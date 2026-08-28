@@ -1,1 +1,65 @@
-# rFirma
+# rfirma: Firma Electrónica Nativa y Portable
+
+`rfirma` es una reimplementación moderna, nativa y portable de la herramienta de firma de la administración española **AutoFirma**. Combina el rendimiento y la ligereza de **Tauri v2 (Rust + Svelte)** para la interfaz y el servidor local, con la madurez del motor criptográfico original de Java compilado a código nativo mediante **GraalVM Native Image**.
+
+---
+
+## 🚀 Características Clave
+* **Sin Dependencia de JRE:** Se ejecuta directamente como código de máquina nativo sin necesidad de tener Java instalado en el equipo del usuario.
+* **Binario Único Portable:** El motor criptográfico compilado se incrusta en el ejecutable de Rust y se extrae en caliente a memoria en tiempo de ejecución.
+* **Arranque Instantáneo:** Reduce los tiempos de arranque de ~3 segundos a menos de 100ms y el consumo de RAM a ~30-50MB.
+* **Integración del Sistema Operativo:** Acceso rápido y nativo a almacenes de certificados (DNI electrónico, FNMT) mediante APIs del sistema y PKCS#11.
+* **Interfaz Moderna:** Diseño moderno basado en Svelte y Tailwind CSS en reemplazo de la interfaz Swing obsoleta.
+
+---
+
+## 🏛️ Arquitectura del Proyecto
+
+El proyecto está diseñado de forma modular para desacoplar la interfaz y la integración con el sistema de la lógica criptográfica pesada:
+
+1. **Frontend (Svelte + Tailwind):** Interfaz gráfica minimalista para la selección y filtrado de certificados e introducción de PIN.
+2. **Tauri Backend (Rust):**
+   * Levanta un servidor local HTTPS/WS seguro (`127.0.0.1:63117`) para comunicarse con las sedes electrónicas.
+   * Maneja el protocolo deep link `rfirma://` y `afirma://`.
+   * Realiza la lectura y firma nativa de los certificados locales (incluyendo tarjetas inteligentes PKCS#11).
+3. **GraalVM FFI Bridge (Java Core):** Librería nativa compilada (`libautofirma_crypto.so`) que recibe los datos en formato JSON mediante FFI y procesa las fases de **Prefirma** y **Postfirma** (generación de los contenedores CAdES, PAdES, XAdES y FacturaE).
+
+---
+
+## 🛠️ Instrucciones de Construcción y Ejecución
+
+Para compilar el proyecto por primera vez, sigue estos pasos en orden:
+
+### Paso 1: Instalar dependencias Java oficiales de Autofirma
+Dado que las librerías oficiales de Autofirma no están publicadas en Maven Central, debes compilarlas e instalarlas localmente en tu caché de Maven (`~/.m2`):
+1. Clona el repositorio original del proyecto ([ctt-gob-es/clienteafirma](https://github.com/ctt-gob-es/clienteafirma)):
+   ```bash
+   git clone https://github.com/ctt-gob-es/clienteafirma.git
+   ```
+2. Accede al directorio y compila/instala los artefactos en tu máquina local:
+   ```bash
+   cd clienteafirma
+   mvn clean install -DskipTests
+   ```
+Una vez finalizado, los JARs requeridos quedarán registrados en tu almacén local de dependencias y listos para ser consumidos por `rfirma`.
+
+### Paso 2: Compilar el Bridge Nativo
+Compila el bridge intermedio que genera la librería dinámica nativa usando GraalVM:
+```bash
+cd rfirma-native-bridge
+mvn clean package
+```
+Esto creará el archivo `target/libautofirma_crypto.so`.
+
+### Paso 3: Lanzar la aplicación en modo desarrollo
+Ve a la aplicación de Tauri y lánzala:
+```bash
+cd ../rfirma-app
+npm install
+npm run tauri dev
+```
+
+---
+
+## 📄 Licencia
+Este proyecto es software libre y está licenciado bajo las mismas condiciones que el Cliente @firma original (**GPL 2.0+** y **EUPL 1.1**).
