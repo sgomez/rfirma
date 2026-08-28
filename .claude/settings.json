@@ -1,0 +1,15 @@
+{
+  "enabledPlugins": {
+    "developer-skills@sgomez": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh pr ready:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh api repos/sgomez/rfirma/pulls/*/reviews*)",
+      "Bash(bash */.claude/plugins/cache/sgomez/developer-skills/*/skills/developer/scripts/cleanup-worktrees.sh:*)"
+
+    ]
+  }
+}

@@ -48,3 +48,19 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 * **App Frontend:** `rfirma-app/src/`
 
 
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Los issues viven en GitHub Issues de `sgomez/rfirma` (CLI `gh`). Ver `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Vocabulario canónico por defecto: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Ver `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` en la raíz. Ver `docs/agents/domain.md`.
