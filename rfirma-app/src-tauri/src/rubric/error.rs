@@ -5,7 +5,6 @@
 //! dañada, es demasiado grande— y ninguno más: el reescalado es silencioso
 //! porque es la operación que el usuario habría pedido de todos modos. A esos
 //! tres se suman [`Situation::SourceUnreadable`],
-//! [`Situation::StoreUnwritable`], que no hablan de la imagen sino del disco: el
 //! [`Situation::StoreUnwritable`] y [`Situation::StoreUnreadable`], que no
 //! hablan de la imagen sino del disco: el ADR no los enumera porque no son
 //! fallos *de la rúbrica*, pero leer el fichero elegido y leer o escribir la

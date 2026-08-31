@@ -233,6 +233,12 @@ fn decode_upright(
         )
     })?;
 
+    // `decode()` pasa al decodificador lo que queda del presupuesto *después*
+    // del `reserve`, y aquí se hace igual: sin esta línea el decodificador
+    // conservaría los suyos enteros y el pico dejaría de estar acotado por
+    // `MAX_DECODED_BYTES` para estarlo por el doble.
+    decoder.set_limits(limits).map_err(damaged)?;
+
     let mut image = image::DynamicImage::from_decoder(decoder).map_err(damaged)?;
     image.apply_orientation(orientation);
     Ok(image)
