@@ -38,6 +38,30 @@ export const gl: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      notAnAcceptedImage: {
+        title: "",
+        body: "",
+      },
+      damagedImage: {
+        title: "",
+        body: "",
+      },
+      imageTooLarge: {
+        title: "",
+        body: "",
+      },
+      sourceUnreadable: {
+        title: "",
+        body: "",
+      },
+      storeUnwritable: {
+        title: "",
+        body: "",
+      },
+      storeUnreadable: {
+        title: "",
+        body: "",
+      },
     },
   },
   window: {
@@ -76,6 +100,67 @@ export const gl: UntranslatedCatalog = {
     signatureBox: "",
     dragHandle: "",
     outOfPage: "",
+  },
+  panel: {
+    document: {
+      pages: "",
+    },
+    coSignature: {
+      one: "",
+      many: "",
+    },
+    certificate: {
+      title: "",
+      loading: "",
+      issuer: "",
+      choose: "",
+      empty: {
+        title: "",
+        body: "",
+        retry: "",
+        otherModule: "",
+      },
+      expired: "",
+      notYetValid: "",
+      revoked: "",
+      unreadable: "",
+    },
+    visibleSignature: {
+      title: "",
+      toggle: "",
+      placement: "",
+      noPlacement: "",
+      content: "",
+      fields: {
+        rubric: "",
+        rubricDisabled: "",
+        signerName: "",
+        idNumber: "",
+        signedAt: "",
+        reason: "",
+      },
+      reason: {
+        label: "",
+        placeholder: "",
+      },
+      rubric: {
+        title: "",
+        choose: "",
+        change: "",
+        thumbnail: "",
+        flattened: "",
+      },
+      preview: {
+        title: "",
+        empty: "",
+        unavailable: "",
+      },
+    },
+    footer: {
+      savedIn: "",
+      unwritable: "",
+      retry: "",
+    },
   },
   preferences: {
     title: "",

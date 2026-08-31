@@ -16,6 +16,8 @@ interface MainWindowProps {
   tray: ReactNode;
   /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
   viewer: ReactNode;
+  /** El contenido del panel, que es quien sabe de certificados y de firma. */
+  panel: ReactNode;
 }
 
 /**
@@ -37,6 +39,7 @@ export function MainWindow({
   onOpenAbout,
   tray,
   viewer,
+  panel,
 }: MainWindowProps) {
   const { t } = useTranslation();
 
@@ -55,7 +58,9 @@ export function MainWindow({
         <section className="main-window__viewer" aria-label={t("window.viewer")}>
           {viewer}
         </section>
-        <section className="main-window__panel" aria-label={t("window.panel")} />
+        <section className="main-window__panel" aria-label={t("window.panel")}>
+          {panel}
+        </section>
       </div>
     </div>
   );

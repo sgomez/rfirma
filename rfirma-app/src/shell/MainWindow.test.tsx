@@ -17,6 +17,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={null}
         viewer={null}
+        panel={null}
       />,
     );
 
@@ -35,6 +36,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={<p>contrato.pdf</p>}
         viewer={null}
+        panel={null}
       />,
     );
 
@@ -51,6 +53,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={null}
         viewer={<p>página 3 de 27</p>}
+        panel={null}
       />,
     );
 
@@ -67,6 +70,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={null}
         viewer={null}
+        panel={null}
       />,
     );
 
@@ -83,6 +87,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={null}
         viewer={null}
+        panel={null}
       />,
     );
 

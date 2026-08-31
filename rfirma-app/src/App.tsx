@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AboutDialog } from "./about/AboutDialog";
 import { DocumentTray } from "./documents/DocumentTray";
 import type { DocumentPicker } from "./documents/picker";
@@ -8,6 +8,14 @@ import { PreferencesDialog } from "./preferences/PreferencesDialog";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
+import type { Certificate, CertificateStore } from "./signing/certificate";
+import type { Rubric, RubricFailure, RubricPicker } from "./signing/rubric";
+import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
+import {
+  DEFAULT_VISIBLE_SIGNATURE,
+  type Layer2Composer,
+  type VisibleSignature,
+} from "./signing/visibleSignature";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import type { SignaturePlacement } from "./viewer/signatureBox";
@@ -26,6 +34,12 @@ interface AppProps {
    * una, la de documentos del usuario (ADR-0011).
    */
   destinations: readonly string[];
+  /** Los certificados de los tokens conectados. Ver [`CertificateStore`]. */
+  certificates: CertificateStore;
+  /** Por dónde entra la rúbrica, ya normalizada. Ver [`RubricPicker`]. */
+  rubrics: RubricPicker;
+  /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
+  composer: Layer2Composer;
   /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
 }
@@ -40,7 +54,17 @@ interface AppProps {
  * Los diálogos se montan **sobre** la ventana y no la desmontan: no hay
  * navegación, y el estado de la bandeja sigue vivo debajo.
  */
-export function App({ recents, picker, preferences, pdfs, destinations, menuAnchor }: AppProps) {
+export function App({
+  recents,
+  picker,
+  preferences,
+  pdfs,
+  destinations,
+  certificates,
+  rubrics,
+  composer,
+  menuAnchor,
+}: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   // Dónde va la firma visible. Vive aquí y no en el visor porque el panel de
@@ -48,6 +72,10 @@ export function App({ recents, picker, preferences, pdfs, destinations, menuAnch
   // dos tienen que estar mirando el mismo.
   const [placement, setPlacement] = useState<SignaturePlacement | null>(null);
   const [settings, setSettings] = useState<Preferences | null>(null);
+  const [certificate, setCertificate] = useState<CertificateState>({ kind: "loading" });
+  const [signature, setSignature] = useState<VisibleSignature>(DEFAULT_VISIBLE_SIGNATURE);
+  const [rubric, setRubric] = useState<Rubric | null>(null);
+  const [rubricFailure, setRubricFailure] = useState<RubricFailure | null>(null);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
   // es recordar; el primer documento no se puede abrir antes de esa lectura.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
@@ -81,6 +109,31 @@ export function App({ recents, picker, preferences, pdfs, destinations, menuAnch
       current = false;
     };
   }, [documents.active, pdfs]);
+
+  // Los certificados se buscan al arrancar y cada vez que alguien pide volver
+  // a buscar: una tarjeta insertada tarde es el caso corriente, no la excepción.
+  const lookForCertificates = useCallback(async () => {
+    setCertificate({ kind: "loading" });
+    const found = await certificates.list();
+    setCertificate(chosenFrom(found));
+  }, [certificates]);
+
+  useEffect(() => {
+    void lookForCertificates();
+  }, [lookForCertificates]);
+
+  // La rúbrica se comprueba y se normaliza **al elegirla**, con el panel
+  // abierto, y nunca al firmar (ADR-0012): el fallo se cuenta aquí.
+  const chooseRubric = async () => {
+    const choice = await rubrics.choose();
+    if (choice === null) return;
+    if ("failure" in choice) {
+      setRubricFailure(choice.failure);
+      return;
+    }
+    setRubricFailure(null);
+    setRubric(choice.rubric);
+  };
 
   const changeSettings = async (next: Preferences) => {
     setSettings(next);
@@ -118,6 +171,37 @@ export function App({ recents, picker, preferences, pdfs, destinations, menuAnch
             onOpen={() => void documents.open()}
           />
         }
+        panel={
+          pdf && documents.active ? (
+            <SigningPanel
+              document={{
+                name: documents.active.name,
+                pages: pdf.pageCount,
+                sizeBytes: null,
+                signatures: null,
+              }}
+              certificate={certificate}
+              onChooseCertificate={() => void lookForCertificates()}
+              onRetryCertificates={() => void lookForCertificates()}
+              onChooseModule={() => void lookForCertificates()}
+              signature={signature}
+              onChangeSignature={setSignature}
+              page={placement?.page ?? null}
+              rubric={rubric}
+              rubricFailure={rubricFailure}
+              onChooseRubric={() => void chooseRubric()}
+              composer={composer}
+              destination={{
+                folder: settings?.destination ?? destinations[0] ?? "",
+                writable: true,
+              }}
+              onChangeDestination={() => setDialog("preferences")}
+              onSign={() => setDialog(null)}
+              signing={false}
+              failure={null}
+            />
+          ) : null
+        }
       />
       {dialog === "preferences" && settings !== null && (
         <PreferencesDialog
@@ -133,4 +217,18 @@ export function App({ recents, picker, preferences, pdfs, destinations, menuAnch
       )}
     </>
   );
+}
+
+/**
+ * Con qué certificado se firma, a partir de los que hay.
+ *
+ * Con uno solo no se pregunta: elegir entre una cosa no es elegir. Con varios,
+ * el panel enseña «Elegir certificado» y el diálogo que los lista es de su
+ * propio sub-issue; hasta entonces se queda en `unchosen`, que es la verdad.
+ */
+function chosenFrom(found: readonly Certificate[]): CertificateState {
+  const [first] = found;
+  if (first === undefined) return { kind: "empty" };
+  if (found.length === 1) return { kind: "chosen", certificate: first };
+  return { kind: "unchosen" };
 }

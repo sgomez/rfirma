@@ -32,6 +32,30 @@ export const en: Catalog = {
         title: "The operation could not be completed",
         body: "Try again. If it keeps happening, attach the technical detail to the bug report.",
       },
+      notAnAcceptedImage: {
+        title: "That image cannot be used as a rubric",
+        body: "The rubric has to be a PNG or a JPEG.",
+      },
+      damagedImage: {
+        title: "The image could not be opened",
+        body: "The file is a PNG or a JPEG, but it is damaged. Try another copy.",
+      },
+      imageTooLarge: {
+        title: "The image is too large",
+        body: "Choose a smaller image, or save it at a lower resolution.",
+      },
+      sourceUnreadable: {
+        title: "The file you chose could not be read",
+        body: "Check that it is still where it was and choose it again.",
+      },
+      storeUnwritable: {
+        title: "Your rubric could not be saved",
+        body: "Choose the image again. If it keeps happening, attach the technical detail to the bug report.",
+      },
+      storeUnreadable: {
+        title: "Your saved rubric could not be read",
+        body: "Choose the image again to replace it.",
+      },
     },
   },
   window: {
@@ -70,6 +94,68 @@ export const en: Catalog = {
     signatureBox: "Visible signature box",
     dragHandle: "Drag to place",
     outOfPage: "The box ended up off the page, so it stayed where it was.",
+  },
+  panel: {
+    document: {
+      pages: "{{pages}} pages",
+    },
+    coSignature: {
+      one: "It already carries 1 signature: yours will be a countersignature.",
+      many: "It already carries {{count}} signatures: yours will be a countersignature.",
+    },
+    certificate: {
+      title: "Certificate",
+      loading: "Looking for certificates…",
+      issuer: "Issued by {{issuer}}",
+      choose: "Choose certificate",
+      empty: {
+        title: "We found no certificate",
+        body: "If you use a card, check that it is inserted and that the reader is connected.",
+        retry: "Look again",
+        otherModule: "Another module…",
+      },
+      expired: "The certificate expired on {{date}}, so it cannot be used to sign.",
+      notYetValid: "The certificate is not valid yet, so it cannot be used to sign.",
+      revoked: "The certificate is revoked ({{reason}}), so it cannot be used to sign.",
+      unreadable: "This certificate could not be read, so it cannot be used to sign.",
+    },
+    visibleSignature: {
+      title: "Visible signature",
+      toggle: "Stamp a signature box on the document",
+      placement: "Page {{page}} · drag it to place it",
+      noPlacement: "Drag the box over the document to place it.",
+      content: "Contents",
+      fields: {
+        rubric: "Your rubric",
+        rubricDisabled: "Choose an image first",
+        signerName: "Name and surname",
+        idNumber: "ID number",
+        signedAt: "Date and time of the signature",
+        reason: "A reason",
+      },
+      reason: {
+        label: "Reason",
+        placeholder: "Approved",
+      },
+      rubric: {
+        title: "Rubric image",
+        choose: "Choose image",
+        change: "Change image",
+        thumbnail: "Your rubric, as it will be stamped",
+        flattened:
+          "It is stamped on white: the box goes into the PDF as a JPEG, and a JPEG has no transparency.",
+      },
+      preview: {
+        title: "What the box will say",
+        empty: "Tick a box so that the signature box says something.",
+        unavailable: "The preview will show up once you choose the certificate.",
+      },
+    },
+    footer: {
+      savedIn: "It will be saved in",
+      unwritable: "Cannot write in {{folder}}",
+      retry: "Try again",
+    },
   },
   preferences: {
     title: "Preferences",

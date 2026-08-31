@@ -5,6 +5,9 @@ import { App } from "./App";
 import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import { inMemoryPreferences } from "./preferences/preferences";
+import { emptyCertificateStore } from "./signing/certificate";
+import { emptyRubricPicker } from "./signing/rubric";
+import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 import { emptyPdfSource } from "./viewer/source";
 
@@ -32,6 +35,9 @@ function renderApp(recents = inMemoryRecents(), documents: RecentDocument[] = []
       pdfs={emptyPdfSource()}
       preferences={preferences}
       destinations={["Documentos"]}
+      certificates={emptyCertificateStore()}
+      rubrics={emptyRubricPicker()}
+      composer={emptyLayer2Composer()}
       menuAnchor="header"
     />,
   );
