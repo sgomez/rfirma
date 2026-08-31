@@ -16,6 +16,7 @@ describe("MainWindow", () => {
         onOpenPreferences={noop}
         onOpenAbout={noop}
         tray={null}
+        viewer={null}
       />,
     );
 
@@ -33,11 +34,28 @@ describe("MainWindow", () => {
         onOpenPreferences={noop}
         onOpenAbout={noop}
         tray={<p>contrato.pdf</p>}
+        viewer={null}
       />,
     );
 
     const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
     expect(tray).toContainElement(screen.getByText("contrato.pdf"));
+  });
+
+  it("puts the viewer content inside the viewer region", () => {
+    renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        tray={null}
+        viewer={<p>página 3 de 27</p>}
+      />,
+    );
+
+    const viewer = screen.getByRole("region", { name: "Visor del documento" });
+    expect(viewer).toContainElement(screen.getByText("página 3 de 27"));
   });
 
   it("has no navigation between screens", () => {
@@ -48,6 +66,7 @@ describe("MainWindow", () => {
         onOpenPreferences={noop}
         onOpenAbout={noop}
         tray={null}
+        viewer={null}
       />,
     );
 
@@ -63,6 +82,7 @@ describe("MainWindow", () => {
         onOpenPreferences={noop}
         onOpenAbout={noop}
         tray={null}
+        viewer={null}
       />,
     );
 

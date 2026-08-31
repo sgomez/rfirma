@@ -55,6 +55,22 @@ export const en: Catalog = {
     recents: "Recent",
     remove: "Remove from the list",
   },
+  viewer: {
+    dropZone: "Drag a PDF here, or click to open one",
+    privacy: "PDF only. The document never leaves your computer.",
+    pageNumber: "Page number",
+    pageOf: "of {{total}}",
+    firstPage: "First page",
+    previousPage: "Previous page",
+    nextPage: "Next page",
+    lastPage: "Last page",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    fitToWindow: "Fit to window",
+    signatureBox: "Visible signature box",
+    dragHandle: "Drag to place",
+    outOfPage: "The box ended up off the page, so it stayed where it was.",
+  },
   preferences: {
     title: "Preferences",
     rememberVisibleSignature: {

@@ -17,6 +17,7 @@
   "dependencies": {
     "@tauri-apps/api": "2.11.1",
     "i18next": "26.4.0",
+    "pdfjs-dist": "6.3.289",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-i18next": "17.0.12"

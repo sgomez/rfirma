@@ -51,6 +51,13 @@ eligiendo una casilla abstracta. Ver
 Qué se ve dentro del recuadro lo controla el
 [panel de firma](panel-de-firma.md).
 
+**En v0.1 el recuadro se mueve, no se redimensiona.** Nace con una proporción
+fija —un tercio del ancho de la página, alto de rúbrica— y se coloca
+arrastrándolo, que es lo que decide dónde va la firma. Los cuatro tiradores de
+las esquinas son de la vuelta siguiente: redimensionar es un segundo gesto y
+cuatro dianas más sobre el mismo elemento, y cambiar el tamaño sin ver todavía
+el contenido —lo pone el panel de firma— es decidir a ciegas.
+
 **El recuadro se guarda en espacio de usuario PDF, no en píxeles de pantalla.**
 Los píxeles se derivan en cada pintada, así que el zoom es puramente visual:
 acercarse no mueve la firma. Guardado en píxeles, el recuadro se queda clavado
@@ -83,19 +90,49 @@ Maquetación propia con `var(--rf-*)`. `--rf-shadow-elevated` en la barra,
 `--rf-radius-pill`, `--rf-border-subtle`, `--rf-space-md` de separación al
 borde inferior.
 
-## Lo que esta pantalla deja abierto
+## Cómo conviven los dos arrastres
 
-**Dos arrastres conviven en el visor**: mover el documento (pan) y mover el
-recuadro. Lo natural es que arrastrar sobre el recuadro lo mueva a él y sobre
-el resto de la página desplace el documento, pero con zoom alto el recuadro
-puede ocupar casi todo el visor y el pan desaparece. La salida habitual es
-reservar el pan a la barra espaciadora o al botón central del ratón. Es
-comportamiento, no aspecto, y se decide al implementar.
+**No hay pan por arrastre, y por eso no hay conflicto.** El documento se
+desplaza con la barra de desplazamiento y con la rueda —lo que el WebView ya
+hace solo—, así que el arrastre del ratón es **siempre** del recuadro. Esto
+resuelve lo que la ficha dejaba abierto: con el zoom al 300 % el recuadro puede
+ocupar casi todo el visor y da igual, porque desplazar el documento no depende
+de que quede superficie libre donde agarrarlo. Un pan por arrastre habría hecho
+falta reservarlo a la barra espaciadora o al botón central, y eso es un gesto
+que hay que descubrir; una barra de desplazamiento se ve.
 
-**Con muchas páginas** puede costar encontrar la correcta. La siguiente vuelta
-sería una tira de miniaturas, que es otra columna: no se ha metido.
+El recuadro se puede mover también **con las flechas** —diez veces más rápido
+con `Shift`—, que es el camino de quien no usa ratón y de quien quiere ajustar
+un punto exacto. Es el mismo camino: pasa por la misma guardia de página.
+
+**Soltar el recuadro fuera de la página no se acepta.** Aparece el aviso «El
+recuadro se ha quedado fuera de la página, así que sigue donde estaba» y el
+recuadro vuelve a donde estaba. Es la mitad de interfaz del ID-22; la
+autoritativa está en el backend, justo antes de firmar, porque iText recortaría
+en silencio y la firma saldría válida igual con la rúbrica encogida.
+
+**La firma va en la página que estás mirando.** Al cambiar de página el
+recuadro va contigo, conservando su sitio sobre el papel; si la página nueva es
+más pequeña y el recuadro no cabe, vuelve a su posición por omisión —abajo a la
+izquierda— en vez de quedarse a medias fuera.
+
+## Sin tira de miniaturas
+
+**No la hay, y no es una deuda.** La barra flotante lleva el número de página
+**editable** más primera y última: con 400 páginas se escribe el número y se
+llega en un gesto, que es menos que arrastrar una tira. Y una tira de
+miniaturas es **una cuarta columna**, justo lo que el ID-25 fija en tres. Si
+algún día se demuestra que hace falta, entra como panel superpuesto sobre el
+visor y no como región nueva.
 
 ## Decisiones
+
+Las pintadas de `pdf.js` pasan por una **cola que cancela la anterior** al
+cambiar el zoom o la página. Sin ella dos `RenderTask` escriben sobre el mismo
+lienzo y queda una mezcla de dos escalas. Y el arrastre del recuadro **no pasa
+por el estado** hasta que se suelta: durante el gesto solo cambia el
+`transform` del elemento. Las dos cosas son mecánica, no aspecto, pero se
+apuntan aquí porque son lo que hace que esta pantalla se sienta como se ve.
 
 La paginación empezó como una pastilla por página bajo la hoja. Se cambió por
 la barra flotante al comprobar que con 27 páginas ya no cabe, y de paso dejó de

@@ -88,6 +88,27 @@ export const es = {
     recents: "Recientes",
     remove: "Quitar de la lista",
   },
+  /**
+   * El visor (docs/design/visor-de-documento.md): la hoja, el recuadro de la
+   * firma y la barra flotante. `dragHandle` es el asa del recuadro, y
+   * `outOfPage` el aviso del ID-22: fuera de la página no se acepta.
+   */
+  viewer: {
+    dropZone: "Arrastra un PDF o pulsa para abrirlo",
+    privacy: "Solo PDF. El documento no sale de tu ordenador en ningún momento.",
+    pageNumber: "Número de página",
+    pageOf: "de {{total}}",
+    firstPage: "Primera página",
+    previousPage: "Página anterior",
+    nextPage: "Página siguiente",
+    lastPage: "Última página",
+    zoomOut: "Alejar",
+    zoomIn: "Acercar",
+    fitToWindow: "Ajustar a la ventana",
+    signatureBox: "Recuadro de la firma visible",
+    dragHandle: "Arrastra para colocar",
+    outOfPage: "El recuadro se ha quedado fuera de la página, así que sigue donde estaba.",
+  },
   /** Los ajustes (docs/design/preferencias.md). Se aplican al hacerlos. */
   preferences: {
     title: "Preferencias",
