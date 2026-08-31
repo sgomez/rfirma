@@ -58,7 +58,7 @@ realimentación que este repositorio decidió proteger en el
 | --- | --- | --- |
 | `tools` | comprueba herramientas y nombra la que falte | rápido |
 | `bootstrap` | `~/.m2` contra la etiqueta `v1.9.1` | rápido |
-| `lint` | `-Xlint:all` + `eslint` + `cargo clippy` | rápido |
+| `lint` | `-Xlint:all` + `biome` + `cargo clippy` + `cargo fmt --check` | rápido |
 | `test` | `mvn test` + `vitest` + `cargo test` | rápido |
 | `build` | puente Java + `tsc -b && vite build` + `cargo build` | rápido |
 | `check` | `tools lint build test` | rápido |
@@ -66,6 +66,11 @@ realimentación que este repositorio decidió proteger en el
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
 | `fuentes-flatpak` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
+
+> La casilla de `lint` decía `eslint`, escrito sin razonarlo y sin decir nada del formateador.
+> El [ADR-0014](0014-gradas-de-prueba-y-puerta-de-calidad.md) lo sustituye por **Biome**, y es
+> también quien decide **qué** se ejecuta dentro de `lint` y `test` y en qué carril cae cada
+> prueba. Añade además la receta voluntaria `rapido` (solo `lint`).
 
 **`check` es un contrato**: `docs/agents/code-host.md` promete que el CI ejecuta
 exactamente `just check` y que un pase local significa lo mismo. Crece por dentro; su
