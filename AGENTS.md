@@ -46,7 +46,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 ---
 
 ## 📍 Archivos de Interés y Rutas
-* **Especificación de Desarrollo:** **[rfirma_development_spec.md](rfirma_development_spec.md)** — borrador **a auditar**, no fuente de verdad. Lo borra el [issue #10](https://github.com/sgomez/rfirma/issues/10).
+* **Especificación de Desarrollo:** el [issue #46](https://github.com/sgomez/rfirma/issues/46) y sus dieciséis sub-issues. Es la fuente de verdad de lo que hay que construir: sus *Implementation Decisions* (`ID-01`…`ID-42`) y *Testing Decisions* (`TD-01`…`TD-09`) las copia cada sub-issue en su `## Spec extract`. El borrador `rfirma_development_spec.md` que vivía en la raíz **ya no existe**: tenía errores comprobados y se borró al publicar el #46.
 * **Bridge Java:** `rfirma-native-bridge/src/main/java/es/gob/afirma/nativebridge/NativeBridge.java`
 * **App Rust/Tauri:** `rfirma-app/src-tauri/`
 * **App Frontend:** `rfirma-app/src/` (React 19 + Vite + TypeScript, pnpm)

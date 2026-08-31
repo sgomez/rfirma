@@ -6,7 +6,7 @@ nativa, una aplicación Tauri, y un empaquetado flatpak. La decisión de fondo e
 cada pieza lleva la suya dentro.
 
 ```
-rfirma-native-bridge/   Maven -> GraalVM CE 25 -> los seis .so del ADR-0004
+rfirma-native-bridge/   Maven -> GraalVM CE 25 -> librfirma_crypto.so (ADR-0004)
 rfirma-app/             Tauri: src-tauri/ (Rust) + src/ (React)
 packaging/flatpak/      manifiesto, generadores de fuentes y verificación
 justfile                el único orquestador
@@ -62,7 +62,7 @@ realimentación que este repositorio decidió proteger en el
 | `test` | `mvn test` + `vitest` + `cargo test` | rápido |
 | `build` | puente Java + `tsc -b && vite build` + `cargo build` | rápido |
 | `check` | `tools lint build test` | rápido |
-| `native` | los seis `.so` con GraalVM CE 25 | lento |
+| `native` | `librfirma_crypto.so` con GraalVM CE 25 | lento |
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
 | `fuentes-flatpak` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
@@ -82,17 +82,25 @@ nombre y su papel no. `tsc -b` va **dentro** de `build`, no en una receta aparte
 `flatpak remote-add` que un script no debe hacer a espaldas de nadie ni dentro de un
 runner; quien las comprueba es `just tools`, que ya falla nombrando lo que falta.
 
-## Los seis `.so` en desarrollo
+## La librería nativa en desarrollo
+
+> Esta sección se escribió cuando la imagen eran **seis** ficheros. El
+> [#36](https://github.com/sgomez/rfirma/issues/36) la dejó en **uno**,
+> `librfirma_crypto.so`, al excluir `afirma-ui-utils` (ADR-0012), y el ADR-0004 quedó
+> reescrito. Lo que sigue está corregido a esa cifra; el razonamiento no cambia.
 
 Ruta canónica única: **`rfirma-native-bridge/target/lib/rfirma/`**. Hoy hay dos rivales
-—`target/native`, que produce `just native` con **un solo** `.so`, y `target/ce25-awt`,
-que produce el banco de pruebas con los seis y al que apunta el manifiesto flatpak—,
-o sea que **la receta no construye lo que se distribuye**. La receta `native` pasa a
-producir la imagen buena, en la ruta canónica, y el manifiesto apunta ahí.
+—`target/native`, que produce `just native`, y `target/ce25-noui`, al que apunta el
+manifiesto flatpak—, o sea que **la receta no construye lo que se distribuye**. La receta
+`native` pasa a producir la imagen buena, en la ruta canónica, y el manifiesto apunta ahí.
 
-`dev` y `build` **comprueban** que los seis ficheros están y, si faltan, **fallan
-nombrando `just native`**; no lo encadenan. La comprobación de arranque que exige el
-ADR-0004 nombra **las dos** rutas que miró: la relativa al ejecutable y `RFIRMA_LIB_DIR`.
+`dev` y `build` **comprueban** que la librería está y, si falta, **fallan nombrando
+`just native`**; no lo encadenan. La comprobación de arranque que exige el ADR-0004 nombra
+**las dos** rutas que miró: la relativa al ejecutable y `RFIRMA_LIB_DIR`.
+
+Y la ruta de distribución **no es** el directorio de construcción: `native-image` sigue
+emitiendo ahí los cinco auxiliares de AWT, así que un `install *.so` reintroduciría
+`libawt.so` — y con él, el aborto del proceso ante un JPEG con perfil ICC que midió el #36.
 
 En `tauri.conf.json`, **`bundle.active: false`**: el binario lo instala el manifiesto
 flatpak, como ya hace la sonda. Los empaquetadores de Tauri (`.deb`, AppImage) están
@@ -127,7 +135,7 @@ pero por la razón de la sección anterior y no por la de Flathub.
 
 ## La sonda se borra
 
-`packaging/flatpak/probe/` ya contiene FFI con `libloading`, carga de los seis ficheros,
+`packaging/flatpak/probe/` ya contiene FFI con `libloading`, carga de la librería nativa,
 ciclo trifásico y PKCS#11 con `cryptoki`. En cuanto exista el código real, eso son **dos
 implementaciones de la misma frontera FFI**, y esa frontera es justo donde este proyecto
 lleva tres hallazgos de fallo silencioso. Se borra en el mismo sub-issue que aporte el
@@ -138,7 +146,8 @@ FFI real, y el manifiesto pasa a empaquetar `rfirma-app`. `verifica.sh` sobreviv
 - El `README.md`, `AGENTS.md`, `design-system.md` y `docs/agents/prototyping.md` decían
   Svelte —y el `README.md`, además, Tailwind—. Eran promesas del borrador inicial, no
   decisiones; quedan corregidas con este ADR.
-- `rfirma_development_spec.md` sigue siendo borrador a auditar y lo borra el
-  [#10](https://github.com/sgomez/rfirma/issues/10), no este ADR.
+- `rfirma_development_spec.md` era borrador a auditar y **ya no existe**: lo borró el
+  [#10](https://github.com/sgomez/rfirma/issues/10) al publicar el spec ejecutable
+  [#46](https://github.com/sgomez/rfirma/issues/46), no este ADR.
 - No hay workspace de Cargo en la raíz: hoy habría un solo miembro real. Se revisa si
   aparece un segundo crate.

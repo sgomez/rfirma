@@ -20,7 +20,7 @@ sitios nuestros:
 `.flatpak` suelto. En una aplicación cualquiera eso es una molestia; en esta no, porque el
 mapa lleva medidas **tres** maneras de invalidar una firma en silencio —`extraParams`, `TIME`
 y zona horaria, las tres con `Digest Mismatch` y sin excepción, unificadas en el sello de
-sesión del [ADR-0012](0012-sello-de-sesion-una-sola-invariante.md)—. Si una versión se lleva
+sesión del [ADR-0016](0016-sello-de-sesion-una-sola-invariante.md)—. Si una versión se lleva
 alguna por delante, sin canal de actualización el usuario se queda ahí y no hay forma de
 avisarle.
 
