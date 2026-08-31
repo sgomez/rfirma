@@ -7,7 +7,7 @@ o el usuario directamente).
 ## La regla
 
 La rama **UI** de `prototype` ("¿qué aspecto debería tener esto?") **no** se
-construye como ruta throwaway con `?variant=` dentro de la app Svelte. Se
+construye como ruta throwaway con `?variant=` dentro de la app React. Se
 prototipa en **Claude Design** y, una vez validada, se describe en un fichero
 de `docs/design/`.
 
