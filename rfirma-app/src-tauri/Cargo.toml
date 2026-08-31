@@ -34,9 +34,14 @@ image = { version = "0.25.10", default-features = false, features = ["jpeg", "pn
 # La rúbrica viaja al puente en Base64 dentro de `signatureRubricImage`, así
 # que la normalización entrega ya esa cadena y nadie la vuelve a codificar mal.
 base64 = "0.22"
-# Sin serde ni serde_json todavia: hoy no hay ningun #[tauri::command] que
-# serialice nada, y una dependencia que nadie importa es ruido. Las anade el
-# sub-issue que escriba el primer comando.
+# La memoria entre sesiones son dos ficheros JSON (ADR-0010), asi que serde
+# entra aqui y no con el primer #[tauri::command]: el formato de configuracion
+# y estado lo escribe este modulo, no la interfaz.
+serde = { version = "1", features = ["derive"] }
+# JSON en los dos ficheros porque los escribe la aplicacion y nadie los edita a
+# mano (ADR-0010). Se lee primero a `Value` para mirar la "version" antes de
+# deserializar: un fichero de una version futura se aparta, no se interpreta.
+serde_json = "1"
 tauri = { version = "2", features = [] }
 # Solo para leer del certificado el titular y las fechas de validez. Un
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que

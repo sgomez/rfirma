@@ -14,14 +14,17 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use serde::{Deserialize, Serialize};
 use x509_cert::der::Decode;
 use x509_cert::Certificate;
 
 /// Cómo volver a encontrar un certificado en el próximo arranque (ID-32).
 ///
 /// Es lo único de esta parte del programa que tiene sentido persistir: no lleva
-/// titular, ni DNI, ni número de serie.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// titular, ni DNI, ni número de serie. Por eso es **este** tipo el que se
+/// serializa en el estado ([`crate::memory`]) y no [`TokenCertificate`], que
+/// arrastra el DER entero.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CertificateRef {
     module: PathBuf,
     token_label: String,

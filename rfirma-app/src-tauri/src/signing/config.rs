@@ -9,6 +9,8 @@
 
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 /// Subfiltro de la firma. Se envía **explícito** aunque parezca redundante: el
 /// javadoc de `PdfExtraParams.SIGNATURE_SUBFILTER` **miente**, dice que por
 /// omisión es `adbe.pkcs7.detached` y el código cae en `ETSI.CAdES.detached`.
@@ -76,7 +78,7 @@ impl Setting {
 /// acabará teniendo el widget: la conversión desde el recuadro que el usuario
 /// arrastra en el visor —incluida la inversa de la rotación de la página— la
 /// hace [`super::placement::Page::place`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SignatureBox {
     /// Página, **1-based**, tal cual la numera `pdf.js`.
     pub page: u32,

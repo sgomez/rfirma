@@ -2788,6 +2788,8 @@ dependencies = [
  "cryptoki",
  "image",
  "rsa",
+ "serde",
+ "serde_json",
  "sha2",
  "tauri",
  "tauri-build",
