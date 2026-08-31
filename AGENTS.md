@@ -21,10 +21,11 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * Para retornar cadenas JSON desde Java a Rust de forma segura, se debe usar la asignación manual en el C-heap mediante `UnmanagedMemory.malloc(bytes.length + 1)`.
    * Rust es responsable de llamar al método FFI `autofirma_free_string(thread, ptr)` una vez leído el JSON para evitar fugas de memoria.
 
-3. **Incrustación Dinámica del `.so` (Distribución Portable):**
-   * No enlaces la librería criptográfica `.so`/`.dll`/`.dylib` en tiempo de compilación mediante `build.rs` o variables `LD_LIBRARY_PATH`.
-   * El backend de Rust debe usar la macro `include_bytes!` para guardar la librería dentro del binario.
-   * Al iniciar, comprueba y extrae el archivo en el directorio de la caché del usuario (ej. `~/.cache/rfirma/libautofirma_crypto.so`) y cárgalo dinámicamente con `libloading`.
+3. **Distribución de la librería nativa (ADR-0004):**
+   * `native-image` **no** produce un artefacto autosuficiente: la rúbrica de imagen necesita **seis ficheros** (`librfirma_crypto.so` + `libawt.so`, `libawt_headless.so`, `libjavajpeg.so`, `libjava.so`, `libjvm.so`) que deben convivir en el **mismo directorio**.
+   * **No uses `include_bytes!` ni extraigas nada a `~/.cache/rfirma/`.** El `.deb` es el único canal soportado: los seis ficheros se instalan en `/usr/lib/rfirma/`.
+   * Rust carga `librfirma_crypto.so` por **ruta absoluta** con `libloading`; los otros cinco se resuelven solos vía `$ORIGIN`. No hace falta `LD_LIBRARY_PATH` ni tocar `RPATH`. La ruta es una constante de compilación sobreescribible con `RFIRMA_LIB_DIR`.
+   * Al arrancar, comprueba que los seis ficheros existen por nombre y falla nombrando el que falta: una instalación incompleta degrada a un error engañoso sobre el formato de la imagen, no a un fallo de carga.
 
 4. **Firma Trifásica (Triphase Signing):**
    * La clave privada **nunca** debe pasar al isolate de Java/GraalVM (especialmente si es un certificado no exportable en un DNIe o tarjeta física).
@@ -34,7 +35,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 ---
 
 ## 🛠️ Herramientas y Estado de Configuración del Entorno
-* **GraalVM JDK:** Hay **dos** instalados por SDKMAN: `21-graalce` (por defecto) y `25.3.4+1.r25-graalce`. La herramienta `native-image` está disponible en el PATH. **Cuál se usa está pendiente de decidir**: la línea Java 21 no puede compilar la firma visible en una imagen `--shared` (aborta dentro del `JNI_OnLoad` de `libawt.so`) y la 25 sí. Ver `docs/research/graalvm-libawt-shared.md` y el issue #6.
+* **GraalVM JDK: `25.3.4+1.r25-graalce`**, decidido en el ADR-0004. Hay dos instalados por SDKMAN y `21-graalce` sigue siendo el de por defecto de SDKMAN, así que **fija `GRAALVM_HOME` a la ruta de la 25** para construir. La línea 21 aborta dentro del `JNI_OnLoad` de `libawt.so` con cualquier firma visible. El `pom.xml` sigue compilando a `release 21`: cambia el JDK que construye, no el lenguaje de destino. Ver `docs/research/graalvm-libawt-shared.md`.
 * **Maven:** Instalado y configurado en el PATH.
 * **Token PKCS#11 de pruebas:** `softhsm2` con el token `rfirma-test` (PIN `1234`), módulo en `/usr/lib/softhsm/libsofthsm2.so`, cargado con un certificado **de pruebas de la FNMT** emitido por su CA de producción. El kit completo vive en `~/.local/share/rfirma-test-certs`. **El certificado personal del titular no se usa en ningún punto del proyecto.** Ver `docs/research/token-pkcs11-pruebas.md`.
 * **Cargo (Rust):** Instalado y configurado.

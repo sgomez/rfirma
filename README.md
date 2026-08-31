@@ -1,12 +1,12 @@
-# rfirma: Firma Electrónica Nativa y Portable
+# rfirma: Firma Electrónica Nativa
 
-`rfirma` es una reimplementación moderna, nativa y portable de la herramienta de firma de la administración española **AutoFirma**. Combina el rendimiento y la ligereza de **Tauri v2 (Rust + Svelte)** para la interfaz y el servidor local, con la madurez del motor criptográfico original de Java compilado a código nativo mediante **GraalVM Native Image**.
+`rfirma` es una reimplementación moderna y nativa de la herramienta de firma de la administración española **AutoFirma**. Combina el rendimiento y la ligereza de **Tauri v2 (Rust + Svelte)** para la interfaz y el servidor local, con la madurez del motor criptográfico original de Java compilado a código nativo mediante **GraalVM Native Image**.
 
 ---
 
 ## 🚀 Características Clave
 * **Sin Dependencia de JRE:** Se ejecuta directamente como código de máquina nativo sin necesidad de tener Java instalado en el equipo del usuario.
-* **Binario Único Portable:** El motor criptográfico compilado se incrusta en el ejecutable de Rust y se extrae en caliente a memoria en tiempo de ejecución.
+* **Distribución en `.deb`:** El motor criptográfico compilado se instala junto a la aplicación en `/usr/lib/rfirma/` y se carga dinámicamente al arrancar (ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)).
 * **Arranque Instantáneo:** Reduce los tiempos de arranque de ~3 segundos a menos de 100ms y el consumo de RAM a ~30-50MB.
 * **Integración del Sistema Operativo:** Acceso rápido y nativo a almacenes de certificados (DNI electrónico, FNMT) mediante APIs del sistema y PKCS#11.
 * **Interfaz Moderna:** Diseño moderno basado en Svelte y Tailwind CSS en reemplazo de la interfaz Swing obsoleta.
