@@ -154,8 +154,8 @@ modules:
     buildsystem: simple
     build-options:
       build-args:
-        # Flathub NO permite red en construccion; aqui se usa para no tener
-        # que vendorizar las dependencias de cargo en una medicion.
+        # Aqui se usa para no tener que vendorizar las dependencias de cargo
+        # en una medicion. En la construccion real desaparece (ADR-0013).
         - --share=network
     build-commands:
       - cargo build --release

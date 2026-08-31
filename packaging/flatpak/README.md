@@ -33,8 +33,17 @@ packaging/flatpak/verifica.sh
 Lo medido y las decisiones que salen de ello están en
 [`docs/research/flatpak-canal-unico.md`](../../docs/research/flatpak-canal-unico.md).
 
-## Pendiente antes de publicar en Flathub
+## Pendiente antes de publicar
+
+El canal es propio: bundle en GitHub Releases y repositorio ostree en
+`rfirma.sgomez.me`. Ver el
+[ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md).
 
 - **Construir sin red.** El módulo `sonda` declara `--share=network` para bajar
-  las dependencias de cargo. Flathub no lo permite: hay que vendorizarlas con
-  `flatpak-cargo-generator.py` a partir del `Cargo.lock`.
+  las dependencias de cargo. Se vendorizan con `flatpak-cargo-generator.py` a
+  partir del `Cargo.lock`. Ya no lo obliga Flathub: lo decidió por su cuenta el
+  [ADR-0013](../../docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md),
+  para que un fichero generado no entre en el CI sin que nadie lo mire.
+- **Publicar el repositorio ostree.** `flatpak build-export` +
+  `flatpak build-update-repo`, firmado con GPG, servido como ficheros estáticos,
+  más el `.flatpakref` con la huella de la clave.
