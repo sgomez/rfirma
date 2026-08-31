@@ -1,22 +1,22 @@
 # Puerta automatica del repositorio.
 #
-# Decidida en https://github.com/sgomez/rfirma/issues/11. Antes de esto,
-# docs/agents/code-host.md declaraba "CI: none" mientras
-# docs/agents/developer-defaults.md declaraba `merge: auto`: el pipeline de
-# /developer estaba autorizado a mergear a main sin ninguna comprobacion.
+# Decidida en https://github.com/sgomez/rfirma/issues/11 y ampliada a las tres
+# cadenas en https://github.com/sgomez/rfirma/issues/47, siguiendo el ADR-0014.
 #
-# QUE COMPRUEBA HOY: que el puente compila sin avisos nuevos y que las
-# dependencias de AutoFirma se resuelven en una maquina limpia. NO comprueba
-# que nada funcione, porque el repositorio todavia no tiene codigo de
-# produccion. Lee la seccion de CI de docs/agents/code-host.md antes de fiarte
-# de un check en verde.
+# QUE COMPRUEBA HOY: `just check` entero — el puente Java compila con
+# -Xlint:all, Biome y clippy pasan sobre TypeScript y Rust, las tres cadenas
+# construyen, y corren las pruebas de grada A (y B cuando existan) mas la
+# puerta CRAP. Sigue SIN comprobar que una firma valga: eso es grada C y vive
+# en el carril lento. Lee la seccion de CI de docs/agents/code-host.md antes de
+# fiarte de un check en verde.
 #
 # DOS CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
 # realimentacion de un agente, asi que lo que corre siempre tiene que ser
 # rapido:
 #
-#   check  ~48 s   en cada PR y en cada push a main
-#   native ~3 min  solo en etiquetas, a mano, y una vez por semana
+#   check   en cada PR y en cada push a main
+#   native  solo en etiquetas, a mano, con la etiqueta 'native', y una vez por
+#           semana
 #
 # El puente Java apenas se va a tocar una vez escrito, asi que reconstruir la
 # imagen nativa en cada PR seria pagar cuatro veces el carril rapido para no
@@ -35,8 +35,9 @@ on:
   workflow_dispatch:
   schedule:
     # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
-    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente, y de
-    # paso es la red de seguridad del carril lento.
+    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente, es la
+    # red de seguridad del carril lento, y ademas hace de vigilante del kit
+    # FNMT (job 'aviso-kit-fnmt').
     - cron: '17 4 * * 1'
 
 permissions:
@@ -47,8 +48,16 @@ env:
   # JNI_OnLoad de libawt.so con cualquier firma visible. El pom sigue
   # compilando a release 21.
   GRAALVM_VERSION: '25'
+  # Version FIJADA de cargo-crap (ADR-0014): un solo mantenedor y cuatro meses
+  # de vida, asi que una publicacion suya no puede poner en rojo un PR que no
+  # la ha tocado. Tiene que coincidir con `version_crap` del justfile.
+  VERSION_CRAP: '0.4.3'
+  CARGO_TERM_COLOR: always
 
 jobs:
+  # ==========================================================================
+  # CARRIL RAPIDO
+  # ==========================================================================
   check:
     name: Compila y resuelve dependencias
     runs-on: ubuntu-latest
@@ -78,11 +87,64 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - name: Instala just
-        run: sudo apt-get update && sudo apt-get install -y just
+      # package_json_file: la raiz no tiene package.json (ID-01), asi que sin
+      # esto la accion falla con "No pnpm version is specified".
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: rfirma-app/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
 
-      - run: just check
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt, llvm-tools-preview
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      # Tauri v2 en Linux compila contra WebKitGTK 4.1. Sin estos paquetes el
+      # carril entero se cae en el build.rs de javascriptcore-rs-sys con un
+      # "pkg-config exited with status code 1" que no dice de que va.
+      - name: Dependencias de sistema de Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            build-essential \
+            file
+
+      # Binarios preconstruidos: compilarlos desde fuente serian minutos en
+      # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
+      # hace falta porque no es una puerta, solo produce el lcov.
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Herramienta de cobertura y de CRAP
+        run: |
+          cargo binstall --no-confirm cargo-llvm-cov
+          cargo binstall --no-confirm "cargo-crap@${VERSION_CRAP}"
+
+      # RFIRMA_SIN_NATIVA=1 salta la comprobacion de librfirma_crypto.so que
+      # `just build` hace por el ADR-0013. NO es un atajo: el carril rapido no
+      # construye la imagen nativa A PROPOSITO —son los tres minutos que este
+      # workflow existe para no pagar en cada PR— y quien la comprueba de
+      # verdad es el job 'native' de abajo.
+      - name: just check
+        env:
+          RFIRMA_SIN_NATIVA: '1'
+        run: just check
+
+  # ==========================================================================
+  # CARRIL LENTO
+  # ==========================================================================
   native:
     name: Imagen nativa
     runs-on: ubuntu-latest
@@ -91,7 +153,7 @@ jobs:
 
       # El carril lento no corre por omision. Medido en este mismo
       # repositorio: native-image son 1 m 22 s y el job entero 3 m 14 s,
-      # frente a los 48 s del carril rapido. Cabe de sobra en un runner
+      # frente a los segundos del carril rapido. Cabe de sobra en un runner
       # estandar --la duda que dejo abierta el issue #11 queda resuelta--,
       # pero eso no es razon para pagarlo en cada PR.
       - name: Decide si hace falta
@@ -126,12 +188,137 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - name: Instala just
+      - uses: pnpm/action-setup@v4
         if: steps.alcance.outputs.construir == 'si'
-        run: sudo apt-get update && sudo apt-get install -y just
+        with:
+          package_json_file: rfirma-app/package.json
+      - uses: actions/setup-node@v4
+        if: steps.alcance.outputs.construir == 'si'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.alcance.outputs.construir == 'si'
+        with:
+          components: llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+        if: steps.alcance.outputs.construir == 'si'
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      - name: Dependencias de sistema
+        if: steps.alcance.outputs.construir == 'si'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            build-essential \
+            file \
+            poppler-utils
+
+      - uses: cargo-bins/cargo-binstall@main
+        if: steps.alcance.outputs.construir == 'si'
+      - name: Herramienta de cobertura y de CRAP
+        if: steps.alcance.outputs.construir == 'si'
+        run: |
+          cargo binstall --no-confirm cargo-llvm-cov
+          cargo binstall --no-confirm "cargo-crap@${VERSION_CRAP}"
 
       - name: Construye la libreria nativa
         if: steps.alcance.outputs.construir == 'si'
         run: |
           export GRAALVM_HOME="$JAVA_HOME"
           just native
+
+      # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
+      # —marcadas #[ignore]— se ejecutan de verdad. El carril rapido solo las
+      # compila (TD-02).
+      - name: Pruebas de grada C
+        if: steps.alcance.outputs.construir == 'si'
+        run: just test-nativo
+
+      # La misma medicion CRAP que el carril rapido pero SIN --allow sobre el
+      # modulo FFI: con la cobertura de la grada C incluida, ese modulo ya
+      # puede dar la cara (ADR-0014).
+      - name: CRAP sin exclusiones
+        if: steps.alcance.outputs.construir == 'si'
+        run: just crap-completo
+
+  # ==========================================================================
+  # VIGILANTE DEL KIT FNMT
+  # ==========================================================================
+  #
+  # La otra mitad de la bomba de relojeria del ADR-0014. La mitad dura vive en
+  # rfirma-app/src-tauri/tests/kit_fnmt.rs y falla el dia que el certificado
+  # caduque; este avisa 90 dias antes abriendo una issue.
+  #
+  # Y VIVE AQUI, NO EN EL CARRIL RAPIDO, A PROPOSITO: avisar alli rompería
+  # todos los PRs a la vez, un dia cualquiera de 2028, con merge automatico
+  # puesto. El cron es el unico sitio donde avisar no bloquea a nadie.
+  aviso-kit-fnmt:
+    name: Caducidad del kit FNMT
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      # notAfter de testdata/fnmt/activo-rsa.p12. Tiene que coincidir con
+      # CADUCIDAD_ACTIVO_ISO de tests/kit_fnmt.rs y con testdata/fnmt/README.md.
+      CADUCIDAD: '2028-10-30'
+      STCERES: 'https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Avisa si quedan menos de 90 dias
+        run: |
+          set -euo pipefail
+          restantes=$(( ( $(date -u -d "$CADUCIDAD" +%s) - $(date -u +%s) ) / 86400 ))
+          echo "Quedan $restantes dias para el $CADUCIDAD." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$restantes" -gt 90 ]; then
+            exit 0
+          fi
+
+          titulo="El kit FNMT de testdata/fnmt/ caduca el $CADUCIDAD"
+          # Una sola issue viva: sin esto el cron abriria una cada lunes
+          # durante trece semanas.
+          abierta=$(gh issue list --state open --search "$titulo in:title" \
+            --json number --jq 'length')
+          if [ "$abierta" != "0" ]; then
+            echo "Ya hay una issue abierta; no se abre otra." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # El cuerpo va a un fichero, no a un $(cat <<...) en linea: dentro de
+          # un bloque YAML el heredoc conservaria la sangria de cada linea y el
+          # markdown llegaria a la issue como un bloque de codigo.
+          cuerpo=$(mktemp)
+          {
+            printf '`testdata/fnmt/activo-rsa.p12` caduca el **%s**: quedan **%s dias**.\n\n' \
+              "$CADUCIDAD" "$restantes"
+            printf 'Es el certificado del camino feliz, el que esta en el token SoftHSM `rfirma-test`.\n'
+            printf 'Cuando caduque, `rfirma-app/src-tauri/tests/kit_fnmt.rs` empezara a fallar en el\n'
+            printf 'carril rapido y bloqueara todas las entregas.\n\n'
+            printf '## Que hay que hacer\n\n'
+            printf '1. Descargar el kit nuevo de <%s>.\n' "$STCERES"
+            printf '2. Sustituir los tres `.p12` de `testdata/fnmt/`.\n'
+            printf '3. Actualizar las huellas SHA-256 y las fechas en `testdata/fnmt/README.md` y en\n'
+            printf '   `rfirma-app/src-tauri/tests/kit_fnmt.rs` (`HUELLAS`, `CADUCIDAD_ACTIVO_EPOCH`,\n'
+            printf '   `CADUCIDAD_ACTIVO_ISO`), y la `CADUCIDAD` de este workflow.\n'
+            printf '4. Reimportar el certificado activo en SoftHSM segun\n'
+            printf '   `docs/research/token-pkcs11-pruebas.md`.\n\n'
+            printf 'Abierta automaticamente por el cron semanal de `.github/workflows/ci.yml`\n'
+            printf '(ADR-0014, TD-07).\n'
+          } > "$cuerpo"
+
+          gh issue create --title "$titulo" --label needs-triage --body-file "$cuerpo"

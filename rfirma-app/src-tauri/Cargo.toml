@@ -1,0 +1,35 @@
+[package]
+name = "rfirma"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "rfirma: firma y cofirma de PDFs en PAdES con firma visible."
+license = "EUPL-1.2"
+publish = false
+
+# El binario se llama igual que `command:` en el manifiesto flatpak
+# (packaging/flatpak/me.sgomez.rfirma.yml). Si cambias uno, cambia el otro.
+[[bin]]
+name = "rfirma"
+path = "src/main.rs"
+
+[lib]
+name = "rfirma_lib"
+path = "src/lib.rs"
+
+[build-dependencies]
+# ADR-0013: build.rs se queda en tauri_build::build(). No invoca a Maven ni a
+# native-image jamás; de eso se encarga `just native`.
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Sin serde ni serde_json todavia: hoy no hay ningun #[tauri::command] que
+# serialice nada, y una dependencia que nadie importa es ruido. Las anade el
+# sub-issue que escriba el primer comando.
+tauri = { version = "2", features = [] }
+
+[dev-dependencies]
+sha2 = "0.10"
+
+[profile.release]
+strip = true
