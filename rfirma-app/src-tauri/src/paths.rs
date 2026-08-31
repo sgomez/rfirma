@@ -190,6 +190,40 @@ impl Paths {
     }
 }
 
+/// El nombre de la carpeta de documentos cuando nadie dice otra cosa.
+const DOCUMENTS_DIRECTORY: &str = "Documents";
+
+/// La carpeta de documentos del usuario, que es donde cae lo firmado cuando no
+/// se ha elegido otra (ADR-0011).
+///
+/// Está aquí y no en [`crate::destination`] por la razón de siempre: dónde
+/// tiene sus documentos un usuario depende del sistema operativo, y el ID-35
+/// pone ese conocimiento en un solo fichero. Lo que hace el destino con la
+/// ruta —comprobarla sin crearla jamás— no depende de nada de esto.
+pub fn documents_folder() -> Result<PathBuf, HomeUnknown> {
+    documents_folder_of(Platform::CURRENT, &|name| std::env::var_os(name))
+}
+
+/// La carpeta de documentos de `platform`, leyendo el entorno con
+/// `environment`. Pública por lo mismo que [`Paths::resolve`]: para probar las
+/// tres columnas sin tocar el entorno del proceso.
+///
+/// **No se lee `~/.config/user-dirs.dirs`.** En un sistema en castellano la
+/// carpeta se llama `Documentos` y `XDG_DOCUMENTS_DIR` es quien lo dice; si no
+/// lo dice, el destino que sale de aquí no existirá, y entonces la aplicación
+/// **avisa y no escribe** (ID-38). Eso es lo correcto: inventarse la carpeta
+/// —o crearla— es justo el fallo silencioso que el ADR-0011 cierra.
+pub fn documents_folder_of(
+    platform: Platform,
+    environment: &dyn Fn(&str) -> Option<OsString>,
+) -> Result<PathBuf, HomeUnknown> {
+    match platform {
+        Platform::Linux => xdg_directory(environment, "XDG_DOCUMENTS_DIR", DOCUMENTS_DIRECTORY),
+        Platform::Windows => Ok(home(environment, "USERPROFILE")?.join(DOCUMENTS_DIRECTORY)),
+        Platform::MacOs => Ok(home(environment, "HOME")?.join(DOCUMENTS_DIRECTORY)),
+    }
+}
+
 /// `$XDG_*_HOME` si está y es absoluta, y si no `$HOME/<relativa>`.
 ///
 /// La especificación XDG manda **ignorar** un valor relativo, no tratarlo como
@@ -416,6 +450,60 @@ mod tests {
         let paths = Paths::under("/tmp/prueba");
 
         assert_ne!(paths.config_file().parent(), paths.state_file().parent());
+    }
+
+    #[test]
+    fn the_documents_folder_follows_the_xdg_variable_when_the_system_localises_it() {
+        let documents = documents_folder_of(
+            Platform::Linux,
+            &environment(&[
+                ("HOME", "/home/quien"),
+                ("XDG_DOCUMENTS_DIR", "/home/quien/Documentos"),
+            ]),
+        )
+        .expect("deberia resolverse");
+
+        assert_eq!(documents, PathBuf::from("/home/quien/Documentos"));
+    }
+
+    #[test]
+    fn without_the_xdg_variable_the_documents_folder_is_the_english_default() {
+        let documents =
+            documents_folder_of(Platform::Linux, &environment(&[("HOME", "/home/quien")]))
+                .expect("deberia resolverse");
+
+        assert_eq!(documents, PathBuf::from("/home/quien/Documents"));
+    }
+
+    #[test]
+    fn the_other_two_systems_hang_the_documents_folder_off_their_own_profile() {
+        let windows = documents_folder_of(
+            Platform::Windows,
+            &environment(&[("USERPROFILE", r"C:\Users\quien")]),
+        )
+        .expect("deberia resolverse");
+        let macos = documents_folder_of(Platform::MacOs, &environment(&[("HOME", "/Users/quien")]))
+            .expect("deberia resolverse");
+
+        assert_eq!(windows, PathBuf::from(r"C:\Users\quien").join("Documents"));
+        assert_eq!(macos, PathBuf::from("/Users/quien/Documents"));
+    }
+
+    #[test]
+    fn resolving_the_documents_folder_does_not_create_it() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let home = directory.path().join("quien");
+
+        let documents = documents_folder_of(
+            Platform::Linux,
+            &environment(&[("HOME", &home.to_string_lossy())]),
+        )
+        .expect("deberia resolverse");
+
+        assert!(
+            !documents.exists(),
+            "resolver una ruta no toca el disco, y la de destino no se crea nunca (ID-38)"
+        );
     }
 
     /// La prueba de los permisos vive aquí, y no junto a quien los pide, porque

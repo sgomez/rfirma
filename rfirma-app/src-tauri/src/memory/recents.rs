@@ -8,7 +8,11 @@
 //!   no se deduce de la ruta. Se revalida solo el documento que se selecciona,
 //!   comparando el `mtime`.
 //! - **Se identifican por su ruta absoluta canónica.** Nada de hashes ni
-//!   inodos: rompen con las copias y con los sistemas de ficheros de red.
+//!   inodos: rompen con las copias y con los sistemas de ficheros de red. Es
+//!   además el mismo criterio que usa el portal de flatpak, cuyo permiso va
+//!   con la **ruta** y no con el inodo (ID-38, ADR-0011): las dos mitades de
+//!   esa coincidencia están atadas por las pruebas de
+//!   [`crate::destination::portal`].
 //! - **Una ruta que ya no responde no se purga en silencio.** La fila se marca
 //!   [`ShownBadge::Unavailable`] y **sigue en la lista**: un PDF en un USB
 //!   desmontado no está borrado, y decírselo al usuario es más útil que hacerlo
