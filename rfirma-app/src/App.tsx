@@ -237,7 +237,6 @@ export function App({
         <PinDialog
           certificate={certificate.certificate}
           failure={signing.state.failure}
-          busy={false}
           onSubmit={(pin) => void signing.submitPin(pin)}
           onCancel={signing.cancel}
         />

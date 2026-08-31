@@ -117,7 +117,9 @@ export function SigningPanel({
           <p className="rf-prose panel__document">{document.name}</p>
           <p className="rf-hint">
             {[
-              t("panel.document.pages", { pages: document.pages }),
+              document.pages === 1
+                ? t("panel.document.pages.one")
+                : t("panel.document.pages.many", { pages: document.pages }),
               document.sizeBytes === null ? null : formatSize(document.sizeBytes, i18n.language),
             ]
               .filter((piece) => piece !== null)

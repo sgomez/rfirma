@@ -143,7 +143,10 @@ export const gl: UntranslatedCatalog = {
   },
   panel: {
     document: {
-      pages: "",
+      pages: {
+        one: "",
+        many: "",
+      },
     },
     coSignature: {
       one: "",

@@ -137,7 +137,10 @@ export const en: Catalog = {
   },
   panel: {
     document: {
-      pages: "{{pages}} pages",
+      pages: {
+        one: "1 page",
+        many: "{{pages}} pages",
+      },
     },
     coSignature: {
       one: "It already carries 1 signature: yours will be a countersignature.",

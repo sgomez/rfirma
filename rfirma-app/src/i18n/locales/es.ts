@@ -183,7 +183,10 @@ export const es = {
    */
   panel: {
     document: {
-      pages: "{{pages}} páginas",
+      pages: {
+        one: "1 página",
+        many: "{{pages}} páginas",
+      },
     },
     coSignature: {
       one: "Ya lleva 1 firma: la tuya será una cofirma.",

@@ -143,7 +143,10 @@ export const ca: UntranslatedCatalog = {
   },
   panel: {
     document: {
-      pages: "",
+      pages: {
+        one: "",
+        many: "",
+      },
     },
     coSignature: {
       one: "",

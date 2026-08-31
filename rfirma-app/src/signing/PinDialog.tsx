@@ -12,8 +12,6 @@ interface PinDialogProps {
    * los que se resuelven dentro del diálogo (ver `belongsToPinDialog`).
    */
   failure: TokenFailure | null;
-  /** Mientras el token comprueba el PIN, no se acepta un segundo envío. */
-  busy: boolean;
   onSubmit: (pin: string) => void;
   onCancel: () => void;
 }
@@ -36,7 +34,7 @@ interface PinDialogProps {
  * Sin color de error: el sistema de diseño no lo tiene. El fallo se señala con
  * borde, peso y glifo (`.rf-field--error`).
  */
-export function PinDialog({ certificate, failure, busy, onSubmit, onCancel }: PinDialogProps) {
+export function PinDialog({ certificate, failure, onSubmit, onCancel }: PinDialogProps) {
   const { t } = useTranslation();
   const [pin, setPin] = useState("");
   const titleId = useId();
@@ -114,7 +112,7 @@ export function PinDialog({ certificate, failure, busy, onSubmit, onCancel }: Pi
               <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
                 {t("actions.cancel")}
               </button>
-              <button type="submit" className="rf-btn rf-btn--primary" disabled={busy}>
+              <button type="submit" className="rf-btn rf-btn--primary">
                 {t("pin.submit")}
               </button>
             </div>

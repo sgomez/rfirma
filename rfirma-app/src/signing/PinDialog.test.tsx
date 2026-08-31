@@ -27,7 +27,6 @@ function renderDialog(props: Partial<Parameters<typeof PinDialog>[0]> = {}) {
     <PinDialog
       certificate={certificate}
       failure={null}
-      busy={false}
       onSubmit={noop}
       onCancel={noop}
       {...props}
@@ -104,11 +103,5 @@ describe("PinDialog", () => {
     expect(screen.getByText("CKR_PIN_LOCKED (C_Login)")).toBeInTheDocument();
     expect(screen.queryByLabelText("PIN")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Firmar" })).not.toBeInTheDocument();
-  });
-
-  it("does not take a second push while the card is checking the PIN", () => {
-    renderDialog({ busy: true });
-
-    expect(screen.getByRole("button", { name: "Firmar" })).toBeDisabled();
   });
 });

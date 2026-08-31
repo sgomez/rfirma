@@ -56,6 +56,20 @@ function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
 describe("SigningPanel", () => {
+  it("counts the pages in singular when the document has only one", () => {
+    renderPanel({
+      document: { name: "instancia.pdf", pages: 1, sizeBytes: null, signatures: null },
+    });
+
+    expect(screen.getByText("1 página")).toBeInTheDocument();
+  });
+
+  it("counts the pages in plural when the document has more than one", () => {
+    renderPanel();
+
+    expect(screen.getByText(/^27 páginas/)).toBeInTheDocument();
+  });
+
   it("covers the certificate, the visible-signature toggle, the page, the checkboxes and the reason", async () => {
     const user = userEvent.setup();
     renderPanel({
