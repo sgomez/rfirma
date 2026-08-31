@@ -43,9 +43,17 @@ Proyecto de Claude Design del repo:
 - **URL**: <https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132>
 - **projectId**: `c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132`
 
-Cada caso de uso es un fichero `<caso-de-uso>.dc.html` en la raíz del proyecto
-(`firmar-pdf-dnie.dc.html`, `validar-firma.dc.html`…). El `Canvas.dc.html`
-inicial es el lienzo de arranque; no metas flujos nuevos dentro de él.
+**Corrección medida sobre el terreno:** un `.dc.html` **no** es un caso de uso,
+es **un artboard**. El caso de uso es el proyecto entero, y su reparto en
+pantallas-estado lo fija `canvas.json`, que además admite **páginas** con
+nombre. Así que un caso de uso = un fichero `Main.dc.html` (el artboard de
+entrada, obligatorio) más un `<Pantalla>.dc.html` por pantalla-estado, y las
+páginas de `canvas.json` separan conjuntos (variantes frente a estados). Si
+llega un segundo caso de uso y las páginas no bastan para mantenerlos
+separados, entonces sí toca un proyecto por caso de uso.
+
+El `Canvas.dc.html` inicial estaba vacío y se ha borrado: `Main.dc.html` es
+ahora el artboard de entrada.
 
 Si el editor de canvas no llega a mostrar más de un lienzo por proyecto, la
 alternativa es un **proyecto por caso de uso** creado con la skill `design`;
@@ -138,6 +146,11 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
-| _(ninguno todavía)_ | | | |
+| _(ninguno en vuelo)_ | | | |
+
+El caso de uso **firmar un PDF en local** se validó el 31/08/2026 y salió de
+esta tabla: su canvas está enlazado desde la sección «Decisiones» de cada ficha
+de `docs/design/`, empezando por
+[ventana-principal.md](../design/ventana-principal.md).
 
 Estados: `en revisión` (esperando veredicto del usuario) / `validado (YYYY-MM-DD)`.

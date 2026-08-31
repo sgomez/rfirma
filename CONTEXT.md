@@ -35,6 +35,20 @@ Estándar que define cómo se estructura y se incrusta una firma en un documento
 CAdES, PAdES, XAdES y FacturaE.
 _Avoid_: tipo de firma, perfil de firma
 
+**Firma visible**:
+Recuadro que se estampa sobre una página del PDF para que la firma se vea al
+abrir el documento. Es opcional y no aporta validez: la firma electrónica está
+en la estructura del PDF, se dibuje o no. Su apariencia forma parte del
+documento cuyo hash se firma, así que se decide antes de la prefirma.
+_Avoid_: sello, marca de agua, firma gráfica
+
+**Rúbrica**:
+Imagen de la firma manuscrita del titular, escaneada, que puede mostrarse
+dentro del recuadro de la firma visible. Es un adorno del recuadro, no la
+firma: sin rúbrica la firma sigue siendo válida, y una rúbrica sin firma
+electrónica no es nada.
+_Avoid_: firma manuscrita (a secas), imagen de firma, sello
+
 ### Identidad y claves
 
 **Certificado**:
