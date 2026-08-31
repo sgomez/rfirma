@@ -56,6 +56,30 @@ export const en: Catalog = {
         title: "Your saved rubric could not be read",
         body: "Choose the image again to replace it.",
       },
+      incorrectPin: {
+        title: "The PIN is not correct",
+        body: "Type it again. The card locks after a few failed attempts.",
+      },
+      pinLocked: {
+        title: "The card is locked",
+        body: "It locked after too many failed PIN attempts. Unlock it with its PUK before signing again.",
+      },
+      tokenAbsent: {
+        title: "We cannot find the card",
+        body: "Check that it is still inserted and that the reader is connected, then try again.",
+      },
+      expiredSession: {
+        title: "The session with the card expired",
+        body: "Try again: a new session will be opened and we will ask for the PIN once more.",
+      },
+      moduleNotFound: {
+        title: "The card module could not be loaded",
+        body: "Check that the PKCS#11 module is where you said it was, or choose another one.",
+      },
+      certificateNotFound: {
+        title: "The certificate is no longer on the card",
+        body: "Look for the certificates again and choose one of those that turn up.",
+      },
     },
   },
   window: {
@@ -156,6 +180,16 @@ export const en: Catalog = {
       unwritable: "Cannot write in {{folder}}",
       retry: "Try again",
     },
+  },
+  pin: {
+    title: "Enter the card PIN",
+    signingAs: "{{holder}} · {{idNumber}}",
+    label: "PIN",
+    hint: "The PIN is used for this signature only, and is not stored anywhere.",
+    incorrect: "Wrong PIN. You have {{attempts}} attempts left before the card locks.",
+    incorrectOne: "Wrong PIN. You have 1 attempt left before the card locks.",
+    incorrectUnknown: "Wrong PIN. The card locks after a few failed attempts.",
+    submit: "Sign",
   },
   preferences: {
     title: "Preferences",

@@ -74,6 +74,30 @@ export const es = {
         title: "No hemos podido leer tu rúbrica guardada",
         body: "Vuelve a elegir la imagen para reemplazarla.",
       },
+      incorrectPin: {
+        title: "El PIN no es correcto",
+        body: "Vuelve a introducirlo. La tarjeta se bloquea tras varios intentos fallidos.",
+      },
+      pinLocked: {
+        title: "La tarjeta está bloqueada",
+        body: "Se ha bloqueado tras demasiados intentos fallidos con el PIN. Desbloquéala con su PUK antes de volver a firmar.",
+      },
+      tokenAbsent: {
+        title: "No encontramos la tarjeta",
+        body: "Comprueba que sigue insertada y que el lector está conectado, y vuelve a intentarlo.",
+      },
+      expiredSession: {
+        title: "La sesión con la tarjeta ha caducado",
+        body: "Vuelve a intentarlo: se abrirá una sesión nueva y te pediremos el PIN otra vez.",
+      },
+      moduleNotFound: {
+        title: "No hemos podido cargar el módulo de la tarjeta",
+        body: "Comprueba que el módulo PKCS#11 está donde dijiste, o elige otro.",
+      },
+      certificateNotFound: {
+        title: "El certificado ya no está en la tarjeta",
+        body: "Vuelve a buscar los certificados y elige uno de los que haya.",
+      },
     },
   },
   /**
@@ -203,6 +227,21 @@ export const es = {
       unwritable: "No se puede escribir en {{folder}}",
       retry: "Volver a intentarlo",
     },
+  },
+  /**
+   * El diálogo del PIN (docs/design/dialogo-pin.md): el único momento en que el
+   * usuario aporta el secreto que desbloquea la clave privada.
+   */
+  pin: {
+    title: "Introduce el PIN de la tarjeta",
+    signingAs: "{{holder}} · {{idNumber}}",
+    label: "PIN",
+    hint: "El PIN se usa solo para esta firma y no se guarda en ningún sitio.",
+    incorrect:
+      "PIN incorrecto. Te quedan {{attempts}} intentos antes de que la tarjeta se bloquee.",
+    incorrectOne: "PIN incorrecto. Te queda 1 intento antes de que la tarjeta se bloquee.",
+    incorrectUnknown: "PIN incorrecto. La tarjeta se bloquea tras varios intentos fallidos.",
+    submit: "Firmar",
   },
   /** Los ajustes (docs/design/preferencias.md). Se aplican al hacerlos. */
   preferences: {

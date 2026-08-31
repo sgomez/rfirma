@@ -62,6 +62,30 @@ export const eu: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      incorrectPin: {
+        title: "",
+        body: "",
+      },
+      pinLocked: {
+        title: "",
+        body: "",
+      },
+      tokenAbsent: {
+        title: "",
+        body: "",
+      },
+      expiredSession: {
+        title: "",
+        body: "",
+      },
+      moduleNotFound: {
+        title: "",
+        body: "",
+      },
+      certificateNotFound: {
+        title: "",
+        body: "",
+      },
     },
   },
   window: {
@@ -161,6 +185,16 @@ export const eu: UntranslatedCatalog = {
       unwritable: "",
       retry: "",
     },
+  },
+  pin: {
+    title: "",
+    signingAs: "",
+    label: "",
+    hint: "",
+    incorrect: "",
+    incorrectOne: "",
+    incorrectUnknown: "",
+    submit: "",
   },
   preferences: {
     title: "",
