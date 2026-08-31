@@ -6,10 +6,26 @@ flags override them: `--parallel` / `--sequential`, `--auto-merge` /
 `--no-auto-merge` and `--build-oversized`.
 
 ```
-execution: parallel
+execution: sequential
 merge: manual
 oversized: escalate
 ```
+
+> **Por qué `sequential` y no `parallel`.** El corte del spec
+> [#46](https://github.com/sgomez/rfirma/issues/46) es **horizontal por módulo**, que es
+> justo la forma que invita a construir en paralelo, y el
+> [#10](https://github.com/sgomez/rfirma/issues/10) llegó a escribir `parallel` en su
+> apartado *Decidido ya*. Se cambia por un hecho que ninguna de esas decisiones tuvo
+> delante: **el repositorio arranca de cero**. Ocho sub-issues simultáneos en la oleada
+> más ancha no se pisan en su módulo, se pisan en el `Cargo.toml`, el `package.json`, el
+> `justfile` y el `ci.yml` — ficheros compartidos que en un proyecto ya escrito casi nadie
+> toca y que aquí toca todo el mundo. El coste de `sequential` es tiempo de reloj; el de
+> `parallel` sería resolver conflictos de merge en los cimientos. El corte horizontal **no
+> cambia**: sigue siendo la unidad de trabajo, solo que se entregan de uno en uno, en el
+> orden que dictan las aristas `blocked_by` nativas del #46.
+>
+> Reevaluarlo cuando el andamiaje esté puesto y estable tiene sentido: `--parallel` en la
+> invocación lo activa sin tocar este fichero.
 
 - `execution` — `parallel` builds independent sub-issues concurrently in
   waves; `sequential` delivers one sub-issue fully before the next starts.

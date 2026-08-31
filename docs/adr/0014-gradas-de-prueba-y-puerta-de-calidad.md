@@ -4,8 +4,14 @@ El [ADR-0013](0013-estructura-del-repositorio-y-cadena-de-compilacion.md) fijó 
 existen; este fija **qué se ejecuta dentro de ellas y en qué carril**, que era lo que
 [#11](https://github.com/sgomez/rfirma/issues/11) dejó a propósito en la niebla por no haber
 código que probar. Con [#10](https://github.com/sgomez/rfirma/issues/10) aparece, y su corte es
-**horizontal por módulo y en paralelo**: sin esta decisión cada sub-issue se inventa su propio
-criterio de terminado.
+**horizontal por módulo**: sin esta decisión cada sub-issue se inventa su propio criterio de
+terminado.
+
+> Este ADR decía «horizontal por módulo **y en paralelo**». La entrega pasó a
+> `execution: sequential` al publicar el [#46](https://github.com/sgomez/rfirma/issues/46),
+> porque el repositorio arranca de cero y los sub-issues se pisarían en los ficheros de
+> cimientos, no en su módulo. El corte horizontal no cambia; la razón está en
+> `docs/agents/developer-defaults.md`.
 
 ## Las cuatro gradas
 
@@ -96,9 +102,12 @@ exclusión**, y ahí ese módulo da la cara con la cobertura de la grada C inclu
 ### Puerta absoluta, sin trinquete
 
 Umbral fijo, **sin `--baseline` ni `--fail-regression`**. El trinquete exige versionar un JSON
-que cambia en casi cada PR, y con el `execution: parallel` de #10 eso son conflictos de merge en
-un fichero generado. Su única ventaja —amnistiar deuda existente— no aplica: hoy el repositorio
-tiene **cero líneas de Rust**.
+que cambia en casi cada PR, y eso son conflictos de merge en un fichero generado. Su única
+ventaja —amnistiar deuda existente— no aplica: hoy el repositorio tiene **cero líneas de Rust**.
+
+> El argumento original apoyaba esto en el `execution: parallel` que entonces declaraba
+> `developer-defaults.md`. Con `sequential` ese apoyo se debilita, pero la decisión se sostiene
+> sola sobre el segundo motivo, que es el fuerte: no hay deuda que amnistiar.
 
 ### El riesgo de la herramienta, dicho en voz alta
 
