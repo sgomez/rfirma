@@ -55,4 +55,26 @@ export const en: Catalog = {
     recents: "Recent",
     remove: "Remove from the list",
   },
+  preferences: {
+    title: "Preferences",
+    rememberVisibleSignature: {
+      label: "Remember the last visible signature setup",
+      hint: "The page, the position and the contents of the box are reused on the next document.",
+    },
+    rememberActivity: {
+      label: "Remember my activity",
+      hint: "Covers the recent documents and the certificate used last time.",
+      clear: "Empty the list",
+      confirm: {
+        body: "Turning it off erases what is already remembered: the recent documents and the certificate used last time.",
+        accept: "Turn off and erase",
+      },
+    },
+    destination: {
+      label: "Where the signed document is saved",
+    },
+    language: {
+      label: "Language",
+    },
+  },
 };

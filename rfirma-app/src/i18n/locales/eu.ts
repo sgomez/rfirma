@@ -61,4 +61,26 @@ export const eu: UntranslatedCatalog = {
     recents: "",
     remove: "",
   },
+  preferences: {
+    title: "",
+    rememberVisibleSignature: {
+      label: "",
+      hint: "",
+    },
+    rememberActivity: {
+      label: "",
+      hint: "",
+      clear: "",
+      confirm: {
+        body: "",
+        accept: "",
+      },
+    },
+    destination: {
+      label: "",
+    },
+    language: {
+      label: "",
+    },
+  },
 };

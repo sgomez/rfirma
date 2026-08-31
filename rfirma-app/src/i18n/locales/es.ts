@@ -88,4 +88,27 @@ export const es = {
     recents: "Recientes",
     remove: "Quitar de la lista",
   },
+  /** Los ajustes (docs/design/preferencias.md). Se aplican al hacerlos. */
+  preferences: {
+    title: "Preferencias",
+    rememberVisibleSignature: {
+      label: "Recordar la última configuración de firma visible",
+      hint: "La página, la posición y el contenido del recuadro se reutilizan en el siguiente documento.",
+    },
+    rememberActivity: {
+      label: "Recordar mi actividad",
+      hint: "Cubre los documentos recientes y el certificado usado la última vez.",
+      clear: "Vaciar la lista",
+      confirm: {
+        body: "Al apagarlo se borra lo ya recordado: los documentos recientes y el certificado usado la última vez.",
+        accept: "Apagar y borrar",
+      },
+    },
+    destination: {
+      label: "Dónde se guarda el documento firmado",
+    },
+    language: {
+      label: "Idioma",
+    },
+  },
 };

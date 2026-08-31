@@ -1,0 +1,23 @@
+/*
+ * Preferencias (docs/design/preferencias.md): un `.rf-dialog` de 480 px —el
+ * ancho que ya trae la clase— sobre `.rf-scrim`, con los ajustes separados por
+ * `.rf-divider` y un único botón «Cerrar» abajo a la derecha.
+ */
+
+.preferences__clear {
+  align-self: flex-start;
+}
+
+.preferences__confirm {
+  gap: var(--rf-space-sm);
+  background: var(--rf-bg);
+}
+
+.preferences__confirm-actions {
+  justify-content: flex-end;
+}
+
+.preferences__footer {
+  display: flex;
+  justify-content: flex-end;
+}
