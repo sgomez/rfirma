@@ -59,6 +59,14 @@ del recuadro puede haber texto, la rúbrica del titular o las dos cosas; el
 texto lo redacta rFirma y sigue al idioma de la aplicación.
 _Avoid_: sello, marca de agua, firma gráfica
 
+**Espacio de usuario**:
+Sistema de coordenadas del propio PDF, en puntos, con el origen donde lo ponga
+la MediaBox de la página. Es donde rFirma guarda el recuadro de la firma
+visible: los píxeles del visor se derivan de él en cada pintada, nunca al
+revés, porque un recuadro guardado en píxeles se desplaza sobre el documento
+en cuanto cambia el zoom.
+_Avoid_: coordenadas del PDF, puntos de pantalla, píxeles
+
 **Rúbrica**:
 Imagen de la firma manuscrita del titular, escaneada, que puede mostrarse
 dentro del recuadro de la firma visible. Es un adorno del recuadro, no la

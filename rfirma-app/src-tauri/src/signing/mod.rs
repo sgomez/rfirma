@@ -10,9 +10,11 @@
 pub mod config;
 pub mod language;
 pub mod layer2_text;
+pub mod placement;
 pub mod session_seal;
 
 pub use config::{Setting, SignatureBox, SignatureConfig, SUB_FILTER};
 pub use language::Language;
 pub use layer2_text::{compose_layer2_text, mask_id_number, VisibleTextFields};
+pub use placement::{MediaBox, OutOfPage, Page, Rotation, UserSpaceRect, ViewerRect};
 pub use session_seal::{SealMismatch, SessionSeal};
