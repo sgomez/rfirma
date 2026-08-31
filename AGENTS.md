@@ -34,7 +34,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 ---
 
 ## 🛠️ Herramientas y Estado de Configuración del Entorno
-* **GraalVM JDK:** Instalado en el sistema (versión Java 21). La herramienta `native-image` está disponible en el PATH.
+* **GraalVM JDK:** Hay **dos** instalados por SDKMAN: `21-graalce` (por defecto) y `25.3.4+1.r25-graalce`. La herramienta `native-image` está disponible en el PATH. **Cuál se usa está pendiente de decidir**: la línea Java 21 no puede compilar la firma visible en una imagen `--shared` (aborta dentro del `JNI_OnLoad` de `libawt.so`) y la 25 sí. Ver `docs/research/graalvm-libawt-shared.md` y el issue #6.
 * **Maven:** Instalado y configurado en el PATH.
 * **Cargo (Rust):** Instalado y configurado.
 * **Prueba de Concepto FFI:** Se encuentra una PoC funcional del enlace FFI en `clienteafirma/autofirma-native-bridge/rust-poc`. Compila y se ejecuta con éxito.
