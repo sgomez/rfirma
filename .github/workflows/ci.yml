@@ -69,21 +69,20 @@ jobs:
   native:
     name: Imagen nativa
     runs-on: ubuntu-latest
-    # native-image tarda minutos y consume mucha memoria. Se construye siempre
-    # en main y a mano, y en un PR solo si toca al puente o a como se
-    # construye: no tiene sentido gastarlo en un PR que solo toca la interfaz.
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'native')
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # native-image tarda minutos y consume mucha memoria. Se construye
+      # siempre en main y a mano, y en un PR solo si toca al puente o a como
+      # se construye: no tiene sentido gastarlo en un PR que solo toca la
+      # interfaz. La etiqueta 'native' lo fuerza.
       - name: Decide si hace falta
         id: alcance
         run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
+          if [ "${{ github.event_name }}" != "pull_request" ] \
+             || ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
             echo "construir=si" >> "$GITHUB_OUTPUT"
             exit 0
           fi

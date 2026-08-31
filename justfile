@@ -14,7 +14,7 @@
 # de libawt.so con cualquier firma visible, asi que no sirve para construir.
 # El pom sigue compilando a release 21: cambia el JDK que construye, no el
 # lenguaje de destino.
-export GRAALVM_HOME := env("GRAALVM_HOME", home_directory() / ".sdkman/candidates/java/25.3.4+1.r25-graalce")
+graalvm_por_defecto := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
 
 bridge := justfile_directory() / "rfirma-native-bridge"
 
@@ -30,8 +30,9 @@ tools:
     for t in mvn git java; do
         command -v "$t" >/dev/null || { echo "falta: $t"; fallan=1; }
     done
-    if [ ! -x "$GRAALVM_HOME/bin/native-image" ]; then
-        echo "falta native-image en GRAALVM_HOME=$GRAALVM_HOME"
+    graal="${GRAALVM_HOME:-{{graalvm_por_defecto}}}"
+    if [ ! -x "$graal/bin/native-image" ]; then
+        echo "falta native-image en $graal"
         echo "  (solo hace falta para 'just native'; instala GraalVM CE 25)"
     fi
     [ "$fallan" = 0 ] || exit 1
@@ -73,9 +74,10 @@ check: tools lint build test
 native: build
     #!/usr/bin/env bash
     set -euo pipefail
+    graal="${GRAALVM_HOME:-{{graalvm_por_defecto}}}"
     dir="{{bridge}}/target/native"
     mkdir -p "$dir" && cd "$dir"
-    "$GRAALVM_HOME/bin/native-image" --shared -H:Name=librfirma_crypto --no-fallback \
+    "$graal/bin/native-image" --shared -H:Name=librfirma_crypto --no-fallback \
         -cp "{{bridge}}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{bridge}}/target/cp.txt)"
     ls -la "$dir"/*.so
 
