@@ -2787,6 +2787,7 @@ dependencies = [
  "base64 0.22.1",
  "cryptoki",
  "image",
+ "libloading 0.8.9",
  "rsa",
  "serde",
  "serde_json",

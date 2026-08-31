@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=sonda rfirma
-Exec=rfirma-probe
+Name=rfirma
+Exec=rfirma
 Icon=me.sgomez.rfirma
 Terminal=false
 Categories=Utility;
