@@ -38,6 +38,70 @@ export const eu: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      notAnAcceptedImage: {
+        title: "",
+        body: "",
+      },
+      damagedImage: {
+        title: "",
+        body: "",
+      },
+      imageTooLarge: {
+        title: "",
+        body: "",
+      },
+      sourceUnreadable: {
+        title: "",
+        body: "",
+      },
+      storeUnwritable: {
+        title: "",
+        body: "",
+      },
+      storeUnreadable: {
+        title: "",
+        body: "",
+      },
+      incorrectPin: {
+        title: "",
+        body: "",
+      },
+      pinLocked: {
+        title: "",
+        body: "",
+      },
+      tokenAbsent: {
+        title: "",
+        body: "",
+      },
+      expiredSession: {
+        title: "",
+        body: "",
+      },
+      moduleNotFound: {
+        title: "",
+        body: "",
+      },
+      certificateNotFound: {
+        title: "",
+        body: "",
+      },
+      certificateExpired: {
+        title: "",
+        body: "",
+      },
+      certificateNotYetValid: {
+        title: "",
+        body: "",
+      },
+      certificateRevoked: {
+        title: "",
+        body: "",
+      },
+      certificateUnreadable: {
+        title: "",
+        body: "",
+      },
     },
   },
   window: {
@@ -76,6 +140,96 @@ export const eu: UntranslatedCatalog = {
     signatureBox: "",
     dragHandle: "",
     outOfPage: "",
+  },
+  panel: {
+    document: {
+      pages: {
+        one: "",
+        many: "",
+      },
+    },
+    coSignature: {
+      one: "",
+      many: "",
+    },
+    certificate: {
+      title: "",
+      loading: "",
+      issuer: "",
+      choose: "",
+      empty: {
+        title: "",
+        body: "",
+        retry: "",
+        otherModule: "",
+      },
+      expired: "",
+      notYetValid: "",
+      revoked: "",
+      unreadable: "",
+    },
+    visibleSignature: {
+      title: "",
+      toggle: "",
+      placement: "",
+      noPlacement: "",
+      content: "",
+      fields: {
+        rubric: "",
+        rubricDisabled: "",
+        signerName: "",
+        idNumber: "",
+        signedAt: "",
+        reason: "",
+      },
+      reason: {
+        label: "",
+        placeholder: "",
+      },
+      rubric: {
+        title: "",
+        choose: "",
+        change: "",
+        thumbnail: "",
+        flattened: "",
+      },
+      preview: {
+        title: "",
+        empty: "",
+        unavailable: "",
+      },
+    },
+    footer: {
+      savedIn: "",
+      unwritable: "",
+      retry: "",
+    },
+  },
+  pin: {
+    title: "",
+    signingAs: "",
+    label: "",
+    hint: "",
+    incorrect: "",
+    incorrectOne: "",
+    incorrectUnknown: "",
+    submit: "",
+  },
+  progress: {
+    title: "",
+    stages: {
+      presign: "",
+      presignTerm: "",
+      sign: "",
+      postsign: "",
+      postsignTerm: "",
+    },
+    states: {
+      done: "",
+      running: "",
+      pending: "",
+    },
+    keepTheCard: "",
   },
   preferences: {
     title: "",

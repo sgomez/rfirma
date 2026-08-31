@@ -8,6 +8,10 @@ import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { inMemoryLanguagePreference } from "./i18n/preference";
 import { inMemoryPreferences } from "./preferences/preferences";
+import { emptyCertificateStore } from "./signing/certificate";
+import { unavailableSigningBackend } from "./signing/flow";
+import { emptyRubricPicker } from "./signing/rubric";
+import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { emptyPdfSource } from "./viewer/source";
 
 const root = document.getElementById("root");
@@ -54,6 +58,10 @@ createRoot(root).render(
         pdfs={emptyPdfSource()}
         preferences={preferences}
         destinations={[DOCUMENTS_FOLDER]}
+        certificates={emptyCertificateStore()}
+        rubrics={emptyRubricPicker()}
+        composer={emptyLayer2Composer()}
+        signer={unavailableSigningBackend()}
       />
     </LanguageProvider>
   </StrictMode>,

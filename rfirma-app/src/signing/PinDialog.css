@@ -1,0 +1,41 @@
+/*
+ * El diálogo del PIN (docs/design/dialogo-pin.md): 420 px sobre el velo, con la
+ * ventana atenuada detrás.
+ */
+
+.pin-dialog {
+  width: 420px;
+}
+
+/* Tracking amplio: un PIN se teclea a ciegas y se cuenta con la vista. */
+.pin-dialog__pin {
+  letter-spacing: 0.35em;
+}
+
+.pin-dialog__actions {
+  justify-content: flex-end;
+  gap: var(--rf-space-xs);
+}
+
+.pin-dialog__detail {
+  margin-top: var(--rf-space-xs);
+}
+
+/* El texto crudo del token, tal cual: monoespaciada y seleccionable. */
+.pin-dialog__raw {
+  margin: var(--rf-space-xs) 0 0;
+  padding: var(--rf-space-xs);
+  border-radius: var(--rf-radius-sm);
+  background: var(--rf-bg);
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.pin-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}

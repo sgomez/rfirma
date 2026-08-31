@@ -1,0 +1,55 @@
+/*
+ * El diálogo de progreso (docs/design/dialogo-progreso-firma.md): 420 px sobre
+ * el velo, sin salida. El velo es el que bloquea la ventana.
+ */
+
+.progress-dialog {
+  width: 420px;
+}
+
+.progress-dialog__stages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-dialog__stage {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: var(--rf-space-xs);
+  align-items: baseline;
+}
+
+/* En curso: la marca en el color primario y el texto en negrita. */
+.progress-dialog__stage--running .progress-dialog__mark,
+.progress-dialog__stage--running .rf-prose {
+  color: var(--rf-primary);
+  font-weight: 600;
+}
+
+/* Pendiente: atenuada. Hecha se queda con el color del texto y su ✓. */
+.progress-dialog__stage--pending {
+  color: var(--rf-text-muted);
+}
+
+.progress-dialog__term {
+  font-weight: 400;
+}
+
+.progress-dialog__bar {
+  height: 4px;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-border-subtle);
+  overflow: hidden;
+}
+
+.progress-dialog__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-primary);
+  transition: width var(--rf-duration-base) var(--rf-easing);
+}

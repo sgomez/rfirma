@@ -1,0 +1,151 @@
+/*
+ * El panel de firma (docs/design/panel-de-firma.md): área desplazable arriba,
+ * pie fijo abajo.
+ *
+ * El pie no se desplaza porque el destino y el botón tienen que verse **antes**
+ * de firmar, no después de recorrer la configuración entera. Las casillas y la
+ * miniatura se maquetan aquí con `var(--rf-*)`: el vocabulario `rf-*` está
+ * cerrado y no tiene ni casillas ni interruptores.
+ */
+
+.panel {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.panel__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--rf-space-sm);
+}
+
+.panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+}
+
+/* Sin certificado, la firma visible se ve pero no se toca: `inert` quita el
+   foco y el ratón, y la opacidad lo cuenta. */
+.panel__section--inert {
+  opacity: 0.4;
+}
+
+.panel__document {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.panel__co-signature {
+  padding: var(--rf-space-xs);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+}
+
+.panel__certificate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  align-items: flex-start;
+}
+
+/* Sin color de error: el sistema no lo tiene. Se señala con borde y peso. */
+.panel__certificate-warning {
+  padding: var(--rf-space-xs);
+  border: 2px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  font-weight: 600;
+}
+
+.panel__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+}
+
+.panel__skeleton {
+  height: 16px;
+  border-radius: var(--rf-radius-sm);
+  background: var(--rf-border-subtle);
+}
+
+.panel__no-certificates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  padding: var(--rf-space-sm);
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-lg);
+}
+
+.panel__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.panel__checkbox-label {
+  display: flex;
+  gap: var(--rf-space-xs);
+  align-items: center;
+}
+
+.panel__rubric,
+.panel__preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  align-items: flex-start;
+}
+
+/*
+ * La miniatura va sobre blanco y en el tema claro **siempre**: lo que se enseña
+ * es el JPEG opaco que se va a estampar (ID-24), y pintarlo sobre el gris del
+ * tema oscuro sería enseñar algo que el PDF no va a tener.
+ */
+.panel__rubric-thumbnail {
+  max-width: 100%;
+  height: auto;
+  max-height: 96px;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-sm);
+  background: #ffffff;
+}
+
+.panel__preview-text {
+  width: 100%;
+  margin: 0;
+  padding: var(--rf-space-xs);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  font-family: var(--rf-font-body);
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.panel__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  padding: var(--rf-space-sm);
+  border-top: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
+}
+
+.panel__destination {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel__sign {
+  width: 100%;
+}
