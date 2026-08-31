@@ -31,17 +31,11 @@ El proyecto está diseñado de forma modular para desacoplar la interfaz y la in
 Para compilar el proyecto por primera vez, sigue estos pasos en orden:
 
 ### Paso 1: Instalar dependencias Java oficiales de Autofirma
-Dado que las librerías oficiales de Autofirma no están publicadas en Maven Central, debes compilarlas e instalarlas localmente en tu caché de Maven (`~/.m2`):
-1. Clona el repositorio original del proyecto ([ctt-gob-es/clienteafirma](https://github.com/ctt-gob-es/clienteafirma)):
-   ```bash
-   git clone https://github.com/ctt-gob-es/clienteafirma.git
-   ```
-2. Accede al directorio y compila/instala los artefactos en tu máquina local:
-   ```bash
-   cd clienteafirma
-   mvn clean install -DskipTests
-   ```
-Una vez finalizado, los JARs requeridos quedarán registrados en tu almacén local de dependencias y listos para ser consumidos por `rfirma`.
+Dado que las librerías oficiales de Autofirma no están publicadas en Maven Central, el proyecto incluye un script de automatización (`bootstrap.sh`) que las clona, compila e instala localmente en tu caché de Maven (`~/.m2`):
+```bash
+./bootstrap.sh
+```
+Este script se encargará de comprobar si ya dispones de las dependencias; si faltan, las obtendrá directamente del repositorio oficial de la administración ([ctt-gob-es/clienteafirma](https://github.com/ctt-gob-es/clienteafirma)), registrará los paquetes en tu máquina local y luego limpiará el directorio temporal de descarga.
 
 ### Paso 2: Compilar el Bridge Nativo
 Compila el bridge intermedio que genera la librería dinámica nativa usando GraalVM:
