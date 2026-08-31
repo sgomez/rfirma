@@ -83,4 +83,15 @@ export const gl: UntranslatedCatalog = {
       label: "",
     },
   },
+  about: {
+    version: "",
+    whatItDoes: "",
+    independence: "",
+    licenses: {
+      title: "",
+      view: "",
+      rfirma: "",
+      afirma: "",
+    },
+  },
 };

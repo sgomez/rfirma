@@ -111,4 +111,18 @@ export const es = {
       label: "Idioma",
     },
   },
+  /** Acerca de rFirma (docs/design/acerca-de.md). */
+  about: {
+    version: "Versión {{version}}",
+    whatItDoes:
+      "Firma y cofirma documentos PDF con tu certificado. El documento y la clave privada no salen de tu ordenador.",
+    independence:
+      "Proyecto independiente. rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.",
+    licenses: {
+      title: "Licencias",
+      view: "Ver las licencias",
+      rfirma: "rFirma: EUPL-1.2.",
+      afirma: "Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1.",
+    },
+  },
 };

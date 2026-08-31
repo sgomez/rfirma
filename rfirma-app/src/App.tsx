@@ -1,21 +1,95 @@
-import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import { AboutDialog } from "./about/AboutDialog";
+import { DocumentTray } from "./documents/DocumentTray";
+import type { DocumentPicker } from "./documents/picker";
+import type { RecentsStore } from "./documents/recents";
+import { useDocuments } from "./documents/useDocuments";
+import { PreferencesDialog } from "./preferences/PreferencesDialog";
+import type { Preferences, PreferencesStore } from "./preferences/preferences";
+import { MainWindow } from "./shell/MainWindow";
+import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
+
+type OpenDialog = "preferences" | "about" | null;
+
+interface AppProps {
+  recents: RecentsStore;
+  picker: DocumentPicker;
+  preferences: PreferencesStore;
+  /**
+   * Las carpetas de destino, por su nombre. Bajo el arenero hay exactamente
+   * una, la de documentos del usuario (ADR-0011).
+   */
+  destinations: readonly string[];
+  /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
+  menuAnchor?: MenuAnchor;
+}
 
 /**
- * La ventana vacía del andamiaje (#47), ahora sobre el sistema de diseño y el
- * catálogo de cadenas (#55).
+ * La composición: quién habla con quién.
  *
- * NO añadas aquí pantallas ni componentes de producto: los aportan los
- * sub-issues siguientes de #46. Lo que sí es obligatorio a partir de ahora es
- * la forma: `.rf-root` en la raíz de la pantalla —la pone `index.html`—,
- * clases `rf-*` del sistema de diseño, y **ninguna cadena escrita en línea**:
- * todo texto sale del catálogo por su clave.
+ * Todo lo que toca el disco entra por parámetro —los recientes, el portal y los
+ * ajustes—, así que la aplicación entera se puede pintar en una prueba sin
+ * backend. Quien elige las implementaciones de verdad es `main.tsx`.
+ *
+ * Los diálogos se montan **sobre** la ventana y no la desmontan: no hay
+ * navegación, y el estado de la bandeja sigue vivo debajo.
  */
-export function App() {
-  const { t } = useTranslation();
+export function App({ recents, picker, preferences, destinations, menuAnchor }: AppProps) {
+  const documents = useDocuments(recents, picker);
+  const [dialog, setDialog] = useState<OpenDialog>(null);
+  const [settings, setSettings] = useState<Preferences | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    preferences.read().then((read) => {
+      if (current) setSettings(read);
+    });
+    return () => {
+      current = false;
+    };
+  }, [preferences]);
+
+  const changeSettings = async (next: Preferences) => {
+    setSettings(next);
+    await preferences.save(next);
+  };
+
+  // Olvidar la actividad es una sola promesa al usuario del ordenador
+  // compartido: se van los recientes y el certificado a la vez (ID-34).
+  const forgetActivity = async () => {
+    await preferences.forgetActivity();
+    await documents.forgetAll();
+  };
 
   return (
-    <main className="rf-section" aria-label={t("app.name")}>
-      <h1 className="rf-heading">{t("app.name")}</h1>
-    </main>
+    <>
+      <MainWindow
+        status={documents.active?.badge ?? null}
+        menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
+        onOpenPreferences={() => setDialog("preferences")}
+        onOpenAbout={() => setDialog("about")}
+        tray={
+          <DocumentTray
+            recents={documents.recents}
+            activePath={documents.active?.path ?? null}
+            onOpen={() => void documents.open()}
+            onSelect={documents.select}
+            onForget={(path) => void documents.forget(path)}
+          />
+        }
+      />
+      {dialog === "preferences" && settings !== null && (
+        <PreferencesDialog
+          preferences={settings}
+          destinations={destinations}
+          onChange={(next) => void changeSettings(next)}
+          onForgetActivity={() => void forgetActivity()}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === "about" && (
+        <AboutDialog version={__APP_VERSION__} onClose={() => setDialog(null)} />
+      )}
+    </>
   );
 }

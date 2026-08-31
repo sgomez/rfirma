@@ -1,0 +1,23 @@
+/*
+ * Acerca de rFirma (docs/design/acerca-de.md): un `.rf-dialog` de 460 px sobre
+ * `.rf-scrim`, en cuatro bloques.
+ *
+ * El aviso de independencia no lleva regla propia a propósito: es un párrafo
+ * como los demás, y darle borde o fondo sería enmarcarlo como alarma.
+ */
+
+.about {
+  width: 460px;
+}
+
+.about__licenses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  margin: 0;
+  padding-left: var(--rf-space-md);
+}
+
+.about__footer {
+  justify-content: flex-end;
+}

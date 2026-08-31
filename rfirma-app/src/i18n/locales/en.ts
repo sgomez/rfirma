@@ -77,4 +77,17 @@ export const en: Catalog = {
       label: "Language",
     },
   },
+  about: {
+    version: "Version {{version}}",
+    whatItDoes:
+      "Signs and countersigns PDF documents with your certificate. Neither the document nor the private key leaves your computer.",
+    independence:
+      "Independent project. rFirma is not related to AutoFirma or to the Spanish Administration, who publish the official client, nor is it endorsed by them. If you need the official application, download it from their website.",
+    licenses: {
+      title: "Licences",
+      view: "View the licences",
+      rfirma: "rFirma: EUPL-1.2.",
+      afirma: "Cliente @firma libraries: GPL-2.0+ / EUPL-1.1.",
+    },
+  },
 };

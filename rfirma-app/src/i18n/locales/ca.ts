@@ -83,4 +83,15 @@ export const ca: UntranslatedCatalog = {
       label: "",
     },
   },
+  about: {
+    version: "",
+    whatItDoes: "",
+    independence: "",
+    licenses: {
+      title: "",
+      view: "",
+      rfirma: "",
+      afirma: "",
+    },
+  },
 };

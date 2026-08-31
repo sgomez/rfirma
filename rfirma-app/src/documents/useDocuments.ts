@@ -13,6 +13,11 @@ export interface Documents {
   select: (document: RecentDocument) => void;
   /** Quita una fila de la lista. Ver `forget` en `recents.ts`. */
   forget: (path: string) => Promise<void>;
+  /**
+   * Vacía la bandeja entera. Es lo que disparan «Vaciar la lista» y apagar
+   * «Recordar mi actividad» en Preferencias.
+   */
+  forgetAll: () => Promise<void>;
 }
 
 /**
@@ -56,5 +61,11 @@ export function useDocuments(store: RecentsStore, picker: DocumentPicker): Docum
     [store],
   );
 
-  return { recents, active, open, select: setActive, forget };
+  const forgetAll = useCallback(async () => {
+    await store.clear();
+    setRecents(await store.list());
+    setActive(null);
+  }, [store]);
+
+  return { recents, active, open, select: setActive, forget, forgetAll };
 }
