@@ -23,13 +23,27 @@ path = "src/lib.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# El unico sitio del programa que toca la clave privada (ADR-0001). Habla con el
+# modulo PKCS#11 del sistema; no trae criptografia propia.
+cryptoki = "0.12"
 # Sin serde ni serde_json todavia: hoy no hay ningun #[tauri::command] que
 # serialice nada, y una dependencia que nadie importa es ruido. Las anade el
 # sub-issue que escriba el primer comando.
 tauri = { version = "2", features = [] }
+# Solo para leer del certificado el titular y las fechas de validez. Un
+# certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
+# saber leer su notAfter.
+x509-cert = "0.3"
 
 [dev-dependencies]
-sha2 = "0.10"
+# Verifica en las pruebas la firma que devuelve el token, sin montar el
+# ensamblado PAdES entero (docs/research/pkcs11-mecanismo-firma.md, punto 5).
+# Solo de pruebas: rfirma no hace criptografia RSA en Rust, la delega en el token.
+rsa = "0.9"
+# La bandera `oid` es la que hace que la verificacion use el envoltorio
+# DigestInfo de PKCS#1 v1.5. Sin ella `rsa` no acepta Sha256 como digest con
+# prefijo, que es justo lo que el ID-16 exige contrastar.
+sha2 = { version = "0.10", features = ["oid"] }
 
 [profile.release]
 strip = true

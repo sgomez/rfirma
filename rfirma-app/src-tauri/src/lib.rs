@@ -1,8 +1,10 @@
-//! Andamiaje de rfirma (#47): arranca una ventana vacía y nada más.
+//! rfirma: firma y cofirma de PDFs en PAdES con firma visible.
 //!
-//! Aquí no hay lógica de firma, ni FFI, ni PKCS#11: los aportan los sub-issues
-//! siguientes de #46. Si te encuentras escribiendo Rust que sabe qué es un PDF,
-//! te has salido de este módulo.
+//! De momento la ventana está vacía: lo único que hay debajo es
+//! [`pkcs11`], la capa que habla con el token. Ni FFI, ni PDF, ni orquestación
+//! de las tres fases: los aportan los sub-issues siguientes de #46.
+
+pub mod pkcs11;
 
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {

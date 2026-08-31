@@ -20,8 +20,9 @@
 # native-image arruina el bucle de realimentacion que protegio el issue #11.
 #
 # Requisitos: just, maven, git, pnpm, cargo y un GraalVM CE 25 para `native`,
-# mas las librerias -dev del WebView (ver `system_libs` mas abajo).
-#   apt-get install -y just maven
+# mas las librerias -dev del WebView (ver `system_libs` mas abajo) y softhsm2 +
+# opensc para el token de la grada B (ver la receta `token`).
+#   apt-get install -y just maven softhsm2 opensc
 #
 # `just tools` los comprueba TODOS y falla nombrando lo que falte, con la orden
 # de apt lista para copiar. Ejecutalo antes que nada si algo no compila.
@@ -108,6 +109,19 @@ tools:
         echo "  cargo esta en ~/.cargo/bin pero no en el PATH:"
         echo "    anade '. \"$HOME/.cargo/env\"' a tu ~/.zshrc (o ~/.bashrc)"
     fi
+    # El token de la grada B (ADR-0014). No es opcional: sus pruebas corren en
+    # el carril rapido, asi que sin estas tres ordenes `test-rust` falla.
+    softhsm_apt=""
+    command -v softhsm2-util >/dev/null || { echo "falta: softhsm2-util"; softhsm_apt="$softhsm_apt softhsm2"; failures=1; }
+    command -v pkcs11-tool  >/dev/null || { echo "falta: pkcs11-tool";  softhsm_apt="$softhsm_apt opensc";   failures=1; }
+    command -v openssl      >/dev/null || { echo "falta: openssl";      softhsm_apt="$softhsm_apt openssl";  failures=1; }
+    if [ -n "$softhsm_apt" ]; then
+        echo
+        echo "Instalalos con:"
+        echo "  sudo apt install -y$softhsm_apt"
+        echo "y monta el token con: just token"
+        echo
+    fi
     # Las librerias de sistema del WebView. pkg-config es quien decide, porque
     # es quien consulta el build script que falla: el paquete de runtime puede
     # estar instalado y faltar solo el -dev, que es el que trae el .pc.
@@ -162,6 +176,15 @@ bootstrap:
 # Instala las dependencias de node de rfirma-app.
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
+
+# El token de la GRADA B (ADR-0014). Es idempotente y tarda segundos, asi que
+# `test-rust` lo llama siempre: la grada B corre en el carril rapido por
+# definicion, y una prueba que se salta en silencio porque falta el token no es
+# una prueba.
+#
+# Provisiona el token SoftHSM `rfirma-test` desde testdata/fnmt/.
+token:
+    ./testdata/softhsm/provision-token.sh
 
 # ---------------------------------------------------------------------------
 # Lint
@@ -268,7 +291,7 @@ test-ts: deps
     cd {{ app }} && pnpm exec vitest run --reporter=dot
 
 # cargo test, mas la compilacion de las pruebas de grada C.
-test-rust: build-ts
+test-rust: token build-ts
     cd {{ tauri }} && cargo test --all-features
     # El punto ciego de #[ignore] es que una prueba de grada C que deja de
     # compilar contra la FFI se salta EN SILENCIO. Esto lo cierra: el carril
@@ -281,7 +304,7 @@ test-rust: build-ts
 # no a donde `native` acaba de instalar la libreria.
 #
 # Las de grada C, que el carril lento ejecuta con --include-ignored.
-test-native: check-native build-ts
+test-native: token check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --include-ignored
     # Las de grada C del puente Java: el ciclo trifasico entero validado con
     # `pdfsig` de poppler, que es la puerta automatica de validez del ADR-0014.
@@ -302,7 +325,7 @@ test-native: check-native build-ts
 # ventaja —amnistiar deuda existente— no aplica cuando no hay deuda.
 
 # Genera lcov.info con cargo llvm-cov.
-coverage: build-ts
+coverage: token build-ts
     cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path lcov.info
 
 # La puerta del carril rapido, con el modulo FFI oculto.
@@ -312,7 +335,7 @@ crap: coverage
 
 # La misma medicion SIN la exclusion, con la cobertura de la grada C incluida.
 # Aqui el modulo FFI da la cara. Carril lento.
-crap-full: check-native build-ts
+crap-full: token check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --all-features --lcov --output-path lcov.info \
         -- --include-ignored
     cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above
