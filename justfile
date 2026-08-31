@@ -254,8 +254,10 @@ check-native:
 # Ejecuta las pruebas de las tres cadenas y la puerta CRAP.
 test: test-java test-ts test-rust crap
 
-# AVISO: el puente todavia no tiene pruebas propias. La receta existe para que
-# el sub-issue que escriba el puente real tenga donde colgarlas.
+# Las de grada A del puente. Las de grada C llevan @Tag("gradaC") y el pom las
+# excluye por omision, porque necesitan poppler (`pdfsig`) y el carril rapido no
+# lo instala. Se COMPILAN igual —`mvn test` compila todas—, que es la mitad de la
+# TD-02 que le toca a esta cadena.
 #
 # Pruebas del puente Java.
 test-java: build-java
@@ -281,6 +283,10 @@ test-rust: build-ts
 # Las de grada C, que el carril lento ejecuta con --include-ignored.
 test-native: check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --include-ignored
+    # Las de grada C del puente Java: el ciclo trifasico entero validado con
+    # `pdfsig` de poppler, que es la puerta automatica de validez del ADR-0014.
+    # -DexcludedGroups= levanta la exclusion que el pom pone por omision.
+    cd {{ bridge }} && mvn -B test -DexcludedGroups=
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
@@ -318,18 +324,17 @@ crap-full: check-native build-ts
 # Tarda minutos y consume mucha memoria; por eso el workflow no la construye
 # en cada PR (ver .github/workflows/ci.yml).
 #
-# Las dos banderas de mas son las que validó el repositorio (`ce25-noui`, el
-# script testbench/build-native-fonts.sh): sin
-# -H:IncludeResources=com/lowagie/text/pdf/fonts/.* los .afm de iText no entran
-# en la imagen y los dos casos con rubrica revientan con «ExceptionConverter:
-# Courier not found as resource» (docs/research/exclusion-afirma-ui-utils.md,
-# repetido en CE 25 en docs/research/native-image-postfirma-ce25.md). La orden
-# canonica esta en docs/research/graalvm-libawt-shared.md.
+# AQUI NO HAY BANDERAS SUELTAS, y es a proposito (ID-06): el nombre de la
+# libreria, --no-fallback y los .afm de iText viven VERSIONADOS en
+# rfirma-native-bridge/src/main/resources/META-INF/native-image/, que
+# native-image recoge del classpath el solo. Asi la imagen se construye igual
+# desde un clon limpio que desde aqui. Si vuelve a hacer falta una bandera, va a
+# ese fichero, no a esta linea.
 #
-# Produce la ruta CANONICA del ADR-0013, y solo librfirma_crypto.so: el
-# directorio de construccion sigue teniendo los auxiliares de AWT que
-# native-image emite, y un `install *.so` reintroduciria libawt.so — y con el,
-# el aborto del proceso ante un JPEG con perfil ICC que midio el #36.
+# Produce la ruta CANONICA del ADR-0013, y solo librfirma_crypto.so: si algun dia
+# el directorio de construccion vuelve a tener los auxiliares de AWT, un
+# `install *.so` reintroduciria libawt.so — y con el, el aborto del proceso ante
+# un JPEG con perfil ICC que midio el #36.
 #
 # Construye la libreria nativa compartida con GraalVM CE 25.
 native: build-java
@@ -339,18 +344,16 @@ native: build-java
     build_dir="{{ bridge }}/target/native"
     dest="$(dirname "{{ native_lib }}")"
     mkdir -p "$build_dir" && cd "$build_dir"
-    "$graal/bin/native-image" --shared -H:Name=librfirma_crypto --no-fallback \
-        -Djava.awt.headless=true "-H:IncludeResources=com/lowagie/text/pdf/fonts/.*" \
+    "$graal/bin/native-image" --shared \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
     mkdir -p "$dest"
     install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
     ls -la "$dest"
 
-# OJO: hoy esta receta NO termina en un arbol limpio. `native` instala en
-# rfirma-native-bridge/target/lib/rfirma/, pero me.sgomez.rfirma.yml sigue
-# leyendo ../../rfirma-native-bridge/target/ce25-noui (y ../../target/fixtures),
-# que produce a mano el testbench. El manifiesto queda fuera del #47 a
-# proposito: lo reapunta a la ruta canonica el sub-issue que aporte la FFI real.
+# El manifiesto ya lee la ruta canonica que produce `native`. Lo que sigue sin
+# construirse solo es el modulo `datos-de-prueba`, que lee ../../target/fixtures
+# y lo produce a mano testbench/make-fixtures.sh: es material de la sonda, no del
+# paquete real, y se va con ella.
 #
 # Construye el flatpak, el unico canal soportado (ADR-0015).
 flatpak: native

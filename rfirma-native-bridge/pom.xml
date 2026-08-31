@@ -10,29 +10,63 @@
   <packaging>jar</packaging>
 
   <name>rfirma-native-bridge</name>
-  <description>Bridge minimo GraalVM: solo prefirma PAdES trifasica</description>
+  <description>Puente GraalVM de rFirma: prefirma y postfirma PAdES trifasicas</description>
 
   <properties>
-    <maven.compiler.source>21</maven.compiler.source>
-    <maven.compiler.target>21</maven.compiler.target>
+    <!-- release 21 A PROPOSITO (ID-12): el JDK que CONSTRUYE es GraalVM CE 25
+         —la linea 21 aborta dentro del JNI_OnLoad de libawt.so con cualquier
+         firma visible—, pero el lenguaje de destino no se mueve. -->
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <autofirma.version>1.9.1</autofirma.version>
+    <junit.version>5.11.4</junit.version>
+
+    <!-- Las pruebas de grada C (ADR-0014) necesitan poppler (`pdfsig`), que el
+         carril rapido no instala. Se EXCLUYEN por omision y el carril lento las
+         activa con -DexcludedGroups= (lo hace `just test-native`). Compilarlas
+         no depende de esto: `mvn test` las compila siempre, que es el punto
+         ciego que cierra la TD-02. -->
+    <excludedGroups>gradaC</excludedGroups>
   </properties>
 
   <dependencies>
-    <!-- Unica dependencia funcional: el nucleo trifasico, del que solo se
-         instancia PAdESTriPhasePreProcessor (NO PreProcessorFactory). -->
+    <!-- El nucleo trifasico, del que solo se instancia PAdESTriPhasePreProcessor
+         (NO PreProcessorFactory: esa referencia los preprocesadores XAdES,
+         FacturaE, ASiC y PKCS1, y haria alcanzable todo el arbol de formatos). -->
     <dependency>
       <groupId>es.gob.afirma</groupId>
       <artifactId>afirma-server-triphase-signer-core</artifactId>
       <version>${autofirma.version}</version>
       <exclusions>
-        <!-- ADR-0012: la rubrica la normaliza Rust. afirma-crypto-pdf declara
-             afirma-ui-utils con <scope>runtime</scope> y lo invoca por
-             reflexion en PdfPreProcessor.getImage:304; al no estar la clase,
-             el catch (Throwable) de la linea 309 degrada a "se agrega tal
-             cual" y javax.imageio.ImageIO deja de ser alcanzable. Medido en
-             el issue #36: docs/research/exclusion-afirma-ui-utils.md. -->
+        <!-- ADR-0012 / ID-08: ESTA EXCLUSION NO SE QUITA. La rubrica la
+             normaliza Rust. afirma-crypto-pdf declara afirma-ui-utils con
+             <scope>runtime</scope> y lo invoca por reflexion en
+             PdfPreProcessor.getImage:304; al no estar la clase, el
+             catch (Throwable) de la linea 309 degrada a "se agrega tal cual" y
+             javax.imageio.ImageIO deja de ser alcanzable. Eso es lo que deja la
+             imagen nativa en UN SOLO fichero de 27,7 MB en vez de seis.
+             Y no es solo tamano (ID-09): si libawt.so acaba al lado de la
+             libreria, un JPEG con perfil ICC ABORTA el proceso (rc=134) en vez
+             de dar un error recuperable. Medido en el issue #36:
+             docs/research/exclusion-afirma-ui-utils.md. -->
+        <exclusion>
+          <groupId>es.gob.afirma</groupId>
+          <artifactId>afirma-ui-utils</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- PAdES trifasico llama LITERALMENTE a CAdESTriPhaseSigner: la prefirma
+         PAdES devuelve atributos firmados CAdES (ID-15) y la postfirma
+         reensambla la firma CAdES dentro del PDF. Llega ya como transitiva de
+         afirma-crypto-pdf, pero se declara explicita porque el puente depende
+         de ella de verdad y una transitiva puede desaparecer sin aviso.
+         Verificado en docs/research/pades-triphase-contract.md, pregunta 6. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-cades</artifactId>
+      <version>${autofirma.version}</version>
+      <exclusions>
         <exclusion>
           <groupId>es.gob.afirma</groupId>
           <artifactId>afirma-ui-utils</artifactId>
@@ -46,6 +80,13 @@
       <version>23.1.0</version>
       <scope>provided</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -57,10 +98,20 @@
         <configuration>
           <compilerArgs>
             <!-- Todos los avisos del compilador activos: es todo el linting
-                 que hoy tiene sentido. Los linters de Rust y TypeScript
-                 llegan con su carril (issue #11). -->
+                 que hoy tiene sentido en esta cadena (ADR-0014). -->
             <arg>-Xlint:all</arg>
           </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <excludedGroups>${excludedGroups}</excludedGroups>
+          <systemPropertyVariables>
+            <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>

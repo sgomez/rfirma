@@ -1,6 +1,15 @@
 //! Sonda desechable del issue #22: carga la libreria nativa como la cargara
 //! rfirma (dlopen por ruta relativa al ejecutable) y ejecuta el ciclo
 //! trifasico completo con rubrica de imagen, firmando el PK1 con PKCS#11.
+//!
+//! OJO: sus llamadas FFI son las del puente de MEDICION. El #48 reescribio la
+//! frontera —los simbolos se llaman `autofirma_*`, devuelven JSON en vez de XML
+//! o `ERROR:...`, y la postfirma exige el sello de sesion del ADR-0016—, asi que
+//! esta sonda compila pero muere en el `dlsym`. Lo que verificaba —que dentro
+//! del arenero se puede cargar la libreria, hablar con pcscd y leer el modulo
+//! PKCS#11 empaquetado— esta medido y escrito en
+//! docs/research/flatpak-canal-unico.md; quien la vuelva a necesitar, que la
+//! adapte a la frontera nueva en el mismo commit en que la use.
 
 use base64::Engine;
 use std::ffi::{CStr, CString};

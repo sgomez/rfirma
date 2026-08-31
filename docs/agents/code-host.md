@@ -52,21 +52,31 @@ A red check blocks the merge; take the fix path rather than merging past it.
   `rfirma-app/src-tauri/`, and `cargo build --release` links the app;
 - the **tier A** tests run: `vitest` on the frontend, `cargo test` on Rust —
   which today is the FNMT kit guard (fingerprints of the three `.p12`, and
-  `active-rsa.p12` still being in date);
-- the **tier C** tests still **compile** (`cargo test --no-run`), so a test
+  `active-rsa.p12` still being in date) — and `mvn test` on the Java bridge:
+  the CAdES signed attributes of the presign parsed as ASN.1 DER, the session
+  stamp of [ADR-0016](../adr/0016-sello-de-sesion-una-sola-invariante.md), and
+  the bridge's own contract (the three `autofirma_*` entry points,
+  `afirma-ui-utils` absent from the classpath, the versioned `native-image`
+  metadata);
+- the **tier C** tests still **compile** — `cargo test --no-run` on Rust, and
+  `mvn test` compiles the `@Tag("gradaC")` classes it does not run — so a test
   that stops building against the FFI cannot be skipped in silence;
 - the **CRAP gate**: `cargo crap --threshold 30 --fail-above`, at a version
   pinned in the `justfile`, with `--allow` over the FFI module path;
 - on the slow lane only: that `native-image --shared` still **produces the
-  shared library**, that the tier C tests **pass** (`--include-ignored`), and
-  the same CRAP measurement **without** the FFI exclusion.
+  shared library**, that the tier C tests **pass** (`--include-ignored` on
+  Rust, `-DexcludedGroups=` on Maven), and the same CRAP measurement
+  **without** the FFI exclusion.
 
-It still does **not** verify that a signature is valid, that a PDF opens, or
-that a certificate chains: that is tier C and tier D work, and it lands with
-the sub-issues that write the signing code. `pdfsig` as the automatic validity
-oracle and the official validator as a manual release gate are decided
-([ADR-0014](../adr/0014-gradas-de-prueba-y-puerta-de-calidad.md)) but not yet
-built.
+The fast lane still does **not** verify that a signature is valid or that a
+PDF opens: **the slow lane now does**, since
+[#48](https://github.com/sgomez/rfirma/issues/48) — `just test-native` signs a
+PDF end to end through the Java bridge and `pdfsig` validates it, which is the
+automatic oracle [ADR-0014](../adr/0014-gradas-de-prueba-y-puerta-de-calidad.md)
+decided. That run does not touch PKCS#11: phase 2 is the JCE with the FNMT test
+key, so what it proves is the **contract** — a PKCS#1 over the DER bytes of the
+presign — not the card path. Nothing anywhere verifies that a certificate
+chains, and the official validator stays a manual release gate.
 
 **The fast lane does not build the native library, deliberately**, so it sets
 `RFIRMA_SKIP_NATIVE=1` to skip the guard `just build` performs by
