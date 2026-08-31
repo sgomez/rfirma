@@ -4,8 +4,9 @@
 //!
 //! Tres reglas, y las tres son del ADR:
 //!
-//! - **Escritura atómica**: temporal y `rename`. Un fichero a medio escribir es
-//!   una configuración que reaparece mutilada en el siguiente arranque.
+//! - **Escritura atómica**: temporal, `sync_all` y `rename`. Un fichero a medio
+//!   escribir es una configuración que reaparece mutilada en el siguiente
+//!   arranque, y sin el `sync_all` un apagón la deja de longitud cero.
 //! - **`"version": 1` en los dos ficheros.** Se lee **antes** de deserializar,
 //!   sobre el JSON en crudo: un fichero de una versión futura no se interpreta
 //!   con las reglas de esta, se aparta.
@@ -18,6 +19,7 @@
 //! da los valores por omisión sin aviso ninguno.
 
 use std::fs;
+use std::io::Write;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
@@ -48,14 +50,20 @@ pub enum Damage {
 /// Lo que había guardado no se pudo usar y se apartó. Se avisa **una vez**.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Recovery {
-    backup: PathBuf,
+    backup: Option<PathBuf>,
     damage: Damage,
 }
 
 impl Recovery {
     /// Dónde quedó lo que había, por si alguien quiere mirarlo.
-    pub fn backup(&self) -> &Path {
-        &self.backup
+    ///
+    /// `None` cuando **no se pudo apartar** —el directorio no deja escribir, el
+    /// `.bak` está ocupado por un directorio—. Sigue siendo una [`Recovery`] y
+    /// no un error: lo roto continúa en su sitio y se reintentará en el
+    /// siguiente arranque, pero la aplicación arranca igual con los valores por
+    /// omisión, que es lo que promete el ADR-0010.
+    pub fn backup(&self) -> Option<&Path> {
+        self.backup.as_deref()
     }
 
     /// Qué le pasaba.
@@ -166,7 +174,7 @@ impl<T: DeserializeOwned + Default> JsonFile<T> {
             }),
             Err(damage) => Ok(Loaded {
                 value: T::default(),
-                recovery: Some(self.set_aside(damage)?),
+                recovery: Some(self.set_aside(damage)),
             }),
         }
     }
@@ -183,29 +191,46 @@ impl<T: DeserializeOwned + Default> JsonFile<T> {
 
     /// Aparta lo que no se ha podido usar. El `.bak` es **uno**: el interesante
     /// es el último, y guardar historia de ficheros rotos no ayuda a nadie.
-    fn set_aside(&self, damage: Damage) -> Result<Recovery, MemoryError> {
-        let backup = self.backup_path();
-        fs::rename(&self.path, &backup)
-            .map_err(|error| MemoryError::about(Situation::Unwritable, &backup, &error))?;
-        Ok(Recovery { backup, damage })
+    ///
+    /// **No puede fallar.** Es el camino de recuperación: si el `rename` no se
+    /// puede hacer, devolver un error dejaría que un fichero corrupto impidiese
+    /// arrancar, que es exactamente lo que el ADR-0010 prohíbe. Lo que no se
+    /// pudo apartar se cuenta en la [`Recovery`], con `backup()` a `None`.
+    fn set_aside(&self, damage: Damage) -> Recovery {
+        let candidate = self.backup_path();
+        let backup = fs::rename(&self.path, &candidate).ok().map(|()| candidate);
+        Recovery { backup, damage }
     }
 }
 
 impl<T: Serialize> JsonFile<T> {
     /// Escribe el valor, sustituyendo lo que hubiera.
     ///
-    /// Temporal y `rename` (ADR-0010): mientras el `rename` no ocurre, lo que
-    /// hay en disco sigue siendo lo anterior, entero.
+    /// Temporal, `sync_all` y `rename` (ADR-0010): mientras el `rename` no
+    /// ocurre, lo que hay en disco sigue siendo lo anterior, entero.
+    ///
+    /// El `sync_all` no sobra. Cerrar el temporal no lo sincroniza, así que sin
+    /// él el `rename` puede llegar al disco antes que los datos y un corte de
+    /// corriente deja un `config.json` de longitud cero: atómico respecto a
+    /// otros procesos, pero no respecto a un apagón.
+    ///
+    /// El directorio y el fichero quedan **solo para el dueño** donde el
+    /// sistema entiende de modos: dentro van las rutas de los últimos
+    /// documentos, y «Recordar mi actividad» es la promesa a quien firma en un
+    /// ordenador compartido. El modo sale de [`crate::paths`], que es el único
+    /// sitio que sabe de sistemas operativos (ID-35).
     pub fn save(&self, value: &T) -> Result<(), MemoryError> {
         let document = self.versioned(value)?;
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|error| MemoryError::about(Situation::Unwritable, parent, &error))?;
+            crate::paths::restrict_to_owner(parent)
+                .map_err(|error| MemoryError::about(Situation::Unwritable, parent, &error))?;
         }
         let mut temporary = self.path.as_os_str().to_owned();
         temporary.push(".tmp");
         let temporary = PathBuf::from(temporary);
-        fs::write(&temporary, &document)
+        Self::write_and_sync(&temporary, &document)
             .map_err(|error| MemoryError::about(Situation::Unwritable, &temporary, &error))?;
         fs::rename(&temporary, &self.path).map_err(|error| {
             // El `rename` que falla deja el temporal escrito; barrerlo es parte
@@ -213,6 +238,14 @@ impl<T: Serialize> JsonFile<T> {
             let _ = fs::remove_file(&temporary);
             MemoryError::about(Situation::Unwritable, &self.path, &error)
         })
+    }
+
+    /// Escribe el temporal y lo baja al disco antes de que nadie lo renombre.
+    fn write_and_sync(temporary: &Path, document: &[u8]) -> std::io::Result<()> {
+        let mut file = fs::File::create(temporary)?;
+        crate::paths::restrict_to_owner(temporary)?;
+        file.write_all(document)?;
+        file.sync_all()
     }
 
     /// El JSON del valor con `"version"` metido dentro.
@@ -301,16 +334,44 @@ mod tests {
         assert!(matches!(recovery.damage(), Damage::Unparsable(_)));
         assert_eq!(
             recovery.backup(),
-            directory.path().join("rfirma/config.json.bak")
+            Some(directory.path().join("rfirma/config.json.bak").as_path())
         );
         assert!(
-            recovery.backup().exists(),
+            recovery
+                .backup()
+                .expect("deberia haberse apartado")
+                .exists(),
             "lo que habia se conserva en el .bak"
         );
         assert!(
             !file.path().exists(),
             "el fichero roto ya no esta en su sitio"
         );
+    }
+
+    #[test]
+    fn a_corrupt_support_that_cannot_even_be_set_aside_still_lets_the_application_start() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let file = a_file(directory.path());
+        fs::create_dir_all(file.path().parent().expect("deberia tener padre"))
+            .expect("deberia crearse");
+        fs::write(file.path(), b"{esto tampoco es JSON").expect("deberia escribirse");
+        // Un directorio ocupando el sitio del `.bak`: `rename` no puede con el.
+        fs::create_dir(directory.path().join("rfirma/config.json.bak")).expect("deberia crearse");
+
+        let loaded = file
+            .load()
+            .expect("no poder apartar lo roto tampoco puede impedir arrancar");
+
+        assert_eq!(loaded.value(), &Remembered::default());
+        let recovery = loaded.recovery().expect("deberia avisar igualmente");
+        assert!(matches!(recovery.damage(), Damage::Unparsable(_)));
+        assert_eq!(
+            recovery.backup(),
+            None,
+            "no se pudo apartar, y el aviso lo dice"
+        );
+        assert!(file.path().exists(), "lo roto sigue donde estaba");
     }
 
     #[test]

@@ -17,8 +17,12 @@
 //! El hito v0.1 es solo Linux; las otras dos columnas se escriben ahora porque
 //! el momento de saberlo es antes de escribir este fichero, no después.
 //!
-//! Nada aquí toca el disco: resolver una ruta no crea un directorio. Quien
-//! escribe es [`crate::memory`], y crea el directorio en ese momento.
+//! Resolver una ruta no toca el disco: no crea un directorio ni lo comprueba.
+//! Quien escribe es [`crate::memory`], y crea el directorio en ese momento. La
+//! única función de este fichero que sí toca el disco es
+//! [`restrict_to_owner`], y está aquí por la misma razón que todo lo demás:
+//! los permisos POSIX son conocimiento de sistema operativo, y el ID-35 dice
+//! que ese conocimiento vive en un solo sitio.
 
 use std::ffi::OsString;
 use std::fmt;
@@ -56,6 +60,40 @@ impl Platform {
     } else {
         Self::Linux
     };
+}
+
+/// Deja `path` **solo para su dueño**: `0700` si es directorio, `0600` si es
+/// fichero.
+///
+/// Dentro de la memoria van las rutas canónicas de los últimos documentos y la
+/// etiqueta del token. No es el titular ni el DNI —el ID-32 se cumple—, pero
+/// «Recordar mi actividad» se justifica en el ADR-0010 como la promesa a quien
+/// firma en un **ordenador compartido**, y con el umask habitual (0755/0644)
+/// cualquier otra cuenta local puede leer esa lista.
+///
+/// En los sistemas que no entienden de modos POSIX no hace nada y no es un
+/// fallo: la protección equivalente en Windows la da la ACL heredada del perfil
+/// del usuario, y `%LOCALAPPDATA%` ya no es legible por otras cuentas.
+pub fn restrict_to_owner(path: &Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        const OWNER_ONLY_DIRECTORY: u32 = 0o700;
+        const OWNER_ONLY_FILE: u32 = 0o600;
+
+        let mode = if path.metadata()?.is_dir() {
+            OWNER_ONLY_DIRECTORY
+        } else {
+            OWNER_ONLY_FILE
+        };
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        Ok(())
+    }
 }
 
 /// El entorno no dice dónde vive el usuario.
@@ -378,5 +416,33 @@ mod tests {
         let paths = Paths::under("/tmp/prueba");
 
         assert_ne!(paths.config_file().parent(), paths.state_file().parent());
+    }
+
+    /// La prueba de los permisos vive aquí, y no junto a quien los pide, porque
+    /// leer un modo POSIX necesita `std::os::unix` y este es el único fichero
+    /// que puede tener un condicional de sistema operativo (ID-35).
+    #[cfg(unix)]
+    #[test]
+    fn restricting_leaves_the_directory_and_the_file_only_for_their_owner() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let inside = directory.path().join("rfirma");
+        std::fs::create_dir(&inside).expect("deberia crearse");
+        let file = inside.join("state.json");
+        std::fs::write(&file, b"{}").expect("deberia escribirse");
+
+        restrict_to_owner(&inside).expect("deberia poder restringirse");
+        restrict_to_owner(&file).expect("deberia poder restringirse");
+
+        let mode = |path: &Path| {
+            std::fs::metadata(path)
+                .expect("deberia leerse")
+                .permissions()
+                .mode()
+                & 0o777
+        };
+        assert_eq!(mode(&inside), 0o700);
+        assert_eq!(mode(&file), 0o600);
     }
 }

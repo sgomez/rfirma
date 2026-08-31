@@ -76,4 +76,23 @@ mod tests {
         let tags: HashSet<&str> = Language::ALL.iter().map(|l| l.tag()).collect();
         assert_eq!(tags.len(), Language::ALL.len());
     }
+
+    /// Los seis `#[serde(rename)]` repiten los seis brazos de [`Language::tag`],
+    /// y dos listas iguales escritas dos veces se separan. Esto las ata: cambiar
+    /// una sin la otra pone el PR en rojo.
+    #[test]
+    fn is_persisted_by_the_very_tag_it_reports() {
+        for language in Language::ALL {
+            assert_eq!(
+                serde_json::to_value(language).expect("deberia serializarse"),
+                serde_json::json!(language.tag()),
+                "el rename de serde y tag() se han separado en {language:?}"
+            );
+            assert_eq!(
+                serde_json::from_value::<Language>(serde_json::json!(language.tag()))
+                    .expect("deberia leerse"),
+                language,
+            );
+        }
+    }
 }

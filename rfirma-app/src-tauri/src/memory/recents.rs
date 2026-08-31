@@ -101,8 +101,14 @@ impl RecentDocument {
         self.modified
     }
 
-    /// Cuándo se usó por última vez, en segundos desde la época. Es el criterio
-    /// de desalojo.
+    /// Cuándo se usó por última vez, en segundos desde la época.
+    ///
+    /// Es **dato para pintar la fila**, no el criterio de desalojo: el desalojo
+    /// es por posición en la lista, y la posición la fija [`Recents::record`]
+    /// insertando al frente. Hoy las dos cosas coinciden porque `record` es la
+    /// única mutación; si algún día algo inserta con un `last_used` viejo —una
+    /// fusión de dos bandejas, una migración—, el que manda seguirá siendo el
+    /// orden, y entonces habrá que decidir cuál de los dos es la verdad.
     pub fn last_used(&self) -> u64 {
         self.last_used
     }
@@ -139,10 +145,24 @@ fn seconds_since_epoch(instant: SystemTime) -> Option<u64> {
 }
 
 /// La bandeja: como mucho [`CAPACITY`] documentos, el más reciente primero.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// El límite es una invariante del tipo y no una propiedad de [`Recents::record`]:
+/// también se aplica **al deserializar**, para que un `state.json` con quince
+/// entradas —editado a mano, escrito por una rFirma futura con otro límite,
+/// fusionado por un sincronizador— no pinte quince filas hasta el siguiente
+/// `record`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub struct Recents {
     entries: Vec<RecentDocument>,
+}
+
+impl<'de> Deserialize<'de> for Recents {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let mut entries = Vec::<RecentDocument>::deserialize(deserializer)?;
+        entries.truncate(CAPACITY);
+        Ok(Self { entries })
+    }
 }
 
 impl Recents {
@@ -287,6 +307,28 @@ mod tests {
             "el mas viejo se desaloja"
         );
         assert!(!names.contains(&"documento-1.pdf"));
+    }
+
+    #[test]
+    fn a_support_with_more_than_ten_entries_is_cut_down_when_it_is_read() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let mut written = Recents::default();
+        for index in 0..CAPACITY + 5 {
+            let document = a_document(directory.path(), &format!("de-fuera-{index}.pdf"));
+            // Sin pasar por `record`: es lo que hace quien edita el fichero a
+            // mano o una rFirma con otro limite.
+            written.entries.push(seen(&document));
+        }
+        let json = serde_json::to_string(&written).expect("deberia serializarse");
+
+        let read: Recents = serde_json::from_str(&json).expect("deberia leerse");
+
+        assert_eq!(
+            read.len(),
+            CAPACITY,
+            "el limite es del tipo, no de `record`"
+        );
+        assert_eq!(read.entries()[0].name(), "de-fuera-0.pdf");
     }
 
     #[test]
