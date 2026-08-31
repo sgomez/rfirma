@@ -69,6 +69,19 @@ debajo, como detalle de los `extraParams` de PAdES.
 **Sin imagen cargada, la casilla «Tu rúbrica» está apagada** con la pista
 «Elige antes una imagen»: no se puede marcar una rúbrica que no existe.
 
+**La miniatura enseña el resultado real, sobre blanco.** La rúbrica viaja al PDF
+como JPEG y el JPEG no tiene alfa, así que un PNG recortado sale con fondo
+blanco. No se avisa con un cartel: se enseña. Lo que la miniatura muestra es el
+fichero que se va a firmar, ya normalizado, no el que el usuario eligió.
+
+**Al elegir la imagen** el selector del portal filtra por tipo MIME
+(`image/png`, `image/jpeg`). Una imagen demasiado grande **se reduce en
+silencio** —es lo que el usuario habría pedido— y solo hay tres fallos que se
+cuentan: *no es una imagen PNG o JPEG*, *la imagen está dañada* y *la imagen es
+demasiado grande*. Todo esto ocurre al elegir, con el diálogo aún abierto, nunca
+al firmar. Ver el
+[ADR-0012](../adr/0012-normalizacion-de-la-rubrica-en-rust.md).
+
 ## Estados
 
 - **Sin certificado**: botón «Elegir certificado»; la sección de firma visible
@@ -125,6 +138,10 @@ tokens. Si se repiten en otra pantalla, hay que subirlos a
   poder marcarse.
 - El texto que explicaba qué es una rúbrica se eliminó: lo cargan las
   etiquetas.
+- **Los formatos de la rúbrica y su normalización** están fijados en el
+  [ADR-0012](../adr/0012-normalizacion-de-la-rubrica-en-rust.md): PNG y JPEG,
+  normalizados en Rust al elegirlos, transparencia aplanada a blanco y la
+  miniatura obligada a ser honesta al respecto.
 - El `Cambiar` del pie vale **solo para esa firma** y no toca la preferencia.
   Cambiar una preferencia desde un pie de página, sin decirlo, manda la
   siguiente firma a un sitio que el usuario no recuerda haber elegido.
