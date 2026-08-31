@@ -19,8 +19,12 @@
 # native-image jamas: un `cargo build` que dispare por sorpresa 1 m 22 s de
 # native-image arruina el bucle de realimentacion que protegio el issue #11.
 #
-# Requisitos: just, maven, git, pnpm, cargo y un GraalVM CE 25 para `native`.
+# Requisitos: just, maven, git, pnpm, cargo y un GraalVM CE 25 para `native`,
+# mas las librerias -dev del WebView (ver `libs_sistema` mas abajo).
 #   apt-get install -y just maven
+#
+# `just tools` los comprueba TODOS y falla nombrando lo que falte, con la orden
+# de apt lista para copiar. Ejecutalo antes que nada si algo no compila.
 
 # GraalVM CE 25: lo fijo el issue #6. La linea 21 aborta dentro del JNI_OnLoad
 # de libawt.so con cualquier firma visible, asi que no sirve para construir.
@@ -50,6 +54,16 @@ version_crap := "0.4.3"
 # SI esta probado, solo que en el otro carril. El carril lento repite la
 # medicion sin ella (`just crap-completo`).
 ffi_allow := "src/ffi.rs"
+
+# Las librerias de sistema que necesita el WebView de Tauri, como pares
+# "<modulo de pkg-config>:<paquete apt>". NO son dependencias de cargo: son
+# paquetes -dev del sistema, y sin ellas `cargo build` muere dentro del
+# build script de webkit2gtk-sys con un error de pkg-config que no menciona
+# ningun paquete instalable.
+#
+# ESTA ES LA LISTA CANONICA: .github/workflows/ci.yml instala exactamente
+# estos paquetes en sus dos carriles. Si tocas una, tocas las tres.
+libs_sistema := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
 
 # Lista las recetas.
 default:
@@ -86,6 +100,38 @@ tools:
     for t in mvn git java pnpm cargo; do
         command -v "$t" >/dev/null || { echo "falta: $t"; fallan=1; }
     done
+    # Un cargo instalado pero fuera del PATH es el falso negativo mas caro de
+    # esta receta: "falta: cargo" manda a reinstalar rustup a quien solo tiene
+    # que cargar el env. rustup lo deja en ~/.cargo/env, que ~/.profile carga
+    # y zsh NO lee en shells interactivas.
+    if ! command -v cargo >/dev/null && [ -x "$HOME/.cargo/bin/cargo" ]; then
+        echo "  cargo esta en ~/.cargo/bin pero no en el PATH:"
+        echo "    anade '. \"$HOME/.cargo/env\"' a tu ~/.zshrc (o ~/.bashrc)"
+    fi
+    # Las librerias de sistema del WebView. pkg-config es quien decide, porque
+    # es quien consulta el build script que falla: el paquete de runtime puede
+    # estar instalado y faltar solo el -dev, que es el que trae el .pc.
+    if command -v pkg-config >/dev/null; then
+        faltan_apt=""
+        for par in {{ libs_sistema }}; do
+            modulo="${par%%:*}"
+            paquete="${par#*:}"
+            pkg-config --exists "$modulo" || {
+                echo "falta la libreria de sistema: $modulo"
+                faltan_apt="$faltan_apt $paquete"
+                fallan=1
+            }
+        done
+        if [ -n "$faltan_apt" ]; then
+            echo
+            echo "Instalalas con:"
+            echo "  sudo apt install -y$faltan_apt"
+            echo
+        fi
+    else
+        echo "falta: pkg-config"
+        fallan=1
+    fi
     # Opcionales: no rompen `check`, pero si la receta que los usa.
     graal="${GRAALVM_HOME:-{{ graalvm_por_defecto }}}"
     if [ ! -x "$graal/bin/native-image" ]; then
