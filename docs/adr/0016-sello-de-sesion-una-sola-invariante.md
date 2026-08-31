@@ -24,6 +24,13 @@ efectivo reintroduciría el fallo por otra puerta.
 Dentro van también el algoritmo de firma y el `TIME`. Fuera quedan `PRE` y `PID`, que son
 salida de la prefirma y no configuración.
 
+Y dentro van, además, el **SHA-256 del PDF** y el **SHA-256 de la cadena de certificados** (sus
+DER concatenados en orden). No son configuración, pero son lo que sigue **viajando aparte**
+hasta la postfirma: postfirmar un PDF que no es el prefirmado da `Digest Mismatch`, y hacerlo
+con otro certificado da un documento que dice estar firmado por quien no lo firmó. Las dos cosas
+completan sin error, que es exactamente el fallo que este ADR existe para cerrar, así que el
+sello las ata igual que ata el `TIME`.
+
 ## Consecuencias
 
 La zona horaria deja de heredarse del entorno: la prefirma captura la del sistema y la

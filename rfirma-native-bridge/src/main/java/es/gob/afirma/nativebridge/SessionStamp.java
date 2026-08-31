@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -26,13 +28,15 @@ import java.util.TimeZone;
  * justo la que dejo colarse el tercero durante anos. Aqui van en un solo
  * bloque, y la postfirma los toma <b>de el</b> en vez de del llamante: no hay
  * campos que recordar porque no hay campos que pasar. Lo que queda por comprobar
- * es lo que sigue viajando aparte hasta la postfirma —la sesion trifasica y el
- * propio PDF—, y eso son {@link #matchesSessionTime(String)} y
- * {@link #matchesPdf(byte[])}, dos comparaciones de bytes.
+ * es lo que sigue viajando aparte hasta la postfirma —la sesion trifasica, el
+ * propio PDF y la cadena de certificados—, y eso son
+ * {@link #matchesSessionTime(String)}, {@link #matchesPdf(byte[])} y
+ * {@link #matchesChain(X509Certificate[])}, tres comparaciones de bytes.
  *
- * <p>Dentro van el algoritmo, el {@code TIME}, la zona horaria y el
- * <b>SHA-256 del PDF prefirmado</b>. Fuera quedan {@code PRE} y {@code PID},
- * que son salida de la prefirma y no configuracion.
+ * <p>Dentro van el algoritmo, el {@code TIME}, la zona horaria, el
+ * <b>SHA-256 del PDF prefirmado</b> y el <b>SHA-256 de la cadena de
+ * certificados</b>. Fuera quedan {@code PRE} y {@code PID}, que son salida de la
+ * prefirma y no configuracion.
  *
  * <p>El sello es <b>opaco para Rust por convencion</b>, no por construccion: el
  * bloque es texto plano en Base64 y no lleva ninguna marca de integridad, asi
@@ -52,6 +56,8 @@ public final class SessionStamp {
     private static final String KEY_TIME_ZONE = "TZ";
     /** SHA-256 en hexadecimal del PDF que recibio la prefirma. */
     private static final String KEY_PDF_DIGEST = "PDF";
+    /** SHA-256 en hexadecimal de los DER de la cadena, concatenados en orden. */
+    private static final String KEY_CHAIN_DIGEST = "CHAIN";
     /** Prefijo de cada extraParam efectivo. */
     private static final String PARAM_PREFIX = "P.";
 
@@ -59,14 +65,17 @@ public final class SessionStamp {
     private final String time;
     private final String timeZoneId;
     private final String pdfDigest;
+    private final String chainDigest;
     private final Properties extraParams;
 
     private SessionStamp(final String algorithm, final String time,
-            final String timeZoneId, final String pdfDigest, final Properties extraParams) {
+            final String timeZoneId, final String pdfDigest, final String chainDigest,
+            final Properties extraParams) {
         this.algorithm = algorithm;
         this.time = time;
         this.timeZoneId = timeZoneId;
         this.pdfDigest = pdfDigest;
+        this.chainDigest = chainDigest;
         this.extraParams = extraParams;
     }
 
@@ -88,14 +97,21 @@ public final class SessionStamp {
      *                     postfirma y sin sellarlo se puede postfirmar uno distinto
      *                     del prefirmado —el resultado completa sin error y sale con
      *                     {@code Digest Mismatch}, el mismo fallo por otra puerta.
+     * @param chain        la cadena de certificados con la que se prefirma. Tampoco
+     *                     se guarda: se guarda el SHA-256 de sus DER concatenados en
+     *                     orden. Es lo tercero que viaja aparte, y postfirmar con otro
+     *                     certificado tambien completa sin error —sale un PDF que dice
+     *                     estar firmado por quien no lo firmo, con la firma invalida.
      */
     public static SessionStamp of(final String algorithm, final String time,
-            final TimeZone timeZone, final Properties effectiveParams, final byte[] pdf) {
+            final TimeZone timeZone, final Properties effectiveParams, final byte[] pdf,
+            final X509Certificate[] chain) {
         final Properties copy = new Properties();
         for (final String name : effectiveParams.stringPropertyNames()) {
             copy.setProperty(name, effectiveParams.getProperty(name));
         }
-        return new SessionStamp(algorithm, time, timeZone.getID(), digestOf(pdf), copy);
+        return new SessionStamp(algorithm, time, timeZone.getID(), digestOf(pdf),
+                digestOfChain(chain), copy);
     }
 
     /** SHA-256 en hexadecimal minusculas, que es lo que se guarda del PDF. */
@@ -103,14 +119,42 @@ public final class SessionStamp {
         if (pdf == null) {
             throw new IllegalArgumentException("no hay PDF que sellar");
         }
-        final byte[] digest;
+        return hex(sha256().digest(pdf));
+    }
+
+    /**
+     * SHA-256 de los DER de la cadena concatenados <b>en orden</b>: el primero es
+     * el del firmante, asi que reordenarla cambia quien firma y el orden es parte
+     * de lo que hay que sellar.
+     */
+    private static String digestOfChain(final X509Certificate[] chain) {
+        if (chain == null || chain.length == 0) {
+            throw new IllegalArgumentException("no hay cadena de certificados que sellar");
+        }
+        final MessageDigest digest = sha256();
+        for (final X509Certificate cert : chain) {
+            try {
+                digest.update(cert.getEncoded());
+            }
+            catch (final CertificateEncodingException e) {
+                throw new IllegalArgumentException(
+                        "un certificado de la cadena no se puede codificar en DER", e);
+            }
+        }
+        return hex(digest.digest());
+    }
+
+    private static MessageDigest sha256() {
         try {
-            digest = MessageDigest.getInstance("SHA-256").digest(pdf);
+            return MessageDigest.getInstance("SHA-256");
         }
         catch (final NoSuchAlgorithmException e) {
             // SHA-256 es obligatorio en toda JVM; si falta, el entorno esta roto.
             throw new IllegalStateException("esta JVM no tiene SHA-256", e);
         }
+    }
+
+    private static String hex(final byte[] digest) {
         final StringBuilder sb = new StringBuilder(digest.length * 2);
         for (final byte b : digest) {
             sb.append(Character.forDigit((b >> 4) & 0xF, 16));
@@ -126,6 +170,7 @@ public final class SessionStamp {
         append(sb, KEY_TIME, this.time);
         append(sb, KEY_TIME_ZONE, this.timeZoneId);
         append(sb, KEY_PDF_DIGEST, this.pdfDigest);
+        append(sb, KEY_CHAIN_DIGEST, this.chainDigest);
         final List<String> names = new ArrayList<>(this.extraParams.stringPropertyNames());
         // Orden fijo: un Properties no lo tiene, y sin esto dos sellos del mismo
         // contenido saldrian distintos segun el orden de iteracion.
@@ -158,6 +203,7 @@ public final class SessionStamp {
         String time = null;
         String timeZoneId = null;
         String pdfDigest = null;
+        String chainDigest = null;
         final Properties params = new Properties();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) {
@@ -174,6 +220,7 @@ public final class SessionStamp {
                 case KEY_TIME -> time = value;
                 case KEY_TIME_ZONE -> timeZoneId = value;
                 case KEY_PDF_DIGEST -> pdfDigest = value;
+                case KEY_CHAIN_DIGEST -> chainDigest = value;
                 default -> {
                     if (!key.startsWith(PARAM_PREFIX)) {
                         throw new IllegalArgumentException(
@@ -183,11 +230,12 @@ public final class SessionStamp {
                 }
             }
         }
-        if (algorithm == null || time == null || timeZoneId == null || pdfDigest == null) {
+        if (algorithm == null || time == null || timeZoneId == null || pdfDigest == null
+                || chainDigest == null) {
             throw new IllegalArgumentException(
-                    "al sello de sesion le falta ALG, TIME, TZ o PDF");
+                    "al sello de sesion le falta ALG, TIME, TZ, PDF o CHAIN");
         }
-        return new SessionStamp(algorithm, time, timeZoneId, pdfDigest, params);
+        return new SessionStamp(algorithm, time, timeZoneId, pdfDigest, chainDigest, params);
     }
 
     /**
@@ -197,8 +245,9 @@ public final class SessionStamp {
      * <p>El algoritmo, los {@code extraParams} y la zona horaria la postfirma los
      * toma del sello, no del llamante, asi que no pueden desviarse. Lo que si
      * viaja aparte es el {@code TIME} —dentro del {@code TriphaseData}, junto al
-     * {@code PK1} que Rust anade— y el propio PDF; de ahi que haya dos
-     * comprobaciones y no una: esta y {@link #matchesPdf(byte[])}.
+     * {@code PK1} que Rust anade—, el propio PDF y la cadena de certificados; de
+     * ahi que haya tres comprobaciones y no una: esta, {@link #matchesPdf(byte[])}
+     * y {@link #matchesChain(X509Certificate[])}.
      */
     public boolean matchesSessionTime(final String sessionTime) {
         return this.time.equals(sessionTime);
@@ -215,9 +264,29 @@ public final class SessionStamp {
         return pdf != null && this.pdfDigest.equals(digestOf(pdf));
     }
 
+    /**
+     * La tercera comprobacion: la cadena que llega a la postfirma es la misma con
+     * la que se prefirmo, y en el mismo orden.
+     *
+     * <p>Sin esto, postfirmar con otro certificado <b>no falla</b>: devuelve un PDF
+     * completo que dice estar firmado por quien no lo firmo, y cuya firma
+     * {@code pdfsig} declara invalida.
+     */
+    public boolean matchesChain(final X509Certificate[] chain) {
+        if (chain == null || chain.length == 0) {
+            return false;
+        }
+        return this.chainDigest.equals(digestOfChain(chain));
+    }
+
     /** SHA-256 del PDF prefirmado, en hexadecimal. Para el mensaje de error. */
     public String pdfDigest() {
         return this.pdfDigest;
+    }
+
+    /** SHA-256 de la cadena prefirmada, en hexadecimal. Para el mensaje de error. */
+    public String chainDigest() {
+        return this.chainDigest;
     }
 
     public String algorithm() {

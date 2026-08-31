@@ -37,9 +37,13 @@ public final class PadesBridge {
     private static final String PROPERTY_PKCS1 = "PK1";
 
     /**
-     * Cerrojo de la postfirma. Lo que protege no es un campo del puente sino
-     * {@link TimeZone#setDefault(TimeZone)}, que es de la JVM entera; ver el
-     * comentario dentro de {@link #postSign}.
+     * Cerrojo de <b>las dos fases</b>. Lo que protege no es un campo del puente
+     * sino la zona horaria por defecto, que es de la JVM entera: la postfirma la
+     * escribe con {@link TimeZone#setDefault(TimeZone)} durante todo
+     * {@code preProcessPostSign}, y la prefirma la lee. Un lector fuera del
+     * cerrojo capturaria la zona que impuso la postfirma de al lado y sellaria una
+     * que no es la que uso, asi que las dos fases lo toman; ver los comentarios
+     * dentro de {@link #preSign} y {@link #postSign}.
      */
     private static final Object DEFAULT_TIME_ZONE_LOCK = new Object();
 
@@ -70,10 +74,21 @@ public final class PadesBridge {
         // GregorianCalendar con la de por defecto, y el desfase entra dentro del
         // rango firmado (#23). Fuera del sello se heredaria del entorno de la
         // postfirma, que puede no ser el mismo.
-        final TimeZone timeZone = TimeZone.getDefault();
-
-        final TriphaseData session = new PAdESTriPhasePreProcessor().preProcessPreSign(
-                pdf, algorithm, chain, extraParams, false);
+        //
+        // Captura y prefirma van dentro del MISMO cerrojo que la postfirma, y no
+        // porque la prefirma escriba nada: porque la postfirma de al lado mantiene
+        // su TimeZone.setDefault puesto durante todo preProcessPostSign, asi que la
+        // ventana no es un instante entre dos instrucciones sino la postfirma
+        // entera. Leyendo fuera, el sello diria una zona y el documento se habria
+        // prefirmado con otra —y el PDF saldria invalido sin error, que es el fallo
+        // que este puente cierra.
+        final TimeZone timeZone;
+        final TriphaseData session;
+        synchronized (DEFAULT_TIME_ZONE_LOCK) {
+            timeZone = TimeZone.getDefault();
+            session = new PAdESTriPhasePreProcessor().preProcessPreSign(
+                    pdf, algorithm, chain, extraParams, false);
+        }
 
         if (session.getSignsCount() < 1) {
             throw new IllegalStateException("la prefirma PAdES no ha devuelto ninguna firma");
@@ -91,7 +106,8 @@ public final class PadesBridge {
         }
 
         // extraParams EFECTIVOS: el objeto que acaba de mutar la prefirma.
-        final SessionStamp stamp = SessionStamp.of(algorithm, time, timeZone, extraParams, pdf);
+        final SessionStamp stamp =
+                SessionStamp.of(algorithm, time, timeZone, extraParams, pdf, chain);
 
         return new PreSignResult(session.toString(), preSign, stamp.encode());
     }
@@ -102,11 +118,11 @@ public final class PadesBridge {
      * <p>Los {@code extraParams}, el algoritmo y la zona horaria salen del
      * <b>sello</b>, no del llamante: la postfirma los impone en vez de confiar
      * en que vuelvan a coincidir. Lo que no se puede imponer porque viaja aparte
-     * —el {@code TIME}, dentro del {@code TriphaseData}, y el propio PDF— se
-     * compara contra el sello antes de firmar.
+     * —el {@code TIME}, dentro del {@code TriphaseData}, el propio PDF y la cadena
+     * de certificados— se compara contra el sello antes de firmar.
      *
-     * @param pdf        el MISMO PDF que recibio la prefirma.
-     * @param chain      la MISMA cadena de certificados.
+     * @param pdf        el MISMO PDF que recibio la prefirma; el sello lo comprueba.
+     * @param chain      la MISMA cadena de certificados; el sello la comprueba.
      * @param stampB64   el sello que devolvio la prefirma, tal cual.
      * @param sessionXml el {@code TriphaseData} de la prefirma, tal cual.
      * @param pkcs1B64   el PKCS#1 que Rust calculo sobre los atributos firmados.
@@ -144,6 +160,19 @@ public final class PadesBridge {
                     "el PDF que recibe la postfirma no es el que se prefirmo: el sello"
                             + " lleva el SHA-256 " + stamp.pdfDigest() + ". Firmar asi"
                             + " produciria un PDF con «Digest Mismatch» sin dar ningun error.");
+        }
+
+        if (!stamp.matchesChain(chain)) {
+            // La cadena es la tercera cosa que viaja aparte. Postfirmar con otro
+            // certificado tampoco falla: sale un PDF completo que dice estar firmado
+            // por quien no lo firmo, y cuya firma pdfsig declara invalida. Es el
+            // mismo fallo silencioso, y el que mas pesa de los tres.
+            throw new SessionStampMismatchException(
+                    "la cadena de certificados que recibe la postfirma no es la que"
+                            + " prefirmo: el sello lleva el SHA-256 " + stamp.chainDigest()
+                            + ". Firmar asi produciria un PDF que dice estar firmado por"
+                            + " quien no lo firmo, con la firma invalida y sin dar ningun"
+                            + " error.");
         }
 
         if (pkcs1B64 == null || pkcs1B64.isBlank()) {

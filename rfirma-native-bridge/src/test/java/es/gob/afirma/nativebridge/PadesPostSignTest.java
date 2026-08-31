@@ -110,6 +110,24 @@ class PadesPostSignTest {
     }
 
     @Test
+    void rejects_a_chain_that_is_not_the_one_that_presigned() throws Exception {
+        // La cadena es la tercera cosa que viaja aparte. Con el mismo PDF y el mismo
+        // TIME las otras dos comprobaciones pasan, y sin esta la postfirma completa
+        // sin error: el PDF sale diciendo estar firmado por quien no lo firmo y
+        // pdfsig lo declara "Signature is Invalid".
+        final SignedSession s = sign(new Properties());
+        final X509Certificate[] other = TestFixtures.otherCertificateChain();
+
+        final PadesBridge.SessionStampMismatchException failure = assertThrows(
+                PadesBridge.SessionStampMismatchException.class,
+                () -> PadesBridge.postSign(s.pdf(), other,
+                        s.pre().stamp(), s.pre().session(), s.pkcs1()));
+
+        assertTrue(failure.getMessage().contains("quien no lo firmo"),
+                "el mensaje tiene que decir que se estaba evitando: " + failure.getMessage());
+    }
+
+    @Test
     void restores_the_default_time_zone_even_when_postsigns_overlap() throws Exception {
         // TimeZone.setDefault es estado global del proceso: sin serializar, dos
         // postfirmas solapadas se pisan la zona y el finally de una restaura la de
@@ -136,6 +154,50 @@ class PadesPostSignTest {
 
         assertEquals(before.getID(), TimeZone.getDefault().getID(),
                 "el proceso se ha quedado con la zona horaria de una postfirma");
+    }
+
+    @Test
+    void seals_the_ambient_time_zone_even_while_a_postsign_imposes_another() throws Exception {
+        // La postfirma mantiene su TimeZone.setDefault puesto durante TODO
+        // preProcessPostSign, asi que una prefirma que lea la zona fuera del cerrojo
+        // captura la de la postfirma de al lado y sella una que no es con la que se
+        // prefirmo. El PDF acabaria invalido sin que nadie se entere.
+        final byte[] pdf = TestFixtures.samplePdf();
+        final X509Certificate[] chain = TestFixtures.certificateChain();
+        final TimeZone ambientZone = TimeZone.getDefault();
+        // La sesion vecina se prefirma en una zona bien lejana para que su postfirma
+        // imponga una que no es la del proceso: si no, no habria nada que capturar.
+        final SignedSession neighbour;
+        TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Kiritimati"));
+        try {
+            neighbour = sign(new Properties());
+        }
+        finally {
+            TimeZone.setDefault(ambientZone);
+        }
+        final String ambient = ambientZone.getID();
+
+        final ExecutorService pool = Executors.newFixedThreadPool(1);
+        try {
+            final Future<?> postSigns = pool.submit(() -> {
+                for (int i = 0; i < 20; i++) {
+                    PadesBridge.postSign(neighbour.pdf(), neighbour.chain(),
+                            neighbour.pre().stamp(), neighbour.pre().session(), neighbour.pkcs1());
+                }
+                return null;
+            });
+            for (int i = 0; i < 20; i++) {
+                final PadesBridge.PreSignResult pre =
+                        PadesBridge.preSign(pdf, ALGORITHM, chain, new Properties());
+                assertEquals(ambient,
+                        SessionStamp.decode(pre.stamp()).timeZone().getID(),
+                        "el sello ha capturado la zona horaria de la postfirma de al lado");
+            }
+            postSigns.get();
+        }
+        finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

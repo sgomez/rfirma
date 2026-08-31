@@ -32,6 +32,8 @@ final class TestFixtures {
 
     /** Camino feliz del kit: RSA 2048, OCSP good, caduca el 2028-10-30. */
     private static final Path ACTIVE_P12 = Path.of("..", "testdata", "fnmt", "active-rsa.p12");
+    /** El segundo certificado del kit. Aqui solo se usa por ser OTRO, no por estar revocado. */
+    private static final Path REVOKED_P12 = Path.of("..", "testdata", "fnmt", "revoked-rsa.p12");
     private static final char[] PASSWORD = "1234".toCharArray();
 
     private TestFixtures() { }
@@ -47,15 +49,22 @@ final class TestFixtures {
     }
 
     static KeyStore keyStore() throws Exception {
+        return keyStore(ACTIVE_P12);
+    }
+
+    private static KeyStore keyStore(final Path p12) throws Exception {
         final KeyStore ks = KeyStore.getInstance("PKCS12");
-        try (InputStream in = Files.newInputStream(ACTIVE_P12)) {
+        try (InputStream in = Files.newInputStream(p12)) {
             ks.load(in, PASSWORD);
         }
         return ks;
     }
 
     static String alias() throws Exception {
-        final KeyStore ks = keyStore();
+        return alias(keyStore());
+    }
+
+    private static String alias(final KeyStore ks) throws Exception {
         for (final Enumeration<String> aliases = ks.aliases(); aliases.hasMoreElements();) {
             final String alias = aliases.nextElement();
             if (ks.isKeyEntry(alias)) {
@@ -66,7 +75,16 @@ final class TestFixtures {
     }
 
     static X509Certificate[] certificateChain() throws Exception {
-        final Certificate[] chain = keyStore().getCertificateChain(alias());
+        return certificateChain(keyStore());
+    }
+
+    /** Otra cadena distinta del kit, para las pruebas que necesitan una que no sea la del sello. */
+    static X509Certificate[] otherCertificateChain() throws Exception {
+        return certificateChain(keyStore(REVOKED_P12));
+    }
+
+    private static X509Certificate[] certificateChain(final KeyStore ks) throws Exception {
+        final Certificate[] chain = ks.getCertificateChain(alias(ks));
         final List<X509Certificate> certs = new ArrayList<>();
         for (final Certificate cert : chain) {
             certs.add((X509Certificate) cert);
