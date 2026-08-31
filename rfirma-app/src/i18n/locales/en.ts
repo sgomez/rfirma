@@ -191,6 +191,22 @@ export const en: Catalog = {
     incorrectUnknown: "Wrong PIN. The card locks after a few failed attempts.",
     submit: "Sign",
   },
+  progress: {
+    title: "Signing the document…",
+    stages: {
+      presign: "Preparing the signature",
+      presignTerm: "presignature",
+      sign: "Signing on the card",
+      postsign: "Assembling the PDF",
+      postsignTerm: "postsignature",
+    },
+    states: {
+      done: "Done",
+      running: "Under way",
+      pending: "Pending",
+    },
+    keepTheCard: "Do not remove the card until it finishes.",
+  },
   preferences: {
     title: "Preferences",
     rememberVisibleSignature: {

@@ -243,6 +243,30 @@ export const es = {
     incorrectUnknown: "PIN incorrecto. La tarjeta se bloquea tras varios intentos fallidos.",
     submit: "Firmar",
   },
+  /**
+   * El diálogo de progreso (docs/design/dialogo-progreso-firma.md). Las etapas
+   * se nombran en lenguaje llano y el término del dominio va entre paréntesis y
+   * atenuado: quien lea un informe de error sí lo necesita.
+   *
+   * La etapa de firma no lleva paréntesis, porque «firmando en la tarjeta» ya
+   * dice exactamente lo que pasa.
+   */
+  progress: {
+    title: "Firmando el documento…",
+    stages: {
+      presign: "Preparando la firma",
+      presignTerm: "prefirma",
+      sign: "Firmando en la tarjeta",
+      postsign: "Ensamblando el PDF",
+      postsignTerm: "postfirma",
+    },
+    states: {
+      done: "Hecha",
+      running: "En curso",
+      pending: "Pendiente",
+    },
+    keepTheCard: "No retires la tarjeta hasta que termine.",
+  },
   /** Los ajustes (docs/design/preferencias.md). Se aplican al hacerlos. */
   preferences: {
     title: "Preferencias",

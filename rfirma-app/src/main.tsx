@@ -9,6 +9,7 @@ import { LanguageProvider } from "./i18n/LanguageProvider";
 import { inMemoryLanguagePreference } from "./i18n/preference";
 import { inMemoryPreferences } from "./preferences/preferences";
 import { emptyCertificateStore } from "./signing/certificate";
+import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { emptyPdfSource } from "./viewer/source";
@@ -60,6 +61,7 @@ createRoot(root).render(
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}
+        signer={unavailableSigningBackend()}
       />
     </LanguageProvider>
   </StrictMode>,

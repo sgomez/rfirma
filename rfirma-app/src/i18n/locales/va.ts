@@ -196,6 +196,22 @@ export const va: UntranslatedCatalog = {
     incorrectUnknown: "",
     submit: "",
   },
+  progress: {
+    title: "",
+    stages: {
+      presign: "",
+      presignTerm: "",
+      sign: "",
+      postsign: "",
+      postsignTerm: "",
+    },
+    states: {
+      done: "",
+      running: "",
+      pending: "",
+    },
+    keepTheCard: "",
+  },
   preferences: {
     title: "",
     rememberVisibleSignature: {

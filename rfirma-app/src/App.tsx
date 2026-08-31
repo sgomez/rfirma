@@ -9,8 +9,12 @@ import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
+import type { SigningBackend } from "./signing/flow";
+import { PinDialog } from "./signing/PinDialog";
 import type { Rubric, RubricFailure, RubricPicker } from "./signing/rubric";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
+import { SigningProgressDialog } from "./signing/SigningProgressDialog";
+import { useSigning } from "./signing/useSigning";
 import {
   DEFAULT_VISIBLE_SIGNATURE,
   type Layer2Composer,
@@ -40,6 +44,8 @@ interface AppProps {
   rubrics: RubricPicker;
   /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
   composer: Layer2Composer;
+  /** Quien ejecuta las tres etapas de la firma. Ver [`SigningBackend`]. */
+  signer: SigningBackend;
   /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
 }
@@ -63,6 +69,7 @@ export function App({
   certificates,
   rubrics,
   composer,
+  signer,
   menuAnchor,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -76,6 +83,7 @@ export function App({
   const [signature, setSignature] = useState<VisibleSignature>(DEFAULT_VISIBLE_SIGNATURE);
   const [rubric, setRubric] = useState<Rubric | null>(null);
   const [rubricFailure, setRubricFailure] = useState<RubricFailure | null>(null);
+  const signing = useSigning(signer);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
   // es recordar; el primer documento no se puede abrir antes de esa lectura.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
@@ -196,9 +204,16 @@ export function App({
                 writable: true,
               }}
               onChangeDestination={() => setDialog("preferences")}
-              onSign={() => setDialog(null)}
-              signing={false}
-              failure={null}
+              onSign={() => void signing.start()}
+              signing={signing.state.kind === "running" || signing.state.kind === "pin"}
+              failure={
+                signing.state.kind === "failed"
+                  ? {
+                      situation: signing.state.failure.situation,
+                      detail: signing.state.failure.detail,
+                    }
+                  : null
+              }
             />
           ) : null
         }
@@ -214,6 +229,16 @@ export function App({
       )}
       {dialog === "about" && (
         <AboutDialog version={__APP_VERSION__} onClose={() => setDialog(null)} />
+      )}
+      {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}
+      {signing.state.kind === "pin" && certificate.kind === "chosen" && (
+        <PinDialog
+          certificate={certificate.certificate}
+          failure={signing.state.failure}
+          busy={false}
+          onSubmit={(pin) => void signing.submitPin(pin)}
+          onCancel={signing.cancel}
+        />
       )}
     </>
   );

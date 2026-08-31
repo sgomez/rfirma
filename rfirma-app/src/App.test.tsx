@@ -6,6 +6,7 @@ import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import { inMemoryPreferences } from "./preferences/preferences";
 import { emptyCertificateStore } from "./signing/certificate";
+import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
@@ -38,6 +39,7 @@ function renderApp(recents = inMemoryRecents(), documents: RecentDocument[] = []
       certificates={emptyCertificateStore()}
       rubrics={emptyRubricPicker()}
       composer={emptyLayer2Composer()}
+      signer={unavailableSigningBackend()}
       menuAnchor="header"
     />,
   );
