@@ -1,0 +1,161 @@
+# Manifiesto de medicion del issue #22.
+#
+# Empaqueta la SONDA (packaging/flatpak/probe), no rfirma: la aplicacion no
+# existe todavia. Lo que se mide aqui —runtime, permisos, los seis .so en
+# /app/lib/rfirma, PKCS#11, portales y WebKitGTK— es lo que heredara el
+# manifiesto real cambiando el modulo `sonda` por `rfirma-app`.
+app-id: io.github.sgomez.rfirma
+# Rama fija: la version de cada entrega va en <releases> del metainfo, no en
+# la rama. Asi el usuario que instala 'stable' sigue recibiendo las siguientes.
+branch: stable
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: rfirma-probe
+
+finish-args:
+  # Ventana: WebKitGTK bajo Wayland, con respaldo X11.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # Lectores de tarjeta fisicos (DNIe): el demonio pcscd corre en el
+  # anfitrion y su socket aparece dentro en /run/pcscd/pcscd.comm.
+  - --socket=pcsc
+  # Paliativo medido en #22: sin el, GTK3 del runtime commitea un buffer que
+  # no es dmabuf con sincronizacion explicita negociada y Mutter mata el
+  # proceso ("Explicit Sync only supported on dmabuf buffers", Error 71).
+  # Reproducido igual en org.gnome.Platform 49 y 50.
+  - --env=WEBKIT_DISABLE_COMPOSITING_MODE=1
+  # NO se declara --filesystem=host-os: el modulo PKCS#11 lo aporta el
+  # flatpak (modulo `opensc`). Los del anfitrion no cargan aqui dentro.
+  # Ni --filesystem=home ni --filesystem=host: los ficheros entran y salen
+  # por portales.
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/sonda/cargo
+
+modules:
+  # 1. Los seis .so del ADR-0004, construidos en el anfitrion con GraalVM CE 25
+  #    (issue #23 midio que no hace falta construirlos dentro del SDK).
+  - name: libreria-nativa
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 -t /app/lib/rfirma librfirma_crypto.so libawt.so
+        libawt_headless.so libjavajpeg.so libjava.so libjvm.so
+    sources:
+      - type: dir
+        path: ../../rfirma-native-bridge/target/ce25-awt
+
+  # 2. Material de prueba de la sonda (no iria en el paquete real).
+  - name: datos-de-prueba
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 -t /app/share/rfirma-probe cert.b64 cert-fnmt.b64 test.pdf
+        visible-imagen.properties
+    sources:
+      - type: dir
+        path: ../../target/fixtures
+
+  # 3. Cliente PC/SC. El demonio pcscd corre en el ANFITRION; aqui solo va la
+  #    libreria cliente, que habla con el por el socket que expone
+  #    --socket=pcsc. Medido en #22: el runtime no la trae.
+  - name: pcsc-lite
+    buildsystem: meson
+    config-opts:
+      - -Dlibsystemd=false
+      - -Dlibudev=false
+      - -Dlibusb=false
+      - -Dpolkit=false
+      # El socket que expone --socket=pcsc aparece en /run/pcscd/pcscd.comm.
+      - -Dipcdir=/run/pcscd
+      - -Dusbdropdir=/app/lib/pcsc/drivers
+    sources:
+      - type: archive
+        url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz
+        sha256: bfcfe38a20afc49849c6bf55325e38f449fc4b26d3923fdc32b969ae41a8741b
+    cleanup:
+      - /bin
+      - /sbin
+      - /include
+      - /lib/pkgconfig
+      - /share/man
+
+  # 4. El modulo PKCS#11 lo APORTA el flatpak, no el anfitrion. Medido en #22:
+  #    el opensc-pkcs11.so del anfitrion no carga dentro del arenero porque sus
+  #    libopensc.so.13 y libeac.so.3 no estan, y apuntar LD_LIBRARY_PATH al
+  #    anfitrion mezcla librerias de otra glibc dentro del runtime.
+  - name: opensc
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-notify
+      - --disable-doc
+      - --disable-strict
+      - --enable-pcsc
+      - --with-pcsc-provider=libpcsclite.so.1
+    make-install-args:
+      # Por omision intenta escribir en /usr/share/p11-kit/modules, que en el
+      # arenero de construccion es de solo lectura.
+      - p11kitdir=/app/share/p11-kit/modules
+      - completiondir=/app/share/bash-completion/completions
+    sources:
+      - type: archive
+        url: https://github.com/OpenSC/OpenSC/releases/download/0.27.1/opensc-0.27.1.tar.gz
+        sha256: 976f4a23eaf3397a1a2c3a7aac80bf971a8c3d829c9a79f06145bfaeeae5eca7
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - /share/man
+      - /share/bash-completion
+      # De las veintidos herramientas de linea de ordenes solo se conservan
+      # las dos que sirven para diagnosticar una tarjeta en soporte.
+      - /bin/cardos-tool
+      - /bin/cryptoflex-tool
+      - /bin/dnie-tool
+      - /bin/dtrust-tool
+      - /bin/egk-tool
+      - /bin/eidenv
+      - /bin/gids-tool
+      - /bin/goid-tool
+      - /bin/iasecc-tool
+      - /bin/netkey-tool
+      - /bin/openpgp-tool
+      - /bin/opensc-asn1
+      - /bin/opensc-explorer
+      - /bin/piv-tool
+      - /bin/pkcs11-register
+      - /bin/pkcs15-crypt
+      - /bin/pkcs15-init
+      - /bin/pkcs15-tool
+      - /bin/sc-hsm-tool
+      - /bin/westcos-tool
+
+  # 5. La sonda Tauri.
+  - name: sonda
+    buildsystem: simple
+    build-options:
+      build-args:
+        # Flathub NO permite red en construccion; aqui se usa para no tener
+        # que vendorizar las dependencias de cargo en una medicion.
+        - --share=network
+    build-commands:
+      - cargo build --release
+      - install -Dm755 target/release/rfirma-probe /app/bin/rfirma-probe
+      - install -Dm644 io.github.sgomez.rfirma.desktop
+        /app/share/applications/io.github.sgomez.rfirma.desktop
+      - install -Dm644 io.github.sgomez.rfirma.metainfo.xml
+        /app/share/metainfo/io.github.sgomez.rfirma.metainfo.xml
+      - install -Dm644 icons/icon.png
+        /app/share/icons/hicolor/64x64/apps/io.github.sgomez.rfirma.png
+    sources:
+      - type: dir
+        path: probe
+      - type: file
+        path: io.github.sgomez.rfirma.desktop
+      - type: file
+        path: io.github.sgomez.rfirma.metainfo.xml

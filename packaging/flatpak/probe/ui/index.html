@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>sonda rfirma #22</title>
+<style>
+ body{font:14px/1.5 system-ui,sans-serif;margin:2rem;max-width:60rem}
+ pre{background:#111;color:#eee;padding:1rem;overflow:auto;white-space:pre-wrap}
+ button{font:inherit;padding:.5rem 1rem;margin-right:.5rem}
+</style>
+<h1>sonda rfirma — flatpak (#22)</h1>
+<p>Mide WebKitGTK, portales y el ciclo trifásico dentro del arenero.</p>
+<button id="entorno">1. Entorno</button>
+<button id="abrir">2. Abrir PDF (portal)</button>
+<button id="firmar">3. Firmar</button>
+<button id="guardar">4. Guardar (portal)</button>
+<pre id="log">listo.</pre>
+<script>
+const log = document.getElementById('log');
+const say = t => { log.textContent += "\n" + t; };
+const { invoke } = window.__TAURI__.core;
+const dialog = window.__TAURI__.dialog;
+let entrada = null, firmado = null;
+
+say("userAgent: " + navigator.userAgent);
+invoke('arrancado', { ua: navigator.userAgent, ancho: window.innerWidth, alto: window.innerHeight });
+if (window.location.search.indexOf('abrir') >= 0) {
+  dialog.open({ multiple:false }).then(f => say("portal devolvio: " + f));
+}
+
+document.getElementById('entorno').onclick = async () => {
+  say(await invoke('entorno'));
+};
+document.getElementById('abrir').onclick = async () => {
+  const f = await dialog.open({ multiple:false, filters:[{name:'PDF',extensions:['pdf']}] });
+  entrada = f;
+  say("abierto: " + f);
+  if (f) say(await invoke('inspecciona', { ruta: f }));
+};
+document.getElementById('firmar').onclick = async () => {
+  if (!entrada) { say("primero abre un PDF"); return; }
+  try { const r = await invoke('firma', { ruta: entrada }); firmado = r.salida; say(r.informe); }
+  catch(e) { say("ERROR: " + e); }
+};
+document.getElementById('guardar').onclick = async () => {
+  if (!firmado) { say("primero firma"); return; }
+  const d = await dialog.save({ defaultPath: 'firmado.pdf' });
+  say("destino: " + d);
+  if (d) say(await invoke('copia', { origen: firmado, destino: d }));
+};
+</script>

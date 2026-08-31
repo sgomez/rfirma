@@ -28,8 +28,8 @@ solo esté disponible bajo GPL.
 - Hay que **declarar explícitamente** que se toma la rama EUPL-1.1 de Cliente
   @firma. Sin esa declaración, la licencia doble deja ambiguo bajo qué términos
   se usó el código, y la ambigüedad es justo lo que hay que evitar.
-- La [librería nativa va incrustada en el binario](0004-libreria-nativa-incrustada-en-el-binario.md),
-  así que **el `.deb` contiene código derivado** de Cliente @firma. Las
+- La [librería nativa se distribuye como ficheros del paquete](0004-libreria-nativa-distribuida-en-el-paquete.md),
+  así que **el flatpak contiene código derivado** de Cliente @firma. Las
   obligaciones de la licencia viajan con el paquete: aviso de licencia,
   atribución y disponibilidad del código fuente correspondiente.
 - El diálogo [Acerca de](../design/acerca-de.md) tiene que enseñar las dos

@@ -23,9 +23,10 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 
 3. **Distribución de la librería nativa (ADR-0004):**
    * `native-image` **no** produce un artefacto autosuficiente: la rúbrica de imagen necesita **seis ficheros** (`librfirma_crypto.so` + `libawt.so`, `libawt_headless.so`, `libjavajpeg.so`, `libjava.so`, `libjvm.so`) que deben convivir en el **mismo directorio**.
-   * **No uses `include_bytes!` ni extraigas nada a `~/.cache/rfirma/`.** El `.deb` es el único canal soportado: los seis ficheros se instalan en `/usr/lib/rfirma/`.
-   * Rust carga `librfirma_crypto.so` por **ruta absoluta** con `libloading`; los otros cinco se resuelven solos vía `$ORIGIN`. No hace falta `LD_LIBRARY_PATH` ni tocar `RPATH`. La ruta es una constante de compilación sobreescribible con `RFIRMA_LIB_DIR`.
+   * **No uses `include_bytes!` ni extraigas nada a `~/.cache/rfirma/`.** El **flatpak es el único canal soportado**: los seis ficheros se instalan en `/app/lib/rfirma/`. El manifiesto y su verificación viven en `packaging/flatpak/`.
+   * Rust carga `librfirma_crypto.so` por una ruta **relativa al ejecutable** (`../lib/rfirma`) con `libloading`; los otros cinco se resuelven solos vía `$ORIGIN`. No hace falta `LD_LIBRARY_PATH` ni tocar `RPATH`. La ruta es sobreescribible con `RFIRMA_LIB_DIR`.
    * Al arrancar, comprueba que los seis ficheros existen por nombre y falla nombrando el que falta: una instalación incompleta degrada a un error engañoso sobre el formato de la imagen, no a un fallo de carga.
+   * El arenero cambia dos cosas que fuera eran gratis: el **módulo PKCS#11 lo empaqueta el propio flatpak** (los del anfitrión no cargan dentro), y **toda entrada y salida de ficheros pasa por portales**, así que la aplicación nunca conoce la ruta original de un documento. Ver `docs/research/flatpak-canal-unico.md`.
 
 4. **Firma Trifásica (Triphase Signing):**
    * La clave privada **nunca** debe pasar al isolate de Java/GraalVM (especialmente si es un certificado no exportable en un DNIe o tarjeta física).

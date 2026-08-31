@@ -4,7 +4,7 @@ Este documento constituye la especificación de diseño detallada para el nuevo 
 
 * **Nombre del Proyecto:** `rfirma`
 * **Arquitectura:** Híbrida (Tauri Backend en Rust + Webview Frontend en Svelte + FFI a librería nativa GraalVM)
-* **Plataforma Objetivo:** Linux (Ubuntu 24.04/26.04)
+* **Plataforma Objetivo:** Linux, distribuido como **flatpak** sobre `org.gnome.Platform//50` (ver ADR-0004). La distribución del usuario es indiferente.
 * **Protocolo de invocación:** `rfirma://` (y compatibilidad opcional con `afirma://`)
 
 Nota: el proyecto original para evaluar como funciona y copiar la funcionalidad esta en /home/sergio/Developer/SideProjects/clienteafirma
@@ -770,7 +770,7 @@ El frontend se encarga de mostrar la lista de certificados (leída a través de 
 
 ## 5. Script de Instalación y Registro del Servidor Local (Firefox SSL)
 
-Para que el servidor HTTPS sea accesible desde el navegador, el instalador (`.deb` / `.rpm` o un script `setup.sh`) debe registrar el certificado de `localhost` y configurar Firefox.
+Para que el servidor HTTPS sea accesible desde el navegador, el instalador debe registrar el certificado de `localhost` y configurar Firefox. (Nota de auditoría: el canal es un **flatpak**, no un `.deb`/`.rpm`, y el canal navegador está **fuera del alcance** de v0.1.)
 
 ### Script de Instalación del Sistema (`setup.sh`):
 ```bash

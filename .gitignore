@@ -26,3 +26,8 @@ rustc-ice-*.txt
 # Sistema de diseño: material de trabajo local, no versionado por ahora.
 ds-bundle/
 .design-sync/
+
+# flatpak (packaging/flatpak)
+.flatpak-builder/
+packaging/flatpak/build-dir/
+packaging/flatpak/probe/target/

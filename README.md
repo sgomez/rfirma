@@ -6,7 +6,7 @@
 
 ## 🚀 Características Clave
 * **Sin Dependencia de JRE:** Se ejecuta directamente como código de máquina nativo sin necesidad de tener Java instalado en el equipo del usuario.
-* **Distribución en `.deb`:** El motor criptográfico compilado se instala junto a la aplicación en `/usr/lib/rfirma/` y se carga dinámicamente al arrancar (ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)).
+* **Distribución en flatpak:** Canal único, para cualquier distribución de Linux. El motor criptográfico compilado se instala junto a la aplicación en `/app/lib/rfirma/` y se carga dinámicamente al arrancar (ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)).
 * **Arranque Instantáneo:** Reduce los tiempos de arranque de ~3 segundos a menos de 100ms y el consumo de RAM a ~30-50MB.
 * **Integración del Sistema Operativo:** Acceso rápido y nativo a almacenes de certificados (DNI electrónico, FNMT) mediante APIs del sistema y PKCS#11.
 * **Interfaz Moderna:** Diseño moderno basado en Svelte y Tailwind CSS en reemplazo de la interfaz Swing obsoleta.

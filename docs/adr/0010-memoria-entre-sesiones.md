@@ -91,7 +91,10 @@ red.
   promesa al usuario del ordenador compartido.
 - La carpeta fija de guardado se comprueba **antes de firmar**, no al guardar, y
   si no está disponible se degrada a «junto al documento original» avisando en
-  el panel. Firmar y luego no poder escribir obliga a explicar que el documento
+  el panel. **Este punto queda pendiente de rehacer**: el
+  [#22](https://github.com/sgomez/rfirma/issues/22) midió que bajo el arenero de
+  flatpak la aplicación no puede conocer la ruta del documento original, así que
+  «junto al documento original» no existe como destino. Firmar y luego no poder escribir obliga a explicar que el documento
   está firmado pero en ningún sitio.
 - El formato de la rúbrica se valida al elegirla, no al firmar, porque los
   formatos admitidos se fijan en tiempo de construcción
