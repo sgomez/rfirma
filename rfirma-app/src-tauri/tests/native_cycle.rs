@@ -15,12 +15,15 @@
 //! Aquí **no se firma un PDF**: eso es la grada C del puente Java, que valida
 //! con `pdfsig`. Lo que se comprueba aquí es la frontera —que la librería carga
 //! desde donde el ADR-0004 dice, que el JSON del contrato vuelve entero, y que
-//! el ciclo de vida de la memoria del ID-11 se sostiene repetido diez mil
+//! el ciclo de vida de la memoria del ID-11 se sostiene repetido cien mil
 //! veces—, que es lo que no se puede probar con dobles.
 
 use std::path::{Path, PathBuf};
 
-use rfirma_lib::ffi::{locate, BridgeError, NativeBridge, PreSignRequest, LIBRARY_FILE};
+use rfirma_lib::ffi::{
+    locate, BridgeError, NativeBridge, PostSignRequest, PreSignRequest, LIBRARY_FILE,
+};
+use rfirma_lib::signing::SessionSeal;
 
 /// Un PDF mínimo, en Base64, que **no** es un PDF válido para firmar.
 ///
@@ -31,6 +34,9 @@ const NOT_A_PDF_B64: &str = "bm8gc295IHVuIFBERg==";
 
 /// Un certificado que tampoco lo es, por la misma razón.
 const NOT_A_CERTIFICATE_B64: &str = "bm8gc295IHVuIGNlcnRpZmljYWRv";
+
+/// Y un PKCS#1 que tampoco.
+const NOT_A_SIGNATURE_B64: &str = "bm8gc295IHVuYSBmaXJtYQ==";
 
 fn library() -> PathBuf {
     let executable = std::env::current_exe().expect("debería haber ejecutable");
@@ -51,6 +57,19 @@ fn presign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError
             algorithm: "SHA256withRSA",
             certificate_chain_b64: NOT_A_CERTIFICATE_B64,
             extra_params: "signaturePage=1\n",
+        })
+        .map(|_| ())
+}
+
+fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError> {
+    let stamp = SessionSeal::from_bridge("bm8gc295IHVuIHNlbGxv");
+    bridge
+        .postsign(PostSignRequest {
+            pdf_b64: NOT_A_PDF_B64,
+            certificate_chain_b64: NOT_A_CERTIFICATE_B64,
+            stamp: &stamp,
+            session: "<xml/>",
+            pkcs1_b64: NOT_A_SIGNATURE_B64,
         })
         .map(|_| ())
 }
@@ -94,6 +113,28 @@ fn a_bridge_failure_comes_back_as_json_and_not_as_a_crash() {
     }
 }
 
+/// La otra mitad del contrato: la postfirma cruza igual que la prefirma y
+/// vuelve igual, por JSON y no por un aborto.
+///
+/// Aquí tampoco se firma un PDF —eso es la grada C del puente Java, que valida
+/// con `pdfsig`—: lo que se comprueba es que la segunda entrada existe, que se
+/// le pueden pasar sus cinco argumentos y que el fallo vuelve entero.
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn the_postsign_crosses_the_border_and_comes_back_as_json_too() {
+    let bridge = bridge();
+
+    let error = postsign_of_something_invalid(&bridge).expect_err("eso no es una postfirma");
+
+    match error {
+        BridgeError::Failed(detail) => assert!(
+            detail.contains("Exception") || detail.contains("Error"),
+            "el detalle crudo de Java tiene que llegar entero: {detail}"
+        ),
+        other => panic!("se esperaba un fallo del puente, no {other}"),
+    }
+}
+
 /// El ID-11, medido: si Rust dejase de llamar a `autofirma_free_string`, cada
 /// vuelta se quedaría el JSON del puente en el C-heap.
 ///
@@ -104,8 +145,15 @@ fn a_bridge_failure_comes_back_as_json_and_not_as_a_crash() {
 /// queda plana.
 #[test]
 #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn ten_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
-    const BATCH: usize = 10_000;
+fn a_hundred_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
+    // Cien mil, y no diez mil, porque la tolerancia tiene que quedar lejos de
+    // lo que mide: lo que se filtraría por vuelta es el JSON de error de Java
+    // —unos 100-200 bytes—, así que con diez mil vueltas una fuga real caería
+    // en 1-2 MiB, del mismo orden que el ruido que hay que tolerar. Con cien
+    // mil son 10-20 MiB contra un margen de 1 MiB, y la prueba deja de
+    // depender de cuánto mida el mensaje de excepción del día. Cuesta menos de
+    // dos segundos: las veinte mil vueltas de antes tardaban 0,18 s.
+    const BATCH: usize = 100_000;
     const TOLERANCE: u64 = 1024 * 1024;
 
     let bridge = bridge();

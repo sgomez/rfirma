@@ -318,6 +318,10 @@ pub struct PostSignRequest<'a> {
 /// crudo de Java sin traducir para poder pegarlo en un informe.
 #[derive(Debug)]
 pub enum BridgeError {
+    /// No se sabe dónde está el ejecutable, así que no hay desde dónde medir la
+    /// ruta relativa de la librería. Aquí todavía no se ha cruzado ninguna
+    /// frontera: el puente no ha tenido nada que ver.
+    ExecutablePathUnknown(String),
     /// No hay librería que cargar.
     NotFound(LibraryNotFound),
     /// `dlopen` ha fallado.
@@ -349,6 +353,9 @@ pub enum BridgeError {
 impl fmt::Display for BridgeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::ExecutablePathUnknown(detail) => {
+                write!(f, "no puedo saber dónde está el ejecutable: {detail}")
+            }
             Self::NotFound(error) => write!(f, "{error}"),
             Self::Load { path, detail } => {
                 write!(f, "no puedo cargar {}: {detail}", path.display())
@@ -402,6 +409,9 @@ pub struct NativeBridge {
     isolate: *mut c_void,
     thread: *mut c_void,
     path: PathBuf,
+    presign: PreSignSymbol,
+    postsign: PostSignSymbol,
+    free_string: FreeStringSymbol,
 }
 
 /// Cómo libera las cadenas un puente ya cargado: llamando a
@@ -415,13 +425,7 @@ impl FreeBridgeString for BridgeDeallocator<'_> {
         // SAFETY: el puntero lo acaba de devolver este mismo puente, que sigue
         // cargado porque el préstamo lo mantiene vivo.
         unsafe {
-            if let Ok(free_string) = self
-                .bridge
-                .library
-                .get::<FreeStringSymbol>(b"autofirma_free_string\0")
-            {
-                free_string(self.bridge.thread, pointer.cast());
-            }
+            (self.bridge.free_string)(self.bridge.thread, pointer.cast());
         }
     }
 }
@@ -430,7 +434,7 @@ impl NativeBridge {
     /// Carga la librería mirando en los dos sitios de [`candidates`].
     pub fn open() -> Result<Self, BridgeError> {
         let executable = std::env::current_exe()
-            .map_err(|error| BridgeError::MalformedResponse(error.to_string()))?;
+            .map_err(|error| BridgeError::ExecutablePathUnknown(error.to_string()))?;
         let directory = executable.parent().unwrap_or(Path::new(".")).to_path_buf();
         let path = locate(&|name| std::env::var_os(name), &directory)?;
         Self::open_at(&path)
@@ -463,11 +467,24 @@ impl NativeBridge {
                 return Err(BridgeError::IsolateFailed(code));
             }
         }
+        // SAFETY: las tres firmas son las que declara `NativeBridge.java` para
+        // esas entradas, y los punteros a función valen mientras `library` siga
+        // cargada, que es lo que garantiza guardarla en el mismo valor.
+        let (presign, postsign, free_string) = unsafe {
+            (
+                resolve::<PreSignSymbol>(&library, b"autofirma_pades_presign\0")?,
+                resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
+                resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
+            )
+        };
         Ok(Self {
             library,
             isolate,
             thread,
             path: path.to_path_buf(),
+            presign,
+            postsign,
+            free_string,
         })
     }
 
@@ -483,11 +500,10 @@ impl NativeBridge {
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let extra = c_string(request.extra_params, "los extraParams")?;
-        let json = self.call("autofirma_pades_presign", |symbol, thread| {
+        let json = self.call(|thread| {
             // SAFETY: los cinco argumentos viven hasta que la llamada vuelve.
-            let presign: libloading::Symbol<PreSignSymbol> = symbol;
             unsafe {
-                presign(
+                (self.presign)(
                     thread,
                     pdf.as_ptr(),
                     algorithm.as_ptr(),
@@ -506,11 +522,10 @@ impl NativeBridge {
         let stamp = c_string(request.stamp.as_bridge_payload(), "el sello")?;
         let session = c_string(request.session, "la sesión")?;
         let pkcs1 = c_string(request.pkcs1_b64, "el PKCS#1")?;
-        let json = self.call("autofirma_pades_postsign", |symbol, thread| {
+        let json = self.call(|thread| {
             // SAFETY: los seis argumentos viven hasta que la llamada vuelve.
-            let postsign: libloading::Symbol<PostSignSymbol> = symbol;
             unsafe {
-                postsign(
+                (self.postsign)(
                     thread,
                     pdf.as_ptr(),
                     chain.as_ptr(),
@@ -523,29 +538,42 @@ impl NativeBridge {
         parse_postsign(&json)
     }
 
-    /// El único sitio que toca un puntero devuelto por el puente: busca el
-    /// símbolo, llama, adopta la cadena y la libera al salir.
-    fn call<S, F>(&self, name: &str, invoke: F) -> Result<String, BridgeError>
+    /// El único sitio que toca un puntero devuelto por el puente: llama, adopta
+    /// la cadena y la libera al salir.
+    fn call<F>(&self, invoke: F) -> Result<String, BridgeError>
     where
-        S: Copy,
-        F: FnOnce(libloading::Symbol<'_, S>, *mut c_void) -> *mut c_char,
+        F: FnOnce(*mut c_void) -> *mut c_char,
     {
-        let mut symbol_name = name.as_bytes().to_vec();
-        symbol_name.push(0);
-        // SAFETY: el nombre está terminado en `\0` y el tipo `S` es la firma
-        // que declara `NativeBridge.java` para esa entrada.
-        let symbol = unsafe { self.library.get::<S>(&symbol_name) }.map_err(|error| {
-            BridgeError::MissingSymbol {
-                symbol: name.to_owned(),
-                detail: error.to_string(),
-            }
-        })?;
-        let returned = invoke(symbol, self.thread);
+        let returned = invoke(self.thread);
         // SAFETY: lo que devuelve el puente es una cadena C reservada con
         // `UnmanagedMemory.malloc` y nadie más se queda una copia (ID-11).
         let owned = unsafe { BridgeString::adopt(returned, BridgeDeallocator { bridge: self }) }?;
         Ok(owned.to_utf8_lossy())
     }
+}
+
+/// Busca un símbolo y se queda el **puntero a función**, no el préstamo.
+///
+/// Se resuelven los tres de una vez al cargar (y no en cada llamada) por dos
+/// razones: que la librería que no exporta alguno falle al abrirse en vez de a
+/// la primera firma —o, en el caso de `autofirma_free_string`, en vez de no
+/// fallar nunca y filtrar en silencio—, y que firmar no pague un `dlsym` por
+/// cruce.
+///
+/// # Safety
+///
+/// `T` tiene que ser la firma real del símbolo, y el puntero solo vale mientras
+/// la librería siga cargada.
+unsafe fn resolve<T: Copy>(
+    library: &libloading::Library,
+    name: &'static [u8],
+) -> Result<T, BridgeError> {
+    // SAFETY: el nombre está terminado en `\0` y la firma la pone quien llama.
+    let symbol = unsafe { library.get::<T>(name) }.map_err(|error| BridgeError::MissingSymbol {
+        symbol: String::from_utf8_lossy(&name[..name.len() - 1]).into_owned(),
+        detail: error.to_string(),
+    })?;
+    Ok(*symbol)
 }
 
 impl Drop for NativeBridge {
@@ -889,6 +917,66 @@ mod tests {
             .expect_err("no es Base64");
 
         assert!(matches!(error, BridgeError::MalformedResponse(_)));
+    }
+
+    /// Cada variante tiene que decir **lo suyo**: la tesis del módulo es que un
+    /// fallo de esta frontera no reaparezca disfrazado de otro, y eso solo se
+    /// sostiene si el texto de cada una nombra su propia situación.
+    #[test]
+    fn every_failure_of_the_border_says_what_actually_went_wrong() {
+        let directory = tempfile::tempdir().expect("debería haber directorio temporal");
+        let not_found = locate(&environment(&[]), &directory.path().join("bin"))
+            .expect_err("sin librería no debería resolverse");
+
+        let messages = [
+            (
+                BridgeError::ExecutablePathUnknown("no such file".to_owned()),
+                "ejecutable",
+            ),
+            (BridgeError::from(not_found), "lib/rfirma"),
+            (
+                BridgeError::Load {
+                    path: PathBuf::from("/app/lib/rfirma/librfirma_crypto.so"),
+                    detail: "no es un ELF".to_owned(),
+                },
+                "librfirma_crypto.so",
+            ),
+            (
+                BridgeError::MissingSymbol {
+                    symbol: "autofirma_free_string".to_owned(),
+                    detail: "undefined symbol".to_owned(),
+                },
+                "autofirma_free_string",
+            ),
+            (BridgeError::IsolateFailed(7), "graal_create_isolate"),
+            (BridgeError::InvalidArgument("el PDF"), "el PDF"),
+            (BridgeError::NullResponse, "NULL"),
+            (
+                BridgeError::MalformedResponse("no trae \"ok\"".to_owned()),
+                "respuesta ilegible",
+            ),
+            (
+                BridgeError::Failed("java.io.IOException: no es un PDF".to_owned()),
+                "java.io.IOException",
+            ),
+        ];
+
+        for (error, expected) in messages {
+            let message = error.to_string();
+            assert!(
+                message.contains(expected),
+                "{error:?} debería nombrar «{expected}»: {message}"
+            );
+        }
+    }
+
+    /// El fallo de `current_exe` no es una respuesta ilegible del puente: ahí
+    /// todavía no se ha cruzado nada.
+    #[test]
+    fn not_knowing_where_the_executable_is_does_not_blame_the_bridge() {
+        let error = BridgeError::ExecutablePathUnknown("no such file".to_owned()).to_string();
+
+        assert!(!error.contains("puente"), "{error}");
     }
 
     #[test]

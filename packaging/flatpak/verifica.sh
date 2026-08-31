@@ -56,8 +56,10 @@ echo "### 2. la libreria nativa, dentro del arenero"
 # UN SOLO FICHERO (ADR-0012). Si aqui aparece libawt.so, un JPEG con perfil ICC
 # aborta el proceso en vez de dar un error recuperable: eso es un fallo, no un
 # extra.
-flatpak run "${EXTRA[@]}" --command=ls "$APP" -1 /app/lib/rfirma
-contenido=$(flatpak run --command=ls "$APP" -1 /app/lib/rfirma)
+# Un solo arranque del arenero: lo que se ensena y lo que se comprueba tienen
+# que ser la misma medicion, no dos.
+contenido=$(flatpak run "${EXTRA[@]}" --command=ls "$APP" -1 /app/lib/rfirma)
+echo "$contenido"
 [ "$contenido" = "librfirma_crypto.so" ] \
     && echo "OK  un solo fichero" \
     || { echo "SOBRA ALGO en /app/lib/rfirma"; exit 1; }
