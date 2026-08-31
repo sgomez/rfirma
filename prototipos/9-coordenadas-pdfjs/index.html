@@ -1,0 +1,63 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PROTOTIPO #9 — recuadro pdf.js → puntos PAdES</title>
+<style>
+  body { font: 13px/1.5 system-ui, sans-serif; margin: 0; display: flex; height: 100vh; }
+  #panel { width: 380px; padding: 16px; overflow: auto; background: #f6f6f7;
+           border-right: 1px solid #ddd; box-sizing: border-box; }
+  #escena { flex: 1; overflow: auto; background: #7a7a7a; padding: 24px; }
+  #lienzo { position: relative; margin: 0 auto; box-shadow: 0 2px 12px #0006;
+            width: max-content; cursor: crosshair; }
+  canvas { display: block; }
+  #capa { position: absolute; inset: 0; }
+  #caja { position: absolute; border: 2px solid #d32; background: #d3222218;
+          display: none; pointer-events: none; }
+  h1 { font-size: 15px; margin: 0 0 12px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+       color: #666; margin: 18px 0 6px; }
+  label { display: block; margin: 6px 0; }
+  select, input, button { font: inherit; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  td { padding: 1px 4px 1px 0; }
+  td:last-child { text-align: right; font-weight: 600; }
+  textarea { width: 100%; height: 150px; font: 11px/1.4 ui-monospace, monospace;
+             box-sizing: border-box; }
+  .malo { color: #b00; }
+  .nota { color: #666; font-size: 12px; }
+</style>
+<div id="panel">
+  <h1>PROTOTIPO #9 · recuadro → PAdES</h1>
+  <p class="nota">Arrastra sobre el documento para dibujar el recuadro de firma.
+    Desechable: sirve para validar la conversión de coordenadas, nada más.</p>
+
+  <label>Caso:
+    <select id="caso"></select></label>
+  <label>Página: <button id="ant">◀</button>
+    <span id="pag">1 / 1</span> <button id="sig">▶</button></label>
+  <label>Zoom: <input id="zoom" type="range" min="0.4" max="3" step="0.05" value="1">
+    <span id="zoomv">1.00</span>×</label>
+
+  <h2>Página</h2>
+  <table id="tpag"></table>
+
+  <h2>Recuadro dibujado (px de canvas)</h2>
+  <table id="tpx"></table>
+
+  <h2>Espacio de usuario PDF (donde debe caer el widget)</h2>
+  <table id="tuser"></table>
+
+  <h2>extraParams PAdES (lo que se le pasa a la prefirma)</h2>
+  <table id="tpades"></table>
+
+  <h2>Conversión ingenua (la trampa)</h2>
+  <table id="tnaive"></table>
+  <p class="nota" id="difnota"></p>
+
+  <h2>Fichero .properties</h2>
+  <textarea id="props" readonly></textarea>
+  <button id="descargar">Descargar .properties</button>
+</div>
+<div id="escena">
+  <div id="lienzo"><canvas id="cv"></canvas><div id="capa"><div id="caja"></div></div></div>
+</div>
+<script type="module" src="./app.js"></script>

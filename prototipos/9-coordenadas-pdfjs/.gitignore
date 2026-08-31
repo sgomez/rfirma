@@ -1,0 +1,11 @@
+# el motor es de esta maquina (rutas absolutas a ~/.m2) y lleva una clave privada
+motor/rfirma-native-bridge-*.jar
+motor/cp.txt
+motor/cert.b64
+motor/key.pem
+motor/inject-pk1.py
+# productos de cada corrida
+salidas/lab-*/
+salidas/*-firmado.pdf
+salidas/sonda-*
+.venv-proto/
