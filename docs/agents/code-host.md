@@ -25,6 +25,16 @@ Repo-specific facts:
 - **CI**: GitHub Actions, workflow `CI` (`.github/workflows/ci.yml`). See
   the section below for what it does and does not verify.
 
+## `gh` dentro del arenero del worktree
+
+Entubar la salida de `gh` a `head` (u otro consumidor que corte pronto)
+devuelve **vacío con código 0** dentro del guardián del worktree: la salida
+se pierde en vez de fallar de forma visible, así que no lo interpretes como
+«no hay datos». Redirige a un fichero y lee el fichero
+(`gh issue view N --json body,comments > /tmp/x.json`, luego léelo entero o
+con un script). Lo mismo aplica a una consulta GraphQL larga pasada inline:
+escríbela en un fichero y pásala con `gh api graphql -F query=@fichero`.
+
 ## CI
 
 The orchestrator waits on the `CI` workflow before merging. Read the checks
