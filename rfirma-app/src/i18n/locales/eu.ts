@@ -40,4 +40,58 @@ export const eu: UntranslatedCatalog = {
       },
     },
   },
+  window: {
+    tray: "",
+    viewer: "",
+    panel: "",
+  },
+  header: {
+    menu: "",
+    preferences: "",
+    about: "",
+  },
+  badges: {
+    signed: "",
+    unsigned: "",
+    unavailable: "",
+  },
+  tray: {
+    dropZone: "",
+    empty: "",
+    recents: "",
+    remove: "",
+  },
+  preferences: {
+    title: "",
+    rememberVisibleSignature: {
+      label: "",
+      hint: "",
+    },
+    rememberActivity: {
+      label: "",
+      hint: "",
+      clear: "",
+      confirm: {
+        body: "",
+        accept: "",
+      },
+    },
+    destination: {
+      label: "",
+    },
+    language: {
+      label: "",
+    },
+  },
+  about: {
+    version: "",
+    whatItDoes: "",
+    independence: "",
+    licenses: {
+      title: "",
+      view: "",
+      rfirma: "",
+      afirma: "",
+    },
+  },
 };

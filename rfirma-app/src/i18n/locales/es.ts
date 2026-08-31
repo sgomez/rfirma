@@ -14,7 +14,7 @@ export const es = {
   app: {
     // El nombre propio del programa. No se traduce en ningún idioma, pero vive
     // en el catálogo para que ningún componente lo escriba en línea.
-    name: "rfirma",
+    name: "rFirma",
   },
   actions: {
     sign: "Firmar documento",
@@ -49,6 +49,80 @@ export const es = {
         title: "No se ha podido completar la operación",
         body: "Vuelve a intentarlo. Si sigue ocurriendo, adjunta el detalle técnico al informe del fallo.",
       },
+    },
+  },
+  /**
+   * El armazón de la ventana: la cabecera y las tres regiones fijas del ID-25.
+   * Ninguna aparece ni desaparece durante el recorrido, así que sus rótulos son
+   * los nombres accesibles de las regiones y no títulos visibles.
+   */
+  window: {
+    tray: "Bandeja de documentos",
+    viewer: "Visor del documento",
+    panel: "Panel de firma",
+  },
+  header: {
+    menu: "Menú",
+    preferences: "Preferencias…",
+    about: "Acerca de rFirma",
+  },
+  /**
+   * El vocabulario de insignias, compartido por la cabecera y la bandeja.
+   *
+   * `Firmado` y `Sin firmar` describen el documento y se cachean; `No
+   * disponible` no describe el documento sino que **la ruta no responde**, así
+   * que solo aparece en la bandeja y no se guarda nunca.
+   */
+  badges: {
+    signed: "Firmado",
+    unsigned: "Sin firmar",
+    unavailable: "No disponible",
+  },
+  /**
+   * La bandeja: el único sitio donde se abre o se cambia de documento
+   * (docs/design/bandeja-de-documentos.md).
+   */
+  tray: {
+    dropZone: "Arrastra un PDF o pulsa para abrirlo",
+    empty: "Aquí aparecerán los documentos que vayas firmando",
+    recents: "Recientes",
+    remove: "Quitar de la lista",
+  },
+  /** Los ajustes (docs/design/preferencias.md). Se aplican al hacerlos. */
+  preferences: {
+    title: "Preferencias",
+    rememberVisibleSignature: {
+      label: "Recordar la última configuración de firma visible",
+      hint: "La página, la posición y el contenido del recuadro se reutilizan en el siguiente documento.",
+    },
+    rememberActivity: {
+      label: "Recordar mi actividad",
+      hint: "Cubre los documentos recientes y el certificado usado la última vez.",
+      clear: "Vaciar la lista",
+      confirm: {
+        body: "Al apagarlo se borra lo ya recordado: los documentos recientes y el certificado usado la última vez.",
+        accept: "Apagar y borrar",
+      },
+    },
+    destination: {
+      label: "Dónde se guarda el documento firmado",
+    },
+    language: {
+      label: "Idioma",
+    },
+  },
+  /** Acerca de rFirma (docs/design/acerca-de.md). */
+  about: {
+    version: "Versión {{version}}",
+    whatItDoes:
+      "Firma y cofirma documentos PDF con tu certificado. El documento y la clave privada no salen de tu ordenador.",
+    independence:
+      "Proyecto independiente. rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.",
+    licenses: {
+      title: "Licencias",
+      view: "Ver las licencias",
+      rfirma: "rFirma: EUPL-1.2.",
+      afirma: "Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1.",
     },
   },
 };

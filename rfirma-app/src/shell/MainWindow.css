@@ -1,0 +1,45 @@
+/*
+ * La única ventana (docs/design/ventana-principal.md): una cabecera de 56 px y
+ * tres regiones fijas debajo —bandeja 300 px, visor flexible, panel 360 px—.
+ *
+ * Las tres son columnas de un `grid` y no elementos que se monten y desmonten:
+ * la ficha dice que ninguna aparece ni desaparece durante el recorrido, y lo
+ * que cambia es su contenido. Un `display: none` aquí sería el primer paso
+ * hacia la navegación que el ID-25 prohíbe.
+ */
+
+.main-window {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.main-window__body {
+  display: grid;
+  grid-template-columns: 300px 1fr 360px;
+  min-height: 0;
+}
+
+.main-window__tray,
+.main-window__panel {
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--rf-surface);
+}
+
+.main-window__tray {
+  border-right: 1px solid var(--rf-border-subtle);
+}
+
+.main-window__panel {
+  border-left: 1px solid var(--rf-border-subtle);
+}
+
+/* El visor va sobre `--rf-surface`; el papel del documento, que lo pone el
+   sub-issue del visor, fuerza `data-theme="light"` sobre `--rf-bg`. */
+.main-window__viewer {
+  min-height: 0;
+  overflow: auto;
+  background: var(--rf-surface);
+}

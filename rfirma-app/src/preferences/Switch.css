@@ -1,0 +1,59 @@
+/*
+ * El interruptor de Preferencias. No está en el sistema de diseño a propósito
+ * (docs/design/preferencias.md): se maqueta con tokens, aquí.
+ *
+ * El estado no se cuenta solo con el color —la paleta es monocroma—: el pomo
+ * cambia de lado, que es lo que se ve en cualquier tema y con cualquier vista.
+ */
+
+.switch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+}
+
+.switch__control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rf-space-md);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--rf-text);
+  font-family: var(--rf-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.switch__track {
+  flex: none;
+  display: flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-pill);
+  transition: background-color var(--rf-duration-fast) var(--rf-easing);
+}
+
+.switch__knob {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-border-strong);
+  transition: transform var(--rf-duration-fast) var(--rf-easing);
+}
+
+.switch__control[aria-checked="true"] .switch__track {
+  border-color: transparent;
+  background: var(--rf-primary);
+}
+
+.switch__control[aria-checked="true"] .switch__knob {
+  transform: translateX(20px);
+  background: var(--rf-on-primary);
+}
