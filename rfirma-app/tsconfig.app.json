@@ -5,7 +5,10 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    // `node` está por las pruebas: `design-system.test.ts` lee la ficha del
+    // sistema de diseño y el CSS con `node:fs` para compararlos. El código de
+    // la aplicación no usa nada de node.
+    "types": ["vite/client", "node"],
 
     "strict": true,
     "noUnusedLocals": true,

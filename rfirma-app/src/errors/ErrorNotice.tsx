@@ -1,0 +1,46 @@
+import { useTranslation } from "react-i18next";
+import type { Catalog } from "../i18n/catalog";
+import "./ErrorNotice.css";
+
+/**
+ * Las situaciones que sabemos nombrar. Hoy solo la genérica: el mapeo de los
+ * `CKR_*` de `cryptoki` y de las excepciones del puente es de otro sub-issue,
+ * y cada situación que añada entra aquí y en los seis catálogos.
+ */
+export type ErrorSituation = keyof Catalog["errors"]["situations"];
+
+interface ErrorNoticeProps {
+  /** Nuestra situación, que sí está traducida. */
+  situation: ErrorSituation;
+  /**
+   * El texto original tal cual llegó: el `CKR_*` de `cryptoki` o el mensaje
+   * incrustado de la excepción del puente. **No se traduce ni se recorta**:
+   * está para pegarlo en un informe de fallo.
+   */
+  technicalDetail: string;
+}
+
+/**
+ * Un error, como manda el ID-29: una **situación** nuestra traducida y, aparte,
+ * el texto original crudo en un detalle plegado.
+ *
+ * Los errores no se traducen, se clasifican. `cryptoki` devuelve códigos y el
+ * puente Java devuelve excepciones cuyo texto está incrustado en el código
+ * —`afirma-crypto-pdf` no tiene ni un `.properties` localizado—, así que
+ * ninguno de los dos se enseña como mensaje. Lo que no sepamos clasificar cae
+ * en `unknown` más su detalle técnico crudo (ADR-0009).
+ */
+export function ErrorNotice({ situation, technicalDetail }: ErrorNoticeProps) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rf-card" role="alert">
+      <p className="rf-title">{t(`errors.situations.${situation}.title`)}</p>
+      <p className="rf-prose rf-text-muted">{t(`errors.situations.${situation}.body`)}</p>
+      <details className="error-notice__detail">
+        <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
+        <pre className="error-notice__raw">{technicalDetail}</pre>
+      </details>
+    </div>
+  );
+}
