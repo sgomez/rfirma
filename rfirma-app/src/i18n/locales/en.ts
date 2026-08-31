@@ -96,6 +96,54 @@ export const en: Catalog = {
         title: "The certificate could not be read",
         body: "What is on the card is not a certificate we can read. Try another one.",
       },
+      notAPdf: {
+        title: "That file is not a PDF",
+        body: "rFirma signs PDFs. Choose a PDF document and try again.",
+      },
+      documentEncrypted: {
+        title: "The PDF is protected",
+        body: "It is encrypted or has restricted permissions, so it cannot be signed. Open it with its password, save it without protection and try again.",
+      },
+      documentCertified: {
+        title: "The PDF is certified",
+        body: "Its author signed it forbidding changes, so adding a signature would invalidate theirs. Ask them for an uncertified copy.",
+      },
+      documentUnreadable: {
+        title: "The document could not be read",
+        body: "Check that it is still where it was and open it again.",
+      },
+      boxOutOfPage: {
+        title: "The box falls outside the page",
+        body: "Drag it inside the page and sign again. Left as it is, it would be clipped in the PDF without warning.",
+      },
+      sealMismatch: {
+        title: "Signing was interrupted halfway",
+        body: "What we prepared at the start and what came back at the end do not match, so we stopped before writing anything. Sign the document again.",
+      },
+      bridgeFailed: {
+        title: "The signature could not be prepared",
+        body: "The component that assembles the signed PDF failed. Try again and, if it keeps happening, attach the technical detail to the bug report.",
+      },
+      folderMissing: {
+        title: "The destination folder is gone",
+        body: "We do not create it for you: if we did, the document would look saved and would not be there. Create it again or choose another one in Preferences.",
+      },
+      notAFolder: {
+        title: "The destination is not a folder",
+        body: "There is a file with that name where we expected a folder. Choose another destination in Preferences.",
+      },
+      folderUnreadable: {
+        title: "The destination folder could not be checked",
+        body: "It may be a permissions problem or a drive that is not responding. Choose another destination in Preferences.",
+      },
+      folderUnwritable: {
+        title: "The signed document could not be saved",
+        body: "Signing worked, but the file could not be written to the destination folder. Choose another one in Preferences and sign again.",
+      },
+      noFreeName: {
+        title: "There are already too many documents with that name",
+        body: "We stopped rather than overwrite one. Move or rename the earlier ones and sign again.",
+      },
     },
   },
   window: {

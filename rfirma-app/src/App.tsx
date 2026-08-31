@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AboutDialog } from "./about/AboutDialog";
 import { DocumentTray } from "./documents/DocumentTray";
 import type { DocumentPicker } from "./documents/picker";
@@ -11,7 +12,7 @@ import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SigningBackend } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
-import type { Rubric, RubricFailure, RubricPicker } from "./signing/rubric";
+import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./signing/rubric";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
 import { useSigning } from "./signing/useSigning";
@@ -87,6 +88,19 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
   // es recordar; el primer documento no se puede abrir antes de esa lectura.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
+  const { i18n } = useTranslation();
+  // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
+  // documento y no vuelve a correr. Recalcularlo en cada pintada haría que la
+  // vista previa enseñara una hora y se estampara otra, que es la diferencia
+  // entre enseñar el PDF que se va a firmar y enseñar uno parecido.
+  //
+  // El **formato** sí se rehace al cambiar de idioma: la hora es la misma, y
+  // solo cambia cómo se escribe.
+  const [signingInstant, setSigningInstant] = useState(() => new Date());
+  const signedAt = useMemo(
+    () => formatSignedAt(signingInstant, i18n.language),
+    [signingInstant, i18n.language],
+  );
 
   useEffect(() => {
     let current = true;
@@ -112,6 +126,9 @@ export function App({
       if (!current) return;
       setPdf(opened);
       setPlacement(null);
+      // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
+      // abrió, y el recuadro de este llevaría estampada una hora vieja.
+      setSigningInstant(new Date());
     });
     return () => {
       current = false;
@@ -146,6 +163,41 @@ export function App({
   const changeSettings = async (next: Preferences) => {
     setSettings(next);
     await preferences.save(next);
+  };
+
+  /**
+   * La firma: se arma la orden con lo que hay decidido y se manda entera.
+   *
+   * La `MediaBox` y la `/Rotate` salen de la página abierta porque el backend
+   * **no lee PDFs**: la conversión del recuadro a puntos PAdES es suya
+   * (`signing::placement`, con la guardia del ID-22), pero los datos de la
+   * página los tiene `pdf.js`.
+   */
+  const sign = async () => {
+    const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
+    if (pdf === null || documents.active === null || placement === null || chosen === null) {
+      // El botón ya está apagado sin certificado en vigor; aquí solo se
+      // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
+      return;
+    }
+    const page = await pdf.getPage(placement.page);
+    await signing.start(chosen, {
+      document: documents.active.path,
+      certificate: chosen.label,
+      placement: {
+        page: placement.page,
+        mediaBox: page.view,
+        rotation: page.rotate,
+        rect: [placement.rect.x0, placement.rect.y0, placement.rect.x1, placement.rect.y1],
+      },
+      fields: signature.fields,
+      reason: signature.reason,
+      signedAt,
+      // La rúbrica solo viaja si además está marcada: tener una imagen
+      // guardada no es quererla dentro del recuadro.
+      rubric: signature.rubric && rubric !== null ? base64Of(rubric) : null,
+      language: i18n.resolvedLanguage ?? i18n.language,
+    });
   };
 
   // Olvidar la actividad es una sola promesa al usuario del ordenador
@@ -204,9 +256,8 @@ export function App({
                 writable: true,
               }}
               onChangeDestination={() => setDialog("preferences")}
-              onSign={() =>
-                void signing.start(certificate.kind === "chosen" ? certificate.certificate : null)
-              }
+              signedAt={signedAt}
+              onSign={() => void sign()}
               signing={signing.state.kind === "running" || signing.state.kind === "pin"}
               failure={
                 signing.state.kind === "failed"
@@ -243,6 +294,23 @@ export function App({
       )}
     </>
   );
+}
+
+/**
+ * La fecha del recuadro, en el idioma de la ventana.
+ *
+ * El **formato** es lo único de la firma visible que decide el frontal, y es a
+ * propósito: quien sabe el huso y las convenciones de fecha del sistema es el
+ * navegador, no Rust, y meter una biblioteca de husos en el backend para
+ * repetir lo que `Intl` ya sabe sería duplicar el problema. Las **etiquetas**
+ * del recuadro siguen siendo de `signing::layer2_text` (ID-19): aquí no se
+ * escribe «Fecha», solo lo que va detrás.
+ */
+function formatSignedAt(instant: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+    timeStyle: "medium",
+  }).format(instant);
 }
 
 /**

@@ -306,9 +306,13 @@ mod full_cycle {
     /// umbral en una discusión sobre la compresión JPEG.
     fn a_black_rubric() -> String {
         let mut png = Vec::new();
-        image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(200, 100, image::Rgb([0, 0, 0])))
-            .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
-            .expect("el PNG de prueba deberia codificarse");
+        image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
+            200,
+            100,
+            image::Rgb([0, 0, 0]),
+        ))
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .expect("el PNG de prueba deberia codificarse");
 
         rubric::normalize(&png)
             .expect("una rubrica negra es normalizable")

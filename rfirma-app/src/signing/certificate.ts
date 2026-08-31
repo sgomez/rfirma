@@ -19,9 +19,18 @@ export type CertificateStatus =
   | { kind: "valid" }
   /** `notAfter` en segundos desde la época, como lo da el backend. */
   | { kind: "expired"; notAfter: number }
-  | { kind: "notYetValid" }
+  /** `notBefore` en segundos desde la época. */
+  | { kind: "notYetValid"; notBefore: number }
   | { kind: "revoked"; reason: string }
-  | { kind: "unreadable" };
+  /**
+   * Por qué el DER no se pudo leer, **en las palabras del decodificador**.
+   *
+   * Cruza con su carga desde `pkcs11::certificate` igual que `expired` y
+   * `revoked`: sin ella, `refusalFor` acababa fabricando la prosa del detalle
+   * justo en el hueco que el ID-29 reserva al texto original crudo, y el
+   * informe de fallo perdía lo único que servía para diagnosticarlo.
+   */
+  | { kind: "unreadable"; detail: string };
 
 /** Un certificado elegible, con lo justo para pintarlo y para firmar con él. */
 export interface Certificate {
@@ -60,7 +69,13 @@ export interface CertificateStore {
   list(): Promise<readonly Certificate[]>;
 }
 
-/** El almacén mientras no hay orden expuesta que hable con el token: vacío. */
+/**
+ * Un almacén vacío: ni token ni orden de por medio.
+ *
+ * Desde el #60 quien habla con PKCS#11 es `tauriCertificateStore`; esto queda
+ * como doble para pintar la ventana sin backend, que es el estado «Sin
+ * certificado» de la ficha.
+ */
 export function emptyCertificateStore(): CertificateStore {
   return { list: async () => [] };
 }

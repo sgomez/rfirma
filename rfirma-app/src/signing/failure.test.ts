@@ -33,10 +33,17 @@ describe("refusalFor", () => {
   });
 
   it("refuses one that is not in force yet, and one it cannot read", () => {
-    expect(refusalFor(withStatus({ kind: "notYetValid" }))?.situation).toBe(
-      "certificateNotYetValid",
+    const notYet = refusalFor(withStatus({ kind: "notYetValid", notBefore: 4102444800 }));
+    expect(notYet?.situation).toBe("certificateNotYetValid");
+    expect(notYet?.detail).toContain("4102444800");
+
+    const unreadable = refusalFor(
+      withStatus({ kind: "unreadable", detail: "PEM error: unexpected tag" }),
     );
-    expect(refusalFor(withStatus({ kind: "unreadable" }))?.situation).toBe("certificateUnreadable");
+    expect(unreadable?.situation).toBe("certificateUnreadable");
+    // El detalle es el del decodificador de Rust, no prosa fabricada aquí: es
+    // el hueco que el ID-29 reserva al texto original crudo.
+    expect(unreadable?.detail).toBe("PEM error: unexpected tag");
   });
 
   it("refuses when no certificate was chosen at all", () => {

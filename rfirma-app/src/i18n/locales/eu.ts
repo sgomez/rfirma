@@ -102,6 +102,54 @@ export const eu: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      notAPdf: {
+        title: "",
+        body: "",
+      },
+      documentEncrypted: {
+        title: "",
+        body: "",
+      },
+      documentCertified: {
+        title: "",
+        body: "",
+      },
+      documentUnreadable: {
+        title: "",
+        body: "",
+      },
+      boxOutOfPage: {
+        title: "",
+        body: "",
+      },
+      sealMismatch: {
+        title: "",
+        body: "",
+      },
+      bridgeFailed: {
+        title: "",
+        body: "",
+      },
+      folderMissing: {
+        title: "",
+        body: "",
+      },
+      notAFolder: {
+        title: "",
+        body: "",
+      },
+      folderUnreadable: {
+        title: "",
+        body: "",
+      },
+      folderUnwritable: {
+        title: "",
+        body: "",
+      },
+      noFreeName: {
+        title: "",
+        body: "",
+      },
     },
   },
   window: {

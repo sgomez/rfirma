@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
@@ -7,7 +7,7 @@ import { isUsable } from "./certificate";
 import type { SigningFailure } from "./failure";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
-import type { Layer2Composer, VisibleSignature } from "./visibleSignature";
+import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./visibleSignature";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
 export interface SigningDocument {
@@ -57,6 +57,14 @@ interface SigningPanelProps {
   onChooseRubric: () => void;
   /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
   composer: Layer2Composer;
+  /**
+   * La fecha y hora que llevará el recuadro, **ya formateadas**.
+   *
+   * Viene de arriba y no se calcula aquí porque tiene que ser **la misma** que
+   * se envíe a firmar: la vista previa enseña el texto que se va a estampar, y
+   * un reloj propio en este componente enseñaría uno y estamparía otro.
+   */
+  signedAt: string;
   destination: Destination;
   onChangeDestination: () => void;
   onSign: () => void;
@@ -94,6 +102,7 @@ export function SigningPanel({
   rubricFailure,
   onChooseRubric,
   composer,
+  signedAt,
   destination,
   onChangeDestination,
   onSign,
@@ -104,7 +113,14 @@ export function SigningPanel({
   const reasonId = useId();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const usable = chosen !== null && isUsable(chosen.status);
-  const preview = useLayer2Preview(composer, signature, usable);
+  const language = i18n.resolvedLanguage ?? i18n.language;
+  // Memoizado porque es la dependencia del efecto que pide la vista previa: un
+  // objeto nuevo en cada pintada la pediría en bucle.
+  const signer = useMemo<SigningIdentity | null>(
+    () => (chosen === null ? null : { certificate: chosen.label, signedAt, language }),
+    [chosen, signedAt, language],
+  );
+  const preview = useLayer2Preview(composer, signature, signer);
 
   const changeField = (field: keyof VisibleSignature["fields"], checked: boolean) => {
     onChangeSignature({ ...signature, fields: { ...signature.fields, [field]: checked } });
@@ -429,23 +445,23 @@ function Layer2Preview({ text }: { text: string | null }) {
 function useLayer2Preview(
   composer: Layer2Composer,
   signature: VisibleSignature,
-  usable: boolean,
+  signer: SigningIdentity | null,
 ): string | null {
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!usable || !signature.enabled) {
+    if (signer === null || !signature.enabled) {
       setPreview(null);
       return;
     }
     let current = true;
-    void composer.compose(signature).then((text) => {
+    void composer.compose(signature, signer).then((text) => {
       if (current) setPreview(text);
     });
     return () => {
       current = false;
     };
-  }, [composer, signature, usable]);
+  }, [composer, signature, signer]);
 
   return preview;
 }

@@ -35,10 +35,13 @@ use tauri::State;
 use crate::destination::{CheckedFolder, PortalDocument};
 use crate::ffi::BridgeError;
 use crate::memory::Configuration;
-use crate::pkcs11::{self, CertificateRef, CertificateStatus, Situation, TokenError};
+use crate::pkcs11::{
+    self, CertificateRef, CertificateStatus, Situation, TokenCertificate, TokenError,
+};
 use crate::signing::{
-    compose_layer2_text, cycle, AdmissibleDocument, Language, OpenCycle, Refusal, SealMismatch,
-    SessionSeal, SignatureBox, SignatureConfig, SigningRequest, TokenSignature, VisibleTextFields,
+    compose_layer2_text, cycle, AdmissibleDocument, Language, MediaBox, OpenCycle, Page, Refusal,
+    Rotation, SealMismatch, SessionSeal, SignatureBox, SignatureConfig, SigningRequest,
+    TokenSignature, UserSpaceRect, VisibleTextFields,
 };
 
 pub use isolate::{Isolate, IsolateGone};
@@ -168,7 +171,7 @@ pub enum StatusView {
     Revoked {
         reason: String,
     },
-    Detail {
+    Unreadable {
         detail: String,
     },
 }
@@ -180,7 +183,7 @@ impl From<CertificateStatus> for StatusView {
             CertificateStatus::Expired { not_after } => Self::Expired { not_after },
             CertificateStatus::NotYetValid { not_before } => Self::NotYetValid { not_before },
             CertificateStatus::Revoked { reason } => Self::Revoked { reason },
-            CertificateStatus::Unreadable { detail } => Self::Detail { detail },
+            CertificateStatus::Unreadable { detail } => Self::Unreadable { detail },
         }
     }
 }
@@ -221,6 +224,51 @@ pub struct VisibleFieldsOrder {
     pub reason: bool,
 }
 
+/// Dónde ha caído el recuadro, tal como lo sabe el visor.
+///
+/// La `MediaBox` y la `/Rotate` las trae la ventana porque quien tiene abierto
+/// el PDF es `pdf.js`: el backend **no lee PDFs**, y ponerle un analizador para
+/// releer lo que el visor ya sabe sería una segunda opinión sobre la misma
+/// página.
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacementOrder {
+    /// Página **1-based**, como la numera `pdf.js` y como la cuenta
+    /// `signaturePage`.
+    pub page: u32,
+    /// La `MediaBox` de esa página: `[x0, y0, x1, y1]`.
+    pub media_box: [f64; 4],
+    /// Su `/Rotate`, en grados.
+    pub rotation: i32,
+    /// El recuadro en espacio de usuario: `[x0, y0, x1, y1]`.
+    pub rect: [i32; 4],
+}
+
+impl PlacementOrder {
+    fn signature_box(&self) -> Result<SignatureBox, Failure> {
+        let [x0, y0, x1, y1] = self.media_box;
+        let rotation = Rotation::from_degrees(self.rotation).ok_or_else(|| {
+            Failure::new(
+                "unknown",
+                format!("una pagina no puede estar girada {} grados", self.rotation),
+            )
+        })?;
+        let page = Page {
+            number: self.page,
+            media_box: MediaBox::new(x0, y0, x1, y1),
+            rotation,
+        };
+        let [left, bottom, right, top] = self.rect;
+        page.signature_box(&UserSpaceRect {
+            lower_left_x: left,
+            lower_left_y: bottom,
+            upper_right_x: right,
+            upper_right_y: top,
+        })
+        .map_err(|out| Failure::new("boxOutOfPage", out.to_string()))
+    }
+}
+
 /// La orden de firma completa: todo lo que distingue esta firma de otra.
 ///
 /// `signed_at` llega **ya formateado** por la ventana, que es la que conoce el
@@ -235,8 +283,13 @@ pub struct SigningOrder {
     pub document: String,
     /// La `label` del certificado elegido, de [`CertificateView`].
     pub certificate: String,
-    /// Dónde cae el recuadro, en puntos PAdES.
-    pub signature_box: SignatureBox,
+    /// Dónde cae el recuadro, en **espacio de usuario PDF** (ID-21).
+    ///
+    /// No en puntos PAdES: la inversa de la `/Rotate` que iText aplica al
+    /// cerrar el documento la hace [`crate::signing::placement`], y con ella
+    /// viene gratis la guardia del ID-22 —un recuadro que se saliera de la
+    /// página iText **lo recorta en silencio** y la firma sale válida igual—.
+    pub placement: PlacementOrder,
     pub fields: VisibleFieldsOrder,
     /// El motivo. Vacío es «sin motivo».
     pub reason: String,
@@ -386,6 +439,156 @@ fn layer2_text_of(order: &SigningOrder, holder: &(String, String)) -> String {
     )
 }
 
+/// El certificado que pide la orden, si sigue estando y sirve para firmar.
+///
+/// Se mira el estado **otra vez** aunque la ventana ya lo mirara al listar, y
+/// no sobra: entre listar y firmar puede haberse retirado la tarjeta o haber
+/// pasado la medianoche del `notAfter`. Es la última comprobación antes del
+/// PIN, y la única que ve el token de ahora mismo.
+fn usable_certificate<'a>(
+    certificates: &'a [TokenCertificate],
+    label: &str,
+) -> Result<&'a TokenCertificate, Failure> {
+    let chosen = certificates
+        .iter()
+        .find(|certificate| certificate.reference().label() == label)
+        .ok_or_else(|| {
+            Failure::new(
+                "certificateNotFound",
+                format!("el token ya no tiene {label}"),
+            )
+        })?;
+    let status = chosen.status();
+    if !status.is_usable() {
+        return Err(Failure::new(
+            "certificateNotFound",
+            format!("{label}: {status:?}"),
+        ));
+    }
+    Ok(chosen)
+}
+
+/// La configuración de firma que salen de la orden y del certificado elegido.
+///
+/// El nombre y el DNI se leen **del DER**, no de la orden: la ventana solo
+/// manda la etiqueta, y componer el recuadro con lo que la ventana diga sería
+/// dejar que estampe cualquier nombre.
+fn config_for(order: &SigningOrder, chosen: &TokenCertificate) -> Result<SignatureConfig, Failure> {
+    let (name, id, _) = holder_of(chosen.subject().as_deref());
+    Ok(SignatureConfig {
+        signature_box: order.placement.signature_box()?,
+        layer2_text: layer2_text_of(order, &(name, id)),
+        rubric_image: order.rubric.clone(),
+        // Un motivo vacío **no se envía**: `signReason` con la cadena vacía
+        // estampa una etiqueta «Motivo:» sin nada detrás.
+        sign_reason: (!order.reason.is_empty()).then(|| order.reason.clone()),
+    })
+}
+
+/// Se lleva el ciclo a medias de la sesión, exigiendo que el token ya haya
+/// firmado.
+///
+/// **Se lo lleva, no lo copia**: al salir de aquí la sesión queda vacía, así
+/// que una postfirma que falle no deja un ciclo colgando que un segundo intento
+/// pudiera reusar con otro sello. El ciclo se reabre desde la prefirma o no se
+/// reabre.
+fn take_signed_cycle(
+    session: &SigningSession,
+) -> Result<(OpenCycle, PortalDocument, TokenSignature, SessionSeal), Failure> {
+    let mut open = lock(&session.open);
+    let in_flight = open.take().ok_or_else(no_open_cycle)?;
+    let signature = in_flight
+        .signature
+        .ok_or_else(|| Failure::new("unknown", "todavía no se ha firmado en el token"))?;
+    Ok((
+        in_flight.cycle,
+        in_flight.document,
+        signature,
+        in_flight.seal,
+    ))
+}
+
+/// Cómo se cuenta un documento firmado: **dos nombres, ninguna ruta**
+/// (ADR-0011).
+fn told_as(landing: &std::path::Path, folder: &CheckedFolder) -> SignedDocumentView {
+    SignedDocumentView {
+        name: landing
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+            .to_owned(),
+        folder: folder.name().to_owned(),
+    }
+}
+
+/// Deja caer el documento firmado en la carpeta de destino, **sin diálogo**
+/// (ID-36, ADR-0011).
+///
+/// Lo único que se elige es la carpeta, y se eligió una vez. El nombre lo
+/// resuelve [`CheckedFolder::landing_for`], que numera los homónimos: sin
+/// diálogo por firma no hay ningún «ya existe, ¿reemplazar?» que avise, así que
+/// sin esa numeración la segunda firma machacaría a la primera en silencio.
+fn deliver(
+    environment: &Environment,
+    document: &PortalDocument,
+    signed: &[u8],
+) -> Result<SignedDocumentView, Failure> {
+    let chosen = {
+        let configuration = lock(&environment.configuration);
+        crate::destination::chosen_folder(&configuration, environment.documents_folder.clone())
+    };
+    // La carpeta se comprueba y **no se crea nunca** (ID-38): bajo el arenero
+    // crearla contesta OK y no deja nada en el anfitrión.
+    let folder = CheckedFolder::check(&chosen)?;
+    let landing = folder.landing_for(document)?;
+    std::fs::write(&landing, signed)
+        .map_err(|error| Failure::new("folderUnwritable", error.to_string()))?;
+    Ok(told_as(&landing, &folder))
+}
+
+/// Lo que hay que saber del token y de la orden antes de cruzar la frontera.
+///
+/// Junta las dos preguntas que se le hacen al token —qué certificado es, y si
+/// todavía sirve— con la configuración que sale de él, porque las tres son la
+/// misma decisión: **con qué se firma**.
+fn plan_signature(
+    module: &std::path::Path,
+    order: &SigningOrder,
+) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), Failure> {
+    let certificates = pkcs11::list_certificates(module)?;
+    let chosen = usable_certificate(&certificates, &order.certificate)?;
+    Ok((
+        config_for(order, chosen)?,
+        chosen.reference().clone(),
+        vec![chosen.der().to_vec()],
+    ))
+}
+
+/// Los bytes del documento, ya admitidos.
+///
+/// La puerta rápida del #60: se decide sobre los bytes, sin token y sin
+/// frontera, y por eso puede caer **antes del diálogo del PIN**.
+fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, Failure> {
+    let bytes = std::fs::read(document.reading_path())
+        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
+    AdmissibleDocument::check(&bytes)?;
+    Ok(bytes)
+}
+
+/// Aplana las tres capas de resultado que devuelve un trabajo del isolate: el
+/// hilo puede haberse caído, la librería puede no haber abierto, y el ciclo
+/// puede haber fallado.
+fn on_the_bridge<T: Send + 'static>(
+    isolate: &Isolate,
+    task: impl FnOnce(&crate::ffi::NativeBridge) -> Result<T, cycle::CycleError> + Send + 'static,
+) -> Result<T, Failure> {
+    match isolate.run(task) {
+        Err(gone) => Err(gone.into()),
+        Ok(Err(bridge)) => Err(bridge.into()),
+        Ok(Ok(outcome)) => outcome.map_err(Failure::from),
+    }
+}
+
 /// **Orden 3.** Prefirma: cruza la frontera y deja el ciclo abierto.
 ///
 /// Antes de nada rechaza lo que no se puede firmar —cifrado, certificado, o no
@@ -398,60 +601,24 @@ pub fn begin_signing(
     session: State<'_, SigningSession>,
 ) -> Result<(), Failure> {
     let document = PortalDocument::opened(&order.document);
-    let bytes = std::fs::read(document.reading_path())
-        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
-    // La puerta rápida del #60: se decide sobre los bytes, sin token y sin
-    // frontera, y por eso puede caer antes del diálogo del PIN. El préstamo se
-    // acaba aquí mismo para que los bytes puedan viajar al hilo del isolate.
-    AdmissibleDocument::check(&bytes).map_err(Failure::from)?;
+    let bytes = admitted_bytes(&document)?;
+    let (config, reference, chain) = plan_signature(&environment.module, &order)?;
 
-    let certificates = pkcs11::list_certificates(&environment.module)?;
-    let chosen = certificates
-        .iter()
-        .find(|certificate| certificate.reference().label() == order.certificate)
-        .ok_or_else(|| {
-            Failure::new(
-                "certificateNotFound",
-                format!("el token ya no tiene {}", order.certificate),
-            )
-        })?;
-    // La segunda vez que se mira el estado, y no sobra: entre listar y firmar
-    // puede haber pasado la medianoche del `notAfter`.
-    if !chosen.status().is_usable() {
-        return Err(Failure::new(
-            "certificateNotFound",
-            format!("{:?}", chosen.status()),
-        ));
-    }
-    let (name, id, _) = holder_of(chosen.subject().as_deref());
-    let config = SignatureConfig {
-        signature_box: order.signature_box,
-        layer2_text: layer2_text_of(&order, &(name, id)),
-        rubric_image: order.rubric.clone(),
-        sign_reason: (!order.reason.is_empty()).then(|| order.reason.clone()),
-    };
-    let reference: CertificateRef = chosen.reference().clone();
-    let chain = vec![chosen.der().to_vec()];
-
-    let cycle = isolate
-        .run(move |bridge| {
-            // La comprobación se repite dentro del hilo porque el tipo que la
-            // garantiza presta los bytes y los bytes viajan: no es un `if`
-            // olvidable, es el único constructor de `AdmissibleDocument`.
-            let document = AdmissibleDocument::check(&bytes)?;
-            cycle::presign(
-                bridge,
-                SigningRequest {
-                    document,
-                    chain: &chain,
-                    config: &config,
-                    certificate: &reference,
-                },
-            )
-        })
-        .map_err(Failure::from)?
-        .map_err(Failure::from)?
-        .map_err(Failure::from)?;
+    let cycle = on_the_bridge(&isolate, move |bridge| {
+        // La comprobación se repite dentro del hilo porque el tipo que la
+        // garantiza presta los bytes y los bytes viajan: no es un `if`
+        // olvidable, es el único constructor de `AdmissibleDocument`.
+        let document = AdmissibleDocument::check(&bytes)?;
+        cycle::presign(
+            bridge,
+            SigningRequest {
+                document,
+                chain: &chain,
+                config: &config,
+                certificate: &reference,
+            },
+        )
+    })?;
 
     let seal = cycle.seal_in_transit();
     *lock(&session.open) = Some(InFlight {
@@ -486,46 +653,13 @@ pub fn finish_signing(
     isolate: State<'_, Isolate>,
     session: State<'_, SigningSession>,
 ) -> Result<SignedDocumentView, Failure> {
-    let (cycle, document, signature, seal) = {
-        let mut open = lock(&session.open);
-        let in_flight = open.take().ok_or_else(no_open_cycle)?;
-        let signature = in_flight
-            .signature
-            .ok_or_else(|| Failure::new("unknown", "todavía no se ha firmado en el token"))?;
-        (
-            in_flight.cycle,
-            in_flight.document,
-            signature,
-            in_flight.seal,
-        )
-    };
+    let (cycle, document, signature, seal) = take_signed_cycle(&session)?;
 
-    let chosen = {
-        let configuration = lock(&environment.configuration);
-        crate::destination::chosen_folder(&configuration, environment.documents_folder.clone())
-    };
-    // La carpeta se comprueba y **no se crea nunca** (ID-38): bajo el arenero
-    // crearla contesta OK y no deja nada en el anfitrión.
-    let folder = CheckedFolder::check(&chosen)?;
-    let landing = folder.landing_for(&document)?;
+    let signed = on_the_bridge(&isolate, move |bridge| {
+        cycle.postsign(bridge, &signature, &seal)
+    })?;
 
-    let signed = isolate
-        .run(move |bridge| cycle.postsign(bridge, &signature, &seal))
-        .map_err(Failure::from)?
-        .map_err(Failure::from)?
-        .map_err(Failure::from)?;
-
-    std::fs::write(&landing, &signed)
-        .map_err(|error| Failure::new("folderUnwritable", error.to_string()))?;
-
-    Ok(SignedDocumentView {
-        name: landing
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default()
-            .to_owned(),
-        folder: folder.name().to_owned(),
-    })
+    deliver(&environment, &document, &signed)
 }
 
 /// **Orden 6.** Cancelar: se olvida el ciclo a medias.
@@ -550,10 +684,12 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::{
-        holder_of, language_of, situation_name, CertificateView, Failure, SignedDocumentView,
-        StatusView,
+        config_for, deliver, holder_of, language_of, situation_name, take_signed_cycle, told_as,
+        usable_certificate, CertificateView, CheckedFolder, Configuration, Environment, Failure,
+        Mutex, PlacementOrder, PortalDocument, SignedDocumentView, SigningOrder, SigningSession,
+        StatusView, VisibleFieldsOrder,
     };
-    use crate::pkcs11::{CertificateStatus, Situation};
+    use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
 
     /// **Grada A**: lo que se comprueba aquí es la **forma** de lo que sale por
@@ -681,7 +817,7 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_string(&unreadable).expect("serializa"),
-            r#"{"kind":"detail","detail":"PEM error"}"#
+            r#"{"kind":"unreadable","detail":"PEM error"}"#
         );
     }
 
@@ -731,6 +867,194 @@ mod tests {
             holder_of(None),
             (String::new(), String::new(), String::new())
         );
+    }
+
+    /// Un certificado del token con el DER que se le dé. Con basura dentro el
+    /// estado sale `Unreadable`, que es justo lo que hace falta para probar la
+    /// negativa sin fabricar un X.509.
+    fn a_certificate(label: &str, der: &[u8]) -> TokenCertificate {
+        TokenCertificate::new(
+            CertificateRef::new("/usr/lib/softhsm/libsofthsm2.so", "rfirma-test", label),
+            der.to_vec(),
+        )
+    }
+
+    fn an_order() -> SigningOrder {
+        SigningOrder {
+            document: "/run/user/1000/doc/1e8b83b9/contrato.pdf".to_owned(),
+            certificate: "FIRMA".to_owned(),
+            placement: PlacementOrder {
+                page: 1,
+                media_box: [0.0, 0.0, 595.0, 842.0],
+                rotation: 0,
+                rect: [72, 500, 272, 600],
+            },
+            fields: VisibleFieldsOrder {
+                signer_name: true,
+                id_number: true,
+                signed_at: true,
+                reason: true,
+            },
+            reason: String::new(),
+            signed_at: "31/08/26, 12:00:00".to_owned(),
+            rubric: None,
+            language: "es".to_owned(),
+        }
+    }
+
+    #[test]
+    fn refuses_a_certificate_that_is_no_longer_in_the_token() {
+        let failure = usable_certificate(&[], "FIRMA").expect_err("ya no esta");
+
+        assert_eq!(failure.situation, "certificateNotFound");
+        assert!(failure.detail.contains("FIRMA"), "{}", failure.detail);
+    }
+
+    #[test]
+    fn looks_at_the_status_again_between_listing_and_signing() {
+        // La ventana ya lo miró al listar, y aun así se vuelve a mirar: entre
+        // una cosa y otra puede haberse retirado la tarjeta o haber pasado la
+        // medianoche del `notAfter`.
+        let certificates = [a_certificate("FIRMA", &[0x00, 0x01, 0x02])];
+
+        let failure = usable_certificate(&certificates, "FIRMA").expect_err("no es legible");
+
+        assert_eq!(failure.situation, "certificateNotFound");
+        assert!(failure.detail.contains("Unreadable"), "{}", failure.detail);
+    }
+
+    #[test]
+    fn the_geometry_of_the_order_becomes_pades_points() {
+        let certificate = a_certificate("FIRMA", &[]);
+
+        let config = config_for(&an_order(), &certificate).expect("el recuadro cabe");
+
+        assert_eq!(config.signature_box.page, 1);
+        assert_eq!(config.signature_box.lower_left_x, 72);
+        assert_eq!(config.signature_box.upper_right_y, 600);
+    }
+
+    #[test]
+    fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
+        // iText lo recortaría sin decir nada y la firma saldría válida igual,
+        // con la rúbrica de trece puntos de ancho (ID-22).
+        let order = SigningOrder {
+            placement: PlacementOrder {
+                rect: [72, 500, 900, 600],
+                ..an_order().placement
+            },
+            ..an_order()
+        };
+
+        let failure = config_for(&order, &a_certificate("FIRMA", &[])).expect_err("se sale");
+
+        assert_eq!(failure.situation, "boxOutOfPage");
+    }
+
+    #[test]
+    fn an_empty_reason_is_not_sent_at_all() {
+        // `signReason` vacío estampa una etiqueta «Motivo:» sin nada detrás.
+        let config = config_for(&an_order(), &a_certificate("FIRMA", &[])).expect("cabe");
+
+        assert_eq!(config.sign_reason, None);
+    }
+
+    #[test]
+    fn a_reason_that_was_written_does_travel() {
+        let order = SigningOrder {
+            reason: "Conforme".to_owned(),
+            ..an_order()
+        };
+
+        let config = config_for(&order, &a_certificate("FIRMA", &[])).expect("cabe");
+
+        assert_eq!(config.sign_reason.as_deref(), Some("Conforme"));
+    }
+
+    #[test]
+    fn a_signed_document_is_named_by_its_file_and_its_folder_and_nothing_else() {
+        let folder = tempfile::tempdir().expect("deberia haber temporal");
+        let checked = CheckedFolder::at(folder.path()).expect("existe");
+        let landing = folder.path().join("contrato-firmado.pdf");
+
+        let view = told_as(&landing, &checked);
+
+        assert_eq!(view.name, "contrato-firmado.pdf");
+        assert_eq!(
+            view.folder,
+            folder.path().file_name().and_then(|n| n.to_str()).unwrap()
+        );
+        // Ni el nombre ni la carpeta llevan un separador: si lo llevaran, sería
+        // una ruta del anfitrión saliendo por la orden (ADR-0011).
+        assert!(!view.name.contains('/'));
+        assert!(!view.folder.contains('/'));
+    }
+
+    fn an_environment(documents_folder: &std::path::Path) -> Environment {
+        Environment {
+            module: "/usr/lib/softhsm/libsofthsm2.so".into(),
+            documents_folder: documents_folder.to_path_buf(),
+            configuration: Mutex::new(Configuration::default()),
+        }
+    }
+
+    #[test]
+    fn the_signed_document_falls_into_the_destination_folder_without_a_dialog() {
+        let folder = tempfile::tempdir().expect("deberia haber temporal");
+        let environment = an_environment(folder.path());
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        let view = deliver(&environment, &document, b"%PDF-firmado").expect("cae");
+
+        assert_eq!(view.name, "contrato-firmado.pdf");
+        assert_eq!(
+            std::fs::read(folder.path().join("contrato-firmado.pdf")).expect("esta"),
+            b"%PDF-firmado"
+        );
+    }
+
+    #[test]
+    fn a_second_signature_is_numbered_instead_of_overwriting_the_first() {
+        // Sin diálogo por firma no hay ningún «ya existe, ¿reemplazar?» que
+        // avise: sin la numeración, la segunda machacaría a la primera callando.
+        let folder = tempfile::tempdir().expect("deberia haber temporal");
+        let environment = an_environment(folder.path());
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        deliver(&environment, &document, b"la primera").expect("cae");
+        let second = deliver(&environment, &document, b"la segunda").expect("cae tambien");
+
+        assert_ne!(second.name, "contrato-firmado.pdf");
+        assert_eq!(
+            std::fs::read(folder.path().join("contrato-firmado.pdf")).expect("sigue"),
+            b"la primera"
+        );
+    }
+
+    #[test]
+    fn a_destination_folder_that_is_not_there_is_told_and_never_created() {
+        // Bajo el arenero crearla contesta OK y no deja nada en el anfitrión
+        // (ID-38): la única respuesta correcta es decirlo.
+        let missing = tempfile::tempdir()
+            .expect("temporal")
+            .path()
+            .join("no-esta");
+        let environment = an_environment(&missing);
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        let failure = deliver(&environment, &document, b"x").expect_err("no esta");
+
+        assert_eq!(failure.situation, "folderMissing");
+        assert!(!missing.exists(), "la carpeta se ha creado, y no debía");
+    }
+
+    #[test]
+    fn there_is_nothing_to_finish_when_no_cycle_was_started() {
+        let session = SigningSession::default();
+
+        let failure = take_signed_cycle(&session).expect_err("no hay ciclo");
+
+        assert_eq!(failure.situation, "unknown");
     }
 
     #[test]
