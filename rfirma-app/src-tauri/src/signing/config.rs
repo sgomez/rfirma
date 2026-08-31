@@ -74,8 +74,8 @@ impl Setting {
 ///
 /// Los valores son los que espera `setVisibleSignature`, no el `/Rect` que
 /// acabará teniendo el widget: la conversión desde el recuadro que el usuario
-/// arrastra en el visor —incluida la inversa de la rotación de la página— es
-/// otra cosa y vive en su propio sub-issue.
+/// arrastra en el visor —incluida la inversa de la rotación de la página— la
+/// hace [`super::placement::Page::place`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SignatureBox {
     /// Página, **1-based**, tal cual la numera `pdf.js`.
