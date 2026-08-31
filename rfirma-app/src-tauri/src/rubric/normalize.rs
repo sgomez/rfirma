@@ -8,7 +8,7 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
-use image::{ExtendedColorType, ImageEncoder, ImageFormat};
+use image::{ExtendedColorType, ImageDecoder as _, ImageEncoder, ImageFormat, ImageReader};
 use std::io::Cursor;
 
 use super::error::{RubricError, Situation};
@@ -144,11 +144,16 @@ pub fn normalize(bytes: &[u8]) -> Result<NormalizedRubric, RubricError> {
             )
         })?;
 
-    let image = image::load_from_memory_with_format(bytes, format.as_image_format())
-        .map_err(|error| RubricError::new(Situation::DamagedImage, error.to_string()))?;
+    let image = decode_upright(bytes, format)?;
 
-    let image = downscale(image);
-    let opaque = flatten_onto_white(&image);
+    // Se aplana **antes** de reescalar. `imageops::resize` interpola cada canal
+    // por separado y sin premultiplicar, así que un píxel transparente aporta su
+    // RGB a los vecinos aunque su alfa sea 0: muchas herramientas dejan
+    // `(0, 0, 0, 0)` bajo el recorte, y eso saldría como una orla gris en el
+    // borde del trazo, que es donde una firma es casi todo borde. Aplanado ya no
+    // queda alfa que interpolar. Cuesta aplanar a resolución completa, y para 10
+    // MB de entrada eso es irrelevante.
+    let opaque = downscale(flatten_onto_white(&image));
 
     // El JPEG se emite pelado: `JpegEncoder` no incrusta perfil ICC si no se le
     // da uno, y no se le da. No es cosmética —`com.aowagie.text.Jpeg` parsea el
@@ -168,12 +173,50 @@ pub fn normalize(bytes: &[u8]) -> Result<NormalizedRubric, RubricError> {
     Ok(NormalizedRubric { jpeg })
 }
 
+/// Decodifica **enderezando**: la orientación EXIF se aplica aquí y no en
+/// ningún otro sitio.
+///
+/// `load_from_memory_with_format` acaba en `ImageReader::decode()`, que no
+/// consulta la orientación —monta el decodificador, aplica los `Limits` y
+/// convierte—, así que hay que preguntársela al decodificador a mano. No es
+/// teórico: el JPEG es «el caso normal de una rúbrica escaneada», y una firma
+/// fotografiada con el móvil llega con `Orientation` 6 u 8. Como al almacén va
+/// el JPEG ya normalizado, y el JPEG de salida no lleva EXIF, un giro que no se
+/// aplicase aquí quedaría **congelado**: girada en la miniatura y girada en el
+/// PDF firmado, sin nada que dijera cómo enderezarla.
+fn decode_upright(
+    bytes: &[u8],
+    format: AcceptedFormat,
+) -> Result<image::DynamicImage, RubricError> {
+    let damaged =
+        |error: image::ImageError| RubricError::new(Situation::DamagedImage, error.to_string());
+
+    let mut decoder = ImageReader::with_format(Cursor::new(bytes), format.as_image_format())
+        .into_decoder()
+        .map_err(damaged)?;
+    let orientation = decoder.orientation().map_err(damaged)?;
+    let mut image = image::DynamicImage::from_decoder(decoder).map_err(damaged)?;
+    image.apply_orientation(orientation);
+    Ok(image)
+}
+
 /// Reescala solo si hace falta, conservando la proporción.
-fn downscale(image: image::DynamicImage) -> image::DynamicImage {
-    if image.width().max(image.height()) <= MAX_SIDE_PX {
+///
+/// Sobre `RgbImage` y no sobre `DynamicImage` a propósito: cuando llega aquí el
+/// alfa ya está aplanado, y ese orden es lo que evita los halos del borde.
+fn downscale(image: image::RgbImage) -> image::RgbImage {
+    let longest = image.width().max(image.height());
+    if longest <= MAX_SIDE_PX {
         return image;
     }
-    image.resize(MAX_SIDE_PX, MAX_SIDE_PX, FilterType::Lanczos3)
+    let ratio = f64::from(MAX_SIDE_PX) / f64::from(longest);
+    let scale = |side: u32| ((f64::from(side) * ratio).round() as u32).max(1);
+    image::imageops::resize(
+        &image,
+        scale(image.width()),
+        scale(image.height()),
+        FilterType::Lanczos3,
+    )
 }
 
 /// Aplana el canal alfa sobre **blanco**.
@@ -247,6 +290,9 @@ mod tests {
     fn accepts_png_and_jpeg_as_a_runtime_capability() {
         let formats = accepted_formats();
 
+        // Esto documenta lo que hoy hay compilado; **no** es la prueba del
+        // criterio. La prueba es el bucle de debajo, que decodifica una muestra
+        // de cada formato que la lista anuncia.
         assert_eq!(formats, vec![AcceptedFormat::Png, AcceptedFormat::Jpeg]);
         for format in formats {
             let sample = match format {
@@ -371,6 +417,46 @@ mod tests {
 
         assert_eq!(decoded.width(), MAX_SIDE_PX);
         assert_eq!(decoded.height(), MAX_SIDE_PX / 4);
+    }
+
+    /// Un JPEG con un APP1 `Exif` que dice `Orientation` 6 —girar 90° en el
+    /// sentido de las agujas—, que es lo que graba un móvil sujetado de lado.
+    fn jpeg_rotated_by_exif(width: u32, height: u32) -> Vec<u8> {
+        let plain = normalize(&png(width, height, Rgba([10, 20, 30, 255])))
+            .expect("el JPEG de prueba deberia normalizarse")
+            .jpeg;
+
+        let mut tiff = b"MM\x00\x2A\x00\x00\x00\x08".to_vec(); // big endian, IFD en 8
+        tiff.extend_from_slice(&1_u16.to_be_bytes()); // una sola entrada
+        tiff.extend_from_slice(&0x0112_u16.to_be_bytes()); // Orientation
+        tiff.extend_from_slice(&3_u16.to_be_bytes()); // SHORT
+        tiff.extend_from_slice(&1_u32.to_be_bytes()); // un valor
+        tiff.extend_from_slice(&6_u16.to_be_bytes()); // el valor, alineado a la izquierda
+        tiff.extend_from_slice(&0_u16.to_be_bytes()); // relleno del campo de 4 bytes
+        tiff.extend_from_slice(&0_u32.to_be_bytes()); // no hay IFD siguiente
+
+        let mut payload = b"Exif\0\0".to_vec();
+        payload.extend_from_slice(&tiff);
+        let length = u16::try_from(payload.len() + 2).expect("el EXIF de prueba es pequeno");
+
+        let mut with_exif = vec![0xFF, 0xD8, 0xFF, 0xE1];
+        with_exif.extend_from_slice(&length.to_be_bytes());
+        with_exif.extend_from_slice(&payload);
+        with_exif.extend_from_slice(&plain[2..]);
+        with_exif
+    }
+
+    #[test]
+    fn a_photographed_rubric_comes_out_upright_and_not_sideways() {
+        let sideways = jpeg_rotated_by_exif(40, 10);
+
+        let normalized = normalize(&sideways).expect("un JPEG con EXIF deberia normalizarse");
+        let decoded =
+            image::load_from_memory(normalized.bytes()).expect("la salida deberia decodificarse");
+
+        // La orientacion 6 intercambia los lados: si no se aplicase, saldria
+        // 40x10 y la firma quedaria tumbada, congelada asi en el almacen.
+        assert_eq!((decoded.width(), decoded.height()), (10, 40));
     }
 
     #[test]

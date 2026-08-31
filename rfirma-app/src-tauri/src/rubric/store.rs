@@ -14,11 +14,12 @@
 //! de Tauri; hasta que exista, cualquier ruta sirve, y las pruebas se apoyan en
 //! eso.
 
-use std::fs;
+use std::fs::{self, File};
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
 use super::error::{RubricError, Situation};
-use super::normalize::{normalize, NormalizedRubric};
+use super::normalize::{normalize, NormalizedRubric, MAX_INPUT_BYTES};
 
 /// El sitio donde vive la rúbrica de la aplicación.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -44,12 +45,36 @@ impl RubricStore {
     /// Se valida al elegir, no al firmar (ADR-0010): un fichero que no vale
     /// falla con el diálogo del usuario todavía abierto.
     pub fn adopt(&self, source: &Path) -> Result<NormalizedRubric, RubricError> {
-        let bytes = fs::read(source).map_err(|error| {
+        let unreadable = |error: std::io::Error| {
             RubricError::new(
                 Situation::SourceUnreadable,
                 format!("{}: {error}", source.display()),
             )
-        })?;
+        };
+
+        // Se lee **con tope**, no entero y luego se mide. `adopt` es el único
+        // camino real hasta `normalize`, así que un `fs::read` a secas metería
+        // en memoria lo que el usuario haya elegido en el portal —un vídeo, una
+        // imagen de disco— solo para acabar devolviendo `ImageTooLarge`. Se lee
+        // un byte de más que el tope: si aparece, el fichero lo pasa. `take`
+        // sobre el fichero ya abierto y no un `metadata` previo, para no dejar
+        // una ventana entre comprobar el tamaño y leerlo.
+        let mut bytes = Vec::new();
+        File::open(source)
+            .map_err(&unreadable)?
+            .take(MAX_INPUT_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(unreadable)?;
+        if bytes.len() > MAX_INPUT_BYTES {
+            return Err(RubricError::new(
+                Situation::ImageTooLarge,
+                format!(
+                    "{} pasa del tope de {MAX_INPUT_BYTES} bytes",
+                    source.display()
+                ),
+            ));
+        }
+
         let normalized = normalize(&bytes)?;
         self.save(&normalized)?;
         Ok(normalized)
@@ -66,13 +91,30 @@ impl RubricStore {
         }
         let temporary = self.path.with_extension("jpg.tmp");
         fs::write(&temporary, rubric.bytes()).map_err(|error| self.unwritable(&error))?;
-        fs::rename(&temporary, &self.path).map_err(|error| self.unwritable(&error))
+        fs::rename(&temporary, &self.path).map_err(|error| {
+            // El `rename` que falla deja el temporal escrito; barrerlo es parte
+            // de fallar sin dejar rastro. Si el borrado tampoco puede, el fallo
+            // que se cuenta sigue siendo el del `rename`.
+            let _ = fs::remove_file(&temporary);
+            self.unwritable(&error)
+        })
     }
 
-    /// La rúbrica guardada, si la hay. `None` cuando el usuario no ha elegido
-    /// ninguna todavía.
-    pub fn stored(&self) -> Option<Vec<u8>> {
-        fs::read(&self.path).ok()
+    /// La rúbrica guardada, si la hay.
+    ///
+    /// `Ok(None)` significa **una** cosa y solo una: el usuario no ha elegido
+    /// rúbrica todavía. Un almacén que existe pero no se deja leer sale como
+    /// `Err`, no como `None`: fundir las dos en `None` sería justo el
+    /// desaparecer en silencio que este módulo evita en todas partes.
+    pub fn stored(&self) -> Result<Option<Vec<u8>>, RubricError> {
+        match fs::read(&self.path) {
+            Ok(bytes) => Ok(Some(bytes)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(RubricError::new(
+                Situation::SourceUnreadable,
+                format!("{}: {error}", self.path.display()),
+            )),
+        }
     }
 
     fn unwritable(&self, error: &std::io::Error) -> RubricError {
@@ -112,7 +154,13 @@ mod tests {
         let adopted = store.adopt(&source).expect("deberia adoptarse");
         fs::remove_file(&source).expect("el original deberia poder borrarse");
 
-        assert_eq!(store.stored().as_deref(), Some(adopted.bytes()));
+        assert_eq!(
+            store
+                .stored()
+                .expect("el almacen deberia leerse")
+                .as_deref(),
+            Some(adopted.bytes())
+        );
     }
 
     #[test]
@@ -124,7 +172,10 @@ mod tests {
 
         store.adopt(&source).expect("deberia adoptarse");
 
-        let stored = store.stored().expect("deberia haber rubrica guardada");
+        let stored = store
+            .stored()
+            .expect("el almacen deberia leerse")
+            .expect("deberia haber rubrica guardada");
         assert_eq!(image::guess_format(&stored).ok(), Some(ImageFormat::Jpeg));
     }
 
@@ -148,9 +199,12 @@ mod tests {
         fs::write(&second, bytes).expect("el PNG de prueba deberia escribirse");
         let adopted = store.adopt(&second).expect("deberia adoptarse la segunda");
 
-        assert_eq!(store.stored().as_deref(), Some(adopted.bytes()));
-        let stored = image::load_from_memory(&store.stored().expect("deberia haber rubrica"))
-            .expect("deberia decodificarse");
+        let saved = store
+            .stored()
+            .expect("el almacen deberia leerse")
+            .expect("deberia haber rubrica");
+        assert_eq!(saved, adopted.bytes());
+        let stored = image::load_from_memory(&saved).expect("deberia decodificarse");
         assert_eq!((stored.width(), stored.height()), (40, 12));
     }
 
@@ -164,7 +218,7 @@ mod tests {
         let error = store.adopt(&source).expect_err("un PDF deberia rechazarse");
 
         assert_eq!(error.situation(), Situation::NotAnAcceptedImage);
-        assert_eq!(store.stored(), None);
+        assert_eq!(store.stored().expect("el almacen deberia leerse"), None);
     }
 
     #[test]
@@ -178,6 +232,57 @@ mod tests {
 
         assert_eq!(error.situation(), Situation::SourceUnreadable);
         assert!(error.detail().contains("no-existe.png"));
+    }
+
+    #[test]
+    fn a_source_over_the_input_cap_is_rejected_without_reading_it_whole() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let store = RubricStore::at(directory.path().join("rubric.jpg"));
+        let source = directory.path().join("enorme.png");
+        fs::write(&source, vec![0_u8; MAX_INPUT_BYTES + 4096]).expect("deberia escribirse");
+
+        let error = store
+            .adopt(&source)
+            .expect_err("un fichero por encima del tope deberia rechazarse");
+
+        assert_eq!(error.situation(), Situation::ImageTooLarge);
+        assert!(error.detail().contains("enorme.png"));
+        assert_eq!(store.stored().expect("el almacen deberia leerse"), None);
+    }
+
+    #[test]
+    fn a_store_that_cannot_be_written_leaves_no_temporary_behind() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        // Un directorio donde deberia ir el fichero: `rename` no puede con el.
+        let taken = directory.path().join("rubric.jpg");
+        fs::create_dir(&taken).expect("deberia crearse el directorio");
+        let store = RubricStore::at(&taken);
+        let source = directory.path().join("rubrica.png");
+        a_png(&source);
+
+        store
+            .adopt(&source)
+            .expect_err("deberia fallar al escribir");
+
+        assert!(
+            !directory.path().join("rubric.jpg.tmp").exists(),
+            "el temporal deberia barrerse cuando el rename falla"
+        );
+    }
+
+    #[test]
+    fn a_store_that_cannot_be_read_is_not_the_same_as_having_no_rubric() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        // Un directorio en el sitio del fichero: existe, pero `read` no puede.
+        let taken = directory.path().join("rubric.jpg");
+        fs::create_dir(&taken).expect("deberia crearse el directorio");
+
+        let error = RubricStore::at(&taken)
+            .stored()
+            .expect_err("un almacen ilegible deberia fallar, no salir como None");
+
+        assert_eq!(error.situation(), Situation::SourceUnreadable);
+        assert!(error.detail().contains("rubric.jpg"));
     }
 
     #[test]
