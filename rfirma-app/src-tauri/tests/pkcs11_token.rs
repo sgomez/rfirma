@@ -248,7 +248,18 @@ fn signing_a_hash_with_the_bare_rsa_mechanism_would_not_verify() {
 
 /// El mecanismo descartado, invocado a mano contra el mismo token. No usa el
 /// módulo de rfirma a propósito: es el contraejemplo, no una capacidad.
+///
+/// Lo que sí toma prestado de rfirma es el **turno del token**: iniciar sesión
+/// por fuera de él sería cruzarse con las firmas de verdad —doce pruebas en
+/// hilos del mismo proceso— y hacer que el `login` de aquí le devuelva
+/// `CKR_USER_ALREADY_LOGGED_IN` a un `pkcs11::sign` con PIN equivocado, o que
+/// su `logout()` cierre esta sesión entre el `login` y el `sign`. El candado no
+/// es reentrante: dentro del cierre no puede llamarse a `pkcs11::sign`.
 fn sign_with_bare_rsa_pkcs(data: &[u8]) -> Vec<u8> {
+    pkcs11::with_token_turn(|| sign_with_bare_rsa_pkcs_holding_the_turn(data))
+}
+
+fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
     use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
     use cryptoki::mechanism::Mechanism;
     use cryptoki::object::{Attribute, ObjectClass};
@@ -274,9 +285,11 @@ fn sign_with_bare_rsa_pkcs(data: &[u8]) -> Vec<u8> {
         .expect("el token rfirma-test");
 
     let session = context.open_ro_session(slot).expect("sesion");
-    // El estado de sesion iniciada es del token dentro del proceso: si otra
-    // prueba esta firmando ahora mismo, ya estamos autenticados.
-    let _ = session.login(UserType::User, Some(&AuthPin::new(PIN.into())));
+    // Con el turno cogido nadie mas del proceso tiene sesion iniciada contra
+    // este token, asi que este login tiene que salir limpio.
+    session
+        .login(UserType::User, Some(&AuthPin::new(PIN.into())))
+        .expect("el login del contraejemplo, con el turno del token cogido");
     let key = session
         .find_objects(&[
             Attribute::Class(ObjectClass::PRIVATE_KEY),
@@ -287,9 +300,16 @@ fn sign_with_bare_rsa_pkcs(data: &[u8]) -> Vec<u8> {
         .next()
         .expect("la clave del camino feliz");
 
-    session
+    let signature = session
         .sign(&Mechanism::RsaPkcs, key, data)
-        .expect("CKM_RSA_PKCS deberia firmar cualquier bloque que le quepa")
+        .expect("CKM_RSA_PKCS deberia firmar cualquier bloque que le quepa");
+
+    // Se cierra la sesion autenticada antes de soltar el turno, igual que hace
+    // pkcs11::sign: dejarla abierta dejaria el token desbloqueado para las
+    // pruebas que vengan detras.
+    let _ = session.logout();
+
+    signature
 }
 
 #[test]
