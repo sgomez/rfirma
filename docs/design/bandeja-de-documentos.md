@@ -15,15 +15,16 @@ De arriba abajo:
 1. **Zona de soltar**: recuadro con borde discontinuo,
    «Arrastra un PDF o pulsa para abrirlo». Pulsarla abre el explorador de
    archivos del sistema.
-2. **Recientes**: lista de documentos ya vistos. Cada fila lleva el nombre,
-   una insignia de estado y la fecha.
+2. **Recientes**: lista de documentos ya vistos, **diez como máximo**, con
+   desalojo por último uso —reabrir uno viejo lo rescata—. Cada fila lleva el
+   nombre, una insignia de estado y la fecha.
 
 La fila seleccionada se marca con `--rf-border-strong` y fondo `--rf-bg`;
 las demás son `.rf-card--interactive` sin borde.
 
 ## Vocabulario de las insignias
 
-Dos valores, y solo dos: **`Firmado`** y **`Sin firmar`**.
+Tres valores: **`Firmado`**, **`Sin firmar`** y **`No disponible`**.
 
 Un PDF que ya trae la firma de otra persona es, sencillamente, `Firmado`.
 Quién la puso y cuándo se consulta desplegando el aviso de cofirma del
@@ -34,10 +35,20 @@ Consecuencia asumida: un documento que llegó firmado por otro sale como
 alguna vez hace falta distinguir «firmado por mí» de «firmado por otro»,
 habrá que decidirlo como vocabulario, no improvisarlo en la fila.
 
+`No disponible` es distinto de los otros dos: no describe el documento sino que
+**la ruta no responde**. La fila se atenúa y al pulsarla se ofrece quitarla de
+la lista, pero no se purga sola: un PDF en un USB desmontado o en un disco de
+red caído no está borrado, y la fila revive cuando la ruta reaparece.
+
+Al firmar aparecen **dos filas**, el original y el firmado, y el firmado pasa a
+ser el documento activo. No se fusionan: hay dos ficheros en el disco y la
+bandeja lo dice.
+
 ## Estados
 
-- **Vacía** (primera ejecución): solo la zona de soltar, más
-  «Aquí aparecerán los documentos que vayas firmando».
+- **Vacía** (primera ejecución, o con «Recordar mi actividad» apagado en
+  [Preferencias](preferencias.md)): solo la zona de soltar, más «Aquí
+  aparecerán los documentos que vayas firmando».
 - **Con recientes**: la lista, con el documento activo seleccionado.
 - **Arrastrando** (por definir): la zona de soltar debe acusar el arrastre.
 
@@ -49,10 +60,11 @@ seleccionada.
 
 ## Lo que esta pantalla deja abierto
 
-Los recientes son **estado persistido entre sesiones**, y eso no estaba en el
-inventario de capacidades del prototipo: qué se guarda, dónde, cuánto tiempo y
-cómo se borra son decisiones de alcance, no de interfaz. Están pendientes en el
-mapa.
+Nada. Los recientes son **estado persistido entre sesiones**, y qué se guarda,
+dónde, cuánto dura y cómo se borra quedó decidido en el
+[ADR-0010](../adr/0010-memoria-entre-sesiones.md): se cachean nombre, insignia,
+`mtime` y fecha de último uso para poder pintar la fila sin abrir el fichero, y
+se revalida solo el documento que se selecciona.
 
 ## Decisiones
 

@@ -19,13 +19,24 @@ aplican al hacerlos: no hay «Guardar» ni «Cancelar».
    por omisión). La página, la posición y el contenido del recuadro se
    reutilizan en el siguiente documento. Es una de las dos mejoras que
    justificaron el prototipo, y aquí deja de ser un comportamiento fijo para
-   ser una decisión del usuario.
-2. **Dónde se guarda el documento firmado** (desplegable). Por omisión, junto
-   al documento original; la alternativa es una carpeta fija.
-3. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
+   ser una decisión del usuario. Apagado significa **no guardarla**: el
+   recuadro arranca en el valor por omisión en cada documento.
+2. **Recordar mi actividad** (interruptor, activo por omisión), con un botón
+   **«Vaciar la lista»** al lado. Cubre los documentos recientes y el
+   certificado usado la última vez: es la misma promesa a quien firma en un
+   ordenador compartido. Apagarlo **borra** lo ya guardado, previa
+   confirmación; vaciar sin apagar es «hoy no, mañana sí».
+3. **Dónde se guarda el documento firmado** (desplegable). Por omisión, junto
+   al documento original; la alternativa es una carpeta fija. La carpeta fija
+   se comprueba **antes de firmar**: si no existe o no es escribible, se avisa
+   en el panel y esa firma se guarda junto al original, sin cambiar la
+   preferencia.
+4. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
    inglés: la misma lista que el cliente oficial. El cambio se aplica en
    caliente, como el resto del diálogo. Un idioma solo aparece aquí si tiene
-   **todas** las cadenas traducidas.
+   **todas** las cadenas traducidas. En la primera ejecución sale del locale
+   del sistema cotejado contra esos seis, con español como recurso; no hay
+   diálogo de bienvenida que pregunte lo que la aplicación ya sabe.
 
 Los valores posibles viven **dentro** de los desplegables. Nada de textos
 debajo enumerando lo que el propio control ya muestra al abrirse.
@@ -41,6 +52,11 @@ Uno. Los ajustes tienen siempre valor.
 tokens; no está en el sistema de diseño.
 
 ## Decisiones
+
+**Qué se recuerda entre sesiones y dónde vive** está fijado en el
+[ADR-0010](../adr/0010-memoria-entre-sesiones.md): los dos interruptores de
+arriba, el borrado que provoca apagar el segundo, y la comprobación previa de
+la carpeta fija salen de ahí.
 
 El **alcance de la traducción** está fijado en
 [#16](https://github.com/sgomez/rfirma/issues/16): las seis lenguas, cadenas

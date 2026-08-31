@@ -93,3 +93,21 @@ _Avoid_: request, encargo, trabajo de firma
 Sitio web de la Administración que origina la petición de firma y recibe el
 documento firmado.
 _Avoid_: portal, cliente web, tercero
+
+### Memoria de la aplicación
+
+**Documento reciente**:
+Documento que la aplicación ha visto antes y ofrece para volver a él, sin
+guardar una copia: solo dónde estaba y cómo pintar su fila.
+_Avoid_: historial, documento abierto, favorito
+
+**Preferencia**:
+Ajuste que el usuario elige y que la aplicación se limita a obedecer: el idioma,
+dónde guardar el documento firmado, los interruptores.
+_Avoid_: configuración, opción, setting
+
+**Estado**:
+Lo que la aplicación recuerda por su cuenta, sin que nadie se lo pida: los
+documentos recientes, la última configuración de firma visible y el certificado
+usado la última vez. Borrarlo no reconfigura nada.
+_Avoid_: caché, historial, sesión
