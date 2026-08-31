@@ -1,0 +1,123 @@
+# Puerta automatica del repositorio.
+#
+# Decidida en https://github.com/sgomez/rfirma/issues/11. Antes de esto,
+# docs/agents/code-host.md declaraba "CI: none" mientras
+# docs/agents/developer-defaults.md declaraba `merge: auto`: el pipeline de
+# /developer estaba autorizado a mergear a main sin ninguna comprobacion.
+#
+# QUE COMPRUEBA HOY: que el puente compila sin avisos nuevos y que las
+# dependencias de AutoFirma se resuelven en una maquina limpia. NO comprueba
+# que nada funcione, porque el repositorio todavia no tiene codigo de
+# produccion. Lee la seccion de CI de docs/agents/code-host.md antes de fiarte
+# de un check en verde.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
+    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente.
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  # GraalVM CE 25, fijado por el issue #6: la linea 21 aborta dentro del
+  # JNI_OnLoad de libawt.so con cualquier firma visible. El pom sigue
+  # compilando a release 21.
+  GRAALVM_VERSION: '25'
+
+jobs:
+  check:
+    name: Compila y resuelve dependencias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Las dependencias de AutoFirma no estan en Maven Central: bootstrap.sh
+      # clona el repositorio oficial en la etiqueta v1.9.1 y las compila. Esa
+      # etiqueta es inmutable, asi que la cache se llena una vez y acierta
+      # siempre despues; solo se invalida si cambia la version que pide
+      # bootstrap.sh o las dependencias del pom.
+      #
+      # Descartado publicarlas en un registro propio: seria redistribuir
+      # binarios GPL de terceros, con las obligaciones de licencia que eso
+      # arrastra.
+      - name: Cache de ~/.m2
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - name: Instala just
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - run: just check
+
+  native:
+    name: Imagen nativa
+    runs-on: ubuntu-latest
+    # native-image tarda minutos y consume mucha memoria. Se construye siempre
+    # en main y a mano, y en un PR solo si toca al puente o a como se
+    # construye: no tiene sentido gastarlo en un PR que solo toca la interfaz.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'native')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide si hace falta
+        id: alcance
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "construir=si" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          if git diff --name-only "$base"...HEAD \
+              | grep -qE '^(rfirma-native-bridge/|bootstrap\.sh|justfile)'; then
+            echo "construir=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "construir=no" >> "$GITHUB_OUTPUT"
+            echo "El PR no toca el puente ni la construccion: no se construye la imagen." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        if: steps.alcance.outputs.construir == 'si'
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache de ~/.m2
+        if: steps.alcance.outputs.construir == 'si'
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - name: Instala just
+        if: steps.alcance.outputs.construir == 'si'
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - name: Construye la libreria nativa
+        if: steps.alcance.outputs.construir == 'si'
+        run: |
+          export GRAALVM_HOME="$JAVA_HOME"
+          just native

@@ -41,7 +41,15 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
+        <version>3.13.0</version>
+        <configuration>
+          <compilerArgs>
+            <!-- Todos los avisos del compilador activos: es todo el linting
+                 que hoy tiene sentido. Los linters de Rust y TypeScript
+                 llegan con su carril (issue #11). -->
+            <arg>-Xlint:all</arg>
+          </compilerArgs>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
