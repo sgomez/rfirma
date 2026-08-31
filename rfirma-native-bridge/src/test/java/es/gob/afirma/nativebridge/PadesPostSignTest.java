@@ -10,7 +10,12 @@ import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Properties;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Test;
 
@@ -83,6 +88,54 @@ class PadesPostSignTest {
         assertThrows(PadesBridge.SessionStampMismatchException.class,
                 () -> PadesBridge.postSign(first.pdf(), first.chain(),
                         second.pre().stamp(), first.pre().session(), first.pkcs1()));
+    }
+
+    @Test
+    void rejects_a_pdf_that_is_not_the_one_that_was_presigned() throws Exception {
+        // El PDF viaja aparte igual que el TIME y la postfirma PAdES lo regenera
+        // entero: postfirmar otro completa sin error y devuelve {"ok":true,...}
+        // con una firma que da "Digest Mismatch".
+        final SignedSession s = sign(new Properties());
+        final byte[] other = Arrays.copyOf(s.pdf(), s.pdf().length);
+        // Un byte de la zona de metadatos: sigue siendo un PDF, ya no es EL PDF.
+        other[other.length - 1] ^= 0x01;
+
+        final PadesBridge.SessionStampMismatchException failure = assertThrows(
+                PadesBridge.SessionStampMismatchException.class,
+                () -> PadesBridge.postSign(other, s.chain(),
+                        s.pre().stamp(), s.pre().session(), s.pkcs1()));
+
+        assertTrue(failure.getMessage().contains("Digest Mismatch"),
+                "el mensaje tiene que decir que se estaba evitando: " + failure.getMessage());
+    }
+
+    @Test
+    void restores_the_default_time_zone_even_when_postsigns_overlap() throws Exception {
+        // TimeZone.setDefault es estado global del proceso: sin serializar, dos
+        // postfirmas solapadas se pisan la zona y el finally de una restaura la de
+        // la otra. El sintoma seria un PDF con "Digest Mismatch" e irreproducible.
+        final SignedSession first = sign(new Properties());
+        final SignedSession second = sign(new Properties());
+        final TimeZone before = TimeZone.getDefault();
+
+        final ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            final List<Future<byte[]>> results = pool.invokeAll(List.of(
+                    () -> PadesBridge.postSign(first.pdf(), first.chain(),
+                            first.pre().stamp(), first.pre().session(), first.pkcs1()),
+                    () -> PadesBridge.postSign(second.pdf(), second.chain(),
+                            second.pre().stamp(), second.pre().session(), second.pkcs1())));
+            for (final Future<byte[]> result : results) {
+                assertArrayEquals("%PDF".getBytes(StandardCharsets.US_ASCII),
+                        Arrays.copyOf(result.get(), 4));
+            }
+        }
+        finally {
+            pool.shutdownNow();
+        }
+
+        assertEquals(before.getID(), TimeZone.getDefault().getID(),
+                "el proceso se ha quedado con la zona horaria de una postfirma");
     }
 
     @Test

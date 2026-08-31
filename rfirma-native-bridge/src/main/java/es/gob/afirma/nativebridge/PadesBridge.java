@@ -36,6 +36,13 @@ public final class PadesBridge {
     /** Donde deposita Rust el PKCS#1. */
     private static final String PROPERTY_PKCS1 = "PK1";
 
+    /**
+     * Cerrojo de la postfirma. Lo que protege no es un campo del puente sino
+     * {@link TimeZone#setDefault(TimeZone)}, que es de la JVM entera; ver el
+     * comentario dentro de {@link #postSign}.
+     */
+    private static final Object DEFAULT_TIME_ZONE_LOCK = new Object();
+
     private PadesBridge() { }
 
     /** Lo que la prefirma entrega a Rust. */
@@ -74,9 +81,17 @@ public final class PadesBridge {
         final TriphaseData.TriSign signConfig = session.getSign(0);
         final String time = signConfig.getProperty(PROPERTY_SIGN_TIME);
         final String preSign = signConfig.getProperty(PROPERTY_PRESIGN);
+        // PAdES los pone siempre; comprobarlos es lo que mantiene el error legible
+        // si algun dia deja de hacerlo. Sin esto, la frontera devolveria
+        // {"ok":true,...,"pre":null} —una forma de exito sin prefirma dentro— o
+        // fallaria con un NPE dentro del sello, que no explica nada.
+        if (preSign == null || time == null) {
+            throw new IllegalStateException(
+                    "la prefirma PAdES no ha devuelto " + (preSign == null ? "PRE" : "TIME"));
+        }
 
         // extraParams EFECTIVOS: el objeto que acaba de mutar la prefirma.
-        final SessionStamp stamp = SessionStamp.of(algorithm, time, timeZone, extraParams);
+        final SessionStamp stamp = SessionStamp.of(algorithm, time, timeZone, extraParams, pdf);
 
         return new PreSignResult(session.toString(), preSign, stamp.encode());
     }
@@ -85,9 +100,10 @@ public final class PadesBridge {
      * Postfirma PAdES: ensambla el PDF firmado.
      *
      * <p>Los {@code extraParams}, el algoritmo y la zona horaria salen del
-     * <b>sello</b>, no del llamante: la postfirma los impone en vez de
-     * confiar en que vuelvan a coincidir. Lo unico que se compara es el
-     * {@code TIME}, que es el que viaja aparte dentro del {@code TriphaseData}.
+     * <b>sello</b>, no del llamante: la postfirma los impone en vez de confiar
+     * en que vuelvan a coincidir. Lo que no se puede imponer porque viaja aparte
+     * —el {@code TIME}, dentro del {@code TriphaseData}, y el propio PDF— se
+     * compara contra el sello antes de firmar.
      *
      * @param pdf        el MISMO PDF que recibio la prefirma.
      * @param chain      la MISMA cadena de certificados.
@@ -119,6 +135,17 @@ public final class PadesBridge {
                             + " Mismatch» sin dar ningun error.");
         }
 
+        if (!stamp.matchesPdf(pdf)) {
+            // El PDF tambien viaja aparte, y la postfirma PAdES lo regenera
+            // entero: si no es byte a byte el prefirmado, completa igualmente y
+            // devuelve un PDF cuya firma da "Digest Mismatch". Mismo fallo
+            // silencioso que el TIME desparejado, por la otra puerta.
+            throw new SessionStampMismatchException(
+                    "el PDF que recibe la postfirma no es el que se prefirmo: el sello"
+                            + " lleva el SHA-256 " + stamp.pdfDigest() + ". Firmar asi"
+                            + " produciria un PDF con «Digest Mismatch» sin dar ningun error.");
+        }
+
         if (pkcs1B64 == null || pkcs1B64.isBlank()) {
             throw new IllegalArgumentException("falta el PKCS#1 de la fase 2");
         }
@@ -126,14 +153,24 @@ public final class PadesBridge {
 
         // La zona horaria de la prefirma se IMPONE: preProcessPostSign reconstruye
         // el instante con Calendar.getInstance(), que usa la de por defecto.
-        final TimeZone previous = TimeZone.getDefault();
-        TimeZone.setDefault(stamp.timeZone());
-        try {
-            return new PAdESTriPhasePreProcessor().preProcessPostSign(
-                    pdf, stamp.algorithm(), chain, stamp.extraParams(), session);
-        }
-        finally {
-            TimeZone.setDefault(previous);
+        //
+        // TimeZone.setDefault es estado GLOBAL del proceso, no de esta llamada, y
+        // esta es una libreria compartida a la que Rust entra desde un pool de
+        // hilos: dos postfirmas solapadas se pisarian la zona y el finally de una
+        // restauraria la de la otra —firma invalida en silencio, e irreproducible—.
+        // Por eso se serializa. Firmar no es una operacion de caudal: el coste de
+        // esperar a la postfirma de al lado es irrelevante frente a un PDF con
+        // «Digest Mismatch».
+        synchronized (DEFAULT_TIME_ZONE_LOCK) {
+            final TimeZone previous = TimeZone.getDefault();
+            TimeZone.setDefault(stamp.timeZone());
+            try {
+                return new PAdESTriPhasePreProcessor().preProcessPostSign(
+                        pdf, stamp.algorithm(), chain, stamp.extraParams(), session);
+            }
+            finally {
+                TimeZone.setDefault(previous);
+            }
         }
     }
 
