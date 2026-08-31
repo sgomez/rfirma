@@ -39,15 +39,18 @@ _Avoid_: tipo de firma, perfil de firma
 Recuadro que se estampa sobre una página del PDF para que la firma se vea al
 abrir el documento. Es opcional y no aporta validez: la firma electrónica está
 en la estructura del PDF, se dibuje o no. Su apariencia forma parte del
-documento cuyo hash se firma, así que se decide antes de la prefirma.
+documento cuyo hash se firma, así que se decide antes de la prefirma. Dentro
+del recuadro puede haber texto, la rúbrica del titular o las dos cosas; el
+texto lo redacta rFirma y sigue al idioma de la aplicación.
 _Avoid_: sello, marca de agua, firma gráfica
 
 **Rúbrica**:
 Imagen de la firma manuscrita del titular, escaneada, que puede mostrarse
 dentro del recuadro de la firma visible. Es un adorno del recuadro, no la
 firma: sin rúbrica la firma sigue siendo válida, y una rúbrica sin firma
-electrónica no es nada.
-_Avoid_: firma manuscrita (a secas), imagen de firma, sello
+electrónica no es nada. Rúbrica es **siempre** una imagen: el texto que
+acompaña al recuadro no es una rúbrica, es texto de la firma visible.
+_Avoid_: firma manuscrita (a secas), imagen de firma, sello, rúbrica de texto
 
 ### Identidad y claves
 
