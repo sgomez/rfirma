@@ -70,9 +70,18 @@ AutoFirma) and it is the safety net for the slow lane.
 It does **not** verify that anything works. This repo has **no production
 code yet** — `NativeBridge.java` is the measurement bridge from issues #2 and
 #13, and `just test` runs an empty suite. The Rust and TypeScript lanes, the
-signing tests and the CRAP thresholds were deliberately left out of #11
-because they would test code that does not exist; they arrive with the lanes
-themselves.
+signing tests and the CRAP threshold were deliberately left out of #11
+because they would test code that does not exist.
+
+They are now **decided but not yet built**:
+[ADR-0014](../adr/0014-gradas-de-prueba-y-puerta-de-calidad.md) fixes the four
+test tiers (A: nothing, B: SoftHSM, C: the six `.so`, D: network), which lane
+each runs in, Biome/clippy/vitest as the tooling, `cargo crap` as a gate in
+**Rust only**, `pdfsig` as the automatic validity oracle with the official
+validator as a manual release gate, and **no pre-commit hook** — `just check`
+stays the single entry point. They arrive with the sub-issues of
+[#10](https://github.com/sgomez/rfirma/issues/10). **Until this section says
+otherwise, none of it runs**: what is above is still all CI does.
 
 **So the reviewer still installs and runs everything itself** — a green check
 is not a substitute. That stays true until this section says the suite covers
