@@ -1,13 +1,7 @@
 package es.gob.afirma.nativebridge;
 
-import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
-import java.util.Properties;
 
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.UnmanagedMemory;
@@ -16,34 +10,60 @@ import org.graalvm.nativeimage.c.type.CCharPointer;
 import org.graalvm.nativeimage.c.type.CTypeConversion;
 import org.graalvm.word.PointerBase;
 
-import es.gob.afirma.core.signers.TriphaseData;
-import es.gob.afirma.triphase.signer.processors.PAdESTriPhasePreProcessor;
-
 /**
- * Bridge minimo de medicion: prefirma y postfirma PAdES.
+ * La frontera FFI del puente: prefirma y postfirma PAdES vistas desde Rust.
  *
- * Deliberadamente SIN JSON y SIN PreProcessorFactory: la factoria referencia
- * los preprocesadores XAdES, FacturaE, ASiC y PKCS1, y usarla haria alcanzable
- * todo el arbol de formatos. Aqui se instancia PAdESTriPhasePreProcessor
- * directamente para medir solo el coste de PAdES.
+ * <p>Aqui no se decide nada. Esta clase convierte cadenas C a Java, delega en
+ * {@link PadesBridge} y devuelve JSON; lo que hace la firma vive alli, donde se
+ * puede probar sin construir la imagen nativa.
+ *
+ * <p><b>Tres entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * {@code autofirma_pades_postsign} y {@code autofirma_free_string}. Se instancia
+ * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
+ * que referencia los preprocesadores XAdES, FacturaE, ASiC y PKCS1 y haria
+ * alcanzable todo el arbol de formatos dentro de la imagen.
+ *
+ * <h2>La memoria (ADR-0003, ID-11)</h2>
+ *
+ * Todo lo que sale por un valor de retorno se reserva <b>a mano</b> con
+ * {@link UnmanagedMemory#malloc(int)} y lo libera <b>Rust</b> llamando a
+ * {@code autofirma_free_string}. Nunca {@code CTypeConversion.toCString}: GraalVM
+ * libera esa memoria al salir del bloque, asi que Rust leeria memoria ya
+ * liberada y al liberarla el mismo provocaria un doble {@code free}. Es un fallo
+ * silencioso —funciona en pruebas cortas y corrompe memoria bajo carga—, asi que
+ * quien anada una entrada aqui devuelve con {@link #toUnmanagedCString(String)} o
+ * no devuelve.
+ *
+ * <h2>El JSON</h2>
+ *
+ * <pre>
+ * presign  ok  {"ok":true,"session":"&lt;xml&gt;","pre":"&lt;b64 DER&gt;","stamp":"&lt;b64&gt;"}
+ * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}
+ * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
+ * </pre>
+ *
+ * {@code session} y {@code stamp} son <b>opacos</b>: Rust los transporta sin
+ * interpretarlos y los devuelve tal cual a la postfirma (ADR-0016).
  */
 public final class NativeBridge {
 
     private NativeBridge() { }
 
     static {
-        // Medicion ticket #2: forzar AWT headless antes de que cualquier
-        // ruta de firma visible toque java.awt.
+        // AWT headless antes de que ninguna ruta de firma visible toque java.awt.
+        //
+        // Ya no se toca java.library.path: al excluir afirma-ui-utils (ID-08) la
+        // libreria es UN SOLO fichero y no hay auxiliares de AWT que localizar.
+        // Volver a ponerlos "por si acaso" es lo que hace que un JPEG con perfil
+        // ICC aborte el proceso en vez de dar un error recuperable (ID-09).
         System.setProperty("java.awt.headless", "true");
-        // Permite apuntar java.library.path al directorio donde Rust extraiga
-        // los .so auxiliares del JDK (Substrate ignora LD_LIBRARY_PATH aqui).
-        final String libDir = System.getenv("RFIRMA_LIB_DIR");
-        if (libDir != null && !libDir.isEmpty()) {
-            System.setProperty("java.library.path", libDir);
-        }
     }
 
-    @CEntryPoint(name = "rfirma_free_string")
+    /**
+     * Libera una cadena devuelta por este puente. Rust <b>tiene</b> que llamarla
+     * por cada valor de retorno, incluidos los caminos de error.
+     */
+    @CEntryPoint(name = "autofirma_free_string")
     public static void freeString(final IsolateThread thread, final PointerBase pointer) {
         if (pointer.isNonNull()) {
             UnmanagedMemory.free(pointer);
@@ -53,14 +73,14 @@ public final class NativeBridge {
     /**
      * Prefirma PAdES.
      *
-     * @param pdfB64        PDF de entrada en Base64.
-     * @param algorithm     p.ej. "SHA256withRSA".
-     * @param certChainB64  cadena de certificados en Base64, separados por ';'.
-     * @param extraParams   extraParams en formato java.util.Properties (lineas "clave=valor").
-     * @return XML del TriphaseData, o "ERROR:<mensaje>". Propiedad del llamante:
-     *         debe liberarse con rfirma_free_string.
+     * @param pdfB64       PDF de entrada en Base64.
+     * @param algorithm    p.ej. {@code SHA256withRSA}.
+     * @param certChainB64 cadena de certificados en Base64, separados por {@code ';'}.
+     * @param extraParams  extraParams en formato {@code java.util.Properties}
+     *                     (lineas {@code clave=valor}).
+     * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
      */
-    @CEntryPoint(name = "rfirma_pades_presign")
+    @CEntryPoint(name = "autofirma_pades_presign")
     public static CCharPointer padesPreSign(
             final IsolateThread thread,
             final CCharPointer pdfB64,
@@ -68,140 +88,102 @@ public final class NativeBridge {
             final CCharPointer certChainB64,
             final CCharPointer extraParams) {
         try {
-            final byte[] pdf = Base64.getDecoder().decode(CTypeConversion.toJavaString(pdfB64));
-            final X509Certificate[] chain = parseCertificates(CTypeConversion.toJavaString(certChainB64));
-
-            final Properties params = new Properties();
-            final String rawParams = CTypeConversion.toJavaString(extraParams);
-            if (rawParams != null && !rawParams.isEmpty()) {
-                params.load(new ByteArrayInputStream(rawParams.getBytes(StandardCharsets.UTF_8)));
-            }
-
-            final TriphaseData td = new PAdESTriPhasePreProcessor().preProcessPreSign(
-                    pdf,
+            final PadesBridge.PreSignResult result = PadesBridge.preSign(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(pdfB64)),
                     CTypeConversion.toJavaString(algorithm),
-                    chain,
-                    params,
-                    false);
+                    PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
+                    SessionStamp.parseParams(CTypeConversion.toJavaString(extraParams)));
 
-            return toCStringUnmanaged(td.toString());
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "session", result.session());
+            field(json, "pre", result.preSignB64());
+            field(json, "stamp", result.stamp());
+            return toUnmanagedCString(json.append('}').toString());
         }
         catch (final Throwable e) {
-            return toCStringUnmanaged("ERROR:" + e.getClass().getName() + ": " + e.getMessage());
+            return toUnmanagedCString(errorJson(e));
         }
     }
 
     /**
      * Postfirma PAdES: ensambla el PDF firmado.
      *
-     * Medicion ticket #13. Los extraParams y el instante de firma deben ser
-     * exactamente los mismos que en la prefirma (el TIME viaja dentro del
-     * propio TriphaseData); la postfirma regenera el PDF entero.
+     * <p>No recibe ni algoritmo ni extraParams: los toma del sello, que es
+     * justamente lo que impide que se desvien de la prefirma (ADR-0016).
      *
-     * @param pdfB64        el MISMO PDF de entrada que recibio la prefirma, en Base64.
-     * @param algorithm     el MISMO algoritmo que en la prefirma.
-     * @param certChainB64  la MISMA cadena de certificados, Base64 separado por ';'.
-     * @param extraParams   los MISMOS extraParams que en la prefirma.
-     * @param triphaseXml   el XML del TriphaseData de la prefirma, con el campo PK1 anadido.
-     * @return PDF firmado en Base64, o "ERROR:&lt;mensaje&gt;". Propiedad del llamante:
-     *         debe liberarse con rfirma_free_string.
+     * @param pdfB64       el MISMO PDF de entrada que recibio la prefirma, en Base64.
+     * @param certChainB64 la MISMA cadena de certificados, Base64 separado por {@code ';'}.
+     * @param stampB64     el sello de sesion que devolvio la prefirma, tal cual.
+     * @param sessionXml   el {@code TriphaseData} de la prefirma, tal cual.
+     * @param pkcs1B64     el PKCS#1 calculado por Rust sobre los atributos firmados.
+     * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
      */
-    @CEntryPoint(name = "rfirma_pades_postsign")
+    @CEntryPoint(name = "autofirma_pades_postsign")
     public static CCharPointer padesPostSign(
             final IsolateThread thread,
             final CCharPointer pdfB64,
-            final CCharPointer algorithm,
             final CCharPointer certChainB64,
-            final CCharPointer extraParams,
-            final CCharPointer triphaseXml) {
+            final CCharPointer stampB64,
+            final CCharPointer sessionXml,
+            final CCharPointer pkcs1B64) {
         try {
-            final byte[] signedPdf = postSign(
-                    CTypeConversion.toJavaString(pdfB64),
-                    CTypeConversion.toJavaString(algorithm),
-                    CTypeConversion.toJavaString(certChainB64),
-                    CTypeConversion.toJavaString(extraParams),
-                    CTypeConversion.toJavaString(triphaseXml));
-            return toCStringUnmanaged(Base64.getEncoder().encodeToString(signedPdf));
+            final byte[] signed = PadesBridge.postSign(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(pdfB64)),
+                    PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
+                    CTypeConversion.toJavaString(stampB64),
+                    CTypeConversion.toJavaString(sessionXml),
+                    CTypeConversion.toJavaString(pkcs1B64));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "pdf", Base64.getEncoder().encodeToString(signed));
+            return toUnmanagedCString(json.append('}').toString());
         }
         catch (final Throwable e) {
-            return toCStringUnmanaged("ERROR:" + e.getClass().getName() + ": " + e.getMessage());
+            return toUnmanagedCString(errorJson(e));
         }
     }
 
-    /** Nucleo compartido por el CEntryPoint nativo y el main de control en JVM. */
-    static byte[] postSign(final String pdfB64, final String algorithm,
-            final String certChainB64, final String rawParams,
-            final String triphaseXml) throws Exception {
-        final byte[] pdf = Base64.getDecoder().decode(pdfB64);
-        final X509Certificate[] chain = parseCertificates(certChainB64);
-        final Properties params = loadParams(rawParams);
-        final TriphaseData session = TriphaseData.parser(triphaseXml.getBytes(StandardCharsets.UTF_8));
-
-        return new PAdESTriPhasePreProcessor().preProcessPostSign(
-                pdf, algorithm, chain, params, session);
+    static String errorJson(final Throwable e) {
+        final String message = e.getMessage() == null ? e.getClass().getName()
+                : e.getClass().getName() + ": " + e.getMessage();
+        final StringBuilder json = new StringBuilder("{\"ok\":false");
+        field(json, "error", message);
+        return json.append('}').toString();
     }
 
-    /** Nucleo compartido por el CEntryPoint nativo y el main de control en JVM. */
-    static TriphaseData preSign(final String pdfB64, final String algorithm,
-            final String certChainB64, final String rawParams) throws Exception {
-        return new PAdESTriPhasePreProcessor().preProcessPreSign(
-                Base64.getDecoder().decode(pdfB64),
-                algorithm,
-                parseCertificates(certChainB64),
-                loadParams(rawParams),
-                false);
-    }
-
-    private static Properties loadParams(final String rawParams) throws Exception {
-        final Properties params = new Properties();
-        if (rawParams != null && !rawParams.isEmpty()) {
-            params.load(new ByteArrayInputStream(rawParams.getBytes(StandardCharsets.UTF_8)));
+    private static void field(final StringBuilder json, final String name, final String value) {
+        json.append(",\"").append(name).append("\":");
+        if (value == null) {
+            json.append("null");
+            return;
         }
-        return params;
+        json.append('"');
+        for (int i = 0; i < value.length(); i++) {
+            final char c = value.charAt(i);
+            switch (c) {
+                case '"' -> json.append("\\\"");
+                case '\\' -> json.append("\\\\");
+                case '\n' -> json.append("\\n");
+                case '\r' -> json.append("\\r");
+                case '\t' -> json.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        json.append(String.format("\\u%04x", Integer.valueOf(c)));
+                    }
+                    else {
+                        json.append(c);
+                    }
+                }
+            }
+        }
+        json.append('"');
     }
 
     /**
-     * Control en JVM normal, para distinguir un fallo de native-image de un
-     * fallo de AutoFirma o del montaje de la prueba.
-     *
-     * uso: presign  &lt;pdf.b64&gt; &lt;cert.b64&gt; [extra.properties]
-     *      postsign &lt;pdf.b64&gt; &lt;cert.b64&gt; &lt;triphase.xml&gt; [extra.properties]
+     * Reserva la cadena en el C-heap. La libera Rust, no GraalVM: ver ADR-0003 y
+     * el aviso de la cabecera de esta clase.
      */
-    public static void main(final String[] args) throws Exception {
-        final String pdfB64 = java.nio.file.Files.readString(java.nio.file.Path.of(args[1])).trim();
-        final String certB64 = java.nio.file.Files.readString(java.nio.file.Path.of(args[2])).trim();
-        if ("presign".equals(args[0])) {
-            final String extra = args.length > 3
-                    ? java.nio.file.Files.readString(java.nio.file.Path.of(args[3])) : "";
-            System.out.println(preSign(pdfB64, "SHA256withRSA", certB64, extra).toString());
-        }
-        else if ("postsign".equals(args[0])) {
-            final String xml = java.nio.file.Files.readString(java.nio.file.Path.of(args[3]));
-            final String extra = args.length > 4
-                    ? java.nio.file.Files.readString(java.nio.file.Path.of(args[4])) : "";
-            final byte[] out = postSign(pdfB64, "SHA256withRSA", certB64, extra, xml);
-            java.nio.file.Files.write(java.nio.file.Path.of("jvm-postsign.pdf"), out);
-            System.out.println("POSTSIGN OK (" + out.length + " bytes) -> jvm-postsign.pdf");
-        }
-        else {
-            throw new IllegalArgumentException("modo desconocido: " + args[0]);
-        }
-    }
-
-    private static X509Certificate[] parseCertificates(final String chainB64) throws Exception {
-        final CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        final List<X509Certificate> certs = new ArrayList<>();
-        for (final String b64 : chainB64.split(";")) {
-            if (b64.isBlank()) {
-                continue;
-            }
-            certs.add((X509Certificate) cf.generateCertificate(
-                    new ByteArrayInputStream(Base64.getDecoder().decode(b64.trim()))));
-        }
-        return certs.toArray(new X509Certificate[0]);
-    }
-
-    private static CCharPointer toCStringUnmanaged(final String s) {
+    private static CCharPointer toUnmanagedCString(final String s) {
         final byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         final CCharPointer p = UnmanagedMemory.malloc(bytes.length + 1);
         for (int i = 0; i < bytes.length; i++) {

@@ -62,8 +62,12 @@ modules:
     build-commands:
       - install -Dm644 -t /app/lib/rfirma librfirma_crypto.so
     sources:
+      # La ruta CANONICA del ADR-0013, la que produce `just native`. No es
+      # target/native (el directorio de construccion) ni target/ce25-noui (el
+      # del banco de medicion del #36): esos eran los rivales que el ADR
+      # resolvio, y el manifiesto leia el segundo.
       - type: dir
-        path: ../../rfirma-native-bridge/target/ce25-noui
+        path: ../../rfirma-native-bridge/target/lib/rfirma
 
   # 2. Material de prueba de la sonda (no iria en el paquete real).
   - name: datos-de-prueba
