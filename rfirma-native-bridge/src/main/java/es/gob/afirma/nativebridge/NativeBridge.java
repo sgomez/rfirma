@@ -20,7 +20,7 @@ import es.gob.afirma.core.signers.TriphaseData;
 import es.gob.afirma.triphase.signer.processors.PAdESTriPhasePreProcessor;
 
 /**
- * Bridge minimo de medicion: un unico punto de entrada de prefirma PAdES.
+ * Bridge minimo de medicion: prefirma y postfirma PAdES.
  *
  * Deliberadamente SIN JSON y SIN PreProcessorFactory: la factoria referencia
  * los preprocesadores XAdES, FacturaE, ASiC y PKCS1, y usarla haria alcanzable
@@ -88,6 +88,103 @@ public final class NativeBridge {
         }
         catch (final Throwable e) {
             return toCStringUnmanaged("ERROR:" + e.getClass().getName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Postfirma PAdES: ensambla el PDF firmado.
+     *
+     * Medicion ticket #13. Los extraParams y el instante de firma deben ser
+     * exactamente los mismos que en la prefirma (el TIME viaja dentro del
+     * propio TriphaseData); la postfirma regenera el PDF entero.
+     *
+     * @param pdfB64        el MISMO PDF de entrada que recibio la prefirma, en Base64.
+     * @param algorithm     el MISMO algoritmo que en la prefirma.
+     * @param certChainB64  la MISMA cadena de certificados, Base64 separado por ';'.
+     * @param extraParams   los MISMOS extraParams que en la prefirma.
+     * @param triphaseXml   el XML del TriphaseData de la prefirma, con el campo PK1 anadido.
+     * @return PDF firmado en Base64, o "ERROR:&lt;mensaje&gt;". Propiedad del llamante:
+     *         debe liberarse con rfirma_free_string.
+     */
+    @CEntryPoint(name = "rfirma_pades_postsign")
+    public static CCharPointer padesPostSign(
+            final IsolateThread thread,
+            final CCharPointer pdfB64,
+            final CCharPointer algorithm,
+            final CCharPointer certChainB64,
+            final CCharPointer extraParams,
+            final CCharPointer triphaseXml) {
+        try {
+            final byte[] signedPdf = postSign(
+                    CTypeConversion.toJavaString(pdfB64),
+                    CTypeConversion.toJavaString(algorithm),
+                    CTypeConversion.toJavaString(certChainB64),
+                    CTypeConversion.toJavaString(extraParams),
+                    CTypeConversion.toJavaString(triphaseXml));
+            return toCStringUnmanaged(Base64.getEncoder().encodeToString(signedPdf));
+        }
+        catch (final Throwable e) {
+            return toCStringUnmanaged("ERROR:" + e.getClass().getName() + ": " + e.getMessage());
+        }
+    }
+
+    /** Nucleo compartido por el CEntryPoint nativo y el main de control en JVM. */
+    static byte[] postSign(final String pdfB64, final String algorithm,
+            final String certChainB64, final String rawParams,
+            final String triphaseXml) throws Exception {
+        final byte[] pdf = Base64.getDecoder().decode(pdfB64);
+        final X509Certificate[] chain = parseCertificates(certChainB64);
+        final Properties params = loadParams(rawParams);
+        final TriphaseData session = TriphaseData.parser(triphaseXml.getBytes(StandardCharsets.UTF_8));
+
+        return new PAdESTriPhasePreProcessor().preProcessPostSign(
+                pdf, algorithm, chain, params, session);
+    }
+
+    /** Nucleo compartido por el CEntryPoint nativo y el main de control en JVM. */
+    static TriphaseData preSign(final String pdfB64, final String algorithm,
+            final String certChainB64, final String rawParams) throws Exception {
+        return new PAdESTriPhasePreProcessor().preProcessPreSign(
+                Base64.getDecoder().decode(pdfB64),
+                algorithm,
+                parseCertificates(certChainB64),
+                loadParams(rawParams),
+                false);
+    }
+
+    private static Properties loadParams(final String rawParams) throws Exception {
+        final Properties params = new Properties();
+        if (rawParams != null && !rawParams.isEmpty()) {
+            params.load(new ByteArrayInputStream(rawParams.getBytes(StandardCharsets.UTF_8)));
+        }
+        return params;
+    }
+
+    /**
+     * Control en JVM normal, para distinguir un fallo de native-image de un
+     * fallo de AutoFirma o del montaje de la prueba.
+     *
+     * uso: presign  &lt;pdf.b64&gt; &lt;cert.b64&gt; [extra.properties]
+     *      postsign &lt;pdf.b64&gt; &lt;cert.b64&gt; &lt;triphase.xml&gt; [extra.properties]
+     */
+    public static void main(final String[] args) throws Exception {
+        final String pdfB64 = java.nio.file.Files.readString(java.nio.file.Path.of(args[1])).trim();
+        final String certB64 = java.nio.file.Files.readString(java.nio.file.Path.of(args[2])).trim();
+        if ("presign".equals(args[0])) {
+            final String extra = args.length > 3
+                    ? java.nio.file.Files.readString(java.nio.file.Path.of(args[3])) : "";
+            System.out.println(preSign(pdfB64, "SHA256withRSA", certB64, extra).toString());
+        }
+        else if ("postsign".equals(args[0])) {
+            final String xml = java.nio.file.Files.readString(java.nio.file.Path.of(args[3]));
+            final String extra = args.length > 4
+                    ? java.nio.file.Files.readString(java.nio.file.Path.of(args[4])) : "";
+            final byte[] out = postSign(pdfB64, "SHA256withRSA", certB64, extra, xml);
+            java.nio.file.Files.write(java.nio.file.Path.of("jvm-postsign.pdf"), out);
+            System.out.println("POSTSIGN OK (" + out.length + " bytes) -> jvm-postsign.pdf");
+        }
+        else {
+            throw new IllegalArgumentException("modo desconocido: " + args[0]);
         }
     }
 
