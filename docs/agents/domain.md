@@ -44,6 +44,16 @@ When your output names a domain concept (in an issue title, a refactor proposal,
 
 If the concept you need isn't in the glossary yet, that's a signal: either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 
+## Los ADR representan siempre la decisión vigente
+
+Cuando una decisión se revisa, **se reescribe el ADR existente en su sitio**, ajustando
+también su nombre de fichero si el título deja de describirla. No se marcan `Superseded`
+ni se conservan ADR históricos junto al vigente: dos ADR sobre la misma decisión son
+ruido en el contexto de quien lea el repositorio después.
+
+Lo que sí se conserva, dentro del ADR reescrito, es **por qué se descartó la opción
+anterior**: eso va en `Considered Options`, que es donde un lector futuro lo busca.
+
 ## Flag ADR conflicts
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
