@@ -5,7 +5,7 @@ quien implemente una pantalla debería poder hacerlo sin más contexto que este
 fichero.
 
 El sistema es CSS puro — custom properties y clases — sin dependencia de
-framework. El frontend de rFirma es Svelte, pero nada de lo que sigue lo
+framework. El frontend de rFirma es React ([ADR-0013](../adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md)), pero nada de lo que sigue lo
 presupone.
 
 ---

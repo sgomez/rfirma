@@ -5,7 +5,7 @@ Este archivo contiene el contexto técnico esencial, las restricciones de diseñ
 ---
 
 ## 🎯 Objetivo del Proyecto
-Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuyo repositorio oficial es [ctt-gob-es/clienteafirma](https://github.com/ctt-gob-es/clienteafirma)) por una aplicación nativa en **Tauri v2 (Rust + Svelte)**. La lógica criptográfica pesada (CAdES, PAdES, XAdES, FacturaE) se delega a una biblioteca compartida compilada con **GraalVM Native Image** a partir de la base de código original de Autofirma.
+Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuyo repositorio oficial es [ctt-gob-es/clienteafirma](https://github.com/ctt-gob-es/clienteafirma)) por una aplicación nativa en **Tauri v2 (Rust + React)**. La lógica criptográfica pesada (CAdES, PAdES, XAdES, FacturaE) se delega a una biblioteca compartida compilada con **GraalVM Native Image** a partir de la base de código original de Autofirma.
 
 ---
 
@@ -45,10 +45,12 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 ---
 
 ## 📍 Archivos de Interés y Rutas
-* **Especificación de Desarrollo:** **[rfirma_development_spec.md](rfirma_development_spec.md)** (contiene la arquitectura detallada y planos de código para los módulos de Rust, Java y Svelte).
+* **Especificación de Desarrollo:** **[rfirma_development_spec.md](rfirma_development_spec.md)** — borrador **a auditar**, no fuente de verdad. Lo borra el [issue #10](https://github.com/sgomez/rfirma/issues/10).
 * **Bridge Java:** `rfirma-native-bridge/src/main/java/es/gob/afirma/nativebridge/NativeBridge.java`
 * **App Rust/Tauri:** `rfirma-app/src-tauri/`
-* **App Frontend:** `rfirma-app/src/`
+* **App Frontend:** `rfirma-app/src/` (React 19 + Vite + TypeScript, pnpm)
+* **Empaquetado:** `packaging/flatpak/`
+* **Punto de entrada de todo:** `justfile` — ver el [ADR-0013](docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md).
 
 
 
