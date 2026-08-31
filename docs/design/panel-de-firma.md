@@ -19,8 +19,10 @@ termina en el botón que firma. Es la única región con un botón primario.
 3. **Certificado**.
 4. **Firma visible**.
 
-**Pie fijo**: «Se guardará en» con la ruta y un `Cambiar`, y debajo el botón
-primario a ancho completo.
+**Pie fijo**: «Se guardará en» con el **nombre de la carpeta** —no la ruta— y
+un `Cambiar`, y debajo el botón primario a ancho completo. El destino se ve
+antes de firmar, no después. Lo fija el
+[ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
 ## El aviso de cofirma
 
@@ -76,6 +78,11 @@ debajo, como detalle de los `extraParams` de PAdES.
   («si usas una tarjeta, comprueba que está insertada y que el lector está
   conectado») y dos salidas: «Volver a buscar» y «Otro módulo…».
 - **Listo**: todo activo, botón «Firmar documento».
+- **Destino no disponible**: la carpeta de destino no está o no se puede
+  escribir. El pie sustituye «Se guardará en» por «No se puede escribir en
+  *Documents*», con el `Cambiar` al lado. El botón de firmar **no se apaga** y
+  no se degrada a otro destino: quien firme aquí elige dónde, y nadie se queda
+  con el documento cargado y sin salida ([ADR-0011](../adr/0011-destino-del-documento-firmado.md)).
 - **Error de firma**: el pie sustituye «Se guardará en» por un aviso con borde
   de 2 px, la causa en lenguaje llano y el detalle técnico en monoespaciada
   (`CKR_DEVICE_REMOVED durante C_Sign (fase: firma)`) con un «Copiar detalle».
@@ -89,7 +96,10 @@ Sustituye a la configuración, que ya no sirve de nada:
 - Nombre del fichero resultante y su tamaño.
 - `Resumen`: insignias `PAdES` y `2 firmas`, y **todas las firmas del
   documento**, no solo la del usuario, con la insignia `La tuya` en la suya.
-- «Abrir el PDF» (primario) y «Abrir la carpeta» (secundario).
+- «Abrir el PDF» (primario) y «Abrir la carpeta» (secundario). Los dos son el
+  portal `OpenURI`, que funciona sin declarar ningún permiso. Cargan más peso
+  del que parece: bajo el arenero son la única forma que tiene el usuario de
+  llegar al fichero sin saberse la ruta.
 - Al pie, «Firmar otro documento» como `--ghost`.
 
 Enseñar todas las firmas es la contrapartida del aviso de cofirma: si antes se
@@ -115,6 +125,9 @@ tokens. Si se repiten en otra pantalla, hay que subirlos a
   poder marcarse.
 - El texto que explicaba qué es una rúbrica se eliminó: lo cargan las
   etiquetas.
+- El `Cambiar` del pie vale **solo para esa firma** y no toca la preferencia.
+  Cambiar una preferencia desde un pie de página, sin decirlo, manda la
+  siguiente firma a un sitio que el usuario no recuerda haber elegido.
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
 **Recorrido de firma**, artboards 2 a 5, 9 y 10.

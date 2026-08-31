@@ -27,7 +27,9 @@ Tres hallazgos cambian decisiones:
 1. **El módulo PKCS#11 lo aporta el flatpak.** Los del anfitrión no cargan dentro y `p11-kit` solo
    proyecta el almacén de confianza, nunca un token de firma.
 2. **«Guardar junto al documento original» no se puede implementar** bajo el arenero: la aplicación
-   no puede saber dónde estaba el original, y el portal lo prohíbe explícitamente.
+   no puede saber dónde estaba el original, y el portal lo prohíbe explícitamente. Sustituido por
+   `--filesystem=xdg-documents` en el
+   [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 3. **La ventana muere al primer fotograma** en Wayland con el GTK3 del runtime, en 49 y en 50, y se
    arregla con una variable de entorno que el manifiesto declara.
 
@@ -151,7 +153,14 @@ Consecuencia directa: **«junto al documento original», que es el valor por omi
 Ni escribiendo al lado, ni preseleccionando esa carpeta en el diálogo de guardar, porque la
 aplicación no sabe cuál es. Lo mismo alcanza a la degradación del
 [ADR-0010](../adr/0010-memoria-entre-sesiones.md), que usa «junto al original» como recurso cuando
-la carpeta fija falla. Queda por decidir qué lo sustituye; no es trabajo de este ticket.
+la carpeta fija falla.
+
+**Resuelto en el [#27](https://github.com/sgomez/rfirma/issues/27)**, que lo sustituye por
+`--filesystem=xdg-documents` y deja el recorrido sin diálogo por firma: el
+[ADR-0011](../adr/0011-destino-del-documento-firmado.md). Ahí se mide además que
+`--filesystem=home` **tampoco** habría devuelto la ruta real —el portal solo la da a un llamante
+`is_host`— y que escribir en una carpeta declarada que **no existe en el anfitrión** contesta OK y
+no deja nada, la misma trampa de arriba con otro disfraz.
 
 El **diálogo de guardar** sí resuelve el caso general: el usuario elige destino y el portal concede
 el permiso justo para ese fichero. La sonda copia el PDF firmado a la ruta devuelta y funciona.
