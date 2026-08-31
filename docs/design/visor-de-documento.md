@@ -51,6 +51,21 @@ eligiendo una casilla abstracta. Ver
 Qué se ve dentro del recuadro lo controla el
 [panel de firma](panel-de-firma.md).
 
+**El recuadro se guarda en espacio de usuario PDF, no en píxeles de pantalla.**
+Los píxeles se derivan en cada pintada, así que el zoom es puramente visual:
+acercarse no mueve la firma. Guardado en píxeles, el recuadro se queda clavado
+en la pantalla al cambiar el zoom y se desplaza sobre el documento sin que
+nadie lo toque.
+
+Convertir ese rectángulo a los `extraParams` de posición de PAdES **no es solo
+invertir la matriz del viewport de `pdf.js`**: iText le aplica además una
+transformación según la `/Rotate` de la página, así que hay que entregarle la
+inversa. La fórmula, la tabla por rotación y las trampas —entre ellas que un
+recuadro fuera de página se recorta en silencio— están medidas en
+[Del recuadro dibujado con pdf.js a los extraParams de posición de PAdES](../research/coordenadas-recuadro-pades.md).
+Léelo antes de implementar esta pantalla: el fallo no da excepción, coloca la
+firma en el sitio equivocado.
+
 ## Estados
 
 - **Vacío** (sin documento): en lugar de la hoja, una zona de soltar de
