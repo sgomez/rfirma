@@ -40,4 +40,18 @@ export const va: UntranslatedCatalog = {
       },
     },
   },
+  window: {
+    tray: "",
+    viewer: "",
+    panel: "",
+  },
+  header: {
+    menu: "",
+    preferences: "",
+    about: "",
+    status: {
+      signed: "",
+      unsigned: "",
+    },
+  },
 };

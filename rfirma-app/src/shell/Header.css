@@ -1,0 +1,56 @@
+/*
+ * Cabecera: una sola fila de 56 px sobre `--rf-surface`, separada del cuerpo
+ * por `--rf-border-subtle` (docs/design/cabecera.md).
+ *
+ * Aquí no se fija ningún color a mano: todo sale de los tokens, como manda el
+ * sistema de diseño.
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 var(--rf-space-md);
+  border-bottom: 1px solid var(--rf-border-subtle);
+}
+
+.header__menu {
+  position: relative;
+}
+
+/* El botón de menú es de 40 px, más estrecho que el mínimo táctil de `.rf-btn`,
+   porque va dentro de una franja de 56 px. */
+.header__button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.header__button--open {
+  background: var(--rf-primary);
+  color: var(--rf-on-primary);
+}
+
+/* El menú flota anclado a la derecha, por encima del cuerpo de la ventana. */
+.header__popup {
+  position: absolute;
+  top: calc(100% + var(--rf-space-xs));
+  right: 0;
+  z-index: 10;
+  gap: 0;
+  min-width: 220px;
+  padding: var(--rf-space-xs);
+}
+
+.header__entry {
+  justify-content: flex-start;
+  width: 100%;
+  font-weight: 400;
+  text-align: left;
+}
+
+.header__entry:hover {
+  background: var(--rf-bg);
+}

@@ -34,4 +34,18 @@ export const en: Catalog = {
       },
     },
   },
+  window: {
+    tray: "Document tray",
+    viewer: "Document viewer",
+    panel: "Signature panel",
+  },
+  header: {
+    menu: "Menu",
+    preferences: "Preferences…",
+    about: "About rFirma",
+    status: {
+      signed: "Signed",
+      unsigned: "Unsigned",
+    },
+  },
 };

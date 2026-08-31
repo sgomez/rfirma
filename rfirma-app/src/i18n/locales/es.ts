@@ -51,4 +51,23 @@ export const es = {
       },
     },
   },
+  /**
+   * El armazón de la ventana: la cabecera y las tres regiones fijas del ID-25.
+   * Ninguna aparece ni desaparece durante el recorrido, así que sus rótulos son
+   * los nombres accesibles de las regiones y no títulos visibles.
+   */
+  window: {
+    tray: "Bandeja de documentos",
+    viewer: "Visor del documento",
+    panel: "Panel de firma",
+  },
+  header: {
+    menu: "Menú",
+    preferences: "Preferencias…",
+    about: "Acerca de rFirma",
+    status: {
+      signed: "Firmado",
+      unsigned: "Sin firmar",
+    },
+  },
 };
