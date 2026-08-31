@@ -101,6 +101,11 @@ Documento que la aplicación ha visto antes y ofrece para volver a él, sin
 guardar una copia: solo dónde estaba y cómo pintar su fila.
 _Avoid_: historial, documento abierto, favorito
 
+**Carpeta de destino**:
+Carpeta donde cae el documento firmado. La aplicación la enseña por su
+**nombre**, nunca por su ruta, y no la crea: si no está, no está.
+_Avoid_: carpeta fija, ruta de salida, junto al original
+
 **Preferencia**:
 Ajuste que el usuario elige y que la aplicación se limita a obedecer: el idioma,
 dónde guardar el documento firmado, los interruptores.

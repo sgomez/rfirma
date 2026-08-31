@@ -29,10 +29,18 @@ finish-args:
   # proceso ("Explicit Sync only supported on dmabuf buffers", Error 71).
   # Reproducido igual en org.gnome.Platform 49 y 50.
   - --env=WEBKIT_DISABLE_COMPOSITING_MODE=1
+  # Carpeta donde cae el documento firmado (ADR-0011). El recorrido no lleva
+  # dialogo por firma, asi que el fichero tiene que caer solo en algun sitio.
+  # Es la concesion mas estrecha que resuelve el caso: NO --filesystem=home.
+  # TRAMPA MEDIDA en #27: si esta carpeta no existe en el anfitrion, dentro
+  # del arenero mkdir y la escritura contestan OK y el fichero no aparece en
+  # ninguna parte. La aplicacion NO debe crearla nunca: si no esta, no esta.
+  - --filesystem=xdg-documents
   # NO se declara --filesystem=host-os: el modulo PKCS#11 lo aporta el
   # flatpak (modulo `opensc`). Los del anfitrion no cargan aqui dentro.
-  # Ni --filesystem=home ni --filesystem=host: los ficheros entran y salen
-  # por portales.
+  # Ni --filesystem=home ni --filesystem=host: la ENTRADA de ficheros sigue
+  # entrando por portales, y --filesystem=home tampoco devolveria la ruta
+  # real del original (ADR-0011).
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin

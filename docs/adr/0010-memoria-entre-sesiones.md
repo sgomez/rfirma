@@ -89,13 +89,12 @@ red.
 - Preferencias gana un interruptor, «Recordar mi actividad», y un botón «Vaciar
   la lista». El interruptor cubre recientes **y** certificado: son la misma
   promesa al usuario del ordenador compartido.
-- La carpeta fija de guardado se comprueba **antes de firmar**, no al guardar, y
-  si no está disponible se degrada a «junto al documento original» avisando en
-  el panel. **Este punto queda pendiente de rehacer**: el
-  [#22](https://github.com/sgomez/rfirma/issues/22) midió que bajo el arenero de
-  flatpak la aplicación no puede conocer la ruta del documento original, así que
-  «junto al documento original» no existe como destino. Firmar y luego no poder escribir obliga a explicar que el documento
-  está firmado pero en ningún sitio.
+- La carpeta de destino se comprueba **antes de firmar**, no al guardar. Qué
+  pasa cuando no está lo fija el
+  [ADR-0011](0011-destino-del-documento-firmado.md), que retira la degradación
+  «junto al documento original» que aquí se describía: ese destino no existe
+  bajo el arenero, y no se sustituye por otro. Firmar y luego no poder escribir
+  obliga a explicar que el documento está firmado pero en ningún sitio.
 - El formato de la rúbrica se valida al elegirla, no al firmar, porque los
   formatos admitidos se fijan en tiempo de construcción
   ([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)).
