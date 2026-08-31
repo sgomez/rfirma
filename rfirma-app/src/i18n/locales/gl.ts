@@ -61,6 +61,22 @@ export const gl: UntranslatedCatalog = {
     recents: "",
     remove: "",
   },
+  viewer: {
+    dropZone: "",
+    privacy: "",
+    pageNumber: "",
+    pageOf: "",
+    firstPage: "",
+    previousPage: "",
+    nextPage: "",
+    lastPage: "",
+    zoomOut: "",
+    zoomIn: "",
+    fitToWindow: "",
+    signatureBox: "",
+    dragHandle: "",
+    outOfPage: "",
+  },
   preferences: {
     title: "",
     rememberVisibleSignature: {

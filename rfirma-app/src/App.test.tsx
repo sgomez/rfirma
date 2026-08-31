@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
@@ -6,6 +6,7 @@ import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import { inMemoryPreferences } from "./preferences/preferences";
 import { renderWithCatalog } from "./testing/render";
+import { emptyPdfSource } from "./viewer/source";
 
 function document(path: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
@@ -28,6 +29,7 @@ function renderApp(recents = inMemoryRecents(), documents: RecentDocument[] = []
     <App
       recents={recents}
       picker={inMemoryDocumentPicker(documents)}
+      pdfs={emptyPdfSource()}
       preferences={preferences}
       destinations={["Documentos"]}
       menuAnchor="header"
@@ -36,13 +38,23 @@ function renderApp(recents = inMemoryRecents(), documents: RecentDocument[] = []
   return { recents, preferences };
 }
 
-// Grada A: la aplicación entera, con los cuatro puertos en memoria.
+/**
+ * La zona de soltar **de la bandeja**. Desde que el visor existe hay dos con el
+ * mismo rótulo —la de la bandeja y la del visor vacío—, y las dos fichas las
+ * piden: `bandeja-de-documentos.md` y `visor-de-documento.md`.
+ */
+function trayDropZone() {
+  const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+  return within(tray).getByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" });
+}
+
+// Grada A: la aplicación entera, con los cinco puertos en memoria.
 describe("App", () => {
   it("opens a document from the tray and shows its badge in the header", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("/documentos/factura.pdf")]);
 
-    await user.click(screen.getByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }));
+    await user.click(trayDropZone());
 
     expect(await screen.findByText("factura.pdf")).toBeInTheDocument();
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
@@ -99,7 +111,7 @@ describe("App", () => {
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
-    await user.click(screen.getByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }));
+    await user.click(trayDropZone());
 
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
     expect(screen.queryByText("factura.pdf")).not.toBeInTheDocument();

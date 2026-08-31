@@ -1,0 +1,128 @@
+/*
+ * El visor (docs/design/visor-de-documento.md): la hoja centrada, el recuadro
+ * de la firma encima y la barra flotante al pie.
+ *
+ * La hoja fuerza `data-theme="light"`: el papel es papel y no cambia con el
+ * tema. El área reserva sitio abajo para que la hoja nunca quede debajo de la
+ * barra.
+ */
+
+.viewer {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr;
+  min-height: 0;
+  height: 100%;
+  background: var(--rf-surface);
+}
+
+.viewer--empty {
+  place-content: center;
+  justify-items: center;
+  gap: var(--rf-space-sm);
+  padding: var(--rf-space-lg);
+  text-align: center;
+}
+
+.viewer__drop-zone {
+  width: 520px;
+  max-width: 100%;
+  height: 300px;
+  border: 1px dashed var(--rf-border-strong);
+  border-radius: var(--rf-radius-lg);
+  background: transparent;
+  color: var(--rf-text);
+  cursor: pointer;
+}
+
+/* El desplazamiento del documento es de la barra de scroll y de la rueda: no
+   hay pan por arrastre, así que el arrastre del ratón es siempre del recuadro
+   y los dos gestos nunca compiten. */
+.viewer__scroll {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  place-items: start center;
+  padding: var(--rf-space-md);
+  /* 88 px para que la hoja no quede nunca debajo de la barra flotante. */
+  padding-bottom: 88px;
+}
+
+.viewer__sheet {
+  position: relative;
+  background: var(--rf-bg);
+  box-shadow: var(--rf-shadow-card);
+}
+
+.viewer__canvas {
+  display: block;
+}
+
+.viewer__box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--rf-border-strong);
+  background: color-mix(in srgb, var(--rf-surface) 70%, transparent);
+  cursor: grab;
+  touch-action: none;
+}
+
+.viewer__box:active {
+  cursor: grabbing;
+}
+
+.viewer__handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% -100%;
+  padding: 0 var(--rf-space-xs);
+  border-radius: var(--rf-radius-sm);
+  background: var(--rf-primary);
+  color: var(--rf-on-primary);
+  white-space: nowrap;
+}
+
+.viewer__alert {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  translate: -50% 0;
+  padding: var(--rf-space-xs) var(--rf-space-sm);
+  border-radius: var(--rf-radius-pill);
+  border: 1px solid var(--rf-border-strong);
+  background: var(--rf-surface);
+  box-shadow: var(--rf-shadow-elevated);
+}
+
+.viewer__bar {
+  position: absolute;
+  left: 50%;
+  bottom: var(--rf-space-md);
+  translate: -50% 0;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  padding: var(--rf-space-xs) var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-surface);
+  box-shadow: var(--rf-shadow-elevated);
+}
+
+/* Ocupa lo mismo con 4 páginas que con 400: el número se escribe, no se elige
+   de una pastilla por página. */
+.viewer__page {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.viewer__zoom {
+  min-width: 4rem;
+  text-align: center;
+}
+
+.viewer__divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 var(--rf-space-xs);
+}

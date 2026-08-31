@@ -1,0 +1,64 @@
+import { GlobalWorkerOptions, getDocument, type PageViewport, type PDFPageProxy } from "pdfjs-dist";
+// El fichero del worker, empaquetado por Vite. Con `?url` sale una ruta a un
+// activo de `dist/`, que es lo que hay que darle a `pdf.js`: bajo el arenero no
+// se puede cargar un worker de fuera de la aplicación.
+import workerSource from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type { PdfDocument, PdfLoader, PdfPage, Viewport } from "./pdf";
+
+GlobalWorkerOptions.workerSrc = workerSource;
+
+/**
+ * `pdf.js` de verdad, detrás del puerto de [`pdf.ts`](./pdf.ts).
+ *
+ * Es el **único** fichero del frontal que importa `pdfjs-dist`, y no tiene ni
+ * una decisión propia: cada método es una línea. Todo lo que hay que pensar
+ * —cancelar la pintada en vuelo, guardar el recuadro en espacio de usuario—
+ * vive en los módulos que sí se prueban en `jsdom`, donde esta librería no
+ * cabe.
+ */
+export function pdfjsLoader(): PdfLoader {
+  return {
+    async load(bytes) {
+      const document = await getDocument({ data: bytes }).promise;
+      return {
+        pageCount: document.numPages,
+        getPage: async (number) => adaptPage(await document.getPage(number)),
+      } satisfies PdfDocument;
+    },
+  };
+}
+
+function adaptPage(page: PDFPageProxy): PdfPage {
+  return {
+    number: page.pageNumber,
+    rotate: page.rotate,
+    getViewport: ({ scale }) => adaptViewport(page, scale),
+    // `render` exige el `PageViewport` original, no una copia con los mismos
+    // números, así que el nuestro guarda una referencia al suyo.
+    render: ({ canvas, viewport }) => page.render({ canvas, viewport: originalOf(page, viewport) }),
+  };
+}
+
+/** El `PageViewport` del que salió cada viewport nuestro. Ver [`adaptPage`]. */
+const originals = new WeakMap<Viewport, PageViewport>();
+
+function adaptViewport(page: PDFPageProxy, scale: number): Viewport {
+  const viewport = page.getViewport({ scale });
+  const adapted: Viewport = {
+    width: viewport.width,
+    height: viewport.height,
+    convertToPdfPoint: (x, y) => pair(viewport.convertToPdfPoint(x, y)),
+    convertToViewportPoint: (x, y) => pair(viewport.convertToViewportPoint(x, y)),
+  };
+  originals.set(adapted, viewport);
+  return adapted;
+}
+
+function originalOf(page: PDFPageProxy, viewport: Viewport): PageViewport {
+  return originals.get(viewport) ?? page.getViewport({ scale: 1 });
+}
+
+/** `convertTo*Point` devuelve `any[]`; aquí se estrecha a las dos coordenadas. */
+function pair(values: unknown[]): [number, number] {
+  return [Number(values[0]), Number(values[1])];
+}

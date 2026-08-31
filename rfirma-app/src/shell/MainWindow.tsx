@@ -14,6 +14,8 @@ interface MainWindowProps {
   onOpenAbout: () => void;
   /** El contenido de la bandeja, que es quien sabe de documentos. */
   tray: ReactNode;
+  /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
+  viewer: ReactNode;
 }
 
 /**
@@ -34,6 +36,7 @@ export function MainWindow({
   onOpenPreferences,
   onOpenAbout,
   tray,
+  viewer,
 }: MainWindowProps) {
   const { t } = useTranslation();
 
@@ -49,7 +52,9 @@ export function MainWindow({
         <section className="main-window__tray" aria-label={t("window.tray")}>
           {tray}
         </section>
-        <section className="main-window__viewer" aria-label={t("window.viewer")} />
+        <section className="main-window__viewer" aria-label={t("window.viewer")}>
+          {viewer}
+        </section>
         <section className="main-window__panel" aria-label={t("window.panel")} />
       </div>
     </div>

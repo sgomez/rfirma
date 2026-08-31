@@ -8,15 +8,18 @@ import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { inMemoryLanguagePreference } from "./i18n/preference";
 import { inMemoryPreferences } from "./preferences/preferences";
+import { emptyPdfSource } from "./viewer/source";
 
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Las cuatro dependencias que tocan el disco viven todavía en memoria: quien
+// Las cinco dependencias que tocan el disco viven todavía en memoria: quien
 // las guarda es el backend —`memory::Configuration`, `memory::State`, el portal
-// de ficheros— y no hay ninguna orden expuesta que las lea ni las escriba.
+// de ficheros— y no hay ninguna orden expuesta que las lea ni las escriba. La
+// del visor es `emptyPdfSource`: el PDF se pintará con `pdfjsSource` en cuanto
+// haya por dónde pedirle los bytes al portal.
 // Cuando la haya, se sustituyen aquí y en ningún otro sitio: ni la ventana ni
 // sus pruebas conocen a Tauri.
 //
@@ -48,6 +51,7 @@ createRoot(root).render(
       <App
         recents={recents}
         picker={inMemoryDocumentPicker()}
+        pdfs={emptyPdfSource()}
         preferences={preferences}
         destinations={[DOCUMENTS_FOLDER]}
       />
