@@ -93,11 +93,17 @@ to be fast.
 
 The fast lane was **~48 s** when it was Java alone (measured under #11). #47
 added the Node and Rust toolchains, their system dependencies
-(`libwebkit2gtk-4.1-dev` and friends), and two `cargo binstall`ed binaries, so
-it is no longer that number and pretending otherwise would be a lie. What holds
-it down is caching — `~/.m2`, the pnpm store, `Swatinem/rust-cache`, and
-prebuilt binaries rather than `cargo install`. **If it starts creeping, the
-thing to cut is a lane, not the caching.**
+(`libwebkit2gtk-4.1-dev` and friends), and two `cargo binstall`ed binaries, and
+measured **~9 min on a cold cache** for the first run. Pretending it is still
+48 s would be a lie, so: it is not.
+
+Almost all of that is Rust, and almost all of *that* is compiling the Tauri
+dependency tree **twice** — once for `cargo build --release`, once
+instrumented for `cargo llvm-cov`. What holds it down after the first run is
+caching: `~/.m2`, the pnpm store, `Swatinem/rust-cache`, and prebuilt binaries
+instead of `cargo install`. **If it creeps past what an agent will wait for,
+the thing to cut is the coverage build, not the caching** — the CRAP gate is
+the one piece of `just check` that pays for a whole second compile.
 
 `native-image` fits comfortably on a standard runner — that question is
 settled — but the Java bridge will barely be touched once written, so
