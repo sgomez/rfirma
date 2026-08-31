@@ -1,0 +1,30 @@
+/*
+ * Maquetación propia del aviso de error. El vocabulario `rf-*` está cerrado
+ * (sección 9 del sistema de diseño), así que lo que no está en la tabla se
+ * escribe aquí con `var(--rf-*)` y con nombre propio.
+ */
+
+.error-notice__detail {
+  margin-top: var(--rf-space-xs);
+}
+
+.error-notice__detail > summary {
+  cursor: pointer;
+}
+
+/*
+ * El texto original va entero: se envuelve, no se recorta. Un `text-overflow`
+ * aquí dejaría al usuario copiando media línea en el informe de fallo.
+ */
+.error-notice__raw {
+  margin: var(--rf-space-xs) 0 0;
+  padding: var(--rf-space-xs);
+  border-radius: var(--rf-radius-sm);
+  background: var(--rf-bg);
+  color: var(--rf-text-muted);
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

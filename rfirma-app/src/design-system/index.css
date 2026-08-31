@@ -1,0 +1,8 @@
+/*
+ * El sistema de diseño entero, en el orden que exige la sección 1: primero los
+ * tokens, luego los componentes que los consumen. Se importa una sola vez, en
+ * `main.tsx`.
+ */
+
+@import "./tokens.css";
+@import "./components.css";
