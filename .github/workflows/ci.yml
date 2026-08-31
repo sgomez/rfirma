@@ -26,6 +26,9 @@ name: CI
 
 on:
   pull_request:
+    # 'labeled' incluido a proposito: sin el, poner la etiqueta 'native' no
+    # dispararia nada y habria que empujar otra vez para que se enterase.
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
     tags: ['v*']
