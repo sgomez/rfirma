@@ -7,15 +7,10 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 
-/// Los seis ficheros que el ADR-0004 exige que convivan en un directorio.
-pub const SEIS: [&str; 6] = [
-    "librfirma_crypto.so",
-    "libawt.so",
-    "libawt_headless.so",
-    "libjavajpeg.so",
-    "libjava.so",
-    "libjvm.so",
-];
+/// El fichero que el ADR-0004 exige. Era una lista de seis hasta el #36: al
+/// excluir afirma-ui-utils (ADR-0012) los cinco auxiliares de AWT dejaron de
+/// hacer falta, y tenerlos al lado convierte un error recuperable en un aborto.
+pub const FICHEROS: [&str; 1] = ["librfirma_crypto.so"];
 
 /// Ruta de la libreria: relativa al ejecutable, no una constante absoluta.
 /// Sobrescribible con RFIRMA_LIB_DIR para desarrollar contra target/.
@@ -29,7 +24,7 @@ pub fn dir_libreria() -> PathBuf {
 }
 
 pub fn faltan(dir: &Path) -> Vec<String> {
-    SEIS.iter()
+    FICHEROS.iter()
         .filter(|n| !dir.join(n).exists())
         .map(|n| n.to_string())
         .collect()

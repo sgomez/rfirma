@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # Verificacion reproducible del flatpak (#22). Construye, instala y comprueba
-# dentro del arenero: los seis .so, el ciclo trifasico completo con rubrica de
-# imagen firmado por PKCS#11, la validez de la firma y que la ventana arranca.
+# dentro del arenero: la libreria nativa, el ciclo trifasico completo con
+# rubrica de imagen firmado por PKCS#11, la validez de la firma y que la ventana
+# arranca.
+#
+# OJO (#36): la ultima corrida real fue con los SEIS .so y la imagen ce25-awt.
+# El manifiesto ya instala uno solo desde ce25-noui; esta verificacion esta
+# PENDIENTE de repetirse contra esa imagen.
 #
 # Uso: packaging/flatpak/verifica.sh
 #
 # Requisitos: flatpak-builder, org.gnome.Sdk//50,
 #             org.freedesktop.Sdk.Extension.rust-stable//25.08,
-#             la imagen nativa en rfirma-native-bridge/target/ce25-awt
-#             (GRAALVM_HOME=CE 25; testbench/build-native-awt.sh ce25-awt awt-config),
+#             la imagen nativa en rfirma-native-bridge/target/ce25-noui
+#             (GRAALVM_HOME=CE 25; testbench/build-native-fonts.sh ce25-noui),
 #             el material de pruebas en target/fixtures (test.pdf,
 #             visible-imagen.properties) y el token de pruebas de #5
 #             (SoftHSM rfirma-test); cert-fnmt.b64 se exporta solo.

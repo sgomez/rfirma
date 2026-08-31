@@ -59,9 +59,9 @@ fn informe_entorno() -> String {
     s += &format!("dir libreria    : {}\n", dir.display());
     let ausentes = sonda::faltan(&dir);
     s += &format!(
-        "los seis .so    : {}\n",
+        "libreria nativa : {}\n",
         if ausentes.is_empty() {
-            "los seis presentes".to_string()
+            "presente".to_string()
         } else {
             format!("FALTAN: {}", ausentes.join(", "))
         }
