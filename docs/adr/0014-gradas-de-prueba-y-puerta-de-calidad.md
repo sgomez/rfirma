@@ -124,14 +124,14 @@ el código.
 **`bootstrap.sh` no crece**. Y en un repositorio movido por agentes un hook desconocido se
 esquiva con `--no-verify` o explota sin que nadie entienda por qué.
 
-Se añade en su lugar una receta **`just rapido`** —solo `lint`, sin `build` ni `test`— para el
+Se añade en su lugar una receta **`just quick`** —solo `lint`, sin `build` ni `test`— para el
 bucle corto de quien quiera formatear antes de commitear. Voluntaria, visible en `just --list`, y
 sin tocar el contrato de `check`.
 
 ## La bomba de relojería del kit FNMT
 
 `testdata/fnmt/` con los tres `.p12`, sus contraseñas publicadas y sus huellas al lado, más la
-excepción para el escáner de secretos que avisó #11. `activo-rsa.p12` **caduca el 2028-10-30**, y
+excepción para el escáner de secretos que avisó #11. `active-rsa.p12` **caduca el 2028-10-30**, y
 las dos mitades de la guardia viven en sitios distintos a propósito:
 
 - la **prueba dura** (grada A, carril rápido) falla al caducar nombrando el fichero, la fecha y

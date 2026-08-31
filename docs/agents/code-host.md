@@ -52,7 +52,7 @@ A red check blocks the merge; take the fix path rather than merging past it.
   `rfirma-app/src-tauri/`, and `cargo build --release` links the app;
 - the **tier A** tests run: `vitest` on the frontend, `cargo test` on Rust —
   which today is the FNMT kit guard (fingerprints of the three `.p12`, and
-  `activo-rsa.p12` still being in date);
+  `active-rsa.p12` still being in date);
 - the **tier C** tests still **compile** (`cargo test --no-run`), so a test
   that stops building against the FFI cannot be skipped in silence;
 - the **CRAP gate**: `cargo crap --threshold 30 --fail-above`, at a version
@@ -69,7 +69,7 @@ oracle and the official validator as a manual release gate are decided
 built.
 
 **The fast lane does not build the native library, deliberately**, so it sets
-`RFIRMA_SIN_NATIVA=1` to skip the guard `just build` performs by
+`RFIRMA_SKIP_NATIVE=1` to skip the guard `just build` performs by
 [ADR-0013](../adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md).
 Locally, without that variable, `just build` and `just dev` **fail naming
 `just native`** rather than chaining a three-minute `native-image` run onto
@@ -118,11 +118,11 @@ learn nothing new. **If your PR touches the bridge, add the `native` label.**
 The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of
 AutoFirma), it is the safety net for the slow lane, and it is the **watchman
-for the FNMT test kit** — 90 days before `testdata/fnmt/activo-rsa.p12`
+for the FNMT test kit** — 90 days before `testdata/fnmt/active-rsa.p12`
 expires on **2028-10-30** it opens an issue. That warning lives in the cron and
 not in the fast lane on purpose: warning there would break every open PR at
 once, on an arbitrary day in 2028, with auto-merge on. The *hard* half of the
-guard is in the fast lane, in `rfirma-app/src-tauri/tests/kit_fnmt.rs`, and it
+guard is in the fast lane, in `rfirma-app/src-tauri/tests/fnmt_kit.rs`, and it
 only fires once the certificate has actually expired.
 
 ### Running the same thing locally
@@ -138,7 +138,7 @@ just check
 
 `just tools` names whatever is still missing, and `just --list` shows the rest.
 CI runs exactly `just check`, so a local pass and a CI pass mean the same thing
-— with the one documented exception of `RFIRMA_SIN_NATIVA` above: locally you
+— with the one documented exception of `RFIRMA_SKIP_NATIVE` above: locally you
 need `just native` once, and then `just check` covers strictly more than CI's
 fast lane does.
 

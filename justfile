@@ -20,7 +20,7 @@
 # native-image arruina el bucle de realimentacion que protegio el issue #11.
 #
 # Requisitos: just, maven, git, pnpm, cargo y un GraalVM CE 25 para `native`,
-# mas las librerias -dev del WebView (ver `libs_sistema` mas abajo).
+# mas las librerias -dev del WebView (ver `system_libs` mas abajo).
 #   apt-get install -y just maven
 #
 # `just tools` los comprueba TODOS y falla nombrando lo que falte, con la orden
@@ -30,7 +30,7 @@
 # de libawt.so con cualquier firma visible, asi que no sirve para construir.
 # El pom sigue compilando a release 21: cambia el JDK que construye, no el
 # lenguaje de destino.
-graalvm_por_defecto := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
+default_graalvm := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
 
 bridge := justfile_directory() / "rfirma-native-bridge"
 app := justfile_directory() / "rfirma-app"
@@ -39,20 +39,20 @@ tauri := app / "src-tauri"
 # Ruta canonica de la libreria nativa (ADR-0013). `native` la produce aqui y el
 # manifiesto flatpak la instala desde aqui. NO es target/native ni
 # target/ce25-noui: esos eran los dos rivales que el ADR resolvio.
-lib_nativa := bridge / "target/lib/rfirma/librfirma_crypto.so"
+native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 
 # cargo-crap tiene un solo mantenedor y cuatro meses de vida (ADR-0014), asi
 # que la version va FIJADA: una publicacion suya no puede poner en rojo un PR
 # que no la ha tocado. Si se abandona, la puerta se quita borrando la receta
 # `crap` de `test` y esta linea.
-version_crap := "0.4.3"
+crap_version := "0.4.3"
 
 # El modulo FFI, oculto para la puerta CRAP del carril rapido. cargo-crap
 # puntua con `--missing pessimistic`, o sea que una funcion SIN datos de
 # cobertura vale 0 %, y la cobertura del carril rapido no incluye la grada C.
 # Sin esta exclusion los peores CRAP del repositorio serian justo el codigo que
 # SI esta probado, solo que en el otro carril. El carril lento repite la
-# medicion sin ella (`just crap-completo`).
+# medicion sin ella (`just crap-full`).
 ffi_allow := "src/ffi.rs"
 
 # Las librerias de sistema que necesita el WebView de Tauri, como pares
@@ -63,7 +63,7 @@ ffi_allow := "src/ffi.rs"
 #
 # ESTA ES LA LISTA CANONICA: .github/workflows/ci.yml instala exactamente
 # estos paquetes en sus dos carriles. Si tocas una, tocas las tres.
-libs_sistema := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
+system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
 
 # Lista las recetas.
 default:
@@ -86,7 +86,7 @@ check: tools lint build test
 # sin que nadie entienda por que.
 #
 # Solo lint, sin build ni test.
-rapido: lint
+quick: lint
 
 # ---------------------------------------------------------------------------
 # Herramientas y dependencias
@@ -96,9 +96,9 @@ rapido: lint
 tools:
     #!/usr/bin/env bash
     set -euo pipefail
-    fallan=0
+    failures=0
     for t in mvn git java pnpm cargo; do
-        command -v "$t" >/dev/null || { echo "falta: $t"; fallan=1; }
+        command -v "$t" >/dev/null || { echo "falta: $t"; failures=1; }
     done
     # Un cargo instalado pero fuera del PATH es el falso negativo mas caro de
     # esta receta: "falta: cargo" manda a reinstalar rustup a quien solo tiene
@@ -112,28 +112,28 @@ tools:
     # es quien consulta el build script que falla: el paquete de runtime puede
     # estar instalado y faltar solo el -dev, que es el que trae el .pc.
     if command -v pkg-config >/dev/null; then
-        faltan_apt=""
-        for par in {{ libs_sistema }}; do
-            modulo="${par%%:*}"
-            paquete="${par#*:}"
-            pkg-config --exists "$modulo" || {
-                echo "falta la libreria de sistema: $modulo"
-                faltan_apt="$faltan_apt $paquete"
-                fallan=1
+        missing_apt=""
+        for pair in {{ system_libs }}; do
+            module="${pair%%:*}"
+            package="${pair#*:}"
+            pkg-config --exists "$module" || {
+                echo "falta la libreria de sistema: $module"
+                missing_apt="$missing_apt $package"
+                failures=1
             }
         done
-        if [ -n "$faltan_apt" ]; then
+        if [ -n "$missing_apt" ]; then
             echo
             echo "Instalalas con:"
-            echo "  sudo apt install -y$faltan_apt"
+            echo "  sudo apt install -y$missing_apt"
             echo
         fi
     else
         echo "falta: pkg-config"
-        fallan=1
+        failures=1
     fi
     # Opcionales: no rompen `check`, pero si la receta que los usa.
-    graal="${GRAALVM_HOME:-{{ graalvm_por_defecto }}}"
+    graal="${GRAALVM_HOME:-{{ default_graalvm }}}"
     if [ ! -x "$graal/bin/native-image" ]; then
         echo "aviso: falta native-image en $graal"
         echo "  (solo hace falta para 'just native'; instala GraalVM CE 25)"
@@ -143,8 +143,8 @@ tools:
     cargo llvm-cov --version >/dev/null 2>&1 || \
         echo "aviso: falta cargo-llvm-cov (cargo binstall cargo-llvm-cov)"
     cargo crap --version >/dev/null 2>&1 || \
-        echo "aviso: falta cargo-crap (cargo binstall cargo-crap@{{ version_crap }})"
-    [ "$fallan" = 0 ] || exit 1
+        echo "aviso: falta cargo-crap (cargo binstall cargo-crap@{{ crap_version }})"
+    [ "$failures" = 0 ] || exit 1
     echo "herramientas: correcto"
 
 # No estan en Maven Central: hay que compilarlas desde el repositorio oficial.
@@ -198,7 +198,7 @@ lint-rust: build-ts
 # compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
 #
 # Compila las tres cadenas.
-build: comprueba-nativa build-java build-ts build-rust
+build: check-native build-java build-ts build-rust
 
 # Compila el puente Java.
 build-java: bootstrap
@@ -221,22 +221,22 @@ build-rust: build-ts
 # esta y, si falta, fallan nombrando `just native`. Encadenarla metaria 1 m 22 s
 # de native-image en cada compilacion.
 #
-# RFIRMA_SIN_NATIVA=1 salta la comprobacion. Existe por el carril rapido del CI,
+# RFIRMA_SKIP_NATIVE=1 salta la comprobacion. Existe por el carril rapido del CI,
 # que corre `just check` sin construir la imagen nativa a proposito (son tres
 # minutos que el carril lento ya paga). Ponerla a mano en local es decir "se lo
 # que hago y no voy a ejecutar nada".
 #
 # Falla nombrando `just native` si la libreria nativa no esta.
-comprueba-nativa:
+check-native:
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ "${RFIRMA_SIN_NATIVA:-0}" = "1" ]; then
-        echo "comprueba-nativa: omitida (RFIRMA_SIN_NATIVA=1)"
+    if [ "${RFIRMA_SKIP_NATIVE:-0}" = "1" ]; then
+        echo "check-native: omitida (RFIRMA_SKIP_NATIVE=1)"
         exit 0
     fi
-    if [ ! -f "{{ lib_nativa }}" ]; then
+    if [ ! -f "{{ native_lib }}" ]; then
         echo "falta la libreria nativa:" >&2
-        echo "  {{ lib_nativa }}" >&2
+        echo "  {{ native_lib }}" >&2
         echo >&2
         echo "Ejecuta 'just native' (tarda unos tres minutos y necesita" >&2
         echo "GraalVM CE 25). No se construye sola a proposito: ver ADR-0013." >&2
@@ -279,8 +279,8 @@ test-rust: build-ts
 # no a donde `native` acaba de instalar la libreria.
 #
 # Las de grada C, que el carril lento ejecuta con --include-ignored.
-test-nativo: comprueba-nativa build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ lib_nativa }}")" cargo test --all-features -- --include-ignored
+test-native: check-native build-ts
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --include-ignored
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
@@ -296,18 +296,18 @@ test-nativo: comprueba-nativa build-ts
 # ventaja —amnistiar deuda existente— no aplica cuando no hay deuda.
 
 # Genera lcov.info con cargo llvm-cov.
-cobertura: build-ts
+coverage: build-ts
     cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path lcov.info
 
 # La puerta del carril rapido, con el modulo FFI oculto.
-crap: cobertura
+crap: coverage
     cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
 
 # La misma medicion SIN la exclusion, con la cobertura de la grada C incluida.
 # Aqui el modulo FFI da la cara. Carril lento.
-crap-completo: comprueba-nativa build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ lib_nativa }}")" cargo llvm-cov --all-features --lcov --output-path lcov.info \
+crap-full: check-native build-ts
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --all-features --lcov --output-path lcov.info \
         -- --include-ignored
     cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above
 
@@ -335,16 +335,16 @@ crap-completo: comprueba-nativa build-ts
 native: build-java
     #!/usr/bin/env bash
     set -euo pipefail
-    graal="${GRAALVM_HOME:-{{ graalvm_por_defecto }}}"
-    obra="{{ bridge }}/target/native"
-    destino="$(dirname "{{ lib_nativa }}")"
-    mkdir -p "$obra" && cd "$obra"
+    graal="${GRAALVM_HOME:-{{ default_graalvm }}}"
+    build_dir="{{ bridge }}/target/native"
+    dest="$(dirname "{{ native_lib }}")"
+    mkdir -p "$build_dir" && cd "$build_dir"
     "$graal/bin/native-image" --shared -H:Name=librfirma_crypto --no-fallback \
         -Djava.awt.headless=true "-H:IncludeResources=com/lowagie/text/pdf/fonts/.*" \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
-    mkdir -p "$destino"
-    install -m644 "$obra/librfirma_crypto.so" "$destino/librfirma_crypto.so"
-    ls -la "$destino"
+    mkdir -p "$dest"
+    install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
+    ls -la "$dest"
 
 # OJO: hoy esta receta NO termina en un arbol limpio. `native` instala en
 # rfirma-native-bridge/target/lib/rfirma/, pero me.sgomez.rfirma.yml sigue
@@ -363,7 +363,7 @@ flatpak: native
 # nadie ha mirado.
 #
 # Regenera cargo-sources.json y node-sources.json.
-fuentes-flatpak:
+flatpak-sources:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}/packaging/flatpak"
@@ -385,8 +385,8 @@ fuentes-flatpak:
     flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
 
 # Abre la ventana con recarga en caliente.
-dev: comprueba-nativa deps
-    cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ lib_nativa }}")" pnpm exec tauri dev
+dev: check-native deps
+    cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev
 
 # Borra lo construido.
 clean:

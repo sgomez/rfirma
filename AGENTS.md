@@ -34,6 +34,11 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * Java se utiliza únicamente para el **Pre-proceso** (generar los hashes a firmar) y el **Post-proceso** (ensamblar la firma con el PDF/XML final).
    * La **Firma (Sign)** del hash se ejecuta nativamente en el backend de Rust usando el módulo PKCS#11 / CNG / Keychain del sistema operativo.
 
+5. **Idioma: castellano para la prosa, inglés para el código:**
+   * En **castellano**: documentación (`README`, `CONTEXT.md`, `docs/`, ADR), comentarios del código, mensajes de commit, descripciones de issues y de PR.
+   * En **inglés**: todo el identificador — nombres de variables, funciones, tipos, módulos, ficheros y ramas — y también los nombres de los tests (`fn signs_pdf_without_rubric()`, `it('rejects a PNG rubric')`).
+   * Los textos que ve la persona usuaria (etiquetas de la UI, mensajes de error mostrados) van en castellano; las claves de i18n que los identifican, en inglés.
+
 ---
 
 ## 🛠️ Herramientas y Estado de Configuración del Entorno

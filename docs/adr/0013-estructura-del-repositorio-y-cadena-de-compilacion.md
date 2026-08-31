@@ -64,7 +64,7 @@ realimentación que este repositorio decidió proteger en el
 | `check` | `tools lint build test` | rápido |
 | `native` | `librfirma_crypto.so` con GraalVM CE 25 | lento |
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
-| `fuentes-flatpak` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
+| `flatpak-sources` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
 
 > La casilla de `lint` decía `eslint`, escrito sin razonarlo y sin decir nada del formateador.
@@ -123,7 +123,7 @@ revisable que tiene que verse en un diff.
 `cargo-sources.json` y `node-sources.json` se generan con `flatpak-cargo-generator.py`
 y `flatpak-node-generator` —que soporta `pnpm-lock.yaml`, no solo npm y yarn—, se
 **versionan** en `packaging/flatpak/`, y `--share=network` desaparece del manifiesto.
-Se regeneran a mano con `just fuentes-flatpak` cuando cambia un fichero de bloqueo; el
+Se regeneran a mano con `just flatpak-sources` cuando cambia un fichero de bloqueo; el
 CI **comprueba que están al día** en vez de regenerarlos, porque un fichero generado
 dentro del CI es un fichero que nadie ha mirado.
 

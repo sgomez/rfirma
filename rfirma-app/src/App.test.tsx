@@ -7,7 +7,7 @@ import { App } from "./App";
 // que vitest resuelva JSX, jsdom y testing-library. Sin esto, `just test`
 // pasaría en verde con la cadena rota.
 describe("App", () => {
-  it("renderiza la ventana vacía", () => {
+  it("renders the empty window", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: "rfirma" })).toBeInTheDocument();
   });
