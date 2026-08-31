@@ -45,9 +45,27 @@ A red check blocks the merge; take the fix path rather than merging past it.
 - the Java bridge **compiles** under GraalVM CE 25 with `-Xlint:all`;
 - AutoFirma's dependencies **resolve and build** on a clean runner
   (`bootstrap.sh` against the immutable upstream tag `v1.9.1`);
-- on `main`, on demand, and on PRs touching `rfirma-native-bridge/`,
-  `bootstrap.sh` or `justfile`, that `native-image --shared` still
-  **produces the shared library**.
+- on the slow lane only, that `native-image --shared` still **produces the
+  shared library**.
+
+### Two lanes, split by speed
+
+This is first of all an **agent's** feedback loop, so what runs every time has
+to be fast. Measured on this repo:
+
+| Lane | Job | Time | When |
+| --- | --- | --- | --- |
+| fast | `Compila y resuelve dependencias` | **~48 s** | every PR, every push to `main` |
+| slow | `Imagen nativa` | **~3 m 14 s** (`native-image` itself is 1 m 22 s) | tags `v*`, manual dispatch, weekly cron, or a PR labelled `native` |
+
+`native-image` fits comfortably on a standard runner — that question is
+settled — but the Java bridge will barely be touched once written, so
+rebuilding the image on every PR would cost four times the fast lane to learn
+nothing new. **If your PR touches the bridge, add the `native` label.**
+
+The weekly cron does double duty: it keeps the `~/.m2` cache from expiring
+(GitHub evicts after 7 days unused, and refilling it means compiling all of
+AutoFirma) and it is the safety net for the slow lane.
 
 It does **not** verify that anything works. This repo has **no production
 code yet** — `NativeBridge.java` is the measurement bridge from issues #2 and

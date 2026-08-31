@@ -10,16 +10,30 @@
 # que nada funcione, porque el repositorio todavia no tiene codigo de
 # produccion. Lee la seccion de CI de docs/agents/code-host.md antes de fiarte
 # de un check en verde.
+#
+# DOS CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
+# realimentacion de un agente, asi que lo que corre siempre tiene que ser
+# rapido:
+#
+#   check  ~48 s   en cada PR y en cada push a main
+#   native ~3 min  solo en etiquetas, a mano, y una vez por semana
+#
+# El puente Java apenas se va a tocar una vez escrito, asi que reconstruir la
+# imagen nativa en cada PR seria pagar cuatro veces el carril rapido para no
+# enterarse de nada nuevo. Quien si la toque, que ponga la etiqueta 'native'
+# en su PR.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
   schedule:
     # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
-    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente.
+    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente, y de
+    # paso es la red de seguridad del carril lento.
     - cron: '17 4 * * 1'
 
 permissions:
@@ -71,29 +85,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # native-image tarda minutos y consume mucha memoria. Se construye
-      # siempre en main y a mano, y en un PR solo si toca al puente o a como
-      # se construye: no tiene sentido gastarlo en un PR que solo toca la
-      # interfaz. La etiqueta 'native' lo fuerza.
+      # El carril lento no corre por omision. Medido en este mismo
+      # repositorio: native-image son 1 m 22 s y el job entero 3 m 14 s,
+      # frente a los 48 s del carril rapido. Cabe de sobra en un runner
+      # estandar --la duda que dejo abierta el issue #11 queda resuelta--,
+      # pero eso no es razon para pagarlo en cada PR.
       - name: Decide si hace falta
         id: alcance
         run: |
-          if [ "${{ github.event_name }}" != "pull_request" ] \
-             || ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
-            echo "construir=si" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          base="${{ github.event.pull_request.base.sha }}"
-          if git diff --name-only "$base"...HEAD \
-              | grep -qE '^(rfirma-native-bridge/|bootstrap\.sh|justfile)'; then
-            echo "construir=si" >> "$GITHUB_OUTPUT"
-          else
-            echo "construir=no" >> "$GITHUB_OUTPUT"
-            echo "El PR no toca el puente ni la construccion: no se construye la imagen." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          case "${{ github.event_name }}" in
+            push|workflow_dispatch|schedule)
+              echo "construir=si" >> "$GITHUB_OUTPUT" ;;
+            pull_request)
+              if ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
+                echo "construir=si" >> "$GITHUB_OUTPUT"
+              else
+                echo "construir=no" >> "$GITHUB_OUTPUT"
+                echo "Carril lento omitido. Pon la etiqueta \`native\` en el PR si tocas el puente." \
+                  >> "$GITHUB_STEP_SUMMARY"
+              fi ;;
+          esac
 
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
         if: steps.alcance.outputs.construir == 'si'
