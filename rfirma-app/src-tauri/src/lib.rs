@@ -1,10 +1,13 @@
 //! rfirma: firma y cofirma de PDFs en PAdES con firma visible.
 //!
-//! De momento la ventana está vacía: lo único que hay debajo es
-//! [`pkcs11`], la capa que habla con el token. Ni FFI, ni PDF, ni orquestación
-//! de las tres fases: los aportan los sub-issues siguientes de #46.
+//! De momento la ventana está vacía: lo único que hay debajo son
+//! [`pkcs11`], la capa que habla con el token, y [`signing`], la configuración
+//! de firma y el sello de sesión. Ni FFI, ni PDF, ni orquestación de las tres
+//! fases: los aportan los sub-issues siguientes de #46. Si te encuentras
+//! escribiendo Rust que sabe qué es un PDF, te has salido de estos módulos.
 
 pub mod pkcs11;
+pub mod signing;
 
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {
