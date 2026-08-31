@@ -146,6 +146,11 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
-| Firmar un PDF en local ([#4](https://github.com/sgomez/rfirma/issues/4)) | [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132) — 13 artboards en dos páginas | `en revisión` | — |
+| _(ninguno en vuelo)_ | | | |
+
+El caso de uso **firmar un PDF en local** se validó el 31/08/2026 y salió de
+esta tabla: su canvas está enlazado desde la sección «Decisiones» de cada ficha
+de `docs/design/`, empezando por
+[ventana-principal.md](../design/ventana-principal.md).
 
 Estados: `en revisión` (esperando veredicto del usuario) / `validado (YYYY-MM-DD)`.
