@@ -285,6 +285,26 @@ mod tests {
         assert_eq!(landing, root.path().join("contrato-firmado.pdf"));
     }
 
+    /// La tercera vuelta, que es donde el sufijo se apilaba: lo que entra ya
+    /// lleva el número de la segunda, y lo que sale es el siguiente número, no
+    /// un segundo `-firmado`.
+    #[test]
+    fn the_third_cosignature_keeps_counting_instead_of_stacking() {
+        let root = a_folder();
+        let checked = CheckedFolder::at(root.path()).expect("deberia comprobarse");
+        fs::write(root.path().join("contrato-firmado.pdf"), b"la primera")
+            .expect("deberia escribirse");
+        fs::write(root.path().join("contrato-firmado-2.pdf"), b"la segunda")
+            .expect("deberia escribirse");
+        let signed_twice = PortalDocument::opened("/run/user/1000/doc/aa/contrato-firmado-2.pdf");
+
+        let landing = checked
+            .landing_for(&signed_twice)
+            .expect("deberia haber sitio");
+
+        assert_eq!(landing, root.path().join("contrato-firmado-3.pdf"));
+    }
+
     #[test]
     fn deciding_where_it_lands_writes_nothing() {
         let root = a_folder();

@@ -6,10 +6,13 @@
 //! **2**: el primero no lleva número.
 //!
 //! El detalle que parece un capricho y no lo es: **no se apila un segundo
-//! sufijo**. Cofirmar `contrato-firmado.pdf` da `contrato-firmado-2.pdf`, no
-//! `contrato-firmado-firmado.pdf`. Un documento que se cofirma tres veces es
-//! el caso normal de rFirma, no el raro, y el nombre no puede crecer con cada
-//! firma.
+//! sufijo**, y tampoco a la tercera vuelta. Cofirmar `contrato-firmado.pdf` da
+//! `contrato-firmado-2.pdf`, y cofirmar *ese* da `contrato-firmado-3.pdf`, no
+//! `contrato-firmado-2-firmado.pdf`. Para eso [`signed_name`] quita el número
+//! de desempate antes de reconocer el sufijo: el nombre que devuelve es
+//! siempre el canónico, y el número lo vuelve a poner quien mira la carpeta.
+//! Un documento que se cofirma tres veces es el caso normal de rFirma, no el
+//! raro, y el nombre no puede crecer con cada firma.
 
 /// Lo que se le añade al nombre del original.
 ///
@@ -35,15 +38,24 @@ const FALLBACK_STEM: &str = "documento";
 /// El nombre del documento firmado a partir del nombre del original.
 ///
 /// ```text
-/// contrato.pdf          -> contrato-firmado.pdf
-/// contrato-firmado.pdf  -> contrato-firmado.pdf   (no se apila el sufijo)
-/// informe               -> informe-firmado
+/// contrato.pdf            -> contrato-firmado.pdf
+/// contrato-firmado.pdf    -> contrato-firmado.pdf   (no se apila el sufijo)
+/// contrato-firmado-2.pdf  -> contrato-firmado.pdf   (tampoco a la tercera)
+/// informe                 -> informe-firmado
 /// ```
+///
+/// El nombre que sale es el **canónico**, sin número: quien mira si está
+/// ocupado y le cuelga el `-2`, `-3`… es
+/// [`super::CheckedFolder::landing_for`]. Por eso el número de desempate se
+/// quita antes de reconocer el sufijo — si no, la tercera cofirma volvería a
+/// apilarlo (`contrato-firmado-2-firmado.pdf`) y el nombre crecería con cada
+/// firma, que es justo lo que este módulo promete que no pasa.
 pub fn signed_name(original: &str) -> String {
     let (stem, extension) = split_extension(original);
     let stem = if stem.is_empty() { FALLBACK_STEM } else { stem };
-    if ends_with_the_suffix(stem) {
-        return format!("{stem}{extension}");
+    let unnumbered = without_the_number(stem);
+    if ends_with_the_suffix(unnumbered) {
+        return format!("{unnumbered}{extension}");
     }
     format!("{stem}{SIGNED_SUFFIX}{extension}")
 }
@@ -54,11 +66,31 @@ pub fn numbered(name: &str, number: u32) -> String {
     format!("{stem}-{number}{extension}")
 }
 
-/// Si el nombre ya acaba en el sufijo, mirando solo ASCII: el sufijo es ASCII
-/// entero, así que comparar por bytes no rompe ninguna tilde del resto.
+/// Si el nombre ya acaba en el sufijo, sin distinguir mayúsculas.
+///
+/// La comparación es **sobre `as_bytes()`, no sobre un corte del `&str`**: el
+/// sufijo es ASCII entero, pero el tronco no tiene por qué serlo, y cortar un
+/// `&str` por el byte `len - 8` entra en pánico si ese byte cae dentro de un
+/// carácter multibyte —`árbitros.pdf`, `1ª parte.pdf`—. Sobre bytes la
+/// intención se conserva y el pánico desaparece: un tronco cuyos últimos ocho
+/// bytes no sean los del sufijo simplemente no coincide.
 fn ends_with_the_suffix(stem: &str) -> bool {
-    stem.len() >= SIGNED_SUFFIX.len()
-        && stem[stem.len() - SIGNED_SUFFIX.len()..].eq_ignore_ascii_case(SIGNED_SUFFIX)
+    let (stem, suffix) = (stem.as_bytes(), SIGNED_SUFFIX.as_bytes());
+    stem.len() >= suffix.len() && stem[stem.len() - suffix.len()..].eq_ignore_ascii_case(suffix)
+}
+
+/// El tronco sin su número de desempate final: `contrato-firmado-2` da
+/// `contrato-firmado`. Si no lo lleva, o lo que sigue al guion no son solo
+/// dígitos, devuelve el tronco tal cual.
+fn without_the_number(stem: &str) -> &str {
+    match stem.rsplit_once('-') {
+        Some((head, number))
+            if !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit()) =>
+        {
+            head
+        }
+        _ => stem,
+    }
 }
 
 /// Parte el nombre en tronco y extensión **con el punto incluido**.
@@ -87,6 +119,44 @@ mod tests {
     fn a_name_that_already_ends_in_the_suffix_does_not_take_a_second_one() {
         assert_eq!(signed_name("contrato-firmado.pdf"), "contrato-firmado.pdf");
         assert_eq!(signed_name("contrato-FIRMADO.pdf"), "contrato-FIRMADO.pdf");
+    }
+
+    /// Un tronco corto que empieza por una vocal acentuada colocaba el corte
+    /// del sufijo dentro de la tilde y tumbaba la aplicación entera. En una
+    /// aplicación española que firma lo que le entra por el diálogo, esto no
+    /// es un caso de laboratorio.
+    #[test]
+    fn an_accented_name_is_signed_and_does_not_panic() {
+        assert_eq!(signed_name("árbitros.pdf"), "árbitros-firmado.pdf");
+        assert_eq!(signed_name("1ª parte.pdf"), "1ª parte-firmado.pdf");
+        assert_eq!(signed_name("ñ.pdf"), "ñ-firmado.pdf");
+        assert_eq!(
+            signed_name("Acuerdo Marco-firmado.pdf"),
+            "Acuerdo Marco-firmado.pdf"
+        );
+    }
+
+    /// La tercera cofirma es el caso que el módulo declara normal: el nombre
+    /// vuelve al canónico y es la carpeta quien le pone el número.
+    #[test]
+    fn the_suffix_does_not_stack_on_a_name_that_already_carries_a_number() {
+        assert_eq!(
+            signed_name("contrato-firmado-2.pdf"),
+            "contrato-firmado.pdf"
+        );
+        assert_eq!(
+            signed_name("contrato-FIRMADO-9.pdf"),
+            "contrato-FIRMADO.pdf"
+        );
+    }
+
+    /// Quitar el número solo vale si lo que queda es el sufijo: un `-2` que
+    /// forma parte del nombre del usuario se queda donde está.
+    #[test]
+    fn a_number_that_is_part_of_the_original_name_survives() {
+        assert_eq!(signed_name("informe-2.pdf"), "informe-2-firmado.pdf");
+        assert_eq!(signed_name("anexo-2b.pdf"), "anexo-2b-firmado.pdf");
+        assert_eq!(signed_name("acta-.pdf"), "acta--firmado.pdf");
     }
 
     #[test]
