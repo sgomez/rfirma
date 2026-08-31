@@ -26,6 +26,18 @@
       <groupId>es.gob.afirma</groupId>
       <artifactId>afirma-server-triphase-signer-core</artifactId>
       <version>${autofirma.version}</version>
+      <exclusions>
+        <!-- ADR-0012: la rubrica la normaliza Rust. afirma-crypto-pdf declara
+             afirma-ui-utils con <scope>runtime</scope> y lo invoca por
+             reflexion en PdfPreProcessor.getImage:304; al no estar la clase,
+             el catch (Throwable) de la linea 309 degrada a "se agrega tal
+             cual" y javax.imageio.ImageIO deja de ser alcanzable. Medido en
+             el issue #36: docs/research/exclusion-afirma-ui-utils.md. -->
+        <exclusion>
+          <groupId>es.gob.afirma</groupId>
+          <artifactId>afirma-ui-utils</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

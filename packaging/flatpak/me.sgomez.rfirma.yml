@@ -1,7 +1,7 @@
 # Manifiesto de medicion del issue #22.
 #
 # Empaqueta la SONDA (packaging/flatpak/probe), no rfirma: la aplicacion no
-# existe todavia. Lo que se mide aqui —runtime, permisos, los seis .so en
+# existe todavia. Lo que se mide aqui —runtime, permisos, la libreria nativa en
 # /app/lib/rfirma, PKCS#11, portales y WebKitGTK— es lo que heredara el
 # manifiesto real cambiando el modulo `sonda` por `rfirma-app`.
 app-id: me.sgomez.rfirma
@@ -48,16 +48,22 @@ build-options:
     CARGO_HOME: /run/build/sonda/cargo
 
 modules:
-  # 1. Los seis .so del ADR-0004, construidos en el anfitrion con GraalVM CE 25
-  #    (issue #23 midio que no hace falta construirlos dentro del SDK).
+  # 1. La libreria nativa del ADR-0004, construida en el anfitrion con GraalVM
+  #    CE 25 (issue #23 midio que no hace falta construirla dentro del SDK).
+  #    UN SOLO FICHERO desde el #36: al excluir afirma-ui-utils (ADR-0012) los
+  #    cinco auxiliares de AWT dejan de hacer falta.
+  #    NO los anadas de vuelta: si libawt.so esta aqui, un JPEG con perfil ICC
+  #    ABORTA el proceso (rc=134) en vez de dar un error recuperable, y se lleva
+  #    la aplicacion entera. Ver docs/research/exclusion-afirma-ui-utils.md.
+  #    PENDIENTE: la verificacion dentro del arenero del #22 se corrio con los
+  #    seis ficheros y la imagen ce25-awt; falta repetir verifica.sh con esta.
   - name: libreria-nativa
     buildsystem: simple
     build-commands:
-      - install -Dm644 -t /app/lib/rfirma librfirma_crypto.so libawt.so
-        libawt_headless.so libjavajpeg.so libjava.so libjvm.so
+      - install -Dm644 -t /app/lib/rfirma librfirma_crypto.so
     sources:
       - type: dir
-        path: ../../rfirma-native-bridge/target/ce25-awt
+        path: ../../rfirma-native-bridge/target/ce25-noui
 
   # 2. Material de prueba de la sonda (no iria en el paquete real).
   - name: datos-de-prueba

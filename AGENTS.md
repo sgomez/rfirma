@@ -22,10 +22,11 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * Rust es responsable de llamar al método FFI `autofirma_free_string(thread, ptr)` una vez leído el JSON para evitar fugas de memoria.
 
 3. **Distribución de la librería nativa (ADR-0004):**
-   * `native-image` **no** produce un artefacto autosuficiente: la rúbrica de imagen necesita **seis ficheros** (`librfirma_crypto.so` + `libawt.so`, `libawt_headless.so`, `libjavajpeg.so`, `libjava.so`, `libjvm.so`) que deben convivir en el **mismo directorio**.
-   * **No uses `include_bytes!` ni extraigas nada a `~/.cache/rfirma/`.** El **flatpak es el único canal soportado**: los seis ficheros se instalan en `/app/lib/rfirma/`. El manifiesto y su verificación viven en `packaging/flatpak/`.
-   * Rust carga `librfirma_crypto.so` por una ruta **relativa al ejecutable** (`../lib/rfirma`) con `libloading`; los otros cinco se resuelven solos vía `$ORIGIN`. No hace falta `LD_LIBRARY_PATH` ni tocar `RPATH`. La ruta es sobreescribible con `RFIRMA_LIB_DIR`.
-   * Al arrancar, comprueba que los seis ficheros existen por nombre y falla nombrando el que falta: una instalación incompleta degrada a un error engañoso sobre el formato de la imagen, no a un fallo de carga.
+   * Es **un solo fichero**, `librfirma_crypto.so` (27,7 MB), y cubre los cuatro casos: sin rúbrica, rúbrica de texto y rúbrica de imagen. Los cinco auxiliares de AWT desaparecieron al excluir `afirma-ui-utils` del `pom.xml` (ADR-0012); si ves esa exclusión, **no la quites**.
+   * **No instales nunca los auxiliares «por si acaso».** Si `libawt.so` está en el directorio, un JPEG con perfil ICC **aborta el proceso** en vez de dar un error recuperable, y se lleva la aplicación entera. Medido en `docs/research/exclusion-afirma-ui-utils.md`.
+   * **No uses `include_bytes!` ni extraigas nada a `~/.cache/rfirma/`.** El **flatpak es el único canal soportado**: el fichero se instala en `/app/lib/rfirma/`. El manifiesto y su verificación viven en `packaging/flatpak/`.
+   * Rust lo carga por una ruta **relativa al ejecutable** (`../lib/rfirma`) con `libloading`. No hace falta `LD_LIBRARY_PATH` ni tocar `RPATH`. La ruta es sobreescribible con `RFIRMA_LIB_DIR`.
+   * El puente **exige un JPEG ya normalizado y sin perfil ICC**: la normalización de la rúbrica es de Rust (ADR-0012). Un PNG que llegue hasta aquí falla con «no está codificada en JPEG», y eso es lo correcto.
    * El arenero cambia dos cosas que fuera eran gratis: el **módulo PKCS#11 lo empaqueta el propio flatpak** (los del anfitrión no cargan dentro), y **toda entrada y salida de ficheros pasa por portales**, así que la aplicación nunca conoce la ruta original de un documento. Ver `docs/research/flatpak-canal-unico.md`.
 
 4. **Firma Trifásica (Triphase Signing):**

@@ -13,20 +13,20 @@
 ## La sonda
 
 Mientras `rfirma-app` no exista, el manifiesto empaqueta una aplicación Tauri
-mínima que sirve para *medir* el arenero: carga los seis `.so`, ejecuta el ciclo
+mínima que sirve para *medir* el arenero: carga la librería nativa, ejecuta el ciclo
 trifásico completo con rúbrica de imagen, firma el PK1 con PKCS#11 e informa de
 lo que ve dentro (portales, WebKitGTK, glibc, permisos). Se construyó para el
 [#22](https://github.com/sgomez/rfirma/issues/22).
 
 Cuando exista la aplicación, se sustituye el módulo `sonda` del manifiesto por
 `rfirma-app` y se borra `probe/`. El resto del manifiesto —runtime, permisos,
-los seis `.so` en `/app/lib/rfirma`, pcsc-lite y OpenSC— se queda tal cual.
+la librería en `/app/lib/rfirma`, pcsc-lite y OpenSC— se queda tal cual.
 
 ## Verificar
 
 ```bash
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
-rfirma-native-bridge/testbench/build-native-awt.sh ce25-awt awt-config
+rfirma-native-bridge/testbench/build-native-fonts.sh ce25-noui
 packaging/flatpak/verifica.sh
 ```
 
