@@ -1,0 +1,34 @@
+[package]
+name = "rfirma"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "rfirma: firma y cofirma de PDFs en PAdES con firma visible."
+license = "EUPL-1.2"
+publish = false
+
+# El binario se llama igual que `command:` en el manifiesto flatpak
+# (packaging/flatpak/me.sgomez.rfirma.yml). Si cambias uno, cambia el otro.
+[[bin]]
+name = "rfirma"
+path = "src/main.rs"
+
+[lib]
+name = "rfirma_lib"
+path = "src/lib.rs"
+
+[build-dependencies]
+# ADR-0013: build.rs se queda en tauri_build::build(). No invoca a Maven ni a
+# native-image jamás; de eso se encarga `just native`.
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+sha2 = "0.10"
+
+[profile.release]
+strip = true
