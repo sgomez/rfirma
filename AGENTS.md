@@ -36,6 +36,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 ## 🛠️ Herramientas y Estado de Configuración del Entorno
 * **GraalVM JDK:** Hay **dos** instalados por SDKMAN: `21-graalce` (por defecto) y `25.3.4+1.r25-graalce`. La herramienta `native-image` está disponible en el PATH. **Cuál se usa está pendiente de decidir**: la línea Java 21 no puede compilar la firma visible en una imagen `--shared` (aborta dentro del `JNI_OnLoad` de `libawt.so`) y la 25 sí. Ver `docs/research/graalvm-libawt-shared.md` y el issue #6.
 * **Maven:** Instalado y configurado en el PATH.
+* **Token PKCS#11 de pruebas:** `softhsm2` con el token `rfirma-test` (PIN `1234`), módulo en `/usr/lib/softhsm/libsofthsm2.so`, cargado con un certificado **de pruebas de la FNMT** emitido por su CA de producción. El kit completo vive en `~/.local/share/rfirma-test-certs`. **El certificado personal del titular no se usa en ningún punto del proyecto.** Ver `docs/research/token-pkcs11-pruebas.md`.
 * **Cargo (Rust):** Instalado y configurado.
 * **Prueba de Concepto FFI:** Se encuentra una PoC funcional del enlace FFI en `clienteafirma/autofirma-native-bridge/rust-poc`. Compila y se ejecuta con éxito.
 
