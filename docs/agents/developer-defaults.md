@@ -7,7 +7,7 @@ flags override them: `--parallel` / `--sequential`, `--auto-merge` /
 
 ```
 execution: sequential
-merge: manual
+merge: auto
 oversized: escalate
 ```
 
@@ -36,14 +36,20 @@ oversized: escalate
   unattended, and this line is the standing record of that authorization.
   A local code host (see `docs/agents/code-host.md`) supports `manual` only.
 
-  **Por qué este repositorio está hoy en `manual`.** El CI de
-  [#11](https://github.com/sgomez/rfirma/issues/11) verifica que el puente
-  Java compila y que las dependencias de AutoFirma resuelven, y **nada
-  más** — `docs/agents/code-host.md` lo dice en letra grande. Con
-  `merge: auto`, `/developer` fusionaría a `main` código de firma sin que
-  nadie haya visto un PDF firmado. Vuelve a `auto` cuando el carril de
-  pruebas de [#33](https://github.com/sgomez/rfirma/issues/33) esté vivo y
-  el CI ejecute el ciclo trifásico.
+  **Por qué este repositorio pasó a `auto` durante la entrega del #46.** Estuvo
+  en `manual` mientras el CI solo verificaba que el puente Java compilaba y que
+  las dependencias de AutoFirma resolvían. El [#47](https://github.com/sgomez/rfirma/issues/47)
+  amplió el carril rápido a las tres cadenas de herramientas — `clippy -D warnings`,
+  `vitest`, `cargo test` de grada A, la compilación de la grada C y la puerta CRAP —
+  y el titular decidió que eso basta para fusionar sin intervención.
+
+  **Lo que sigue sin cubrir, y conviene tener presente.** Verde **no** significa que
+  una firma sea válida, que un PDF abra ni que un certificado encadene:
+  `docs/agents/code-host.md` lo dice en letra grande y sigue siendo cierto. Esa
+  garantía llega con el [#61](https://github.com/sgomez/rfirma/issues/61) — el ciclo
+  completo y la puerta de `pdfsig` — que en el momento de este cambio aún estaba sin
+  entregar. Hasta entonces, `auto` fusiona código de firma que nadie ha visto firmar.
+  Volver a `manual` es cambiar una palabra en el bloque de arriba.
 - `oversized` — what to do with a sub-issue triage scores too big to fit in
   one context window. `escalate` hands it to a human to re-cut and builds
   nothing. `build` builds it anyway at `opus`, taking triage's fault lines as
