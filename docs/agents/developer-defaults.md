@@ -7,7 +7,7 @@ flags override them: `--parallel` / `--sequential`, `--auto-merge` /
 
 ```
 execution: parallel
-merge: auto
+merge: manual
 oversized: escalate
 ```
 
@@ -19,6 +19,15 @@ oversized: escalate
   whose review verdict is CLEAN — the orchestrator merges to `main`
   unattended, and this line is the standing record of that authorization.
   A local code host (see `docs/agents/code-host.md`) supports `manual` only.
+
+  **Por qué este repositorio está hoy en `manual`.** El CI de
+  [#11](https://github.com/sgomez/rfirma/issues/11) verifica que el puente
+  Java compila y que las dependencias de AutoFirma resuelven, y **nada
+  más** — `docs/agents/code-host.md` lo dice en letra grande. Con
+  `merge: auto`, `/developer` fusionaría a `main` código de firma sin que
+  nadie haya visto un PDF firmado. Vuelve a `auto` cuando el carril de
+  pruebas de [#33](https://github.com/sgomez/rfirma/issues/33) esté vivo y
+  el CI ejecute el ciclo trifásico.
 - `oversized` — what to do with a sub-issue triage scores too big to fit in
   one context window. `escalate` hands it to a human to re-cut and builds
   nothing. `build` builds it anyway at `opus`, taking triage's fault lines as
