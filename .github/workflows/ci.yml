@@ -1,0 +1,137 @@
+# Puerta automatica del repositorio.
+#
+# Decidida en https://github.com/sgomez/rfirma/issues/11. Antes de esto,
+# docs/agents/code-host.md declaraba "CI: none" mientras
+# docs/agents/developer-defaults.md declaraba `merge: auto`: el pipeline de
+# /developer estaba autorizado a mergear a main sin ninguna comprobacion.
+#
+# QUE COMPRUEBA HOY: que el puente compila sin avisos nuevos y que las
+# dependencias de AutoFirma se resuelven en una maquina limpia. NO comprueba
+# que nada funcione, porque el repositorio todavia no tiene codigo de
+# produccion. Lee la seccion de CI de docs/agents/code-host.md antes de fiarte
+# de un check en verde.
+#
+# DOS CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
+# realimentacion de un agente, asi que lo que corre siempre tiene que ser
+# rapido:
+#
+#   check  ~48 s   en cada PR y en cada push a main
+#   native ~3 min  solo en etiquetas, a mano, y una vez por semana
+#
+# El puente Java apenas se va a tocar una vez escrito, asi que reconstruir la
+# imagen nativa en cada PR seria pagar cuatro veces el carril rapido para no
+# enterarse de nada nuevo. Quien si la toque, que ponga la etiqueta 'native'
+# en su PR.
+name: CI
+
+on:
+  pull_request:
+    # 'labeled' incluido a proposito: sin el, poner la etiqueta 'native' no
+    # dispararia nada y habria que empujar otra vez para que se enterase.
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+  schedule:
+    # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
+    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente, y de
+    # paso es la red de seguridad del carril lento.
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  # GraalVM CE 25, fijado por el issue #6: la linea 21 aborta dentro del
+  # JNI_OnLoad de libawt.so con cualquier firma visible. El pom sigue
+  # compilando a release 21.
+  GRAALVM_VERSION: '25'
+
+jobs:
+  check:
+    name: Compila y resuelve dependencias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Las dependencias de AutoFirma no estan en Maven Central: bootstrap.sh
+      # clona el repositorio oficial en la etiqueta v1.9.1 y las compila. Esa
+      # etiqueta es inmutable, asi que la cache se llena una vez y acierta
+      # siempre despues; solo se invalida si cambia la version que pide
+      # bootstrap.sh o las dependencias del pom.
+      #
+      # Descartado publicarlas en un registro propio: seria redistribuir
+      # binarios GPL de terceros, con las obligaciones de licencia que eso
+      # arrastra.
+      - name: Cache de ~/.m2
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - name: Instala just
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - run: just check
+
+  native:
+    name: Imagen nativa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # El carril lento no corre por omision. Medido en este mismo
+      # repositorio: native-image son 1 m 22 s y el job entero 3 m 14 s,
+      # frente a los 48 s del carril rapido. Cabe de sobra en un runner
+      # estandar --la duda que dejo abierta el issue #11 queda resuelta--,
+      # pero eso no es razon para pagarlo en cada PR.
+      - name: Decide si hace falta
+        id: alcance
+        run: |
+          case "${{ github.event_name }}" in
+            push|workflow_dispatch|schedule)
+              echo "construir=si" >> "$GITHUB_OUTPUT" ;;
+            pull_request)
+              if ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
+                echo "construir=si" >> "$GITHUB_OUTPUT"
+              else
+                echo "construir=no" >> "$GITHUB_OUTPUT"
+                echo "Carril lento omitido. Pon la etiqueta \`native\` en el PR si tocas el puente." \
+                  >> "$GITHUB_STEP_SUMMARY"
+              fi ;;
+          esac
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        if: steps.alcance.outputs.construir == 'si'
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache de ~/.m2
+        if: steps.alcance.outputs.construir == 'si'
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - name: Instala just
+        if: steps.alcance.outputs.construir == 'si'
+        run: sudo apt-get update && sudo apt-get install -y just
+
+      - name: Construye la libreria nativa
+        if: steps.alcance.outputs.construir == 'si'
+        run: |
+          export GRAALVM_HOME="$JAVA_HOME"
+          just native
