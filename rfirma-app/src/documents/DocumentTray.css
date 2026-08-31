@@ -1,0 +1,77 @@
+/*
+ * Bandeja de documentos (docs/design/bandeja-de-documentos.md): la zona de
+ * soltar arriba y los recientes debajo, dentro de la columna de 300 px que fija
+ * la ventana.
+ */
+
+.tray {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-md);
+  padding: var(--rf-space-md);
+}
+
+.tray__drop-zone {
+  min-height: 112px;
+  padding: var(--rf-space-md);
+  border: 1px dashed var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  background: transparent;
+  color: var(--rf-text-muted);
+  font-family: var(--rf-font-body);
+  cursor: pointer;
+  transition: border-color var(--rf-duration-fast) var(--rf-easing);
+}
+
+.tray__drop-zone:hover {
+  border-color: var(--rf-primary);
+  color: var(--rf-text);
+}
+
+.tray__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tray__row {
+  display: flex;
+  flex-direction: column;
+}
+
+.tray__card {
+  gap: var(--rf-space-xs);
+  align-items: stretch;
+  border-color: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* La fila seleccionada: borde fuerte y fondo `--rf-bg`, que es lo que la
+   distingue de las demás sin recurrir al color. */
+.tray__card--selected {
+  border-color: var(--rf-border-strong);
+  background: var(--rf-bg);
+}
+
+/* La ruta no responde: la fila se atenúa, pero **no desaparece**. */
+.tray__card--unavailable {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tray__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray__forget {
+  align-self: flex-start;
+  min-height: 32px;
+  font-size: 12px;
+}

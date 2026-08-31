@@ -43,9 +43,16 @@ export const en: Catalog = {
     menu: "Menu",
     preferences: "Preferences…",
     about: "About rFirma",
-    status: {
-      signed: "Signed",
-      unsigned: "Unsigned",
-    },
+  },
+  badges: {
+    signed: "Signed",
+    unsigned: "Unsigned",
+    unavailable: "Unavailable",
+  },
+  tray: {
+    dropZone: "Drag a PDF here, or click to open one",
+    empty: "The documents you sign will show up here",
+    recents: "Recent",
+    remove: "Remove from the list",
   },
 };

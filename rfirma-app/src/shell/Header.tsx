@@ -66,7 +66,7 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
       <div className="rf-row">
         {status !== null && (
           <span className={status === "Signed" ? "rf-badge rf-badge--primary" : "rf-badge"}>
-            {t(status === "Signed" ? "header.status.signed" : "header.status.unsigned")}
+            {t(status === "Signed" ? "badges.signed" : "badges.unsigned")}
           </span>
         )}
         {menuAnchor === "header" && (

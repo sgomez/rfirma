@@ -10,13 +10,34 @@ const noop = () => {};
 describe("MainWindow", () => {
   it("lays out the three regions under the header", () => {
     renderWithCatalog(
-      <MainWindow status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        tray={null}
+      />,
     );
 
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
+  });
+
+  it("puts the tray content inside the tray region", () => {
+    renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        tray={<p>contrato.pdf</p>}
+      />,
+    );
+
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(tray).toContainElement(screen.getByText("contrato.pdf"));
   });
 
   it("has no navigation between screens", () => {
@@ -26,6 +47,7 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
+        tray={null}
       />,
     );
 
@@ -40,6 +62,7 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
+        tray={null}
       />,
     );
 

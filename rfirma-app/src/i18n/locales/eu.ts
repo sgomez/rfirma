@@ -49,9 +49,16 @@ export const eu: UntranslatedCatalog = {
     menu: "",
     preferences: "",
     about: "",
-    status: {
-      signed: "",
-      unsigned: "",
-    },
+  },
+  badges: {
+    signed: "",
+    unsigned: "",
+    unavailable: "",
+  },
+  tray: {
+    dropZone: "",
+    empty: "",
+    recents: "",
+    remove: "",
   },
 };

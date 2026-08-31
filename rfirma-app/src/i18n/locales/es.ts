@@ -65,9 +65,27 @@ export const es = {
     menu: "Menú",
     preferences: "Preferencias…",
     about: "Acerca de rFirma",
-    status: {
-      signed: "Firmado",
-      unsigned: "Sin firmar",
-    },
+  },
+  /**
+   * El vocabulario de insignias, compartido por la cabecera y la bandeja.
+   *
+   * `Firmado` y `Sin firmar` describen el documento y se cachean; `No
+   * disponible` no describe el documento sino que **la ruta no responde**, así
+   * que solo aparece en la bandeja y no se guarda nunca.
+   */
+  badges: {
+    signed: "Firmado",
+    unsigned: "Sin firmar",
+    unavailable: "No disponible",
+  },
+  /**
+   * La bandeja: el único sitio donde se abre o se cambia de documento
+   * (docs/design/bandeja-de-documentos.md).
+   */
+  tray: {
+    dropZone: "Arrastra un PDF o pulsa para abrirlo",
+    empty: "Aquí aparecerán los documentos que vayas firmando",
+    recents: "Recientes",
+    remove: "Quitar de la lista",
   },
 };

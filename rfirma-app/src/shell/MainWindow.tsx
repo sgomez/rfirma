@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { Badge } from "../documents/document";
 import { Header } from "./Header";
@@ -11,6 +12,8 @@ interface MainWindowProps {
   menuAnchor: MenuAnchor;
   onOpenPreferences: () => void;
   onOpenAbout: () => void;
+  /** El contenido de la bandeja, que es quien sabe de documentos. */
+  tray: ReactNode;
 }
 
 /**
@@ -30,6 +33,7 @@ export function MainWindow({
   menuAnchor,
   onOpenPreferences,
   onOpenAbout,
+  tray,
 }: MainWindowProps) {
   const { t } = useTranslation();
 
@@ -42,7 +46,9 @@ export function MainWindow({
         onOpenAbout={onOpenAbout}
       />
       <div className="main-window__body">
-        <section className="main-window__tray" aria-label={t("window.tray")} />
+        <section className="main-window__tray" aria-label={t("window.tray")}>
+          {tray}
+        </section>
         <section className="main-window__viewer" aria-label={t("window.viewer")} />
         <section className="main-window__panel" aria-label={t("window.panel")} />
       </div>
