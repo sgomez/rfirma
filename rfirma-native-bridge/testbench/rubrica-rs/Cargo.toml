@@ -1,0 +1,16 @@
+# Prototipo de la normalizacion de rubrica que el ADR-0012 pone en Rust.
+# No es codigo de produccion: existe para medir, en el issue #36, que el JPEG
+# que emite este crate lo acepta `new Jpeg(...)` de com.aowagie.text sin que
+# la imagen nativa toque AWT.
+[package]
+name = "rubrica"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# `image` es el decodificador/codificador de referencia del ecosistema, y el
+# unico que cubre de una pieza lo que pide el ADR-0012: decodificar PNG y
+# JPEG, aplanar el alfa, reescalar y volver a codificar en JPEG. Sin
+# default-features no arrastra los demas formatos: la superficie queda en los
+# dos que decide el ADR.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
