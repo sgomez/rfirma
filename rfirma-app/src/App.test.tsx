@@ -86,4 +86,25 @@ describe("App", () => {
       screen.getByText("Aquí aparecerán los documentos que vayas firmando"),
     ).toBeInTheDocument();
   });
+
+  it("stops remembering once Remember my activity is off, not just purges what there was", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents([document("/a.pdf")]), [document("/documentos/factura.pdf")]);
+    await screen.findByText("a.pdf");
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    await user.click(await screen.findByRole("switch", { name: /Recordar mi actividad/ }));
+    await user.click(screen.getByRole("button", { name: "Apagar y borrar" }));
+    await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    await user.click(screen.getByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }));
+
+    expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
+    expect(screen.queryByText("factura.pdf")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Aquí aparecerán los documentos que vayas firmando"),
+    ).toBeInTheDocument();
+  });
 });

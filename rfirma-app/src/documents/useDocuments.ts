@@ -26,8 +26,18 @@ export interface Documents {
  * Las dos dependencias entran por parámetro y no se construyen aquí para que
  * la bandeja se pueda probar entera sin backend, que es lo que pide la grada A
  * de este sub-issue.
+ *
+ * `remember` es «Recordar mi actividad» (ID-34), y aquí es donde manda: con la
+ * preferencia apagada, abrir un documento **no** lo apunta en la bandeja. Sin
+ * este dueño, apagarla solo purgaba una vez y el siguiente documento volvía a
+ * quedarse, con lo que el estado «Vacía … o con «Recordar mi actividad»
+ * apagado» de `bandeja-de-documentos.md` era inalcanzable.
  */
-export function useDocuments(store: RecentsStore, picker: DocumentPicker): Documents {
+export function useDocuments(
+  store: RecentsStore,
+  picker: DocumentPicker,
+  remember = true,
+): Documents {
   const [recents, setRecents] = useState<RecentDocument[]>([]);
   const [active, setActive] = useState<RecentDocument | null>(null);
 
@@ -47,10 +57,14 @@ export function useDocuments(store: RecentsStore, picker: DocumentPicker): Docum
   const open = useCallback(async () => {
     const chosen = await picker.choose();
     if (chosen === null) return;
-    await store.record(chosen);
-    setRecents(await store.list());
+    // El documento se abre igual; lo que la preferencia decide es si queda
+    // rastro de haberlo abierto.
+    if (remember) {
+      await store.record(chosen);
+      setRecents(await store.list());
+    }
     setActive(chosen);
-  }, [picker, store]);
+  }, [picker, store, remember]);
 
   const forget = useCallback(
     async (path: string) => {

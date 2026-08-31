@@ -39,6 +39,20 @@ describe("useDocuments", () => {
     expect(result.current.recents).toEqual([factura]);
   });
 
+  it("does not remember the document opened through the portal when remembering is off", async () => {
+    const store = inMemoryRecents();
+    const factura = document("/factura.pdf");
+    const { result } = renderHook(() =>
+      useDocuments(store, inMemoryDocumentPicker([factura]), false),
+    );
+
+    await act(() => result.current.open());
+
+    expect(result.current.active).toEqual(factura);
+    expect(result.current.recents).toEqual([]);
+    expect(await store.list()).toEqual([]);
+  });
+
   it("leaves everything as it was when the portal is cancelled", async () => {
     const store = inMemoryRecents([document("/a.pdf")]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));

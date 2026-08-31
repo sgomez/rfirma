@@ -35,9 +35,11 @@ interface AppProps {
  * navegación, y el estado de la bandeja sigue vivo debajo.
  */
 export function App({ recents, picker, preferences, destinations, menuAnchor }: AppProps) {
-  const documents = useDocuments(recents, picker);
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [settings, setSettings] = useState<Preferences | null>(null);
+  // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
+  // es recordar; el primer documento no se puede abrir antes de esa lectura.
+  const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
 
   useEffect(() => {
     let current = true;

@@ -73,7 +73,9 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
           <div className="header__menu" ref={container}>
             <button
               type="button"
-              className={open ? "rf-btn header__button header__button--open" : "rf-btn"}
+              className={
+                open ? "rf-btn header__button header__button--open" : "rf-btn header__button"
+              }
               aria-label={t("header.menu")}
               aria-haspopup="menu"
               aria-expanded={open}

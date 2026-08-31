@@ -30,7 +30,7 @@ export function AboutDialog({ version, onClose }: AboutDialogProps) {
     <div className="rf-scrim">
       <div className="rf-dialog about" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div>
-          <p className="rf-title" id={titleId}>
+          <p className="rf-heading" id={titleId}>
             {t("app.name")}
           </p>
           <p className="rf-body rf-text-muted">{t("about.version", { version })}</p>

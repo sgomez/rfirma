@@ -8,7 +8,7 @@ import type { Catalog } from "../catalog";
  */
 export const en: Catalog = {
   app: {
-    name: "rfirma",
+    name: "rFirma",
   },
   actions: {
     sign: "Sign document",

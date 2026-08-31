@@ -91,6 +91,26 @@ describe("Header", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
+  // El tamaño del botón no es su estado: `cabecera.md` lo fija en 40 px, más
+  // estrecho que el mínimo táctil de `.rf-btn`, y ese ancho lo pone
+  // `header__button`. Si la clase dependiera de `open`, el botón encogería al
+  // abrirse y volvería a crecer al cerrarse.
+  it("keeps the menu button sized by header__button whether the menu is open or closed", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+    );
+    const button = screen.getByRole("button", { name: "Menú" });
+
+    expect(button).toHaveClass("header__button");
+    expect(button).not.toHaveClass("header__button--open");
+
+    await user.click(button);
+
+    expect(button).toHaveClass("header__button");
+    expect(button).toHaveClass("header__button--open");
+  });
+
   it("hides the menu button where the two entries live in the native menu", () => {
     renderWithCatalog(
       <Header status={null} menuAnchor="native" onOpenPreferences={noop} onOpenAbout={noop} />,

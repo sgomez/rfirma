@@ -14,7 +14,7 @@ export const es = {
   app: {
     // El nombre propio del programa. No se traduce en ningún idioma, pero vive
     // en el catálogo para que ningún componente lo escriba en línea.
-    name: "rfirma",
+    name: "rFirma",
   },
   actions: {
     sign: "Firmar documento",
