@@ -34,6 +34,19 @@ El repositorio va **firmado con GPG**, con la clave pública en la web y su huel
 `--no-gpg-verify` no es defendible en una aplicación de firma electrónica: sin ficha en un
 centro de software, esa firma es la única cadena de confianza que el usuario tiene.
 
+## Precedente, y por qué el repositorio es nuestro y no de un tercero
+
+No es un camino inventado. **Tabularis** —Tauri, como esta— se distribuye en snap, AppImage,
+`.deb`, `.rpm`, AUR y flatpak, y su flatpak **no está en Flathub**: sale de un repositorio de
+terceros, con `flatpak remote-add --if-not-exists flatpark …` y `flatpak install`. Misma
+forma que la de arriba, y demuestra que el remoto propio es un canal normal, no una rareza.
+
+Colgarnos de un repositorio ajeno como Flatpark ahorraría la clave GPG y el despliegue, y se
+descarta por lo mismo por lo que se descarta la tienda: **mete a un tercero entre el usuario y
+una aplicación de firma electrónica**. El dominio ya existe, el `app-id` ya es
+`me.sgomez.rfirma` por DNS inverso de `rfirma.sgomez.me`, y servir un directorio estático es
+lo más barato de toda esta decisión.
+
 ## El runtime sigue viniendo de Flathub
 
 El bundle no lleva `org.gnome.Platform//50` dentro, así que sin el remoto de Flathub añadido
@@ -57,3 +70,6 @@ son cientos de megas para ahorrar un comando.
 - **Flathub no queda cerrado para siempre**, solo fuera de v0.1. Volver es un esfuerzo nuevo
   —vendorizar el árbol Maven, y lo que sus reglas digan cuando toque—, no la continuación de
   este.
+- Los **instaladores nativos por distribución** (`.deb`, `.rpm`, AUR, snap) siguen fuera de
+  v0.1 por decisión del [#17](https://github.com/sgomez/rfirma/issues/17). Esta ADR decide
+  **por dónde llega el flatpak**, no cuántos formatos hay.
