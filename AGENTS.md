@@ -64,3 +64,7 @@ Vocabulario canónico por defecto: `needs-triage`, `needs-info`, `ready-for-agen
 ### Domain docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` en la raíz. Ver `docs/agents/domain.md`.
+
+### Prototyping
+
+Un canvas de Claude Design por caso de uso ([proyecto `c0ddbfa7`](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132)) para prototipar; al validarlo, una ficha `docs/design/<pantalla>.md` por pantalla. Ver `docs/agents/prototyping.md`.

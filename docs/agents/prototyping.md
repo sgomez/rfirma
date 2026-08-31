@@ -1,0 +1,143 @@
+# Prototipado
+
+Dónde vive la salida de la skill `prototype` en este repo (y de quien la
+invoque: `/wayfinder` con un ticket `wayfinder:prototype`, `/grill-with-docs`,
+o el usuario directamente).
+
+## La regla
+
+La rama **UI** de `prototype` ("¿qué aspecto debería tener esto?") **no** se
+construye como ruta throwaway con `?variant=` dentro de la app Svelte. Se
+prototipa en **Claude Design** y, una vez validada, se describe en un fichero
+de `docs/design/`.
+
+Claude Design es **solo** la superficie de prototipado: es desechable, sirve
+para que el usuario mire y decida. La referencia duradera vive siempre en el
+repo, en Markdown.
+
+La rama **lógica** (`LOGIC.md`: máquinas de estado, flujo trifásico, errores de
+PKCS#11) **no** cambia: sigue siendo el fichero HTML único y local que describe
+la skill. El lienzo es para pantallas, no para simuladores.
+
+## Granularidad: un canvas por caso de uso
+
+- **Un canvas = un caso de uso** (un flujo completo: "firmar un PDF con DNIe",
+  "validar una firma existente", "configurar almacenes de claves").
+- **Un artboard = una pantalla en un estado concreto**: vacío, con datos,
+  pidiendo PIN, en error, en progreso. Los estados son lo que de verdad valida
+  una decisión de UI, así que van todos al canvas.
+- **Una ficha `docs/design/<pantalla>.md` = una pantalla**, no un caso de uso.
+  Una pantalla que aparece en varios flujos (el selector de certificados, por
+  ejemplo) tiene **una sola ficha**, que lista los flujos que la usan. No
+  dupliques su descripción por flujo.
+
+Al validar un canvas se escriben o actualizan **varias** fichas, una por
+pantalla del flujo. Es la única asimetría del esquema y es deliberada: el
+canvas se organiza por recorrido, la documentación por pieza reutilizable.
+
+## Dónde viven los canvas
+
+Proyecto de Claude Design del repo:
+
+- **Nombre**: `Autofirma de escritorio en Rust`
+- **URL**: <https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132>
+- **projectId**: `c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132`
+
+Cada caso de uso es un fichero `<caso-de-uso>.dc.html` en la raíz del proyecto
+(`firmar-pdf-dnie.dc.html`, `validar-firma.dc.html`…). El `Canvas.dc.html`
+inicial es el lienzo de arranque; no metas flujos nuevos dentro de él.
+
+Si el editor de canvas no llega a mostrar más de un lienzo por proyecto, la
+alternativa es un **proyecto por caso de uso** creado con la skill `design`;
+en ese caso el `projectId` deja de ser único y manda el registro de canvas
+de más abajo. Comprueba con `list_files` antes de asumir nada.
+
+## Cómo publicar un canvas
+
+1. **Redactar los artboards**: skill `design` (ficheros `.dc.html`, un artboard
+   por pantalla-estado del flujo). La skill `design` sirve para **crear o
+   re-sembrar** un lienzo; un lienzo ya publicado se edita en su Artifact.
+2. **Transportar ficheros al proyecto**: herramienta `DesignSync` con el
+   `projectId` de arriba. Orden obligatorio: `list_files` / `get_file` →
+   `finalize_plan` (declarando writes y deletes) → `write_files`.
+3. **Anotarlo en el registro de canvas** de más abajo.
+4. **Enseñar la URL al usuario** con la lista de artboards, y esperar su
+   veredicto. La validación es siempre humana.
+
+Si falta la autorización de design (la llamada de lectura falla por scopes),
+dilo y cae a la rama local de `UI.md` en lugar de bloquear el prototipo.
+
+## Variantes
+
+Se mantiene la regla de la skill: **varias variantes radicalmente distintas**
+(3 por defecto, tope 5) para la pantalla que sea el nudo del caso de uso —
+distinta jerarquía de información y distinta acción principal, no distinto
+color. Las variantes son artboards paralelos del mismo canvas, etiquetados
+`A` / `B` / `C`. Las pantallas satélite del flujo se dibujan una sola vez,
+siguiendo la variante que se esté evaluando.
+
+## Sistema de diseño
+
+- La referencia normativa es **`docs/design/design-system.md`**: temas, roles de
+  color, tokens `--rf-*`, componentes. Léela antes de dibujar nada y **no fijes
+  colores a mano**.
+- El proyecto lleva ya adjunto el sistema de diseño compilado en
+  `_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/` (tokens,
+  `styles.css`, fuentes). Los artboards consumen esos tokens.
+- El proyecto es de tipo `PROJECT_TYPE_PROJECT`, **no**
+  `PROJECT_TYPE_DESIGN_SYSTEM`, y el tipo es inmutable. Por tanto el flujo
+  completo de `/design-sync` (subir una librería de componentes local como
+  design system) **no aplica** aquí: `DesignSync` se usa solo como transporte de
+  ficheros del lienzo.
+
+## Al validar: la ficha de pantalla
+
+Cuando el usuario da por buena una variante, el prototipo ha cumplido. Lo que
+baja a `main` es Markdown, no HTML:
+
+- Escribe o actualiza **`docs/design/<pantalla>.md`** por cada pantalla del
+  flujo, con esta estructura:
+
+  ```markdown
+  # <Nombre de la pantalla>
+
+  Una frase: qué resuelve y en qué punto del flujo aparece.
+
+  ## Casos de uso que la usan
+  - <caso de uso> — <en qué paso>
+
+  ## Estructura
+  Regiones y jerarquía. Acción principal, acciones secundarias.
+
+  ## Estados
+  Un apartado por estado (vacío, cargando, error, …): qué cambia y qué ve el usuario.
+
+  ## Componentes y tokens
+  Clases y tokens `--rf-*` del sistema de diseño que emplea. Nada de colores literales.
+
+  ## Decisiones
+  Qué se descartó y por qué. Enlace al canvas que lo validó.
+  ```
+
+- Marca el canvas como `validado` en el registro, con la fecha. El canvas se
+  queda como fuente primaria de la decisión; no se borra ni se promociona a
+  código tal cual. Su URL vive a partir de ahí en la sección "Decisiones" de la
+  ficha, que es donde se lee de verdad.
+- Comenta en el ticket de wayfinder o en el issue de implementación la
+  **respuesta** (qué variante gana y por qué) más los enlaces al canvas y a las
+  fichas, antes de cerrarlo.
+- Si la decisión introduce vocabulario o una regla visual nueva y transversal,
+  actualiza `docs/design/design-system.md`; si es una decisión de arquitectura,
+  va a `docs/adr/`.
+
+## Registro de canvas
+
+Estado de los prototipos en vuelo. Es estado de proceso, no documentación de
+producto: cuando un caso de uso se valida y sus fichas están escritas, su fila
+puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
+
+| Caso de uso | Canvas | Estado | Fichas |
+| ----------- | ------ | ------ | ------ |
+| _(ninguno todavía)_ | | | |
+
+Estados: `en revisión` (esperando veredicto del usuario) / `validado (YYYY-MM-DD)`.
