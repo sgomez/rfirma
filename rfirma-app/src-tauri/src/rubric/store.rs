@@ -111,7 +111,7 @@ impl RubricStore {
             Ok(bytes) => Ok(Some(bytes)),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(error) => Err(RubricError::new(
-                Situation::SourceUnreadable,
+                Situation::StoreUnreadable,
                 format!("{}: {error}", self.path.display()),
             )),
         }
@@ -251,26 +251,6 @@ mod tests {
     }
 
     #[test]
-    fn a_store_that_cannot_be_written_leaves_no_temporary_behind() {
-        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-        // Un directorio donde deberia ir el fichero: `rename` no puede con el.
-        let taken = directory.path().join("rubric.jpg");
-        fs::create_dir(&taken).expect("deberia crearse el directorio");
-        let store = RubricStore::at(&taken);
-        let source = directory.path().join("rubrica.png");
-        a_png(&source);
-
-        store
-            .adopt(&source)
-            .expect_err("deberia fallar al escribir");
-
-        assert!(
-            !directory.path().join("rubric.jpg.tmp").exists(),
-            "el temporal deberia barrerse cuando el rename falla"
-        );
-    }
-
-    #[test]
     fn a_store_that_cannot_be_read_is_not_the_same_as_having_no_rubric() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
         // Un directorio en el sitio del fichero: existe, pero `read` no puede.
@@ -281,12 +261,12 @@ mod tests {
             .stored()
             .expect_err("un almacen ilegible deberia fallar, no salir como None");
 
-        assert_eq!(error.situation(), Situation::SourceUnreadable);
+        assert_eq!(error.situation(), Situation::StoreUnreadable);
         assert!(error.detail().contains("rubric.jpg"));
     }
 
     #[test]
-    fn a_store_that_cannot_be_written_says_so_instead_of_disappearing() {
+    fn a_store_that_cannot_be_written_says_so_and_leaves_no_temporary_behind() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
         // Un directorio donde debería ir el fichero: `rename` no puede con él.
         let taken = directory.path().join("rubric.jpg");
@@ -301,5 +281,9 @@ mod tests {
 
         assert_eq!(error.situation(), Situation::StoreUnwritable);
         assert!(error.detail().contains("rubric.jpg"));
+        assert!(
+            !directory.path().join("rubric.jpg.tmp").exists(),
+            "el temporal deberia barrerse cuando el rename falla"
+        );
     }
 }

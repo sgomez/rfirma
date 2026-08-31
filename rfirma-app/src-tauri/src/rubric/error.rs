@@ -4,12 +4,18 @@
 //! El ADR-0012 cuenta **tres** fallos de la imagen —no es PNG ni JPEG, está
 //! dañada, es demasiado grande— y ninguno más: el reescalado es silencioso
 //! porque es la operación que el usuario habría pedido de todos modos. A esos
-//! tres se suman [`Situation::SourceUnreadable`] y
+//! tres se suman [`Situation::SourceUnreadable`],
 //! [`Situation::StoreUnwritable`], que no hablan de la imagen sino del disco: el
-//! ADR no los enumera porque no son fallos *de la rúbrica*, pero leer el
-//! fichero elegido y escribir la copia pueden fallar, y desaparecer no es una
-//! opción. Decir «no es PNG ni JPEG» de un fichero que no se ha podido ni leer
-//! sería mentirle al usuario.
+//! [`Situation::StoreUnwritable`] y [`Situation::StoreUnreadable`], que no
+//! hablan de la imagen sino del disco: el ADR no los enumera porque no son
+//! fallos *de la rúbrica*, pero leer el fichero elegido y leer o escribir la
+//! copia pueden fallar, y desaparecer no es una opción. Decir «no es PNG ni
+//! JPEG» de un fichero que no se ha podido ni leer sería mentirle al usuario.
+//!
+//! El origen y el almacén tienen situación propia cada uno **a propósito**: el
+//! catálogo no dice lo mismo con «no hemos podido leer el fichero que
+//! elegiste» que con «no hemos podido leer tu rúbrica guardada», y el usuario
+//! no hace lo mismo en un caso que en el otro.
 
 use std::fmt;
 
@@ -26,6 +32,10 @@ pub enum Situation {
     SourceUnreadable,
     /// La rúbrica ya normalizada no se ha podido escribir en el almacén.
     StoreUnwritable,
+    /// El almacén existe pero la rúbrica guardada no se ha podido leer. No es
+    /// [`Situation::SourceUnreadable`]: ahí el fichero lo acaba de elegir el
+    /// usuario, aquí es una copia nuestra que se ha vuelto ilegible.
+    StoreUnreadable,
 }
 
 /// Un fallo al preparar la rúbrica: la situación traducible y el detalle crudo.

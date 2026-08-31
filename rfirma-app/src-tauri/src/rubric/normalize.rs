@@ -20,10 +20,25 @@ pub const JPEG_QUALITY: u8 = 90;
 /// reescalado **es silencioso**: es la operación que el usuario habría pedido.
 pub const MAX_SIDE_PX: u32 = 1000;
 
-/// Tope del fichero de entrada, 10 MB (ADR-0012). Se comprueba antes de
-/// decodificar: el tope está para no darle a un decodificador un fichero
-/// arbitrariamente grande, así que comprobarlo después no serviría de nada.
+/// Tope del fichero de entrada, 10 MB (ADR-0012). Se comprueba **dos** veces y
+/// siempre antes de decodificar: [`super::store::RubricStore::adopt`] lo
+/// comprueba mientras lee, que es donde de verdad protege —nunca mete en
+/// memoria más de este tope— y [`normalize`] lo vuelve a comprobar sobre los
+/// bytes, que es su contrato para quien la llame sin pasar por el almacén.
+///
+/// Un fichero pequeño puede seguir siendo una imagen enorme, así que este tope
+/// no basta por sí solo: ver [`MAX_DECODED_BYTES`].
 pub const MAX_INPUT_BYTES: usize = 10 * 1024 * 1024;
+
+/// Tope de la imagen **ya descomprimida**, 512 MB: el mismo `max_alloc` que
+/// trae `Limits::default()` del crate `image`.
+///
+/// [`MAX_INPUT_BYTES`] no cubre esto. Un PNG uniforme comprime ~1000:1, así
+/// que un fichero holgadamente dentro del tope de entrada puede declarar unas
+/// dimensiones que reserven gigabytes, y un `Vec` que no se puede reservar
+/// aborta el proceso en vez de devolver un error. Es la bomba de
+/// descompresión de siempre, y aquí se corta antes de reservar nada.
+pub const MAX_DECODED_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Un formato de entrada admitido.
 ///
@@ -184,6 +199,9 @@ pub fn normalize(bytes: &[u8]) -> Result<NormalizedRubric, RubricError> {
 /// el JPEG ya normalizado, y el JPEG de salida no lleva EXIF, un giro que no se
 /// aplicase aquí quedaría **congelado**: girada en la miniatura y girada en el
 /// PDF firmado, sin nada que dijera cómo enderezarla.
+///
+/// El tope de memoria hay que reponerlo a mano, y no es opcional: ver
+/// [`MAX_DECODED_BYTES`].
 fn decode_upright(
     bytes: &[u8],
     format: AcceptedFormat,
@@ -195,6 +213,26 @@ fn decode_upright(
         .into_decoder()
         .map_err(damaged)?;
     let orientation = decoder.orientation().map_err(damaged)?;
+
+    // `into_decoder` **no** hace el `limits.reserve(decoder.total_bytes())` que
+    // sí hace `ImageReader::decode()`, y ese `reserve` es el único sitio donde
+    // se comprueba el búfer *de salida* contra `max_alloc`. El `set_limits` que
+    // sí queda no lo suple: en PNG y en JPEG solo hace `check_support` y
+    // `check_dimensions`, y los topes de lado son `None`. Sin esta comprobación
+    // el tope de 10 MB de la entrada no protege de nada, porque un PNG uniforme
+    // comprime ~1000:1: 3,3 MB en disco declaran 3,3 GB de búfer, y un `Vec`
+    // que no se puede reservar **aborta el proceso**, que es justo el modo de
+    // fallo que el ADR-0012 existe para convertir en error recuperable.
+    let decoded_bytes = decoder.total_bytes();
+    let mut limits = image::Limits::default();
+    limits.max_alloc = Some(MAX_DECODED_BYTES);
+    limits.reserve(decoded_bytes).map_err(|_| {
+        RubricError::new(
+            Situation::ImageTooLarge,
+            format!("{decoded_bytes} bytes ya descomprimida, el tope son {MAX_DECODED_BYTES}"),
+        )
+    })?;
+
     let mut image = image::DynamicImage::from_decoder(decoder).map_err(damaged)?;
     image.apply_orientation(orientation);
     Ok(image)
@@ -457,6 +495,73 @@ mod tests {
         // La orientacion 6 intercambia los lados: si no se aplicase, saldria
         // 40x10 y la firma quedaria tumbada, congelada asi en el almacen.
         assert_eq!((decoded.width(), decoded.height()), (10, 40));
+    }
+
+    /// Un PNG **diminuto** que declara unas dimensiones enormes: la bomba de
+    /// descompresión de siempre.
+    ///
+    /// Basta con la cabecera, porque el decodificador saca `total_bytes()` del
+    /// IHDR y no de los datos: son 30000x30000 en RGBA, o sea 3,35 GB de búfer
+    /// declarados por unas decenas de bytes de fichero, holgadamente dentro del
+    /// tope de entrada de 10 MB.
+    fn png_declaring(width: u32, height: u32) -> Vec<u8> {
+        fn crc32(bytes: &[u8]) -> u32 {
+            let mut crc = 0xFFFF_FFFF_u32;
+            for byte in bytes {
+                crc ^= u32::from(*byte);
+                for _ in 0..8 {
+                    let carry = crc & 1;
+                    crc >>= 1;
+                    if carry != 0 {
+                        crc ^= 0xEDB8_8320;
+                    }
+                }
+            }
+            !crc
+        }
+        fn chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
+            let mut typed = kind.to_vec();
+            typed.extend_from_slice(data);
+            let mut out = (u32::try_from(data.len()).expect("cabe"))
+                .to_be_bytes()
+                .to_vec();
+            out.extend_from_slice(&typed);
+            out.extend_from_slice(&crc32(&typed).to_be_bytes());
+            out
+        }
+
+        let mut header = width.to_be_bytes().to_vec();
+        header.extend_from_slice(&height.to_be_bytes());
+        header.extend_from_slice(&[8, 6, 0, 0, 0]); // 8 bits, RGBA, sin entrelazar
+
+        // Un IDAT con un zlib de un solo byte, en bloque almacenado: el
+        // decodificador se monta leyendo hasta el primer IDAT, y con eso ya
+        // sabe declarar `total_bytes()`. Los datos de la imagen no llegan a
+        // leerse nunca, que es justo lo que la prueba comprueba.
+        let idat = [
+            0x78, 0x01, 0x01, 0x01, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x01,
+        ];
+
+        let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+        png.extend_from_slice(&chunk(b"IHDR", &header));
+        png.extend_from_slice(&chunk(b"IDAT", &idat));
+        png.extend_from_slice(&chunk(b"IEND", &[]));
+        png
+    }
+
+    #[test]
+    fn a_small_file_that_decompresses_to_gigabytes_is_rejected_before_reserving_them() {
+        let bomb = png_declaring(30_000, 30_000);
+        assert!(
+            bomb.len() < MAX_INPUT_BYTES,
+            "la bomba de la prueba deberia pasar el tope de entrada"
+        );
+
+        let error = normalize(&bomb).expect_err("una bomba de descompresion deberia rechazarse");
+
+        // Recuperable, no un aborto del proceso: es de lo que va el ADR-0012.
+        assert_eq!(error.situation(), Situation::ImageTooLarge);
+        assert!(error.detail().contains("descomprimida"));
     }
 
     #[test]
