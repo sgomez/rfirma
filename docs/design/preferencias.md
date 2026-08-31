@@ -23,7 +23,9 @@ aplican al hacerlos: no hay «Guardar» ni «Cancelar».
 2. **Dónde se guarda el documento firmado** (desplegable). Por omisión, junto
    al documento original; la alternativa es una carpeta fija.
 3. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
-   inglés.
+   inglés: la misma lista que el cliente oficial. El cambio se aplica en
+   caliente, como el resto del diálogo. Un idioma solo aparece aquí si tiene
+   **todas** las cadenas traducidas.
 
 Los valores posibles viven **dentro** de los desplegables. Nada de textos
 debajo enumerando lo que el propio control ya muestra al abrirse.
@@ -38,14 +40,13 @@ Uno. Los ajustes tienen siempre valor.
 `.rf-hint`, `.rf-divider`, `.rf-btn--primary`. El interruptor se maqueta con
 tokens; no está en el sistema de diseño.
 
-## Lo que esta pantalla deja abierto
-
-El idioma compromete un **alcance de traducción** que no está decidido: de
-dónde salen las cadenas, si se traducen también los mensajes de error de
-PKCS#11 y qué pasa con las lenguas cooficiales en el texto que se estampa
-dentro del recuadro de firma. Pendiente en el mapa.
-
 ## Decisiones
+
+El **alcance de la traducción** está fijado en
+[#16](https://github.com/sgomez/rfirma/issues/16): las seis lenguas, cadenas
+propias escritas desde cero con el vocabulario de `CONTEXT.md`, mensajes de
+error que traducen situaciones nuestras y no el texto de PKCS#11 ni el del
+puente Java, y texto de la firma visible que sigue al idioma de la aplicación.
 
 Preferencias existe desde el primer día en lugar de esperar a tener «algo que
 configurar»: el propio recorrido ya generó dos ajustes reales, y un menú que
