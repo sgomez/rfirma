@@ -136,10 +136,10 @@ lint-java: bootstrap
 lint-ts: deps
     cd {{ app }} && pnpm exec biome ci .
 
-# clippy y rustfmt sobre rfirma-app/src-tauri.
-#
 # Depende de build-ts porque tauri-build lee frontendDist (../dist) ya en
 # build.rs: sin el, clippy se cae antes de mirar una sola linea de Rust.
+#
+# clippy y rustfmt sobre rfirma-app/src-tauri.
 lint-rust: build-ts
     cd {{ tauri }} && cargo fmt --all -- --check
     cd {{ tauri }} && cargo clippy --all-targets --all-features -- -D warnings
@@ -227,9 +227,14 @@ test-rust: build-ts
     # rapido las compila aunque no las ejecute (TD-02).
     cd {{ tauri }} && cargo test --all-features --no-run
 
+# RFIRMA_LIB_DIR por lo mismo que en `dev`: el binario de una prueba vive en
+# src-tauri/target/debug/deps/, asi que la ruta relativa al ejecutable que usa
+# el cargador (../lib/rfirma) resolveria a src-tauri/target/debug/lib/rfirma y
+# no a donde `native` acaba de instalar la libreria.
+#
 # Las de grada C, que el carril lento ejecuta con --include-ignored.
 test-nativo: comprueba-nativa build-ts
-    cd {{ tauri }} && cargo test --all-features -- --include-ignored
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ lib_nativa }}")" cargo test --all-features -- --include-ignored
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
@@ -256,7 +261,7 @@ crap: cobertura
 # La misma medicion SIN la exclusion, con la cobertura de la grada C incluida.
 # Aqui el modulo FFI da la cara. Carril lento.
 crap-completo: comprueba-nativa build-ts
-    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path lcov.info \
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ lib_nativa }}")" cargo llvm-cov --all-features --lcov --output-path lcov.info \
         -- --include-ignored
     cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above
 
@@ -266,6 +271,14 @@ crap-completo: comprueba-nativa build-ts
 
 # Tarda minutos y consume mucha memoria; por eso el workflow no la construye
 # en cada PR (ver .github/workflows/ci.yml).
+#
+# Las dos banderas de mas son las que validó el repositorio (`ce25-noui`, el
+# script testbench/build-native-fonts.sh): sin
+# -H:IncludeResources=com/lowagie/text/pdf/fonts/.* los .afm de iText no entran
+# en la imagen y los dos casos con rubrica revientan con «ExceptionConverter:
+# Courier not found as resource» (docs/research/exclusion-afirma-ui-utils.md,
+# repetido en CE 25 en docs/research/native-image-postfirma-ce25.md). La orden
+# canonica esta en docs/research/graalvm-libawt-shared.md.
 #
 # Produce la ruta CANONICA del ADR-0013, y solo librfirma_crypto.so: el
 # directorio de construccion sigue teniendo los auxiliares de AWT que
@@ -281,11 +294,18 @@ native: build-java
     destino="$(dirname "{{ lib_nativa }}")"
     mkdir -p "$obra" && cd "$obra"
     "$graal/bin/native-image" --shared -H:Name=librfirma_crypto --no-fallback \
+        -Djava.awt.headless=true "-H:IncludeResources=com/lowagie/text/pdf/fonts/.*" \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
     mkdir -p "$destino"
     install -m644 "$obra/librfirma_crypto.so" "$destino/librfirma_crypto.so"
     ls -la "$destino"
 
+# OJO: hoy esta receta NO termina en un arbol limpio. `native` instala en
+# rfirma-native-bridge/target/lib/rfirma/, pero me.sgomez.rfirma.yml sigue
+# leyendo ../../rfirma-native-bridge/target/ce25-noui (y ../../target/fixtures),
+# que produce a mano el testbench. El manifiesto queda fuera del #47 a
+# proposito: lo reapunta a la ruta canonica el sub-issue que aporte la FFI real.
+#
 # Construye el flatpak, el unico canal soportado (ADR-0015).
 flatpak: native
     cd {{ justfile_directory() }}/packaging/flatpak && \

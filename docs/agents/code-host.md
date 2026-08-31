@@ -94,17 +94,20 @@ to be fast.
 The fast lane was **~48 s** when it was Java alone (measured under #11). #47
 added the Node and Rust toolchains, their system dependencies
 (`libwebkit2gtk-4.1-dev` and friends), and two `cargo binstall`ed binaries, and
-measured **~9 min cold, ~3 min warm**. Pretending it is still 48 s would be a
-lie, so: it is not. **~3 min is the number to hold**, because that is what a
-second PR on the same branch actually costs.
+measured **~9 min cold, 3-4 min warm** (2 m 59 s on one warm run, 4 m 11 s on
+another). Pretending it is still 48 s would be a lie, so: it is not. **3-4 min
+is the number to hold**, because that is what a second PR on the same branch
+actually costs.
 
 Almost all of it is Rust, and almost all of *that* is compiling the Tauri
-dependency tree **twice** — once for `cargo build --release`, once
-instrumented for `cargo llvm-cov`. The six-minute gap between cold and warm is
-what the caching buys: `~/.m2`, the pnpm store, `Swatinem/rust-cache`, and
-prebuilt binaries instead of `cargo install`. **If it creeps past what an agent
+dependency tree **four times** — `cargo clippy --all-targets`, `cargo build
+--release`, `cargo test`, and the `cargo llvm-cov` instrumented build each get
+their own metadata hash, so none of them reuses another's artifacts. The
+five-to-six-minute gap between cold and warm is what the caching buys: `~/.m2`,
+the pnpm store, `Swatinem/rust-cache`, and prebuilt binaries instead of
+`cargo install`. **If it creeps past what an agent
 will wait for, the thing to cut is the coverage build, not the caching** — the
-CRAP gate is the one piece of `just check` that pays for a whole second
+CRAP gate is the one piece of `just check` that pays for a whole extra
 compile.
 
 `native-image` fits comfortably on a standard runner — that question is

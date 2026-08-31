@@ -23,9 +23,10 @@ path = "src/lib.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Sin serde ni serde_json todavia: hoy no hay ningun #[tauri::command] que
+# serialice nada, y una dependencia que nadie importa es ruido. Las anade el
+# sub-issue que escriba el primer comando.
 tauri = { version = "2", features = [] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 
 [dev-dependencies]
 sha2 = "0.10"
