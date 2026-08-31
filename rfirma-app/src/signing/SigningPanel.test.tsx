@@ -169,6 +169,41 @@ describe("SigningPanel", () => {
     expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
   });
 
+  it("shows a token failure as a translated situation with the raw CKR apart", () => {
+    renderPanel({
+      failure: { situation: "tokenAbsent", detail: "CKR_DEVICE_REMOVED (C_Sign)" },
+    });
+
+    expect(screen.getByText("No encontramos la tarjeta")).toBeInTheDocument();
+    // El código original, ni traducido ni recortado: está para pegarlo.
+    expect(screen.getByText("CKR_DEVICE_REMOVED (C_Sign)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Volver a intentarlo" })).toBeInTheDocument();
+  });
+
+  it("warns about an expired certificate and refuses to sign with it", () => {
+    renderPanel({
+      certificate: {
+        kind: "chosen",
+        certificate: { ...certificate, status: { kind: "expired", notAfter: 1_767_225_600 } },
+      },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/El certificado caducó el/);
+    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+  });
+
+  it("warns about a revoked certificate and refuses to sign with it", () => {
+    renderPanel({
+      certificate: {
+        kind: "chosen",
+        certificate: { ...certificate, status: { kind: "revoked", reason: "keyCompromise" } },
+      },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/revocado/);
+    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+  });
+
   it("waits for the certificates without pretending there are none", () => {
     renderPanel({ certificate: { kind: "loading" } });
 

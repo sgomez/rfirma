@@ -204,7 +204,9 @@ export function App({
                 writable: true,
               }}
               onChangeDestination={() => setDialog("preferences")}
-              onSign={() => void signing.start()}
+              onSign={() =>
+                void signing.start(certificate.kind === "chosen" ? certificate.certificate : null)
+              }
               signing={signing.state.kind === "running" || signing.state.kind === "pin"}
               failure={
                 signing.state.kind === "failed"

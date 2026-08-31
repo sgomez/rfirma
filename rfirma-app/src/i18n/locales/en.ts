@@ -80,6 +80,22 @@ export const en: Catalog = {
         title: "The certificate is no longer on the card",
         body: "Look for the certificates again and choose one of those that turn up.",
       },
+      certificateExpired: {
+        title: "The certificate has expired",
+        body: "An expired certificate cannot sign. Renew it with its issuer and try again.",
+      },
+      certificateNotYetValid: {
+        title: "The certificate is not valid yet",
+        body: "Its validity period has not started, so it cannot sign.",
+      },
+      certificateRevoked: {
+        title: "The certificate is revoked",
+        body: "Its issuer revoked it, so it cannot sign. You need a new one.",
+      },
+      certificateUnreadable: {
+        title: "The certificate could not be read",
+        body: "What is on the card is not a certificate we can read. Try another one.",
+      },
     },
   },
   window: {

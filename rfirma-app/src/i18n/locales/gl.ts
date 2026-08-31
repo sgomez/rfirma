@@ -86,6 +86,22 @@ export const gl: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      certificateExpired: {
+        title: "",
+        body: "",
+      },
+      certificateNotYetValid: {
+        title: "",
+        body: "",
+      },
+      certificateRevoked: {
+        title: "",
+        body: "",
+      },
+      certificateUnreadable: {
+        title: "",
+        body: "",
+      },
     },
   },
   window: {

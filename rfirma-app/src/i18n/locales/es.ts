@@ -98,6 +98,22 @@ export const es = {
         title: "El certificado ya no está en la tarjeta",
         body: "Vuelve a buscar los certificados y elige uno de los que haya.",
       },
+      certificateExpired: {
+        title: "El certificado ha caducado",
+        body: "Un certificado caducado no sirve para firmar. Renuévalo con su emisora y vuelve a intentarlo.",
+      },
+      certificateNotYetValid: {
+        title: "El certificado todavía no está en vigor",
+        body: "Aún no ha empezado su periodo de validez, así que no sirve para firmar.",
+      },
+      certificateRevoked: {
+        title: "El certificado está revocado",
+        body: "Su emisora lo ha revocado, así que no sirve para firmar. Necesitas uno nuevo.",
+      },
+      certificateUnreadable: {
+        title: "No hemos podido leer el certificado",
+        body: "Lo que hay en la tarjeta no es un certificado que sepamos leer. Prueba con otro.",
+      },
     },
   },
   /**

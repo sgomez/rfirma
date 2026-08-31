@@ -1,9 +1,10 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ErrorNotice, type ErrorSituation } from "../errors/ErrorNotice";
+import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
+import type { SigningFailure } from "./failure";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
 import type { Layer2Composer, VisibleSignature } from "./visibleSignature";
@@ -38,13 +39,6 @@ export interface Destination {
   folder: string;
   /** Si se puede escribir ahí. Falso no apaga el botón: ofrece cambiarla. */
   writable: boolean;
-}
-
-/** Un fallo de la firma, ya clasificado por el backend (ID-29). */
-export interface SigningFailure {
-  situation: ErrorSituation;
-  /** El texto original crudo: `CKR_DEVICE_REMOVED (C_Sign)`. */
-  detail: string;
 }
 
 interface SigningPanelProps {

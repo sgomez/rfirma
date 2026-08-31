@@ -1,10 +1,19 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { Certificate } from "./certificate";
 import type { SignedDocument, SigningBackend, StageResult } from "./flow";
 import type { TokenFailure } from "./token";
 import { useSigning } from "./useSigning";
 
 const signed: SignedDocument = { name: "contrato_firmado.pdf", folder: "Documentos" };
+
+const certificate: Certificate = {
+  label: "Firma",
+  holderName: "Ada Lovelace Byron",
+  idNumber: "99999999R",
+  issuer: "AC FNMT Usuarios",
+  status: { kind: "valid" },
+};
 
 const wrongPin: TokenFailure = {
   situation: "incorrectPin",
@@ -37,7 +46,7 @@ describe("useSigning", () => {
     const presign = vi.fn(async () => ok(undefined));
     const { result } = renderHook(() => useSigning(backendOf({ presign })));
 
-    const started = act(() => result.current.start());
+    const started = act(() => result.current.start(certificate));
     expect(presign).toHaveBeenCalled();
     await started;
 
@@ -65,7 +74,7 @@ describe("useSigning", () => {
       ),
     );
 
-    await act(() => result.current.start());
+    await act(() => result.current.start(certificate));
     await act(() => result.current.submitPin("1234"));
 
     expect(calls).toEqual(["presign", "sign", "postsign"]);
@@ -80,7 +89,7 @@ describe("useSigning", () => {
       .mockResolvedValueOnce(ok(undefined));
     const { result } = renderHook(() => useSigning(backendOf({ presign, sign })));
 
-    await act(() => result.current.start());
+    await act(() => result.current.start(certificate));
     await act(() => result.current.submitPin("0000"));
 
     expect(result.current.state).toEqual({ kind: "pin", failure: wrongPin });
@@ -96,7 +105,7 @@ describe("useSigning", () => {
       useSigning(backendOf({ sign: async () => failed(cardGone) })),
     );
 
-    await act(() => result.current.start());
+    await act(() => result.current.start(certificate));
     await act(() => result.current.submitPin("1234"));
 
     expect(result.current.state).toEqual({ kind: "failed", failure: cardGone });
@@ -112,16 +121,52 @@ describe("useSigning", () => {
       useSigning(backendOf({ postsign: async () => failed(assembling) })),
     );
 
-    await act(() => result.current.start());
+    await act(() => result.current.start(certificate));
     await act(() => result.current.submitPin("1234"));
 
     expect(result.current.state).toEqual({ kind: "failed", failure: assembling });
   });
 
+  it("warns about an expired certificate before ever asking for the PIN", async () => {
+    const presign = vi.fn(async () => ok(undefined));
+    const { result } = renderHook(() => useSigning(backendOf({ presign })));
+
+    await act(() =>
+      result.current.start({
+        ...certificate,
+        status: { kind: "expired", notAfter: 1_767_225_600 },
+      }),
+    );
+
+    expect(presign).not.toHaveBeenCalled();
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: { situation: "certificateExpired", detail: "notAfter=1767225600" },
+    });
+  });
+
+  it("warns about a revoked certificate before ever asking for the PIN", async () => {
+    const presign = vi.fn(async () => ok(undefined));
+    const { result } = renderHook(() => useSigning(backendOf({ presign })));
+
+    await act(() =>
+      result.current.start({
+        ...certificate,
+        status: { kind: "revoked", reason: "keyCompromise" },
+      }),
+    );
+
+    expect(presign).not.toHaveBeenCalled();
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: { situation: "certificateRevoked", detail: "revocado: keyCompromise" },
+    });
+  });
+
   it("goes back to the panel when the PIN dialog is cancelled", async () => {
     const { result } = renderHook(() => useSigning(backendOf()));
 
-    await act(() => result.current.start());
+    await act(() => result.current.start(certificate));
     act(() => result.current.cancel());
 
     expect(result.current.state).toEqual({ kind: "idle" });
