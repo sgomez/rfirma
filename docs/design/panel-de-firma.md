@@ -56,15 +56,27 @@ Cuatro piezas en este orden:
 4. **Imagen de la rúbrica**: miniatura real de la imagen cargada y un botón
    para cambiarla.
 
+**El DNI se estampa enmascarado**, siempre y sin interruptor: `99999999R` sale
+como `***9999**`, con la misma máscara que AutoFirma aplica por omisión
+(`*`, mínimo tres dígitos seguidos, tres ocultos y cuatro visibles). No se
+promete más de lo que hace: el certificado entero viaja dentro de la firma con
+el DNI en claro, y cualquier lector de PDF lo enseña al inspeccionarla. La
+máscara protege de la lectura casual del recuadro, no del documento.
+
 **Firma visible y rúbrica no son lo mismo**, y la estructura lo dice sin
 explicarlo: la *firma visible* es el recuadro que se estampa en la página; la
 *rúbrica* es la firma manuscrita escaneada que va dentro de él, y es opcional.
 Ver [ADR-0006](../adr/0006-firma-visible-se-configura-sobre-el-documento.md) y
 el glosario de [CONTEXT.md](../../CONTEXT.md).
 
-**No hay comodines.** El usuario nunca escribe `$$SUBJECTCN$$` ni
-`$$SIGNDATE$$`: marca qué dato aparece. Los comodines siguen existiendo por
-debajo, como detalle de los `extraParams` de PAdES.
+**No hay comodines**, ni arriba ni abajo. El usuario nunca escribe
+`$$SUBJECTCN$$` ni `$$SIGNDATE$$`: marca qué dato aparece. Y tampoco los hay por
+debajo: rFirma compone el texto del recuadro y lo envía ya resuelto en
+`layer2Text`. Lo fuerza esta lista de casillas — AutoFirma **no tiene comodín
+para el DNI**, que vive en el RDN `serialNumber` y solo asoma dentro de
+`$$SUBJECTCN$$` y `$$SUBJECTDN$$`, con el nombre pegado. Separar «Nombre y
+apellidos» de «DNI» no se puede expresar con sus comodines. Ver
+[#31](https://github.com/sgomez/rfirma/issues/31).
 
 **Sin imagen cargada, la casilla «Tu rúbrica» está apagada** con la pista
 «Elige antes una imagen»: no se puede marcar una rúbrica que no existe.

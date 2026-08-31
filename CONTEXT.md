@@ -30,6 +30,21 @@ Tercera etapa: ensamblado del documento firmado final incorporando el resultado
 de la firma en el formato de firma correspondiente.
 _Avoid_: post-proceso, postsign, ensamblado
 
+**Configuración de firma**:
+Conjunto de parámetros con que rFirma pide la firma de un PDF: el subfiltro, el
+recuadro y su contenido, y el motivo si lo hay. Es lo que distingue una firma de
+otra a igualdad de documento y certificado. No incluye el certificado ni el
+documento, que son entradas por su cuenta.
+_Avoid_: extraParams, opciones de firma, perfil de firma
+
+**Sello de sesión**:
+Bloque que la prefirma devuelve y que la postfirma exige recibir idéntico:
+lleva la configuración de firma tal y como quedó tras la prefirma, el instante
+de la firma, la zona horaria y el algoritmo. rFirma lo transporta sin leerlo.
+Existe porque la postfirma regenera el documento entero y cualquier diferencia
+invalida la firma sin dar error.
+_Avoid_: contexto de firma, sesión trifásica, sello de tiempo (es otra cosa)
+
 **Formato de firma**:
 Estándar que define cómo se estructura y se incrusta una firma en un documento:
 CAdES, PAdES, XAdES y FacturaE.
