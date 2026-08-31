@@ -30,4 +30,3 @@ ds-bundle/
 # flatpak (packaging/flatpak)
 .flatpak-builder/
 packaging/flatpak/build-dir/
-packaging/flatpak/probe/target/

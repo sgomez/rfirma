@@ -1,9 +1,11 @@
-# Manifiesto de medicion del issue #22.
+# Manifiesto del flatpak de rfirma, el UNICO canal de distribucion (ADR-0015).
 #
-# Empaqueta la SONDA (packaging/flatpak/probe), no rfirma: la aplicacion no
-# existe todavia. Lo que se mide aqui —runtime, permisos, la libreria nativa en
-# /app/lib/rfirma, PKCS#11, portales y WebKitGTK— es lo que heredara el
-# manifiesto real cambiando el modulo `sonda` por `rfirma-app`.
+# Empaqueta rfirma-app. Hasta el #56 empaquetaba la sonda del #22
+# (packaging/flatpak/probe), que se borro al existir la frontera FFI real: dos
+# implementaciones de la misma frontera es justo donde este proyecto lleva tres
+# hallazgos de fallo silencioso (ADR-0013). Todo lo demas —runtime, permisos, la
+# libreria nativa en /app/lib/rfirma, pcsc-lite y OpenSC— es lo que midio el #22
+# y se queda tal cual.
 app-id: me.sgomez.rfirma
 # Rama fija: la version de cada entrega va en <releases> del metainfo, no en
 # la rama. Asi el usuario que instala 'stable' sigue recibiendo las siguientes.
@@ -13,7 +15,7 @@ runtime-version: '50'
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-command: rfirma-probe
+command: rfirma
 
 finish-args:
   # Ventana: WebKitGTK bajo Wayland, con respaldo X11.
@@ -45,7 +47,7 @@ finish-args:
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
   env:
-    CARGO_HOME: /run/build/sonda/cargo
+    CARGO_HOME: /run/build/rfirma-app/cargo
 
 modules:
   # 1. La libreria nativa del ADR-0004, construida en el anfitrion con GraalVM
@@ -69,17 +71,7 @@ modules:
       - type: dir
         path: ../../rfirma-native-bridge/target/lib/rfirma
 
-  # 2. Material de prueba de la sonda (no iria en el paquete real).
-  - name: datos-de-prueba
-    buildsystem: simple
-    build-commands:
-      - install -Dm644 -t /app/share/rfirma-probe cert.b64 cert-fnmt.b64 test.pdf
-        visible-imagen.properties
-    sources:
-      - type: dir
-        path: ../../target/fixtures
-
-  # 3. Cliente PC/SC. El demonio pcscd corre en el ANFITRION; aqui solo va la
+  # 2. Cliente PC/SC. El demonio pcscd corre en el ANFITRION; aqui solo va la
   #    libreria cliente, que habla con el por el socket que expone
   #    --socket=pcsc. Medido en #22: el runtime no la trae.
   - name: pcsc-lite
@@ -103,7 +95,7 @@ modules:
       - /lib/pkgconfig
       - /share/man
 
-  # 4. El modulo PKCS#11 lo APORTA el flatpak, no el anfitrion. Medido en #22:
+  # 3. El modulo PKCS#11 lo APORTA el flatpak, no el anfitrion. Medido en #22:
   #    el opensc-pkcs11.so del anfitrion no carga dentro del arenero porque sus
   #    libopensc.so.13 y libeac.so.3 no estan, y apuntar LD_LIBRARY_PATH al
   #    anfitrion mezcla librerias de otra glibc dentro del runtime.
@@ -153,26 +145,42 @@ modules:
       - /bin/sc-hsm-tool
       - /bin/westcos-tool
 
-  # 5. La sonda Tauri.
-  - name: sonda
+  # 4. La aplicacion. El binario se llama `rfirma` y coincide con `command:` de
+  #    arriba y con el [[bin]] de rfirma-app/src-tauri/Cargo.toml: si cambias
+  #    uno, cambia los tres.
+  #
+  #    El FRONTEND SE CONSTRUYE EN EL ANFITRION y entra ya construido en
+  #    rfirma-app/dist, igual que la libreria nativa: tauri-build lee
+  #    `frontendDist` dentro de su propio build.rs, asi que sin dist no compila
+  #    ni una linea de Rust. Ejecuta `just build-ts` antes de `just flatpak`.
+  #
+  #    PENDIENTE (ADR-0013): construir SIN red. Son las dos vendorizaciones que
+  #    produce `just flatpak-sources` —cargo-sources.json y node-sources.json—,
+  #    y hasta que existan este modulo declara --share=network como hacia la
+  #    sonda. Ver "Pendiente antes de publicar" en el README de este directorio.
+  - name: rfirma-app
     buildsystem: simple
     build-options:
       build-args:
-        # Aqui se usa para no tener que vendorizar las dependencias de cargo
-        # en una medicion. En la construccion real desaparece (ADR-0013).
         - --share=network
     build-commands:
-      - cargo build --release
-      - install -Dm755 target/release/rfirma-probe /app/bin/rfirma-probe
+      - cargo build --release --manifest-path src-tauri/Cargo.toml
+      - install -Dm755 src-tauri/target/release/rfirma /app/bin/rfirma
       - install -Dm644 me.sgomez.rfirma.desktop
         /app/share/applications/me.sgomez.rfirma.desktop
       - install -Dm644 me.sgomez.rfirma.metainfo.xml
         /app/share/metainfo/me.sgomez.rfirma.metainfo.xml
-      - install -Dm644 icons/icon.png
+      - install -Dm644 src-tauri/icons/icon.png
         /app/share/icons/hicolor/64x64/apps/me.sgomez.rfirma.png
     sources:
       - type: dir
-        path: probe
+        path: ../../rfirma-app
+        skip:
+          # Lo que no entra: las dependencias de node (las usa `vite build` en
+          # el anfitrion, no la construccion) y el target de cargo del
+          # anfitrion, que ademas trae objetos enlazados contra otra glibc.
+          - node_modules
+          - src-tauri/target
       - type: file
         path: me.sgomez.rfirma.desktop
       - type: file

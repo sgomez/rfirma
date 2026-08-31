@@ -373,13 +373,12 @@ native: build-java
     install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
     ls -la "$dest"
 
-# El manifiesto ya lee la ruta canonica que produce `native`. Lo que sigue sin
-# construirse solo es el modulo `datos-de-prueba`, que lee ../../target/fixtures
-# y lo produce a mano testbench/make-fixtures.sh: es material de la sonda, no del
-# paquete real, y se va con ella.
+# El manifiesto lee la ruta canonica que produce `native` y el frontend ya
+# construido de rfirma-app/dist, porque tauri-build lee `frontendDist` dentro de
+# su propio build.rs. Por eso esta receta encadena tambien `build-ts`.
 #
 # Construye el flatpak, el unico canal soportado (ADR-0015).
-flatpak: native
+flatpak: native build-ts
     cd {{ justfile_directory() }}/packaging/flatpak && \
         flatpak-builder --force-clean --user --install build-dir me.sgomez.rfirma.yml
 

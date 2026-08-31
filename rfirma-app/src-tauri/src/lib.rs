@@ -3,14 +3,16 @@
 //! De momento la ventana está vacía: lo único que hay debajo son
 //! [`pkcs11`], la capa que habla con el token, [`rubric`], la normalización y
 //! el almacén de la imagen de la firma, [`signing`], la configuración de firma
-//! y el sello de sesión, [`memory`], lo que se recuerda entre sesiones,
-//! [`destination`], por dónde entra el documento y dónde cae el firmado, y
-//! [`paths`], el único sitio que sabe qué sistema operativo hay debajo. Ni
-//! FFI, ni PDF, ni orquestación de las tres fases: los aportan los sub-issues
-//! siguientes de #46. Si te encuentras escribiendo Rust que sabe qué es un
-//! PDF, te has salido de estos módulos.
+//! y el sello de sesión, [`ffi`], la frontera con la librería nativa,
+//! [`memory`], lo que se recuerda entre sesiones, [`destination`], por dónde
+//! entra el documento y dónde cae el firmado, y [`paths`], el único sitio que
+//! sabe qué sistema operativo hay debajo. La orquestación de las tres fases
+//! —quién llama a la prefirma, quién firma con el token y quién postfirma—
+//! todavía no está: la aporta un sub-issue siguiente de #46. Si te encuentras
+//! escribiendo Rust que sabe qué es un PDF, te has salido de estos módulos.
 
 pub mod destination;
+pub mod ffi;
 pub mod memory;
 pub mod paths;
 pub mod pkcs11;

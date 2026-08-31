@@ -35,7 +35,7 @@ job programado que abre una issue si falla.
 
 ### Las pruebas de la grada C se compilan siempre y se ejecutan solo en el lento
 
-Se marcan con **`#[ignore]`**, en un fichero que lo dice por su nombre (`tests/ciclo_nativo.rs`),
+Se marcan con **`#[ignore]`**, en un fichero que lo dice por su nombre (`tests/native_cycle.rs`),
 y el carril lento las ejecuta con `--include-ignored`. Descartada una *feature* de cargo, que
 además las sacaría de la compilación.
 
@@ -58,7 +58,7 @@ escribirlo, un check en verde se lee como una promesa que el CI no puede demostr
 ## La prueba del ciclo completo tiene dueño
 
 Es el **único sub-issue vertical** de #10: el último de la cadena, bloqueado por todos los
-módulos, y su entregable es `tests/ciclo_nativo.rs` más el paso de `pdfsig`. Necesita el puente
+módulos, y su entregable es `tests/native_cycle.rs` más el paso de `pdfsig`. Necesita el puente
 Java, la FFI, PKCS#11, el PDF y `pdfsig` a la vez, así que no pertenece a ningún módulo del
 corte horizontal. Su cuerpo tiene que decir **por qué** es la excepción, o el siguiente agente
 que lea el spec creerá que el corte se rompió por descuido.

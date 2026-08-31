@@ -30,6 +30,11 @@ cryptoki = "0.12"
 # formatos volvería a congelarse en el comando de native-image. Solo PNG y
 # JPEG: cada decodificador de más es superficie sobre un fichero que elige el
 # usuario, y ni un TIFF ni un WebP aparecen en una firma escaneada.
+# Carga la libreria nativa con dlopen por una ruta relativa al ejecutable
+# (ID-10). No hay `#[link]` ni `build.rs` que enlace nada: la libreria no esta
+# presente al compilar, y encadenarla al build son 1 m 22 s de native-image en
+# cada `cargo build` (ADR-0013).
+libloading = "0.8"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 # La rúbrica viaja al puente en Base64 dentro de `signatureRubricImage`, así
 # que la normalización entrega ya esa cadena y nadie la vuelve a codificar mal.
