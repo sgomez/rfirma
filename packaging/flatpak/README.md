@@ -5,8 +5,8 @@
 
 | Fichero | Qué es |
 |---|---|
-| `io.github.sgomez.rfirma.yml` | El manifiesto |
-| `io.github.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
+| `me.sgomez.rfirma.yml` | El manifiesto |
+| `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
 | `verifica.sh` | Verificación reproducible de punta a punta |
 | `probe/` | **Sonda desechable**, no es rfirma (ver abajo) |
 

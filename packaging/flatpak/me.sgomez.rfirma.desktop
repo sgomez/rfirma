@@ -2,6 +2,6 @@
 Type=Application
 Name=sonda rfirma
 Exec=rfirma-probe
-Icon=io.github.sgomez.rfirma
+Icon=me.sgomez.rfirma
 Terminal=false
 Categories=Utility;

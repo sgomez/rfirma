@@ -16,7 +16,7 @@ set -uo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RAIZ="$(cd "$AQUI/../.." && pwd)"
-APP=io.github.sgomez.rfirma
+APP=me.sgomez.rfirma
 LAB=${LAB:-/tmp/rfirma-verifica}
 rm -rf "$LAB"; mkdir -p "$LAB"
 

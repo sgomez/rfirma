@@ -10,7 +10,7 @@ Entorno: Ubuntu 26.04 (glibc 2.43), flatpak 1.16.6, flatpak-builder 1.4.8, `org.
 580. Imagen nativa `ce25-awt` del #23 (GraalVM CE 25, 35.326.048 bytes). Token SoftHSM `rfirma-test`
 del [#5](https://github.com/sgomez/rfirma/issues/5).
 
-Lo construido vive en `packaging/flatpak/`: el manifiesto `io.github.sgomez.rfirma.yml`, una
+Lo construido vive en `packaging/flatpak/`: el manifiesto `me.sgomez.rfirma.yml`, una
 **sonda** Tauri desechable (`probe/`) que hace de aplicación mientras rfirma no existe, y
 `verifica.sh`, que reconstruye y vuelve a comprobar todo de una pasada.
 
@@ -129,7 +129,7 @@ portal Documents  : (b'/run/user/1000/doc',)
 ```
 
 Lo interesante es qué forma tiene lo que devuelven. Exportando un fichero como haría el diálogo de
-abrir (`flatpak document-export --app=io.github.sgomez.rfirma --allow-write …/docs/original.pdf`),
+abrir (`flatpak document-export --app=me.sgomez.rfirma --allow-write …/docs/original.pdf`),
 la aplicación lo ve así:
 
 ```
@@ -230,7 +230,7 @@ ser el del token**; obvio dicho así, silencioso al medirlo.
 
 | Decisión | Valor | Por qué |
 |---|---|---|
-| `app-id` | `io.github.sgomez.rfirma` | DNS inverso del repositorio; admisible en Flathub |
+| `app-id` | `me.sgomez.rfirma` | DNS inverso de `rfirma.sgomez.me`, dominio propio. Ver abajo |
 | Runtime | `org.gnome.Platform//50` | 49 y 50 miden igual; se elige la nueva |
 | Rama | `stable` | La versión va en `<releases>` del metainfo, no en la rama |
 | Ventana | `--socket=wayland --socket=fallback-x11 --share=ipc --device=dri` | |
@@ -246,6 +246,14 @@ OpenSC y pcsc-lite; el manifiesto descarta veinte de las veintidós herramientas
 de OpenSC y conserva `opensc-tool` y `pkcs11-tool` para diagnosticar), **47,5 MB** ya instalado, y
 **13.449.368 bytes** el bundle de un fichero. El bundle **no lleva el runtime**: quien lo instale se
 descarga `org.gnome.Platform//50` aparte, unos 830 MB la primera vez.
+
+El `app-id` sale del **dominio propio** y no de `io.github.sgomez`, que era la otra opción. El id es
+lo más caro de cambiar después —es la carpeta de datos `~/.var/app/<id>/`, el nombre D-Bus, los
+permisos de portales ya concedidos y la entrada de menú, y renombrar obliga a un
+`end-of-life-rebase` con usuarios de por medio— así que se ata a lo que menos probable es que
+cambie. Un id `io.github.*` ata la aplicación a la forja y miente el día que el repositorio se
+mueva. Flathub verifica las dos formas: la del dominio, con un TXT en DNS o un fichero en
+`.well-known`.
 
 Se elige **Flathub** y no un repositorio propio: el motivo del #17 para abandonar el `.deb` era que
 lo usara gente de otras distribuciones, y un repositorio propio devuelve la fricción que flatpak

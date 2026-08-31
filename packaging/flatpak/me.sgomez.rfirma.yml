@@ -4,7 +4,7 @@
 # existe todavia. Lo que se mide aqui —runtime, permisos, los seis .so en
 # /app/lib/rfirma, PKCS#11, portales y WebKitGTK— es lo que heredara el
 # manifiesto real cambiando el modulo `sonda` por `rfirma-app`.
-app-id: io.github.sgomez.rfirma
+app-id: me.sgomez.rfirma
 # Rama fija: la version de cada entrega va en <releases> del metainfo, no en
 # la rama. Asi el usuario que instala 'stable' sigue recibiendo las siguientes.
 branch: stable
@@ -146,16 +146,16 @@ modules:
     build-commands:
       - cargo build --release
       - install -Dm755 target/release/rfirma-probe /app/bin/rfirma-probe
-      - install -Dm644 io.github.sgomez.rfirma.desktop
-        /app/share/applications/io.github.sgomez.rfirma.desktop
-      - install -Dm644 io.github.sgomez.rfirma.metainfo.xml
-        /app/share/metainfo/io.github.sgomez.rfirma.metainfo.xml
+      - install -Dm644 me.sgomez.rfirma.desktop
+        /app/share/applications/me.sgomez.rfirma.desktop
+      - install -Dm644 me.sgomez.rfirma.metainfo.xml
+        /app/share/metainfo/me.sgomez.rfirma.metainfo.xml
       - install -Dm644 icons/icon.png
-        /app/share/icons/hicolor/64x64/apps/io.github.sgomez.rfirma.png
+        /app/share/icons/hicolor/64x64/apps/me.sgomez.rfirma.png
     sources:
       - type: dir
         path: probe
       - type: file
-        path: io.github.sgomez.rfirma.desktop
+        path: me.sgomez.rfirma.desktop
       - type: file
-        path: io.github.sgomez.rfirma.metainfo.xml
+        path: me.sgomez.rfirma.metainfo.xml

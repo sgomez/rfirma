@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.sgomez.rfirma</id>
+  <id>me.sgomez.rfirma</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>EUPL-1.2</project_license>
   <name>rfirma</name>
@@ -11,10 +11,10 @@
       certificado de una tarjeta o de un módulo PKCS#11.
     </p>
   </description>
-  <launchable type="desktop-id">io.github.sgomez.rfirma.desktop</launchable>
-  <url type="homepage">https://github.com/sgomez/rfirma</url>
+  <launchable type="desktop-id">me.sgomez.rfirma.desktop</launchable>
+  <url type="homepage">https://rfirma.sgomez.me</url>
   <url type="bugtracker">https://github.com/sgomez/rfirma/issues</url>
-  <developer id="io.github.sgomez">
+  <developer id="me.sgomez">
     <name>Sergio Gómez</name>
   </developer>
   <content_rating type="oars-1.1"/>
