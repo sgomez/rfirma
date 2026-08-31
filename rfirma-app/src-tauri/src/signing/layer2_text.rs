@@ -29,6 +29,9 @@ pub struct VisibleTextFields<'a> {
     /// Nombre y apellidos del titular.
     pub signer_name: Option<&'a str>,
     /// DNI o NIE **en claro**: la máscara la aplica el compositor, siempre.
+    /// Admite el valor tal cual venga del RDN `serialNumber` —con el prefijo
+    /// `IDCES-` de la FNMT y del DNIe, si lo trae—: la máscara segmenta como
+    /// AutoFirma y solo toca el trozo con los dígitos.
     pub id_number: Option<&'a str>,
     /// Fecha y hora de la firma, **ya formateadas** por quien llama. Tiene que
     /// ser el mismo instante que acabará dentro del sello de sesión: el
@@ -126,23 +129,73 @@ pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -
 /// tiene interruptor —se aplica siempre— y por eso tampoco se apoya en
 /// `obfuscateCertText`, que solo actúa al sustituir comodines y aquí no hay.
 ///
-/// Replica `PdfVisibleAreasUtils.obfuscateIds` con la máscara por omisión de
-/// `PdfTextMask`, incluidas sus dos rarezas: las letras del identificador
-/// siempre se ocultan, y un identificador con menos dígitos que posiciones
-/// visibles se enmascara desde atrás.
+/// Replica `PdfVisibleAreasUtils.obfuscateIds:660-691` con la máscara por
+/// omisión de `PdfTextMask`, **incluida la segmentación**: el texto se parte
+/// por los caracteres que no son alfanuméricos y la máscara cae solo sobre el
+/// segmento que contiene la racha de dígitos. Así `IDCES-99999999R` —la forma
+/// en la que el RDN `serialNumber` de la FNMT y del DNIe trae el número— sale
+/// como `IDCES-***9999**` y no como un borrón entero de asteriscos.
+///
+/// Con sus tres rarezas, que se replican y no se corrigen:
+///
+/// 1. Las letras del segmento se ocultan siempre (por eso `99999999R` acaba
+///    en `**`).
+/// 2. Un segmento con menos dígitos que posiciones visibles se enmascara
+///    **desde atrás**, que deja los dígitos intactos y oculta lo de delante.
+/// 3. El recuento de dígitos que decide entre las dos ramas es el de **toda
+///    la cadena**, no el del segmento (`PdfVisibleAreasUtils.java:707` le pasa
+///    a `countDigits` el array entero). Es incoherente con el resto del
+///    algoritmo, pero es lo que estampa AutoFirma en el PDF.
 pub fn mask_id_number(id: &str) -> String {
     let mut chars: Vec<char> = id.chars().collect();
-    if !has_digit_run(&chars) {
-        return id.to_owned();
+    // Rareza 3: el recuento es global aunque el enmascarado sea por segmento.
+    let digits = chars.iter().filter(|c| c.is_ascii_digit()).count();
+
+    // El bucle exterior de `obfuscateIds`. `digit_run` se reinicia con las
+    // letras y **no** con los separadores, igual que el `digitCount` de Java;
+    // `found` sobrevive a las letras que vengan detrás de la racha.
+    let mut digit_run = 0usize;
+    let mut segment_start = 0usize;
+    let mut found = false;
+    for index in 0..chars.len() {
+        // `Character.isLetterOrDigit` es Unicode: una eñe o una tilde no
+        // parten el segmento. Dígito sí se lee en ASCII: un DNI o un NIE no
+        // traen otra cosa.
+        if chars[index].is_alphanumeric() {
+            if chars[index].is_ascii_digit() {
+                digit_run += 1;
+                if digit_run == MIN_DIGITS {
+                    found = true;
+                }
+            } else {
+                digit_run = 0;
+            }
+        } else {
+            if found {
+                obfuscate(&mut chars, segment_start, index - segment_start, digits);
+                found = false;
+            }
+            segment_start = index + 1;
+        }
+    }
+    if found {
+        let length = chars.len() - segment_start;
+        obfuscate(&mut chars, segment_start, length, digits);
     }
 
-    let digits = chars.iter().filter(|c| c.is_ascii_digit()).count();
+    chars.into_iter().collect()
+}
+
+/// Aplica la máscara a un segmento, con `digits` contados sobre la cadena
+/// entera. Es `PdfVisibleAreasUtils.obfuscate:704-761`.
+fn obfuscate(chars: &mut [char], start: usize, length: usize, digits: usize) {
     let plain = MASK_POSITIONS.iter().filter(|visible| **visible).count();
+    let segment = &mut chars[start..start + length];
 
     if digits >= plain {
         let positions = fitted_positions(digits);
         let mut position = 0usize;
-        for c in &mut chars {
+        for c in segment {
             if c.is_ascii_digit() {
                 if !positions.get(position).copied().unwrap_or(false) {
                     *c = OBFUSCATED_CHAR;
@@ -153,7 +206,7 @@ pub fn mask_id_number(id: &str) -> String {
             }
         }
     } else {
-        for (offset, c) in chars.iter_mut().rev().enumerate() {
+        for (offset, c) in segment.iter_mut().rev().enumerate() {
             let position = MASK_POSITIONS.len().checked_sub(offset + 1);
             let visible = position.is_some_and(|p| MASK_POSITIONS[p]);
             if !visible {
@@ -161,21 +214,6 @@ pub fn mask_id_number(id: &str) -> String {
             }
         }
     }
-
-    chars.into_iter().collect()
-}
-
-/// ¿Hay [`MIN_DIGITS`] dígitos seguidos? Es lo que AutoFirma exige para
-/// considerar que un texto es un identificador.
-fn has_digit_run(chars: &[char]) -> bool {
-    let mut run = 0usize;
-    for c in chars {
-        run = if c.is_ascii_digit() { run + 1 } else { 0 };
-        if run >= MIN_DIGITS {
-            return true;
-        }
-    }
-    false
 }
 
 /// Adapta la máscara a un identificador con menos dígitos que posiciones,
@@ -304,6 +342,22 @@ mod tests {
         // La rareza de AutoFirma: con tres dígitos la máscara se aplica desde
         // atrás y los que se ocultan son los caracteres de delante.
         assert_eq!(mask_id_number("AB123"), "*B123");
+    }
+
+    #[test]
+    fn masks_only_the_segment_that_holds_the_digits() {
+        // El RDN `serialNumber` de la FNMT y del DNIe trae el prefijo, y quien
+        // lo extraiga no tiene por qué quitarlo: el recuadro sigue legible.
+        assert_eq!(mask_id_number("IDCES-99999999R"), "IDCES-***9999**");
+        assert_eq!(mask_id_number("12345678-Z"), "***4567*-Z");
+        assert_eq!(mask_id_number("99999999 R"), "***9999* R");
+    }
+
+    #[test]
+    fn keeps_the_digit_run_across_a_separator_like_java_does() {
+        // `digitCount` de Java solo se reinicia con letras, así que `12-345`
+        // sí llega a la racha mínima; el segmento enmascarado es el segundo.
+        assert_eq!(mask_id_number("12-345"), "12-*45");
     }
 
     #[test]

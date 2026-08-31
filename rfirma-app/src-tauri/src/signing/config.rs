@@ -209,6 +209,26 @@ mod tests {
     }
 
     #[test]
+    fn emits_every_key_the_five_settings_declare() {
+        // La dirección contraria a la de arriba: una clave declarada en
+        // `Setting::keys()` que `extra_params` no llegue a emitir nunca sería
+        // una promesa muerta. `complete()` tiene los cinco ajustes puestos, así
+        // que sobre ella la contención va en los dos sentidos.
+        let declared: HashSet<&str> = Setting::ALL
+            .iter()
+            .flat_map(|setting| setting.keys().iter().copied())
+            .collect();
+        let emitted = complete().extra_params();
+
+        for key in declared {
+            assert!(
+                emitted.contains_key(key),
+                "«{key}» lo declara un ajuste y no lo emite nadie"
+            );
+        }
+    }
+
+    #[test]
     fn gives_every_setting_its_own_keys() {
         let mut seen: HashSet<&str> = HashSet::new();
         for setting in Setting::ALL {
