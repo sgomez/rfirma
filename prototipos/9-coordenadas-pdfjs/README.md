@@ -75,22 +75,31 @@ entregar `T⁻¹(U)`. Eso es el paso 2.
    redondea aquí y punto.
 4. **El texto de la rúbrica sale derecho** en páginas rotadas: iText rota la
    apariencia por su cuenta. No hay que compensar nada por ese lado.
-5. **`pdftotext` no vale para comprobar esto** (ya lo decía #14). Aquí se
+5. **El recuadro no se guarda en píxeles.** Si se guarda en píxeles de canvas,
+   al cambiar el zoom se queda clavado en la pantalla y se mueve sobre el
+   documento sin que nadie lo toque. Aquí vive en espacio de usuario PDF y los
+   píxeles se derivan en cada pintada con `convertToViewportPoint`, así que el
+   zoom es puramente visual. Medido: dibujado a zoom 1 y subido a zoom 2, la
+   caja pasa de `60,80 200×80` a `120,160 400×160` y los `extraParams` no se
+   mueven.
+6. **`pdftotext` no vale para comprobar esto** (ya lo decía #14). Aquí se
    comprueba leyendo el `/Rect` del widget del PDF firmado, que es el dato
    duro, y en dos casos además rasterizando con `pdftoppm` para verlo.
 
 ## Qué se midió
 
-Trece casos, todos con el **mismo arrastre de pantalla** `(60,80)–(260,160)` a
-zoom 1, firmados de verdad con el ciclo trifásico entero y comprobados contra
-el `/Rect` del PDF resultante:
+Dieciséis casos, todos con el **mismo arrastre de pantalla** `(60,80)–(260,160)`,
+firmados de verdad con el ciclo trifásico entero y comprobados contra el
+`/Rect` del PDF resultante:
 
 - A4 con `/Rotate` 0, 90, 180 y 270
 - A5 y Letter (tamaños que no son A4)
 - MediaBox `[20 30 615 872]` con `/Rotate` 0, 90, 180 y 270
 - `mixto.pdf`, tres páginas de distinto tamaño y rotación, firmando en cada una
+- tres a zoom distinto de 1: A4 a 1.75, `offset-rot270` a 1.75 y `a4-rot90` a
+  0.6, que es donde se vería si la escala se cuela en la conversión
 
-**13 de 13 coinciden al punto** (`diferencia [0,0,0,0]`).
+**16 de 16 coinciden al punto** (`diferencia [0,0,0,0]`).
 
 ## Cómo se corre
 
@@ -98,7 +107,7 @@ el `/Rect` del PDF resultante:
 ./motor/preparar.sh        # una vez: jar, classpath y certificado de usar y tirar
 python3 casos/gen-pdfs.py  # genera los PDFs de prueba
 ./servir.sh                # visor en http://localhost:8099/
-./comprobar-todo.sh        # firma y comprueba los trece casos
+./comprobar-todo.sh        # firma y comprueba los dieciséis casos
 ./sonda-rotacion.sh        # vuelve a medir T (si cambia la version de itext)
 ```
 
@@ -112,7 +121,7 @@ nativa, así que para esta pregunta la imagen nativa no aporta nada.
 
 | Fichero              | Qué es                                                        |
 | -------------------- | ------------------------------------------------------------- |
-| `index.html`, `app.js` | El visor. La conversión está en `aEspacioUsuario` / `aExtraParams`. |
+| `index.html`, `app.js` | El visor. La conversión está en `aEspacioUsuario` / `aExtraParams`; `aPixeles` es el camino de vuelta, solo para pintar. |
 | `casos/gen-pdfs.py`  | Genera los PDFs con rejilla y ancla `ORIGEN`.                  |
 | `firmar.sh`          | Ciclo trifásico: prefirma → PK1 → postfirma.                   |
 | `comprobar.py`       | Lee el `/Rect` del widget y lo compara con lo dibujado.        |

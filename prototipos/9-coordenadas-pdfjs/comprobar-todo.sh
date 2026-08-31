@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PROTOTIPO #9 — firma y comprueba los trece casos de salidas/.
+# PROTOTIPO #9 — firma y comprueba todos los casos de salidas/.
 cd "$(dirname "$0")"
 fallos=0; ok=0
 for p in salidas/*.properties; do

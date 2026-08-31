@@ -7,8 +7,13 @@ const CASOS = ['a4', 'a4-rot90', 'a4-rot180', 'a4-rot270', 'a5', 'letter',
 
 const $ = (id) => document.getElementById(id);
 let doc = null, pagina = null, viewport = null, nPag = 1, total = 1;
-let arrastre = null, recuadro = null;
+let arrastre = null;
 
+// El recuadro vive en ESPACIO DE USUARIO PDF, no en pixeles de canvas. Es la
+// unica forma de que el zoom sea puramente visual: si se guardaran pixeles, al
+// cambiar el zoom el recuadro se quedaria clavado en la pantalla y se moveria
+// sobre el documento sin que nadie lo tocase.
+let recuadroU = null;
 
 CASOS.forEach((c) => $('caso').add(new Option(c, c)));
 
@@ -17,7 +22,8 @@ async function abrir(nombre) {
   // apertura se queda colgada para siempre.
   if (doc) { await doc.destroy(); doc = null; }
   doc = await pdfjs.getDocument(`./casos/${nombre}.pdf`).promise;
-  total = doc.numPages; nPag = 1; recuadro = null;
+  total = doc.numPages; nPag = 1; recuadroU = null;
+  $('caja').style.display = 'none';
   await pintar();
 }
 
@@ -44,6 +50,7 @@ async function pintar() {
   $('lienzo').style.height = viewport.height + 'px';
   $('pag').textContent = `${nPag} / ${total}`;
   $('zoomv').textContent = escala.toFixed(2);
+  dibujarCaja();
   volcar();
 }
 
@@ -65,9 +72,9 @@ async function pintar() {
 //        T270(x,y) = (y, my1 - x)
 //    donde mx1,my1 son las esquinas SUPERIORES de la MediaBox. Asi que hay que
 //    entregarle T^-1 del rectangulo que queremos.
-function aEspacioUsuario(r) {
-  const [ax, ay] = viewport.convertToPdfPoint(r.x0, r.y0);
-  const [bx, by] = viewport.convertToPdfPoint(r.x1, r.y1);
+function aEspacioUsuario(x0, y0, x1, y1) {
+  const [ax, ay] = viewport.convertToPdfPoint(x0, y0);
+  const [bx, by] = viewport.convertToPdfPoint(x1, y1);
   return { llx: Math.min(ax, bx), lly: Math.min(ay, by),
            urx: Math.max(ax, bx), ury: Math.max(ay, by) };
 }
@@ -88,6 +95,14 @@ function aExtraParams(u) {
   };
 }
 
+// Camino de vuelta, solo para pintar: espacio de usuario -> pixeles de canvas.
+function aPixeles(u) {
+  const [ax, ay] = viewport.convertToViewportPoint(u.llx, u.lly);
+  const [bx, by] = viewport.convertToViewportPoint(u.urx, u.ury);
+  return { x0: Math.min(ax, bx), y0: Math.min(ay, by),
+           x1: Math.max(ax, bx), y1: Math.max(ay, by) };
+}
+
 // La version que sale sola si uno no se para a pensar: divide por la escala y
 // voltea la Y contra la altura del canvas. Ignora la MediaBox y la rotacion.
 function ingenua(r) {
@@ -104,6 +119,17 @@ function fila(t, k, v, clase) {
     `<tr><td>${k}</td><td class="${clase || ''}">${v}</td></tr>`);
 }
 
+function dibujarCaja() {
+  const caja = $('caja');
+  if (!recuadroU) { caja.style.display = 'none'; return; }
+  const r = aPixeles(recuadroU);
+  caja.style.display = 'block';
+  caja.style.left = r.x0 + 'px';
+  caja.style.top = r.y0 + 'px';
+  caja.style.width = (r.x1 - r.x0) + 'px';
+  caja.style.height = (r.y1 - r.y0) + 'px';
+}
+
 function volcar() {
   const [mx0, my0, mx1, my1] = pagina.view;
   $('tpag').innerHTML = '';
@@ -113,15 +139,15 @@ function volcar() {
 
   for (const id of ['tpx', 'tuser', 'tpades', 'tnaive']) $(id).innerHTML = '';
   $('props').value = ''; $('difnota').textContent = '';
-  if (!recuadro) return;
+  if (!recuadroU) return;
 
-  fila($('tpx'), 'x0, y0', `${recuadro.x0.toFixed(1)}, ${recuadro.y0.toFixed(1)}`);
-  fila($('tpx'), 'x1, y1', `${recuadro.x1.toFixed(1)}, ${recuadro.y1.toFixed(1)}`);
+  const px = aPixeles(recuadroU);
+  fila($('tpx'), 'x0, y0', `${px.x0.toFixed(1)}, ${px.y0.toFixed(1)}`);
+  fila($('tpx'), 'x1, y1', `${px.x1.toFixed(1)}, ${px.y1.toFixed(1)}`);
 
-  const u = aEspacioUsuario(recuadro);
-  const p = aExtraParams(u), n = ingenua(recuadro);
-  const uu = { llx: Math.round(u.llx), lly: Math.round(u.lly),
-               urx: Math.round(u.urx), ury: Math.round(u.ury) };
+  const p = aExtraParams(recuadroU), n = ingenua(px);
+  const uu = { llx: Math.round(recuadroU.llx), lly: Math.round(recuadroU.lly),
+               urx: Math.round(recuadroU.urx), ury: Math.round(recuadroU.ury) };
 
   fila($('tuser'), 'llx, lly', `${uu.llx}, ${uu.lly}`);
   fila($('tuser'), 'urx, ury', `${uu.urx}, ${uu.ury}`);
@@ -136,13 +162,14 @@ function volcar() {
   const dif = ['llx', 'lly', 'urx', 'ury'].filter((k) => n[k] !== p[k]).length;
   $('difnota').textContent = dif
     ? `${dif} de 4 coordenadas difieren: aquí la ingenua colocaría mal el recuadro.`
-    : 'Coinciden en este caso (página sin rotar y con MediaBox en el origen).';
+    : 'Coinciden en este caso (página sin rotar, MediaBox en el origen y zoom 1).';
 
   $('props').value = [
     `# PROTOTIPO #9 — caso ${$('caso').value}, generado desde el visor`,
     `# rfirma-esperado: {"caso":"${$('caso').value}","pagina":${nPag},` +
       `"widget":[${uu.llx},${uu.lly},${uu.urx},${uu.ury}],` +
-      `"mediabox":[${mx0},${my0},${mx1},${my1}],"rotate":${pagina.rotate}}`,
+      `"mediabox":[${mx0},${my0},${mx1},${my1}],"rotate":${pagina.rotate},` +
+      `"zoom":${viewport.scale}}`,
     `signaturePage=${nPag}`,
     `signaturePositionOnPageLowerLeftX=${p.llx}`,
     `signaturePositionOnPageLowerLeftY=${p.lly}`,
@@ -154,7 +181,7 @@ function volcar() {
 }
 
 // --- arrastre ---------------------------------------------------------------
-const capa = $('capa'), caja = $('caja');
+const capa = $('capa');
 capa.addEventListener('pointerdown', (e) => {
   const r = capa.getBoundingClientRect();
   arrastre = { x: e.clientX - r.left, y: e.clientY - r.top };
@@ -163,21 +190,18 @@ capa.addEventListener('pointerdown', (e) => {
 capa.addEventListener('pointermove', (e) => {
   if (!arrastre) return;
   const r = capa.getBoundingClientRect();
-  recuadro = { x0: arrastre.x, y0: arrastre.y,
-               x1: e.clientX - r.left, y1: e.clientY - r.top };
-  caja.style.display = 'block';
-  caja.style.left = Math.min(recuadro.x0, recuadro.x1) + 'px';
-  caja.style.top = Math.min(recuadro.y0, recuadro.y1) + 'px';
-  caja.style.width = Math.abs(recuadro.x1 - recuadro.x0) + 'px';
-  caja.style.height = Math.abs(recuadro.y1 - recuadro.y0) + 'px';
+  // A espacio de usuario ya mismo: en pixeles no se guarda nada.
+  recuadroU = aEspacioUsuario(arrastre.x, arrastre.y,
+                              e.clientX - r.left, e.clientY - r.top);
+  dibujarCaja();
   volcar();
 });
 capa.addEventListener('pointerup', () => { arrastre = null; });
 
-$('caso').onchange = (e) => { caja.style.display = 'none'; abrir(e.target.value); };
+$('caso').onchange = (e) => abrir(e.target.value);
 $('zoom').oninput = () => pintar();
-$('ant').onclick = () => { if (nPag > 1) { nPag--; pintar(); } };
-$('sig').onclick = () => { if (nPag < total) { nPag++; pintar(); } };
+$('ant').onclick = () => { if (nPag > 1) { nPag--; recuadroU = null; pintar(); } };
+$('sig').onclick = () => { if (nPag < total) { nPag++; recuadroU = null; pintar(); } };
 $('descargar').onclick = () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([$('props').value], { type: 'text/plain' }));
@@ -185,29 +209,25 @@ $('descargar').onclick = () => {
   a.click();
 };
 
-// Gancho para el arnes de comprobacion por lotes (comprobar-todo.sh): repite
-// el mismo rectangulo de pantalla en cada caso sin depender de un raton real.
+// Gancho para el arnes de comprobacion por lotes: repite el mismo rectangulo
+// de pantalla en cada caso sin depender de un raton real.
 window.__proto9 = {
-  async caso(nombre) { $('caso').value = nombre; await abrir(nombre); },
   // Igual que arrastrar() pero sin pintar: abre el PDF, monta el viewport y
-  // aplica la conversion. Es lo que usa comprobar-todo.sh, que no necesita
-  // ver nada.
-  async medir(nombre, x0, y0, x1, y1, pag = 1) {
+  // aplica la conversion. Es lo que usa el arnes, que no necesita ver nada.
+  async medir(nombre, x0, y0, x1, y1, pag = 1, escala = 1) {
     if (doc) { await doc.destroy(); doc = null; }
     doc = await pdfjs.getDocument(`./casos/${nombre}.pdf`).promise;
     total = doc.numPages; nPag = pag;
     pagina = await doc.getPage(pag);
-    viewport = pagina.getViewport({ scale: 1 });
+    viewport = pagina.getViewport({ scale: escala });
     $('caso').value = nombre;
-    recuadro = { x0, y0, x1, y1 };
+    recuadroU = aEspacioUsuario(x0, y0, x1, y1);
     volcar();
     return $('props').value;
   },
   arrastrar(x0, y0, x1, y1) {
-    recuadro = { x0, y0, x1, y1 };
-    caja.style.display = 'block';
-    caja.style.left = Math.min(x0, x1) + 'px'; caja.style.top = Math.min(y0, y1) + 'px';
-    caja.style.width = Math.abs(x1 - x0) + 'px'; caja.style.height = Math.abs(y1 - y0) + 'px';
+    recuadroU = aEspacioUsuario(x0, y0, x1, y1);
+    dibujarCaja();
     volcar();
     return $('props').value;
   },
