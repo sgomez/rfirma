@@ -58,7 +58,11 @@ echo "### 2. la libreria nativa, dentro del arenero"
 # extra.
 # Un solo arranque del arenero: lo que se ensena y lo que se comprueba tienen
 # que ser la misma medicion, no dos.
-contenido=$(flatpak run "${EXTRA[@]}" --command=ls "$APP" -1 /app/lib/rfirma)
+# Y si el arranque es lo que falla, hay que decir eso: sin este `||`, el
+# `contenido` vacio saldria como "SOBRA ALGO", que es justo lo contrario de lo
+# que ha pasado.
+contenido=$(flatpak run "${EXTRA[@]}" --command=ls "$APP" -1 /app/lib/rfirma) \
+    || { echo "NO HE PODIDO LISTAR /app/lib/rfirma (el flatpak run fallo)"; exit 1; }
 echo "$contenido"
 [ "$contenido" = "librfirma_crypto.so" ] \
     && echo "OK  un solo fichero" \

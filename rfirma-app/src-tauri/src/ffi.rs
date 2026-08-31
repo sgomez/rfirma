@@ -405,6 +405,11 @@ type PostSignSymbol = unsafe extern "C" fn(
 /// al hilo que lo creó. Compartir este valor entre hilos sería el segundo fallo
 /// silencioso de esta frontera, así que el tipo no deja.
 pub struct NativeBridge {
+    /// Nadie la lee, y aun así tiene que estar: es lo que mantiene cargada la
+    /// librería —y por tanto válidos los cinco punteros a función de abajo—
+    /// mientras el puente viva. Soltarla antes sería un `dlclose` con el
+    /// isolate dentro.
+    #[expect(dead_code, reason = "mantiene viva la librería de los punteros")]
     library: libloading::Library,
     isolate: *mut c_void,
     thread: *mut c_void,
@@ -412,6 +417,7 @@ pub struct NativeBridge {
     presign: PreSignSymbol,
     postsign: PostSignSymbol,
     free_string: FreeStringSymbol,
+    tear_down: TearDownIsolate,
 }
 
 /// Cómo libera las cadenas un puente ya cargado: llamando a
@@ -451,32 +457,33 @@ impl NativeBridge {
                 path: path.to_path_buf(),
                 detail: error.to_string(),
             })?;
+        // Los símbolos se resuelven **antes** de crear el isolate, y el orden
+        // importa: si faltara alguno después de `graal_create_isolate`, el `?`
+        // saldría con el isolate vivo y sin `NativeBridge` que lo desmontara en
+        // `Drop`, y además soltaría `library` —un `dlclose` con un isolate
+        // dentro—. Resolviendo primero, ese camino no existe.
+        //
+        // SAFETY: las cuatro firmas son las que declaran `NativeBridge.java` y
+        // el contrato de GraalVM para esas entradas, y los punteros a función
+        // valen mientras `library` siga cargada, que es lo que garantiza
+        // guardarla en el mismo valor.
+        let (create, presign, postsign, free_string, tear_down) = unsafe {
+            (
+                resolve::<CreateIsolate>(&library, b"graal_create_isolate\0")?,
+                resolve::<PreSignSymbol>(&library, b"autofirma_pades_presign\0")?,
+                resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
+                resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
+                resolve::<TearDownIsolate>(&library, b"graal_tear_down_isolate\0")?,
+            )
+        };
         let mut isolate: *mut c_void = std::ptr::null_mut();
         let mut thread: *mut c_void = std::ptr::null_mut();
         // SAFETY: la firma de `graal_create_isolate` es la del contrato de
         // GraalVM y los dos punteros de salida son locales válidos.
-        unsafe {
-            let create = library
-                .get::<CreateIsolate>(b"graal_create_isolate\0")
-                .map_err(|error| BridgeError::MissingSymbol {
-                    symbol: "graal_create_isolate".to_owned(),
-                    detail: error.to_string(),
-                })?;
-            let code = create(std::ptr::null_mut(), &mut isolate, &mut thread);
-            if code != 0 {
-                return Err(BridgeError::IsolateFailed(code));
-            }
+        let code = unsafe { create(std::ptr::null_mut(), &mut isolate, &mut thread) };
+        if code != 0 {
+            return Err(BridgeError::IsolateFailed(code));
         }
-        // SAFETY: las tres firmas son las que declara `NativeBridge.java` para
-        // esas entradas, y los punteros a función valen mientras `library` siga
-        // cargada, que es lo que garantiza guardarla en el mismo valor.
-        let (presign, postsign, free_string) = unsafe {
-            (
-                resolve::<PreSignSymbol>(&library, b"autofirma_pades_presign\0")?,
-                resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
-                resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
-            )
-        };
         Ok(Self {
             library,
             isolate,
@@ -485,6 +492,7 @@ impl NativeBridge {
             presign,
             postsign,
             free_string,
+            tear_down,
         })
     }
 
@@ -554,11 +562,12 @@ impl NativeBridge {
 
 /// Busca un símbolo y se queda el **puntero a función**, no el préstamo.
 ///
-/// Se resuelven los tres de una vez al cargar (y no en cada llamada) por dos
-/// razones: que la librería que no exporta alguno falle al abrirse en vez de a
-/// la primera firma —o, en el caso de `autofirma_free_string`, en vez de no
-/// fallar nunca y filtrar en silencio—, y que firmar no pague un `dlsym` por
-/// cruce.
+/// Se resuelven los cinco de una vez al cargar, y antes de crear el isolate,
+/// por tres razones: que la librería que no exporta alguno falle al abrirse en
+/// vez de a la primera firma —o, en el caso de `autofirma_free_string`, en vez
+/// de no fallar nunca y filtrar en silencio—; que un símbolo que falta no deje
+/// un isolate huérfano ni un `dlclose` con el isolate dentro; y que firmar y
+/// desmontar no paguen un `dlsym` cada uno.
 ///
 /// # Safety
 ///
@@ -582,14 +591,10 @@ impl Drop for NativeBridge {
             return;
         }
         // SAFETY: el isolate lo creó este mismo valor y nadie más lo ha
-        // destruido; después de esto el puente ya no se usa.
+        // destruido; el símbolo se resolvió al abrir, así que aquí no hay nada
+        // que pueda fallar en silencio; después de esto el puente ya no se usa.
         unsafe {
-            if let Ok(tear_down) = self
-                .library
-                .get::<TearDownIsolate>(b"graal_tear_down_isolate\0")
-            {
-                tear_down(self.thread);
-            }
+            (self.tear_down)(self.thread);
         }
         self.isolate = std::ptr::null_mut();
         self.thread = std::ptr::null_mut();
