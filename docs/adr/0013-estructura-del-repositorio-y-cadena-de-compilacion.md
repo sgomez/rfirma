@@ -114,11 +114,11 @@ Se regeneran a mano con `just fuentes-flatpak` cuando cambia un fichero de bloqu
 CI **comprueba que están al día** en vez de regenerarlos, porque un fichero generado
 dentro del CI es un fichero que nadie ha mirado.
 
-Queda **sin decidir** cómo entran los seis `.so` en una construcción apta para Flathub:
-hoy son un `type: dir` que apunta a artefactos que el manifiesto no sabe construir, y
-construirlos dentro del arenero exigiría GraalVM CE 25 y el árbol Maven entero de
-AutoFirma vendorizado. Lo fijan las reglas de Flathub, no una preferencia nuestra: se
-investiga en el [#37](https://github.com/sgomez/rfirma/issues/37).
+Aquí se decía que quedaba **sin decidir** cómo entra la librería nativa en una
+construcción apta para Flathub. Ya no aplica: el
+[ADR-0015](0015-canal-de-distribucion-propio.md) deja la tienda fuera de v0.1, y con
+canal propio el `type: dir` es válido. La regla de construir sin red **se mantiene**,
+pero por la razón de la sección anterior y no por la de Flathub.
 
 ## La sonda se borra
 
