@@ -31,6 +31,17 @@ aplican al hacerlos: no hay «Guardar» ni «Cancelar».
    se comprueba **antes de firmar**: si no existe o no es escribible, se avisa
    en el panel y esa firma se guarda junto al original, sin cambiar la
    preferencia.
+
+   > **Este ajuste está pendiente de rehacer.** Medido en el
+   > [#22](https://github.com/sgomez/rfirma/issues/22): bajo el arenero de
+   > flatpak la aplicación **no puede saber dónde estaba el documento
+   > original** —`Documents.Info` y `.Lookup` responden `Not allowed in
+   > sandbox`— y escribir un hermano del fichero que entrega el portal deja un
+   > `.xdp-…` huérfano en la carpeta del usuario **sin dar error**. Así que ni
+   > el valor por omisión ni la degradación que describe el
+   > [ADR-0010](../adr/0010-memoria-entre-sesiones.md) son implementables tal
+   > como están. Detalle en
+   > [`docs/research/flatpak-canal-unico.md`](../research/flatpak-canal-unico.md).
 4. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
    inglés: la misma lista que el cliente oficial. El cambio se aplica en
    caliente, como el resto del diálogo. Un idioma solo aparece aquí si tiene

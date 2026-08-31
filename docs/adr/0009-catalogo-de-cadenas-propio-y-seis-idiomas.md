@@ -55,5 +55,5 @@ verdaderamente nuevo.
   recuadro en el visor antes de firmar, así que no hay sorpresa. No lleva
   ajuste propio.
 - **El empaquetado queda fuera del circuito de traducción.** El `.desktop` y
-  la descripción del `.deb` no se traducen: lo que muestran es el nombre
+  el `metainfo.xml` del flatpak no se traducen: lo que muestran es el nombre
   propio del programa.
