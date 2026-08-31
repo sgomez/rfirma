@@ -108,6 +108,26 @@ que **no está en el almacén de Ubuntu**. Solo están `AC_RAIZ_FNMT-RCM.pem`
 `AC_RAIZ_FNMT-RCM_SERVIDORES_SEGUROS.pem`. Para validar cadenas ECC hay que
 añadir la G2 a mano, y ese paso pertenece al caso de prueba, no al producto.
 
+## Ampliación: el token lo monta un script (#49)
+
+Las órdenes de arriba se ejecutaron a mano una vez. Desde el
+[issue #49](https://github.com/sgomez/rfirma/issues/49) las hace
+`testdata/softhsm/provision-token.sh`, que es idempotente y al que llama
+`just token` —y, a través de `test-rust`, el propio `just check`—. Parte de
+`testdata/fnmt/`, que es el subconjunto del kit versionado en el repositorio, no
+de `~/.local/share/rfirma-test-certs`.
+
+El token pasa a tener **tres certificados y una sola clave**:
+
+| `CKA_ID` | `CKA_LABEL` | qué tiene |
+| --- | --- | --- |
+| `01` | `FNMT-ACTIVO-99999999R` | clave privada + certificado |
+| `02` | `FNMT-CADUCADO-99999999R` | solo el certificado (caducó en 2020) |
+| `03` | `FNMT-REVOCADO-99999999R` | solo el certificado (revocado en 2024) |
+
+Los dos últimos entran **sin clave a propósito**: existen para que el listado
+tenga que clasificarlos antes de pedir el PIN, no para firmar con ellos.
+
 ## Fuera
 
 El certificado FNMT personal del titular. No se importa, no se exporta, no se

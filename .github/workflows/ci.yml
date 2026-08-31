@@ -109,6 +109,11 @@ jobs:
       # Tauri v2 en Linux compila contra WebKitGTK 4.1. Sin estos paquetes el
       # carril entero se cae en el build.rs de javascriptcore-rs-sys con un
       # "pkg-config exited with status code 1" que no dice de que va.
+      #
+      # softhsm2 y opensc son la GRADA B del ADR-0014: son segundos de apt y a
+      # cambio las pruebas del modulo PKCS#11 corren en cada PR, contra un token
+      # de verdad, en vez de quedarse ignoradas. `just check` provisiona el token
+      # solo (receta `token`), asi que aqui basta con instalarlos.
       - name: Dependencias de sistema de Tauri
         run: |
           sudo apt-get update
@@ -121,7 +126,9 @@ jobs:
             libsoup-3.0-dev \
             libxdo-dev \
             build-essential \
-            file
+            file \
+            softhsm2 \
+            opensc
 
       # Binarios preconstruidos: compilarlos desde fuente serian minutos en
       # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
@@ -223,7 +230,9 @@ jobs:
             libxdo-dev \
             build-essential \
             file \
-            poppler-utils
+            poppler-utils \
+            softhsm2 \
+            opensc
 
       - uses: cargo-bins/cargo-binstall@main
         if: steps.scope.outputs.build == 'true'
