@@ -214,6 +214,12 @@ export const en: Catalog = {
         retry: "Look again",
         otherModule: "Another module…",
       },
+      failed: {
+        title: "We could not look for certificates",
+        body: "The search failed before finishing, so we do not know whether there is any.",
+        retry: "Look again",
+        otherModule: "Another module…",
+      },
       expired: "The certificate expired on {{date}}, so it cannot be used to sign.",
       notYetValid: "The certificate is not valid yet, so it cannot be used to sign.",
       revoked: "The certificate is revoked ({{reason}}), so it cannot be used to sign.",

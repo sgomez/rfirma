@@ -232,8 +232,17 @@ export function App({
   // a buscar: una tarjeta insertada tarde es el caso corriente, no la excepción.
   const lookForCertificates = useCallback(async () => {
     setCertificate({ kind: "loading" });
-    const found = await certificates.list();
-    setCertificate(chosenFrom(found));
+    try {
+      const found = await certificates.list();
+      setCertificate(chosenFrom(found));
+    } catch (thrown) {
+      // El rechazo se recoge **aquí** y no se deja escapar (ID-11): sin este
+      // `catch` nadie volvía a llamar a `setCertificate` y la ficha se quedaba
+      // girando en «Buscando certificados…» para siempre. Se clasifica con el
+      // mismo `classify` que el visor y la rúbrica: no hay dos formas de
+      // contar un error (ID-29).
+      setCertificate({ kind: "failed", failure: classify(thrown) });
+    }
   }, [certificates]);
 
   useEffect(() => {

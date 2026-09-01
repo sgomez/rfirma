@@ -220,6 +220,12 @@ export const eu: UntranslatedCatalog = {
         retry: "",
         otherModule: "",
       },
+      failed: {
+        title: "",
+        body: "",
+        retry: "",
+        otherModule: "",
+      },
       expired: "",
       notYetValid: "",
       revoked: "",

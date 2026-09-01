@@ -22,16 +22,12 @@ pub mod pkcs11;
 pub mod rubric;
 pub mod signing;
 
-/// Dónde está el módulo PKCS#11 dentro del arenero.
+/// La escotilla para apuntar a **otro** módulo PKCS#11.
 ///
-/// Lo empaqueta el propio flatpak: los del anfitrión no cargan dentro
-/// (`docs/research/flatpak-canal-unico.md`). Se puede apuntar a otro con
-/// `RFIRMA_PKCS11_MODULE`, que es lo que hacen las pruebas de grada B y C
-/// contra SoftHSM.
+/// Cuando está puesta manda ella sola y se ignoran los candidatos de
+/// [`pkcs11::stores`]: quien la exporta quiere ese módulo. Es de lo que
+/// dependen las pruebas de grada B y C contra SoftHSM.
 pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
-
-/// El módulo por omisión: el que instala el flatpak.
-pub const DEFAULT_PKCS11_MODULE: &str = "/app/lib/pkcs11/opensc-pkcs11.so";
 
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {
@@ -44,9 +40,11 @@ pub fn run() {
         .map(memory::Loaded::into_value)
         .unwrap_or_default();
     let environment = commands::Environment {
-        module: std::env::var_os(PKCS11_MODULE_VARIABLE)
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| std::path::PathBuf::from(DEFAULT_PKCS11_MODULE)),
+        // Los almacenes se resuelven **aquí**, en el binario, y no en la
+        // receta que lo arranca: es lo que hace que `just dev` encuentre el
+        // token del anfitrión sin exportar nada, y con el mismo código que
+        // corre instalado (ID-13).
+        stores: pkcs11::stores::from_environment(),
         documents_folder: paths::documents_folder().unwrap_or_default(),
         configuration: std::sync::Mutex::new(configuration),
         // La memoria viaja con el entorno y no aparte: las órdenes que guardan

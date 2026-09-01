@@ -8,6 +8,7 @@ import {
   FolderIcon,
   InfoIcon,
 } from "../design-system/icons";
+import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
 import type { Certificate } from "./certificate";
@@ -33,12 +34,18 @@ export interface SigningDocument {
 }
 
 /**
- * En qué punto está la elección del certificado. Son los cuatro primeros
- * estados de la ficha; «Listo» es `chosen` con un certificado en vigor.
+ * En qué punto está la elección del certificado. Son los estados de la ficha;
+ * «Listo» es `chosen` con un certificado en vigor.
+ *
+ * `failed` es el aterrizaje del rechazo (ID-10): sin él la búsqueda que falla
+ * no tenía dónde caer y la ficha se quedaba en `loading` para siempre. No es lo
+ * mismo que `empty` —«no hay ninguno» y «no he podido buscarlos» son cosas
+ * distintas— y por eso son dos estados y no un booleano dentro de uno.
  */
 export type CertificateState =
   | { kind: "loading" }
   | { kind: "empty" }
+  | { kind: "failed"; failure: NamedFailure }
   | { kind: "unchosen" }
   | { kind: "chosen"; certificate: Certificate };
 
@@ -344,7 +351,7 @@ export function SigningPanel({
   );
 }
 
-/** El certificado, en sus cuatro estados. */
+/** El certificado, en sus cinco estados. */
 function CertificateBlock({
   state,
   onChoose,
@@ -382,6 +389,31 @@ function CertificateBlock({
           </button>
           <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
             {t("panel.certificate.empty.otherModule")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.kind === "failed") {
+    // El mismo lenguaje que `empty` —título, explicación, botón de volver a
+    // buscar— con texto propio, más el fallo ya clasificado con su detalle
+    // crudo debajo: quien firma tiene que poder distinguir «mete la tarjeta»
+    // de «algo va mal» (ID-10).
+    return (
+      <div className="panel__no-certificates">
+        <div className="panel__notice-title">
+          <AlertIcon />
+          <span className="rf-title">{t("panel.certificate.failed.title")}</span>
+        </div>
+        <p className="rf-prose rf-text-muted">{t("panel.certificate.failed.body")}</p>
+        <ErrorNotice situation={state.failure.situation} technicalDetail={state.failure.detail} />
+        <div className="rf-row rf-gap-xs panel__no-certificates-actions">
+          <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
+            {t("panel.certificate.failed.retry")}
+          </button>
+          <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
+            {t("panel.certificate.failed.otherModule")}
           </button>
         </div>
       </div>

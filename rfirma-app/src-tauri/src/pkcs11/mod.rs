@@ -22,6 +22,7 @@
 
 pub mod certificate;
 pub mod error;
+pub mod stores;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -41,6 +42,38 @@ pub use error::{Situation, TokenError};
 /// El mecanismo del ID-16, en un solo sitio para que cambiarlo sea un cambio
 /// visible y no un descuido en una llamada perdida.
 const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;
+
+/// Los certificados de **todos** los almacenes, concatenados.
+///
+/// Un almacén que no cargue no tumba a los demás (ID-03): no tener Firefox
+/// instalado no puede dejar sin tarjeta a quien la tiene. Pero el fallo no se
+/// tira a la basura: si al final no salió ningún certificado de ninguna parte,
+/// lo que se cuenta es **ese** fallo, y no un «no hay ninguno» que sería
+/// mentira. Sin almacenes tampoco se calla: quedarse sin dónde buscar es un
+/// fallo de configuración, no una lista vacía.
+pub fn list_certificates_across(stores: &[PathBuf]) -> Result<Vec<TokenCertificate>, TokenError> {
+    if stores.is_empty() {
+        return Err(TokenError::new(
+            Situation::ModuleNotFound,
+            "no hay ningun modulo PKCS#11 donde buscar certificados",
+        ));
+    }
+
+    let mut found = Vec::new();
+    let mut refused: Option<TokenError> = None;
+
+    for store in stores {
+        match list_certificates(store) {
+            Ok(certificates) => found.extend(certificates),
+            Err(error) => refused = refused.or(Some(error)),
+        }
+    }
+
+    match refused {
+        Some(error) if found.is_empty() => Err(error),
+        _ => Ok(found),
+    }
+}
 
 /// Los certificados que hay en cualquier token del módulo, sin iniciar sesión.
 ///

@@ -268,6 +268,12 @@ export const es = {
         retry: "Volver a buscar",
         otherModule: "Otro módulo…",
       },
+      failed: {
+        title: "No hemos podido buscar los certificados",
+        body: "La búsqueda ha fallado antes de terminar, así que no sabemos si hay alguno.",
+        retry: "Volver a buscar",
+        otherModule: "Otro módulo…",
+      },
       expired: "El certificado caducó el {{date}}, así que no se puede firmar con él.",
       notYetValid:
         "El certificado todavía no ha entrado en vigor, así que no se puede firmar con él.",
