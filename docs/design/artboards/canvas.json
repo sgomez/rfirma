@@ -29,6 +29,16 @@
       "page": "recorrido"
     },
     {
+      "file": "EstadoElegirCertificado.dc.html",
+      "title": "2b · Elegir certificado",
+      "x": 0,
+      "y": 3420,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido",
+      "is_interactive": true
+    },
+    {
       "file": "EstadoCargandoCertificados.dc.html",
       "title": "3 · Cargando certificados",
       "x": 2520,
@@ -152,6 +162,14 @@
       "w": 900,
       "page": "otros",
       "text": "Fichero tuyo, no lo he tocado. Está aquí solo para que no aparezca como un marco suelto."
+    },
+    {
+      "id": "nota-selector",
+      "x": 1260,
+      "y": 3420,
+      "w": 1100,
+      "page": "recorrido",
+      "text": "2b · Elegir certificado. Pantalla nueva: hoy el código no tiene ninguna, y con más de un certificado el botón «Elegir certificado» se limita a volver a buscar.\n\nDesplegable superpuesto: la lista flota sobre el panel, así que la firma visible y el botón de firmar no se mueven al abrirla. Elegido el 01/09/2026 frente a un acordeón en flujo y a un disparador compacto de una línea.\n\nSe puede pulsar: abre, se desplaza y se elige. Tres palancas — estado inicial, cuántos certificados hay y si se listan los que no sirven.\n\nUn certificado caducado o revocado se lista, dice por qué, y no se deja elegir: que falte de la lista no explica nada a quien viene a firmar con él.\n\nLa fila lleva titular, y debajo DNI · emisor · almacén. El almacén está porque hace falta: los tres primeros son la MISMA persona, con el MISMO DNI y el MISMO emisor, en almacenes distintos. Datos de prueba de la FNMT, nunca un certificado real."
     }
   ],
   "launch": {

@@ -2,7 +2,7 @@
 
 **Esto es una importación de un solo uso, y se borra al terminar el [#80].**
 
-Son los doce artboards del canvas de Claude Design «Autofirma de escritorio en
+Son los trece artboards del canvas de Claude Design «Autofirma de escritorio en
 Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
@@ -22,6 +22,7 @@ del recorrido de la ficha `ventana-principal.md`:
 | - | -------- | ------ |
 | 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto** |
 | 2 | `EstadoDocumentoCargado` | Documento cargado, sin certificado |
+| 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
 | 3 | `EstadoCargandoCertificados` | Buscando certificados |
 | 4 | `EstadoSinCertificados` | Sin certificados, con salida |
 | 5 | `Main` | Configurando la firma visible — el nudo del recorrido |
@@ -45,8 +46,38 @@ no se ha importado: sin él los ficheros no se renderizan solos, y no hacen
 falta para transcribir).
 
 **El `<helmet>` no es la fuente del sistema de diseño.** Es una copia
-comprimida y le faltan tokens; manda el bundle versionado (ID-47). Los doce
+comprimida y le faltan tokens; manda el bundle versionado (ID-47). Los trece
 ficheros lo llevan byte a byte idéntico, y `comprueba.sh` lo verifica.
+
+## `EstadoElegirCertificado` no viene del canvas original
+
+Los otros doce se bajaron del canvas tal cual. Este se **añadió después**, el
+01/09/2026, porque el recorrido no tenía pantalla para elegir entre varios
+certificados: con más de uno el panel enseñaba «Elegir certificado» y ese botón
+se limitaba a volver a buscar, así que no había forma de elegir ninguno.
+
+Es el único que **se puede pulsar**: abre el desplegable, se desplaza y se
+elige, y lleva tres palancas —estado inicial, cuántos certificados hay y si se
+listan los que no sirven— para poder decidir mirando en vez de suponiendo. Lo
+que se decidió con él:
+
+- **Desplegable superpuesto**, y no un acordeón en flujo ni un diálogo: la lista
+  flota sobre el panel, así que la firma visible y el botón de firmar no se
+  mueven al abrirla.
+- **Un certificado caducado o revocado se lista, dice por qué y no se deja
+  elegir** (`disabled`). Que falte de la lista no le explica nada a quien viene
+  a firmar justo con él.
+- **La fila lleva el almacén** —`DNI · emisor · almacén`—, porque el mismo
+  certificado en el perfil de Firefox y en `~/.pki/nssdb` es indistinguible sin
+  él. El disparador cerrado no lo lleva: elegido ya no desambigua nada.
+- **Sin preselección la primera vez**: elegir con qué identidad se firma no lo
+  hace la aplicación, y el orden de la lista solo dice en qué orden cargaron los
+  módulos.
+- **El certificado se recuerda al firmar con él**, no al elegirlo en la lista.
+
+Sustituye al botón `Cambiar` de la tarjeta de certificado que declaraba
+`panel-de-firma.md`: el disparador del desplegable ya es el sitio donde se
+cambia.
 
 ## Lo que hay que decidir al transcribir
 

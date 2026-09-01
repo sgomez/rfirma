@@ -39,10 +39,14 @@ antes de firmar, no después. Lo fija el
 - **Aviso de cofirma**: 10 px de relleno vertical y 16 px horizontal, borde de
   1 px en `--rf-border-subtle`, `--rf-radius-md`, fondo `--rf-bg`, icono de
   información de 20 px.
-- **Tarjeta de certificado**: 16 px de relleno, 6 px entre líneas, borde
+- **Disparador del certificado**: 16 px de relleno, 6 px entre líneas, borde
   `--rf-border-strong`. Escarapela de 20 px y nombre en `.rf-title` a 14 px;
   debajo, DNI y emisora en una sola línea `.rf-body rf-text-muted` separadas
-  por `·`.
+  por `·`; a la derecha, la punta de flecha de 16 px, girada 180° al abrir.
+- **Filas de la lista**: 12 px de relleno vertical y 16 px horizontal, 4 px
+  entre líneas, separadas por 1 px en `--rf-border-subtle` salvo la última.
+  La elegida lleva la marca de verificación de 16 px en `--rf-primary`, a la
+  derecha y a 3 px del borde superior.
 - **Esqueletos de carga**: dos bloques de **66 px** —el alto de la tarjeta que
   van a sustituir, para que el panel no salte—, con `--rf-radius-md` y borde
   `--rf-border-subtle`. El primero lleva el degradado horizontal que dice que
@@ -115,7 +119,50 @@ ejemplo.
 
 ## Certificado
 
-Tarjeta con el nombre del titular, el DNI y la autoridad emisora.
+**Un desplegable**, no una tarjeta. Cerrado ocupa el mismo hueco que ocupaba la
+tarjeta y enseña lo mismo —escarapela, titular, y debajo `DNI · Emitido por X`—
+más la punta de flecha a la derecha. Abierto despliega la lista de certificados
+**superpuesta** sobre el panel.
+
+Superpuesta y no en flujo: la firma visible y el botón de firmar **no se
+mueven** al abrirla, y con nueve certificados el panel sigue midiendo lo mismo.
+Un acordeón que empuja el contenido saca el botón primario de la vista justo
+mientras se elige. La capa va a `calc(100% + 4px)` del disparador, con
+`--rf-shadow-elevated` y la lista recortada a **232 px** con desplazamiento
+propio, que son tres filas y media: el borde cortado es lo que dice que hay más.
+
+**Cada fila lleva el almacén.** Titular en `.rf-title` a 14 px y, debajo,
+`DNI · emisor · almacén` en `.rf-body rf-text-muted`. El almacén no es adorno:
+el mismo certificado en el perfil de Firefox y en `~/.pki/nssdb` es
+indistinguible sin él, y quien tiene tres iguales no puede elegir a ciegas. Va
+por **nombre** —«Firefox», «Chrome», «Tarjeta»—, nunca por la ruta del módulo ni
+por el `configdir` del perfil, que son rutas del anfitrión
+([ADR-0011](../adr/0011-destino-del-documento-firmado.md)). En el disparador
+cerrado **no aparece**: elegido ya no desambigua nada.
+
+**Un certificado caducado o revocado se lista, dice por qué, y no se deja
+elegir.** Fila `disabled`, atenuada, con el motivo en tercera línea y en negrita
+—«Caducó el 3 de marzo de 2020»—, con la misma prosa que ya compone
+`statusWarning`. Esconderlo sería más limpio y peor: quien viene a firmar con
+ese certificado se quedaría mirando una lista donde falta, sin saber por qué.
+Es lo que pide la historia 8 del [#46](https://github.com/sgomez/rfirma/issues/46).
+
+**La primera vez no hay preselección.** Con varios certificados y nada
+recordado, el disparador dice «Elegir certificado» y el botón de firmar está
+apagado. Elegir con qué identidad se firma un documento con validez jurídica no
+lo hace la aplicación por su cuenta, y el orden de la lista solo dice en qué
+orden cargaron los módulos. Con uno solo sí se elige solo: elegir entre una cosa
+no es elegir.
+
+**El certificado se recuerda al firmar con él**, no al elegirlo en la lista, y
+la próxima sesión sale ya puesto. El glosario dice «el certificado usado la
+última vez» y la historia 7 dice «con cuál firmé»; ninguna dice «el último que
+miré». Si al arrancar ya no está, el panel vuelve a «Sin certificado» sin ruido
+([ADR-0010](../adr/0010-memoria-entre-sesiones.md)).
+
+El artboard es
+[`EstadoElegirCertificado`](artboards/EstadoElegirCertificado.dc.html), y es el
+único que se puede pulsar.
 
 ## Firma visible
 
@@ -172,8 +219,11 @@ al firmar. Ver el
 
 ## Estados
 
-- **Sin certificado**: botón «Elegir certificado»; la sección de firma visible
-  al 40 % y sin interacción; el botón primario deshabilitado.
+- **Sin certificado**: el desplegable cerrado y vacío, con «Elegir
+  certificado» donde iría el titular; la sección de firma visible al 40 % y sin
+  interacción; el botón primario deshabilitado.
+- **Eligiendo**: la lista desplegada sobre el panel. Se cierra al elegir, al
+  pulsar fuera y con `Escape`.
 - **Cargando certificados**: «Buscando certificados…» y dos esqueletos.
 - **Sin certificados**: bloque con borde `--rf-border-strong`, explicación
   («si usas una tarjeta, comprueba que está insertada y que el lector está
@@ -238,9 +288,12 @@ Además de las tres del ticket, estas piezas existen en el código y **no** en
 ningún artboard. Se quedan, y se anotan aquí porque el ID-44 pide declararlas
 antes que el código y no al revés:
 
-- **El botón `Cambiar` de la tarjeta de certificado.** Ningún artboard lo
-  dibuja, pero con varios certificados en la tarjeta no habría forma de
-  cambiar de uno a otro sin volver a buscar.
+- **El desplegable de certificado**, que sustituye a la tarjeta y al botón
+  `Cambiar` que esta ficha declaraba antes. Ningún artboard del canvas original
+  lo dibujaba porque ninguno contemplaba tener más de un certificado; el
+  artboard `EstadoElegirCertificado` se añadió después, ya con esta decisión
+  tomada. El disparador es ahora el sitio donde se cambia, así que el botón
+  `Cambiar` desaparece: dos caminos para lo mismo es uno de más.
 - **El rótulo «Imagen de la rúbrica».** El artboard pone la miniatura y el
   botón sin encabezado; sin él la fila queda colgando de la lista de casillas
   y no se lee como su propio bloque.

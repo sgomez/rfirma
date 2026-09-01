@@ -99,10 +99,14 @@ Dispositivo físico que custodia una clave no exportable y ejecuta la firma en s
 interior, protegido por un PIN. El caso principal en España es el **DNIe**.
 _Avoid_: smartcard, token, tarjeta inteligente
 
-**Almacén de certificados**:
-Conjunto de certificados disponibles para firmar en la máquina del usuario, ya
-provengan del sistema operativo, de un fichero o de una tarjeta criptográfica.
-_Avoid_: keystore, repositorio de certificados, llavero
+**Almacén**:
+**Un** origen de certificados, no todos: una tarjeta criptográfica, el perfil de
+Firefox, la base de datos de Chrome. Son varios a la vez y se abren por
+separado, así que uno que no cargue no deja sin certificados a los demás. Cada
+certificado sabe de cuál salió, y hace falta: el mismo certificado en dos
+almacenes es indistinguible sin decirlo.
+_Avoid_: keystore, repositorio de certificados, llavero, «el conjunto de
+certificados de la máquina»
 
 ### Invocación
 
