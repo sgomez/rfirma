@@ -52,6 +52,7 @@
 
 pub mod isolate;
 
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
@@ -770,6 +771,41 @@ pub struct OpenedDocumentView {
     pub modified: Option<u64>,
 }
 
+/// Dónde se abre el diálogo de abrir: la **carpeta de destino**, si existe.
+///
+/// Lo que se pediría de primeras es «la última carpeta usada», y **no es
+/// implementable en el canal que se distribuye**. Lo que el portal devuelve al
+/// elegir un fichero es `/run/user/1000/doc/<id>/nombre.pdf`, y ese padre no es
+/// una carpeta del usuario sino un directorio con un solo fichero dentro;
+/// preguntar por la de verdad —`org.freedesktop.portal.Documents.Info` y
+/// `.Lookup`— contesta `Not allowed in sandbox`, y `--filesystem=home` tampoco
+/// lo arreglaría. Está medido en `docs/research/flatpak-canal-unico.md`,
+/// apartado 4, y es la misma razón por la que [`PortalDocument`] no tiene
+/// ningún método que devuelva un directorio.
+///
+/// Recordarla **solo fuera del arenero** —donde el diálogo sí devuelve una ruta
+/// de verdad— se descarta a propósito: dejaría el diálogo apareciendo en un
+/// sitio distinto según el empaquetado, que es la misma incoherencia que el
+/// ADR-0011 rechaza al enseñar el nombre de la carpeta y no su ruta.
+///
+/// Así que se abre donde **sí** hay una carpeta conocida y estable: aquella
+/// donde caen los documentos firmados. Es la respuesta a lo que se quería de
+/// verdad —no empezar cada vez en la lista de «Recientes» del sistema— y
+/// además deja al alcance lo ya firmado, que es lo más probable que se quiera
+/// volver a abrir.
+///
+/// Devuelve `None` si la carpeta no está, y entonces el diálogo se abre donde
+/// el sistema quiera: [`CheckedFolder`] solo mira, **nunca crea** (ID-38).
+fn starting_folder(environment: &Environment) -> Option<PathBuf> {
+    let folder = {
+        let configuration = lock(&environment.configuration);
+        crate::destination::chosen_folder(&configuration, environment.documents_folder.clone())
+    };
+    CheckedFolder::check(&folder)
+        .ok()
+        .map(|checked| checked.path().to_path_buf())
+}
+
 /// **Orden 7.** Abre el diálogo del sistema y apunta lo que el portal conceda.
 ///
 /// El diálogo se abre **desde aquí y no desde el frontal** (ID-63): así la
@@ -781,19 +817,21 @@ pub struct OpenedDocumentView {
 /// Cerrar el diálogo sin elegir nada devuelve `None`, que **no es un fallo**:
 /// es lo que deja el documento activo, la lista y el visor como estaban
 /// (ID-73).
+///
+/// El diálogo se abre **en la carpeta de destino**: ver [`starting_folder`].
 #[tauri::command(async)]
 pub fn open_document(
     app: tauri::AppHandle,
+    environment: State<'_, Environment>,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<Option<OpenedDocumentView>, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
-    let Some(chosen) = app
-        .dialog()
-        .file()
-        .add_filter("PDF", &["pdf"])
-        .blocking_pick_file()
-    else {
+    let mut dialog = app.dialog().file().add_filter("PDF", &["pdf"]);
+    if let Some(folder) = starting_folder(&environment) {
+        dialog = dialog.set_directory(folder);
+    }
+    let Some(chosen) = dialog.blocking_pick_file() else {
         return Ok(None);
     };
     let handle = chosen
@@ -1028,10 +1066,11 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 mod tests {
     use super::{
         attribute, config_for, deliver, dropped_document, holder_of, issuer_of, language_of,
-        merged, shown, situation_name, take_signed_cycle, told_as, usable_certificate,
-        CertificateView, CheckedFolder, Configuration, ConfigurationView, Environment, Failure,
-        Mutex, OpenedDocumentView, OpenedDocuments, PlacementOrder, PortalDocument,
-        SignedDocumentView, SigningOrder, SigningSession, StatusView, Theme, VisibleFieldsOrder,
+        merged, shown, situation_name, starting_folder, take_signed_cycle, told_as,
+        usable_certificate, CertificateView, CheckedFolder, Configuration, ConfigurationView,
+        Environment, Failure, Mutex, OpenedDocumentView, OpenedDocuments, PlacementOrder,
+        PortalDocument, SignedDocumentView, SigningOrder, SigningSession, StatusView, Theme,
+        VisibleFieldsOrder,
     };
     use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
@@ -1550,6 +1589,73 @@ mod tests {
             configuration: Mutex::new(Configuration::default()),
             memory: super::Memory::at(&crate::paths::Paths::under(documents_folder)),
         }
+    }
+
+    /// El diálogo de abrir arranca donde caen los firmados, que es la única
+    /// carpeta que la aplicación conoce bajo el arenero.
+    #[test]
+    fn the_open_dialog_starts_in_the_destination_folder() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let chosen = documents.path().join("Firmados");
+        std::fs::create_dir(&chosen).expect("deberia crearse la carpeta de prueba");
+        let environment = Environment {
+            configuration: Mutex::new(Configuration {
+                destination: Some(crate::memory::DestinationFolder::at(&chosen)),
+                ..Configuration::default()
+            }),
+            ..an_environment(documents.path())
+        };
+
+        assert_eq!(starting_folder(&environment), Some(chosen));
+    }
+
+    /// Sin destino elegido manda la carpeta de documentos, igual que al
+    /// guardar: las dos puntas del recorrido miran al mismo sitio.
+    #[test]
+    fn without_a_chosen_destination_it_starts_in_the_documents_folder() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let environment = an_environment(documents.path());
+
+        assert_eq!(
+            starting_folder(&environment),
+            Some(documents.path().to_path_buf())
+        );
+    }
+
+    /// La carpeta **no se crea nunca** (ID-38): si no está, el diálogo se abre
+    /// donde el sistema quiera y ya está. Fabricarla aquí sería justo el fallo
+    /// silencioso que midió el #27.
+    #[test]
+    fn a_missing_folder_neither_gets_created_nor_stops_the_dialog() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let absent = documents.path().join("Firmados");
+        let environment = Environment {
+            configuration: Mutex::new(Configuration {
+                destination: Some(crate::memory::DestinationFolder::at(&absent)),
+                ..Configuration::default()
+            }),
+            ..an_environment(documents.path())
+        };
+
+        assert_eq!(starting_folder(&environment), None);
+        assert!(!absent.exists(), "la carpeta no se puede haber creado");
+    }
+
+    /// La guardia de la que este cambio se cuelga: el diálogo se abre en una
+    /// carpeta **nuestra**, nunca en el directorio del portal, que tiene un
+    /// solo fichero dentro y no es ninguna carpeta del usuario.
+    #[test]
+    fn the_dialog_never_starts_where_the_portal_left_the_document() {
+        let body = production_half()
+            .split_once("fn starting_folder")
+            .expect("la funcion sigue aqui")
+            .1;
+        let body = &body[..body.find("\n}\n").expect("y tiene cuerpo")];
+
+        assert!(
+            !body.contains("reading_path") && !body.contains("parent()"),
+            "el directorio del portal no puede ser el punto de partida del dialogo"
+        );
     }
 
     /// La misma guardia del ADR-0011 sobre lo que devuelven los ajustes.

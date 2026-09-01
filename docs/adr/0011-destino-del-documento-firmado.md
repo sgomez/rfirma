@@ -81,3 +81,27 @@ firmar**, como manda el ADR-0010, no al guardar.
 - **Los instaladores nativos heredan una capacidad más.** *Guardar junto al original* se suma a
   lo que ya estaba apuntado que se gana al salir del arenero, junto al módulo PKCS#11 del
   anfitrión y la matriz de WebKitGTK.
+
+## Enmienda: dónde se abre el diálogo de abrir
+
+Añadido después, por el mismo motivo que todo lo de arriba.
+
+Lo natural sería que el diálogo de abrir apareciera en **la última carpeta usada**, y bajo el
+arenero **no es implementable**: lo que el portal devuelve al elegir un fichero es
+`/run/user/1000/doc/<id>/nombre.pdf`, cuyo directorio padre contiene un solo fichero y no es
+ninguna carpeta del usuario; preguntar por la real —`org.freedesktop.portal.Documents.Info` y
+`.Lookup`— contesta `Not allowed in sandbox`, y `--filesystem=home` tampoco la devolvería. Es
+la misma medición del apartado 4 de
+[`docs/research/flatpak-canal-unico.md`](../research/flatpak-canal-unico.md) que ya sostiene
+que *junto al original* no existe aquí.
+
+Recordarla **solo fuera del arenero** —donde el diálogo sí devuelve una ruta de verdad— se
+descarta: dejaría el diálogo apareciendo en un sitio distinto según el empaquetado, que es
+exactamente la incoherencia que este ADR rechaza al enseñar el nombre de la carpeta y no su
+ruta.
+
+Así que el diálogo se abre en **la carpeta de destino**, la de Preferencias. Es la única
+carpeta del usuario que la aplicación conoce y nombra, resuelve lo que se quería de verdad
+—no empezar cada vez en la lista de «Recientes» del sistema— y además deja a la vista lo ya
+firmado, que es lo más probable que se quiera volver a abrir. Si no está, no se pasa punto de
+partida y abre donde el sistema quiera: la carpeta **no se crea nunca**, tampoco aquí.
