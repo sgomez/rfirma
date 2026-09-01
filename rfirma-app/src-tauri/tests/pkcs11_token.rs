@@ -378,6 +378,52 @@ fn a_module_that_is_not_there_is_not_a_token_error() {
     assert!(error.detail().contains("no-hay-ningun-modulo-aqui.so"));
 }
 
+/// La promesa del ID-03: no tener un almacén instalado no puede dejar sin
+/// certificados a quien sí tiene el otro.
+#[test]
+fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
+    let stores = vec![
+        PathBuf::from("/usr/lib/no-hay-ningun-modulo-aqui.so"),
+        module(),
+    ];
+
+    let found = pkcs11::list_certificates_across(&stores)
+        .expect("el almacen que si carga tiene que seguir contando");
+
+    assert!(
+        found
+            .iter()
+            .any(|certificate| certificate.reference().label() == ACTIVE),
+        "el certificado activo del token tenia que salir pese al almacen roto"
+    );
+}
+
+/// Y la otra mitad: cuando **nadie** ha podido cargar, lo que se cuenta es el
+/// fallo y no un «no hay ninguno» que seria mentira.
+#[test]
+fn tells_the_failure_apart_from_an_empty_list_when_no_store_loads() {
+    let stores = vec![
+        PathBuf::from("/usr/lib/no-hay-ningun-modulo-aqui.so"),
+        PathBuf::from("/usr/lib/tampoco-hay-este-otro.so"),
+    ];
+
+    let error = pkcs11::list_certificates_across(&stores)
+        .expect_err("sin ningun almacen cargado no hay lista que devolver");
+
+    assert_eq!(error.situation(), Situation::ModuleNotFound);
+}
+
+/// Sin almacenes tampoco se calla: quedarse sin donde buscar es un fallo de
+/// configuracion, no una lista vacia.
+#[test]
+fn having_nowhere_to_look_is_a_failure_and_not_an_empty_list() {
+    let error =
+        pkcs11::list_certificates_across(&[]).expect_err("sin almacenes no hay donde buscar");
+
+    assert_eq!(error.situation(), Situation::ModuleNotFound);
+    assert!(!error.detail().is_empty());
+}
+
 #[test]
 fn a_label_that_is_not_in_the_token_says_so_instead_of_failing_generically() {
     let missing = CertificateRef::new(module(), TOKEN, "ETIQUETA-QUE-NO-EXISTE");

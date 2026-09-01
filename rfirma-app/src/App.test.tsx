@@ -7,6 +7,7 @@ import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
+import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
@@ -66,11 +67,40 @@ function pdfsOf(pages: Record<string, number>): PdfSource {
   };
 }
 
+const aCertificate: Certificate = {
+  label: "Firma",
+  holderName: "Ada Lovelace Byron",
+  idNumber: "99999999R",
+  issuer: "AC FNMT Usuarios",
+  status: { kind: "valid" },
+};
+
+/**
+ * Un almacén que **rechaza** las primeras `failures` búsquedas y a partir de
+ * ahí devuelve lo que se le diga: es el token que no carga y que, arreglado el
+ * problema, sí carga al volver a buscar.
+ */
+function failingCertificateStore(failures: number, then: readonly Certificate[] = []) {
+  let left = failures;
+  const store: CertificateStore = {
+    list: async () => {
+      if (left > 0) {
+        left -= 1;
+        // La forma que rechaza `invoke` cuando Rust ya clasificó el fallo.
+        throw { situation: "moduleNotFound", detail: "CKR_GENERAL_ERROR" };
+      }
+      return then;
+    },
+  };
+  return store;
+}
+
 function renderApp(
   recents = inMemoryRecents(),
   documents: RecentDocument[] = [],
   pdfs: PdfSource = unavailablePdfSource(),
   settings: Partial<Preferences> = {},
+  certificates: CertificateStore = emptyCertificateStore(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -91,7 +121,7 @@ function renderApp(
       pdfs={pdfs}
       preferences={preferences}
       destinations={["Documentos"]}
-      certificates={emptyCertificateStore()}
+      certificates={certificates}
       rubrics={emptyRubricPicker()}
       composer={emptyLayer2Composer()}
       signer={unavailableSigningBackend()}
@@ -214,6 +244,56 @@ describe("App", () => {
     expect(
       screen.getAllByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }),
     ).toHaveLength(1);
+  });
+
+  /**
+   * El cuelgue del #97: la promesa rechazada no la recogía nadie y la ficha se
+   * quedaba en «Buscando certificados…» para siempre, con el rechazo saliendo
+   * en el registro como *unhandled rejection*.
+   */
+  it("names the failure and offers to look again when the certificate search rejects", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      failingCertificateStore(1),
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+
+    await waitFor(() =>
+      expect(within(panel).queryByText("Buscando certificados…")).not.toBeInTheDocument(),
+    );
+    // El mensaje es el del fallo clasificado, y **no** el de «no hay ninguno».
+    expect(within(panel).getByRole("alert")).toHaveTextContent(
+      "No hemos podido cargar el módulo de la tarjeta",
+    );
+    expect(within(panel).queryByText("No hemos encontrado ningún certificado")).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
+    // El fallo se queda dentro de la ficha del certificado: el documento sigue
+    // pintado y el visor no se entera.
+    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+  });
+
+  it("loads the list when looking again with the problem already solved", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      failingCertificateStore(1, [aCertificate]),
+    );
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const retry = await within(panel).findByRole("button", { name: "Volver a buscar" });
+
+    await user.click(retry);
+
+    expect(await within(panel).findByText("Ada Lovelace Byron")).toBeInTheDocument();
   });
 
   it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {
