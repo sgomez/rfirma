@@ -24,7 +24,7 @@ pub mod certificate;
 pub mod error;
 pub mod stores;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::path::{Path, PathBuf};
@@ -51,10 +51,17 @@ const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;
 ///
 /// Un almacén que no cargue no tumba a los demás (ID-03): no tener Firefox
 /// instalado no puede dejar sin tarjeta a quien la tiene. Pero el fallo no se
-/// tira a la basura: si al final no salió ningún certificado de ninguna parte,
-/// lo que se cuenta es **ese** fallo, y no un «no hay ninguno» que sería
-/// mentira. Sin almacenes tampoco se calla: quedarse sin dónde buscar es un
-/// fallo de configuración, no una lista vacía.
+/// tira a la basura: si **ningún** almacén ha llegado a abrirse, lo que se
+/// cuenta es **ese** fallo, y no un «no hay ninguno» que sería mentira. Sin
+/// almacenes tampoco se calla: quedarse sin dónde buscar es un fallo de
+/// configuración, no una lista vacía.
+///
+/// Lo que decide si hubo fallo es **si algún almacén cargó**, no si la lista
+/// final quedó vacía: desde el filtro de certificados firmables (#100), un
+/// almacén puede abrirse bien y no tener ningún certificado firmable que
+/// enseñar —un perfil de Firefox con solo autoridades de certificación, por
+/// ejemplo—, y eso no es un fallo de ningún otro almacén que sí haya
+/// fallado al cargar.
 pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate>, TokenError> {
     if stores.is_empty() {
         return Err(TokenError::new(
@@ -64,26 +71,57 @@ pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate
     }
 
     let mut found = Vec::new();
+    let mut any_loaded = false;
     let mut refused: Option<TokenError> = None;
 
     for store in stores {
         match list_certificates(store) {
-            Ok(certificates) => found.extend(certificates),
+            Ok(certificates) => {
+                any_loaded = true;
+                found.extend(certificates);
+            }
             Err(error) => refused = refused.or(Some(error)),
         }
     }
 
     match refused {
-        Some(error) if found.is_empty() => Err(error),
+        Some(error) if !any_loaded => Err(error),
         _ => Ok(found),
     }
 }
 
-/// Los certificados que hay en cualquier token del módulo, sin iniciar sesión.
+/// Los certificados **firmables** que hay en cualquier token del módulo, sin
+/// iniciar sesión.
 ///
 /// No pide el PIN a propósito: los certificados son objetos públicos, y su
 /// estado —caducado, en vigor— tiene que poder decidirse **antes** de que a
 /// nadie se le pida nada.
+///
+/// La lista se filtra a los que tienen una clave privada emparejada por
+/// `CKA_ID` en el mismo token (ID-07): un perfil de Firefox corriente trae
+/// más de cien certificados y solo un puñado son firmables, el resto son
+/// autoridades y certificados de páginas web. El filtro **no es solo para
+/// NSS**: se aplica a todos los almacenes por igual, y en una tarjeta no
+/// esconde nada porque todo lo que hay ahí ya es firmable.
+///
+/// El filtro solo se aplica por ranura si esa ranura **enseña alguna**
+/// `CKO_PRIVATE_KEY` sin sesión. Algunos módulos —SoftHSM entre ellos,
+/// comprobado— marcan sus claves privadas con `CKA_PRIVATE` de forma
+/// incondicional, y sin sesión no enseñan ninguna, tengan par o no: si se
+/// filtrase igualmente, una ranura así perdería **todos** sus certificados,
+/// no solo los que de verdad no tienen clave. Cero claves visibles no
+/// significa «aquí no hay nada firmable»; significa «este módulo no lo va a
+/// decir sin PIN». En ese caso se deja pasar la ranura entera sin filtrar.
+///
+/// El borde de esa vuelta atrás: **un perfil NSS con contraseña maestra se
+/// comporta igual**. Sin `C_Login` tampoco enseña sus `CKO_PRIVATE_KEY`, así
+/// que su ranura no se filtra y vuelve a listar sus ciento y pico entradas.
+/// Degrada en la dirección segura —enseña de más, nunca esconde algo
+/// firmable—, pero ahí el filtro del #100 no se nota; el sitio donde eso se
+/// arregla de verdad es más adelante, cuando ya haya sesión autenticada. El
+/// perfil desechable de las pruebas se monta con `--empty-password`, que es
+/// justo el caso en el que las claves sí se ven, así que ninguna prueba de
+/// grada B enseña este borde.
 pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
     // Bajo el mismo turno que la firma: abrir un almacén NSS es inicializar el
@@ -100,49 +138,167 @@ fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificate>, TokenEr
     for slot in usable_slots(&context)? {
         let token_label = context.get_token_info(slot)?.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
+        found.extend(signable_certificates(&session, store, &token_label)?);
+    }
 
-        for object in session.find_objects(&[Attribute::Class(ObjectClass::CERTIFICATE)])? {
-            let attributes = session.get_attributes(
-                object,
-                &[
-                    AttributeType::Label,
-                    AttributeType::Value,
-                    AttributeType::Id,
-                ],
-            )?;
+    Ok(found)
+}
 
-            let mut label = None;
-            let mut der = None;
-            let mut cka_id = None;
-            for attribute in attributes {
-                match attribute {
-                    Attribute::Label(bytes) => {
-                        label = Some(String::from_utf8_lossy(&bytes).trim().to_owned())
-                    }
-                    Attribute::Value(bytes) => der = Some(bytes),
-                    // Un CKA_ID vacío no empareja nada: es lo mismo que no
-                    // tenerlo, y guardarlo como si lo tuviera haría que la
-                    // búsqueda de la clave devolviese la primera que pasara.
-                    Attribute::Id(bytes) if !bytes.is_empty() => cka_id = Some(bytes),
-                    _ => {}
-                }
-            }
+/// Los certificados de una ranura ya abierta que tienen clave privada —o,
+/// si la ranura no enseña ninguna clave privada sin sesión, todos los
+/// certificados sin filtrar (ver la nota de [`list_certificates`]).
+fn signable_certificates(
+    session: &Session,
+    store: &Store,
+    token_label: &str,
+) -> Result<Vec<TokenCertificate>, TokenError> {
+    let visible_private_keys = private_key_ids(session)?;
 
-            // Un certificado sin CKA_LABEL no se puede reencontrar por etiqueta,
-            // que es lo único que el ADR-0010 deja persistir, así que no se
-            // ofrece: enseñarlo sería prometer algo que no podemos cumplir.
-            if let (Some(label), Some(der)) = (label, der) {
-                if !label.is_empty() {
-                    found.push(TokenCertificate::new(
-                        CertificateRef::new(store, &token_label, label, cka_id),
-                        der,
-                    ));
+    if visible_private_keys.is_empty() {
+        return all_certificates_in_session(session, store, token_label);
+    }
+
+    let mut found = Vec::new();
+    for certificate in all_certificates_in_session(session, store, token_label)? {
+        // Sin clave privada con su mismo CKA_ID en el mismo token, no se puede
+        // firmar con él: es justo lo que este filtro (ID-07) tiene que
+        // descartar.
+        if certificate
+            .reference()
+            .cka_id()
+            .is_some_and(|cka_id| visible_private_keys.contains(cka_id))
+        {
+            found.push(certificate);
+        }
+    }
+
+    Ok(found)
+}
+
+/// Los `CKA_ID` de las `CKO_PRIVATE_KEY` visibles en la sesión, en una sola
+/// consulta al token.
+///
+/// Antes esto era un `find_objects` por certificado —137 en el perfil de
+/// Firefox de 137 entradas que motiva el #100—; leer las claves de la ranura
+/// de una vez a un conjunto cuesta una sola consulta y de paso es lo que hace
+/// falta para distinguir «esta ranura no tiene ninguna clave visible» de «esta
+/// ranura tiene claves y esta en concreto no empareja».
+///
+/// No lee ningún atributo protegido de la clave, solo su `CKA_ID`: la
+/// existencia de la clave no es un secreto, solo su valor lo es (ID-08).
+fn private_key_ids(session: &Session) -> Result<HashSet<Vec<u8>>, TokenError> {
+    let mut ids = HashSet::new();
+
+    for object in session.find_objects(&[Attribute::Class(ObjectClass::PRIVATE_KEY)])? {
+        // Una clave que el token enumera pero cuyo CKA_ID no deja leer se
+        // salta, no se propaga: el módulo PKCS#11 lo pone el fabricante de la
+        // tarjeta, y el peor caso de saltarla es un certificado de más en la
+        // lista, mientras que el de propagar es que no se pueda listar nada
+        // —ni en esta ranura ni en los almacenes que vengan detrás— con un
+        // error que habla del atributo de una clave.
+        let Ok(attributes) = session.get_attributes(object, &[AttributeType::Id]) else {
+            continue;
+        };
+
+        for attribute in attributes {
+            // Un CKA_ID vacío no empareja nada: es el mismo caso que un
+            // certificado sin CKA_ID, ver all_certificates_in_session.
+            if let Attribute::Id(bytes) = attribute {
+                if !bytes.is_empty() {
+                    ids.insert(bytes);
                 }
             }
         }
     }
 
+    Ok(ids)
+}
+
+/// Los certificados de una ranura ya abierta, **sin** aplicar el filtro de
+/// clave privada.
+///
+/// Compartida entre [`signable_certificates`] y
+/// [`list_certificates_unfiltered_for_test`], que existe para que las pruebas
+/// puedan construir la referencia a un certificado que el filtro de #100 deja
+/// fuera del listado a propósito —una CA suelta, por ejemplo— y comprobar qué
+/// pasa al intentar firmar con ella.
+fn all_certificates_in_session(
+    session: &Session,
+    store: &Store,
+    token_label: &str,
+) -> Result<Vec<TokenCertificate>, TokenError> {
+    let mut found = Vec::new();
+
+    for object in session.find_objects(&[Attribute::Class(ObjectClass::CERTIFICATE)])? {
+        let attributes = session.get_attributes(
+            object,
+            &[
+                AttributeType::Label,
+                AttributeType::Value,
+                AttributeType::Id,
+            ],
+        )?;
+
+        let mut label = None;
+        let mut der = None;
+        let mut cka_id = None;
+        for attribute in attributes {
+            match attribute {
+                Attribute::Label(bytes) => {
+                    label = Some(String::from_utf8_lossy(&bytes).trim().to_owned())
+                }
+                Attribute::Value(bytes) => der = Some(bytes),
+                // Un CKA_ID vacío no empareja nada: es lo mismo que no
+                // tenerlo, y guardarlo como si lo tuviera haría que la
+                // búsqueda de la clave devolviese la primera que pasara.
+                Attribute::Id(bytes) if !bytes.is_empty() => cka_id = Some(bytes),
+                _ => {}
+            }
+        }
+
+        // Un certificado sin CKA_LABEL no se puede reencontrar por etiqueta,
+        // que es lo único que el ADR-0010 deja persistir, así que no se
+        // ofrece: enseñarlo sería prometer algo que no podemos cumplir.
+        if let (Some(label), Some(der)) = (label, der) {
+            if !label.is_empty() {
+                found.push(TokenCertificate::new(
+                    CertificateRef::new(store, token_label, label, cka_id),
+                    der,
+                ));
+            }
+        }
+    }
+
     Ok(found)
+}
+
+/// Lo mismo que [`list_certificates`], pero sin aplicar el filtro de clave
+/// privada (ID-07).
+///
+/// Existe solo para las pruebas: ninguna referencia a un certificado sin clave
+/// —una CA suelta de un perfil NSS, por ejemplo— sale ya de
+/// [`list_certificates`], así que una prueba que quiera comprobar qué pasa al
+/// pedirle una firma a una de ellas necesita otra forma de conseguir esa
+/// referencia. No hace falta sesión: como [`list_certificates`], esto tampoco
+/// pide el PIN.
+#[doc(hidden)]
+pub fn list_certificates_unfiltered_for_test(
+    store: impl Into<Store>,
+) -> Result<Vec<TokenCertificate>, TokenError> {
+    let store = store.into();
+    with_token_turn(|| {
+        the_store_is_really_there(&store)?;
+        let context = context(&store)?;
+        let mut found = Vec::new();
+
+        for slot in usable_slots(&context)? {
+            let token_label = context.get_token_info(slot)?.label().trim().to_owned();
+            let session = context.open_ro_session(slot)?;
+            found.extend(all_certificates_in_session(&session, &store, &token_label)?);
+        }
+
+        Ok(found)
+    })
 }
 
 /// La comprobación explícita que separa «no hay certificados» de «lo he abierto

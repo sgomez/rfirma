@@ -15,8 +15,8 @@
 //! | `CKA_ID` | etiqueta | qué tiene | para qué |
 //! | --- | --- | --- | --- |
 //! | `01` | `FNMT-ACTIVO-99999999R` | clave + certificado | camino feliz |
-//! | `02` | `FNMT-CADUCADO-99999999R` | solo certificado | caducó en 2020 |
-//! | `03` | `FNMT-REVOCADO-99999999R` | solo certificado | revocado en 2024, en vigor |
+//! | `02` | `FNMT-CADUCADO-99999999R` | clave + certificado | caducó en 2020 |
+//! | `03` | `FNMT-REVOCADO-99999999R` | clave + certificado | revocado en 2024, en vigor |
 //! | `04` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del activo |
 //! | `05` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del caducado |
 //!
@@ -24,7 +24,29 @@
 //! reproducción de lo que hay en un perfil de Firefox de verdad, donde dos
 //! claves privadas llevan la misma etiqueta.
 //!
+//! Los cinco llevan clave (#100): sin ella el filtro de certificados
+//! firmables (ID-07) los haría desaparecer del listado, y el caducado y el
+//! revocado existen justamente para que el listado tenga que clasificarlos.
+//!
 //! El detalle del entorno está en `docs/research/token-pkcs11-pruebas.md`.
+//!
+//! # Por qué estas pruebas listan sin iniciar sesión
+//!
+//! [`pkcs11::list_certificates`] no pide el PIN (ID-08): el filtro de #100
+//! busca la clave privada sin sesión, y en NSS y en una tarjeta real eso basta
+//! para saber que existe. **SoftHSM no se comporta así.** Sus objetos
+//! `CKO_PRIVATE_KEY` llevan `CKA_PRIVATE` de forma incondicional —comprobado
+//! con `pkcs11-tool`, con `p11tool --write` sin `--mark-private`, y con un
+//! `C_SetAttributeValue` directo, que devuelve `CKR_ATTRIBUTE_READ_ONLY`—, así
+//! que sin sesión SoftHSM no enseña ninguna clave, tenga par o no.
+//!
+//! Por eso el filtro no se aplica por ranura si esa ranura no enseña
+//! **ninguna** clave privada sin sesión: cero claves visibles no significa
+//! «aquí no hay nada firmable», significa «este módulo no lo va a decir sin
+//! PIN» (ver la nota de [`pkcs11::list_certificates`]). Gracias a eso
+//! `list_certificates` a secas —sin sesión— vuelve a listar los cinco
+//! certificados de este token, y estas pruebas no necesitan ningún escape
+//! autenticado. Lo comprueba `listing_without_a_session_still_lists_them`.
 //!
 //! # Lo que aquí no se comprueba
 //!
@@ -177,12 +199,24 @@ fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it
     );
 }
 
+/// La nota del módulo, fijada en una prueba: SoftHSM no enseña ninguna clave
+/// privada sin sesión, y aun así los cinco certificados del token salen sin
+/// pedir el PIN, porque una ranura sin ninguna clave visible no se filtra
+/// (ver la nota de [`pkcs11::list_certificates`]).
 #[test]
-fn listing_does_not_need_the_pin() {
-    // No hay ninguna sesion iniciada en este proceso y aun asi hay certificados:
-    // ese es todo el punto. Si listar exigiera PIN, no habria forma de rechazar
-    // un certificado caducado antes de pedirlo.
-    assert!(certificates().len() >= 3);
+fn listing_without_a_session_still_lists_them() {
+    let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");
+    assert!(
+        found
+            .iter()
+            .any(|certificate| certificate.reference().label() == ACTIVE),
+        "el certificado activo tenia que salir sin PIN"
+    );
+    assert_eq!(
+        found.len(),
+        5,
+        "el token de pruebas tiene cinco certificados, todos con clave"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -510,11 +544,17 @@ fn a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label() {
     assert!(error.detail().contains("CKA_ID"), "{}", error.detail());
 }
 
-/// El caducado y el revocado entran sin clave a propósito: pedir una firma con
-/// ellos es un fallo del token, no del certificado, y se distingue.
-#[test]
-fn asking_a_certificate_without_a_key_to_sign_is_a_token_failure() {
-    let error = signing_error(&reference(EXPIRED), PIN);
-
-    assert_eq!(error.situation(), Situation::CertificateNotFound);
-}
+// Antes de #100, el caducado y el revocado entraban en el token SIN clave a
+// proposito, y esta prueba pedia una firma con ellos para comprobar que eso
+// es un fallo del token y no del certificado. Con el filtro de #100 esa
+// referencia ya no la devuelve nunca el listado -un certificado sin clave no
+// se ofrece-, y el propio script de aprovisionamiento les da su clave (misma
+// razon: si no la tuvieran, el filtro los haria desaparecer y las pruebas de
+// estado de mas arriba se quedarian sin sujeto). El token ya no tiene ningun
+// certificado sin clave, asi que el escenario de esta prueba no se puede
+// reproducir con una referencia real; lo que cubria -un CKA_ID sin clave
+// emparejada- lo siguen comprobando
+// a_cka_id_that_is_not_in_the_token_says_so_instead_of_failing_generically (un
+// CKA_ID que no esta en el token) y
+// a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label
+// (una referencia sin CKA_ID).

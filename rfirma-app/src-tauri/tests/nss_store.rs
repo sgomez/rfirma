@@ -146,6 +146,34 @@ fn a_firefox_profile_is_listed_like_any_other_pkcs11_store() {
     );
 }
 
+/// La prueba del #100: la lista solo trae certificados firmables. La CA suelta
+/// del perfil no tiene clave privada y no sale; el del titular, que sí tiene,
+/// sale. Sin esto, un perfil de Firefox de verdad enseñaría un centenar de
+/// autoridades y certificados de páginas web por cada certificado firmable.
+#[test]
+fn a_certificate_without_a_private_key_is_filtered_out_and_the_holders_is_not() {
+    let (_profile, store) = a_disposable_profile();
+
+    let found = certificates(&store);
+
+    assert!(
+        found
+            .iter()
+            .any(|certificate| certificate.reference().label() == HOLDER),
+        "el certificado del titular tiene clave y tenia que salir"
+    );
+    assert!(
+        !found
+            .iter()
+            .any(|certificate| certificate.reference().label().contains("AC ")),
+        "la CA suelta no tiene clave privada y no deberia salir en la lista firmable"
+    );
+
+    // Y sin pedir el PIN: el filtro busca la clave sin iniciar sesion (ID-08).
+    // Si esto necesitase el PIN, no habria forma de decidir que enseñar antes
+    // de pedirselo a nadie.
+}
+
 /// El titular, el DNI y el emisor se leen del DER igual que en una tarjeta: no
 /// hay una segunda implementación para NSS.
 #[test]
@@ -336,10 +364,17 @@ fn a_remembered_nss_certificate_still_signs_after_a_round_trip_through_the_state
 /// Firmar con un certificado que **no** tiene clave privada en el perfil —una
 /// CA suelta, de las que un Firefox de verdad tiene a cientos— se rechaza
 /// diciendo qué falta, no con un fallo genérico.
+///
+/// La CA ya no sale de `certificates()`: el filtro de #100 la descarta
+/// justamente porque no tiene clave, que es lo que esta prueba quiere
+/// comprobar. Su referencia sale de
+/// [`pkcs11::list_certificates_unfiltered_for_test`], el escape que existe
+/// para este caso.
 #[test]
 fn a_certificate_without_a_private_key_says_so_instead_of_failing_generically() {
     let (_profile, store) = a_disposable_profile();
-    let authority = certificates(&store)
+    let authority = pkcs11::list_certificates_unfiltered_for_test(&store)
+        .expect("el perfil deberia listarse sin filtrar")
         .into_iter()
         .find(|certificate| certificate.reference().label().contains("AC "))
         .expect("el perfil tenia que traer alguna CA suelta");
