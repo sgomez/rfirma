@@ -170,6 +170,31 @@ El único certificado **sin** clave privada del proyecto vive ahora en el perfil
 NSS desechable de `tests/nss_store.rs`, que es donde hace falta para comprobar
 qué pasa al pedirle una firma a algo que no puede firmar.
 
+## Ampliación: SoftHSM oculta sus claves privadas sin sesión, y no se puede cambiar (#100)
+
+El filtro «solo certificados firmables» del [issue #100](https://github.com/sgomez/rfirma/issues/100)
+busca `CKO_PRIVATE_KEY` con `find_objects` **sin PIN**, porque la existencia de
+una clave no es secreta (solo su valor lo es). Contra SoftHSM 2.6.1 esa
+búsqueda **siempre** devuelve cero resultados sin sesión autenticada, y no es
+un defecto de configuración: se comprobó por tres vías independientes que
+SoftHSM marca `CKO_PRIVATE_KEY` con `CKA_PRIVATE` de forma incondicional y no
+configurable.
+
+- `pkcs11-tool --list-objects --type privkey` sin `--login`: 0 objetos; con
+  `--login`: los que haya.
+- `p11tool --write` **sin** `--mark-private` (que en teoría deja el objeto
+  público): el objeto sigue sin verse sin sesión.
+- `C_SetAttributeValue(CKA_PRIVATE, false)` directo sobre una clave ya
+  existente, con sesión autenticada: devuelve `CKR_ATTRIBUTE_READ_ONLY`.
+
+El NSS softoken (`libsoftokn3.so`) no tiene esta restricción — sí encuentra las
+claves del perfil sin login. Cualquier filtro de «¿tiene clave privada?» que se
+apoye en `find_objects` sin sesión tiene que tratar «esta ranura no enseña
+ninguna clave privada sin sesión» como «este módulo no lo va a decir sin PIN» y
+no filtrarla, en vez de asumir que una ranura sin resultados está vacía de
+verdad: si un lector real se comportase como SoftHSM, la asunción contraria
+vaciaría el listado sin ningún error que lo explicara.
+
 ## Fuera
 
 El certificado FNMT personal del titular. No se importa, no se exporta, no se

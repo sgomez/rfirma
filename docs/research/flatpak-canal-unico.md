@@ -400,6 +400,25 @@ Ningún permiso nuevo hace falta para esta medición: `flatpak document-export` 
 del arenero solo usan el portal de documentos y el `--filesystem="$LAB"` que el banco de pruebas ya
 declaraba para el resto de pasos.
 
+## 10. Verificar dentro del arenero sin depender del idioma del anfitrión (#101)
+
+El paso 7 de `verifica.sh` comprueba, dentro del arenero, que escribir en
+`~/.mozilla/firefox` y en `~/.pki/nssdb` falla y que `profiles.ini` se lee. Dos
+trampas de esa comprobación, ninguna propia de NSS:
+
+- **`flatpak run` propaga `LANG`/`LC_*` del anfitrión al arenero**, y
+  `org.gnome.Platform//50` trae la extensión de locale correspondiente:
+  cualquier paso de verificación que decida algo mirando con `grep` el mensaje
+  de error de una herramienta de `coreutils` (p. ej. `touch: no se puede
+  efectuar `touch` sobre…`) da un falso verde en un escritorio que no esté en
+  inglés. La comprobación tiene que medir la propiedad directamente —
+  `[ -d … ]`, el código de salida de la orden— y dejar el mensaje solo como
+  información en el log, nunca como condición.
+- **`flatpak run --env=VAR=valor --command=sh me.sgomez.rfirma -c '…"$VAR"…'`**
+  es la forma de pasar una ruta del anfitrión al arenero sin interpolarla ya
+  dentro de las comillas de `sh -c` (que la expandiría con el `$HOME` de dentro
+  del arenero, no el de fuera).
+
 ## Reproducir
 
 ```bash
