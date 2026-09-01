@@ -75,6 +75,7 @@ const aCertificate: Certificate = {
   issuer: "AC FNMT Usuarios",
   store: "card",
   status: { kind: "valid" },
+  remembered: false,
 };
 
 /**
@@ -330,6 +331,60 @@ describe("App", () => {
 
     expect(trigger).toHaveTextContent("Grace Hopper Murray");
     expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+  });
+
+  /**
+   * Quien tiene cuatro certificados los elige **una vez**, no cada día: el que
+   * se usó en la última firma sale ya puesto, sin pedir el PIN (#110). Quién es
+   * ese lo decide el backend —las coordenadas del token no cruzan la
+   * frontera—; aquí llega marcada la fila.
+   */
+  it("starts with the certificate that was used the last time already chosen", async () => {
+    const user = userEvent.setup();
+    const used: Certificate = {
+      ...aCertificate,
+      id: "otra",
+      holderName: "Grace Hopper Murray",
+      remembered: true,
+    };
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [aCertificate, used] },
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
+
+    expect(trigger).toHaveTextContent("Grace Hopper Murray");
+    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+  });
+
+  /**
+   * Y el recordado que ya no está —tarjeta fuera, perfil borrado— deja el panel
+   * en «Sin certificado» **sin ruido**: no viene marcada ninguna fila, y eso no
+   * es un error que contar (ADR-0010).
+   */
+  it("falls back to no certificate when the remembered one is gone, without an error", async () => {
+    const user = userEvent.setup();
+    const other: Certificate = { ...aCertificate, id: "otra", holderName: "Grace Hopper Murray" };
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [aCertificate, other] },
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
+
+    expect(trigger).toHaveTextContent("Elegir certificado");
+    expect(within(panel).queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {

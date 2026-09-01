@@ -491,15 +491,27 @@ function formatSignedAt(instant: Date, locale: string): string {
  * Con qué certificado se firma, a partir de los que hay.
  *
  * Con uno solo no se pregunta: elegir entre una cosa no es elegir, y eso
- * incluye a uno caducado —el panel lo pone y avisa de por qué no sirve—. Con
- * varios **no hay preselección**: el desplegable dice «Elegir certificado» y el
- * botón de firmar sigue apagado, porque elegir con qué identidad se firma un
- * documento con validez jurídica no lo hace la aplicación por su cuenta, y el
- * orden de la lista solo dice en qué orden cargaron los módulos.
+ * incluye a uno caducado —el panel lo pone y avisa de por qué no sirve—.
+ *
+ * Con varios manda **el que se usó la última vez** (#110): quien tiene cuatro
+ * certificados los elige una vez, no cada día. Eso no contradice la regla de
+ * que la aplicación no elige por su cuenta: no está eligiendo, está devolviendo
+ * lo que ya se eligió firmando. Y viene con su estado de ahora, no con el de
+ * entonces: si desde la última firma caducó, sale puesto y el panel avisa de
+ * por qué ya no sirve, igual que hace con el único certificado de un token.
+ *
+ * Sin recordado —primera vez, o el recordado ya no está en el token— sigue sin
+ * haber preselección: el desplegable dice «Elegir certificado» y el botón de
+ * firmar sigue apagado, porque el orden de la lista solo dice en qué orden
+ * cargaron los módulos.
  */
 function chosenFrom(found: readonly Certificate[]): CertificateState {
   const [first] = found;
   if (first === undefined) return { kind: "empty" };
   if (found.length === 1) return { kind: "chosen", certificate: first, certificates: found };
+  const remembered = found.find((one) => one.remembered);
+  if (remembered !== undefined) {
+    return { kind: "chosen", certificate: remembered, certificates: found };
+  }
   return { kind: "unchosen", certificates: found };
 }

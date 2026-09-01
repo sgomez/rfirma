@@ -15,6 +15,7 @@ const certificate: Certificate = {
   issuer: "AC FNMT Usuarios",
   store: "card",
   status: { kind: "valid" },
+  remembered: false,
 };
 
 const wrongPin: TokenFailure = {

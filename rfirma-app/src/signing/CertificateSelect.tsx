@@ -7,7 +7,12 @@ import "./CertificateSelect.css";
 
 interface CertificateSelectProps {
   certificates: readonly Certificate[];
-  /** El elegido, o `null` mientras no hay ninguno: no hay preselección. */
+  /**
+   * El elegido, o `null` mientras no hay ninguno.
+   *
+   * Quién viene puesto al arrancar lo decide `chosenFrom`, no este componente:
+   * el que se usó en la última firma, y sin él —o sin nada recordado— ninguno.
+   */
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
 }
@@ -145,8 +150,9 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
           <CertificateIcon />
         </span>
         {chosen === null ? (
-          // Sin preselección: elegir con qué identidad se firma un documento
-          // con validez jurídica no lo hace la aplicación por su cuenta.
+          // Sin nada recordado no hay preselección: elegir con qué identidad se
+          // firma un documento con validez jurídica no lo hace la aplicación
+          // por su cuenta.
           <span className="rf-body certificate-select__unchosen">
             {t("panel.certificate.choose")}
           </span>

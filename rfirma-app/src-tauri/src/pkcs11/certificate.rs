@@ -111,6 +111,37 @@ impl CertificateRef {
     pub fn cka_id(&self) -> Option<&[u8]> {
         self.cka_id.as_deref()
     }
+
+    /// Si esta referencia y otra señalan al **mismo** certificado.
+    ///
+    /// No es `==`, y la diferencia es justo el certificado que recordó una
+    /// versión anterior: al leído del token le sobran coordenadas que al
+    /// recordado le faltan —el `CKA_ID` antes del #98, los `init_args` antes
+    /// del #99—, y comparando por igualdad ninguno de esos volvería a
+    /// encontrarse nunca. Lo que **no se sabe no descarta**: una coordenada
+    /// ausente en cualquiera de los dos lados deja de opinar.
+    ///
+    /// El precio de esa tolerancia es conocido y pequeño: dos certificados que
+    /// compartan etiqueta en el mismo token son indistinguibles para una
+    /// referencia sin `CKA_ID`, y entonces se reencuentra el primero. Es lo que
+    /// se podía saber en aquella versión; a la primera firma se reescribe con
+    /// las cinco coordenadas y deja de pasar.
+    pub fn is_the_same_as(&self, other: &Self) -> bool {
+        self.module == other.module
+            && self.token_label == other.token_label
+            && self.label == other.label
+            && agree(self.cka_id.as_deref(), other.cka_id.as_deref())
+            && agree(self.init_args.as_deref(), other.init_args.as_deref())
+    }
+}
+
+/// Dos coordenadas concuerdan si las dos están y valen lo mismo, o si a
+/// cualquiera de las dos le falta.
+fn agree<T: PartialEq + ?Sized>(one: Option<&T>, other: Option<&T>) -> bool {
+    match (one, other) {
+        (Some(one), Some(other)) => one == other,
+        _ => true,
+    }
 }
 
 /// En qué estado está el certificado, decidido **antes** de pedir el PIN.
@@ -282,6 +313,91 @@ mod tests {
         assert_eq!(certificate.subject(), None);
         assert_eq!(certificate.issuer(), None);
         assert!(!certificate.status().is_usable());
+    }
+
+    /// Lo que hace falta al arrancar: la referencia recordada reconoce a la
+    /// que acaba de salir del token, y no reconoce a ninguna otra.
+    #[test]
+    fn a_remembered_reference_recognises_the_one_that_came_out_of_the_token() {
+        let remembered = CertificateRef::new("/usr/lib/x.so", "rfirma-test", "FIRMA", vec![0x01]);
+
+        assert!(remembered.is_the_same_as(&CertificateRef::new(
+            "/usr/lib/x.so",
+            "rfirma-test",
+            "FIRMA",
+            vec![0x01]
+        )));
+        assert!(!remembered.is_the_same_as(&CertificateRef::new(
+            "/usr/lib/x.so",
+            "rfirma-test",
+            "FIRMA",
+            vec![0x02]
+        )));
+        assert!(!remembered.is_the_same_as(&CertificateRef::new(
+            "/usr/lib/x.so",
+            "otro-token",
+            "FIRMA",
+            vec![0x01]
+        )));
+        assert!(!remembered.is_the_same_as(&CertificateRef::new(
+            "/usr/lib/otro.so",
+            "rfirma-test",
+            "FIRMA",
+            vec![0x01]
+        )));
+    }
+
+    /// El certificado que recordó una versión anterior al #98 y al #99 no lleva
+    /// `CKA_ID` ni `init_args`, y aun así tiene que reencontrarse: lo que no se
+    /// sabe no descarta.
+    #[test]
+    fn a_reference_remembered_by_an_older_version_still_finds_its_certificate() {
+        let written = r#"{
+            "module": "/usr/lib/libsoftokn3.so",
+            "token_label": "NSS Certificate DB",
+            "label": "FIRMA"
+        }"#;
+        let remembered: CertificateRef =
+            serde_json::from_str(written).expect("una referencia antigua tiene que leerse");
+
+        let listed = CertificateRef::new(
+            Store::with_init_args(
+                "/usr/lib/libsoftokn3.so",
+                Some("configdir='/home/quien/.mozilla/firefox/abc'".to_owned()),
+            ),
+            "NSS Certificate DB",
+            "FIRMA",
+            vec![0x01],
+        );
+
+        assert!(remembered.is_the_same_as(&listed));
+    }
+
+    /// Y dos perfiles de Firefox distintos **no** son el mismo certificado
+    /// aunque compartan módulo, token y etiqueta: lo que los separa son los
+    /// `init_args`, que es para lo que entraron en el #99.
+    #[test]
+    fn two_firefox_profiles_are_not_the_same_certificate() {
+        let one = CertificateRef::new(
+            Store::with_init_args(
+                "/usr/lib/libsoftokn3.so",
+                Some("configdir='/uno'".to_owned()),
+            ),
+            "NSS Certificate DB",
+            "FIRMA",
+            vec![0x01],
+        );
+        let other = CertificateRef::new(
+            Store::with_init_args(
+                "/usr/lib/libsoftokn3.so",
+                Some("configdir='/otro'".to_owned()),
+            ),
+            "NSS Certificate DB",
+            "FIRMA",
+            vec![0x01],
+        );
+
+        assert!(!one.is_the_same_as(&other));
     }
 
     #[test]
