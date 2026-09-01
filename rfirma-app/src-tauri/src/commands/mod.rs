@@ -368,7 +368,7 @@ pub struct Environment {
     /// Es una **colección** y no una ruta única (ID-03): un almacén que no
     /// cargue no puede dejar sin certificados a los demás. Los resuelve
     /// [`crate::pkcs11::stores::from_environment`] al arrancar.
-    pub stores: Vec<std::path::PathBuf>,
+    pub stores: Vec<crate::pkcs11::Store>,
     /// La carpeta de documentos del usuario, para cuando no haya destino
     /// elegido.
     pub documents_folder: std::path::PathBuf,
@@ -631,7 +631,7 @@ fn deliver(
 /// todavía sirve— con la configuración que sale de él, porque las tres son la
 /// misma decisión: **con qué se firma**.
 fn plan_signature(
-    stores: &[std::path::PathBuf],
+    stores: &[crate::pkcs11::Store],
     order: &SigningOrder,
 ) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), Failure> {
     let certificates = pkcs11::list_certificates_across(stores)?;
@@ -1656,7 +1656,9 @@ mod tests {
 
     fn an_environment(documents_folder: &std::path::Path) -> Environment {
         Environment {
-            stores: vec!["/usr/lib/softhsm/libsofthsm2.so".into()],
+            stores: vec![crate::pkcs11::Store::module(
+                "/usr/lib/softhsm/libsofthsm2.so",
+            )],
             documents_folder: documents_folder.to_path_buf(),
             configuration: Mutex::new(Configuration::default()),
             memory: super::Memory::at(&crate::paths::Paths::under(documents_folder)),

@@ -25,7 +25,10 @@ pub mod error;
 pub mod stores;
 
 use std::collections::HashMap;
+use std::ffi::CString;
+use std::os::raw::c_void;
 use std::path::{Path, PathBuf};
+use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
@@ -38,6 +41,7 @@ use cryptoki::types::AuthPin;
 
 pub use certificate::{CertificateRef, CertificateStatus, TokenCertificate};
 pub use error::{Situation, TokenError};
+pub use stores::Store;
 
 /// El mecanismo del ID-16, en un solo sitio para que cambiarlo sea un cambio
 /// visible y no un descuido en una llamada perdida.
@@ -51,7 +55,7 @@ const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;
 /// lo que se cuenta es **ese** fallo, y no un «no hay ninguno» que sería
 /// mentira. Sin almacenes tampoco se calla: quedarse sin dónde buscar es un
 /// fallo de configuración, no una lista vacía.
-pub fn list_certificates_across(stores: &[PathBuf]) -> Result<Vec<TokenCertificate>, TokenError> {
+pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate>, TokenError> {
     if stores.is_empty() {
         return Err(TokenError::new(
             Situation::ModuleNotFound,
@@ -80,8 +84,17 @@ pub fn list_certificates_across(stores: &[PathBuf]) -> Result<Vec<TokenCertifica
 /// No pide el PIN a propósito: los certificados son objetos públicos, y su
 /// estado —caducado, en vigor— tiene que poder decidirse **antes** de que a
 /// nadie se le pida nada.
-pub fn list_certificates(module: &Path) -> Result<Vec<TokenCertificate>, TokenError> {
-    let context = context(module)?;
+pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
+    let store = store.into();
+    // Bajo el mismo turno que la firma: abrir un almacén NSS es inicializar el
+    // módulo con **su** perfil, y dos almacenes a la vez sobre el mismo
+    // `libsoftokn3.so` se pisarían.
+    with_token_turn(|| list_holding_the_turn(&store))
+}
+
+fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+    the_store_is_really_there(store)?;
+    let context = context(store)?;
     let mut found = Vec::new();
 
     for slot in usable_slots(&context)? {
@@ -121,7 +134,7 @@ pub fn list_certificates(module: &Path) -> Result<Vec<TokenCertificate>, TokenEr
             if let (Some(label), Some(der)) = (label, der) {
                 if !label.is_empty() {
                     found.push(TokenCertificate::new(
-                        CertificateRef::new(module, &token_label, label, cka_id),
+                        CertificateRef::new(store, &token_label, label, cka_id),
                         der,
                     ));
                 }
@@ -130,6 +143,49 @@ pub fn list_certificates(module: &Path) -> Result<Vec<TokenCertificate>, TokenEr
     }
 
     Ok(found)
+}
+
+/// La comprobación explícita que separa «no hay certificados» de «lo he abierto
+/// mal».
+///
+/// Es el aviso que el #95 dejó escrito, y está medido: cuando a softoken se le
+/// da un `configdir` que no lleva a ningún perfil **no siempre falla**. A veces
+/// devuelve un `CKR_*` opaco desde `C_Initialize`, y a veces abre dos ranuras
+/// que se anuncian como `token initialized` y no tienen ni un objeto dentro —es
+/// lo que hace, sin más, cuando no se le pasan init args—. Las dos caras se ven
+/// desde arriba igual que un Firefox recién instalado, que es justo la
+/// confusión que este spec vino a cerrar.
+///
+/// Así que no se le pregunta a softoken: se mira si hay `cert9.db` detrás del
+/// `configdir` **antes** de abrir nada. La respuesta es la misma siempre, y el
+/// mensaje dice con qué init args se iba a abrir en vez de un código de error.
+fn the_store_is_really_there(store: &Store) -> Result<(), TokenError> {
+    let Some(init_args) = store.init_args() else {
+        // Un módulo de tarjeta no lleva init args y no hay nada que comprobar:
+        // un token vacío es una situación legítima, no una mala configuración.
+        return Ok(());
+    };
+
+    let profile = configured_directory(init_args);
+    if profile.is_some_and(|directory| Path::new(directory).join("cert9.db").is_file()) {
+        return Ok(());
+    }
+
+    Err(TokenError::new(
+        Situation::ModuleNotFound,
+        format!(
+            "los init args «{init_args}» no llevan a ningun perfil NSS: \
+             detras del configdir no hay ningun cert9.db"
+        ),
+    ))
+}
+
+/// El `configdir` de unos init args, ya sin el prefijo `sql:` ni las comillas.
+fn configured_directory(init_args: &str) -> Option<&str> {
+    let value = init_args.split("configdir=").nth(1)?;
+    let value = value.strip_prefix('\'')?;
+    let value = value.split('\'').next()?;
+    Some(value.strip_prefix("sql:").unwrap_or(value))
 }
 
 /// Firma `data` con la clave privada que acompaña al certificado referenciado.
@@ -153,7 +209,8 @@ pub fn sign(reference: &CertificateRef, pin: &str, data: &[u8]) -> Result<Vec<u8
 /// una de ellas inicia sesión a mano, como contraejemplo del mecanismo del
 /// ID-16. Sin este turno compartido, ese contraejemplo se cruza con las firmas
 /// de verdad y pone el carril rápido rojo de forma intermitente. **No es
-/// reentrante**: nunca llames a [`sign`] desde dentro del cierre.
+/// reentrante**: nunca llames a [`sign`] ni a [`list_certificates`] desde
+/// dentro del cierre.
 #[doc(hidden)]
 pub fn with_token_turn<T>(operation: impl FnOnce() -> T) -> T {
     static TURN: Mutex<()> = Mutex::new(());
@@ -166,7 +223,9 @@ fn sign_holding_the_turn(
     pin: &str,
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
-    let context = context(reference.module())?;
+    let store = reference.store();
+    the_store_is_really_there(&store)?;
+    let context = context(&store)?;
     let slot = slot_of(&context, reference.token_label())?;
     let session = context.open_ro_session(slot)?;
 
@@ -269,8 +328,24 @@ fn private_key(
 /// proceso y módulo**, y la segunda devuelve `CKR_CRYPTOKI_ALREADY_INITIALIZED`.
 /// Como el `.so` lo comparte todo el proceso vía `dlopen`, abrir un contexto por
 /// operación rompería en cuanto haya dos.
-fn context(module: &Path) -> Result<Arc<Pkcs11>, TokenError> {
+fn context(store: &Store) -> Result<Arc<Pkcs11>, TokenError> {
     static MODULES: OnceLock<Mutex<HashMap<PathBuf, Arc<Pkcs11>>>> = OnceLock::new();
+
+    // Un almacén con init args **no se cachea**, y esto es lo contrario de una
+    // optimización perdida.
+    //
+    // Los init args se le pasan a `C_Initialize`, que es por proceso y por
+    // módulo. Todos los perfiles de Firefox de una máquina se abren por el
+    // mismo `libsoftokn3.so`, así que un contexto cacheado por ruta de módulo
+    // devolvería el **primer** perfil abierto cada vez que se pidiera
+    // cualquiera de los otros: dos perfiles distintos enseñarían los mismos
+    // certificados, duplicados. Se abre uno, se lee y se cierra —el `Drop` de
+    // `Pkcs11` llama a `C_Finalize`— antes de pasar al siguiente, y por eso
+    // todo lo que abre un almacén tiene que hacerlo dentro de
+    // [`with_token_turn`].
+    if let Some(init_args) = store.init_args() {
+        return Ok(Arc::new(initialized(store.path(), Some(init_args))?));
+    }
 
     let mut loaded = MODULES
         .get_or_init(|| Mutex::new(HashMap::new()))
@@ -280,12 +355,48 @@ fn context(module: &Path) -> Result<Arc<Pkcs11>, TokenError> {
         // inicializados—, así que perder el proceso por eso sería peor.
         .unwrap_or_else(|poisoned| poisoned.into_inner());
 
-    if let Some(context) = loaded.get(module) {
+    if let Some(context) = loaded.get(store.path()) {
         return Ok(Arc::clone(context));
     }
 
+    let context = Arc::new(initialized(store.path(), None)?);
+    loaded.insert(store.path().to_path_buf(), Arc::clone(&context));
+
+    Ok(context)
+}
+
+/// Carga el módulo y llama a `C_Initialize`, con init args o sin ellos.
+///
+/// Los init args viajan por `pReserved` de `CK_C_INITIALIZE_ARGS`, que es donde
+/// softoken los busca. **No** por la variable de entorno `NSS_LIB_PARAMS`, que
+/// es la otra forma de decírselo: esa es del proceso entero y no de la llamada,
+/// así que no sabría distinguir un perfil de otro (ID-05 pide varios) y además
+/// escribir en el entorno con la aplicación ya arrancada y con hilos dentro no
+/// es seguro. El contenido de la cadena es el mismo que la variable llevaría.
+fn initialized(module: &Path, init_args: Option<&str>) -> Result<Pkcs11, TokenError> {
     let context = Pkcs11::new(module)?;
-    match context.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK)) {
+    let flags = CInitializeFlags::OS_LOCKING_OK;
+
+    // La cadena tiene que seguir viva mientras dure `C_Initialize`: softoken la
+    // lee ahí mismo y no se queda con el puntero.
+    let reserved = init_args
+        .map(|args| CString::new(args).map_err(|_| nul_inside(args)))
+        .transpose()?;
+    let arguments = match &reserved {
+        // SAFETY: el puntero sale de una `CString` viva hasta el final de esta
+        // función, y softoken espera exactamente eso en `pReserved`: una cadena
+        // C terminada en cero con sus init args.
+        Some(reserved) => unsafe {
+            CInitializeArgs::new_with_reserved(
+                flags,
+                NonNull::new(reserved.as_ptr() as *mut c_void)
+                    .expect("una CString nunca esta en la direccion cero"),
+            )
+        },
+        None => CInitializeArgs::new(flags),
+    };
+
+    match context.initialize(arguments) {
         Ok(()) => {}
         // `C_Initialize` es por proceso, no por handle: si otra biblioteca del
         // mismo proceso ya cargó este módulo, el nuestro está inicializado y
@@ -293,8 +404,13 @@ fn context(module: &Path) -> Result<Arc<Pkcs11>, TokenError> {
         Err(Error::Pkcs11(RvError::CryptokiAlreadyInitialized, _)) => {}
         Err(other) => return Err(other.into()),
     }
-    let context = Arc::new(context);
-    loaded.insert(module.to_path_buf(), Arc::clone(&context));
 
     Ok(context)
+}
+
+fn nul_inside(init_args: &str) -> TokenError {
+    TokenError::new(
+        Situation::ModuleNotFound,
+        format!("los init args «{init_args}» llevan un cero dentro"),
+    )
 }

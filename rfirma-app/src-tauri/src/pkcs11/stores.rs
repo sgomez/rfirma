@@ -8,9 +8,13 @@
 //! fuera— sin que nadie tenga que exportar nada a mano.
 //!
 //! Es una **colección** y no una ruta a propósito (ID-03): un almacén que no
-//! cargue no puede dejar sin certificados a los demás. Hoy todos son módulos
-//! PKCS#11; el almacén NSS de Mozilla entra por aquí, como un módulo más, en su
-//! propio sub-issue.
+//! cargue no puede dejar sin certificados a los demás.
+//!
+//! Desde el #99 hay dos clases de almacén y **una sola** implementación
+//! (ID-01): el módulo PKCS#11 de una tarjeta, y el almacén NSS de Mozilla —el
+//! perfil de Firefox y `~/.pki/nssdb`—, que entra por `libsoftokn3.so` como un
+//! módulo PKCS#11 más. Lo único que los distingue es que el segundo necesita
+//! que se le diga **qué perfil** abrir: eso son los init args de [`Store`].
 
 use std::path::{Path, PathBuf};
 
@@ -35,16 +39,231 @@ pub const CANDIDATE_MODULES: &[&str] = &[
     "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so",
 ];
 
+/// Dónde puede estar el softoken de NSS, que es lo que abre un perfil de
+/// Firefox.
+///
+/// No se empaqueta (ID-15): el runtime `org.gnome.Platform//50` ya trae el
+/// primero de esta lista, así que dentro del arenero y fuera se busca igual.
+pub const CANDIDATE_SOFTOKENS: &[&str] = &[
+    "/usr/lib/x86_64-linux-gnu/libsoftokn3.so",
+    "/usr/lib/x86_64-linux-gnu/nss/libsoftokn3.so",
+    "/usr/lib64/libsoftokn3.so",
+    "/usr/lib64/nss/libsoftokn3.so",
+    "/usr/lib/libsoftokn3.so",
+    "/usr/lib/nss/libsoftokn3.so",
+];
+
+/// Un almacén de certificados: el módulo que lo sirve y, si hace falta, **qué**
+/// tiene que abrir.
+///
+/// Para una tarjeta los init args son `None` y esto es exactamente lo que era
+/// antes, una ruta. Para NSS son la cadena que le dice a softoken qué perfil
+/// abrir y en qué modo, y sin ellos **no falla**: abre un almacén vacío que se
+/// anuncia como `token initialized` y devuelve cero objetos, que es el fallo
+/// silencioso que este módulo existe para evitar.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Store {
+    module: PathBuf,
+    init_args: Option<String>,
+}
+
+impl Store {
+    /// Un módulo PKCS#11 corriente, sin nada que configurar.
+    pub fn module(module: impl Into<PathBuf>) -> Self {
+        Self {
+            module: module.into(),
+            init_args: None,
+        }
+    }
+
+    /// Un almacén con init args ya escritos. Lo usa [`CertificateRef`] para
+    /// reconstruir el almacén de una referencia recordada.
+    ///
+    /// [`CertificateRef`]: super::CertificateRef
+    pub fn with_init_args(module: impl Into<PathBuf>, init_args: Option<String>) -> Self {
+        Self {
+            module: module.into(),
+            init_args,
+        }
+    }
+
+    /// El almacén NSS de un perfil concreto (ID-02).
+    ///
+    /// `flags=readOnly` **no es opcional**: rfirma no puede escribir en el
+    /// perfil de Firefox de nadie. `sql:` tampoco: es el formato de `cert9.db`,
+    /// que es el que llevan los perfiles desde hace años, y sin el prefijo
+    /// softoken buscaría los `cert8.db` de Berkeley DB que ya no existen.
+    pub fn nss(softoken: impl Into<PathBuf>, profile: &Path) -> Self {
+        Self {
+            module: softoken.into(),
+            init_args: Some(format!(
+                "configdir='sql:{}' certPrefix='' keyPrefix='' secmod='secmod.db' flags=readOnly",
+                profile.display()
+            )),
+        }
+    }
+
+    /// Ruta del módulo PKCS#11 que lo sirve.
+    pub fn path(&self) -> &Path {
+        &self.module
+    }
+
+    /// Lo que hay que pasarle a `C_Initialize` para que abra **este** almacén,
+    /// o `None` cuando el módulo no necesita que se le diga nada.
+    pub fn init_args(&self) -> Option<&str> {
+        self.init_args.as_deref()
+    }
+}
+
+impl From<&Path> for Store {
+    fn from(module: &Path) -> Self {
+        Self::module(module)
+    }
+}
+
+impl From<PathBuf> for Store {
+    fn from(module: PathBuf) -> Self {
+        Self::module(module)
+    }
+}
+
+impl From<&PathBuf> for Store {
+    fn from(module: &PathBuf) -> Self {
+        Self::module(module.clone())
+    }
+}
+
+impl From<&str> for Store {
+    fn from(module: &str) -> Self {
+        Self::module(module)
+    }
+}
+
+impl From<&Store> for Store {
+    fn from(store: &Store) -> Self {
+        store.clone()
+    }
+}
+
 /// Los almacenes de esta máquina, resueltos al arrancar.
 ///
 /// `RFIRMA_PKCS11_MODULE` sigue siendo la escotilla para apuntar a otro módulo
 /// —de ella dependen las pruebas de grada B contra SoftHSM— y cuando está
 /// puesta **manda ella sola**: quien la exporta quiere ese módulo y no el que
-/// nosotros hubiéramos elegido.
-pub fn from_environment() -> Vec<PathBuf> {
-    match std::env::var_os(crate::PKCS11_MODULE_VARIABLE) {
-        Some(module) => vec![PathBuf::from(module)],
-        None => present_among(CANDIDATE_MODULES, |path| path.is_file()),
+/// nosotros hubiéramos elegido, ni el perfil de Firefox que tenga delante.
+pub fn from_environment() -> Vec<Store> {
+    if let Some(module) = std::env::var_os(crate::PKCS11_MODULE_VARIABLE) {
+        return vec![Store::module(module)];
+    }
+
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let mut stores: Vec<Store> = present_among(CANDIDATE_MODULES, |path| path.is_file())
+        .into_iter()
+        .map(Store::module)
+        .collect();
+
+    // El softoken se busca una vez y sirve para todos los perfiles: lo que
+    // cambia de un perfil a otro son los init args, no el módulo.
+    if let (Some(home), Some(softoken)) = (
+        home,
+        present_among(CANDIDATE_SOFTOKENS, |path| path.is_file())
+            .into_iter()
+            .next(),
+    ) {
+        stores.extend(
+            nss_profiles(&home)
+                .into_iter()
+                .map(|profile| Store::nss(&softoken, &profile)),
+        );
+    }
+
+    stores
+}
+
+/// Los perfiles NSS que hay bajo un `HOME`, en orden (ID-05).
+///
+/// Los de Firefox salen de `profiles.ini` y **no** de adivinar el nombre del
+/// directorio: el sufijo aleatorio de `xxxxxxxx.default-release` no se puede
+/// deducir, y quien tenga varios perfiles no cabe en «el primero que haya».
+/// Después va `~/.pki/nssdb`, que es donde guardan los suyos Chrome y las
+/// herramientas de NSS.
+///
+/// Un perfil **sin `cert9.db` se salta**: es un perfil sin base de datos de
+/// certificados, y abrirlo en solo lectura no crearía ninguna.
+pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
+    let firefox = home.join(".mozilla/firefox");
+    let mut profiles: Vec<PathBuf> = profiles_declared_in(&firefox.join("profiles.ini"))
+        .into_iter()
+        .map(|relative_or_absolute| resolve_under(&firefox, &relative_or_absolute))
+        .collect();
+    profiles.push(home.join(".pki/nssdb"));
+
+    let mut found: Vec<PathBuf> = Vec::new();
+    for profile in profiles {
+        if !profile.join("cert9.db").is_file() {
+            continue;
+        }
+        let resolved = profile.canonicalize().unwrap_or_else(|_| profile.clone());
+        if !found
+            .iter()
+            .any(|already| already.canonicalize().unwrap_or_else(|_| already.clone()) == resolved)
+        {
+            found.push(profile);
+        }
+    }
+
+    found
+}
+
+/// Las rutas que declara un `profiles.ini`, tal cual vienen.
+///
+/// Se leen las secciones `[ProfileN]` y solo su clave `Path`. Las secciones
+/// `[Install…]` se ignoran a propósito: su `Default=` apunta a un perfil que ya
+/// está declarado como `[ProfileN]`, y contarlo dos veces enseñaría cada
+/// certificado por duplicado.
+///
+/// El formato no da para un analizador de INI de verdad: son secciones entre
+/// corchetes y `clave=valor` sin comillas ni continuaciones.
+fn profiles_declared_in(ini: &Path) -> Vec<String> {
+    let Ok(text) = std::fs::read_to_string(ini) else {
+        // No tener Firefox instalado no es un fallo: es no tener perfiles
+        // (ID-03). Quien firma con tarjeta sigue firmando.
+        return Vec::new();
+    };
+
+    let mut paths = Vec::new();
+    let mut inside_a_profile = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(section) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            inside_a_profile = section.starts_with("Profile");
+            continue;
+        }
+        if !inside_a_profile {
+            continue;
+        }
+        if let Some(value) = line.strip_prefix("Path=") {
+            let value = value.trim();
+            if !value.is_empty() {
+                paths.push(value.to_owned());
+            }
+        }
+    }
+
+    paths
+}
+
+/// Una ruta de `profiles.ini` resuelta contra el directorio de Firefox.
+///
+/// `IsRelative` no se lee: una ruta absoluta se reconoce por empezar con `/`, y
+/// creer a la clave por encima de la ruta convertiría un `profiles.ini` mal
+/// escrito en un directorio inexistente en vez de en el perfil que hay.
+fn resolve_under(firefox: &Path, path: &str) -> PathBuf {
+    let path = Path::new(path);
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        firefox.join(path)
     }
 }
 
@@ -116,5 +335,131 @@ mod tests {
         let stores = present_among(&candidates, |path| path.is_file());
 
         assert_eq!(stores, vec![module]);
+    }
+
+    /// Un módulo de tarjeta no lleva init args: es lo que era antes del #99.
+    #[test]
+    fn a_plain_module_has_nothing_to_configure() {
+        assert_eq!(Store::module("/usr/lib/x.so").init_args(), None);
+    }
+
+    /// Las dos mitades que no son negociables (ID-02): el formato `sql:` y el
+    /// solo lectura.
+    #[test]
+    fn an_nss_store_opens_the_profile_read_only_and_in_sql_format() {
+        let store = Store::nss("/usr/lib/libsoftokn3.so", Path::new("/casa/perfil"));
+        let args = store.init_args().expect("un almacen NSS lleva init args");
+
+        assert!(args.contains("configdir='sql:/casa/perfil'"), "{args}");
+        assert!(args.contains("flags=readOnly"), "{args}");
+    }
+
+    fn a_home_with(profiles: &[(&str, bool)], ini: Option<&str>) -> tempfile::TempDir {
+        let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+        let firefox = home.path().join(".mozilla/firefox");
+        std::fs::create_dir_all(&firefox).expect("deberia poder crearse .mozilla/firefox");
+        for (name, with_database) in profiles {
+            let directory = home.path().join(name);
+            std::fs::create_dir_all(&directory).expect("deberia poder crearse el perfil");
+            if *with_database {
+                std::fs::write(directory.join("cert9.db"), b"").expect("deberia poder escribirse");
+            }
+        }
+        if let Some(ini) = ini {
+            std::fs::write(firefox.join("profiles.ini"), ini).expect("deberia poder escribirse");
+        }
+        home
+    }
+
+    /// El nombre del directorio de un perfil lleva un sufijo aleatorio: hay que
+    /// leerlo del `profiles.ini`, y hay que leerlos **todos**.
+    #[test]
+    fn reads_every_firefox_profile_declared_in_profiles_ini() {
+        let home = a_home_with(
+            &[
+                (".mozilla/firefox/aaaaaaaa.default-release", true),
+                (".mozilla/firefox/bbbbbbbb.trabajo", true),
+            ],
+            Some(
+                "[Install4F96D1932A9F858E]\n\
+                 Default=aaaaaaaa.default-release\n\
+                 \n\
+                 [Profile0]\n\
+                 Name=default-release\n\
+                 IsRelative=1\n\
+                 Path=aaaaaaaa.default-release\n\
+                 \n\
+                 [Profile1]\n\
+                 Name=trabajo\n\
+                 IsRelative=1\n\
+                 Path=bbbbbbbb.trabajo\n",
+            ),
+        );
+
+        assert_eq!(
+            nss_profiles(home.path()),
+            vec![
+                home.path()
+                    .join(".mozilla/firefox/aaaaaaaa.default-release"),
+                home.path().join(".mozilla/firefox/bbbbbbbb.trabajo"),
+            ]
+        );
+    }
+
+    /// Un perfil declarado que no tiene base de datos de certificados no es un
+    /// fallo: es un perfil sin certificados, y se salta.
+    #[test]
+    fn skips_a_declared_profile_without_a_certificate_database() {
+        let home = a_home_with(
+            &[
+                (".mozilla/firefox/aaaaaaaa.vacio", false),
+                (".mozilla/firefox/bbbbbbbb.lleno", true),
+            ],
+            Some("[Profile0]\nPath=aaaaaaaa.vacio\n\n[Profile1]\nPath=bbbbbbbb.lleno\n"),
+        );
+
+        assert_eq!(
+            nss_profiles(home.path()),
+            vec![home.path().join(".mozilla/firefox/bbbbbbbb.lleno")]
+        );
+    }
+
+    /// El almacén de Chrome y de las herramientas de NSS entra gratis.
+    #[test]
+    fn reads_the_shared_nssdb_too() {
+        let home = a_home_with(&[(".pki/nssdb", true)], None);
+
+        assert_eq!(
+            nss_profiles(home.path()),
+            vec![home.path().join(".pki/nssdb")]
+        );
+    }
+
+    /// Sin Firefox instalado no hay perfiles, y eso **no** es un fallo: quien
+    /// firma con tarjeta sigue firmando.
+    #[test]
+    fn has_no_profiles_when_firefox_is_not_installed() {
+        let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+
+        assert!(nss_profiles(home.path()).is_empty());
+    }
+
+    /// Un `profiles.ini` puede declarar una ruta absoluta; el resto son
+    /// relativas a `~/.mozilla/firefox`.
+    #[test]
+    fn resolves_an_absolute_profile_path_as_it_comes() {
+        let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+        let firefox = home.path().join(".mozilla/firefox");
+        let elsewhere = home.path().join("otro-sitio");
+        std::fs::create_dir_all(&firefox).expect("deberia poder crearse .mozilla/firefox");
+        std::fs::create_dir_all(&elsewhere).expect("deberia poder crearse el otro sitio");
+        std::fs::write(elsewhere.join("cert9.db"), b"").expect("deberia poder escribirse");
+        std::fs::write(
+            firefox.join("profiles.ini"),
+            format!("[Profile0]\nIsRelative=0\nPath={}\n", elsewhere.display()),
+        )
+        .expect("deberia poder escribirse");
+
+        assert_eq!(nss_profiles(home.path()), vec![elsewhere]);
     }
 }

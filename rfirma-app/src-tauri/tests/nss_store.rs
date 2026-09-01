@@ -1,0 +1,351 @@
+//! El almacén NSS de Mozilla —el perfil de Firefox— leído y firmado como lo
+//! que es: **un módulo PKCS#11 más**. **Grada B** (ADR-0014, TD-02): carril
+//! rápido, segundos.
+//!
+//! # Cómo se monta el perfil
+//!
+//! ```sh
+//! sudo apt install -y libnss3 libnss3-tools
+//! ```
+//!
+//! Y ya está: cada prueba se provisiona **su propio perfil desechable** en un
+//! directorio temporal, con `testdata/nss/provision-profile.sh` y el material
+//! público de la FNMT de `testdata/fnmt/`. El perfil real de Firefox de nadie
+//! se toca jamás, ni se lee: aquí no aparece `~/.mozilla` por ninguna parte.
+//!
+//! Lo que hay dentro del perfil desechable:
+//!
+//! | apodo | qué tiene | para qué |
+//! | --- | --- | --- |
+//! | `EIDAS_CERTIFICADO_PRUEBAS___99999999R` | clave + certificado | en vigor: lista y firma |
+//! | `EIDAS_CERTIFICADO_PRUEBAS___99999999R` | clave + certificado | caducó en 2020 |
+//! | las dos CA de la FNMT | solo certificado | lo que un perfil de verdad tiene a cientos |
+//!
+//! Los dos primeros **comparten `CKA_LABEL`**: la FNMT le pone el mismo
+//! `friendlyName` a los tres `.p12` del kit y NSS lo usa de apodo. No es un
+//! defecto del material: es exactamente lo que hay en un perfil de Firefox de
+//! verdad, donde dos claves privadas llevan la misma etiqueta, y es lo que hace
+//! obligatorio emparejar por `CKA_ID` (#98, ID-06).
+//!
+//! # La contraseña maestra es la cadena vacía
+//!
+//! El perfil se crea con `certutil -N --empty-password`, que es el caso
+//! corriente de un Firefox recién instalado. Para `C_Login` la cadena vacía
+//! **no es lo mismo** que «sin PIN», y por eso este fichero incluye firmar y no
+//! solo listar.
+
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use rfirma_lib::pkcs11::{self, CertificateStatus, Situation, Store, TokenCertificate};
+use rsa::pkcs1v15::{Signature, VerifyingKey};
+use rsa::pkcs8::DecodePublicKey;
+use rsa::signature::Verifier;
+use rsa::RsaPublicKey;
+use sha2::Sha256;
+use x509_cert::der::{Decode, Encode};
+
+/// El apodo que NSS le pone a los dos certificados de persona, sacado del
+/// `friendlyName` de los `.p12` de la FNMT.
+const HOLDER: &str = "EIDAS_CERTIFICADO_PRUEBAS___99999999R";
+/// El token del perfil. Se llama igual en **todos** los perfiles del mundo, que
+/// es justo por lo que la referencia necesita llevar también los init args.
+const CERTIFICATE_DB: &str = "NSS Certificate DB";
+/// La contraseña maestra de un Firefox recién instalado.
+const NO_MASTER_PASSWORD: &str = "";
+
+/// Lo mismo que firma el recorrido real: un bloque DER de `SignedAttributes`
+/// que nadie ha hasheado antes de llegar aquí.
+const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
+
+fn softoken() -> PathBuf {
+    pkcs11::stores::present_among(pkcs11::stores::CANDIDATE_SOFTOKENS, |path| path.is_file())
+        .into_iter()
+        .next()
+        .expect(
+            "falta libsoftokn3.so. Las pruebas de grada B del almacen NSS lo necesitan:\n  \
+             sudo apt install -y libnss3 libnss3-tools",
+        )
+}
+
+fn repository_root() -> PathBuf {
+    // `CARGO_MANIFEST_DIR` es rfirma-app/src-tauri; la raiz esta dos arriba.
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("la raiz del repositorio")
+        .to_path_buf()
+}
+
+/// Un perfil NSS recién provisionado en un directorio temporal.
+///
+/// Devuelve el `TempDir` junto al almacén: en cuanto se suelte, el perfil
+/// desaparece. Por eso las pruebas lo atan a una variable y no lo descartan.
+fn a_disposable_profile() -> (tempfile::TempDir, Store) {
+    let directory = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let script = repository_root().join("testdata/nss/provision-profile.sh");
+
+    let provisioned = Command::new("bash")
+        .arg(&script)
+        .arg(directory.path())
+        .output()
+        .expect("deberia poder ejecutarse el script de aprovisionamiento");
+
+    assert!(
+        provisioned.status.success(),
+        "no se ha podido montar el perfil NSS con {}:\n{}\n{}",
+        script.display(),
+        String::from_utf8_lossy(&provisioned.stdout),
+        String::from_utf8_lossy(&provisioned.stderr),
+    );
+
+    let store = Store::nss(softoken(), directory.path());
+    (directory, store)
+}
+
+fn certificates(store: &Store) -> Vec<TokenCertificate> {
+    pkcs11::list_certificates(store).expect("el perfil NSS deberia listarse")
+}
+
+/// El certificado de persona que está en vigor. Se elige por **estado** y no por
+/// etiqueta a propósito: los dos la comparten.
+fn the_valid_one(store: &Store) -> TokenCertificate {
+    certificates(store)
+        .into_iter()
+        .find(|certificate| certificate.status().is_usable())
+        .expect("el perfil tenia que traer un certificado en vigor")
+}
+
+// ---------------------------------------------------------------------------
+// Listar
+// ---------------------------------------------------------------------------
+
+/// La promesa entera del ID-01: NSS entra por el mismo `list_certificates` que
+/// una tarjeta, y lo que devuelve son referencias con las mismas coordenadas.
+#[test]
+fn a_firefox_profile_is_listed_like_any_other_pkcs11_store() {
+    let (_profile, store) = a_disposable_profile();
+
+    let found = certificates(&store);
+
+    assert!(
+        found
+            .iter()
+            .any(|certificate| certificate.reference().label() == HOLDER),
+        "el certificado del titular tenia que salir; salieron: {:?}",
+        found
+            .iter()
+            .map(|certificate| certificate.reference().label())
+            .collect::<Vec<_>>()
+    );
+    let valid = the_valid_one(&store);
+    assert_eq!(valid.reference().token_label(), CERTIFICATE_DB);
+    assert!(
+        valid.reference().cka_id().is_some(),
+        "sin CKA_ID no hay forma de emparejar el certificado con su clave"
+    );
+}
+
+/// El titular, el DNI y el emisor se leen del DER igual que en una tarjeta: no
+/// hay una segunda implementación para NSS.
+#[test]
+fn the_holder_and_the_issuer_are_read_the_same_as_from_a_card() {
+    let (_profile, store) = a_disposable_profile();
+
+    let certificate = the_valid_one(&store);
+
+    let subject = certificate.subject().expect("el DER deberia leerse");
+    assert!(
+        subject.contains("EIDAS CERTIFICADO PRUEBAS"),
+        "titular leido: {subject}"
+    );
+    assert!(
+        subject.contains("IDCES-99999999R"),
+        "el DNI tenia que leerse del subject: {subject}"
+    );
+    let issuer = certificate.issuer().expect("el DER deberia leerse");
+    assert!(
+        issuer.contains("AC FNMT Usuarios"),
+        "emisor leido: {issuer}"
+    );
+}
+
+/// Un certificado caducado de NSS sale marcado como caducado, igual que uno de
+/// tarjeta, y **sin** haber pedido ningún secreto para saberlo.
+#[test]
+fn an_expired_certificate_from_nss_is_marked_as_expired() {
+    let (_profile, store) = a_disposable_profile();
+
+    let expired: Vec<_> = certificates(&store)
+        .into_iter()
+        .filter(|certificate| matches!(certificate.status(), CertificateStatus::Expired { .. }))
+        .collect();
+
+    assert!(
+        expired
+            .iter()
+            .any(|certificate| certificate.reference().label() == HOLDER),
+        "el certificado que caduco en 2020 tenia que salir marcado como caducado"
+    );
+}
+
+/// Los dos certificados de persona comparten etiqueta y no comparten `CKA_ID`.
+/// Es lo que hay en un perfil de verdad, y es lo que obliga al ID-06.
+#[test]
+fn two_certificates_share_the_label_and_are_told_apart_by_their_cka_id() {
+    let (_profile, store) = a_disposable_profile();
+
+    let same_label: Vec<_> = certificates(&store)
+        .into_iter()
+        .filter(|certificate| certificate.reference().label() == HOLDER)
+        .collect();
+
+    assert_eq!(
+        same_label.len(),
+        2,
+        "el perfil tenia que traer los dos certificados del titular"
+    );
+    assert_ne!(
+        same_label[0].reference().cka_id(),
+        same_label[1].reference().cka_id(),
+        "dos certificados con la misma etiqueta tienen que distinguirse por CKA_ID"
+    );
+}
+
+/// Varios perfiles no es un caso excepcional (ID-05), y es donde se rompería una
+/// implementación que cachease el contexto del módulo por su ruta: los dos
+/// perfiles se abren por el **mismo** `libsoftokn3.so`, así que un contexto
+/// reutilizado devolvería el primer perfil las dos veces.
+#[test]
+fn two_profiles_are_read_as_two_stores_and_not_as_the_first_one_twice() {
+    let (_first, one) = a_disposable_profile();
+    let (_second, other) = a_disposable_profile();
+
+    let both = pkcs11::list_certificates_across(&[one.clone(), other.clone()])
+        .expect("los dos perfiles tenian que listarse");
+    let alone = certificates(&one);
+
+    assert_eq!(
+        both.len(),
+        alone.len() * 2,
+        "dos perfiles tienen que dar el doble de certificados que uno"
+    );
+    assert_ne!(one.init_args(), other.init_args());
+}
+
+/// La comprobación explícita que pide el spec. Abrir softoken con init args que
+/// no llevan a ningún perfil no da un fallo fiable: unas veces devuelve un
+/// `CKR_*` opaco y otras dos ranuras que se anuncian como `token initialized`
+/// con cero objetos dentro. Las dos caras se ven desde arriba igual que un
+/// Firefox recién instalado, así que lo que no puede pasar es que salga una
+/// lista vacía.
+#[test]
+fn opening_the_store_with_the_wrong_init_args_is_a_failure_and_not_an_empty_list() {
+    let nowhere = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let store = Store::nss(softoken(), nowhere.path());
+
+    let error = pkcs11::list_certificates(&store)
+        .expect_err("un almacen abierto donde no hay perfil no puede parecer un perfil vacio");
+
+    assert_eq!(error.situation(), Situation::ModuleNotFound);
+    assert!(
+        error.detail().contains("configdir"),
+        "el detalle tiene que decir con que init args se iba a abrir: {}",
+        error.detail()
+    );
+}
+
+/// Y la otra mitad del ID-03: un perfil que no lleva a ninguna parte no puede
+/// dejar sin certificados a quien sí tiene otro almacén.
+#[test]
+fn a_profile_that_leads_nowhere_does_not_hide_the_one_that_works() {
+    let (_profile, works) = a_disposable_profile();
+    let nowhere = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+
+    let found =
+        pkcs11::list_certificates_across(&[Store::nss(softoken(), nowhere.path()), works.clone()])
+            .expect("el perfil que si abre tiene que seguir contando");
+
+    assert!(found
+        .iter()
+        .any(|certificate| certificate.reference().label() == HOLDER));
+}
+
+// ---------------------------------------------------------------------------
+// Firmar
+// ---------------------------------------------------------------------------
+
+fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
+    let parsed =
+        x509_cert::Certificate::from_der(certificate.der()).expect("el DER deberia parsearse");
+    let spki = parsed
+        .tbs_certificate()
+        .subject_public_key_info()
+        .to_der()
+        .expect("el SPKI deberia serializarse");
+    let public_key = RsaPublicKey::from_public_key_der(&spki).expect("clave publica RSA");
+    VerifyingKey::<Sha256>::new(public_key)
+}
+
+/// El criterio de aceptación central: se firma con el certificado de Firefox y
+/// la firma verifica contra **su** clave pública.
+///
+/// La contraseña maestra que se pasa es la cadena vacía, y llega hasta
+/// `C_Login` como tal: si en algún punto del camino se convirtiera en «sin
+/// PIN», softoken no autenticaría y esto se pondría rojo.
+#[test]
+fn signing_with_an_nss_certificate_verifies_against_its_public_key() {
+    let (_profile, store) = a_disposable_profile();
+    let certificate = the_valid_one(&store);
+
+    let raw = pkcs11::sign(certificate.reference(), NO_MASTER_PASSWORD, PRESIGN)
+        .expect("un perfil sin contrasena maestra tiene que poder firmar con la cadena vacia");
+
+    // RSA 2048: la firma cruda mide exactamente el modulo.
+    assert_eq!(raw.len(), 256);
+    let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
+    verifying_key(&certificate)
+        .verify(PRESIGN, &signature)
+        .expect("la firma no verifica contra la clave publica del certificado");
+}
+
+/// El certificado se reencuentra **desde lo que se persiste** (ADR-0010): la
+/// referencia se serializa y se vuelve a leer, y con eso solo se firma.
+///
+/// Sin los init args dentro de la referencia esto no se puede cumplir: el
+/// módulo y la etiqueta del token son iguales en todos los perfiles de Firefox
+/// de la máquina, y una referencia recordada no sabría a cuál volver.
+#[test]
+fn a_remembered_nss_certificate_still_signs_after_a_round_trip_through_the_state_file() {
+    let (_profile, store) = a_disposable_profile();
+    let certificate = the_valid_one(&store);
+
+    let written = serde_json::to_string(certificate.reference()).expect("deberia serializarse");
+    let remembered: pkcs11::CertificateRef =
+        serde_json::from_str(&written).expect("deberia leerse");
+
+    let raw = pkcs11::sign(&remembered, NO_MASTER_PASSWORD, PRESIGN)
+        .expect("la referencia recordada tenia que volver a encontrar su perfil");
+
+    let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
+    verifying_key(&certificate)
+        .verify(PRESIGN, &signature)
+        .expect("la firma no verifica contra la clave publica del certificado");
+}
+
+/// Firmar con un certificado que **no** tiene clave privada en el perfil —una
+/// CA suelta, de las que un Firefox de verdad tiene a cientos— se rechaza
+/// diciendo qué falta, no con un fallo genérico.
+#[test]
+fn a_certificate_without_a_private_key_says_so_instead_of_failing_generically() {
+    let (_profile, store) = a_disposable_profile();
+    let authority = certificates(&store)
+        .into_iter()
+        .find(|certificate| certificate.reference().label().contains("AC "))
+        .expect("el perfil tenia que traer alguna CA suelta");
+
+    let error = pkcs11::sign(authority.reference(), NO_MASTER_PASSWORD, PRESIGN)
+        .expect_err("una CA no tiene con que firmar");
+
+    assert_eq!(error.situation(), Situation::CertificateNotFound);
+}

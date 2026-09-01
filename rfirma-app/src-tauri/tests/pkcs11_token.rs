@@ -75,7 +75,7 @@ fn module() -> PathBuf {
 }
 
 fn certificates() -> Vec<TokenCertificate> {
-    let found = pkcs11::list_certificates(&module()).expect("no se ha podido listar el token");
+    let found = pkcs11::list_certificates(module()).expect("no se ha podido listar el token");
     assert!(
         !found.is_empty(),
         "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just token"
@@ -448,8 +448,8 @@ fn a_module_that_is_not_there_is_not_a_token_error() {
 #[test]
 fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
     let stores = vec![
-        PathBuf::from("/usr/lib/no-hay-ningun-modulo-aqui.so"),
-        module(),
+        pkcs11::Store::module("/usr/lib/no-hay-ningun-modulo-aqui.so"),
+        pkcs11::Store::module(module()),
     ];
 
     let found = pkcs11::list_certificates_across(&stores)
@@ -468,8 +468,8 @@ fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
 #[test]
 fn tells_the_failure_apart_from_an_empty_list_when_no_store_loads() {
     let stores = vec![
-        PathBuf::from("/usr/lib/no-hay-ningun-modulo-aqui.so"),
-        PathBuf::from("/usr/lib/tampoco-hay-este-otro.so"),
+        pkcs11::Store::module("/usr/lib/no-hay-ningun-modulo-aqui.so"),
+        pkcs11::Store::module("/usr/lib/tampoco-hay-este-otro.so"),
     ];
 
     let error = pkcs11::list_certificates_across(&stores)

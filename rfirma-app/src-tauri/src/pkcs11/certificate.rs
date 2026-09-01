@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use x509_cert::der::Decode;
 use x509_cert::Certificate;
 
+use super::stores::Store;
+
 /// Cómo volver a encontrar un certificado en el próximo arranque (ID-32).
 ///
 /// Es lo único de esta parte del programa que tiene sentido persistir: no lleva
@@ -39,26 +41,47 @@ pub struct CertificateRef {
     /// `CKA_ID`, no el certificado.
     #[serde(default)]
     cka_id: Option<Vec<u8>>,
+    /// Lo que hubo que pasarle a `C_Initialize` para abrir el almacén de donde
+    /// salió, o `None` cuando el módulo no necesitaba que le dijeran nada.
+    ///
+    /// Sin esto un certificado de NSS **no se puede reencontrar**: todos los
+    /// perfiles de Firefox de una máquina se sirven por el mismo
+    /// `libsoftokn3.so` y su token se llama igual en todos, «NSS Certificate
+    /// DB», así que el módulo y la etiqueta del token no distinguen un perfil
+    /// de otro. Lo que los distingue es el `configdir` de estos init args.
+    #[serde(default)]
+    init_args: Option<String>,
 }
 
 impl CertificateRef {
-    /// Construye la referencia a partir de sus cuatro coordenadas.
+    /// Construye la referencia a partir del almacén y de las tres coordenadas
+    /// que la sitúan dentro de él.
+    ///
+    /// El almacén se acepta como ruta de módulo a secas —que es lo que es para
+    /// una tarjeta— o como [`Store`] entero, que es lo que hace falta para NSS.
     ///
     /// El `CKA_ID` admite tanto `vec![0x01]` como `None`; lo segundo solo tiene
     /// sentido para reconstruir una referencia recordada por una versión
     /// anterior, porque un certificado leído del token siempre trae el suyo.
     pub fn new(
-        module: impl Into<PathBuf>,
+        store: impl Into<Store>,
         token_label: impl Into<String>,
         label: impl Into<String>,
         cka_id: impl Into<Option<Vec<u8>>>,
     ) -> Self {
+        let store = store.into();
         Self {
-            module: module.into(),
+            module: store.path().to_path_buf(),
             token_label: token_label.into(),
             label: label.into(),
             cka_id: cka_id.into(),
+            init_args: store.init_args().map(str::to_owned),
         }
+    }
+
+    /// El almacén de donde salió, listo para volver a abrirlo.
+    pub fn store(&self) -> Store {
+        Store::with_init_args(&self.module, self.init_args.clone())
     }
 
     /// Ruta del módulo PKCS#11 que lo sirve.

@@ -275,7 +275,7 @@ mod full_cycle {
     }
 
     fn signing_certificate() -> TokenCertificate {
-        pkcs11::list_certificates(&module())
+        pkcs11::list_certificates(module())
             .expect("no se ha podido listar el token")
             .into_iter()
             .find(|certificate| certificate.reference().label() == ACTIVE)
