@@ -368,6 +368,38 @@ venía a quitar. El bundle queda como vehículo de pruebas previas, no como cana
   esta sesión de Wayland. El camino de los ficheros se midió por el portal de documentos, que es lo
   que el diálogo acaba entregando.
 
+## 9. La entrada de documentos, dentro del arenero (#89)
+
+El apartado 4 dejaba pendiente comprobar, ya con la aplicación de verdad y no la sonda, que los
+bytes que el portal concede llegan a lo que la Orden 8 (`read_document`, `commands/mod.rs`) lee del
+disco, y si el permiso que apunta contra la ruta del anfitrión sobrevive a cerrar y reabrir la
+aplicación (ID-72). El paso 6 de `verifica.sh` mide las dos cosas.
+
+**Los bytes llegan intactos.** `flatpak document-export --app=me.sgomez.rfirma <fichero>` es la
+misma vía por la que el diálogo de la Orden 7 (`open_document`) concede el permiso: contra la ruta
+del anfitrión, no el inodo, y devuelve la ruta montada dentro del arenero. Un `flatpak run
+--command=sha256sum` sobre esa ruta, dentro del arenero, da el mismo hash que el fichero original en
+el anfitrión.
+
+**El identificador sobrevive a cerrar y reabrir la aplicación.** Se mató el proceso (`flatpak kill`)
+y se volvió a pedir el permiso para el **mismo** fichero del anfitrión, como haría quien elige otra
+vez el mismo PDF en el diálogo tras reabrir rfirma: el portal devuelve la **misma** ruta montada
+(mismo identificador de documento), y sus bytes se siguen leyendo igual. El permiso vive en el
+almacén del propio portal de documentos, no en el proceso de la aplicación, así que no depende de
+que rfirma siga viva.
+
+**Consecuencia para los recientes.** Hoy `RecentDocument` identifica una fila por la ruta canónica
+del anfitrión (`memory/recents.rs`), que bajo el arenero la aplicación no puede leer del documento
+del portal (`PortalDocument` no expone ninguna, apartado 4 de arriba). El día que la bandeja
+persista entre sesiones bajo flatpak tendrá que identificar la fila por la ruta montada del portal
+en vez de por la ruta real —esta medición dice que hacerlo funciona: volver a abrir el mismo host
+path en una sesión posterior devuelve el mismo identificador y las mismas lecturas—, no es trabajo
+de este ticket.
+
+Ningún permiso nuevo hace falta para esta medición: `flatpak document-export` y la lectura dentro
+del arenero solo usan el portal de documentos y el `--filesystem="$LAB"` que el banco de pruebas ya
+declaraba para el resto de pasos.
+
 ## Reproducir
 
 ```bash
@@ -378,4 +410,5 @@ packaging/flatpak/verifica.sh
 
 `verifica.sh` construye e instala el flatpak, imprime el informe del arenero, ejecuta el ciclo
 trifásico completo firmando con el token de pruebas, valida con `pdfsig`, arranca la ventana y la
-deja diez segundos, y empaqueta el bundle.
+deja diez segundos, comprueba que un documento entrado por el portal llega con sus bytes intactos
+dentro del arenero, y empaqueta el bundle.
