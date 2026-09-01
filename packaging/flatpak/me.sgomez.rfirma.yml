@@ -57,12 +57,36 @@ modules:
   #    NO los anadas de vuelta: si libawt.so esta aqui, un JPEG con perfil ICC
   #    ABORTA el proceso (rc=134) en vez de dar un error recuperable, y se lleva
   #    la aplicacion entera. Ver docs/research/exclusion-afirma-ui-utils.md.
-  #    PENDIENTE: la verificacion dentro del arenero del #22 se corrio con los
-  #    seis ficheros y la imagen ce25-awt; falta repetir verifica.sh con esta.
+  #
+  #    EL DIRECTORIO DE CONSTRUCCION NO ES EL DE DISTRIBUCION. `native-image`
+  #    sigue emitiendo los cinco auxiliares en target/native; lo que se empaqueta
+  #    es target/lib/rfirma, donde `just native` copia UN SOLO fichero por su
+  #    nombre. Por eso el install de abajo nombra librfirma_crypto.so y NO lleva
+  #    un *.so: un comodin aqui reintroduciria libawt.so el dia que la fuente
+  #    apuntase, por descuido, al directorio de construccion.
   - name: libreria-nativa
     buildsystem: simple
     build-commands:
       - install -Dm644 -t /app/lib/rfirma librfirma_crypto.so
+      # La invariante, comprobada DURANTE LA CONSTRUCCION y no solo en
+      # verifica.sh: si aparece un segundo .so, esto para el flatpak entero en
+      # vez de producir un bundle que aborta en cuanto alguien firme con una
+      # rubrica de imagen. Es la comprobacion barata de un fallo caro.
+      - |
+        set -eu
+        sobran=$(ls -1 /app/lib/rfirma/*.so | grep -v '/librfirma_crypto\.so$' || true)
+        if [ -n "$sobran" ]; then
+            echo "ERROR: sobra algo en /app/lib/rfirma:" >&2
+            echo "$sobran" >&2
+            echo >&2
+            echo "Solo puede estar librfirma_crypto.so (ADR-0012). Si lo que" >&2
+            echo "sobra es libawt.so, un JPEG con perfil ICC pasa de dar un" >&2
+            echo "error recuperable a ABORTAR el proceso (rc=134) y llevarse" >&2
+            echo "la aplicacion entera: ver" >&2
+            echo "docs/research/exclusion-afirma-ui-utils.md." >&2
+            exit 1
+        fi
+        echo "OK: un solo .so en /app/lib/rfirma"
     sources:
       # La ruta CANONICA del ADR-0013, la que produce `just native`. No es
       # target/native (el directorio de construccion) ni target/ce25-noui (el
@@ -154,17 +178,33 @@ modules:
   #    `frontendDist` dentro de su propio build.rs, asi que sin dist no compila
   #    ni una linea de Rust. Ejecuta `just build-ts` antes de `just flatpak`.
   #
-  #    PENDIENTE (ADR-0013): construir SIN red. Son las dos vendorizaciones que
-  #    produce `just flatpak-sources` —cargo-sources.json y node-sources.json—,
-  #    y hasta que existan este modulo declara --share=network como hacia la
-  #    sonda. Ver "Pendiente antes de publicar" en el README de este directorio.
+  #    POR ESO node-sources.json ESTA VERSIONADO PERO NO SE INCLUYE AQUI. El
+  #    ID-07 pide las dos vendorizaciones y `just flatpak-sources` genera las
+  #    dos, pero dentro del arenero no hay nada que ejecutar con ellas: en
+  #    org.gnome.Sdk//50 NO HAY node (comprobado: `which node` no lo encuentra),
+  #    asi que mover `vite build` aqui dentro exigiria anadir la extension de
+  #    SDK org.freedesktop.Sdk.Extension.node22, que es otra decision y no la de
+  #    este issue. Lo que hay versionado es lo que haria falta el dia que se
+  #    tome: hasta entonces node-sources.json lo mantiene al dia la misma puerta
+  #    que al de cargo, para que no se pudra en silencio.
+  #
+  #    SE CONSTRUYE SIN RED (ID-07): NO hay --share=network en ningun modulo.
+  #    Las dependencias de cargo entran vendorizadas por cargo-sources.json, que
+  #    genera `just flatpak-sources` a partir del Cargo.lock y esta VERSIONADO
+  #    aqui al lado. `just check-flatpak-sources` —dentro de `just lint`, y por
+  #    tanto del CI— falla si el Cargo.lock cambia y nadie lo regenera.
+  #
+  #    cargo-sources.json deja el vendor en cargo/vendor y su configuracion en
+  #    cargo/config, ambos RELATIVOS al directorio de construccion del modulo
+  #    (/run/build/rfirma-app). Por eso CARGO_HOME apunta ahi arriba en
+  #    build-options: si cambias el nombre del modulo, cambia tambien esa ruta.
   - name: rfirma-app
     buildsystem: simple
-    build-options:
-      build-args:
-        - --share=network
     build-commands:
-      - cargo build --release --manifest-path src-tauri/Cargo.toml
+      # --offline no es adorno: sin red, cargo fallaria igual, pero al llegar a
+      # la primera descarga y con un error de red. Asi falla al instante y
+      # diciendo QUE falta en el vendor, que es lo que se quiere depurar.
+      - cargo build --offline --release --manifest-path src-tauri/Cargo.toml
       - install -Dm755 src-tauri/target/release/rfirma /app/bin/rfirma
       - install -Dm644 me.sgomez.rfirma.desktop
         /app/share/applications/me.sgomez.rfirma.desktop
@@ -185,3 +225,6 @@ modules:
         path: me.sgomez.rfirma.desktop
       - type: file
         path: me.sgomez.rfirma.metainfo.xml
+      # Las dependencias de cargo, vendorizadas. Va AL FINAL: son 955 entradas
+      # y arriba estan las que se leen a mano.
+      - cargo-sources.json

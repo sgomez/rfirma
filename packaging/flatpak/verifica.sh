@@ -4,17 +4,41 @@
 # PKCS#11 que empaqueta el propio flatpak carga, y que la ventana arranca y
 # sigue viva.
 #
-# QUE SE MIDE AQUI Y QUE NO. Hasta el #56 este script pedia a la sonda del #22
-# que ejecutase el ciclo trifasico entero dentro del arenero y validaba el PDF
-# con pdfsig. La sonda se borro con el ADR-0013 —era una segunda implementacion
-# de la frontera FFI—, y rfirma todavia no orquesta las tres fases: eso lo
-# aporta un sub-issue posterior del #46. Mientras tanto la firma de punta a
-# punta la mide `just test-native`, FUERA del arenero, y lo que se comprueba
-# aqui es lo que solo el arenero puede romper.
+# QUE SE MIDE AQUI Y QUE NO.
 #
-# PENDIENTE: recuperar los pasos de firma cuando exista la orquestacion. Lo que
-# median —que dentro del arenero se puede cargar la libreria, hablar con pcscd y
-# leer el modulo PKCS#11 empaquetado— esta escrito en
+# El paso 5 corre el CICLO TRIFASICO COMPLETO con RUBRICA DE IMAGEN contra la
+# libreria que ha quedado INSTALADA dentro del bundle —los bytes que se
+# distribuyen, sacados de /app/lib/rfirma— y valida el PDF con pdfsig. Eso es lo
+# que faltaba: la verificacion del #22 se corrio contra la imagen de SEIS
+# ficheros (ce25-awt), y la rubrica de imagen es justo el caso que cambia de
+# comportamiento segun que .so haya al lado. Con libawt.so presente, un JPEG con
+# perfil ICC aborta el proceso (rc=134) en vez de dar un error recuperable.
+#
+# El ciclo se ejecuta en el ANFITRION apuntando a la libreria del bundle, no
+# dentro del arenero. No es una preferencia; dentro no se puede hoy, por tres
+# razones medidas:
+#
+#   1. NO HAY TOKEN. La fase 2 firma con PKCS#11, y el bundle empaqueta OpenSC
+#      para una tarjeta fisica (ID-40). El token de pruebas es SoftHSM, que no
+#      esta dentro y no puede entrar: montar el del anfitrion es apuntar
+#      LD_LIBRARY_PATH a librerias de otra glibc, que es exactamente lo que el
+#      ID-40 prohibe.
+#   2. NO HAY POPPLER. `pdfsig` y `pdftoppm` no estan ni en el bundle ni en
+#      org.gnome.Platform//50 (comprobado: `which pdfsig` no los encuentra), y
+#      son la puerta automatica de la TD-03.
+#   3. NO HAY POR DONDE ENTRAR. rfirma no tiene modo headless: el ciclo solo se
+#      alcanza por los #[tauri::command] desde el WebView. Y un binario de
+#      prueba construido en el anfitrion tampoco vale de puente, porque aqui la
+#      glibc es 2.43 y la del runtime 2.42.
+#
+# Meter SoftHSM, poppler y un binario de prueba en el bundle para poder medirlo
+# desde dentro seria distribuir el banco de pruebas a las personas usuarias y
+# romper "los permisos son los declarados y ninguno mas". Cerrar el hueco pide
+# un manifiesto de banco aparte, y eso es otra decision.
+#
+# Lo que SI se mide dentro del arenero son los pasos 2, 3 y 4: que la libreria
+# esta y esta SOLA, que el modulo PKCS#11 que empaqueta el propio flatpak carga,
+# y que la ventana arranca y sigue viva. Ver
 # docs/research/flatpak-canal-unico.md.
 #
 # Uso: packaging/flatpak/verifica.sh
@@ -24,6 +48,8 @@
 #             la libreria nativa en la ruta canonica del ADR-0013
 #             (GRAALVM_HOME=CE 25; `just native`) y el frontend construido
 #             (`just build-ts`, que tauri-build lee de rfirma-app/dist).
+#             Para el paso 5, ademas: el token SoftHSM de la grada B
+#             (`just token`) y poppler-utils (`pdfsig`, `pdftoppm`).
 set -uo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -91,7 +117,35 @@ else
 fi
 
 echo
-echo "### 5. bundle de un solo fichero"
+echo "### 5. el ciclo trifasico completo, contra la libreria DEL BUNDLE"
+# Los bytes que se distribuyen, no los del arbol de construccion: se leen del
+# despliegue que acaba de instalar el paso 1. Si esto y `just test-native`
+# midiesen el mismo fichero, este paso no diria nada nuevo.
+DESPLIEGUE="$(flatpak info --show-location "$APP" 2>/dev/null)" \
+    || { echo "no encuentro el despliegue de $APP"; exit 1; }
+LIB_BUNDLE="$DESPLIEGUE/files/lib/rfirma"
+if [ ! -f "$LIB_BUNDLE/librfirma_crypto.so" ]; then
+    echo "no esta librfirma_crypto.so en $LIB_BUNDLE"; exit 1
+fi
+echo "libreria: $LIB_BUNDLE/librfirma_crypto.so"
+echo "          $(sha256sum "$LIB_BUNDLE/librfirma_crypto.so" | cut -c1-16)... \
+($(du -h "$LIB_BUNDLE/librfirma_crypto.so" | cut -f1))"
+
+# La rubrica de imagen es el caso que este paso existe para cubrir, asi que se
+# ejecutan los cuatro casos visibles y la cofirma: el filtro es el modulo entero
+# full_cycle. Las pruebas generan el JPEG con el normalizador de produccion
+# (ADR-0012), validan con pdfsig y comprueban la rubrica RASTERIZANDO, porque
+# pdftotext no la ve y daria un falso negativo (TD-03).
+(
+    cd "$RAIZ/rfirma-app/src-tauri" \
+        && RFIRMA_LIB_DIR="$LIB_BUNDLE" \
+           cargo test --all-features --test native_cycle -- \
+           --include-ignored full_cycle::
+) || { echo "FALLO el ciclo contra la libreria del bundle"; exit 1; }
+echo "OK  ciclo trifasico y pdfsig contra los bytes que se distribuyen"
+
+echo
+echo "### 6. bundle de un solo fichero"
 flatpak build-bundle "$LAB/repo" "$LAB/$APP.flatpak" "$APP" stable >/dev/null 2>&1 \
     && echo "$LAB/$APP.flatpak: $(du -h "$LAB/$APP.flatpak" | cut -f1)" \
     || echo "build-bundle FALLO"

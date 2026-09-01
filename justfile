@@ -191,7 +191,11 @@ token:
 # ---------------------------------------------------------------------------
 
 # Las tres cadenas, y falla si falla cualquiera.
-lint: lint-java lint-ts lint-rust
+#
+# `check-flatpak-sources` va PRIMERA a proposito: no necesita ni bootstrap ni
+# deps, tarda milisegundos, y lo que detecta —un fichero de bloqueo tocado sin
+# regenerar las fuentes vendorizadas— no lo encuentra ninguna de las otras.
+lint: check-flatpak-sources lint-java lint-ts lint-rust
 
 # -Xlint:all, como decidio el issue #11.
 lint-java: bootstrap
@@ -369,18 +373,46 @@ native: build-java
     mkdir -p "$build_dir" && cd "$build_dir"
     "$graal/bin/native-image" --shared \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
+    # El directorio de DISTRIBUCION se vacia antes de copiar. No es limpieza
+    # cosmetica: sin esto hereda lo que dejase una version anterior de esta
+    # receta —las que instalaban los seis .so— y el directorio que el manifiesto
+    # empaqueta acabaria con libawt.so dentro sin que nadie lo tocara.
+    rm -rf "$dest"
     mkdir -p "$dest"
     install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
+    # Y se comprueba, porque la invariante es "UNO", no "el que acabo de copiar".
+    sobran="$(ls -1 "$dest" | grep -v '^librfirma_crypto\.so$' || true)"
+    if [ -n "$sobran" ]; then
+        echo "sobra algo en $dest:" >&2
+        echo "$sobran" >&2
+        exit 1
+    fi
     ls -la "$dest"
 
 # El manifiesto lee la ruta canonica que produce `native` y el frontend ya
 # construido de rfirma-app/dist, porque tauri-build lee `frontendDist` dentro de
 # su propio build.rs. Por eso esta receta encadena tambien `build-ts`.
 #
+# EL ENTREGABLE DEL v0.1 ES EL FICHERO .flatpak (ID-42), no la instalacion: se
+# construye contra un repositorio ostree local y de ahi sale el bundle de un
+# solo fichero, que se instala con `flatpak install`. No se publica en ningun
+# sitio —ni Releases, ni repositorio remoto, ni GPG—: eso es el ADR-0015 y
+# queda fuera de este hito.
+#
+# El runtime NO va dentro del bundle: se consume del remoto de Flathub, que es
+# por tanto requisito de instalacion. Ver el README.
+#
 # Construye el flatpak, el unico canal soportado (ADR-0015).
 flatpak: native build-ts
-    cd {{ justfile_directory() }}/packaging/flatpak && \
-        flatpak-builder --force-clean --user --install build-dir me.sgomez.rfirma.yml
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ justfile_directory() }}/packaging/flatpak"
+    flatpak-builder --force-clean --user --install --repo=repo \
+        build-dir me.sgomez.rfirma.yml
+    flatpak build-bundle repo me.sgomez.rfirma.flatpak me.sgomez.rfirma stable
+    echo
+    echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
+    echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
 # A mano, cuando cambie un fichero de bloqueo: el flatpak se construye SIN red
 # (ADR-0013) y el CI comprueba que estos ficheros estan al dia en vez de
@@ -408,6 +440,24 @@ flatpak-sources:
     python3 flatpak-cargo-generator.py \
         ../../rfirma-app/src-tauri/Cargo.lock -o cargo-sources.json
     flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
+    # El sello que lee `check-flatpak-sources`: el sha256 de cada fichero de
+    # bloqueo TAL Y COMO estaba al generar los JSON de arriba. Se escribe en el
+    # formato de sha256sum para que comprobarlo sea `sha256sum -c` y no un
+    # analizador nuestro. Las rutas van relativas a la raiz del repositorio,
+    # que es desde donde comprueba el script.
+    cd "{{ justfile_directory() }}"
+    sha256sum rfirma-app/src-tauri/Cargo.lock rfirma-app/pnpm-lock.yaml \
+        > packaging/flatpak/sources.lock
+    echo
+    echo "regeneradas. Versiona cargo-sources.json, node-sources.json y sources.lock."
+
+# La comprobacion de ID-07, sin regenerar nada. Va dentro de `lint` (y por
+# tanto de `check`) en vez de ser un paso suelto del workflow, porque
+# docs/agents/code-host.md promete que el CI ejecuta `just check` y nada mas.
+#
+# Comprueba que las fuentes vendorizadas del flatpak estan al dia.
+check-flatpak-sources:
+    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
 
 # Abre la ventana con recarga en caliente.
 dev: check-native deps

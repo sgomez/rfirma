@@ -8,6 +8,25 @@
 | `me.sgomez.rfirma.yml` | El manifiesto |
 | `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
 | `verifica.sh` | Verificación reproducible dentro del arenero |
+| `cargo-sources.json` / `node-sources.json` | Dependencias vendorizadas, generadas |
+| `sources.lock` | El sello que dice contra qué ficheros de bloqueo se generaron |
+| `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
+
+## Instalar
+
+El bundle **no trae el runtime**: sale del remoto de **Flathub**, que es
+requisito de instalación.
+
+```bash
+flatpak remote-add --user --if-not-exists \
+    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+just flatpak
+flatpak install --user packaging/flatpak/me.sgomez.rfirma.flatpak
+```
+
+`just flatpak` construye contra un repositorio ostree local (`repo/`, sin
+versionar) y de ahí saca `me.sgomez.rfirma.flatpak`, que es **el entregable del
+v0.1** (ID-42). No se publica en ningún sitio.
 
 ## La sonda ya no está
 
@@ -33,14 +52,34 @@ construidos, así que van primero:
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
 just native
 just build-ts
+just token       # el paso 5 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` comprueba lo que solo el arenero puede romper: que la librería
-nativa esté —y **sola**, sin auxiliares de AWT—, que el módulo PKCS#11 que
-empaqueta el propio flatpak esté ahí, y que la ventana arranque y siga viva. La
-firma de punta a punta se mide fuera, con `just test-native`; recuperar ese paso
-aquí dentro espera a que rfirma orqueste las tres fases.
+`verifica.sh` da seis pasos. Dentro del arenero comprueba lo que solo el arenero
+puede romper: que la librería nativa esté —y **sola**, sin auxiliares de AWT—,
+que el módulo PKCS#11 que empaqueta el propio flatpak cargue, y que la ventana
+arranque y siga viva.
+
+El paso 5 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
+con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se
+distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
+verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
+contra la imagen de **seis** ficheros, y la rúbrica de imagen es justo el caso
+cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
+grada B (`just token`) y `poppler-utils`.
+
+Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
+dentro del arenero, por tres razones medidas: dentro **no hay token** (el bundle
+empaqueta OpenSC para una tarjeta física, y montar el SoftHSM del anfitrión es
+justo el `LD_LIBRARY_PATH` de otra glibc que prohíbe el ID-40), **no hay
+poppler** (`pdfsig` no está ni en el bundle ni en `org.gnome.Platform//50`), y
+**no hay por dónde entrar** (rfirma no tiene modo headless: el ciclo solo se
+alcanza por los `#[tauri::command]` desde el WebView, y un binario de prueba del
+anfitrión tampoco sirve de puente, porque aquí la glibc es 2.43 y la del runtime
+2.42). Meter SoftHSM, poppler y un binario de prueba dentro sería distribuir el
+banco de pruebas y romper «los permisos son los declarados y ninguno más»;
+cerrarlo pide un manifiesto de banco aparte.
 
 ## Pendiente antes de publicar
 
@@ -48,15 +87,34 @@ El canal es propio: bundle en GitHub Releases y repositorio ostree en
 `rfirma.sgomez.me`. Ver el
 [ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md).
 
-- **Construir sin red.** El módulo `rfirma-app` declara `--share=network` para
-  bajar las dependencias de cargo. Se vendorizan con
-  `flatpak-cargo-generator.py` a partir del `Cargo.lock`, y el frontend con
-  `flatpak-node-generator` a partir del `pnpm-lock.yaml` (`just
-  flatpak-sources`), que es además lo que permitiría construirlo dentro del
-  arenero en vez de traerlo hecho del anfitrión. Ya no lo obliga Flathub: lo
-  decidió por su cuenta el
-  [ADR-0013](../../docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md),
-  para que un fichero generado no entre en el CI sin que nadie lo mire.
 - **Publicar el repositorio ostree.** `flatpak build-export` +
   `flatpak build-update-repo`, firmado con GPG, servido como ficheros estáticos,
   más el `.flatpakref` con la huella de la clave.
+
+## Construir sin red
+
+Ya está hecho: **no hay `--share=network` en el manifiesto**. Las dependencias
+de cargo entran vendorizadas desde `cargo-sources.json`, y `cargo build` corre
+con `--offline`.
+
+Los dos generadores son de
+[flatpak-builder-tools](https://github.com/flatpak/flatpak-builder-tools) y **no
+se versionan aquí** (ID-04): se traen a mano la primera vez.
+`just flatpak-sources` falla nombrando el que falte.
+
+```bash
+just flatpak-sources   # cuando cambie Cargo.lock o pnpm-lock.yaml
+```
+
+Esa receta regenera los dos JSON **y** reescribe `sources.lock` con el `sha256`
+de cada fichero de bloqueo. El CI no los regenera: ejecuta
+`just check-flatpak-sources` (dentro de `just lint`, y por tanto de `just
+check`), que compara esos `sha256` y falla nombrando el fichero que se ha
+movido. Un fichero generado dentro del CI es un fichero que nadie ha mirado
+([ID-07](https://github.com/sgomez/rfirma/issues/46)).
+
+`node-sources.json` se genera y se versiona, pero **el manifiesto todavía no lo
+usa**: el frontend se construye en el anfitrión y entra hecho, porque
+`org.gnome.Sdk//50` no trae `node`. Consumirlo pide añadir la extensión de SDK
+`org.freedesktop.Sdk.Extension.node22`, que es otra decisión. Mientras tanto lo
+cubre la misma puerta, para que no se pudra en silencio.
