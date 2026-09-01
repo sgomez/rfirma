@@ -52,14 +52,34 @@ construidos, así que van primero:
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
 just native
 just build-ts
+just token       # el paso 5 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` comprueba lo que solo el arenero puede romper: que la librería
-nativa esté —y **sola**, sin auxiliares de AWT—, que el módulo PKCS#11 que
-empaqueta el propio flatpak esté ahí, y que la ventana arranque y siga viva. La
-firma de punta a punta se mide fuera, con `just test-native`; recuperar ese paso
-aquí dentro espera a que rfirma orqueste las tres fases.
+`verifica.sh` da seis pasos. Dentro del arenero comprueba lo que solo el arenero
+puede romper: que la librería nativa esté —y **sola**, sin auxiliares de AWT—,
+que el módulo PKCS#11 que empaqueta el propio flatpak cargue, y que la ventana
+arranque y siga viva.
+
+El paso 5 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
+con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se
+distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
+verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
+contra la imagen de **seis** ficheros, y la rúbrica de imagen es justo el caso
+cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
+grada B (`just token`) y `poppler-utils`.
+
+Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
+dentro del arenero, por tres razones medidas: dentro **no hay token** (el bundle
+empaqueta OpenSC para una tarjeta física, y montar el SoftHSM del anfitrión es
+justo el `LD_LIBRARY_PATH` de otra glibc que prohíbe el ID-40), **no hay
+poppler** (`pdfsig` no está ni en el bundle ni en `org.gnome.Platform//50`), y
+**no hay por dónde entrar** (rfirma no tiene modo headless: el ciclo solo se
+alcanza por los `#[tauri::command]` desde el WebView, y un binario de prueba del
+anfitrión tampoco sirve de puente, porque aquí la glibc es 2.43 y la del runtime
+2.42). Meter SoftHSM, poppler y un binario de prueba dentro sería distribuir el
+banco de pruebas y romper «los permisos son los declarados y ninguno más»;
+cerrarlo pide un manifiesto de banco aparte.
 
 ## Pendiente antes de publicar
 
