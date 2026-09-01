@@ -255,6 +255,22 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         run: just test-native
 
+      # EL PDF DE LA PUERTA MANUAL (TD-04). `pdfsig` es la puerta automatica,
+      # pero el criterio de terminado del hito promete que un VALIDADOR OFICIAL
+      # acepta la firma, y VALIDe es red, web y sin API estable: esa puerta la
+      # cierra una persona, una vez por etiqueta v*. Este paso es lo unico que
+      # le hace falta para poder cerrarla — el PDF del caso maximo (recuadro
+      # con texto Y rubrica), sin reproducir GraalVM, SoftHSM y poppler en su
+      # equipo. Se sube SIEMPRE que las pruebas hayan corrido, tambien si algo
+      # posterior falla: un PDF que no valida es justo el que hay que mirar.
+      - name: PDF para el validador oficial
+        if: steps.scope.outputs.build == 'true' && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-puerta-manual
+          path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
+          if-no-files-found: error
+
       # La misma medicion CRAP que el carril rapido pero SIN --allow sobre el
       # modulo FFI: con la cobertura de la grada C incluida, ese modulo ya
       # puede dar la cara (ADR-0014).

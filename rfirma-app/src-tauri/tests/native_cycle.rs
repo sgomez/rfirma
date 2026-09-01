@@ -12,11 +12,42 @@
 //! `native_cycle.rs` porque el `CLAUDE.md` del repositorio pide **identificador
 //! en inglés y prosa en castellano**, y un nombre de fichero es identificador.
 //!
-//! Aquí **no se firma un PDF**: eso es la grada C del puente Java, que valida
-//! con `pdfsig`. Lo que se comprueba aquí es la frontera —que la librería carga
-//! desde donde el ADR-0004 dice, que el JSON del contrato vuelve entero, y que
-//! el ciclo de vida de la memoria del ID-11 se sostiene repetido cien mil
-//! veces—, que es lo que no se puede probar con dobles.
+//! # Por qué este fichero es la excepción vertical al corte horizontal
+//!
+//! El resto del spec #46 está cortado **por módulo**: la rúbrica, el token, la
+//! memoria, las coordenadas, la frontera FFI. Este fichero no. Necesita el
+//! puente Java, la FFI, PKCS#11, el PDF y `pdfsig` **a la vez**, así que no
+//! pertenece a ningún módulo del corte, y por eso tiene un sub-issue propio
+//! (#61) en vez de repartirse entre los demás (TD-09, ADR-0014).
+//!
+//! **El corte no se rompió por descuido.** Se rompió porque sin dueño explícito
+//! cada módulo habría supuesto que esta prueba la escribía otro, y no la habría
+//! escrito nadie. Lo que se pierde al partirla es exactamente lo único que
+//! demuestra que la versión sirve: que un PDF firmado por rFirma es un PDF
+//! válido. Todo lo demás se puede probar con dobles; esto no.
+//!
+//! # Las dos mitades del fichero
+//!
+//! Arriba, **la frontera sola**: que la librería carga desde donde el ADR-0004
+//! dice, que el JSON del contrato vuelve entero en vez de abortar el proceso, y
+//! que el ciclo de vida de la memoria del ID-11 se sostiene repetido cien mil
+//! veces. Abajo, en [`full_cycle`], **el ciclo trifásico entero** contra el
+//! token, con `pdfsig` de poppler delante.
+//!
+//! # El PDF de la puerta manual
+//!
+//! El validador oficial es una **puerta manual de release**, no de CI: VALIDe
+//! es red, web y sin API estable (TD-04, ADR-0014). El PDF que se le lleva es
+//! el que produce
+//! [`full_cycle::a_signature_with_text_and_rubric_is_the_pdf_of_the_manual_gate`],
+//! el caso máximo —recuadro con texto **y** rúbrica—, y se deposita como
+//! `manual-gate.pdf` dentro del `CARGO_TARGET_TMPDIR` de la prueba
+//! (`rfirma-app/src-tauri/target/tmp/manual-gate.pdf` con el diseño de
+//! directorios de cargo de hoy). La propia prueba imprime la ruta absoluta, y
+//! el carril lento del CI lo sube como artefacto `pdf-puerta-manual` para que
+//! quien etiquete una `v*` no tenga que reproducir el entorno para conseguirlo.
+//! Un check en verde **no** demuestra lo que promete el criterio de terminado
+//! del hito; este fichero produce el PDF, y una persona cierra la puerta.
 
 use std::path::{Path, PathBuf};
 
@@ -175,14 +206,19 @@ fn a_hundred_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
     );
 }
 
-/// **El ciclo trifásico entero**, que es lo que el #60 tenía que construir: la
-/// prefirma cruza la frontera, el token firma, la postfirma ensambla, y
-/// `pdfsig` de poppler dice si eso vale (TD-03, ADR-0014).
+/// **El ciclo trifásico entero**: la prefirma cruza la frontera, el token
+/// firma, la postfirma ensambla, y `pdfsig` de poppler dice si eso vale
+/// (TD-03, ADR-0014).
 ///
 /// Necesita las **dos** cosas a la vez —`librfirma_crypto.so` y el token
 /// SoftHSM—, que es exactamente por lo que estas pruebas viven aquí y no en
 /// `pkcs11_token.rs`: aquellas son grada B y corren en el carril rápido, y
 /// estas son grada C y corren en `just test-native`.
+///
+/// Dentro hay tres grupos: los **cuatro casos de firma visible** que la
+/// librería nativa soporta —ni texto ni rúbrica, texto solo, rúbrica sola, y
+/// las dos—, la **cofirma** sobre un PDF ya firmado, y las **tres invariantes
+/// del sello** del ADR-0016, probadas como fallo esperado.
 ///
 /// # La rúbrica se comprueba **rasterizando**
 ///
@@ -196,6 +232,8 @@ mod full_cycle {
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
+    use base64::Engine;
+    use rfirma_lib::ffi::NativeBridge;
     use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
     use rfirma_lib::rubric;
     use rfirma_lib::signing::{
@@ -319,7 +357,12 @@ mod full_cycle {
             .to_base64()
     }
 
-    fn a_config(rubric: Option<String>) -> SignatureConfig {
+    /// La configuracion de firma de un caso, con el mismo recuadro siempre.
+    ///
+    /// El texto y la rubrica van sueltos porque son **los dos ejes de los
+    /// cuatro casos**: cada prueba de abajo fija uno y otro, y el recuadro se
+    /// queda quieto para que las cuatro midan la misma region de la pagina.
+    fn a_config_of(text: &str, rubric: Option<String>) -> SignatureConfig {
         SignatureConfig {
             signature_box: SignatureBox {
                 page: 1,
@@ -328,7 +371,7 @@ mod full_cycle {
                 upper_right_x: BOX_RIGHT as i32,
                 upper_right_y: BOX_TOP as i32,
             },
-            layer2_text: "Firmado por: PRUEBAS FNMT".to_owned(),
+            layer2_text: text.to_owned(),
             rubric_image: rubric,
             sign_reason: None,
         }
@@ -436,44 +479,131 @@ mod full_cycle {
         dark
     }
 
-    #[test]
-    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
-    fn the_whole_cycle_signs_a_pdf_and_pdfsig_validates_it() {
+    /// Lo que `pdfsig` escribe cuando la firma es criptográficamente válida.
+    const VALID: &str = "Signature Validation: Signature is Valid.";
+
+    /// El PDF que va a la **puerta manual del validador oficial** (TD-04).
+    ///
+    /// Es el caso máximo —recuadro con texto **y** rúbrica—, porque es el que
+    /// ejercita todo lo que la versión promete a la vez; si el validador
+    /// oficial acepta este, los otros tres son subconjuntos suyos.
+    const MANUAL_GATE_PDF: &str = "manual-gate.pdf";
+
+    /// Firma, pasa `pdfsig` y devuelve la primera página pintada.
+    ///
+    /// Los cuatro casos de firma visible comparten esto porque lo que los
+    /// distingue es **solo** lo que hay dentro del recuadro: la validez
+    /// criptográfica se exige igual en los cuatro, y una prueba que la
+    /// comprobara en unos sí y en otros no dejaría el agujero justo donde la
+    /// firma visible cambia el PDF.
+    fn signed_page(name: &str, config: &SignatureConfig) -> (PathBuf, image::GrayImage) {
         let pdf = a_one_page_pdf();
 
-        let signed = sign(&pdf, &a_config(None));
+        // El recuadro tiene que estar vacío ANTES de firmar, o contar píxeles
+        // oscuros después no mide nada.
+        let before = rasterise(&write_to_target(&format!("before-{name}"), &pdf));
+        assert_eq!(
+            dark_pixels_in_the_signature_box(&before),
+            0,
+            "el recuadro no estaba vacio antes de firmar: la prueba no mide nada"
+        );
 
+        let signed = sign(&pdf, config);
         assert!(
             signed.len() > pdf.len(),
             "el PDF firmado tiene que crecer: {} contra {}",
             signed.len(),
             pdf.len()
         );
-        let report = pdfsig(&write_to_target("cycle-without-rubric.pdf", &signed));
+
+        let path = write_to_target(name, &signed);
+        let report = pdfsig(&path);
         assert!(
-            report.contains("Signature Validation: Signature is Valid."),
+            report.contains(VALID),
             "pdfsig no da la firma por valida:\n{report}"
+        );
+
+        let page = rasterise(&path);
+        (path, page)
+    }
+
+    /// El área del recuadro en píxeles, que es contra lo que se compara la
+    /// tinta que haya dentro.
+    fn box_area() -> u32 {
+        (BOX_RIGHT - BOX_LEFT) * (BOX_TOP - BOX_BOTTOM)
+    }
+
+    // ---------------------------------------------------------------------
+    // Los cuatro casos de firma visible
+    // ---------------------------------------------------------------------
+    //
+    // Son cuatro y no dos porque el texto y la rúbrica son dos ajustes
+    // independientes (`layer2Text` y `signatureRubricImage`, ID-18) y la
+    // librería nativa soporta las cuatro combinaciones. Los que se saltan sin
+    // querer son siempre los mismos: el vacío, que es el que descubre que
+    // `PdfSessionManager` inyecta su texto por omisión en cuanto falta la
+    // clave, y el de rúbrica sola, que es el que descubre que el texto no
+    // estaba pintando la rúbrica por él.
+    //
+    // Los cuatro se miden **rasterizando** (TD-03), y los cuatro miran el mismo
+    // recuadro, así que entre ellos se distinguen: vacío, poca tinta, lleno,
+    // lleno.
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn a_signature_with_neither_text_nor_rubric_leaves_the_box_empty() {
+        // `layer2Text` viaja **vacío pero presente** a propósito (ID-18): si la
+        // clave faltara y tampoco hubiera rúbrica, `PdfSessionManager` metería
+        // su texto por omisión —castellano fijo y con comodines dentro— y este
+        // caso dejaría de ser el caso vacío sin que nadie se enterase.
+        let (_, page) = signed_page("cycle-bare.pdf", &a_config_of("", None));
+
+        assert_eq!(
+            dark_pixels_in_the_signature_box(&page),
+            0,
+            "sin texto y sin rubrica el recuadro tiene que salir vacio: \
+             si hay tinta, alguien la ha inyectado por omision"
         );
     }
 
     #[test]
     #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
-    fn the_rubric_is_there_when_the_page_is_rasterised() {
-        // `pdftotext` no ve una imagen: preguntarle por la rubrica daria un
-        // falso negativo, y por eso el TD-03 manda rasterizar.
-        let pdf = a_one_page_pdf();
-        let before = rasterise(&write_to_target("cycle-before-rubric.pdf", &pdf));
-        assert_eq!(
-            dark_pixels_in_the_signature_box(&before),
-            0,
-            "el recuadro tiene que estar vacio antes de firmar, o la prueba no mide nada"
+    fn a_signature_with_only_text_puts_ink_in_the_box_but_does_not_fill_it() {
+        let (_, page) = signed_page(
+            "cycle-text-only.pdf",
+            &a_config_of("Firmado por: PRUEBAS FNMT", None),
         );
 
-        let signed = sign(&pdf, &a_config(Some(a_black_rubric())));
-
-        let page = rasterise(&write_to_target("cycle-with-rubric.pdf", &signed));
         let dark = dark_pixels_in_the_signature_box(&page);
-        let area = (BOX_RIGHT - BOX_LEFT) * (BOX_TOP - BOX_BOTTOM);
+        let area = box_area();
+        assert!(
+            dark > 0,
+            "el texto del recuadro no ha llegado al PDF: {dark} pixeles oscuros de {area}"
+        );
+        // El techo es la otra mitad de la comprobación: unas letras dejan
+        // bastante menos tinta que una rúbrica maciza, y sin este límite el
+        // caso de texto y el de rúbrica pasarían con la misma medida.
+        assert!(
+            dark < area / 2,
+            "unas letras no pueden ennegrecer medio recuadro: {dark} de {area}. \
+             O el texto es enorme, o lo que hay dentro no es texto"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn a_signature_with_only_a_rubric_fills_the_box() {
+        // `pdftotext` no ve una imagen: preguntarle por la rúbrica daría un
+        // falso negativo, y por eso el TD-03 manda rasterizar. Este caso es el
+        // que lo demuestra sin ayuda del texto —aquí no hay ni una letra que
+        // pudiera estar dando el verde por ella—.
+        let (_, page) = signed_page(
+            "cycle-rubric-only.pdf",
+            &a_config_of("", Some(a_black_rubric())),
+        );
+
+        let dark = dark_pixels_in_the_signature_box(&page);
+        let area = box_area();
         assert!(
             dark > area / 2,
             "el recuadro esta practicamente vacio: {dark} pixeles oscuros de {area}"
@@ -482,8 +612,40 @@ mod full_cycle {
 
     #[test]
     #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn a_signature_with_text_and_rubric_is_the_pdf_of_the_manual_gate() {
+        let (path, page) = signed_page(
+            MANUAL_GATE_PDF,
+            &a_config_of("Firmado por: PRUEBAS FNMT", Some(a_black_rubric())),
+        );
+
+        let dark = dark_pixels_in_the_signature_box(&page);
+        let area = box_area();
+        assert!(
+            dark > area / 2,
+            "el recuadro esta practicamente vacio: {dark} pixeles oscuros de {area}"
+        );
+
+        // Se imprime la ruta, y no solo se escribe el fichero: la puerta del
+        // TD-04 la ejecuta una persona, y una persona necesita saber de dónde
+        // sacar el PDF. `cargo test -- --nocapture` (o el registro del carril
+        // lento) lo dice.
+        println!(
+            "PDF de la puerta manual del validador oficial: {}",
+            path.display()
+        );
+        assert!(
+            path.is_file(),
+            "el PDF de la puerta manual tiene que quedar en disco"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
     fn a_pdf_that_was_already_signed_is_cosigned_and_pdfsig_validates_both() {
-        let first = sign(&a_one_page_pdf(), &a_config(None));
+        let first = sign(
+            &a_one_page_pdf(),
+            &a_config_of("Firmado por: PRUEBAS FNMT", None),
+        );
         assert!(
             AdmissibleDocument::check(&first)
                 .expect("un PDF firmado se puede cofirmar")
@@ -493,39 +655,103 @@ mod full_cycle {
 
         // El segundo recuadro va más abajo: dos firmas visibles en el mismo
         // sitio se taparían, y lo que se quiere ver es que las dos están.
+        let base = a_config_of("Firmado por: PRUEBAS FNMT", None);
         let lower = SignatureConfig {
             signature_box: SignatureBox {
                 lower_left_y: BOX_BOTTOM as i32 - 150,
                 upper_right_y: BOX_TOP as i32 - 150,
-                ..a_config(None).signature_box
+                ..base.signature_box
             },
-            ..a_config(None)
+            ..base
         };
         let second = sign(&first, &lower);
 
         let report = pdfsig(&write_to_target("cycle-cosigned.pdf", &second));
-        let valid = report
-            .matches("Signature Validation: Signature is Valid.")
-            .count();
+        let valid = report.matches(VALID).count();
         assert_eq!(
             valid, 2,
             "la cofirma tiene que dejar las DOS firmas validas:\n{report}"
         );
     }
 
-    #[test]
-    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
-    fn a_seal_altered_between_the_presign_and_the_postsign_makes_the_postsign_fail() {
-        // La invariante del ADR-0016, medida de punta a punta: sin ella la
-        // postfirma **completa sin error** y el PDF sale con `Digest Mismatch`.
-        // Un fallo visible es lo unico que separa eso de una firma invalida que
-        // nadie sabe por que lo es.
+    // ---------------------------------------------------------------------
+    // Las tres invariantes del sello, como fallo esperado
+    // ---------------------------------------------------------------------
+    //
+    // El ADR-0016 y el ID-17 dicen que la postfirma exige recibir de la
+    // prefirma **lo mismo en tres cosas a la vez**: los `extraParams`
+    // efectivos, el instante de firma y la zona horaria. Las tres se prueban
+    // **como fallo esperado** y no se evitan: lo que las tres protegen es un
+    // fallo que no se ve —la postfirma completa sin error y el PDF sale con
+    // `Digest Mismatch`—, así que una prueba que se limitara a no alterarlas no
+    // distinguiría el código con guarda del código sin ella.
+    //
+    // Las tres son de grada C y no de grada A aunque `session_seal.rs` ya
+    // compare bytes en el carril rápido, porque **lo que se altera aquí es el
+    // sello de verdad**: el que acaba de componer `SessionStamp.encode` al otro
+    // lado de la FFI, con los nombres de campo que el puente escribe hoy. Una
+    // prueba de grada A los inventa, y seguiría verde el día que el puente
+    // dejara de sellar la zona horaria.
+    //
+    // Y no las guarda Java: la postfirma toma del sello la zona horaria y los
+    // `extraParams`, así que un sello alterado en esos dos campos le parece
+    // bien y el PDF sale inválido. `SessionStamp.matchesSessionTime` cubre el
+    // instante, y nada más. La comparación de bytes de Rust, **antes** de
+    // cruzar, es la única guarda que tienen los otros dos.
+
+    /// El bloque de texto que hay dentro del sello.
+    ///
+    /// **rFirma no lee el sello nunca** —el ADR-0016 lo prohíbe, y por eso
+    /// `SessionSeal` no tiene ni un `get`—, pero la prueba sí, y a propósito:
+    /// es lo único que permite alterar *una* invariante sin tocar las otras
+    /// dos. Que este conocimiento viva aquí, en un fichero de pruebas, y no en
+    /// el código de producción es justo la línea que el ADR traza.
+    fn inside_the_seal(seal: &SessionSeal) -> String {
+        let raw = base64::engine::general_purpose::STANDARD
+            .decode(seal.as_bridge_payload())
+            .expect("el sello del puente viene en Base64");
+        String::from_utf8(raw).expect("el bloque del sello es UTF-8")
+    }
+
+    /// Devuelve el sello con el valor del **primer** campo cuya clave empiece
+    /// por `prefix` cambiado, y **falla si no hay ninguno**.
+    ///
+    /// Ese `assert` es lo que separa esta prueba de una que no prueba nada: sin
+    /// él, el día que el puente dejara de sellar el campo, la prueba alteraría
+    /// un sello inexistente, el sello saldría idéntico... y el fallo esperado
+    /// no llegaría.
+    fn seal_with_field_altered(seal: &SessionSeal, prefix: &str) -> SessionSeal {
+        let block = inside_the_seal(seal);
+        let mut altered = false;
+        let lines: Vec<String> = block
+            .lines()
+            .map(|line| {
+                if !altered && line.starts_with(prefix) {
+                    altered = true;
+                    format!("{line}-alterado")
+                } else {
+                    line.to_owned()
+                }
+            })
+            .collect();
+        assert!(
+            altered,
+            "el sello del puente ya no lleva ningun campo '{prefix}'. \
+             Sin ese campo la invariante del ADR-0016 no esta sellada, \
+             y esta prueba habria pasado sin comprobar nada:\n{block}"
+        );
+        SessionSeal::from_bridge(base64::engine::general_purpose::STANDARD.encode(lines.join("\n")))
+    }
+
+    /// Abre un ciclo, firma en el token y devuelve las dos mitades que la
+    /// postfirma necesita. Lo comparten las tres invariantes.
+    fn a_cycle_ready_to_postsign() -> (NativeBridge, cycle::OpenCycle, cycle::TokenSignature) {
         let bridge = bridge();
         let pdf = a_one_page_pdf();
         let certificate = signing_certificate();
         let chain = vec![certificate.der().to_vec()];
         let reference = reference();
-        let config = a_config(None);
+        let config = a_config_of("Firmado por: PRUEBAS FNMT", None);
 
         let cycle = cycle::presign(
             &bridge,
@@ -539,18 +765,56 @@ mod full_cycle {
         .expect("la prefirma deberia salir");
         let signature = cycle.sign_on_token(PIN).expect("el token deberia firmar");
 
-        // El sello se altera **sin leerlo**: se le pega un byte al final, que es
-        // todo lo que hace falta para que deje de ser el mismo.
-        let tampered = SessionSeal::from_bridge(format!(
-            "{}\u{0}",
-            cycle.seal_in_transit().as_bridge_payload()
-        ));
+        (bridge, cycle, signature)
+    }
 
-        let outcome = cycle.postsign(&bridge, &signature, &tampered);
+    /// Altera un campo del sello real y comprueba que la postfirma **aborta**
+    /// en vez de devolver un PDF.
+    fn postsign_refuses_a_seal_altered_in(prefix: &str) {
+        let (bridge, cycle, signature) = a_cycle_ready_to_postsign();
+
+        let tampered = seal_with_field_altered(&cycle.seal_in_transit(), prefix);
+
+        // Del PDF solo se enseña el tamaño: si la postfirma devuelve uno, el
+        // `Debug` de un `Vec<u8>` son medio megabyte de numeros en el registro
+        // de la prueba, y lo que hace falta saber es que ha devuelto algo.
+        let outcome = cycle
+            .postsign(&bridge, &signature, &tampered)
+            .map(|pdf| format!("un PDF de {} bytes", pdf.len()));
 
         assert!(
             matches!(outcome, Err(cycle::CycleError::Seal(_))),
-            "la postfirma tenia que abortar por el sello, y ha contestado {outcome:?}"
+            "con el campo '{prefix}' alterado la postfirma tenia que abortar por el \
+             sello, y ha contestado {outcome:?}. Un Ok aqui es un PDF con Digest \
+             Mismatch que nadie sabe por que no vale"
         );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn an_altered_signing_instant_makes_the_postsign_fail() {
+        // El `TIME` que la prefirma dejó en el `TriphaseData`. Entra dentro de
+        // los atributos firmados, así que un segundo de diferencia invalida.
+        postsign_refuses_a_seal_altered_in("TIME=");
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn an_altered_time_zone_makes_the_postsign_fail() {
+        // El tercero, el que nadie esperaba (#23): el desfase de la zona entra
+        // dentro del rango firmado, así que el mismo instante en otra zona
+        // produce otros bytes. Y aquí Java no ayuda —toma la zona del propio
+        // sello—, así que esta comparación es la única guarda que hay.
+        postsign_refuses_a_seal_altered_in("TZ=");
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn altered_effective_extra_params_make_the_postsign_fail() {
+        // Los `extraParams` **efectivos**, no los enviados: Java muta el
+        // `Properties` que recibe y `PAdESTriPhaseSigner:174` no lo clona, así
+        // que el puente relee el objeto después de la prefirma y sella eso.
+        // Van prefijados con `P.` dentro del bloque.
+        postsign_refuses_a_seal_altered_in("P.");
     }
 }
