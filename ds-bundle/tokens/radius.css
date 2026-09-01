@@ -1,0 +1,8 @@
+/* rFirma Design System - Radius */
+:root {
+  --rf-radius-sm: 4px;
+  --rf-radius-md: 6px;
+  --rf-radius-lg: 8px;
+  --rf-radius-xl: 16px;
+  --rf-radius-pill: 9999px;
+}

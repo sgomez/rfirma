@@ -1,0 +1,35 @@
+<!-- @dsCard group="Foundations" viewport="820x260" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Elevation - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+</style>
+</head>
+<body class="rf-root">
+
+<h2 class="rf-title">Elevaci&oacute;n</h2>
+<p class="rf-body rf-text-muted" style="margin-top:8px">La profundidad viene sobre todo del color de superficie; la sombra solo la matiza.</p>
+<div class="rf-row rf-gap-md" style="margin-top:24px; align-items:stretch">
+  <div class="rf-card" style="flex:1">
+    <p class="rf-demo-label">shadow-card</p>
+    <p class="rf-prose">Reposo. Tarjetas de lista, paneles de opciones.</p>
+  </div>
+  <div class="rf-card rf-card--elevated" style="flex:1">
+    <p class="rf-demo-label">shadow-elevated</p>
+    <p class="rf-prose">Flotante. Di&aacute;logos, men&uacute;s, estado hover.</p>
+  </div>
+  <div class="rf-surface" style="flex:1; padding:var(--rf-space-3)">
+    <p class="rf-demo-label">sin sombra</p>
+    <p class="rf-prose">Solo superficie y borde. El caso m&aacute;s frecuente.</p>
+  </div>
+</div>
+
+</body></html>

@@ -1,0 +1,21 @@
+/* rFirma Design System - Spacing (8px base, 9 tiers) */
+:root {
+  --rf-space-base: 8px;
+  --rf-space-1: 8px;
+  --rf-space-2: 16px;
+  --rf-space-3: 24px;
+  --rf-space-4: 40px;
+  --rf-space-5: 48px;
+  --rf-space-6: 64px;
+  --rf-space-7: 72px;
+  --rf-space-8: 80px;
+  --rf-space-9: 144px;
+
+  /* Named aliases, by intended use */
+  --rf-space-xs: var(--rf-space-1);   /* button padding, icon gaps */
+  --rf-space-sm: var(--rf-space-2);   /* text-block padding, inline gaps */
+  --rf-space-md: var(--rf-space-3);   /* form-field gaps, card grid gaps */
+  --rf-space-lg: var(--rf-space-5);   /* section spacing */
+  --rf-space-xl: var(--rf-space-8);   /* hero / featured breakout */
+  --rf-space-2xl: var(--rf-space-9);  /* full-bleed, page-top */
+}

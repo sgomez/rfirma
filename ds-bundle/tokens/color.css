@@ -1,0 +1,105 @@
+/* rFirma Design System - Color
+ *
+ * Dos temas. El tema lo decide el sistema operativo (`prefers-color-scheme`)
+ * y `data-theme="light|dark"` lo fuerza sobre cualquier elemento, no solo la
+ * raiz - eso permite una zona clara dentro de una pantalla oscura y al reves.
+ *
+ * Los tokens `--rf-color-*` son los literales de la especificacion de partida
+ * y NO cambian con el tema; estan aqui como referencia. Lo que consume el
+ * sistema son los roles semanticos `--rf-bg`, `--rf-text`, `--rf-primary`...
+ * que si cambian.
+ *
+ * CORRECCION DE ACCESIBILIDAD: la especificacion de partida daba por bueno
+ * `on-primary` (#ffffff) sobre `primary` (#94a3b8) como WCAG AA a 5,8:1. El
+ * valor real es 2,56:1 y falla AA. Cada par que se usa aqui esta calculado y
+ * anotado. Los tres unicos valores derivados son #fafbfc, #b6c0cd y #475569,
+ * todos de la misma familia slate.
+ */
+
+/* --------------------------------- Literales de la especificacion origen */
+:root {
+  --rf-color-primary: #94a3b8;
+  --rf-color-on-primary: #ffffff;
+  --rf-color-background: #18181b;
+  --rf-color-surface: #15171a;
+  --rf-color-border: #e5e5e5;
+  --rf-color-text: #000000;
+  --rf-color-text-muted: #ffffff;
+  --rf-color-accent: #64748b;
+}
+
+/* ------------------------------------------------------------ Tema claro */
+/* Es tambien el bloque base: define TODOS los roles, para que ningun rol
+ * exista solo dentro de una media query. */
+:root,
+[data-theme="light"],
+.rf-on-light {
+  color-scheme: light;
+
+  --rf-bg: #ffffff;
+  --rf-surface: #fafbfc;             /* derivado; mantiene el atenuado en 4,59:1 */
+
+  --rf-text: #000000;                /* 21:1 sobre bg */
+  --rf-text-muted: #64748b;          /* 4,76:1 sobre bg | 4,59:1 sobre surface */
+
+  --rf-border-subtle: #e5e5e5;       /* decorativo: divisores, borde de tarjeta */
+  --rf-border-strong: #64748b;       /* contorno de control: 4,76:1, cumple el 3:1 de WCAG 1.4.11 */
+
+  --rf-primary: #64748b;             /* el slate oscuro de la paleta */
+  --rf-on-primary: #ffffff;          /* 4,76:1 sobre primary */
+  --rf-primary-hover: #475569;       /* derivado; 7,58:1 */
+  --rf-accent: #94a3b8;
+
+  --rf-focus-ring: #64748b;          /* 4,76:1 sobre bg */
+}
+
+/* ----------------------------------------------------------- Tema oscuro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --rf-bg: #18181b;
+    --rf-surface: #15171a;
+
+    --rf-text: #ffffff;                        /* 17,72:1 sobre bg */
+    --rf-text-muted: #94a3b8;                  /* 6,91:1 sobre bg */
+
+    --rf-border-subtle: rgba(229, 229, 229, 0.12);
+    --rf-border-strong: rgba(229, 229, 229, 0.45);  /* 3,80:1 sobre bg */
+
+    --rf-primary: #94a3b8;
+    --rf-on-primary: #18181b;                  /* 6,91:1 - con #ffffff seria 2,56:1 y fallaria AA */
+    --rf-primary-hover: #b6c0cd;               /* derivado; 9,63:1 */
+    --rf-accent: #64748b;
+
+    --rf-focus-ring: #94a3b8;                  /* 6,91:1 sobre bg */
+  }
+}
+
+/* Forzado explicito. Vale en cualquier elemento, no solo en :root. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --rf-bg: #18181b;
+  --rf-surface: #15171a;
+
+  --rf-text: #ffffff;
+  --rf-text-muted: #94a3b8;
+
+  --rf-border-subtle: rgba(229, 229, 229, 0.12);
+  --rf-border-strong: rgba(229, 229, 229, 0.45);
+
+  --rf-primary: #94a3b8;
+  --rf-on-primary: #18181b;
+  --rf-primary-hover: #b6c0cd;
+  --rf-accent: #64748b;
+
+  --rf-focus-ring: #94a3b8;
+}
+
+/* ---------------------------------------------------- Constantes de tema */
+:root {
+  --rf-focus-ring-width: 2px;
+  --rf-focus-ring-offset: 2px;
+  --rf-scrim: rgba(0, 0, 0, 0.6);
+}

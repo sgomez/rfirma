@@ -23,8 +23,10 @@ rustc-ice-*.txt
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Sistema de diseño: material de trabajo local, no versionado por ahora.
-ds-bundle/
+# Sistema de diseño: el bundle esta versionado (ID-47 del #80), porque es la
+# fuente normativa de los tokens y no puede depender de un servicio externo.
+# Fuera quedan los artefactos de la herramienta que lo transporta.
+ds-bundle/_ds_needs_recompile
 .design-sync/
 
 # flatpak (packaging/flatpak)

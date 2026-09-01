@@ -1,0 +1,70 @@
+<!-- @dsCard group="Foundations" viewport="900x430" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Spacing - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+  .rf-bar { display:block; height:16px; background:var(--rf-color-primary);
+    border-radius:var(--rf-radius-sm); flex:none; }
+</style>
+</head>
+<body class="rf-root">
+
+<h2 class="rf-title">Escala de 8px</h2>
+<p class="rf-body rf-text-muted" style="margin-top:8px">Nueve escalones. Los saltos (24&rarr;40, 80&rarr;144) son intencionados.</p>
+<div class="rf-stack rf-gap-sm" style="margin-top:24px">
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:8px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">8px</span>
+    <span class="rf-body rf-text-muted">--rf-space-xs &middot; relleno de bot&oacute;n, separaci&oacute;n de iconos</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:16px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">16px</span>
+    <span class="rf-body rf-text-muted">--rf-space-sm &middot; relleno de bloques de texto</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:24px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">24px</span>
+    <span class="rf-body rf-text-muted">--rf-space-md &middot; separaci&oacute;n entre campos y tarjetas</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:40px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">40px</span>
+    <span class="rf-body rf-text-muted">--rf-space-4</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:48px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">48px</span>
+    <span class="rf-body rf-text-muted">--rf-space-lg &middot; separaci&oacute;n entre secciones</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:64px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">64px</span>
+    <span class="rf-body rf-text-muted">--rf-space-6</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:72px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">72px</span>
+    <span class="rf-body rf-text-muted">--rf-space-7</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:80px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">80px</span>
+    <span class="rf-body rf-text-muted">--rf-space-xl &middot; h&eacute;roes y contenido destacado</span>
+  </div>
+  <div class="rf-row">
+    <span style="width:160px; flex:none; display:flex; align-items:center"><span class="rf-bar" style="width:144px"></span></span>
+    <span class="rf-body" style="width:56px; flex:none">144px</span>
+    <span class="rf-body rf-text-muted">--rf-space-2xl &middot; m&aacute;rgenes a sangre</span>
+  </div>
+</div>
+
+</body></html>

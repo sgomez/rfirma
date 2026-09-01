@@ -1,0 +1,13 @@
+/* rFirma Design System - Fonts
+ *
+ * Inter, familia variable, servida desde Google Fonts bajo licencia OFL.
+ * La especificacion de partida nombraba `InterDisplay` e `InterVariable`: son
+ * distribucion privada de esta misma tipografia, sustituidas aqui por la
+ * version publica. Los pesos 100..900 cubren los tres roles del sistema.
+ *
+ * Para autoalojarla (recomendado en una app de escritorio, que no siempre
+ * tiene red): descarga los woff2 a fonts/ y cambia este @import por reglas
+ * @font-face. Las pilas de tokens/typography.css ya declaran fallbacks del
+ * sistema, asi que un fallo de red degrada a la sans nativa, no a serif.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');

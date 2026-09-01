@@ -1,0 +1,72 @@
+<!-- @dsCard group="Foundations" viewport="900x620" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Colors - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+  .rf-swatches { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--rf-space-2); }
+  .rf-swatch { display:flex; align-items:center; gap:var(--rf-space-2); }
+  .rf-swatch__chip { width:56px; height:56px; border-radius:var(--rf-radius-md);
+    border:1px solid var(--rf-border-strong); flex:none; }
+  .rf-swatch__name { font-family:var(--rf-font-body); font-size:12px; font-weight:600; }
+  .rf-swatch__val { font-family:var(--rf-font-body); font-size:12px;
+    color:var(--rf-text-muted); margin-top:4px; }
+</style>
+</head>
+<body class="rf-root">
+
+<h2 class="rf-title">Paleta</h2>
+<p class="rf-body rf-text-muted" style="margin-top:8px">Literales de la paleta. No cambian con el tema.</p>
+<div class="rf-swatches" style="margin-top:24px">
+    <div class="rf-swatch">
+      <div class="rf-swatch__chip" style="background: var(--rf-color-primary)"></div>
+      <div><div class="rf-swatch__name">primary</div><div class="rf-swatch__val">#94a3b8</div></div>
+    </div>
+    <div class="rf-swatch">
+      <div class="rf-swatch__chip" style="background: var(--rf-color-accent)"></div>
+      <div><div class="rf-swatch__name">accent</div><div class="rf-swatch__val">#64748b</div></div>
+    </div>
+    <div class="rf-swatch">
+      <div class="rf-swatch__chip" style="background: var(--rf-color-background)"></div>
+      <div><div class="rf-swatch__name">background</div><div class="rf-swatch__val">#18181b</div></div>
+    </div>
+    <div class="rf-swatch">
+      <div class="rf-swatch__chip" style="background: var(--rf-color-surface)"></div>
+      <div><div class="rf-swatch__name">surface</div><div class="rf-swatch__val">#15171a</div></div>
+    </div>
+    <div class="rf-swatch">
+      <div class="rf-swatch__chip" style="background: var(--rf-color-on-primary)"></div>
+      <div><div class="rf-swatch__name">on-primary</div><div class="rf-swatch__val">#ffffff</div></div>
+    </div>
+    <div class="rf-swatch">
+      <div class="rf-swatch__chip" style="background: var(--rf-color-border)"></div>
+      <div><div class="rf-swatch__name">border</div><div class="rf-swatch__val">#e5e5e5</div></div>
+    </div>
+</div>
+<hr class="rf-divider" style="margin:24px 0">
+<h2 class="rf-title">Roles sem&aacute;nticos</h2>
+<p class="rf-body rf-text-muted" style="margin-top:8px">Lo que consume el sistema. Se resuelven solos seg&uacute;n el tema; los literales de arriba no cambian.</p>
+<div class="rf-row rf-gap-md" style="margin-top:16px; align-items:stretch">
+  <div class="rf-card" style="flex:1">
+    <p class="rf-demo-label">Tema oscuro</p>
+    <p class="rf-prose">--rf-text &middot; 17,72:1</p>
+    <p class="rf-prose rf-text-muted">--rf-text-muted &middot; 6,91:1</p>
+    <p class="rf-prose"><span style="background:var(--rf-primary); color:var(--rf-on-primary); padding:2px 8px; border-radius:var(--rf-radius-sm)">--rf-on-primary</span> &middot; 6,91:1</p>
+  </div>
+  <div class="rf-card rf-on-light" style="flex:1">
+    <p class="rf-demo-label">Tema claro</p>
+    <p class="rf-prose">--rf-text &middot; 21:1</p>
+    <p class="rf-prose rf-text-muted">--rf-text-muted &middot; 4,76:1</p>
+    <p class="rf-prose"><span style="background:var(--rf-primary); color:var(--rf-on-primary); padding:2px 8px; border-radius:var(--rf-radius-sm)">--rf-on-primary</span> &middot; 4,76:1</p>
+  </div>
+</div>
+<p class="rf-prose rf-text-muted" style="margin-top:16px">Blanco sobre #94a3b8 da 2,56:1 y falla WCAG AA. Por eso el par se invierte en oscuro y en claro el relleno pasa al slate oscuro.</p>
+
+</body></html>

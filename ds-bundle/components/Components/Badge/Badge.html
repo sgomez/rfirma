@@ -1,0 +1,37 @@
+<!-- @dsCard group="Components" viewport="700x190" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Badge - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+</style>
+</head>
+<body class="rf-root">
+
+<div class="rf-stack rf-gap-md">
+  <div>
+    <p class="rf-demo-label">Variantes</p>
+    <div class="rf-row rf-gap-sm">
+      <span class="rf-badge rf-badge--primary">Activo</span>
+      <span class="rf-badge">Software</span>
+      <span class="rf-badge">Caducado</span>
+      <span class="rf-badge">PAdES-LTA</span>
+    </div>
+  </div>
+  <div>
+    <p class="rf-demo-label">En contexto</p>
+    <div class="rf-row" style="justify-content:space-between; max-width:420px">
+      <p class="rf-title">Certificado seleccionado</p>
+      <span class="rf-badge rf-badge--primary">Activo</span>
+    </div>
+  </div>
+</div>
+
+</body></html>

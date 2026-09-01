@@ -1,0 +1,38 @@
+<!-- @dsCard group="Foundations" viewport="820x250" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Motion - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+  .rf-motion { transition: background-color var(--d) var(--rf-easing),
+    transform var(--d) var(--rf-easing); }
+  .rf-motion:hover { background: var(--rf-color-accent); transform: translateY(-4px); }
+</style>
+</head>
+<body class="rf-root">
+
+<h2 class="rf-title">Movimiento</h2>
+<p class="rf-body rf-text-muted" style="margin-top:8px">Pasa el cursor por encima. Curva &uacute;nica: cubic-bezier(0.4, 0, 0.2, 1).</p>
+<div class="rf-row rf-gap-md" style="margin-top:24px">
+  <div class="rf-card rf-motion" style="flex:1; --d: var(--rf-duration-fast)">
+    <p class="rf-demo-label">fast &middot; 150ms</p>
+    <p class="rf-prose">Hover, foco, tooltips.</p>
+  </div>
+  <div class="rf-card rf-motion" style="flex:1; --d: var(--rf-duration-base)">
+    <p class="rf-demo-label">base &middot; 300ms</p>
+    <p class="rf-prose">Modales, paneles, transiciones de vista.</p>
+  </div>
+  <div class="rf-card rf-motion" style="flex:1; --d: var(--rf-duration-slow)">
+    <p class="rf-demo-label">slow &middot; 300ms</p>
+    <p class="rf-prose">Id&eacute;ntico a base. No es un escal&oacute;n propio.</p>
+  </div>
+</div>
+
+</body></html>

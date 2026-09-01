@@ -1,0 +1,42 @@
+<!-- @dsCard group="Components" viewport="820x310" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Button - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+</style>
+</head>
+<body class="rf-root">
+
+<div class="rf-stack rf-gap-md">
+  <div>
+    <p class="rf-demo-label">Variantes</p>
+    <div class="rf-row rf-gap-sm">
+      <button class="rf-btn rf-btn--primary">Firmar documento</button>
+      <button class="rf-btn rf-btn--secondary">Elegir certificado</button>
+      <button class="rf-btn rf-btn--ghost">Cancelar</button>
+    </div>
+  </div>
+  <div>
+    <p class="rf-demo-label">P&iacute;ldora y desactivado</p>
+    <div class="rf-row rf-gap-sm">
+      <button class="rf-btn rf-btn--primary rf-btn--pill">Firmar y guardar</button>
+      <button class="rf-btn rf-btn--secondary" disabled>Sin certificado</button>
+    </div>
+  </div>
+  <div>
+    <p class="rf-demo-label">Foco visible (anillo de 2px, desplazamiento de 2px)</p>
+    <div class="rf-row rf-gap-sm">
+      <button class="rf-btn rf-btn--primary" style="outline:2px solid var(--rf-focus-ring); outline-offset:2px">Firmar documento</button>
+    </div>
+  </div>
+</div>
+
+</body></html>

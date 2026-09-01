@@ -1,0 +1,17 @@
+/* rFirma Design System - Motion
+ * Note: duration-slow == duration-base (300ms). Kept for compatibility;
+ * there is no distinct "slow" tier in this system.
+ */
+:root {
+  --rf-duration-fast: 150ms;
+  --rf-duration-base: 300ms;
+  --rf-duration-slow: 300ms;
+  --rf-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --rf-duration-fast: 1ms;
+    --rf-duration-base: 1ms;
+    --rf-duration-slow: 1ms;
+  }
+}

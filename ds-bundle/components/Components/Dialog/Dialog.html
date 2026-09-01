@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" viewport="820x400" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Dialog - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+</style>
+</head>
+<body class="rf-root">
+
+<div class="rf-scrim" style="padding:var(--rf-space-5); border-radius:var(--rf-radius-lg); display:flex; justify-content:center">
+  <div class="rf-dialog">
+    <p class="rf-title">Confirmar firma</p>
+    <p class="rf-prose rf-text-muted">Vas a firmar <strong style="color:var(--rf-text)">contrato-2026.pdf</strong>
+    con el certificado <strong style="color:var(--rf-text)">DNIe &middot; GARC&Iacute;A L&Oacute;PEZ, MAR&Iacute;A</strong>.
+    La clave privada no sale de la tarjeta.</p>
+    <div class="rf-surface" style="padding:var(--rf-space-2)">
+      <p class="rf-demo-label" style="margin-bottom:4px">Formato</p>
+      <p class="rf-body">PAdES-LTA con sello de tiempo</p>
+    </div>
+    <hr class="rf-divider">
+    <div class="rf-row rf-gap-sm" style="justify-content:flex-end">
+      <button class="rf-btn rf-btn--ghost">Cancelar</button>
+      <button class="rf-btn rf-btn--primary">Firmar</button>
+    </div>
+  </div>
+</div>
+
+</body></html>

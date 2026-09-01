@@ -1,0 +1,13 @@
+/* rFirma Design System - Breakpoints
+ * Custom properties cannot be used in media queries; these exist for
+ * documentation and JS reads. Write the literal px value in @media.
+ *   @media (min-width: 400px)  /  640px  /  768px  /  1024px  /  1280px  /  1400px
+ */
+:root {
+  --rf-bp-xs: 400px;
+  --rf-bp-sm: 640px;
+  --rf-bp-md: 768px;
+  --rf-bp-lg: 1024px;
+  --rf-bp-xl: 1280px;
+  --rf-bp-2xl: 1400px;
+}

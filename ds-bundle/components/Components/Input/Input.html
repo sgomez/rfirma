@@ -1,0 +1,43 @@
+<!-- @dsCard group="Components" viewport="820x270" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Input - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+</style>
+</head>
+<body class="rf-root">
+
+<div class="rf-row rf-gap-md" style="align-items:flex-start">
+  <div class="rf-field" style="flex:1">
+    <label class="rf-label" for="a">Ruta del documento</label>
+    <input class="rf-input" id="a" value="/home/maria/contrato-2026.pdf">
+    <span class="rf-hint">Formatos admitidos: PDF, XML, FacturaE.</span>
+  </div>
+  <div class="rf-field" style="flex:1">
+    <label class="rf-label" for="b">Contrase&ntilde;a del almac&eacute;n</label>
+    <input class="rf-input" id="b" type="password" value="............">
+    <span class="rf-hint">Nunca sale del equipo.</span>
+  </div>
+</div>
+<div class="rf-row rf-gap-md" style="align-items:flex-start; margin-top:24px">
+  <div class="rf-field rf-field--error" style="flex:1">
+    <label class="rf-label" for="c">PIN de la tarjeta</label>
+    <input class="rf-input" id="c" type="password" value="......">
+    <span class="rf-hint">PIN incorrecto. Quedan 2 intentos.</span>
+  </div>
+  <div class="rf-field" style="flex:1">
+    <label class="rf-label" for="d">Sello de tiempo</label>
+    <input class="rf-input" id="d" placeholder="Sin servidor TSA configurado" disabled>
+    <span class="rf-hint">Requiere una autoridad de sellado.</span>
+  </div>
+</div>
+
+</body></html>

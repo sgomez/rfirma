@@ -1,0 +1,45 @@
+<!-- @dsCard group="Components" viewport="980x290" -->
+<!doctype html>
+<html lang="es" data-theme="dark"><head><meta charset="utf-8">
+<title>Card - rFirma Design System</title>
+<link rel="stylesheet" href="../../../styles.css">
+<style>
+  body { margin: 0; padding: var(--rf-space-3); }
+  .rf-demo-label {
+    font-family: var(--rf-font-body); font-size: 11px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--rf-text-muted); margin: 0 0 var(--rf-space-1);
+  }
+  .rf-demo-grid { display: grid; gap: var(--rf-space-2); }
+</style>
+</head>
+<body class="rf-root">
+
+<div class="rf-row rf-gap-md" style="align-items:stretch">
+  <div class="rf-card rf-card--interactive" style="flex:1">
+    <div class="rf-row" style="justify-content:space-between; align-items:flex-start">
+      <p class="rf-title">DNIe</p>
+      <span class="rf-badge rf-badge--primary" style="flex:none">Activo</span>
+    </div>
+    <p class="rf-body rf-text-muted">GARC&Iacute;A L&Oacute;PEZ, MAR&Iacute;A</p>
+    <hr class="rf-divider" style="margin:8px 0">
+    <p class="rf-body rf-text-muted">Caduca el 14/03/2029</p>
+  </div>
+  <div class="rf-card" style="flex:1">
+    <div class="rf-row" style="justify-content:space-between; align-items:flex-start">
+      <p class="rf-title">FNMT Persona F&iacute;sica</p>
+      <span class="rf-badge" style="flex:none">Software</span>
+    </div>
+    <p class="rf-body rf-text-muted">GARC&Iacute;A L&Oacute;PEZ, MAR&Iacute;A</p>
+    <hr class="rf-divider" style="margin:8px 0">
+    <p class="rf-body rf-text-muted">Caduca el 02/11/2027</p>
+  </div>
+  <div class="rf-card rf-card--elevated" style="flex:1">
+    <p class="rf-title">A&ntilde;adir certificado</p>
+    <p class="rf-prose rf-text-muted">Importa un fichero PKCS#12 o conecta una tarjeta criptogr&aacute;fica.</p>
+    <div style="flex:1"></div>
+    <button class="rf-btn rf-btn--secondary" style="align-self:flex-start">Importar</button>
+  </div>
+</div>
+
+</body></html>
