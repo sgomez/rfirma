@@ -1,14 +1,19 @@
 /**
- * Los cinco puertos que hablan con las órdenes de Tauri: los tres de firma
- * (#60) y los dos del documento (#82).
+ * Los seis puertos que hablan con Tauri: los tres de firma (#60), los dos del
+ * documento (#82) y el del arrastre (#83).
+ *
+ * El del arrastre es el único que no habla con una orden sino con un **evento**
+ * de la ventana: soltar un fichero no lo pide la interfaz, le ocurre. Aun así
+ * vive aquí por la misma razón que los otros cinco —es donde se importa lo de
+ * `@tauri-apps/api`— y la ventana lo sigue viendo como un puerto suyo.
  *
  * Este es el **único** fichero del frontal que sabe que debajo hay Tauri, y por
  * eso es el único que importa `invoke`. Vive en la raíz de `src/` y no dentro
  * de `signing/` justamente por eso: la frontera es una sola para toda la
  * aplicación, y repartirla por módulos sería tener dos. La ventana y sus
  * pruebas siguen hablando con `CertificateStore`, `Layer2Composer`,
- * `SigningBackend`, `DocumentPicker` y `PdfSource`, y quien elige entre estas
- * implementaciones y los dobles de memoria es `main.tsx`.
+ * `SigningBackend`, `DocumentPicker`, `PdfSource` y `DocumentDrops`, y quien
+ * elige entre estas implementaciones y los dobles de memoria es `main.tsx`.
  *
  * # Los fallos llegan clasificados, no traducidos
  *
@@ -21,9 +26,12 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentDocument } from "./documents/recents";
 import { classify } from "./errors/classify";
+import type { ErrorSituation } from "./errors/ErrorNotice";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
 import type { TokenFailure } from "./signing/token";
@@ -161,21 +169,91 @@ export function tauriDocumentPicker(): DocumentPicker {
   return {
     choose: async () => {
       const opened = await invoke<OpenedDocumentView | null>("open_document");
-      if (opened === null) return null;
-      return {
-        id: opened.id,
-        name: opened.name,
-        // Un documento recién abierto se anota como **no firmado** (ID-71):
-        // saber si un PDF ya trae firmas es otro trabajo, y el panel ya declara
-        // ese dato como desconocido. Se anota lo que se sabe.
-        badge: "Unsigned",
-        modified: opened.modified,
-        lastUsed: Math.floor(Date.now() / 1000),
-        // Lo acaba de conceder el portal, así que responde.
-        available: true,
-      } satisfies RecentDocument;
+      return opened === null ? null : recentOf(opened);
     },
   };
+}
+
+/** El nombre del evento del arrastre. Es `commands::DOCUMENT_DROPPED`. */
+const DOCUMENT_DROPPED = "document-dropped";
+
+/**
+ * Lo que llega al soltar, tal cual lo emite Rust. Es
+ * `commands::DroppedDocumentView`, campo a campo: **un documento ya abierto o
+ * un fallo, y ninguna ruta**.
+ */
+interface DroppedDocumentView {
+  document: OpenedDocumentView | null;
+  failure: { situation: string; detail: string } | null;
+  ignored: number;
+}
+
+/**
+ * El arrastre, por el evento nativo de la ventana (ID-67).
+ *
+ * Quién decide qué se abre de lo soltado está del otro lado: aquí no se mira
+ * ninguna ruta porque ninguna llega. Lo que llega es lo mismo que devuelve el
+ * diálogo, más el motivo cuando no se ha abierto nada y cuántos ficheros más
+ * venían en el gesto.
+ *
+ * `listen` devuelve una promesa y la suscripción tiene que poder cancelarse
+ * antes de que se resuelva —un efecto de React se limpia cuando quiere—, así
+ * que se guarda la intención y se aplica cuando llegue: sin eso, desmontar
+ * deprisa deja un oyente vivo escuchando para siempre.
+ */
+export function tauriDocumentDrops(): DocumentDrops {
+  return {
+    subscribe: (listener) => {
+      let listening = true;
+      const stopping = listen<DroppedDocumentView>(DOCUMENT_DROPPED, (event) => {
+        if (listening) listener(dropOf(event.payload));
+      });
+      void stopping.then((stop) => {
+        if (!listening) stop();
+      });
+      return () => {
+        listening = false;
+        void stopping.then((stop) => stop());
+      };
+    },
+  };
+}
+
+/** Lo soltado, en el vocabulario de la ventana. */
+function dropOf(view: DroppedDocumentView): Drop {
+  return {
+    document: view.document === null ? null : recentOf(view.document),
+    failure:
+      view.failure === null
+        ? null
+        : {
+            situation: view.failure.situation as ErrorSituation,
+            detail: view.failure.detail,
+          },
+    ignored: view.ignored,
+  };
+}
+
+/**
+ * Un documento recién abierto, como fila de la bandeja.
+ *
+ * Lo comparten el diálogo y el arrastre a propósito: soltar un PDF tiene que
+ * dejar exactamente lo mismo que elegirlo, y dos conversiones parecidas es
+ * justo por donde dejarían de serlo.
+ */
+function recentOf(opened: OpenedDocumentView): RecentDocument {
+  return {
+    id: opened.id,
+    name: opened.name,
+    // Un documento recién abierto se anota como **no firmado** (ID-71): saber
+    // si un PDF ya trae firmas es otro trabajo, y el panel ya declara ese dato
+    // como desconocido. Se anota lo que se sabe.
+    badge: "Unsigned",
+    modified: opened.modified,
+    lastUsed: Math.floor(Date.now() / 1000),
+    // Lo acaba de conceder el portal, así que responde.
+    available: true,
+  } satisfies RecentDocument;
 }
 
 /**

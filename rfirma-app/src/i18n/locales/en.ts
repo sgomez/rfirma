@@ -112,6 +112,14 @@ export const en: Catalog = {
         title: "The document could not be read",
         body: "Check that it is still where it was and open it again.",
       },
+      droppedFileUnreadable: {
+        title: "We could not read the file you dropped",
+        body: "Dropping a file does not give us permission to read from every folder. Open it with the open button, which does.",
+      },
+      droppedOnlyFirst: {
+        title: "We only opened the first PDF",
+        body: "rFirma signs one document at a time. The other files you dropped are still where they were: drop them once you are done with this one.",
+      },
       boxOutOfPage: {
         title: "The box falls outside the page",
         body: "Drag it inside the page and sign again. Left as it is, it would be clipped in the PDF without warning.",

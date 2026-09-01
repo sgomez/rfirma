@@ -9,6 +9,15 @@ export interface Documents {
   active: RecentDocument | null;
   /** Abre un documento por el portal. Ver [`DocumentPicker`]. */
   open: () => Promise<void>;
+  /**
+   * Recibe un documento que **ya viene abierto**: el que se ha soltado en la
+   * ventana.
+   *
+   * Es la mitad de [`open`] que no habla con el portal, y existe para que
+   * arrastrar acabe exactamente donde acaba el diálogo —anotado en la bandeja
+   * si toca, y activo— en vez de por un camino paralelo que se pareciera.
+   */
+  accept: (document: RecentDocument) => Promise<void>;
   /** Cambia de documento desde una fila de la bandeja. */
   select: (document: RecentDocument) => void;
   /** Quita una fila de la lista. Ver `forget` en `recents.ts`. */
@@ -54,17 +63,24 @@ export function useDocuments(
     };
   }, [store]);
 
+  const accept = useCallback(
+    async (document: RecentDocument) => {
+      // El documento se abre igual; lo que la preferencia decide es si queda
+      // rastro de haberlo abierto.
+      if (remember) {
+        await store.record(document);
+        setRecents(await store.list());
+      }
+      setActive(document);
+    },
+    [store, remember],
+  );
+
   const open = useCallback(async () => {
     const chosen = await picker.choose();
     if (chosen === null) return;
-    // El documento se abre igual; lo que la preferencia decide es si queda
-    // rastro de haberlo abierto.
-    if (remember) {
-      await store.record(chosen);
-      setRecents(await store.list());
-    }
-    setActive(chosen);
-  }, [picker, store, remember]);
+    await accept(chosen);
+  }, [picker, accept]);
 
   const forget = useCallback(
     async (id: string) => {
@@ -81,5 +97,5 @@ export function useDocuments(
     setActive(null);
   }, [store]);
 
-  return { recents, active, open, select: setActive, forget, forgetAll };
+  return { recents, active, open, accept, select: setActive, forget, forgetAll };
 }

@@ -19,6 +19,7 @@ import { inMemoryPreferences } from "./preferences/preferences";
 import { emptyRubricPicker } from "./signing/rubric";
 import {
   tauriCertificateStore,
+  tauriDocumentDrops,
   tauriDocumentPicker,
   tauriLayer2Composer,
   tauriPdfSource,
@@ -30,9 +31,11 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Cinco puertos hablan ya con las órdenes: los tres de firma del #60
-// —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`— y
-// los dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`. Los
+// Seis puertos hablan ya con el backend: los tres de firma del #60
+// —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`—, los
+// dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, y el del
+// arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
+// de la ventana en vez de llamar a una orden. Los
 // que siguen en memoria son los que tocan el disco por sitios que todavía no
 // tienen orden expuesta: los recientes, los ajustes y la rúbrica. Cuando la
 // tengan, se sustituyen aquí y en ningún otro sitio (ID-75): ni la ventana ni
@@ -66,6 +69,7 @@ createRoot(root).render(
       <App
         recents={recents}
         picker={tauriDocumentPicker()}
+        drops={tauriDocumentDrops()}
         pdfs={tauriPdfSource()}
         preferences={preferences}
         destinations={[DOCUMENTS_FOLDER]}

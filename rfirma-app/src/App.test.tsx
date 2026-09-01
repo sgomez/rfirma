@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
+import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import { inMemoryPreferences } from "./preferences/preferences";
@@ -73,10 +74,12 @@ function renderApp(
     { destination: "Documentos", rememberVisibleSignature: true, rememberActivity: true },
     () => void recents.clear(),
   );
+  const drops = inMemoryDocumentDrops();
   renderWithCatalog(
     <App
       recents={recents}
       picker={inMemoryDocumentPicker(documents)}
+      drops={drops}
       pdfs={pdfs}
       preferences={preferences}
       destinations={["Documentos"]}
@@ -87,7 +90,7 @@ function renderApp(
       menuAnchor="header"
     />,
   );
-  return { recents, preferences };
+  return { recents, preferences, drops };
 }
 
 /**
@@ -238,5 +241,99 @@ describe("App", () => {
     expect(
       screen.getByText("Aquí aparecerán los documentos que vayas firmando"),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * **Grada A del arrastre** (TD-17): los cuatro casos, contados por lo que se ve
+ * en la ventana y no por lo que se llamó.
+ *
+ * Se prueban contra el doble del puerto porque en Tauri v2 el arrastre es un
+ * evento nativo de la ventana: `jsdom` no lo tiene, y un `fireEvent.drop` sobre
+ * el JSX probaría un camino que en la aplicación de verdad **no existe**
+ * (ID-67). Lo que el doble entrega es lo mismo que emite Rust, que es quien
+ * decide qué se abre de lo soltado.
+ */
+describe("App, al soltar ficheros en la ventana", () => {
+  /** Lo que Rust emite al soltar un PDF que sí se abre. */
+  function anOpened(name: string, ignored = 0) {
+    return { document: document(name), failure: null, ignored };
+  }
+
+  it("opens a dropped PDF exactly like the dialog does", async () => {
+    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 7 }));
+
+    drops.drop(anOpened("factura.pdf"));
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    expect(within(panel).getByText(/7/)).toBeInTheDocument();
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(within(tray).getByText("Sin firmar")).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
+  });
+
+  it("says so when what was dropped is not a PDF", async () => {
+    const { drops } = renderApp();
+
+    drops.drop({
+      document: null,
+      failure: { situation: "notAPdf", detail: "el fichero no es un PDF" },
+      ignored: 0,
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
+  });
+
+  /** ID-70: se abre el primero, y los demás no se callan. */
+  it("opens the first PDF of several and says that it only opened that one", async () => {
+    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
+
+    drops.drop(anOpened("factura.pdf", 2));
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Solo hemos abierto el primer PDF");
+  });
+
+  /**
+   * ID-68: el aviso dice **qué hacer**, y lo que hay que hacer es usar el botón
+   * de abrir, que sí pasa por el portal. Que este caso exista de verdad —y
+   * desde qué carpetas— está medido en
+   * `docs/research/arrastre-bajo-el-arenero.md`.
+   */
+  it("tells what to do when the dropped file cannot be read", async () => {
+    const { drops } = renderApp();
+
+    drops.drop({
+      document: null,
+      failure: {
+        situation: "droppedFileUnreadable",
+        detail: "No such file or directory (os error 2)",
+      },
+      ignored: 0,
+    });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("No hemos podido leer el fichero que has soltado");
+    expect(alert).toHaveTextContent("Ábrelo con el botón de abrir");
+    // Y el detalle crudo sigue ahí, sin traducir, para el informe de fallo.
+    expect(alert).toHaveTextContent("os error 2");
+  });
+
+  /** El aviso habla del documento que hay delante, así que se va con él. */
+  it("drops the notice once another document is in front", async () => {
+    const user = userEvent.setup();
+    const { drops } = renderApp(
+      inMemoryRecents(),
+      [document("otro.pdf")],
+      pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
+    );
+    drops.drop(anOpened("factura.pdf", 2));
+    await screen.findByRole("alert");
+
+    await user.click(trayDropZone());
+
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 });

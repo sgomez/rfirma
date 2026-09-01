@@ -14,6 +14,15 @@
 //! identificador. Ninguna de las dos devuelve una ruta, y ninguna reescribe las
 //! reglas de [`PortalDocument`]: son un adaptador delgado encima (ID-65).
 //!
+//! # Y hay un camino más, que no es una orden
+//!
+//! Soltar un fichero en la ventana desemboca en el mismo sitio, pero **al
+//! revés**: no lo pide la ventana, le ocurre. Por eso [`dropped_document`] no
+//! es una novena orden sino lo que alimenta el evento [`DOCUMENT_DROPPED`], que
+//! `lib.rs` emite desde el manejador del arrastre nativo (ID-67). Lo que cruza
+//! sigue siendo un [`OpenedDocumentView`]: las rutas que trae el arrastre se
+//! quedan de este lado.
+//!
 //! # Ninguna orden devuelve una ruta del anfitrión
 //!
 //! No es una recomendación, es una consecuencia del ADR-0011: bajo el arenero
@@ -787,6 +796,76 @@ pub fn read_document(
     Ok(tauri::ipc::Response::new(bytes))
 }
 
+/// El nombre del evento con el que la ventana se entera de un arrastre.
+///
+/// Es un **evento** y no una novena orden a propósito: el arrastre no lo pide
+/// la ventana, le ocurre. En Tauri v2 el arrastre y la soltura del WebView
+/// vienen desactivados por omisión a favor del evento nativo (ID-67), así que
+/// un manejador de soltura en el JSX no se dispararía nunca; lo que hay debajo
+/// es esto, y al otro lado lo recoge el puerto `DocumentDrops`.
+pub const DOCUMENT_DROPPED: &str = "document-dropped";
+
+/// Lo que la ventana recibe al soltar ficheros encima.
+///
+/// **Ninguna ruta** (ADR-0011). Lo que se suelta son rutas del anfitrión, y
+/// justamente por eso la decisión de cuál se abre se toma aquí: lo que cruza es
+/// el documento ya apuntado, con su identificador opaco, igual que si se
+/// hubiera elegido por el diálogo.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DroppedDocumentView {
+    /// El documento que se ha abierto, o `None` si no se ha abierto ninguno.
+    pub document: Option<OpenedDocumentView>,
+    /// Por qué no se ha abierto ninguno. `None` cuando sí se abrió.
+    pub failure: Option<Failure>,
+    /// Cuántos ficheros más venían en el mismo gesto y no se han abierto: la
+    /// aplicación firma de uno en uno y lo dice (ID-70).
+    pub ignored: usize,
+}
+
+/// Decide qué hacer con lo que se ha soltado y lo apunta si se puede abrir.
+///
+/// Es el adaptador entre [`crate::dropped::first_pdf`], que es quien decide, y
+/// lo que la ventana entiende. Devuelve `None` cuando no se ha soltado nada:
+/// entonces no hay nada que contar y no se emite ningún evento.
+pub fn dropped_document(
+    paths: &[std::path::PathBuf],
+    opened: &OpenedDocuments,
+) -> Option<DroppedDocumentView> {
+    match crate::dropped::first_pdf(paths) {
+        crate::dropped::Dropped::Nothing => None,
+        crate::dropped::Dropped::Opened { path, ignored } => {
+            let document = PortalDocument::opened(path);
+            let name = document.name().to_owned();
+            let modified = modified_seconds(&document);
+            Some(DroppedDocumentView {
+                document: Some(OpenedDocumentView {
+                    id: opened.remember(document),
+                    name,
+                    modified,
+                }),
+                failure: None,
+                ignored,
+            })
+        }
+        crate::dropped::Dropped::NotAPdf { ignored } => Some(DroppedDocumentView {
+            document: None,
+            failure: Some(Failure::from(Refusal::NotAPdf)),
+            ignored,
+        }),
+        // El aviso que el ID-68 exige: no es «ha fallado» a secas, es una
+        // situación propia cuyo texto dice qué hacer —usar el botón de abrir,
+        // que sí pasa por el portal—. Por qué existe este caso y desde qué
+        // carpetas ocurre está medido en
+        // `docs/research/arrastre-bajo-el-arenero.md`.
+        crate::dropped::Dropped::Unreadable { detail, ignored } => Some(DroppedDocumentView {
+            document: None,
+            failure: Some(Failure::new("droppedFileUnreadable", detail)),
+            ignored,
+        }),
+    }
+}
+
 /// El documento que se abrió con ese identificador.
 ///
 /// Que no esté apuntado no es un fallo del programa: se cuenta como un
@@ -823,11 +902,11 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::{
-        attribute, config_for, deliver, holder_of, issuer_of, language_of, situation_name,
-        take_signed_cycle, told_as, usable_certificate, CertificateView, CheckedFolder,
-        Configuration, Environment, Failure, Mutex, OpenedDocumentView, OpenedDocuments,
-        PlacementOrder, PortalDocument, SignedDocumentView, SigningOrder, SigningSession,
-        StatusView, VisibleFieldsOrder,
+        attribute, config_for, deliver, dropped_document, holder_of, issuer_of, language_of,
+        situation_name, take_signed_cycle, told_as, usable_certificate, CertificateView,
+        CheckedFolder, Configuration, Environment, Failure, Mutex, OpenedDocumentView,
+        OpenedDocuments, PlacementOrder, PortalDocument, SignedDocumentView, SigningOrder,
+        SigningSession, StatusView, VisibleFieldsOrder,
     };
     use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
@@ -965,6 +1044,85 @@ mod tests {
             Some(std::path::PathBuf::from(handle)),
             "y el backend sí sabe por dónde leerlo"
         );
+    }
+
+    /// La misma guardia, sobre lo que cruza al soltar. Importa más aquí que en
+    /// ningún otro sitio: el arrastre es el **único** camino por el que a la
+    /// aplicación le llega una ruta del anfitrión de verdad, así que este es
+    /// justo el tipo por el que se escaparía (ADR-0011).
+    #[test]
+    fn the_dropped_document_that_crosses_carries_no_host_path() {
+        let body = production_half()
+            .split_once("struct DroppedDocumentView")
+            .expect("el tipo de salida sigue aqui")
+            .1
+            .split_once("\n}")
+            .expect("y tiene cuerpo")
+            .0;
+
+        for leak in ["PathBuf", "&Path", "path:", "module:", "reading_path"] {
+            assert!(
+                !body.contains(leak),
+                "«DroppedDocumentView» ha ganado un «{leak}»: eso es una ruta del anfitrion saliendo"
+            );
+        }
+    }
+
+    /// Soltar un PDF legible acaba igual que elegirlo por el diálogo: un
+    /// documento apuntado, con su identificador opaco y su nombre.
+    #[test]
+    fn a_dropped_pdf_crosses_as_an_opened_document() {
+        let opened = OpenedDocuments::new();
+        let pdf = std::env::temp_dir().join("rfirma-commands-soltado.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n").expect("se puede escribir en el temporal");
+
+        let view = dropped_document(&[pdf], &opened).expect("algo se ha soltado");
+
+        let document = view.document.expect("y se ha abierto");
+        assert_eq!(document.name, "rfirma-commands-soltado.pdf");
+        assert_eq!(document.id.len(), 32);
+        assert_eq!(view.failure, None);
+        assert_eq!(view.ignored, 0);
+        assert_eq!(opened.len(), 1);
+    }
+
+    /// Y lo que no es un PDF no apunta nada: se cuenta con la misma situación
+    /// con la que se rechaza al firmar, que ya está en los seis catálogos.
+    #[test]
+    fn dropping_something_that_is_not_a_pdf_opens_nothing_and_says_so() {
+        let opened = OpenedDocuments::new();
+        let other = std::env::temp_dir().join("rfirma-commands-soltado.ods");
+
+        let view = dropped_document(&[other], &opened).expect("algo se ha soltado");
+
+        assert!(view.document.is_none());
+        assert_eq!(
+            view.failure.map(|failure| failure.situation),
+            Some("notAPdf".to_owned())
+        );
+        assert!(opened.is_empty(), "no se apunta lo que no se abre");
+    }
+
+    /// El aviso del ID-68 tiene **situación propia**: `documentUnreadable`
+    /// dice «comprueba que sigue donde estaba», y aquí el fichero está donde
+    /// estaba —lo que falta es la concesión—, así que ese texto mandaría a
+    /// mirar lo que no es. El suyo dice qué hacer: usar el botón de abrir.
+    #[test]
+    fn a_dropped_file_the_sandbox_cannot_read_names_its_own_situation() {
+        let opened = OpenedDocuments::new();
+        let unreachable = std::env::temp_dir().join("rfirma-commands-no-existe/contrato.pdf");
+
+        let view = dropped_document(&[unreachable], &opened).expect("algo se ha soltado");
+
+        let failure = view.failure.expect("se cuenta como un fallo con nombre");
+        assert_eq!(failure.situation, "droppedFileUnreadable");
+        assert!(!failure.detail.is_empty(), "con su detalle crudo (ID-29)");
+    }
+
+    /// Soltar nada no es un suceso que contar, así que no se emite nada.
+    #[test]
+    fn dropping_no_files_at_all_says_nothing() {
+        assert_eq!(dropped_document(&[], &OpenedDocuments::new()), None);
     }
 
     /// Las dos órdenes nuevas son **dos**, y la lista sigue cerrada (ID-59).
