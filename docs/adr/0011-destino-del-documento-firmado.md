@@ -81,3 +81,43 @@ firmar**, como manda el ADR-0010, no al guardar.
 - **Los instaladores nativos heredan una capacidad más.** *Guardar junto al original* se suma a
   lo que ya estaba apuntado que se gana al salir del arenero, junto al módulo PKCS#11 del
   anfitrión y la matriz de WebKitGTK.
+
+## Enmienda: dónde se abre el diálogo de abrir
+
+Añadido después. El diálogo de abrir arranca en **la última carpeta usada**, y donde esa no se
+puede saber, en **la carpeta de destino**.
+
+Las dos mitades son necesarias porque los canales no saben lo mismo, y esa asimetría este ADR
+ya la asume: la última viñeta de arriba apunta que los instaladores nativos heredan
+capacidades que en el flatpak no existen. Esta es una más.
+
+- **Fuera del arenero** —deb, rpm, Windows, macOS— el diálogo devuelve una ruta de verdad, así
+  que la carpeta de la que salió el documento se sabe, y se apunta.
+- **Bajo el arenero no se puede saber.** Lo que el portal devuelve es
+  `/run/user/1000/doc/<id>/nombre.pdf`, cuyo directorio padre contiene un solo fichero y no es
+  ninguna carpeta del usuario; preguntar por la real —`org.freedesktop.portal.Documents.Info` y
+  `.Lookup`— contesta `Not allowed in sandbox`, y `--filesystem=home` tampoco la devolvería. Es
+  la misma medición del apartado 4 de
+  [`docs/research/flatpak-canal-unico.md`](../research/flatpak-canal-unico.md) que sostiene que
+  *junto al original* no existe aquí.
+
+El respaldo para ese caso es la carpeta de destino: la única carpeta del usuario que la
+aplicación conoce y nombra en el flatpak. Resuelve lo que se quería de verdad —no empezar cada
+vez en la lista de «Recientes» del sistema— y además deja a la vista lo ya firmado, que es lo
+más probable que se quiera volver a abrir.
+
+**Que el diálogo aparezca en distinto sitio según el canal no es la incoherencia que este ADR
+rechaza.** Esa era enseñar la ruta donde se puede y el nombre donde no: la misma pantalla
+contando cosas distintas, y el usuario sin forma de saber por qué. Dónde arranca un diálogo no
+se lee ni se compara; se navega. Lo que sí sería incoherente es abrir en «Recientes» en un
+canal donde se sabe hacerlo mejor.
+
+Lo apuntado es **estado y no configuración** (ADR-0010): lo acumula la aplicación sola, vive en
+`XDG_STATE_HOME` y **«Recordar mi actividad» se lo lleva** como se lleva los recientes y el
+certificado. Una carpeta del anfitrión que sobreviviera a «Vaciar la lista» contaría por dónde
+anduvo quien firmó antes.
+
+Y sigue sin ser un sitio donde escribir: lo único que recibe esa ruta es el `set_directory` del
+diálogo, y la única forma de nombrar dónde cae un fichero sigue siendo `CheckedFolder`. Si la
+carpeta apuntada ya no está, se pasa a la de destino; si esa tampoco, no se pasa punto de
+partida y abre donde el sistema quiera. **Ninguna de las dos se crea nunca.**

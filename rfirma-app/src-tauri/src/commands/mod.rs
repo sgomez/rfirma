@@ -52,6 +52,7 @@
 
 pub mod isolate;
 
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
@@ -770,6 +771,106 @@ pub struct OpenedDocumentView {
     pub modified: Option<u64>,
 }
 
+/// Dónde se abre el diálogo de abrir: **la última carpeta usada**, y si no se
+/// sabe, la de destino.
+///
+/// Las dos mitades de la frase importan, porque no todos los canales saben lo
+/// mismo:
+///
+/// - **Fuera del arenero** —deb, rpm, Windows, macOS— el diálogo devuelve una
+///   ruta de verdad, así que la carpeta de la que salió el documento se sabe y
+///   se recuerda. Lo hace [`remembered_folder`], y vive en el estado, no en la
+///   configuración: la acumula la aplicación sola.
+/// - **Bajo el arenero no se puede saber**, y no hay forma de arreglarlo con
+///   más código: lo que el portal devuelve es
+///   `/run/user/1000/doc/<id>/nombre.pdf`, cuyo directorio padre tiene un solo
+///   fichero dentro y no es ninguna carpeta del usuario; preguntar por la real
+///   —`org.freedesktop.portal.Documents.Info` y `.Lookup`— contesta
+///   `Not allowed in sandbox`, y `--filesystem=home` tampoco la devolvería.
+///   Medido en `docs/research/flatpak-canal-unico.md`, apartado 4.
+///
+/// El respaldo para ese caso es la **carpeta de destino**, la de Preferencias:
+/// la única carpeta del usuario que la aplicación conoce y nombra en el
+/// flatpak. Resuelve lo que se quería de verdad —no empezar cada vez en la
+/// lista de «Recientes» del sistema— y además deja a la vista lo ya firmado.
+///
+/// Esto **no es una ruta donde escribir** y no puede llegar a serlo: lo único
+/// que la recibe es `set_directory`, y la única forma de nombrar un sitio
+/// donde cae un fichero sigue siendo [`CheckedFolder::landing_for`]
+/// (ADR-0011).
+///
+/// Devuelve `None` si no queda ninguna de las dos, y entonces el diálogo se
+/// abre donde el sistema quiera: [`CheckedFolder`] solo mira, **nunca crea**
+/// (ID-38).
+fn starting_folder(environment: &Environment) -> Option<PathBuf> {
+    if let Some(remembered) = remembered_folder(environment) {
+        return Some(remembered);
+    }
+    let configuration = lock(&environment.configuration).clone();
+    let folder = crate::destination::chosen_folder(&configuration, &environment.documents_folder);
+    CheckedFolder::check(&folder)
+        .ok()
+        .map(|checked| checked.path().to_path_buf())
+}
+
+/// La última carpeta apuntada, **si sigue estando ahí**.
+///
+/// Se comprueba porque una carpeta que se borró o que estaba en un disco que
+/// ya no está montado no es un punto de partida: es un diálogo que se abre en
+/// un sitio que no existe. Bajo el arenero esto es siempre `None`, y también
+/// con «Recordar mi actividad» apagado, porque entonces no hay fichero de
+/// estado que leer.
+fn remembered_folder(environment: &Environment) -> Option<PathBuf> {
+    environment
+        .memory
+        .state()
+        .ok()?
+        .into_value()
+        .last_open_folder
+        .filter(|folder| folder.is_dir())
+}
+
+/// Apunta de dónde salió el documento, **cuando se puede saber**.
+///
+/// Es lo mejor posible en cada canal y a propósito: donde el diálogo devuelve
+/// una ruta de verdad, la próxima vez se abre justo ahí; donde devuelve un
+/// enlace del portal, [`folder_it_came_from`] contesta `None` y no se apunta
+/// nada. Un fallo al escribir el estado **no impide abrir el documento**:
+/// recordar la carpeta es una comodidad, y perderla no puede costar el
+/// recorrido.
+fn remember_the_folder(environment: &Environment, document: &PortalDocument) {
+    let Some(folder) = folder_it_came_from(document) else {
+        return;
+    };
+    let configuration = lock(&environment.configuration).clone();
+    let Ok(loaded) = environment.memory.state() else {
+        return;
+    };
+    let mut state = loaded.into_value();
+    if state.last_open_folder.as_deref() == Some(folder) {
+        return;
+    }
+    state.last_open_folder = Some(folder.to_path_buf());
+    let _ = environment.memory.remember_state(&configuration, &state);
+}
+
+/// La carpeta de la que salió el documento, o `None` si entró por el portal.
+///
+/// El `None` **no es una precaución, es la verdad**: el directorio padre de un
+/// enlace del portal contiene ese solo fichero y no dice nada de dónde está el
+/// original. Apuntarlo abriría el diálogo la próxima vez en un directorio del
+/// arenero que para entonces ni existe.
+///
+/// Vive aquí y no en [`PortalDocument`] para no darle a ese tipo un método que
+/// devuelva un directorio: que no lo tenga es lo que impide que «guardar junto
+/// al original» se cuele por la puerta de atrás (ADR-0011).
+fn folder_it_came_from(document: &PortalDocument) -> Option<&std::path::Path> {
+    if document.came_through_the_portal() {
+        return None;
+    }
+    document.reading_path().parent()
+}
+
 /// **Orden 7.** Abre el diálogo del sistema y apunta lo que el portal conceda.
 ///
 /// El diálogo se abre **desde aquí y no desde el frontal** (ID-63): así la
@@ -781,25 +882,29 @@ pub struct OpenedDocumentView {
 /// Cerrar el diálogo sin elegir nada devuelve `None`, que **no es un fallo**:
 /// es lo que deja el documento activo, la lista y el visor como estaban
 /// (ID-73).
+///
+/// El diálogo se abre en la última carpeta usada, y donde esa no se puede
+/// saber, en la de destino: ver [`starting_folder`].
 #[tauri::command(async)]
 pub fn open_document(
     app: tauri::AppHandle,
+    environment: State<'_, Environment>,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<Option<OpenedDocumentView>, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
-    let Some(chosen) = app
-        .dialog()
-        .file()
-        .add_filter("PDF", &["pdf"])
-        .blocking_pick_file()
-    else {
+    let mut dialog = app.dialog().file().add_filter("PDF", &["pdf"]);
+    if let Some(folder) = starting_folder(&environment) {
+        dialog = dialog.set_directory(folder);
+    }
+    let Some(chosen) = dialog.blocking_pick_file() else {
         return Ok(None);
     };
     let handle = chosen
         .into_path()
         .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
     let document = PortalDocument::opened(handle);
+    remember_the_folder(&environment, &document);
     let name = document.name().to_owned();
     let modified = modified_seconds(&document);
     Ok(Some(OpenedDocumentView {
@@ -1027,11 +1132,12 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::{
-        attribute, config_for, deliver, dropped_document, holder_of, issuer_of, language_of,
-        merged, shown, situation_name, take_signed_cycle, told_as, usable_certificate,
-        CertificateView, CheckedFolder, Configuration, ConfigurationView, Environment, Failure,
-        Mutex, OpenedDocumentView, OpenedDocuments, PlacementOrder, PortalDocument,
-        SignedDocumentView, SigningOrder, SigningSession, StatusView, Theme, VisibleFieldsOrder,
+        attribute, config_for, deliver, dropped_document, folder_it_came_from, holder_of,
+        issuer_of, language_of, merged, remember_the_folder, shown, situation_name,
+        starting_folder, take_signed_cycle, told_as, usable_certificate, CertificateView,
+        CheckedFolder, Configuration, ConfigurationView, Environment, Failure, Mutex,
+        OpenedDocumentView, OpenedDocuments, PlacementOrder, PortalDocument, SignedDocumentView,
+        SigningOrder, SigningSession, StatusView, Theme, VisibleFieldsOrder,
     };
     use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
@@ -1555,6 +1661,168 @@ mod tests {
             configuration: Mutex::new(Configuration::default()),
             memory: super::Memory::at(&crate::paths::Paths::under(documents_folder)),
         }
+    }
+
+    /// El diálogo de abrir arranca donde caen los firmados, que es la única
+    /// carpeta que la aplicación conoce bajo el arenero.
+    #[test]
+    fn the_open_dialog_starts_in_the_destination_folder() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let chosen = documents.path().join("Firmados");
+        std::fs::create_dir(&chosen).expect("deberia crearse la carpeta de prueba");
+        let environment = Environment {
+            configuration: Mutex::new(Configuration {
+                destination: Some(crate::memory::DestinationFolder::at(&chosen)),
+                ..Configuration::default()
+            }),
+            ..an_environment(documents.path())
+        };
+
+        assert_eq!(starting_folder(&environment), Some(chosen));
+    }
+
+    /// Sin destino elegido manda la carpeta de documentos, igual que al
+    /// guardar: las dos puntas del recorrido miran al mismo sitio.
+    #[test]
+    fn without_a_chosen_destination_it_starts_in_the_documents_folder() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let environment = an_environment(documents.path());
+
+        assert_eq!(
+            starting_folder(&environment),
+            Some(documents.path().to_path_buf())
+        );
+    }
+
+    /// La carpeta **no se crea nunca** (ID-38): si no está, el diálogo se abre
+    /// donde el sistema quiera y ya está. Fabricarla aquí sería justo el fallo
+    /// silencioso que midió el #27.
+    #[test]
+    fn a_missing_folder_neither_gets_created_nor_stops_the_dialog() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let absent = documents.path().join("Firmados");
+        let environment = Environment {
+            configuration: Mutex::new(Configuration {
+                destination: Some(crate::memory::DestinationFolder::at(&absent)),
+                ..Configuration::default()
+            }),
+            ..an_environment(documents.path())
+        };
+
+        assert_eq!(starting_folder(&environment), None);
+        assert!(!absent.exists(), "la carpeta no se puede haber creado");
+    }
+
+    /// Fuera del arenero el diálogo devuelve una ruta de verdad, y entonces la
+    /// carpeta de la que salió el documento **sí** se sabe.
+    #[test]
+    fn outside_the_sandbox_the_folder_the_document_came_from_is_the_real_one() {
+        let document = PortalDocument::opened("/home/quien/Contratos/contrato.pdf");
+
+        assert_eq!(
+            folder_it_came_from(&document),
+            Some(std::path::Path::new("/home/quien/Contratos"))
+        );
+    }
+
+    /// Y bajo el arenero no se sabe. El padre del enlace del portal tiene ese
+    /// solo fichero dentro y no es ninguna carpeta del usuario: apuntarlo
+    /// abriría el diálogo la próxima vez en un directorio que ni existe ya.
+    #[test]
+    fn a_document_from_the_portal_leaves_no_folder_to_remember() {
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf");
+
+        assert_eq!(folder_it_came_from(&document), None);
+    }
+
+    /// Lo pedido: la próxima vez el diálogo se abre donde estuvo la última vez,
+    /// y no en el destino.
+    #[test]
+    fn the_last_folder_used_wins_over_the_destination_folder() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let contracts = documents.path().join("Contratos");
+        std::fs::create_dir(&contracts).expect("deberia crearse la carpeta de prueba");
+        let environment = an_environment(documents.path());
+        remember_the_folder(
+            &environment,
+            &PortalDocument::opened(contracts.join("contrato.pdf")),
+        );
+
+        assert_eq!(starting_folder(&environment), Some(contracts));
+    }
+
+    /// Una carpeta que ya no está no es un punto de partida: es un diálogo que
+    /// se abre en un sitio que no existe.
+    #[test]
+    fn a_remembered_folder_that_is_gone_falls_back_to_the_destination() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let contracts = documents.path().join("Contratos");
+        std::fs::create_dir(&contracts).expect("deberia crearse la carpeta de prueba");
+        let environment = an_environment(documents.path());
+        remember_the_folder(
+            &environment,
+            &PortalDocument::opened(contracts.join("contrato.pdf")),
+        );
+        std::fs::remove_dir(&contracts).expect("deberia borrarse");
+
+        assert_eq!(
+            starting_folder(&environment),
+            Some(documents.path().to_path_buf())
+        );
+    }
+
+    /// Bajo el arenero no se apunta nada, así que el diálogo sigue abriéndose
+    /// en el destino por los siglos de los siglos. Es lo correcto: la
+    /// alternativa es guardar un directorio del portal.
+    #[test]
+    fn opening_through_the_portal_never_writes_a_folder_into_the_state() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let environment = an_environment(documents.path());
+
+        remember_the_folder(
+            &environment,
+            &PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf"),
+        );
+
+        assert_eq!(
+            environment
+                .memory
+                .state()
+                .expect("deberia leerse el estado")
+                .value()
+                .last_open_folder,
+            None
+        );
+        assert_eq!(
+            starting_folder(&environment),
+            Some(documents.path().to_path_buf())
+        );
+    }
+
+    /// La carpeta es actividad, y «Recordar mi actividad» manda: con el
+    /// interruptor apagado no se apunta, y el diálogo vuelve al destino.
+    #[test]
+    fn the_folder_is_not_remembered_with_the_activity_switch_off() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let contracts = documents.path().join("Contratos");
+        std::fs::create_dir(&contracts).expect("deberia crearse la carpeta de prueba");
+        let environment = Environment {
+            configuration: Mutex::new(Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            }),
+            ..an_environment(documents.path())
+        };
+
+        remember_the_folder(
+            &environment,
+            &PortalDocument::opened(contracts.join("contrato.pdf")),
+        );
+
+        assert_eq!(
+            starting_folder(&environment),
+            Some(documents.path().to_path_buf())
+        );
     }
 
     /// La misma guardia del ADR-0011 sobre lo que devuelven los ajustes.

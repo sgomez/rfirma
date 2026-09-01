@@ -2,9 +2,11 @@
 //! ADR-0010).
 //!
 //! Las otras tres memorias: los documentos recientes, la última configuración
-//! de firma visible y el certificado usado. Vive en un fichero aparte del de la
-//! configuración porque en Windows **no debe viajar en un perfil móvil**, y
-//! porque borrarlo no reconfigura la aplicación.
+//! de firma visible y el certificado usado. Y, colgada de ellas, la última
+//! carpeta de la que se abrió algo, que fuera del arenero sí se puede saber.
+//! Vive en un fichero aparte del de la configuración porque en Windows **no
+//! debe viajar en un perfil móvil**, y porque borrarlo no reconfigura la
+//! aplicación.
 //!
 //! Del certificado se guarda **cómo volver a encontrarlo** —módulo PKCS#11,
 //! etiqueta del token, etiqueta del objeto y su `CKA_ID`—, **nunca titular ni
@@ -15,6 +17,8 @@
 //! que se persiste es [`CertificateRef`], que no tiene sitio donde meter un
 //! titular aunque alguien quisiera; el titular se relee del DER del token cada
 //! vez que hace falta pintarlo.
+
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +40,19 @@ pub struct State {
     /// Cómo volver a encontrar el certificado que se usó. Se relee del token al
     /// arrancar; si no está, el panel vuelve a «Sin certificado» sin ruido.
     pub certificate: Option<CertificateRef>,
+    /// La última carpeta de la que se abrió un documento, para volver a abrir
+    /// el diálogo ahí (enmienda del ADR-0011).
+    ///
+    /// Es `None` **siempre bajo el arenero**, y no por precaución: allí el
+    /// diálogo devuelve un enlace del portal y la carpeta real no se puede
+    /// saber. En los canales sin arenero —deb, rpm, Windows, macOS— sí se
+    /// sabe, y entonces se recuerda.
+    ///
+    /// Es la única ruta del anfitrión que se guarda además de las de los
+    /// recientes, y es **estado y no configuración**: la acumula la aplicación
+    /// sola, nadie la elige, y por eso «Recordar mi actividad» se la lleva
+    /// como se lleva todo lo demás.
+    pub last_open_folder: Option<PathBuf>,
 }
 
 impl State {
@@ -43,8 +60,10 @@ impl State {
     ///
     /// Es lo que cubre «Recordar mi actividad»: recientes **y** certificado, la
     /// misma promesa a quien firma en un ordenador compartido. La última
-    /// configuración de firma visible se va con ellos: es estado, y el
-    /// interruptor promete no recordar actividad.
+    /// configuración de firma visible se va con ellos, y la última carpeta
+    /// abierta también: es estado, y el interruptor promete no recordar
+    /// actividad. Una carpeta del anfitrión que sobreviviera a «Vaciar la
+    /// lista» diría por dónde anduvo quien firmó antes.
     pub fn forget_everything(&mut self) {
         *self = Self::default();
     }
@@ -104,6 +123,21 @@ mod tests {
         assert!(state.recents.is_empty());
         assert!(state.certificate.is_none());
         assert!(state.visible_signature.is_none());
+    }
+
+    /// La carpeta de la que se abrió algo es actividad como el resto: contar
+    /// por dónde anduvo quien firmó antes es justo lo que el interruptor
+    /// promete no hacer.
+    #[test]
+    fn forgetting_everything_also_covers_the_last_folder_opened() {
+        let mut state = State {
+            last_open_folder: Some(PathBuf::from("/home/quien/Contratos")),
+            ..State::default()
+        };
+
+        state.forget_everything();
+
+        assert!(state.last_open_folder.is_none());
     }
 
     #[test]
