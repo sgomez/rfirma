@@ -17,11 +17,16 @@ export const CAPACITY = 10;
  */
 export interface RecentDocument {
   /**
-   * La ruta absoluta **canónica**, que es lo que identifica la fila (ID-33).
-   * Nada de hashes ni de inodos: rompen con las copias y con los sistemas de
-   * ficheros de red.
+   * El identificador **opaco** que acuñó el backend al abrir el documento, y
+   * que es lo que identifica la fila (ID-62).
+   *
+   * No es una ruta y de él no se puede reconstruir ninguna: bajo el arenero la
+   * aplicación no conoce la ruta original de un documento —el portal solo se la
+   * da a un llamante `is_host`, que un flatpak nunca es—, así que guardar aquí
+   * una ruta era guardar una mentira. Quien sabe a qué documento del portal
+   * corresponde es el registro del backend, y solo él.
    */
-  path: string;
+  id: string;
   /** El nombre del fichero, cacheado. */
   name: string;
   /** La insignia cacheada: se conoce abriendo el documento, y por eso se cachea. */
@@ -48,15 +53,22 @@ export function shownBadge(document: RecentDocument): ShownBadge {
 /**
  * Mete un documento al frente de la lista, desalojando por el final.
  *
- * La identidad es la ruta canónica, así que reabrir uno viejo **lo rescata**
- * en vez de duplicarlo. El orden de la lista es el que manda para el desalojo;
- * `lastUsed` es dato para pintar la fila.
+ * La identidad es el identificador opaco, así que **volver a elegir una fila
+ * de la bandeja la rescata** al frente en vez de duplicarla. Reabrir el mismo
+ * fichero **por el diálogo** es otra cosa: el backend acuña un identificador
+ * nuevo por cada concesión del portal (ID-62), así que el mismo
+ * `contrato.pdf` abierto tres veces son tres filas. Es lo buscado —el
+ * identificador nombra la concesión, no el fichero— y el precio es que esas
+ * tres desalojan a las demás.
+ *
+ * El orden de la lista es el que manda para el desalojo; `lastUsed` es dato
+ * para pintar la fila.
  */
 export function record(
   recents: readonly RecentDocument[],
   document: RecentDocument,
 ): RecentDocument[] {
-  const others = recents.filter((entry) => entry.path !== document.path);
+  const others = recents.filter((entry) => entry.id !== document.id);
   return [document, ...others].slice(0, CAPACITY);
 }
 
@@ -68,8 +80,8 @@ export function record(
  * disco de red caído no está borrado, y la fila revive cuando la ruta
  * reaparece.
  */
-export function forget(recents: readonly RecentDocument[], path: string): RecentDocument[] {
-  return recents.filter((entry) => entry.path !== path);
+export function forget(recents: readonly RecentDocument[], id: string): RecentDocument[] {
+  return recents.filter((entry) => entry.id !== id);
 }
 
 /**
@@ -87,7 +99,7 @@ export interface RecentsStore {
   /** Registra un documento recién abierto o recién firmado. */
   record(document: RecentDocument): Promise<void>;
   /** Quita una fila. Ver [`forget`]. */
-  forget(path: string): Promise<void>;
+  forget(id: string): Promise<void>;
   /** Vacía la lista. Es el «Vaciar la lista» de Preferencias. */
   clear(): Promise<void>;
 }
@@ -103,8 +115,8 @@ export function inMemoryRecents(initial: readonly RecentDocument[] = []): Recent
     record: async (document) => {
       entries = record(entries, document);
     },
-    forget: async (path) => {
-      entries = forget(entries, path);
+    forget: async (id) => {
+      entries = forget(entries, id);
     },
     clear: async () => {
       entries = [];

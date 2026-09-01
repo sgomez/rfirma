@@ -32,7 +32,7 @@ export interface SignedDocument {
  * sello de sesión. Lo que la ventana no tiene no lo puede alterar (ADR-0016).
  */
 export interface SigningOrder {
-  /** El asa que dio el portal al abrir el documento. Entra; no vuelve a salir. */
+  /** El identificador que acuñó el backend al abrir el documento (ID-62). */
   document: string;
   /** El `CKA_LABEL` del certificado elegido. */
   certificate: string;

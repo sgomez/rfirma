@@ -19,10 +19,9 @@ export interface DocumentPicker {
 }
 
 /**
- * El selector mientras no hay orden expuesta que hable con el portal: entrega
- * los documentos que se le den, en orden, y luego se comporta como una
- * cancelación. Sirve de doble en las pruebas y de relleno en `main.tsx`, igual
- * que `inMemoryLanguagePreference`.
+ * El selector sin portal: entrega los documentos que se le den, en orden, y
+ * luego se comporta como una cancelación. Es el doble de las pruebas; quien
+ * habla con el portal de verdad es `tauriDocumentPicker`.
  */
 export function inMemoryDocumentPicker(documents: readonly RecentDocument[] = []): DocumentPicker {
   const pending = documents.slice();

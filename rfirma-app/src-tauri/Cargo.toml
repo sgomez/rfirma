@@ -54,6 +54,13 @@ image = { version = "0.25.10", default-features = false, features = ["jpeg", "pn
 # La rúbrica viaja al puente en Base64 dentro de `signatureRubricImage`, así
 # que la normalización entrega ya esa cadena y nadie la vuelve a codificar mal.
 base64 = "0.22"
+# El identificador opaco de un documento abierto sale de aqui y no de un
+# amasado de `RandomState` (ID-61): `std` siembra sus claves una vez por hilo y
+# cada `RandomState::new()` posterior incrementa una, asi que los
+# identificadores de una sesion salian todos de la misma semilla mas un
+# contador. Ya estaba en el arbol como dependencia transitiva; aqui solo se
+# hace directa.
+getrandom = "0.3"
 # La memoria entre sesiones son dos ficheros JSON (ADR-0010), asi que serde
 # entra aqui y no con el primer #[tauri::command]: el formato de configuracion
 # y estado lo escribe este modulo, no la interfaz.
@@ -63,6 +70,11 @@ serde = { version = "1", features = ["derive"] }
 # deserializar: un fichero de una version futura se aparta, no se interpreta.
 serde_json = "1"
 tauri = { version = "2", features = [] }
+# El diálogo de fichero se abre desde Rust y no desde el frontal (ID-63): así
+# la ventana sigue con un solo fichero que conoce `invoke` y la lista de
+# permisos de `capabilities/default.json` no crece, porque los permisos de
+# Tauri v2 vigilan lo que la ventana puede pedir, no lo que Rust hace.
+tauri-plugin-dialog = "2"
 # Solo para leer del certificado el titular y las fechas de validez. Un
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
 # saber leer su notAfter.

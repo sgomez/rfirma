@@ -1,10 +1,14 @@
 /**
- * Los tres puertos de firma, enchufados a las órdenes de Tauri (#60).
+ * Los cinco puertos que hablan con las órdenes de Tauri: los tres de firma
+ * (#60) y los dos del documento (#82).
  *
  * Este es el **único** fichero del frontal que sabe que debajo hay Tauri, y por
- * eso es el único que importa `invoke`. La ventana y sus pruebas siguen
- * hablando con `CertificateStore`, `Layer2Composer` y `SigningBackend`, y quien
- * elige entre estas implementaciones y las de memoria es `main.tsx`.
+ * eso es el único que importa `invoke`. Vive en la raíz de `src/` y no dentro
+ * de `signing/` justamente por eso: la frontera es una sola para toda la
+ * aplicación, y repartirla por módulos sería tener dos. La ventana y sus
+ * pruebas siguen hablando con `CertificateStore`, `Layer2Composer`,
+ * `SigningBackend`, `DocumentPicker` y `PdfSource`, y quien elige entre estas
+ * implementaciones y los dobles de memoria es `main.tsx`.
  *
  * # Los fallos llegan clasificados, no traducidos
  *
@@ -12,54 +16,27 @@
  * original crudo al lado—, así que aquí no hay ni una tabla de `CKR_*` ni un
  * `catch` que invente un mensaje: lo que no venga con esa forma —una excepción
  * del propio puente de Tauri, una orden que no existe— cae en `unknown` con su
- * texto tal cual, que es exactamente lo que el ADR-0009 pide.
+ * texto tal cual, que es exactamente lo que el ADR-0009 pide. Quien lo decide
+ * es `errors/classify.ts`, que no es de Tauri sino del ID-29.
  */
 
 import { invoke } from "@tauri-apps/api/core";
-import type { Certificate, CertificateStore } from "./certificate";
-import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./flow";
-import type { TokenFailure } from "./token";
-import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./visibleSignature";
+import type { DocumentPicker } from "./documents/picker";
+import type { RecentDocument } from "./documents/recents";
+import { classify } from "./errors/classify";
+import type { Certificate, CertificateStore } from "./signing/certificate";
+import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
+import type { TokenFailure } from "./signing/token";
+import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./signing/visibleSignature";
+import { type PdfSource, pdfjsSource } from "./viewer/source";
 
-/**
- * Un fallo tal y como lo rechaza una orden. Es `commands::Failure` de Rust,
- * campo a campo.
- */
-interface RejectedFailure {
-  situation: string;
-  detail: string;
-  attemptsLeft: number | null;
-}
-
-function isRejectedFailure(thrown: unknown): thrown is RejectedFailure {
-  return (
-    typeof thrown === "object" &&
-    thrown !== null &&
-    typeof (thrown as RejectedFailure).situation === "string" &&
-    typeof (thrown as RejectedFailure).detail === "string"
-  );
-}
-
-/**
- * Lo que se enseña cuando algo falla.
- *
- * Un rechazo con forma se pasa tal cual —la situación ya viene clasificada por
- * Rust—; cualquier otra cosa cae en `unknown` **conservando su texto**. Perder
- * ese texto sería quedarse sin lo único que sirve para diagnosticar el fallo
- * que no supimos clasificar.
- */
+/** Lo que se enseña cuando falla una etapa de la firma. Ver [`classify`]. */
 function failureOf(thrown: unknown): TokenFailure {
-  if (isRejectedFailure(thrown)) {
-    return {
-      situation: thrown.situation as TokenFailure["situation"],
-      detail: thrown.detail,
-      attemptsLeft: thrown.attemptsLeft,
-    };
-  }
+  const named = classify(thrown);
   return {
-    situation: "unknown",
-    detail: thrown instanceof Error ? thrown.message : String(thrown),
-    attemptsLeft: null,
+    situation: named.situation as TokenFailure["situation"],
+    detail: named.detail,
+    attemptsLeft: named.attemptsLeft,
   };
 }
 
@@ -157,4 +134,60 @@ export function tauriSigningBackend(): SigningBackend {
  */
 export function cancelSigning(): Promise<void> {
   return invoke<void>("cancel_signing");
+}
+
+/**
+ * Un documento recién abierto, tal como lo devuelve `open_document`. Es
+ * `commands::OpenedDocumentView` de Rust, campo a campo: **un identificador y
+ * un nombre, ninguna ruta** (ADR-0011).
+ */
+interface OpenedDocumentView {
+  id: string;
+  name: string;
+  modified: number | null;
+}
+
+/**
+ * El portal de ficheros, por la orden que abre el diálogo desde Rust (ID-63).
+ *
+ * El diálogo no se abre desde aquí: si lo hiciera, el frontal tendría que pedir
+ * el permiso del complemento de diálogo y la lista de permisos de la ventana
+ * crecería. Lo que cruza es lo que el backend apuntó.
+ *
+ * Cancelar devuelve `null`, y eso **no es un fallo**: es lo que deja el
+ * documento activo, la lista y el visor como estaban (ID-73).
+ */
+export function tauriDocumentPicker(): DocumentPicker {
+  return {
+    choose: async () => {
+      const opened = await invoke<OpenedDocumentView | null>("open_document");
+      if (opened === null) return null;
+      return {
+        id: opened.id,
+        name: opened.name,
+        // Un documento recién abierto se anota como **no firmado** (ID-71):
+        // saber si un PDF ya trae firmas es otro trabajo, y el panel ya declara
+        // ese dato como desconocido. Se anota lo que se sabe.
+        badge: "Unsigned",
+        modified: opened.modified,
+        lastUsed: Math.floor(Date.now() / 1000),
+        // Lo acaba de conceder el portal, así que responde.
+        available: true,
+      } satisfies RecentDocument;
+    },
+  };
+}
+
+/**
+ * El PDF que se pinta: los bytes del portal, abiertos con `pdf.js` (ID-76).
+ *
+ * Los bytes viajan **como bytes** y no como una lista de números en JSON
+ * (ID-66): `read_document` contesta con la respuesta binaria del puente de
+ * Tauri, que aquí llega como un `ArrayBuffer`.
+ */
+export function tauriPdfSource(): PdfSource {
+  return pdfjsSource(async (document) => {
+    const bytes = await invoke<ArrayBuffer>("read_document", { id: document.id });
+    return new Uint8Array(bytes);
+  });
 }

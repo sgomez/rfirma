@@ -11,6 +11,7 @@ import {
   PlusIcon,
   UploadIcon,
 } from "../design-system/icons";
+import { ErrorNotice } from "../errors/ErrorNotice";
 import "./DocumentViewer.css";
 import type { PdfDocument, Viewport } from "./pdf";
 import { createRenderQueue, type RenderQueue } from "./renderQueue";
@@ -23,6 +24,7 @@ import {
   toPixels,
   toUserSpace,
 } from "./signatureBox";
+import type { DocumentFailure } from "./source";
 import { useBoxDrag } from "./useBoxDrag";
 
 /**
@@ -45,6 +47,19 @@ interface DocumentViewerProps {
   onPlace: (placement: SignaturePlacement) => void;
   /** Abrir un documento, que va por el portal igual que desde la bandeja. */
   onOpen: () => void;
+  /**
+   * Por qué no se ha podido pintar el documento que se eligió, si es que no se
+   * ha podido.
+   *
+   * Va aquí y no al pie del panel de firma porque sin documento abierto no hay
+   * panel: quien acaba de elegir un PDF corrupto tiene el visor delante, y
+   * dejarlo en su estado vacío contaba lo mismo que no haber abierto nada.
+   *
+   * Y se pinta **también con un documento delante**: el segundo PDF que no se
+   * deja abrir deja el primero en pantalla, así que sin esto el rechazo era
+   * mudo y parecía que la pulsación no había hecho nada.
+   */
+  failure?: DocumentFailure | null;
 }
 
 /**
@@ -69,7 +84,13 @@ interface DocumentViewerProps {
  * —tampoco con el zoom al 300 %, donde el recuadro ocupa casi todo el visor—.
  * La discusión está en `docs/design/visor-de-documento.md`.
  */
-export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentViewerProps) {
+export function DocumentViewer({
+  pdf,
+  placement,
+  onPlace,
+  onOpen,
+  failure = null,
+}: DocumentViewerProps) {
   const { t, i18n } = useTranslation();
   const canvas = useRef<HTMLCanvasElement>(null);
   const boxElement = useRef<HTMLDivElement>(null);
@@ -197,6 +218,7 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
   if (!pdf) {
     return (
       <div className="viewer viewer--empty">
+        {failure && <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />}
         <button type="button" className="viewer__drop-zone" onClick={onOpen}>
           <span className="viewer__drop-icon">
             <UploadIcon />
@@ -211,6 +233,14 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
 
   return (
     <div className="viewer" ref={surface}>
+      {failure && (
+        // Flota sobre la hoja, como la barra y el aviso de «se sale de la
+        // página»: `.viewer` es una rejilla de una sola fila y meter aquí un
+        // hijo en flujo le robaría altura al documento.
+        <div className="viewer__failure">
+          <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
+        </div>
+      )}
       <div className="viewer__scroll">
         <div
           className="viewer__sheet"

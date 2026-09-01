@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
-const { tauriCertificateStore, tauriLayer2Composer, tauriSigningBackend } = await import("./tauri");
+const {
+  tauriCertificateStore,
+  tauriDocumentPicker,
+  tauriLayer2Composer,
+  tauriPdfSource,
+  tauriSigningBackend,
+} = await import("./tauri");
 
 const anOrder = {
   document: "/run/user/1000/doc/1e8b83b9/contrato.pdf",
@@ -159,3 +165,98 @@ describe("los puertos de firma sobre Tauri", () => {
     expect(text).toBeNull();
   });
 });
+
+/**
+ * **Grada A**: los dos puertos del documento contra el mismo `invoke` falso
+ * (TD-16), con el caso bueno, la cancelación y el fallo de lectura, que es
+ * justo lo que cubren las pruebas de los tres puertos de firma de arriba.
+ */
+describe("los puertos del documento sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks the backend to open the dialog, and nothing else", async () => {
+    invoke.mockResolvedValue({ id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 });
+
+    await tauriDocumentPicker().choose();
+
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(["open_document"]);
+  });
+
+  it("turns what the portal granted into a tray row badged Unsigned", async () => {
+    // Detectar si un PDF ya trae firmas es otro trabajo: se anota lo que se
+    // sabe y no se inventa (ID-71).
+    invoke.mockResolvedValue({ id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 });
+
+    const chosen = await tauriDocumentPicker().choose();
+
+    expect(chosen).toMatchObject({
+      id: "0f1e2d3c",
+      name: "contrato.pdf",
+      badge: "Unsigned",
+      modified: 1_700_000_000,
+      available: true,
+    });
+  });
+
+  it("reads a cancelled dialog as no document, and not as a failure", async () => {
+    invoke.mockResolvedValue(null);
+
+    await expect(tauriDocumentPicker().choose()).resolves.toBeNull();
+  });
+
+  it("asks for the bytes of a document by its identifier, never by a path", async () => {
+    invoke.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer);
+
+    await tauriPdfSource().open(aRow());
+
+    expect(invoke).toHaveBeenCalledWith("read_document", { id: "0f1e2d3c" });
+  });
+
+  it("keeps the situation and the raw detail when the bytes cannot be read", async () => {
+    invoke.mockImplementation(() =>
+      Promise.reject({
+        situation: "documentUnreadable",
+        detail: "No such file or directory (os error 2)",
+        attemptsLeft: null,
+      }),
+    );
+
+    const outcome = await tauriPdfSource().open(aRow());
+
+    expect(outcome).toEqual({
+      ok: false,
+      failure: {
+        situation: "documentUnreadable",
+        detail: "No such file or directory (os error 2)",
+      },
+    });
+  });
+
+  it("names the failure of a corrupt PDF instead of coming back empty", async () => {
+    // Los bytes llegaron: lo que falla es abrirlos, y `pdf.js` no clasifica
+    // nada. Sin nombre, el visor se quedaba en su estado vacío, que es el mismo
+    // que cuando no se ha abierto nada.
+    invoke.mockResolvedValue(new Uint8Array([0x25, 0x21, 0x3f]).buffer);
+
+    const outcome = await tauriPdfSource().open(aRow());
+
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.failure.situation).toBe("documentUnreadable");
+    expect(outcome.failure.detail).not.toBe("");
+  });
+});
+
+/** Una fila de la bandeja, que es lo que entra por el puerto del visor. */
+function aRow() {
+  return {
+    id: "0f1e2d3c",
+    name: "contrato.pdf",
+    badge: "Unsigned" as const,
+    modified: 1_700_000_000,
+    lastUsed: 1_700_000_000,
+    available: true,
+  };
+}

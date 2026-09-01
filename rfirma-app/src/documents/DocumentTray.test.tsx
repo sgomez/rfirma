@@ -5,10 +5,12 @@ import { renderWithCatalog } from "../testing/render";
 import { DocumentTray } from "./DocumentTray";
 import type { RecentDocument } from "./recents";
 
-function document(path: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
-    path,
-    name: path.slice(path.lastIndexOf("/") + 1),
+    // El identificador lo acuña el backend y es opaco: aquí se finge con un
+    // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
+    id: `id-${name}`,
+    name,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
@@ -23,7 +25,7 @@ function renderTray(props: Partial<Parameters<typeof DocumentTray>[0]> = {}) {
   return renderWithCatalog(
     <DocumentTray
       recents={[]}
-      activePath={null}
+      activeId={null}
       onOpen={noop}
       onSelect={noop}
       onForget={noop}
@@ -59,10 +61,7 @@ describe("DocumentTray", () => {
 
   it("paints the recents from their cached metadata", () => {
     renderTray({
-      recents: [
-        document("/documentos/contrato.pdf", { badge: "Signed" }),
-        document("/documentos/factura.pdf"),
-      ],
+      recents: [document("contrato.pdf", { badge: "Signed" }), document("factura.pdf")],
     });
 
     expect(screen.getByText("contrato.pdf")).toBeInTheDocument();
@@ -73,8 +72,8 @@ describe("DocumentTray", () => {
 
   it("marks the active document as the selected row", () => {
     renderTray({
-      recents: [document("/a.pdf"), document("/b.pdf")],
-      activePath: "/b.pdf",
+      recents: [document("a.pdf"), document("b.pdf")],
+      activeId: "id-b.pdf",
     });
 
     const selected = screen.getByRole("button", { name: /b\.pdf/ });
@@ -84,7 +83,7 @@ describe("DocumentTray", () => {
   it("changes document from a row", async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    const factura = document("/factura.pdf");
+    const factura = document("factura.pdf");
     renderTray({ recents: [factura], onSelect });
 
     await user.click(screen.getByRole("button", { name: /factura\.pdf/ }));
@@ -92,9 +91,9 @@ describe("DocumentTray", () => {
     expect(onSelect).toHaveBeenCalledWith(factura);
   });
 
-  it("badges a path that no longer answers as Unavailable and keeps it in the list", () => {
+  it("badges a document that no longer answers as Unavailable and keeps it in the list", () => {
     renderTray({
-      recents: [document("/usb/informe.pdf", { badge: "Signed", available: false })],
+      recents: [document("informe.pdf", { badge: "Signed", available: false })],
     });
 
     expect(screen.getByText("informe.pdf")).toBeInTheDocument();
@@ -106,17 +105,17 @@ describe("DocumentTray", () => {
     const user = userEvent.setup();
     const onForget = vi.fn();
     renderTray({
-      recents: [document("/usb/informe.pdf", { available: false })],
+      recents: [document("informe.pdf", { available: false })],
       onForget,
     });
 
     await user.click(screen.getByRole("button", { name: "Quitar de la lista" }));
 
-    expect(onForget).toHaveBeenCalledWith("/usb/informe.pdf");
+    expect(onForget).toHaveBeenCalledWith("id-informe.pdf");
   });
 
-  it("does not offer removing a row whose path answers", () => {
-    renderTray({ recents: [document("/a.pdf")] });
+  it("does not offer removing a row whose document answers", () => {
+    renderTray({ recents: [document("a.pdf")] });
 
     expect(screen.queryByRole("button", { name: "Quitar de la lista" })).not.toBeInTheDocument();
   });

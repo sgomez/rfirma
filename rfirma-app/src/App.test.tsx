@@ -10,12 +10,15 @@ import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
-import { emptyPdfSource } from "./viewer/source";
+import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
+import { type PdfSource, unavailablePdfSource } from "./viewer/source";
 
-function document(path: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
-    path,
-    name: path.slice(path.lastIndexOf("/") + 1),
+    // El identificador lo acuña el backend y es opaco: aquí se finge con un
+    // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
+    id: `id-${name}`,
+    name,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
@@ -24,7 +27,48 @@ function document(path: string, overrides: Partial<RecentDocument> = {}): Recent
   };
 }
 
-function renderApp(recents = inMemoryRecents(), documents: RecentDocument[] = []) {
+const A4 = { width: 595, height: 842 };
+
+/** Un viewport de `pdf.js` sin rotación: escala y voltea el eje Y. */
+function viewportAt(scale: number): Viewport {
+  return {
+    width: A4.width * scale,
+    height: A4.height * scale,
+    convertToPdfPoint: (x, y) => [x / scale, A4.height - y / scale],
+    convertToViewportPoint: (x, y) => [x * scale, (A4.height - y) * scale],
+  };
+}
+
+/** Un PDF que se deja pintar: `pdf.js` no cabe en `jsdom` (ver `pdf.ts`). */
+function aPdfOf(pageCount: number): PdfDocument {
+  const pageOf = (number: number): PdfPage => ({
+    number,
+    rotate: 0,
+    view: [0, 0, A4.width, A4.height],
+    getViewport: ({ scale }) => viewportAt(scale),
+    render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+  });
+  return { pageCount, getPage: (number) => Promise.resolve(pageOf(number)) };
+}
+
+/** Un origen que abre cada documento con las páginas que se le digan. */
+function pdfsOf(pages: Record<string, number>): PdfSource {
+  return {
+    open: async (document) => {
+      const pageCount = pages[document.name];
+      if (pageCount === undefined) {
+        return { ok: false, failure: { situation: "documentUnreadable", detail: "roto" } };
+      }
+      return { ok: true, pdf: aPdfOf(pageCount) };
+    },
+  };
+}
+
+function renderApp(
+  recents = inMemoryRecents(),
+  documents: RecentDocument[] = [],
+  pdfs: PdfSource = unavailablePdfSource(),
+) {
   const preferences = inMemoryPreferences(
     { destination: "Documentos", rememberVisibleSignature: true, rememberActivity: true },
     () => void recents.clear(),
@@ -33,7 +77,7 @@ function renderApp(recents = inMemoryRecents(), documents: RecentDocument[] = []
     <App
       recents={recents}
       picker={inMemoryDocumentPicker(documents)}
-      pdfs={emptyPdfSource()}
+      pdfs={pdfs}
       preferences={preferences}
       destinations={["Documentos"]}
       certificates={emptyCertificateStore()}
@@ -60,7 +104,7 @@ function trayDropZone() {
 describe("App", () => {
   it("opens a document from the tray and shows its badge in the header", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("/documentos/factura.pdf")]);
+    renderApp(inMemoryRecents(), [document("factura.pdf")]);
 
     await user.click(trayDropZone());
 
@@ -68,9 +112,77 @@ describe("App", () => {
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
   });
 
+  /**
+   * El recorrido entero del #82, contado por lo que se ve y no por las órdenes
+   * que se llamaron (TD-15): se elige un PDF y queda pintado, con su nombre y
+   * sus páginas en el panel, y anotado en la bandeja como no firmado (ID-71).
+   */
+  it("paints the chosen document in the viewer and annotates it in the tray", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 7 }));
+
+    await user.click(trayDropZone());
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    expect(within(panel).getByText(/7/)).toBeInTheDocument();
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(within(tray).getByText("Sin firmar")).toBeInTheDocument();
+    // El visor vacío tenía su propia zona de soltar; con el documento pintado
+    // solo queda la de la bandeja.
+    expect(
+      screen.getAllByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }),
+    ).toHaveLength(1);
+  });
+
+  it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents(), [document("corrupto.pdf")], pdfsOf({}));
+
+    await user.click(trayDropZone());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No hemos podido leer el documento");
+  });
+
+  it("repaints a document when its tray row is chosen again, one after another", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("primero.pdf"), document("segundo.pdf")],
+      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    );
+    await user.click(trayDropZone());
+    await screen.findByRole("region", { name: "Panel de firma" });
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await waitFor(() => expect(within(panel).getByText("segundo.pdf")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /primero\.pdf/ }));
+
+    await waitFor(() => expect(within(panel).getByText("primero.pdf")).toBeInTheDocument());
+    expect(within(panel).getByText(/2/)).toBeInTheDocument();
+  });
+
+  it("changes nothing when the dialog is closed without choosing", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
+    await user.click(trayDropZone());
+    await screen.findByRole("region", { name: "Panel de firma" });
+
+    // El selector en memoria se agota tras el primero, y a partir de ahí se
+    // comporta como una cancelación (ID-73).
+    await user.click(trayDropZone());
+
+    const panel = screen.getByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(within(tray).getAllByText("factura.pdf")).toHaveLength(1);
+  });
+
   it("opens Preferences from the menu, over the window and without unmounting it", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("/a.pdf")]));
+    renderApp(inMemoryRecents([document("a.pdf")]));
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -93,7 +205,7 @@ describe("App", () => {
 
   it("empties the tray when Remember my activity is turned off", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("/a.pdf")]));
+    renderApp(inMemoryRecents([document("a.pdf")]));
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -109,7 +221,7 @@ describe("App", () => {
 
   it("stops remembering once Remember my activity is off, not just purges what there was", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("/a.pdf")]), [document("/documentos/factura.pdf")]);
+    renderApp(inMemoryRecents([document("a.pdf")]), [document("factura.pdf")]);
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));

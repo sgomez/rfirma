@@ -48,6 +48,10 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        // El diálogo de fichero se abre desde Rust (ID-63), así que el
+        // complemento entra aquí y no en el frontal: la lista de permisos de la
+        // ventana no crece por esto.
+        .plugin(tauri_plugin_dialog::init())
         .manage(environment)
         // El hilo del isolate arranca con la ventana y **no abre la librería
         // todavía**: quien solo quiere mirar un PDF no paga el dlopen de 27,7
@@ -55,6 +59,9 @@ pub fn run() {
         // como una ventana que no abre.
         .manage(commands::Isolate::start())
         .manage(commands::SigningSession::default())
+        // Los documentos abiertos, del identificador opaco al documento del
+        // portal (ID-61). Vive mientras vive el proceso.
+        .manage(memory::OpenedDocuments::new())
         .invoke_handler(tauri::generate_handler![
             commands::list_certificates,
             commands::compose_visible_text,
@@ -62,6 +69,8 @@ pub fn run() {
             commands::sign_with_pin,
             commands::finish_signing,
             commands::cancel_signing,
+            commands::open_document,
+            commands::read_document,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

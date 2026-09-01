@@ -4,10 +4,12 @@ import { inMemoryDocumentPicker } from "./picker";
 import { inMemoryRecents, type RecentDocument } from "./recents";
 import { useDocuments } from "./useDocuments";
 
-function document(path: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
-    path,
-    name: path.slice(path.lastIndexOf("/") + 1),
+    // El identificador lo acuña el backend y es opaco: aquí se finge con un
+    // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
+    id: `id-${name}`,
+    name,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
@@ -20,7 +22,7 @@ function document(path: string, overrides: Partial<RecentDocument> = {}): Recent
 // fichero de estado.
 describe("useDocuments", () => {
   it("lists what the store remembers, without opening anything", async () => {
-    const store = inMemoryRecents([document("/a.pdf")]);
+    const store = inMemoryRecents([document("a.pdf")]);
 
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));
 
@@ -30,7 +32,7 @@ describe("useDocuments", () => {
 
   it("makes the document opened through the portal the active one and remembers it", async () => {
     const store = inMemoryRecents();
-    const factura = document("/factura.pdf");
+    const factura = document("factura.pdf");
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([factura])));
 
     await act(() => result.current.open());
@@ -41,7 +43,7 @@ describe("useDocuments", () => {
 
   it("does not remember the document opened through the portal when remembering is off", async () => {
     const store = inMemoryRecents();
-    const factura = document("/factura.pdf");
+    const factura = document("factura.pdf");
     const { result } = renderHook(() =>
       useDocuments(store, inMemoryDocumentPicker([factura]), false),
     );
@@ -54,7 +56,7 @@ describe("useDocuments", () => {
   });
 
   it("leaves everything as it was when the portal is cancelled", async () => {
-    const store = inMemoryRecents([document("/a.pdf")]);
+    const store = inMemoryRecents([document("a.pdf")]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));
     await waitFor(() => expect(result.current.recents).toHaveLength(1));
 
@@ -66,11 +68,11 @@ describe("useDocuments", () => {
 
   it("drops the active document when its row is removed from the list", async () => {
     const store = inMemoryRecents();
-    const informe = document("/usb/informe.pdf");
+    const informe = document("informe.pdf");
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([informe])));
     await act(() => result.current.open());
 
-    await act(() => result.current.forget("/usb/informe.pdf"));
+    await act(() => result.current.forget("id-informe.pdf"));
 
     expect(result.current.recents).toEqual([]);
     expect(result.current.active).toBeNull();

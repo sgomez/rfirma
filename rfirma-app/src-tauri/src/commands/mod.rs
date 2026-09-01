@@ -1,10 +1,18 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son seis, y la lista es cerrada a propósito. Cada una rellena un puerto que
-//! la interfaz ya tenía declarado desde el #76 —`CertificateStore`,
-//! `Layer2Composer`, `SigningBackend`—, así que la ventana no aprende nada
-//! nuevo de Tauri: sigue hablando con los mismos puertos y es `main.tsx` quien
-//! elige estas implementaciones.
+//! Son ocho, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
+//! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82—,
+//! así que la ventana no aprende nada nuevo de Tauri: sigue hablando con los
+//! mismos puertos y es `main.tsx` quien elige estas implementaciones.
+//!
+//! # El documento entra por el portal y se nombra con un identificador
+//!
+//! `open_document` abre el diálogo del sistema **desde Rust** (ID-63), apunta
+//! lo que el portal conceda en [`crate::memory::OpenedDocuments`] y devuelve un
+//! identificador opaco; `read_document` entrega sus bytes contra ese
+//! identificador. Ninguna de las dos devuelve una ruta, y ninguna reescribe las
+//! reglas de [`PortalDocument`]: son un adaptador delgado encima (ID-65).
 //!
 //! # Ninguna orden devuelve una ruta del anfitrión
 //!
@@ -34,7 +42,7 @@ use tauri::State;
 
 use crate::destination::{CheckedFolder, PortalDocument};
 use crate::ffi::BridgeError;
-use crate::memory::Configuration;
+use crate::memory::{Configuration, OpenedDocuments};
 use crate::pkcs11::{
     self, CertificateRef, CertificateStatus, Situation, TokenCertificate, TokenError,
 };
@@ -629,8 +637,12 @@ pub fn begin_signing(
     environment: State<'_, Environment>,
     isolate: State<'_, Isolate>,
     session: State<'_, SigningSession>,
+    opened: State<'_, OpenedDocuments>,
 ) -> Result<(), Failure> {
-    let document = PortalDocument::opened(&order.document);
+    // Lo que la ventana manda es el identificador que se acuñó al abrir, y no
+    // una ruta: quien sabe a qué documento del portal corresponde es el
+    // registro, y solo él (ID-62).
+    let document = opened_document(&opened, &order.document)?;
     let bytes = admitted_bytes(&document)?;
     let (config, reference, chain) = plan_signature(&environment.module, &order)?;
 
@@ -701,6 +713,103 @@ pub fn cancel_signing(session: State<'_, SigningSession>) {
     *lock(&session.open) = None;
 }
 
+/// Un documento abierto, tal como la ventana lo recibe: **un identificador y un
+/// nombre, ninguna ruta** (ID-60, ADR-0011).
+///
+/// El `modified` sale de aquí y no lo calcula la ventana porque quien tocó el
+/// disco es el backend: la fila de la bandeja se pinta con metadatos cacheados
+/// y sin volver a abrir el fichero (ADR-0010).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenedDocumentView {
+    /// El identificador opaco que acuñó [`OpenedDocuments`].
+    pub id: String,
+    /// El nombre del fichero. No su ruta.
+    pub name: String,
+    /// El `mtime`, en segundos desde la época; `None` si no se pudo leer.
+    pub modified: Option<u64>,
+}
+
+/// **Orden 7.** Abre el diálogo del sistema y apunta lo que el portal conceda.
+///
+/// El diálogo se abre **desde aquí y no desde el frontal** (ID-63): así la
+/// ventana sigue con un solo fichero que conoce `invoke`, y la lista de
+/// permisos de `capabilities/default.json` no crece, porque los permisos de
+/// Tauri v2 vigilan lo que la ventana puede pedir y no lo que Rust hace.
+/// Filtra por PDF porque es lo único que la aplicación sabe firmar (ID-64).
+///
+/// Cerrar el diálogo sin elegir nada devuelve `None`, que **no es un fallo**:
+/// es lo que deja el documento activo, la lista y el visor como estaban
+/// (ID-73).
+#[tauri::command(async)]
+pub fn open_document(
+    app: tauri::AppHandle,
+    opened: State<'_, OpenedDocuments>,
+) -> Result<Option<OpenedDocumentView>, Failure> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let Some(chosen) = app
+        .dialog()
+        .file()
+        .add_filter("PDF", &["pdf"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+    let handle = chosen
+        .into_path()
+        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
+    let document = PortalDocument::opened(handle);
+    let name = document.name().to_owned();
+    let modified = modified_seconds(&document);
+    Ok(Some(OpenedDocumentView {
+        id: opened.remember(document),
+        name,
+        modified,
+    }))
+}
+
+/// **Orden 8.** Los bytes del documento abierto, **como bytes** (ID-66).
+///
+/// Devuelve una [`tauri::ipc::Response`] y no un `Vec<u8>`: serializado a JSON,
+/// un PDF de unos pocos megabytes se convierte en un array de miles de números
+/// y multiplica el tamaño y el tiempo. Esta es la respuesta binaria que el
+/// puente de Tauri ofrece justo para esto, y al otro lado llega un
+/// `ArrayBuffer` que `pdf.js` abre sin nada en medio.
+#[tauri::command(async)]
+pub fn read_document(
+    id: String,
+    opened: State<'_, OpenedDocuments>,
+) -> Result<tauri::ipc::Response, Failure> {
+    let document = opened_document(&opened, &id)?;
+    let bytes = std::fs::read(document.reading_path())
+        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// El documento que se abrió con ese identificador.
+///
+/// Que no esté apuntado no es un fallo del programa: se cuenta como un
+/// documento que no se puede leer, que es lo que la ventana sabe enseñar.
+fn opened_document(opened: &OpenedDocuments, id: &str) -> Result<PortalDocument, Failure> {
+    opened.get(id).ok_or_else(|| {
+        Failure::new(
+            "documentUnreadable",
+            "el documento ya no esta abierto en esta sesion",
+        )
+    })
+}
+
+/// El `mtime` del documento, en segundos desde la época.
+fn modified_seconds(document: &PortalDocument) -> Option<u64> {
+    std::fs::metadata(document.reading_path())
+        .and_then(|metadata| metadata.modified())
+        .ok()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|elapsed| elapsed.as_secs())
+}
+
 fn no_open_cycle() -> Failure {
     Failure::new("unknown", "no hay ninguna firma empezada")
 }
@@ -716,8 +825,9 @@ mod tests {
     use super::{
         attribute, config_for, deliver, holder_of, issuer_of, language_of, situation_name,
         take_signed_cycle, told_as, usable_certificate, CertificateView, CheckedFolder,
-        Configuration, Environment, Failure, Mutex, PlacementOrder, PortalDocument,
-        SignedDocumentView, SigningOrder, SigningSession, StatusView, VisibleFieldsOrder,
+        Configuration, Environment, Failure, Mutex, OpenedDocumentView, OpenedDocuments,
+        PlacementOrder, PortalDocument, SignedDocumentView, SigningOrder, SigningSession,
+        StatusView, VisibleFieldsOrder,
     };
     use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
@@ -793,6 +903,102 @@ mod tests {
             .1;
 
         assert!(session.contains("seal: SessionSeal"));
+    }
+
+    /// La misma guardia del ADR-0011, sobre lo que las **dos órdenes nuevas**
+    /// devuelven. Va aparte de
+    /// [`no_output_of_any_command_carries_a_host_path`] a propósito: aquella es
+    /// la prueba que el spec exige que siga verde **sin tocarla** (TD-19), y
+    /// ampliarle la lista habría sido tocarla.
+    #[test]
+    fn the_opened_document_that_crosses_carries_no_host_path() {
+        let body = production_half()
+            .split_once("struct OpenedDocumentView")
+            .expect("el tipo de salida sigue aqui")
+            .1
+            .split_once('}')
+            .expect("y tiene cuerpo")
+            .0;
+
+        for leak in ["PathBuf", "&Path", "path:", "module:", "reading_path"] {
+            assert!(
+                !body.contains(leak),
+                "«OpenedDocumentView» ha ganado un «{leak}»: eso es una ruta del anfitrion saliendo"
+            );
+        }
+    }
+
+    #[test]
+    fn an_opened_document_is_told_with_an_identifier_and_a_name() {
+        let view = OpenedDocumentView {
+            id: "0f1e2d3c4b5a69788796a5b4c3d2e1f0".to_owned(),
+            name: "contrato.pdf".to_owned(),
+            modified: Some(1_700_000_000),
+        };
+
+        let json = serde_json::to_string(&view).expect("serializa");
+
+        assert_eq!(
+            json,
+            r#"{"id":"0f1e2d3c4b5a69788796a5b4c3d2e1f0","name":"contrato.pdf","modified":1700000000}"#
+        );
+        assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
+    }
+
+    /// El identificador cruza; la ruta que hay detrás se queda en el registro.
+    #[test]
+    fn the_identifier_crosses_and_the_reading_path_stays_behind() {
+        let opened = OpenedDocuments::new();
+        let handle = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
+
+        let id = opened.remember(PortalDocument::opened(handle));
+
+        assert!(
+            !id.contains("1e8b83b9"),
+            "el identificador no lleva el del portal: {id}"
+        );
+        assert!(!id.contains("contrato"), "ni el nombre: {id}");
+        assert_eq!(
+            opened
+                .get(&id)
+                .map(|document| document.reading_path().to_owned()),
+            Some(std::path::PathBuf::from(handle)),
+            "y el backend sí sabe por dónde leerlo"
+        );
+    }
+
+    /// Las dos órdenes nuevas son **dos**, y la lista sigue cerrada (ID-59).
+    ///
+    /// Cuenta el prefijo `#[tauri::command` y no el atributo entero porque las
+    /// dos órdenes del documento llevan `(async)`: lo que se cierra es cuántas
+    /// órdenes hay, no cómo se ejecuta cada una.
+    #[test]
+    fn the_list_of_commands_grew_from_six_to_eight_and_no_further() {
+        assert_eq!(
+            production_half().matches("#[tauri::command").count(),
+            8,
+            "la lista de ordenes es cerrada a proposito"
+        );
+    }
+
+    /// Y las dos que hablan con el disco o con el portal **no bloquean el hilo
+    /// principal**: `#[tauri::command]` a secas genera un cuerpo `Blocking`
+    /// que corre dentro del manejador del IPC —el hilo del bucle GTK—, y
+    /// `blocking_pick_file()` espera allí a un cierre que solo ese hilo puede
+    /// ejecutar. Punto muerto: la ventana se clava y el diálogo no aparece.
+    #[test]
+    fn the_two_commands_that_touch_the_portal_run_off_the_main_thread() {
+        for command in ["pub fn open_document(", "pub fn read_document("] {
+            let source = production_half();
+            let declaration = source
+                .find(command)
+                .unwrap_or_else(|| panic!("no esta la orden «{command}»"));
+            let before = &source[..declaration];
+            assert!(
+                before.ends_with("#[tauri::command(async)]\n"),
+                "«{command}» tiene que ser #[tauri::command(async)]"
+            );
+        }
     }
 
     #[test]
