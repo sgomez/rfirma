@@ -269,7 +269,11 @@ jobs:
         with:
           name: pdf-puerta-manual
           path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
-          if-no-files-found: error
+          # `warn` y no `error`: este paso corre tambien cuando las pruebas han
+          # fallado antes de llegar a la de la puerta manual, y ahi el PDF no
+          # existe. Un segundo rojo — «artefacto no encontrado» — solo taparia
+          # el rojo de verdad.
+          if-no-files-found: warn
 
       # La misma medicion CRAP que el carril rapido pero SIN --allow sobre el
       # modulo FFI: con la cobertura de la grada C incluida, ese modulo ya

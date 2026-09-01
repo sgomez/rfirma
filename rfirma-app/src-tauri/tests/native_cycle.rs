@@ -456,9 +456,22 @@ mod full_cycle {
         );
 
         let page = format!("{}-1.png", prefix.display());
-        image::open(&page)
+        let image = image::open(&page)
             .unwrap_or_else(|error| panic!("no se ha podido leer {page}: {error}"))
-            .to_luma8()
+            .to_luma8();
+
+        // A 72 ppp un punto del PDF es un píxel. Si algún día no lo fuera, los
+        // recortes de `dark_pixels_in_the_signature_box` mirarían una franja
+        // más pequeña que el recuadro y el caso vacío pasaría por la vía
+        // trivial. Mejor un fallo ruidoso aquí que un recorte callado allí.
+        assert_eq!(
+            image.dimensions(),
+            (PAGE_WIDTH, PAGE_HEIGHT),
+            "pdftoppm ha rasterizado a otra escala: los recortes del recuadro dejarian \
+             de medir el recuadro entero"
+        );
+
+        image
     }
 
     /// Cuántos píxeles oscuros hay dentro del recuadro de la firma.
@@ -686,6 +699,13 @@ mod full_cycle {
     // `Digest Mismatch`—, así que una prueba que se limitara a no alterarlas no
     // distinguiría el código con guarda del código sin ella.
     //
+    // Con una salvedad que conviene no leer de más: las tres acaban en la misma
+    // comparación del **bloque entero**, así que ninguna aísla causalidad por
+    // campo. Lo que distingue a una de otra es su `assert!(altered)`, es decir,
+    // «el puente sigue sellando `TIME` / `TZ` / `P.*`». Mientras `OpenCycle` no
+    // exponga la sesión —y el ADR-0016 es justo lo que lo impide—, esta es la
+    // cota máxima.
+    //
     // Las tres son de grada C y no de grada A aunque `session_seal.rs` ya
     // compare bytes en el carril rápido, porque **lo que se altera aquí es el
     // sello de verdad**: el que acaba de componer `SessionStamp.encode` al otro
@@ -713,6 +733,20 @@ mod full_cycle {
         String::from_utf8(raw).expect("el bloque del sello es UTF-8")
     }
 
+    /// Vuelve a componer el payload del sello a partir de sus líneas.
+    ///
+    /// El `\n` final no es un detalle de estilo: `SessionStamp.encode` cierra
+    /// **cada** campo con un salto de línea, incluido el último, así que el
+    /// bloque decodificado termina en `'\n'`. `str::lines()` no lo devuelve y
+    /// `join("\n")` no lo repone. Sin reponerlo aquí, el sello reconstruido ya
+    /// diferiría del original **sin haber mutado nada**, y como
+    /// `SessionSeal::verify_unchanged` compara la cadena entera, las tres
+    /// invariantes pasarían por el salto de línea en vez de por el campo: una
+    /// mutación inerte las dejaría igual de verdes.
+    fn re_encoded(lines: &[String]) -> String {
+        base64::engine::general_purpose::STANDARD.encode(format!("{}\n", lines.join("\n")))
+    }
+
     /// Devuelve el sello con el valor del **primer** campo cuya clave empiece
     /// por `prefix` cambiado, y **falla si no hay ninguno**.
     ///
@@ -720,8 +754,23 @@ mod full_cycle {
     /// él, el día que el puente dejara de sellar el campo, la prueba alteraría
     /// un sello inexistente, el sello saldría idéntico... y el fallo esperado
     /// no llegaría.
+    ///
+    /// El segundo `assert` ancla la otra mitad de esa afirmación: reconstruir
+    /// el sello **sin mutar nada** tiene que dar el payload original byte a
+    /// byte. Con los dos, la única diferencia entre el sello que abrió el ciclo
+    /// y el que llega a la postfirma es el campo que la prueba dice alterar.
     fn seal_with_field_altered(seal: &SessionSeal, prefix: &str) -> SessionSeal {
         let block = inside_the_seal(seal);
+
+        let untouched: Vec<String> = block.lines().map(str::to_owned).collect();
+        assert_eq!(
+            re_encoded(&untouched),
+            seal.as_bridge_payload(),
+            "reconstruir el sello sin mutar nada tiene que dar el mismo payload byte a \
+             byte, o esta prueba pasaria por la reconstruccion y no por el campo \
+             '{prefix}':\n{block}"
+        );
+
         let mut altered = false;
         let lines: Vec<String> = block
             .lines()
@@ -740,7 +789,7 @@ mod full_cycle {
              Sin ese campo la invariante del ADR-0016 no esta sellada, \
              y esta prueba habria pasado sin comprobar nada:\n{block}"
         );
-        SessionSeal::from_bridge(base64::engine::general_purpose::STANDARD.encode(lines.join("\n")))
+        SessionSeal::from_bridge(re_encoded(&lines))
     }
 
     /// Abre un ciclo, firma en el token y devuelve las dos mitades que la
