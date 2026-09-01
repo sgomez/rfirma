@@ -15,6 +15,7 @@ const certificate: Certificate = {
   issuer: "AC FNMT Usuarios",
   store: "card",
   status: { kind: "valid" },
+  remembered: false,
 };
 
 /** Un JPEG de un píxel: lo que devuelve `rubric::normalize`, ya opaco. */

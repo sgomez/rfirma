@@ -75,6 +75,19 @@ export interface Certificate {
    */
   store: CertificateStoreClass;
   status: CertificateStatus;
+  /**
+   * Si es **el que se usó la última vez**, y por tanto el que viene ya puesto
+   * en el desplegable al arrancar (#110).
+   *
+   * Lo decide el backend y no esta ventana, porque lo que se recordó son
+   * coordenadas del token —módulo, etiqueta, `CKA_ID`, perfil— y ninguna de
+   * ellas puede cruzar la frontera (ADR-0011). Aquí solo llega marcada la fila.
+   *
+   * Con el certificado recordado fuera del token no viene marcada **ninguna**,
+   * y entonces el panel arranca en «Sin certificado» sin decir nada: no es un
+   * error, es que no está (ADR-0010).
+   */
+  remembered: boolean;
 }
 
 /**

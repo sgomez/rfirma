@@ -20,6 +20,7 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     issuer: "AC FNMT Usuarios",
     store: "card",
     status: { kind: "valid" },
+    remembered: false,
     ...overrides,
   };
 }

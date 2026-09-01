@@ -271,6 +271,15 @@ pub struct CertificateView {
     /// ventana.
     pub store: String,
     pub status: StatusView,
+    /// Si es **el que se usó la última vez** (#110).
+    ///
+    /// Es un `bool` y no una segunda orden porque la ventana ya está pidiendo
+    /// esta lista: preguntar aparte cuál se recordó obligaría a encadenar dos
+    /// llamadas para pintar el desplegable una vez. Y es una propiedad de la
+    /// **fila**, no del certificado: dice cuál viene ya puesto, y con el
+    /// recordado fuera del token no viene marcada ninguna, que es como el panel
+    /// vuelve a «Sin certificado» sin ruido.
+    pub remembered: bool,
 }
 
 /// El documento firmado, tal como la ventana lo cuenta: **dos nombres, ninguna
@@ -387,6 +396,11 @@ struct InFlight {
     cycle: OpenCycle,
     document: PortalDocument,
     signature: Option<TokenSignature>,
+    /// Con qué certificado se está firmando, para poder recordarlo **si la
+    /// postfirma termina bien**. Viaja aquí y no se relee del token al acabar:
+    /// entre la prefirma y la postfirma la tarjeta puede haberse retirado, y
+    /// entonces no habría forma de saber con cuál se acababa de firmar.
+    certificate: CertificateRef,
     /// El sello, transportado aparte del ciclo que lo emitió.
     ///
     /// Están separados a propósito: si el sello viviera solo dentro de
@@ -487,6 +501,9 @@ pub fn list_certificates(
     environment: State<'_, Environment>,
 ) -> Result<Vec<CertificateView>, Failure> {
     let found = pkcs11::list_certificates_across(&environment.stores)?;
+    // Lo recordado se lee **una vez** y no una por fila: es el mismo fichero de
+    // estado para todas.
+    let remembered = remembered_certificate(&environment);
     // Las asas se acuñan **aquí** y sustituyen a las del listado anterior: la
     // ventana solo puede señalar filas del listado que tiene delante.
     let handles = environment.listed.replace(
@@ -507,9 +524,47 @@ pub fn list_certificates(
                 issuer: issuer_of(certificate.issuer().as_deref()),
                 store: store_name(certificate.reference().store().class()).to_owned(),
                 status: certificate.status().into(),
+                remembered: remembered
+                    .as_ref()
+                    .is_some_and(|one| one.is_the_same_as(certificate.reference())),
             }
         })
         .collect())
+}
+
+/// El certificado que quedó recordado, si hay estado que leer.
+///
+/// No hace falta mirar «Recordar mi actividad» aquí: apagarlo borra el fichero
+/// de estado, así que con el interruptor apagado no hay nada que leer. Un
+/// estado ilegible no es un motivo para no listar certificados: se sigue sin
+/// recordado, que es exactamente el primer arranque.
+fn remembered_certificate(environment: &Environment) -> Option<CertificateRef> {
+    environment.memory.state().ok()?.into_value().certificate
+}
+
+/// Apunta con qué certificado se acaba de firmar.
+///
+/// Se llama **desde la postfirma y solo desde ahí** (#110): lo que se recuerda
+/// es «con cuál firmé», no «cuál miré». Elegir uno en el desplegable, ver en la
+/// vista previa que no era el que se quería y cerrar sin firmar no cambia lo
+/// recordado; y de paso no hay una escritura en disco por cada clic.
+///
+/// Los interruptores los aplica [`Memory::remember_state`], que es donde no se
+/// pueden olvidar: con «Recordar mi actividad» apagado esto no escribe nada y
+/// borra lo que hubiera. Un fallo al escribir **no tumba la firma**: el
+/// documento ya está firmado y en su carpeta, y perder la comodidad de la
+/// próxima sesión no puede convertir eso en un error.
+fn remember_the_certificate(environment: &Environment, reference: &CertificateRef) {
+    let configuration = lock(&environment.configuration).clone();
+    let Ok(loaded) = environment.memory.state() else {
+        return;
+    };
+    let mut state = loaded.into_value();
+    if state.certificate.as_ref() == Some(reference) {
+        return;
+    }
+    state.certificate = Some(reference.clone());
+    let _ = environment.memory.remember_state(&configuration, &state);
 }
 
 /// **Orden 2.** El texto del recuadro, ya compuesto, para la vista previa.
@@ -634,20 +689,29 @@ fn config_for(order: &SigningOrder, chosen: &TokenCertificate) -> Result<Signatu
 /// que una postfirma que falle no deja un ciclo colgando que un segundo intento
 /// pudiera reusar con otro sello. El ciclo se reabre desde la prefirma o no se
 /// reabre.
-fn take_signed_cycle(
-    session: &SigningSession,
-) -> Result<(OpenCycle, PortalDocument, TokenSignature, SessionSeal), Failure> {
+fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, Failure> {
     let mut open = lock(&session.open);
     let in_flight = open.take().ok_or_else(no_open_cycle)?;
     let signature = in_flight
         .signature
         .ok_or_else(|| Failure::new("unknown", "todavía no se ha firmado en el token"))?;
-    Ok((
-        in_flight.cycle,
-        in_flight.document,
+    Ok(SignedCycle {
+        cycle: in_flight.cycle,
+        document: in_flight.document,
         signature,
-        in_flight.seal,
-    ))
+        seal: in_flight.seal,
+        certificate: in_flight.certificate,
+    })
+}
+
+/// El ciclo ya firmado en el token, sacado de la sesión y listo para la
+/// postfirma.
+struct SignedCycle {
+    cycle: OpenCycle,
+    document: PortalDocument,
+    signature: TokenSignature,
+    seal: SessionSeal,
+    certificate: CertificateRef,
 }
 
 /// Cómo se cuenta un documento firmado: **dos nombres, ninguna ruta**
@@ -749,6 +813,9 @@ pub fn begin_signing(
     let document = opened_document(&opened, &order.document)?;
     let bytes = admitted_bytes(&document)?;
     let (config, reference, chain) = plan_signature(&environment, &order)?;
+    // Una copia para la sesión: la otra se va con la prefirma al otro lado de
+    // la frontera.
+    let certificate = reference.clone();
 
     let cycle = on_the_bridge(&isolate, move |bridge| {
         // La comprobación se repite dentro del hilo porque el tipo que la
@@ -771,6 +838,7 @@ pub fn begin_signing(
         cycle,
         document,
         signature: None,
+        certificate,
         seal,
     });
     Ok(())
@@ -793,19 +861,33 @@ pub fn sign_with_pin(pin: String, session: State<'_, SigningSession>) -> Result<
 ///
 /// El documento cae **sin diálogo** (ID-36, ADR-0011): lo único que se elige es
 /// la carpeta, y se eligió una vez.
+///
+/// Y es aquí donde se apunta el certificado usado: esta orden es el **único**
+/// punto del programa en el que una firma ha terminado bien (#110).
 #[tauri::command]
 pub fn finish_signing(
     environment: State<'_, Environment>,
     isolate: State<'_, Isolate>,
     session: State<'_, SigningSession>,
 ) -> Result<SignedDocumentView, Failure> {
-    let (cycle, document, signature, seal) = take_signed_cycle(&session)?;
+    let SignedCycle {
+        cycle,
+        document,
+        signature,
+        seal,
+        certificate,
+    } = take_signed_cycle(&session)?;
 
     let signed = on_the_bridge(&isolate, move |bridge| {
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
-    deliver(&environment, &document, &signed)
+    let delivered = deliver(&environment, &document, &signed)?;
+    // **Después** de que el documento haya caído, y no antes: mientras la
+    // postfirma pueda fallar todavía no se ha firmado nada con este
+    // certificado (#110).
+    remember_the_certificate(&environment, &certificate);
+    Ok(delivered)
 }
 
 /// **Orden 6.** Cancelar: se olvida el ciclo a medias.
@@ -1196,12 +1278,12 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 mod tests {
     use super::{
         attribute, certificate_behind, config_for, deliver, dropped_document, folder_it_came_from,
-        holder_of, issuer_of, language_of, merged, remember_the_folder, shown, situation_name,
-        starting_folder, store_name, take_signed_cycle, told_as, usable_certificate,
-        CertificateView, CheckedFolder, Configuration, ConfigurationView, Environment, Failure,
-        ListedCertificates, Mutex, OpenedDocumentView, OpenedDocuments, PlacementOrder,
-        PortalDocument, SignedDocumentView, SigningOrder, SigningSession, StatusView, Theme,
-        VisibleFieldsOrder,
+        holder_of, issuer_of, language_of, merged, remember_the_certificate, remember_the_folder,
+        remembered_certificate, shown, situation_name, starting_folder, store_name,
+        take_signed_cycle, told_as, usable_certificate, CertificateView, CheckedFolder,
+        Configuration, ConfigurationView, Environment, Failure, ListedCertificates, Mutex,
+        OpenedDocumentView, OpenedDocuments, PlacementOrder, PortalDocument, SignedDocumentView,
+        SigningOrder, SigningSession, StatusView, Theme, VisibleFieldsOrder,
     };
     use crate::pkcs11::{
         CertificateRef, CertificateStatus, Situation, StoreClass, TokenCertificate,
@@ -1544,6 +1626,7 @@ mod tests {
             issuer: "FNMT-RCM".to_owned(),
             store: store_name(StoreClass::Firefox).to_owned(),
             status: StatusView::Valid,
+            remembered: false,
         };
         let json = serde_json::to_string(&view).expect("serializa");
 
@@ -2113,9 +2196,131 @@ mod tests {
     fn there_is_nothing_to_finish_when_no_cycle_was_started() {
         let session = SigningSession::default();
 
-        let failure = take_signed_cycle(&session).expect_err("no hay ciclo");
+        let Err(failure) = take_signed_cycle(&session) else {
+            panic!("no hay ciclo abierto que llevarse");
+        };
 
         assert_eq!(failure.situation, "unknown");
+    }
+
+    /// Lo pedido: tras una firma con éxito el certificado usado queda escrito,
+    /// y en la sesión siguiente se vuelve a encontrar.
+    #[test]
+    fn the_certificate_signed_with_is_written_into_the_state() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let environment = an_environment(documents.path());
+        let used = a_certificate("FNMT-ACTIVO-99999999R", b"da igual");
+
+        remember_the_certificate(&environment, used.reference());
+
+        assert_eq!(
+            remembered_certificate(&environment).as_ref(),
+            Some(used.reference()),
+            "la proxima sesion tiene que encontrarlo"
+        );
+    }
+
+    /// El certificado es actividad, y «Recordar mi actividad» manda: con el
+    /// interruptor apagado no se escribe nada.
+    #[test]
+    fn the_certificate_is_not_remembered_with_the_activity_switch_off() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let paths = crate::paths::Paths::under(documents.path());
+        let environment = Environment {
+            configuration: Mutex::new(Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            }),
+            ..an_environment(documents.path())
+        };
+        let used = a_certificate("FNMT-ACTIVO-99999999R", b"da igual");
+
+        remember_the_certificate(&environment, used.reference());
+
+        assert!(
+            !paths.state_file().exists(),
+            "con el interruptor apagado no se escribe ningun certificado"
+        );
+        assert_eq!(remembered_certificate(&environment), None);
+    }
+
+    /// Y apagar el interruptor **borra** el que hubiera, que es la otra mitad
+    /// del ID-34. Lo hace `Memory::remember_configuration`; lo que se comprueba
+    /// aquí es que el certificado se va con el resto y no sobrevive aparte.
+    #[test]
+    fn turning_the_activity_switch_off_erases_the_certificate_already_remembered() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let environment = an_environment(documents.path());
+        remember_the_certificate(
+            &environment,
+            a_certificate("FNMT-ACTIVO-99999999R", b"da igual").reference(),
+        );
+
+        environment
+            .memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        assert_eq!(remembered_certificate(&environment), None);
+    }
+
+    /// Un certificado recordado que ya no está en el token **no marca ninguna
+    /// fila**: el panel vuelve a «Sin certificado» y no hay error que contar
+    /// (ADR-0010).
+    #[test]
+    fn a_remembered_certificate_that_is_gone_marks_no_row() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let environment = an_environment(documents.path());
+        remember_the_certificate(
+            &environment,
+            a_certificate("EL-QUE-YA-NO-ESTA", b"da igual").reference(),
+        );
+        let remembered = remembered_certificate(&environment).expect("algo se recordo");
+
+        let present = a_certificate("FNMT-ACTIVO-99999999R", b"da igual");
+
+        assert!(!remembered.is_the_same_as(present.reference()));
+    }
+
+    /// Y el primer arranque no recuerda nada ni se queja de nada: no hay
+    /// fichero de estado que leer.
+    #[test]
+    fn a_first_run_has_no_remembered_certificate() {
+        let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+        assert_eq!(
+            remembered_certificate(&an_environment(documents.path())),
+            None
+        );
+    }
+
+    /// **Elegir no es firmar.** Lo que recuerda el certificado es la postfirma,
+    /// y solo ella: si `remember_the_certificate` apareciera también en la
+    /// orden que lista o en la que prefirma, elegir uno en el desplegable y
+    /// cerrar sin firmar cambiaría lo recordado —y con «Recordar mi actividad»
+    /// apagado escribiría en disco por cada clic—.
+    #[test]
+    fn only_the_postsign_remembers_the_certificate() {
+        let source = production_half();
+
+        assert_eq!(
+            source
+                .matches("remember_the_certificate(&environment")
+                .count(),
+            1,
+            "se recuerda desde un solo sitio"
+        );
+        let postsign = source
+            .split_once("pub fn finish_signing(")
+            .expect("la postfirma sigue aqui")
+            .1;
+        assert!(
+            postsign.contains("remember_the_certificate(&environment"),
+            "y ese sitio es la postfirma"
+        );
     }
 
     #[test]

@@ -11,6 +11,7 @@ function withStatus(status: Certificate["status"]): Certificate {
     issuer: "AC FNMT Usuarios",
     store: "card",
     status,
+    remembered: false,
   };
 }
 
