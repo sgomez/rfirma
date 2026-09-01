@@ -8,16 +8,19 @@
 # FNMT con la contrasena incluida. El certificado personal del titular no
 # interviene aqui ni en ningun otro punto del proyecto.
 #
-# Se importan CINCO certificados y TRES claves privadas:
+# Se importan CINCO certificados y CINCO claves privadas:
 #
 #   id 01  FNMT-ACTIVO-99999999R     clave + certificado  (camino feliz)
-#   id 02  FNMT-CADUCADO-99999999R   solo certificado     (caduco en 2020)
-#   id 03  FNMT-REVOCADO-99999999R   solo certificado     (revocado en 2024)
+#   id 02  FNMT-CADUCADO-99999999R   clave + certificado  (caduco en 2020)
+#   id 03  FNMT-REVOCADO-99999999R   clave + certificado  (revocado en 2024)
 #   id 04  FNMT-GEMELO-99999999R     clave + certificado  (par de claves activo)
 #   id 05  FNMT-GEMELO-99999999R     clave + certificado  (par de claves caducado)
 #
-# El caducado y el revocado entran SIN clave a proposito: existen para que el
-# listado tenga que clasificarlos, no para firmar con ellos.
+# El caducado y el revocado llevan su clave (#100) para que el filtro de
+# certificados firmables (ID-07) no los haga desaparecer del listado: sin
+# clave privada emparejada por CKA_ID no se ofrecen, y lo que estas dos
+# pruebas de estado necesitan es que SIGAN saliendo, solo que clasificados
+# como caducado y como revocado y no como en vigor.
 #
 # Los dos GEMELOS comparten CKA_LABEL y tienen CKA_ID y par de claves distintos:
 # reproducen lo medido en un perfil de Firefox de verdad, donde dos claves
@@ -122,7 +125,9 @@ import_private_key() {
 
 import_private_key "$kit/active-rsa.p12"  "1234"         "01" "FNMT-ACTIVO-99999999R"
 import_certificate "$kit/active-rsa.p12"  "1234"         "01" "FNMT-ACTIVO-99999999R"
+import_private_key "$kit/expired-rsa.p12" "G5cp,fYC9gje" "02" "FNMT-CADUCADO-99999999R"
 import_certificate "$kit/expired-rsa.p12" "G5cp,fYC9gje" "02" "FNMT-CADUCADO-99999999R"
+import_private_key "$kit/revoked-rsa.p12" "1234"         "03" "FNMT-REVOCADO-99999999R"
 import_certificate "$kit/revoked-rsa.p12" "1234"         "03" "FNMT-REVOCADO-99999999R"
 
 # Los gemelos: misma etiqueta, distinto CKA_ID, distinto par de claves.

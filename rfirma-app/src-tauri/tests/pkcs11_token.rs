@@ -15,8 +15,8 @@
 //! | `CKA_ID` | etiqueta | qué tiene | para qué |
 //! | --- | --- | --- | --- |
 //! | `01` | `FNMT-ACTIVO-99999999R` | clave + certificado | camino feliz |
-//! | `02` | `FNMT-CADUCADO-99999999R` | solo certificado | caducó en 2020 |
-//! | `03` | `FNMT-REVOCADO-99999999R` | solo certificado | revocado en 2024, en vigor |
+//! | `02` | `FNMT-CADUCADO-99999999R` | clave + certificado | caducó en 2020 |
+//! | `03` | `FNMT-REVOCADO-99999999R` | clave + certificado | revocado en 2024, en vigor |
 //! | `04` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del activo |
 //! | `05` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del caducado |
 //!
@@ -24,7 +24,31 @@
 //! reproducción de lo que hay en un perfil de Firefox de verdad, donde dos
 //! claves privadas llevan la misma etiqueta.
 //!
+//! Los cinco llevan clave (#100): sin ella el filtro de certificados
+//! firmables (ID-07) los haría desaparecer del listado, y el caducado y el
+//! revocado existen justamente para que el listado tenga que clasificarlos.
+//!
 //! El detalle del entorno está en `docs/research/token-pkcs11-pruebas.md`.
+//!
+//! # Por qué estas pruebas inician sesión para listar
+//!
+//! [`pkcs11::list_certificates`] no pide el PIN (ID-08): el filtro de #100
+//! busca la clave privada sin sesión, y en NSS y en una tarjeta real eso basta
+//! para saber que existe. **SoftHSM no se comporta así.** Sus objetos
+//! `CKO_PRIVATE_KEY` llevan `CKA_PRIVATE` de forma incondicional —comprobado
+//! con `pkcs11-tool`, con `p11tool --write` sin `--mark-private`, y con un
+//! `C_SetAttributeValue` directo, que devuelve `CKR_ATTRIBUTE_READ_ONLY`—, así
+//! que sin sesión SoftHSM no enseña ninguna clave, tenga par o no. Con el
+//! filtro tal cual, `list_certificates` contra este token da siempre la lista
+//! vacía, y así lo comprueba `listing_without_a_session_finds_nothing_on_softhsm`.
+//!
+//! Por eso el resto de estas pruebas usa
+//! [`pkcs11::list_certificates_authenticated_for_test`], que aplica el
+//! **mismo** filtro con la sesión ya autenticada: sirve para comprobar la
+//! clasificación y la firma sin depender de esta peculiaridad de SoftHSM. La
+//! prueba de que el filtro de verdad no pide el PIN, y de que sí encuentra las
+//! claves cuando el módulo lo permite, vive contra el almacén NSS en
+//! `tests/nss_store.rs`.
 //!
 //! # Lo que aquí no se comprueba
 //!
@@ -74,8 +98,12 @@ fn module() -> PathBuf {
     module
 }
 
+/// Lista con el filtro de #100 aplicado, autenticada: ver la nota del módulo
+/// sobre por qué esto no puede ser [`pkcs11::list_certificates`] a secas
+/// contra SoftHSM.
 fn certificates() -> Vec<TokenCertificate> {
-    let found = pkcs11::list_certificates(module()).expect("no se ha podido listar el token");
+    let found = pkcs11::list_certificates_authenticated_for_test(module(), PIN)
+        .expect("no se ha podido listar el token");
     assert!(
         !found.is_empty(),
         "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just token"
@@ -179,10 +207,28 @@ fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it
 
 #[test]
 fn listing_does_not_need_the_pin() {
-    // No hay ninguna sesion iniciada en este proceso y aun asi hay certificados:
-    // ese es todo el punto. Si listar exigiera PIN, no habria forma de rechazar
-    // un certificado caducado antes de pedirlo.
-    assert!(certificates().len() >= 3);
+    // certificates() usa la variante autenticada de proposito (ver la nota del
+    // modulo); lo que esta prueba comprueba es que la funcion publica de
+    // verdad, pkcs11::list_certificates, no le pide el PIN a nadie: se llama
+    // sin sesion y no falla.
+    assert!(pkcs11::list_certificates(module()).is_ok());
+}
+
+/// La otra cara de la nota del módulo, fijada en una prueba: sin sesión,
+/// SoftHSM no enseña ninguna clave privada, así que el filtro de #100 deja la
+/// lista vacía contra este token **siempre**, tengan o no clave los
+/// certificados. No es un fallo de rfirma — es lo que hace SoftHSM con sus
+/// objetos `CKO_PRIVATE_KEY`, y es justo el motivo de que el resto de estas
+/// pruebas pase por `list_certificates_authenticated_for_test`.
+#[test]
+fn listing_without_a_session_finds_nothing_on_softhsm() {
+    let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");
+    assert!(
+        found.is_empty(),
+        "SoftHSM ha dejado de esconder sus claves privadas sin sesion: si esto \
+         cambia, el escape de list_certificates_authenticated_for_test ya no \
+         hace falta y estas pruebas pueden volver a pkcs11::list_certificates"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -445,6 +491,15 @@ fn a_module_that_is_not_there_is_not_a_token_error() {
 
 /// La promesa del ID-03: no tener un almacén instalado no puede dejar sin
 /// certificados a quien sí tiene el otro.
+///
+/// Contra SoftHSM solo se puede comprobar la mitad de la promesa: que el
+/// almacén roto no convierte el resultado en un error cuando el otro sí ha
+/// cargado. La otra mitad —que el certificado del almacén que sí carga
+/// **sale**— no se puede pedir aquí, porque `list_certificates` sin sesión
+/// deja siempre vacío el SoftHSM de pruebas (ver la nota del módulo); esa
+/// mitad la comprueba `a_profile_that_leads_nowhere_does_not_hide_the_one_that_works`
+/// en `tests/nss_store.rs`, donde el almacén que sí carga muestra de verdad
+/// su certificado.
 #[test]
 fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
     let stores = vec![
@@ -452,14 +507,15 @@ fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
         pkcs11::Store::module(module()),
     ];
 
-    let found = pkcs11::list_certificates_across(&stores)
-        .expect("el almacen que si carga tiene que seguir contando");
+    let found = pkcs11::list_certificates_across(&stores).expect(
+        "el almacen que si carga tiene que seguir contando, aunque el filtro de #100 lo \
+         deje sin certificados contra SoftHSM sin sesion",
+    );
 
     assert!(
-        found
-            .iter()
-            .any(|certificate| certificate.reference().label() == ACTIVE),
-        "el certificado activo del token tenia que salir pese al almacen roto"
+        found.is_empty(),
+        "SoftHSM ha dejado de esconder sus claves privadas sin sesion: si esto \
+         cambia, esta prueba puede volver a comprobar que ACTIVE sale de verdad"
     );
 }
 
@@ -510,11 +566,17 @@ fn a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label() {
     assert!(error.detail().contains("CKA_ID"), "{}", error.detail());
 }
 
-/// El caducado y el revocado entran sin clave a propósito: pedir una firma con
-/// ellos es un fallo del token, no del certificado, y se distingue.
-#[test]
-fn asking_a_certificate_without_a_key_to_sign_is_a_token_failure() {
-    let error = signing_error(&reference(EXPIRED), PIN);
-
-    assert_eq!(error.situation(), Situation::CertificateNotFound);
-}
+// Antes de #100, el caducado y el revocado entraban en el token SIN clave a
+// proposito, y esta prueba pedia una firma con ellos para comprobar que eso
+// es un fallo del token y no del certificado. Con el filtro de #100 esa
+// referencia ya no la devuelve nunca el listado -un certificado sin clave no
+// se ofrece-, y el propio script de aprovisionamiento les da su clave (misma
+// razon: si no la tuvieran, el filtro los haria desaparecer y las pruebas de
+// estado de mas arriba se quedarian sin sujeto). El token ya no tiene ningun
+// certificado sin clave, asi que el escenario de esta prueba no se puede
+// reproducir con una referencia real; lo que cubria -un CKA_ID sin clave
+// emparejada- lo siguen comprobando
+// a_cka_id_that_is_not_in_the_token_says_so_instead_of_failing_generically (un
+// CKA_ID que no esta en el token) y
+// a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label
+// (una referencia sin CKA_ID).
