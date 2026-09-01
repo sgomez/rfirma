@@ -12,7 +12,9 @@ la especificación PDF. ¿Qué dice `pdfsig` de un documento así?
 
 **Respuesta corta: `pdfsig` no dice nada.** Valida el documento como **una sola firma
 válida** y con el documento **entero** cubierto, tanto con `signaturePages=all` como con
-`1-2`. Poppler tampoco protesta al rasterizar, y **pinta el recuadro en todas las páginas
+`1-2`. **VALIDe tampoco** (apéndice del [#118](https://github.com/sgomez/rfirma/issues/118)):
+el validador oficial da PAdES B-Level correcto y cuenta **un solo firmante** en los dos
+documentos. Poppler tampoco protesta al rasterizar, y **pinta el recuadro en todas las páginas
 que lo listan**. La irregularidad es real —hay **una** anotación referenciada desde
 **tres** `/Annots`, con `/P` apuntando solo a la primera página— pero ninguna herramienta
 disponible aquí la denuncia. Lo que sí es una limitación dura del diseño es que, al ser
@@ -427,14 +429,11 @@ Lo digo en voz alta porque decide cuánto pesa la recomendación:
   más probabilidad de denunciar el `/Fields` con entradas duplicadas y el `/P` que no
   cuadra con los `/Annots`. Sin ellas, «ninguna herramienta protesta» significa en realidad
   «poppler no protesta».
-- **VALIDe**. Es la tarea [#118](https://github.com/sgomez/rfirma/issues/118) y usa
-  **estos mismos dos PDF**. Es el veredicto que de verdad importa para el usuario español,
-  y hasta que llegue, esta ficha no está cerrada del todo.
-- **Adobe Acrobat Reader, Foxit y los visores de navegador** (`pdf.js`, el de Chrome). No
-  hay ninguno disponible sin GUI aquí. Interesa sobre todo si alguno marca el documento
-  como modificado o si alguno pinta el recuadro **solo** en la página del `/P` —que sería
-  el comportamiento estrictamente conforme, y dejaría dos de las tres estampaciones
-  invisibles—.
+- **Adobe Acrobat Reader y Foxit**: no hay ninguno de los dos en este equipo. (Los visores
+  de navegador —`pdf.js` y el de Chrome— sí se midieron; ver el apéndice.) Interesa sobre
+  todo si alguno marca el documento como modificado o si alguno pinta el recuadro **solo**
+  en la página del `/P` —que sería el comportamiento estrictamente conforme, y dejaría dos
+  de las tres estampaciones invisibles—.
 - **Páginas de tamaños o rotaciones distintas.** Las tres del banco son A4 sin rotar. El
   recorte contra la primera página (`PdfUtil.java:625-632`) solo se ve en un documento
   mixto, y es justo donde se espera el problema.
@@ -472,3 +471,70 @@ de `run.sh`** al `.p12` del kit de la FNMT en
 mvn -q package        # deja target/probe-1.jar y target/cp.txt
 ./run.sh
 ```
+
+---
+
+## Apéndice: VALIDe y pdfium ([#118](https://github.com/sgomez/rfirma/issues/118))
+
+Las dos primeras viñetas de «Lo que no se ha medido» ya están medidas. El veredicto del
+sondeo **no cambia**: sigue siendo *no replicar*.
+
+### VALIDe
+
+Los dos ficheros del banco, `pages-all.pdf` y `pages-1-2.pdf`, subidos al validador oficial
+(<https://valide.redsara.es>) el 1 de septiembre de 2026. **Ambos validados
+correctamente**, con un detalle **idéntico palabra por palabra** salvo la hora de consulta:
+
+```
+Formato de firma detectado: PAdES B-Level
+
+Firmantes
+  Asunto: CN=EIDAS CERTIFICADO PRUEBAS - 99999999R,SN=EIDAS CERTIFICADO,
+          givenName=PRUEBAS,serialNumber=IDCES-99999999R,C=ES
+  ID Emisor: CN=AC FNMT Usuarios,OU=Ceres,O=FNMT-RCM,C=ES
+  Tipo de certificado: FNMT PF SW EIDAS - SHA256
+  Uso del certificado: digitalSignature | nonRepudiation | keyEncipherment
+  Válido desde: 2024-10-30 · Válido hasta: 2028-10-30
+  Política: 1.3.6.1.4.1.5734.3.10.1,0.4.0.194112.1.0 · ID Política: MITyC
+```
+
+Tres cosas que importan:
+
+1. **Un solo firmante.** VALIDe imprime **un** bloque `Firmantes`, no tres. Cuenta lo mismo
+   que `pdfsig`: el recuadro replicado es una firma, no varias. Es la pregunta del ticket.
+2. **Ni un aviso sobre la estructura.** Nada sobre la anotación compartida, ni sobre el
+   `/P` que no cuadra con los tres `/Annots`, ni sobre modificación posterior. El validador
+   oficial es tan mudo como poppler.
+3. **La cadena del certificado sí valida.** Donde `pdfsig` se quedaba en
+   `Unknown issue with Certificate or corrupted data`, VALIDe resuelve la AC FNMT Usuarios
+   y clasifica el certificado. Ese `Unknown issue` era del almacén de confianza de poppler,
+   no del documento.
+
+`signaturePages=all` y `signaturePages=1-2` son indistinguibles para VALIDe.
+
+### Chrome (pdfium)
+
+No hay Okular, Evince ni Acrobat en el equipo de desarrollo; sí Chrome, cuyo motor de PDF
+(**pdfium**) es distinto del `pdf.js` que ya se midió en el
+[#115](https://github.com/sgomez/rfirma/issues/115).
+
+**pdfium pinta el recuadro en las tres páginas**, en la misma posición, como poppler. No
+aparece el comportamiento estrictamente conforme que se temía —pintarlo solo en la página
+del `/P`, dejando invisibles las otras dos estampaciones—: ninguno de los tres motores
+probados lo hace.
+
+Chrome **no muestra ningún aviso de firma**, ni de válida ni de modificada: su visor no
+valida firmas y no tiene panel de firmas. No es un dato sobre este documento.
+
+### Qué sigue sin medirse
+
+`qpdf --check` y `mutool clean -s` (no instalados), Adobe Acrobat y Foxit, las páginas de
+tamaños o rotaciones distintas, y la cofirma sobre un documento ya replicado. Ninguno
+cambiaría la recomendación: lo que la decide es que, al ser literalmente el mismo objeto,
+el `/Rect` es forzosamente idéntico en todas las páginas, y ningún validador denuncia la
+estructura porque sobre la firma no hay nada que denunciar.
+
+> El banco de pruebas sigue **sin fusionar**, en la rama
+> `research/replicated-widget-pdfsig`: los dos PDF firmados, el driver Java, los scripts y
+> la captura de Chrome que documenta lo de arriba
+> (`assets/replicated-widget-driver/chrome-pdfium-pages-all.png`).
