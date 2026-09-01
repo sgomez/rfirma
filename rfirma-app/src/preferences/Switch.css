@@ -15,7 +15,7 @@
 .switch__control {
   display: flex;
   align-items: flex-start;
-  gap: var(--rf-space-sm);
+  gap: var(--rf-space-xs);
   width: 100%;
   min-height: 44px;
   padding: 0;
@@ -62,7 +62,7 @@
 }
 
 /* La ayuda se sangra hasta la columna del texto: 40 px de pastilla más los
-   16 px que la separan. */
+   8 px que la separan. */
 .switch__hint {
-  padding-left: calc(40px + var(--rf-space-sm));
+  padding-left: calc(40px + var(--rf-space-xs));
 }

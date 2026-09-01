@@ -88,7 +88,7 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
           />
         </div>
 
-        <p className="rf-prose">{t("progress.keepTheCard")}</p>
+        <p className="rf-prose rf-text-muted">{t("progress.keepTheCard")}</p>
       </div>
     </div>
   );

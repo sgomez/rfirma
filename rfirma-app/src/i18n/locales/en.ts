@@ -248,6 +248,11 @@ export const en: Catalog = {
       unwritable: "Cannot write in {{folder}}",
       retry: "Try again",
     },
+    signed: {
+      summary: "Summary",
+      format: "PAdES",
+      signAnother: "Sign another document",
+    },
   },
   pin: {
     title: "Enter the card PIN",
@@ -305,7 +310,6 @@ export const en: Catalog = {
       "Independent project. rFirma is not related to AutoFirma or to the Spanish Administration, who publish the official client, nor is it endorsed by them. If you need the official application, download it from their website.",
     repository: "github.com/sgomez/rfirma",
     licenses: {
-      title: "Licences",
       view: "View the licences",
       rfirma: "rFirma: EUPL-1.2.",
       afirma: "Cliente @firma libraries: GPL-2.0+ / EUPL-1.1.",

@@ -271,16 +271,18 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
         >
           <ChevronLeftIcon />
         </button>
-        <input
-          className="rf-input viewer__page"
-          type="number"
-          min={1}
-          max={pageCount}
-          aria-label={t("viewer.pageNumber")}
-          value={page}
-          onChange={(event) => goTo(Number(event.target.value))}
-        />
-        <span className="rf-body">{t("viewer.pageOf", { total: pageCount })}</span>
+        <div className="rf-row rf-gap-xs viewer__pages">
+          <input
+            className="rf-input viewer__page"
+            type="number"
+            min={1}
+            max={pageCount}
+            aria-label={t("viewer.pageNumber")}
+            value={page}
+            onChange={(event) => goTo(Number(event.target.value))}
+          />
+          <span className="rf-body rf-text-muted">{t("viewer.pageOf", { total: pageCount })}</span>
+        </div>
         <button
           type="button"
           className="rf-btn rf-btn--ghost viewer__step"

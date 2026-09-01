@@ -184,11 +184,20 @@ al firmar. Ver el
   a escribir un informe de fallo. El «Copiar detalle» del artboard **está
   pendiente**: es una acción sobre el portapapeles, no una diferencia de piel.
   El botón pasa a «Volver a intentarlo».
-- **Firmado**: el panel entero se reemplaza por el resumen (ver abajo).
-  **Todavía sin implementar**: el resumen necesita la lista de firmas del PDF
-  —que nadie cuenta aún, ver arriba— y los dos `OpenURI` de «Abrir el PDF» y
-  «Abrir la carpeta», que no son piel sino dos órdenes al backend. Hasta
-  entonces el panel se queda en su estado «Listo» tras firmar.
+- **Firmado**: el panel entero se reemplaza por el resumen (ver abajo). Está
+  implementado **en lo que no necesita datos nuevos**: la cabecera con el
+  nombre del fichero que quedó escrito, el rótulo `RESUMEN`, la insignia
+  `PAdES` —rFirma no produce otro formato— y el pie con «Firmar otro
+  documento» a ancho completo. Es el único acuse de recibo del recorrido:
+  antes la postfirma devolvía un `SignedDocument` que nadie leía y la ventana
+  volvía al panel con el nombre del fichero **original**, así que quien
+  firmaba no sabía si se había escrito nada.
+  Siguen **pendientes** tres piezas del artboard, y por la regla del dato
+  desconocido no ocupan sitio: la insignia con el número de firmas y las
+  tarjetas de cada firma —nadie cuenta todavía las firmas del PDF, ver
+  arriba— y los botones «Abrir el PDF» y «Abrir la carpeta», que no son piel
+  sino dos `OpenURI` que aún no existen. Reaparecen en cuanto haya quien lea
+  las firmas del resultado y quien abra un URI.
 
 ## El resumen, tras firmar
 
@@ -205,6 +214,26 @@ Sustituye a la configuración, que ya no sirve de nada:
 
 Enseñar todas las firmas es la contrapartida del aviso de cofirma: si antes se
 avisa de que el PDF ya llevaba una, el resumen tiene que enseñarlas todas.
+
+## Diferencias con el canvas, declaradas
+
+Además de las tres del ticket, estas piezas existen en el código y **no** en
+ningún artboard. Se quedan, y se anotan aquí porque el ID-44 pide declararlas
+antes que el código y no al revés:
+
+- **El botón `Cambiar` de la tarjeta de certificado.** Ningún artboard lo
+  dibuja, pero con varios certificados en la tarjeta no habría forma de
+  cambiar de uno a otro sin volver a buscar.
+- **El rótulo «Imagen de la rúbrica».** El artboard pone la miniatura y el
+  botón sin encabezado; sin él la fila queda colgando de la lista de casillas
+  y no se lee como su propio bloque.
+- **El bloque «Lo que dirá el recuadro».** Lo exige el ID-19: el texto lo
+  compone Rust y la vista previa enseña **esa** cadena, no una imitación.
+- **El aviso de recuadro fuera de página** del visor, que exige el ID-22.
+- **El marco de la rúbrica va solo con rúbrica elegida.** El artboard dibuja
+  siempre el marco de 56 × 36 px con el garabato dentro; aquí la miniatura
+  enseña el JPEG real ya normalizado, así que sin imagen no hay nada honesto
+  que enseñar y el botón se queda solo en su fila.
 
 ## Componentes y tokens
 

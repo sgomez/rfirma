@@ -253,6 +253,11 @@ export const eu: UntranslatedCatalog = {
       unwritable: "",
       retry: "",
     },
+    signed: {
+      summary: "",
+      format: "",
+      signAnother: "",
+    },
   },
   pin: {
     title: "",
@@ -308,7 +313,6 @@ export const eu: UntranslatedCatalog = {
     independence: "",
     repository: "",
     licenses: {
-      title: "",
       view: "",
       rfirma: "",
       afirma: "",

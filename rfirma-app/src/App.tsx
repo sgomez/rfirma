@@ -13,6 +13,7 @@ import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SigningBackend } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
 import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./signing/rubric";
+import { SignedPanel } from "./signing/SignedPanel";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
 import { useSigning } from "./signing/useSigning";
@@ -232,7 +233,15 @@ export function App({
           />
         }
         panel={
-          pdf && documents.active ? (
+          signing.state.kind === "signed" ? (
+            // Firmado: la columna derecha cambia de contenido, no de sitio. Es
+            // el único acuse de recibo que recibe quien firma, así que se monta
+            // en cuanto la postfirma devuelve el documento.
+            <SignedPanel
+              document={{ name: signing.state.document.name, pages: pdf?.pageCount ?? null }}
+              onSignAnother={signing.signAnother}
+            />
+          ) : pdf && documents.active ? (
             <SigningPanel
               document={{
                 name: documents.active.name,

@@ -60,7 +60,7 @@
 .panel__section {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-xs);
+  gap: var(--rf-space-sm);
 }
 
 /* Sin certificado, la firma visible se ve pero no se toca: `inert` quita el
@@ -179,7 +179,7 @@
 .panel__fields {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-xs);
+  gap: 6px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -318,6 +318,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* El aviso de carpeta no escribible **no** se recorta: es una frase entera y
+   perderla por elipsis en una columna de 360 px sería perder el aviso. */
+.panel__destination-unwritable {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
 }
 
 .panel__destination-change {

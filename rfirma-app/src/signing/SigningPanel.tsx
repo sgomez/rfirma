@@ -137,7 +137,7 @@ export function SigningPanel({
   return (
     <div className="panel">
       <div className="panel__scroll">
-        <section className="panel__header">
+        <div className="panel__header">
           <span className="panel__header-icon">
             <FileIcon />
           </span>
@@ -154,7 +154,7 @@ export function SigningPanel({
                 .join(" · ")}
             </p>
           </div>
-        </section>
+        </div>
 
         {document.signatures !== null && document.signatures > 0 && (
           <div className="panel__co-signature">
@@ -299,12 +299,24 @@ export function SigningPanel({
           <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
         ) : (
           <div className="panel__destination">
-            <p className="rf-label">{t("panel.footer.savedIn")}</p>
+            {/* El rótulo es una promesa, así que **desaparece** cuando no se
+                puede cumplir: con la carpeta no escribible el pie dice solo
+                que no se puede escribir en ella, y no las dos cosas a la vez. */}
+            {destination.writable && <p className="rf-label">{t("panel.footer.savedIn")}</p>}
             <div className="rf-row rf-gap-xs panel__destination-row">
               <span className="panel__destination-icon">
                 <FolderIcon />
               </span>
-              <p className="rf-prose panel__destination-folder">
+              {/* El nombre de la carpeta se recorta con elipsis; el aviso de
+                  que no se puede escribir, no —recortar justamente el aviso
+                  sería perderlo cuando más falta hace—. */}
+              <p
+                className={
+                  destination.writable
+                    ? "rf-prose panel__destination-folder"
+                    : "rf-prose panel__destination-unwritable"
+                }
+              >
                 {destination.writable
                   ? destination.folder
                   : t("panel.footer.unwritable", { folder: destination.folder })}

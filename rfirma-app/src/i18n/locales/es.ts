@@ -295,6 +295,16 @@ export const es = {
       unwritable: "No se puede escribir en {{folder}}",
       retry: "Volver a intentarlo",
     },
+    /**
+     * El panel del documento ya firmado. Solo lleva lo que se sabe sin volver
+     * a leer el PDF: qué fichero quedó, en qué formato y la salida para
+     * empezar otra firma. Lo demás está anotado como pendiente en la ficha.
+     */
+    signed: {
+      summary: "Resumen",
+      format: "PAdES",
+      signAnother: "Firmar otro documento",
+    },
   },
   /**
    * El diálogo del PIN (docs/design/dialogo-pin.md): el único momento en que el
@@ -368,7 +378,6 @@ export const es = {
     // La dirección del repositorio no se traduce en ningún idioma: es una URL.
     repository: "github.com/sgomez/rfirma",
     licenses: {
-      title: "Licencias",
       view: "Ver las licencias",
       rfirma: "rFirma: EUPL-1.2.",
       afirma: "Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1.",

@@ -190,24 +190,3 @@ export function MoveIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
-
-/** El garabato de la rúbrica: su propio lienzo, apaisado, y trazo de 2. */
-export function RubricIcon({ width = 63, height = 30 }: { width?: number; height?: number }) {
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 84 40"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10" />
-      <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9" />
-    </svg>
-  );
-}

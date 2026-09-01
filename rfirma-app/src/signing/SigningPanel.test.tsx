@@ -144,6 +144,14 @@ describe("SigningPanel", () => {
     expect(screen.getByRole("button", { name: "Firmar documento" })).toBeEnabled();
   });
 
+  it("does not promise a destination it has just said it cannot write to", () => {
+    // «Se guardará en» y «No se puede escribir en Documentos» a la vez es una
+    // contradicción: el rótulo es la promesa y desaparece con ella.
+    renderPanel({ destination: { folder: "Documentos", writable: false } });
+
+    expect(screen.queryByText("Se guardará en")).not.toBeInTheDocument();
+  });
+
   it("never shows a wildcard, neither in the interface nor in the preview", async () => {
     renderPanel({ composer: composerOf("Firmado por: Ada Lovelace Byron\nDNI: ***9999**") });
 

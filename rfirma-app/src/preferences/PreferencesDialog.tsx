@@ -163,6 +163,8 @@ export function PreferencesDialog({
           </select>
         </div>
 
+        <hr className="rf-divider" />
+
         <div className="preferences__footer">
           <button type="button" className="rf-btn rf-btn--primary" onClick={onClose}>
             {t("actions.close")}

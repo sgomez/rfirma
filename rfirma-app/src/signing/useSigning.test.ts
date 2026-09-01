@@ -102,6 +102,24 @@ describe("useSigning", () => {
     expect(result.current.state).toEqual({ kind: "signed", document: signed });
   });
 
+  /**
+   * Sin esto el acuse de recibo no tendría salida: el estado «Firmado» se queda
+   * montado y no hay forma de volver al panel para firmar otro documento.
+   */
+  it("goes back to the panel from the signed state without telling the backend", async () => {
+    const discard = vi.fn(async () => {});
+    const { result } = renderHook(() => useSigning(backendOf({ discard })));
+
+    await act(() => result.current.start(certificate, anOrder()));
+    await act(() => result.current.submitPin("1234"));
+    act(() => result.current.signAnother());
+
+    expect(result.current.state).toEqual({ kind: "idle" });
+    // El ciclo terminó por su propio pie en la postfirma: no hay nada a medias
+    // que el backend tenga que olvidar.
+    expect(discard).not.toHaveBeenCalled();
+  });
+
   it("retries a wrong PIN without repeating the presignature", async () => {
     const presign = vi.fn(async () => ok(undefined));
     const sign = vi

@@ -70,7 +70,11 @@ bandeja lo dice.
 
 - **Vacía** (primera ejecución, o con «Recordar mi actividad» apagado en
   [Preferencias](preferencias.md)): solo la zona de soltar, más «Aquí
-  aparecerán los documentos que vayas firmando».
+  aparecerán los documentos que vayas firmando». **Aquí la ficha y el canvas
+  no coinciden**, y manda la ficha: el artboard del estado vacío enseña además
+  el rótulo `RECIENTES` sobre el mensaje, y un encabezado sobre una lista que
+  no existe promete una sección vacía donde no hay ninguna. El rótulo aparece
+  con el primer documento (ID-44).
 - **Con recientes**: la lista, con el documento activo seleccionado.
 - **Arrastrando** (por definir): la zona de soltar debe acusar el arrastre.
 

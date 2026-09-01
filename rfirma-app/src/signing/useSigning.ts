@@ -42,6 +42,13 @@ export interface Signing {
    * otra firma lo pisara.
    */
   cancel: () => void;
+  /**
+   * Cerrar el estado «Firmado» para empezar otra firma.
+   *
+   * No avisa al backend, a diferencia de [`cancel`]: el ciclo ya terminó por
+   * su propio pie en la postfirma y no queda nada a medias que olvidar.
+   */
+  signAnother: () => void;
 }
 
 /**
@@ -102,5 +109,7 @@ export function useSigning(backend: SigningBackend): Signing {
     void backend.discard().catch(() => {});
   };
 
-  return { state, start, submitPin, cancel };
+  const signAnother = () => setState({ kind: "idle" });
+
+  return { state, start, submitPin, cancel, signAnother };
 }

@@ -1,0 +1,11 @@
+/*
+ * El panel del documento firmado (docs/design/panel-de-firma.md, estado
+ * «Firmado»). Reutiliza el armazón de `SigningPanel.css` —el mismo `.panel`,
+ * la misma cabecera y el mismo pie— porque en el artboard es la misma columna
+ * con otro contenido, no otra pantalla.
+ */
+
+/* «Firmar otro documento» ocupa el pie entero: es la única salida del estado. */
+.signed-panel__again {
+  width: 100%;
+}

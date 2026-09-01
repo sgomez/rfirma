@@ -10,7 +10,7 @@
 .progress-dialog__stages {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-xs);
+  gap: var(--rf-space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -46,10 +46,14 @@
   background: var(--rf-primary);
 }
 
-/* En curso: la marca en el color primario y el texto en negrita. */
-.progress-dialog__stage--running .progress-dialog__mark,
-.progress-dialog__stage--running .rf-prose {
+/* En curso: la marca en el color primario, y el texto **en el color normal** y
+   en negrita. Teñir también el rótulo lo alejaría del artboard y dejaría la
+   fila en curso con menos contraste que las otras dos. */
+.progress-dialog__stage--running .progress-dialog__mark {
   color: var(--rf-primary);
+}
+
+.progress-dialog__stage--running .rf-prose {
   font-weight: 700;
 }
 
