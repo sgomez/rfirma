@@ -57,12 +57,36 @@ modules:
   #    NO los anadas de vuelta: si libawt.so esta aqui, un JPEG con perfil ICC
   #    ABORTA el proceso (rc=134) en vez de dar un error recuperable, y se lleva
   #    la aplicacion entera. Ver docs/research/exclusion-afirma-ui-utils.md.
-  #    PENDIENTE: la verificacion dentro del arenero del #22 se corrio con los
-  #    seis ficheros y la imagen ce25-awt; falta repetir verifica.sh con esta.
+  #
+  #    EL DIRECTORIO DE CONSTRUCCION NO ES EL DE DISTRIBUCION. `native-image`
+  #    sigue emitiendo los cinco auxiliares en target/native; lo que se empaqueta
+  #    es target/lib/rfirma, donde `just native` copia UN SOLO fichero por su
+  #    nombre. Por eso el install de abajo nombra librfirma_crypto.so y NO lleva
+  #    un *.so: un comodin aqui reintroduciria libawt.so el dia que la fuente
+  #    apuntase, por descuido, al directorio de construccion.
   - name: libreria-nativa
     buildsystem: simple
     build-commands:
       - install -Dm644 -t /app/lib/rfirma librfirma_crypto.so
+      # La invariante, comprobada DURANTE LA CONSTRUCCION y no solo en
+      # verifica.sh: si aparece un segundo .so, esto para el flatpak entero en
+      # vez de producir un bundle que aborta en cuanto alguien firme con una
+      # rubrica de imagen. Es la comprobacion barata de un fallo caro.
+      - |
+        set -eu
+        sobran=$(ls -1 /app/lib/rfirma/*.so | grep -v '/librfirma_crypto\.so$' || true)
+        if [ -n "$sobran" ]; then
+            echo "ERROR: sobra algo en /app/lib/rfirma:" >&2
+            echo "$sobran" >&2
+            echo >&2
+            echo "Solo puede estar librfirma_crypto.so (ADR-0012). Si lo que" >&2
+            echo "sobra es libawt.so, un JPEG con perfil ICC pasa de dar un" >&2
+            echo "error recuperable a ABORTAR el proceso (rc=134) y llevarse" >&2
+            echo "la aplicacion entera: ver" >&2
+            echo "docs/research/exclusion-afirma-ui-utils.md." >&2
+            exit 1
+        fi
+        echo "OK: un solo .so en /app/lib/rfirma"
     sources:
       # La ruta CANONICA del ADR-0013, la que produce `just native`. No es
       # target/native (el directorio de construccion) ni target/ce25-noui (el

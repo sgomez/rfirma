@@ -373,8 +373,20 @@ native: build-java
     mkdir -p "$build_dir" && cd "$build_dir"
     "$graal/bin/native-image" --shared \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
+    # El directorio de DISTRIBUCION se vacia antes de copiar. No es limpieza
+    # cosmetica: sin esto hereda lo que dejase una version anterior de esta
+    # receta —las que instalaban los seis .so— y el directorio que el manifiesto
+    # empaqueta acabaria con libawt.so dentro sin que nadie lo tocara.
+    rm -rf "$dest"
     mkdir -p "$dest"
     install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
+    # Y se comprueba, porque la invariante es "UNO", no "el que acabo de copiar".
+    sobran="$(ls -1 "$dest" | grep -v '^librfirma_crypto\.so$' || true)"
+    if [ -n "$sobran" ]; then
+        echo "sobra algo en $dest:" >&2
+        echo "$sobran" >&2
+        exit 1
+    fi
     ls -la "$dest"
 
 # El manifiesto lee la ruta canonica que produce `native` y el frontend ya
