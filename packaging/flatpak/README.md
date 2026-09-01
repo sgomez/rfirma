@@ -56,11 +56,13 @@ just token       # el paso 5 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` da siete pasos. Dentro del arenero comprueba lo que solo el arenero
+`verifica.sh` da ocho pasos. Dentro del arenero comprueba lo que solo el arenero
 puede romper: que la librería nativa esté —y **sola**, sin auxiliares de AWT—,
 que el módulo PKCS#11 que empaqueta el propio flatpak cargue, que la ventana
-arranque y siga viva, y que un documento entrado por el portal llegue con sus
-bytes intactos.
+arranque y siga viva, que un documento entrado por el portal llegue con sus
+bytes intactos, y que el arenero **rechace escribir** en el perfil de Firefox
+y en `~/.pki/nssdb` — los dos únicos `--filesystem` que no van por portal
+(#101, AC 3).
 
 El paso 5 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
 con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se

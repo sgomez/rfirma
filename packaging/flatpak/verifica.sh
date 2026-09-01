@@ -36,15 +36,16 @@
 # romper "los permisos son los declarados y ninguno mas". Cerrar el hueco pide
 # un manifiesto de banco aparte, y eso es otra decision.
 #
-# Lo que SI se mide dentro del arenero son los pasos 2, 3, 4 y 6: que la
+# Lo que SI se mide dentro del arenero son los pasos 2, 3, 4, 6 y 7: que la
 # libreria esta y esta SOLA, que el modulo PKCS#11 que empaqueta el propio
-# flatpak carga, que la ventana arranca y sigue viva, y que un documento
-# entrado por el portal llega con sus bytes intactos. El paso 6 no necesita el
-# WebView para comprobar el portal: usa `flatpak document-export`, la misma via
-# por la que el dialogo de abrir concede el permiso (docs/research/
-# flatpak-canal-unico.md, apartado 4), asi que no hace falta el binario de
-# prueba que el paso 5 SI necesita para el ciclo trifasico. Ver
-# docs/research/flatpak-canal-unico.md.
+# flatpak carga, que la ventana arranca y sigue viva, que un documento
+# entrado por el portal llega con sus bytes intactos, y que el arenero
+# RECHAZA escribir en los almacenes NSS que el manifiesto declara en solo
+# lectura (#101, AC 3). El paso 6 no necesita el WebView para comprobar el
+# portal: usa `flatpak document-export`, la misma via por la que el dialogo
+# de abrir concede el permiso (docs/research/flatpak-canal-unico.md,
+# apartado 4), asi que no hace falta el binario de prueba que el paso 5 SI
+# necesita para el ciclo trifasico. Ver docs/research/flatpak-canal-unico.md.
 #
 # Uso: packaging/flatpak/verifica.sh
 #
@@ -217,7 +218,58 @@ echo "    -> el dia que los recientes persistan entre sesiones, reabrir por" \
      "el portal el mismo host path funcionara sin pedir permiso otra vez"
 
 echo
-echo "### 7. bundle de un solo fichero"
+echo "### 7. el arenero no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
+# AC 3 del #101: "rfirma no puede escribir en el perfil de Firefox desde
+# dentro del arenero, y hay constancia de haberlo comprobado". Esto NO es la
+# comprobacion que la TD del #95 deja como manual -esa depende de una maquina
+# y un perfil reales-; esta es una propiedad del arenero, medible sin ninguno
+# de los dos: :ro tiene que sostenerse tanto si hay perfil como si no.
+#
+# TRAMPA MEDIDA (misma clase que xdg-documents, #27): si la ruta NO existe en
+# el ANFITRION, flatpak no monta nada y el intento de escritura falla por
+# ENOENT igual que si :ro estuviese haciendo su trabajo -un "OK" que no ha
+# medido nada. Por eso la funcion distingue tres desenlaces: la escritura se
+# permitio (FALLO, :ro no se sostiene), la ruta no esta montada pese a existir
+# en el anfitrion (FALLO, no se ha medido lo que se creia medir) y no hay nada
+# que montar porque el anfitrion no tiene esa ruta (AVISO, nada que medir).
+comprueba_ro() {
+    local etiqueta="$1" ruta="$2"
+    if [ ! -e "$ruta" ]; then
+        echo "AVISO  $etiqueta: no existe $ruta en el anfitrion, nada que medir"
+        return 0
+    fi
+    local salida
+    salida=$(flatpak run "${EXTRA[@]}" --command=sh "$APP" -c \
+        "touch '$ruta/verifica-escritura-107' 2>&1; echo RC=\$?") \
+        || { echo "NO HE PODIDO EJECUTAR LA COMPROBACION EN $etiqueta"; exit 1; }
+    if echo "$salida" | grep -q "RC=0"; then
+        echo "ESCRITURA PERMITIDA en $etiqueta dentro del arenero (:ro no se sostiene):"
+        echo "$salida"
+        flatpak run "${EXTRA[@]}" --command=rm "$APP" -f "$ruta/verifica-escritura-107" 2>/dev/null
+        exit 1
+    fi
+    if echo "$salida" | grep -qi "no such file or directory"; then
+        echo "$etiqueta NO ESTA MONTADO dentro del arenero (ENOENT pese a existir"
+        echo "en el anfitrion en $ruta): no se ha medido nada"
+        echo "$salida"
+        exit 1
+    fi
+    echo "OK  $etiqueta: escritura denegada dentro del arenero"
+    echo "    $salida"
+}
+comprueba_ro "perfil de Firefox" "$HOME/.mozilla/firefox"
+comprueba_ro "almacen NSS del sistema" "$HOME/.pki/nssdb"
+
+if [ -f "$HOME/.mozilla/firefox/profiles.ini" ]; then
+    flatpak run "${EXTRA[@]}" --command=cat "$APP" "$HOME/.mozilla/firefox/profiles.ini" >/dev/null \
+        && echo "OK  profiles.ini se lee dentro del arenero (la mitad que SI hace falta)" \
+        || { echo "NO HE PODIDO LEER profiles.ini dentro del arenero"; exit 1; }
+else
+    echo "AVISO  no hay profiles.ini en el anfitrion, la lectura no se mide"
+fi
+
+echo
+echo "### 8. bundle de un solo fichero"
 flatpak build-bundle "$LAB/repo" "$LAB/$APP.flatpak" "$APP" stable >/dev/null 2>&1 \
     && echo "$LAB/$APP.flatpak: $(du -h "$LAB/$APP.flatpak" | cut -f1)" \
     || echo "build-bundle FALLO"
