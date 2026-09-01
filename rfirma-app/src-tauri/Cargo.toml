@@ -17,6 +17,21 @@ path = "src/main.rs"
 name = "rfirma_lib"
 path = "src/lib.rs"
 
+[features]
+# NO LA QUITES, Y NO LA PONGAS POR OMISION.
+#
+# El `dev` de Tauri es literalmente `!custom-protocol` (build.rs del crate
+# tauri): sin esta bandera, `cargo build --release` produce un binario que
+# apunta la ventana a `devUrl` —http://localhost:1420— en vez de servir el
+# frontal empotrado, y el flatpak abre con "Could not connect to localhost".
+# La activa `cargo tauri build`, que aqui NO se usa (ID-05: bundle.active es
+# false y el binario lo instala el manifiesto flatpak), asi que la pasan a mano
+# la receta `build-rust` del justfile y el modulo `rfirma-app` del manifiesto.
+#
+# Por omision NO, porque entonces `just dev` (`tauri dev`) serviria los assets
+# empotrados en vez del servidor de vite y el recargado en caliente moriria.
+custom-protocol = ["tauri/custom-protocol"]
+
 [build-dependencies]
 # ADR-0013: build.rs se queda en tauri_build::build(). No invoca a Maven ni a
 # native-image jamás; de eso se encarga `just native`.

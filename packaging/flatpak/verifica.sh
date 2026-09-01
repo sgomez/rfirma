@@ -105,16 +105,32 @@ flatpak run "${EXTRA[@]}" --command=sh "$APP" -c \
 
 echo
 echo "### 4. la ventana arranca (WebKitGTK del runtime)"
-flatpak run --filesystem="$LAB" "$APP" >"$LAB/gui.log" 2>&1 &
+# --log-session-bus NO es adorno: un proceso VIVO no es una ventana que se vea.
+# El v0.1 se entrego con la ventana pintando un error de DBus a pantalla
+# completa y este paso decia OK, porque solo miraba el pgrep. rfirma no escribe
+# nada en el arranque, asi que lo unico que delata una pagina que no ha cargado
+# es lo que el arenero rechaza en el bus.
+flatpak run --log-session-bus --filesystem="$LAB" "$APP" >"$LAB/gui.log" 2>&1 &
 sleep 10
-if pgrep -x rfirma >/dev/null; then
-    # rfirma no escribe nada en el arranque: lo que se mide es que el proceso
-    # sobreviva, porque el fallo del #22 era que Mutter lo mataba (Error 71).
-    echo "sigue viva a los 10 s: OK"
-    flatpak kill "$APP" 2>/dev/null
-else
+if ! pgrep -x rfirma >/dev/null; then
     echo "LA VENTANA MURIO:"; tail -3 "$LAB/gui.log"; exit 1
 fi
+# El fallo del #22 era que Mutter la mataba (Error 71); el de la v0.1, que
+# WebKitGTK pedia un proxy que el arenero sin red no concede.
+echo "sigue viva a los 10 s: OK"
+flatpak kill "$APP" 2>/dev/null
+rechazos=$(grep -c "portal.Error.NotAllowed" "$LAB/gui.log" || true)
+if [ "$rechazos" != "0" ]; then
+    echo "EL ARENERO RECHAZA $rechazos LLAMADA(S) AL PORTAL:" >&2
+    grep -B1 "portal.Error.NotAllowed" "$LAB/gui.log" >&2
+    echo >&2
+    echo "Una ventana viva NO es una ventana que se vea: si el rechazo es a" >&2
+    echo "ProxyResolver.Lookup, WebKit pinta el error como pagina y no hay" >&2
+    echo "aplicacion. Se corrige con --env=GIO_USE_PROXY_RESOLVER=dummy en" >&2
+    echo "finish-args, NO con --share=network." >&2
+    exit 1
+fi
+echo "ninguna llamada al portal rechazada: OK"
 
 echo
 echo "### 5. el ciclo trifasico completo, contra la libreria DEL BUNDLE"

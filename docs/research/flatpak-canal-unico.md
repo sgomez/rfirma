@@ -211,6 +211,93 @@ cuando el runtime traiga GTK/WebKit más nuevos, y la sonda vale para eso.
 Aviso: `--socket=fallback-x11` **no** da X11 mientras haya Wayland, así que forzar `GDK_BACKEND=x11`
 sin `--socket=x11` hace fallar la inicialización de GTK con «Failed to initialize GTK».
 
+### 5.1. El proxy que no se puede preguntar (v0.1)
+
+La v0.1 se entregó con la ventana abriendo **con un error de DBus pintado a pantalla completa**:
+
+```
+GDBus.Error:org.freedesktop.portal.Error.NotAllowed: This call is not available inside the sandbox
+```
+
+El método rechazado se caza con `flatpak run --log-session-bus`:
+
+```
+C22: -> :1.66 call org.freedesktop.portal.ProxyResolver.Lookup at /org/freedesktop/portal/desktop
+B5215: <- :1.66 return error org.freedesktop.portal.Error.NotAllowed from C22
+```
+
+Dos rechazos por arranque, uno del proceso de red de WebKit y otro del proceso web. **El portal solo
+concede `ProxyResolver` a una aplicación con red**, y rfirma no la declara ni debe declararla. GLib
+no tiene plan B: `GProxyResolverPortal` es el único resolvedor dentro del arenero, así que la carga
+no llega a empezar y WebKit pinta el error del resolvedor como página.
+
+Se corrige declarando el resolvedor nulo en `finish-args`:
+
+```yaml
+  - --env=GIO_USE_PROXY_RESOLVER=dummy
+```
+
+Con él, las dos llamadas desaparecen del bus (338 → 324 líneas de traza, ninguna `NotAllowed`). La
+alternativa —`--share=network`— **no se toma**: rfirma firma sin salir a la red, y abrir el permiso
+para callar un aviso de proxy es pagar el canal entero por un `Lookup`.
+
+**Por qué la sonda del #22 no lo vio, teniendo los mismos permisos.** La sonda cargaba su HTML
+directamente en el *webview* y por eso imprimió `WEBVIEW OK`; la aplicación de verdad sirve el
+frontal por el protocolo propio de Tauri, y **ese** sí pasa por el resolvedor de proxy. Es el mismo
+patrón que ya costó tres hallazgos en este proyecto (ADR-0013): la sonda y lo que se distribuye no
+ejercitan el mismo camino.
+
+**Y por qué `verifica.sh` decía OK.** Su paso 4 solo miraba que el proceso siguiera vivo a los diez
+segundos, y lo estaba: una ventana viva no es una ventana que se vea. Desde este hallazgo el paso 4
+corre con `--log-session-bus` y falla si el arenero rechaza cualquier llamada al portal.
+
+### 5.2. El binario apuntaba al servidor de vite (v0.1)
+
+Detrás del proxy había un segundo fallo, y este era el gordo: quitada la página de error del
+resolvedor, la ventana abría con
+
+```
+Could not connect to localhost: Connection refused
+```
+
+El binario empaquetado **no llevaba el frontal dentro**. Comprobado sobre el `.flatpak` instalado:
+
+```
+$ strings -a …/files/bin/rfirma | grep -c "index-A5JvJEiO"   # el bundle de vite
+0
+$ strings -a …/files/bin/rfirma | grep "http://localhost:1420"
+http://localhost:1420/
+```
+
+La causa está en el `build.rs` del crate `tauri` (2.11.5), y es de una literalidad incómoda:
+
+```rust
+let custom_protocol = has_feature("custom-protocol");
+let dev = !custom_protocol;
+```
+
+**El modo dev de Tauri no se deduce del perfil de cargo: es la ausencia de una bandera.** Un
+`cargo build --release` sin `--features custom-protocol` compila sin una queja y produce un binario
+que sirve `devUrl` en vez del frontal empotrado. Quien normalmente activa la bandera es
+`cargo tauri build`, y este repositorio **no lo usa a propósito** (ID-05: `bundle.active` es false y
+el binario lo instala el manifiesto). Al saltarse el CLI se perdió lo único que el CLI aportaba.
+
+Medido en el anfitrión, con el mismo `dist`:
+
+| Construcción | Tamaño | `/assets/index-*.js` dentro |
+|---|---|---|
+| `cargo build --release` | 7,56 MB | no |
+| `cargo build --release --features custom-protocol` | 8,09 MB | sí |
+
+Media MB de diferencia: es el frontal. La bandera se declara en `src-tauri/Cargo.toml` **sin ser
+`default`** —si lo fuera, `tauri dev` serviría los assets empotrados y moriría el recargado en
+caliente— y la pasan a mano los dos sitios que compilan sin el CLI: la receta `build-rust` del
+`justfile` y el módulo `rfirma-app` del manifiesto.
+
+**La guarda.** El manifiesto saca del `dist/index.html` el nombre del bundle de vite y comprueba con
+un `grep` que está dentro del binario recién compilado. Falla al construir, que es donde sale
+barato, en vez de producir un bundle que abre contra un puerto que en el arenero no escucha nadie.
+
 ## 6. La prueba final
 
 El listón del [#14](https://github.com/sgomez/rfirma/issues/14), ahora dentro del arenero y con
