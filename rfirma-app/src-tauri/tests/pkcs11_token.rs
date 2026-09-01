@@ -30,7 +30,7 @@
 //!
 //! El detalle del entorno está en `docs/research/token-pkcs11-pruebas.md`.
 //!
-//! # Por qué estas pruebas inician sesión para listar
+//! # Por qué estas pruebas listan sin iniciar sesión
 //!
 //! [`pkcs11::list_certificates`] no pide el PIN (ID-08): el filtro de #100
 //! busca la clave privada sin sesión, y en NSS y en una tarjeta real eso basta
@@ -38,17 +38,15 @@
 //! `CKO_PRIVATE_KEY` llevan `CKA_PRIVATE` de forma incondicional —comprobado
 //! con `pkcs11-tool`, con `p11tool --write` sin `--mark-private`, y con un
 //! `C_SetAttributeValue` directo, que devuelve `CKR_ATTRIBUTE_READ_ONLY`—, así
-//! que sin sesión SoftHSM no enseña ninguna clave, tenga par o no. Con el
-//! filtro tal cual, `list_certificates` contra este token da siempre la lista
-//! vacía, y así lo comprueba `listing_without_a_session_finds_nothing_on_softhsm`.
+//! que sin sesión SoftHSM no enseña ninguna clave, tenga par o no.
 //!
-//! Por eso el resto de estas pruebas usa
-//! [`pkcs11::list_certificates_authenticated_for_test`], que aplica el
-//! **mismo** filtro con la sesión ya autenticada: sirve para comprobar la
-//! clasificación y la firma sin depender de esta peculiaridad de SoftHSM. La
-//! prueba de que el filtro de verdad no pide el PIN, y de que sí encuentra las
-//! claves cuando el módulo lo permite, vive contra el almacén NSS en
-//! `tests/nss_store.rs`.
+//! Por eso el filtro no se aplica por ranura si esa ranura no enseña
+//! **ninguna** clave privada sin sesión: cero claves visibles no significa
+//! «aquí no hay nada firmable», significa «este módulo no lo va a decir sin
+//! PIN» (ver la nota de [`pkcs11::list_certificates`]). Gracias a eso
+//! `list_certificates` a secas —sin sesión— vuelve a listar los cinco
+//! certificados de este token, y estas pruebas no necesitan ningún escape
+//! autenticado. Lo comprueba `listing_without_a_session_still_lists_them`.
 //!
 //! # Lo que aquí no se comprueba
 //!
@@ -98,12 +96,8 @@ fn module() -> PathBuf {
     module
 }
 
-/// Lista con el filtro de #100 aplicado, autenticada: ver la nota del módulo
-/// sobre por qué esto no puede ser [`pkcs11::list_certificates`] a secas
-/// contra SoftHSM.
 fn certificates() -> Vec<TokenCertificate> {
-    let found = pkcs11::list_certificates_authenticated_for_test(module(), PIN)
-        .expect("no se ha podido listar el token");
+    let found = pkcs11::list_certificates(module()).expect("no se ha podido listar el token");
     assert!(
         !found.is_empty(),
         "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just token"
@@ -205,29 +199,23 @@ fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it
     );
 }
 
+/// La nota del módulo, fijada en una prueba: SoftHSM no enseña ninguna clave
+/// privada sin sesión, y aun así los cinco certificados del token salen sin
+/// pedir el PIN, porque una ranura sin ninguna clave visible no se filtra
+/// (ver la nota de [`pkcs11::list_certificates`]).
 #[test]
-fn listing_does_not_need_the_pin() {
-    // certificates() usa la variante autenticada de proposito (ver la nota del
-    // modulo); lo que esta prueba comprueba es que la funcion publica de
-    // verdad, pkcs11::list_certificates, no le pide el PIN a nadie: se llama
-    // sin sesion y no falla.
-    assert!(pkcs11::list_certificates(module()).is_ok());
-}
-
-/// La otra cara de la nota del módulo, fijada en una prueba: sin sesión,
-/// SoftHSM no enseña ninguna clave privada, así que el filtro de #100 deja la
-/// lista vacía contra este token **siempre**, tengan o no clave los
-/// certificados. No es un fallo de rfirma — es lo que hace SoftHSM con sus
-/// objetos `CKO_PRIVATE_KEY`, y es justo el motivo de que el resto de estas
-/// pruebas pase por `list_certificates_authenticated_for_test`.
-#[test]
-fn listing_without_a_session_finds_nothing_on_softhsm() {
+fn listing_without_a_session_still_lists_them() {
     let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");
     assert!(
-        found.is_empty(),
-        "SoftHSM ha dejado de esconder sus claves privadas sin sesion: si esto \
-         cambia, el escape de list_certificates_authenticated_for_test ya no \
-         hace falta y estas pruebas pueden volver a pkcs11::list_certificates"
+        found
+            .iter()
+            .any(|certificate| certificate.reference().label() == ACTIVE),
+        "el certificado activo tenia que salir sin PIN"
+    );
+    assert_eq!(
+        found.len(),
+        5,
+        "el token de pruebas tiene cinco certificados, todos con clave"
     );
 }
 
@@ -491,15 +479,6 @@ fn a_module_that_is_not_there_is_not_a_token_error() {
 
 /// La promesa del ID-03: no tener un almacén instalado no puede dejar sin
 /// certificados a quien sí tiene el otro.
-///
-/// Contra SoftHSM solo se puede comprobar la mitad de la promesa: que el
-/// almacén roto no convierte el resultado en un error cuando el otro sí ha
-/// cargado. La otra mitad —que el certificado del almacén que sí carga
-/// **sale**— no se puede pedir aquí, porque `list_certificates` sin sesión
-/// deja siempre vacío el SoftHSM de pruebas (ver la nota del módulo); esa
-/// mitad la comprueba `a_profile_that_leads_nowhere_does_not_hide_the_one_that_works`
-/// en `tests/nss_store.rs`, donde el almacén que sí carga muestra de verdad
-/// su certificado.
 #[test]
 fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
     let stores = vec![
@@ -507,15 +486,14 @@ fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
         pkcs11::Store::module(module()),
     ];
 
-    let found = pkcs11::list_certificates_across(&stores).expect(
-        "el almacen que si carga tiene que seguir contando, aunque el filtro de #100 lo \
-         deje sin certificados contra SoftHSM sin sesion",
-    );
+    let found = pkcs11::list_certificates_across(&stores)
+        .expect("el almacen que si carga tiene que seguir contando");
 
     assert!(
-        found.is_empty(),
-        "SoftHSM ha dejado de esconder sus claves privadas sin sesion: si esto \
-         cambia, esta prueba puede volver a comprobar que ACTIVE sale de verdad"
+        found
+            .iter()
+            .any(|certificate| certificate.reference().label() == ACTIVE),
+        "el certificado activo del token tenia que salir pese al almacen roto"
     );
 }
 

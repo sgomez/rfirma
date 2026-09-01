@@ -24,7 +24,7 @@ pub mod certificate;
 pub mod error;
 pub mod stores;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::path::{Path, PathBuf};
@@ -103,6 +103,15 @@ pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate
 /// autoridades y certificados de páginas web. El filtro **no es solo para
 /// NSS**: se aplica a todos los almacenes por igual, y en una tarjeta no
 /// esconde nada porque todo lo que hay ahí ya es firmable.
+///
+/// El filtro solo se aplica por ranura si esa ranura **enseña alguna**
+/// `CKO_PRIVATE_KEY` sin sesión. Algunos módulos —SoftHSM entre ellos,
+/// comprobado— marcan sus claves privadas con `CKA_PRIVATE` de forma
+/// incondicional, y sin sesión no enseñan ninguna, tengan par o no: si se
+/// filtrase igualmente, una ranura así perdería **todos** sus certificados,
+/// no solo los que de verdad no tienen clave. Cero claves visibles no
+/// significa «aquí no hay nada firmable»; significa «este módulo no lo va a
+/// decir sin PIN». En ese caso se deja pasar la ranura entera sin filtrar.
 pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
     // Bajo el mismo turno que la firma: abrir un almacén NSS es inicializar el
@@ -125,29 +134,64 @@ fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificate>, TokenEr
     Ok(found)
 }
 
-/// Los certificados de una ranura ya abierta que tienen clave privada.
-///
-/// Compartida entre [`list_holding_the_turn`] (sin sesión) y
-/// [`list_certificates_authenticated_for_test`] (con sesión): el filtro es
-/// exactamente el mismo código en los dos casos, y lo único que cambia es si
-/// la sesión que se le pasa está autenticada o no.
+/// Los certificados de una ranura ya abierta que tienen clave privada —o,
+/// si la ranura no enseña ninguna clave privada sin sesión, todos los
+/// certificados sin filtrar (ver la nota de [`list_certificates`]).
 fn signable_certificates(
     session: &Session,
     store: &Store,
     token_label: &str,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    let mut found = Vec::new();
+    let visible_private_keys = private_key_ids(session)?;
 
+    if visible_private_keys.is_empty() {
+        return all_certificates_in_session(session, store, token_label);
+    }
+
+    let mut found = Vec::new();
     for certificate in all_certificates_in_session(session, store, token_label)? {
         // Sin clave privada con su mismo CKA_ID en el mismo token, no se puede
         // firmar con él: es justo lo que este filtro (ID-07) tiene que
         // descartar.
-        if has_matching_private_key(session, certificate.reference().cka_id())? {
+        if certificate
+            .reference()
+            .cka_id()
+            .is_some_and(|cka_id| visible_private_keys.contains(cka_id))
+        {
             found.push(certificate);
         }
     }
 
     Ok(found)
+}
+
+/// Los `CKA_ID` de las `CKO_PRIVATE_KEY` visibles en la sesión, en una sola
+/// consulta al token.
+///
+/// Antes esto era un `find_objects` por certificado —137 en el perfil de
+/// Firefox de 137 entradas que motiva el #100—; leer las claves de la ranura
+/// de una vez a un conjunto cuesta una sola consulta y de paso es lo que hace
+/// falta para distinguir «esta ranura no tiene ninguna clave visible» de «esta
+/// ranura tiene claves y esta en concreto no empareja».
+///
+/// No lee ningún atributo protegido de la clave, solo su `CKA_ID`: la
+/// existencia de la clave no es un secreto, solo su valor lo es (ID-08).
+fn private_key_ids(session: &Session) -> Result<HashSet<Vec<u8>>, TokenError> {
+    let mut ids = HashSet::new();
+
+    for object in session.find_objects(&[Attribute::Class(ObjectClass::PRIVATE_KEY)])? {
+        for attribute in session.get_attributes(object, &[AttributeType::Id])? {
+            // Un CKA_ID vacío no empareja nada: es el mismo caso que un
+            // certificado sin CKA_ID, ver all_certificates_in_session.
+            if let Attribute::Id(bytes) = attribute {
+                if !bytes.is_empty() {
+                    ids.insert(bytes);
+                }
+            }
+        }
+    }
+
+    Ok(ids)
 }
 
 /// Los certificados de una ranura ya abierta, **sin** aplicar el filtro de
@@ -206,68 +250,6 @@ fn all_certificates_in_session(
     }
 
     Ok(found)
-}
-
-/// Si el token tiene una `CKO_PRIVATE_KEY` con este `CKA_ID`, buscada con la
-/// sesión que se le pase.
-///
-/// Sin `CKA_ID` no hay con qué emparejar, así que no hay clave: es el mismo
-/// caso que un certificado sin `CKA_LABEL`, una referencia a medias que no
-/// vale para nada.
-///
-/// La búsqueda no lee ningún atributo protegido de la clave, solo comprueba
-/// que un objeto con esa clase y ese `CKA_ID` existe (ID-08): en NSS y en una
-/// tarjeta habitual eso basta sin iniciar sesión, porque la existencia de la
-/// clave no es un secreto, solo su valor lo es.
-fn has_matching_private_key(session: &Session, cka_id: Option<&[u8]>) -> Result<bool, TokenError> {
-    let Some(cka_id) = cka_id else {
-        return Ok(false);
-    };
-
-    Ok(!session
-        .find_objects(&[
-            Attribute::Class(ObjectClass::PRIVATE_KEY),
-            Attribute::Id(cka_id.to_vec()),
-        ])?
-        .is_empty())
-}
-
-/// Lo mismo que [`list_certificates`], pero con la sesión ya autenticada.
-///
-/// Existe solo para `tests/pkcs11_token.rs`. SoftHSM marca sus objetos
-/// `CKO_PRIVATE_KEY` con `CKA_PRIVATE` de forma incondicional —comprobado:
-/// ni `pkcs11-tool`, ni `p11tool`, ni un `C_SetAttributeValue` de este mismo
-/// puente logran desmarcarlo— así que sin sesión iniciada SoftHSM no enseña
-/// ninguna clave, tenga par o no. El filtro de arriba es correcto para NSS y
-/// para una tarjeta real, donde [`has_matching_private_key`] sí encuentra la
-/// clave sin sesión (ID-08); contra el token de pruebas hace falta iniciar
-/// sesión para que las pruebas de firma y de clasificación tengan certificados
-/// con los que trabajar. La prueba de que [`list_certificates`] nunca pide el
-/// PIN, y de que contra SoftHSM eso la deja vacía, vive en
-/// `tests/pkcs11_token.rs` como su propio caso.
-#[doc(hidden)]
-pub fn list_certificates_authenticated_for_test(
-    store: impl Into<Store>,
-    pin: &str,
-) -> Result<Vec<TokenCertificate>, TokenError> {
-    let store = store.into();
-    with_token_turn(|| {
-        the_store_is_really_there(&store)?;
-        let context = context(&store)?;
-        let mut found = Vec::new();
-
-        for slot in usable_slots(&context)? {
-            let token_label = context.get_token_info(slot)?.label().trim().to_owned();
-            let session = context.open_ro_session(slot)?;
-            session.login(UserType::User, Some(&AuthPin::new(pin.into())))?;
-
-            let result = signable_certificates(&session, &store, &token_label);
-            let _ = session.logout();
-            found.extend(result?);
-        }
-
-        Ok(found)
-    })
 }
 
 /// Lo mismo que [`list_certificates`], pero sin aplicar el filtro de clave
