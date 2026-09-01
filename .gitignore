@@ -25,8 +25,9 @@ rustc-ice-*.txt
 
 # Sistema de diseño: el bundle esta versionado (ID-47 del #80), porque es la
 # fuente normativa de los tokens y no puede depender de un servicio externo.
-# Fuera quedan los artefactos de la herramienta que lo transporta.
-ds-bundle/_ds_needs_recompile
+# Vive en rfirma-app/src/design-system/bundle/ desde el #85. Fuera quedan los
+# artefactos de la herramienta que lo transporta.
+rfirma-app/src/design-system/bundle/_ds_needs_recompile
 .design-sync/
 
 # flatpak (packaging/flatpak)

@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!dist", "!src-tauri/target", "!src-tauri/gen", "!node_modules"]
+    "includes": [
+      "**",
+      "!dist",
+      "!src-tauri/target",
+      "!src-tauri/gen",
+      "!node_modules",
+      "!src/design-system/bundle"
+    ]
   },
   "formatter": {
     "enabled": true,

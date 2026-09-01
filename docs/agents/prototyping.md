@@ -86,12 +86,20 @@ siguiendo la variante que se esté evaluando.
 
 ## Sistema de diseño
 
-- La referencia normativa es **`docs/design/design-system.md`**: temas, roles de
-  color, tokens `--rf-*`, componentes. Léela antes de dibujar nada y **no fijes
+- Lo **normativo** es el bundle versionado en
+  `rfirma-app/src/design-system/bundle/` (#85): es el CSS que consume la
+  aplicación y el único sitio donde vive un valor. `docs/design/design-system.md`
+  lo describe —temas, roles de color, tokens `--rf-*`, componentes— y una prueba
+  de grada A impide que se separen. Léela antes de dibujar nada y **no fijes
   colores a mano**.
+- El bundle **no se edita en el repositorio**: se cambia en el proyecto de
+  sistema de diseño, se reexporta entero sobre `bundle/` y se resella con
+  `just seal-ds-bundle`. Un retoque a mano sale en rojo en `just lint`.
 - El proyecto lleva ya adjunto el sistema de diseño compilado en
   `_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/` (tokens,
-  `styles.css`, fuentes). Los artboards consumen esos tokens.
+  `styles.css`, fuentes). Los artboards consumen esos tokens. Su `<helmet>` es
+  una copia comprimida para previsualizar, no una fuente: si un valor difiere
+  del bundle, gana el bundle.
 - El proyecto es de tipo `PROJECT_TYPE_PROJECT`, **no**
   `PROJECT_TYPE_DESIGN_SYSTEM`, y el tipo es inmutable. Por tanto el flujo
   completo de `/design-sync` (subir una librería de componentes local como

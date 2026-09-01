@@ -192,10 +192,11 @@ token:
 
 # Las tres cadenas, y falla si falla cualquiera.
 #
-# `check-flatpak-sources` va PRIMERA a proposito: no necesita ni bootstrap ni
-# deps, tarda milisegundos, y lo que detecta —un fichero de bloqueo tocado sin
-# regenerar las fuentes vendorizadas— no lo encuentra ninguna de las otras.
-lint: check-flatpak-sources lint-java lint-ts lint-rust
+# `check-flatpak-sources` y `check-ds-bundle` van PRIMERAS a proposito: no
+# necesitan ni bootstrap ni deps, tardan milisegundos, y lo que detectan —un
+# fichero de bloqueo tocado sin regenerar las fuentes vendorizadas, un token
+# del sistema de diseno editado a mano— no lo encuentra ninguna de las otras.
+lint: check-flatpak-sources check-ds-bundle lint-java lint-ts lint-rust
 
 # -Xlint:all, como decidio el issue #11.
 lint-java: bootstrap
@@ -463,6 +464,35 @@ flatpak-sources:
 # Comprueba que las fuentes vendorizadas del flatpak estan al dia.
 check-flatpak-sources:
     {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
+
+# La comprobacion de ID-56, hermana de la de arriba y por los mismos motivos:
+# el bundle del sistema de diseno es normativo y despues del corte no hay
+# origen que consultar, asi que lo unico que puede protegerlo es un sello.
+#
+# Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
+check-ds-bundle:
+    {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
+
+# A mano, cuando el bundle se reexporte desde el proyecto de sistema de diseno.
+# No lo ejecuta el CI: un sello regenerado dentro del CI sella lo que nadie ha
+# mirado, que es exactamente lo que se quiere impedir.
+#
+# Resella el bundle del sistema de diseno.
+seal-ds-bundle:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ justfile_directory() }}"
+    # Rutas relativas a la raiz, que es desde donde comprueba el script, y
+    # orden estable (LC_ALL=C) para que dos resellados de lo mismo den el mismo
+    # fichero y el diff solo ensene lo que de verdad ha cambiado.
+    # `_ds_needs_recompile` queda fuera, igual que en .gitignore: es un marcador
+    # de estado de design-sync-cli y no parte del sistema de diseno.
+    find rfirma-app/src/design-system/bundle -type f ! -name _ds_needs_recompile \
+        | LC_ALL=C sort \
+        | xargs sha256sum \
+        > rfirma-app/src/design-system/bundle.lock
+    echo
+    echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
 # Abre la ventana con recarga en caliente.
 dev: check-native deps

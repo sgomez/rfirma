@@ -30,7 +30,7 @@ oscura sin escribir ni una regla de componente:
 La estructura CSS que lo sostiene es la de tres estados:
 
 ```css
-:root, [data-theme="light"] { /* claro: define TODOS los roles */ }
+:root, [data-theme="light"], .rf-on-light { /* claro: define TODOS los roles */ }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) { /* oscuro */ }
 }
@@ -106,8 +106,12 @@ que un fallo de carga degrada a la sans nativa, no a serif.
 1.0 apelmaza cualquier párrafo. En cuanto un texto pueda ocupar más de una
 línea, `.rf-prose`.
 
-Nota de despliegue: conviene autoalojar Inter en lugar de servirla desde una
-CDN — es una aplicación de escritorio y no siempre hay red.
+Nota de despliegue: Inter **está autoalojada**, no servida desde una CDN. Los
+woff2 (subconjuntos `latin` y `latin-ext`) y su OFL viven junto al bundle y
+entran en el paquete. No es una preferencia: dentro del arenero del flatpak no
+hay red —el manifiesto no declara `--share=network`— y la CSP hereda
+`default-src 'self'` sin `font-src`, así que un `@import` a Google Fonts no
+cargaría nunca y toda la aplicación caería a la sans del sistema.
 
 ---
 
@@ -139,7 +143,10 @@ Todo `padding`, `margin` y `gap` sale de la escala. **Nunca un px suelto.**
 diálogos. `pill` solo a insignias.
 
 Dos elevaciones: `--rf-shadow-card` (reposo) y `--rf-shadow-elevated`
-(flotante). En el tema oscuro las sombras apenas se leen; **la profundidad la
+(flotante). Ambas son sombras de cuatro capas y **su valor es el del bundle
+versionado**, que es el único del repositorio: el `<helmet>` de los artboards
+de `docs/design/artboards/` es una copia comprimida para previsualizar y no es
+la fuente. En el tema oscuro las sombras apenas se leen; **la profundidad la
 aporta el contraste entre `--rf-bg` y `--rf-surface` más el borde**. Empieza
 siempre por una superficie plana y sube solo si el elemento flota de verdad.
 
@@ -173,8 +180,9 @@ Requisitos que la capa de componentes ya satisface y que no hay que
 reimplementar ni relajar:
 
 - **Área táctil.** Mínimo 44×44px en botones y campos.
-- **Foco.** Contorno de 2px en `--rf-focus-ring` con 2px de desplazamiento,
-  aplicado a todo `:focus-visible` bajo la raíz.
+- **Foco.** Contorno de `--rf-focus-ring-width` (2px) en `--rf-focus-ring` con
+  `--rf-focus-ring-offset` (2px) de desplazamiento, aplicado a todo
+  `:focus-visible` bajo la raíz. Las dos medidas son tokens, no literales.
 - **El color nunca es el único indicador.** El botón secundario cambia borde
   *y* color en hover; el campo con error cambia borde, sube el peso del texto de
   ayuda y le antepone un glifo `!`.
@@ -191,16 +199,21 @@ CSS con `var(--rf-*)`.
 
 | Familia | Clases |
 | --- | --- |
-| Raíz y tema | `.rf-root`, `[data-theme]` |
+| Raíz y tema | `.rf-root`, `.rf-on-light`, `[data-theme]` |
 | Texto | `.rf-display`, `.rf-heading`, `.rf-title`, `.rf-body`, `.rf-prose`, `.rf-text-muted`, `.rf-text-primary` |
 | Disposición | `.rf-stack`, `.rf-row`, `.rf-section`, `.rf-divider`, `.rf-gap-xs\|sm\|md\|lg` |
 | Superficies | `.rf-surface`, `.rf-card`, `.rf-card--elevated`, `.rf-card--interactive` |
-| Botones | `.rf-btn` + `--primary\|--secondary\|--ghost\|--pill` |
+| Botones | `.rf-btn` + `--primary\|--secondary\|--ghost\|--pill\|--disabled` |
 | Formularios | `.rf-field`, `.rf-field--error`, `.rf-label`, `.rf-input`, `.rf-hint` |
 | Otros | `.rf-badge`, `.rf-badge--primary`, `.rf-dialog`, `.rf-scrim` |
 
 `.rf-root` es obligatoria en la raíz de toda pantalla: establece lienzo, familia
 tipográfica y color heredado.
+
+`.rf-on-light` es un alias de `data-theme="light"`, conservado por
+compatibilidad: hace exactamente lo mismo y no hay motivo para preferirlo en
+código nuevo. `.rf-btn--disabled` es el equivalente en clase del atributo
+`[disabled]`, para un elemento que no lo admite.
 
 ---
 
