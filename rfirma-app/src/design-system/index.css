@@ -1,8 +1,19 @@
 /*
- * El sistema de diseño entero, en el orden que exige la sección 1: primero los
- * tokens, luego los componentes que los consumen. Se importa una sola vez, en
- * `main.tsx`.
+ * El sistema de diseño entero. Se importa una sola vez, en `main.tsx`.
+ *
+ * Aquí no se escribe ni una declaración: lo único que hay bajo
+ * `design-system/` que sea nuestro son este fichero, la prueba y el sello.
+ * Todo lo demás es `bundle/`, el bundle del proyecto de sistema de diseño tal
+ * y como salió de la herramienta (ID-47), y su orden de importación —tokens
+ * primero, componentes después— lo fija su propia `styles.css`.
+ *
+ * Para cambiar un token o una clase: se cambia en el proyecto de diseño, se
+ * vuelve a exportar el bundle sobre `bundle/` y se resella con
+ * `just seal-ds-bundle`. Editar `bundle/` a mano sale en rojo en `just lint`.
+ *
+ * Por eso `bundle/` está excluido de Biome en `biome.json`: el formateador y
+ * el sello se contradicen —uno reescribiría los ficheros, el otro exige que
+ * nadie los toque— y quien manda es el sello.
  */
 
-@import "./tokens.css";
-@import "./components.css";
+@import "./bundle/styles.css";
