@@ -49,6 +49,10 @@ pub fn run() {
             .unwrap_or_else(|| std::path::PathBuf::from(DEFAULT_PKCS11_MODULE)),
         documents_folder: paths::documents_folder().unwrap_or_default(),
         configuration: std::sync::Mutex::new(configuration),
+        // La memoria viaja con el entorno y no aparte: las órdenes que guardan
+        // ajustes tienen que actualizar la copia viva y el fichero a la vez, y
+        // dos estados separados invitan a hacer solo una de las dos cosas.
+        memory,
     };
 
     tauri::Builder::default()
@@ -95,6 +99,9 @@ pub fn run() {
             commands::cancel_signing,
             commands::open_document,
             commands::read_document,
+            commands::read_configuration,
+            commands::write_configuration,
+            commands::forget_activity,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

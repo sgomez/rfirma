@@ -1,9 +1,10 @@
 //! La **configuración**: lo que el usuario elige y la aplicación obedece
 //! (ID-31, ADR-0010).
 //!
-//! Cuatro de las cinco memorias viven aquí —idioma, carpeta de destino, los dos
-//! interruptores— y la quinta, la rúbrica, vive **al lado**: es una imagen, no
-//! un campo, y se guarda como copia en [`crate::paths::Paths::rubric_path`].
+//! Cinco de las seis memorias viven aquí —idioma, tema, carpeta de destino y
+//! los dos interruptores— y la sexta, la rúbrica, vive **al lado**: es una
+//! imagen, no un campo, y se guarda como copia en
+//! [`crate::paths::Paths::rubric_path`].
 //! Lo importante es lo que **no** hay en esta estructura: ninguna ruta del PNG
 //! que eligió el usuario. AutoFirma guarda esa ruta y pierde la rúbrica en
 //! silencio en cuanto el fichero se mueve (ID-33).
@@ -50,6 +51,25 @@ impl DestinationFolder {
     }
 }
 
+/// El tema de la ventana: lo que el usuario elige ver.
+///
+/// [`Theme::System`] no es «claro»: es **no forzar nada** y dejar que mande
+/// `prefers-color-scheme`, que es lo que ya hacía la aplicación antes de que
+/// este ajuste existiera. Por eso es el valor por omisión y por eso son tres
+/// valores y no un interruptor de dos: un booleano no puede decir «lo que diga
+/// el sistema».
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    /// Lo que diga el sistema operativo.
+    #[default]
+    System,
+    /// Claro, pase lo que pase.
+    Light,
+    /// Oscuro, pase lo que pase.
+    Dark,
+}
+
 /// Lo que el usuario elige.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -72,6 +92,8 @@ pub struct Configuration {
     /// la misma promesa a quien firma en un ordenador compartido. Al apagarse
     /// **borra** lo ya recordado, y de eso se encarga [`super::Memory`].
     pub remember_activity: bool,
+    /// El tema de la ventana. Ver [`Theme`].
+    pub theme: Theme,
 }
 
 impl Default for Configuration {
@@ -84,6 +106,10 @@ impl Default for Configuration {
             // escondería justo lo que justificó el prototipo.
             remember_visible_signature: true,
             remember_activity: true,
+            // Sin elegir, manda el sistema: es lo que hacía la ventana antes
+            // de que el ajuste existiera, y una aplicación que se abre en
+            // claro dentro de un escritorio oscuro parece rota.
+            theme: Theme::System,
         }
     }
 }
@@ -106,6 +132,22 @@ mod tests {
         let folder = DestinationFolder::at("/home/quien/Documentos/Firmados");
 
         assert_eq!(folder.name(), "Firmados");
+    }
+
+    #[test]
+    fn without_choosing_the_theme_is_the_one_the_system_says() {
+        assert_eq!(Configuration::default().theme, Theme::System);
+    }
+
+    #[test]
+    fn the_theme_is_persisted_in_lowercase() {
+        let written = serde_json::to_value(Configuration {
+            theme: Theme::Dark,
+            ..Configuration::default()
+        })
+        .expect("deberia serializarse");
+
+        assert_eq!(written["theme"], serde_json::json!("dark"));
     }
 
     #[test]
@@ -145,6 +187,7 @@ mod tests {
                 "language",
                 "remember_activity",
                 "remember_visible_signature",
+                "theme",
             ],
             "la rubrica es una copia en el almacen, nunca un campo con la ruta del original"
         );

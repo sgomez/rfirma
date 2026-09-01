@@ -6,6 +6,7 @@ import { PreferencesDialog } from "./PreferencesDialog";
 import type { Preferences } from "./preferences";
 
 const defaults: Preferences = {
+  theme: "system",
   destination: "Documentos",
   rememberVisibleSignature: true,
   rememberActivity: true,
@@ -65,27 +66,57 @@ describe("PreferencesDialog", () => {
   it("shows the destination folder by its name and never by its path", () => {
     renderDialog({ preferences: { ...defaults, destination: "Documentos" } });
 
-    const destination = screen.getByLabelText("Dónde se guarda el documento firmado");
-    expect(destination).toHaveValue("Documentos");
+    const destination = screen.getByRole("combobox", {
+      name: "Dónde se guarda el documento firmado",
+    });
+    expect(destination).toHaveTextContent("Documentos");
     expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
   });
 
-  it("offers only the languages whose catalog is complete", () => {
+  it("offers only the languages whose catalog is complete", async () => {
+    const user = userEvent.setup();
     renderDialog();
 
-    const language = screen.getByLabelText("Idioma");
-    expect(language).toHaveValue("es");
-    const offered = Array.from(language.querySelectorAll("option")).map((option) => option.value);
-    expect(offered).toEqual(["es", "en"]);
+    const language = screen.getByRole("combobox", { name: "Idioma" });
+    expect(language).toHaveTextContent("Español");
+    await user.click(language);
+
+    const offered = screen.getAllByRole("option").map((option) => option.textContent);
+    expect(offered).toEqual(["Español", "English"]);
   });
 
   it("changes the language in place", async () => {
     const user = userEvent.setup();
     renderDialog();
 
-    await user.selectOptions(screen.getByLabelText("Idioma"), "en");
+    await user.click(screen.getByRole("combobox", { name: "Idioma" }));
+    await user.click(screen.getByRole("option", { name: "English" }));
 
     expect(await screen.findByText("Preferences")).toBeInTheDocument();
+  });
+
+  /**
+   * El tema no lo dibuja el canvas: llegó después, y por eso se comprueba que
+   * está y que ofrece los tres valores. `El del sistema` no es «claro»: es no
+   * forzar nada.
+   */
+  it("offers the three themes and applies the chosen one straight away", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderDialog({ onChange });
+
+    const theme = screen.getByRole("combobox", { name: "Tema" });
+    expect(theme).toHaveTextContent("El del sistema");
+    await user.click(theme);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "El del sistema",
+      "Claro",
+      "Oscuro",
+    ]);
+
+    await user.click(screen.getByRole("option", { name: "Oscuro" }));
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, theme: "dark" });
   });
 
   it("empties the list without turning the switch off", async () => {

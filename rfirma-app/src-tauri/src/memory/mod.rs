@@ -1,9 +1,9 @@
-//! Lo que rFirma recuerda entre sesiones: **cinco** memorias, partidas en dos
-//! (ADR-0010, #53) — más una sexta, [`OpenedDocuments`], que no sobrevive al
+//! Lo que rFirma recuerda entre sesiones: **seis** memorias, partidas en dos
+//! (ADR-0010 y su enmienda, #53) — más [`OpenedDocuments`], que no sobrevive al
 //! proceso y por eso no cuenta entre ellas.
 //!
 //! **Configuración** —lo que el usuario elige y la aplicación obedece— son el
-//! idioma, la carpeta de destino, los dos interruptores y la rúbrica.
+//! idioma, el tema, la carpeta de destino, los dos interruptores y la rúbrica.
 //! **Estado** —lo que la aplicación acumula sola— son los documentos
 //! recientes, la última configuración de firma visible y el certificado usado.
 //! La que se olvida siempre al contarlas es la quinta, el certificado.
@@ -34,7 +34,7 @@ pub mod recents;
 pub mod state;
 pub mod store;
 
-pub use configuration::{Configuration, DestinationFolder};
+pub use configuration::{Configuration, DestinationFolder, Theme};
 pub use error::{MemoryError, Situation};
 pub use opened::OpenedDocuments;
 pub use recents::{Badge, RecentDocument, Recents, ShownBadge, CAPACITY};

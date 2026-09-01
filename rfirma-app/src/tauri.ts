@@ -1,6 +1,7 @@
 /**
- * Los seis puertos que hablan con Tauri: los tres de firma (#60), los dos del
- * documento (#82) y el del arrastre (#83).
+ * Los puertos que hablan con Tauri: los tres de firma (#60), los dos del
+ * documento (#82), el del arrastre (#83) y los dos de la configuración —los
+ * ajustes y el idioma—, que comparten fichero debajo.
  *
  * El del arrastre es el único que no habla con una orden sino con un **evento**
  * de la ventana: soltar un fichero no lo pide la interfaz, le ocurre. Aun así
@@ -32,6 +33,10 @@ import type { DocumentPicker } from "./documents/picker";
 import type { RecentDocument } from "./documents/recents";
 import { classify } from "./errors/classify";
 import type { ErrorSituation } from "./errors/ErrorNotice";
+import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
+import type { LanguagePreference } from "./i18n/preference";
+import type { PreferencesStore } from "./preferences/preferences";
+import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
 import type { TokenFailure } from "./signing/token";
@@ -268,4 +273,75 @@ export function tauriPdfSource(): PdfSource {
     const bytes = await invoke<ArrayBuffer>("read_document", { id: document.id });
     return new Uint8Array(bytes);
   });
+}
+
+/**
+ * La configuración tal como cruza: es `commands::ConfigurationView`, con el
+ * destino **por su nombre** y sin una sola ruta (ADR-0011).
+ */
+interface ConfigurationView {
+  language: string;
+  destination: string;
+  rememberVisibleSignature: boolean;
+  rememberActivity: boolean;
+  theme: Theme;
+}
+
+function readConfiguration(): Promise<ConfigurationView> {
+  return invoke<ConfigurationView>("read_configuration");
+}
+
+function writeConfiguration(configuration: ConfigurationView): Promise<void> {
+  return invoke<void>("write_configuration", { configuration });
+}
+
+/**
+ * Los ajustes, guardados en el disco por `memory::Memory`.
+ *
+ * Cada escritura **relee** antes de escribir en vez de recordar lo último que
+ * mandó: el idioma va por su propio puerto y se guarda en la misma
+ * configuración, así que una copia local aquí se quedaría atrás en cuanto
+ * alguien cambiara el idioma y devolvería el anterior en la escritura
+ * siguiente.
+ *
+ * El destino que se manda es el que se leyó: la ventana lo enseña y no lo
+ * elige —bajo el arenero hay una sola carpeta—, y el backend lo ignora.
+ */
+export function tauriPreferences(): PreferencesStore {
+  return {
+    read: async () => {
+      const configuration = await readConfiguration();
+      return {
+        theme: isTheme(configuration.theme) ? configuration.theme : DEFAULT_THEME,
+        destination: configuration.destination,
+        rememberVisibleSignature: configuration.rememberVisibleSignature,
+        rememberActivity: configuration.rememberActivity,
+      };
+    },
+    save: async (preferences) => {
+      const stored = await readConfiguration();
+      await writeConfiguration({ ...stored, ...preferences });
+    },
+    forgetActivity: () => invoke<void>("forget_activity"),
+  };
+}
+
+/**
+ * El idioma, en la misma configuración que los demás ajustes.
+ *
+ * Es un puerto aparte porque el idioma se lee **antes** de que haya ventana
+ * —`createI18n` lo necesita para el primer pintado— y los ajustes solo se leen
+ * al montar la aplicación. Debajo es el mismo fichero.
+ */
+export function tauriLanguagePreference(): LanguagePreference {
+  return {
+    read: async () => {
+      const { language } = await readConfiguration();
+      return isLanguageTag(language) ? language : FALLBACK_LANGUAGE;
+    },
+    save: async (language) => {
+      const stored = await readConfiguration();
+      await writeConfiguration({ ...stored, language });
+    },
+  };
 }

@@ -37,15 +37,22 @@ aplican al hacerlos: no hay «Guardar» ni «Cancelar».
 - «Vaciar la lista» cuelga del ajuste que lo explica y sigue esa misma sangría.
   Es un botón secundario de 32 px de alto, 8 px de relleno lateral y 12 px de
   cuerpo — el mismo tamaño menor que el `Cambiar` del pie del panel.
-- Los dos desplegables son `.rf-field` con `.rf-label` y `.rf-input`.
+- Los tres desplegables son `.rf-field` con `.rf-label` y un cierre que
+  reutiliza `.rf-input`, con el chevrón a la derecha y la lista flotando 4 px
+  por debajo.
 
-**El artboard dibuja el desplegable como una fila con un chevrón a la derecha.**
-En la aplicación son `<select>` nativos: el chevrón lo pinta la plataforma, y
-la lista que se abre es la del sistema —con su navegación por teclado, su
-búsqueda por letra inicial y su lectura por el lector de pantalla—. Redibujarla
-para copiar un chevrón sería cambiar un control por un dibujo.
+**El desplegable no es un `<select>` nativo.** Se intentó, y no vale: el cierre
+se estila con CSS, pero la lista que se abre la pinta el sistema de ventanas
+—GTK, bajo WebKitGTK— y no la hoja de estilos, así que las opciones salían con
+los colores del escritorio en medio de un diálogo hecho con los tokens del
+sistema de diseño. No es una limitación que se pueda rodear con más CSS: ese
+trozo de interfaz no es nuestro. A cambio hay que reponer a mano lo que el
+elemento nativo daba gratis —`combobox` + `listbox` con
+`aria-activedescendant`, flechas, Inicio, Fin, Intro, Escape, cierre al pulsar
+fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
+`onClick` no es un desplegable, es un dibujo de uno.
 
-### Las dos diferencias con el canvas
+### Las tres diferencias con el canvas
 
 Decididas al transcribir, y no se reabren (ID-44):
 
@@ -63,6 +70,9 @@ Decididas al transcribir, y no se reabren (ID-44):
    el patrón visual de los ajustes que el artboard sí dibuja —interruptor
    delante, texto y ayuda al lado—, con la geometría añadida que queda anotada
    arriba.
+3. **El tema se queda**, y llegó después: los tokens del bundle ya traían los
+   dos temas y el `data-theme` que fuerza cualquiera de ellos; lo que faltaba
+   era dónde elegirlo. Se maqueta como los otros dos desplegables.
 
 ## Los ajustes
 
@@ -94,7 +104,12 @@ Decididas al transcribir, y no se reabren (ID-44):
    Razonamiento y alternativas descartadas en el
    [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
-4. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
+4. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
+   el del sistema, que **no es «claro»**: es no forzar nada y dejar que mande
+   `prefers-color-scheme`. Los otros dos escriben `data-theme` en `<html>`, que
+   es lo que los tokens de color del bundle leen para redefinir los roles. El
+   cambio se aplica en caliente, como el resto del diálogo.
+5. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
    inglés: la misma lista que el cliente oficial. El cambio se aplica en
    caliente, como el resto del diálogo. Un idioma solo aparece aquí si tiene
    **todas** las cadenas traducidas. En la primera ejecución sale del locale
@@ -111,8 +126,9 @@ Uno. Los ajustes tienen siempre valor.
 ## Componentes y tokens
 
 `.rf-dialog`, `.rf-scrim`, `.rf-field`, `.rf-label`, `.rf-input`,
-`.rf-hint`, `.rf-divider`, `.rf-btn--primary`. El interruptor se maqueta con
-tokens; no está en el sistema de diseño.
+`.rf-hint`, `.rf-divider`, `.rf-card--elevated`, `.rf-btn--primary`. El
+interruptor y el desplegable se maquetan con tokens; ninguno de los dos está en
+el sistema de diseño.
 
 ## Decisiones
 
@@ -124,7 +140,13 @@ el `Cambiar` que vale solo para una firma.
 **Qué se recuerda entre sesiones y dónde vive** está fijado en el
 [ADR-0010](../adr/0010-memoria-entre-sesiones.md): los dos interruptores de
 arriba, el borrado que provoca apagar el segundo, y la comprobación previa de
-la carpeta fija salen de ahí.
+la carpeta fija salen de ahí. El tema entró después, por la enmienda de ese
+mismo ADR.
+
+**Los ajustes se guardan al elegirlos, en el disco.** El diálogo llama a
+`PreferencesStore`, y debajo son `read_configuration` y `write_configuration`,
+que pasan por `memory::Memory::remember_configuration`: el único sitio donde el
+borrado del estado al apagar «Recordar mi actividad» no se puede olvidar.
 
 El **alcance de la traducción** está fijado en
 [#16](https://github.com/sgomez/rfirma/issues/16): las seis lenguas, cadenas

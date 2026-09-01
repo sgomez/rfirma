@@ -1,10 +1,18 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son ocho, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son once, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
-//! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82—,
+//! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
+//! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar—,
 //! así que la ventana no aprende nada nuevo de Tauri: sigue hablando con los
 //! mismos puertos y es `main.tsx` quien elige estas implementaciones.
+//!
+//! # Los ajustes se guardan al elegirlos, y en el disco
+//!
+//! `read_configuration` y `write_configuration` son las dos mitades del puerto
+//! `PreferencesStore`, y `forget_activity` es lo que promete «Recordar mi
+//! actividad» al apagarse. Las tres pasan por [`crate::memory::Memory`], que es
+//! el único sitio donde los dos interruptores no se pueden olvidar (ADR-0010).
 //!
 //! # El documento entra por el portal y se nombra con un identificador
 //!
@@ -51,7 +59,9 @@ use tauri::State;
 
 use crate::destination::{CheckedFolder, PortalDocument};
 use crate::ffi::BridgeError;
-use crate::memory::{Configuration, OpenedDocuments};
+use crate::memory::{
+    Configuration, Memory, MemoryError, OpenedDocuments, Situation as MemorySituation, Theme,
+};
 use crate::pkcs11::{
     self, CertificateRef, CertificateStatus, Situation, TokenCertificate, TokenError,
 };
@@ -108,6 +118,16 @@ fn situation_name(situation: Situation) -> &'static str {
 impl From<TokenError> for Failure {
     fn from(error: TokenError) -> Self {
         Self::new(situation_name(error.situation()), error.detail())
+    }
+}
+
+impl From<MemoryError> for Failure {
+    fn from(error: MemoryError) -> Self {
+        let situation = match error.situation() {
+            MemorySituation::Unreadable => "settingsUnreadable",
+            MemorySituation::Unwritable => "settingsUnwritable",
+        };
+        Self::new(situation, error.detail().to_owned())
     }
 }
 
@@ -347,8 +367,15 @@ pub struct Environment {
     /// La carpeta de documentos del usuario, para cuando no haya destino
     /// elegido.
     pub documents_folder: std::path::PathBuf,
-    /// Lo que se recuerda entre sesiones.
+    /// Lo que se recuerda entre sesiones, ya leído.
+    ///
+    /// Es la copia viva: las órdenes de firma la consultan sin tocar el disco,
+    /// y [`write_configuration`] la actualiza a la vez que la guarda. Tener
+    /// solo el fichero obligaría a releerlo en cada firma; tener solo la copia
+    /// perdería lo elegido al cerrar la ventana.
     pub configuration: Mutex<Configuration>,
+    /// Los dos ficheros donde se recuerda. Ver [`crate::memory::Memory`].
+    pub memory: Memory,
 }
 
 fn language_of(tag: &str) -> Language {
@@ -796,6 +823,100 @@ pub fn read_document(
     Ok(tauri::ipc::Response::new(bytes))
 }
 
+/// La configuración, tal como la ventana la ve: **ningún `PathBuf`**.
+///
+/// El destino sale por su [`nombre`](crate::memory::DestinationFolder::name) y
+/// nunca por su ruta, igual que todo lo demás que cruza (ADR-0011). Y va en un
+/// solo sentido de verdad: la ventana **no elige la carpeta** —bajo el arenero
+/// hay una y solo una—, así que el destino que llegue en una escritura se
+/// ignora. Está aquí para pintarlo, no para cambiarlo.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigurationView {
+    /// La etiqueta corta del idioma: `es`, `ca`, `eu`, `gl`, `va` o `en`.
+    pub language: String,
+    /// El **nombre** de la carpeta de destino. Nunca su ruta.
+    pub destination: String,
+    /// «Recordar la última configuración de firma visible».
+    pub remember_visible_signature: bool,
+    /// «Recordar mi actividad».
+    pub remember_activity: bool,
+    /// El tema de la ventana. Ver [`Theme`].
+    pub theme: Theme,
+}
+
+/// Cómo se ve desde la ventana la configuración que hay guardada.
+fn shown(configuration: &Configuration, documents_folder: &std::path::Path) -> ConfigurationView {
+    let folder = crate::destination::chosen_folder(configuration, documents_folder.to_path_buf());
+    ConfigurationView {
+        language: configuration.language.tag().to_owned(),
+        destination: folder.name().to_owned(),
+        remember_visible_signature: configuration.remember_visible_signature,
+        remember_activity: configuration.remember_activity,
+        theme: configuration.theme,
+    }
+}
+
+/// **Orden 9.** Lo que hay guardado, para pintar Preferencias al abrir.
+///
+/// Lee de la copia viva y no del disco: el fichero se leyó una vez al arrancar
+/// (`lib.rs`), y volver a leerlo aquí abriría la puerta a que la ventana y las
+/// órdenes de firma vieran configuraciones distintas.
+#[tauri::command]
+pub fn read_configuration(environment: State<'_, Environment>) -> ConfigurationView {
+    let configuration = lock(&environment.configuration);
+    shown(&configuration, &environment.documents_folder)
+}
+
+/// **Orden 10.** Guarda lo que el usuario acaba de elegir.
+///
+/// Actualiza la copia viva **y** el fichero, en ese orden, y las dos cosas o
+/// ninguna: si la escritura falla, la copia se deja como estaba, porque una
+/// ventana que enseña un ajuste que el disco no tiene miente en la sesión
+/// siguiente.
+///
+/// El borrado del estado al apagar «Recordar mi actividad» **no está aquí**:
+/// lo hace [`Memory::remember_configuration`](crate::memory::Memory), que es
+/// donde no se puede olvidar (ADR-0010).
+#[tauri::command(async)]
+pub fn write_configuration(
+    configuration: ConfigurationView,
+    environment: State<'_, Environment>,
+) -> Result<(), Failure> {
+    let mut live = lock(&environment.configuration);
+    let next = merged(&live, &configuration);
+    environment.memory.remember_configuration(&next)?;
+    *live = next;
+    Ok(())
+}
+
+/// Lo elegido, encima de lo guardado.
+///
+/// Vive aparte de la orden porque es la única decisión que hay dentro —qué
+/// campos manda la ventana y cuáles no— y así se puede comprobar sin montar un
+/// entorno de Tauri.
+fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration {
+    Configuration {
+        language: language_of(&chosen.language),
+        // El destino no viaja de vuelta: la ventana lo enseña, no lo elige.
+        destination: live.destination.clone(),
+        remember_visible_signature: chosen.remember_visible_signature,
+        remember_activity: chosen.remember_activity,
+        theme: chosen.theme,
+    }
+}
+
+/// **Orden 11.** Olvida lo acumulado: los recientes y el certificado.
+///
+/// Es «Vaciar la lista» y también lo que arrastra apagar «Recordar mi
+/// actividad» (ID-34): las dos son la misma promesa y por eso son la misma
+/// orden.
+#[tauri::command(async)]
+pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failure> {
+    environment.memory.forget_activity()?;
+    Ok(())
+}
+
 /// El nombre del evento con el que la ventana se entera de un arrastre.
 ///
 /// Es un **evento** y no una novena orden a propósito: el arrastre no lo pide
@@ -903,10 +1024,10 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 mod tests {
     use super::{
         attribute, config_for, deliver, dropped_document, holder_of, issuer_of, language_of,
-        situation_name, take_signed_cycle, told_as, usable_certificate, CertificateView,
-        CheckedFolder, Configuration, Environment, Failure, Mutex, OpenedDocumentView,
-        OpenedDocuments, PlacementOrder, PortalDocument, SignedDocumentView, SigningOrder,
-        SigningSession, StatusView, VisibleFieldsOrder,
+        merged, shown, situation_name, take_signed_cycle, told_as, usable_certificate,
+        CertificateView, CheckedFolder, Configuration, ConfigurationView, Environment, Failure,
+        Mutex, OpenedDocumentView, OpenedDocuments, PlacementOrder, PortalDocument,
+        SignedDocumentView, SigningOrder, SigningSession, StatusView, Theme, VisibleFieldsOrder,
     };
     use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
@@ -1125,16 +1246,17 @@ mod tests {
         assert_eq!(dropped_document(&[], &OpenedDocuments::new()), None);
     }
 
-    /// Las dos órdenes nuevas son **dos**, y la lista sigue cerrada (ID-59).
+    /// La lista sigue cerrada (ID-59): ocho órdenes más las tres de los
+    /// ajustes.
     ///
-    /// Cuenta el prefijo `#[tauri::command` y no el atributo entero porque las
-    /// dos órdenes del documento llevan `(async)`: lo que se cierra es cuántas
-    /// órdenes hay, no cómo se ejecuta cada una.
+    /// Cuenta el prefijo `#[tauri::command` y no el atributo entero porque
+    /// varias llevan `(async)`: lo que se cierra es cuántas órdenes hay, no
+    /// cómo se ejecuta cada una.
     #[test]
-    fn the_list_of_commands_grew_from_six_to_eight_and_no_further() {
+    fn the_list_of_commands_grew_to_eleven_and_no_further() {
         assert_eq!(
             production_half().matches("#[tauri::command").count(),
-            8,
+            11,
             "la lista de ordenes es cerrada a proposito"
         );
     }
@@ -1422,6 +1544,87 @@ mod tests {
             module: "/usr/lib/softhsm/libsofthsm2.so".into(),
             documents_folder: documents_folder.to_path_buf(),
             configuration: Mutex::new(Configuration::default()),
+            memory: super::Memory::at(&crate::paths::Paths::under(documents_folder)),
+        }
+    }
+
+    /// La misma guardia del ADR-0011 sobre lo que devuelven los ajustes.
+    #[test]
+    fn the_configuration_that_crosses_carries_no_host_path() {
+        let body = production_half()
+            .split_once("struct ConfigurationView")
+            .expect("el tipo de salida sigue aqui")
+            .1
+            .split_once('}')
+            .expect("y tiene cuerpo")
+            .0;
+
+        for leak in ["PathBuf", "&Path", "path:", "module:", "reading_path"] {
+            assert!(
+                !body.contains(leak),
+                "«ConfigurationView» ha ganado un «{leak}»: eso es una ruta del anfitrion saliendo"
+            );
+        }
+    }
+
+    /// Sin destino elegido manda la carpeta de documentos, y sale por su
+    /// nombre: la ruta se queda de este lado (ADR-0011).
+    #[test]
+    fn the_configuration_shows_the_destination_folder_by_its_name() {
+        let view = shown(
+            &Configuration::default(),
+            std::path::Path::new("/home/quien/Documentos"),
+        );
+
+        assert_eq!(view.destination, "Documentos");
+        assert!(!view.destination.contains('/'));
+    }
+
+    /// La ventana no elige la carpeta —bajo el arenero hay una sola—, así que
+    /// lo que mande en ese campo no puede reescribir lo guardado.
+    #[test]
+    fn writing_the_configuration_never_moves_the_destination_folder() {
+        let live = Configuration {
+            destination: Some(crate::memory::DestinationFolder::at(
+                "/home/quien/Documentos/Firmados",
+            )),
+            ..Configuration::default()
+        };
+        let chosen = ConfigurationView {
+            language: "en".to_owned(),
+            destination: "Otra".to_owned(),
+            remember_visible_signature: false,
+            remember_activity: true,
+            theme: Theme::Dark,
+        };
+
+        let next = merged(&live, &chosen);
+
+        assert_eq!(
+            next.destination, live.destination,
+            "el destino no lo elige la ventana"
+        );
+        assert_eq!(next.language, Language::English);
+        assert!(!next.remember_visible_signature);
+        assert_eq!(next.theme, Theme::Dark);
+    }
+
+    /// Un tema desconocido no puede tumbar la lectura de los ajustes: lo que
+    /// hay guardado es un valor cerrado, y el catálogo de la ventana es el
+    /// mismo. Aquí solo se comprueba el viaje de ida y vuelta.
+    #[test]
+    fn the_theme_survives_the_round_trip_to_the_window() {
+        for theme in [Theme::System, Theme::Light, Theme::Dark] {
+            let configuration = Configuration {
+                theme,
+                ..Configuration::default()
+            };
+            let view = shown(
+                &configuration,
+                std::path::Path::new("/home/quien/Documentos"),
+            );
+
+            assert_eq!(merged(&configuration, &view).theme, theme);
         }
     }
 

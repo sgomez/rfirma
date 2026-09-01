@@ -64,3 +64,23 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/*
+ * El fondo de los botones.
+ *
+ * El `helmet` de los artboards declara `.rf-btn { background: transparent;
+ * color: var(--rf-text) }` y el bundle **no**: su `.rf-btn` fija el borde y la
+ * geometría pero deja el fondo sin declarar. Sin declararlo gana la hoja de
+ * estilos del navegador, que en WebKitGTK pinta el botón nativo del sistema
+ * —fondo gris y relieve—, y por eso el botón de menú y las dos entradas del
+ * desplegable salían con sombra.
+ *
+ * Va en `:where()` a propósito, con especificidad cero: así repone lo que
+ * falta sin ganarle a `.rf-btn--primary`, que sí trae su fondo y se declara
+ * antes que este fichero.
+ */
+:where(.rf-btn) {
+  appearance: none;
+  background: transparent;
+  color: var(--rf-text);
+}

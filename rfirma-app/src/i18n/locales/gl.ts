@@ -311,6 +311,12 @@ export const gl: UntranslatedCatalog = {
     destination: {
       label: "",
     },
+    theme: {
+      label: "",
+      system: "",
+      light: "",
+      dark: "",
+    },
     language: {
       label: "",
     },

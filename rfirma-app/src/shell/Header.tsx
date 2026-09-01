@@ -67,7 +67,7 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
   };
 
   return (
-    <header className="header rf-surface">
+    <header className="header">
       <p className="header__name rf-title">{t("app.name")}</p>
       <div className="rf-row">
         {status !== null && (

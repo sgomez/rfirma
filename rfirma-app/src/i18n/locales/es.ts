@@ -380,6 +380,16 @@ export const es = {
     destination: {
       label: "Dónde se guarda el documento firmado",
     },
+    /**
+     * El tema. `system` no es «claro»: es no forzar nada y dejar que mande el
+     * escritorio, y por eso su rótulo nombra al sistema y no a un color.
+     */
+    theme: {
+      label: "Tema",
+      system: "El del sistema",
+      light: "Claro",
+      dark: "Oscuro",
+    },
     language: {
       label: "Idioma",
     },

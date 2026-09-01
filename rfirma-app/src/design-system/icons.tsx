@@ -128,6 +128,15 @@ export function ChevronRightIcon({ size = 16 }: IconProps) {
   );
 }
 
+/** La punta de flecha del desplegable de Preferencias. */
+export function ChevronDownIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
 /** La flecha «anterior» de la barra del visor. */
 export function ChevronLeftIcon({ size = 16 }: IconProps) {
   return (

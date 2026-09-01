@@ -1,0 +1,71 @@
+/*
+ * El desplegable de Preferencias. Ver [`Select`].
+ *
+ * El cierre reutiliza `.rf-input` para que mida y se comporte como el resto de
+ * los campos del diálogo; lo de aquí es lo que el `<input>` no tiene: la punta
+ * de flecha a la derecha y la lista flotante.
+ */
+
+.select {
+  position: relative;
+}
+
+.select__control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rf-space-xs);
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+/* El texto no empuja a la flecha: con un nombre largo se recorta, y la punta
+   sigue donde el ojo la busca. */
+.select__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La lista cuelga del campo, por encima de todo lo que haya en el diálogo. */
+.select__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  gap: 2px;
+  max-height: 240px;
+  padding: 6px;
+  overflow-y: auto;
+  background: var(--rf-bg);
+}
+
+/* Misma geometría que las entradas del menú de la cabecera: es el mismo gesto
+   —una lista corta que se despliega y se elige— y no hay razón para que se
+   vean distintas. */
+.select__option {
+  padding: 9px 10px;
+  border-radius: var(--rf-radius-sm);
+  font-size: 14px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+/* El cursor del teclado y el del ratón son el mismo: `onPointerEnter` mueve
+   `active`, así que aquí basta con una regla y no hace falta un `:hover`. */
+.select__option--active {
+  background: var(--rf-surface);
+}
+
+/* Lo elegido se marca con la marca de verificación del sistema **y** con el
+   color de acento: color solo nunca es el único distintivo. */
+.select__option[aria-selected="true"] {
+  color: var(--rf-primary);
+  font-weight: 600;
+}
+
+.select__option[aria-selected="true"]::after {
+  content: " ✓";
+}

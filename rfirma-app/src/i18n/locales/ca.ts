@@ -311,6 +311,12 @@ export const ca: UntranslatedCatalog = {
     destination: {
       label: "",
     },
+    theme: {
+      label: "",
+      system: "",
+      light: "",
+      dark: "",
+    },
     language: {
       label: "",
     },
