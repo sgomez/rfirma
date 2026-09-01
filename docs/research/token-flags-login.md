@@ -22,15 +22,15 @@ incorrecto».
 
 ## Qué se midió y cómo
 
-### La sonda
+### El método
 
-`docs/research/assets/token-flags-probe/` es un crate de un solo fichero que usa
-**la misma versión de `cryptoki` (0.12) que `rfirma-app`** y, sobre todo, **las
+Las medidas salen de un programa desechable de un solo fichero que usa **la
+misma versión de `cryptoki` (0.12) que `rfirma-app`** y, sobre todo, **las
 mismas llamadas**: `CInitializeArgs::new_with_reserved` con los init args que
 construye `Store::nss`, `open_ro_session`, y `session.login(UserType::User,
 Some(&AuthPin::new(...)))`, que es literalmente la línea de
-`sign_holding_the_turn`. No es una reimplementación: es el mismo camino con
-trazas.
+`sign_holding_the_turn`. No es una reimplementación del recorrido: es el mismo
+camino con trazas.
 
 Para cada ranura con token inicializado imprime `CKF_LOGIN_REQUIRED`,
 `CKF_USER_PIN_INITIALIZED`, `CKF_PROTECTED_AUTHENTICATION_PATH`,
@@ -44,15 +44,9 @@ NSS solo se distinguen por sus init args.
 
 ### Los cuatro almacenes
 
-```bash
-cd docs/research/assets/token-flags-probe
-bash setup-nss.sh /tmp/rfirma-117   # crea nopass, master y emptydb
-bash run.sh       /tmp/rfirma-117   # los recorre, más SoftHSM
-```
-
-`setup-nss.sh` crea **tres perfiles NSS desechables** en `/tmp` con `certutil -N`
-y les mete el certificado del kit de pruebas de la FNMT
-(`docs/research/token-pkcs11-pruebas.md`):
+Tres son **perfiles NSS desechables** creados en `/tmp` con `certutil -N`, con
+el certificado del kit de pruebas de la FNMT
+(`docs/research/token-pkcs11-pruebas.md`) dentro:
 
 - **`nopass`** — `certutil -N --empty-password`, que es exactamente lo que deja
   Firefox cuando nadie pone contraseña maestra.
@@ -63,10 +57,35 @@ y les mete el certificado del kit de pruebas de la FNMT
 El cuarto almacén es el token SoftHSM **`rfirma-test`** (PIN `1234`, módulo
 `/usr/lib/softhsm/libsofthsm2.so`).
 
+Los tres perfiles se montan así, y con esto basta para rehacer la medición:
+
+```bash
+S=/tmp/rfirma-117/nss; rm -rf "$S"; mkdir -p "$S"; cd "$S"
+P12=~/'.local/share/rfirma-test-certs/Claves RSA/AC FNMT Usuarios/Nuevos/Nuevo Perfil no SMIME/ACTIVO_EIDAS_CERTIFICADO_PRUEBAS___99999999R.p12'
+
+# pk12util rechaza el cifrado antiguo del .p12 de la FNMT: se reexporta.
+openssl pkcs12 -in "$P12" -passin pass:1234 -nodes -legacy \
+  | openssl pkcs12 -export -passout pass:1234 -name FNMT -out modern.p12
+
+printf ''        > empty.txt
+printf 'secreto' > master.txt
+
+certutil -N -d sql:"$S/nopass"  --empty-password
+pk12util -i modern.p12 -d sql:"$S/nopass"  -W 1234 -K ""
+certutil -N -d sql:"$S/master"  -f master.txt
+pk12util -i modern.p12 -d sql:"$S/master"  -W 1234 -k master.txt
+certutil -N -d sql:"$S/emptydb" --empty-password
+```
+
+Los init args con los que se abre cada perfil son los que construye
+`Store::nss`, literalmente:
+
+```
+configdir='sql:<perfil>' certPrefix='' keyPrefix='' secmod='secmod.db' flags=readOnly
+```
+
 **Ni el perfil real de Firefox del titular ni su `~/.pki/nssdb` ni su
-certificado personal se tocan en ningún punto.** Los `.p12` de la FNMT usan
-cifrado que `pk12util` rechaza, así que el script los reexporta con
-`openssl pkcs12 -legacy` a un `.p12` moderno antes de importarlos.
+certificado personal se tocan en ningún punto.**
 
 Versiones: `libnss3` 2:3.120-1ubuntu2.1
 (`/usr/lib/x86_64-linux-gnu/libsoftokn3.so`), SoftHSM 2.6.1, `cryptoki` 0.12.0.
@@ -107,8 +126,8 @@ hace daño: no tiene certificados) y nunca la elige para firmar, porque
 
 ## `C_Login` y `C_Sign`, resultados reales
 
-Salida literal de `run.sh`, condensada a lo que importa. `EMPTY` es `""`
-—puntero válido, longitud 0— y `NONE` es `NULL_PTR`.
+Salida literal de la sonda, condensada a lo que importa. «cadena vacía» es `""`
+—puntero válido, longitud 0— y `NULL` es `NULL_PTR`.
 
 | Almacén | sin `C_Login` | `C_Login(User, "1234")` | `C_Login(User, "")` | `C_Login(User, NULL)` |
 |---|---|---|---|---|
@@ -255,13 +274,30 @@ tratando `CKR_USER_ALREADY_LOGGED_IN` como éxito, como hoy.
 
 ## Reproducir
 
+Monta los tres perfiles con el bloque de «Los cuatro almacenes» y recórrelos
+**un proceso por almacén** —`C_Initialize` es por proceso y módulo—, con
+`/usr/lib/x86_64-linux-gnu/libsoftokn3.so` para los perfiles NSS y
+`/usr/lib/softhsm/libsofthsm2.so` para el token de pruebas.
+
+Para los flags de la primera tabla basta `pkcs11-tool` (`opensc`), sin escribir
+nada:
+
 ```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-cd docs/research/assets/token-flags-probe
-cargo build
-bash setup-nss.sh /tmp/rfirma-117
-bash run.sh       /tmp/rfirma-117
+NSS=/tmp/rfirma-117/nss/nopass
+pkcs11-tool --module /usr/lib/x86_64-linux-gnu/libsoftokn3.so -T   # ver nota
+pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so         -T
 ```
+
+`pkcs11-tool` no acepta los init args de NSS, así que para los perfiles hay que
+apuntarlo al perfil por `NSS_LIB_PARAMS` o repetir la llamada desde código con
+los init args de arriba; esto último es lo que se hizo aquí.
+
+La segunda tabla —`C_Login` con `"1234"`, con `""` y con `NULL`, y el `C_Sign`
+posterior— sí necesita código, porque `pkcs11-tool` no distingue la cadena vacía
+de `NULL`, que es justo la diferencia que el sondeo mide. Son unas cien líneas
+con `cryptoki` 0.12: `CInitializeArgs::new_with_reserved` con los init args,
+`open_ro_session`, `login(UserType::User, …)` en una sesión nueva por variante y
+un `C_Sign` con `CKM_SHA256_RSA_PKCS`, el mecanismo del ID-16.
 
 Requiere `certutil`/`pk12util` (`libnss3-tools`), `openssl`, el kit de pruebas de
 la FNMT en `~/.local/share/rfirma-test-certs` y el token SoftHSM `rfirma-test`
