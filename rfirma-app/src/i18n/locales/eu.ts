@@ -214,6 +214,13 @@ export const eu: UntranslatedCatalog = {
       loading: "",
       issuer: "",
       choose: "",
+      list: "",
+      stores: {
+        card: "",
+        firefox: "",
+        chrome: "",
+        nssdb: "",
+      },
       empty: {
         title: "",
         body: "",

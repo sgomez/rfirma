@@ -57,8 +57,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use rfirma_lib::memory::ListedCertificates;
 use rfirma_lib::pkcs11::{
-    self, CertificateRef, CertificateStatus, Situation, TokenCertificate, TokenError,
+    self, CertificateRef, CertificateStatus, Situation, StoreClass, TokenCertificate, TokenError,
 };
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
@@ -439,6 +440,65 @@ fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
             "la firma verifica contra el otro gemelo: se esta emparejando por etiqueta"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// El asa opaca y la clase del almacén
+// ---------------------------------------------------------------------------
+
+/// El caso que hace falta el asa, contra etiquetas repetidas **de verdad**: los
+/// dos gemelos comparten `CKA_LABEL`, y cada asa tiene que llevar a su
+/// certificado y no al primero de los dos.
+#[test]
+fn each_of_two_certificates_sharing_a_label_comes_back_by_its_own_handle() {
+    let found = certificates();
+    let listed = ListedCertificates::new();
+
+    let handles = listed.replace(
+        found
+            .iter()
+            .map(|certificate| certificate.reference().clone()),
+    );
+
+    let twins: Vec<(&String, &TokenCertificate)> = handles
+        .iter()
+        .zip(found.iter())
+        .filter(|(_, certificate)| certificate.reference().label() == TWIN)
+        .collect();
+    assert_eq!(twins.len(), 2, "el token tenia que traer los dos gemelos");
+    assert_ne!(twins[0].0, twins[1].0, "dos filas, dos asas");
+    for (handle, certificate) in twins {
+        assert_eq!(
+            listed.get(handle).as_ref(),
+            Some(certificate.reference()),
+            "el asa tiene que llevar a SU certificado y no al primero con esa etiqueta"
+        );
+    }
+}
+
+/// Y el asa no lleva dentro nada de lo que nombra: ni la ruta del módulo, ni el
+/// token, ni la etiqueta (ADR-0011).
+#[test]
+fn the_handle_of_a_real_certificate_carries_nothing_of_it() {
+    let listed = ListedCertificates::new();
+
+    let handles = listed.replace([reference(ACTIVE)]);
+
+    let handle = &handles[0];
+    assert_eq!(handle.len(), 32);
+    assert!(handle.chars().all(|letter| letter.is_ascii_hexdigit()));
+    for leak in ["softhsm", "libsofthsm2", TOKEN, ACTIVE, "/"] {
+        assert!(!handle.contains(leak), "el asa «{handle}» lleva «{leak}»");
+    }
+}
+
+/// SoftHSM entra por un módulo a secas, así que su clase es la de una tarjeta:
+/// es lo que la ventana enseñará en la tercera columna de la fila.
+#[test]
+fn a_plain_pkcs11_module_is_a_card_store() {
+    let store = certificate_labelled(ACTIVE).reference().store();
+
+    assert_eq!(store.class(), StoreClass::Card);
 }
 
 // ---------------------------------------------------------------------------

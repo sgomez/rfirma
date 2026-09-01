@@ -262,6 +262,13 @@ export const es = {
       loading: "Buscando certificados…",
       issuer: "Emitido por {{issuer}}",
       choose: "Elegir certificado",
+      list: "Certificados disponibles",
+      stores: {
+        card: "Tarjeta",
+        firefox: "Firefox",
+        chrome: "Chrome",
+        nssdb: "Almacén NSS",
+      },
       empty: {
         title: "No hemos encontrado ningún certificado",
         body: "Si usas una tarjeta, comprueba que está insertada y que el lector está conectado.",

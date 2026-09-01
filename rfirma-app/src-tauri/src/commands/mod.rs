@@ -61,10 +61,11 @@ use tauri::State;
 use crate::destination::{CheckedFolder, PortalDocument};
 use crate::ffi::BridgeError;
 use crate::memory::{
-    Configuration, Memory, MemoryError, OpenedDocuments, Situation as MemorySituation, Theme,
+    Configuration, ListedCertificates, Memory, MemoryError, OpenedDocuments,
+    Situation as MemorySituation, Theme,
 };
 use crate::pkcs11::{
-    self, CertificateRef, CertificateStatus, Situation, TokenCertificate, TokenError,
+    self, CertificateRef, CertificateStatus, Situation, StoreClass, TokenCertificate, TokenError,
 };
 use crate::signing::{
     compose_layer2_text, cycle, AdmissibleDocument, Language, MediaBox, OpenCycle, Page, Refusal,
@@ -226,18 +227,49 @@ impl From<CertificateStatus> for StatusView {
     }
 }
 
+/// El nombre en inglés de una clase de almacén, que es la clave con la que el
+/// catálogo de la ventana la traduce.
+///
+/// Es la forma del ID-29 aplicada a algo que no es un fallo: cruza la **clase**
+/// y el rótulo lo pone la ventana, igual que con la `situation` de [`Failure`].
+/// Componer aquí «Perfil de Firefox» se saltaría los catálogos y sacaría
+/// castellano en la versión en inglés.
+fn store_name(class: StoreClass) -> &'static str {
+    match class {
+        StoreClass::Card => "card",
+        StoreClass::Firefox => "firefox",
+        StoreClass::Chrome => "chrome",
+        StoreClass::Nssdb => "nssdb",
+    }
+}
+
 /// Un certificado, con lo justo para pintar su fila y para volver a encontrarlo.
 ///
-/// **No lleva el DER ni la ruta del módulo.** El DER es de quien lee X.509, que
-/// es Rust; la ruta del módulo es del anfitrión. Lo que la ventana devuelve para
-/// firmar es la `label`, y el backend reencuentra el resto.
+/// **No lleva el DER, ni la ruta del módulo, ni el `configdir` del perfil.** El
+/// DER es de quien lee X.509, que es Rust; los otros dos son rutas del
+/// anfitrión (ADR-0011). Lo que la ventana devuelve para firmar es el `id`, y
+/// el backend reencuentra el resto en [`ListedCertificates`].
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CertificateView {
+    /// El asa acuñada al listar. **Sin significado para la ventana**: no se
+    /// deriva de nada del certificado y de ella no se reconstruye ninguna ruta.
+    ///
+    /// Es lo que identifica la fila, y no la `label`: las etiquetas se repiten
+    /// —dos claves con el mismo `CKA_LABEL` en un perfil de Firefox, dos
+    /// `FNMT-GEMELO-99999999R` en el token de pruebas— y buscando por etiqueta
+    /// se cogía siempre el primero, así que el segundo era inelegible.
+    pub id: String,
     pub label: String,
     pub holder_name: String,
     pub id_number: String,
     pub issuer: String,
+    /// De qué clase es el almacén de donde salió: `card`, `firefox`, `chrome`
+    /// o `nssdb`. **Nunca una ruta y nunca el rótulo ya escrito**: el mismo
+    /// certificado en el perfil de Firefox y en `~/.pki/nssdb` es
+    /// indistinguible sin esto, y quien lo traduce es el catálogo de la
+    /// ventana.
+    pub store: String,
     pub status: StatusView,
 }
 
@@ -319,7 +351,9 @@ impl PlacementOrder {
 pub struct SigningOrder {
     /// El asa que dio el portal al abrir el documento. Entra, no sale.
     pub document: String,
-    /// La `label` del certificado elegido, de [`CertificateView`].
+    /// El **asa** del certificado elegido, la que dio [`CertificateView::id`].
+    /// Entra, no sale, y no es la etiqueta: con dos etiquetas iguales la
+    /// etiqueta no distingue una fila de la otra.
     pub certificate: String,
     /// Dónde cae el recuadro, en **espacio de usuario PDF** (ID-21).
     ///
@@ -369,6 +403,10 @@ pub struct Environment {
     /// cargue no puede dejar sin certificados a los demás. Los resuelve
     /// [`crate::pkcs11::stores::from_environment`] al arrancar.
     pub stores: Vec<crate::pkcs11::Store>,
+    /// Los certificados del último listado, por su asa. Ver
+    /// [`ListedCertificates`]: es donde se queda todo lo que la ventana no
+    /// puede tener.
+    pub listed: ListedCertificates,
     /// La carpeta de documentos del usuario, para cuando no haya destino
     /// elegido.
     pub documents_folder: std::path::PathBuf,
@@ -449,15 +487,25 @@ pub fn list_certificates(
     environment: State<'_, Environment>,
 ) -> Result<Vec<CertificateView>, Failure> {
     let found = pkcs11::list_certificates_across(&environment.stores)?;
+    // Las asas se acuñan **aquí** y sustituyen a las del listado anterior: la
+    // ventana solo puede señalar filas del listado que tiene delante.
+    let handles = environment.listed.replace(
+        found
+            .iter()
+            .map(|certificate| certificate.reference().clone()),
+    );
     Ok(found
         .into_iter()
-        .map(|certificate| {
+        .zip(handles)
+        .map(|(certificate, id)| {
             let (holder_name, id_number) = holder_of(certificate.subject().as_deref());
             CertificateView {
+                id,
                 label: certificate.reference().label().to_owned(),
                 holder_name,
                 id_number,
                 issuer: issuer_of(certificate.issuer().as_deref()),
+                store: store_name(certificate.reference().store().class()).to_owned(),
                 status: certificate.status().into(),
             }
         })
@@ -474,27 +522,49 @@ pub fn compose_visible_text(
     order: SigningOrder,
     environment: State<'_, Environment>,
 ) -> Result<String, Failure> {
-    // El titular sale del token, no de la orden: la ventana solo tiene la
-    // etiqueta, y componer el recuadro con la etiqueta en vez del nombre
-    // enseñaría una vista previa que el PDF no va a tener.
+    // El titular sale del token, no de la orden: la ventana solo tiene el asa,
+    // y componer el recuadro con lo que la ventana diga sería dejar que estampe
+    // cualquier nombre.
     let holder = holder_named(&order.certificate, &environment)?;
     Ok(layer2_text_of(&order, &holder))
 }
 
 /// El nombre y el DNI del certificado elegido, leídos del DER. **Sin PIN**:
 /// los certificados son objetos públicos del token.
-fn holder_named(label: &str, environment: &Environment) -> Result<(String, String), Failure> {
+fn holder_named(handle: &str, environment: &Environment) -> Result<(String, String), Failure> {
     let certificates = pkcs11::list_certificates_across(&environment.stores)?;
-    let chosen = certificates
+    let chosen = certificate_behind(&certificates, handle, &environment.listed)?;
+    Ok(holder_of(chosen.subject().as_deref()))
+}
+
+/// El certificado que hay detrás de un asa, buscado en el listado de ahora
+/// mismo.
+///
+/// Son dos pasos y no uno: el asa da la [`CertificateRef`] que se apuntó al
+/// listar, y la referencia —módulo, init args, token, etiqueta y `CKA_ID`— es
+/// lo que empareja con el certificado que el token enseña **ahora**. Comparar
+/// la referencia entera y no la etiqueta es lo que hace elegible al segundo de
+/// dos certificados con la misma etiqueta.
+fn certificate_behind<'a>(
+    certificates: &'a [TokenCertificate],
+    handle: &str,
+    listed: &ListedCertificates,
+) -> Result<&'a TokenCertificate, Failure> {
+    let wanted = listed.get(handle).ok_or_else(|| {
+        Failure::new(
+            "certificateNotFound",
+            "el certificado elegido no es de la ultima busqueda",
+        )
+    })?;
+    certificates
         .iter()
-        .find(|certificate| certificate.reference().label() == label)
+        .find(|certificate| certificate.reference() == &wanted)
         .ok_or_else(|| {
             Failure::new(
                 "certificateNotFound",
-                format!("el token ya no tiene {label}"),
+                format!("el token ya no tiene {}", wanted.label()),
             )
-        })?;
-    Ok(holder_of(chosen.subject().as_deref()))
+        })
 }
 
 fn layer2_text_of(order: &SigningOrder, holder: &(String, String)) -> String {
@@ -526,22 +596,15 @@ fn layer2_text_of(order: &SigningOrder, holder: &(String, String)) -> String {
 /// PIN, y la única que ve el token de ahora mismo.
 fn usable_certificate<'a>(
     certificates: &'a [TokenCertificate],
-    label: &str,
+    handle: &str,
+    listed: &ListedCertificates,
 ) -> Result<&'a TokenCertificate, Failure> {
-    let chosen = certificates
-        .iter()
-        .find(|certificate| certificate.reference().label() == label)
-        .ok_or_else(|| {
-            Failure::new(
-                "certificateNotFound",
-                format!("el token ya no tiene {label}"),
-            )
-        })?;
+    let chosen = certificate_behind(certificates, handle, listed)?;
     let status = chosen.status();
     if !status.is_usable() {
         return Err(Failure::new(
             "certificateNotFound",
-            format!("{label}: {status:?}"),
+            format!("{}: {status:?}", chosen.reference().label()),
         ));
     }
     Ok(chosen)
@@ -550,8 +613,8 @@ fn usable_certificate<'a>(
 /// La configuración de firma que salen de la orden y del certificado elegido.
 ///
 /// El nombre y el DNI se leen **del DER**, no de la orden: la ventana solo
-/// manda la etiqueta, y componer el recuadro con lo que la ventana diga sería
-/// dejar que estampe cualquier nombre.
+/// manda el asa, y componer el recuadro con lo que la ventana diga sería dejar
+/// que estampe cualquier nombre.
 fn config_for(order: &SigningOrder, chosen: &TokenCertificate) -> Result<SignatureConfig, Failure> {
     let (name, id) = holder_of(chosen.subject().as_deref());
     Ok(SignatureConfig {
@@ -631,11 +694,11 @@ fn deliver(
 /// todavía sirve— con la configuración que sale de él, porque las tres son la
 /// misma decisión: **con qué se firma**.
 fn plan_signature(
-    stores: &[crate::pkcs11::Store],
+    environment: &Environment,
     order: &SigningOrder,
 ) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), Failure> {
-    let certificates = pkcs11::list_certificates_across(stores)?;
-    let chosen = usable_certificate(&certificates, &order.certificate)?;
+    let certificates = pkcs11::list_certificates_across(&environment.stores)?;
+    let chosen = usable_certificate(&certificates, &order.certificate, &environment.listed)?;
     Ok((
         config_for(order, chosen)?,
         chosen.reference().clone(),
@@ -685,7 +748,7 @@ pub fn begin_signing(
     // registro, y solo él (ID-62).
     let document = opened_document(&opened, &order.document)?;
     let bytes = admitted_bytes(&document)?;
-    let (config, reference, chain) = plan_signature(&environment.stores, &order)?;
+    let (config, reference, chain) = plan_signature(&environment, &order)?;
 
     let cycle = on_the_bridge(&isolate, move |bridge| {
         // La comprobación se repite dentro del hilo porque el tipo que la
@@ -1132,14 +1195,17 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::{
-        attribute, config_for, deliver, dropped_document, folder_it_came_from, holder_of,
-        issuer_of, language_of, merged, remember_the_folder, shown, situation_name,
-        starting_folder, take_signed_cycle, told_as, usable_certificate, CertificateView,
-        CheckedFolder, Configuration, ConfigurationView, Environment, Failure, Mutex,
-        OpenedDocumentView, OpenedDocuments, PlacementOrder, PortalDocument, SignedDocumentView,
-        SigningOrder, SigningSession, StatusView, Theme, VisibleFieldsOrder,
+        attribute, certificate_behind, config_for, deliver, dropped_document, folder_it_came_from,
+        holder_of, issuer_of, language_of, merged, remember_the_folder, shown, situation_name,
+        starting_folder, store_name, take_signed_cycle, told_as, usable_certificate,
+        CertificateView, CheckedFolder, Configuration, ConfigurationView, Environment, Failure,
+        ListedCertificates, Mutex, OpenedDocumentView, OpenedDocuments, PlacementOrder,
+        PortalDocument, SignedDocumentView, SigningOrder, SigningSession, StatusView, Theme,
+        VisibleFieldsOrder,
     };
-    use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
+    use crate::pkcs11::{
+        CertificateRef, CertificateStatus, Situation, StoreClass, TokenCertificate,
+    };
     use crate::signing::Language;
 
     /// **Grada A**: lo que se comprueba aquí es la **forma** de lo que sale por
@@ -1170,7 +1236,15 @@ mod tests {
                 .split_once('}')
                 .expect("y tiene cuerpo")
                 .0;
-            for leak in ["PathBuf", "&Path", "path:", "module:", "reading_path"] {
+            for leak in [
+                "PathBuf",
+                "&Path",
+                "path:",
+                "module:",
+                "reading_path",
+                "init_args",
+                "configdir",
+            ] {
                 assert!(
                     !body.contains(leak),
                     "«{output}» ha ganado un «{leak}»: eso es una ruta del anfitrión saliendo"
@@ -1463,10 +1537,12 @@ mod tests {
     #[test]
     fn a_certificate_crosses_without_its_der_and_without_its_module() {
         let view = CertificateView {
+            id: "0123456789abcdef0123456789abcdef".to_owned(),
             label: "ETIQUETA".to_owned(),
             holder_name: "Ada Lovelace Byron".to_owned(),
             id_number: "IDCES-00000000T".to_owned(),
             issuer: "FNMT-RCM".to_owned(),
+            store: store_name(StoreClass::Firefox).to_owned(),
             status: StatusView::Valid,
         };
         let json = serde_json::to_string(&view).expect("serializa");
@@ -1474,6 +1550,28 @@ mod tests {
         assert!(json.contains(r#""holderName":"Ada Lovelace Byron""#));
         assert!(!json.contains(r#""der""#), "el DER no sale: {json}");
         assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
+    }
+
+    /// El almacén cruza como **clase en inglés** y no como rótulo ni como
+    /// ruta: el nombre en castellano lo pone el catálogo de la ventana, igual
+    /// que hace con la `situation` de un fallo.
+    #[test]
+    fn the_store_crosses_as_a_class_and_never_as_a_path() {
+        let names = [
+            store_name(StoreClass::Card),
+            store_name(StoreClass::Firefox),
+            store_name(StoreClass::Chrome),
+            store_name(StoreClass::Nssdb),
+        ];
+
+        assert_eq!(names, ["card", "firefox", "chrome", "nssdb"]);
+        for name in names {
+            assert!(!name.contains('/'), "«{name}» parece una ruta");
+            assert!(
+                name.chars().all(|letter| letter.is_ascii_lowercase()),
+                "«{name}» no es una clase en ingles"
+            );
+        }
     }
 
     #[test]
@@ -1532,15 +1630,32 @@ mod tests {
     /// estado sale `Unreadable`, que es justo lo que hace falta para probar la
     /// negativa sin fabricar un X.509.
     fn a_certificate(label: &str, der: &[u8]) -> TokenCertificate {
+        a_certificate_with_id(label, 0x01, der)
+    }
+
+    /// El mismo, con el `CKA_ID` a la vista: es lo único que distingue dos
+    /// certificados que comparten etiqueta.
+    fn a_certificate_with_id(label: &str, cka_id: u8, der: &[u8]) -> TokenCertificate {
         TokenCertificate::new(
             CertificateRef::new(
                 "/usr/lib/softhsm/libsofthsm2.so",
                 "rfirma-test",
                 label,
-                vec![0x01],
+                vec![cka_id],
             ),
             der.to_vec(),
         )
+    }
+
+    /// Un registro con esos certificados ya listados, y sus asas.
+    fn listed_from(certificates: &[TokenCertificate]) -> (ListedCertificates, Vec<String>) {
+        let listed = ListedCertificates::new();
+        let handles = listed.replace(
+            certificates
+                .iter()
+                .map(|certificate| certificate.reference().clone()),
+        );
+        (listed, handles)
     }
 
     fn an_order() -> SigningOrder {
@@ -1568,10 +1683,44 @@ mod tests {
 
     #[test]
     fn refuses_a_certificate_that_is_no_longer_in_the_token() {
-        let failure = usable_certificate(&[], "FIRMA").expect_err("ya no esta");
+        let certificates = [a_certificate("FIRMA", &[])];
+        let (listed, handles) = listed_from(&certificates);
+
+        let failure = usable_certificate(&[], &handles[0], &listed).expect_err("ya no esta");
 
         assert_eq!(failure.situation, "certificateNotFound");
         assert!(failure.detail.contains("FIRMA"), "{}", failure.detail);
+    }
+
+    /// Un asa que no salió de la última búsqueda no elige nada: la ventana solo
+    /// puede señalar filas del listado que tiene delante.
+    #[test]
+    fn refuses_a_handle_that_is_not_from_the_last_listing() {
+        let listed = ListedCertificates::new();
+
+        let failure = usable_certificate(&[], "00000000000000000000000000000000", &listed)
+            .expect_err("no es de la ultima busqueda");
+
+        assert_eq!(failure.situation, "certificateNotFound");
+    }
+
+    /// El caso que hacía falta el asa: dos certificados con la **misma
+    /// etiqueta** son elegibles por separado, y elegir el segundo firma con el
+    /// segundo. Buscando por etiqueta se cogía siempre el primero.
+    #[test]
+    fn two_certificates_with_the_same_label_are_chosen_apart() {
+        let certificates = [
+            a_certificate_with_id("FNMT-GEMELO-99999999R", 0x04, &[]),
+            a_certificate_with_id("FNMT-GEMELO-99999999R", 0x05, &[]),
+        ];
+        let (listed, handles) = listed_from(&certificates);
+
+        let first = certificate_behind(&certificates, &handles[0], &listed).expect("el primero");
+        let second = certificate_behind(&certificates, &handles[1], &listed).expect("el segundo");
+
+        assert_ne!(handles[0], handles[1]);
+        assert_eq!(first.reference().cka_id(), Some([0x04].as_slice()));
+        assert_eq!(second.reference().cka_id(), Some([0x05].as_slice()));
     }
 
     #[test]
@@ -1580,8 +1729,10 @@ mod tests {
         // una cosa y otra puede haberse retirado la tarjeta o haber pasado la
         // medianoche del `notAfter`.
         let certificates = [a_certificate("FIRMA", &[0x00, 0x01, 0x02])];
+        let (listed, handles) = listed_from(&certificates);
 
-        let failure = usable_certificate(&certificates, "FIRMA").expect_err("no es legible");
+        let failure =
+            usable_certificate(&certificates, &handles[0], &listed).expect_err("no es legible");
 
         assert_eq!(failure.situation, "certificateNotFound");
         assert!(failure.detail.contains("Unreadable"), "{}", failure.detail);
@@ -1659,6 +1810,7 @@ mod tests {
             stores: vec![crate::pkcs11::Store::module(
                 "/usr/lib/softhsm/libsofthsm2.so",
             )],
+            listed: ListedCertificates::new(),
             documents_folder: documents_folder.to_path_buf(),
             configuration: Mutex::new(Configuration::default()),
             memory: super::Memory::at(&crate::paths::Paths::under(documents_folder)),

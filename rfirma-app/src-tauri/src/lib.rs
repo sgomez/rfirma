@@ -45,6 +45,9 @@ pub fn run() {
         // token del anfitrión sin exportar nada, y con el mismo código que
         // corre instalado (ID-13).
         stores: pkcs11::stores::from_environment(),
+        // El último listado de certificados, vacío hasta la primera búsqueda.
+        // Es donde se quedan las referencias que la ventana no puede tener.
+        listed: memory::ListedCertificates::new(),
         documents_folder: paths::documents_folder().unwrap_or_default(),
         configuration: std::sync::Mutex::new(configuration),
         // La memoria viaja con el entorno y no aparte: las órdenes que guardan

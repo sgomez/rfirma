@@ -60,8 +60,8 @@ export interface Layer2Composer {
  * Con qué y cuándo se firma, que es lo que le faltaba al compositor.
  *
  * El recuadro lleva el nombre y el DNI del titular —que solo conoce quien lee
- * el DER, o sea el backend— y la fecha. Por el puerto viajan la **etiqueta**
- * del certificado, con la que el backend lo reencuentra, y el **instante ya
+ * el DER, o sea el backend— y la fecha. Por el puerto viajan el **asa** del
+ * certificado, con la que el backend lo reencuentra, y el **instante ya
  * formateado**.
  *
  * `signedAt` tiene que ser **el mismo** que se envíe a firmar. El recuadro se
@@ -70,7 +70,7 @@ export interface Layer2Composer {
  * que el PDF no va a tener. Por eso se fija una vez y se pasa a las dos.
  */
 export interface SigningIdentity {
-  /** El `CKA_LABEL` del certificado elegido. */
+  /** El asa del certificado elegido, la que dio el backend al listar. */
   certificate: string;
   /** La fecha y hora, ya formateadas para el recuadro. */
   signedAt: string;

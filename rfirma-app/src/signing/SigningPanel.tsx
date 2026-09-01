@@ -1,16 +1,10 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AlertIcon,
-  CertificateIcon,
-  CheckIcon,
-  FileIcon,
-  FolderIcon,
-  InfoIcon,
-} from "../design-system/icons";
+import { AlertIcon, CheckIcon, FileIcon, FolderIcon, InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
+import { CertificateSelect, statusWarning } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 import type { SigningFailure } from "./failure";
@@ -46,8 +40,18 @@ export type CertificateState =
   | { kind: "loading" }
   | { kind: "empty" }
   | { kind: "failed"; failure: NamedFailure }
-  | { kind: "unchosen" }
-  | { kind: "chosen"; certificate: Certificate };
+  /**
+   * Hay certificados y **ninguno elegido**, que es lo que pasa la primera vez
+   * con varios: el disparador dice «Elegir certificado» y el botón de firmar
+   * sigue apagado. Elegir con qué identidad se firma un documento con validez
+   * jurídica no lo hace la aplicación por su cuenta.
+   */
+  | { kind: "unchosen"; certificates: readonly Certificate[] }
+  /**
+   * Uno elegido, **y los demás al lado**: el desplegable los sigue listando,
+   * porque cambiar de certificado es abrirlo otra vez y no un botón aparte.
+   */
+  | { kind: "chosen"; certificate: Certificate; certificates: readonly Certificate[] };
 
 /** La carpeta de destino, por su **nombre**: la ruta no se enseña (ADR-0011). */
 export interface Destination {
@@ -59,7 +63,8 @@ export interface Destination {
 interface SigningPanelProps {
   document: SigningDocument;
   certificate: CertificateState;
-  onChooseCertificate: () => void;
+  /** Cuál se elige en el desplegable. */
+  onChooseCertificate: (certificate: Certificate) => void;
   onRetryCertificates: () => void;
   onChooseModule: () => void;
   signature: VisibleSignature;
@@ -132,7 +137,7 @@ export function SigningPanel({
   // Memoizado porque es la dependencia del efecto que pide la vista previa: un
   // objeto nuevo en cada pintada la pediría en bucle.
   const signer = useMemo<SigningIdentity | null>(
-    () => (chosen === null ? null : { certificate: chosen.label, signedAt, language }),
+    () => (chosen === null ? null : { certificate: chosen.id, signedAt, language }),
     [chosen, signedAt, language],
   );
   const preview = useLayer2Preview(composer, signature, signer);
@@ -359,7 +364,7 @@ function CertificateBlock({
   onChooseModule,
 }: {
   state: CertificateState;
-  onChoose: () => void;
+  onChoose: (certificate: Certificate) => void;
   onRetry: () => void;
   onChooseModule: () => void;
 }) {
@@ -420,56 +425,24 @@ function CertificateBlock({
     );
   }
 
-  if (state.kind === "unchosen") {
-    return (
-      <button type="button" className="rf-btn rf-btn--secondary" onClick={onChoose}>
-        {t("panel.certificate.choose")}
-      </button>
-    );
-  }
-
-  const { certificate } = state;
+  // Elegido o no, el hueco lo ocupa el mismo desplegable: cambiar de
+  // certificado es volver a abrirlo, y por eso el botón `Cambiar` de la tarjeta
+  // ya no existe.
+  const chosen = state.kind === "chosen" ? state.certificate : null;
   return (
-    <div className="rf-card panel__certificate">
-      <div className="panel__certificate-name">
-        <span className="panel__certificate-icon">
-          <CertificateIcon />
-        </span>
-        <span className="rf-title">{certificate.holderName}</span>
-      </div>
-      <p className="rf-body rf-text-muted">
-        {certificate.idNumber} · {t("panel.certificate.issuer", { issuer: certificate.issuer })}
-      </p>
-      {!isUsable(certificate.status) && (
+    <>
+      <CertificateSelect certificates={state.certificates} chosen={chosen} onChoose={onChoose} />
+      {/* Con uno solo se elige solo, así que puede quedar puesto uno que no
+          sirve: el aviso se queda debajo del disparador, donde estaba en la
+          tarjeta. Elegido de la lista esto no se ve nunca, porque las filas
+          inutilizables no se dejan elegir. */}
+      {chosen !== null && !isUsable(chosen.status) && (
         <p className="rf-prose panel__certificate-warning" role="alert">
-          {statusWarning(certificate.status, i18n.language, t)}
+          {statusWarning(chosen.status, i18n.language, t)}
         </p>
       )}
-      <button type="button" className="rf-btn rf-btn--ghost" onClick={onChoose}>
-        {t("actions.change")}
-      </button>
-    </div>
+    </>
   );
-}
-
-/** Por qué no se puede firmar con este certificado, dicho antes del PIN. */
-function statusWarning(
-  status: Certificate["status"],
-  locale: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
-  switch (status.kind) {
-    case "expired":
-      return t("panel.certificate.expired", {
-        date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(status.notAfter * 1000),
-      });
-    case "notYetValid":
-      return t("panel.certificate.notYetValid");
-    case "revoked":
-      return t("panel.certificate.revoked", { reason: status.reason });
-    default:
-      return t("panel.certificate.unreadable");
-  }
 }
 
 /** Una casilla. No sale del sistema de diseño: se maqueta con tokens. */

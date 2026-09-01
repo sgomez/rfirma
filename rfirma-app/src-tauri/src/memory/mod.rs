@@ -29,6 +29,8 @@
 
 pub mod configuration;
 pub mod error;
+pub mod handles;
+pub mod listed;
 pub mod opened;
 pub mod recents;
 pub mod state;
@@ -36,6 +38,7 @@ pub mod store;
 
 pub use configuration::{Configuration, DestinationFolder, Theme};
 pub use error::{MemoryError, Situation};
+pub use listed::ListedCertificates;
 pub use opened::OpenedDocuments;
 pub use recents::{Badge, RecentDocument, Recents, ShownBadge, CAPACITY};
 pub use state::State;

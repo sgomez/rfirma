@@ -53,6 +53,31 @@ pub const CANDIDATE_SOFTOKENS: &[&str] = &[
     "/usr/lib/nss/libsoftokn3.so",
 ];
 
+/// **Qué clase de almacén** es, para poder decirlo en la ventana.
+///
+/// Cruza la frontera como clase en inglés y **nunca como ruta** (ADR-0011): el
+/// rótulo —«Firefox», «Chrome», «Tarjeta»— lo pone el catálogo de la ventana,
+/// igual que hace con la `situation` de un fallo. Componer aquí el nombre ya
+/// escrito se saltaría los catálogos y sacaría castellano en la versión en
+/// inglés.
+///
+/// Hace falta porque el mismo certificado en el perfil de Firefox y en
+/// `~/.pki/nssdb` es indistinguible sin él, y quien tiene tres iguales no puede
+/// elegir a ciegas.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum StoreClass {
+    /// Un módulo PKCS#11 corriente: el DNIe, una tarjeta, SoftHSM.
+    Card,
+    /// Un perfil de Firefox, servido por `libsoftokn3.so`.
+    Firefox,
+    /// `~/.pki/nssdb`, que es donde guardan los suyos Chrome y las
+    /// herramientas de NSS.
+    Chrome,
+    /// Otro almacén NSS: un perfil fuera de sitio, o el que se apunte a mano.
+    /// No se disfraza de Firefox ni de Chrome, porque no se sabe de quién es.
+    Nssdb,
+}
+
 /// Un almacén de certificados: el módulo que lo sirve y, si hace falta, **qué**
 /// tiene que abrir.
 ///
@@ -112,6 +137,37 @@ impl Store {
     /// o `None` cuando el módulo no necesita que se le diga nada.
     pub fn init_args(&self) -> Option<&str> {
         self.init_args.as_deref()
+    }
+
+    /// De qué clase es, que es lo único de un almacén que puede cruzar a la
+    /// ventana.
+    ///
+    /// Sin init args es una tarjeta: eso es lo que era un almacén antes del
+    /// #99. Con ellos es NSS, y **de quién** es el perfil se decide por su
+    /// `configdir`; un perfil que no esté ni en `~/.mozilla/firefox` ni en
+    /// `~/.pki/nssdb` se queda en [`StoreClass::Nssdb`] en vez de que se le
+    /// atribuya un dueño que no se conoce.
+    pub fn class(&self) -> StoreClass {
+        let Some(profile) = self.profile() else {
+            return StoreClass::Card;
+        };
+        if profile.contains("/.mozilla/firefox/") {
+            StoreClass::Firefox
+        } else if profile.ends_with("/.pki/nssdb") {
+            StoreClass::Chrome
+        } else {
+            StoreClass::Nssdb
+        }
+    }
+
+    /// El `configdir` de los init args, sin el prefijo `sql:` y sin las
+    /// comillas. **No sale de este módulo**: es una ruta del anfitrión, y solo
+    /// se lee para clasificar.
+    fn profile(&self) -> Option<&str> {
+        let args = self.init_args.as_deref()?;
+        let after = args.split_once("configdir='")?.1;
+        let inside = after.split_once('\'')?.0;
+        Some(inside.strip_prefix("sql:").unwrap_or(inside))
     }
 }
 
@@ -341,6 +397,38 @@ mod tests {
     #[test]
     fn a_plain_module_has_nothing_to_configure() {
         assert_eq!(Store::module("/usr/lib/x.so").init_args(), None);
+    }
+
+    /// Sin init args es una tarjeta, y esa es la clase que cruza a la ventana.
+    #[test]
+    fn a_plain_module_is_a_card() {
+        assert_eq!(Store::module("/usr/lib/x.so").class(), StoreClass::Card);
+    }
+
+    /// Un perfil de `~/.mozilla/firefox` es de Firefox, y el de `~/.pki/nssdb`
+    /// es de Chrome: son los dos que hay que poder distinguir en la lista.
+    #[test]
+    fn an_nss_store_is_classified_by_whose_profile_it_opens() {
+        let firefox = Store::nss(
+            "/usr/lib/libsoftokn3.so",
+            Path::new("/casa/ada/.mozilla/firefox/aaaaaaaa.default-release"),
+        );
+        let chrome = Store::nss("/usr/lib/libsoftokn3.so", Path::new("/casa/ada/.pki/nssdb"));
+
+        assert_eq!(firefox.class(), StoreClass::Firefox);
+        assert_eq!(chrome.class(), StoreClass::Chrome);
+    }
+
+    /// Un perfil que no esté en ninguno de los dos sitios se queda en «NSS» a
+    /// secas: atribuirle un dueño sería inventárselo.
+    #[test]
+    fn an_nss_store_somewhere_else_claims_no_owner() {
+        let store = Store::nss(
+            "/usr/lib/libsoftokn3.so",
+            Path::new("/tmp/perfil-de-pruebas"),
+        );
+
+        assert_eq!(store.class(), StoreClass::Nssdb);
     }
 
     /// Las dos mitades que no son negociables (ID-02): el formato `sql:` y el
