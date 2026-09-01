@@ -63,6 +63,11 @@ serde = { version = "1", features = ["derive"] }
 # deserializar: un fichero de una version futura se aparta, no se interpreta.
 serde_json = "1"
 tauri = { version = "2", features = [] }
+# El diálogo de fichero se abre desde Rust y no desde el frontal (ID-63): así
+# la ventana sigue con un solo fichero que conoce `invoke` y la lista de
+# permisos de `capabilities/default.json` no crece, porque los permisos de
+# Tauri v2 vigilan lo que la ventana puede pedir, no lo que Rust hace.
+tauri-plugin-dialog = "2"
 # Solo para leer del certificado el titular y las fechas de validez. Un
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
 # saber leer su notAfter.
