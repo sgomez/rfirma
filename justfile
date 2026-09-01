@@ -191,7 +191,11 @@ token:
 # ---------------------------------------------------------------------------
 
 # Las tres cadenas, y falla si falla cualquiera.
-lint: lint-java lint-ts lint-rust
+#
+# `check-flatpak-sources` va PRIMERA a proposito: no necesita ni bootstrap ni
+# deps, tarda milisegundos, y lo que detecta —un fichero de bloqueo tocado sin
+# regenerar las fuentes vendorizadas— no lo encuentra ninguna de las otras.
+lint: check-flatpak-sources lint-java lint-ts lint-rust
 
 # -Xlint:all, como decidio el issue #11.
 lint-java: bootstrap
@@ -424,6 +428,24 @@ flatpak-sources:
     python3 flatpak-cargo-generator.py \
         ../../rfirma-app/src-tauri/Cargo.lock -o cargo-sources.json
     flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
+    # El sello que lee `check-flatpak-sources`: el sha256 de cada fichero de
+    # bloqueo TAL Y COMO estaba al generar los JSON de arriba. Se escribe en el
+    # formato de sha256sum para que comprobarlo sea `sha256sum -c` y no un
+    # analizador nuestro. Las rutas van relativas a la raiz del repositorio,
+    # que es desde donde comprueba el script.
+    cd "{{ justfile_directory() }}"
+    sha256sum rfirma-app/src-tauri/Cargo.lock rfirma-app/pnpm-lock.yaml \
+        > packaging/flatpak/sources.lock
+    echo
+    echo "regeneradas. Versiona cargo-sources.json, node-sources.json y sources.lock."
+
+# La comprobacion de ID-07, sin regenerar nada. Va dentro de `lint` (y por
+# tanto de `check`) en vez de ser un paso suelto del workflow, porque
+# docs/agents/code-host.md promete que el CI ejecuta `just check` y nada mas.
+#
+# Comprueba que las fuentes vendorizadas del flatpak estan al dia.
+check-flatpak-sources:
+    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
 
 # Abre la ventana con recarga en caliente.
 dev: check-native deps

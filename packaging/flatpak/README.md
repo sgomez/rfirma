@@ -8,6 +8,25 @@
 | `me.sgomez.rfirma.yml` | El manifiesto |
 | `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
 | `verifica.sh` | Verificación reproducible dentro del arenero |
+| `cargo-sources.json` / `node-sources.json` | Dependencias vendorizadas, generadas |
+| `sources.lock` | El sello que dice contra qué ficheros de bloqueo se generaron |
+| `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
+
+## Instalar
+
+El bundle **no trae el runtime**: sale del remoto de **Flathub**, que es
+requisito de instalación.
+
+```bash
+flatpak remote-add --user --if-not-exists \
+    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+just flatpak
+flatpak install --user packaging/flatpak/me.sgomez.rfirma.flatpak
+```
+
+`just flatpak` construye contra un repositorio ostree local (`repo/`, sin
+versionar) y de ahí saca `me.sgomez.rfirma.flatpak`, que es **el entregable del
+v0.1** (ID-42). No se publica en ningún sitio.
 
 ## La sonda ya no está
 
@@ -48,15 +67,34 @@ El canal es propio: bundle en GitHub Releases y repositorio ostree en
 `rfirma.sgomez.me`. Ver el
 [ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md).
 
-- **Construir sin red.** El módulo `rfirma-app` declara `--share=network` para
-  bajar las dependencias de cargo. Se vendorizan con
-  `flatpak-cargo-generator.py` a partir del `Cargo.lock`, y el frontend con
-  `flatpak-node-generator` a partir del `pnpm-lock.yaml` (`just
-  flatpak-sources`), que es además lo que permitiría construirlo dentro del
-  arenero en vez de traerlo hecho del anfitrión. Ya no lo obliga Flathub: lo
-  decidió por su cuenta el
-  [ADR-0013](../../docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md),
-  para que un fichero generado no entre en el CI sin que nadie lo mire.
 - **Publicar el repositorio ostree.** `flatpak build-export` +
   `flatpak build-update-repo`, firmado con GPG, servido como ficheros estáticos,
   más el `.flatpakref` con la huella de la clave.
+
+## Construir sin red
+
+Ya está hecho: **no hay `--share=network` en el manifiesto**. Las dependencias
+de cargo entran vendorizadas desde `cargo-sources.json`, y `cargo build` corre
+con `--offline`.
+
+Los dos generadores son de
+[flatpak-builder-tools](https://github.com/flatpak/flatpak-builder-tools) y **no
+se versionan aquí** (ID-04): se traen a mano la primera vez.
+`just flatpak-sources` falla nombrando el que falte.
+
+```bash
+just flatpak-sources   # cuando cambie Cargo.lock o pnpm-lock.yaml
+```
+
+Esa receta regenera los dos JSON **y** reescribe `sources.lock` con el `sha256`
+de cada fichero de bloqueo. El CI no los regenera: ejecuta
+`just check-flatpak-sources` (dentro de `just lint`, y por tanto de `just
+check`), que compara esos `sha256` y falla nombrando el fichero que se ha
+movido. Un fichero generado dentro del CI es un fichero que nadie ha mirado
+([ID-07](https://github.com/sgomez/rfirma/issues/46)).
+
+`node-sources.json` se genera y se versiona, pero **el manifiesto todavía no lo
+usa**: el frontend se construye en el anfitrión y entra hecho, porque
+`org.gnome.Sdk//50` no trae `node`. Consumirlo pide añadir la extensión de SDK
+`org.freedesktop.Sdk.Extension.node22`, que es otra decisión. Mientras tanto lo
+cubre la misma puerta, para que no se pudra en silencio.
