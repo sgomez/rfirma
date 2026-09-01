@@ -332,7 +332,7 @@ ser el del token**; obvio dicho así, silencioso al medirlo.
 | Ventana | `--socket=wayland --socket=fallback-x11 --share=ipc --device=dri` | |
 | Compositing | `--env=WEBKIT_DISABLE_COMPOSITING_MODE=1` | Sección 5 |
 | Tarjetas | `--socket=pcsc` | El `pcscd` del anfitrión |
-| Ficheros | **ninguno** | Todo por portales: ni `home` ni `host` |
+| Ficheros | `xdg-documents`, `~/.mozilla/firefox:ro`, `~/.pki/nssdb:ro` | Documentos por portal; los dos `:ro` son la excepción del #95/#101 para NSS. Ni `home` ni `host` |
 | Módulo PKCS#11 | empaquetado (OpenSC 0.27.1 + pcsc-lite 2.5.1) | Sección 3 |
 | Arquitectura | `x86_64` sola en v0.1 | No hay imagen nativa de aarch64 y no se ha medido |
 | Distribución | Flathub como destino; `flatpak build-bundle` para probar | |

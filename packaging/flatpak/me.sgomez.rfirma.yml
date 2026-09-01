@@ -54,6 +54,16 @@ finish-args:
   # Ni --filesystem=home ni --filesystem=host: la ENTRADA de ficheros sigue
   # entrando por portales, y --filesystem=home tampoco devolveria la ruta
   # real del original (ADR-0011).
+  # EXCEPCION CONSCIENTE al ADR-0004 (#95, #101): un almacen de certificados
+  # NSS no es un documento y no hay portal que lo sirva. Sin esto el flatpak
+  # no ve ningun certificado de Firefox. `:ro` es la mitad importante: rfirma
+  # necesita LEER certificados y no tiene ningun motivo para escribir en el
+  # perfil ni en las claves de quien firma. Las rutas son las mismas que lee
+  # pkcs11::stores en el anfitrion (~/.mozilla/firefox via profiles.ini, y
+  # ~/.pki/nssdb). NO se declara --filesystem=home. No hace falta empaquetar
+  # NSS: el runtime org.gnome.Platform//50 ya trae libsoftokn3.so.
+  - --filesystem=~/.mozilla/firefox:ro
+  - --filesystem=~/.pki/nssdb:ro
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin

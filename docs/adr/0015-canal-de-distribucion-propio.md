@@ -70,6 +70,13 @@ son cientos de megas para ahorrar un comando.
 - **Flathub no queda cerrado para siempre**, solo fuera de v0.1. Volver es un esfuerzo nuevo
   —vendorizar el árbol Maven, y lo que sus reglas digan cuando toque—, no la continuación de
   este.
+- **La política de portales no vive aquí.** Esta ADR decide *dónde se sirve* el bundle;
+  qué entra y sale del arenero lo fija el
+  [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md), y ahí está también su
+  **excepción para los almacenes NSS** (`~/.mozilla/firefox:ro` y `~/.pki/nssdb:ro`,
+  [#95](https://github.com/sgomez/rfirma/issues/95) /
+  [#101](https://github.com/sgomez/rfirma/issues/101)). Se anota porque el criterio de
+  aceptación del #101 cita esta ADR para esa nota.
 - Los **instaladores nativos por distribución** (`.deb`, `.rpm`, AUR, snap) siguen fuera de
   v0.1 por decisión del [#17](https://github.com/sgomez/rfirma/issues/17). Esta ADR decide
   **por dónde llega el flatpak**, no cuántos formatos hay.
