@@ -114,6 +114,11 @@ jobs:
       # cambio las pruebas del modulo PKCS#11 corren en cada PR, contra un token
       # de verdad, en vez de quedarse ignoradas. `just check` provisiona el token
       # solo (receta `token`), asi que aqui basta con instalarlos.
+      #
+      # libnss3-tools es la otra mitad de esa grada desde el #99: trae certutil y
+      # pk12util, con los que cada prueba del almacen NSS se monta su propio
+      # perfil desechable en un directorio temporal. El libsoftokn3.so que lo
+      # abre viene con libnss3, que ya esta en el runner.
       - name: Dependencias de sistema de Tauri
         run: |
           sudo apt-get update
@@ -128,7 +133,8 @@ jobs:
             build-essential \
             file \
             softhsm2 \
-            opensc
+            opensc \
+            libnss3-tools
 
       # Binarios preconstruidos: compilarlos desde fuente serian minutos en
       # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
@@ -232,7 +238,8 @@ jobs:
             file \
             poppler-utils \
             softhsm2 \
-            opensc
+            opensc \
+            libnss3-tools
 
       - uses: cargo-bins/cargo-binstall@main
         if: steps.scope.outputs.build == 'true'

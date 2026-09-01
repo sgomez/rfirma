@@ -115,6 +115,11 @@ tools:
     command -v softhsm2-util >/dev/null || { echo "falta: softhsm2-util"; softhsm_apt="$softhsm_apt softhsm2"; failures=1; }
     command -v pkcs11-tool  >/dev/null || { echo "falta: pkcs11-tool";  softhsm_apt="$softhsm_apt opensc";   failures=1; }
     command -v openssl      >/dev/null || { echo "falta: openssl";      softhsm_apt="$softhsm_apt openssl";  failures=1; }
+    # El almacen NSS es la otra mitad de la grada B (#99): certutil y pk12util
+    # montan el perfil desechable de cada prueba, y libsoftokn3.so es el modulo
+    # que lo abre. El perfil real de Firefox de nadie interviene.
+    command -v certutil     >/dev/null || { echo "falta: certutil";     softhsm_apt="$softhsm_apt libnss3-tools"; failures=1; }
+    command -v pk12util     >/dev/null || { echo "falta: pk12util";     softhsm_apt="$softhsm_apt libnss3-tools"; failures=1; }
     if [ -n "$softhsm_apt" ]; then
         echo
         echo "Instalalos con:"

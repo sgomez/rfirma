@@ -126,7 +126,14 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(fields, vec!["cka_id", "label", "module", "token_label"]);
+        // `init_args` entra con el #99: es lo que distingue un perfil de
+        // Firefox de otro, y sin ello un certificado de NSS recordado no sabria
+        // a que almacen volver. Sigue siendo *donde* esta el certificado, no
+        // quien es.
+        assert_eq!(
+            fields,
+            vec!["cka_id", "init_args", "label", "module", "token_label"]
+        );
     }
 
     /// El requisito del ID-32 dicho como lo dice el issue: **ni el titular ni

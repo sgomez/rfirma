@@ -57,6 +57,22 @@ describe("PinDialog", () => {
     expect(onSubmit).toHaveBeenCalledWith("1234");
   });
 
+  // Quien firma con un certificado de Firefox sin contraseña maestra puesta no
+  // tiene ningún secreto que teclear. El diálogo tiene que dejarle seguir y
+  // entregar la CADENA VACÍA: para `C_Login` no es lo mismo que «sin PIN», y un
+  // botón deshabilitado aquí sería un diálogo imposible de completar (#99).
+  it("hands over the empty string when there is no master password to type", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    renderDialog({ onSubmit });
+
+    const submit = screen.getByRole("button", { name: "Firmar" });
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+
+    expect(onSubmit).toHaveBeenCalledWith("");
+  });
+
   it("retries a wrong PIN without restarting the journey", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
