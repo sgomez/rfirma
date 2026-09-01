@@ -377,10 +377,26 @@ native: build-java
 # construido de rfirma-app/dist, porque tauri-build lee `frontendDist` dentro de
 # su propio build.rs. Por eso esta receta encadena tambien `build-ts`.
 #
+# EL ENTREGABLE DEL v0.1 ES EL FICHERO .flatpak (ID-42), no la instalacion: se
+# construye contra un repositorio ostree local y de ahi sale el bundle de un
+# solo fichero, que se instala con `flatpak install`. No se publica en ningun
+# sitio —ni Releases, ni repositorio remoto, ni GPG—: eso es el ADR-0015 y
+# queda fuera de este hito.
+#
+# El runtime NO va dentro del bundle: se consume del remoto de Flathub, que es
+# por tanto requisito de instalacion. Ver el README.
+#
 # Construye el flatpak, el unico canal soportado (ADR-0015).
 flatpak: native build-ts
-    cd {{ justfile_directory() }}/packaging/flatpak && \
-        flatpak-builder --force-clean --user --install build-dir me.sgomez.rfirma.yml
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ justfile_directory() }}/packaging/flatpak"
+    flatpak-builder --force-clean --user --install --repo=repo \
+        build-dir me.sgomez.rfirma.yml
+    flatpak build-bundle repo me.sgomez.rfirma.flatpak me.sgomez.rfirma stable
+    echo
+    echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
+    echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
 # A mano, cuando cambie un fichero de bloqueo: el flatpak se construye SIN red
 # (ADR-0013) y el CI comprueba que estos ficheros estan al dia en vez de
