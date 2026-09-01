@@ -36,9 +36,14 @@
 # romper "los permisos son los declarados y ninguno mas". Cerrar el hueco pide
 # un manifiesto de banco aparte, y eso es otra decision.
 #
-# Lo que SI se mide dentro del arenero son los pasos 2, 3 y 4: que la libreria
-# esta y esta SOLA, que el modulo PKCS#11 que empaqueta el propio flatpak carga,
-# y que la ventana arranca y sigue viva. Ver
+# Lo que SI se mide dentro del arenero son los pasos 2, 3, 4 y 6: que la
+# libreria esta y esta SOLA, que el modulo PKCS#11 que empaqueta el propio
+# flatpak carga, que la ventana arranca y sigue viva, y que un documento
+# entrado por el portal llega con sus bytes intactos. El paso 6 no necesita el
+# WebView para comprobar el portal: usa `flatpak document-export`, la misma via
+# por la que el dialogo de abrir concede el permiso (docs/research/
+# flatpak-canal-unico.md, apartado 4), asi que no hace falta el binario de
+# prueba que el paso 5 SI necesita para el ciclo trifasico. Ver
 # docs/research/flatpak-canal-unico.md.
 #
 # Uso: packaging/flatpak/verifica.sh
@@ -161,7 +166,54 @@ echo "          $(sha256sum "$LIB_BUNDLE/librfirma_crypto.so" | cut -c1-16)... \
 echo "OK  ciclo trifasico y pdfsig contra los bytes que se distribuyen"
 
 echo
-echo "### 6. bundle de un solo fichero"
+echo "### 6. el portal de documentos, dentro del arenero"
+# DENTRO del arenero: `flatpak run` hereda exactamente los mismos permisos
+# que el binario real, y `flatpak document-export` es la misma via por la que
+# el dialogo de abrir (Orden 7, commands/mod.rs) concede el permiso -contra la
+# RUTA del anfitrion, no el inodo- y devuelve la ruta montada que la
+# aplicacion ve (docs/research/flatpak-canal-unico.md, apartado 4). No hace
+# falta el binario de prueba que el paso 5 necesita: aqui no se firma nada,
+# solo se comprueba que los bytes concedidos por el portal llegan, que es lo
+# que la Orden 8 (`read_document`) lee del disco.
+ENTRADA="$LAB/portal-entrada.pdf"
+head -c 65536 /dev/urandom >"$ENTRADA"
+HASH_ANFITRION=$(sha256sum "$ENTRADA" | cut -d' ' -f1)
+RUTA_PORTAL=$(flatpak document-export --app="$APP" "$ENTRADA") \
+    || { echo "FALLO 'flatpak document-export'"; exit 1; }
+echo "ruta que ve la aplicacion: $RUTA_PORTAL"
+HASH_ARENERO=$(flatpak run "${EXTRA[@]}" --command=sha256sum "$APP" "$RUTA_PORTAL" | cut -d' ' -f1) \
+    || { echo "NO HE PODIDO LEER $RUTA_PORTAL DENTRO DEL ARENERO"; exit 1; }
+[ "$HASH_ARENERO" = "$HASH_ANFITRION" ] \
+    && echo "OK  los bytes del portal llegan intactos ($HASH_ARENERO)" \
+    || { echo "LOS BYTES NO COINCIDEN: anfitrion $HASH_ANFITRION, arenero $HASH_ARENERO"; exit 1; }
+
+# ID-72: si el permiso sobrevive a cerrar y reabrir la aplicacion, y no solo a
+# seguir vivo dentro del mismo `flatpak run`. Se simula la sesion siguiente
+# matando el proceso y volviendo a pedir la MISMA ruta del anfitrion, como
+# haria quien vuelve a elegir el mismo fichero en el dialogo.
+flatpak run --filesystem="$LAB" "$APP" >"$LAB/sesion-portal.log" 2>&1 &
+sleep 3
+flatpak kill "$APP" 2>/dev/null
+sleep 1
+RUTA_PORTAL_SESION2=$(flatpak document-export --app="$APP" "$ENTRADA") \
+    || { echo "FALLO 'flatpak document-export' en la sesion siguiente"; exit 1; }
+if [ "$RUTA_PORTAL_SESION2" != "$RUTA_PORTAL" ]; then
+    echo "EL IDENTIFICADOR NO SOBREVIVE: la sesion siguiente recibe otra ruta"
+    echo "    ($RUTA_PORTAL -> $RUTA_PORTAL_SESION2)"
+    echo "    -> los recientes NO podran reabrir por el portal sin volver a" \
+         "pedir permiso el dia que se persistan entre sesiones"
+    exit 1
+fi
+HASH_SESION2=$(flatpak run "${EXTRA[@]}" --command=sha256sum "$APP" "$RUTA_PORTAL_SESION2" | cut -d' ' -f1) \
+    || { echo "NO HE PODIDO RELEER $RUTA_PORTAL_SESION2 en la sesion siguiente"; exit 1; }
+[ "$HASH_SESION2" = "$HASH_ANFITRION" ] \
+    && echo "OK  el identificador del portal sobrevive a cerrar y reabrir la aplicacion" \
+    || { echo "EL IDENTIFICADOR SOBREVIVE PERO LOS BYTES NO COINCIDEN"; exit 1; }
+echo "    -> el dia que los recientes persistan entre sesiones, reabrir por" \
+     "el portal el mismo host path funcionara sin pedir permiso otra vez"
+
+echo
+echo "### 7. bundle de un solo fichero"
 flatpak build-bundle "$LAB/repo" "$LAB/$APP.flatpak" "$APP" stable >/dev/null 2>&1 \
     && echo "$LAB/$APP.flatpak: $(du -h "$LAB/$APP.flatpak" | cut -f1)" \
     || echo "build-bundle FALLO"
