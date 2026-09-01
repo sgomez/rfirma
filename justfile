@@ -240,9 +240,14 @@ build-ts: deps
 # instala el manifiesto flatpak. `vite build` tiene que haber corrido antes,
 # porque tauri-build lee frontendDist.
 #
+# --features custom-protocol NO ES OPCIONAL, y es justo lo que se pierde al no
+# usar `cargo tauri build`, que la pasa el solo. Sin ella el `dev` de Tauri
+# queda encendido y el binario apunta la ventana a devUrl en vez de servir el
+# frontal empotrado. Ver el bloque [features] de src-tauri/Cargo.toml.
+#
 # Compila el binario de la aplicacion.
 build-rust: build-ts
-    cd {{ tauri }} && cargo build --release
+    cd {{ tauri }} && cargo build --release --features custom-protocol
 
 # La libreria nativa NO SE ENCADENA (ADR-0013): `dev` y `build` comprueban que
 # esta y, si falta, fallan nombrando `just native`. Encadenarla metaria 1 m 22 s
