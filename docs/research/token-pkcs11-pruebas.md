@@ -117,18 +117,20 @@ Las órdenes de arriba se ejecutaron a mano una vez. Desde el
 `testdata/fnmt/`, que es el subconjunto del kit versionado en el repositorio, no
 de `~/.local/share/rfirma-test-certs`.
 
-El token pasa a tener **cinco certificados y tres claves**:
+El token pasa a tener **cinco certificados y cinco claves**:
 
 | `CKA_ID` | `CKA_LABEL` | qué tiene |
 | --- | --- | --- |
 | `01` | `FNMT-ACTIVO-99999999R` | clave privada + certificado |
-| `02` | `FNMT-CADUCADO-99999999R` | solo el certificado (caducó en 2020) |
-| `03` | `FNMT-REVOCADO-99999999R` | solo el certificado (revocado en 2024) |
+| `02` | `FNMT-CADUCADO-99999999R` | clave privada + certificado (caducó en 2020) |
+| `03` | `FNMT-REVOCADO-99999999R` | clave privada + certificado (revocado en 2024) |
 | `04` | `FNMT-GEMELO-99999999R` | clave privada + certificado (el par activo) |
 | `05` | `FNMT-GEMELO-99999999R` | clave privada + certificado (el par caducado) |
 
-El caducado y el revocado entran **sin clave a propósito**: existen para que el
-listado tenga que clasificarlos antes de pedir el PIN, no para firmar con ellos.
+El caducado y el revocado **entraron al principio sin clave**, a propósito:
+existían para que el listado tuviera que clasificarlos antes de pedir el PIN,
+no para firmar con ellos. Desde el #100 tienen la suya —la tabla de arriba ya
+lo refleja—; el porqué está en la ampliación de más abajo.
 
 ## Ampliación: los gemelos (#98)
 
@@ -145,6 +147,28 @@ comprueba además que **no** verifica contra el gemelo.
 Como los dos comparten etiqueta, la idempotencia del script mira el `CKA_ID` y
 no la etiqueta: buscarlos por ella daría el segundo por importado en cuanto
 estuviera el primero.
+
+## Ampliación: la clave del caducado y del revocado (#100)
+
+Desde el [issue #100](https://github.com/sgomez/rfirma/issues/100) el listado
+solo ofrece los certificados **firmables**: los que tienen una clave privada
+emparejada por `CKA_ID` en el mismo token. Con eso, «solo el certificado»
+dejó de ser un banco de pruebas útil y pasó a ser un artefacto que se comía a
+sus propios sujetos: sin clave, el caducado y el revocado desaparecían del
+listado y las pruebas de grada B que distinguen un certificado caducado de un
+fallo del token, o uno en vigor de uno revocado, se quedaban sin nada que
+clasificar.
+
+Así que `provision-token.sh` importa también la clave privada del `02` y la
+del `03` —dos líneas, y la idempotencia sigue mirando el `CKA_ID`, así que una
+segunda pasada no reimporta nada—. Lo que da estado a un certificado es su
+propio contenido (`notAfter`, la revocación), no que le falte la clave: el
+banco de pruebas no pierde nada al dárselas, y gana que el filtro de firmables
+no lo vacíe.
+
+El único certificado **sin** clave privada del proyecto vive ahora en el perfil
+NSS desechable de `tests/nss_store.rs`, que es donde hace falta para comprobar
+qué pasa al pedirle una firma a algo que no puede firmar.
 
 ## Fuera
 

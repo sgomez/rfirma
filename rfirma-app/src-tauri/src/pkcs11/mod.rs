@@ -112,6 +112,16 @@ pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate
 /// no solo los que de verdad no tienen clave. Cero claves visibles no
 /// significa «aquí no hay nada firmable»; significa «este módulo no lo va a
 /// decir sin PIN». En ese caso se deja pasar la ranura entera sin filtrar.
+///
+/// El borde de esa vuelta atrás: **un perfil NSS con contraseña maestra se
+/// comporta igual**. Sin `C_Login` tampoco enseña sus `CKO_PRIVATE_KEY`, así
+/// que su ranura no se filtra y vuelve a listar sus ciento y pico entradas.
+/// Degrada en la dirección segura —enseña de más, nunca esconde algo
+/// firmable—, pero ahí el filtro del #100 no se nota; el sitio donde eso se
+/// arregla de verdad es más adelante, cuando ya haya sesión autenticada. El
+/// perfil desechable de las pruebas se monta con `--empty-password`, que es
+/// justo el caso en el que las claves sí se ven, así que ninguna prueba de
+/// grada B enseña este borde.
 pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
     // Bajo el mismo turno que la firma: abrir un almacén NSS es inicializar el
@@ -180,7 +190,17 @@ fn private_key_ids(session: &Session) -> Result<HashSet<Vec<u8>>, TokenError> {
     let mut ids = HashSet::new();
 
     for object in session.find_objects(&[Attribute::Class(ObjectClass::PRIVATE_KEY)])? {
-        for attribute in session.get_attributes(object, &[AttributeType::Id])? {
+        // Una clave que el token enumera pero cuyo CKA_ID no deja leer se
+        // salta, no se propaga: el módulo PKCS#11 lo pone el fabricante de la
+        // tarjeta, y el peor caso de saltarla es un certificado de más en la
+        // lista, mientras que el de propagar es que no se pueda listar nada
+        // —ni en esta ranura ni en los almacenes que vengan detrás— con un
+        // error que habla del atributo de una clave.
+        let Ok(attributes) = session.get_attributes(object, &[AttributeType::Id]) else {
+            continue;
+        };
+
+        for attribute in attributes {
             // Un CKA_ID vacío no empareja nada: es el mismo caso que un
             // certificado sin CKA_ID, ver all_certificates_in_session.
             if let Attribute::Id(bytes) = attribute {
