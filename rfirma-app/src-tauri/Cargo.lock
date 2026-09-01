@@ -2811,6 +2811,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "cryptoki",
+ "getrandom 0.3.4",
  "image",
  "libloading 0.8.9",
  "rsa",

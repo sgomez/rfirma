@@ -106,6 +106,27 @@ describe("el visor vacío", () => {
 });
 
 describe("el visor con documento", () => {
+  /**
+   * El segundo PDF que no se deja abrir deja el primero en pantalla. Si el
+   * aviso solo se pintara en la rama del visor vacío, ese rechazo sería mudo y
+   * la pulsación parecería no haber hecho nada.
+   */
+  it("still tells why a document was refused while another one is painted", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        failure={{ situation: "documentUnreadable", detail: "roto" }}
+      />,
+    );
+
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.getByText("No hemos podido leer el documento")).toBeInTheDocument();
+  });
+
   it("renders the first page and counts the rest", async () => {
     const { document, renders } = recordingDocument(27);
     renderWithCatalog(

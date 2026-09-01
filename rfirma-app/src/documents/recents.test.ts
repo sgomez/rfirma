@@ -24,7 +24,10 @@ describe("record", () => {
     expect(recents.map((entry) => entry.name)).toEqual(["b.pdf", "a.pdf"]);
   });
 
-  it("identifies a document by its opaque id, so reopening an old one rescues it", () => {
+  // Reelegir la misma fila la rescata al frente. Reabrir el mismo fichero por
+  // el diálogo no pasa por aquí con el mismo id: el backend acuña uno nuevo
+  // por concesión (ID-62), y eso son dos filas.
+  it("identifies a document by its opaque id, so re-selecting a row rescues it", () => {
     const recents = record([document("a.pdf"), document("b.pdf")], document("b.pdf"));
 
     expect(recents.map((entry) => entry.name)).toEqual(["b.pdf", "a.pdf"]);

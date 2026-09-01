@@ -53,9 +53,16 @@ export function shownBadge(document: RecentDocument): ShownBadge {
 /**
  * Mete un documento al frente de la lista, desalojando por el final.
  *
- * La identidad es el identificador opaco, así que reabrir uno viejo **lo rescata**
- * en vez de duplicarlo. El orden de la lista es el que manda para el desalojo;
- * `lastUsed` es dato para pintar la fila.
+ * La identidad es el identificador opaco, así que **volver a elegir una fila
+ * de la bandeja la rescata** al frente en vez de duplicarla. Reabrir el mismo
+ * fichero **por el diálogo** es otra cosa: el backend acuña un identificador
+ * nuevo por cada concesión del portal (ID-62), así que el mismo
+ * `contrato.pdf` abierto tres veces son tres filas. Es lo buscado —el
+ * identificador nombra la concesión, no el fichero— y el precio es que esas
+ * tres desalojan a las demás.
+ *
+ * El orden de la lista es el que manda para el desalojo; `lastUsed` es dato
+ * para pintar la fila.
  */
 export function record(
   recents: readonly RecentDocument[],

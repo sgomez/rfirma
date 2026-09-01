@@ -128,6 +128,18 @@
   white-space: nowrap;
 }
 
+/* El fallo al abrir, con un documento ya pintado detrás. Flota arriba y no
+   abajo para no pelearse con la barra ni con el aviso de «se sale de la
+   página», y en flujo no puede ir: `.viewer` tiene una sola fila. */
+.viewer__failure {
+  position: absolute;
+  z-index: 1;
+  top: var(--rf-space-md);
+  left: 50%;
+  translate: -50% 0;
+  width: min(520px, calc(100% - 2 * var(--rf-space-md)));
+}
+
 .viewer__alert {
   position: absolute;
   left: 50%;

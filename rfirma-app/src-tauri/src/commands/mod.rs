@@ -741,7 +741,7 @@ pub struct OpenedDocumentView {
 /// Cerrar el diálogo sin elegir nada devuelve `None`, que **no es un fallo**:
 /// es lo que deja el documento activo, la lista y el visor como estaban
 /// (ID-73).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn open_document(
     app: tauri::AppHandle,
     opened: State<'_, OpenedDocuments>,
@@ -776,7 +776,7 @@ pub fn open_document(
 /// y multiplica el tamaño y el tiempo. Esta es la respuesta binaria que el
 /// puente de Tauri ofrece justo para esto, y al otro lado llega un
 /// `ArrayBuffer` que `pdf.js` abre sin nada en medio.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn read_document(
     id: String,
     opened: State<'_, OpenedDocuments>,
@@ -968,13 +968,37 @@ mod tests {
     }
 
     /// Las dos órdenes nuevas son **dos**, y la lista sigue cerrada (ID-59).
+    ///
+    /// Cuenta el prefijo `#[tauri::command` y no el atributo entero porque las
+    /// dos órdenes del documento llevan `(async)`: lo que se cierra es cuántas
+    /// órdenes hay, no cómo se ejecuta cada una.
     #[test]
     fn the_list_of_commands_grew_from_six_to_eight_and_no_further() {
         assert_eq!(
-            production_half().matches("#[tauri::command]").count(),
+            production_half().matches("#[tauri::command").count(),
             8,
             "la lista de ordenes es cerrada a proposito"
         );
+    }
+
+    /// Y las dos que hablan con el disco o con el portal **no bloquean el hilo
+    /// principal**: `#[tauri::command]` a secas genera un cuerpo `Blocking`
+    /// que corre dentro del manejador del IPC —el hilo del bucle GTK—, y
+    /// `blocking_pick_file()` espera allí a un cierre que solo ese hilo puede
+    /// ejecutar. Punto muerto: la ventana se clava y el diálogo no aparece.
+    #[test]
+    fn the_two_commands_that_touch_the_portal_run_off_the_main_thread() {
+        for command in ["pub fn open_document(", "pub fn read_document("] {
+            let source = production_half();
+            let declaration = source
+                .find(command)
+                .unwrap_or_else(|| panic!("no esta la orden «{command}»"));
+            let before = &source[..declaration];
+            assert!(
+                before.ends_with("#[tauri::command(async)]\n"),
+                "«{command}» tiene que ser #[tauri::command(async)]"
+            );
+        }
     }
 
     #[test]
