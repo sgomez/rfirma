@@ -320,7 +320,12 @@ pub struct PlacementOrder {
     /// Su `/Rotate`, en grados.
     pub rotation: i32,
     /// El recuadro en espacio de usuario: `[x0, y0, x1, y1]`.
-    pub rect: [i32; 4],
+    ///
+    /// En **coma flotante** porque eso es lo que sale de `convertToPdfPoint`
+    /// del visor: pedir enteros aquí rechazaba la orden entera en el
+    /// deserializador, antes de tocar el puente. El redondeo lo hace
+    /// [`UserSpaceRect::rounded`], que es de quien es la regla.
+    pub rect: [f64; 4],
 }
 
 impl PlacementOrder {
@@ -338,13 +343,8 @@ impl PlacementOrder {
             rotation,
         };
         let [left, bottom, right, top] = self.rect;
-        page.signature_box(&UserSpaceRect {
-            lower_left_x: left,
-            lower_left_y: bottom,
-            upper_right_x: right,
-            upper_right_y: top,
-        })
-        .map_err(|out| Failure::new("boxOutOfPage", out.to_string()))
+        page.signature_box(&UserSpaceRect::rounded(left, bottom, right, top))
+            .map_err(|out| Failure::new("boxOutOfPage", out.to_string()))
     }
 }
 
@@ -1749,7 +1749,7 @@ mod tests {
                 page: 1,
                 media_box: [0.0, 0.0, 595.0, 842.0],
                 rotation: 0,
-                rect: [72, 500, 272, 600],
+                rect: [72.0, 500.0, 272.0, 600.0],
             },
             fields: VisibleFieldsOrder {
                 signer_name: true,
@@ -1762,6 +1762,33 @@ mod tests {
             rubric: None,
             language: "es".to_owned(),
         }
+    }
+
+    /// La ventana manda el recuadro en espacio de usuario **tal cual sale de
+    /// `convertToPdfPoint`**, y eso son fracciones: `pdf.js` invierte una
+    /// matriz, no cuenta puntos enteros.
+    #[test]
+    fn accepts_a_rect_with_the_fractional_coordinates_the_viewer_sends() {
+        let sent = serde_json::json!({
+            "page": 1,
+            "mediaBox": [0.0, 0.0, 595.276, 841.89],
+            "rotation": 0,
+            "rect": [47.7218, 179.1376722440945, 250.1, 259.9],
+        });
+
+        let placement: PlacementOrder =
+            serde_json::from_value(sent).expect("el recuadro del visor tiene decimales");
+
+        let box_ = placement.signature_box().expect("cabe en la pagina");
+        assert_eq!(
+            (
+                box_.lower_left_x,
+                box_.lower_left_y,
+                box_.upper_right_x,
+                box_.upper_right_y
+            ),
+            (48, 179, 250, 260)
+        );
     }
 
     #[test]
@@ -1838,7 +1865,7 @@ mod tests {
         // con la rúbrica de trece puntos de ancho (ID-22).
         let order = SigningOrder {
             placement: PlacementOrder {
-                rect: [72, 500, 900, 600],
+                rect: [72.0, 500.0, 900.0, 600.0],
                 ..an_order().placement
             },
             ..an_order()

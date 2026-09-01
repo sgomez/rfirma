@@ -168,6 +168,28 @@ pub struct UserSpaceRect {
     pub upper_right_y: i32,
 }
 
+impl UserSpaceRect {
+    /// Las dos esquinas del recuadro tal y como salen del visor: **con
+    /// decimales**.
+    ///
+    /// `convertToPdfPoint` de `pdf.js` invierte una matriz, así que lo que la
+    /// ventana tiene son fracciones de punto, no puntos. El redondeo a entero
+    /// es de este módulo —AutoFirma lee las coordenadas como `int`— y por eso
+    /// entra por aquí y no por un `Math.round` en TypeScript, que sería una
+    /// segunda copia de la misma regla.
+    ///
+    /// Las esquinas se ordenan por lo mismo que en [`Page::to_user_space`]: se
+    /// arrastra en cualquier dirección y el recuadro es el mismo.
+    pub fn rounded(x0: f64, y0: f64, x1: f64, y1: f64) -> Self {
+        Self {
+            lower_left_x: round(x0.min(x1)),
+            lower_left_y: round(y0.min(y1)),
+            upper_right_x: round(x0.max(x1)),
+            upper_right_y: round(y0.max(y1)),
+        }
+    }
+}
+
 impl Page {
     /// Los dos pasos de una vez: del arrastre del visor a los puntos PAdES.
     ///
