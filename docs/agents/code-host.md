@@ -25,15 +25,23 @@ Repo-specific facts:
 - **CI**: GitHub Actions, workflow `CI` (`.github/workflows/ci.yml`). See
   the section below for what it does and does not verify.
 
-## `gh` dentro del arenero del worktree
+## El guardián del worktree
 
 Entubar la salida de `gh` a `head` (u otro consumidor que corte pronto)
 devuelve **vacío con código 0** dentro del guardián del worktree: la salida
 se pierde en vez de fallar de forma visible, así que no lo interpretes como
-«no hay datos». Redirige a un fichero y lee el fichero
+«no hay datos». Lo mismo le pasa a `gh issue view N --comments` **sin
+entubar nada**. Redirige siempre a un fichero y lee el fichero
 (`gh issue view N --json body,comments > /tmp/x.json`, luego léelo entero o
 con un script). Lo mismo aplica a una consulta GraphQL larga pasada inline:
 escríbela en un fichero y pásala con `gh api graphql -F query=@fichero`.
+
+El guardián también rechaza, con un error explícito y no con salida vacía,
+dos formas de comando que aparecen constantemente al automatizar `gh`:
+un `cmd_a && cmd_b` encadenado («demasiado complejo para verificar que se
+queda dentro del worktree» — sepáralos en llamadas independientes) y un
+`python3 - <<'PY' ... PY` con varias rutas dentro (escribe el script en el
+directorio de scratchpad y ejecútalo por su ruta, en vez de pasarlo inline).
 
 ## CI
 
@@ -168,6 +176,11 @@ compile.
 settled — but the Java bridge will barely be touched once written, so
 rebuilding the image on every PR would cost several times the fast lane to
 learn nothing new. **If your PR touches the bridge, add the `native` label.**
+This is not a formality: on #73 the fast lane was green and the review
+verdict was CLEAN, and only the slow lane — triggered by adding the label —
+caught a real bug at the FFI boundary, twice, before the fix stuck. Without
+the label that PR would have merged broken and nothing short of the next
+tagged release or the weekly cron would have caught it.
 
 The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of
@@ -195,6 +208,21 @@ CI runs exactly `just check`, so a local pass and a CI pass mean the same thing
 — with the one documented exception of `RFIRMA_SKIP_NATIVE` above: locally you
 need `just native` once, and then `just check` covers strictly more than CI's
 fast lane does.
+
+**`just check` deletes the native library it needs.** Its `lint-java` recipe
+runs `mvn -B clean compile`, and `clean` takes
+`rfirma-native-bridge/target/` with it — including
+`target/lib/rfirma/librfirma_crypto.so`, which is where `just native`
+installs it. So `just check` followed by `just test-native` or `just
+crap-full` fails saying the native library is missing, pointing at a file
+that existed when the recipe started. It is not that `just native` was
+skipped; `just check` just erased it mid-run. Order that works locally:
+`RFIRMA_SKIP_NATIVE=1 just check` (the CI exception, on purpose) and then
+`just native` once more before the slow-lane targets — never `just native`
+first, `just check` second. If the PR does not touch Java, skip the
+three-minute rebuild entirely: point `RFIRMA_LIB_DIR` at an
+already-built `librfirma_crypto.so` (or copy it into the worktree's
+`target/lib/rfirma`) and the tier C tests run against that.
 
 ## Is the change mergeable?
 

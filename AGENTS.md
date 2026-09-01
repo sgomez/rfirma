@@ -22,7 +22,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * Rust es responsable de llamar al método FFI `autofirma_free_string(thread, ptr)` una vez leído el JSON para evitar fugas de memoria.
 
 3. **Distribución de la librería nativa (ADR-0004):**
-   * Es **un solo fichero**, `librfirma_crypto.so` (27,7 MB), y cubre los cuatro casos: sin rúbrica, rúbrica de texto y rúbrica de imagen. Los cinco auxiliares de AWT desaparecieron al excluir `afirma-ui-utils` del `pom.xml` (ADR-0012); si ves esa exclusión, **no la quites**.
+   * Es **un solo fichero**, `librfirma_crypto.so` (27,7 MB), y cubre los cuatro casos: sin rúbrica, rúbrica de texto y rúbrica de imagen. Los cinco auxiliares de AWT desaparecieron al excluir `afirma-ui-utils` del `pom.xml` (ADR-0012); si ves esa exclusión, **no la quites**. Por eso una firma visible con rúbrica emite siempre un `WARNING` de `ClassNotFoundException: es.gob.afirma.ui.utils.ImageUtils` en el registro de las pruebas: es la exclusión haciendo su trabajo, no un fallo que arreglar.
    * **No instales nunca los auxiliares «por si acaso».** Si `libawt.so` está en el directorio, un JPEG con perfil ICC **aborta el proceso** en vez de dar un error recuperable, y se lleva la aplicación entera. Medido en `docs/research/exclusion-afirma-ui-utils.md`.
    * **No uses `include_bytes!` ni extraigas nada a `~/.cache/rfirma/`.** El **flatpak es el único canal soportado**: el fichero se instala en `/app/lib/rfirma/`. El manifiesto y su verificación viven en `packaging/flatpak/`.
    * Rust lo carga por una ruta **relativa al ejecutable** (`../lib/rfirma`) con `libloading`. No hace falta `LD_LIBRARY_PATH` ni tocar `RPATH`. La ruta es sobreescribible con `RFIRMA_LIB_DIR`.

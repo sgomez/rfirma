@@ -8,6 +8,11 @@
 - Mecanismo estructural, no estadística: el repositorio arranca casi vacío, así que la triage de cualquier sub-issue de #46 dice «primero de su especie, no hay patrón que imitar» y eso empuja a `complex` de forma sistemática. Esa señal dejará de ser informativa en cuanto haya andamiaje: reevaluar el tier de los sub-issues posteriores (#51 en adelante) contra el código ya escrito, no contra el vacío.
 - #48 (puente Java, prefirma/postfirma PAdES) necesitó dos ciclos por la MISMA clase de fallo — firma inválida en silencio con `{"ok":true}` — que volvió por puertas distintas tras el primer arreglo (primero el PDF y TimeZone.setDefault; luego TimeZone.getDefault() fuera del cerrojo y la cadena de certificados sin sellar). El sellado de sesión es propenso a esto: al arreglar una entrada sin sellar conviene enumerar TODAS las entradas del sello de una vez, no la señalada.
 - #50 gastó un merge-fix por política `merge: manual`, no por dificultad del ticket: PR hermanos cortados del mismo `main`. Sin relación con el tier.
+- El spec #46 completo (15 sub-issues) cerró con TODO a `complex`/opus salvo tres tickets que la triage puntuó `oversized` y se construyeron igualmente por el flag `--build-oversized`: #57 (4 superficies de UI), #59 (panel + PIN + progreso + clasificación de errores) y #62 (flatpak: manifiesto + vendorizado + garantía del .so + verificación en arenero). Los tres salieron bien: 1, 1 y 0 ciclos de arreglo, ninguno volvió con media función, y la revisión confirmó las cuatro rebanadas en los tres casos. Señal para la calibración: en este repositorio un `oversized` de esta forma —varias superficies independientes pero cada una con su ficha de diseño ya escrita— es construible de una vez a opus. Lo que hizo que funcionara fue pasarle al constructor las líneas de fractura de la triage como ORDEN DE TRABAJO explícito, con instrucción de comitear cada rebanada al terminarla.
+- El veto de no-partir funcionó en #60 y #61: los dos habrían puntuado `oversized` y la triage los bajó a `complex` al encontrar la directiva en el cuerpo. Ambos convergieron en 1 ciclo. La directiva del autor es mejor señal que la rúbrica cuando existe.
+- La nota de la cosecha anterior sobre «primero de su especie» se confirmó y ya expiró: siguió puntuando `complex` todo el spec incluso cuando ya había patrones que imitar (#58 tenía placement.rs de #51, #59 tenía los diálogos de #57). A partir de aquí, tier contra el código escrito, no contra el vacío.
+- Coste real: los 12 sub-issues de este tramo consumieron entre 120k y 393k tokens de subagente por construcción. #60 (orquestación trifásica, indivisible por directiva) fue el techo con 393k y 228 llamadas de herramienta; nadie se quedó sin contexto.
+- Patrón de fallo dominante y transversal a todo el spec: el arreglo de un fallo abre otra puerta a LA MISMA clase de fallo. #48 lo hizo dos veces con la firma inválida en silencio; #52 lo repitió (arreglar el EXIF con `into_decoder()` perdió el tope de 512 MB del búfer); #56 lo repitió (el refactor del carril nativo dejó el isolate sin desmontar y hacía `dlclose` con él vivo). Al arreglar una entrada de un invariante, enumerar TODAS las entradas de ese invariante, no solo la señalada.
 
 ## Run log
 
@@ -15,3 +20,15 @@
 2026-08-31 spec=#46 sub=#48 model=opus effort=medium pr=#65 verdict=CLEAN cycles=2 mergefix=0 wave=— outcome=ready-to-merge
 2026-08-31 spec=#46 sub=#49 model=opus effort=medium pr=#66 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=ready-to-merge
 2026-08-31 spec=#46 sub=#50 model=opus effort=medium pr=#67 verdict=CLEAN cycles=1 mergefix=1 wave=— outcome=ready-to-merge
+2026-08-31 spec=#46 sub=#51 model=opus effort=medium pr=#68 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-08-31 spec=#46 sub=#52 model=opus effort=medium pr=#69 verdict=CLEAN cycles=3 mergefix=0 wave=— outcome=merged
+2026-08-31 spec=#46 sub=#53 model=opus effort=medium pr=#70 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-08-31 spec=#46 sub=#54 model=opus effort=medium pr=#71 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-08-31 spec=#46 sub=#55 model=opus effort=medium pr=#72 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-08-31 spec=#46 sub=#56 model=opus effort=medium pr=#73 verdict=CLEAN cycles=2 mergefix=0 wave=— outcome=merged
+2026-08-31 spec=#46 sub=#57 model=opus effort=medium pr=#74 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged oversized=built
+2026-09-01 spec=#46 sub=#58 model=opus effort=medium pr=#75 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-01 spec=#46 sub=#59 model=opus effort=medium pr=#76 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged oversized=built
+2026-09-01 spec=#46 sub=#60 model=opus effort=medium pr=#77 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-01 spec=#46 sub=#61 model=opus effort=medium pr=#78 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-01 spec=#46 sub=#62 model=opus effort=medium pr=#79 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged oversized=built
