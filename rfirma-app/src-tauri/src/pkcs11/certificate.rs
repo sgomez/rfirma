@@ -3,8 +3,9 @@
 //! Dos ideas mandan aquí:
 //!
 //! - **Del certificado se guarda cómo volver a encontrarlo, no quién es**
-//!   (ID-32, ADR-0010). Eso es [`CertificateRef`]: módulo y etiqueta, y nada
-//!   más. El titular se lee del DER cada vez que hace falta pintarlo, con
+//!   (ID-32, ADR-0010). Eso es [`CertificateRef`]: módulo, token, etiqueta y
+//!   `CKA_ID`, y nada más. El titular se lee del DER cada vez que hace falta
+//!   pintarlo, con
 //!   [`TokenCertificate::subject`], y por eso no hay forma de persistirlo desde
 //!   aquí sin escribirlo a propósito.
 //! - **Un certificado caducado no es un fallo del token.** Es un
@@ -29,19 +30,34 @@ pub struct CertificateRef {
     module: PathBuf,
     token_label: String,
     label: String,
+    /// El `CKA_ID` del certificado, que es lo que de verdad lo empareja con su
+    /// clave privada.
+    ///
+    /// `None` es **un certificado recordado antes del #98**, cuando la
+    /// referencia solo tenía tres coordenadas: el fichero de estado de una
+    /// versión anterior se lee sin romperse, y lo que queda sin saber es el
+    /// `CKA_ID`, no el certificado.
+    #[serde(default)]
+    cka_id: Option<Vec<u8>>,
 }
 
 impl CertificateRef {
-    /// Construye la referencia a partir de sus tres coordenadas.
+    /// Construye la referencia a partir de sus cuatro coordenadas.
+    ///
+    /// El `CKA_ID` admite tanto `vec![0x01]` como `None`; lo segundo solo tiene
+    /// sentido para reconstruir una referencia recordada por una versión
+    /// anterior, porque un certificado leído del token siempre trae el suyo.
     pub fn new(
         module: impl Into<PathBuf>,
         token_label: impl Into<String>,
         label: impl Into<String>,
+        cka_id: impl Into<Option<Vec<u8>>>,
     ) -> Self {
         Self {
             module: module.into(),
             token_label: token_label.into(),
             label: label.into(),
+            cka_id: cka_id.into(),
         }
     }
 
@@ -57,9 +73,20 @@ impl CertificateRef {
         &self.token_label
     }
 
-    /// `CKA_LABEL` del objeto dentro del token.
+    /// `CKA_LABEL` del objeto dentro del token. Sirve para pintarlo y para
+    /// reconocerlo, **no** para encontrar su clave: en un almacén de verdad la
+    /// etiqueta se repite (ID-06).
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    /// `CKA_ID` del objeto dentro del token: la coordenada con la que PKCS#11
+    /// —y NSS— emparejan certificado y clave privada.
+    ///
+    /// `None` solo aparece leyendo el estado de una versión anterior al #98, o
+    /// en un token que no le ponga `CKA_ID` a sus objetos.
+    pub fn cka_id(&self) -> Option<&[u8]> {
+        self.cka_id.as_deref()
     }
 }
 
@@ -179,18 +206,49 @@ mod tests {
 
     /// **Grada A**: no hay token de por medio.
     #[test]
-    fn a_reference_carries_the_three_coordinates_and_nothing_else() {
-        let reference = CertificateRef::new("/usr/lib/x.so", "rfirma-test", "ETIQUETA");
+    fn a_reference_carries_the_four_coordinates_and_nothing_else() {
+        let reference =
+            CertificateRef::new("/usr/lib/x.so", "rfirma-test", "ETIQUETA", vec![0x2a, 0x01]);
 
         assert_eq!(reference.module(), Path::new("/usr/lib/x.so"));
         assert_eq!(reference.token_label(), "rfirma-test");
         assert_eq!(reference.label(), "ETIQUETA");
+        assert_eq!(reference.cka_id(), Some([0x2a, 0x01].as_slice()));
+    }
+
+    /// Lo que escribio una version anterior al #98 no lleva `cka_id`, y leerlo
+    /// tiene que dar una referencia sin `CKA_ID` en vez de un error: el fichero
+    /// de estado de quien actualiza no puede tumbar el arranque.
+    #[test]
+    fn a_reference_remembered_before_the_cka_id_existed_still_reads() {
+        let written = r#"{
+            "module": "/usr/lib/x.so",
+            "token_label": "rfirma-test",
+            "label": "ETIQUETA"
+        }"#;
+
+        let reference: CertificateRef =
+            serde_json::from_str(written).expect("una referencia antigua tiene que leerse");
+
+        assert_eq!(reference.label(), "ETIQUETA");
+        assert_eq!(reference.cka_id(), None);
+    }
+
+    #[test]
+    fn a_reference_round_trips_through_the_state_file_with_its_cka_id() {
+        let reference = CertificateRef::new("/usr/lib/x.so", "rfirma-test", "ETIQUETA", vec![0x05]);
+
+        let written = serde_json::to_string(&reference).expect("deberia serializarse");
+        let read: CertificateRef = serde_json::from_str(&written).expect("deberia leerse");
+
+        assert_eq!(read, reference);
+        assert_eq!(read.cka_id(), Some([0x05].as_slice()));
     }
 
     #[test]
     fn a_der_that_is_not_a_certificate_is_unreadable_rather_than_a_panic() {
         let certificate = TokenCertificate::new(
-            CertificateRef::new("/usr/lib/x.so", "rfirma-test", "BASURA"),
+            CertificateRef::new("/usr/lib/x.so", "rfirma-test", "BASURA", vec![0x01]),
             vec![0x00, 0x01, 0x02],
         );
 

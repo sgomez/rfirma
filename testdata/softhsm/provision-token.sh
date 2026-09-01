@@ -8,14 +8,22 @@
 # FNMT con la contrasena incluida. El certificado personal del titular no
 # interviene aqui ni en ningun otro punto del proyecto.
 #
-# Se importan TRES certificados y UNA sola clave privada:
+# Se importan CINCO certificados y TRES claves privadas:
 #
 #   id 01  FNMT-ACTIVO-99999999R     clave + certificado  (camino feliz)
 #   id 02  FNMT-CADUCADO-99999999R   solo certificado     (caduco en 2020)
 #   id 03  FNMT-REVOCADO-99999999R   solo certificado     (revocado en 2024)
+#   id 04  FNMT-GEMELO-99999999R     clave + certificado  (par de claves activo)
+#   id 05  FNMT-GEMELO-99999999R     clave + certificado  (par de claves caducado)
 #
-# Los dos ultimos entran SIN clave a proposito: existen para que el listado
-# tenga que clasificarlos, no para firmar con ellos.
+# El caducado y el revocado entran SIN clave a proposito: existen para que el
+# listado tenga que clasificarlos, no para firmar con ellos.
+#
+# Los dos GEMELOS comparten CKA_LABEL y tienen CKA_ID y par de claves distintos:
+# reproducen lo medido en un perfil de Firefox de verdad, donde dos claves
+# privadas comparten etiqueta. Buscar la clave por etiqueta devolveria una de
+# las dos arbitrariamente y se firmaria con la clave equivocada sin que nadie se
+# entere; emparejar por CKA_ID es lo que lo impide (#98, ID-06).
 #
 # `softhsm2-util --import` no admite PKCS#12 (falla con «Could not read the
 # PKCS#8 file»), asi que el .p12 se parte con OpenSSL y los objetos se escriben
@@ -81,14 +89,17 @@ private_keys="$(list_objects privkey)"
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
-has_label() {
-    printf '%s\n' "$1" | grep -q "label:[[:space:]]*$2[[:space:]]*$"
+# La idempotencia mira el CKA_ID y no la etiqueta: los dos gemelos comparten
+# etiqueta, asi que buscarlos por ella daria por importado el segundo en cuanto
+# estuviera el primero.
+has_id() {
+    printf '%s\n' "$1" | grep -q "ID:[[:space:]]*$2[[:space:]]*$"
 }
 
 # import_certificate <fichero .p12> <contrasena> <id> <etiqueta>
 import_certificate() {
     local p12="$1" password="$2" id="$3" label="$4"
-    has_label "$certificates" "$label" && return 0
+    has_id "$certificates" "$id" && return 0
     openssl pkcs12 -in "$p12" -passin "pass:$password" -clcerts -nokeys -legacy \
         | openssl x509 -outform DER -out "$workdir/cert.der"
     pkcs11-tool --module "$module" --token-label "$token_label" --login --pin "$pin" \
@@ -100,7 +111,7 @@ import_certificate() {
 # import_private_key <fichero .p12> <contrasena> <id> <etiqueta>
 import_private_key() {
     local p12="$1" password="$2" id="$3" label="$4"
-    has_label "$private_keys" "$label" && return 0
+    has_id "$private_keys" "$id" && return 0
     openssl pkcs12 -in "$p12" -passin "pass:$password" -nocerts -nodes -legacy \
         | openssl pkcs8 -topk8 -nocrypt -outform DER -out "$workdir/key.der"
     pkcs11-tool --module "$module" --token-label "$token_label" --login --pin "$pin" \
@@ -113,5 +124,11 @@ import_private_key "$kit/active-rsa.p12"  "1234"         "01" "FNMT-ACTIVO-99999
 import_certificate "$kit/active-rsa.p12"  "1234"         "01" "FNMT-ACTIVO-99999999R"
 import_certificate "$kit/expired-rsa.p12" "G5cp,fYC9gje" "02" "FNMT-CADUCADO-99999999R"
 import_certificate "$kit/revoked-rsa.p12" "1234"         "03" "FNMT-REVOCADO-99999999R"
+
+# Los gemelos: misma etiqueta, distinto CKA_ID, distinto par de claves.
+import_private_key "$kit/active-rsa.p12"  "1234"         "04" "FNMT-GEMELO-99999999R"
+import_certificate "$kit/active-rsa.p12"  "1234"         "04" "FNMT-GEMELO-99999999R"
+import_private_key "$kit/expired-rsa.p12" "G5cp,fYC9gje" "05" "FNMT-GEMELO-99999999R"
+import_certificate "$kit/expired-rsa.p12" "G5cp,fYC9gje" "05" "FNMT-GEMELO-99999999R"
 
 echo "token $token_label listo en $module"

@@ -285,7 +285,7 @@ mod full_cycle {
     }
 
     fn reference() -> CertificateRef {
-        CertificateRef::new(module(), TOKEN, ACTIVE)
+        signing_certificate().reference().clone()
     }
 
     /// Un PDF de una página, escrito a mano.

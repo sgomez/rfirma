@@ -152,6 +152,7 @@ mod tests {
                 "/usr/lib/softhsm/libsofthsm2.so",
                 "rfirma-test",
                 "Certificado de pruebas",
+                vec![0x01],
             )),
             visible_signature: Some(SignatureBox {
                 page: 1,
