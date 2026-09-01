@@ -52,7 +52,10 @@ antes de firmar, no después. Lo fija el
   de verificación de 12 px (trazo 3) cuando está marcado. Fila de 24 px de alto
   mínimo, con 8 px entre la casilla y su texto.
 - **Interruptor**: pastilla de 40×24 px con el pomo de 16 px. Va **delante**
-  del texto.
+  del texto, **a 8 px** de él. Es el mismo componente que el de Preferencias,
+  pero no la misma separación: allí el artboard lo dibuja con `rf-gap-sm`
+  (16 px) y aquí con `rf-gap-xs`. Un solo valor no puede ser los dos, así que
+  el diálogo pide el suyo (`switch--wide`) y este es el de por omisión.
 - **Rúbrica**: la miniatura es un rectángulo de 56×36 px con borde
   `--rf-border-strong` y `--rf-radius-sm`, y comparte fila con el botón
   secundario, que ocupa el resto y mide 36 px de alto.
@@ -198,6 +201,15 @@ al firmar. Ver el
   arriba— y los botones «Abrir el PDF» y «Abrir la carpeta», que no son piel
   sino dos `OpenURI` que aún no existen. Reaparecen en cuanto haya quien lea
   las firmas del resultado y quien abra un URI.
+  El acuse de recibo **es de un documento concreto y solo se ve con ese
+  documento delante**. El recuento de páginas de la cabecera sale del PDF que
+  la ventana tiene abierto, no del fichero escrito, así que con otro documento
+  delante enseñaría el nombre de uno con las páginas de otro; y sin ninguno
+  dejaría una tercera columna al lado del visor vacío, que es lo que quita el
+  ID-51. Por eso el estado guarda el asa del documento que se firmó y se cierra
+  solo en cuanto deja de estar activo —se elige otro en la bandeja, se olvida
+  el activo, se vacía la lista—, como si se hubiera pulsado «Firmar otro
+  documento».
 
 ## El resumen, tras firmar
 

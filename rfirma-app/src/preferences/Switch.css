@@ -6,16 +6,30 @@
  * cambia de lado, que es lo que se ve en cualquier tema y con cualquier vista.
  */
 
+/*
+ * La separación entre la pastilla y el texto **no es la misma en los dos sitios
+ * donde vive el interruptor**, y por eso es una variable y no un número: el
+ * panel de firma lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`) y
+ * Preferencias con `rf-gap-sm` (16 px, `EstadoPreferencias.dc.html:409`).
+ * Escribirla una sola vez es lo que mantiene la sangría de la ayuda pegada a la
+ * columna del texto sin repetir la cuenta.
+ */
 .switch {
+  --switch-gap: var(--rf-space-xs);
   display: flex;
   flex-direction: column;
   gap: var(--rf-space-xs);
 }
 
+/* El interruptor de Preferencias: misma pastilla, 16 px hasta el texto. */
+.switch--wide {
+  --switch-gap: var(--rf-space-sm);
+}
+
 .switch__control {
   display: flex;
   align-items: flex-start;
-  gap: var(--rf-space-xs);
+  gap: var(--switch-gap);
   width: 100%;
   min-height: 44px;
   padding: 0;
@@ -61,8 +75,10 @@
   background: var(--rf-on-primary);
 }
 
-/* La ayuda se sangra hasta la columna del texto: 40 px de pastilla más los
-   8 px que la separan. */
+/* La ayuda se sangra hasta la columna del texto: 40 px de pastilla más lo que
+   la separa de él. Con la separación de Preferencias son 56 px, que es donde
+   cae también `.preferences__clear`: los dos cuelgan del mismo texto y tienen
+   que buscar la misma columna. */
 .switch__hint {
-  padding-left: calc(40px + var(--rf-space-xs));
+  padding-left: calc(40px + var(--switch-gap));
 }

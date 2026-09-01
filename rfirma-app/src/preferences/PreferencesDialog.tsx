@@ -84,6 +84,7 @@ export function PreferencesDialog({
           checked={preferences.rememberVisibleSignature}
           label={t("preferences.rememberVisibleSignature.label")}
           hint={t("preferences.rememberVisibleSignature.hint")}
+          wide
           onChange={(checked) => onChange({ ...preferences, rememberVisibleSignature: checked })}
         />
 
@@ -93,6 +94,7 @@ export function PreferencesDialog({
           checked={preferences.rememberActivity}
           label={t("preferences.rememberActivity.label")}
           hint={t("preferences.rememberActivity.hint")}
+          wide
           onChange={rememberActivity}
         />
         <button

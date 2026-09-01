@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Certificate } from "./certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./flow";
 import type { TokenFailure } from "./token";
-import { useSigning } from "./useSigning";
+import { acknowledgementFor, useSigning } from "./useSigning";
 
 const signed: SignedDocument = { name: "contrato_firmado.pdf", folder: "Documentos" };
 
@@ -99,7 +99,13 @@ describe("useSigning", () => {
     await act(() => result.current.submitPin("1234"));
 
     expect(calls).toEqual(["presign", "sign", "postsign"]);
-    expect(result.current.state).toEqual({ kind: "signed", document: signed });
+    // El asa del documento de partida viaja con el estado: es lo que ata el
+    // acuse de recibo a su documento (`acknowledgementFor`).
+    expect(result.current.state).toEqual({
+      kind: "signed",
+      document: signed,
+      origin: anOrder().document,
+    });
   });
 
   /**
@@ -136,7 +142,11 @@ describe("useSigning", () => {
     await act(() => result.current.submitPin("1234"));
 
     expect(presign).toHaveBeenCalledTimes(1);
-    expect(result.current.state).toEqual({ kind: "signed", document: signed });
+    expect(result.current.state).toEqual({
+      kind: "signed",
+      document: signed,
+      origin: anOrder().document,
+    });
   });
 
   it("takes a token failure that is not about the PIN out of the dialog", async () => {
@@ -262,5 +272,40 @@ describe("useSigning", () => {
 
     expect(result.current.state).toEqual({ kind: "idle" });
     expect(discard).toHaveBeenCalled();
+  });
+});
+
+/**
+ * La regla que ata el acuse de recibo a su documento. Vive fuera del gancho
+ * porque la ventana la necesita **en la pintada**, antes de que ningún efecto
+ * haya corrido: un solo fotograma con el nombre de un fichero y las páginas de
+ * otro ya es el dato inventado que el ID-44 prohíbe.
+ */
+describe("acknowledgementFor", () => {
+  const signedState = {
+    kind: "signed",
+    document: signed,
+    origin: "/run/user/1000/doc/1e8b83b9/contrato.pdf",
+  } as const;
+
+  it("shows the acknowledgement while its own document is the active one", () => {
+    expect(acknowledgementFor(signedState, signedState.origin)).toBe(signedState);
+  });
+
+  it("hides it when another document has been opened", () => {
+    // Con otro delante el recuento de páginas sería el del otro documento.
+    expect(acknowledgementFor(signedState, "/run/user/1000/doc/aa11bb22/otro.pdf")).toBeNull();
+  });
+
+  it("hides it when there is no active document left", () => {
+    // Olvidar el activo o vaciar la lista: sin esto quedaba una tercera columna
+    // al lado del visor en su estado vacio (ID-51).
+    expect(acknowledgementFor(signedState, null)).toBeNull();
+  });
+
+  it("has nothing to show in the states that are not the signed one", () => {
+    expect(acknowledgementFor({ kind: "idle" }, "/a.pdf")).toBeNull();
+    expect(acknowledgementFor({ kind: "running", stage: "sign" }, "/a.pdf")).toBeNull();
+    expect(acknowledgementFor({ kind: "pin", failure: null }, "/a.pdf")).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Certificate } from "./certificate";
 import { refusalFor, type SigningFailure } from "./failure";
 import type { SignedDocument, SigningBackend, SigningOrder, SigningStage } from "./flow";
@@ -9,12 +9,17 @@ import { belongsToPinDialog, type TokenFailure } from "./token";
  *
  * `pin` con un fallo dentro es la clave del reintento: un PIN incorrecto vuelve
  * a este mismo estado, **sin repetir la prefirma** y sin desmontar el diálogo.
+ *
+ * `signed` lleva dentro el **asa del documento de partida** (`origin`), y no
+ * solo el fichero que quedó escrito: el acuse de recibo es de un documento
+ * concreto, y sin esa atadura la ventana lo enseñaba al lado de cualquier otro
+ * que se abriera después —el nombre de A con el recuento de páginas de B—.
  */
 export type SigningState =
   | { kind: "idle" }
   | { kind: "running"; stage: SigningStage }
   | { kind: "pin"; failure: TokenFailure | null }
-  | { kind: "signed"; document: SignedDocument }
+  | { kind: "signed"; document: SignedDocument; origin: string }
   | { kind: "failed"; failure: SigningFailure };
 
 /** Lo que la ventana necesita para conducir la firma. */
@@ -68,6 +73,10 @@ export interface Signing {
  */
 export function useSigning(backend: SigningBackend): Signing {
   const [state, setState] = useState<SigningState>({ kind: "idle" });
+  // De qué documento es el ciclo en curso. Vive en una referencia y no en el
+  // estado porque no se pinta en ninguna etapa: entra con la orden y solo
+  // vuelve a salir al llegar a «Firmado», para atarlo a su documento.
+  const origin = useRef<string | null>(null);
 
   const routed = (failure: TokenFailure): SigningState =>
     belongsToPinDialog(failure) ? { kind: "pin", failure } : { kind: "failed", failure };
@@ -81,6 +90,7 @@ export function useSigning(backend: SigningBackend): Signing {
       setState({ kind: "failed", failure: refusal });
       return;
     }
+    origin.current = order.document;
     setState({ kind: "running", stage: "presign" });
     const presigned = await backend.presign(order);
     setState(presigned.ok ? { kind: "pin", failure: null } : routed(presigned.failure));
@@ -96,7 +106,9 @@ export function useSigning(backend: SigningBackend): Signing {
     setState({ kind: "running", stage: "postsign" });
     const assembled = await backend.postsign();
     setState(
-      assembled.ok ? { kind: "signed", document: assembled.value } : routed(assembled.failure),
+      assembled.ok
+        ? { kind: "signed", document: assembled.value, origin: origin.current ?? "" }
+        : routed(assembled.failure),
     );
   };
 
@@ -112,4 +124,25 @@ export function useSigning(backend: SigningBackend): Signing {
   const signAnother = () => setState({ kind: "idle" });
 
   return { state, start, submitPin, cancel, signAnother };
+}
+
+/**
+ * El acuse de recibo, **solo si sigue delante el documento que lo produjo**.
+ *
+ * El estado «Firmado» enseña el fichero que quedó escrito, pero el recuento de
+ * páginas sale del PDF que la ventana tiene abierto: son dos fuentes, y solo
+ * dicen lo mismo mientras hablen del mismo documento. Con otro delante el panel
+ * enseñaba el nombre de A con las páginas de B —un dato inventado, que es justo
+ * lo que el ID-44 prohíbe—, y sin ninguno se quedaba una tercera columna al
+ * lado del visor vacío, que es lo que quita el ID-51.
+ *
+ * `activePath` es `null` cuando no hay documento activo: se ha olvidado el que
+ * había, o se ha vaciado la lista.
+ */
+export function acknowledgementFor(
+  state: SigningState,
+  activePath: string | null,
+): Extract<SigningState, { kind: "signed" }> | null {
+  if (state.kind !== "signed") return null;
+  return state.origin === activePath ? state : null;
 }

@@ -16,7 +16,7 @@ import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./
 import { SignedPanel } from "./signing/SignedPanel";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
-import { useSigning } from "./signing/useSigning";
+import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import {
   DEFAULT_VISIBLE_SIGNATURE,
   type Layer2Composer,
@@ -136,6 +136,21 @@ export function App({
     };
   }, [documents.active, pdfs]);
 
+  // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado
+  // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas
+  // que enseña sale del PDF abierto, así que el panel solo puede montarse
+  // mientras los dos sean el mismo documento.
+  const signedHere = acknowledgementFor(signing.state, documents.active?.path ?? null);
+  const signedSomewhere = signing.state.kind === "signed";
+
+  // Y cuando deja de serlo —se elige otro en la bandeja, se olvida el activo,
+  // se vacía la lista— el estado se cierra, en vez de quedarse esperando a que
+  // el documento firmado vuelva a estar delante.
+  const signAnother = signing.signAnother;
+  useEffect(() => {
+    if (signedSomewhere && signedHere === null) signAnother();
+  }, [signedSomewhere, signedHere, signAnother]);
+
   // Los certificados se buscan al arrancar y cada vez que alguien pide volver
   // a buscar: una tarjeta insertada tarde es el caso corriente, no la excepción.
   const lookForCertificates = useCallback(async () => {
@@ -233,12 +248,18 @@ export function App({
           />
         }
         panel={
-          signing.state.kind === "signed" ? (
+          signedHere !== null ? (
             // Firmado: la columna derecha cambia de contenido, no de sitio. Es
             // el único acuse de recibo que recibe quien firma, así que se monta
             // en cuanto la postfirma devuelve el documento.
+            //
+            // Solo mientras siga activo **el documento que se firmó**: el
+            // recuento de páginas sale del PDF abierto, y con otro delante sería
+            // el nombre de un fichero con las páginas de otro. Sin documento
+            // activo tampoco se monta, o quedaría una tercera columna al lado
+            // del visor vacío (ID-51).
             <SignedPanel
-              document={{ name: signing.state.document.name, pages: pdf?.pageCount ?? null }}
+              document={{ name: signedHere.document.name, pages: pdf?.pageCount ?? null }}
               onSignAnother={signing.signAnother}
             />
           ) : pdf && documents.active ? (

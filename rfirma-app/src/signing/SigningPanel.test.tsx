@@ -81,9 +81,13 @@ describe("SigningPanel", () => {
     });
 
     expect(screen.getByText("Ada Lovelace Byron")).toBeInTheDocument();
-    expect(
-      screen.getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    ).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", {
+      name: /Estampar un recuadro de firma en el documento/,
+    });
+    expect(toggle).toBeInTheDocument();
+    // El panel lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`); los 16 px
+    // son de Preferencias y se piden allí con `switch--wide`.
+    expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
     expect(screen.getByText("Página 3 · arrástralo para colocarlo")).toBeInTheDocument();
     for (const label of [
       "Tu rúbrica",

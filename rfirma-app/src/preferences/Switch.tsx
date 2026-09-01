@@ -5,6 +5,15 @@ interface SwitchProps {
   checked: boolean;
   label: string;
   hint?: string;
+  /**
+   * `true` para la separación de Preferencias (16 px entre la pastilla y el
+   * texto); por omisión, la del panel de firma (8 px).
+   *
+   * Es una propiedad y no un valor fijo porque los dos artboards que llevan
+   * este mismo interruptor lo separan distinto —`rf-gap-xs` en el panel,
+   * `rf-gap-sm` en el diálogo— y un solo número no puede ser los dos.
+   */
+  wide?: boolean;
   onChange: (checked: boolean) => void;
 }
 
@@ -25,11 +34,11 @@ interface SwitchProps {
  * botón, sangrada hasta el texto: dentro se sumaría al nombre accesible y el
  * lector de pantalla leería el párrafo entero al llegar al interruptor.
  */
-export function Switch({ checked, label, hint, onChange }: SwitchProps) {
+export function Switch({ checked, label, hint, wide = false, onChange }: SwitchProps) {
   const hintId = useId();
 
   return (
-    <div className="switch">
+    <div className={wide ? "switch switch--wide" : "switch"}>
       <button
         type="button"
         role="switch"

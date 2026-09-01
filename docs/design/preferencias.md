@@ -20,6 +20,11 @@ aplican al hacerlos: no hay «Guardar» ni «Cancelar».
   **delante** del texto, 16 px de separación, y el texto en `.rf-prose` con su
   ayuda en `.rf-hint` 4 px debajo. La ayuda se sangra hasta la columna del
   texto: 40 px de pastilla más los 16 de separación.
+  Esos 16 px son **de este diálogo**: el panel de firma usa el mismo
+  interruptor a 8 px (`panel-de-firma.md`), así que aquí se piden aparte con
+  `switch--wide`. La sangría de la ayuda se calcula con esa misma separación y
+  no con un número escrito a mano, que es lo que la mantiene en la misma
+  columna que «Vaciar la lista».
 - «Vaciar la lista» cuelga del ajuste que lo explica y sigue esa misma sangría.
   Es un botón secundario de 32 px de alto, 8 px de relleno lateral y 12 px de
   cuerpo — el mismo tamaño menor que el `Cambiar` del pie del panel.
