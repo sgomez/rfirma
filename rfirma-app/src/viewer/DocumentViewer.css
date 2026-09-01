@@ -19,20 +19,39 @@
 .viewer--empty {
   place-content: center;
   justify-items: center;
-  gap: var(--rf-space-sm);
+  gap: var(--rf-space-md);
   padding: var(--rf-space-lg);
   text-align: center;
 }
 
+/* La caja del estado vacío es grande a propósito: 520×300 px, borde de **2 px**
+   discontinuo y `--rf-radius-xl`. Es la única superficie del visor cuando no
+   hay documento, y una caja tímida ahí deja la columna pareciendo rota. */
 .viewer__drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rf-space-sm);
   width: 520px;
   max-width: 100%;
   height: 300px;
-  border: 1px dashed var(--rf-border-strong);
-  border-radius: var(--rf-radius-lg);
+  padding: var(--rf-space-lg);
+  border: 2px dashed var(--rf-border-strong);
+  border-radius: var(--rf-radius-xl);
   background: transparent;
   color: var(--rf-text);
+  font-family: var(--rf-font-body);
   cursor: pointer;
+}
+
+.viewer__drop-icon {
+  display: flex;
+  color: var(--rf-text-muted);
+}
+
+.viewer__drop-title {
+  text-align: center;
 }
 
 /* El desplazamiento del documento es de la barra de scroll y de la rueda: no
@@ -71,10 +90,15 @@
   cursor: grabbing;
 }
 
+/* El asa lleva la cruz de cuatro puntas delante del rótulo: el icono dice qué
+   gesto se espera antes de que nadie lea nada. */
 .viewer__handle {
   position: absolute;
   top: 0;
   left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   translate: -50% -100%;
   padding: 0 var(--rf-space-xs);
   border-radius: var(--rf-radius-sm);
@@ -107,6 +131,17 @@
   border-radius: var(--rf-radius-pill);
   background: var(--rf-surface);
   box-shadow: var(--rf-shadow-elevated);
+}
+
+/* Cada botón de la barra es un círculo de 32 px: el icono va dentro sin
+   relleno propio y la pastilla mantiene su alto. */
+.viewer__step {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--rf-radius-pill);
 }
 
 /* Ocupa lo mismo con 4 páginas que con 400: el número se escribe, no se elige

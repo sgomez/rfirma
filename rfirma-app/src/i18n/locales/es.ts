@@ -208,6 +208,7 @@ export const es = {
    */
   viewer: {
     dropZone: "Arrastra un PDF o pulsa para abrirlo",
+    dropZoneHint: "Se abrirá el explorador de archivos",
     privacy: "Solo PDF. El documento no sale de tu ordenador en ningún momento.",
     pageNumber: "Número de página",
     pageOf: "de {{total}}",
@@ -364,6 +365,8 @@ export const es = {
       "Firma y cofirma documentos PDF con tu certificado. El documento y la clave privada no salen de tu ordenador.",
     independence:
       "Proyecto independiente. rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.",
+    // La dirección del repositorio no se traduce en ningún idioma: es una URL.
+    repository: "github.com/sgomez/rfirma",
     licenses: {
       title: "Licencias",
       view: "Ver las licencias",

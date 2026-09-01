@@ -175,6 +175,7 @@ export const ca: UntranslatedCatalog = {
   },
   viewer: {
     dropZone: "",
+    dropZoneHint: "",
     privacy: "",
     pageNumber: "",
     pageOf: "",
@@ -305,6 +306,7 @@ export const ca: UntranslatedCatalog = {
     version: "",
     whatItDoes: "",
     independence: "",
+    repository: "",
     licenses: {
       title: "",
       view: "",

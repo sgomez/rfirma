@@ -25,6 +25,32 @@ describe("Header", () => {
     expect(screen.getByText("Sin firmar")).toBeInTheDocument();
   });
 
+  // ID-53: el icono es un `<svg>` en línea copiado del artboard, no el `\u2630`
+  // de texto que había antes ni un icono de fuente.
+  it("draws the menu button with an inline svg icon", () => {
+    renderWithCatalog(
+      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+    );
+
+    const button = screen.getByRole("button", { name: "Men\u00fa" });
+    expect(button.querySelector("svg")).not.toBeNull();
+    expect(button).toHaveTextContent("");
+  });
+
+  // El artboard del estado vac\u00edo dibuja el men\u00fa desplegado, pero eso es una
+  // posibilidad y no un estado inicial: arranca cerrado.
+  it("starts with the menu closed", () => {
+    renderWithCatalog(
+      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+    );
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Men\u00fa" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
   it("has no menu bar, only the menu button", () => {
     renderWithCatalog(
       <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,

@@ -20,6 +20,28 @@ Superficie de ancho flexible sobre `--rf-surface`, con `overflow: hidden`:
 El área reserva 88 px inferiores para que la hoja nunca quede debajo de la
 barra.
 
+### Geometría
+
+- La hoja lleva borde de 1 px en `--rf-border-subtle`, `--rf-radius-sm` y
+  `--rf-shadow-card`.
+- **Zona de soltar del estado vacío**: 520 × 300 px, borde de **2 px**
+  discontinuo en `--rf-border-strong` y `--rf-radius-xl` —no `lg`—, con 48 px
+  (`--rf-space-lg`) de relleno y 16 px entre sus tres piezas. Dentro, de arriba
+  abajo: el icono de subir de 28 px teñido con `--rf-text-muted`, el texto en
+  `.rf-title` centrado y la línea de apoyo «Se abrirá el explorador de
+  archivos» en `.rf-prose rf-text-muted`. Debajo de la caja, a 24 px, la línea
+  de privacidad, también en `.rf-prose rf-text-muted`.
+- Es la única zona de soltar con borde de 2 px y radio `xl`; la de la
+  [bandeja](bandeja-de-documentos.md) es de 1 px y radio `md`. La diferencia es
+  deliberada: una es la entrada principal de la pantalla vacía y la otra un
+  atajo permanente en una columna estrecha.
+- **Barra flotante**: píldora con 4 px de relleno, 2 px entre botones, borde de
+  1 px en `--rf-border-subtle` y `--rf-shadow-elevated`. Cada botón es un
+  **círculo de 32 px** con su icono de 16 px dentro. El divisor entre los dos
+  grupos es una línea de 1 × 24 px en `--rf-border-subtle` con 4 px de margen.
+- **Asa del recuadro**: pastilla en `--rf-primary` sobre el borde superior, con
+  la cruz de cuatro puntas de 14 px a 4 px del rótulo.
+
 ## La barra flotante
 
 Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:
@@ -27,6 +49,11 @@ Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:
 ```
 « ‹ [3] de 27 › »  │  − 100 % + ⤢
 ```
+
+Los siete botones son `<svg>` **en línea** copiados del artboard (ID-53), no
+los glifos tipográficos que insinúa el esquema de arriba: dobles y simples
+chevrones para las páginas, menos y más para el zoom, y las cuatro esquinas
+para «ajustar a la ventana». Todos sobre lienzo `0 0 24 24` con trazo de 1.5.
 
 - **Páginas**: primera, anterior, número editable, total, siguiente, última.
   Ocupa lo mismo con 4 páginas que con 400 — por eso no hay una pastilla por
@@ -75,10 +102,11 @@ firma en el sitio equivocado.
 
 ## Estados
 
-- **Vacío** (sin documento): en lugar de la hoja, una zona de soltar de
-  520 × 300 con borde discontinuo, «Arrastra un PDF o pulsa para abrirlo» y,
-  debajo, «Solo PDF. El documento no sale de tu ordenador en ningún momento».
-  La barra flotante no aparece.
+- **Vacío** (sin documento): en lugar de la hoja, la zona de soltar de
+  520 × 300 con su icono, «Arrastra un PDF o pulsa para abrirlo» y «Se abrirá
+  el explorador de archivos»; debajo, «Solo PDF. El documento no sale de tu
+  ordenador en ningún momento». La barra flotante no aparece, y el
+  [panel de firma](panel-de-firma.md) tampoco está montado.
 - **Documento cargado, recuadro sin seleccionar**: sin tiradores ni asa.
 - **Configurando**: recuadro seleccionado, con tiradores y asa.
 - **Atenuado**: bajo cualquier diálogo, la hoja baja a `opacity: .45`.

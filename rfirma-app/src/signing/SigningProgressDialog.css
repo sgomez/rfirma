@@ -18,16 +18,39 @@
 
 .progress-dialog__stage {
   display: grid;
-  grid-template-columns: 16px 1fr auto;
+  grid-template-columns: 20px 1fr auto;
   gap: var(--rf-space-xs);
-  align-items: baseline;
+  align-items: center;
+}
+
+/* La casilla de la marca es siempre de 20 px, la lleve la verificación o uno de
+   los dos puntos: así las tres filas alinean su texto. */
+.progress-dialog__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+/* El punto pendiente es un aro y el punto en curso, macizo. */
+.progress-dialog__dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-pill);
+}
+
+.progress-dialog__stage--running .progress-dialog__dot {
+  border-color: transparent;
+  background: var(--rf-primary);
 }
 
 /* En curso: la marca en el color primario y el texto en negrita. */
 .progress-dialog__stage--running .progress-dialog__mark,
 .progress-dialog__stage--running .rf-prose {
   color: var(--rf-primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Pendiente: atenuada. Hecha se queda con el color del texto y su ✓. */

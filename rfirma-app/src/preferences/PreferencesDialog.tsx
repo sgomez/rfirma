@@ -33,6 +33,12 @@ interface PreferencesDialogProps {
  * El idioma sale de `LanguageProvider` y no de estos ajustes porque ya vivía
  * ahí, y solo se ofrecen los catálogos **completos**: caer al castellano a
  * mitad de pantalla no es una degradación aceptable (ADR-0009).
+ *
+ * Dos diferencias con el artboard, decididas y anotadas en la ficha (ID-44):
+ * el desplegable de destino **no ofrece «Junto al documento original»**, porque
+ * el ADR-0011 midió que bajo el arenero eso deja un `.xdp-…` huérfano sin dar
+ * error; y «Recordar mi actividad» con su «Vaciar la lista» **sí están**,
+ * aunque el canvas no los dibuje, porque el ID-34 los exige.
  */
 export function PreferencesDialog({
   preferences,
@@ -64,7 +70,12 @@ export function PreferencesDialog({
 
   return (
     <div className="rf-scrim">
-      <div className="rf-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div
+        className="rf-dialog preferences"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <p className="rf-title" id={titleId}>
           {t("preferences.title")}
         </p>

@@ -35,6 +35,25 @@ exactamente lo que pasa, y es la única de las tres que toca la clave privada.
 Marcas de estado: hecha (✓), en curso (círculo relleno en `--rf-primary` y
 texto en negrita), pendiente (círculo hueco y texto atenuado).
 
+### Geometría
+
+- Diálogo de 420 px. Cada etapa es una fila con una casilla de marca de 20 px,
+  el texto y su palabra de estado.
+- **La marca**: la etapa cumplida lleva la verificación en `<svg>` de 20 px con
+  trazo 2; la etapa en curso, un disco macizo de 10 px en `--rf-primary`; la
+  pendiente, un aro de 10 px con borde `--rf-border-strong`. Son `<svg>` y
+  formas maquetadas, no los glifos `✓ ● ○`.
+- La etapa en curso va a peso 700 y en `--rf-primary`; la pendiente, en
+  `--rf-text-muted`.
+- **Barra**: 4 px de alto, `--rf-radius-pill`, canal `--rf-border-subtle` y
+  relleno `--rf-primary`.
+
+**La palabra de estado se queda, aunque el artboard no la dibuje.** El artboard
+distingue las tres etapas solo por la forma de su marca, y la sección 8 del
+[sistema de diseño](design-system.md) prohíbe que la forma o el color sean el
+único indicador. «Hecha», «En curso» y «Pendiente» al final de cada fila son lo
+que convierte tres glifos parecidos en tres filas que se leen.
+
 ## Estados
 
 Tres, uno por etapa en curso. El diálogo no se puede cancelar una vez empezada

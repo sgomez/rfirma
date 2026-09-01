@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MenuIcon } from "../design-system/icons";
 import type { Badge } from "../documents/document";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
@@ -27,7 +28,12 @@ interface HeaderProps {
  * panel; repetirlos en un menú sería un segundo camino para lo mismo.
  *
  * En macOS las dos entradas se registran en el menú de aplicación nativo, así
- * que el botón ☰ **se oculta** en vez de quedarse vacío.
+ * que el botón de menú **se oculta** en vez de quedarse vacío.
+ *
+ * El menú **arranca cerrado**. El artboard del estado vacío lo dibuja
+ * desplegado, pero eso enseña una posibilidad y no un estado inicial: una
+ * aplicación que abre con un menú encima del documento no es lo que el canvas
+ * pide.
  */
 export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: HeaderProps) {
   const { t } = useTranslation();
@@ -62,7 +68,7 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
 
   return (
     <header className="header rf-surface">
-      <p className="rf-title">{t("app.name")}</p>
+      <p className="header__name rf-title">{t("app.name")}</p>
       <div className="rf-row">
         {status !== null && (
           <span className={status === "Signed" ? "rf-badge rf-badge--primary" : "rf-badge"}>
@@ -82,7 +88,7 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
               aria-controls={open ? menuId : undefined}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
-              ☰
+              <MenuIcon />
             </button>
             {open && (
               <div className="header__popup rf-card rf-card--elevated" id={menuId} role="menu">

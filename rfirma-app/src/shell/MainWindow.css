@@ -1,11 +1,11 @@
 /*
  * La única ventana (docs/design/ventana-principal.md): una cabecera de 56 px y
- * tres regiones fijas debajo —bandeja 300 px, visor flexible, panel 360 px—.
+ * debajo la bandeja de 300 px, el visor flexible y el panel de 360 px.
  *
- * Las tres son columnas de un `grid` y no elementos que se monten y desmonten:
- * la ficha dice que ninguna aparece ni desaparece durante el recorrido, y lo
- * que cambia es su contenido. Un `display: none` aquí sería el primer paso
- * hacia la navegación que el ID-25 prohíbe.
+ * Sin documento el panel **no está en el árbol** y quedan dos columnas
+ * (ID-51). No es un `display: none` —eso sería el primer paso hacia la
+ * navegación que el ID-25 prohíbe—: es una columna menos en el `grid` porque
+ * el elemento no se monta.
  */
 
 .main-window {
@@ -19,6 +19,10 @@
   display: grid;
   grid-template-columns: 300px 1fr 360px;
   min-height: 0;
+}
+
+.main-window__body--no-panel {
+  grid-template-columns: 300px 1fr;
 }
 
 .main-window__tray,

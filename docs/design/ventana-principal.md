@@ -9,8 +9,7 @@ abrir el documento a guardarlo firmado, sin navegar a ninguna otra pantalla.
 
 ## Estructura
 
-Tres regiones fijas bajo una cabecera común. Ninguna aparece ni desaparece
-durante el recorrido: lo que cambia es su contenido.
+Una cabecera común y debajo la bandeja, el visor y el panel de firma.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -20,6 +19,25 @@ durante el recorrido: lo que cambia es su contenido.
 │ 300 px       │ flexible              │ 360 px           │
 └──────────────┴───────────────────────┴──────────────────┘
 ```
+
+**Sin documento la ventana es de dos columnas.** El panel de firma no está
+montado: no hay nada que firmar, y una columna vacía con su borde izquierdo
+solo dice que falta algo. Es lo que dice el `oculto` del estado 1 de la tabla
+de abajo y lo que enseña el artboard del estado vacío.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ cabecera                                                │  56 px
+├──────────────┬──────────────────────────────────────────┤
+│ bandeja      │ visor                                    │
+│ 300 px       │ flexible                                 │
+└──────────────┴──────────────────────────────────────────┘
+```
+
+No es un `display: none` ni el primer paso hacia una segunda pantalla: la
+región no se monta, y en cuanto hay documento vuelve. Las tres regiones siguen
+sin aparecer ni desaparecer **durante** el recorrido, que empieza con el
+documento abierto.
 
 - [Cabecera](cabecera.md) — identidad, estado del documento y menú principal.
 - [Bandeja de documentos](bandeja-de-documentos.md) — qué documento se firma.
@@ -32,6 +50,15 @@ mucho un botón primario en pantalla.
 Sobre la ventana pueden abrirse cuatro diálogos, que la oscurecen sin
 desmontarla: [PIN](dialogo-pin.md), [progreso de firma](dialogo-progreso-firma.md),
 [preferencias](preferencias.md) y [acerca de](acerca-de.md).
+
+### Geometría
+
+- Cabecera de 56 px, borde inferior de 1 px en `--rf-border-subtle`.
+- Bandeja de 300 px fijos, borde derecho de 1 px en `--rf-border-subtle`.
+- Visor flexible, sin ancho propio.
+- Panel de 360 px fijos, borde izquierdo de 1 px en `--rf-border-subtle`.
+- Bandeja, visor y panel sobre `--rf-surface`; solo el papel del documento
+  fuerza `data-theme="light"` sobre `--rf-bg`.
 
 ## La secuencia no es negociable
 

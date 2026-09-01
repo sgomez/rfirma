@@ -60,15 +60,17 @@ export function PinDialog({ certificate, failure, onSubmit, onCancel }: PinDialo
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <p className="rf-title" id={titleId}>
-          {locked ? t("errors.situations.pinLocked.title") : t("pin.title")}
-        </p>
-        <p className="rf-hint">
-          {t("pin.signingAs", {
-            holder: certificate.holderName,
-            idNumber: certificate.idNumber,
-          })}
-        </p>
+        <div className="pin-dialog__heading">
+          <p className="rf-title" id={titleId}>
+            {locked ? t("errors.situations.pinLocked.title") : t("pin.title")}
+          </p>
+          <p className="rf-prose rf-text-muted">
+            {t("pin.signingAs", {
+              holder: certificate.holderName,
+              idNumber: certificate.idNumber,
+            })}
+          </p>
+        </div>
 
         {locked && failure ? (
           <>

@@ -1,5 +1,16 @@
 import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  FitIcon,
+  MinusIcon,
+  MoveIcon,
+  PlusIcon,
+  UploadIcon,
+} from "../design-system/icons";
 import "./DocumentViewer.css";
 import type { PdfDocument, Viewport } from "./pdf";
 import { createRenderQueue, type RenderQueue } from "./renderQueue";
@@ -186,10 +197,14 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
   if (!pdf) {
     return (
       <div className="viewer viewer--empty">
-        <button type="button" className="viewer__drop-zone rf-prose" onClick={onOpen}>
-          {t("viewer.dropZone")}
+        <button type="button" className="viewer__drop-zone" onClick={onOpen}>
+          <span className="viewer__drop-icon">
+            <UploadIcon />
+          </span>
+          <span className="rf-title viewer__drop-title">{t("viewer.dropZone")}</span>
+          <span className="rf-prose rf-text-muted">{t("viewer.dropZoneHint")}</span>
         </button>
-        <p className="rf-body rf-text-muted">{t("viewer.privacy")}</p>
+        <p className="rf-prose rf-text-muted">{t("viewer.privacy")}</p>
       </div>
     );
   }
@@ -222,7 +237,10 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
               onKeyDown={nudge}
               {...drag}
             >
-              <span className="viewer__handle rf-body">{t("viewer.dragHandle")}</span>
+              <span className="viewer__handle rf-body">
+                <MoveIcon />
+                {t("viewer.dragHandle")}
+              </span>
             </div>
           )}
         </div>
@@ -237,21 +255,21 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
       <div className="viewer__bar rf-row">
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.firstPage")}
           disabled={page === 1}
           onClick={() => goTo(1)}
         >
-          «
+          <ChevronsLeftIcon />
         </button>
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.previousPage")}
           disabled={page === 1}
           onClick={() => goTo(page - 1)}
         >
-          ‹
+          <ChevronLeftIcon />
         </button>
         <input
           className="rf-input viewer__page"
@@ -265,51 +283,51 @@ export function DocumentViewer({ pdf, placement, onPlace, onOpen }: DocumentView
         <span className="rf-body">{t("viewer.pageOf", { total: pageCount })}</span>
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.nextPage")}
           disabled={page === pageCount}
           onClick={() => goTo(page + 1)}
         >
-          ›
+          <ChevronRightIcon />
         </button>
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.lastPage")}
           disabled={page === pageCount}
           onClick={() => goTo(pageCount)}
         >
-          »
+          <ChevronsRightIcon />
         </button>
 
         <span className="viewer__divider rf-divider" />
 
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.zoomOut")}
           disabled={zoom <= (ZOOM_STEPS[0] ?? 0)}
           onClick={() => stepZoom(-1)}
         >
-          −
+          <MinusIcon />
         </button>
         <span className="rf-body viewer__zoom">{percent.format(zoom)}</span>
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.zoomIn")}
           disabled={zoom >= (ZOOM_STEPS[ZOOM_STEPS.length - 1] ?? 0)}
           onClick={() => stepZoom(1)}
         >
-          +
+          <PlusIcon />
         </button>
         <button
           type="button"
-          className="rf-btn rf-btn--ghost"
+          className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.fitToWindow")}
           onClick={fitToWindow}
         >
-          ⤢
+          <FitIcon />
         </button>
       </div>
     </div>

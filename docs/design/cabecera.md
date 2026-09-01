@@ -13,10 +13,36 @@ Una sola fila de 56 px sobre `--rf-surface`, separada del cuerpo por
 `--rf-border-subtle`:
 
 - **Izquierda**: `rFirma` en `.rf-title`.
-- **Derecha**: la insignia de estado del documento y el botón de menú (☰).
+- **Derecha**: la insignia de estado del documento y el botón de menú.
 
 La insignia usa dos valores y solo dos: **`Sin firmar`** y **`Firmado`**
 (en `.rf-badge--primary`). No aparece cuando no hay documento abierto.
+
+### Geometría
+
+- Alto 56 px. Relleno **asimétrico**: 24 px (`--rf-space-md`) a la izquierda y
+  16 px (`--rf-space-sm`) a la derecha, porque a la derecha el botón ya trae su
+  propio cuadro de 40 px. Separación entre piezas, 16 px.
+- El nombre va en `.rf-title` pero **bajado a 15 px** con `letter-spacing:
+  .4px`. Los 20 px plenos de `.rf-title` compiten con el título del panel en
+  una franja de 56 px; el tracking abierto es lo que lo devuelve a leerse como
+  identidad.
+- El botón de menú es un **cuadrado de 40×40 px** con `--rf-radius-md` y el
+  icono de tres rayas de 20 px. Nada de relleno propio.
+- El menú desplegado flota a 52 px del borde superior de la ventana y a 16 px
+  del derecho, con 230 px de ancho mínimo, 6 px de relleno, 2 px entre
+  entradas, `--rf-radius-md`, borde `--rf-border-subtle`, fondo `--rf-bg` y
+  `--rf-shadow-elevated`.
+- Cada entrada es `.rf-prose` con 9 px de relleno vertical, 10 px horizontal y
+  `--rf-radius-sm`.
+
+### Los iconos
+
+Las tres rayas del botón son un `<svg>` **en línea**, copiado del artboard
+(ID-53): 20×20 px sobre lienzo `0 0 24 24`, trazo de 1.5 en `currentColor`,
+extremos y uniones redondeados, `d="M4 7h16M4 12h16M4 17h16"`. No hay
+biblioteca de iconos ni icono de fuente, y el `☰` de texto que hubo antes ya
+no está: un glifo tipográfico cambia de forma con la fuente instalada.
 
 ## El menú
 
@@ -46,6 +72,11 @@ cómo se ancla esto en macOS.
 - **Documento firmado**: insignia `Firmado` en `--rf-primary`.
 - **Menú abierto**: el botón se rellena con `--rf-primary`; el menú flota con
   `--rf-shadow-elevated` anclado a la derecha.
+
+El menú **arranca cerrado**. El artboard «1 · Vacío · menú abierto» lo dibuja
+desplegado para enseñar sus dos entradas, pero eso es una posibilidad y no el
+estado inicial: abrir la aplicación con un menú encima del documento no es lo
+que el canvas pide.
 
 ## Componentes y tokens
 

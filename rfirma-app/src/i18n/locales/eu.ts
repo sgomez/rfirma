@@ -175,6 +175,7 @@ export const eu: UntranslatedCatalog = {
   },
   viewer: {
     dropZone: "",
+    dropZoneHint: "",
     privacy: "",
     pageNumber: "",
     pageOf: "",
@@ -305,6 +306,7 @@ export const eu: UntranslatedCatalog = {
     version: "",
     whatItDoes: "",
     independence: "",
+    repository: "",
     licenses: {
       title: "",
       view: "",

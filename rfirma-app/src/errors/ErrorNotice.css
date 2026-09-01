@@ -4,6 +4,29 @@
  * escribe aquí con `var(--rf-*)` y con nombre propio.
  */
 
+/* El borde de 2 px es lo único que distingue un aviso de error de una tarjeta
+   corriente: la paleta es monocroma y no hay rojo que gastar (sección 2 del
+   sistema de diseño). */
+.error-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  padding: var(--rf-space-sm);
+  border: 2px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+}
+
+.error-notice__title {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  margin: 0;
+}
+
+.error-notice__title > .rf-title {
+  font-size: 14px;
+}
+
 .error-notice__detail {
   margin-top: var(--rf-space-xs);
 }

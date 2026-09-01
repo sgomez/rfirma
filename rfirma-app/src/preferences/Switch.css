@@ -14,9 +14,8 @@
 
 .switch__control {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--rf-space-md);
+  align-items: flex-start;
+  gap: var(--rf-space-sm);
   width: 100%;
   min-height: 44px;
   padding: 0;
@@ -28,21 +27,24 @@
   cursor: pointer;
 }
 
+/* 40×24 con el pomo de 16 px y 4 px de holgura, que es la medida del artboard.
+   El área de pulsación no encoge por ello: la da `.switch__control`, que
+   mantiene sus 44 px de alto mínimo. */
 .switch__track {
   flex: none;
   display: flex;
   align-items: center;
-  width: 44px;
+  width: 40px;
   height: 24px;
-  padding: 2px;
+  padding: 3px;
   border: 1px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-pill);
   transition: background-color var(--rf-duration-fast) var(--rf-easing);
 }
 
 .switch__knob {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--rf-radius-pill);
   background: var(--rf-border-strong);
   transition: transform var(--rf-duration-fast) var(--rf-easing);
@@ -50,10 +52,17 @@
 
 .switch__control[aria-checked="true"] .switch__track {
   border-color: transparent;
+  padding: 4px;
   background: var(--rf-primary);
 }
 
 .switch__control[aria-checked="true"] .switch__knob {
-  transform: translateX(20px);
+  transform: translateX(16px);
   background: var(--rf-on-primary);
+}
+
+/* La ayuda se sangra hasta la columna del texto: 40 px de pastilla más los
+   16 px que la separan. */
+.switch__hint {
+  padding-left: calc(40px + var(--rf-space-sm));
 }

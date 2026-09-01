@@ -4,8 +4,19 @@
  * `.rf-divider` y un único botón «Cerrar» abajo a la derecha.
  */
 
+.preferences {
+  width: 480px;
+}
+
+/* «Vaciar la lista» cuelga del ajuste que la explica, así que se sangra hasta
+   la columna de su texto, igual que la ayuda del interruptor. Es el patrón
+   visual de los ajustes que el artboard sí dibuja, aplicado a uno que no. */
 .preferences__clear {
   align-self: flex-start;
+  margin-left: calc(40px + var(--rf-space-sm));
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
 }
 
 .preferences__confirm {
