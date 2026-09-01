@@ -11,28 +11,31 @@ import "./app.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents } from "./documents/recents";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { inMemoryLanguagePreference } from "./i18n/preference";
 import { inMemoryPreferences } from "./preferences/preferences";
 import { emptyRubricPicker } from "./signing/rubric";
-import { tauriCertificateStore, tauriLayer2Composer, tauriSigningBackend } from "./signing/tauri";
-import { emptyPdfSource } from "./viewer/source";
+import {
+  tauriCertificateStore,
+  tauriDocumentPicker,
+  tauriLayer2Composer,
+  tauriPdfSource,
+  tauriSigningBackend,
+} from "./tauri";
 
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Los tres puertos de firma ya están enchufados a las órdenes del #60:
-// `tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`. Los
+// Cinco puertos hablan ya con las órdenes: los tres de firma del #60
+// —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`— y
+// los dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`. Los
 // que siguen en memoria son los que tocan el disco por sitios que todavía no
-// tienen orden expuesta —los recientes, los ajustes, el portal de ficheros y la
-// rúbrica—, más la del visor, `emptyPdfSource`: el PDF se pintará con
-// `pdfjsSource` en cuanto haya por dónde pedirle los bytes al portal.
-// Cuando la haya, se sustituyen aquí y en ningún otro sitio: ni la ventana ni
+// tienen orden expuesta: los recientes, los ajustes y la rúbrica. Cuando la
+// tengan, se sustituyen aquí y en ningún otro sitio (ID-75): ni la ventana ni
 // sus pruebas conocen a Tauri.
 //
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
@@ -62,8 +65,8 @@ createRoot(root).render(
     <LanguageProvider i18n={i18n} preference={preference}>
       <App
         recents={recents}
-        picker={inMemoryDocumentPicker()}
-        pdfs={emptyPdfSource()}
+        picker={tauriDocumentPicker()}
+        pdfs={tauriPdfSource()}
         preferences={preferences}
         destinations={[DOCUMENTS_FOLDER]}
         certificates={tauriCertificateStore()}

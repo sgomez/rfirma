@@ -5,6 +5,7 @@ import { DocumentTray } from "./documents/DocumentTray";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
+import { classify } from "./errors/classify";
 import { PreferencesDialog } from "./preferences/PreferencesDialog";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { MainWindow } from "./shell/MainWindow";
@@ -25,7 +26,7 @@ import {
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import type { SignaturePlacement } from "./viewer/signatureBox";
-import type { PdfSource } from "./viewer/source";
+import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "preferences" | "about" | null;
 
@@ -76,6 +77,10 @@ export function App({
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
+  // Por qué no se pudo pintar el último documento que se eligió. Vive al lado
+  // del PDF y no dentro del visor porque lo produce quien abre, y el visor solo
+  // lo enseña.
+  const [pdfFailure, setPdfFailure] = useState<DocumentFailure | null>(null);
   // Dónde va la firma visible. Vive aquí y no en el visor porque el panel de
   // firma —su sub-issue— es quien dirá qué se pinta dentro del recuadro, y los
   // dos tienen que estar mirando el mismo.
@@ -119,13 +124,15 @@ export function App({
     const active = documents.active;
     if (!active) {
       setPdf(null);
+      setPdfFailure(null);
       setPlacement(null);
       return;
     }
     let current = true;
     void pdfs.open(active).then((opened) => {
       if (!current) return;
-      setPdf(opened);
+      setPdf(opened.ok ? opened.pdf : null);
+      setPdfFailure(opened.ok ? null : opened.failure);
       setPlacement(null);
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
@@ -174,6 +181,21 @@ export function App({
     }
     setRubricFailure(null);
     setRubric(choice.rubric);
+  };
+
+  /**
+   * Abrir un documento por el portal.
+   *
+   * El `catch` no es decorativo: si la orden que abre el diálogo rechaza, la
+   * promesa quedaría sin dueño y el fallo no se contaría en ningún sitio. Se
+   * cuenta donde se cuentan los demás del documento, en el visor.
+   */
+  const openDocument = async () => {
+    try {
+      await documents.open();
+    } catch (thrown) {
+      setPdfFailure(classify(thrown));
+    }
   };
 
   const changeSettings = async (next: Preferences) => {
@@ -234,7 +256,7 @@ export function App({
           <DocumentTray
             recents={documents.recents}
             activeId={documents.active?.id ?? null}
-            onOpen={() => void documents.open()}
+            onOpen={() => void openDocument()}
             onSelect={documents.select}
             onForget={(id) => void documents.forget(id)}
           />
@@ -244,7 +266,8 @@ export function App({
             pdf={pdf}
             placement={placement}
             onPlace={setPlacement}
-            onOpen={() => void documents.open()}
+            onOpen={() => void openDocument()}
+            failure={pdfFailure}
           />
         }
         panel={
