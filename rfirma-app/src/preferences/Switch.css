@@ -6,17 +6,43 @@
  * cambia de lado, que es lo que se ve en cualquier tema y con cualquier vista.
  */
 
+/*
+ * La separación entre la pastilla y el texto **no es la misma en los dos sitios
+ * donde vive el interruptor**, y por eso es una variable y no un número: el
+ * panel de firma lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`) y
+ * Preferencias con `rf-gap-sm` (16 px, `EstadoPreferencias.dc.html:409`).
+ * Escribirla una sola vez es lo que mantiene la sangría de la ayuda pegada a la
+ * columna del texto sin repetir la cuenta.
+ */
+/* La separación **vertical** entre el botón y su ayuda es de 4 px, la del
+   artboard (`EstadoPreferencias.dc.html:417`) y la que escribe la ficha. Es
+   otra cosa que `--switch-gap`, que es la horizontal. */
 .switch {
+  --switch-gap: var(--rf-space-xs);
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-xs);
+  gap: 4px;
 }
 
+/* El interruptor de Preferencias: misma pastilla, 16 px hasta el texto. */
+.switch--wide {
+  --switch-gap: var(--rf-space-sm);
+}
+
+/*
+ * Los 44 px de alto mínimo son el área de pulsación de la sección 8 del sistema
+ * de diseño, y se quedan. Consecuencia declarada (ID-44, ver
+ * `docs/design/preferencias.md`): con un rótulo de una línea el botón es más
+ * alto que su contenido, así que el hueco que se ve bajo el texto es mayor que
+ * los 4 px de `gap`. El artboard no tiene ese hueco porque mete la ayuda dentro
+ * de la columna del texto; aquí la ayuda está fuera del botón a propósito
+ * —dentro se sumaría al nombre accesible—, y entre las dos cosas manda el área
+ * de pulsación.
+ */
 .switch__control {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--rf-space-md);
+  align-items: flex-start;
+  gap: var(--switch-gap);
   width: 100%;
   min-height: 44px;
   padding: 0;
@@ -28,32 +54,49 @@
   cursor: pointer;
 }
 
+/* 40×24 con el pomo de 16 px y 4 px de holgura, que es la medida del artboard.
+   El área de pulsación no encoge por ello: la da `.switch__control`, que
+   mantiene sus 44 px de alto mínimo. */
 .switch__track {
   flex: none;
   display: flex;
   align-items: center;
-  width: 44px;
+  width: 40px;
   height: 24px;
-  padding: 2px;
+  padding: 3px;
   border: 1px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-pill);
   transition: background-color var(--rf-duration-fast) var(--rf-easing);
 }
 
 .switch__knob {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--rf-radius-pill);
   background: var(--rf-border-strong);
   transition: transform var(--rf-duration-fast) var(--rf-easing);
 }
 
+/* El relleno **no** cambia al encenderse. El artboard dibuja la pastilla
+   encendida sin borde y con 4 px de relleno, que es el mismo hueco de 4 px que
+   deja apagada con su borde de 1 px y 3 de relleno. Aquí el borde no se quita,
+   se vuelve transparente para que la pastilla no cambie de tamaño, así que los
+   3 px se quedan: con `border-box` un relleno de 4 dejaría al pomo de 16 px un
+   canal de 14 y se saldría por arriba y por abajo. */
 .switch__control[aria-checked="true"] .switch__track {
   border-color: transparent;
   background: var(--rf-primary);
 }
 
 .switch__control[aria-checked="true"] .switch__knob {
-  transform: translateX(20px);
+  transform: translateX(16px);
   background: var(--rf-on-primary);
+}
+
+/* La ayuda se sangra hasta la columna del texto: 40 px de pastilla más lo que
+   la separa de él. Con la separación de Preferencias son 56 px, que es donde
+   cae también `.preferences__clear`: los dos cuelgan del mismo texto y tienen
+   que buscar la misma columna. */
+.switch__hint {
+  padding-left: calc(40px + var(--switch-gap));
 }

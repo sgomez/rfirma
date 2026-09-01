@@ -40,6 +40,23 @@ gente va a preguntar qué es esto.
 Ver [ADR-0008](../adr/0008-licencia-eupl-1-2.md) para por qué esa combinación
 se sostiene.
 
+### Geometría
+
+- Diálogo de **460 px**.
+- El nombre va en `.rf-heading` **bajado a 32 px** —los 48 plenos llenan medio
+  diálogo— y, 4 px debajo, la versión en `.rf-body rf-text-muted`.
+- Los dos párrafos, en `.rf-prose`; el aviso de independencia sin borde, fondo
+  ni icono, como cualquier otro.
+- El bloque de licencias es una pila de 6 px: las dos líneas en
+  `.rf-body rf-text-muted` y la dirección del repositorio en `.rf-body`.
+- Acciones abajo a la derecha: «Ver las licencias» fantasma y «Cerrar»
+  primario.
+
+El artboard dibuja las dos líneas de licencia **desplegadas**; eso es el estado
+congelado del canvas y aquí es lo que revela «Ver las licencias». Lo que se ve
+siempre es la dirección del repositorio, que es adónde va quien quiera
+comprobar cualquiera de las dos.
+
 ## Estados
 
 Uno.

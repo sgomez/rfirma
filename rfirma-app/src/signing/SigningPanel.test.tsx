@@ -81,9 +81,13 @@ describe("SigningPanel", () => {
     });
 
     expect(screen.getByText("Ada Lovelace Byron")).toBeInTheDocument();
-    expect(
-      screen.getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    ).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", {
+      name: /Estampar un recuadro de firma en el documento/,
+    });
+    expect(toggle).toBeInTheDocument();
+    // El panel lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`); los 16 px
+    // son de Preferencias y se piden allí con `switch--wide`.
+    expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
     expect(screen.getByText("Página 3 · arrástralo para colocarlo")).toBeInTheDocument();
     for (const label of [
       "Tu rúbrica",
@@ -110,10 +114,30 @@ describe("SigningPanel", () => {
     expect(buttons.at(-1)).toBe(primaries[0]);
   });
 
+  // El artboard enseña «27 páginas · 2,4 MB» y un resumen de firmas que hoy
+  // nadie calcula. Lo desconocido **no ocupa sitio**: ni un guion, ni un «—»,
+  // ni un marcador de posición.
+  it("paints nothing at all in place of what nobody knows yet", () => {
+    renderPanel({
+      document: { name: "contrato.pdf", pages: 27, sizeBytes: null, signatures: null },
+    });
+
+    // La línea de metadatos dice las páginas y **nada más**: sin el separador
+    // que precedería al tamaño, y sin tamaño.
+    expect(screen.getByText("27 páginas")).toBeInTheDocument();
+    expect(screen.getByText("27 páginas").textContent).toBe("27 páginas");
+    expect(screen.queryByText(/—|–|\bMB\b|\bkB\b/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
+  });
+
   it("shows the destination folder by its name and never by its path", () => {
     renderPanel({ destination: { folder: "Documentos", writable: true } });
 
-    expect(screen.getByText("Se guardará en Documentos")).toBeInTheDocument();
+    // El artboard parte la fila en dos: «Se guardará en» como rótulo y la
+    // carpeta debajo, junto al icono de carpeta. Lo que la prueba defiende
+    // —que se ve el nombre y nunca la ruta— no cambia.
+    expect(screen.getByText("Se guardará en")).toBeInTheDocument();
+    expect(screen.getByText("Documentos")).toBeInTheDocument();
     expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
   });
 
@@ -122,6 +146,14 @@ describe("SigningPanel", () => {
 
     expect(screen.getByText("No se puede escribir en Documentos")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+  });
+
+  it("does not promise a destination it has just said it cannot write to", () => {
+    // «Se guardará en» y «No se puede escribir en Documentos» a la vez es una
+    // contradicción: el rótulo es la promesa y desaparece con ella.
+    renderPanel({ destination: { folder: "Documentos", writable: false } });
+
+    expect(screen.queryByText("Se guardará en")).not.toBeInTheDocument();
   });
 
   it("never shows a wildcard, neither in the interface nor in the preview", async () => {

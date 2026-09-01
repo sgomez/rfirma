@@ -17,7 +17,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={null}
         viewer={null}
-        panel={null}
+        panel={<p>panel</p>}
       />,
     );
 
@@ -25,6 +25,27 @@ describe("MainWindow", () => {
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
+  });
+
+  // ID-51: sin documento el panel **no se monta**. La ventana pasa a dos
+  // columnas, que es lo que dice el estado 1 de la tabla de la ficha
+  // (`oculto`) y lo que enseña el artboard del estado vacío.
+  it("does not mount the signing panel while there is no document", () => {
+    renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        tray={null}
+        viewer={null}
+        panel={null}
+      />,
+    );
+
+    expect(screen.queryByRole("region", { name: "Panel de firma" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
   });
 
   it("puts the tray content inside the tray region", () => {
@@ -87,7 +108,7 @@ describe("MainWindow", () => {
         onOpenAbout={noop}
         tray={null}
         viewer={null}
-        panel={null}
+        panel={<p>panel</p>}
       />,
     );
 

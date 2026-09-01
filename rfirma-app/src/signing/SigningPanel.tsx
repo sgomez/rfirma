@@ -1,5 +1,13 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  AlertIcon,
+  CertificateIcon,
+  CheckIcon,
+  FileIcon,
+  FolderIcon,
+  InfoIcon,
+} from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
 import type { Certificate } from "./certificate";
@@ -129,32 +137,42 @@ export function SigningPanel({
   return (
     <div className="panel">
       <div className="panel__scroll">
-        <section className="panel__section">
-          <p className="rf-prose panel__document">{document.name}</p>
-          <p className="rf-hint">
-            {[
-              document.pages === 1
-                ? t("panel.document.pages.one")
-                : t("panel.document.pages.many", { pages: document.pages }),
-              document.sizeBytes === null ? null : formatSize(document.sizeBytes, i18n.language),
-            ]
-              .filter((piece) => piece !== null)
-              .join(" · ")}
-          </p>
-        </section>
+        <div className="panel__header">
+          <span className="panel__header-icon">
+            <FileIcon />
+          </span>
+          <div className="panel__header-text">
+            <p className="rf-title panel__document">{document.name}</p>
+            <p className="rf-body rf-text-muted">
+              {[
+                document.pages === 1
+                  ? t("panel.document.pages.one")
+                  : t("panel.document.pages.many", { pages: document.pages }),
+                document.sizeBytes === null ? null : formatSize(document.sizeBytes, i18n.language),
+              ]
+                .filter((piece) => piece !== null)
+                .join(" · ")}
+            </p>
+          </div>
+        </div>
 
         {document.signatures !== null && document.signatures > 0 && (
-          <p className="rf-hint panel__co-signature">
-            {document.signatures === 1
-              ? t("panel.coSignature.one")
-              : t("panel.coSignature.many", { count: document.signatures })}
-          </p>
+          <div className="panel__co-signature">
+            <span className="panel__notice-icon">
+              <InfoIcon />
+            </span>
+            <p className="rf-prose">
+              {document.signatures === 1
+                ? t("panel.coSignature.one")
+                : t("panel.coSignature.many", { count: document.signatures })}
+            </p>
+          </div>
         )}
 
         <hr className="rf-divider" />
 
         <section className="panel__section" aria-label={t("panel.certificate.title")}>
-          <p className="rf-label">{t("panel.certificate.title")}</p>
+          <p className="rf-label panel__heading">{t("panel.certificate.title")}</p>
           <CertificateBlock
             state={certificate}
             onChoose={onChooseCertificate}
@@ -170,7 +188,7 @@ export function SigningPanel({
           aria-label={t("panel.visibleSignature.title")}
           inert={!usable}
         >
-          <p className="rf-label">{t("panel.visibleSignature.title")}</p>
+          <p className="rf-label panel__heading">{t("panel.visibleSignature.title")}</p>
           <Switch
             checked={signature.enabled}
             label={t("panel.visibleSignature.toggle")}
@@ -236,8 +254,8 @@ export function SigningPanel({
 
               <div className="panel__rubric">
                 <p className="rf-label">{t("panel.visibleSignature.rubric.title")}</p>
-                {rubric && (
-                  <>
+                <div className="panel__rubric-row">
+                  {rubric && (
                     <img
                       className="panel__rubric-thumbnail"
                       src={rubric.dataUrl}
@@ -245,14 +263,20 @@ export function SigningPanel({
                       height={rubric.height}
                       alt={t("panel.visibleSignature.rubric.thumbnail")}
                     />
-                    <p className="rf-hint">{t("panel.visibleSignature.rubric.flattened")}</p>
-                  </>
+                  )}
+                  <button
+                    type="button"
+                    className="rf-btn rf-btn--secondary panel__rubric-choose"
+                    onClick={onChooseRubric}
+                  >
+                    {rubric
+                      ? t("panel.visibleSignature.rubric.change")
+                      : t("panel.visibleSignature.rubric.choose")}
+                  </button>
+                </div>
+                {rubric && (
+                  <p className="rf-hint">{t("panel.visibleSignature.rubric.flattened")}</p>
                 )}
-                <button type="button" className="rf-btn rf-btn--secondary" onClick={onChooseRubric}>
-                  {rubric
-                    ? t("panel.visibleSignature.rubric.change")
-                    : t("panel.visibleSignature.rubric.choose")}
-                </button>
                 {rubricFailure && (
                   <ErrorNotice
                     situation={rubricFailure.situation}
@@ -274,15 +298,37 @@ export function SigningPanel({
         {failure ? (
           <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
         ) : (
-          <div className="rf-row panel__destination">
-            <p className="rf-hint">
-              {destination.writable
-                ? `${t("panel.footer.savedIn")} ${destination.folder}`
-                : t("panel.footer.unwritable", { folder: destination.folder })}
-            </p>
-            <button type="button" className="rf-btn rf-btn--ghost" onClick={onChangeDestination}>
-              {t("actions.change")}
-            </button>
+          <div className="panel__destination">
+            {/* El rótulo es una promesa, así que **desaparece** cuando no se
+                puede cumplir: con la carpeta no escribible el pie dice solo
+                que no se puede escribir en ella, y no las dos cosas a la vez. */}
+            {destination.writable && <p className="rf-label">{t("panel.footer.savedIn")}</p>}
+            <div className="rf-row rf-gap-xs panel__destination-row">
+              <span className="panel__destination-icon">
+                <FolderIcon />
+              </span>
+              {/* El nombre de la carpeta se recorta con elipsis; el aviso de
+                  que no se puede escribir, no —recortar justamente el aviso
+                  sería perderlo cuando más falta hace—. */}
+              <p
+                className={
+                  destination.writable
+                    ? "rf-prose panel__destination-folder"
+                    : "rf-prose panel__destination-unwritable"
+                }
+              >
+                {destination.writable
+                  ? destination.folder
+                  : t("panel.footer.unwritable", { folder: destination.folder })}
+              </p>
+              <button
+                type="button"
+                className="rf-btn rf-btn--ghost panel__destination-change"
+                onClick={onChangeDestination}
+              >
+                {t("actions.change")}
+              </button>
+            </div>
           </div>
         )}
         <button
@@ -325,10 +371,13 @@ function CertificateBlock({
   if (state.kind === "empty") {
     return (
       <div className="panel__no-certificates">
-        <p className="rf-prose">{t("panel.certificate.empty.title")}</p>
-        <p className="rf-hint">{t("panel.certificate.empty.body")}</p>
-        <div className="rf-row">
-          <button type="button" className="rf-btn rf-btn--secondary" onClick={onRetry}>
+        <div className="panel__notice-title">
+          <AlertIcon />
+          <span className="rf-title">{t("panel.certificate.empty.title")}</span>
+        </div>
+        <p className="rf-prose rf-text-muted">{t("panel.certificate.empty.body")}</p>
+        <div className="rf-row rf-gap-xs panel__no-certificates-actions">
+          <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
             {t("panel.certificate.empty.retry")}
           </button>
           <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
@@ -350,9 +399,15 @@ function CertificateBlock({
   const { certificate } = state;
   return (
     <div className="rf-card panel__certificate">
-      <p className="rf-prose">{certificate.holderName}</p>
-      <p className="rf-hint">{certificate.idNumber}</p>
-      <p className="rf-hint">{t("panel.certificate.issuer", { issuer: certificate.issuer })}</p>
+      <div className="panel__certificate-name">
+        <span className="panel__certificate-icon">
+          <CertificateIcon />
+        </span>
+        <span className="rf-title">{certificate.holderName}</span>
+      </div>
+      <p className="rf-body rf-text-muted">
+        {certificate.idNumber} · {t("panel.certificate.issuer", { issuer: certificate.issuer })}
+      </p>
       {!isUsable(certificate.status) && (
         <p className="rf-prose panel__certificate-warning" role="alert">
           {statusWarning(certificate.status, i18n.language, t)}
@@ -403,18 +458,22 @@ function Checkbox({
 
   return (
     <div className="panel__checkbox">
-      <label className="rf-prose panel__checkbox-label">
+      <label className="panel__checkbox-label">
         <input
+          className="panel__checkbox-input"
           type="checkbox"
           checked={checked}
           disabled={disabled}
           aria-describedby={hint ? hintId : undefined}
           onChange={(event) => onChange(event.target.checked)}
         />
-        {label}
+        <span className="panel__checkbox-box" aria-hidden="true">
+          {checked && <CheckIcon />}
+        </span>
+        <span className="rf-prose">{label}</span>
       </label>
       {hint && (
-        <p className="rf-hint" id={hintId}>
+        <p className="rf-hint panel__checkbox-hint" id={hintId}>
           {hint}
         </p>
       )}

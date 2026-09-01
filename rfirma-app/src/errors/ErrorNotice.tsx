@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { AlertIcon } from "../design-system/icons";
 import type { Catalog } from "../i18n/catalog";
 import "./ErrorNotice.css";
 
@@ -29,14 +30,22 @@ interface ErrorNoticeProps {
  * —`afirma-crypto-pdf` no tiene ni un `.properties` localizado—, así que
  * ninguno de los dos se enseña como mensaje. Lo que no sepamos clasificar cae
  * en `unknown` más su detalle técnico crudo (ADR-0009).
+ *
+ * El artboard del error de firma dibuja el detalle **desplegado**. Eso es un
+ * estado congelado, no el inicial (ID-43): aquí sigue plegado, porque el
+ * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
+ * va a escribir un informe de fallo.
  */
 export function ErrorNotice({ situation, technicalDetail }: ErrorNoticeProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="rf-card" role="alert">
-      <p className="rf-title">{t(`errors.situations.${situation}.title`)}</p>
-      <p className="rf-prose rf-text-muted">{t(`errors.situations.${situation}.body`)}</p>
+    <div className="error-notice" role="alert">
+      <p className="error-notice__title">
+        <AlertIcon />
+        <span className="rf-title">{t(`errors.situations.${situation}.title`)}</span>
+      </p>
+      <p className="rf-prose">{t(`errors.situations.${situation}.body`)}</p>
       <details className="error-notice__detail">
         <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
         <pre className="error-notice__raw">{technicalDetail}</pre>

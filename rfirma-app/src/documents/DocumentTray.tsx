@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { UploadIcon } from "../design-system/icons";
 import type { ShownBadge } from "./document";
 import "./DocumentTray.css";
 import { type RecentDocument, shownBadge } from "./recents";
@@ -43,14 +44,17 @@ export function DocumentTray({
 
   return (
     <div className="tray">
-      <button type="button" className="tray__drop-zone rf-prose" onClick={onOpen}>
-        {t("tray.dropZone")}
+      <button type="button" className="tray__drop-zone" onClick={onOpen}>
+        <span className="tray__drop-icon">
+          <UploadIcon />
+        </span>
+        <span className="rf-prose tray__drop-text">{t("tray.dropZone")}</span>
       </button>
       {recents.length === 0 ? (
         <p className="rf-prose rf-text-muted">{t("tray.empty")}</p>
       ) : (
         <>
-          <p className="rf-label">{t("tray.recents")}</p>
+          <p className="rf-label tray__heading">{t("tray.recents")}</p>
           <ul className="tray__list" aria-label={t("tray.recents")}>
             {recents.map((document) => {
               const badge = shownBadge(document);
@@ -65,7 +69,7 @@ export function DocumentTray({
                     onClick={() => onSelect(document)}
                   >
                     <span className="rf-prose tray__name">{document.name}</span>
-                    <span className="rf-row">
+                    <span className="rf-row rf-gap-xs">
                       <span className="rf-badge">{t(BADGE_KEY[badge])}</span>
                       <span className="rf-body rf-text-muted">
                         {dates.format(document.lastUsed * 1000)}

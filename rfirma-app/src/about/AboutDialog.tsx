@@ -20,6 +20,11 @@ interface AboutDialogProps {
  * El aviso va **como párrafo, sin icono ni recuadro**: es un hecho sobre el
  * proyecto, no una advertencia sobre un riesgo del usuario, y enmarcarlo como
  * alarma le daría un peso que no le corresponde.
+ *
+ * El artboard dibuja las dos líneas de licencia **desplegadas**; eso es el
+ * estado congelado del canvas y aquí es lo que revela «Ver las licencias»
+ * (ID-43). Lo que se ve siempre es la dirección del repositorio, que es adónde
+ * va quien quiera comprobar cualquiera de las dos.
  */
 export function AboutDialog({ version, onClose }: AboutDialogProps) {
   const { t } = useTranslation();
@@ -29,8 +34,8 @@ export function AboutDialog({ version, onClose }: AboutDialogProps) {
   return (
     <div className="rf-scrim">
       <div className="rf-dialog about" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <div>
-          <p className="rf-heading" id={titleId}>
+        <div className="about__identity">
+          <p className="rf-heading about__name" id={titleId}>
             {t("app.name")}
           </p>
           <p className="rf-body rf-text-muted">{t("about.version", { version })}</p>
@@ -42,13 +47,17 @@ export function AboutDialog({ version, onClose }: AboutDialogProps) {
 
         <hr className="rf-divider" />
 
-        <p className="rf-label">{t("about.licenses.title")}</p>
-        {showingLicenses && (
-          <ul className="about__licenses">
-            <li className="rf-prose">{t("about.licenses.rfirma")}</li>
-            <li className="rf-prose">{t("about.licenses.afirma")}</li>
-          </ul>
-        )}
+        <div className="about__licenses">
+          {showingLicenses && (
+            <>
+              <p className="rf-body rf-text-muted">{t("about.licenses.afirma")}</p>
+              <p className="rf-body rf-text-muted">{t("about.licenses.rfirma")}</p>
+            </>
+          )}
+          <p className="rf-body">{t("about.repository")}</p>
+        </div>
+
+        <hr className="rf-divider" />
 
         <div className="rf-row about__footer">
           <button

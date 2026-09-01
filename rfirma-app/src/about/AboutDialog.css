@@ -10,12 +10,23 @@
   width: 460px;
 }
 
+.about__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 32 px: los 48 de `.rf-heading` llenan medio diálogo de 460 px. Es el único
+   sitio de la aplicación donde el nombre se lee como portada. */
+.about__name {
+  font-size: 32px;
+}
+
 .about__licenses {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-xs);
+  gap: 6px;
   margin: 0;
-  padding-left: var(--rf-space-md);
 }
 
 .about__footer {

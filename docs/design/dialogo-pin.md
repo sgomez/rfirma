@@ -25,6 +25,17 @@ secuencia en [ventana-principal.md](ventana-principal.md).
 5. Divisor y, abajo a la derecha, «Cancelar» (`--ghost`) y «Firmar»
    (`--primary`).
 
+### Geometría
+
+- Diálogo de 420 px, `.rf-dialog` sobre `.rf-scrim`.
+- Título en `.rf-title` y, 4 px debajo, «titular · DNI» en
+  `.rf-prose rf-text-muted` —no en `.rf-hint`: es quién va a firmar, y se lee
+  antes de teclear nada.
+- El campo del PIN va a **18 px con 6 px de tracking**: se teclea a ciegas y
+  los puntos se cuentan con la vista.
+- Acciones abajo a la derecha, `Cancelar` fantasma a la izquierda de `Firmar`
+  primario.
+
 ## Estados
 
 - **Pidiendo PIN**: pista neutra, «El PIN se usa solo para esta firma y no se

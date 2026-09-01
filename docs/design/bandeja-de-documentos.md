@@ -22,6 +22,28 @@ De arriba abajo:
 La fila seleccionada se marca con `--rf-border-strong` y fondo `--rf-bg`;
 las demás son `.rf-card--interactive` sin borde.
 
+### Geometría
+
+- La columna entera lleva 16 px (`--rf-space-sm`) de relleno y 16 px entre la
+  zona de soltar, el rótulo y la lista.
+- **Zona de soltar**: columna centrada con 16 px de relleno y 8 px
+  (`--rf-space-xs`) entre el icono y el texto; borde de **1 px discontinuo** en
+  `--rf-border-strong` y `--rf-radius-md`. No fija alto: lo dan el icono, el
+  texto y el relleno. El texto va en `.rf-prose` centrado.
+- **Icono de la zona de soltar**: la flecha de subir, `<svg>` en línea de 28×28
+  px sobre lienzo `0 0 24 24`, trazo de 1.5 en `currentColor`, teñida con
+  `--rf-text-muted`. Dos trazados: `M12 16V4M8 8l4-4 4 4` y
+  `M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3`.
+- **«RECIENTES»**: `.rf-label` en **versalitas** (`text-transform: uppercase`)
+  con `letter-spacing: .6px`. Es el mismo tratamiento que los rótulos de
+  sección del [panel](panel-de-firma.md).
+- **Fila**: 16 px de relleno, `--rf-radius-md`, borde de 1 px, y **6 px** entre
+  el nombre y su línea de metadatos. El nombre va en `.rf-prose` a peso **600**
+  con elipsis; debajo, la insignia y la fecha en `.rf-body rf-text-muted`
+  separadas 8 px.
+- La fila sin seleccionar tiene borde y fondo **transparentes**, no ausentes:
+  así no salta de tamaño al seleccionarse.
+
 ## Vocabulario de las insignias
 
 Tres valores: **`Firmado`**, **`Sin firmar`** y **`No disponible`**.
@@ -48,7 +70,11 @@ bandeja lo dice.
 
 - **Vacía** (primera ejecución, o con «Recordar mi actividad» apagado en
   [Preferencias](preferencias.md)): solo la zona de soltar, más «Aquí
-  aparecerán los documentos que vayas firmando».
+  aparecerán los documentos que vayas firmando». **Aquí la ficha y el canvas
+  no coinciden**, y manda la ficha: el artboard del estado vacío enseña además
+  el rótulo `RECIENTES` sobre el mensaje, y un encabezado sobre una lista que
+  no existe promete una sección vacía donde no hay ninguna. El rótulo aparece
+  con el primer documento (ID-44).
 - **Con recientes**: la lista, con el documento activo seleccionado.
 - **Arrastrando** (por definir): la zona de soltar debe acusar el arrastre.
 

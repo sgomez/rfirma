@@ -20,6 +20,68 @@ Superficie de ancho flexible sobre `--rf-surface`, con `overflow: hidden`:
 El área reserva 88 px inferiores para que la hoja nunca quede debajo de la
 barra.
 
+### Geometría
+
+- La hoja lleva borde de 1 px en `--rf-border-subtle`, `--rf-radius-sm` y
+  `--rf-shadow-card`.
+- **Zona de soltar del estado vacío**: 520 × 300 px, borde de **2 px**
+  discontinuo en `--rf-border-strong` y `--rf-radius-xl` —no `lg`—, con 48 px
+  (`--rf-space-lg`) de relleno y 16 px entre sus tres piezas. Dentro, de arriba
+  abajo: el icono de subir de 28 px teñido con `--rf-text-muted`, el texto en
+  `.rf-title` centrado y la línea de apoyo «Se abrirá el explorador de
+  archivos» en `.rf-prose rf-text-muted`. Debajo de la caja, a 24 px, la línea
+  de privacidad, también en `.rf-prose rf-text-muted`. Las dos piezas son una
+  pila **centrada en el visor**, vertical y horizontalmente: el hueco sobra por
+  igual arriba y abajo, no queda todo debajo de la caja.
+- Es la única zona de soltar con borde de 2 px y radio `xl`; la de la
+  [bandeja](bandeja-de-documentos.md) es de 1 px y radio `md`. La diferencia es
+  deliberada: una es la entrada principal de la pantalla vacía y la otra un
+  atajo permanente en una columna estrecha.
+- **Barra flotante**: píldora con 4 px de relleno, 2 px entre botones, borde de
+  1 px en `--rf-border-subtle` y `--rf-shadow-elevated`. Cada botón es un
+  **círculo de 32 px** con su icono de 16 px dentro. El divisor entre los dos
+  grupos es una línea de 1 × 24 px en `--rf-border-subtle` con 4 px de margen.
+- **Asa del recuadro**: pastilla en `--rf-primary` **alineada al borde
+  izquierdo** del recuadro (a −2 px, no centrada), con 3 px de relleno
+  vertical y 6 px de horizontal, el rótulo a 8 px en peso 700 y la cruz de
+  cuatro puntas de 14 px a 4 px del rótulo.
+- **Número de página**: pastilla de **56 × 30 px** con `--rf-radius-sm` y el
+  número a 13 px en peso 700 — más apretada que un `.rf-input` corriente, que
+  mide 44 px de alto y no cabe dentro de una barra de 40. El «de 27» que la
+  sigue va en `.rf-body rf-text-muted`, y el porcentaje del zoom ocupa 44 px
+  como mínimo, también en peso 700. La barra entera lleva `white-space: nowrap`:
+  es una sola línea y el «de 27» no parte nunca.
+  **El ancho es la única medida de la barra que no es la del canvas** (ID-44):
+  el artboard dibuja un `<span>` de 34 px que solo muestra el número, y aquí es
+  un `<input>` en el que se escribe, con su cursor y sitio para tres cifras sin
+  que el número baile al pasar de 9 a 100. El alto sí es el suyo, 30 px. Y la
+  pastilla va lisa como en el canvas: las flechas de la plataforma se apagan
+  con `appearance: textfield` —no caben en 30 px— y de página se cambia con los
+  cuatro botones de la barra, que es el gesto que el artboard dibuja. El campo
+  sigue siendo `type="number"`, así que el teclado no pierde nada.
+
+### El recuadro va vacío, y por qué (ID-44)
+
+El artboard dibuja **dentro** del recuadro una vista previa del sello: el
+garabato de la rúbrica, el nombre del titular a 8,5 px y dos líneas de 7,5 px
+con el DNI y la fecha. Aquí el recuadro va **vacío**, con su asa y nada más.
+No es un olvido:
+
+- **El texto del recuadro lo compone Rust** (`signing::layer2_text`, ID-19), y
+  el panel ya enseña esa cadena tal cual en «Lo que dirá el recuadro». Pintar
+  aquí una segunda versión, maquetada en HTML, sería una imitación local del
+  compositor autoritativo: la misma regla que el panel se aplica a sí mismo.
+- **No hay WYSIWYG que prometer.** El sello del PDF lo dibuja el puente con
+  sus propias métricas de fuente; una imitación en HTML sobre una hoja que
+  además se escala del 50 % al 300 % enseñaría un encuadre que el PDF no va a
+  tener, justo en la pieza que el usuario está colocando.
+- Por eso el recuadro se queda **translúcido** y no con el `--rf-surface` liso
+  del artboard: vacío y opaco escondería el trozo de documento sobre el que se
+  está decidiendo. Sí toma del artboard el borde de 2 px y el `--rf-radius-sm`.
+
+Los cuatro tiradores de las esquinas siguen pendientes: cambiar el **tamaño**
+del recuadro es de la vuelta siguiente.
+
 ## La barra flotante
 
 Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:
@@ -27,6 +89,11 @@ Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:
 ```
 « ‹ [3] de 27 › »  │  − 100 % + ⤢
 ```
+
+Los siete botones son `<svg>` **en línea** copiados del artboard (ID-53), no
+los glifos tipográficos que insinúa el esquema de arriba: dobles y simples
+chevrones para las páginas, menos y más para el zoom, y las cuatro esquinas
+para «ajustar a la ventana». Todos sobre lienzo `0 0 24 24` con trazo de 1.5.
 
 - **Páginas**: primera, anterior, número editable, total, siguiente, última.
   Ocupa lo mismo con 4 páginas que con 400 — por eso no hay una pastilla por
@@ -39,7 +106,8 @@ barra y no en un menú *Ver*.
 
 ## El recuadro de firma
 
-Rectángulo con borde `--rf-border-strong` sobre `--rf-surface`. Al estar
+Rectángulo con borde de 2 px en `--rf-border-strong` y `--rf-radius-sm`, sobre
+un `--rf-surface` **translúcido** (ver arriba). Al estar
 seleccionado muestra cuatro tiradores en las esquinas y un asa etiquetada
 «Arrastra para colocar» sobre el borde superior.
 
@@ -48,8 +116,9 @@ se decide mirando el documento —normalmente bajo el nombre de la persona— y 
 eligiendo una casilla abstracta. Ver
 [ADR-0006](../adr/0006-firma-visible-se-configura-sobre-el-documento.md).
 
-Qué se ve dentro del recuadro lo controla el
-[panel de firma](panel-de-firma.md).
+Qué **dirá** el recuadro lo controla el [panel de firma](panel-de-firma.md),
+y es ahí donde se lee: sobre la hoja el recuadro va vacío, por las razones de
+«El recuadro va vacío, y por qué» más arriba.
 
 **En v0.1 el recuadro se mueve, no se redimensiona.** Nace con una proporción
 fija —un tercio del ancho de la página, alto de rúbrica— y se coloca
@@ -75,10 +144,11 @@ firma en el sitio equivocado.
 
 ## Estados
 
-- **Vacío** (sin documento): en lugar de la hoja, una zona de soltar de
-  520 × 300 con borde discontinuo, «Arrastra un PDF o pulsa para abrirlo» y,
-  debajo, «Solo PDF. El documento no sale de tu ordenador en ningún momento».
-  La barra flotante no aparece.
+- **Vacío** (sin documento): en lugar de la hoja, la zona de soltar de
+  520 × 300 con su icono, «Arrastra un PDF o pulsa para abrirlo» y «Se abrirá
+  el explorador de archivos»; debajo, «Solo PDF. El documento no sale de tu
+  ordenador en ningún momento». La barra flotante no aparece, y el
+  [panel de firma](panel-de-firma.md) tampoco está montado.
 - **Documento cargado, recuadro sin seleccionar**: sin tiradores ni asa.
 - **Configurando**: recuadro seleccionado, con tiradores y asa.
 - **Atenuado**: bajo cualquier diálogo, la hoja baja a `opacity: .45`.

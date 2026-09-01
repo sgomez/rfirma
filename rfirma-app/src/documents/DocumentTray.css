@@ -2,22 +2,32 @@
  * Bandeja de documentos (docs/design/bandeja-de-documentos.md): la zona de
  * soltar arriba y los recientes debajo, dentro de la columna de 300 px que fija
  * la ventana.
+ *
+ * Las medidas son las del artboard: relleno y separación de 16 px, zona de
+ * soltar de 1 px discontinuo con radio `md`, y filas de 16 px de relleno con
+ * 6 px entre el nombre y su línea de metadatos.
  */
 
 .tray {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-md);
-  padding: var(--rf-space-md);
+  gap: var(--rf-space-sm);
+  padding: var(--rf-space-sm);
 }
 
+/* La zona de soltar no fija alto: lo dan el icono, el texto y el relleno, que
+   es como la dibuja el artboard. */
 .tray__drop-zone {
-  min-height: 112px;
-  padding: var(--rf-space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rf-space-xs);
+  padding: var(--rf-space-sm);
   border: 1px dashed var(--rf-border-strong);
   border-radius: var(--rf-radius-md);
   background: transparent;
-  color: var(--rf-text-muted);
+  color: var(--rf-text);
   font-family: var(--rf-font-body);
   cursor: pointer;
   transition: border-color var(--rf-duration-fast) var(--rf-easing);
@@ -25,13 +35,28 @@
 
 .tray__drop-zone:hover {
   border-color: var(--rf-primary);
-  color: var(--rf-text);
+}
+
+.tray__drop-icon {
+  display: flex;
+  color: var(--rf-text-muted);
+}
+
+.tray__drop-text {
+  text-align: center;
+}
+
+/* «RECIENTES» va en versalitas con el tracking abierto: es un rótulo de
+   sección, no una frase. */
+.tray__heading {
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
 .tray__list {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-xs);
+  gap: var(--rf-space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -43,9 +68,11 @@
 }
 
 .tray__card {
-  gap: var(--rf-space-xs);
+  gap: 6px;
   align-items: stretch;
+  padding: var(--rf-space-sm);
   border-color: transparent;
+  background: transparent;
   text-align: left;
   cursor: pointer;
   font: inherit;
@@ -65,6 +92,7 @@
 }
 
 .tray__name {
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

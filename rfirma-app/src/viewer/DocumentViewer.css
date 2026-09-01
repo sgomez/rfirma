@@ -16,23 +16,49 @@
   background: var(--rf-surface);
 }
 
+/* Las filas vuelven a `auto` a propósito. `.viewer` las fija en `1fr`, y una
+   pista de `1fr` se come todo el espacio libre: con ella `place-content` no
+   tiene hueco que repartir y queda inerte —la caja pegada arriba y la línea de
+   privacidad descolgada al fondo—. Con las dos filas a su tamaño, el hueco
+   sobrante existe y `place-content: center` lo reparte, que es la pila
+   centrada del artboard (`EstadoVacio.dc.html:147`). */
 .viewer--empty {
+  grid-template-rows: auto;
   place-content: center;
   justify-items: center;
-  gap: var(--rf-space-sm);
+  gap: var(--rf-space-md);
   padding: var(--rf-space-lg);
   text-align: center;
 }
 
+/* La caja del estado vacío es grande a propósito: 520×300 px, borde de **2 px**
+   discontinuo y `--rf-radius-xl`. Es la única superficie del visor cuando no
+   hay documento, y una caja tímida ahí deja la columna pareciendo rota. */
 .viewer__drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rf-space-sm);
   width: 520px;
   max-width: 100%;
   height: 300px;
-  border: 1px dashed var(--rf-border-strong);
-  border-radius: var(--rf-radius-lg);
+  padding: var(--rf-space-lg);
+  border: 2px dashed var(--rf-border-strong);
+  border-radius: var(--rf-radius-xl);
   background: transparent;
   color: var(--rf-text);
+  font-family: var(--rf-font-body);
   cursor: pointer;
+}
+
+.viewer__drop-icon {
+  display: flex;
+  color: var(--rf-text-muted);
+}
+
+.viewer__drop-title {
+  text-align: center;
 }
 
 /* El desplazamiento del documento es de la barra de scroll y de la rueda: no
@@ -51,7 +77,10 @@
 .viewer__sheet {
   position: relative;
   background: var(--rf-bg);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-sm);
   box-shadow: var(--rf-shadow-card);
+  overflow: hidden;
 }
 
 .viewer__canvas {
@@ -60,8 +89,16 @@
 
 .viewer__box {
   position: absolute;
-  box-sizing: border-box;
-  border: 1px solid var(--rf-border-strong);
+  /* El `box-sizing: border-box` que este recuadro necesita —el rectángulo que
+     se pinta es el que se firma, borde incluido— ya lo da el reinicio de
+     `app.css` para toda la página; aquí sobraba repetirlo. */
+  border: 2px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-sm);
+  /* El recuadro va **translúcido** y no con el `--rf-surface` liso del
+     artboard: allí la caja lleva dentro la vista previa del sello y tapar el
+     texto de debajo es lo correcto; aquí va vacía (ver
+     `docs/design/visor-de-documento.md`), y una caja opaca y vacía escondería
+     el trozo de documento sobre el que se está decidiendo colocarla. */
   background: color-mix(in srgb, var(--rf-surface) 70%, transparent);
   cursor: grab;
   touch-action: none;
@@ -71,15 +108,23 @@
   cursor: grabbing;
 }
 
+/* El asa lleva la cruz de cuatro puntas delante del rótulo: el icono dice qué
+   gesto se espera antes de que nadie lea nada. */
 .viewer__handle {
   position: absolute;
   top: 0;
-  left: 50%;
-  translate: -50% -100%;
-  padding: 0 var(--rf-space-xs);
+  left: -2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  translate: 0 -100%;
+  margin-top: -2px;
+  padding: 3px 6px;
   border-radius: var(--rf-radius-sm);
   background: var(--rf-primary);
   color: var(--rf-on-primary);
+  font-size: 8px;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -101,28 +146,73 @@
   bottom: var(--rf-space-md);
   translate: -50% 0;
   align-items: center;
-  gap: var(--rf-space-xs);
-  padding: var(--rf-space-xs) var(--rf-space-sm);
+  gap: 2px;
+  padding: 4px;
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-pill);
   background: var(--rf-surface);
   box-shadow: var(--rf-shadow-elevated);
+  /* Como en el artboard (`EstadoDocumentoCargado.dc.html:219`): la barra es una
+     sola línea y el «de 27» nunca parte. */
+  white-space: nowrap;
+}
+
+/* Cada botón de la barra es un círculo de 32 px: el icono va dentro sin
+   relleno propio y la pastilla mantiene su alto. */
+.viewer__step {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--rf-radius-pill);
 }
 
 /* Ocupa lo mismo con 4 páginas que con 400: el número se escribe, no se elige
-   de una pastilla por página. */
+   de una pastilla por página. La pastilla del artboard es de 34×30 px con el
+   número a 13 px en negrita, más apretada que un `.rf-input` de 44 px: la barra
+   flotante entera mide 40 px de alto y un campo de 44 no cabe dentro.
+   El **alto** es el suyo, 30 px. El **ancho** no: el artboard dibuja un
+   `<span>` de 34 px que solo muestra el número, y esto es un `<input>` en el
+   que se escribe, con su cursor y sitio para tres cifras sin que el texto
+   baile. 56 px es esa diferencia, declarada aquí y en la ficha (ID-44). */
 .viewer__page {
-  width: 4.5rem;
+  width: 3.5rem;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 4px;
+  border-radius: var(--rf-radius-sm);
+  font-size: 13px;
+  font-weight: 700;
   text-align: center;
+  /* Las flechas de la plataforma no caben en una pastilla de 30 px y el
+     artboard la dibuja lisa: se sube y se baja de página con los cuatro
+     botones de la barra, que es el gesto que el artboard sí dibuja. El campo
+     sigue siendo `type="number"`, así que el teclado y el lector de pantalla
+     no pierden nada. */
+  appearance: textfield;
+}
+
+.viewer__page::-webkit-outer-spin-button,
+.viewer__page::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* La fila del número y su «de N» comparte el relleno lateral del artboard. */
+.viewer__pages {
+  flex: none;
+  padding: 0 6px;
 }
 
 .viewer__zoom {
-  min-width: 4rem;
+  min-width: 44px;
+  font-weight: 700;
   text-align: center;
 }
 
 .viewer__divider {
   width: 1px;
   height: 24px;
-  margin: 0 var(--rf-space-xs);
+  margin: 0 4px;
 }

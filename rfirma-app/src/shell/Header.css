@@ -2,21 +2,40 @@
  * Cabecera: una sola fila de 56 px sobre `--rf-surface`, separada del cuerpo
  * por `--rf-border-subtle` (docs/design/cabecera.md).
  *
+ * La geometría de aquí es la del artboard, medida a medida: el relleno
+ * asimétrico (24 px a la izquierda, 16 a la derecha, donde va el botón), el
+ * nombre a 15 px con .4 px de tracking, el botón cuadrado de 40 px y el menú
+ * flotante de 230 px anclado a 52 px del borde superior.
+ *
  * Aquí no se fija ningún color a mano: todo sale de los tokens, como manda el
  * sistema de diseño.
  */
 
 .header {
+  position: relative;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--rf-space-sm);
   height: 56px;
-  padding: 0 var(--rf-space-md);
+  padding: 0 var(--rf-space-sm) 0 var(--rf-space-md);
   border-bottom: 1px solid var(--rf-border-subtle);
 }
 
+/* El nombre no va al tamaño pleno de `.rf-title`: en una franja de 56 px el
+   artboard lo baja a 15 px y le abre el tracking para que siga leyéndose como
+   identidad y no como título de sección. */
+.header__name {
+  font-size: 15px;
+  letter-spacing: 0.4px;
+}
+
+/* El menú no crea contexto de posición: el desplegable se ancla a la cabecera
+   entera, que es lo que hace el artboard. Este contenedor existe para que el
+   clic fuera sepa qué es «dentro». */
 .header__menu {
-  position: relative;
+  display: flex;
 }
 
 /* El botón de menú es de 40 px, más estrecho que el mínimo táctil de `.rf-btn`,
@@ -25,7 +44,7 @@
   min-width: 40px;
   min-height: 40px;
   padding: 0;
-  font-size: 16px;
+  border-radius: var(--rf-radius-md);
 }
 
 .header__button--open {
@@ -36,21 +55,27 @@
 /* El menú flota anclado a la derecha, por encima del cuerpo de la ventana. */
 .header__popup {
   position: absolute;
-  top: calc(100% + var(--rf-space-xs));
-  right: 0;
+  top: 52px;
+  right: var(--rf-space-sm);
   z-index: 10;
-  gap: 0;
-  min-width: 220px;
-  padding: var(--rf-space-xs);
+  gap: 2px;
+  min-width: 230px;
+  padding: 6px;
+  background: var(--rf-bg);
 }
 
 .header__entry {
   justify-content: flex-start;
   width: 100%;
+  min-height: 0;
+  padding: 9px 10px;
+  border-radius: var(--rf-radius-sm);
+  font-size: 14px;
   font-weight: 400;
+  line-height: 1.6;
   text-align: left;
 }
 
 .header__entry:hover {
-  background: var(--rf-bg);
+  background: var(--rf-surface);
 }

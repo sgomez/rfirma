@@ -1,7 +1,16 @@
+// El bundle del sistema de diseño va **antes** que cualquier componente: los
+// `import` de ES se evalúan en orden, y el CSS de cada pantalla baja a propósito
+// medidas de las clases `rf-*` (`.viewer__step` sobre `.rf-btn`, por ejemplo).
+// Con el mismo peso de selector gana el último que se emite, así que emitir el
+// bundle después anularía en silencio media transcripción.
+import "./design-system/index.css";
+// Y justo después, lo que el bundle no trae y toda la pantalla necesita: el
+// modelo de caja, el margen del documento y la colocación del velo. Va detrás
+// del bundle porque son ajustes sobre él (ver `app.css`).
+import "./app.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import "./design-system/index.css";
 import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents } from "./documents/recents";
 import { createI18n } from "./i18n/i18n";

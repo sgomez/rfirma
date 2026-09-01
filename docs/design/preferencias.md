@@ -13,6 +13,57 @@ Los ajustes de la aplicación. Se abre desde el menú de la
 `.rf-divider` y un único botón «Cerrar» abajo a la derecha. Los cambios se
 aplican al hacerlos: no hay «Guardar» ni «Cancelar».
 
+### Geometría
+
+- Diálogo de **480 px**.
+- Cada interruptor es una fila con la pastilla de **40×24 px** (pomo de 16 px)
+  **delante** del texto, 16 px de separación, y el texto en `.rf-prose` con su
+  ayuda en `.rf-hint` 4 px debajo. La ayuda se sangra hasta la columna del
+  texto: 40 px de pastilla más los 16 de separación.
+  Esos 16 px son **de este diálogo**: el panel de firma usa el mismo
+  interruptor a 8 px (`panel-de-firma.md`), así que aquí se piden aparte con
+  `switch--wide`. La sangría de la ayuda se calcula con esa misma separación y
+  no con un número escrito a mano, que es lo que la mantiene en la misma
+  columna que «Vaciar la lista».
+  **Los 4 px separan el botón de la ayuda, no el rótulo de la ayuda** (ID-44).
+  El artboard mete rótulo y ayuda en la misma columna, los dos dentro de la
+  fila; aquí la ayuda queda **fuera** del botón —dentro se sumaría al nombre
+  accesible y el lector de pantalla leería el párrafo entero al llegar al
+  interruptor—, y el botón conserva sus 44 px de alto mínimo de área de
+  pulsación (sección 8 del [sistema de diseño](design-system.md)). Con un
+  rótulo de una línea eso deja aire dentro del botón, así que el hueco que se
+  ve bajo el texto es mayor que esos 4 px. Entre copiar el hueco del canvas y
+  conservar el área de pulsación, manda el área de pulsación.
+- «Vaciar la lista» cuelga del ajuste que lo explica y sigue esa misma sangría.
+  Es un botón secundario de 32 px de alto, 8 px de relleno lateral y 12 px de
+  cuerpo — el mismo tamaño menor que el `Cambiar` del pie del panel.
+- Los dos desplegables son `.rf-field` con `.rf-label` y `.rf-input`.
+
+**El artboard dibuja el desplegable como una fila con un chevrón a la derecha.**
+En la aplicación son `<select>` nativos: el chevrón lo pinta la plataforma, y
+la lista que se abre es la del sistema —con su navegación por teclado, su
+búsqueda por letra inicial y su lectura por el lector de pantalla—. Redibujarla
+para copiar un chevrón sería cambiar un control por un dibujo.
+
+### Las dos diferencias con el canvas
+
+Decididas al transcribir, y no se reabren (ID-44):
+
+1. **«Junto al documento original» se ha eliminado.** El artboard lo ofrece
+   como destino del firmado, pero el
+   [ADR-0011](../adr/0011-destino-del-documento-firmado.md) midió que bajo el
+   arenero **no es implementable**: escribir un hermano del fichero que entrega
+   el portal deja un `.xdp-…` huérfano y **no da error**, que es la peor de las
+   formas de fallar —el usuario cree que ha guardado y no ha guardado—. El
+   desplegable lista solo las carpetas que el arenero permite. El canvas es
+   anterior a esa medición.
+2. **«Recordar mi actividad» y «Vaciar la lista» se quedan**, aunque el
+   artboard no los dibuje: los exige el ID-34, y sin ellos no hay forma de
+   cumplir la promesa a quien firma en un ordenador compartido. Se maquetan con
+   el patrón visual de los ajustes que el artboard sí dibuja —interruptor
+   delante, texto y ayuda al lado—, con la geometría añadida que queda anotada
+   arriba.
+
 ## Los ajustes
 
 1. **Recordar la última configuración de firma visible** (interruptor, activo

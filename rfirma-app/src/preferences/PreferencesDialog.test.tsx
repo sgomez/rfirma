@@ -42,6 +42,26 @@ describe("PreferencesDialog", () => {
     expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
   });
 
+  /**
+   * El interruptor es el mismo componente en el panel de firma y aquí, pero los
+   * artboards lo separan distinto del texto: `rf-gap-xs` (8 px) en el panel
+   * (`Main.dc.html:306`) y `rf-gap-sm` (16 px) en el diálogo
+   * (`EstadoPreferencias.dc.html:409`). Un solo valor no puede ser los dos, y
+   * arreglar uno rompía el otro: el diálogo pide el suyo, y por eso se
+   * comprueba que lo pida.
+   */
+  it("asks for the wider spacing the Preferences artboard draws", () => {
+    renderDialog();
+
+    for (const name of [
+      /Recordar la última configuración de firma visible/,
+      /Recordar mi actividad/,
+    ]) {
+      const control = screen.getByRole("switch", { name });
+      expect(control.closest(".switch")).toHaveClass("switch--wide");
+    }
+  });
+
   it("shows the destination folder by its name and never by its path", () => {
     renderDialog({ preferences: { ...defaults, destination: "Documentos" } });
 

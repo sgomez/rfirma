@@ -285,6 +285,16 @@ Una o dos palabras. No hay variantes de éxito ni de error (sección 2).
 Acciones abajo a la derecha, la de descarte como `--ghost` a la izquierda de la
 primaria. Título en `.rf-title`, nunca en `.rf-heading`.
 
+**`.rf-scrim` en el bundle es solo el color.** La clase trae el
+`background: var(--rf-scrim)` y nada más: ni `position`, ni `inset`, ni
+centrado. Quien coloca el velo —`position: fixed`, `inset: 0` y el centrado del
+diálogo— es `rfirma-app/src/app.css`, y por eso los diálogos se superponen a la
+ventana en vez de pintarse en flujo detrás de ella. Ahí mismo están las otras
+dos reglas que el bundle tampoco trae y que toda la aplicación da por hechas:
+`box-sizing: border-box` para todo y `margin: 0` en el documento. **Todas las
+medidas de estas fichas son de borde a borde**, con el borde y el relleno
+dentro; sin ese reinicio ninguna es la que se pinta.
+
 ---
 
 ## 11. Por qué el sistema no es lo obvio

@@ -16,13 +16,21 @@ interface MainWindowProps {
   tray: ReactNode;
   /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
   viewer: ReactNode;
-  /** El contenido del panel, que es quien sabe de certificados y de firma. */
+  /**
+   * El contenido del panel, que es quien sabe de certificados y de firma, o
+   * `null` cuando no hay documento abierto: entonces el panel **no se monta**
+   * y la ventana se ve en dos columnas (ID-51).
+   */
   panel: ReactNode;
 }
 
 /**
- * La única ventana de rFirma: una cabecera y tres regiones fijas debajo
- * —bandeja, visor y panel de firma—.
+ * La única ventana de rFirma: una cabecera y, debajo, la bandeja, el visor y
+ * —en cuanto hay documento— el panel de firma.
+ *
+ * **Sin documento la ventana es de dos columnas.** El panel no se oculta con
+ * `display: none`: no se monta (ID-51), que es lo que ya hacía la composición
+ * al pasar `null` y lo que dice el estado 1 de la tabla de la ficha.
  *
  * **No hay navegación.** El recorrido entero, de abrir el documento a
  * guardarlo firmado, ocurre aquí sin cambiar de pantalla (ID-25), así que no
@@ -43,6 +51,11 @@ export function MainWindow({
 }: MainWindowProps) {
   const { t } = useTranslation();
 
+  // Sin documento no hay panel que montar, y sin panel la ventana es de dos
+  // columnas. `null` y `undefined` son lo que la composición pasa; una cadena
+  // vacía o un `false` no llegan aquí.
+  const hasPanel = panel !== null && panel !== undefined;
+
   return (
     <div className="main-window">
       <Header
@@ -51,16 +64,20 @@ export function MainWindow({
         onOpenPreferences={onOpenPreferences}
         onOpenAbout={onOpenAbout}
       />
-      <div className="main-window__body">
+      <div
+        className={hasPanel ? "main-window__body" : "main-window__body main-window__body--no-panel"}
+      >
         <section className="main-window__tray" aria-label={t("window.tray")}>
           {tray}
         </section>
         <section className="main-window__viewer" aria-label={t("window.viewer")}>
           {viewer}
         </section>
-        <section className="main-window__panel" aria-label={t("window.panel")}>
-          {panel}
-        </section>
+        {hasPanel && (
+          <section className="main-window__panel" aria-label={t("window.panel")}>
+            {panel}
+          </section>
+        )}
       </div>
     </div>
   );

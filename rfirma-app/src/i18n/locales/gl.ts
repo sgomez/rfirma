@@ -175,6 +175,7 @@ export const gl: UntranslatedCatalog = {
   },
   viewer: {
     dropZone: "",
+    dropZoneHint: "",
     privacy: "",
     pageNumber: "",
     pageOf: "",
@@ -252,6 +253,11 @@ export const gl: UntranslatedCatalog = {
       unwritable: "",
       retry: "",
     },
+    signed: {
+      summary: "",
+      format: "",
+      signAnother: "",
+    },
   },
   pin: {
     title: "",
@@ -305,8 +311,8 @@ export const gl: UntranslatedCatalog = {
     version: "",
     whatItDoes: "",
     independence: "",
+    repository: "",
     licenses: {
-      title: "",
       view: "",
       rfirma: "",
       afirma: "",

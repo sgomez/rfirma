@@ -7,14 +7,23 @@
   width: 420px;
 }
 
-/* Tracking amplio: un PIN se teclea a ciegas y se cuenta con la vista. */
+.pin-dialog__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Tracking amplio y cuerpo grande: un PIN se teclea a ciegas y los puntos se
+   cuentan con la vista. 6 px de separación y 18 px de cuerpo, como el
+   artboard. */
 .pin-dialog__pin {
-  letter-spacing: 0.35em;
+  font-size: 18px;
+  letter-spacing: 6px;
 }
 
 .pin-dialog__actions {
   justify-content: flex-end;
-  gap: var(--rf-space-xs);
+  gap: var(--rf-space-sm);
 }
 
 .pin-dialog__detail {

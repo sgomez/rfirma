@@ -24,6 +24,55 @@ un `Cambiar`, y debajo el botón primario a ancho completo. El destino se ve
 antes de firmar, no después. Lo fija el
 [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
+### Geometría
+
+- La columna es de 360 px con 16 px de relleno y **11 px** entre bloques. Los
+  11 px no salen de la escala de espaciado a propósito: es la columna más
+  apretada de la ventana y los 8 px de `xs` juntan demasiado los divisores.
+- **Cabecera**: icono de hoja de 20 px en `--rf-text-muted`, desplazado 2 px
+  hacia abajo para alinear con la primera línea; a su lado, el nombre en
+  `.rf-title` **a 14 px** recortado con elipsis y, 4 px debajo, la línea de
+  metadatos en `.rf-body rf-text-muted`.
+- **Rótulos de sección** («CERTIFICADO», «FIRMA VISIBLE»): `.rf-label` en
+  versalitas con `letter-spacing: .6px`. Los rótulos de campo («Contenido»,
+  «Se guardará en») son `.rf-label` a secas, sin versalitas.
+- **Aviso de cofirma**: 10 px de relleno vertical y 16 px horizontal, borde de
+  1 px en `--rf-border-subtle`, `--rf-radius-md`, fondo `--rf-bg`, icono de
+  información de 20 px.
+- **Tarjeta de certificado**: 16 px de relleno, 6 px entre líneas, borde
+  `--rf-border-strong`. Escarapela de 20 px y nombre en `.rf-title` a 14 px;
+  debajo, DNI y emisora en una sola línea `.rf-body rf-text-muted` separadas
+  por `·`.
+- **Esqueletos de carga**: dos bloques de **66 px** —el alto de la tarjeta que
+  van a sustituir, para que el panel no salte—, con `--rf-radius-md` y borde
+  `--rf-border-subtle`. El primero lleva el degradado horizontal que dice que
+  la búsqueda sigue viva; el segundo, solo su borde.
+- **Casillas del contenido**: cuadrado de 18 px con `--rf-radius-sm`, contorno
+  `--rf-border-strong` cuando está vacío y relleno `--rf-primary` con la marca
+  de verificación de 12 px (trazo 3) cuando está marcado. Fila de 24 px de alto
+  mínimo, con 8 px entre la casilla y su texto. La ayuda de la casilla —cuando
+  la lleva, como «Elige antes una imagen»— va **2 px debajo del rótulo y en su
+  misma columna**: 26 px de sangría, los 18 del cuadrado más los 8 que lo
+  separan del texto. Es hermana del `<label>`, no va dentro, para que no entre
+  en el nombre accesible de la casilla; la sangría es lo que la deja donde el
+  artboard la dibuja.
+- **Interruptor**: pastilla de 40×24 px con el pomo de 16 px. Va **delante**
+  del texto, **a 8 px** de él. Es el mismo componente que el de Preferencias,
+  pero no la misma separación: allí el artboard lo dibuja con `rf-gap-sm`
+  (16 px) y aquí con `rf-gap-xs`. Un solo valor no puede ser los dos, así que
+  el diálogo pide el suyo (`switch--wide`) y este es el de por omisión.
+- **Rúbrica**: la miniatura es un rectángulo de 56×36 px con borde
+  `--rf-border-strong` y `--rf-radius-sm`, y comparte fila con el botón
+  secundario, que ocupa el resto y mide 36 px de alto.
+- **Pie**: 16 px de relleno, borde superior de 1 px en `--rf-border-subtle`.
+  Dentro: el rótulo «Se guardará en», 4 px debajo la fila con el icono de
+  carpeta de 20 px, la carpeta en `.rf-prose` recortada con elipsis y un
+  `Cambiar` fantasma de 32 px de alto, 8 px de relleno lateral y 12 px de
+  cuerpo. Debajo, el botón primario a ancho completo.
+- **Aviso de error**: 16 px de relleno, borde de **2 px** en
+  `--rf-border-strong` y `--rf-radius-md`; título con el triángulo de aviso de
+  20 px y el texto en `.rf-title` a 14 px.
+
 ## El aviso de cofirma
 
 Icono de **información**, borde `--rf-border-subtle`:
@@ -36,6 +85,33 @@ A la derecha, un **`Ver ›`** que despliega las firmas que el documento ya
 tiene, con quién y cuándo, usando el mismo componente de firma que el resumen
 del estado firmado. Es lo que permite auditar un PDF ajeno antes de añadirle
 nada.
+
+## Lo que no se sabe no ocupa sitio
+
+El artboard enseña «27 páginas · 2,4 MB», «Ya lleva **1 firma**: la tuya será
+una **cofirma**» y, en el resumen, «2 firmas». Hoy **el tamaño y el número de
+firmas llegan como desconocidos**, y averiguar si un PDF ya viene firmado está
+fuera del alcance de la entrada de documentos.
+
+La regla, decidida al transcribir el canvas (ID-44):
+
+> Lo que se sabe se pinta; **lo desconocido no ocupa sitio**. Ni un guion, ni
+> un «—», ni un marcador de posición, ni el separador que lo precedería.
+
+Así, con el tamaño desconocido la línea de metadatos dice exactamente
+«27 páginas» y termina ahí; con el número de firmas desconocido, el aviso de
+cofirma y el `Ver ›` **no se montan**. Un «—» donde debería ir un dato no dice
+«todavía no se sabe»: dice «este documento no tiene tamaño», que es falso, y
+deja al lector decidiendo cuál de las dos cosas significa.
+
+**Qué reaparece cuando el dato exista**: en cuanto la entrada de documentos
+devuelva el tamaño, vuelve el `· 2,4 MB` de la línea de metadatos; en cuanto
+alguien cuente las firmas del PDF, vuelven el aviso de cofirma entero con su
+`Ver ›` y la insignia de firmas del resumen. Ninguno de los dos necesita
+rediseño: el sitio ya está descrito arriba, solo está vacío.
+
+El canvas es anterior a esa constatación y por eso los pinta con datos de
+ejemplo.
 
 ## Certificado
 
@@ -110,9 +186,35 @@ al firmar. Ver el
   con el documento cargado y sin salida ([ADR-0011](../adr/0011-destino-del-documento-firmado.md)).
 - **Error de firma**: el pie sustituye «Se guardará en» por un aviso con borde
   de 2 px, la causa en lenguaje llano y el detalle técnico en monoespaciada
-  (`CKR_DEVICE_REMOVED durante C_Sign (fase: firma)`) con un «Copiar detalle».
+  (`CKR_DEVICE_REMOVED durante C_Sign (fase: firma)`). El artboard lo dibuja
+  **desplegado**; en la aplicación va plegado tras «Detalle técnico», porque un
+  `CKR_*` crudo bajo el mensaje ocupa el pie entero y solo lo necesita quien va
+  a escribir un informe de fallo. El «Copiar detalle» del artboard **está
+  pendiente**: es una acción sobre el portapapeles, no una diferencia de piel.
   El botón pasa a «Volver a intentarlo».
-- **Firmado**: el panel entero se reemplaza por el resumen (ver abajo).
+- **Firmado**: el panel entero se reemplaza por el resumen (ver abajo). Está
+  implementado **en lo que no necesita datos nuevos**: la cabecera con el
+  nombre del fichero que quedó escrito, el rótulo `RESUMEN`, la insignia
+  `PAdES` —rFirma no produce otro formato— y el pie con «Firmar otro
+  documento» a ancho completo. Es el único acuse de recibo del recorrido:
+  antes la postfirma devolvía un `SignedDocument` que nadie leía y la ventana
+  volvía al panel con el nombre del fichero **original**, así que quien
+  firmaba no sabía si se había escrito nada.
+  Siguen **pendientes** tres piezas del artboard, y por la regla del dato
+  desconocido no ocupan sitio: la insignia con el número de firmas y las
+  tarjetas de cada firma —nadie cuenta todavía las firmas del PDF, ver
+  arriba— y los botones «Abrir el PDF» y «Abrir la carpeta», que no son piel
+  sino dos `OpenURI` que aún no existen. Reaparecen en cuanto haya quien lea
+  las firmas del resultado y quien abra un URI.
+  El acuse de recibo **es de un documento concreto y solo se ve con ese
+  documento delante**. El recuento de páginas de la cabecera sale del PDF que
+  la ventana tiene abierto, no del fichero escrito, así que con otro documento
+  delante enseñaría el nombre de uno con las páginas de otro; y sin ninguno
+  dejaría una tercera columna al lado del visor vacío, que es lo que quita el
+  ID-51. Por eso el estado guarda el asa del documento que se firmó y se cierra
+  solo en cuanto deja de estar activo —se elige otro en la bandeja, se olvida
+  el activo, se vacía la lista—, como si se hubiera pulsado «Firmar otro
+  documento».
 
 ## El resumen, tras firmar
 
@@ -129,6 +231,26 @@ Sustituye a la configuración, que ya no sirve de nada:
 
 Enseñar todas las firmas es la contrapartida del aviso de cofirma: si antes se
 avisa de que el PDF ya llevaba una, el resumen tiene que enseñarlas todas.
+
+## Diferencias con el canvas, declaradas
+
+Además de las tres del ticket, estas piezas existen en el código y **no** en
+ningún artboard. Se quedan, y se anotan aquí porque el ID-44 pide declararlas
+antes que el código y no al revés:
+
+- **El botón `Cambiar` de la tarjeta de certificado.** Ningún artboard lo
+  dibuja, pero con varios certificados en la tarjeta no habría forma de
+  cambiar de uno a otro sin volver a buscar.
+- **El rótulo «Imagen de la rúbrica».** El artboard pone la miniatura y el
+  botón sin encabezado; sin él la fila queda colgando de la lista de casillas
+  y no se lee como su propio bloque.
+- **El bloque «Lo que dirá el recuadro».** Lo exige el ID-19: el texto lo
+  compone Rust y la vista previa enseña **esa** cadena, no una imitación.
+- **El aviso de recuadro fuera de página** del visor, que exige el ID-22.
+- **El marco de la rúbrica va solo con rúbrica elegida.** El artboard dibuja
+  siempre el marco de 56 × 36 px con el garabato dentro; aquí la miniatura
+  enseña el JPEG real ya normalizado, así que sin imagen no hay nada honesto
+  que enseñar y el botón se queda solo en su fila.
 
 ## Componentes y tokens
 
