@@ -13,6 +13,8 @@
 - La nota de la cosecha anterior sobre «primero de su especie» se confirmó y ya expiró: siguió puntuando `complex` todo el spec incluso cuando ya había patrones que imitar (#58 tenía placement.rs de #51, #59 tenía los diálogos de #57). A partir de aquí, tier contra el código escrito, no contra el vacío.
 - Coste real: los 12 sub-issues de este tramo consumieron entre 120k y 393k tokens de subagente por construcción. #60 (orquestación trifásica, indivisible por directiva) fue el techo con 393k y 228 llamadas de herramienta; nadie se quedó sin contexto.
 - Patrón de fallo dominante y transversal a todo el spec: el arreglo de un fallo abre otra puerta a LA MISMA clase de fallo. #48 lo hizo dos veces con la firma inválida en silencio; #52 lo repitió (arreglar el EXIF con `into_decoder()` perdió el tope de 512 MB del búfer); #56 lo repitió (el refactor del carril nativo dejó el isolate sin desmontar y hacía `dlclose` con él vivo). Al arreglar una entrada de un invariante, enumerar TODAS las entradas de ese invariante, no solo la señalada.
+- #89 (standard/sonnet, 1 ciclo): los tickets cuyo producto es una MEDICIÓN (ampliar packaging/flatpak/verifica.sh, documentar en docs/research/) tienen un modo de fallo que la rúbrica genérica de complejidad no ve: el guion puede AFIRMAR lo medido sin medirlo. Aquí el paso 6 mataba la aplicación sin comprobar antes que había arrancado, así que el ID-72 se daba por medido en falso; lo cazó la revisión, no la construcción. Señal: el criterio de aceptación es «queda medido/documentado X» y no «el código hace X». Mecanismo, no estadística: a sonnet le sale un guion que corre y sale con 0, no un guion que demuestra. Considerar subir de grada estos tickets, o exigir en el brief que cada paso verifique su precondición antes de afirmar su medición.
+- #82 (triaje: oversized → complex por veto propio): el dispatcher detectó la directiva explícita de no dividir en el cuerpo del issue («van juntas porque separarlas deja el árbol rojo») y rebajó su propia puntuación a complex. Funcionó: 1 ciclo y fusionado. El veto de directiva está operando como se pretendía; no hace falta regla nueva.
 
 ## Run log
 
@@ -33,3 +35,6 @@
 2026-09-01 spec=#46 sub=#61 model=opus effort=medium pr=#78 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-01 spec=#46 sub=#62 model=opus effort=medium pr=#79 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged oversized=built
 2026-09-01 spec=#80 sub=#85 model=opus effort=medium pr=#90 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=escalated
+2026-09-01 spec=#81 sub=#82 model=opus effort=medium pr=#92 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-01 spec=#81 sub=#83 model=opus effort=medium pr=#93 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-01 spec=#81 sub=#89 model=sonnet effort=medium pr=#94 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged

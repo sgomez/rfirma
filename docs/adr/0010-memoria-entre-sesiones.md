@@ -24,21 +24,31 @@ pierde el trabajo.
 
 ## Reglas que se derivan
 
-- **Los recientes cachean metadatos**, no solo rutas: nombre, insignia, `mtime`
-  y fecha de último uso. Sin caché habría que parsear diez PDFs antes de pintar
-  la bandeja, porque la insignia `Firmado`/`Sin firmar` no se deduce de la ruta.
-  Se revalida solo el documento que se selecciona, comparando el `mtime`.
+- **Los recientes cachean metadatos**, no una ruta: nombre, insignia, `mtime` y
+  fecha de último uso. Sin caché habría que parsear diez PDFs antes de pintar
+  la bandeja, porque la insignia `Firmado`/`Sin firmar` no se deduce del
+  identificador. Se revalida solo el documento que se selecciona, comparando
+  el `mtime`.
 - **Diez entradas, desalojo por último uso.** La bandeja no tiene buscador; si
   algún día hace falta uno, el límite estaba mal.
-- **Un reciente se identifica por su ruta absoluta canónica.** Nada de hashes ni
-  inodos: rompen con las copias y con los sistemas de ficheros de red.
+- **Un reciente se identifica por un identificador opaco, no por su ruta**
+  (ID-62, [#82](https://github.com/sgomez/rfirma/pull/92)). Cuando se escribió
+  este ADR la aplicación aún hablaba con el disco directamente y una ruta
+  canónica bastaba; el arenero descrito en el
+  [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md) cambió esa
+  premisa — bajo el portal de documentos la aplicación **nunca** conoce la ruta
+  original, solo un identificador que acuña el backend al abrir el documento
+  y que guarda el registro en memoria (`memory::opened`). Guardar una ruta
+  habría sido guardar una mentira, y además es justo la fuga que cierra el
+  [ADR-0011](0011-destino-del-documento-firmado.md): un identificador no se
+  puede recorrer por fuerza bruta como una ruta.
 - **Al firmar entran dos filas**, el original y el firmado, y el firmado pasa a
   ser el documento activo. Fusionarlos en una fila que «evoluciona» esconde que
   hay dos ficheros en el disco, que es lo que el usuario necesita saber para no
   mandar el equivocado.
-- **Una ruta que ya no existe no se purga en silencio**: la fila se atenúa con
-  la insignia `No disponible` y ofrece quitarla. Un PDF en un USB desmontado no
-  está borrado.
+- **Un documento que ya no responde no se purga en silencio**: la fila se
+  atenúa con la insignia `No disponible` y ofrece quitarla. Un PDF en un USB
+  desmontado, o cuyo permiso del portal ya no vale, no está borrado.
 - **La rúbrica se copia**, no se referencia. Es una sola, y se sustituye al
   elegir otra. Guardar la ruta —lo que hace AutoFirma— pierde la rúbrica en
   silencio en cuanto el usuario mueve el PNG.

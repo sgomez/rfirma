@@ -121,8 +121,11 @@ _Avoid_: portal, cliente web, tercero
 
 **Documento reciente**:
 Documento que la aplicación ha visto antes y ofrece para volver a él, sin
-guardar una copia: solo dónde estaba y cómo pintar su fila.
-_Avoid_: historial, documento abierto, favorito
+guardar una copia: solo su identificador opaco y lo que hace falta para pintar
+su fila. Bajo el arenero la aplicación nunca conoce la ruta original de un
+documento (ADR-0010, ADR-0011), así que el identificador no es ni deriva de
+una ruta.
+_Avoid_: historial, documento abierto, favorito, ruta
 
 **Carpeta de destino**:
 Carpeta donde cae el documento firmado. La aplicación la enseña por su
