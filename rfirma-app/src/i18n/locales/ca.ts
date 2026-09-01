@@ -118,6 +118,14 @@ export const ca: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      droppedFileUnreadable: {
+        title: "",
+        body: "",
+      },
+      droppedOnlyFirst: {
+        title: "",
+        body: "",
+      },
       boxOutOfPage: {
         title: "",
         body: "",

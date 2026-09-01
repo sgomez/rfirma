@@ -130,6 +130,22 @@ export const es = {
         title: "No hemos podido leer el documento",
         body: "Comprueba que sigue donde estaba y vuelve a abrirlo.",
       },
+      /**
+       * Arrastrar no pasa por el portal de ficheros, así que hay carpetas de
+       * las que rFirma no puede leer nada aunque el fichero esté ahí delante
+       * (ID-68). Por eso el texto no dice «no existe» —existe— sino qué hacer.
+       * Cuándo ocurre exactamente está medido en
+       * `docs/research/arrastre-bajo-el-arenero.md`.
+       */
+      droppedFileUnreadable: {
+        title: "No hemos podido leer el fichero que has soltado",
+        body: "Arrastrar no nos da permiso para leer de cualquier carpeta. Ábrelo con el botón de abrir, que sí nos lo da.",
+      },
+      /** El aviso del ID-70: se firma de uno en uno, y se dice cuál. */
+      droppedOnlyFirst: {
+        title: "Solo hemos abierto el primer PDF",
+        body: "rFirma firma de uno en uno. Los demás ficheros que has soltado siguen donde estaban: arrástralos cuando termines con este.",
+      },
       boxOutOfPage: {
         title: "El recuadro se sale de la página",
         body: "Arrástralo dentro de la página y vuelve a firmar. Si lo dejásemos así, quedaría recortado en el PDF sin avisar.",

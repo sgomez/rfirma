@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutDialog } from "./about/AboutDialog";
 import { DocumentTray } from "./documents/DocumentTray";
+import type { DocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
@@ -30,9 +31,23 @@ import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "preferences" | "about" | null;
 
+/**
+ * Un aviso del arrastre, atado al documento del que habla.
+ *
+ * `about` es el identificador del documento que tenía que estar delante para
+ * que el aviso siga significando algo: el que se acaba de abrir cuando se
+ * soltaron varios, o el que ya estaba cuando lo soltado no se pudo abrir.
+ */
+interface DropNotice {
+  about: string | null;
+  failure: DocumentFailure;
+}
+
 interface AppProps {
   recents: RecentsStore;
   picker: DocumentPicker;
+  /** Por dónde entra un PDF arrastrado a la ventana. Ver [`DocumentDrops`]. */
+  drops: DocumentDrops;
   preferences: PreferencesStore;
   /** De dónde salen los bytes del PDF que se pinta. Ver [`PdfSource`]. */
   pdfs: PdfSource;
@@ -66,6 +81,7 @@ interface AppProps {
 export function App({
   recents,
   picker,
+  drops,
   preferences,
   pdfs,
   destinations,
@@ -81,6 +97,12 @@ export function App({
   // del PDF y no dentro del visor porque lo produce quien abre, y el visor solo
   // lo enseña.
   const [pdfFailure, setPdfFailure] = useState<DocumentFailure | null>(null);
+  // Lo que hay que contar del último arrastre, y **de qué documento**: soltar
+  // varios PDF deja un aviso que habla del que se abrió, así que se va solo en
+  // cuanto hay otro delante. Sin esa atadura habría que borrarlo a mano desde
+  // cada camino que cambia de documento, y el que se olvidara dejaría el aviso
+  // hablando de un documento que ya no está.
+  const [dropNotice, setDropNotice] = useState<DropNotice | null>(null);
   // Dónde va la firma visible. Vive aquí y no en el visor porque el panel de
   // firma —su sub-issue— es quien dirá qué se pinta dentro del recuadro, y los
   // dos tienen que estar mirando el mismo.
@@ -94,6 +116,11 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
   // es recordar; el primer documento no se puede abrir antes de esa lectura.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
+  const activeId = documents.active?.id ?? null;
+  // El documento activo, leíble desde la suscripción al arrastre sin que un
+  // cambio de documento la vuelva a montar.
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
   const { i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
   // documento y no vuelve a correr. Recalcularlo en cada pintada haría que la
@@ -142,6 +169,40 @@ export function App({
       current = false;
     };
   }, [documents.active, pdfs]);
+
+  // El arrastre. Desemboca en el mismo sitio que el diálogo —`accept` es la
+  // mitad de `open` que no habla con el portal—, y lo que añade es contar lo
+  // que solo pasa al soltar: que no fuera un PDF, que no se dejara leer o que
+  // fueran varios.
+  //
+  // La suscripción se monta una vez y sobrevive a los cambios de documento: si
+  // dependiera de `documents`, cada apertura cancelaría el oyente y volvería a
+  // suscribirse, y un arrastre que cayera en medio se perdería.
+  const acceptDocument = documents.accept;
+  useEffect(
+    () =>
+      drops.subscribe((drop) => {
+        if (drop.document === null) {
+          // No se ha abierto nada, así que el aviso habla de lo que ya hubiera
+          // delante y se va con ello.
+          setDropNotice(drop.failure && { about: activeIdRef.current, failure: drop.failure });
+          return;
+        }
+        setDropNotice(
+          drop.ignored > 0
+            ? {
+                about: drop.document.id,
+                failure: {
+                  situation: "droppedOnlyFirst",
+                  detail: `se han soltado ${drop.ignored + 1} ficheros`,
+                },
+              }
+            : null,
+        );
+        void acceptDocument(drop.document);
+      }),
+    [drops, acceptDocument],
+  );
 
   // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado
   // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas
@@ -267,7 +328,10 @@ export function App({
             placement={placement}
             onPlace={setPlacement}
             onOpen={() => void openDocument()}
-            failure={pdfFailure}
+            // Los dos avisos caben en el mismo sitio, y manda el del PDF: si el
+            // documento que se soltó tampoco se deja pintar, eso es más urgente
+            // que contar cuántos ficheros venían con él.
+            failure={pdfFailure ?? (dropNotice?.about === activeId ? dropNotice.failure : null)}
           />
         }
         panel={

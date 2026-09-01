@@ -5,7 +5,8 @@
 //! el almacén de la imagen de la firma, [`signing`], la configuración de firma
 //! y el sello de sesión, [`ffi`], la frontera con la librería nativa,
 //! [`memory`], lo que se recuerda entre sesiones, [`destination`], por dónde
-//! entra el documento y dónde cae el firmado, y [`paths`], el único sitio que
+//! entra el documento y dónde cae el firmado, [`dropped`], qué se abre de lo
+//! que se suelta en la ventana, y [`paths`], el único sitio que
 //! sabe qué sistema operativo hay debajo. La orquestación de las tres fases
 //! —quién llama a la prefirma, quién firma con el token y quién postfirma—
 //! todavía no está: la aporta un sub-issue siguiente de #46. Si te encuentras
@@ -13,6 +14,7 @@
 
 pub mod commands;
 pub mod destination;
+pub mod dropped;
 pub mod ffi;
 pub mod memory;
 pub mod paths;
@@ -33,6 +35,8 @@ pub const DEFAULT_PKCS11_MODULE: &str = "/app/lib/pkcs11/opensc-pkcs11.so";
 
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {
+    use tauri::{Emitter, Manager};
+
     let paths = paths::Paths::from_environment().expect("debería saberse cuál es el HOME");
     let memory = memory::Memory::at(&paths);
     let configuration = memory
@@ -62,6 +66,26 @@ pub fn run() {
         // Los documentos abiertos, del identificador opaco al documento del
         // portal (ID-61). Vive mientras vive el proceso.
         .manage(memory::OpenedDocuments::new())
+        // El arrastre entra por aquí y no por un `onDrop` del JSX (ID-67): con
+        // `dragDropEnabled` —que es lo que hay— el WebView **no** dispara los
+        // eventos de arrastre de HTML, así que un manejador en el frontal no se
+        // ejecutaría nunca y parecería un fallo de la interfaz. Lo que llega
+        // aquí son rutas del anfitrión, y se quedan aquí: lo que cruza es el
+        // documento ya apuntado (ADR-0011).
+        .on_window_event(|window, event| {
+            let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
+            else {
+                return;
+            };
+            let opened = window.state::<memory::OpenedDocuments>();
+            let Some(dropped) = commands::dropped_document(paths, &opened) else {
+                return;
+            };
+            // Emitir puede fallar si la ventana se está cerrando, y entonces no
+            // hay nadie a quien contarle nada: no es un motivo para tumbar la
+            // aplicación mientras se va.
+            let _ = window.emit(commands::DOCUMENT_DROPPED, dropped);
+        })
         .invoke_handler(tauri::generate_handler![
             commands::list_certificates,
             commands::compose_visible_text,

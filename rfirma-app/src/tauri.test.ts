@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
+const listen = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/event", () => ({ listen }));
+
 const {
   tauriCertificateStore,
+  tauriDocumentDrops,
   tauriDocumentPicker,
   tauriLayer2Composer,
   tauriPdfSource,
@@ -246,6 +250,113 @@ describe("los puertos del documento sobre Tauri", () => {
     if (outcome.ok) return;
     expect(outcome.failure.situation).toBe("documentUnreadable");
     expect(outcome.failure.detail).not.toBe("");
+  });
+});
+
+/**
+ * **Grada A**: el puerto del arrastre contra un `listen` falso.
+ *
+ * Lo que se comprueba es la costura, y aquí la costura es sobre todo **el
+ * nombre del evento**: si deja de coincidir con `commands::DOCUMENT_DROPPED`,
+ * nada falla en ninguna parte —ni compila peor, ni salta un error— y arrastrar
+ * simplemente no hace nada.
+ */
+describe("el puerto del arrastre sobre Tauri", () => {
+  beforeEach(() => {
+    listen.mockReset();
+  });
+
+  /** Deja escuchar y devuelve con qué dejar de hacerlo. */
+  function listening() {
+    const stop = vi.fn();
+    let emit: ((event: { payload: unknown }) => void) | undefined;
+    listen.mockImplementation((_name: string, handler: (event: { payload: unknown }) => void) => {
+      emit = handler;
+      return Promise.resolve(stop);
+    });
+    return {
+      stop,
+      emit: (payload: unknown) => emit?.({ payload }),
+    };
+  }
+
+  it("subscribes to the drag-and-drop event of the window, by its name", () => {
+    listening();
+
+    tauriDocumentDrops().subscribe(() => {});
+
+    expect(listen.mock.calls.map(([name]) => name)).toEqual(["document-dropped"]);
+  });
+
+  it("turns a dropped document into a tray row badged Unsigned", async () => {
+    const window = listening();
+    const dropped: unknown[] = [];
+    tauriDocumentDrops().subscribe((drop) => dropped.push(drop));
+
+    window.emit({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+      failure: null,
+      ignored: 2,
+    });
+
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]).toMatchObject({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned", available: true },
+      failure: null,
+      ignored: 2,
+    });
+  });
+
+  it("keeps the situation and the raw detail of a drop that opened nothing", () => {
+    const window = listening();
+    const dropped: unknown[] = [];
+    tauriDocumentDrops().subscribe((drop) => dropped.push(drop));
+
+    window.emit({
+      document: null,
+      failure: { situation: "droppedFileUnreadable", detail: "os error 2" },
+      ignored: 0,
+    });
+
+    expect(dropped[0]).toEqual({
+      document: null,
+      failure: { situation: "droppedFileUnreadable", detail: "os error 2" },
+      ignored: 0,
+    });
+  });
+
+  it("stops listening when the subscription is dropped", async () => {
+    const window = listening();
+
+    const unsubscribe = tauriDocumentDrops().subscribe(() => {});
+    unsubscribe();
+    await Promise.resolve();
+
+    expect(window.stop).toHaveBeenCalled();
+  });
+
+  /**
+   * Y cancelar **antes** de que `listen` resuelva también deja de escuchar: un
+   * efecto de React se limpia cuando quiere, y sin esto desmontar deprisa
+   * dejaba un oyente vivo para siempre.
+   */
+  it("stops listening even when the subscription is dropped before it is ready", async () => {
+    const stop = vi.fn();
+    let ready: (() => void) | undefined;
+    listen.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          ready = () => resolve(stop);
+        }),
+    );
+
+    const unsubscribe = tauriDocumentDrops().subscribe(() => {});
+    unsubscribe();
+    ready?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(stop).toHaveBeenCalled();
   });
 });
 
