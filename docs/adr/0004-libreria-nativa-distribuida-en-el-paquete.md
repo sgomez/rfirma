@@ -91,6 +91,19 @@ cinco auxiliares. Medido en
   tiene ningún motivo para escribir en el perfil de Firefox ni en las claves de
   quien firma. La entrada de **documentos** sigue entrando por portales, sin
   cambios; esta excepción es solo para el almacén de certificados.
+- **Lo que esta excepción deja fuera, a sabiendas.** La concesión concuerda
+  exactamente con lo que busca `pkcs11::stores`, ni un byte más, y por eso dos
+  casos quedan sin cubrir: un `profiles.ini` cuyo `Path=` sea absoluto y apunte
+  fuera de `~/.mozilla/firefox`, y los Firefox de snap o de flatpak
+  (`~/snap/firefox/common/.mozilla/firefox`,
+  `~/.var/app/org.mozilla.firefox/.mozilla/firefox`), que en Ubuntu son la
+  instalación por omisión. En los dos, el anfitrión resuelve el perfil y el
+  arenero no lo ve: la persona lee «no se ha encontrado ningún certificado» sin
+  más explicación. **No se ensancha la concesión para taparlo** —ensancharla es
+  justo lo que el [#101](https://github.com/sgomez/rfirma/issues/101) rechaza—;
+  se anota aquí para que el aplazamiento tenga constancia y para que quien lo
+  retome sepa que el arreglo es declarar esas rutas concretas, nunca `~/.mozilla`
+  ni `home`.
 - El PDF con rúbrica de imagen **deja de ser idéntico bit a bit** al que ensambla
   AutoFirma en una JVM completa, porque el codificador JPEG pasa a ser el de Rust. Sigue
   siéndolo frente a una JVM con el mismo recorte de dependencias, que es contra lo que

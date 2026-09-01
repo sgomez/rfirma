@@ -232,6 +232,17 @@ echo "### 7. el arenero no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
 # permitio (FALLO, :ro no se sostiene), la ruta no esta montada pese a existir
 # en el anfitrion (FALLO, no se ha medido lo que se creia medir) y no hay nada
 # que montar porque el anfitrion no tiene esa ruta (AVISO, nada que medir).
+#
+# NINGUNO de los tres desenlaces se decide leyendo un mensaje de error. Un
+# `grep` a la salida de `touch` solo acierta con coreutils en ingles: `flatpak
+# run` propaga LANG/LC_* del anfitrion al arenero y org.gnome.Platform//50 trae
+# la extension de locale, asi que en un escritorio en castellano el mensaje es
+# "No existe el fichero o el directorio" y la rama de "no esta montado" no se
+# dispararia -otro falso verde, justo el que esta funcion cierra-. Asi que el
+# montaje se decide con un `test -d` DENTRO del arenero, que es la pregunta de
+# verdad, y el mensaje de `touch` queda como informacion para quien lea la
+# salida. La ruta viaja por RUTA_RO en el entorno y no interpolada dentro de las
+# comillas simples de `sh -c`, para que un $HOME con comillas no rompa la orden.
 comprueba_ro() {
     local etiqueta="$1" ruta="$2"
     if [ ! -e "$ruta" ]; then
@@ -239,18 +250,20 @@ comprueba_ro() {
         return 0
     fi
     local salida
-    salida=$(flatpak run "${EXTRA[@]}" --command=sh "$APP" -c \
-        "touch '$ruta/verifica-escritura-107' 2>&1; echo RC=\$?") \
+    salida=$(flatpak run "${EXTRA[@]}" --env=RUTA_RO="$ruta" --command=sh "$APP" -c \
+        '[ -d "$RUTA_RO" ] && echo MONTADO || echo NO_MONTADO
+         touch "$RUTA_RO/verifica-escritura-107" 2>&1; echo RC=$?') \
         || { echo "NO HE PODIDO EJECUTAR LA COMPROBACION EN $etiqueta"; exit 1; }
     if echo "$salida" | grep -q "RC=0"; then
         echo "ESCRITURA PERMITIDA en $etiqueta dentro del arenero (:ro no se sostiene):"
         echo "$salida"
-        flatpak run "${EXTRA[@]}" --command=rm "$APP" -f "$ruta/verifica-escritura-107" 2>/dev/null
+        flatpak run "${EXTRA[@]}" --env=RUTA_RO="$ruta" --command=sh "$APP" -c \
+            'rm -f "$RUTA_RO/verifica-escritura-107"' 2>/dev/null
         exit 1
     fi
-    if echo "$salida" | grep -qi "no such file or directory"; then
-        echo "$etiqueta NO ESTA MONTADO dentro del arenero (ENOENT pese a existir"
-        echo "en el anfitrion en $ruta): no se ha medido nada"
+    if ! echo "$salida" | grep -q "^MONTADO$"; then
+        echo "$etiqueta NO ESTA MONTADO dentro del arenero (existe en el anfitrion"
+        echo "en $ruta pero dentro no hay directorio): no se ha medido nada"
         echo "$salida"
         exit 1
     fi
