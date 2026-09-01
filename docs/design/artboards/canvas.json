@@ -1,0 +1,161 @@
+{
+  "pages": [
+    {
+      "id": "recorrido",
+      "name": "Recorrido de firma"
+    },
+    {
+      "id": "otros",
+      "name": "Otros"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "EstadoVacio.dc.html",
+      "title": "1 · Vacío · menú Archivo abierto",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoDocumentoCargado.dc.html",
+      "title": "2 · Documento cargado",
+      "x": 1260,
+      "y": 0,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoCargandoCertificados.dc.html",
+      "title": "3 · Cargando certificados",
+      "x": 2520,
+      "y": 0,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoSinCertificados.dc.html",
+      "title": "4 · Sin certificados",
+      "x": 3780,
+      "y": 0,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "5 · Configurando la firma visible",
+      "x": 0,
+      "y": 1140,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoPin.dc.html",
+      "title": "6 · Pidiendo PIN",
+      "x": 1260,
+      "y": 1140,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoPinIncorrecto.dc.html",
+      "title": "7 · PIN incorrecto",
+      "x": 2520,
+      "y": 1140,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoFirmando.dc.html",
+      "title": "8 · Firmando",
+      "x": 3780,
+      "y": 1140,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoExito.dc.html",
+      "title": "9 · Firmado con éxito",
+      "x": 0,
+      "y": 2280,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoErrorFirma.dc.html",
+      "title": "10 · Error de firma",
+      "x": 1260,
+      "y": 2280,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoPreferencias.dc.html",
+      "title": "Preferencias · desde el menú",
+      "x": 2520,
+      "y": 2280,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "EstadoAcercaDe.dc.html",
+      "title": "Acerca de · desde el menú",
+      "x": 3780,
+      "y": 2280,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
+    },
+    {
+      "file": "firmar-fichero-local.dc.html",
+      "title": "firmar-fichero-local · tuyo, sin tocar",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 1000,
+      "page": "otros"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "nota-recorrido",
+      "x": 0,
+      "y": -230,
+      "w": 1100,
+      "page": "recorrido",
+      "text": "Variante D (bandeja de recientes), elegida el 31/08/2026, con la barra lateral derecha de la B.\nLos diez estados del recorrido, en orden. La secuencia la fija la criptografía y no se rediseña:\nrecuadro → prefirma → PIN → firma → postfirma → guardar."
+    },
+    {
+      "id": "nota-vocabulario",
+      "x": 0,
+      "y": -120,
+      "w": 1100,
+      "page": "recorrido",
+      "text": "Dos cosas distintas que antes se mezclaban: la FIRMA VISIBLE es el recuadro que se estampa en la página (se activa o no, y se arrastra a donde toque);\nla RÚBRICA es el trazo manuscrito escaneado que va dentro de ese recuadro, y es opcional. Los comodines $$SUBJECTCN$$ han desaparecido: se marca qué dato aparece."
+    },
+    {
+      "id": "nota-otros",
+      "x": 0,
+      "y": -140,
+      "w": 900,
+      "page": "otros",
+      "text": "Fichero tuyo, no lo he tocado. Está aquí solo para que no aparezca como un marco suelto."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "recorrido"
+  }
+}
