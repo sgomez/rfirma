@@ -32,3 +32,4 @@
 2026-09-01 spec=#46 sub=#60 model=opus effort=medium pr=#77 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-01 spec=#46 sub=#61 model=opus effort=medium pr=#78 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-01 spec=#46 sub=#62 model=opus effort=medium pr=#79 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged oversized=built
+2026-09-01 spec=#80 sub=#85 model=opus effort=medium pr=#90 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=escalated
