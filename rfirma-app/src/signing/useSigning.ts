@@ -10,7 +10,7 @@ import { belongsToPinDialog, type TokenFailure } from "./token";
  * `pin` con un fallo dentro es la clave del reintento: un PIN incorrecto vuelve
  * a este mismo estado, **sin repetir la prefirma** y sin desmontar el diálogo.
  *
- * `signed` lleva dentro el **asa del documento de partida** (`origin`), y no
+ * `signed` lleva dentro el **identificador del documento de partida** (`origin`), y no
  * solo el fichero que quedó escrito: el acuse de recibo es de un documento
  * concreto, y sin esa atadura la ventana lo enseñaba al lado de cualquier otro
  * que se abriera después —el nombre de A con el recuento de páginas de B—.
@@ -136,13 +136,13 @@ export function useSigning(backend: SigningBackend): Signing {
  * lo que el ID-44 prohíbe—, y sin ninguno se quedaba una tercera columna al
  * lado del visor vacío, que es lo que quita el ID-51.
  *
- * `activePath` es `null` cuando no hay documento activo: se ha olvidado el que
+ * `activeId` es `null` cuando no hay documento activo: se ha olvidado el que
  * había, o se ha vaciado la lista.
  */
 export function acknowledgementFor(
   state: SigningState,
-  activePath: string | null,
+  activeId: string | null,
 ): Extract<SigningState, { kind: "signed" }> | null {
   if (state.kind !== "signed") return null;
-  return state.origin === activePath ? state : null;
+  return state.origin === activeId ? state : null;
 }

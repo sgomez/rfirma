@@ -140,7 +140,7 @@ export function App({
   // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas
   // que enseña sale del PDF abierto, así que el panel solo puede montarse
   // mientras los dos sean el mismo documento.
-  const signedHere = acknowledgementFor(signing.state, documents.active?.path ?? null);
+  const signedHere = acknowledgementFor(signing.state, documents.active?.id ?? null);
   const signedSomewhere = signing.state.kind === "signed";
 
   // Y cuando deja de serlo —se elige otro en la bandeja, se olvida el activo,
@@ -198,7 +198,7 @@ export function App({
     }
     const page = await pdf.getPage(placement.page);
     await signing.start(chosen, {
-      document: documents.active.path,
+      document: documents.active.id,
       certificate: chosen.label,
       placement: {
         page: placement.page,
@@ -233,10 +233,10 @@ export function App({
         tray={
           <DocumentTray
             recents={documents.recents}
-            activePath={documents.active?.path ?? null}
+            activeId={documents.active?.id ?? null}
             onOpen={() => void documents.open()}
             onSelect={documents.select}
-            onForget={(path) => void documents.forget(path)}
+            onForget={(id) => void documents.forget(id)}
           />
         }
         viewer={

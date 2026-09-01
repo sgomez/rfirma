@@ -12,12 +12,12 @@ const BADGE_KEY: Record<ShownBadge, string> = {
 
 interface DocumentTrayProps {
   recents: readonly RecentDocument[];
-  /** La ruta canónica del documento activo, o `null`. */
-  activePath: string | null;
+  /** El identificador del documento activo, o `null`. */
+  activeId: string | null;
   /** Abrir un documento, que va por el portal. Ver [`DocumentPicker`]. */
   onOpen: () => void;
   onSelect: (document: RecentDocument) => void;
-  onForget: (path: string) => void;
+  onForget: (id: string) => void;
 }
 
 /**
@@ -28,17 +28,11 @@ interface DocumentTrayProps {
  * el segundo sería un camino paralelo, y además no existe bajo el arenero.
  *
  * Las filas se pintan con los metadatos cacheados —nombre, insignia y fecha—
- * **sin abrir ningún fichero** (ADR-0010). Una ruta que ya no responde sale con
+ * **sin abrir ningún fichero** (ADR-0010). Un documento que ya no responde sale con
  * la insignia `No disponible`, se atenúa y ofrece quitarla, pero **sigue en la
  * lista**: un PDF en un USB desmontado no está borrado.
  */
-export function DocumentTray({
-  recents,
-  activePath,
-  onOpen,
-  onSelect,
-  onForget,
-}: DocumentTrayProps) {
+export function DocumentTray({ recents, activeId, onOpen, onSelect, onForget }: DocumentTrayProps) {
   const { t, i18n } = useTranslation();
   const dates = new Intl.DateTimeFormat(i18n.language, { dateStyle: "short" });
 
@@ -60,11 +54,11 @@ export function DocumentTray({
               const badge = shownBadge(document);
               const unavailable = badge === "Unavailable";
               return (
-                <li key={document.path} className="tray__row">
+                <li key={document.id} className="tray__row">
                   <button
                     type="button"
-                    className={rowClass(document.path === activePath, unavailable)}
-                    aria-current={document.path === activePath}
+                    className={rowClass(document.id === activeId, unavailable)}
+                    aria-current={document.id === activeId}
                     disabled={unavailable}
                     onClick={() => onSelect(document)}
                   >
@@ -80,7 +74,7 @@ export function DocumentTray({
                     <button
                       type="button"
                       className="rf-btn rf-btn--ghost tray__forget"
-                      onClick={() => onForget(document.path)}
+                      onClick={() => onForget(document.id)}
                     >
                       {t("tray.remove")}
                     </button>

@@ -12,10 +12,12 @@ import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 import { emptyPdfSource } from "./viewer/source";
 
-function document(path: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
-    path,
-    name: path.slice(path.lastIndexOf("/") + 1),
+    // El identificador lo acuña el backend y es opaco: aquí se finge con un
+    // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
+    id: `id-${name}`,
+    name,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
@@ -60,7 +62,7 @@ function trayDropZone() {
 describe("App", () => {
   it("opens a document from the tray and shows its badge in the header", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("/documentos/factura.pdf")]);
+    renderApp(inMemoryRecents(), [document("factura.pdf")]);
 
     await user.click(trayDropZone());
 
@@ -70,7 +72,7 @@ describe("App", () => {
 
   it("opens Preferences from the menu, over the window and without unmounting it", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("/a.pdf")]));
+    renderApp(inMemoryRecents([document("a.pdf")]));
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -93,7 +95,7 @@ describe("App", () => {
 
   it("empties the tray when Remember my activity is turned off", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("/a.pdf")]));
+    renderApp(inMemoryRecents([document("a.pdf")]));
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -109,7 +111,7 @@ describe("App", () => {
 
   it("stops remembering once Remember my activity is off, not just purges what there was", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("/a.pdf")]), [document("/documentos/factura.pdf")]);
+    renderApp(inMemoryRecents([document("a.pdf")]), [document("factura.pdf")]);
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
