@@ -14,9 +14,10 @@ De arriba abajo:
 
 1. **Zona de soltar**: recuadro con borde discontinuo,
    «Arrastra un PDF o pulsa para abrirlo». Pulsarla abre el explorador de
-   archivos del sistema, **en la carpeta de destino** de Preferencias. No es la
-   última carpeta usada: bajo el arenero esa no se puede saber, y por qué se
-   abre justo ahí está en la enmienda del
+   archivos del sistema, **en la última carpeta usada**. En el flatpak esa no
+   se puede saber —el portal no la dice—, y entonces abre en la **carpeta de
+   destino** de Preferencias. Las dos mitades y por qué el canal cambia esto
+   están en la enmienda del
    [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 2. **Recientes**: lista de documentos ya vistos, **diez como máximo**, con
    desalojo por último uso —reabrir uno viejo lo rescata—. Cada fila lleva el

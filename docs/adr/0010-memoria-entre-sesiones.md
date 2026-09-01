@@ -15,7 +15,8 @@ Se recuerdan **seis cosas**, partidas en dos grupos según quién las decide.
 documento firmado, los interruptores, y el fichero de la rúbrica.
 
 **Estado** (lo acumula la aplicación sola): los documentos recientes, la última
-configuración de firma visible y el certificado usado la última vez.
+configuración de firma visible y el certificado usado la última vez. La enmienda
+del final le suma la última carpeta abierta.
 
 La distinción no es cosmética: en Windows el estado no debe viajar en un perfil
 móvil y la configuración sí, y en Linux `XDG_STATE_HOME` existe exactamente para
@@ -120,3 +121,20 @@ aplicación obedece. Por omisión vale `system`, que **no es «claro»** sino no
 forzar nada y dejar que mande `prefers-color-scheme`: es lo que hacía la ventana
 antes de que el ajuste existiera, y abrir en claro dentro de un escritorio
 oscuro parece un fallo.
+
+## Enmienda: la última carpeta abierta
+
+El estado gana una memoria más, **la última carpeta de la que se abrió un
+documento**, para que el diálogo de abrir vuelva a aparecer ahí. La decide la
+enmienda del [ADR-0011](0011-destino-del-documento-firmado.md); lo que le toca a
+este es dónde vive y qué se la lleva.
+
+Es **estado y no configuración**: nadie la elige, la acumula la aplicación sola
+al abrir documentos. Así que va al fichero de `XDG_STATE_HOME` y **«Recordar mi
+actividad» se la lleva** igual que a los recientes y al certificado —es la misma
+promesa a quien firma en un ordenador compartido, y una carpeta del anfitrión
+que sobreviviera a «Vaciar la lista» diría por dónde anduvo el anterior—.
+
+En el flatpak vale `None` siempre: el portal no dice de qué carpeta salió el
+documento, así que no hay nada que apuntar. No es un campo que se apague por
+prudencia, es uno que allí nunca llega a tener valor.
