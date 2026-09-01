@@ -12,11 +12,17 @@
 //! práctica basta con tener los paquetes. Provisiona el token `rfirma-test`
 //! (PIN `1234`) desde `testdata/fnmt/`, que es material público de la FNMT:
 //!
-//! | etiqueta | qué tiene | para qué |
-//! | --- | --- | --- |
-//! | `FNMT-ACTIVO-99999999R` | clave + certificado | camino feliz |
-//! | `FNMT-CADUCADO-99999999R` | solo certificado | caducó en 2020 |
-//! | `FNMT-REVOCADO-99999999R` | solo certificado | revocado en 2024, en vigor |
+//! | `CKA_ID` | etiqueta | qué tiene | para qué |
+//! | --- | --- | --- | --- |
+//! | `01` | `FNMT-ACTIVO-99999999R` | clave + certificado | camino feliz |
+//! | `02` | `FNMT-CADUCADO-99999999R` | solo certificado | caducó en 2020 |
+//! | `03` | `FNMT-REVOCADO-99999999R` | solo certificado | revocado en 2024, en vigor |
+//! | `04` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del activo |
+//! | `05` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del caducado |
+//!
+//! Los dos gemelos comparten `CKA_LABEL` y no comparten nada más: son la
+//! reproducción de lo que hay en un perfil de Firefox de verdad, donde dos
+//! claves privadas llevan la misma etiqueta.
 //!
 //! El detalle del entorno está en `docs/research/token-pkcs11-pruebas.md`.
 //!
@@ -44,6 +50,10 @@ const PIN: &str = "1234";
 const ACTIVE: &str = "FNMT-ACTIVO-99999999R";
 const EXPIRED: &str = "FNMT-CADUCADO-99999999R";
 const REVOKED: &str = "FNMT-REVOCADO-99999999R";
+/// Los dos certificados que comparten etiqueta y no comparten clave.
+const TWIN: &str = "FNMT-GEMELO-99999999R";
+const TWIN_OF_THE_ACTIVE_KEY: u8 = 0x04;
+const TWIN_OF_THE_EXPIRED_KEY: u8 = 0x05;
 
 /// Lo mismo que firma el recorrido real: un bloque DER de `SignedAttributes`
 /// que nadie ha hasheado antes de llegar aquí. Que sea DER de verdad da igual
@@ -82,8 +92,23 @@ fn certificate_labelled(label: &str) -> TokenCertificate {
         })
 }
 
+/// La referencia **tal y como sale del token**, con su `CKA_ID` incluido. No se
+/// fabrica a mano: quien firma parte de lo que devolvió el listado, y una
+/// referencia inventada aquí no probaría el mismo camino.
 fn reference(label: &str) -> CertificateRef {
-    CertificateRef::new(module(), TOKEN, label)
+    certificate_labelled(label).reference().clone()
+}
+
+fn certificate_with_cka_id(cka_id: u8) -> TokenCertificate {
+    certificates()
+        .into_iter()
+        .find(|certificate| certificate.reference().cka_id() == Some([cka_id].as_slice()))
+        .unwrap_or_else(|| {
+            panic!(
+                "el token {TOKEN} no tiene ningun certificado con CKA_ID {cka_id:02x}. \
+                 Montalo con: just token"
+            )
+        })
 }
 
 fn epoch(seconds: u64) -> SystemTime {
@@ -102,10 +127,14 @@ fn listing_gives_back_what_it_takes_to_find_each_certificate_again() {
     assert_eq!(reference.module(), module().as_path());
     assert_eq!(reference.token_label(), TOKEN);
     assert_eq!(reference.label(), ACTIVE);
+    // El CKA_ID es la coordenada que empareja el certificado con su clave, y
+    // sin ella lo persistido no basta para reencontrar este certificado y no
+    // otro con su misma etiqueta.
+    assert_eq!(reference.cka_id(), Some([0x01].as_slice()));
 }
 
 /// El titular se lee del DER cuando hace falta pintarlo, y **no** viaja dentro
-/// de la referencia: lo que se persiste son tres coordenadas y nada más (ID-32,
+/// de la referencia: lo que se persiste son cuatro coordenadas y nada más (ID-32,
 /// ADR-0010).
 ///
 /// Que la etiqueta de este token concreto lleve el DNI dentro no es asunto
@@ -342,6 +371,42 @@ fn signing_the_same_bytes_twice_gives_the_same_signature() {
     assert_eq!(once, twice);
 }
 
+/// **La prueba del #98.** Dos certificados con la **misma** `CKA_LABEL` y
+/// distinto `CKA_ID` firman cada uno con **su** clave.
+///
+/// Es el fallo que no se nota: buscando la clave por etiqueta el token devuelve
+/// una de las dos arbitrariamente, la firma sale, el PDF se cierra, y lo que ha
+/// firmado es una clave que no es la del certificado que la persona eligió. Por
+/// eso no basta con que cada firma verifique: hace falta comprobar también que
+/// **no** verifica contra el otro certificado, que es lo que estaría pasando si
+/// alguien volviera a emparejar por etiqueta.
+#[test]
+fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
+    let one = certificate_with_cka_id(TWIN_OF_THE_ACTIVE_KEY);
+    let other = certificate_with_cka_id(TWIN_OF_THE_EXPIRED_KEY);
+
+    assert_eq!(one.reference().label(), TWIN);
+    assert_eq!(other.reference().label(), TWIN);
+    assert_ne!(one.reference().cka_id(), other.reference().cka_id());
+
+    let signed_by_one = pkcs11::sign(one.reference(), PIN, PRESIGN).expect("firma del primero");
+    let signed_by_other = pkcs11::sign(other.reference(), PIN, PRESIGN).expect("firma del segundo");
+
+    for (certificate, signature, twin) in [
+        (&one, &signed_by_one, &other),
+        (&other, &signed_by_other, &one),
+    ] {
+        let signature = Signature::try_from(signature.as_slice()).expect("firma RSA");
+        verifying_key(certificate)
+            .verify(PRESIGN, &signature)
+            .expect("cada gemelo tiene que firmar con la clave de SU certificado");
+        assert!(
+            verifying_key(twin).verify(PRESIGN, &signature).is_err(),
+            "la firma verifica contra el otro gemelo: se esta emparejando por etiqueta"
+        );
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Clasificar los errores del token
 // ---------------------------------------------------------------------------
@@ -361,7 +426,7 @@ fn a_wrong_pin_is_a_situation_and_carries_its_raw_ckr_apart() {
 
 #[test]
 fn a_token_that_is_not_there_is_told_apart_from_a_wrong_pin() {
-    let absent = CertificateRef::new(module(), "no-existe-este-token", ACTIVE);
+    let absent = CertificateRef::new(module(), "no-existe-este-token", ACTIVE, vec![0x01]);
     let error = signing_error(&absent, PIN);
 
     assert_eq!(error.situation(), Situation::TokenAbsent);
@@ -425,11 +490,24 @@ fn having_nowhere_to_look_is_a_failure_and_not_an_empty_list() {
 }
 
 #[test]
-fn a_label_that_is_not_in_the_token_says_so_instead_of_failing_generically() {
-    let missing = CertificateRef::new(module(), TOKEN, "ETIQUETA-QUE-NO-EXISTE");
+fn a_cka_id_that_is_not_in_the_token_says_so_instead_of_failing_generically() {
+    let missing = CertificateRef::new(module(), TOKEN, "ETIQUETA-QUE-NO-EXISTE", vec![0xff]);
     let error = signing_error(&missing, PIN);
 
     assert_eq!(error.situation(), Situation::CertificateNotFound);
+}
+
+/// Una referencia recordada por una versión anterior al #98 no lleva `CKA_ID`.
+/// Firmar con ella se rechaza en vez de caer de vuelta en la etiqueta: el
+/// respaldo por etiqueta es justo el fallo que este cambio cierra.
+#[test]
+fn a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label() {
+    let remembered = CertificateRef::new(module(), TOKEN, ACTIVE, None);
+
+    let error = signing_error(&remembered, PIN);
+
+    assert_eq!(error.situation(), Situation::CertificateNotFound);
+    assert!(error.detail().contains("CKA_ID"), "{}", error.detail());
 }
 
 /// El caducado y el revocado entran sin clave a propósito: pedir una firma con

@@ -7,7 +7,10 @@
 //! porque borrarlo no reconfigura la aplicación.
 //!
 //! Del certificado se guarda **cómo volver a encontrarlo** —módulo PKCS#11,
-//! etiqueta del token y etiqueta del objeto—, **nunca titular ni DNI** (ID-32).
+//! etiqueta del token, etiqueta del objeto y su `CKA_ID`—, **nunca titular ni
+//! DNI** (ID-32). El `CKA_ID` es lo que lo identifica de verdad: en un almacén
+//! real la etiqueta se repite, y sin él lo persistido no basta para reencontrar
+//! el certificado **exacto**.
 //! Esto no es una precaución: es un fichero en el disco del usuario. El tipo
 //! que se persiste es [`CertificateRef`], que no tiene sitio donde meter un
 //! titular aunque alguien quisiera; el titular se relee del DER del token cada
@@ -82,6 +85,7 @@ mod tests {
                 "/usr/lib/softhsm/libsofthsm2.so",
                 "rfirma-test",
                 "Certificado de pruebas",
+                vec![0x01],
             )),
             visible_signature: Some(SignatureBox {
                 page: 1,
@@ -109,6 +113,7 @@ mod tests {
                 "/usr/lib/softhsm/libsofthsm2.so",
                 "rfirma-test",
                 "Certificado de pruebas",
+                vec![0x01],
             )),
             ..State::default()
         };
@@ -121,7 +126,7 @@ mod tests {
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(fields, vec!["label", "module", "token_label"]);
+        assert_eq!(fields, vec!["cka_id", "label", "module", "token_label"]);
     }
 
     /// El requisito del ID-32 dicho como lo dice el issue: **ni el titular ni
@@ -137,6 +142,7 @@ mod tests {
                 "/usr/lib/softhsm/libsofthsm2.so",
                 "rfirma-test",
                 "Certificado de pruebas",
+                vec![0x01],
             ),
             der,
         );

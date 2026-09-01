@@ -89,17 +89,28 @@ pub fn list_certificates(module: &Path) -> Result<Vec<TokenCertificate>, TokenEr
         let session = context.open_ro_session(slot)?;
 
         for object in session.find_objects(&[Attribute::Class(ObjectClass::CERTIFICATE)])? {
-            let attributes =
-                session.get_attributes(object, &[AttributeType::Label, AttributeType::Value])?;
+            let attributes = session.get_attributes(
+                object,
+                &[
+                    AttributeType::Label,
+                    AttributeType::Value,
+                    AttributeType::Id,
+                ],
+            )?;
 
             let mut label = None;
             let mut der = None;
+            let mut cka_id = None;
             for attribute in attributes {
                 match attribute {
                     Attribute::Label(bytes) => {
                         label = Some(String::from_utf8_lossy(&bytes).trim().to_owned())
                     }
                     Attribute::Value(bytes) => der = Some(bytes),
+                    // Un CKA_ID vacío no empareja nada: es lo mismo que no
+                    // tenerlo, y guardarlo como si lo tuviera haría que la
+                    // búsqueda de la clave devolviese la primera que pasara.
+                    Attribute::Id(bytes) if !bytes.is_empty() => cka_id = Some(bytes),
                     _ => {}
                 }
             }
@@ -110,7 +121,7 @@ pub fn list_certificates(module: &Path) -> Result<Vec<TokenCertificate>, TokenEr
             if let (Some(label), Some(der)) = (label, der) {
                 if !label.is_empty() {
                     found.push(TokenCertificate::new(
-                        CertificateRef::new(module, &token_label, label),
+                        CertificateRef::new(module, &token_label, label, cka_id),
                         der,
                     ));
                 }
@@ -176,7 +187,7 @@ fn sign_holding_the_turn(
         Err(other) => return Err(other.into()),
     }
 
-    let signature = private_key(&session, reference.label()).and_then(|key| {
+    let signature = private_key(&session, reference).and_then(|key| {
         session
             .sign(&SIGNING_MECHANISM, key, data)
             .map_err(TokenError::from)
@@ -211,21 +222,43 @@ fn slot_of(context: &Pkcs11, token_label: &str) -> Result<Slot, TokenError> {
     ))
 }
 
+/// La clave privada del certificado, buscada por `CKA_ID` y **nunca** por
+/// etiqueta (ID-06).
+///
+/// La diferencia no es de estilo. En un perfil de Firefox de verdad hay dos
+/// claves privadas distintas con la **misma** `CKA_LABEL`, así que buscar por
+/// etiqueta devuelve una de las dos arbitrariamente y se firma con una clave que
+/// no es la del certificado elegido. La firma sale, verifica contra otra clave
+/// pública, y nadie se entera. PKCS#11 empareja certificado y clave por
+/// `CKA_ID` —es lo que hace el propio NSS— y aquí se hace lo mismo.
+///
+/// Una referencia sin `CKA_ID` —recordada por una versión anterior al #98— no
+/// se resuelve por etiqueta como respaldo: eso sería volver justo al fallo que
+/// esto cierra. Se rechaza, y quien la tenga la recupera volviendo a listar el
+/// token, que devuelve la referencia completa.
 fn private_key(
     session: &Session,
-    label: &str,
+    reference: &CertificateRef,
 ) -> Result<cryptoki::object::ObjectHandle, TokenError> {
+    let label = reference.label();
+    let cka_id = reference.cka_id().ok_or_else(|| {
+        TokenError::new(
+            Situation::CertificateNotFound,
+            format!("la referencia a {label} no lleva CKA_ID: vuelve a listar el token"),
+        )
+    })?;
+
     session
         .find_objects(&[
             Attribute::Class(ObjectClass::PRIVATE_KEY),
-            Attribute::Label(label.as_bytes().to_vec()),
+            Attribute::Id(cka_id.to_vec()),
         ])?
         .into_iter()
         .next()
         .ok_or_else(|| {
             TokenError::new(
                 Situation::CertificateNotFound,
-                format!("el token no tiene ninguna clave privada etiquetada {label}"),
+                format!("el token no tiene ninguna clave privada con el CKA_ID de {label}"),
             )
         })
 }

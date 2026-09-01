@@ -1427,7 +1427,12 @@ mod tests {
     /// negativa sin fabricar un X.509.
     fn a_certificate(label: &str, der: &[u8]) -> TokenCertificate {
         TokenCertificate::new(
-            CertificateRef::new("/usr/lib/softhsm/libsofthsm2.so", "rfirma-test", label),
+            CertificateRef::new(
+                "/usr/lib/softhsm/libsofthsm2.so",
+                "rfirma-test",
+                label,
+                vec![0x01],
+            ),
             der.to_vec(),
         )
     }

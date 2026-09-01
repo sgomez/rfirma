@@ -117,16 +117,34 @@ Las órdenes de arriba se ejecutaron a mano una vez. Desde el
 `testdata/fnmt/`, que es el subconjunto del kit versionado en el repositorio, no
 de `~/.local/share/rfirma-test-certs`.
 
-El token pasa a tener **tres certificados y una sola clave**:
+El token pasa a tener **cinco certificados y tres claves**:
 
 | `CKA_ID` | `CKA_LABEL` | qué tiene |
 | --- | --- | --- |
 | `01` | `FNMT-ACTIVO-99999999R` | clave privada + certificado |
 | `02` | `FNMT-CADUCADO-99999999R` | solo el certificado (caducó en 2020) |
 | `03` | `FNMT-REVOCADO-99999999R` | solo el certificado (revocado en 2024) |
+| `04` | `FNMT-GEMELO-99999999R` | clave privada + certificado (el par activo) |
+| `05` | `FNMT-GEMELO-99999999R` | clave privada + certificado (el par caducado) |
 
-Los dos últimos entran **sin clave a propósito**: existen para que el listado
-tenga que clasificarlos antes de pedir el PIN, no para firmar con ellos.
+El caducado y el revocado entran **sin clave a propósito**: existen para que el
+listado tenga que clasificarlos antes de pedir el PIN, no para firmar con ellos.
+
+## Ampliación: los gemelos (#98)
+
+Los dos `FNMT-GEMELO-99999999R` comparten `CKA_LABEL` y no comparten ni
+`CKA_ID` ni par de claves. Reproducen lo que hay en un perfil de Firefox de
+verdad, donde `certutil -K` enseña **dos claves privadas con la misma
+etiqueta**: buscar la clave por etiqueta devuelve una de las dos
+arbitrariamente y se firma con una clave que no es la del certificado elegido.
+La firma sale y verifica —contra la otra clave pública—, así que el fallo no se
+nota. Por eso `pkcs11::sign` empareja por `CKA_ID`, que es lo que hace el propio
+NSS, y por eso la prueba de grada B no se conforma con que cada firma verifique:
+comprueba además que **no** verifica contra el gemelo.
+
+Como los dos comparten etiqueta, la idempotencia del script mira el `CKA_ID` y
+no la etiqueta: buscarlos por ella daría el segundo por importado en cuanto
+estuviera el primero.
 
 ## Fuera
 
