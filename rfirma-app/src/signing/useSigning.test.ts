@@ -56,6 +56,7 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
     presign: async () => ok(undefined),
     sign: async () => ok(undefined),
     postsign: async () => ok(signed),
+    discard: async () => {},
     ...overrides,
   };
 }
@@ -196,5 +197,52 @@ describe("useSigning", () => {
     act(() => result.current.cancel());
 
     expect(result.current.state).toEqual({ kind: "idle" });
+  });
+
+  /**
+   * Volver al panel no basta: el ciclo a medias lo guarda el backend, así que
+   * cancelar tiene que decírselo o el PDF, los atributos a firmar y el sello se
+   * quedan vivos hasta que se cierre la ventana.
+   */
+  it("tells the backend to forget the half-open cycle when the PIN dialog is cancelled", async () => {
+    const discard = vi.fn(async () => {});
+    const { result } = renderHook(() => useSigning(backendOf({ discard })));
+
+    await act(() => result.current.start(certificate, anOrder()));
+    act(() => result.current.cancel());
+
+    expect(discard).toHaveBeenCalledTimes(1);
+  });
+
+  /** Cerrar el aviso de un fallo va por el mismo `cancel`, y también limpia. */
+  it("forgets the cycle when a failure notice is dismissed as well", async () => {
+    const discard = vi.fn(async () => {});
+    const { result } = renderHook(() =>
+      useSigning(backendOf({ discard, sign: async () => failed(cardGone) })),
+    );
+
+    await act(() => result.current.start(certificate, anOrder()));
+    await act(() => result.current.submitPin("1234"));
+    expect(result.current.state).toEqual({ kind: "failed", failure: cardGone });
+
+    act(() => result.current.cancel());
+
+    expect(discard).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Si el backend no puede olvidar, la ventana vuelve al panel igual: no hay
+   * nada que contarle a nadie, y una promesa rechazada sin dueño tumbaría el
+   * proceso.
+   */
+  it("goes back to the panel even if the backend cannot forget the cycle", async () => {
+    const discard = vi.fn(() => Promise.reject(new Error("no hay isolate")));
+    const { result } = renderHook(() => useSigning(backendOf({ discard })));
+
+    await act(() => result.current.start(certificate, anOrder()));
+    act(() => result.current.cancel());
+
+    expect(result.current.state).toEqual({ kind: "idle" });
+    expect(discard).toHaveBeenCalled();
   });
 });

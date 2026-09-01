@@ -124,6 +124,19 @@ impl TokenCertificate {
             .map(|certificate| certificate.tbs_certificate().subject().to_string())
     }
 
+    /// La autoridad que lo emitió, para pintarla. **No es el `O=` del titular**:
+    /// ese es la organización de quien firma, y enseñarlo como emisor le dice a
+    /// quien firma que su propio organismo emitió el certificado. El emisor es
+    /// el dato con el que se decide si un certificado es de fiar, así que sale
+    /// del campo que de verdad lo lleva.
+    ///
+    /// Se recalcula del DER cada vez, por lo mismo que [`Self::subject`].
+    pub fn issuer(&self) -> Option<String> {
+        Certificate::from_der(&self.der)
+            .ok()
+            .map(|certificate| certificate.tbs_certificate().issuer().to_string())
+    }
+
     /// El estado ahora mismo, leyendo el reloj del sistema.
     pub fn status(&self) -> CertificateStatus {
         self.status_at(SystemTime::now())
@@ -186,6 +199,7 @@ mod tests {
             CertificateStatus::Unreadable { .. }
         ));
         assert_eq!(certificate.subject(), None);
+        assert_eq!(certificate.issuer(), None);
         assert!(!certificate.status().is_usable());
     }
 

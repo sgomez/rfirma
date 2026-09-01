@@ -144,10 +144,17 @@ export function tauriSigningBackend(): SigningBackend {
     presign: (order) => stage(() => invoke<void>("begin_signing", { order })),
     sign: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
     postsign: () => stage(() => invoke<SignedDocument>("finish_signing")),
+    discard: cancelSigning,
   };
 }
 
-/** Olvida el ciclo a medias cuando se cancela en el diálogo del PIN. */
+/**
+ * Olvida el ciclo a medias cuando se cancela en el diálogo del PIN.
+ *
+ * Quien la llama es `useSigning.cancel`, a través del puerto: por eso está
+ * enchufada como `discard` arriba y no exportada suelta para que alguien se
+ * acuerde de invocarla.
+ */
 export function cancelSigning(): Promise<void> {
   return invoke<void>("cancel_signing");
 }

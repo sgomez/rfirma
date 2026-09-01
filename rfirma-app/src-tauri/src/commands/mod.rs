@@ -345,18 +345,49 @@ fn language_of(tag: &str) -> Language {
     }
 }
 
-/// El titular y el DNI que se leen del certificado, para el recuadro y para la
+/// El valor de un atributo de un nombre distinguido, o la cadena vacía si no
+/// está.
+fn attribute(name: &str, distinguished_name: &str) -> String {
+    distinguished_name
+        .split(',')
+        .map(str::trim)
+        .find_map(|part| part.strip_prefix(name).map(str::to_owned))
+        .unwrap_or_default()
+}
+
+/// El titular y el DNI que se leen del **subject**, para el recuadro y para la
 /// fila del panel.
-fn holder_of(subject: Option<&str>) -> (String, String, String) {
+fn holder_of(subject: Option<&str>) -> (String, String) {
     let subject = subject.unwrap_or_default();
-    let field = |name: &str| {
-        subject
-            .split(',')
-            .map(str::trim)
-            .find_map(|part| part.strip_prefix(name).map(str::to_owned))
-            .unwrap_or_default()
-    };
-    (field("CN="), field("SERIALNUMBER="), field("O="))
+    (
+        attribute("CN=", subject),
+        attribute("SERIALNUMBER=", subject),
+    )
+}
+
+/// La autoridad emisora, tal como se enseña en el panel («Emitido por …»).
+///
+/// Sale del **issuer**, no del `O=` del subject: ese es la organización del
+/// titular. Un certificado de persona física de la FNMT no lleva `O=` en el
+/// subject —así que ahí el panel se quedaba en «Emitido por »— y uno de
+/// empleado público sí, con el organismo del titular, que el panel afirmaba
+/// que había emitido el certificado. El emisor es el dato con el que alguien
+/// decide si se fía, y no admite un valor aproximado.
+///
+/// Se enseña el `CN=` del issuer, que es como se nombra a una autoridad («AC
+/// FNMT Usuarios»); si no lo lleva se cae al `O=` del issuer, y si tampoco, al
+/// nombre distinguido entero, que es feo pero cierto.
+fn issuer_of(issuer: Option<&str>) -> String {
+    let issuer = issuer.unwrap_or_default().trim();
+    let common_name = attribute("CN=", issuer);
+    if !common_name.is_empty() {
+        return common_name;
+    }
+    let organisation = attribute("O=", issuer);
+    if !organisation.is_empty() {
+        return organisation;
+    }
+    issuer.to_owned()
 }
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -372,12 +403,12 @@ pub fn list_certificates(
     Ok(found
         .into_iter()
         .map(|certificate| {
-            let (holder_name, id_number, issuer) = holder_of(certificate.subject().as_deref());
+            let (holder_name, id_number) = holder_of(certificate.subject().as_deref());
             CertificateView {
                 label: certificate.reference().label().to_owned(),
                 holder_name,
                 id_number,
-                issuer,
+                issuer: issuer_of(certificate.issuer().as_deref()),
                 status: certificate.status().into(),
             }
         })
@@ -414,8 +445,7 @@ fn holder_named(label: &str, environment: &Environment) -> Result<(String, Strin
                 format!("el token ya no tiene {label}"),
             )
         })?;
-    let (name, id, _) = holder_of(chosen.subject().as_deref());
-    Ok((name, id))
+    Ok(holder_of(chosen.subject().as_deref()))
 }
 
 fn layer2_text_of(order: &SigningOrder, holder: &(String, String)) -> String {
@@ -474,7 +504,7 @@ fn usable_certificate<'a>(
 /// manda la etiqueta, y componer el recuadro con lo que la ventana diga sería
 /// dejar que estampe cualquier nombre.
 fn config_for(order: &SigningOrder, chosen: &TokenCertificate) -> Result<SignatureConfig, Failure> {
-    let (name, id, _) = holder_of(chosen.subject().as_deref());
+    let (name, id) = holder_of(chosen.subject().as_deref());
     Ok(SignatureConfig {
         signature_box: order.placement.signature_box()?,
         layer2_text: layer2_text_of(order, &(name, id)),
@@ -684,10 +714,10 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::{
-        config_for, deliver, holder_of, language_of, situation_name, take_signed_cycle, told_as,
-        usable_certificate, CertificateView, CheckedFolder, Configuration, Environment, Failure,
-        Mutex, PlacementOrder, PortalDocument, SignedDocumentView, SigningOrder, SigningSession,
-        StatusView, VisibleFieldsOrder,
+        attribute, config_for, deliver, holder_of, issuer_of, language_of, situation_name,
+        take_signed_cycle, told_as, usable_certificate, CertificateView, CheckedFolder,
+        Configuration, Environment, Failure, Mutex, PlacementOrder, PortalDocument,
+        SignedDocumentView, SigningOrder, SigningSession, StatusView, VisibleFieldsOrder,
     };
     use crate::pkcs11::{CertificateRef, CertificateStatus, Situation, TokenCertificate};
     use crate::signing::Language;
@@ -852,21 +882,54 @@ mod tests {
 
     #[test]
     fn reads_the_holder_and_the_id_out_of_the_subject() {
-        let (name, id, issuer) = holder_of(Some(
+        let (name, id) = holder_of(Some(
             "CN=LOVELACE BYRON ADA, SERIALNUMBER=IDCES-00000000T, O=FNMT-RCM",
         ));
 
         assert_eq!(name, "LOVELACE BYRON ADA");
         assert_eq!(id, "IDCES-00000000T");
-        assert_eq!(issuer, "FNMT-RCM");
     }
 
     #[test]
     fn a_subject_without_the_fields_gives_empty_strings_and_not_a_panic() {
-        assert_eq!(
-            holder_of(None),
-            (String::new(), String::new(), String::new())
-        );
+        assert_eq!(holder_of(None), (String::new(), String::new()));
+    }
+
+    /// El caso que rompía: el subject de un certificado de persona física de la
+    /// FNMT **no lleva `O=`**, así que leer el emisor de ahí dejaba el panel en
+    /// «Emitido por » y nada más.
+    #[test]
+    fn the_issuer_is_the_authority_and_not_the_organisation_of_the_holder() {
+        let subject =
+            "CN=EIDAS CERTIFICADO PRUEBAS - 99999999R, serialNumber=IDCES-99999999R, C=ES";
+        let issuer = "CN=AC FNMT Usuarios, OU=Ceres, O=FNMT-RCM, C=ES";
+
+        assert_eq!(issuer_of(Some(issuer)), "AC FNMT Usuarios");
+        assert_eq!(attribute("O=", subject), "");
+    }
+
+    /// El otro caso malo: el `O=` del subject de un empleado público es su
+    /// organismo, y enseñarlo como emisor afirmaba que ese organismo emitió el
+    /// certificado.
+    #[test]
+    fn the_organisation_of_a_public_employee_is_never_read_as_the_issuer() {
+        let subject = "CN=LOVELACE BYRON ADA, O=AYUNTAMIENTO DE CADIZ, C=ES";
+        let issuer = "CN=AC Administracion Publica, O=FNMT-RCM, C=ES";
+
+        let (name, id) = holder_of(Some(subject));
+
+        assert_eq!(name, "LOVELACE BYRON ADA");
+        assert_eq!(id, "");
+        assert_eq!(issuer_of(Some(issuer)), "AC Administracion Publica");
+    }
+
+    /// Un issuer sin `CN=` no deja el panel mudo: se cae al `O=`, y sin ninguno
+    /// de los dos, al nombre distinguido entero.
+    #[test]
+    fn an_issuer_without_a_common_name_falls_back_instead_of_going_blank() {
+        assert_eq!(issuer_of(Some("O=FNMT-RCM, C=ES")), "FNMT-RCM");
+        assert_eq!(issuer_of(Some("OU=Ceres, C=ES")), "OU=Ceres, C=ES");
+        assert_eq!(issuer_of(None), "");
     }
 
     /// Un certificado del token con el DER que se le dé. Con basura dentro el

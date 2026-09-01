@@ -50,6 +50,19 @@ describe("los puertos de firma sobre Tauri", () => {
     ]);
   });
 
+  /**
+   * La cuarta operación del puerto: la salida. La orden existía y estaba
+   * registrada en `lib.rs` sin que nadie la llamara, que es exactamente el
+   * agujero que deja el ciclo a medias vivo en memoria.
+   */
+  it("wires the discard of the half-open cycle to cancel_signing", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriSigningBackend().discard();
+
+    expect(invoke).toHaveBeenCalledWith("cancel_signing");
+  });
+
   it("sends the order whole to the presignature and nothing else after it", () => {
     invoke.mockResolvedValue(undefined);
 

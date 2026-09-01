@@ -86,6 +86,20 @@ export interface SigningBackend {
   sign(pin: string): Promise<StageResult<void>>;
   /** Etapa 3: ensambla el PDF firmado y lo deja en el destino. */
   postsign(): Promise<StageResult<SignedDocument>>;
+  /**
+   * Olvida el ciclo a medias: la cuarta operación **no es una etapa**, es la
+   * salida.
+   *
+   * Está en el puerto y no suelta en `tauri.ts` porque el ciclo a medias lo
+   * guarda el backend, y quien lo abre es quien tiene que poder cerrarlo. Sin
+   * esto, cancelar en el diálogo del PIN devolvía la ventana al panel y dejaba
+   * vivos —hasta cerrar la aplicación— el PDF en Base64, los atributos CAdES a
+   * firmar, el sello de sesión y, si ya se había tecleado, el PKCS#1 de la
+   * tarjeta.
+   *
+   * Es idempotente: cancelar sin ciclo abierto no es un fallo.
+   */
+  discard(): Promise<void>;
 }
 
 /**
@@ -107,5 +121,5 @@ export function unavailableSigningBackend(): SigningBackend {
         attemptsLeft: null,
       },
     });
-  return { presign: missing, sign: missing, postsign: missing };
+  return { presign: missing, sign: missing, postsign: missing, discard: async () => {} };
 }

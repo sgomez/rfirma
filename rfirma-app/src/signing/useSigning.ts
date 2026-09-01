@@ -32,7 +32,15 @@ export interface Signing {
   start: (certificate: Certificate | null, order: SigningOrder) => Promise<void>;
   /** El PIN tecleado: firma en la tarjeta y ensambla. */
   submitPin: (pin: string) => Promise<void>;
-  /** Cancelar en el diálogo del PIN, o cerrar un fallo: se vuelve al panel. */
+  /**
+   * Cancelar en el diálogo del PIN, o cerrar un fallo: se vuelve al panel **y
+   * el backend olvida el ciclo a medias**.
+   *
+   * Las dos cosas, no solo la primera: volver al panel sin avisar al backend
+   * dejaba el `OpenCycle` entero vivo en memoria —el PDF, los atributos a
+   * firmar, el sello y el PKCS#1— hasta que se cerrara la ventana o hasta que
+   * otra firma lo pisara.
+   */
   cancel: () => void;
 }
 
@@ -85,7 +93,14 @@ export function useSigning(backend: SigningBackend): Signing {
     );
   };
 
-  const cancel = () => setState({ kind: "idle" });
+  const cancel = () => {
+    setState({ kind: "idle" });
+    // De cortesía y sin esperar: la ventana ya está en el panel, y si el
+    // backend no puede olvidar el ciclo no hay nada que contarle a nadie. El
+    // `catch` está porque una promesa rechazada y sin dueño tumba el proceso
+    // de pruebas, no porque haya un fallo que tragarse.
+    void backend.discard().catch(() => {});
+  };
 
   return { state, start, submitPin, cancel };
 }
