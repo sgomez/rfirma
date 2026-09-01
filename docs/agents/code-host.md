@@ -83,10 +83,44 @@ PDF opens: **the slow lane now does**, since
 [#48](https://github.com/sgomez/rfirma/issues/48) — `just test-native` signs a
 PDF end to end through the Java bridge and `pdfsig` validates it, which is the
 automatic oracle [ADR-0014](../adr/0014-gradas-de-prueba-y-puerta-de-calidad.md)
-decided. That run does not touch PKCS#11: phase 2 is the JCE with the FNMT test
-key, so what it proves is the **contract** — a PKCS#1 over the DER bytes of the
-presign — not the card path. Nothing anywhere verifies that a certificate
-chains, and the official validator stays a manual release gate.
+decided. That Java-side run does not touch PKCS#11: phase 2 is the JCE with the
+FNMT test key, so what it proves is the **contract** — a PKCS#1 over the DER
+bytes of the presign — not the card path.
+
+Since [#61](https://github.com/sgomez/rfirma/issues/61) the same lane also runs
+**the real card path**: `rfirma-app/src-tauri/tests/native_cycle.rs` drives the
+whole triphase cycle with phase 2 on the **SoftHSM token**, over the four
+visible-signature cases (no text and no rubric, text only, rubric only, both)
+plus a cosignature, with `pdfsig` on every PDF it produces. The rubric is
+checked by **rasterising** the page with `pdftoppm` and counting dark pixels
+inside the box — `pdftotext` cannot see an image and gives a false negative
+(TD-03). The three session-seal invariants of
+[ADR-0016](../adr/0016-sello-de-sesion-una-sola-invariante.md) — signing
+instant, time zone, effective `extraParams` — are covered as **expected
+failures**: each alters exactly that field of the real seal and asserts the
+postsign aborts, because the bug it guards against is a postsign that completes
+without error and leaves a `Digest Mismatch` PDF nobody can explain.
+
+Nothing anywhere verifies that a certificate **chains**: without the FNMT CA in
+the store `pdfsig` will always report the signature as not verified against a
+trust root, so the tests deliberately assert cryptographic validity and nothing
+more.
+
+### The manual gate, and how to reach it
+
+The official validator (VALIDe) stays a **manual release gate** — network, web,
+no stable API (TD-04) — run by a person once per `v*` tag. A green check does
+**not** demonstrate what the milestone's done-criterion promises.
+
+The PDF that goes to it is `manual-gate.pdf`: the maximal case, a box with
+**both** text and rubric, produced by
+`full_cycle::a_signature_with_text_and_rubric_is_the_pdf_of_the_manual_gate`.
+It lands in the test's `CARGO_TARGET_TMPDIR`
+(`rfirma-app/src-tauri/target/tmp/manual-gate.pdf` today), the test prints its
+absolute path, and the slow lane uploads it as the workflow artifact
+**`pdf-puerta-manual`**. So closing the gate is: run the slow lane (tag, manual
+dispatch, or a PR labelled `native`), download that artifact, upload it to
+VALIDe. If the maximal case validates, the other three are subsets of it.
 
 **The fast lane does not build the native library, deliberately**, so it sets
 `RFIRMA_SKIP_NATIVE=1` to skip the guard `just build` performs by
