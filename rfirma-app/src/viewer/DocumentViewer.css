@@ -16,7 +16,14 @@
   background: var(--rf-surface);
 }
 
+/* Las filas vuelven a `auto` a propósito. `.viewer` las fija en `1fr`, y una
+   pista de `1fr` se come todo el espacio libre: con ella `place-content` no
+   tiene hueco que repartir y queda inerte —la caja pegada arriba y la línea de
+   privacidad descolgada al fondo—. Con las dos filas a su tamaño, el hueco
+   sobrante existe y `place-content: center` lo reparte, que es la pila
+   centrada del artboard (`EstadoVacio.dc.html:147`). */
 .viewer--empty {
+  grid-template-rows: auto;
   place-content: center;
   justify-items: center;
   gap: var(--rf-space-md);
@@ -81,7 +88,9 @@
 
 .viewer__box {
   position: absolute;
-  box-sizing: border-box;
+  /* El `box-sizing: border-box` que este recuadro necesita —el rectángulo que
+     se pinta es el que se firma, borde incluido— ya lo da el reinicio de
+     `app.css` para toda la página; aquí sobraba repetirlo. */
   border: 2px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-sm);
   /* El recuadro va **translúcido** y no con el `--rf-surface` liso del
@@ -142,6 +151,9 @@
   border-radius: var(--rf-radius-pill);
   background: var(--rf-surface);
   box-shadow: var(--rf-shadow-elevated);
+  /* Como en el artboard (`EstadoDocumentoCargado.dc.html:219`): la barra es una
+     sola línea y el «de 27» nunca parte. */
+  white-space: nowrap;
 }
 
 /* Cada botón de la barra es un círculo de 32 px: el icono va dentro sin
@@ -158,9 +170,12 @@
 /* Ocupa lo mismo con 4 páginas que con 400: el número se escribe, no se elige
    de una pastilla por página. La pastilla del artboard es de 34×30 px con el
    número a 13 px en negrita, más apretada que un `.rf-input` de 44 px: la barra
-   flotante entera mide 40 px de alto y un campo de 44 no cabe dentro. */
+   flotante entera mide 40 px de alto y un campo de 44 no cabe dentro.
+   El **alto** es el suyo, 30 px. El **ancho** no: el artboard dibuja un
+   `<span>` de 34 px que solo muestra el número, y esto es un `<input>` en el
+   que se escribe, con su cursor y sitio para tres cifras sin que el texto
+   baile. 56 px es esa diferencia, declarada aquí y en la ficha (ID-44). */
 .viewer__page {
-  min-width: 34px;
   width: 3.5rem;
   height: 30px;
   min-height: 30px;
@@ -169,6 +184,18 @@
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+  /* Las flechas de la plataforma no caben en una pastilla de 30 px y el
+     artboard la dibuja lisa: se sube y se baja de página con los cuatro
+     botones de la barra, que es el gesto que el artboard sí dibuja. El campo
+     sigue siendo `type="number"`, así que el teclado y el lector de pantalla
+     no pierden nada. */
+  appearance: textfield;
+}
+
+.viewer__page::-webkit-outer-spin-button,
+.viewer__page::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
 }
 
 /* La fila del número y su «de N» comparte el relleno lateral del artboard. */

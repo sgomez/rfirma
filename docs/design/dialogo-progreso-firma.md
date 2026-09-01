@@ -43,8 +43,10 @@ texto en negrita), pendiente (círculo hueco y texto atenuado).
   trazo 2; la etapa en curso, un disco macizo de 10 px en `--rf-primary`; la
   pendiente, un aro de 10 px con borde `--rf-border-strong`. Son `<svg>` y
   formas maquetadas, no los glifos `✓ ● ○`.
-- La etapa en curso va a peso 700 y en `--rf-primary`; la pendiente, en
-  `--rf-text-muted`.
+- La etapa en curso va a **peso 700, y su texto no se tiñe**: el `--rf-primary`
+  es solo de su marca, el disco macizo. Es lo que dibuja el artboard
+  (`EstadoFirmando.dc.html:423`, `font-weight:700` y ningún color) y lo que
+  hace el CSS. La pendiente sí lleva el texto en `--rf-text-muted`.
 - **Barra**: 4 px de alto, `--rf-radius-pill`, canal `--rf-border-subtle` y
   relleno `--rf-primary`.
 

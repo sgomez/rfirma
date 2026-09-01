@@ -185,6 +185,22 @@
   border: 0;
 }
 
+/* La casilla y su ayuda son una columna, con la ayuda a 2 px del rótulo y
+   sangrada hasta la columna del texto —los 18 px del cuadrado más los 8 que lo
+   separan—. El artboard mete la ayuda dentro de esa columna
+   (`EstadoDocumentoCargado.dc.html:322`); aquí es hermana del `<label>` para
+   que no entre en el nombre accesible de la casilla, y la sangría es lo que la
+   deja en la misma columna que el rótulo en vez de bajo el cuadrado. */
+.panel__checkbox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel__checkbox-hint {
+  padding-left: calc(18px + var(--rf-space-xs));
+}
+
 .panel__checkbox-label {
   display: flex;
   gap: var(--rf-space-xs);

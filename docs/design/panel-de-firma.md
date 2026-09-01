@@ -50,7 +50,12 @@ antes de firmar, no después. Lo fija el
 - **Casillas del contenido**: cuadrado de 18 px con `--rf-radius-sm`, contorno
   `--rf-border-strong` cuando está vacío y relleno `--rf-primary` con la marca
   de verificación de 12 px (trazo 3) cuando está marcado. Fila de 24 px de alto
-  mínimo, con 8 px entre la casilla y su texto.
+  mínimo, con 8 px entre la casilla y su texto. La ayuda de la casilla —cuando
+  la lleva, como «Elige antes una imagen»— va **2 px debajo del rótulo y en su
+  misma columna**: 26 px de sangría, los 18 del cuadrado más los 8 que lo
+  separan del texto. Es hermana del `<label>`, no va dentro, para que no entre
+  en el nombre accesible de la casilla; la sangría es lo que la deja donde el
+  artboard la dibuja.
 - **Interruptor**: pastilla de 40×24 px con el pomo de 16 px. Va **delante**
   del texto, **a 8 px** de él. Es el mismo componente que el de Preferencias,
   pero no la misma separación: allí el artboard lo dibuja con `rf-gap-sm`

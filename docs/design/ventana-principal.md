@@ -51,6 +51,14 @@ Sobre la ventana pueden abrirse cuatro diálogos, que la oscurecen sin
 desmontarla: [PIN](dialogo-pin.md), [progreso de firma](dialogo-progreso-firma.md),
 [preferencias](preferencias.md) y [acerca de](acerca-de.md).
 
+**«Sobre» es literal, y no lo da el bundle.** Los cuatro se montan como
+hermanos de la ventana, no dentro de ella, y `.rf-scrim` en el bundle es solo
+el color del velo. Quien lo coloca —`position: fixed`, `inset: 0`, el diálogo
+centrado y por encima del menú de la cabecera— es `rfirma-app/src/app.css`.
+Sin esa regla los diálogos se pintan **en flujo**, detrás de la ventana y por
+debajo del pliegue, con la banda oscura del alto de su contenido: ni
+superposición, ni ventana atenuada, ni centrado.
+
 ### Geometría
 
 - Cabecera de 56 px, borde inferior de 1 px en `--rf-border-subtle`.

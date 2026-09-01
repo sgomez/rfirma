@@ -30,7 +30,9 @@ barra.
   abajo: el icono de subir de 28 px teñido con `--rf-text-muted`, el texto en
   `.rf-title` centrado y la línea de apoyo «Se abrirá el explorador de
   archivos» en `.rf-prose rf-text-muted`. Debajo de la caja, a 24 px, la línea
-  de privacidad, también en `.rf-prose rf-text-muted`.
+  de privacidad, también en `.rf-prose rf-text-muted`. Las dos piezas son una
+  pila **centrada en el visor**, vertical y horizontalmente: el hueco sobra por
+  igual arriba y abajo, no queda todo debajo de la caja.
 - Es la única zona de soltar con borde de 2 px y radio `xl`; la de la
   [bandeja](bandeja-de-documentos.md) es de 1 px y radio `md`. La diferencia es
   deliberada: una es la entrada principal de la pantalla vacía y la otra un
@@ -43,11 +45,20 @@ barra.
   izquierdo** del recuadro (a −2 px, no centrada), con 3 px de relleno
   vertical y 6 px de horizontal, el rótulo a 8 px en peso 700 y la cruz de
   cuatro puntas de 14 px a 4 px del rótulo.
-- **Número de página**: pastilla de 34 × 30 px con `--rf-radius-sm` y el
+- **Número de página**: pastilla de **56 × 30 px** con `--rf-radius-sm` y el
   número a 13 px en peso 700 — más apretada que un `.rf-input` corriente, que
   mide 44 px de alto y no cabe dentro de una barra de 40. El «de 27» que la
   sigue va en `.rf-body rf-text-muted`, y el porcentaje del zoom ocupa 44 px
-  como mínimo, también en peso 700.
+  como mínimo, también en peso 700. La barra entera lleva `white-space: nowrap`:
+  es una sola línea y el «de 27» no parte nunca.
+  **El ancho es la única medida de la barra que no es la del canvas** (ID-44):
+  el artboard dibuja un `<span>` de 34 px que solo muestra el número, y aquí es
+  un `<input>` en el que se escribe, con su cursor y sitio para tres cifras sin
+  que el número baile al pasar de 9 a 100. El alto sí es el suyo, 30 px. Y la
+  pastilla va lisa como en el canvas: las flechas de la plataforma se apagan
+  con `appearance: textfield` —no caben en 30 px— y de página se cambia con los
+  cuatro botones de la barra, que es el gesto que el artboard dibuja. El campo
+  sigue siendo `type="number"`, así que el teclado no pierde nada.
 
 ### El recuadro va vacío, y por qué (ID-44)
 

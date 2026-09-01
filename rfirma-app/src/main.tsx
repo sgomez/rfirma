@@ -4,6 +4,10 @@
 // Con el mismo peso de selector gana el último que se emite, así que emitir el
 // bundle después anularía en silencio media transcripción.
 import "./design-system/index.css";
+// Y justo después, lo que el bundle no trae y toda la pantalla necesita: el
+// modelo de caja, el margen del documento y la colocación del velo. Va detrás
+// del bundle porque son ajustes sobre él (ver `app.css`).
+import "./app.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";

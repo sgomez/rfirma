@@ -473,7 +473,7 @@ function Checkbox({
         <span className="rf-prose">{label}</span>
       </label>
       {hint && (
-        <p className="rf-hint" id={hintId}>
+        <p className="rf-hint panel__checkbox-hint" id={hintId}>
           {hint}
         </p>
       )}

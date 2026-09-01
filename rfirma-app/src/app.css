@@ -1,0 +1,66 @@
+/*
+ * Lo que el bundle del sistema de diseño no trae y toda la aplicación
+ * necesita: el modelo de caja, el margen del documento y la colocación del
+ * velo de los diálogos.
+ *
+ * POR QUÉ AQUÍ Y NO EN `bundle/`: el bundle es normativo y está sellado
+ * (ID-47, ID-56, #85). Solo se cambia en el proyecto de diseño y se reexporta
+ * entero; editarlo aquí sale en rojo en `just lint`. El ID-57 dice además que
+ * la maquetación propia va en el CSS de la aplicación, y esto es maquetación
+ * propia: son las tres reglas que cada artboard lleva en su `helmet` —el
+ * preámbulo que la herramienta de diseño le pone a cada lienzo— y que por eso
+ * nunca llegaron al bundle.
+ *
+ * Se importa en `main.tsx` **después** del bundle: son ajustes sobre él, no un
+ * sustituto.
+ */
+
+/*
+ * `box-sizing: border-box` para todo, como `EstadoDocumentoCargado.dc.html:44`.
+ *
+ * Sin esta regla ninguna de las medidas transcritas del canvas es la que se
+ * pinta: `.switch__track` mide 48×32 en vez de 40×24, la zona de soltar del
+ * visor 620×400 en vez de 520×300, y el cuadrado de la casilla 20 px en vez de
+ * 18. Los comentarios del CSS de pantalla hacen la cuenta con el borde y el
+ * relleno **dentro** (el pomo de 16 px sale de 24 − 2·1 de borde − 2·3 de
+ * relleno), así que la regla no es un gusto: es la premisa de todas ellas.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/*
+ * `index.html` pone `.rf-root` en el `<body>`, y `.rf-root` no fija el margen.
+ * Sin esto la ventana va desplazada los 8 px del margen por omisión del
+ * navegador y el `height: 100dvh` de `.main-window` desborda justo esos 8.
+ */
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+/*
+ * El velo de los diálogos.
+ *
+ * El bundle define `.rf-scrim` solo como color (`_ds_bundle.css:204`); el
+ * `helmet` del artboard es el que lo coloca (`EstadoPin.dc.html:101`). Sin la
+ * colocación, los cuatro diálogos —PIN, progreso, preferencias y acerca de— se
+ * montan **en flujo**, detrás de la ventana y por debajo del pliegue: una
+ * banda oscura del alto de su contenido, sin superponerse a nada.
+ *
+ * `fixed` y no `absolute`: los diálogos son hermanos de `<MainWindow>` en
+ * `App.tsx`, no hijos suyos, así que no hay antepasado posicionado del que
+ * colgar. El `z-index` los pone por encima del menú de la cabecera, que es lo
+ * más alto de la ventana (`Header.css:60`, `z-index: 10`).
+ */
+.rf-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
