@@ -22,8 +22,10 @@ Repo-specific facts:
 - **Merge policy support**: both `merge: auto` and `merge: manual`.
 - **Publishing commits**: `git push origin <branch>` (from a local
   `fix/pr-<PR>` branch: `git push origin HEAD:<pr-branch>`).
-- **CI**: GitHub Actions, workflow `CI` (`.github/workflows/ci.yml`). See
-  the section below for what it does and does not verify.
+- **CI**: GitHub Actions, workflow `CI` (`.github/workflows/ci.yml`), on
+  every pull request. See "Checking the change's CI status" below for how to
+  read it, and "What green actually means" for what it does and does not
+  verify.
 
 ## El guardián del worktree
 
@@ -43,23 +45,54 @@ queda dentro del worktree» — sepáralos en llamadas independientes) y un
 `python3 - <<'PY' ... PY` con varias rutas dentro (escribe el script en el
 directorio de scratchpad y ejecútalo por su ruta, en vez de pasarlo inline).
 
-## CI
+## Checking the change's CI status
 
-The orchestrator waits on the `CI` workflow before merging. Read the checks
-with:
+Three operations read the same `CI` workflow, for different readers.
 
-```bash
-gh pr checks <PR> --watch
-gh run view <RUN_ID> --log-failed
-```
+- **Wait for the checks and gate the merge** (the orchestrator, before
+  merging):
 
-A red check blocks the merge; take the fix path rather than merging past it.
+  ```bash
+  gh pr checks <PR> --watch --fail-fast   # exits non-zero if any check fails
+  ```
+
+  A non-zero exit is **not** a merge conflict: it is a red build, and the
+  answer is another fix cycle, never a merge-fix job.
+
+- **Read the checks already recorded for the head sha** (the reviewer, before
+  deciding whether to run the suite locally):
+
+  ```bash
+  gh pr checks <PR> --json name,state,link --jq \
+    '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")]'
+  ```
+
+  Empty output with at least one check present = green. Any entry is a
+  failing or still-running check; its `link` is the job URL to quote. Green
+  here does **not** license skipping the local run in this repo — read "What
+  green actually means" below before deciding.
+
+- **Classify a red — did the failing job actually execute?** (any reader,
+  before spending a fix cycle on it): take `<run-id>` from the failing
+  check's `link` (`…/actions/runs/<run-id>/job/<job-id>`), then
+
+  ```bash
+  gh run view <run-id> --json conclusion,jobs --jq '{run: .conclusion,
+    failed: [.jobs[] | select(.conclusion != "success" and .conclusion != "skipped")
+    | {name, steps: (.steps | length)}]}'
+  ```
+
+  A failed job with `steps > 0` ran against the change: **code-red** — a
+  fix cycle, and the failing job's URL is what a fixer needs (the raw log
+  stays out of the orchestrator's context). Every failed job at `steps: 0`,
+  a run conclusion of `startup_failure`, or a job no runner ever picked up:
+  **infra-red** — the job never started (runner offline, Actions minutes
+  exhausted) and the red says nothing about the code.
 
 ### What green actually means
 
-**Still narrow, but no longer only Java.** As of
-[issue #47](https://github.com/sgomez/rfirma/issues/47) the fast lane runs
-`just check` across all three toolchains. It verifies:
+**Narrow.** The fast lane runs `just check` across all three toolchains. It
+verifies:
 
 - the Java bridge **compiles** under GraalVM CE 25 with `-Xlint:all`;
 - AutoFirma's dependencies **resolve and build** on a clean runner
@@ -86,17 +119,16 @@ A red check blocks the merge; take the fix path rather than merging past it.
   Rust, `-DexcludedGroups=` on Maven), and the same CRAP measurement
   **without** the FFI exclusion.
 
-The fast lane still does **not** verify that a signature is valid or that a
-PDF opens: **the slow lane now does**, since
-[#48](https://github.com/sgomez/rfirma/issues/48) — `just test-native` signs a
-PDF end to end through the Java bridge and `pdfsig` validates it, which is the
-automatic oracle [ADR-0014](../adr/0014-gradas-de-prueba-y-puerta-de-calidad.md)
+The fast lane does **not** verify that a signature is valid or that a PDF
+opens; **the slow lane does**: `just test-native` signs a PDF end to end
+through the Java bridge and `pdfsig` validates it, which is the automatic
+oracle [ADR-0014](../adr/0014-gradas-de-prueba-y-puerta-de-calidad.md)
 decided. That Java-side run does not touch PKCS#11: phase 2 is the JCE with the
 FNMT test key, so what it proves is the **contract** — a PKCS#1 over the DER
 bytes of the presign — not the card path.
 
-Since [#61](https://github.com/sgomez/rfirma/issues/61) the same lane also runs
-**the real card path**: `rfirma-app/src-tauri/tests/native_cycle.rs` drives the
+The same lane also runs **the real card path**:
+`rfirma-app/src-tauri/tests/native_cycle.rs` drives the
 whole triphase cycle with phase 2 on the **SoftHSM token**, over the four
 visible-signature cases (no text and no rubric, text only, rubric only, both)
 plus a cosignature, with `pdfsig` on every PDF it produces. The rubric is
@@ -139,8 +171,7 @@ every compile. Do not copy that variable into a local shell profile: it is the
 CI's exception, not a default.
 
 **So the reviewer still installs and runs everything itself** — a green check
-is not a substitute. What is green now is *the toolchains and the scaffolding*,
-not the product.
+is not a substitute for it.
 
 ### Two lanes, split by speed
 
@@ -153,13 +184,10 @@ to be fast.
 | slow | `Imagen nativa` (`native-image` itself is 1 m 22 s) | tags `v*`, manual dispatch, weekly cron, or a PR labelled `native` |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
 
-The fast lane was **~48 s** when it was Java alone (measured under #11). #47
-added the Node and Rust toolchains, their system dependencies
-(`libwebkit2gtk-4.1-dev` and friends), and two `cargo binstall`ed binaries, and
-measured **~9 min cold, 3-4 min warm** (2 m 59 s on one warm run, 4 m 11 s on
-another). Pretending it is still 48 s would be a lie, so: it is not. **3-4 min
-is the number to hold**, because that is what a second PR on the same branch
-actually costs.
+The fast lane costs **~9 min cold and 3-4 min warm** — three toolchains, their
+system dependencies (`libwebkit2gtk-4.1-dev` and friends) and two
+`cargo binstall`ed binaries. **3-4 min is the number to hold**: it is what a
+second PR on the same branch actually costs.
 
 Almost all of it is Rust, and almost all of *that* is compiling the Tauri
 dependency tree **four times** — `cargo clippy --all-targets`, `cargo build
@@ -172,15 +200,13 @@ will wait for, the thing to cut is the coverage build, not the caching** — the
 CRAP gate is the one piece of `just check` that pays for a whole extra
 compile.
 
-`native-image` fits comfortably on a standard runner — that question is
-settled — but the Java bridge will barely be touched once written, so
-rebuilding the image on every PR would cost several times the fast lane to
-learn nothing new. **If your PR touches the bridge, add the `native` label.**
-This is not a formality: on #73 the fast lane was green and the review
-verdict was CLEAN, and only the slow lane — triggered by adding the label —
-caught a real bug at the FFI boundary, twice, before the fix stuck. Without
-the label that PR would have merged broken and nothing short of the next
-tagged release or the weekly cron would have caught it.
+`native-image` fits comfortably on a standard runner, but the Java bridge is
+barely touched once written, so rebuilding the image on every PR would cost
+several times the fast lane to learn nothing new. **If your PR touches the
+bridge or the signing path, add the `native` label.** This is not a
+formality: without the label the slow lane **reports green having never run**,
+so a bug at the FFI boundary merges unseen and nothing short of the next
+tagged release or the weekly cron catches it.
 
 The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of
@@ -224,16 +250,32 @@ three-minute rebuild entirely: point `RFIRMA_LIB_DIR` at an
 already-built `librfirma_crypto.so` (or copy it into the worktree's
 `target/lib/rfirma`) and the tier C tests run against that.
 
+## Read the last reviewed revision
+
+The reviewer, to settle its scope (`review-pr` step 2) — GitHub records the
+sha each review was submitted against:
+
+```bash
+gh api "repos/{owner}/{repo}/pulls/<PR>/reviews" \
+  --jq 'map(select(.state != "PENDING")) | last | .commit_id // empty'
+```
+
+Empty = never reviewed (full scope). Otherwise the sha anchors the
+incremental diff, once `git merge-base --is-ancestor <sha> HEAD` confirms the
+branch was not rewritten under it.
+
 ## Is the change mergeable?
 
-Read before merging (the orchestrator, at the top of its checks gate):
+Read before waiting on anything (the orchestrator, at the top of its checks
+gate):
 
 ```bash
 gh pr view <PR> --json mergeStateStatus --jq .mergeStateStatus
 ```
 
-`DIRTY` = conflicts with the base — take the merge-fix path. `BEHIND` =
-mergeable but stale (`gh pr update-branch <PR>`). `CLEAN` = no conflict and
-checks passing. `UNSTABLE` = no conflict but a check is failing — read it
-before deciding. The review verdict and the checks are **both** gates, and
+`DIRTY` = conflicts with the base: GitHub runs **no checks** against it, so
+waiting for one can only time out. It is a conflict, never a red and never an
+un-startable CI — take the merge-fix path. `BEHIND` = mergeable but stale
+(`gh pr update-branch <PR>`). `CLEAN`/`UNSTABLE`/`BLOCKED` = the checks above
+are the question. The review verdict and the checks are **both** gates, and
 neither substitutes for the other: see "What green actually means" above.
