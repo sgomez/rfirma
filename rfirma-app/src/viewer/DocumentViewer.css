@@ -80,6 +80,7 @@
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-sm);
   box-shadow: var(--rf-shadow-card);
+  overflow: hidden;
 }
 
 .viewer__canvas {
