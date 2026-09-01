@@ -518,8 +518,6 @@ No hay Okular, Evince ni Acrobat en el equipo de desarrollo; sí Chrome, cuyo mo
 (**pdfium**) es distinto del `pdf.js` que ya se midió en el
 [#115](https://github.com/sgomez/rfirma/issues/115).
 
-![pages-all.pdf en Chrome: el recuadro en las tres páginas](assets/replicated-widget-driver/chrome-pdfium-pages-all.png)
-
 **pdfium pinta el recuadro en las tres páginas**, en la misma posición, como poppler. No
 aparece el comportamiento estrictamente conforme que se temía —pintarlo solo en la página
 del `/P`, dejando invisibles las otras dos estampaciones—: ninguno de los tres motores
@@ -536,6 +534,7 @@ cambiaría la recomendación: lo que la decide es que, al ser literalmente el mi
 el `/Rect` es forzosamente idéntico en todas las páginas, y ningún validador denuncia la
 estructura porque sobre la firma no hay nada que denunciar.
 
-> El banco de pruebas (los dos PDF firmados, el driver Java y los scripts) sigue **sin
-> fusionar**, en la rama `research/replicated-widget-pdfsig`. La captura de arriba sí viaja
-> con el informe.
+> El banco de pruebas sigue **sin fusionar**, en la rama
+> `research/replicated-widget-pdfsig`: los dos PDF firmados, el driver Java, los scripts y
+> la captura de Chrome que documenta lo de arriba
+> (`assets/replicated-widget-driver/chrome-pdfium-pages-all.png`).
