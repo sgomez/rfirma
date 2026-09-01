@@ -81,6 +81,16 @@ cinco auxiliares. Medido en
   de intervenir**. A cambio, todo lo que el arenero no expone hay que declararlo, y
   eso alcanza a cosas que fuera eran gratis: el módulo PKCS#11 lo empaqueta el propio
   flatpak, y los ficheros entran y salen por portales.
+- **Excepción consciente, desde el [#95](https://github.com/sgomez/rfirma/issues/95):**
+  el manifiesto declara `--filesystem=~/.mozilla/firefox:ro` y
+  `--filesystem=~/.pki/nssdb:ro`. Un almacén de certificados NSS **no es un
+  documento** y no hay portal que lo sirva; sin este permiso el flatpak no ve
+  ningún certificado del perfil de Firefox, que es exactamente lo que el
+  [#95](https://github.com/sgomez/rfirma/issues/95) mide y cierra. `:ro` es la
+  mitad importante de la concesión: rfirma necesita *leer* certificados y no
+  tiene ningún motivo para escribir en el perfil de Firefox ni en las claves de
+  quien firma. La entrada de **documentos** sigue entrando por portales, sin
+  cambios; esta excepción es solo para el almacén de certificados.
 - El PDF con rúbrica de imagen **deja de ser idéntico bit a bit** al que ensambla
   AutoFirma en una JVM completa, porque el codificador JPEG pasa a ser el de Rust. Sigue
   siéndolo frente a una JVM con el mismo recorte de dependencias, que es contra lo que
