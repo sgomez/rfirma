@@ -114,6 +114,54 @@ export const es = {
         title: "No hemos podido leer el certificado",
         body: "Lo que hay en la tarjeta no es un certificado que sepamos leer. Prueba con otro.",
       },
+      notAPdf: {
+        title: "Ese fichero no es un PDF",
+        body: "rFirma firma PDF. Elige un documento PDF y vuelve a intentarlo.",
+      },
+      documentEncrypted: {
+        title: "El PDF está protegido",
+        body: "Está cifrado o tiene los permisos restringidos, así que no se puede firmar. Ábrelo con su contraseña, guárdalo sin protección y vuelve a intentarlo.",
+      },
+      documentCertified: {
+        title: "El PDF está certificado",
+        body: "Su autor lo firmó prohibiendo los cambios, así que añadir una firma invalidaría la suya. Pídele una copia sin certificar.",
+      },
+      documentUnreadable: {
+        title: "No hemos podido leer el documento",
+        body: "Comprueba que sigue donde estaba y vuelve a abrirlo.",
+      },
+      boxOutOfPage: {
+        title: "El recuadro se sale de la página",
+        body: "Arrástralo dentro de la página y vuelve a firmar. Si lo dejásemos así, quedaría recortado en el PDF sin avisar.",
+      },
+      sealMismatch: {
+        title: "La firma se ha interrumpido a medias",
+        body: "Lo que preparamos al empezar y lo que hemos recibido al terminar no coinciden, así que hemos parado antes de escribir nada. Vuelve a firmar el documento.",
+      },
+      bridgeFailed: {
+        title: "No hemos podido preparar la firma",
+        body: "Ha fallado el componente que arma el PDF firmado. Vuelve a intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del fallo.",
+      },
+      folderMissing: {
+        title: "La carpeta de destino ya no está",
+        body: "No la creamos por ti: si la creásemos, el documento parecería guardado y no estaría. Vuelve a crearla o elige otra en Preferencias.",
+      },
+      notAFolder: {
+        title: "El destino no es una carpeta",
+        body: "Hay un fichero con ese nombre donde esperábamos una carpeta. Elige otro destino en Preferencias.",
+      },
+      folderUnreadable: {
+        title: "No hemos podido consultar la carpeta de destino",
+        body: "Puede ser cosa de los permisos o de una unidad que no responde. Elige otro destino en Preferencias.",
+      },
+      folderUnwritable: {
+        title: "No hemos podido guardar el documento firmado",
+        body: "La firma salió bien, pero el fichero no se ha podido escribir en la carpeta de destino. Elige otra en Preferencias y vuelve a firmar.",
+      },
+      noFreeName: {
+        title: "Ya hay demasiados documentos con ese nombre",
+        body: "Para no machacar ninguno, hemos parado. Mueve o renombra los anteriores y vuelve a firmar.",
+      },
     },
   },
   /**

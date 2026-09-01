@@ -43,6 +43,7 @@ function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
       rubric={null}
       rubricFailure={null}
       onChooseRubric={noop}
+      signedAt="31/08/26, 12:00:00"
       composer={composerOf(null)}
       destination={{ folder: "Documentos", writable: true }}
       onChangeDestination={noop}

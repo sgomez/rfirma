@@ -21,6 +21,18 @@ export interface Rubric {
 }
 
 /**
+ * El Base64 a secas, que es lo que viaja en `signatureRubricImage`.
+ *
+ * El puerto entrega un `data:` porque lo que la ventana hace con la rúbrica es
+ * **pintarla**; lo que el puente espera es la carga sin el prefijo. Recortarlo
+ * aquí, y no en cada llamante, es lo que impide que alguien mande el
+ * `data:image/jpeg;base64,` dentro del PDF.
+ */
+export function base64Of(rubric: Rubric): string {
+  return rubric.dataUrl.slice(rubric.dataUrl.indexOf(",") + 1);
+}
+
+/**
  * Los seis fallos de la rúbrica, con los mismos nombres que
  * `rubric::error::Situation`. Tres hablan de la imagen —el ADR-0012 no cuenta
  * más— y tres del disco. El reescalado no está: se hace en silencio, porque es

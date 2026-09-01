@@ -32,6 +32,10 @@ function adaptPage(page: PDFPageProxy): PdfPage {
   return {
     number: page.pageNumber,
     rotate: page.rotate,
+    // `pdf.js` tipa `view` como `number[]`, así que las cuatro esquinas salen
+    // opcionales aunque siempre estén. Un cero por omisión sería una caja
+    // inventada; el `?? 0` está para que `tsc` pase, y el caso no ocurre.
+    view: [page.view[0] ?? 0, page.view[1] ?? 0, page.view[2] ?? 0, page.view[3] ?? 0],
     getViewport: ({ scale }) => adaptViewport(page, scale),
     // `render` exige el `PageViewport` original, no una copia con los mismos
     // números, así que el nuestro guarda una referencia al suyo.

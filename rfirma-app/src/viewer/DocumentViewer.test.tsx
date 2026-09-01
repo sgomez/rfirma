@@ -38,6 +38,7 @@ function recordingDocument(pageCount = 3): Recorder {
   const pageOf = (number: number): PdfPage => ({
     number,
     rotate: 0,
+    view: [0, 0, 595, 842],
     getViewport: ({ scale }) => viewportAt(scale),
     render: ({ viewport }) => {
       let settle: () => void = () => {};

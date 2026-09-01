@@ -128,6 +128,26 @@ fn the_holder_is_readable_for_display_but_is_not_part_of_the_reference() {
     );
 }
 
+/// El emisor sale del **issuer** del DER, y en un certificado de persona física
+/// de la FNMT no hay otro sitio de donde sacarlo: su subject **no lleva `O=`**.
+/// Leerlo de ahí dejaba el panel en «Emitido por » y nada más.
+#[test]
+fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it_with() {
+    let certificate = certificate_labelled(ACTIVE);
+
+    let issuer = certificate.issuer().expect("el DER deberia leerse");
+    let subject = certificate.subject().expect("el DER deberia leerse");
+
+    assert!(
+        issuer.contains("AC FNMT Usuarios"),
+        "emisor leido: {issuer}"
+    );
+    assert!(
+        !subject.contains("O="),
+        "el subject de este certificado no lleva organizacion: {subject}"
+    );
+}
+
 #[test]
 fn listing_does_not_need_the_pin() {
     // No hay ninguna sesion iniciada en este proceso y aun asi hay certificados:

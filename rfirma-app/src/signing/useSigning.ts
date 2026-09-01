@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Certificate } from "./certificate";
 import { refusalFor, type SigningFailure } from "./failure";
-import type { SignedDocument, SigningBackend, SigningStage } from "./flow";
+import type { SignedDocument, SigningBackend, SigningOrder, SigningStage } from "./flow";
 import { belongsToPinDialog, type TokenFailure } from "./token";
 
 /**
@@ -21,13 +21,26 @@ export type SigningState =
 export interface Signing {
   state: SigningState;
   /**
-   * Arranca por la prefirma. Antes comprueba el certificado: uno caducado o
-   * revocado se avisa **sin** llegar a pedir el PIN.
+   * Arranca por la prefirma con la orden completa. Antes comprueba el
+   * certificado: uno caducado o revocado se avisa **sin** llegar a pedir el
+   * PIN.
+   *
+   * La orden va entera en esta llamada y no se guarda aquí: entre la prefirma
+   * y la postfirma el ciclo vive en el backend, con su sello de sesión, y la
+   * ventana no tiene nada que pueda alterar (ADR-0016).
    */
-  start: (certificate: Certificate | null) => Promise<void>;
+  start: (certificate: Certificate | null, order: SigningOrder) => Promise<void>;
   /** El PIN tecleado: firma en la tarjeta y ensambla. */
   submitPin: (pin: string) => Promise<void>;
-  /** Cancelar en el diálogo del PIN, o cerrar un fallo: se vuelve al panel. */
+  /**
+   * Cancelar en el diálogo del PIN, o cerrar un fallo: se vuelve al panel **y
+   * el backend olvida el ciclo a medias**.
+   *
+   * Las dos cosas, no solo la primera: volver al panel sin avisar al backend
+   * dejaba el `OpenCycle` entero vivo en memoria —el PDF, los atributos a
+   * firmar, el sello y el PKCS#1— hasta que se cerrara la ventana o hasta que
+   * otra firma lo pisara.
+   */
   cancel: () => void;
 }
 
@@ -52,7 +65,7 @@ export function useSigning(backend: SigningBackend): Signing {
   const routed = (failure: TokenFailure): SigningState =>
     belongsToPinDialog(failure) ? { kind: "pin", failure } : { kind: "failed", failure };
 
-  const start = async (certificate: Certificate | null) => {
+  const start = async (certificate: Certificate | null, order: SigningOrder) => {
     // El estado del certificado se sabe leyendo su DER, sin tocar la tarjeta:
     // pedir el PIN para luego fallar por una fecha ya conocida es hacer teclear
     // el secreto que desbloquea la clave para nada.
@@ -62,7 +75,7 @@ export function useSigning(backend: SigningBackend): Signing {
       return;
     }
     setState({ kind: "running", stage: "presign" });
-    const presigned = await backend.presign();
+    const presigned = await backend.presign(order);
     setState(presigned.ok ? { kind: "pin", failure: null } : routed(presigned.failure));
   };
 
@@ -80,7 +93,14 @@ export function useSigning(backend: SigningBackend): Signing {
     );
   };
 
-  const cancel = () => setState({ kind: "idle" });
+  const cancel = () => {
+    setState({ kind: "idle" });
+    // De cortesía y sin esperar: la ventana ya está en el panel, y si el
+    // backend no puede olvidar el ciclo no hay nada que contarle a nadie. El
+    // `catch` está porque una promesa rechazada y sin dueño tumba el proceso
+    // de pruebas, no porque haya un fallo que tragarse.
+    void backend.discard().catch(() => {});
+  };
 
   return { state, start, submitPin, cancel };
 }

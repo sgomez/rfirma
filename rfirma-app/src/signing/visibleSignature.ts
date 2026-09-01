@@ -53,13 +53,38 @@ export const DEFAULT_VISIBLE_SIGNATURE: VisibleSignature = {
  */
 export interface Layer2Composer {
   /** El texto tal cual irá en `layer2Text`, o `null` si aún no hay backend. */
-  compose(signature: VisibleSignature): Promise<string | null>;
+  compose(signature: VisibleSignature, signer: SigningIdentity): Promise<string | null>;
 }
 
 /**
- * El compositor mientras no hay orden expuesta que lo pida: no compone nada y
- * la vista previa se queda en su estado vacío. Doble de pruebas y relleno de
- * `main.tsx`, igual que `emptyPdfSource`.
+ * Con qué y cuándo se firma, que es lo que le faltaba al compositor.
+ *
+ * El recuadro lleva el nombre y el DNI del titular —que solo conoce quien lee
+ * el DER, o sea el backend— y la fecha. Por el puerto viajan la **etiqueta**
+ * del certificado, con la que el backend lo reencuentra, y el **instante ya
+ * formateado**.
+ *
+ * `signedAt` tiene que ser **el mismo** que se envíe a firmar. El recuadro se
+ * compone antes de la prefirma y el PDF ya no se vuelve a tocar, así que
+ * componer la vista previa con una hora y firmar con otra sería enseñar algo
+ * que el PDF no va a tener. Por eso se fija una vez y se pasa a las dos.
+ */
+export interface SigningIdentity {
+  /** El `CKA_LABEL` del certificado elegido. */
+  certificate: string;
+  /** La fecha y hora, ya formateadas para el recuadro. */
+  signedAt: string;
+  /** El idioma en el que van las etiquetas del recuadro. */
+  language: string;
+}
+
+/**
+ * Un compositor que no compone nada: la vista previa se queda en su estado
+ * vacío.
+ *
+ * Desde el #60 el autoritativo es `tauriLayer2Composer`, que pide el texto a
+ * `signing::layer2_text`; esto queda como doble de pruebas, igual que
+ * `emptyPdfSource`.
  */
 export function emptyLayer2Composer(): Layer2Composer {
   return { compose: async () => null };

@@ -8,10 +8,8 @@ import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { inMemoryLanguagePreference } from "./i18n/preference";
 import { inMemoryPreferences } from "./preferences/preferences";
-import { emptyCertificateStore } from "./signing/certificate";
-import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
-import { emptyLayer2Composer } from "./signing/visibleSignature";
+import { tauriCertificateStore, tauriLayer2Composer, tauriSigningBackend } from "./signing/tauri";
 import { emptyPdfSource } from "./viewer/source";
 
 const root = document.getElementById("root");
@@ -19,11 +17,12 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Las cinco dependencias que tocan el disco viven todavía en memoria: quien
-// las guarda es el backend —`memory::Configuration`, `memory::State`, el portal
-// de ficheros— y no hay ninguna orden expuesta que las lea ni las escriba. La
-// del visor es `emptyPdfSource`: el PDF se pintará con `pdfjsSource` en cuanto
-// haya por dónde pedirle los bytes al portal.
+// Los tres puertos de firma ya están enchufados a las órdenes del #60:
+// `tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`. Los
+// que siguen en memoria son los que tocan el disco por sitios que todavía no
+// tienen orden expuesta —los recientes, los ajustes, el portal de ficheros y la
+// rúbrica—, más la del visor, `emptyPdfSource`: el PDF se pintará con
+// `pdfjsSource` en cuanto haya por dónde pedirle los bytes al portal.
 // Cuando la haya, se sustituyen aquí y en ningún otro sitio: ni la ventana ni
 // sus pruebas conocen a Tauri.
 //
@@ -58,10 +57,10 @@ createRoot(root).render(
         pdfs={emptyPdfSource()}
         preferences={preferences}
         destinations={[DOCUMENTS_FOLDER]}
-        certificates={emptyCertificateStore()}
+        certificates={tauriCertificateStore()}
         rubrics={emptyRubricPicker()}
-        composer={emptyLayer2Composer()}
-        signer={unavailableSigningBackend()}
+        composer={tauriLayer2Composer()}
+        signer={tauriSigningBackend()}
       />
     </LanguageProvider>
   </StrictMode>,

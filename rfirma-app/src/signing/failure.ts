@@ -37,10 +37,19 @@ export function refusalFor(certificate: Certificate | null): SigningFailure | nu
     case "expired":
       return { situation: "certificateExpired", detail: `notAfter=${status.notAfter}` };
     case "notYetValid":
-      return { situation: "certificateNotYetValid", detail: "notBefore en el futuro" };
+      return { situation: "certificateNotYetValid", detail: `notBefore=${status.notBefore}` };
     case "revoked":
       return { situation: "certificateRevoked", detail: `revocado: ${status.reason}` };
+    case "unreadable":
+      // El detalle es el del decodificador de Rust, tal cual. Fabricarlo aquí
+      // —«el DER no es un X.509 legible»— llenaba con prosa nuestra el hueco
+      // que el ID-29 reserva al texto original crudo, y dejaba el informe de
+      // fallo sin lo único que servía para diagnosticarlo.
+      return { situation: "certificateUnreadable", detail: status.detail };
     default:
-      return { situation: "certificateUnreadable", detail: "el DER no es un X.509 legible" };
+      // `valid` ya salió por `isUsable`, así que esta rama es inalcanzable.
+      // Está para que una sexta variante del estado no se cuele en silencio
+      // como «se puede firmar»: `tsc` la exige aquí en cuanto se añada.
+      return { situation: "unknown", detail: `estado no clasificado: ${status.kind}` };
   }
 }

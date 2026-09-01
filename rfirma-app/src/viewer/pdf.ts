@@ -47,6 +47,17 @@ export interface PdfPage {
   readonly number: number;
   /** La `/Rotate` de la página, en grados. */
   readonly rotate: number;
+  /**
+   * La caja de la página, `[x0, y0, x1, y1]` en espacio de usuario: el `view`
+   * de `pdf.js`, que es la `CropBox` recortada a la `MediaBox`.
+   *
+   * Está aquí porque la conversión del recuadro a puntos PAdES la hace el
+   * backend (`signing::placement`) y **necesita la caja y la rotación**, y
+   * quien tiene el PDF abierto es este visor. Releerlas en Rust exigiría un
+   * analizador de PDF —que este proyecto no tiene, y a propósito— para acabar
+   * en una segunda opinión sobre la misma página.
+   */
+  readonly view: readonly [number, number, number, number];
   getViewport(options: { scale: number }): Viewport;
   /**
    * Pinta la página sobre el lienzo.
