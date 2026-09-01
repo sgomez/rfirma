@@ -9,10 +9,10 @@ no sirve de oráculo porque **no tiene lista de recientes en absoluto** (sí
 guarda la configuración de firma visible, en `java.util.prefs`, y la rúbrica
 **como ruta**, que es justo lo que aquí se rechaza).
 
-Se recuerdan **cinco cosas**, partidas en dos grupos según quién las decide.
+Se recuerdan **seis cosas**, partidas en dos grupos según quién las decide.
 
-**Configuración** (la elige el usuario): el idioma, dónde se guarda el documento
-firmado, los interruptores, y el fichero de la rúbrica.
+**Configuración** (la elige el usuario): el idioma, el tema, dónde se guarda el
+documento firmado, los interruptores, y el fichero de la rúbrica.
 
 **Estado** (lo acumula la aplicación sola): los documentos recientes, la última
 configuración de firma visible y el certificado usado la última vez.
@@ -110,3 +110,13 @@ red.
   ([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)).
 - El hito v0.1 es solo Linux; las columnas de macOS y Windows se registran ahora
   porque el momento de saberlo es antes de escribir `paths.rs`, no después.
+
+## Enmienda: el tema
+
+La configuración gana una sexta memoria, **el tema** (`system`, `light`,
+`dark`), que no estaba cuando se escribió este ADR. Es del grupo de la
+configuración por la misma razón que el idioma: lo elige el usuario y la
+aplicación obedece. Por omisión vale `system`, que **no es «claro»** sino no
+forzar nada y dejar que mande `prefers-color-scheme`: es lo que hacía la ventana
+antes de que el ajuste existiera, y abrir en claro dentro de un escritorio
+oscuro parece un fallo.

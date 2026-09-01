@@ -8,7 +8,15 @@
  * donde se puede y el nombre donde no sería la misma pantalla contando cosas
  * distintas según el empaquetado (ADR-0011).
  */
+import type { Theme } from "./theme";
+
 export interface Preferences {
+  /**
+   * El tema de la ventana. Ver [`Theme`]. Está aquí y no en un puerto aparte
+   * —al contrario que el idioma— porque nació con este diálogo: no hay ningún
+   * otro sitio de la aplicación que lo lea.
+   */
+  theme: Theme;
   /**
    * El **nombre** de la carpeta donde cae el documento firmado —su último
    * segmento—, nunca su ruta.
@@ -30,10 +38,12 @@ export interface Preferences {
 /**
  * De dónde salen los ajustes y a dónde vuelven.
  *
- * Puerto, y no una llamada a Tauri, por lo mismo que `LanguagePreference`:
- * quien los guarda es `memory::Memory::remember_configuration`, que además es
- * quien borra el estado al apagarse «Recordar mi actividad», y todavía no hay
- * orden expuesta que lo llame.
+ * Puerto, y no una llamada a Tauri, por lo mismo que `LanguagePreference`: la
+ * ventana no conoce a Tauri, y quien elige entre `tauriPreferences` y el doble
+ * de memoria es `main.tsx` (ID-75). Debajo son `read_configuration` y
+ * `write_configuration`, que pasan por `memory::Memory::remember_configuration`
+ * —el único sitio donde el borrado del estado al apagarse «Recordar mi
+ * actividad» no se puede olvidar—.
  */
 export interface PreferencesStore {
   read(): Promise<Preferences>;

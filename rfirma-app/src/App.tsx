@@ -9,6 +9,7 @@ import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
 import { PreferencesDialog } from "./preferences/PreferencesDialog";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
+import { applyTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
@@ -145,6 +146,14 @@ export function App({
     };
   }, [preferences]);
 
+  // El tema elegido, puesto en el documento. Es lo único de los ajustes que no
+  // se pinta dentro de la ventana sino **sobre** ella: los tokens de color
+  // cuelgan de `<html>`, así que quien lo aplica tiene que salir del árbol de
+  // React. Mientras los ajustes se leen no se toca nada, y manda el sistema.
+  useEffect(() => {
+    if (settings) applyTheme(settings.theme);
+  }, [settings]);
+
   // El documento activo, abierto para pintarlo. Cambiar de documento tira el
   // recuadro: la posición es de este documento y de esta página.
   useEffect(() => {
@@ -259,9 +268,24 @@ export function App({
     }
   };
 
+  /**
+   * Un ajuste cambia **en cuanto se toca**, y solo se queda si el disco lo
+   * acepta.
+   *
+   * Si guardar falla —el fichero de configuración no se deja escribir— el
+   * diálogo vuelve a lo que había: una ventana que enseña un ajuste que el
+   * disco no tiene estaría mintiendo sobre la sesión siguiente. El detalle
+   * crudo se pierde aquí porque todavía no hay dónde enseñarlo; lo que no se
+   * pierde es la verdad de lo que hay guardado.
+   */
   const changeSettings = async (next: Preferences) => {
+    const before = settings;
     setSettings(next);
-    await preferences.save(next);
+    try {
+      await preferences.save(next);
+    } catch {
+      setSettings(before);
+    }
   };
 
   /**
@@ -302,7 +326,15 @@ export function App({
   // Olvidar la actividad es una sola promesa al usuario del ordenador
   // compartido: se van los recientes y el certificado a la vez (ID-34).
   const forgetActivity = async () => {
-    await preferences.forgetActivity();
+    // Los recientes de la ventana se vacían **aunque el borrado del disco
+    // falle**: lo que promete el rótulo es que dejen de estar, y quedarse a
+    // medias sería enseñarlos como si nada hubiera pasado.
+    try {
+      await preferences.forgetActivity();
+    } catch {
+      // Sin nada que enseñar todavía: lo que no puede pasar es que el fallo
+      // deje la lista intacta y sin explicación.
+    }
     await documents.forgetAll();
   };
 

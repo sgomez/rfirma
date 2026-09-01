@@ -11,8 +11,14 @@
  * sistema de diseño.
  */
 
+/* El fondo se pone aquí y no con `.rf-surface`: esa clase, en el bundle, trae
+   además `border` y `border-radius`, así que la cabecera salía rodeada de un
+   marco redondeado en vez de separada del cuerpo por una raya. El `helmet` de
+   los artboards define `.rf-surface` como fondo y nada más, y esa es la que
+   pide la ficha. */
 .header {
   position: relative;
+  background: var(--rf-surface);
   z-index: 5;
   display: flex;
   align-items: center;

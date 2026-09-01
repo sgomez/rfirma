@@ -10,10 +10,20 @@ const {
   tauriCertificateStore,
   tauriDocumentDrops,
   tauriDocumentPicker,
+  tauriLanguagePreference,
   tauriLayer2Composer,
   tauriPdfSource,
+  tauriPreferences,
   tauriSigningBackend,
 } = await import("./tauri");
+
+const aConfiguration = {
+  language: "es",
+  destination: "Documentos",
+  rememberVisibleSignature: true,
+  rememberActivity: true,
+  theme: "system",
+};
 
 const anOrder = {
   document: "/run/user/1000/doc/1e8b83b9/contrato.pdf",
@@ -371,3 +381,91 @@ function aRow() {
     available: true,
   };
 }
+
+/**
+ * **Grada A**: los ajustes y el idioma son el mismo fichero debajo, y lo que
+ * se comprueba aquí es justo eso —que ninguno de los dos puertos pisa lo que
+ * el otro acaba de guardar—.
+ */
+describe("los puertos de la configuración sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("reads the settings the backend remembers, destination included", async () => {
+    invoke.mockResolvedValue(aConfiguration);
+
+    const read = await tauriPreferences().read();
+
+    expect(invoke).toHaveBeenCalledWith("read_configuration");
+    expect(read).toEqual({
+      theme: "system",
+      destination: "Documentos",
+      rememberVisibleSignature: true,
+      rememberActivity: true,
+    });
+  });
+
+  it("falls back to the system theme when what is stored is not one of the three", async () => {
+    invoke.mockResolvedValue({ ...aConfiguration, theme: "sepia" });
+
+    expect((await tauriPreferences().read()).theme).toBe("system");
+  });
+
+  /**
+   * El idioma no es de `Preferences` sino de su propio puerto, así que
+   * guardar los ajustes con una copia local en vez de releer devolvería el
+   * idioma anterior y desharía el cambio.
+   */
+  it("keeps the language the other port saved when the settings are written", async () => {
+    invoke.mockImplementation((command: string) =>
+      command === "read_configuration"
+        ? Promise.resolve({ ...aConfiguration, language: "en" })
+        : Promise.resolve(undefined),
+    );
+
+    await tauriPreferences().save({
+      theme: "dark",
+      destination: "Documentos",
+      rememberVisibleSignature: false,
+      rememberActivity: true,
+    });
+
+    expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
+      configuration: {
+        ...aConfiguration,
+        language: "en",
+        theme: "dark",
+        rememberVisibleSignature: false,
+      },
+    });
+  });
+
+  it("saves the language without touching the rest of the settings", async () => {
+    invoke.mockImplementation((command: string) =>
+      command === "read_configuration"
+        ? Promise.resolve({ ...aConfiguration, theme: "dark" })
+        : Promise.resolve(undefined),
+    );
+
+    await tauriLanguagePreference().save("gl");
+
+    expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
+      configuration: { ...aConfiguration, theme: "dark", language: "gl" },
+    });
+  });
+
+  it("falls back to Spanish when what is stored is not one of the six", async () => {
+    invoke.mockResolvedValue({ ...aConfiguration, language: "fr" });
+
+    expect(await tauriLanguagePreference().read()).toBe("es");
+  });
+
+  it("wires forgetting the activity to its own command", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriPreferences().forgetActivity();
+
+    expect(invoke).toHaveBeenCalledWith("forget_activity");
+  });
+});

@@ -306,6 +306,12 @@ export const en: Catalog = {
     destination: {
       label: "Where the signed document is saved",
     },
+    theme: {
+      label: "Theme",
+      system: "System",
+      light: "Light",
+      dark: "Dark",
+    },
     language: {
       label: "Language",
     },

@@ -14,15 +14,15 @@ import { App } from "./App";
 import { inMemoryRecents } from "./documents/recents";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
-import { inMemoryLanguagePreference } from "./i18n/preference";
-import { inMemoryPreferences } from "./preferences/preferences";
 import { emptyRubricPicker } from "./signing/rubric";
 import {
   tauriCertificateStore,
   tauriDocumentDrops,
   tauriDocumentPicker,
+  tauriLanguagePreference,
   tauriLayer2Composer,
   tauriPdfSource,
+  tauriPreferences,
   tauriSigningBackend,
 } from "./tauri";
 
@@ -31,37 +31,30 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Seis puertos hablan ya con el backend: los tres de firma del #60
+// Ocho puertos hablan ya con el backend: los tres de firma del #60
 // —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`—, los
-// dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, y el del
+// dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, el del
 // arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
-// de la ventana en vez de llamar a una orden. Los
-// que siguen en memoria son los que tocan el disco por sitios que todavía no
-// tienen orden expuesta: los recientes, los ajustes y la rúbrica. Cuando la
+// de la ventana en vez de llamar a una orden, y los dos de la configuración,
+// `tauriPreferences` y `tauriLanguagePreference`, que debajo son el mismo
+// fichero. Los que siguen en memoria son los que tocan el disco por sitios que
+// todavía no tienen orden expuesta: los recientes y la rúbrica. Cuando la
 // tengan, se sustituyen aquí y en ningún otro sitio (ID-75): ni la ventana ni
 // sus pruebas conocen a Tauri.
 //
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
-const preference = inMemoryLanguagePreference();
+const preference = tauriLanguagePreference();
 const i18n = createI18n(await preference.read());
 
 const recents = inMemoryRecents();
 
-// El nombre de la carpeta de documentos del usuario lo resuelve el backend
-// (`paths::documents_folder`). Bajo el arenero el destino es esa carpeta y solo
-// esa, así que la lista tiene una entrada (ADR-0011).
-const DOCUMENTS_FOLDER = "Documentos";
+const preferences = tauriPreferences();
 
-const preferences = inMemoryPreferences(
-  {
-    destination: DOCUMENTS_FOLDER,
-    rememberVisibleSignature: true,
-    rememberActivity: true,
-  },
-  () => {
-    void recents.clear();
-  },
-);
+// El nombre de la carpeta de documentos del usuario lo resuelve el backend
+// (`paths::documents_folder`) y llega con los ajustes; esta lista es lo que el
+// desplegable ofrece mientras se leen. Bajo el arenero el destino es esa
+// carpeta y solo esa, así que tiene una entrada (ADR-0011).
+const DOCUMENTS_FOLDER = "Documentos";
 
 createRoot(root).render(
   <StrictMode>

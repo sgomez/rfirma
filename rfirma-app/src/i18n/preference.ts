@@ -5,10 +5,12 @@ import { FALLBACK_LANGUAGE, type LanguageTag } from "./languages";
  * ajuste que el usuario elige y la aplicación se limita a obedecer
  * (`CONTEXT.md`). No se olfatea del navegador.
  *
- * Es un puerto y no una llamada a Tauri porque quien guarda la configuración
- * es el backend (`memory::Configuration`, ID-31) y todavía no hay orden
- * expuesta que leerla y escribirla; el diálogo de Preferencias trae la
- * implementación de verdad y la enchufa en `main.tsx` sin tocar nada más.
+ * Es un puerto y no una llamada a Tauri porque la ventana no conoce a Tauri:
+ * quien guarda la configuración es el backend (`memory::Configuration`,
+ * ID-31), la implementación de verdad es `tauriLanguagePreference` y quien
+ * elige entre ella y el doble de memoria es `main.tsx` (ID-75). El idioma va
+ * por su propio puerto y no dentro de `Preferences` porque se lee **antes** de
+ * que haya ventana: `createI18n` lo necesita para el primer pintado.
  */
 export interface LanguagePreference {
   read(): Promise<LanguageTag>;

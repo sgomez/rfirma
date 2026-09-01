@@ -1,10 +1,11 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
+import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
 import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
@@ -69,9 +70,16 @@ function renderApp(
   recents = inMemoryRecents(),
   documents: RecentDocument[] = [],
   pdfs: PdfSource = unavailablePdfSource(),
+  settings: Partial<Preferences> = {},
 ) {
   const preferences = inMemoryPreferences(
-    { destination: "Documentos", rememberVisibleSignature: true, rememberActivity: true },
+    {
+      theme: "system",
+      destination: "Documentos",
+      rememberVisibleSignature: true,
+      rememberActivity: true,
+      ...settings,
+    },
     () => void recents.clear(),
   );
   const drops = inMemoryDocumentDrops();
@@ -105,6 +113,76 @@ function trayDropZone() {
 
 // Grada A: la aplicación entera, con los cinco puertos en memoria.
 describe("App", () => {
+  /**
+   * El tema es lo único de los ajustes que se pinta **fuera** del árbol de
+   * React: los tokens de color cuelgan de `<html>`.
+   */
+  it("puts the remembered theme on the document as soon as the settings are read", async () => {
+    renderApp(inMemoryRecents(), [], unavailablePdfSource(), { theme: "dark" });
+
+    await waitFor(() =>
+      expect(globalThis.document.documentElement).toHaveAttribute("data-theme", "dark"),
+    );
+  });
+
+  it("leaves the theme to the desktop when nothing was chosen", async () => {
+    globalThis.document.documentElement.setAttribute("data-theme", "dark");
+    renderApp(inMemoryRecents(), [], unavailablePdfSource(), { theme: "system" });
+
+    await waitFor(() =>
+      expect(globalThis.document.documentElement).not.toHaveAttribute("data-theme"),
+    );
+  });
+
+  /**
+   * Un ajuste que el disco no acepta **no se queda puesto**: la ventana
+   * volvería a abrirse con el valor anterior, así que enseñarlo cambiado sería
+   * mentir sobre la sesión siguiente.
+   */
+  it("puts a setting back when the disk refuses to keep it", async () => {
+    const user = userEvent.setup();
+    const refused = vi.fn(async () => {
+      throw new Error("no se deja escribir");
+    });
+    const preferences: PreferencesStore = {
+      read: async () => ({
+        theme: "system",
+        destination: "Documentos",
+        rememberVisibleSignature: true,
+        rememberActivity: true,
+      }),
+      save: refused,
+      forgetActivity: async () => {},
+    };
+    renderWithCatalog(
+      <App
+        recents={inMemoryRecents()}
+        picker={inMemoryDocumentPicker([])}
+        drops={inMemoryDocumentDrops()}
+        pdfs={unavailablePdfSource()}
+        preferences={preferences}
+        destinations={["Documentos"]}
+        certificates={emptyCertificateStore()}
+        rubrics={emptyRubricPicker()}
+        composer={emptyLayer2Composer()}
+        signer={unavailableSigningBackend()}
+        menuAnchor="header"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    const remember = await screen.findByRole("switch", {
+      name: /Recordar la última configuración de firma visible/,
+    });
+    await user.click(remember);
+
+    // Se intentó guardar —así que el clic sí llegó— y aun así el interruptor
+    // vuelve a estar como estaba.
+    await waitFor(() => expect(refused).toHaveBeenCalledOnce());
+    expect(remember).toHaveAttribute("aria-checked", "true");
+  });
+
   it("opens a document from the tray and shows its badge in the header", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")]);
