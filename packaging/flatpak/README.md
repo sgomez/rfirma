@@ -56,10 +56,11 @@ just token       # el paso 5 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` da seis pasos. Dentro del arenero comprueba lo que solo el arenero
+`verifica.sh` da siete pasos. Dentro del arenero comprueba lo que solo el arenero
 puede romper: que la librería nativa esté —y **sola**, sin auxiliares de AWT—,
-que el módulo PKCS#11 que empaqueta el propio flatpak cargue, y que la ventana
-arranque y siga viva.
+que el módulo PKCS#11 que empaqueta el propio flatpak cargue, que la ventana
+arranque y siga viva, y que un documento entrado por el portal llegue con sus
+bytes intactos.
 
 El paso 5 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
 con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se

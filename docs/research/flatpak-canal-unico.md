@@ -370,7 +370,7 @@ venía a quitar. El bundle queda como vehículo de pruebas previas, no como cana
 
 ## 9. La entrada de documentos, dentro del arenero (#89)
 
-Este apartado 4 dejaba pendiente comprobar, ya con la aplicación de verdad y no la sonda, que los
+El apartado 4 dejaba pendiente comprobar, ya con la aplicación de verdad y no la sonda, que los
 bytes que el portal concede llegan a lo que la Orden 8 (`read_document`, `commands/mod.rs`) lee del
 disco, y si el permiso que apunta contra la ruta del anfitrión sobrevive a cerrar y reabrir la
 aplicación (ID-72). El paso 6 de `verifica.sh` mide las dos cosas.
@@ -390,7 +390,7 @@ que rfirma siga viva.
 
 **Consecuencia para los recientes.** Hoy `RecentDocument` identifica una fila por la ruta canónica
 del anfitrión (`memory/recents.rs`), que bajo el arenero la aplicación no puede leer del documento
-del portal ([`PortalDocument`] no expone ninguna, apartado 4 de arriba). El día que la bandeja
+del portal (`PortalDocument` no expone ninguna, apartado 4 de arriba). El día que la bandeja
 persista entre sesiones bajo flatpak tendrá que identificar la fila por la ruta montada del portal
 en vez de por la ruta real —esta medición dice que hacerlo funciona: volver a abrir el mismo host
 path en una sesión posterior devuelve el mismo identificador y las mismas lecturas—, no es trabajo
@@ -410,4 +410,5 @@ packaging/flatpak/verifica.sh
 
 `verifica.sh` construye e instala el flatpak, imprime el informe del arenero, ejecuta el ciclo
 trifásico completo firmando con el token de pruebas, valida con `pdfsig`, arranca la ventana y la
-deja diez segundos, y empaqueta el bundle.
+deja diez segundos, comprueba que un documento entrado por el portal llega con sus bytes intactos
+dentro del arenero, y empaqueta el bundle.

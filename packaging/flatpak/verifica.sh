@@ -192,9 +192,13 @@ HASH_ARENERO=$(flatpak run "${EXTRA[@]}" --command=sha256sum "$APP" "$RUTA_PORTA
 # matando el proceso y volviendo a pedir la MISMA ruta del anfitrion, como
 # haria quien vuelve a elegir el mismo fichero en el dialogo.
 flatpak run --filesystem="$LAB" "$APP" >"$LAB/sesion-portal.log" 2>&1 &
-sleep 3
+for _ in $(seq 20); do pgrep -x rfirma >/dev/null && break; sleep 1; done
+pgrep -x rfirma >/dev/null \
+    || { echo "LA SESION DE PRUEBA NO ARRANCO, no se puede medir el ID-72"; tail -3 "$LAB/sesion-portal.log"; exit 1; }
 flatpak kill "$APP" 2>/dev/null
-sleep 1
+for _ in $(seq 10); do pgrep -x rfirma >/dev/null || break; sleep 1; done
+pgrep -x rfirma >/dev/null \
+    && { echo "LA SESION DE PRUEBA NO MURIO, el ID-72 no queda medido"; exit 1; }
 RUTA_PORTAL_SESION2=$(flatpak document-export --app="$APP" "$ENTRADA") \
     || { echo "FALLO 'flatpak document-export' en la sesion siguiente"; exit 1; }
 if [ "$RUTA_PORTAL_SESION2" != "$RUTA_PORTAL" ]; then
