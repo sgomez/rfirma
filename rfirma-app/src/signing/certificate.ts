@@ -32,9 +32,30 @@ export type CertificateStatus =
    */
   | { kind: "unreadable"; detail: string };
 
+/**
+ * De qué clase es el almacén de donde salió el certificado.
+ *
+ * Cruza la frontera como **clase en inglés** y nunca como texto ya escrito ni
+ * como ruta: el rótulo lo pone el catálogo de esta ventana, igual que hace con
+ * la `situation` de un fallo. Un nombre compuesto en Rust se saltaría los
+ * catálogos y saldría en castellano en la versión en inglés.
+ */
+export type CertificateStoreClass = "card" | "firefox" | "chrome" | "nssdb";
+
 /** Un certificado elegible, con lo justo para pintarlo y para firmar con él. */
 export interface Certificate {
-  /** El `CKA_LABEL` del objeto dentro del token: identifica la fila. */
+  /**
+   * El **asa** que acuñó el backend al listar, sin significado aquí.
+   *
+   * Es lo que identifica la fila, y no la etiqueta: las etiquetas se repiten
+   * —dos claves con el mismo `CKA_LABEL` en un perfil de Firefox, dos
+   * `FNMT-GEMELO-99999999R` en el token de pruebas— así que buscando por
+   * etiqueta se firmaba siempre con el primero de los dos. La referencia
+   * entera no puede cruzar: lleva la ruta del módulo y el `configdir` del
+   * perfil (ADR-0011).
+   */
+  id: string;
+  /** El `CKA_LABEL` del objeto dentro del token. Se enseña, no identifica. */
   label: string;
   /** Nombre y apellidos del titular. */
   holderName: string;
@@ -47,6 +68,12 @@ export interface Certificate {
   idNumber: string;
   /** La autoridad emisora. */
   issuer: string;
+  /**
+   * Dónde estaba. No es adorno: el mismo certificado en el perfil de Firefox y
+   * en `~/.pki/nssdb` es indistinguible sin él, y quien tiene tres iguales no
+   * puede elegir a ciegas.
+   */
+  store: CertificateStoreClass;
   status: CertificateStatus;
 }
 

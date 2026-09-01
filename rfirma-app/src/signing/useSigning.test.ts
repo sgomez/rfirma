@@ -8,10 +8,12 @@ import { acknowledgementFor, useSigning } from "./useSigning";
 const signed: SignedDocument = { name: "contrato_firmado.pdf", folder: "Documentos" };
 
 const certificate: Certificate = {
+  id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
   holderName: "Ada Lovelace Byron",
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
+  store: "card",
   status: { kind: "valid" },
 };
 

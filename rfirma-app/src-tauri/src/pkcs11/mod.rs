@@ -41,7 +41,7 @@ use cryptoki::types::AuthPin;
 
 pub use certificate::{CertificateRef, CertificateStatus, TokenCertificate};
 pub use error::{Situation, TokenError};
-pub use stores::Store;
+pub use stores::{Store, StoreClass};
 
 /// El mecanismo del ID-16, en un solo sitio para que cambiarlo sea un cambio
 /// visible y no un descuido en una llamada perdida.

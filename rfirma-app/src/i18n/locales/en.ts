@@ -208,6 +208,13 @@ export const en: Catalog = {
       loading: "Looking for certificates…",
       issuer: "Issued by {{issuer}}",
       choose: "Choose certificate",
+      list: "Available certificates",
+      stores: {
+        card: "Card",
+        firefox: "Firefox",
+        chrome: "Chrome",
+        nssdb: "NSS store",
+      },
       empty: {
         title: "We found no certificate",
         body: "If you use a card, check that it is inserted and that the reader is connected.",

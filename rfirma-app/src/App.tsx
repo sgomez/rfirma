@@ -249,6 +249,22 @@ export function App({
     void lookForCertificates();
   }, [lookForCertificates]);
 
+  /**
+   * Elegir un certificado del desplegable.
+   *
+   * Solo cambia cuál está puesto: **no** se recuerda aquí. El certificado se
+   * recuerda al firmar con él, que es lo que dicen el glosario —«el certificado
+   * usado la última vez»— y la historia 7 —«con cuál firmé»—; ninguna dice «el
+   * último que miré» (ADR-0010).
+   */
+  const chooseCertificate = useCallback((chosen: Certificate) => {
+    setCertificate((state) =>
+      state.kind === "unchosen" || state.kind === "chosen"
+        ? { kind: "chosen", certificate: chosen, certificates: state.certificates }
+        : state,
+    );
+  }, []);
+
   // La rúbrica se comprueba y se normaliza **al elegirla**, con el panel
   // abierto, y nunca al firmar (ADR-0012): el fallo se cuenta aquí.
   const chooseRubric = async () => {
@@ -315,7 +331,7 @@ export function App({
     const page = await pdf.getPage(placement.page);
     await signing.start(chosen, {
       document: documents.active.id,
-      certificate: chosen.label,
+      certificate: chosen.id,
       placement: {
         page: placement.page,
         mediaBox: page.view,
@@ -399,7 +415,7 @@ export function App({
                 signatures: null,
               }}
               certificate={certificate}
-              onChooseCertificate={() => void lookForCertificates()}
+              onChooseCertificate={chooseCertificate}
               onRetryCertificates={() => void lookForCertificates()}
               onChooseModule={() => void lookForCertificates()}
               signature={signature}
@@ -474,13 +490,16 @@ function formatSignedAt(instant: Date, locale: string): string {
 /**
  * Con qué certificado se firma, a partir de los que hay.
  *
- * Con uno solo no se pregunta: elegir entre una cosa no es elegir. Con varios,
- * el panel enseña «Elegir certificado» y el diálogo que los lista es de su
- * propio sub-issue; hasta entonces se queda en `unchosen`, que es la verdad.
+ * Con uno solo no se pregunta: elegir entre una cosa no es elegir, y eso
+ * incluye a uno caducado —el panel lo pone y avisa de por qué no sirve—. Con
+ * varios **no hay preselección**: el desplegable dice «Elegir certificado» y el
+ * botón de firmar sigue apagado, porque elegir con qué identidad se firma un
+ * documento con validez jurídica no lo hace la aplicación por su cuenta, y el
+ * orden de la lista solo dice en qué orden cargaron los módulos.
  */
 function chosenFrom(found: readonly Certificate[]): CertificateState {
   const [first] = found;
   if (first === undefined) return { kind: "empty" };
-  if (found.length === 1) return { kind: "chosen", certificate: first };
-  return { kind: "unchosen" };
+  if (found.length === 1) return { kind: "chosen", certificate: first, certificates: found };
+  return { kind: "unchosen", certificates: found };
 }

@@ -68,10 +68,12 @@ function pdfsOf(pages: Record<string, number>): PdfSource {
 }
 
 const aCertificate: Certificate = {
+  id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
   holderName: "Ada Lovelace Byron",
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
+  store: "card",
   status: { kind: "valid" },
 };
 
@@ -294,6 +296,40 @@ describe("App", () => {
     await user.click(retry);
 
     expect(await within(panel).findByText("Ada Lovelace Byron")).toBeInTheDocument();
+  });
+
+  /**
+   * Con varios certificados **no hay preselección**, y elegir una fila deja
+   * puesto ese certificado y no el primero de la lista. La colisión de
+   * etiquetas —dos filas con el mismo `CKA_LABEL`— la prueban el desplegable
+   * (grada A) y `tests/pkcs11_token.rs` (grada B); aquí lo que se comprueba es
+   * el recorrido entero de la ventana.
+   */
+  it("chooses no certificate by itself and takes the one that is picked", async () => {
+    const user = userEvent.setup();
+    const other: Certificate = { ...aCertificate, id: "otra", holderName: "Grace Hopper Murray" };
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [aCertificate, other] },
+    );
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
+
+    expect(trigger).toHaveTextContent("Elegir certificado");
+    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+
+    await user.click(trigger);
+    const rows = within(panel).getAllByRole("option");
+    const second = rows[1];
+    if (second === undefined) throw new Error("la lista tenia que traer dos filas");
+    await user.click(second);
+
+    expect(trigger).toHaveTextContent("Grace Hopper Murray");
+    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeEnabled();
   });
 
   it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {

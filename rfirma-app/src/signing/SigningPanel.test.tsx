@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
@@ -8,10 +8,12 @@ import { SigningPanel } from "./SigningPanel";
 import { DEFAULT_VISIBLE_SIGNATURE, type Layer2Composer } from "./visibleSignature";
 
 const certificate: Certificate = {
+  id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
   holderName: "Ada Lovelace Byron",
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
+  store: "card",
   status: { kind: "valid" },
 };
 
@@ -33,7 +35,7 @@ function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
   return renderWithCatalog(
     <SigningPanel
       document={{ name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000, signatures: 0 }}
-      certificate={{ kind: "chosen", certificate }}
+      certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
       onChooseCertificate={noop}
       onRetryCertificates={noop}
       onChooseModule={noop}
@@ -232,6 +234,7 @@ describe("SigningPanel", () => {
       certificate: {
         kind: "chosen",
         certificate: { ...certificate, status: { kind: "expired", notAfter: 1_767_225_600 } },
+        certificates: [{ ...certificate, status: { kind: "expired", notAfter: 1_767_225_600 } }],
       },
     });
 
@@ -244,11 +247,48 @@ describe("SigningPanel", () => {
       certificate: {
         kind: "chosen",
         certificate: { ...certificate, status: { kind: "revoked", reason: "keyCompromise" } },
+        certificates: [{ ...certificate, status: { kind: "revoked", reason: "keyCompromise" } }],
       },
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(/revocado/);
     expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+  });
+
+  /** Con varios y nada elegido no hay preselección: el orden de la lista solo
+   * dice en qué orden cargaron los módulos, y elegir con qué identidad se firma
+   * un documento con validez jurídica no lo hace la aplicación por su cuenta. */
+  it("does not preselect anything when there are several certificates", () => {
+    renderPanel({
+      certificate: {
+        kind: "unchosen",
+        certificates: [certificate, { ...certificate, id: "otra" }],
+      },
+    });
+
+    expect(screen.getByRole("combobox", { name: "Certificado" })).toHaveTextContent(
+      "Elegir certificado",
+    );
+    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+  });
+
+  /** Con uno solo se elige solo: elegir entre una cosa no es elegir. */
+  it("keeps a single certificate chosen and ready to sign", () => {
+    renderPanel();
+
+    expect(screen.getByRole("combobox", { name: "Certificado" })).toHaveTextContent(
+      "Ada Lovelace Byron",
+    );
+    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+  });
+
+  /** El disparador es ahora el sitio donde se cambia, así que el botón
+   * `Cambiar` de la tarjeta ya no existe. El del pie es el del destino. */
+  it("has no «change» button in the certificate section any more", () => {
+    renderPanel();
+
+    const section = screen.getByRole("region", { name: "Certificado" });
+    expect(within(section).queryByRole("button", { name: "Cambiar" })).not.toBeInTheDocument();
   });
 
   it("waits for the certificates without pretending there are none", () => {

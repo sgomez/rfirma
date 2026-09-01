@@ -34,7 +34,14 @@ export interface SignedDocument {
 export interface SigningOrder {
   /** El identificador que acuñó el backend al abrir el documento (ID-62). */
   document: string;
-  /** El `CKA_LABEL` del certificado elegido. */
+  /**
+   * El **asa** del certificado elegido, la que acuñó el backend al listar.
+   *
+   * No es la etiqueta: las etiquetas se repiten, y por etiqueta se firmaba
+   * siempre con el primero de los dos. La referencia entera no puede cruzar
+   * —lleva la ruta del módulo y el `configdir` del perfil (ADR-0011)—, así que
+   * lo que viaja es el asa y el backend reencuentra el resto.
+   */
   certificate: string;
   /**
    * Dónde cae el recuadro, en **espacio de usuario PDF** (ID-21), con la

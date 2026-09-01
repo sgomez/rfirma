@@ -105,31 +105,6 @@
   font-size: 14px;
 }
 
-.panel__certificate {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  padding: var(--rf-space-sm);
-  border-color: var(--rf-border-strong);
-}
-
-.panel__certificate-name {
-  display: flex;
-  align-items: center;
-  gap: var(--rf-space-xs);
-}
-
-.panel__certificate-name > .rf-title {
-  font-size: 14px;
-}
-
-.panel__certificate-icon {
-  display: flex;
-  flex: none;
-  color: var(--rf-text-muted);
-}
-
 /* Sin color de error: el sistema no lo tiene. Se señala con borde y peso. */
 .panel__certificate-warning {
   padding: var(--rf-space-xs);
@@ -144,7 +119,7 @@
   gap: var(--rf-space-xs);
 }
 
-/* Los esqueletos tienen la altura de la tarjeta que van a sustituir —66 px—,
+/* Los esqueletos tienen la altura del disparador que van a sustituir —66 px—,
    para que el panel no dé un salto al llegar el certificado. El primero lleva
    el degradado que dice «esto sigue en marcha»; el segundo, solo su borde. */
 .panel__skeleton {

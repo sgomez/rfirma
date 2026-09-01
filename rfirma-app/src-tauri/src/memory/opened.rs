@@ -17,15 +17,10 @@
 //! ni de la ruta dentro, y de él no se reconstruye ninguna.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
+use super::handles::mint;
 use crate::destination::PortalDocument;
-
-/// Cuántos documentos se han acuñado en este proceso. Solo lo usa el amasado
-/// de reserva de [`minted_without_the_system_csprng`], para que dos documentos
-/// abiertos en el mismo instante no puedan colisionar.
-static MINTED: AtomicU64 = AtomicU64::new(0);
 
 /// Los documentos que se han abierto en esta sesión.
 #[derive(Debug, Default)]
@@ -64,47 +59,6 @@ impl OpenedDocuments {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-}
-
-/// Acuña un identificador opaco de 128 bits, en hexadecimal.
-///
-/// Los 128 bits salen del **CSPRNG del sistema** (`getrandom`), y **no se
-/// derivan del documento**. Derivarlo de la ruta —un hash del nombre, por
-/// ejemplo— dejaría que la ventana comprobara rutas por fuerza bruta contra el
-/// identificador, que es exactamente la fuga que el ADR-0011 cierra.
-///
-/// No sirve amasarlo con `RandomState`: `std` siembra sus claves una vez por
-/// hilo y cada `RandomState::new()` posterior se limita a incrementar una, así
-/// que todos los identificadores de la sesión saldrían de la misma semilla más
-/// un contador y dos consecutivos no serían independientes.
-fn mint() -> String {
-    match (getrandom::u64(), getrandom::u64()) {
-        (Ok(high), Ok(low)) => format!("{high:016x}{low:016x}"),
-        _ => minted_without_the_system_csprng(),
-    }
-}
-
-/// Cuando el CSPRNG del sistema no responde —no debería pasar en Linux, pero
-/// `getrandom` puede fallar— se vuelve al amasado de `RandomState` más un
-/// contador de proceso.
-///
-/// Es peor —misma semilla por hilo, así que la entropía no crece con cada
-/// acuñado— pero mantiene lo que de verdad importa aquí: **sigue sin llevar
-/// nada del documento dentro** y sigue sin repetirse dentro del proceso, que
-/// es lo que la tabla necesita. Un `panic!` en su lugar tumbaría la orden que
-/// abre el documento por un fallo del que no se recupera nadie.
-fn minted_without_the_system_csprng() -> String {
-    use std::collections::hash_map::RandomState;
-    use std::hash::{BuildHasher, Hasher};
-
-    let counter = MINTED.fetch_add(1, Ordering::Relaxed);
-    let half = |seed: u64| {
-        let mut hasher = RandomState::new().build_hasher();
-        hasher.write_u64(counter);
-        hasher.write_u64(seed);
-        hasher.finish()
-    };
-    format!("{:016x}{:016x}", half(0), half(1))
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {

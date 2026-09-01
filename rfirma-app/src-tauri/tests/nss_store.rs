@@ -37,7 +37,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rfirma_lib::pkcs11::{self, CertificateStatus, Situation, Store, TokenCertificate};
+use rfirma_lib::memory::ListedCertificates;
+use rfirma_lib::pkcs11::{self, CertificateStatus, Situation, Store, StoreClass, TokenCertificate};
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;
@@ -237,6 +238,82 @@ fn two_certificates_share_the_label_and_are_told_apart_by_their_cka_id() {
         same_label[0].reference().cka_id(),
         same_label[1].reference().cka_id(),
         "dos certificados con la misma etiqueta tienen que distinguirse por CKA_ID"
+    );
+}
+
+/// Con las etiquetas repetidas de un perfil de verdad, cada fila tiene que
+/// llevar a **su** certificado: buscando por etiqueta se cogía siempre el
+/// primero, y el segundo era inelegible aunque se enseñara en la lista.
+#[test]
+fn each_certificate_sharing_a_label_comes_back_by_its_own_handle() {
+    let (_profile, store) = a_disposable_profile();
+    let found = certificates(&store);
+    let listed = ListedCertificates::new();
+
+    let handles = listed.replace(
+        found
+            .iter()
+            .map(|certificate| certificate.reference().clone()),
+    );
+
+    let holders: Vec<(&String, &TokenCertificate)> = handles
+        .iter()
+        .zip(found.iter())
+        .filter(|(_, certificate)| certificate.reference().label() == HOLDER)
+        .collect();
+    assert_eq!(holders.len(), 2, "el perfil tenia que traer los dos");
+    assert_ne!(holders[0].0, holders[1].0, "dos filas, dos asas");
+    for (handle, certificate) in holders {
+        assert_eq!(listed.get(handle).as_ref(), Some(certificate.reference()));
+    }
+}
+
+/// El asa de un certificado de NSS no lleva dentro el `configdir` del perfil,
+/// que es lo que de verdad hay que no puede cruzar (ADR-0011).
+#[test]
+fn the_handle_carries_nothing_of_the_profile_it_came_from() {
+    let (profile, store) = a_disposable_profile();
+    let listed = ListedCertificates::new();
+
+    let handles = listed.replace([the_valid_one(&store).reference().clone()]);
+
+    let handle = &handles[0];
+    assert_eq!(handle.len(), 32);
+    assert!(handle.chars().all(|letter| letter.is_ascii_hexdigit()));
+    for leak in ["/", "tmp", HOLDER, CERTIFICATE_DB] {
+        assert!(!handle.contains(leak), "el asa «{handle}» lleva «{leak}»");
+    }
+    let name = profile
+        .path()
+        .file_name()
+        .expect("el perfil tiene nombre")
+        .to_string_lossy()
+        .into_owned();
+    assert!(!handle.contains(&name), "el asa lleva el nombre del perfil");
+}
+
+/// La clase del almacén es lo único suyo que puede cruzar, y sale de **de quién
+/// es el perfil**: uno bajo `~/.mozilla/firefox` es de Firefox, uno en
+/// `~/.pki/nssdb` es de Chrome, y este —desechable, en un temporal— no se
+/// atribuye a nadie.
+#[test]
+fn an_nss_store_says_its_class_and_never_its_configdir() {
+    let (profile, store) = a_disposable_profile();
+
+    let class = the_valid_one(&store).reference().store().class();
+
+    assert_eq!(class, StoreClass::Nssdb);
+    assert_eq!(
+        Store::nss(
+            softoken(),
+            &profile.path().join(".mozilla/firefox/x.default")
+        )
+        .class(),
+        StoreClass::Firefox
+    );
+    assert_eq!(
+        Store::nss(softoken(), &profile.path().join(".pki/nssdb")).class(),
+        StoreClass::Chrome
     );
 }
 
