@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { SignaturePlacement } from "../viewer/signatureBox";
+import type { Placement } from "../viewer/signatureBox";
 import type { DocumentPicker } from "./picker";
 import { place as placedIn, type RecentDocument, type RecentsStore } from "./recents";
 
@@ -45,7 +45,7 @@ export interface Documents {
    * Sin documento activo no hace nada, y con «Recordar mi actividad» apagado
    * tampoco: no hay fila donde apuntarlo.
    */
-  place: (placement: SignaturePlacement | null) => Promise<void>;
+  place: (placement: Placement | null) => Promise<void>;
   /** Quita una fila de la lista. Ver `forget` en `recents.ts`. */
   forget: (id: string) => Promise<void>;
   /**
@@ -130,7 +130,7 @@ export function useDocuments(
   }, [store]);
 
   const place = useCallback(
-    async (placement: SignaturePlacement | null) => {
+    async (placement: Placement | null) => {
       if (!remember || active === null) return;
       // La fila se actualiza, el documento activo **no**: cambiarlo volvería a
       // disparar la apertura del PDF en cada arrastre del recuadro, y lo que ha

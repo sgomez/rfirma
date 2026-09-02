@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { Viewport } from "./pdf";
-import { defaultBox, fitsInPage, movedBy, toPixels, toUserSpace } from "./signatureBox";
+import {
+  firstSealedPage,
+  fitsInPage,
+  movedBy,
+  pageSetOf,
+  resizedBy,
+  sealedPages,
+  sealing,
+  sealsPage,
+  standardBox,
+  toPixels,
+  toUserSpace,
+  unsealing,
+} from "./signatureBox";
 
 /**
  * **Grada A** (`vitest`, carril rápido). ID-21 e ID-22.
@@ -100,19 +113,119 @@ describe("la guardia de página", () => {
   });
 });
 
-describe("el recuadro por omisión", () => {
+describe("la posición estándar", () => {
   it("fits in the page it is drawn on", () => {
     const viewport = viewportOf(1);
-    const box = defaultBox(viewport);
+    const box = standardBox(viewport);
 
     expect(fitsInPage(box, viewport)).toBe(true);
   });
 
   it("scales with the zoom, so it looks the same size on the paper", () => {
-    const small = defaultBox(viewportOf(1));
-    const big = defaultBox(viewportOf(2));
+    const small = standardBox(viewportOf(1));
+    const big = standardBox(viewportOf(2));
 
     expect(big.width).toBeCloseTo(small.width * 2);
+  });
+
+  /** ID-102: abajo a la derecha, a un 8 % del borde. */
+  it("sits at the bottom right, an eighth of the page away from the edge", () => {
+    const viewport = viewportOf(1);
+    const box = standardBox(viewport);
+
+    expect(viewport.width - (box.x + box.width)).toBeCloseTo(viewport.width * 0.08);
+    expect(viewport.height - (box.y + box.height)).toBeCloseTo(viewport.height * 0.08);
+  });
+});
+
+describe("el conjunto de páginas", () => {
+  const rect = { x0: 50, y0: 60, x1: 250, y1: 140 };
+
+  it("seals every page of the set and no other", () => {
+    expect(sealsPage({ only: [1, 3] }, 1)).toBe(true);
+    expect(sealsPage({ only: [1, 3] }, 2)).toBe(false);
+    expect(sealsPage("all", 27)).toBe(true);
+  });
+
+  /** El ID-91 del backend, en el lado de la ventana: «todas» y la lista completa son lo mismo. */
+  it("names the same pages as the full list when it says all", () => {
+    expect(sealedPages("all", 3)).toEqual([1, 2, 3]);
+    expect(sealedPages({ only: [3, 1] }, 3)).toEqual([3, 1]);
+  });
+
+  it("orders and deduplicates what it is given", () => {
+    expect(pageSetOf([3, 1, 3])).toEqual({ only: [1, 3] });
+  });
+
+  /** ID-92: un conjunto vacío no es una colocación, es la ausencia de una. */
+  it("is nothing at all when no page is left", () => {
+    expect(pageSetOf([])).toBeNull();
+  });
+
+  it("opens on the first page of the set", () => {
+    expect(firstSealedPage(null)).toBeNull();
+    expect(firstSealedPage({ rect, pages: { only: [3, 7] } })).toBe(3);
+    expect(firstSealedPage({ rect, pages: "all" })).toBe(1);
+  });
+
+  it("adds a page without touching the rectangle", () => {
+    expect(sealing({ rect, pages: { only: [3] } }, 7)).toEqual({ rect, pages: { only: [3, 7] } });
+  });
+
+  it("changes nothing when every page is already sealed", () => {
+    const all = { rect, pages: "all" } as const;
+
+    expect(sealing(all, 7)).toBe(all);
+  });
+
+  it("spells out the rest of the pages when one is taken off all of them", () => {
+    expect(unsealing({ rect, pages: "all" }, 2, 3)).toEqual({ rect, pages: { only: [1, 3] } });
+  });
+
+  /** ID-92: quitar la última página devuelve al estado del PDF recién abierto. */
+  it("takes the whole placement away with the last page of the set", () => {
+    expect(unsealing({ rect, pages: { only: [3] } }, 3, 10)).toBeNull();
+  });
+});
+
+describe("los tiradores", () => {
+  const rect = { x: 100, y: 100, width: 200, height: 80 };
+  const min = { width: 120, height: 34 };
+
+  it("moves the grabbed corner and leaves the opposite one where it was", () => {
+    const grown = resizedBy(rect, "bottom-right", 40, 20, min, false);
+
+    expect(grown).toEqual({ x: 100, y: 100, width: 240, height: 100 });
+  });
+
+  it("grows up and to the left from the top left corner", () => {
+    const grown = resizedBy(rect, "top-left", -40, -20, min, false);
+
+    expect(grown).toEqual({ x: 60, y: 80, width: 240, height: 100 });
+  });
+
+  /** ID-103: el gesto se para en el mínimo en vez de recortar el texto en silencio. */
+  it("stops at the minimum size instead of shrinking past it", () => {
+    const shrunk = resizedBy(rect, "bottom-right", -500, -500, min, false);
+
+    expect(shrunk.width).toBe(min.width);
+    expect(shrunk.height).toBe(min.height);
+  });
+
+  it("keeps the proportion with Shift held down", () => {
+    const grown = resizedBy(rect, "bottom-right", 100, 0, min, true);
+
+    expect(grown.width / grown.height).toBeCloseTo(rect.width / rect.height);
+    expect(grown.width).toBeGreaterThan(rect.width);
+  });
+
+  /** Conservar la proporción no es una puerta trasera al tamaño ilegible. */
+  it("still stops at the minimum with the proportion held", () => {
+    const shrunk = resizedBy(rect, "top-left", 500, 500, min, true);
+
+    expect(shrunk.width).toBeGreaterThanOrEqual(min.width);
+    expect(shrunk.height).toBeGreaterThanOrEqual(min.height);
+    expect(shrunk.width / shrunk.height).toBeCloseTo(rect.width / rect.height);
   });
 });
 

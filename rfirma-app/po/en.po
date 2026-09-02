@@ -394,6 +394,30 @@ msgstr "Drag to place"
 msgid "viewer.outOfPage"
 msgstr "The box ended up off the page, so it stayed where it was."
 
+#. Pastilla bajo la hoja: todavía no se ha colocado la firma en ninguna página.
+msgid "viewer.pill.notPlaced"
+msgstr "You have not placed the signature yet"
+
+#. Pastilla bajo la hoja: la firma está colocada, pero no en la página que se está mirando.
+msgid "viewer.pill.notSealed"
+msgstr "This page is not stamped"
+
+#. Pastilla bajo la hoja: la página que se está mirando sí lleva la firma.
+msgid "viewer.pill.sealed"
+msgstr "This page is stamped"
+
+#. Botón de la pastilla: añade la página que se está mirando a las que llevan firma.
+msgid "viewer.pill.seal"
+msgstr "Stamp this page"
+
+#. Botón de la pastilla cuando se firman todas las páginas: solo falta decir dónde va el recuadro, así que no se nombra «esta página».
+msgid "viewer.pill.placeHere"
+msgstr "Place the stamp here"
+
+#. Botón de la pastilla: quita la firma de la página que se está mirando.
+msgid "viewer.pill.unseal"
+msgstr "Remove the stamp"
+
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
 msgstr[0] "1 page"

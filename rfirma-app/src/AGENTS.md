@@ -35,8 +35,8 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 517 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 655 | El árbol de la ventana y el estado que la recorre. |
+| `tauri.ts` | 521 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 663 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -49,7 +49,7 @@ rojo.
 | `documents/picker.ts` | 31 | Por dónde entra un documento. |
 | `documents/drops.ts` | 74 | Qué ocurre al soltar ficheros encima. |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
-| `signing/flow.ts` | 139 | Las tres etapas de la trifásica. |
+| `signing/flow.ts` | 148 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
 | `signing/SigningPanel.tsx` | 545 | El panel. El fichero más grande de la interfaz. |
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
@@ -63,14 +63,14 @@ rojo.
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 622 | El visor. |
+| `viewer/DocumentViewer.tsx` | 758 | El visor, con la pastilla bajo la hoja. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 68 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
 | `viewer/zoom.ts` | 176 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
 | `viewer/source.ts` | 93 | De dónde salen los bytes del documento. |
-| `viewer/signatureBox.ts` | 120 | El recuadro: dónde se guarda y cómo se pinta. |
-| `viewer/useBoxDrag.ts` | 122 | El arrastre del recuadro. |
+| `viewer/signatureBox.ts` | 285 | El recuadro: dónde se guarda, en qué páginas y cómo se redimensiona. |
+| `viewer/useBoxDrag.ts` | 178 | El arrastre del recuadro y sus cuatro tiradores. |
 | **`preferences/`** | | Los ajustes. |
 | `preferences/preferences.ts` | 93 | Lo que la aplicación recuerda. |
 | `preferences/PreferencesDialog.tsx` | 401 | La pantalla completa de ajustes, con su índice de secciones. |

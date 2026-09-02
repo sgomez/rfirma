@@ -43,6 +43,8 @@ const anOrder = (): SigningOrder => ({
   certificate: "Firma",
   placement: {
     page: 3,
+    pages: { only: [3] },
+    pageCount: 10,
     mediaBox: [0, 0, 595, 842],
     rotation: 0,
     rect: [72, 500, 272, 600],

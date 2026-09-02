@@ -24,13 +24,21 @@ import "./DocumentViewer.css";
 import type { PdfDocument, Viewport } from "./pdf";
 import { createRenderQueue, type ObservedSize, observeSize, type RenderQueue } from "./renderQueue";
 import {
+  firstSealedPage,
   fitsInPage,
+  GRIP_PX,
+  MIN_BOX_POINTS,
   movedBy,
+  type PageChoice,
   type PageSize,
   type PixelRect,
-  type SignaturePlacement,
+  type Placement,
+  sealing,
+  sealsPage,
+  standardBox,
   toPixels,
   toUserSpace,
+  unsealing,
 } from "./signatureBox";
 import type { DocumentFailure } from "./source";
 import { useBoxDrag } from "./useBoxDrag";
@@ -62,13 +70,38 @@ const NUDGE_FAST = 10;
 /** Las teclas de página. A cuál lleva cada una lo reparte `navigate`. */
 const PAGE_KEYS = new Set(["PageDown", "PageUp", "Home", "End"]);
 
+/** Las cuatro esquinas, con la clase que las coloca. */
+const GRIPS = [
+  { corner: "top-left", modifier: "tl" },
+  { corner: "top-right", modifier: "tr" },
+  { corner: "bottom-left", modifier: "bl" },
+  { corner: "bottom-right", modifier: "br" },
+] as const;
+
 interface DocumentViewerProps {
   /** El documento abierto, o `null` si no hay ninguno. */
   pdf: PdfDocument | null;
-  /** Dónde va la firma visible, en espacio de usuario. `null` mientras no hay. */
-  placement: SignaturePlacement | null;
-  /** El recuadro ha cambiado de sitio, de tamaño de página o de página. */
-  onPlace: (placement: SignaturePlacement) => void;
+  /**
+   * Dónde va la firma visible y en qué páginas, en espacio de usuario. `null`
+   * es **el documento recién abierto**: sin ninguna página sellada no hay
+   * recuadro en ninguna parte (ID-92).
+   */
+  placement: Placement | null;
+  /**
+   * El recuadro ha cambiado de sitio, de tamaño o de conjunto de páginas.
+   *
+   * `null` es quitar la colocación entera, que es lo que deja quitar el sello
+   * de la última página del conjunto (ID-92).
+   */
+  onPlace: (placement: Placement | null) => void;
+  /**
+   * Cuál de las tres opciones del panel manda sobre el conjunto de páginas.
+   *
+   * El visor no la elige: la lee para redactar la pastilla (ID-101). Por
+   * omisión, `these`, que es la única de las tres en la que la pastilla ofrece
+   * las tres caras.
+   */
+  pageChoice?: PageChoice;
   /** Abrir un documento, que va por el portal igual que desde la bandeja. */
   onOpen: () => void;
   /**
@@ -113,6 +146,7 @@ export function DocumentViewer({
   placement,
   onPlace,
   onOpen,
+  pageChoice = "these",
   failure = null,
 }: DocumentViewerProps) {
   const { t, i18n } = useTranslation();
@@ -134,7 +168,9 @@ export function DocumentViewer({
   queue.current ??= createRenderQueue();
   // La página inicial sale del `placement`: montado ya con un documento
   // delante, no hay cambio de `pdf` que reponga la página que guardaba su fila.
-  const [page, setPage] = useState(() => within(placement?.page ?? 1, pdf?.pageCount ?? 0));
+  const [page, setPage] = useState(() =>
+    within(firstSealedPage(placement) ?? 1, pdf?.pageCount ?? 0),
+  );
   const [zoom, setZoom] = useState(1);
   // Cómo se mira, que no es lo mismo que cuánto se amplía: un modo de ajuste
   // sobrevive al cambio de página, al redimensionado y al documento siguiente;
@@ -165,7 +201,7 @@ export function DocumentViewer({
   const [shown, setShown] = useState(pdf);
   if (pdf !== shown) {
     setShown(pdf);
-    setPage(within(placement?.page ?? 1, pdf?.pageCount ?? 0));
+    setPage(within(firstSealedPage(placement) ?? 1, pdf?.pageCount ?? 0));
     setViewport(null);
     setPagePoints(null);
     // El modo de ajuste **sí** cruza al documento siguiente y el porcentaje
@@ -259,11 +295,14 @@ export function DocumentViewer({
     surface.scrollTop = wanted.top;
   }, [viewport]);
 
-  // El recuadro se pinta **sólo en su página**: con el ID-96 en cualquier otra
-  // no hay nada que empujar, y por eso no hace falta un modo de «editar
-  // recuadro» (ID-113).
+  // El recuadro se pinta **idéntico en todas las páginas del conjunto y en
+  // ninguna más** (ID-96). La página donde se arrastró no se dibuja distinta
+  // —inventaría una diferencia que el PDF no tiene—, y fuera del conjunto la
+  // página va en blanco: ni un fantasma a trazos, que insinuaría que ahí hay
+  // algo. Quien quiera saberlo lo lee en la pastilla, con palabras.
+  const sealed = placement !== null && sealsPage(placement.pages, page);
   const pixels: PixelRect | null =
-    viewport && placement && placement.page === page ? toPixels(viewport, placement.rect) : null;
+    viewport && placement && sealed ? toPixels(viewport, placement.rect) : null;
 
   // Al cambiar de página, un recuadro que quede fuera de la parte visible se
   // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
@@ -291,23 +330,59 @@ export function DocumentViewer({
     if (!seen) element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [page, viewport, surface]);
 
-  /** Confirma el recuadro movido, ya en píxeles del lienzo. */
+  /**
+   * Confirma el recuadro movido o redimensionado, ya en píxeles del lienzo.
+   *
+   * El conjunto de páginas **no lo toca el gesto**: mover el recuadro de una
+   * página del conjunto lo mueve en todas, porque es un solo campo de firma con
+   * el widget replicado (ID-96).
+   */
   const place = useCallback(
     (moved: PixelRect) => {
-      if (!viewport) return;
+      if (!viewport || !placement) return;
       setOutOfPage(false);
-      onPlace({ page, rect: toUserSpace(viewport, moved) });
+      onPlace({ ...placement, rect: toUserSpace(viewport, moved) });
     },
-    [viewport, page, onPlace],
+    [viewport, placement, onPlace],
   );
 
   const drag = useBoxDrag({
     box: boxElement,
     rect: pixels ?? { x: 0, y: 0, width: 0, height: 0 },
     page: viewport ?? { width: 0, height: 0 },
+    // El mínimo es del papel y la comparación de la pantalla: los puntos del
+    // ID-103, a la escala a la que se está mirando.
+    min: { width: MIN_BOX_POINTS.width * zoom, height: MIN_BOX_POINTS.height * zoom },
     onDrop: place,
     onOutOfPage: () => setOutOfPage(true),
   });
+
+  /**
+   * Sellar la página que se está mirando (ID-101, ID-102).
+   *
+   * Sin nada colocado, el recuadro nace en su **posición estándar** —no hay
+   * gesto que diga dónde—; con algo colocado, la página se añade al conjunto y
+   * el rectángulo no se mueve.
+   */
+  const seal = () => {
+    if (!viewport) return;
+    setOutOfPage(false);
+    if (placement !== null) {
+      onPlace(sealing(placement, page));
+      return;
+    }
+    onPlace({
+      rect: toUserSpace(viewport, standardBox(viewport)),
+      pages: pageChoice === "all" ? "all" : { only: [page] },
+    });
+  };
+
+  /** Quitar el sello de esta página, y con el último, la colocación entera. */
+  const unseal = () => {
+    if (placement === null) return;
+    setOutOfPage(false);
+    onPlace(unsealing(placement, page, pageCount));
+  };
 
   /**
    * El recuadro atiende **sólo las flechas**, y `Esc` devuelve el foco a la
@@ -418,6 +493,41 @@ export function DocumentViewer({
     maximumFractionDigits: 0,
   });
 
+  /**
+   * La pastilla bajo la hoja, y cuál de sus tres caras toca (ID-101).
+   *
+   * `null` es **no hay pastilla**: con `Solo 1 página` o `Todas las páginas` y
+   * la página ya sellada no queda nada que ofrecer ahí. Y el botón cambia de
+   * texto con la opción: con «todas» el conjunto ya está completo y lo único
+   * que falta es el rectángulo, así que decir «esta página» prometería una
+   * página cuando se sellan las veintisiete.
+   */
+  const pill = ((): { text: string; label: string; variant: string; act: () => void } | null => {
+    if (placement === null) {
+      return {
+        text: t("viewer.pill.notPlaced"),
+        label: pageChoice === "all" ? t("viewer.pill.placeHere") : t("viewer.pill.seal"),
+        variant: "rf-btn--primary",
+        act: seal,
+      };
+    }
+    if (!sealed) {
+      return {
+        text: t("viewer.pill.notSealed"),
+        label: t("viewer.pill.seal"),
+        variant: "rf-btn--secondary",
+        act: seal,
+      };
+    }
+    if (pageChoice !== "these") return null;
+    return {
+      text: t("viewer.pill.sealed"),
+      label: t("viewer.pill.unseal"),
+      variant: "rf-btn--ghost",
+      act: unseal,
+    };
+  })();
+
   /** Toma lo tecleado en el porcentaje, recortado al rango, y suelta el campo. */
   const commitTyped = () => {
     const wanted = typing === null ? null : typedZoom(typing);
@@ -483,15 +593,41 @@ export function DocumentViewer({
                 height: `${pixels.height}px`,
               }}
               onKeyDown={nudge}
-              {...drag}
+              {...drag.box}
             >
               <span className="viewer__handle rf-body">
                 <MoveIcon />
                 {t("viewer.dragHandle")}
               </span>
+              {/*
+                Los tiradores son **cromo, no papel** (ID-104): el lado va en
+                línea, en píxeles de pantalla, para que mida lo mismo al 50 %,
+                al 100 % y al 300 %. El recuadro sí escala, porque es la hoja.
+              */}
+              {GRIPS.map(({ corner, modifier }) => (
+                <span
+                  key={corner}
+                  className={`viewer__grip viewer__grip--${modifier}`}
+                  data-corner={corner}
+                  style={{ width: `${GRIP_PX}px`, height: `${GRIP_PX}px` }}
+                  aria-hidden="true"
+                  {...drag.grip(corner)}
+                />
+              ))}
             </div>
           )}
         </div>
+
+        {pill !== null && (
+          // Bajo la hoja y centrada, que es literalmente donde va: es el único
+          // camino para elegir páginas que no pasa por teclear (ID-101).
+          <div className="viewer__pill rf-row">
+            <span className="rf-body">{pill.text}</span>
+            <button type="button" className={`rf-btn ${pill.variant}`} onClick={pill.act}>
+              {pill.label}
+            </button>
+          </div>
+        )}
       </div>
 
       {outOfPage && (

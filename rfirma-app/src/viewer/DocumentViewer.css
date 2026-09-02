@@ -138,6 +138,61 @@
   white-space: nowrap;
 }
 
+/* Los cuatro tiradores de las esquinas (ID-103). El lado lo escribe el
+   componente en línea, en píxeles de pantalla: son cromo y no papel, así que
+   miden lo mismo a cualquier zoom (ID-104). Aquí va solo el aspecto y dónde se
+   cuelga cada uno, medio tirador por fuera del borde para que la diana no se
+   coma la esquina del recuadro. */
+.viewer__grip {
+  position: absolute;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: 2px;
+  background: var(--rf-surface);
+  touch-action: none;
+}
+
+.viewer__grip--tl {
+  top: 0;
+  left: 0;
+  translate: -50% -50%;
+  cursor: nwse-resize;
+}
+
+.viewer__grip--tr {
+  top: 0;
+  right: 0;
+  translate: 50% -50%;
+  cursor: nesw-resize;
+}
+
+.viewer__grip--bl {
+  bottom: 0;
+  left: 0;
+  translate: -50% 50%;
+  cursor: nesw-resize;
+}
+
+.viewer__grip--br {
+  bottom: 0;
+  right: 0;
+  translate: 50% 50%;
+  cursor: nwse-resize;
+}
+
+/* La pastilla bajo la hoja (ID-101). Va **en flujo**, en la fila siguiente de
+   la rejilla del desplazamiento, porque «bajo la hoja» es literal: se desplaza
+   con el documento y no tapa nada. */
+.viewer__pill {
+  align-items: center;
+  gap: var(--rf-space-sm);
+  margin-top: var(--rf-space-md);
+  padding: var(--rf-space-xs) var(--rf-space-sm);
+  border-radius: var(--rf-radius-pill);
+  border: 1px solid var(--rf-border-strong);
+  background: var(--rf-surface);
+  box-shadow: var(--rf-shadow-elevated);
+}
+
 /* El fallo al abrir, con un documento ya pintado detrás. Flota arriba y no
    abajo para no pelearse con la barra ni con el aviso de «se sale de la
    página», y en flujo no puede ir: `.viewer` tiene una sola fila. */

@@ -351,6 +351,30 @@ msgstr ""
 msgid "viewer.outOfPage"
 msgstr ""
 
+#. Pastilla bajo la hoja: todavía no se ha colocado la firma en ninguna página.
+msgid "viewer.pill.notPlaced"
+msgstr ""
+
+#. Pastilla bajo la hoja: la firma está colocada, pero no en la página que se está mirando.
+msgid "viewer.pill.notSealed"
+msgstr ""
+
+#. Pastilla bajo la hoja: la página que se está mirando sí lleva la firma.
+msgid "viewer.pill.sealed"
+msgstr ""
+
+#. Botón de la pastilla: añade la página que se está mirando a las que llevan firma.
+msgid "viewer.pill.seal"
+msgstr ""
+
+#. Botón de la pastilla cuando se firman todas las páginas: solo falta decir dónde va el recuadro, así que no se nombra «esta página».
+msgid "viewer.pill.placeHere"
+msgstr ""
+
+#. Botón de la pastilla: quita la firma de la página que se está mirando.
+msgid "viewer.pill.unseal"
+msgstr ""
+
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
 msgstr[0] ""

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import type { PdfDocument, PdfPage, RenderTask, Viewport } from "./pdf";
-import type { SignaturePlacement } from "./signatureBox";
+import type { Placement } from "./signatureBox";
 import { movedBy, toPixels, toUserSpace } from "./signatureBox";
 
 /**
@@ -79,7 +79,7 @@ const noop = () => {};
  * Un recuadro ya colocado. Desde el ID-114 el visor **no lo crea**: quien lo
  * quiera en pantalla lo entrega, igual que hace la fila que lo recuerda.
  */
-const seated: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+const seated: Placement = { rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } };
 
 function box() {
   return screen.getByRole("application", { name: "Recuadro de la firma visible" });
@@ -87,6 +87,15 @@ function box() {
 
 function sheet() {
   return screen.getByRole("document", { name: "Hoja del documento" });
+}
+
+/** Se teclea la página en la barra y se espera a que la pintada llegue. */
+async function goToPage(wanted: number, renders: Recorder["renders"]) {
+  const painted = renders.length;
+  fireEvent.change(screen.getByLabelText("Número de página"), {
+    target: { value: String(wanted) },
+  });
+  await waitFor(() => expect(renders.length).toBeGreaterThan(painted));
 }
 
 /** La parte visible del visor, la que se mide para ajustar. */
@@ -234,7 +243,7 @@ describe("el visor con documento", () => {
       fireEvent.keyDown(box(), { key: "ArrowRight", shiftKey: true });
 
       await waitFor(() => expect(onPlace).toHaveBeenCalled());
-      const placed = onPlace.mock.calls[0]?.[0] as SignaturePlacement;
+      const placed = onPlace.mock.calls[0]?.[0] as Placement;
 
       // El mismo cálculo con el viewport de píxeles CSS (escala 1), nunca el
       // del mapa de bits (escala `devicePixelRatio`): si `toUserSpace` se
@@ -336,7 +345,10 @@ describe("el recuadro de la firma", () => {
    * `onPlace` —que ahora escribe en la fila—.
    */
   it("opens on the page the row remembered instead of resetting it to the first", async () => {
-    const remembered: SignaturePlacement = { page: 3, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const remembered: Placement = {
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [3] },
+    };
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument(5);
     const { rerender } = renderWithCatalog(
@@ -355,7 +367,10 @@ describe("el recuadro de la firma", () => {
 
   /** Una fila vieja con una página que el documento ya no tiene no lo rompe. */
   it("clamps a remembered page that the document no longer has", async () => {
-    const remembered: SignaturePlacement = { page: 9, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const remembered: Placement = {
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [9] },
+    };
     const { document, renders } = recordingDocument(3);
     const { rerender } = renderWithCatalog(
       <DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={noop} />,
@@ -368,7 +383,10 @@ describe("el recuadro de la firma", () => {
   });
 
   it("keeps the box still over the document when the zoom changes", async () => {
-    const placement: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const placement: Placement = {
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [1] },
+    };
     const { document, renders } = recordingDocument();
     const onPlace = vi.fn();
     renderWithCatalog(
@@ -390,7 +408,10 @@ describe("el recuadro de la firma", () => {
   });
 
   it("stores the drop in user space, converted by the viewport", async () => {
-    const placement: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const placement: Placement = {
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [1] },
+    };
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
@@ -404,13 +425,16 @@ describe("el recuadro de la firma", () => {
 
     // A escala 1 y sin rotación: +10 en X y −20 en Y del documento.
     expect(onPlace).toHaveBeenCalledWith({
-      page: 1,
+      pages: { only: [1] },
       rect: { x0: 60, y0: 40, x1: 260, y1: 120 },
     });
   });
 
   it("refuses a drop that falls off the page instead of taking it silently", async () => {
-    const placement: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const placement: Placement = {
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [1] },
+    };
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
@@ -427,7 +451,10 @@ describe("el recuadro de la firma", () => {
   });
 
   it("moves with the arrow keys, for whoever is not using a mouse", async () => {
-    const placement: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const placement: Placement = {
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [1] },
+    };
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
@@ -438,7 +465,7 @@ describe("el recuadro de la firma", () => {
     fireEvent.keyDown(box(), { key: "ArrowRight" });
 
     expect(onPlace).toHaveBeenCalledWith({
-      page: 1,
+      pages: { only: [1] },
       rect: { x0: 51, y0: 60, x1: 251, y1: 140 },
     });
   });
@@ -463,9 +490,219 @@ describe("el recuadro de la firma", () => {
     fireEvent.keyDown(box(), { key: "ArrowRight" });
 
     expect(onPlace).toHaveBeenCalledWith({
-      page: 1,
+      pages: { only: [1] },
       rect: { x0: 51, y0: 60, x1: 251, y1: 140 },
     });
+  });
+});
+
+/** ID-96: el mismo recuadro en todas las páginas del conjunto, y en ninguna más. */
+describe("el conjunto de páginas en la hoja", () => {
+  const onTwo: Placement = {
+    rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+    pages: { only: [1, 3] },
+  };
+
+  it("draws the same box on every page of the set, and no differently on any of them", async () => {
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={onTwo} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    const first = { left: box().style.left, top: box().style.top, width: box().style.width };
+
+    await goToPage(3, renders);
+
+    expect(box().style.left).toBe(first.left);
+    expect(box().style.top).toBe(first.top);
+    expect(box().style.width).toBe(first.width);
+  });
+
+  /**
+   * El criterio 2 del #174: sellada la 3 y estando en la 7, la 7 se ve **en
+   * blanco**. Ni recuadro ni fantasma a trazos: un fantasma insinúa que ahí hay
+   * algo, que es la mentira que este hito existe para quitar.
+   */
+  it("leaves a page outside the set blank, with no dashed ghost either", async () => {
+    const { document, renders } = recordingDocument(9);
+    const { container } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [3] } }}
+        onPlace={noop}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    await goToPage(7, renders);
+
+    expect(container.querySelectorAll(".viewer__box")).toHaveLength(0);
+    expect(container.querySelectorAll(".viewer__grip")).toHaveLength(0);
+  });
+
+  it("draws the box on every page when the whole document is stamped", async () => {
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: "all" }}
+        onPlace={noop}
+        onOpen={noop}
+        pageChoice="all"
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    await goToPage(2, renders);
+
+    expect(box()).toBeInTheDocument();
+  });
+
+  /** Mover el recuadro en una página lo mueve en todas: es un widget replicado. */
+  it("keeps the set untouched when the box is dragged", async () => {
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={onTwo} onPlace={onPlace} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.keyDown(box(), { key: "ArrowRight" });
+
+    const [placed] = onPlace.mock.calls[0] as [Placement];
+    expect(placed.pages).toEqual({ only: [1, 3] });
+  });
+});
+
+/** ID-104: los tiradores son cromo, no papel. */
+describe("los tiradores del recuadro", () => {
+  it("measures the same on screen at 50 %, 100 % and 300 %", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    const sides = [];
+    for (const zoom of ["50", "100", "300"]) {
+      fireEvent.change(screen.getByLabelText("Nivel de zoom"), { target: { value: zoom } });
+      fireEvent.keyDown(screen.getByLabelText("Nivel de zoom"), { key: "Enter" });
+      await waitFor(() => expect(renders.at(-1)?.scale).toBe(Number(zoom) / 100));
+      const grip = container.querySelector(".viewer__grip") as HTMLElement;
+      sides.push([grip.style.width, grip.style.height]);
+    }
+
+    expect(sides).toEqual([
+      ["10px", "10px"],
+      ["10px", "10px"],
+      ["10px", "10px"],
+    ]);
+  });
+
+  it("hangs one grip on each of the four corners", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(
+      [...container.querySelectorAll(".viewer__grip")].map((g) => g.getAttribute("data-corner")),
+    ).toEqual(["top-left", "top-right", "bottom-left", "bottom-right"]);
+  });
+});
+
+/** ID-101 e ID-102: la pastilla bajo la hoja, sus tres caras y su cuarta redacción. */
+describe("la pastilla bajo la hoja", () => {
+  it("asks for a placement on a document that has none, and puts it on this page", async () => {
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.getByText("Aún no has colocado la firma")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sellar esta página" }));
+
+    const [placed] = onPlace.mock.calls[0] as [Placement];
+    expect(placed.pages).toEqual({ only: [1] });
+    // La posición estándar: abajo a la derecha, dentro de la página (ID-102).
+    expect(placed.rect.x1).toBeGreaterThan(A4.width / 2);
+    expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
+  });
+
+  /** El botón no promete «esta página» cuando se sellan las veintisiete. */
+  it("does not name this page when the whole document is going to be stamped", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        pageChoice="all"
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
+  });
+
+  it("offers to stamp a page that is outside the set, and adds it", async () => {
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
+        onPlace={onPlace}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    await goToPage(2, renders);
+    expect(screen.getByText("Esta página no se sella")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Sellar esta página" }));
+
+    expect(onPlace).toHaveBeenCalledWith({
+      rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
+      pages: { only: [1, 2] },
+    });
+  });
+
+  /** ID-92: quitar la última página devuelve al estado del PDF recién abierto. */
+  it("takes the whole placement away with the last page of the set", async () => {
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.getByText("Esta página se sella")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Quitar el sello" }));
+
+    expect(onPlace).toHaveBeenCalledWith(null);
+  });
+
+  /** Con «Solo 1 página» o «Todas» y la página sellada no queda nada que ofrecer. */
+  it("says nothing at all on a stamped page when the set is not the one being chosen", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        pageChoice="single"
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(container.querySelectorAll(".viewer__pill")).toHaveLength(0);
   });
 });
 
