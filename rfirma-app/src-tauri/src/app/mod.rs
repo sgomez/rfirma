@@ -32,6 +32,7 @@ pub mod cycle;
 pub mod documents;
 pub mod recents;
 pub mod signing;
+pub mod window;
 
 #[cfg(test)]
 pub(crate) mod fixtures;

@@ -139,11 +139,24 @@ export function DocumentViewer({
 
     void pdf.getPage(page).then((loaded) => {
       if (!live) return undefined;
+      // `next` es el viewport en **píxeles CSS**: es el que se guarda en el
+      // estado y el que usan las conversiones a espacio de usuario PDF
+      // (`toPixels`/`toUserSpace`, y detrás de ellas `signing::placement`), así
+      // que la nitidez de abajo no puede tocarlo o el `/Rect` que acaba en el
+      // PDF cambiaría con la pantalla en la que se firmó (ID-84).
       const next = loaded.getViewport({ scale: zoom });
-      target.width = next.width;
-      target.height = next.height;
+      // El mapa de bits se pinta a `devicePixelRatio`, para que el documento se
+      // vea nítido en pantallas HiDPI; el tamaño en CSS —lo que ocupa en la
+      // ventana— se fija aparte y no cambia, porque si no el navegador lo
+      // reescalaría igual que a 1x y la nitidez no se notaría.
+      const ratio = window.devicePixelRatio || 1;
+      const bitmap = ratio === 1 ? next : loaded.getViewport({ scale: zoom * ratio });
+      target.width = bitmap.width;
+      target.height = bitmap.height;
+      target.style.width = `${next.width}px`;
+      target.style.height = `${next.height}px`;
       setViewport(next);
-      return pending.run(() => loaded.render({ canvas: target, viewport: next }));
+      return pending.run(() => loaded.render({ canvas: target, viewport: bitmap }));
     });
 
     return () => {

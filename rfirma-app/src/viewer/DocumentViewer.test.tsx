@@ -139,6 +139,55 @@ describe("el visor con documento", () => {
     expect(screen.getByText("de 27")).toBeInTheDocument();
   });
 
+  /**
+   * ID-84: el mapa de bits sale al doble de resolución que el `<canvas>` en
+   * píxeles CSS, en una pantalla 2x.
+   */
+  it("rasterises at devicePixelRatio, twice the CSS size on a 2x screen", async () => {
+    const original = window.devicePixelRatio;
+    Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
+    try {
+      const { document, renders } = recordingDocument();
+      const { container } = renderWithCatalog(
+        <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      );
+
+      await waitFor(() => expect(renders).toHaveLength(1));
+      const canvas = container.querySelector("canvas") as HTMLCanvasElement;
+      expect(canvas.width).toBe(A4.width * 2);
+      expect(canvas.height).toBe(A4.height * 2);
+      expect(canvas.style.width).toBe(`${A4.width}px`);
+      expect(canvas.style.height).toBe(`${A4.height}px`);
+    } finally {
+      Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
+    }
+  });
+
+  /**
+   * La nitidez es cosa del mapa de bits: el viewport que se usa para convertir
+   * el recuadro a espacio de usuario PDF sigue en píxeles CSS, así que el
+   * `/Rect` que acaba en el PDF no se mueve por la pantalla en la que se firmó
+   * (ID-84).
+   */
+  it("keeps the box-to-user-space conversion in CSS pixels regardless of devicePixelRatio", async () => {
+    const original = window.devicePixelRatio;
+    Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
+    try {
+      const onPlace = vi.fn();
+      const { document } = recordingDocument();
+      renderWithCatalog(
+        <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
+      );
+
+      await waitFor(() => expect(onPlace).toHaveBeenCalled());
+      const placed = onPlace.mock.calls[0]?.[0] as SignaturePlacement;
+      expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
+      expect(placed.rect.y1).toBeLessThanOrEqual(A4.height);
+    } finally {
+      Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
+    }
+  });
+
   it("cancels the render in flight when the zoom changes", async () => {
     const { document, renders } = recordingDocument();
     renderWithCatalog(

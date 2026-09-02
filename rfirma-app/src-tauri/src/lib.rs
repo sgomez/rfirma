@@ -87,19 +87,53 @@ pub fn run() {
         // ejecutaría nunca y parecería un fallo de la interfaz. Lo que llega
         // aquí son rutas del anfitrión, y se quedan aquí: lo que cruza es el
         // documento ya apuntado (ADR-0011).
-        .on_window_event(|window, event| {
-            let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
-            else {
-                return;
-            };
-            let opened = window.state::<memory::OpenedDocuments>();
-            let Some(dropped) = commands::dropped_document(paths, &opened) else {
-                return;
-            };
-            // Emitir puede fallar si la ventana se está cerrando, y entonces no
-            // hay nadie a quien contarle nada: no es un motivo para tumbar la
-            // aplicación mientras se va.
-            let _ = window.emit(commands::DOCUMENT_DROPPED, dropped);
+        // El tamaño de la ventana se aplica al arrancar (ID-72) leyendo lo
+        // recordado, o el de por omisión si no hay nada. No es ruido: es el
+        // mismo tamaño que ya trae `tauri.conf.json` cuando no hay nada
+        // guardado (`app::window::default_window`).
+        .setup(|app| {
+            let environment = app.state::<app::Environment>();
+            let remembered = app::window::initial_window(&environment.memory);
+            if let Some(webview) = app.get_webview_window("main") {
+                if remembered.maximized {
+                    let _ = webview.maximize();
+                } else {
+                    let _ = webview
+                        .set_size(tauri::LogicalSize::new(remembered.width, remembered.height));
+                }
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) => {
+                let opened = window.state::<memory::OpenedDocuments>();
+                let Some(dropped) = commands::dropped_document(paths, &opened) else {
+                    return;
+                };
+                // Emitir puede fallar si la ventana se está cerrando, y
+                // entonces no hay nadie a quien contarle nada: no es un motivo
+                // para tumbar la aplicación mientras se va.
+                let _ = window.emit(commands::DOCUMENT_DROPPED, dropped);
+            }
+            // El tamaño se recuerda en cada cambio y no solo al cerrar: así
+            // sobrevive también a un cierre que no dispara `Resized` (matar el
+            // proceso, un cuelgue). Maximizada, no se lee el tamaño físico
+            // —sería el de la pantalla entera— y se conserva el restaurado que
+            // ya hubiera (ID-73, `app::window::resized`).
+            tauri::WindowEvent::Resized(_) => {
+                let maximized = window.is_maximized().unwrap_or(false);
+                let logical_size = (!maximized)
+                    .then(|| window.inner_size().ok())
+                    .flatten()
+                    .map(|size| {
+                        let scale = window.scale_factor().unwrap_or(1.0);
+                        let logical = size.to_logical::<f64>(scale);
+                        (logical.width, logical.height)
+                    });
+                let environment = window.state::<app::Environment>();
+                app::window::resized(&environment.memory, maximized, logical_size);
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_certificates,
