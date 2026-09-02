@@ -18,7 +18,7 @@ function renderDialog(props: Partial<Parameters<typeof PreferencesDialog>[0]> = 
   return renderWithCatalog(
     <PreferencesDialog
       preferences={defaults}
-      destinations={["Documentos"]}
+      onChooseDestination={noop}
       onChange={noop}
       onForgetActivity={noop}
       onClose={noop}
@@ -66,11 +66,35 @@ describe("PreferencesDialog", () => {
   it("shows the destination folder by its name and never by its path", () => {
     renderDialog({ preferences: { ...defaults, destination: "Documentos" } });
 
-    const destination = screen.getByRole("combobox", {
-      name: "Dónde se guarda el documento firmado",
-    });
-    expect(destination).toHaveTextContent("Documentos");
+    expect(screen.getByText("Dónde se guarda el documento firmado")).toBeInTheDocument();
+    expect(screen.getByText("Documentos")).toBeInTheDocument();
     expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
+  });
+
+  it("picks the destination folder with a directory picker and not with a dropdown", async () => {
+    // El desplegable recibía una sola opción: un control que finge elegir
+    // (ID-65). Lo que hay es un botón que abre el selector del sistema.
+    const user = userEvent.setup();
+    const onChooseDestination = vi.fn(async () => {});
+    renderDialog({ onChooseDestination });
+
+    expect(
+      screen.queryByRole("combobox", { name: "Dónde se guarda el documento firmado" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cambiar carpeta…" }));
+
+    expect(onChooseDestination).toHaveBeenCalledOnce();
+  });
+
+  it("shows in the section the failure to choose a folder", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      onChooseDestination: () => Promise.reject(new Error("no se pudo guardar")),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Cambiar carpeta…" }));
+
+    expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
   });
 
   it("offers only the languages whose catalog is complete", async () => {
@@ -222,9 +246,7 @@ describe("PreferencesDialog", () => {
         name: /Recordar la última configuración de firma visible/,
       }),
     ).toBeInTheDocument();
-    expect(
-      within(signing).getByRole("combobox", { name: "Dónde se guarda el documento firmado" }),
-    ).toBeInTheDocument();
+    expect(within(signing).getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
 
     const privacy = screen.getByRole("region", { name: "Privacidad" });
     expect(

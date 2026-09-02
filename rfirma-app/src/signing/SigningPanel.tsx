@@ -7,6 +7,8 @@ import { Switch } from "../preferences/Switch";
 import { CertificateSelect, statusWarning } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
+import type { Destination } from "./destination";
+import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
@@ -52,13 +54,6 @@ export type CertificateState =
    * porque cambiar de certificado es abrirlo otra vez y no un botón aparte.
    */
   | { kind: "chosen"; certificate: Certificate; certificates: readonly Certificate[] };
-
-/** La carpeta de destino, por su **nombre**: la ruta no se enseña (ADR-0011). */
-export interface Destination {
-  folder: string;
-  /** Si se puede escribir ahí. Falso no apaga el botón: ofrece cambiarla. */
-  writable: boolean;
-}
 
 interface SigningPanelProps {
   document: SigningDocument;
@@ -141,6 +136,12 @@ export function SigningPanel({
     [chosen, signedAt, language],
   );
   const preview = useLayer2Preview(composer, signature, signer);
+  // El destino recortado. Sin nombre compuesto —la carpeta no se deja
+  // comprobar— se enseña el del documento, que es lo único que se sabe.
+  const shortened = shortenDestination({
+    folder: destination.folder,
+    name: destination.name ?? document.name,
+  });
 
   const changeField = (field: keyof VisibleSignature["fields"], checked: boolean) => {
     onChangeSignature({ ...signature, fields: { ...signature.fields, [field]: checked } });
@@ -319,20 +320,25 @@ export function SigningPanel({
               <span className="panel__destination-icon">
                 <FolderIcon />
               </span>
-              {/* El nombre de la carpeta se recorta con elipsis; el aviso de
-                  que no se puede escribir, no —recortar justamente el aviso
-                  sería perderlo cuando más falta hace—. */}
-              <p
-                className={
-                  destination.writable
-                    ? "rf-prose panel__destination-folder"
-                    : "rf-prose panel__destination-unwritable"
-                }
-              >
-                {destination.writable
-                  ? destination.folder
-                  : t("panel.footer.unwritable", { folder: destination.folder })}
-              </p>
+              {/* El destino son **dos cosas**: la carpeta, atenuada y precedida
+                  de `…/` —hay carpetas por encima y no se afirma cuáles—, y el
+                  nombre sin atenuar, que es el dato (ID-63). El recorte lo
+                  decide `shortenDestination`; la línea envuelve antes que
+                  cortarse, así que aquí no hay ninguna elipsis de CSS.
+
+                  El aviso de que no se puede escribir **no se recorta**: es una
+                  frase entera y perderla por elipsis sería perder el aviso
+                  cuando más falta hace. */}
+              {destination.writable ? (
+                <p className="rf-prose panel__destination-path">
+                  <span className="rf-text-muted">{`…/${shortened.folder}/`}</span>
+                  {shortened.name}
+                </p>
+              ) : (
+                <p className="rf-prose panel__destination-unwritable">
+                  {t("panel.footer.unwritable", { folder: shortened.folder })}
+                </p>
+              )}
               <button
                 type="button"
                 className="rf-btn rf-btn--ghost panel__destination-change"

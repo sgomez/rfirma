@@ -51,12 +51,10 @@ interface SaveFailure {
 interface PreferencesDialogProps {
   preferences: Preferences;
   /**
-   * Las carpetas de destino que se pueden elegir, **por su nombre**. Bajo el
-   * arenero hay exactamente una, la de documentos del usuario: *junto al
-   * documento original* no existe ahí, y enseñarlo atenuado sería contarle al
-   * usuario nuestros problemas de empaquetado (ADR-0011).
+   * Abre el **selector de directorio** del sistema y guarda lo que conceda.
+   * Rechaza si el ajuste no se pudo guardar, como cualquier otro (ID-70).
    */
-  destinations: readonly string[];
+  onChooseDestination: () => Promise<void>;
   /**
    * Guarda el ajuste. **Rechaza** si el disco no lo acepta, y quien lo llama
    * ya ha repuesto el valor anterior: el rechazo no es para deshacer nada,
@@ -104,10 +102,16 @@ interface PreferencesDialogProps {
  * despliega el elemento nativo la pinta el sistema de ventanas y no la hoja de
  * estilos, así que las opciones salían con los colores del escritorio dentro
  * de una pantalla hecha con los tokens del sistema de diseño.
+ *
+ * **La carpeta de destino no es un desplegable**: lo fue, con una sola opción
+ * dentro, que es un control que finge elegir. Es una fila con el **nombre** de
+ * la carpeta —no su ruta— y un botón que abre el selector de directorio del
+ * sistema, que devuelve exactamente ese último segmento en los cuatro canales
+ * (ID-65, ADR-0011).
  */
 export function PreferencesDialog({
   preferences,
-  destinations,
+  onChooseDestination,
   onChange,
   onForgetActivity,
   onClose,
@@ -283,14 +287,21 @@ export function PreferencesDialog({
                 )
               }
             />
-            <Select
-              label={t("preferences.destination.label")}
-              value={preferences.destination}
-              options={destinations.map((name) => ({ value: name, label: name }))}
-              onChange={(destination) =>
-                void change("signing", () => onChange({ ...preferences, destination }))
-              }
-            />
+            <div className="preferences__destination">
+              <p className="rf-label">{t("preferences.destination.label")}</p>
+              <div className="rf-row rf-gap-sm preferences__destination-row">
+                <p className="rf-prose preferences__destination-folder">
+                  {preferences.destination}
+                </p>
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--secondary"
+                  onClick={() => void change("signing", onChooseDestination)}
+                >
+                  {t("preferences.destination.change")}
+                </button>
+              </div>
+            </div>
             {saveNotice("signing")}
           </section>
 

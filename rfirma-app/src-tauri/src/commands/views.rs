@@ -117,6 +117,31 @@ pub struct CertificateView {
     pub remembered: bool,
 }
 
+/// Dónde va a caer el documento que hay delante: **la carpeta y el nombre**,
+/// los dos por su nombre y ninguno por su ruta (ID-63, ADR-0011).
+///
+/// Es lo que el pie del panel de firma enseña **antes** de firmar, así que trae
+/// las dos cosas que hacen falta para pintarlo: el nombre con el que va a caer
+/// —el que compone [`CheckedFolder::landing_for`](crate::destination::CheckedFolder::landing_for),
+/// con su sufijo y su número de desempate ya resueltos— y si la carpeta se
+/// puede escribir, que decide [`CheckedFolder::check`](crate::destination::CheckedFolder::check)
+/// y no un literal (ID-67).
+///
+/// `name` es `None` cuando la carpeta no está o no se deja escribir: sin
+/// carpeta comprobada no hay dónde resolver el homónimo, y aventurar un nombre
+/// sería prometer un fichero que nadie va a escribir.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DestinationView {
+    /// El **nombre** de la carpeta de destino, su último segmento.
+    pub folder: String,
+    /// El nombre del fichero firmado que va a caer ahí, homónimos incluidos.
+    pub name: Option<String>,
+    /// Si esa carpeta está y se puede escribir **ahora mismo**. No se persiste:
+    /// es un hecho sobre el disco de este instante.
+    pub writable: bool,
+}
+
 /// El documento firmado, tal como la ventana lo cuenta: **dos nombres, ninguna
 /// ruta** (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

@@ -41,6 +41,7 @@ import type { LanguagePreference } from "./i18n/preference";
 import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type { Certificate, CertificateStore } from "./signing/certificate";
+import type { Destination, DestinationSource } from "./signing/destination";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { TokenFailure } from "./signing/token";
@@ -457,6 +458,20 @@ export function tauriPreferences(): PreferencesStore {
       await writeConfiguration({ ...stored, ...preferences });
     },
     forgetActivity: () => invoke<void>("forget_activity"),
+    chooseFolder: () => invoke<string | null>("choose_destination"),
+  };
+}
+
+/**
+ * Dónde caerá el documento que hay delante: `preview_destination`.
+ *
+ * Lo compone el backend con la misma carpeta comprobada y el mismo
+ * `landing_for` con los que va a escribir después, así que el pie enseña lo que
+ * va a ocurrir y no una promesa parecida (ID-63, ID-67).
+ */
+export function tauriDestinations(): DestinationSource {
+  return {
+    previewFor: (documentId) => invoke<Destination>("preview_destination", { id: documentId }),
   };
 }
 

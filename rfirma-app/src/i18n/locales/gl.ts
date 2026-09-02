@@ -337,6 +337,7 @@ export const gl: UntranslatedCatalog = {
     },
     destination: {
       label: "",
+      change: "",
     },
     theme: {
       label: "",

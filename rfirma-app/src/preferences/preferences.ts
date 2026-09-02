@@ -54,6 +54,16 @@ export interface PreferencesStore {
    * apagar «Recordar mi actividad».
    */
   forgetActivity(): Promise<void>;
+  /**
+   * Abre el **selector de directorio** del sistema y guarda la carpeta que
+   * conceda, devolviéndola por su **nombre**; `null` si se cerró sin elegir.
+   *
+   * Va aquí y no en un puerto aparte porque es el otro medio de escribir un
+   * ajuste, y el único que la ventana no puede resolver sola: el diálogo lo
+   * abre Rust (ID-65), así que la ventana no manda ninguna ruta —no la
+   * conoce— y lo que recibe de vuelta es lo mismo que enseña.
+   */
+  chooseFolder(): Promise<string | null>;
 }
 
 /**
@@ -63,6 +73,7 @@ export interface PreferencesStore {
 export function inMemoryPreferences(
   initial: Preferences,
   onForget: () => void = () => {},
+  folder: () => string | null = () => null,
 ): PreferencesStore {
   let preferences = initial;
   return {
@@ -71,5 +82,12 @@ export function inMemoryPreferences(
       preferences = next;
     },
     forgetActivity: async () => onForget(),
+    chooseFolder: async () => {
+      const chosen = folder();
+      if (chosen !== null) {
+        preferences = { ...preferences, destination: chosen };
+      }
+      return chosen;
+    },
   };
 }

@@ -332,6 +332,7 @@ export const en: Catalog = {
     },
     destination: {
       label: "Where the signed document is saved",
+      change: "Change folder…",
     },
     theme: {
       label: "Theme",

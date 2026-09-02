@@ -412,6 +412,7 @@ export const es = {
     },
     destination: {
       label: "Dónde se guarda el documento firmado",
+      change: "Cambiar carpeta…",
     },
     /**
      * El tema. `system` no es «claro»: es no forzar nada y dejar que mande el

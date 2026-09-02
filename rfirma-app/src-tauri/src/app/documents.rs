@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::commands::views::{
-    DroppedDocumentView, Failure, OpenedDocumentView, SignedDocumentView,
+    DestinationView, DroppedDocumentView, Failure, OpenedDocumentView, SignedDocumentView,
 };
 use crate::destination::{CheckedFolder, PortalDocument};
 use crate::memory::{Configuration, Memory, OpenedDocuments};
@@ -101,17 +101,57 @@ pub fn deliver(
     Ok((landing, told))
 }
 
+/// **Caso de uso.** Dónde va a caer el documento que hay delante, **antes** de
+/// firmarlo y sin escribir nada (ID-63, ID-67).
+///
+/// Es [`deliver`] menos la escritura: la misma carpeta elegida, la misma
+/// comprobación —[`CheckedFolder::check`], que **no crea nada** (ID-38)— y el
+/// mismo nombre que compone [`CheckedFolder::landing_for`], homónimos
+/// numerados incluidos. Lo que el pie del panel enseña es lo que va a ocurrir,
+/// no una promesa parecida.
+///
+/// La carpeta que no está o no se deja escribir **no es un fallo aquí**: es un
+/// destino que se cuenta como no escribible, con el botón de firmar todavía
+/// vivo y un `Cambiar` al lado (ADR-0011). Por eso no devuelve `Result`.
+pub fn where_it_lands(
+    configuration: &Configuration,
+    documents_folder: &Path,
+    document: &PortalDocument,
+) -> DestinationView {
+    let chosen = super::chosen_folder(configuration, documents_folder.to_path_buf());
+    let Ok(folder) = CheckedFolder::check(&chosen) else {
+        return DestinationView {
+            folder: chosen.name().to_owned(),
+            name: None,
+            writable: false,
+        };
+    };
+    let name = folder
+        .landing_for(document)
+        .ok()
+        .and_then(|landing| file_name_of(&landing));
+    DestinationView {
+        folder: folder.name().to_owned(),
+        name,
+        writable: true,
+    }
+}
+
 /// Cómo se cuenta un documento firmado: **dos nombres, ninguna ruta**
 /// (ADR-0011).
 pub fn told_as(landing: &Path, folder: &CheckedFolder) -> SignedDocumentView {
     SignedDocumentView {
-        name: landing
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default()
-            .to_owned(),
+        name: file_name_of(landing).unwrap_or_default(),
         folder: folder.name().to_owned(),
     }
+}
+
+/// El último segmento de una ruta, que es lo único de ella que cruza.
+fn file_name_of(landing: &Path) -> Option<String> {
+    landing
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(str::to_owned)
 }
 
 /// Apunta el documento en el registro de la sesión y lo cuenta con su
@@ -258,7 +298,7 @@ fn modified_seconds(document: &PortalDocument) -> Option<u64> {
 mod tests {
     use super::{
         bytes_of, deliver, dropped_document, folder_it_came_from, note_opened, remember_the_folder,
-        starting_folder, told_as,
+        starting_folder, told_as, where_it_lands,
     };
     use crate::app::fixtures::a_memory;
     use crate::destination::{CheckedFolder, PortalDocument};
@@ -639,5 +679,91 @@ mod tests {
 
         assert_eq!(failure.situation, "folderMissing");
         assert!(!missing.exists(), "la carpeta se ha creado, y no debía");
+    }
+
+    /// El pie del panel enseña **carpeta y nombre**, y el nombre es el que va a
+    /// caer de verdad: el sufijo `-firmado` ya puesto (ID-63).
+    #[test]
+    fn the_landing_is_told_by_its_folder_and_its_name_before_signing() {
+        let folder = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        let view = where_it_lands(
+            &with_destination(folder.path()),
+            std::path::Path::new("/no/se/usa"),
+            &document,
+        );
+
+        assert!(view.writable, "la carpeta esta y se puede escribir");
+        assert_eq!(view.name.as_deref(), Some("contrato-firmado.pdf"));
+        assert_eq!(
+            view.folder,
+            folder
+                .path()
+                .file_name()
+                .and_then(|name| name.to_str())
+                .expect("el temporal tiene nombre")
+        );
+    }
+
+    /// El homónimo se resuelve **antes** de firmar: quien mira el pie está
+    /// preguntándose si va a machacar el anterior, y la respuesta es el número.
+    #[test]
+    fn a_namesake_already_there_is_numbered_in_what_the_footer_shows() {
+        let folder = tempfile::tempdir().expect("deberia haber directorio temporal");
+        std::fs::write(folder.path().join("contrato-firmado.pdf"), b"x")
+            .expect("deberia escribirse el homonimo");
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        let view = where_it_lands(
+            &with_destination(folder.path()),
+            std::path::Path::new("/no/se/usa"),
+            &document,
+        );
+
+        assert_eq!(view.name.as_deref(), Some("contrato-firmado-2.pdf"));
+    }
+
+    /// `writable` sale de `CheckedFolder::check` y no de un literal (ID-67): con
+    /// la carpeta ausente el pie avisa, **y la carpeta no se crea**.
+    #[test]
+    fn a_folder_that_is_not_there_is_told_as_unwritable_and_stays_uncreated() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let missing = home.path().join("Firmados");
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        let view = where_it_lands(
+            &with_destination(&missing),
+            std::path::Path::new("/no/se/usa"),
+            &document,
+        );
+
+        assert!(!view.writable);
+        assert_eq!(view.folder, "Firmados", "la carpeta se sigue nombrando");
+        assert_eq!(view.name, None, "sin carpeta no hay nombre que prometer");
+        assert!(!missing.exists(), "la carpeta se ha creado, y no debía");
+    }
+
+    /// Decidir dónde caerá **no escribe nada**: el pie se pinta en cada pintada
+    /// y una que dejara ficheros llenaría la carpeta de vacíos.
+    #[test]
+    fn telling_the_landing_writes_nothing() {
+        let folder = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
+
+        let view = where_it_lands(
+            &with_destination(folder.path()),
+            std::path::Path::new("/no/se/usa"),
+            &document,
+        );
+
+        assert!(view.name.is_some());
+        assert_eq!(
+            std::fs::read_dir(folder.path())
+                .expect("deberia leerse el temporal")
+                .count(),
+            0,
+            "decidir el destino ha dejado ficheros"
+        );
     }
 }

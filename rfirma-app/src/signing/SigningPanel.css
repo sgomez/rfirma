@@ -291,24 +291,28 @@
   gap: 4px;
 }
 
+/* Arriba, y no centrado: el destino puede ocupar dos renglones y el icono y el
+   `Cambiar` tienen que casar con el primero. */
 .panel__destination-row {
-  align-items: center;
+  align-items: flex-start;
 }
 
 .panel__destination-icon {
   display: flex;
   flex: none;
+  /* 3 px para casar con la primera línea del destino, que ya no está centrado. */
+  margin-top: 3px;
   color: var(--rf-text-muted);
 }
 
-/* La carpeta se recorta por el final: lo que importa del destino es el nombre,
-   y el pie no puede crecer con la longitud de una ruta. */
-.panel__destination-folder {
+/* La línea **envuelve antes que cortarse** (ID-64): `white-space: nowrap` con
+   `overflow: hidden` cortaba en seco lo que la `…` de `shortenDestination` ya
+   había recortado, y sin avisar. Lo que decide qué se pierde es la función
+   pura, no la hoja de estilos. */
+.panel__destination-path {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* El aviso de carpeta no escribible **no** se recorta: es una frase entera y

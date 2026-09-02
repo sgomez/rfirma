@@ -337,6 +337,7 @@ export const eu: UntranslatedCatalog = {
     },
     destination: {
       label: "",
+      change: "",
     },
     theme: {
       label: "",

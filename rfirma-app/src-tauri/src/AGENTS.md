@@ -18,10 +18,11 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (664), `app/documents.rs` (643), `app/signing.rs` (604)
-  y `rubric/normalize.rs` (586). Ninguno de `commands/` pasa de 400 y así se
-  quedan: cuando uno crece, lo que ha entrado casi siempre es una decisión, y
-  una decisión va en `app/`.
+  `app/documents.rs` (769), `signing/placement.rs` (664), `app/signing.rs` (604)
+  y `rubric/normalize.rs` (586). Ninguno de `commands/` pasa de 450, y lo
+  que los hace crecer es **prosa**: los cuerpos siguen siendo desempaquetar,
+  llamar y traducir. Si lo que crece es un cuerpo, lo que ha entrado casi
+  siempre es una decisión, y una decisión va en `app/`.
 - El primer bloque `//!` de cada módulo es su contrato. `head -40 <fichero>` casi
   siempre basta para decidir si es el fichero que buscas.
 
@@ -30,12 +31,12 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 171 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
+| `lib.rs` | 173 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 381 | **Las dieciséis órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 328 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/mod.rs` | 449 | **Las dieciocho órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/views.rs` | 353 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
@@ -45,10 +46,10 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/cycle.rs` | 432 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
 | `app/signing.rs` | 604 | El recorrido de la firma en tres pasos y la sesión a medias. |
-| `app/documents.rs` | 643 | Por dónde entra el documento y dónde cae el firmado. |
+| `app/documents.rs` | 769 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/recents.rs` | 539 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
-| `app/configuration.rs` | 256 | Los ajustes, del disco a la ventana y de vuelta. |
+| `app/configuration.rs` | 344 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/window.rs` | 151 | El tamaño de la ventana entre sesiones, y si estaba maximizada (ID-72, ID-73). |
 | `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |

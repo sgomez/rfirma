@@ -8,6 +8,7 @@ vi.mock("@tauri-apps/api/event", () => ({ listen }));
 
 const {
   tauriCertificateStore,
+  tauriDestinations,
   tauriDocumentDrops,
   tauriDocumentPicker,
   tauriLanguagePreference,
@@ -545,6 +546,47 @@ describe("los puertos de la configuración sobre Tauri", () => {
     await tauriPreferences().forgetActivity();
 
     expect(invoke).toHaveBeenCalledWith("forget_activity");
+  });
+
+  it("picks the destination folder with the backend dialog and gets back a name", async () => {
+    invoke.mockResolvedValue("Firmados");
+
+    await expect(tauriPreferences().chooseFolder()).resolves.toBe("Firmados");
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(["choose_destination"]);
+  });
+
+  it("reads a cancelled directory picker as no choice, and not as a failure", async () => {
+    invoke.mockResolvedValue(null);
+
+    await expect(tauriPreferences().chooseFolder()).resolves.toBeNull();
+  });
+});
+
+/**
+ * **Grada A**: el destino sobre Tauri. Quien lo compone —la carpeta comprobada
+ * y el nombre con su homónimo resuelto— es `app::documents::where_it_lands`, y
+ * está probado allí; aquí solo se comprueba la costura.
+ */
+describe("el puerto del destino sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks where the open document will land, by its identifier and never by a path", async () => {
+    invoke.mockResolvedValue({
+      folder: "Documentos",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
+
+    const destination = await tauriDestinations().previewFor("1e8b83b9");
+
+    expect(invoke).toHaveBeenCalledWith("preview_destination", { id: "1e8b83b9" });
+    expect(destination).toEqual({
+      folder: "Documentos",
+      name: "contrato-firmado.pdf",
+      writable: true,
+    });
   });
 });
 

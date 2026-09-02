@@ -2,13 +2,16 @@
 //! y de vuelta.
 //!
 //! Las dos direcciones son asimétricas a propósito: sale todo, entra casi todo.
-//! La carpeta de destino se enseña y no se elige —bajo el arenero hay una y
-//! solo una—, así que lo que llegue en ese campo se ignora.
+//! La carpeta de destino **no entra por aquí**: lo que la ventana manda en ese
+//! campo se ignora, y quien la mueve es [`choose_destination`], que recibe la
+//! carpeta que el selector de directorio concedió y no una ruta escrita por la
+//! ventana (ID-65, ADR-0011).
 
 use std::sync::Mutex;
 
 use crate::commands::views::ConfigurationView;
 use crate::commands::Failure;
+use crate::destination::DestinationFolder;
 use crate::memory::{Configuration, Memory};
 use crate::signing::Language;
 
@@ -65,6 +68,39 @@ pub fn write(
     Ok(())
 }
 
+/// **Caso de uso.** Guarda la carpeta que el selector de directorio acaba de
+/// conceder, y la devuelve por su nombre (ID-65).
+///
+/// Vive aparte de [`write`] porque el destino **no viaja en
+/// [`ConfigurationView`]**: lo que cruza de vuelta es un nombre, y una ruta
+/// escrita por la ventana no sería una carpeta concedida por el portal sino una
+/// que la ventana se ha inventado. Aquí la ruta entra desde el diálogo que abrió
+/// el propio backend, y sale su último segmento (ADR-0011).
+///
+/// La carpeta **no se comprueba aquí**: lo que el selector concede existe por
+/// haberlo concedido, y si deja de existir quien lo cuenta es
+/// [`crate::app::documents::where_it_lands`], en el pie y antes de firmar
+/// (ID-67).
+pub fn choose_destination(
+    memory: &Memory,
+    live: &Mutex<Configuration>,
+    folder: DestinationFolder,
+) -> Result<String, Failure> {
+    let mut live = super::lock(live);
+    let next = Configuration {
+        destination: Some(folder),
+        ..live.clone()
+    };
+    memory.remember_configuration(&next)?;
+    let name = next
+        .destination
+        .as_ref()
+        .map(|folder| folder.name().to_owned())
+        .unwrap_or_default();
+    *live = next;
+    Ok(name)
+}
+
 /// **Caso de uso.** Olvida lo acumulado: los recientes y el certificado.
 ///
 /// Es «Vaciar la lista» y también lo que arrastra apagar «Recordar mi
@@ -95,7 +131,7 @@ pub fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration
 mod tests {
     use std::sync::Mutex;
 
-    use super::{forget_activity, language_of, merged, shown, write};
+    use super::{choose_destination, forget_activity, language_of, merged, shown, write};
     use crate::app::fixtures::a_memory;
     use crate::commands::views::ConfigurationView;
     use crate::memory::{Configuration, Theme};
@@ -252,5 +288,57 @@ mod tests {
         // Lo que no reconozcamos cae en castellano, que es el idioma del
         // documento administrativo corriente, y no en un panic.
         assert_eq!(language_of("de"), Language::Spanish);
+    }
+
+    /// La carpeta elegida llega al disco **y** a la copia viva, y vuelve por su
+    /// **nombre**: la ruta se queda de este lado (ID-65, ADR-0011).
+    #[test]
+    fn the_chosen_folder_is_remembered_and_comes_back_by_its_name() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let live = Mutex::new(Configuration::default());
+
+        let name = choose_destination(
+            &memory,
+            &live,
+            crate::destination::DestinationFolder::at("/run/user/1000/doc/1e8b/Firmados"),
+        )
+        .expect("deberia guardarse");
+
+        assert_eq!(name, "Firmados");
+        assert!(!name.contains('/'), "la ruta no cruza");
+        assert_eq!(
+            super::super::lock(&live).destination,
+            Some(crate::destination::DestinationFolder::at(
+                "/run/user/1000/doc/1e8b/Firmados"
+            )),
+            "la copia viva se entera en el mismo paso"
+        );
+    }
+
+    /// Elegir carpeta **no toca ningún otro ajuste**: es una fila de
+    /// Preferencias, no un guardado de la pantalla entera.
+    #[test]
+    fn choosing_a_folder_leaves_the_other_settings_alone() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let live = Mutex::new(Configuration {
+            language: Language::English,
+            theme: Theme::Dark,
+            remember_activity: false,
+            ..Configuration::default()
+        });
+
+        choose_destination(
+            &memory,
+            &live,
+            crate::destination::DestinationFolder::at("/tmp/Firmados"),
+        )
+        .expect("deberia guardarse");
+
+        let after = super::super::lock(&live);
+        assert_eq!(after.language, Language::English);
+        assert_eq!(after.theme, Theme::Dark);
+        assert!(!after.remember_activity);
     }
 }

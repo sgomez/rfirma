@@ -15,6 +15,7 @@ import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import {
   tauriCertificateStore,
+  tauriDestinations,
   tauriDocumentDrops,
   tauriDocumentPicker,
   tauriLanguagePreference,
@@ -31,14 +32,16 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Diez puertos hablan ya con el backend: los tres de firma del #60
+// Once puertos hablan ya con el backend: los tres de firma del #60
 // —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`—, los
 // dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, el del
 // arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
 // de la ventana en vez de llamar a una orden, los dos de la configuración,
 // `tauriPreferences` y `tauriLanguagePreference`, que debajo son el mismo
 // fichero, el de la bandeja del #126, `tauriRecents`, que es el que la hace
-// sobrevivir al reinicio (ID-75), y el de la rúbrica del #128, `tauriRubricPicker`.
+// sobrevivir al reinicio (ID-75), el de la rúbrica del #128, `tauriRubricPicker`,
+// y el del destino del #130, `tauriDestinations`, que es quien sabe con qué
+// nombre y en qué carpeta va a caer lo firmado (ID-63).
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
@@ -50,12 +53,6 @@ const recents = tauriRecents();
 
 const preferences = tauriPreferences();
 
-// El nombre de la carpeta de documentos del usuario lo resuelve el backend
-// (`paths::documents_folder`) y llega con los ajustes; esta lista es lo que el
-// desplegable ofrece mientras se leen. Bajo el arenero el destino es esa
-// carpeta y solo esa, así que tiene una entrada (ADR-0011).
-const DOCUMENTS_FOLDER = "Documentos";
-
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
@@ -65,7 +62,7 @@ createRoot(root).render(
         drops={tauriDocumentDrops()}
         pdfs={tauriPdfSource()}
         preferences={preferences}
-        destinations={[DOCUMENTS_FOLDER]}
+        destinations={tauriDestinations()}
         certificates={tauriCertificateStore()}
         rubrics={tauriRubricPicker()}
         composer={tauriLayer2Composer()}

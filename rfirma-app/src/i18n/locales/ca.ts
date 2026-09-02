@@ -337,6 +337,7 @@ export const ca: UntranslatedCatalog = {
     },
     destination: {
       label: "",
+      change: "",
     },
     theme: {
       label: "",
