@@ -25,6 +25,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0014 | Gradas de prueba y puerta de calidad (CRAP) |
 | 0015 | Canal de distribución propio |
 | 0016 | El sello de sesión: una sola invariante |
+| 0017 | La arquitectura de los dos lados: puertos y capas |
 
 ## `research/` — mediciones (por qué algo es como es)
 

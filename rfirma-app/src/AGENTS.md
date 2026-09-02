@@ -84,6 +84,7 @@ rojo.
 ## La regla del puerto
 
 La ventana no habla con Tauri: habla con puertos declarados en su propio
-módulo, y `main.tsx` elige la implementación. Si vas a añadir capacidad nueva,
-el orden es: el puerto en su módulo de dominio → `tauri.ts` → `main.tsx`. Las
-fichas de pantalla viven en `docs/design/` (ver `docs/AGENTS.md`).
+módulo, y `main.tsx` elige la implementación (ADR-0017). Si vas a añadir
+capacidad nueva, el orden es: el puerto en su módulo de dominio → `tauri.ts` →
+`main.tsx`. Las fichas de pantalla viven en `docs/design/` (ver
+`docs/AGENTS.md`).

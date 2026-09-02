@@ -263,15 +263,50 @@ fn the_list_of_commands_grew_to_eleven_and_no_further() {
     assert_eq!(orders, 11, "la lista de ordenes es cerrada a proposito");
 }
 
-/// Y las dos que hablan con el disco o con el portal **no bloquean el hilo
+/// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
+/// siguiente: el atributo, el nombre y el cuerpo.
+///
+/// Se trocea el fichero en vez de nombrar órdenes una a una porque lo que se
+/// vigila —quién se cuelga del hilo del bucle de eventos— es una propiedad de
+/// **cualquier** orden, incluida la que alguien añada mañana.
+fn commands_of(source: &str) -> Vec<(&str, String, &str)> {
+    let marker = "#[tauri::command";
+    let mut found = Vec::new();
+    let mut rest = source;
+    while let Some(start) = rest.find(marker) {
+        rest = &rest[start..];
+        let end = rest[marker.len()..]
+            .find(marker)
+            .map_or(rest.len(), |offset| offset + marker.len());
+        let block = &rest[..end];
+        let attribute = block.lines().next().unwrap_or_default();
+        let name = block
+            .split_once("pub fn ")
+            .and_then(|(_, after)| after.split_once('('))
+            .map(|(name, _)| name.trim().to_owned())
+            .unwrap_or_else(|| "sin nombre".to_owned());
+        found.push((attribute, name, block));
+        rest = &rest[end..];
+    }
+    found
+}
+
+/// Y las que hablan con el disco o con el portal **no bloquean el hilo
 /// principal**: `#[tauri::command]` a secas genera un cuerpo `Blocking` que
 /// corre dentro del manejador del IPC —el hilo del bucle GTK—, y
 /// `blocking_pick_file()` espera allí a un cierre que solo ese hilo puede
 /// ejecutar. Punto muerto: la ventana se clava y el diálogo no aparece.
+///
+/// Las dos de hoy se nombran porque están escritas y se sabe lo que hacen; la
+/// regla general, en cambio, se **descubre**: toda orden cuyo cuerpo llame a un
+/// `blocking_*` de un plugin tiene que ser `(async)`, se llame como se llame.
+/// Sin esa mitad, una orden nueva con un diálogo dentro entraría con la ventana
+/// clavada y las guardas en verde.
 #[test]
-fn the_two_commands_that_touch_the_portal_run_off_the_main_thread() {
+fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
+    let source = production_half(source_of("mod.rs"));
+
     for command in ["pub fn open_document(", "pub fn read_document("] {
-        let source = production_half(source_of("mod.rs"));
         let declaration = source
             .find(command)
             .unwrap_or_else(|| panic!("no esta la orden «{command}»"));
@@ -279,6 +314,27 @@ fn the_two_commands_that_touch_the_portal_run_off_the_main_thread() {
         assert!(
             before.ends_with("#[tauri::command(async)]\n"),
             "«{command}» tiene que ser #[tauri::command(async)]"
+        );
+    }
+
+    // Cuántas órdenes hay lo cierra `the_list_of_commands_grew_to_eleven_and_no_further`;
+    // aquí solo se comprueba que el troceado las ve, porque un troceado que se
+    // queda corto dejaría esta guarda en verde sin haber mirado nada.
+    let commands = commands_of(source);
+    assert!(
+        commands.len() >= 11,
+        "el troceado de ordenes ha encontrado {}: si no las ve todas, no vigila nada",
+        commands.len()
+    );
+    for (attribute, name, block) in commands {
+        if !block.contains("blocking_") {
+            continue;
+        }
+        assert_eq!(
+            attribute.trim(),
+            "#[tauri::command(async)]",
+            "«{name}» llama a un blocking_* de un plugin desde el hilo del bucle de \
+             eventos: tiene que ser #[tauri::command(async)] o la ventana se clava sin error"
         );
     }
 }
