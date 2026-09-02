@@ -543,6 +543,39 @@ mod full_cycle {
         (path, page)
     }
 
+    /// **La prefirma en seco** (ID-136): el mismo ciclo, con un `PK1` inventado
+    /// y **sin PIN**.
+    ///
+    /// Que aquí no aparezca `sign_on_token` ni la constante `PIN` no es
+    /// casualidad: es la mitad de la decisión que se puede leer. La otra mitad
+    /// —que el sello pintado sea el mismo— la mide
+    /// `the_dry_run_paints_the_very_box_the_real_signature_paints`.
+    fn dry_run(pdf: &[u8], config: &SignatureConfig) -> Vec<u8> {
+        let bridge = bridge();
+        let certificate = signing_certificate();
+        let chain = vec![certificate.der().to_vec()];
+        let reference = reference();
+
+        let cycle = cycle::presign(
+            &bridge,
+            SigningRequest {
+                document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
+                chain: &chain,
+                config,
+                certificate: &reference,
+            },
+        )
+        .expect("la prefirma en seco deberia salir");
+
+        cycle
+            .postsign(
+                &bridge,
+                &cycle::TokenSignature::invented(),
+                &cycle.seal_in_transit(),
+            )
+            .expect("la postfirma deberia componer el PDF con el PK1 inventado")
+    }
+
     /// El área del recuadro en píxeles, que es contra lo que se compara la
     /// tinta que haya dentro.
     fn box_area() -> u32 {
@@ -732,6 +765,69 @@ mod full_cycle {
     /// es lo único que permite alterar *una* invariante sin tocar las otras
     /// dos. Que este conocimiento viva aquí, en un fichero de pruebas, y no en
     /// el código de producción es justo la línea que el ADR traza.
+    /// **Lo que la vista previa pinta es el sello, no un dibujo parecido**
+    /// (ID-136).
+    ///
+    /// El sondeo del #115 midió que los bytes visibles del PDF compuesto con un
+    /// `PK1` inventado son idénticos a los del firmado de verdad. Esto es esa
+    /// medida convertida en puerta: se rasterizan las dos páginas a 72 ppp y se
+    /// comparan **píxel a píxel**. Si algún día dejaran de coincidir, la
+    /// ventana estaría enseñando dentro del recuadro algo que el PDF firmado no
+    /// va a tener, y el hito entero cambia de forma.
+    ///
+    /// Se compara la página entera y no solo el recuadro a propósito: lo que se
+    /// afirma es que la vista previa no altera nada de lo que se ve, ni dentro
+    /// ni fuera.
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn the_dry_run_paints_the_very_box_the_real_signature_paints() {
+        let pdf = a_one_page_pdf();
+        let config = a_config_of("rfirma\nla vista previa", Some(a_black_rubric()));
+
+        let signed = sign(&pdf, &config);
+        let previewed = dry_run(&pdf, &config);
+
+        let signed_page = rasterise(&write_to_target("signed-against-preview.pdf", &signed));
+        let previewed_page = rasterise(&write_to_target("previewed.pdf", &previewed));
+
+        assert_eq!(
+            dark_pixels_in_the_signature_box(&previewed_page),
+            dark_pixels_in_the_signature_box(&signed_page),
+            "la vista previa pinta otra cantidad de tinta que la firma de verdad"
+        );
+        assert_eq!(
+            previewed_page.as_raw(),
+            signed_page.as_raw(),
+            "la pagina compuesta en seco no se ve igual que la firmada: la ventana              estaria enseñando lo que el PDF no va a tener"
+        );
+    }
+
+    /// **La prefirma en seco no pide PIN y no escribe donde cae el firmado.**
+    ///
+    /// Que no pida PIN se ve en que este recorrido compone el PDF con el token
+    /// **cerrado**: `dry_run` no llama a `sign_on_token` y aquí no hay
+    /// contraseña ninguna. Que no toque el disco de destino se ve en que lo que
+    /// vuelve son bytes: el único fichero que aparece es el que escribe la
+    /// prueba para poder mirarlo.
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn the_dry_run_composes_a_pdf_without_ever_asking_for_the_pin() {
+        let pdf = a_one_page_pdf();
+
+        let previewed = dry_run(&pdf, &a_config_of("rfirma: sin PIN", None));
+
+        assert!(
+            previewed.len() > pdf.len(),
+            "el PDF compuesto tiene que crecer: {} contra {}",
+            previewed.len(),
+            pdf.len()
+        );
+        assert!(
+            previewed.starts_with(b"%PDF-"),
+            "lo que vuelve de la prefirma en seco tiene que ser un PDF"
+        );
+    }
+
     fn inside_the_seal(seal: &SessionSeal) -> String {
         let raw = base64::engine::general_purpose::STANDARD
             .decode(seal.as_bridge_payload())

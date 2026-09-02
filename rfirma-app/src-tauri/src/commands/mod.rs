@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son dieciocho, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son veintiuna, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -83,6 +83,13 @@
 //!
 //! [`begin_signing`] → [`sign_with_pin`] → [`finish_signing`]. El porqué está
 //! en [`crate::app::signing`], que es quien lo hace.
+//!
+//! # Y hay un cuarto paso que no firma: la vista previa
+//!
+//! [`preview_signature`] recorre el mismo ciclo con un `PK1` inventado y
+//! devuelve el PDF compuesto, sin PIN y sin escribir nada (ID-136). Lo que la
+//! ventana pinta dentro del recuadro es entonces **el sello**, no un dibujo
+//! parecido.
 
 pub mod failure;
 pub mod orders;
@@ -486,6 +493,36 @@ pub fn open_signed_folder(
         .opener()
         .open_path(folder.to_string_lossy(), None::<&str>)
         .map_err(|error| Failure::new("unknown", error.to_string()))
+}
+
+/// **Orden 21.** El PDF con el sello que va a quedar, compuesto sin firmar
+/// (ID-136).
+///
+/// La **prefirma en seco**: el ciclo trifásico entero con un `PK1` inventado,
+/// para que la ventana pinte dentro del recuadro lo que va a quedar de verdad y
+/// no una aproximación dibujada. **No pide PIN** y **no toca el disco de
+/// destino**; el porqué de las dos está en [`crate::app::preview`].
+///
+/// Devuelve una [`tauri::ipc::Response`] por lo mismo que [`read_document`]: un
+/// PDF serializado a JSON es un array de miles de números.
+///
+/// Es `(async)` porque el trabajo se va al hilo del isolate y la espera es de
+/// segundos en un documento grande —≈1,9 s en un escaneado de 37 MB—: en el
+/// hilo del bucle de eventos eso es la ventana clavada.
+#[tauri::command(async)]
+pub fn preview_signature(
+    order: SigningOrder,
+    environment: State<'_, Environment>,
+    isolate: State<'_, Isolate>,
+    opened: State<'_, OpenedDocuments>,
+) -> Result<tauri::ipc::Response, Failure> {
+    Ok(tauri::ipc::Response::new(app::preview::compose(
+        &order,
+        &environment.stores,
+        &environment.listed,
+        &opened,
+        &isolate,
+    )?))
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.
