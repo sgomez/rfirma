@@ -120,6 +120,7 @@ export function PreferencesDialog({
   const [current, setCurrent] = useState<Section>("signing");
   const titleId = useId();
   const screen = useRef<HTMLDivElement>(null);
+  const confirm = useRef<HTMLDivElement>(null);
   const sections = useRef(new Map<Section, HTMLElement | null>());
 
   // El foco entra en la pantalla al abrirla, que es lo que la hace un diálogo
@@ -128,6 +129,14 @@ export function PreferencesDialog({
   useEffect(() => {
     screen.current?.focus();
   }, []);
+
+  // La confirmación es a su vez un diálogo modal, así que cuando se pone
+  // delante el foco entra en ella y el tabulador deja de pasear por los
+  // ajustes que quedan detrás: `aria-modal` lo promete a quien escucha, y
+  // esto es lo que lo cumple para quien teclea.
+  useEffect(() => {
+    if (confirmingPurge) confirm.current?.focus();
+  }, [confirmingPurge]);
 
   /**
    * Guarda un ajuste y, si el disco lo rechaza, deja el aviso **en la sección
@@ -161,6 +170,17 @@ export function PreferencesDialog({
     }
   };
 
+  /**
+   * «Borrar y apagar», en ese orden y hasta el final: la lista se vacía
+   * **aunque el ajuste no se haya podido guardar**. Lo que se acaba de
+   * confirmar es un borrado, y no hacerlo porque el interruptor no cupo en el
+   * disco dejaría los recientes a la vista después de haber dicho que sí.
+   *
+   * De ahí la pareja de avisos que puede salir: el de *Privacidad* dice que
+   * «Recordar mi actividad» sigue encendido —y es verdad, el ajuste no se
+   * guardó— mientras la lista ya está vacía. Cada uno cuenta lo suyo, y lo
+   * único que sobra es la promesa que no se cumple, que no la hay.
+   */
   const purge = async () => {
     setConfirmingPurge(false);
     await change("privacy", () => onChange({ ...preferences, rememberActivity: false }));
@@ -175,7 +195,7 @@ export function PreferencesDialog({
    */
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Tab") {
-      trapFocus(screen.current, event);
+      trapFocus(confirmingPurge ? confirm.current : screen.current, event);
       return;
     }
     if (event.key !== "Escape" || event.defaultPrevented) return;
@@ -343,6 +363,8 @@ export function PreferencesDialog({
             className="rf-dialog preferences__confirm"
             role="dialog"
             aria-modal="true"
+            tabIndex={-1}
+            ref={confirm}
             aria-labelledby={`${titleId}-confirm`}
           >
             <p className="rf-prose" id={`${titleId}-confirm`}>

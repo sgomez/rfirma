@@ -341,6 +341,27 @@ describe("PreferencesDialog", () => {
     expect(screen.getByRole("button", { name: "Borrar y apagar" })).toHaveClass("rf-btn--primary");
   });
 
+  /** La confirmación es a su vez modal: el teclado no se sale de ella (ID-71). */
+  it("keeps the keyboard inside the confirmation while it is in front", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
+
+    const confirmation = screen
+      .getByText(/Al apagarlo se borra lo ya recordado/)
+      .closest(".rf-dialog") as HTMLElement;
+    expect(confirmation.contains(document.activeElement)).toBe(true);
+
+    // Dos botones: al tercer tabulador ya ha dado la vuelta en vez de irse al
+    // índice de secciones que queda detrás.
+    await user.tab();
+    await user.tab();
+    await user.tab();
+
+    expect(confirmation.contains(document.activeElement)).toBe(true);
+  });
+
   it("calls the confirmation off with Escape, without closing the screen", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

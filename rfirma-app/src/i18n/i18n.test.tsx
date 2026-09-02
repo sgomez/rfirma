@@ -68,7 +68,7 @@ describe("la resolución de cadenas", () => {
   });
 });
 
-function Probe() {
+function Probe({ onFailure }: { onFailure?: (thrown: unknown) => void }) {
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
 
@@ -76,7 +76,7 @@ function Probe() {
     <div>
       <p>{t("actions.sign")}</p>
       <p>{language}</p>
-      <button type="button" onClick={() => void setLanguage("en")}>
+      <button type="button" onClick={() => void setLanguage("en").catch(onFailure)}>
         {t("actions.change")}
       </button>
     </div>
@@ -102,6 +102,32 @@ describe("el cambio de idioma", () => {
     expect(screen.getByText("Sign document")).toBeInTheDocument();
     expect(screen.getByText("en")).toBeInTheDocument();
     await expect(preference.read()).resolves.toBe("en");
+  });
+
+  it("puts the language back and rethrows when the disk refuses to save it", async () => {
+    const preference = {
+      read: async () => "es" as const,
+      save: async () => {
+        throw new Error("disco lleno");
+      },
+    };
+    const i18n = createI18n(await preference.read());
+    let failure: unknown = null;
+    render(
+      <LanguageProvider i18n={i18n} preference={preference}>
+        <Probe onFailure={(thrown) => (failure = thrown)} />
+      </LanguageProvider>,
+    );
+
+    await act(async () => {
+      screen.getByRole("button").click();
+    });
+
+    // El rechazo llega a quien lo tiene que contar…
+    expect(failure).toBeInstanceOf(Error);
+    // …y la ventana ha vuelto al idioma anterior, que es lo que ese aviso dice.
+    expect(screen.getByText("Firmar documento")).toBeInTheDocument();
+    expect(screen.getByText("es")).toBeInTheDocument();
   });
 
   it("arranca en el idioma que dice la preferencia guardada", async () => {

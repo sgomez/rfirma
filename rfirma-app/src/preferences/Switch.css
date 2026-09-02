@@ -10,12 +10,12 @@
  * La separación entre la pastilla y el texto **no es la misma en los dos sitios
  * donde vive el interruptor**, y por eso es una variable y no un número: el
  * panel de firma lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`) y
- * Preferencias con `rf-gap-sm` (16 px, `EstadoPreferencias.dc.html:409`).
+ * Preferencias con `rf-gap-sm` (16 px, `PreferenciasPantalla`).
  * Escribirla una sola vez es lo que mantiene la sangría de la ayuda pegada a la
  * columna del texto sin repetir la cuenta.
  */
 /* La separación **vertical** entre el botón y su ayuda es de 4 px, la del
-   artboard (`EstadoPreferencias.dc.html:417`) y la que escribe la ficha. Es
+   artboard (`PreferenciasPantalla`) y la que escribe la ficha. Es
    otra cosa que `--switch-gap`, que es la horizontal. */
 .switch {
   --switch-gap: var(--rf-space-xs);

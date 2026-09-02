@@ -384,17 +384,27 @@ export function App({
     // Los recientes de la ventana se vacían **aunque el borrado del disco
     // falle**: lo que promete el rótulo es que dejen de estar, y quedarse a
     // medias sería enseñarlos como si nada hubiera pasado.
-    let failure: unknown = null;
+    // El centinela envuelve el valor en vez de serlo: un rechazo con `null`
+    // —el tipo capturado es `unknown`— volvería a ser el `catch {}` vacío que
+    // esta función existe para quitar de en medio.
+    let failure: { thrown: unknown } | null = null;
     try {
       await preferences.forgetActivity();
     } catch (thrown) {
-      failure = thrown;
+      failure = { thrown };
     }
-    await documents.forgetAll();
+    try {
+      await documents.forgetAll();
+    } catch (thrown) {
+      // El primero que falló es el que se cuenta: si el disco ya había dicho
+      // que no, ese rechazo es el que explica lo que ha pasado, y perderlo
+      // aquí dejaría el fallo de verdad sin llegar a *Privacidad*.
+      failure ??= { thrown };
+    }
     // El fallo se cuenta **después** de vaciar la ventana, y lo cuenta
     // Preferencias en su sección de Privacidad (ID-70): lo que no puede pasar
     // es que el borrado del disco falle y nadie lo diga.
-    if (failure !== null) throw failure;
+    if (failure !== null) throw failure.thrown;
   };
 
   return (
