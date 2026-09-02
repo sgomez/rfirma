@@ -126,9 +126,23 @@ pub fn forget(
         .get(id)
         .ok_or_else(|| Failure::new("documentUnreadable", format!("no hay documento «{id}»")))?;
     let mut state = loaded_state(memory);
-    state.recents.forget(document.reading_path());
+    state
+        .recents
+        .forget(&canonical_or_raw(document.reading_path()));
     memory.remember_state(configuration, &state)?;
     Ok(())
+}
+
+/// La ruta canónica de `path`, y `path` tal cual si no se puede canonicalizar.
+///
+/// Las filas se guardan **siempre** por ruta canónica ([`RecentDocument::seen`]),
+/// así que buscar una por la ruta cruda no la encuentra en cuanto el camino pasa
+/// por un enlace simbólico. Canonicalizar falla cuando la ruta ya no responde, y
+/// ahí la cruda es lo único que hay: es justo la fila `No disponible` que el
+/// usuario quiere quitar, y compararla cruda es lo que la encuentra si se guardó
+/// sin enlaces por medio.
+fn canonical_or_raw(path: &Path) -> std::path::PathBuf {
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 /// Anota el documento **recién firmado** con la insignia `Firmado`.
@@ -326,6 +340,28 @@ mod tests {
             .map(|row| row.name)
             .collect();
         assert_eq!(names, vec!["nomina.pdf".to_owned()]);
+    }
+
+    /// La fila se guarda por ruta canónica, así que quitarla comparando la ruta
+    /// cruda que abrió la ventana era un no-op silencioso en cuanto el camino
+    /// pasaba por un enlace simbólico.
+    #[test]
+    fn a_row_opened_through_a_symlink_is_still_the_row_that_forget_takes_out() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let real = directory.path().join("real");
+        fs::create_dir(&real).expect("deberia crearse");
+        let linked = directory.path().join("enlace");
+        std::os::unix::fs::symlink(&real, &linked).expect("deberia enlazarse");
+        a_pdf(&real, "contrato.pdf", b"%PDF-1.7 de prueba");
+        let memory = a_memory(directory.path());
+        let configuration = Configuration::default();
+        let opened = OpenedDocuments::new();
+        let id = opened.remember(PortalDocument::opened(linked.join("contrato.pdf")));
+        record(&memory, &configuration, &opened, &id, None).expect("deberia anotarse");
+
+        forget(&memory, &configuration, &opened, &id).expect("deberia olvidarse");
+
+        assert!(listed_rows(&memory, &opened).is_empty());
     }
 
     #[test]

@@ -99,21 +99,30 @@ export function DocumentViewer({
   // dos pintadas vivas.
   const queue = useRef<RenderQueue | null>(null);
   queue.current ??= createRenderQueue();
-  const [page, setPage] = useState(1);
+  // La página inicial también sale del `placement`: si el visor se monta ya con
+  // un documento delante, no hay cambio de `pdf` que dispare la siembra de
+  // abajo.
+  const [page, setPage] = useState(() => within(placement?.page ?? 1, pdf?.pageCount ?? 0));
   const [zoom, setZoom] = useState(1);
   const [viewport, setViewport] = useState<Viewport | null>(null);
   const [outOfPage, setOutOfPage] = useState(false);
 
   const pageCount = pdf?.pageCount ?? 0;
 
-  // Documento nuevo, recorrido nuevo: primera página y escala original. Se
-  // ajusta durante la pintada y no en un efecto porque es estado derivado de
+  // Documento nuevo, recorrido nuevo: **la página que guardaba su fila** —la 1
+  // si no guardaba ninguna— y escala original. La página inicial sale del
+  // `placement` que entra y no de un 1 fijo porque si no el visor se queda en
+  // la 1, el efecto de colocación de abajo ve que no coincide con la página
+  // recordada y llama a `onPlace` con la 1: la página guardada no solo no se
+  // repondría, se pisaría al reabrir (ID-74).
+  //
+  // Se ajusta durante la pintada y no en un efecto porque es estado derivado de
   // una prop: con un efecto habría una pintada intermedia con la página del
   // documento anterior.
   const [shown, setShown] = useState(pdf);
   if (pdf !== shown) {
     setShown(pdf);
-    setPage(1);
+    setPage(within(placement?.page ?? 1, pdf?.pageCount ?? 0));
     setZoom(1);
     setViewport(null);
   }
@@ -194,7 +203,7 @@ export function DocumentViewer({
 
   const goTo = (wanted: number) => {
     setOutOfPage(false);
-    setPage(Math.min(Math.max(1, wanted), Math.max(1, pageCount)));
+    setPage(within(wanted, pageCount));
   };
 
   const stepZoom = (direction: 1 | -1) => {
@@ -367,6 +376,11 @@ export function DocumentViewer({
 }
 
 /** El escalón más cercano a un zoom que no es ninguno, como el de «ajustar». */
+/** La página `wanted` recortada a las que tiene el documento. */
+function within(wanted: number, pageCount: number): number {
+  return Math.min(Math.max(1, wanted), Math.max(1, pageCount));
+}
+
 function nearestStep(zoom: number): number {
   let best = 0;
   ZOOM_STEPS.forEach((step, index) => {

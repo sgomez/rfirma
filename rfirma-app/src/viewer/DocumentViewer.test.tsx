@@ -200,6 +200,44 @@ describe("el recuadro de la firma", () => {
     expect(placed.rect.y1).toBeLessThanOrEqual(A4.height);
   });
 
+  /**
+   * El criterio del #126: reabrir un documento **repone su página**. El visor
+   * arrancaba siempre en la 1, así que el efecto de colocación veía que no
+   * coincidía con la página guardada y la pisaba con la 1 a través de
+   * `onPlace` —que ahora escribe en la fila—.
+   */
+  it("opens on the page the row remembered instead of resetting it to the first", async () => {
+    const remembered: SignaturePlacement = { page: 3, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument(5);
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer pdf={null} placement={null} onPlace={onPlace} onOpen={noop} />,
+    );
+
+    rerender(
+      <DocumentViewer pdf={document} placement={remembered} onPlace={onPlace} onOpen={noop} />,
+    );
+
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(renders[0]?.page).toBe(3);
+    expect(screen.getByLabelText("Número de página")).toHaveValue(3);
+    expect(onPlace).not.toHaveBeenCalled();
+  });
+
+  /** Una fila vieja con una página que el documento ya no tiene no lo rompe. */
+  it("clamps a remembered page that the document no longer has", async () => {
+    const remembered: SignaturePlacement = { page: 9, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+    const { document, renders } = recordingDocument(3);
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+
+    rerender(<DocumentViewer pdf={document} placement={remembered} onPlace={noop} onOpen={noop} />);
+
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(renders[0]?.page).toBe(3);
+  });
+
   it("keeps the box still over the document when the zoom changes", async () => {
     const placement: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
     const { document, renders } = recordingDocument();
