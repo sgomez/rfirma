@@ -30,6 +30,7 @@ pub mod certificates;
 pub mod configuration;
 pub mod cycle;
 pub mod documents;
+pub mod recents;
 pub mod signing;
 
 #[cfg(test)]

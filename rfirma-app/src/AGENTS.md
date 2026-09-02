@@ -24,18 +24,18 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 76 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 347 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 517 | El árbol de la ventana y el estado que la recorre. |
+| `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 418 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 532 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
 | `shell/menuAnchor.ts` | 25 | Dónde se ancla el menú de dos entradas. |
 | **`documents/`** | | La bandeja. |
 | `documents/document.ts` | 13 | El vocabulario de la bandeja. |
-| `documents/useDocuments.ts` | 101 | El estado de la bandeja. |
+| `documents/useDocuments.ts` | 131 | El estado de la bandeja. |
 | `documents/DocumentTray.tsx` | 97 | La bandeja pintada. |
-| `documents/recents.ts` | 125 | Los diez recientes. Misma capacidad que `memory::recents::CAPACITY`. |
+| `documents/recents.ts` | 162 | Los diez recientes y su puerto. Misma capacidad que `memory::recents::CAPACITY`. |
 | `documents/picker.ts` | 31 | Por dónde entra un documento. |
 | `documents/drops.ts` | 74 | Qué ocurre al soltar ficheros encima. |
 | **`signing/`** | | La firma, en el lado de la interfaz. |

@@ -51,15 +51,43 @@ pub enum ShownBadge {
     Unavailable,
 }
 
+/// **Dónde cayó el recuadro en este documento**: la página y la esquina
+/// inferior izquierda, en espacio de usuario PDF (ID-74).
+///
+/// Es la mitad **por documento** de lo que se recuerda de la firma visible. La
+/// otra mitad —el interruptor, las cinco casillas, el motivo y el **tamaño**
+/// del recuadro— es global y vive en
+/// [`VisibleSignatureMemory`](super::state::VisibleSignatureMemory): reponer
+/// sobre un documento nuevo una posición elegida para otro es justo lo que
+/// rechaza el ID-22, mientras que el tamaño sí se hereda porque no depende de
+/// la página.
+///
+/// No lleva el tamaño **a propósito**: dos sitios donde guardar el mismo ancho
+/// es un sitio donde divergen.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Placement {
+    /// Página, **1-based**, tal cual la numera `pdf.js`.
+    pub page: u32,
+    /// Esquina inferior izquierda, eje X, en espacio de usuario PDF.
+    pub lower_left_x: f64,
+    /// Esquina inferior izquierda, eje Y, en espacio de usuario PDF.
+    pub lower_left_y: f64,
+}
+
 /// Un documento de la bandeja, con lo que hace falta para pintar la fila sin
 /// abrirlo.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RecentDocument {
     path: PathBuf,
     name: String,
     badge: Badge,
     modified: Option<u64>,
     last_used: u64,
+    /// Dónde cayó el recuadro en **este** documento. `None` mientras nadie lo
+    /// haya colocado, y también cuando «Recordar la última configuración de
+    /// firma visible» está apagado: apagado significa **no guardarla**.
+    #[serde(default)]
+    placement: Option<Placement>,
 }
 
 impl RecentDocument {
@@ -81,6 +109,7 @@ impl RecentDocument {
             badge,
             modified,
             last_used: seconds_since_epoch(at).unwrap_or_default(),
+            placement: None,
         })
     }
 
@@ -115,6 +144,16 @@ impl RecentDocument {
     /// orden, y entonces habrá que decidir cuál de los dos es la verdad.
     pub fn last_used(&self) -> u64 {
         self.last_used
+    }
+
+    /// Dónde cayó el recuadro en este documento, si alguien lo colocó.
+    pub fn placement(&self) -> Option<Placement> {
+        self.placement
+    }
+
+    /// Coloca —o descoloca— el recuadro de este documento.
+    pub fn place(&mut self, placement: Option<Placement>) {
+        self.placement = placement;
     }
 
     /// Si la ruta responde ahora mismo.
@@ -155,7 +194,7 @@ fn seconds_since_epoch(instant: SystemTime) -> Option<u64> {
 /// entradas —editado a mano, escrito por una rFirma futura con otro límite,
 /// fusionado por un sincronizador— no pinte quince filas hasta el siguiente
 /// `record`.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct Recents {
     entries: Vec<RecentDocument>,
@@ -176,10 +215,47 @@ impl Recents {
     /// Al firmar se anotan **dos**, el original y el firmado: son dos ficheros
     /// en el disco y fundirlos en una fila que «evoluciona» escondería cuál se
     /// va a mandar.
-    pub fn record(&mut self, document: RecentDocument) {
+    /// Una fila que vuelve a anotarse **conserva su recuadro**: la posición es
+    /// del documento, no de la apertura, y el identificador opaco cambia en
+    /// cada concesión del portal (ID-62). Sin esto, reabrir el mismo contrato
+    /// borraría dónde había caído su recuadro, que es lo contrario del ID-74.
+    pub fn record(&mut self, mut document: RecentDocument) {
+        let remembered = self
+            .entries
+            .iter()
+            .find(|entry| entry.path == document.path)
+            .and_then(RecentDocument::placement);
+        if document.placement.is_none() {
+            document.placement = remembered;
+        }
         self.entries.retain(|entry| entry.path != document.path);
         self.entries.insert(0, document);
         self.entries.truncate(CAPACITY);
+    }
+
+    /// La fila de una ruta, si está.
+    pub fn entry(&self, path: &Path) -> Option<&RecentDocument> {
+        self.entries.iter().find(|entry| entry.path == path)
+    }
+
+    /// Coloca el recuadro de una fila. Si la ruta no está, no hace nada: la
+    /// fila la crea [`Recents::record`] al abrir el documento.
+    pub fn place(&mut self, path: &Path, placement: Option<Placement>) {
+        if let Some(entry) = self.entries.iter_mut().find(|entry| entry.path == path) {
+            entry.place(placement);
+        }
+    }
+
+    /// Descoloca **todos** los recuadros, dejando las filas donde están.
+    ///
+    /// Es lo que hace «Recordar la última configuración de firma visible» al
+    /// apagarse: la bandeja es actividad y la sigue guardando «Recordar mi
+    /// actividad», pero dónde cayó el recuadro es firma visible y apagado
+    /// significa no guardarlo (ID-74).
+    pub fn forget_placements(&mut self) {
+        for entry in &mut self.entries {
+            entry.place(None);
+        }
     }
 
     /// Los documentos, del más reciente al más antiguo.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import type { SignaturePlacement } from "../viewer/signatureBox";
 import type { DocumentPicker } from "./picker";
-import type { RecentDocument, RecentsStore } from "./recents";
+import { place as placedIn, type RecentDocument, type RecentsStore } from "./recents";
 
 export interface Documents {
   /** Los recientes, el más reciente primero. */
@@ -20,6 +21,17 @@ export interface Documents {
   accept: (document: RecentDocument) => Promise<void>;
   /** Cambia de documento desde una fila de la bandeja. */
   select: (document: RecentDocument) => void;
+  /**
+   * Apunta dónde ha caído el recuadro **del documento que hay delante**.
+   *
+   * Se guarda en su fila y no en un ajuste global porque la posición es de este
+   * documento y de esta página (ID-74): el siguiente documento arranca con el
+   * recuadro donde toque, no donde lo dejó el anterior (ID-22).
+   *
+   * Sin documento activo no hace nada, y con «Recordar mi actividad» apagado
+   * tampoco: no hay fila donde apuntarlo.
+   */
+  place: (placement: SignaturePlacement | null) => Promise<void>;
   /** Quita una fila de la lista. Ver `forget` en `recents.ts`. */
   forget: (id: string) => Promise<void>;
   /**
@@ -67,11 +79,17 @@ export function useDocuments(
     async (document: RecentDocument) => {
       // El documento se abre igual; lo que la preferencia decide es si queda
       // rastro de haberlo abierto.
-      if (remember) {
-        await store.record(document);
-        setRecents(await store.list());
+      if (!remember) {
+        setActive(document);
+        return;
       }
-      setActive(document);
+      // Lo que vuelve de anotarlo es la fila que el almacén ya tenía de este
+      // documento: su insignia cacheada y dónde había caído su recuadro. Es
+      // así como un documento que ya estuvo abierto repone su página y su
+      // posición sin que la ventana guarde nada por su cuenta.
+      const noted = await store.record(document);
+      setRecents(await store.list());
+      setActive(noted);
     },
     [store, remember],
   );
@@ -97,5 +115,17 @@ export function useDocuments(
     setActive(null);
   }, [store]);
 
-  return { recents, active, open, accept, select: setActive, forget, forgetAll };
+  const place = useCallback(
+    async (placement: SignaturePlacement | null) => {
+      if (!remember || active === null) return;
+      // La fila se actualiza, el documento activo **no**: cambiarlo volvería a
+      // disparar la apertura del PDF en cada arrastre del recuadro, y lo que ha
+      // cambiado no es qué documento hay delante sino dónde cae su firma.
+      setRecents((current) => placedIn(current, active.id, placement));
+      await store.record({ ...active, placement });
+    },
+    [store, remember, active],
+  );
+
+  return { recents, active, open, accept, select: setActive, place, forget, forgetAll };
 }

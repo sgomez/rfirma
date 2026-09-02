@@ -40,14 +40,14 @@ pub use configuration::{Configuration, Theme};
 pub use error::{MemoryError, Situation};
 pub use listed::ListedCertificates;
 pub use opened::OpenedDocuments;
-pub use recents::{Badge, RecentDocument, Recents, ShownBadge, CAPACITY};
-pub use state::State;
+pub use recents::{Badge, Placement, RecentDocument, Recents, ShownBadge, CAPACITY};
+pub use state::{BoxSize, RememberedFields, State, VisibleSignatureMemory};
 pub use store::{Damage, JsonFile, Loaded, Recovery, FORMAT_VERSION};
 
 use crate::paths::Paths;
 
 /// Las dos memorias y sus dos soportes.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Memory {
     configuration: JsonFile<Configuration>,
     state: JsonFile<State>,
@@ -116,10 +116,14 @@ impl Memory {
         if configuration.remember_visible_signature {
             return self.state.save(state);
         }
-        self.state.save(&State {
-            visible_signature: None,
-            ..state.clone()
-        })
+        // Apagado se lleva **las dos mitades** de la firma visible (ID-74): lo
+        // global y también dónde cayó el recuadro en cada fila, que vive en los
+        // recientes. Guardar solo una dejaría el recuadro reponiéndose con el
+        // interruptor apagado.
+        let mut without_the_box = state.clone();
+        without_the_box.visible_signature = None;
+        without_the_box.recents.forget_placements();
+        self.state.save(&without_the_box)
     }
 
     /// Olvida lo acumulado sin tocar ningún interruptor.
@@ -135,7 +139,7 @@ impl Memory {
 mod tests {
     use super::*;
     use crate::pkcs11::CertificateRef;
-    use crate::signing::{Language, SignatureBox};
+    use crate::signing::Language;
     use std::fs;
     use std::path::Path;
     use std::time::SystemTime;
@@ -157,18 +161,27 @@ mod tests {
                 "Certificado de pruebas",
                 vec![0x01],
             )),
-            visible_signature: Some(SignatureBox {
-                page: 1,
-                lower_left_x: 10,
-                lower_left_y: 20,
-                upper_right_x: 110,
-                upper_right_y: 70,
+            visible_signature: Some(VisibleSignatureMemory {
+                enabled: true,
+                size: BoxSize {
+                    width: 100.0,
+                    height: 50.0,
+                },
+                ..VisibleSignatureMemory::default()
             }),
             ..State::default()
         };
         state.recents.record(
             RecentDocument::seen(&document, Badge::Unsigned, SystemTime::now())
                 .expect("deberia anotarse"),
+        );
+        state.recents.place(
+            &fs::canonicalize(&document).expect("deberia canonicalizarse"),
+            Some(Placement {
+                page: 1,
+                lower_left_x: 48.0,
+                lower_left_y: 179.0,
+            }),
         );
         state
     }
@@ -295,6 +308,12 @@ mod tests {
         assert!(stored.visible_signature.is_none());
         assert_eq!(stored.recents.len(), 1);
         assert!(stored.certificate.is_some());
+        // La otra mitad del ID-74: la fila sigue —es actividad— pero sin dónde
+        // cayó su recuadro, que es firma visible.
+        assert!(
+            stored.recents.entries()[0].placement().is_none(),
+            "apagado no guarda tampoco la posicion de cada documento"
+        );
     }
 
     #[test]

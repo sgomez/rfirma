@@ -17,8 +17,8 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (664), `app/documents.rs` (638), `rubric/normalize.rs`
-  (586) y `pkcs11/mod.rs` (572). Ninguno de `commands/` pasa de 400 y así se
+  `signing/placement.rs` (664), `app/documents.rs` (643), `app/signing.rs` (604)
+  y `rubric/normalize.rs` (586). Ninguno de `commands/` pasa de 400 y así se
   quedan: cuando uno crece, lo que ha entrado casi siempre es una decisión, y
   una decisión va en `app/`.
 - El primer bloque `//!` de cada módulo es su contrato. `head -40 <fichero>` casi
@@ -29,32 +29,33 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 119 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
+| `lib.rs` | 122 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 252 | **Las once órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 283 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/mod.rs` | 319 | **Las catorce órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/views.rs` | 328 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/failure.rs` | 181 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
-| `commands/guards.rs` | 389 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
+| `commands/guards.rs` | 394 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 183 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 432 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
-| `app/signing.rs` | 539 | El recorrido de la firma en tres pasos y la sesión a medias. |
-| `app/documents.rs` | 638 | Por dónde entra el documento y dónde cae el firmado. |
+| `app/signing.rs` | 604 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/documents.rs` | 643 | Por dónde entra el documento y dónde cae el firmado. |
+| `app/recents.rs` | 539 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/configuration.rs` | 256 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades (ADR-0010). |
-| `memory/mod.rs` | 408 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
-| `memory/state.rs` | 210 | El estado que la aplicación acumula por su cuenta (ID-31). |
+| `memory/mod.rs` | 427 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
+| `memory/state.rs` | 341 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
-| `memory/recents.rs` | 406 | Los diez recientes, por ruta canónica. |
+| `memory/recents.rs` | 482 | Los diez recientes, por ruta canónica, con la página y la posición del recuadro de cada uno (ID-74). |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |
-| `memory/opened.rs` | 154 | Los documentos abiertos en esta sesión: del identificador opaco al fichero. |
+| `memory/opened.rs` | 179 | Los documentos abiertos en esta sesión: del identificador opaco al fichero. |
 | `memory/listed.rs` | 168 | Los certificados listados en esta sesión: del asa opaca a la referencia. |
 | `memory/handles.rs` | 90 | Cómo se acuña un asa opaca (ID-61, ADR-0011). |
 | `memory/error.rs` | 89 | Situaciones de la memoria (ADR-0009). |
@@ -101,7 +102,10 @@ traducir el resultado, está en el fichero equivocado (ID-79).
 Las cuatro guardas de conjunto están juntas en `commands/guards.rs`, y solo dos
 piden algo de ti:
 
-- **La lista cerrada de órdenes** hay que renumerarla o renombrarla.
+- **La lista cerrada de órdenes** hay que renumerarla. El nombre de la prueba
+  **ya no lleva el número dentro** (TD-11): el conteo vive en la aserción de
+  `the_list_of_commands_is_closed_and_this_is_how_long_it_is`, porque cambiar el
+  número es la información y renombrar la prueba en cada sub-issue no dice nada.
 - **La lista de ficheros del módulo** (`SOURCES`) hay que ampliarla si creas un
   fichero nuevo dentro de `commands/`; una guarda propia se pone roja si se te
   olvida.
