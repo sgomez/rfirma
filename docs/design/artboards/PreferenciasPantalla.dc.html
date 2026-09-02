@@ -168,7 +168,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
     <div data-theme="light" style="width:452px;aspect-ratio:1/1.414;background:var(--rf-bg);
       border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);
       box-shadow:var(--rf-shadow-card);position:relative;overflow:hidden;
-      display:flex;flex-direction:column;gap:10px;padding:32px">
+      display:flex;flex-direction:column;gap:10px;padding:32px;opacity:.45">
       <div style="height:12px;width:46%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></div>
       <div style="height:8px"></div>
       <div style="height:6px;width:65%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:66%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:67%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:68%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:69%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:70%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:71%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:73%;border-radius:2px;background:var(--rf-border-subtle)"></div>
@@ -178,7 +178,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <div style="height:7px;width:38%;border-radius:2px;background:var(--rf-border-strong);opacity:.55"></div>
       <div style="height:6px;width:26%;border-radius:2px;background:var(--rf-border-subtle)"></div>
       <div style="position:absolute;left:130px;bottom:44px;width:176px;
-        border:2px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
+        border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
         background:var(--rf-surface);display:flex;gap:8px;align-items:center;padding:8px 10px">
         <div style="flex:none;color:var(--rf-text);opacity:.8"><svg width="63" height="30" viewBox="0 0 84 40"
           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -191,14 +191,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
           <div style="font-size:7.5px;color:var(--rf-text-muted)">DNI 99999999R</div>
           <div style="font-size:7.5px;color:var(--rf-text-muted)">31/08/2026 11:04</div>
         </div>
-        <div style="position:absolute;top:-4px;left:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;bottom:-4px;left:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;bottom:-4px;right:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;top:-26px;left:-2px;display:flex;align-items:center;gap:4px;
-          padding:3px 6px;border-radius:var(--rf-radius-sm);background:var(--rf-primary);
-          color:var(--rf-on-primary);font-size:8px;font-weight:700;white-space:nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M12 3 9 6M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Arrastra para colocar</div>
       </div>
     </div>
   </div>
@@ -225,7 +217,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 <aside class="rf-stack" style="width:360px;flex:none;border-left:1px solid var(--rf-border-subtle);
   background:var(--rf-surface);height:100%">
-  <div class="rf-stack" style="gap:11px;padding:var(--rf-space-sm);overflow:auto;flex:1">
+  <div class="rf-stack" style="gap:11px;padding:var(--rf-space-sm);overflow:hidden;flex:1">
     <div class="rf-row rf-gap-xs" style="align-items:flex-start">
       <span style="color:var(--rf-text-muted);display:flex;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
       <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
@@ -233,155 +225,163 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <p class="rf-body rf-text-muted">27 páginas · 2,4 MB</p>
       </div>
     </div>
-    <div class="rf-stack rf-gap-xs" style="padding:10px var(--rf-space-sm);border:1px solid var(--rf-border-subtle);
-      border-radius:var(--rf-radius-md);background:var(--rf-bg)">
-      <div class="rf-row rf-gap-xs">
-        <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></span>
-        <p class="rf-prose" style="flex:1">Ya lleva <strong>1 firma</strong>: la tuya será una <strong>cofirma</strong>.</p>
-        <span class="rf-row" style="gap:2px;flex:none;font-size:12px;font-weight:600;cursor:pointer">
-          Ver
-          <span style="display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </span>
-      </div>
-    </div>
     <hr class="rf-divider">
-    <div class="rf-stack rf-gap-sm">
-      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Certificado</p>
-      <div class="rf-card" style="padding:var(--rf-space-sm);gap:6px;border-color:var(--rf-border-strong)">
-        <div class="rf-row rf-gap-xs">
-          <span style="color:var(--rf-text-muted);display:flex"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
-          <span class="rf-title" style="font-size:14px">EIDAS CERTIFICADO PRUEBAS</span>
-        </div>
-        <p class="rf-body rf-text-muted">99999999R · AC FNMT Usuarios</p>
-      </div>
-    </div>
-    <hr class="rf-divider">
-    <div class="rf-stack rf-gap-sm">
-      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Firma visible</p>
+    <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Certificado</p>
+    <div class="rf-card" style="padding:var(--rf-space-sm);gap:6px;border-color:var(--rf-border-strong)">
       <div class="rf-row rf-gap-xs">
-        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
-          background:var(--rf-primary)">
-          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
-            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
-        </span>
-        <p class="rf-prose" style="flex:1">Estampar un recuadro de firma en el documento</p>
+        <span style="color:var(--rf-text-muted);display:flex"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+        <span class="rf-title" style="font-size:14px">EIDAS CERTIFICADO PRUEBAS</span>
       </div>
-      <p class="rf-hint">Página 3 · arrástralo para colocarlo</p>
-      <div class="rf-stack" style="gap:6px">
-        <p class="rf-label">Contenido</p>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
-          </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Tu rúbrica</span></div>
-        </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
-          </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Nombre y apellidos</span></div>
-        </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
-          </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">DNI</span></div>
-        </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
-          </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Fecha y hora de la firma</span></div>
-        </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;border:1px solid var(--rf-border-strong)"></span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Un motivo</span></div>
-        </div>
-      </div>
-      <div class="rf-row rf-gap-xs">
-        <div style="width:56px;height:36px;flex:none;border-radius:var(--rf-radius-sm);
-          border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;
-          color:var(--rf-text)">
-          <svg width="42" height="20" viewBox="0 0 84 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/>
-            <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/>
-          </svg></div>
-        <button class="rf-btn rf-btn--secondary" style="flex:1;min-height:36px">Cambiar la imagen de la rúbrica…</button>
-      </div>
+      <p class="rf-body rf-text-muted">99999999R · AC FNMT Usuarios</p>
     </div>
-  </div>
-  <div class="rf-stack rf-gap-sm" style="padding:var(--rf-space-sm);
-    border-top:1px solid var(--rf-border-subtle);flex:none">
-    <sc-if value="{{destinoOk}}" hint-placeholder-val="{{true}}">
-      <div class="rf-stack" style="gap:4px">
-        <p class="rf-label">Se guardará en</p>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start">
-          <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:3px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
-          <p class="rf-prose" style="flex:1;min-width:0;overflow-wrap:anywhere"><span class="rf-text-muted">{{carpeta}}</span>{{fichero}}</p>
-          <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar</button>
-        </div>
-      </div>
-    </sc-if>
-    <sc-if value="{{destinoRoto}}" hint-placeholder-val="{{false}}">
-      <div class="rf-row rf-gap-xs" style="align-items:flex-start">
-        <span style="display:flex;flex:none;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
-        <p class="rf-prose" style="flex:1;min-width:0">No se puede escribir en <strong>Documentos</strong></p>
-        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar</button>
-      </div>
-    </sc-if>
-    <button class="rf-btn rf-btn--primary" style="width:100%">Firmar documento</button>
   </div>
 </aside>
 </div>
+<div style="position:absolute;left:0;right:0;top:56px;bottom:0;background:var(--rf-bg);display:flex">
+
+  <nav class="rf-stack" style="width:220px;flex:none;gap:2px;padding:var(--rf-space-sm);
+    border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+    <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;padding:var(--rf-space-xs) var(--rf-space-xs) var(--rf-space-sm)">Preferencias</p>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
+      border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-subtle);
+      background:var(--rf-bg);font-size:14px;font-weight:600">Firma</span>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
+      border-radius:var(--rf-radius-md);border:1px solid transparent;
+      font-size:14px;font-weight:600;color:var(--rf-text-muted)">Privacidad</span>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
+      border-radius:var(--rf-radius-md);border:1px solid transparent;
+      font-size:14px;font-weight:600;color:var(--rf-text-muted)">Apariencia</span>
+  </nav>
+
+  <div class="rf-stack" style="flex:1;min-width:0">
+    <div style="flex:1;min-height:0;overflow:auto;display:flex;justify-content:center">
+  <div class="rf-stack rf-gap-md" style="width:100%;max-width:{{ancho}}px;
+    padding:var(--rf-space-md) var(--rf-space-md) var(--rf-space-lg)">
+
+    <div class="rf-stack rf-gap-sm">
+      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Firma</p>
+      <hr class="rf-divider">
+      <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+          background:var(--rf-primary);margin-top:2px">
+          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+        </span>
+        <div class="rf-stack" style="gap:4px;flex:1">
+          <p class="rf-prose">Recordar la última configuración de firma visible</p>
+          <p class="rf-hint">El interruptor, las casillas, el motivo y el tamaño del recuadro se
+            reutilizan en el siguiente documento. La posición se recuerda por documento, no aquí.</p>
+        </div>
+      </div>
+      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs)">
+        <p class="rf-prose">Dónde se guarda el documento firmado</p>
+        <div class="rf-row rf-gap-xs">
+          <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+          <p class="rf-prose" style="flex:1;min-width:0;font-weight:600;overflow:hidden;
+            text-overflow:ellipsis;white-space:nowrap">Documentos</p>
+          <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
+        </div>
+        <p class="rf-hint">Se comprueba antes de firmar. Si no está o no se puede escribir se avisa en
+          el panel, y ahí mismo se puede cambiar. La carpeta no se crea nunca.</p>
+      </div>
+      <sc-if value="{{avisoGuardar}}" hint-placeholder-val="{{true}}">
+        <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
+          border-radius:var(--rf-radius-md);margin-top:var(--rf-space-xs)">
+          <div class="rf-row rf-gap-xs">
+            <span style="display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+            <p class="rf-title" style="font-size:14px">No se ha podido guardar el ajuste</p>
+          </div>
+          <p class="rf-hint">Se ha vuelto al valor anterior. Vuelve a intentarlo.</p>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="rf-stack rf-gap-sm">
+      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Privacidad</p>
+      <hr class="rf-divider">
+      <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+          background:var(--rf-primary);margin-top:2px">
+          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+        </span>
+        <div class="rf-stack" style="gap:4px;flex:1">
+          <p class="rf-prose">Recordar mi actividad</p>
+          <p class="rf-hint">Los documentos recientes y el certificado que usaste la última vez.
+            Apagarlo borra lo ya guardado, previa confirmación.</p>
+        </div>
+      </div>
+      <div style="padding-left:56px">
+        <button class="rf-btn rf-btn--secondary" style="min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Vaciar la lista</button>
+      </div>
+      <sc-if value="{{avisoVaciar}}" hint-placeholder-val="{{true}}">
+        <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
+          border-radius:var(--rf-radius-md);margin-top:var(--rf-space-xs)">
+          <div class="rf-row rf-gap-xs">
+            <span style="display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+            <p class="rf-title" style="font-size:14px">No se ha podido vaciar la lista</p>
+          </div>
+          <p class="rf-hint">Los documentos recientes siguen guardados. Vuelve a intentarlo.</p>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="rf-stack rf-gap-sm">
+      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Apariencia</p>
+      <hr class="rf-divider">
+      <div class="rf-field" style="padding-top:var(--rf-space-xs)">
+        <label class="rf-label">Tema</label>
+        <div class="rf-input rf-row" style="justify-content:space-between">
+          <span>El del sistema</span>
+          <span class="rf-text-muted" style="display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+      </div>
+      <div class="rf-field">
+        <label class="rf-label">Idioma</label>
+        <div class="rf-input rf-row" style="justify-content:space-between">
+          <span>Español</span>
+          <span class="rf-text-muted" style="display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+    </div>
+    <div class="rf-row" style="flex:none;justify-content:flex-end;padding:var(--rf-space-sm);
+      border-top:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+      <button class="rf-btn rf-btn--secondary">Cerrar</button>
+    </div>
+  </div>
+
+</div>
+<sc-if value="{{dialogo}}" hint-placeholder-val="{{false}}">
+  <div class="rf-scrim">
+    <div class="rf-dialog">
+      <div class="rf-stack rf-gap-xs">
+        <p class="rf-title" style="font-size:16px">Dejar de recordar tu actividad</p>
+        <p class="rf-prose">Se borrarán los cuatro documentos recientes y el certificado que usaste
+          la última vez. No se puede deshacer.</p>
+      </div>
+      <div class="rf-row rf-gap-xs" style="justify-content:flex-end">
+        <button class="rf-btn rf-btn--ghost">Cancelar</button>
+        <button class="rf-btn rf-btn--primary">Borrar y apagar</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":1000}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":1000}}'>
 class Component extends DCLogic {
-  porElMedio(texto, cabeza, cola) {
-    if (texto.length - cola.length <= cabeza) { return texto; }
-    return texto.slice(0, cabeza) + "…" + cola;
-  }
-  recortaFichero(nombre, cabeza) {
-    const punto = nombre.lastIndexOf(".");
-    const ext = punto > 0 ? nombre.slice(punto) : "";
-    const tronco = punto > 0 ? nombre.slice(0, punto) : nombre;
-    const casa = tronco.match(/-firmado(-\d+)?$/);
-    const cola = casa ? casa[0] : "";
-    const nucleo = tronco.slice(0, tronco.length - cola.length);
-    if (nucleo.length <= cabeza) { return nombre; }
-    return nucleo.slice(0, cabeza) + "…" + cola + ext;
-  }
-  recortaCarpeta(nombre, cabeza) {
-    if (nombre.length <= cabeza) { return nombre; }
-    return nombre.slice(0, cabeza) + "…";
-  }
   renderVals() {
-    const caso = this.props.destino ?? "cabe entero";
-    const cabeza = this.props.cabeza ?? 18;
-    const cabezaCarpeta = this.props.cabezaCarpeta ?? 16;
-    const casos = {
-      "cabe entero": ["Documentos", "Solicitud-subvencion-firmado.pdf"],
-      "nombre largo": ["Documentos", "contrato-de-arrendamiento-de-vivienda-2026-firmado.pdf"],
-      "segunda firma": ["Documentos", "contrato-de-arrendamiento-de-vivienda-2026-firmado-2.pdf"],
-      "carpeta larga": ["Expedientes de subvencion 2026", "Solicitud-subvencion-firmado.pdf"],
-      "no disponible": ["Documentos", "Solicitud-subvencion-firmado.pdf"]
-    };
-    const par = casos[caso] || casos["cabe entero"];
+    const aviso = this.props.aviso ?? "ninguno";
     return {
       tema: this.props.tema ?? "light",
-      destinoOk: caso !== "no disponible",
-      destinoRoto: caso === "no disponible",
-      carpeta: "…/" + this.recortaCarpeta(par[0], cabezaCarpeta) + "/",
-      fichero: this.recortaFichero(par[1], cabeza)
+      ancho: this.props.ancho ?? 720,
+      aviso: aviso,
+      avisoGuardar: aviso === "al guardar",
+      avisoVaciar: aviso === "al vaciar",
+      dialogo: this.props.dialogo ?? false
     };
   }
 }

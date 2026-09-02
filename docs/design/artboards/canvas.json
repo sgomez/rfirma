@@ -94,7 +94,7 @@
     },
     {
       "file": "EstadoExito.dc.html",
-      "title": "9 · Firmado con éxito",
+      "title": "9 · Firmado con éxito · el resumen",
       "x": 0,
       "y": 2280,
       "w": 1180,
@@ -105,15 +105,6 @@
       "file": "EstadoErrorFirma.dc.html",
       "title": "10 · Error de firma",
       "x": 1260,
-      "y": 2280,
-      "w": 1180,
-      "h": 1000,
-      "page": "recorrido"
-    },
-    {
-      "file": "EstadoPreferencias.dc.html",
-      "title": "Preferencias · desde el menú",
-      "x": 2520,
       "y": 2280,
       "w": 1180,
       "h": 1000,
@@ -136,6 +127,15 @@
       "w": 1180,
       "h": 1000,
       "page": "otros"
+    },
+    {
+      "file": "PreferenciasPantalla.dc.html",
+      "title": "Preferencias · a pantalla completa",
+      "x": 2520,
+      "y": 2280,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido"
     }
   ],
   "annotations": [
@@ -170,6 +170,14 @@
       "w": 1100,
       "page": "recorrido",
       "text": "2b · Elegir certificado. Pantalla nueva: hoy el código no tiene ninguna, y con más de un certificado el botón «Elegir certificado» se limita a volver a buscar.\n\nDesplegable superpuesto: la lista flota sobre el panel, así que la firma visible y el botón de firmar no se mueven al abrirla. Elegido el 01/09/2026 frente a un acordeón en flujo y a un disparador compacto de una línea.\n\nSe puede pulsar: abre, se desplaza y se elige. Tres palancas — estado inicial, cuántos certificados hay y si se listan los que no sirven.\n\nUn certificado caducado o revocado se lista, dice por qué, y no se deja elegir: que falte de la lista no explica nada a quien viene a firmar con él.\n\nLa fila lleva titular, y debajo DNI · emisor · almacén. El almacén está porque hace falta: los tres primeros son la MISMA persona, con el MISMO DNI y el MISMO emisor, en almacenes distintos. Datos de prueba de la FNMT, nunca un certificado real."
+    },
+    {
+      "id": "nota-v02",
+      "x": 2520,
+      "y": 3420,
+      "w": 1100,
+      "page": "recorrido",
+      "text": "v0.2 · lo construido llega al usuario (ticket #123). Tres artboards de este recorrido cambian; no hay pantallas nuevas ni página aparte.\n\nPREFERENCIAS · A PANTALLA COMPLETA sustituye al modal de 480 px, que desaparece. Ocupa todo bajo la cabecera, que se queda intacta con su estado de documento: no se ha navegado a ninguna parte. Índice de secciones a la izquierda (crece con los ajustes que traerán la ficha 19 y las siguientes), columna de contenido en medio y pie fijo con «Cerrar», que así no se pierde al desplazarse. Guardado automático al cambiar cada ajuste: no hay «Guardar» ni «Cancelar». El destino deja de ser un desplegable de una sola opción y pasa a selector de directorio.\nPalancas: «Ficha 5b» enseña dónde cae cada uno de los dos errores que hoy se tragan; «Apagar Recordar mi actividad» saca la confirmación destructiva, que sigue siendo un diálogo pequeño porque el borrado es irreversible; «Maquetación» decide el ancho de la columna.\n\n5 · CONFIGURANDO LA FIRMA VISIBLE estrena el pie: carpeta MÁS nombre de fichero, con la última carpeta precedida de «…/» y el nombre recortado por el medio. La carpeta entera, la extensión y la cola (-firmado y su -2) no se recortan nunca. Palanca «Pie · destino» para los cinco casos, incluido el destino no disponible en el que el botón de firmar NO se apaga; palancas «Pie · recorte» para decidir por dónde corta.\n\n9 · FIRMADO CON ÉXITO estrena el resumen sin la ficha 14: nombre, tamaño, encabezado «Resumen» con la insignia PAdES sola guardando el sitio, y tres botones verticales — Abrir el PDF (primario), Abrir la carpeta (secundario), Volver a firmar (fantasma). «Firmar otro documento» se retira: la bandeja ya abre y acepta arrastre. La palanca «Ficha 14» enseña qué ocupará ese hueco en v1.0."
     }
   ],
   "launch": {
