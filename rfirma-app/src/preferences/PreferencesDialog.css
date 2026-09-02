@@ -127,3 +127,23 @@
 .preferences__confirm-actions {
   justify-content: flex-end;
 }
+
+/* La carpeta de destino: su **nombre** y el botón que abre el selector de
+   directorio. No es un desplegable, así que no hereda nada de `Select`. */
+.preferences__destination {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preferences__destination-row {
+  align-items: center;
+}
+
+/* El nombre envuelve antes que cortarse, como el destino del pie del panel: lo
+   que decide qué se pierde no es la hoja de estilos (ID-64). */
+.preferences__destination-folder {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -31,9 +31,9 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 76 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 481 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 561 | El árbol de la ventana y el estado que la recorre. |
+| `main.tsx` | 73 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 496 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 608 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -48,12 +48,13 @@ rojo.
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 132 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
-| `signing/SigningPanel.tsx` | 539 | El panel. El fichero más grande de la interfaz. |
+| `signing/SigningPanel.tsx` | 545 | El panel. El fichero más grande de la interfaz. |
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
 | `signing/SignedPanel.tsx` | 78 | Lo que se ve al terminar. |
 | `signing/certificate.ts` | 121 | El certificado, en el lado de la interfaz. |
+| `signing/destination.ts` | 129 | Dónde cae el firmado, y el recorte de esa línea: la función pura del ID-64. |
 | `signing/visibleSignature.ts` | 91 | Qué se estampa en el recuadro. |
 | `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
@@ -67,8 +68,8 @@ rojo.
 | `viewer/signatureBox.ts` | 120 | El recuadro: dónde se guarda y cómo se pinta. |
 | `viewer/useBoxDrag.ts` | 122 | El arrastre del recuadro. |
 | **`preferences/`** | | Los ajustes. |
-| `preferences/preferences.ts` | 75 | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | 390 | La pantalla completa de ajustes, con su índice de secciones. |
+| `preferences/preferences.ts` | 93 | Lo que la aplicación recuerda. |
+| `preferences/PreferencesDialog.tsx` | 401 | La pantalla completa de ajustes, con su índice de secciones. |
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |

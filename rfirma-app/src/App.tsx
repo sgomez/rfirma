@@ -13,6 +13,7 @@ import { applyTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
+import type { Destination, DestinationSource } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
 import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./signing/rubric";
@@ -52,11 +53,8 @@ interface AppProps {
   preferences: PreferencesStore;
   /** De dónde salen los bytes del PDF que se pinta. Ver [`PdfSource`]. */
   pdfs: PdfSource;
-  /**
-   * Las carpetas de destino, por su nombre. Bajo el arenero hay exactamente
-   * una, la de documentos del usuario (ADR-0011).
-   */
-  destinations: readonly string[];
+  /** Dónde caerá el documento que hay delante. Ver [`DestinationSource`]. */
+  destinations: DestinationSource;
   /** Los certificados de los tokens conectados. Ver [`CertificateStore`]. */
   certificates: CertificateStore;
   /** Por dónde entra la rúbrica, ya normalizada. Ver [`RubricPicker`]. */
@@ -109,6 +107,11 @@ export function App({
   // dos tienen que estar mirando el mismo.
   const [placement, setPlacement] = useState<SignaturePlacement | null>(null);
   const [settings, setSettings] = useState<Preferences | null>(null);
+  // Dónde caerá el firmado, tal y como lo cuenta el backend. Es estado y no un
+  // cálculo del pie porque el nombre lo compone Rust —con el sufijo y el
+  // homónimo ya resueltos— y `writable` sale de comprobar la carpeta de verdad
+  // (ID-63, ID-67): la ventana lo enseña, no lo deduce.
+  const [destination, setDestination] = useState<Destination | null>(null);
   const [certificate, setCertificate] = useState<CertificateState>({ kind: "loading" });
   const [signature, setSignature] = useState<VisibleSignature>(DEFAULT_VISIBLE_SIGNATURE);
   const [rubric, setRubric] = useState<Rubric | null>(null);
@@ -166,6 +169,34 @@ export function App({
   useEffect(() => {
     if (settings) applyTheme(settings.theme);
   }, [settings]);
+
+  // El destino se pregunta **por documento**, y otra vez cuando cambia la
+  // carpeta elegida: el nombre depende del documento —y de qué homónimos haya
+  // ya en la carpeta— y `writable` de si la carpeta sigue estando. Sin
+  // documento delante no hay destino que enseñar.
+  const chosenFolder = settings?.destination ?? null;
+  useEffect(() => {
+    // Sin documento delante no hay destino que enseñar, y sin ajustes leídos
+    // tampoco: la carpeta que se va a consultar es la que ellos dicen.
+    if (activeId === null || chosenFolder === null) {
+      setDestination(null);
+      return;
+    }
+    let current = true;
+    destinations
+      .previewFor(activeId)
+      .then((found) => {
+        if (current) setDestination(found);
+      })
+      .catch(() => {
+        // Un destino que no se puede consultar no apaga el panel: se queda sin
+        // pie hasta la siguiente vuelta, que es menos que perder el documento.
+        if (current) setDestination(null);
+      });
+    return () => {
+      current = false;
+    };
+  }, [destinations, activeId, chosenFolder]);
 
   // El documento activo, abierto para pintarlo. Cambiar de documento **repone
   // el recuadro de ese documento**, que es lo que guarda su fila de la bandeja
@@ -344,6 +375,22 @@ export function App({
   };
 
   /**
+   * La carpeta de destino se elige con el **selector de directorio** del
+   * sistema, que abre Rust: la ventana no manda ninguna ruta —no la conoce— y
+   * lo que recibe de vuelta es el nombre que enseña (ID-65).
+   *
+   * Cerrar el selector sin elegir deja la carpeta que hubiera. Si guardar
+   * falla, el rechazo sigue su camino hasta Preferencias, que es quien sabe
+   * dónde va el aviso (ID-70).
+   */
+  const chooseDestination = async () => {
+    const chosen = await preferences.chooseFolder();
+    if (chosen !== null && settings !== null) {
+      setSettings({ ...settings, destination: chosen });
+    }
+  };
+
+  /**
    * La firma: se arma la orden con lo que hay decidido y se manda entera.
    *
    * La `MediaBox` y la `/Rotate` salen de la página abierta porque el backend
@@ -469,10 +516,13 @@ export function App({
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
               composer={composer}
-              destination={{
-                folder: settings?.destination ?? destinations[0] ?? "",
-                writable: true,
-              }}
+              destination={
+                destination ?? {
+                  folder: settings?.destination ?? "",
+                  name: null,
+                  writable: true,
+                }
+              }
               onChangeDestination={() => setDialog("preferences")}
               signedAt={signedAt}
               onSign={() => void sign()}
@@ -492,7 +542,7 @@ export function App({
       {dialog === "preferences" && settings !== null && (
         <PreferencesDialog
           preferences={settings}
-          destinations={destinations}
+          onChooseDestination={chooseDestination}
           onChange={changeSettings}
           onForgetActivity={forgetActivity}
           onClose={() => setDialog(null)}

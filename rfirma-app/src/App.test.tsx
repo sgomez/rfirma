@@ -9,10 +9,16 @@ import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
+import { inMemoryDestination } from "./signing/destination";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
+
+/** El destino que contesta el backend mientras la prueba no diga otra cosa. */
+const aDestination = () =>
+  inMemoryDestination({ folder: "Documentos", name: "contrato-firmado.pdf", writable: true });
+
 import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
 import { type PdfSource, unavailablePdfSource } from "./viewer/source";
 
@@ -125,7 +131,7 @@ function renderApp(
       drops={drops}
       pdfs={pdfs}
       preferences={preferences}
-      destinations={["Documentos"]}
+      destinations={aDestination()}
       certificates={certificates}
       rubrics={rubrics}
       composer={emptyLayer2Composer()}
@@ -218,6 +224,7 @@ describe("App", () => {
       }),
       save: refused,
       forgetActivity: async () => {},
+      chooseFolder: async () => null,
     };
     renderWithCatalog(
       <App
@@ -226,7 +233,7 @@ describe("App", () => {
         drops={inMemoryDocumentDrops()}
         pdfs={unavailablePdfSource()}
         preferences={preferences}
-        destinations={["Documentos"]}
+        destinations={aDestination()}
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}
@@ -526,6 +533,7 @@ describe("App", () => {
       forgetActivity: async () => {
         throw new Error("no se deja borrar");
       },
+      chooseFolder: async () => null,
     };
     renderWithCatalog(
       <App
@@ -534,7 +542,7 @@ describe("App", () => {
         drops={inMemoryDocumentDrops()}
         pdfs={unavailablePdfSource()}
         preferences={preferences}
-        destinations={["Documentos"]}
+        destinations={aDestination()}
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}

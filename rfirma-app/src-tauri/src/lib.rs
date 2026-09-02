@@ -165,6 +165,8 @@ pub fn run() {
             commands::forget_recent,
             commands::choose_rubric,
             commands::read_rubric,
+            commands::preview_destination,
+            commands::choose_destination,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

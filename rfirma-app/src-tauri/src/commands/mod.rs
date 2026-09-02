@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son dieciséis, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son dieciocho, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -54,6 +54,15 @@
 //! sesión anterior dejó adoptado, para que la ventana la encuentre puesta al
 //! arrancar.
 //!
+//! # El destino se enseña antes de firmar, y se elige con un selector de directorio
+//!
+//! [`preview_destination`] contesta lo que el pie del panel enseña: la carpeta
+//! y el **nombre** con el que el documento va a caer, más si esa carpeta se
+//! puede escribir —de [`crate::destination::CheckedFolder::check`], nunca de un
+//! literal (ID-67)—. [`choose_destination`] abre el selector de directorio del
+//! sistema y guarda lo que conceda: es un desplegable menos, y un control que
+//! fingía elegir menos (ID-65).
+//!
 //! # Y hay un camino más, que no es una orden
 //!
 //! Soltar un fichero en la ventana desemboca en el mismo sitio, pero **al
@@ -95,8 +104,8 @@ pub use failure::Failure;
 pub use orders::SigningOrder;
 pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
-    CertificateView, ConfigurationView, DroppedDocumentView, OpenedDocumentView, PlacementView,
-    RecentDocumentView, SignedDocumentView,
+    CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, OpenedDocumentView,
+    PlacementView, RecentDocumentView, SignedDocumentView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -370,6 +379,64 @@ pub fn choose_rubric(
 pub fn read_rubric(environment: State<'_, Environment>) -> Result<Option<RubricView>, Failure> {
     let stored = app::rubric::stored(&environment.rubric)?;
     Ok(stored.map(|bytes| RubricView::from_bytes(&bytes)))
+}
+
+/// **Orden 17.** Dónde va a caer el documento que hay delante, **antes** de
+/// firmarlo.
+///
+/// Es lo que el pie del panel enseña: la carpeta y el nombre, los dos por su
+/// nombre (ID-63). Escribe nada y **no crea la carpeta**; que no esté o no se
+/// deje escribir viaja como un destino no escribible y no como un fallo, porque
+/// el botón de firmar sigue vivo y lo que se ofrece es `Cambiar` (ID-67).
+///
+/// Es `(async)` como [`list_recents`]: mira el disco —la carpeta y sus
+/// homónimos— y no la copia viva.
+#[tauri::command(async)]
+pub fn preview_destination(
+    id: String,
+    environment: State<'_, Environment>,
+    opened: State<'_, OpenedDocuments>,
+) -> Result<DestinationView, Failure> {
+    let document = app::documents::opened_document(&opened, &id)?;
+    Ok(app::documents::where_it_lands(
+        &environment.configuration(),
+        &environment.documents_folder,
+        &document,
+    ))
+}
+
+/// **Orden 18.** Abre el selector de directorio del sistema y guarda la carpeta
+/// de destino que conceda.
+///
+/// Sustituye al desplegable que recibía una sola opción, que es un control que
+/// fingía elegir (ID-65). Se abre **desde aquí y no desde el frontal**, por la
+/// misma razón que [`open_document`] (ID-63), y lo que vuelve es el **último
+/// segmento** de lo concedido: un directorio del portal llega como
+/// `/run/user/1000/doc/<id>/Documentos`, cuyo último segmento es el nombre de la
+/// carpeta, así que la ventana enseña lo mismo conozcamos la ruta real o no
+/// (ADR-0011).
+///
+/// Cerrar el diálogo sin elegir devuelve `None`, y **no es un fallo**: deja la
+/// carpeta que hubiera.
+#[tauri::command(async)]
+pub fn choose_destination(
+    app_handle: tauri::AppHandle,
+    environment: State<'_, Environment>,
+) -> Result<Option<String>, Failure> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let Some(chosen) = app_handle.dialog().file().blocking_pick_folder() else {
+        return Ok(None);
+    };
+    let folder = chosen
+        .into_path()
+        .map_err(|error| Failure::new("folderMissing", error.to_string()))?;
+    app::configuration::choose_destination(
+        &environment.memory,
+        &environment.configuration,
+        crate::destination::DestinationFolder::at(folder),
+    )
+    .map(Some)
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

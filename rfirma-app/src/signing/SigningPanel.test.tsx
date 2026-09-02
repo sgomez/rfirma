@@ -48,7 +48,7 @@ function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
       onChooseRubric={noop}
       signedAt="31/08/26, 12:00:00"
       composer={composerOf(null)}
-      destination={{ folder: "Documentos", writable: true }}
+      destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
       onChangeDestination={noop}
       onSign={noop}
       signing={false}
@@ -133,19 +133,36 @@ describe("SigningPanel", () => {
     expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
   });
 
-  it("shows the destination folder by its name and never by its path", () => {
-    renderPanel({ destination: { folder: "Documentos", writable: true } });
+  it("shows the destination folder and the file name, and never the whole path", () => {
+    renderPanel({
+      destination: { folder: "Documentos", name: "contrato-firmado.pdf", writable: true },
+    });
 
-    // El artboard parte la fila en dos: «Se guardará en» como rótulo y la
-    // carpeta debajo, junto al icono de carpeta. Lo que la prueba defiende
-    // —que se ve el nombre y nunca la ruta— no cambia.
+    // El artboard parte la fila en dos: «Se guardará en» como rótulo y el
+    // destino debajo, junto al icono de carpeta. El destino son **dos cosas**:
+    // la carpeta precedida de `…/` y el nombre con el que va a caer (ID-63).
     expect(screen.getByText("Se guardará en")).toBeInTheDocument();
-    expect(screen.getByText("Documentos")).toBeInTheDocument();
+    expect(screen.getByText("…/Documentos/")).toBeInTheDocument();
+    expect(screen.getByText(/contrato-firmado\.pdf/)).toBeInTheDocument();
     expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
   });
 
+  it("shortens a long name through the middle and keeps its suffix and extension", () => {
+    renderPanel({
+      destination: {
+        folder: "Documentos",
+        name: `contrato-de-arrendamiento-${"largo-".repeat(6)}firmado-2.pdf`,
+        writable: true,
+      },
+    });
+
+    const shown = screen.getByText(/contrato-de-/);
+    expect(shown.textContent).toContain("…");
+    expect(shown.textContent?.endsWith("-firmado-2.pdf")).toBe(true);
+  });
+
   it("keeps the sign button alive when the destination cannot be written to", () => {
-    renderPanel({ destination: { folder: "Documentos", writable: false } });
+    renderPanel({ destination: { folder: "Documentos", name: null, writable: false } });
 
     expect(screen.getByText("No se puede escribir en Documentos")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Firmar documento" })).toBeEnabled();
@@ -154,7 +171,7 @@ describe("SigningPanel", () => {
   it("does not promise a destination it has just said it cannot write to", () => {
     // «Se guardará en» y «No se puede escribir en Documentos» a la vez es una
     // contradicción: el rótulo es la promesa y desaparece con ella.
-    renderPanel({ destination: { folder: "Documentos", writable: false } });
+    renderPanel({ destination: { folder: "Documentos", name: null, writable: false } });
 
     expect(screen.queryByText("Se guardará en")).not.toBeInTheDocument();
   });
