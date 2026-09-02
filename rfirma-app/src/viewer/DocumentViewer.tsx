@@ -102,6 +102,20 @@ interface DocumentViewerProps {
    * las tres caras.
    */
   pageChoice?: PageChoice;
+  /**
+   * La página que se está mirando ha cambiado.
+   *
+   * El visor la sigue eligiendo él —el recorrido es suyo—, pero el panel la
+   * necesita para no decir «el recuadro está en esta página» cuando no lo está
+   * (ID-100).
+   */
+  onPageChange?: (page: number) => void;
+  /**
+   * Llevar la vista hasta una página. **Cada petición es un objeto nuevo**: el
+   * mismo número dos veces tiene que llevar allí las dos veces, así que lo que
+   * dispara el salto es la identidad y no el valor.
+   */
+  goToPage?: { page: number } | null;
   /** Abrir un documento, que va por el portal igual que desde la bandeja. */
   onOpen: () => void;
   /**
@@ -147,6 +161,8 @@ export function DocumentViewer({
   onPlace,
   onOpen,
   pageChoice = "these",
+  onPageChange,
+  goToPage = null,
   failure = null,
 }: DocumentViewerProps) {
   const { t, i18n } = useTranslation();
@@ -212,6 +228,21 @@ export function DocumentViewer({
       setZoom(1);
     }
   }
+
+  // La petición de ir a una página, atendida una sola vez por petición y
+  // durante la pintada: en un efecto habría una pintada intermedia con la
+  // página anterior.
+  const requested = useRef(goToPage);
+  if (goToPage !== null && goToPage !== requested.current) {
+    requested.current = goToPage;
+    setPage(within(goToPage.page, pageCount));
+  }
+
+  // Quien recorre el documento es el visor; quien necesita saber por dónde va,
+  // el panel.
+  useEffect(() => {
+    onPageChange?.(page);
+  }, [page, onPageChange]);
 
   // La pintada. Es el único sitio que toca el lienzo, y su limpieza cancela lo
   // que hubiera en vuelo: sin eso, al cambiar el zoom deprisa dos `RenderTask`

@@ -439,6 +439,76 @@ msgstr[0] "Ya lleva 1 firma: la tuya será una cofirma."
 msgstr[1] "Ya lleva {{count}} firmas: la tuya será una cofirma."
 msgstr[2] "Ya lleva {{count}} firmas: la tuya será una cofirma."
 
+#. La línea dice la página del recuadro, no la que se está mirando.
+msgid "panel.placement.notPlaced"
+msgstr "Aún no has colocado la firma"
+
+msgid "panel.placement.here"
+msgstr "El recuadro está en esta página"
+
+#. {{page}} es la página donde está el recuadro. Es un botón: al pulsarlo el visor va allí.
+msgid "panel.placement.onPage"
+msgstr "El recuadro está en la página {{page}}"
+
+#. Rótulo del bloque con las tres opciones de en qué páginas se sella.
+msgid "panel.placement.title"
+msgstr "Colocación"
+
+msgid "panel.placement.single"
+msgstr "Solo 1 página"
+
+#. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
+msgid "panel.placement.singlePage"
+msgstr "Página {{page}}"
+
+#. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
+msgid "panel.placement.singleUnplaced"
+msgstr "aún sin colocar"
+
+msgid "panel.placement.these"
+msgstr "Estas páginas"
+
+#. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
+msgid "panel.placement.field"
+msgstr "Páginas donde se sella"
+
+#. {{pages}} es el número de páginas del documento.
+msgid "panel.placement.all"
+msgstr "Todas las páginas ({{pages}})"
+
+#. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
+msgid "panel.placement.echo"
+msgstr "Se sellará en las páginas {{pages}}."
+
+#. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
+msgid "panel.placement.echoMore"
+msgid_plural "panel.placement.echoMore"
+msgstr[0] "Se sellará en las páginas {{pages}} y 1 más."
+msgstr[1] "Se sellará en las páginas {{pages}} y {{count}} más."
+msgstr[2] "Se sellará en las páginas {{pages}} y {{count}} más."
+
+#. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
+msgid "panel.placement.replicated"
+msgid_plural "panel.placement.replicated"
+msgstr[0] "El mismo recuadro, en el mismo sitio y del mismo tamaño, en 1 página."
+msgstr[1] "El mismo recuadro, en el mismo sitio y del mismo tamaño, en las {{count}} páginas: es un solo campo de firma repetido, no {{count}} firmas."
+msgstr[2] "El mismo recuadro, en el mismo sitio y del mismo tamaño, en las {{count}} páginas: es un solo campo de firma repetido, no {{count}} firmas."
+
+#. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
+msgid "panel.placement.errors.beyond"
+msgstr "El documento tiene {{pageCount}} páginas y has escrito hasta la {{page}}."
+
+#. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
+msgid "panel.placement.errors.reversed"
+msgstr "«{{entry}}» va al revés: el primer número tiene que ser el menor."
+
+msgid "panel.placement.errors.zero"
+msgstr "No hay página 0: la primera es la 1."
+
+#. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
+msgid "panel.placement.errors.malformed"
+msgstr "«{{entry}}» no se entiende. Números y rangos separados por comas: 1,2-3,10-20."
+
 msgid "panel.certificate.title"
 msgstr "Certificado"
 
@@ -513,13 +583,6 @@ msgstr "Firma visible"
 msgid "panel.visibleSignature.toggle"
 msgstr "Estampar un recuadro de firma en el documento"
 
-#. {{page}} es el número de página donde se colocó el recuadro.
-msgid "panel.visibleSignature.placement"
-msgstr "Página {{page}} · arrástralo para colocarlo"
-
-msgid "panel.visibleSignature.noPlacement"
-msgstr "Arrastra el recuadro sobre el documento para colocarlo."
-
 msgid "panel.visibleSignature.content"
 msgstr "Contenido"
 
@@ -572,6 +635,10 @@ msgstr "Marca alguna casilla para que el recuadro diga algo."
 
 msgid "panel.visibleSignature.preview.unavailable"
 msgstr "La vista previa aparecerá al elegir el certificado."
+
+#. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
+msgid "panel.footer.placeFirst"
+msgstr "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la página."
 
 msgid "panel.footer.savedIn"
 msgstr "Se guardará en"

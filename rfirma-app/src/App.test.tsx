@@ -284,7 +284,7 @@ describe("App", () => {
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    expect(within(panel).getByText(/7/)).toBeInTheDocument();
+    expect(within(panel).getByText(/^7 páginas/)).toBeInTheDocument();
     const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
     expect(within(tray).getByText("Sin firmar")).toBeInTheDocument();
     // El visor vacío tenía su propia zona de soltar; con el documento pintado
@@ -375,7 +375,9 @@ describe("App", () => {
     await user.click(second);
 
     expect(trigger).toHaveTextContent("Grace Hopper Murray");
-    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+    // Con el interruptor de firma visible encendido y sin recuadro colocado,
+    // firmar sigue apagado: es el otro «no» del ID-93, y no el del certificado.
+    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
   });
 
   /**
@@ -405,7 +407,9 @@ describe("App", () => {
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
     expect(trigger).toHaveTextContent("Grace Hopper Murray");
-    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+    // Con el interruptor de firma visible encendido y sin recuadro colocado,
+    // firmar sigue apagado: es el otro «no» del ID-93, y no el del certificado.
+    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
   });
 
   /**
@@ -458,7 +462,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /primero\.pdf/ }));
 
     await waitFor(() => expect(within(panel).getByText("primero.pdf")).toBeInTheDocument());
-    expect(within(panel).getByText(/2/)).toBeInTheDocument();
+    expect(within(panel).getByText(/^2 páginas/)).toBeInTheDocument();
   });
 
   it("changes nothing when the dialog is closed without choosing", async () => {
@@ -610,7 +614,7 @@ describe("App, al soltar ficheros en la ventana", () => {
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    expect(within(panel).getByText(/7/)).toBeInTheDocument();
+    expect(within(panel).getByText(/^7 páginas/)).toBeInTheDocument();
     const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
     expect(within(tray).getByText("Sin firmar")).toBeInTheDocument();
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");

@@ -387,6 +387,76 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
+#. La línea dice la página del recuadro, no la que se está mirando.
+msgid "panel.placement.notPlaced"
+msgstr ""
+
+msgid "panel.placement.here"
+msgstr ""
+
+#. {{page}} es la página donde está el recuadro. Es un botón: al pulsarlo el visor va allí.
+msgid "panel.placement.onPage"
+msgstr ""
+
+#. Rótulo del bloque con las tres opciones de en qué páginas se sella.
+msgid "panel.placement.title"
+msgstr ""
+
+msgid "panel.placement.single"
+msgstr ""
+
+#. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
+msgid "panel.placement.singlePage"
+msgstr ""
+
+#. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
+msgid "panel.placement.singleUnplaced"
+msgstr ""
+
+msgid "panel.placement.these"
+msgstr ""
+
+#. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
+msgid "panel.placement.field"
+msgstr ""
+
+#. {{pages}} es el número de páginas del documento.
+msgid "panel.placement.all"
+msgstr ""
+
+#. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
+msgid "panel.placement.echo"
+msgstr ""
+
+#. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
+msgid "panel.placement.echoMore"
+msgid_plural "panel.placement.echoMore"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
+msgid "panel.placement.replicated"
+msgid_plural "panel.placement.replicated"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
+msgid "panel.placement.errors.beyond"
+msgstr ""
+
+#. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
+msgid "panel.placement.errors.reversed"
+msgstr ""
+
+msgid "panel.placement.errors.zero"
+msgstr ""
+
+#. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
+msgid "panel.placement.errors.malformed"
+msgstr ""
+
 msgid "panel.certificate.title"
 msgstr ""
 
@@ -454,13 +524,6 @@ msgstr ""
 msgid "panel.visibleSignature.toggle"
 msgstr ""
 
-#. {{page}} es el número de página donde se colocó el recuadro.
-msgid "panel.visibleSignature.placement"
-msgstr ""
-
-msgid "panel.visibleSignature.noPlacement"
-msgstr ""
-
 msgid "panel.visibleSignature.content"
 msgstr ""
 
@@ -510,6 +573,10 @@ msgid "panel.visibleSignature.preview.empty"
 msgstr ""
 
 msgid "panel.visibleSignature.preview.unavailable"
+msgstr ""
+
+#. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
+msgid "panel.footer.placeFirst"
 msgstr ""
 
 msgid "panel.footer.savedIn"

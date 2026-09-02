@@ -333,3 +333,54 @@
 .panel__sign {
   width: 100%;
 }
+
+/* El bloque «Colocación»: borde propio, porque agrupa una decisión entera y no
+   una lista de casillas (docs/design/panel-de-firma.md § Colocación). */
+.panel__placement {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: var(--rf-space-sm);
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-bg);
+}
+
+.panel__placement-option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rf-space-xs);
+}
+
+/* El número va en el pie y no en la etiqueta: «esta página» no dice cuál
+   (ID-97). */
+.panel__placement-foot {
+  margin-left: auto;
+}
+
+/* Sangrado hasta la columna del texto del radio, para que se lea como suyo. */
+.panel__placement-field {
+  padding-left: 26px;
+}
+
+/* El aviso del campo: el triángulo y la frase en la misma línea, y la frase
+   **no se recorta** —perderla por elipsis sería perder el aviso cuando más
+   falta hace—. */
+.panel__placement-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--rf-text);
+}
+
+/* La línea que dice la página del recuadro es pulsable cuando lleva a otra
+   página, y se alinea con el texto: lo que ofrece es ir allí. */
+.panel__placement-goto {
+  align-self: flex-start;
+  padding: 0;
+}
+
+.panel__place-first {
+  margin: 0;
+}

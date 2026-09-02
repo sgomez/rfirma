@@ -4,12 +4,22 @@ import { AlertIcon, CheckIcon, FileIcon, FolderIcon, InfoIcon } from "../design-
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
+import {
+  firstSealedPage,
+  type PageChoice,
+  type PageSet,
+  type Placement,
+  pageSetOf,
+  sealedPages,
+  sealsPage,
+} from "../viewer/signatureBox";
 import { CertificateSelect, statusWarning } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
 import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
+import { formatPageRange, type PageRangeError, parsePageRange } from "./pageRange";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
 import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./visibleSignature";
@@ -64,8 +74,24 @@ interface SigningPanelProps {
   onChooseModule: () => void;
   signature: VisibleSignature;
   onChangeSignature: (signature: VisibleSignature) => void;
-  /** En qué página está el recuadro, o `null` si aún no se ha colocado. */
-  page: number | null;
+  /**
+   * Dónde va la firma visible y en qué páginas, o `null` si aún no se ha
+   * colocado. `null` es el PDF recién abierto y también haber quitado la última
+   * página del conjunto: **colocado es tener páginas** (ID-92).
+   */
+  placement: Placement | null;
+  /** El conjunto de páginas ha cambiado desde el bloque «Colocación». */
+  onPlace: (placement: Placement | null) => void;
+  /** Cuál de las tres opciones manda sobre el conjunto (ID-97). */
+  pageChoice: PageChoice;
+  onChangePageChoice: (choice: PageChoice) => void;
+  /**
+   * La página que se está mirando en el visor. Solo se usa para elegir entre
+   * «el recuadro está en esta página» y «…en la página 3» (ID-100).
+   */
+  viewedPage: number;
+  /** Llevar el visor hasta la página del recuadro, que es un clic (ID-100). */
+  onGoToPage: (page: number) => void;
   rubric: Rubric | null;
   /** El último fallo al elegir la rúbrica, que se cuenta aquí y no al firmar. */
   rubricFailure: RubricFailure | null;
@@ -112,7 +138,12 @@ export function SigningPanel({
   onChooseModule,
   signature,
   onChangeSignature,
-  page,
+  placement,
+  onPlace,
+  pageChoice,
+  onChangePageChoice,
+  viewedPage,
+  onGoToPage,
   rubric,
   rubricFailure,
   onChooseRubric,
@@ -126,6 +157,7 @@ export function SigningPanel({
 }: SigningPanelProps) {
   const { t, i18n } = useTranslation();
   const reasonId = useId();
+  const placementName = useId();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const usable = chosen !== null && isUsable(chosen.status);
   const language = i18n.resolvedLanguage ?? i18n.language;
@@ -142,6 +174,66 @@ export function SigningPanel({
     folder: destination.folder,
     name: destination.name ?? document.name,
   });
+
+  // ── El bloque «Colocación» ────────────────────────────────────────────────
+  //
+  // Lo tecleado vive aquí y el conjunto vive arriba, y los dos se mantienen a
+  // la par por **identidad**: el conjunto que este panel acaba de emitir se
+  // apunta en `seenPages`, así que solo se reescribe el campo cuando el
+  // conjunto cambia **desde fuera** —sellar o quitar una página en el visor,
+  // ID-99—. Sin esa distinción, teclear `1,2-3` se convertiría en `1-3` bajo
+  // los dedos, porque la forma comprimida no es la que se está escribiendo.
+  const pages = placement?.pages ?? null;
+  const [pagesText, setPagesText] = useState(() =>
+    pages === null ? "" : formatPageRange(pages, document.pages),
+  );
+  const [seenPages, setSeenPages] = useState<PageSet | null>(pages);
+  // La página del gesto original, la que sobrevive al cambio de opción
+  // (ID-97). Con «todas» el conjunto ya no la nombra, y por eso se recuerda.
+  const [anchor, setAnchor] = useState<number | null>(firstSealedPage(placement));
+  if (pages !== seenPages) {
+    setSeenPages(pages);
+    setPagesText(pages === null ? "" : formatPageRange(pages, document.pages));
+    if (pages !== null && pages !== "all") setAnchor(pages.only[0] ?? null);
+  }
+  const boxPage = placement === null ? null : (firstSealedPage(placement) ?? anchor);
+  const parsed = parsePageRange(pagesText, document.pages);
+  const rangeError = pageChoice === "these" && !parsed.ok ? parsed.error : null;
+  const sealedCount = placement === null ? 0 : sealedPages(placement.pages, document.pages).length;
+  const echo = placement === null ? null : echoOf(placement.pages, document.pages, t);
+
+  // Elegir páginas **no coloca nada**: sin recuadro, las tres opciones son una
+  // preferencia a la espera del primer gesto sobre la hoja (ID-92).
+  const place = (next: PageSet | null) => {
+    if (next !== null && next !== "all") setAnchor(next.only[0] ?? null);
+    if (placement === null) return;
+    setSeenPages(next);
+    onPlace(next === null ? null : { ...placement, pages: next });
+  };
+
+  const typePages = (value: string) => {
+    setPagesText(value);
+    const typed = parsePageRange(value, document.pages);
+    // Lo que no se entiende **no se aplica a medias**: el conjunto se queda
+    // como estaba y el error apaga el botón de firmar (ID-22, ID-98).
+    if (typed.ok) place(typed.pages);
+  };
+
+  const chooseChoice = (choice: PageChoice) => {
+    onChangePageChoice(choice);
+    if (choice === "all") return place("all");
+    if (choice === "single") return place(boxPage === null ? null : { only: [boxPage] });
+    const resolved =
+      placement === null ? null : pageSetOf(sealedPages(placement.pages, document.pages));
+    setPagesText(resolved === null ? "" : formatPageRange(resolved, document.pages));
+    place(resolved);
+  };
+
+  // Con el interruptor encendido y sin colocar **no se firma**, y el pie manda
+  // hacer la acción en vez de describir el estado (ID-93). Con el interruptor
+  // apagado se firma, invisible, como siempre.
+  const unplaced = signature.enabled && placement === null;
+  const blocked = signature.enabled && (placement === null || rangeError !== null);
 
   const changeField = (field: keyof VisibleSignature["fields"], checked: boolean) => {
     onChangeSignature({ ...signature, fields: { ...signature.fields, [field]: checked } });
@@ -204,11 +296,107 @@ export function SigningPanel({
 
           {signature.enabled && (
             <>
-              <p className="rf-hint">
-                {page === null
-                  ? t("panel.visibleSignature.noPlacement")
-                  : t("panel.visibleSignature.placement", { page })}
-              </p>
+              {/* La línea dice **la página del recuadro, no la que miras**
+                  (ID-100). Con el recuadro en otra página es un botón, y
+                  lleva allí: decir un número que no está delante y no dejar
+                  ir hasta él sería peor que callarse. */}
+              {boxPage === null ? (
+                <p className="rf-hint">{t("panel.placement.notPlaced")}</p>
+              ) : placement !== null && sealsPage(placement.pages, viewedPage) ? (
+                <p className="rf-hint">{t("panel.placement.here")}</p>
+              ) : (
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--ghost panel__placement-goto"
+                  onClick={() => onGoToPage(boxPage)}
+                >
+                  {t("panel.placement.onPage", { page: boxPage })}
+                </button>
+              )}
+
+              <fieldset className="panel__placement">
+                <legend className="rf-label">{t("panel.placement.title")}</legend>
+
+                <label className="panel__placement-option">
+                  <input
+                    type="radio"
+                    name={placementName}
+                    checked={pageChoice === "single"}
+                    onChange={() => chooseChoice("single")}
+                  />
+                  <span className="rf-body">{t("panel.placement.single")}</span>
+                  {/* La etiqueta es fija y el número va en el pie: «esta
+                      página» no dice cuál y deja de ser cierto en cuanto pasas
+                      de página (ID-97). */}
+                  <span className="rf-hint panel__placement-foot">
+                    {boxPage === null
+                      ? t("panel.placement.singleUnplaced")
+                      : t("panel.placement.singlePage", { page: boxPage })}
+                  </span>
+                </label>
+
+                <label className="panel__placement-option">
+                  <input
+                    type="radio"
+                    name={placementName}
+                    checked={pageChoice === "these"}
+                    onChange={() => chooseChoice("these")}
+                  />
+                  <span className="rf-body">{t("panel.placement.these")}</span>
+                </label>
+
+                {pageChoice === "these" && (
+                  <div
+                    className={
+                      rangeError === null
+                        ? "rf-field panel__placement-field"
+                        : "rf-field rf-field--error panel__placement-field"
+                    }
+                  >
+                    <input
+                      className="rf-input"
+                      type="text"
+                      inputMode="numeric"
+                      value={pagesText}
+                      aria-label={t("panel.placement.field")}
+                      aria-invalid={rangeError !== null}
+                      placeholder="1,2-3,10-20"
+                      onChange={(event) => typePages(event.target.value)}
+                    />
+                    {rangeError === null ? (
+                      echo !== null && <p className="rf-hint">{echo}</p>
+                    ) : (
+                      <p className="rf-hint panel__placement-error">
+                        <span className="panel__notice-icon">
+                          <AlertIcon />
+                        </span>
+                        <span>{messageFor(rangeError, t)}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <label className="panel__placement-option">
+                  <input
+                    type="radio"
+                    name={placementName}
+                    checked={pageChoice === "all"}
+                    onChange={() => chooseChoice("all")}
+                  />
+                  <span className="rf-body">
+                    {t("panel.placement.all", { pages: document.pages })}
+                  </span>
+                </label>
+
+                {/* Un solo campo de firma con el widget replicado, no una firma
+                    por página: es lo que se estampa, y decirlo aquí evita
+                    prometer trece firmas. */}
+                {sealedCount > 1 && (
+                  <p className="rf-hint">
+                    {t("panel.placement.replicated", { count: sealedCount })}
+                  </p>
+                )}
+              </fieldset>
 
               <fieldset className="panel__fields">
                 <legend className="rf-label">{t("panel.visibleSignature.content")}</legend>
@@ -343,10 +531,13 @@ export function SigningPanel({
             </div>
           </div>
         )}
+        {/* Manda hacer la acción, no describe un estado: quien lee esto tiene
+            que saber qué hacer a continuación (ID-93). */}
+        {unplaced && <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>}
         <button
           type="button"
           className="rf-btn rf-btn--primary panel__sign"
-          disabled={!usable || signing}
+          disabled={!usable || signing || blocked}
           onClick={onSign}
         >
           {failure ? t("panel.footer.retry") : t("actions.sign")}
@@ -354,6 +545,48 @@ export function SigningPanel({
       </footer>
     </div>
   );
+}
+
+/**
+ * La línea de eco bajo el campo: **qué páginas se van a sellar**, dichas una a
+ * una (ID-98). Se nombran las seis primeras y el resto se cuenta, que es lo que
+ * cabe en la columna más estrecha de la ventana.
+ */
+function echoOf(
+  pages: PageSet,
+  pageCount: number,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | null {
+  const list = sealedPages(pages, pageCount);
+  if (list.length === 0) return null;
+  const shown = list.slice(0, ECHO_LIMIT).join(", ");
+  const rest = list.length - ECHO_LIMIT;
+  return rest > 0
+    ? t("panel.placement.echoMore", { pages: shown, count: rest })
+    : t("panel.placement.echo", { pages: shown });
+}
+
+/** Cuántas páginas se nombran antes de pasar a contarlas. */
+const ECHO_LIMIT = 6;
+
+/**
+ * La situación del campo, redactada. Es la vista quien la redacta y no el
+ * analizador, que solo sabe qué ha pasado y no en qué idioma se cuenta (ID-29).
+ */
+function messageFor(error: PageRangeError, t: ReturnType<typeof useTranslation>["t"]): string {
+  switch (error.kind) {
+    case "beyond":
+      return t("panel.placement.errors.beyond", {
+        pageCount: error.pageCount,
+        page: error.page,
+      });
+    case "reversed":
+      return t("panel.placement.errors.reversed", { entry: error.entry });
+    case "zero":
+      return t("panel.placement.errors.zero");
+    case "malformed":
+      return t("panel.placement.errors.malformed", { entry: error.entry });
+  }
 }
 
 /** El certificado, en sus cinco estados. */
