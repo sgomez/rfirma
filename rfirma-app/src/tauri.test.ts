@@ -15,6 +15,7 @@ const {
   tauriPdfSource,
   tauriPreferences,
   tauriRecents,
+  tauriRubricPicker,
   tauriSigningBackend,
 } = await import("./tauri");
 
@@ -261,6 +262,59 @@ describe("los puertos del documento sobre Tauri", () => {
     if (outcome.ok) return;
     expect(outcome.failure.situation).toBe("documentUnreadable");
     expect(outcome.failure.detail).not.toBe("");
+  });
+});
+
+/**
+ * **Grada A**: el puerto de la rúbrica contra el mismo `invoke` falso.
+ *
+ * Ni el caso bueno ni el rechazado revientan la promesa: las seis
+ * situaciones de `RubricSituation` llegan clasificadas dentro de la propia
+ * respuesta, así que `choose` nunca rechaza por una imagen que no vale.
+ */
+describe("el puerto de la rúbrica sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks the backend to open the dialog, and nothing else", async () => {
+    invoke.mockResolvedValue(null);
+
+    await tauriRubricPicker().choose();
+
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(["choose_rubric"]);
+  });
+
+  it("reads a cancelled dialog as no rubric, and not as a failure", async () => {
+    invoke.mockResolvedValue(null);
+
+    await expect(tauriRubricPicker().choose()).resolves.toBeNull();
+  });
+
+  it("turns the adopted image into a rubric with a data url and its size", async () => {
+    invoke.mockResolvedValue({
+      rubric: { base64: "/9j/", width: 200, height: 80 },
+      failure: null,
+    });
+
+    const choice = await tauriRubricPicker().choose();
+
+    expect(choice).toEqual({
+      rubric: { dataUrl: "data:image/jpeg;base64,/9j/", width: 200, height: 80 },
+    });
+  });
+
+  it("keeps the situation and the raw detail of an image that was refused", async () => {
+    invoke.mockResolvedValue({
+      rubric: null,
+      failure: { situation: "notAnAcceptedImage", detail: "no es PNG ni JPEG" },
+    });
+
+    const choice = await tauriRubricPicker().choose();
+
+    expect(choice).toEqual({
+      failure: { situation: "notAnAcceptedImage", detail: "no es PNG ni JPEG" },
+    });
   });
 });
 

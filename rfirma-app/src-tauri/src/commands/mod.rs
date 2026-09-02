@@ -1,10 +1,10 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son catorce, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son quince, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
-//! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar, y
-//! `RecentsStore` desde el #126—,
+//! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
+//! `RecentsStore` desde el #126, y `RubricPicker` desde el #128—,
 //! así que la ventana no aprende nada nuevo de Tauri: sigue hablando con los
 //! mismos puertos y es `main.tsx` quien elige estas implementaciones.
 //!
@@ -20,7 +20,9 @@
 //! El reparto del módulo:
 //!
 //! - [`views`], los tipos que cruzan a la ventana y las conversiones que los
-//!   producen; [`failure`], la mitad de eso que cuenta lo que ha salido mal.
+//!   producen; [`failure`], la mitad de eso que cuenta lo que ha salido mal;
+//!   [`rubric`], los mismos dos papeles pero solo para la rúbrica —aparte por
+//!   tamaño, no porque sea otra cosa.
 //! - [`orders`], lo que la ventana manda, ya deserializado.
 //! - `guards`, las cuatro pruebas que necesitan ver **todas** las órdenes a la
 //!   vez (ID-85). Solo existe en las pruebas.
@@ -39,6 +41,15 @@
 //! lo que el portal conceda en [`crate::memory::OpenedDocuments`] y devuelve un
 //! identificador opaco; [`read_document`] entrega sus bytes contra ese
 //! identificador. Ninguna de las dos devuelve una ruta.
+//!
+//! # La rúbrica se elige con su propio diálogo, y se copia
+//!
+//! [`choose_rubric`] abre el diálogo del sistema filtrado a imágenes, y
+//! adopta lo que el portal conceda en [`crate::rubric::RubricStore`] —se
+//! copia, no se referencia (ID-33)—. Cancelar y una imagen que no vale no son
+//! lo mismo: cancelar es `None`, una imagen inválida es
+//! `Some(RubricChoiceView::refused(..))`, porque el frontal la cuenta con el
+//! panel de firma todavía abierto y no como un fallo que reviente la promesa.
 //!
 //! # Y hay un camino más, que no es una orden
 //!
@@ -63,6 +74,7 @@
 
 pub mod failure;
 pub mod orders;
+pub mod rubric;
 pub mod views;
 
 #[cfg(test)]
@@ -78,6 +90,7 @@ pub use crate::app::signing::SigningSession;
 pub use app::documents::dropped_document;
 pub use failure::Failure;
 pub use orders::SigningOrder;
+pub use rubric::RubricChoiceView;
 pub use views::{
     CertificateView, ConfigurationView, DroppedDocumentView, OpenedDocumentView, PlacementView,
     RecentDocumentView, SignedDocumentView,
@@ -307,6 +320,48 @@ pub fn forget_recent(
         &opened,
         &id,
     )
+}
+
+/// **Orden 15.** Abre el diálogo del portal y adopta la imagen elegida como
+/// rúbrica.
+///
+/// Filtra por PNG y JPEG, que es lo único que
+/// [`crate::rubric::normalize`] admite. Se abre **desde aquí y no desde el
+/// frontal**, por la misma razón que [`open_document`] (ID-63): la ventana
+/// sigue sin pedir el permiso del diálogo.
+///
+/// Cerrar el diálogo sin elegir nada devuelve `None`, y **no es un fallo**: es
+/// lo que deja la rúbrica ya elegida como estaba (ID-73). Una imagen que no
+/// vale —no es PNG ni JPEG, está dañada, pasa del tope— tampoco es un fallo
+/// que reviente la promesa: viaja como `RubricChoiceView::refused`, con el
+/// panel de firma todavía abierto (ADR-0010), porque es justo lo que
+/// [`crate::signing::rubric::RubricPicker`] del frontal espera encontrar en su
+/// `RubricChoice`.
+#[tauri::command(async)]
+pub fn choose_rubric(
+    app_handle: tauri::AppHandle,
+    environment: State<'_, Environment>,
+) -> Option<RubricChoiceView> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let dialog = app_handle
+        .dialog()
+        .file()
+        .add_filter("Imagen", &["png", "jpg", "jpeg"]);
+    let chosen = dialog.blocking_pick_file()?;
+    let source = match chosen.into_path() {
+        Ok(path) => path,
+        Err(error) => {
+            return Some(RubricChoiceView::refused(&crate::rubric::RubricError::new(
+                crate::rubric::Situation::SourceUnreadable,
+                error.to_string(),
+            )));
+        }
+    };
+    Some(match app::rubric::choose(&environment.rubric, &source) {
+        Ok(normalized) => RubricChoiceView::adopted(&normalized),
+        Err(error) => RubricChoiceView::refused(&error),
+    })
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

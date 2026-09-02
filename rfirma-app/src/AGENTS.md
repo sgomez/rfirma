@@ -31,8 +31,8 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 418 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `main.tsx` | 76 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 475 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
 | `App.tsx` | 532 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |

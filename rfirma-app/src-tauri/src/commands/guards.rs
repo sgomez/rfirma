@@ -20,10 +20,11 @@ use std::path::Path;
 /// están **todos**: sin ella, un fichero nuevo con un tipo de salida dentro
 /// pasaría sin que nadie lo mirara, que es justo el fallo que el ID-84 viene a
 /// arreglar.
-const SOURCES: [(&str, &str); 4] = [
+const SOURCES: [(&str, &str); 5] = [
     ("mod.rs", include_str!("mod.rs")),
     ("failure.rs", include_str!("failure.rs")),
     ("orders.rs", include_str!("orders.rs")),
+    ("rubric.rs", include_str!("rubric.rs")),
     ("views.rs", include_str!("views.rs")),
 ];
 
@@ -265,7 +266,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 14, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 15, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
