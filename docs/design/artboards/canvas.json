@@ -58,12 +58,13 @@
     },
     {
       "file": "Main.dc.html",
-      "title": "5 · Configurando la firma visible",
+      "title": "5 · Colocando la firma visible",
       "x": 0,
       "y": 1140,
       "w": 1180,
       "h": 1000,
-      "page": "recorrido"
+      "page": "recorrido",
+      "is_interactive": true
     },
     {
       "file": "EstadoPin.dc.html",
@@ -136,6 +137,16 @@
       "w": 1180,
       "h": 1000,
       "page": "recorrido"
+    },
+    {
+      "file": "EstadoPaginasSinSello.dc.html",
+      "title": "5b · Antes de firmar · páginas sin sello",
+      "x": 5040,
+      "y": 1140,
+      "w": 1180,
+      "h": 1000,
+      "page": "recorrido",
+      "is_interactive": false
     }
   ],
   "annotations": [
@@ -178,6 +189,14 @@
       "w": 1100,
       "page": "recorrido",
       "text": "v0.2 · lo construido llega al usuario (ticket #123). Tres artboards de este recorrido cambian; no hay pantallas nuevas ni página aparte.\n\nPREFERENCIAS · A PANTALLA COMPLETA sustituye al modal de 480 px, que desaparece. Ocupa todo bajo la cabecera, que se queda intacta con su estado de documento: no se ha navegado a ninguna parte. Índice de secciones a la izquierda (crece con los ajustes que traerán la ficha 19 y las siguientes), columna de contenido en medio y pie fijo con «Cerrar», que así no se pierde al desplazarse. Guardado automático al cambiar cada ajuste: no hay «Guardar» ni «Cancelar». El destino deja de ser un desplegable de una sola opción y pasa a selector de directorio.\nPalancas: «Ficha 5b» enseña dónde cae cada uno de los dos errores que hoy se tragan; «Apagar Recordar mi actividad» saca la confirmación destructiva, que sigue siendo un diálogo pequeño porque el borrado es irreversible; «Maquetación» decide el ancho de la columna.\n\n5 · CONFIGURANDO LA FIRMA VISIBLE estrena el pie: carpeta MÁS nombre de fichero, con la última carpeta precedida de «…/» y el nombre recortado por el medio. La carpeta entera, la extensión y la cola (-firmado y su -2) no se recortan nunca. Palanca «Pie · destino» para los cinco casos, incluido el destino no disponible en el que el botón de firmar NO se apaga; palancas «Pie · recorte» para decidir por dónde corta.\n\n9 · FIRMADO CON ÉXITO estrena el resumen sin la ficha 14: nombre, tamaño, encabezado «Resumen» con la insignia PAdES sola guardando el sitio, y tres botones verticales — Abrir el PDF (primario), Abrir la carpeta (secundario), Volver a firmar (fantasma). «Firmar otro documento» se retira: la bandeja ya abre y acepta arrastre. La palanca «Ficha 14» enseña qué ocupará ese hueco en v1.0."
+    },
+    {
+      "id": "nota-v03",
+      "x": 3780,
+      "y": 3420,
+      "w": 1100,
+      "page": "recorrido",
+      "text": "v0.3 · EL RECUADRO (fichas 6 y 24), decidido en el ticket #155 del mapa #148, que absorbió al #154. Se supone siempre la firma visible activada. No hay pantallas nuevas: cambia «5 · Colocando la firma visible» y nace el diálogo «5b».\n\n5 SE PUEDE PULSAR: los radios, el botón bajo la hoja y las flechas de página funcionan. La palanca «Colocación» salta a cada caso; desde ahí se camina.\n\nREGLA DE ORO: «colocado» no es una casilla aparte, es que haya al menos una página sellada. Sin ninguna, no hay recuadro y «Firmar documento» está apagado, sea cual sea el modo.\n\nCASO 1 · recién abierto: nada sellado, firmar apagado, el panel pide colocar la firma y bajo la hoja aparece «Aún no has colocado la firma · Sellar esta página». Se pulsa (o se arrastra un recuadro) y esa página queda sellada. Al cambiar de página el sello no viaja; para traerlo, el mismo botón.\nCASO 2 · «Todas las páginas»: todavía falta el rectángulo, y el botón dice «COLOCAR EL SELLO AQUÍ» — en «todas» el conjunto ya está completo y decir «esta» engañaría.\nCASO 3 · «Estas páginas»: tres caminos que hacen lo mismo — el botón (que autorrellena el campo), el arrastre, o teclear. En una página ya sellada el botón dice «QUITAR EL SELLO» y el campo se reescribe: quitar la 12 de 3,10-20 deja 3,10-11,13-20. Si se quita la última, se vuelve al caso 1.\n\nPOSICIÓN ESTÁNDAR: colocado por botón o por campo, el recuadro cae abajo a la derecha, a un margen del borde.\n\n«SOLO 1 PÁGINA» es etiqueta fija y el número va en el pie («Página 3»): decir «esta página» mentía al pasar de página. Al cambiar de modo sobrevive la página DONDE SE COLOCÓ el recuadro.\n\nEL CAMPO usa el formato de impresión de toda la vida, 1,2-3,10-20. Enmienda al #152, que pedía una tira de miniaturas: se rompe a las 200 páginas. Lo prohibido de AutoFirma es su sintaxis (1-3,-3--1) y la degradación silenciosa, no teclear — la palanca «tecleado» recorre los tres errores y los tres APAGAN el botón de firmar (ID-22).\n\nTIRADORES: cuatro, y son CROMO, NO PAPEL — 10 px en pantalla al 50 %, al 100 % y al 300 %. No hay medidas escritas en el panel ni línea de ayuda: se mueve arrastrando, se redimensiona por los tiradores, y la ayuda va en tooltip. La palanca «tamaño» enseña el mínimo útil.\n\nFUERA DEL CONJUNTO la página se ve EN BLANCO: un recuadro a trazos insinuaría que ahí hay algo. Y la página donde se arrastró el recuadro NO se dibuja distinta de las demás — el widget replicado es idéntico en todas, y distinguirla inventaría una diferencia que el PDF no tiene.\n\n5b · PÁGINAS SIN SELLO. No se nombran las páginas una a una: se dice el TOTAL, n de m, y todo se cuenta sobre el CONJUNTO ELEGIDO y no sobre el documento — si eliges 13 de 27 y se caen 3, el sello aparece en 10, no en 24. correctPositionSignature recorta contra la PRIMERA página de la lista y descarta en silencio aquellas donde no cabe la esquina inferior izquierda (#150). Modal antes de firmar, «Cancelar» / «Firmar de todos modos», y «sin sello» — nunca «recortadas».\n\nLo medido que lo sostiene: un solo campo de firma con el widget replicado (docs/research/recuadro-replicado-pdfsig.md, validado por VALIDe como PAdES B-Level con UN firmante). Por eso el /Rect es forzosamente el mismo en todas."
     }
   ],
   "launch": {

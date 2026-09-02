@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-field--error .rf-hint::before{content:"! ";}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:1000px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+
+<header class="rf-row" style="height:56px;flex:none;padding:0 var(--rf-space-sm) 0 var(--rf-space-md);
+  gap:var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+  <span class="rf-title" style="font-size:15px;letter-spacing:.4px">rFirma</span>
+  <div style="flex:1"></div>
+  <span class="rf-badge">Sin firmar</span>
+  <span style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+</header>
+
+<div class="rf-row" style="flex:1;min-height:0;align-items:stretch;background:var(--rf-surface)">
+  <div style="width:260px;flex:none;border-right:1px solid var(--rf-border-subtle);padding:var(--rf-space-sm);display:flex;flex-direction:column;gap:12px">
+    <div style="height:88px;border:1px dashed var(--rf-border-subtle);border-radius:var(--rf-radius-md)"></div>
+    <div style="height:56px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)"></div>
+    <div style="height:56px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);opacity:.6"></div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:var(--rf-space-md)">
+    <div data-theme="light" style="width:320px;aspect-ratio:1/1.414;background:var(--rf-bg);
+      border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);box-shadow:var(--rf-shadow-card);position:relative">
+      <div style="position:absolute;left:44%;top:70%;width:48%;height:14%;border:1.5px solid var(--rf-primary);border-radius:2px"></div>
+    </div>
+  </div>
+  <div style="width:340px;flex:none;border-left:1px solid var(--rf-border-subtle);padding:var(--rf-space-sm);display:flex;flex-direction:column;gap:12px">
+    <div style="height:44px;border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-subtle)"></div>
+    <div style="height:64px;border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-subtle)"></div>
+    <div style="flex:1"></div>
+    <div style="height:44px;border-radius:var(--rf-radius-md);background:var(--rf-primary);opacity:.5"></div>
+  </div>
+</div>
+
+<div class="rf-scrim" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10">
+  <div class="rf-dialog" style="width:{{ anchoDialogo }}px;padding:var(--rf-space-md);display:flex;flex-direction:column;gap:var(--rf-space-sm)">
+
+    <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+      <span style="display:flex;flex:none;margin-top:2px;color:var(--rf-text)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+      <p class="rf-title" style="flex:1;min-width:0;font-size:18px;line-height:1.3">{{ titulo }}</p>
+    </div>
+
+    <p class="rf-prose">{{ cuerpo }}</p>
+
+    <sc-if value="{{ hayNumeros }}" hint-placeholder-val="{{ true }}">
+      <div class="rf-stack" style="gap:6px">
+        <p class="rf-label">Páginas sin sello</p>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <sc-for list="{{ numeros }}" as="p" hint-placeholder-count="3">
+            <span style="min-width:30px;height:26px;padding:0 6px;flex:none;border-radius:var(--rf-radius-sm);
+              border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ p.num }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayMiniaturas }}" hint-placeholder-val="{{ false }}">
+      <div class="rf-stack" style="gap:8px">
+        <p class="rf-label">Páginas sin sello</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <sc-for list="{{ minis }}" as="m" hint-placeholder-count="3">
+            <span style="flex:none;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span data-theme="light" style="position:relative;display:block;width:{{ m.ancho }}px;height:{{ m.alto }}px;
+                background:var(--rf-bg);border:1px solid var(--rf-border-strong);border-radius:1px">
+                <span style="position:absolute;left:19px;top:43px;width:21px;height:9px;border-radius:1px;
+                  border:1px dashed var(--rf-border-strong)"></span>
+              </span>
+              <span class="rf-body rf-text-muted">{{ m.pie }}</span>
+            </span>
+          </sc-for>
+          <sc-if value="{{ hayMasMinis }}" hint-placeholder-val="{{ false }}">
+            <span class="rf-body rf-text-muted" style="align-self:center">+{{ restanMinis }} más</span>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="rf-row rf-gap-xs" style="align-items:flex-start;padding:var(--rf-space-xs);
+      border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-subtle);background:var(--rf-bg)">
+      <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:1px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h9a2 2 0 0 1 2 2v12M5 8h9a2 2 0 0 1 2 2v10H7a2 2 0 0 1-2-2z"/></svg></span>
+      <p class="rf-body" style="flex:1;line-height:1.5">{{ positivo }}</p>
+    </div>
+
+    <div class="rf-row rf-gap-xs" style="justify-content:flex-end;padding-top:var(--rf-space-xs)">
+      <button class="rf-btn rf-btn--ghost">Cancelar</button>
+      <button class="rf-btn rf-btn--primary">Firmar de todos modos</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"cuantas":{"editor":"enum","options":["1 de 13 elegidas","3 de 13 elegidas","12 de 13 elegidas","3 de 27 · todas"],"default":"3 de 13 elegidas","section":"Cuantas se caen"},"$preview":{"width":1180,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const caso = this.props.cuantas ?? "3 de 13 elegidas";
+    // Todo se cuenta sobre el CONJUNTO ELEGIDO, no sobre el documento: si eliges
+    // 13 paginas de 27 y se caen 3, el sello aparece en 10, no en 24.
+    const casos = {
+      "1 de 13 elegidas": [1, 13],
+      "3 de 13 elegidas": [3, 13],
+      "12 de 13 elegidas": [12, 13],
+      "3 de 27 · todas": [3, 27]
+    };
+    const par = casos[caso] || casos["3 de 13 elegidas"];
+    const k = par[0], m = par[1];
+    const quedan = m - k;
+
+    const titulo = k === 1
+      ? "Una página se quedará sin sello"
+      : k + " páginas se quedarán sin sello";
+
+    // No se nombran una a una: el total, n de m.
+    const cuerpo = "El recuadro no cabe en " + k + " de las " + m + " páginas que has elegido, "
+      + "más pequeñas que aquella sobre la que lo colocaste. "
+      + "El documento se firmará igual y la firma será válida en todo él, "
+      + "pero en esas páginas no aparecerá el sello.";
+
+    const positivo = quedan === 1
+      ? "El sello aparecerá en 1 de las " + m + " páginas elegidas."
+      : "El sello aparecerá en " + quedan + " de las " + m + " páginas elegidas.";
+
+    return {
+      tema: this.props.tema ?? "light",
+      anchoDialogo: 460,
+      titulo: titulo,
+      cuerpo: cuerpo,
+      hayNumeros: false,
+      numeros: [],
+      hayMiniaturas: false,
+      minis: [],
+      hayMasMinis: false,
+      restanMinis: 0,
+      positivo: positivo
+    };
+  }
+}
+</script>
+</body>
+</html>
