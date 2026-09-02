@@ -76,12 +76,19 @@ casos la única que hace falta además del fichero que vas a tocar:
 
 **Presupuesto de exploración.** Explorar es lo que agota el contexto, no
 escribir código: en una sesión medida, leer ficheros se llevó el 58 % del
-contexto y escribir el parche el 3 %. Por eso:
+contexto y escribir el parche el 3 %. Y **lo que cuesta una lectura no es su
+tamaño, sino su tamaño multiplicado por las peticiones que vienen después**: lo
+leído se queda en el contexto y se reenvía en cada turno. Un `cat` de 4k tokens
+en la llamada 15 de 120 se paga ciento y pico veces. Por eso:
 
-* **Nunca `cat` de un fichero de más de 300 líneas**, ni de uno que el índice
-  marque como grande. `grep -n '<símbolo>'` para situarte y `sed -n 'A,Bp'` para
-  el tramo. `signing/placement.rs` completo son ~7k tokens; casi nunca los
-  necesitas.
+* **Para situarte en un fichero, `just outline <ruta>`, nunca `cat`.** Imprime
+  el esqueleto —cada elemento público y cada prueba, con su número de línea y la
+  primera línea de su documentación— y desde ahí abres el tramo con
+  `sed -n 'A,Bp'`. `commands/guards.rs` entero son 14 KB; su esqueleto, 2 KB.
+  `App.tsx` pasa de 21 KB a 1,3 KB. Funciona con `.rs`, `.ts` y `.tsx`; para lo
+  demás, `grep -n '<símbolo>'`.
+* **`cat` solo de ficheros que la tabla del índice marque por debajo de 300
+  líneas**, y solo si vas a tocarlos enteros.
 * **Los tests no se leen para entender el código**, solo para tocarlos. Sus
   nombres son frases y se listan con un `grep -n 'fn \|it('` que cuesta cien
   veces menos.
