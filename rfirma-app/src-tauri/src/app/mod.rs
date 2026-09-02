@@ -75,6 +75,13 @@ impl Environment {
     /// esto es desempaquetar: el cerrojo no cruza a [`crate::app`] porque un
     /// caso de uso que lo tomara podría quedárselo mientras hace entrada y
     /// salida.
+    ///
+    /// Es una **instantánea**, y a propósito: una orden la toma al entrar y esa
+    /// copia le vale para todo el recorrido. Antes el cerrojo se cogía en cada
+    /// punto de uso, así que unas Preferencias guardadas a mitad de una
+    /// postfirma —o con el diálogo de abrir abierto— podían cambiarle el rumbo
+    /// por la mitad. Un recorrido que empieza con unos ajustes termina con esos
+    /// mismos.
     pub fn configuration(&self) -> Configuration {
         lock(&self.configuration).clone()
     }

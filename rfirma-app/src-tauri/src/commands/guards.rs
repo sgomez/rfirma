@@ -50,6 +50,49 @@ fn production_half(source: &str) -> &str {
         .unwrap_or(source)
 }
 
+/// La misma fuente con cada atributo en **una sola línea**.
+///
+/// `rustfmt` parte un `#[derive(...)]` en varias líneas en cuanto la lista se
+/// alarga, y una lectura línea a línea vería el `#[derive(` sin el `Serialize`
+/// que va debajo: el tipo dejaría de descubrirse y la guarda seguiría en verde.
+/// Juntar el atributo antes de mirarlo cierra esa rendija.
+fn attributes_on_one_line(source: &str) -> String {
+    let mut joined = String::new();
+    let mut open = 0i32;
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        let starts_an_attribute = open == 0 && trimmed.starts_with("#[");
+        if starts_an_attribute || open > 0 {
+            if open == 0 {
+                joined.push_str(line);
+            } else {
+                joined.push_str(trimmed);
+            }
+            open += line.matches('[').count() as i32 - line.matches(']').count() as i32;
+            if open <= 0 {
+                open = 0;
+                joined.push('\n');
+            }
+            continue;
+        }
+        joined.push_str(line);
+        joined.push('\n');
+    }
+    joined
+}
+
+/// Cuántos `derive` con `Serialize` hay en una fuente ya aplanada.
+///
+/// Es el contraste de [`outputs`]: si el módulo declara siete tipos
+/// serializables y el descubrimiento encuentra seis, uno se está escapando.
+fn serialising_derives(flattened: &str) -> usize {
+    flattened
+        .lines()
+        .map(str::trim_start)
+        .filter(|line| line.starts_with("#[derive(") && line.contains("Serialize"))
+        .count()
+}
+
 /// Un tipo que cruza a la ventana: el que se serializa.
 struct Output<'a> {
     file: &'a str,
@@ -67,9 +110,10 @@ struct Output<'a> {
 fn outputs() -> Vec<Output<'static>> {
     let mut found = Vec::new();
     for (file, source) in SOURCES {
+        let flattened = attributes_on_one_line(production_half(source));
         let mut serialisable = false;
         let mut open: Option<(String, String)> = None;
-        for line in production_half(source).lines() {
+        for line in flattened.lines() {
             let trimmed = line.trim_start();
             if let Some((name, body)) = open.as_mut() {
                 if line == "}" {
@@ -121,6 +165,17 @@ fn outputs() -> Vec<Output<'static>> {
 #[test]
 fn no_output_of_any_command_carries_a_host_path() {
     let outputs = outputs();
+    let declared: usize = SOURCES
+        .iter()
+        .map(|(_, source)| serialising_derives(&attributes_on_one_line(production_half(source))))
+        .sum();
+    assert_eq!(
+        outputs.len(),
+        declared,
+        "el modulo declara {declared} tipos serializables y el descubrimiento ha encontrado {}: \
+         uno se esta escapando de la guarda",
+        outputs.len()
+    );
     assert!(
         outputs.len() >= 6,
         "los tipos de salida no se han encontrado: {}",
@@ -147,6 +202,29 @@ fn no_output_of_any_command_carries_a_host_path() {
     }
 }
 
+/// Los `.rs` que hay dentro de un directorio, **incluidos los de sus
+/// subdirectorios**, con la ruta relativa al módulo (`views/mod.rs`).
+///
+/// Recorrer solo el primer nivel dejaría fuera un submódulo en directorio: sus
+/// tipos de salida no aparecerían ni en `SOURCES` ni en esta guarda, que es la
+/// forma silenciosa que tiene esto de degradarse.
+fn rust_files_under(directory: &Path, prefix: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let entries = std::fs::read_dir(directory)
+        .expect("el modulo de ordenes tiene que estar donde dice el manifiesto");
+    for entry in entries {
+        let entry = entry.expect("deberia leerse la entrada");
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let relative = format!("{prefix}{name}");
+        if entry.path().is_dir() {
+            found.extend(rust_files_under(&entry.path(), &format!("{relative}/")));
+        } else if name.ends_with(".rs") {
+            found.push(relative);
+        }
+    }
+    found
+}
+
 /// Y la lista de ficheros que recorre la guarda de arriba es **la del módulo
 /// entero**: un fichero nuevo sin dar de alta aquí se llevaría sus tipos de
 /// salida sin que nadie los mirara.
@@ -154,11 +232,8 @@ fn no_output_of_any_command_carries_a_host_path() {
 fn the_list_of_files_covers_the_whole_module() {
     let listed: BTreeSet<&str> = SOURCES.iter().map(|(file, _)| *file).collect();
     let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/commands");
-    let present: BTreeSet<String> = std::fs::read_dir(&directory)
-        .expect("el modulo de ordenes tiene que estar donde dice el manifiesto")
-        .map(|entry| entry.expect("deberia leerse la entrada").file_name())
-        .map(|name| name.to_string_lossy().into_owned())
-        .filter(|name| name.ends_with(".rs"))
+    let present: BTreeSet<String> = rust_files_under(&directory, "")
+        .into_iter()
         .filter(|name| name != THIS_FILE)
         .collect();
 
@@ -222,4 +297,37 @@ fn the_pin_is_taken_by_a_single_command() {
         .sum();
 
     assert_eq!(takers, 1, "el PIN entra por una sola orden");
+}
+
+/// Y el descubrimiento no se rompe porque `rustfmt` parta un `derive`.
+///
+/// Es la rendija por la que un tipo de salida volvía a pasar sin que nadie lo
+/// mirara: la lista de `derive` se alarga, el formateador la parte en varias
+/// líneas, y una lectura línea a línea ve el `#[derive(` sin su `Serialize`.
+#[test]
+fn a_derive_broken_across_lines_is_still_seen() {
+    let broken = "#[derive(\n    Clone,\n    Debug,\n    Serialize,\n)]\npub struct Leaky {\n}\n";
+
+    let flattened = attributes_on_one_line(broken);
+
+    assert_eq!(
+        serialising_derives(&flattened),
+        1,
+        "un derive partido en varias lineas sigue siendo un tipo de salida"
+    );
+    assert!(
+        flattened
+            .lines()
+            .next()
+            .is_some_and(|line| line.starts_with("#[derive(") && line.contains("Serialize")),
+        "el atributo tiene que quedar en una sola linea: {flattened}"
+    );
+}
+
+/// Y lo que no es un atributo se queda como estaba: aplanar no toca nada más.
+#[test]
+fn what_is_not_an_attribute_is_left_alone() {
+    let source = "pub struct Plain {\n    name: String,\n}\n";
+
+    assert_eq!(attributes_on_one_line(source), source);
 }

@@ -65,6 +65,16 @@ pub fn write(
     Ok(())
 }
 
+/// **Caso de uso.** Olvida lo acumulado: los recientes y el certificado.
+///
+/// Es «Vaciar la lista» y también lo que arrastra apagar «Recordar mi
+/// actividad» (ID-34). No toca ningún interruptor: la configuración se queda
+/// donde estaba, y por eso recibe solo la memoria y no la copia viva.
+pub fn forget_activity(memory: &Memory) -> Result<(), Failure> {
+    memory.forget_activity()?;
+    Ok(())
+}
+
 /// Lo elegido, encima de lo guardado.
 ///
 /// Vive aparte de la orden porque es la única decisión que hay dentro —qué
@@ -85,7 +95,7 @@ pub fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration
 mod tests {
     use std::sync::Mutex;
 
-    use super::{language_of, merged, shown, write};
+    use super::{forget_activity, language_of, merged, shown, write};
     use crate::app::fixtures::a_memory;
     use crate::commands::views::ConfigurationView;
     use crate::memory::{Configuration, Theme};
@@ -120,6 +130,57 @@ mod tests {
                 .value()
                 .theme,
             Theme::Dark
+        );
+    }
+
+    /// Olvidar la actividad se lleva lo acumulado —el certificado y los
+    /// recientes— y **no** toca ningún interruptor: los ajustes siguen donde
+    /// estaban (ID-34).
+    #[test]
+    fn forgetting_the_activity_keeps_the_settings() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let settings = Configuration {
+            theme: Theme::Dark,
+            ..Configuration::default()
+        };
+        memory
+            .remember_configuration(&settings)
+            .expect("deberia guardarse");
+        memory
+            .remember_state(
+                &settings,
+                &crate::memory::State {
+                    certificate: Some(crate::pkcs11::CertificateRef::new(
+                        "/usr/lib/softhsm/libsofthsm2.so",
+                        "rfirma-test",
+                        "Certificado de pruebas",
+                        vec![0x01],
+                    )),
+                    ..Default::default()
+                },
+            )
+            .expect("deberia guardarse");
+
+        forget_activity(&memory).expect("deberia olvidarse");
+
+        assert!(
+            memory
+                .state()
+                .expect("deberia leerse")
+                .value()
+                .certificate
+                .is_none(),
+            "lo acumulado se olvida"
+        );
+        assert_eq!(
+            memory
+                .configuration()
+                .expect("deberia leerse")
+                .value()
+                .theme,
+            Theme::Dark,
+            "los ajustes no los toca"
         );
     }
 

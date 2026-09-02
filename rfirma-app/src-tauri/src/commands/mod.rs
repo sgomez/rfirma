@@ -239,8 +239,7 @@ pub fn write_configuration(
 /// orden.
 #[tauri::command(async)]
 pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failure> {
-    environment.memory.forget_activity()?;
-    Ok(())
+    app::configuration::forget_activity(&environment.memory)
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

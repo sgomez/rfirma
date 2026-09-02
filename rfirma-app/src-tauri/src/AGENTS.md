@@ -16,9 +16,11 @@ misma PR que lo crea**, o el PR sale en rojo.
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
-- El fichero más grande del backend es `signing/placement.rs`, con 664 líneas.
-  Ninguno de `commands/` pasa de 400 y así se quedan: cuando uno crece, lo que
-  ha entrado casi siempre es una decisión, y una decisión va en `app/`.
+- El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
+  `signing/placement.rs` (664), `app/documents.rs` (638), `rubric/normalize.rs`
+  (586) y `pkcs11/mod.rs` (572). Ninguno de `commands/` pasa de 400 y así se
+  quedan: cuando uno crece, lo que ha entrado casi siempre es una decisión, y
+  una decisión va en `app/`.
 - El primer bloque `//!` de cada módulo es su contrato. `head -40 <fichero>` casi
   siempre basta para decidir si es el fichero que buscas.
 
@@ -27,21 +29,21 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 111 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
+| `lib.rs` | 119 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 253 | **Las once órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/mod.rs` | 252 | **Las once órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 283 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/failure.rs` | 180 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
-| `commands/guards.rs` | 225 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85). Solo en pruebas. |
+| `commands/guards.rs` | 333 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
-| `app/mod.rs` | 127 | El reparto y `Environment`, la raíz de composición. Léelo antes que sus hermanos. |
+| `app/mod.rs` | 134 | El reparto y `Environment`, la raíz de composición. Léelo antes que sus hermanos. |
 | `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
 | `app/signing.rs` | 539 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 638 | Por dónde entra el documento y dónde cae el firmado. |
-| `app/configuration.rs` | 195 | Los ajustes, del disco a la ventana y de vuelta. |
+| `app/configuration.rs` | 256 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
