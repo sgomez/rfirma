@@ -30,7 +30,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 122 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
+| `lib.rs` | 166 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
@@ -40,19 +40,20 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
 | `commands/guards.rs` | 394 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
-| `app/mod.rs` | 183 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
+| `app/mod.rs` | 185 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 432 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
 | `app/signing.rs` | 604 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 643 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/recents.rs` | 539 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/configuration.rs` | 256 | Los ajustes, del disco a la ventana y de vuelta. |
+| `app/window.rs` | 151 | El tamaño de la ventana entre sesiones, y si estaba maximizada (ID-72, ID-73). |
 | `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
-| **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades (ADR-0010). |
-| `memory/mod.rs` | 427 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
-| `memory/state.rs` | 341 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
+| **`memory/`** | | Lo que rFirma recuerda: siete memorias en dos mitades y una exenta (ADR-0010). |
+| `memory/mod.rs` | 527 | El reparto de las siete memorias. Léelo antes que sus hermanos. |
+| `memory/state.rs` | 401 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 482 | Los diez recientes, por ruta canónica, con la página y la posición del recuadro de cada uno (ID-74). |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |

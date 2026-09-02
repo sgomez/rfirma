@@ -1,6 +1,10 @@
-//! Lo que rFirma recuerda entre sesiones: **seis** memorias, partidas en dos
+//! Lo que rFirma recuerda entre sesiones: **siete** memorias, partidas en dos
 //! (ADR-0010 y su enmienda, #53) — más [`OpenedDocuments`], que no sobrevive al
 //! proceso y por eso no cuenta entre ellas.
+//!
+//! La séptima es el tamaño de la ventana (ID-72, ID-73, `app::window`): no
+//! mira ningún interruptor, así que sobrevive tanto a «Recordar mi actividad»
+//! como a «Recordar la última configuración de firma visible» apagados.
 //!
 //! **Configuración** —lo que el usuario elige y la aplicación obedece— son el
 //! idioma, el tema, la carpeta de destino, los dos interruptores y la rúbrica.
@@ -41,7 +45,7 @@ pub use error::{MemoryError, Situation};
 pub use listed::ListedCertificates;
 pub use opened::OpenedDocuments;
 pub use recents::{Badge, Placement, RecentDocument, Recents, ShownBadge, CAPACITY};
-pub use state::{BoxSize, RememberedFields, State, VisibleSignatureMemory};
+pub use state::{BoxSize, RememberedFields, State, VisibleSignatureMemory, WindowMemory};
 pub use store::{Damage, JsonFile, Loaded, Recovery, FORMAT_VERSION};
 
 use crate::paths::Paths;
@@ -79,8 +83,10 @@ impl Memory {
 
     /// El estado guardado, o el vacío.
     ///
-    /// No hace falta filtrar por el interruptor al leer: si está apagado, no
-    /// hay nada que leer, porque apagarlo borró el soporte.
+    /// No hace falta filtrar por el interruptor al leer: con «Recordar mi
+    /// actividad» apagado el fichero sobrevive, pero solo con el tamaño de la
+    /// ventana dentro —la única memoria exenta (ID-73)—, así que no hay nada
+    /// más que ocultar.
     pub fn state(&self) -> Result<Loaded<State>, MemoryError> {
         self.state.load()
     }
@@ -94,7 +100,7 @@ impl Memory {
     pub fn remember_configuration(&self, configuration: &Configuration) -> Result<(), MemoryError> {
         self.configuration.save(configuration)?;
         if !configuration.remember_activity {
-            self.state.erase()?;
+            self.erase_activity_but_keep_the_window()?;
         }
         Ok(())
     }
@@ -111,7 +117,7 @@ impl Memory {
         state: &State,
     ) -> Result<(), MemoryError> {
         if !configuration.remember_activity {
-            return self.state.erase();
+            return self.erase_activity_but_keep_the_window();
         }
         if configuration.remember_visible_signature {
             return self.state.save(state);
@@ -131,7 +137,43 @@ impl Memory {
     /// No es «Vaciar la lista» —eso son solo los recientes,
     /// [`Recents::clear`]—: esto se lleva también el certificado.
     pub fn forget_activity(&self) -> Result<(), MemoryError> {
-        self.state.erase()
+        self.erase_activity_but_keep_the_window()
+    }
+
+    /// El tamaño de la ventana y si estaba maximizada, sin mirar ningún
+    /// interruptor (ID-73): es la única memoria que ninguno de los dos cubre.
+    pub fn remember_window(&self, window: WindowMemory) -> Result<(), MemoryError> {
+        let mut state = self.state.load()?.into_value();
+        state.window = Some(window);
+        self.state.save(&state)
+    }
+
+    /// Borra lo acumulado —recientes, certificado, firma visible, última
+    /// carpeta— conservando el tamaño de la ventana (ID-73).
+    ///
+    /// Si no había ventana guardada esto es exactamente el borrado de antes:
+    /// el fichero desaparece del disco. Si la había, queda un fichero con
+    /// solo ese campo, que es lo que promete «es la única memoria exenta».
+    ///
+    /// La lectura previa no puede vetar el borrado: en el camino de borrado
+    /// por privacidad, un `state.json` que `load` no consiga leer se trata
+    /// como si no llevara ventana dentro —se pierde esa memoria, no el
+    /// borrado— en vez de dejar la actividad en el disco con un `Err`.
+    fn erase_activity_but_keep_the_window(&self) -> Result<(), MemoryError> {
+        let window = self
+            .state
+            .load()
+            .map(Loaded::into_value)
+            .unwrap_or_default()
+            .window;
+        self.state.erase()?;
+        match window {
+            Some(window) => self.state.save(&State {
+                window: Some(window),
+                ..State::default()
+            }),
+            None => Ok(()),
+        }
     }
 }
 
@@ -273,6 +315,64 @@ mod tests {
             paths.config_file().exists(),
             "la configuracion no se va con el estado"
         );
+    }
+
+    /// El ID-73 dicho como lo dice el issue: **apagar «Recordar mi actividad»
+    /// no borra el tamaño de la ventana**, la única memoria exenta.
+    #[test]
+    fn turning_remember_activity_off_does_not_erase_the_window_size() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let (memory, paths) = a_memory(directory.path());
+        let window = WindowMemory {
+            width: 1280.0,
+            height: 800.0,
+            maximized: false,
+        };
+        memory
+            .remember_state(&Configuration::default(), &a_state(directory.path()))
+            .expect("deberia guardarse");
+        memory.remember_window(window).expect("deberia guardarse");
+
+        memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        assert!(
+            paths.state_file().exists(),
+            "el tamaño de la ventana no se ha ido, así que el fichero sigue"
+        );
+        let state = memory.state().expect("deberia leerse").into_value();
+        assert_eq!(state.window, Some(window));
+        assert!(
+            state.certificate.is_none(),
+            "el resto de la actividad sí se ha ido"
+        );
+    }
+
+    /// `remember_window` no mira ningún interruptor: escribe siempre.
+    #[test]
+    fn the_window_size_is_remembered_even_with_the_switch_off() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let (memory, _) = a_memory(directory.path());
+        memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        let window = WindowMemory {
+            width: 1024.0,
+            height: 768.0,
+            maximized: true,
+        };
+        memory.remember_window(window).expect("deberia guardarse");
+
+        let state = memory.state().expect("deberia leerse").into_value();
+        assert_eq!(state.window, Some(window));
     }
 
     #[test]

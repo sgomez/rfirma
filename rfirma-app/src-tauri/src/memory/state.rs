@@ -57,6 +57,29 @@ pub struct State {
     /// sola, nadie la elige, y por eso «Recordar mi actividad» se la lleva
     /// como se lleva todo lo demás.
     pub last_open_folder: Option<PathBuf>,
+    /// El tamaño de la ventana y si estaba maximizada (ID-72).
+    ///
+    /// **Es la única memoria exenta de «Recordar mi actividad»** (ID-73): el
+    /// tamaño de una ventana no dice qué hizo quien firmó antes, así que
+    /// apagar el interruptor —o vaciar la actividad— no se la lleva. Por eso
+    /// [`State::forget_everything`] la conserva en vez de vaciarla con el
+    /// resto.
+    ///
+    /// **La posición no se guarda**, y no en ningún campo de aquí: en Wayland
+    /// el cliente no puede pedirla, así que unas coordenadas guardadas serían
+    /// una promesa que el compositor incumple (ADR-0010, enmienda).
+    pub window: Option<WindowMemory>,
+}
+
+/// El tamaño de la ventana entre sesiones, sin la posición (ID-72).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct WindowMemory {
+    /// El ancho, en píxeles lógicos.
+    pub width: f64,
+    /// El alto, en píxeles lógicos.
+    pub height: f64,
+    /// Si estaba maximizada al cerrar.
+    pub maximized: bool,
 }
 
 /// Lo **global** de la firma visible, lo mismo para todos los documentos
@@ -113,8 +136,13 @@ impl State {
     /// abierta también: es estado, y el interruptor promete no recordar
     /// actividad. Una carpeta del anfitrión que sobreviviera a «Vaciar la
     /// lista» diría por dónde anduvo quien firmó antes.
+    ///
+    /// El tamaño de la ventana **no** se va con el resto (ID-73): es la única
+    /// memoria exenta.
     pub fn forget_everything(&mut self) {
+        let window = self.window.take();
         *self = Self::default();
+        self.window = window;
     }
 
     /// Si no hay nada que recordar.
@@ -173,6 +201,38 @@ mod tests {
         assert!(state.recents.is_empty());
         assert!(state.certificate.is_none());
         assert!(state.visible_signature.is_none());
+    }
+
+    /// El ID-73 dicho en `State`: la ventana es la única memoria que
+    /// `forget_everything` no toca.
+    #[test]
+    fn forgetting_everything_leaves_the_window_size_alone() {
+        let mut state = State {
+            certificate: Some(CertificateRef::new(
+                "/usr/lib/softhsm/libsofthsm2.so",
+                "rfirma-test",
+                "Certificado de pruebas",
+                vec![0x01],
+            )),
+            window: Some(WindowMemory {
+                width: 1024.0,
+                height: 768.0,
+                maximized: false,
+            }),
+            ..State::default()
+        };
+
+        state.forget_everything();
+
+        assert!(state.certificate.is_none());
+        assert_eq!(
+            state.window,
+            Some(WindowMemory {
+                width: 1024.0,
+                height: 768.0,
+                maximized: false,
+            })
+        );
     }
 
     /// El ID-74 dicho como lo dice el issue: **lo global por un lado y lo de
