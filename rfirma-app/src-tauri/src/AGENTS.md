@@ -35,11 +35,12 @@ misma PR que lo crea**, o el PR sale en rojo.
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 252 | **Las once órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 283 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
-| `commands/failure.rs` | 180 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
+| `commands/failure.rs` | 181 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
 | `commands/guards.rs` | 333 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
-| `app/mod.rs` | 134 | El reparto y `Environment`, la raíz de composición. Léelo antes que sus hermanos. |
+| `app/mod.rs` | 183 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
+| `app/cycle.rs` | 432 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
 | `app/signing.rs` | 539 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 638 | Por dónde entra el documento y dónde cae el firmado. |
@@ -50,7 +51,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades (ADR-0010). |
 | `memory/mod.rs` | 406 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
 | `memory/state.rs` | 210 | El estado que la aplicación acumula por su cuenta (ID-31). |
-| `memory/configuration.rs` | 195 | Lo que el usuario elige y la aplicación obedece. |
+| `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 406 | Los diez recientes, por ruta canónica. |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |
 | `memory/opened.rs` | 154 | Los documentos abiertos en esta sesión: del identificador opaco al fichero. |
@@ -58,8 +59,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `memory/handles.rs` | 90 | Cómo se acuña un asa opaca (ID-61, ADR-0011). |
 | `memory/error.rs` | 89 | Situaciones de la memoria (ADR-0009). |
 | **`signing/`** | | Las reglas puras de la firma. |
-| `signing/mod.rs` | 26 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. |
-| `signing/cycle.rs` | 426 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. |
+| `signing/mod.rs` | 30 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. **No importa `ffi`** (ID-82). |
 | `signing/config.rs` | 321 | Los cinco ajustes de firma y ni uno más (ID-18). Aquí vive `SignatureBox`. |
 | `signing/placement.rs` | 664 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21). |
 | `signing/admissibility.rs` | 316 | Lo que no se puede firmar, decidido antes del PIN. |
@@ -73,7 +73,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `pkcs11/certificate.rs` | 411 | El certificado tal y como sale del token. |
 | `pkcs11/error.rs` | 233 | Situaciones del token (ID-29, ADR-0009). |
 | **`destination/`** | | Dónde cae el firmado y por dónde entra el original (ADR-0011). |
-| `destination/mod.rs` | 346 | El reparto. |
+| `destination/mod.rs` | 353 | El reparto, y `DestinationFolder`. **No importa `memory`** (ID-83). |
 | `destination/naming.rs` | 190 | Cómo se llama el firmado y qué pasa si el nombre existe. |
 | `destination/portal.rs` | 207 | El documento tal y como entra por el portal (ID-37). |
 | `destination/error.rs` | 114 | Situaciones del destino (ADR-0009). |

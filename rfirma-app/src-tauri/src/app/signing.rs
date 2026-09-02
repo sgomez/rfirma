@@ -12,6 +12,7 @@
 use std::path::Path;
 use std::sync::Mutex;
 
+use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature};
 use crate::app::{certificates, documents, lock};
 use crate::commands::orders::SigningOrder;
 use crate::commands::views::{Failure, SignedDocumentView};
@@ -20,8 +21,7 @@ use crate::isolate::Isolate;
 use crate::memory::{Configuration, ListedCertificates, Memory, OpenedDocuments};
 use crate::pkcs11::{self, CertificateRef, Store, TokenCertificate};
 use crate::signing::{
-    compose_layer2_text, cycle, AdmissibleDocument, OpenCycle, SessionSeal, SignatureConfig,
-    SigningRequest, TokenSignature, VisibleTextFields,
+    compose_layer2_text, AdmissibleDocument, SessionSeal, SignatureConfig, VisibleTextFields,
 };
 
 /// El ciclo a medias, entre el PIN y la postfirma.

@@ -233,12 +233,11 @@ mod full_cycle {
     use std::process::Command;
 
     use base64::Engine;
+    use rfirma_lib::app::cycle::{self, SigningRequest};
     use rfirma_lib::ffi::NativeBridge;
     use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
     use rfirma_lib::rubric;
-    use rfirma_lib::signing::{
-        cycle, AdmissibleDocument, SessionSeal, SignatureBox, SignatureConfig, SigningRequest,
-    };
+    use rfirma_lib::signing::{AdmissibleDocument, SessionSeal, SignatureBox, SignatureConfig};
 
     use super::bridge;
 

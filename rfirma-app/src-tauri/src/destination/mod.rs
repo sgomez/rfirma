@@ -42,6 +42,14 @@
 //! `None` significa la carpeta de documentos, que resuelve
 //! [`crate::paths::documents_folder`]. Nada de esto vuelve a preguntar.
 //!
+//! Este módulo **no importa [`crate::memory`]** y no debe volver a hacerlo
+//! (ID-83): [`DestinationFolder`] es un concepto del destino y vive aquí, y
+//! desenvolver la configuración para elegir entre ella y la carpeta de
+//! documentos lo hace quien ya tiene la configuración delante,
+//! [`crate::app::chosen_folder`]. La memoria sí importa de aquí —persiste una
+//! carpeta de destino y un documento del portal—, que es la dirección correcta
+//! (ID-81). Lo vigila `tests/module_directions.rs`.
+//!
 //! El identificador que el portal da a un documento **sigue a la ruta, no al
 //! inodo**, que es exactamente la implementación de la insignia
 //! `No disponible` de los recientes: está contado en [`portal`].
@@ -56,23 +64,39 @@ pub use portal::PortalDocument;
 
 use std::path::{Path, PathBuf};
 
-use crate::memory::{Configuration, DestinationFolder};
+use serde::{Deserialize, Serialize};
 
-/// La carpeta donde cae lo firmado: la que el usuario eligió una vez, o la de
-/// documentos.
+/// La carpeta donde cae el documento firmado.
 ///
-/// `documents_folder` se pasa desde fuera —lo resuelve
-/// [`crate::paths::documents_folder`]— porque saber dónde tiene sus documentos
-/// un usuario es conocimiento de sistema operativo, y el ID-35 dice que ese
-/// conocimiento vive en un solo fichero.
-pub fn chosen_folder(
-    configuration: &Configuration,
-    documents_folder: impl Into<PathBuf>,
-) -> DestinationFolder {
-    configuration
-        .destination
-        .clone()
-        .unwrap_or_else(|| DestinationFolder::at(documents_folder))
+/// Bajo el arenero la aplicación **escribe** en ella pero la única palabra que
+/// tiene de ella es su último segmento, así que el ajuste enseña el
+/// [`nombre`](DestinationFolder::name) y no la ruta (ADR-0011). Se guarda la
+/// ruta entera porque es lo que hace falta para volver a escribir; enseñarla es
+/// otra decisión, y es de la interfaz.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DestinationFolder {
+    path: PathBuf,
+}
+
+impl DestinationFolder {
+    /// La carpeta que hay en `path`.
+    pub fn at(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
+    }
+
+    /// La ruta, para escribir en ella.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// El último segmento, que es lo que ve el usuario. Vacío si la ruta no
+    /// tiene ninguno —una raíz—, y entonces la interfaz enseña la ruta.
+    pub fn name(&self) -> &str {
+        self.path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+    }
 }
 
 /// Una carpeta de destino que **existe de verdad**.
@@ -321,26 +345,9 @@ mod tests {
     }
 
     #[test]
-    fn the_remembered_folder_is_reused_and_nobody_is_asked_again() {
-        let configuration = Configuration {
-            destination: Some(DestinationFolder::at("/home/quien/Documentos/Firmados")),
-            ..Configuration::default()
-        };
+    fn the_destination_shows_its_name_and_not_its_path() {
+        let folder = DestinationFolder::at("/home/quien/Documentos/Firmados");
 
-        let folder = chosen_folder(&configuration, "/home/quien/Documentos");
-
-        assert_eq!(
-            folder.path(),
-            Path::new("/home/quien/Documentos/Firmados"),
-            "elegida una vez, se reutiliza"
-        );
         assert_eq!(folder.name(), "Firmados");
-    }
-
-    #[test]
-    fn without_a_remembered_folder_the_destination_is_the_documents_folder() {
-        let folder = chosen_folder(&Configuration::default(), "/home/quien/Documentos");
-
-        assert_eq!(folder.path(), Path::new("/home/quien/Documentos"));
     }
 }

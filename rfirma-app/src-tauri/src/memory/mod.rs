@@ -36,7 +36,7 @@ pub mod recents;
 pub mod state;
 pub mod store;
 
-pub use configuration::{Configuration, DestinationFolder, Theme};
+pub use configuration::{Configuration, Theme};
 pub use error::{MemoryError, Situation};
 pub use listed::ListedCertificates;
 pub use opened::OpenedDocuments;
@@ -200,7 +200,9 @@ mod tests {
         let (memory, _) = a_memory(directory.path());
         let configuration = Configuration {
             language: Language::Catalan,
-            destination: Some(DestinationFolder::at("/home/quien/Documentos/Firmados")),
+            destination: Some(crate::destination::DestinationFolder::at(
+                "/home/quien/Documentos/Firmados",
+            )),
             ..Configuration::default()
         };
 

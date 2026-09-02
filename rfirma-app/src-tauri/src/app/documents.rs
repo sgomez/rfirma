@@ -86,7 +86,7 @@ pub fn deliver(
     document: &PortalDocument,
     signed: &[u8],
 ) -> Result<SignedDocumentView, Failure> {
-    let chosen = crate::destination::chosen_folder(configuration, documents_folder.to_path_buf());
+    let chosen = super::chosen_folder(configuration, documents_folder.to_path_buf());
     // La carpeta se comprueba y **no se crea nunca** (ID-38): bajo el arenero
     // crearla contesta OK y no deja nada en el anfitrión.
     let folder = CheckedFolder::check(&chosen)?;
@@ -160,7 +160,7 @@ pub fn starting_folder(
     if let Some(remembered) = remembered_folder(memory) {
         return Some(remembered);
     }
-    let folder = crate::destination::chosen_folder(configuration, documents_folder.to_path_buf());
+    let folder = super::chosen_folder(configuration, documents_folder.to_path_buf());
     CheckedFolder::check(&folder)
         .ok()
         .map(|checked| checked.path().to_path_buf())
@@ -262,7 +262,7 @@ mod tests {
     /// Una configuración con esa carpeta de destino elegida.
     fn with_destination(folder: &std::path::Path) -> Configuration {
         Configuration {
-            destination: Some(crate::memory::DestinationFolder::at(folder)),
+            destination: Some(crate::destination::DestinationFolder::at(folder)),
             ..Configuration::default()
         }
     }

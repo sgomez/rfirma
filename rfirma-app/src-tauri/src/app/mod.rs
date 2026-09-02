@@ -28,6 +28,7 @@
 
 pub mod certificates;
 pub mod configuration;
+pub mod cycle;
 pub mod documents;
 pub mod signing;
 
@@ -36,6 +37,7 @@ pub(crate) mod fixtures;
 
 use std::sync::Mutex;
 
+use crate::destination::DestinationFolder;
 use crate::memory::{Configuration, ListedCertificates, Memory};
 
 /// Los almacenes de certificados, la carpeta de destino y lo que se recuerda.
@@ -87,6 +89,27 @@ impl Environment {
     }
 }
 
+/// La carpeta donde cae lo firmado: la que el usuario eligió una vez, o la de
+/// documentos.
+///
+/// Vive aquí y no en [`crate::destination`] porque desenvolver la configuración
+/// es una decisión, y las decisiones las toma quien ya tiene la configuración
+/// delante (ID-83). El módulo del destino solo sabe de carpetas.
+///
+/// `documents_folder` se pasa desde fuera —lo resuelve
+/// [`crate::paths::documents_folder`]— porque saber dónde tiene sus documentos
+/// un usuario es conocimiento de sistema operativo, y el ID-35 dice que ese
+/// conocimiento vive en un solo fichero.
+pub fn chosen_folder(
+    configuration: &Configuration,
+    documents_folder: impl Into<std::path::PathBuf>,
+) -> DestinationFolder {
+    configuration
+        .destination
+        .clone()
+        .unwrap_or_else(|| DestinationFolder::at(documents_folder))
+}
+
 /// El cerrojo, sin envenenarse.
 ///
 /// Un `Mutex` envenenado es un hilo que se cayó teniéndolo cogido; lo que hay
@@ -100,10 +123,12 @@ pub fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use std::sync::Mutex;
 
-    use super::Environment;
+    use super::{chosen_folder, Environment};
     use crate::app::fixtures::a_memory;
+    use crate::destination::DestinationFolder;
     use crate::memory::{Configuration, ListedCertificates};
 
     /// Lo que una orden desempaqueta es una **copia**, no el cerrojo: un caso de
@@ -130,5 +155,29 @@ mod tests {
             environment.configuration().remember_activity == copy.remember_activity,
             "la copia dice lo mismo que la viva"
         );
+    }
+
+    #[test]
+    fn the_remembered_folder_is_reused_and_nobody_is_asked_again() {
+        let configuration = Configuration {
+            destination: Some(DestinationFolder::at("/home/quien/Documentos/Firmados")),
+            ..Configuration::default()
+        };
+
+        let folder = chosen_folder(&configuration, "/home/quien/Documentos");
+
+        assert_eq!(
+            folder.path(),
+            Path::new("/home/quien/Documentos/Firmados"),
+            "elegida una vez, se reutiliza"
+        );
+        assert_eq!(folder.name(), "Firmados");
+    }
+
+    #[test]
+    fn without_a_remembered_folder_the_destination_is_the_documents_folder() {
+        let folder = chosen_folder(&Configuration::default(), "/home/quien/Documentos");
+
+        assert_eq!(folder.path(), Path::new("/home/quien/Documentos"));
     }
 }
