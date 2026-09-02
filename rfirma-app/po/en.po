@@ -7,14 +7,12 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n!=0 && n%1000000==0) ? 1 : "
 "2);\n"
 
+#. No se traduce: es el nombre de la aplicación.
 msgid "app.name"
 msgstr "rFirma"
 
 msgid "actions.sign"
 msgstr "Sign document"
-
-msgid "actions.chooseCertificate"
-msgstr "Choose certificate"
 
 msgid "actions.cancel"
 msgstr "Cancel"
@@ -25,18 +23,23 @@ msgstr "Close"
 msgid "actions.change"
 msgstr "Change"
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.ca"
 msgstr "Català"
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.eu"
 msgstr "Euskara"
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.gl"
 msgstr "Galego"
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.en"
 msgstr "English"
 
@@ -282,12 +285,15 @@ msgstr ""
 "Your recent documents and your certificate are still saved. Try again and, "
 "if it keeps happening, attach the technical detail to the bug report."
 
+#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr "Document tray"
 
+#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr "Document viewer"
 
+#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
 msgstr "Signature panel"
 
@@ -333,6 +339,7 @@ msgstr "PDF only. The document never leaves your computer."
 msgid "viewer.pageNumber"
 msgstr "Page number"
 
+#. {{total}} es el número de páginas del documento.
 msgid "viewer.pageOf"
 msgstr "of {{total}}"
 
@@ -386,6 +393,7 @@ msgstr "Certificate"
 msgid "panel.certificate.loading"
 msgstr "Looking for certificates…"
 
+#. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr "Issued by {{issuer}}"
 
@@ -404,8 +412,15 @@ msgstr "Firefox"
 msgid "panel.certificate.stores.chrome"
 msgstr "Chrome"
 
+#. Término del dominio: NSS es el almacén de certificados de Firefox y Chrome; no se traduce la sigla.
 msgid "panel.certificate.stores.nssdb"
 msgstr "NSS store"
+
+msgid "panel.certificate.retry"
+msgstr "Look again"
+
+msgid "panel.certificate.otherModule"
+msgstr "Another module…"
 
 msgid "panel.certificate.empty.title"
 msgstr "We found no certificate"
@@ -415,12 +430,6 @@ msgstr ""
 "If you use a card, check that it is inserted and that the reader is "
 "connected."
 
-msgid "panel.certificate.empty.retry"
-msgstr "Look again"
-
-msgid "panel.certificate.empty.otherModule"
-msgstr "Another module…"
-
 msgid "panel.certificate.failed.title"
 msgstr "We could not look for certificates"
 
@@ -428,18 +437,14 @@ msgid "panel.certificate.failed.body"
 msgstr ""
 "The search failed before finishing, so we do not know whether there is any."
 
-msgid "panel.certificate.failed.retry"
-msgstr "Look again"
-
-msgid "panel.certificate.failed.otherModule"
-msgstr "Another module…"
-
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
 msgid "panel.certificate.expired"
 msgstr "The certificate expired on {{date}}, so it cannot be used to sign."
 
 msgid "panel.certificate.notYetValid"
 msgstr "The certificate is not valid yet, so it cannot be used to sign."
 
+#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
 msgid "panel.certificate.revoked"
 msgstr "The certificate is revoked ({{reason}}), so it cannot be used to sign."
 
@@ -452,6 +457,7 @@ msgstr "Visible signature"
 msgid "panel.visibleSignature.toggle"
 msgstr "Stamp a signature box on the document"
 
+#. {{page}} es el número de página donde se colocó el recuadro.
 msgid "panel.visibleSignature.placement"
 msgstr "Page {{page}} · drag it to place it"
 
@@ -514,6 +520,7 @@ msgstr "The preview will show up once you choose the certificate."
 msgid "panel.footer.savedIn"
 msgstr "It will be saved in"
 
+#. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"
 msgstr "Cannot write in {{folder}}"
 
@@ -523,6 +530,7 @@ msgstr "Try again"
 msgid "panel.signed.summary"
 msgstr "Summary"
 
+#. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
 
@@ -538,6 +546,7 @@ msgstr "Sign it again"
 msgid "pin.title"
 msgstr "Enter the card PIN"
 
+#. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
 msgid "pin.signingAs"
 msgstr "{{holder}} · {{idNumber}}"
 
@@ -565,6 +574,7 @@ msgstr "Signing the document…"
 msgid "progress.stages.presign"
 msgstr "Preparing the signature"
 
+#. Término del dominio: la etapa de la firma trifásica en la que se generan los hashes a firmar.
 msgid "progress.stages.presignTerm"
 msgstr "presignature"
 
@@ -574,6 +584,7 @@ msgstr "Signing on the card"
 msgid "progress.stages.postsign"
 msgstr "Assembling the PDF"
 
+#. Término del dominio: la etapa en la que se ensambla el PDF ya firmado.
 msgid "progress.stages.postsignTerm"
 msgstr "postsignature"
 
@@ -638,6 +649,7 @@ msgstr "Change folder…"
 msgid "preferences.theme.label"
 msgstr "Theme"
 
+#. Nombra al sistema operativo, no un color: no se traduce como un tono.
 msgid "preferences.theme.system"
 msgstr "System"
 
@@ -650,6 +662,7 @@ msgstr "Dark"
 msgid "preferences.language.label"
 msgstr "Language"
 
+#. {{version}} es el número de versión de la aplicación.
 msgid "about.version"
 msgstr "Version {{version}}"
 
@@ -664,6 +677,7 @@ msgstr ""
 "Administration, who publish the official client, nor is it endorsed by them. "
 "If you need the official application, download it from their website."
 
+#. No se traduce: es una URL.
 msgid "about.repository"
 msgstr "github.com/sgomez/rfirma"
 

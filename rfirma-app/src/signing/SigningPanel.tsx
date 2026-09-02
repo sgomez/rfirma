@@ -390,10 +390,10 @@ function CertificateBlock({
         <p className="rf-prose rf-text-muted">{t("panel.certificate.empty.body")}</p>
         <div className="rf-row rf-gap-xs panel__no-certificates-actions">
           <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
-            {t("panel.certificate.empty.retry")}
+            {t("panel.certificate.retry")}
           </button>
           <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
-            {t("panel.certificate.empty.otherModule")}
+            {t("panel.certificate.otherModule")}
           </button>
         </div>
       </div>
@@ -415,10 +415,10 @@ function CertificateBlock({
         <ErrorNotice situation={state.failure.situation} technicalDetail={state.failure.detail} />
         <div className="rf-row rf-gap-xs panel__no-certificates-actions">
           <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
-            {t("panel.certificate.failed.retry")}
+            {t("panel.certificate.retry")}
           </button>
           <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
-            {t("panel.certificate.failed.otherModule")}
+            {t("panel.certificate.otherModule")}
           </button>
         </div>
       </div>

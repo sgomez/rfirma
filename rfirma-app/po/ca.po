@@ -7,13 +7,11 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n!=0 && n%1000000==0) ? 1 : "
 "2);\n"
 
+#. No se traduce: es el nombre de la aplicación.
 msgid "app.name"
 msgstr ""
 
 msgid "actions.sign"
-msgstr ""
-
-msgid "actions.chooseCertificate"
 msgstr ""
 
 msgid "actions.cancel"
@@ -25,18 +23,23 @@ msgstr ""
 msgid "actions.change"
 msgstr ""
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr ""
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.ca"
 msgstr ""
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.eu"
 msgstr ""
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.gl"
 msgstr ""
 
+#. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.en"
 msgstr ""
 
@@ -241,12 +244,15 @@ msgstr ""
 msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
 
+#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr ""
 
+#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr ""
 
+#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
 msgstr ""
 
@@ -292,6 +298,7 @@ msgstr ""
 msgid "viewer.pageNumber"
 msgstr ""
 
+#. {{total}} es el número de páginas del documento.
 msgid "viewer.pageOf"
 msgstr ""
 
@@ -343,6 +350,7 @@ msgstr ""
 msgid "panel.certificate.loading"
 msgstr ""
 
+#. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
 msgstr ""
 
@@ -361,7 +369,14 @@ msgstr ""
 msgid "panel.certificate.stores.chrome"
 msgstr ""
 
+#. Término del dominio: NSS es el almacén de certificados de Firefox y Chrome; no se traduce la sigla.
 msgid "panel.certificate.stores.nssdb"
+msgstr ""
+
+msgid "panel.certificate.retry"
+msgstr ""
+
+msgid "panel.certificate.otherModule"
 msgstr ""
 
 msgid "panel.certificate.empty.title"
@@ -370,30 +385,20 @@ msgstr ""
 msgid "panel.certificate.empty.body"
 msgstr ""
 
-msgid "panel.certificate.empty.retry"
-msgstr ""
-
-msgid "panel.certificate.empty.otherModule"
-msgstr ""
-
 msgid "panel.certificate.failed.title"
 msgstr ""
 
 msgid "panel.certificate.failed.body"
 msgstr ""
 
-msgid "panel.certificate.failed.retry"
-msgstr ""
-
-msgid "panel.certificate.failed.otherModule"
-msgstr ""
-
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
 msgid "panel.certificate.expired"
 msgstr ""
 
 msgid "panel.certificate.notYetValid"
 msgstr ""
 
+#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
 msgid "panel.certificate.revoked"
 msgstr ""
 
@@ -406,6 +411,7 @@ msgstr ""
 msgid "panel.visibleSignature.toggle"
 msgstr ""
 
+#. {{page}} es el número de página donde se colocó el recuadro.
 msgid "panel.visibleSignature.placement"
 msgstr ""
 
@@ -466,6 +472,7 @@ msgstr ""
 msgid "panel.footer.savedIn"
 msgstr ""
 
+#. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"
 msgstr ""
 
@@ -475,6 +482,7 @@ msgstr ""
 msgid "panel.signed.summary"
 msgstr ""
 
+#. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr ""
 
@@ -490,6 +498,7 @@ msgstr ""
 msgid "pin.title"
 msgstr ""
 
+#. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
 msgid "pin.signingAs"
 msgstr ""
 
@@ -517,6 +526,7 @@ msgstr ""
 msgid "progress.stages.presign"
 msgstr ""
 
+#. Término del dominio: la etapa de la firma trifásica en la que se generan los hashes a firmar.
 msgid "progress.stages.presignTerm"
 msgstr ""
 
@@ -526,6 +536,7 @@ msgstr ""
 msgid "progress.stages.postsign"
 msgstr ""
 
+#. Término del dominio: la etapa en la que se ensambla el PDF ya firmado.
 msgid "progress.stages.postsignTerm"
 msgstr ""
 
@@ -586,6 +597,7 @@ msgstr ""
 msgid "preferences.theme.label"
 msgstr ""
 
+#. Nombra al sistema operativo, no un color: no se traduce como un tono.
 msgid "preferences.theme.system"
 msgstr ""
 
@@ -598,6 +610,7 @@ msgstr ""
 msgid "preferences.language.label"
 msgstr ""
 
+#. {{version}} es el número de versión de la aplicación.
 msgid "about.version"
 msgstr ""
 
@@ -607,6 +620,7 @@ msgstr ""
 msgid "about.independence"
 msgstr ""
 
+#. No se traduce: es una URL.
 msgid "about.repository"
 msgstr ""
 
