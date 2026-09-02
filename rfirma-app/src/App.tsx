@@ -28,7 +28,7 @@ import {
 } from "./signing/visibleSignature";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
-import type { SignaturePlacement } from "./viewer/signatureBox";
+import { firstSealedPage, type Placement } from "./viewer/signatureBox";
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "preferences" | "about" | null;
@@ -111,7 +111,7 @@ export function App({
   // Dónde va la firma visible. Vive aquí y no en el visor porque el panel de
   // firma —su sub-issue— es quien dirá qué se pinta dentro del recuadro, y los
   // dos tienen que estar mirando el mismo.
-  const [placement, setPlacement] = useState<SignaturePlacement | null>(null);
+  const [placement, setPlacement] = useState<Placement | null>(null);
   const [settings, setSettings] = useState<Preferences | null>(null);
   // Dónde caerá el firmado, tal y como lo cuenta el backend. Es estado y no un
   // cálculo del pie porque el nombre lo compone Rust —con el sufijo y el
@@ -242,7 +242,9 @@ export function App({
   // posición, y el siguiente documento arranca con el suyo.
   const placeDocument = documents.place;
   const rememberPlacement = useCallback(
-    (next: SignaturePlacement) => {
+    // `null` es quitar el sello de la última página del conjunto: el documento
+    // vuelve al estado de recién abierto, y su fila lo olvida (ID-92).
+    (next: Placement | null) => {
       setPlacement(next);
       void placeDocument(next);
     },
@@ -439,12 +441,19 @@ export function App({
       // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
       return;
     }
-    const page = await pdf.getPage(placement.page);
+    // La página que mide la `MediaBox` y la `/Rotate` es la **primera del
+    // conjunto**: el widget se replica idéntico en todas (ID-96), así que
+    // cualquiera de ellas daría la misma conversión, y la primera es la única
+    // que se puede nombrar sin elegir.
+    const first = firstSealedPage(placement) ?? 1;
+    const page = await pdf.getPage(first);
     await signing.start(chosen, {
       document: documents.active.id,
       certificate: chosen.id,
       placement: {
-        page: placement.page,
+        page: first,
+        pages: placement.pages,
+        pageCount: pdf.pageCount,
         mediaBox: page.view,
         rotation: page.rotate,
         rect: [placement.rect.x0, placement.rect.y0, placement.rect.x1, placement.rect.y1],
@@ -554,7 +563,7 @@ export function App({
               onChooseModule={() => void lookForCertificates()}
               signature={signature}
               onChangeSignature={setSignature}
-              page={placement?.page ?? null}
+              page={firstSealedPage(placement)}
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}

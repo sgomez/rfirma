@@ -31,15 +31,95 @@ export interface UserSpaceRect {
 }
 
 /**
- * El recuadro colocado: en qué página y dónde.
+ * En qué páginas se estampa el recuadro.
  *
- * Es lo único que el visor entrega hacia arriba, y el mismo dato que espera
- * `signing::placement::Page` en el backend: `page` es **1-based**, como lo
- * numera `pdf.js` y como lo cuenta `signaturePage`.
+ * Cruza tal cual lo lee `signing::placement::PageSet`: la palabra `"all"`, o el
+ * registro `{ only: [1, 3] }` con las páginas **1-based, ordenadas y sin
+ * repetir**. No hay una tercera forma, y la gramática de lo que se teclea
+ * (`1,2-3,10-20`) se traduce a esta antes de cruzar.
  */
-export interface SignaturePlacement {
-  page: number;
+export type PageSet = "all" | { only: number[] };
+
+/**
+ * El recuadro colocado: **dónde y en qué páginas** (ID-90).
+ *
+ * Sustituye al `SignaturePlacement { page, rect }` de v0.2. Es un registro
+ * llano y no una unión de un brazo: un `kind` que nunca discrimina es ruido, y
+ * el día que entre otra rama de colocación, `rect` y `pages` tendrán que
+ * **desaparecer**, no convivir con ella.
+ *
+ * **«Colocado» no es una bandera: es tener al menos una página sellada**
+ * (ID-92). Por eso no existe una colocación con el conjunto vacío: quitar la
+ * última página devuelve `null`, que es exactamente el estado del PDF recién
+ * abierto.
+ */
+export interface Placement {
   rect: UserSpaceRect;
+  pages: PageSet;
+}
+
+/**
+ * Cuál de las tres opciones del panel manda sobre el conjunto.
+ *
+ * El visor no la elige —vive en el panel— pero la necesita para dos cosas que
+ * le pide el ID-101: la cuarta redacción del botón («Colocar el sello aquí»
+ * cuando se sellan todas) y que con `Solo 1 página` o `Todas las páginas` una
+ * página ya sellada **no ofrezca pastilla**, porque no queda nada que ofrecer.
+ */
+export type PageChoice = "single" | "these" | "all";
+
+/** ¿Esta página lleva recuadro? Es la pregunta que contesta el ID-96. */
+export function sealsPage(pages: PageSet, page: number): boolean {
+  return pages === "all" || pages.only.includes(page);
+}
+
+/**
+ * Las páginas que el conjunto nombra en un documento de `pageCount`.
+ *
+ * `"all"` y la lista completa dan lo mismo, igual que en `PageSet::resolve`.
+ */
+export function sealedPages(pages: PageSet, pageCount: number): number[] {
+  if (pages !== "all") return pages.only;
+  return Array.from({ length: Math.max(0, pageCount) }, (_, index) => index + 1);
+}
+
+/**
+ * El conjunto ordenado y sin repetir, o `null` si no queda ninguna página.
+ *
+ * `null` no es un fallo: es el ID-92. Sin páginas no hay colocación, y quien lo
+ * reciba tiene que **borrar el recuadro**, no guardar un conjunto vacío —que el
+ * puente leería como «la última página»—.
+ */
+export function pageSetOf(pages: Iterable<number>): PageSet | null {
+  const only = [...new Set(pages)].sort((a, b) => a - b);
+  return only.length === 0 ? null : { only };
+}
+
+/** La primera página del conjunto: la que el visor abre y la que mide el panel. */
+export function firstSealedPage(placement: Placement | null): number | null {
+  if (placement === null) return null;
+  if (placement.pages === "all") return 1;
+  return placement.pages.only[0] ?? null;
+}
+
+/** Añade una página al conjunto. Con «todas» ya estaba dentro y no cambia nada. */
+export function sealing(placement: Placement, page: number): Placement {
+  if (placement.pages === "all") return placement;
+  const pages = pageSetOf([...placement.pages.only, page]);
+  return pages === null ? placement : { ...placement, pages };
+}
+
+/**
+ * Quita una página del conjunto, y con la última **quita la colocación entera**
+ * (ID-92).
+ *
+ * `"all"` se resuelve antes de restar, que es para lo que hace falta
+ * `pageCount`: quitar una de «todas» deja a las demás nombradas una a una.
+ */
+export function unsealing(placement: Placement, page: number, pageCount: number): Placement | null {
+  const rest = sealedPages(placement.pages, pageCount).filter((sealed) => sealed !== page);
+  const pages = pageSetOf(rest);
+  return pages === null ? null : { ...placement, pages };
 }
 
 /** El recuadro en píxeles del lienzo. Dato **de paso**: se pinta y se tira. */
@@ -105,16 +185,101 @@ export function fitsInPage(rect: PixelRect, page: PageSize): boolean {
 }
 
 /**
- * Dónde aparece el recuadro la primera vez.
+ * La **posición estándar** del recuadro (ID-102).
  *
- * Abajo a la izquierda, que es donde suele ir la firma en un documento
- * administrativo, y en proporción a la página para que el zoom no lo cambie de
- * tamaño sobre el papel. A partir de ahí se arrastra: la posición es libre y no
- * hay rejilla (ID-26).
+ * Colocado por la pastilla o por el campo de páginas no hay gesto que diga
+ * dónde, así que cae abajo a la derecha a un **8 %** del borde, que es donde
+ * suele ir la firma en un documento administrativo. Va en proporción a la
+ * página para que el zoom no lo cambie de tamaño sobre el papel; a partir de
+ * ahí se arrastra, que la posición es libre y no hay rejilla (ID-26).
  */
-export function defaultBox(page: PageSize): PixelRect {
+export function standardBox(page: PageSize): PixelRect {
   const width = page.width * 0.34;
   const height = page.height * 0.095;
   const margin = page.height * 0.08;
-  return { x: page.width * 0.08, y: page.height - height - margin, width, height };
+  return {
+    x: page.width - width - page.width * 0.08,
+    y: page.height - height - margin,
+    width,
+    height,
+  };
+}
+
+/**
+ * El **tamaño mínimo** del recuadro, en puntos de espacio de usuario (ID-103).
+ *
+ * Es «aquel por debajo del cual el nombre y la fecha ya no caben»: con las tres
+ * líneas del sello administrativo —«Firmado por», el nombre con el DNI y la
+ * fecha— a los 6 pt que es donde AutoFirma deja de bajar, la línea más larga
+ * pide unos 120 pt de ancho y las tres, con su interlínea, unos 34 pt de alto.
+ * Por debajo queda **la rúbrica sola**, y ahí es justo donde se paran los
+ * tiradores: el gesto se detiene en vez de recortar el texto en silencio.
+ *
+ * Va en **puntos y no en píxeles** porque es una pregunta sobre el papel: lo
+ * que cabe o no cabe dentro del sello no depende de cuánto se haya acercado
+ * quien lo coloca.
+ */
+export const MIN_BOX_POINTS: PageSize = { width: 120, height: 34 };
+
+/**
+ * El lado del tirador, **en píxeles de pantalla** (ID-104).
+ *
+ * No escala con la hoja: mide lo mismo al 50 %, al 100 % y al 300 %, porque es
+ * la diana del gesto y no parte del documento. El sello sí escala, porque es la
+ * hoja.
+ */
+export const GRIP_PX = 10;
+
+/** Por qué esquina se agarra el recuadro para redimensionarlo. */
+export type BoxCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+/**
+ * El recuadro redimensionado por una esquina, en píxeles del lienzo.
+ *
+ * La esquina opuesta se queda quieta —es la que da el gesto su punto fijo— y
+ * `min` para el tirador: por debajo del mínimo el rectángulo **no encoge más**,
+ * y el resto del arrastre no hace nada. Con `keepRatio` (`Mayús`) se conserva
+ * la proporción de partida, y el recorte al mínimo se aplica **después**, sobre
+ * los dos lados a la vez, para que conservar la proporción no sea una puerta
+ * trasera al tamaño ilegible.
+ */
+export function resizedBy(
+  rect: PixelRect,
+  corner: BoxCorner,
+  dx: number,
+  dy: number,
+  min: PageSize,
+  keepRatio: boolean,
+): PixelRect {
+  const towardsRight = corner === "top-right" || corner === "bottom-right";
+  const towardsBottom = corner === "bottom-left" || corner === "bottom-right";
+  let width = rect.width + (towardsRight ? dx : -dx);
+  let height = rect.height + (towardsBottom ? dy : -dy);
+
+  if (keepRatio && rect.height > 0) {
+    // Manda el lado que más ha crecido en proporción: agarrando la esquina se
+    // arrastra en diagonal y elegir siempre el mismo eje haría que el gesto
+    // ignorase la mitad del recorrido.
+    const ratio = rect.width / rect.height;
+    width = Math.max(width, height * ratio);
+    height = width / ratio;
+    if (width < min.width) {
+      width = min.width;
+      height = width / ratio;
+    }
+    if (height < min.height) {
+      height = min.height;
+      width = height * ratio;
+    }
+  } else {
+    width = Math.max(width, min.width);
+    height = Math.max(height, min.height);
+  }
+
+  return {
+    x: towardsRight ? rect.x : rect.x + rect.width - width,
+    y: towardsBottom ? rect.y : rect.y + rect.height - height,
+    width,
+    height,
+  };
 }

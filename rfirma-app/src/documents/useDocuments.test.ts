@@ -71,7 +71,7 @@ describe("useDocuments", () => {
     // La fila la guarda el backend por su ruta canónica, así que reabrir el
     // mismo contrato —con otro identificador, ID-62— vuelve con su recuadro.
     const contrato = document("contrato.pdf");
-    const box = { page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } };
+    const box = { rect: { x0: 72, y0: 500, x1: 272, y1: 600 }, pages: { only: [3] } };
     const store = inMemoryRecents([{ ...contrato, placement: box }]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
 
@@ -82,7 +82,7 @@ describe("useDocuments", () => {
 
   it("does not let a brand new document inherit the position of another one", async () => {
     const contrato = document("contrato.pdf");
-    const box = { page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } };
+    const box = { rect: { x0: 72, y0: 500, x1: 272, y1: 600 }, pages: { only: [3] } };
     const nomina = document("nomina.pdf");
     const store = inMemoryRecents([{ ...contrato, placement: box }]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([nomina])));
@@ -98,7 +98,7 @@ describe("useDocuments", () => {
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
     await act(() => result.current.open());
 
-    const box = { page: 2, rect: { x0: 10, y0: 20, x1: 210, y1: 120 } };
+    const box = { rect: { x0: 10, y0: 20, x1: 210, y1: 120 }, pages: { only: [2] } };
     await act(() => result.current.place(box));
 
     expect(result.current.recents[0]?.placement).toEqual(box);
@@ -113,7 +113,9 @@ describe("useDocuments", () => {
     );
     await act(() => result.current.open());
 
-    await act(() => result.current.place({ page: 2, rect: { x0: 10, y0: 20, x1: 210, y1: 120 } }));
+    await act(() =>
+      result.current.place({ rect: { x0: 10, y0: 20, x1: 210, y1: 120 }, pages: { only: [2] } }),
+    );
 
     await expect(store.list()).resolves.toEqual([]);
   });
@@ -143,7 +145,7 @@ describe("useDocuments", () => {
     const store = inMemoryRecents();
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
     await act(() => result.current.open());
-    const box = { page: 2, rect: { x0: 10, y0: 20, x1: 210, y1: 120 } };
+    const box = { rect: { x0: 10, y0: 20, x1: 210, y1: 120 }, pages: { only: [2] } };
     await act(() => result.current.place(box));
 
     act(() => result.current.reopen());

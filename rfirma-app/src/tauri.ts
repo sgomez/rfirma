@@ -46,6 +46,7 @@ import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { TokenFailure } from "./signing/token";
 import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./signing/visibleSignature";
+import type { PageSet } from "./viewer/signatureBox";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
 
 /** Lo que se enseña cuando falla una etapa de la firma. Ver [`classify`]. */
@@ -117,7 +118,14 @@ function previewOrder(signature: VisibleSignature, signer: SigningIdentity): Sig
   return {
     document: "",
     certificate: signer.certificate,
-    placement: { page: 1, mediaBox: [0, 0, 0, 0], rotation: 0, rect: [0, 0, 0, 0] },
+    placement: {
+      page: 1,
+      pages: { only: [1] },
+      pageCount: 1,
+      mediaBox: [0, 0, 0, 0],
+      rotation: 0,
+      rect: [0, 0, 0, 0],
+    },
     fields: signature.fields,
     reason: signature.reason,
     signedAt: signer.signedAt,
@@ -345,7 +353,7 @@ interface RecentDocumentView {
   modified: number | null;
   lastUsed: number;
   available: boolean;
-  placement: { page: number; rect: [number, number, number, number] } | null;
+  placement: { rect: [number, number, number, number]; pages: PageSet } | null;
 }
 
 /**
@@ -367,13 +375,13 @@ export function tauriRecents(): RecentsStore {
         await invoke<RecentDocumentView>("record_recent", {
           id: document.id,
           placement: document.placement && {
-            page: document.placement.page,
             rect: [
               document.placement.rect.x0,
               document.placement.rect.y0,
               document.placement.rect.x1,
               document.placement.rect.y1,
             ],
+            pages: document.placement.pages,
           },
         }),
       ),
@@ -392,7 +400,7 @@ function rowOf(view: RecentDocumentView): RecentDocument {
     modified: view.modified,
     lastUsed: view.lastUsed,
     available: view.available,
-    placement: view.placement && { page: view.placement.page, rect: { x0, y0, x1, y1 } },
+    placement: view.placement && { rect: { x0, y0, x1, y1 }, pages: view.placement.pages },
   } satisfies RecentDocument;
 }
 

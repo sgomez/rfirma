@@ -1,4 +1,4 @@
-import type { SignaturePlacement } from "../viewer/signatureBox";
+import type { Placement } from "../viewer/signatureBox";
 import type { Badge, ShownBadge } from "./document";
 
 /**
@@ -47,7 +47,7 @@ export interface RecentDocument {
    * **tamaño** sí es global, y quien junta las dos mitades es el backend: aquí
    * llega el rectángulo entero.
    */
-  placement: SignaturePlacement | null;
+  placement: Placement | null;
 }
 
 /**
@@ -90,7 +90,7 @@ export function record(
 export function place(
   recents: readonly RecentDocument[],
   id: string,
-  placement: SignaturePlacement | null,
+  placement: Placement | null,
 ): RecentDocument[] {
   return recents.map((entry) => (entry.id === id ? { ...entry, placement } : entry));
 }

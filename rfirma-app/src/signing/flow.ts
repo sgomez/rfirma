@@ -7,6 +7,7 @@
  * pide cada etapa por su turno y enseña en cuál va.
  */
 
+import type { PageSet } from "../viewer/signatureBox";
 import type { TokenFailure } from "./token";
 import type { VisibleTextFields } from "./visibleSignature";
 
@@ -60,8 +61,16 @@ export interface SigningOrder {
    * ese módulo, y divergiría en la primera esquina.
    */
   placement: {
-    /** Página **1-based**, como la numera `pdf.js`. */
+    /**
+     * La página cuya `MediaBox` y `/Rotate` acompañan al recuadro, **1-based**
+     * como la numera `pdf.js`. Es la primera del conjunto: el widget se replica
+     * idéntico en todas (ID-96), así que cualquiera daría la misma conversión.
+     */
     page: number;
+    /** En qué páginas se estampa el recuadro (ID-90). */
+    pages: PageSet;
+    /** Cuántas páginas tiene el documento, para validar el destino (ID-94). */
+    pageCount: number;
     /** `[x0, y0, x1, y1]` de la `MediaBox`. */
     mediaBox: readonly [number, number, number, number];
     /** La `/Rotate` en grados. */

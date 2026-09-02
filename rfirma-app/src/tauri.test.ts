@@ -33,6 +33,8 @@ const anOrder = {
   certificate: "Firma",
   placement: {
     page: 3,
+    pages: { only: [3] },
+    pageCount: 10,
     mediaBox: [0, 0, 595, 842] as const,
     rotation: 0,
     rect: [72, 500, 272, 600] as const,
@@ -607,7 +609,10 @@ describe("la bandeja sobre Tauri", () => {
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
     available: false,
-    placement: { page: 3, rect: [72, 500, 272, 600] as [number, number, number, number] },
+    placement: {
+      rect: [72, 500, 272, 600] as [number, number, number, number],
+      pages: { only: [3] },
+    },
   };
 
   it("lists the tray with the availability the backend just recomputed", async () => {
@@ -617,7 +622,10 @@ describe("la bandeja sobre Tauri", () => {
 
     expect(invoke).toHaveBeenCalledWith("list_recents");
     expect(rows[0]?.available).toBe(false);
-    expect(rows[0]?.placement).toEqual({ page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } });
+    expect(rows[0]?.placement).toEqual({
+      rect: { x0: 72, y0: 500, x1: 272, y1: 600 },
+      pages: { only: [3] },
+    });
   });
 
   it("records a document by its opaque identifier and never by a path", async () => {
@@ -625,12 +633,12 @@ describe("la bandeja sobre Tauri", () => {
 
     await tauriRecents().record({
       ...aRow(),
-      placement: { page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } },
+      placement: { rect: { x0: 72, y0: 500, x1: 272, y1: 600 }, pages: { only: [3] } },
     });
 
     expect(invoke).toHaveBeenCalledWith("record_recent", {
       id: "0f1e2d3c",
-      placement: { page: 3, rect: [72, 500, 272, 600] },
+      placement: { rect: [72, 500, 272, 600], pages: { only: [3] } },
     });
   });
 
@@ -640,7 +648,10 @@ describe("la bandeja sobre Tauri", () => {
     const noted = await tauriRecents().record(aRow());
 
     expect(invoke).toHaveBeenCalledWith("record_recent", { id: "0f1e2d3c", placement: null });
-    expect(noted.placement).toEqual({ page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } });
+    expect(noted.placement).toEqual({
+      rect: { x0: 72, y0: 500, x1: 272, y1: 600 },
+      pages: { only: [3] },
+    });
   });
 
   it("forgets a single row by its identifier", async () => {
