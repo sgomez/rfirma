@@ -22,6 +22,8 @@
 - Por qué el default es `sequential` y no `parallel`: el corte de los specs de este repositorio es horizontal por módulo, pero los PR hermanos no chocan en su módulo — chocan en `Cargo.toml`, `package.json`, `justfile` y `ci.yml`, que en un proyecto ya escrito casi nadie toca y aquí toca todo el mundo. El coste de `sequential` es tiempo de reloj; el de `parallel`, conflictos de merge en los cimientos. Con el andamiaje ya puesto, merece una reevaluación: `--parallel` en la invocación lo prueba sin tocar la configuración.
 - #135 puntuó `oversized` por tamaño de fichero, pero el cuerpo del issue prohibía explícitamente dividirlo ("a propósito de una vez"), así que el veto de directiva la bajó a `complex`/opus. Se construyó entera en ~31 min con 1 ciclo de arreglo, y el único hallazgo fue un dato de tamaño de fichero obsoleto en un fichero-mapa. Señal: una señal de "sobredimensionado por reparto de tamaño de fichero" sobre un refactor mecánico de mover-y-partir está sobrevalorada en este repositorio, y `complex`/opus es el tier correcto cuando el ticket lleva una directiva explícita de no partir.
 - #136 y #137 puntuaron ambos `complex`/opus y ambos volvieron CLEAN a la primera revisión con cero ciclos de arreglo, en ~19 min cada uno. Mecanismo: los dos tenían un patrón ya fusionado en el repositorio que imitar (`app/` de #135; el guarda `single_cfg_os_site.rs` para #137), y la propia triage lo nombró en sus pistas. El tier salió bien pero se quedó en lo más alto de su banda — dato a vigilar si se repite, no regla todavía.
+- Los dos sub-issues estándar/sonnet de #125 (#127, #128) volvieron NEEDS_FIXES en la primera revisión; el de #128 por una puerta de calidad roja (CRAP: `choose_rubric` puntuó 42 por encima del umbral 30) más un almacén que se escribía y nunca se leía. Los dos sub-issues opus de rebanadas comparables de UI+comando (#130, #131) llegaron CLEAN a la primera revisión con cero ciclos. Señal: en este repositorio, una rebanada «un comando de Tauri + su adaptador TS + el cableado de UI» lleva reglas densas y no obvias (el umbral de CRAP, las tres guardas de `commands/mod.rs`, el ADR-0011) que el nivel sonnet no satisface de forma fiable a la primera; la triage puntuó las dos `standard`.
+- El coste y la precisión de la triage salieron bien en lo demás de #125: los seis sub-issues convergieron, ninguna escalada, ningún conflicto de fusión (ejecución secuencial, cadena de dependencias estricta).
 
 ## Run log
 
@@ -55,3 +57,9 @@
 2026-09-02 spec=#134 sub=#135 model=opus effort=medium pr=#138 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-02 spec=#134 sub=#136 model=opus effort=medium pr=#139 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-02 spec=#134 sub=#137 model=opus effort=medium pr=#140 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#125 sub=#126 model=opus effort=medium pr=#141 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#125 sub=#127 model=sonnet effort=medium pr=#142 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#125 sub=#128 model=sonnet effort=medium pr=#143 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#125 sub=#129 model=opus effort=medium pr=#144 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#125 sub=#130 model=opus effort=medium pr=#145 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#125 sub=#131 model=opus effort=medium pr=#146 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
