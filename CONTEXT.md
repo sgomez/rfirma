@@ -51,13 +51,24 @@ CAdES, PAdES, XAdES y FacturaE.
 _Avoid_: tipo de firma, perfil de firma
 
 **Firma visible**:
-Recuadro que se estampa sobre una página del PDF para que la firma se vea al
-abrir el documento. Es opcional y no aporta validez: la firma electrónica está
+Recuadro que se estampa sobre una o varias páginas del PDF para que la firma se
+vea al abrir el documento. Es opcional y no aporta validez: la firma electrónica está
 en la estructura del PDF, se dibuje o no. Su apariencia forma parte del
 documento cuyo hash se firma, así que se decide antes de la prefirma. Dentro
 del recuadro puede haber texto, la rúbrica del titular o las dos cosas; el
 texto lo redacta rFirma y sigue al idioma de la aplicación.
 _Avoid_: sello, marca de agua, firma gráfica
+
+**Colocación**:
+Dónde y en qué páginas se estampa el recuadro de la firma visible: un
+rectángulo en espacio de usuario y el conjunto de páginas que lo llevan. No hay
+colocación «vacía»: mientras no haya al menos una página sellada, no hay
+recuadro en ninguna parte y no se puede firmar con firma visible. El conjunto
+puede ser una página, algunas o todas, y el recuadro se dibuja idéntico en
+todas ellas y en ninguna más, porque el PDF lleva un solo campo de firma con su
+widget replicado. Se recuerda por documento: «las páginas 3, 7 y 9» no
+significa nada en otro PDF.
+_Avoid_: ancla, posición de la firma, página de firma
 
 **Espacio de usuario**:
 Sistema de coordenadas del propio PDF, en puntos, con el origen donde lo ponga
