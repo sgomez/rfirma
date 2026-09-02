@@ -112,3 +112,22 @@ piden algo de ti:
 
 Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 `app/` al que llama (TD-21).
+
+## Las pruebas que se leen a sí mismas
+
+Cuatro ficheros vigilan invariantes leyendo el código **como texto**, no
+ejecutándolo: `app/cycle.rs`, `app/signing.rs`, `commands/guards.rs` y
+`tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
+dentro. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
+
+- **`production_half` corta por `"\nmod tests {"`**, así que todo lo que quede
+  **después** del módulo de pruebas es invisible para la guarda. Si estás
+  comprobando a mano que una guarda falla como debe, coloca el tipo o la
+  llamada de mentira **antes** del `mod tests`: detrás pasa en verde sin que
+  nadie lo mire, que es justo el fallo que estas pruebas existen para evitar.
+- **Algunas aserciones cuentan apariciones literales** —
+  `assert_eq!(cycle.matches("bridge.").count(), 2)` en `app/cycle.rs` es la que
+  sostiene el ADR-0001: una tercera llamada al puente sería la clave privada
+  cruzando a Java. Mover código entre módulos que llevan una de estas pruebas
+  obliga a elegir entre reescribir sus aserciones o mudar el fichero entero.
+  Decídelo al planificar el cambio, no al final.
