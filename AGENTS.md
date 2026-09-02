@@ -29,7 +29,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * El puente **exige un JPEG ya normalizado y sin perfil ICC**: la normalización de la rúbrica es de Rust (ADR-0012). Un PNG que llegue hasta aquí falla con «no está codificada en JPEG», y eso es lo correcto.
    * El arenero cambia dos cosas que fuera eran gratis: el **módulo PKCS#11 lo empaqueta el propio flatpak** (los del anfitrión no cargan dentro), y **toda entrada y salida de ficheros pasa por portales**, así que la aplicación nunca conoce la ruta original de un documento. Ver `docs/research/flatpak-canal-unico.md`.
    * **`just flatpak-sources` no corre en este entorno**: `flatpak-cargo-generator.py` no está versionado y `pip install aiohttp` no resuelve contra PyPI. Cuando `Cargo.lock` cambia por una dependencia nueva, `packaging/flatpak/cargo-sources.json` se reproduce a mano: dos entradas por crate de `registry+…crates.io-index`, ordenadas por nombre y por **versión semver** (`0.9.6` antes que `0.10.2`, no orden lexicográfico), selladas con `sha256sum` como hace la receta. Si el cambio es solo **hacer directa una dependencia que ya estaba en el árbol transitivo**, `Cargo.lock` cambia en una sola línea y `cargo-sources.json` **no** se toca — basta con regenerar el sha de `sources.lock` (`sha256sum` de los dos ficheros de bloqueo), sin la regeneración manual completa.
-   * La guardia del ADR-0011 (`no_output_of_any_command_carries_a_host_path`) recorre una lista **fija** de nombres de `struct` en `commands/mod.rs`: un tipo de salida nuevo no queda cubierto solo por existir. Cada tipo de salida nuevo que un comando de Tauri devuelva necesita su propia entrada en esa guardia, o pasa sin que nadie lo mire.
+   * La guardia del ADR-0011 (`no_output_of_any_command_carries_a_host_path`, en `commands/guards.rs`) recorre **todos los ficheros de `commands/`** y descubre sola cada tipo que derive `Serialize`: un tipo de salida nuevo queda cubierto por existir. Lo único que hay que mantener a mano es la lista `SOURCES` cuando se crea un fichero nuevo dentro de `commands/`, y hay una guarda hermana que se pone roja si se olvida.
    * Un comando de Tauri (`#[tauri::command]`) sobre una `fn` **no** `async` corre en `ExecutionContext::Blocking`, en el hilo del bucle de eventos: si dentro llama a un `blocking_*` de un plugin (p. ej. el de diálogo), se cuelga ahí para siempre y sin error visible. La forma correcta es `#[tauri::command(async)]`; conviene fijarla con una prueba porque ninguna otra guardia la vigila.
    * Para medir el comportamiento del arenero **sin GUI**, `flatpak run --command=python3 me.sgomez.rfirma -` mete un script por la entrada estándar dentro del bundle ya instalado, con sus permisos reales. `org.gnome.Platform` trae `python3` con PyGObject y `gdbus`, pero **no** `strings` ni `busctl`.
 
@@ -80,7 +80,8 @@ contexto y escribir el parche el 3 %. Por eso:
 
 * **Nunca `cat` de un fichero de más de 300 líneas**, ni de uno que el índice
   marque como grande. `grep -n '<símbolo>'` para situarte y `sed -n 'A,Bp'` para
-  el tramo. `commands/mod.rs` completo son ~24k tokens; casi nunca los necesitas.
+  el tramo. `signing/placement.rs` completo son ~7k tokens; casi nunca los
+  necesitas.
 * **Los tests no se leen para entender el código**, solo para tocarlos. Sus
   nombres son frases y se listan con un `grep -n 'fn \|it('` que cuesta cien
   veces menos.
