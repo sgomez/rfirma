@@ -1,10 +1,10 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import type { PdfDocument, PdfPage, RenderTask, Viewport } from "./pdf";
 import type { SignaturePlacement } from "./signatureBox";
-import { defaultBox, movedBy, toUserSpace } from "./signatureBox";
+import { movedBy, toPixels, toUserSpace } from "./signatureBox";
 
 /**
  * **Grada A** (`vitest`, carril rápido). Sub-issue #58.
@@ -75,9 +75,50 @@ function recordingDocument(pageCount = 3): Recorder {
 
 const noop = () => {};
 
+/**
+ * Un recuadro ya colocado. Desde el ID-114 el visor **no lo crea**: quien lo
+ * quiera en pantalla lo entrega, igual que hace la fila que lo recuerda.
+ */
+const seated: SignaturePlacement = { page: 1, rect: { x0: 50, y0: 60, x1: 250, y1: 140 } };
+
 function box() {
   return screen.getByRole("application", { name: "Recuadro de la firma visible" });
 }
+
+function sheet() {
+  return screen.getByRole("document", { name: "Hoja del documento" });
+}
+
+/** La parte visible del visor, la que se mide para ajustar. */
+function surfaceOf(container: HTMLElement): HTMLElement {
+  return container.querySelector(".viewer__scroll") as HTMLElement;
+}
+
+/**
+ * `jsdom` no trae `ResizeObserver` ni mide nada, así que la parte visible se
+ * dimensiona a mano y el redimensionado se dispara desde la prueba.
+ */
+function stubResizeObserver() {
+  let notify: () => void = () => {};
+  class Stub {
+    constructor(callback: () => void) {
+      notify = callback;
+    }
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  }
+  vi.stubGlobal("ResizeObserver", Stub);
+  return {
+    resizeTo(element: HTMLElement, width: number, height: number) {
+      Object.defineProperty(element, "clientWidth", { value: width, configurable: true });
+      Object.defineProperty(element, "clientHeight", { value: height, configurable: true });
+      act(() => notify());
+    },
+  };
+}
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("el visor vacío", () => {
   it("offers the way in, and no floating bar", () => {
@@ -183,20 +224,12 @@ describe("el visor con documento", () => {
     Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
     try {
       const onPlace = vi.fn();
-      const { document } = recordingDocument();
-      const { rerender } = renderWithCatalog(
-        <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
+      const { document, renders } = recordingDocument();
+      renderWithCatalog(
+        <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
       );
 
-      await waitFor(() => expect(onPlace).toHaveBeenCalled());
-      // El recuadro solo se pinta cuando `placement` no es nulo: aquí se
-      // repone a mano lo que el componente acaba de pedir por `onPlace`, tal
-      // como haría la fila real que lo guarda.
-      const seeded = onPlace.mock.calls[0]?.[0] as SignaturePlacement;
-      onPlace.mockClear();
-      rerender(
-        <DocumentViewer pdf={document} placement={seeded} onPlace={onPlace} onOpen={noop} />,
-      );
+      await waitFor(() => expect(renders).toHaveLength(1));
 
       fireEvent.keyDown(box(), { key: "ArrowRight", shiftKey: true });
 
@@ -207,9 +240,8 @@ describe("el visor con documento", () => {
       // del mapa de bits (escala `devicePixelRatio`): si `toUserSpace` se
       // rompiera y empezara a usar el viewport equivocado, este valor
       // esperado ya no coincidiría con lo que produce el componente.
-      const moved = movedBy(defaultBox(A4), 10, 0);
-      const expectedRect = toUserSpace(viewportAt(1), moved);
-      expect(placed.rect).toEqual(expectedRect);
+      const moved = movedBy(toPixels(viewportAt(1), seated.rect), 10, 0);
+      expect(placed.rect).toEqual(toUserSpace(viewportAt(1), moved));
     } finally {
       Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
     }
@@ -261,19 +293,40 @@ describe("el visor con documento", () => {
 });
 
 describe("el recuadro de la firma", () => {
-  it("places a first box in user space when a document opens", async () => {
+  /**
+   * ID-114: abrir un documento **no** escribe en la colocación. El visor ya no
+   * siembra un recuadro; el que haya llega por la prop, y así un redondeo a un
+   * zoom raro no puede reescribir la fila guardada del documento (ID-74).
+   */
+  it("does not write the placement when a document opens", async () => {
     const onPlace = vi.fn();
-    const { document } = recordingDocument();
+    const { document, renders } = recordingDocument();
     renderWithCatalog(
       <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
     );
 
-    await waitFor(() => expect(onPlace).toHaveBeenCalled());
-    const placed = onPlace.mock.calls[0]?.[0] as SignaturePlacement;
-    expect(placed.page).toBe(1);
-    // En puntos del documento, no en píxeles: cabe en la A4 de la prueba.
-    expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
-    expect(placed.rect.y1).toBeLessThanOrEqual(A4.height);
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(onPlace).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /** ID-113 con el ID-96: en otra página no hay recuadro, así que `Tab` no lo alcanza. */
+  it("shows the box only on its own page", async () => {
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(box()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+
+    await waitFor(() => expect(renders).toHaveLength(2));
+    expect(
+      screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
+    ).not.toBeInTheDocument();
   });
 
   /**
@@ -389,4 +442,294 @@ describe("el recuadro de la firma", () => {
       rect: { x0: 51, y0: 60, x1: 251, y1: 140 },
     });
   });
+
+  /**
+   * ID-115: el empuje es de **un punto de espacio de usuario**, no de un píxel
+   * del lienzo. Al 200 % una flecha seguía moviendo medio punto, así que
+   * colocar con precisión obligaba a acercarse primero.
+   */
+  it("nudges by a user-space point, whatever the zoom", async () => {
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.change(screen.getByLabelText("Nivel de zoom"), { target: { value: "200" } });
+    fireEvent.keyDown(screen.getByLabelText("Nivel de zoom"), { key: "Enter" });
+    await waitFor(() => expect(renders[1]?.scale).toBe(2));
+
+    fireEvent.keyDown(box(), { key: "ArrowRight" });
+
+    expect(onPlace).toHaveBeenCalledWith({
+      page: 1,
+      rect: { x0: 51, y0: 60, x1: 251, y1: 140 },
+    });
+  });
 });
+
+describe("el zoom continuo", () => {
+  it("magnifies with Ctrl and the wheel, which is also how the trackpad pinch arrives", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.wheel(surfaceOf(container), {
+      ctrlKey: true,
+      deltaY: -100,
+      clientX: 40,
+      clientY: 30,
+    });
+
+    await waitFor(() => expect(renders).toHaveLength(2));
+    expect(renders[1]?.scale).toBeCloseTo(Math.exp(0.5), 6);
+  });
+
+  it("leaves the wheel alone without Ctrl, which is how the document scrolls", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.wheel(surfaceOf(container), { deltaY: -100 });
+
+    expect(renders).toHaveLength(1);
+  });
+
+  it("takes the percentage typed in the bar, clipped to the range", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    const level = screen.getByLabelText("Nivel de zoom");
+
+    fireEvent.change(level, { target: { value: "1000" } });
+    fireEvent.keyDown(level, { key: "Enter" });
+
+    await waitFor(() => expect(renders[1]?.scale).toBe(4));
+  });
+
+  it("comes back to 100 % with Ctrl+0", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
+    await waitFor(() => expect(renders).toHaveLength(2));
+
+    fireEvent.keyDown(sheet(), { key: "0", ctrlKey: true });
+
+    await waitFor(() => expect(renders[2]?.scale).toBe(1));
+  });
+
+  /** ID-116: los botones ± tropiezan con los siete escalones. */
+  it("trips over the steps with the buttons, and reaches the ceiling from the last one", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
+
+    await waitFor(() => expect(renders[1]?.scale).toBe(1.25));
+  });
+});
+
+describe("«ajustar» como modo", () => {
+  it("stays fitted across a resize, a page change and another document", async () => {
+    const observer = stubResizeObserver();
+    const first = recordingDocument(3);
+    const { container, rerender } = renderWithCatalog(
+      <DocumentViewer pdf={first.document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(first.renders).toHaveLength(1));
+    observer.resizeTo(surfaceOf(container), 800, 600);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
+    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((800 * 0.92) / A4.width));
+
+    // La ventana cambia de tamaño: sigue ajustado, que es lo que «ajustar» como
+    // modo significa (ID-117).
+    observer.resizeTo(surfaceOf(container), 1200, 600);
+    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width));
+
+    // Se pasa de página: sigue ajustado.
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await waitFor(() => expect(latest(first.renders)?.page).toBe(2));
+    expect(latest(first.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width);
+
+    // Y se abre otro documento: el modo cruza, porque describe cómo se mira y
+    // no cuánto se amplía *ese* documento.
+    const second = recordingDocument(3);
+    rerender(
+      <DocumentViewer pdf={second.document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(second.renders.length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(latest(second.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width),
+    );
+  });
+
+  it("fits the whole page when that is what was asked, tighter axis first", async () => {
+    const observer = stubResizeObserver();
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    observer.resizeTo(surfaceOf(container), 800, 400);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar a la página" }));
+
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.height));
+  });
+
+  it("is broken by a zoom fixed by hand, and then the next document is back at 100 %", async () => {
+    const observer = stubResizeObserver();
+    const first = recordingDocument();
+    const { container, rerender } = renderWithCatalog(
+      <DocumentViewer pdf={first.document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(first.renders).toHaveLength(1));
+    observer.resizeTo(surfaceOf(container), 800, 600);
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
+    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((800 * 0.92) / A4.width));
+
+    fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
+    // El botón tropieza con el escalón siguiente al ajuste, el 125 %.
+    await waitFor(() => expect(latest(first.renders)?.scale).toBe(1.25));
+    // Y ya no está ajustado: estirar la ventana no lo mueve.
+    observer.resizeTo(surfaceOf(container), 1200, 600);
+    expect(latest(first.renders)?.scale).toBe(1.25);
+
+    const second = recordingDocument();
+    rerender(
+      <DocumentViewer pdf={second.document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+
+    await waitFor(() => expect(second.renders).toHaveLength(1));
+    expect(second.renders[0]?.scale).toBe(1);
+  });
+
+  /** ID-114: ni el zoom ni el redimensionado escriben en la colocación. */
+  it("writes nothing to the placement while zooming and resizing", async () => {
+    const observer = stubResizeObserver();
+    const onPlace = vi.fn();
+    const { document, renders } = recordingDocument(3);
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    observer.resizeTo(surfaceOf(container), 800, 600);
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
+    fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await waitFor(() => expect(renders.length).toBeGreaterThan(1));
+
+    expect(onPlace).not.toHaveBeenCalled();
+  });
+});
+
+describe("el reparto del foco", () => {
+  it("turns the pages with the focus on the sheet", async () => {
+    const { document, renders } = recordingDocument(5);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.keyDown(sheet(), { key: "PageDown" });
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(2));
+
+    fireEvent.keyDown(sheet(), { key: "End" });
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(5));
+
+    fireEvent.keyDown(sheet(), { key: "Home" });
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(1));
+  });
+
+  /**
+   * ID-113: las teclas de página **burbujean** desde el recuadro hasta la
+   * hoja, así que se pasa de página sin salir del recuadro.
+   */
+  it("turns the pages from inside the box too, because the keys bubble", async () => {
+    const { document, renders } = recordingDocument(5);
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.keyDown(box(), { key: "PageDown" });
+
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(2));
+  });
+
+  it("gives the focus back to the sheet with Esc", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    box().focus();
+
+    fireEvent.keyDown(box(), { key: "Escape" });
+
+    expect(sheet()).toHaveFocus();
+  });
+
+  it("makes both the sheet and the box reachable with Tab", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(sheet()).toHaveAttribute("tabindex", "0");
+    expect(box()).toHaveAttribute("tabindex", "0");
+  });
+});
+
+describe("el tope del mapa de bits", () => {
+  /**
+   * ID-119: al 400 % con `devicePixelRatio` 2 el lienzo se pinta a 4×, no a
+   * 8×. Serían ~4 760 × 6 736 px y 128 MB para una sola página, y con el
+   * porcentaje editable ese techo se alcanza tecleando.
+   */
+  it("paints at four times and not eight at 400 % on a 2x screen", async () => {
+    const original = window.devicePixelRatio;
+    Object.defineProperty(window, "devicePixelRatio", { value: 2, configurable: true });
+    try {
+      const { document, renders } = recordingDocument();
+      const { container } = renderWithCatalog(
+        <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+      );
+      await waitFor(() => expect(renders).toHaveLength(1));
+
+      const level = screen.getByLabelText("Nivel de zoom");
+      fireEvent.change(level, { target: { value: "400" } });
+      fireEvent.keyDown(level, { key: "Enter" });
+
+      await waitFor(() => expect(latest(renders)?.scale).toBe(4));
+      const canvas = container.querySelector("canvas") as HTMLCanvasElement;
+      expect(canvas.width).toBe(A4.width * 4);
+      // El zoom que ve la persona sigue siendo el 400 %: lo recortado es la
+      // resolución del lienzo, y por eso el tamaño en CSS no se toca.
+      expect(canvas.style.width).toBe(`${A4.width * 4}px`);
+    } finally {
+      Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
+    }
+  });
+});
+
+/** La última pintada lanzada, que es la que se está mirando. */
+function latest(renders: Recorder["renders"]) {
+  return renders[renders.length - 1];
+}

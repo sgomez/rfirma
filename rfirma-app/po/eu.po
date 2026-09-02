@@ -326,7 +326,20 @@ msgstr ""
 msgid "viewer.zoomIn"
 msgstr ""
 
-msgid "viewer.fitToWindow"
+#. Rótulo del campo donde se teclea el porcentaje de zoom.
+msgid "viewer.zoomLevel"
+msgstr ""
+
+#. Botón: la hoja ocupa todo el ancho disponible.
+msgid "viewer.fitWidth"
+msgstr ""
+
+#. Botón: la página entera cabe en el visor.
+msgid "viewer.fitPage"
+msgstr ""
+
+#. Nombre accesible de la hoja del documento, que se enfoca para pasar de página.
+msgid "viewer.sheet"
 msgstr ""
 
 msgid "viewer.signatureBox"

@@ -83,6 +83,16 @@
   overflow: hidden;
 }
 
+/*
+ * ID-113: la hoja y el recuadro se enfocan los dos, y el anillo dice cuál de
+ * los dos tiene el foco. El de la hoja va hacia dentro porque la hoja recorta
+ * lo que se sale (`overflow: hidden`) y un anillo desplazado hacia fuera se
+ * quedaría a medias detrás del borde.
+ */
+.viewer__sheet:focus-visible {
+  outline-offset: calc(-1 * var(--rf-focus-ring-offset));
+}
+
 .viewer__canvas {
   display: block;
 }
@@ -217,8 +227,14 @@
   padding: 0 6px;
 }
 
+/*
+ * El porcentaje es un campo, no un rótulo: con el zoom continuo hay que poder
+ * teclearlo (ID-116). Ocupa lo mismo que ocupaba el rótulo, para que la barra
+ * no cambie de reparto.
+ */
 .viewer__zoom {
-  min-width: 44px;
+  width: 60px;
+  padding-inline: var(--rf-space-xs);
   font-weight: 700;
   text-align: center;
 }

@@ -191,6 +191,16 @@ export function FitIcon({ size = 16 }: IconProps) {
   );
 }
 
+/** La hoja entera dentro del marco: «ajustar a la página». */
+export function FitPageIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+      <rect x="7" y="4" width="10" height="16" rx="1" />
+      <path d="M4 8V4h3M20 8V4h-3M4 16v4h3M20 16v4h-3" />
+    </svg>
+  );
+}
+
 /** La cruz de cuatro puntas del rótulo «Arrástralo para colocarlo». */
 export function MoveIcon({ size = 14 }: IconProps) {
   return (
