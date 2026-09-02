@@ -24,6 +24,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::signing::PageSet;
+
 /// Cuántos se recuerdan. La bandeja no tiene buscador; si algún día hace falta
 /// uno, este límite estaba mal.
 pub const CAPACITY: usize = 10;
@@ -51,8 +53,8 @@ pub enum ShownBadge {
     Unavailable,
 }
 
-/// **Dónde cayó el recuadro en este documento**: la página y la esquina
-/// inferior izquierda, en espacio de usuario PDF (ID-74).
+/// **Dónde cayó el recuadro en este documento**: el conjunto de páginas y la
+/// esquina inferior izquierda, en espacio de usuario PDF (ID-74, ID-95).
 ///
 /// Es la mitad **por documento** de lo que se recuerda de la firma visible. La
 /// otra mitad —el interruptor, las cinco casillas, el motivo y el **tamaño**
@@ -62,16 +64,50 @@ pub enum ShownBadge {
 /// rechaza el ID-22, mientras que el tamaño sí se hereda porque no depende de
 /// la página.
 ///
+/// **El conjunto de páginas también es por documento**: «las páginas 3, 7 y 9»
+/// no significa nada en otro PDF.
+///
 /// No lleva el tamaño **a propósito**: dos sitios donde guardar el mismo ancho
 /// es un sitio donde divergen.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Placement {
-    /// Página, **1-based**, tal cual la numera `pdf.js`.
-    pub page: u32,
     /// Esquina inferior izquierda, eje X, en espacio de usuario PDF.
     pub lower_left_x: f64,
     /// Esquina inferior izquierda, eje Y, en espacio de usuario PDF.
     pub lower_left_y: f64,
+    /// En qué páginas se estampa.
+    pub pages: PageSet,
+}
+
+impl<'de> Deserialize<'de> for Placement {
+    /// **Lee también las filas que dejó v0.2**, que guardaban `page` en vez de
+    /// `pages` (ID-95).
+    ///
+    /// `{ page: 3 }` significaba exactamente `{ pages: [3] }`, así que se lee
+    /// como tal y **no se versiona el formato**: una versión para un campo que
+    /// se traduce solo sería una versión que hay que subir la próxima vez.
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Stored {
+            lower_left_x: f64,
+            lower_left_y: f64,
+            /// v0.3.
+            pages: Option<PageSet>,
+            /// v0.2: una sola página.
+            page: Option<u32>,
+        }
+
+        let stored = Stored::deserialize(deserializer)?;
+        let pages = stored
+            .pages
+            .or_else(|| stored.page.map(PageSet::only_page))
+            .ok_or_else(|| serde::de::Error::missing_field("pages"))?;
+        Ok(Self {
+            lower_left_x: stored.lower_left_x,
+            lower_left_y: stored.lower_left_y,
+            pages,
+        })
+    }
 }
 
 /// Un documento de la bandeja, con lo que hace falta para pintar la fila sin
@@ -147,8 +183,8 @@ impl RecentDocument {
     }
 
     /// Dónde cayó el recuadro en este documento, si alguien lo colocó.
-    pub fn placement(&self) -> Option<Placement> {
-        self.placement
+    pub fn placement(&self) -> Option<&Placement> {
+        self.placement.as_ref()
     }
 
     /// Coloca —o descoloca— el recuadro de este documento.
@@ -201,8 +237,19 @@ pub struct Recents {
 }
 
 impl<'de> Deserialize<'de> for Recents {
+    /// **Una fila que no se sepa leer se descarta, y las demás siguen**
+    /// (ID-95): la bandeja es actividad, no datos del usuario, y perder las
+    /// diez porque una traía un campo raro es perder nueve por nada.
+    ///
+    /// Por eso las filas se leen de una en una desde su JSON en vez de
+    /// deserializar el vector entero: un `Vec<RecentDocument>` falla entero al
+    /// primer elemento que no encaje.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let mut entries = Vec::<RecentDocument>::deserialize(deserializer)?;
+        let rows = Vec::<serde_json::Value>::deserialize(deserializer)?;
+        let mut entries: Vec<RecentDocument> = rows
+            .into_iter()
+            .filter_map(|row| serde_json::from_value(row).ok())
+            .collect();
         entries.truncate(CAPACITY);
         Ok(Self { entries })
     }
@@ -224,7 +271,7 @@ impl Recents {
             .entries
             .iter()
             .find(|entry| entry.path == document.path)
-            .and_then(RecentDocument::placement);
+            .and_then(|entry| entry.placement.clone());
         if document.placement.is_none() {
             document.placement = remembered;
         }
@@ -478,5 +525,75 @@ mod tests {
         );
 
         assert!(failure.is_err());
+    }
+
+    /// **ID-95**: la fila que v0.2 guardó con `page` se lee como el conjunto de
+    /// esa única página, que es exactamente lo que significaba. **No hay
+    /// migración ni versión de formato**: el campo se traduce al leerlo.
+    #[test]
+    fn reads_a_v0_2_row_as_the_set_of_the_one_page_it_named() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let document = a_document(directory.path(), "contrato.pdf");
+        let mut written =
+            serde_json::to_value(vec![seen(&document)]).expect("deberia serializarse");
+        written[0]["placement"] = serde_json::json!({
+            "page": 3,
+            "lower_left_x": 48.0,
+            "lower_left_y": 179.0,
+        });
+
+        let read: Recents = serde_json::from_value(written).expect("deberia leerse");
+
+        let placement = read.entries()[0]
+            .placement()
+            .expect("la v0.2 la habia colocado");
+        assert_eq!(placement.pages, PageSet::only_page(3));
+        assert_eq!(placement.lower_left_x, 48.0);
+    }
+
+    /// La otra mitad del ID-95: una fila ilegible **se descarta sola**, y las
+    /// demás llegan. Perder las diez porque una traía un campo que nadie sabe
+    /// leer es perder nueve por nada.
+    #[test]
+    fn discards_a_row_it_cannot_read_without_dragging_the_others() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let first = a_document(directory.path(), "primero.pdf");
+        let second = a_document(directory.path(), "segundo.pdf");
+        let mut written =
+            serde_json::to_value(vec![seen(&first), seen(&second)]).expect("deberia serializarse");
+        written[0]["placement"] = serde_json::json!({ "no": "esto no lo lee nadie" });
+
+        let read: Recents = serde_json::from_value(written).expect("deberia leerse");
+
+        assert_eq!(read.len(), 1);
+        assert_eq!(read.entries()[0].name(), "segundo.pdf");
+    }
+
+    /// El conjunto de páginas es **de este documento** (ID-95), así que viaja
+    /// en la fila y vuelve entero.
+    #[test]
+    fn remembers_the_page_set_of_each_document() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let document = a_document(directory.path(), "expediente.pdf");
+        let mut recents = Recents::default();
+        let noted = seen(&document);
+        let path = noted.path().to_path_buf();
+        recents.record(noted);
+        recents.place(
+            &path,
+            Some(Placement {
+                lower_left_x: 48.0,
+                lower_left_y: 179.0,
+                pages: PageSet::only([3, 7, 9]).expect("no esta vacio"),
+            }),
+        );
+
+        let json = serde_json::to_string(&recents).expect("deberia serializarse");
+        let read: Recents = serde_json::from_str(&json).expect("deberia leerse");
+
+        assert_eq!(
+            read.entries()[0].placement().map(|spot| spot.pages.clone()),
+            PageSet::only([3, 7, 9])
+        );
     }
 }

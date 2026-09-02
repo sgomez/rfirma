@@ -220,9 +220,9 @@ mod tests {
         state.recents.place(
             &fs::canonicalize(&document).expect("deberia canonicalizarse"),
             Some(Placement {
-                page: 1,
                 lower_left_x: 48.0,
                 lower_left_y: 179.0,
+                pages: crate::signing::PageSet::only_page(1),
             }),
         );
         state

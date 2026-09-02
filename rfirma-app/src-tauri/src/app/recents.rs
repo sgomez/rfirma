@@ -203,9 +203,9 @@ fn identifier_for(path: &Path, opened: &OpenedDocuments) -> String {
 }
 
 /// Las dos mitades juntas: la esquina del documento y el tamaño global.
-fn joined(spot: Placement, size: BoxSize) -> PlacementView {
+fn joined(spot: &Placement, size: BoxSize) -> PlacementView {
     PlacementView {
-        page: spot.page,
+        pages: spot.pages.clone(),
         rect: [
             spot.lower_left_x,
             spot.lower_left_y,
@@ -220,9 +220,9 @@ fn split(placement: PlacementView) -> (Placement, BoxSize) {
     let [x0, y0, x1, y1] = placement.rect;
     (
         Placement {
-            page: placement.page,
             lower_left_x: x0,
             lower_left_y: y0,
+            pages: placement.pages,
         },
         BoxSize {
             width: x1 - x0,
@@ -241,6 +241,7 @@ mod tests {
     use super::*;
     use crate::app::fixtures::a_memory;
     use crate::memory::Loaded;
+    use crate::signing::PageSet;
     use std::fs;
     use std::path::PathBuf;
 
@@ -259,9 +260,13 @@ mod tests {
     }
 
     fn a_placement(page: u32) -> PlacementView {
+        placed_on(PageSet::only_page(page))
+    }
+
+    fn placed_on(pages: PageSet) -> PlacementView {
         PlacementView {
-            page,
             rect: [72.0, 500.0, 272.0, 600.0],
+            pages,
         }
     }
 
@@ -570,6 +575,29 @@ mod tests {
         let spot = state.recents.entries()[0]
             .placement()
             .expect("la posicion es de este documento");
-        assert_eq!((spot.page, spot.lower_left_x), (1, 72.0));
+        assert_eq!(
+            (&spot.pages, spot.lower_left_x),
+            (&PageSet::only_page(1), 72.0)
+        );
+    }
+
+    /// El conjunto de páginas es **por documento** (ID-95) y vuelve entero,
+    /// incluido «todas»: lo que se parte entre el documento y lo global es el
+    /// rectángulo, no las páginas.
+    #[test]
+    fn a_document_gets_its_whole_page_set_back_and_not_just_a_page() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(directory.path());
+        let configuration = Configuration::default();
+        let opened = OpenedDocuments::new();
+        let (path, id) = an_opened_pdf(directory.path(), "expediente.pdf", &opened);
+        let placed = placed_on(PageSet::All);
+        record(&memory, &configuration, &opened, &id, Some(placed.clone()))
+            .expect("deberia anotarse");
+
+        let again = opened.remember(PortalDocument::opened(path));
+        let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
+
+        assert_eq!(row.placement, Some(placed));
     }
 }

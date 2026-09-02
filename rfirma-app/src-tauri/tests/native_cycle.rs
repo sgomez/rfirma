@@ -237,7 +237,9 @@ mod full_cycle {
     use rfirma_lib::ffi::NativeBridge;
     use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
     use rfirma_lib::rubric;
-    use rfirma_lib::signing::{AdmissibleDocument, SessionSeal, SignatureBox, SignatureConfig};
+    use rfirma_lib::signing::{
+        AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
+    };
 
     use super::bridge;
 
@@ -363,12 +365,14 @@ mod full_cycle {
     /// queda quieto para que las cuatro midan la misma region de la pagina.
     fn a_config_of(text: &str, rubric: Option<String>) -> SignatureConfig {
         SignatureConfig {
-            signature_box: SignatureBox {
-                page: 1,
-                lower_left_x: BOX_LEFT as i32,
-                lower_left_y: BOX_BOTTOM as i32,
-                upper_right_x: BOX_RIGHT as i32,
-                upper_right_y: BOX_TOP as i32,
+            placement: Placement {
+                rect: PadesRect {
+                    lower_left_x: BOX_LEFT as i32,
+                    lower_left_y: BOX_BOTTOM as i32,
+                    upper_right_x: BOX_RIGHT as i32,
+                    upper_right_y: BOX_TOP as i32,
+                },
+                pages: PageSet::only_page(1),
             },
             layer2_text: text.to_owned(),
             rubric_image: rubric,
@@ -669,10 +673,13 @@ mod full_cycle {
         // sitio se taparían, y lo que se quiere ver es que las dos están.
         let base = a_config_of("Firmado por: PRUEBAS FNMT", None);
         let lower = SignatureConfig {
-            signature_box: SignatureBox {
-                lower_left_y: BOX_BOTTOM as i32 - 150,
-                upper_right_y: BOX_TOP as i32 - 150,
-                ..base.signature_box
+            placement: Placement {
+                rect: PadesRect {
+                    lower_left_y: BOX_BOTTOM as i32 - 150,
+                    upper_right_y: BOX_TOP as i32 - 150,
+                    ..base.placement.rect
+                },
+                ..base.placement.clone()
             },
             ..base
         };

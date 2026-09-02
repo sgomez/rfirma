@@ -9,7 +9,7 @@
 use serde::Deserialize;
 
 use crate::commands::Failure;
-use crate::signing::{MediaBox, Page, Rotation, SignatureBox, UserSpaceRect};
+use crate::signing::{MediaBox, Page, PageSet, Placement, Rotation, UserSpaceRect};
 
 /// Lo que la ventana ha marcado en las casillas del recuadro.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
@@ -27,13 +27,24 @@ pub struct VisibleFieldsOrder {
 /// el PDF es `pdf.js`: el backend **no lee PDFs**, y ponerle un analizador para
 /// releer lo que el visor ya sabe sería una segunda opinión sobre la misma
 /// página.
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacementOrder {
-    /// Página **1-based**, como la numera `pdf.js` y como la cuenta
-    /// `signaturePage`.
+    /// La página **sobre la que se arrastró**, 1-based como la numera
+    /// `pdf.js`. No es el destino —eso es [`PlacementOrder::pages`]—: es la
+    /// página cuya `MediaBox` y cuya `/Rotate` describen las coordenadas que
+    /// vienen en `rect`.
     pub page: u32,
-    /// La `MediaBox` de esa página: `[x0, y0, x1, y1]`.
+    /// **En qué páginas se estampa** (ID-91).
+    pub pages: PageSet,
+    /// Cuántas páginas tiene el documento, según el visor, que es quien lo
+    /// tiene abierto.
+    ///
+    /// Viaja con la orden porque **el backend no lee PDFs** y sin ella no
+    /// puede validar el destino: `PdfUtil.getPages` recorta en silencio y
+    /// firma en la última con cara de éxito (ID-94).
+    pub page_count: u32,
+    /// La `MediaBox` de la página del arrastre: `[x0, y0, x1, y1]`.
     pub media_box: [f64; 4],
     /// Su `/Rotate`, en grados.
     pub rotation: i32,
@@ -47,11 +58,24 @@ pub struct PlacementOrder {
 }
 
 impl PlacementOrder {
-    /// El recuadro en puntos PAdES, o la negativa si se sale de la página.
+    /// La colocación en puntos PAdES, o la negativa si el destino no existe o
+    /// el recuadro se sale de la página.
     ///
     /// Es público porque quien lo llama es el caso de uso que arma la
     /// configuración de firma ([`crate::app::signing`]), y no una orden.
-    pub fn signature_box(&self) -> Result<SignatureBox, Failure> {
+    ///
+    /// **Las dos negativas se comprueban antes de llamar al puente** y no hay
+    /// otro sitio donde comprobarlas: iText recorta un recuadro que se salga
+    /// (ID-22) y `PdfUtil.getPages` recorta un destino que no exista (ID-94),
+    /// los dos en silencio y devolviendo éxito.
+    pub fn placement(&self) -> Result<Placement, Failure> {
+        self.pages
+            .validate(self.page_count)
+            .map_err(|out| Failure::new(PAGE_OUT_OF_DOCUMENT, out.to_string()))?;
+        PageSet::only_page(self.page)
+            .validate(self.page_count)
+            .map_err(|out| Failure::new(PAGE_OUT_OF_DOCUMENT, out.to_string()))?;
+
         let [x0, y0, x1, y1] = self.media_box;
         let rotation = Rotation::from_degrees(self.rotation).ok_or_else(|| {
             Failure::new(
@@ -65,10 +89,19 @@ impl PlacementOrder {
             rotation,
         };
         let [left, bottom, right, top] = self.rect;
-        page.signature_box(&UserSpaceRect::rounded(left, bottom, right, top))
-            .map_err(|out| Failure::new("boxOutOfPage", out.to_string()))
+        let rect = page
+            .pades_rect(&UserSpaceRect::rounded(left, bottom, right, top))
+            .map_err(|out| Failure::new("boxOutOfPage", out.to_string()))?;
+        Ok(Placement {
+            rect,
+            pages: self.pages.clone(),
+        })
     }
 }
+
+/// La situación con la que la ventana pinta un destino que el documento no
+/// tiene (ID-29, ID-94).
+const PAGE_OUT_OF_DOCUMENT: &str = "pageOutOfDocument";
 
 /// La orden de firma completa: todo lo que distingue esta firma de otra.
 ///
@@ -108,31 +141,86 @@ pub struct SigningOrder {
 #[cfg(test)]
 mod tests {
     use super::PlacementOrder;
+    use crate::signing::PageSet;
 
     /// La ventana manda el recuadro en espacio de usuario **tal cual sale de
     /// `convertToPdfPoint`**, y eso son fracciones: `pdf.js` invierte una
     /// matriz, no cuenta puntos enteros.
     #[test]
     fn accepts_a_rect_with_the_fractional_coordinates_the_viewer_sends() {
-        let sent = serde_json::json!({
-            "page": 1,
-            "mediaBox": [0.0, 0.0, 595.276, 841.89],
-            "rotation": 0,
-            "rect": [47.7218, 179.1376722440945, 250.1, 259.9],
-        });
+        let placement: PlacementOrder = serde_json::from_value(sent_from_the_viewer())
+            .expect("el recuadro del visor tiene decimales");
 
-        let placement: PlacementOrder =
-            serde_json::from_value(sent).expect("el recuadro del visor tiene decimales");
-
-        let box_ = placement.signature_box().expect("cabe en la pagina");
+        let placed = placement.placement().expect("cabe en la pagina");
         assert_eq!(
             (
-                box_.lower_left_x,
-                box_.lower_left_y,
-                box_.upper_right_x,
-                box_.upper_right_y
+                placed.rect.lower_left_x,
+                placed.rect.lower_left_y,
+                placed.rect.upper_right_x,
+                placed.rect.upper_right_y
             ),
             (48, 179, 250, 260)
         );
+    }
+
+    /// Lo que el visor manda de verdad, con el conjunto de páginas y el número
+    /// de páginas del documento.
+    fn sent_from_the_viewer() -> serde_json::Value {
+        serde_json::json!({
+            "page": 1,
+            "pages": { "only": [1] },
+            "pageCount": 3,
+            "mediaBox": [0.0, 0.0, 595.276, 841.89],
+            "rotation": 0,
+            "rect": [47.7218, 179.1376722440945, 250.1, 259.9],
+        })
+    }
+
+    fn order_placed_on(pages: serde_json::Value, page_count: u32) -> PlacementOrder {
+        let mut sent = sent_from_the_viewer();
+        sent["pages"] = pages;
+        sent["pageCount"] = serde_json::json!(page_count);
+        serde_json::from_value(sent).expect("la orden del visor")
+    }
+
+    /// **TD-30**: el destino fuera de rango **no llega al puente**. Se prueba
+    /// aquí porque el puente no lo rechazaría: firmaría en la última página y
+    /// devolvería éxito.
+    #[test]
+    fn refuses_a_destination_the_document_does_not_have_before_calling_the_bridge() {
+        let failure = order_placed_on(serde_json::json!({ "only": [99] }), 3)
+            .placement()
+            .expect_err("un documento de tres paginas no tiene la 99");
+
+        assert_eq!(failure.situation, "pageOutOfDocument");
+        assert!(failure.detail.contains("99"), "{}", failure.detail);
+    }
+
+    /// La página del arrastre también es un destino: es donde acaba el
+    /// recuadro cuando el conjunto es «todas».
+    #[test]
+    fn refuses_a_drag_page_the_document_does_not_have() {
+        let mut sent = sent_from_the_viewer();
+        sent["page"] = serde_json::json!(9);
+        sent["pages"] = serde_json::json!("all");
+        let order: PlacementOrder = serde_json::from_value(sent).expect("la orden del visor");
+
+        assert_eq!(
+            order.placement().expect_err("la 9 no existe").situation,
+            "pageOutOfDocument"
+        );
+    }
+
+    #[test]
+    fn carries_the_page_set_through_to_the_placement() {
+        let placed = order_placed_on(serde_json::json!("all"), 3)
+            .placement()
+            .expect("cabe y existe");
+        assert_eq!(placed.pages, PageSet::All);
+
+        let placed = order_placed_on(serde_json::json!({ "only": [3, 1] }), 3)
+            .placement()
+            .expect("cabe y existe");
+        assert_eq!(placed.pages, PageSet::only([1, 3]).expect("no esta vacio"));
     }
 }

@@ -30,7 +30,9 @@
 //! versión de `afirma-lib-itext`, vuelve a medirla: es un hecho sobre esa
 //! librería, no sobre el formato PAdES.
 
-use super::config::SignatureBox;
+use super::config::PadesRect;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::fmt;
 
 /// La `/Rotate` de la página, que solo puede ser uno de cuatro valores.
@@ -195,8 +197,8 @@ impl Page {
     ///
     /// `zoom` es la escala del viewport de `pdf.js` con la que se dibujó el
     /// arrastre, y tiene que ser mayor que cero.
-    pub fn place(&self, rect: &ViewerRect, zoom: f64) -> Result<SignatureBox, OutOfPage> {
-        self.signature_box(&self.to_user_space(rect, zoom))
+    pub fn place(&self, rect: &ViewerRect, zoom: f64) -> Result<PadesRect, OutOfPage> {
+        self.pades_rect(&self.to_user_space(rect, zoom))
     }
 
     /// Paso 1: lienzo → espacio de usuario PDF.
@@ -222,12 +224,11 @@ impl Page {
     /// silencio** y la firma saldría válida igual, con la rúbrica de 13 pt de
     /// ancho en vez de los 200 que se dibujaron. Aquí se rechaza antes de
     /// firmar.
-    pub fn signature_box(&self, rect: &UserSpaceRect) -> Result<SignatureBox, OutOfPage> {
+    pub fn pades_rect(&self, rect: &UserSpaceRect) -> Result<PadesRect, OutOfPage> {
         self.check_fits(rect)?;
         let (ax, ay) = self.inverse_itext(rect.lower_left_x, rect.lower_left_y);
         let (bx, by) = self.inverse_itext(rect.upper_right_x, rect.upper_right_y);
-        Ok(SignatureBox {
-            page: self.number,
+        Ok(PadesRect {
             lower_left_x: ax.min(bx),
             lower_left_y: ay.min(by),
             upper_right_x: ax.max(bx),
@@ -359,9 +360,147 @@ impl fmt::Display for OutOfPage {
 
 impl std::error::Error for OutOfPage {}
 
+/// **En qué páginas se estampa el recuadro** (ID-91).
+///
+/// Nunca un `u32` desnudo. «Esta página», «algunas» y «todas» no son tres
+/// modos: son un conjunto de tamaño 1, *k* o *n*, y el puente acepta un
+/// conjunto cualquiera —`all` da **exactamente el mismo resultado** que la
+/// lista completa: mismas anotaciones y un solo campo `Signature1`—.
+///
+/// El tipo con nombre existe porque el puente convive con **dos convenios
+/// incompatibles para el valor `0`**: `signaturePages` lo lee como «la primera
+/// página» y `imagePage` como «todas». Un número desnudo invita a importar el
+/// equivocado y a firmar en la página de al lado sin que nadie proteste
+/// (`docs/research/ancla-y-paginas-en-el-puente.md`).
+///
+/// Cruza y se guarda como **`"all"` o `{ "only": [1, 3] }`**, que es el único
+/// trozo de la gramática de `signaturePages` que rFirma habla: ni `append`, ni
+/// los negativos, ni los rangos, porque los tres nombran páginas que el visor
+/// no sabe pintar.
+///
+/// Los dos `serde` son **derivados y no escritos a mano** aunque el formato se
+/// pudiera apretar más: un tipo que cruza sin `derive(Serialize)` es invisible
+/// para la guarda de rutas del ADR-0011 y para `just contract`, que descubren
+/// los tipos por ese derive. Un formato más corto no vale quedarse fuera de
+/// las dos.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PageSet {
+    /// Todas las páginas del documento, sean cuantas sean. Cruza como `"all"`,
+    /// que es además el literal que el puente lee.
+    All,
+    /// Estas y ninguna más, **1-based**, ordenadas y sin repetir. Cruza como
+    /// `{ "only": [1, 3] }`.
+    Only(BTreeSet<u32>),
+}
+
+impl PageSet {
+    /// El conjunto de una sola página, que es lo que significaba el
+    /// `signaturePage` de v0.2.
+    pub fn only_page(page: u32) -> Self {
+        Self::Only(BTreeSet::from([page]))
+    }
+
+    /// Un conjunto explícito, o `None` si venía vacío: un conjunto sin páginas
+    /// no coloca el recuadro en ninguna parte, y el puente lo trataría como si
+    /// la clave faltara —o sea, firmando en la última—.
+    pub fn only(pages: impl IntoIterator<Item = u32>) -> Option<Self> {
+        let pages: BTreeSet<u32> = pages.into_iter().collect();
+        (!pages.is_empty()).then_some(Self::Only(pages))
+    }
+
+    /// Las páginas que este conjunto nombra en un documento de `page_count`.
+    ///
+    /// Es donde se ve el ID-91: [`PageSet::All`] y la lista completa **dan lo
+    /// mismo**.
+    pub fn resolve(&self, page_count: u32) -> BTreeSet<u32> {
+        match self {
+            Self::All => (1..=page_count).collect(),
+            Self::Only(pages) => pages.clone(),
+        }
+    }
+
+    /// El literal de `signaturePages`.
+    ///
+    /// Único sitio donde el conjunto se convierte en texto del puente (ID-91):
+    /// mientras siga siendo uno solo, el convenio de `imagePage` no puede
+    /// colarse por descuido.
+    pub fn literal(&self) -> String {
+        match self {
+            Self::All => ALL_PAGES.to_owned(),
+            Self::Only(pages) => pages
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        }
+    }
+
+    /// **La validación del destino** (ID-94): que el documento tenga esas
+    /// páginas.
+    ///
+    /// Se comprueba aquí porque **no hay excepción que capturar**:
+    /// `PdfUtil.getPages` no lanza nunca —recorta, avisa por `WARNING` y cae en
+    /// la última página—, de modo que un destino fuera de rango se firma en la
+    /// última con cara de éxito y la respuesta de la prefirma no dice dónde
+    /// acabó el widget. La única defensa es no llamar al puente.
+    pub fn validate(&self, page_count: u32) -> Result<(), OutOfDocument> {
+        let missing: Vec<u32> = match self {
+            Self::All => Vec::new(),
+            Self::Only(pages) => pages
+                .iter()
+                .copied()
+                .filter(|page| *page < 1 || *page > page_count)
+                .collect(),
+        };
+        if !missing.is_empty() || self.resolve(page_count).is_empty() {
+            return Err(OutOfDocument {
+                missing,
+                page_count,
+            });
+        }
+        Ok(())
+    }
+}
+
+/// El literal con el que el puente nombra «todas las páginas». **No es `0`**:
+/// ese es el convenio de `imagePage`, y aquí significaría «la primera».
+const ALL_PAGES: &str = "all";
+
+/// El destino no existe en el documento (ID-94).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OutOfDocument {
+    /// Las páginas pedidas que el documento no tiene. Vacía cuando lo que
+    /// fallaba era que el conjunto no nombraba ninguna página.
+    pub missing: Vec<u32>,
+    /// Cuántas páginas tiene el documento de verdad.
+    pub page_count: u32,
+}
+
+impl fmt::Display for OutOfDocument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.missing.is_empty() {
+            return write!(
+                f,
+                "el conjunto de paginas no nombra ninguna pagina de un documento de {}",
+                self.page_count
+            );
+        }
+        let missing: Vec<String> = self.missing.iter().map(u32::to_string).collect();
+        write!(
+            f,
+            "el documento tiene {} paginas y el recuadro se colocaria en la {}",
+            self.page_count,
+            missing.join(", ")
+        )
+    }
+}
+
+impl std::error::Error for OutOfDocument {}
+
 #[cfg(test)]
 mod tests {
-    use super::{MediaBox, OutOfPage, Page, Rotation, UserSpaceRect, ViewerRect};
+    use super::{MediaBox, OutOfPage, Page, PageSet, Rotation, UserSpaceRect, ViewerRect};
 
     /// El arrastre de pantalla con el que se midieron los dieciséis casos.
     const DRAG: ViewerRect = ViewerRect {
@@ -466,7 +605,6 @@ mod tests {
                 "paso 2 del caso «{}»",
                 case.name
             );
-            assert_eq!(placed.page, case.page, "página del caso «{}»", case.name);
         }
     }
 
@@ -502,15 +640,15 @@ mod tests {
         let same_rect = rect([100, 200, 300, 260]);
 
         assert_ne!(
-            at_origin.signature_box(&same_rect).expect("cabe"),
-            displaced.signature_box(&same_rect).expect("cabe"),
+            at_origin.pades_rect(&same_rect).expect("cabe"),
+            displaced.pades_rect(&same_rect).expect("cabe"),
         );
     }
 
     #[test]
     fn emits_integer_coordinates() {
         // El arrastre cae en medio punto por todas partes; lo que sale son
-        // enteros porque `SignatureBox` no sabe guardar otra cosa.
+        // enteros porque `PadesRect` no sabe guardar otra cosa.
         let page = Page {
             number: 1,
             media_box: MediaBox::new(0.0, 0.0, 595.0, 842.0),
@@ -572,7 +710,7 @@ mod tests {
             rotation: Rotation::None,
         };
         let error = page
-            .signature_box(&rect([500, 700, 700, 780]))
+            .pades_rect(&rect([500, 700, 700, 780]))
             .expect_err("un recuadro que se sale no puede firmarse");
         assert_eq!(
             error,
@@ -592,7 +730,7 @@ mod tests {
             rotation: Rotation::None,
         };
         let message = page
-            .signature_box(&rect([500, 700, 700, 780]))
+            .pades_rect(&rect([500, 700, 700, 780]))
             .expect_err("se sale")
             .to_string();
         assert!(message.contains("615"), "no dice el límite: {message}");
@@ -609,7 +747,7 @@ mod tests {
             media_box: MediaBox::new(20.0, 30.0, 615.0, 872.0),
             rotation: Rotation::None,
         };
-        assert!(page.signature_box(&rect([5, 10, 200, 100])).is_err());
+        assert!(page.pades_rect(&rect([5, 10, 200, 100])).is_err());
     }
 
     #[test]
@@ -619,7 +757,7 @@ mod tests {
             media_box: MediaBox::new(20.0, 30.0, 615.0, 872.0),
             rotation: Rotation::None,
         };
-        assert!(page.signature_box(&rect([20, 30, 615, 872])).is_ok());
+        assert!(page.pades_rect(&rect([20, 30, 615, 872])).is_ok());
     }
 
     #[test]
@@ -660,5 +798,129 @@ mod tests {
             page.to_user_space(&backwards, 1.0),
             page.to_user_space(&DRAG, 1.0)
         );
+    }
+
+    /// ID-91: «esta página», «algunas» y «todas» son un conjunto de tamaño 1,
+    /// *k* y *n*, y `all` **da exactamente lo mismo** que la lista completa.
+    #[test]
+    fn resolves_all_to_the_very_same_pages_the_full_list_names() {
+        assert_eq!(
+            PageSet::All.resolve(3),
+            PageSet::only([1, 2, 3]).expect("no esta vacio").resolve(3)
+        );
+    }
+
+    #[test]
+    fn orders_and_deduplicates_the_pages_it_is_given() {
+        let pages = PageSet::only([9, 3, 9, 7]).expect("no esta vacio");
+        assert_eq!(pages.literal(), "3,7,9");
+    }
+
+    #[test]
+    fn refuses_to_build_a_set_without_pages() {
+        assert_eq!(PageSet::only([]), None);
+    }
+
+    /// **TD-30, sin puente**: el destino se valida en Rust porque
+    /// `PdfUtil.getPages` no lanza —recorta y firma en la última con cara de
+    /// éxito—, así que no hay excepción que capturar.
+    #[test]
+    fn refuses_a_page_the_document_does_not_have() {
+        let refusal = PageSet::only_page(99)
+            .validate(3)
+            .expect_err("un documento de tres paginas no tiene la 99");
+        assert_eq!(refusal.missing, vec![99]);
+        assert_eq!(refusal.page_count, 3);
+    }
+
+    #[test]
+    fn names_every_page_the_document_does_not_have() {
+        let refusal = PageSet::only([1, 4, 9])
+            .expect("no esta vacio")
+            .validate(3)
+            .expect_err("le faltan dos");
+        assert_eq!(refusal.missing, vec![4, 9]);
+    }
+
+    /// El `0` es la trampa de los dos convenios: en `signaturePages` sería «la
+    /// primera página» y en `imagePage` «todas». Aquí no es ninguna de las dos,
+    /// porque las páginas se cuentan desde 1.
+    #[test]
+    fn refuses_the_page_zero_instead_of_guessing_which_convention_it_meant() {
+        assert!(PageSet::only_page(0).validate(3).is_err());
+    }
+
+    #[test]
+    fn accepts_a_set_that_fits_in_the_document() {
+        assert!(PageSet::only([1, 3])
+            .expect("no esta vacio")
+            .validate(3)
+            .is_ok());
+        assert!(PageSet::All.validate(3).is_ok());
+    }
+
+    /// `all` sobre un documento sin páginas no nombra ninguna, y el puente lo
+    /// leería como si la clave faltara.
+    #[test]
+    fn refuses_all_when_the_document_has_no_pages() {
+        assert!(PageSet::All.validate(0).is_err());
+    }
+
+    /// «Todas» cruza con **el mismo literal que lee el puente**, y la lista
+    /// dice de qué es la lista: `{ "only": [...] }` no se puede confundir con
+    /// las coordenadas de al lado.
+    #[test]
+    fn crosses_as_the_word_all_or_as_the_list_it_names() {
+        assert_eq!(
+            serde_json::to_value(PageSet::All).expect("deberia serializarse"),
+            serde_json::json!("all")
+        );
+        assert_eq!(
+            serde_json::to_value(PageSet::only([3, 1]).expect("no esta vacio"))
+                .expect("deberia serializarse"),
+            serde_json::json!({ "only": [1, 3] })
+        );
+    }
+
+    #[test]
+    fn reads_back_what_it_writes() {
+        for pages in [
+            PageSet::All,
+            PageSet::only_page(3),
+            PageSet::only([1, 2, 3]).expect("no esta vacio"),
+        ] {
+            let written = serde_json::to_value(&pages).expect("deberia serializarse");
+            assert_eq!(
+                serde_json::from_value::<PageSet>(written).expect("deberia leerse"),
+                pages
+            );
+        }
+    }
+
+    /// Ni `0` («todas» en el convenio de `imagePage`), ni `append`, ni los
+    /// rangos: lo que rFirma no sabe pintar, no lo sabe leer.
+    #[test]
+    fn refuses_a_page_set_written_in_a_grammar_it_does_not_speak() {
+        for written in [
+            serde_json::json!("append"),
+            serde_json::json!("1-3"),
+            serde_json::json!(0),
+            serde_json::json!([1, 3]),
+        ] {
+            assert!(
+                serde_json::from_value::<PageSet>(written.clone()).is_err(),
+                "«{written}» no es un conjunto de paginas"
+            );
+        }
+    }
+
+    /// El conjunto vacío sí se puede escribir —`{ "only": [] }` es JSON
+    /// válido—, así que quien lo rechaza es la validación del destino y no el
+    /// deserializador: no nombra ninguna página de ningún documento.
+    #[test]
+    fn refuses_an_empty_set_when_the_destination_is_validated() {
+        let empty: PageSet =
+            serde_json::from_value(serde_json::json!({ "only": [] })).expect("es json valido");
+        assert!(empty.validate(3).is_err());
     }
 }

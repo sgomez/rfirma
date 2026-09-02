@@ -156,6 +156,7 @@ mod tests {
     use super::*;
     use crate::memory::recents::{Badge, Placement, RecentDocument};
     use crate::pkcs11::TokenCertificate;
+    use crate::signing::PageSet;
     use std::fs;
     use std::path::Path;
     use std::time::SystemTime;
@@ -266,9 +267,9 @@ mod tests {
         state.recents.place(
             &path,
             Some(Placement {
-                page: 3,
                 lower_left_x: 48.0,
                 lower_left_y: 179.0,
+                pages: PageSet::only_page(3),
             }),
         );
 
@@ -282,7 +283,7 @@ mod tests {
         assert_eq!(global["size"]["width"], 200.0);
         assert_eq!(global["reason"], "Conforme");
         let row = &written["recents"][0]["placement"];
-        assert_eq!(row["page"], 3);
+        assert_eq!(row["pages"], serde_json::json!({ "only": [3] }));
         assert_eq!(row["lower_left_x"], 48.0);
         assert!(
             row["width"].is_null(),
@@ -302,17 +303,19 @@ mod tests {
         state.recents.place(
             &path,
             Some(Placement {
-                page: 2,
                 lower_left_x: 10.0,
                 lower_left_y: 20.0,
+                pages: PageSet::only_page(2),
             }),
         );
 
         state.recents.record(a_document(directory.path()));
 
         assert_eq!(
-            state.recents.entries()[0].placement().map(|box_| box_.page),
-            Some(2)
+            state.recents.entries()[0]
+                .placement()
+                .map(|box_| box_.pages.clone()),
+            Some(PageSet::only_page(2))
         );
     }
 

@@ -257,7 +257,7 @@ pub fn config_for(
 ) -> Result<SignatureConfig, Failure> {
     let (name, id) = certificates::holder_of(chosen.subject().as_deref());
     Ok(SignatureConfig {
-        signature_box: order.placement.signature_box()?,
+        placement: order.placement.placement()?,
         layer2_text: layer2_text_of(order, &(name, id)),
         rubric_image: order.rubric.clone(),
         // Un motivo vacío **no se envía**: `signReason` con la cadena vacía
@@ -357,6 +357,7 @@ mod tests {
     use crate::destination::PortalDocument;
     use crate::isolate::Isolate;
     use crate::memory::{Configuration, ListedCertificates, OpenedDocuments};
+    use crate::signing::PageSet;
 
     /// **Grada A**: lo que se comprueba leyendo esta fuente son invariantes de
     /// forma —qué guarda la sesión y desde dónde se recuerda el certificado—.
@@ -496,9 +497,9 @@ mod tests {
 
         let config = config_for(&an_order(), &certificate).expect("el recuadro cabe");
 
-        assert_eq!(config.signature_box.page, 1);
-        assert_eq!(config.signature_box.lower_left_x, 72);
-        assert_eq!(config.signature_box.upper_right_y, 600);
+        assert_eq!(config.placement.pages, PageSet::only_page(1));
+        assert_eq!(config.placement.rect.lower_left_x, 72);
+        assert_eq!(config.placement.rect.upper_right_y, 600);
     }
 
     #[test]

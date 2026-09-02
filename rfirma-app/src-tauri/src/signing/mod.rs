@@ -22,9 +22,11 @@ pub mod properties;
 pub mod session_seal;
 
 pub use admissibility::{AdmissibleDocument, Refusal};
-pub use config::{Setting, SignatureBox, SignatureConfig, SUB_FILTER};
+pub use config::{PadesRect, Placement, Setting, SignatureConfig, SUB_FILTER};
 pub use language::Language;
 pub use layer2_text::{compose_layer2_text, mask_id_number, VisibleTextFields};
-pub use placement::{MediaBox, OutOfPage, Page, Rotation, UserSpaceRect, ViewerRect};
+pub use placement::{
+    MediaBox, OutOfDocument, OutOfPage, Page, PageSet, Rotation, UserSpaceRect, ViewerRect,
+};
 pub use properties::to_java_properties;
 pub use session_seal::{SealMismatch, SessionSeal};
