@@ -1,6 +1,10 @@
-//! Lo que rFirma recuerda entre sesiones: **seis** memorias, partidas en dos
+//! Lo que rFirma recuerda entre sesiones: **siete** memorias, partidas en dos
 //! (ADR-0010 y su enmienda, #53) — más [`OpenedDocuments`], que no sobrevive al
 //! proceso y por eso no cuenta entre ellas.
+//!
+//! La séptima es el tamaño de la ventana (ID-72, ID-73, `app::window`): no
+//! mira ningún interruptor, así que sobrevive tanto a «Recordar mi actividad»
+//! como a «Recordar la última configuración de firma visible» apagados.
 //!
 //! **Configuración** —lo que el usuario elige y la aplicación obedece— son el
 //! idioma, el tema, la carpeta de destino, los dos interruptores y la rúbrica.
@@ -79,8 +83,10 @@ impl Memory {
 
     /// El estado guardado, o el vacío.
     ///
-    /// No hace falta filtrar por el interruptor al leer: si está apagado, no
-    /// hay nada que leer, porque apagarlo borró el soporte.
+    /// No hace falta filtrar por el interruptor al leer: con «Recordar mi
+    /// actividad» apagado el fichero sobrevive, pero solo con el tamaño de la
+    /// ventana dentro —la única memoria exenta (ID-73)—, así que no hay nada
+    /// más que ocultar.
     pub fn state(&self) -> Result<Loaded<State>, MemoryError> {
         self.state.load()
     }
@@ -148,8 +154,18 @@ impl Memory {
     /// Si no había ventana guardada esto es exactamente el borrado de antes:
     /// el fichero desaparece del disco. Si la había, queda un fichero con
     /// solo ese campo, que es lo que promete «es la única memoria exenta».
+    ///
+    /// La lectura previa no puede vetar el borrado: en el camino de borrado
+    /// por privacidad, un `state.json` que `load` no consiga leer se trata
+    /// como si no llevara ventana dentro —se pierde esa memoria, no el
+    /// borrado— en vez de dejar la actividad en el disco con un `Err`.
     fn erase_activity_but_keep_the_window(&self) -> Result<(), MemoryError> {
-        let window = self.state.load()?.into_value().window;
+        let window = self
+            .state
+            .load()
+            .map(Loaded::into_value)
+            .unwrap_or_default()
+            .window;
         self.state.erase()?;
         match window {
             Some(window) => self.state.save(&State {

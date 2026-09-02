@@ -95,11 +95,15 @@ pub fn run() {
             let environment = app.state::<app::Environment>();
             let remembered = app::window::initial_window(&environment.memory);
             if let Some(webview) = app.get_webview_window("main") {
+                // El tamaño restaurado se aplica siempre, y maximizar va
+                // después: si se maximizara primero, el tamaño sin maximizar
+                // de la ventana se quedaría en el de `tauri.conf.json` y el
+                // primer «desmaximizar» de la sesión lo pisaría con ese valor
+                // de fábrica en vez de con el recordado.
+                let _ =
+                    webview.set_size(tauri::LogicalSize::new(remembered.width, remembered.height));
                 if remembered.maximized {
                     let _ = webview.maximize();
-                } else {
-                    let _ = webview
-                        .set_size(tauri::LogicalSize::new(remembered.width, remembered.height));
                 }
             }
             Ok(())
@@ -129,7 +133,13 @@ pub fn run() {
                         let scale = window.scale_factor().unwrap_or(1.0);
                         let logical = size.to_logical::<f64>(scale);
                         (logical.width, logical.height)
-                    });
+                    })
+                    // Un tamaño degenerado (0×0, lo que un `Resized` de
+                    // minimizar podría emitir en algún canal) no se persiste:
+                    // el próximo arranque lo aplicaría tal cual y abriría una
+                    // ventana inservible sin forma de salir de ahí sin borrar
+                    // `state.json` a mano.
+                    .filter(|(width, height)| *width > 0.0 && *height > 0.0);
                 let environment = window.state::<app::Environment>();
                 app::window::resized(&environment.memory, maximized, logical_size);
             }

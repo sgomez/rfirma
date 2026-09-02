@@ -31,7 +31,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 158 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
+| `lib.rs` | 166 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
@@ -52,8 +52,8 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
-| **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades (ADR-0010). |
-| `memory/mod.rs` | 511 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
+| **`memory/`** | | Lo que rFirma recuerda: siete memorias en dos mitades y una exenta (ADR-0010). |
+| `memory/mod.rs` | 527 | El reparto de las siete memorias. Léelo antes que sus hermanos. |
 | `memory/state.rs` | 401 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 482 | Los diez recientes, por ruta canónica, con la página y la posición del recuadro de cada uno (ID-74). |

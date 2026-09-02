@@ -4,6 +4,7 @@ import { renderWithCatalog } from "../testing/render";
 import { DocumentViewer } from "./DocumentViewer";
 import type { PdfDocument, PdfPage, RenderTask, Viewport } from "./pdf";
 import type { SignaturePlacement } from "./signatureBox";
+import { defaultBox, movedBy, toUserSpace } from "./signatureBox";
 
 /**
  * **Grada A** (`vitest`, carril rápido). Sub-issue #58.
@@ -168,6 +169,14 @@ describe("el visor con documento", () => {
    * el recuadro a espacio de usuario PDF sigue en píxeles CSS, así que el
    * `/Rect` que acaba en el PDF no se mueve por la pantalla en la que se firmó
    * (ID-84).
+   *
+   * La caja por omisión es proporcional a la página y la conversión a espacio
+   * de usuario divide por la escala del viewport, así que es invariante de
+   * escala por sí sola: no distinguiría un viewport en píxeles CSS de uno en
+   * píxeles de mapa de bits. La prueba mueve el recuadro con las flechas —el
+   * mismo camino que usa el arrastre, `toUserSpace(viewport, moved)`— un
+   * desplazamiento fijo **en píxeles CSS** y afirma los puntos PDF exactos
+   * que resultarían con el viewport correcto (escala 1, no 2).
    */
   it("keeps the box-to-user-space conversion in CSS pixels regardless of devicePixelRatio", async () => {
     const original = window.devicePixelRatio;
@@ -175,14 +184,32 @@ describe("el visor con documento", () => {
     try {
       const onPlace = vi.fn();
       const { document } = recordingDocument();
-      renderWithCatalog(
+      const { rerender } = renderWithCatalog(
         <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
       );
 
       await waitFor(() => expect(onPlace).toHaveBeenCalled());
+      // El recuadro solo se pinta cuando `placement` no es nulo: aquí se
+      // repone a mano lo que el componente acaba de pedir por `onPlace`, tal
+      // como haría la fila real que lo guarda.
+      const seeded = onPlace.mock.calls[0]?.[0] as SignaturePlacement;
+      onPlace.mockClear();
+      rerender(
+        <DocumentViewer pdf={document} placement={seeded} onPlace={onPlace} onOpen={noop} />,
+      );
+
+      fireEvent.keyDown(box(), { key: "ArrowRight", shiftKey: true });
+
+      await waitFor(() => expect(onPlace).toHaveBeenCalled());
       const placed = onPlace.mock.calls[0]?.[0] as SignaturePlacement;
-      expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
-      expect(placed.rect.y1).toBeLessThanOrEqual(A4.height);
+
+      // El mismo cálculo con el viewport de píxeles CSS (escala 1), nunca el
+      // del mapa de bits (escala `devicePixelRatio`): si `toUserSpace` se
+      // rompiera y empezara a usar el viewport equivocado, este valor
+      // esperado ya no coincidiría con lo que produce el componente.
+      const moved = movedBy(defaultBox(A4), 10, 0);
+      const expectedRect = toUserSpace(viewportAt(1), moved);
+      expect(placed.rect).toEqual(expectedRect);
     } finally {
       Object.defineProperty(window, "devicePixelRatio", { value: original, configurable: true });
     }
