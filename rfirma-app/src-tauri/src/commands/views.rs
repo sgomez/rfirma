@@ -151,6 +151,13 @@ pub struct SignedDocumentView {
     pub name: String,
     /// El nombre de la carpeta donde quedó. No su ruta.
     pub folder: String,
+    /// Cuántos bytes se han escrito.
+    ///
+    /// Sale de la escritura misma —`std::fs::write` recibe la rebanada y su
+    /// longitud es el tamaño— y **no de volver a mirar el fichero** (ID-77):
+    /// preguntarle al disco por algo que ya se sabe abre la ventana a que el
+    /// resumen cuente un tamaño distinto del que se acaba de escribir.
+    pub size_bytes: u64,
 }
 
 /// Un documento abierto, tal como la ventana lo recibe: **un identificador y un
@@ -281,15 +288,16 @@ mod tests {
     }
 
     #[test]
-    fn a_signed_document_is_told_with_two_names() {
+    fn a_signed_document_is_told_with_two_names_and_its_size() {
         let view = SignedDocumentView {
             name: "contrato_signed.pdf".to_owned(),
             folder: "Documentos".to_owned(),
+            size_bytes: 2_400_000,
         };
 
         assert_eq!(
             serde_json::to_string(&view).expect("serializa"),
-            r#"{"name":"contrato_signed.pdf","folder":"Documentos"}"#
+            r#"{"name":"contrato_signed.pdf","folder":"Documentos","sizeBytes":2400000}"#
         );
     }
 

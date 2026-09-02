@@ -74,6 +74,10 @@ pub fn run() {
         // complemento entra aquí y no en el frontal: la lista de permisos de la
         // ventana no crece por esto.
         .plugin(tauri_plugin_dialog::init())
+        // Y el que abre el PDF firmado y su carpeta, por la misma puerta: bajo
+        // el arenero es el portal `OpenURI`, y es lo único que lleva al usuario
+        // hasta un fichero cuya ruta nunca ve (ID-79, ID-85, ADR-0011).
+        .plugin(tauri_plugin_opener::init())
         .manage(environment)
         // El hilo del isolate arranca con la ventana y **no abre la librería
         // todavía**: quien solo quiere mirar un PDF no paga el dlopen de 27,7
@@ -167,6 +171,8 @@ pub fn run() {
             commands::read_rubric,
             commands::preview_destination,
             commands::choose_destination,
+            commands::open_signed_document,
+            commands::open_signed_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

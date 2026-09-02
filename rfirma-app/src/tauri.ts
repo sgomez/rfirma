@@ -41,7 +41,7 @@ import type { LanguagePreference } from "./i18n/preference";
 import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type { Certificate, CertificateStore } from "./signing/certificate";
-import type { Destination, DestinationSource } from "./signing/destination";
+import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { TokenFailure } from "./signing/token";
@@ -472,6 +472,23 @@ export function tauriPreferences(): PreferencesStore {
 export function tauriDestinations(): DestinationSource {
   return {
     previewFor: (documentId) => invoke<Destination>("preview_destination", { id: documentId }),
+  };
+}
+
+/**
+ * Abrir el PDF firmado y su carpeta: `open_signed_document` y
+ * `open_signed_folder`.
+ *
+ * **No se les manda ninguna ruta**, porque la ventana no tiene ninguna
+ * (ADR-0011): lo que abren es el fichero que dejó la última postfirma, que es
+ * justo el que el resumen tiene delante. El complemento `opener` se llama desde
+ * Rust por lo mismo que el del diálogo (ID-63, ID-85), y debajo es el portal
+ * `OpenURI`.
+ */
+export function tauriSignedDocumentOpener(): SignedDocumentOpener {
+  return {
+    openDocument: () => invoke<void>("open_signed_document"),
+    openFolder: () => invoke<void>("open_signed_folder"),
   };
 }
 

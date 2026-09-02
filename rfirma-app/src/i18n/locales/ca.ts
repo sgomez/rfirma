@@ -285,7 +285,9 @@ export const ca: UntranslatedCatalog = {
     signed: {
       summary: "",
       format: "",
-      signAnother: "",
+      openDocument: "",
+      openFolder: "",
+      signAgain: "",
     },
   },
   pin: {

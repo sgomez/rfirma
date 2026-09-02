@@ -24,6 +24,7 @@ import {
   tauriPreferences,
   tauriRecents,
   tauriRubricPicker,
+  tauriSignedDocumentOpener,
   tauriSigningBackend,
 } from "./tauri";
 
@@ -32,7 +33,7 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Once puertos hablan ya con el backend: los tres de firma del #60
+// Doce puertos hablan ya con el backend: los tres de firma del #60
 // —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`—, los
 // dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, el del
 // arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
@@ -40,8 +41,10 @@ if (!root) {
 // `tauriPreferences` y `tauriLanguagePreference`, que debajo son el mismo
 // fichero, el de la bandeja del #126, `tauriRecents`, que es el que la hace
 // sobrevivir al reinicio (ID-75), el de la rúbrica del #128, `tauriRubricPicker`,
-// y el del destino del #130, `tauriDestinations`, que es quien sabe con qué
-// nombre y en qué carpeta va a caer lo firmado (ID-63).
+// el del destino del #130, `tauriDestinations`, que es quien sabe con qué
+// nombre y en qué carpeta va a caer lo firmado (ID-63), y el del resumen del
+// #131, `tauriSignedDocumentOpener`, que bajo el arenero es lo único que lleva
+// al usuario hasta el fichero que acaba de firmar (ID-79).
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
@@ -67,6 +70,7 @@ createRoot(root).render(
         rubrics={tauriRubricPicker()}
         composer={tauriLayer2Composer()}
         signer={tauriSigningBackend()}
+        opener={tauriSignedDocumentOpener()}
       />
     </LanguageProvider>
   </StrictMode>,

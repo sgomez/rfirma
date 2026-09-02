@@ -97,7 +97,9 @@ pub fn deliver(
     // [`crate::app::recents::note_signed`] para anotar la fila del firmado, y
     // lo que cruza sigue siendo [`SignedDocumentView`], dos nombres y ninguna
     // ruta (ADR-0011).
-    let told = told_as(&landing, &folder);
+    // El tamaño sale de aquí y no de volver a mirar el fichero (ID-77): estos
+    // son los bytes que se acaban de escribir, y son los que el resumen cuenta.
+    let told = told_as(&landing, &folder, signed.len() as u64);
     Ok((landing, told))
 }
 
@@ -137,12 +139,16 @@ pub fn where_it_lands(
     }
 }
 
-/// Cómo se cuenta un documento firmado: **dos nombres, ninguna ruta**
-/// (ADR-0011).
-pub fn told_as(landing: &Path, folder: &CheckedFolder) -> SignedDocumentView {
+/// Cómo se cuenta un documento firmado: **dos nombres, un tamaño y ninguna
+/// ruta** (ADR-0011).
+///
+/// El tamaño entra por parámetro y no se lee del disco: quien llama acaba de
+/// escribir esos bytes y ya sabe cuántos son (ID-77).
+pub fn told_as(landing: &Path, folder: &CheckedFolder, size_bytes: u64) -> SignedDocumentView {
     SignedDocumentView {
         name: file_name_of(landing).unwrap_or_default(),
         folder: folder.name().to_owned(),
+        size_bytes,
     }
 }
 
@@ -433,9 +439,10 @@ mod tests {
         let checked = CheckedFolder::at(folder.path()).expect("existe");
         let landing = folder.path().join("contrato-firmado.pdf");
 
-        let view = told_as(&landing, &checked);
+        let view = told_as(&landing, &checked, 2_400_000);
 
         assert_eq!(view.name, "contrato-firmado.pdf");
+        assert_eq!(view.size_bytes, 2_400_000);
         assert_eq!(
             view.folder,
             folder.path().file_name().and_then(|n| n.to_str()).unwrap()
@@ -629,6 +636,9 @@ mod tests {
         .expect("cae");
 
         assert_eq!(view.1.name, "contrato-firmado.pdf");
+        // El tamaño que cruza es el de los bytes escritos, contados en la
+        // escritura y no releídos del disco (ID-77).
+        assert_eq!(view.1.size_bytes, b"%PDF-firmado".len() as u64);
         assert_eq!(
             std::fs::read(folder.path().join("contrato-firmado.pdf")).expect("esta"),
             b"%PDF-firmado"

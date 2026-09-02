@@ -6,14 +6,14 @@ import type { DocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
-import { classify } from "./errors/classify";
+import { classify, type NamedFailure } from "./errors/classify";
 import { PreferencesDialog } from "./preferences/PreferencesDialog";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { applyTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
-import type { Destination, DestinationSource } from "./signing/destination";
+import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
 import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./signing/rubric";
@@ -63,6 +63,11 @@ interface AppProps {
   composer: Layer2Composer;
   /** Quien ejecuta las tres etapas de la firma. Ver [`SigningBackend`]. */
   signer: SigningBackend;
+  /**
+   * Quien lleva al usuario hasta el fichero firmado. Ver
+   * [`SignedDocumentOpener`].
+   */
+  opener: SignedDocumentOpener;
   /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
 }
@@ -88,6 +93,7 @@ export function App({
   rubrics,
   composer,
   signer,
+  opener,
   menuAnchor,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -116,6 +122,11 @@ export function App({
   const [signature, setSignature] = useState<VisibleSignature>(DEFAULT_VISIBLE_SIGNATURE);
   const [rubric, setRubric] = useState<Rubric | null>(null);
   const [rubricFailure, setRubricFailure] = useState<RubricFailure | null>(null);
+  // Por qué no se pudo abrir el firmado o su carpeta. Vive aquí y no dentro del
+  // resumen porque lo produce quien llama al portal, y el resumen solo lo
+  // enseña; sin él, el único camino que el usuario tiene hasta el fichero
+  // fallaría sin decir nada (ADR-0011).
+  const [openFailure, setOpenFailure] = useState<NamedFailure | null>(null);
   const signing = useSigning(signer);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
   // es recordar; el primer documento no se puede abrir antes de esa lectura.
@@ -285,7 +296,30 @@ export function App({
   const signAnother = signing.signAnother;
   useEffect(() => {
     if (signedSomewhere && signedHere === null) signAnother();
+    // Y el fallo de abrir se va con el resumen del que hablaba: es de un
+    // documento concreto, como el propio acuse de recibo.
+    if (signedHere === null) setOpenFailure(null);
   }, [signedSomewhere, signedHere, signAnother]);
+
+  // Los dos caminos hasta el fichero. El fallo se recoge aquí y se enseña en el
+  // resumen: un botón que no hace nada y no dice por qué deja al usuario sin
+  // ninguna forma de llegar a lo que acaba de firmar (ID-79).
+  const openSigned = (open: () => Promise<void>) => {
+    setOpenFailure(null);
+    open().catch((thrown: unknown) => setOpenFailure(classify(thrown)));
+  };
+
+  // «Volver a firmar»: se cierra el resumen y **se relee el original del
+  // disco** (ID-80). Es abrir el documento otra vez, porque entre una firma y
+  // la siguiente el usuario ha podido modificarlo fuera o haberse equivocado al
+  // configurar la firma. Lo que decida el recuadro recordado —incluido el aviso
+  // del ID-22 si ya no cabe— lo resuelve el camino de siempre, no uno nuevo.
+  const reopenDocument = documents.reopen;
+  const signAgain = () => {
+    setOpenFailure(null);
+    signing.signAnother();
+    reopenDocument();
+  };
 
   // Los certificados se buscan al arrancar y cada vez que alguien pide volver
   // a buscar: una tarjeta insertada tarde es el caso corriente, no la excepción.
@@ -494,8 +528,17 @@ export function App({
             // activo tampoco se monta, o quedaría una tercera columna al lado
             // del visor vacío (ID-51).
             <SignedPanel
-              document={{ name: signedHere.document.name, pages: pdf?.pageCount ?? null }}
-              onSignAnother={signing.signAnother}
+              document={{
+                name: signedHere.document.name,
+                pages: pdf?.pageCount ?? null,
+                // El tamaño lo trae la postfirma, que lo supo al escribir el
+                // fichero: aquí no se recalcula nada (ID-77).
+                sizeBytes: signedHere.document.sizeBytes,
+              }}
+              onOpenDocument={() => openSigned(() => opener.openDocument())}
+              onOpenFolder={() => openSigned(() => opener.openFolder())}
+              onSignAgain={signAgain}
+              failure={openFailure}
             />
           ) : pdf && documents.active ? (
             <SigningPanel

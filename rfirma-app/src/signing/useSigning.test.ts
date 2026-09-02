@@ -5,7 +5,11 @@ import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "
 import type { TokenFailure } from "./token";
 import { acknowledgementFor, useSigning } from "./useSigning";
 
-const signed: SignedDocument = { name: "contrato_firmado.pdf", folder: "Documentos" };
+const signed: SignedDocument = {
+  name: "contrato_firmado.pdf",
+  folder: "Documentos",
+  sizeBytes: 2_400_000,
+};
 
 const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",

@@ -280,7 +280,9 @@ export const en: Catalog = {
     signed: {
       summary: "Summary",
       format: "PAdES",
-      signAnother: "Sign another document",
+      openDocument: "Open the PDF",
+      openFolder: "Open the folder",
+      signAgain: "Sign it again",
     },
   },
   pin: {

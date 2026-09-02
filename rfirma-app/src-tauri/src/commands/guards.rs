@@ -249,8 +249,8 @@ fn the_list_of_files_covers_the_whole_module() {
     );
 }
 
-/// La lista sigue cerrada (ID-59): ocho órdenes, las tres de los ajustes y las
-/// tres de la bandeja.
+/// La lista sigue cerrada (ID-59): ocho órdenes, las tres de los ajustes, las
+/// tres de la bandeja y las dos del resumen tras firmar.
 ///
 /// **El conteo vive en la aserción y no en el nombre** (TD-11): cambiar el
 /// número es la información, y cuatro sub-issues que renombraran la misma
@@ -266,7 +266,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 18, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 20, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
@@ -303,16 +303,26 @@ fn commands_of(source: &str) -> Vec<(&str, String, &str)> {
 /// `blocking_pick_file()` espera allí a un cierre que solo ese hilo puede
 /// ejecutar. Punto muerto: la ventana se clava y el diálogo no aparece.
 ///
-/// Las dos de hoy se nombran porque están escritas y se sabe lo que hacen; la
-/// regla general, en cambio, se **descubre**: toda orden cuyo cuerpo llame a un
-/// `blocking_*` de un plugin tiene que ser `(async)`, se llame como se llame.
-/// Sin esa mitad, una orden nueva con un diálogo dentro entraría con la ventana
-/// clavada y las guardas en verde.
+/// Las cuatro de hoy se nombran porque están escritas y se sabe lo que hacen.
+/// Las dos del resumen entran en la lista **aunque no llamen a ningún
+/// `blocking_*`**: `open_path` del complemento `opener` es una llamada síncrona
+/// a D-Bus, y esperar ahí la respuesta del portal clava la ventana igual que el
+/// diálogo, sin que la mitad que se descubre sola las vea (TD-10).
+///
+/// La regla general, en cambio, se **descubre**: toda orden cuyo cuerpo llame a
+/// un `blocking_*` de un plugin tiene que ser `(async)`, se llame como se
+/// llame. Sin esa mitad, una orden nueva con un diálogo dentro entraría con la
+/// ventana clavada y las guardas en verde.
 #[test]
 fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
     let source = production_half(source_of("mod.rs"));
 
-    for command in ["pub fn open_document(", "pub fn read_document("] {
+    for command in [
+        "pub fn open_document(",
+        "pub fn read_document(",
+        "pub fn open_signed_document(",
+        "pub fn open_signed_folder(",
+    ] {
         let declaration = source
             .find(command)
             .unwrap_or_else(|| panic!("no esta la orden «{command}»"));

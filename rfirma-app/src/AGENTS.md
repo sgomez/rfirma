@@ -31,30 +31,30 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 73 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 496 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 608 | El árbol de la ventana y el estado que la recorre. |
+| `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 517 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 655 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
 | `shell/menuAnchor.ts` | 25 | Dónde se ancla el menú de dos entradas. |
 | **`documents/`** | | La bandeja. |
 | `documents/document.ts` | 13 | El vocabulario de la bandeja. |
-| `documents/useDocuments.ts` | 131 | El estado de la bandeja. |
+| `documents/useDocuments.ts` | 156 | El estado de la bandeja. |
 | `documents/DocumentTray.tsx` | 97 | La bandeja pintada. |
 | `documents/recents.ts` | 162 | Los diez recientes y su puerto. Misma capacidad que `memory::recents::CAPACITY`. |
 | `documents/picker.ts` | 31 | Por dónde entra un documento. |
 | `documents/drops.ts` | 74 | Qué ocurre al soltar ficheros encima. |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
-| `signing/flow.ts` | 132 | Las tres etapas de la trifásica. |
+| `signing/flow.ts` | 139 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
 | `signing/SigningPanel.tsx` | 545 | El panel. El fichero más grande de la interfaz. |
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
-| `signing/SignedPanel.tsx` | 78 | Lo que se ve al terminar. |
+| `signing/SignedPanel.tsx` | 144 | El resumen tras firmar, y sus tres salidas (ID-79). |
 | `signing/certificate.ts` | 121 | El certificado, en el lado de la interfaz. |
-| `signing/destination.ts` | 129 | Dónde cae el firmado, y el recorte de esa línea: la función pura del ID-64. |
+| `signing/destination.ts` | 160 | Dónde cae el firmado, el recorte de esa línea —la función pura del ID-64— y quién lleva al usuario hasta el fichero (ID-79). |
 | `signing/visibleSignature.ts` | 91 | Qué se estampa en el recuadro. |
 | `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
@@ -79,8 +79,8 @@ rojo.
 | `i18n/LanguageProvider.tsx` | 81 | El contexto. |
 | `i18n/languages.ts` | 45 | Los seis idiomas. |
 | `i18n/preference.ts` | 34 | De dónde sale y a dónde vuelve el idioma. |
-| `i18n/locales/es.ts` | 445 | Castellano: además de catálogo, **la forma** del catálogo. |
-| `i18n/locales/en.ts` | 359 | Inglés, el otro con contenido en v0.1. |
+| `i18n/locales/es.ts` | 451 | Castellano: además de catálogo, **la forma** del catálogo. |
+| `i18n/locales/en.ts` | 362 | Inglés, el otro con contenido en v0.1. |
 | `i18n/locales/ca.ts` `i18n/locales/eu.ts` `i18n/locales/gl.ts` `i18n/locales/va.ts` | ~362 | Claves sí, textos no. No se leen. |
 | **`errors/`** | | Los fallos que ve el usuario. |
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |

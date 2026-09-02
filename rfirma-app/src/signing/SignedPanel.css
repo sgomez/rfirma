@@ -5,7 +5,12 @@
  * con otro contenido, no otra pantalla.
  */
 
-/* «Firmar otro documento» ocupa el pie entero: es la única salida del estado. */
-.signed-panel__again {
+/*
+ * Los tres botones van **uno sobre otro y a ancho completo** (ID-79). Apilarlos
+ * ya lo hace `.panel__footer`, que es una columna; lo que se declara aquí es el
+ * ancho, porque `.rf-btn` es `inline-flex` y sin esto los tres saldrían del
+ * tamaño de su etiqueta y con tres anchos distintos.
+ */
+.signed-panel__action {
   width: 100%;
 }

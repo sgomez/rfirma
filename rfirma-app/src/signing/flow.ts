@@ -22,6 +22,13 @@ export interface SignedDocument {
   name: string;
   /** El nombre de la carpeta donde quedó, no su ruta. */
   folder: string;
+  /**
+   * Cuántos bytes ocupa el fichero que ha quedado.
+   *
+   * Lo cuenta la postfirma al escribirlo y **no se recalcula** abriéndolo otra
+   * vez (ID-77): la ventana ni siquiera conoce su ruta para poder hacerlo.
+   */
+  sizeBytes: number;
 }
 
 /**
