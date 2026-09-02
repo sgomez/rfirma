@@ -11,7 +11,9 @@ misma PR que lo crea**, o el PR sale en rojo.
 
 - **Para situarte, `just outline <ruta>`; nunca `cat` de un módulo de más de 300
   líneas.** El esqueleto trae cada `fn`, `struct` y prueba con su número de línea
-  y la primera línea de su `///`; desde ahí, `sed -n 'A,Bp'` para el tramo.
+  y la primera línea de su `///`; desde ahí, `sed -n 'A,Bp;C,Dp'` con **todos**
+  los tramos en una sola llamada — un turno por tramo sale más caro que haber
+  leído el módulo entero.
   La tabla de abajo da el tamaño de cada módulo antes de que lo abras.
 - **Los tests van al final de cada módulo**, tras `#[cfg(test)]`. No los leas
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:

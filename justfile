@@ -394,8 +394,11 @@ outline path:
             name, $1, $2, $2 / 3500
         if ($1 < 120)
             printf "   Es corto: leelo entero si vas a tocarlo. --\n"
-        else
-            printf "   Abre SOLO el tramo que necesites: sed -n %cA,Bp%c %s --\n", 39, 39, name
+        else {
+            printf "   Abre los tramos que necesites, TODOS EN UNA SOLA LLAMADA:\n"
+            printf "     sed -n %cA,Bp;C,Dp%c %s\n", 39, 39, name
+            printf "   Un turno por tramo sale mas caro que leer el fichero entero. --\n"
+        }
     }'
     # Los dos caminos de error de arriba ya han salido con 1. Aqui solo queda el
     # 141 de un SIGPIPE si alguien encadena un `head`, y eso no es un fallo.

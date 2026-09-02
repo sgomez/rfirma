@@ -83,11 +83,18 @@ en la llamada 15 de 120 se paga ciento y pico veces. Por eso:
 
 * **Para situarte en un fichero, `just outline <ruta>`, nunca `cat`.** Imprime
   el esqueleto —cada elemento público y cada prueba, con su número de línea y la
-  primera línea de su documentación— y desde ahí abres el tramo con
-  `sed -n 'A,Bp'`. Funciona con `.rs`, `.ts` y `.tsx`; para lo demás,
+  primera línea de su documentación— y desde ahí abres los tramos que te hagan
+  falta. Funciona con `.rs`, `.ts` y `.tsx`; para lo demás,
   `grep -n '<símbolo>'`. El pie de la salida dice lo que habría costado leerlo
   entero, medido en ese momento.
-* **`cat` solo de ficheros que la tabla del índice marque por debajo de 300
+* **Los tramos se abren todos de golpe, `sed -n 'A,Bp;C,Dp'`, no de uno en
+  uno.** La unidad de coste es el turno, no el carácter. Medido sobre las
+  ejecuciones de un día: el esqueleto bajó un tercio lo que crece el contexto
+  por turno, y aun así los tickets salieron más caros, porque el agente pasó de
+  diez lecturas sueltas a veinticinco y cada ida y vuelta se arrastra todo el
+  contexto anterior. Si `outline` te ha dicho dónde están las cinco cosas que
+  buscas, pídelas en una llamada.
+* **`cat` solo de ficheros que el pie de `just outline` marque por debajo de 300
   líneas**, y solo si vas a tocarlos enteros.
 * **Los tests no se leen para entender el código**, solo para tocarlos. Sus
   nombres son frases y se listan con un `grep -n 'fn \|it('` que cuesta cien
