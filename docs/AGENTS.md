@@ -55,5 +55,10 @@ sistema de diseño entero (14 KB).
 `triage-labels.md` · `domain.md` · `prototyping.md` ·
 `developer-defaults.md` · `delivery-ledger.md`
 
+Dos de ellos son **anexos de una sola fase**, y no se abren fuera de ella:
+`code-host-ci.md` (esperar, leer o clasificar el CI de una PR — incluye qué
+verifica de verdad el verde y los dos carriles) y `issue-authoring.md` (crear
+issues hijos: enlace nativo de sub-issue y `## Spec extract`).
+
 Los lee el orquestador y los trabajadores de `/developer`. **No los leas si no
 vas a publicar un issue o una PR.**

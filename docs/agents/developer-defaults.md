@@ -7,7 +7,7 @@ flags override them: `--parallel` / `--sequential`, `--auto-merge` /
 ```
 execution: sequential
 merge: auto
-oversized: escalate
+oversized: build
 ```
 
 - `execution` — `parallel` builds independent sub-issues concurrently in
