@@ -5,7 +5,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type WheelEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -60,7 +59,7 @@ import {
 const NUDGE = 1;
 const NUDGE_FAST = 10;
 
-/** Las teclas de página, y a qué página lleva cada una. */
+/** Las teclas de página. A cuál lleva cada una lo reparte `navigate`. */
 const PAGE_KEYS = new Set(["PageDown", "PageUp", "Home", "End"]);
 
 interface DocumentViewerProps {
@@ -122,7 +121,13 @@ export function DocumentViewer({
   const sheet = useRef<HTMLDivElement>(null);
   // La parte visible: la que se mide para ajustar, la que se desplaza al
   // anclar el zoom al puntero y la que dice si el recuadro se ve o no.
-  const surface = useRef<HTMLDivElement>(null);
+  //
+  // Va en estado y no en un `ref` **a propósito**: sólo existe en la rama con
+  // documento, y el visor se monta con `pdf === null`. Con un `ref`, todo
+  // efecto que quisiera engancharse a ella corría en el montaje, la encontraba
+  // vacía y no volvía a correr jamás; con estado, el elemento avisa de que ya
+  // está ahí y los efectos se rehacen solos.
+  const [surface, setSurface] = useState<HTMLDivElement | null>(null);
   // Una cola por lienzo, creada una sola vez: es quien garantiza que no haya
   // dos pintadas vivas.
   const queue = useRef<RenderQueue | null>(null);
@@ -227,11 +232,10 @@ export function DocumentViewer({
   // La parte visible se mide sola y avisa de cada cambio, que es lo que hace de
   // «ajustar» un modo y no un cálculo de una vez (ID-117).
   useEffect(() => {
-    const element = surface.current;
-    if (!element) return;
-    setVisible({ width: element.clientWidth, height: element.clientHeight });
-    return observeSize(element, setVisible);
-  }, []);
+    if (!surface) return;
+    setVisible({ width: surface.clientWidth, height: surface.clientHeight });
+    return observeSize(surface, setVisible);
+  }, [surface]);
 
   // Ajustar es una razón entre la parte visible y la página: cambie la que
   // cambie, la escala se recalcula. Con el zoom fijado a mano no hay nada que
@@ -248,12 +252,11 @@ export function DocumentViewer({
   //
   // biome-ignore lint/correctness/useExhaustiveDependencies: `viewport` no se lee, dispara: es la señal de que la hoja ya tiene el tamaño nuevo.
   useLayoutEffect(() => {
-    const element = surface.current;
     const wanted = anchor.current;
-    if (!element || !wanted) return;
+    if (!surface || !wanted) return;
     anchor.current = null;
-    element.scrollLeft = wanted.left;
-    element.scrollTop = wanted.top;
+    surface.scrollLeft = wanted.left;
+    surface.scrollTop = wanted.top;
   }, [viewport]);
 
   // El recuadro se pinta **sólo en su página**: con el ID-96 en cualquier otra
@@ -265,22 +268,28 @@ export function DocumentViewer({
   // Al cambiar de página, un recuadro que quede fuera de la parte visible se
   // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
   // o al cambiar el zoom impediría mirar otra zona de la misma página (ID-118).
+  //
+  // La página se da por atendida **en cuanto se ha podido mirar**, haya
+  // recuadro o no: el recuadro se pinta sólo en su página (ID-96), así que
+  // marcarla sólo cuando lo hay dejaba la marca clavada en la página del
+  // recuadro y el regreso a ella —el único caso que el ID-118 quiere cubrir—
+  // salía por la guarda sin hacer nada.
   const broughtIn = useRef(page);
   useEffect(() => {
     if (broughtIn.current === page) return;
-    const element = boxElement.current;
-    const area = surface.current;
-    if (!viewport || !element || !area) return;
+    if (!surface || !viewport) return;
     broughtIn.current = page;
+    const element = boxElement.current;
+    if (!element) return;
     const box = element.getBoundingClientRect();
-    const frame = area.getBoundingClientRect();
+    const frame = surface.getBoundingClientRect();
     const seen =
       box.top >= frame.top &&
       box.bottom <= frame.bottom &&
       box.left >= frame.left &&
       box.right <= frame.right;
     if (!seen) element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-  }, [page, viewport]);
+  }, [page, viewport, surface]);
 
   /** Confirma el recuadro movido, ya en píxeles del lienzo. */
   const place = useCallback(
@@ -337,10 +346,10 @@ export function DocumentViewer({
   };
 
   /** Un zoom fijado a mano, que es lo que saca del modo de ajuste (ID-117). */
-  const toZoom = (value: number) => {
+  const toZoom = useCallback((value: number) => {
     setMode({ kind: "free", value });
     setZoom(value);
-  };
+  }, []);
 
   /**
    * La hoja atiende las teclas de página, y también las del recuadro cuando
@@ -365,22 +374,41 @@ export function DocumentViewer({
    * llega por aquí sin una línea aparte: el navegador lo entrega como una rueda
    * con `ctrlKey` (ID-116).
    */
-  const zoomAtPointer = (event: WheelEvent<HTMLDivElement>) => {
-    if (!event.ctrlKey) return;
-    event.preventDefault();
-    const next = pinchedZoom(zoom, event.deltaY);
-    if (next === zoom) return;
-    const element = surface.current;
-    if (element) {
-      const frame = element.getBoundingClientRect();
-      anchor.current = anchoredScroll(
-        { left: element.scrollLeft, top: element.scrollTop },
-        { x: event.clientX - frame.left, y: event.clientY - frame.top },
-        next / zoom,
-      );
-    }
-    toZoom(next);
-  };
+  const zoomAtPointer = useCallback(
+    (event: globalThis.WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const next = pinchedZoom(zoom, event.deltaY);
+      if (next === zoom) return;
+      if (surface) {
+        const frame = surface.getBoundingClientRect();
+        // Un pellizco de trackpad emite decenas de eventos seguidos, y el
+        // desplazamiento del anterior aún no se ha aplicado —lo aplica el
+        // `useLayoutEffect` cuando llega el viewport nuevo—. Partir del
+        // `scroll` del elemento anclaría sobre un valor viejo, así que
+        // mientras haya uno pendiente se compone sobre él.
+        const from = anchor.current ?? { left: surface.scrollLeft, top: surface.scrollTop };
+        anchor.current = anchoredScroll(
+          from,
+          { x: event.clientX - frame.left, y: event.clientY - frame.top },
+          next / zoom,
+        );
+      }
+      toZoom(next);
+    },
+    [zoom, surface, toZoom],
+  );
+
+  // React marca `wheel` como oyente **pasivo** (`addTrappedEventListener`, en
+  // `DOMPluginEventSystem`), y dentro de uno pasivo `preventDefault()` no hace
+  // nada: con la prop `onWheel`, `Ctrl`+rueda y el pellizco conservaban su
+  // acción por defecto y ampliaban el WebView entero además del documento. El
+  // oyente se engancha a mano, con `passive: false`.
+  useEffect(() => {
+    if (!surface) return;
+    surface.addEventListener("wheel", zoomAtPointer, { passive: false });
+    return () => surface.removeEventListener("wheel", zoomAtPointer);
+  }, [surface, zoomAtPointer]);
 
   /** Los botones ± tropiezan con los siete escalones, no con el continuo. */
   const stepZoom = (direction: 1 | -1) => toZoom(steppedZoom(zoom, direction));
@@ -423,7 +451,7 @@ export function DocumentViewer({
           <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
         </div>
       )}
-      <div className="viewer__scroll" ref={surface} onWheel={zoomAtPointer}>
+      <div className="viewer__scroll" ref={setSurface}>
         <div
           ref={sheet}
           className="viewer__sheet"

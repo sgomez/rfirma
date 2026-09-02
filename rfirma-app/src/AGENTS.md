@@ -63,7 +63,7 @@ rojo.
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 602 | El visor. |
+| `viewer/DocumentViewer.tsx` | 622 | El visor. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 68 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |

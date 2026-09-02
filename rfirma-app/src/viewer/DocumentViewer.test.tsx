@@ -488,6 +488,31 @@ describe("el zoom continuo", () => {
     expect(renders[1]?.scale).toBeCloseTo(Math.exp(0.5), 6);
   });
 
+  /**
+   * React registra `wheel` como oyente **pasivo**, y dentro de uno pasivo
+   * `preventDefault()` es un no-op: con la prop `onWheel` el gesto conservaba
+   * su acción por defecto y ampliaba el WebView entero además del documento.
+   */
+  it("cancels the browser's own zoom, which a passive listener could not", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    const gesture = new WheelEvent("wheel", {
+      ctrlKey: true,
+      deltaY: -100,
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => {
+      surfaceOf(container).dispatchEvent(gesture);
+    });
+
+    expect(gesture.defaultPrevented).toBe(true);
+  });
+
   it("leaves the wheel alone without Ctrl, which is how the document scrolls", async () => {
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(
@@ -575,6 +600,28 @@ describe("«ajustar» como modo", () => {
     await waitFor(() =>
       expect(latest(second.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width),
     );
+  });
+
+  /**
+   * El visor se monta con `pdf === null` —`App.tsx` no lo condiciona ni le
+   * pone `key`—, y la parte visible sólo existe en la rama con documento. Si
+   * el observador se enganchara en el montaje, no se engancharía nunca y
+   * «ajustar» no ajustaría nada en lo que se instala.
+   */
+  it("fits a document that arrived after the viewer was already mounted", async () => {
+    const observer = stubResizeObserver();
+    const { document, renders } = recordingDocument();
+    const { container, rerender } = renderWithCatalog(
+      <DocumentViewer pdf={null} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+
+    rerender(<DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+    observer.resizeTo(surfaceOf(container), 800, 600);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
+
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((800 * 0.92) / A4.width));
   });
 
   it("fits the whole page when that is what was asked, tighter axis first", async () => {
@@ -730,6 +777,61 @@ describe("el tope del mapa de bits", () => {
 });
 
 /** La última pintada lanzada, que es la que se está mirando. */
+describe("el recuadro que se trae a la vista", () => {
+  /**
+   * ID-118. El recuadro se pinta **sólo en su página**, así que la página de
+   * paso no tiene ninguno: si el paso por ella no contara como atendida, el
+   * regreso a la página del recuadro —el único caso que esto cubre— saldría
+   * por la guarda sin traer nada.
+   */
+  it("brings the box back into view on returning to its page", async () => {
+    const brought = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      value: brought,
+      configurable: true,
+      writable: true,
+    });
+    // `jsdom` no hace layout: sin esto todo mide cero y el recuadro siempre
+    // «se ve». El recuadro se pone lejos, fuera de la parte visible.
+    const measure = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const far = this.classList.contains("viewer__box");
+        return {
+          top: far ? 5000 : 0,
+          bottom: far ? 5100 : 600,
+          left: 0,
+          right: far ? 100 : 800,
+          width: far ? 100 : 800,
+          height: far ? 100 : 600,
+          x: 0,
+          y: far ? 5000 : 0,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+
+    try {
+      const { document, renders } = recordingDocument(3);
+      renderWithCatalog(
+        <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+      );
+      await waitFor(() => expect(renders).toHaveLength(1));
+      expect(brought).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+      await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(2));
+
+      fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
+      await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(1));
+
+      await waitFor(() => expect(brought).toHaveBeenCalled());
+    } finally {
+      measure.mockRestore();
+      delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+    }
+  });
+});
+
 function latest(renders: Recorder["renders"]) {
   return renders[renders.length - 1];
 }

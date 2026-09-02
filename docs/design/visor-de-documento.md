@@ -135,7 +135,10 @@ barra y no en un menú *Ver*.
 **El zoom es continuo, del 25 % al 400 %** (ID-116). `Ctrl`+rueda amplía
 **anclado al puntero** —y el pellizco del trackpad llega por ese mismo camino,
 porque el navegador lo entrega como una rueda con `Ctrl`—; el porcentaje se
-teclea y se recorta al rango en vez de rechazarse; `Ctrl+0` vuelve al 100 %. Los
+teclea y se recorta al rango en vez de rechazarse; `Ctrl+0` vuelve al 100 %
+**con el foco en la hoja o en el recuadro** —desde donde burbujea—, que es donde
+se está mirando el documento; con el foco en la barra, el 100 % está a un
+teclazo en el propio campo del porcentaje. Los
 botones ± ya no son *el* zoom: son los **siete escalones** con los que
 tropiezan, para que pulsar «acercar» caiga en un número redondo y no en el
 137 % en el que quedó el pellizco.
