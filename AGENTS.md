@@ -64,6 +64,32 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 * **Empaquetado:** `packaging/flatpak/`
 * **Punto de entrada de todo:** `justfile` — ver el [ADR-0013](docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md).
 
+### 🗺️ Mapas: lee el índice antes que el código
+
+Hay un índice por zona, y **cada uno da el tamaño de cada fichero antes de que
+lo abras**. Son la primera lectura de cualquier trabajo, y en la mayoría de los
+casos la única que hace falta además del fichero que vas a tocar:
+
+* `rfirma-app/src-tauri/src/AGENTS.md` — mapa del backend Rust.
+* `rfirma-app/src/AGENTS.md` — mapa de la interfaz.
+* `docs/AGENTS.md` — índice de ADR, research, fichas de diseño y contratos de proceso.
+
+**Presupuesto de exploración.** Explorar es lo que agota el contexto, no
+escribir código: en una sesión medida, leer ficheros se llevó el 58 % del
+contexto y escribir el parche el 3 %. Por eso:
+
+* **Nunca `cat` de un fichero de más de 300 líneas**, ni de uno que el índice
+  marque como grande. `grep -n '<símbolo>'` para situarte y `sed -n 'A,Bp'` para
+  el tramo. `commands/mod.rs` completo son ~24k tokens; casi nunca los necesitas.
+* **Los tests no se leen para entender el código**, solo para tocarlos. Sus
+  nombres son frases y se listan con un `grep -n 'fn \|it('` que cuesta cien
+  veces menos.
+* **Un documento de `docs/` se abre por `grep`, no por `cat`.** Los de
+  `research/` llegan a 32 KB y solo se consultan si vas a cambiar la decisión
+  que sostienen.
+* Si acabas leyendo entero un fichero que el índice no anunciaba, **el índice
+  está mal**: arréglalo en la misma PR, en `## Discoveries`.
+
 
 
 ---

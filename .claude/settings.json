@@ -2,6 +2,19 @@
   "enabledPlugins": {
     "developer-skills@sgomez": true
   },
+  "skillOverrides": {
+    "dataviz": "user-invocable-only",
+    "artifact-capabilities": "user-invocable-only",
+    "workflow-authoring": "user-invocable-only",
+    "update-config": "user-invocable-only",
+    "keybindings-help": "user-invocable-only",
+    "schedule": "user-invocable-only",
+    "loop": "user-invocable-only",
+    "find-skills": "user-invocable-only",
+    "humanizer": "user-invocable-only",
+    "claude-api": "user-invocable-only",
+    "init": "user-invocable-only"
+  },
   "permissions": {
     "allow": [
       "Bash(gh pr ready:*)",
