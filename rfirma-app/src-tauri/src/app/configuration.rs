@@ -33,7 +33,7 @@ pub fn shown(
     configuration: &Configuration,
     documents_folder: &std::path::Path,
 ) -> ConfigurationView {
-    let folder = crate::destination::chosen_folder(configuration, documents_folder.to_path_buf());
+    let folder = super::chosen_folder(configuration, documents_folder.to_path_buf());
     ConfigurationView {
         language: configuration.language.tag().to_owned(),
         destination: folder.name().to_owned(),
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn writing_the_configuration_never_moves_the_destination_folder() {
         let live = Configuration {
-            destination: Some(crate::memory::DestinationFolder::at(
+            destination: Some(crate::destination::DestinationFolder::at(
                 "/home/quien/Documentos/Firmados",
             )),
             ..Configuration::default()

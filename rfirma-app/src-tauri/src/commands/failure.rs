@@ -12,12 +12,13 @@
 
 use serde::Serialize;
 
+use crate::app::cycle;
 use crate::destination::DestinationError;
 use crate::ffi::BridgeError;
 use crate::isolate::IsolateGone;
 use crate::memory::{MemoryError, Situation as MemorySituation};
 use crate::pkcs11::{Situation, TokenError};
-use crate::signing::{cycle, Refusal, SealMismatch};
+use crate::signing::{Refusal, SealMismatch};
 
 /// Lo que la ventana recibe cuando algo sale mal.
 ///

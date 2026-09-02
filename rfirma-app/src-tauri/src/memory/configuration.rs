@@ -12,44 +12,10 @@
 //! Borrar la configuración no pierde el trabajo, y borrar el estado no
 //! reconfigura la aplicación: por eso son dos ficheros y no uno.
 
-use std::path::{Path, PathBuf};
-
 use serde::{Deserialize, Serialize};
 
+use crate::destination::DestinationFolder;
 use crate::signing::Language;
-
-/// La carpeta donde cae el documento firmado.
-///
-/// Bajo el arenero la aplicación **escribe** en ella pero la única palabra que
-/// tiene de ella es su último segmento, así que el ajuste enseña el
-/// [`nombre`](DestinationFolder::name) y no la ruta (ADR-0011). Se guarda la
-/// ruta entera porque es lo que hace falta para volver a escribir; enseñarla es
-/// otra decisión, y es de la interfaz.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DestinationFolder {
-    path: PathBuf,
-}
-
-impl DestinationFolder {
-    /// La carpeta que hay en `path`.
-    pub fn at(path: impl Into<PathBuf>) -> Self {
-        Self { path: path.into() }
-    }
-
-    /// La ruta, para escribir en ella.
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-
-    /// El último segmento, que es lo que ve el usuario. Vacío si la ruta no
-    /// tiene ninguno —una raíz—, y entonces la interfaz enseña la ruta.
-    pub fn name(&self) -> &str {
-        self.path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default()
-    }
-}
 
 /// El tema de la ventana: lo que el usuario elige ver.
 ///
@@ -125,13 +91,6 @@ mod tests {
 
         assert!(configuration.remember_visible_signature);
         assert!(configuration.remember_activity);
-    }
-
-    #[test]
-    fn the_destination_shows_its_name_and_not_its_path() {
-        let folder = DestinationFolder::at("/home/quien/Documentos/Firmados");
-
-        assert_eq!(folder.name(), "Firmados");
     }
 
     #[test]

@@ -6,6 +6,13 @@
 //! repartido a propósito: tres módulos negociando esta frontera por separado es
 //! justo el fallo que el ADR-0016 documenta.
 //!
+//! **Vive en [`crate::app`] y no en [`crate::signing`]** (ID-82). Es
+//! orquestación: llama a la frontera nativa y al token, así que ponerlo entre
+//! las reglas puras de la firma obligaba a que esas reglas importaran
+//! [`crate::ffi`], y eso cerraba un ciclo entre los dos módulos. Aquí las
+//! dependencias van todas hacia el dominio (ID-81), y las recibe explícitas:
+//! el puente entra por argumento en [`presign`] y en [`OpenCycle::postsign`].
+//!
 //! ```text
 //!   1. prefirma   Java   PDF + cadena + extraParams  ->  PRE (DER) + sesión + sello
 //!   2. firma      Rust   PRE  --CKM_SHA256_RSA_PKCS-->  PK1
@@ -39,12 +46,11 @@
 
 use base64::Engine;
 
-use super::admissibility::{AdmissibleDocument, Refusal};
-use super::config::SignatureConfig;
-use super::properties::to_java_properties;
-use super::session_seal::{SealMismatch, SessionSeal};
 use crate::ffi::{BridgeError, NativeBridge, PostSignRequest, PreSignRequest};
 use crate::pkcs11::{self, CertificateRef, TokenError};
+use crate::signing::{
+    to_java_properties, AdmissibleDocument, Refusal, SealMismatch, SessionSeal, SignatureConfig,
+};
 
 /// El algoritmo de firma, en el nombre que entiende Java.
 ///

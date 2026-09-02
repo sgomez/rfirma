@@ -165,7 +165,7 @@ pub struct DroppedDocumentView {
 
 /// La configuración, tal como la ventana la ve: **ningún `PathBuf`**.
 ///
-/// El destino sale por su [`nombre`](crate::memory::DestinationFolder::name) y
+/// El destino sale por su [`nombre`](crate::destination::DestinationFolder::name) y
 /// nunca por su ruta, igual que todo lo demás que cruza (ADR-0011). Y va en un
 /// solo sentido de verdad: la ventana **no elige la carpeta** —bajo el arenero
 /// hay una y solo una—, así que el destino que llegue en una escritura se
