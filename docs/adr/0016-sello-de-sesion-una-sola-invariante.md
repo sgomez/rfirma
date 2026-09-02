@@ -40,3 +40,24 @@ que el usuario ve estampada en el recuadro.
 El sello es opaco para Rust **por diseño**. Si algún día hace falta leer un valor de dentro, la
 respuesta es que la prefirma lo devuelva aparte, no abrir el sello: en cuanto Rust lo
 interpreta, puede reconstruirlo, y un sello reconstruible no protege de nada.
+
+## Enmienda: el conjunto de páginas viaja dentro del sello, y por eso no hay obra
+
+Añadido con el hito v0.3 ([#148](https://github.com/sgomez/rfirma/issues/148)).
+No cambia el mecanismo: lo registra, porque la pregunta se abrió y la respuesta
+está medida ([#150](https://github.com/sgomez/rfirma/issues/150)).
+
+El multipágina no añade un campo al sello. **`signaturePages` es un
+`extraParam`**, cruza el puente con toda su gramática sin una línea de Java
+nueva —`SessionStamp.parseParams` es un `Properties.load` en crudo— y **no sale
+mutado de la prefirma**, así que los `extraParams` **efectivos** que este ADR ya
+serializa lo llevan dentro por existir. La invariante sigue siendo una sola
+comparación de bytes, y el conjunto de páginas queda atado igual que el `TIME`.
+
+Lo que **no** entra en el sello, y hay que decirlo para que no se le atribuya:
+`imagePage`, que es el sello sin firmar y está fuera de la lista cerrada de
+ajustes; y la **validación del destino**, que ocurre **antes** de llamar al
+puente y es de Rust. `PdfUtil.getPages` no lanza nunca —recorta, avisa por
+`WARNING` y cae en la última página—, y la respuesta de la prefirma no dice
+dónde acabó el widget: no hay nada que el sello pueda proteger ahí, porque el
+fallo ya ocurrió y se llama éxito.
