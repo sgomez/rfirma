@@ -1,21 +1,31 @@
 //! rfirma: firma y cofirma de PDFs en PAdES con firma visible.
 //!
-//! De momento la ventana está vacía: lo único que hay debajo son
-//! [`pkcs11`], la capa que habla con el token, [`rubric`], la normalización y
-//! el almacén de la imagen de la firma, [`signing`], la configuración de firma
-//! y el sello de sesión, [`ffi`], la frontera con la librería nativa,
-//! [`memory`], lo que se recuerda entre sesiones, [`destination`], por dónde
-//! entra el documento y dónde cae el firmado, [`dropped`], qué se abre de lo
-//! que se suelta en la ventana, y [`paths`], el único sitio que
-//! sabe qué sistema operativo hay debajo. La orquestación de las tres fases
-//! —quién llama a la prefirma, quién firma con el token y quién postfirma—
-//! todavía no está: la aporta un sub-issue siguiente de #46. Si te encuentras
-//! escribiendo Rust que sabe qué es un PDF, te has salido de estos módulos.
+//! El backend está en tres alturas, y se leen de arriba abajo:
+//!
+//! - [`commands`], las once órdenes de Tauri. Desempaquetan el estado, llaman a
+//!   un caso de uso y traducen el resultado. No deciden nada (ID-79).
+//! - [`app`], los casos de uso: qué certificados hay, cómo se planifica y se
+//!   entrega una firma, qué se recuerda entre sesiones. Es la interfaz por la
+//!   que se prueba (ID-77).
+//! - Los módulos de dominio e infraestructura, que no saben que las dos
+//!   alturas de arriba existen (ID-81): [`pkcs11`], la capa que habla con el
+//!   token; [`rubric`], la normalización y el almacén de la imagen de la firma;
+//!   [`signing`], las reglas puras de la firma y el sello de sesión; [`ffi`] y
+//!   [`isolate`], la frontera con la librería nativa y el hilo que la posee;
+//!   [`memory`], lo que se recuerda entre sesiones; [`destination`], por dónde
+//!   entra el documento y dónde cae el firmado; [`dropped`], qué se abre de lo
+//!   que se suelta en la ventana; y [`paths`], el único sitio que sabe qué
+//!   sistema operativo hay debajo.
+//!
+//! Si te encuentras escribiendo Rust que sabe qué es un PDF, te has salido de
+//! estos módulos.
 
+pub mod app;
 pub mod commands;
 pub mod destination;
 pub mod dropped;
 pub mod ffi;
+pub mod isolate;
 pub mod memory;
 pub mod paths;
 pub mod pkcs11;
@@ -39,7 +49,7 @@ pub fn run() {
         .configuration()
         .map(memory::Loaded::into_value)
         .unwrap_or_default();
-    let environment = commands::Environment {
+    let environment = app::Environment {
         // Los almacenes se resuelven **aquí**, en el binario, y no en la
         // receta que lo arranca: es lo que hace que `just dev` encuentre el
         // token del anfitrión sin exportar nada, y con el mismo código que
@@ -66,7 +76,7 @@ pub fn run() {
         // todavía**: quien solo quiere mirar un PDF no paga el dlopen de 27,7
         // MB, y una librería que falta se cuenta como un error de firma y no
         // como una ventana que no abre.
-        .manage(commands::Isolate::start())
+        .manage(isolate::Isolate::start())
         .manage(commands::SigningSession::default())
         // Los documentos abiertos, del identificador opaco al documento del
         // portal (ID-61). Vive mientras vive el proceso.
