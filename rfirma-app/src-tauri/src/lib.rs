@@ -2,7 +2,7 @@
 //!
 //! El backend está en tres alturas, y se leen de arriba abajo:
 //!
-//! - [`commands`], las catorce órdenes de Tauri. Desempaquetan el estado, llaman a
+//! - [`commands`], las quince órdenes de Tauri. Desempaquetan el estado, llaman a
 //!   un caso de uso y traducen el resultado. No deciden nada (ID-79).
 //! - [`app`], los casos de uso: qué certificados hay, cómo se planifica y se
 //!   entrega una firma, qué se recuerda entre sesiones. Es la interfaz por la
@@ -64,6 +64,9 @@ pub fn run() {
         // ajustes tienen que actualizar la copia viva y el fichero a la vez, y
         // dos estados separados invitan a hacer solo una de las dos cosas.
         memory,
+        // Se copia, no se referencia (ID-33): el almacén vive en una ruta fija
+        // del directorio de datos, resuelta aquí una sola vez.
+        rubric: rubric::RubricStore::at(paths.rubric_path()),
     };
 
     tauri::Builder::default()
@@ -160,6 +163,8 @@ pub fn run() {
             commands::list_recents,
             commands::record_recent,
             commands::forget_recent,
+            commands::choose_rubric,
+            commands::read_rubric,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

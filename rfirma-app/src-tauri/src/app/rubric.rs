@@ -1,0 +1,113 @@
+//! Elegir la rúbrica: adopta en el almacén lo que el diálogo del portal
+//! concede (ID-82).
+//!
+//! No decide nada que [`crate::rubric::RubricStore::adopt`] no decida ya —leer
+//! con tope, normalizar, copiar—: la única razón por la que este módulo existe
+//! es la regla de dirección, que a [`crate::commands`] solo le deja llamar a
+//! [`crate::app`] (ID-79, ID-81). Las seis situaciones de fallo se prueban a
+//! fondo en `rubric::store` y `rubric::normalize`; aquí solo se prueba que la
+//! orden llama a lo que tiene que llamar, que es lo que TD-21 pide de un caso
+//! de uso nuevo.
+
+use tauri_plugin_dialog::FilePath;
+
+use crate::rubric::{NormalizedRubric, RubricError, RubricStore, Situation};
+
+/// Adopta la imagen que el usuario acaba de elegir en el diálogo del portal.
+///
+/// Clasifica aquí lo que la orden no debe clasificar (ID-79): un `FilePath`
+/// que el portal no resuelve a una ruta local es la misma familia de fallo
+/// que una imagen que `RubricStore::adopt` rechaza, así que ambos casos
+/// terminan en el mismo `Result`.
+pub fn choose(store: &RubricStore, chosen: FilePath) -> Result<NormalizedRubric, RubricError> {
+    let source = chosen
+        .into_path()
+        .map_err(|error| RubricError::new(Situation::SourceUnreadable, error.to_string()))?;
+    store.adopt(&source)
+}
+
+/// La rúbrica que ya estaba adoptada, si la hay: lo que `read_rubric` pide al
+/// arrancar para que una sesión nueva encuentre la de la anterior (ID-33).
+pub fn stored(store: &RubricStore) -> Result<Option<Vec<u8>>, RubricError> {
+    store.stored()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::Cursor;
+
+    use image::{ImageFormat, Rgba, RgbaImage};
+    use tauri_plugin_dialog::FilePath;
+
+    use super::{choose, stored};
+    use crate::rubric::RubricStore;
+
+    /// **Grada A**: escribe en un directorio temporal, sin token ni puente.
+    fn a_png(path: &std::path::Path) {
+        let mut image = RgbaImage::new(10, 10);
+        for pixel in image.pixels_mut() {
+            *pixel = Rgba([10, 20, 30, 255]);
+        }
+        let mut bytes = Vec::new();
+        image
+            .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+            .expect("el PNG de prueba deberia codificarse");
+        fs::write(path, bytes).expect("el PNG de prueba deberia escribirse");
+    }
+
+    #[test]
+    fn choosing_adopts_the_picked_image_into_the_store() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let source = home.path().join("firma-escaneada.png");
+        a_png(&source);
+        let store = RubricStore::at(home.path().join("rubric.jpg"));
+
+        let normalized =
+            choose(&store, FilePath::from(source.as_path())).expect("deberia adoptar la imagen");
+
+        assert_eq!(
+            store.stored().expect("deberia leerse"),
+            Some(normalized.bytes().to_vec())
+        );
+    }
+
+    #[test]
+    fn choosing_a_file_that_is_not_an_image_fails_without_touching_the_store() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let source = home.path().join("no-es-una-imagen.txt");
+        fs::write(&source, b"esto no es una imagen").expect("deberia escribirse");
+        let store = RubricStore::at(home.path().join("rubric.jpg"));
+
+        let error =
+            choose(&store, FilePath::from(source.as_path())).expect_err("deberia rechazarse");
+
+        assert_eq!(
+            error.situation(),
+            crate::rubric::Situation::NotAnAcceptedImage
+        );
+        assert_eq!(store.stored().expect("deberia leerse"), None);
+    }
+
+    #[test]
+    fn stored_reads_back_what_a_previous_session_adopted() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let source = home.path().join("firma-escaneada.png");
+        a_png(&source);
+        let store = RubricStore::at(home.path().join("rubric.jpg"));
+        let normalized =
+            choose(&store, FilePath::from(source.as_path())).expect("deberia adoptar la imagen");
+
+        let bytes = stored(&store).expect("deberia leerse");
+
+        assert_eq!(bytes, Some(normalized.bytes().to_vec()));
+    }
+
+    #[test]
+    fn stored_is_none_when_nothing_has_been_adopted_yet() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let store = RubricStore::at(home.path().join("rubric.jpg"));
+
+        assert_eq!(stored(&store).expect("deberia leerse"), None);
+    }
+}

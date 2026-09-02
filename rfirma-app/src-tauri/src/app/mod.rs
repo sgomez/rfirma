@@ -31,6 +31,7 @@ pub mod configuration;
 pub mod cycle;
 pub mod documents;
 pub mod recents;
+pub mod rubric;
 pub mod signing;
 pub mod window;
 
@@ -70,6 +71,8 @@ pub struct Environment {
     pub configuration: Mutex<Configuration>,
     /// Los dos ficheros donde se recuerda. Ver [`crate::memory::Memory`].
     pub memory: Memory,
+    /// El almacén de la rúbrica: se copia, no se referencia (ID-33).
+    pub rubric: crate::rubric::RubricStore,
 }
 
 impl Environment {
@@ -148,6 +151,7 @@ mod tests {
                 ..Configuration::default()
             }),
             memory: a_memory(home.path()),
+            rubric: crate::rubric::RubricStore::at(home.path().join("rubric.jpg")),
         };
 
         let copy = environment.configuration();

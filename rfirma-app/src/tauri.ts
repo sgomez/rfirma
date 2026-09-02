@@ -1,11 +1,12 @@
 /**
  * Los puertos que hablan con Tauri: los tres de firma (#60), los dos del
- * documento (#82), el del arrastre (#83) y los dos de la configuración —los
- * ajustes y el idioma—, que comparten fichero debajo.
+ * documento (#82), el del arrastre (#83), los dos de la configuración —los
+ * ajustes y el idioma—, que comparten fichero debajo, y el de la rúbrica
+ * (#128).
  *
  * El del arrastre es el único que no habla con una orden sino con un **evento**
  * de la ventana: soltar un fichero no lo pide la interfaz, le ocurre. Aun así
- * vive aquí por la misma razón que los otros cinco —es donde se importa lo de
+ * vive aquí por la misma razón que los otros —es donde se importa lo de
  * `@tauri-apps/api`— y la ventana lo sigue viendo como un puerto suyo.
  *
  * Este es el **único** fichero del frontal que sabe que debajo hay Tauri, y por
@@ -13,8 +14,9 @@
  * de `signing/` justamente por eso: la frontera es una sola para toda la
  * aplicación, y repartirla por módulos sería tener dos. La ventana y sus
  * pruebas siguen hablando con `CertificateStore`, `Layer2Composer`,
- * `SigningBackend`, `DocumentPicker`, `PdfSource` y `DocumentDrops`, y quien
- * elige entre estas implementaciones y los dobles de memoria es `main.tsx`.
+ * `SigningBackend`, `DocumentPicker`, `PdfSource`, `DocumentDrops` y
+ * `RubricPicker`, y quien elige entre estas implementaciones y los dobles de
+ * memoria es `main.tsx`.
  *
  * # Los fallos llegan clasificados, no traducidos
  *
@@ -40,6 +42,7 @@ import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
+import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { TokenFailure } from "./signing/token";
 import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./signing/visibleSignature";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
@@ -176,6 +179,66 @@ export function tauriDocumentPicker(): DocumentPicker {
     choose: async () => {
       const opened = await invoke<OpenedDocumentView | null>("open_document");
       return opened === null ? null : recentOf(opened);
+    },
+  };
+}
+
+/**
+ * La rúbrica ya normalizada, tal como la devuelve `choose_rubric`. Es
+ * `commands::RubricView` de Rust, campo a campo: el JPEG en Base64, sin el
+ * prefijo `data:` —lo antepone aquí, que es quien sabe que es para un
+ * `<img>`— y sus dimensiones.
+ */
+interface RubricViewPayload {
+  base64: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * Lo que devuelve elegir una rúbrica, tal cual lo emite Rust. Es
+ * `commands::RubricChoiceView`, campo a campo: la imagen adoptada o por qué
+ * no se ha podido, nunca las dos.
+ */
+interface RubricChoiceViewPayload {
+  rubric: RubricViewPayload | null;
+  failure: { situation: string; detail: string } | null;
+}
+
+/**
+ * El selector de la rúbrica, por la orden que abre el diálogo del portal
+ * desde Rust y adopta lo elegido en `RubricStore` (ID-82).
+ *
+ * Cancelar el diálogo devuelve `null`, y **no es un fallo**: es lo que deja
+ * la rúbrica ya elegida como estaba. Una imagen que no vale tampoco revienta
+ * la promesa —viaja como `{ failure }`, con el panel de firma todavía
+ * abierto (ADR-0010)—, así que `choose` no necesita `try`/`catch`: las seis
+ * situaciones de `RubricSituation` llegan ya clasificadas en la propia
+ * respuesta.
+ */
+function rubricOf(payload: RubricViewPayload): Rubric {
+  const { base64, width, height } = payload;
+  return { dataUrl: `data:image/jpeg;base64,${base64}`, width, height };
+}
+
+export function tauriRubricPicker(): RubricPicker {
+  return {
+    choose: async () => {
+      const outcome = await invoke<RubricChoiceViewPayload | null>("choose_rubric");
+      if (outcome === null) return null;
+      if (outcome.rubric !== null) return { rubric: rubricOf(outcome.rubric) };
+      const failure = outcome.failure;
+      if (failure === null) return null;
+      return {
+        failure: {
+          situation: failure.situation as RubricSituation,
+          detail: failure.detail,
+        },
+      };
+    },
+    stored: async () => {
+      const found = await invoke<RubricViewPayload | null>("read_rubric");
+      return found === null ? null : rubricOf(found);
     },
   };
 }

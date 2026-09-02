@@ -13,7 +13,6 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
-import { emptyRubricPicker } from "./signing/rubric";
 import {
   tauriCertificateStore,
   tauriDocumentDrops,
@@ -23,6 +22,7 @@ import {
   tauriPdfSource,
   tauriPreferences,
   tauriRecents,
+  tauriRubricPicker,
   tauriSigningBackend,
 } from "./tauri";
 
@@ -31,16 +31,15 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Nueve puertos hablan ya con el backend: los tres de firma del #60
+// Diez puertos hablan ya con el backend: los tres de firma del #60
 // —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`—, los
 // dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, el del
 // arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
-// de la ventana en vez de llamar a una orden, y los dos de la configuración,
+// de la ventana en vez de llamar a una orden, los dos de la configuración,
 // `tauriPreferences` y `tauriLanguagePreference`, que debajo son el mismo
-// fichero, y el de la bandeja del #126, `tauriRecents`, que es el que la hace
-// sobrevivir al reinicio (ID-75). El único que sigue en memoria es la rúbrica,
-// que toca el disco por un sitio que todavía no tiene orden expuesta; cuando la
-// tenga, se sustituye aquí y en ningún otro sitio: ni la ventana ni sus pruebas
+// fichero, el de la bandeja del #126, `tauriRecents`, que es el que la hace
+// sobrevivir al reinicio (ID-75), y el de la rúbrica del #128, `tauriRubricPicker`.
+// La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
@@ -68,7 +67,7 @@ createRoot(root).render(
         preferences={preferences}
         destinations={[DOCUMENTS_FOLDER]}
         certificates={tauriCertificateStore()}
-        rubrics={emptyRubricPicker()}
+        rubrics={tauriRubricPicker()}
         composer={tauriLayer2Composer()}
         signer={tauriSigningBackend()}
       />
