@@ -1,4 +1,11 @@
-import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeftIcon,
@@ -6,6 +13,7 @@ import {
   ChevronsLeftIcon,
   ChevronsRightIcon,
   FitIcon,
+  FitPageIcon,
   MinusIcon,
   MoveIcon,
   PlusIcon,
@@ -14,11 +22,11 @@ import {
 import { ErrorNotice } from "../errors/ErrorNotice";
 import "./DocumentViewer.css";
 import type { PdfDocument, Viewport } from "./pdf";
-import { createRenderQueue, type RenderQueue } from "./renderQueue";
+import { createRenderQueue, type ObservedSize, observeSize, type RenderQueue } from "./renderQueue";
 import {
-  defaultBox,
   fitsInPage,
   movedBy,
+  type PageSize,
   type PixelRect,
   type SignaturePlacement,
   toPixels,
@@ -26,17 +34,33 @@ import {
 } from "./signatureBox";
 import type { DocumentFailure } from "./source";
 import { useBoxDrag } from "./useBoxDrag";
+import {
+  anchoredScroll,
+  bitmapScale,
+  DEFAULT_ZOOM,
+  fitScale,
+  pinchedZoom,
+  type ScrollOffset,
+  steppedZoom,
+  typedZoom,
+  ZOOM_MAX,
+  ZOOM_MIN,
+  type ZoomMode,
+} from "./zoom";
 
 /**
- * Los escalones del zoom. Son pasos y no una rueda continua porque el
- * porcentaje se lee, se compara entre sesiones y se dice en voz alta: «ponlo al
- * 150 %» no significa nada si cada acercamiento cae donde quiera.
+ * Lo que se mueve el recuadro con una flecha, y con la flecha más `Shift`,
+ * **en puntos de espacio de usuario** (ID-115).
+ *
+ * En píxeles del lienzo el gesto dependía del zoom: al 300 % una flecha movía
+ * un tercio de punto y al 50 % movía dos, así que colocar con precisión pedía
+ * acercarse primero. Un punto es un punto a cualquier escala.
  */
-const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
-
-/** Lo que se mueve el recuadro con una flecha, y con la flecha más `Shift`. */
 const NUDGE = 1;
 const NUDGE_FAST = 10;
+
+/** Las teclas de página. A cuál lleva cada una lo reparte `navigate`. */
+const PAGE_KEYS = new Set(["PageDown", "PageUp", "Home", "End"]);
 
 interface DocumentViewerProps {
   /** El documento abierto, o `null` si no hay ninguno. */
@@ -94,27 +118,46 @@ export function DocumentViewer({
   const { t, i18n } = useTranslation();
   const canvas = useRef<HTMLCanvasElement>(null);
   const boxElement = useRef<HTMLDivElement>(null);
-  const surface = useRef<HTMLDivElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
+  // La parte visible: la que se mide para ajustar, la que se desplaza al
+  // anclar el zoom al puntero y la que dice si el recuadro se ve o no.
+  //
+  // Va en estado y no en un `ref` **a propósito**: sólo existe en la rama con
+  // documento, y el visor se monta con `pdf === null`. Con un `ref`, todo
+  // efecto que quisiera engancharse a ella corría en el montaje, la encontraba
+  // vacía y no volvía a correr jamás; con estado, el elemento avisa de que ya
+  // está ahí y los efectos se rehacen solos.
+  const [surface, setSurface] = useState<HTMLDivElement | null>(null);
   // Una cola por lienzo, creada una sola vez: es quien garantiza que no haya
   // dos pintadas vivas.
   const queue = useRef<RenderQueue | null>(null);
   queue.current ??= createRenderQueue();
-  // La página inicial también sale del `placement`: si el visor se monta ya con
-  // un documento delante, no hay cambio de `pdf` que dispare la siembra de
-  // abajo.
+  // La página inicial sale del `placement`: montado ya con un documento
+  // delante, no hay cambio de `pdf` que reponga la página que guardaba su fila.
   const [page, setPage] = useState(() => within(placement?.page ?? 1, pdf?.pageCount ?? 0));
   const [zoom, setZoom] = useState(1);
+  // Cómo se mira, que no es lo mismo que cuánto se amplía: un modo de ajuste
+  // sobrevive al cambio de página, al redimensionado y al documento siguiente;
+  // un porcentaje fijado a mano, no (ID-117).
+  const [mode, setMode] = useState<ZoomMode>(DEFAULT_ZOOM);
   const [viewport, setViewport] = useState<Viewport | null>(null);
+  // La página **sin escalar**, en puntos: el divisor de todo ajuste. Sale de la
+  // misma pintada, así que no hay una segunda lectura del documento.
+  const [pagePoints, setPagePoints] = useState<PageSize | null>(null);
+  const [visible, setVisible] = useState<ObservedSize | null>(null);
   const [outOfPage, setOutOfPage] = useState(false);
+  // Lo tecleado en el porcentaje mientras se teclea. `null` = no se está
+  // tecleando, y entonces el campo muestra el zoom de verdad.
+  const [typing, setTyping] = useState<string | null>(null);
+  // El desplazamiento que deja quieto el punto bajo el puntero, a la espera de
+  // que la hoja crezca: aplicado antes, el navegador lo recortaría al tamaño
+  // viejo.
+  const anchor = useRef<ScrollOffset | null>(null);
 
   const pageCount = pdf?.pageCount ?? 0;
 
   // Documento nuevo, recorrido nuevo: **la página que guardaba su fila** —la 1
-  // si no guardaba ninguna— y escala original. La página inicial sale del
-  // `placement` que entra y no de un 1 fijo porque si no el visor se queda en
-  // la 1, el efecto de colocación de abajo ve que no coincide con la página
-  // recordada y llama a `onPlace` con la 1: la página guardada no solo no se
-  // repondría, se pisaría al reabrir (ID-74).
+  // si no guardaba ninguna— y el zoom de partida.
   //
   // Se ajusta durante la pintada y no en un efecto porque es estado derivado de
   // una prop: con un efecto habría una pintada intermedia con la página del
@@ -123,8 +166,15 @@ export function DocumentViewer({
   if (pdf !== shown) {
     setShown(pdf);
     setPage(within(placement?.page ?? 1, pdf?.pageCount ?? 0));
-    setZoom(1);
     setViewport(null);
+    setPagePoints(null);
+    // El modo de ajuste **sí** cruza al documento siguiente y el porcentaje
+    // no: quien dijo «al ancho» describió cómo quiere mirar, no cuánto quiere
+    // ampliar *este* documento (ID-117).
+    if (mode.kind === "free") {
+      setMode(DEFAULT_ZOOM);
+      setZoom(1);
+    }
   }
 
   // La pintada. Es el único sitio que toca el lienzo, y su limpieza cancela lo
@@ -148,13 +198,27 @@ export function DocumentViewer({
       // El mapa de bits se pinta a `devicePixelRatio`, para que el documento se
       // vea nítido en pantallas HiDPI; el tamaño en CSS —lo que ocupa en la
       // ventana— se fija aparte y no cambia, porque si no el navegador lo
-      // reescalaría igual que a 1x y la nitidez no se notaría.
-      const ratio = window.devicePixelRatio || 1;
-      const bitmap = ratio === 1 ? next : loaded.getViewport({ scale: zoom * ratio });
+      // reescalaría igual que a 1x y la nitidez no se notaría. Y se acota a 4×,
+      // o el 400 % en una pantalla HiDPI serían 128 MB de lienzo (ID-119).
+      const scale = bitmapScale(zoom, window.devicePixelRatio);
+      const bitmap = scale === zoom ? next : loaded.getViewport({ scale });
       target.width = bitmap.width;
       target.height = bitmap.height;
       target.style.width = `${next.width}px`;
       target.style.height = `${next.height}px`;
+      // La página sin escalar, que es contra lo que se ajusta. Sale del mismo
+      // objeto ya cargado: `next.width / zoom` sería lo mismo salvo por el
+      // redondeo, y ajustar por un tamaño redondeado se nota.
+      const unscaled = loaded.getViewport({ scale: 1 });
+      // El mismo tamaño se guarda como el mismo objeto: si cada pintada dejara
+      // uno nuevo, el efecto de ajuste se dispararía en cada repintado y
+      // reaplicaría una escala vieja sobre el zoom que se acaba de fijar a
+      // mano.
+      setPagePoints((current) =>
+        current?.width === unscaled.width && current.height === unscaled.height
+          ? current
+          : { width: unscaled.width, height: unscaled.height },
+      );
       setViewport(next);
       return pending.run(() => loaded.render({ canvas: target, viewport: bitmap }));
     });
@@ -165,19 +229,67 @@ export function DocumentViewer({
     };
   }, [pdf, page, zoom]);
 
-  // El recuadro tiene que existir y tiene que caber en la página que se está
-  // mirando: la firma va donde estás mirando, y una página más pequeña que la
-  // anterior no puede quedarse con un recuadro que se sale.
+  // La parte visible se mide sola y avisa de cada cambio, que es lo que hace de
+  // «ajustar» un modo y no un cálculo de una vez (ID-117).
   useEffect(() => {
-    if (!viewport) return;
-    const kept = placement?.rect;
-    const fits = kept !== undefined && fitsInPage(toPixels(viewport, kept), viewport);
-    if (fits && placement?.page === page) return;
-    onPlace({ page, rect: fits && kept ? kept : toUserSpace(viewport, defaultBox(viewport)) });
-  }, [viewport, placement, page, onPlace]);
+    if (!surface) return;
+    setVisible({ width: surface.clientWidth, height: surface.clientHeight });
+    return observeSize(surface, setVisible);
+  }, [surface]);
 
+  // Ajustar es una razón entre la parte visible y la página: cambie la que
+  // cambie, la escala se recalcula. Con el zoom fijado a mano no hay nada que
+  // recalcular y `fitScale` devuelve `null`.
+  useEffect(() => {
+    const wanted = fitScale(mode, visible, pagePoints);
+    if (wanted !== null) {
+      setZoom((current) => (Math.abs(current - wanted) < 1e-6 ? current : wanted));
+    }
+  }, [mode, visible, pagePoints]);
+
+  // El desplazamiento anclado al puntero se aplica cuando la hoja ya ha crecido
+  // —el mismo cuadro en el que cambia la escala—, nunca antes.
+  //
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `viewport` no se lee, dispara: es la señal de que la hoja ya tiene el tamaño nuevo.
+  useLayoutEffect(() => {
+    const wanted = anchor.current;
+    if (!surface || !wanted) return;
+    anchor.current = null;
+    surface.scrollLeft = wanted.left;
+    surface.scrollTop = wanted.top;
+  }, [viewport]);
+
+  // El recuadro se pinta **sólo en su página**: con el ID-96 en cualquier otra
+  // no hay nada que empujar, y por eso no hace falta un modo de «editar
+  // recuadro» (ID-113).
   const pixels: PixelRect | null =
-    viewport && placement ? toPixels(viewport, placement.rect) : null;
+    viewport && placement && placement.page === page ? toPixels(viewport, placement.rect) : null;
+
+  // Al cambiar de página, un recuadro que quede fuera de la parte visible se
+  // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
+  // o al cambiar el zoom impediría mirar otra zona de la misma página (ID-118).
+  //
+  // La página se da por atendida **en cuanto se ha podido mirar**, haya
+  // recuadro o no: el recuadro se pinta sólo en su página (ID-96), así que
+  // marcarla sólo cuando lo hay dejaba la marca clavada en la página del
+  // recuadro y el regreso a ella —el único caso que el ID-118 quiere cubrir—
+  // salía por la guarda sin hacer nada.
+  const broughtIn = useRef(page);
+  useEffect(() => {
+    if (broughtIn.current === page) return;
+    if (!surface || !viewport) return;
+    broughtIn.current = page;
+    const element = boxElement.current;
+    if (!element) return;
+    const box = element.getBoundingClientRect();
+    const frame = surface.getBoundingClientRect();
+    const seen =
+      box.top >= frame.top &&
+      box.bottom <= frame.bottom &&
+      box.left >= frame.left &&
+      box.right <= frame.right;
+    if (!seen) element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [page, viewport, surface]);
 
   /** Confirma el recuadro movido, ya en píxeles del lienzo. */
   const place = useCallback(
@@ -197,9 +309,23 @@ export function DocumentViewer({
     onOutOfPage: () => setOutOfPage(true),
   });
 
-  /** Las flechas mueven el recuadro sin ratón, por la misma guardia. */
+  /**
+   * El recuadro atiende **sólo las flechas**, y `Esc` devuelve el foco a la
+   * hoja (ID-113). Todo lo demás —las teclas de página— se deja burbujear
+   * hasta la hoja, así que se pasa de página sin salir del recuadro.
+   *
+   * El empuje es de **un punto de espacio de usuario**, y 10 con `Shift`: como
+   * la guardia de «cabe en la página» trabaja en píxeles del lienzo, el paso se
+   * convierte aquí, y a la escala del viewport un punto son `zoom` píxeles
+   * (ID-115).
+   */
   const nudge = (event: KeyboardEvent<HTMLElement>) => {
-    const step = event.shiftKey ? NUDGE_FAST : NUDGE;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      sheet.current?.focus();
+      return;
+    }
+    const step = (event.shiftKey ? NUDGE_FAST : NUDGE) * zoom;
     const towards: Record<string, [number, number]> = {
       ArrowLeft: [-step, 0],
       ArrowRight: [step, 0],
@@ -219,23 +345,85 @@ export function DocumentViewer({
     setPage(within(wanted, pageCount));
   };
 
-  const stepZoom = (direction: 1 | -1) => {
-    const index = ZOOM_STEPS.indexOf(zoom);
-    const next = ZOOM_STEPS[(index === -1 ? nearestStep(zoom) : index) + direction];
-    if (next !== undefined) setZoom(next);
+  /** Un zoom fijado a mano, que es lo que saca del modo de ajuste (ID-117). */
+  const toZoom = useCallback((value: number) => {
+    setMode({ kind: "free", value });
+    setZoom(value);
+  }, []);
+
+  /**
+   * La hoja atiende las teclas de página, y también las del recuadro cuando
+   * burbujean desde él (ID-113). `Ctrl+0` vuelve al 100 % (ID-116).
+   */
+  const navigate = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.ctrlKey && event.key === "0") {
+      event.preventDefault();
+      toZoom(1);
+      return;
+    }
+    if (!PAGE_KEYS.has(event.key)) return;
+    event.preventDefault();
+    if (event.key === "PageDown") goTo(page + 1);
+    else if (event.key === "PageUp") goTo(page - 1);
+    else if (event.key === "Home") goTo(1);
+    else goTo(pageCount);
   };
 
-  /** Ajustar a la ventana: el ancho del visor manda, con un respiro a los lados. */
-  const fitToWindow = () => {
-    const available = surface.current?.clientWidth;
-    if (!available || !viewport) return;
-    setZoom((current) => (current * (available * 0.92)) / viewport.width);
-  };
+  /**
+   * `Ctrl`+rueda amplía **anclado al puntero**, y el pellizco del trackpad
+   * llega por aquí sin una línea aparte: el navegador lo entrega como una rueda
+   * con `ctrlKey` (ID-116).
+   */
+  const zoomAtPointer = useCallback(
+    (event: globalThis.WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const next = pinchedZoom(zoom, event.deltaY);
+      if (next === zoom) return;
+      if (surface) {
+        const frame = surface.getBoundingClientRect();
+        // Un pellizco de trackpad emite decenas de eventos seguidos, y el
+        // desplazamiento del anterior aún no se ha aplicado —lo aplica el
+        // `useLayoutEffect` cuando llega el viewport nuevo—. Partir del
+        // `scroll` del elemento anclaría sobre un valor viejo, así que
+        // mientras haya uno pendiente se compone sobre él.
+        const from = anchor.current ?? { left: surface.scrollLeft, top: surface.scrollTop };
+        anchor.current = anchoredScroll(
+          from,
+          { x: event.clientX - frame.left, y: event.clientY - frame.top },
+          next / zoom,
+        );
+      }
+      toZoom(next);
+    },
+    [zoom, surface, toZoom],
+  );
+
+  // React marca `wheel` como oyente **pasivo** (`addTrappedEventListener`, en
+  // `DOMPluginEventSystem`), y dentro de uno pasivo `preventDefault()` no hace
+  // nada: con la prop `onWheel`, `Ctrl`+rueda y el pellizco conservaban su
+  // acción por defecto y ampliaban el WebView entero además del documento. El
+  // oyente se engancha a mano, con `passive: false`.
+  useEffect(() => {
+    if (!surface) return;
+    surface.addEventListener("wheel", zoomAtPointer, { passive: false });
+    return () => surface.removeEventListener("wheel", zoomAtPointer);
+  }, [surface, zoomAtPointer]);
+
+  /** Los botones ± tropiezan con los siete escalones, no con el continuo. */
+  const stepZoom = (direction: 1 | -1) => toZoom(steppedZoom(zoom, direction));
 
   const percent = new Intl.NumberFormat(i18n.language, {
     style: "percent",
     maximumFractionDigits: 0,
   });
+
+  /** Toma lo tecleado en el porcentaje, recortado al rango, y suelta el campo. */
+  const commitTyped = () => {
+    const wanted = typing === null ? null : typedZoom(typing);
+    setTyping(null);
+    if (wanted !== null) toZoom(wanted);
+  };
 
   if (!pdf) {
     return (
@@ -254,7 +442,7 @@ export function DocumentViewer({
   }
 
   return (
-    <div className="viewer" ref={surface}>
+    <div className="viewer">
       {failure && (
         // Flota sobre la hoja, como la barra y el aviso de «se sale de la
         // página»: `.viewer` es una rejilla de una sola fila y meter aquí un
@@ -263,10 +451,18 @@ export function DocumentViewer({
           <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
         </div>
       )}
-      <div className="viewer__scroll">
+      <div className="viewer__scroll" ref={setSurface}>
         <div
+          ref={sheet}
           className="viewer__sheet"
           data-theme="light"
+          role="document"
+          aria-label={t("viewer.sheet")}
+          // La hoja se enfoca para pasar de página con el teclado, y es también
+          // donde acaban las teclas de página que burbujean desde el recuadro.
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: se enfoca y navega con el teclado.
+          tabIndex={0}
+          onKeyDown={navigate}
           style={{ width: viewport?.width, height: viewport?.height }}
         >
           <canvas ref={canvas} className="viewer__canvas" />
@@ -360,17 +556,39 @@ export function DocumentViewer({
           type="button"
           className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.zoomOut")}
-          disabled={zoom <= (ZOOM_STEPS[0] ?? 0)}
+          disabled={zoom <= ZOOM_MIN}
           onClick={() => stepZoom(-1)}
         >
           <MinusIcon />
         </button>
-        <span className="rf-body viewer__zoom">{percent.format(zoom)}</span>
+        {/*
+          El porcentaje se teclea: con el zoom continuo, los botones ya no
+          alcanzan cualquier valor, y «ponlo al 150 %» tiene que poder escribirse
+          (ID-116). Se recorta al rango en vez de rechazarse.
+        */}
+        <input
+          className="rf-input viewer__zoom"
+          type="text"
+          inputMode="numeric"
+          aria-label={t("viewer.zoomLevel")}
+          value={typing ?? percent.format(zoom)}
+          onChange={(event) => setTyping(event.target.value)}
+          onFocus={(event) => event.target.select()}
+          onBlur={commitTyped}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commitTyped();
+            } else if (event.key === "Escape") {
+              setTyping(null);
+            }
+          }}
+        />
         <button
           type="button"
           className="rf-btn rf-btn--ghost viewer__step"
           aria-label={t("viewer.zoomIn")}
-          disabled={zoom >= (ZOOM_STEPS[ZOOM_STEPS.length - 1] ?? 0)}
+          disabled={zoom >= ZOOM_MAX}
           onClick={() => stepZoom(1)}
         >
           <PlusIcon />
@@ -378,27 +596,27 @@ export function DocumentViewer({
         <button
           type="button"
           className="rf-btn rf-btn--ghost viewer__step"
-          aria-label={t("viewer.fitToWindow")}
-          onClick={fitToWindow}
+          aria-label={t("viewer.fitWidth")}
+          aria-pressed={mode.kind === "fit-width"}
+          onClick={() => setMode({ kind: "fit-width" })}
         >
           <FitIcon />
+        </button>
+        <button
+          type="button"
+          className="rf-btn rf-btn--ghost viewer__step"
+          aria-label={t("viewer.fitPage")}
+          aria-pressed={mode.kind === "fit-page"}
+          onClick={() => setMode({ kind: "fit-page" })}
+        >
+          <FitPageIcon />
         </button>
       </div>
     </div>
   );
 }
 
-/** El escalón más cercano a un zoom que no es ninguno, como el de «ajustar». */
 /** La página `wanted` recortada a las que tiene el documento. */
 function within(wanted: number, pageCount: number): number {
   return Math.min(Math.max(1, wanted), Math.max(1, pageCount));
-}
-
-function nearestStep(zoom: number): number {
-  let best = 0;
-  ZOOM_STEPS.forEach((step, index) => {
-    const current = ZOOM_STEPS[best] ?? 1;
-    if (Math.abs(step - zoom) < Math.abs(current - zoom)) best = index;
-  });
-  return best;
 }

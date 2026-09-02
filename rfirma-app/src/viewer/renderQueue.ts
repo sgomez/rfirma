@@ -61,3 +61,41 @@ export function createRenderQueue(): RenderQueue {
     },
   };
 }
+
+/** El tamaño de la parte visible del visor, en píxeles CSS. */
+export interface ObservedSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * Avisa del tamaño de la parte visible cada vez que cambia, y devuelve cómo
+ * dejar de mirar.
+ *
+ * Vive junto a la cola porque lo que dispara es **otra pintada**: quien eligió
+ * «ajustar al ancho» ha dicho *cómo* quiere mirar, no *cuánto* quiere ampliar,
+ * así que estirar la ventana recalcula la escala y repinta (ID-117). El
+ * redimensionado llega a ráfagas, y cada aviso entra por la misma cola que
+ * cancela la anterior: sin eso, arrastrar el borde de la ventana deja media
+ * docena de `RenderTask` escribiendo sobre el mismo lienzo.
+ *
+ * Sustituye a un «ajustar a la ventana» de un solo cálculo, que quedaba
+ * desajustado en cuanto la ventana cambiaba de tamaño.
+ *
+ * Mide con `clientWidth`/`clientHeight` y no con el `contentRect` de la
+ * entrada: son los mismos píxeles CSS que usa el resto del visor, así que el
+ * observador es el disparador y no una segunda fuente de medidas.
+ */
+export function observeSize(
+  element: HTMLElement,
+  onSize: (size: ObservedSize) => void,
+): () => void {
+  // Ningún WebView soportado se queda sin `ResizeObserver`; `jsdom` sí, y sin
+  // esta guardia se caería aquí cualquier prueba que monte el visor.
+  if (typeof ResizeObserver === "undefined") return () => {};
+  const observer = new ResizeObserver(() => {
+    onSize({ width: element.clientWidth, height: element.clientHeight });
+  });
+  observer.observe(element);
+  return () => observer.disconnect();
+}

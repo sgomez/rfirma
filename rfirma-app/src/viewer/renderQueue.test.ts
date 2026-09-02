@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RenderTask } from "./pdf";
-import { createRenderQueue } from "./renderQueue";
+import { createRenderQueue, observeSize } from "./renderQueue";
 
 /**
  * **Grada A** (`vitest`, carril rápido).
@@ -100,5 +100,58 @@ describe("la cola de pintadas", () => {
 
     queue.cancel();
     expect(task.cancelled).toBe(false);
+  });
+});
+
+describe("el observador del tamaño", () => {
+  /** Un `ResizeObserver` de mentira: `jsdom` no trae ninguno. */
+  function stubResizeObserver() {
+    const observed: Element[] = [];
+    let notify: () => void = () => {};
+    let disconnected = false;
+    class Stub {
+      constructor(callback: () => void) {
+        notify = callback;
+      }
+      observe(element: Element) {
+        observed.push(element);
+      }
+      disconnect() {
+        disconnected = true;
+      }
+      unobserve() {}
+    }
+    vi.stubGlobal("ResizeObserver", Stub);
+    return {
+      observed,
+      resize: () => notify(),
+      get disconnected() {
+        return disconnected;
+      },
+    };
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reports the visible size in CSS pixels whenever it changes", () => {
+    const observer = stubResizeObserver();
+    const element = document.createElement("div");
+    Object.defineProperty(element, "clientWidth", { value: 800 });
+    Object.defineProperty(element, "clientHeight", { value: 600 });
+    const sizes: Array<{ width: number; height: number }> = [];
+
+    const stop = observeSize(element, (size) => sizes.push(size));
+    observer.resize();
+
+    expect(observer.observed).toEqual([element]);
+    expect(sizes).toEqual([{ width: 800, height: 600 }]);
+    stop();
+    expect(observer.disconnected).toBe(true);
+  });
+
+  it("does nothing where there is no ResizeObserver, instead of bringing the viewer down", () => {
+    vi.stubGlobal("ResizeObserver", undefined);
+
+    expect(() => observeSize(document.createElement("div"), () => {})()).not.toThrow();
   });
 });

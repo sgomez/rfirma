@@ -116,19 +116,43 @@ Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:
 « ‹ [3] de 27 › »  │  − 100 % + ⤢
 ```
 
-Los siete botones son `<svg>` **en línea** copiados del artboard (ID-53), no
-los glifos tipográficos que insinúa el esquema de arriba: dobles y simples
-chevrones para las páginas, menos y más para el zoom, y las cuatro esquinas
-para «ajustar a la ventana». Todos sobre lienzo `0 0 24 24` con trazo de 1.5.
+Los botones son `<svg>` **en línea** copiados del artboard (ID-53), no los
+glifos tipográficos que insinúa el esquema de arriba: dobles y simples chevrones
+para las páginas, menos y más para el zoom, las cuatro esquinas para «ajustar al
+ancho» y la hoja dentro del marco para «ajustar a la página». Todos sobre lienzo
+`0 0 24 24` con trazo de 1.5.
 
 - **Páginas**: primera, anterior, número editable, total, siguiente, última.
   Ocupa lo mismo con 4 páginas que con 400 — por eso no hay una pastilla por
   página.
-- **Zoom**: alejar, porcentaje, acercar, ajustar a la ventana.
+- **Zoom**: alejar, **porcentaje editable**, acercar, ajustar al ancho, ajustar
+  a la página.
 
 El zoom no es un extra: para colocar el recuadro con precisión hay que
 acercarse, así que forma parte de colocar la firma. Por eso va en la misma
 barra y no en un menú *Ver*.
+
+**El zoom es continuo, del 25 % al 400 %** (ID-116). `Ctrl`+rueda amplía
+**anclado al puntero** —y el pellizco del trackpad llega por ese mismo camino,
+porque el navegador lo entrega como una rueda con `Ctrl`—; el porcentaje se
+teclea y se recorta al rango en vez de rechazarse; `Ctrl+0` vuelve al 100 %
+**con el foco en la hoja o en el recuadro** —desde donde burbujea—, que es donde
+se está mirando el documento; con el foco en la barra, el 100 % está a un
+teclazo en el propio campo del porcentaje. Los
+botones ± ya no son *el* zoom: son los **siete escalones** con los que
+tropiezan, para que pulsar «acercar» caiga en un número redondo y no en el
+137 % en el que quedó el pellizco.
+
+**«Ajustar» es un modo, no un botón que se pulsa una vez** (ID-117). Sobrevive
+al cambio de página, al redimensionado de la ventana y al documento siguiente:
+has dicho *cómo* quieres mirar, no *cuánto* quieres ampliar ese documento. Un
+zoom fijado a mano lo rompe, y entonces el documento siguiente vuelve al 100 %.
+No se recuerda entre sesiones ni por documento.
+
+**El lienzo no pasa de 4×** (ID-119). En una pantalla HiDPI el mapa de bits se
+pinta a `devicePixelRatio`, pero `zoom × ratio` se acota: un A4 al 400 % con
+`ratio` 2 serían 128 MB para una sola página. El zoom que se ve llega al 400 %
+igual; lo que se recorta es la resolución, y no se avisa.
 
 ## El recuadro de firma
 
@@ -256,7 +280,25 @@ que hay que descubrir; una barra de desplazamiento se ve.
 
 El recuadro se puede mover también **con las flechas** —diez veces más rápido
 con `Shift`—, que es el camino de quien no usa ratón y de quien quiere ajustar
-un punto exacto. Es el mismo camino: pasa por la misma guardia de página.
+un punto exacto. Es el mismo camino: pasa por la misma guardia de página. El
+empuje es de **un punto de espacio de usuario**, no de un píxel del lienzo
+(ID-115): en píxeles, al 300 % una flecha movía un tercio de punto y al 50 %
+movía dos, así que el gesto dependía del zoom.
+
+**Hay dos elementos enfocables, y el anillo de foco dice cuál** (ID-113). La
+hoja atiende `AvPág`, `RePág`, `Inicio` y `Fin`; el recuadro atiende **sólo las
+flechas**, y las teclas de página **burbujean** desde él hasta la hoja, así que
+se pasa de página sin salir del recuadro. `Esc` devuelve el foco a la hoja. No
+hace falta un modo explícito de «editar recuadro»: el recuadro sólo se pinta en
+su propia página, así que en cualquier otra no hay nada que empujar ni nada que
+`Tab` alcance. Al cambiar de página, un recuadro que quede fuera de la parte
+visible se trae a ella **una sola vez** (ID-118): hacerlo también al repintar o
+al cambiar el zoom impediría mirar otra zona de la misma página.
+
+**Ni el zoom ni el redimensionado escriben nunca en la colocación** (ID-114).
+Escriben el arrastre, el redimensionado del recuadro y el empuje con flechas, y
+nadie más: si un redondeo a un zoom raro pudiera reescribirla, la fila guardada
+del documento cambiaría sin que nadie hubiera tocado nada (ID-74).
 
 **Soltar el recuadro fuera de la página no se acepta.** Aparece el aviso «El
 recuadro se ha quedado fuera de la página, así que sigue donde estaba» y el

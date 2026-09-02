@@ -63,10 +63,11 @@ rojo.
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 404 | El visor. |
+| `viewer/DocumentViewer.tsx` | 622 | El visor. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 68 | El worker de `pdf.js`, empaquetado por Vite. |
-| `viewer/renderQueue.ts` | 63 | Una sola pintada viva sobre el lienzo. |
+| `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
+| `viewer/zoom.ts` | 176 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
 | `viewer/source.ts` | 93 | De dónde salen los bytes del documento. |
 | `viewer/signatureBox.ts` | 120 | El recuadro: dónde se guarda y cómo se pinta. |
 | `viewer/useBoxDrag.ts` | 122 | El arrastre del recuadro. |
@@ -87,7 +88,7 @@ rojo.
 | **`errors/`** | | Los fallos que ve el usuario. |
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
-| **`design-system/`** | | `design-system/icons.tsx` (201), copiados en línea de los artboards. |
+| **`design-system/`** | | `design-system/icons.tsx` (211), copiados en línea de los artboards. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
 | **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
 
