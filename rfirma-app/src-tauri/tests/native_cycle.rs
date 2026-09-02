@@ -758,13 +758,6 @@ mod full_cycle {
     // instante, y nada más. La comparación de bytes de Rust, **antes** de
     // cruzar, es la única guarda que tienen los otros dos.
 
-    /// El bloque de texto que hay dentro del sello.
-    ///
-    /// **rFirma no lee el sello nunca** —el ADR-0016 lo prohíbe, y por eso
-    /// `SessionSeal` no tiene ni un `get`—, pero la prueba sí, y a propósito:
-    /// es lo único que permite alterar *una* invariante sin tocar las otras
-    /// dos. Que este conocimiento viva aquí, en un fichero de pruebas, y no en
-    /// el código de producción es justo la línea que el ADR traza.
     /// **Lo que la vista previa pinta es el sello, no un dibujo parecido**
     /// (ID-136).
     ///
@@ -798,7 +791,7 @@ mod full_cycle {
         assert_eq!(
             previewed_page.as_raw(),
             signed_page.as_raw(),
-            "la pagina compuesta en seco no se ve igual que la firmada: la ventana              estaria enseñando lo que el PDF no va a tener"
+            "la pagina compuesta en seco no se ve igual que la firmada: la ventana estaria enseñando lo que el PDF no va a tener"
         );
     }
 
@@ -828,6 +821,13 @@ mod full_cycle {
         );
     }
 
+    /// El bloque de texto que hay dentro del sello.
+    ///
+    /// **rFirma no lee el sello nunca** —el ADR-0016 lo prohíbe, y por eso
+    /// `SessionSeal` no tiene ni un `get`—, pero la prueba sí, y a propósito:
+    /// es lo único que permite alterar *una* invariante sin tocar las otras
+    /// dos. Que este conocimiento viva aquí, en un fichero de pruebas, y no en
+    /// el código de producción es justo la línea que el ADR traza.
     fn inside_the_seal(seal: &SessionSeal) -> String {
         let raw = base64::engine::general_purpose::STANDARD
             .decode(seal.as_bridge_payload())
