@@ -133,12 +133,13 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
    `prefers-color-scheme`. Los otros dos escriben `data-theme` en `<html>`, que
    es lo que los tokens de color del bundle leen para redefinir los roles. El
    cambio se aplica en caliente, como el resto de la pantalla.
-5. **Idioma** (desplegable). Español, català, euskara, galego, valencià e
-   inglés: la misma lista que el cliente oficial. El cambio se aplica en
-   caliente. Un idioma solo aparece aquí si tiene **todas** las cadenas
-   traducidas. En la primera ejecución sale del locale del sistema cotejado
-   contra esos seis, con español como recurso; no hay diálogo de bienvenida que
-   pregunte lo que la aplicación ya sabe.
+5. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
+   cinco desde el ID-124, que sacó el valencià porque sus reglas de plural no
+   son las del castellano. El cambio se aplica en caliente. Un idioma solo
+   aparece aquí si tiene **todas** las cadenas traducidas. En la primera
+   ejecución sale del locale del sistema cotejado contra esos cinco, con
+   español como recurso; no hay diálogo de bienvenida que pregunte lo que la
+   aplicación ya sabe.
 
 Los valores posibles viven **dentro** de los desplegables. Nada de textos
 debajo enumerando lo que el propio control ya muestra al abrirse.

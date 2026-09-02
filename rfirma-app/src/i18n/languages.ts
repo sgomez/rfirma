@@ -12,8 +12,10 @@ import { LANGUAGES } from "./locales";
  * el desplegable: la regla de publicación del ADR-0009 deja de ser algo que
  * alguien comprueba y pasa a ser irrepresentable.
  *
- * El valencià salió en v0.3: `Intl.PluralRules("va")` se resuelve a `und`, con
- * una sola categoría, así que ese catálogo estaba roto para plurales. Las
+ * El valencià salió en v0.3: `Intl.PluralRules("va")` no da la categoría
+ * `many` que `es` y `ca` sí usan —cuántas categorías devuelve exactamente
+ * depende del CLDR del intérprete—, así que ese catálogo estaba roto para
+ * plurales en cuanto los plurales entraron. Las
  * etiquetas son las de `Language::tag` del backend (`signing/language.rs`); si
  * cambia una, cambia en los dos sitios.
  */

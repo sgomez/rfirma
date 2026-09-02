@@ -76,11 +76,11 @@ rojo.
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |
 | **`i18n/`** | | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). |
-| `i18n/catalog.ts` | 50 | La forma del catálogo. |
+| `i18n/catalog.ts` | 28 | La forma del catálogo. |
 | `i18n/i18n.ts` | 40 | La traducción. |
 | `i18n/LanguageProvider.tsx` | 81 | El contexto. |
-| `i18n/languages.ts` | 26 | Los idiomas publicados: reexporta lo que generó `po-import`. |
-| `i18n/i18next.d.ts` | 21 | Las claves, para `tsc` y el editor. Se versiona; `resources.d.ts` no. |
+| `i18n/languages.ts` | 30 | Los idiomas publicados: reexporta lo que generó `po-import`. |
+| `i18n/i18next.d.ts` | 23 | Las claves, para `tsc` y el editor. Se versiona; `resources.d.ts` no. |
 | `i18n/preference.ts` | 34 | De dónde sale y a dónde vuelve el idioma. |
 | `i18n/locales/*.ts` | — | **Generados, no versionados.** Salen de `po/`. No se leen ni se editan. |
 | **`errors/`** | | Los fallos que ve el usuario. |

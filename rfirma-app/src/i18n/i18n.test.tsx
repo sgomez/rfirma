@@ -25,10 +25,16 @@ describe("el circuito de cadenas", () => {
   });
 
   it("no publica el valencià, que salió con los plurales (ID-124)", () => {
-    // `Intl.PluralRules("va")` se resuelve a `und`: una sola categoría, así que
-    // ese catálogo estaría roto para plurales el día que se publicara.
+    // La invariante nuestra es la lista de cinco. Lo que motivó la salida del
+    // valencià —que sus categorías de plural no son las del castellano— se
+    // afirma aquí en la única forma que no depende del ICU del intérprete:
+    // `va` no tiene `many`, que es la categoría que `es` y `ca` sí usan. El
+    // conjunto exacto que devuelve `Intl.PluralRules("va")` **sí** varía con la
+    // versión de CLDR (`["other"]` con un ICU que no conoce `va`,
+    // `["one","other"]` con uno que sí), y afirmarlo rompía el CI solo.
     expect([...LANGUAGES]).not.toContain("va");
-    expect(new Intl.PluralRules("va").resolvedOptions().pluralCategories).toEqual(["other"]);
+    expect(new Intl.PluralRules("va").resolvedOptions().pluralCategories).not.toContain("many");
+    expect(new Intl.PluralRules("es").resolvedOptions().pluralCategories).toContain("many");
   });
 
   it("tiene las mismas claves en todos los publicados", () => {

@@ -1073,7 +1073,7 @@ seal-ds-bundle:
     echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
 # Abre la ventana con recarga en caliente.
-dev: check-native deps
+dev: check-native po-import
     cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev
 
 # Borra lo construido.

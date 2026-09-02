@@ -25,7 +25,7 @@
  * Uso: `node tools/po-import.mjs [--all]` desde `rfirma-app/`.
  */
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import gettextParser from "gettext-parser";
@@ -198,6 +198,13 @@ export function readCatalogs(poDirectory) {
   });
 }
 
+/** Borra los `.ts` que dejó una ejecución anterior en un directorio generado. */
+function clearGenerated(directory) {
+  for (const name of readdirSync(directory)) {
+    if (name.endsWith(".ts")) rmSync(join(directory, name));
+  }
+}
+
 /**
  * Genera los `.ts` y devuelve los idiomas publicados.
  *
@@ -216,6 +223,13 @@ export function generate({ poDirectory, outputDirectory, snapshotDirectory, all 
 
   mkdirSync(outputDirectory, { recursive: true });
   if (snapshotDirectory !== undefined) mkdirSync(snapshotDirectory, { recursive: true });
+
+  // El estado de los dos directorios ha de ser función SOLO de `po/`: un `.ts`
+  // de una ejecución anterior sobrevive si su idioma deja de estar al 100 %, y
+  // aunque `index.ts` ya no lo importe, `tsc` sigue comprobando al huérfano y
+  // la instantánea rancia le miente a `extract --ci`.
+  clearGenerated(outputDirectory);
+  if (snapshotDirectory !== undefined) clearGenerated(snapshotDirectory);
 
   const published = [];
   for (const { tag, entries, complete } of catalogs) {

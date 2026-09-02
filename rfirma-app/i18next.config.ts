@@ -27,7 +27,16 @@ import { defineConfig } from "i18next-cli";
  * escribe y sale con 1 si algo faltaba.
  */
 export default defineConfig({
-  locales: ["es", "en"],
+  // Solo el idioma de referencia. Las instantáneas de
+  // `node_modules/.cache/i18next-cli/` las escribe `po-import`, y **solo para
+  // los idiomas al 100 %** (ID-123): en cuanto `en.po` baje del 100 % —lo
+  // normal en el instante en que se añade una cadena castellana— no habría
+  // `en.ts` en la caché y `extract --ci` daría por ausentes todas sus claves,
+  // un muro de falsos positivos por un idioma incompleto, que es justo lo que
+  // `check-po` documenta que NO es un fallo. Las dos preguntas del ID-127
+  // —¿hay una `t()` sin entrada? ¿sobra alguna clave?— se contestan enteras
+  // con `es`, el único catálogo que `po-import` garantiza.
+  locales: ["es"],
   extract: {
     input: ["src/**/*.{ts,tsx}"],
     ignore: ["src/**/*.test.{ts,tsx}", "src/i18n/locales/**"],

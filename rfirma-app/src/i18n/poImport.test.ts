@@ -3,8 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { po as poParser } from "gettext-parser";
 import { describe, expect, it } from "vitest";
-// @ts-expect-error `tools/` es JavaScript de construcción y queda fuera de tsconfig.
-import { entriesOf, generate, isComplete, readCatalogs } from "../../tools/po-import.mjs";
+import {
+  entriesOf,
+  generate,
+  isComplete,
+  readCatalogs,
+  renderSnapshot,
+  // @ts-expect-error `tools/` es JavaScript de construcción y queda fuera de tsconfig.
+} from "../../tools/po-import.mjs";
 
 /**
  * **Grada A**. El arnés del circuito de cadenas: TD-34 —un idioma a medias no
@@ -134,5 +140,54 @@ msgstr[2] "{{count}} orrialde"
   it("da por incompleta una entrada con solo espacios", () => {
     expect(isComplete([["a", "x"]])).toBe(true);
     expect(isComplete([["a", "   "]])).toBe(false);
+  });
+
+  it("no deja atrás el .ts de un idioma que dejó de estar al 100 %", () => {
+    const output = mkdtempSync(join(tmpdir(), "rfirma-ts-"));
+    generate({ poDirectory: fixture(COMPLETE_BASQUE), outputDirectory: output });
+    expect(readdirSync(output).sort()).toEqual(["es.ts", "eu.ts", "index.ts"]);
+
+    // El mismo directorio de salida, ahora con el euskera a medias: el .ts
+    // anterior tiene que desaparecer, o `tsc` seguiría comprobando al huérfano
+    // y la instantánea rancia le mentiría a `extract --ci`.
+    generate({
+      poDirectory: fixture('\nmsgid "actions.sign"\nmsgstr ""\n'),
+      outputDirectory: output,
+    });
+
+    expect(readdirSync(output).sort()).toEqual(["es.ts", "index.ts"]);
+  });
+
+  it("escribe la instantánea con el formato de i18next-cli: `as const` y orden por raíz", () => {
+    const snapshot = renderSnapshot({
+      window: { viewer: "Visor" },
+      panel: {
+        document: {
+          pages_other: "{{count}} páginas",
+          pages_one: "1 página",
+          pages_many: "{{count}} páginas",
+        },
+      },
+    });
+
+    // Claves ordenadas por su raíz —`localeCompare`, el sufijo de plural no
+    // cuenta— y las tres formas seguidas en el orden de `Intl.PluralRules`.
+    // Cualquier diferencia, también la de orden, pone `extract --ci` en rojo.
+    expect(snapshot).toBe(
+      `export default ${JSON.stringify(
+        {
+          panel: {
+            document: {
+              pages_one: "1 página",
+              pages_many: "{{count}} páginas",
+              pages_other: "{{count}} páginas",
+            },
+          },
+          window: { viewer: "Visor" },
+        },
+        null,
+        2,
+      )} as const;\n`,
+    );
   });
 });

@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 /// Idioma de la aplicación: `es`, `ca`, `eu`, `gl` y `en`.
 ///
 /// El valencià salió en v0.3 (ID-124), y no por una decisión sobre lenguas:
-/// `Intl.PluralRules("va")` se resuelve a `und` —una sola categoría, `other`—,
+/// `Intl.PluralRules("va")` no da la categoría `many` que `es` y `ca` sí usan
+/// —cuántas categorías devuelve exactamente depende del CLDR del intérprete—,
 /// de modo que ese catálogo está roto para plurales en cuanto los plurales
 /// entran. `ca-ES-valencia` sí resuelve a `ca`, pero **no se soportan variantes
 /// de ningún idioma**: las reglas de plural se definen sobre el idioma.
