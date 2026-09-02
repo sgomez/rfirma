@@ -266,6 +266,37 @@ Entre campos, `--rf-space-md`. Error: `.rf-field--error` en el contenedor.
 
 Una o dos palabras. No hay variantes de éxito ni de error (sección 2).
 
+### Ruta de destino
+
+Dónde va a caer un fichero: **la última carpeta y el nombre**, nunca la ruta
+entera. Nace en el pie del panel de firma y lo fija el
+[ADR-0011](../adr/0011-destino-del-documento-firmado.md).
+
+```html
+<p class="rf-prose" style="flex:1;min-width:0;overflow-wrap:anywhere">
+  <span class="rf-text-muted">…/Documentos/</span>contrato-de-arrend…-firmado.pdf
+</p>
+```
+
+Tres reglas, y las tres son el componente:
+
+1. **La carpeta va atenuada y el nombre no.** La carpeta es contexto; el nombre
+   es el dato. Delante lleva `…/`, que dice que hay carpetas por encima sin
+   afirmar cuáles: bajo el arenero la aplicación no las conoce, y fuera de él no
+   se enseñan igualmente.
+2. **El nombre se recorta por el medio**, no por la cola. Se conservan siempre
+   la extensión y el sufijo `-firmado` con su número de desempate —`-2`, `-3`—,
+   porque son la respuesta a «¿voy a machacar el anterior?», que es lo que se
+   mira. El `…` se come el centro del tronco. La **carpeta no se recorta nunca
+   por el medio**; si hace falta, por la cola: un nombre de carpeta se reconoce
+   por el principio y no tiene ninguna cola que preservar.
+3. **La línea envuelve antes que cortarse.** Nada de `white-space: nowrap` con
+   `overflow: hidden`: eso corta en seco lo que el `…` ya había recortado, y sin
+   avisar. Envuelve con `overflow-wrap: anywhere`, y quien la acompaña —el icono
+   de carpeta, el botón `Cambiar`— se alinea arriba (`align-items: flex-start`).
+
+Se maqueta con tokens; no hay clase propia en el bundle.
+
 ### Diálogo
 
 ```html

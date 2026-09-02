@@ -121,3 +121,58 @@ Y sigue sin ser un sitio donde escribir: lo único que recibe esa ruta es el `se
 diálogo, y la única forma de nombrar dónde cae un fichero sigue siendo `CheckedFolder`. Si la
 carpeta apuntada ya no está, se pasa a la de destino; si esa tampoco, no se pasa punto de
 partida y abre donde el sistema quiera. **Ninguna de las dos se crea nunca.**
+
+## Enmienda: cómo se elige la carpeta, y qué enseña el pie
+
+Añadida con el hito v0.2 ([#123](https://github.com/sgomez/rfirma/issues/123)).
+No cambia dónde cae el fichero; cambia con qué gesto se elige y qué se lee antes
+de firmar.
+
+### La carpeta se elige con un selector de directorio
+
+En Preferencias, «Dónde se guarda el documento firmado» **deja de ser un
+desplegable**. Lo era porque este ADR retiró *junto al documento original*, y lo
+que quedó fue una lista de un solo elemento: un control que finge elegir, y el
+único ajuste de la pantalla que mentía.
+
+Pasa a ser una fila con el nombre de la carpeta y un botón **«Cambiar
+carpeta…»** que abre el selector de directorio del sistema. La consecuencia «el
+destino se enseña por nombre, no por ruta» **sigue en pie y ahora se cumple
+mejor**: un directorio concedido por el portal llega como
+`/run/user/1000/doc/<id>/Documentos`, cuyo último segmento *es* el nombre de la
+carpeta, así que los cuatro canales pueden nombrarla igual sin que ninguno
+dependa de conocer la ruta real. Es la opción «preguntar la carpeta una sola
+vez» que este ADR describe más arriba, con el permiso que persiste en
+`~/.local/share/flatpak/db/documents` — descartada entonces por poner una
+pregunta en medio del recorrido, y admitida ahora porque la pregunta está en
+Preferencias, que es donde se va a cambiar un ajuste.
+
+**`Cambiar`, en el pie del panel, no cambia**: sigue abriendo el diálogo de
+guardar y sigue valiendo solo para esa firma. Que los dos gestos sean distintos
+no es la incoherencia que este ADR rechaza. El diálogo de guardar es el único
+que fija **carpeta y nombre a la vez**, que es justo lo que hace falta para una
+firma concreta; el ajuste persistente solo tiene que nombrar una carpeta, y para
+eso está el selector de directorio. Uno decide una vez, el otro decide siempre.
+
+### El pie enseña la carpeta y el nombre del fichero
+
+«Se guardará en» pasa de enseñar solo la carpeta a enseñar **la última carpeta y
+el nombre del fichero**: `…/Documentos/contrato-firmado.pdf`.
+
+El nombre lo compone la aplicación —`-firmado`, con desempate `-2`, `-3`, como
+fija este mismo ADR— y hasta ahora no se veía hasta después de firmar, cuando ya
+no se podía hacer nada al respecto. Enseñarlo antes es lo que convierte la
+numeración en información en vez de en sorpresa: quien va a cofirmar ve que va a
+salir un `-2` y no que ha machacado el anterior.
+
+El `…/` de delante dice que hay carpetas por encima **sin afirmar cuáles**. No
+reabre la ruta que esta decisión prohíbe: bajo el arenero la aplicación no las
+conoce, y fuera de él no se enseñan igualmente, así que la marca significa lo
+mismo en los cuatro canales. La regla de recorte —qué se conserva, qué se come
+el `…`, y que la línea envuelve antes que cortarse— vive en el componente
+**ruta de destino** de [`docs/design/design-system.md`](../design/design-system.md),
+que es donde se puede escribir con el ejemplo delante.
+
+El estado **destino no disponible** no cambia: el pie sustituye la línea entera
+por «No se puede escribir en *Documentos*» con su `Cambiar`, y el botón de
+firmar no se apaga.

@@ -138,3 +138,54 @@ que sobreviviera a «Vaciar la lista» diría por dónde anduvo el anterior—.
 En el flatpak vale `None` siempre: el portal no dice de qué carpeta salió el
 documento, así que no hay nada que apuntar. No es un campo que se apague por
 prudencia, es uno que allí nunca llega a tener valor.
+
+## Enmienda: la ventana, y la posición del recuadro por documento
+
+Añadido con el hito v0.2 ([#123](https://github.com/sgomez/rfirma/issues/123)).
+Son dos cosas: una memoria nueva y un reparto distinto de una que ya estaba.
+
+### El tamaño de la ventana es una memoria más
+
+El estado gana **el tamaño de la ventana y si estaba maximizada**. Va en el
+mismo `state.json` que el resto del estado, escrito por la aplicación con el
+mismo `paths.rs`, y **no** con `tauri-plugin-window-state`: ese plugin trae su
+propio fichero, su propio formato y su propio momento de escritura, que es una
+cuarta ruta de persistencia al lado de las tres que este ADR se ha molestado en
+nombrar.
+
+**La posición no se repone en Wayland**, y por tanto no se repone en ningún
+canal. El protocolo no deja a una aplicación colocarse: `xdg_toplevel` no tiene
+ninguna petición de posición, y el compositor decide. Guardar unas coordenadas
+que en el escritorio objetivo no se pueden aplicar es guardar un campo que
+miente en el sitio donde más se usa; que en X11 funcionara no basta para que la
+misma memoria signifique dos cosas distintas según la sesión.
+
+**«Recordar mi actividad» no se lleva el tamaño de la ventana**, y es la única
+excepción del grupo de estado. Lo demás que hay ahí —recientes, certificado,
+última carpeta— dice **qué** hizo el anterior; el tamaño de una ventana no dice
+nada de nadie. Y quien vacía su lista de recientes para no dejar rastro no
+espera que además la ventana se le encoja al tamaño de fábrica, que se lee como
+un fallo y no como una promesa cumplida. Es un juicio y no una medición: si
+alguien encuentra un caso en el que el tamaño delate algo, esta viñeta es la que
+hay que tirar.
+
+### La posición del recuadro se recuerda por documento, no en Preferencias
+
+Este ADR guardaba «la última configuración de firma visible» como una sola cosa
+del grupo de estado. Se parte en dos:
+
+- **Global**, y gobernado por el interruptor de Preferencias: el propio
+  interruptor de firma visible, las cinco casillas, el motivo y el tamaño del
+  recuadro. Eso es lo que se reutiliza en el siguiente documento.
+- **Por documento**: la **página y la posición** del recuadro, guardadas en la
+  fila de recientes de ese documento.
+
+Reponer sobre un documento nuevo una posición elegida para otro es lo que
+rechaza el ID-22: el recuadro acaba fuera de página, o encima del texto, y el
+usuario tiene que arreglarlo cada vez. Un recuadro colocado a mano en la
+página 3 de un contrato no dice nada de dónde va en un modelo 036.
+
+Cuesta acoplar la ficha 3 a la 2 —sin fila de recientes no hay dónde guardar la
+posición—, y se acepta: es el mismo sitio donde ya viven los metadatos de ese
+documento, y desaparece con él cuando se olvida o se vacía la lista, sin ninguna
+regla de caducidad nueva.

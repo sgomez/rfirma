@@ -19,10 +19,11 @@ termina en el botón que firma. Es la única región con un botón primario.
 3. **Certificado**.
 4. **Firma visible**.
 
-**Pie fijo**: «Se guardará en» con el **nombre de la carpeta** —no la ruta— y
-un `Cambiar`, y debajo el botón primario a ancho completo. El destino se ve
-antes de firmar, no después. Lo fija el
-[ADR-0011](../adr/0011-destino-del-documento-firmado.md).
+**Pie fijo**: «Se guardará en» con **la última carpeta y el nombre del
+fichero** —nunca la ruta—, un `Cambiar`, y debajo el botón primario a ancho
+completo. El destino se ve antes de firmar, no después. Lo fija el
+[ADR-0011](../adr/0011-destino-del-documento-firmado.md); la línea es el
+componente **ruta de destino** del [sistema de diseño](design-system.md).
 
 ### Geometría
 
@@ -70,9 +71,11 @@ antes de firmar, no después. Lo fija el
   secundario, que ocupa el resto y mide 36 px de alto.
 - **Pie**: 16 px de relleno, borde superior de 1 px en `--rf-border-subtle`.
   Dentro: el rótulo «Se guardará en», 4 px debajo la fila con el icono de
-  carpeta de 20 px, la carpeta en `.rf-prose` recortada con elipsis y un
-  `Cambiar` fantasma de 32 px de alto, 8 px de relleno lateral y 12 px de
-  cuerpo. Debajo, el botón primario a ancho completo.
+  carpeta de 20 px, el destino en `.rf-prose` y un `Cambiar` fantasma de 32 px
+  de alto, 8 px de relleno lateral y 12 px de cuerpo. Debajo, el botón primario
+  a ancho completo. El icono y el `Cambiar` se alinean **arriba**
+  (`align-items: flex-start`, el icono 3 px más abajo para casar con la primera
+  línea) porque el destino puede ocupar dos renglones.
 - **Aviso de error**: 16 px de relleno, borde de **2 px** en
   `--rf-border-strong` y `--rf-radius-md`; título con el triángulo de aviso de
   20 px y el texto en `.rf-title` a 14 px.
@@ -242,45 +245,57 @@ al firmar. Ver el
   a escribir un informe de fallo. El «Copiar detalle» del artboard **está
   pendiente**: es una acción sobre el portapapeles, no una diferencia de piel.
   El botón pasa a «Volver a intentarlo».
-- **Firmado**: el panel entero se reemplaza por el resumen (ver abajo). Está
-  implementado **en lo que no necesita datos nuevos**: la cabecera con el
-  nombre del fichero que quedó escrito, el rótulo `RESUMEN`, la insignia
-  `PAdES` —rFirma no produce otro formato— y el pie con «Firmar otro
-  documento» a ancho completo. Es el único acuse de recibo del recorrido:
-  antes la postfirma devolvía un `SignedDocument` que nadie leía y la ventana
-  volvía al panel con el nombre del fichero **original**, así que quien
-  firmaba no sabía si se había escrito nada.
-  Siguen **pendientes** tres piezas del artboard, y por la regla del dato
-  desconocido no ocupan sitio: la insignia con el número de firmas y las
-  tarjetas de cada firma —nadie cuenta todavía las firmas del PDF, ver
-  arriba— y los botones «Abrir el PDF» y «Abrir la carpeta», que no son piel
-  sino dos `OpenURI` que aún no existen. Reaparecen en cuanto haya quien lea
-  las firmas del resultado y quien abra un URI.
-  El acuse de recibo **es de un documento concreto y solo se ve con ese
-  documento delante**. El recuento de páginas de la cabecera sale del PDF que
-  la ventana tiene abierto, no del fichero escrito, así que con otro documento
-  delante enseñaría el nombre de uno con las páginas de otro; y sin ninguno
-  dejaría una tercera columna al lado del visor vacío, que es lo que quita el
-  ID-51. Por eso el estado guarda el asa del documento que se firmó y se cierra
-  solo en cuanto deja de estar activo —se elige otro en la bandeja, se olvida
-  el activo, se vacía la lista—, como si se hubiera pulsado «Firmar otro
-  documento».
+- **Firmado**: el panel entero se reemplaza por el resumen (ver abajo). El
+  acuse de recibo **es de un documento concreto y solo se ve con ese documento
+  delante**. El recuento de páginas de la cabecera sale del PDF que la ventana
+  tiene abierto, no del fichero escrito, así que con otro documento delante
+  enseñaría el nombre de uno con las páginas de otro; y sin ninguno dejaría una
+  tercera columna al lado del visor vacío, que es lo que quita el ID-51. Por
+  eso el estado guarda el asa del documento que se firmó y se cierra solo en
+  cuanto deja de estar activo: se elige otro en la bandeja, se olvida el
+  activo, se vacía la lista.
 
 ## El resumen, tras firmar
 
 Sustituye a la configuración, que ya no sirve de nada:
 
-- Nombre del fichero resultante y su tamaño.
-- `Resumen`: insignias `PAdES` y `2 firmas`, y **todas las firmas del
-  documento**, no solo la del usuario, con la insignia `La tuya` en la suya.
-- «Abrir el PDF» (primario) y «Abrir la carpeta» (secundario). Los dos son el
-  portal `OpenURI`, que funciona sin declarar ningún permiso. Cargan más peso
-  del que parece: bajo el arenero son la única forma que tiene el usuario de
-  llegar al fichero sin saberse la ruta.
-- Al pie, «Firmar otro documento» como `--ghost`.
+- **Cabecera**: el nombre del fichero resultante y, debajo, la línea de
+  metadatos con las páginas y **el tamaño**. El tamaño lo conoce
+  `finish_signing`, que escribe con `std::fs::write` y sabe cuántos bytes ha
+  puesto; hoy `SignedDocumentView` lo descarta.
+- **`Resumen`**, con la insignia `PAdES` —rFirma no produce otro formato— sola
+  debajo. El encabezado se queda aunque solo cuelgue una insignia de él:
+  **guarda el sitio de la ficha 14**, que traerá la insignia con el número de
+  firmas y la tarjeta de cada firma del documento, con `La tuya` en la del
+  usuario. Enseñarlas todas es la contrapartida del aviso de cofirma: si antes
+  se avisa de que el PDF ya llevaba una, el resumen tiene que enseñarlas.
+- **Tres botones, uno sobre otro y a ancho completo**, en el pie fijo:
+  «Abrir el PDF» primario, «Abrir la carpeta» secundario y «Volver a firmar»
+  como `--ghost`. Los dos primeros son el portal `OpenURI`, que funciona sin
+  declarar ningún permiso, y cargan más peso del que parece: bajo el arenero
+  son la única forma que tiene el usuario de llegar al fichero sin saberse la
+  ruta.
 
-Enseñar todas las firmas es la contrapartida del aviso de cofirma: si antes se
-avisa de que el PDF ya llevaba una, el resumen tiene que enseñarlas todas.
+**«Volver a firmar» vuelve al panel de firma con el original, releído del
+disco.** Es abrir el documento otra vez: el usuario ha podido modificarlo fuera
+o haberse equivocado al configurar la firma. El enlace del portal sigue siendo
+válido mientras la ruta no cambie, que es la misma regla que sostiene la
+insignia `No disponible` de los recientes. Si al releer el documento tiene
+menos páginas y el recuadro recordado se sale, avisa el aviso de recuadro fuera
+de página del visor (ID-22): no hace falta uno nuevo.
+
+**El firmado anterior se queda en la carpeta.** La segunda firma sale numerada
+—`contrato-firmado-2.pdf`— como manda el ADR-0011, así que quien se equivocó
+acaba con dos ficheros y el equivocado delante por orden alfabético. Se acepta:
+la aplicación no borra nada del usuario nunca, y ofrecer «reemplazar» obligaría
+al pie a prometer una destrucción **antes** de firmar, que es un estado nuevo
+del pie por un caso poco frecuente.
+
+**No hay «Firmar otro documento».** Lo hubo, como `--ghost` al pie, y se
+retira: la [bandeja](bandeja-de-documentos.md) siempre ofrece abrir y aceptar
+arrastre, y dos caminos para lo mismo es uno de más. Del resumen se sale por
+tanto de dos maneras: eligiendo otro documento en la bandeja, o volviendo al
+panel del mismo con «Volver a firmar».
 
 ## Diferencias con el canvas, declaradas
 
@@ -332,6 +347,24 @@ tokens. Si se repiten en otra pantalla, hay que subirlos a
 - El `Cambiar` del pie vale **solo para esa firma** y no toca la preferencia.
   Cambiar una preferencia desde un pie de página, sin decirlo, manda la
   siguiente firma a un sitio que el usuario no recuerda haber elegido.
+- **El pie enseña carpeta *y* nombre**, no solo la carpeta. El nombre lo elige
+  la aplicación —`-firmado`, con desempate `-2`, `-3`— y hasta ahora no se veía
+  hasta después de firmar. La regla de recorte y el porqué de cada pieza están
+  en el componente **ruta de destino** del
+  [sistema de diseño](design-system.md); lo que esta ficha añade es que
+  `Cambiar` sigue abriendo **el diálogo de guardar**, que es el único gesto que
+  fija carpeta y nombre a la vez, mientras que el ajuste persistente de
+  Preferencias usa un selector de directorio, que es el único que necesita
+  nombrar una carpeta. Que el gesto sea distinto no es incoherencia: uno decide
+  una vez y el otro decide siempre.
+- **La línea del destino no se corta, envuelve.** Estuvo con
+  `white-space: nowrap` y `overflow: hidden`, y eso cortaba en seco —y sin
+  puntos suspensivos— lo que el recorte ya había acortado: con `…/Documentos/`
+  delante y el `Cambiar` al lado, en 360 px no cabía ni un nombre corto.
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
-**Recorrido de firma**, artboards 2 a 5, 9 y 10.
+**Recorrido de firma**, artboards 2 a 5, 9 y 10. El pie del destino y el
+resumen se rehicieron el 02/09/2026 con las decisiones del
+[#123](https://github.com/sgomez/rfirma/issues/123): están en `Main`, con las
+palancas «Pie · destino» y «Pie · recorte», y en `EstadoExito`, con la palanca
+«Ficha 14».

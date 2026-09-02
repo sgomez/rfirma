@@ -65,11 +65,22 @@ de más abajo. Comprueba con `list_files` antes de asumir nada.
 1. **Redactar los artboards**: skill `design` (ficheros `.dc.html`, un artboard
    por pantalla-estado del flujo). La skill `design` sirve para **crear o
    re-sembrar** un lienzo; un lienzo ya publicado se edita en su Artifact.
+
+   El `<helmet>` de un artboard nuevo **se copia de
+   `docs/design/artboards/_helmet.part`, nunca de un `get_file` del proyecto**.
+   La copia del proyecto se queda atrás y no hay nada allí que lo detecte: el
+   02/09/2026 tres artboards entraron con dos tokens de sombra desfasados
+   porque se redactaron mirando al proyecto. La dirección es siempre
+   **repo → proyecto**.
 2. **Transportar ficheros al proyecto**: herramienta `DesignSync` con el
    `projectId` de arriba. Orden obligatorio: `list_files` / `get_file` →
    `finalize_plan` (declarando writes y deletes) → `write_files`.
-3. **Anotarlo en el registro de canvas** de más abajo.
-4. **Enseñar la URL al usuario** con la lista de artboards, y esperar su
+3. **Pasar `docs/design/artboards/comprueba.sh`** sobre la copia del repo, que
+   verifica que todos llevan el `<helmet>` de `_helmet.part`. Compararlos entre
+   sí no basta: trece ficheros de acuerdo entre ellos dan verde con el sistema
+   de diseño equivocado entero.
+4. **Anotarlo en el registro de canvas** de más abajo.
+5. **Enseñar la URL al usuario** con la lista de artboards, y esperar su
    veredicto. La validación es siempre humana.
 
 Si falta la autorización de design (la llamada de lectura falla por scopes),
