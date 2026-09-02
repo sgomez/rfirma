@@ -34,7 +34,8 @@ silenciosa que el **ID-22** rechaza.
 ## El banco
 
 Todo se midió **contra el puente de rfirma**, no contra AutoFirma directamente: es la
-frontera que interesa. Banco en `docs/research/assets/signature-pages-probe/`:
+frontera que interesa. El banco **no se fusiona**: se queda en la rama
+`research/signature-pages-bridge`, que no se borra, en `docs/research/assets/signature-pages-probe/`:
 
 | Fichero | Qué es |
 | --- | --- |
