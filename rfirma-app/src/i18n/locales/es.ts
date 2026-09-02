@@ -178,6 +178,19 @@ export const es = {
         title: "Ya hay demasiados documentos con ese nombre",
         body: "Para no machacar ninguno, hemos parado. Mueve o renombra los anteriores y vuelve a firmar.",
       },
+      /**
+       * Los dos fallos de Preferencias (ID-70). No los clasifica Rust: los
+       * nombra la ventana al recoger el rechazo de `PreferencesStore`, y por eso
+       * son las dos únicas situaciones sin pareja en el backend.
+       */
+      settingNotSaved: {
+        title: "No hemos podido guardar el ajuste",
+        body: "Hemos vuelto al valor anterior, que es el que sigue guardado. Vuelve a intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del fallo.",
+      },
+      activityNotForgotten: {
+        title: "No hemos podido vaciar la lista",
+        body: "Los documentos recientes y el certificado siguen guardados. Vuelve a intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del fallo.",
+      },
     },
   },
   /**
@@ -377,6 +390,13 @@ export const es = {
   /** Los ajustes (docs/design/preferencias.md). Se aplican al hacerlos. */
   preferences: {
     title: "Preferencias",
+    /** Las tres secciones del índice de la izquierda (ID-69). */
+    sections: {
+      label: "Secciones",
+      signing: "Firma",
+      privacy: "Privacidad",
+      appearance: "Apariencia",
+    },
     rememberVisibleSignature: {
       label: "Recordar la última configuración de firma visible",
       hint: "La página, la posición y el contenido del recuadro se reutilizan en el siguiente documento.",
@@ -387,7 +407,7 @@ export const es = {
       clear: "Vaciar la lista",
       confirm: {
         body: "Al apagarlo se borra lo ya recordado: los documentos recientes y el certificado usado la última vez.",
-        accept: "Apagar y borrar",
+        accept: "Borrar y apagar",
       },
     },
     destination: {

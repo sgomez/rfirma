@@ -7,7 +7,15 @@ import type { LanguagePreference } from "./preference";
 interface LanguageSelection {
   /** El idioma que se está enseñando. */
   language: LanguageTag;
-  /** Cambia el idioma **en caliente** y lo guarda en la preferencia. */
+  /**
+   * Cambia el idioma **en caliente** y lo guarda en la preferencia.
+   *
+   * Si el disco lo rechaza, **deshace el cambio** —la ventana vuelve al idioma
+   * anterior— y relanza. Es el mismo contrato que `Preferences.save` a través
+   * de `App.changeSettings`, y lo que permite que Preferencias cuente el fallo
+   * con el mismo aviso que los otros cuatro ajustes: el que dice que se ha
+   * vuelto al valor anterior solo puede salir si de verdad se ha vuelto.
+   */
   setLanguage: (language: LanguageTag) => Promise<void>;
 }
 
@@ -25,9 +33,13 @@ interface LanguageProviderProps {
  *
  * El cambio se aplica sin reiniciar: `changeLanguage` avisa a i18next, los
  * componentes que usan `useTranslation` se repintan solos, y solo después se
- * guarda la preferencia. Ese orden importa —la interfaz responde aunque
- * guardar falle— y es el mismo «los cambios se aplican al hacerlos» de la
- * ficha de Preferencias: no hay «Guardar» ni «Cancelar».
+ * guarda la preferencia. Ese orden importa —la interfaz responde al momento— y
+ * es el mismo «los cambios se aplican al hacerlos» de la ficha de
+ * Preferencias: no hay «Guardar» ni «Cancelar».
+ *
+ * Lo que **no** se queda aplicado es un cambio que el disco rechazó: entonces
+ * se repone el idioma anterior antes de relanzar, porque el aviso que recoge
+ * ese rechazo afirma que se ha vuelto al valor anterior.
  */
 export function LanguageProvider({ i18n, preference, children }: LanguageProviderProps) {
   const [language, setLanguageState] = useState<LanguageTag>(() =>
@@ -36,9 +48,16 @@ export function LanguageProvider({ i18n, preference, children }: LanguageProvide
 
   const setLanguage = useCallback(
     async (next: LanguageTag) => {
+      const previous = isLanguageTag(i18n.language) ? i18n.language : FALLBACK_LANGUAGE;
       await i18n.changeLanguage(next);
       setLanguageState(next);
-      await preference.save(next);
+      try {
+        await preference.save(next);
+      } catch (thrown) {
+        await i18n.changeLanguage(previous);
+        setLanguageState(previous);
+        throw thrown;
+      }
     },
     [i18n, preference],
   );

@@ -33,7 +33,7 @@ rojo.
 |---|---|---|
 | `main.tsx` | 76 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
 | `tauri.ts` | 481 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 545 | El árbol de la ventana y el estado que la recorre. |
+| `App.tsx` | 561 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -68,19 +68,19 @@ rojo.
 | `viewer/useBoxDrag.ts` | 122 | El arrastre del recuadro. |
 | **`preferences/`** | | Los ajustes. |
 | `preferences/preferences.ts` | 75 | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | 174 | El diálogo. |
+| `preferences/PreferencesDialog.tsx` | 390 | La pantalla completa de ajustes, con su índice de secciones. |
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |
 | **`i18n/`** | | Catálogo propio, seis idiomas (ADR-0009). |
 | `i18n/catalog.ts` | 50 | La forma del catálogo. |
 | `i18n/i18n.ts` | 40 | La traducción. |
-| `i18n/LanguageProvider.tsx` | 62 | El contexto. |
+| `i18n/LanguageProvider.tsx` | 81 | El contexto. |
 | `i18n/languages.ts` | 45 | Los seis idiomas. |
 | `i18n/preference.ts` | 34 | De dónde sale y a dónde vuelve el idioma. |
-| `i18n/locales/es.ts` | 425 | Castellano: además de catálogo, **la forma** del catálogo. |
-| `i18n/locales/en.ts` | 345 | Inglés, el otro con contenido en v0.1. |
-| `i18n/locales/ca.ts` `i18n/locales/eu.ts` `i18n/locales/gl.ts` `i18n/locales/va.ts` | ~348 | Claves sí, textos no. No se leen. |
+| `i18n/locales/es.ts` | 445 | Castellano: además de catálogo, **la forma** del catálogo. |
+| `i18n/locales/en.ts` | 359 | Inglés, el otro con contenido en v0.1. |
+| `i18n/locales/ca.ts` `i18n/locales/eu.ts` `i18n/locales/gl.ts` `i18n/locales/va.ts` | ~362 | Claves sí, textos no. No se leen. |
 | **`errors/`** | | Los fallos que ve el usuario. |
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
