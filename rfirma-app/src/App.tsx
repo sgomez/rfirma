@@ -325,19 +325,21 @@ export function App({
    * Un ajuste cambia **en cuanto se toca**, y solo se queda si el disco lo
    * acepta.
    *
-   * Si guardar falla —el fichero de configuración no se deja escribir— el
-   * diálogo vuelve a lo que había: una ventana que enseña un ajuste que el
-   * disco no tiene estaría mintiendo sobre la sesión siguiente. El detalle
-   * crudo se pierde aquí porque todavía no hay dónde enseñarlo; lo que no se
-   * pierde es la verdad de lo que hay guardado.
+   * Si guardar falla —el fichero de configuración no se deja escribir— la
+   * pantalla vuelve a lo que había: una ventana que enseña un ajuste que el
+   * disco no tiene estaría mintiendo sobre la sesión siguiente. Repuesto el
+   * valor, **el rechazo sigue su camino**: quien lo recoge es Preferencias, que
+   * es quien sabe en qué sección se pulsó y por tanto dónde va el aviso
+   * (ID-70).
    */
   const changeSettings = async (next: Preferences) => {
     const before = settings;
     setSettings(next);
     try {
       await preferences.save(next);
-    } catch {
+    } catch (thrown) {
       setSettings(before);
+      throw thrown;
     }
   };
 
@@ -382,13 +384,17 @@ export function App({
     // Los recientes de la ventana se vacían **aunque el borrado del disco
     // falle**: lo que promete el rótulo es que dejen de estar, y quedarse a
     // medias sería enseñarlos como si nada hubiera pasado.
+    let failure: unknown = null;
     try {
       await preferences.forgetActivity();
-    } catch {
-      // Sin nada que enseñar todavía: lo que no puede pasar es que el fallo
-      // deje la lista intacta y sin explicación.
+    } catch (thrown) {
+      failure = thrown;
     }
     await documents.forgetAll();
+    // El fallo se cuenta **después** de vaciar la ventana, y lo cuenta
+    // Preferencias en su sección de Privacidad (ID-70): lo que no puede pasar
+    // es que el borrado del disco falle y nadie lo diga.
+    if (failure !== null) throw failure;
   };
 
   return (
@@ -477,8 +483,8 @@ export function App({
         <PreferencesDialog
           preferences={settings}
           destinations={destinations}
-          onChange={(next) => void changeSettings(next)}
-          onForgetActivity={() => void forgetActivity()}
+          onChange={changeSettings}
+          onForgetActivity={forgetActivity}
           onClose={() => setDialog(null)}
         />
       )}

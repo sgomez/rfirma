@@ -1,16 +1,107 @@
 /*
- * Preferencias (docs/design/preferencias.md): un `.rf-dialog` de 480 px —el
- * ancho que ya trae la clase— sobre `.rf-scrim`, con los ajustes separados por
- * `.rf-divider` y un único botón «Cerrar» abajo a la derecha.
+ * Preferencias (docs/design/preferencias.md): un diálogo **a pantalla
+ * completa** por debajo de la cabecera, con el índice de secciones de 220 px a
+ * la izquierda, la columna de contenido de 720 px centrada y el pie fijo con
+ * «Cerrar».
+ *
+ * No usa `.rf-scrim`: el velo va de `inset: 0` (`app.css`) y taparía la
+ * cabecera, que el ID-68 deja **intacta detrás** con su estado de documento.
+ * Por eso la colocación es de aquí, y arranca a los 56 px que mide la cabecera
+ * (`shell/Header.css`). El `z-index` la pone por encima del menú de la
+ * cabecera (10) y por debajo del velo de los diálogos (100), que es lo que
+ * deja la confirmación del borrado encima de esta pantalla.
  */
 
 .preferences {
-  width: 480px;
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 1fr auto;
+  background: var(--rf-bg);
+}
+
+.preferences:focus {
+  outline: none;
+}
+
+.preferences__index {
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--rf-space-sm);
+  background: var(--rf-surface);
+  border-right: 1px solid var(--rf-border-subtle);
+  overflow-y: auto;
+}
+
+/* El encabezado del índice separa el título de la primera fila con el mismo
+   aire que hay entre filas, y por eso el margen se escribe aquí: `.rf-title`
+   no trae ninguno. */
+.preferences__index > .rf-title {
+  margin: 0 0 var(--rf-space-sm);
+  padding: 0 var(--rf-space-xs);
+}
+
+/* Cada fila del índice: 36 px de alto, `--rf-radius-md` y relleno lateral
+   corto. La activa lleva fondo y borde; las demás, ni uno ni otro. */
+.preferences__section {
+  justify-content: flex-start;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 var(--rf-space-xs);
+  border: 1px solid transparent;
+  border-radius: var(--rf-radius-md);
+  text-align: left;
+}
+
+.preferences__section--current {
+  background: var(--rf-bg);
+  border-color: var(--rf-border-strong);
+}
+
+.preferences__content {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* El aire sobrante queda a los lados: a ancho completo, un interruptor y su
+   ayuda acaban separados por medio metro de nada. */
+.preferences__column {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--rf-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-lg);
+}
+
+.preferences__section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}
+
+/* El rótulo de la sección y su `.rf-divider` van pegados: son una sola cosa. */
+.preferences__heading {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--rf-text-muted);
+}
+
+.preferences__section-body > .rf-divider {
+  margin: 0 0 var(--rf-space-xs);
 }
 
 /* «Vaciar la lista» cuelga del ajuste que la explica, así que se sangra hasta
-   la columna de su texto, igual que la ayuda del interruptor. Es el patrón
-   visual de los ajustes que el artboard sí dibuja, aplicado a uno que no. */
+   la columna de su texto, igual que la ayuda del interruptor: los 40 px de la
+   pastilla más la separación ancha de esta pantalla. */
 .preferences__clear {
   align-self: flex-start;
   margin-left: calc(40px + var(--rf-space-sm));
@@ -19,16 +110,20 @@
   font-size: 12px;
 }
 
+/* Fijo, y no al final del contenido: en una pantalla que se desplaza, un botón
+   de cierre que se va con el desplazamiento es un botón que no está. */
+.preferences__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--rf-space-sm);
+  background: var(--rf-surface);
+  border-top: 1px solid var(--rf-border-subtle);
+}
+
 .preferences__confirm {
   gap: var(--rf-space-sm);
-  background: var(--rf-bg);
 }
 
 .preferences__confirm-actions {
-  justify-content: flex-end;
-}
-
-.preferences__footer {
-  display: flex;
   justify-content: flex-end;
 }

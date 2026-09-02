@@ -152,6 +152,14 @@ export const en: Catalog = {
         title: "There are already too many documents with that name",
         body: "We stopped rather than overwrite one. Move or rename the earlier ones and sign again.",
       },
+      settingNotSaved: {
+        title: "The setting could not be saved",
+        body: "We went back to the previous value, which is the one still saved. Try again and, if it keeps happening, attach the technical detail to the bug report.",
+      },
+      activityNotForgotten: {
+        title: "The list could not be emptied",
+        body: "Your recent documents and your certificate are still saved. Try again and, if it keeps happening, attach the technical detail to the bug report.",
+      },
     },
   },
   window: {
@@ -303,6 +311,12 @@ export const en: Catalog = {
   },
   preferences: {
     title: "Preferences",
+    sections: {
+      label: "Sections",
+      signing: "Signing",
+      privacy: "Privacy",
+      appearance: "Appearance",
+    },
     rememberVisibleSignature: {
       label: "Remember the last visible signature setup",
       hint: "The page, the position and the contents of the box are reused on the next document.",
@@ -313,7 +327,7 @@ export const en: Catalog = {
       clear: "Empty the list",
       confirm: {
         body: "Turning it off erases what is already remembered: the recent documents and the certificate used last time.",
-        accept: "Turn off and erase",
+        accept: "Erase and turn off",
       },
     },
     destination: {

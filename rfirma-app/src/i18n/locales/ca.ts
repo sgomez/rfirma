@@ -158,6 +158,14 @@ export const ca: UntranslatedCatalog = {
         title: "",
         body: "",
       },
+      settingNotSaved: {
+        title: "",
+        body: "",
+      },
+      activityNotForgotten: {
+        title: "",
+        body: "",
+      },
     },
   },
   window: {
@@ -308,6 +316,12 @@ export const ca: UntranslatedCatalog = {
   },
   preferences: {
     title: "",
+    sections: {
+      label: "",
+      signing: "",
+      privacy: "",
+      appearance: "",
+    },
     rememberVisibleSignature: {
       label: "",
       hint: "",

@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
@@ -12,7 +12,7 @@ const defaults: Preferences = {
   rememberActivity: true,
 };
 
-const noop = () => {};
+const noop = async () => {};
 
 function renderDialog(props: Partial<Parameters<typeof PreferencesDialog>[0]> = {}) {
   return renderWithCatalog(
@@ -47,9 +47,9 @@ describe("PreferencesDialog", () => {
    * El interruptor es el mismo componente en el panel de firma y aquí, pero los
    * artboards lo separan distinto del texto: `rf-gap-xs` (8 px) en el panel
    * (`Main.dc.html:306`) y `rf-gap-sm` (16 px) en el diálogo
-   * (`EstadoPreferencias.dc.html:409`). Un solo valor no puede ser los dos, y
-   * arreglar uno rompía el otro: el diálogo pide el suyo, y por eso se
-   * comprueba que lo pida.
+   * (`PreferenciasPantalla`). Un solo valor no puede ser los dos, y arreglar
+   * uno rompía el otro: la pantalla pide el suyo, y por eso se comprueba que
+   * lo pida.
    */
   it("asks for the wider spacing the Preferences artboard draws", () => {
     renderDialog();
@@ -151,7 +151,7 @@ describe("PreferencesDialog", () => {
     renderDialog({ onForgetActivity, onChange });
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
-    await user.click(screen.getByRole("button", { name: "Apagar y borrar" }));
+    await user.click(screen.getByRole("button", { name: "Borrar y apagar" }));
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, rememberActivity: false });
     expect(onForgetActivity).toHaveBeenCalledOnce();
@@ -188,5 +188,170 @@ describe("PreferencesDialog", () => {
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+  /**
+   * La pantalla completa sigue siendo un diálogo (ID-68): `Escape` la cierra y
+   * el foco entra en ella al abrirse, que es lo que la distingue de una región
+   * más de la ventana.
+   */
+  it("closes on Escape, like the dialog it still is", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    expect(screen.getByRole("dialog", { name: "Preferencias" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  /** Los cinco ajustes, repartidos en las tres secciones del ID-69. */
+  it("lays the settings out in three sections with an index to the left", () => {
+    renderDialog();
+
+    const index = screen.getByRole("navigation", { name: "Secciones" });
+    expect(
+      within(index)
+        .getAllByRole("button")
+        .map((row) => row.textContent),
+    ).toEqual(["Firma", "Privacidad", "Apariencia"]);
+
+    const signing = screen.getByRole("region", { name: "Firma" });
+    expect(
+      within(signing).getByRole("switch", {
+        name: /Recordar la última configuración de firma visible/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(signing).getByRole("combobox", { name: "Dónde se guarda el documento firmado" }),
+    ).toBeInTheDocument();
+
+    const privacy = screen.getByRole("region", { name: "Privacidad" });
+    expect(
+      within(privacy).getByRole("switch", { name: /Recordar mi actividad/ }),
+    ).toBeInTheDocument();
+    expect(within(privacy).getByRole("button", { name: "Vaciar la lista" })).toBeInTheDocument();
+
+    const appearance = screen.getByRole("region", { name: "Apariencia" });
+    expect(within(appearance).getByRole("combobox", { name: "Tema" })).toBeInTheDocument();
+    expect(within(appearance).getByRole("combobox", { name: "Idioma" })).toBeInTheDocument();
+  });
+
+  it("marks the chosen section in the index and leaves the first one chosen", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    const index = screen.getByRole("navigation", { name: "Secciones" });
+    expect(within(index).getByRole("button", { name: "Firma" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+
+    await user.click(within(index).getByRole("button", { name: "Apariencia" }));
+
+    expect(within(index).getByRole("button", { name: "Apariencia" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(within(index).getByRole("button", { name: "Firma" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  /** Fijo: un botón de cierre que se va con el desplazamiento no está (ID-69). */
+  it("keeps Cerrar in a footer outside the column that scrolls", () => {
+    const { container } = renderDialog();
+
+    const close = screen.getByRole("button", { name: "Cerrar" });
+    expect(close.closest(".preferences__footer")).not.toBeNull();
+    expect(container.querySelector(".preferences__content")?.contains(close)).toBe(false);
+  });
+
+  /**
+   * El aviso va **en la sección donde se pulsó** y no en una franja común
+   * arriba (ID-70): con tres secciones, un aviso común obliga a leer el texto
+   * para saber qué se rompió.
+   */
+  it("shows the failure to save inside the section where the setting was pressed", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn(async () => {
+      throw new Error("no se deja escribir");
+    });
+    renderDialog({ onChange });
+
+    await user.click(screen.getByRole("combobox", { name: "Tema" }));
+    await user.click(screen.getByRole("option", { name: "Oscuro" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido guardar el ajuste");
+    expect(notice).toHaveTextContent("Hemos vuelto al valor anterior");
+    expect(screen.getByRole("region", { name: "Apariencia" })).toContainElement(notice);
+    expect(screen.getByRole("region", { name: "Firma" })).not.toContainElement(notice);
+  });
+
+  it("keeps the technical detail of the rejection in the notice", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn(async () => {
+      throw new Error("EACCES: permission denied");
+    });
+    renderDialog({ onChange });
+
+    await user.click(
+      screen.getByRole("switch", { name: /Recordar la última configuración de firma visible/ }),
+    );
+
+    expect(await screen.findByText("EACCES: permission denied")).toBeInTheDocument();
+  });
+
+  /** El otro fallo que se tragaba: siempre en Privacidad, pegado a su botón. */
+  it("says the recents are still saved when emptying the list fails", async () => {
+    const user = userEvent.setup();
+    const onForgetActivity = vi.fn(async () => {
+      throw new Error("no se deja borrar");
+    });
+    renderDialog({ onForgetActivity });
+
+    await user.click(screen.getByRole("button", { name: "Vaciar la lista" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido vaciar la lista");
+    expect(notice).toHaveTextContent("siguen guardados");
+    expect(screen.getByRole("region", { name: "Privacidad" })).toContainElement(notice);
+  });
+
+  it("says nothing when the setting is saved", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.click(screen.getByRole("switch", { name: /Recordar la última configuración/ }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  /** El interruptor no se mueve hasta que se confirma (ID-71). */
+  it("leaves the switch on while the purge is being confirmed", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    const remember = screen.getByRole("switch", { name: /Recordar mi actividad/ });
+    await user.click(remember);
+
+    expect(remember).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "Cancelar" })).toHaveClass("rf-btn--ghost");
+    expect(screen.getByRole("button", { name: "Borrar y apagar" })).toHaveClass("rf-btn--primary");
+  });
+
+  it("calls the confirmation off with Escape, without closing the screen", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onChange = vi.fn();
+    renderDialog({ onClose, onChange });
+
+    await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByText(/Al apagarlo se borra lo ya recordado/)).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

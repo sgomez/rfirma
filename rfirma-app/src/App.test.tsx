@@ -243,9 +243,13 @@ describe("App", () => {
     await user.click(remember);
 
     // Se intentó guardar —así que el clic sí llegó— y aun así el interruptor
-    // vuelve a estar como estaba.
+    // vuelve a estar como estaba, y ahora además se dice, en su sección.
     await waitFor(() => expect(refused).toHaveBeenCalledOnce());
     expect(remember).toHaveAttribute("aria-checked", "true");
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido guardar el ajuste");
+    expect(screen.getByRole("region", { name: "Firma" })).toContainElement(notice);
+    expect(screen.getByText("no se deja escribir")).toBeInTheDocument();
   });
 
   it("opens a document from the tray and shows its badge in the header", async () => {
@@ -495,12 +499,59 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
     await user.click(await screen.findByRole("switch", { name: /Recordar mi actividad/ }));
-    await user.click(screen.getByRole("button", { name: "Apagar y borrar" }));
+    await user.click(screen.getByRole("button", { name: "Borrar y apagar" }));
 
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
     expect(
       screen.getByText("Aquí aparecerán los documentos que vayas firmando"),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * La bandeja se vacía **aunque el borrado del disco falle** —lo que promete
+   * el rótulo es que dejen de estar— y el fallo se cuenta en Privacidad, que es
+   * el otro `catch {}` vacío que el ID-70 llena.
+   */
+  it("empties the tray and says the recents are still saved when the disk refuses", async () => {
+    const user = userEvent.setup();
+    const recents = inMemoryRecents([document("a.pdf")]);
+    const preferences: PreferencesStore = {
+      read: async () => ({
+        theme: "system",
+        destination: "Documentos",
+        rememberVisibleSignature: true,
+        rememberActivity: true,
+      }),
+      save: async () => {},
+      forgetActivity: async () => {
+        throw new Error("no se deja borrar");
+      },
+    };
+    renderWithCatalog(
+      <App
+        recents={recents}
+        picker={inMemoryDocumentPicker([])}
+        drops={inMemoryDocumentDrops()}
+        pdfs={unavailablePdfSource()}
+        preferences={preferences}
+        destinations={["Documentos"]}
+        certificates={emptyCertificateStore()}
+        rubrics={emptyRubricPicker()}
+        composer={emptyLayer2Composer()}
+        signer={unavailableSigningBackend()}
+        menuAnchor="header"
+      />,
+    );
+    await screen.findByText("a.pdf");
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    await user.click(await screen.findByRole("button", { name: "Vaciar la lista" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido vaciar la lista");
+    expect(screen.getByRole("region", { name: "Privacidad" })).toContainElement(notice);
+    expect(screen.queryByText("a.pdf")).not.toBeInTheDocument();
   });
 
   it("stops remembering once Remember my activity is off, not just purges what there was", async () => {
@@ -511,7 +562,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
     await user.click(await screen.findByRole("switch", { name: /Recordar mi actividad/ }));
-    await user.click(screen.getByRole("button", { name: "Apagar y borrar" }));
+    await user.click(screen.getByRole("button", { name: "Borrar y apagar" }));
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
