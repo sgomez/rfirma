@@ -12,8 +12,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 - **Para situarte, `just outline <ruta>`; nunca `cat` de un módulo de más de 300
   líneas.** El esqueleto trae cada `fn`, `struct` y prueba con su número de línea
   y la primera línea de su `///`; desde ahí, `sed -n 'A,Bp'` para el tramo.
-  `commands/guards.rs` entero son 14 840 caracteres (~4,2k tokens) y su esqueleto
-  3149. La tabla de abajo da el tamaño de cada módulo antes de que lo abras.
+  La tabla de abajo da el tamaño de cada módulo antes de que lo abras.
 - **Los tests van al final de cada módulo**, tras `#[cfg(test)]`. No los leas
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
@@ -100,6 +99,13 @@ en `commands/`. Lo vigila `tests/module_directions.rs` (ADR-0017).
 El cuerpo de la orden va en `commands/mod.rs` y **lo que decide, en `app/`**: si
 lo que estás escribiendo dentro de la orden no es desempaquetar el `State` ni
 traducir el resultado, está en el fichero equivocado (ID-79).
+
+Lo que escribas aquí es lo que verá quien trabaje en la interfaz: `just contract`
+genera el contrato de las dos partes leyendo `commands/mod.rs` y los tipos que
+derivan `Serialize`. **No hay nada que actualizar** —una orden nueva aparece por
+existir—, pero sí dos cosas que salen mal si te descuidas: un tipo de salida sin
+`Serialize` no cruza y no se publica, y un `#[tauri::command]` sin `async` sale
+publicado como bloqueante, que es justo la trampa que cuelga la ventana.
 
 Las cuatro guardas de conjunto están juntas en `commands/guards.rs`, y solo dos
 piden algo de ti:

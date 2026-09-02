@@ -322,6 +322,192 @@ outline path:
     # 141 de un SIGPIPE si alguien encadena un `head`, y eso no es un fallo.
     exit 0
 
+
+# Imprime EL CONTRATO ENTRE LOS DOS LADOS: las ordenes que la ventana puede
+# pedirle al backend y los tipos que cruzan la frontera, con los nombres de
+# campo que ve TypeScript.
+#
+# PARA QUE SIRVE: para saber esto mismo hay que leer hoy `commands/mod.rs`
+# (12 200 caracteres) y `commands/views.rs` (13 766). El contrato son ~3665, y
+# es MAS correcto que las fuentes: de los cinco parametros de `begin_signing`,
+# cuatro son estado que Tauri inyecta y NO cruzan; aqui no aparecen. Quien va a
+# tocar la interfaz empieza por aqui y no abre `commands/` jamas.
+#
+# SE GENERA DE LAS FUENTES, y por eso no puede quedarse obsoleto. Un contrato
+# escrito a mano se desincroniza en el primer PR que anade una orden, y uno
+# desincronizado es PEOR que ninguno: el agente se lo cree, escribe el
+# adaptador contra una firma que no existe y lo descubre al compilar, cuando ya
+# ha gastado el contexto.
+#
+# Las dos reglas que lo hacen fiel, y que son verificables:
+#
+#   - La ORDEN se invoca por su nombre de Rust tal cual —`invoke(
+#     "list_certificates")`, ver `src/tauri.ts`—, asi que va sin tocar.
+#   - Los CAMPOS los renombra serde a camelCase (hay catorce `rename_all` en
+#     `commands/`), asi que se renombran: `holder_name` sale `holderName`, que
+#     es lo que el adaptador escribe de verdad.
+#
+# Los tipos se descubren por su derive de `Serialize`/`Deserialize`, igual que
+# la guarda del ADR-0011 en `guards.rs`: un tipo nuevo aparece aqui por existir,
+# sin lista que mantener. Los atributos se aplanan antes de mirarlos porque
+# rustfmt parte un derive largo en varias lineas, que es el mismo motivo por el
+# que esa guarda tiene `attributes_on_one_line`.
+#
+# Lo que la ventana puede pedirle al backend, generado de las fuentes.
+contract:
+    #!/usr/bin/env bash
+    set -u
+    cd {{ tauri }}/src/commands
+
+    # El extractor de tipos se usa dos veces —para los de `commands/` y para los
+    # que estos toman prestados de otros modulos—, asi que vive en un fichero y
+    # no duplicado. `only` lo limita a un tipo por su nombre.
+    program=$(mktemp)
+    trap 'rm -f "$program"' EXIT
+    printf '%s' '
+    function camel(s,   out, i, parts, n) {
+        if (!camelize) return s
+        n = split(s, parts, "_")
+        out = parts[1]
+        for (i = 2; i <= n; i++) out = out toupper(substr(parts[i], 1, 1)) substr(parts[i], 2)
+        return out
+    }
+    function take_attr(a) {
+        if (a ~ /^#\[derive/) derive = a
+        else if (a ~ /^#\[serde/) serde = a
+    }
+    function reset() { derive = ""; serde = "" }
+
+    # Las pruebas del final no cuentan: sus tipos no cruzan nada.
+    /^#\[cfg\(test\)\]/ { exit }
+
+    !inty {
+        if (collecting) {
+            buf = buf " " $0
+            if ($0 ~ /\][ \t]*$/) { collecting = 0; take_attr(buf) }
+            next
+        }
+        if ($0 ~ /^#\[/) {
+            if ($0 ~ /\][ \t]*$/) take_attr($0)
+            else { buf = $0; collecting = 1 }
+            next
+        }
+    }
+    !inty && /^pub (struct|enum) / {
+        name = $3; sub(/[ \t]*\{$/, "", name); sub(/<.*/, "", name)
+        if (derive !~ /Serialize|Deserialize/) { reset(); next }
+        if (only != "" && only != name) { reset(); next }
+        camelize = (serde ~ /camelCase/)
+        tag = ""
+        if (match(serde, /tag = "[^"]+"/)) tag = substr(serde, RSTART + 7, RLENGTH - 8)
+        head = $0
+        sub(/[ \t]*\{[ \t]*$/, "", head)
+        isenum = ($2 == "enum")
+        printf "\n  %s", head
+        if (tag != "") printf "   (serde: etiqueta \"%s\")", tag
+        if (source != "") printf "   [%s]", source
+        printf "\n"
+        inty = 1
+        next
+    }
+    !inty { reset(); next }
+
+    inty && /^\}/ { inty = 0; reset(); next }
+    inty && /^[ \t]*(\/\/|#\[)/ { next }
+    inty && /^[ \t]*$/ { next }
+
+    # Una variante de enum con campos se junta en una sola linea.
+    inty && variant != "" {
+        if ($0 ~ /^[ \t]*\},?[ \t]*$/) {
+            printf "      %s { %s }\n", variant, fields
+            variant = ""; fields = ""
+            next
+        }
+        line = $0; sub(/^[ \t]+/, "", line); sub(/,[ \t]*$/, "", line)
+        split(line, kv, ":")
+        f = kv[1]; sub(/^pub /, "", f)
+        fields = fields (fields == "" ? "" : ", ") camel(f) ": " substr(line, index(line, ":") + 2)
+        next
+    }
+    inty && isenum && /^[ \t]+[A-Z][A-Za-z0-9]*[ \t]*\{[ \t]*$/ {
+        variant = $1; sub(/[ \t]*\{$/, "", variant); fields = ""
+        next
+    }
+    inty && isenum {
+        line = $0; sub(/^[ \t]+/, "", line); sub(/,[ \t]*$/, "", line)
+        printf "      %s\n", line
+        next
+    }
+    inty {
+        line = $0; sub(/^[ \t]+/, "", line); sub(/,[ \t]*$/, "", line); sub(/^pub /, "", line)
+        split(line, kv, ":")
+        printf "      %s: %s\n", camel(kv[1]), substr(line, index(line, ":") + 2)
+        next
+    }
+    ' > "$program"
+
+    # Lo unico que se dice aqui es lo que la salida NO ensena: los parametros
+    # que se han quitado. Lo demas ya lo sabe quien lee.
+    orders=$(awk '
+    /#\[tauri::command/ { taking = 1; async = ($0 ~ /async/); buf = ""; next }
+    taking {
+        buf = buf " " $0
+        if ($0 !~ /\{[ \t]*$/) next
+        taking = 0
+        gsub(/[ \t]+/, " ", buf)
+        sub(/ \{$/, "", buf)
+        sub(/^ *pub fn /, "", buf)
+        # El estado inyectado no cruza: fuera.
+        gsub(/ *[a-z_]+: State<[^>]*>,?/, "", buf)
+        gsub(/ *[a-z_]+: tauri::AppHandle,?/, "", buf)
+        gsub(/\( +/, "(", buf); gsub(/,? *\)/, ")", buf)
+        printf "  %-6s%s\n", (async ? "async " : ""), buf
+    }
+    ' mod.rs)
+
+    crossing=""
+    for source in $(ls *.rs | grep -v '^guards\.rs$'); do
+        crossing="$crossing$(awk -f "$program" -v only="" -v source="" "$source")"$'\n'
+    done
+
+    # Un tipo que aparece en un campo pero no se define arriba viene prestado de
+    # otro modulo (`Badge` de `memory/recents.rs`, `Theme` de
+    # `memory/configuration.rs`). Sin el, el contrato nombra algo que no explica
+    # y quien lo lee tiene que ir a buscarlo: justo el viaje que esto evita.
+    defined=$(printf '%s' "$crossing" | sed -n 's/^  pub \(struct\|enum\) \([A-Za-z0-9_]*\).*/\2/p')
+    #
+    # Se miran TODAS las lineas de cuerpo, no solo los campos con `nombre: tipo`:
+    # un tipo puede aparecer solo dentro de una variante de enum. Lo que no sea
+    # un tipo de verdad —el nombre de una variante— no lo encuentra el grep de
+    # abajo y se cae solo, sin ruido.
+    borrowed=$(printf '%s' "$crossing" \
+        | sed -n 's/^      //p' \
+        | grep -o '[A-Z][A-Za-z0-9_]*' \
+        | sort -u \
+        | grep -vxF -e Option -e Vec -e String -e Box -e Result -e HashMap -e BTreeMap \
+        | grep -vxF "$defined" || true)
+    lent=""
+    for type in $borrowed; do
+        for candidate in $(grep -rl "^pub \(struct\|enum\) $type" .. --include='*.rs'); do
+            lent="$lent$(awk -f "$program" -v only="$type" \
+                -v source="$(realpath --relative-to=.. "$candidate")" "$candidate")"$'\n'
+        done
+    done
+    if [ -n "$lent" ]; then
+        lent=$'\n  PRESTADOS DE OTROS MODULOS\n'"$lent"
+    fi
+
+    # Una sola escritura: asi un `head` encadenado no deja a medias la receta ni
+    # la mata por senal.
+    printf '%s\n%s\n\n%s\n%s%s\n\n%s\n' \
+        "ORDENES DE TAURI                          (commands/mod.rs)" \
+        "  Sin el estado inyectado (State<...>, AppHandle): no cruza." \
+        "$orders" \
+        $'\nTIPOS QUE CRUZAN                          (el resto de commands/)\n  Campos con el nombre que ve la ventana.\n' \
+        "$crossing$lent" \
+        "-- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --" \
+        2>/dev/null | cat -s
+    exit 0
 # ---------------------------------------------------------------------------
 # Lint
 # ---------------------------------------------------------------------------

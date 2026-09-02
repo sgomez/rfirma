@@ -84,9 +84,9 @@ en la llamada 15 de 120 se paga ciento y pico veces. Por eso:
 * **Para situarte en un fichero, `just outline <ruta>`, nunca `cat`.** Imprime
   el esqueleto —cada elemento público y cada prueba, con su número de línea y la
   primera línea de su documentación— y desde ahí abres el tramo con
-  `sed -n 'A,Bp'`. `commands/guards.rs` entero son 14 840 caracteres; su esqueleto, 3149.
-  `App.tsx` pasa de 21 588 a 1385. Funciona con `.rs`, `.ts` y `.tsx`; para lo
-  demás, `grep -n '<símbolo>'`.
+  `sed -n 'A,Bp'`. Funciona con `.rs`, `.ts` y `.tsx`; para lo demás,
+  `grep -n '<símbolo>'`. El pie de la salida dice lo que habría costado leerlo
+  entero, medido en ese momento.
 * **`cat` solo de ficheros que la tabla del índice marque por debajo de 300
   líneas**, y solo si vas a tocarlos enteros.
 * **Los tests no se leen para entender el código**, solo para tocarlos. Sus

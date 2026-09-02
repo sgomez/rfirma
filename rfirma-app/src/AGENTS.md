@@ -10,11 +10,15 @@ rojo.
 
 ## Presupuesto de lectura
 
+- **Para saber qué puede pedirle la ventana al backend, `just contract`. No abras
+  `src-tauri/src/commands/`.** Imprime las órdenes y los tipos que cruzan, con
+  los nombres de campo que ve TypeScript (`holderName`, no `holder_name`), y sin
+  el estado que Tauri inyecta y que nunca cruza. Se genera de las fuentes en cada
+  ejecución, así que no puede quedarse obsoleto.
 - **Para situarte, `just outline <ruta>`; nunca `cat` de un módulo de más de 300
   líneas.** El esqueleto trae cada `export`, cada `it(`/`describe(` y cada
   manejador interno con su número de línea y la primera línea de su bloque `/**`;
-  desde ahí, `sed -n 'A,Bp'` para el tramo. `App.tsx` entero son 21 588
-  caracteres (~6,2k tokens) y su esqueleto 1385.
+  desde ahí, `sed -n 'A,Bp'` para el tramo.
 - Los tests viven en `*.test.ts(x)` **al lado** del módulo. No los abras salvo
   que vayas a tocarlos; `grep -n "it(\|describe(" <fichero>.test.tsx` dice qué
   cubren en una línea por caso.
