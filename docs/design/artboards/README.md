@@ -183,3 +183,22 @@ etiqueta colgando del recuadro, y los cuatro campos de medidas en puntos de la
 ficha 6. Los porqués están en
 [panel-de-firma.md](../panel-de-firma.md) y
 [visor-de-documento.md](../visor-de-documento.md).
+
+**Y `Main` estrena la palanca «Vista previa»**, que decide qué se ve **dentro**
+del recuadro (ficha 7, [#156](https://github.com/sgomez/rfirma/issues/156)):
+fiel, recalculando, moviendo, y no se ha podido dibujar. La regla que lo
+sostiene es que **o es el sello de verdad, o no hay recuadro** — no se enseña
+nunca una aproximación—, y lo que hace que se cumpla es que **sin certificado el
+bloque entero de firma visible está apagado y en gris**, que es lo que
+`EstadoDocumentoCargado` ya dibujaba sin que ninguna ficha lo recogiera. Al
+cerrar el #156 se corrigió ahí el interruptor, que se pintaba encendido dentro
+del bloque apagado, y la línea «Página 3 · arrástralo para colocarlo», que además
+contradecía al #155, pasó a «Se activa al elegir certificado».
+
+Esto **enmienda el ID-44**, que dejaba el recuadro vacío: su argumento era
+correcto para lo que se sabía entonces, y el sondeo
+[#115](https://github.com/sgomez/rfirma/issues/115) le quitó la premisa —no hay
+que maquetar el sello, se le pide a quien lo dibuja—. Hubo dos artboards de
+trabajo, `VistaPreviaRecuadro` y `VistaPreviaDentro`, en una página aparte; **se
+han borrado al fundirlos aquí**, para no dejar dos sitios donde mirar la misma
+pantalla.

@@ -181,14 +181,18 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <sc-if value="{{ hayRecuadro }}" hint-placeholder-val="{{ true }}">
           <div style="{{ estiloRecuadro }}">
             <sc-if value="{{ contenidoVisible }}" hint-placeholder-val="{{ true }}">
-            <svg width="30" height="16" viewBox="0 0 84 40" fill="none" stroke="var(--rf-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none">
+            <svg width="30" height="16" viewBox="0 0 84 40" fill="none" stroke="var(--rf-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:{{ opacidadSello }}">
               <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/>
               <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/></svg>
-            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;opacity:{{ opacidadSello }}">
               <div style="font-size:8px;font-weight:700;color:var(--rf-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">EIDAS CERTIFICADO PRUEBAS</div>
               <div style="font-size:7px;color:var(--rf-text-muted)">DNI 99999999R</div>
               <div style="font-size:7px;color:var(--rf-text-muted)">02/09/2026 11:04</div>
             </div>
+            </sc-if>
+            <sc-if value="{{ selloFallido }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;color:var(--rf-text-muted)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16v.5"/></svg></span>
             </sc-if>
             <sc-if value="{{ contenidoOculto }}" hint-placeholder-val="{{ false }}">
               <svg width="100%" height="70%" viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55">
@@ -363,6 +367,17 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
           </svg></div>
         <button class="rf-btn rf-btn--secondary" style="flex:1;min-height:36px">Cambiar la imagen de la rúbrica…</button>
       </div>
+      <div class="rf-stack" style="padding:var(--rf-space-sm);border:1px solid {{ bordeVista }};
+        border-radius:var(--rf-radius-md);background:var(--rf-bg);gap:8px">
+        <div class="rf-row rf-gap-xs">
+          <p class="rf-label" style="flex:1">Vista previa</p>
+          <span class="rf-badge {{ claseVista }}">{{ insigniaVista }}</span>
+        </div>
+        <p class="rf-prose">{{ explicaVista }}</p>
+        <sc-if value="{{ hayBotonVista }}" hint-placeholder-val="{{ false }}">
+          <button class="rf-btn rf-btn--secondary" style="width:100%">{{ botonVista }}</button>
+        </sc-if>
+      </div>
     </div>
   </div>
   <div class="rf-stack rf-gap-sm" style="padding:var(--rf-space-sm);
@@ -396,7 +411,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"caso":{"editor":"enum","options":["1 · recien abierto, sin colocar","1.1 · una pagina, sellada la 3","1.2 · una pagina, mirando otra","2 · todas, sin colocar","2.1 · todas, colocado","3 · algunas, sin colocar","3.1 · algunas, colocado","3.2 · algunas, en una pagina sellada"],"default":"1 · recien abierto, sin colocar","section":"Colocacion"},"tecleado":{"editor":"enum","options":["lo que digan los botones","10-40 · paginas que no existen","3-1 · rango al reves","1;2;3 · separador equivocado"],"default":"lo que digan los botones","section":"Colocacion"},"paginas":{"editor":"enum","options":["4","27","200"],"default":"27","section":"Documento"},"zoom":{"editor":"enum","options":["50 %","100 %","300 %"],"default":"100 %","section":"Visor"},"tamano":{"editor":"enum","options":["normal","al minimo"],"default":"normal","section":"Recuadro"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":1000}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"caso":{"editor":"enum","options":["1 · recien abierto, sin colocar","1.1 · una pagina, sellada la 3","1.2 · una pagina, mirando otra","2 · todas, sin colocar","2.1 · todas, colocado","3 · algunas, sin colocar","3.1 · algunas, colocado","3.2 · algunas, en una pagina sellada"],"default":"1 · recien abierto, sin colocar","section":"Colocacion"},"tecleado":{"editor":"enum","options":["lo que digan los botones","10-40 · paginas que no existen","3-1 · rango al reves","1;2;3 · separador equivocado"],"default":"lo que digan los botones","section":"Colocacion"},"vista":{"editor":"enum","options":["fiel · el sello de verdad","recalculando","moviendo o redimensionando","no se ha podido dibujar"],"default":"fiel · el sello de verdad","section":"Vista previa"},"paginas":{"editor":"enum","options":["4","27","200"],"default":"27","section":"Documento"},"zoom":{"editor":"enum","options":["50 %","100 %","300 %"],"default":"100 %","section":"Visor"},"tamano":{"editor":"enum","options":["normal","al minimo"],"default":"normal","section":"Recuadro"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":1000}}'>
 class Component extends DCLogic {
   porElMedio(texto, cabeza, cola) {
     if (texto.length - cola.length <= cabeza) { return texto; }
@@ -624,6 +639,37 @@ class Component extends DCLogic {
     };
     const par = casos[caso] || casos["cabe entero"];
 
+    // Que se ve DENTRO del recuadro (ficha 7, #156). La regla que lo sostiene:
+    // o es el sello de verdad, o no hay recuadro. Sin certificado el bloque
+    // entero de firma visible esta apagado, asi que aqui siempre hay uno.
+    const vista = this.props.vista ?? "fiel · el sello de verdad";
+    const selloFallido = vista === "no se ha podido dibujar";
+    const selloQuieto = vista.indexOf("fiel") === 0;
+    let opacidadSello = 1;
+    let insigniaVista = "Vista fiel";
+    let claseVista = "rf-badge--primary";
+    let bordeVista = "var(--rf-border-subtle)";
+    let botonVista = "";
+    let explicaVista = "Es el sello de verdad: lo dibuja el mismo compositor que firmará, en un ciclo trifásico en seco. Lo que ves es lo que quedará.";
+    if (vista === "recalculando") {
+      opacidadSello = 0.35;
+      insigniaVista = "Calculando…";
+      claseVista = "";
+      explicaVista = "Se recalcula sola al soltar. En un documento grande pasa a pedirse: 0,15 s en un PDF normal, 1,9 s en un escaneado de 37 MB.";
+      botonVista = "Ver cómo queda";
+    } else if (vista === "moviendo o redimensionando") {
+      opacidadSello = 0.35;
+      insigniaVista = "Moviendo";
+      claseVista = "";
+      explicaVista = "Mientras dura el gesto se congela la vista anterior, atenuada: recalcular por fotograma cuesta 507 MB de RSS. Al soltar se rehace.";
+    } else if (selloFallido) {
+      insigniaVista = "No se ha podido dibujar";
+      claseVista = "";
+      bordeVista = "var(--rf-border-strong)";
+      explicaVista = "No se ha podido componer el sello. La vista previa no es una puerta: se dice y se firma igual.";
+      botonVista = "Volver a intentarlo";
+    }
+
     return {
       destinoOk: caso !== "no disponible",
       destinoRoto: caso === "no disponible",
@@ -636,14 +682,24 @@ class Component extends DCLogic {
       hayRecuadro: enConjunto,
       estiloRecuadro: caja("solid var(--rf-primary)",
         "background:var(--rf-bg);display:flex;align-items:center;gap:6px;padding:6px;cursor:move"),
-      contenidoVisible: anchoCaja >= 150,
-      contenidoOculto: anchoCaja < 150,
+      contenidoVisible: anchoCaja >= 150 && !selloFallido,
+      contenidoOculto: anchoCaja < 150 && !selloFallido,
+      selloFallido: selloFallido,
+      opacidadSello: opacidadSello,
+      insigniaVista: insigniaVista,
+      claseVista: claseVista,
+      bordeVista: bordeVista,
+      explicaVista: explicaVista,
+      hayBotonVista: botonVista !== "",
+      botonVista: botonVista,
       tiradorTL: tirador("top:" + off + "px;left:" + off + "px"),
       tiradorTR: tirador("top:" + off + "px;right:" + off + "px"),
       tiradorBL: tirador("bottom:" + off + "px;left:" + off + "px"),
       tiradorBR: tirador("bottom:" + off + "px;right:" + off + "px"),
-      pastillaRecuadro: cuantas === 1 ? "La única página sellada"
-        : "Página " + v.viendo + " de las " + cuantas + " selladas",
+      pastillaRecuadro: selloQuieto
+        ? (cuantas === 1 ? "La única página sellada"
+            : "Página " + v.viendo + " de las " + cuantas + " selladas")
+        : (selloFallido ? "Sin vista previa" : (vista === "recalculando" ? "Calculando…" : "Arrastrando")),
       hayAviso: hayAviso,
       textoAviso: textoAviso,
       botonAviso: botonAviso,

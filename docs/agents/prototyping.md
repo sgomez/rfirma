@@ -167,6 +167,13 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 | ----------- | ------ | ------ | ------ |
 | _(ninguno en vuelo)_ | | | |
 
+La **vista previa dentro del recuadro** (ficha 7, [#156](https://github.com/sgomez/rfirma/issues/156))
+se validó el 02/09/2026 y también salió. Se prototipó en una página aparte con
+dos artboards propios, y al validarla **se fundió en `Main` y la página se
+borró**: la pantalla es la misma, y dos sitios donde mirarla son dos fuentes de
+verdad. Es la regla, y conviene tenerla presente al abrir una página de trabajo:
+nace para morir.
+
 El caso de uso **firmar un PDF en local** se validó el 31/08/2026 y salió de
 esta tabla: su canvas está enlazado desde la sección «Decisiones» de cada ficha
 de `docs/design/`, empezando por
