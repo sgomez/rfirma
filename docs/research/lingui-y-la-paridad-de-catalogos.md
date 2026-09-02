@@ -583,15 +583,42 @@ migrar.
 
 ## Por qué no Fluent
 
-Se descartó sin sondearlo. El motivo de migrar es entrar en el ecosistema
-`.po` —Weblate, Crowdin, Poedit— y los `.ftl` de Fluent no son gettext: Poedit
-es un editor de gettext y no los abre. Lo que Fluent aporta de verdad
-—selectores por género y por caso, atributos de mensaje, y que un traductor
-pueda añadir en su idioma una distinción que el idioma de origen no tiene— es
-real y en euskara no sería un capricho, pero es un argumento para una aplicación
-con mucha más prosa que ésta. Con 200 cadenas y tres plurales, se paga un
-ecosistema entero por una capacidad que hoy no se usa. Si algún día la
-declinación vasca se convierte en un problema medido y no supuesto, se reabre.
+Se descartó sin sondearlo a fondo. El motivo de migrar es entrar en el
+ecosistema `.po` —Weblate, Crowdin, Poedit— y los `.ftl` de Fluent no son
+gettext: Poedit es un editor de gettext y no los abre. Con eso bastaba.
+
+Pero el argumento que se le suponía a Fluent —«selectores por género y por
+caso, que en euskara no es un capricho»— **no resiste la comprobación**, y
+conviene dejarlo escrito para no reabrirlo por corazonada.
+
+El problema del euskara es real y está documentado: las buenas prácticas de
+localización de Mozilla nombran el caso —«`From the menu` in Basque is
+`Menutik`»— y avisan de que un marcador que no se puede declinar dará
+problemas. Y se ve en producción: en el euskara de Firefox hay **61
+apariciones en 31 ficheros** del truco de la letra epentética entre paréntesis
+(`{ $hostname }(e)k`, `%1$S(r)en`), donde el traductor escribe las dos formas y
+que elija quien lee. El mismo recuento sobre finés, húngaro, turco, estonio,
+castellano y francés da cero. KDE hace lo mismo en su euskara.
+
+Solo que nada de eso lo arregla Fluent de serie. La declinación depende de la
+última letra de la palabra interpolada, así que haría falta **una función
+propia** registrada en el `FluentBundle` —que es lo que hace KDE para el
+coreano— y eso ya no es «Fluent lo trae»: es código nuestro, igual que el arnés
+del §2. Fluent, de hecho, no menciona el euskara en ninguno de sus ejemplos
+motivadores.
+
+Y para las cadenas que hay hoy el problema ni se plantea. El caso que
+importaría —«se han firmado N documentos»— lo cubre ICU entero: CLDR da al
+euskara `one`/`other`, el mismo perfil que el inglés, el nombre no se pluraliza
+tras numeral y lo que cambia es el auxiliar. El resto son interpolaciones en
+absolutivo, que es de marca cero. La salida que recomienda EIZIE, la asociación
+de traductores vascos, tampoco es un selector: es **reformular**, colgando el
+sufijo de un nombre común (`{ $filename } fitxategia sinatu da`), y eso se
+escribe igual de bien en un `.po`.
+
+Conclusión: con 200 cadenas y tres plurales, Fluent costaría el ecosistema
+`.po` entero a cambio de una capacidad que ni se usa ni resolvería sola el caso
+que la justificaba.
 
 ---
 
