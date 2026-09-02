@@ -28,9 +28,10 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { Badge } from "./documents/document";
 import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
-import type { RecentDocument } from "./documents/recents";
+import type { RecentDocument, RecentsStore } from "./documents/recents";
 import { classify } from "./errors/classify";
 import type { ErrorSituation } from "./errors/ErrorNotice";
 import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
@@ -258,6 +259,76 @@ function recentOf(opened: OpenedDocumentView): RecentDocument {
     lastUsed: Math.floor(Date.now() / 1000),
     // Lo acaba de conceder el portal, así que responde.
     available: true,
+    // Dónde cayó su recuadro la última vez lo sabe el backend, que guarda la
+    // bandeja por ruta canónica: llega al anotarlo, no al abrirlo.
+    placement: null,
+  } satisfies RecentDocument;
+}
+
+/**
+ * Una fila de la bandeja tal cual la devuelve Rust. Es
+ * `commands::RecentDocumentView`, campo a campo: **un identificador opaco y un
+ * nombre, ninguna ruta** (ADR-0011).
+ *
+ * `available` viene recalculado contra el disco de ahora mismo y no se persiste
+ * nunca: una fila que no responde llega con `false` y **revive** cuando la ruta
+ * reaparece.
+ */
+interface RecentDocumentView {
+  id: string;
+  name: string;
+  badge: Badge;
+  modified: number | null;
+  lastUsed: number;
+  available: boolean;
+  placement: { page: number; rect: [number, number, number, number] } | null;
+}
+
+/**
+ * La bandeja en el disco (ID-75).
+ *
+ * Tres de las cuatro operaciones son órdenes propias; la cuarta, «Vaciar la
+ * lista», **ya era** `forget_activity` y no se duplica: vaciar la bandeja y
+ * olvidar la actividad son la misma promesa (ID-34).
+ *
+ * Lo que cruza en las tres es el **identificador opaco** que acuñó el backend
+ * al abrir (ID-62). La deduplicación de la bandeja sigue siendo por la ruta
+ * canónica, que solo Rust conoce y que no sale de allí.
+ */
+export function tauriRecents(): RecentsStore {
+  return {
+    list: async () => (await invoke<RecentDocumentView[]>("list_recents")).map(rowOf),
+    record: async (document) =>
+      rowOf(
+        await invoke<RecentDocumentView>("record_recent", {
+          id: document.id,
+          placement: document.placement && {
+            page: document.placement.page,
+            rect: [
+              document.placement.rect.x0,
+              document.placement.rect.y0,
+              document.placement.rect.x1,
+              document.placement.rect.y1,
+            ],
+          },
+        }),
+      ),
+    forget: (id) => invoke<void>("forget_recent", { id }),
+    clear: () => invoke<void>("forget_activity"),
+  };
+}
+
+/** Una fila de la bandeja, en el vocabulario de la ventana. */
+function rowOf(view: RecentDocumentView): RecentDocument {
+  const [x0, y0, x1, y1] = view.placement?.rect ?? [0, 0, 0, 0];
+  return {
+    id: view.id,
+    name: view.name,
+    badge: view.badge,
+    modified: view.modified,
+    lastUsed: view.lastUsed,
+    available: view.available,
+    placement: view.placement && { page: view.placement.page, rect: { x0, y0, x1, y1 } },
   } satisfies RecentDocument;
 }
 

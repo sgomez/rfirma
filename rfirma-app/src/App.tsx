@@ -154,8 +154,11 @@ export function App({
     if (settings) applyTheme(settings.theme);
   }, [settings]);
 
-  // El documento activo, abierto para pintarlo. Cambiar de documento tira el
-  // recuadro: la posición es de este documento y de esta página.
+  // El documento activo, abierto para pintarlo. Cambiar de documento **repone
+  // el recuadro de ese documento**, que es lo que guarda su fila de la bandeja
+  // (ID-74): uno que ya estuvo abierto vuelve a su página y a su posición, y
+  // uno nuevo llega sin ninguna y arranca donde toque, no donde lo dejó el
+  // anterior (ID-22).
   useEffect(() => {
     const active = documents.active;
     if (!active) {
@@ -169,7 +172,7 @@ export function App({
       if (!current) return;
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
-      setPlacement(null);
+      setPlacement(active.placement);
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
       setSigningInstant(new Date());
@@ -178,6 +181,18 @@ export function App({
       current = false;
     };
   }, [documents.active, pdfs]);
+
+  // Dónde ha caído el recuadro se pinta y **se apunta en la fila del documento**
+  // (ID-74): así el mismo contrato reabierto mañana vuelve a su página y a su
+  // posición, y el siguiente documento arranca con el suyo.
+  const placeDocument = documents.place;
+  const rememberPlacement = useCallback(
+    (next: SignaturePlacement) => {
+      setPlacement(next);
+      void placeDocument(next);
+    },
+    [placeDocument],
+  );
 
   // El arrastre. Desemboca en el mismo sitio que el diálogo —`accept` es la
   // mitad de `open` que no habla con el portal—, y lo que añade es contar lo
@@ -383,7 +398,7 @@ export function App({
           <DocumentViewer
             pdf={pdf}
             placement={placement}
-            onPlace={setPlacement}
+            onPlace={rememberPlacement}
             onOpen={() => void openDocument()}
             // Los dos avisos caben en el mismo sitio, y manda el del PDF: si el
             // documento que se soltó tampoco se deja pintar, eso es más urgente

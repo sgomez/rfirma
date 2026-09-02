@@ -1,3 +1,4 @@
+import type { SignaturePlacement } from "../viewer/signatureBox";
 import type { Badge, ShownBadge } from "./document";
 
 /**
@@ -37,6 +38,16 @@ export interface RecentDocument {
   lastUsed: number;
   /** Si la ruta responde ahora mismo. */
   available: boolean;
+  /**
+   * Dónde cayó el recuadro **en este documento**, o `null` si nadie lo colocó
+   * todavía (ID-74).
+   *
+   * Va en la fila y no en un ajuste global porque reponer sobre un documento
+   * nuevo una posición elegida para otro es lo que rechaza el ID-22. El
+   * **tamaño** sí es global, y quien junta las dos mitades es el backend: aquí
+   * llega el rectángulo entero.
+   */
+  placement: SignaturePlacement | null;
 }
 
 /**
@@ -73,6 +84,18 @@ export function record(
 }
 
 /**
+ * La fila con su recuadro cambiado. La lista se recorre entera porque `record`
+ * puede haberla reordenado.
+ */
+export function place(
+  recents: readonly RecentDocument[],
+  id: string,
+  placement: SignaturePlacement | null,
+): RecentDocument[] {
+  return recents.map((entry) => (entry.id === id ? { ...entry, placement } : entry));
+}
+
+/**
  * Quita una fila de la lista.
  *
  * Es lo que ofrece una fila `No disponible` al pulsarla, y lo único que la
@@ -88,16 +111,24 @@ export function forget(recents: readonly RecentDocument[], id: string): RecentDo
  * De dónde salen los recientes y a dónde vuelven.
  *
  * Es un puerto y no una llamada a Tauri por la misma razón que
- * `LanguagePreference`: quien los guarda es el backend (`memory::State`), y
- * todavía no hay ninguna orden expuesta que los lea ni los escriba. Cuando la
- * haya, su implementación se enchufa en `main.tsx` sin tocar ni la bandeja ni
- * sus pruebas.
+ * `LanguagePreference`: quien los guarda es el backend (`memory::State`), y la
+ * ventana no tiene por qué saber si eso es un fichero en el disco o un objeto
+ * en memoria. La implementación de verdad es `tauriRecents`, y quien elige es
+ * `main.tsx`.
  */
 export interface RecentsStore {
   /** La lista entera, la más reciente primero, con `available` ya resuelto. */
   list(): Promise<RecentDocument[]>;
-  /** Registra un documento recién abierto o recién firmado. */
-  record(document: RecentDocument): Promise<void>;
+  /**
+   * Registra un documento recién abierto —o vuelve a registrarlo con otro
+   * recuadro— y **devuelve la fila resultante**.
+   *
+   * Devuelve la fila y no nada porque es donde la ventana recupera lo que el
+   * backend ya sabía de ese documento: su insignia cacheada y dónde había
+   * caído su recuadro. Un documento que ya estuvo abierto vuelve con su página
+   * y su posición; uno nuevo vuelve sin ninguna, que es lo que pide el ID-22.
+   */
+  record(document: RecentDocument): Promise<RecentDocument>;
   /** Quita una fila. Ver [`forget`]. */
   forget(id: string): Promise<void>;
   /** Vacía la lista. Es el «Vaciar la lista» de Preferencias. */
@@ -105,15 +136,21 @@ export interface RecentsStore {
 }
 
 /**
- * Los recientes mientras no hay dónde guardarlos: viven durante la sesión y se
- * olvidan al cerrar. Sirven también de doble en las pruebas.
+ * Los recientes que viven solo durante la sesión y se olvidan al cerrar. Es el
+ * doble de las pruebas de la bandeja, que así corren sin backend.
+ *
+ * Imita la única regla del backend que la ventana nota: una fila que vuelve a
+ * anotarse **conserva su recuadro** si la nueva no trae ninguno.
  */
 export function inMemoryRecents(initial: readonly RecentDocument[] = []): RecentsStore {
   let entries = initial.slice(0, CAPACITY);
   return {
     list: async () => entries,
     record: async (document) => {
-      entries = record(entries, document);
+      const remembered = entries.find((entry) => entry.id === document.id)?.placement ?? null;
+      const noted = { ...document, placement: document.placement ?? remembered };
+      entries = record(entries, noted);
+      return noted;
     },
     forget: async (id) => {
       entries = forget(entries, id);

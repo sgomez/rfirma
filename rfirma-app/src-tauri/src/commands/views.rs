@@ -18,7 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::memory::Theme;
+use crate::memory::{Badge, Theme};
 use crate::pkcs11::{CertificateStatus, StoreClass};
 
 pub use super::failure::Failure;
@@ -161,6 +161,51 @@ pub struct DroppedDocumentView {
     /// Cuántos ficheros más venían en el mismo gesto y no se han abierto: la
     /// aplicación firma de uno en uno y lo dice (ID-70).
     pub ignored: usize,
+}
+
+/// El recuadro colocado, tal como cruza en los dos sentidos: **la página y el
+/// rectángulo en espacio de usuario PDF**, y ninguna ruta.
+///
+/// Cruza **entero** aunque se guarde partido (ID-74): la ventana pinta un
+/// rectángulo, no una esquina más un tamaño global, y quien junta las dos
+/// mitades es [`crate::app::recents`]. Componer el rectángulo en TypeScript
+/// sería poner el reparto del ID-74 en los dos lados.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacementView {
+    /// Página **1-based**, como la numera `pdf.js`.
+    pub page: u32,
+    /// El recuadro en espacio de usuario: `[x0, y0, x1, y1]`.
+    pub rect: [f64; 4],
+}
+
+/// Una fila de la bandeja, tal como la ventana la recibe: **un identificador
+/// opaco y un nombre, ninguna ruta** (ID-62, ID-75, ADR-0011).
+///
+/// La deduplicación de la bandeja sigue siendo por la ruta canónica que **solo
+/// Rust conoce**; lo que cruza es el identificador con el que se piden los
+/// bytes.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentDocumentView {
+    /// El identificador opaco con el que se lee el documento.
+    pub id: String,
+    /// El nombre del fichero. No su ruta.
+    pub name: String,
+    /// La insignia cacheada. `Unavailable` no está aquí: se recalcula al
+    /// listar y viaja en `available`.
+    pub badge: Badge,
+    /// El `mtime` cacheado, en segundos desde la época.
+    pub modified: Option<u64>,
+    /// Cuándo se usó por última vez, en segundos desde la época.
+    pub last_used: u64,
+    /// Si la ruta responde **ahora mismo**. No se persiste nunca: es un hecho
+    /// sobre el disco de este instante, y por eso lo recalcula el backend en
+    /// cada listado.
+    pub available: bool,
+    /// Dónde cayó el recuadro en este documento, con el tamaño global ya
+    /// puesto. `None` si nadie lo colocó.
+    pub placement: Option<PlacementView>,
 }
 
 /// La configuración, tal como la ventana la ve: **ningún `PathBuf`**.

@@ -177,7 +177,7 @@ fn no_output_of_any_command_carries_a_host_path() {
         outputs.len()
     );
     assert!(
-        outputs.len() >= 6,
+        outputs.len() >= 8,
         "los tipos de salida no se han encontrado: {}",
         outputs.len()
     );
@@ -248,19 +248,24 @@ fn the_list_of_files_covers_the_whole_module() {
     );
 }
 
-/// La lista sigue cerrada (ID-59): ocho órdenes más las tres de los ajustes.
+/// La lista sigue cerrada (ID-59): ocho órdenes, las tres de los ajustes y las
+/// tres de la bandeja.
+///
+/// **El conteo vive en la aserción y no en el nombre** (TD-11): cambiar el
+/// número es la información, y cuatro sub-issues que renombraran la misma
+/// prueba serían cuatro diffs que no dicen nada.
 ///
 /// Cuenta el prefijo `#[tauri::command` y no el atributo entero porque varias
 /// llevan `(async)`: lo que se cierra es cuántas órdenes hay, no cómo se
 /// ejecuta cada una.
 #[test]
-fn the_list_of_commands_grew_to_eleven_and_no_further() {
+fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
     let orders: usize = SOURCES
         .iter()
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 11, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 14, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
@@ -317,12 +322,12 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
         );
     }
 
-    // Cuántas órdenes hay lo cierra `the_list_of_commands_grew_to_eleven_and_no_further`;
+    // Cuántas órdenes hay lo cierra `the_list_of_commands_is_closed_and_this_is_how_long_it_is`;
     // aquí solo se comprueba que el troceado las ve, porque un troceado que se
     // queda corto dejaría esta guarda en verde sin haber mirado nada.
     let commands = commands_of(source);
     assert!(
-        commands.len() >= 11,
+        commands.len() >= 14,
         "el troceado de ordenes ha encontrado {}: si no las ve todas, no vigila nada",
         commands.len()
     );

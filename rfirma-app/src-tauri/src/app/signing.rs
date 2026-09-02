@@ -13,7 +13,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature};
-use crate::app::{certificates, documents, lock};
+use crate::app::{certificates, documents, lock, recents};
 use crate::commands::orders::SigningOrder;
 use crate::commands::views::{Failure, SignedDocumentView};
 use crate::destination::PortalDocument;
@@ -157,11 +157,15 @@ pub fn finish(
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
-    let delivered = documents::deliver(configuration, documents_folder, &document, &signed)?;
+    let (landing, delivered) =
+        documents::deliver(configuration, documents_folder, &document, &signed)?;
     // **Después** de que el documento haya caído, y no antes: mientras la
     // postfirma pueda fallar todavía no se ha firmado nada con este
     // certificado (#110).
     certificates::remember_the_certificate(memory, configuration, &certificate);
+    // Y aquí, y **solo aquí**, se escribe la insignia `Firmado` (ID-76): el
+    // documento que la lleva es el que acaba de caer, y nada más lo escribe.
+    recents::note_signed(memory, configuration, &landing);
     Ok(delivered)
 }
 
@@ -316,10 +320,17 @@ mod tests {
     /// La mitad de producción, sin las pruebas: si no, esta comprobación se
     /// leería a sí misma y encontraría siempre sus propios literales.
     fn production_half() -> &'static str {
-        SOURCE
+        half_of(SOURCE)
+    }
+
+    /// La mitad de producción de **cualquier** fuente, sin sus pruebas: si no,
+    /// estas comprobaciones leerían los literales de los tests y se creerían
+    /// cualquier cosa.
+    fn half_of(source: &'static str) -> &'static str {
+        source
             .split_once("\nmod tests {")
             .map(|(before, _)| before)
-            .unwrap_or(SOURCE)
+            .unwrap_or(source)
     }
 
     #[test]
@@ -350,6 +361,60 @@ mod tests {
             .1;
 
         assert!(session.contains("seal: SessionSeal"));
+    }
+
+    /// **La insignia `Firmado` la escribe solo la postfirma** (ID-76).
+    ///
+    /// Se lee la fuente y no el resultado porque lo que se vigila es una
+    /// propiedad de **todo** el backend, no de un recorrido: un
+    /// `Badge::Signed` nuevo en el caso de uso que abre un documento, o en la
+    /// orden que anota la fila, pondría `Firmado` en un PDF que rFirma no ha
+    /// firmado. Contar las firmas de un PDF ajeno es la ficha 14 y es de v1.0.
+    ///
+    /// La mitad de comportamiento la fija
+    /// `the_signed_document_is_the_only_row_that_gets_the_signed_badge`, en
+    /// [`crate::app::recents`]; esta es la que solo se ve mirando los cuatro
+    /// ficheros a la vez.
+    #[test]
+    fn the_signed_badge_is_written_by_the_postsign_and_by_nothing_else() {
+        let writers = [
+            ("app/signing.rs", production_half()),
+            ("app/recents.rs", half_of(include_str!("recents.rs"))),
+            ("app/documents.rs", half_of(include_str!("documents.rs"))),
+            (
+                "commands/mod.rs",
+                half_of(include_str!("../commands/mod.rs")),
+            ),
+        ];
+
+        for (file, source) in writers {
+            let written = source.matches("Badge::Signed").count();
+            let expected = usize::from(file == "app/recents.rs");
+            assert_eq!(
+                written, expected,
+                "«{file}» escribe la insignia Firmado {written} veces y tenia que escribirla \
+                 {expected}: el unico sitio es `recents::note_signed`, y quien lo llama es la \
+                 postfirma"
+            );
+        }
+
+        let recents = half_of(include_str!("recents.rs"));
+        let note_signed = recents
+            .split_once("pub fn note_signed(")
+            .expect("el anotador del firmado sigue aqui")
+            .1;
+        assert!(
+            note_signed.contains("Badge::Signed"),
+            "y esta dentro de `note_signed`"
+        );
+        let postsign = production_half()
+            .split_once("pub fn finish(")
+            .expect("la postfirma sigue aqui")
+            .1;
+        assert!(
+            postsign.contains("recents::note_signed("),
+            "a quien solo llama la postfirma"
+        );
     }
 
     /// **Elegir no es firmar.** Lo que recuerda el certificado es la postfirma,

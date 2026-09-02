@@ -23,20 +23,24 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::pkcs11::CertificateRef;
-use crate::signing::SignatureBox;
 
 use super::recents::Recents;
 
 /// Lo que la aplicación recuerda sola.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct State {
     /// La bandeja de documentos.
     pub recents: Recents,
-    /// Dónde cayó el recuadro la última vez. `None` mientras no se haya
-    /// firmado nada, y también cuando «Recordar la última configuración de
+    /// Lo **global** de la firma visible: el interruptor, las cinco casillas,
+    /// el motivo y el tamaño del recuadro (ID-74). `None` mientras nadie haya
+    /// tocado el panel, y también cuando «Recordar la última configuración de
     /// firma visible» está apagado: apagado significa **no guardarla**.
-    pub visible_signature: Option<SignatureBox>,
+    ///
+    /// **La página y la posición no están aquí**: son de cada documento y
+    /// viven en su fila de recientes
+    /// ([`Placement`](super::recents::Placement)).
+    pub visible_signature: Option<VisibleSignatureMemory>,
     /// Cómo volver a encontrar el certificado que se usó. Se relee del token al
     /// arrancar; si no está, el panel vuelve a «Sin certificado» sin ruido.
     pub certificate: Option<CertificateRef>,
@@ -53,6 +57,51 @@ pub struct State {
     /// sola, nadie la elige, y por eso «Recordar mi actividad» se la lleva
     /// como se lleva todo lo demás.
     pub last_open_folder: Option<PathBuf>,
+}
+
+/// Lo **global** de la firma visible, lo mismo para todos los documentos
+/// (ID-74).
+///
+/// El reparto no es un renombrado: lo que se persistía antes era **solo la
+/// geometría del recuadro** —página y cuatro esquinas— y lo que maneja el panel
+/// son interruptor, casillas, rúbrica y motivo. No se solapan, así que hay dos
+/// tipos y no uno.
+///
+/// El **tamaño** sí es global y la **posición** no: el tamaño no depende de la
+/// página, y reponer sobre un documento nuevo una posición elegida para otro es
+/// lo que rechaza el ID-22.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct VisibleSignatureMemory {
+    /// El interruptor: si se estampa recuadro.
+    pub enabled: bool,
+    /// Si la rúbrica va dentro del recuadro. Es la quinta casilla.
+    pub rubric: bool,
+    /// Las cuatro casillas de texto.
+    pub fields: RememberedFields,
+    /// El motivo escrito. Vacío es «sin motivo».
+    pub reason: String,
+    /// El tamaño del recuadro, en espacio de usuario PDF.
+    pub size: BoxSize,
+}
+
+/// Las cuatro casillas de texto del recuadro. La rúbrica va aparte: es una
+/// imagen, no un dato del titular.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct RememberedFields {
+    pub signer_name: bool,
+    pub id_number: bool,
+    pub signed_at: bool,
+    pub reason: bool,
+}
+
+/// El tamaño del recuadro, en puntos de espacio de usuario PDF.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BoxSize {
+    pub width: f64,
+    pub height: f64,
 }
 
 impl State {
@@ -77,7 +126,7 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::recents::{Badge, RecentDocument};
+    use crate::memory::recents::{Badge, Placement, RecentDocument};
     use crate::pkcs11::TokenCertificate;
     use std::fs;
     use std::path::Path;
@@ -106,12 +155,13 @@ mod tests {
                 "Certificado de pruebas",
                 vec![0x01],
             )),
-            visible_signature: Some(SignatureBox {
-                page: 1,
-                lower_left_x: 10,
-                lower_left_y: 20,
-                upper_right_x: 110,
-                upper_right_y: 70,
+            visible_signature: Some(VisibleSignatureMemory {
+                enabled: true,
+                size: BoxSize {
+                    width: 100.0,
+                    height: 50.0,
+                },
+                ..VisibleSignatureMemory::default()
             }),
             ..State::default()
         };
@@ -123,6 +173,87 @@ mod tests {
         assert!(state.recents.is_empty());
         assert!(state.certificate.is_none());
         assert!(state.visible_signature.is_none());
+    }
+
+    /// El ID-74 dicho como lo dice el issue: **lo global por un lado y lo de
+    /// cada documento por otro**. Lo que se persistía antes era una sola cosa
+    /// —la geometría del recuadro— y ahora son dos tipos que no comparten
+    /// ningún campo.
+    #[test]
+    fn what_is_global_and_what_is_of_each_document_are_two_different_places() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let mut state = State {
+            visible_signature: Some(VisibleSignatureMemory {
+                enabled: true,
+                rubric: true,
+                fields: RememberedFields {
+                    signer_name: true,
+                    id_number: true,
+                    signed_at: true,
+                    reason: false,
+                },
+                reason: "Conforme".to_owned(),
+                size: BoxSize {
+                    width: 200.0,
+                    height: 80.0,
+                },
+            }),
+            ..State::default()
+        };
+        let document = a_document(directory.path());
+        let path = document.path().to_path_buf();
+        state.recents.record(document);
+        state.recents.place(
+            &path,
+            Some(Placement {
+                page: 3,
+                lower_left_x: 48.0,
+                lower_left_y: 179.0,
+            }),
+        );
+
+        let written = serde_json::to_value(&state).expect("deberia serializarse");
+
+        let global = &written["visible_signature"];
+        assert!(
+            global["page"].is_null() && global["lower_left_x"].is_null(),
+            "la pagina y la posicion no son globales: son de cada documento"
+        );
+        assert_eq!(global["size"]["width"], 200.0);
+        assert_eq!(global["reason"], "Conforme");
+        let row = &written["recents"][0]["placement"];
+        assert_eq!(row["page"], 3);
+        assert_eq!(row["lower_left_x"], 48.0);
+        assert!(
+            row["width"].is_null(),
+            "el tamano no se repite en cada fila: dos sitios donde divergir"
+        );
+    }
+
+    /// Reabrir el mismo contrato acuña un identificador opaco nuevo (ID-62),
+    /// pero la fila es la misma ruta canónica y su recuadro sigue donde estaba.
+    #[test]
+    fn recording_a_document_again_keeps_where_its_box_had_fallen() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let mut state = State::default();
+        let document = a_document(directory.path());
+        let path = document.path().to_path_buf();
+        state.recents.record(document);
+        state.recents.place(
+            &path,
+            Some(Placement {
+                page: 2,
+                lower_left_x: 10.0,
+                lower_left_y: 20.0,
+            }),
+        );
+
+        state.recents.record(a_document(directory.path()));
+
+        assert_eq!(
+            state.recents.entries()[0].placement().map(|box_| box_.page),
+            Some(2)
+        );
     }
 
     /// La carpeta de la que se abrió algo es actividad como el resto: contar

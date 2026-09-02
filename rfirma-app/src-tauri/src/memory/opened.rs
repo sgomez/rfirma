@@ -17,6 +17,8 @@
 //! ni de la ruta dentro, y de él no se reconstruye ninguna.
 
 use std::collections::HashMap;
+use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
 use super::handles::mint;
@@ -25,7 +27,11 @@ use crate::destination::PortalDocument;
 /// Los documentos que se han abierto en esta sesión.
 #[derive(Debug, Default)]
 pub struct OpenedDocuments {
-    documents: Mutex<HashMap<String, PortalDocument>>,
+    /// El orden de llegada junto al documento: sin él, dos concesiones de la
+    /// misma ruta no se podrían distinguir por antigüedad y
+    /// [`OpenedDocuments::last_id_of`] devolvería una cualquiera.
+    documents: Mutex<HashMap<String, (u64, PortalDocument)>>,
+    granted: AtomicU64,
 }
 
 impl OpenedDocuments {
@@ -41,13 +47,32 @@ impl OpenedDocuments {
     /// del portal, no un fichero del disco del usuario.
     pub fn remember(&self, document: PortalDocument) -> String {
         let id = mint();
-        lock(&self.documents).insert(id.clone(), document);
+        let order = self.granted.fetch_add(1, Ordering::Relaxed);
+        lock(&self.documents).insert(id.clone(), (order, document));
         id
     }
 
     /// El documento que se apuntó con ese identificador, si sigue apuntado.
     pub fn get(&self, id: &str) -> Option<PortalDocument> {
-        lock(&self.documents).get(id).cloned()
+        lock(&self.documents)
+            .get(id)
+            .map(|(_, document)| document.clone())
+    }
+
+    /// El identificador **más reciente** que se apuntó para esa ruta de
+    /// lectura, si hay alguno.
+    ///
+    /// Lo necesita la bandeja en disco: sus filas se guardan por ruta y lo que
+    /// cruza a la ventana es un identificador, así que listarlas acuñaría uno
+    /// nuevo para el documento que la ventana ya tiene delante y la fila
+    /// activa dejaría de reconocerse. El más reciente y no uno cualquiera
+    /// porque el orden de un `HashMap` no es orden.
+    pub fn last_id_of(&self, reading_path: &Path) -> Option<String> {
+        lock(&self.documents)
+            .iter()
+            .filter(|(_, (_, document))| document.reading_path() == reading_path)
+            .max_by_key(|(_, (order, _))| *order)
+            .map(|(id, _)| id.clone())
     }
 
     /// Cuántos hay apuntados.

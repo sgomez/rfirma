@@ -14,6 +14,7 @@ function document(name: string, overrides: Partial<RecentDocument> = {}): Recent
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
     available: true,
+    placement: null,
     ...overrides,
   };
 }
@@ -64,6 +65,57 @@ describe("useDocuments", () => {
 
     expect(result.current.active).toBeNull();
     expect(result.current.recents).toHaveLength(1);
+  });
+
+  it("gives a document that was open before its page and its position back", async () => {
+    // La fila la guarda el backend por su ruta canónica, así que reabrir el
+    // mismo contrato —con otro identificador, ID-62— vuelve con su recuadro.
+    const contrato = document("contrato.pdf");
+    const box = { page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } };
+    const store = inMemoryRecents([{ ...contrato, placement: box }]);
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
+
+    await act(() => result.current.open());
+
+    expect(result.current.active?.placement).toEqual(box);
+  });
+
+  it("does not let a brand new document inherit the position of another one", async () => {
+    const contrato = document("contrato.pdf");
+    const box = { page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } };
+    const nomina = document("nomina.pdf");
+    const store = inMemoryRecents([{ ...contrato, placement: box }]);
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([nomina])));
+
+    await act(() => result.current.open());
+
+    expect(result.current.active?.placement).toBeNull();
+  });
+
+  it("writes where the box fell on the row of the document in front", async () => {
+    const contrato = document("contrato.pdf");
+    const store = inMemoryRecents();
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
+    await act(() => result.current.open());
+
+    const box = { page: 2, rect: { x0: 10, y0: 20, x1: 210, y1: 120 } };
+    await act(() => result.current.place(box));
+
+    expect(result.current.recents[0]?.placement).toEqual(box);
+    await expect(store.list()).resolves.toEqual([{ ...contrato, placement: box }]);
+  });
+
+  it("has no row to write the box on when remembering is off", async () => {
+    const contrato = document("contrato.pdf");
+    const store = inMemoryRecents();
+    const { result } = renderHook(() =>
+      useDocuments(store, inMemoryDocumentPicker([contrato]), false),
+    );
+    await act(() => result.current.open());
+
+    await act(() => result.current.place({ page: 2, rect: { x0: 10, y0: 20, x1: 210, y1: 120 } }));
+
+    await expect(store.list()).resolves.toEqual([]);
   });
 
   it("drops the active document when its row is removed from the list", async () => {

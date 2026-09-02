@@ -15,6 +15,7 @@ function document(name: string, overrides: Partial<RecentDocument> = {}): Recent
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
     available: true,
+    placement: null,
     ...overrides,
   };
 }

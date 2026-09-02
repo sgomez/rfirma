@@ -85,7 +85,7 @@ pub fn deliver(
     documents_folder: &Path,
     document: &PortalDocument,
     signed: &[u8],
-) -> Result<SignedDocumentView, Failure> {
+) -> Result<(PathBuf, SignedDocumentView), Failure> {
     let chosen = super::chosen_folder(configuration, documents_folder.to_path_buf());
     // La carpeta se comprueba y **no se crea nunca** (ID-38): bajo el arenero
     // crearla contesta OK y no deja nada en el anfitrión.
@@ -93,7 +93,12 @@ pub fn deliver(
     let landing = folder.landing_for(document)?;
     std::fs::write(&landing, signed)
         .map_err(|error| Failure::new("folderUnwritable", error.to_string()))?;
-    Ok(told_as(&landing, &folder))
+    // La ruta sale **hacia dentro**, no hacia la ventana: la necesita
+    // [`crate::app::recents::note_signed`] para anotar la fila del firmado, y
+    // lo que cruza sigue siendo [`SignedDocumentView`], dos nombres y ninguna
+    // ruta (ADR-0011).
+    let told = told_as(&landing, &folder);
+    Ok((landing, told))
 }
 
 /// Cómo se cuenta un documento firmado: **dos nombres, ninguna ruta**
@@ -583,7 +588,7 @@ mod tests {
         )
         .expect("cae");
 
-        assert_eq!(view.name, "contrato-firmado.pdf");
+        assert_eq!(view.1.name, "contrato-firmado.pdf");
         assert_eq!(
             std::fs::read(folder.path().join("contrato-firmado.pdf")).expect("esta"),
             b"%PDF-firmado"
@@ -612,7 +617,7 @@ mod tests {
         )
         .expect("cae tambien");
 
-        assert_ne!(second.name, "contrato-firmado.pdf");
+        assert_ne!(second.1.name, "contrato-firmado.pdf");
         assert_eq!(
             std::fs::read(folder.path().join("contrato-firmado.pdf")).expect("sigue"),
             b"la primera"

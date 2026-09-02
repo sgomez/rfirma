@@ -14,6 +14,7 @@ const {
   tauriLayer2Composer,
   tauriPdfSource,
   tauriPreferences,
+  tauriRecents,
   tauriSigningBackend,
 } = await import("./tauri");
 
@@ -379,6 +380,7 @@ function aRow() {
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
     available: true,
+    placement: null,
   };
 }
 
@@ -465,6 +467,78 @@ describe("los puertos de la configuración sobre Tauri", () => {
     invoke.mockResolvedValue(undefined);
 
     await tauriPreferences().forgetActivity();
+
+    expect(invoke).toHaveBeenCalledWith("forget_activity");
+  });
+});
+
+/**
+ * **Grada A**: la bandeja sobre Tauri. Lo que se comprueba es la frontera —qué
+ * orden se llama y con qué—, no las reglas de la lista: esas son de
+ * `memory::recents` y ya están probadas allí.
+ */
+describe("la bandeja sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  const aStoredRow = {
+    id: "0f1e2d3c",
+    name: "contrato.pdf",
+    badge: "Unsigned" as const,
+    modified: 1_700_000_000,
+    lastUsed: 1_700_000_000,
+    available: false,
+    placement: { page: 3, rect: [72, 500, 272, 600] as [number, number, number, number] },
+  };
+
+  it("lists the tray with the availability the backend just recomputed", async () => {
+    invoke.mockResolvedValue([aStoredRow]);
+
+    const rows = await tauriRecents().list();
+
+    expect(invoke).toHaveBeenCalledWith("list_recents");
+    expect(rows[0]?.available).toBe(false);
+    expect(rows[0]?.placement).toEqual({ page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } });
+  });
+
+  it("records a document by its opaque identifier and never by a path", async () => {
+    invoke.mockResolvedValue({ ...aStoredRow, available: true });
+
+    await tauriRecents().record({
+      ...aRow(),
+      placement: { page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } },
+    });
+
+    expect(invoke).toHaveBeenCalledWith("record_recent", {
+      id: "0f1e2d3c",
+      placement: { page: 3, rect: [72, 500, 272, 600] },
+    });
+  });
+
+  it("hands back the row the backend already had, box included", async () => {
+    invoke.mockResolvedValue({ ...aStoredRow, available: true });
+
+    const noted = await tauriRecents().record(aRow());
+
+    expect(invoke).toHaveBeenCalledWith("record_recent", { id: "0f1e2d3c", placement: null });
+    expect(noted.placement).toEqual({ page: 3, rect: { x0: 72, y0: 500, x1: 272, y1: 600 } });
+  });
+
+  it("forgets a single row by its identifier", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriRecents().forget("0f1e2d3c");
+
+    expect(invoke).toHaveBeenCalledWith("forget_recent", { id: "0f1e2d3c" });
+  });
+
+  it("empties the whole list through the order that already did it", () => {
+    // «Vaciar la lista» no estrena orden: es `forget_activity`, la misma
+    // promesa que apagar «Recordar mi actividad» (ID-34).
+    invoke.mockResolvedValue(undefined);
+
+    void tauriRecents().clear();
 
     expect(invoke).toHaveBeenCalledWith("forget_activity");
   });

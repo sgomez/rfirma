@@ -2,7 +2,7 @@
 //!
 //! El backend está en tres alturas, y se leen de arriba abajo:
 //!
-//! - [`commands`], las once órdenes de Tauri. Desempaquetan el estado, llaman a
+//! - [`commands`], las catorce órdenes de Tauri. Desempaquetan el estado, llaman a
 //!   un caso de uso y traducen el resultado. No deciden nada (ID-79).
 //! - [`app`], los casos de uso: qué certificados hay, cómo se planifica y se
 //!   entrega una firma, qué se recuerda entre sesiones. Es la interfaz por la
@@ -113,6 +113,9 @@ pub fn run() {
             commands::read_configuration,
             commands::write_configuration,
             commands::forget_activity,
+            commands::list_recents,
+            commands::record_recent,
+            commands::forget_recent,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");
