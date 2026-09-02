@@ -508,6 +508,99 @@ contract:
         "-- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --" \
         2>/dev/null | cat -s
     exit 0
+
+# ---------------------------------------------------------------------------
+# Medicion
+# ---------------------------------------------------------------------------
+
+# Cuanto cuesta cada tipo de agente en este repositorio, leyendo las
+# transcripciones de ~/.claude/projects (las de los arboles de trabajo
+# incluidas).
+#
+# POR QUE ESTE NUMERO Y NO EL DE TOKENS A SECAS: casi todo lo que entra en una
+# peticion es relectura de cache, que se factura a una decima parte. Sumar
+# tokens de entrada a pelo multiplica por diez el coste real y hace que
+# cualquier comparacion mienta. La columna es la entrada efectiva:
+#
+#     cache_read x 0,1  +  cache_creation x 1,25
+#
+# COMO SE LEE: el coste crece con el CUADRADO de la longitud de la sesion,
+# porque lo leido se queda en el contexto y se reenvia en cada peticion
+# posterior. Por eso la columna de peticiones importa tanto como la de coste:
+# un agente que baja de 150 a 75 peticiones no cuesta la mitad, cuesta la
+# cuarta parte. Y por eso una lectura grande temprana es cara aunque el fichero
+# sea pequeno.
+#
+# El argumento opcional es una marca de tiempo ISO en UTC, y deja fuera a los
+# agentes arrancados antes: es la forma de tener el antes y el despues de un
+# cambio sin hacer cuentas a mano.
+#
+#     just agent-cost                    # todo lo que hay
+#     just agent-cost 2026-09-02T08:14   # solo desde ese corte
+#
+# Coste por tipo de agente, de las transcripciones de este repositorio.
+agent-cost since="":
+    #!/usr/bin/env python3
+    import collections, glob, json, os, sys
+
+    since = "{{ since }}"
+    project = "{{ justfile_directory() }}"
+
+    # Un arbol de trabajo tiene su propio directorio de proyecto, con el mismo
+    # prefijo y un sufijo: el comodin del final los recoge todos.
+    slug = "-" + project.strip("/").replace("/", "-")
+    pattern = os.path.expanduser("~/.claude/projects") + "/" + slug + "*/**/subagents/*.meta.json"
+
+    rows = collections.defaultdict(lambda: [0, 0, 0.0])
+    for meta_path in glob.glob(pattern, recursive=True):
+        try:
+            kind = json.load(open(meta_path)).get("agentType", "?")
+        except Exception:
+            continue
+        transcript = meta_path.replace(".meta.json", ".jsonl")
+        if not os.path.exists(transcript):
+            continue
+
+        # Una peticion aparece varias veces en la transcripcion, una por trozo
+        # emitido, y todas cargan el mismo uso: se cuentan por su identificador
+        # o se cuenta de mas.
+        requests, first = dict(), None
+        for line in open(transcript, errors="replace"):
+            try:
+                entry = json.loads(line)
+            except Exception:
+                continue
+            if first is None and entry.get("timestamp"):
+                first = entry["timestamp"]
+            usage = (entry.get("message") or dict()).get("usage")
+            if not usage:
+                continue
+            ident = entry.get("requestId") or (entry.get("message") or dict()).get("id")
+            requests[ident] = (
+                usage.get("cache_read_input_tokens", 0),
+                usage.get("cache_creation_input_tokens", 0),
+            )
+
+        if not requests or (since and (first or "") < since):
+            continue
+        row = rows[kind]
+        row[0] += 1
+        row[1] += len(requests)
+        row[2] += sum(r for r, _ in requests.values()) * 0.1 \
+            + sum(c for _, c in requests.values()) * 1.25
+
+    if not rows:
+        print("sin transcripciones" + (" desde " + since if since else ""))
+        sys.exit(0)
+
+    print("%-34s %5s %11s %13s" % ("agente", "n", "peticiones", "efectivo"))
+    print("%-34s %5s %11s %13s" % ("", "", "por agente", "por agente"))
+    for kind, (n, requests_total, effective) in sorted(rows.items(), key=lambda item: -item[1][2]):
+        print("%-34s %5d %11.0f %13s" % (kind, n, requests_total / n, format(round(effective / n), ",d")))
+    print()
+    print("entrada efectiva = cache_read x 0,1 + cache_creation x 1,25")
+    if since:
+        print("solo agentes arrancados desde " + since)
 # ---------------------------------------------------------------------------
 # Lint
 # ---------------------------------------------------------------------------
