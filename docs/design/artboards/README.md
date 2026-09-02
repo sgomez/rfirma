@@ -2,12 +2,14 @@
 
 **Esto es una importación de un solo uso, y se borra al terminar el [#80].**
 
-Son los trece artboards del canvas de Claude Design «Autofirma de escritorio en
+Son los catorce artboards del canvas de Claude Design «Autofirma de escritorio en
 Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron el
 02/09/2026 con las decisiones de v0.2 del
 [#123](https://github.com/sgomez/rfirma/issues/123); ver «Lo que cambió en v0.2»
-al final.
+al final. Ese mismo día `Main` volvió a cambiar y nació `EstadoPaginasSinSello`
+con las decisiones de v0.3 del [#155](https://github.com/sgomez/rfirma/issues/155);
+ver «Lo que cambió en v0.3».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -29,12 +31,13 @@ del recorrido de la ficha `ventana-principal.md`:
 | 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
 | 3 | `EstadoCargandoCertificados` | Buscando certificados |
 | 4 | `EstadoSinCertificados` | Sin certificados, con salida |
-| 5 | `Main` | Configurando la firma visible — el nudo del recorrido, con el pie del destino |
+| 5 | `Main` | **Colocando** la firma visible — el nudo del recorrido, con el pie del destino y el bloque de colocación de v0.3 |
 | 6 | `EstadoPin` | Pidiendo PIN |
 | 7 | `EstadoPinIncorrecto` | PIN incorrecto |
 | 8 | `EstadoFirmando` | Firmando, con las tres fases |
 | 9 | `EstadoExito` | Firmado — el resumen, sin la ficha 14 |
 | 10 | `EstadoErrorFirma` | Error de firma, en el pie del panel |
+| 5b | `EstadoPaginasSinSello` | Antes de firmar: las páginas donde el recuadro no cabe |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de» |
 
@@ -145,3 +148,38 @@ carpeta atenuada con `…/` delante, nombre en color de texto, y la línea
 envolviendo en vez de cortarse.
 
 [#80]: https://github.com/sgomez/rfirma/issues/80
+
+## Lo que cambió en v0.3
+
+Decidido en el [#155](https://github.com/sgomez/rfirma/issues/155) —que absorbió
+al [#154](https://github.com/sgomez/rfirma/issues/154)— y dibujado el
+02/09/2026. Se supone siempre la firma visible activada. No hay pantallas
+nuevas: cambia `Main` y nace un diálogo.
+
+**`Main` estrena el bloque «Colocación»**, que sustituye a la línea «Página 3 ·
+arrástralo para colocarlo». Tres opciones en radio —`Solo 1 página` con el
+número en el pie, `Estas páginas` con un campo en formato de impresión
+(`1,2-3,10-20`), y `Todas las páginas (27)`— más la frase de la limitación
+cuando hay más de una. Bajo la hoja aparece una pastilla con tres caras
+—colocar, sellar esta página, quitar el sello— y los tiradores del recuadro
+funcionan, con un tamaño mínimo.
+
+**Es el segundo artboard que se puede pulsar**, después de
+`EstadoElegirCertificado`. La palanca «Colocación» salta a los ocho casos del
+recorrido; desde ahí, los radios, la pastilla y las flechas de página funcionan
+de verdad. La palanca «tecleado» recorre los tres errores del rango, que
+**apagan el botón de firmar** en vez de recortar en silencio (ID-22); «zoom»
+recorre 50 %, 100 % y 300 % para comprobar que los tiradores no escalan con la
+hoja; «tamaño» enseña el mínimo útil.
+
+**`EstadoPaginasSinSello` es nuevo**: el diálogo que avisa, antes de firmar, de
+las páginas donde el recuadro no cabe. Palanca «Cuántas se caen»: 1, 3 y 12 de
+13 elegidas, más 3 de 27 con todas elegidas. **Las páginas no se nombran una a
+una**, se dice el total *n* de *m*, y *m* es el conjunto elegido y no el
+documento.
+
+**Se descartaron por el camino** una tira de miniaturas bajo el visor, una
+etiqueta colgando del recuadro, y los cuatro campos de medidas en puntos de la
+ficha 6. Los porqués están en
+[panel-de-firma.md](../panel-de-firma.md) y
+[visor-de-documento.md](../visor-de-documento.md).

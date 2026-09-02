@@ -120,12 +120,17 @@ Qué **dirá** el recuadro lo controla el [panel de firma](panel-de-firma.md),
 y es ahí donde se lee: sobre la hoja el recuadro va vacío, por las razones de
 «El recuadro va vacío, y por qué» más arriba.
 
-**En v0.1 el recuadro se mueve, no se redimensiona.** Nace con una proporción
-fija —un tercio del ancho de la página, alto de rúbrica— y se coloca
-arrastrándolo, que es lo que decide dónde va la firma. Los cuatro tiradores de
-las esquinas son de la vuelta siguiente: redimensionar es un segundo gesto y
-cuatro dianas más sobre el mismo elemento, y cambiar el tamaño sin ver todavía
-el contenido —lo pone el panel de firma— es decidir a ciegas.
+**Desde v0.3 el recuadro se redimensiona por los tiradores.** En v0.1 solo se
+movía; nacía con una proporción fija y esa era toda la geometría disponible.
+Ahora los cuatro tiradores de las esquinas funcionan, con `Mayús` para mantener
+la proporción, y hay un **tamaño mínimo**: aquel por debajo del cual el nombre y
+la fecha ya no caben dentro y el sello deja de decir nada. Los tiradores no
+bajan de ahí. No hay medidas escritas en el panel; ver
+[panel de firma](panel-de-firma.md).
+
+**Los tiradores son cromo, no papel.** Miden 10 px **en pantalla** al 50 %, al
+100 % y al 300 %: no escalan con la hoja, porque son la diana del gesto y no
+parte del documento. El recuadro sí escala, porque es la hoja.
 
 **El recuadro se guarda en espacio de usuario PDF, no en píxeles de pantalla.**
 Los píxeles se derivan en cada pintada, así que el zoom es puramente visual:
@@ -142,6 +147,42 @@ recuadro fuera de página se recorta en silencio— están medidas en
 Léelo antes de implementar esta pantalla: el fallo no da excepción, coloca la
 firma en el sitio equivocado.
 
+## La pastilla bajo la hoja
+
+Centrada bajo la página, `--rf-radius-pill`, fondo `--rf-surface`, borde
+`--rf-border-strong` y `--rf-shadow-elevated`. Un texto y un botón, y solo tiene
+tres caras:
+
+| Cuándo | Texto | Botón |
+| --- | --- | --- |
+| Nada colocado | «Aún no has colocado la firma» | `Sellar esta página`, primario — o `Colocar el sello aquí` con `Todas las páginas` |
+| Colocado, y esta página no está en el conjunto | «Esta página no se sella» | `Sellar esta página`, secundario |
+| Colocado, esta página está en el conjunto, opción `Estas páginas` | «Esta página se sella» | `Quitar el sello`, fantasma |
+
+Con `Solo 1 página` o `Todas las páginas` y la página ya sellada, **no hay
+pastilla**: no queda nada que ofrecer ahí.
+
+**El botón cambia de texto con la opción.** Con `Todas las páginas` dice
+«Colocar el sello aquí» y no «Sellar esta página», porque el conjunto ya está
+completo y lo único que falta es el rectángulo: decir «esta» prometería una
+página cuando se sellan las 27.
+
+Es el único camino para elegir páginas que no pasa por teclear, y el que hace
+que las páginas se elijan **mirándolas**. Pulsar reescribe el campo del panel.
+
+## En qué páginas se dibuja el recuadro
+
+**En todas las del conjunto, idéntico, y en ninguna más.** El widget se replica:
+mismo `/Rect`, mismo contenido. De ahí dos consecuencias que la pantalla tiene
+que respetar:
+
+- **La página donde se arrastró el recuadro no se dibuja distinta de las demás.**
+  Dibujarla distinta inventaría una diferencia que el PDF no tiene. El «ancla»
+  sobrevive solo como el número del pie de `Solo 1 página` en el panel.
+- **Fuera del conjunto no se dibuja nada.** Ni un recuadro a trazos: un fantasma
+  insinúa que ahí hay algo, que es exactamente la mentira que este diseño existe
+  para evitar. Lo dice la pastilla, con palabras.
+
 ## Estados
 
 - **Vacío** (sin documento): en lugar de la hoja, la zona de soltar de
@@ -149,8 +190,13 @@ firma en el sitio equivocado.
   el explorador de archivos»; debajo, «Solo PDF. El documento no sale de tu
   ordenador en ningún momento». La barra flotante no aparece, y el
   [panel de firma](panel-de-firma.md) tampoco está montado.
+- **Documento cargado, sin colocar**: no hay recuadro en ninguna página. Bajo la
+  hoja, la pastilla «Aún no has colocado la firma» con su botón.
 - **Documento cargado, recuadro sin seleccionar**: sin tiradores ni asa.
 - **Configurando**: recuadro seleccionado, con tiradores y asa.
+- **Página fuera del conjunto**: la hoja se ve **en blanco**, sin recuadro ni
+  fantasma, y bajo ella la pastilla «Esta página no se sella · Sellar esta
+  página».
 - **Atenuado**: bajo cualquier diálogo, la hoja baja a `opacity: .45`.
 - **Firmado**: el recuadro pierde tiradores y asa; ya no se mueve.
 
@@ -181,10 +227,15 @@ recuadro vuelve a donde estaba. Es la mitad de interfaz del ID-22; la
 autoritativa está en el backend, justo antes de firmar, porque iText recortaría
 en silencio y la firma saldría válida igual con la rúbrica encogida.
 
-**La firma va en la página que estás mirando.** Al cambiar de página el
-recuadro va contigo, conservando su sitio sobre el papel; si la página nueva es
-más pequeña y el recuadro no cabe, vuelve a su posición por omisión —abajo a la
-izquierda— en vez de quedarse a medias fuera.
+**La firma NO va en la página que estás mirando, y el recuadro no te sigue.**
+Esto cambió en v0.3 ([#152](https://github.com/sgomez/rfirma/issues/152)): el
+recuadro nace de un arrastre y ese arrastre lo fija a una página concreta.
+Cambiar de página no se lo lleva consigo — se queda donde se puso. Para llevarlo
+a la página que tienes delante, se vuelve a arrastrar o se usa la pastilla.
+
+**Las páginas donde el recuadro no cabe no se bloquean.** Se avisan una sola
+vez, en el [diálogo de páginas sin sello](dialogo-paginas-sin-sello.md), justo
+antes de firmar.
 
 ## Sin tira de miniaturas
 
@@ -194,6 +245,13 @@ llega en un gesto, que es menos que arrastrar una tira. Y una tira de
 miniaturas es **una cuarta columna**, justo lo que el ID-25 fija en tres. Si
 algún día se demuestra que hace falta, entra como panel superpuesto sobre el
 visor y no como región nueva.
+
+**v0.3 lo volvió a mirar y lo confirmó.** Al diseñar el multipágina se prototipó
+una tira de miniaturas bajo la hoja donde se marcaban las páginas a sellar, con
+el recuadro pintado sobre cada una. Se descartó por lo mismo de siempre —a las
+200 páginas es un desplazador que hay que recorrer— y el conjunto se escribe en
+el panel, en formato de impresión. Lo que la tira hacía gratis, enseñar que el
+recuadro cae en el mismo sitio en todas, lo dice ahora una frase.
 
 ## Decisiones
 
@@ -209,5 +267,9 @@ la barra flotante al comprobar que con 27 páginas ya no cabe, y de paso dejó d
 colgar del documento para pertenecer al visor, que es a lo que pertenece.
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
-**Recorrido de firma**, artboards «1 · Vacío» y «5 · Configurando la firma
-visible».
+**Recorrido de firma**, artboards «1 · Vacío» y «5 · Colocando la firma
+visible». Los tiradores, la pastilla bajo la hoja y el comportamiento al cambiar
+de página se validaron el 02/09/2026 con el
+[#155](https://github.com/sgomez/rfirma/issues/155), en el artboard «5», que se
+puede pulsar: la palanca «zoom» recorre 50 %, 100 % y 300 %, y la palanca
+«tamaño» enseña el mínimo útil.

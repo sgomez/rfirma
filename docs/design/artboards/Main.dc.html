@@ -165,7 +165,8 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 <div style="flex:1;min-width:0;position:relative;overflow:hidden;background:var(--rf-surface)">
   <div class="rf-stack rf-gap-sm" style="position:absolute;inset:0;align-items:center;
     justify-content:center;padding:var(--rf-space-md) var(--rf-space-md) 88px">
-    <div data-theme="light" style="width:452px;aspect-ratio:1/1.414;background:var(--rf-bg);
+    <div style="position:relative;width:{{ anchoPagina }}px;flex:none">
+    <div data-theme="light" style="width:100%;aspect-ratio:1/1.414;background:var(--rf-bg);
       border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);
       box-shadow:var(--rf-shadow-card);position:relative;overflow:hidden;
       display:flex;flex-direction:column;gap:10px;padding:32px">
@@ -177,45 +178,56 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <div style="height:16px"></div>
       <div style="height:7px;width:38%;border-radius:2px;background:var(--rf-border-strong);opacity:.55"></div>
       <div style="height:6px;width:26%;border-radius:2px;background:var(--rf-border-subtle)"></div>
-      <div style="position:absolute;left:130px;bottom:44px;width:176px;
-        border:2px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
-        background:var(--rf-surface);display:flex;gap:8px;align-items:center;padding:8px 10px">
-        <div style="flex:none;color:var(--rf-text);opacity:.8"><svg width="63" height="30" viewBox="0 0 84 40"
-          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/>
-          <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/>
-        </svg></div>
-        <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
-          <div style="font-size:8.5px;font-weight:700;color:var(--rf-text);white-space:nowrap;
-            overflow:hidden;text-overflow:ellipsis">EIDAS CERTIFICADO PRUEBAS</div>
-          <div style="font-size:7.5px;color:var(--rf-text-muted)">DNI 99999999R</div>
-          <div style="font-size:7.5px;color:var(--rf-text-muted)">31/08/2026 11:04</div>
+        <sc-if value="{{ hayRecuadro }}" hint-placeholder-val="{{ true }}">
+          <div style="{{ estiloRecuadro }}">
+            <sc-if value="{{ contenidoVisible }}" hint-placeholder-val="{{ true }}">
+            <svg width="30" height="16" viewBox="0 0 84 40" fill="none" stroke="var(--rf-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none">
+              <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/>
+              <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/></svg>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <div style="font-size:8px;font-weight:700;color:var(--rf-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">EIDAS CERTIFICADO PRUEBAS</div>
+              <div style="font-size:7px;color:var(--rf-text-muted)">DNI 99999999R</div>
+              <div style="font-size:7px;color:var(--rf-text-muted)">02/09/2026 11:04</div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ contenidoOculto }}" hint-placeholder-val="{{ false }}">
+              <svg width="100%" height="70%" viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55">
+                <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/></svg>
+            </sc-if>
+            <div style="{{ tiradorTL }}"></div>
+            <div style="{{ tiradorTR }}"></div>
+            <div style="{{ tiradorBL }}"></div>
+            <div style="{{ tiradorBR }}"></div>
+            <div style="position:absolute;top:-26px;left:-2px;display:flex;align-items:center;gap:5px;
+              padding:3px 8px;border-radius:var(--rf-radius-pill);background:var(--rf-primary);
+              color:var(--rf-on-primary);font-size:9px;font-weight:700;white-space:nowrap">{{ pastillaRecuadro }}</div>
+          </div>
+        </sc-if>
+    </div>
+      <sc-if value="{{ hayAviso }}" hint-placeholder-val="{{ true }}">
+        <div class="rf-row rf-gap-xs" style="position:absolute;left:50%;bottom:-52px;transform:translateX(-50%);
+          padding:6px 8px 6px 14px;border-radius:var(--rf-radius-pill);background:var(--rf-surface);
+          border:1px solid var(--rf-border-strong);box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
+          <span class="rf-body" style="flex:none">{{ textoAviso }}</span>
+          <button type="button" onClick="{{ pulsaAviso }}" class="rf-btn {{ claseBotonAviso }}" style="flex:none;min-height:28px;padding:0 var(--rf-space-sm);font-size:12px">{{ botonAviso }}</button>
         </div>
-        <div style="position:absolute;top:-4px;left:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;top:-4px;right:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;bottom:-4px;left:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;bottom:-4px;right:-4px;width:8px;height:8px;background:var(--rf-bg);border:1px solid var(--rf-border-strong)"></div>
-        <div style="position:absolute;top:-26px;left:-2px;display:flex;align-items:center;gap:4px;
-          padding:3px 6px;border-radius:var(--rf-radius-sm);background:var(--rf-primary);
-          color:var(--rf-on-primary);font-size:8px;font-weight:700;white-space:nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M12 3 9 6M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Arrastra para colocar</div>
-      </div>
+      </sc-if>
     </div>
   </div>
   <div class="rf-row" style="position:absolute;bottom:var(--rf-space-md);left:50%;
     transform:translateX(-50%);gap:2px;padding:4px;border-radius:var(--rf-radius-pill);
     border:1px solid var(--rf-border-subtle);background:var(--rf-surface);
     box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"/></svg></span>
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+    <button type="button" onClick="{{ vaPrimera }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"/></svg></button>
+    <button type="button" onClick="{{ vaAtras }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
     <div class="rf-row rf-gap-xs" style="padding:0 6px;flex:none">
       <span style="min-width:34px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
         border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
-        font-size:13px;font-weight:700">3</span>
-      <span class="rf-body rf-text-muted" style="flex:none">de 27</span>
+        font-size:13px;font-weight:700">{{ viendoNum }}</span>
+      <span class="rf-body rf-text-muted" style="flex:none">de {{ n }}</span>
     </div>
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"/></svg></span>
+    <button type="button" onClick="{{ vaAdelante }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button type="button" onClick="{{ vaUltima }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"/></svg></button>
     <span style="width:1px;height:24px;flex:none;margin:0 4px;background:var(--rf-border-subtle)"></span>
     <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
     <span class="rf-body" style="min-width:44px;flex:none;text-align:center;font-weight:700">100 %</span>
@@ -230,7 +242,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <span style="color:var(--rf-text-muted);display:flex;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
       <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
         <p class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solicitud-subvencion.pdf</p>
-        <p class="rf-body rf-text-muted">27 páginas · 2,4 MB</p>
+        <p class="rf-body rf-text-muted">{{ n }} páginas · 2,4 MB</p>
       </div>
     </div>
     <div class="rf-stack rf-gap-xs" style="padding:10px var(--rf-space-sm);border:1px solid var(--rf-border-subtle);
@@ -266,7 +278,41 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </span>
         <p class="rf-prose" style="flex:1">Estampar un recuadro de firma en el documento</p>
       </div>
-      <p class="rf-hint">Página 3 · arrástralo para colocarlo</p>
+      <div class="rf-stack" style="padding:var(--rf-space-sm);border:1px solid var(--rf-border-strong);
+        border-radius:var(--rf-radius-md);background:var(--rf-bg);gap:10px">
+      <p class="rf-label">Colocación</p>
+
+      <sc-for list="{{ opciones }}" as="o" hint-placeholder-count="3">
+        <div class="rf-stack" style="gap:6px">
+          <button type="button" onClick="{{ o.elegir }}" style="{{ o.estilo }}">
+            <span style="width:15px;height:15px;flex:none;margin-top:2px;border-radius:var(--rf-radius-pill);border:1.5px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center">
+              <sc-if value="{{ o.activa }}" hint-placeholder-val="{{ false }}"><span style="width:7px;height:7px;border-radius:var(--rf-radius-pill);background:var(--rf-primary)"></span></sc-if>
+            </span>
+            <span class="rf-stack" style="gap:2px;flex:1;min-width:0;text-align:left">
+              <span class="rf-prose" style="line-height:1.35">{{ o.texto }}</span>
+              <sc-if value="{{ o.hayPie }}" hint-placeholder-val="{{ false }}">
+                <span class="rf-body rf-text-muted" style="line-height:1.35">{{ o.pie }}</span>
+              </sc-if>
+            </span>
+          </button>
+          <sc-if value="{{ o.campo }}" hint-placeholder-val="{{ false }}">
+            <div class="rf-stack" style="gap:5px;padding-left:23px">
+              <span class="rf-input" style="{{ estiloCampo }}">{{ textoCampo }}</span>
+              <sc-if value="{{ hayError }}" hint-placeholder-val="{{ false }}">
+                <span class="rf-row rf-gap-xs" style="align-items:flex-start">
+                  <span style="display:flex;flex:none;margin-top:1px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+                  <span class="rf-body" style="flex:1;line-height:1.4">{{ error }}</span>
+                </span>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ diceLimitacion }}" hint-placeholder-val="{{ true }}">
+        <p class="rf-body rf-text-muted" style="line-height:1.45;padding-top:2px;border-top:1px solid var(--rf-border-subtle);margin-top:2px">{{ frase }}</p>
+      </sc-if>
+      </div>
       <div class="rf-stack" style="gap:6px">
         <p class="rf-label">Contenido</p>
         <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
@@ -338,13 +384,19 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar</button>
       </div>
     </sc-if>
-    <button class="rf-btn rf-btn--primary" style="width:100%">Firmar documento</button>
+    <sc-if value="{{ faltaColocar }}" hint-placeholder-val="{{ true }}">
+      <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+        <span style="display:flex;flex:none;margin-top:1px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h9a2 2 0 0 1 2 2v12M5 8h9a2 2 0 0 1 2 2v10H7a2 2 0 0 1-2-2z"/></svg></span>
+        <p class="rf-body" style="flex:1;line-height:1.45">{{ textoFalta }}</p>
+      </div>
+    </sc-if>
+    <button class="rf-btn rf-btn--primary" disabled="{{ firmarApagado }}" style="width:100%">Firmar documento</button>
   </div>
 </aside>
 </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":1000}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"caso":{"editor":"enum","options":["1 · recien abierto, sin colocar","1.1 · una pagina, sellada la 3","1.2 · una pagina, mirando otra","2 · todas, sin colocar","2.1 · todas, colocado","3 · algunas, sin colocar","3.1 · algunas, colocado","3.2 · algunas, en una pagina sellada"],"default":"1 · recien abierto, sin colocar","section":"Colocacion"},"tecleado":{"editor":"enum","options":["lo que digan los botones","10-40 · paginas que no existen","3-1 · rango al reves","1;2;3 · separador equivocado"],"default":"lo que digan los botones","section":"Colocacion"},"paginas":{"editor":"enum","options":["4","27","200"],"default":"27","section":"Documento"},"zoom":{"editor":"enum","options":["50 %","100 %","300 %"],"default":"100 %","section":"Visor"},"tamano":{"editor":"enum","options":["normal","al minimo"],"default":"normal","section":"Recuadro"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":1000}}'>
 class Component extends DCLogic {
   porElMedio(texto, cabeza, cola) {
     if (texto.length - cola.length <= cabeza) { return texto; }
@@ -364,7 +416,202 @@ class Component extends DCLogic {
     if (nombre.length <= cabeza) { return nombre; }
     return nombre.slice(0, cabeza) + "…";
   }
+
+  todas(n) { const a = []; for (let i = 1; i <= n; i++) { a.push(i); } return a; }
+
+  // El formato de impresión de toda la vida: 1,2-3,10-20.
+  // El ID-22 prohíbe la degradación silenciosa: nada se recorta ni se ignora.
+  parseRango(txt, n) {
+    const limpio = (txt || "").trim();
+    if (limpio === "") { return { sel: [], error: "" }; }
+    const vistos = {}; const sel = []; let error = "";
+    const trozos = limpio.split(",");
+    for (let i = 0; i < trozos.length; i++) {
+      const t = trozos[i].trim();
+      if (t === "") { continue; }
+      const solo = t.match(/^(\d+)$/);
+      const par = t.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (!solo && !par) {
+        error = error || "«" + t + "» no se entiende. Números y rangos separados por comas: 1,2-3,10-20.";
+        continue;
+      }
+      const a = parseInt(solo ? solo[1] : par[1], 10);
+      const b = parseInt(solo ? solo[1] : par[2], 10);
+      if (a === 0 || b === 0) { error = error || "No hay página 0: la primera es la 1."; continue; }
+      if (b < a) { error = error || "«" + t + "» va al revés: el primer número tiene que ser el menor."; continue; }
+      if (b > n) { error = error || "El documento tiene " + n + " páginas y has escrito hasta la " + b + "."; continue; }
+      for (let p = a; p <= b; p++) { if (!vistos[p]) { vistos[p] = true; sel.push(p); } }
+    }
+    sel.sort(function (x, y) { return x - y; });
+    return { sel: sel, error: error };
+  }
+
+  // El camino de vuelta: un conjunto se escribe en el campo como rangos.
+  comprime(sel) {
+    if (sel.length === 0) { return ""; }
+    const t = []; let i = 0;
+    while (i < sel.length) {
+      let j = i;
+      while (j + 1 < sel.length && sel[j + 1] === sel[j] + 1) { j++; }
+      t.push(j - i >= 1 ? sel[i] + "-" + sel[j] : String(sel[i]));
+      i = j + 1;
+    }
+    return t.join(",");
+  }
+
+  escenario(caso, n) {
+    const algunas = [3].concat(this.todas(n).filter(function (p) { return p >= 10 && p <= 20; }));
+    const mapa = {
+      "1 · recien abierto, sin colocar":     { modo: "una", texto: "", ancla: 0, viendo: 1, puesto: false },
+      "1.1 · una pagina, sellada la 3":      { modo: "una", texto: "", ancla: 3, viendo: 3, puesto: true },
+      "1.2 · una pagina, mirando otra":      { modo: "una", texto: "", ancla: 3, viendo: 7, puesto: true },
+      "2 · todas, sin colocar":              { modo: "todas", texto: "", ancla: 0, viendo: 1, puesto: false },
+      "2.1 · todas, colocado":               { modo: "todas", texto: "", ancla: 5, viendo: 5, puesto: true },
+      "3 · algunas, sin colocar":            { modo: "algunas", texto: "", ancla: 0, viendo: 1, puesto: false },
+      "3.1 · algunas, colocado":             { modo: "algunas", texto: this.comprime(algunas), ancla: 3, viendo: 3, puesto: true },
+      "3.2 · algunas, en una pagina sellada": { modo: "algunas", texto: this.comprime(algunas), ancla: 3, viendo: 12, puesto: true }
+    };
+    const e = mapa[caso] || mapa["1 · recien abierto, sin colocar"];
+    return {
+      modo: e.modo,
+      texto: e.texto,
+      ancla: Math.min(e.ancla, n),
+      viendo: Math.min(e.viendo, n),
+      puesto: e.puesto
+    };
+  }
+
+  lee() {
+    const n = parseInt(this.props.paginas ?? "27", 10);
+    const caso = this.props.caso ?? "1 · recien abierto, sin colocar";
+    const tecleado = this.props.tecleado ?? "lo que digan los botones";
+    const clave = [caso, this.props.paginas, tecleado].join("|");
+    const base = this.escenario(caso, n);
+    if (tecleado !== "lo que digan los botones") {
+      base.modo = "algunas";
+      base.texto = tecleado.split(" ")[0];
+      base.puesto = true;
+      if (base.ancla === 0) { base.ancla = 1; }
+    }
+    const s = (this.state && this.state.clave === clave) ? this.state : {};
+    return {
+      n: n, clave: clave,
+      modo: s.modo ?? base.modo,
+      texto: s.texto ?? base.texto,
+      ancla: s.ancla ?? base.ancla,
+      viendo: s.viendo ?? base.viendo,
+      puesto: s.puesto ?? base.puesto
+    };
+  }
+
   renderVals() {
+    const self = this;
+    const v = this.lee();
+    const n = v.n;
+    const clave = v.clave;
+
+    const r = v.modo === "algunas" ? this.parseRango(v.texto, n) : { sel: [], error: "" };
+    // «Colocado» no es una bandera aparte: es que haya al menos una página sellada.
+    const sel = v.modo === "una" ? (v.puesto ? [v.ancla] : [])
+      : v.modo === "todas" ? (v.puesto ? this.todas(n) : [])
+      : r.sel;
+    const cuantas = sel.length;
+    const colocado = cuantas > 0;
+    const hayError = v.modo === "algunas" && r.error !== "";
+    const enConjunto = sel.indexOf(v.viendo) !== -1;
+
+    const pon = function (c) { self.setState(Object.assign({ clave: clave, modo: v.modo, texto: v.texto, ancla: v.ancla, viendo: v.viendo, puesto: v.puesto }, c)); };
+
+    // --- Acciones sobre el lienzo ---
+    const sellarEsta = function () {
+      if (v.modo === "una") { pon({ ancla: v.viendo, puesto: true }); return; }
+      if (v.modo === "todas") { pon({ ancla: v.viendo, puesto: true }); return; }
+      const nuevo = sel.indexOf(v.viendo) === -1 ? sel.concat([v.viendo]) : sel;
+      nuevo.sort(function (a, b) { return a - b; });
+      pon({ texto: self.comprime(nuevo), ancla: colocado ? v.ancla : v.viendo, puesto: true });
+    };
+    const quitarEsta = function () {
+      const nuevo = sel.filter(function (p) { return p !== v.viendo; });
+      // Sin páginas se vuelve al caso 1: no hay un estado intermedio con recuadro y sin sitio.
+      pon({ texto: self.comprime(nuevo), puesto: nuevo.length > 0, ancla: nuevo.length > 0 ? v.ancla : 0 });
+    };
+
+    // --- Cambio de modo: sobrevive la página donde se colocó el recuadro ---
+    const cambiaModo = function (m) {
+      return function () {
+        if (m === "algunas") {
+          const arranque = cuantas > 0 ? sel : (v.puesto ? [v.ancla] : []);
+          pon({ modo: m, texto: self.comprime(arranque) });
+        } else {
+          pon({ modo: m });
+        }
+      };
+    };
+
+    const irA = function (p) { return function () { pon({ viendo: Math.max(1, Math.min(n, p)) }); }; };
+
+    // --- Geometría. Colocar por botón o por campo deja el sello en su sitio
+    // estándar: abajo a la derecha, a un margen del borde. ---
+    const PW = 595, PH = 842;
+    const alMinimo = (this.props.tamano ?? "normal") === "al minimo";
+    const anchoPt = alMinimo ? 120 : 286;
+    const altoPt = alMinimo ? 36 : 118;
+    const wPct = anchoPt / PW, hPct = altoPt / PH;
+    const lPct = 1 - 0.08 - wPct, tPct = 1 - 0.08 - hPct;
+
+    const zoom = parseInt(this.props.zoom ?? "100 %", 10) / 100;
+    const anchoPagina = Math.round(400 * zoom);
+    const anchoCaja = anchoPagina * wPct;
+
+    // Fuera del conjunto no se dibuja nada: un recuadro a trazos insinuaria que ahi hay algo.
+    const caja = function (borde, extra) {
+      return "position:absolute;left:" + (lPct * 100).toFixed(2) + "%;top:" + (tPct * 100).toFixed(2)
+        + "%;width:" + (wPct * 100).toFixed(2) + "%;height:" + (hPct * 100).toFixed(2) + "%;"
+        + "border:1.5px " + borde + ";border-radius:2px;box-sizing:border-box;" + extra;
+    };
+    const lado = 10, off = -(lado / 2);
+    const tirador = function (esq) {
+      return "position:absolute;" + esq + ";width:" + lado + "px;height:" + lado + "px;"
+        + "background:var(--rf-bg);border:1.5px solid var(--rf-border-strong);border-radius:1px;box-sizing:border-box";
+    };
+
+    // --- El aviso bajo la hoja: uno solo, con tres caras ---
+    let hayAviso = true, textoAviso = "", botonAviso = "", claseBotonAviso = "rf-btn--secondary", pulsaAviso = sellarEsta;
+    if (!colocado) {
+      textoAviso = "Aún no has colocado la firma";
+      botonAviso = v.modo === "todas" ? "Colocar el sello aquí" : "Sellar esta página";
+      claseBotonAviso = "rf-btn--primary";
+    } else if (!enConjunto) {
+      textoAviso = "Esta página no se sella";
+      botonAviso = "Sellar esta página";
+    } else if (v.modo === "algunas") {
+      textoAviso = "Esta página se sella";
+      botonAviso = "Quitar el sello";
+      claseBotonAviso = "rf-btn--ghost";
+      pulsaAviso = quitarEsta;
+    } else {
+      hayAviso = false;
+    }
+
+    const opciones = [
+      { clave: "una", texto: "Solo 1 página", pie: v.puesto || colocado ? "Página " + (v.ancla || v.viendo) : "aún sin colocar", hayPie: true, campo: false },
+      { clave: "algunas", texto: "Estas páginas", pie: "", hayPie: false, campo: true },
+      { clave: "todas", texto: "Todas las páginas (" + n + ")", pie: "", hayPie: false, campo: false }
+    ].map(function (o) {
+      const activa = v.modo === o.clave;
+      return Object.assign({}, o, {
+        activa: activa,
+        campo: o.campo && activa,
+        elegir: cambiaModo(o.clave),
+        estilo: "display:flex;align-items:flex-start;gap:9px;width:100%;padding:5px 6px;border:none;cursor:pointer;"
+          + "font-family:inherit;border-radius:var(--rf-radius-sm);background:" + (activa ? "var(--rf-surface)" : "transparent")
+      });
+    });
+
+    const navBtn = "width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;"
+      + "border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0";
+
+    // --- Pie del destino (v0.2, ticket #123): se conserva entero ---
     const caso = this.props.destino ?? "cabe entero";
     const cabeza = this.props.cabeza ?? 18;
     const cabezaCarpeta = this.props.cabezaCarpeta ?? 16;
@@ -376,12 +623,47 @@ class Component extends DCLogic {
       "no disponible": ["Documentos", "Solicitud-subvencion-firmado.pdf"]
     };
     const par = casos[caso] || casos["cabe entero"];
+
     return {
-      tema: this.props.tema ?? "light",
       destinoOk: caso !== "no disponible",
       destinoRoto: caso === "no disponible",
       carpeta: "…/" + this.recortaCarpeta(par[0], cabezaCarpeta) + "/",
-      fichero: this.recortaFichero(par[1], cabeza)
+      fichero: this.recortaFichero(par[1], cabeza),
+      tema: this.props.tema ?? "light",
+      n: n,
+      viendoNum: v.viendo,
+      anchoPagina: anchoPagina,
+      hayRecuadro: enConjunto,
+      estiloRecuadro: caja("solid var(--rf-primary)",
+        "background:var(--rf-bg);display:flex;align-items:center;gap:6px;padding:6px;cursor:move"),
+      contenidoVisible: anchoCaja >= 150,
+      contenidoOculto: anchoCaja < 150,
+      tiradorTL: tirador("top:" + off + "px;left:" + off + "px"),
+      tiradorTR: tirador("top:" + off + "px;right:" + off + "px"),
+      tiradorBL: tirador("bottom:" + off + "px;left:" + off + "px"),
+      tiradorBR: tirador("bottom:" + off + "px;right:" + off + "px"),
+      pastillaRecuadro: cuantas === 1 ? "La única página sellada"
+        : "Página " + v.viendo + " de las " + cuantas + " selladas",
+      hayAviso: hayAviso,
+      textoAviso: textoAviso,
+      botonAviso: botonAviso,
+      claseBotonAviso: claseBotonAviso,
+      pulsaAviso: pulsaAviso,
+      estiloNav: navBtn,
+      vaPrimera: irA(1), vaAtras: irA(v.viendo - 1), vaAdelante: irA(v.viendo + 1), vaUltima: irA(n),
+      opciones: opciones,
+      textoCampo: v.texto === "" ? "1,2-3,10-20" : v.texto,
+      estiloCampo: "display:block;width:100%;padding:7px 9px;font-size:13px;border-radius:var(--rf-radius-md);"
+        + "background:var(--rf-surface);color:var(--rf-" + (v.texto === "" ? "text-muted" : "text") + ");"
+        + "border:1px solid var(--rf-" + (hayError ? "text" : "border-strong") + ")",
+      hayError: hayError,
+      error: r.error,
+      diceLimitacion: cuantas > 1,
+      frase: "El mismo recuadro, en el mismo sitio y del mismo tamaño, en las " + cuantas
+        + " páginas: es un solo campo de firma repetido, no " + cuantas + " firmas.",
+      faltaColocar: !colocado,
+      textoFalta: "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la página.",
+      firmarApagado: !colocado || hayError
     };
   }
 }

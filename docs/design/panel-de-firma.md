@@ -172,7 +172,8 @@ El artboard es
 Cuatro piezas en este orden:
 
 1. **Interruptor**: «Estampar un recuadro de firma en el documento».
-2. **Pista de ubicación**: «Página 3 · arrástralo para colocarlo».
+2. **Colocación**: en qué páginas se sella y en cuál está el recuadro.
+   Ver «[Colocación](#colocación)».
 3. **Contenido**: cinco casillas de igual forma y ritmo.
    - Tu rúbrica
    - Nombre y apellidos
@@ -220,6 +221,103 @@ demasiado grande*. Todo esto ocurre al elegir, con el diálogo aún abierto, nun
 al firmar. Ver el
 [ADR-0012](../adr/0012-normalizacion-de-la-rubrica-en-rust.md).
 
+## Colocación
+
+Bloque con borde `--rf-border-strong`, `--rf-radius-md` y fondo `--rf-bg`, bajo
+el interruptor de firma visible. Sustituye a la línea «Página 3 · arrástralo
+para colocarlo», que **mentía**: decía la página que estabas mirando, no la del
+recuadro.
+
+Dentro, el rótulo `Colocación` y tres opciones en radio:
+
+| Opción | Pie | Conjunto |
+| --- | --- | --- |
+| `Solo 1 página` | `Página 3`, o `aún sin colocar` | la página del recuadro |
+| `Estas páginas` | — | lo que diga su campo de texto |
+| `Todas las páginas (27)` | — | las *n* del documento |
+
+**La etiqueta es fija y el número va en el pie.** «Esta página» no dice cuál y
+deja de ser cierto en cuanto pasas de página; el pie sí lo dice, y dice además
+de dónde sale: la página donde has puesto el recuadro. La fija el arrastre, no
+lo que estés mirando ([#152](https://github.com/sgomez/rfirma/issues/152)).
+
+Debajo de las tres, y solo con más de una página elegida, la frase de la
+limitación: «El mismo recuadro, en el mismo sitio y del mismo tamaño, en las 13
+páginas: es un solo campo de firma repetido, no 13 firmas». Es la traducción
+honesta de lo que se estampa —un único campo de firma con el widget replicado,
+medido en [recuadro-replicado-pdfsig.md](../research/recuadro-replicado-pdfsig.md)
+y validado por VALIDe como PAdES B-Level con **un solo firmante**—, y por eso el
+`/Rect` es forzosamente el mismo en todas.
+
+### Colocado es tener páginas
+
+**No hay un estado «colocado» aparte: el recuadro existe si hay al menos una
+página sellada.** Con el conjunto vacío no se dibuja recuadro en ninguna parte,
+el pie del panel pide colocar la firma y `Firmar documento` está **apagado**,
+sea cual sea la opción marcada — también con `Todas las páginas`, porque elegir
+todas no coloca nada. Quitar la última página del conjunto devuelve exactamente
+a ese estado. No existe un estado intermedio con un recuadro que no esté en
+ninguna página, y eso es lo que hace que «recién abierto» y «me he quedado sin
+páginas» sean una sola cosa que describir, dibujar y probar.
+
+### El campo de «Estas páginas»
+
+Formato de impresión de toda la vida: `1,2-3,10-20`. Números y rangos separados
+por comas, sin sintaxis propia.
+
+**No es el rango tecleado que prohíben las notas del mapa.** Lo prohibido de
+AutoFirma es su sintaxis —`1-3,-3--1`, con rangos negativos— y, sobre todo, su
+degradación silenciosa. Aquí **nada se recorta ni se ignora** (ID-22): cada
+entrada que no se puede resolver se dice y **apaga el botón de firmar**.
+
+| Lo escrito | Lo que se ve |
+| --- | --- |
+| `10-40` en un documento de 27 | «El documento tiene 27 páginas y has escrito hasta la 40.» |
+| `3-1` | «`3-1` va al revés: el primer número tiene que ser el menor.» |
+| `0` | «No hay página 0: la primera es la 1.» |
+| `1;2;3` | «`1;2;3` no se entiende. Números y rangos separados por comas: 1,2-3,10-20.» |
+| vacío | Sin error, pero el conjunto queda vacío: se aplica «colocado es tener páginas». |
+
+El campo lleva borde `--rf-text` en lugar de `--rf-border-strong` cuando hay
+error, y el mensaje va debajo con el triángulo de aviso de 15 px.
+
+**El campo se escribe solo.** Sellar o quitar una página desde el visor
+reescribe su contenido en forma comprimida: quitar la 12 de `3,10-20` deja
+`3,10-11,13-20`. Es el camino de vuelta del conjunto al texto, y hace que los
+dos caminos —teclear y pulsar— no puedan discrepar.
+
+### Tres caminos, un mismo resultado
+
+Se coloca la firma de tres maneras, y ninguna es más oficial que otra:
+arrastrando un recuadro sobre la hoja, pulsando el botón que hay bajo la página
+(ver [visor de documento](visor-de-documento.md)), o escribiendo en este campo.
+
+**Colocada por botón o por campo, el recuadro cae en su posición estándar**:
+abajo a la derecha, a un 8 % del ancho y del alto desde el borde. Solo el
+arrastre elige sitio; los otros dos caminos tienen que poner el recuadro en
+algún lado, y ese es el sitio menos malo — es donde va una firma en un papel.
+
+### Al cambiar de opción sobrevive la página del recuadro
+
+De `Estas páginas` = {3, 10…20} a `Solo 1 página` queda **la 3**, la del gesto
+original, no la que estés mirando ni la más baja del conjunto por casualidad. El
+número del pie ya venía diciendo esa página, así que cambiar de opción no lo
+mueve y no hay sorpresa. De `Solo 1 página` a `Estas páginas`, el campo arranca
+con esa misma página escrita.
+
+### Ni medidas escritas ni línea de ayuda
+
+**No hay cuatro campos en puntos.** Se propusieron con la ficha 6 y se
+descartaron: el recuadro se mueve arrastrando y cambia de tamaño por los
+tiradores, y basta. Con ellos se cae también la pregunta de qué hacer con una
+medida tecleada que se sale de la página — arrastrando no puede ocurrir, porque
+soltar fuera no se acepta.
+
+**Y no hay línea de ayuda.** «Arrástralo para moverlo y agárralo por una esquina
+para cambiar su tamaño» son tres renglones en la columna más apretada de la
+ventana para explicar dos gestos que se descubren al primer intento. Va en
+**tooltip** sobre el recuadro.
+
 ## Estados
 
 - **Sin certificado**: el desplegable cerrado y vacío, con «Elegir
@@ -231,6 +329,13 @@ al firmar. Ver el
 - **Sin certificados**: bloque con borde `--rf-border-strong`, explicación
   («si usas una tarjeta, comprueba que está insertada y que el lector está
   conectado») y dos salidas: «Volver a buscar» y «Otro módulo…».
+- **Sin colocar**: hay certificado y la firma visible está encendida, pero el
+  conjunto de páginas está vacío. El pie añade, sobre el botón, «Coloca la firma
+  sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la
+  página», y `Firmar documento` está apagado. Es el estado del PDF recién
+  abierto y también el de haber quitado la última página del conjunto.
+- **Rango con error**: el campo de «Estas páginas» tiene algo que no se puede
+  resolver. Mensaje bajo el campo y `Firmar documento` apagado.
 - **Listo**: todo activo, botón «Firmar documento».
 - **Destino no disponible**: la carpeta de destino no está o no se puede
   escribir. El pie sustituye «Se guardará en» por «No se puede escribir en
@@ -335,6 +440,14 @@ tokens. Si se repiten en otra pantalla, hay que subirlos a
 
 - El botón «Cambiar» junto al nombre del documento se retiró: la bandeja ya
   hace eso, y dos caminos para lo mismo es uno de más.
+- **La elección de páginas vive en el panel, no en el visor.** Se probaron una
+  tira de miniaturas bajo la hoja y una etiqueta colgando del propio recuadro.
+  La tira se rompe a las 200 páginas y añade mobiliario al visor; la etiqueta
+  esconde la decisión dentro del objeto que se está moviendo. Gana el panel, que
+  es donde ya vive todo lo que hay que decidir antes de firmar.
+- **«Colocado» dejó de ser una bandera.** Serlo obligaba a describir un estado
+  con recuadro y sin páginas que nadie sabía dibujar ni qué debía hacer al
+  firmar.
 - La miniatura de la rúbrica estuvo dentro de la lista de casillas y se sacó:
   rompía el ritmo de la lista y escondía que sin imagen la casilla no debe
   poder marcarse.
@@ -368,3 +481,10 @@ resumen se rehicieron el 02/09/2026 con las decisiones del
 [#123](https://github.com/sgomez/rfirma/issues/123): están en `Main`, con las
 palancas «Pie · destino» y «Pie · recorte», y en `EstadoExito`, con la palanca
 «Ficha 14».
+
+**El bloque de colocación se validó el 02/09/2026** con las decisiones del
+[#155](https://github.com/sgomez/rfirma/issues/155), que absorbió al
+[#154](https://github.com/sgomez/rfirma/issues/154). Está en `Main`, que **se
+puede pulsar**: la palanca «Colocación» salta a cada uno de los ocho casos y
+desde ahí los radios, el campo, el botón de bajo la hoja y las flechas de página
+funcionan de verdad; la palanca «tecleado» recorre los tres errores del rango.
