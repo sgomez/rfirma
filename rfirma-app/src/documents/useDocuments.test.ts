@@ -118,6 +118,47 @@ describe("useDocuments", () => {
     await expect(store.list()).resolves.toEqual([]);
   });
 
+  /**
+   * «Volver a firmar» relee el original del disco (ID-80): el documento activo
+   * se repone, y quien lo mira —el efecto que abre el PDF— lo vuelve a leer
+   * porque es otra referencia.
+   */
+  it("hands out a fresh active document when it is reopened", async () => {
+    const contrato = document("contrato.pdf");
+    const store = inMemoryRecents();
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
+    await act(() => result.current.open());
+    const before = result.current.active;
+
+    act(() => result.current.reopen());
+
+    expect(result.current.active).toEqual(before);
+    expect(result.current.active).not.toBe(before);
+  });
+
+  it("reopens with the box where it was last dragged, not where it was opened", async () => {
+    // El arrastre escribe en la fila y a propósito no toca el documento activo:
+    // reponer la copia devolvería el recuadro a donde estaba al abrirlo.
+    const contrato = document("contrato.pdf");
+    const store = inMemoryRecents();
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
+    await act(() => result.current.open());
+    const box = { page: 2, rect: { x0: 10, y0: 20, x1: 210, y1: 120 } };
+    await act(() => result.current.place(box));
+
+    act(() => result.current.reopen());
+
+    expect(result.current.active?.placement).toEqual(box);
+  });
+
+  it("has nothing to reopen without a document in front", () => {
+    const { result } = renderHook(() => useDocuments(inMemoryRecents(), inMemoryDocumentPicker()));
+
+    act(() => result.current.reopen());
+
+    expect(result.current.active).toBeNull();
+  });
+
   it("drops the active document when its row is removed from the list", async () => {
     const store = inMemoryRecents();
     const informe = document("informe.pdf");

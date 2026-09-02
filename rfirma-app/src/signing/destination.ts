@@ -42,6 +42,37 @@ export interface DestinationSource {
   previewFor(documentId: string): Promise<Destination>;
 }
 
+/**
+ * Quién lleva al usuario **hasta** el fichero que ha quedado escrito.
+ *
+ * Bajo el arenero esto no es comodidad: la aplicación nunca conoce la ruta del
+ * documento y el usuario nunca la ve (ADR-0011), así que abrir el PDF y abrir
+ * su carpeta son las dos únicas formas de llegar a lo que se acaba de firmar
+ * (ID-79).
+ *
+ * Ninguno de los dos métodos recibe nada: el documento que se abre es el de la
+ * última firma, y quién es lo sabe el backend, que es el único que tiene su
+ * ruta. Debajo son las órdenes `open_signed_document` y `open_signed_folder`,
+ * y más abajo el portal `OpenURI`.
+ */
+export interface SignedDocumentOpener {
+  /** Abre el PDF firmado con el visor del sistema. */
+  openDocument(): Promise<void>;
+  /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81). */
+  openFolder(): Promise<void>;
+}
+
+/**
+ * Un abridor que **no abre**, y lo dice: para montar la ventana en una prueba
+ * sin backend. Falla en vez de fingir que ha abierto algo, que es lo único que
+ * no puede hacer aquí un doble —el usuario se quedaría esperando una ventana
+ * que nadie va a abrir—.
+ */
+export function unavailableOpener(): SignedDocumentOpener {
+  const missing = () => Promise.reject(new Error("no hay quien abra el documento firmado"));
+  return { openDocument: missing, openFolder: missing };
+}
+
 /** Un destino fijo, para pintar la ventana en una prueba sin backend. */
 export function inMemoryDestination(destination: Destination): DestinationSource {
   return { previewFor: async () => destination };

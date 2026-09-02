@@ -9,7 +9,7 @@
 //! la ventana no tiene no lo puede filtrar ni alterar, y el sello de sesión es
 //! justo lo que no puede cambiar entre la prefirma y la postfirma (ADR-0016).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature};
@@ -32,6 +32,17 @@ use crate::signing::{
 #[derive(Default)]
 pub struct SigningSession {
     open: Mutex<Option<InFlight>>,
+    /// **Dónde cayó el último documento firmado en esta sesión.**
+    ///
+    /// No es parte del ciclo —el ciclo ya terminó cuando esto se escribe— pero
+    /// vive aquí por lo mismo que él: bajo el arenero la ventana nunca conoce
+    /// la ruta (ADR-0011), así que la única forma de que «Abrir el PDF» y
+    /// «Abrir la carpeta» lleguen al fichero es que el backend recuerde a
+    /// dónde lo dejó. Lo que cruza sigue siendo el nombre.
+    ///
+    /// Se pisa en cada firma que termina bien: el resumen que hay delante es
+    /// siempre el del último documento firmado.
+    delivered: Mutex<Option<PathBuf>>,
 }
 
 struct InFlight {
@@ -166,7 +177,43 @@ pub fn finish(
     // Y aquí, y **solo aquí**, se escribe la insignia `Firmado` (ID-76): el
     // documento que la lleva es el que acaba de caer, y nada más lo escribe.
     recents::note_signed(memory, configuration, &landing);
+    // Y aquí se guarda la ruta, para los dos botones del resumen: es lo único
+    // que puede llevar al usuario hasta el fichero, porque él nunca la ve
+    // (ID-79, ADR-0011).
+    *lock(&session.delivered) = Some(landing);
     Ok(delivered)
+}
+
+/// **Caso de uso.** El fichero que quedó escrito en la última firma.
+///
+/// Devuelve la ruta **hacia dentro**, para que la orden se la dé al portal: no
+/// cruza a la ventana ni por asomo (ADR-0011). Sin firma terminada en esta
+/// sesión no hay nada que abrir, y eso es un fallo y no un silencio: los dos
+/// botones solo se pintan con el resumen delante, así que llegar aquí sin
+/// documento entregado es que algo se ha descolocado.
+pub fn signed_document(session: &SigningSession) -> Result<PathBuf, Failure> {
+    lock(&session.delivered)
+        .clone()
+        .ok_or_else(no_signed_document)
+}
+
+/// **Caso de uso.** La carpeta donde quedó el fichero de la última firma.
+///
+/// Es el directorio padre de [`signed_document`], y no la carpeta de destino
+/// leída otra vez de la configuración: si el usuario la ha cambiado desde que
+/// firmó, «Abrir la carpeta» tiene que abrir aquella en la que está el fichero
+/// del resumen, no la que se usaría en la siguiente firma.
+pub fn signed_folder(session: &SigningSession) -> Result<PathBuf, Failure> {
+    let landing = signed_document(session)?;
+    landing
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(no_signed_document)
+}
+
+/// Ninguna firma ha terminado todavía en esta sesión.
+fn no_signed_document() -> Failure {
+    Failure::new("unknown", "no hay ningun documento firmado en esta sesion")
 }
 
 /// **Caso de uso.** Cancelar: se olvida el ciclo a medias.
@@ -302,8 +349,8 @@ fn no_open_cycle() -> Failure {
 #[cfg(test)]
 mod tests {
     use super::{
-        admitted_bytes, begin, cancel, config_for, finish, sign_on_token, take_signed_cycle,
-        visible_text, SigningSession,
+        admitted_bytes, begin, cancel, config_for, finish, sign_on_token, signed_document,
+        signed_folder, take_signed_cycle, visible_text, SigningSession,
     };
     use crate::app::fixtures::{a_certificate, a_memory, an_order};
     use crate::commands::orders::{PlacementOrder, SigningOrder};
@@ -500,6 +547,55 @@ mod tests {
         };
 
         assert_eq!(failure.situation, "unknown");
+    }
+
+    /// Los dos botones del resumen no tienen nada que abrir hasta que una
+    /// firma termina: preguntar antes es un fallo, no un silencio.
+    #[test]
+    fn there_is_nothing_to_open_before_the_first_signature_of_the_session() {
+        let session = SigningSession::default();
+
+        let Err(failure) = signed_document(&session) else {
+            panic!("no se ha firmado nada todavia");
+        };
+        assert_eq!(failure.situation, "unknown");
+        assert!(signed_folder(&session).is_err());
+    }
+
+    /// Y la ruta que abren la guarda la sesión, **no la ventana**: bajo el
+    /// arenero la ventana nunca conoce la ruta del fichero (ADR-0011), así que
+    /// las dos órdenes no reciben ninguna y leen la que dejó la postfirma.
+    #[test]
+    fn the_two_openers_read_the_landing_the_postsign_left_behind() {
+        let session = SigningSession::default();
+        let folder = tempfile::tempdir().expect("deberia haber temporal");
+        let landing = folder.path().join("contrato-firmado.pdf");
+        *crate::app::lock(&session.delivered) = Some(landing.clone());
+
+        assert_eq!(signed_document(&session).expect("hay firmado"), landing);
+        assert_eq!(signed_folder(&session).expect("y carpeta"), folder.path());
+    }
+
+    /// Ni la ruta ni nada que se le parezca sale por la orden: lo que la
+    /// sesión guarda se queda dentro (ADR-0011).
+    #[test]
+    fn the_remembered_landing_never_leaves_the_backend() {
+        let crossing = production_half()
+            .split_once("pub struct SigningSession {")
+            .expect("la sesion sigue aqui")
+            .1
+            .split_once("\n}")
+            .expect("y tiene cuerpo")
+            .0;
+
+        assert!(
+            crossing.contains("delivered"),
+            "la sesion tiene que recordar donde cayo el firmado: {crossing}"
+        );
+        assert!(
+            !crossing.contains("Serialize"),
+            "la sesion no se serializa: si cruzara, cruzaria una ruta del anfitrion"
+        );
     }
 
     /// Lo que no es un PDF cae **antes del diálogo del PIN** (#60): se decide

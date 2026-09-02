@@ -9,7 +9,7 @@ import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
-import { inMemoryDestination } from "./signing/destination";
+import { inMemoryDestination, unavailableOpener } from "./signing/destination";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
@@ -136,6 +136,7 @@ function renderApp(
       rubrics={rubrics}
       composer={emptyLayer2Composer()}
       signer={unavailableSigningBackend()}
+      opener={unavailableOpener()}
       menuAnchor="header"
     />,
   );
@@ -238,6 +239,7 @@ describe("App", () => {
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}
         signer={unavailableSigningBackend()}
+        opener={unavailableOpener()}
         menuAnchor="header"
       />,
     );
@@ -547,6 +549,7 @@ describe("App", () => {
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}
         signer={unavailableSigningBackend()}
+        opener={unavailableOpener()}
         menuAnchor="header"
       />,
     );

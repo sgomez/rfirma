@@ -439,6 +439,55 @@ pub fn choose_destination(
     .map(Some)
 }
 
+/// **Orden 19.** Abre el PDF firmado con el visor del sistema.
+///
+/// Bajo el arenero esto **no es comodidad**: la ventana nunca conoce la ruta
+/// del fichero (ADR-0011) y el usuario tampoco la ve, así que este botón y el
+/// siguiente son la única forma que tiene de llegar a lo que acaba de firmar
+/// (ID-79).
+///
+/// Por eso la orden **no recibe ninguna ruta**: la que se abre es la del
+/// último documento entregado, que guarda la sesión de firma. Lo que la
+/// ventana no tiene no lo puede pedir mal.
+///
+/// Debajo es el portal `OpenURI`, que fuera del arenero cae en `xdg-open`.
+#[tauri::command(async)]
+pub fn open_signed_document(
+    app_handle: tauri::AppHandle,
+    session: State<'_, SigningSession>,
+) -> Result<(), Failure> {
+    use tauri_plugin_opener::OpenerExt;
+
+    let landing = app::signing::signed_document(&session)?;
+    app_handle
+        .opener()
+        .open_path(landing.to_string_lossy(), None::<&str>)
+        .map_err(|error| Failure::new("unknown", error.to_string()))
+}
+
+/// **Orden 20.** Abre la carpeta donde quedó el PDF firmado.
+///
+/// La carpeta es la del fichero del resumen y no la de destino leída otra vez:
+/// si el usuario la ha cambiado desde que firmó, abrir la nueva le enseñaría un
+/// directorio donde su documento no está.
+///
+/// El mismo portal que [`open_signed_document`], con el directorio en vez del
+/// fichero: el gestor de archivos lo abre y el usuario ve dentro lo que acaba
+/// de firmar, junto a las firmas anteriores que **siguen ahí** (ID-81).
+#[tauri::command(async)]
+pub fn open_signed_folder(
+    app_handle: tauri::AppHandle,
+    session: State<'_, SigningSession>,
+) -> Result<(), Failure> {
+    use tauri_plugin_opener::OpenerExt;
+
+    let folder = app::signing::signed_folder(&session)?;
+    app_handle
+        .opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(|error| Failure::new("unknown", error.to_string()))
+}
+
 /// El nombre del evento con el que la ventana se entera de un arrastre.
 ///
 /// Es un **evento** y no una orden más a propósito: el arrastre no lo

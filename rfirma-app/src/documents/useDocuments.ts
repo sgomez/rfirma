@@ -22,6 +22,20 @@ export interface Documents {
   /** Cambia de documento desde una fila de la bandeja. */
   select: (document: RecentDocument) => void;
   /**
+   * **Vuelve a leer del disco el documento que hay delante**, sin cambiar de
+   * documento.
+   *
+   * Es lo que hay debajo de «Volver a firmar» (ID-80): abrir el mismo documento
+   * otra vez, porque entre una firma y la siguiente el usuario ha podido
+   * modificarlo fuera. No hay ningún mecanismo nuevo para el recuadro que ya no
+   * quepa —si el documento releído tiene menos páginas avisa el aviso del
+   * ID-22— porque lo que se repone es la fila de la bandeja, igual que al
+   * seleccionarlo.
+   *
+   * Sin documento delante no hace nada.
+   */
+  reopen: () => void;
+  /**
    * Apunta dónde ha caído el recuadro **del documento que hay delante**.
    *
    * Se guarda en su fila y no en un ajuste global porque la posición es de este
@@ -127,5 +141,16 @@ export function useDocuments(
     [store, remember, active],
   );
 
-  return { recents, active, open, accept, select: setActive, place, forget, forgetAll };
+  // El documento activo se repone **desde su fila**, y no desde la copia que
+  // hay en `active`: el arrastre del recuadro actualiza la fila y a propósito
+  // no toca el documento activo, así que reponer la copia devolvería el
+  // recuadro a donde estaba al abrirlo y perdería lo último arrastrado.
+  const reopen = useCallback(() => {
+    setActive((current) => {
+      if (current === null) return null;
+      return { ...(recents.find((row) => row.id === current.id) ?? current) };
+    });
+  }, [recents]);
+
+  return { recents, active, open, accept, select: setActive, reopen, place, forget, forgetAll };
 }

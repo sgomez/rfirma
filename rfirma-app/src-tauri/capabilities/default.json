@@ -1,7 +1,12 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permisos de la ventana principal. Crece con cada sub-issue que necesite uno; hoy solo el núcleo.",
+  "description": "Permisos de la ventana principal. Crece con cada sub-issue que necesite uno. El complemento `opener` entra aquí denegado a propósito (ID-85): abrir lo firmado lo hace Rust, y la ventana no tiene ninguna ruta que abrir (ADR-0011).",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "opener:deny-open-path",
+    "opener:deny-open-url",
+    "opener:deny-reveal-item-in-dir"
+  ]
 }

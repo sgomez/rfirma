@@ -338,14 +338,19 @@ export const es = {
       retry: "Volver a intentarlo",
     },
     /**
-     * El panel del documento ya firmado. Solo lleva lo que se sabe sin volver
-     * a leer el PDF: qué fichero quedó, en qué formato y la salida para
-     * empezar otra firma. Lo demás está anotado como pendiente en la ficha.
+     * El panel del documento ya firmado. Solo lleva lo que se sabe sin volver a
+     * leer el PDF: qué fichero quedó, en qué formato y las tres salidas del
+     * estado. Las dos primeras son las únicas que llevan al usuario hasta el
+     * fichero, porque bajo el arenero nunca ve su ruta (ID-79, ADR-0011); la
+     * tercera vuelve al panel con el original releído (ID-80). El número de
+     * firmas y la lista de firmas están anotados como pendientes en la ficha.
      */
     signed: {
       summary: "Resumen",
       format: "PAdES",
-      signAnother: "Firmar otro documento",
+      openDocument: "Abrir el PDF",
+      openFolder: "Abrir la carpeta",
+      signAgain: "Volver a firmar",
     },
   },
   /**
