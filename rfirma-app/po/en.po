@@ -213,6 +213,14 @@ msgstr ""
 "Drag it inside the page and sign again. Left as it is, it would be clipped "
 "in the PDF without warning."
 
+msgid "errors.situations.pageOutOfDocument.title"
+msgstr "The document does not reach that page"
+
+msgid "errors.situations.pageOutOfDocument.body"
+msgstr ""
+"Choose a page the document actually has and sign again. Left as it is, the "
+"seal would end up on the last page without warning."
+
 msgid "errors.situations.sealMismatch.title"
 msgstr "Signing was interrupted halfway"
 

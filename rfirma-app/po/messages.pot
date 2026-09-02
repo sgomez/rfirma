@@ -190,6 +190,12 @@ msgstr ""
 msgid "errors.situations.boxOutOfPage.body"
 msgstr ""
 
+msgid "errors.situations.pageOutOfDocument.title"
+msgstr ""
+
+msgid "errors.situations.pageOutOfDocument.body"
+msgstr ""
+
 msgid "errors.situations.sealMismatch.title"
 msgstr ""
 
