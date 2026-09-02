@@ -60,28 +60,54 @@ barra.
   cuatro botones de la barra, que es el gesto que el artboard dibuja. El campo
   sigue siendo `type="number"`, así que el teclado no pierde nada.
 
-### El recuadro va vacío, y por qué (ID-44)
+### Dentro del recuadro va el sello de verdad (enmienda al ID-44)
 
-El artboard dibuja **dentro** del recuadro una vista previa del sello: el
-garabato de la rúbrica, el nombre del titular a 8,5 px y dos líneas de 7,5 px
-con el DNI y la fecha. Aquí el recuadro va **vacío**, con su asa y nada más.
-No es un olvido:
+El ID-44 decidió dejar el recuadro **vacío** con un argumento correcto para lo
+que se sabía entonces: maquetar el sello en HTML sería una imitación local del
+compositor autoritativo, y prometería un encuadre que iText no va a respetar. El
+sondeo [#115](https://github.com/sgomez/rfirma/issues/115) desactivó la premisa,
+no la conclusión: **no hay que maquetar nada**. Un ciclo trifásico en seco con un
+`PK1` inventado produce bytes visibles **idénticos** a los del firmado de verdad,
+y `pdf.js` de fábrica los pinta. El sello que se ve lo dibuja quien lo dibujará,
+no una copia nuestra. Medido en
+[prefirma en seco con pdf.js](../research/prefirma-en-seco-pdfjs.md).
 
-- **El texto del recuadro lo compone Rust** (`signing::layer2_text`, ID-19), y
-  el panel ya enseña esa cadena tal cual en «Lo que dirá el recuadro». Pintar
-  aquí una segunda versión, maquetada en HTML, sería una imitación local del
-  compositor autoritativo: la misma regla que el panel se aplica a sí mismo.
-- **No hay WYSIWYG que prometer.** El sello del PDF lo dibuja el puente con
-  sus propias métricas de fuente; una imitación en HTML sobre una hoja que
-  además se escala del 50 % al 300 % enseñaría un encuadre que el PDF no va a
-  tener, justo en la pieza que el usuario está colocando.
-- Por eso el recuadro se queda **translúcido** y no con el `--rf-surface` liso
-  del artboard: vacío y opaco escondería el trozo de documento sobre el que se
-  está decidiendo. Sí toma del artboard el borde de 2 px y el `--rf-radius-sm`.
+Desde v0.3, entonces, **dentro del recuadro va el sello**, con la condición que
+sostiene la promesa: **o es el sello de verdad, o no hay recuadro**. No hay
+estado intermedio en el que se enseñe una aproximación.
 
-Los cuatro tiradores de las esquinas siguen pendientes: cambiar el **tamaño**
-del recuadro es de la vuelta siguiente.
+- **Sin certificado no hay recuadro.** El bloque entero de firma visible del
+  [panel de firma](panel-de-firma.md) está apagado hasta que hay con qué firmar,
+  y la hoja se ve limpia. Es la pieza que hace innecesario decidir qué enseñar
+  «mientras tanto»: no hay mientras tanto. Se descartaron por el camino las tres
+  respuestas a esa pregunta —recuadro vacío, la rúbrica sola, un texto de
+  ejemplo atenuado—, y con ellas la pregunta.
+- **El recuadro no se recalcula durante el gesto.** Cuesta 0,15 s en un PDF
+  normal, y 1,9 s con 507 MB de RSS en un escaneado de 37 MB: recalcular por
+  fotograma está descartado. Mientras se arrastra o se redimensiona, la vista
+  anterior **se congela y se atenúa** — sigue sirviendo para medir el bulto, y el
+  atenuado dice que aún no es la definitiva.
+- **Al soltar se recalcula sola**, salvo en documentos grandes: por encima del
+  umbral medido pasa a pedirse con un botón, «Ver cómo queda». Un documento de
+  2,4 MB va solo; el escaneado de 37 MB del sondeo, no.
+- **Si no se puede dibujar, se dice y se firma igual.** La vista previa **no es
+  una puerta**: el recuadro enseña que no ha podido componerse, y sobre si se
+  puede firmar manda el botón de firmar, no este recuadro. Los tres fallos
+  posibles —documento con contraseña, PDF/A, el puente— **siguen sin medir**.
+- **Por debajo del tamaño mínimo** el nombre y la fecha ya no caben y queda la
+  rúbrica sola. Ese punto es justamente donde se paran los tiradores: en vez de
+  recortar el texto en silencio, el gesto se detiene.
+- **Con varias páginas se pide una sola prefirma.** El widget replicado es
+  idéntico en todas, así que dibujar uno es dibujarlos todos.
 
+El recuadro sigue siendo **translúcido**, y por la misma razón de antes: opaco
+escondería el trozo de documento sobre el que se está decidiendo.
+
+Dos cosas que esto le exige a la implementación y que no se ven en pantalla: hay
+que **empaquetar `standard_fonts` de `pdfjs-dist`** y pasarle
+`standardFontDataUrl` a `getDocument`, o aceptar por escrito que el corte de
+línea es aproximado; y la vista previa **depende de que `annotationMode` siga en
+su valor por omisión**, que hoy no vigila ninguna guardia.
 ## La barra flotante
 
 Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:
@@ -116,9 +142,10 @@ se decide mirando el documento —normalmente bajo el nombre de la persona— y 
 eligiendo una casilla abstracta. Ver
 [ADR-0006](../adr/0006-firma-visible-se-configura-sobre-el-documento.md).
 
-Qué **dirá** el recuadro lo controla el [panel de firma](panel-de-firma.md),
-y es ahí donde se lee: sobre la hoja el recuadro va vacío, por las razones de
-«El recuadro va vacío, y por qué» más arriba.
+Qué **dirá** el recuadro lo eligen las casillas del
+[panel de firma](panel-de-firma.md), pero se lee **aquí**, dentro del recuadro:
+el sello que se ve es el que se va a estampar. Ver «Dentro del recuadro va el
+sello de verdad» más arriba.
 
 **Desde v0.3 el recuadro se redimensiona por los tiradores.** En v0.1 solo se
 movía; nacía con una proporción fija y esa era toda la geometría disponible.
@@ -190,13 +217,23 @@ que respetar:
   el explorador de archivos»; debajo, «Solo PDF. El documento no sale de tu
   ordenador en ningún momento». La barra flotante no aparece, y el
   [panel de firma](panel-de-firma.md) tampoco está montado.
-- **Documento cargado, sin colocar**: no hay recuadro en ninguna página. Bajo la
-  hoja, la pastilla «Aún no has colocado la firma» con su botón.
+- **Sin certificado**: la hoja se ve limpia, sin recuadro y sin pastilla debajo.
+  El bloque de firma visible del panel está apagado, así que no hay nada que
+  colocar todavía.
+- **Documento cargado, sin colocar**: hay certificado, pero ninguna página
+  sellada, así que no hay recuadro en ninguna. Bajo la hoja, la pastilla «Aún no
+  has colocado la firma» con su botón.
 - **Documento cargado, recuadro sin seleccionar**: sin tiradores ni asa.
 - **Configurando**: recuadro seleccionado, con tiradores y asa.
 - **Página fuera del conjunto**: la hoja se ve **en blanco**, sin recuadro ni
   fantasma, y bajo ella la pastilla «Esta página no se sella · Sellar esta
   página».
+- **Moviendo o redimensionando**: el contenido del recuadro se atenúa y se
+  queda congelado en la última vista calculada; el borde y los tiradores no.
+- **Recalculando**: igual de atenuado, con la etiqueta del asa diciendo
+  «Calculando…».
+- **Sin vista previa**: el recuadro conserva su borde y sus tiradores, y dentro
+  lleva un icono de aviso en lugar del sello. Firmar sigue disponible.
 - **Atenuado**: bajo cualquier diálogo, la hoja baja a `opacity: .45`.
 - **Firmado**: el recuadro pierde tiradores y asa; ya no se mueve.
 
@@ -265,6 +302,13 @@ apuntan aquí porque son lo que hace que esta pantalla se sienta como se ve.
 La paginación empezó como una pastilla por página bajo la hoja. Se cambió por
 la barra flotante al comprobar que con 27 páginas ya no cabe, y de paso dejó de
 colgar del documento para pertenecer al visor, que es a lo que pertenece.
+
+Lo que va **dentro** del recuadro se dibujó primero en dos artboards de trabajo
+aparte, y **se fundió en «5 · Colocando la firma visible»** en cuanto se decidió:
+dos sitios donde mirar la misma pantalla son dos fuentes de verdad. Vive en su
+palanca «Vista previa». El acuerdo que lo simplificó todo —sin certificado, el
+bloque apagado— llegó mirándolos: con el recuadro fuera de escena, las tres
+alternativas de qué enseñar dentro dejaron de ser una decisión.
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
 **Recorrido de firma**, artboards «1 · Vacío» y «5 · Colocando la firma

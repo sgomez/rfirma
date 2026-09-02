@@ -169,7 +169,7 @@ El artboard es
 
 ## Firma visible
 
-Cuatro piezas en este orden:
+Cinco piezas en este orden:
 
 1. **Interruptor**: «Estampar un recuadro de firma en el documento».
 2. **Colocación**: en qué páginas se sella y en cuál está el recuadro.
@@ -182,6 +182,24 @@ Cuatro piezas en este orden:
    - Un motivo
 4. **Imagen de la rúbrica**: miniatura real de la imagen cargada y un botón
    para cambiarla.
+5. **Vista previa**: una insignia con el estado de lo que se ve dentro del
+   recuadro, una línea que lo explica, y el botón que haga falta —«Ver cómo
+   queda» en un documento grande, «Volver a intentarlo» cuando no se ha podido
+   dibujar—. El sello se ve **sobre la hoja**, no aquí; lo que vive aquí es lo
+   que la hoja no puede decir. Ver
+   [visor de documento](visor-de-documento.md) § «Dentro del recuadro va el
+   sello de verdad».
+
+**Sin certificado, el bloque entero está apagado y en gris**, con el interruptor
+en «no» y un aviso encima: «Elige un certificado para colocar la firma visible».
+No es una cortesía, es lo que hace consistente la promesa del visor: el sello que
+se ve dentro del recuadro es el que dibuja el compositor, y sin certificado no
+hay ninguno que dibujar. Apagando el bloque desaparece la pregunta de qué enseñar
+mientras tanto. El recorrido ya iba en ese orden —el certificado se elige antes
+de llegar a colocar—, y el precio aceptado es que preparar la colocación exige
+tener puesta la tarjeta o el DNIe. La colocación **no se pierde** si el
+certificado desaparece después: el bloque se vuelve a apagar y el recuadro
+vuelve al reaparecer.
 
 **El DNI se estampa enmascarado**, siempre y sin interruptor: `99999999R` sale
 como `***9999**`, con la misma máscara que AutoFirma aplica por omisión
