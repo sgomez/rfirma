@@ -1,0 +1,87 @@
+### PROBE sin-parametro pdf=3p signaturePages=null
+### PROBE sin-parametro sent-after-call=[signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=null
+### PROBE sin-parametro sealed keys=[signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE sin-parametro sealed signaturePages=null
+### PROBE sin-parametro OK -> target/probe-sin-parametro.pdf
+### PROBE sin-parametro widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE all pdf=3p signaturePages=all
+### PROBE all sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=all
+### PROBE all sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE all sealed signaturePages=all
+### PROBE all OK -> target/probe-all.pdf
+### PROBE all widgets paginas=3 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0, 2.0, 100.0, 100.0, 300.0, 200.0, 3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE dos pdf=3p signaturePages=2
+### PROBE dos sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=2
+### PROBE dos sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE dos sealed signaturePages=2
+### PROBE dos OK -> target/probe-dos.pdf
+### PROBE dos widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:0@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[2.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE rango pdf=3p signaturePages=1-3,-3--1
+### PROBE rango sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=1-3,-3--1
+### PROBE rango sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE rango sealed signaturePages=1-3,-3--1
+### PROBE rango OK -> target/probe-rango.pdf
+### PROBE rango widgets paginas=3 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0, 2.0, 100.0, 100.0, 300.0, 200.0, 3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE ultima pdf=3p signaturePages=-1
+### PROBE ultima sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=-1
+### PROBE ultima sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE ultima sealed signaturePages=-1
+### PROBE ultima OK -> target/probe-ultima.pdf
+### PROBE ultima widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE append pdf=3p signaturePages=append
+### PROBE append sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=append
+### PROBE append sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE append sealed signaturePages=append
+### PROBE append OK -> target/probe-append.pdf
+### PROBE append widgets paginas=4 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 4:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[4.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE fuera-de-rango pdf=3p signaturePages=99
+### PROBE fuera-de-rango sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=99
+### PROBE fuera-de-rango sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE fuera-de-rango sealed signaturePages=99
+### PROBE fuera-de-rango OK -> target/probe-fuera-de-rango.pdf
+### PROBE fuera-de-rango widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE fuera-de-rango-rango pdf=3p signaturePages=2-99
+### PROBE fuera-de-rango-rango sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=2-99
+### PROBE fuera-de-rango-rango sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE fuera-de-rango-rango sealed signaturePages=2-99
+### PROBE fuera-de-rango-rango OK -> target/probe-fuera-de-rango-rango.pdf
+### PROBE fuera-de-rango-rango widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[2.0, 100.0, 100.0, 300.0, 200.0, 3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE basura pdf=3p signaturePages=pepe
+### PROBE basura sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=pepe
+### PROBE basura sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE basura sealed signaturePages=pepe
+### PROBE basura OK -> target/probe-basura.pdf
+### PROBE basura widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE cero pdf=3p signaturePages=0
+### PROBE cero sent-after-call=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY] signaturePages=0
+### PROBE cero sealed keys=[signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE cero sealed signaturePages=0
+### PROBE cero OK -> target/probe-cero.pdf
+### PROBE cero widgets paginas=3 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:0@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE singular-1 pdf=3p signaturePage=1 signaturePages=null
+### PROBE singular-1 sealed keys=[signaturePage, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE singular-1 widgets paginas=3 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:0@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE singular-99 pdf=3p signaturePage=99 signaturePages=null
+### PROBE singular-99 sealed keys=[signaturePage, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE singular-99 widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE singular-0 pdf=3p signaturePage=0 signaturePages=null
+### PROBE singular-0 sealed keys=[signaturePage, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE singular-0 widgets paginas=3 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:0@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE singular-menos1 pdf=3p signaturePage=-1 signaturePages=null
+### PROBE singular-menos1 sealed keys=[signaturePage, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE singular-menos1 widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE singular-basura pdf=3p signaturePage=pepe signaturePages=null
+### PROBE singular-basura sealed keys=[signaturePage, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE singular-basura widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE ambos-1-y-3 pdf=3p signaturePage=1 signaturePages=3
+### PROBE ambos-1-y-3 sealed keys=[signaturePage, signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE ambos-1-y-3 widgets paginas=3 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE ambos-1-y-all pdf=3p signaturePage=1 signaturePages=all
+### PROBE ambos-1-y-all sealed keys=[signaturePage, signaturePages, signaturePositionOnPageLowerLeftX, signaturePositionOnPageLowerLeftY, signaturePositionOnPageUpperRightX, signaturePositionOnPageUpperRightY]
+### PROBE ambos-1-y-all widgets paginas=3 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 3:1@Rectangle: 595.0x842.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0, 2.0, 100.0, 100.0, 300.0, 200.0, 3.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE sesion-99 session=<xml>  <firmas>   <firma Id="bb0849c0-a79b-40e8-ba04-c6cb77d5c3e1">    <param n="NEED_PRE">true</param>    <param n="PRE">…</param>    <param n="TIME">1788361239638</param>    <param n="PID">WzxhOWI3ZDZkYTVmNjc1YzU1ZTBlMmJiZWI4OWY5YTFkYj48MTMyYTgwZWI0YjE3NjI5OGRjMzgwNjE4ZWIwNWM2NWE+XQ==</param>   </firma>  </firmas> </xml>
+### PROBE sesion-2 session=<xml>  <firmas>   <firma Id="22c69086-5821-47eb-be02-fd3e41aa8fa6">    <param n="NEED_PRE">true</param>    <param n="PRE">…</param>    <param n="TIME">1788361239642</param>    <param n="PID">WzwxNDM5NDgwZjEzMjZjOTAyMjA1YjA3MTdiMjc0NDkyYj48YTBlNTM0ODQ3MGRlOGYzOTk1YmM3OThjNzM3NTUyZjM+XQ==</param>   </firma>  </firmas> </xml>
+### PROBE mixta-all signaturePages=all
+### PROBE mixta-all widgets paginas=2 annots=[1:1@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 200.0x200.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[1.0, 100.0, 100.0, 300.0, 200.0, 2.0, 100.0, 100.0, 300.0, 200.0]
+### PROBE mixta-solo-pequena signaturePages=2
+### PROBE mixta-solo-pequena widgets paginas=2 annots=[1:0@Rectangle: 595.0x842.0 (rot: 0 degrees) 2:1@Rectangle: 200.0x200.0 (rot: 0 degrees) ] campos=[Signature1] rect(Signature1)=[2.0, 100.0, 100.0, 200.0, 200.0]
