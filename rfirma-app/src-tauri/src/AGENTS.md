@@ -9,9 +9,11 @@ misma PR que lo crea**, o el PR sale en rojo.
 
 ## Presupuesto de lectura
 
-- **Nunca `cat` de un fichero de más de 300 líneas.** `grep -n '<símbolo>'` para
-  situarte y `sed -n 'A,Bp'` para leer el tramo. La tabla de abajo da el tamaño
-  de cada módulo antes de que lo abras.
+- **Para situarte, `just outline <ruta>`; nunca `cat` de un módulo de más de 300
+  líneas.** El esqueleto trae cada `fn`, `struct` y prueba con su número de línea
+  y la primera línea de su `///`; desde ahí, `sed -n 'A,Bp'` para el tramo.
+  `commands/guards.rs` entero son 14 840 caracteres (~4,2k tokens) y su esqueleto
+  3149. La tabla de abajo da el tamaño de cada módulo antes de que lo abras.
 - **Los tests van al final de cada módulo**, tras `#[cfg(test)]`. No los leas
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
