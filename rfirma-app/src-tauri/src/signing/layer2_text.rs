@@ -76,12 +76,6 @@ fn labels(language: Language) -> Layer2Labels {
             signed_at: "Data",
             reason: "Motivo",
         },
-        Language::Valencian => Layer2Labels {
-            signer: "Signat per",
-            id_number: "DNI",
-            signed_at: "Data",
-            reason: "Motiu",
-        },
         Language::English => Layer2Labels {
             signer: "Signed by",
             id_number: "ID number",

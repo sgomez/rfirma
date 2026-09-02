@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { classify } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
-import { completeLanguages } from "../i18n/languages";
+import { LANGUAGES } from "../i18n/languages";
 import "./PreferencesDialog.css";
 import type { Preferences } from "./preferences";
 import { Select } from "./Select";
@@ -351,7 +351,7 @@ export function PreferencesDialog({
             <Select
               label={t("preferences.language.label")}
               value={language}
-              options={completeLanguages().map((tag) => ({
+              options={LANGUAGES.map((tag) => ({
                 value: tag,
                 label: t(`languages.${tag}`),
               }))}

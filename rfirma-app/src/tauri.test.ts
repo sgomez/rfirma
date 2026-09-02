@@ -527,10 +527,10 @@ describe("los puertos de la configuración sobre Tauri", () => {
         : Promise.resolve(undefined),
     );
 
-    await tauriLanguagePreference().save("gl");
+    await tauriLanguagePreference().save("en");
 
     expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
-      configuration: { ...aConfiguration, theme: "dark", language: "gl" },
+      configuration: { ...aConfiguration, theme: "dark", language: "en" },
     });
   });
 

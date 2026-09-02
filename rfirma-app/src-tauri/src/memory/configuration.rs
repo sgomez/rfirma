@@ -43,7 +43,7 @@ pub struct Configuration {
     /// El idioma de la interfaz y del texto de la firma visible.
     ///
     /// Por omisión, castellano: en la primera ejecución quien lo decide es el
-    /// locale del sistema cotejado contra los seis (ADR-0010), y eso lo hace
+    /// locale del sistema cotejado contra los publicados (ADR-0010), y eso lo hace
     /// quien arranca la aplicación, no este fichero.
     pub language: Language,
     /// Dónde cae el documento firmado. `None` es «la carpeta de documentos del

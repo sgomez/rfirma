@@ -88,9 +88,7 @@ export function SignedPanel({
               {[
                 document.pages === null
                   ? null
-                  : document.pages === 1
-                    ? t("panel.document.pages.one")
-                    : t("panel.document.pages.many", { pages: document.pages }),
+                  : t("panel.document.pages", { count: document.pages }),
                 formatSize(document.sizeBytes, i18n.language),
               ]
                 .filter((piece) => piece !== null)

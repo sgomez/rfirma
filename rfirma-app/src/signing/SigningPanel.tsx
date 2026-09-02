@@ -158,9 +158,7 @@ export function SigningPanel({
             <p className="rf-title panel__document">{document.name}</p>
             <p className="rf-body rf-text-muted">
               {[
-                document.pages === 1
-                  ? t("panel.document.pages.one")
-                  : t("panel.document.pages.many", { pages: document.pages }),
+                t("panel.document.pages", { count: document.pages }),
                 document.sizeBytes === null ? null : formatSize(document.sizeBytes, i18n.language),
               ]
                 .filter((piece) => piece !== null)
@@ -174,11 +172,7 @@ export function SigningPanel({
             <span className="panel__notice-icon">
               <InfoIcon />
             </span>
-            <p className="rf-prose">
-              {document.signatures === 1
-                ? t("panel.coSignature.one")
-                : t("panel.coSignature.many", { count: document.signatures })}
-            </p>
+            <p className="rf-prose">{t("panel.coSignature", { count: document.signatures })}</p>
           </div>
         )}
 

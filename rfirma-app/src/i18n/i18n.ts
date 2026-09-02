@@ -8,14 +8,14 @@ export const NAMESPACE = "translation";
 const resources = Object.fromEntries(LANGUAGES.map((tag) => [tag, { [NAMESPACE]: CATALOGS[tag] }]));
 
 /**
- * Una instancia de i18next con los seis catálogos ya dentro.
+ * Una instancia de i18next con los catálogos publicados ya dentro.
  *
  * Dos decisiones que no son las de por omisión y conviene no deshacer:
  *
  * - **Sin `i18next-browser-languagedetector`**. El idioma no se olfatea del
  *   navegador: es una preferencia guardada (ID-02), y quien la lee es
  *   `LanguageProvider`. En la primera ejecución sale del locale del sistema
- *   cotejado contra los seis, y de eso se encarga el backend.
+ *   cotejado contra los publicados, y de eso se encarga el backend.
  * - **`returnEmptyString: false`**, que es lo que hace caer al castellano las
  *   claves vacías de los cuatro idiomas sin traducir (ADR-0009). Con el valor
  *   por omisión, i18next daría la cadena vacía por buena y la interfaz saldría

@@ -72,7 +72,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `signing/layer2_text.rs` | 369 | El texto del recuadro visible. |
 | `signing/properties.rs` | 178 | Los `extraParams` en el formato del puente. |
 | `signing/session_seal.rs` | 152 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). |
-| `signing/language.rs` | 98 | Los seis idiomas (ADR-0009). |
+| `signing/language.rs` | 105 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). |
 | **`pkcs11/`** | | La única parte que habla con el token. |
 | `pkcs11/mod.rs` | 572 | La capa PKCS#11. |
 | `pkcs11/stores.rs` | 553 | Dónde se buscan los certificados. |

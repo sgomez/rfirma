@@ -395,7 +395,7 @@ mod tests {
     }
 
     /// Y lo que no es un PDF no apunta nada: se cuenta con la misma situación
-    /// con la que se rechaza al firmar, que ya está en los seis catálogos.
+    /// con la que se rechaza al firmar, que ya está en el catálogo.
     #[test]
     fn dropping_something_that_is_not_a_pdf_opens_nothing_and_says_so() {
         let opened = OpenedDocuments::new();

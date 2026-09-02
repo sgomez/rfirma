@@ -24,7 +24,6 @@ pub fn language_of(tag: &str) -> Language {
         "ca" => Language::Catalan,
         "eu" => Language::Basque,
         "gl" => Language::Galician,
-        "va" => Language::Valencian,
         "en" => Language::English,
         _ => Language::Spanish,
     }
@@ -288,6 +287,9 @@ mod tests {
         // Lo que no reconozcamos cae en castellano, que es el idioma del
         // documento administrativo corriente, y no en un panic.
         assert_eq!(language_of("de"), Language::Spanish);
+        // El valencia salio en v0.3 (ID-124): una preferencia guardada por una
+        // version anterior cae al castellano como cualquier otra desconocida.
+        assert_eq!(language_of("va"), Language::Spanish);
     }
 
     /// La carpeta elegida llega al disco **y** a la copia viva, y vuelve por su

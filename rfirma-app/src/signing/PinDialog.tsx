@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import { type FormEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Certificate } from "./certificate";
@@ -141,11 +142,7 @@ function TechnicalDetail({ detail }: { detail: string }) {
 }
 
 /** Los intentos que quedan, cuando el módulo los cuenta. */
-function attemptsHint(
-  attemptsLeft: number | null,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
+function attemptsHint(attemptsLeft: number | null, t: TFunction): string {
   if (attemptsLeft === null) return t("pin.incorrectUnknown");
-  if (attemptsLeft === 1) return t("pin.incorrectOne");
-  return t("pin.incorrect", { attempts: attemptsLeft });
+  return t("pin.incorrect", { count: attemptsLeft });
 }

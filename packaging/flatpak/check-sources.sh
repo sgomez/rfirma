@@ -4,7 +4,7 @@
 #
 # POR QUE NO SE REGENERAN AQUI (ID-07): un fichero generado dentro del CI es un
 # fichero que nadie ha mirado. cargo-sources.json son 955 entradas y
-# node-sources.json otras 204; si el CI las rehiciera solo, un cambio de
+# node-sources.json otras 299; si el CI las rehiciera solo, un cambio de
 # dependencia entraria en la construccion sin pasar por una revision. Asi que
 # se regeneran A MANO con `just flatpak-sources`, se versionan, y lo unico que
 # se comprueba automaticamente es que no se hayan quedado atras.

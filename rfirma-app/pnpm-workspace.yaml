@@ -1,0 +1,16 @@
+# Lo poco que pnpm 11 exige declarar, y que no cabe en package.json.
+#
+# allowBuilds: @swc/core trae un script de instalacion, y pnpm 11 se niega a
+# instalar en silencio si no se le dice que hacer con el (ERR_PNPM_IGNORED_BUILDS,
+# que rompe `pnpm install --frozen-lockfile` del CI). Llega como dependencia de
+# i18next-cli, que solo lo usa para analizar el codigo; no hace falta compilar
+# nada nativo, asi que va a `false` y la herramienta funciona igual.
+#
+# minimumReleaseAgeExclude: la politica de cadena de suministro de pnpm frena
+# los paquetes recien publicados. i18next-cli publica 24 veces en 30 dias
+# (ID-127) y por eso la version va FIJADA EXACTA en package.json: quien decide
+# cuando se sube es una persona, no el reloj.
+allowBuilds:
+  '@swc/core': false
+minimumReleaseAgeExclude:
+  - i18next-cli@1.72.4
