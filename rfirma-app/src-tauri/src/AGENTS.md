@@ -37,7 +37,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/views.rs` | 283 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/failure.rs` | 181 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
-| `commands/guards.rs` | 333 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
+| `commands/guards.rs` | 389 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 183 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 432 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
@@ -49,7 +49,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades (ADR-0010). |
-| `memory/mod.rs` | 406 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
+| `memory/mod.rs` | 408 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
 | `memory/state.rs` | 210 | El estado que la aplicación acumula por su cuenta (ID-31). |
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 406 | Los diez recientes, por ruta canónica. |
@@ -82,6 +82,15 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `rubric/normalize.rs` | 586 | La normalización. |
 | `rubric/store.rs` | 289 | Se copia, no se referencia (ID-33). |
 | `rubric/error.rs` | 92 | Situaciones de la rúbrica (ADR-0009). |
+
+## La regla de la dirección
+
+Las dependencias van **hacia dentro**: `commands/` → `app/` → dominio e
+infraestructura. Ningún módulo de dominio nombra a `app/` ni a `commands/`, y
+entre hermanos el que sabe menos no nombra al que sabe más (`ffi` importa
+`signing`, no al revés). Si vas a añadir capacidad nueva, el orden es: la regla
+pura en su módulo de dominio → el caso de uso en `app/` → el cuerpo de la orden
+en `commands/`. Lo vigila `tests/module_directions.rs` (ADR-0017).
 
 ## Al añadir o cambiar una orden de Tauri
 
