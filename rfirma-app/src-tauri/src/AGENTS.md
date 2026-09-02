@@ -126,6 +126,13 @@ piden algo de ti:
 - La del **hilo del portal** tampoco: un comando que llame a un `blocking_*` de
   un plugin necesita `#[tauri::command(async)]`, y ella lo vigila.
 
+Y un aviso que no es una guarda, pero equivocarse cuesta lo mismo: los permisos
+de `capabilities/*.json` **solo filtran el IPC de la ventana** (JS → Rust). Que
+Rust llame a la API de un plugin —`tauri-plugin-dialog`, `tauri-plugin-opener`—
+desde dentro de una orden no necesita permiso ninguno: `default.json` lleva solo
+`core:default` y las dos funcionan. Confirmado dos veces, ID-63 con `dialog` y
+el #131 con `opener`, la segunda desmintiendo la suposición contraria.
+
 Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 `app/` al que llama (TD-21).
 
