@@ -75,7 +75,7 @@ rojo.
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |
-| **`i18n/`** | | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). |
+| **`i18n/`** | | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los dieciséis bloques de comentario que explican el mecanismo —no para quien traduce— están indexados en `i18n/AGENTS.md`. |
 | `i18n/catalog.ts` | 28 | La forma del catálogo. |
 | `i18n/i18n.ts` | 40 | La traducción. |
 | `i18n/LanguageProvider.tsx` | 81 | El contexto. |
