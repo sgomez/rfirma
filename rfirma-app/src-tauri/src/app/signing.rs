@@ -271,7 +271,11 @@ pub fn config_for(
 /// Junta las dos preguntas que se le hacen al token —qué certificado es, y si
 /// todavía sirve— con la configuración que sale de él, porque las tres son la
 /// misma decisión: **con qué se firma**.
-fn plan_signature(
+///
+/// Lo comparte [`crate::app::preview`], que llega al puente con exactamente
+/// este mismo plan: la vista previa que se compusiera con otra configuración
+/// enseñaría un sello que la firma no va a estampar.
+pub(crate) fn plan_signature(
     stores: &[Store],
     listed: &ListedCertificates,
     order: &SigningOrder,
@@ -331,7 +335,10 @@ pub struct SignedCycle {
 /// Aplana las tres capas de resultado que devuelve un trabajo del isolate: el
 /// hilo puede haberse caído, la librería puede no haber abierto, y el ciclo
 /// puede haber fallado.
-fn on_the_bridge<T: Send + 'static>(
+///
+/// Lo comparte [`crate::app::preview`]: el isolate es uno y las tres capas de
+/// resultado son las mismas, se esté firmando o solo viendo.
+pub(crate) fn on_the_bridge<T: Send + 'static>(
     isolate: &Isolate,
     task: impl FnOnce(&crate::ffi::NativeBridge) -> Result<T, cycle::CycleError> + Send + 'static,
 ) -> Result<T, Failure> {
@@ -419,6 +426,10 @@ mod tests {
     /// orden que anota la fila, pondría `Firmado` en un PDF que rFirma no ha
     /// firmado. Contar las firmas de un PDF ajeno es la ficha 14 y es de v1.0.
     ///
+    /// La vista previa entra en la lista aunque no escriba nada: componer el
+    /// PDF con un `PK1` inventado y anotar `Firmado` sería poner la insignia a
+    /// un documento que nadie ha firmado (ID-136).
+    ///
     /// La mitad de comportamiento la fija
     /// `the_signed_document_is_the_only_row_that_gets_the_signed_badge`, en
     /// [`crate::app::recents`]; esta es la que solo se ve mirando los cuatro
@@ -429,6 +440,7 @@ mod tests {
             ("app/signing.rs", production_half()),
             ("app/recents.rs", half_of(include_str!("recents.rs"))),
             ("app/documents.rs", half_of(include_str!("documents.rs"))),
+            ("app/preview.rs", half_of(include_str!("preview.rs"))),
             (
                 "commands/mod.rs",
                 half_of(include_str!("../commands/mod.rs")),

@@ -136,6 +136,15 @@ impl From<SealMismatch> for CycleError {
     }
 }
 
+/// Cuántos bytes ocupa el `PK1` inventado de [`TokenSignature::invented`].
+///
+/// Son los de una firma RSA de 2048 bits, que es la de los certificados de
+/// firma que rFirma maneja. La longitud no cambia lo que se pinta —el hueco que
+/// el PAdES reserva para la firma se rellena igual—, así que aquí no hace falta
+/// leerle el módulo al certificado ni hacer criptografía RSA en Rust, que es
+/// justo lo que el proyecto delega en el token.
+const INVENTED_PKCS1_BYTES: usize = 256;
+
 /// El PKCS#1 que ha calculado el token. Es lo único que produce la fase 2.
 ///
 /// Existe como tipo propio, y no como un `Vec<u8>` suelto, para que la firma no
@@ -145,6 +154,23 @@ impl From<SealMismatch> for CycleError {
 pub struct TokenSignature(Vec<u8>);
 
 impl TokenSignature {
+    /// **Un `PK1` inventado**, para la prefirma en seco de la vista previa
+    /// (ID-136).
+    ///
+    /// No lo ha calculado ningún token y no vale como firma: existe para que
+    /// [`OpenCycle::postsign`] tenga con qué ensamblar el PDF cuando lo que se
+    /// quiere no es firmar sino **ver el sello que va a quedar**. Lo que la
+    /// postfirma necesita del `PK1` es su sitio dentro del CMS, no su valor: el
+    /// sondeo del #115 midió que los bytes visibles del PDF compuesto así son
+    /// idénticos a los del firmado de verdad.
+    ///
+    /// Se llama desde [`crate::app::preview`], y de ningún otro sitio: un
+    /// recorrido de firma que llegara a la postfirma con esto en vez de con lo
+    /// que devolvió el token produciría un PDF que ningún validador acepta.
+    pub fn invented() -> Self {
+        Self(vec![0; INVENTED_PKCS1_BYTES])
+    }
+
     /// La firma cruda, tal cual la devolvió el token.
     pub fn raw(&self) -> &[u8] {
         &self.0
