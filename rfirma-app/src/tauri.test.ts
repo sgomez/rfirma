@@ -316,6 +316,28 @@ describe("el puerto de la rúbrica sobre Tauri", () => {
       failure: { situation: "notAnAcceptedImage", detail: "no es PNG ni JPEG" },
     });
   });
+
+  it("asks the backend for what a previous session adopted, and nothing else", async () => {
+    invoke.mockResolvedValue(null);
+
+    await tauriRubricPicker().stored();
+
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(["read_rubric"]);
+  });
+
+  it("reads no stored rubric as null", async () => {
+    invoke.mockResolvedValue(null);
+
+    await expect(tauriRubricPicker().stored()).resolves.toBeNull();
+  });
+
+  it("turns the stored image into the same rubric shape as choosing one", async () => {
+    invoke.mockResolvedValue({ base64: "/9j/", width: 200, height: 80 });
+
+    const found = await tauriRubricPicker().stored();
+
+    expect(found).toEqual({ dataUrl: "data:image/jpeg;base64,/9j/", width: 200, height: 80 });
+  });
 });
 
 /**

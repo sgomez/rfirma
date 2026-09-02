@@ -10,7 +10,7 @@ import { inMemoryPreferences } from "./preferences/preferences";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
-import { emptyRubricPicker } from "./signing/rubric";
+import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
@@ -105,6 +105,7 @@ function renderApp(
   pdfs: PdfSource = unavailablePdfSource(),
   settings: Partial<Preferences> = {},
   certificates: CertificateStore = emptyCertificateStore(),
+  rubrics: RubricPicker = emptyRubricPicker(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -126,7 +127,7 @@ function renderApp(
       preferences={preferences}
       destinations={["Documentos"]}
       certificates={certificates}
-      rubrics={emptyRubricPicker()}
+      rubrics={rubrics}
       composer={emptyLayer2Composer()}
       signer={unavailableSigningBackend()}
       menuAnchor="header"
@@ -166,6 +167,36 @@ describe("App", () => {
     await waitFor(() =>
       expect(globalThis.document.documentElement).not.toHaveAttribute("data-theme"),
     );
+  });
+
+  /**
+   * El criterio del #128: mover o borrar el fichero original no pierde la
+   * rúbrica, sigue ahí a la siguiente sesión. Lo que se comprueba aquí es la
+   * mitad de la ventana —lee lo que el almacén ya tenía adoptado al arrancar,
+   * sin que nadie vuelva a elegirla—, no el disco: eso lo prueba
+   * `RubricStore::stored` en Rust.
+   */
+  it("shows the rubric a previous session already adopted, without choosing it again", async () => {
+    const user = userEvent.setup();
+    const rubrics: RubricPicker = {
+      choose: async () => null,
+      stored: async () => ({ dataUrl: "data:image/jpeg;base64,/9j/", width: 200, height: 80 }),
+    };
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      emptyCertificateStore(),
+      rubrics,
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+
+    expect(
+      await within(panel).findByRole("img", { name: "Tu rúbrica, tal como se estampará" }),
+    ).toBeInTheDocument();
   });
 
   /**

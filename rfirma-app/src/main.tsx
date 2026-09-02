@@ -39,8 +39,8 @@ if (!root) {
 // `tauriPreferences` y `tauriLanguagePreference`, que debajo son el mismo
 // fichero, el de la bandeja del #126, `tauriRecents`, que es el que la hace
 // sobrevivir al reinicio (ID-75), y el de la rúbrica del #128, `tauriRubricPicker`.
-// Ninguno se sustituye desde aquí más que este fichero: ni la ventana ni sus
-// pruebas conocen a Tauri.
+// La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
+// conocen a Tauri.
 //
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
 const preference = tauriLanguagePreference();

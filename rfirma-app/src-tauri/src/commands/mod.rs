@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son quince, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son dieciséis, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -50,6 +50,9 @@
 //! lo mismo: cancelar es `None`, una imagen inválida es
 //! `Some(RubricChoiceView::refused(..))`, porque el frontal la cuenta con el
 //! panel de firma todavía abierto y no como un fallo que reviente la promesa.
+//! [`read_rubric`] es la otra mitad: lee lo que un `choose_rubric` de una
+//! sesión anterior dejó adoptado, para que la ventana la encuentre puesta al
+//! arrancar.
 //!
 //! # Y hay un camino más, que no es una orden
 //!
@@ -90,7 +93,7 @@ pub use crate::app::signing::SigningSession;
 pub use app::documents::dropped_document;
 pub use failure::Failure;
 pub use orders::SigningOrder;
-pub use rubric::RubricChoiceView;
+pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DroppedDocumentView, OpenedDocumentView, PlacementView,
     RecentDocumentView, SignedDocumentView,
@@ -349,19 +352,24 @@ pub fn choose_rubric(
         .file()
         .add_filter("Imagen", &["png", "jpg", "jpeg"]);
     let chosen = dialog.blocking_pick_file()?;
-    let source = match chosen.into_path() {
-        Ok(path) => path,
-        Err(error) => {
-            return Some(RubricChoiceView::refused(&crate::rubric::RubricError::new(
-                crate::rubric::Situation::SourceUnreadable,
-                error.to_string(),
-            )));
-        }
-    };
-    Some(match app::rubric::choose(&environment.rubric, &source) {
+    Some(match app::rubric::choose(&environment.rubric, chosen) {
         Ok(normalized) => RubricChoiceView::adopted(&normalized),
         Err(error) => RubricChoiceView::refused(&error),
     })
+}
+
+/// **Orden 16.** La rúbrica ya adoptada, si la hay, para que una sesión nueva
+/// la encuentre puesta (ID-33).
+///
+/// El JPEG sobrevive en [`crate::rubric::RubricStore`] aunque se cierre la
+/// aplicación; sin esta orden nadie lo leía nunca en producción y «Tu
+/// rúbrica» arrancaba siempre apagada. Se llama una vez, al montar. Es
+/// `(async)` como [`list_recents`]: lee del disco, y no de la copia viva que
+/// [`read_configuration`] sí tiene a mano.
+#[tauri::command(async)]
+pub fn read_rubric(environment: State<'_, Environment>) -> Result<Option<RubricView>, Failure> {
+    let stored = app::rubric::stored(&environment.rubric)?;
+    Ok(stored.map(|bytes| RubricView::from_bytes(&bytes)))
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

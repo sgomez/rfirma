@@ -146,6 +146,19 @@ export function App({
     };
   }, [preferences]);
 
+  // La rúbrica adoptada en una sesión anterior sigue en el almacén aunque se
+  // cierre la aplicación (ID-33): sin esta lectura al arrancar, «Tu rúbrica»
+  // aparecía siempre apagada aunque el JPEG estuviera ahí.
+  useEffect(() => {
+    let current = true;
+    rubrics.stored().then((found) => {
+      if (current && found !== null) setRubric(found);
+    });
+    return () => {
+      current = false;
+    };
+  }, [rubrics]);
+
   // El tema elegido, puesto en el documento. Es lo único de los ajustes que no
   // se pinta dentro de la ventana sino **sobre** ella: los tokens de color
   // cuelgan de `<html>`, así que quien lo aplica tiene que salir del árbol de

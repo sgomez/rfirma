@@ -30,14 +30,14 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 170 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
+| `lib.rs` | 171 | Registro de comandos y estados de Tauri. Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 374 | **Las quince órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/mod.rs` | 381 | **Las dieciséis órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 328 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
-| `commands/rubric.rs` | 137 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
-| `commands/failure.rs` | 181 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
+| `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
+| `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
 | `commands/guards.rs` | 395 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
@@ -47,7 +47,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/signing.rs` | 604 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 643 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/recents.rs` | 539 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
-| `app/rubric.rs` | 71 | Adopta en el almacén lo que el diálogo del portal concede: envoltorio fino sobre `RubricStore::adopt` que solo existe por la regla de dirección (ID-79, TD-21). |
+| `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 256 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/window.rs` | 151 | El tamaño de la ventana entre sesiones, y si estaba maximizada (ID-72, ID-73). |
 | `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |

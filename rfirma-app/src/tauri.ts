@@ -42,7 +42,7 @@ import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
-import type { RubricPicker, RubricSituation } from "./signing/rubric";
+import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { TokenFailure } from "./signing/token";
 import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./signing/visibleSignature";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
@@ -216,15 +216,17 @@ interface RubricChoiceViewPayload {
  * situaciones de `RubricSituation` llegan ya clasificadas en la propia
  * respuesta.
  */
+function rubricOf(payload: RubricViewPayload): Rubric {
+  const { base64, width, height } = payload;
+  return { dataUrl: `data:image/jpeg;base64,${base64}`, width, height };
+}
+
 export function tauriRubricPicker(): RubricPicker {
   return {
     choose: async () => {
       const outcome = await invoke<RubricChoiceViewPayload | null>("choose_rubric");
       if (outcome === null) return null;
-      if (outcome.rubric !== null) {
-        const { base64, width, height } = outcome.rubric;
-        return { rubric: { dataUrl: `data:image/jpeg;base64,${base64}`, width, height } };
-      }
+      if (outcome.rubric !== null) return { rubric: rubricOf(outcome.rubric) };
       const failure = outcome.failure;
       if (failure === null) return null;
       return {
@@ -233,6 +235,10 @@ export function tauriRubricPicker(): RubricPicker {
           detail: failure.detail,
         },
       };
+    },
+    stored: async () => {
+      const found = await invoke<RubricViewPayload | null>("read_rubric");
+      return found === null ? null : rubricOf(found);
     },
   };
 }

@@ -18,6 +18,7 @@ use crate::ffi::BridgeError;
 use crate::isolate::IsolateGone;
 use crate::memory::{MemoryError, Situation as MemorySituation};
 use crate::pkcs11::{Situation, TokenError};
+use crate::rubric::{RubricError, Situation as RubricSituation};
 use crate::signing::{Refusal, SealMismatch};
 
 /// Lo que la ventana recibe cuando algo sale mal.
@@ -104,6 +105,30 @@ impl From<BridgeError> for Failure {
 impl From<IsolateGone> for Failure {
     fn from(error: IsolateGone) -> Self {
         Self::new("bridgeFailed", error.to_string())
+    }
+}
+
+/// El nombre en `camelCase` de una situación de la rúbrica.
+fn rubric_situation_name(situation: RubricSituation) -> &'static str {
+    match situation {
+        RubricSituation::NotAnAcceptedImage => "notAnAcceptedImage",
+        RubricSituation::DamagedImage => "damagedImage",
+        RubricSituation::ImageTooLarge => "imageTooLarge",
+        RubricSituation::SourceUnreadable => "sourceUnreadable",
+        RubricSituation::StoreUnwritable => "storeUnwritable",
+        RubricSituation::StoreUnreadable => "storeUnreadable",
+    }
+}
+
+impl From<&RubricError> for Failure {
+    fn from(error: &RubricError) -> Self {
+        Self::new(rubric_situation_name(error.situation()), error.detail())
+    }
+}
+
+impl From<RubricError> for Failure {
+    fn from(error: RubricError) -> Self {
+        Self::from(&error)
     }
 }
 

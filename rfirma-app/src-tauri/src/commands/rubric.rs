@@ -4,6 +4,8 @@
 
 use std::io::Cursor;
 
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine as _;
 use serde::Serialize;
 
 use crate::rubric::NormalizedRubric;
@@ -31,13 +33,27 @@ impl RubricView {
     /// `rubric::normalize` no las guarda —no las necesita para nada— así que
     /// se preguntan aquí, y no tocando ese módulo (ID-82 no cambia lo que
     /// `normalize` hace con la imagen).
+    ///
+    /// Una cabecera ilegible no debería darse nunca —el JPEG lo acaba de
+    /// producir `normalize`, o lo dejó escrito una sesión anterior que ya lo
+    /// hizo—, pero es la única entrada de este módulo que viene de fuera de
+    /// la orden que la produjo: si algún día lo está, `(0, 0)` no revienta el
+    /// proceso por un dato que solo afecta a cómo se pinta el recuadro.
     fn from_normalized(rubric: &NormalizedRubric) -> Self {
+        Self::from_bytes(rubric.bytes())
+    }
+
+    /// Lo mismo que [`Self::from_normalized`], pero partiendo de los bytes
+    /// crudos del almacén en vez de un [`NormalizedRubric`] recién producido:
+    /// es lo que lee `read_rubric` al arrancar, cuando la rúbrica no la
+    /// acaba de adoptar esta sesión.
+    pub(super) fn from_bytes(jpeg: &[u8]) -> Self {
         let (width, height) =
-            image::ImageReader::with_format(Cursor::new(rubric.bytes()), image::ImageFormat::Jpeg)
+            image::ImageReader::with_format(Cursor::new(jpeg), image::ImageFormat::Jpeg)
                 .into_dimensions()
-                .expect("el JPEG que normalize produce siempre trae cabecera legible");
+                .unwrap_or((0, 0));
         Self {
-            base64: rubric.to_base64(),
+            base64: BASE64.encode(jpeg),
             width,
             height,
         }
@@ -72,17 +88,9 @@ impl RubricChoiceView {
     /// No se ha podido adoptar: la situación clasificada y el detalle crudo,
     /// con los mismos nombres que `RubricSituation` en TypeScript.
     pub fn refused(error: &crate::rubric::RubricError) -> Self {
-        let situation = match error.situation() {
-            crate::rubric::Situation::NotAnAcceptedImage => "notAnAcceptedImage",
-            crate::rubric::Situation::DamagedImage => "damagedImage",
-            crate::rubric::Situation::ImageTooLarge => "imageTooLarge",
-            crate::rubric::Situation::SourceUnreadable => "sourceUnreadable",
-            crate::rubric::Situation::StoreUnwritable => "storeUnwritable",
-            crate::rubric::Situation::StoreUnreadable => "storeUnreadable",
-        };
         Self {
             rubric: None,
-            failure: Some(Failure::new(situation, error.detail())),
+            failure: Some(Failure::from(error)),
         }
     }
 }

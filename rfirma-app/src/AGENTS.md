@@ -32,8 +32,8 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 76 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 475 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 532 | El árbol de la ventana y el estado que la recorre. |
+| `tauri.ts` | 481 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 545 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -55,7 +55,7 @@ rojo.
 | `signing/SignedPanel.tsx` | 78 | Lo que se ve al terminar. |
 | `signing/certificate.ts` | 121 | El certificado, en el lado de la interfaz. |
 | `signing/visibleSignature.ts` | 91 | Qué se estampa en el recuadro. |
-| `signing/rubric.ts` | 72 | La rúbrica que va dentro del recuadro. |
+| `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | **`viewer/`** | | El visor de PDF. |

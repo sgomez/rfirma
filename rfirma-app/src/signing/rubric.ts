@@ -64,9 +64,14 @@ export type RubricChoice = { rubric: Rubric } | { failure: RubricFailure } | nul
  */
 export interface RubricPicker {
   choose(): Promise<RubricChoice>;
+  /**
+   * La rúbrica ya adoptada en una sesión anterior, si la hay. Se llama una
+   * vez al arrancar, igual que `PreferencesStore.read` (ID-33).
+   */
+  stored(): Promise<Rubric | null>;
 }
 
 /** El selector mientras no hay orden expuesta: se comporta como cancelación. */
 export function emptyRubricPicker(): RubricPicker {
-  return { choose: async () => null };
+  return { choose: async () => null, stored: async () => null };
 }
