@@ -109,6 +109,20 @@ tools:
         echo "  cargo esta en ~/.cargo/bin pero no en el PATH:"
         echo "    anade '. \"$HOME/.cargo/env\"' a tu ~/.zshrc (o ~/.bashrc)"
     fi
+    # gettext es DEPENDENCIA REQUERIDA desde v0.3 (ID-128): las cadenas viven
+    # en rfirma-app/po/ y msgmerge es la bisagra entre la plantilla y los cinco
+    # .po. El importador NO lo necesita —es Node puro— asi que un clon limpio
+    # compila sin esto; lo necesita quien DESARROLLA y lo necesita el CI.
+    gettext_apt=""
+    for t in msgfmt msgmerge msgcmp msgattrib; do
+        command -v "$t" >/dev/null || { echo "falta: $t"; gettext_apt="gettext"; failures=1; }
+    done
+    if [ -n "$gettext_apt" ]; then
+        echo
+        echo "Instalalo con:"
+        echo "  sudo apt install -y $gettext_apt"
+        echo
+    fi
     # El token de la grada B (ADR-0014). No es opcional: sus pruebas corren en
     # el carril rapido, asi que sin estas tres ordenes `test-rust` falla.
     softhsm_apt=""
@@ -181,6 +195,71 @@ bootstrap:
 # Instala las dependencias de node de rfirma-app.
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
+
+# EL CIRCUITO DE CADENAS (ADR-0009 enmendado, ID-121):
+#
+#   po/messages.pot --msgmerge--> po/{es,ca,eu,gl,en}.po --po-import--> src/i18n/locales/*.ts
+#      versionado                       versionados                  generados, NO versionados
+#
+# `po` es el bucle de quien toca una cadena: se escribe en el .pot, se fusiona
+# y se regenera. El peaje esta aceptado a conciencia (ID-128).
+#
+# --all genera TAMBIEN los idiomas incompletos, rellenando con castellano, para
+# que quien traduce vea su trabajo antes del 100 %. Nunca en el CI.
+#
+# Fusiona el .pot con los cinco .po y regenera los catalogos.
+po *args: deps
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ app }}/po"
+    for f in *.po; do
+        msgmerge --quiet --update --backup=none --no-fuzzy-matching "$f" messages.pot
+    done
+    cd "{{ app }}"
+    node tools/po-import.mjs {{ args }}
+    pnpm exec i18next-cli types -q
+
+# Genera src/i18n/locales/*.ts desde los .po. Node puro: sin gettext.
+po-import: deps
+    cd {{ app }} && node tools/po-import.mjs
+    cd {{ app }} && pnpm exec i18next-cli types -q
+
+# LOS .po CUADRAN CON EL .pot Y ESTAN BIEN FORMADOS (ID-128). Un idioma
+# incompleto NO es un fallo: es lo normal mientras se traduce, y lo unico que
+# ocurre es que no se genera su .ts. Lo que si falla es un .po roto o con
+# claves que la plantilla no tiene.
+#
+# --use-untranslated y --use-fuzzy en msgcmp: sin ellos, msgcmp trata cada
+# cadena sin traducir como error fatal y un idioma al 0 % pondria el CI rojo.
+#
+# Comprueba los cinco .po contra la plantilla.
+check-po:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ app }}/po"
+    command -v msgfmt >/dev/null || { echo "falta gettext: ejecuta 'just tools'" >&2; exit 1; }
+    for f in *.po; do
+        echo -n "$f: "
+        msgfmt --check-format --statistics --output-file=/dev/null "$f"
+        msgcmp --use-untranslated --use-fuzzy "$f" messages.pot
+    done
+    echo "los .po cuadran con messages.pot"
+
+# LO QUE EL .pot NO PUEDE VER ES EL CODIGO (ID-127). i18next-cli entra como
+# vigilante y nunca como dueno del catalogo: mira src/ y contesta a las dos
+# preguntas que la cadena .pot -> .po -> .ts deja sin cubrir.
+#
+#   extract --ci     una t() cuya clave no esta en el catalogo -> sale con 1
+#   status --unused  una clave del catalogo que ya no usa nadie -> sale con 1
+#
+# Ambas leen la INSTANTANEA de node_modules/.cache/i18next-cli/, que escribe
+# po-import: `extract` reescribe el fichero que mira, y sobre los catalogos de
+# verdad se llevaria por delante el `: Catalog` que comprueba las claves.
+#
+# i18next-cli sobre el codigo.
+lint-i18n: po-import
+    cd {{ app }} && pnpm exec i18next-cli extract --ci
+    cd {{ app }} && pnpm exec i18next-cli status --unused
 
 # El token de la GRADA B (ADR-0014). Es idempotente y tarda segundos, asi que
 # `test-rust` lo llama siempre: la grada B corre en el carril rapido por
@@ -695,7 +774,7 @@ agent-cost since="":
 # necesitan ni bootstrap ni deps, tardan milisegundos, y lo que detectan —un
 # fichero de bloqueo tocado sin regenerar las fuentes vendorizadas, un token
 # del sistema de diseno editado a mano— no lo encuentra ninguna de las otras.
-lint: check-flatpak-sources check-ds-bundle lint-java lint-ts lint-rust
+lint: check-flatpak-sources check-ds-bundle check-po lint-java lint-ts lint-i18n lint-rust
 
 # -Xlint:all, como decidio el issue #11.
 lint-java: bootstrap
@@ -706,7 +785,7 @@ lint-java: bootstrap
 # hay router, ni tabla de datos, ni biblioteca de componentes.
 #
 # Biome sobre rfirma-app.
-lint-ts: deps
+lint-ts: po-import
     cd {{ app }} && pnpm exec biome ci .
 
 # Depende de build-ts porque tauri-build lee frontendDist (../dist) ya en
@@ -732,7 +811,7 @@ build-java: bootstrap
     cd {{ bridge }} && mvn -B package -DskipTests
 
 # tsc -b y vite build.
-build-ts: deps
+build-ts: po-import
     cd {{ app }} && pnpm exec tsc -b
     cd {{ app }} && pnpm exec vite build
 
@@ -796,7 +875,7 @@ test-java: build-java
     cd {{ bridge }} && mvn -B test
 
 # vitest.
-test-ts: deps
+test-ts: po-import
     cd {{ app }} && pnpm exec vitest run --reporter=dot
 
 # cargo test, mas la compilacion de las pruebas de grada C.

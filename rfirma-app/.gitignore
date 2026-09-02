@@ -4,3 +4,8 @@ lcov.info
 
 # Generado por tauri-build en cada compilacion (esquemas de capacidades).
 src-tauri/gen/
+
+# Catalogos generados por tools/po-import.mjs desde po/*.po (ID-121): son
+# datos compilados, y lo que se versiona es el .po.
+src/i18n/locales/
+src/i18n/resources.d.ts

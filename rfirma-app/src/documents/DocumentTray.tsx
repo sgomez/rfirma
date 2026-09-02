@@ -4,11 +4,11 @@ import type { ShownBadge } from "./document";
 import "./DocumentTray.css";
 import { type RecentDocument, shownBadge } from "./recents";
 
-const BADGE_KEY: Record<ShownBadge, string> = {
+const BADGE_KEY = {
   Signed: "badges.signed",
   Unsigned: "badges.unsigned",
   Unavailable: "badges.unavailable",
-};
+} as const satisfies Record<ShownBadge, string>;
 
 interface DocumentTrayProps {
   recents: readonly RecentDocument[];

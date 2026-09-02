@@ -12,7 +12,9 @@
       "!src-tauri/target",
       "!src-tauri/gen",
       "!node_modules",
-      "!src/design-system/bundle"
+      "!src/design-system/bundle",
+      "!src/i18n/locales",
+      "!src/i18n/resources.d.ts"
     ]
   },
   "formatter": {

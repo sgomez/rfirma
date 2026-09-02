@@ -2,7 +2,7 @@
 //!
 //! Un fallo no cruza como el error del módulo que lo produjo: cruza como un
 //! [`Failure`], que es la forma del ID-29 —una **situación** nuestra, en
-//! `camelCase`, que el catálogo traduce a los seis idiomas, y el texto original
+//! `camelCase`, que el catálogo traduce a cada idioma, y el texto original
 //! **crudo** al lado— y la misma que ya tiene `TokenFailure` en TypeScript.
 //!
 //! Aquí viven el tipo, las conversiones desde cada error de dominio y los
@@ -24,7 +24,7 @@ use crate::signing::{Refusal, SealMismatch};
 /// Lo que la ventana recibe cuando algo sale mal.
 ///
 /// Es la forma del ID-29 y la misma que ya tiene `TokenFailure` en TypeScript:
-/// una **situación** nuestra, que el catálogo traduce a los seis idiomas, y el
+/// una **situación** nuestra, que el catálogo traduce a cada idioma, y el
 /// texto original **crudo** al lado, sin traducir ni recortar, para poder
 /// pegarlo en un informe.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

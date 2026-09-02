@@ -3,7 +3,7 @@
 //! `cryptoki` devuelve códigos (`CKR_PIN_INCORRECT`, `CKR_TOKEN_NOT_PRESENT`) y
 //! ninguno de ellos se enseña como mensaje. Aquí se convierten en una
 //! [`Situation`] —una situación *nuestra*, que el catálogo de cadenas traduce a
-//! los seis idiomas— y el código original viaja aparte, **sin traducir**, para
+//! cada idioma— y el código original viaja aparte, **sin traducir**, para
 //! poder pegarlo en un informe de fallo.
 //!
 //! Lo que no sepamos clasificar cae en [`Situation::Unknown`], que no es un

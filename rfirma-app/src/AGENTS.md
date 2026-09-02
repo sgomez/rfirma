@@ -22,10 +22,12 @@ rojo.
 - Los tests viven en `*.test.ts(x)` **al lado** del módulo. No los abras salvo
   que vayas a tocarlos; `grep -n "it(\|describe(" <fichero>.test.tsx` dice qué
   cubren en una línea por caso.
-- **Los seis catálogos de `i18n/locales/` son ~350 líneas cada uno y no se leen
-  nunca enteros.** `es.ts` es la forma del catálogo; para una clave concreta,
-  `grep -n '<clave>' i18n/locales/es.ts`. Al añadir una clave hay que añadirla a
-  los seis (ADR-0009), y eso se hace con una edición puntual, no leyéndolos.
+- **`i18n/locales/` NO ESTÁ EN EL REPOSITORIO.** Los catálogos los genera
+  `tools/po-import.mjs` desde `rfirma-app/po/` en cada `just build` (ID-121). La
+  fuente de verdad de una cadena es `po/messages.pot` y los cinco `po/*.po`;
+  para una clave concreta, `grep -n '<clave>' po/es.po`. **Una cadena nueva se
+  escribe en el `.pot`, se corre `just po`, y entonces se compila.** Editar un
+  `.ts` de `locales/` no sirve de nada: se sobrescribe.
 
 ## Dónde vive qué
 
@@ -73,21 +75,41 @@ rojo.
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |
-| **`i18n/`** | | Catálogo propio, seis idiomas (ADR-0009). |
+| **`i18n/`** | | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). |
 | `i18n/catalog.ts` | 50 | La forma del catálogo. |
 | `i18n/i18n.ts` | 40 | La traducción. |
 | `i18n/LanguageProvider.tsx` | 81 | El contexto. |
-| `i18n/languages.ts` | 45 | Los seis idiomas. |
+| `i18n/languages.ts` | 26 | Los idiomas publicados: reexporta lo que generó `po-import`. |
+| `i18n/i18next.d.ts` | 21 | Las claves, para `tsc` y el editor. Se versiona; `resources.d.ts` no. |
 | `i18n/preference.ts` | 34 | De dónde sale y a dónde vuelve el idioma. |
-| `i18n/locales/es.ts` | 451 | Castellano: además de catálogo, **la forma** del catálogo. |
-| `i18n/locales/en.ts` | 362 | Inglés, el otro con contenido en v0.1. |
-| `i18n/locales/ca.ts` `i18n/locales/eu.ts` `i18n/locales/gl.ts` `i18n/locales/va.ts` | ~362 | Claves sí, textos no. No se leen. |
+| `i18n/locales/*.ts` | — | **Generados, no versionados.** Salen de `po/`. No se leen ni se editan. |
 | **`errors/`** | | Los fallos que ve el usuario. |
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
 | **`design-system/`** | | `design-system/icons.tsx` (201), copiados en línea de los artboards. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
 | **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
+
+## El circuito de cadenas (ADR-0009 enmendado, ID-121…ID-130)
+
+```
+po/messages.pot ──msgmerge──▶ po/{es,ca,eu,gl,en}.po ──po-import──▶ src/i18n/locales/*.ts
+   versionado                       versionados                  generados, NO versionados
+```
+
+Cuatro comprobaciones, cada una en su sitio y sin solaparse:
+
+| Qué falla | Quién lo caza |
+|---|---|
+| Las claves no cuadran entre idiomas | `tsc` sobre el `.ts` generado (`Catalog = typeof es`) |
+| Un idioma a medias, o con `#, fuzzy` | `just check-po` (`msgfmt --statistics`, `msgcmp`) |
+| Una `t()` sin entrada en el catálogo | `just lint-i18n` (`i18next-cli extract --ci`) |
+| Una clave del catálogo que no usa nadie | `just lint-i18n` (`i18next-cli status --unused`) |
+
+**El idioma que no está al 100 % no genera `.ts`**, así que no puede llegar al
+desplegable: no es una comprobación, es que no existe. `just po --all` genera
+también los incompletos, rellenando con castellano, para quien traduce; nunca
+en el CI.
 
 ## La regla del puerto
 

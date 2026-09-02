@@ -1,0 +1,677 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n!=0 && n%1000000==0) ? 1 : "
+"2);\n"
+
+msgid "app.name"
+msgstr "rFirma"
+
+msgid "actions.sign"
+msgstr "Sign document"
+
+msgid "actions.chooseCertificate"
+msgstr "Choose certificate"
+
+msgid "actions.cancel"
+msgstr "Cancel"
+
+msgid "actions.close"
+msgstr "Close"
+
+msgid "actions.change"
+msgstr "Change"
+
+msgid "languages.es"
+msgstr "Español"
+
+msgid "languages.ca"
+msgstr "Català"
+
+msgid "languages.eu"
+msgstr "Euskara"
+
+msgid "languages.gl"
+msgstr "Galego"
+
+msgid "languages.en"
+msgstr "English"
+
+msgid "errors.technicalDetail"
+msgstr "Technical detail"
+
+msgid "errors.situations.unknown.title"
+msgstr "The operation could not be completed"
+
+msgid "errors.situations.unknown.body"
+msgstr ""
+"Try again. If it keeps happening, attach the technical detail to the bug "
+"report."
+
+msgid "errors.situations.notAnAcceptedImage.title"
+msgstr "That image cannot be used as a rubric"
+
+msgid "errors.situations.notAnAcceptedImage.body"
+msgstr "The rubric has to be a PNG or a JPEG."
+
+msgid "errors.situations.damagedImage.title"
+msgstr "The image could not be opened"
+
+msgid "errors.situations.damagedImage.body"
+msgstr "The file is a PNG or a JPEG, but it is damaged. Try another copy."
+
+msgid "errors.situations.imageTooLarge.title"
+msgstr "The image is too large"
+
+msgid "errors.situations.imageTooLarge.body"
+msgstr "Choose a smaller image, or save it at a lower resolution."
+
+msgid "errors.situations.sourceUnreadable.title"
+msgstr "The file you chose could not be read"
+
+msgid "errors.situations.sourceUnreadable.body"
+msgstr "Check that it is still where it was and choose it again."
+
+msgid "errors.situations.storeUnwritable.title"
+msgstr "Your rubric could not be saved"
+
+msgid "errors.situations.storeUnwritable.body"
+msgstr ""
+"Choose the image again. If it keeps happening, attach the technical detail "
+"to the bug report."
+
+msgid "errors.situations.storeUnreadable.title"
+msgstr "Your saved rubric could not be read"
+
+msgid "errors.situations.storeUnreadable.body"
+msgstr "Choose the image again to replace it."
+
+msgid "errors.situations.incorrectPin.title"
+msgstr "The PIN is not correct"
+
+msgid "errors.situations.incorrectPin.body"
+msgstr "Type it again. The card locks after a few failed attempts."
+
+msgid "errors.situations.pinLocked.title"
+msgstr "The card is locked"
+
+msgid "errors.situations.pinLocked.body"
+msgstr ""
+"It locked after too many failed PIN attempts. Unlock it with its PUK before "
+"signing again."
+
+msgid "errors.situations.tokenAbsent.title"
+msgstr "We cannot find the card"
+
+msgid "errors.situations.tokenAbsent.body"
+msgstr ""
+"Check that it is still inserted and that the reader is connected, then try "
+"again."
+
+msgid "errors.situations.expiredSession.title"
+msgstr "The session with the card expired"
+
+msgid "errors.situations.expiredSession.body"
+msgstr ""
+"Try again: a new session will be opened and we will ask for the PIN once "
+"more."
+
+msgid "errors.situations.moduleNotFound.title"
+msgstr "The card module could not be loaded"
+
+msgid "errors.situations.moduleNotFound.body"
+msgstr ""
+"Check that the PKCS#11 module is where you said it was, or choose another "
+"one."
+
+msgid "errors.situations.certificateNotFound.title"
+msgstr "The certificate is no longer on the card"
+
+msgid "errors.situations.certificateNotFound.body"
+msgstr "Look for the certificates again and choose one of those that turn up."
+
+msgid "errors.situations.certificateExpired.title"
+msgstr "The certificate has expired"
+
+msgid "errors.situations.certificateExpired.body"
+msgstr ""
+"An expired certificate cannot sign. Renew it with its issuer and try again."
+
+msgid "errors.situations.certificateNotYetValid.title"
+msgstr "The certificate is not valid yet"
+
+msgid "errors.situations.certificateNotYetValid.body"
+msgstr "Its validity period has not started, so it cannot sign."
+
+msgid "errors.situations.certificateRevoked.title"
+msgstr "The certificate is revoked"
+
+msgid "errors.situations.certificateRevoked.body"
+msgstr "Its issuer revoked it, so it cannot sign. You need a new one."
+
+msgid "errors.situations.certificateUnreadable.title"
+msgstr "The certificate could not be read"
+
+msgid "errors.situations.certificateUnreadable.body"
+msgstr "What is on the card is not a certificate we can read. Try another one."
+
+msgid "errors.situations.notAPdf.title"
+msgstr "That file is not a PDF"
+
+msgid "errors.situations.notAPdf.body"
+msgstr "rFirma signs PDFs. Choose a PDF document and try again."
+
+msgid "errors.situations.documentEncrypted.title"
+msgstr "The PDF is protected"
+
+msgid "errors.situations.documentEncrypted.body"
+msgstr ""
+"It is encrypted or has restricted permissions, so it cannot be signed. Open "
+"it with its password, save it without protection and try again."
+
+msgid "errors.situations.documentCertified.title"
+msgstr "The PDF is certified"
+
+msgid "errors.situations.documentCertified.body"
+msgstr ""
+"Its author signed it forbidding changes, so adding a signature would "
+"invalidate theirs. Ask them for an uncertified copy."
+
+msgid "errors.situations.documentUnreadable.title"
+msgstr "The document could not be read"
+
+msgid "errors.situations.documentUnreadable.body"
+msgstr "Check that it is still where it was and open it again."
+
+msgid "errors.situations.droppedFileUnreadable.title"
+msgstr "We could not read the file you dropped"
+
+msgid "errors.situations.droppedFileUnreadable.body"
+msgstr ""
+"Dropping a file does not give us permission to read from every folder. Open "
+"it with the open button, which does."
+
+msgid "errors.situations.droppedOnlyFirst.title"
+msgstr "We only opened the first PDF"
+
+msgid "errors.situations.droppedOnlyFirst.body"
+msgstr ""
+"rFirma signs one document at a time. The other files you dropped are still "
+"where they were: drop them once you are done with this one."
+
+msgid "errors.situations.boxOutOfPage.title"
+msgstr "The box falls outside the page"
+
+msgid "errors.situations.boxOutOfPage.body"
+msgstr ""
+"Drag it inside the page and sign again. Left as it is, it would be clipped "
+"in the PDF without warning."
+
+msgid "errors.situations.sealMismatch.title"
+msgstr "Signing was interrupted halfway"
+
+msgid "errors.situations.sealMismatch.body"
+msgstr ""
+"What we prepared at the start and what came back at the end do not match, so "
+"we stopped before writing anything. Sign the document again."
+
+msgid "errors.situations.bridgeFailed.title"
+msgstr "The signature could not be prepared"
+
+msgid "errors.situations.bridgeFailed.body"
+msgstr ""
+"The component that assembles the signed PDF failed. Try again and, if it "
+"keeps happening, attach the technical detail to the bug report."
+
+msgid "errors.situations.folderMissing.title"
+msgstr "The destination folder is gone"
+
+msgid "errors.situations.folderMissing.body"
+msgstr ""
+"We do not create it for you: if we did, the document would look saved and "
+"would not be there. Create it again or choose another one in Preferences."
+
+msgid "errors.situations.notAFolder.title"
+msgstr "The destination is not a folder"
+
+msgid "errors.situations.notAFolder.body"
+msgstr ""
+"There is a file with that name where we expected a folder. Choose another "
+"destination in Preferences."
+
+msgid "errors.situations.folderUnreadable.title"
+msgstr "The destination folder could not be checked"
+
+msgid "errors.situations.folderUnreadable.body"
+msgstr ""
+"It may be a permissions problem or a drive that is not responding. Choose "
+"another destination in Preferences."
+
+msgid "errors.situations.folderUnwritable.title"
+msgstr "The signed document could not be saved"
+
+msgid "errors.situations.folderUnwritable.body"
+msgstr ""
+"Signing worked, but the file could not be written to the destination folder. "
+"Choose another one in Preferences and sign again."
+
+msgid "errors.situations.noFreeName.title"
+msgstr "There are already too many documents with that name"
+
+msgid "errors.situations.noFreeName.body"
+msgstr ""
+"We stopped rather than overwrite one. Move or rename the earlier ones and "
+"sign again."
+
+msgid "errors.situations.settingNotSaved.title"
+msgstr "The setting could not be saved"
+
+msgid "errors.situations.settingNotSaved.body"
+msgstr ""
+"We went back to the previous value, which is the one still saved. Try again "
+"and, if it keeps happening, attach the technical detail to the bug report."
+
+msgid "errors.situations.activityNotForgotten.title"
+msgstr "The list could not be emptied"
+
+msgid "errors.situations.activityNotForgotten.body"
+msgstr ""
+"Your recent documents and your certificate are still saved. Try again and, "
+"if it keeps happening, attach the technical detail to the bug report."
+
+msgid "window.tray"
+msgstr "Document tray"
+
+msgid "window.viewer"
+msgstr "Document viewer"
+
+msgid "window.panel"
+msgstr "Signature panel"
+
+msgid "header.menu"
+msgstr "Menu"
+
+msgid "header.preferences"
+msgstr "Preferences…"
+
+msgid "header.about"
+msgstr "About rFirma"
+
+msgid "badges.signed"
+msgstr "Signed"
+
+msgid "badges.unsigned"
+msgstr "Unsigned"
+
+msgid "badges.unavailable"
+msgstr "Unavailable"
+
+msgid "tray.dropZone"
+msgstr "Drag a PDF here, or click to open one"
+
+msgid "tray.empty"
+msgstr "The documents you sign will show up here"
+
+msgid "tray.recents"
+msgstr "Recent"
+
+msgid "tray.remove"
+msgstr "Remove from the list"
+
+msgid "viewer.dropZone"
+msgstr "Drag a PDF here, or click to open one"
+
+msgid "viewer.dropZoneHint"
+msgstr "The file browser will open"
+
+msgid "viewer.privacy"
+msgstr "PDF only. The document never leaves your computer."
+
+msgid "viewer.pageNumber"
+msgstr "Page number"
+
+msgid "viewer.pageOf"
+msgstr "of {{total}}"
+
+msgid "viewer.firstPage"
+msgstr "First page"
+
+msgid "viewer.previousPage"
+msgstr "Previous page"
+
+msgid "viewer.nextPage"
+msgstr "Next page"
+
+msgid "viewer.lastPage"
+msgstr "Last page"
+
+msgid "viewer.zoomOut"
+msgstr "Zoom out"
+
+msgid "viewer.zoomIn"
+msgstr "Zoom in"
+
+msgid "viewer.fitToWindow"
+msgstr "Fit to window"
+
+msgid "viewer.signatureBox"
+msgstr "Visible signature box"
+
+msgid "viewer.dragHandle"
+msgstr "Drag to place"
+
+msgid "viewer.outOfPage"
+msgstr "The box ended up off the page, so it stayed where it was."
+
+msgid "panel.document.pages"
+msgid_plural "panel.document.pages"
+msgstr[0] "1 page"
+msgstr[1] "{{count}} pages"
+msgstr[2] "{{count}} pages"
+
+msgid "panel.coSignature"
+msgid_plural "panel.coSignature"
+msgstr[0] "It already carries 1 signature: yours will be a countersignature."
+msgstr[1] ""
+"It already carries {{count}} signatures: yours will be a countersignature."
+msgstr[2] ""
+"It already carries {{count}} signatures: yours will be a countersignature."
+
+msgid "panel.certificate.title"
+msgstr "Certificate"
+
+msgid "panel.certificate.loading"
+msgstr "Looking for certificates…"
+
+msgid "panel.certificate.issuer"
+msgstr "Issued by {{issuer}}"
+
+msgid "panel.certificate.choose"
+msgstr "Choose certificate"
+
+msgid "panel.certificate.list"
+msgstr "Available certificates"
+
+msgid "panel.certificate.stores.card"
+msgstr "Card"
+
+msgid "panel.certificate.stores.firefox"
+msgstr "Firefox"
+
+msgid "panel.certificate.stores.chrome"
+msgstr "Chrome"
+
+msgid "panel.certificate.stores.nssdb"
+msgstr "NSS store"
+
+msgid "panel.certificate.empty.title"
+msgstr "We found no certificate"
+
+msgid "panel.certificate.empty.body"
+msgstr ""
+"If you use a card, check that it is inserted and that the reader is "
+"connected."
+
+msgid "panel.certificate.empty.retry"
+msgstr "Look again"
+
+msgid "panel.certificate.empty.otherModule"
+msgstr "Another module…"
+
+msgid "panel.certificate.failed.title"
+msgstr "We could not look for certificates"
+
+msgid "panel.certificate.failed.body"
+msgstr ""
+"The search failed before finishing, so we do not know whether there is any."
+
+msgid "panel.certificate.failed.retry"
+msgstr "Look again"
+
+msgid "panel.certificate.failed.otherModule"
+msgstr "Another module…"
+
+msgid "panel.certificate.expired"
+msgstr "The certificate expired on {{date}}, so it cannot be used to sign."
+
+msgid "panel.certificate.notYetValid"
+msgstr "The certificate is not valid yet, so it cannot be used to sign."
+
+msgid "panel.certificate.revoked"
+msgstr "The certificate is revoked ({{reason}}), so it cannot be used to sign."
+
+msgid "panel.certificate.unreadable"
+msgstr "This certificate could not be read, so it cannot be used to sign."
+
+msgid "panel.visibleSignature.title"
+msgstr "Visible signature"
+
+msgid "panel.visibleSignature.toggle"
+msgstr "Stamp a signature box on the document"
+
+msgid "panel.visibleSignature.placement"
+msgstr "Page {{page}} · drag it to place it"
+
+msgid "panel.visibleSignature.noPlacement"
+msgstr "Drag the box over the document to place it."
+
+msgid "panel.visibleSignature.content"
+msgstr "Contents"
+
+msgid "panel.visibleSignature.fields.rubric"
+msgstr "Your rubric"
+
+msgid "panel.visibleSignature.fields.rubricDisabled"
+msgstr "Choose an image first"
+
+msgid "panel.visibleSignature.fields.signerName"
+msgstr "Name and surname"
+
+msgid "panel.visibleSignature.fields.idNumber"
+msgstr "ID number"
+
+msgid "panel.visibleSignature.fields.signedAt"
+msgstr "Date and time of the signature"
+
+msgid "panel.visibleSignature.fields.reason"
+msgstr "A reason"
+
+msgid "panel.visibleSignature.reason.label"
+msgstr "Reason"
+
+msgid "panel.visibleSignature.reason.placeholder"
+msgstr "Approved"
+
+msgid "panel.visibleSignature.rubric.title"
+msgstr "Rubric image"
+
+msgid "panel.visibleSignature.rubric.choose"
+msgstr "Choose image"
+
+msgid "panel.visibleSignature.rubric.change"
+msgstr "Change image"
+
+msgid "panel.visibleSignature.rubric.thumbnail"
+msgstr "Your rubric, as it will be stamped"
+
+msgid "panel.visibleSignature.rubric.flattened"
+msgstr ""
+"It is stamped on white: the box goes into the PDF as a JPEG, and a JPEG has "
+"no transparency."
+
+msgid "panel.visibleSignature.preview.title"
+msgstr "What the box will say"
+
+msgid "panel.visibleSignature.preview.empty"
+msgstr "Tick a box so that the signature box says something."
+
+msgid "panel.visibleSignature.preview.unavailable"
+msgstr "The preview will show up once you choose the certificate."
+
+msgid "panel.footer.savedIn"
+msgstr "It will be saved in"
+
+msgid "panel.footer.unwritable"
+msgstr "Cannot write in {{folder}}"
+
+msgid "panel.footer.retry"
+msgstr "Try again"
+
+msgid "panel.signed.summary"
+msgstr "Summary"
+
+msgid "panel.signed.format"
+msgstr "PAdES"
+
+msgid "panel.signed.openDocument"
+msgstr "Open the PDF"
+
+msgid "panel.signed.openFolder"
+msgstr "Open the folder"
+
+msgid "panel.signed.signAgain"
+msgstr "Sign it again"
+
+msgid "pin.title"
+msgstr "Enter the card PIN"
+
+msgid "pin.signingAs"
+msgstr "{{holder}} · {{idNumber}}"
+
+msgid "pin.label"
+msgstr "PIN"
+
+msgid "pin.hint"
+msgstr "The PIN is used for this signature only, and is not stored anywhere."
+
+msgid "pin.incorrect"
+msgid_plural "pin.incorrect"
+msgstr[0] "Wrong PIN. You have 1 attempt left before the card locks."
+msgstr[1] "Wrong PIN. You have {{count}} attempts left before the card locks."
+msgstr[2] "Wrong PIN. You have {{count}} attempts left before the card locks."
+
+msgid "pin.incorrectUnknown"
+msgstr "Wrong PIN. The card locks after a few failed attempts."
+
+msgid "pin.submit"
+msgstr "Sign"
+
+msgid "progress.title"
+msgstr "Signing the document…"
+
+msgid "progress.stages.presign"
+msgstr "Preparing the signature"
+
+msgid "progress.stages.presignTerm"
+msgstr "presignature"
+
+msgid "progress.stages.sign"
+msgstr "Signing on the card"
+
+msgid "progress.stages.postsign"
+msgstr "Assembling the PDF"
+
+msgid "progress.stages.postsignTerm"
+msgstr "postsignature"
+
+msgid "progress.states.done"
+msgstr "Done"
+
+msgid "progress.states.running"
+msgstr "Under way"
+
+msgid "progress.states.pending"
+msgstr "Pending"
+
+msgid "progress.keepTheCard"
+msgstr "Do not remove the card until it finishes."
+
+msgid "preferences.title"
+msgstr "Preferences"
+
+msgid "preferences.sections.label"
+msgstr "Sections"
+
+msgid "preferences.sections.signing"
+msgstr "Signing"
+
+msgid "preferences.sections.privacy"
+msgstr "Privacy"
+
+msgid "preferences.sections.appearance"
+msgstr "Appearance"
+
+msgid "preferences.rememberVisibleSignature.label"
+msgstr "Remember the last visible signature setup"
+
+msgid "preferences.rememberVisibleSignature.hint"
+msgstr ""
+"The page, the position and the contents of the box are reused on the next "
+"document."
+
+msgid "preferences.rememberActivity.label"
+msgstr "Remember my activity"
+
+msgid "preferences.rememberActivity.hint"
+msgstr "Covers the recent documents and the certificate used last time."
+
+msgid "preferences.rememberActivity.clear"
+msgstr "Empty the list"
+
+msgid "preferences.rememberActivity.confirm.body"
+msgstr ""
+"Turning it off erases what is already remembered: the recent documents and "
+"the certificate used last time."
+
+msgid "preferences.rememberActivity.confirm.accept"
+msgstr "Erase and turn off"
+
+msgid "preferences.destination.label"
+msgstr "Where the signed document is saved"
+
+msgid "preferences.destination.change"
+msgstr "Change folder…"
+
+msgid "preferences.theme.label"
+msgstr "Theme"
+
+msgid "preferences.theme.system"
+msgstr "System"
+
+msgid "preferences.theme.light"
+msgstr "Light"
+
+msgid "preferences.theme.dark"
+msgstr "Dark"
+
+msgid "preferences.language.label"
+msgstr "Language"
+
+msgid "about.version"
+msgstr "Version {{version}}"
+
+msgid "about.whatItDoes"
+msgstr ""
+"Signs and countersigns PDF documents with your certificate. Neither the "
+"document nor the private key leaves your computer."
+
+msgid "about.independence"
+msgstr ""
+"Independent project. rFirma is not related to AutoFirma or to the Spanish "
+"Administration, who publish the official client, nor is it endorsed by them. "
+"If you need the official application, download it from their website."
+
+msgid "about.repository"
+msgstr "github.com/sgomez/rfirma"
+
+msgid "about.licenses.view"
+msgstr "View the licences"
+
+msgid "about.licenses.rfirma"
+msgstr "rFirma: EUPL-1.2."
+
+msgid "about.licenses.afirma"
+msgstr "Cliente @firma libraries: GPL-2.0+ / EUPL-1.1."

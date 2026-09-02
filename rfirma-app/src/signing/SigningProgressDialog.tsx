@@ -99,8 +99,8 @@ export function SigningProgressDialog({ stage }: SigningProgressDialogProps) {
  * «firmando en la tarjeta» ya dice exactamente lo que pasa, y es la única de
  * las tres que toca la clave privada.
  */
-const TERM_KEY: Record<SigningStage, string | null> = {
+const TERM_KEY = {
   presign: "presignTerm",
   sign: null,
   postsign: "postsignTerm",
-};
+} as const satisfies Record<SigningStage, string | null>;

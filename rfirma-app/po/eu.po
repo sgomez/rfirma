@@ -1,0 +1,620 @@
+msgid ""
+msgstr ""
+"Language: eu\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n!=0 && n%1000000==0) ? 1 : "
+"2);\n"
+
+msgid "app.name"
+msgstr ""
+
+msgid "actions.sign"
+msgstr ""
+
+msgid "actions.chooseCertificate"
+msgstr ""
+
+msgid "actions.cancel"
+msgstr ""
+
+msgid "actions.close"
+msgstr ""
+
+msgid "actions.change"
+msgstr ""
+
+msgid "languages.es"
+msgstr ""
+
+msgid "languages.ca"
+msgstr ""
+
+msgid "languages.eu"
+msgstr ""
+
+msgid "languages.gl"
+msgstr ""
+
+msgid "languages.en"
+msgstr ""
+
+msgid "errors.technicalDetail"
+msgstr ""
+
+msgid "errors.situations.unknown.title"
+msgstr ""
+
+msgid "errors.situations.unknown.body"
+msgstr ""
+
+msgid "errors.situations.notAnAcceptedImage.title"
+msgstr ""
+
+msgid "errors.situations.notAnAcceptedImage.body"
+msgstr ""
+
+msgid "errors.situations.damagedImage.title"
+msgstr ""
+
+msgid "errors.situations.damagedImage.body"
+msgstr ""
+
+msgid "errors.situations.imageTooLarge.title"
+msgstr ""
+
+msgid "errors.situations.imageTooLarge.body"
+msgstr ""
+
+msgid "errors.situations.sourceUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.sourceUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.storeUnwritable.title"
+msgstr ""
+
+msgid "errors.situations.storeUnwritable.body"
+msgstr ""
+
+msgid "errors.situations.storeUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.storeUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.incorrectPin.title"
+msgstr ""
+
+msgid "errors.situations.incorrectPin.body"
+msgstr ""
+
+msgid "errors.situations.pinLocked.title"
+msgstr ""
+
+msgid "errors.situations.pinLocked.body"
+msgstr ""
+
+msgid "errors.situations.tokenAbsent.title"
+msgstr ""
+
+msgid "errors.situations.tokenAbsent.body"
+msgstr ""
+
+msgid "errors.situations.expiredSession.title"
+msgstr ""
+
+msgid "errors.situations.expiredSession.body"
+msgstr ""
+
+msgid "errors.situations.moduleNotFound.title"
+msgstr ""
+
+msgid "errors.situations.moduleNotFound.body"
+msgstr ""
+
+msgid "errors.situations.certificateNotFound.title"
+msgstr ""
+
+msgid "errors.situations.certificateNotFound.body"
+msgstr ""
+
+msgid "errors.situations.certificateExpired.title"
+msgstr ""
+
+msgid "errors.situations.certificateExpired.body"
+msgstr ""
+
+msgid "errors.situations.certificateNotYetValid.title"
+msgstr ""
+
+msgid "errors.situations.certificateNotYetValid.body"
+msgstr ""
+
+msgid "errors.situations.certificateRevoked.title"
+msgstr ""
+
+msgid "errors.situations.certificateRevoked.body"
+msgstr ""
+
+msgid "errors.situations.certificateUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.certificateUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.notAPdf.title"
+msgstr ""
+
+msgid "errors.situations.notAPdf.body"
+msgstr ""
+
+msgid "errors.situations.documentEncrypted.title"
+msgstr ""
+
+msgid "errors.situations.documentEncrypted.body"
+msgstr ""
+
+msgid "errors.situations.documentCertified.title"
+msgstr ""
+
+msgid "errors.situations.documentCertified.body"
+msgstr ""
+
+msgid "errors.situations.documentUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.documentUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.droppedFileUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.droppedFileUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.droppedOnlyFirst.title"
+msgstr ""
+
+msgid "errors.situations.droppedOnlyFirst.body"
+msgstr ""
+
+msgid "errors.situations.boxOutOfPage.title"
+msgstr ""
+
+msgid "errors.situations.boxOutOfPage.body"
+msgstr ""
+
+msgid "errors.situations.sealMismatch.title"
+msgstr ""
+
+msgid "errors.situations.sealMismatch.body"
+msgstr ""
+
+msgid "errors.situations.bridgeFailed.title"
+msgstr ""
+
+msgid "errors.situations.bridgeFailed.body"
+msgstr ""
+
+msgid "errors.situations.folderMissing.title"
+msgstr ""
+
+msgid "errors.situations.folderMissing.body"
+msgstr ""
+
+msgid "errors.situations.notAFolder.title"
+msgstr ""
+
+msgid "errors.situations.notAFolder.body"
+msgstr ""
+
+msgid "errors.situations.folderUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.folderUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.folderUnwritable.title"
+msgstr ""
+
+msgid "errors.situations.folderUnwritable.body"
+msgstr ""
+
+msgid "errors.situations.noFreeName.title"
+msgstr ""
+
+msgid "errors.situations.noFreeName.body"
+msgstr ""
+
+msgid "errors.situations.settingNotSaved.title"
+msgstr ""
+
+msgid "errors.situations.settingNotSaved.body"
+msgstr ""
+
+msgid "errors.situations.activityNotForgotten.title"
+msgstr ""
+
+msgid "errors.situations.activityNotForgotten.body"
+msgstr ""
+
+msgid "window.tray"
+msgstr ""
+
+msgid "window.viewer"
+msgstr ""
+
+msgid "window.panel"
+msgstr ""
+
+msgid "header.menu"
+msgstr ""
+
+msgid "header.preferences"
+msgstr ""
+
+msgid "header.about"
+msgstr ""
+
+msgid "badges.signed"
+msgstr ""
+
+msgid "badges.unsigned"
+msgstr ""
+
+msgid "badges.unavailable"
+msgstr ""
+
+msgid "tray.dropZone"
+msgstr ""
+
+msgid "tray.empty"
+msgstr ""
+
+msgid "tray.recents"
+msgstr ""
+
+msgid "tray.remove"
+msgstr ""
+
+msgid "viewer.dropZone"
+msgstr ""
+
+msgid "viewer.dropZoneHint"
+msgstr ""
+
+msgid "viewer.privacy"
+msgstr ""
+
+msgid "viewer.pageNumber"
+msgstr ""
+
+msgid "viewer.pageOf"
+msgstr ""
+
+msgid "viewer.firstPage"
+msgstr ""
+
+msgid "viewer.previousPage"
+msgstr ""
+
+msgid "viewer.nextPage"
+msgstr ""
+
+msgid "viewer.lastPage"
+msgstr ""
+
+msgid "viewer.zoomOut"
+msgstr ""
+
+msgid "viewer.zoomIn"
+msgstr ""
+
+msgid "viewer.fitToWindow"
+msgstr ""
+
+msgid "viewer.signatureBox"
+msgstr ""
+
+msgid "viewer.dragHandle"
+msgstr ""
+
+msgid "viewer.outOfPage"
+msgstr ""
+
+msgid "panel.document.pages"
+msgid_plural "panel.document.pages"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "panel.coSignature"
+msgid_plural "panel.coSignature"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "panel.certificate.title"
+msgstr ""
+
+msgid "panel.certificate.loading"
+msgstr ""
+
+msgid "panel.certificate.issuer"
+msgstr ""
+
+msgid "panel.certificate.choose"
+msgstr ""
+
+msgid "panel.certificate.list"
+msgstr ""
+
+msgid "panel.certificate.stores.card"
+msgstr ""
+
+msgid "panel.certificate.stores.firefox"
+msgstr ""
+
+msgid "panel.certificate.stores.chrome"
+msgstr ""
+
+msgid "panel.certificate.stores.nssdb"
+msgstr ""
+
+msgid "panel.certificate.empty.title"
+msgstr ""
+
+msgid "panel.certificate.empty.body"
+msgstr ""
+
+msgid "panel.certificate.empty.retry"
+msgstr ""
+
+msgid "panel.certificate.empty.otherModule"
+msgstr ""
+
+msgid "panel.certificate.failed.title"
+msgstr ""
+
+msgid "panel.certificate.failed.body"
+msgstr ""
+
+msgid "panel.certificate.failed.retry"
+msgstr ""
+
+msgid "panel.certificate.failed.otherModule"
+msgstr ""
+
+msgid "panel.certificate.expired"
+msgstr ""
+
+msgid "panel.certificate.notYetValid"
+msgstr ""
+
+msgid "panel.certificate.revoked"
+msgstr ""
+
+msgid "panel.certificate.unreadable"
+msgstr ""
+
+msgid "panel.visibleSignature.title"
+msgstr ""
+
+msgid "panel.visibleSignature.toggle"
+msgstr ""
+
+msgid "panel.visibleSignature.placement"
+msgstr ""
+
+msgid "panel.visibleSignature.noPlacement"
+msgstr ""
+
+msgid "panel.visibleSignature.content"
+msgstr ""
+
+msgid "panel.visibleSignature.fields.rubric"
+msgstr ""
+
+msgid "panel.visibleSignature.fields.rubricDisabled"
+msgstr ""
+
+msgid "panel.visibleSignature.fields.signerName"
+msgstr ""
+
+msgid "panel.visibleSignature.fields.idNumber"
+msgstr ""
+
+msgid "panel.visibleSignature.fields.signedAt"
+msgstr ""
+
+msgid "panel.visibleSignature.fields.reason"
+msgstr ""
+
+msgid "panel.visibleSignature.reason.label"
+msgstr ""
+
+msgid "panel.visibleSignature.reason.placeholder"
+msgstr ""
+
+msgid "panel.visibleSignature.rubric.title"
+msgstr ""
+
+msgid "panel.visibleSignature.rubric.choose"
+msgstr ""
+
+msgid "panel.visibleSignature.rubric.change"
+msgstr ""
+
+msgid "panel.visibleSignature.rubric.thumbnail"
+msgstr ""
+
+msgid "panel.visibleSignature.rubric.flattened"
+msgstr ""
+
+msgid "panel.visibleSignature.preview.title"
+msgstr ""
+
+msgid "panel.visibleSignature.preview.empty"
+msgstr ""
+
+msgid "panel.visibleSignature.preview.unavailable"
+msgstr ""
+
+msgid "panel.footer.savedIn"
+msgstr ""
+
+msgid "panel.footer.unwritable"
+msgstr ""
+
+msgid "panel.footer.retry"
+msgstr ""
+
+msgid "panel.signed.summary"
+msgstr ""
+
+msgid "panel.signed.format"
+msgstr ""
+
+msgid "panel.signed.openDocument"
+msgstr ""
+
+msgid "panel.signed.openFolder"
+msgstr ""
+
+msgid "panel.signed.signAgain"
+msgstr ""
+
+msgid "pin.title"
+msgstr ""
+
+msgid "pin.signingAs"
+msgstr ""
+
+msgid "pin.label"
+msgstr ""
+
+msgid "pin.hint"
+msgstr ""
+
+msgid "pin.incorrect"
+msgid_plural "pin.incorrect"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "pin.incorrectUnknown"
+msgstr ""
+
+msgid "pin.submit"
+msgstr ""
+
+msgid "progress.title"
+msgstr ""
+
+msgid "progress.stages.presign"
+msgstr ""
+
+msgid "progress.stages.presignTerm"
+msgstr ""
+
+msgid "progress.stages.sign"
+msgstr ""
+
+msgid "progress.stages.postsign"
+msgstr ""
+
+msgid "progress.stages.postsignTerm"
+msgstr ""
+
+msgid "progress.states.done"
+msgstr ""
+
+msgid "progress.states.running"
+msgstr ""
+
+msgid "progress.states.pending"
+msgstr ""
+
+msgid "progress.keepTheCard"
+msgstr ""
+
+msgid "preferences.title"
+msgstr ""
+
+msgid "preferences.sections.label"
+msgstr ""
+
+msgid "preferences.sections.signing"
+msgstr ""
+
+msgid "preferences.sections.privacy"
+msgstr ""
+
+msgid "preferences.sections.appearance"
+msgstr ""
+
+msgid "preferences.rememberVisibleSignature.label"
+msgstr ""
+
+msgid "preferences.rememberVisibleSignature.hint"
+msgstr ""
+
+msgid "preferences.rememberActivity.label"
+msgstr ""
+
+msgid "preferences.rememberActivity.hint"
+msgstr ""
+
+msgid "preferences.rememberActivity.clear"
+msgstr ""
+
+msgid "preferences.rememberActivity.confirm.body"
+msgstr ""
+
+msgid "preferences.rememberActivity.confirm.accept"
+msgstr ""
+
+msgid "preferences.destination.label"
+msgstr ""
+
+msgid "preferences.destination.change"
+msgstr ""
+
+msgid "preferences.theme.label"
+msgstr ""
+
+msgid "preferences.theme.system"
+msgstr ""
+
+msgid "preferences.theme.light"
+msgstr ""
+
+msgid "preferences.theme.dark"
+msgstr ""
+
+msgid "preferences.language.label"
+msgstr ""
+
+msgid "about.version"
+msgstr ""
+
+msgid "about.whatItDoes"
+msgstr ""
+
+msgid "about.independence"
+msgstr ""
+
+msgid "about.repository"
+msgstr ""
+
+msgid "about.licenses.view"
+msgstr ""
+
+msgid "about.licenses.rfirma"
+msgstr ""
+
+msgid "about.licenses.afirma"
+msgstr ""

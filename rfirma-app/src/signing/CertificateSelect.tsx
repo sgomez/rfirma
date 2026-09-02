@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CertificateIcon, CheckIcon, ChevronDownIcon } from "../design-system/icons";
@@ -246,11 +247,7 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
 }
 
 /** Por qué no se puede firmar con este certificado, dicho antes del PIN. */
-export function statusWarning(
-  status: Certificate["status"],
-  locale: string,
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
+export function statusWarning(status: Certificate["status"], locale: string, t: TFunction): string {
   switch (status.kind) {
     case "expired":
       return t("panel.certificate.expired", {

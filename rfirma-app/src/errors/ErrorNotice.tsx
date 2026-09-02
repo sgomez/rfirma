@@ -6,7 +6,7 @@ import "./ErrorNotice.css";
 /**
  * Las situaciones que sabemos nombrar. Hoy solo la genérica: el mapeo de los
  * `CKR_*` de `cryptoki` y de las excepciones del puente es de otro sub-issue,
- * y cada situación que añada entra aquí y en los seis catálogos.
+ * y cada situación que añada entra aquí y en `po/messages.pot`.
  */
 export type ErrorSituation = keyof Catalog["errors"]["situations"];
 
