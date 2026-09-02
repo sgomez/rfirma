@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::memory::{Badge, Theme};
 use crate::pkcs11::{CertificateStatus, StoreClass};
+use crate::signing::PageSet;
 
 pub use super::failure::Failure;
 
@@ -195,20 +196,24 @@ pub struct DroppedDocumentView {
     pub ignored: usize,
 }
 
-/// El recuadro colocado, tal como cruza en los dos sentidos: **la página y el
-/// rectángulo en espacio de usuario PDF**, y ninguna ruta.
+/// El recuadro colocado, tal como cruza en los dos sentidos: **el rectángulo
+/// en espacio de usuario PDF y el conjunto de páginas**, y ninguna ruta.
 ///
-/// Cruza **entero** aunque se guarde partido (ID-74): la ventana pinta un
-/// rectángulo, no una esquina más un tamaño global, y quien junta las dos
-/// mitades es [`crate::app::recents`]. Componer el rectángulo en TypeScript
-/// sería poner el reparto del ID-74 en los dos lados.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+/// Es la forma del ID-90 —`{ rect, pages }`, un registro llano y no una unión
+/// de un brazo— y la misma que la ventana tiene en `viewer/signatureBox.ts`.
+///
+/// El rectángulo cruza **entero** aunque se guarde partido (ID-74): la ventana
+/// pinta un rectángulo, no una esquina más un tamaño global, y quien junta las
+/// dos mitades es [`crate::app::recents`]. Componer el rectángulo en TypeScript
+/// sería poner el reparto del ID-74 en los dos lados. El conjunto de páginas no
+/// se parte: es entero del documento (ID-95).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacementView {
-    /// Página **1-based**, como la numera `pdf.js`.
-    pub page: u32,
     /// El recuadro en espacio de usuario: `[x0, y0, x1, y1]`.
     pub rect: [f64; 4],
+    /// En qué páginas se estampa: `"all"` o la lista, **1-based**.
+    pub pages: PageSet,
 }
 
 /// Una fila de la bandeja, tal como la ventana la recibe: **un identificador

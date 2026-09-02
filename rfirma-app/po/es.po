@@ -218,6 +218,14 @@ msgstr ""
 "Arrástralo dentro de la página y vuelve a firmar. Si lo dejásemos así, "
 "quedaría recortado en el PDF sin avisar."
 
+msgid "errors.situations.pageOutOfDocument.title"
+msgstr "El documento no llega a esa página"
+
+msgid "errors.situations.pageOutOfDocument.body"
+msgstr ""
+"Elige una página que exista en el documento y vuelve a firmar. Si lo "
+"dejásemos así, el sello acabaría en la última página sin avisar."
+
 msgid "errors.situations.sealMismatch.title"
 msgstr "La firma se ha interrumpido a medias"
 

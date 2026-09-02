@@ -18,8 +18,8 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `app/documents.rs` (779), `app/signing.rs` (700), `signing/placement.rs` (664)
-  y `rubric/normalize.rs` (586). Ninguno de `commands/` llega a 500, y lo
+  `signing/placement.rs` (926), `app/documents.rs` (779), `app/signing.rs` (701)
+  y `app/recents.rs` (603). Ninguno de `commands/` llega a 500, y lo
   que los hace crecer es **prosa**: los cuerpos siguen siendo desempaquetar,
   llamar y traducir. Si lo que crece es un cuerpo, lo que ha entrado casi
   siempre es una decisión, y una decisión va en `app/`.
@@ -36,38 +36,38 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 498 | **Las veinte órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 361 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/views.rs` | 366 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
-| `commands/orders.rs` | 138 | Lo que la ventana manda, ya deserializado. |
+| `commands/orders.rs` | 226 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
 | `commands/guards.rs` | 404 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 189 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 432 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
-| `app/signing.rs` | 700 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/signing.rs` | 701 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 779 | Por dónde entra el documento y dónde cae el firmado. |
-| `app/recents.rs` | 539 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
+| `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 344 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/window.rs` | 151 | El tamaño de la ventana entre sesiones, y si estaba maximizada (ID-72, ID-73). |
-| `app/fixtures.rs` | 74 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
+| `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
 | **`memory/`** | | Lo que rFirma recuerda: siete memorias en dos mitades y una exenta (ADR-0010). |
 | `memory/mod.rs` | 527 | El reparto de las siete memorias. Léelo antes que sus hermanos. |
-| `memory/state.rs` | 401 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
+| `memory/state.rs` | 404 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
-| `memory/recents.rs` | 482 | Los diez recientes, por ruta canónica, con la página y la posición del recuadro de cada uno (ID-74). |
+| `memory/recents.rs` | 599 | Los diez recientes, por ruta canónica, con el conjunto de páginas y la posición del recuadro de cada uno (ID-74, ID-95). Lee las filas de v0.2 y descarta la que no entienda. |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |
 | `memory/opened.rs` | 179 | Los documentos abiertos en esta sesión: del identificador opaco al fichero. |
 | `memory/listed.rs` | 168 | Los certificados listados en esta sesión: del asa opaca a la referencia. |
 | `memory/handles.rs` | 90 | Cómo se acuña un asa opaca (ID-61, ADR-0011). |
 | `memory/error.rs` | 89 | Situaciones de la memoria (ADR-0009). |
 | **`signing/`** | | Las reglas puras de la firma. |
-| `signing/mod.rs` | 30 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. **No importa `ffi`** (ID-82). |
-| `signing/config.rs` | 321 | Los cinco ajustes de firma y ni uno más (ID-18). Aquí vive `SignatureBox`. |
-| `signing/placement.rs` | 664 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21). |
+| `signing/mod.rs` | 32 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. **No importa `ffi`** (ID-82). |
+| `signing/config.rs` | 400 | Los cinco ajustes de firma y ni uno más (ID-18). Aquí viven `Placement` y `PadesRect` (ID-90). |
+| `signing/placement.rs` | 926 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21), y `PageSet`: en qué páginas se estampa y si el documento las tiene (ID-91, ID-94). |
 | `signing/admissibility.rs` | 316 | Lo que no se puede firmar, decidido antes del PIN. |
 | `signing/layer2_text.rs` | 369 | El texto del recuadro visible. |
 | `signing/properties.rs` | 178 | Los `extraParams` en el formato del puente. |

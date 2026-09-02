@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::placement::PageSet;
+
 /// Subfiltro de la firma. Se envía **explícito** aunque parezca redundante: el
 /// javadoc de `PdfExtraParams.SIGNATURE_SUBFILTER` **miente**, dice que por
 /// omisión es `adbe.pkcs7.detached` y el código cae en `ETSI.CAdES.detached`.
@@ -18,7 +20,7 @@ use serde::{Deserialize, Serialize};
 pub const SUB_FILTER: &str = "ETSI.CAdES.detached";
 
 const SUB_FILTER_KEY: &str = "signatureSubFilter";
-const PAGE_KEY: &str = "signaturePage";
+const PAGES_KEY: &str = "signaturePages";
 const LOWER_LEFT_X_KEY: &str = "signaturePositionOnPageLowerLeftX";
 const LOWER_LEFT_Y_KEY: &str = "signaturePositionOnPageLowerLeftY";
 const UPPER_RIGHT_X_KEY: &str = "signaturePositionOnPageUpperRightX";
@@ -34,7 +36,7 @@ const SIGN_REASON_KEY: &str = "signReason";
 pub enum Setting {
     /// El subfiltro, siempre [`SUB_FILTER`].
     SubFilter,
-    /// La geometría del recuadro: página y las cuatro esquinas.
+    /// La geometría del recuadro: las páginas y las cuatro esquinas.
     Geometry,
     /// El texto del recuadro, ya compuesto por rFirma.
     Layer2Text,
@@ -59,7 +61,7 @@ impl Setting {
         match self {
             Self::SubFilter => &[SUB_FILTER_KEY],
             Self::Geometry => &[
-                PAGE_KEY,
+                PAGES_KEY,
                 LOWER_LEFT_X_KEY,
                 LOWER_LEFT_Y_KEY,
                 UPPER_RIGHT_X_KEY,
@@ -72,16 +74,20 @@ impl Setting {
     }
 }
 
-/// El recuadro de la firma visible, ya en puntos PAdES.
+/// El rectángulo de la firma visible, ya en puntos PAdES.
 ///
 /// Los valores son los que espera `setVisibleSignature`, no el `/Rect` que
 /// acabará teniendo el widget: la conversión desde el recuadro que el usuario
 /// arrastra en el visor —incluida la inversa de la rotación de la página— la
 /// hace [`super::placement::Page::place`].
+///
+/// **No lleva página**: en qué páginas se estampa es [`PageSet`], y las dos
+/// mitades juntas son [`Placement`]. Con el widget replicado el rectángulo es
+/// forzosamente el mismo en todas (ID-96), así que hay un rectángulo y un
+/// conjunto, no un rectángulo por página.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SignatureBox {
-    /// Página, **1-based**, tal cual la numera `pdf.js`.
-    pub page: u32,
+#[serde(rename_all = "camelCase")]
+pub struct PadesRect {
     /// Esquina inferior izquierda, eje X.
     pub lower_left_x: i32,
     /// Esquina inferior izquierda, eje Y.
@@ -92,17 +98,32 @@ pub struct SignatureBox {
     pub upper_right_y: i32,
 }
 
-impl SignatureBox {
+/// **La colocación**: dónde cae el recuadro y en qué páginas (ID-90).
+///
+/// Es un registro llano y **no una unión de un brazo**: un `kind` que nunca
+/// discrimina es ruido, y no ahorraría la migración del día que entre otra
+/// rama de colocación, porque en esa rama `rect` y `pages` tienen que
+/// desaparecer, no convivir.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Placement {
+    /// El rectángulo, el mismo en todas las páginas del conjunto.
+    pub rect: PadesRect,
+    /// Las páginas en las que se estampa.
+    pub pages: PageSet,
+}
+
+impl Placement {
     fn extra_params(&self) -> Vec<(String, String)> {
-        let Self {
-            page,
+        let Self { rect, pages } = self;
+        let PadesRect {
             lower_left_x,
             lower_left_y,
             upper_right_x,
             upper_right_y,
-        } = self;
+        } = rect;
         vec![
-            (PAGE_KEY.to_owned(), page.to_string()),
+            (PAGES_KEY.to_owned(), pages.literal()),
             (LOWER_LEFT_X_KEY.to_owned(), lower_left_x.to_string()),
             (LOWER_LEFT_Y_KEY.to_owned(), lower_left_y.to_string()),
             (UPPER_RIGHT_X_KEY.to_owned(), upper_right_x.to_string()),
@@ -114,8 +135,8 @@ impl SignatureBox {
 /// Lo que distingue una firma de otra a igualdad de documento y certificado.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignatureConfig {
-    /// Dónde cae el recuadro.
-    pub signature_box: SignatureBox,
+    /// Dónde cae el recuadro y en qué páginas.
+    pub placement: Placement,
     /// El texto del recuadro, compuesto por
     /// [`super::layer2_text::compose_layer2_text`]. Puede estar vacío.
     pub layer2_text: String,
@@ -136,7 +157,7 @@ impl SignatureConfig {
         // Destructurado exhaustivo A PROPÓSITO: un sexto ajuste no compila
         // hasta que alguien lo declare también en `Setting`.
         let Self {
-            signature_box,
+            placement,
             layer2_text,
             rubric_image,
             sign_reason,
@@ -144,7 +165,7 @@ impl SignatureConfig {
 
         let mut params = BTreeMap::new();
         params.insert(SUB_FILTER_KEY.to_owned(), SUB_FILTER.to_owned());
-        params.extend(signature_box.extra_params());
+        params.extend(placement.extra_params());
         params.insert(LAYER2_TEXT_KEY.to_owned(), layer2_text.clone());
         if let Some(image) = rubric_image {
             params.insert(RUBRIC_IMAGE_KEY.to_owned(), image.clone());
@@ -158,12 +179,11 @@ impl SignatureConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{Setting, SignatureBox, SignatureConfig, SUB_FILTER};
+    use super::{PadesRect, PageSet, Placement, Setting, SignatureConfig, SUB_FILTER};
     use std::collections::HashSet;
 
-    fn a_box() -> SignatureBox {
-        SignatureBox {
-            page: 3,
+    fn a_rect() -> PadesRect {
+        PadesRect {
             lower_left_x: 100,
             lower_left_y: 200,
             upper_right_x: 300,
@@ -171,9 +191,16 @@ mod tests {
         }
     }
 
+    fn placed_on(pages: PageSet) -> Placement {
+        Placement {
+            rect: a_rect(),
+            pages,
+        }
+    }
+
     fn minimal() -> SignatureConfig {
         SignatureConfig {
-            signature_box: a_box(),
+            placement: placed_on(PageSet::only_page(3)),
             layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
             rubric_image: None,
             sign_reason: None,
@@ -251,7 +278,7 @@ mod tests {
     #[test]
     fn sends_the_geometry_of_the_box() {
         let params = minimal().extra_params();
-        assert_eq!(params.get("signaturePage"), Some(&"3".to_owned()));
+        assert_eq!(params.get("signaturePages"), Some(&"3".to_owned()));
         assert_eq!(
             params.get("signaturePositionOnPageLowerLeftX"),
             Some(&"100".to_owned())
@@ -317,5 +344,57 @@ mod tests {
         for key in ruled_out {
             assert!(!params.contains_key(key), "«{key}» no debería enviarse");
         }
+    }
+
+    /// El singular y el plural conviven en el puente y **gana el plural**
+    /// (`PdfUtil.getPages:699-703`), así que enviar los dos describiría una
+    /// configuración que solo se entiende leyendo el código de AutoFirma.
+    #[test]
+    fn never_sends_the_singular_page_key() {
+        assert!(!complete().extra_params().contains_key("signaturePage"));
+    }
+
+    /// El conjunto de tamaño 1, el de tamaño *k* y el de tamaño *n*: la misma
+    /// clave, tres literales.
+    #[test]
+    fn writes_the_page_set_as_the_bridge_reads_it() {
+        for (pages, literal) in [
+            (PageSet::only_page(3), "3"),
+            (PageSet::only([7, 3, 3]).expect("no esta vacio"), "3,7"),
+            (PageSet::All, "all"),
+        ] {
+            let config = SignatureConfig {
+                placement: placed_on(pages),
+                ..minimal()
+            };
+            assert_eq!(
+                config.extra_params().get("signaturePages"),
+                Some(&literal.to_owned())
+            );
+        }
+    }
+
+    /// ID-91: «todas» no es un modo aparte. Lo único que cambia entre `all` y
+    /// la lista completa es el literal; las otras cuatro claves de la
+    /// geometría son las mismas, que es lo que hace que «algunas» no cueste
+    /// nada de más.
+    #[test]
+    fn changes_nothing_but_the_page_set_between_all_and_the_full_list() {
+        let all = SignatureConfig {
+            placement: placed_on(PageSet::All),
+            ..complete()
+        };
+        let listed = SignatureConfig {
+            placement: placed_on(PageSet::only([1, 2, 3]).expect("no esta vacio")),
+            ..complete()
+        };
+
+        let mut left = all.extra_params();
+        let mut right = listed.extra_params();
+        assert_ne!(
+            left.remove("signaturePages"),
+            right.remove("signaturePages")
+        );
+        assert_eq!(left, right);
     }
 }
