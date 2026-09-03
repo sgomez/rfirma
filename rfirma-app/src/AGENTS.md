@@ -113,6 +113,14 @@ Cuatro comprobaciones, cada una en su sitio y sin solaparse:
 | Una `t()` sin entrada en el catálogo | `just lint-i18n` (`i18next-cli extract --ci`) |
 | Una clave del catálogo que no usa nadie | `just lint-i18n` (`i18next-cli status --unused`) |
 
+Las dos últimas miran el código en busca de `t("…")` literales, y de ahí salen
+sus dos puntos ciegos. **Una clave ensamblada con plantilla** (`t(\`a.b.${x}\`)`)
+no la ve ninguna: las dos pasan en verde aunque la clave resultante no exista en
+el catálogo, y el hueco solo aparece en pantalla — escribe siempre la clave
+entera. Y **el extractor lee también los comentarios**, así que un `t()` de
+ejemplo dentro de un bloque `/** */` cuenta como clave usada: puede poner
+`extract --ci` en rojo o falsear el recuento de claves sin uso.
+
 **El idioma que no está al 100 % no genera `.ts`**, así que no puede llegar al
 desplegable: no es una comprobación, es que no existe. `just po --all` genera
 también los incompletos, rellenando con castellano, para quien traduce; nunca
@@ -125,3 +133,17 @@ módulo, y `main.tsx` elige la implementación (ADR-0017). Si vas a añadir
 capacidad nueva, el orden es: el puerto en su módulo de dominio → `tauri.ts` →
 `main.tsx`. Las fichas de pantalla viven en `docs/design/` (ver
 `docs/AGENTS.md`).
+
+## Dos trampas al probar el visor
+
+Las dos costaron un ciclo de arreglo entero en el visor, y ninguna se ve
+leyendo el código:
+
+- **`jsdom` no trae `ResizeObserver` ni `scrollIntoView`.** Un módulo que los
+  use necesita guardia (`typeof ResizeObserver === "undefined"`) o revienta
+  cualquier prueba que monte el componente.
+- **React 19 registra `wheel`, `touchstart` y `touchmove` como oyentes
+  pasivos**, así que `preventDefault()` dentro de la prop `onWheel` **no hace
+  nada** — y `fireEvent.wheel` pasa igual, con lo que la prueba tampoco lo
+  denuncia. Engancha el evento nativo a mano con `{ passive: false }`, y en la
+  prueba despacha un evento nativo `cancelable` y comprueba `defaultPrevented`.

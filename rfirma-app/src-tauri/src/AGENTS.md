@@ -115,6 +115,12 @@ existir—, pero sí dos cosas que salen mal si te descuidas: un tipo de salida 
 `Serialize` no cruza y no se publica, y un `#[tauri::command]` sin `async` sale
 publicado como bloqueante, que es justo la trampa que cuelga la ventana.
 
+Y una tercera, más callada: tanto el extractor del `justfile` como la guarda de
+rutas del ADR-0011 reconocen el tipo por el **macro** `derive(Serialize)` escrito
+en el código, no por que implemente el rasgo. Un `impl Serialize` a mano en un
+tipo de cruce se queda fuera del contrato **y** fuera de la guarda sin que nada
+se ponga rojo; si necesitas uno, publícalo por otra vía.
+
 Las cuatro guardas de conjunto están juntas en `commands/guards.rs`, y solo dos
 piden algo de ti:
 
@@ -158,3 +164,9 @@ dentro. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
   cruzando a Java. Mover código entre módulos que llevan una de estas pruebas
   obliga a elegir entre reescribir sus aserciones o mudar el fichero entero.
   Decídelo al planificar el cambio, no al final.
+- **No todas descubren solas, y la de al lado sí.** La guarda de rutas de
+  `commands/guards.rs` encuentra por su cuenta cada tipo nuevo, y eso enseña a
+  confiar; la de `app/signing.rs` que vigila quién escribe el sello firmado lleva
+  una **lista fija** de ficheros de `app/` y de `commands/`. Un módulo nuevo de
+  `app/` que pueda escribir en la bandeja hay que añadirlo a mano a esa lista, o
+  queda sin vigilar y en verde.
