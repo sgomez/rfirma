@@ -413,11 +413,11 @@
   color: var(--rf-text);
 }
 
-/* La línea que dice la página del recuadro es pulsable cuando lleva a otra
-   página, y se alinea con el texto: lo que ofrece es ir allí. */
-.panel__placement-goto {
-  align-self: flex-start;
-  padding: 0;
+/* El botón de sellar, a todo el ancho del bloque y bajo los radios (#194).
+   Estira solo porque `.panel__placement` ya es una columna flexible con
+   `align-items: stretch` por omisión; no hace falta fijar un ancho. */
+.panel__placement-seal {
+  margin-top: 4px;
 }
 
 .panel__place-first {

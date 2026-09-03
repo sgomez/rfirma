@@ -351,26 +351,6 @@ msgstr ""
 msgid "viewer.outOfPage"
 msgstr ""
 
-#. Pastilla bajo la hoja: todavía no se ha colocado la firma en ninguna página.
-msgid "viewer.pill.notPlaced"
-msgstr ""
-
-#. Pastilla bajo la hoja: la firma está colocada, pero no en la página que se está mirando.
-msgid "viewer.pill.notSealed"
-msgstr ""
-
-#. Pastilla bajo la hoja: la página que se está mirando sí lleva la firma.
-msgid "viewer.pill.sealed"
-msgstr ""
-
-#. Botón de la pastilla: añade la página que se está mirando a las que llevan firma.
-msgid "viewer.pill.seal"
-msgstr ""
-
-#. Botón de la pastilla: quita la firma de la página que se está mirando.
-msgid "viewer.pill.unseal"
-msgstr ""
-
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
 msgstr[0] ""
@@ -382,17 +362,6 @@ msgid_plural "panel.coSignature"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
-
-#. La línea dice la página del recuadro, no la que se está mirando.
-msgid "panel.placement.notPlaced"
-msgstr ""
-
-msgid "panel.placement.here"
-msgstr ""
-
-#. {{page}} es la página donde está el recuadro. Es un botón: al pulsarlo el visor va allí.
-msgid "panel.placement.onPage"
-msgstr ""
 
 #. Rótulo del bloque con las tres opciones de en qué páginas se sella.
 msgid "panel.placement.title"
@@ -418,6 +387,18 @@ msgstr ""
 
 #. {{pages}} es el número de páginas del documento.
 msgid "panel.placement.all"
+msgstr ""
+
+#. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
+msgid "panel.placement.seal"
+msgstr ""
+
+#. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
+msgid "panel.placement.sealAll"
+msgstr ""
+
+#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+msgid "panel.placement.unseal"
 msgstr ""
 
 #. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.

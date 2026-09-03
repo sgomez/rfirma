@@ -63,7 +63,8 @@ function panelWith(props: PanelProps) {
       pageChoice="single"
       onChangePageChoice={noop}
       viewedPage={3}
-      onGoToPage={noop}
+      onSeal={noop}
+      onUnseal={noop}
       rubric={null}
       rubricFailure={null}
       onChooseRubric={noop}
@@ -161,7 +162,7 @@ describe("SigningPanel", () => {
     // El panel lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`); los 16 px
     // son de Preferencias y se piden allí con `switch--wide`.
     expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
-    expect(screen.getByText("El recuadro está en esta página")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
     for (const label of ["Firmante", "Emisor", "Fecha", "Rúbrica", "Motivo"]) {
       expect(screen.getByRole("checkbox", { name: new RegExp(label) })).toBeInTheDocument();
     }
@@ -396,11 +397,80 @@ describe("SigningPanel · Colocación", () => {
 
     expect(
       screen.getByText(
-        "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la página.",
+        "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón de sellar.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Aún no has colocado la firma")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sellar esta página" })).toBeInTheDocument();
     expect(signButton()).toBeDisabled();
+  });
+
+  /**
+   * #194: el botón vive en el bloque «Colocación», a todo el ancho y bajo los
+   * radios, y con él desaparecen los tres mensajes de colocación —incluido el
+   * que saltaba a la página del recuadro— porque su etiqueta ya cuenta lo
+   * mismo.
+   */
+  it("offers the seal button in the placement block, and none of the retired messages", () => {
+    renderPanel({ signature: visible, placement: { rect, pages: { only: [3] } }, viewedPage: 3 });
+
+    const block = screen.getByText("Colocación").closest("fieldset") as HTMLElement;
+    expect(within(block).getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
+    expect(screen.queryByText("El recuadro está en esta página")).not.toBeInTheDocument();
+    expect(screen.queryByText(/El recuadro está en la página/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Aún no has colocado la firma")).not.toBeInTheDocument();
+  });
+
+  it("seals the page it is looking at when nothing is placed yet", async () => {
+    const user = userEvent.setup();
+    const onSeal = vi.fn();
+    renderPanel({ signature: visible, placement: null, onSeal });
+
+    await user.click(screen.getByRole("button", { name: "Sellar esta página" }));
+
+    expect(onSeal).toHaveBeenCalled();
+  });
+
+  /**
+   * Con «Todas las páginas» y el recuadro sin colocar, «esta página»
+   * mentiría: el conjunto ya está completo y falta el rectángulo.
+   */
+  it("offers to place the stamp here when «all pages» is chosen and nothing is placed", () => {
+    renderPanel({ signature: visible, placement: null, pageChoice: "all" });
+
+    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
+  });
+
+  it("offers to unseal the page it is looking at when it already carries the stamp", async () => {
+    const user = userEvent.setup();
+    const onUnseal = vi.fn();
+    renderPanel({
+      signature: visible,
+      placement: { rect, pages: { only: [3] } },
+      viewedPage: 3,
+      onUnseal,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Quitar el sello" }));
+
+    expect(onUnseal).toHaveBeenCalled();
+  });
+
+  /**
+   * «Todas las páginas» no tiene conjunto propio que guardar (`storing`,
+   * `signatureBox.ts`): quitarle una página de ahí no se va a ninguna parte,
+   * `onUnseal` resolvería «todas» en sueltas y `placementOf` las recompondría
+   * en «todas» acto seguido, y el botón parecería no hacer nada. No se ofrece.
+   */
+  it("does not offer to unseal while «all pages» is chosen, even though the page carries the stamp", () => {
+    renderPanel({
+      signature: visible,
+      placement: { rect, pages: "all" },
+      pageChoice: "all",
+      viewedPage: 3,
+    });
+
+    expect(screen.queryByRole("button", { name: "Quitar el sello" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
   });
 
   it("signs invisibly with the switch off, which is the other «no» entirely", () => {
@@ -516,14 +586,14 @@ describe("SigningPanel · Colocación", () => {
     expect(onChangePageChoice).toHaveBeenCalledWith("all");
   });
 
-  it("says the page of the box and not the one on screen, and going there is one click", async () => {
+  it("offers to seal the page it is looking at, not the one the box is already on", async () => {
     const user = userEvent.setup();
-    const onGoToPage = vi.fn();
-    renderPanel({ signature: visible, viewedPage: 7, onGoToPage });
+    const onSeal = vi.fn();
+    renderPanel({ signature: visible, viewedPage: 7, onSeal });
 
-    await user.click(screen.getByRole("button", { name: "El recuadro está en la página 3" }));
+    await user.click(screen.getByRole("button", { name: "Sellar esta página" }));
 
-    expect(onGoToPage).toHaveBeenCalledWith(3);
+    expect(onSeal).toHaveBeenCalled();
   });
 
   it("warns that the repeated box is one signature field and not one per page", () => {
@@ -609,12 +679,12 @@ describe("la vista previa del sello, en el panel", () => {
 
   it("keeps the placement across a certificate that comes and goes", () => {
     const { show } = renderPanel({ signature: stamping });
-    expect(screen.getByText("El recuadro está en esta página")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
 
     show({ certificate: { kind: "empty" }, signature: stamping });
     show({ signature: stamping });
 
-    expect(screen.getByText("El recuadro está en esta página")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
   });
 
   it("says the stamp is the real one once it is composed", () => {

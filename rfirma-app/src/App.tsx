@@ -157,11 +157,14 @@ export function App({
     () => placementOf(placing.rect, placing.sets, placing.choice),
     [placing],
   );
-  // La página que se está mirando, y la petición de ir a otra. Las dos cruzan
-  // porque el panel dice **la página del recuadro** y lleva hasta ella
-  // (ID-100), y el recorrido sigue siendo del visor.
+  // La página que se está mirando: la sigue eligiendo el visor, y el panel la
+  // necesita para elegir la cara del botón de sellar (#194).
   const [viewedPage, setViewedPage] = useState(1);
-  const [goTo, setGoTo] = useState<{ page: number } | null>(null);
+  // El botón de sellar vive en el panel y actúa en el visor, que es quien
+  // tiene el `viewport` para medir la posición estándar del recuadro (#194).
+  const [placementRequest, setPlacementRequest] = useState<{
+    action: "seal" | "unseal";
+  } | null>(null);
   const [settings, setSettings] = useState<Preferences | null>(null);
   // Dónde caerá el firmado, tal y como lo cuenta el backend. Es estado y no un
   // cálculo del pie porque el nombre lo compone Rust —con el sufijo y el
@@ -757,7 +760,7 @@ export function App({
             onPlace={rememberPlacement}
             pageChoice={pageChoice}
             onPageChange={setViewedPage}
-            goToPage={goTo}
+            placementRequest={placementRequest}
             onOpen={() => void openDocument()}
             // Los dos avisos caben en el mismo sitio, y manda el del PDF: si el
             // documento que se soltó tampoco se deja pintar, eso es más urgente
@@ -809,7 +812,8 @@ export function App({
               pageChoice={pageChoice}
               onChangePageChoice={changePageChoice}
               viewedPage={viewedPage}
-              onGoToPage={(page) => setGoTo({ page })}
+              onSeal={() => setPlacementRequest({ action: "seal" })}
+              onUnseal={() => setPlacementRequest({ action: "unseal" })}
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
