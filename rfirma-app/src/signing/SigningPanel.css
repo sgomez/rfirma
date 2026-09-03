@@ -276,45 +276,6 @@
   overflow-wrap: anywhere;
 }
 
-/*
- * La vista previa del sello (ID-107). Lo que vive aquí es lo que la hoja no
- * puede decir: en qué estado está lo que se ve dentro del recuadro. El sello
- * **no** se repite en el panel; enseñarlo dos veces sería enseñarlo pequeño en
- * uno de los dos sitios.
- */
-.panel__stamp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rf-space-xs);
-  align-items: flex-start;
-}
-
-.panel__stamp-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rf-space-xs);
-  align-items: flex-start;
-  width: 100%;
-}
-
-/* La insignia del estado que no es el bueno se pinta con el borde marcado, no
-   con un color de alarma: no se ha roto nada — el ID-111 dice que se firma
-   igual—, sólo que todavía no hay sello que enseñar. */
-.panel__stamp-badge--failed,
-.panel__stamp-badge--onDemand {
-  border: 1px solid var(--rf-border-strong);
-}
-
-/* El detalle técnico crudo, en monoespaciada y sin recortar: es lo que hace
-   falta para contar el fallo, y los tres posibles siguen sin medir. */
-.panel__stamp-detail {
-  margin: 0;
-  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
-  font-size: 12px;
-  color: var(--rf-text-muted);
-  overflow-wrap: anywhere;
-}
-
 .panel__footer {
   display: flex;
   flex-direction: column;

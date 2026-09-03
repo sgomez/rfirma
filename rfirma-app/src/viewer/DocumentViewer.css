@@ -231,6 +231,42 @@
   box-shadow: var(--rf-shadow-elevated);
 }
 
+/*
+ * El estado del sello (#202): el mismo hueco que `.viewer__alert`, sobre la
+ * botonera, y no hay dos a la vez — mientras se arrastra fuera de la página
+ * manda el aviso de arriba, y esta pastilla vuelve al soltar.
+ *
+ * La altura es **fija**, tenga botón o no: `.viewer__stamp-slot` reserva su
+ * sitio incluso vacío, para no saltar al pasar de «congelado» a «sin
+ * componer» justo mientras se arrastra el recuadro.
+ */
+.viewer__stamp {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-sm);
+  height: 40px;
+  padding: 0 var(--rf-space-sm);
+  border-radius: var(--rf-radius-pill);
+  border: 1px solid var(--rf-border-strong);
+  background: var(--rf-surface);
+  box-shadow: var(--rf-shadow-elevated);
+  white-space: nowrap;
+}
+
+.viewer__stamp-line {
+  margin: 0;
+}
+
+.viewer__stamp-slot {
+  display: flex;
+  align-items: center;
+  height: 28px;
+}
+
 .viewer__bar {
   position: absolute;
   left: 50%;

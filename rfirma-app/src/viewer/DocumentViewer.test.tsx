@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
@@ -630,6 +630,143 @@ describe("el sello dentro del recuadro", () => {
 
     fireEvent.pointerUp(grip, { pointerId: 1 });
     expect(onGesture).toHaveBeenLastCalledWith(false);
+  });
+});
+
+/**
+ * ID-107, ID-108, ID-111, #202: el estado del sello, en la pastilla que flota
+ * sobre la botonera. Antes vivía en el panel, con una insignia de estado que
+ * se ha retirado; aquí es solo texto y, si hace falta, un botón.
+ */
+describe("el estado del sello, flotando sobre la botonera", () => {
+  function stampPill() {
+    return screen.queryByRole("status");
+  }
+
+  it("mounts no pill when there is nothing to say about the stamp", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(stampPill()).not.toBeInTheDocument();
+  });
+
+  it("says nothing once the stamp is up to date", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "composed" }}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(stampPill()).not.toBeInTheDocument();
+  });
+
+  it("says the frozen view is the previous one while the box is being moved", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "frozen" }}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(screen.getByText("Sello congelado mientras mueves el recuadro")).toBeInTheDocument();
+  });
+
+  it("asks for the recomposition by hand on a large document", async () => {
+    const onComposeStamp = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "onDemand" }}
+        onComposeStamp={onComposeStamp}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver cómo queda" }));
+
+    expect(onComposeStamp).toHaveBeenCalled();
+  });
+
+  /**
+   * ID-111. La vista previa **no es una puerta**: sobre si se puede firmar
+   * manda el botón de firmar, que no vive aquí.
+   */
+  it("says it could not draw the stamp, with a way to retry", async () => {
+    const onComposeStamp = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{
+          kind: "failed",
+          failure: { situation: "documentUnreadable", detail: "el documento tiene contraseña" },
+        }}
+        onComposeStamp={onComposeStamp}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(screen.getByText("No se ha podido dibujar el sello")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Volver a intentarlo" }));
+
+    expect(onComposeStamp).toHaveBeenCalled();
+  });
+
+  /**
+   * El hueco del botón queda reservado incluso vacío: dos estados sin botón
+   * —congelado y componiendo— pintan igual de elementos, y el que sí tiene
+   * botón no añade una fila nueva, solo lo rellena.
+   */
+  it("keeps the same button slot whether there is a button or not", async () => {
+    const { document, renders } = recordingDocument();
+    const { container, rerender } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "frozen" }}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    const slot = () => container.querySelector(".viewer__stamp-slot") as HTMLElement;
+    expect(slot()).toBeInTheDocument();
+    expect(within(slot()).queryByRole("button")).not.toBeInTheDocument();
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "onDemand" }}
+      />,
+    );
+
+    expect(slot()).toBeInTheDocument();
+    expect(within(slot()).getByRole("button", { name: "Ver cómo queda" })).toBeInTheDocument();
   });
 });
 
