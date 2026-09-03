@@ -478,6 +478,34 @@ describe("App", () => {
     expect(within(panel).queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  /** El recordado no escapa a la regla de «nunca se preselecciona un
+   * certificado no utilizable»: si caducó desde la última firma, el
+   * desplegable arranca sin elección, igual que si no hubiera recordado
+   * ninguno (#197). */
+  it("does not preselect the remembered certificate when it has expired since", async () => {
+    const user = userEvent.setup();
+    const expired: Certificate = {
+      ...aCertificate,
+      id: "otra",
+      holderName: "Grace Hopper Murray",
+      status: { kind: "expired", notAfter: 0 },
+      remembered: true,
+    };
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [aCertificate, expired] },
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
+
+    expect(trigger).toHaveTextContent("Elegir certificado");
+  });
+
   /** «Con uno solo se elige solo» gana una excepción: si ese único no sirve,
    * el desplegable arranca sin elección (#197). */
   it("does not preselect the sole certificate when it cannot be used", async () => {

@@ -988,20 +988,25 @@ function formatSignedAt(instant: Date, locale: string): string {
 /**
  * Con qué certificado se firma, a partir de los que hay.
  *
- * Con uno solo no se pregunta: elegir entre una cosa no es elegir, y eso
- * incluye a uno caducado —el panel lo pone y avisa de por qué no sirve—.
+ * Con uno solo no se pregunta: elegir entre una cosa no es elegir. Pero eso no
+ * vale para uno caducado —preseleccionar un certificado inservible sería
+ * elegir por la persona usuaria con qué identidad firma, y eso no lo hace la
+ * aplicación por su cuenta (#197)—, así que con uno solo inservible el
+ * desplegable arranca sin elección, igual que si no hubiera ninguno.
  *
  * Con varios manda **el que se usó la última vez** (#110): quien tiene cuatro
  * certificados los elige una vez, no cada día. Eso no contradice la regla de
  * que la aplicación no elige por su cuenta: no está eligiendo, está devolviendo
- * lo que ya se eligió firmando. Y viene con su estado de ahora, no con el de
- * entonces: si desde la última firma caducó, sale puesto y el panel avisa de
- * por qué ya no sirve, igual que hace con el único certificado de un token.
+ * lo que ya se eligió firmando. Pero viene con su estado de ahora, no con el
+ * de entonces, y la misma regla del párrafo anterior le alcanza igual: si
+ * desde la última firma caducó, no sale puesto —«nunca se preselecciona un
+ * certificado no utilizable» no tiene excepción para el recordado—, y el
+ * desplegable arranca sin elección como si no hubiera recordado ninguno.
  *
- * Sin recordado —primera vez, o el recordado ya no está en el token— sigue sin
- * haber preselección: el desplegable dice «Elegir certificado» y el botón de
- * firmar sigue apagado, porque el orden de la lista solo dice en qué orden
- * cargaron los módulos.
+ * Sin recordado —primera vez, o el recordado ya no está en el token, o ya no
+ * sirve— sigue sin haber preselección: el desplegable dice «Elegir
+ * certificado» y el botón de firmar sigue apagado, porque el orden de la
+ * lista solo dice en qué orden cargaron los módulos.
  */
 function chosenFrom(found: readonly Certificate[]): CertificateState {
   const [first] = found;
@@ -1015,7 +1020,7 @@ function chosenFrom(found: readonly Certificate[]): CertificateState {
       : { kind: "unchosen", certificates: found };
   }
   const remembered = found.find((one) => one.remembered);
-  if (remembered !== undefined) {
+  if (remembered !== undefined && isUsable(remembered.status)) {
     return { kind: "chosen", certificate: remembered, certificates: found };
   }
   return { kind: "unchosen", certificates: found };

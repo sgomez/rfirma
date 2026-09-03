@@ -57,17 +57,46 @@ describe("groupCertificates", () => {
   });
 
   it("sorts each group alphabetically by holder, in Spanish, accents and «ñ» included", () => {
-    const nino = aCertificate({ id: "a", holderName: "Niño Pérez" });
+    const alvaro = aCertificate({ id: "a", holderName: "Álvaro Núñez" });
     const zutano = aCertificate({ id: "b", holderName: "Zutano García" });
-    const alvaro = aCertificate({ id: "c", holderName: "Álvaro Núñez" });
+    const alfonso = aCertificate({ id: "c", holderName: "Alfonso Ruiz" });
 
-    const groups = groupCertificates([zutano, nino, alvaro]);
+    const groups = groupCertificates([zutano, alvaro, alfonso]);
 
+    // «Álvaro» y «Alfonso» solo se separan al comparar con `sensitivity:
+    // "base"`, que iguala la tilde con la letra sin tilde y deja decidir a la
+    // «l»/«v» siguiente: sin el `"es"` del `Intl.Collator` (o con `en`, `de`,
+    // sin locale) esta terna ya da otro orden.
     expect(groups.available.map((c) => c.holderName)).toEqual([
+      "Alfonso Ruiz",
       "Álvaro Núñez",
-      "Niño Pérez",
       "Zutano García",
     ]);
+  });
+
+  /** En la colación de `es`, la «ñ» es letra propia y ordena **después de
+   * toda la n**: en `en` es una n con tilde y el orden se invierte. Este par
+   * falla el día que alguien quite el `"es"` del `Intl.Collator`, que es
+   * justo lo que este criterio protege (#197, TD del #194). */
+  it("orders «ñ» after every plain «n», the Spanish way", () => {
+    const penz = aCertificate({ id: "a", holderName: "Penz Ruiz" });
+    const pena = aCertificate({ id: "b", holderName: "Peña Ruiz" });
+
+    const groups = groupCertificates([pena, penz]);
+
+    expect(groups.available.map((c) => c.holderName)).toEqual(["Penz Ruiz", "Peña Ruiz"]);
+  });
+
+  /** `sensitivity: "base"` iguala dos titulares que solo se distinguen por la
+   * tilde: decide entonces el desempate por almacén, no el nombre. Con el
+   * `sensitivity` por defecto ("variant") el resultado sería otro. */
+  it("treats holders that differ only by an accent as equal, deciding by store", () => {
+    const angel = aCertificate({ id: "chrome", holderName: "Ángel Ruiz", store: "chrome" });
+    const angelPlain = aCertificate({ id: "card", holderName: "Angel Ruiz", store: "card" });
+
+    const groups = groupCertificates([angel, angelPlain]);
+
+    expect(groups.available.map((c) => c.store)).toEqual(["card", "chrome"]);
   });
 
   it("breaks a tie between same-holder certificates by store", () => {
