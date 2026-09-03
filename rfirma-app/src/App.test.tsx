@@ -874,3 +874,99 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     expect(screen.queryByRole("dialog", { name: /sello/ })).not.toBeInTheDocument();
   });
 });
+
+/**
+ * El bloque «Colocación», con el visor y el panel a la vez (#185, #188).
+ *
+ * Vive en la grada A y no en el panel porque los tres caminos que colocan
+ * —arrastre, pastilla y campo— acaban en el mismo recuadro **solo si los dos
+ * componentes están montados**: el panel nombra páginas y no sabe dónde cae el
+ * rectángulo, y el visor pone el rectángulo sin saber cuál de las tres opciones
+ * manda. Probado por separado, cada uno pasaba en verde con el fallo dentro.
+ */
+describe("App · Colocación", () => {
+  const remembered: Certificate = { ...aCertificate, remembered: true };
+
+  /** Abre el documento y espera al bloque «Colocación» ya pintado. */
+  async function openPlacing() {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 8 }),
+      {},
+      { list: async () => [remembered] },
+    );
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByText("Colocación");
+    return { user, panel };
+  }
+
+  const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
+  const pill = () => screen.getByRole("button", { name: "Sellar esta página" });
+
+  it("places the box on its standard spot when a range is typed, with nothing placed yet", async () => {
+    const { user, panel } = await openPlacing();
+
+    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
+    await user.type(within(panel).getByLabelText("Páginas donde se sella"), "1");
+
+    // El recuadro cae abajo a la derecha sin que nadie lo haya arrastrado: es
+    // el ID-102 pedido desde el panel, que es lo que el #185 no hacía.
+    expect(box()).not.toBeNull();
+  });
+
+  it("places the box when «all the pages» is chosen, with nothing placed yet", async () => {
+    const { user, panel } = await openPlacing();
+
+    await user.click(within(panel).getByRole("radio", { name: /Todas las páginas/ }));
+
+    expect(box()).not.toBeNull();
+  });
+
+  it("keeps the pill saying the same thing on every option while nothing is placed", async () => {
+    const { user, panel } = await openPlacing();
+
+    expect(pill()).toBeInTheDocument();
+    // Con el campo vacío «Estas páginas» sigue sin nombrar ninguna página, que
+    // es la única opción con la que se puede comparar la pastilla (#188).
+    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
+
+    expect(pill()).toBeInTheDocument();
+  });
+
+  it("replaces the sealed page instead of adding to it under «one page only»", async () => {
+    const { user, panel } = await openPlacing();
+
+    await user.click(pill());
+    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await user.click(pill());
+
+    // Ni el aviso del recuadro repetido —que solo aparece con más de una— ni un
+    // conjunto de dos: esa opción nombra una página y nada más.
+    expect(within(panel).queryByText(/El mismo recuadro/)).toBeNull();
+    expect(within(panel).getByText("Página 2")).toBeInTheDocument();
+  });
+
+  it("gives each option its own set, so going back brings what was left there", async () => {
+    const { user, panel } = await openPlacing();
+    const field = () => within(panel).getByLabelText("Páginas donde se sella");
+
+    await user.click(pill());
+    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
+    // Se estrena sembrada de la anterior, que es lo que pide la ficha.
+    expect(field()).toHaveValue("1");
+
+    await user.clear(field());
+    await user.type(field(), "2,5");
+    await user.click(within(panel).getByRole("radio", { name: /Solo 1 página/ }));
+
+    // La suya, la 1, y no la más baja del conjunto de al lado (#188).
+    expect(within(panel).getByText("Página 1")).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
+
+    expect(field()).toHaveValue("2,5");
+  });
+});

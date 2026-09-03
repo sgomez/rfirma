@@ -410,10 +410,6 @@ msgstr "This page is stamped"
 msgid "viewer.pill.seal"
 msgstr "Stamp this page"
 
-#. Botón de la pastilla cuando se firman todas las páginas: solo falta decir dónde va el recuadro, así que no se nombra «esta página».
-msgid "viewer.pill.placeHere"
-msgstr "Place the stamp here"
-
 #. Botón de la pastilla: quita la firma de la página que se está mirando.
 msgid "viewer.pill.unseal"
 msgstr "Remove the stamp"

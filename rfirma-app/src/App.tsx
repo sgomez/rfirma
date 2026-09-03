@@ -34,10 +34,19 @@ import {
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import {
+  activating,
   firstSealedPage,
+  NO_PAGE_SETS,
   type PageChoice,
+  type PageSet,
+  type PageSets,
   type Placement,
+  pagesOf,
+  placementOf,
   sealedPages,
+  standardRectOf,
+  storing,
+  type UserSpaceRect,
 } from "./viewer/signatureBox";
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
@@ -131,11 +140,23 @@ export function App({
   // Dónde va la firma visible. Vive aquí y no en el visor porque el panel de
   // firma —su sub-issue— es quien dirá qué se pinta dentro del recuadro, y los
   // dos tienen que estar mirando el mismo.
-  const [placement, setPlacement] = useState<Placement | null>(null);
-  // Cuál de las tres opciones del bloque «Colocación» manda sobre el conjunto
-  // (ID-97). Vive aquí porque el visor también la lee: es quien redacta la
-  // pastilla, y con «solo 1 página» o «todas» no ofrece quitar el sello.
-  const [pageChoice, setPageChoice] = useState<PageChoice>("single");
+  //
+  // **No es un `Placement`, son tres y un rectángulo** (#188): el recuadro es
+  // uno solo y las tres opciones del bloque «Colocación» guardan cada una su
+  // conjunto. `placement` —lo que ve el resto de la ventana y lo que cruza a
+  // firmar— es el recuadro con el conjunto de la opción activa, y por eso se
+  // deriva en vez de guardarse: dos copias del mismo dato es de dónde salían
+  // las páginas que se sumaban solas en `Solo 1 página`.
+  const [placing, setPlacing] = useState<Placing>({
+    rect: null,
+    sets: NO_PAGE_SETS,
+    choice: "single",
+  });
+  const pageChoice = placing.choice;
+  const placement = useMemo(
+    () => placementOf(placing.rect, placing.sets, placing.choice),
+    [placing],
+  );
   // La página que se está mirando, y la petición de ir a otra. Las dos cruzan
   // porque el panel dice **la página del recuadro** y lleva hasta ella
   // (ID-100), y el recorrido sigue siendo del visor.
@@ -278,7 +299,7 @@ export function App({
       setPdf(null);
       setPdfFailure(null);
       setSizeBytes(null);
-      setPlacement(null);
+      setPlacing({ rect: null, sets: NO_PAGE_SETS, choice: "single" });
       return;
     }
     let current = true;
@@ -287,7 +308,11 @@ export function App({
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
       setSizeBytes(opened.ok ? opened.sizeBytes : null);
-      setPlacement(active.placement);
+      // La fila guarda **una** colocación, que es lo que se firmó: al reabrir
+      // se reparte en la opción que la explica, y las otras dos arrancan sin
+      // conjunto propio para que la primera vez que se elijan se siembren de
+      // esta (ID-74).
+      setPlacing(placingFrom(active.placement, opened.ok ? opened.pdf.pageCount : 0));
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
       setSigningInstant(new Date());
@@ -301,14 +326,75 @@ export function App({
   // (ID-74): así el mismo contrato reabierto mañana vuelve a su página y a su
   // posición, y el siguiente documento arranca con el suyo.
   const placeDocument = documents.place;
-  const rememberPlacement = useCallback(
-    // `null` es quitar el sello de la última página del conjunto: el documento
-    // vuelve al estado de recién abierto, y su fila lo olvida (ID-92).
-    (next: Placement | null) => {
-      setPlacement(next);
-      void placeDocument(next);
+  const pageCount = pdf?.pageCount ?? 0;
+  // El único camino por el que la colocación cambia: fija las tres piezas y
+  // apunta en la fila **lo que la opción activa deja ver**, que es lo que se
+  // firmaría si se firmara ahora.
+  const apply = useCallback(
+    (next: Placing) => {
+      setPlacing(next);
+      void placeDocument(placementOf(next.rect, next.sets, next.choice));
     },
     [placeDocument],
+  );
+
+  /**
+   * Lo mismo, pero **poniendo el recuadro si no hay ninguno** (#185).
+   *
+   * Es la mitad que le faltaba al bloque «Colocación»: elegir una opción o
+   * teclear un rango sobre un documento sin recuadro ya no se queda esperando
+   * un gesto sobre la hoja, deja el recuadro en su posición estándar. La página
+   * que lo mide es la primera del conjunto, la misma que mide la firma (ID-96).
+   */
+  const placeStandard = useCallback(
+    async (next: Placing) => {
+      const pages = pagesOf(next.sets, next.choice);
+      if (next.rect !== null || pages === null || pdf === null) return apply(next);
+      const first = sealedPages(pages, pdf.pageCount)[0] ?? 1;
+      const page = await pdf.getPage(first);
+      apply({ ...next, rect: standardRectOf(page.getViewport({ scale: 1 })) });
+    },
+    [apply, pdf],
+  );
+
+  // Lo que llega del visor: colocar, mover o redimensionar el recuadro y tocar
+  // el conjunto **de la opción activa**. `null` es quitar el sello de la última
+  // página de esa opción; las otras dos conservan el suyo (ID-92, #188).
+  const rememberPlacement = useCallback(
+    (next: Placement | null) => {
+      apply({
+        rect: next?.rect ?? placing.rect,
+        sets: storing(placing.sets, placing.choice, next?.pages ?? null, pageCount),
+        choice: placing.choice,
+      });
+    },
+    [apply, placing, pageCount],
+  );
+
+  // Lo que llega del panel: solo el conjunto de la opción activa cambia, y el
+  // recuadro nace si no había ninguno.
+  const choosePages = useCallback(
+    (pages: PageSet | null) => {
+      void placeStandard({
+        ...placing,
+        sets: storing(placing.sets, placing.choice, pages, pageCount),
+      });
+    },
+    [placeStandard, placing, pageCount],
+  );
+
+  // Cambiar de opción **no reescribe la que dejas**: la nueva trae lo suyo, y
+  // solo se siembra de la anterior si se estrena (#188).
+  const changePageChoice = useCallback(
+    (choice: PageChoice) => {
+      const previous = pagesOf(placing.sets, placing.choice);
+      void placeStandard({
+        rect: placing.rect,
+        sets: activating(placing.sets, choice, previous, pageCount, viewedPage),
+        choice,
+      });
+    },
+    [placeStandard, placing, pageCount, viewedPage],
   );
 
   // El arrastre. Desemboca en el mismo sitio que el diálogo —`accept` es la
@@ -715,9 +801,10 @@ export function App({
               signature={signature}
               onChangeSignature={setSignature}
               placement={placement}
-              onPlace={rememberPlacement}
+              pageSets={placing.sets}
+              onChoosePages={choosePages}
               pageChoice={pageChoice}
-              onChangePageChoice={setPageChoice}
+              onChangePageChoice={changePageChoice}
               viewedPage={viewedPage}
               onGoToPage={(page) => setGoTo({ page })}
               rubric={rubric}
@@ -780,6 +867,39 @@ export function App({
       )}
     </>
   );
+}
+
+/**
+ * La colocación **entera**, tal y como la guarda la ventana (#188).
+ *
+ * Un rectángulo, tres conjuntos —uno por opción— y cuál de ellas manda. Lo que
+ * cruza a firmar es el `Placement` que sale de las tres, no esto: aquí vive el
+ * estado de la interfaz, y ahí fuera solo se puede firmar en un sitio.
+ */
+interface Placing {
+  rect: UserSpaceRect | null;
+  sets: PageSets;
+  choice: PageChoice;
+}
+
+/**
+ * La colocación guardada en la fila, repartida en las tres opciones (ID-74).
+ *
+ * La opción activa es **la que explica el conjunto sin inventar nada**: una
+ * página sola es `Solo 1 página`, la palabra `"all"` es `Todas las páginas` y
+ * cualquier otra cosa es `Estas páginas`. Las demás arrancan vacías a propósito
+ * —no se rellenan «por si acaso»— para que la primera vez que se elijan se
+ * siembren de esta, que es lo que pide la ficha.
+ */
+function placingFrom(placement: Placement | null, pageCount: number): Placing {
+  if (placement === null) return { rect: null, sets: NO_PAGE_SETS, choice: "single" };
+  const { rect, pages } = placement;
+  if (pages === "all") return { rect, sets: NO_PAGE_SETS, choice: "all" };
+  const only = sealedPages(pages, pageCount);
+  if (only.length === 1 && only[0] !== undefined) {
+    return { rect, sets: { single: only[0], these: null }, choice: "single" };
+  }
+  return { rect, sets: { single: null, these: pages }, choice: "these" };
 }
 
 /**

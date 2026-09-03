@@ -223,17 +223,22 @@ tres caras:
 
 | Cuándo | Texto | Botón |
 | --- | --- | --- |
-| Nada colocado | «Aún no has colocado la firma» | `Sellar esta página`, primario — o `Colocar el sello aquí` con `Todas las páginas` |
+| Nada colocado | «Aún no has colocado la firma» | `Sellar esta página`, primario |
 | Colocado, y esta página no está en el conjunto | «Esta página no se sella» | `Sellar esta página`, secundario |
 | Colocado, esta página está en el conjunto, opción `Estas páginas` | «Esta página se sella» | `Quitar el sello`, fantasma |
 
 Con `Solo 1 página` o `Todas las páginas` y la página ya sellada, **no hay
 pastilla**: no queda nada que ofrecer ahí.
 
-**El botón cambia de texto con la opción.** Con `Todas las páginas` dice
-«Colocar el sello aquí» y no «Sellar esta página», porque el conjunto ya está
-completo y lo único que falta es el rectángulo: decir «esta» prometería una
-página cuando se sellan las 27.
+**El botón no cambia de texto con la opción** (#188). Hasta la v0.3 tenía una
+cuarta redacción, «Colocar el sello aquí» con `Todas las páginas`, y sobre un
+documento sin colocar era una diferencia sin diferencia detrás: sin recuadro,
+«todas» todavía no sella nada —es una preferencia—, y la misma hoja ofrecía dos
+botones distintos según qué radio estuviera marcado en la columna de al lado.
+
+**Con `Solo 1 página` sellar sustituye**, no añade: esa opción nombra una página,
+y sellar la 2 deja la 2 y quita el sello de la 1. Con las otras dos, la página se
+añade al conjunto.
 
 Es el único camino para elegir páginas que no pasa por teclear, y el que hace
 que las páginas se elijan **mirándolas**. Pulsar reescribe el campo del panel.

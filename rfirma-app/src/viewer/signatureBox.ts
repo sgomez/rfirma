@@ -283,3 +283,108 @@ export function resizedBy(
     height,
   };
 }
+
+/**
+ * El conjunto que guarda **cada opción** del bloque «Colocación» (#188).
+ *
+ * Las tres opciones no se turnan sobre un mismo conjunto: cada una recuerda el
+ * suyo, y elegir otra **no reescribe la que dejas**. Sin esto, sellar la 2 en
+ * `Solo 1 página` se sumaba a la 1 en vez de sustituirla, y volver a `Estas
+ * páginas` traía lo que hubiera dejado la opción anterior en vez del rango que
+ * se tecleó allí.
+ *
+ * `all` no necesita hueco: su conjunto es la palabra `"all"` y no hay nada que
+ * recordar. `single` guarda **un número** y no un `PageSet` porque una página
+ * es lo único que esa opción puede llegar a nombrar; el tipo lo dice mejor que
+ * una invariante escrita al lado.
+ *
+ * El **recuadro es uno solo** y no vive aquí: es el mismo rectángulo mirado
+ * desde las tres opciones, y cambiar de opción no lo mueve.
+ */
+export interface PageSets {
+  single: number | null;
+  these: PageSet | null;
+}
+
+/** El documento recién abierto: ninguna opción ha nombrado todavía una página. */
+export const NO_PAGE_SETS: PageSets = { single: null, these: null };
+
+/** El conjunto de la opción activa, que es el único que manda sobre la firma. */
+export function pagesOf(sets: PageSets, choice: PageChoice): PageSet | null {
+  if (choice === "all") return "all";
+  if (choice === "these") return sets.these;
+  return sets.single === null ? null : { only: [sets.single] };
+}
+
+/**
+ * La colocación que ve el resto de la ventana: el recuadro compartido y el
+ * conjunto de la opción activa.
+ *
+ * Sigue valiendo el ID-92 —colocado es tener páginas—, solo que ahora «tener
+ * páginas» se pregunta **por opción**: con el recuadro puesto y `Estas páginas`
+ * sin rango, no hay colocación aunque `single` sí tenga la suya.
+ */
+export function placementOf(
+  rect: UserSpaceRect | null,
+  sets: PageSets,
+  choice: PageChoice,
+): Placement | null {
+  if (rect === null) return null;
+  const pages = pagesOf(sets, choice);
+  return pages === null ? null : { rect, pages };
+}
+
+/** Guarda `pages` en la opción activa. Las otras dos **no se tocan**. */
+export function storing(
+  sets: PageSets,
+  choice: PageChoice,
+  pages: PageSet | null,
+  pageCount: number,
+): PageSets {
+  // «Todas» no tiene conjunto que guardar: es la palabra, siempre la misma.
+  if (choice === "all") return sets;
+  if (choice === "these") return { ...sets, these: pages };
+  return { ...sets, single: pages === null ? null : (sealedPages(pages, pageCount)[0] ?? null) };
+}
+
+/**
+ * La opción que se activa, sembrada **solo si nunca tuvo conjunto propio**.
+ *
+ * Es la mitad que sigue debiéndose a la ficha: estrenar `Estas páginas` viniendo
+ * de `Solo 1 página` = 3 arranca con `3` escrito. Lo que ya no ocurre es lo
+ * contrario —volver a una opción que ya se usó trae **lo suyo**, no lo de la
+ * anterior—, y por eso la siembra mira primero si hay algo guardado.
+ *
+ * `fallback` es la página que se está mirando: la única respuesta razonable
+ * cuando `Solo 1 página` se estrena sin nada colocado en ninguna parte.
+ */
+export function activating(
+  sets: PageSets,
+  choice: PageChoice,
+  previous: PageSet | null,
+  pageCount: number,
+  fallback: number,
+): PageSets {
+  if (choice === "all") return sets;
+  if (choice === "these") {
+    return sets.these === null ? { ...sets, these: previous } : sets;
+  }
+  if (sets.single !== null) return sets;
+  const first = previous === null ? null : (sealedPages(previous, pageCount)[0] ?? null);
+  return { ...sets, single: first ?? fallback };
+}
+
+/**
+ * La **posición estándar en espacio de usuario**, que es la que puede pedir
+ * quien no pinta nada (ID-102, #185).
+ *
+ * El issue #185 daba por hecho que colocar desde el panel exigía una costura
+ * nueva con el visor «porque el viewport no sale de ahí». No es cierto: el
+ * viewport a escala 1 lo da la propia página de `pdf.js`, y con él la posición
+ * estándar sale de las dos funciones que ya existían, rotación incluida y sin
+ * una segunda tabla por `/Rotate` —que es justo lo que la cabecera de este
+ * módulo prohíbe—.
+ */
+export function standardRectOf(viewport: Viewport): UserSpaceRect {
+  return toUserSpace(viewport, standardBox(viewport));
+}

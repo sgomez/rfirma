@@ -3,7 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import type { PageChoice, Placement } from "../viewer/signatureBox";
+import {
+  activating,
+  type PageChoice,
+  type PageSet,
+  type PageSets,
+  pagesOf,
+  placementOf,
+  storing,
+} from "../viewer/signatureBox";
 import type { Certificate } from "./certificate";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
@@ -50,7 +58,8 @@ function panelWith(props: PanelProps) {
       signature={DEFAULT_VISIBLE_SIGNATURE}
       onChangeSignature={noop}
       placement={{ rect, pages: { only: [3] } }}
-      onPlace={noop}
+      pageSets={{ single: 3, these: null }}
+      onChoosePages={noop}
       pageChoice="single"
       onChangePageChoice={noop}
       viewedPage={3}
@@ -79,34 +88,44 @@ function renderPanel(props: PanelProps = {}) {
 }
 
 /**
- * El panel con el `placement` de verdad detrás, que es como vive en `App.tsx`.
+ * El panel con **las tres opciones de verdad** detrás, que es como vive en
+ * `App.tsx` desde el #188.
  *
  * Teclear en el campo son varias pulsaciones seguidas y cada una emite el
  * conjunto: con un espía que no lo aplica, la segunda pulsación escribiría
  * sobre un panel que sigue viendo el conjunto viejo, y lo que se probaría sería
- * el espía.
+ * el espía. El recuadro es fijo porque el panel ya no lo compone: solo nombra
+ * páginas, y quién las convierte en rectángulo es cosa de `App.tsx`.
  */
 function renderLivePanel(props: PanelProps = {}) {
-  const placed: (Placement | null)[] = [];
+  const chosen: (PageSet | null)[] = [];
   function Live() {
-    const [placement, setPlacement] = useState<Placement | null>({ rect, pages: { only: [3] } });
+    const choice = props.pageChoice ?? "single";
+    const [sets, setSets] = useState<PageSets>({
+      single: 3,
+      these: choice === "these" ? { only: [3] } : null,
+    });
     // La opción elegida también vive fuera del panel, como en `App.tsx`: sin
     // eso, volver a pulsar «Solo 1 página» no dispara nada —el radio sigue
     // marcado— y el viaje de ida y vuelta no se podría probar.
-    const [pageChoice, setPageChoice] = useState<PageChoice>(props.pageChoice ?? "single");
+    const [pageChoice, setPageChoice] = useState<PageChoice>(choice);
     return panelWith({
       ...props,
-      placement,
-      onPlace: (next) => {
-        placed.push(next);
-        setPlacement(next);
+      placement: placementOf(rect, sets, pageChoice),
+      pageSets: sets,
+      onChoosePages: (next) => {
+        chosen.push(next);
+        setSets(storing(sets, pageChoice, next, 27));
       },
       pageChoice,
-      onChangePageChoice: setPageChoice,
+      onChangePageChoice: (next) => {
+        setSets(activating(sets, next, pagesOf(sets, pageChoice), 27, 3));
+        setPageChoice(next);
+      },
     });
   }
   renderWithCatalog(<Live />);
-  return { placed };
+  return { chosen };
 }
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
@@ -397,33 +416,34 @@ describe("SigningPanel · Colocación", () => {
   });
 
   it("does not lose the placement when the switch goes off and on again", () => {
-    const onPlace = vi.fn();
-    const { show } = renderPanel({ signature: visible, onPlace });
+    const onChoosePages = vi.fn();
+    const { show } = renderPanel({ signature: visible, onChoosePages });
 
-    show({ signature: { ...visible, enabled: false }, onPlace });
-    show({ signature: visible, onPlace });
+    show({ signature: { ...visible, enabled: false }, onChoosePages });
+    show({ signature: visible, onChoosePages });
 
-    expect(onPlace).not.toHaveBeenCalled();
+    expect(onChoosePages).not.toHaveBeenCalled();
     expect(screen.getByText("Página 3")).toBeInTheDocument();
   });
 
   it("seals what the field says, in the everyday print format", () => {
-    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+    const { chosen } = renderLivePanel({ signature: visible, pageChoice: "these" });
 
     fireEvent.change(field(), { target: { value: "1,2-3,10-20" } });
 
-    expect(placed.at(-1)).toEqual({
-      rect,
-      pages: { only: [1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
+    expect(chosen.at(-1)).toEqual({
+      only: [1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
     });
     expect(field()).toHaveValue("1,2-3,10-20");
   });
 
   it("echoes the pages it is going to seal instead of leaving the field to be read", () => {
+    const sealed = { only: [1, 2, 3, 10, 11, 12, 13, 14] };
     renderPanel({
       signature: visible,
       pageChoice: "these",
-      placement: { rect, pages: { only: [1, 2, 3, 10, 11, 12, 13, 14] } },
+      placement: { rect, pages: sealed },
+      pageSets: { single: 1, these: sealed },
     });
 
     expect(
@@ -437,57 +457,68 @@ describe("SigningPanel · Colocación", () => {
     ["99", "El documento tiene 27 páginas y has escrito hasta la 99."],
     ["1;2", "«1;2» no se entiende. Números y rangos separados por comas: 1,2-3,10-20."],
   ])("turns the sign button off and says why for %s", (typed, said) => {
-    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+    const { chosen } = renderLivePanel({ signature: visible, pageChoice: "these" });
 
     fireEvent.change(field(), { target: { value: typed } });
 
     expect(screen.getByText(said)).toBeInTheDocument();
     expect(signButton()).toBeDisabled();
     // Nada se aplica a medias: el conjunto se queda como estaba (ID-22).
-    expect(placed).toEqual([]);
+    expect(chosen).toEqual([]);
   });
 
   it("rewrites the field when a page is unsealed from the viewer (ID-99)", () => {
     const props = { signature: visible, pageChoice: "these" as const };
+    const sealed = { only: [3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] };
     const { show } = renderPanel({
       ...props,
-      placement: { rect, pages: { only: [3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] } },
+      placement: { rect, pages: sealed },
+      pageSets: { single: 3, these: sealed },
     });
 
     expect(field()).toHaveValue("3,10-20");
 
-    show({
-      ...props,
-      placement: { rect, pages: { only: [3, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20] } },
-    });
+    const rest = { only: [3, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20] };
+    show({ ...props, placement: { rect, pages: rest }, pageSets: { single: 3, these: rest } });
 
     expect(field()).toHaveValue("3,10-11,13-20");
   });
 
-  it("keeps the page of the box when the option changes", async () => {
+  /**
+   * Elegir una opción **es solo elegirla** (#188). El conjunto de cada una lo
+   * guarda quien las tiene las tres, y mientras el panel emitía además un
+   * conjunto por su cuenta, la opción que dejabas se reescribía con la que
+   * llegaba: de ahí salía que `Solo 1 página` y `Estas páginas` compartieran
+   * estado.
+   */
+  it("asks for the option and does not decide the set that goes with it", async () => {
     const user = userEvent.setup();
-    const onPlace = vi.fn();
+    const onChoosePages = vi.fn();
+    const onChangePageChoice = vi.fn();
     renderPanel({
       signature: visible,
       pageChoice: "these",
       placement: { rect, pages: { only: [3, 10, 11] } },
-      onPlace,
+      pageSets: { single: 3, these: { only: [3, 10, 11] } },
+      onChoosePages,
+      onChangePageChoice,
     });
 
     await user.click(screen.getByRole("radio", { name: /Solo 1 página/ }));
 
-    expect(onPlace).toHaveBeenLastCalledWith({ rect, pages: { only: [3] } });
+    expect(onChangePageChoice).toHaveBeenCalledWith("single");
+    expect(onChoosePages).not.toHaveBeenCalled();
   });
 
   it("names every page of the document when «all» is chosen", async () => {
     const user = userEvent.setup();
-    const onPlace = vi.fn();
-    renderPanel({ signature: visible, onPlace });
+    const onChangePageChoice = vi.fn();
+    renderPanel({ signature: visible, onChangePageChoice });
 
     expect(screen.getByRole("radio", { name: /Todas las páginas \(27\)/ })).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: /Todas las páginas/ }));
 
-    expect(onPlace).toHaveBeenLastCalledWith({ rect, pages: "all" });
+    expect(onChangePageChoice).toHaveBeenCalledWith("all");
   });
 
   it("says the page of the box and not the one on screen, and going there is one click", async () => {
@@ -507,24 +538,25 @@ describe("SigningPanel · Colocación", () => {
   });
 
   /**
-   * ID-97, el viaje completo. Con «todas» el conjunto ya no nombra la página
-   * del gesto, así que la única forma de que vuelva es el ancla: la ida
-   * `single(3)` → `all` no la puede perder, y la vuelta tiene que sellar la 3 y
-   * no la 1, que es la más baja del conjunto por casualidad.
+   * ID-97 y #188, el viaje completo. Con «todas» el conjunto activo ya no
+   * nombra la página del gesto, y la que vuelve al elegir «Solo 1 página» es
+   * **la que esa opción guarda**, no la más baja del conjunto por casualidad.
+   * Su pie la dice todo el rato, incluso mientras manda otra opción.
    */
   it("keeps the page of the box on the round trip single, all and single again", async () => {
     const user = userEvent.setup();
-    const { placed } = renderLivePanel({ signature: visible });
+    renderLivePanel({ signature: visible });
 
     await user.click(screen.getByRole("radio", { name: /Todas las páginas/ }));
 
-    expect(placed.at(-1)).toEqual({ rect, pages: "all" });
+    expect(screen.getByText(/en las 27 páginas/)).toBeInTheDocument();
     // El pie de «Solo 1 página» sigue diciendo la página del gesto original.
     expect(screen.getByText("Página 3")).toBeInTheDocument();
 
     await user.click(screen.getByRole("radio", { name: /Solo 1 página/ }));
 
-    expect(placed.at(-1)).toEqual({ rect, pages: { only: [3] } });
+    expect(screen.queryByText(/en las 27 páginas/)).not.toBeInTheDocument();
+    expect(screen.getByText("Página 3")).toBeInTheDocument();
   });
 
   /**
@@ -534,18 +566,18 @@ describe("SigningPanel · Colocación", () => {
    * sobre la hoja.
    */
   it("says the empty field instead of taking the box away with it", () => {
-    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+    const { chosen } = renderLivePanel({ signature: visible, pageChoice: "these" });
 
     fireEvent.change(field(), { target: { value: "" } });
 
-    expect(placed).toEqual([]);
+    expect(chosen).toEqual([]);
     expect(screen.getByText("Escribe en qué páginas se sella: 1,2-3,10-20.")).toBeInTheDocument();
     expect(signButton()).toBeDisabled();
 
     // Y el campo devuelve el recuadro, con el mismo sitio y el mismo tamaño.
     fireEvent.change(field(), { target: { value: "5" } });
 
-    expect(placed.at(-1)).toEqual({ rect, pages: { only: [5] } });
+    expect(chosen.at(-1)).toEqual({ only: [5] });
   });
 });
 

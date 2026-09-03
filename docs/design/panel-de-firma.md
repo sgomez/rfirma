@@ -315,13 +315,37 @@ abajo a la derecha, a un 8 % del ancho y del alto desde el borde. Solo el
 arrastre elige sitio; los otros dos caminos tienen que poner el recuadro en
 algún lado, y ese es el sitio menos malo — es donde va una firma en un papel.
 
-### Al cambiar de opción sobrevive la página del recuadro
+La página que mide esa posición es **la primera del conjunto**, la misma que
+mide la firma de verdad. El panel no la mide: solo nombra páginas, y quién
+convierte un conjunto en un rectángulo es quien tiene el documento abierto.
 
-De `Estas páginas` = {3, 10…20} a `Solo 1 página` queda **la 3**, la del gesto
-original, no la que estés mirando ni la más baja del conjunto por casualidad. El
-número del pie ya venía diciendo esa página, así que cambiar de opción no lo
-mueve y no hay sorpresa. De `Solo 1 página` a `Estas páginas`, el campo arranca
-con esa misma página escrita.
+### Cada opción guarda su conjunto
+
+**Las tres opciones no se turnan sobre un mismo conjunto: cada una recuerda el
+suyo.** `Solo 1 página` guarda una página, `Estas páginas` guarda su rango y
+`Todas las páginas` no tiene nada que guardar. Elegir otra opción **no reescribe
+la que dejas**, y la firma se ve según la que manda en ese momento.
+
+El **recuadro es uno solo**, y es lo único que las tres comparten: cambiar de
+opción no lo mueve ni lo redimensiona, solo cambia en qué páginas cae.
+
+**La primera vez que se elige una opción se siembra de la anterior**, que es lo
+que hace que el cambio no sorprenda: de `Solo 1 página` = 3 a `Estas páginas`, el
+campo arranca con `3` escrito. A partir de ahí es suyo — si allí se teclea
+`2,5`, volver a `Solo 1 página` deja **la 3**, la que esa opción tenía, y no la
+más baja del rango de al lado. `Todas las páginas` no se lleva nada consigo, así
+que el viaje de ida y vuelta devuelve la página del gesto original.
+
+Con `Solo 1 página` **sellar sustituye**. La pastilla bajo la hoja añade páginas
+al conjunto con las otras dos opciones, pero una opción que se llama «solo 1» no
+puede acabar nombrando tres: sellar la 2 deja la 2, y la 1 se queda sin sello.
+Lo que estaba escrito en `Estas páginas` sigue ahí, intacto, esperando a que la
+elijan.
+
+Esto sustituye a lo que la ficha decía hasta el #188 —«al cambiar de opción
+sobrevive la página del recuadro», con un ancla y un solo conjunto detrás—. Con
+un conjunto compartido, `Solo 1 página` acumulaba páginas y las dos opciones se
+pisaban el estado; ninguna de las dos cosas se veía leyendo la regla del ancla.
 
 ### Ni medidas escritas ni línea de ayuda
 

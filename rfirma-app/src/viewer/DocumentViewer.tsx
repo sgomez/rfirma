@@ -460,7 +460,15 @@ export function DocumentViewer({
     if (!viewport) return;
     setOutOfPage(false);
     if (placement !== null) {
-      onPlace(sealing(placement, page));
+      // Con `Solo 1 página` sellar **sustituye**: esa opción no puede nombrar
+      // dos, y sumar aquí dejaba la 1 y la 2 selladas a la vez con el panel
+      // diciendo «Página 1» (#188). Con las otras dos se añade, que es lo que
+      // significan.
+      onPlace(
+        pageChoice === "single"
+          ? { ...placement, pages: { only: [page] } }
+          : sealing(placement, page),
+      );
       return;
     }
     onPlace({
@@ -596,9 +604,13 @@ export function DocumentViewer({
    */
   const pill = ((): { text: string; label: string; variant: string; act: () => void } | null => {
     if (placement === null) {
+      // **Sin recuadro el rótulo no cambia con la opción** (#188): «todas»
+      // todavía no es un conjunto, es una preferencia, y decir aquí «Colocar el
+      // sello aquí» con «Estas páginas» diciendo «Sellar esta página» en la
+      // misma hoja era una diferencia sin diferencia detrás.
       return {
         text: t("viewer.pill.notPlaced"),
-        label: pageChoice === "all" ? t("viewer.pill.placeHere") : t("viewer.pill.seal"),
+        label: t("viewer.pill.seal"),
         variant: "rf-btn--primary",
         act: seal,
       };
