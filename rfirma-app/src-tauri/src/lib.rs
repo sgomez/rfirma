@@ -154,7 +154,6 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_certificates,
-            commands::compose_visible_text,
             commands::begin_signing,
             commands::sign_with_pin,
             commands::finish_signing,

@@ -20,8 +20,8 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (926), `app/documents.rs` (779), `app/signing.rs` (718)
-  y `app/recents.rs` (603). El mayor de `commands/` es `commands/mod.rs` (598);
+  `signing/placement.rs` (926), `app/documents.rs` (779), `app/signing.rs` (691)
+  y `app/recents.rs` (603). El mayor de `commands/` es `commands/mod.rs` (589);
   ninguno de sus hermanos pasa de 406, y lo que los hace crecer es **prosa**:
   los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
   es un cuerpo, lo que ha entrado casi siempre es una decisión, y una decisión
@@ -38,7 +38,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 598 | **Las veintidós órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/mod.rs` | 589 | **Las veintiuna órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 366 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
@@ -48,7 +48,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/mod.rs` | 190 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 578 | Qué certificados hay, cuál eligió la ventana, cuál se recordó y qué estampa el recuadro. |
-| `app/signing.rs` | 718 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/signing.rs` | 691 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 779 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |

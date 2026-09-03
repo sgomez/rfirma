@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son veintidós, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son veintiuna, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -131,16 +131,7 @@ pub fn list_certificates(
     )
 }
 
-/// **Orden 2.** El texto del recuadro, ya compuesto, para la vista previa.
-#[tauri::command]
-pub fn compose_visible_text(
-    order: SigningOrder,
-    environment: State<'_, Environment>,
-) -> Result<String, Failure> {
-    app::signing::visible_text(&order, &environment.stores, &environment.listed)
-}
-
-/// **Orden 3.** Prefirma: cruza la frontera y deja el ciclo abierto.
+/// **Orden 2.** Prefirma: cruza la frontera y deja el ciclo abierto.
 #[tauri::command]
 pub fn begin_signing(
     order: SigningOrder,
@@ -159,7 +150,7 @@ pub fn begin_signing(
     )
 }
 
-/// **Orden 4.** Firma en el token, con el PIN que se acaba de teclear.
+/// **Orden 3.** Firma en el token, con el PIN que se acaba de teclear.
 ///
 /// El PIN entra por aquí y no se guarda en ningún sitio: ni en la sesión, ni en
 /// el registro, ni de vuelta a la ventana (ADR-0001).
@@ -168,7 +159,7 @@ pub fn sign_with_pin(pin: String, session: State<'_, SigningSession>) -> Result<
     app::signing::sign_on_token(&session, &pin)
 }
 
-/// **Orden 5.** Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
+/// **Orden 4.** Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
 #[tauri::command]
 pub fn finish_signing(
     environment: State<'_, Environment>,
@@ -184,13 +175,13 @@ pub fn finish_signing(
     )
 }
 
-/// **Orden 6.** Cancelar: se olvida el ciclo a medias.
+/// **Orden 5.** Cancelar: se olvida el ciclo a medias.
 #[tauri::command]
 pub fn cancel_signing(session: State<'_, SigningSession>) {
     app::signing::cancel(&session);
 }
 
-/// **Orden 7.** Abre el diálogo del sistema y apunta lo que el portal conceda.
+/// **Orden 6.** Abre el diálogo del sistema y apunta lo que el portal conceda.
 ///
 /// El diálogo se abre **desde aquí y no desde el frontal** (ID-63): así la
 /// ventana sigue con un solo fichero que conoce `invoke`, y la lista de
@@ -235,7 +226,7 @@ pub fn open_document(
     )))
 }
 
-/// **Orden 8.** Los bytes del documento abierto, **como bytes** (ID-66).
+/// **Orden 7.** Los bytes del documento abierto, **como bytes** (ID-66).
 ///
 /// Devuelve una [`tauri::ipc::Response`] y no un `Vec<u8>`: serializado a JSON,
 /// un PDF de unos pocos megabytes se convierte en un array de miles de números
@@ -252,7 +243,7 @@ pub fn read_document(
     )?))
 }
 
-/// **Orden 9.** Lo que hay guardado, para pintar Preferencias al abrir.
+/// **Orden 8.** Lo que hay guardado, para pintar Preferencias al abrir.
 ///
 /// Lee de la copia viva y no del disco: el fichero se leyó una vez al arrancar
 /// (`lib.rs`), y volver a leerlo aquí abriría la puerta a que la ventana y las
@@ -262,7 +253,7 @@ pub fn read_configuration(environment: State<'_, Environment>) -> ConfigurationV
     app::configuration::shown(&environment.configuration(), &environment.documents_folder)
 }
 
-/// **Orden 10.** Guarda lo que el usuario acaba de elegir.
+/// **Orden 9.** Guarda lo que el usuario acaba de elegir.
 #[tauri::command(async)]
 pub fn write_configuration(
     configuration: ConfigurationView,
@@ -275,7 +266,7 @@ pub fn write_configuration(
     )
 }
 
-/// **Orden 11.** Olvida lo acumulado: los recientes y el certificado.
+/// **Orden 10.** Olvida lo acumulado: los recientes y el certificado.
 ///
 /// Es «Vaciar la lista» y también lo que arrastra apagar «Recordar mi
 /// actividad» (ID-34): las dos son la misma promesa y por eso son la misma
@@ -285,7 +276,7 @@ pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failur
     app::configuration::forget_activity(&environment.memory)
 }
 
-/// **Orden 12.** La bandeja entera, la más reciente primero.
+/// **Orden 11.** La bandeja entera, la más reciente primero.
 ///
 /// `available` se **recalcula aquí** contra el disco de ahora mismo y no se
 /// persiste nunca: una ruta que no responde sale con `available: false` —la
@@ -301,7 +292,7 @@ pub fn list_recents(
     app::recents::listed_rows(&environment.memory, &opened)
 }
 
-/// **Orden 13.** Anota en la bandeja el documento abierto, y dónde cayó su
+/// **Orden 12.** Anota en la bandeja el documento abierto, y dónde cayó su
 /// recuadro.
 ///
 /// Devuelve la fila ya lista para pintar porque es donde la ventana recupera lo
@@ -323,7 +314,7 @@ pub fn record_recent(
     )
 }
 
-/// **Orden 14.** Quita una fila de la bandeja.
+/// **Orden 13.** Quita una fila de la bandeja.
 ///
 /// Es lo único que saca una fila. Vaciar la lista entera es
 /// [`forget_activity`], que además se lleva el certificado.
@@ -341,7 +332,7 @@ pub fn forget_recent(
     )
 }
 
-/// **Orden 15.** Abre el diálogo del portal y adopta la imagen elegida como
+/// **Orden 14.** Abre el diálogo del portal y adopta la imagen elegida como
 /// rúbrica.
 ///
 /// Filtra por PNG y JPEG, que es lo único que
@@ -374,7 +365,7 @@ pub fn choose_rubric(
     })
 }
 
-/// **Orden 16.** La rúbrica ya adoptada, si la hay, para que una sesión nueva
+/// **Orden 15.** La rúbrica ya adoptada, si la hay, para que una sesión nueva
 /// la encuentre puesta (ID-33).
 ///
 /// El JPEG sobrevive en [`crate::rubric::RubricStore`] aunque se cierre la
@@ -388,7 +379,7 @@ pub fn read_rubric(environment: State<'_, Environment>) -> Result<Option<RubricV
     Ok(stored.map(|bytes| RubricView::from_bytes(&bytes)))
 }
 
-/// **Orden 17.** Dónde va a caer el documento que hay delante, **antes** de
+/// **Orden 16.** Dónde va a caer el documento que hay delante, **antes** de
 /// firmarlo.
 ///
 /// Es lo que el pie del panel enseña: la carpeta y el nombre, los dos por su
@@ -412,7 +403,7 @@ pub fn preview_destination(
     ))
 }
 
-/// **Orden 18.** Abre el selector de directorio del sistema y guarda la carpeta
+/// **Orden 17.** Abre el selector de directorio del sistema y guarda la carpeta
 /// de destino que conceda.
 ///
 /// Sustituye al desplegable que recibía una sola opción, que es un control que
@@ -446,7 +437,7 @@ pub fn choose_destination(
     .map(Some)
 }
 
-/// **Orden 19.** Abre el PDF firmado con el visor del sistema.
+/// **Orden 18.** Abre el PDF firmado con el visor del sistema.
 ///
 /// Bajo el arenero esto **no es comodidad**: la ventana nunca conoce la ruta
 /// del fichero (ADR-0011) y el usuario tampoco la ve, así que este botón y el
@@ -472,7 +463,7 @@ pub fn open_signed_document(
         .map_err(|error| Failure::new("unknown", error.to_string()))
 }
 
-/// **Orden 20.** Abre la carpeta donde quedó el PDF firmado.
+/// **Orden 19.** Abre la carpeta donde quedó el PDF firmado.
 ///
 /// La carpeta es la del fichero del resumen y no la de destino leída otra vez:
 /// si el usuario la ha cambiado desde que firmó, abrir la nueva le enseñaría un
@@ -495,7 +486,7 @@ pub fn open_signed_folder(
         .map_err(|error| Failure::new("unknown", error.to_string()))
 }
 
-/// **Orden 21.** El PDF con el sello que va a quedar, compuesto sin firmar
+/// **Orden 20.** El PDF con el sello que va a quedar, compuesto sin firmar
 /// (ID-136).
 ///
 /// La **prefirma en seco**: el ciclo trifásico entero con un `PK1` inventado,
@@ -525,7 +516,7 @@ pub fn preview_signature(
     )?))
 }
 
-/// **Orden 22.** La esquina inferior izquierda del recuadro, en puntos PAdES
+/// **Orden 21.** La esquina inferior izquierda del recuadro, en puntos PAdES
 /// (ID-105).
 ///
 /// `correctPositionSignature` (`PdfUtil.java:607-632`) descarta en silencio,
