@@ -8,7 +8,7 @@
  * AUTOALOJADA (ID-49). Lo que traia el bundle era un @import a Google Fonts y
  * ese es el unico fichero del bundle que NO puede quedarse como salio de la
  * herramienta: el manifiesto del flatpak no declara `--share=network`, asi que
- * dentro del sandbox no hay red, y la CSP no tiene `font-src` —hereda
+ * dentro del arenero no hay red, y la CSP no tiene `font-src` —hereda
  * `default-src 'self'`—, con lo que la peticion ni saldria. Con la fuente
  * dentro del paquete no hace falta tocar la CSP.
  *
