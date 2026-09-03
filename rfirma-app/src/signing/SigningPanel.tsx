@@ -196,9 +196,29 @@ export function SigningPanel({
     setPagesText(pages === null ? "" : formatPageRange(pages, document.pages));
     if (pages !== null && pages !== "all") setAnchor(pages.only[0] ?? null);
   }
-  const boxPage = placement === null ? null : (firstSealedPage(placement) ?? anchor);
+  // El ancla se lee **solo con «todas»**, que es el único conjunto que ya no
+  // nombra la página del gesto: en los demás la página está en el conjunto y
+  // `firstSealedPage` la da. Leerla siempre —con un `??` detrás de
+  // `firstSealedPage`— la dejaba inalcanzable, y volver de «todas» a «solo 1
+  // página» sellaba la 1 en vez de la del gesto original (ID-97).
+  const boxPage =
+    placement === null
+      ? null
+      : placement.pages === "all"
+        ? (anchor ?? 1)
+        : firstSealedPage(placement);
   const parsed = parsePageRange(pagesText, document.pages);
-  const rangeError = pageChoice === "these" && !parsed.ok ? parsed.error : null;
+  // El campo vacío bajo «Estas páginas» es **una situación más**, no un
+  // conjunto: no nombra ninguna página, lo dice bajo el campo y apaga el botón
+  // de firmar. Lo que no hace es emitir `onPlace(null)` — ver `typePages`.
+  const rangeError: FieldTrouble | null =
+    pageChoice !== "these"
+      ? null
+      : pagesText.trim() === ""
+        ? { kind: "empty" }
+        : !parsed.ok
+          ? parsed.error
+          : null;
   const sealedCount = placement === null ? 0 : sealedPages(placement.pages, document.pages).length;
   const echo = placement === null ? null : echoOf(placement.pages, document.pages, t);
 
@@ -216,7 +236,13 @@ export function SigningPanel({
     const typed = parsePageRange(value, document.pages);
     // Lo que no se entiende **no se aplica a medias**: el conjunto se queda
     // como estaba y el error apaga el botón de firmar (ID-22, ID-98).
-    if (typed.ok) place(typed.pages);
+    //
+    // Y el campo vacío tampoco se aplica: borrarlo es el paso normal para
+    // reescribir el rango, y emitir `onPlace(null)` ahí se llevaba la
+    // colocación **entera, `rect` incluido**, sin camino de vuelta desde el
+    // campo —había que volver a arrastrar sobre la hoja—. Mientras está vacío
+    // la colocación se queda como estaba y la situación `empty` bloquea.
+    if (typed.ok && typed.pages !== null) place(typed.pages);
   };
 
   const chooseChoice = (choice: PageChoice) => {
@@ -570,11 +596,21 @@ function echoOf(
 const ECHO_LIMIT = 6;
 
 /**
+ * Lo que le pasa al campo: las situaciones del analizador, más **el campo
+ * vacío**, que no es suya. `parsePageRange("")` es un `ok` con conjunto vacío
+ * —el módulo es puro y ahí no hay nada que reprochar—, pero bajo «Estas
+ * páginas» un campo sin páginas no puede firmar y hay que decirlo.
+ */
+type FieldTrouble = PageRangeError | { kind: "empty" };
+
+/**
  * La situación del campo, redactada. Es la vista quien la redacta y no el
  * analizador, que solo sabe qué ha pasado y no en qué idioma se cuenta (ID-29).
  */
-function messageFor(error: PageRangeError, t: ReturnType<typeof useTranslation>["t"]): string {
+function messageFor(error: FieldTrouble, t: ReturnType<typeof useTranslation>["t"]): string {
   switch (error.kind) {
+    case "empty":
+      return t("panel.placement.errors.empty");
     case "beyond":
       return t("panel.placement.errors.beyond", {
         pageCount: error.pageCount,

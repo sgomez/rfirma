@@ -51,7 +51,7 @@ rojo.
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 148 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
-| `signing/SigningPanel.tsx` | 773 | El panel. El fichero más grande de la interfaz. |
+| `signing/SigningPanel.tsx` | 808 | El panel. El fichero más grande de la interfaz. |
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |

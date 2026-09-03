@@ -509,6 +509,10 @@ msgstr "No hay página 0: la primera es la 1."
 msgid "panel.placement.errors.malformed"
 msgstr "«{{entry}}» no se entiende. Números y rangos separados por comas: 1,2-3,10-20."
 
+#. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
+msgid "panel.placement.errors.empty"
+msgstr "Escribe en qué páginas se sella: 1,2-3,10-20."
+
 msgid "panel.certificate.title"
 msgstr "Certificado"
 

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import type { Placement } from "../viewer/signatureBox";
+import type { PageChoice, Placement } from "../viewer/signatureBox";
 import type { Certificate } from "./certificate";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
@@ -88,6 +88,10 @@ function renderLivePanel(props: PanelProps = {}) {
   const placed: (Placement | null)[] = [];
   function Live() {
     const [placement, setPlacement] = useState<Placement | null>({ rect, pages: { only: [3] } });
+    // La opción elegida también vive fuera del panel, como en `App.tsx`: sin
+    // eso, volver a pulsar «Solo 1 página» no dispara nada —el radio sigue
+    // marcado— y el viaje de ida y vuelta no se podría probar.
+    const [pageChoice, setPageChoice] = useState<PageChoice>(props.pageChoice ?? "single");
     return panelWith({
       ...props,
       placement,
@@ -95,6 +99,8 @@ function renderLivePanel(props: PanelProps = {}) {
         placed.push(next);
         setPlacement(next);
       },
+      pageChoice,
+      onChangePageChoice: setPageChoice,
     });
   }
   renderWithCatalog(<Live />);
@@ -496,5 +502,47 @@ describe("SigningPanel · Colocación", () => {
     renderPanel({ signature: visible, placement: { rect, pages: { only: [3, 4, 5] } } });
 
     expect(screen.getByText(/es un solo campo de firma repetido, no 3 firmas/)).toBeInTheDocument();
+  });
+
+  /**
+   * ID-97, el viaje completo. Con «todas» el conjunto ya no nombra la página
+   * del gesto, así que la única forma de que vuelva es el ancla: la ida
+   * `single(3)` → `all` no la puede perder, y la vuelta tiene que sellar la 3 y
+   * no la 1, que es la más baja del conjunto por casualidad.
+   */
+  it("keeps the page of the box on the round trip single, all and single again", async () => {
+    const user = userEvent.setup();
+    const { placed } = renderLivePanel({ signature: visible });
+
+    await user.click(screen.getByRole("radio", { name: /Todas las páginas/ }));
+
+    expect(placed.at(-1)).toEqual({ rect, pages: "all" });
+    // El pie de «Solo 1 página» sigue diciendo la página del gesto original.
+    expect(screen.getByText("Página 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: /Solo 1 página/ }));
+
+    expect(placed.at(-1)).toEqual({ rect, pages: { only: [3] } });
+  });
+
+  /**
+   * Borrar el campo es el paso normal para reescribir el rango. Si el vacío
+   * emitiera `onPlace(null)` se llevaría la colocación entera —`rect`
+   * incluido— y el campo ya no podría devolverla: habría que volver a arrastrar
+   * sobre la hoja.
+   */
+  it("says the empty field instead of taking the box away with it", () => {
+    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+
+    fireEvent.change(field(), { target: { value: "" } });
+
+    expect(placed).toEqual([]);
+    expect(screen.getByText("Escribe en qué páginas se sella: 1,2-3,10-20.")).toBeInTheDocument();
+    expect(signButton()).toBeDisabled();
+
+    // Y el campo devuelve el recuadro, con el mismo sitio y el mismo tamaño.
+    fireEvent.change(field(), { target: { value: "5" } });
+
+    expect(placed.at(-1)).toEqual({ rect, pages: { only: [5] } });
   });
 });

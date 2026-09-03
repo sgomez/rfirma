@@ -502,6 +502,10 @@ msgstr "There is no page 0: the first one is 1."
 msgid "panel.placement.errors.malformed"
 msgstr "“{{entry}}” cannot be read. Numbers and ranges separated by commas: 1,2-3,10-20."
 
+#. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
+msgid "panel.placement.errors.empty"
+msgstr "Type which pages get stamped: 1,2-3,10-20."
+
 msgid "panel.certificate.title"
 msgstr "Certificate"
 

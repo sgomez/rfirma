@@ -1069,6 +1069,102 @@ describe("el recuadro que se trae a la vista", () => {
   });
 });
 
+/**
+ * ID-100. El panel dice **la página del recuadro** y lleva hasta ella, así que
+ * el visor tiene que atender la petición y contar por dónde va. Que el panel
+ * pida la 3 lo comprueba su propia prueba; que el visor **llegue** a la 3 se
+ * comprueba aquí.
+ */
+describe("la página que pide el panel", () => {
+  it("goes to the page it was asked for, clipped to the document", async () => {
+    const { document, renders } = recordingDocument(5);
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        goToPage={{ page: 3 }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(3));
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        goToPage={{ page: 9 }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(5));
+  });
+
+  /**
+   * Toda la razón de que cada petición sea un objeto nuevo: pulsar el botón del
+   * panel dos veces tiene que llevar allí las dos veces, aunque el número no
+   * haya cambiado. Un efecto con `[goToPage.page]` no volvería a moverse.
+   */
+  it("goes back to the same page when it is asked for twice", async () => {
+    const { document, renders } = recordingDocument(5);
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        goToPage={{ page: 3 }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(3));
+
+    fireEvent.click(screen.getByRole("button", { name: "Primera página" }));
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(1));
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        goToPage={{ page: 3 }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(3));
+  });
+
+  it("tells which page is being looked at, so the panel does not say the wrong one", async () => {
+    const onPageChange = vi.fn();
+    const { document, renders } = recordingDocument(3);
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={noop}
+        onOpen={noop}
+        onPageChange={onPageChange}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(onPageChange).toHaveBeenCalledWith(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+
+    await waitFor(() => expect(onPageChange).toHaveBeenLastCalledWith(2));
+  });
+});
+
 function latest(renders: Recorder["renders"]) {
   return renders[renders.length - 1];
 }

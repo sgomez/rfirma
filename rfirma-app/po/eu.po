@@ -457,6 +457,10 @@ msgstr ""
 msgid "panel.placement.errors.malformed"
 msgstr ""
 
+#. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
+msgid "panel.placement.errors.empty"
+msgstr ""
+
 msgid "panel.certificate.title"
 msgstr ""
 
