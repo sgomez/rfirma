@@ -153,25 +153,55 @@ pub fn usable_certificate<'a>(
 }
 
 /// Los pares `atributo=valor` de un nombre distinguido, partidos por comas
-/// que **no** estén escapadas con `\`.
+/// que **no** estén escapadas con `\`, y con esa barra ya desescapada.
 ///
 /// El `CN` de un DNIe lleva una coma escapada dentro del propio nombre
 /// —«APELLIDO1 APELLIDO2\, NOMBRE (FIRMA)»—, y partir por cualquier coma
-/// trunca el titular a los apellidos. Una coma escapada es la que llega
-/// precedida de una barra invertida; esa barra se deja tal cual en el
-/// resultado, sin desescapar nada más (ID-198: sin tocar ningún token).
-fn attribute_pairs(distinguished_name: &str) -> Vec<&str> {
+/// trunca el titular a los apellidos. La barra es la sintaxis de escape del
+/// RFC 4514, no un carácter del nombre: una coma va escapada cuando la
+/// preceden un número **impar** de barras consecutivas (la barra también se
+/// escapa a sí misma, así que `\\,` es una barra literal seguida de una coma
+/// que sí separa), y el resultado desescapa esas barras antes de devolver
+/// cada par (#194, punto 5; #198).
+fn attribute_pairs(distinguished_name: &str) -> Vec<String> {
     let mut pairs = Vec::new();
     let mut start = 0;
     let bytes = distinguished_name.as_bytes();
     for (index, byte) in bytes.iter().enumerate() {
-        if *byte == b',' && bytes.get(index.wrapping_sub(1)) != Some(&b'\\') {
-            pairs.push(&distinguished_name[start..index]);
+        if *byte == b',' && !comma_is_escaped(bytes, index) {
+            pairs.push(unescape(&distinguished_name[start..index]));
             start = index + 1;
         }
     }
-    pairs.push(&distinguished_name[start..]);
+    pairs.push(unescape(&distinguished_name[start..]));
     pairs
+}
+
+/// Si la coma en `index` va escapada: la preceden un número impar de barras
+/// invertidas consecutivas.
+fn comma_is_escaped(bytes: &[u8], index: usize) -> bool {
+    let mut backslashes = 0;
+    while index > backslashes && bytes[index - 1 - backslashes] == b'\\' {
+        backslashes += 1;
+    }
+    backslashes % 2 == 1
+}
+
+/// Quita las barras de escape del RFC 4514 (`\,` → `,`, `\\` → `\`, …), sin
+/// tocar nada más.
+fn unescape(value: &str) -> String {
+    let mut result = String::with_capacity(value.len());
+    let mut chars = value.chars();
+    while let Some(character) = chars.next() {
+        if character == '\\' {
+            if let Some(escaped) = chars.next() {
+                result.push(escaped);
+                continue;
+            }
+        }
+        result.push(character);
+    }
+    result
 }
 
 /// El valor de un atributo de un nombre distinguido, o la cadena vacía si no
@@ -179,8 +209,7 @@ fn attribute_pairs(distinguished_name: &str) -> Vec<&str> {
 pub fn attribute(name: &str, distinguished_name: &str) -> String {
     attribute_pairs(distinguished_name)
         .into_iter()
-        .map(str::trim)
-        .find_map(|part| part.strip_prefix(name).map(str::to_owned))
+        .find_map(|part| part.trim().strip_prefix(name).map(str::to_owned))
         .unwrap_or_default()
 }
 
@@ -286,14 +315,29 @@ mod tests {
 
     /// El caso que rompía el DNIe: su `CN` lleva una coma escapada dentro
     /// —«APELLIDO1 APELLIDO2\, NOMBRE (FIRMA)»—, y partir por comas sin
-    /// respetar el escapado truncaba el titular a los apellidos.
+    /// respetar el escapado truncaba el titular a los apellidos. La barra de
+    /// escape no es parte del nombre: no debe llegar al recuadro ni a la fila.
     #[test]
     fn a_common_name_with_an_escaped_comma_is_read_whole() {
         let subject = "CN=APELLIDO1 APELLIDO2\\, NOMBRE (FIRMA), SERIALNUMBER=00000000T, C=ES";
 
         let (name, id) = holder_of(Some(subject));
 
-        assert_eq!(name, "APELLIDO1 APELLIDO2\\, NOMBRE (FIRMA)");
+        assert_eq!(name, "APELLIDO1 APELLIDO2, NOMBRE (FIRMA)");
+        assert_eq!(id, "00000000T");
+    }
+
+    /// Una barra literal delante de la coma no la escapa: el RFC 4514 escapa
+    /// la barra a sí misma, así que `\\,` es una barra seguida de una coma que
+    /// sí separa. Contar solo el byte anterior confundiría esto con una coma
+    /// escapada y fundiría el nombre distinguido entero en un único par.
+    #[test]
+    fn a_literal_backslash_before_the_comma_does_not_escape_it() {
+        let subject = "CN=FOO\\\\,SERIALNUMBER=00000000T";
+
+        let (name, id) = holder_of(Some(subject));
+
+        assert_eq!(name, "FOO\\");
         assert_eq!(id, "00000000T");
     }
 
