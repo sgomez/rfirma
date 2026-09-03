@@ -132,6 +132,15 @@ interface DocumentViewerProps {
    */
   failure?: DocumentFailure | null;
   /**
+   * La firma visible está encendida.
+   *
+   * El visor entero cuelga de esto: apagada, no hay recuadro pintado, no hay
+   * pastilla que ofrezca sellar y la hoja no traza. La colocación **no se
+   * borra** —vive en quien la recuerda, y vuelve intacta al reencender—, así
+   * que aquí sólo se deja de pintar (#190).
+   */
+  enabled?: boolean;
+  /**
    * El documento **con el sello ya estampado**, que se pinta en lugar del
    * original mientras esté compuesto (ID-107).
    *
@@ -191,6 +200,7 @@ export function DocumentViewer({
   pageChoice = "these",
   onPageChange,
   goToPage = null,
+  enabled = true,
   failure = null,
   stamped = null,
   stampFrozen = false,
@@ -371,7 +381,7 @@ export function DocumentViewer({
   // algo. Quien quiera saberlo lo lee en la pastilla, con palabras.
   const sealed = placement !== null && sealsPage(placement.pages, page);
   const pixels: PixelRect | null =
-    viewport && placement && sealed ? toPixels(viewport, placement.rect) : null;
+    viewport && placement && sealed && enabled ? toPixels(viewport, placement.rect) : null;
 
   // Al cambiar de página, un recuadro que quede fuera de la parte visible se
   // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
@@ -603,6 +613,9 @@ export function DocumentViewer({
    * página cuando se sellan las veintisiete.
    */
   const pill = ((): { text: string; label: string; variant: string; act: () => void } | null => {
+    // Con la firma visible apagada no hay nada que sellar: ofrecerlo colocaba
+    // un recuadro que después no se pintaba en ninguna parte (#190).
+    if (!enabled) return null;
     if (placement === null) {
       // **Sin recuadro el rótulo no cambia con la opción** (#188): «todas»
       // todavía no es un conjunto, es una preferencia, y decir aquí «Colocar el

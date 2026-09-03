@@ -751,6 +751,7 @@ export function App({
             stampFrozen={stamp.state.kind === "frozen"}
             onGesture={setGesturing}
             placement={placement}
+            enabled={signature.enabled}
             onPlace={rememberPlacement}
             pageChoice={pageChoice}
             onPageChange={setViewedPage}

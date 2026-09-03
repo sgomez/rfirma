@@ -1310,3 +1310,50 @@ describe("la página que pide el panel", () => {
 function latest(renders: Recorder["renders"]) {
   return renders[renders.length - 1];
 }
+
+/**
+ * #190: la firma visible apagada tiene que apagar **también el visor**. Hasta
+ * aquí `signature.enabled` sólo decidía si había sello que componer, así que la
+ * pastilla seguía ofreciendo sellar y el recuadro seguía pintado sobre la hoja.
+ */
+describe("el visor con la firma visible apagada", () => {
+  it("offers no pill to seal the page", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        enabled={false}
+        onPlace={noop}
+        onOpen={noop}
+      />,
+    );
+
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.queryByRole("button", { name: "Sellar esta página" })).not.toBeInTheDocument();
+  });
+
+  // La colocación **no se borra** al apagar (así lo hace ya el panel): lo que
+  // desaparece es el recuadro, y vuelve intacto al reencender.
+  it("paints no box over the sheet, and paints it again when switched back on", async () => {
+    const { document, renders } = recordingDocument();
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        enabled={false}
+        onPlace={noop}
+        onOpen={noop}
+      />,
+    );
+
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(screen.queryByRole("application")).not.toBeInTheDocument();
+
+    rerender(
+      <DocumentViewer pdf={document} placement={seated} enabled onPlace={noop} onOpen={noop} />,
+    );
+
+    expect(box()).toBeInTheDocument();
+  });
+});
