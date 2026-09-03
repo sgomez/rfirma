@@ -10,7 +10,7 @@ import { inMemoryPreferences } from "./preferences/preferences";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
 import { inMemoryDestination, unavailableOpener } from "./signing/destination";
-import { unavailableSigningBackend } from "./signing/flow";
+import { type SigningBackend, type SigningOrder, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
@@ -20,6 +20,7 @@ const aDestination = () =>
   inMemoryDestination({ folder: "Documentos", name: "contrato-firmado.pdf", writable: true });
 
 import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
+import type { Placement } from "./viewer/signatureBox";
 import { type PdfSource, unavailablePdfSource } from "./viewer/source";
 
 function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
@@ -74,6 +75,41 @@ function pdfsOf(pages: Record<string, number>): PdfSource {
   };
 }
 
+/**
+ * Un PDF de tamaños mezclados: cada página trae su propio `view`. Es lo que
+ * hace falta para que `correctPositionSignature` se coma alguna en silencio
+ * (ID-105) y para probarlo hace falta más de un tamaño en el mismo documento.
+ */
+function aPdfWithViews(views: readonly (readonly [number, number, number, number])[]): PdfDocument {
+  const pageOf = (number: number): PdfPage => {
+    const view = views[number - 1];
+    if (view === undefined) throw new Error(`no hay view para la página ${number}`);
+    return {
+      number,
+      rotate: 0,
+      view,
+      getViewport: ({ scale }) => viewportAt(scale),
+      render: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+    };
+  };
+  return { pageCount: views.length, getPage: (number) => Promise.resolve(pageOf(number)) };
+}
+
+/** Un origen que abre `name` con las `views` que se le den, tamaños mezclados incluidos. */
+function pdfsWithViews(
+  name: string,
+  views: readonly (readonly [number, number, number, number])[],
+): PdfSource {
+  return {
+    open: async (opened) => {
+      if (opened.name !== name) {
+        return { ok: false, failure: { situation: "documentUnreadable", detail: "roto" } };
+      }
+      return { ok: true, pdf: aPdfWithViews(views) };
+    },
+  };
+}
+
 const aCertificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
@@ -112,6 +148,7 @@ function renderApp(
   settings: Partial<Preferences> = {},
   certificates: CertificateStore = emptyCertificateStore(),
   rubrics: RubricPicker = emptyRubricPicker(),
+  signer: SigningBackend = unavailableSigningBackend(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -135,7 +172,7 @@ function renderApp(
       certificates={certificates}
       rubrics={rubrics}
       composer={emptyLayer2Composer()}
-      signer={unavailableSigningBackend()}
+      signer={signer}
       opener={unavailableOpener()}
       menuAnchor="header"
     />,
@@ -682,5 +719,152 @@ describe("App, al soltar ficheros en la ventana", () => {
     await user.click(trayDropZone());
 
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+});
+
+/**
+ * ID-105/ID-106: el diálogo de páginas sin sello, justo antes de firmar y
+ * gateado en `App.sign` (docs/design/dialogo-paginas-sin-sello.md).
+ */
+describe("App, con páginas donde el recuadro no cabe", () => {
+  const A4: readonly [number, number, number, number] = [0, 0, 595, 842];
+  // Más pequeña que el recuadro que se coloca abajo: se cae.
+  const SMALL: readonly [number, number, number, number] = [0, 0, 200, 150];
+
+  const remembered: Certificate = { ...aCertificate, remembered: true };
+
+  // El recuadro cabe en A4 pero no en SMALL: fitsInPage lo comprueba contra
+  // el ancho y el alto, igual que correctPositionSignature.
+  const rect = { x0: 250, y0: 50, x1: 450, y1: 100 };
+
+  function documentWithPlacement(name: string, pages: Placement["pages"]) {
+    return document(name, { placement: { rect, pages } });
+  }
+
+  it("warns before signing when some of the chosen pages will fall, and cancel does not sign", async () => {
+    const user = userEvent.setup();
+    const presign = vi.fn(async () => ({ ok: true as const, value: undefined }));
+    const signer: SigningBackend = {
+      presign,
+      sign: async () => ({ ok: true, value: undefined }),
+      postsign: async () => ({
+        ok: true,
+        value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
+      }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      discard: async () => {},
+    };
+    renderApp(
+      inMemoryRecents(),
+      [documentWithPlacement("factura.pdf", { only: [1, 2, 3] })],
+      pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
+    await waitFor(() => expect(sign).toBeEnabled());
+
+    await user.click(sign);
+
+    // ID-106: el denominador es el conjunto elegido (3), no el documento.
+    expect(
+      await screen.findByRole("dialog", { name: "Una página se quedará sin sello" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "El recuadro no cabe en 1 de las 3 páginas que has elegido, más pequeñas que aquella " +
+          "sobre la que lo colocaste. El documento se firmará igual y la firma será válida en " +
+          "todo él, pero en esas páginas no aparecerá el sello.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("El sello aparecerá en 2 de las 3 páginas elegidas."),
+    ).toBeInTheDocument();
+    expect(presign).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(presign).not.toHaveBeenCalled();
+  });
+
+  it("signs anyway with the exact order already built, when confirmed", async () => {
+    const user = userEvent.setup();
+    const presign = vi.fn(async (_order: SigningOrder) => ({
+      ok: true as const,
+      value: undefined,
+    }));
+    const signer: SigningBackend = {
+      presign,
+      sign: async () => ({ ok: true, value: undefined }),
+      postsign: async () => ({
+        ok: true,
+        value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
+      }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      discard: async () => {},
+    };
+    renderApp(
+      inMemoryRecents(),
+      [documentWithPlacement("factura.pdf", { only: [1, 2, 3] })],
+      pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
+    await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(sign);
+    await screen.findByRole("dialog", { name: "Una página se quedará sin sello" });
+
+    await user.click(screen.getByRole("button", { name: "Firmar de todos modos" }));
+
+    await waitFor(() => expect(presign).toHaveBeenCalledOnce());
+    const order = presign.mock.calls[0]?.[0];
+    expect(order?.placement.pages).toEqual({ only: [1, 2, 3] });
+    expect(screen.queryByRole("dialog", { name: /sello/ })).not.toBeInTheDocument();
+  });
+
+  it("does not appear when every chosen page keeps its seal", async () => {
+    const user = userEvent.setup();
+    const presign = vi.fn(async () => ({ ok: true as const, value: undefined }));
+    const signer: SigningBackend = {
+      presign,
+      sign: async () => ({ ok: true, value: undefined }),
+      postsign: async () => ({
+        ok: true,
+        value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
+      }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      discard: async () => {},
+    };
+    renderApp(
+      inMemoryRecents(),
+      [documentWithPlacement("factura.pdf", { only: [1, 3] })],
+      pdfsWithViews("factura.pdf", [A4, SMALL, A4]),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
+    await waitFor(() => expect(sign).toBeEnabled());
+
+    await user.click(sign);
+
+    await waitFor(() => expect(presign).toHaveBeenCalledOnce());
+    expect(screen.queryByRole("dialog", { name: /sello/ })).not.toBeInTheDocument();
   });
 });

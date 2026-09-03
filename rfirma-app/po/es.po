@@ -732,6 +732,28 @@ msgstr "Pendiente"
 msgid "progress.keepTheCard"
 msgstr "No retires la tarjeta hasta que termine."
 
+#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+msgid "sealLoss.title"
+msgid_plural "sealLoss.title"
+msgstr[0] "Una página se quedará sin sello"
+msgstr[1] "{{count}} páginas se quedarán sin sello"
+msgstr[2] "{{count}} páginas se quedarán sin sello"
+
+#. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
+msgid "sealLoss.body"
+msgstr ""
+"El recuadro no cabe en {{fallen}} de las {{chosen}} páginas que has "
+"elegido, más pequeñas que aquella sobre la que lo colocaste. El documento "
+"se firmará igual y la firma será válida en todo él, pero en esas páginas "
+"no aparecerá el sello."
+
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+msgid "sealLoss.remaining"
+msgstr "El sello aparecerá en {{sealed}} de las {{chosen}} páginas elegidas."
+
+msgid "sealLoss.confirm"
+msgstr "Firmar de todos modos"
+
 msgid "preferences.title"
 msgstr "Preferencias"
 

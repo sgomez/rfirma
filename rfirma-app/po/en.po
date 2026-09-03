@@ -484,12 +484,17 @@ msgstr[2] "It will be stamped on pages {{pages}} and {{count}} more."
 msgid "panel.placement.replicated"
 msgid_plural "panel.placement.replicated"
 msgstr[0] "The same box, in the same place and at the same size, on 1 page."
-msgstr[1] "The same box, in the same place and at the same size, on all {{count}} pages: it is a single signature field repeated, not {{count}} signatures."
-msgstr[2] "The same box, in the same place and at the same size, on all {{count}} pages: it is a single signature field repeated, not {{count}} signatures."
+msgstr[1] ""
+"The same box, in the same place and at the same size, on all {{count}} "
+"pages: it is a single signature field repeated, not {{count}} signatures."
+msgstr[2] ""
+"The same box, in the same place and at the same size, on all {{count}} "
+"pages: it is a single signature field repeated, not {{count}} signatures."
 
 #. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
 msgid "panel.placement.errors.beyond"
-msgstr "The document has {{pageCount}} pages and you have written up to {{page}}."
+msgstr ""
+"The document has {{pageCount}} pages and you have written up to {{page}}."
 
 #. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
 msgid "panel.placement.errors.reversed"
@@ -500,7 +505,9 @@ msgstr "There is no page 0: the first one is 1."
 
 #. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
 msgid "panel.placement.errors.malformed"
-msgstr "“{{entry}}” cannot be read. Numbers and ranges separated by commas: 1,2-3,10-20."
+msgstr ""
+"“{{entry}}” cannot be read. Numbers and ranges separated by commas: "
+"1,2-3,10-20."
 
 #. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
 msgid "panel.placement.errors.empty"
@@ -631,7 +638,9 @@ msgstr "The preview will show up once you choose the certificate."
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"
-msgstr "Place the signature on the document: drag a box or press the button under the page."
+msgstr ""
+"Place the signature on the document: drag a box or press the button under "
+"the page."
 
 msgid "panel.footer.savedIn"
 msgstr "It will be saved in"
@@ -715,6 +724,28 @@ msgstr "Pending"
 
 msgid "progress.keepTheCard"
 msgstr "Do not remove the card until it finishes."
+
+#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+msgid "sealLoss.title"
+msgid_plural "sealLoss.title"
+msgstr[0] "One page will be left without a seal"
+msgstr[1] "{{count}} pages will be left without a seal"
+msgstr[2] "{{count}} pages will be left without a seal"
+
+#. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
+msgid "sealLoss.body"
+msgstr ""
+"The box does not fit on {{fallen}} of the {{chosen}} pages you chose, "
+"smaller than the one you placed it on. The document will be signed all the "
+"same and the signature will be valid throughout it, but the seal will not "
+"appear on those pages."
+
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+msgid "sealLoss.remaining"
+msgstr "The seal will appear on {{sealed}} of the {{chosen}} chosen pages."
+
+msgid "sealLoss.confirm"
+msgstr "Sign anyway"
 
 msgid "preferences.title"
 msgstr "Preferences"
