@@ -316,7 +316,7 @@ describe("la tipografía", () => {
   });
 
   it("sirve cada `@font-face` desde un fichero local que existe en el árbol", () => {
-    // ID-49: dentro del arenero del flatpak no hay red, así que una `src` que
+    // ID-49: dentro del sandbox del flatpak no hay red, así que una `src` que
     // apunte fuera es una tipografía que nunca carga.
     for (const face of faces) {
       const source = /url\(\s*['"]?([^'")]+)['"]?\s*\)/.exec(face)?.[1];

@@ -75,7 +75,7 @@ tauri = { version = "2", features = [] }
 # permisos de `capabilities/default.json` no crece, porque los permisos de
 # Tauri v2 vigilan lo que la ventana puede pedir, no lo que Rust hace.
 tauri-plugin-dialog = "2"
-# Abrir el PDF firmado y su carpeta, que bajo el arenero es la unica forma
+# Abrir el PDF firmado y su carpeta, que bajo el sandbox es la unica forma
 # que tiene el usuario de llegar al fichero: nunca ve la ruta (ADR-0011).
 # Debajo es el portal `OpenURI`, y la llamada sale de Rust como la del
 # dialogo (ID-63, ID-85).

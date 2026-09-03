@@ -8,11 +8,11 @@
 //!
 //! # Qué llega de verdad al soltar
 //!
-//! Está medido, no supuesto, en `docs/research/arrastre-bajo-el-arenero.md`.
+//! Está medido, no supuesto, en `docs/research/arrastre-bajo-el-sandbox.md`.
 //! El resumen que este módulo necesita: cuando el origen del arrastre habla el
 //! portal `FileTransfer` —Nautilus y cualquier GTK moderno— llega una ruta
 //! exportada en `/run/user/1000/doc/…` que **se lee desde cualquier carpeta**;
-//! cuando no lo habla, llega la ruta del anfitrión tal cual, y bajo el arenero
+//! cuando no lo habla, llega la ruta del anfitrión tal cual, y bajo el sandbox
 //! esa ruta solo existe si cae dentro de la carpeta de documentos. Esa última
 //! combinación es el único fallo real, y es el que [`Dropped::Unreadable`]
 //! nombra.
@@ -38,7 +38,7 @@ pub enum Dropped {
     Opened { path: PathBuf, ignored: usize },
     /// Ninguno de los ficheros soltados es un PDF.
     NotAPdf { ignored: usize },
-    /// El primer PDF soltado está donde el arenero no llega.
+    /// El primer PDF soltado está donde el sandbox no llega.
     Unreadable { detail: String, ignored: usize },
     /// No se ha soltado ningún fichero. No es un fallo y no se cuenta.
     Nothing,
@@ -91,7 +91,7 @@ mod tests {
         path
     }
 
-    /// Una ruta que **no existe dentro del arenero**, que es exactamente la
+    /// Una ruta que **no existe dentro del sandbox**, que es exactamente la
     /// forma del fallo medido: el fichero está en el anfitrión y aquí da
     /// `ENOENT`.
     fn a_path_the_sandbox_cannot_reach() -> PathBuf {

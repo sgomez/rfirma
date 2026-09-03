@@ -137,7 +137,7 @@ _Avoid_: portal, cliente web, tercero
 **Documento reciente**:
 Documento que la aplicación ha visto antes y ofrece para volver a él, sin
 guardar una copia: solo su identificador opaco y lo que hace falta para pintar
-su fila. Bajo el arenero la aplicación nunca conoce la ruta original de un
+su fila. Bajo el sandbox la aplicación nunca conoce la ruta original de un
 documento (ADR-0010, ADR-0011), así que el identificador no es ni deriva de
 una ruta.
 _Avoid_: historial, documento abierto, favorito, ruta
@@ -157,3 +157,13 @@ Lo que la aplicación recuerda por su cuenta, sin que nadie se lo pida: los
 documentos recientes, la última configuración de firma visible y el certificado
 usado la última vez. Borrarlo no reconfigura nada.
 _Avoid_: caché, historial, sesión
+
+### Distribución
+
+**Sandbox**:
+Confinamiento del sistema operativo en el que corre la aplicación cuando se
+instala como flatpak: no ve el sistema de ficheros del anfitrión y toda entrada
+y salida de documentos pasa por los portales, así que nunca conoce la ruta
+original de un documento (ADR-0004, ADR-0011). Los canales nativos —`.deb`,
+`.rpm`— corren fuera de él.
+_Avoid_: arenero, caja de arena, jaula, contenedor

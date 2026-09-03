@@ -737,7 +737,7 @@ describe("App, al soltar ficheros en la ventana", () => {
    * ID-68: el aviso dice **qué hacer**, y lo que hay que hacer es usar el botón
    * de abrir, que sí pasa por el portal. Que este caso exista de verdad —y
    * desde qué carpetas— está medido en
-   * `docs/research/arrastre-bajo-el-arenero.md`.
+   * `docs/research/arrastre-bajo-el-sandbox.md`.
    */
   it("tells what to do when the dropped file cannot be read", async () => {
     const { drops } = renderApp();

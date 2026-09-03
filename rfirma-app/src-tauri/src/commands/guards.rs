@@ -156,7 +156,7 @@ fn outputs() -> Vec<Output<'static>> {
     found
 }
 
-/// Bajo el arenero la aplicación no conoce la ruta real de un documento, así
+/// Bajo el sandbox la aplicación no conoce la ruta real de un documento, así
 /// que devolver una sería devolver una mentira (ADR-0011). Lo que sale son
 /// nombres.
 ///

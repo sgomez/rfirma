@@ -433,7 +433,7 @@ function writeConfiguration(configuration: ConfigurationView): Promise<void> {
  * siguiente.
  *
  * El destino que se manda es el que se leyó: la ventana lo enseña y no lo
- * elige —bajo el arenero hay una sola carpeta—, y el backend lo ignora.
+ * elige —bajo el sandbox hay una sola carpeta—, y el backend lo ignora.
  */
 export function tauriPreferences(): PreferencesStore {
   return {

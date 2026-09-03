@@ -21,7 +21,7 @@ export interface RecentDocument {
    * El identificador **opaco** que acuñó el backend al abrir el documento, y
    * que es lo que identifica la fila (ID-62).
    *
-   * No es una ruta y de él no se puede reconstruir ninguna: bajo el arenero la
+   * No es una ruta y de él no se puede reconstruir ninguna: bajo el sandbox la
    * aplicación no conoce la ruta original de un documento —el portal solo se la
    * da a un llamante `is_host`, que un flatpak nunca es—, así que guardar aquí
    * una ruta era guardar una mentira. Quien sabe a qué documento del portal

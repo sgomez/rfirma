@@ -25,7 +25,7 @@ interface DocumentTrayProps {
  *
  * Es el único punto de entrada de documentos de la aplicación, y por eso la
  * zona de soltar es un botón que llama al portal y no un `<input type="file">`:
- * el segundo sería un camino paralelo, y además no existe bajo el arenero.
+ * el segundo sería un camino paralelo, y además no existe bajo el sandbox.
  *
  * Las filas se pintan con los metadatos cacheados —nombre, insignia y fecha—
  * **sin abrir ningún fichero** (ADR-0010). Un documento que ya no responde sale con

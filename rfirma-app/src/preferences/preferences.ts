@@ -3,7 +3,7 @@
  *
  * Son un subconjunto de `memory::Configuration`: el idioma no está aquí porque
  * ya lo lleva `LanguagePreference` (#55), y la **ruta** de la carpeta de
- * destino tampoco, porque bajo el arenero la aplicación escribe en ella pero
+ * destino tampoco, porque bajo el sandbox la aplicación escribe en ella pero
  * la única palabra que tiene de ella es su último segmento. Enseñar la ruta
  * donde se puede y el nombre donde no sería la misma pantalla contando cosas
  * distintas según el empaquetado (ADR-0011).

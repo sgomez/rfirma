@@ -15,7 +15,7 @@ use std::path::Path;
 pub enum Situation {
     /// La carpeta de destino **no existe en el anfitrión**.
     ///
-    /// Bajo el arenero esto no se nota escribiendo: `mkdir` y la escritura
+    /// Bajo el sandbox esto no se nota escribiendo: `mkdir` y la escritura
     /// contestan OK, el fichero se relee bien y en el anfitrión no hay nada
     /// (#27, `docs/research/flatpak-canal-unico.md`). Por eso la única
     /// respuesta correcta es decirlo, nunca crearla.

@@ -3,7 +3,7 @@
 El recorrido validado en el [ADR-0006](0006-firma-visible-se-configura-sobre-el-documento.md)
 da por hecho que se firma y el documento aparece: sin diálogo por firma, con el destino
 visible en el pie del panel antes de pulsar. El
-[#22](https://github.com/sgomez/rfirma/issues/22) midió que bajo el arenero de flatpak la
+[#22](https://github.com/sgomez/rfirma/issues/22) midió que bajo el sandbox de flatpak la
 aplicación **no puede saber de qué carpeta salió el original** —`Documents.Info` y `.Lookup`
 contestan `Not allowed in sandbox`— y que escribir un hermano del fichero que entrega el
 portal deja un `.xdp-…` huérfano **sin dar error**. Eso mató el valor por omisión de
@@ -14,8 +14,8 @@ portal deja un `.xdp-…` huérfano **sin dar error**. Eso mató el valor por om
 existe, y no se rebaja la experiencia de los tres para que se parezca a la del cuarto. Lo que
 cambia es **dónde cae el fichero**, no cómo se firma.
 
-Bajo el arenero cae en la carpeta de documentos del usuario, declarando
-**`--filesystem=xdg-documents`** en el manifiesto. Fuera del arenero, cuando existan los
+Bajo el sandbox cae en la carpeta de documentos del usuario, declarando
+**`--filesystem=xdg-documents`** en el manifiesto. Fuera del sandbox, cuando existan los
 instaladores nativos, caerá junto al documento original.
 
 ## Por qué no las otras
@@ -25,7 +25,7 @@ devuelve la ruta real únicamente cuando `xdp_app_info_is_host()`; en cualquier 
 por `xdp_register_document` y contesta `/run/user/1000/doc/<id>/…`. Un flatpak no es «host»
 tenga los permisos que tenga, así que conservar *junto al original* exigiría **saltarse el
 portal**, que es lo que prohíbe el [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md).
-Conviene que quede escrito por esta razón y no por la del arenero: «lo rechazamos por
+Conviene que quede escrito por esta razón y no por la del sandbox: «lo rechazamos por
 seguridad» invita a reabrirlo, «no hace lo que creíamos» no.
 
 **La carpeta de datos de la aplicación** (`~/.var/app/me.sgomez.rfirma/data/`) es escribible
@@ -43,7 +43,7 @@ Esto **reabre a sabiendas** la decisión de #22 de no declarar ningún `--filesy
 
 ## La trampa que obliga a una regla
 
-Si la carpeta declarada en `--filesystem` **no existe en el anfitrión**, dentro del arenero
+Si la carpeta declarada en `--filesystem` **no existe en el anfitrión**, dentro del sandbox
 `mkdir` y la escritura contestan **OK**, el fichero se relee bien, y en el anfitrión no hay
 nada; a la siguiente ejecución no queda ni rastro. Medido. Es el fallo silencioso otra vez.
 
@@ -53,11 +53,11 @@ firmar**, como manda el ADR-0010, no al guardar.
 
 ## Consequences
 
-- **Un solo modo en el desplegable bajo el arenero.** *Junto al documento original* no aparece
+- **Un solo modo en el desplegable bajo el sandbox.** *Junto al documento original* no aparece
   en flatpak: no existe ahí, y enseñarlo atenuado sería contarle al usuario nuestros problemas
   de empaquetado. Un ajuste cuya lista de valores depende del empaquetado no se puede explicar
   en una frase.
-- **El destino se enseña por nombre, no por ruta**, en todos los canales. Bajo el arenero la
+- **El destino se enseña por nombre, no por ruta**, en todos los canales. Bajo el sandbox la
   aplicación conoce la carpeta y escribe en ella, pero la única palabra que tiene de ella es su
   último segmento. Enseñar la ruta donde se puede y el nombre donde no es la misma incoherencia
   en pequeño. Esto corrige el pie «Se guardará en» de
@@ -79,7 +79,7 @@ firmar**, como manda el ADR-0010, no al guardar.
 - **La degradación del ADR-0010 desaparece**, no se sustituye. Era «junto al original» y ese
   destino ya no existe.
 - **Los instaladores nativos heredan una capacidad más.** *Guardar junto al original* se suma a
-  lo que ya estaba apuntado que se gana al salir del arenero, junto al módulo PKCS#11 del
+  lo que ya estaba apuntado que se gana al salir del sandbox, junto al módulo PKCS#11 del
   anfitrión y la matriz de WebKitGTK.
 
 ## Enmienda: dónde se abre el diálogo de abrir
@@ -91,9 +91,9 @@ Las dos mitades son necesarias porque los canales no saben lo mismo, y esa asime
 ya la asume: la última viñeta de arriba apunta que los instaladores nativos heredan
 capacidades que en el flatpak no existen. Esta es una más.
 
-- **Fuera del arenero** —deb, rpm, Windows, macOS— el diálogo devuelve una ruta de verdad, así
+- **Fuera del sandbox** —deb, rpm, Windows, macOS— el diálogo devuelve una ruta de verdad, así
   que la carpeta de la que salió el documento se sabe, y se apunta.
-- **Bajo el arenero no se puede saber.** Lo que el portal devuelve es
+- **Bajo el sandbox no se puede saber.** Lo que el portal devuelve es
   `/run/user/1000/doc/<id>/nombre.pdf`, cuyo directorio padre contiene un solo fichero y no es
   ninguna carpeta del usuario; preguntar por la real —`org.freedesktop.portal.Documents.Info` y
   `.Lookup`— contesta `Not allowed in sandbox`, y `--filesystem=home` tampoco la devolvería. Es
@@ -166,7 +166,7 @@ numeración en información en vez de en sorpresa: quien va a cofirmar ve que va
 salir un `-2` y no que ha machacado el anterior.
 
 El `…/` de delante dice que hay carpetas por encima **sin afirmar cuáles**. No
-reabre la ruta que esta decisión prohíbe: bajo el arenero la aplicación no las
+reabre la ruta que esta decisión prohíbe: bajo el sandbox la aplicación no las
 conoce, y fuera de él no se enseñan igualmente, así que la marca significa lo
 mismo en los cuatro canales. La regla de recorte —qué se conserva, qué se come
 el `…`, y que la línea envuelve antes que cortarse— vive en el componente

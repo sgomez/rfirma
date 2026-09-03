@@ -232,7 +232,7 @@ mod tests {
         assert!(!view.destination.contains('/'));
     }
 
-    /// La ventana no elige la carpeta —bajo el arenero hay una sola—, así que
+    /// La ventana no elige la carpeta —bajo el sandbox hay una sola—, así que
     /// lo que mande en ese campo no puede reescribir lo guardado.
     #[test]
     fn writing_the_configuration_never_moves_the_destination_folder() {

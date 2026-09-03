@@ -1,6 +1,6 @@
 import { GlobalWorkerOptions, getDocument, type PageViewport, type PDFPageProxy } from "pdfjs-dist";
 // El fichero del worker, empaquetado por Vite. Con `?url` sale una ruta a un
-// activo de `dist/`, que es lo que hay que darle a `pdf.js`: bajo el arenero no
+// activo de `dist/`, que es lo que hay que darle a `pdf.js`: bajo el sandbox no
 // se puede cargar un worker de fuera de la aplicación.
 import workerSource from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { PdfDocument, PdfLoader, PdfPage, Viewport } from "./pdf";

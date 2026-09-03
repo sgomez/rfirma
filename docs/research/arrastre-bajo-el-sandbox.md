@@ -1,11 +1,11 @@
-# Qué llega al soltar un fichero en la ventana, bajo el arenero: medición
+# Qué llega al soltar un fichero en la ventana, bajo el sandbox: medición
 
 Medición del **ID-69** para el issue
 [#83](https://github.com/sgomez/rfirma/issues/83). El spec
 [#81](https://github.com/sgomez/rfirma/issues/81) prometió un aviso que dijera
 **qué hacer** cuando un fichero soltado no se pueda leer (ID-68), y puso como
 condición que antes se midiera si eso pasa de verdad y con qué rutas. Esto es
-esa medición: **no es una suposición sobre lo que el arenero deja pasar**.
+esa medición: **no es una suposición sobre lo que el sandbox deja pasar**.
 
 Entorno: Ubuntu 26.04, flatpak 1.16.6, `org.gnome.Platform//50` (GTK **3.24.52**,
 WebKitGTK 4.1), sesión GNOME sobre Wayland, `xdg-desktop-portal` del anfitrión.
@@ -35,7 +35,7 @@ Por eso el mensaje no puede decir «el fichero no existe» —existe, y la perso
 lo está viendo en su pantalla— sino **qué hacer**: abrirlo con el botón de
 abrir, que sí pasa por el portal de ficheros y concede la lectura.
 
-## 1. Dentro del arenero solo está la carpeta de documentos
+## 1. Dentro del sandbox solo está la carpeta de documentos
 
 Lo primero, porque es la mitad de la respuesta:
 
@@ -80,7 +80,7 @@ El resultado es que a Tauri le llegan `PathBuf` normales y corrientes, y en el
 caso interesante son rutas de `/run/user/1000/doc/`.
 
 La cadena está medida de punta a punta y sin GUI: el anfitrión hace de origen
-(`StartTransfer` + `AddFiles`, que es lo que hace Nautilus) y dentro del arenero
+(`StartTransfer` + `AddFiles`, que es lo que hace Nautilus) y dentro del sandbox
 se hace de destino (`RetrieveFiles`, que es lo que hace GTK):
 
 ```
@@ -104,16 +104,16 @@ Dos detalles que importan al código:
 - **El nombre del fichero sobrevive** dentro de la ruta exportada
   (`…/1e20dd88/rfirma-id69-fuera.pdf`), así que `PortalDocument::name()` sigue
   sacando el nombre del último segmento, igual que con el diálogo.
-- **Un fichero que ya se ve dentro del arenero no se exporta**: el portal
+- **Un fichero que ya se ve dentro del sandbox no se exporta**: el portal
   devuelve su ruta del anfitrión sin más. No hay nada que hacer al respecto; las
   dos formas se leen igual.
 
-## 3. Fuera del arenero (`just dev`) pasa lo mismo
+## 3. Fuera del sandbox (`just dev`) pasa lo mismo
 
-`file_transfer_portal_supported()` no comprueba si hay arenero: comprueba si
+`file_transfer_portal_supported()` no comprueba si hay sandbox: comprueba si
 `org.freedesktop.portal.Documents` contesta en el bus. En un escritorio GNOME
 contesta siempre, así que **`just dev` toma el mismo camino**, solo que para un
-llamante sin arenero el portal devuelve las rutas reales:
+llamante sin sandbox el portal devuelve las rutas reales:
 
 ```
 LLEGA  /home/sergio/Downloads/rfirma-id69-fuera.pdf
@@ -151,7 +151,7 @@ reescribirlos. Lo que hay que montar es:
 2. Desde el anfitrión, `StartTransfer` con `autostop: false` y `AddFiles` con
    los descriptores de los dos, **sin que el proceso termine**: la transferencia
    muere con la conexión de quien la abrió.
-3. Con esa clave, dentro del arenero
+3. Con esa clave, dentro del sandbox
    (`flatpak run --command=python3 me.sgomez.rfirma`), `RetrieveFiles` y un
    `open()` sobre cada ruta que devuelva; y, para el contraste, un `open()`
    sobre las dos rutas del anfitrión tal cual.

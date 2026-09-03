@@ -64,7 +64,7 @@ pub fn dropped_document(
         // situación propia cuyo texto dice qué hacer —usar el botón de abrir,
         // que sí pasa por el portal—. Por qué existe este caso y desde qué
         // carpetas ocurre está medido en
-        // `docs/research/arrastre-bajo-el-arenero.md`.
+        // `docs/research/arrastre-bajo-el-sandbox.md`.
         crate::dropped::Dropped::Unreadable { detail, ignored } => Some(DroppedDocumentView {
             document: None,
             failure: Some(Failure::new("droppedFileUnreadable", detail)),
@@ -87,7 +87,7 @@ pub fn deliver(
     signed: &[u8],
 ) -> Result<(PathBuf, SignedDocumentView), Failure> {
     let chosen = super::chosen_folder(configuration, documents_folder.to_path_buf());
-    // La carpeta se comprueba y **no se crea nunca** (ID-38): bajo el arenero
+    // La carpeta se comprueba y **no se crea nunca** (ID-38): bajo el sandbox
     // crearla contesta OK y no deja nada en el anfitrión.
     let folder = CheckedFolder::check(&chosen)?;
     let landing = folder.landing_for(document)?;
@@ -178,11 +178,11 @@ fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedD
 /// Las dos mitades de la frase importan, porque no todos los canales saben lo
 /// mismo:
 ///
-/// - **Fuera del arenero** —deb, rpm, Windows, macOS— el diálogo devuelve una
+/// - **Fuera del sandbox** —deb, rpm, Windows, macOS— el diálogo devuelve una
 ///   ruta de verdad, así que la carpeta de la que salió el documento se sabe y
 ///   se recuerda. Lo hace [`remembered_folder`], y vive en el estado, no en la
 ///   configuración: la acumula la aplicación sola.
-/// - **Bajo el arenero no se puede saber**, y no hay forma de arreglarlo con
+/// - **Bajo el sandbox no se puede saber**, y no hay forma de arreglarlo con
 ///   más código: lo que el portal devuelve es
 ///   `/run/user/1000/doc/<id>/nombre.pdf`, cuyo directorio padre tiene un solo
 ///   fichero dentro y no es ninguna carpeta del usuario; preguntar por la real
@@ -221,7 +221,7 @@ pub fn starting_folder(
 ///
 /// Se comprueba porque una carpeta que se borró o que estaba en un disco que
 /// ya no está montado no es un punto de partida: es un diálogo que se abre en
-/// un sitio que no existe. Bajo el arenero esto es siempre `None`, y también
+/// un sitio que no existe. Bajo el sandbox esto es siempre `None`, y también
 /// con «Recordar mi actividad» apagado, porque entonces no hay fichero de
 /// estado que leer.
 pub fn remembered_folder(memory: &Memory) -> Option<PathBuf> {
@@ -265,7 +265,7 @@ pub fn remember_the_folder(
 /// El `None` **no es una precaución, es la verdad**: el directorio padre de un
 /// enlace del portal contiene ese solo fichero y no dice nada de dónde está el
 /// original. Apuntarlo abriría el diálogo la próxima vez en un directorio del
-/// arenero que para entonces ni existe.
+/// sandbox que para entonces ni existe.
 ///
 /// Vive aquí y no en [`PortalDocument`] para no darle a ese tipo un método que
 /// devuelva un directorio: que no lo tenga es lo que impide que «guardar junto
@@ -454,7 +454,7 @@ mod tests {
     }
 
     /// El diálogo de abrir arranca donde caen los firmados, que es la única
-    /// carpeta que la aplicación conoce bajo el arenero.
+    /// carpeta que la aplicación conoce bajo el sandbox.
     #[test]
     fn the_open_dialog_starts_in_the_destination_folder() {
         let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -506,7 +506,7 @@ mod tests {
         assert!(!absent.exists(), "la carpeta no se puede haber creado");
     }
 
-    /// Fuera del arenero el diálogo devuelve una ruta de verdad, y entonces la
+    /// Fuera del sandbox el diálogo devuelve una ruta de verdad, y entonces la
     /// carpeta de la que salió el documento **sí** se sabe.
     #[test]
     fn outside_the_sandbox_the_folder_the_document_came_from_is_the_real_one() {
@@ -518,7 +518,7 @@ mod tests {
         );
     }
 
-    /// Y bajo el arenero no se sabe. El padre del enlace del portal tiene ese
+    /// Y bajo el sandbox no se sabe. El padre del enlace del portal tiene ese
     /// solo fichero dentro y no es ninguna carpeta del usuario: apuntarlo
     /// abriría el diálogo la próxima vez en un directorio que ni existe ya.
     #[test]
@@ -569,7 +569,7 @@ mod tests {
         );
     }
 
-    /// Bajo el arenero no se apunta nada, así que el diálogo sigue abriéndose
+    /// Bajo el sandbox no se apunta nada, así que el diálogo sigue abriéndose
     /// en el destino por los siglos de los siglos. Es lo correcto: la
     /// alternativa es guardar un directorio del portal.
     #[test]
@@ -676,7 +676,7 @@ mod tests {
 
     #[test]
     fn a_destination_folder_that_is_not_there_is_told_and_never_created() {
-        // Bajo el arenero crearla contesta OK y no deja nada en el anfitrión
+        // Bajo el sandbox crearla contesta OK y no deja nada en el anfitrión
         // (ID-38): la única respuesta correcta es decirlo.
         let missing = tempfile::tempdir()
             .expect("temporal")

@@ -43,7 +43,7 @@ if (!root) {
 // sobrevivir al reinicio (ID-75), el de la rúbrica del #128, `tauriRubricPicker`,
 // el del destino del #130, `tauriDestinations`, que es quien sabe con qué
 // nombre y en qué carpeta va a caer lo firmado (ID-63), y el del resumen del
-// #131, `tauriSignedDocumentOpener`, que bajo el arenero es lo único que lleva
+// #131, `tauriSignedDocumentOpener`, que bajo el sandbox es lo único que lleva
 // al usuario hasta el fichero que acaba de firmar (ID-79).
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.

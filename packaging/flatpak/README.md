@@ -7,7 +7,7 @@
 |---|---|
 | `me.sgomez.rfirma.yml` | El manifiesto |
 | `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
-| `verifica.sh` | Verificación reproducible dentro del arenero |
+| `verifica.sh` | Verificación reproducible dentro del sandbox |
 | `cargo-sources.json` / `node-sources.json` | Dependencias vendorizadas, generadas |
 | `sources.lock` | El sello que dice contra qué ficheros de bloqueo se generaron |
 | `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
@@ -32,7 +32,7 @@ v0.1** (ID-42). No se publica en ningún sitio.
 
 Hasta el [#56](https://github.com/sgomez/rfirma/issues/56) el manifiesto
 empaquetaba `probe/`, una aplicación Tauri mínima escrita para *medir* el
-arenero en el [#22](https://github.com/sgomez/rfirma/issues/22). Ahora empaqueta
+sandbox en el [#22](https://github.com/sgomez/rfirma/issues/22). Ahora empaqueta
 `rfirma-app`, y la sonda se ha borrado: contenía FFI, carga de la librería
 nativa y PKCS#11, o sea una **segunda implementación de la frontera FFI**, que
 es justo donde este proyecto lleva tres hallazgos de fallo silencioso
@@ -56,11 +56,11 @@ just token       # el paso 5 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` da ocho pasos. Dentro del arenero comprueba lo que solo el arenero
+`verifica.sh` da ocho pasos. Dentro del sandbox comprueba lo que solo el sandbox
 puede romper: que la librería nativa esté —y **sola**, sin auxiliares de AWT—,
 que el módulo PKCS#11 que empaqueta el propio flatpak cargue, que la ventana
 arranque y siga viva, que un documento entrado por el portal llegue con sus
-bytes intactos, y que el arenero **rechace escribir** en el perfil de Firefox
+bytes intactos, y que el sandbox **rechace escribir** en el perfil de Firefox
 y en `~/.pki/nssdb` — los dos únicos `--filesystem` que no van por portal
 (#101, AC 3).
 
@@ -73,7 +73,7 @@ cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
 grada B (`just token`) y `poppler-utils`.
 
 Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
-dentro del arenero, por tres razones medidas: dentro **no hay token** (el bundle
+dentro del sandbox, por tres razones medidas: dentro **no hay token** (el bundle
 empaqueta OpenSC para una tarjeta física, y montar el SoftHSM del anfitrión es
 justo el `LD_LIBRARY_PATH` de otra glibc que prohíbe el ID-40), **no hay
 poppler** (`pdfsig` no está ni en el bundle ni en `org.gnome.Platform//50`), y

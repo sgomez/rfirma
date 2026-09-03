@@ -3,7 +3,7 @@ import type { RecentDocument } from "./recents";
 /**
  * Por dónde entra un documento en la aplicación.
  *
- * La entrada pasa **siempre por el portal** del sistema: bajo el arenero es la
+ * La entrada pasa **siempre por el portal** del sistema: bajo el sandbox es la
  * única forma de leer un fichero de fuera, y saltárselo es lo que prohíbe el
  * ADR-0004. De ahí que esto sea un puerto y no un `<input type="file">`: el
  * WebView no puede abrir el explorador del sistema por su cuenta, y un campo

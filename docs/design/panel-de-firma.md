@@ -479,7 +479,7 @@ Sustituye a la configuración, que ya no sirve de nada:
 - **Tres botones, uno sobre otro y a ancho completo**, en el pie fijo:
   «Abrir el PDF» primario, «Abrir la carpeta» secundario y «Volver a firmar»
   como `--ghost`. Los dos primeros son el portal `OpenURI`, que funciona sin
-  declarar ningún permiso, y cargan más peso del que parece: bajo el arenero
+  declarar ningún permiso, y cargan más peso del que parece: bajo el sandbox
   son la única forma que tiene el usuario de llegar al fichero sin saberse la
   ruta.
 

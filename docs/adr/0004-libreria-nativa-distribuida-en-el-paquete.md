@@ -78,7 +78,7 @@ cinco auxiliares. Medido en
   compilando a `release 21`: lo que cambia es el JDK que construye, no el lenguaje de
   destino.
 - El runtime fija la glibc que se ejecuta, así que **la distribución del usuario deja
-  de intervenir**. A cambio, todo lo que el arenero no expone hay que declararlo, y
+  de intervenir**. A cambio, todo lo que el sandbox no expone hay que declararlo, y
   eso alcanza a cosas que fuera eran gratis: el módulo PKCS#11 lo empaqueta el propio
   flatpak, y los ficheros entran y salen por portales.
 - **Excepción consciente:**
@@ -97,7 +97,7 @@ cinco auxiliares. Medido en
   (`~/snap/firefox/common/.mozilla/firefox`,
   `~/.var/app/org.mozilla.firefox/.mozilla/firefox`), que en Ubuntu son la
   instalación por omisión. En los dos, el anfitrión resuelve el perfil y el
-  arenero no lo ve: la persona lee «no se ha encontrado ningún certificado» sin
+  sandbox no lo ve: la persona lee «no se ha encontrado ningún certificado» sin
   más explicación. **No se ensancha la concesión para taparlo** —ensancharla es
   justo lo que el [#101](https://github.com/sgomez/rfirma/issues/101) rechaza—;
   se anota aquí para que el aplazamiento tenga constancia y para que quien lo

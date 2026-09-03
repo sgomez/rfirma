@@ -439,7 +439,7 @@ pub fn choose_destination(
 
 /// **Orden 18.** Abre el PDF firmado con el visor del sistema.
 ///
-/// Bajo el arenero esto **no es comodidad**: la ventana nunca conoce la ruta
+/// Bajo el sandbox esto **no es comodidad**: la ventana nunca conoce la ruta
 /// del fichero (ADR-0011) y el usuario tampoco la ve, así que este botón y el
 /// siguiente son la única forma que tiene de llegar a lo que acaba de firmar
 /// (ID-79).
@@ -448,7 +448,7 @@ pub fn choose_destination(
 /// último documento entregado, que guarda la sesión de firma. Lo que la
 /// ventana no tiene no lo puede pedir mal.
 ///
-/// Debajo es el portal `OpenURI`, que fuera del arenero cae en `xdg-open`.
+/// Debajo es el portal `OpenURI`, que fuera del sandbox cae en `xdg-open`.
 #[tauri::command(async)]
 pub fn open_signed_document(
     app_handle: tauri::AppHandle,

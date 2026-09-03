@@ -58,7 +58,7 @@ export type RubricChoice = { rubric: Rubric } | { failure: RubricFailure } | nul
 
 /**
  * Por dónde entra la rúbrica. Puerto por lo mismo que el selector de
- * documentos: bajo el arenero el fichero lo entrega el portal, y la
+ * documentos: bajo el sandbox el fichero lo entrega el portal, y la
  * normalización ocurre al elegir, con el panel todavía abierto, nunca al
  * firmar.
  */

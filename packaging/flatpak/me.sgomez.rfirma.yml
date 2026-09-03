@@ -46,7 +46,7 @@ finish-args:
   # dialogo por firma, asi que el fichero tiene que caer solo en algun sitio.
   # Es la concesion mas estrecha que resuelve el caso: NO --filesystem=home.
   # TRAMPA MEDIDA en #27: si esta carpeta no existe en el anfitrion, dentro
-  # del arenero mkdir y la escritura contestan OK y el fichero no aparece en
+  # del sandbox mkdir y la escritura contestan OK y el fichero no aparece en
   # ninguna parte. La aplicacion NO debe crearla nunca: si no esta, no esta.
   - --filesystem=xdg-documents
   # NO se declara --filesystem=host-os: el modulo PKCS#11 lo aporta el
@@ -141,7 +141,7 @@ modules:
       - /share/man
 
   # 3. El modulo PKCS#11 lo APORTA el flatpak, no el anfitrion. Medido en #22:
-  #    el opensc-pkcs11.so del anfitrion no carga dentro del arenero porque sus
+  #    el opensc-pkcs11.so del anfitrion no carga dentro del sandbox porque sus
   #    libopensc.so.13 y libeac.so.3 no estan, y apuntar LD_LIBRARY_PATH al
   #    anfitrion mezcla librerias de otra glibc dentro del runtime.
   - name: opensc
@@ -155,7 +155,7 @@ modules:
       - --with-pcsc-provider=libpcsclite.so.1
     make-install-args:
       # Por omision intenta escribir en /usr/share/p11-kit/modules, que en el
-      # arenero de construccion es de solo lectura.
+      # sandbox de construccion es de solo lectura.
       - p11kitdir=/app/share/p11-kit/modules
       - completiondir=/app/share/bash-completion/completions
     sources:
@@ -201,7 +201,7 @@ modules:
   #
   #    POR ESO node-sources.json ESTA VERSIONADO PERO NO SE INCLUYE AQUI. El
   #    ID-07 pide las dos vendorizaciones y `just flatpak-sources` genera las
-  #    dos, pero dentro del arenero no hay nada que ejecutar con ellas: en
+  #    dos, pero dentro del sandbox no hay nada que ejecutar con ellas: en
   #    org.gnome.Sdk//50 NO HAY node (comprobado: `which node` no lo encuentra),
   #    asi que mover `vite build` aqui dentro exigiria anadir la extension de
   #    SDK org.freedesktop.Sdk.Extension.node22, que es otra decision y no la de
@@ -230,7 +230,7 @@ modules:
       # LA COMPROBACION QUE FALTABA: que el frontal este DENTRO del binario.
       # Sin --features custom-protocol el `dev` de Tauri queda encendido, el
       # binario compila igual de bien y la ventana abre contra
-      # http://localhost:1420, que dentro del arenero no existe. Es el fallo de
+      # http://localhost:1420, que dentro del sandbox no existe. Es el fallo de
       # la v0.1 y no lo veia nadie: ni cargo, ni verifica.sh, que solo miraba
       # que el proceso siguiera vivo. Un `grep` del nombre del bundle de vite
       # lo caza al construir, que es donde sale barato.
@@ -248,7 +248,7 @@ modules:
             echo >&2
             echo "Falta --features custom-protocol: sin ella el binario abre" >&2
             echo "la ventana contra devUrl (http://localhost:1420) y dentro" >&2
-            echo "del arenero no hay nadie escuchando ahi. Ver el bloque" >&2
+            echo "del sandbox no hay nadie escuchando ahi. Ver el bloque" >&2
             echo "[features] de rfirma-app/src-tauri/Cargo.toml." >&2
             exit 1
         fi

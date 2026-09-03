@@ -60,7 +60,7 @@ interface SignedPanelProps {
  * v1.0.
  *
  * Los tres botones del pie son las tres salidas del estado, y los dos primeros
- * cargan más peso del que parece: bajo el arenero la aplicación nunca conoce la
+ * cargan más peso del que parece: bajo el sandbox la aplicación nunca conoce la
  * ruta del documento y el usuario nunca la ve (ADR-0011), así que son la única
  * forma que tiene de llegar al fichero que acaba de firmar (ID-79). **No hay
  * «Firmar otro documento»**: lo hubo y se retira, porque la bandeja siempre

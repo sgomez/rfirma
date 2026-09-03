@@ -45,7 +45,7 @@ export interface DestinationSource {
 /**
  * Quién lleva al usuario **hasta** el fichero que ha quedado escrito.
  *
- * Bajo el arenero esto no es comodidad: la aplicación nunca conoce la ruta del
+ * Bajo el sandbox esto no es comodidad: la aplicación nunca conoce la ruta del
  * documento y el usuario nunca la ve (ADR-0011), así que abrir el PDF y abrir
  * su carpeta son las dos únicas formas de llegar a lo que se acaba de firmar
  * (ID-79).

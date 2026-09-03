@@ -28,7 +28,7 @@ export type OpenedPdf =
    * El PDF abierto y **cuánto ocupa**, en bytes.
    *
    * El tamaño viaja con él porque sale de los mismos bytes que se acaban de
-   * leer y no hay una segunda forma de saberlo: bajo el arenero la aplicación
+   * leer y no hay una segunda forma de saberlo: bajo el sandbox la aplicación
    * no conoce la ruta del documento, así que nadie puede preguntarle al disco.
    * Quien lo usa es la vista previa del sello, que por encima de cierto tamaño
    * deja de recalcularse sola (ID-109).
@@ -38,7 +38,7 @@ export type OpenedPdf =
 /**
  * De qué documento se pinta el PDF.
  *
- * Es un puerto por lo mismo que lo es el selector: bajo el arenero los bytes
+ * Es un puerto por lo mismo que lo es el selector: bajo el sandbox los bytes
  * los entrega el **portal**, no una ruta que el WebView pueda abrir. La
  * aplicación nunca conoce la ruta original de un documento, así que aquí no hay
  * ni una URL: entra el documento de la bandeja y sale el PDF ya abierto.
