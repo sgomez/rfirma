@@ -106,7 +106,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   box-shadow:var(--rf-shadow-elevated);width:420px}
 </style>
 </helmet>
-<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:1000px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
 
 
 <header class="rf-row" style="height:56px;flex:none;padding:0 var(--rf-space-sm) 0 var(--rf-space-md);
@@ -297,6 +297,10 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <ul style="list-style:none;margin:0;padding:0;max-height:232px;overflow-y:auto;background:var(--rf-surface);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
           <sc-for list="{{ filas }}" as="fila" hint-placeholder-count="3">
             <li>
+              <sc-if value="{{ fila.hayEncabezado }}" hint-placeholder-val="{{ false }}">
+                <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;margin:0;
+                  padding:8px var(--rf-space-sm) 4px;background:var(--rf-bg)">{{ fila.encabezado }}</p>
+              </sc-if>
               <button type="button" style="{{ fila.estilo }}" disabled="{{ fila.inutil }}" onClick="{{ fila.elegir }}">
                 <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
                   <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ fila.titular }}</span>
@@ -428,7 +432,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"estado":{"editor":"enum","options":["sin elegir","elegido","abierto"],"default":"abierto","section":"Selector"},"cuantos":{"editor":"enum","options":["2","4","9"],"default":"4","section":"Selector"},"caducados":{"editor":"boolean","default":true,"section":"Selector"},"$preview":{"width":1180,"height":1000}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"estado":{"editor":"enum","options":["sin elegir","elegido","abierto"],"default":"abierto","section":"Selector"},"cuantos":{"editor":"enum","options":["2","4","9"],"default":"4","section":"Selector"},"caducados":{"editor":"boolean","default":true,"section":"Selector"},"orden":{"editor":"enum","options":["agrupado · utilizables primero","como hoy · el orden en que cargaron los modulos"],"default":"agrupado · utilizables primero","section":"Orden"},"$preview":{"width":1180,"height":700}}'>
 // El boton de cada fila. La ultima no lleva raya, y la que no sirve va
 // atenuada y sin cursor: es la marca de que no se puede elegir.
 const FILA = "display:flex;align-items:flex-start;gap:var(--rf-space-xs);width:100%;" +
@@ -453,14 +457,23 @@ class Component extends DCLogic {
     const estado = this.props.estado || "sin elegir";
     const cuantos = parseInt(this.props.cuantos || "4", 10);
     const conCaducados = this.props.caducados !== false;
+    const agrupado = (this.props.orden || "agrupado").indexOf("agrupado") === 0;
 
     // Mover una palanca reinicia lo que se haya tocado con el ratón.
-    const clave = [tema, estado, cuantos, conCaducados].join("|");
+    const clave = [tema, estado, cuantos, conCaducados, agrupado].join("|");
     const s = (this.state && this.state.clave === clave) ? this.state : {};
 
     let visibles = TODOS.slice(0, cuantos);
     if (!conCaducados) {
       visibles = visibles.filter(function (c) { return !c.aviso; });
+    }
+    if (agrupado) {
+      visibles = visibles.slice().sort(function (a, b) {
+        const utilA = a.aviso ? 1 : 0, utilB = b.aviso ? 1 : 0;
+        if (utilA !== utilB) { return utilA - utilB; }
+        const porTitular = a.titular.localeCompare(b.titular, "es");
+        return porTitular !== 0 ? porTitular : a.almacen.localeCompare(b.almacen, "es");
+      });
     }
 
     const abierto = s.abierto !== undefined ? s.abierto : (estado === "abierto");
@@ -476,7 +489,11 @@ class Component extends DCLogic {
     const filas = visibles.map(function (c, indice) {
       const inutil = Boolean(c.aviso);
       const ultima = indice === visibles.length - 1;
+      const anterior = indice > 0 ? visibles[indice - 1] : null;
+      const abreGrupo = agrupado && (indice === 0 || Boolean(anterior.aviso) !== inutil);
       return {
+        hayEncabezado: abreGrupo,
+        encabezado: inutil ? "No utilizables" : "Disponibles",
         titular: c.titular,
         linea: c.dni + " · " + c.emisor + " · " + c.almacen,
         aviso: c.aviso,

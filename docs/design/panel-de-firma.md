@@ -150,12 +150,29 @@ elegir.** Fila `disabled`, atenuada, con el motivo en tercera línea y en negrit
 ese certificado se quedaría mirando una lista donde falta, sin saber por qué.
 Es lo que pide la historia 8 del [#46](https://github.com/sgomez/rfirma/issues/46).
 
-**La primera vez no hay preselección.** Con varios certificados y nada
-recordado, el disparador dice «Elegir certificado» y el botón de firmar está
-apagado. Elegir con qué identidad se firma un documento con validez jurídica no
-lo hace la aplicación por su cuenta, y el orden de la lista solo dice en qué
-orden cargaron los módulos. Con uno solo sí se elige solo: elegir entre una cosa
-no es elegir.
+**La lista va agrupada y ordenada.** Dos grupos con encabezado —`Disponibles`
+y `No utilizables`—, y dentro de cada uno, orden alfabético por titular con
+`localeCompare("es")`, desempatando por nombre del almacén. Hasta la v0.3.0 **no
+ordenaba nadie**: las filas salían en el orden en que respondían los módulos
+PKCS#11 —primero las tarjetas presentes, luego los perfiles de Firefox, luego
+`~/.pki/nssdb`—, y dentro de cada uno, lo que devolviera `C_FindObjects`. Ese
+orden no significa nada para quien elige, y dejaba los caducados arriba
+obligando a bajar a buscar los que sirven.
+
+El corte entre grupos es **si se puede firmar con él**, y nada más: abajo caen
+juntos los caducados, los que aún no son válidos y los que no se han podido
+leer. No hay un grupo «revocado» porque hoy **no se comprueba la revocación**:
+solo se miran las fechas del certificado, y hablar con un OCSP es otro trabajo.
+El estado existe en el contrato para que ese resultado no acabe disfrazado de
+fallo del token, pero nadie lo emite todavía.
+
+**La primera vez no hay preselección**, y **nunca se preselecciona uno que no
+sirva**. Con varios certificados y nada recordado, el disparador dice «Elegir
+certificado» y el botón de firmar está apagado. Elegir con qué identidad se
+firma un documento con validez jurídica no lo hace la aplicación por su cuenta.
+La regla de «con uno solo se elige solo» tiene por tanto una excepción: si ese
+único certificado está caducado, la lista arranca sin elección — preseleccionar
+algo con lo que no se puede firmar solo aplaza el fallo hasta después del PIN.
 
 **El certificado se recuerda al firmar con él**, no al elegirlo en la lista, y
 la próxima sesión sale ya puesto. El glosario dice «el certificado usado la
@@ -169,26 +186,27 @@ El artboard es
 
 ## Firma visible
 
-Cinco piezas en este orden:
+Cuatro piezas en este orden:
 
 1. **Interruptor**: «Estampar un recuadro de firma en el documento».
-2. **Colocación**: en qué páginas se sella y en cuál está el recuadro.
-   Ver «[Colocación](#colocación)».
+2. **Colocación**: en qué páginas se sella, en cuál está el recuadro, y el
+   botón que lo pone o lo quita. Ver «[Colocación](#colocación)».
 3. **Contenido**: cinco casillas de igual forma y ritmo.
-   - Tu rúbrica
-   - Nombre y apellidos
-   - DNI
-   - Fecha y hora de la firma
-   - Un motivo
+   - Firmante
+   - Emisor
+   - Fecha
+   - Rúbrica
+   - Motivo
 4. **Imagen de la rúbrica**: miniatura real de la imagen cargada y un botón
    para cambiarla.
-5. **Vista previa**: una insignia con el estado de lo que se ve dentro del
-   recuadro, una línea que lo explica, y el botón que haga falta —«Ver cómo
-   queda» en un documento grande, «Volver a intentarlo» cuando no se ha podido
-   dibujar—. El sello se ve **sobre la hoja**, no aquí; lo que vive aquí es lo
-   que la hoja no puede decir. Ver
-   [visor de documento](visor-de-documento.md) § «Dentro del recuadro va el
-   sello de verdad».
+
+**No hay quinta pieza.** Hubo un bloque «Vista previa» con una insignia de
+estado —al día, recalculando, moviendo, no se ha podido dibujar— y se retiró en
+la v0.3.1: contaba el estado de un componente, que no es información para quien
+firma, y quedaba tan abajo en la columna que había que desplazarse para verlo.
+El sello se ve **sobre la hoja**, y lo que la hoja no puede decir lo dice ahora
+la pastilla flotante del visor. Ver
+[visor de documento](visor-de-documento.md) § «La pastilla bajo la hoja».
 
 **Sin certificado, el bloque entero está apagado y en gris**, con el interruptor
 en «no» y un aviso encima: «Elige un certificado para colocar la firma visible».
@@ -201,12 +219,29 @@ tener puesta la tarjeta o el DNIe. La colocación **no se pierde** si el
 certificado desaparece después: el bloque se vuelve a apagar y el recuadro
 vuelve al reaparecer.
 
-**El DNI se estampa enmascarado**, siempre y sin interruptor: `99999999R` sale
-como `***9999**`, con la misma máscara que AutoFirma aplica por omisión
-(`*`, mínimo tres dígitos seguidos, tres ocultos y cuatro visibles). No se
-promete más de lo que hace: el certificado entero viaja dentro de la firma con
-el DNI en claro, y cualquier lector de PDF lo enseña al inspeccionarla. La
-máscara protege de la lectura casual del recuadro, no del documento.
+**La máscara va sobre el nombre del firmante, no sobre un campo aparte.**
+`ADA LOVELACE BYRON - 99999999R` se estampa como
+`ADA LOVELACE BYRON - ***9999**`, con la misma máscara que AutoFirma aplica por
+omisión (`*`, mínimo tres dígitos seguidos, tres ocultos y cuatro visibles) y
+en el mismo sitio en que la aplica él: el `CN` del subject. Hasta la v0.3.0 la
+máscara existía pero estaba puesta en una línea «DNI» separada, leída del RDN
+`serialNumber`, mientras el `CN` se estampaba tal cual — y como los
+certificados españoles llevan ya el DNI dentro del `CN`, el recuadro lo
+enseñaba en claro arriba y lo tapaba abajo. Por eso desaparece la casilla
+«DNI»: el dato no falta, está donde siempre estuvo.
+
+No se promete más de lo que hace: el certificado entero viaja dentro de la
+firma con el DNI en claro, y cualquier lector de PDF lo enseña al
+inspeccionarla. La máscara protege de la lectura casual del recuadro, no del
+documento. Los certificados de **seudónimo** quedan exentos, como en AutoFirma.
+
+**El texto del recuadro es un solo párrafo**, con las frases separadas por
+puntos, no una línea por dato. No es estética: iText reparte el tamaño de letra
+entre `alto del recuadro / número de líneas`, así que menos líneas es letra más
+grande. Y **el tamaño se ajusta solo**: rFirma envía `layer2FontSize = 0`, que
+es lo que activa el reparto. Antes no enviaba nada y el valor por omisión, 12 pt,
+funcionaba como tope —solo encogía, nunca crecía—, de modo que un recuadro
+grande salía con letra minúscula.
 
 **Firma visible y rúbrica no son lo mismo**, y la estructura lo dice sin
 explicarlo: la *firma visible* es el recuadro que se estampa en la página; la
@@ -217,13 +252,16 @@ el glosario de [CONTEXT.md](../../CONTEXT.md).
 **No hay comodines**, ni arriba ni abajo. El usuario nunca escribe
 `$$SUBJECTCN$$` ni `$$SIGNDATE$$`: marca qué dato aparece. Y tampoco los hay por
 debajo: rFirma compone el texto del recuadro y lo envía ya resuelto en
-`layer2Text`. Lo fuerza esta lista de casillas — AutoFirma **no tiene comodín
-para el DNI**, que vive en el RDN `serialNumber` y solo asoma dentro de
-`$$SUBJECTCN$$` y `$$SUBJECTDN$$`, con el nombre pegado. Separar «Nombre y
-apellidos» de «DNI» no se puede expresar con sus comodines. Ver
+`layer2Text`. AutoFirma tiene catorce comodines y un campo de texto libre; aquí
+hay cinco casillas, y la diferencia es deliberada. Con casillas el texto **sigue
+al idioma de la aplicación** en los cinco idiomas, cosa que una plantilla escrita
+por el usuario no puede hacer; y no se heredan las rarezas del original, como que
+`$$PSEUDONYM$$` imprima el literal en el PDF cuando el certificado no lleva el
+OID `2.5.4.65`. Un editor de plantillas queda apuntado para más adelante, y esta
+lista no le cierra la puerta. Ver
 [#31](https://github.com/sgomez/rfirma/issues/31).
 
-**Sin imagen cargada, la casilla «Tu rúbrica» está apagada** con la pista
+**Sin imagen cargada, la casilla «Rúbrica» está apagada** con la pista
 «Elige antes una imagen»: no se puede marcar una rúbrica que no existe.
 
 **La miniatura enseña el resultado real, sobre blanco.** La rúbrica viaja al PDF
@@ -253,6 +291,28 @@ Dentro, el rótulo `Colocación` y tres opciones en radio:
 | `Solo 1 página` | `Página 3`, o `aún sin colocar` | la página del recuadro |
 | `Estas páginas` | — | lo que diga su campo de texto |
 | `Todas las páginas (27)` | — | las *n* del documento |
+
+**El botón de sellar vive aquí**, bajo los radios y a todo el ancho del bloque.
+Tiene tres caras y su etiqueta es lo único que hace falta saber: `Sellar esta
+página` cuando la página que miras no lleva sello, `Colocar el sello aquí`
+cuando el modo es «Todas las páginas» —en «todas» el conjunto ya está completo y
+decir «esta» engañaría—, y `Quitar el sello` cuando sí lo lleva.
+
+Hasta la v0.3.0 este botón vivía en una pastilla **bajo la hoja**, y esa
+pastilla iba *en flujo* dentro del área de desplazamiento del visor: al ampliar,
+la hoja crecía y el botón se iba con ella fuera de la vista. Se estudiaron una
+pastilla flotante y meterlo en la botonera de paginación, y ganó el panel — la
+botonera está centrada y las tres caras tienen anchos muy distintos, así que la
+botonera entera bailaría de sitio con cada cambio, y además mezcla navegación
+inocua con una acción que modifica el documento. La pastilla, al quedar libre,
+pasa a ser **solo** el estado del sello.
+
+**Y con el botón desaparecen los mensajes de colocación.** El panel decía «Aún
+no has colocado la firma», «El recuadro está en esta página» y «El recuadro está
+en la página *n*» —esta última con un botón para saltar allí—. La etiqueta del
+botón ya lo cuenta: si dice «Sellar esta página», no está sellada. Repetirlo en
+una frase encima era decir dos veces lo mismo y gastar el alto que la v0.3.1
+está intentando ahorrar.
 
 **La etiqueta es fija y el número va en el pie.** «Esta página» no dice cuál y
 deja de ser cierto en cuanto pasas de página; el pie sí lo dice, y dice además
@@ -459,8 +519,11 @@ antes que el código y no al revés:
 - **El rótulo «Imagen de la rúbrica».** El artboard pone la miniatura y el
   botón sin encabezado; sin él la fila queda colgando de la lista de casillas
   y no se lee como su propio bloque.
-- **El bloque «Lo que dirá el recuadro».** Lo exige el ID-19: el texto lo
-  compone Rust y la vista previa enseña **esa** cadena, no una imitación.
+- ~~**El bloque «Lo que dirá el recuadro».**~~ Lo exigía el ID-19, y **se retiró
+  en la v0.3.1 junto con ese ID**. Su argumento era bueno —el texto lo compone
+  Rust y había que enseñar *esa* cadena, no una imitación— pero se quedó sin
+  premisa cuando el sello real pasó a verse entero sobre la hoja: leer el texto
+  dos veces, una en el panel y otra en el documento, no añade nada.
 - **El aviso de recuadro fuera de página** del visor, que exige el ID-22.
 - **El marco de la rúbrica va solo con rúbrica elegida.** El artboard dibuja
   siempre el marco de 56 × 36 px con el garabato dentro; aquí la miniatura

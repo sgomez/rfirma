@@ -67,12 +67,23 @@ superposición, ni ventana atenuada, ni centrado.
 - Panel de 360 px fijos, borde izquierdo de 1 px en `--rf-border-subtle`.
 - Bandeja, visor y panel sobre `--rf-surface`; solo el papel del documento
   fuerza `data-theme="light"` sobre `--rf-bg`.
-- **La ventana abre a 1440×900 y no baja de 1100×700.** Las dos columnas
+- **La ventana abre a 1280×720 y no baja de 1100×560.** Las dos columnas
   laterales suman 660 px fijos, así que lo que decide si el documento se lee es
   lo que sobra: a 1024 de ancho —la medida con la que arrancó— al visor le
-  quedaban 364 px, menos de la mitad de una A4 al 100 %. El mínimo se fija en
-  1100 por lo mismo: por debajo, el visor deja de ser la región principal de la
-  ventana y pasa a ser la más estrecha de las tres.
+  quedaban 364 px, menos de la mitad de una A4 al 100 %. El mínimo de **ancho**
+  se fija en 1100 por lo mismo: por debajo, el visor deja de ser la región
+  principal de la ventana y pasa a ser la más estrecha de las tres.
+
+  El **alto** es otra historia y hasta la v0.3.0 estaba mal. Abría a 900 con un
+  mínimo de 700, y ninguna de las dos cifras miraba la pantalla: en un portátil
+  de 1366×768 la ventana nacía más alta que el escritorio, el pie del panel
+  quedaba fuera, y el mínimo de 700 impedía encogerla lo bastante para
+  recuperarlo. **La corrección no es añadir lógica de monitores**, es dejar de
+  estorbar al gestor de ventanas, que ya sabe colocar: se pide un alto que quepa
+  en un portátil y se baja el suelo hasta donde la ventana sigue siendo usable.
+  El tamaño se sigue recordando entre sesiones, como estaba
+  ([ADR-0010](../adr/0010-que-recuerda-rfirma.md)); lo que no se hace es
+  imponerlo por encima de la pantalla.
 
 ## La secuencia no es negociable
 

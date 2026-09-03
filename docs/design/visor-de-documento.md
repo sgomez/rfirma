@@ -160,11 +160,26 @@ botones ± ya no son *el* zoom: son los **siete escalones** con los que
 tropiezan, para que pulsar «acercar» caiga en un número redondo y no en el
 137 % en el que quedó el pellizco.
 
+**Un documento nuevo abre en «ajustar a la página»**, no al 100 %. Es lo que se
+quiere casi siempre —para colocar el recuadro hay que ver dónde cae en la hoja—
+y evita que la primera pintada de un A4 salga cortada por abajo. Se eligió
+«ajustar a la página» también en apaisado, en vez de «ajustar al ancho»: al
+ancho deja parte de la hoja fuera de la vista, y el recuadro se coloca sobre la
+hoja entera.
+
 **«Ajustar» es un modo, no un botón que se pulsa una vez** (ID-117). Sobrevive
 al cambio de página, al redimensionado de la ventana y al documento siguiente:
-has dicho *cómo* quieres mirar, no *cuánto* quieres ampliar ese documento. Un
-zoom fijado a mano lo rompe, y entonces el documento siguiente vuelve al 100 %.
-No se recuerda entre sesiones ni por documento.
+has dicho *cómo* quieres mirar, no *cuánto* quieres ampliar ese documento. No se
+recuerda entre sesiones ni por documento.
+
+**Y un zoom fijado a mano también sobrevive al documento siguiente**, lo que
+enmienda el ID-117. Antes se descartaba y el documento siguiente volvía al
+100 %; ahora manda lo último que haya dicho el usuario, sea un modo o un
+porcentaje, y el «ajustar a la página» de partida solo se aplica mientras no
+haya tocado nada. El argumento es el mismo que sostenía la regla original —has
+dicho cómo quieres mirar— y antes se aplicaba solo a la mitad de los casos: a
+quien se pone al 200 % para colocar un recuadro fino, devolverle el 100 % al
+abrir el siguiente documento es pelearse con él.
 
 **El lienzo no pasa de 4×** (ID-119). En una pantalla HiDPI el mapa de bits se
 pinta a `devicePixelRatio`, pero `zoom × ratio` se acota: un A4 al 400 % con
@@ -217,31 +232,36 @@ firma en el sitio equivocado.
 
 ## La pastilla bajo la hoja
 
-Centrada bajo la página, `--rf-radius-pill`, fondo `--rf-surface`, borde
-`--rf-border-strong` y `--rf-shadow-elevated`. Un texto y un botón, y solo tiene
-tres caras:
+**Flota**, como la botonera: `position: absolute` contra el visor, justo encima
+de ella, `--rf-radius-pill`, fondo `--rf-surface`, borde `--rf-border-strong` y
+`--rf-shadow-elevated`. Es el mismo hueco que ocupa el aviso del visor, y no hay
+dos: es uno.
+
+**Habla del sello y de nada más.** Un texto, y un botón cuando hay algo que
+hacer:
 
 | Cuándo | Texto | Botón |
 | --- | --- | --- |
-| Nada colocado | «Aún no has colocado la firma» | `Sellar esta página`, primario |
-| Colocado, y esta página no está en el conjunto | «Esta página no se sella» | `Sellar esta página`, secundario |
-| Colocado, esta página está en el conjunto, opción `Estas páginas` | «Esta página se sella» | `Quitar el sello`, fantasma |
+| El sello está al día | — | — (no hay pastilla) |
+| Moviendo o redimensionando el recuadro | «Sello congelado mientras mueves el recuadro» | — |
+| Documento grande, sin componer | «Documento grande: el sello no se recalcula solo» | `Ver cómo queda` |
+| No se ha podido componer | «No se ha podido dibujar el sello» | `Volver a intentarlo` |
 
-Con `Solo 1 página` o `Todas las páginas` y la página ya sellada, **no hay
-pastilla**: no queda nada que ofrecer ahí.
+**Mide lo mismo tenga botón o no.** Altura fija y el hueco del botón reservado.
+Sin eso pega un salto al pasar de «congelado» a «sin componer», y algo que salta
+bajo la hoja mientras colocas el recuadro molesta más que lo que arreglaba.
 
-**El botón no cambia de texto con la opción** (#188). Hasta la v0.3 tenía una
-cuarta redacción, «Colocar el sello aquí» con `Todas las páginas`, y sobre un
-documento sin colocar era una diferencia sin diferencia detrás: sin recuadro,
-«todas» todavía no sella nada —es una preferencia—, y la misma hoja ofrecía dos
-botones distintos según qué radio estuviera marcado en la columna de al lado.
+**No dice nada de colocación.** Hasta la v0.3.0 tenía tres caras que ofrecían
+`Sellar esta página` y `Quitar el sello`, y ese botón se ha ido al panel, al
+bloque «Colocación» — ver [panel de firma](panel-de-firma.md) § «Colocación».
+El motivo no fue de reparto sino un fallo: la pastilla iba **en flujo** dentro
+del área de desplazamiento, así que al ampliar la hoja crecía y la pastilla
+salía de la vista, botón incluido. Al mudarse el botón, la pastilla quedó libre
+para lo único que la hoja no puede contar por sí misma, que es el estado del
+sello; y no hace falta arbitrar quién habla, porque solo hay un inquilino.
 
-**Con `Solo 1 página` sellar sustituye**, no añade: esa opción nombra una página,
-y sellar la 2 deja la 2 y quita el sello de la 1. Con las otras dos, la página se
-añade al conjunto.
-
-Es el único camino para elegir páginas que no pasa por teclear, y el que hace
-que las páginas se elijan **mirándolas**. Pulsar reescribe el campo del panel.
+**Y no repite lo que ya dice el botón.** «Aún no has colocado la firma» se ha
+retirado: si el botón del panel dice `Sellar esta página`, es que no lo está.
 
 ## En qué páginas se dibuja el recuadro
 

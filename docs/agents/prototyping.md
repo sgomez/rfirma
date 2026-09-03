@@ -146,6 +146,12 @@ baja a `main` es Markdown, no HTML:
   Qué se descartó y por qué. Enlace al canvas que lo validó.
   ```
 
+- **Un artboard de trabajo nace para morir.** Si para decidir has creado
+  artboards o páginas aparte, al validar **se funden en el artboard de la
+  pantalla y se borran**, del repositorio y del proyecto, en el mismo turno en
+  que el usuario elige. La pantalla es la misma, y dos sitios donde mirarla son
+  dos fuentes de verdad. Lo que se conserva es el *porqué*, en la anotación de
+  la página que sobrevive.
 - Marca el canvas como `validado` en el registro, con la fecha. El canvas se
   queda como fuente primaria de la decisión; no se borra ni se promociona a
   código tal cual. Su URL vive a partir de ahí en la sección "Decisiones" de la
@@ -166,13 +172,6 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
 | _(ninguno en vuelo)_ | | | |
-
-La **vista previa dentro del recuadro** (ficha 7, [#156](https://github.com/sgomez/rfirma/issues/156))
-se validó el 02/09/2026 y también salió. Se prototipó en una página aparte con
-dos artboards propios, y al validarla **se fundió en `Main` y la página se
-borró**: la pantalla es la misma, y dos sitios donde mirarla son dos fuentes de
-verdad. Es la regla, y conviene tenerla presente al abrir una página de trabajo:
-nace para morir.
 
 El caso de uso **firmar un PDF en local** se validó el 31/08/2026 y salió de
 esta tabla: su canvas está enlazado desde la sección «Decisiones» de cada ficha

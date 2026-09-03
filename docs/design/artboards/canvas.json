@@ -16,7 +16,7 @@
       "x": 0,
       "y": 0,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -25,7 +25,7 @@
       "x": 1260,
       "y": 0,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -34,7 +34,7 @@
       "x": 0,
       "y": 3420,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido",
       "is_interactive": true
     },
@@ -44,7 +44,7 @@
       "x": 2520,
       "y": 0,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -53,7 +53,7 @@
       "x": 3780,
       "y": 0,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -62,7 +62,7 @@
       "x": 0,
       "y": 1140,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido",
       "is_interactive": true
     },
@@ -72,7 +72,7 @@
       "x": 1260,
       "y": 1140,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -81,7 +81,7 @@
       "x": 2520,
       "y": 1140,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -90,7 +90,7 @@
       "x": 3780,
       "y": 1140,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -99,7 +99,7 @@
       "x": 0,
       "y": 2280,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -108,7 +108,7 @@
       "x": 1260,
       "y": 2280,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -117,7 +117,7 @@
       "x": 3780,
       "y": 2280,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -126,7 +126,7 @@
       "x": 0,
       "y": 0,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "otros"
     },
     {
@@ -135,7 +135,7 @@
       "x": 2520,
       "y": 2280,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido"
     },
     {
@@ -144,7 +144,7 @@
       "x": 5040,
       "y": 1140,
       "w": 1180,
-      "h": 1000,
+      "h": 700,
       "page": "recorrido",
       "is_interactive": false
     }
@@ -197,6 +197,14 @@
       "w": 1100,
       "page": "recorrido",
       "text": "v0.3 · EL RECUADRO (fichas 6 y 24), decidido en el ticket #155 del mapa #148, que absorbió al #154. Se supone siempre la firma visible activada. No hay pantallas nuevas: cambia «5 · Colocando la firma visible» y nace el diálogo «5b».\n\n5 SE PUEDE PULSAR: los radios, el botón bajo la hoja y las flechas de página funcionan. La palanca «Colocación» salta a cada caso; desde ahí se camina.\n\nREGLA DE ORO: «colocado» no es una casilla aparte, es que haya al menos una página sellada. Sin ninguna, no hay recuadro y «Firmar documento» está apagado, sea cual sea el modo.\n\nCASO 1 · recién abierto: nada sellado, firmar apagado, el panel pide colocar la firma y bajo la hoja aparece «Aún no has colocado la firma · Sellar esta página». Se pulsa (o se arrastra un recuadro) y esa página queda sellada. Al cambiar de página el sello no viaja; para traerlo, el mismo botón.\nCASO 2 · «Todas las páginas»: todavía falta el rectángulo, y el botón dice «COLOCAR EL SELLO AQUÍ» — en «todas» el conjunto ya está completo y decir «esta» engañaría.\nCASO 3 · «Estas páginas»: tres caminos que hacen lo mismo — el botón (que autorrellena el campo), el arrastre, o teclear. En una página ya sellada el botón dice «QUITAR EL SELLO» y el campo se reescribe: quitar la 12 de 3,10-20 deja 3,10-11,13-20. Si se quita la última, se vuelve al caso 1.\n\nPOSICIÓN ESTÁNDAR: colocado por botón o por campo, el recuadro cae abajo a la derecha, a un margen del borde.\n\n«SOLO 1 PÁGINA» es etiqueta fija y el número va en el pie («Página 3»): decir «esta página» mentía al pasar de página. Al cambiar de modo sobrevive la página DONDE SE COLOCÓ el recuadro.\n\nEL CAMPO usa el formato de impresión de toda la vida, 1,2-3,10-20. Enmienda al #152, que pedía una tira de miniaturas: se rompe a las 200 páginas. Lo prohibido de AutoFirma es su sintaxis (1-3,-3--1) y la degradación silenciosa, no teclear — la palanca «tecleado» recorre los tres errores y los tres APAGAN el botón de firmar (ID-22).\n\nTIRADORES: cuatro, y son CROMO, NO PAPEL — 10 px en pantalla al 50 %, al 100 % y al 300 %. No hay medidas escritas en el panel ni línea de ayuda: se mueve arrastrando, se redimensiona por los tiradores, y la ayuda va en tooltip. La palanca «tamaño» enseña el mínimo útil.\n\nFUERA DEL CONJUNTO la página se ve EN BLANCO: un recuadro a trazos insinuaría que ahí hay algo. Y la página donde se arrastró el recuadro NO se dibuja distinta de las demás — el widget replicado es idéntico en todas, y distinguirla inventaría una diferencia que el PDF no tiene.\n\n5b · PÁGINAS SIN SELLO. No se nombran las páginas una a una: se dice el TOTAL, n de m, y todo se cuenta sobre el CONJUNTO ELEGIDO y no sobre el documento — si eliges 13 de 27 y se caen 3, el sello aparece en 10, no en 24. correctPositionSignature recorta contra la PRIMERA página de la lista y descarta en silencio aquellas donde no cabe la esquina inferior izquierda (#150). Modal antes de firmar, «Cancelar» / «Firmar de todos modos», y «sin sello» — nunca «recortadas».\n\nLo medido que lo sostiene: un solo campo de firma con el widget replicado (docs/research/recuadro-replicado-pdfsig.md, validado por VALIDe como PAdES B-Level con UN firmante). Por eso el /Rect es forzosamente el mismo en todas.\n\nFICHA 7 · QUE SE VE DENTRO DEL RECUADRO (ticket #156). Palanca «Vista previa», cuatro casos. LA REGLA: O ES EL SELLO DE VERDAD, O NO HAY RECUADRO — no se enseña nunca una aproximacion.\n\nSIN CERTIFICADO EL BLOQUE ENTERO DE FIRMA VISIBLE ESTA APAGADO Y EN GRIS (se ve en «2 · Documento cargado»), asi que no hay recuadro que colocar ni que previsualizar. Con eso se cayo entera la pregunta de que enseñar dentro sin certificado — vacio, la rubrica sola, o un texto de ejemplo: no habia nada que decidir porque no hay recuadro. El recorrido ya iba en ese orden; ahora la interfaz lo dice.\n\nLO QUE HAY DENTRO NO LO MAQUETAMOS NOSOTROS: el sondeo #115 midio que un ciclo trifasico EN SECO con un PK1 inventado da bytes visibles IDENTICOS a los del firmado de verdad, y pdf.js de fabrica los pinta. Cero codigo de dibujo nuevo. Eso ENMIENDA EL ID-44, que dejaba el recuadro vacio con el argumento correcto para lo que se sabia entonces.\n\nMOVIENDO O REDIMENSIONANDO se congela la vista anterior ATENUADA: recalcular por fotograma cuesta 1,9 s y 507 MB de RSS en un escaneado de 37 MB. RECALCULANDO va sola al soltar, salvo documento grande, donde pasa a pedirse con «Ver como queda». NO SE HA PODIDO DIBUJAR: la vista previa NO ES UNA PUERTA — se dice y se firma igual; sobre si se puede firmar manda el boton de firmar. Los tres fallos (contraseña, PDF/A, el puente) SIGUEN SIN MEDIR.\n\nPOR DEBAJO DEL TAMAÑO MINIMO queda la rubrica sola: es justo donde se paran los tiradores. Y con varias paginas se pide UNA SOLA prefirma, porque el widget replicado es identico en todas.\n\nPARA EL SPEC: hay que empaquetar standard_fonts de pdfjs-dist y pasarle standardFontDataUrl a getDocument, o aceptar por escrito que el corte de linea es aproximado; y la vista previa depende de que annotationMode siga en su valor por omision, que hoy no vigila ninguna guardia."
+    },
+    {
+      "id": "nota-v031",
+      "x": 5040,
+      "y": 3420,
+      "w": 1100,
+      "page": "recorrido",
+      "text": "v0.3.1 · LOS ARREGLOS DE LA v0.3, decididos el 03/09/2026. No hay pantallas nuevas: cambian «5 · Colocando la firma visible», «2b · Elegir certificado» y «2 · Documento cargado». Los dos artboards de trabajo —«Sellar esta pagina» y «Disparo del sello»— se han FUNDIDO AQUI Y BORRADO, con sus dos paginas: la pantalla es la misma y dos sitios donde mirarla son dos fuentes de verdad.\n\nTODOS LOS ARTBOARDS PASAN DE 1000 A 700 DE ALTO. De fabrica la ventana era 1440x900 con minHeight 700, aplicados sin mirar la pantalla: en un portatil de 1366x768 nace mas alta que el escritorio y el pie del panel queda fuera. Pasa a 1280x720 con minHeight ~560, y NO se anade codigo de monitores — el gestor de ventanas ya coloca; lo que habia que hacer era dejar de atarle las manos.\n\nVISTA POR DEFECTO: ajustar a la pagina, siempre. El modo ya existia; lo que faltaba era que fuera el de partida. Si el usuario toca el zoom, manda el. Enmienda el ID-117.\n\n«SELLAR ESTA PAGINA» BAJA AL PANEL, al bloque «Colocacion», junto a los radios que ya deciden el conjunto de paginas. Antes vivia en una pastilla EN FLUJO bajo la hoja, que al ampliar se iba con ella y desaparecia de la vista. Se descartaron: pastilla flotante (habria competido con el estado del sello por el mismo hueco) y meterlo en la botonera de paginacion (que esta centrada, asi que bailaria de sitio con cada una de las tres caras del boton, y mezcla navegacion con una accion que modifica el documento).\n\nLA PASTILLA RENACE FLOTANTE Y 100 % PARA EL ESTADO DEL SELLO, en el hueco sobre la botonera donde ya vivia el aviso del visor. No dice nada de colocacion: la etiqueta del boton del panel ya lo cuenta —«Sellar esta pagina» significa que no lo esta, «Quitar el sello» que si—. MIDE LO MISMO TENGA BOTON O NO: sin altura fija pega saltos al pasar de «componiendo» a «sin componer», y algo que salta bajo la hoja mientras colocas el recuadro es peor que lo que arreglaba.\n\nFUERA EL ROTULO «VISTA PREVIA» DEL PANEL, con su insignia de estado y sus 16 claves: contaba el estado de un componente y quedaba tan abajo en la barra lateral que no se veia. Fuera tambien «Lo que dira el recuadro» (retira el ID-19) y los tres mensajes de colocacion del panel con su boton «ir a la pagina». EL SELLO EN DIRECTO NO SE TOCA: no es un dibujo, es EL SELLO.\n\nSE DESCARTO DIBUJAR EL BOTON DENTRO DEL PROPIO RECUADRO: el recuadro tiene un tamano minimo donde no cabe ninguno, asi que el disparador cambiaria de sitio segun el tamano; y el interior es zona de arrastre, de modo que en un recuadro pequeno el boton se come el sitio por donde se agarra.\n\nEL RECUADRO: cinco casillas —Firmante, Emisor, Fecha, Rubrica, Motivo—, un solo PARRAFO separado por puntos en vez de cuatro lineas, y la ofuscacion se muda AL CN. Es donde AutoFirma la aplica; rFirma habia portado la mascara y se la ponia a una linea «DNI» aparte, dejando el CN en claro — y los certificados espanoles llevan el DNI dentro del CN, asi que tapaba lo que ya se leia arriba. Desaparece la casilla «DNI» y entra «Emisor». Ademas layer2FontSize pasa a 0: iText reparte alto/lineas y la letra crece o encoge con el recuadro, en vez de quedarse en 12 pt como tope.\n\nLA RUBRICA SIGUE ENCIMA DEL TEXTO, centrada y de fondo. No es un fallo de maqueta: es como funciona setImageScale(-1) en iText y es lo que hace AutoFirma. Lo que falta es su OTRA opcion, «insertar marca visible» (solo imagen, prohibida en documentos con cofirma), y eso es funcionalidad nueva: v0.4.\n\nCERTIFICADOS AGRUPADOS: utilizables arriba y el resto abajo, cada grupo alfabetico con localeCompare(\"es\") y el almacen desempatando, con encabezados «Disponibles» / «No utilizables». Hoy NO ORDENA NADIE: el orden es el que responde cada modulo PKCS#11, que no significa nada para quien elige. La palanca «Orden» conserva el de hoy para comparar. Revocado sigue sin emitirse: no hay OCSP ni CRL, solo fechas — el corte real es «utilizable o no».\n\nA LA v0.4: insertar marca visible, el editor de firmas (plantillas $$…$$, controles de fuente, limpieza del CN), OCSP, la memoria de la posicion de la ventana, y sellar solo la pagina visible en la vista previa — medido y descartado para 0.3.1: el coste va con los bytes y no con las paginas, pero PdfCopy y selectPages son de paquete en el fork de iText, PdfSmartCopy no existe, en Rust no hay ni una dependencia de PDF, y el ahorro va de −92 % en un escaneado a −15 % en un manual con recursos compartidos."
     }
   ],
   "launch": {

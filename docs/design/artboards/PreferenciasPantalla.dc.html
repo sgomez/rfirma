@@ -106,7 +106,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   box-shadow:var(--rf-shadow-elevated);width:420px}
 </style>
 </helmet>
-<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:1000px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
 <header class="rf-row" style="height:56px;flex:none;padding:0 var(--rf-space-sm) 0 var(--rf-space-md);
   gap:var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
   background:var(--rf-surface);position:relative;z-index:5">
@@ -371,7 +371,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":1000}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   renderVals() {
     const aviso = this.props.aviso ?? "ninguno";

@@ -1,6 +1,11 @@
 # Artboards importados de Claude Design
 
-**Esto es una importación de un solo uso, y se borra al terminar el [#80].**
+**Este directorio se mantiene hasta cerrar la v1.0.** Lo decidió el
+[#80](https://github.com/sgomez/rfirma/issues/80#issuecomment-5521081522) el 03/09/2026,
+enmendando lo que decía antes —que era una importación de un solo uso y se borraba al
+terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, y es la copia
+1-1 que permite revisar la interfaz **sin cuenta de Claude**, que es el motivo por el que se
+importó a un repositorio público. **No preguntes si hay que borrarlo: no, hasta la v1.0.**
 
 Son los catorce artboards del canvas de Claude Design «Autofirma de escritorio en
 Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
@@ -14,10 +19,10 @@ Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
 
-Cuando el #80 termine, este directorio desaparece y la referencia duradera de
-la interfaz pasa a ser las fichas de `docs/design/`, que es lo que ya dice
-`docs/agents/prototyping.md`. Si estás leyendo esto y el #80 está cerrado,
-alguien se ha dejado el borrado.
+La referencia **normativa** de cada pantalla son las fichas de `docs/design/`,
+como dice `docs/agents/prototyping.md`; el lienzo es la fuente primaria de la
+decisión que las sostiene, y este directorio su copia legible sin cuenta.
+Cuando llegue la v1.0 habrá que decidir de nuevo si sigue haciendo falta.
 
 ## Qué es cada fichero
 
@@ -31,7 +36,7 @@ del recorrido de la ficha `ventana-principal.md`:
 | 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
 | 3 | `EstadoCargandoCertificados` | Buscando certificados |
 | 4 | `EstadoSinCertificados` | Sin certificados, con salida |
-| 5 | `Main` | **Colocando** la firma visible — el nudo del recorrido, con el pie del destino y el bloque de colocación de v0.3 |
+| 5 | `Main` | **Colocando** la firma visible — el nudo del recorrido, con el pie del destino y el bloque de colocación de v0.3, y el botón de sellar de la 0.3.1 |
 | 6 | `EstadoPin` | Pidiendo PIN |
 | 7 | `EstadoPinIncorrecto` | PIN incorrecto |
 | 8 | `EstadoFirmando` | Firmando, con las tres fases |
@@ -202,3 +207,47 @@ que maquetar el sello, se le pide a quien lo dibuja—. Hubo dos artboards de
 trabajo, `VistaPreviaRecuadro` y `VistaPreviaDentro`, en una página aparte; **se
 han borrado al fundirlos aquí**, para no dejar dos sitios donde mirar la misma
 pantalla.
+
+## Lo que cambió en v0.3.1
+
+Decidido el 03/09/2026 y dibujado el mismo día. **No hay artboards nuevos**: los
+dos que nacieron para decidir —`SellarEstaPagina` y `DisparoDelSello`, en sus
+dos páginas propias— se fundieron aquí y **se borraron**, que es la regla.
+Cambian `Main`, `EstadoElegirCertificado` y `EstadoDocumentoCargado`.
+
+**Los catorce pasan de 1000 a 700 px de alto.** La ventana abría a 1440×900 con
+un mínimo de 700, sin mirar la pantalla: en un portátil de 1366×768 nacía más
+alta que el escritorio y el pie del panel quedaba fuera, y el mínimo impedía
+encogerla para recuperarlo. Pasa a 1280×720 con mínimo 1100×560, y **no se
+añade código de monitores**: el gestor de ventanas ya coloca, lo que había que
+hacer era dejar de atarle las manos.
+
+**`Main` estrena el botón de sellar en el panel**, dentro del bloque
+«Colocación», con sus tres caras. Venía de una pastilla bajo la hoja que iba
+*en flujo* dentro del desplazamiento: al ampliar, la hoja crecía y el botón se
+iba de la vista. Se descartaron la pastilla flotante —habría competido por el
+mismo hueco que el estado del sello— y meterlo en la botonera de paginación, que
+está centrada y bailaría de sitio con cada cara, además de mezclar navegación
+con una acción que modifica el documento.
+
+**Y la pastilla renace flotante y dedicada al sello**, en el hueco sobre la
+botonera donde ya vivía el aviso del visor. Mide lo mismo tenga botón o no: sin
+altura fija pega saltos al pasar de «congelado» a «sin componer». No dice nada
+de colocación, porque la etiqueta del botón del panel ya lo cuenta.
+
+**Fuera el bloque «Vista previa» del panel**, con su insignia de estado, y fuera
+los tres mensajes de colocación con su botón «ir a la página». El sello en
+directo sobre la hoja **no se toca**.
+
+**El recuadro estrena cinco casillas** —`Firmante`, `Emisor`, `Fecha`,
+`Rúbrica`, `Motivo`— y un solo **párrafo** separado por puntos en vez de cuatro
+líneas. La ofuscación se muda al `CN`, que es donde la aplica AutoFirma: estaba
+puesta en una línea «DNI» aparte mientras el `CN` se estampaba en claro, y como
+los certificados españoles llevan el DNI dentro del `CN`, tapaba lo que ya se
+leía arriba. Además `layer2FontSize` pasa a 0, con lo que la letra crece y
+encoge con el recuadro en vez de quedarse en 12 pt como tope.
+
+**`EstadoElegirCertificado` estrena grupos**: `Disponibles` y `No utilizables`,
+cada uno alfabético con `localeCompare("es")` y el almacén desempatando. La
+palanca «Orden» conserva el de hoy —el que responden los módulos PKCS#11— para
+poder comparar.
