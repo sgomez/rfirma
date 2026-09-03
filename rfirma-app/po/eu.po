@@ -571,17 +571,8 @@ msgstr ""
 msgid "panel.visibleSignature.rubric.flattened"
 msgstr ""
 
-msgid "panel.visibleSignature.preview.title"
-msgstr ""
-
-msgid "panel.visibleSignature.preview.empty"
-msgstr ""
-
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
-msgstr ""
-
-msgid "panel.visibleSignature.preview.unavailable"
 msgstr ""
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.

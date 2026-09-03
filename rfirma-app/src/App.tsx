@@ -26,11 +26,7 @@ import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import { useStampPreview } from "./signing/useStampPreview";
-import {
-  DEFAULT_VISIBLE_SIGNATURE,
-  type Layer2Composer,
-  type VisibleSignature,
-} from "./signing/visibleSignature";
+import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import {
@@ -78,8 +74,6 @@ interface AppProps {
   certificates: CertificateStore;
   /** Por dónde entra la rúbrica, ya normalizada. Ver [`RubricPicker`]. */
   rubrics: RubricPicker;
-  /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
-  composer: Layer2Composer;
   /** Quien compone el sello que se ve dentro del recuadro. Ver [`StampComposer`]. */
   stamps: StampComposer;
   /** Quien ejecuta las tres etapas de la firma. Ver [`SigningBackend`]. */
@@ -112,7 +106,6 @@ export function App({
   destinations,
   certificates,
   rubrics,
-  composer,
   stamps,
   signer,
   opener,
@@ -819,7 +812,6 @@ export function App({
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
-              composer={composer}
               destination={
                 destination ?? {
                   folder: settings?.destination ?? "",
@@ -828,7 +820,6 @@ export function App({
                 }
               }
               onChangeDestination={() => setDialog("preferences")}
-              signedAt={signedAt}
               onSign={() => void sign()}
               signing={signing.state.kind === "running" || signing.state.kind === "pin"}
               failure={

@@ -628,18 +628,9 @@ msgstr ""
 "It is stamped on white: the box goes into the PDF as a JPEG, and a JPEG has "
 "no transparency."
 
-msgid "panel.visibleSignature.preview.title"
-msgstr "What the box will say"
-
-msgid "panel.visibleSignature.preview.empty"
-msgstr "Tick a box so that the signature box says something."
-
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Choose a certificate to place the visible signature"
-
-msgid "panel.visibleSignature.preview.unavailable"
-msgstr "The preview will show up once you choose the certificate."
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"

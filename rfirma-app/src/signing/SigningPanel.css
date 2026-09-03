@@ -227,8 +227,7 @@
   outline-offset: var(--rf-focus-ring-offset);
 }
 
-.panel__rubric,
-.panel__preview {
+.panel__rubric {
   display: flex;
   flex-direction: column;
   gap: var(--rf-space-xs);
@@ -262,18 +261,6 @@
 .panel__rubric-choose {
   flex: 1;
   min-height: 36px;
-}
-
-.panel__preview-text {
-  width: 100%;
-  margin: 0;
-  padding: var(--rf-space-xs);
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-md);
-  font-family: var(--rf-font-body);
-  font-size: 13px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
 .panel__footer {

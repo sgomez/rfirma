@@ -19,7 +19,6 @@ import {
   tauriDocumentDrops,
   tauriDocumentPicker,
   tauriLanguagePreference,
-  tauriLayer2Composer,
   tauriPdfSource,
   tauriPreferences,
   tauriRecents,
@@ -34,8 +33,8 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Doce puertos hablan ya con el backend: los tres de firma del #60
-// —`tauriCertificateStore`, `tauriLayer2Composer` y `tauriSigningBackend`—, los
+// Once puertos hablan ya con el backend: los dos de firma del #60 que quedan
+// —`tauriCertificateStore` y `tauriSigningBackend`—, los
 // dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, el del
 // arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
 // de la ventana en vez de llamar a una orden, los dos de la configuración,
@@ -69,7 +68,6 @@ createRoot(root).render(
         destinations={tauriDestinations()}
         certificates={tauriCertificateStore()}
         rubrics={tauriRubricPicker()}
-        composer={tauriLayer2Composer()}
         stamps={tauriStampComposer()}
         signer={tauriSigningBackend()}
         opener={tauriSignedDocumentOpener()}

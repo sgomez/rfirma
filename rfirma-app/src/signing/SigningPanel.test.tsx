@@ -15,7 +15,7 @@ import {
 import type { Certificate } from "./certificate";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
-import { DEFAULT_VISIBLE_SIGNATURE, type Layer2Composer } from "./visibleSignature";
+import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
@@ -34,11 +34,6 @@ const rubric: Rubric = {
   width: 240,
   height: 80,
 };
-
-/** El compositor de verdad es Rust; aquí basta con que devuelva algo fiel. */
-function composerOf(text: string | null): Layer2Composer {
-  return { compose: async () => text };
-}
 
 const noop = () => {};
 
@@ -68,8 +63,6 @@ function panelWith(props: PanelProps) {
       rubric={null}
       rubricFailure={null}
       onChooseRubric={noop}
-      signedAt="31/08/26, 12:00:00"
-      composer={composerOf(null)}
       destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
       onChangeDestination={noop}
       onSign={noop}
@@ -240,19 +233,12 @@ describe("SigningPanel", () => {
     expect(screen.queryByText("Se guardará en")).not.toBeInTheDocument();
   });
 
-  it("never shows a wildcard, neither in the interface nor in the preview", async () => {
-    renderPanel({ composer: composerOf("Firmado por: Ada Lovelace Byron\nDNI: ***9999**") });
+  it("never shows a wildcard in the interface", () => {
+    // ID-19: las casillas marcan qué dato aparece, y nunca hay una cadena
+    // como `$$SUBJECTCN$$` escrita a mano en el panel.
+    renderPanel({});
 
-    expect(await screen.findByText(/Firmado por: Ada Lovelace Byron/)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\$\$/);
-  });
-
-  it("previews the composed text and not an imitation of its own", async () => {
-    // El compositor autoritativo es `signing::layer2_text`: si el panel
-    // compusiera el texto por su cuenta, esta cadena no aparecería tal cual.
-    renderPanel({ composer: composerOf("Fecha: 31/08/2026 12:00:00 CEST") });
-
-    expect(await screen.findByText("Fecha: 31/08/2026 12:00:00 CEST")).toBeInTheDocument();
   });
 
   it("shows the rubric already normalized, over white, before signing", () => {
