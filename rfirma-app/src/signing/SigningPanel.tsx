@@ -8,8 +8,8 @@ import {
   firstSealedPage,
   type PageChoice,
   type PageSet,
+  type PageSets,
   type Placement,
-  pageSetOf,
   sealedPages,
   sealsPage,
 } from "../viewer/signatureBox";
@@ -81,8 +81,18 @@ interface SigningPanelProps {
    * página del conjunto: **colocado es tener páginas** (ID-92).
    */
   placement: Placement | null;
-  /** El conjunto de páginas ha cambiado desde el bloque «Colocación». */
-  onPlace: (placement: Placement | null) => void;
+  /**
+   * El conjunto que guarda **cada opción**, que es lo que el bloque pinta
+   * incluso cuando no manda: el pie de `Solo 1 página` dice su página aunque
+   * esté activa `Todas`, y el campo trae el rango que se tecleó allí (#188).
+   */
+  pageSets: PageSets;
+  /**
+   * El conjunto de la **opción activa** ha cambiado desde el bloque
+   * «Colocación». El panel no compone `Placement`: no sabe dónde cae el
+   * recuadro y no tiene por qué saberlo (#185).
+   */
+  onChoosePages: (pages: PageSet | null) => void;
   /** Cuál de las tres opciones manda sobre el conjunto (ID-97). */
   pageChoice: PageChoice;
   onChangePageChoice: (choice: PageChoice) => void;
@@ -150,7 +160,8 @@ export function SigningPanel({
   signature,
   onChangeSignature,
   placement,
-  onPlace,
+  pageSets,
+  onChoosePages,
   pageChoice,
   onChangePageChoice,
   viewedPage,
@@ -196,30 +207,22 @@ export function SigningPanel({
   // conjunto cambia **desde fuera** —sellar o quitar una página en el visor,
   // ID-99—. Sin esa distinción, teclear `1,2-3` se convertiría en `1-3` bajo
   // los dedos, porque la forma comprimida no es la que se está escribiendo.
-  const pages = placement?.pages ?? null;
+  // El campo lo escribe **el conjunto de «Estas páginas»**, y no el conjunto
+  // activo: con `Solo 1 página` o `Todas` delante el campo ni se pinta, y al
+  // volver tiene que traer lo que se tecleó allí, no lo que dejó la otra opción
+  // (#188).
+  const pages = pageSets.these;
   const [pagesText, setPagesText] = useState(() =>
     pages === null ? "" : formatPageRange(pages, document.pages),
   );
   const [seenPages, setSeenPages] = useState<PageSet | null>(pages);
-  // La página del gesto original, la que sobrevive al cambio de opción
-  // (ID-97). Con «todas» el conjunto ya no la nombra, y por eso se recuerda.
-  const [anchor, setAnchor] = useState<number | null>(firstSealedPage(placement));
   if (pages !== seenPages) {
     setSeenPages(pages);
     setPagesText(pages === null ? "" : formatPageRange(pages, document.pages));
-    if (pages !== null && pages !== "all") setAnchor(pages.only[0] ?? null);
   }
-  // El ancla se lee **solo con «todas»**, que es el único conjunto que ya no
-  // nombra la página del gesto: en los demás la página está en el conjunto y
-  // `firstSealedPage` la da. Leerla siempre —con un `??` detrás de
-  // `firstSealedPage`— la dejaba inalcanzable, y volver de «todas» a «solo 1
-  // página» sellaba la 1 en vez de la del gesto original (ID-97).
-  const boxPage =
-    placement === null
-      ? null
-      : placement.pages === "all"
-        ? (anchor ?? 1)
-        : firstSealedPage(placement);
+  // La página del recuadro **según la opción activa**: es la que la línea de
+  // arriba nombra y hasta la que lleva (ID-100).
+  const boxPage = firstSealedPage(placement);
   const parsed = parsePageRange(pagesText, document.pages);
   // El campo vacío bajo «Estas páginas» es **una situación más**, no un
   // conjunto: no nombra ninguna página, lo dice bajo el campo y apaga el botón
@@ -235,13 +238,12 @@ export function SigningPanel({
   const sealedCount = placement === null ? 0 : sealedPages(placement.pages, document.pages).length;
   const echo = placement === null ? null : echoOf(placement.pages, document.pages, t);
 
-  // Elegir páginas **no coloca nada**: sin recuadro, las tres opciones son una
-  // preferencia a la espera del primer gesto sobre la hoja (ID-92).
+  // Elegir páginas **coloca** (#185): quien recibe esto pone el recuadro en su
+  // posición estándar si todavía no había ninguno. El panel no sabe dónde cae
+  // —no mide páginas— y por eso manda el conjunto y nada más.
   const place = (next: PageSet | null) => {
-    if (next !== null && next !== "all") setAnchor(next.only[0] ?? null);
-    if (placement === null) return;
     setSeenPages(next);
-    onPlace(next === null ? null : { ...placement, pages: next });
+    onChoosePages(next);
   };
 
   const typePages = (value: string) => {
@@ -258,14 +260,12 @@ export function SigningPanel({
     if (typed.ok && typed.pages !== null) place(typed.pages);
   };
 
+  // Cambiar de opción es **solo** cambiar de opción: el conjunto de cada una lo
+  // guarda quien las tiene las tres, y la siembra de la que se estrena también
+  // (#188). Antes esto reescribía el conjunto activo con lo que hubiera, y por
+  // ahí se colaba el estado compartido.
   const chooseChoice = (choice: PageChoice) => {
     onChangePageChoice(choice);
-    if (choice === "all") return place("all");
-    if (choice === "single") return place(boxPage === null ? null : { only: [boxPage] });
-    const resolved =
-      placement === null ? null : pageSetOf(sealedPages(placement.pages, document.pages));
-    setPagesText(resolved === null ? "" : formatPageRange(resolved, document.pages));
-    place(resolved);
   };
 
   // Con el interruptor encendido y sin colocar **no se firma**, y el pie manda
@@ -375,10 +375,13 @@ export function SigningPanel({
                   {/* La etiqueta es fija y el número va en el pie: «esta
                       página» no dice cuál y deja de ser cierto en cuanto pasas
                       de página (ID-97). */}
+                  {/* Su página, no la del conjunto activo: con «Todas»
+                      delante este pie sigue diciendo la suya, que es la que
+                      volverá si se elige (#188). */}
                   <span className="rf-hint panel__placement-foot">
-                    {boxPage === null
+                    {pageSets.single === null
                       ? t("panel.placement.singleUnplaced")
-                      : t("panel.placement.singlePage", { page: boxPage })}
+                      : t("panel.placement.singlePage", { page: pageSets.single })}
                   </span>
                 </label>
 

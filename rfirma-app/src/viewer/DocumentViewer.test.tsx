@@ -769,8 +769,14 @@ describe("la pastilla bajo la hoja", () => {
     expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
   });
 
-  /** El botón no promete «esta página» cuando se sellan las veintisiete. */
-  it("does not name this page when the whole document is going to be stamped", async () => {
+  /**
+   * **Sin recuadro el rótulo no cambia con la opción** (#188). El ID-101 pedía
+   * una cuarta redacción para «todas», y sobre un documento sin colocar era una
+   * diferencia sin diferencia detrás: «todas» todavía no sella nada, es una
+   * preferencia, y la misma hoja ofrecía dos botones distintos según qué radio
+   * estuviera marcado en la columna de al lado.
+   */
+  it("does not change the pill while nothing is placed, whatever the option says", async () => {
     const { document, renders } = recordingDocument();
     renderWithCatalog(
       <DocumentViewer
@@ -783,7 +789,7 @@ describe("la pastilla bajo la hoja", () => {
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
-    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sellar esta página" })).toBeInTheDocument();
   });
 
   it("offers to stamp a page that is outside the set, and adds it", async () => {

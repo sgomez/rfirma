@@ -367,10 +367,6 @@ msgstr ""
 msgid "viewer.pill.seal"
 msgstr ""
 
-#. Botón de la pastilla cuando se firman todas las páginas: solo falta decir dónde va el recuadro, así que no se nombra «esta página».
-msgid "viewer.pill.placeHere"
-msgstr ""
-
 #. Botón de la pastilla: quita la firma de la página que se está mirando.
 msgid "viewer.pill.unseal"
 msgstr ""
