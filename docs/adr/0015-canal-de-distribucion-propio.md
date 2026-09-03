@@ -74,7 +74,6 @@ son cientos de megas para ahorrar un comando.
   qué entra y sale del arenero lo fija el
   [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md), y ahí está también su
   **excepción para los almacenes NSS** (`~/.mozilla/firefox:ro` y `~/.pki/nssdb:ro`,
-  [#95](https://github.com/sgomez/rfirma/issues/95) /
   [#101](https://github.com/sgomez/rfirma/issues/101)). Se anota porque el criterio de
   aceptación del #101 cita esta ADR para esa nota.
 - Los **instaladores nativos por distribución** (`.deb`, `.rpm`, AUR, snap) siguen fuera de
