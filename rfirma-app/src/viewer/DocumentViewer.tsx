@@ -38,10 +38,12 @@ import {
   standardBox,
   toPixels,
   toUserSpace,
+  type UserSpaceRect,
   unsealing,
 } from "./signatureBox";
 import type { DocumentFailure } from "./source";
 import { type BoxDragHandlers, useBoxDrag } from "./useBoxDrag";
+import { useBoxTrace } from "./useBoxTrace";
 import {
   anchoredScroll,
   bitmapScale,
@@ -132,6 +134,20 @@ interface DocumentViewerProps {
    */
   failure?: DocumentFailure | null;
   /**
+   * Se puede colocar la firma visible ahora mismo: el interruptor está
+   * encendido **y** hay un certificado utilizable (ID-108).
+   *
+   * Los tres caminos que colocan cuelgan de esto: sin ello no hay recuadro
+   * pintado, no hay pastilla que ofrezca sellar y la hoja no traza. Es la misma
+   * pregunta que el panel contesta apagando su bloque entero —«Elige un
+   * certificado para colocar la firma visible»—, y el visor tenía su propia
+   * copia del estado que no la respetaba (#190).
+   *
+   * La colocación **no se borra** al perderla: vive en quien la recuerda y
+   * vuelve intacta, así que aquí sólo se deja de pintar.
+   */
+  canPlace?: boolean;
+  /**
    * El documento **con el sello ya estampado**, que se pinta en lugar del
    * original mientras esté compuesto (ID-107).
    *
@@ -191,6 +207,7 @@ export function DocumentViewer({
   pageChoice = "these",
   onPageChange,
   goToPage = null,
+  canPlace = true,
   failure = null,
   stamped = null,
   stampFrozen = false,
@@ -200,6 +217,13 @@ export function DocumentViewer({
   const canvas = useRef<HTMLCanvasElement>(null);
   const boxElement = useRef<HTMLDivElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
+  // El rectángulo que se dibuja mientras se traza. Está siempre en el DOM y
+  // oculto: el trazo le escribe la geometría a mano, sin pasar por React.
+  const ghost = useRef<HTMLDivElement>(null);
+  // El recuadro acaba de nacer de un trazo y se lleva el foco en cuanto se
+  // pinte: el gesto grueso y el ajuste fino con las flechas (ID-115) son un
+  // solo movimiento.
+  const focusBox = useRef(false);
   // La parte visible: la que se mide para ajustar, la que se desplaza al
   // anclar el zoom al puntero y la que dice si el recuadro se ve o no.
   //
@@ -371,7 +395,7 @@ export function DocumentViewer({
   // algo. Quien quiera saberlo lo lee en la pastilla, con palabras.
   const sealed = placement !== null && sealsPage(placement.pages, page);
   const pixels: PixelRect | null =
-    viewport && placement && sealed ? toPixels(viewport, placement.rect) : null;
+    viewport && placement && sealed && canPlace ? toPixels(viewport, placement.rect) : null;
 
   // Al cambiar de página, un recuadro que quede fuera de la parte visible se
   // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
@@ -420,6 +444,10 @@ export function DocumentViewer({
   // soltar, y el arrastre sigue sin pasar por el estado de React.
   const gesturing = (handlers: BoxDragHandlers): BoxDragHandlers => ({
     onPointerDown: (event) => {
+      // Agarrar el recuadro **no es** trazar sobre la hoja: sin esto el mismo
+      // `pointerdown` arrancaría los dos gestos, porque el recuadro vive dentro
+      // de la hoja y el trazo escucha allí (#190).
+      event.stopPropagation();
       handlers.onPointerDown(event);
       // La misma guardia que `useBoxDrag`: con el botón secundario no arranca
       // ningún gesto, así que avisar de uno congelaría la vista previa hasta el
@@ -450,32 +478,70 @@ export function DocumentViewer({
   });
 
   /**
-   * Sellar la página que se está mirando (ID-101, ID-102).
+   * La colocación que resulta de sellar la página que se mira, con el recuadro
+   * en `rect` (ID-101, ID-102).
+   *
+   * Es la regla del conjunto y **la comparten los dos gestos que sellan**: la
+   * pastilla, que no toca el rectángulo, y el trazo, que trae uno nuevo (#190).
+   * Trazar es «sellar esta página» con sitio elegido, así que dos reglas
+   * habrían sido dos maneras de contestar a la misma pregunta.
+   *
+   * Con `Solo 1 página` sellar **sustituye**: esa opción no puede nombrar dos, y
+   * sumar aquí dejaba la 1 y la 2 selladas a la vez con el panel diciendo
+   * «Página 1» (#188). Con las otras dos se añade, que es lo que significan.
+   */
+  const placedAt = (rect: UserSpaceRect): Placement => {
+    if (placement === null) {
+      return { rect, pages: pageChoice === "all" ? "all" : { only: [page] } };
+    }
+    if (pageChoice === "single") return { rect, pages: { only: [page] } };
+    return { ...sealing(placement, page), rect };
+  };
+
+  /**
+   * Sellar la página que se está mirando.
    *
    * Sin nada colocado, el recuadro nace en su **posición estándar** —no hay
-   * gesto que diga dónde—; con algo colocado, la página se añade al conjunto y
-   * el rectángulo no se mueve.
+   * gesto que diga dónde—; con algo colocado, el rectángulo no se mueve.
    */
   const seal = () => {
     if (!viewport) return;
     setOutOfPage(false);
-    if (placement !== null) {
-      // Con `Solo 1 página` sellar **sustituye**: esa opción no puede nombrar
-      // dos, y sumar aquí dejaba la 1 y la 2 selladas a la vez con el panel
-      // diciendo «Página 1» (#188). Con las otras dos se añade, que es lo que
-      // significan.
-      onPlace(
-        pageChoice === "single"
-          ? { ...placement, pages: { only: [page] } }
-          : sealing(placement, page),
-      );
-      return;
-    }
-    onPlace({
-      rect: toUserSpace(viewport, standardBox(viewport)),
-      pages: pageChoice === "all" ? "all" : { only: [page] },
-    });
+    onPlace(placedAt(placement?.rect ?? toUserSpace(viewport, standardBox(viewport))));
   };
+
+  /**
+   * El recuadro trazado sobre la hoja, que es el gesto que lo hace nacer (#190).
+   *
+   * Trazar dice dos cosas —esta página y aquí— y se aplican las dos: el
+   * rectángulo se mueve **en todas las páginas del conjunto**, porque el PDF
+   * lleva un solo campo de firma con el widget replicado (ID-96), y el conjunto
+   * cambia según la opción activa, igual que al sellar.
+   */
+  const trace = (traced: PixelRect) => {
+    if (!viewport) return;
+    setOutOfPage(false);
+    focusBox.current = true;
+    onPlace(placedAt(toUserSpace(viewport, traced)));
+  };
+
+  const tracing = useBoxTrace({
+    sheet,
+    ghost,
+    page: viewport ?? { width: 0, height: 0 },
+    min: { width: MIN_BOX_POINTS.width * zoom, height: MIN_BOX_POINTS.height * zoom },
+    onTrace: trace,
+  });
+
+  // El foco al recuadro recién trazado, cuando ya está pintado. `pixels` es la
+  // **señal** de que ya lo está —el recuadro no existe hasta que lo hay—, no
+  // algo que este efecto lea: por eso el linter la ve de más.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `pixels` dispara el efecto, no lo alimenta.
+  useEffect(() => {
+    if (!focusBox.current || !boxElement.current) return;
+    focusBox.current = false;
+    boxElement.current.focus();
+  }, [pixels]);
 
   /** Quitar el sello de esta página, y con el último, la colocación entera. */
   const unseal = () => {
@@ -603,6 +669,9 @@ export function DocumentViewer({
    * página cuando se sellan las veintisiete.
    */
   const pill = ((): { text: string; label: string; variant: string; act: () => void } | null => {
+    // Sin firma visible que colocar no hay nada que sellar: ofrecerlo colocaba
+    // un recuadro que después no se pintaba en ninguna parte (#190).
+    if (!canPlace) return null;
     if (placement === null) {
       // **Sin recuadro el rótulo no cambia con la opción** (#188): «todas»
       // todavía no es un conjunto, es una preferencia, y decir aquí «Colocar el
@@ -668,7 +737,9 @@ export function DocumentViewer({
       <div className="viewer__scroll" ref={setSurface}>
         <div
           ref={sheet}
-          className="viewer__sheet"
+          // El `crosshair` es lo único que anuncia el trazo: es el único de los
+          // tres caminos que no tiene un botón ni un campo que lo cuente (#190).
+          className={`viewer__sheet${canPlace ? " viewer__sheet--traceable" : ""}`}
           data-theme="light"
           role="document"
           aria-label={t("viewer.sheet")}
@@ -678,8 +749,22 @@ export function DocumentViewer({
           tabIndex={0}
           onKeyDown={navigate}
           style={{ width: viewport?.width, height: viewport?.height }}
+          // Sin firma visible que colocar, la hoja no traza: no habría dónde
+          // pintar lo que se colocara.
+          {...(canPlace ? gesturing(tracing) : {})}
         >
           <canvas ref={canvas} className="viewer__canvas" />
+          {/*
+            El rectángulo del trazo en curso. Se pinta oculto y lo enseña el
+            gesto escribiéndole el estilo: montarlo al empezar habría metido a
+            React en un camino que existe justo para no pasar por él.
+          */}
+          <div
+            ref={ghost}
+            className="viewer__trace"
+            aria-hidden="true"
+            style={{ display: "none" }}
+          />
           {pixels && (
             <div
               ref={boxElement}

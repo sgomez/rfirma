@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -968,5 +968,59 @@ describe("App · Colocación", () => {
     await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
 
     expect(field()).toHaveValue("2,5");
+  });
+});
+
+/**
+ * ID-108: sin certificado utilizable no hay sello que dibujar, y sin sello no
+ * hay recuadro. El panel lo cumplía desde siempre —apaga su bloque entero y dice
+ * «Elige un certificado para colocar la firma visible»—, pero el visor tenía su
+ * propia copia del estado y no lo miraba: ofrecía sellar y dejaba trazar (#190).
+ */
+describe("App, sin un certificado elegido todavía", () => {
+  /** Pulsar, mover y soltar sobre la hoja: el gesto que coloca el recuadro. */
+  function traceOverSheet() {
+    const sheet = screen.getByRole("document", { name: "Hoja del documento" });
+    fireEvent.pointerDown(sheet, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(sheet, { pointerId: 1, clientX: 300, clientY: 200 });
+    fireEvent.pointerUp(sheet, { pointerId: 1, clientX: 300, clientY: 200 });
+  }
+
+  it("neither offers to seal the page nor lets the sheet be traced", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
+
+    await user.click(trayDropZone());
+    await screen.findByRole("document", { name: "Hoja del documento" });
+
+    expect(screen.getByText("Elige un certificado para colocar la firma visible")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Sellar esta página" })).not.toBeInTheDocument();
+
+    traceOverSheet();
+
+    expect(screen.queryByRole("application")).not.toBeInTheDocument();
+  });
+
+  it("lets the sheet be traced as soon as a certificate is chosen", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 3 }),
+      {},
+      { list: async () => [aCertificate] },
+    );
+
+    await user.click(trayDropZone());
+    await screen.findByRole("document", { name: "Hoja del documento" });
+    const panel = screen.getByRole("region", { name: "Panel de firma" });
+    await user.click(await within(panel).findByRole("combobox", { name: "Certificado" }));
+    await user.click(within(panel).getAllByRole("option")[0] as HTMLElement);
+
+    traceOverSheet();
+
+    expect(
+      screen.getByRole("application", { name: "Recuadro de la firma visible" }),
+    ).toBeInTheDocument();
   });
 });

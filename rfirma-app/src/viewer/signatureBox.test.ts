@@ -7,6 +7,7 @@ import {
   movedBy,
   NO_PAGE_SETS,
   type PageSets,
+  type PageSize,
   pageSetOf,
   pagesOf,
   placementOf,
@@ -19,6 +20,7 @@ import {
   storing,
   toPixels,
   toUserSpace,
+  tracedBox,
   unsealing,
 } from "./signatureBox";
 
@@ -321,5 +323,77 @@ describe("los tres conjuntos del bloque «Colocación»", () => {
 
     expect(three.x0).toBeCloseTo(one.x0);
     expect(three.y0).toBeCloseTo(one.y0);
+  });
+});
+
+/**
+ * #190: el recuadro nace de un trazo sobre la hoja, y la regla del trazo es
+ * pura: normalizar, recortar al papel, y no bajar del mínimo.
+ */
+describe("tracedBox", () => {
+  const page: PageSize = { width: 600, height: 800 };
+  const min: PageSize = { width: 120, height: 34 };
+
+  it("takes the rectangle the pointer drew, corner to corner", () => {
+    expect(tracedBox({ x: 100, y: 200 }, { x: 400, y: 350 }, page, min)).toEqual({
+      x: 100,
+      y: 200,
+      width: 300,
+      height: 150,
+    });
+  });
+
+  it("normalises a trace drawn upwards and to the left", () => {
+    expect(tracedBox({ x: 400, y: 350 }, { x: 100, y: 200 }, page, min)).toEqual({
+      x: 100,
+      y: 200,
+      width: 300,
+      height: 150,
+    });
+  });
+
+  // Misma regla que los tiradores (ID-103), y anclada donde se pulsó: lo que
+  // se queda quieto es la esquina de la que salió el gesto.
+  it("grows a too-small trace up to the minimum, anchored where the gesture started", () => {
+    expect(tracedBox({ x: 100, y: 200 }, { x: 110, y: 210 }, page, min)).toEqual({
+      x: 100,
+      y: 200,
+      width: 120,
+      height: 34,
+    });
+  });
+
+  it("anchors the minimum to the right when the trace went leftwards", () => {
+    expect(tracedBox({ x: 300, y: 200 }, { x: 290, y: 190 }, page, min)).toEqual({
+      x: 180,
+      y: 166,
+      width: 120,
+      height: 34,
+    });
+  });
+
+  it("clips a trace that leaves the page at its edge", () => {
+    expect(tracedBox({ x: 400, y: 600 }, { x: 900, y: 1000 }, page, min)).toEqual({
+      x: 400,
+      y: 600,
+      width: 200,
+      height: 200,
+    });
+  });
+
+  // El mínimo gana al borde y el recuadro se empuja hacia dentro: lo que no
+  // puede salir de aquí es un rectángulo ilegible ni uno fuera del papel (ID-22).
+  it("pushes the box back inside when the minimum does not fit against the edge", () => {
+    expect(tracedBox({ x: 500, y: 790 }, { x: 590, y: 900 }, page, min)).toEqual({
+      x: 480,
+      y: 766,
+      width: 120,
+      height: 34,
+    });
+  });
+
+  it("never returns a box wider than the page itself", () => {
+    const traced = tracedBox({ x: 0, y: 0 }, { x: 10, y: 10 }, { width: 60, height: 20 }, min);
+    expect(traced).toEqual({ x: 0, y: 0, width: 60, height: 20 });
   });
 });
