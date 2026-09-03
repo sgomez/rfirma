@@ -87,17 +87,18 @@ pub fn remember_the_certificate(
     let _ = memory.remember_state(configuration, &state);
 }
 
-/// **Caso de uso.** El nombre y el DNI del certificado elegido, leídos del DER.
+/// **Caso de uso.** Lo que el recuadro necesita del certificado elegido, leído
+/// del DER.
 ///
 /// **Sin PIN**: los certificados son objetos públicos del token.
-pub fn holder_named(
+pub fn stamped_holder_named(
     handle: &str,
     stores: &[Store],
     listed: &ListedCertificates,
-) -> Result<(String, String), Failure> {
+) -> Result<StampedHolder, Failure> {
     let certificates = pkcs11::list_certificates_across(stores)?;
     let chosen = certificate_behind(&certificates, handle, listed)?;
-    Ok(holder_of(chosen.subject().as_deref()))
+    Ok(stamped_holder_of(chosen))
 }
 
 /// El certificado que hay detrás de un asa, buscado en el listado de ahora
@@ -223,6 +224,49 @@ pub fn holder_of(subject: Option<&str>) -> (String, String) {
     )
 }
 
+/// Lo que se estampa del certificado en el recuadro de la firma visible.
+///
+/// El `CN` viaja **entero y en claro** —nombre y DNI juntos, que es como lo
+/// enseña AutoFirma—: quien tapa el identificador es el compositor del texto,
+/// y por eso hace falta saber además si el certificado es de seudónimo, que es
+/// la única excepción a la máscara.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StampedHolder {
+    /// El `CN` del subject, entero.
+    pub common_name: String,
+    /// La autoridad emisora, la misma que enseña el desplegable.
+    pub issuer: String,
+    /// Si el certificado es de seudónimo.
+    pub pseudonym: bool,
+}
+
+/// Lo que el recuadro estampa de un certificado, leído del DER.
+pub fn stamped_holder_of(certificate: &TokenCertificate) -> StampedHolder {
+    let subject = certificate.subject();
+    StampedHolder {
+        common_name: attribute("CN=", subject.as_deref().unwrap_or_default()),
+        issuer: issuer_of(certificate.issuer().as_deref()),
+        pseudonym: is_pseudonym(subject.as_deref()),
+    }
+}
+
+/// Si el certificado es **de seudónimo**: su subject declara el RDN
+/// `2.5.4.65`, que es como lo decide el original (`AOUtil.isPseudonymCert`).
+///
+/// El nombre del atributo se busca en las tres formas en que puede salir
+/// impreso un nombre distinguido —el OID pelado, el OID con prefijo y el
+/// nombre corto—, porque quién lo imprime no es cosa nuestra: viene del DER
+/// por `x509-cert`.
+pub fn is_pseudonym(subject: Option<&str>) -> bool {
+    const PSEUDONYM: [&str; 3] = ["2.5.4.65=", "OID.2.5.4.65=", "PSEUDONYM="];
+    attribute_pairs(subject.unwrap_or_default())
+        .iter()
+        .any(|pair| {
+            let pair = pair.trim().to_ascii_uppercase();
+            PSEUDONYM.iter().any(|name| pair.starts_with(name))
+        })
+}
+
 /// La autoridad emisora, tal como se enseña en el panel («Emitido por …»).
 ///
 /// Sale del **issuer**, no del `O=` del subject: ese es la organización del
@@ -251,8 +295,8 @@ pub fn issuer_of(issuer: Option<&str>) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attribute, certificate_behind, holder_of, issuer_of, listed_rows, remember_the_certificate,
-        remembered_certificate, usable_certificate,
+        attribute, certificate_behind, holder_of, is_pseudonym, issuer_of, listed_rows,
+        remember_the_certificate, remembered_certificate, usable_certificate,
     };
     use crate::app::fixtures::{a_certificate, a_certificate_with_id, a_memory, listed_from};
     use crate::memory::{Configuration, ListedCertificates};
@@ -270,6 +314,28 @@ mod tests {
     #[test]
     fn a_subject_without_the_fields_gives_empty_strings_and_not_a_panic() {
         assert_eq!(holder_of(None), (String::new(), String::new()));
+    }
+
+    /// Los certificados de seudónimo quedan exentos de la máscara del
+    /// recuadro, y lo que los distingue es el RDN `2.5.4.65`, salga impreso
+    /// como salga.
+    #[test]
+    fn a_subject_with_the_pseudonym_rdn_is_a_pseudonym_certificate() {
+        for subject in [
+            "CN=SEUDONIMO, 2.5.4.65=ADA, C=ES",
+            "CN=SEUDONIMO, OID.2.5.4.65=ADA, C=ES",
+            "CN=SEUDONIMO, pseudonym=ADA, C=ES",
+        ] {
+            assert!(is_pseudonym(Some(subject)), "«{subject}» es de seudónimo");
+        }
+    }
+
+    #[test]
+    fn a_subject_without_that_rdn_is_not_a_pseudonym_certificate() {
+        assert!(!is_pseudonym(Some(
+            "CN=LOVELACE BYRON ADA - 99999999R, serialNumber=IDCES-99999999R, C=ES"
+        )));
+        assert!(!is_pseudonym(None));
     }
 
     /// El caso que rompía: el subject de un certificado de persona física de la

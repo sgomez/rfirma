@@ -1,10 +1,17 @@
 //! El texto del recuadro de la firma visible, redactado por rFirma.
 //!
 //! **No hay comodines** (ID-19): `$$SUBJECTCN$$` y `$$SIGNDATE$$` no salen de
-//! aquí, y para el DNI AutoFirma no tiene ninguno —vive en el RDN
-//! `serialNumber` y solo asoma pegado al nombre dentro de `$$SUBJECTCN$$`—, así
-//! que separar «Nombre y apellidos» de «DNI» obliga a componer el texto entero
-//! en Rust y enviarlo ya resuelto en `layer2Text`.
+//! aquí. Componer el texto entero en Rust y enviarlo ya resuelto en
+//! `layer2Text` es lo que permite que siga al idioma de la aplicación, y lo que
+//! deja fuera las rarezas del original —entre ellas que `$$PSEUDONYM$$`
+//! estampe su literal en el PDF cuando el certificado no lleva el OID
+//! `2.5.4.65`—.
+//!
+//! **Es un solo párrafo**, con las frases separadas por puntos y sin saltos de
+//! línea forzados: iText reparte el tamaño de letra entre `alto del recuadro /
+//! número de líneas`, así que menos líneas es letra más grande. El **motivo**
+//! es la excepción y va en su propio renglón: es texto libre, puede ser largo,
+//! y dentro del párrafo encogería la letra de todo lo demás.
 
 use super::language::Language;
 
@@ -20,19 +27,22 @@ const MASK_POSITIONS: [bool; 7] = [false, false, false, true, true, true, true];
 /// identificador enmascarable.
 const MIN_DIGITS: usize = 3;
 
+/// Cuántos dígitos lleva el cuerpo de un DNI, un NIE o un CIF, ya sin la letra
+/// inicial y sin el carácter de control del final.
+const IDENTIFIER_DIGITS: std::ops::RangeInclusive<usize> = 7..=8;
+
 /// Lo que el usuario ha marcado en las casillas del panel de firma.
 ///
 /// `None` es «la casilla está sin marcar»; el dato no aparece en el recuadro.
 /// La rúbrica no está aquí porque es una imagen, no texto.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct VisibleTextFields<'a> {
-    /// Nombre y apellidos del titular.
+    /// El `CN` del subject **entero y en claro**, nombre y DNI juntos, que es
+    /// como lo enseña AutoFirma. La máscara la aplica el compositor: llega
+    /// aquí sin tocar.
     pub signer_name: Option<&'a str>,
-    /// DNI o NIE **en claro**: la máscara la aplica el compositor, siempre.
-    /// Admite el valor tal cual venga del RDN `serialNumber` —con el prefijo
-    /// `IDCES-` de la FNMT y del DNIe, si lo trae—: la máscara segmenta como
-    /// AutoFirma y solo toca el trozo con los dígitos.
-    pub id_number: Option<&'a str>,
+    /// La autoridad emisora, la misma que se enseña en el desplegable.
+    pub issuer: Option<&'a str>,
     /// Fecha y hora de la firma, **ya formateadas** por quien llama. Tiene que
     /// ser el mismo instante que acabará dentro del sello de sesión: el
     /// recuadro se estampa antes de la prefirma y el PDF ya no se vuelve a
@@ -40,12 +50,15 @@ pub struct VisibleTextFields<'a> {
     pub signed_at: Option<&'a str>,
     /// Motivo de la firma.
     pub reason: Option<&'a str>,
+    /// Si el certificado es **de seudónimo**: entonces el `CN` se estampa sin
+    /// enmascarar, como hace el original (`PdfSessionManager.java:206-214`).
+    pub pseudonym: bool,
 }
 
 /// Las etiquetas del recuadro en un idioma.
 struct Layer2Labels {
     signer: &'static str,
-    id_number: &'static str,
+    issuer: &'static str,
     signed_at: &'static str,
     reason: &'static str,
 }
@@ -54,31 +67,31 @@ fn labels(language: Language) -> Layer2Labels {
     match language {
         Language::Spanish => Layer2Labels {
             signer: "Firmado por",
-            id_number: "DNI",
+            issuer: "Emisor",
             signed_at: "Fecha",
             reason: "Motivo",
         },
         Language::Catalan => Layer2Labels {
             signer: "Signat per",
-            id_number: "DNI",
+            issuer: "Emissor",
             signed_at: "Data",
             reason: "Motiu",
         },
         Language::Basque => Layer2Labels {
             signer: "Sinatzailea",
-            id_number: "NAN",
+            issuer: "Jaulkitzailea",
             signed_at: "Data",
             reason: "Arrazoia",
         },
         Language::Galician => Layer2Labels {
             signer: "Asinado por",
-            id_number: "DNI",
+            issuer: "Emisor",
             signed_at: "Data",
             reason: "Motivo",
         },
         Language::English => Layer2Labels {
             signer: "Signed by",
-            id_number: "ID number",
+            issuer: "Issuer",
             signed_at: "Date",
             reason: "Reason",
         },
@@ -88,31 +101,109 @@ fn labels(language: Language) -> Layer2Labels {
 /// Compone el texto del recuadro con las casillas marcadas, en el idioma de la
 /// aplicación.
 ///
-/// Sin ninguna casilla marcada devuelve la cadena vacía, que **no** es lo mismo
-/// que no enviar `layer2Text`: ver [`super::config::SignatureConfig`].
+/// Firmante, emisor y fecha van en **un solo párrafo**, separados por puntos;
+/// el motivo, si lo hay, en el renglón de debajo. Sin ninguna casilla marcada
+/// devuelve la cadena vacía, que **no** es lo mismo que no enviar `layer2Text`:
+/// ver [`super::config::SignatureConfig`].
 pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -> String {
     let labels = labels(language);
     // Destructurado exhaustivo: una casilla nueva no compila hasta que alguien
-    // decida en qué línea del recuadro cae.
+    // decida en qué parte del recuadro cae.
     let VisibleTextFields {
         signer_name,
-        id_number,
+        issuer,
         signed_at,
         reason,
+        pseudonym,
     } = fields;
 
-    let lines = [
-        (labels.signer, signer_name.map(str::to_owned)),
-        (labels.id_number, id_number.map(mask_id_number)),
+    let signer = signer_name.map(|name| {
+        if *pseudonym {
+            name.to_owned()
+        } else {
+            obfuscate_ids(name)
+        }
+    });
+
+    let sentences = [
+        (labels.signer, signer),
+        (labels.issuer, issuer.map(str::to_owned)),
         (labels.signed_at, signed_at.map(str::to_owned)),
-        (labels.reason, reason.map(str::to_owned)),
     ];
 
-    lines
+    let mut paragraph = sentences
         .into_iter()
         .filter_map(|(label, value)| value.map(|value| format!("{label}: {value}")))
         .collect::<Vec<_>>()
-        .join("\n")
+        .join(". ");
+    if !paragraph.is_empty() {
+        paragraph.push('.');
+    }
+
+    match reason.map(|reason| format!("{}: {reason}", labels.reason)) {
+        Some(reason) if paragraph.is_empty() => reason,
+        Some(reason) => format!("{paragraph}\n{reason}"),
+        None => paragraph,
+    }
+}
+
+/// Enmascara los identificadores que lleve dentro un texto, que es como el
+/// original tapa el DNI: sobre el `CN`, no sobre un campo aparte
+/// (`PdfVisibleAreasUtils.getLayerText:262-267`).
+///
+/// Los certificados españoles llevan el DNI dentro del `CN` —«ADA LOVELACE
+/// BYRON - 99999999R»—, así que enmascarar ahí es enmascararlo donde de verdad
+/// está. Se parte el texto en fragmentos alfanuméricos y solo se enmascaran
+/// los que **encajan con el patrón** de DNI, NIE o CIF: nadie se apellida como
+/// un DNI, y ceñirse al patrón deja el resto del nombre intacto.
+///
+/// Aquí está la diferencia con el original, y es a propósito: él le pasa a
+/// `countDigits` la cadena entera (`PdfVisibleAreasUtils.java:707`), de modo
+/// que sobre un nombre completo el recuento decide por una rama que no es la
+/// del fragmento que enmascara. Como aquí la máscara se aplica **al fragmento
+/// solo**, el recuento es el suyo y la rama la correcta.
+pub fn obfuscate_ids(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut obfuscated = String::with_capacity(text.len());
+    let mut index = 0usize;
+    while index < chars.len() {
+        if !chars[index].is_alphanumeric() {
+            obfuscated.push(chars[index]);
+            index += 1;
+            continue;
+        }
+        let start = index;
+        while index < chars.len() && chars[index].is_alphanumeric() {
+            index += 1;
+        }
+        let fragment: String = chars[start..index].iter().collect();
+        if looks_like_an_identifier(&fragment) {
+            obfuscated.push_str(&mask_id_number(&fragment));
+        } else {
+            obfuscated.push_str(&fragment);
+        }
+    }
+    obfuscated
+}
+
+/// Si un fragmento alfanumérico es un DNI, un NIE o un CIF.
+///
+/// Los tres son el mismo esqueleto: una letra inicial opcional —la `X`, `Y` o
+/// `Z` del NIE, la de tipo de un CIF—, siete u ocho dígitos, y un carácter de
+/// control que puede ser letra o dígito. Un número de teléfono o un año no
+/// entran, que es lo que hace seguro aplicar esto sobre un nombre.
+fn looks_like_an_identifier(fragment: &str) -> bool {
+    if !fragment.is_ascii() {
+        return false;
+    }
+    let mut body = fragment;
+    if body.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) {
+        body = &body[1..];
+    }
+    if body.chars().last().is_some_and(|c| c.is_ascii_alphabetic()) {
+        body = &body[..body.len() - 1];
+    }
+    IDENTIFIER_DIGITS.contains(&body.len()) && body.chars().all(|c| c.is_ascii_digit())
 }
 
 /// Enmascara un identificador con la máscara por omisión de AutoFirma.
@@ -231,38 +322,66 @@ fn fitted_positions(digits: usize) -> Vec<bool> {
 
 #[cfg(test)]
 mod tests {
-    use super::{compose_layer2_text, mask_id_number, VisibleTextFields};
+    use super::{compose_layer2_text, mask_id_number, obfuscate_ids, VisibleTextFields};
     use crate::signing::language::Language;
 
     fn all_fields<'a>() -> VisibleTextFields<'a> {
         VisibleTextFields {
-            signer_name: Some("Ada Lovelace Byron"),
-            id_number: Some("99999999R"),
+            signer_name: Some("ADA LOVELACE BYRON - 99999999R"),
+            issuer: Some("AC FNMT Usuarios"),
             signed_at: Some("31/08/2026 12:00:00 CEST"),
             reason: Some("Conforme"),
+            pseudonym: false,
         }
     }
 
     #[test]
-    fn composes_one_line_per_checked_field() {
+    fn composes_one_paragraph_and_leaves_the_reason_on_its_own_line() {
         assert_eq!(
             compose_layer2_text(&all_fields(), Language::Spanish),
-            "Firmado por: Ada Lovelace Byron\n\
-             DNI: ***9999**\n\
-             Fecha: 31/08/2026 12:00:00 CEST\n\
+            "Firmado por: ADA LOVELACE BYRON - ***9999**. \
+             Emisor: AC FNMT Usuarios. \
+             Fecha: 31/08/2026 12:00:00 CEST.\n\
              Motivo: Conforme"
+        );
+    }
+
+    #[test]
+    fn forces_no_line_break_other_than_the_one_before_the_reason() {
+        let without_reason = VisibleTextFields {
+            reason: None,
+            ..all_fields()
+        };
+        assert!(!compose_layer2_text(&without_reason, Language::Spanish).contains('\n'));
+        assert_eq!(
+            compose_layer2_text(&all_fields(), Language::Spanish)
+                .lines()
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn composes_only_the_reason_when_it_is_the_only_box_checked() {
+        let fields = VisibleTextFields {
+            reason: Some("Conforme"),
+            ..VisibleTextFields::default()
+        };
+        assert_eq!(
+            compose_layer2_text(&fields, Language::Spanish),
+            "Motivo: Conforme"
         );
     }
 
     #[test]
     fn drops_the_unchecked_fields() {
         let fields = VisibleTextFields {
-            signer_name: Some("Ada Lovelace Byron"),
+            signer_name: Some("ADA LOVELACE BYRON"),
             ..VisibleTextFields::default()
         };
         assert_eq!(
             compose_layer2_text(&fields, Language::Spanish),
-            "Firmado por: Ada Lovelace Byron"
+            "Firmado por: ADA LOVELACE BYRON."
         );
     }
 
@@ -293,7 +412,7 @@ mod tests {
         for language in Language::ALL {
             let text = compose_layer2_text(&fields, language);
             assert!(
-                text.contains("Ada Lovelace Byron"),
+                text.contains("ADA LOVELACE BYRON"),
                 "falta el titular en {}",
                 language.tag()
             );
@@ -304,14 +423,63 @@ mod tests {
     }
 
     #[test]
-    fn masks_the_id_number_without_a_switch() {
+    fn masks_the_id_inside_the_common_name_without_a_switch() {
         let fields = VisibleTextFields {
-            id_number: Some("99999999R"),
+            signer_name: Some("ADA LOVELACE BYRON - 99999999R"),
             ..VisibleTextFields::default()
         };
         let text = compose_layer2_text(&fields, Language::Spanish);
         assert!(!text.contains("99999999R"), "el DNI sale en claro: {text}");
-        assert!(text.ends_with("***9999**"), "{text}");
+        assert!(text.contains("***9999**"), "{text}");
+    }
+
+    #[test]
+    fn a_pseudonym_certificate_is_exempt_from_the_mask() {
+        let fields = VisibleTextFields {
+            signer_name: Some("SEUDONIMO 99999999R"),
+            pseudonym: true,
+            ..VisibleTextFields::default()
+        };
+        assert_eq!(
+            compose_layer2_text(&fields, Language::Spanish),
+            "Firmado por: SEUDONIMO 99999999R."
+        );
+    }
+
+    /// Los cuatro formatos españoles que llegan en el `CN`, con el DNI o el
+    /// CIF dentro: se tapa el identificador y **solo** el identificador.
+    #[test]
+    fn masks_the_identifier_of_every_spanish_common_name() {
+        // FNMT de persona física.
+        assert_eq!(
+            obfuscate_ids("ADA LOVELACE BYRON - 99999999R"),
+            "ADA LOVELACE BYRON - ***9999**"
+        );
+        // Empleado público.
+        assert_eq!(
+            obfuscate_ids("ADA LOVELACE BYRON - NIF 99999999R"),
+            "ADA LOVELACE BYRON - NIF ***9999**"
+        );
+        // Representante de empresa: el NIE de la persona y el CIF de la
+        // sociedad, los dos tapados.
+        assert_eq!(
+            obfuscate_ids("X1234567L - EMPRESA EJEMPLO SL - A12345674"),
+            "****4567* - EMPRESA EJEMPLO SL - ****4567*"
+        );
+        // DNIe: su `CN` viene con la coma ya desescapada y sin identificador.
+        assert_eq!(
+            obfuscate_ids("APELLIDO1 APELLIDO2, ADA (FIRMA)"),
+            "APELLIDO1 APELLIDO2, ADA (FIRMA)"
+        );
+    }
+
+    #[test]
+    fn leaves_alone_what_is_not_an_identifier() {
+        assert_eq!(obfuscate_ids("ADA LOVELACE BYRON"), "ADA LOVELACE BYRON");
+        // Un teléfono tiene nueve dígitos y un año cuatro: ninguno encaja.
+        assert_eq!(obfuscate_ids("600123456 y 2026"), "600123456 y 2026");
+        assert_eq!(obfuscate_ids("ANDRÉS PEÑA"), "ANDRÉS PEÑA");
+        assert_eq!(obfuscate_ids(""), "");
     }
 
     #[test]
@@ -340,8 +508,6 @@ mod tests {
 
     #[test]
     fn masks_only_the_segment_that_holds_the_digits() {
-        // El RDN `serialNumber` de la FNMT y del DNIe trae el prefijo, y quien
-        // lo extraiga no tiene por qué quitarlo: el recuadro sigue legible.
         assert_eq!(mask_id_number("IDCES-99999999R"), "IDCES-***9999**");
         assert_eq!(mask_id_number("12345678-Z"), "***4567*-Z");
         assert_eq!(mask_id_number("99999999 R"), "***9999* R");
@@ -354,10 +520,14 @@ mod tests {
         assert_eq!(mask_id_number("12-345"), "12-*45");
     }
 
+    /// La rareza 3 del original —el recuento de dígitos sobre toda la cadena—
+    /// no llega al recuadro: la máscara la aplica [`obfuscate_ids`] sobre el
+    /// fragmento suelto, donde el recuento es el del propio identificador.
     #[test]
-    fn leaves_alone_what_is_not_an_identifier() {
-        assert_eq!(mask_id_number("Ada Lovelace"), "Ada Lovelace");
-        assert_eq!(mask_id_number("A1B2C3"), "A1B2C3");
-        assert_eq!(mask_id_number(""), "");
+    fn counts_the_digits_of_the_identifier_and_not_those_of_the_whole_name() {
+        assert_eq!(
+            obfuscate_ids("ADA 12 LOVELACE 345 BYRON - 99999999R"),
+            "ADA 12 LOVELACE 345 BYRON - ***9999**"
+        );
     }
 }

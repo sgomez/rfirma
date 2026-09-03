@@ -20,7 +20,7 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (926), `app/documents.rs` (779), `app/signing.rs` (713)
+  `signing/placement.rs` (926), `app/documents.rs` (779), `app/signing.rs` (718)
   y `app/recents.rs` (603). El mayor de `commands/` es `commands/mod.rs` (598);
   ninguno de sus hermanos pasa de 406, y lo que los hace crecer es **prosa**:
   los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
@@ -42,13 +42,13 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/views.rs` | 366 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
-| `commands/orders.rs` | 226 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
+| `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
 | `commands/guards.rs` | 406 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 190 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
-| `app/certificates.rs` | 420 | Qué certificados hay, cuál eligió la ventana y cuál se recordó. |
-| `app/signing.rs` | 713 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/certificates.rs` | 578 | Qué certificados hay, cuál eligió la ventana, cuál se recordó y qué estampa el recuadro. |
+| `app/signing.rs` | 718 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 779 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
@@ -60,7 +60,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `dropped.rs` | 185 | Qué se decide al soltar ficheros en la ventana (ID-67, ID-68, ID-70). |
 | **`memory/`** | | Lo que rFirma recuerda: siete memorias en dos mitades y una exenta (ADR-0010). |
 | `memory/mod.rs` | 527 | El reparto de las siete memorias. Léelo antes que sus hermanos. |
-| `memory/state.rs` | 404 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
+| `memory/state.rs` | 449 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 599 | Los diez recientes, por ruta canónica, con el conjunto de páginas y la posición del recuadro de cada uno (ID-74, ID-95). Lee las filas de v0.2 y descarta la que no entienda. |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |
@@ -70,11 +70,11 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `memory/error.rs` | 89 | Situaciones de la memoria (ADR-0009). |
 | **`signing/`** | | Las reglas puras de la firma. |
 | `signing/mod.rs` | 32 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. **No importa `ffi`** (ID-82). |
-| `signing/config.rs` | 400 | Los cinco ajustes de firma y ni uno más (ID-18). Aquí viven `Placement` y `PadesRect` (ID-90). |
+| `signing/config.rs` | 431 | Los seis ajustes de firma y ni uno más (ID-18). Aquí viven `Placement` y `PadesRect` (ID-90). |
 | `signing/placement.rs` | 926 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21), y `PageSet`: en qué páginas se estampa y si el documento las tiene (ID-91, ID-94). |
 | `signing/admissibility.rs` | 316 | Lo que no se puede firmar, decidido antes del PIN. |
-| `signing/layer2_text.rs` | 369 | El texto del recuadro visible. |
-| `signing/properties.rs` | 178 | Los `extraParams` en el formato del puente. |
+| `signing/layer2_text.rs` | 533 | El texto del recuadro visible: un párrafo, y la máscara sobre el `CN`. |
+| `signing/properties.rs` | 179 | Los `extraParams` en el formato del puente. |
 | `signing/session_seal.rs` | 152 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). |
 | `signing/language.rs` | 105 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). |
 | **`pkcs11/`** | | La única parte que habla con el token. |

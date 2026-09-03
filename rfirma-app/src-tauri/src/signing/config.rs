@@ -1,4 +1,4 @@
-//! La configuración de firma: cinco ajustes y ni uno más (ID-18).
+//! La configuración de firma: seis ajustes y ni uno más (ID-18).
 //!
 //! Todo lo demás se hereda de AutoFirma sin enviarse. Quedan fuera a propósito
 //! (ID-20) la política de firma, la ciudad, el contacto, el perfil,
@@ -28,9 +28,19 @@ const UPPER_RIGHT_Y_KEY: &str = "signaturePositionOnPageUpperRightY";
 const LAYER2_TEXT_KEY: &str = "layer2Text";
 const RUBRIC_IMAGE_KEY: &str = "signatureRubricImage";
 const SIGN_REASON_KEY: &str = "signReason";
+const LAYER2_FONT_SIZE_KEY: &str = "layer2FontSize";
 
-/// Los cinco ajustes de la configuración de firma. La lista es cerrada: si
-/// alguien quiere un sexto, tiene que añadir una variante aquí y decir qué
+/// El tamaño de letra del recuadro, **cero**, que no es un tamaño: es lo que
+/// hace que el compositor reparta `alto del recuadro / número de líneas` y
+/// ajuste la letra desde ahí. Sin la clave, `PdfSessionManager:261-272` cae en
+/// su valor por omisión —12 pt— y ese funciona como **tope**: solo encoge,
+/// nunca crece, así que un recuadro de media página salía con letra minúscula.
+/// **Sin tope superior**: si alguien traza un recuadro grande es porque quiere
+/// verlo, y lo ve antes de firmar.
+const LAYER2_FONT_SIZE: &str = "0";
+
+/// Los seis ajustes de la configuración de firma. La lista es cerrada: si
+/// alguien quiere un séptimo, tiene que añadir una variante aquí y decir qué
 /// clave emite, y eso ya no se cuela en una revisión.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Setting {
@@ -44,16 +54,19 @@ pub enum Setting {
     RubricImage,
     /// El motivo de la firma, si lo hay.
     SignReason,
+    /// El tamaño de letra del recuadro, siempre [`LAYER2_FONT_SIZE`].
+    Layer2FontSize,
 }
 
 impl Setting {
-    /// Los cinco.
-    pub const ALL: [Self; 5] = [
+    /// Los seis.
+    pub const ALL: [Self; 6] = [
         Self::SubFilter,
         Self::Geometry,
         Self::Layer2Text,
         Self::RubricImage,
         Self::SignReason,
+        Self::Layer2FontSize,
     ];
 
     /// Las claves de `extraParams` que emite este ajuste.
@@ -70,6 +83,7 @@ impl Setting {
             Self::Layer2Text => &[LAYER2_TEXT_KEY],
             Self::RubricImage => &[RUBRIC_IMAGE_KEY],
             Self::SignReason => &[SIGN_REASON_KEY],
+            Self::Layer2FontSize => &[LAYER2_FONT_SIZE_KEY],
         }
     }
 }
@@ -154,7 +168,7 @@ impl SignatureConfig {
     /// y tampoco hay `signatureRubricImage`, `PdfSessionManager` inyecta su
     /// texto por omisión, en castellano fijo y con comodines dentro.
     pub fn extra_params(&self) -> BTreeMap<String, String> {
-        // Destructurado exhaustivo A PROPÓSITO: un sexto ajuste no compila
+        // Destructurado exhaustivo A PROPÓSITO: un quinto campo no compila
         // hasta que alguien lo declare también en `Setting`.
         let Self {
             placement,
@@ -167,6 +181,9 @@ impl SignatureConfig {
         params.insert(SUB_FILTER_KEY.to_owned(), SUB_FILTER.to_owned());
         params.extend(placement.extra_params());
         params.insert(LAYER2_TEXT_KEY.to_owned(), layer2_text.clone());
+        // Se envía siempre, y siempre cero: no es un ajuste del usuario, es lo
+        // que enciende el reparto del alto entre las líneas.
+        params.insert(LAYER2_FONT_SIZE_KEY.to_owned(), LAYER2_FONT_SIZE.to_owned());
         if let Some(image) = rubric_image {
             params.insert(RUBRIC_IMAGE_KEY.to_owned(), image.clone());
         }
@@ -216,8 +233,8 @@ mod tests {
     }
 
     #[test]
-    fn closes_the_configuration_at_five_settings() {
-        assert_eq!(Setting::ALL.len(), 5);
+    fn closes_the_configuration_and_this_is_how_many_settings_it_has() {
+        assert_eq!(Setting::ALL.len(), 6);
     }
 
     #[test]
@@ -231,17 +248,17 @@ mod tests {
             for key in config.extra_params().keys() {
                 assert!(
                     owned.contains(key.as_str()),
-                    "«{key}» no pertenece a ninguno de los cinco ajustes"
+                    "«{key}» no pertenece a ninguno de los seis ajustes"
                 );
             }
         }
     }
 
     #[test]
-    fn emits_every_key_the_five_settings_declare() {
+    fn emits_every_key_the_settings_declare() {
         // La dirección contraria a la de arriba: una clave declarada en
         // `Setting::keys()` que `extra_params` no llegue a emitir nunca sería
-        // una promesa muerta. `complete()` tiene los cinco ajustes puestos, así
+        // una promesa muerta. `complete()` tiene los seis ajustes puestos, así
         // que sobre ella la contención va en los dos sentidos.
         let declared: HashSet<&str> = Setting::ALL
             .iter()
@@ -307,6 +324,20 @@ mod tests {
             config.extra_params().get("layer2Text"),
             Some(&String::new())
         );
+    }
+
+    /// El tamaño de letra viaja con **valor cero**, que es lo que hace
+    /// que el compositor reparta el alto del recuadro entre sus líneas. Sin la
+    /// clave, el valor por omisión del puente actúa como tope y la letra solo
+    /// encoge.
+    #[test]
+    fn always_sends_the_font_size_as_zero() {
+        for config in [minimal(), complete()] {
+            assert_eq!(
+                config.extra_params().get("layer2FontSize"),
+                Some(&"0".to_owned())
+            );
+        }
     }
 
     #[test]

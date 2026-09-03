@@ -12,11 +12,19 @@ use crate::commands::Failure;
 use crate::signing::{MediaBox, Page, PageSet, Placement, Rotation, UserSpaceRect};
 
 /// Lo que la ventana ha marcado en las casillas del recuadro.
+///
+/// La casilla «DNI» ya no está: el dato viaja dentro del `CN` del firmante y
+/// lo tapa la máscara al componer el texto. En su sitio entra «Emisor», que
+/// hasta ahora solo se veía en el desplegable de certificados.
+///
+/// `serde(default)` porque una casilla que la ventana no mande vale «sin
+/// marcar»: el recuadro sale con un dato de menos, que es mucho menos malo que
+/// rechazar la orden entera y no firmar.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 pub struct VisibleFieldsOrder {
     pub signer_name: bool,
-    pub id_number: bool,
+    pub issuer: bool,
     pub signed_at: bool,
     pub reason: bool,
 }
