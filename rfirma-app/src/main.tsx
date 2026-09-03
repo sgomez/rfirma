@@ -26,6 +26,7 @@ import {
   tauriRubricPicker,
   tauriSignedDocumentOpener,
   tauriSigningBackend,
+  tauriStampComposer,
 } from "./tauri";
 
 const root = document.getElementById("root");
@@ -69,6 +70,7 @@ createRoot(root).render(
         certificates={tauriCertificateStore()}
         rubrics={tauriRubricPicker()}
         composer={tauriLayer2Composer()}
+        stamps={tauriStampComposer()}
         signer={tauriSigningBackend()}
         opener={tauriSignedDocumentOpener()}
       />

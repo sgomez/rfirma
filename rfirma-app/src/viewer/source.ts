@@ -23,7 +23,17 @@ export interface DocumentFailure {
  * elegir un PDF corrupto se quedaba mirando la zona de soltar sin que nadie le
  * dijera qué había pasado.
  */
-export type OpenedPdf = { ok: true; pdf: PdfDocument } | { ok: false; failure: DocumentFailure };
+export type OpenedPdf =
+  /**
+   * El PDF abierto y **cuánto ocupa**, en bytes.
+   *
+   * El tamaño viaja con él porque sale de los mismos bytes que se acaban de
+   * leer y no hay una segunda forma de saberlo: bajo el arenero la aplicación
+   * no conoce la ruta del documento, así que nadie puede preguntarle al disco.
+   * Quien lo usa es la vista previa del sello, que por encima de cierto tamaño
+   * deja de recalcularse sola (ID-109).
+   */
+  { ok: true; pdf: PdfDocument; sizeBytes: number } | { ok: false; failure: DocumentFailure };
 
 /**
  * De qué documento se pinta el PDF.
@@ -54,7 +64,8 @@ export function pdfjsSource(read: ReadDocument): PdfSource {
   return {
     open: async (document) => {
       try {
-        return { ok: true, pdf: await loader.load(await read(document)) };
+        const bytes = await read(document);
+        return { ok: true, pdf: await loader.load(bytes), sizeBytes: bytes.byteLength };
       } catch (thrown) {
         const named = classify(thrown);
         return {

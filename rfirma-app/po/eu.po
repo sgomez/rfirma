@@ -576,6 +576,59 @@ msgstr ""
 msgid "panel.visibleSignature.preview.empty"
 msgstr ""
 
+#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
+msgid "panel.visibleSignature.noCertificate"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.title"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.unplaced.badge"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.unplaced.line"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.frozen.badge"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.frozen.line"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.onDemand.badge"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.onDemand.line"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.composing.badge"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.composing.line"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.composed.badge"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.composed.line"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.failed.badge"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.failed.line"
+msgstr ""
+
+#. La vista previa no es una puerta (ID-111).
+msgid "panel.visibleSignature.stamp.failed.hint"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.show"
+msgstr ""
+
+msgid "panel.visibleSignature.stamp.retry"
+msgstr ""
+
 msgid "panel.visibleSignature.preview.unavailable"
 msgstr ""
 

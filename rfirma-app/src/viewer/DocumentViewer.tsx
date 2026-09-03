@@ -41,7 +41,7 @@ import {
   unsealing,
 } from "./signatureBox";
 import type { DocumentFailure } from "./source";
-import { useBoxDrag } from "./useBoxDrag";
+import { type BoxDragHandlers, useBoxDrag } from "./useBoxDrag";
 import {
   anchoredScroll,
   bitmapScale,
@@ -131,6 +131,34 @@ interface DocumentViewerProps {
    * mudo y parecía que la pulsación no había hecho nada.
    */
   failure?: DocumentFailure | null;
+  /**
+   * El documento **con el sello ya estampado**, que se pinta en lugar del
+   * original mientras esté compuesto (ID-107).
+   *
+   * Es la pieza entera de «dentro del recuadro va el sello de verdad»: el visor
+   * no dibuja nada nuevo, pinta otro PDF. Los bytes visibles de ese PDF están
+   * medidos idénticos a los del firmado de verdad, así que el recuadro no
+   * enseña una aproximación sino el resultado. `null` es no tener ninguno —sin
+   * certificado, sin colocar, o no se ha podido componer—, y entonces se pinta
+   * el original.
+   */
+  stamped?: PdfDocument | null;
+  /**
+   * El gesto está en curso: la vista anterior queda **congelada y atenuada**
+   * (ID-109).
+   *
+   * Congelada sale gratis —quien no recompone es quien entrega `stamped`—; lo
+   * que se pinta aquí es el atenuado, sobre el recuadro de antes del gesto.
+   */
+  stampFrozen?: boolean;
+  /**
+   * Empieza o acaba un gesto sobre el recuadro.
+   *
+   * Lo necesita quien compone el sello: recalcular por fotograma cuesta ≈1,9 s
+   * y 507 MB de RSS en el peor documento medido, así que el ciclo se pide **al
+   * soltar** y no durante el arrastre (ID-109).
+   */
+  onGesture?: (active: boolean) => void;
 }
 
 /**
@@ -164,6 +192,9 @@ export function DocumentViewer({
   onPageChange,
   goToPage = null,
   failure = null,
+  stamped = null,
+  stampFrozen = false,
+  onGesture,
 }: DocumentViewerProps) {
   const { t, i18n } = useTranslation();
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -208,6 +239,13 @@ export function DocumentViewer({
 
   const pageCount = pdf?.pageCount ?? 0;
 
+  // Lo que se pinta es el PDF **en seco** cuando lo hay, y el original cuando
+  // no. El recorrido —la página, el zoom, el conjunto de páginas— sigue
+  // colgando de `pdf`: los dos documentos tienen las mismas páginas, y hacer
+  // que el visor se reiniciara cada vez que llega un sello nuevo sería devolver
+  // a quien está colocando el recuadro a la página 1.
+  const painted = stamped ?? pdf;
+
   // Documento nuevo, recorrido nuevo: **la página que guardaba su fila** —la 1
   // si no guardaba ninguna— y el zoom de partida.
   //
@@ -249,12 +287,12 @@ export function DocumentViewer({
   // escriben sobre el mismo `<canvas>` y queda una mezcla de dos escalas.
   useEffect(() => {
     const pending = queue.current;
-    if (!pdf || !pending) return;
+    if (!painted || !pending) return;
     const target = canvas.current;
     if (!target) return;
     let live = true;
 
-    void pdf.getPage(page).then((loaded) => {
+    void painted.getPage(page).then((loaded) => {
       if (!live) return undefined;
       // `next` es el viewport en **píxeles CSS**: es el que se guarda en el
       // estado y el que usan las conversiones a espacio de usuario PDF
@@ -294,7 +332,7 @@ export function DocumentViewer({
       live = false;
       pending.cancel();
     };
-  }, [pdf, page, zoom]);
+  }, [painted, page, zoom]);
 
   // La parte visible se mide sola y avisa de cada cambio, que es lo que hace de
   // «ajustar» un modo y no un cálculo de una vez (ID-117).
@@ -376,6 +414,29 @@ export function DocumentViewer({
     },
     [viewport, placement, onPlace],
   );
+
+  // Los dos gestos avisan de que empiezan y de que acaban, sin que `useBoxDrag`
+  // tenga que saber para qué: quien compone el sello sólo quiere el ciclo al
+  // soltar, y el arrastre sigue sin pasar por el estado de React.
+  const gesturing = (handlers: BoxDragHandlers): BoxDragHandlers => ({
+    onPointerDown: (event) => {
+      handlers.onPointerDown(event);
+      // La misma guardia que `useBoxDrag`: con el botón secundario no arranca
+      // ningún gesto, así que avisar de uno congelaría la vista previa hasta el
+      // `pointerup` sin que se esté moviendo nada.
+      if (event.button !== 0) return;
+      onGesture?.(true);
+    },
+    onPointerMove: handlers.onPointerMove,
+    onPointerUp: (event) => {
+      handlers.onPointerUp(event);
+      onGesture?.(false);
+    },
+    onPointerCancel: (event) => {
+      handlers.onPointerCancel(event);
+      onGesture?.(false);
+    },
+  });
 
   const drag = useBoxDrag({
     box: boxElement,
@@ -624,7 +685,7 @@ export function DocumentViewer({
                 height: `${pixels.height}px`,
               }}
               onKeyDown={nudge}
-              {...drag.box}
+              {...gesturing(drag.box)}
             >
               <span className="viewer__handle rf-body">
                 <MoveIcon />
@@ -642,10 +703,28 @@ export function DocumentViewer({
                   data-corner={corner}
                   style={{ width: `${GRIP_PX}px`, height: `${GRIP_PX}px` }}
                   aria-hidden="true"
-                  {...drag.grip(corner)}
+                  {...gesturing(drag.grip(corner))}
                 />
               ))}
             </div>
+          )}
+          {/*
+            El atenuado del gesto (ID-109). Va sobre el recuadro **de antes**,
+            que es donde sigue el sello congelado: el que se arrastra se ha ido
+            con el puntero, y atenuar la hoja entera atenuaría el documento, que
+            es justo lo que hay que seguir viendo debajo.
+          */}
+          {stampFrozen && pixels && (
+            <div
+              className="viewer__stamp-frozen"
+              aria-hidden="true"
+              style={{
+                left: `${pixels.x}px`,
+                top: `${pixels.y}px`,
+                width: `${pixels.width}px`,
+                height: `${pixels.height}px`,
+              }}
+            />
           )}
         </div>
 

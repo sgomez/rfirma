@@ -633,6 +633,59 @@ msgstr "What the box will say"
 msgid "panel.visibleSignature.preview.empty"
 msgstr "Tick a box so that the signature box says something."
 
+#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
+msgid "panel.visibleSignature.noCertificate"
+msgstr "Choose a certificate to place the visible signature"
+
+msgid "panel.visibleSignature.stamp.title"
+msgstr "Preview"
+
+msgid "panel.visibleSignature.stamp.unplaced.badge"
+msgstr "Not placed"
+
+msgid "panel.visibleSignature.stamp.unplaced.line"
+msgstr "Place the box on the page to see the stamp"
+
+msgid "panel.visibleSignature.stamp.frozen.badge"
+msgstr "Frozen"
+
+msgid "panel.visibleSignature.stamp.frozen.line"
+msgstr "Frozen while you move the box"
+
+msgid "panel.visibleSignature.stamp.onDemand.badge"
+msgstr "On hold"
+
+msgid "panel.visibleSignature.stamp.onDemand.line"
+msgstr "The document is large: the stamp is not redrawn on its own"
+
+msgid "panel.visibleSignature.stamp.composing.badge"
+msgstr "Composing"
+
+msgid "panel.visibleSignature.stamp.composing.line"
+msgstr "Composing the stamp with the chosen certificate"
+
+msgid "panel.visibleSignature.stamp.composed.badge"
+msgstr "Up to date"
+
+msgid "panel.visibleSignature.stamp.composed.line"
+msgstr "What you see is what gets stamped"
+
+msgid "panel.visibleSignature.stamp.failed.badge"
+msgstr "Not drawn"
+
+msgid "panel.visibleSignature.stamp.failed.line"
+msgstr "The stamp could not be drawn"
+
+#. La vista previa no es una puerta (ID-111).
+msgid "panel.visibleSignature.stamp.failed.hint"
+msgstr "You can sign anyway: the sign button is what decides that."
+
+msgid "panel.visibleSignature.stamp.show"
+msgstr "See how it looks"
+
+msgid "panel.visibleSignature.stamp.retry"
+msgstr "Try again"
+
 msgid "panel.visibleSignature.preview.unavailable"
 msgstr "The preview will show up once you choose the certificate."
 

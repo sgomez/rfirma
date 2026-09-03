@@ -31,7 +31,7 @@ interface BoxDragOptions {
 }
 
 /** Los manejadores que se derraman sobre un elemento del gesto. */
-interface BoxDragHandlers {
+export interface BoxDragHandlers {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;

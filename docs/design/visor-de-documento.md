@@ -108,6 +108,23 @@ que **empaquetar `standard_fonts` de `pdfjs-dist`** y pasarle
 `standardFontDataUrl` a `getDocument`, o aceptar por escrito que el corte de
 línea es aproximado; y la vista previa **depende de que `annotationMode` siga en
 su valor por omisión**, que hoy no vigila ninguna guardia.
+
+Las dos están hechas, y así: las catorce fuentes las copia a `dist/standard_fonts/`
+un complemento de `vite.config.ts` de veinte líneas, sin dependencia nueva, y
+`pdfjsLoader` se las pasa; y la guardia de `annotationMode` vive en
+`viewer/pdfjsLoader.test.ts`, lee la fuente de todo `src/` y **se pone roja si
+alguien lo escribe**, sea con el valor que sea. No distingue valores a propósito:
+sólo `DISABLE` apaga el sello, pero un `annotationMode` escrito es la
+conversación que hay que tener, y el día que el visor rellene formularios se
+tendrá ahí.
+
+**El umbral del documento grande es el tamaño, y son 8 MB.** No está medido punto
+a punto —lo medido son los dos extremos, 0,15 s en un PDF de 2,4 MB y 1,9 s con
+507 MB de RSS en un escaneado de 37 MB—, y se elige el tamaño y no el tiempo del
+ciclo anterior porque el tamaño se sabe **antes** de pagar el primer ciclo. Por
+debajo, la vista se recalcula sola al soltar; por encima, aparece «Ver cómo
+queda».
+
 ## La barra flotante
 
 Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:

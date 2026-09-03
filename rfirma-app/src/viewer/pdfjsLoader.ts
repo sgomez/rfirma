@@ -8,6 +8,18 @@ import type { PdfDocument, PdfLoader, PdfPage, Viewport } from "./pdf";
 GlobalWorkerOptions.workerSrc = workerSource;
 
 /**
+ * Dónde están las catorce fuentes estándar, que las empaqueta `vite.config.ts`
+ * (ID-112).
+ *
+ * Sin esto `pdf.js` avisa y sustituye por una fuente del sistema: pinta igual
+ * —está medido—, pero con otras métricas, y el corte de línea del texto que se
+ * ve dentro del recuadro dejaría de ser el que produce el compositor. La ruta
+ * es la misma en la ventana y en `vite dev`; **la vigila una guardia**, en
+ * `pdfjsLoader.test.ts`.
+ */
+const STANDARD_FONTS = "/standard_fonts/";
+
+/**
  * `pdf.js` de verdad, detrás del puerto de [`pdf.ts`](./pdf.ts).
  *
  * Es el **único** fichero del frontal que importa `pdfjs-dist`, y no tiene ni
@@ -19,7 +31,8 @@ GlobalWorkerOptions.workerSrc = workerSource;
 export function pdfjsLoader(): PdfLoader {
   return {
     async load(bytes) {
-      const document = await getDocument({ data: bytes }).promise;
+      const document = await getDocument({ data: bytes, standardFontDataUrl: STANDARD_FONTS })
+        .promise;
       return {
         pageCount: document.numPages,
         getPage: async (number) => adaptPage(await document.getPage(number)),

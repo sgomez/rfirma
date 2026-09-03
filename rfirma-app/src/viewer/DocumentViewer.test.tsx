@@ -496,6 +496,142 @@ describe("el recuadro de la firma", () => {
   });
 });
 
+/** ID-107, ID-109: dentro del recuadro va el sello de verdad, o no hay recuadro. */
+describe("el sello dentro del recuadro", () => {
+  it("paints the stamped document instead of the original one", async () => {
+    const original = recordingDocument();
+    const preview = recordingDocument();
+
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={original.document}
+        stamped={preview.document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+      />,
+    );
+
+    // Cero código de dibujo nuevo: lo que se ve es el PDF en seco, pintado por
+    // `pdf.js` de fábrica, y el original no se pinta en absoluto.
+    await waitFor(() => expect(preview.renders).toHaveLength(1));
+    expect(original.renders).toHaveLength(0);
+  });
+
+  it("comes back to the original document when there is no stamp to show", async () => {
+    const original = recordingDocument();
+    const preview = recordingDocument();
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer
+        pdf={original.document}
+        stamped={preview.document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(preview.renders).toHaveLength(1));
+
+    rerender(
+      <DocumentViewer
+        pdf={original.document}
+        stamped={null}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+      />,
+    );
+
+    await waitFor(() => expect(original.renders).toHaveLength(1));
+  });
+
+  it("dims the frozen view while the box is being dragged", async () => {
+    const { document, renders } = recordingDocument();
+    const { container, rerender } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={seated} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    expect(container.querySelector(".viewer__stamp-frozen")).toBeNull();
+
+    rerender(
+      <DocumentViewer pdf={document} placement={seated} stampFrozen onPlace={noop} onOpen={noop} />,
+    );
+
+    // El atenuado va sobre el recuadro **de antes del gesto**: el que se
+    // arrastra se ha ido con el puntero, y lo congelado se queda donde estaba.
+    const frozen = container.querySelector(".viewer__stamp-frozen") as HTMLElement;
+    expect(frozen.style.left).toBe("50px");
+    expect(frozen.style.width).toBe("200px");
+  });
+
+  it("tells the gesture apart from the drop, which is when the stamp is recomposed", async () => {
+    const onGesture = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onGesture={onGesture}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    fireEvent.pointerDown(box(), { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+    expect(onGesture).toHaveBeenLastCalledWith(true);
+
+    fireEvent.pointerMove(box(), { pointerId: 1, clientX: 110, clientY: 120 });
+    fireEvent.pointerUp(box(), { pointerId: 1 });
+
+    expect(onGesture).toHaveBeenLastCalledWith(false);
+  });
+
+  it("says nothing about a gesture the secondary button never started", async () => {
+    const onGesture = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onGesture={onGesture}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    // `useBoxDrag` descarta el botón secundario —es el del menú del sistema—,
+    // así que avisar de un gesto aquí congelaría la vista previa sin que se
+    // esté moviendo nada.
+    fireEvent.pointerDown(box(), { pointerId: 1, button: 2, clientX: 100, clientY: 100 });
+
+    expect(onGesture).not.toHaveBeenCalled();
+  });
+
+  it("also freezes while a grip is resizing the box", async () => {
+    const onGesture = vi.fn();
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onGesture={onGesture}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    const grip = container.querySelector('[data-corner="bottom-right"]') as HTMLElement;
+
+    fireEvent.pointerDown(grip, { pointerId: 1, button: 0, clientX: 250, clientY: 100 });
+    expect(onGesture).toHaveBeenLastCalledWith(true);
+
+    fireEvent.pointerUp(grip, { pointerId: 1 });
+    expect(onGesture).toHaveBeenLastCalledWith(false);
+  });
+});
+
 /** ID-96: el mismo recuadro en todas las páginas del conjunto, y en ninguna más. */
 describe("el conjunto de páginas en la hoja", () => {
   const onTwo: Placement = {
