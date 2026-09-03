@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   anchoredScroll,
   bitmapScale,
+  DEFAULT_ZOOM,
   fitScale,
   MAX_BITMAP_SCALE,
   pinchedZoom,
@@ -88,6 +89,12 @@ describe("el porcentaje tecleado", () => {
     expect(typedZoom("")).toBeNull();
     expect(typedZoom("ajustar")).toBeNull();
     expect(typedZoom("0")).toBeNull();
+  });
+});
+
+describe("el ajuste de partida", () => {
+  it("opens a fresh document fitted to the whole page, not a free percentage (ID-117 enmendado)", () => {
+    expect(DEFAULT_ZOOM).toEqual({ kind: "fit-page" });
   });
 });
 

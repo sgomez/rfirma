@@ -61,8 +61,16 @@ export type ZoomMode =
   | { readonly kind: "fit-width" }
   | { readonly kind: "fit-page" };
 
-/** El punto de partida, y a donde vuelve `Ctrl+0` y el documento siguiente. */
-export const DEFAULT_ZOOM: ZoomMode = { kind: "free", value: 1 };
+/**
+ * El punto de partida de un documento recién abierto: la hoja entera, tanto en
+ * vertical como en apaisado (ID-117 enmendado). `Ctrl+0` sigue yendo al 100 %,
+ * que es un porcentaje fijado a mano y no este modo.
+ *
+ * Solo se aplica mientras la persona usuaria no haya tocado nada: en cuanto
+ * fija un modo o un porcentaje, manda lo último que haya dicho ella, y el
+ * documento siguiente lo hereda tal cual.
+ */
+export const DEFAULT_ZOOM: ZoomMode = { kind: "fit-page" };
 
 /** Un zoom recortado al rango. Todo lo que sale de aquí ha pasado por esto. */
 export function clampZoom(value: number): number {
