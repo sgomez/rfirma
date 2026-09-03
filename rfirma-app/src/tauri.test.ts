@@ -18,6 +18,7 @@ const {
   tauriRecents,
   tauriRubricPicker,
   tauriSigningBackend,
+  tauriStampComposer,
 } = await import("./tauri");
 
 const aConfiguration = {
@@ -279,6 +280,49 @@ describe("los puertos del documento sobre Tauri", () => {
     if (outcome.ok) return;
     expect(outcome.failure.situation).toBe("documentUnreadable");
     expect(outcome.failure.detail).not.toBe("");
+  });
+});
+
+/**
+ * **Grada A**: el ciclo en seco que compone el sello, contra el mismo `invoke`
+ * falso. Lo que se prueba es la costura —qué orden se llama y cómo vuelve un
+ * fallo—, no el puente: los bytes de verdad los mide el sondeo del #115.
+ */
+describe("el puerto del sello sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks for the dry run with the very order that would be signed", async () => {
+    invoke.mockResolvedValue(new Uint8Array([0x25, 0x50, 0x44, 0x46]).buffer);
+
+    await tauriStampComposer().compose(anOrder);
+
+    expect(invoke).toHaveBeenCalledWith("preview_signature", { order: anOrder });
+  });
+
+  /**
+   * ID-111: la vista previa **no es una puerta**. El puerto no relanza nada, así
+   * que quien lo llama no tiene un `catch` que decida si se puede firmar.
+   */
+  it("names the failure instead of rejecting, so signing stays possible", async () => {
+    invoke.mockImplementation(() =>
+      Promise.reject({
+        situation: "documentUnreadable",
+        detail: "el documento tiene contraseña",
+        attemptsLeft: null,
+      }),
+    );
+
+    const composed = await tauriStampComposer().compose(anOrder);
+
+    expect(composed).toEqual({
+      ok: false,
+      failure: {
+        situation: "documentUnreadable",
+        detail: "el documento tiene contraseña",
+      },
+    });
   });
 });
 

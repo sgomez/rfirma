@@ -12,6 +12,7 @@ import { emptyCertificateStore } from "./signing/certificate";
 import { inMemoryDestination, unavailableOpener } from "./signing/destination";
 import { type SigningBackend, type SigningOrder, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
+import { unavailableStampComposer } from "./signing/stampPreview";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 
@@ -70,7 +71,7 @@ function pdfsOf(pages: Record<string, number>): PdfSource {
       if (pageCount === undefined) {
         return { ok: false, failure: { situation: "documentUnreadable", detail: "roto" } };
       }
-      return { ok: true, pdf: aPdfOf(pageCount) };
+      return { ok: true, pdf: aPdfOf(pageCount), sizeBytes: 2_400_000 };
     },
   };
 }
@@ -105,7 +106,7 @@ function pdfsWithViews(
       if (opened.name !== name) {
         return { ok: false, failure: { situation: "documentUnreadable", detail: "roto" } };
       }
-      return { ok: true, pdf: aPdfWithViews(views) };
+      return { ok: true, pdf: aPdfWithViews(views), sizeBytes: 2_400_000 };
     },
   };
 }
@@ -172,6 +173,7 @@ function renderApp(
       certificates={certificates}
       rubrics={rubrics}
       composer={emptyLayer2Composer()}
+      stamps={unavailableStampComposer()}
       signer={signer}
       opener={unavailableOpener()}
       menuAnchor="header"
@@ -231,7 +233,9 @@ describe("App", () => {
       [document("factura.pdf")],
       pdfsOf({ "factura.pdf": 2 }),
       {},
-      emptyCertificateStore(),
+      // Con certificado: desde el ID-108 el bloque entero de firma visible
+      // —la rúbrica incluida— está apagado hasta que hay con qué firmar.
+      failingCertificateStore(0, [aCertificate]),
       rubrics,
     );
 
@@ -275,6 +279,7 @@ describe("App", () => {
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}
+        stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
         menuAnchor="header"
@@ -589,6 +594,7 @@ describe("App", () => {
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
         composer={emptyLayer2Composer()}
+        stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
         menuAnchor="header"

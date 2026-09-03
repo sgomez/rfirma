@@ -21,6 +21,7 @@ import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
 import { formatPageRange, type PageRangeError, parsePageRange } from "./pageRange";
 import type { Rubric, RubricFailure } from "./rubric";
+import type { StampPreview } from "./stampPreview";
 import "./SigningPanel.css";
 import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./visibleSignature";
 
@@ -99,6 +100,16 @@ interface SigningPanelProps {
   /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
   composer: Layer2Composer;
   /**
+   * En qué estado está el sello que se ve **sobre la hoja** (ID-107).
+   *
+   * Lo que vive en el panel es lo que la hoja no puede decir: la insignia, la
+   * línea que la explica y el botón que haga falta. El sello no se enseña aquí
+   * —enseñarlo dos veces sería enseñarlo pequeño en uno de los dos sitios—.
+   */
+  stamp: StampPreview;
+  /** «Ver cómo queda», y también «Volver a intentarlo». */
+  onComposeStamp: () => void;
+  /**
    * La fecha y hora que llevará el recuadro, **ya formateadas**.
    *
    * Viene de arriba y no se calcula aquí porque tiene que ser **la misma** que
@@ -148,6 +159,8 @@ export function SigningPanel({
   rubricFailure,
   onChooseRubric,
   composer,
+  stamp,
+  onComposeStamp,
   signedAt,
   destination,
   onChangeDestination,
@@ -314,13 +327,21 @@ export function SigningPanel({
           inert={!usable}
         >
           <p className="rf-label panel__heading">{t("panel.visibleSignature.title")}</p>
+          {/* ID-108: sin certificado no hay sello que dibujar, y sin sello no
+              hay recuadro. El aviso va encima del interruptor porque es lo que
+              explica por qué el bloque entero está en gris. */}
+          {!usable && <p className="rf-hint">{t("panel.visibleSignature.noCertificate")}</p>}
           <Switch
-            checked={signature.enabled}
+            // El interruptor se pinta **en «no»** dentro de un bloque apagado.
+            // Encendido prometía un recuadro que no hay, y la preferencia que
+            // guarda `signature.enabled` no se pierde: vuelve al reaparecer el
+            // certificado, igual que la colocación.
+            checked={usable && signature.enabled}
             label={t("panel.visibleSignature.toggle")}
             onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
           />
 
-          {signature.enabled && (
+          {usable && signature.enabled && (
             <>
               {/* La línea dice **la página del recuadro, no la que miras**
                   (ID-100). Con el recuadro en otra página es un botón, y
@@ -509,6 +530,11 @@ export function SigningPanel({
               <div className="panel__preview">
                 <p className="rf-label">{t("panel.visibleSignature.preview.title")}</p>
                 <Layer2Preview text={preview} />
+              </div>
+
+              <div className="panel__stamp">
+                <p className="rf-label">{t("panel.visibleSignature.stamp.title")}</p>
+                <StampNotice state={stamp} onCompose={onComposeStamp} />
               </div>
             </>
           )}
@@ -766,6 +792,85 @@ function Layer2Preview({ text }: { text: string | null }) {
     return <p className="rf-hint">{t("panel.visibleSignature.preview.empty")}</p>;
   }
   return <pre className="panel__preview-text">{text}</pre>;
+}
+
+/**
+ * El estado del sello que se ve sobre la hoja: insignia, línea y el botón que
+ * haga falta.
+ *
+ * No enseña el sello —lo enseña la hoja—, y **no apaga nada**: el ID-111 dice
+ * que la vista previa no es una puerta, así que ni siquiera el estado de fallo
+ * toca el botón de firmar, que vive en el pie y no mira aquí.
+ */
+function StampNotice({ state, onCompose }: { state: StampPreview; onCompose: () => void }) {
+  const { t } = useTranslation();
+  // Sin certificado el bloque entero está apagado y este componente no llega a
+  // pintarse. Se nombra igual, y así el objeto de abajo cubre los siete casos.
+  if (state.kind === "noCertificate") return null;
+
+  // Las claves se escriben **enteras y a mano**: `i18next-cli` lee el código
+  // para cazar la clave que no está en el catálogo y la del catálogo que ya no
+  // usa nadie (ID-127), y una clave compuesta con una plantilla es invisible
+  // para las dos comprobaciones.
+  const said = {
+    unplaced: {
+      badge: t("panel.visibleSignature.stamp.unplaced.badge"),
+      line: t("panel.visibleSignature.stamp.unplaced.line"),
+      button: null,
+    },
+    frozen: {
+      badge: t("panel.visibleSignature.stamp.frozen.badge"),
+      line: t("panel.visibleSignature.stamp.frozen.line"),
+      button: null,
+    },
+    onDemand: {
+      badge: t("panel.visibleSignature.stamp.onDemand.badge"),
+      line: t("panel.visibleSignature.stamp.onDemand.line"),
+      button: t("panel.visibleSignature.stamp.show"),
+    },
+    composing: {
+      badge: t("panel.visibleSignature.stamp.composing.badge"),
+      line: t("panel.visibleSignature.stamp.composing.line"),
+      button: null,
+    },
+    composed: {
+      badge: t("panel.visibleSignature.stamp.composed.badge"),
+      line: t("panel.visibleSignature.stamp.composed.line"),
+      button: null,
+    },
+    failed: {
+      badge: t("panel.visibleSignature.stamp.failed.badge"),
+      line: t("panel.visibleSignature.stamp.failed.line"),
+      button: t("panel.visibleSignature.stamp.retry"),
+    },
+  }[state.kind];
+
+  return (
+    <div className="panel__stamp-row">
+      <span className={`rf-badge panel__stamp-badge panel__stamp-badge--${state.kind}`}>
+        {said.badge}
+      </span>
+      <p className="rf-hint">{said.line}</p>
+      {state.kind === "failed" && (
+        <>
+          <p className="rf-hint">{t("panel.visibleSignature.stamp.failed.hint")}</p>
+          {/* El detalle técnico crudo, que es lo que hace falta para contar el
+              fallo: los tres posibles —contraseña, PDF/A y el puente— siguen
+              sin medir, así que aquí no se clasifica ninguno. */}
+          <p className="panel__stamp-detail">{state.failure.detail}</p>
+        </>
+      )}
+      {said.button !== null && (
+        <button
+          type="button"
+          className="rf-btn rf-btn--secondary panel__stamp-button"
+          onClick={onCompose}
+        >
+          {said.button}
+        </button>
+      )}
+    </div>
+  );
 }
 
 /**

@@ -104,18 +104,29 @@
      `app.css` para toda la página; aquí sobraba repetirlo. */
   border: 2px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-sm);
-  /* El recuadro va **translúcido** y no con el `--rf-surface` liso del
-     artboard: allí la caja lleva dentro la vista previa del sello y tapar el
-     texto de debajo es lo correcto; aquí va vacía (ver
-     `docs/design/visor-de-documento.md`), y una caja opaca y vacía escondería
-     el trozo de documento sobre el que se está decidiendo colocarla. */
-  background: color-mix(in srgb, var(--rf-surface) 70%, transparent);
+  /* El recuadro va **translúcido**, y desde el ID-107 por dos razones a la vez:
+     una caja opaca escondería el trozo de documento sobre el que se está
+     decidiendo, y ahora escondería además **el sello**, que se pinta en el
+     lienzo de debajo y no aquí dentro. Por eso el velo es un tinte y no el
+     `--rf-surface` al 70 % que llevaba cuando la caja iba vacía (ver
+     `docs/design/visor-de-documento.md`). */
+  background: color-mix(in srgb, var(--rf-surface) 12%, transparent);
   cursor: grab;
   touch-action: none;
 }
 
 .viewer__box:active {
   cursor: grabbing;
+}
+
+/* La vista congelada durante el gesto (ID-109): sigue sirviendo para medir el
+   bulto, y el atenuado dice que aún no es la definitiva. Es un velo y no un
+   `opacity` sobre el lienzo porque lo que se atenúa es **el sello de antes**, no
+   el documento, que es justo lo que hay que seguir viendo. */
+.viewer__stamp-frozen {
+  position: absolute;
+  background: color-mix(in srgb, var(--rf-surface) 55%, transparent);
+  pointer-events: none;
 }
 
 /* El asa lleva la cruz de cuatro puntas delante del rótulo: el icono dice qué

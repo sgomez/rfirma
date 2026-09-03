@@ -44,8 +44,10 @@ import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
+import type { StampComposer } from "./signing/stampPreview";
 import type { TokenFailure } from "./signing/token";
 import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./signing/visibleSignature";
+import { pdfjsLoader } from "./viewer/pdfjsLoader";
 import type { PageSet } from "./viewer/signatureBox";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
 
@@ -417,6 +419,42 @@ export function tauriPdfSource(): PdfSource {
     const bytes = await invoke<ArrayBuffer>("read_document", { id: document.id });
     return new Uint8Array(bytes);
   });
+}
+
+/**
+ * El sello de verdad, antes de firmar: `preview_signature` (ID-107).
+ *
+ * Debajo hay un **ciclo trifásico en seco** con un `PK1` inventado, que
+ * devuelve un PDF cuyos bytes visibles están medidos idénticos a los del
+ * firmado de verdad. No pide PIN —el certificado elegido es público y se lee
+ * sin él— y lo que devuelve **se tira**: firmar de verdad vuelve a prefirmar
+ * desde cero.
+ *
+ * Los bytes viajan como bytes, igual que en `read_document`, y se abren con el
+ * mismo `pdf.js` que pinta el original: por eso la vista previa no es una
+ * imitación de nada, es el mismo compositor y el mismo lector.
+ */
+export function tauriStampComposer(): StampComposer {
+  const loader = pdfjsLoader();
+  return {
+    compose: async (order) => {
+      try {
+        const bytes = await invoke<ArrayBuffer>("preview_signature", { order });
+        return { ok: true, pdf: await loader.load(new Uint8Array(bytes)) };
+      } catch (thrown) {
+        // La vista previa **no es una puerta** (ID-111): el fallo se cuenta y
+        // se sigue pudiendo firmar, así que aquí no se relanza nada.
+        const named = classify(thrown);
+        return {
+          ok: false,
+          failure: {
+            situation: named.situation === "unknown" ? "documentUnreadable" : named.situation,
+            detail: named.detail,
+          },
+        };
+      }
+    },
+  };
 }
 
 /**

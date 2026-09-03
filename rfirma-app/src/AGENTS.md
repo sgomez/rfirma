@@ -34,9 +34,9 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 521 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 680 | El árbol de la ventana y el estado que la recorre. |
+| `main.tsx` | 79 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 560 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 876 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -51,7 +51,7 @@ rojo.
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 165 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
-| `signing/SigningPanel.tsx` | 808 | El panel. El fichero más grande de la interfaz. |
+| `signing/SigningPanel.tsx` | 913 | El panel. El fichero más grande de la interfaz. |
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
@@ -65,13 +65,15 @@ rojo.
 | `signing/pageRange.ts` | 102 | El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React. |
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
+| `signing/stampPreview.ts` | 113 | El sello que se ve dentro del recuadro antes de firmar: el puerto del ciclo en seco, sus estados y el umbral del documento grande. Sin React. |
+| `signing/useStampPreview.ts` | 139 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 789 | El visor, con la pastilla bajo la hoja. |
+| `viewer/DocumentViewer.tsx` | 864 | El visor, con la pastilla bajo la hoja. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
-| `viewer/pdfjsLoader.ts` | 68 | El worker de `pdf.js`, empaquetado por Vite. |
+| `viewer/pdfjsLoader.ts` | 81 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
 | `viewer/zoom.ts` | 176 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
-| `viewer/source.ts` | 93 | De dónde salen los bytes del documento. |
+| `viewer/source.ts` | 105 | De dónde salen los bytes del documento. |
 | `viewer/signatureBox.ts` | 285 | El recuadro: dónde se guarda, en qué páginas y cómo se redimensiona. |
 | `viewer/useBoxDrag.ts` | 178 | El arrastre del recuadro y sus cuatro tiradores. |
 | **`preferences/`** | | Los ajustes. |

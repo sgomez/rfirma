@@ -13,6 +13,7 @@ import { applyTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
+import { isUsable } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
@@ -20,9 +21,11 @@ import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./
 import { SignedPanel } from "./signing/SignedPanel";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
+import { composesOnRelease, type StampComposer, type StampRequest } from "./signing/stampPreview";
 import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { acknowledgementFor, useSigning } from "./signing/useSigning";
+import { useStampPreview } from "./signing/useStampPreview";
 import {
   DEFAULT_VISIBLE_SIGNATURE,
   type Layer2Composer,
@@ -68,6 +71,8 @@ interface AppProps {
   rubrics: RubricPicker;
   /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
   composer: Layer2Composer;
+  /** Quien compone el sello que se ve dentro del recuadro. Ver [`StampComposer`]. */
+  stamps: StampComposer;
   /** Quien ejecuta las tres etapas de la firma. Ver [`SigningBackend`]. */
   signer: SigningBackend;
   /**
@@ -99,6 +104,7 @@ export function App({
   certificates,
   rubrics,
   composer,
+  stamps,
   signer,
   opener,
   menuAnchor,
@@ -109,6 +115,13 @@ export function App({
   // del PDF y no dentro del visor porque lo produce quien abre, y el visor solo
   // lo enseña.
   const [pdfFailure, setPdfFailure] = useState<DocumentFailure | null>(null);
+  // Cuánto ocupa el documento que hay delante. Lo cuenta quien lo abrió, que es
+  // el único que ve los bytes: por encima de cierto tamaño la vista previa del
+  // sello deja de recalcularse sola (ID-109).
+  const [sizeBytes, setSizeBytes] = useState<number | null>(null);
+  // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
+  // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
+  const [gesturing, setGesturing] = useState(false);
   // Lo que hay que contar del último arrastre, y **de qué documento**: soltar
   // varios PDF deja un aviso que habla del que se abrió, así que se va solo en
   // cuanto hay otro delante. Sin esa atadura habría que borrarlo a mano desde
@@ -174,6 +187,26 @@ export function App({
     () => formatSignedAt(signingInstant, i18n.language),
     [signingInstant, i18n.language],
   );
+
+  // La página que mide la `MediaBox` y la `/Rotate` de la orden: la **primera
+  // del conjunto**, que es la que también usa la firma de verdad (ID-96). Se lee
+  // aquí, y no dentro de la vista previa, porque leerla es asíncrono y el ciclo
+  // del sello se decide con la orden ya armada.
+  const boxPage = placement === null ? null : (firstSealedPage(placement) ?? 1);
+  const [geometry, setGeometry] = useState<PageGeometry | null>(null);
+  useEffect(() => {
+    if (pdf === null || boxPage === null) {
+      setGeometry(null);
+      return;
+    }
+    let current = true;
+    void pdf.getPage(boxPage).then((page) => {
+      if (current) setGeometry({ page: boxPage, view: page.view, rotate: page.rotate });
+    });
+    return () => {
+      current = false;
+    };
+  }, [pdf, boxPage]);
 
   useEffect(() => {
     let current = true;
@@ -244,6 +277,7 @@ export function App({
     if (!active) {
       setPdf(null);
       setPdfFailure(null);
+      setSizeBytes(null);
       setPlacement(null);
       return;
     }
@@ -252,6 +286,7 @@ export function App({
       if (!current) return;
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
+      setSizeBytes(opened.ok ? opened.sizeBytes : null);
       setPlacement(active.placement);
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
@@ -451,6 +486,46 @@ export function App({
     }
   };
 
+  // ── La vista previa del sello (ID-107) ───────────────────────────────────
+  //
+  // La orden en seco es **la misma** que se manda a firmar: por eso lo que se
+  // ve dentro del recuadro coincide con el PDF firmado, y no porque nadie lo
+  // compare. Lo que la ventana decide aquí es sólo si hay algo que componer.
+  const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
+  const stampRequest: StampRequest = useMemo(() => {
+    if (chosen === null || !isUsable(chosen.status)) return { kind: "noCertificate" };
+    if (
+      !signature.enabled ||
+      pdf === null ||
+      placement === null ||
+      geometry === null ||
+      documents.active === null
+    ) {
+      return { kind: "unplaced" };
+    }
+    return {
+      kind: "ready",
+      order: signingOrderFor({
+        documentId: documents.active.id,
+        certificate: chosen,
+        placement,
+        geometry,
+        pageCount: pdf.pageCount,
+        signature,
+        rubric,
+        signedAt,
+        language: i18n.resolvedLanguage ?? i18n.language,
+      }),
+    };
+  }, [chosen, signature, pdf, placement, geometry, documents.active, rubric, signedAt, i18n]);
+
+  const stamp = useStampPreview({
+    composer: stamps,
+    request: stampRequest,
+    gesturing,
+    onDemand: !composesOnRelease(sizeBytes),
+  });
+
   /**
    * La firma: se arma la orden con lo que hay decidido y se manda entera.
    *
@@ -460,7 +535,6 @@ export function App({
    * página los tiene `pdf.js`.
    */
   const sign = async () => {
-    const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
     if (pdf === null || documents.active === null || placement === null || chosen === null) {
       // El botón ya está apagado sin certificado en vigor; aquí solo se
       // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
@@ -472,25 +546,20 @@ export function App({
     // que se puede nombrar sin elegir.
     const first = firstSealedPage(placement) ?? 1;
     const page = await pdf.getPage(first);
-    const order: SigningOrder = {
-      document: documents.active.id,
-      certificate: chosen.id,
-      placement: {
-        page: first,
-        pages: placement.pages,
-        pageCount: pdf.pageCount,
-        mediaBox: page.view,
-        rotation: page.rotate,
-        rect: [placement.rect.x0, placement.rect.y0, placement.rect.x1, placement.rect.y1],
-      },
-      fields: signature.fields,
-      reason: signature.reason,
+    // La misma orden que compuso la vista previa, armada por el mismo sitio: si
+    // aquí se armara a mano, lo que se enseñó y lo que se firma podrían
+    // separarse sin que ninguna prueba lo notara.
+    const order = signingOrderFor({
+      documentId: documents.active.id,
+      certificate: chosen,
+      placement,
+      geometry: { page: first, view: page.view, rotate: page.rotate },
+      pageCount: pdf.pageCount,
+      signature,
+      rubric,
       signedAt,
-      // La rúbrica solo viaja si además está marcada: tener una imagen
-      // guardada no es quererla dentro del recuadro.
-      rubric: signature.rubric && rubric !== null ? base64Of(rubric) : null,
       language: i18n.resolvedLanguage ?? i18n.language,
-    };
+    });
 
     // ID-105: `correctPositionSignature` descarta en silencio, contra cada
     // página, aquella donde no cabe la esquina inferior izquierda del
@@ -576,6 +645,9 @@ export function App({
         viewer={
           <DocumentViewer
             pdf={pdf}
+            stamped={stamp.pdf}
+            stampFrozen={stamp.state.kind === "frozen"}
+            onGesture={setGesturing}
             placement={placement}
             onPlace={rememberPlacement}
             pageChoice={pageChoice}
@@ -617,7 +689,7 @@ export function App({
               document={{
                 name: documents.active.name,
                 pages: pdf.pageCount,
-                sizeBytes: null,
+                sizeBytes,
                 signatures: null,
               }}
               certificate={certificate}
@@ -636,6 +708,8 @@ export function App({
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
               composer={composer}
+              stamp={stamp.state}
+              onComposeStamp={stamp.compose}
               destination={
                 destination ?? {
                   folder: settings?.destination ?? "",
@@ -690,6 +764,69 @@ export function App({
       )}
     </>
   );
+}
+
+/**
+ * La página que mide la orden: la primera del conjunto, con su caja y su giro.
+ *
+ * El backend **no lee PDFs** —la conversión del recuadro a puntos PAdES es
+ * suya, pero los datos de la página los tiene `pdf.js`—, así que esto es lo que
+ * la ventana tiene que llevarle.
+ */
+interface PageGeometry {
+  page: number;
+  view: readonly [number, number, number, number];
+  rotate: number;
+}
+
+/**
+ * La orden de firma, armada en **un solo sitio**.
+ *
+ * La usan la firma de verdad y el ciclo en seco de la vista previa, y esa es la
+ * razón de que exista: el ID-107 promete que lo que se ve dentro del recuadro
+ * coincide con el PDF firmado, y dos constructores separados podrían dejar de
+ * cumplirlo sin que ninguna prueba lo notara.
+ */
+function signingOrderFor({
+  documentId,
+  certificate,
+  placement,
+  geometry,
+  pageCount,
+  signature,
+  rubric,
+  signedAt,
+  language,
+}: {
+  documentId: string;
+  certificate: Certificate;
+  placement: Placement;
+  geometry: PageGeometry;
+  pageCount: number;
+  signature: VisibleSignature;
+  rubric: Rubric | null;
+  signedAt: string;
+  language: string;
+}): SigningOrder {
+  return {
+    document: documentId,
+    certificate: certificate.id,
+    placement: {
+      page: geometry.page,
+      pages: placement.pages,
+      pageCount,
+      mediaBox: geometry.view,
+      rotation: geometry.rotate,
+      rect: [placement.rect.x0, placement.rect.y0, placement.rect.x1, placement.rect.y1],
+    },
+    fields: signature.fields,
+    reason: signature.reason,
+    signedAt,
+    // La rúbrica solo viaja si además está marcada: tener una imagen guardada
+    // no es quererla dentro del recuadro.
+    rubric: signature.rubric && rubric !== null ? base64Of(rubric) : null,
+    language,
+  };
 }
 
 /**
