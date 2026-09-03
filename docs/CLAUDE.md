@@ -33,7 +33,8 @@ Se consultan **solo si vas a cambiar la decisión que sostienen**. Son los
 ficheros más grandes del repositorio (hasta 32 KB).
 
 `ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-arenero` ·
-`campos-de-firma-vacios` · `coordenadas-recuadro-pades` ·
+`campos-de-firma-vacios` · `contrato-protocolo-afirma` ·
+`coordenadas-recuadro-pades` ·
 `exclusion-afirma-ui-utils` · `firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
