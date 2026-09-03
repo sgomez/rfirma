@@ -105,15 +105,16 @@ mod tests {
 
     #[test]
     fn folds_the_newlines_of_the_layer2_text_into_one_line() {
-        // Sin esto, la segunda línea del recuadro se leería como otra clave.
+        // El motivo va en su propio renglón, y sin esto ese renglón se leería
+        // como otra clave.
         let block = to_java_properties(&params(&[(
             "layer2Text",
-            "Firmado por: Ada Lovelace\nDNI: ***4567**",
+            "Firmado por: ADA LOVELACE BYRON - ***9999**.\nMotivo: Conforme",
         )]));
 
         assert_eq!(
             block,
-            "layer2Text=Firmado por: Ada Lovelace\\nDNI: ***4567**\n"
+            "layer2Text=Firmado por: ADA LOVELACE BYRON - ***9999**.\\nMotivo: Conforme\n"
         );
         assert_eq!(block.lines().count(), 1);
     }

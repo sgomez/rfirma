@@ -12,6 +12,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use crate::app::certificates::StampedHolder;
 use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature};
 use crate::app::{certificates, documents, lock, recents};
 use crate::commands::orders::SigningOrder;
@@ -76,7 +77,7 @@ pub fn visible_text(
     stores: &[Store],
     listed: &ListedCertificates,
 ) -> Result<String, Failure> {
-    let holder = certificates::holder_named(&order.certificate, stores, listed)?;
+    let holder = certificates::stamped_holder_named(&order.certificate, stores, listed)?;
     Ok(layer2_text_of(order, &holder))
 }
 
@@ -225,22 +226,26 @@ pub fn cancel(session: &SigningSession) {
 }
 
 /// El texto del recuadro que sale de la orden y del titular.
-fn layer2_text_of(order: &SigningOrder, holder: &(String, String)) -> String {
-    let (name, id) = holder;
+fn layer2_text_of(order: &SigningOrder, holder: &StampedHolder) -> String {
     compose_layer2_text(
         &VisibleTextFields {
-            signer_name: order.fields.signer_name.then_some(name.as_str()),
-            id_number: order
+            signer_name: order
                 .fields
-                .id_number
-                .then_some(id.as_str())
-                .filter(|id| !id.is_empty()),
+                .signer_name
+                .then_some(holder.common_name.as_str())
+                .filter(|name| !name.is_empty()),
+            issuer: order
+                .fields
+                .issuer
+                .then_some(holder.issuer.as_str())
+                .filter(|issuer| !issuer.is_empty()),
             signed_at: order.fields.signed_at.then_some(order.signed_at.as_str()),
             reason: order
                 .fields
                 .reason
                 .then_some(order.reason.as_str())
                 .filter(|reason| !reason.is_empty()),
+            pseudonym: holder.pseudonym,
         },
         super::configuration::language_of(&order.language),
     )
@@ -248,17 +253,17 @@ fn layer2_text_of(order: &SigningOrder, holder: &(String, String)) -> String {
 
 /// La configuración de firma que sale de la orden y del certificado elegido.
 ///
-/// El nombre y el DNI se leen **del DER**, no de la orden: la ventana solo
+/// El nombre y el emisor se leen **del DER**, no de la orden: la ventana solo
 /// manda el asa, y componer el recuadro con lo que la ventana diga sería dejar
 /// que estampe cualquier nombre.
 pub fn config_for(
     order: &SigningOrder,
     chosen: &TokenCertificate,
 ) -> Result<SignatureConfig, Failure> {
-    let (name, id) = certificates::holder_of(chosen.subject().as_deref());
+    let holder = certificates::stamped_holder_of(chosen);
     Ok(SignatureConfig {
         placement: order.placement.placement()?,
-        layer2_text: layer2_text_of(order, &(name, id)),
+        layer2_text: layer2_text_of(order, &holder),
         rubric_image: order.rubric.clone(),
         // Un motivo vacío **no se envía**: `signReason` con la cadena vacía
         // estampa una etiqueta «Motivo:» sin nada detrás.

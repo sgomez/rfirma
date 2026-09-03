@@ -64,7 +64,7 @@ pub(crate) fn an_order() -> SigningOrder {
         },
         fields: VisibleFieldsOrder {
             signer_name: true,
-            id_number: true,
+            issuer: true,
             signed_at: true,
             reason: true,
         },

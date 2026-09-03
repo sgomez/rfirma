@@ -110,11 +110,17 @@ pub struct VisibleSignatureMemory {
 
 /// Las cuatro casillas de texto del recuadro. La rúbrica va aparte: es una
 /// imagen, no un dato del titular.
+///
+/// `id_number` estuvo aquí hasta la v0.3.1 y se fue con la casilla «DNI». El
+/// estado viejo **se ignora en silencio**, sin migración: es un booleano de
+/// adorno del recuadro, y `serde(default)` sin `deny_unknown_fields` es lo que
+/// hace que un fichero guardado por la versión anterior siga leyéndose entero
+/// en vez de fallar por un campo de sobra.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RememberedFields {
     pub signer_name: bool,
-    pub id_number: bool,
+    pub issuer: bool,
     pub signed_at: bool,
     pub reason: bool,
 }
@@ -204,6 +210,45 @@ mod tests {
         assert!(state.visible_signature.is_none());
     }
 
+    /// La configuración guardada por la v0.3.0 trae la casilla «DNI», que ya
+    /// no existe: se ignora **en silencio**, y el resto de lo guardado
+    /// sobrevive. Sin esto, un campo de sobra tumbaba la deserialización
+    /// entera y el usuario perdía la configuración del recuadro al actualizar.
+    #[test]
+    fn a_visible_signature_saved_by_an_older_version_survives_the_field_that_is_gone() {
+        let saved = r#"{
+            "enabled": true,
+            "rubric": true,
+            "fields": {
+                "signer_name": true,
+                "id_number": true,
+                "signed_at": true,
+                "reason": true
+            },
+            "reason": "Conforme",
+            "size": { "width": 200.0, "height": 80.0 }
+        }"#;
+
+        let remembered: VisibleSignatureMemory =
+            serde_json::from_str(saved).expect("el campo de sobra se ignora");
+
+        assert!(remembered.enabled);
+        assert!(remembered.rubric);
+        assert_eq!(remembered.reason, "Conforme");
+        assert_eq!(remembered.size.width, 200.0);
+        assert_eq!(remembered.size.height, 80.0);
+        assert_eq!(
+            remembered.fields,
+            RememberedFields {
+                signer_name: true,
+                // La casilla nueva no estaba en lo guardado: vale «sin marcar».
+                issuer: false,
+                signed_at: true,
+                reason: true,
+            }
+        );
+    }
+
     /// El ID-73 dicho en `State`: la ventana es la única memoria que
     /// `forget_everything` no toca.
     #[test]
@@ -249,7 +294,7 @@ mod tests {
                 rubric: true,
                 fields: RememberedFields {
                     signer_name: true,
-                    id_number: true,
+                    issuer: true,
                     signed_at: true,
                     reason: false,
                 },
