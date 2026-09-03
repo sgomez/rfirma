@@ -473,6 +473,12 @@ msgstr ""
 msgid "panel.certificate.list"
 msgstr ""
 
+msgid "panel.certificate.groups.available"
+msgstr ""
+
+msgid "panel.certificate.groups.unusable"
+msgstr ""
+
 msgid "panel.certificate.stores.card"
 msgstr ""
 

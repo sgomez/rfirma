@@ -99,6 +99,45 @@ export function isUsable(status: CertificateStatus): boolean {
   return status.kind === "valid";
 }
 
+/** Los certificados, ya separados en los dos grupos que enseña el desplegable. */
+export interface CertificateGroups {
+  /** Los que se pueden usar para firmar, arriba. */
+  readonly available: readonly Certificate[];
+  /**
+   * Caducados, todavía no válidos, no leídos o —el día que se empiece a
+   * comprobar la revocación (#194)— revocados: cualquier motivo por el que no
+   * se puede firmar con ellos cae en el mismo grupo, abajo.
+   */
+  readonly unusable: readonly Certificate[];
+}
+
+/** Alfabético en castellano, con acentos y «ñ» donde toca. */
+const holderCollator = new Intl.Collator("es", { sensitivity: "base" });
+
+function byHolderThenStore(a: Certificate, b: Certificate): number {
+  return (
+    holderCollator.compare(a.holderName, b.holderName) || holderCollator.compare(a.store, b.store)
+  );
+}
+
+/**
+ * Agrupa y ordena los certificados para el desplegable: los usables arriba,
+ * los que no lo son abajo, y dentro de cada grupo alfabético por titular,
+ * desempatando por almacén (ID-197). Es una función pura y sin locale
+ * implícito de sistema —el `Intl.Collator` fija «es»— para que el orden no
+ * dependa de dónde corre la aplicación.
+ */
+export function groupCertificates(certificates: readonly Certificate[]): CertificateGroups {
+  const available: Certificate[] = [];
+  const unusable: Certificate[] = [];
+  for (const certificate of certificates) {
+    (isUsable(certificate.status) ? available : unusable).push(certificate);
+  }
+  available.sort(byHolderThenStore);
+  unusable.sort(byHolderThenStore);
+  return { available, unusable };
+}
+
 /**
  * De dónde salen los certificados del token. Es un puerto por lo mismo que lo
  * son el selector de documentos y el origen del PDF: quien habla con PKCS#11 es

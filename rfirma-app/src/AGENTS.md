@@ -52,13 +52,13 @@ rojo.
 | `signing/flow.ts` | 165 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
 | `signing/SigningPanel.tsx` | 916 | El panel. El fichero más grande de la interfaz. |
-| `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
+| `signing/CertificateSelect.tsx` | 289 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
 | `signing/UnsealedPagesDialog.tsx` | 84 | El diálogo de páginas sin sello, justo antes de firmar (ID-105, ID-106). |
 | `signing/unsealedPages.ts` | 67 | Qué páginas del conjunto elegido pierde `correctPositionSignature` en silencio, en puntos PAdES. Sin React. |
 | `signing/SignedPanel.tsx` | 144 | El resumen tras firmar, y sus tres salidas (ID-79). |
-| `signing/certificate.ts` | 121 | El certificado, en el lado de la interfaz. |
+| `signing/certificate.ts` | 160 | El certificado, en el lado de la interfaz, con el orden y el agrupado del desplegable. |
 | `signing/destination.ts` | 160 | Dónde cae el firmado, el recorte de esa línea —la función pura del ID-64— y quién lleva al usuario hasta el fichero (ID-79). |
 | `signing/visibleSignature.ts` | 91 | Qué se estampa en el recuadro. |
 | `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
