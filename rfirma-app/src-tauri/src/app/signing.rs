@@ -687,5 +687,4 @@ mod tests {
             "no queda ciclo que llevarse"
         );
     }
-
 }
