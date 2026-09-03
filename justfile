@@ -74,12 +74,43 @@ default:
 # Contrato
 # ---------------------------------------------------------------------------
 
-# `check` ES UN CONTRATO (ID-03): es exactamente `tools lint build test`, y
-# docs/agents/code-host.md promete que el CI ejecuta eso y nada mas. Crece por
+# `check` ES UN CONTRATO (ID-03): la puerta entera del repositorio, lo que
+# ejecuta el agente revisor, y lo que en conjunto ejecuta el CI. Crece por
 # dentro; su nombre y su papel no cambian.
 #
-# Lo que ejecutan el CI y el agente revisor.
-check: tools lint build test
+# YA NO ES `tools lint build test`, SINO UN CARRIL POR CADENA. La forma vieja
+# encadenaba las tres cadenas en una sola cola, y eso en el CI es una pared:
+# repartidos en un job cada uno, los carriles corren en paralelo y la espera
+# pasa a ser la cadena mas lenta en vez de la suma de las tres. `lint`, `build`
+# y `test` siguen existiendo como atajos locales; el CI ya no los usa.
+#
+# Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
+check: tools check-repo check-java check-ts check-rust
+
+# Lo que no pertenece a ninguna cadena (ID-01): dos sellos que tardan
+# milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
+# el carril de TypeScript por ser el mas barato, no por parentesco.
+check-repo: check-flatpak-sources check-ds-bundle
+
+# UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
+# cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
+# tiene esta cadena), ejecuta las pruebas y empaqueta. Antes eran tres JVM
+# —`clean compile`, `package -DskipTests` y `test`— recompilando lo mismo.
+check-java: test-java
+
+check-ts: check-po lint-ts lint-i18n build-ts test-ts
+
+# SIN `cargo build --release`: ese binario no lo ejecuta nadie en el carril
+# rapido —el bundle lo produce el flatpak— y era un arbol de dependencias
+# entero, aparte del de depuracion y del instrumentado. Lo compila el carril
+# lento, que es donde se empaqueta.
+#
+# Y SIN `cargo test` suelto: `crap` arrastra `coverage`, y `cargo llvm-cov` YA
+# ejecuta la suite. Tenerlos los dos era correr las mismas pruebas dos veces en
+# dos arboles distintos. El peaje aceptado es que aqui las pruebas corren solo
+# instrumentadas; sin instrumentar las ejecuta `test-native` en cada empujon a
+# main.
+check-rust: lint-rust crap
 
 # El bucle corto de quien quiera formatear antes de commitear. Voluntaria, y
 # deliberadamente NO es un hook de pre-commit (ADR-0014): en un repositorio
@@ -777,11 +808,23 @@ agent-cost since="":
 # necesitan ni bootstrap ni deps, tardan milisegundos, y lo que detectan —un
 # fichero de bloqueo tocado sin regenerar las fuentes vendorizadas, un token
 # del sistema de diseno editado a mano— no lo encuentra ninguna de las otras.
-lint: check-flatpak-sources check-ds-bundle check-po lint-java lint-ts lint-i18n lint-rust
+#
+# ATAJO LOCAL, NO LO QUE CORRE EL CI: la puerta son los carriles `check-*` de
+# arriba. Esta receta existe para pasar todo el linting de una vez sin compilar
+# ni probar nada.
+lint: check-repo check-po lint-java lint-ts lint-i18n lint-rust
 
 # -Xlint:all, como decidio el issue #11.
+#
+# SIN `clean`, y no es un descuido: `clean` se llevaba por delante
+# target/lib/rfirma/librfirma_crypto.so, o sea que `just check` borraba la
+# libreria nativa a mitad de ejecucion y `just test-native` fallaba despues
+# senalando un fichero que existia al empezar. El aviso vivia en
+# docs/agents/code-host-ci.md; ahora no hace falta. No se pierde ninguna
+# puerta: -Xlint:all avisa pero no es -Werror, asi que esta receta comprueba
+# que compila, y de eso maven se entera igual sin borrar nada.
 lint-java: bootstrap
-    cd {{ bridge }} && mvn -B clean compile
+    cd {{ bridge }} && mvn -B compile
 
 # Biome, no eslint + prettier (ADR-0014): un binario que formatea y lintea en
 # milisegundos, y aqui el ecosistema de plugins de eslint no cobra porque no
@@ -806,7 +849,9 @@ lint-rust: build-ts
 # `tsc -b` va DENTRO de build, no en una receta aparte (ID-03): un build que
 # compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
 #
-# Compila las tres cadenas.
+# Compila las tres cadenas, binario de release incluido. ATAJO LOCAL Y PASO DE
+# EMPAQUETADO, no parte del carril rapido: `check-rust` no construye el
+# release (ver alli el motivo).
 build: check-native build-java build-ts build-rust
 
 # Compila el puente Java.
@@ -865,7 +910,10 @@ check-native:
 # y B (SoftHSM) corren aqui; C (la libreria nativa) se marca #[ignore] y solo la
 # ejecuta el carril lento, pero AQUI SE COMPILA.
 #
-# Ejecuta las pruebas de las tres cadenas y la puerta CRAP.
+# Ejecuta las pruebas de las tres cadenas y la puerta CRAP. ATAJO LOCAL: el
+# carril rapido no corre `test-rust`, porque `crap` ya ejecuta la suite
+# instrumentada. Aqui si esta, que sin instrumentar es cuatro veces mas rapida
+# y es el bucle corto de quien desarrolla.
 test: test-java test-ts test-rust crap
 
 # Las de grada A del puente. Las de grada C llevan @Tag("gradaC") y el pom las
@@ -873,9 +921,14 @@ test: test-java test-ts test-rust crap
 # lo instala. Se COMPILAN igual —`mvn test` compila todas—, que es la mitad de la
 # TD-02 que le toca a esta cadena.
 #
+# `verify` Y NO `test`: recorre compile (con -Xlint:all), test y package en una
+# sola JVM, asi que es a la vez el lint, el build y las pruebas de esta cadena.
+# Por eso `check-java` es solo esto y por eso NO depende de `build-java`:
+# encadenarlo seria arrancar maven dos veces para empaquetar dos veces.
+#
 # Pruebas del puente Java.
-test-java: build-java
-    cd {{ bridge }} && mvn -B test
+test-java: bootstrap
+    cd {{ bridge }} && mvn -B verify
 
 # vitest.
 test-ts: po-import
@@ -915,6 +968,11 @@ test-native: token check-native build-ts
 # trinquete exige versionar un JSON que cambia en casi cada PR, y su unica
 # ventaja —amnistiar deuda existente— no aplica cuando no hay deuda.
 
+# EJECUTA LA SUITE, no solo la mide: `cargo llvm-cov` corre `cargo test` por
+# dentro y propaga su codigo de salida. Por eso el carril rapido no necesita
+# ademas un `cargo test`, y por eso tampoco hace falta el `--no-run` de las de
+# grada C: llvm-cov compila todos los objetivos de prueba (TD-02).
+#
 # Genera lcov.info con cargo llvm-cov.
 coverage: token build-ts
     cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path lcov.info

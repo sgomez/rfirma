@@ -61,7 +61,7 @@ realimentación que este repositorio decidió proteger en el
 | `lint` | `-Xlint:all` + `biome` + `cargo clippy` + `cargo fmt --check` | rápido |
 | `test` | `mvn test` + `vitest` + `cargo test` | rápido |
 | `build` | puente Java + `tsc -b && vite build` + `cargo build` | rápido |
-| `check` | `tools lint build test` | rápido |
+| `check` | `tools check-repo check-java check-ts check-rust` | rápido |
 | `native` | `librfirma_crypto.so` con GraalVM CE 25 | lento |
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
 | `flatpak-sources` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
@@ -72,9 +72,24 @@ realimentación que este repositorio decidió proteger en el
 > también quien decide **qué** se ejecuta dentro de `lint` y `test` y en qué carril cae cada
 > prueba. Añade además la receta voluntaria `rapido` (solo `lint`).
 
+> **Enmienda: `check` es un carril por cadena, no `tools lint build test`.** La forma
+> original encadenaba las tres cadenas en una sola cola, y en el CI eso es una pared:
+> el tiempo de pared era la suma. `check` pasa a ser `tools` más `check-repo`,
+> `check-java`, `check-ts` y `check-rust`, y el workflow le da **un job a cada
+> carril**, así que corren a la vez y la espera es la de la cadena más lenta. Lo que
+> se comprueba no cambia salvo en dos puntos, ambos medidos y ambos deliberados:
+> `cargo build --release` se muda al carril lento —nadie ejecutaba ese binario en el
+> rápido y era un árbol de dependencias entero— y el `cargo test` suelto desaparece
+> porque `cargo llvm-cov`, que la puerta CRAP ya arrastra, **ejecuta la suite él
+> mismo**. `lint`, `build` y `test` siguen existiendo como atajos locales.
+>
+> `just check` bajó de ~45 s a ~31 s en el equipo de desarrollo, y el carril rápido
+> del CI de 4 min 18 s a la duración de su cadena más lenta.
+
 **`check` es un contrato**: `docs/agents/code-host.md` promete que el CI ejecuta
-exactamente `just check` y que un pase local significa lo mismo. Crece por dentro; su
-nombre y su papel no. `tsc -b` va **dentro** de `build`, no en una receta aparte: un
+exactamente lo que `just check` ejecuta —hoy repartido en un job por carril— y que un
+pase local significa lo mismo. Crece por dentro, y puede repartirse; su nombre y su
+papel no cambian. `tsc -b` va **dentro** de `build`, no en una receta aparte: un
 `build` que compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
 
 `bootstrap.sh` **no crece**. Sigue resolviendo `~/.m2` y nada más. Instalar GraalVM,
