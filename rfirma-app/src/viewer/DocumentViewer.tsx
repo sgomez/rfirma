@@ -38,6 +38,7 @@ import {
   standardBox,
   toPixels,
   toUserSpace,
+  type UserSpaceRect,
   unsealing,
 } from "./signatureBox";
 import type { DocumentFailure } from "./source";
