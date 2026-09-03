@@ -589,22 +589,22 @@ msgid "panel.visibleSignature.content"
 msgstr "Contents"
 
 msgid "panel.visibleSignature.fields.rubric"
-msgstr "Your rubric"
+msgstr "Rubric"
 
 msgid "panel.visibleSignature.fields.rubricDisabled"
 msgstr "Choose an image first"
 
 msgid "panel.visibleSignature.fields.signerName"
-msgstr "Name and surname"
+msgstr "Signer"
 
-msgid "panel.visibleSignature.fields.idNumber"
-msgstr "ID number"
+msgid "panel.visibleSignature.fields.issuer"
+msgstr "Issuer"
 
 msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Date and time of the signature"
+msgstr "Date"
 
 msgid "panel.visibleSignature.fields.reason"
-msgstr "A reason"
+msgstr "Reason"
 
 msgid "panel.visibleSignature.reason.label"
 msgstr "Reason"

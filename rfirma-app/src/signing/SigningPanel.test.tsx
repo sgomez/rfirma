@@ -162,16 +162,11 @@ describe("SigningPanel", () => {
     // son de Preferencias y se piden allí con `switch--wide`.
     expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
     expect(screen.getByText("El recuadro está en esta página")).toBeInTheDocument();
-    for (const label of [
-      "Tu rúbrica",
-      "Nombre y apellidos",
-      "DNI",
-      "Fecha y hora de la firma",
-      "Un motivo",
-    ]) {
+    for (const label of ["Firmante", "Emisor", "Fecha", "Rúbrica", "Motivo"]) {
       expect(screen.getByRole("checkbox", { name: new RegExp(label) })).toBeInTheDocument();
     }
-    await user.type(screen.getByLabelText("Motivo"), "!");
+    expect(screen.queryByRole("checkbox", { name: /DNI/ })).not.toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Motivo" }), "!");
     expect(screen.getByRole("button", { name: "Elegir imagen" })).toBeInTheDocument();
   });
 
@@ -272,7 +267,7 @@ describe("SigningPanel", () => {
   it("cannot tick a rubric that does not exist", () => {
     renderPanel({ rubric: null });
 
-    expect(screen.getByRole("checkbox", { name: /Tu rúbrica/ })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: /Rúbrica/ })).toBeDisabled();
     expect(screen.getByText("Elige antes una imagen")).toBeInTheDocument();
   });
 
@@ -609,7 +604,7 @@ describe("la vista previa del sello, en el panel", () => {
       screen.getByText("Elige un certificado para colocar la firma visible"),
     ).toBeInTheDocument();
     // Y nada de lo que hay dentro del bloque, que es lo que no se puede decidir.
-    expect(screen.queryByRole("checkbox", { name: /Nombre y apellidos/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Firmante/ })).not.toBeInTheDocument();
   });
 
   it("keeps the placement across a certificate that comes and goes", () => {

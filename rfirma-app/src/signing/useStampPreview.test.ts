@@ -30,7 +30,7 @@ function anOrder(rect: [number, number, number, number] = [50, 60, 250, 140]): S
       rotation: 0,
       rect,
     },
-    fields: { signerName: true, idNumber: true, signedAt: true, reason: false },
+    fields: { signerName: true, issuer: false, signedAt: true, reason: false },
     reason: "",
     signedAt: "3 de septiembre de 2026, 12:00",
     rubric: null,

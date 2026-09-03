@@ -40,7 +40,7 @@ const anOrder = {
     rotation: 0,
     rect: [72, 500, 272, 600] as const,
   },
-  fields: { signerName: true, idNumber: true, signedAt: true, reason: false },
+  fields: { signerName: true, issuer: false, signedAt: true, reason: false },
   reason: "",
   signedAt: "31/08/26, 12:00:00",
   rubric: null,
