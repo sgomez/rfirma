@@ -68,14 +68,15 @@ rojo.
 | `signing/stampPreview.ts` | 113 | El sello que se ve dentro del recuadro antes de firmar: el puerto del ciclo en seco, sus estados y el umbral del documento grande. Sin React. |
 | `signing/useStampPreview.ts` | 163 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 880 | El visor, con la pastilla bajo la hoja. |
+| `viewer/DocumentViewer.tsx` | 951 | El visor, con la pastilla bajo la hoja y los tres gestos del recuadro. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 81 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
 | `viewer/zoom.ts` | 176 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
 | `viewer/source.ts` | 104 | De dónde salen los bytes del documento. |
-| `viewer/signatureBox.ts` | 390 | El recuadro: dónde se guarda, **el conjunto propio de cada opción** (#188) y cómo se redimensiona. |
-| `viewer/useBoxDrag.ts` | 178 | El arrastre del recuadro y sus cuatro tiradores. |
+| `viewer/signatureBox.ts` | 452 | El recuadro: dónde se guarda, **el conjunto propio de cada opción** (#188), cómo se redimensiona y cómo se traza. |
+| `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
+| `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
 | **`preferences/`** | | Los ajustes. |
 | `preferences/preferences.ts` | 93 | Lo que la aplicación recuerda. |
 | `preferences/PreferencesDialog.tsx` | 401 | La pantalla completa de ajustes, con su índice de secciones. |

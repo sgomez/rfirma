@@ -388,3 +388,65 @@ export function activating(
 export function standardRectOf(viewport: Viewport): UserSpaceRect {
   return toUserSpace(viewport, standardBox(viewport));
 }
+
+/** Un punto del lienzo, que es de donde salen y adonde van los trazos. */
+export interface PixelPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * El recuadro que sale de **trazarlo** sobre la hoja (#190).
+ *
+ * Es el único de los tres caminos que elige sitio y tamaño en el mismo gesto,
+ * así que es también el único que tiene que reconciliar tres reglas que pueden
+ * contradecirse. El orden en que se aplican **es la decisión**:
+ *
+ * 1. **Normalizar**: el trazo se dibuja en cualquiera de las cuatro
+ *    direcciones, y el rectángulo no tiene lados negativos.
+ * 2. **Recortar al papel**: salirse por un borde deja el recuadro pegado a él.
+ *    Aquí sí se recorta, al revés que al mover (ID-22, donde se avisa y no se
+ *    aplica): allí hay un sitio anterior válido al que volver y aquí no, así
+ *    que descartar dejaría el gesto sin resultado y con un aviso encima.
+ * 3. **No bajar del mínimo** (ID-103), anclado a la esquina donde arrancó el
+ *    gesto: es la esquina que la mano eligió, y la que `resizedBy` deja quieta.
+ * 4. **Empujar hacia dentro** lo que el mínimo haya sacado del papel: trazar a
+ *    dos dedos del borde inferior no puede producir un recuadro que se salga.
+ *
+ * Con una página más pequeña que el mínimo gana la página: un recuadro que no
+ * cabe es lo único que aquí no se puede devolver.
+ */
+export function tracedBox(
+  from: PixelPoint,
+  to: PixelPoint,
+  page: PageSize,
+  min: PageSize,
+): PixelRect {
+  const side = (
+    start: number,
+    end: number,
+    extent: number,
+    smallest: number,
+  ): { at: number; size: number } => {
+    const low = Math.min(start, end);
+    const size = Math.min(Math.max(Math.abs(end - start), 0), extent);
+    // El recorte al papel se hace sobre el trazo, antes de mirar el mínimo: lo
+    // que asoma por el borde no cuenta como recorrido.
+    const clipped = Math.min(Math.max(low, 0), extent);
+    const visible = Math.min(size, extent - clipped);
+    const grown = Math.min(Math.max(visible, smallest), extent);
+    // Anclado a la esquina de la que salió el gesto: hacia la derecha crece
+    // desde `start`, hacia la izquierda crece hacia atrás desde él.
+    const at = end >= start ? clipped : Math.min(start, extent) - grown;
+    return { at: Math.min(Math.max(at, 0), extent - grown), size: grown };
+  };
+
+  const horizontal = side(from.x, to.x, page.width, min.width);
+  const vertical = side(from.y, to.y, page.height, min.height);
+  return {
+    x: horizontal.at,
+    y: vertical.at,
+    width: horizontal.size,
+    height: vertical.size,
+  };
+}

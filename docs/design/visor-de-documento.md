@@ -1,7 +1,7 @@
 # Visor de documento
 
 Columna central. Enseña el PDF y es donde se **coloca** el recuadro de la firma
-visible arrastrándolo sobre la página. Responde a «cómo va a quedar».
+visible **trazándolo** sobre la página. Responde a «cómo va a quedar».
 
 ## Casos de uso que la usan
 
@@ -289,7 +289,54 @@ Maquetación propia con `var(--rf-*)`. `--rf-shadow-elevated` en la barra,
 `--rf-radius-pill`, `--rf-border-subtle`, `--rf-space-md` de separación al
 borde inferior.
 
-## Cómo conviven los dos arrastres
+## Los tres gestos del recuadro
+
+Se llamaban «arrastre» los tres y no se distinguían al leerlos, así que tienen
+nombre propio (#190):
+
+- **Trazar** es el gesto que hace **nacer** el recuadro: se pulsa sobre la hoja
+  y se arrastra, y sale el rectángulo que se dibuja, de esquina a esquina. Es el
+  único de los tres caminos que colocan la firma —el trazo, la pastilla y el
+  campo de páginas— que elige **sitio** en el mismo gesto; los otros dos ponen
+  el recuadro en su posición estándar, porque no hay nada que diga dónde.
+- **Arrastrar** es mover el que ya existe.
+- **Redimensionar** es tirar de una de las cuatro esquinas.
+
+Trazar es **«sellar esta página» con sitio elegido**, y por eso comparte con la
+pastilla la regla del conjunto: con `Solo 1 página` sustituye la página, con
+`Estas páginas` la añade y con `Todas las páginas` el conjunto ya estaba
+completo. Y como el PDF lleva un solo campo de firma con el widget replicado
+(ID-96), el rectángulo trazado se mueve **en todas las páginas del conjunto**:
+el gesto dice dos cosas —esta página y aquí— y se aplican las dos.
+
+Cuatro reglas lo cierran, en este orden:
+
+1. El trazo se **normaliza**: se dibuja en cualquiera de las cuatro direcciones.
+2. Lo que sale de la hoja se **recorta al borde**. Aquí sí se recorta, al revés
+   que al mover: allí hay un sitio anterior válido al que volver y aquí no, así
+   que descartar dejaría el gesto sin resultado y con un aviso encima.
+3. Por debajo del **mínimo** (ID-103) el recuadro crece hasta él, anclado a la
+   esquina donde arrancó el gesto — la misma regla que los tiradores.
+4. Lo que el mínimo haya sacado del papel se **empuja hacia dentro**: trazar a
+   dos dedos del borde no puede producir un recuadro que se salga (ID-22).
+
+Un **clic seco no coloca nada**: por debajo de cuatro píxeles de pantalla no hay
+trazo. La hoja es también lo que se enfoca para pasar de página con el teclado,
+así que un clic sobre ella significa «dame el foco» y no puede pasar a colocar
+una firma. El umbral se mide en píxeles de pantalla y no en puntos del papel,
+como el lado de los tiradores (ID-104): mide la intención de la mano.
+
+Mientras dura el trazo se pinta un **rectángulo a trazos** con la silueta de lo
+que va a quedar, y al soltar, el recuadro recién nacido **se lleva el foco**:
+el gesto grueso y el ajuste fino con las flechas (ID-115) son un solo
+movimiento.
+
+**Con la firma visible apagada la hoja no traza**, no hay pastilla y el recuadro
+no se pinta, aunque la colocación siga guardada y vuelva intacta al reencender.
+El cursor lo dice: `crosshair` sobre la hoja mientras se puede trazar, la flecha
+de siempre cuando no.
+
+## Cómo conviven arrastrar y desplazar
 
 **No hay pan por arrastre, y por eso no hay conflicto.** El documento se
 desplaza con la barra de desplazamiento y con la rueda —lo que el WebView ya
@@ -318,7 +365,7 @@ visible se trae a ella **una sola vez** (ID-118): hacerlo también al repintar o
 al cambiar el zoom impediría mirar otra zona de la misma página.
 
 **Ni el zoom ni el redimensionado escriben nunca en la colocación** (ID-114).
-Escriben el arrastre, el redimensionado del recuadro y el empuje con flechas, y
+Escriben el trazo, el arrastre, el redimensionado y el empuje con flechas, y
 nadie más: si un redondeo a un zoom raro pudiera reescribirla, la fila guardada
 del documento cambiaría sin que nadie hubiera tocado nada (ID-74).
 
@@ -330,9 +377,9 @@ en silencio y la firma saldría válida igual con la rúbrica encogida.
 
 **La firma NO va en la página que estás mirando, y el recuadro no te sigue.**
 Esto cambió en v0.3 ([#152](https://github.com/sgomez/rfirma/issues/152)): el
-recuadro nace de un arrastre y ese arrastre lo fija a una página concreta.
+recuadro nace de un trazo y ese trazo lo fija a una página concreta.
 Cambiar de página no se lo lleva consigo — se queda donde se puso. Para llevarlo
-a la página que tienes delante, se vuelve a arrastrar o se usa la pastilla.
+a la página que tienes delante, se traza otra vez o se usa la pastilla.
 
 **Las páginas donde el recuadro no cabe no se bloquean.** Se avisan una sola
 vez, en el [diálogo de páginas sin sello](dialogo-paginas-sin-sello.md), justo

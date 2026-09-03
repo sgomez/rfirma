@@ -93,6 +93,23 @@
   outline-offset: calc(-1 * var(--rf-focus-ring-offset));
 }
 
+/*
+  Lo único que anuncia que la hoja se puede trazar (#190). El recuadro y sus
+  tiradores traen el suyo y ganan por estar encima, así que sobre algo ya
+  colocado el cursor sigue diciendo «esto se agarra».
+*/
+.viewer__sheet--traceable {
+  cursor: crosshair;
+}
+
+/* El rectángulo del trazo en curso: la silueta de lo que se va a colocar. */
+.viewer__trace {
+  position: absolute;
+  border: 1px dashed var(--rf-accent);
+  background: color-mix(in srgb, var(--rf-accent) 8%, transparent);
+  pointer-events: none;
+}
+
 .viewer__canvas {
   display: block;
 }
