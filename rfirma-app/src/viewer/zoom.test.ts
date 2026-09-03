@@ -111,6 +111,20 @@ describe("«ajustar» como modo", () => {
     expect(scale).toBeCloseTo((400 * 0.92) / A4.height, 6);
   });
 
+  it("fits a landscape page too, where 'fit width' would leave part of it out (ID-117 enmendado)", () => {
+    const landscape = { width: A4.height, height: A4.width };
+    const surface = { width: 800, height: 400 };
+    const scale = fitScale({ kind: "fit-page" }, surface, landscape);
+
+    // Contra una superficie de 800×400, el alto de la hoja apaisada (595) es
+    // el eje que aprieta: «ajustar al ancho» daría un porcentaje mayor —el
+    // que sale de los 842 de ancho— y dejaría el alto fuera.
+    expect(scale).toBeCloseTo((surface.height * 0.92) / landscape.height, 6);
+    const byWidth = fitScale({ kind: "fit-width" }, surface, landscape);
+    expect(byWidth).not.toBeNull();
+    expect(scale).toBeLessThan(byWidth as number);
+  });
+
   it("clips a fit that would fall outside the range", () => {
     expect(fitScale({ kind: "fit-width" }, { width: 8000, height: 8000 }, A4)).toBe(ZOOM_MAX);
     expect(fitScale({ kind: "fit-width" }, { width: 10, height: 10 }, A4)).toBe(ZOOM_MIN);

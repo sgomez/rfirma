@@ -1062,7 +1062,7 @@ describe("«ajustar» como modo", () => {
     await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.height));
   });
 
-  it("keeps fitting a document that opens narrow and tall as well", async () => {
+  it("keeps fitting the page when the surface opens narrow and tall as well", async () => {
     const observer = stubResizeObserver();
     const { document, renders } = recordingDocument();
     const { container } = renderWithCatalog(

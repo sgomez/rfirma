@@ -9,11 +9,13 @@ import type { PageSize } from "./signatureBox";
  * ID-117, ID-119).
  *
  * La distinción que sostiene el módulo es entre **cuánto quieres ampliar** y
- * **cómo quieres mirar**. Un porcentaje es lo primero y no sobrevive a nada:
- * cambiar de documento lo devuelve al 100 %. «Ajustar al ancho» es lo segundo,
- * y sobrevive al cambio de página, al redimensionado de la ventana y al
- * documento siguiente, porque no describe *ese* documento sino la forma de
- * mirarlos (ID-117).
+ * **cómo quieres mirar**. Un porcentaje es lo primero: fija ese número, sea
+ * cual sea el documento. Un modo de ajuste es lo segundo y no describe *ese*
+ * documento sino la forma de mirarlos, así que sobrevive al cambio de página
+ * y al redimensionado de la ventana. Entre un documento y el siguiente se
+ * recuerda lo último que haya fijado la persona usuaria, sea modo o
+ * porcentaje; el modo de partida de un documento recién abierto solo manda
+ * mientras no haya tocado nada (ID-117).
  */
 
 /** El zoom mínimo: por debajo, un A4 es una miniatura sobre la que no se coloca nada. */
