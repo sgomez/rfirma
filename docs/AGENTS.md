@@ -39,7 +39,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
 `native-image-postfirma-ce25` · `native-image-shared-pades` ·
 `pades-triphase-contract` · `pkcs11-mecanismo-firma` ·
-`prefirma-en-seco-pdfjs` · `recuadro-replicado-pdfsig` · `token-flags-login` ·
+`prefirma-en-seco-pdfjs` · `recuadro-replicado-pdfsig` ·
+`rutas-reales-con-filesystem-home` · `token-flags-login` ·
 `token-pkcs11-pruebas`
 
 ## `design/` — una ficha por pantalla (lo que ve el usuario)
