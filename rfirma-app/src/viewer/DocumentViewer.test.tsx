@@ -768,6 +768,31 @@ describe("el estado del sello, flotando sobre la botonera", () => {
     expect(slot()).toBeInTheDocument();
     expect(within(slot()).getByRole("button", { name: "Ver cómo queda" })).toBeInTheDocument();
   });
+
+  /**
+   * El criterio que da nombre al #202: la pastilla sigue visible con el
+   * documento ampliado. jsdom no lee el `position: absolute` de la hoja, pero
+   * sí el sitio en el DOM — la pastilla tiene que quedar **fuera** del área de
+   * desplazamiento, no dentro, o el zoom volvería a taparla.
+   */
+  it("floats outside the scroll area, so zooming the sheet does not hide it", async () => {
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "frozen" }}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    const scroll = container.querySelector(".viewer__scroll") as HTMLElement;
+    const pill = container.querySelector(".viewer__stamp") as HTMLElement;
+    expect(pill).toBeInTheDocument();
+    expect(scroll).not.toContainElement(pill);
+  });
 });
 
 /** ID-96: el mismo recuadro en todas las páginas del conjunto, y en ninguna más. */

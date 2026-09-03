@@ -233,8 +233,10 @@
 
 /*
  * El estado del sello (#202): el mismo hueco que `.viewer__alert`, sobre la
- * botonera, y no hay dos a la vez — mientras se arrastra fuera de la página
- * manda el aviso de arriba, y esta pastilla vuelve al soltar.
+ * botonera, y no hay dos a la vez — mientras `outOfPage` está encendido manda
+ * el aviso de arriba, y esta pastilla no vuelve hasta la siguiente colocación
+ * válida, que puede ser más tarde que el simple soltar el gesto (ver el
+ * comentario del TSX).
  *
  * La altura es **fija**, tenga botón o no: `.viewer__stamp-slot` reserva su
  * sitio incluso vacío, para no saltar al pasar de «congelado» a «sin
@@ -265,6 +267,15 @@
   display: flex;
   align-items: center;
   height: 28px;
+}
+
+/* Mismo ajuste que `.viewer__step`, 30 líneas más abajo: `rf-btn` trae
+   `min-height: 44px` y este hueco mide 28 px dentro de una pastilla de
+   40 px, así que sin fijar el alto aquí el botón sobresale por arriba y por
+   abajo del borde redondeado. */
+.viewer__stamp-button {
+  height: 28px;
+  min-height: 28px;
 }
 
 .viewer__bar {

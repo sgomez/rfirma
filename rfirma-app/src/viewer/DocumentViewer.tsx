@@ -805,9 +805,11 @@ export function DocumentViewer({
       </div>
 
       {/*
-        Un solo inquilino en el hueco sobre la botonera (#202): mientras se
-        arrastra fuera de la página el aviso manda, porque es del gesto en
-        curso; el estado del sello vuelve en cuanto se suelta.
+        Un solo inquilino en el hueco sobre la botonera (#202): `outOfPage` no
+        se apaga al soltar, solo con la siguiente colocación válida (`place`,
+        `seal`, `trace`, `unseal` o `goTo`), así que el aviso puede seguir
+        puesto —y la pastilla del sello escondida con él— después de que el
+        gesto termine, hasta ese próximo evento.
       */}
       {outOfPage ? (
         <p className="viewer__alert rf-body" role="alert">
@@ -962,11 +964,14 @@ function StampPill({ state, onCompose }: { state: StampPreview; onCompose: () =>
   // usa nadie (ID-127), y una clave compuesta con una plantilla es invisible
   // para las dos comprobaciones.
   const said = {
+    noCertificate: null,
+    unplaced: null,
     frozen: { line: t("viewer.stamp.frozen"), button: null },
     onDemand: { line: t("viewer.stamp.onDemand"), button: t("viewer.stamp.show") },
     composing: { line: t("viewer.stamp.composing"), button: null },
+    composed: null,
     failed: { line: t("viewer.stamp.failed"), button: t("viewer.stamp.retry") },
-  }[state.kind as "frozen" | "onDemand" | "composing" | "failed"];
+  }[state.kind];
 
   // noCertificate, unplaced y composed no dicen nada del sello: sin bloque
   // encendido, sin recuadro y «al día» son los tres casos sin pastilla.
