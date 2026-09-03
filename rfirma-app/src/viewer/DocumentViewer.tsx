@@ -243,9 +243,9 @@ export function DocumentViewer({
     within(firstSealedPage(placement) ?? 1, pdf?.pageCount ?? 0),
   );
   const [zoom, setZoom] = useState(1);
-  // Cómo se mira, que no es lo mismo que cuánto se amplía: un modo de ajuste
-  // sobrevive al cambio de página, al redimensionado y al documento siguiente;
-  // un porcentaje fijado a mano, no (ID-117).
+  // Cómo se mira, que no es lo mismo que cuánto se amplía: sobrevive al cambio
+  // de página, al redimensionado y al documento siguiente, sea un modo de
+  // ajuste o un porcentaje fijado a mano (ID-117 enmendado).
   const [mode, setMode] = useState<ZoomMode>(DEFAULT_ZOOM);
   const [viewport, setViewport] = useState<Viewport | null>(null);
   // La página **sin escalar**, en puntos: el divisor de todo ajuste. Sale de la
@@ -282,13 +282,10 @@ export function DocumentViewer({
     setPage(within(firstSealedPage(placement) ?? 1, pdf?.pageCount ?? 0));
     setViewport(null);
     setPagePoints(null);
-    // El modo de ajuste **sí** cruza al documento siguiente y el porcentaje
-    // no: quien dijo «al ancho» describió cómo quiere mirar, no cuánto quiere
-    // ampliar *este* documento (ID-117).
-    if (mode.kind === "free") {
-      setMode(DEFAULT_ZOOM);
-      setZoom(1);
-    }
+    // El modo cruza al documento siguiente entero, sea de ajuste o un
+    // porcentaje fijado a mano: manda lo último que haya dicho la persona
+    // usuaria, y el ajuste de partida —`DEFAULT_ZOOM`— solo se ve en el primer
+    // documento, mientras no lo haya tocado (ID-117 enmendado).
   }
 
   // La petición de ir a una página, atendida una sola vez por petición y

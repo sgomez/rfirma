@@ -9,11 +9,13 @@ import type { PageSize } from "./signatureBox";
  * ID-117, ID-119).
  *
  * La distinción que sostiene el módulo es entre **cuánto quieres ampliar** y
- * **cómo quieres mirar**. Un porcentaje es lo primero y no sobrevive a nada:
- * cambiar de documento lo devuelve al 100 %. «Ajustar al ancho» es lo segundo,
- * y sobrevive al cambio de página, al redimensionado de la ventana y al
- * documento siguiente, porque no describe *ese* documento sino la forma de
- * mirarlos (ID-117).
+ * **cómo quieres mirar**. Un porcentaje es lo primero: fija ese número, sea
+ * cual sea el documento. Un modo de ajuste es lo segundo y no describe *ese*
+ * documento sino la forma de mirarlos, así que sobrevive al cambio de página
+ * y al redimensionado de la ventana. Entre un documento y el siguiente se
+ * recuerda lo último que haya fijado la persona usuaria, sea modo o
+ * porcentaje; el modo de partida de un documento recién abierto solo manda
+ * mientras no haya tocado nada (ID-117).
  */
 
 /** El zoom mínimo: por debajo, un A4 es una miniatura sobre la que no se coloca nada. */
@@ -61,8 +63,16 @@ export type ZoomMode =
   | { readonly kind: "fit-width" }
   | { readonly kind: "fit-page" };
 
-/** El punto de partida, y a donde vuelve `Ctrl+0` y el documento siguiente. */
-export const DEFAULT_ZOOM: ZoomMode = { kind: "free", value: 1 };
+/**
+ * El punto de partida de un documento recién abierto: la hoja entera, tanto en
+ * vertical como en apaisado (ID-117 enmendado). `Ctrl+0` sigue yendo al 100 %,
+ * que es un porcentaje fijado a mano y no este modo.
+ *
+ * Solo se aplica mientras la persona usuaria no haya tocado nada: en cuanto
+ * fija un modo o un porcentaje, manda lo último que haya dicho ella, y el
+ * documento siguiente lo hereda tal cual.
+ */
+export const DEFAULT_ZOOM: ZoomMode = { kind: "fit-page" };
 
 /** Un zoom recortado al rango. Todo lo que sale de aquí ha pasado por esto. */
 export function clampZoom(value: number): number {

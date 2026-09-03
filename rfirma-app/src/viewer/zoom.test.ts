@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   anchoredScroll,
   bitmapScale,
+  DEFAULT_ZOOM,
   fitScale,
   MAX_BITMAP_SCALE,
   pinchedZoom,
@@ -91,6 +92,12 @@ describe("el porcentaje tecleado", () => {
   });
 });
 
+describe("el ajuste de partida", () => {
+  it("opens a fresh document fitted to the whole page, not a free percentage (ID-117 enmendado)", () => {
+    expect(DEFAULT_ZOOM).toEqual({ kind: "fit-page" });
+  });
+});
+
 describe("«ajustar» como modo", () => {
   it("fits the width of the sheet in the surface, with room on the sides", () => {
     const scale = fitScale({ kind: "fit-width" }, { width: 800, height: 400 }, A4);
@@ -102,6 +109,20 @@ describe("«ajustar» como modo", () => {
     const scale = fitScale({ kind: "fit-page" }, { width: 800, height: 400 }, A4);
 
     expect(scale).toBeCloseTo((400 * 0.92) / A4.height, 6);
+  });
+
+  it("fits a landscape page too, where 'fit width' would leave part of it out (ID-117 enmendado)", () => {
+    const landscape = { width: A4.height, height: A4.width };
+    const surface = { width: 800, height: 400 };
+    const scale = fitScale({ kind: "fit-page" }, surface, landscape);
+
+    // Contra una superficie de 800×400, el alto de la hoja apaisada (595) es
+    // el eje que aprieta: «ajustar al ancho» daría un porcentaje mayor —el
+    // que sale de los 842 de ancho— y dejaría el alto fuera.
+    expect(scale).toBeCloseTo((surface.height * 0.92) / landscape.height, 6);
+    const byWidth = fitScale({ kind: "fit-width" }, surface, landscape);
+    expect(byWidth).not.toBeNull();
+    expect(scale).toBeLessThan(byWidth as number);
   });
 
   it("clips a fit that would fall outside the range", () => {

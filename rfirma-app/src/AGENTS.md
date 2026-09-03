@@ -72,7 +72,7 @@ rojo.
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 81 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
-| `viewer/zoom.ts` | 176 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
+| `viewer/zoom.ts` | 186 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
 | `viewer/source.ts` | 104 | De dónde salen los bytes del documento. |
 | `viewer/signatureBox.ts` | 452 | El recuadro: dónde se guarda, **el conjunto propio de cada opción** (#188), cómo se redimensiona y cómo se traza. |
 | `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |

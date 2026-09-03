@@ -1018,7 +1018,7 @@ describe("«ajustar» como modo", () => {
     await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.height));
   });
 
-  it("is broken by a zoom fixed by hand, and then the next document is back at 100 %", async () => {
+  it("is broken by a zoom fixed by hand, and the next document keeps it (ID-117 enmendado)", async () => {
     const observer = stubResizeObserver();
     const first = recordingDocument();
     const { container, rerender } = renderWithCatalog(
@@ -1041,8 +1041,38 @@ describe("«ajustar» como modo", () => {
       <DocumentViewer pdf={second.document} placement={null} onPlace={noop} onOpen={noop} />,
     );
 
+    // El porcentaje fijado a mano sobrevive al documento siguiente: manda lo
+    // último que dijo la persona usuaria, no el ajuste de partida.
     await waitFor(() => expect(second.renders).toHaveLength(1));
-    expect(second.renders[0]?.scale).toBe(1);
+    expect(second.renders[0]?.scale).toBe(1.25);
+  });
+
+  it("opens a fresh document fitted to the whole page, tighter axis first", async () => {
+    const observer = stubResizeObserver();
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    observer.resizeTo(surfaceOf(container), 800, 400);
+
+    // Sin tocar nada: el ajuste de partida ya es «a la página», no un
+    // porcentaje libre (ID-117 enmendado).
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.height));
+  });
+
+  it("keeps fitting the page when the surface opens narrow and tall as well", async () => {
+    const observer = stubResizeObserver();
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    observer.resizeTo(surfaceOf(container), 400, 900);
+
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.width));
   });
 
   /** ID-114: ni el zoom ni el redimensionado escriben en la colocación. */
