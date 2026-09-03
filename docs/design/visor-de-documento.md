@@ -124,6 +124,7 @@ a punto —lo medido son los dos extremos, 0,15 s en un PDF de 2,4 MB y 1,9 s co
 ciclo anterior porque el tamaño se sabe **antes** de pagar el primer ciclo. Por
 debajo, la vista se recalcula sola al soltar; por encima, aparece «Ver cómo
 queda».
+
 ## La barra flotante
 
 Una sola pieza, en píldora elevada, con dos grupos separados por un divisor:

@@ -499,7 +499,12 @@ export function App({
       pdf === null ||
       placement === null ||
       geometry === null ||
-      documents.active === null
+      documents.active === null ||
+      // La geometría llega por un efecto asíncrono: al cambiar el conjunto de
+      // páginas hay una pintada con la página, la `MediaBox` y la `/Rotate`
+      // viejas junto al recuadro nuevo. Componer eso cuesta un ciclo entero
+      // para enseñar el sello de la página anterior.
+      geometry.page !== boxPage
     ) {
       return { kind: "unplaced" };
     }
@@ -517,7 +522,18 @@ export function App({
         language: i18n.resolvedLanguage ?? i18n.language,
       }),
     };
-  }, [chosen, signature, pdf, placement, geometry, documents.active, rubric, signedAt, i18n]);
+  }, [
+    chosen,
+    signature,
+    pdf,
+    placement,
+    geometry,
+    boxPage,
+    documents.active,
+    rubric,
+    signedAt,
+    i18n,
+  ]);
 
   const stamp = useStampPreview({
     composer: stamps,

@@ -56,6 +56,25 @@ function composerOf(...answers: ComposedStamp[]): StampComposer & { calls: numbe
   return composer;
 }
 
+/** Un compositor que no contesta hasta que se le dice. */
+function deferredComposer(): StampComposer & {
+  calls: number;
+  settle: (answer: ComposedStamp) => void;
+} {
+  let pending: ((answer: ComposedStamp) => void) | null = null;
+  const composer = {
+    calls: 0,
+    compose: () => {
+      composer.calls += 1;
+      return new Promise<ComposedStamp>((resolve) => {
+        pending = resolve;
+      });
+    },
+    settle: (answer: ComposedStamp) => pending?.(answer),
+  };
+  return composer;
+}
+
 const ok: ComposedStamp = { ok: true, pdf: stamped };
 const again: ComposedStamp = { ok: true, pdf: restamped };
 const broken: ComposedStamp = {
@@ -211,5 +230,61 @@ describe("si no se puede componer, se dice y se firma igual (ID-111)", () => {
 
     await waitFor(() => expect(result.current.state).toEqual({ kind: "composed" }));
     expect(composer.calls).toBe(2);
+  });
+});
+
+/**
+ * Lo compuesto y el ciclo en vuelo van atados a **su** orden: en cuanto la
+ * orden cambia, ni el uno cuenta como en curso ni el otro se pinta.
+ */
+describe("un ciclo abandonado deja de contar", () => {
+  it("forgets an abandoned cycle instead of staying «composing» for ever", async () => {
+    const composer = deferredComposer();
+    const { result, rerender } = renderHook(
+      ({ rect, gesturing }: { rect: [number, number, number, number]; gesturing: boolean }) =>
+        useStampPreview({ composer, request: ready(rect), gesturing, onDemand: true }),
+      {
+        initialProps: {
+          rect: [50, 60, 250, 140] as [number, number, number, number],
+          gesturing: false,
+        },
+      },
+    );
+    act(() => result.current.compose());
+    await waitFor(() => expect(result.current.state).toEqual({ kind: "composing" }));
+
+    // Se agarra el recuadro antes de que termine el ciclo, y la orden vieja
+    // resuelve cuando ya no la quiere nadie.
+    rerender({ rect: [50, 60, 250, 140], gesturing: true });
+    await act(async () => composer.settle(ok));
+    rerender({ rect: [90, 60, 290, 140], gesturing: false });
+
+    // En un documento grande esto es lo único que devuelve el botón: sin ello
+    // el panel se queda diciendo «Componiendo» sin nada en vuelo.
+    expect(result.current.state).toEqual({ kind: "onDemand" });
+  });
+
+  it("stops painting the previous stamp as soon as the order changes", async () => {
+    const composer = deferredComposer();
+    const { result, rerender } = renderHook(
+      ({ rect }: { rect: [number, number, number, number] }) =>
+        useStampPreview({ composer, request: ready(rect), gesturing: false, onDemand: false }),
+      { initialProps: { rect: [50, 60, 250, 140] as [number, number, number, number] } },
+    );
+    await waitFor(() => expect(composer.calls).toBe(1));
+    await act(async () => composer.settle(ok));
+    expect(result.current.pdf).toBe(stamped);
+
+    rerender({ rect: [90, 60, 290, 140] });
+
+    // Mientras se compone la colocación nueva, la hoja vuelve al original: el
+    // sello de la anterior ya no es lo que se va a firmar (ID-107).
+    expect(result.current.state).toEqual({ kind: "composing" });
+    expect(result.current.pdf).toBeNull();
+
+    await act(async () => composer.settle(broken));
+
+    expect(result.current.state.kind).toBe("failed");
+    expect(result.current.pdf).toBeNull();
   });
 });

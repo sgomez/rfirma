@@ -421,6 +421,10 @@ export function DocumentViewer({
   const gesturing = (handlers: BoxDragHandlers): BoxDragHandlers => ({
     onPointerDown: (event) => {
       handlers.onPointerDown(event);
+      // La misma guardia que `useBoxDrag`: con el botón secundario no arranca
+      // ningún gesto, así que avisar de uno congelaría la vista previa hasta el
+      // `pointerup` sin que se esté moviendo nada.
+      if (event.button !== 0) return;
       onGesture?.(true);
     },
     onPointerMove: handlers.onPointerMove,

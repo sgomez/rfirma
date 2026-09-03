@@ -69,7 +69,10 @@ export function useStampPreview({
   // La orden que se ha pedido componer a mano, que es la única que se compone
   // en un documento grande y la única que se vuelve a intentar tras un fallo.
   const [asked, setAsked] = useState<string | null>(null);
-  const [composing, setComposing] = useState(false);
+  // El ciclo en vuelo va atado a su orden, no a un booleano: un ciclo que se
+  // abandona —empieza un gesto, o cambia la orden— deja de contar solo, sin
+  // depender de que la promesa vuelva a apagarlo.
+  const [inFlight, setInFlight] = useState<string | null>(null);
 
   const key = keyOf(request);
   const settled = composed?.key === key || failed?.key === key;
@@ -82,15 +85,16 @@ export function useStampPreview({
   useEffect(() => {
     if (!wanted || key === null || order === null) return;
     let live = true;
-    setComposing(true);
+    setInFlight(key);
     void composer.compose(order).then((result) => {
       if (!live) return;
-      setComposing(false);
+      setInFlight((current) => (current === key ? null : current));
       if (result.ok) setComposed({ key, value: result.pdf });
       else setFailed({ key, value: result.failure });
     });
     return () => {
       live = false;
+      setInFlight((current) => (current === key ? null : current));
     };
   }, [composer, key, wanted]);
 
@@ -103,10 +107,30 @@ export function useStampPreview({
   }, [key]);
 
   return {
-    state: stateOf({ request, gesturing, onDemand, composing, composed, failed, key }),
+    state: stateOf({
+      request,
+      gesturing,
+      onDemand,
+      composing: inFlight === key,
+      composed,
+      failed,
+      key,
+    }),
     // Sin certificado o sin colocar **no hay recuadro**, así que tampoco hay
     // nada que pintar dentro: el visor vuelve al documento original.
-    pdf: request.kind === "ready" ? (composed?.value ?? null) : null,
+    //
+    // Y lo compuesto sólo se pinta contra **su** orden: mientras la de ahora se
+    // compone o ha fallado, enseñar el sello de la colocación anterior sería
+    // enseñar algo que no es lo que se va a firmar (ID-107). La excepción es el
+    // gesto, que es justo donde congelar el anterior es lo que pide el ID-109.
+    pdf:
+      request.kind !== "ready"
+        ? null
+        : gesturing
+          ? (composed?.value ?? null)
+          : composed?.key === key
+            ? composed.value
+            : null,
     compose,
   };
 }

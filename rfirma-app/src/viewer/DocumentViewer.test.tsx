@@ -587,6 +587,28 @@ describe("el sello dentro del recuadro", () => {
     expect(onGesture).toHaveBeenLastCalledWith(false);
   });
 
+  it("says nothing about a gesture the secondary button never started", async () => {
+    const onGesture = vi.fn();
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onGesture={onGesture}
+        onOpen={noop}
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    // `useBoxDrag` descarta el botón secundario —es el del menú del sistema—,
+    // así que avisar de un gesto aquí congelaría la vista previa sin que se
+    // esté moviendo nada.
+    fireEvent.pointerDown(box(), { pointerId: 1, button: 2, clientX: 100, clientY: 100 });
+
+    expect(onGesture).not.toHaveBeenCalled();
+  });
+
   it("also freezes while a grip is resizing the box", async () => {
     const onGesture = vi.fn();
     const { document, renders } = recordingDocument();

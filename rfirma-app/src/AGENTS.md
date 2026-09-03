@@ -36,7 +36,7 @@ rojo.
 |---|---|---|
 | `main.tsx` | 79 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
 | `tauri.ts` | 560 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 876 | El árbol de la ventana y el estado que la recorre. |
+| `App.tsx` | 892 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -66,14 +66,14 @@ rojo.
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | `signing/stampPreview.ts` | 113 | El sello que se ve dentro del recuadro antes de firmar: el puerto del ciclo en seco, sus estados y el umbral del documento grande. Sin React. |
-| `signing/useStampPreview.ts` | 139 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
+| `signing/useStampPreview.ts` | 163 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 864 | El visor, con la pastilla bajo la hoja. |
+| `viewer/DocumentViewer.tsx` | 868 | El visor, con la pastilla bajo la hoja. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 81 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
 | `viewer/zoom.ts` | 176 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
-| `viewer/source.ts` | 105 | De dónde salen los bytes del documento. |
+| `viewer/source.ts` | 104 | De dónde salen los bytes del documento. |
 | `viewer/signatureBox.ts` | 285 | El recuadro: dónde se guarda, en qué páginas y cómo se redimensiona. |
 | `viewer/useBoxDrag.ts` | 178 | El arrastre del recuadro y sus cuatro tiradores. |
 | **`preferences/`** | | Los ajustes. |
