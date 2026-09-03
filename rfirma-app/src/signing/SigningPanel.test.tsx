@@ -70,8 +70,6 @@ function panelWith(props: PanelProps) {
       onChooseRubric={noop}
       signedAt="31/08/26, 12:00:00"
       composer={composerOf(null)}
-      stamp={{ kind: "unplaced" }}
-      onComposeStamp={noop}
       destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
       onChangeDestination={noop}
       onSign={noop}
@@ -646,8 +644,14 @@ describe("SigningPanel · Colocación", () => {
   });
 });
 
-/** ID-107, ID-108, ID-111: lo que la hoja no puede decir del sello. */
-describe("la vista previa del sello, en el panel", () => {
+/**
+ * ID-108. El estado del sello en sí lo cuenta ahora la pastilla flotante del
+ * visor (#202) — ver `DocumentViewer.test.tsx` § «el estado del sello,
+ * flotando sobre la botonera». Lo que sigue siendo del panel es el bloque
+ * entero, apagado sin certificado, y que la colocación sobrevive a que el
+ * certificado desaparezca y vuelva.
+ */
+describe("el bloque de firma visible, sin certificado", () => {
   const stamping = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
 
   function toggle() {
@@ -655,8 +659,6 @@ describe("la vista previa del sello, en el panel", () => {
       name: /Estampar un recuadro de firma en el documento/,
     });
   }
-
-  const signButton = () => screen.getByRole("button", { name: "Firmar documento" });
 
   /**
    * ID-108. El bloque entero apagado y en gris, y el interruptor **en «no»**:
@@ -685,52 +687,5 @@ describe("la vista previa del sello, en el panel", () => {
     show({ signature: stamping });
 
     expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
-  });
-
-  it("says the stamp is the real one once it is composed", () => {
-    renderPanel({ signature: stamping, stamp: { kind: "composed" } });
-
-    expect(screen.getByText("Lo que se ve es lo que se estampa")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Ver cómo queda" })).not.toBeInTheDocument();
-  });
-
-  it("asks for the recomposition by hand on a large document", async () => {
-    const user = userEvent.setup();
-    const onComposeStamp = vi.fn();
-    renderPanel({ signature: stamping, stamp: { kind: "onDemand" }, onComposeStamp });
-
-    await user.click(screen.getByRole("button", { name: "Ver cómo queda" }));
-
-    expect(onComposeStamp).toHaveBeenCalled();
-  });
-
-  /**
-   * ID-111. La vista previa **no es una puerta**: sobre si se puede firmar
-   * manda el botón de firmar, que no mira este bloque.
-   */
-  it("says it could not draw the stamp, and leaves the sign button alone", async () => {
-    const user = userEvent.setup();
-    const onComposeStamp = vi.fn();
-    renderPanel({
-      signature: stamping,
-      stamp: {
-        kind: "failed",
-        failure: { situation: "documentUnreadable", detail: "el documento tiene contraseña" },
-      },
-      onComposeStamp,
-    });
-
-    expect(screen.getByText("No se ha podido dibujar el sello")).toBeInTheDocument();
-    expect(signButton()).toBeEnabled();
-
-    await user.click(screen.getByRole("button", { name: "Volver a intentarlo" }));
-
-    expect(onComposeStamp).toHaveBeenCalled();
-  });
-
-  it("says the frozen view is the previous one while the box is being moved", () => {
-    renderPanel({ signature: stamping, stamp: { kind: "frozen" } });
-
-    expect(screen.getByText("Congelada mientras mueves el recuadro")).toBeInTheDocument();
   });
 });

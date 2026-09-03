@@ -766,6 +766,8 @@ export function App({
             // documento que se soltó tampoco se deja pintar, eso es más urgente
             // que contar cuántos ficheros venían con él.
             failure={pdfFailure ?? (dropNotice?.about === activeId ? dropNotice.failure : null)}
+            stamp={stamp.state}
+            onComposeStamp={stamp.compose}
           />
         }
         panel={
@@ -818,8 +820,6 @@ export function App({
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
               composer={composer}
-              stamp={stamp.state}
-              onComposeStamp={stamp.compose}
               destination={
                 destination ?? {
                   folder: settings?.destination ?? "",

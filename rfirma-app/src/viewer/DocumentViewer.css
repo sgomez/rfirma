@@ -231,6 +231,53 @@
   box-shadow: var(--rf-shadow-elevated);
 }
 
+/*
+ * El estado del sello (#202): el mismo hueco que `.viewer__alert`, sobre la
+ * botonera, y no hay dos a la vez — mientras `outOfPage` está encendido manda
+ * el aviso de arriba, y esta pastilla no vuelve hasta la siguiente colocación
+ * válida, que puede ser más tarde que el simple soltar el gesto (ver el
+ * comentario del TSX).
+ *
+ * La altura es **fija**, tenga botón o no: `.viewer__stamp-slot` reserva su
+ * sitio incluso vacío, para no saltar al pasar de «congelado» a «sin
+ * componer» justo mientras se arrastra el recuadro.
+ */
+.viewer__stamp {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-sm);
+  height: 40px;
+  padding: 0 var(--rf-space-sm);
+  border-radius: var(--rf-radius-pill);
+  border: 1px solid var(--rf-border-strong);
+  background: var(--rf-surface);
+  box-shadow: var(--rf-shadow-elevated);
+  white-space: nowrap;
+}
+
+.viewer__stamp-line {
+  margin: 0;
+}
+
+.viewer__stamp-slot {
+  display: flex;
+  align-items: center;
+  height: 28px;
+}
+
+/* Mismo ajuste que `.viewer__step`, 30 líneas más abajo: `rf-btn` trae
+   `min-height: 44px` y este hueco mide 28 px dentro de una pastilla de
+   40 px, así que sin fijar el alto aquí el botón sobresale por arriba y por
+   abajo del borde redondeado. */
+.viewer__stamp-button {
+  height: 28px;
+  min-height: 28px;
+}
+
 .viewer__bar {
   position: absolute;
   left: 50%;

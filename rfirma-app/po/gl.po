@@ -351,6 +351,24 @@ msgstr ""
 msgid "viewer.outOfPage"
 msgstr ""
 
+msgid "viewer.stamp.frozen"
+msgstr ""
+
+msgid "viewer.stamp.onDemand"
+msgstr ""
+
+msgid "viewer.stamp.show"
+msgstr ""
+
+msgid "viewer.stamp.composing"
+msgstr ""
+
+msgid "viewer.stamp.failed"
+msgstr ""
+
+msgid "viewer.stamp.retry"
+msgstr ""
+
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
 msgstr[0] ""
@@ -561,55 +579,6 @@ msgstr ""
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.title"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.unplaced.badge"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.unplaced.line"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.frozen.badge"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.frozen.line"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.onDemand.badge"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.onDemand.line"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.composing.badge"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.composing.line"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.composed.badge"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.composed.line"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.failed.badge"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.failed.line"
-msgstr ""
-
-#. La vista previa no es una puerta (ID-111).
-msgid "panel.visibleSignature.stamp.failed.hint"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.show"
-msgstr ""
-
-msgid "panel.visibleSignature.stamp.retry"
 msgstr ""
 
 msgid "panel.visibleSignature.preview.unavailable"

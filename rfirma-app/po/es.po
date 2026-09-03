@@ -400,8 +400,25 @@ msgid "viewer.dragHandle"
 msgstr "Arrastra para colocar"
 
 msgid "viewer.outOfPage"
-msgstr ""
-"El recuadro se ha quedado fuera de la página, así que sigue donde estaba."
+msgstr "El recuadro se ha quedado fuera de la página, así que sigue donde estaba."
+
+msgid "viewer.stamp.frozen"
+msgstr "Sello congelado mientras mueves el recuadro"
+
+msgid "viewer.stamp.onDemand"
+msgstr "Documento grande: el sello no se recalcula solo"
+
+msgid "viewer.stamp.show"
+msgstr "Ver cómo queda"
+
+msgid "viewer.stamp.composing"
+msgstr "Componiendo el sello con el certificado elegido"
+
+msgid "viewer.stamp.failed"
+msgstr "No se ha podido dibujar el sello"
+
+msgid "viewer.stamp.retry"
+msgstr "Volver a intentarlo"
 
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
@@ -623,55 +640,6 @@ msgstr "Marca alguna casilla para que el recuadro diga algo."
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Elige un certificado para colocar la firma visible"
-
-msgid "panel.visibleSignature.stamp.title"
-msgstr "Vista previa"
-
-msgid "panel.visibleSignature.stamp.unplaced.badge"
-msgstr "Sin colocar"
-
-msgid "panel.visibleSignature.stamp.unplaced.line"
-msgstr "Coloca el recuadro sobre la hoja para ver el sello"
-
-msgid "panel.visibleSignature.stamp.frozen.badge"
-msgstr "Congelada"
-
-msgid "panel.visibleSignature.stamp.frozen.line"
-msgstr "Congelada mientras mueves el recuadro"
-
-msgid "panel.visibleSignature.stamp.onDemand.badge"
-msgstr "En espera"
-
-msgid "panel.visibleSignature.stamp.onDemand.line"
-msgstr "El documento es grande: el sello no se recalcula solo"
-
-msgid "panel.visibleSignature.stamp.composing.badge"
-msgstr "Componiendo"
-
-msgid "panel.visibleSignature.stamp.composing.line"
-msgstr "Componiendo el sello con el certificado elegido"
-
-msgid "panel.visibleSignature.stamp.composed.badge"
-msgstr "Al día"
-
-msgid "panel.visibleSignature.stamp.composed.line"
-msgstr "Lo que se ve es lo que se estampa"
-
-msgid "panel.visibleSignature.stamp.failed.badge"
-msgstr "No se ha podido"
-
-msgid "panel.visibleSignature.stamp.failed.line"
-msgstr "No se ha podido dibujar el sello"
-
-#. La vista previa no es una puerta (ID-111).
-msgid "panel.visibleSignature.stamp.failed.hint"
-msgstr "Se puede firmar igual: sobre eso manda el botón de firmar."
-
-msgid "panel.visibleSignature.stamp.show"
-msgstr "Ver cómo queda"
-
-msgid "panel.visibleSignature.stamp.retry"
-msgstr "Volver a intentarlo"
 
 msgid "panel.visibleSignature.preview.unavailable"
 msgstr "La vista previa aparecerá al elegir el certificado."
