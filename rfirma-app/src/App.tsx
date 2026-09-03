@@ -1006,7 +1006,14 @@ function formatSignedAt(instant: Date, locale: string): string {
 function chosenFrom(found: readonly Certificate[]): CertificateState {
   const [first] = found;
   if (first === undefined) return { kind: "empty" };
-  if (found.length === 1) return { kind: "chosen", certificate: first, certificates: found };
+  // Con uno solo se elige solo, pero no si ese único no sirve: preseleccionar
+  // un certificado caducado sería elegir por la persona usuaria con qué
+  // identidad firma, y eso no lo hace la aplicación por su cuenta (#197).
+  if (found.length === 1) {
+    return isUsable(first.status)
+      ? { kind: "chosen", certificate: first, certificates: found }
+      : { kind: "unchosen", certificates: found };
+  }
   const remembered = found.find((one) => one.remembered);
   if (remembered !== undefined) {
     return { kind: "chosen", certificate: remembered, certificates: found };

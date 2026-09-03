@@ -525,6 +525,12 @@ msgstr "Choose certificate"
 msgid "panel.certificate.list"
 msgstr "Available certificates"
 
+msgid "panel.certificate.groups.available"
+msgstr "Available"
+
+msgid "panel.certificate.groups.unusable"
+msgstr "Unusable"
+
 msgid "panel.certificate.stores.card"
 msgstr "Card"
 

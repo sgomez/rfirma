@@ -25,11 +25,17 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   };
 }
 
-/** Dos certificados con **la misma etiqueta** y el mismo titular, en dos
- * almacenes distintos: es el caso que el asa existe para resolver. */
+/**
+ * Dos certificados con **la misma etiqueta** y el mismo titular, en dos
+ * almacenes distintos: es el caso que el asa existe para resolver.
+ *
+ * El orden ya es el que produce `groupCertificates` —mismo titular, empate
+ * por almacén, «chrome» antes que «firefox»— para que los índices de fila de
+ * estas pruebas coincidan con el orden de inserción sin sorpresas.
+ */
 const twins: readonly Certificate[] = [
-  aCertificate({ id: "aaaa", store: "firefox" }),
-  aCertificate({ id: "bbbb", store: "chrome" }),
+  aCertificate({ id: "aaaa", store: "chrome" }),
+  aCertificate({ id: "bbbb", store: "firefox" }),
 ];
 
 function renderSelect(props: Partial<Parameters<typeof CertificateSelect>[0]> = {}) {
@@ -78,8 +84,8 @@ describe("CertificateSelect", () => {
     await userEvent.click(trigger());
 
     expect(row(0)).toHaveTextContent("Ada Lovelace Byron");
-    expect(row(0)).toHaveTextContent("99999999R · Emitido por AC FNMT Usuarios · Firefox");
-    expect(row(1)).toHaveTextContent("Chrome");
+    expect(row(0)).toHaveTextContent("99999999R · Emitido por AC FNMT Usuarios · Chrome");
+    expect(row(1)).toHaveTextContent("Firefox");
   });
 
   /** El almacén lo traduce la ventana desde el catálogo: lo que cruza la
@@ -111,7 +117,7 @@ describe("CertificateSelect", () => {
 
     expect(trigger()).toHaveTextContent("Ada Lovelace Byron");
     expect(trigger()).toHaveTextContent("99999999R · Emitido por AC FNMT Usuarios");
-    expect(trigger()).not.toHaveTextContent("Firefox");
+    expect(trigger()).not.toHaveTextContent("Chrome");
   });
 
   /** Que falte de la lista no le explica nada a quien viene a firmar justo con
@@ -195,5 +201,44 @@ describe("CertificateSelect", () => {
     const list = screen.getByRole("listbox");
     const cursor = list.getAttribute("aria-activedescendant");
     expect(row(1)).toHaveAttribute("id", cursor);
+  });
+
+  /** Prior art: los encabezados agrupan lo que la función pura de
+   * `certificate.ts` ya ordenó; aquí solo se comprueba que aparecen. */
+  it("groups the list under two headers, available first and unusable below", async () => {
+    const expired = aCertificate({ id: "cccc", status: { kind: "expired", notAfter: 0 } });
+    renderSelect({ certificates: [expired, ...twins] });
+
+    await userEvent.click(trigger());
+
+    expect(screen.getByText("Disponibles")).toBeVisible();
+    expect(screen.getByText("No utilizables")).toBeVisible();
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+  });
+
+  /** Sin ninguno de los dos grupos vacío, no sale su encabezado: no hay nada
+   * que titular. */
+  it("does not show the unusable header when every certificate can be used", async () => {
+    renderSelect();
+
+    await userEvent.click(trigger());
+
+    expect(screen.queryByText("No utilizables")).not.toBeInTheDocument();
+  });
+
+  /** «Deshabilitada de verdad»: la fila lleva la clase que en
+   * `CertificateSelect.css` le pone `pointer-events: none`, así que el
+   * navegador ni siquiera le entrega el puntero, y un clic no llega nunca a
+   * intentar elegirla. */
+  it("marks an unusable row so the pointer never reaches it", async () => {
+    const expired = aCertificate({ id: "cccc", status: { kind: "expired", notAfter: 0 } });
+    const { onChoose } = renderSelect({ certificates: [expired] });
+
+    await userEvent.click(trigger());
+    const disabledRow = screen.getByRole("option");
+
+    expect(disabledRow).toHaveClass("certificate-select__option--unusable");
+    await userEvent.click(disabledRow);
+    expect(onChoose).not.toHaveBeenCalled();
   });
 });

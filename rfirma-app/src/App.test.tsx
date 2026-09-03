@@ -478,6 +478,29 @@ describe("App", () => {
     expect(within(panel).queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  /** «Con uno solo se elige solo» gana una excepción: si ese único no sirve,
+   * el desplegable arranca sin elección (#197). */
+  it("does not preselect the sole certificate when it cannot be used", async () => {
+    const user = userEvent.setup();
+    const expired: Certificate = {
+      ...aCertificate,
+      status: { kind: "expired", notAfter: 0 },
+    };
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [expired] },
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
+
+    expect(trigger).toHaveTextContent("Elegir certificado");
+  });
+
   it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("corrupto.pdf")], pdfsOf({}));

@@ -93,6 +93,16 @@
   background: var(--rf-surface);
 }
 
+/* El encabezado de cada grupo, «Disponibles» / «No utilizables»: no es una
+   fila, no se elige y no entra en el recorrido del teclado. */
+.certificate-select__group-label {
+  padding: 6px var(--rf-space-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rf-text-muted);
+  text-transform: uppercase;
+}
+
 .certificate-select__option {
   display: flex;
   align-items: flex-start;
@@ -116,10 +126,13 @@
   background: var(--rf-bg);
 }
 
-/* Atenuada y sin cursor de mano: la fila se lee, pero no se elige. */
+/* Atenuada, sin cursor de mano y sin eventos de puntero: la fila se lee, pero
+   no se puede pulsar. `aria-disabled` sola no basta —el navegador la sigue
+   dejando pulsable— así que el bloqueo es real, con `pointer-events: none`. */
 .certificate-select__option--unusable {
   opacity: 0.6;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Sin color de error: el sistema no lo tiene. El motivo se señala con peso,
