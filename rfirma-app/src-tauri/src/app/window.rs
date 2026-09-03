@@ -15,10 +15,17 @@ use crate::memory::{Memory, WindowMemory};
 
 /// El ancho con el que abre la ventana cuando no hay nada guardado, o cuando
 /// lo guardado no se pudo leer. El mismo valor que `tauri.conf.json`.
-pub const DEFAULT_WIDTH: f64 = 1440.0;
+pub const DEFAULT_WIDTH: f64 = 1280.0;
 /// El alto con el que abre la ventana cuando no hay nada guardado. El mismo
 /// valor que `tauri.conf.json`.
-pub const DEFAULT_HEIGHT: f64 = 900.0;
+pub const DEFAULT_HEIGHT: f64 = 720.0;
+/// El ancho mínimo al que se puede encoger la ventana. El mismo valor que
+/// `tauri.conf.json`. Por debajo de esta cifra el visor deja de ser la
+/// región principal, con 660 px fijos entre bandeja y panel.
+pub const MIN_WIDTH: f64 = 1100.0;
+/// El alto mínimo al que se puede encoger la ventana. El mismo valor que
+/// `tauri.conf.json`.
+pub const MIN_HEIGHT: f64 = 560.0;
 
 /// Con qué tamaño abrir la ventana: el recordado, o el de por omisión.
 ///
