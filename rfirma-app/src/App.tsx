@@ -496,11 +496,17 @@ export function App({
     // página, aquella donde no cabe la esquina inferior izquierda del
     // recuadro. Es el único aviso que queda desde que se cayó la tira del
     // visor (#152), así que se calcula aquí, antes de mandar la orden.
+    //
+    // La esquina se compara en **puntos PAdES**, no en espacio de usuario
+    // PDF: son espacios distintos en cuanto la `/Rotate` no es 0, y la
+    // conversión (`T⁻¹`) no tiene copia en TypeScript — se pide al backend,
+    // que es quien la aplica de verdad al armar la orden.
     const chosenPages = sealedPages(placement.pages, pdf.pageCount);
     const views = await Promise.all(
       chosenPages.map(async (number) => ({ number, view: (await pdf.getPage(number)).view })),
     );
-    const fallen = pagesWithoutSeal(placement.rect, views);
+    const [lowerLeftX, lowerLeftY] = await signer.padesLowerLeft(order.placement);
+    const fallen = pagesWithoutSeal({ x: lowerLeftX, y: lowerLeftY }, views);
     if (fallen.length > 0) {
       setSealLossPrompt({
         fallen: fallen.length,

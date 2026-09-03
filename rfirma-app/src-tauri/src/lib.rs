@@ -174,6 +174,7 @@ pub fn run() {
             commands::open_signed_document,
             commands::open_signed_folder,
             commands::preview_signature,
+            commands::pades_lower_left,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

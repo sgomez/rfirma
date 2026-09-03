@@ -147,6 +147,7 @@ export function tauriSigningBackend(): SigningBackend {
     presign: (order) => stage(() => invoke<void>("begin_signing", { order })),
     sign: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
     postsign: () => stage(() => invoke<SignedDocument>("finish_signing")),
+    padesLowerLeft: (placement) => invoke<[number, number]>("pades_lower_left", { placement }),
     discard: cancelSigning,
   };
 }

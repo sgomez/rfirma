@@ -110,6 +110,17 @@ export interface SigningBackend {
   /** Etapa 3: ensambla el PDF firmado y lo deja en el destino. */
   postsign(): Promise<StageResult<SignedDocument>>;
   /**
+   * La esquina inferior izquierda de `placement.rect`, convertida a puntos
+   * PAdES (ID-105).
+   *
+   * No es una etapa de la firma trifásica —no toca el ciclo ni la clave—: es
+   * geometría pura, la misma `T⁻¹` de `signing::placement` que arma la orden
+   * de verdad. Vive en este puerto y no en uno aparte porque quien la calcula
+   * es el mismo backend, y duplicar el puerto para una sola llamada sería más
+   * ruido que el que ahorra.
+   */
+  padesLowerLeft(placement: SigningOrder["placement"]): Promise<readonly [number, number]>;
+  /**
    * Olvida el ciclo a medias: la cuarta operación **no es una etapa**, es la
    * salida.
    *
@@ -144,5 +155,11 @@ export function unavailableSigningBackend(): SigningBackend {
         attemptsLeft: null,
       },
     });
-  return { presign: missing, sign: missing, postsign: missing, discard: async () => {} };
+  return {
+    presign: missing,
+    sign: missing,
+    postsign: missing,
+    padesLowerLeft: () => Promise.reject(new Error("no hay orden de firma expuesta todavia")),
+    discard: async () => {},
+  };
 }

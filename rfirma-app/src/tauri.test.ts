@@ -96,6 +96,20 @@ describe("los puertos de firma sobre Tauri", () => {
     expect(invoke).toHaveBeenCalledWith("begin_signing", { order: anOrder });
   });
 
+  /**
+   * ID-105: la conversión a puntos PAdES no tiene copia en TypeScript, así
+   * que el diálogo de páginas sin sello la pide por esta orden, en vez de
+   * recalcularla.
+   */
+  it("asks the backend for the PAdES corner instead of computing it", async () => {
+    invoke.mockResolvedValue([50, 145]);
+
+    const lowerLeft = await tauriSigningBackend().padesLowerLeft(anOrder.placement);
+
+    expect(invoke).toHaveBeenCalledWith("pades_lower_left", { placement: anOrder.placement });
+    expect(lowerLeft).toEqual([50, 145]);
+  });
+
   it("never sends the PIN with anything else", async () => {
     // El PIN va solo, en su propia orden y después de la prefirma: mandarlo
     // junto al documento sería pedir el secreto que desbloquea la clave antes

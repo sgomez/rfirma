@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son veintiuna, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son veintidós, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -108,7 +108,7 @@ use crate::memory::OpenedDocuments;
 pub use crate::app::signing::SigningSession;
 pub use app::documents::dropped_document;
 pub use failure::Failure;
-pub use orders::SigningOrder;
+pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, OpenedDocumentView,
@@ -525,6 +525,22 @@ pub fn preview_signature(
     )?))
 }
 
+/// **Orden 22.** La esquina inferior izquierda del recuadro, en puntos PAdES
+/// (ID-105).
+///
+/// `correctPositionSignature` (`PdfUtil.java:607-632`) descarta en silencio,
+/// antes de firmar, cualquier página del conjunto donde esta esquina no cabe
+/// — comparada contra el ancho y el alto de **cada** página. El diálogo de
+/// páginas sin sello anticipa esa guardia, pero la conversión de espacio de
+/// usuario a puntos PAdES (`T⁻¹` de la `/Rotate`, `signing::placement`) no
+/// tiene copia en TypeScript: la pide aquí, en vez de recalcularla del lado
+/// de la ventana.
+#[tauri::command]
+pub fn pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure> {
+    let placement = placement.placement()?;
+    Ok([placement.rect.lower_left_x, placement.rect.lower_left_y])
+}
+
 /// El nombre del evento con el que la ventana se entera de un arrastre.
 ///
 /// Es un **evento** y no una orden más a propósito: el arrastre no lo
@@ -533,3 +549,50 @@ pub fn preview_signature(
 /// un manejador de soltura en el JSX no se dispararía nunca; lo que hay debajo
 /// es esto, y al otro lado lo recoge el puerto `DocumentDrops`.
 pub const DOCUMENT_DROPPED: &str = "document-dropped";
+
+#[cfg(test)]
+mod tests {
+    use super::{pades_lower_left, PlacementOrder};
+
+    /// El mismo ejemplo numérico del hallazgo: con `/Rotate 0` la esquina
+    /// PAdES coincide con la de espacio de usuario, que es el único caso que
+    /// cubrían las pruebas de `unsealedPages.test.ts` antes de este cambio.
+    #[test]
+    fn matches_user_space_when_the_page_is_not_rotated() {
+        let placement: PlacementOrder = serde_json::from_value(serde_json::json!({
+            "page": 1,
+            "pages": { "only": [1] },
+            "pageCount": 1,
+            "mediaBox": [0.0, 0.0, 595.0, 842.0],
+            "rotation": 0,
+            "rect": [250.0, 50.0, 450.0, 100.0],
+        }))
+        .expect("la orden del visor");
+
+        assert_eq!(
+            pades_lower_left(placement).expect("cabe en la pagina"),
+            [250, 50]
+        );
+    }
+
+    /// Con `/Rotate 90` la esquina PAdES **no** coincide con la de espacio de
+    /// usuario: es el caso que el hallazgo señala como el que hacía que el
+    /// diálogo avisara de páginas que no se caían, o al revés.
+    #[test]
+    fn diverges_from_user_space_when_the_page_is_rotated() {
+        let placement: PlacementOrder = serde_json::from_value(serde_json::json!({
+            "page": 1,
+            "pages": { "only": [1] },
+            "pageCount": 1,
+            "mediaBox": [0.0, 0.0, 595.0, 842.0],
+            "rotation": 90,
+            "rect": [250.0, 50.0, 450.0, 100.0],
+        }))
+        .expect("la orden del visor");
+
+        assert_eq!(
+            pades_lower_left(placement).expect("cabe en la pagina"),
+            [50, 145]
+        );
+    }
+}

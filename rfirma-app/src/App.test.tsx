@@ -10,7 +10,7 @@ import { inMemoryPreferences } from "./preferences/preferences";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
 import { inMemoryDestination, unavailableOpener } from "./signing/destination";
-import { type SigningBackend, unavailableSigningBackend } from "./signing/flow";
+import { type SigningBackend, type SigningOrder, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
@@ -751,6 +751,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         ok: true,
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       discard: async () => {},
     };
     renderApp(
@@ -794,7 +795,10 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
   it("signs anyway with the exact order already built, when confirmed", async () => {
     const user = userEvent.setup();
-    const presign = vi.fn(async () => ({ ok: true as const, value: undefined }));
+    const presign = vi.fn(async (_order: SigningOrder) => ({
+      ok: true as const,
+      value: undefined,
+    }));
     const signer: SigningBackend = {
       presign,
       sign: async () => ({ ok: true, value: undefined }),
@@ -802,6 +806,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         ok: true,
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       discard: async () => {},
     };
     renderApp(
@@ -839,6 +844,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         ok: true,
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       discard: async () => {},
     };
     renderApp(
