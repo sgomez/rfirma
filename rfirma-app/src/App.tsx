@@ -751,7 +751,9 @@ export function App({
             stampFrozen={stamp.state.kind === "frozen"}
             onGesture={setGesturing}
             placement={placement}
-            enabled={signature.enabled}
+            // ID-108: sin certificado utilizable no se coloca, igual que el
+            // panel apaga su bloque entero.
+            canPlace={signature.enabled && chosen !== null && isUsable(chosen.status)}
             onPlace={rememberPlacement}
             pageChoice={pageChoice}
             onPageChange={setViewedPage}

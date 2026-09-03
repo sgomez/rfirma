@@ -331,10 +331,12 @@ que va a quedar, y al soltar, el recuadro recién nacido **se lleva el foco**:
 el gesto grueso y el ajuste fino con las flechas (ID-115) son un solo
 movimiento.
 
-**Con la firma visible apagada la hoja no traza**, no hay pastilla y el recuadro
-no se pinta, aunque la colocación siga guardada y vuelva intacta al reencender.
-El cursor lo dice: `crosshair` sobre la hoja mientras se puede trazar, la flecha
-de siempre cuando no.
+**Los tres caminos cuelgan de la misma condición que el bloque del panel**: el
+interruptor de firma visible encendido y un certificado utilizable (ID-108). Sin
+ella la hoja no traza, no hay pastilla y el recuadro no se pinta, aunque la
+colocación siga guardada y vuelva intacta en cuanto se cumpla. El cursor lo
+dice: `crosshair` sobre la hoja mientras se puede trazar, la flecha de siempre
+cuando no.
 
 ## Cómo conviven arrastrar y desplazar
 

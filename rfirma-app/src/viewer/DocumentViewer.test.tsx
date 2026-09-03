@@ -1313,18 +1313,19 @@ function latest(renders: Recorder["renders"]) {
 }
 
 /**
- * #190: la firma visible apagada tiene que apagar **también el visor**. Hasta
- * aquí `signature.enabled` sólo decidía si había sello que componer, así que la
- * pastilla seguía ofreciendo sellar y el recuadro seguía pintado sobre la hoja.
+ * #190: lo que apaga el bloque del panel —el interruptor en «no», o no haber
+ * elegido certificado (ID-108)— tiene que apagar **también el visor**. Hasta
+ * aquí el visor no lo miraba, así que la pastilla seguía ofreciendo sellar y el
+ * recuadro seguía pintado sobre la hoja.
  */
-describe("el visor con la firma visible apagada", () => {
+describe("el visor cuando no se puede colocar la firma visible", () => {
   it("offers no pill to seal the page", async () => {
     const { document, renders } = recordingDocument();
     renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={null}
-        enabled={false}
+        canPlace={false}
         onPlace={noop}
         onOpen={noop}
       />,
@@ -1342,7 +1343,7 @@ describe("el visor con la firma visible apagada", () => {
       <DocumentViewer
         pdf={document}
         placement={seated}
-        enabled={false}
+        canPlace={false}
         onPlace={noop}
         onOpen={noop}
       />,
@@ -1352,7 +1353,7 @@ describe("el visor con la firma visible apagada", () => {
     expect(screen.queryByRole("application")).not.toBeInTheDocument();
 
     rerender(
-      <DocumentViewer pdf={document} placement={seated} enabled onPlace={noop} onOpen={noop} />,
+      <DocumentViewer pdf={document} placement={seated} canPlace onPlace={noop} onOpen={noop} />,
     );
 
     expect(box()).toBeInTheDocument();
@@ -1520,14 +1521,14 @@ describe("el recuadro trazado sobre la hoja", () => {
     });
   });
 
-  it("traces nothing while the visible signature is off", async () => {
+  it("traces nothing while the visible signature cannot be placed", async () => {
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
     renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={null}
-        enabled={false}
+        canPlace={false}
         onPlace={onPlace}
         onOpen={noop}
       />,

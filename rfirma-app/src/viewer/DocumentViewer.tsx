@@ -133,14 +133,19 @@ interface DocumentViewerProps {
    */
   failure?: DocumentFailure | null;
   /**
-   * La firma visible está encendida.
+   * Se puede colocar la firma visible ahora mismo: el interruptor está
+   * encendido **y** hay un certificado utilizable (ID-108).
    *
-   * El visor entero cuelga de esto: apagada, no hay recuadro pintado, no hay
-   * pastilla que ofrezca sellar y la hoja no traza. La colocación **no se
-   * borra** —vive en quien la recuerda, y vuelve intacta al reencender—, así
-   * que aquí sólo se deja de pintar (#190).
+   * Los tres caminos que colocan cuelgan de esto: sin ello no hay recuadro
+   * pintado, no hay pastilla que ofrezca sellar y la hoja no traza. Es la misma
+   * pregunta que el panel contesta apagando su bloque entero —«Elige un
+   * certificado para colocar la firma visible»—, y el visor tenía su propia
+   * copia del estado que no la respetaba (#190).
+   *
+   * La colocación **no se borra** al perderla: vive en quien la recuerda y
+   * vuelve intacta, así que aquí sólo se deja de pintar.
    */
-  enabled?: boolean;
+  canPlace?: boolean;
   /**
    * El documento **con el sello ya estampado**, que se pinta en lugar del
    * original mientras esté compuesto (ID-107).
@@ -201,7 +206,7 @@ export function DocumentViewer({
   pageChoice = "these",
   onPageChange,
   goToPage = null,
-  enabled = true,
+  canPlace = true,
   failure = null,
   stamped = null,
   stampFrozen = false,
@@ -389,7 +394,7 @@ export function DocumentViewer({
   // algo. Quien quiera saberlo lo lee en la pastilla, con palabras.
   const sealed = placement !== null && sealsPage(placement.pages, page);
   const pixels: PixelRect | null =
-    viewport && placement && sealed && enabled ? toPixels(viewport, placement.rect) : null;
+    viewport && placement && sealed && canPlace ? toPixels(viewport, placement.rect) : null;
 
   // Al cambiar de página, un recuadro que quede fuera de la parte visible se
   // trae a ella. **Una sola vez, en el cambio de página**: hacerlo al repintar
@@ -663,9 +668,9 @@ export function DocumentViewer({
    * página cuando se sellan las veintisiete.
    */
   const pill = ((): { text: string; label: string; variant: string; act: () => void } | null => {
-    // Con la firma visible apagada no hay nada que sellar: ofrecerlo colocaba
+    // Sin firma visible que colocar no hay nada que sellar: ofrecerlo colocaba
     // un recuadro que después no se pintaba en ninguna parte (#190).
-    if (!enabled) return null;
+    if (!canPlace) return null;
     if (placement === null) {
       // **Sin recuadro el rótulo no cambia con la opción** (#188): «todas»
       // todavía no es un conjunto, es una preferencia, y decir aquí «Colocar el
@@ -733,7 +738,7 @@ export function DocumentViewer({
           ref={sheet}
           // El `crosshair` es lo único que anuncia el trazo: es el único de los
           // tres caminos que no tiene un botón ni un campo que lo cuente (#190).
-          className={`viewer__sheet${enabled ? " viewer__sheet--traceable" : ""}`}
+          className={`viewer__sheet${canPlace ? " viewer__sheet--traceable" : ""}`}
           data-theme="light"
           role="document"
           aria-label={t("viewer.sheet")}
@@ -743,9 +748,9 @@ export function DocumentViewer({
           tabIndex={0}
           onKeyDown={navigate}
           style={{ width: viewport?.width, height: viewport?.height }}
-          // Con la firma visible apagada la hoja no traza: no habría dónde
+          // Sin firma visible que colocar, la hoja no traza: no habría dónde
           // pintar lo que se colocara.
-          {...(enabled ? gesturing(tracing) : {})}
+          {...(canPlace ? gesturing(tracing) : {})}
         >
           <canvas ref={canvas} className="viewer__canvas" />
           {/*
