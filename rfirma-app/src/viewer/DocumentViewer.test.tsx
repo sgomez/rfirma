@@ -1432,6 +1432,22 @@ describe("el recuadro trazado sobre la hoja", () => {
     expect(screen.queryByRole("application")).not.toBeInTheDocument();
   });
 
+  // El síntoma que se ve: sin foco en la hoja, `AvPág` desplazaba la vista en
+  // vez de pasar de página (ID-113).
+  it("leaves the sheet focused after a bare click, so the page keys still work", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(<Placing document={document} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [101, 101]);
+
+    expect(sheet()).toHaveFocus();
+
+    fireEvent.keyDown(sheet(), { key: "PageDown" });
+
+    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(2));
+  });
+
   // Trazar es «sellar esta página» con sitio elegido (ID-101): el conjunto se
   // toca igual que con la pastilla, y el rectángulo se mueve en todas las
   // páginas del conjunto porque es un solo campo replicado (ID-96).

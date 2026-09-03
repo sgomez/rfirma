@@ -25,7 +25,8 @@ function Probe({ onTrace = () => {} }: { onTrace?: (traced: PixelRect) => void }
   const handlers = useBoxTrace({ sheet, ghost, page: PAGE, min: MIN, onTrace });
 
   return (
-    <div ref={sheet} role="document" aria-label="hoja" {...handlers}>
+    // biome-ignore lint/a11y/noNoninteractiveTabindex: la hoja se enfoca, como en el visor.
+    <div ref={sheet} role="document" aria-label="hoja" tabIndex={0} {...handlers}>
       <div ref={ghost} data-testid="ghost" style={{ display: "none" }} />
     </div>
   );
@@ -69,6 +70,35 @@ describe("useBoxTrace", () => {
     }
 
     expect(renders).toBe(0);
+  });
+
+  // El mínimo es una regla sobre el recuadro que queda, no sobre el gesto: el
+  // fantasma sigue al cursor aunque todavía no dé el tamaño.
+  it("draws the ghost the hand is drawing, without jumping to the minimum", () => {
+    const onTrace = vi.fn();
+    render(<Probe onTrace={onTrace} />);
+
+    fireEvent.pointerDown(sheet(), { pointerId: 1, button: 0, clientX: 50, clientY: 60 });
+    fireEvent.pointerMove(sheet(), { pointerId: 1, clientX: 90, clientY: 80 });
+
+    expect(ghost().style.width).toBe("40px");
+    expect(ghost().style.height).toBe("20px");
+
+    // Y al soltar sí: lo que queda colocado no baja del mínimo (ID-103).
+    fireEvent.pointerUp(sheet(), { pointerId: 1, clientX: 90, clientY: 80 });
+
+    expect(onTrace).toHaveBeenCalledWith({ x: 50, y: 60, width: 120, height: 34 });
+  });
+
+  // El clic seco no coloca, pero sí enfoca la hoja: es lo que deja pasar de
+  // página con `AvPág` y `RePág` (ID-113).
+  it("hands the focus to the sheet when the gesture was only a click", () => {
+    render(<Probe />);
+
+    fireEvent.pointerDown(sheet(), { pointerId: 1, button: 0, clientX: 50, clientY: 60 });
+    fireEvent.pointerUp(sheet(), { pointerId: 1, clientX: 50, clientY: 60 });
+
+    expect(sheet()).toHaveFocus();
   });
 
   it("shows nothing while the gesture could still be a click", () => {

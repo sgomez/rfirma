@@ -315,13 +315,20 @@ Cuatro reglas lo cierran, en este orden:
 2. Lo que sale de la hoja se **recorta al borde**. Aquí sí se recorta, al revés
    que al mover: allí hay un sitio anterior válido al que volver y aquí no, así
    que descartar dejaría el gesto sin resultado y con un aviso encima.
-3. Por debajo del **mínimo** (ID-103) el recuadro crece hasta él, anclado a la
-   esquina donde arrancó el gesto — la misma regla que los tiradores.
+3. **Al soltar**, por debajo del **mínimo** (ID-103) el recuadro crece hasta él,
+   anclado a la esquina donde arrancó el gesto — la misma regla que los
+   tiradores. Durante el trazo **no**: el mínimo es una regla sobre el recuadro
+   que queda, no sobre el gesto que lo dibuja, y aplicarlo antes hacía que el
+   rectángulo pegara un salto al pasar el umbral y se quedara clavado ahí,
+   despegado del cursor, hasta que el recorrido lo alcanzaba.
 4. Lo que el mínimo haya sacado del papel se **empuja hacia dentro**: trazar a
    dos dedos del borde no puede producir un recuadro que se salga (ID-22).
 
-Un **clic seco no coloca nada**: por debajo de cuatro píxeles de pantalla no hay
-trazo. La hoja es también lo que se enfoca para pasar de página con el teclado,
+Un **clic seco no coloca nada, pero enfoca la hoja**: por debajo de cuatro
+píxeles de pantalla no hay trazo, y el clic significa lo que significaba —«dame
+el foco»—, que es lo que deja pasar de página con `AvPág` y `RePág` (ID-113).
+Sin enfocarla a mano, esas teclas desplazaban la vista en vez de cambiar de
+página. La hoja es también lo que se enfoca para pasar de página con el teclado,
 así que un clic sobre ella significa «dame el foco» y no puede pasar a colocar
 una firma. El umbral se mide en píxeles de pantalla y no en puntos del papel,
 como el lado de los tiradores (ID-104): mide la intención de la mano.

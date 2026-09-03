@@ -13,6 +13,18 @@ import type { BoxDragHandlers } from "./useBoxDrag";
  */
 export const TRACE_THRESHOLD_PX = 4;
 
+/**
+ * Mientras se traza **no hay mínimo**: el rectángulo que se ve es el que la mano
+ * está dibujando, y punto.
+ *
+ * Aplicarlo durante el gesto lo delataba: pasado el umbral, el fantasma pegaba
+ * un salto al tamaño mínimo y se quedaba ahí, quieto y despegado del cursor,
+ * hasta que el recorrido lo alcanzaba. El mínimo es una regla sobre **el
+ * recuadro que queda** (ID-103), no sobre el gesto que lo dibuja, así que se
+ * aplica al soltar.
+ */
+const NO_MINIMUM: PageSize = { width: 0, height: 0 };
+
 interface BoxTraceOptions {
   /** La hoja: de su rectángulo salen las coordenadas del lienzo. */
   sheet: RefObject<HTMLElement | null>;
@@ -111,7 +123,7 @@ export function useBoxTrace({
       return;
     }
     current.to = to;
-    paint(tracedBox(current.from, to, page, min));
+    paint(tracedBox(current.from, to, page, NO_MINIMUM));
   };
 
   const end = (event: ReactPointerEvent<HTMLElement>) => {
@@ -122,7 +134,13 @@ export function useBoxTrace({
     paint(null);
     // La forma sale del último `pointermove`: sin ninguno que pasara el umbral,
     // esto fue un clic y la hoja se queda con el foco y nada más.
-    if (current.to === null) return;
+    if (current.to === null) {
+      // Un clic sobre la hoja es **«dame el foco»**: es lo que deja pasar de
+      // página con `AvPág` y `RePág` (ID-113). Sin esto el foco se quedaba donde
+      // estuviera y esas teclas desplazaban la vista en vez de pasar de página.
+      sheet.current?.focus({ preventScroll: true });
+      return;
+    }
     onTrace(tracedBox(current.from, current.to, page, min));
   };
 
