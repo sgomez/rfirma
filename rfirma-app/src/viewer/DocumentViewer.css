@@ -207,20 +207,6 @@
   cursor: nwse-resize;
 }
 
-/* La pastilla bajo la hoja (ID-101). Va **en flujo**, en la fila siguiente de
-   la rejilla del desplazamiento, porque «bajo la hoja» es literal: se desplaza
-   con el documento y no tapa nada. */
-.viewer__pill {
-  align-items: center;
-  gap: var(--rf-space-sm);
-  margin-top: var(--rf-space-md);
-  padding: var(--rf-space-xs) var(--rf-space-sm);
-  border-radius: var(--rf-radius-pill);
-  border: 1px solid var(--rf-border-strong);
-  background: var(--rf-surface);
-  box-shadow: var(--rf-shadow-elevated);
-}
-
 /* El fallo al abrir, con un documento ya pintado detrás. Flota arriba y no
    abajo para no pelearse con la barra ni con el aviso de «se sale de la
    página», y en flujo no puede ir: `.viewer` tiene una sola fila. */

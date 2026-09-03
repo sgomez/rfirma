@@ -5,7 +5,6 @@ import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
 import {
-  firstSealedPage,
   type PageChoice,
   type PageSet,
   type PageSets,
@@ -97,12 +96,20 @@ interface SigningPanelProps {
   pageChoice: PageChoice;
   onChangePageChoice: (choice: PageChoice) => void;
   /**
-   * La página que se está mirando en el visor. Solo se usa para elegir entre
-   * «el recuadro está en esta página» y «…en la página 3» (ID-100).
+   * La página que se está mirando en el visor. Decide la cara del botón de
+   * sellar: si la lleva, ofrece quitarla (#194).
    */
   viewedPage: number;
-  /** Llevar el visor hasta la página del recuadro, que es un clic (ID-100). */
-  onGoToPage: (page: number) => void;
+  /**
+   * Sellar la página que se está mirando, o quitarle el sello si ya lo lleva.
+   *
+   * El botón vive aquí, pero la acción la ejecuta el visor: es quien sabe
+   * dónde cae el recuadro cuando no había ninguno todavía —su posición
+   * estándar se mide sobre el `viewport` de `pdf.js`, que el panel no tiene
+   * (#194)—.
+   */
+  onSeal: () => void;
+  onUnseal: () => void;
   rubric: Rubric | null;
   /** El último fallo al elegir la rúbrica, que se cuenta aquí y no al firmar. */
   rubricFailure: RubricFailure | null;
@@ -165,7 +172,8 @@ export function SigningPanel({
   pageChoice,
   onChangePageChoice,
   viewedPage,
-  onGoToPage,
+  onSeal,
+  onUnseal,
   rubric,
   rubricFailure,
   onChooseRubric,
@@ -220,9 +228,6 @@ export function SigningPanel({
     setSeenPages(pages);
     setPagesText(pages === null ? "" : formatPageRange(pages, document.pages));
   }
-  // La página del recuadro **según la opción activa**: es la que la línea de
-  // arriba nombra y hasta la que lleva (ID-100).
-  const boxPage = firstSealedPage(placement);
   const parsed = parsePageRange(pagesText, document.pages);
   // El campo vacío bajo «Estas páginas» es **una situación más**, no un
   // conjunto: no nombra ninguna página, lo dice bajo el campo y apaga el botón
@@ -237,6 +242,21 @@ export function SigningPanel({
           : null;
   const sealedCount = placement === null ? 0 : sealedPages(placement.pages, document.pages).length;
   const echo = placement === null ? null : echoOf(placement.pages, document.pages, t);
+
+  // El botón de sellar, y cuál de sus tres caras toca (#194, antes ID-101).
+  // Quitar el sello se ofrece siempre que la página lo lleve, sea cual sea la
+  // opción activa: `onUnseal` resuelve «todas» en páginas sueltas antes de
+  // restar (`unsealing`), así que no hace falta distinguir aquí.
+  const sealed = placement !== null && sealsPage(placement.pages, viewedPage);
+  const sealButton = sealed
+    ? { label: t("panel.placement.unseal"), variant: "rf-btn--ghost", act: onUnseal }
+    : pageChoice === "all"
+      ? { label: t("panel.placement.sealAll"), variant: "rf-btn--primary", act: onSeal }
+      : {
+          label: t("panel.placement.seal"),
+          variant: placement === null ? "rf-btn--primary" : "rf-btn--secondary",
+          act: onSeal,
+        };
 
   // Elegir páginas **coloca** (#185): quien recibe esto pone el recuadro en su
   // posición estándar si todavía no había ninguno. El panel no sabe dónde cae
@@ -343,24 +363,6 @@ export function SigningPanel({
 
           {usable && signature.enabled && (
             <>
-              {/* La línea dice **la página del recuadro, no la que miras**
-                  (ID-100). Con el recuadro en otra página es un botón, y
-                  lleva allí: decir un número que no está delante y no dejar
-                  ir hasta él sería peor que callarse. */}
-              {boxPage === null ? (
-                <p className="rf-hint">{t("panel.placement.notPlaced")}</p>
-              ) : placement !== null && sealsPage(placement.pages, viewedPage) ? (
-                <p className="rf-hint">{t("panel.placement.here")}</p>
-              ) : (
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--ghost panel__placement-goto"
-                  onClick={() => onGoToPage(boxPage)}
-                >
-                  {t("panel.placement.onPage", { page: boxPage })}
-                </button>
-              )}
-
               <fieldset className="panel__placement">
                 <legend className="rf-label">{t("panel.placement.title")}</legend>
 
@@ -437,6 +439,21 @@ export function SigningPanel({
                     {t("panel.placement.all", { pages: document.pages })}
                   </span>
                 </label>
+
+                {/* El botón de sellar vive en el bloque «Colocación», a todo
+                    el ancho y bajo los radios (#194): hasta la v0.3.0 iba en
+                    una pastilla bajo la hoja, en flujo dentro del área de
+                    desplazamiento del visor, así que ampliar la hoja se lo
+                    llevaba fuera de la vista. La etiqueta es la única cara
+                    que hace falta: cuenta lo mismo que decían los tres
+                    mensajes que ocupaba antes. */}
+                <button
+                  type="button"
+                  className={`rf-btn ${sealButton.variant} panel__placement-seal`}
+                  onClick={sealButton.act}
+                >
+                  {sealButton.label}
+                </button>
 
                 {/* Un solo campo de firma con el widget replicado, no una firma
                     por página: es lo que se estampa, y decirlo aquí evita

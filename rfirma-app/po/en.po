@@ -394,26 +394,6 @@ msgstr "Drag to place"
 msgid "viewer.outOfPage"
 msgstr "The box ended up off the page, so it stayed where it was."
 
-#. Pastilla bajo la hoja: todavía no se ha colocado la firma en ninguna página.
-msgid "viewer.pill.notPlaced"
-msgstr "You have not placed the signature yet"
-
-#. Pastilla bajo la hoja: la firma está colocada, pero no en la página que se está mirando.
-msgid "viewer.pill.notSealed"
-msgstr "This page is not stamped"
-
-#. Pastilla bajo la hoja: la página que se está mirando sí lleva la firma.
-msgid "viewer.pill.sealed"
-msgstr "This page is stamped"
-
-#. Botón de la pastilla: añade la página que se está mirando a las que llevan firma.
-msgid "viewer.pill.seal"
-msgstr "Stamp this page"
-
-#. Botón de la pastilla: quita la firma de la página que se está mirando.
-msgid "viewer.pill.unseal"
-msgstr "Remove the stamp"
-
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
 msgstr[0] "1 page"
@@ -427,17 +407,6 @@ msgstr[1] ""
 "It already carries {{count}} signatures: yours will be a countersignature."
 msgstr[2] ""
 "It already carries {{count}} signatures: yours will be a countersignature."
-
-#. La línea dice la página del recuadro, no la que se está mirando.
-msgid "panel.placement.notPlaced"
-msgstr "You have not placed the signature yet"
-
-msgid "panel.placement.here"
-msgstr "The box is on this page"
-
-#. {{page}} es la página donde está el recuadro. Es un botón: al pulsarlo el visor va allí.
-msgid "panel.placement.onPage"
-msgstr "The box is on page {{page}}"
 
 #. Rótulo del bloque con las tres opciones de en qué páginas se sella.
 msgid "panel.placement.title"
@@ -464,6 +433,18 @@ msgstr "Pages to stamp"
 #. {{pages}} es el número de páginas del documento.
 msgid "panel.placement.all"
 msgstr "All pages ({{pages}})"
+
+#. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
+msgid "panel.placement.seal"
+msgstr "Stamp this page"
+
+#. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
+msgid "panel.placement.sealAll"
+msgstr "Place the stamp here"
+
+#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+msgid "panel.placement.unseal"
+msgstr "Remove the stamp"
 
 #. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
 msgid "panel.placement.echo"
@@ -693,9 +674,7 @@ msgstr "The preview will show up once you choose the certificate."
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"
-msgstr ""
-"Place the signature on the document: drag a box or press the button under "
-"the page."
+msgstr "Place the signature on the document: drag a box or press the seal button."
 
 msgid "panel.footer.savedIn"
 msgstr "It will be saved in"

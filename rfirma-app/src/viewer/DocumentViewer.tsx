@@ -99,25 +99,27 @@ interface DocumentViewerProps {
   /**
    * Cuál de las tres opciones del panel manda sobre el conjunto de páginas.
    *
-   * El visor no la elige: la lee para redactar la pastilla (ID-101). Por
-   * omisión, `these`, que es la única de las tres en la que la pastilla ofrece
-   * las tres caras.
+   * El visor no la elige: la lee para saber si sellar sustituye o añade
+   * (ID-96). Por omisión, `these`.
    */
   pageChoice?: PageChoice;
   /**
    * La página que se está mirando ha cambiado.
    *
    * El visor la sigue eligiendo él —el recorrido es suyo—, pero el panel la
-   * necesita para no decir «el recuadro está en esta página» cuando no lo está
-   * (ID-100).
+   * necesita para elegir la cara del botón de sellar (#194, antes ID-100).
    */
   onPageChange?: (page: number) => void;
   /**
-   * Llevar la vista hasta una página. **Cada petición es un objeto nuevo**: el
-   * mismo número dos veces tiene que llevar allí las dos veces, así que lo que
-   * dispara el salto es la identidad y no el valor.
+   * El botón de sellar vive en el panel, pero sellar y quitar el sello siguen
+   * siendo del visor: es quien tiene el `viewport` de `pdf.js` que mide la
+   * posición estándar del recuadro (#194).
+   *
+   * **Cada petición es un objeto nuevo**, igual que antes `goToPage`: pulsar
+   * el mismo botón dos veces tiene que actuar las dos veces, así que lo que
+   * dispara la acción es la identidad y no el valor.
    */
-  goToPage?: { page: number } | null;
+  placementRequest?: { action: "seal" | "unseal" } | null;
   /** Abrir un documento, que va por el portal igual que desde la bandeja. */
   onOpen: () => void;
   /**
@@ -206,7 +208,7 @@ export function DocumentViewer({
   onOpen,
   pageChoice = "these",
   onPageChange,
-  goToPage = null,
+  placementRequest = null,
   canPlace = true,
   failure = null,
   stamped = null,
@@ -286,15 +288,6 @@ export function DocumentViewer({
     // porcentaje fijado a mano: manda lo último que haya dicho la persona
     // usuaria, y el ajuste de partida —`DEFAULT_ZOOM`— solo se ve en el primer
     // documento, mientras no lo haya tocado (ID-117 enmendado).
-  }
-
-  // La petición de ir a una página, atendida una sola vez por petición y
-  // durante la pintada: en un efecto habría una pintada intermedia con la
-  // página anterior.
-  const requested = useRef(goToPage);
-  if (goToPage !== null && goToPage !== requested.current) {
-    requested.current = goToPage;
-    setPage(within(goToPage.page, pageCount));
   }
 
   // Quien recorre el documento es el visor; quien necesita saber por dónde va,
@@ -547,6 +540,23 @@ export function DocumentViewer({
     onPlace(unsealing(placement, page, pageCount));
   };
 
+  // El botón que sella o quita el sello vive en el panel; la petición cruza
+  // como `placementRequest` y se atiende aquí, que es donde vive el `viewport`
+  // (#194). El guardado por identidad es el mismo patrón que usaba
+  // `goToPage`: pulsar el mismo botón dos veces tiene que actuar las dos
+  // veces, aunque la acción no haya cambiado.
+  const requestedPlacement = useRef(placementRequest);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `seal` y `unseal` se recrean en cada pintada; lo que dispara el efecto es la identidad de `placementRequest`, no ellas.
+  useEffect(() => {
+    if (placementRequest === null || placementRequest === requestedPlacement.current) return;
+    requestedPlacement.current = placementRequest;
+    // Sin firma visible que colocar no hay nada que sellar: atenderla colocaba
+    // un recuadro que después no se pintaba en ninguna parte (#190).
+    if (!canPlace) return;
+    if (placementRequest.action === "seal") seal();
+    else unseal();
+  }, [placementRequest, canPlace]);
+
   /**
    * El recuadro atiende **sólo las flechas**, y `Esc` devuelve el foco a la
    * hoja (ID-113). Todo lo demás —las teclas de página— se deja burbujear
@@ -655,48 +665,6 @@ export function DocumentViewer({
     style: "percent",
     maximumFractionDigits: 0,
   });
-
-  /**
-   * La pastilla bajo la hoja, y cuál de sus tres caras toca (ID-101).
-   *
-   * `null` es **no hay pastilla**: con `Solo 1 página` o `Todas las páginas` y
-   * la página ya sellada no queda nada que ofrecer ahí. Y el botón cambia de
-   * texto con la opción: con «todas» el conjunto ya está completo y lo único
-   * que falta es el rectángulo, así que decir «esta página» prometería una
-   * página cuando se sellan las veintisiete.
-   */
-  const pill = ((): { text: string; label: string; variant: string; act: () => void } | null => {
-    // Sin firma visible que colocar no hay nada que sellar: ofrecerlo colocaba
-    // un recuadro que después no se pintaba en ninguna parte (#190).
-    if (!canPlace) return null;
-    if (placement === null) {
-      // **Sin recuadro el rótulo no cambia con la opción** (#188): «todas»
-      // todavía no es un conjunto, es una preferencia, y decir aquí «Colocar el
-      // sello aquí» con «Estas páginas» diciendo «Sellar esta página» en la
-      // misma hoja era una diferencia sin diferencia detrás.
-      return {
-        text: t("viewer.pill.notPlaced"),
-        label: t("viewer.pill.seal"),
-        variant: "rf-btn--primary",
-        act: seal,
-      };
-    }
-    if (!sealed) {
-      return {
-        text: t("viewer.pill.notSealed"),
-        label: t("viewer.pill.seal"),
-        variant: "rf-btn--secondary",
-        act: seal,
-      };
-    }
-    if (pageChoice !== "these") return null;
-    return {
-      text: t("viewer.pill.sealed"),
-      label: t("viewer.pill.unseal"),
-      variant: "rf-btn--ghost",
-      act: unseal,
-    };
-  })();
 
   /** Toma lo tecleado en el porcentaje, recortado al rango, y suelta el campo. */
   const commitTyped = () => {
@@ -821,17 +789,6 @@ export function DocumentViewer({
             />
           )}
         </div>
-
-        {pill !== null && (
-          // Bajo la hoja y centrada, que es literalmente donde va: es el único
-          // camino para elegir páginas que no pasa por teclear (ID-101).
-          <div className="viewer__pill rf-row">
-            <span className="rf-body">{pill.text}</span>
-            <button type="button" className={`rf-btn ${pill.variant}`} onClick={pill.act}>
-              {pill.label}
-            </button>
-          </div>
-        )}
       </div>
 
       {outOfPage && (

@@ -751,17 +751,29 @@ describe("los tiradores del recuadro", () => {
 });
 
 /** ID-101 e ID-102: la pastilla bajo la hoja, sus tres caras y su cuarta redacción. */
-describe("la pastilla bajo la hoja", () => {
-  it("asks for a placement on a document that has none, and puts it on this page", async () => {
+/**
+ * El botón de sellar vive en el panel desde #194; el visor solo atiende la
+ * petición que cruza por `placementRequest`, porque es quien tiene el
+ * `viewport` que mide la posición estándar del recuadro.
+ */
+describe("la petición de sellar o quitar el sello", () => {
+  it("places a document that has none, on this page, at the standard position", async () => {
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
+    const { rerender } = renderWithCatalog(
       <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
-    expect(screen.getByText("Aún no has colocado la firma")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Sellar esta página" }));
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "seal" }}
+      />,
+    );
 
     const [placed] = onPlace.mock.calls[0] as [Placement];
     expect(placed.pages).toEqual({ only: [1] });
@@ -770,33 +782,10 @@ describe("la pastilla bajo la hoja", () => {
     expect(placed.rect.x1).toBeLessThanOrEqual(A4.width);
   });
 
-  /**
-   * **Sin recuadro el rótulo no cambia con la opción** (#188). El ID-101 pedía
-   * una cuarta redacción para «todas», y sobre un documento sin colocar era una
-   * diferencia sin diferencia detrás: «todas» todavía no sella nada, es una
-   * preferencia, y la misma hoja ofrecía dos botones distintos según qué radio
-   * estuviera marcado en la columna de al lado.
-   */
-  it("does not change the pill while nothing is placed, whatever the option says", async () => {
-    const { document, renders } = recordingDocument();
-    renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onPlace={noop}
-        onOpen={noop}
-        pageChoice="all"
-      />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    expect(screen.getByRole("button", { name: "Sellar esta página" })).toBeInTheDocument();
-  });
-
-  it("offers to stamp a page that is outside the set, and adds it", async () => {
+  it("adds the page it is looking at to a placement that already exists", async () => {
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument(3);
-    renderWithCatalog(
+    const { rerender } = renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
@@ -805,10 +794,17 @@ describe("la pastilla bajo la hoja", () => {
       />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
-
     await goToPage(2, renders);
-    expect(screen.getByText("Esta página no se sella")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sellar esta página" }));
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={{ rect: { x0: 50, y0: 60, x1: 250, y1: 140 }, pages: { only: [1] } }}
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "seal" }}
+      />,
+    );
 
     expect(onPlace).toHaveBeenCalledWith({
       rect: { x0: 50, y0: 60, x1: 250, y1: 140 },
@@ -820,32 +816,58 @@ describe("la pastilla bajo la hoja", () => {
   it("takes the whole placement away with the last page of the set", async () => {
     const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
+    const { rerender } = renderWithCatalog(
       <DocumentViewer pdf={document} placement={seated} onPlace={onPlace} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
-    expect(screen.getByText("Esta página se sella")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Quitar el sello" }));
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "unseal" }}
+      />,
+    );
 
     expect(onPlace).toHaveBeenCalledWith(null);
   });
 
-  /** Con «Solo 1 página» o «Todas» y la página sellada no queda nada que ofrecer. */
-  it("says nothing at all on a stamped page when the set is not the one being chosen", async () => {
+  /**
+   * Toda la razón de que cada petición sea un objeto nuevo: pulsar el botón
+   * del panel dos veces tiene que actuar las dos veces, aunque la acción no
+   * haya cambiado.
+   */
+  it("acts again when asked for the same action twice", async () => {
+    const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
-    const { container } = renderWithCatalog(
-      <DocumentViewer
-        pdf={document}
-        placement={seated}
-        onPlace={noop}
-        onOpen={noop}
-        pageChoice="single"
-      />,
+    const { rerender } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={onPlace} onOpen={noop} />,
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
-    expect(container.querySelectorAll(".viewer__pill")).toHaveLength(0);
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "seal" }}
+      />,
+    );
+    expect(onPlace).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "seal" }}
+      />,
+    );
+    expect(onPlace).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -1243,80 +1265,10 @@ describe("el recuadro que se trae a la vista", () => {
 });
 
 /**
- * ID-100. El panel dice **la página del recuadro** y lleva hasta ella, así que
- * el visor tiene que atender la petición y contar por dónde va. Que el panel
- * pida la 3 lo comprueba su propia prueba; que el visor **llegue** a la 3 se
- * comprueba aquí.
+ * El panel necesita saber por dónde va el visor para elegir la cara del botón
+ * de sellar (#194, antes ID-100).
  */
-describe("la página que pide el panel", () => {
-  it("goes to the page it was asked for, clipped to the document", async () => {
-    const { document, renders } = recordingDocument(5);
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onPlace={noop}
-        onOpen={noop}
-        goToPage={{ page: 3 }}
-      />,
-    );
-    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(3));
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onPlace={noop}
-        onOpen={noop}
-        goToPage={{ page: 9 }}
-      />,
-    );
-    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(5));
-  });
-
-  /**
-   * Toda la razón de que cada petición sea un objeto nuevo: pulsar el botón del
-   * panel dos veces tiene que llevar allí las dos veces, aunque el número no
-   * haya cambiado. Un efecto con `[goToPage.page]` no volvería a moverse.
-   */
-  it("goes back to the same page when it is asked for twice", async () => {
-    const { document, renders } = recordingDocument(5);
-    const { rerender } = renderWithCatalog(
-      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
-    );
-    await waitFor(() => expect(renders).toHaveLength(1));
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onPlace={noop}
-        onOpen={noop}
-        goToPage={{ page: 3 }}
-      />,
-    );
-    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(3));
-
-    fireEvent.click(screen.getByRole("button", { name: "Primera página" }));
-    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(1));
-
-    rerender(
-      <DocumentViewer
-        pdf={document}
-        placement={null}
-        onPlace={noop}
-        onOpen={noop}
-        goToPage={{ page: 3 }}
-      />,
-    );
-    await waitFor(() => expect(screen.getByLabelText("Número de página")).toHaveValue(3));
-  });
-
+describe("la página que se está mirando", () => {
   it("tells which page is being looked at, so the panel does not say the wrong one", async () => {
     const onPageChange = vi.fn();
     const { document, renders } = recordingDocument(3);
@@ -1349,20 +1301,32 @@ function latest(renders: Recorder["renders"]) {
  * recuadro seguía pintado sobre la hoja.
  */
 describe("el visor cuando no se puede colocar la firma visible", () => {
-  it("offers no pill to seal the page", async () => {
+  it("ignores a seal request, since the panel should not have offered the button either", async () => {
+    const onPlace = vi.fn();
     const { document, renders } = recordingDocument();
-    renderWithCatalog(
+    const { rerender } = renderWithCatalog(
       <DocumentViewer
         pdf={document}
         placement={null}
         canPlace={false}
-        onPlace={noop}
+        onPlace={onPlace}
         onOpen={noop}
       />,
     );
-
     await waitFor(() => expect(renders).toHaveLength(1));
-    expect(screen.queryByRole("button", { name: "Sellar esta página" })).not.toBeInTheDocument();
+
+    rerender(
+      <DocumentViewer
+        pdf={document}
+        placement={null}
+        canPlace={false}
+        onPlace={onPlace}
+        onOpen={noop}
+        placementRequest={{ action: "seal" }}
+      />,
+    );
+
+    expect(onPlace).not.toHaveBeenCalled();
   });
 
   // La colocación **no se borra** al apagar (así lo hace ya el panel): lo que
