@@ -152,11 +152,33 @@ pub fn usable_certificate<'a>(
     Ok(chosen)
 }
 
+/// Los pares `atributo=valor` de un nombre distinguido, partidos por comas
+/// que **no** estén escapadas con `\`.
+///
+/// El `CN` de un DNIe lleva una coma escapada dentro del propio nombre
+/// —«APELLIDO1 APELLIDO2\, NOMBRE (FIRMA)»—, y partir por cualquier coma
+/// trunca el titular a los apellidos. Una coma escapada es la que llega
+/// precedida de una barra invertida; esa barra se deja tal cual en el
+/// resultado, sin desescapar nada más (ID-198: sin tocar ningún token).
+fn attribute_pairs(distinguished_name: &str) -> Vec<&str> {
+    let mut pairs = Vec::new();
+    let mut start = 0;
+    let bytes = distinguished_name.as_bytes();
+    for (index, byte) in bytes.iter().enumerate() {
+        if *byte == b',' && bytes.get(index.wrapping_sub(1)) != Some(&b'\\') {
+            pairs.push(&distinguished_name[start..index]);
+            start = index + 1;
+        }
+    }
+    pairs.push(&distinguished_name[start..]);
+    pairs
+}
+
 /// El valor de un atributo de un nombre distinguido, o la cadena vacía si no
 /// está.
 pub fn attribute(name: &str, distinguished_name: &str) -> String {
-    distinguished_name
-        .split(',')
+    attribute_pairs(distinguished_name)
+        .into_iter()
         .map(str::trim)
         .find_map(|part| part.strip_prefix(name).map(str::to_owned))
         .unwrap_or_default()
@@ -247,6 +269,32 @@ mod tests {
         assert_eq!(name, "LOVELACE BYRON ADA");
         assert_eq!(id, "");
         assert_eq!(issuer_of(Some(issuer)), "AC Administracion Publica");
+    }
+
+    /// El caso de representante de empresa sigue funcionando igual que antes:
+    /// varios atributos separados por comas sin ninguna escapada de por medio.
+    #[test]
+    fn the_holder_of_a_company_representative_is_read_whole() {
+        let subject = "CN=LOVELACE BYRON ADA - R: B00000000, SERIALNUMBER=IDCES-00000000T, \
+                        O=ANALYTICAL ENGINES SL, C=ES";
+
+        let (name, id) = holder_of(Some(subject));
+
+        assert_eq!(name, "LOVELACE BYRON ADA - R: B00000000");
+        assert_eq!(id, "IDCES-00000000T");
+    }
+
+    /// El caso que rompía el DNIe: su `CN` lleva una coma escapada dentro
+    /// —«APELLIDO1 APELLIDO2\, NOMBRE (FIRMA)»—, y partir por comas sin
+    /// respetar el escapado truncaba el titular a los apellidos.
+    #[test]
+    fn a_common_name_with_an_escaped_comma_is_read_whole() {
+        let subject = "CN=APELLIDO1 APELLIDO2\\, NOMBRE (FIRMA), SERIALNUMBER=00000000T, C=ES";
+
+        let (name, id) = holder_of(Some(subject));
+
+        assert_eq!(name, "APELLIDO1 APELLIDO2\\, NOMBRE (FIRMA)");
+        assert_eq!(id, "00000000T");
     }
 
     /// Un issuer sin `CN=` no deja el panel mudo: se cae al `O=`, y sin ninguno
