@@ -666,6 +666,24 @@ msgstr ""
 msgid "progress.keepTheCard"
 msgstr ""
 
+#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+msgid "sealLoss.title"
+msgid_plural "sealLoss.title"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
+msgid "sealLoss.body"
+msgstr ""
+
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+msgid "sealLoss.remaining"
+msgstr ""
+
+msgid "sealLoss.confirm"
+msgstr ""
+
 msgid "preferences.title"
 msgstr ""
 

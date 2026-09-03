@@ -55,6 +55,8 @@ rojo.
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
+| `signing/UnsealedPagesDialog.tsx` | 84 | El diálogo de páginas sin sello, justo antes de firmar (ID-105, ID-106). |
+| `signing/unsealedPages.ts` | 46 | Qué páginas del conjunto elegido pierde `correctPositionSignature` en silencio. Sin React. |
 | `signing/SignedPanel.tsx` | 144 | El resumen tras firmar, y sus tres salidas (ID-79). |
 | `signing/certificate.ts` | 121 | El certificado, en el lado de la interfaz. |
 | `signing/destination.ts` | 160 | Dónde cae el firmado, el recorte de esa línea —la función pura del ID-64— y quién lleva al usuario hasta el fichero (ID-79). |
@@ -89,7 +91,7 @@ rojo.
 | **`errors/`** | | Los fallos que ve el usuario. |
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
-| **`design-system/`** | | `design-system/icons.tsx` (211), copiados en línea de los artboards. |
+| **`design-system/`** | | `design-system/icons.tsx` (226), copiados en línea de los artboards. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
 | **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
 

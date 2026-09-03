@@ -1,0 +1,41 @@
+/*
+ * El diálogo de páginas sin sello
+ * (docs/design/dialogo-paginas-sin-sello.md): 460 px sobre el velo.
+ */
+
+.unsealed-pages-dialog {
+  width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}
+
+.unsealed-pages-dialog__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+}
+
+.unsealed-pages-dialog__alert {
+  flex-shrink: 0;
+}
+
+/* La vuelta positiva: el dato que de verdad decide, en un bloque aparte. */
+.unsealed-pages-dialog__remaining {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  padding: var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-bg);
+}
+
+.unsealed-pages-dialog__seal {
+  flex-shrink: 0;
+}
+
+.unsealed-pages-dialog__actions {
+  justify-content: flex-end;
+  gap: var(--rf-space-sm);
+}

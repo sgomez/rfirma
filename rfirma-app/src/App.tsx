@@ -14,12 +14,14 @@ import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
-import type { SigningBackend } from "./signing/flow";
+import type { SigningBackend, SigningOrder } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
 import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./signing/rubric";
 import { SignedPanel } from "./signing/SignedPanel";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
+import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
+import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import {
   DEFAULT_VISIBLE_SIGNATURE,
@@ -28,7 +30,12 @@ import {
 } from "./signing/visibleSignature";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
-import { firstSealedPage, type PageChoice, type Placement } from "./viewer/signatureBox";
+import {
+  firstSealedPage,
+  type PageChoice,
+  type Placement,
+  sealedPages,
+} from "./viewer/signatureBox";
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "preferences" | "about" | null;
@@ -136,6 +143,15 @@ export function App({
   // enseña; sin él, el único camino que el usuario tiene hasta el fichero
   // fallaría sin decir nada (ADR-0011).
   const [openFailure, setOpenFailure] = useState<NamedFailure | null>(null);
+  // El diálogo de páginas sin sello (ID-105), guardado con la orden y el
+  // certificado ya armados: `Firmar de todos modos` no rehace el viaje a
+  // `pdf.js`, manda exactamente lo que se enseñó.
+  const [sealLossPrompt, setSealLossPrompt] = useState<{
+    fallen: number;
+    chosen: number;
+    certificate: Certificate;
+    order: SigningOrder;
+  } | null>(null);
   const signing = useSigning(signer);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión
   // es recordar; el primer documento no se puede abrir antes de esa lectura.
@@ -456,7 +472,7 @@ export function App({
     // que se puede nombrar sin elegir.
     const first = firstSealedPage(placement) ?? 1;
     const page = await pdf.getPage(first);
-    await signing.start(chosen, {
+    const order: SigningOrder = {
       document: documents.active.id,
       certificate: chosen.id,
       placement: {
@@ -474,7 +490,36 @@ export function App({
       // guardada no es quererla dentro del recuadro.
       rubric: signature.rubric && rubric !== null ? base64Of(rubric) : null,
       language: i18n.resolvedLanguage ?? i18n.language,
-    });
+    };
+
+    // ID-105: `correctPositionSignature` descarta en silencio, contra cada
+    // página, aquella donde no cabe la esquina inferior izquierda del
+    // recuadro. Es el único aviso que queda desde que se cayó la tira del
+    // visor (#152), así que se calcula aquí, antes de mandar la orden.
+    const chosenPages = sealedPages(placement.pages, pdf.pageCount);
+    const views = await Promise.all(
+      chosenPages.map(async (number) => ({ number, view: (await pdf.getPage(number)).view })),
+    );
+    const fallen = pagesWithoutSeal(placement.rect, views);
+    if (fallen.length > 0) {
+      setSealLossPrompt({
+        fallen: fallen.length,
+        chosen: chosenPages.length,
+        certificate: chosen,
+        order,
+      });
+      return;
+    }
+
+    await signing.start(chosen, order);
+  };
+
+  // `Firmar de todos modos`: la orden ya estaba armada, se manda tal cual.
+  const signAnyway = async () => {
+    if (sealLossPrompt === null) return;
+    const { certificate: chosen, order } = sealLossPrompt;
+    setSealLossPrompt(null);
+    await signing.start(chosen, order);
   };
 
   // Olvidar la actividad es una sola promesa al usuario del ordenador
@@ -619,6 +664,14 @@ export function App({
       )}
       {dialog === "about" && (
         <AboutDialog version={__APP_VERSION__} onClose={() => setDialog(null)} />
+      )}
+      {sealLossPrompt !== null && (
+        <UnsealedPagesDialog
+          fallen={sealLossPrompt.fallen}
+          chosen={sealLossPrompt.chosen}
+          onConfirm={() => void signAnyway()}
+          onCancel={() => setSealLossPrompt(null)}
+        />
       )}
       {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}
       {signing.state.kind === "pin" && certificate.kind === "chosen" && (
