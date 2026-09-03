@@ -12,7 +12,6 @@ const {
   tauriDocumentDrops,
   tauriDocumentPicker,
   tauriLanguagePreference,
-  tauriLayer2Composer,
   tauriPdfSource,
   tauriPreferences,
   tauriRecents,
@@ -167,36 +166,6 @@ describe("los puertos de firma sobre Tauri", () => {
     await tauriCertificateStore().list();
 
     expect(invoke).toHaveBeenCalledWith("list_certificates");
-  });
-
-  it("composes the preview with the chosen certificate and the instant it was given", async () => {
-    invoke.mockResolvedValue("Firmado por: ADA LOVELACE");
-    const signer = { certificate: "Firma", signedAt: "31/08/26, 12:00:00", language: "es" };
-
-    const text = await tauriLayer2Composer().compose(
-      { enabled: true, rubric: false, fields: anOrder.fields, reason: "" },
-      signer,
-    );
-
-    expect(text).toBe("Firmado por: ADA LOVELACE");
-    const [, payload] = invoke.mock.calls[0] ?? [];
-    expect(payload).toMatchObject({
-      order: { certificate: "Firma", signedAt: "31/08/26, 12:00:00", language: "es" },
-    });
-  });
-
-  it("leaves the preview empty rather than raising an error notice", async () => {
-    // La vista previa no es sitio para un aviso de error: si el token se ha
-    // retirado mientras se miraba, el recuadro se queda vacío y lo cuenta el
-    // intento de firmar.
-    invoke.mockImplementation(() => Promise.reject(new Error("CKR_DEVICE_REMOVED")));
-
-    const text = await tauriLayer2Composer().compose(
-      { enabled: true, rubric: false, fields: anOrder.fields, reason: "" },
-      { certificate: "Firma", signedAt: "31/08/26, 12:00:00", language: "es" },
-    );
-
-    expect(text).toBeNull();
   });
 });
 

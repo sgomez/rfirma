@@ -13,7 +13,6 @@ import { inMemoryDestination, unavailableOpener } from "./signing/destination";
 import { type SigningBackend, type SigningOrder, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
-import { emptyLayer2Composer } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 
 /** El destino que contesta el backend mientras la prueba no diga otra cosa. */
@@ -172,7 +171,6 @@ function renderApp(
       destinations={aDestination()}
       certificates={certificates}
       rubrics={rubrics}
-      composer={emptyLayer2Composer()}
       stamps={unavailableStampComposer()}
       signer={signer}
       opener={unavailableOpener()}
@@ -278,7 +276,6 @@ describe("App", () => {
         destinations={aDestination()}
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
-        composer={emptyLayer2Composer()}
         stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
@@ -644,7 +641,6 @@ describe("App", () => {
         destinations={aDestination()}
         certificates={emptyCertificateStore()}
         rubrics={emptyRubricPicker()}
-        composer={emptyLayer2Composer()}
         stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}

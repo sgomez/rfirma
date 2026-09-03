@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, CheckIcon, FileIcon, FolderIcon, InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
@@ -21,7 +21,7 @@ import type { SigningFailure } from "./failure";
 import { formatPageRange, type PageRangeError, parsePageRange } from "./pageRange";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
-import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./visibleSignature";
+import type { VisibleSignature } from "./visibleSignature";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
 export interface SigningDocument {
@@ -113,16 +113,6 @@ interface SigningPanelProps {
   /** El último fallo al elegir la rúbrica, que se cuenta aquí y no al firmar. */
   rubricFailure: RubricFailure | null;
   onChooseRubric: () => void;
-  /** Quien compone el texto del recuadro. Ver [`Layer2Composer`]. */
-  composer: Layer2Composer;
-  /**
-   * La fecha y hora que llevará el recuadro, **ya formateadas**.
-   *
-   * Viene de arriba y no se calcula aquí porque tiene que ser **la misma** que
-   * se envíe a firmar: la vista previa enseña el texto que se va a estampar, y
-   * un reloj propio en este componente enseñaría uno y estamparía otro.
-   */
-  signedAt: string;
   destination: Destination;
   onChangeDestination: () => void;
   onSign: () => void;
@@ -141,8 +131,8 @@ interface SigningPanelProps {
  * Dos cosas que parecen detalles y son la ficha entera:
  *
  * - **No hay comodines.** El contenido del recuadro se marca con casillas y el
- *   texto lo compone Rust ya resuelto (ID-19). La vista previa enseña esa misma
- *   cadena, pedida a [`Layer2Composer`], y no una imitación local.
+ *   texto lo compone Rust ya resuelto (ID-19); el propio recuadro, en directo
+ *   sobre la hoja, es lo que lo enseña.
  * - **La miniatura de la rúbrica es honesta.** Enseña el fichero ya
  *   normalizado, que es un JPEG y por tanto opaco: un PNG con transparencia se
  *   ve aquí con su fondo blanco, antes de firmar y no dentro del PDF (ID-24).
@@ -166,8 +156,6 @@ export function SigningPanel({
   rubric,
   rubricFailure,
   onChooseRubric,
-  composer,
-  signedAt,
   destination,
   onChangeDestination,
   onSign,
@@ -179,14 +167,6 @@ export function SigningPanel({
   const placementName = useId();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const usable = chosen !== null && isUsable(chosen.status);
-  const language = i18n.resolvedLanguage ?? i18n.language;
-  // Memoizado porque es la dependencia del efecto que pide la vista previa: un
-  // objeto nuevo en cada pintada la pediría en bucle.
-  const signer = useMemo<SigningIdentity | null>(
-    () => (chosen === null ? null : { certificate: chosen.id, signedAt, language }),
-    [chosen, signedAt, language],
-  );
-  const preview = useLayer2Preview(composer, signature, signer);
   // El destino recortado. Sin nombre compuesto —la carpeta no se deja
   // comprobar— se enseña el del documento, que es lo único que se sabe.
   const shortened = shortenDestination({
@@ -537,11 +517,6 @@ export function SigningPanel({
                   />
                 )}
               </div>
-
-              <div className="panel__preview">
-                <p className="rf-label">{t("panel.visibleSignature.preview.title")}</p>
-                <Layer2Preview text={preview} />
-              </div>
             </>
           )}
         </section>
@@ -785,50 +760,6 @@ function Checkbox({
       )}
     </div>
   );
-}
-
-/** Lo que va a decir el recuadro, tal cual lo compuso el backend. */
-function Layer2Preview({ text }: { text: string | null }) {
-  const { t } = useTranslation();
-
-  if (text === null) {
-    return <p className="rf-hint">{t("panel.visibleSignature.preview.unavailable")}</p>;
-  }
-  if (text.trim() === "") {
-    return <p className="rf-hint">{t("panel.visibleSignature.preview.empty")}</p>;
-  }
-  return <pre className="panel__preview-text">{text}</pre>;
-}
-
-/**
- * Pide el texto del recuadro cada vez que cambian las casillas.
- *
- * La respuesta que llega tarde se descarta: dos cambios seguidos pueden
- * resolverse en orden inverso, y la vista previa enseñaría un estado anterior
- * al de las casillas que se ven marcadas.
- */
-function useLayer2Preview(
-  composer: Layer2Composer,
-  signature: VisibleSignature,
-  signer: SigningIdentity | null,
-): string | null {
-  const [preview, setPreview] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (signer === null || !signature.enabled) {
-      setPreview(null);
-      return;
-    }
-    let current = true;
-    void composer.compose(signature, signer).then((text) => {
-      if (current) setPreview(text);
-    });
-    return () => {
-      current = false;
-    };
-  }, [composer, signature, signer]);
-
-  return preview;
 }
 
 /** «2,4 MB». El tamaño en la unidad que el usuario reconoce, no en bytes. */

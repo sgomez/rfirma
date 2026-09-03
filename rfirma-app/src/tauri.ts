@@ -1,8 +1,8 @@
 /**
- * Los puertos que hablan con Tauri: los tres de firma (#60), los dos del
- * documento (#82), el del arrastre (#83), los dos de la configuración —los
- * ajustes y el idioma—, que comparten fichero debajo, y el de la rúbrica
- * (#128).
+ * Los puertos que hablan con Tauri: los dos de firma que quedan (#60, #194),
+ * los dos del documento (#82), el del arrastre (#83), los dos de la
+ * configuración —los ajustes y el idioma—, que comparten fichero debajo, y el
+ * de la rúbrica (#128).
  *
  * El del arrastre es el único que no habla con una orden sino con un **evento**
  * de la ventana: soltar un fichero no lo pide la interfaz, le ocurre. Aun así
@@ -13,10 +13,9 @@
  * eso es el único que importa `invoke`. Vive en la raíz de `src/` y no dentro
  * de `signing/` justamente por eso: la frontera es una sola para toda la
  * aplicación, y repartirla por módulos sería tener dos. La ventana y sus
- * pruebas siguen hablando con `CertificateStore`, `Layer2Composer`,
- * `SigningBackend`, `DocumentPicker`, `PdfSource`, `DocumentDrops` y
- * `RubricPicker`, y quien elige entre estas implementaciones y los dobles de
- * memoria es `main.tsx`.
+ * pruebas siguen hablando con `CertificateStore`, `SigningBackend`,
+ * `DocumentPicker`, `PdfSource`, `DocumentDrops` y `RubricPicker`, y quien
+ * elige entre estas implementaciones y los dobles de memoria es `main.tsx`.
  *
  * # Los fallos llegan clasificados, no traducidos
  *
@@ -42,11 +41,10 @@ import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
-import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./signing/flow";
+import type { SignedDocument, SigningBackend, StageResult } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { StampComposer } from "./signing/stampPreview";
 import type { TokenFailure } from "./signing/token";
-import type { Layer2Composer, SigningIdentity, VisibleSignature } from "./signing/visibleSignature";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
 import type { PageSet } from "./viewer/signatureBox";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
@@ -81,58 +79,6 @@ async function stage<T>(call: () => Promise<T>): Promise<StageResult<T>> {
 export function tauriCertificateStore(): CertificateStore {
   return {
     list: () => invoke<readonly Certificate[]>("list_certificates"),
-  };
-}
-
-/**
- * El compositor autoritativo: el mismo `signing::layer2_text` que compone lo
- * que se envía en `layer2Text`.
- *
- * Por eso la vista previa es honesta y no una imitación: es literalmente la
- * cadena que va a acabar estampada.
- */
-export function tauriLayer2Composer(): Layer2Composer {
-  return {
-    compose: async (signature: VisibleSignature, signer: SigningIdentity) => {
-      try {
-        return await invoke<string>("compose_visible_text", {
-          order: previewOrder(signature, signer),
-        });
-      } catch {
-        // La vista previa no es sitio para un aviso de error: si no se puede
-        // componer —el token se ha retirado mientras se miraba—, el recuadro
-        // se queda en su estado vacío y lo contará el intento de firmar.
-        return null;
-      }
-    },
-  };
-}
-
-/**
- * La orden que compone la vista previa.
- *
- * Lleva un recuadro degenerado y ningún documento **a propósito**:
- * `compose_visible_text` solo mira las casillas, el motivo y el instante, y
- * darle una posición de mentira es más honesto que darle una de verdad que
- * nadie va a usar.
- */
-function previewOrder(signature: VisibleSignature, signer: SigningIdentity): SigningOrder {
-  return {
-    document: "",
-    certificate: signer.certificate,
-    placement: {
-      page: 1,
-      pages: { only: [1] },
-      pageCount: 1,
-      mediaBox: [0, 0, 0, 0],
-      rotation: 0,
-      rect: [0, 0, 0, 0],
-    },
-    fields: signature.fields,
-    reason: signature.reason,
-    signedAt: signer.signedAt,
-    rubric: null,
-    language: signer.language,
   };
 }
 

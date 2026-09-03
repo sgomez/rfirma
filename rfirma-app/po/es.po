@@ -631,18 +631,9 @@ msgstr ""
 "Se estampa sobre blanco: el recuadro va al PDF como JPEG y un JPEG no tiene "
 "transparencia."
 
-msgid "panel.visibleSignature.preview.title"
-msgstr "Lo que dirá el recuadro"
-
-msgid "panel.visibleSignature.preview.empty"
-msgstr "Marca alguna casilla para que el recuadro diga algo."
-
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Elige un certificado para colocar la firma visible"
-
-msgid "panel.visibleSignature.preview.unavailable"
-msgstr "La vista previa aparecerá al elegir el certificado."
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"
