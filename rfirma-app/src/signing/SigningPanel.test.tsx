@@ -1,7 +1,9 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
+import type { PageChoice, Placement } from "../viewer/signatureBox";
 import type { Certificate } from "./certificate";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
@@ -32,8 +34,13 @@ function composerOf(text: string | null): Layer2Composer {
 
 const noop = () => {};
 
-function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
-  return renderWithCatalog(
+/** El recuadro, en espacio de usuario: aquí solo importa que exista. */
+const rect = { x0: 100, y0: 100, x1: 300, y1: 180 };
+
+type PanelProps = Partial<Parameters<typeof SigningPanel>[0]>;
+
+function panelWith(props: PanelProps) {
+  return (
     <SigningPanel
       document={{ name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000, signatures: 0 }}
       certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
@@ -42,7 +49,12 @@ function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
       onChooseModule={noop}
       signature={DEFAULT_VISIBLE_SIGNATURE}
       onChangeSignature={noop}
-      page={3}
+      placement={{ rect, pages: { only: [3] } }}
+      onPlace={noop}
+      pageChoice="single"
+      onChangePageChoice={noop}
+      viewedPage={3}
+      onGoToPage={noop}
       rubric={null}
       rubricFailure={null}
       onChooseRubric={noop}
@@ -54,8 +66,45 @@ function renderPanel(props: Partial<Parameters<typeof SigningPanel>[0]> = {}) {
       signing={false}
       failure={null}
       {...props}
-    />,
+    />
   );
+}
+
+/** `show` vuelve a pintar con otras props: es el camino de vuelta del ID-99. */
+function renderPanel(props: PanelProps = {}) {
+  const result = renderWithCatalog(panelWith(props));
+  return { ...result, show: (next: PanelProps) => result.rerender(panelWith(next)) };
+}
+
+/**
+ * El panel con el `placement` de verdad detrás, que es como vive en `App.tsx`.
+ *
+ * Teclear en el campo son varias pulsaciones seguidas y cada una emite el
+ * conjunto: con un espía que no lo aplica, la segunda pulsación escribiría
+ * sobre un panel que sigue viendo el conjunto viejo, y lo que se probaría sería
+ * el espía.
+ */
+function renderLivePanel(props: PanelProps = {}) {
+  const placed: (Placement | null)[] = [];
+  function Live() {
+    const [placement, setPlacement] = useState<Placement | null>({ rect, pages: { only: [3] } });
+    // La opción elegida también vive fuera del panel, como en `App.tsx`: sin
+    // eso, volver a pulsar «Solo 1 página» no dispara nada —el radio sigue
+    // marcado— y el viaje de ida y vuelta no se podría probar.
+    const [pageChoice, setPageChoice] = useState<PageChoice>(props.pageChoice ?? "single");
+    return panelWith({
+      ...props,
+      placement,
+      onPlace: (next) => {
+        placed.push(next);
+        setPlacement(next);
+      },
+      pageChoice,
+      onChangePageChoice: setPageChoice,
+    });
+  }
+  renderWithCatalog(<Live />);
+  return { placed };
 }
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
@@ -91,7 +140,7 @@ describe("SigningPanel", () => {
     // El panel lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`); los 16 px
     // son de Preferencias y se piden allí con `switch--wide`.
     expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
-    expect(screen.getByText("Página 3 · arrástralo para colocarlo")).toBeInTheDocument();
+    expect(screen.getByText("El recuadro está en esta página")).toBeInTheDocument();
     for (const label of [
       "Tu rúbrica",
       "Nombre y apellidos",
@@ -314,5 +363,186 @@ describe("SigningPanel", () => {
 
     expect(screen.getByText("Buscando certificados…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+  });
+});
+
+// El bloque «Colocación»: los dos noes, el conjunto tecleado y la línea que
+// dice la página del recuadro (ID-93, ID-97…ID-100).
+describe("SigningPanel · Colocación", () => {
+  /** El interruptor encendido, que es donde vive el bloque entero. */
+  const visible = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
+
+  const signButton = () => screen.getByRole("button", { name: "Firmar documento" });
+  const field = () => screen.getByLabelText("Páginas donde se sella");
+
+  it("refuses to sign a visible signature that is not placed anywhere, and says what to do", () => {
+    renderPanel({ signature: visible, placement: null });
+
+    expect(
+      screen.getByText(
+        "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la página.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Aún no has colocado la firma")).toBeInTheDocument();
+    expect(signButton()).toBeDisabled();
+  });
+
+  it("signs invisibly with the switch off, which is the other «no» entirely", () => {
+    renderPanel({ signature: { ...visible, enabled: false }, placement: null });
+
+    expect(signButton()).toBeEnabled();
+    expect(screen.queryByText("Colocación")).not.toBeInTheDocument();
+  });
+
+  it("does not lose the placement when the switch goes off and on again", () => {
+    const onPlace = vi.fn();
+    const { show } = renderPanel({ signature: visible, onPlace });
+
+    show({ signature: { ...visible, enabled: false }, onPlace });
+    show({ signature: visible, onPlace });
+
+    expect(onPlace).not.toHaveBeenCalled();
+    expect(screen.getByText("Página 3")).toBeInTheDocument();
+  });
+
+  it("seals what the field says, in the everyday print format", () => {
+    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+
+    fireEvent.change(field(), { target: { value: "1,2-3,10-20" } });
+
+    expect(placed.at(-1)).toEqual({
+      rect,
+      pages: { only: [1, 2, 3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
+    });
+    expect(field()).toHaveValue("1,2-3,10-20");
+  });
+
+  it("echoes the pages it is going to seal instead of leaving the field to be read", () => {
+    renderPanel({
+      signature: visible,
+      pageChoice: "these",
+      placement: { rect, pages: { only: [1, 2, 3, 10, 11, 12, 13, 14] } },
+    });
+
+    expect(
+      screen.getByText("Se sellará en las páginas 1, 2, 3, 10, 11, 12 y 2 más."),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["3-1", "«3-1» va al revés: el primer número tiene que ser el menor."],
+    ["0", "No hay página 0: la primera es la 1."],
+    ["99", "El documento tiene 27 páginas y has escrito hasta la 99."],
+    ["1;2", "«1;2» no se entiende. Números y rangos separados por comas: 1,2-3,10-20."],
+  ])("turns the sign button off and says why for %s", (typed, said) => {
+    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+
+    fireEvent.change(field(), { target: { value: typed } });
+
+    expect(screen.getByText(said)).toBeInTheDocument();
+    expect(signButton()).toBeDisabled();
+    // Nada se aplica a medias: el conjunto se queda como estaba (ID-22).
+    expect(placed).toEqual([]);
+  });
+
+  it("rewrites the field when a page is unsealed from the viewer (ID-99)", () => {
+    const props = { signature: visible, pageChoice: "these" as const };
+    const { show } = renderPanel({
+      ...props,
+      placement: { rect, pages: { only: [3, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] } },
+    });
+
+    expect(field()).toHaveValue("3,10-20");
+
+    show({
+      ...props,
+      placement: { rect, pages: { only: [3, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20] } },
+    });
+
+    expect(field()).toHaveValue("3,10-11,13-20");
+  });
+
+  it("keeps the page of the box when the option changes", async () => {
+    const user = userEvent.setup();
+    const onPlace = vi.fn();
+    renderPanel({
+      signature: visible,
+      pageChoice: "these",
+      placement: { rect, pages: { only: [3, 10, 11] } },
+      onPlace,
+    });
+
+    await user.click(screen.getByRole("radio", { name: /Solo 1 página/ }));
+
+    expect(onPlace).toHaveBeenLastCalledWith({ rect, pages: { only: [3] } });
+  });
+
+  it("names every page of the document when «all» is chosen", async () => {
+    const user = userEvent.setup();
+    const onPlace = vi.fn();
+    renderPanel({ signature: visible, onPlace });
+
+    expect(screen.getByRole("radio", { name: /Todas las páginas \(27\)/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /Todas las páginas/ }));
+
+    expect(onPlace).toHaveBeenLastCalledWith({ rect, pages: "all" });
+  });
+
+  it("says the page of the box and not the one on screen, and going there is one click", async () => {
+    const user = userEvent.setup();
+    const onGoToPage = vi.fn();
+    renderPanel({ signature: visible, viewedPage: 7, onGoToPage });
+
+    await user.click(screen.getByRole("button", { name: "El recuadro está en la página 3" }));
+
+    expect(onGoToPage).toHaveBeenCalledWith(3);
+  });
+
+  it("warns that the repeated box is one signature field and not one per page", () => {
+    renderPanel({ signature: visible, placement: { rect, pages: { only: [3, 4, 5] } } });
+
+    expect(screen.getByText(/es un solo campo de firma repetido, no 3 firmas/)).toBeInTheDocument();
+  });
+
+  /**
+   * ID-97, el viaje completo. Con «todas» el conjunto ya no nombra la página
+   * del gesto, así que la única forma de que vuelva es el ancla: la ida
+   * `single(3)` → `all` no la puede perder, y la vuelta tiene que sellar la 3 y
+   * no la 1, que es la más baja del conjunto por casualidad.
+   */
+  it("keeps the page of the box on the round trip single, all and single again", async () => {
+    const user = userEvent.setup();
+    const { placed } = renderLivePanel({ signature: visible });
+
+    await user.click(screen.getByRole("radio", { name: /Todas las páginas/ }));
+
+    expect(placed.at(-1)).toEqual({ rect, pages: "all" });
+    // El pie de «Solo 1 página» sigue diciendo la página del gesto original.
+    expect(screen.getByText("Página 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: /Solo 1 página/ }));
+
+    expect(placed.at(-1)).toEqual({ rect, pages: { only: [3] } });
+  });
+
+  /**
+   * Borrar el campo es el paso normal para reescribir el rango. Si el vacío
+   * emitiera `onPlace(null)` se llevaría la colocación entera —`rect`
+   * incluido— y el campo ya no podría devolverla: habría que volver a arrastrar
+   * sobre la hoja.
+   */
+  it("says the empty field instead of taking the box away with it", () => {
+    const { placed } = renderLivePanel({ signature: visible, pageChoice: "these" });
+
+    fireEvent.change(field(), { target: { value: "" } });
+
+    expect(placed).toEqual([]);
+    expect(screen.getByText("Escribe en qué páginas se sella: 1,2-3,10-20.")).toBeInTheDocument();
+    expect(signButton()).toBeDisabled();
+
+    // Y el campo devuelve el recuadro, con el mismo sitio y el mismo tamaño.
+    fireEvent.change(field(), { target: { value: "5" } });
+
+    expect(placed.at(-1)).toEqual({ rect, pages: { only: [5] } });
   });
 });

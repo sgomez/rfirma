@@ -28,7 +28,7 @@ import {
 } from "./signing/visibleSignature";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
-import { firstSealedPage, type Placement } from "./viewer/signatureBox";
+import { firstSealedPage, type PageChoice, type Placement } from "./viewer/signatureBox";
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "preferences" | "about" | null;
@@ -112,6 +112,15 @@ export function App({
   // firma —su sub-issue— es quien dirá qué se pinta dentro del recuadro, y los
   // dos tienen que estar mirando el mismo.
   const [placement, setPlacement] = useState<Placement | null>(null);
+  // Cuál de las tres opciones del bloque «Colocación» manda sobre el conjunto
+  // (ID-97). Vive aquí porque el visor también la lee: es quien redacta la
+  // pastilla, y con «solo 1 página» o «todas» no ofrece quitar el sello.
+  const [pageChoice, setPageChoice] = useState<PageChoice>("single");
+  // La página que se está mirando, y la petición de ir a otra. Las dos cruzan
+  // porque el panel dice **la página del recuadro** y lleva hasta ella
+  // (ID-100), y el recorrido sigue siendo del visor.
+  const [viewedPage, setViewedPage] = useState(1);
+  const [goTo, setGoTo] = useState<{ page: number } | null>(null);
   const [settings, setSettings] = useState<Preferences | null>(null);
   // Dónde caerá el firmado, tal y como lo cuenta el backend. Es estado y no un
   // cálculo del pie porque el nombre lo compone Rust —con el sufijo y el
@@ -518,6 +527,9 @@ export function App({
             pdf={pdf}
             placement={placement}
             onPlace={rememberPlacement}
+            pageChoice={pageChoice}
+            onPageChange={setViewedPage}
+            goToPage={goTo}
             onOpen={() => void openDocument()}
             // Los dos avisos caben en el mismo sitio, y manda el del PDF: si el
             // documento que se soltó tampoco se deja pintar, eso es más urgente
@@ -563,7 +575,12 @@ export function App({
               onChooseModule={() => void lookForCertificates()}
               signature={signature}
               onChangeSignature={setSignature}
-              page={firstSealedPage(placement)}
+              placement={placement}
+              onPlace={rememberPlacement}
+              pageChoice={pageChoice}
+              onChangePageChoice={setPageChoice}
+              viewedPage={viewedPage}
+              onGoToPage={(page) => setGoTo({ page })}
               rubric={rubric}
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}

@@ -36,7 +36,7 @@ rojo.
 |---|---|---|
 | `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
 | `tauri.ts` | 521 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 663 | El árbol de la ventana y el estado que la recorre. |
+| `App.tsx` | 680 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -51,7 +51,7 @@ rojo.
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 148 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
-| `signing/SigningPanel.tsx` | 545 | El panel. El fichero más grande de la interfaz. |
+| `signing/SigningPanel.tsx` | 808 | El panel. El fichero más grande de la interfaz. |
 | `signing/CertificateSelect.tsx` | 266 | La elección de certificado. |
 | `signing/PinDialog.tsx` | 151 | El PIN. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
@@ -60,10 +60,11 @@ rojo.
 | `signing/destination.ts` | 160 | Dónde cae el firmado, el recorte de esa línea —la función pura del ID-64— y quién lleva al usuario hasta el fichero (ID-79). |
 | `signing/visibleSignature.ts` | 91 | Qué se estampa en el recuadro. |
 | `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
+| `signing/pageRange.ts` | 102 | El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React. |
 | `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 758 | El visor, con la pastilla bajo la hoja. |
+| `viewer/DocumentViewer.tsx` | 789 | El visor, con la pastilla bajo la hoja. |
 | `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | 68 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |

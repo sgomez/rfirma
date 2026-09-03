@@ -432,6 +432,80 @@ msgstr[1] ""
 msgstr[2] ""
 "It already carries {{count}} signatures: yours will be a countersignature."
 
+#. La línea dice la página del recuadro, no la que se está mirando.
+msgid "panel.placement.notPlaced"
+msgstr "You have not placed the signature yet"
+
+msgid "panel.placement.here"
+msgstr "The box is on this page"
+
+#. {{page}} es la página donde está el recuadro. Es un botón: al pulsarlo el visor va allí.
+msgid "panel.placement.onPage"
+msgstr "The box is on page {{page}}"
+
+#. Rótulo del bloque con las tres opciones de en qué páginas se sella.
+msgid "panel.placement.title"
+msgstr "Placement"
+
+msgid "panel.placement.single"
+msgstr "One page only"
+
+#. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
+msgid "panel.placement.singlePage"
+msgstr "Page {{page}}"
+
+#. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
+msgid "panel.placement.singleUnplaced"
+msgstr "not placed yet"
+
+msgid "panel.placement.these"
+msgstr "These pages"
+
+#. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
+msgid "panel.placement.field"
+msgstr "Pages to stamp"
+
+#. {{pages}} es el número de páginas del documento.
+msgid "panel.placement.all"
+msgstr "All pages ({{pages}})"
+
+#. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
+msgid "panel.placement.echo"
+msgstr "It will be stamped on pages {{pages}}."
+
+#. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
+msgid "panel.placement.echoMore"
+msgid_plural "panel.placement.echoMore"
+msgstr[0] "It will be stamped on pages {{pages}} and 1 more."
+msgstr[1] "It will be stamped on pages {{pages}} and {{count}} more."
+msgstr[2] "It will be stamped on pages {{pages}} and {{count}} more."
+
+#. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
+msgid "panel.placement.replicated"
+msgid_plural "panel.placement.replicated"
+msgstr[0] "The same box, in the same place and at the same size, on 1 page."
+msgstr[1] "The same box, in the same place and at the same size, on all {{count}} pages: it is a single signature field repeated, not {{count}} signatures."
+msgstr[2] "The same box, in the same place and at the same size, on all {{count}} pages: it is a single signature field repeated, not {{count}} signatures."
+
+#. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
+msgid "panel.placement.errors.beyond"
+msgstr "The document has {{pageCount}} pages and you have written up to {{page}}."
+
+#. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
+msgid "panel.placement.errors.reversed"
+msgstr "“{{entry}}” runs backwards: the first number has to be the lower one."
+
+msgid "panel.placement.errors.zero"
+msgstr "There is no page 0: the first one is 1."
+
+#. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
+msgid "panel.placement.errors.malformed"
+msgstr "“{{entry}}” cannot be read. Numbers and ranges separated by commas: 1,2-3,10-20."
+
+#. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
+msgid "panel.placement.errors.empty"
+msgstr "Type which pages get stamped: 1,2-3,10-20."
+
 msgid "panel.certificate.title"
 msgstr "Certificate"
 
@@ -502,13 +576,6 @@ msgstr "Visible signature"
 msgid "panel.visibleSignature.toggle"
 msgstr "Stamp a signature box on the document"
 
-#. {{page}} es el número de página donde se colocó el recuadro.
-msgid "panel.visibleSignature.placement"
-msgstr "Page {{page}} · drag it to place it"
-
-msgid "panel.visibleSignature.noPlacement"
-msgstr "Drag the box over the document to place it."
-
 msgid "panel.visibleSignature.content"
 msgstr "Contents"
 
@@ -561,6 +628,10 @@ msgstr "Tick a box so that the signature box says something."
 
 msgid "panel.visibleSignature.preview.unavailable"
 msgstr "The preview will show up once you choose the certificate."
+
+#. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
+msgid "panel.footer.placeFirst"
+msgstr "Place the signature on the document: drag a box or press the button under the page."
 
 msgid "panel.footer.savedIn"
 msgstr "It will be saved in"
