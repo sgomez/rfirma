@@ -1,11 +1,11 @@
 //! El documento **tal y como entra**: por el portal, y nada más (ID-37,
 //! ADR-0011, #22).
 //!
-//! Bajo el arenero el diálogo de abrir no devuelve la ruta del usuario, sino
+//! Bajo el sandbox el diálogo de abrir no devuelve la ruta del usuario, sino
 //! un enlace del portal de documentos:
 //!
 //! ```text
-//! ruta dentro del arenero: /run/user/1000/doc/1e8b83b9/original.pdf
+//! ruta dentro del sandbox: /run/user/1000/doc/1e8b83b9/original.pdf
 //! directorio padre       : /run/user/1000/doc/1e8b83b9
 //! contenido del padre    : original.pdf
 //! ```
@@ -45,7 +45,7 @@
 
 use std::path::{Path, PathBuf};
 
-/// Dónde monta el arenero el portal de documentos. El `1000` del medio es el
+/// Dónde monta el sandbox el portal de documentos. El `1000` del medio es el
 /// uid, así que solo se comprueba el prefijo.
 const PORTAL_ROOT: &str = "/run/user";
 
@@ -54,7 +54,7 @@ const PORTAL_DIRECTORY: &str = "doc";
 
 /// Un documento que ha entrado por el portal.
 ///
-/// Fuera del arenero —los instaladores nativos que todavía no existen— el
+/// Fuera del sandbox —los instaladores nativos que todavía no existen— el
 /// diálogo devuelve una ruta corriente y este tipo la acepta igual: entonces
 /// [`PortalDocument::portal_id`] es `None` y nada más cambia. Lo que **no**
 /// cambia en ningún canal es que de aquí no sale un directorio donde escribir.
@@ -106,7 +106,7 @@ impl PortalDocument {
         Some(identifier)
     }
 
-    /// Si ha entrado por el portal del arenero.
+    /// Si ha entrado por el portal del sandbox.
     pub fn came_through_the_portal(&self) -> bool {
         self.portal_id().is_some()
     }
@@ -122,7 +122,7 @@ mod tests {
 
     /// **Grada A**: rutas como cadenas para el portal, y ficheros de verdad en
     /// un directorio temporal para la parte que pregunta al disco. El
-    /// comportamiento del portal en sí solo se ve dentro del arenero y se
+    /// comportamiento del portal en sí solo se ve dentro del sandbox y se
     /// comprueba en el sub-issue del flatpak (#62).
     const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/original.pdf";
 

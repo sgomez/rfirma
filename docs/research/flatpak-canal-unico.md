@@ -17,7 +17,7 @@ Lo construido vive en `packaging/flatpak/`: el manifiesto `me.sgomez.rfirma.yml`
 ## Veredicto
 
 **Flatpak sirve, y el ciclo trifásico completo con rúbrica de imagen firma y valida dentro del
-arenero.** `pdfsig` dice *Signature is Valid* sobre un PDF de 179.813 bytes firmado con el
+sandbox.** `pdfsig` dice *Signature is Valid* sobre un PDF de 179.813 bytes firmado con el
 certificado del token, con la rúbrica dibujada. Es además la **primera vez** que la fase 2 la hace
 PKCS#11 de verdad desde Rust (`cryptoki`, `CKM_SHA256_RSA_PKCS`) y no el `openssl` del banco de
 pruebas.
@@ -26,7 +26,7 @@ Tres hallazgos cambian decisiones:
 
 1. **El módulo PKCS#11 lo aporta el flatpak.** Los del anfitrión no cargan dentro y `p11-kit` solo
    proyecta el almacén de confianza, nunca un token de firma.
-2. **«Guardar junto al documento original» no se puede implementar** bajo el arenero: la aplicación
+2. **«Guardar junto al documento original» no se puede implementar** bajo el sandbox: la aplicación
    no puede saber dónde estaba el original, y el portal lo prohíbe explícitamente. Sustituido por
    `--filesystem=xdg-documents` en el
    [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
@@ -46,7 +46,7 @@ los seis .so    : los seis presentes
 dlopen          : OK (/app/lib/rfirma/librfirma_crypto.so)
 ```
 
-Los cinco auxiliares se resuelven solos por `$ORIGIN`, igual que fuera del arenero: **ni
+Los cinco auxiliares se resuelven solos por `$ORIGIN`, igual que fuera del sandbox: **ni
 `LD_LIBRARY_PATH` ni `RPATH` ni CWD**. El razonamiento del ADR-0004 —los seis conviven en un
 directorio que gestiona un empaquetador— se cumple igual con flatpak que con el `.deb`.
 
@@ -54,7 +54,7 @@ directorio que gestiona un empaquetador— se cumple igual con flatpak que con e
 
 ## 2. La glibc
 
-Confirmado dentro del arenero: `gnu_get_libc_version` devuelve **2.42**, contra el suelo de
+Confirmado dentro del sandbox: `gnu_get_libc_version` devuelve **2.42**, contra el suelo de
 **2.34** que midió el #23. La glibc del anfitrión de quien instala deja de intervenir. Nada nuevo;
 solo la comprobación de que el número que se ejecuta es el del runtime.
 
@@ -70,7 +70,7 @@ Esta es la decisión que el `.deb` no tenía. Se probaron los tres caminos:
 
 ### p11-kit solo proyecta la confianza
 
-Flatpak arranca por su cuenta un `p11-kit server` para cada arenero y lo publica en
+Flatpak arranca por su cuenta un `p11-kit server` para cada sandbox y lo publica en
 `/run/user/1000/p11-kit/pkcs11`. Aparece sin declarar ningún permiso, lo que invita a pensar que es
 la puerta a los módulos del usuario. No lo es: el proceso del anfitrión es
 
@@ -79,7 +79,7 @@ p11-kit server --sh -n /run/user/1000/.flatpak-helper/pkcs11-flatpak-… \
                --provider p11-kit-trust.so pkcs11:model=p11-kit-trust?write-protected=yes
 ```
 
-o sea **un solo proveedor, el almacén de CA**. `p11-kit list-modules` dentro del arenero lista un
+o sea **un solo proveedor, el almacén de CA**. `p11-kit list-modules` dentro del sandbox lista un
 único módulo, `System Trust`, de solo lectura. Los `opensc-pkcs11` y `softhsm2` que el anfitrión sí
 tiene registrados en `/usr/share/p11-kit/modules/` no cruzan.
 
@@ -97,7 +97,7 @@ cosa. El enlazador los resuelve contra el **runtime**, no contra el anfitrión:
 dependencias coinciden con las del runtime. `opensc-pkcs11.so`, que es el módulo real de un DNIe,
 **no carga**. Apuntar `LD_LIBRARY_PATH` a `/run/host/usr/lib/x86_64-linux-gnu` lo resuelve todo,
 pero al precio de meter en el proceso librerías enlazadas contra la glibc 2.43 del anfitrión dentro
-de un runtime de 2.42. Eso es exactamente la clase de rotura que el arenero existe para evitar.
+de un runtime de 2.42. Eso es exactamente la clase de rotura que el sandbox existe para evitar.
 
 ### Lo que se empaqueta
 
@@ -107,7 +107,7 @@ Dos módulos nuevos en el manifiesto:
   El runtime no la trae. `-Dipcdir=/run/pcscd`, que es donde `--socket=pcsc` monta el socket.
 - **OpenSC 0.27.1**, que aporta `/app/lib/pkcs11/opensc-pkcs11.so`.
 
-Dentro del arenero, sin `--filesystem` de ninguna clase, `opensc-pkcs11.so` **carga, inicializa y
+Dentro del sandbox, sin `--filesystem` de ninguna clase, `opensc-pkcs11.so` **carga, inicializa y
 enumera ranuras**; devuelve cero porque esta máquina no tiene lector. `--socket=pcsc` deja el
 socket del anfitrión a la vista:
 
@@ -135,7 +135,7 @@ abrir (`flatpak document-export --app=me.sgomez.rfirma --allow-write …/docs/or
 la aplicación lo ve así:
 
 ```
-ruta dentro del arenero: /run/user/1000/doc/1e8b83b9/original.pdf
+ruta dentro del sandbox: /run/user/1000/doc/1e8b83b9/original.pdf
 directorio padre       : /run/user/1000/doc/1e8b83b9
 contenido del padre    : original.pdf
 ```
@@ -149,7 +149,7 @@ contenido del padre    : original.pdf
   `.Lookup` contestan `org.freedesktop.portal.Error.NotAllowed: Not allowed in sandbox`.
 
 Consecuencia directa: **«junto al documento original», que es el valor por omisión de
-[`docs/design/preferencias.md`](../design/preferencias.md), no es implementable** bajo el arenero.
+[`docs/design/preferencias.md`](../design/preferencias.md), no es implementable** bajo el sandbox.
 Ni escribiendo al lado, ni preseleccionando esa carpeta en el diálogo de guardar, porque la
 aplicación no sabe cuál es. Lo mismo alcanza a la degradación del
 [ADR-0010](../adr/0010-memoria-entre-sesiones.md), que usa «junto al original» como recurso cuando
@@ -165,13 +165,13 @@ no deja nada, la misma trampa de arriba con otro disfraz.
 El **diálogo de guardar** sí resuelve el caso general: el usuario elige destino y el portal concede
 el permiso justo para ese fichero. La sonda copia el PDF firmado a la ruta devuelta y funciona.
 
-Nota aparte: `/etc/localtime` **sí** apunta dentro del arenero a `Europe/Madrid`. La trampa de la
+Nota aparte: `/etc/localtime` **sí** apunta dentro del sandbox a `Europe/Madrid`. La trampa de la
 zona horaria que el #23 encontró en Docker no se da aquí.
 
 ## 5. WebKitGTK: renderiza, pero hay que sujetarla
 
 La sonda avisa desde el propio *webview*, así que la traza demuestra que WebKitGTK cargó, pintó y
-ejecutó JavaScript dentro del arenero:
+ejecutó JavaScript dentro del sandbox:
 
 ```
 WEBVIEW OK  900x593  userAgent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 … Version/60.5
@@ -228,7 +228,7 @@ B5215: <- :1.66 return error org.freedesktop.portal.Error.NotAllowed from C22
 
 Dos rechazos por arranque, uno del proceso de red de WebKit y otro del proceso web. **El portal solo
 concede `ProxyResolver` a una aplicación con red**, y rfirma no la declara ni debe declararla. GLib
-no tiene plan B: `GProxyResolverPortal` es el único resolvedor dentro del arenero, así que la carga
+no tiene plan B: `GProxyResolverPortal` es el único resolvedor dentro del sandbox, así que la carga
 no llega a empezar y WebKit pinta el error del resolvedor como página.
 
 Se corrige declarando el resolvedor nulo en `finish-args`:
@@ -249,7 +249,7 @@ ejercitan el mismo camino.
 
 **Y por qué `verifica.sh` decía OK.** Su paso 4 solo miraba que el proceso siguiera vivo a los diez
 segundos, y lo estaba: una ventana viva no es una ventana que se vea. Desde este hallazgo el paso 4
-corre con `--log-session-bus` y falla si el arenero rechaza cualquier llamada al portal.
+corre con `--log-session-bus` y falla si el sandbox rechaza cualquier llamada al portal.
 
 ### 5.2. El binario apuntaba al servidor de vite (v0.1)
 
@@ -296,11 +296,11 @@ caliente— y la pasan a mano los dos sitios que compilan sin el CLI: la receta 
 
 **La guarda.** El manifiesto saca del `dist/index.html` el nombre del bundle de vite y comprueba con
 un `grep` que está dentro del binario recién compilado. Falla al construir, que es donde sale
-barato, en vez de producir un bundle que abre contra un puerto que en el arenero no escucha nadie.
+barato, en vez de producir un bundle que abre contra un puerto que en el sandbox no escucha nadie.
 
 ## 6. La prueba final
 
-El listón del [#14](https://github.com/sgomez/rfirma/issues/14), ahora dentro del arenero y con
+El listón del [#14](https://github.com/sgomez/rfirma/issues/14), ahora dentro del sandbox y con
 firma de token:
 
 ```
@@ -368,7 +368,7 @@ venía a quitar. El bundle queda como vehículo de pruebas previas, no como cana
   esta sesión de Wayland. El camino de los ficheros se midió por el portal de documentos, que es lo
   que el diálogo acaba entregando.
 
-## 9. La entrada de documentos, dentro del arenero (#89)
+## 9. La entrada de documentos, dentro del sandbox (#89)
 
 El apartado 4 dejaba pendiente comprobar, ya con la aplicación de verdad y no la sonda, que los
 bytes que el portal concede llegan a lo que la Orden 8 (`read_document`, `commands/mod.rs`) lee del
@@ -377,8 +377,8 @@ aplicación (ID-72). El paso 6 de `verifica.sh` mide las dos cosas.
 
 **Los bytes llegan intactos.** `flatpak document-export --app=me.sgomez.rfirma <fichero>` es la
 misma vía por la que el diálogo de la Orden 7 (`open_document`) concede el permiso: contra la ruta
-del anfitrión, no el inodo, y devuelve la ruta montada dentro del arenero. Un `flatpak run
---command=sha256sum` sobre esa ruta, dentro del arenero, da el mismo hash que el fichero original en
+del anfitrión, no el inodo, y devuelve la ruta montada dentro del sandbox. Un `flatpak run
+--command=sha256sum` sobre esa ruta, dentro del sandbox, da el mismo hash que el fichero original en
 el anfitrión.
 
 **El identificador sobrevive a cerrar y reabrir la aplicación.** Se mató el proceso (`flatpak kill`)
@@ -389,7 +389,7 @@ almacén del propio portal de documentos, no en el proceso de la aplicación, as
 que rfirma siga viva.
 
 **Consecuencia para los recientes.** Hoy `RecentDocument` identifica una fila por la ruta canónica
-del anfitrión (`memory/recents.rs`), que bajo el arenero la aplicación no puede leer del documento
+del anfitrión (`memory/recents.rs`), que bajo el sandbox la aplicación no puede leer del documento
 del portal (`PortalDocument` no expone ninguna, apartado 4 de arriba). El día que la bandeja
 persista entre sesiones bajo flatpak tendrá que identificar la fila por la ruta montada del portal
 en vez de por la ruta real —esta medición dice que hacerlo funciona: volver a abrir el mismo host
@@ -397,16 +397,16 @@ path en una sesión posterior devuelve el mismo identificador y las mismas lectu
 de este ticket.
 
 Ningún permiso nuevo hace falta para esta medición: `flatpak document-export` y la lectura dentro
-del arenero solo usan el portal de documentos y el `--filesystem="$LAB"` que el banco de pruebas ya
+del sandbox solo usan el portal de documentos y el `--filesystem="$LAB"` que el banco de pruebas ya
 declaraba para el resto de pasos.
 
-## 10. Verificar dentro del arenero sin depender del idioma del anfitrión (#101)
+## 10. Verificar dentro del sandbox sin depender del idioma del anfitrión (#101)
 
-El paso 7 de `verifica.sh` comprueba, dentro del arenero, que escribir en
+El paso 7 de `verifica.sh` comprueba, dentro del sandbox, que escribir en
 `~/.mozilla/firefox` y en `~/.pki/nssdb` falla y que `profiles.ini` se lee. Dos
 trampas de esa comprobación, ninguna propia de NSS:
 
-- **`flatpak run` propaga `LANG`/`LC_*` del anfitrión al arenero**, y
+- **`flatpak run` propaga `LANG`/`LC_*` del anfitrión al sandbox**, y
   `org.gnome.Platform//50` trae la extensión de locale correspondiente:
   cualquier paso de verificación que decida algo mirando con `grep` el mensaje
   de error de una herramienta de `coreutils` (p. ej. `touch: no se puede
@@ -415,9 +415,9 @@ trampas de esa comprobación, ninguna propia de NSS:
   `[ -d … ]`, el código de salida de la orden— y dejar el mensaje solo como
   información en el log, nunca como condición.
 - **`flatpak run --env=VAR=valor --command=sh me.sgomez.rfirma -c '…"$VAR"…'`**
-  es la forma de pasar una ruta del anfitrión al arenero sin interpolarla ya
+  es la forma de pasar una ruta del anfitrión al sandbox sin interpolarla ya
   dentro de las comillas de `sh -c` (que la expandiría con el `$HOME` de dentro
-  del arenero, no el de fuera).
+  del sandbox, no el de fuera).
 
 ## Reproducir
 
@@ -427,7 +427,7 @@ rfirma-native-bridge/testbench/build-native-awt.sh ce25-awt awt-config
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` construye e instala el flatpak, imprime el informe del arenero, ejecuta el ciclo
+`verifica.sh` construye e instala el flatpak, imprime el informe del sandbox, ejecuta el ciclo
 trifásico completo firmando con el token de pruebas, valida con `pdfsig`, arranca la ventana y la
 deja diez segundos, comprueba que un documento entrado por el portal llega con sus bytes intactos
-dentro del arenero, y empaqueta el bundle.
+dentro del sandbox, y empaqueta el bundle.

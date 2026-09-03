@@ -74,7 +74,7 @@ describe("SignedPanel", () => {
 
   /**
    * Los tres botones del pie, en el orden y con la jerarquía del ID-79. Los dos
-   * de abrir no son comodidad: bajo el arenero son la única forma que tiene el
+   * de abrir no son comodidad: bajo el sandbox son la única forma que tiene el
    * usuario de llegar a un fichero cuya ruta nunca ve (ADR-0011).
    */
   it("offers three ways out, stacked and in the hierarchy of the artboard", () => {

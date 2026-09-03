@@ -32,7 +32,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 Se consultan **solo si vas a cambiar la decisión que sostienen**. Son los
 ficheros más grandes del repositorio (hasta 32 KB).
 
-`ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-arenero` ·
+`ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` ·
 `campos-de-firma-vacios` · `coordenadas-recuadro-pades` ·
 `exclusion-afirma-ui-utils` · `firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·

@@ -35,7 +35,7 @@ pierde el trabajo.
 - **Un reciente se identifica por un identificador opaco, no por su ruta**
   (ID-62, [#82](https://github.com/sgomez/rfirma/pull/92)). Cuando se escribió
   este ADR la aplicación aún hablaba con el disco directamente y una ruta
-  canónica bastaba; el arenero descrito en el
+  canónica bastaba; el sandbox descrito en el
   [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md) cambió esa
   premisa — bajo el portal de documentos la aplicación **nunca** conoce la ruta
   original, solo un identificador que acuña el backend al abrir el documento
@@ -104,7 +104,7 @@ red.
   pasa cuando no está lo fija el
   [ADR-0011](0011-destino-del-documento-firmado.md), que retira la degradación
   «junto al documento original» que aquí se describía: ese destino no existe
-  bajo el arenero, y no se sustituye por otro. Firmar y luego no poder escribir
+  bajo el sandbox, y no se sustituye por otro. Firmar y luego no poder escribir
   obliga a explicar que el documento está firmado pero en ningún sitio.
 - El formato de la rúbrica se valida al elegirla, no al firmar, porque los
   formatos admitidos se fijan en tiempo de construcción

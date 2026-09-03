@@ -79,7 +79,7 @@ export interface PdfDocument {
 /**
  * Quien abre un PDF.
  *
- * Los bytes llegan ya leídos porque bajo el arenero el documento entra por el
+ * Los bytes llegan ya leídos porque bajo el sandbox el documento entra por el
  * portal y la aplicación nunca conoce su ruta original: pasarle una URL a
  * `pdf.js` sería el segundo camino de entrada que el ADR-0004 no admite.
  */

@@ -36,7 +36,7 @@ pub struct SigningSession {
     /// **Dónde cayó el último documento firmado en esta sesión.**
     ///
     /// No es parte del ciclo —el ciclo ya terminó cuando esto se escribe— pero
-    /// vive aquí por lo mismo que él: bajo el arenero la ventana nunca conoce
+    /// vive aquí por lo mismo que él: bajo el sandbox la ventana nunca conoce
     /// la ruta (ADR-0011), así que la única forma de que «Abrir el PDF» y
     /// «Abrir la carpeta» lleguen al fichero es que el backend recuerde a
     /// dónde lo dejó. Lo que cruza sigue siendo el nombre.
@@ -563,7 +563,7 @@ mod tests {
     }
 
     /// Y la ruta que abren la guarda la sesión, **no la ventana**: bajo el
-    /// arenero la ventana nunca conoce la ruta del fichero (ADR-0011), así que
+    /// sandbox la ventana nunca conoce la ruta del fichero (ADR-0011), así que
     /// las dos órdenes no reciben ninguna y leen la que dejó la postfirma.
     #[test]
     fn the_two_openers_read_the_landing_the_postsign_left_behind() {

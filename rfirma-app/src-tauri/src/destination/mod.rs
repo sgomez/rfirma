@@ -3,7 +3,7 @@
 //!
 //! El recorrido no se negocia y no lo cambia el empaquetado: se firma y el
 //! documento **cae solo**, sin diálogo por firma. Lo que cambia por canal es
-//! *dónde* cae. Bajo el arenero, la carpeta de documentos del usuario, que es
+//! *dónde* cae. Bajo el sandbox, la carpeta de documentos del usuario, que es
 //! lo único que el manifiesto concede
 //! (`--filesystem=xdg-documents`, `packaging/flatpak/me.sgomez.rfirma.yml`).
 //!
@@ -14,7 +14,7 @@
 //!
 //! ## Las tres trampas, y las tres fallan calladas
 //!
-//! 1. **«Junto al original» no es implementable** bajo el arenero, y no hay
+//! 1. **«Junto al original» no es implementable** bajo el sandbox, y no hay
 //!    ninguna ruta de código que lo intente. El portal solo da la ruta real a
 //!    un llamante `is_host`, que un flatpak nunca es, y escribir al lado del
 //!    fichero que entrega el portal deja un `.xdp-…` huérfano **sin dar
@@ -68,7 +68,7 @@ use serde::{Deserialize, Serialize};
 
 /// La carpeta donde cae el documento firmado.
 ///
-/// Bajo el arenero la aplicación **escribe** en ella pero la única palabra que
+/// Bajo el sandbox la aplicación **escribe** en ella pero la única palabra que
 /// tiene de ella es su último segmento, así que el ajuste enseña el
 /// [`nombre`](DestinationFolder::name) y no la ruta (ADR-0011). Se guarda la
 /// ruta entera porque es lo que hace falta para volver a escribir; enseñarla es
@@ -114,7 +114,7 @@ impl CheckedFolder {
     /// Comprueba la carpeta. **Nunca la crea**, ni siquiera si el error es
     /// justo que no está (ID-38).
     ///
-    /// Dentro del arenero crearla habría contestado OK y no habría dejado nada
+    /// Dentro del sandbox crearla habría contestado OK y no habría dejado nada
     /// en el anfitrión, así que «arreglarlo» aquí sería fabricar el fallo
     /// silencioso en lugar de evitarlo. Si no está, es que no está de verdad:
     /// flatpak solo monta lo que ya existe.
@@ -147,7 +147,7 @@ impl CheckedFolder {
     }
 
     /// El último segmento, que es **lo único que se le enseña al usuario**
-    /// (ADR-0011): bajo el arenero la aplicación escribe en la carpeta pero no
+    /// (ADR-0011): bajo el sandbox la aplicación escribe en la carpeta pero no
     /// tiene más palabra de ella que su nombre, y enseñar la ruta donde se
     /// puede y el nombre donde no es la misma incoherencia en pequeño.
     pub fn name(&self) -> &str {
@@ -189,7 +189,7 @@ mod tests {
 
     /// **Grada A**: directorios de verdad en un temporal, que es lo que hace
     /// falta para que «existe» y «no existe» signifiquen algo. Lo que el
-    /// portal hace *dentro* del arenero —contestar OK a una escritura que no
+    /// portal hace *dentro* del sandbox —contestar OK a una escritura que no
     /// deja nada— no se puede reproducir fuera de él: se comprueba en el
     /// sub-issue del flatpak (#62) y aquí queda escrito en
     /// [`the_folder_is_never_created_here`], con el enlace a la medición.
@@ -215,11 +215,11 @@ mod tests {
 
     /// La trampa del ID-38, por escrito.
     ///
-    /// Dentro del arenero, escribir en una carpeta **declarada** en
+    /// Dentro del sandbox, escribir en una carpeta **declarada** en
     /// `--filesystem` que no existe en el anfitrión contesta OK, el fichero se
     /// relee bien y en el anfitrión no hay nada; a la siguiente ejecución no
     /// queda ni rastro. Medido en el #27 y recogido en
-    /// `docs/research/flatpak-canal-unico.md`, apartado 4. Fuera del arenero
+    /// `docs/research/flatpak-canal-unico.md`, apartado 4. Fuera del sandbox
     /// eso no se puede reproducir, así que lo que esta prueba sujeta es la
     /// **única** defensa que tenemos contra ello: que la aplicación no crea la
     /// carpeta ni cuando el error es justo que falta.
@@ -234,7 +234,7 @@ mod tests {
         assert!(failure.detail().contains("Documentos"));
         assert!(
             !missing.exists(),
-            "comprobar una carpeta que falta no puede crearla: dentro del arenero \
+            "comprobar una carpeta que falta no puede crearla: dentro del sandbox \
              eso contestaria OK y no dejaria nada en el anfitrion (#27)"
         );
     }

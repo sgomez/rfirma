@@ -9,7 +9,7 @@
 //!
 //! # Por qué un identificador y no la ruta
 //!
-//! Bajo el arenero la aplicación no conoce la ruta original de un documento, y
+//! Bajo el sandbox la aplicación no conoce la ruta original de un documento, y
 //! la del portal es un enlace concedido para esta sesión que además no se puede
 //! usar para nada más que leer (ver [`crate::destination::PortalDocument`]).
 //! Mandarla a la ventana sería mandar una mentira, y el ADR-0011 lo prohíbe.

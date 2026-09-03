@@ -75,7 +75,7 @@ pub fn run() {
         // ventana no crece por esto.
         .plugin(tauri_plugin_dialog::init())
         // Y el que abre el PDF firmado y su carpeta, por la misma puerta: bajo
-        // el arenero es el portal `OpenURI`, y es lo único que lleva al usuario
+        // el sandbox es el portal `OpenURI`, y es lo único que lleva al usuario
         // hasta un fichero cuya ruta nunca ve (ID-79, ID-85, ADR-0011).
         .plugin(tauri_plugin_opener::init())
         .manage(environment)

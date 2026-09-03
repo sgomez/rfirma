@@ -71,7 +71,7 @@ son cientos de megas para ahorrar un comando.
   —vendorizar el árbol Maven, y lo que sus reglas digan cuando toque—, no la continuación de
   este.
 - **La política de portales no vive aquí.** Esta ADR decide *dónde se sirve* el bundle;
-  qué entra y sale del arenero lo fija el
+  qué entra y sale del sandbox lo fija el
   [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md), y ahí está también su
   **excepción para los almacenes NSS** (`~/.mozilla/firefox:ro` y `~/.pki/nssdb:ro`,
   [#101](https://github.com/sgomez/rfirma/issues/101)). Se anota porque el criterio de

@@ -27,12 +27,12 @@ precedentes vivos que hacen justo eso (TuxGuitar, Ghidra), pero son anteriores a
 y la propia política dice que no se aplica retroactivamente, así que **no demuestran que una
 submission nueva pasaría**.
 
-**Construir los seis dentro del arenero es caro, no imposible.** No hay extensión de SDK de GraalVM
+**Construir los seis dentro del sandbox es caro, no imposible.** No hay extensión de SDK de GraalVM
 (comprobado: cero repositorios y cero coincidencias de código en la organización `flathub`), así que
 GraalVM CE entraría como tarball prebuilt de 352 MB; y no hay generador oficial de Maven en
 `flatpak-builder-tools`, así que las ~790 entradas de `~/.m2` habría que vendorizarlas con un guion
 propio, sabiendo que las 36 de `es.gob.afirma` no están en Maven Central y hay que compilarlas desde
-git dentro del arenero.
+git dentro del sandbox.
 
 **Y hay un obstáculo mayor que los seis `.so`, que el ticket no contemplaba: la política de IA
 generativa de Flathub.** Prohíbe expresamente las aplicaciones «que contengan código, documentación
@@ -175,7 +175,7 @@ modules:
       - /usr/lib/sdk/openjdk21/installjdk.sh
 ```
 
-Y la compilación real, dentro del arenero, con las dependencias vendorizadas:
+Y la compilación real, dentro del sandbox, con las dependencias vendorizadas:
 
 ```yaml
       - source /usr/lib/sdk/openjdk21/enable.sh && gradle buildGhidra
@@ -190,7 +190,7 @@ según su
 Es exactamente el mismo mecanismo que el ADR-0013 ya adoptó para cargo y pnpm.
 
 Dato útil que no esperaba: **la extensión `openjdk25` trae Maven 3.9.16** dentro
-(`$FLATPAK_DEST/maven/bin/mvn`, enlazado en `bin`). O sea que `mvn` **existe** dentro del arenero de
+(`$FLATPAK_DEST/maven/bin/mvn`, enlazado en `bin`). O sea que `mvn` **existe** dentro del sandbox de
 construcción sin trabajo adicional. Lo que no existe es la forma de rellenar `~/.m2` sin red.
 
 ### GraalVM: no existe extensión. Dicho explícitamente.
@@ -206,12 +206,12 @@ resultados:
 | código con `GRAALVM_HOME` | 0 |
 
 **No hay ninguna extensión de SDK de GraalVM en Flathub, y no hay ninguna aplicación en Flathub que
-use `native-image`.** Si rfirma se publicase construyendo dentro del arenero, sería la primera. Esto
+use `native-image`.** Si rfirma se publicase construyendo dentro del sandbox, sería la primera. Esto
 es una acotación de búsqueda por la API de código de GitHub, que solo indexa las ramas por omisión;
 no es una prueba formal de inexistencia, pero cuatro ceros sobre una organización de este tamaño es
 bastante concluyente.
 
-## 3. Qué costaría construir los seis dentro del arenero
+## 3. Qué costaría construir los seis dentro del sandbox
 
 Tres bloques, y ninguno es un muro; los tres son caros.
 
@@ -232,14 +232,14 @@ dependencies»—. Esa lectura es mía y **no la he podido confirmar contra ning
 contra ningún precedente de una aplicación**; el precedente que sí existe es el de una extensión de
 SDK, que es otra cosa.
 
-Construir GraalVM CE desde fuente dentro del arenero no lo he dimensionado: exige `mx`, un JDK de
+Construir GraalVM CE desde fuente dentro del sandbox no lo he dimensionado: exige `mx`, un JDK de
 arranque y un árbol de fuentes propio. Doy por hecho que está fuera de discusión, pero es una
 suposición.
 
 ### 3.2 AutoFirma vendorizado
 
 `bootstrap.sh` clona `ctt-gob-es/clienteafirma` en la etiqueta `v1.9.1` y ejecuta
-`mvn clean install -DskipTests` sobre el cliente oficial **entero**. Dentro del arenero eso se
+`mvn clean install -DskipTests` sobre el cliente oficial **entero**. Dentro del sandbox eso se
 traduce en una fuente `type: git` con `tag` **y** `commit` (el linter exige los dos en una submission
 nueva, sección 1) y un módulo que compila el árbol completo.
 
@@ -280,7 +280,7 @@ explícito en el propio hilo:
 > `repo.maven.apache.org`, which means you'll have to adjust them manually
 
 Que es justo nuestro caso: los 36 `.jar` de `es.gob.afirma` no están en Central; salen de compilar
-el clon. Habría que compilarlos dentro del arenero (3.2) e instalarlos en el `~/.m2` local antes de
+el clon. Habría que compilarlos dentro del sandbox (3.2) e instalarlos en el `~/.m2` local antes de
 compilar el puente.
 
 Escala del fichero resultante, con dos referencias reales:
@@ -306,7 +306,7 @@ pasa de «copiar 35 MB» a «compilar el cliente oficial de AutoFirma entero má
 
 Y una **precondición dura** que ya estaba escrita: el ADR-0013 exige versionar los metadatos de
 `native-image`, porque «desde un clon limpio la imagen que se distribuye no es reproducible». Si el
-arenero construye la imagen, eso deja de ser higiene y pasa a ser requisito de que el módulo
+sandbox construye la imagen, eso deja de ser higiene y pasa a ser requisito de que el módulo
 compile.
 
 ## 4. Qué invalida `type: dir`, y qué no
@@ -469,7 +469,7 @@ metadatos de `native-image` versionados (ADR-0013) pasan de higiene a precondici
 - El **ADR-0004** puede anotar que Flathub no es hoy un canal disponible tal como está el manifiesto,
   y que el motivo no es técnico.
 - El **ADR-0013** puede **cerrar el punto que dejó abierto**: para v0.1 **no** se construye la
-  librería dentro del arenero. Es caro (sección 3) y no resuelve el bloqueo real (sección 6).
+  librería dentro del sandbox. Es caro (sección 3) y no resuelve el bloqueo real (sección 6).
 - Merece un ADR propio la pregunta que abre la sección 6: si Flathub sigue siendo el destino
   declarado del #17 y del #22, o si el canal pasa a ser el bundle más, quizá, un repositorio propio.
 
@@ -501,9 +501,9 @@ metadatos de `native-image` versionados (ADR-0013) pasan de higiene a precondici
   «runtime dependencies» es una inferencia del texto, no una regla escrita. No he encontrado ninguna
   aplicación en Flathub que baje un toolchain binario de 352 MB; el único precedente cercano es una
   extensión de SDK, que es otra categoría.
-- **Si `native-image` funciona dentro del arenero de construcción de flatpak.** No lo he probado. Ni
+- **Si `native-image` funciona dentro del sandbox de construcción de flatpak.** No lo he probado. Ni
   aquí ni en ningún issue anterior de este repositorio. Necesita el toolchain de C —que el SDK trae—
-  y bastante memoria; ninguna de las dos cosas está medida contra el arenero.
+  y bastante memoria; ninguna de las dos cosas está medida contra el sandbox.
 - **Los límites de tiempo, memoria y disco de los trabajadores de construcción de Flathub.** No los
   he encontrado publicados. Es la incógnita que decide si la sección 3 es «caro» o «imposible en la
   práctica».

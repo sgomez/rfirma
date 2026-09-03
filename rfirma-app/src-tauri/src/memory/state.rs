@@ -3,7 +3,7 @@
 //!
 //! Las otras tres memorias: los documentos recientes, la última configuración
 //! de firma visible y el certificado usado. Y, colgada de ellas, la última
-//! carpeta de la que se abrió algo, que fuera del arenero sí se puede saber.
+//! carpeta de la que se abrió algo, que fuera del sandbox sí se puede saber.
 //! Vive en un fichero aparte del de la configuración porque en Windows **no
 //! debe viajar en un perfil móvil**, y porque borrarlo no reconfigura la
 //! aplicación.
@@ -47,9 +47,9 @@ pub struct State {
     /// La última carpeta de la que se abrió un documento, para volver a abrir
     /// el diálogo ahí (enmienda del ADR-0011).
     ///
-    /// Es `None` **siempre bajo el arenero**, y no por precaución: allí el
+    /// Es `None` **siempre bajo el sandbox**, y no por precaución: allí el
     /// diálogo devuelve un enlace del portal y la carpeta real no se puede
-    /// saber. En los canales sin arenero —deb, rpm, Windows, macOS— sí se
+    /// saber. En los canales sin sandbox —deb, rpm, Windows, macOS— sí se
     /// sabe, y entonces se recuerda.
     ///
     /// Es la única ruta del anfitrión que se guarda además de las de los

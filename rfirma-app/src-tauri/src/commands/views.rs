@@ -8,7 +8,7 @@
 //!
 //! # Ninguno lleva una ruta del anfitrión
 //!
-//! No es una recomendación, es una consecuencia del ADR-0011: bajo el arenero
+//! No es una recomendación, es una consecuencia del ADR-0011: bajo el sandbox
 //! la aplicación **no conoce** la ruta real de un documento —el portal solo la
 //! da a un llamante `is_host`, que un flatpak nunca es—, así que devolver una
 //! sería devolver una mentira. Lo que sale de aquí son **nombres**: el del
@@ -249,7 +249,7 @@ pub struct RecentDocumentView {
 ///
 /// El destino sale por su [`nombre`](crate::destination::DestinationFolder::name) y
 /// nunca por su ruta, igual que todo lo demás que cruza (ADR-0011). Y va en un
-/// solo sentido de verdad: la ventana **no elige la carpeta** —bajo el arenero
+/// solo sentido de verdad: la ventana **no elige la carpeta** —bajo el sandbox
 /// hay una y solo una—, así que el destino que llegue en una escritura se
 /// ignora. Está aquí para pintarlo, no para cambiarlo.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

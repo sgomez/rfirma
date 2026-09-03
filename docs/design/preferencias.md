@@ -100,7 +100,7 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
    del usuario.
 
    **No es un desplegable.** Lo fue, con una sola opción dentro, que es un
-   control que finge elegir. Bajo el arenero la aplicación escribe en la
+   control que finge elegir. Bajo el sandbox la aplicación escribe en la
    carpeta pero la única palabra que tiene de ella es su último segmento, y
    enseñar la ruta donde se puede y el nombre donde no sería la misma pantalla
    contando cosas distintas según el empaquetado; un selector de directorio
@@ -112,7 +112,7 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
    si no está.
 
    *Junto al documento original* **no aparece aquí en el flatpak**: bajo el
-   arenero la aplicación no puede saber de qué carpeta salió el original. Es
+   sandbox la aplicación no puede saber de qué carpeta salió el original. Es
    una capacidad que llegará con los instaladores nativos, no una opción
    atenuada que le cuente al usuario nuestros problemas de empaquetado.
    Razonamiento y alternativas descartadas en el

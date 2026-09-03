@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Verificacion reproducible del flatpak. Construye, instala y comprueba dentro
-# del arenero: que la libreria nativa esta donde el ADR-0004 dice, que el modulo
+# del sandbox: que la libreria nativa esta donde el ADR-0004 dice, que el modulo
 # PKCS#11 que empaqueta el propio flatpak carga, y que la ventana arranca y
 # sigue viva.
 #
@@ -15,7 +15,7 @@
 # perfil ICC aborta el proceso (rc=134) en vez de dar un error recuperable.
 #
 # El ciclo se ejecuta en el ANFITRION apuntando a la libreria del bundle, no
-# dentro del arenero. No es una preferencia; dentro no se puede hoy, por tres
+# dentro del sandbox. No es una preferencia; dentro no se puede hoy, por tres
 # razones medidas:
 #
 #   1. NO HAY TOKEN. La fase 2 firma con PKCS#11, y el bundle empaqueta OpenSC
@@ -36,10 +36,10 @@
 # romper "los permisos son los declarados y ninguno mas". Cerrar el hueco pide
 # un manifiesto de banco aparte, y eso es otra decision.
 #
-# Lo que SI se mide dentro del arenero son los pasos 2, 3, 4, 6 y 7: que la
+# Lo que SI se mide dentro del sandbox son los pasos 2, 3, 4, 6 y 7: que la
 # libreria esta y esta SOLA, que el modulo PKCS#11 que empaqueta el propio
 # flatpak carga, que la ventana arranca y sigue viva, que un documento
-# entrado por el portal llega con sus bytes intactos, y que el arenero
+# entrado por el portal llega con sus bytes intactos, y que el sandbox
 # RECHAZA escribir en los almacenes NSS que el manifiesto declara en solo
 # lectura (#101, AC 3). El paso 6 no necesita el WebView para comprobar el
 # portal: usa `flatpak document-export`, la misma via por la que el dialogo
@@ -84,11 +84,11 @@ flatpak-builder --user --force-clean --install --repo="$LAB/repo" \
 echo "OK  ($(du -sh "$AQUI/build-dir/files" | cut -f1) instalados)"
 
 echo
-echo "### 2. la libreria nativa, dentro del arenero"
+echo "### 2. la libreria nativa, dentro del sandbox"
 # UN SOLO FICHERO (ADR-0012). Si aqui aparece libawt.so, un JPEG con perfil ICC
 # aborta el proceso en vez de dar un error recuperable: eso es un fallo, no un
 # extra.
-# Un solo arranque del arenero: lo que se ensena y lo que se comprueba tienen
+# Un solo arranque del sandbox: lo que se ensena y lo que se comprueba tienen
 # que ser la misma medicion, no dos.
 # Y si el arranque es lo que falla, hay que decir eso: sin este `||`, el
 # `contenido` vacio saldria como "SOBRA ALGO", que es justo lo contrario de lo
@@ -115,19 +115,19 @@ echo "### 4. la ventana arranca (WebKitGTK del runtime)"
 # El v0.1 se entrego con la ventana pintando un error de DBus a pantalla
 # completa y este paso decia OK, porque solo miraba el pgrep. rfirma no escribe
 # nada en el arranque, asi que lo unico que delata una pagina que no ha cargado
-# es lo que el arenero rechaza en el bus.
+# es lo que el sandbox rechaza en el bus.
 flatpak run --log-session-bus --filesystem="$LAB" "$APP" >"$LAB/gui.log" 2>&1 &
 sleep 10
 if ! pgrep -x rfirma >/dev/null; then
     echo "LA VENTANA MURIO:"; tail -3 "$LAB/gui.log"; exit 1
 fi
 # El fallo del #22 era que Mutter la mataba (Error 71); el de la v0.1, que
-# WebKitGTK pedia un proxy que el arenero sin red no concede.
+# WebKitGTK pedia un proxy que el sandbox sin red no concede.
 echo "sigue viva a los 10 s: OK"
 flatpak kill "$APP" 2>/dev/null
 rechazos=$(grep -c "portal.Error.NotAllowed" "$LAB/gui.log" || true)
 if [ "$rechazos" != "0" ]; then
-    echo "EL ARENERO RECHAZA $rechazos LLAMADA(S) AL PORTAL:" >&2
+    echo "EL SANDBOX RECHAZA $rechazos LLAMADA(S) AL PORTAL:" >&2
     grep -B1 "portal.Error.NotAllowed" "$LAB/gui.log" >&2
     echo >&2
     echo "Una ventana viva NO es una ventana que se vea: si el rechazo es a" >&2
@@ -167,8 +167,8 @@ echo "          $(sha256sum "$LIB_BUNDLE/librfirma_crypto.so" | cut -c1-16)... \
 echo "OK  ciclo trifasico y pdfsig contra los bytes que se distribuyen"
 
 echo
-echo "### 6. el portal de documentos, dentro del arenero"
-# DENTRO del arenero: `flatpak run` hereda exactamente los mismos permisos
+echo "### 6. el portal de documentos, dentro del sandbox"
+# DENTRO del sandbox: `flatpak run` hereda exactamente los mismos permisos
 # que el binario real, y `flatpak document-export` es la misma via por la que
 # el dialogo de abrir (Orden 7, commands/mod.rs) concede el permiso -contra la
 # RUTA del anfitrion, no el inodo- y devuelve la ruta montada que la
@@ -182,11 +182,11 @@ HASH_ANFITRION=$(sha256sum "$ENTRADA" | cut -d' ' -f1)
 RUTA_PORTAL=$(flatpak document-export --app="$APP" "$ENTRADA") \
     || { echo "FALLO 'flatpak document-export'"; exit 1; }
 echo "ruta que ve la aplicacion: $RUTA_PORTAL"
-HASH_ARENERO=$(flatpak run "${EXTRA[@]}" --command=sha256sum "$APP" "$RUTA_PORTAL" | cut -d' ' -f1) \
-    || { echo "NO HE PODIDO LEER $RUTA_PORTAL DENTRO DEL ARENERO"; exit 1; }
-[ "$HASH_ARENERO" = "$HASH_ANFITRION" ] \
-    && echo "OK  los bytes del portal llegan intactos ($HASH_ARENERO)" \
-    || { echo "LOS BYTES NO COINCIDEN: anfitrion $HASH_ANFITRION, arenero $HASH_ARENERO"; exit 1; }
+HASH_SANDBOX=$(flatpak run "${EXTRA[@]}" --command=sha256sum "$APP" "$RUTA_PORTAL" | cut -d' ' -f1) \
+    || { echo "NO HE PODIDO LEER $RUTA_PORTAL DENTRO DEL SANDBOX"; exit 1; }
+[ "$HASH_SANDBOX" = "$HASH_ANFITRION" ] \
+    && echo "OK  los bytes del portal llegan intactos ($HASH_SANDBOX)" \
+    || { echo "LOS BYTES NO COINCIDEN: anfitrion $HASH_ANFITRION, sandbox $HASH_SANDBOX"; exit 1; }
 
 # ID-72: si el permiso sobrevive a cerrar y reabrir la aplicacion, y no solo a
 # seguir vivo dentro del mismo `flatpak run`. Se simula la sesion siguiente
@@ -218,11 +218,11 @@ echo "    -> el dia que los recientes persistan entre sesiones, reabrir por" \
      "el portal el mismo host path funcionara sin pedir permiso otra vez"
 
 echo
-echo "### 7. el arenero no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
+echo "### 7. el sandbox no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
 # AC 3 del #101: "rfirma no puede escribir en el perfil de Firefox desde
-# dentro del arenero, y hay constancia de haberlo comprobado". Esto NO es la
+# dentro del sandbox, y hay constancia de haberlo comprobado". Esto NO es la
 # comprobacion que la TD del #95 deja como manual -esa depende de una maquina
-# y un perfil reales-; esta es una propiedad del arenero, medible sin ninguno
+# y un perfil reales-; esta es una propiedad del sandbox, medible sin ninguno
 # de los dos: :ro tiene que sostenerse tanto si hay perfil como si no.
 #
 # TRAMPA MEDIDA (misma clase que xdg-documents, #27): si la ruta NO existe en
@@ -235,11 +235,11 @@ echo "### 7. el arenero no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
 #
 # NINGUNO de los tres desenlaces se decide leyendo un mensaje de error. Un
 # `grep` a la salida de `touch` solo acierta con coreutils en ingles: `flatpak
-# run` propaga LANG/LC_* del anfitrion al arenero y org.gnome.Platform//50 trae
+# run` propaga LANG/LC_* del anfitrion al sandbox y org.gnome.Platform//50 trae
 # la extension de locale, asi que en un escritorio en castellano el mensaje es
 # "No existe el fichero o el directorio" y la rama de "no esta montado" no se
 # dispararia -otro falso verde, justo el que esta funcion cierra-. Asi que el
-# montaje se decide con un `test -d` DENTRO del arenero, que es la pregunta de
+# montaje se decide con un `test -d` DENTRO del sandbox, que es la pregunta de
 # verdad, y el mensaje de `touch` queda como informacion para quien lea la
 # salida. La ruta viaja por RUTA_RO en el entorno y no interpolada dentro de las
 # comillas simples de `sh -c`, para que un $HOME con comillas no rompa la orden.
@@ -255,19 +255,19 @@ comprueba_ro() {
          touch "$RUTA_RO/verifica-escritura-107" 2>&1; echo RC=$?') \
         || { echo "NO HE PODIDO EJECUTAR LA COMPROBACION EN $etiqueta"; exit 1; }
     if echo "$salida" | grep -q "RC=0"; then
-        echo "ESCRITURA PERMITIDA en $etiqueta dentro del arenero (:ro no se sostiene):"
+        echo "ESCRITURA PERMITIDA en $etiqueta dentro del sandbox (:ro no se sostiene):"
         echo "$salida"
         flatpak run "${EXTRA[@]}" --env=RUTA_RO="$ruta" --command=sh "$APP" -c \
             'rm -f "$RUTA_RO/verifica-escritura-107"' 2>/dev/null
         exit 1
     fi
     if ! echo "$salida" | grep -q "^MONTADO$"; then
-        echo "$etiqueta NO ESTA MONTADO dentro del arenero (existe en el anfitrion"
+        echo "$etiqueta NO ESTA MONTADO dentro del sandbox (existe en el anfitrion"
         echo "en $ruta pero dentro no hay directorio): no se ha medido nada"
         echo "$salida"
         exit 1
     fi
-    echo "OK  $etiqueta: escritura denegada dentro del arenero"
+    echo "OK  $etiqueta: escritura denegada dentro del sandbox"
     echo "    $salida"
 }
 comprueba_ro "perfil de Firefox" "$HOME/.mozilla/firefox"
@@ -275,8 +275,8 @@ comprueba_ro "almacen NSS del sistema" "$HOME/.pki/nssdb"
 
 if [ -f "$HOME/.mozilla/firefox/profiles.ini" ]; then
     flatpak run "${EXTRA[@]}" --command=cat "$APP" "$HOME/.mozilla/firefox/profiles.ini" >/dev/null \
-        && echo "OK  profiles.ini se lee dentro del arenero (la mitad que SI hace falta)" \
-        || { echo "NO HE PODIDO LEER profiles.ini dentro del arenero"; exit 1; }
+        && echo "OK  profiles.ini se lee dentro del sandbox (la mitad que SI hace falta)" \
+        || { echo "NO HE PODIDO LEER profiles.ini dentro del sandbox"; exit 1; }
 else
     echo "AVISO  no hay profiles.ini en el anfitrion, la lectura no se mide"
 fi

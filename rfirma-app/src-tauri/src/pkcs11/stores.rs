@@ -4,7 +4,7 @@
 //! una ruta única. Esa ruta **solo existe dentro del flatpak**, así que con
 //! `just dev` la carga fallaba siempre y la ventana se quedaba sin
 //! certificados. Ahora el binario resuelve los almacenes que de verdad hay
-//! debajo —el del arenero cuando corre dentro, y los del anfitrión cuando corre
+//! debajo —el del sandbox cuando corre dentro, y los del anfitrión cuando corre
 //! fuera— sin que nadie tenga que exportar nada a mano.
 //!
 //! Es una **colección** y no una ruta a propósito (ID-03): un almacén que no
@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 /// decida con qué se firma.
 pub const CANDIDATE_MODULES: &[&str] = &[
     // El que empaqueta el propio flatpak: los del anfitrión no cargan dentro
-    // del arenero (`docs/research/flatpak-canal-unico.md`).
+    // del sandbox (`docs/research/flatpak-canal-unico.md`).
     "/app/lib/pkcs11/opensc-pkcs11.so",
     // Los del anfitrión, que es lo que hay debajo de `just dev`. OpenSC cubre
     // el DNIe y las tarjetas corrientes; SoftHSM es el token de pruebas.
@@ -43,7 +43,7 @@ pub const CANDIDATE_MODULES: &[&str] = &[
 /// Firefox.
 ///
 /// No se empaqueta (ID-15): el runtime `org.gnome.Platform//50` ya trae el
-/// primero de esta lista, así que dentro del arenero y fuera se busca igual.
+/// primero de esta lista, así que dentro del sandbox y fuera se busca igual.
 pub const CANDIDATE_SOFTOKENS: &[&str] = &[
     "/usr/lib/x86_64-linux-gnu/libsoftokn3.so",
     "/usr/lib/x86_64-linux-gnu/nss/libsoftokn3.so",

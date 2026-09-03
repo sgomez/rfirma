@@ -318,7 +318,7 @@ fidelidad encontrada, y se cierra empaquetando `pdfjs-dist/standard_fonts`.
 Se dice en voz alta para que nadie lo dé por medido:
 
 - **No se midió dentro del flatpak.** Todo corre en el equipo de desarrollo,
-  contra la `.so` del `target/`. El arenero no debería cambiar nada aquí —no hay
+  contra la `.so` del `target/`. El sandbox no debería cambiar nada aquí —no hay
   portales de por medio, los bytes ya están en memoria—, pero no está
   comprobado.
 - **No se midió a través de la envoltura de Rust** (`ffi.rs`), sino con un

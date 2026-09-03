@@ -108,7 +108,7 @@ línea, `.rf-prose`.
 
 Nota de despliegue: Inter **está autoalojada**, no servida desde una CDN. Los
 woff2 (subconjuntos `latin` y `latin-ext`) y su OFL viven junto al bundle y
-entran en el paquete. No es una preferencia: dentro del arenero del flatpak no
+entran en el paquete. No es una preferencia: dentro del sandbox del flatpak no
 hay red —el manifiesto no declara `--share=network`— y la CSP hereda
 `default-src 'self'` sin `font-src`, así que un `@import` a Google Fonts no
 cargaría nunca y toda la aplicación caería a la sans del sistema.
@@ -282,7 +282,7 @@ Tres reglas, y las tres son el componente:
 
 1. **La carpeta va atenuada y el nombre no.** La carpeta es contexto; el nombre
    es el dato. Delante lleva `…/`, que dice que hay carpetas por encima sin
-   afirmar cuáles: bajo el arenero la aplicación no las conoce, y fuera de él no
+   afirmar cuáles: bajo el sandbox la aplicación no las conoce, y fuera de él no
    se enseñan igualmente.
 2. **El nombre se recorta por el medio**, no por la cola. Se conservan siempre
    la extensión y el sufijo `-firmado` con su número de desempate —`-2`, `-3`—,
