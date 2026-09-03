@@ -24,6 +24,9 @@
 - #136 y #137 puntuaron ambos `complex`/opus y ambos volvieron CLEAN a la primera revisión con cero ciclos de arreglo, en ~19 min cada uno. Mecanismo: los dos tenían un patrón ya fusionado en el repositorio que imitar (`app/` de #135; el guarda `single_cfg_os_site.rs` para #137), y la propia triage lo nombró en sus pistas. El tier salió bien pero se quedó en lo más alto de su banda — dato a vigilar si se repite, no regla todavía.
 - Los dos sub-issues estándar/sonnet de #125 (#127, #128) volvieron NEEDS_FIXES en la primera revisión; el de #128 por una puerta de calidad roja (CRAP: `choose_rubric` puntuó 42 por encima del umbral 30) más un almacén que se escribía y nunca se leía. Los dos sub-issues opus de rebanadas comparables de UI+comando (#130, #131) llegaron CLEAN a la primera revisión con cero ciclos. Señal: en este repositorio, una rebanada «un comando de Tauri + su adaptador TS + el cableado de UI» lleva reglas densas y no obvias (el umbral de CRAP, las tres guardas de `commands/mod.rs`, el ADR-0011) que el nivel sonnet no satisface de forma fiable a la primera; la triage puntuó las dos `standard`.
 - El coste y la precisión de la triage salieron bien en lo demás de #125: los seis sub-issues convergieron, ninguna escalada, ningún conflicto de fusión (ejecución secuencial, cadena de dependencias estricta).
+- #169 y #177 se triaron `oversized` (model=none) pero se construyeron a opus por el default `oversized: build` del repositorio, y los dos fusionaron tras un único ciclo de arreglo sin escalada. Dos de nueve, ambos primero-de-su-familia dentro del ticket: en este repositorio `oversized` dispara de más, y un ticket acotado a una sola costura debería puntuar `complex` aunque agrupe varias decisiones de ID.
+- La triage de #177 informó de que sus tres bloqueantes (#172, #174, #175) «no estaban en main» cuando los tres se habían fusionado minutos antes en la misma tanda secuencial: el dispatcher leyó un checkout obsoleto. Mecanismo: la triage dedujo de esa lectura obsoleta que «no hay patrón que imitar», y eso empujó también hacia `oversized`. Un dispatcher debe hacer `fetch origin/main` antes de concluir que un patrón está ausente.
+- Tanda secuencial de nueve sub-issues, cero conflictos de fusión y cero merge-fixes; seis de nueve necesitaron exactamente un ciclo de arreglo, ninguno necesitó dos. La forma «un ciclo y CLEAN» es la norma de este repositorio, no una señal de alarma.
 
 ## Run log
 
@@ -63,3 +66,12 @@
 2026-09-02 spec=#125 sub=#129 model=opus effort=medium pr=#144 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-02 spec=#125 sub=#130 model=opus effort=medium pr=#145 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-02 spec=#125 sub=#131 model=opus effort=medium pr=#146 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#168 sub=#169 model=opus effort=medium pr=#178 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#168 sub=#170 model=sonnet effort=medium pr=#179 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-02 spec=#168 sub=#171 model=opus effort=medium pr=#180 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#168 sub=#172 model=opus effort=medium pr=#181 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#168 sub=#173 model=opus effort=medium pr=#182 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#168 sub=#174 model=opus effort=medium pr=#183 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#168 sub=#175 model=opus effort=medium pr=#184 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#168 sub=#176 model=sonnet effort=medium pr=#186 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#168 sub=#177 model=opus effort=medium pr=#187 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
