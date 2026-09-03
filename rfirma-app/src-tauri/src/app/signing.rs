@@ -63,24 +63,6 @@ struct InFlight {
     seal: SessionSeal,
 }
 
-/// **Caso de uso.** El texto del recuadro, ya compuesto, para la vista previa.
-///
-/// Es la **misma** función que compone lo que se envía en `layer2Text`
-/// ([`compose_layer2_text`]), y por eso la vista previa es honesta: una copia
-/// en TypeScript empezaría igual y divergiría en la primera esquina.
-///
-/// El titular sale del token, no de la orden: la ventana solo tiene el asa, y
-/// componer el recuadro con lo que la ventana diga sería dejar que estampe
-/// cualquier nombre.
-pub fn visible_text(
-    order: &SigningOrder,
-    stores: &[Store],
-    listed: &ListedCertificates,
-) -> Result<String, Failure> {
-    let holder = certificates::stamped_holder_named(&order.certificate, stores, listed)?;
-    Ok(layer2_text_of(order, &holder))
-}
-
 /// **Caso de uso.** Prefirma: cruza la frontera y deja el ciclo abierto.
 ///
 /// Antes de nada rechaza lo que no se puede firmar —cifrado, certificado, o no
@@ -362,7 +344,7 @@ fn no_open_cycle() -> Failure {
 mod tests {
     use super::{
         admitted_bytes, begin, cancel, config_for, finish, sign_on_token, signed_document,
-        signed_folder, take_signed_cycle, visible_text, SigningSession,
+        signed_folder, take_signed_cycle, SigningSession,
     };
     use crate::app::fixtures::{a_certificate, a_memory, an_order};
     use crate::commands::orders::{PlacementOrder, SigningOrder};
@@ -704,15 +686,5 @@ mod tests {
             take_signed_cycle(&session).is_err(),
             "no queda ciclo que llevarse"
         );
-    }
-
-    /// La vista previa lee el titular **del token**, así que sin ningún almacén
-    /// donde buscar no compone un texto en blanco: lo dice.
-    #[test]
-    fn the_preview_says_so_instead_of_composing_a_box_without_a_holder() {
-        let failure = visible_text(&an_order(), &[], &ListedCertificates::new())
-            .expect_err("no hay donde buscar el certificado");
-
-        assert!(!failure.detail.is_empty(), "con su detalle crudo (ID-29)");
     }
 }

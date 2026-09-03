@@ -1,6 +1,6 @@
 //! El texto del recuadro de la firma visible, redactado por rFirma.
 //!
-//! **No hay comodines** (ID-19): `$$SUBJECTCN$$` y `$$SIGNDATE$$` no salen de
+//! **No hay comodines**: `$$SUBJECTCN$$` y `$$SIGNDATE$$` no salen de
 //! aquí. Componer el texto entero en Rust y enviarlo ya resuelto en
 //! `layer2Text` es lo que permite que siga al idioma de la aplicación, y lo que
 //! deja fuera las rarezas del original —entre ellas que `$$PSEUDONYM$$`

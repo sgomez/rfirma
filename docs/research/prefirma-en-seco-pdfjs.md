@@ -211,7 +211,7 @@ Dos ciclos en seco **separados por 3 segundos** sobre el mismo documento
 producen PDF que difieren en **593 bytes** —el `/Contents`, el `TIME` del
 diccionario de firma y el File ID— y, al pintarlos y restarlos píxel a píxel,
 **0 píxeles de diferencia**. La apariencia no depende del instante porque
-rFirma compone el `layer2Text` en Rust y lo envía ya resuelto (ID-19); si el
+rFirma compone el `layer2Text` en Rust y lo envía ya resuelto; si el
 texto llevara los comodines de AutoFirma, esto no valdría.
 
 Consecuencia práctica: **la vista previa se puede calcular una vez y cachear
