@@ -455,6 +455,24 @@ describe("SigningPanel · Colocación", () => {
     expect(onUnseal).toHaveBeenCalled();
   });
 
+  /**
+   * «Todas las páginas» no tiene conjunto propio que guardar (`storing`,
+   * `signatureBox.ts`): quitarle una página de ahí no se va a ninguna parte,
+   * `onUnseal` resolvería «todas» en sueltas y `placementOf` las recompondría
+   * en «todas» acto seguido, y el botón parecería no hacer nada. No se ofrece.
+   */
+  it("does not offer to unseal while «all pages» is chosen, even though the page carries the stamp", () => {
+    renderPanel({
+      signature: visible,
+      placement: { rect, pages: "all" },
+      pageChoice: "all",
+      viewedPage: 3,
+    });
+
+    expect(screen.queryByRole("button", { name: "Quitar el sello" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
+  });
+
   it("signs invisibly with the switch off, which is the other «no» entirely", () => {
     renderPanel({ signature: { ...visible, enabled: false }, placement: null });
 

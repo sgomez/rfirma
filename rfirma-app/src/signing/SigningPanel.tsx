@@ -244,10 +244,14 @@ export function SigningPanel({
   const echo = placement === null ? null : echoOf(placement.pages, document.pages, t);
 
   // El botón de sellar, y cuál de sus tres caras toca (#194, antes ID-101).
-  // Quitar el sello se ofrece siempre que la página lo lleve, sea cual sea la
-  // opción activa: `onUnseal` resuelve «todas» en páginas sueltas antes de
-  // restar (`unsealing`), así que no hace falta distinguir aquí.
-  const sealed = placement !== null && sealsPage(placement.pages, viewedPage);
+  // Quitar el sello se ofrece cuando la página lo lleva, salvo con «Todas las
+  // páginas» activa: esa opción no tiene conjunto propio que guardar
+  // (`storing` lo descarta, `signatureBox.ts`), así que `onUnseal` resolvería
+  // «todas» en páginas sueltas y `placementOf` las recompondría en «todas» acto
+  // seguido — el botón parecería no hacer nada. Restarle una página a «todas»
+  // pide primero pasar a «Estas páginas», que sí recuerda lo suyo.
+  const sealed =
+    placement !== null && pageChoice !== "all" && sealsPage(placement.pages, viewedPage);
   const sealButton = sealed
     ? { label: t("panel.placement.unseal"), variant: "rf-btn--ghost", act: onUnseal }
     : pageChoice === "all"
