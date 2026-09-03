@@ -3,20 +3,26 @@
 # Decidida en https://github.com/sgomez/rfirma/issues/11 y ampliada a las tres
 # cadenas en https://github.com/sgomez/rfirma/issues/47, siguiendo el ADR-0014.
 #
-# QUE COMPRUEBA HOY: `just check` entero — el puente Java compila con
-# -Xlint:all, Biome y clippy pasan sobre TypeScript y Rust, las tres cadenas
-# construyen, y corren las pruebas de grada A (y B cuando existan) mas la
-# puerta CRAP. Sigue SIN comprobar que una firma valga: eso es grada C y vive
-# en el carril lento. Lee la seccion de CI de docs/agents/code-host.md antes de
-# fiarte de un check en verde.
+# QUE COMPRUEBA HOY: `just check` entero, pero REPARTIDO EN UN JOB POR CADENA
+# —el puente Java compila con -Xlint:all y pasa sus pruebas, Biome y tsc pasan
+# sobre TypeScript, clippy y la puerta CRAP sobre Rust. Sigue SIN comprobar que
+# una firma valga: eso es grada C y vive en el carril lento. Lee la seccion de
+# CI de docs/agents/code-host.md antes de fiarte de un check en verde.
+#
+# TRES JOBS Y NO UNO, POR TIEMPO DE PARED. Las tres cadenas no se necesitan
+# entre si, asi que encadenarlas era pagar la suma cuando se puede pagar la mas
+# lenta. Y cada job instala solo lo suyo: el de Java no necesita las librerias
+# del WebView ni cargo-crap, el de TypeScript no necesita ni GraalVM ni Rust.
+# Solo el de Rust paga los 34 s de apt y los ~40 s de restaurar la cache de
+# cargo.
 #
 # DOS CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
 # realimentacion de un agente, asi que lo que corre siempre tiene que ser
 # rapido:
 #
-#   check   en cada PR y en cada push a main
-#   native  solo en etiquetas, a mano, con la etiqueta 'native', y una vez por
-#           semana
+#   cadena Java / TypeScript / Rust   en cada PR y en cada push a main
+#   native                            solo en etiquetas, a mano, con la
+#                                     etiqueta 'native', y una vez por semana
 #
 # El puente Java apenas se va a tocar una vez escrito, asi que reconstruir la
 # imagen nativa en cada PR seria pagar cuatro veces el carril rapido para no
@@ -43,6 +49,14 @@ on:
 permissions:
   contents: read
 
+# En un repositorio movido por agentes lo normal es empujar tres veces seguidas
+# a la misma rama. Sin esto, las dos primeras ejecuciones siguen ocupando
+# runners para producir un veredicto que ya no le importa a nadie. Solo en PR:
+# en main cada commit merece su propia ejecucion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   # GraalVM CE 25, fijado por el issue #6: la linea 21 aborta dentro del
   # JNI_OnLoad de libawt.so con cualquier firma visible. El pom sigue
@@ -58,8 +72,12 @@ jobs:
   # ==========================================================================
   # CARRIL RAPIDO
   # ==========================================================================
-  check:
-    name: Compila y resuelve dependencias
+  # Cada job instala SOLO lo de su cadena. Los tres arrancan a la vez, asi que
+  # la espera es la del mas lento (Rust) y no la suma.
+
+  # --------------------------------------------------------------------------
+  java:
+    name: Cadena Java
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,8 +105,54 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
+      - name: just
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends just
+
+      # Una sola JVM: `mvn -B verify` compila con -Xlint:all, prueba y
+      # empaqueta. Ver `check-java` en el justfile.
+      - run: just check-java
+
+  # --------------------------------------------------------------------------
+  web:
+    name: Cadena TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       # package_json_file: la raiz no tiene package.json (ID-01), asi que sin
       # esto la accion falla con "No pnpm version is specified".
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: rfirma-app/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      # gettext trae msgfmt y msgcmp, que son `check-po` (ID-128).
+      - name: just y gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends just gettext
+
+      # `check-repo` viaja aqui —y no en un cuarto job— porque son dos sellos
+      # de milisegundos y montar un runner para ellos costaria cien veces mas
+      # que ejecutarlos.
+      - run: just check-repo check-ts
+
+  # --------------------------------------------------------------------------
+  rust:
+    name: Cadena Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Rust necesita la cadena de Node aunque no ejecute una sola prueba de
+      # TypeScript: tauri-build lee frontendDist (../dist) dentro de su propio
+      # build.rs, asi que sin `vite build` clippy no llega a mirar ni una linea.
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: rfirma-app/package.json
@@ -112,8 +176,8 @@ jobs:
       #
       # softhsm2 y opensc son la GRADA B del ADR-0014: son segundos de apt y a
       # cambio las pruebas del modulo PKCS#11 corren en cada PR, contra un token
-      # de verdad, en vez de quedarse ignoradas. `just check` provisiona el token
-      # solo (receta `token`), asi que aqui basta con instalarlos.
+      # de verdad, en vez de quedarse ignoradas. `just check-rust` provisiona el
+      # token solo (receta `token`), asi que aqui basta con instalarlos.
       #
       # libnss3-tools es la otra mitad de esa grada desde el #99: trae certutil y
       # pk12util, con los que cada prueba del almacen NSS se monta su propio
@@ -146,15 +210,11 @@ jobs:
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
 
-      # RFIRMA_SKIP_NATIVE=1 salta la comprobacion de librfirma_crypto.so que
-      # `just build` hace por el ADR-0013. NO es un atajo: el carril rapido no
-      # construye la imagen nativa A PROPOSITO —son los tres minutos que este
-      # workflow existe para no pagar en cada PR— y quien la comprueba de
-      # verdad es el job 'native' de abajo.
-      - name: just check
-        env:
-          RFIRMA_SKIP_NATIVE: '1'
-        run: just check
+      # Sin RFIRMA_SKIP_NATIVE: `check-rust` ya no encadena `check-native`, asi
+      # que no hay nada que saltarse. Y sin `cargo build --release`, que es un
+      # arbol de dependencias entero que aqui no ejecuta nadie — lo compila el
+      # carril lento, junto al empaquetado que lo usa.
+      - run: just check-rust
 
   # ==========================================================================
   # CARRIL LENTO
@@ -290,6 +350,19 @@ jobs:
       - name: CRAP sin exclusiones
         if: steps.scope.outputs.build == 'true'
         run: just crap-full
+
+      # EL BINARIO DE RELEASE VIVE AQUI, y no en el carril rapido. Es un arbol
+      # de dependencias entero aparte del de depuracion y del instrumentado, y
+      # alli no lo ejecutaba nadie: lo que se empaqueta es el flatpak, que es
+      # cosa de este carril. --features custom-protocol no es opcional; el
+      # justfile explica por que.
+      #
+      # Lo unico que esto comprueba y el carril rapido no es que el perfil de
+      # release enlace: `clippy --all-targets --all-features` ya compila el
+      # mismo codigo, custom-protocol incluido.
+      - name: Compila el binario de release
+        if: steps.scope.outputs.build == 'true'
+        run: just build-rust
 
   # ==========================================================================
   # VIGILANTE DEL KIT FNMT

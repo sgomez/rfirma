@@ -48,7 +48,9 @@ Three operations read the same `CI` workflow, for different readers.
 
 ### What green actually means
 
-**Narrow.** The fast lane runs `just check` across all three toolchains. It
+**Narrow.** The fast lane runs `just check` across all three toolchains —
+split into one job per chain (`Cadena Java`, `Cadena TypeScript`, `Cadena
+Rust`), which together are exactly `just check` minus `just tools`. It
 verifies:
 
 - the Java bridge **compiles** under GraalVM CE 25 with `-Xlint:all`;
@@ -57,7 +59,9 @@ verifies:
 - **Biome** passes on `rfirma-app/` (`biome ci`), and `tsc -b` typechecks
   before `vite build`;
 - **clippy with `-D warnings`** and `cargo fmt --check` pass on
-  `rfirma-app/src-tauri/`, and `cargo build --release` links the app;
+  `rfirma-app/src-tauri/`, over `--all-targets --all-features`. It does **not**
+  verify that `cargo build --release` links: that moved to the slow lane, next
+  to the packaging that consumes it;
 - the **tier A** tests run: `vitest` on the frontend, `cargo test` on Rust —
   which today is the FNMT kit guard (fingerprints of the three `.p12`, and
   `active-rsa.p12` still being in date) — and `mvn test` on the Java bridge:
@@ -119,13 +123,14 @@ absolute path, and the slow lane uploads it as the workflow artifact
 dispatch, or a PR labelled `native`), download that artifact, upload it to
 VALIDe. If the maximal case validates, the other three are subsets of it.
 
-**The fast lane does not build the native library, deliberately**, so it sets
-`RFIRMA_SKIP_NATIVE=1` to skip the guard `just build` performs by
-[ADR-0013](../adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md).
-Locally, without that variable, `just build` and `just dev` **fail naming
-`just native`** rather than chaining a three-minute `native-image` run onto
-every compile. Do not copy that variable into a local shell profile: it is the
-CI's exception, not a default.
+**The fast lane does not build the native library, deliberately.** It no longer
+needs `RFIRMA_SKIP_NATIVE=1` for that — `check-rust` does not go through `just
+build`, so there is no guard to skip. The guard itself still stands where
+[ADR-0013](../adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md)
+put it: locally `just build` and `just dev` **fail naming `just native`**
+rather than chaining a three-minute `native-image` run onto every compile, and
+`RFIRMA_SKIP_NATIVE=1` is how you say you know what you are doing. Do not copy
+that variable into a local shell profile.
 
 **So the reviewer still installs and runs everything itself** — a green check
 is not a substitute for it.
@@ -137,25 +142,35 @@ to be fast.
 
 | Lane | Job | When |
 | --- | --- | --- |
-| fast | `Compila y resuelve dependencias` | every PR, every push to `main` |
+| fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every PR, every push to `main` |
 | slow | `Imagen nativa` (`native-image` itself is 1 m 22 s) | tags `v*`, manual dispatch, weekly cron, or a PR labelled `native` |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
 
-The fast lane costs **~9 min cold and 3-4 min warm** — three toolchains, their
-system dependencies (`libwebkit2gtk-4.1-dev` and friends) and two
-`cargo binstall`ed binaries. **3-4 min is the number to hold**: it is what a
-second PR on the same branch actually costs.
+The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
+other two finish inside it and are free in wall-clock terms. Java and
+TypeScript do not wait for Rust and Rust does not wait for them, so what a
+second PR on the same branch costs is the slowest single chain, not the sum.
 
-Almost all of it is Rust, and almost all of *that* is compiling the Tauri
-dependency tree **four times** — `cargo clippy --all-targets`, `cargo build
---release`, `cargo test`, and the `cargo llvm-cov` instrumented build each get
-their own metadata hash, so none of them reuses another's artifacts. The
-five-to-six-minute gap between cold and warm is what the caching buys: `~/.m2`,
-the pnpm store, `Swatinem/rust-cache`, and prebuilt binaries instead of
-`cargo install`. **If it creeps past what an agent
-will wait for, the thing to cut is the coverage build, not the caching** — the
-CRAP gate is the one piece of `just check` that pays for a whole extra
-compile.
+Almost all of the Rust job is compiling the Tauri dependency tree, and each
+distinct flag set gets its own metadata hash and reuses nothing from the
+others. So the count of those trees *is* the cost, and the fast lane is down to
+**two** — `cargo clippy --all-targets --all-features` and the `cargo llvm-cov`
+instrumented build. It used to be four: `cargo build --release` moved to the
+slow lane (nothing in the fast lane ran that binary), and the bare `cargo test`
+went away because `cargo llvm-cov` **runs the suite itself** and propagates its
+exit code, so keeping both meant running every test twice in two trees.
+
+**If it creeps back up, the thing to cut is a compile, not the caching** — and
+do not reach for the coverage build, which is now the only thing running the
+Rust tests at all. What the caching buys (`~/.m2`, the pnpm store,
+`Swatinem/rust-cache`, prebuilt binaries instead of `cargo install`) is the
+gap between a cold run and that warm number.
+
+**One tradeoff was taken on purpose:** in the fast lane the Rust tests only
+ever run *instrumented*, under `llvm-cov`. The uninstrumented run still
+happens, in the slow lane's `just test-native`, on every push to `main` and
+every weekly cron — so a failure that only shows up without instrumentation is
+caught at merge, not at PR.
 
 `native-image` fits comfortably on a standard runner, but the Java bridge is
 barely touched once written, so rebuilding the image on every PR would cost
@@ -187,23 +202,26 @@ just check
 ```
 
 `just tools` names whatever is still missing, and `just --list` shows the rest.
-CI runs exactly `just check`, so a local pass and a CI pass mean the same thing
-— with the one documented exception of `RFIRMA_SKIP_NATIVE` above: locally you
-need `just native` once, and then `just check` covers strictly more than CI's
-fast lane does.
+The fast lane's three jobs are `just check-java`, `just check-repo check-ts`
+and `just check-rust` — together exactly what `just check` runs, minus the
+`tools` probe that each runner's setup actions already guarantee. So a local
+pass and a CI pass mean the same thing.
 
-**`just check` deletes the native library it needs.** Its `lint-java` recipe
-runs `mvn -B clean compile`, and `clean` takes
-`rfirma-native-bridge/target/` with it — including
-`target/lib/rfirma/librfirma_crypto.so`, which is where `just native`
-installs it. So `just check` followed by `just test-native` or `just
-crap-full` fails saying the native library is missing, pointing at a file
-that existed when the recipe started. It is not that `just native` was
-skipped; `just check` just erased it mid-run. Order that works locally:
-`RFIRMA_SKIP_NATIVE=1 just check` (the CI exception, on purpose) and then
-`just native` once more before the slow-lane targets — never `just native`
-first, `just check` second. If the PR does not touch Java, skip the
-three-minute rebuild entirely: point `RFIRMA_LIB_DIR` at an
-already-built `librfirma_crypto.so` (or copy it into the worktree's
-`target/lib/rfirma`) and the tier C tests run against that.
+`just check` **no longer needs the native library at all**: `check-rust`
+dropped the `build` chain, so `RFIRMA_SKIP_NATIVE` is not needed to run it and
+CI no longer sets it. The variable still exists for `just build` and `just
+dev`, which do check for the library (ADR-0013).
+
+It also no longer **deletes** it. `lint-java` used to run `mvn -B clean
+compile`, and that `clean` took `rfirma-native-bridge/target/` with it —
+including `target/lib/rfirma/librfirma_crypto.so`, where `just native` installs
+it — so `just check` followed by `just test-native` failed pointing at a file
+that existed when the recipe started. The `clean` is gone (`-Xlint:all` is not
+`-Werror`, so nothing was gating on the full recompile), and `check-java` runs
+a single `mvn -B verify`. Any order works now.
+
+If the PR does not touch Java, you can still skip the three-minute rebuild
+entirely: point `RFIRMA_LIB_DIR` at an already-built `librfirma_crypto.so` (or
+copy it into the worktree's `target/lib/rfirma`) and the tier C tests run
+against that.
 
