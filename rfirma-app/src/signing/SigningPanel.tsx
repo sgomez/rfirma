@@ -451,26 +451,26 @@ export function SigningPanel({
               <fieldset className="panel__fields">
                 <legend className="rf-label">{t("panel.visibleSignature.content")}</legend>
                 <Checkbox
-                  checked={signature.rubric && rubric !== null}
-                  disabled={rubric === null}
-                  label={t("panel.visibleSignature.fields.rubric")}
-                  hint={rubric === null ? t("panel.visibleSignature.fields.rubricDisabled") : null}
-                  onChange={(checked) => onChangeSignature({ ...signature, rubric: checked })}
-                />
-                <Checkbox
                   checked={signature.fields.signerName}
                   label={t("panel.visibleSignature.fields.signerName")}
                   onChange={(checked) => changeField("signerName", checked)}
                 />
                 <Checkbox
-                  checked={signature.fields.idNumber}
-                  label={t("panel.visibleSignature.fields.idNumber")}
-                  onChange={(checked) => changeField("idNumber", checked)}
+                  checked={signature.fields.issuer}
+                  label={t("panel.visibleSignature.fields.issuer")}
+                  onChange={(checked) => changeField("issuer", checked)}
                 />
                 <Checkbox
                   checked={signature.fields.signedAt}
                   label={t("panel.visibleSignature.fields.signedAt")}
                   onChange={(checked) => changeField("signedAt", checked)}
+                />
+                <Checkbox
+                  checked={signature.rubric && rubric !== null}
+                  disabled={rubric === null}
+                  label={t("panel.visibleSignature.fields.rubric")}
+                  hint={rubric === null ? t("panel.visibleSignature.fields.rubricDisabled") : null}
+                  onChange={(checked) => onChangeSignature({ ...signature, rubric: checked })}
                 />
                 <Checkbox
                   checked={signature.fields.reason}

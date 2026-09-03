@@ -593,22 +593,22 @@ msgid "panel.visibleSignature.content"
 msgstr "Contenido"
 
 msgid "panel.visibleSignature.fields.rubric"
-msgstr "Tu rúbrica"
+msgstr "Rúbrica"
 
 msgid "panel.visibleSignature.fields.rubricDisabled"
 msgstr "Elige antes una imagen"
 
 msgid "panel.visibleSignature.fields.signerName"
-msgstr "Nombre y apellidos"
+msgstr "Firmante"
 
-msgid "panel.visibleSignature.fields.idNumber"
-msgstr "DNI"
+msgid "panel.visibleSignature.fields.issuer"
+msgstr "Emisor"
 
 msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Fecha y hora de la firma"
+msgstr "Fecha"
 
 msgid "panel.visibleSignature.fields.reason"
-msgstr "Un motivo"
+msgstr "Motivo"
 
 msgid "panel.visibleSignature.reason.label"
 msgstr "Motivo"

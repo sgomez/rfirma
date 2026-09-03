@@ -542,7 +542,7 @@ msgstr ""
 msgid "panel.visibleSignature.fields.signerName"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.idNumber"
+msgid "panel.visibleSignature.fields.issuer"
 msgstr ""
 
 msgid "panel.visibleSignature.fields.signedAt"

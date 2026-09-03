@@ -13,7 +13,7 @@
 /** Las cuatro casillas de texto. La rúbrica va aparte: es una imagen. */
 export interface VisibleTextFields {
   signerName: boolean;
-  idNumber: boolean;
+  issuer: boolean;
   signedAt: boolean;
   reason: boolean;
 }
@@ -30,15 +30,17 @@ export interface VisibleSignature {
 }
 
 /**
- * Lo que sale marcado la primera vez: recuadro sí, y dentro el nombre, el DNI y
- * la fecha, que es el contenido de un recuadro administrativo corriente. La
- * rúbrica no, porque todavía no hay imagen; el motivo tampoco, porque está
- * vacío y una etiqueta «Motivo:» sin nada detrás no dice nada.
+ * Lo que sale marcado la primera vez: recuadro sí, y dentro el firmante —con
+ * el DNI ya dentro del nombre (ADR-0006 v0.3.1)— y la fecha, que es el
+ * contenido de un recuadro administrativo corriente. El emisor no, por ser
+ * un dato añadido y no el que se venía mostrando; la rúbrica no, porque
+ * todavía no hay imagen; el motivo tampoco, porque está vacío y una etiqueta
+ * «Motivo:» sin nada detrás no dice nada.
  */
 export const DEFAULT_VISIBLE_SIGNATURE: VisibleSignature = {
   enabled: true,
   rubric: false,
-  fields: { signerName: true, idNumber: true, signedAt: true, reason: false },
+  fields: { signerName: true, issuer: false, signedAt: true, reason: false },
   reason: "",
 };
 
