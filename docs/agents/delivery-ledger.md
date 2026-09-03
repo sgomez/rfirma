@@ -28,6 +28,8 @@
 - La triage de #177 informó de que sus tres bloqueantes (#172, #174, #175) «no estaban en main» cuando los tres se habían fusionado minutos antes en la misma tanda secuencial: el dispatcher leyó un checkout obsoleto. Mecanismo: la triage dedujo de esa lectura obsoleta que «no hay patrón que imitar», y eso empujó también hacia `oversized`. Un dispatcher debe hacer `fetch origin/main` antes de concluir que un patrón está ausente.
 - Tanda secuencial de nueve sub-issues, cero conflictos de fusión y cero merge-fixes; seis de nueve necesitaron exactamente un ciclo de arreglo, ninguno necesitó dos. La forma «un ciclo y CLEAN» es la norma de este repositorio, no una señal de alarma.
 
+- #201 y #202 (rebanadas de reubicación de UI entre `DocumentViewer` y `SigningPanel`) puntuaron `standard` y costaron muy por encima de su grada: ~250k y ~200k tokens, 189 y 143 llamadas de herramienta, 15-17 min cada uno — el triple de cualquier otro `standard` de la tanda. Los dos tocaban TSX + CSS + los cinco catálogos de i18n + dos ficheros de prueba. Señal: un ticket de UI que reubica un elemento entre dos componentes ya existentes y toca los cinco catálogos de locale tarifica como `complex`, no `standard`.
+
 ## Run log
 
 2026-08-31 spec=#46 sub=#47 model=opus effort=medium pr=#64 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=ready-to-merge
@@ -75,3 +77,13 @@
 2026-09-03 spec=#168 sub=#175 model=opus effort=medium pr=#184 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-03 spec=#168 sub=#176 model=sonnet effort=medium pr=#186 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-03 spec=#168 sub=#177 model=opus effort=medium pr=#187 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#195 model=sonnet effort=medium pr=#205 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#196 model=sonnet effort=medium pr=#206 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#197 model=sonnet effort=medium pr=#209 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#198 model=sonnet effort=medium pr=#210 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#199 model=opus effort=medium pr=#211 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#200 model=sonnet effort=medium pr=#212 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#201 model=sonnet effort=medium pr=#213 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#202 model=sonnet effort=medium pr=#214 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#203 model=sonnet effort=medium pr=#215 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-03 spec=#194 sub=#204 model=sonnet effort=medium pr=#216 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
