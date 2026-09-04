@@ -1,8 +1,8 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import type { Drop } from "./documents/drops";
+import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
@@ -151,6 +151,7 @@ function renderApp(
   rubrics: RubricPicker = emptyRubricPicker(),
   signer: SigningBackend = unavailableSigningBackend(),
   invoked: Drop | null = null,
+  drops: FakeDocumentDrops = inMemoryDocumentDrops(invoked),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -162,7 +163,6 @@ function renderApp(
     },
     () => void recents.clear(),
   );
-  const drops = inMemoryDocumentDrops(invoked);
   renderWithCatalog(
     <App
       recents={recents}
@@ -1096,6 +1096,59 @@ describe("App, invocada con un documento", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("contrato.pdf")).toBeInTheDocument();
     expect(within(panel).getByText(/^3 páginas/)).toBeInTheDocument();
+  });
+
+  /**
+   * `pending()` es una lectura que **consume**, y el efecto que la pide se
+   * rehace mientras la llamada está en vuelo: `<StrictMode>` lo hace en
+   * desarrollo, y en producción lo hace la lectura asíncrona de los ajustes
+   * cuando «Recordar mi actividad» viene apagado —cambia la identidad de
+   * `accept`—. Si la entrega dependiera del ciclo de vida del efecto, la
+   * respuesta llegaría a un efecto ya limpiado y el documento invocado
+   * desaparecería sin ningún aviso.
+   *
+   * Por eso el doble no contesta solo: la prueba deja que el efecto se rehaga
+   * con la lectura en vuelo y la contesta después.
+   */
+  it("delivers the invoked PDF when the effect remounts while the read is in flight", async () => {
+    let answer: (invoked: Drop | null) => void = () => {};
+    const base = inMemoryDocumentDrops();
+    let asked = 0;
+    const drops: FakeDocumentDrops = {
+      ...base,
+      pending: () => {
+        asked += 1;
+        return new Promise<Drop | null>((resolve) => {
+          answer = resolve;
+        });
+      },
+    };
+
+    renderApp(
+      inMemoryRecents(),
+      [],
+      pdfsOf({ "contrato.pdf": 3 }),
+      { rememberActivity: false },
+      emptyCertificateStore(),
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      null,
+      drops,
+    );
+
+    // Los ajustes ya han llegado, así que el efecto se ha rehecho: la lectura
+    // de la invocación sigue viva y no se ha vuelto a pedir.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(asked).toBe(1);
+
+    await act(async () => {
+      answer({ document: document("contrato.pdf"), failure: null, ignored: 0 });
+    });
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("contrato.pdf")).toBeInTheDocument();
   });
 
   /** ID-158: no arranca ningún modo especial, abre la ventana y lo dice. */

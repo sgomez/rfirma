@@ -47,7 +47,14 @@ impl Invocation {
     /// relativas, que es justo lo que ya no se podía hacer.
     pub fn of_this_process() -> Self {
         Self {
-            command_line: std::env::args().collect(),
+            // `args()` **entra en pánico** con un argumento que no sea UTF-8
+            // válido, y en Linux una ruta es una cadena de bytes: morir en el
+            // arranque es lo contrario del ID-158. Una ruta ilegible sale por
+            // `NotAPdf`, la misma puerta que los demás argumentos que no se
+            // pueden abrir.
+            command_line: std::env::args_os()
+                .map(|argument| argument.to_string_lossy().into_owned())
+                .collect(),
             folder: std::env::current_dir().unwrap_or_default(),
         }
     }

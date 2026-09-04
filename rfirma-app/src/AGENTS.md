@@ -36,7 +36,7 @@ rojo.
 |---|---|---|
 | `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
 | `tauri.ts` | 510 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 1034 | El árbol de la ventana y el estado que la recorre. |
+| `App.tsx` | 1045 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |

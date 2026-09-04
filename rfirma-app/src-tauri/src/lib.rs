@@ -2,7 +2,7 @@
 //!
 //! El backend está en tres alturas, y se leen de arriba abajo:
 //!
-//! - [`commands`], las quince órdenes de Tauri. Desempaquetan el estado, llaman a
+//! - [`commands`], las veintidós órdenes de Tauri. Desempaquetan el estado, llaman a
 //!   un caso de uso y traducen el resultado. No deciden nada (ID-79).
 //! - [`app`], los casos de uso: qué certificados hay, cómo se planifica y se
 //!   entrega una firma, qué se recuerda entre sesiones. Es la interfaz por la
@@ -86,6 +86,12 @@ pub fn run() {
                     command_line,
                     folder: std::path::PathBuf::from(folder),
                 };
+                // Sin ventana no hay a quién entregarle nada, y anotar el
+                // documento en `OpenedDocuments` antes de saberlo dejaría una
+                // entrada que no recoge nadie: primero la ventana.
+                let Some(window) = app.get_webview_window("main") else {
+                    return;
+                };
                 let session = app.state::<commands::SigningSession>();
                 let opened = app.state::<memory::OpenedDocuments>();
                 let substitution = commands::second_invocation(
@@ -93,9 +99,6 @@ pub fn run() {
                     &opened,
                     app::signing::is_live(&session),
                 );
-                let Some(window) = app.get_webview_window("main") else {
-                    return;
-                };
                 // Traer la ventana al frente ocurre siempre, también con la firma a
                 // medias: quien invoca quiere ver la aplicación, y enseñarle el PIN
                 // que dejó a medias es la respuesta correcta.

@@ -402,6 +402,17 @@ export function App({
   // dependiera de `documents`, cada apertura cancelaría el oyente y volvería a
   // suscribirse, y un arrastre que cayera en medio se perdería.
   const acceptDocument = documents.accept;
+  // La entrega de la invocación **no puede vivir en el ciclo de vida de este
+  // efecto**: `drops.pending()` es una lectura que consume, así que descartar
+  // su respuesta porque el efecto se rehizo pierde el documento para siempre
+  // —la segunda llamada ya devuelve `null`—. Y se rehace de verdad: en
+  // desarrollo `<StrictMode>` monta, limpia y vuelve a montar, y en producción
+  // la identidad de `acceptDocument` cambia cuando se lee «Recordar mi
+  // actividad» y viene apagada. Por eso «ya se preguntó» es una marca que
+  // sobrevive a los remontajes, y la respuesta se entrega por el manejador
+  // vigente en ese momento en vez de por el que la pidió.
+  const invocationAsked = useRef(false);
+  const arrivedRef = useRef<(drop: Drop) => void>(() => {});
   useEffect(() => {
     const arrived = (drop: Drop) => {
       if (drop.document === null) {
@@ -423,20 +434,20 @@ export function App({
       );
       void acceptDocument(drop.document);
     };
+    arrivedRef.current = arrived;
     const stop = drops.subscribe(arrived);
     // Y por aquí mismo entra el documento con el que se invocó a la aplicación
     // desde fuera (ID-157): desemboca en la ventana completa, en el mismo
     // estado en que la deja arrastrar un PDF (ID-159), así que no tiene camino
     // propio. Se pregunta **después** de suscribirse, no antes: una segunda
     // invocación que llegara en medio se perdería.
-    let live = true;
-    void drops.pending().then((invoked) => {
-      if (live && invoked !== null) arrived(invoked);
-    });
-    return () => {
-      live = false;
-      stop();
-    };
+    if (!invocationAsked.current) {
+      invocationAsked.current = true;
+      void drops.pending().then((invoked) => {
+        if (invoked !== null) arrivedRef.current(invoked);
+      });
+    }
+    return stop;
   }, [drops, acceptDocument]);
 
   // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado

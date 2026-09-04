@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son veintiuna, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son veintidós, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -105,7 +105,7 @@ use crate::app::{self, Environment};
 use crate::isolate::Isolate;
 use crate::memory::OpenedDocuments;
 
-pub use crate::app::invocation::{Invocation, PendingInvocation};
+pub use crate::app::invocation::PendingInvocation;
 pub use crate::app::signing::SigningSession;
 pub use app::documents::dropped_document;
 pub use app::invocation::second_invocation;
