@@ -213,11 +213,14 @@ sub-issue de implementación al que toca, no esta ficha.
 borrado que provoca apagar el segundo, y la comprobación previa de la carpeta
 salen de ahí. El tema entró después, por la enmienda de ese mismo ADR.
 
-El **alcance de la traducción** está fijado en
-[#16](https://github.com/sgomez/rfirma/issues/16): las seis lenguas, cadenas
-propias escritas desde cero con el vocabulario de `CONTEXT.md`, mensajes de
-error que traducen situaciones nuestras y no el texto de PKCS#11 ni el del
-puente Java, y texto de la firma visible que sigue al idioma de la aplicación.
+El **alcance de la traducción** lo fija el
+[ADR-0009](../adr/0009-catalogo-de-cadenas-propio-y-cinco-idiomas.md): cinco
+idiomas y ninguna variante, cadenas propias escritas desde cero con el
+vocabulario de `CONTEXT.md`, mensajes de error que traducen situaciones nuestras
+y no el texto de PKCS#11 ni el del puente Java, y texto de la firma visible que
+sigue al idioma de la aplicación. En el desplegable sólo aparece el idioma que
+esté al 100 %: la completitud es una puerta de construcción, no un filtro que se
+aplique aquí.
 
 Preferencias existe desde el primer día en lugar de esperar a tener «algo que
 configurar»: el propio recorrido ya generó dos ajustes reales, y un menú que

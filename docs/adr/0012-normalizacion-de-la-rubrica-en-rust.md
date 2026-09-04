@@ -69,7 +69,7 @@ cargar la rúbrica.
 
 **El reescalado es silencioso**: es la operación que el usuario habría pedido. Los
 tres fallos que sí se cuentan, clasificados como manda el
-[ADR-0009](0009-catalogo-de-cadenas-propio-y-seis-idiomas.md), son *no es una
+[ADR-0009](0009-catalogo-de-cadenas-propio-y-cinco-idiomas.md), son *no es una
 imagen PNG o JPEG*, *la imagen está dañada* y *la imagen es demasiado grande*. El
 selector del portal filtra por **tipo MIME** (`image/png`, `image/jpeg`) y no por
 extensión, porque la extensión miente.

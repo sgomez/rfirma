@@ -147,7 +147,9 @@ abre y acepta arrastre. La palanca **Ficha 14** enseña qué ocupará ese hueco 
 v1.0.
 
 **Los otros ocho artboards que llevan pie se barrieron a la vez**: ninguno
-enseña ya `~/Documentos/…`, que es la ruta que el ADR-0011 prohíbe. Los suyos
+enseña ya `~/Documentos/…`, que es la ruta entera que el componente **ruta de
+destino** del sistema de diseño no admite en el pie —regla de cuánto se pinta,
+no de qué ruta se conoce, que es lo que decide el ADR-0011—. Los suyos
 son estáticos —solo `Main` lleva las palancas—, pero siguen la misma regla:
 carpeta atenuada con `…/` delante, nombre en color de texto, y la línea
 envolviendo en vez de cortarse.
