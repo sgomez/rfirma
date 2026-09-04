@@ -40,8 +40,9 @@ estaticas y de milisegundos:
   * la regla `-rc.N` -> sin paquetes nativos existe y se comporta (ID-154);
   * el verbo del menu contextual es un `Type=Service` de KDE que se llama
     «Firmar con rFirma», sale al primer nivel, desaparece con mas de un fichero
-    y no viaja en el flatpak, mientras que ningun lanzador declara
-    `application/pdf` (ID-155, ID-156, ID-162, ID-165, ADR-0018).
+    y no viaja en el flatpak, mientras que ningun lanzador —ni los `.desktop`
+    sueltos ni la plantilla `.desktop.hbs` que rellena el bundler de Tauri—
+    declara `application/pdf` (ID-155, ID-156, ID-162, ID-165, ADR-0018).
 
 Uso: packaging/check-version.py
 """
@@ -67,6 +68,10 @@ RC_RULE = "packaging/native-packages-allowed.sh"
 KDE_SERVICEMENU = "packaging/kde/rfirma-sign.desktop"
 FLATPAK_MANIFEST = "packaging/flatpak/me.sgomez.rfirma.yml"
 SERVICEMENU_TARGET = "/usr/share/kio/servicemenus/rfirma-sign.desktop"
+
+# La plantilla del lanzador que el bundler de Tauri rellena para el `.deb` y
+# el `.rpm`: es un `.desktop` con marcas de Handlebars dentro.
+DESKTOP_TEMPLATE_SUFFIX = ".desktop.hbs"
 
 # El verbo del menu contextual, palabra por palabra (ID-165).
 VERB = "Firmar con rFirma"
@@ -233,13 +238,49 @@ def check_readme() -> None:
 
 
 def desktop_files() -> list[str]:
-    """Rutas relativas de todos los `.desktop` que hay bajo `packaging/`."""
+    """Rutas relativas de todo `.desktop` bajo `packaging/`, plantillas incluidas.
+
+    El lanzador que instalan el `.deb` y el `.rpm` no es un `.desktop` suelto:
+    es la plantilla `desktopTemplate` de Tauri, con extension `.desktop.hbs`.
+    Dejarla fuera de esta lista dejaba sin vigilar justo el fichero donde un
+    `MimeType=` convierte a rFirma en lectora de PDF (ID-155, ADR-0018).
+    """
     paths = []
     for base, _dirs, files in os.walk(os.path.join(ROOT, "packaging")):
         for name in files:
-            if name.endswith(".desktop"):
+            if name.endswith(".desktop") or name.endswith(DESKTOP_TEMPLATE_SUFFIX):
                 paths.append(os.path.relpath(os.path.join(base, name), ROOT))
     return sorted(paths)
+
+
+def check_desktop_templates_are_inspected(conf: dict) -> None:
+    """Toda plantilla de lanzador declarada en Tauri pasa por las puertas.
+
+    `desktop_files()` recorre `packaging/`; si algun dia la plantilla del `.deb`
+    o la del `.rpm` se mudara fuera de ahi —o cambiara de extension— el ID-155
+    dejaria de ser falsable en silencio. Esto lo pone rojo.
+    """
+    inspected = set(desktop_files())
+    for target in ("deb", "rpm"):
+        template = conf["bundle"]["linux"][target].get("desktopTemplate")
+        if not template:
+            fail(
+                f"{TAURI_CONF}: el paquete {target} no declara "
+                f"`desktopTemplate`, asi que su lanzador no se puede vigilar "
+                f"(ID-155)"
+            )
+            continue
+        relative = os.path.relpath(
+            os.path.normpath(os.path.join(ROOT, "rfirma-app", "src-tauri", template)),
+            ROOT,
+        )
+        if relative not in inspected:
+            fail(
+                f"{TAURI_CONF}: la plantilla de lanzador del paquete {target} "
+                f"({relative}) queda fuera de las comprobaciones de `.desktop`. "
+                f"Sin ella nada impide que rFirma se registre como lectora de "
+                f"PDF (ID-155, ADR-0018)."
+            )
 
 
 def desktop_groups(path: str) -> dict[str, dict[str, str]]:
@@ -407,6 +448,7 @@ def main() -> int:
     check_metainfo(version)
     check_readme()
     check_desktop_names()
+    check_desktop_templates_are_inspected(conf)
     check_no_pdf_handler()
     check_kde_servicemenu(conf)
     check_rc_rule()

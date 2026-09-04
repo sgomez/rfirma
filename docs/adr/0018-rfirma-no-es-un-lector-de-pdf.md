@@ -53,7 +53,11 @@ del documento.
 ## Cómo se vigila
 
 `packaging/check-version.py` (`just check-version`, en el CI) comprueba las cuatro cosas que este ADR
-fija: que ningún `.desktop` de tipo `Application` declara `MimeType`, que el *servicemenu* de KDE
+fija: que ningún lanzador de tipo `Application` declara `MimeType` —y ahí entra, sobre todo, la
+plantilla `packaging/rfirma.desktop.hbs`, que es el lanzador que de verdad instalan el `.deb` y el
+`.rpm`; el `.hbs` del nombre la dejaba fuera de un barrido por `*.desktop`, así que la puerta lo
+recorre por su sufijo y además exige que el `desktopTemplate` declarado en `tauri.conf.json` para
+cada paquete sea uno de los ficheros que inspecciona—, que el *servicemenu* de KDE
 filtra por `application/pdf`, sale al primer nivel (`X-KDE-Priority=TopLevel`) y **desaparece con más
 de un fichero seleccionado** (`X-KDE-RequiredNumberOfUrls=1`), que el verbo se llama exactamente
 «Firmar con rFirma», y que el manifiesto del flatpak no lo instala.
