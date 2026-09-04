@@ -127,6 +127,31 @@ bateria() {
         ok "$etiqueta_destino: el arbol servido es exactamente el que se construyo"
     fi
 
+    # a_traversal_label_never_reaches_the_host
+    # La etiqueta es un nombre de directorio Y viaja dentro del enlace: si `.`
+    # colara, el `--delete` del paso 1 se aplicaria a `arboles/` entero y
+    # borraria el arbol en servicio antes de cualquier verificacion. Se exige
+    # que el guion salga distinto de 0 y que lo servido siga intacto.
+    local etiqueta_mala intacto=1 arboles_antes arboles_ahora
+    arboles_antes="$(cd "$raiz_remota/arboles" && find . | LC_ALL=C sort)"
+    for etiqueta_mala in "." ".." ".oculto" "../fuera" "v0.4.2/.."; do
+        if "$publica" "$tmp/v3" "$etiqueta_mala" "$destino" > "$tmp/salida" 2>&1; then
+            fail "$etiqueta_destino: la etiqueta '$etiqueta_mala' se ha publicado"
+            intacto=0
+        fi
+        arboles_ahora="$(cd "$raiz_remota/arboles" && find . | LC_ALL=C sort)"
+        if [ "$(servido "$raiz_remota")" != "arboles/v0.4.2" ] \
+            || ! diff -r "$tmp/v3" "$raiz_remota/actual/" > /dev/null 2>&1 \
+            || [ "$arboles_ahora" != "$arboles_antes" ]; then
+            fail "$etiqueta_destino: la etiqueta '$etiqueta_mala' ha tocado el arbol servido"
+            intacto=0
+            break
+        fi
+    done
+    if [ "$intacto" -eq 1 ]; then
+        ok "$etiqueta_destino: una etiqueta con travesia no llega al anfitrion"
+    fi
+
     rm -rf "$tmp/v1" "$tmp/v2" "$tmp/v3"
 }
 

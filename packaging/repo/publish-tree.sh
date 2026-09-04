@@ -60,7 +60,10 @@ fi
 
 # La etiqueta es un nombre de directorio en el anfitrion y ademas viaja dentro
 # del enlace simbolico: cualquier cosa rara ahi es una travesia de rutas.
-if ! [[ "$etiqueta" =~ ^[A-Za-z0-9._-]+$ ]]; then
+# El primer caracter tiene que ser alfanumerico, y eso es lo que descarta `.`,
+# `..` y cualquier `.oculto`: con `.` el `--delete` del paso 1 se aplicaria a
+# `arboles/` entero y se llevaria por delante el arbol en servicio.
+if ! [[ "$etiqueta" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
     echo "la etiqueta '$etiqueta' no es un nombre de directorio admisible" >&2
     exit 1
 fi
