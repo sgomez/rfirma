@@ -864,9 +864,11 @@ build-ts: po-import
     cd {{ app }} && pnpm exec tsc -b
     cd {{ app }} && pnpm exec vite build
 
-# Sin `cargo tauri build`: bundle.active es false (ID-05) y el binario lo
-# instala el manifiesto flatpak. `vite build` tiene que haber corrido antes,
-# porque tauri-build lee frontendDist.
+# Sin `tauri build`: esta receta es el atajo de compilacion y el paso que
+# alimenta al flatpak, cuyo manifiesto instala el binario el mismo. Quien
+# empaqueta el .deb y el .rpm es la receta `bundle`, y esa si pasa por el
+# bundler. `vite build` tiene que haber corrido antes, porque tauri-build lee
+# frontendDist.
 #
 # --features custom-protocol NO ES OPCIONAL, y es justo lo que se pierde al no
 # usar `cargo tauri build`, que la pasa el solo. Sin ella el `dev` de Tauri
@@ -1094,6 +1096,47 @@ flatpak: native build-ts
     echo
     echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
+
+# Los otros dos canales del ADR-0004, los que NO son el flatpak: el bundler de
+# Tauri produce el .deb y el .rpm de una sola pasada, con `bundle.active: true`
+# y `targets: ["deb", "rpm"]` en tauri.conf.json.
+#
+# `tauri build` y NO `cargo build --release`: la bandera --features
+# custom-protocol la pasa el solo (ver el comentario de `build-rust`, donde no
+# usarla es justo lo que obliga a escribirla a mano), y es el unico que sabe
+# empaquetar. Encadena `native` porque la libreria entra en los dos paquetes por
+# `bundle.linux.<formato>.files` desde la ruta canonica, y `build-ts` porque
+# tauri-build lee frontendDist.
+#
+# LA REGLA DE LAS CANDIDATAS NO SE REIMPLEMENTA AQUI (ID-154): se consulta
+# packaging/native-packages-allowed.sh con la version de tauri.conf.json, que es
+# la fuente (ID-150). Una `-rc.N` no tiene representacion valida en el campo
+# Version de un RPM, asi que ahi esta receta no construye nada y lo dice.
+#
+# La puerta del contenido (ADR-0012, ID-144) es la MISMA que la del flatpak:
+# packaging/verifica-contenido.sh sobre el paquete construido, uno por formato.
+#
+# Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004).
+bundle: native build-ts
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ justfile_directory() }}"
+    version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
+    if ! packaging/native-packages-allowed.sh "$version"; then
+        echo "bundle: no hay nada que construir para $version" >&2
+        exit 1
+    fi
+    (cd "{{ app }}" && pnpm exec tauri build)
+    salida="rfirma-app/src-tauri/target/release/bundle"
+    for formato in deb rpm; do
+        paquete="$(find "$salida/$formato" -maxdepth 1 -type f -name "*.$formato" | sort | tail -1)"
+        if [ -z "$paquete" ]; then
+            echo "el bundler no produjo ningun .$formato en $salida/$formato" >&2
+            exit 1
+        fi
+        packaging/verifica-contenido.sh "$paquete"
+        echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
+    done
 
 # A mano, cuando cambie un fichero de bloqueo: el flatpak se construye SIN red
 # (ADR-0013) y el CI comprueba que estos ficheros estan al dia en vez de

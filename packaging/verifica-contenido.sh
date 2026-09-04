@@ -47,9 +47,20 @@ else
             dpkg-deb -x "$PAQUETE" "$LAB/contenido"
             ;;
         *.rpm)
+            # bsdtar lee el RPM entero el solo y viene en libarchive-tools, que
+            # esta en cualquier Debian; rpm2cpio obliga a instalar `rpm`, que
+            # NO esta en el equipo de desarrollo ni en el runner del CI. Se
+            # prefiere el primero y se cae al segundo donde solo haya rpm.
             PAQUETE="$(realpath "$PAQUETE")"
             mkdir -p "$LAB/contenido"
-            (cd "$LAB/contenido" && rpm2cpio "$PAQUETE" | cpio -idm --quiet)
+            if command -v bsdtar >/dev/null 2>&1; then
+                bsdtar -xf "$PAQUETE" -C "$LAB/contenido"
+            elif command -v rpm2cpio >/dev/null 2>&1; then
+                (cd "$LAB/contenido" && rpm2cpio "$PAQUETE" | cpio -idm --quiet)
+            else
+                echo "para mirar dentro de un .rpm hace falta bsdtar (libarchive-tools) o rpm2cpio (rpm)" >&2
+                exit 1
+            fi
             ;;
         *)
             echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm o un directorio files/)" >&2
