@@ -12,6 +12,7 @@ import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { applyTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
+import { NotificationStrip } from "./shell/NotificationStrip";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
@@ -27,6 +28,7 @@ import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import { useStampPreview } from "./signing/useStampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
+import type { NewVersion, VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import {
@@ -83,6 +85,8 @@ interface AppProps {
    * [`SignedDocumentOpener`].
    */
   opener: SignedDocumentOpener;
+  /** Si hay una versión nueva publicada. Ver [`VersionCheck`]. */
+  versions: VersionCheck;
   /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
 }
@@ -109,9 +113,16 @@ export function App({
   stamps,
   signer,
   opener,
+  versions,
   menuAnchor,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
+  // El aviso de versión: lo que contestó el puerto y si ya se descartó. Se
+  // descarta **para esta sesión** y no se anota en disco: quien decide cada
+  // cuánto se vuelve a preguntar es el backend (una vez cada 24 h), y una
+  // segunda memoria aquí sería una regla más que no manda nadie.
+  const [newVersion, setNewVersion] = useState<NewVersion | null>(null);
+  const [versionDismissed, setVersionDismissed] = useState(false);
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   // Por qué no se pudo pintar el último documento que se eligió. Vive al lado
   // del PDF y no dentro del visor porque lo produce quien abre, y el visor solo
@@ -191,7 +202,7 @@ export function App({
   // cambio de documento la vuelva a montar.
   const activeIdRef = useRef(activeId);
   activeIdRef.current = activeId;
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
   // documento y no vuelve a correr. Recalcularlo en cada pintada haría que la
   // vista previa enseñara una hora y se estampara otra, que es la diferencia
@@ -247,6 +258,26 @@ export function App({
       current = false;
     };
   }, [rubrics]);
+
+  // Si hay versión nueva se pregunta **una vez, al arrancar**, y lo que se
+  // haga con la respuesta es enseñar una franja: nada de esto interrumpe el
+  // recorrido (ID-181). Un `null` —o directamente que no haya red— deja la
+  // ventana exactamente como estaba, sin aviso, sin error y sin reintento.
+  useEffect(() => {
+    let current = true;
+    versions
+      .latest()
+      .then((published) => {
+        if (current) setNewVersion(published);
+      })
+      .catch(() => {
+        // La comprobación de versión no tiene voz para quejarse: es un extra,
+        // y un fallo suyo no es asunto de quien está firmando.
+      });
+    return () => {
+      current = false;
+    };
+  }, [versions]);
 
   // El tema elegido, puesto en el documento. Es lo único de los ajustes que no
   // se pinta dentro de la ventana sino **sobre** ella: los tokens de color
@@ -754,6 +785,23 @@ export function App({
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
         onOpenPreferences={() => setDialog("preferences")}
         onOpenAbout={() => setDialog("about")}
+        notification={
+          // El primer —y hoy único— inquilino de la franja. La acción no
+          // descarga nada: lleva a *Acerca de*, que es donde están las órdenes
+          // de alta del repositorio (ID-181), y así el `opener:deny-open-url`
+          // del ID-85 sigue sin hacer falta.
+          newVersion !== null && !versionDismissed ? (
+            <NotificationStrip
+              message={t("notifications.newVersion.message", { version: newVersion.version })}
+              action={{
+                label: t("notifications.newVersion.action"),
+                onSelect: () => setDialog("about"),
+              }}
+              dismissLabel={t("actions.dismiss")}
+              onDismiss={() => setVersionDismissed(true)}
+            />
+          ) : null
+        }
         tray={
           <DocumentTray
             recents={documents.recents}

@@ -23,6 +23,9 @@ msgstr ""
 msgid "actions.change"
 msgstr ""
 
+msgid "actions.dismiss"
+msgstr ""
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr ""
@@ -260,6 +263,14 @@ msgstr ""
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
+msgstr ""
+
+#. {{version}} es la versión publicada, p. ej. 0.4.1.
+msgid "notifications.newVersion.message"
+msgstr ""
+
+#. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
+msgid "notifications.newVersion.action"
 msgstr ""
 
 msgid "header.menu"

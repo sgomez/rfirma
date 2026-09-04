@@ -12,6 +12,13 @@ interface MainWindowProps {
   menuAnchor: MenuAnchor;
   onOpenPreferences: () => void;
   onOpenAbout: () => void;
+  /**
+   * La franja de notificación, o `null` —lo normal— cuando no hay nada que
+   * notificar: entonces **no se monta** y las tres regiones suben. Es un
+   * hueco, no un aviso concreto: quien decide qué se cuenta es la
+   * composición. Ver [`NotificationStrip`].
+   */
+  notification?: ReactNode;
   /** El contenido de la bandeja, que es quien sabe de documentos. */
   tray: ReactNode;
   /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
@@ -37,6 +44,11 @@ interface MainWindowProps {
  * hay router y no debe aparecer uno: las diez situaciones de la ficha son
  * combinaciones del contenido de las tres regiones, no pantallas distintas.
  *
+ * **Entre la cabecera y las tres regiones hay sitio para una franja** de
+ * notificación (ID-207). No está casi nunca: cuando no hay nada que notificar
+ * no se monta, y la ventana es exactamente la de antes. Lo que se cuenta ahí
+ * no lo sabe la ventana, que solo le presta el hueco.
+ *
  * Este componente es **solo la disposición**: no conoce documentos ni
  * certificados. Quién llena cada región es cosa de su propio sub-issue.
  */
@@ -45,6 +57,7 @@ export function MainWindow({
   menuAnchor,
   onOpenPreferences,
   onOpenAbout,
+  notification = null,
   tray,
   viewer,
   panel,
@@ -64,6 +77,7 @@ export function MainWindow({
         onOpenPreferences={onOpenPreferences}
         onOpenAbout={onOpenAbout}
       />
+      {notification}
       <div
         className={hasPanel ? "main-window__body" : "main-window__body main-window__body--no-panel"}
       >

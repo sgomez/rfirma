@@ -15,6 +15,7 @@ import { type SigningBackend, type SigningOrder, unavailableSigningBackend } fro
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
 import { renderWithCatalog } from "./testing/render";
+import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
 
 /** El destino que contesta el backend mientras la prueba no diga otra cosa. */
 const aDestination = () =>
@@ -152,6 +153,7 @@ function renderApp(
   signer: SigningBackend = unavailableSigningBackend(),
   invoked: Drop | null = null,
   drops: FakeDocumentDrops = inMemoryDocumentDrops(invoked),
+  versions: VersionCheck = inMemoryVersionCheck(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -177,6 +179,7 @@ function renderApp(
       stamps={unavailableStampComposer()}
       signer={signer}
       opener={unavailableOpener()}
+      versions={versions}
       menuAnchor="header"
     />,
   );
@@ -283,6 +286,7 @@ describe("App", () => {
         stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
+        versions={inMemoryVersionCheck()}
         menuAnchor="header"
       />,
     );
@@ -649,6 +653,7 @@ describe("App", () => {
         stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
+        versions={inMemoryVersionCheck()}
         menuAnchor="header"
       />,
     );
@@ -1179,5 +1184,75 @@ describe("App, invocada con un documento", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+  });
+
+  /**
+   * El aviso de versión nueva, que es el primer inquilino de la franja
+   * (ID-181, ID-207). Se comprueba desde la aplicación entera porque lo que
+   * decide el ticket es **dónde** notifica rFirma: bajo la cabecera y sin
+   * modal.
+   */
+  describe("the new-version notice", () => {
+    const withVersionCheck = (versions: VersionCheck) =>
+      renderApp(
+        inMemoryRecents(),
+        [],
+        unavailablePdfSource(),
+        {},
+        emptyCertificateStore(),
+        emptyRubricPicker(),
+        unavailableSigningBackend(),
+        null,
+        inMemoryDocumentDrops(),
+        versions,
+      );
+
+    it("shows a strip under the header, and nothing modal, when there is a new version", async () => {
+      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));
+
+      const strip = await screen.findByRole("status");
+      expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
+      // Nada modal: ni diálogo encima ni ventana atenuada.
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    });
+
+    it("says nothing at all when there is no new version", async () => {
+      withVersionCheck(inMemoryVersionCheck());
+
+      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    // Sin red la comprobación ni contesta ni se queja: la ventana se queda
+    // como estaba, que es lo que dice el ID-178.
+    it("says nothing when the check fails", async () => {
+      withVersionCheck({ latest: async () => Promise.reject(new Error("sin red")) });
+
+      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("takes the user to About, which is where the upgrade instructions are", async () => {
+      const user = userEvent.setup();
+      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));
+
+      await screen.findByRole("status");
+      await user.click(screen.getByRole("button", { name: "Cómo actualizar" }));
+
+      expect(await screen.findByRole("dialog")).toHaveTextContent("rFirma");
+    });
+
+    it("is dismissed for good once dismissed", async () => {
+      const user = userEvent.setup();
+      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));
+
+      await screen.findByRole("status");
+      await user.click(screen.getByRole("button", { name: "Descartar" }));
+
+      await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+      // La ventana sigue entera debajo: descartar no navega a ninguna parte.
+      expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    });
   });
 });

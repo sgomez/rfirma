@@ -8,14 +8,19 @@
  * el elemento no se monta.
  */
 
+/* Columna: la cabecera, la franja de notificación —que casi nunca está— y el
+   cuerpo, que se queda con lo que sobre. Era un `grid` de dos filas fijas; con
+   la franja en medio serían dos o tres según el día, y `flex` no necesita
+   saberlo. */
 .main-window {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
   overflow: hidden;
 }
 
 .main-window__body {
+  flex: 1;
   display: grid;
   grid-template-columns: 300px 1fr 360px;
   min-height: 0;

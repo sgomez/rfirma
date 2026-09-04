@@ -34,11 +34,12 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 526 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 1045 | El árbol de la ventana y el estado que la recorre. |
+| `main.tsx` | 82 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 542 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 1093 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
-| `shell/MainWindow.tsx` | 84 | El marco. |
+| `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
+| `shell/NotificationStrip.tsx` | 74 | La franja de notificación: el patrón, no el aviso concreto (ID-207). |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
 | `shell/menuAnchor.ts` | 25 | Dónde se ancla el menú de dos entradas. |
 | **`documents/`** | | La bandeja. |
@@ -96,6 +97,7 @@ rojo.
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
 | **`design-system/`** | | `design-system/icons.tsx` (226), copiados en línea de los artboards. |
+| **`updates/`** | | `updates/newVersion.ts` (39): el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
 | **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
 

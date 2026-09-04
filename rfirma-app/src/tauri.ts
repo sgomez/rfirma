@@ -46,6 +46,7 @@ import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { StoreSecret } from "./signing/secret";
 import type { StampComposer } from "./signing/stampPreview";
 import type { TokenFailure } from "./signing/token";
+import type { NewVersion, VersionCheck } from "./updates/newVersion";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
 import type { PageSet } from "./viewer/signatureBox";
 import { type PdfSource, pdfjsSource } from "./viewer/source";
@@ -523,5 +524,19 @@ export function tauriLanguagePreference(): LanguagePreference {
       const stored = await readConfiguration();
       await writeConfiguration({ ...stored, language });
     },
+  };
+}
+
+/**
+ * Si hay una versión nueva publicada.
+ *
+ * Aquí no hay ni URL ni caché ni comparación de versiones: todo eso es de
+ * `app::version`, que es quien pregunta —como mucho una vez cada 24 h— y quien
+ * decide que sin red no se dice nada. La orden contesta `null` en los tres
+ * casos en que no hay nada que contar, y `null` es lo que llega a la ventana.
+ */
+export function tauriVersionCheck(): VersionCheck {
+  return {
+    latest: async () => await invoke<NewVersion | null>("check_for_new_version"),
   };
 }
