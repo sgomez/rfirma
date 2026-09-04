@@ -18,6 +18,7 @@ const {
   tauriRubricPicker,
   tauriSigningBackend,
   tauriStampComposer,
+  tauriVersionCheck,
 } = await import("./tauri");
 
 const aConfiguration = {
@@ -782,5 +783,27 @@ describe("el documento con el que se invocó a la aplicación", () => {
     invoke.mockResolvedValue(null);
 
     expect(await tauriDocumentDrops().pending()).toBeNull();
+  });
+});
+
+describe("el puerto de la versión sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks the backend whether there is a newer published version, and nothing else", async () => {
+    invoke.mockResolvedValue({ version: "0.4.1" });
+
+    expect(await tauriVersionCheck().latest()).toEqual({ version: "0.4.1" });
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("check_for_new_version");
+  });
+
+  // Sin versión nueva, sin red o dentro de las 24 h de caché la orden contesta
+  // lo mismo: nada. La ventana no distingue los tres casos porque no tiene que
+  // hacer nada distinto en ninguno.
+  it("reads no answer as nothing to say, and not as a failure", async () => {
+    invoke.mockResolvedValue(null);
+
+    expect(await tauriVersionCheck().latest()).toBeNull();
   });
 });

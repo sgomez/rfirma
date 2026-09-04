@@ -116,4 +116,45 @@ describe("MainWindow", () => {
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
   });
+
+  // ID-207: el hueco de la franja está entre la cabecera y las regiones, y
+  // sólo hay franja cuando hay algo que notificar.
+  it("mounts nothing between the header and the regions while there is nothing to notify", () => {
+    const { container } = renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        tray={null}
+        viewer={null}
+        panel={null}
+      />,
+    );
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(container.querySelector(".main-window")?.children).toHaveLength(2);
+  });
+
+  it("puts the notification strip under the header and over the regions", () => {
+    const { container } = renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        notification={<p role="status">hay algo que contar</p>}
+        tray={null}
+        viewer={null}
+        panel={null}
+      />,
+    );
+
+    const window = container.querySelector(".main-window");
+    const [header, strip, body] = [...(window?.children ?? [])];
+    expect(window?.children).toHaveLength(3);
+    expect(header?.tagName).toBe("HEADER");
+    expect(strip).toHaveTextContent("hay algo que contar");
+    expect(body).toHaveClass("main-window__body");
+  });
 });

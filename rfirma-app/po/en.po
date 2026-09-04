@@ -23,6 +23,9 @@ msgstr "Close"
 msgid "actions.change"
 msgstr "Change"
 
+msgid "actions.dismiss"
+msgstr "Dismiss"
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
@@ -304,6 +307,14 @@ msgstr "Document viewer"
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
 msgstr "Signature panel"
+
+#. {{version}} es la versión publicada, p. ej. 0.4.1.
+msgid "notifications.newVersion.message"
+msgstr "There is a new version of rFirma: {{version}}"
+
+#. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
+msgid "notifications.newVersion.action"
+msgstr "How to update"
 
 msgid "header.menu"
 msgstr "Menu"
@@ -634,7 +645,8 @@ msgstr "Choose a certificate to place the visible signature"
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"
-msgstr "Place the signature on the document: drag a box or press the seal button."
+msgstr ""
+"Place the signature on the document: drag a box or press the seal button."
 
 msgid "panel.footer.savedIn"
 msgstr "It will be saved in"

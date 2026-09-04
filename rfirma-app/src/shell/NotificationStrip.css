@@ -1,0 +1,50 @@
+/*
+ * La franja de notificación (docs/design/ventana-principal.md): 41 px a ancho
+ * completo entre la cabecera y las tres regiones, sobre `--rf-surface` y
+ * separada del cuerpo por `--rf-border-subtle`.
+ *
+ * El alto es fijo a propósito: es lo que se le concede a una ventana cuyo
+ * mínimo son 560 px, y lo que obliga a que quepa una frase y no un párrafo.
+ */
+
+.notification-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  height: 41px;
+  padding: 0 var(--rf-space-sm) 0 var(--rf-space-md);
+  border-bottom: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
+}
+
+.notification-strip__icon {
+  display: flex;
+  color: var(--rf-text-muted);
+}
+
+/* La frase se recorta en una línea: la franja no crece, y un nombre de versión
+   largo no puede empujar la acción fuera de la ventana. */
+.notification-strip__message {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Los dos botones son más bajos que el mínimo de `.rf-btn`, igual que el de la
+   cabecera: van dentro de una franja de 41 px. */
+.notification-strip__action,
+.notification-strip__dismiss {
+  min-height: 29px;
+  padding: 0 var(--rf-space-xs);
+  font-size: 13px;
+}
+
+.notification-strip__dismiss {
+  min-width: 29px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}

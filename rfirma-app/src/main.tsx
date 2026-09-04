@@ -26,6 +26,7 @@ import {
   tauriSignedDocumentOpener,
   tauriSigningBackend,
   tauriStampComposer,
+  tauriVersionCheck,
 } from "./tauri";
 
 const root = document.getElementById("root");
@@ -45,6 +46,9 @@ if (!root) {
 // nombre y en qué carpeta va a caer lo firmado (ID-63), y el del resumen del
 // #131, `tauriSignedDocumentOpener`, que bajo el sandbox es lo único que lleva
 // al usuario hasta el fichero que acaba de firmar (ID-79).
+// y el de la versión del #271, `tauriVersionCheck`, que es la única conexión
+// saliente de la aplicación y sólo sirve para poner una franja bajo la cabecera
+// (ID-181).
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
@@ -71,6 +75,7 @@ createRoot(root).render(
         stamps={tauriStampComposer()}
         signer={tauriSigningBackend()}
         opener={tauriSignedDocumentOpener()}
+        versions={tauriVersionCheck()}
       />
     </LanguageProvider>
   </StrictMode>,
