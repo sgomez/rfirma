@@ -48,7 +48,20 @@ pub fn dropped_document(
     paths: &[PathBuf],
     opened: &OpenedDocuments,
 ) -> Option<DroppedDocumentView> {
-    match crate::dropped::first_pdf(paths) {
+    told_as_dropped(crate::dropped::first_pdf(paths), opened)
+}
+
+/// Lo que decidió [`crate::dropped`], contado como la ventana lo entiende.
+///
+/// Está aparte de [`dropped_document`] porque la invocación con un documento
+/// termina en esto mismo: **lo que se ve es la ventana en el estado en que la
+/// deja arrastrar un PDF** (ID-159), y eso solo es cierto de verdad si las dos
+/// entradas comparten la traducción, no si se parecen.
+pub(crate) fn told_as_dropped(
+    decided: crate::dropped::Dropped,
+    opened: &OpenedDocuments,
+) -> Option<DroppedDocumentView> {
+    match decided {
         crate::dropped::Dropped::Nothing => None,
         crate::dropped::Dropped::Opened { path, ignored } => Some(DroppedDocumentView {
             document: Some(told_as_opened(PortalDocument::opened(path), opened)),

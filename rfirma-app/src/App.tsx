@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutDialog } from "./about/AboutDialog";
 import { DocumentTray } from "./documents/DocumentTray";
-import type { DocumentDrops } from "./documents/drops";
+import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
@@ -402,30 +402,42 @@ export function App({
   // dependiera de `documents`, cada apertura cancelaría el oyente y volvería a
   // suscribirse, y un arrastre que cayera en medio se perdería.
   const acceptDocument = documents.accept;
-  useEffect(
-    () =>
-      drops.subscribe((drop) => {
-        if (drop.document === null) {
-          // No se ha abierto nada, así que el aviso habla de lo que ya hubiera
-          // delante y se va con ello.
-          setDropNotice(drop.failure && { about: activeIdRef.current, failure: drop.failure });
-          return;
-        }
-        setDropNotice(
-          drop.ignored > 0
-            ? {
-                about: drop.document.id,
-                failure: {
-                  situation: "droppedOnlyFirst",
-                  detail: `se han soltado ${drop.ignored + 1} ficheros`,
-                },
-              }
-            : null,
-        );
-        void acceptDocument(drop.document);
-      }),
-    [drops, acceptDocument],
-  );
+  useEffect(() => {
+    const arrived = (drop: Drop) => {
+      if (drop.document === null) {
+        // No se ha abierto nada, así que el aviso habla de lo que ya hubiera
+        // delante y se va con ello.
+        setDropNotice(drop.failure && { about: activeIdRef.current, failure: drop.failure });
+        return;
+      }
+      setDropNotice(
+        drop.ignored > 0
+          ? {
+              about: drop.document.id,
+              failure: {
+                situation: "droppedOnlyFirst",
+                detail: `se han soltado ${drop.ignored + 1} ficheros`,
+              },
+            }
+          : null,
+      );
+      void acceptDocument(drop.document);
+    };
+    const stop = drops.subscribe(arrived);
+    // Y por aquí mismo entra el documento con el que se invocó a la aplicación
+    // desde fuera (ID-157): desemboca en la ventana completa, en el mismo
+    // estado en que la deja arrastrar un PDF (ID-159), así que no tiene camino
+    // propio. Se pregunta **después** de suscribirse, no antes: una segunda
+    // invocación que llegara en medio se perdería.
+    let live = true;
+    void drops.pending().then((invoked) => {
+      if (live && invoked !== null) arrived(invoked);
+    });
+    return () => {
+      live = false;
+      stop();
+    };
+  }, [drops, acceptDocument]);
 
   // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado
   // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas

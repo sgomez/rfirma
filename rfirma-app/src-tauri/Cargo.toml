@@ -80,6 +80,11 @@ tauri-plugin-dialog = "2"
 # Debajo es el portal `OpenURI`, y la llamada sale de Rust como la del
 # dialogo (ID-63, ID-85).
 tauri-plugin-opener = "2"
+# Instancia unica (ID-160): la segunda invocacion no abre otro proceso, se la
+# entrega a la ventana que ya estaba. Dos procesos escribiendo `state.json` y
+# `recents.json` acaban con el ultimo en cerrar pisando al otro, y el `.deb`
+# quita el aislamiento del flatpak que hoy lo tapa a medias.
+tauri-plugin-single-instance = "2"
 # Solo para leer del certificado el titular y las fechas de validez. Un
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
 # saber leer su notAfter.

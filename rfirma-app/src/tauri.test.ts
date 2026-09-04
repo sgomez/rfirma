@@ -699,3 +699,39 @@ describe("la bandeja sobre Tauri", () => {
     expect(invoke).toHaveBeenCalledWith("forget_activity");
   });
 });
+
+/**
+ * **Grada A**: la invocación desde fuera, contra un `invoke` falso.
+ *
+ * La costura es el nombre de la orden, `read_invocation`, y que lo que vuelve
+ * se traduzca **igual** que un arrastre: ese «igual» es el ID-159, y es lo
+ * único que hace que invocar y arrastrar dejen la misma ventana.
+ */
+describe("el documento con el que se invocó a la aplicación", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks the backend for it, and reads it like a drop", async () => {
+    invoke.mockResolvedValue({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+      failure: null,
+      ignored: 0,
+    });
+
+    const invoked = await tauriDocumentDrops().pending();
+
+    expect(invoke).toHaveBeenCalledWith("read_invocation");
+    expect(invoked).toMatchObject({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned" },
+      failure: null,
+      ignored: 0,
+    });
+  });
+
+  it("brings nothing when the application was opened without a document", async () => {
+    invoke.mockResolvedValue(null);
+
+    expect(await tauriDocumentDrops().pending()).toBeNull();
+  });
+});
