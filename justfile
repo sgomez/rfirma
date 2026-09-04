@@ -87,10 +87,10 @@ default:
 # Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
 check: tools check-repo check-java check-ts check-rust
 
-# Lo que no pertenece a ninguna cadena (ID-01): dos sellos que tardan
+# Lo que no pertenece a ninguna cadena (ID-01): tres comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle
+check-repo: check-flatpak-sources check-ds-bundle check-version
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -804,10 +804,11 @@ agent-cost since="":
 
 # Las tres cadenas, y falla si falla cualquiera.
 #
-# `check-flatpak-sources` y `check-ds-bundle` van PRIMERAS a proposito: no
-# necesitan ni bootstrap ni deps, tardan milisegundos, y lo que detectan —un
-# fichero de bloqueo tocado sin regenerar las fuentes vendorizadas, un token
-# del sistema de diseno editado a mano— no lo encuentra ninguna de las otras.
+# `check-repo` va PRIMERA a proposito: sus tres comprobaciones no necesitan ni
+# bootstrap ni deps, tardan milisegundos, y lo que detectan —un fichero de
+# bloqueo tocado sin regenerar las fuentes vendorizadas, un token del sistema de
+# diseno editado a mano, una version que dice tres cosas distintas— no lo
+# encuentra ninguna de las otras.
 #
 # ATAJO LOCAL, NO LO QUE CORRE EL CI: la puerta son los carriles `check-*` de
 # arriba. Esta receta existe para pasar todo el linting de una vez sin compilar
@@ -1111,6 +1112,21 @@ check-flatpak-sources:
 # Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
 check-ds-bundle:
     {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
+
+# El candado del ID-150 y sus vecinos, hermano de las otras dos de `check-repo`
+# y por los mismos motivos: cuesta milisegundos, no necesita ni bootstrap ni
+# deps, y lo que detecta —una version que dice tres cosas distintas, un enlace
+# de descarga que envejece, un lanzador que pone `rfirma` donde va prosa— no lo
+# ve ninguna compilacion.
+#
+# La FUENTE de la version es rfirma-app/src-tauri/tauri.conf.json y solo ahi se
+# cambia; pom.xml queda FUERA del candado a proposito (ID-150). La regla de las
+# candidatas vive en packaging/native-packages-allowed.sh, y quien empaquete la
+# CONSULTA en vez de reimplementarla (ID-154).
+#
+# Comprueba el candado de la version y el nombre del producto.
+check-version:
+    {{ justfile_directory() }}/packaging/check-version.py
 
 # A mano, cuando el bundle se reexporte desde el proyecto de sistema de diseno.
 # No lo ejecuta el CI: un sello regenerado dentro del CI sella lo que nadie ha
