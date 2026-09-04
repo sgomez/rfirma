@@ -155,30 +155,40 @@ prudencia, es uno que allí nunca llega a tener valor.
 Añadido con el hito v0.2 ([#123](https://github.com/sgomez/rfirma/issues/123)).
 Son dos cosas: una memoria nueva y un reparto distinto de una que ya estaba.
 
-### El tamaño de la ventana es una memoria más
+### El tamaño de la ventana no se recuerda
 
-El estado gana **el tamaño de la ventana y si estaba maximizada**. Va en el
-mismo `state.json` que el resto del estado, escrito por la aplicación con el
-mismo `paths.rs`, y **no** con `tauri-plugin-window-state`: ese plugin trae su
-propio fichero, su propio formato y su propio momento de escritura, que es una
-cuarta ruta de persistencia al lado de las tres que este ADR se ha molestado en
-nombrar.
+rFirma abre siempre al tamaño de `tauri.conf.json` —1280x720, con un mínimo de
+1100x560— y quien quiera otra cosa maximiza o arrastra un borde. No hay ninguna
+memoria de ventana en `state.json`, ni se llama a `set_size` en el arranque.
 
-**La posición no se repone en Wayland**, y por tanto no se repone en ningún
-canal. El protocolo no deja a una aplicación colocarse: `xdg_toplevel` no tiene
-ninguna petición de posición, y el compositor decide. Guardar unas coordenadas
-que en el escritorio objetivo no se pueden aplicar es guardar un campo que
-miente en el sitio donde más se usa; que en X11 funcionara no basta para que la
-misma memoria signifique dos cosas distintas según la sesión.
+**Recordarlo se probó y salió mal.** La medición está en el cuerpo de esta
+decisión y no en un issue porque es la razón entera:
 
-**«Recordar mi actividad» no se lleva el tamaño de la ventana**, y es la única
-excepción del grupo de estado. Lo demás que hay ahí —recientes, certificado,
-última carpeta— dice **qué** hizo el anterior; el tamaño de una ventana no dice
-nada de nadie. Y quien vacía su lista de recientes para no dejar rastro no
-espera que además la ventana se le encoja al tamaño de fábrica, que se lee como
-un fallo y no como una promesa cumplida. Es un juicio y no una medición: si
-alguien encuentra un caso en el que el tamaño delate algo, esta viñeta es la que
-hay que tirar.
+- Bajo GTK, `set_size` y `inner_size()` **no miden lo mismo**. El primero fija
+  el contenido; el segundo devuelve la superficie con las sombras del CSD
+  dentro. Guardar la segunda medida para reponerla con la primera sumaba
+  **52x99 px en cada arranque** (GNOME 49/Wayland), y a los ocho arranques la
+  ventana ya no cabía en una pantalla de 1440 de alto.
+- Ese error concreto tiene arreglo —preguntarle el contenido a GTK—, pero deja
+  en pie el resto: un tamaño guardado en un monitor no tiene por qué caber en
+  otro, y **recortarlo no es implementable en Wayland**. El área útil no es
+  consultable (`work_area` devuelve el monitor entero, comprobado en Tauri y en
+  GDK: un panel superior de 48 px no lo sabe nadie), y `current_monitor()`
+  contesta el monitor equivocado durante los primeros ~200 ms, que es
+  justamente cuando habría que decidir.
+- Y el sistema operativo no lo hace por nosotros: ningún compositor Wayland
+  restaura geometría entre arranques, porque no hay protocolo para eso.
+
+Así que la opción descartada es **recordar el tamaño**, con o sin
+`tauri-plugin-window-state` —ese plugin, además, trae su propio fichero, su
+propio formato y su propio momento de escritura, que es una cuarta ruta de
+persistencia al lado de las tres que este ADR se ha molestado en nombrar—. Lo
+que se gana a cambio: la ventana **siempre** cabe, y no hay ni un píxel de
+código que dependa de lo que el compositor tenga a bien contestar.
+
+**La posición tampoco se repone**, y por el mismo sitio: `xdg_toplevel` no tiene
+ninguna petición de posición y el compositor decide. Que en X11 funcionara no
+basta para que la misma memoria signifique dos cosas distintas según la sesión.
 
 ### La posición del recuadro se recuerda por documento, no en Preferencias
 

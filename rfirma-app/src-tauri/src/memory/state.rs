@@ -57,25 +57,13 @@ pub struct State {
     /// sola, nadie la elige, y por eso «Recordar mi actividad» se la lleva
     /// como se lleva todo lo demás.
     pub last_open_folder: Option<PathBuf>,
-    /// El tamaño de la ventana y si estaba maximizada (ID-72).
-    ///
-    /// **Es la memoria exenta de «Recordar mi actividad»** (ID-73): el
-    /// tamaño de una ventana no dice qué hizo quien firmó antes, así que
-    /// apagar el interruptor —o vaciar la actividad— no se la lleva. Por eso
-    /// [`State::forget_everything`] la conserva en vez de vaciarla con el
-    /// resto.
-    ///
-    /// **La posición no se guarda**, y no en ningún campo de aquí: en Wayland
-    /// el cliente no puede pedirla, así que unas coordenadas guardadas serían
-    /// una promesa que el compositor incumple (ADR-0010, enmienda).
-    pub window: Option<WindowMemory>,
     /// Cuándo se preguntó por última vez si hay una versión nueva, y qué se
     /// contestó (ID-180).
     ///
     /// **No es una memoria del usuario**: no dice qué firmó ni por dónde
-    /// anduvo, dice cuándo habló rFirma con GitHub. Por eso está **exenta de
-    /// los dos interruptores**, como el tamaño de la ventana, y
-    /// [`State::forget_everything`] la conserva: borrarla no borraría nada de
+    /// anduvo, dice cuándo habló rFirma con GitHub. Por eso es la **única
+    /// exenta de los dos interruptores**, y [`State::forget_everything`] la
+    /// conserva: borrarla no borraría nada de
     /// nadie y solo conseguiría una conexión de más en el siguiente arranque.
     pub version_check: Option<VersionCheck>,
 }
@@ -92,17 +80,6 @@ pub struct VersionCheck {
     pub checked_at: u64,
     /// La versión que anunció GitHub, tal y como se leyó.
     pub announced: String,
-}
-
-/// El tamaño de la ventana entre sesiones, sin la posición (ID-72).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct WindowMemory {
-    /// El ancho, en píxeles lógicos.
-    pub width: f64,
-    /// El alto, en píxeles lógicos.
-    pub height: f64,
-    /// Si estaba maximizada al cerrar.
-    pub maximized: bool,
 }
 
 /// Lo **global** de la firma visible, lo mismo para todos los documentos
@@ -166,13 +143,12 @@ impl State {
     /// actividad. Una carpeta del anfitrión que sobreviviera a «Vaciar la
     /// lista» diría por dónde anduvo quien firmó antes.
     ///
-    /// El tamaño de la ventana **no** se va con el resto (ID-73), y tampoco la
-    /// caché de la comprobación de versión, que no es actividad de nadie.
+    /// La caché de la comprobación de versión **no** se va con el resto
+    /// (ID-180): no es actividad de nadie, es un apunte de rFirma sobre sí
+    /// misma.
     pub fn forget_everything(&mut self) {
-        let window = self.window.take();
         let version_check = self.version_check.take();
         *self = Self::default();
-        self.window = window;
         self.version_check = version_check;
     }
 
@@ -271,38 +247,6 @@ mod tests {
                 signed_at: true,
                 reason: true,
             }
-        );
-    }
-
-    /// El ID-73 dicho en `State`: la ventana es la única memoria que
-    /// `forget_everything` no toca.
-    #[test]
-    fn forgetting_everything_leaves_the_window_size_alone() {
-        let mut state = State {
-            certificate: Some(CertificateRef::new(
-                "/usr/lib/softhsm/libsofthsm2.so",
-                "rfirma-test",
-                "Certificado de pruebas",
-                vec![0x01],
-            )),
-            window: Some(WindowMemory {
-                width: 1024.0,
-                height: 768.0,
-                maximized: false,
-            }),
-            ..State::default()
-        };
-
-        state.forget_everything();
-
-        assert!(state.certificate.is_none());
-        assert_eq!(
-            state.window,
-            Some(WindowMemory {
-                width: 1024.0,
-                height: 768.0,
-                maximized: false,
-            })
         );
     }
 
