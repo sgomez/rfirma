@@ -1142,3 +1142,53 @@ clean:
     cd {{ bridge }} && mvn -B clean
     cd {{ tauri }} && cargo clean
     rm -rf {{ app }}/dist
+
+# ID-153: los fragmentos de changelog.d/ (uno por issue, README.md aparte) se
+# reunen aqui, no antes, porque escribir cada uno en su propio fichero es lo
+# que evita el conflicto de fusion de un `## [Unreleased]` compartido. A mano,
+# al publicar una version: sustituye la seccion "## [<version>] - sin
+# publicar" si existe (el caso de la v0.4.0), o inserta una seccion nueva
+# delante de la primera si la version ya tenia una fechada, y borra los
+# fragmentos incorporados.
+#
+# Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
+changelog-release version:
+    #!/usr/bin/env python3
+    import datetime, glob, os, re, sys
+
+    os.chdir("{{ justfile_directory() }}")
+    version = "{{ version }}"
+
+    fragments = sorted(
+        (p for p in glob.glob("changelog.d/*.md") if os.path.basename(p) != "README.md"),
+        key=lambda p: int(os.path.splitext(os.path.basename(p))[0]),
+    )
+    if not fragments:
+        sys.exit("changelog.d/ no tiene fragmentos que reunir.")
+
+    body = "\n\n".join(open(f, encoding="utf-8").read().strip() for f in fragments)
+    today = datetime.date.today().isoformat()
+
+    changelog = open("CHANGELOG.md", encoding="utf-8").read()
+    placeholder = re.compile(
+        r"^## \[" + re.escape(version) + r"\] - sin publicar$", re.MULTILINE
+    )
+    if placeholder.search(changelog):
+        changelog = placeholder.sub(
+            f"## [{version}] - {today}\n\n{body}", changelog, count=1
+        )
+    else:
+        first_heading = re.search(r"^## \[", changelog, re.MULTILINE)
+        section = f"## [{version}] - {today}\n\n{body}\n\n"
+        if first_heading:
+            pos = first_heading.start()
+            changelog = changelog[:pos] + section + changelog[pos:]
+        else:
+            changelog = changelog.rstrip("\n") + "\n\n" + section
+
+    open("CHANGELOG.md", "w", encoding="utf-8").write(changelog)
+
+    for f in fragments:
+        os.remove(f)
+
+    print(f"CHANGELOG.md: version {version} publicada con {len(fragments)} fragmento(s).")
