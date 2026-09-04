@@ -1,0 +1,262 @@
+# El SEGUNDO de los tres workflows de la tuberia de entrega (ID-167,
+# ADR-0015): el que reacciona a la etiqueta `v*` y deja la Release EN BORRADOR.
+# El primero es `build.yml` (como se construye) y el tercero `publish.yml` (que
+# pasa cuando alguien publica). El motivo de cambiar este, y el unico, es QUE
+# SE FIRMA Y QUE SE ADJUNTA.
+#
+# LA RELEASE NACE EN BORRADOR Y PUBLICARLA ES UN ACTO HUMANO (ID-168, segunda
+# invariante del ADR-0015). Una etiqueta no publica nada por si sola: el
+# despliegue cuelga de `release published`, no de este fichero. Por eso el
+# `pdf-puerta-manual` que produjo la construccion se adjunta al borrador: la
+# puerta manual deja de ser una convencion en un comentario y pasa a ser un
+# artefacto delante de quien va a pulsar «Publish».
+#
+# De aqui sale, ademas, que empujar una etiqueta `v*` este RESTRINGIDO POR UNA
+# REGLA DEL REPOSITORIO. Si no, la puerta la abre cualquiera con permiso de
+# escritura y el revisor del `environment: release` se rodea empujando una
+# etiqueta. Esa regla es aprovisionamiento humano, igual que los secretos.
+#
+# DOS JOBS Y NO UNO, Y LA FRONTERA ES EL SECRETO. El job que construye es el
+# `build.yml` de siempre, invocado SIN `secrets:` y sin `secrets: inherit`: eso
+# es lo unico que este fichero puede hacer para sostener la primera invariante
+# del ADR-0015, y por eso `.github/check-workflows.sh` lo vigila. El segundo
+# job es el unico que entra en `environment: release`, y por tanto el unico que
+# ve la subclave GPG.
+#
+# EL ORDEN DE ESTE FICHERO ES OBLIGATORIO, y no es de estilo: firmar un `.rpm`
+# LO MODIFICA. Asi que primero se firma el `.rpm`, luego se calcula el
+# `SHA256SUMS`, luego se atesta la procedencia y solo al final se adjunta
+# (ADR-0015). Al reves, el `.rpm` de la Release y el del repositorio dnf
+# dejarian de ser los mismos bytes y se rompe la invariante del ADR-0004.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Nada por omision: cada job pide lo suyo. El que construye se queda en solo
+# lectura y el que firma es el unico que puede escribir una Release.
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. CONSTRUIR — el mismo workflow de siempre, sin un solo secreto
+  # ---------------------------------------------------------------------------
+  # `expected-version` es la guardia del ID-150 vista desde fuera: la etiqueta
+  # dice `v0.4.0` y el arbol tiene que decir `0.4.0`, o la construccion se para
+  # antes de producir un paquete que nadie podria explicar.
+  build:
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+    with:
+      expected-version: ${{ github.ref_name }}
+
+  # ---------------------------------------------------------------------------
+  # 2. FIRMAR Y DEJAR EL BORRADOR — el unico job con la subclave delante
+  # ---------------------------------------------------------------------------
+  release:
+    name: Firma y deja la Release en borrador
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # El revisor humano del entorno y la sede de los secretos. Los tres que
+    # nombra este fichero se crean con `packaging/setup-signing-key.sh` y se
+    # documentan en SECURITY.md.
+    environment: release
+    permissions:
+      # Crear la Release y adjuntarle los assets.
+      contents: write
+      # La atestacion de procedencia: `id-token` para pedir el token OIDC con
+      # el que se firma, `attestations` para registrarla en el repositorio.
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      # La regla de las candidatas tiene UNA sede
+      # (packaging/native-packages-allowed.sh, ID-154) y `build.yml` ya la
+      # consulto: una version con guion no produce paquetes nativos y es
+      # exactamente la que sale marcada como prerelease. Se reutiliza esa
+      # respuesta en vez de volver a mirar la cadena aqui.
+      IS_PRERELEASE: ${{ needs.build.outputs.native-packages == 'false' }}
+    steps:
+      # El arbol hace falta por las puertas: `packaging/check-digests.sh` y la
+      # accion local que importa la clave son ficheros de este repositorio, no
+      # pasos `run:` escritos aqui (tercera invariante del ADR-0015).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Paquetes de la construccion
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.build.outputs.packages-artifact }}
+          path: paquetes
+
+      - name: PDF de la puerta manual
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: pdf-puerta-manual
+          path: puerta-manual
+
+      # `rpm` trae `rpmsign`; `gnupg` ya viene en el runner, pero pedirlo aqui
+      # es lo que hace que este paso no dependa de la imagen del dia.
+      - name: rpmsign y gnupg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rpm gnupg
+
+      # Importa la SUBCLAVE de firma, nunca la maestra (ID-169). La accion
+      # comprueba ademas que la huella importada es la que el repositorio dice
+      # esperar, asi que cambiar el secreto por otra clave no pasa en silencio.
+      - name: Subclave de firma
+        id: gpg
+        uses: ./.github/actions/import-signing-key
+        with:
+          private-key: ${{ secrets.GPG_SIGNING_SUBKEY }}
+          passphrase: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
+          expected-fingerprint: ${{ vars.GPG_FINGERPRINT }}
+
+      # --- 1 de 4: FIRMAR EL `.rpm` -----------------------------------------
+      # En dnf hay dos interruptores independientes y los dos van a 1
+      # (ADR-0015): `repo_gpgcheck` verifica el indice —eso es del #276— y
+      # `gpgcheck` verifica LA FIRMA DENTRO DE CADA `.rpm`, que es esta. Un
+      # `.rpm` suelto descargado de la Release solo es verificable si la lleva.
+      #
+      # Los `.deb` NO se firman de una en una: no hay consumidor convencional
+      # de esa firma —apt firma el indice— y el `.deb` suelto se verifica por
+      # el `SHA256SUMS.asc`.
+      - name: Firma cada .rpm
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          rpms=(paquetes/*.rpm)
+          if [ ${#rpms[@]} -eq 0 ]; then
+            echo "sin .rpm que firmar (version candidata, ID-154)"
+            exit 0
+          fi
+          # `rpmsign` no sabe de `--passphrase`: la unica manera de darle una
+          # clave protegida sin persona delante es redefinir el mandato de
+          # firma con `--pinentry-mode loopback`.
+          cat > "$HOME/.rpmmacros" <<EOF
+          %_signature gpg
+          %_gpg_name ${{ steps.gpg.outputs.key-id }}
+          %__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor \\
+              --pinentry-mode loopback --passphrase-file ${{ steps.gpg.outputs.passphrase-file }} \\
+              -u "%{_gpg_name}" -sbo %{__signature_filename} %{__plaintext_filename}
+          EOF
+          rpmsign --addsign "${rpms[@]}"
+          # `rpm --checksig` verifica contra SU PROPIO anillo, que no es el de
+          # gpg: sin importar antes la publica, la comprobacion sale
+          # «(MISSING KEYS)» y no verifica nada.
+          rpm --import "${{ steps.gpg.outputs.public-key }}"
+          for paquete in "${rpms[@]}"; do
+            rpm --checksig "$paquete"
+          done
+
+      # --- 2 de 4: CALCULAR EL `SHA256SUMS` ---------------------------------
+      # Y comprobarlo contra el que salio de `build.yml`: lo que se firma tiene
+      # que ser lo que se construyo. La puerta es un script del repositorio
+      # —reproducible en cualquier equipo— y sabe que el `.rpm` cambia al
+      # firmarlo, que es justo el unico cambio permitido entre los dos.
+      - name: Digests, contra los de la construccion
+        env:
+          DIGESTS_DE_LA_CONSTRUCCION: ${{ needs.build.outputs.digests }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$DIGESTS_DE_LA_CONSTRUCCION" > "${{ runner.temp }}/SHA256SUMS.construccion"
+          packaging/check-digests.sh "${{ runner.temp }}/SHA256SUMS.construccion" paquetes
+          cd paquetes
+          rm -f SHA256SUMS SHA256SUMS.asc
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      # La firma de lo verificable por humanos: una sola clave para las
+      # Releases, ostree, apt y dnf (ID-169). Separada y en armadura, para que
+      # `gpg --verify SHA256SUMS.asc SHA256SUMS` funcione sin descargar nada
+      # mas que los dos ficheros.
+      - name: Firma el SHA256SUMS
+        run: |
+          set -euo pipefail
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "${{ steps.gpg.outputs.passphrase-file }}" \
+            --local-user "${{ steps.gpg.outputs.key-id }}" \
+            --armor --detach-sign --output paquetes/SHA256SUMS.asc paquetes/SHA256SUMS
+          gpg --verify paquetes/SHA256SUMS.asc paquetes/SHA256SUMS
+
+      # --- 3 de 4: ATESTAR LA PROCEDENCIA -----------------------------------
+      # Sobre los paquetes ya firmados, que son los bytes que va a descargar
+      # quien instale. Atestar antes de firmar el `.rpm` atestaria un fichero
+      # que ya no existe.
+      - name: Atestacion de procedencia
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            paquetes/*.flatpak
+            paquetes/*.deb
+            paquetes/*.rpm
+
+      # --- 4 de 4: ADJUNTAR -------------------------------------------------
+      - name: Notas del borrador
+        run: |
+          set -euo pipefail
+          cat > "${{ runner.temp }}/notas.md" <<'EOF'
+          ## Antes de publicar
+
+          Publicar esta Release es lo que dispara la distribucion a los tres
+          repositorios de `rfirma.sgomez.me`. Antes de hacerlo:
+
+          1. Descarga `manual-gate.pdf` y llevalo a un validador oficial
+             (VALIDe). La puerta manual no la cierra ninguna prueba automatica.
+          2. Comprueba la firma de los paquetes:
+
+             ```
+             gpg --verify SHA256SUMS.asc SHA256SUMS
+             sha256sum --check SHA256SUMS
+             ```
+
+          La clave que firma es la de rFirma, publicada en
+          <https://rfirma.sgomez.me/rfirma.asc>. Su huella y su politica de
+          revocacion estan en `SECURITY.md`.
+
+          ## Instalacion
+
+          El bundle de flatpak necesita el remoto de Flathub anadido, porque el
+          runtime no viaja dentro:
+
+          ```
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          ```
+
+          EOF
+
+      # `--draft` SIEMPRE, sin excepcion ni entrada que lo cambie: es la
+      # segunda invariante del ADR-0015 y un `if` aqui seria la manera de
+      # perderla. Una candidata sale ademas marcada como prerelease, que es lo
+      # que `publish.yml` mira para no desplegar nada.
+      - name: Release en borrador
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          prerelease=()
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            prerelease=(--prerelease)
+          fi
+          gh release create "${{ github.ref_name }}" \
+            --draft \
+            --title "rFirma ${VERSION}" \
+            --notes-file "${{ runner.temp }}/notas.md" \
+            --generate-notes \
+            "${prerelease[@]}" \
+            paquetes/* \
+            puerta-manual/manual-gate.pdf
+          {
+            echo "### Borrador listo"
+            echo "Falta el gesto humano: revisar el PDF de la puerta manual y publicar."
+            echo
+            gh release view "${{ github.ref_name }}" --json url --jq .url
+          } >> "$GITHUB_STEP_SUMMARY"
