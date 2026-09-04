@@ -132,6 +132,26 @@ if [ -n "$herencias" ]; then
 fi
 echo "OK  ningun workflow escribe 'secrets: inherit'"
 
+# LO QUE SE PUBLICA VA FIRMADO, SIEMPRE (ID-173, ID-175). `build-tree.sh`
+# tiene un modo sin firma —se llama `SIN-FIRMA-SOLO-PRUEBAS`— porque las
+# claves de rFirma las crea una persona y ninguna prueba puede fabricarse
+# una que valga. Ese modo construye un arbol que apt y dnf rechazan en
+# cuanto alguien lo anade, y el ostree recien reimportado no trae ninguna
+# firma porque la firma no viaja dentro del bundle: si llegara a CUALQUIER
+# workflow, la publicacion saldria muda y el fallo lo descubriria quien
+# instala. De ahi que la salida de emergencia tenga candado sobre todos los
+# workflows, no solo sobre publish.yml.
+sin_firmar="$(grep -rn 'SIN-FIRMA-SOLO-PRUEBAS' .github/workflows \
+    | grep -vE ':[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$sin_firmar" ]; then
+    printf '%s\n' "$sin_firmar" >&2
+    echo >&2
+    echo "ningun workflow puede construir el arbol sin firmar (ID-173, ID-175)." >&2
+    echo "Ese modo es de packaging/repo/build-tree.test.sh y de nadie mas." >&2
+    exit 1
+fi
+echo "OK  ningun workflow construye el arbol sin firmar"
+
 RELEASE=.github/workflows/release.yml
 if [ -f "$RELEASE" ]; then
     if ! grep -q '^    environment: release$' "$RELEASE"; then
@@ -180,19 +200,6 @@ if [ -f "$PUBLISH" ]; then
     fi
     echo "OK  $PUBLISH publica con el guion probado y no lleva rsync suelto"
 
-    # LO QUE SE PUBLICA VA FIRMADO, SIEMPRE (ID-173, ID-175). `build-tree.sh`
-    # tiene un modo sin firma —se llama `SIN-FIRMA-SOLO-PRUEBAS`— porque las
-    # claves de rFirma las crea una persona y ninguna prueba puede fabricarse
-    # una que valga. Ese modo construye un arbol que apt y dnf rechazan en
-    # cuanto alguien lo anade, y el ostree recien reimportado no trae ninguna
-    # firma porque la firma no viaja dentro del bundle: si llegara a un
-    # workflow, la publicacion saldria muda y el fallo lo descubriria quien
-    # instala. De ahi que la salida de emergencia tenga candado.
-    if grep -q 'SIN-FIRMA-SOLO-PRUEBAS' "$PUBLISH"; then
-        echo "$PUBLISH no puede construir el arbol sin firmar (ID-173, ID-175)." >&2
-        echo "Ese modo es de packaging/repo/build-tree.test.sh y de nadie mas." >&2
-        exit 1
-    fi
     if ! grep -q 'build-tree.sh serie arbol rfirma.asc "\$FINGERPRINT"' "$PUBLISH"; then
         echo "$PUBLISH tiene que pasarle la huella a build-tree.sh (ID-173)." >&2
         echo "Sin ella el ostree, el InRelease de apt y el repomd de dnf se" >&2

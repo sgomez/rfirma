@@ -279,6 +279,7 @@ trap 'rm -f "$release_tmp"' EXIT
         -o APT::FTPArchive::Release::Description="rFirma para Debian, Ubuntu y derivadas" \
         release dists/stable > "$release_tmp"
     mv "$release_tmp" dists/stable/Release
+    chmod 644 dists/stable/Release
 )
 
 firma_en_claro "$arbol/apt/dists/stable/Release" "$arbol/apt/dists/stable/InRelease"
