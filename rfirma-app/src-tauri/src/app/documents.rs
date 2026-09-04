@@ -165,7 +165,11 @@ fn file_name_of(landing: &Path) -> Option<String> {
 fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedDocumentView {
     let name = document.name().to_owned();
     let modified = modified_seconds(&document);
-    let path = real_path_of(&document).map(|path| path.to_string_lossy().into_owned());
+    // `to_str` y no `to_string_lossy`: una ruta que no sea UTF-8 cruzaría con
+    // caracteres de reemplazo dentro y se pintaría como «la ruta real», que es
+    // justo la mentira que el ID-185 evita. Sin ruta legible, `None`, que es lo
+    // que el campo ya sabe decir.
+    let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
     OpenedDocumentView {
         id: opened.remember(document),
         name,

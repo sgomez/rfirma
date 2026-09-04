@@ -155,8 +155,14 @@ fn outputs() -> Vec<Output<'static>> {
 }
 
 /// Los tipos de salida **detrás de los cuales no hay ningún documento**: lo
-/// que llevan sale del token, de una imagen o de un rectángulo, así que una
-/// ruta del portal no puede llegar hasta ellos por ningún camino.
+/// que llevan sale del token, de una imagen ya normalizada o de un
+/// rectángulo, así que una ruta del portal no puede llegar hasta ellos por
+/// ningún camino. `RubricView` lleva Base64 y medidas; `StatusView`,
+/// `CertificateView` y `PlacementView`, lo que dicen sus nombres.
+///
+/// `RubricChoiceView` **no** está aquí, aunque lo estuvo: lleva un `Failure`
+/// con el detalle crudo del `RubricError`, y por ahí sí hay un camino desde
+/// el enlace del portal. Se construye con los demás.
 ///
 /// Es la otra mitad de [`the_portal_path_never_crosses_to_the_window`]: entre
 /// las dos tienen que sumar **todos** los tipos que el descubrimiento
@@ -164,12 +170,11 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 5] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 4] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
     "RubricView",
-    "RubricChoiceView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
@@ -257,6 +262,14 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         documents::dropped_document(&[std::path::PathBuf::from(A_PORTAL_HANDLE)], &opened)
             .expect("se ha soltado un fichero");
     let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
+    // Elegir como rúbrica el enlace del portal: el caso de uso de verdad, con
+    // el `FilePath` que concede el diálogo. Falla porque la concesión no
+    // existe fuera del sandbox, y ese fallo es lo que cruza.
+    let refused_rubric = crate::app::rubric::choose(
+        &crate::rubric::RubricStore::at(home.path().join("rubric.jpg")),
+        tauri_plugin_dialog::FilePath::Path(std::path::PathBuf::from(A_PORTAL_HANDLE)),
+    )
+    .expect_err("el enlace del portal no existe fuera del sandbox");
 
     let mut crossings = vec![
         Crossing::of("OpenedDocumentView", &opened_view),
@@ -273,6 +286,10 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         Crossing::of(
             "ConfigurationView",
             &configuration::shown(&configuration, home.path()),
+        ),
+        Crossing::of(
+            "RubricChoiceView",
+            &crate::commands::RubricChoiceView::refused(&refused_rubric),
         ),
     ];
 
@@ -316,13 +333,11 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
 /// devolver el enlace de `/run/user/…` sería devolver una mentira.
 #[test]
 fn the_portal_path_never_crosses_to_the_window() {
+    // No se cuenta cuántos son: la igualdad exacta de conjuntos de
+    // `every_output_type_is_either_built_from_a_document_or_declared_without_one`
+    // ya se pone roja si falta cualquiera, y sin un número que subir a mano.
     let crossings = crossings_from_a_portal_document();
 
-    assert!(
-        crossings.len() >= 7,
-        "no se ha construido casi nada: {}",
-        crossings.len()
-    );
     for crossing in &crossings {
         assert!(
             the_portal_path_inside(&crossing.json).is_none(),

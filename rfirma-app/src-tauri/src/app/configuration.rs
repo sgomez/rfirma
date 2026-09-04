@@ -146,9 +146,12 @@ mod tests {
 
         let view = shown(&Configuration::default(), home.path());
 
+        // Contra la marca del sandbox y no contra la propia función: comparar
+        // la vista con lo que la vista usa pasaría igual con el valor
+        // contrario, y no vería un cableado que devolviera siempre `false`.
         assert_eq!(
             view.offers_the_original_folder,
-            crate::destination::the_original_folder_can_be_offered()
+            !std::path::Path::new("/.flatpak-info").exists()
         );
     }
 

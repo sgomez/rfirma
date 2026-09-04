@@ -211,9 +211,10 @@ mod tests {
     /// misma pregunta, no el valor de una de ellas.
     #[test]
     fn the_question_asked_to_the_environment_is_the_marker_of_the_sandbox() {
+        assert_eq!(SANDBOX_MARKER, "/.flatpak-info");
         assert_eq!(
             the_original_folder_can_be_offered(),
-            !inside_a_sandbox(Path::new(SANDBOX_MARKER))
+            !Path::new("/.flatpak-info").exists()
         );
     }
 
