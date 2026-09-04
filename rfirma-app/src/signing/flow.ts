@@ -8,6 +8,7 @@
  */
 
 import type { PageSet } from "../viewer/signatureBox";
+import type { StoreSecret } from "./secret";
 import type { TokenFailure } from "./token";
 import type { VisibleTextFields } from "./visibleSignature";
 
@@ -103,8 +104,14 @@ export type StageResult<T> = { ok: true; value: T } | { ok: false; failure: Toke
  * nada que contar durante los segundos que tarda la postfirma.
  */
 export interface SigningBackend {
-  /** Etapa 1: prepara lo que hay que firmar. No toca la clave privada. */
-  presign(order: SigningOrder): Promise<StageResult<void>>;
+  /**
+   * Etapa 1: prepara lo que hay que firmar. No toca la clave privada.
+   *
+   * Devuelve **cómo hay que pedirle el secreto al almacén** (ID-189, ID-190):
+   * la ventana la lee para decidir entre abrir el diálogo del secreto y firmar
+   * directo.
+   */
+  presign(order: SigningOrder): Promise<StageResult<StoreSecret>>;
   /** Etapa 2: firma el hash en la tarjeta, con el PIN que el usuario tecleó. */
   sign(pin: string): Promise<StageResult<void>>;
   /** Etapa 3: ensambla el PDF firmado y lo deja en el destino. */

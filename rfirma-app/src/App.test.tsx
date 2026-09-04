@@ -801,7 +801,10 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
   it("warns before signing when some of the chosen pages will fall, and cancel does not sign", async () => {
     const user = userEvent.setup();
-    const presign = vi.fn(async () => ({ ok: true as const, value: undefined }));
+    const presign = vi.fn(async () => ({
+      ok: true as const,
+      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+    }));
     const signer: SigningBackend = {
       presign,
       sign: async () => ({ ok: true, value: undefined }),
@@ -855,7 +858,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const user = userEvent.setup();
     const presign = vi.fn(async (_order: SigningOrder) => ({
       ok: true as const,
-      value: undefined,
+      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
     }));
     const signer: SigningBackend = {
       presign,
@@ -894,7 +897,10 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
   it("does not appear when every chosen page keeps its seal", async () => {
     const user = userEvent.setup();
-    const presign = vi.fn(async () => ({ ok: true as const, value: undefined }));
+    const presign = vi.fn(async () => ({
+      ok: true as const,
+      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+    }));
     const signer: SigningBackend = {
       presign,
       sign: async () => ({ ok: true, value: undefined }),

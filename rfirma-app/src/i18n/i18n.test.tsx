@@ -123,13 +123,6 @@ describe("la resolución de cadenas", () => {
     expect(i18n.t("panel.document.pages", { count: 1_000_000 })).toBe("1000000 páginas");
   });
 
-  it("mantiene `pin.incorrectUnknown` fuera del plural: es otro mensaje (ID-129)", () => {
-    const i18n = createI18n("es");
-
-    expect(i18n.t("pin.incorrectUnknown")).not.toContain("{{count}}");
-    expect(i18n.t("pin.incorrectUnknown")).not.toBe(i18n.t("pin.incorrect", { count: 3 }));
-  });
-
   it("cae al castellano donde el catálogo está sin traducir", () => {
     const i18n = createI18n("es");
 

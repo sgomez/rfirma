@@ -98,6 +98,19 @@ describe("los puertos de firma sobre Tauri", () => {
   });
 
   /**
+   * ID-190: la ventana decide entre abrir el diálogo del secreto y firmar
+   * directo con lo que devuelve la prefirma, así que ese valor tiene que
+   * cruzar tal cual y no perderse en `void`.
+   */
+  it("passes the store's secret shape from the presignature through, unchanged", async () => {
+    invoke.mockResolvedValue({ kind: "notNeeded" });
+
+    const outcome = await tauriSigningBackend().presign(anOrder);
+
+    expect(outcome).toEqual({ ok: true, value: { kind: "notNeeded" } });
+  });
+
+  /**
    * ID-105: la conversión a puntos PAdES no tiene copia en TypeScript, así
    * que el diálogo de páginas sin sello la pide por esta orden, en vez de
    * recalcularla.

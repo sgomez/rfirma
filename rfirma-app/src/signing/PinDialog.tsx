@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import { type FormEvent, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Certificate } from "./certificate";
+import type { Certificate, CertificateStoreClass } from "./certificate";
 import "./PinDialog.css";
 import type { TokenFailure } from "./token";
 
@@ -9,8 +9,9 @@ interface PinDialogProps {
   /** Con qué identidad se firma. Se enseña para que se vea antes de teclear. */
   certificate: Certificate;
   /**
-   * El fallo del intento anterior, o `null` la primera vez. Solo llegan aquí
-   * los que se resuelven dentro del diálogo (ver `belongsToPinDialog`).
+   * El fallo del intento anterior, o `null` la primera vez. Solo llega aquí
+   * `incorrectPin`: es el único que se resuelve dentro del diálogo (ver
+   * `belongsToPinDialog`).
    */
   failure: TokenFailure | null;
   onSubmit: (pin: string) => void;
@@ -18,38 +19,65 @@ interface PinDialogProps {
 }
 
 /**
- * El diálogo del PIN (docs/design/dialogo-pin.md).
+ * Qué palabra usa el diálogo, y qué le pide al almacén (ID-188).
  *
- * Aparece **después de la prefirma**: pedir el secreto que desbloquea la clave
- * sin saber todavía qué se va a firmar no tiene sentido.
+ * «PIN» para un módulo PKCS#11; «contraseña» para un fichero —un perfil NSS de
+ * navegador, un `.p12` instalado—. No se discrimina por hardware: se diverge a
+ * propósito de AutoFirma, que le dice «contraseña» al módulo genérico.
+ */
+function wordFor(store: CertificateStoreClass): "pin" | "password" {
+  return store === "card" ? "pin" : "password";
+}
+
+/**
+ * Qué se está abriendo, **en los términos de quien firma**, y solo si se sabe
+ * (ID-208): el perfil de un navegador, o el titular y el DNI de un `.p12`. Con
+ * un módulo PKCS#11 no se nombra nada — ni la clase de almacén, ni el token.
+ */
+function subjectFor(certificate: Certificate, t: TFunction): string | null {
+  switch (certificate.store) {
+    case "firefox":
+      return t("pin.subjectBrowser", { browser: "Firefox" });
+    case "chrome":
+      return t("pin.subjectBrowser", { browser: "Chrome" });
+    case "nssdb":
+      return t("pin.signingAs", {
+        holder: certificate.holderName,
+        idNumber: certificate.idNumber,
+      });
+    case "card":
+      return null;
+  }
+}
+
+/**
+ * El diálogo del secreto del almacén (docs/design/dialogo-pin.md).
  *
- * Dos cosas que la ficha pide y no son decoración:
- *
- * - **Un PIN incorrecto se reintenta aquí mismo.** El diálogo no se desmonta y
- *   el recorrido no vuelve a empezar: se vacía el campo, se enseñan los
- *   intentos que quedan y se teclea otra vez.
- * - **Los intentos restantes se enseñan.** Los cuenta el módulo PKCS#11;
- *   callarlos y dejar que alguien bloquee su tarjeta es un daño real y no
- *   siempre reversible.
- *
- * Sin color de error: el sistema de diseño no lo tiene. El fallo se señala con
- * borde, peso y glifo (`.rf-field--error`).
+ * La palabra la elige el almacén (ID-188) y el contenido no lleva pista de
+ * ninguna clase: ni la clase de módulo PKCS#11, ni el nombre del token, ni una
+ * frase que tranquilice sobre dónde se guarda el secreto (ID-208). Un secreto
+ * incorrecto se reintenta aquí mismo, con el campo vacío y un error de una
+ * línea, sin remedio debajo: no hay contador de reintentos porque PKCS#11 no
+ * lo cuenta nunca (ID-191), y no hay «tarjeta bloqueada» porque la v0.4 retira
+ * tarjetas y DNIe del alcance.
  */
 export function PinDialog({ certificate, failure, onSubmit, onCancel }: PinDialogProps) {
   const { t } = useTranslation();
   const [pin, setPin] = useState("");
   const titleId = useId();
   const pinId = useId();
-  const hintId = useId();
+  const errorId = useId();
 
-  const locked = failure?.situation === "pinLocked";
+  const word = wordFor(certificate.store);
+  const subject = subjectFor(certificate, t);
   const incorrect = failure?.situation === "incorrectPin";
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSubmit(pin);
-    // El campo se vacía en cuanto se envía: si el PIN estaba mal, lo siguiente
-    // que hay que hacer es teclearlo entero otra vez, no corregir un carácter.
+    // El campo se vacía en cuanto se envía: si el secreto estaba mal, lo
+    // siguiente que hay que hacer es teclearlo entero otra vez, no corregir un
+    // carácter.
     setPin("");
   };
 
@@ -63,86 +91,47 @@ export function PinDialog({ certificate, failure, onSubmit, onCancel }: PinDialo
       >
         <div className="pin-dialog__heading">
           <p className="rf-title" id={titleId}>
-            {locked ? t("errors.situations.pinLocked.title") : t("pin.title")}
+            {word === "pin" ? t("pin.title") : t("pin.titlePassword")}
           </p>
-          <p className="rf-prose rf-text-muted">
-            {t("pin.signingAs", {
-              holder: certificate.holderName,
-              idNumber: certificate.idNumber,
-            })}
-          </p>
+          <p className="rf-prose rf-text-muted pin-dialog__subject">{subject}</p>
         </div>
 
-        {locked && failure ? (
-          <>
-            <p className="rf-prose" role="alert">
-              {t("errors.situations.pinLocked.body")}
+        <form onSubmit={submit}>
+          <div className={incorrect ? "rf-field rf-field--error" : "rf-field"}>
+            <label className="rf-label" htmlFor={pinId}>
+              {word === "pin" ? t("pin.label") : t("pin.labelPassword")}
+            </label>
+            <input
+              className={
+                word === "pin" ? "rf-input pin-dialog__pin" : "rf-input pin-dialog__password"
+              }
+              id={pinId}
+              type="password"
+              value={pin}
+              autoComplete="off"
+              aria-invalid={incorrect}
+              aria-describedby={errorId}
+              onChange={(event) => setPin(event.target.value)}
+            />
+            {/* Nada debajo del campo salvo el mensaje de fallo: ni pista, ni
+                promesa, ni contador de intentos. */}
+            <p className="rf-hint pin-dialog__error" id={errorId}>
+              {incorrect ? (word === "pin" ? t("pin.incorrect") : t("pin.incorrectPassword")) : ""}
             </p>
-            <TechnicalDetail detail={failure.detail} />
-            <hr className="rf-divider" />
-            <div className="rf-row pin-dialog__actions">
-              <button type="button" className="rf-btn rf-btn--primary" onClick={onCancel}>
-                {t("actions.close")}
-              </button>
-            </div>
-          </>
-        ) : (
-          <form onSubmit={submit}>
-            <div className={incorrect ? "rf-field rf-field--error" : "rf-field"}>
-              <label className="rf-label" htmlFor={pinId}>
-                {t("pin.label")}
-              </label>
-              <input
-                className="rf-input pin-dialog__pin"
-                id={pinId}
-                type="password"
-                value={pin}
-                autoComplete="off"
-                aria-describedby={hintId}
-                aria-invalid={incorrect}
-                onChange={(event) => setPin(event.target.value)}
-              />
-              <p className="rf-hint" id={hintId}>
-                {incorrect && failure ? attemptsHint(failure.attemptsLeft, t) : t("pin.hint")}
-              </p>
-            </div>
+          </div>
 
-            {incorrect && failure && <TechnicalDetail detail={failure.detail} />}
+          <hr className="rf-divider" />
 
-            <hr className="rf-divider" />
-
-            <div className="rf-row pin-dialog__actions">
-              <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
-                {t("actions.cancel")}
-              </button>
-              <button type="submit" className="rf-btn rf-btn--primary">
-                {t("pin.submit")}
-              </button>
-            </div>
-          </form>
-        )}
+          <div className="rf-row pin-dialog__actions">
+            <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+              {t("actions.cancel")}
+            </button>
+            <button type="submit" className="rf-btn rf-btn--primary">
+              {t("pin.submit")}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
-}
-
-/**
- * El texto original del token, aparte y crudo (ID-29). No se traduce ni se
- * recorta: está para pegarlo en un informe de fallo.
- */
-function TechnicalDetail({ detail }: { detail: string }) {
-  const { t } = useTranslation();
-
-  return (
-    <details className="pin-dialog__detail">
-      <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
-      <pre className="pin-dialog__raw">{detail}</pre>
-    </details>
-  );
-}
-
-/** Los intentos que quedan, cuando el módulo los cuenta. */
-function attemptsHint(attemptsLeft: number | null, t: TFunction): string {
-  if (attemptsLeft === null) return t("pin.incorrectUnknown");
-  return t("pin.incorrect", { count: attemptsLeft });
 }

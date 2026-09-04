@@ -1,6 +1,6 @@
 /*
- * El diálogo del PIN (docs/design/dialogo-pin.md): 420 px sobre el velo, con la
- * ventana atenuada detrás.
+ * El diálogo del secreto (docs/design/dialogo-pin.md): 420 px sobre el velo,
+ * con la ventana atenuada detrás.
  */
 
 .pin-dialog {
@@ -11,6 +11,10 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* El bloque de cabecera reserva 48 px tenga línea de sujeto o no: las tres
+     situaciones miden lo mismo, así que el diálogo no pega saltos al cambiar
+     de almacén. */
+  min-height: 48px;
 }
 
 /* Tracking amplio y cuerpo grande: un PIN se teclea a ciegas y los puntos se
@@ -21,26 +25,22 @@
   letter-spacing: 6px;
 }
 
+/* Una contraseña se lee, no se cuenta: 4 px de tracking en vez de 6. */
+.pin-dialog__password {
+  font-size: 18px;
+  letter-spacing: 4px;
+}
+
+.pin-dialog__error {
+  /* El hueco bajo el campo reserva 17 px tenga mensaje o no: pedir el
+     secreto y fallar al teclearlo miden lo mismo, así que el diálogo no pega
+     saltos al fallar. */
+  min-height: 17px;
+}
+
 .pin-dialog__actions {
   justify-content: flex-end;
   gap: var(--rf-space-sm);
-}
-
-.pin-dialog__detail {
-  margin-top: var(--rf-space-xs);
-}
-
-/* El texto crudo del token, tal cual: monoespaciada y seleccionable. */
-.pin-dialog__raw {
-  margin: var(--rf-space-xs) 0 0;
-  padding: var(--rf-space-xs);
-  border-radius: var(--rf-radius-sm);
-  background: var(--rf-bg);
-  font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
-  font-size: 12px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  user-select: text;
 }
 
 .pin-dialog form {
