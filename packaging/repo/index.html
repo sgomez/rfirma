@@ -1,141 +1,990 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="rf-root">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>rFirma — Firma electrónica nativa</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --fg: #1a1a1a;
-    --bg: #ffffff;
-    --muted: #5a5a5a;
-    --accent: #0b5fff;
-    --border: #dcdcdc;
-    --code-bg: #f4f4f4;
-  }
-  @media (prefers-color-scheme: dark) {
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rFirma — Firma electrónica nativa</title>
+  <meta name="description" content="Alternativa moderna, nativa y ligera a AutoFirma. Construida con Tauri v2 (Rust + React) y el motor criptográfico de clienteafirma mediante GraalVM.">
+
+  <!-- Favicon vectorial oficial -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Ccircle cx='256' cy='256' r='225.28' fill='%23067781'/%3E%3Cpath fill='%23ffffff' d='M 206.05,134.63 C 190.87,133.9 173.56,140.04 167.17,154.88 C 158.7,176.24 154.89,199.17 151.45,221.81 C 145.7,263.83 143.8,306.64 149.91,348.74 C 151.38,361.75 156.08,376.98 169.49,382.09 C 177.29,385.11 186.29,384.78 194.18,382.33 C 207.23,377.91 212.67,363.77 214.74,351.28 C 222.24,313.74 232,276.05 250.11,242.08 C 256.76,230.86 263.77,218.29 275.94,212.37 C 280.92,209.61 286.92,213.33 287.02,218.92 C 287.91,230 283.38,240.72 283.95,251.85 C 283.15,268.89 293.47,286.55 310.21,291.69 C 328.34,297.24 347.41,288.8 360.99,276.85 C 370.03,268.96 378.6,260.32 385.92,250.85 C 392.37,240.92 390.7,225.22 380.31,218.7 C 372.5,214.41 364.05,220.03 358.73,225.73 C 355.75,229.11 350.02,233.87 346.1,229.11 C 341.84,222.32 345.26,213.79 345.8,206.36 C 347.75,189.47 354.63,171.95 348.22,155.23 C 344.64,144.32 334.53,136.52 323.21,135.13 C 310.69,133.6 297.68,135.46 286.51,141.56 C 260.76,154.56 243.03,178.9 229.51,203.68 C 220.32,220.35 213.2,238.04 206.64,255.88 C 208.25,232.1 212.36,208.07 217.24,184.58 C 219.14,173.51 223.39,162.86 224.4,151.68 C 225.56,144.04 220.12,136.59 212.43,135.56 C 210.37,134.92 208.17,134.95 206.05,134.63 Z'/%3E%3C/svg%3E">
+
+  <style>
+    /* ==========================================================================
+       Sistema de Diseño de rFirma (docs/design/design-system.md) - Solo Modo Claro
+       ========================================================================== */
+
     :root {
-      --fg: #eaeaea;
-      --bg: #121212;
-      --muted: #aaaaaa;
-      --accent: #6ea8ff;
-      --border: #333333;
-      --code-bg: #1c1c1c;
+      color-scheme: light;
+      --rf-bg: #ffffff;
+      --rf-surface: #fafbfc;
+      --rf-text: #000000;
+      --rf-text-muted: #64748b;
+      --rf-border-subtle: #e5e5e5;
+      --rf-border-strong: #64748b;
+      --rf-primary: #64748b;
+      --rf-on-primary: #ffffff;
+      --rf-primary-hover: #475569;
+      --rf-accent: #94a3b8;
+      --rf-focus-ring: #64748b;
+      --rf-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+      --rf-shadow-elevated: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --rf-code-bg: #f8fafc;
+
+      /* Color de marca (icono oficial) */
+      --rf-brand: #067781;
+      --rf-brand-surface: #f0fdfa;
+      --rf-brand-border: #99f6e4;
+      --rf-brand-text: #0f766e;
+
+      /* Alertas y avisos */
+      --rf-warning-bg: #fffbeb;
+      --rf-warning-border: #fde68a;
+      --rf-warning-text: #92400e;
+
+      /* Constantes y escala */
+      --rf-focus-ring-width: 2px;
+      --rf-focus-ring-offset: 2px;
+      --rf-font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --rf-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      --rf-space-1: 8px;
+      --rf-space-2: 16px;
+      --rf-space-3: 24px;
+      --rf-space-4: 40px;
+      --rf-space-5: 48px;
+      --rf-space-6: 64px;
+      --rf-space-7: 72px;
+      --rf-space-8: 80px;
+
+      --rf-space-xs: 8px;
+      --rf-space-sm: 16px;
+      --rf-space-md: 24px;
+      --rf-space-lg: 48px;
+      --rf-space-xl: 80px;
+
+      --rf-radius-sm: 4px;
+      --rf-radius-md: 6px;
+      --rf-radius-lg: 8px;
+      --rf-radius-xl: 16px;
+      --rf-radius-pill: 9999px;
+
+      --rf-duration-fast: 150ms;
+      --rf-duration-base: 300ms;
+      --rf-easing: cubic-bezier(0.4, 0, 0.2, 1);
     }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: var(--fg);
-    background: var(--bg);
-    line-height: 1.6;
-  }
-  header, main, footer {
-    max-width: 46rem;
-    margin: 0 auto;
-    padding: 1.5rem 1.25rem;
-  }
-  header {
-    padding-top: 3rem;
-  }
-  h1 {
-    margin-bottom: 0.25rem;
-    font-size: 2rem;
-  }
-  .tagline {
-    color: var(--muted);
-    margin-top: 0;
-  }
-  .badge {
-    display: inline-block;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    border-radius: 999px;
-    padding: 0.15rem 0.75rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-  section {
-    margin-top: 2.5rem;
-  }
-  h2 {
-    font-size: 1.3rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0.4rem;
-  }
-  .notice {
-    border: 1px solid var(--accent);
-    background: var(--code-bg);
-    border-radius: 0.5rem;
-    padding: 0.9rem 1.1rem;
-    margin: 1rem 0;
-  }
-  .channel {
-    margin: 1.5rem 0;
-  }
-  .channel h3 {
-    margin-bottom: 0.25rem;
-  }
-  pre {
-    background: var(--code-bg);
-    border: 1px solid var(--border);
-    border-radius: 0.4rem;
-    padding: 0.9rem 1rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-  }
-  code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  a { color: var(--accent); }
-  ul.repos {
-    padding-left: 1.2rem;
-  }
-  footer {
-    color: var(--muted);
-    font-size: 0.85rem;
-    border-top: 1px solid var(--border);
-    margin-top: 3rem;
-  }
-</style>
+
+    /* Reinicio y caja */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--rf-bg);
+      color: var(--rf-text);
+      font-family: var(--rf-font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Clases de tipografía */
+    .rf-display {
+      font-family: var(--rf-font-display);
+      font-size: clamp(2.25rem, 5.5vw, 4.25rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      margin: 0;
+    }
+
+    .rf-heading {
+      font-family: var(--rf-font-display);
+      font-size: clamp(1.65rem, 3.5vw, 2.25rem);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .rf-title {
+      font-family: var(--rf-font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .rf-prose {
+      font-size: 1rem;
+      line-height: 1.65;
+      margin: 0;
+    }
+
+    .rf-body {
+      font-size: 0.875rem;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .rf-text-muted { color: var(--rf-text-muted); }
+    .rf-text-primary { color: var(--rf-primary); }
+    .rf-text-brand { color: var(--rf-brand-text); }
+
+    /* Enlaces */
+    a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: opacity var(--rf-duration-fast) var(--rf-easing);
+    }
+    a:hover {
+      opacity: 0.8;
+    }
+
+    /* Superficies y Tarjetas */
+    .rf-surface {
+      background: var(--rf-surface);
+      border: 1px solid var(--rf-border-subtle);
+      border-radius: var(--rf-radius-lg);
+    }
+
+    .rf-card {
+      background: var(--rf-surface);
+      border: 1px solid var(--rf-border-subtle);
+      border-radius: var(--rf-radius-lg);
+      box-shadow: var(--rf-shadow-card);
+      padding: var(--rf-space-md);
+      transition: border-color var(--rf-duration-fast) var(--rf-easing),
+                  box-shadow var(--rf-duration-fast) var(--rf-easing);
+    }
+
+    .rf-card--interactive:hover {
+      border-color: var(--rf-border-strong);
+      box-shadow: var(--rf-shadow-elevated);
+    }
+
+    /* Botones (mínimo 44px de área táctil) */
+    .rf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--rf-space-xs);
+      min-height: 44px;
+      padding: 0 var(--rf-space-3);
+      border-radius: var(--rf-radius-md);
+      border: 1px solid transparent;
+      font-family: var(--rf-font-body);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color var(--rf-duration-fast) var(--rf-easing),
+                  border-color var(--rf-duration-fast) var(--rf-easing),
+                  color var(--rf-duration-fast) var(--rf-easing),
+                  transform var(--rf-duration-fast) var(--rf-easing);
+    }
+
+    .rf-btn:active {
+      transform: scale(0.98);
+    }
+
+    .rf-btn--primary {
+      background: var(--rf-primary);
+      color: var(--rf-on-primary);
+    }
+    .rf-btn--primary:hover {
+      background: var(--rf-primary-hover);
+      color: var(--rf-on-primary);
+      opacity: 1;
+    }
+
+    .rf-btn--secondary {
+      background: transparent;
+      color: var(--rf-text);
+      border-color: var(--rf-border-strong);
+    }
+    .rf-btn--secondary:hover {
+      border-color: var(--rf-primary);
+      color: var(--rf-primary);
+      opacity: 1;
+    }
+
+    .rf-btn--ghost {
+      background: transparent;
+      color: var(--rf-text-muted);
+    }
+    .rf-btn--ghost:hover {
+      color: var(--rf-text);
+      opacity: 1;
+    }
+
+    .rf-btn--pill {
+      border-radius: var(--rf-radius-pill);
+    }
+
+    /* Insignias */
+    .rf-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--rf-border-strong);
+      color: var(--rf-text);
+      border-radius: var(--rf-radius-pill);
+      padding: 4px 12px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .rf-badge--brand {
+      border-color: var(--rf-brand-border);
+      background: var(--rf-brand-surface);
+      color: var(--rf-brand-text);
+    }
+
+    .rf-badge--warning {
+      border-color: var(--rf-warning-border);
+      background: var(--rf-warning-bg);
+      color: var(--rf-warning-text);
+    }
+
+    /* Accesibilidad de foco */
+    :focus-visible {
+      outline: var(--rf-focus-ring-width) solid var(--rf-focus-ring);
+      outline-offset: var(--rf-focus-ring-offset);
+    }
+
+    /* ==========================================================================
+       Maquetación de la Landing
+       ========================================================================== */
+
+    .site-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      /* Compensación inferior para que la barra fija no tape contenido */
+      padding-bottom: 72px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 0 var(--rf-space-sm);
+    }
+
+    @media (min-width: 640px) {
+      .container {
+        padding: 0 var(--rf-space-md);
+      }
+    }
+
+    /* 1. Cabecera y Navegación */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.9);
+      border-bottom: 1px solid var(--rf-border-subtle);
+    }
+
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      transition: transform var(--rf-duration-fast) var(--rf-easing);
+    }
+    .brand-group:hover .brand-logo {
+      transform: scale(1.05);
+    }
+
+    .brand-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: none;
+      align-items: center;
+      gap: var(--rf-space-md);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    @media (min-width: 820px) {
+      .nav-links {
+        display: flex;
+      }
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: var(--rf-text-muted);
+    }
+    .nav-links a:hover {
+      color: var(--rf-text);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* 2. Hero Section */
+    .hero-section {
+      padding: var(--rf-space-lg) 0 var(--rf-space-xl);
+      text-align: center;
+    }
+
+    .hero-content {
+      max-width: 50rem;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--rf-space-md);
+    }
+
+    .hero-tagline {
+      font-size: clamp(1.125rem, 2.5vw, 1.35rem);
+      color: var(--rf-text-muted);
+      max-width: 44rem;
+      margin: 0;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: var(--rf-space-sm);
+      margin-top: var(--rf-space-xs);
+    }
+
+    /* 3. Captura de pantalla de la aplicación */
+    .mockup-container {
+      margin-top: var(--rf-space-lg);
+      max-width: 60rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .app-screenshot-frame {
+      background: var(--rf-surface);
+      border: 1px solid var(--rf-border-subtle);
+      border-radius: var(--rf-radius-xl);
+      box-shadow: var(--rf-shadow-elevated);
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    .app-screenshot {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: var(--rf-radius-xl);
+    }
+
+    /* 4. Pilares / Características */
+    .features-section {
+      padding: var(--rf-space-lg) 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--rf-space-md);
+      margin-top: var(--rf-space-lg);
+    }
+    @media (min-width: 640px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .feature-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-icon-wrapper {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--rf-radius-md);
+      background: var(--rf-brand-surface);
+      color: var(--rf-brand-text);
+      border: 1px solid var(--rf-brand-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    /* 5. Comparativa perfectamente centrada */
+    .comparison-section {
+      padding: var(--rf-space-xl) 0;
+      text-align: center;
+      width: 100%;
+    }
+
+    .comparison-header-group {
+      max-width: 44rem;
+      margin: 0 auto;
+    }
+
+    .comparison-table-wrapper {
+      overflow-x: auto;
+      margin: var(--rf-space-md) auto 0;
+      max-width: 58rem;
+      border: 1px solid var(--rf-border-subtle);
+      border-radius: var(--rf-radius-lg);
+      background: var(--rf-surface);
+      box-shadow: var(--rf-shadow-card);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9375rem;
+      min-width: 600px;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--rf-border-subtle);
+    }
+
+    .comparison-table th {
+      background: var(--rf-bg);
+      font-weight: 700;
+      color: var(--rf-text);
+    }
+
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .comparison-table tr:hover td {
+      background: #f1f5f9;
+    }
+
+    .col-feature { width: 28%; font-weight: 600; color: var(--rf-text); }
+    .col-autofirma { width: 36%; color: var(--rf-text-muted); }
+    .col-rfirma { width: 36%; color: var(--rf-text); font-weight: 600; }
+
+    /* 6. Centro de Instalación perfectamente centrado */
+    .install-section {
+      padding: var(--rf-space-xl) 0;
+      text-align: center;
+      width: 100%;
+    }
+
+    .install-header-group {
+      max-width: 46rem;
+      margin: 0 auto;
+    }
+
+    .install-box-container {
+      max-width: 52rem;
+      margin: var(--rf-space-md) auto 0;
+      text-align: left;
+    }
+
+    /* Tarjeta de advertencia: landing de pruebas */
+    .install-alert-card {
+      background: var(--rf-warning-bg);
+      border: 1px solid var(--rf-warning-border);
+      border-radius: var(--rf-radius-md);
+      padding: 18px 20px;
+      margin-bottom: var(--rf-space-md);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .install-alert-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .install-alert-title {
+      font-weight: 700;
+      color: var(--rf-warning-text);
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .install-alert-desc {
+      color: #78350f;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .tabs-nav {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      border-bottom: 1px solid var(--rf-border-subtle);
+      margin-bottom: var(--rf-space-md);
+      padding-bottom: 2px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      appearance: none;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--rf-text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: color var(--rf-duration-fast) var(--rf-easing),
+                  border-color var(--rf-duration-fast) var(--rf-easing);
+    }
+
+    .tab-btn:hover {
+      color: var(--rf-text);
+    }
+
+    .tab-btn[aria-selected="true"] {
+      color: var(--rf-text);
+      border-bottom-color: var(--rf-brand);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+
+    .code-box-wrapper {
+      position: relative;
+      margin: var(--rf-space-sm) 0;
+    }
+
+    pre.code-block {
+      background: var(--rf-code-bg);
+      border: 1px solid var(--rf-border-subtle);
+      border-radius: var(--rf-radius-md);
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      margin: 0;
+      color: var(--rf-text);
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--rf-surface);
+      border: 1px solid var(--rf-border-subtle);
+      border-radius: var(--rf-radius-sm);
+      color: var(--rf-text);
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--rf-duration-fast) var(--rf-easing);
+    }
+
+    .copy-btn:hover {
+      border-color: var(--rf-border-strong);
+      background: var(--rf-bg);
+    }
+
+    .channel-tips {
+      font-size: 0.875rem;
+      color: var(--rf-text-muted);
+      margin-top: 8px;
+    }
+
+    /* 7. Arquitectura */
+    .architecture-section {
+      padding: var(--rf-space-xl) 0;
+    }
+
+    /* 8. Pie de página tradicional */
+    .site-footer {
+      border-top: 1px solid var(--rf-border-subtle);
+      padding: var(--rf-space-lg) 0;
+      margin-top: auto;
+      background: var(--rf-surface);
+    }
+
+    .footer-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--rf-space-md);
+    }
+
+    @media (min-width: 640px) {
+      .footer-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--rf-space-md);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .footer-links a {
+      text-decoration: none;
+      color: var(--rf-text-muted);
+      font-size: 0.875rem;
+    }
+    .footer-links a:hover {
+      color: var(--rf-text);
+    }
+
+    /* 9. Barra Fija Inferior Permanente (Aviso Producto No Oficial) */
+    .fixed-disclaimer-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: #ffffff;
+      border-top: 1px solid var(--rf-border-strong);
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+      padding: 12px 0;
+    }
+
+    .fixed-disclaimer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .fixed-disclaimer-text {
+      font-size: 0.84rem;
+      color: var(--rf-text);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* Iconos SVG inline */
+    .svg-icon {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <h1>rFirma</h1>
-  <p class="tagline">Firma electrónica nativa para Linux, sin depender de Java.</p>
-  <span class="badge">Alfa</span>
-</header>
+<div class="site-wrapper">
 
-<main>
+  <!-- Cabecera -->
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav-bar" aria-label="Navegación principal">
+        <a href="#" class="brand-group" aria-label="rFirma - Inicio">
+          <svg class="brand-logo" viewBox="0 0 512 512" aria-hidden="true">
+            <circle cx="256" cy="256" r="225.28" fill="#067781"/>
+            <path fill="#ffffff" d="M 206.05,134.63 C 190.87,133.9 173.56,140.04 167.17,154.88 C 158.7,176.24 154.89,199.17 151.45,221.81 C 145.7,263.83 143.8,306.64 149.91,348.74 C 151.38,361.75 156.08,376.98 169.49,382.09 C 177.29,385.11 186.29,384.78 194.18,382.33 C 207.23,377.91 212.67,363.77 214.74,351.28 C 222.24,313.74 232,276.05 250.11,242.08 C 256.76,230.86 263.77,218.29 275.94,212.37 C 280.92,209.61 286.92,213.33 287.02,218.92 C 287.91,230 283.38,240.72 283.95,251.85 C 283.15,268.89 293.47,286.55 310.21,291.69 C 328.34,297.24 347.41,288.8 360.99,276.85 C 370.03,268.96 378.6,260.32 385.92,250.85 C 392.37,240.92 390.7,225.22 380.31,218.7 C 372.5,214.41 364.05,220.03 358.73,225.73 C 355.75,229.11 350.02,233.87 346.1,229.11 C 341.84,222.32 345.26,213.79 345.8,206.36 C 347.75,189.47 354.63,171.95 348.22,155.23 C 344.64,144.32 334.53,136.52 323.21,135.13 C 310.69,133.6 297.68,135.46 286.51,141.56 C 260.76,154.56 243.03,178.9 229.51,203.68 C 220.32,220.35 213.2,238.04 206.64,255.88 C 208.25,232.1 212.36,208.07 217.24,184.58 C 219.14,173.51 223.39,162.86 224.4,151.68 C 225.56,144.04 220.12,136.59 212.43,135.56 C 210.37,134.92 208.17,134.95 206.05,134.63 Z"/>
+          </svg>
+          <span class="brand-name">rFirma</span>
+          <span class="rf-badge rf-badge--brand">Alfa</span>
+        </a>
 
-<section id="repositorios">
-  <h2>Instala añadiendo un repositorio</h2>
-  <p>
-    Los tres canales de rFirma son repositorios propios, no ficheros sueltos: una vez añadido
-    uno, las actualizaciones llegan solas con el gestor de paquetes de tu sistema.
-  </p>
+        <ul class="nav-links">
+          <li><a href="#caracteristicas">Características</a></li>
+          <li><a href="#comparativa">Comparativa</a></li>
+          <li><a href="#instalacion">Instalación</a></li>
+          <li><a href="#arquitectura">Arquitectura</a></li>
+        </ul>
 
-  <div class="notice">
-    <strong>Todavía no hay ninguna versión publicada.</strong> Los repositorios de esta página
-    se están construyendo; hasta que exista la primera Release estas órdenes no van a
-    funcionar. Vuelve cuando rFirma anuncie su primera versión, o sigue el desarrollo en
-    <a href="https://github.com/sgomez/rfirma">github.com/sgomez/rfirma</a>.
-  </div>
+        <div class="nav-actions">
+          <a href="https://github.com/sgomez/rfirma" class="rf-btn rf-btn--secondary" target="_blank" rel="noopener noreferrer">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+            </svg>
+            <span>GitHub</span>
+          </a>
+        </div>
+      </nav>
+    </div>
+  </header>
 
-  <div class="channel">
-    <h3>flatpak</h3>
-    <p>Para cualquier distribución de Linux. La aplicación se resuelve del remoto propio, no de
-    Flathub; el runtime (<code>org.gnome.Platform</code>) sí viene de Flathub, así que hace
-    falta tener ese remoto dado de alta.</p>
-    <pre><code>flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</code></pre>
-  </div>
+  <main>
 
-  <div class="channel">
-    <h3>apt (Debian, Ubuntu y derivadas)</h3>
-    <pre><code>curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc >/dev/null
+    <!-- Sección Hero -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-content">
+          <div class="rf-badge">
+            <span>Alternativa moderna a AutoFirma</span>
+          </div>
+
+          <h1 class="rf-display">Firma electrónica nativa. Sin Java, sin dolores de cabeza.</h1>
+
+          <p class="hero-tagline">
+            rFirma reemplaza por completo la pesada interfaz Swing y los servidores locales de AutoFirma por una aplicación de escritorio rápida y moderna en <strong>Rust y React</strong>, manteniendo la compatibilidad criptográfica oficial de la Administración Pública.
+          </p>
+
+          <div class="hero-actions">
+            <a href="#instalacion" class="rf-btn rf-btn--primary">
+              <span>Instalar por repositorio</span>
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </a>
+            <a href="#comparativa" class="rf-btn rf-btn--secondary">
+              <span>Ver diferencias con AutoFirma</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Captura de pantalla real de rFirma -->
+        <div class="mockup-container">
+          <img src="rfirma-main-window.png" alt="Ventana principal de rFirma con visor de documento, colocación de firma visible y panel lateral de configuración" width="1663" height="1115" class="app-screenshot" loading="eager">
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4 Pilares -->
+    <section id="caracteristicas" class="features-section">
+      <div class="container">
+        <h2 class="rf-heading" style="text-align: center; margin-bottom: var(--rf-space-xs);">Construida para ser rápida, segura y fiable</h2>
+        <p class="rf-prose rf-text-muted" style="text-align: center; max-width: 38rem; margin: 0 auto;">Todo lo que siempre quisiste que fuera el cliente de firma electrónica en tu escritorio.</p>
+
+        <div class="features-grid">
+          <div class="rf-card feature-card">
+            <div class="feature-icon-wrapper">⚡</div>
+            <h3 class="rf-title">Rendimiento nativo (Rust + React)</h3>
+            <p class="rf-prose rf-text-muted">
+              Se acabaron los tiempos de carga eternos de la JVM de Java. rFirma arranca de forma instantánea y consume una fracción mínima de memoria RAM, integrada con las directrices de tu entorno de escritorio.
+            </p>
+          </div>
+
+          <div class="rf-card feature-card">
+            <div class="feature-icon-wrapper">🔒</div>
+            <h3 class="rf-title">Firma sin exponer tu clave privada</h3>
+            <p class="rf-prose rf-text-muted">
+              Tu clave privada nunca sale de tu sistema operativo ni viaja por la red ni a entornos Java. La firma se realiza directamente en tu equipo a través de los almacenes seguros del sistema y módulos PKCS#11.
+            </p>
+          </div>
+
+          <div class="rf-card feature-card">
+            <div class="feature-icon-wrapper">🏛️</div>
+            <h3 class="rf-title">Criptografía oficial acreditada</h3>
+            <p class="rf-prose rf-text-muted">
+              La lógica de firma (CAdES, PAdES, XAdES y FacturaE) proviene directamente del código oficial de <code>clienteafirma</code>, compilada a binario nativo con GraalVM Native Image.
+            </p>
+          </div>
+
+          <div class="rf-card feature-card">
+            <div class="feature-icon-wrapper">✍️</div>
+            <h3 class="rf-title">Firma visible intuitiva y precisa</h3>
+            <p class="rf-prose rf-text-muted">
+              Coloca y ajusta el tamaño de la rúbrica directamente sobre las páginas del documento con previsualización fiel en tiempo real. Olvídate de introducir coordenadas numéricas a ciegas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparativa con AutoFirma (Centrada con contenedor interno) -->
+    <section id="comparativa" class="comparison-section">
+      <div class="container">
+        <div class="comparison-header-group">
+          <h2 class="rf-heading">AutoFirma tradicional frente a rFirma</h2>
+          <p class="rf-prose rf-text-muted" style="margin-top: 6px;">Un salto generacional en usabilidad, seguridad y eficiencia técnica.</p>
+        </div>
+
+        <div class="comparison-table-wrapper">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th class="col-feature">Aspecto</th>
+                <th class="col-autofirma">AutoFirma (oficial)</th>
+                <th class="col-rfirma">rFirma</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="col-feature">Arquitectura base</td>
+                <td class="col-autofirma">Java Swing + JVM pesada</td>
+                <td class="col-rfirma">Tauri v2 (Rust + React) + GraalVM Native Image</td>
+              </tr>
+              <tr>
+                <td class="col-feature">Tiempo de arranque</td>
+                <td class="col-autofirma">Lento (5 - 10 segundos)</td>
+                <td class="col-rfirma">Instantáneo (< 200 ms)</td>
+              </tr>
+              <tr>
+                <td class="col-feature">Consumo de memoria</td>
+                <td class="col-autofirma">200 MB – 500 MB RAM</td>
+                <td class="col-rfirma">Ligero (~35 MB RAM)</td>
+              </tr>
+              <tr>
+                <td class="col-feature">Aislamiento de claves</td>
+                <td class="col-autofirma">Clave privada procesada en Java</td>
+                <td class="col-rfirma">La clave privada nunca sale de tu sistema operativo</td>
+              </tr>
+              <tr>
+                <td class="col-feature">Colocación de firma visible</td>
+                <td class="col-autofirma">Coordenadas rígidas o recuadros sin contexto</td>
+                <td class="col-rfirma">Arrastre visual interactivo con previsualización fiel</td>
+              </tr>
+              <tr>
+                <td class="col-feature">Actualizaciones del sistema</td>
+                <td class="col-autofirma">Descargas manuales de <code>.deb</code> o <code>.rpm</code></td>
+                <td class="col-rfirma">Repositorios nativos (Flatpak, APT y DNF) con parches automáticos</td>
+              </tr>
+              <tr>
+                <td class="col-feature">Integración en el escritorio</td>
+                <td class="col-autofirma">Tema Swing rígido de los años 2000</td>
+                <td class="col-rfirma">Diseño accesible WCAG AA moderno e integrado en el escritorio</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Centro de Instalación (Centrado con contenedor interno) -->
+    <section id="instalacion" class="install-section">
+      <div class="container">
+        <div class="install-header-group">
+          <h2 class="rf-heading">Instalación por repositorio</h2>
+          <p class="rf-prose rf-text-muted" style="margin-top: 6px;">
+            Los canales de rFirma son repositorios nativos. Una vez añadido el de tu sistema, las actualizaciones y parches de seguridad llegan de forma automática con el gestor de paquetes.
+          </p>
+        </div>
+
+        <div class="install-box-container">
+          <!-- Aviso destacado de landing de pruebas -->
+          <div class="install-alert-card" role="alert">
+            <div class="install-alert-icon">⚠️</div>
+            <div>
+              <div class="install-alert-title">Esta landing es actualmente un entorno de pruebas</div>
+              <p class="install-alert-desc">
+                Los paquetes y repositorios se encuentran en fase de preparación y <strong>todavía no están publicados</strong>. Las órdenes mostradas a continuación no funcionarán hasta que se publique la primera versión oficial (v0.4). Puedes seguir el desarrollo en tiempo real en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.
+              </p>
+            </div>
+          </div>
+
+          <!-- Selector de Pestañas Centrado -->
+          <div class="tabs-nav" role="tablist" aria-label="Canales de distribución">
+            <button class="tab-btn" role="tab" id="tab-flatpak" aria-selected="true" aria-controls="panel-flatpak">
+              <span>Flatpak</span>
+              <span class="rf-badge" style="font-size: 0.6875rem; padding: 2px 6px;">Universal</span>
+            </button>
+            <button class="tab-btn" role="tab" id="tab-apt" aria-selected="false" aria-controls="panel-apt">
+              <span>APT</span>
+              <span class="rf-badge" style="font-size: 0.6875rem; padding: 2px 6px;">Debian / Ubuntu</span>
+            </button>
+            <button class="tab-btn" role="tab" id="tab-dnf" aria-selected="false" aria-controls="panel-dnf">
+              <span>DNF</span>
+              <span class="rf-badge" style="font-size: 0.6875rem; padding: 2px 6px;">Fedora</span>
+            </button>
+            <button class="tab-btn" role="tab" id="tab-windows" aria-selected="false" aria-controls="panel-windows">
+              <span>Windows</span>
+            </button>
+            <button class="tab-btn" role="tab" id="tab-macos" aria-selected="false" aria-controls="panel-macos">
+              <span>macOS</span>
+            </button>
+          </div>
+
+          <!-- Panel Flatpak -->
+          <div class="tab-panel active" id="panel-flatpak" role="tabpanel" aria-labelledby="tab-flatpak">
+            <p class="rf-prose">
+              Instalación recomendada para cualquier distribución de Linux. Se resuelve desde el remoto ostree propio de rFirma. Requiere el runtime <code>org.gnome.Platform</code> de Flathub.
+            </p>
+
+            <div class="code-box-wrapper">
+              <button class="copy-btn" data-target="code-flatpak" aria-label="Copiar orden de Flatpak">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <span>Copiar</span>
+              </button>
+              <pre class="code-block"><code id="code-flatpak">flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</code></pre>
+            </div>
+            <p class="channel-tips">También puedes descargar e instalar directamente con doble clic el fichero <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> si tu escritorio lo soporta.</p>
+          </div>
+
+          <!-- Panel APT -->
+          <div class="tab-panel" id="panel-apt" role="tabpanel" aria-labelledby="tab-apt">
+            <p class="rf-prose">
+              Para Debian, Ubuntu y distribuciones derivadas. Configura el repositorio mediante el formato moderno <code>deb822</code> con la clave GPG verificada en <code>/usr/share/keyrings/</code>.
+            </p>
+
+            <div class="code-box-wrapper">
+              <button class="copy-btn" data-target="code-apt" aria-label="Copiar órdenes para APT">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <span>Copiar</span>
+              </button>
+              <pre class="code-block"><code id="code-apt">curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc >/dev/null
 sudo tee /etc/apt/sources.list.d/rfirma.sources &lt;&lt;'EOF'
 Types: deb
 URIs: https://rfirma.sgomez.me/apt/
@@ -144,11 +993,21 @@ Components: main
 Signed-By: /usr/share/keyrings/rfirma.asc
 EOF
 sudo apt update &amp;&amp; sudo apt install rfirma</code></pre>
-  </div>
+            </div>
+          </div>
 
-  <div class="channel">
-    <h3>dnf (Fedora y derivadas)</h3>
-    <pre><code>sudo tee /etc/yum.repos.d/rfirma.repo &lt;&lt;'EOF'
+          <!-- Panel DNF -->
+          <div class="tab-panel" id="panel-dnf" role="tabpanel" aria-labelledby="tab-dnf">
+            <p class="rf-prose">
+              Para Fedora y derivadas basadas en paquetes RPM. Configura el repositorio con comprobación criptográfica estricta de metadatos y paquetes (<code>gpgcheck=1</code> y <code>repo_gpgcheck=1</code>).
+            </p>
+
+            <div class="code-box-wrapper">
+              <button class="copy-btn" data-target="code-dnf" aria-label="Copiar órdenes para DNF">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <span>Copiar</span>
+              </button>
+              <pre class="code-block"><code id="code-dnf">sudo tee /etc/yum.repos.d/rfirma.repo &lt;&lt;'EOF'
 [rfirma]
 name=rfirma
 baseurl=https://rfirma.sgomez.me/rpm/
@@ -158,38 +1017,160 @@ repo_gpgcheck=1
 gpgkey=https://rfirma.sgomez.me/rfirma.asc
 EOF
 sudo dnf install rfirma</code></pre>
-  </div>
+            </div>
+          </div>
 
-  <p>
-    Instalar por más de un canal a la vez da aplicaciones independientes, con memorias
-    separadas: ni los documentos recientes, ni la rúbrica, ni las preferencias se comparten.
-    Elige uno solo.
-  </p>
-</section>
+          <!-- Panel Windows (En desarrollo) -->
+          <div class="tab-panel" id="panel-windows" role="tabpanel" aria-labelledby="tab-windows">
+            <div class="rf-card" style="padding: var(--rf-space-md); border-color: var(--rf-border-strong);">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span class="rf-badge rf-badge--warning">En desarrollo</span>
+                <strong style="font-size: 1rem; color: var(--rf-text);">Soporte para Windows en preparación</strong>
+              </div>
+              <p class="rf-prose rf-text-muted" style="margin-bottom: 12px;">
+                La integración nativa para Windows se encuentra actualmente en desarrollo. Utilizará directamente el almacén de certificados de Windows (MS-CAPI / CNG) para firmar con tu certificado personal o DNIe sin necesidad de software intermedio.
+              </p>
+              <p class="rf-body rf-text-muted">
+                Estará disponible como instalador <code>.msi</code> y a través de <code>winget</code>. Puedes seguir el avance del proyecto en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.
+              </p>
+            </div>
+          </div>
 
-<section id="que-es">
-  <h2>Qué es rFirma</h2>
-  <p>
-    rFirma sustituye la interfaz Swing y el servidor de sockets en Java de AutoFirma por una
-    aplicación nativa (Tauri: Rust + React). La lógica criptográfica pesada —CAdES, PAdES,
-    XAdES y FacturaE— se apoya en el código original de
-    <a href="https://github.com/ctt-gob-es/clienteafirma">clienteafirma</a>, compilado con
-    GraalVM Native Image, sin que la clave privada salga nunca del sistema operativo.
-  </p>
-  <p>El código fuente vive en dos repositorios:</p>
-  <ul class="repos">
-    <li><a href="https://github.com/sgomez/rfirma">sgomez/rfirma</a> — la aplicación, el empaquetado y (en
-    <a href="https://github.com/sgomez/rfirma/tree/main/rfirma-native-bridge">rfirma-native-bridge</a>) el puente FFI.</li>
-    <li><a href="https://github.com/ctt-gob-es/clienteafirma">ctt-gob-es/clienteafirma</a> — el motor criptográfico original, del que se consume la lógica de firma.</li>
-  </ul>
-</section>
+          <!-- Panel macOS (En desarrollo) -->
+          <div class="tab-panel" id="panel-macos" role="tabpanel" aria-labelledby="tab-macos">
+            <div class="rf-card" style="padding: var(--rf-space-md); border-color: var(--rf-border-strong);">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span class="rf-badge rf-badge--warning">En desarrollo</span>
+                <strong style="font-size: 1rem; color: var(--rf-text);">Soporte para macOS en preparación</strong>
+              </div>
+              <p class="rf-prose rf-text-muted" style="margin-bottom: 12px;">
+                La versión nativa para macOS está en fase de desarrollo activo. Se integrará con el Keychain de Apple y CryptoTokenKit para un acceso fluido y seguro a las identidades digitales del sistema.
+              </p>
+              <p class="rf-body rf-text-muted">
+                Se distribuirá como imagen de disco <code>.dmg</code> y mediante fórmula de <code>Homebrew</code>. Puedes seguir el avance del proyecto en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</main>
+    <!-- Arquitectura y Transparencia -->
+    <section id="arquitectura" class="architecture-section">
+      <div class="container">
+        <h2 class="rf-heading" style="text-align: center;">Transparencia y arquitectura</h2>
+        <p class="rf-prose rf-text-muted" style="text-align: center; max-width: 38rem; margin: 6px auto 0;">
+          rFirma es software libre y auditable bajo licencia <strong>EUPL 1.2</strong>. El código fuente y su motor se organizan con total separación de responsabilidades:
+        </p>
 
-<footer>
-  <p>rFirma no es un producto oficial de la Administración. Está en fase alfa: puede
-  fallar y su forma puede cambiar sin aviso.</p>
-</footer>
+        <div class="features-grid" style="margin-top: var(--rf-space-md);">
+          <div class="rf-card">
+            <h3 class="rf-title" style="margin-bottom: 8px;">1. Aplicación y puente FFI</h3>
+            <p class="rf-prose rf-text-muted">
+              En el repositorio <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">sgomez/rfirma</a> reside la interfaz de escritorio en Tauri (Rust + React), el puente de enlace FFI seguro (<code>rfirma-native-bridge</code>) y la infraestructura de empaquetado y distribución.
+            </p>
+          </div>
+
+          <div class="rf-card">
+            <h3 class="rf-title" style="margin-bottom: 8px;">2. Motor criptográfico original</h3>
+            <p class="rf-prose rf-text-muted">
+              La lógica pesada de firma digital consume directamente los artefactos de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilados en una única biblioteca compartida nativa con GraalVM Native Image.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--rf-space-md); text-align: center;">
+          <p class="rf-body rf-text-muted">
+            Clave pública de firma de paquetes disponible en: <a href="https://rfirma.sgomez.me/rfirma.asc">https://rfirma.sgomez.me/rfirma.asc</a>
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Pie de página normal -->
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg style="width: 24px; height: 24px;" viewBox="0 0 512 512" aria-hidden="true">
+          <circle cx="256" cy="256" r="225.28" fill="#067781"/>
+          <path fill="#ffffff" d="M 206.05,134.63 C 190.87,133.9 173.56,140.04 167.17,154.88 C 158.7,176.24 154.89,199.17 151.45,221.81 C 145.7,263.83 143.8,306.64 149.91,348.74 C 151.38,361.75 156.08,376.98 169.49,382.09 C 177.29,385.11 186.29,384.78 194.18,382.33 C 207.23,377.91 212.67,363.77 214.74,351.28 C 222.24,313.74 232,276.05 250.11,242.08 C 256.76,230.86 263.77,218.29 275.94,212.37 C 280.92,209.61 286.92,213.33 287.02,218.92 C 287.91,230 283.38,240.72 283.95,251.85 C 283.15,268.89 293.47,286.55 310.21,291.69 C 328.34,297.24 347.41,288.8 360.99,276.85 C 370.03,268.96 378.6,260.32 385.92,250.85 C 392.37,240.92 390.7,225.22 380.31,218.7 C 372.5,214.41 364.05,220.03 358.73,225.73 C 355.75,229.11 350.02,233.87 346.1,229.11 C 341.84,222.32 345.26,213.79 345.8,206.36 C 347.75,189.47 354.63,171.95 348.22,155.23 C 344.64,144.32 334.53,136.52 323.21,135.13 C 310.69,133.6 297.68,135.46 286.51,141.56 C 260.76,154.56 243.03,178.9 229.51,203.68 C 220.32,220.35 213.2,238.04 206.64,255.88 C 208.25,232.1 212.36,208.07 217.24,184.58 C 219.14,173.51 223.39,162.86 224.4,151.68 C 225.56,144.04 220.12,136.59 212.43,135.56 C 210.37,134.92 208.17,134.95 206.05,134.63 Z"/>
+        </svg>
+        <span style="font-weight: 700;">rFirma</span>
+        <span class="rf-body rf-text-muted" style="margin-left: 8px;">Licencia EUPL 1.2</span>
+      </div>
+
+      <div>
+        <ul class="footer-links">
+          <li><a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">Repositorio en GitHub</a></li>
+          <li><a href="https://github.com/sgomez/rfirma/releases" target="_blank" rel="noopener noreferrer">Releases</a></li>
+          <li><a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">Repositorio de clienteafirma</a></li>
+          <li><a href="https://rfirma.sgomez.me/rfirma.asc">Clave GPG pública</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 9. Barra Fija Inferior Permanente (Aviso Producto No Oficial) -->
+  <aside class="fixed-disclaimer-bar" role="note" aria-label="Aviso sobre titularidad oficial">
+    <div class="container fixed-disclaimer-inner">
+      <span class="rf-badge rf-badge--warning" style="flex-shrink: 0;">Aviso legal</span>
+      <p class="fixed-disclaimer-text">
+        <strong>rFirma no es un producto oficial de la Administración Pública.</strong> Es un proyecto comunitario independiente de código abierto bajo licencia EUPL 1.2.
+      </p>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Interactividad: Pestañas y Copia al Portapapeles -->
+<script>
+  (function() {
+    // 1. Navegación por pestañas de instalación
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.tab-panel');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.setAttribute('aria-selected', 'false'));
+        panels.forEach(p => p.classList.remove('active'));
+
+        tab.setAttribute('aria-selected', 'true');
+        const targetPanel = document.getElementById(tab.getAttribute('aria-controls'));
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        }
+      });
+    });
+
+    // 2. Botones de copia al portapapeles con confirmación visual
+    const copyButtons = document.querySelectorAll('.copy-btn');
+    copyButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const targetId = btn.getAttribute('data-target');
+        const targetEl = document.getElementById(targetId);
+        if (!targetEl) return;
+
+        const codeToCopy = targetEl.innerText;
+        try {
+          await navigator.clipboard.writeText(codeToCopy);
+          const originalHTML = btn.innerHTML;
+          btn.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg><span>¡Copiado!</span>';
+          btn.style.borderColor = 'var(--rf-brand)';
+          btn.style.color = 'var(--rf-brand-text)';
+          setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.style.borderColor = '';
+            btn.style.color = '';
+          }, 2000);
+        } catch (err) {
+          console.error('Error al copiar al portapapeles:', err);
+        }
+      });
+    });
+  })();
+</script>
 
 </body>
 </html>

@@ -1,6 +1,6 @@
 # La landing de rfirma.sgomez.me
 
-La imagen que sirve `https://rfirma.sgomez.me` es **sólo `nginx` con esta landing, y nada
+La imagen que sirve `https://rfirma.sgomez.me` es **Caddy (`caddy:alpine`) con esta landing, y nada
 más** ([ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md)). Los tres
 repositorios de paquetes (ostree, apt, dnf) no van dentro de la imagen: los publica un
 montaje de directorio del anfitrión aparte, fuera de este árbol.
@@ -8,7 +8,9 @@ montaje de directorio del anfitrión aparte, fuera de este árbol.
 | Fichero | Qué es |
 |---|---|
 | `index.html` | La landing, escrita a mano, sin generador y sin paso de construcción |
-| `Dockerfile` | `nginx:alpine` más la landing |
+| `rfirma-main-window.png` | Captura real de la interfaz principal de rFirma |
+| `Caddyfile` | Configuración de Caddy (no-root, puerto 3000, cabeceras de seguridad y healthcheck) |
+| `Dockerfile` | `caddy:alpine` no-root más la landing y Caddyfile |
 
 ## Coolify
 
