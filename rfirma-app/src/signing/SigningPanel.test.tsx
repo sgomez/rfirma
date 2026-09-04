@@ -24,7 +24,7 @@ const certificate: Certificate = {
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
   store: "card",
-  status: { kind: "valid" },
+  status: { kind: "valid", notAfter: 1_894_752_000 },
   remembered: false,
 };
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Certificate } from "./certificate";
-import { groupCertificates } from "./certificate";
+import { groupCertificates, installedCertificates } from "./certificate";
 
 function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   return {
@@ -10,7 +10,7 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     idNumber: "99999999R",
     issuer: "AC FNMT Usuarios",
     store: "card",
-    status: { kind: "valid" },
+    status: { kind: "valid", notAfter: 1_894_752_000 },
     remembered: false,
     ...overrides,
   };
@@ -111,5 +111,42 @@ describe("groupCertificates", () => {
 
   it("returns two empty groups for an empty list", () => {
     expect(groupCertificates([])).toEqual({ available: [], unusable: [] });
+  });
+});
+
+describe("installedCertificates", () => {
+  /**
+   * Preferencias enseña **sólo** los `.p12` que se metieron en rFirma: son los
+   * únicos que puede quitar, y quitar el certificado del perfil de Firefox de
+   * nadie no es un gesto de esta aplicación (ID-198).
+   */
+  it("keeps only the ones installed in rFirma", () => {
+    const installed = aCertificate({ id: "installed", store: "installed" });
+    const profile = aCertificate({ id: "firefox", store: "firefox" });
+    const shared = aCertificate({ id: "nssdb", store: "nssdb" });
+
+    expect(installedCertificates([profile, installed, shared])).toEqual([installed]);
+  });
+
+  /** Un caducado se queda: que desaparezca no le explica nada a quien lo instaló. */
+  it("keeps an expired one, unlike the dropdown's available group", () => {
+    const expired = aCertificate({
+      id: "expired",
+      store: "installed",
+      status: { kind: "expired", notAfter: 0 },
+    });
+
+    expect(installedCertificates([expired])).toEqual([expired]);
+  });
+
+  it("orders them by holder, like the dropdown does", () => {
+    const ada = aCertificate({ id: "ada", store: "installed", holderName: "Ada Lovelace Byron" });
+    const grace = aCertificate({
+      id: "grace",
+      store: "installed",
+      holderName: "Grace Hopper Murray",
+    });
+
+    expect(installedCertificates([grace, ada]).map((one) => one.id)).toEqual(["ada", "grace"]);
   });
 });

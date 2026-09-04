@@ -23,6 +23,9 @@ msgstr "Cerrar"
 msgid "actions.change"
 msgstr "Cambiar"
 
+msgid "actions.remove"
+msgstr "Quitar"
+
 msgid "actions.dismiss"
 msgstr "Descartar"
 
@@ -163,6 +166,17 @@ msgstr "El certificado está revocado"
 msgid "errors.situations.certificateRevoked.body"
 msgstr ""
 "Su emisora lo ha revocado, así que no sirve para firmar. Necesitas uno nuevo."
+
+msgid "errors.situations.pkcs12Unreadable.title"
+msgstr "No se ha podido abrir el certificado"
+
+msgid "errors.situations.pkcs12Unreadable.body"
+msgstr "Comprueba la contraseña del fichero."
+
+#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
+#. hay msgid "errors.situations.keyNotRsa.body".
+msgid "errors.situations.keyNotRsa.title"
+msgstr "Ese certificado no es compatible con rFirma"
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "No hemos podido leer el certificado"
@@ -565,6 +579,9 @@ msgstr "Chrome"
 msgid "panel.certificate.stores.nssdb"
 msgstr "Almacén NSS"
 
+msgid "panel.certificate.stores.installed"
+msgstr "Instalado en rFirma"
+
 msgid "panel.certificate.retry"
 msgstr "Volver a buscar"
 
@@ -782,6 +799,9 @@ msgstr "Secciones"
 msgid "preferences.sections.signing"
 msgstr "Firma"
 
+msgid "preferences.sections.certificates"
+msgstr "Certificados"
+
 msgid "preferences.sections.privacy"
 msgstr "Privacidad"
 
@@ -827,6 +847,27 @@ msgstr "Junto al documento original"
 
 msgid "preferences.destination.inThisFolder"
 msgstr "En esta carpeta"
+
+msgid "preferences.certificates.add"
+msgstr "Añadir…"
+
+#. Nombre accesible del boton de cada fila: lleva el titular para distinguirlo
+#. de los demas, que es lo unico que cambia entre una fila y otra.
+msgid "preferences.certificates.remove"
+msgstr "Quitar el certificado de {{holder}}"
+
+msgid "preferences.certificates.empty"
+msgstr "Todavía no has instalado ninguno"
+
+msgid "preferences.certificates.expires"
+msgstr "caduca el {{date}}"
+
+#. Insignia de la fila de un certificado caducado, que se queda en la lista.
+msgid "preferences.certificates.expired"
+msgstr "Caducado"
+
+msgid "preferences.certificates.password.submit"
+msgstr "Continuar"
 
 msgid "preferences.theme.label"
 msgstr "Tema"

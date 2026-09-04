@@ -1,17 +1,27 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
-import { classify } from "../errors/classify";
+import { classify, type NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { LANGUAGES } from "../i18n/languages";
+import type { Certificate } from "../signing/certificate";
 import "./PreferencesDialog.css";
 import type { Preferences } from "./preferences";
 import { Select } from "./Select";
 import { Switch } from "./Switch";
 import { THEMES } from "./theme";
 
-/** Las tres secciones del índice, en el orden en que se apilan (ID-69). */
-const SECTIONS = ["signing", "privacy", "appearance"] as const;
+/** Las cuatro secciones del índice, en el orden en que se apilan (ID-69). */
+const SECTIONS = ["signing", "certificates", "privacy", "appearance"] as const;
 
 type Section = (typeof SECTIONS)[number];
 
@@ -63,6 +73,20 @@ interface PreferencesDialogProps {
   onChange: (preferences: Preferences) => Promise<void>;
   /** Olvida los recientes y el certificado. Rechaza si el borrado falla. */
   onForgetActivity: () => Promise<void>;
+  /**
+   * Los `.p12` que se han instalado en rFirma, y **sólo esos**: son los únicos
+   * que esta pantalla puede quitar (ID-198). Un caducado sigue en la lista.
+   */
+  installedCertificates: readonly Certificate[];
+  /**
+   * Instala un `.p12` con la contraseña **del fichero** y responde si quedó
+   * alguno instalado. Quien abre el selector de ficheros es el backend (ID-63),
+   * así que la contraseña se teclea antes de elegirlo. Rechaza cuando el
+   * fichero no se puede abrir o cuando su clave no es RSA (ID-197).
+   */
+  onInstallCertificate: (password: string) => Promise<boolean>;
+  /** Quita un `.p12` instalado, por el asa de su fila. */
+  onRemoveCertificate: (id: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -114,17 +138,23 @@ export function PreferencesDialog({
   onChooseDestination,
   onChange,
   onForgetActivity,
+  installedCertificates,
+  onInstallCertificate,
+  onRemoveCertificate,
   onClose,
 }: PreferencesDialogProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const [confirmingPurge, setConfirmingPurge] = useState(false);
   const [saveFailure, setSaveFailure] = useState<SaveFailure | null>(null);
   const [forgetFailure, setForgetFailure] = useState<string | null>(null);
+  const [askingPassword, setAskingPassword] = useState(false);
+  const [certificateFailure, setCertificateFailure] = useState<NamedFailure | null>(null);
   const [current, setCurrent] = useState<Section>("signing");
   const titleId = useId();
   const screen = useRef<HTMLDivElement>(null);
   const confirm = useRef<HTMLDivElement>(null);
+  const password = useRef<HTMLDivElement>(null);
   const sections = useRef(new Map<Section, HTMLElement | null>());
 
   // El foco entra en la pantalla al abrirla, que es lo que la hace un diálogo
@@ -141,6 +171,12 @@ export function PreferencesDialog({
   useEffect(() => {
     if (confirmingPurge) confirm.current?.focus();
   }, [confirmingPurge]);
+
+  // Lo mismo con el diálogo de la contraseña del `.p12`, que es el otro modal
+  // que se pone delante de esta pantalla.
+  useEffect(() => {
+    if (askingPassword) password.current?.focus();
+  }, [askingPassword]);
 
   /**
    * Guarda un ajuste y, si el disco lo rechaza, deja el aviso **en la sección
@@ -192,20 +228,58 @@ export function PreferencesDialog({
   };
 
   /**
-   * `Escape` cierra la pantalla, y cierra antes la confirmación si está
-   * delante. Un `Escape` que ya haya consumido un desplegable llega aquí con
+   * Mete un `.p12` con la contraseña que se acaba de teclear.
+   *
+   * El selector de ficheros lo abre el backend **después** (ID-63), así que
+   * cerrarlo sin elegir nada devuelve `false` y no es un fallo: deja la lista
+   * como estaba y no pinta ningún aviso. Lo que sí lo es —la contraseña que no
+   * abre el fichero, la clave que no es RSA (ID-197)— se cuenta en la sección.
+   */
+  const install = async (typed: string) => {
+    setAskingPassword(false);
+    setCertificateFailure(null);
+    try {
+      await onInstallCertificate(typed);
+    } catch (thrown) {
+      setCertificateFailure(classify(thrown));
+    }
+  };
+
+  const remove = async (certificate: Certificate) => {
+    setCertificateFailure(null);
+    try {
+      await onRemoveCertificate(certificate.id);
+    } catch (thrown) {
+      setCertificateFailure(classify(thrown));
+    }
+  };
+
+  /** El modal que está delante de la pantalla, si hay alguno. */
+  const frontmost = () => {
+    if (confirmingPurge) return confirm.current;
+    if (askingPassword) return password.current;
+    return screen.current;
+  };
+
+  /**
+   * `Escape` cierra la pantalla, y cierra antes el modal que esté delante. Un
+   * `Escape` que ya haya consumido un desplegable llega aquí con
    * `defaultPrevented`, así que abrir una lista y cerrarla no cierra además
    * los ajustes.
    */
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Tab") {
-      trapFocus(confirmingPurge ? confirm.current : screen.current, event);
+      trapFocus(frontmost(), event);
       return;
     }
     if (event.key !== "Escape" || event.defaultPrevented) return;
     event.preventDefault();
     if (confirmingPurge) {
       setConfirmingPurge(false);
+      return;
+    }
+    if (askingPassword) {
+      setAskingPassword(false);
       return;
     }
     onClose();
@@ -224,14 +298,38 @@ export function PreferencesDialog({
       <ErrorNotice situation="settingNotSaved" technicalDetail={saveFailure.detail} />
     ) : null;
 
-  const heading = (section: Section) => (
+  const heading = (section: Section, action?: ReactNode) => (
     <>
-      <p className="rf-title preferences__heading" id={`${titleId}-${section}`}>
-        {t(`preferences.sections.${section}`)}
-      </p>
+      <div className="rf-row preferences__heading-row">
+        <p className="rf-title preferences__heading" id={`${titleId}-${section}`}>
+          {t(`preferences.sections.${section}`)}
+        </p>
+        {action}
+      </div>
       <hr className="rf-divider" />
     </>
   );
+
+  /**
+   * Lo que identifica cada fila **es el certificado, no el fichero**: del
+   * `.p12` no se recuerda nada, ni la ruta (ID-196), así que aquí no hay ni
+   * ruta ni «volver a localizar». La fecha de caducidad va en la misma línea
+   * que el DNI y el emisor; un caducado la cambia por su insignia.
+   */
+  const certificateLine = (certificate: Certificate) =>
+    [
+      certificate.idNumber,
+      t("panel.certificate.issuer", { issuer: certificate.issuer }),
+      certificate.status.kind === "valid"
+        ? t("preferences.certificates.expires", {
+            date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(
+              certificate.status.notAfter * 1000,
+            ),
+          })
+        : null,
+    ]
+      .filter((piece) => piece !== null && piece !== "")
+      .join(" · ");
 
   const register = (section: Section) => (element: HTMLElement | null) => {
     sections.current.set(section, element);
@@ -319,6 +417,67 @@ export function PreferencesDialog({
 
           <section
             className="preferences__section-body"
+            aria-labelledby={`${titleId}-certificates`}
+            ref={register("certificates")}
+          >
+            {heading(
+              "certificates",
+              <button
+                type="button"
+                className="rf-btn rf-btn--secondary preferences__add-certificate"
+                onClick={() => {
+                  setCertificateFailure(null);
+                  setAskingPassword(true);
+                }}
+              >
+                {t("preferences.certificates.add")}
+              </button>,
+            )}
+            {certificateFailure !== null && (
+              <ErrorNotice
+                situation={certificateFailure.situation}
+                technicalDetail={
+                  certificateFailure.situation === "keyNotRsa"
+                    ? undefined
+                    : certificateFailure.detail
+                }
+              />
+            )}
+            {installedCertificates.length === 0 ? (
+              <p className="rf-prose preferences__certificates-empty">
+                {t("preferences.certificates.empty")}
+              </p>
+            ) : (
+              <ul className="preferences__certificates">
+                {installedCertificates.map((certificate) => (
+                  <li className="rf-row preferences__certificate" key={certificate.id}>
+                    <span className="preferences__certificate-text">
+                      <span className="rf-title preferences__certificate-holder">
+                        {certificate.holderName}
+                        {certificate.status.kind === "expired" && (
+                          <span className="rf-badge">{t("preferences.certificates.expired")}</span>
+                        )}
+                      </span>
+                      <span className="rf-body rf-text-muted">{certificateLine(certificate)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="rf-btn rf-btn--ghost preferences__remove-certificate"
+                      aria-label={t("preferences.certificates.remove", {
+                        holder: certificate.holderName,
+                      })}
+                      onClick={() => void remove(certificate)}
+                    >
+                      {t("actions.remove")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section
+            className="preferences__section-body"
             aria-labelledby={`${titleId}-privacy`}
             ref={register("privacy")}
           >
@@ -390,6 +549,17 @@ export function PreferencesDialog({
         </button>
       </div>
 
+      {askingPassword && (
+        <div className="rf-scrim">
+          <PasswordPrompt
+            ref={password}
+            labelledBy={`${titleId}-password`}
+            onCancel={() => setAskingPassword(false)}
+            onSubmit={(typed) => void install(typed)}
+          />
+        </div>
+      )}
+
       {confirmingPurge && (
         <div className="rf-scrim">
           <div
@@ -418,6 +588,82 @@ export function PreferencesDialog({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface PasswordPromptProps {
+  ref: Ref<HTMLDivElement>;
+  labelledBy: string;
+  onSubmit: (password: string) => void;
+  onCancel: () => void;
+}
+
+/**
+ * La contraseña **del fichero** `.p12`, tecleada antes de elegirlo.
+ *
+ * Ese orden no es un descuido: el selector de ficheros lo abre el backend y no
+ * la ventana (ID-63), así que la orden de instalar llega con la contraseña ya
+ * puesta y el selector aparece después. La contraseña no se guarda en ningún
+ * estado que sobreviva al envío — de un `.p12` instalado no se recuerda nada,
+ * ni la ruta ni la contraseña (ID-195, ID-196).
+ *
+ * Es un `.rf-dialog` propio y no [`PinDialog`] porque aquí **todavía no hay
+ * certificado**: ese diálogo se identifica por el titular con el que se va a
+ * firmar, y aquí no se sabe ni cuál es ni cuántos trae el fichero.
+ */
+function PasswordPrompt({ ref, labelledBy, onSubmit, onCancel }: PasswordPromptProps) {
+  const { t } = useTranslation();
+  const [typed, setTyped] = useState("");
+  const field = useId();
+  const box = useRef<HTMLInputElement>(null);
+
+  // El foco entra en el campo y no en el marco: es lo único que se puede hacer
+  // dentro de este diálogo, y quien lo abrió venía de pulsar «Añadir…».
+  useEffect(() => {
+    box.current?.focus();
+  }, []);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    onSubmit(typed);
+  };
+
+  return (
+    <div
+      className="rf-dialog preferences__password"
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      ref={ref}
+      aria-labelledby={labelledBy}
+    >
+      <p className="rf-title" id={labelledBy}>
+        {t("pin.titlePassword")}
+      </p>
+      <form onSubmit={submit}>
+        <div className="rf-field">
+          <label className="rf-label" htmlFor={field}>
+            {t("pin.labelPassword")}
+          </label>
+          <input
+            id={field}
+            className="rf-input"
+            type="password"
+            ref={box}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+        </div>
+        <div className="rf-row preferences__confirm-actions">
+          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
+            {t("actions.cancel")}
+          </button>
+          <button type="submit" className="rf-btn rf-btn--primary">
+            {t("preferences.certificates.password.submit")}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

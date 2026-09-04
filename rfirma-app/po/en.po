@@ -23,6 +23,9 @@ msgstr "Close"
 msgid "actions.change"
 msgstr "Change"
 
+msgid "actions.remove"
+msgstr "Remove"
+
 msgid "actions.dismiss"
 msgstr "Dismiss"
 
@@ -160,6 +163,17 @@ msgstr "The certificate is revoked"
 
 msgid "errors.situations.certificateRevoked.body"
 msgstr "Its issuer revoked it, so it cannot sign. You need a new one."
+
+msgid "errors.situations.pkcs12Unreadable.title"
+msgstr "The certificate could not be opened"
+
+msgid "errors.situations.pkcs12Unreadable.body"
+msgstr "Check the file's password."
+
+#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
+#. hay msgid "errors.situations.keyNotRsa.body".
+msgid "errors.situations.keyNotRsa.title"
+msgstr "That certificate does not work with rFirma"
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "The certificate could not be read"
@@ -557,6 +571,9 @@ msgstr "Chrome"
 msgid "panel.certificate.stores.nssdb"
 msgstr "NSS store"
 
+msgid "panel.certificate.stores.installed"
+msgstr "Installed in rFirma"
+
 msgid "panel.certificate.retry"
 msgstr "Look again"
 
@@ -769,6 +786,9 @@ msgstr "Sections"
 msgid "preferences.sections.signing"
 msgstr "Signing"
 
+msgid "preferences.sections.certificates"
+msgstr "Certificates"
+
 msgid "preferences.sections.privacy"
 msgstr "Privacy"
 
@@ -814,6 +834,27 @@ msgstr "Next to the original document"
 
 msgid "preferences.destination.inThisFolder"
 msgstr "In this folder"
+
+msgid "preferences.certificates.add"
+msgstr "Add…"
+
+#. Nombre accesible del boton de cada fila: lleva el titular para distinguirlo
+#. de los demas, que es lo unico que cambia entre una fila y otra.
+msgid "preferences.certificates.remove"
+msgstr "Remove the certificate of {{holder}}"
+
+msgid "preferences.certificates.empty"
+msgstr "You have not installed any yet"
+
+msgid "preferences.certificates.expires"
+msgstr "expires on {{date}}"
+
+#. Insignia de la fila de un certificado caducado, que se queda en la lista.
+msgid "preferences.certificates.expired"
+msgstr "Expired"
+
+msgid "preferences.certificates.password.submit"
+msgstr "Continue"
 
 msgid "preferences.theme.label"
 msgstr "Theme"

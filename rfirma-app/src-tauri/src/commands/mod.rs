@@ -128,6 +128,7 @@ pub fn list_certificates(
 ) -> Result<Vec<CertificateView>, Failure> {
     app::certificates::listed_rows(
         &environment.all_stores(),
+        &environment.installed_certificates,
         &environment.listed,
         &environment.memory,
     )

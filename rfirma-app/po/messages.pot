@@ -23,6 +23,9 @@ msgstr ""
 msgid "actions.change"
 msgstr ""
 
+msgid "actions.remove"
+msgstr ""
+
 msgid "actions.dismiss"
 msgstr ""
 
@@ -146,6 +149,17 @@ msgid "errors.situations.certificateRevoked.title"
 msgstr ""
 
 msgid "errors.situations.certificateRevoked.body"
+msgstr ""
+
+msgid "errors.situations.pkcs12Unreadable.title"
+msgstr ""
+
+msgid "errors.situations.pkcs12Unreadable.body"
+msgstr ""
+
+#. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
+#. hay msgid "errors.situations.keyNotRsa.body".
+msgid "errors.situations.keyNotRsa.title"
 msgstr ""
 
 msgid "errors.situations.certificateUnreadable.title"
@@ -505,6 +519,9 @@ msgstr ""
 msgid "panel.certificate.stores.nssdb"
 msgstr ""
 
+msgid "panel.certificate.stores.installed"
+msgstr ""
+
 msgid "panel.certificate.retry"
 msgstr ""
 
@@ -707,6 +724,9 @@ msgstr ""
 msgid "preferences.sections.signing"
 msgstr ""
 
+msgid "preferences.sections.certificates"
+msgstr ""
+
 msgid "preferences.sections.privacy"
 msgstr ""
 
@@ -747,6 +767,27 @@ msgid "preferences.destination.nextToOriginal"
 msgstr ""
 
 msgid "preferences.destination.inThisFolder"
+msgstr ""
+
+msgid "preferences.certificates.add"
+msgstr ""
+
+#. Nombre accesible del boton de cada fila: lleva el titular para distinguirlo
+#. de los demas, que es lo unico que cambia entre una fila y otra.
+msgid "preferences.certificates.remove"
+msgstr ""
+
+msgid "preferences.certificates.empty"
+msgstr ""
+
+msgid "preferences.certificates.expires"
+msgstr ""
+
+#. Insignia de la fila de un certificado caducado, que se queda en la lista.
+msgid "preferences.certificates.expired"
+msgstr ""
+
+msgid "preferences.certificates.password.submit"
 msgstr ""
 
 msgid "preferences.theme.label"

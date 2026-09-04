@@ -18,7 +18,7 @@ function withStatus(status: Certificate["status"]): Certificate {
 // Grada A: es una decisión sobre datos, sin token y sin red.
 describe("refusalFor", () => {
   it("lets a certificate in force through", () => {
-    expect(refusalFor(withStatus({ kind: "valid" }))).toBeNull();
+    expect(refusalFor(withStatus({ kind: "valid", notAfter: 1_894_752_000 }))).toBeNull();
   });
 
   it("refuses an expired certificate, keeping the date in the raw detail", () => {

@@ -14,7 +14,7 @@ import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import { NotificationStrip } from "./shell/NotificationStrip";
 import type { Certificate, CertificateStore } from "./signing/certificate";
-import { isUsable } from "./signing/certificate";
+import { installedCertificates, isUsable } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
 import { PinDialog } from "./signing/PinDialog";
@@ -541,6 +541,35 @@ export function App({
   }, [lookForCertificates]);
 
   /**
+   * Los `.p12` instalados, que son los que enseña Preferencias.
+   *
+   * Salen del **mismo** listado que el desplegable y no de una segunda orden:
+   * instalar o quitar uno cambia las dos pantallas a la vez, y con dos listados
+   * independientes una de ellas se quedaría contando lo de antes.
+   */
+  const listed = certificate.kind === "chosen" || certificate.kind === "unchosen";
+  const installed = installedCertificates(listed ? certificate.certificates : []);
+
+  // Los dos gestos de Preferencias vuelven a buscar: lo que acaba de entrar o
+  // de salir tiene que aparecer también en el desplegable de la firma.
+  const installCertificate = useCallback(
+    async (password: string) => {
+      const chosen = await certificates.install(password);
+      if (chosen) await lookForCertificates();
+      return chosen;
+    },
+    [certificates, lookForCertificates],
+  );
+
+  const removeCertificate = useCallback(
+    async (id: string) => {
+      await certificates.remove(id);
+      await lookForCertificates();
+    },
+    [certificates, lookForCertificates],
+  );
+
+  /**
    * Elegir un certificado del desplegable.
    *
    * Solo cambia cuál está puesto: **no** se recuerda aquí. El certificado se
@@ -911,6 +940,9 @@ export function App({
           onChooseDestination={chooseDestination}
           onChange={changeSettings}
           onForgetActivity={forgetActivity}
+          installedCertificates={installed}
+          onInstallCertificate={installCertificate}
+          onRemoveCertificate={removeCertificate}
           onClose={() => setDialog(null)}
         />
       )}

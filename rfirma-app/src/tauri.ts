@@ -77,10 +77,15 @@ async function stage<T>(call: () => Promise<T>): Promise<StageResult<T>> {
   }
 }
 
-/** Los certificados de los tokens conectados. No pide el PIN. */
+/**
+ * Los certificados de los tokens conectados, y los dos gestos de Preferencias
+ * sobre los `.p12` instalados. Listar no pide el PIN.
+ */
 export function tauriCertificateStore(): CertificateStore {
   return {
     list: () => invoke<readonly Certificate[]>("list_certificates"),
+    install: (password) => invoke<boolean>("install_certificate", { password }),
+    remove: (id) => invoke<void>("remove_certificate", { id }),
   };
 }
 
