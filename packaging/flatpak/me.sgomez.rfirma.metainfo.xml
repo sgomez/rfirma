@@ -3,7 +3,7 @@
   <id>me.sgomez.rfirma</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>EUPL-1.2</project_license>
-  <name>rfirma</name>
+  <name>rFirma</name>
   <summary>Firma electrónica de documentos PDF</summary>
   <description>
     <p>
@@ -19,8 +19,13 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <!-- ID-152: la version y la fecha aqui, y las notas POR REFERENCIA al
+         CHANGELOG. Copiarlas obligaria a traducir Markdown al XML restringido
+         de AppStream en cada entrega, y a mantener dos textos que dicen lo
+         mismo. La version la vigila packaging/check-version.py contra
+         tauri.conf.json, que es la fuente (ID-150). -->
     <release version="0.1.0" date="2026-01-01">
-      <description><p>Primera version.</p></description>
+      <url type="details">https://github.com/sgomez/rfirma/blob/main/CHANGELOG.md</url>
     </release>
   </releases>
 </component>
