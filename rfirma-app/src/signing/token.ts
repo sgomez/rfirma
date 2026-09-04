@@ -35,9 +35,10 @@ export interface TokenFailure {
    */
   detail: string;
   /**
-   * Cuántos intentos quedan antes de que la tarjeta se bloquee, si el módulo lo
-   * dice; `null` cuando no lo dice. Se enseña siempre que se sepa: bloquear una
-   * tarjeta por no avisar es un daño real y no siempre reversible.
+   * Cuántos intentos quedan antes de que la tarjeta se bloquee. Cruza desde
+   * Rust y llega siempre a `null`: PKCS#11 no cuenta los intentos, así que no
+   * es un hueco por rellenar sino algo estructural (ID-191, docs/design/
+   * dialogo-pin.md). No se enseña en ninguna parte.
    */
   attemptsLeft: number | null;
 }

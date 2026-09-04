@@ -112,7 +112,11 @@ export interface SigningBackend {
    * directo.
    */
   presign(order: SigningOrder): Promise<StageResult<StoreSecret>>;
-  /** Etapa 2: firma el hash en la tarjeta, con el PIN que el usuario tecleó. */
+  /**
+   * Etapa 2: firma el hash en la tarjeta, con el secreto que ya se tiene: el
+   * PIN que el usuario tecleó, o la cadena vacía cuando `presign` devolvió
+   * `notNeeded` y nadie ha tecleado nada (ID-190).
+   */
   sign(pin: string): Promise<StageResult<void>>;
   /** Etapa 3: ensambla el PDF firmado y lo deja en el destino. */
   postsign(): Promise<StageResult<SignedDocument>>;

@@ -64,9 +64,13 @@ export interface Signing {
  * desbloquea la clave sin saber todavía qué se va a firmar.
  *
  * Dónde se cuenta cada fallo lo decide `belongsToPinDialog`, y no este bucle:
- * el PIN incorrecto y la tarjeta bloqueada son respuestas a lo que el usuario
- * acaba de teclear, y se contestan en el diálogo; el resto sale al pie del
- * panel, que es el estado «error de firma» de la ficha.
+ * solo el PIN incorrecto es respuesta a lo que el usuario acaba de teclear, y
+ * se contesta en el diálogo; el resto —incluida la tarjeta bloqueada— sale al
+ * pie del panel, que es el estado «error de firma» de la ficha.
+ *
+ * El bucle ya no pasa siempre por el estado `pin`: cuando el almacén no
+ * necesita sesión (ID-190), `advance` arranca directamente con la cadena
+ * vacía y el diálogo no llega a abrirse.
  *
  * Quien implementa [`SigningBackend`] de verdad son las órdenes de Tauri del
  * #60; aquí solo se pide cada etapa por su turno.
