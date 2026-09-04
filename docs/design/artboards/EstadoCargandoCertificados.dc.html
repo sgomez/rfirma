@@ -93,7 +93,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 .rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
 .rf-field--error .rf-input{border-width:2px}
 .rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
-.rf-field--error .rf-hint::before{content:"! ";}
 .rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
   border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
   font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
@@ -398,12 +397,41 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   </div>
 </aside>
 </div>
+<sc-if value="{{pideSesion}}" hint-placeholder-val="{{false}}">
+<div class="rf-scrim">
+<div class="rf-dialog">
+  <div class="rf-stack" style="gap:4px;min-height:48px">
+    <p class="rf-title">Introduce la contraseña</p>
+    <p class="rf-prose rf-text-muted">Tus certificados de Firefox</p>
+  </div>
+  <div class="rf-field">
+    <label class="rf-label">Contraseña</label>
+    <div class="rf-input rf-row" style="letter-spacing:4px;font-size:18px">•••••••••</div>
+    <div style="min-height:17px"></div>
+  </div>
+  <hr class="rf-divider">
+  <div class="rf-row rf-gap-sm" style="justify-content:flex-end">
+    <button class="rf-btn rf-btn--ghost">Cancelar</button>
+    <button class="rf-btn rf-btn--primary">Continuar</button>
+  </div>
+</div></div>
+</sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"sesion":{"editor":"enum","options":["buscando","buscando · pide la contrasena"],"default":"buscando","section":"Sesion del almacen"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   renderVals() {
-    return { tema: this.props.tema ?? "light" };
+    // ID-190: cuando el almacen necesita sesion, LA SESION SE INICIA ANTES DE
+    // LISTAR. O sea que la contrasena maestra de Firefox se pide AQUI, con la
+    // pantalla todavia buscando y sin que exista ninguna lista de certificados
+    // — no al firmar, que es donde la ponia el recorrido de la v0.1.
+    // El dialogo es el mismo de «6 · Pidiendo PIN» en su posicion de perfil de
+    // Firefox, copiado literal: dos pantallas contando lo mismo con dos textos
+    // distintos serian dos verdades.
+    return {
+      tema: this.props.tema ?? "light",
+      pideSesion: (this.props.sesion ?? "buscando") !== "buscando"
+    };
   }
 }
 </script>

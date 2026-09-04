@@ -17,12 +17,11 @@ está delante el foco no se escapa a los controles de la ventana.
 Tres regiones, de izquierda a derecha y de arriba abajo:
 
 1. **Índice de secciones**, columna fija a la izquierda. Encabezado
-   «Preferencias» y una fila por sección —*Firma*, *Privacidad*, *Apariencia*—.
-   La sección activa lleva fondo y borde; las demás van en
-   `--rf-text-muted` sin borde. Existe para el desplazamiento vertical que
-   traerán los ajustes de la ficha 19 en adelante —el selector de módulo
-   PKCS#11 y lo que venga con los instaladores nativos—: con tres secciones aún
-   se ven todas de un vistazo, pero el sitio ya está.
+   «Preferencias» y una fila por sección —*Firma*, *Certificados*, *Privacidad*,
+   *Apariencia*—. La sección activa lleva fondo y borde; las demás van en
+   `--rf-text-muted` sin borde. Existe para el desplazamiento vertical: con la
+   sección de certificados en fichero, la columna de contenido ya no cabe de una
+   vez en la ventana mínima.
 2. **Columna de contenido**, centrada y desplazable, con las secciones apiladas.
    Cada sección abre con su rótulo en versalitas y un `.rf-divider` debajo.
 3. **Pie fijo** con `Cerrar` abajo a la derecha. Fijo y no al final del
@@ -84,9 +83,12 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
 ### Firma
 
 1. **Recordar la última configuración de firma visible** (interruptor, activo
-   por omisión). El interruptor, las cinco casillas, el motivo y el tamaño del
-   recuadro se reutilizan en el siguiente documento. Apagado significa **no
-   guardarla**: el recuadro arranca en el valor por omisión en cada documento.
+   por omisión), **sin texto de ayuda debajo**. El interruptor, las cinco
+   casillas, el motivo y el tamaño del recuadro se reutilizan en el siguiente
+   documento. Apagado significa **no guardarla**: el recuadro arranca en el valor
+   por omisión en cada documento. Eso es lo que hace, y es lo que la ficha tiene
+   que saber; la pantalla no lo explica, porque explicarlo no cambia lo que la
+   persona puede hacer con el interruptor.
 
    **La posición no se recuerda aquí.** Va por documento, en su fila de
    recientes, porque reponer sobre otro documento una posición elegida para uno
@@ -108,32 +110,105 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
 
    Se comprueba **antes de firmar**: si no está o no se puede escribir, se
    avisa en el pie del panel y ahí mismo se ofrece `Cambiar`; ni se degrada a
-   otro sitio ni se apaga el botón de firmar. La carpeta **no se crea nunca**
-   si no está.
+   otro sitio ni se apaga el botón de firmar. Bajo el ajuste queda **una sola
+   línea de ayuda**, «La carpeta no se crea nunca», que es la única de las tres
+   que había cuyo borrado cambiaría lo que la persona puede esperar: las otras
+   dos contaban cuándo se comprueba y qué pasa si falla, y eso ya lo cuenta el
+   pie del panel en el momento en que ocurre.
 
-   *Junto al documento original* **no aparece aquí en el flatpak**: bajo el
-   sandbox la aplicación no puede saber de qué carpeta salió el original. Es
-   una capacidad que llegará con los instaladores nativos, no una opción
-   atenuada que le cuente al usuario nuestros problemas de empaquetado.
-   Razonamiento y alternativas descartadas en el
+   **«Junto al documento original» es condicional** (ID-184): la opción se
+   ofrece **sólo cuando el entorno sabe devolver la ruta real del documento**.
+   Donde no la sabe —el sandbox del flatpak, que entrega el fichero por un
+   portal— la opción **no aparece**, y el ajuste se queda en la carpeta con su
+   `Cambiar carpeta…`, exactamente como estaba.
+
+   El motivo **no es privacidad**: enseñar la ruta de un documento que el
+   usuario acaba de abrir no revela nada que su gestor de ficheros no enseñe
+   todo el día, y el ID-185 retira esa justificación. El motivo es
+   **corrección**: devolver una ruta que no se conoce es devolver una mentira, y
+   una opción atenuada le contaría al usuario nuestros problemas de empaquetado.
+
+   Los **dos estados miden lo mismo**: el bloque lleva `min-height` de 200 px,
+   medido sobre el artboard, para que las secciones de debajo no salten según el
+   canal. Razonamiento y alternativas descartadas en el
    [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
+
+### Certificados en fichero
+
+3. **La lista de certificados instalados en rFirma**, con **dos gestos y nada
+   más**: **«Añadir…»**, arriba a la derecha de la sección, que abre el selector
+   de ficheros del sistema, y **«Quitar»** al final de cada fila (ID-198).
+
+   **Lo que identifica cada fila es el certificado, no el fichero.** Titular en
+   negrita y, debajo, `DNI · emisor · caduca el …`. **Del fichero no se recuerda
+   nada, ni la ruta** (ID-196): instalar copia lo que hace falta al almacén de
+   rFirma, y el `.p12` de origen deja de importar en cuanto se cierra el
+   selector. Por eso aquí no se pinta ninguna ruta, y no hay «volver a
+   localizar»: un fichero que se mueve o se borra no rompe nada.
+
+   Un certificado caducado **se queda en la lista**, con su insignia
+   `Caducado`, por lo mismo que se queda en el desplegable del
+   [panel de firma](panel-de-firma.md): que desaparezca no le explica nada a
+   quien lo instaló.
+
+   **Sin ninguno instalado**, un recuadro punteado con «Todavía no has instalado
+   ninguno». Sin instrucciones dentro: el botón «Añadir…» ya está encima.
+
+   **No se copia el registro de almacenes de AutoFirma**, con sus seis casillas
+   y sus diálogos anidados. Allí hace falta porque la aplicación **elige** un
+   almacén y sólo enseña ese; rFirma los barre todos y concatena el resultado,
+   así que aquí no hay nada que elegir: sólo una lista de lo que se ha añadido a
+   mano.
+
+   **Una clave elíptica se rechaza al instalar, no al firmar** (ID-197), con un
+   `ErrorNotice` en esta misma sección y un solo renglón: **«Ese certificado no
+   es compatible con rFirma»**. Sin explicación técnica debajo: la curva, el
+   mecanismo y la constante RSA-SHA256 no le sirven de nada a quien acaba de
+   elegir un fichero, y quien sí sabe lo que es una clave elíptica no necesita
+   que se lo cuenten aquí. El sitio importa más que el texto: sin esta guarda, la
+   pantalla construiría el camino más corto al tropiezo —el kit de pruebas de la
+   FNMT trae una carpeta entera de claves ECC—, y el fallo aparecería al firmar,
+   con el documento delante.
 
 ### Privacidad
 
-3. **Recordar mi actividad** (interruptor, activo por omisión), con un botón
-   **«Vaciar la lista»** al lado. Cubre los documentos recientes y el
-   certificado usado la última vez: es la misma promesa a quien firma en un
-   ordenador compartido. Apagarlo **borra** lo ya guardado, previa
-   confirmación; vaciar sin apagar es «hoy no, mañana sí».
+4. **Recordar mi actividad** (interruptor, activo por omisión), con un botón
+   **«Vaciar la lista»** al lado. Su ayuda es una línea: «Los documentos
+   recientes y el certificado que usaste la última vez». Que apagarlo borre lo ya
+   guardado se ve al apagarlo, en el diálogo de confirmación, así que no se
+   anuncia también aquí. Cubre los documentos recientes y el certificado usado la
+   última vez: es la misma promesa a quien firma en un ordenador compartido.
+   Apagarlo **borra** lo ya guardado, previa confirmación; vaciar sin apagar es
+   «hoy no, mañana sí».
+
+5. **Avisarme cuando haya una versión nueva** (interruptor, activo por omisión),
+   sin ayuda debajo. Está en *Privacidad* porque la comprobación de versión es
+   **la única conexión saliente que abre rFirma**, y esta es la sección donde
+   alguien va a buscar si la aplicación habla con fuera.
+
+   **Está siempre, y se avisa siempre.** El spec pedía que el ajuste existiera
+   *sólo* si nadie gestionaba la instalación, detectándolo por la URL del
+   repositorio dentro de `sources.list.d` / `yum.repos.d` (ID-179). Se descartó:
+   esa señal **no es fiable**. Un `.deb` se instala a mano tanto como desde un
+   repositorio, el repositorio puede estar dado de alta y no traer rFirma, en el
+   flatpak no hay ninguno de esos dos ficheros que leer, y aun leyéndolos habría
+   que hurgar en la configuración del gestor de paquetes del anfitrión para
+   decidir si se pinta un interruptor. Avisar siempre y dejar apagarlo cuesta
+   menos y no miente. Con eso **el ID-179 se queda sin consumidor y no se
+   implementa**, y el ID-180 pierde su condición.
+
+   Dónde sale el aviso lo decide
+   [ventana-principal.md](ventana-principal.md): la franja bajo la cabecera. A
+   dónde lleva, [acerca-de.md](acerca-de.md).
 
 ### Apariencia
 
-4. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
+6. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
    el del sistema, que **no es «claro»**: es no forzar nada y dejar que mande
    `prefers-color-scheme`. Los otros dos escriben `data-theme` en `<html>`, que
    es lo que los tokens de color del bundle leen para redefinir los roles. El
    cambio se aplica en caliente, como el resto de la pantalla.
-5. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
+7. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
    cinco desde el ID-124, que sacó el valencià porque sus reglas de plural no
    son las del castellano. El cambio se aplica en caliente. Un idioma solo
    aparece aquí si tiene **todas** las cadenas traducidas. En la primera
@@ -154,7 +229,7 @@ debajo enumerando lo que el propio control ya muestra al abrirse.
   se confirma.
 
   Un diálogo y no una confirmación en línea: el borrado es irreversible y no
-  admite «casi», y en una pantalla con tres secciones a la vista una
+  admite «casi», y en una pantalla con cuatro secciones a la vista una
   confirmación en línea compite por la atención con otras cinco filas. Tampoco
   se hace al revés —borrar y ofrecer deshacer— porque un aviso temporal sobre
   algo ya borrado es el fallo silencioso otra vez, y en un ordenador compartido
@@ -165,8 +240,12 @@ debajo enumerando lo que el propio control ya muestra al abrirse.
 - **No se ha podido vaciar la lista**: el mismo `ErrorNotice`, siempre en
   *Privacidad*, pegado a «Vaciar la lista». Dice que los recientes siguen
   guardados.
+- **El certificado elegido no sirve**: el mismo `ErrorNotice`, siempre en
+  *Certificados en fichero*, entre «Añadir…» y la lista. Un solo renglón, «Ese
+  certificado no es compatible con rFirma», sin detalle debajo. La lista **no
+  cambia**: lo que no se ha podido instalar no aparece en ella.
 
-Los dos avisos van por sección y no uno solo arriba: con tres secciones, un
+Los avisos van por sección y no uno solo arriba: con cuatro secciones, un
 aviso común obliga a leer el texto para saber qué se rompió. Antes esta ficha
 decía «## Estados — Uno. Los ajustes tienen siempre valor», y por eso los dos
 fallos de `App.tsx` —guardar la configuración y `forgetActivity`— no tenían
@@ -183,8 +262,8 @@ ninguno está en el sistema de diseño.
 ## Decisiones
 
 **Por qué deja de ser un modal de 480 px.** Con cinco ajustes ya iba justo, y
-lo que viene —el selector de módulo PKCS#11 de la ficha 19, y lo que traiga
-cada hito— no cabe. Se descartó una ruta de un router: con guardado automático
+lo que traiga cada hito no cabe: la v0.4 sola le añade una sección entera con
+una lista. Se descartó una ruta de un router: con guardado automático
 y `Cerrar` como única salida no hay ningún estado al que navegar ni nada que
 confirmar, así que lo que queda es un diálogo, solo que grande. Así `Escape`
 sigue valiendo y `Cmd+,` en macOS sigue prometiendo lo que abre.
@@ -231,7 +310,18 @@ la sección que las listaba: el artboard se rehizo el 02/09/2026 y ya trae
 «Recordar mi actividad» con su «Vaciar la lista», el tema, y el destino sin
 «Junto al documento original».
 
+**La ficha 19 —el selector de módulo PKCS#11— ya no reserva sitio aquí.** Esta
+ficha guardaba dos huecos para él, en el índice de secciones y en el argumento
+del tamaño. Se retiran: la v0.4 no toca tarjetas ni DNIe y además **retira** la
+fontanería de tarjeta que hoy se compila sin que nadie la use (ID-201 a
+ID-204), así que la ficha 19 queda fuera de alcance y no hay nada que reservar.
+El artboard nunca llegó a dibujarlo.
+
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
 **Recorrido de firma**, artboard «Preferencias · a pantalla completa»
-(`PreferenciasPantalla`). Decidido en el
-[#123](https://github.com/sgomez/rfirma/issues/123).
+(`PreferenciasPantalla`), con las palancas **Destino** —que recorre los dos
+entornos— y **Certificados en fichero** —cuatro instalados, ninguno, y el
+rechazo de la clave elíptica—. Decidido en el
+[#123](https://github.com/sgomez/rfirma/issues/123) y, lo de la v0.4, en el
+[#250](https://github.com/sgomez/rfirma/issues/250) (ID-180, ID-184, ID-196 a
+ID-198).

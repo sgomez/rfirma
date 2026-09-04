@@ -138,8 +138,8 @@ propio, que son tres filas y media: el borde cortado es lo que dice que hay más
 `DNI · emisor · almacén` en `.rf-body rf-text-muted`. El almacén no es adorno:
 el mismo certificado en el perfil de Firefox y en `~/.pki/nssdb` es
 indistinguible sin él, y quien tiene tres iguales no puede elegir a ciegas. Va
-por **nombre** —«Firefox», «Chrome», «Tarjeta»—, nunca por la ruta del módulo ni
-por el `configdir` del perfil, que son rutas del anfitrión
+por **nombre** —«Firefox», «Chrome», «Instalado en rFirma»—, nunca por la ruta
+del módulo ni por el `configdir` del perfil, que son rutas del anfitrión
 ([ADR-0011](../adr/0011-destino-del-documento-firmado.md)). En el disparador
 cerrado **no aparece**: elegido ya no desambigua nada.
 
@@ -154,8 +154,8 @@ Es lo que pide la historia 8 del [#46](https://github.com/sgomez/rfirma/issues/4
 y `No utilizables`—, y dentro de cada uno, orden alfabético por titular con
 `localeCompare("es")`, desempatando por nombre del almacén. Hasta la v0.3.0 **no
 ordenaba nadie**: las filas salían en el orden en que respondían los módulos
-PKCS#11 —primero las tarjetas presentes, luego los perfiles de Firefox, luego
-`~/.pki/nssdb`—, y dentro de cada uno, lo que devolviera `C_FindObjects`. Ese
+PKCS#11 —los perfiles de Firefox, `~/.pki/nssdb`, y los `.p12` instalados—, y
+dentro de cada uno, lo que devolviera `C_FindObjects`. Ese
 orden no significa nada para quien elige, y dejaba los caducados arriba
 obligando a bajar a buscar los que sirven.
 
@@ -172,7 +172,8 @@ certificado» y el botón de firmar está apagado. Elegir con qué identidad se
 firma un documento con validez jurídica no lo hace la aplicación por su cuenta.
 La regla de «con uno solo se elige solo» tiene por tanto una excepción: si ese
 único certificado está caducado, la lista arranca sin elección — preseleccionar
-algo con lo que no se puede firmar solo aplaza el fallo hasta después del PIN.
+algo con lo que no se puede firmar solo aplaza el fallo hasta después de
+teclear el secreto del almacén.
 
 **El certificado se recuerda al firmar con él**, no al elegirlo en la lista, y
 la próxima sesión sale ya puesto. El glosario dice «el certificado usado la
@@ -215,7 +216,7 @@ se ve dentro del recuadro es el que dibuja el compositor, y sin certificado no
 hay ninguno que dibujar. Apagando el bloque desaparece la pregunta de qué enseñar
 mientras tanto. El recorrido ya iba en ese orden —el certificado se elige antes
 de llegar a colocar—, y el precio aceptado es que preparar la colocación exige
-tener puesta la tarjeta o el DNIe. La colocación **no se pierde** si el
+tener ya un certificado disponible. La colocación **no se pierde** si el
 certificado desaparece después: el bloque se vuelve a apagar y el recuadro
 vuelve al reaparecer.
 
@@ -428,9 +429,17 @@ ventana para explicar dos gestos que se descubren al primer intento. Va en
 - **Eligiendo**: la lista desplegada sobre el panel. Se cierra al elegir, al
   pulsar fuera y con `Escape`.
 - **Cargando certificados**: «Buscando certificados…» y dos esqueletos.
-- **Sin certificados**: bloque con borde `--rf-border-strong`, explicación
-  («si usas una tarjeta, comprueba que está insertada y que el lector está
-  conectado») y dos salidas: «Volver a buscar» y «Otro módulo…».
+- **Sin certificados**: bloque con borde `--rf-border-strong`, una frase —«No
+  hay ningún certificado con el que firmar», y nada más— y dos salidas: «Volver
+  a buscar» y **«Añadir un certificado…»**, que lleva a la sección de
+  certificados en fichero de [Preferencias](preferencias.md).
+
+  Antes decía además «si usas una tarjeta, comprueba que está insertada y que el
+  lector está conectado» y la segunda salida era «Otro módulo…», el selector de
+  módulo PKCS#11 de la ficha 19. Las dos se van con las tarjetas (ID-201 a
+  ID-204): el remedio hablaba de un hardware que la v0.4 no toca, y la salida
+  abría una pantalla fuera de alcance. La que queda hace algo: instalar un
+  certificado es la única forma que tiene rFirma de pasar de cero a uno.
 - **Sin colocar**: hay certificado y la firma visible está encendida, pero el
   conjunto de páginas está vacío. El pie añade, sobre el botón, «Coloca la firma
   sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la
@@ -473,7 +482,7 @@ Sustituye a la configuración, que ya no sirve de nada:
 - **`Resumen`**, con la insignia `PAdES` —rFirma no produce otro formato— sola
   debajo. El encabezado se queda aunque solo cuelgue una insignia de él:
   **guarda el sitio de la ficha 14**, que traerá la insignia con el número de
-  firmas y la tarjeta de cada firma del documento, con `La tuya` en la del
+  firmas y una ficha por firma del documento, con `La tuya` en la del
   usuario. Enseñarlas todas es la contrapartida del aviso de cofirma: si antes
   se avisa de que el PDF ya llevaba una, el resumen tiene que enseñarlas.
 - **Tres botones, uno sobre otro y a ancho completo**, en el pie fijo:
@@ -593,3 +602,10 @@ palancas «Pie · destino» y «Pie · recorte», y en `EstadoExito`, con la pal
 puede pulsar**: la palanca «Colocación» salta a cada uno de los ocho casos y
 desde ahí los radios, el campo, el botón de bajo la hoja y las flechas de página
 funcionan de verdad; la palanca «tecleado» recorre los tres errores del rango.
+
+**Las tarjetas salen del panel el 04/09/2026**, con las decisiones de v0.4 del
+[#250](https://github.com/sgomez/rfirma/issues/250) (ID-201 a ID-204). En
+`EstadoElegirCertificado` no queda ningún almacén «Tarjeta» —las dos filas que
+lo llevaban pasan a «Instalado en rFirma» y a «Chrome», así que la columna sigue
+enseñando tres clases distintas de almacén, que es lo que la justifica— y
+`EstadoSinCertificados` pierde el remedio del lector y el botón «Otro módulo…».

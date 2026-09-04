@@ -105,9 +105,11 @@ sombra ni duración.
 - Altura mínima 44px en botones y campos: ya viene en `.rf-btn` y `.rf-input`.
 - Foco: contorno de 2px en `--rf-focus-ring` con 2px de desplazamiento; lo
   aplica `.rf-root :focus-visible`, no lo reimplementes.
-- El color nunca es el único indicador: acompáñalo de borde, peso o glifo
-  (`.rf-field--error` antepone un "!" al texto de ayuda). No hay color de error
-  en la paleta a propósito.
+- El color nunca es el único indicador: acompáñalo de borde o peso
+  (`.rf-field--error` engorda el borde del control y pone en negrita el texto de
+  ayuda). No hay color de error en la paleta a propósito, y **tampoco un glifo
+  antepuesto**: un "!" suelto delante de la frase se lee mal en castellano, donde
+  la exclamación abre con "¡".
 - Las duraciones caen a 1ms bajo `prefers-reduced-motion` desde
   `tokens/motion.css`; no repitas la media query.
 - Puntos de ruptura: 400, 640, 768, 1024, 1280, 1400px. Escríbelos literales en

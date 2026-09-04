@@ -5,7 +5,8 @@
 enmendando lo que decía antes —que era una importación de un solo uso y se borraba al
 terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, y es la copia
 1-1 que permite revisar la interfaz **sin cuenta de Claude**, que es el motivo por el que se
-importó a un repositorio público. **No preguntes si hay que borrarlo: no, hasta la v1.0.**
+importó a un repositorio público. Se ha usado también en la v0.4. **No preguntes si hay que
+borrarlo: no, hasta la v1.0.**
 
 Son los catorce artboards del canvas de Claude Design «Autofirma de escritorio en
 Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
@@ -14,7 +15,9 @@ Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron
 [#123](https://github.com/sgomez/rfirma/issues/123); ver «Lo que cambió en v0.2»
 al final. Ese mismo día `Main` volvió a cambiar y nació `EstadoPaginasSinSello`
 con las decisiones de v0.3 del [#155](https://github.com/sgomez/rfirma/issues/155);
-ver «Lo que cambió en v0.3».
+ver «Lo que cambió en v0.3». Los cambios de la v0.4 —el
+[#250](https://github.com/sgomez/rfirma/issues/250)— tocan diez de los catorce y
+no crean ninguno; ver «Lo que cambió en v0.4».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -34,17 +37,17 @@ del recorrido de la ficha `ventana-principal.md`:
 | 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto** |
 | 2 | `EstadoDocumentoCargado` | Documento cargado, sin certificado |
 | 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
-| 3 | `EstadoCargandoCertificados` | Buscando certificados |
-| 4 | `EstadoSinCertificados` | Sin certificados, con salida |
-| 5 | `Main` | **Colocando** la firma visible — el nudo del recorrido, con el pie del destino y el bloque de colocación de v0.3, y el botón de sellar de la 0.3.1 |
-| 6 | `EstadoPin` | Pidiendo PIN |
-| 7 | `EstadoPinIncorrecto` | PIN incorrecto |
+| 3 | `EstadoCargandoCertificados` | Buscando certificados, y el diálogo de secreto del almacén cuando la sesión se abre **antes** de listar |
+| 4 | `EstadoSinCertificados` | Sin certificados, con salida a instalar uno |
+| 5 | `Main` | **Colocando** la firma visible — el nudo del recorrido, con el pie del destino y el bloque de colocación de v0.3, el botón de sellar de la 0.3.1 y la franja de notificación de la v0.4 |
+| 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén |
+| 7 | `EstadoPinIncorrecto` | Secreto incorrecto |
 | 8 | `EstadoFirmando` | Firmando, con las tres fases |
 | 9 | `EstadoExito` | Firmado — el resumen, sin la ficha 14 |
 | 10 | `EstadoErrorFirma` | Error de firma, en el pie del panel |
 | 5b | `EstadoPaginasSinSello` | Antes de firmar: las páginas donde el recuadro no cabe |
-| — | `PreferenciasPantalla` | Preferencias, a pantalla completa |
-| — | `EstadoAcercaDe` | Diálogo de «acerca de» |
+| — | `PreferenciasPantalla` | Preferencias, a pantalla completa, con los certificados en fichero de la v0.4 |
+| — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4 |
 
 No se ha importado `firmar-fichero-local.dc.html`: `canvas.json` lo aparta en
 la página «Otros» y lo marca como ajeno al recorrido.
@@ -85,7 +88,10 @@ que se decidió con él:
   a firmar justo con él.
 - **La fila lleva el almacén** —`DNI · emisor · almacén`—, porque el mismo
   certificado en el perfil de Firefox y en `~/.pki/nssdb` es indistinguible sin
-  él. El disparador cerrado no lo lleva: elegido ya no desambigua nada.
+  él. El disparador cerrado no lo lleva: elegido ya no desambigua nada. En la
+  v0.4 las dos filas de almacén «Tarjeta» pasan a «Instalado en rFirma» y a
+  «Chrome»: siguen siendo tres clases distintas, que es lo que sostiene la
+  columna.
 - **Sin preselección la primera vez**: elegir con qué identidad se firma no lo
   hace la aplicación, y el orden de la lista solo dice en qué orden cargaron los
   módulos.
@@ -253,3 +259,81 @@ encoge con el recuadro en vez de quedarse en 12 pt como tope.
 cada uno alfabético con `localeCompare("es")` y el almacén desempatando. La
 palanca «Orden» conserva el de hoy —el que responden los módulos PKCS#11— para
 poder comparar.
+
+## Lo que cambió en v0.4
+
+Decidido en el [#250](https://github.com/sgomez/rfirma/issues/250) —cuyo mapa es
+el [#217](https://github.com/sgomez/rfirma/issues/217)— y dibujado el
+04/09/2026. **No hay artboards nuevos y no hubo ninguna página de trabajo**:
+todo entra en artboards que ya existían. Cambian diez —`Main`,
+`PreferenciasPantalla`, `EstadoAcercaDe`, `EstadoPin`, `EstadoPinIncorrecto`,
+`EstadoCargandoCertificados`, `EstadoElegirCertificado`, `EstadoFirmando`,
+`EstadoSinCertificados` y `EstadoErrorFirma`—, y los catorce pierden una regla
+del `<helmet>`.
+
+**`Main` estrena la franja de notificación**, bajo la cabecera: descartable, con
+una frase y **una sola acción** —«Cómo actualizar», que abre *Acerca de*—, y
+41 px de alto en una ventana cuyo mínimo son 560. Lo decidido **no es dónde va
+el aviso de versión sino dónde notifica rFirma**: la franja es el patrón, y el
+aviso es su primer inquilino. Se dibujaron cuatro colocaciones y se juzgaron con
+la ventana **ocupada** —documento cargado, pie de destino, nombre largo—, porque
+un aviso que sólo se ve con la ventana vacía no decide nada. **Se descartaron**
+una insignia en el botón de menú, que no se ve hasta abrir el menú y por tanto
+no notifica, y una línea en el pie, que estrenaba una barra de estado entera
+—rFirma no tiene ninguna— para una frase que casi siempre no está. Las tres
+descartadas **se han borrado del artboard**; la palanca sobrevive convertida en
+palanca de **estado** de dos posiciones, «hay versión nueva» y «al día».
+
+**`PreferenciasPantalla` gana tres cosas.** Una **sección «Certificados en
+fichero»** con una lista y dos gestos, «Añadir…» y «Quitar» —del fichero no se
+recuerda nada, ni la ruta, así que la fila identifica al **certificado**—, con
+sus tres palancas: cuatro instalados, ninguno, y el rechazo de una clave
+elíptica al instalar, en un renglón y sin explicación técnica. El **ajuste del
+aviso de versión**, en *Privacidad*, que **está siempre**. Y **«junto al
+original» pasa a ser condicional** al entorno que sabe devolver la ruta real:
+los dos estados llevan `min-height` de 200 px para que las secciones de debajo
+no salten.
+
+**`EstadoAcercaDe` estrena «cómo actualizar»**: tres pestañas de canal y **un
+solo bloque de órdenes** con «Copiar», presente en los dos estados de versión,
+de modo que lo único que cambia entre ellos es la línea de arriba y miden lo
+mismo por construcción. Lo que se enseña son las órdenes de alta del repositorio
+y no un botón de descarga, así que el mecanismo se autoliquida; y no hay ningún
+enlace pulsable, porque `opener:deny-open-url` sigue denegado. El diálogo pasa
+de 460 a **520 px** y el nombre de 32 a **28 px**.
+
+**`EstadoPin` y `EstadoPinIncorrecto` estrenan la palanca «Clase de almacén»**,
+con las tres situaciones: módulo PKCS#11 (**«PIN»**, antes de listar,
+`Continuar`), perfil de Firefox (**«contraseña»**, antes de listar, `Continuar`)
+y `.p12` instalado (**«contraseña»**, al firmar, `Firmar`). **Fuera el contador
+de reintentos**, que era estructuralmente imposible: la información de token de
+PKCS#11 no lo trae ni con una tarjeta real. **Fuera todas las pistas.** Y fuera
+la jerga: el diálogo no nombra la clase de módulo ni la etiqueta del token.
+
+**`EstadoCargandoCertificados` estrena el diálogo de sesión**, que era la mitad
+menos visible del cambio y no se veía en ninguna pantalla: con Firefox y
+contraseña maestra se pide **aquí**, con la pantalla todavía buscando y sin
+lista detrás. Es el diálogo de «6» copiado literal.
+
+**Las tarjetas salen del dibujo, no sólo del código.** En
+`EstadoElegirCertificado` no queda ningún almacén «Tarjeta»; `EstadoFirmando`
+dice «Firmando» a secas y pierde «No retires la tarjeta hasta que termine»;
+`EstadoErrorFirma` pasa de «La tarjeta se ha desconectado» a «El certificado ha
+dejado de estar disponible», que cubre el perfil que se cierra y el `.p12` que
+se retira sin nombrar hardware —el detalle técnico copiable no cambia, porque es
+lo que devuelve PKCS#11 en los tres casos—; y `EstadoSinCertificados` pierde el
+remedio del lector y cambia «Otro módulo…» por «Añadir un certificado…».
+
+**Los catorce pierden `.rf-field--error .rf-hint::before`**, el `"! "` delante
+del texto de ayuda de un campo en error. En castellano la exclamación abre con
+`¡`, así que un `!` suelto se lee como una exclamación mal cerrada. El error
+sigue marcado sin color, con el borde de 2 px y la negrita de la ayuda. Se ha
+quitado también de `_helmet.part`, del bundle del sistema de diseño y de los dos
+documentos que lo prescribían.
+
+**Y una regla de redacción que atraviesa los diez**: si borrar una frase no
+cambia lo que la persona puede hacer, la frase sobra. Por ahí se ha ido una
+docena —las tranquilizadoras («no se guarda en ningún sitio», «la clave privada
+no sale de tu ordenador»), las que narran el mecanismo, las que explican lo
+evidente y los remedios obvios—. La única que se salvó, recortada, es «La
+carpeta no se crea nunca».

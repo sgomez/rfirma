@@ -170,7 +170,6 @@
  * The palette has no error hue by design, so the signal is weight + glyph +
  * border on the highest-contrast text color - which works in both themes. */
 .rf-field--error .rf-hint { color: var(--rf-text); font-weight: 600; }
-.rf-field--error .rf-hint::before { content: "! "; }
 
 /* ---------------------------------------------------------------- 7. Misc */
 .rf-badge {

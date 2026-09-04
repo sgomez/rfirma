@@ -1,12 +1,13 @@
 # Diálogo de progreso de firma
 
 Acompaña las tres etapas de la firma trifásica mientras se ejecutan. Bloquea la
-ventana porque no hay nada que hacer hasta que termine, y porque retirar la
-tarjeta a mitad rompe la firma.
+ventana porque no hay nada que hacer hasta que termine, y porque interrumpir a
+mitad rompe la firma.
 
 ## Casos de uso que la usan
 
-- Firmar un PDF en local — tras aceptar el PIN.
+- Firmar un PDF en local — tras la prefirma, y con la sesión del almacén ya
+  abierta.
 
 ## Estructura
 
@@ -15,7 +16,12 @@ tarjeta a mitad rompe la firma.
 1. Título «Firmando el documento…».
 2. Lista de tres etapas, cada una con su marca de estado.
 3. Barra de progreso fina.
-4. «No retires la tarjeta hasta que termine».
+
+**Y nada más debajo.** Había una cuarta línea, «No retires la tarjeta hasta que
+termine», y se retira: la v0.4 saca tarjetas y DNIe del alcance y del dibujo
+(ID-201 a ID-204), así que era una instrucción sobre un hardware que no hay. No
+se sustituye por otra advertencia: no queda ningún gesto que pedirle a quien
+mira una barra de progreso.
 
 ## Las tres etapas
 
@@ -26,11 +32,15 @@ error sí:
 | Etapa | Texto |
 | ----- | ----- |
 | Prefirma | Preparando la firma *(prefirma)* |
-| Firma | Firmando en la tarjeta |
+| Firma | Firmando |
 | Postfirma | Ensamblando el PDF *(postfirma)* |
 
-La etapa de **firma** no lleva paréntesis: «firmando en la tarjeta» ya dice
-exactamente lo que pasa, y es la única de las tres que toca la clave privada.
+La etapa de **firma** no lleva paréntesis, y ahora por un motivo más simple que
+el de la v0.3: entonces se llamaba «firmando en la tarjeta» y se argumentaba que
+esa frase ya decía exactamente lo que pasaba. Sin tarjeta, la etapa se llama
+**«Firmando»**, que es a la vez el lenguaje llano y el término del dominio, así
+que el paréntesis repetiría la palabra. Sigue siendo la única de las tres que
+toca la clave privada.
 
 Marcas de estado: hecha (✓), en curso (círculo relleno en `--rf-primary` y
 texto en negrita), pendiente (círculo hueco y texto atenuado).
@@ -59,7 +69,7 @@ que convierte tres glifos parecidos en tres filas que se leen.
 ## Estados
 
 Tres, uno por etapa en curso. El diálogo no se puede cancelar una vez empezada
-la firma en la tarjeta.
+la etapa de firma.
 
 ## Componentes y tokens
 
@@ -69,11 +79,15 @@ la firma en la tarjeta.
 ## Por qué se enseñan las tres etapas
 
 La postfirma **regenera el PDF entero** y puede tardar; sin desglose, una
-espera larga tras teclear el PIN parece un cuelgue. Además, cuando algo falla,
-saber en qué fase fue es lo primero que hace falta — el
+espera larga tras pulsar «Firmar documento» parece un cuelgue. Además, cuando
+algo falla, saber en qué fase fue es lo primero que hace falta — el
 [panel de firma](panel-de-firma.md) lo repite en el detalle técnico del error.
 
 ## Decisiones
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
 **Recorrido de firma**, artboard «8 · Firmando».
+
+La retirada de la tarjeta —del rótulo de la etapa y de la línea de aviso— se
+decidió en el [#250](https://github.com/sgomez/rfirma/issues/250) (ID-201 a
+ID-204) y está dibujada en ese mismo artboard.

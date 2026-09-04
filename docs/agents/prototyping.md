@@ -173,6 +173,12 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 | ----------- | ------ | ------ | ------ |
 | _(ninguno en vuelo)_ | | | |
 
+El caso de uso **v0.4 · salir del sandbox** ([#250](https://github.com/sgomez/rfirma/issues/250))
+se validó el 04/09/2026 y salió de esta tabla: sus siete fichas —`ventana-principal`,
+`preferencias`, `acerca-de`, `dialogo-pin`, `dialogo-progreso-firma`,
+`panel-de-firma` y `design-system`— enlazan el canvas desde su sección
+«Decisiones».
+
 El caso de uso **firmar un PDF en local** se validó el 31/08/2026 y salió de
 esta tabla: su canvas está enlazado desde la sección «Decisiones» de cada ficha
 de `docs/design/`, empezando por
