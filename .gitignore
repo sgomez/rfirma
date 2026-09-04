@@ -40,3 +40,7 @@ packaging/flatpak/*.flatpak
 # Los dos generadores de flatpak-builder-tools se traen a mano y no son
 # nuestros (ID-04): lo que se versiona es su SALIDA, no ellos.
 packaging/flatpak/flatpak-cargo-generator.py
+
+# Python (packaging/): el bytecode que deja cualquier import o `py_compile`.
+__pycache__/
+*.pyc

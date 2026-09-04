@@ -48,6 +48,13 @@ native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 # `crap` de `test` y esta linea.
 crap_version := "0.4.3"
 
+# La misma razon que crap_version: sin ruff.toml ni pyproject.toml en el
+# repositorio, el conjunto de reglas que aplica `ruff check` es el que traiga
+# la version instalada, y una `ruff` nueva puede poner `lint-python` en rojo
+# sin que nadie haya tocado una linea de Python. Clavada aqui e igual en
+# .github/workflows/ci.yml.
+ruff_version := "0.16.6"
+
 # El modulo FFI, oculto para la puerta CRAP del carril rapido. cargo-crap
 # puntua con `--missing pessimistic`, o sea que una funcion SIN datos de
 # cobertura vale 0 %, y la cobertura del carril rapido no incluye la grada C.
@@ -90,7 +97,7 @@ check: tools check-repo check-java check-ts check-rust
 # Lo que no pertenece a ninguna cadena (ID-01): cuatro comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions
+check-repo: check-flatpak-sources check-ds-bundle check-version check-actions lint-python
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -171,6 +178,18 @@ tools:
         echo "  sudo apt install -y$softhsm_apt"
         echo "y monta el token con: just token"
         echo
+    fi
+    # ruff es la puerta del unico Python del repositorio (ID-164) y va dentro de
+    # `check-repo`, asi que sin el la cadena de TypeScript falla entera. No esta
+    # en apt: se instala desde PyPI. La version va clavada, igual que
+    # CRAP_VERSION mas abajo: sin ruff.toml ni pyproject.toml en el repositorio,
+    # el conjunto de reglas por defecto es el que traiga la version instalada,
+    # y una version distinta a la del CI (ver .github/workflows/ci.yml) puede
+    # poner esta puerta en rojo sin que nadie haya tocado una linea de Python.
+    if ! command -v ruff >/dev/null; then
+        echo "falta: ruff"
+        echo "  Instalalo con: pipx install ruff=={{ ruff_version }}  (o: uv tool install ruff=={{ ruff_version }})"
+        failures=1
     fi
     # Las librerias de sistema del WebView. pkg-config es quien decide, porque
     # es quien consulta el build script que falla: el paquete de runtime puede
@@ -1215,6 +1234,19 @@ check-actions:
 # Comprueba el candado de la version y el nombre del producto.
 check-version:
     {{ justfile_directory() }}/packaging/check-version.py
+
+# El ID-164 y el TD-45. Python es tecnologia nueva aqui y solo vive en
+# `packaging/`: el candado de la version y la extension de Nautilus. Esa
+# extension corre DENTRO del proceso de Nautilus, asi que un error de sintaxis
+# no rompe rFirma, rompe el gestor de ficheros de quien la tenga instalada.
+#
+# `ruff check` es lo UNICO que la vigila (TD-45): no hay ninguna prueba que
+# instale el paquete y compruebe que Nautilus la carga, porque eso seria
+# comprobar una distribucion, no este repositorio.
+#
+# Lintea el Python del repositorio.
+lint-python:
+    ruff check {{ justfile_directory() }}/packaging
 
 # A mano, cuando el bundle se reexporte desde el proyecto de sistema de diseno.
 # No lo ejecuta el CI: un sello regenerado dentro del CI sella lo que nadie ha

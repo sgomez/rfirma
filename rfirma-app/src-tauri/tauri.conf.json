@@ -33,15 +33,19 @@
       "deb": {
         "files": {
           "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so",
-          "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop"
+          "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop",
+          "/usr/share/nautilus-python/extensions/rfirma-sign.py": "../../packaging/gnome/rfirma-sign.py"
         },
+        "recommends": ["python3-nautilus"],
         "desktopTemplate": "../../packaging/rfirma.desktop.hbs"
       },
       "rpm": {
         "files": {
           "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so",
-          "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop"
+          "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop",
+          "/usr/share/nautilus-python/extensions/rfirma-sign.py": "../../packaging/gnome/rfirma-sign.py"
         },
+        "recommends": ["nautilus-python"],
         "desktopTemplate": "../../packaging/rfirma.desktop.hbs",
         "compression": {
           "type": "zstd",
