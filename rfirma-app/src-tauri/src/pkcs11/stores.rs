@@ -144,16 +144,17 @@ impl Store {
     ///
     /// Sin init args es una tarjeta: eso es lo que era un almacén antes del
     /// #99. Con ellos es NSS, y **de quién** es el perfil se decide por su
-    /// `configdir`; un perfil que no esté ni en `~/.mozilla/firefox` ni en
-    /// `~/.pki/nssdb` se queda en [`StoreClass::Nssdb`] en vez de que se le
-    /// atribuya un dueño que no se conoce.
+    /// `configdir`; un perfil que no esté en ninguna de las rutas conocidas de
+    /// Firefox (legado o XDG, ID-199) ni de Chrome se queda en
+    /// [`StoreClass::Nssdb`] en vez de que se le atribuya un dueño que no se
+    /// conoce.
     pub fn class(&self) -> StoreClass {
         let Some(profile) = self.profile() else {
             return StoreClass::Card;
         };
-        if profile.contains("/.mozilla/firefox/") {
+        if profile.contains("/.mozilla/firefox/") || profile.contains("/mozilla/firefox/") {
             StoreClass::Firefox
-        } else if profile.ends_with("/.pki/nssdb") {
+        } else if profile.ends_with("/.pki/nssdb") || profile.ends_with("/pki/nssdb") {
             StoreClass::Chrome
         } else {
             StoreClass::Nssdb
@@ -236,23 +237,50 @@ pub fn from_environment() -> Vec<Store> {
     stores
 }
 
+/// Los pares (directorio de configuración, directorio de datos) de Firefox
+/// que se buscan, en orden.
+///
+/// Hasta Firefox 146 los dos eran el mismo directorio, `~/.mozilla/firefox`.
+/// Firefox 147 se mudó a XDG: `profiles.ini` pasa a `~/.config/mozilla` y los
+/// perfiles —donde vive `cert9.db`— a `~/.local/share/mozilla/firefox`. Bajo
+/// XDG el `Path=` relativo de `profiles.ini` resuelve contra el directorio de
+/// **datos**, así que los dos entran **emparejados** (ID-199): declarar sólo
+/// el de configuración da cero certificados otra vez y sin error.
+fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 2] {
+    [
+        (home.join(".mozilla/firefox"), home.join(".mozilla/firefox")),
+        (
+            home.join(".config/mozilla"),
+            home.join(".local/share/mozilla/firefox"),
+        ),
+    ]
+}
+
 /// Los perfiles NSS que hay bajo un `HOME`, en orden (ID-05).
 ///
 /// Los de Firefox salen de `profiles.ini` y **no** de adivinar el nombre del
 /// directorio: el sufijo aleatorio de `xxxxxxxx.default-release` no se puede
 /// deducir, y quien tenga varios perfiles no cabe en «el primero que haya».
-/// Después va `~/.pki/nssdb`, que es donde guardan los suyos Chrome y las
-/// herramientas de NSS.
+/// Se buscan en las dos disposiciones de [`firefox_layouts`], la antigua y la
+/// XDG, porque las dos conviven según la versión instalada. Después van
+/// `~/.pki/nssdb` y `~/.local/share/pki/nssdb`, que es donde guardan los
+/// suyos Chrome y las herramientas de NSS: la familia Chromium entera, porque
+/// ninguna de las dos rutas es «el almacén de Chrome» sino la base NSS
+/// compartida del usuario (ID-199).
 ///
 /// Un perfil **sin `cert9.db` se salta**: es un perfil sin base de datos de
 /// certificados, y abrirlo en solo lectura no crearía ninguna.
 pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
-    let firefox = home.join(".mozilla/firefox");
-    let mut profiles: Vec<PathBuf> = profiles_declared_in(&firefox.join("profiles.ini"))
-        .into_iter()
-        .map(|relative_or_absolute| resolve_under(&firefox, &relative_or_absolute))
-        .collect();
+    let mut profiles: Vec<PathBuf> = Vec::new();
+    for (config, data) in firefox_layouts(home) {
+        profiles.extend(
+            profiles_declared_in(&config.join("profiles.ini"))
+                .into_iter()
+                .map(|relative_or_absolute| resolve_under(&data, &relative_or_absolute)),
+        );
+    }
     profiles.push(home.join(".pki/nssdb"));
+    profiles.push(home.join(".local/share/pki/nssdb"));
 
     let mut found: Vec<PathBuf> = Vec::new();
     for profile in profiles {
@@ -419,6 +447,24 @@ mod tests {
         assert_eq!(chrome.class(), StoreClass::Chrome);
     }
 
+    /// Las mismas dos clases, ahora bajo las rutas XDG que estrenaron Firefox
+    /// 147 y Chrome M146: la clasificación no se puede quedar atada a las
+    /// rutas viejas mientras `nss_profiles` ya lee las nuevas.
+    #[test]
+    fn an_nss_store_is_classified_the_same_under_the_xdg_paths() {
+        let firefox = Store::nss(
+            "/usr/lib/libsoftokn3.so",
+            Path::new("/casa/ada/.local/share/mozilla/firefox/cccccccc.default-release"),
+        );
+        let chrome = Store::nss(
+            "/usr/lib/libsoftokn3.so",
+            Path::new("/casa/ada/.local/share/pki/nssdb"),
+        );
+
+        assert_eq!(firefox.class(), StoreClass::Firefox);
+        assert_eq!(chrome.class(), StoreClass::Chrome);
+    }
+
     /// Un perfil que no esté en ninguno de los dos sitios se queda en «NSS» a
     /// secas: atribuirle un dueño sería inventárselo.
     #[test]
@@ -530,6 +576,42 @@ mod tests {
         let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
 
         assert!(nss_profiles(home.path()).is_empty());
+    }
+
+    /// Firefox 147 bajo XDG: `profiles.ini` en `~/.config/mozilla`, perfil y
+    /// `cert9.db` en `~/.local/share/mozilla/firefox`. Si el código resolviera
+    /// el `Path=` relativo contra el directorio de configuración en vez del de
+    /// datos —o sólo mirara uno de los dos—, este perfil no aparecería: es el
+    /// fallo silencioso que el ID-199 evita.
+    #[test]
+    fn reads_a_firefox_profile_from_the_paired_xdg_config_and_data_dirs() {
+        let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+        let config = home.path().join(".config/mozilla");
+        let data = home.path().join(".local/share/mozilla/firefox");
+        let profile = data.join("cccccccc.default-release");
+        std::fs::create_dir_all(&config).expect("deberia poder crearse .config/mozilla");
+        std::fs::create_dir_all(&profile).expect("deberia poder crearse el perfil");
+        std::fs::write(profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+        std::fs::write(
+            config.join("profiles.ini"),
+            "[Profile0]\nPath=cccccccc.default-release\n",
+        )
+        .expect("deberia poder escribirse");
+
+        assert_eq!(nss_profiles(home.path()), vec![profile]);
+    }
+
+    /// La base NSS compartida de la familia Chromium bajo su ruta XDG
+    /// (`~/.local/share/pki/nssdb`) entra igual que la antigua
+    /// `~/.pki/nssdb`, y las dos pueden convivir.
+    #[test]
+    fn reads_the_xdg_shared_nssdb_too() {
+        let home = a_home_with(&[(".local/share/pki/nssdb", true)], None);
+
+        assert_eq!(
+            nss_profiles(home.path()),
+            vec![home.path().join(".local/share/pki/nssdb")]
+        );
     }
 
     /// Un `profiles.ini` puede declarar una ruta absoluta; el resto son

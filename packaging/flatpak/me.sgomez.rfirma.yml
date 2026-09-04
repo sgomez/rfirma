@@ -68,12 +68,19 @@ finish-args:
   # que lo consume es de la v0.5, y un permiso sin consumidor durante un ciclo
   # entero es el mismo pasivo que se rechazo alli para la CA (#246).
   #
-  # Y estas dos rutas ya no cubren lo que lee pkcs11::stores: Firefox 147 se
-  # mudo a XDG (~/.config/mozilla/firefox + ~/.local/share/mozilla/firefox) y
-  # Chrome M146 a ~/.local/share/pki/nssdb. Enumerarlas aqui y en el codigo es
-  # justo lo que se desincronizo; la lista canonica es la de pkcs11::stores.
+  # Firefox 147 se mudo a XDG y Chrome M146 tambien: las dos rutas de arriba
+  # ya no cubren solas lo que lee pkcs11::stores. Firefox separa configuracion
+  # y datos -~/.config/mozilla lleva profiles.ini, ~/.local/share/mozilla/firefox
+  # lleva los perfiles con sus certificados-, asi que entran EMPAREJADAS: solo
+  # una de las dos vuelve a dar cero certificados y sin error (ID-199). Chrome
+  # entra entero en su ruta XDG, ~/.local/share/pki/nssdb, junto a la antigua.
+  # Enumerarlas aqui y en el codigo es justo lo que se desincronizo; la lista
+  # canonica es la de pkcs11::stores.
   - --filesystem=~/.mozilla/firefox:ro
   - --filesystem=~/.pki/nssdb:ro
+  - --filesystem=~/.config/mozilla:ro
+  - --filesystem=~/.local/share/mozilla/firefox:ro
+  - --filesystem=~/.local/share/pki/nssdb:ro
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
