@@ -1,6 +1,6 @@
-# rfirma: Firma Electrónica Nativa
+# rFirma: Firma Electrónica Nativa
 
-`rfirma` es una reimplementación moderna y nativa de la herramienta de firma de la administración española **AutoFirma**. Combina el rendimiento y la ligereza de **Tauri v2 (Rust + React)** para la interfaz, con la madurez del motor criptográfico original de Java compilado a código nativo mediante **GraalVM Native Image**.
+**rFirma** —`rfirma` como identificador: binario, paquete y `.desktop`— es una reimplementación moderna y nativa de la herramienta de firma de la administración española **AutoFirma**. Combina el rendimiento y la ligereza de **Tauri v2 (Rust + React)** para la interfaz, con la madurez del motor criptográfico original de Java compilado a código nativo mediante **GraalVM Native Image**.
 
 ---
 
@@ -61,14 +61,27 @@ Los canales son **tres** —flatpak, `.deb` y `.rpm`—, todos servidos desde
 [ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)). No hace falta tener
 Java: el motor criptográfico va compilado dentro.
 
-**Elige uno solo.** Instalar rfirma por dos vías son dos aplicaciones con
+**Elige uno solo.** Instalar rFirma por dos vías son dos aplicaciones con
 memorias separadas: ni los documentos recientes, ni la rúbrica, ni las
 preferencias se comparten, y no se migran. Es la conducta normal de Linux —el
 Firefox flatpak y el `.deb` tampoco comparten perfil—.
 
-> **Los canales nativos todavía no existen**: los decide el hito v0.4 y aún no
-> se han construido. Lo único instalable hoy es el flatpak que produce
-> `just flatpak`, en local.
+> **Los canales nativos todavía no existen**: los construye el hito del canal
+> propio y aún no se han publicado. Hasta que la primera Release los sirva, lo
+> único instalable es el flatpak que produce `just flatpak`, en local.
+
+Las descargas van **siempre a la última publicación**, sin número de versión en
+el enlace: así el README no envejece y no hay que sincronizarlo con nada
+(ID-151). Los nombres de los ficheros publicados no llevan versión, que es lo
+que hace que estos enlaces resuelvan:
+
+* flatpak: <https://github.com/sgomez/rfirma/releases/latest/download/me.sgomez.rfirma.flatpak>
+* `.deb`: <https://github.com/sgomez/rfirma/releases/latest/download/rfirma_amd64.deb>
+* `.rpm`: <https://github.com/sgomez/rfirma/releases/latest/download/rfirma.x86_64.rpm>
+
+Las candidatas (`-rc.N`) publican **solo el flatpak**: el campo `Version` de un
+RPM no admite guiones, así que un `.deb` o un `.rpm` de una candidata no existe
+(ID-154, `packaging/native-packages-allowed.sh`).
 
 El bundle **no trae el runtime**: se consume del remoto de **Flathub**, así que
 añadirlo es requisito de instalación. Es de un solo uso, y `--user` no pide
@@ -86,12 +99,6 @@ just flatpak                                          # produce el .flatpak
 flatpak install --user packaging/flatpak/me.sgomez.rfirma.flatpak
 flatpak run me.sgomez.rfirma
 ```
-
-> **v0.1 no se publica** ([ID-42](https://github.com/sgomez/rfirma/issues/46)):
-> el entregable es ese fichero `.flatpak`, instalable en local. El canal del
-> ADR-0015 —Releases firmadas y los tres repositorios de `rfirma.sgomez.me`—
-> exige una clave GPG y unos secretos de despliegue que crea una persona, y
-> llega con el hito v0.4.
 
 ---
 

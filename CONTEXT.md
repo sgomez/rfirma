@@ -169,3 +169,24 @@ y salida de documentos pasa por los portales, así que no conoce la ruta origina
 de un documento que entre por ahí (ADR-0004, ADR-0011). Los canales nativos
 —`.deb`, `.rpm`— corren fuera de él.
 _Avoid_: arenero, caja de arena, jaula, contenedor
+
+### Identidad del producto
+
+**rFirma**:
+El producto, tal y como se escribe en prosa y tal y como lo ve la persona
+usuaria: el título de la ventana, el `Name=` del lanzador, el `<name>` del
+metainfo, la documentación. La forma **`rfirma`**, todo en minúscula, es el
+**identificador**: el binario, el `productName`, el nombre del paquete, el del
+`.desktop` y el de las rutas. Es la regla de idioma del proyecto —prosa en
+castellano, identificadores en inglés— aplicada a un caso que no contemplaba, y
+la vigila `just check-version`.
+_Avoid_: Rfirma, RFirma, RFIRMA, rFirma como identificador
+
+**Versión**:
+El número de la entrega, que vive en `rfirma-app/src-tauri/tauri.conf.json`
+—única fuente, porque es el que el bundler sella dentro de los tres paquetes— y
+se replica en candado comprobado a `package.json`, a `Cargo.toml`, a
+`Cargo.lock` y al metainfo. Subirla arrastra además el sello de
+`packaging/flatpak/sources.lock`, que guarda el `sha256` de `Cargo.lock`. La del `pom.xml` del puente **no** es esta: es un artefacto interno y
+queda fuera del candado. Una **candidata** (`-rc.N`) publica sólo el flatpak.
+_Avoid_: release, tag, número de build
