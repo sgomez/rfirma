@@ -312,18 +312,19 @@ stage "El certificado de revocacion y la copia de la maestra"
 say "El certificado de revocacion es lo que te permite matar la clave el dia"
 say "que la pierdas. Sin el, una clave perdida se queda viva para siempre."
 REVOCACION="$ANILLO/rfirma-revocacion.asc"
-if gpg --batch --yes --pinentry-mode loopback --passphrase-file "$FRASE_FICHERO" \
-     --output "$REVOCACION" --gen-revoke "$HUELLA" >/dev/null 2>&1 <<'RESPUESTAS'
-y
-1
-Clave de firma de rFirma retirada.
-
-y
-RESPUESTAS
-then
+# `gpg --gen-revoke` NO funciona en modo lote: responde «can't do this in batch
+# mode» y sale con 2, ni siquiera con --command-fd. No hace falta generarlo,
+# porque gpg ya deja uno preparado al crear la clave, en openpgp-revocs.d.
+REVOCACION_AUTOMATICA="$GNUPGHOME/openpgp-revocs.d/$HUELLA.rev"
+if [ -f "$REVOCACION_AUTOMATICA" ] && cp "$REVOCACION_AUTOMATICA" "$REVOCACION"; then
   note "certificado de revocacion en $REVOCACION"
+  say "Es el que gpg dejo hecho al crear la maestra: revoca la clave entera."
+  say "Ojo el dia que lo uses: gpg escribe la linea '-----BEGIN...' con dos"
+  say "puntos delante, a proposito, para que no se importe por accidente."
+  say "Hay que quitar ese ':' antes de 'gpg --import $REVOCACION'."
 else
-  warn "no se pudo generar el certificado; hazlo a mano: gpg --gen-revoke $HUELLA"
+  warn "no se encontro el certificado que gpg deja en openpgp-revocs.d"
+  warn "hazlo a mano, de forma interactiva: gpg --gen-revoke $HUELLA"
   SKIPPED+=("certificado de revocacion (gpg --gen-revoke $HUELLA)")
 fi
 printf '\n'
@@ -345,18 +346,26 @@ note "subclave en $SUBCLAVE"
 note "publica en $PUBLICA"
 printf '\n'
 say "Comprobacion: la subclave exportada NO puede llevar la maestra dentro."
-if gpg --batch --list-packets "$SUBCLAVE" 2>/dev/null | grep -q 'secret key packet'; then
+# --export-secret-subkeys emite SIEMPRE el paquete de la clave primaria, pero
+# vaciado: es un stub 'gnu-dummy' (protect mode 1002) sin material secreto. Por
+# eso la comprobacion no puede ser «no hay ningun :secret key packet:» —eso
+# saltaria en toda exportacion correcta—, sino la contraria: la primaria TIENE
+# que estar ahi como stub. Si no aparece 'gnu-dummy', el fichero lleva la
+# maestra de verdad.
+if ! gpg --batch --list-packets "$SUBCLAVE" 2>/dev/null | grep -q 'gnu-dummy'; then
   warn "el fichero contiene la clave secreta MAESTRA: no lo subas a ninguna parte"
   exit 1
 fi
-note "correcto: solo hay subclaves secretas dentro"
+note "correcto: la maestra solo esta como stub, dentro solo hay subclaves secretas"
 pause "Enter para continuar"
 
 # ── 6 ─────────────────────────────────────────────────────────────────────
 stage "El entorno release en GitHub"
-say "Los dos secretos y la variable van al ENTORNO 'release', no al"
-say "repositorio: es lo que hace que un job sin 'environment: release' —como"
-say "build.yml, que es invocable— no pueda verlos jamas."
+say "Los dos SECRETOS van al ENTORNO 'release', no al repositorio: es lo que"
+say "hace que un job sin 'environment: release' —como build.yml, que es"
+say "invocable— no pueda verlos jamas."
+say "La huella NO es un secreto y va como variable de REPOSITORIO, a proposito:"
+say "asi cualquier job puede contrastar contra ella la subclave que importa."
 if ! gh api "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null 2>&1; then
   if confirm "El entorno '$ENTORNO' no existe. Crearlo?"; then
     gh api --method PUT "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null
