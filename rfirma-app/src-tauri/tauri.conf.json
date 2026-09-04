@@ -32,13 +32,15 @@
     "linux": {
       "deb": {
         "files": {
-          "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so"
+          "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so",
+          "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop"
         },
         "desktopTemplate": "../../packaging/rfirma.desktop.hbs"
       },
       "rpm": {
         "files": {
-          "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so"
+          "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so",
+          "/usr/share/kio/servicemenus/rfirma-sign.desktop": "../../packaging/kde/rfirma-sign.desktop"
         },
         "desktopTemplate": "../../packaging/rfirma.desktop.hbs",
         "compression": {
