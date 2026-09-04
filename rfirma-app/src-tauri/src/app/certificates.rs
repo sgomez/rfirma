@@ -5,6 +5,10 @@
 //! que desbloquea la clave para luego decir que el certificado caducó es
 //! hacerlo teclear para nada.
 
+use std::path::Path;
+
+use tauri_plugin_dialog::FilePath;
+
 use crate::commands::views::{store_name, CertificateView};
 use crate::commands::Failure;
 use crate::memory::{Configuration, ListedCertificates, Memory};
@@ -47,6 +51,152 @@ pub fn listed_rows(
             }
         })
         .collect())
+}
+
+/// El OID de `rsaEncryption`, que es la única clave con la que rfirma sabe
+/// firmar: el mecanismo es una constante única, `CKM_SHA256_RSA_PKCS` (ID-16).
+const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
+
+/// **Caso de uso.** Instala un `.p12` como **almacén NSS propio por fichero**
+/// (ID-192).
+///
+/// Lo que entra es el **contenido** del fichero y la contraseña que lo abre;
+/// del fichero no se recuerda nada, ni la ruta ni una copia (ID-196). Quien
+/// descifra es NSS, no rfirma ([`crate::pkcs11::nss`], ID-193), y lo que queda
+/// detrás es un almacén NSS corriente que [`listed_rows`] encuentra en el
+/// siguiente listado sin que nadie le diga nada.
+///
+/// **Una clave que no sea RSA se rechaza aquí, no al firmar** (ID-197): el
+/// almacén recién escrito se borra entero y no llega a existir para nadie.
+/// Rechazarla al firmar sería descubrirlo después del secreto, con el
+/// documento delante.
+pub fn install_pkcs12(
+    installed_dir: &Path,
+    chosen: FilePath,
+    password: &str,
+) -> Result<(), Failure> {
+    let softoken = pkcs11::stores::softoken().ok_or_else(|| {
+        Failure::new(
+            "moduleNotFound",
+            "no esta libsoftokn3.so en ninguna de las rutas conocidas",
+        )
+    })?;
+
+    // Lo que entra es el **contenido**; la ruta muere aquí y no llega ni al
+    // almacén ni a la ventana (ID-196, ADR-0011).
+    let source = chosen
+        .into_path()
+        .map_err(|error| Failure::new("pkcs12Unreadable", error.to_string()))?;
+    let pkcs12 = std::fs::read(&source)
+        .map_err(|error| Failure::new("pkcs12Unreadable", error.to_string()))?;
+
+    // El nombre del directorio es un asa acuñada, no el del fichero: el nombre
+    // de un `.p12` es del usuario y no tiene por qué acabar en el disco de la
+    // aplicación (ID-196, ADR-0011).
+    let directory = installed_dir.join(crate::memory::handles::mint());
+    std::fs::create_dir_all(&directory).map_err(|error| {
+        Failure::new(
+            "settingsUnwritable",
+            format!("no se ha podido crear el almacen del .p12: {error}"),
+        )
+    })?;
+    // El almacén no lleva contraseña propia (ID-195), así que lo que lo protege
+    // son los permisos del directorio.
+    let _ = crate::paths::restrict_to_owner(&directory);
+
+    let store = pkcs11::Store::nss(&softoken, &directory);
+    let installed =
+        pkcs11::with_token_turn(|| pkcs11::nss::import_pkcs12(&directory, &pkcs12, password))
+            .and_then(|()| only_rsa_keys(&store));
+
+    if let Err(error) = installed {
+        // Media instalación no se queda puesta: o el almacén entero, o nada.
+        let _ = std::fs::remove_dir_all(&directory);
+        return Err(error.into());
+    }
+
+    for file in ["cert9.db", "key4.db"] {
+        let _ = crate::paths::restrict_to_owner(&directory.join(file));
+    }
+    Ok(())
+}
+
+/// Los certificados del almacén recién escrito, y **todos con clave RSA**.
+///
+/// Se abre el almacén de verdad en vez de mirar dentro del `.p12`: es la misma
+/// puerta por la que se van a listar luego, así que comprueba a la vez las dos
+/// cosas que pueden salir mal —que el fichero no traía nada instalable, y que
+/// lo que traía no se puede firmar—.
+fn only_rsa_keys(store: &pkcs11::Store) -> Result<(), pkcs11::TokenError> {
+    let found = pkcs11::list_certificates(store)?;
+    if found.is_empty() {
+        return Err(pkcs11::TokenError::new(
+            pkcs11::Situation::Pkcs12Unreadable,
+            "el fichero no ha dejado ningun certificado con clave privada dentro",
+        ));
+    }
+    for certificate in &found {
+        if !is_rsa(certificate) {
+            return Err(pkcs11::TokenError::new(
+                pkcs11::Situation::KeyNotRsa,
+                format!("{}: la clave no es RSA", certificate.reference().label()),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Si la clave pública del certificado es RSA, leyéndolo del DER.
+///
+/// Un DER que no se sabe leer **no es RSA**: lo que no se puede comprobar no se
+/// da por bueno, que es la misma regla con la que se decide el estado de un
+/// certificado ilegible.
+fn is_rsa(certificate: &TokenCertificate) -> bool {
+    use x509_cert::der::Decode;
+
+    x509_cert::Certificate::from_der(certificate.der()).is_ok_and(|read| {
+        read.tbs_certificate()
+            .subject_public_key_info()
+            .algorithm
+            .oid
+            .to_string()
+            == RSA_ENCRYPTION
+    })
+}
+
+/// **Caso de uso.** Quita un `.p12` instalado: borra su almacén entero.
+///
+/// El asa es la de una fila del último listado, como en cualquier otra orden
+/// (ADR-0011); de ella sale el almacén, y de él, el directorio. **Solo se borra
+/// dentro de `installed_dir`**: un certificado del perfil de Firefox, o de una
+/// tarjeta, tiene la misma forma de asa y aquí se rechaza en vez de tocar nada
+/// de nadie.
+pub fn remove_installed(
+    installed_dir: &Path,
+    handle: &str,
+    listed: &ListedCertificates,
+) -> Result<(), Failure> {
+    let reference = listed.get(handle).ok_or_else(|| {
+        Failure::new(
+            "certificateNotFound",
+            "el certificado elegido no es de la ultima busqueda",
+        )
+    })?;
+    let directory = reference
+        .store()
+        .installed_directory_under(installed_dir)
+        .ok_or_else(|| {
+            Failure::new(
+                "certificateNotFound",
+                "ese certificado no viene de un .p12 instalado",
+            )
+        })?;
+    std::fs::remove_dir_all(&directory).map_err(|error| {
+        Failure::new(
+            "settingsUnwritable",
+            format!("no se ha podido quitar el almacen del .p12: {error}"),
+        )
+    })
 }
 
 /// El certificado que quedó recordado, si hay estado que leer.

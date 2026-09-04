@@ -127,7 +127,7 @@ pub fn list_certificates(
     environment: State<'_, Environment>,
 ) -> Result<Vec<CertificateView>, Failure> {
     app::certificates::listed_rows(
-        &environment.stores,
+        &environment.all_stores(),
         &environment.listed,
         &environment.memory,
     )
@@ -147,7 +147,7 @@ pub fn begin_signing(
 ) -> Result<SecretView, Failure> {
     app::signing::begin(
         &order,
-        &environment.stores,
+        &environment.all_stores(),
         &environment.listed,
         &opened,
         &isolate,
@@ -515,7 +515,7 @@ pub fn preview_signature(
 ) -> Result<tauri::ipc::Response, Failure> {
     Ok(tauri::ipc::Response::new(app::preview::compose(
         &order,
-        &environment.stores,
+        &environment.all_stores(),
         &environment.listed,
         &opened,
         &isolate,
@@ -586,6 +586,53 @@ pub fn check_for_new_version(environment: State<'_, Environment>) -> Option<NewV
     Some(NewVersionView {
         version: announced.to_string(),
     })
+}
+
+/// **Orden 24.** Instala un `.p12` como almacén propio de rfirma (ID-192).
+///
+/// Abre el diálogo del portal filtrado a `.p12` y `.pfx` —**desde aquí y no
+/// desde el frontal**, por lo mismo que [`choose_rubric`] (ID-63)— y mete lo
+/// que traiga dentro en un almacén NSS nuevo. `password` es la contraseña
+/// **del fichero**, que es lo único que hace falta para abrirlo y lo único que
+/// la ventana pide: del fichero no se recuerda nada, ni la ruta ni una copia
+/// (ID-196), así que la ventana no lo nombra ni antes ni después.
+///
+/// Devuelve `false` cuando el diálogo se cerró sin elegir nada, que **no es un
+/// fallo**: es lo que deja la lista de instalados como estaba. Un fichero que
+/// no se puede abrir —contraseña que no es la suya— o que trae una clave que no
+/// es RSA (ID-197) sí es un [`Failure`], y entonces no queda instalado nada.
+#[tauri::command(async)]
+pub fn install_certificate(
+    app_handle: tauri::AppHandle,
+    environment: State<'_, Environment>,
+    password: String,
+) -> Result<bool, Failure> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let dialog = app_handle
+        .dialog()
+        .file()
+        .add_filter("Certificado", &["p12", "pfx"]);
+    let Some(chosen) = dialog.blocking_pick_file() else {
+        return Ok(false);
+    };
+
+    app::certificates::install_pkcs12(&environment.installed_certificates, chosen, &password)
+        .map(|()| true)
+}
+
+/// **Orden 25.** Quita un `.p12` instalado, por el asa de su fila.
+///
+/// Lo que se borra es el almacén entero, que es lo único que quedó del fichero.
+/// Un asa que no sea de un `.p12` instalado —la de un certificado del perfil de
+/// Firefox— se rechaza sin tocar nada.
+#[tauri::command(async)]
+pub fn remove_certificate(id: String, environment: State<'_, Environment>) -> Result<(), Failure> {
+    app::certificates::remove_installed(
+        &environment.installed_certificates,
+        &id,
+        &environment.listed,
+    )
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.
