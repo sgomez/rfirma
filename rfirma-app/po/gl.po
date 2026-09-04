@@ -26,6 +26,9 @@ msgstr ""
 msgid "actions.dismiss"
 msgstr ""
 
+msgid "actions.copy"
+msgstr ""
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr ""
@@ -731,6 +734,9 @@ msgstr ""
 msgid "preferences.rememberActivity.confirm.accept"
 msgstr ""
 
+msgid "preferences.notifyNewVersion.label"
+msgstr ""
+
 msgid "preferences.destination.label"
 msgstr ""
 
@@ -764,6 +770,21 @@ msgid "about.version"
 msgstr ""
 
 msgid "about.whatItDoes"
+msgstr ""
+
+msgid "about.update.newVersion"
+msgstr ""
+
+msgid "about.update.upToDate"
+msgstr ""
+
+msgid "about.update.channel.flatpak"
+msgstr ""
+
+msgid "about.update.channel.deb"
+msgstr ""
+
+msgid "about.update.channel.rpm"
 msgstr ""
 
 msgid "about.independence"

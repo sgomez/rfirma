@@ -41,6 +41,7 @@ pub fn shown(
         destination: folder.name().to_owned(),
         remember_visible_signature: configuration.remember_visible_signature,
         remember_activity: configuration.remember_activity,
+        notify_new_version: configuration.notify_new_version,
         theme: configuration.theme,
         offers_the_original_folder: crate::destination::the_original_folder_can_be_offered(),
     }
@@ -123,6 +124,7 @@ pub fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration
         destination: live.destination.clone(),
         remember_visible_signature: chosen.remember_visible_signature,
         remember_activity: chosen.remember_activity,
+        notify_new_version: chosen.notify_new_version,
         theme: chosen.theme,
     }
 }
@@ -168,6 +170,7 @@ mod tests {
             destination: "Documentos".to_owned(),
             remember_visible_signature: false,
             remember_activity: true,
+            notify_new_version: true,
             theme: Theme::Dark,
             offers_the_original_folder: false,
         };
@@ -267,6 +270,7 @@ mod tests {
             destination: "Otra".to_owned(),
             remember_visible_signature: false,
             remember_activity: true,
+            notify_new_version: true,
             theme: Theme::Dark,
             offers_the_original_folder: false,
         };

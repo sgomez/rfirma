@@ -162,6 +162,7 @@ function renderApp(
       offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
+      notifyNewVersion: true,
       ...settings,
     },
     () => void recents.clear(),
@@ -268,6 +269,7 @@ describe("App", () => {
         offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
+        notifyNewVersion: true,
       }),
       save: refused,
       forgetActivity: async () => {},
@@ -633,6 +635,7 @@ describe("App", () => {
         offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
+        notifyNewVersion: true,
       }),
       save: async () => {},
       forgetActivity: async () => {
@@ -1219,6 +1222,28 @@ describe("App, invocada con un documento", () => {
 
     it("says nothing at all when there is no new version", async () => {
       withVersionCheck(inMemoryVersionCheck());
+
+      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    /**
+     * «Avisarme cuando haya una versión nueva» apagado (ID-180): la
+     * comprobación sigue corriendo, pero la franja no se monta.
+     */
+    it("says nothing when Avisarme cuando haya una versión nueva is turned off", async () => {
+      renderApp(
+        inMemoryRecents(),
+        [],
+        unavailablePdfSource(),
+        { notifyNewVersion: false },
+        emptyCertificateStore(),
+        emptyRubricPicker(),
+        unavailableSigningBackend(),
+        null,
+        inMemoryDocumentDrops(),
+        inMemoryVersionCheck({ version: "0.4.1" }),
+      );
 
       await screen.findByRole("region", { name: "Bandeja de documentos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();

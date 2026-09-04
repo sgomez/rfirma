@@ -39,6 +39,13 @@ export interface Preferences {
    * **borra** lo ya recordado, previa confirmación.
    */
   rememberActivity: boolean;
+  /**
+   * «Avisarme cuando haya una versión nueva» (ID-180). **Siempre visible y
+   * sin condición**: no se detecta si alguien gestiona la instalación. No
+   * apaga la comprobación —esa la sigue haciendo el backend cada 24 h—, solo
+   * si la ventana enseña la franja con lo que contestó.
+   */
+  notifyNewVersion: boolean;
 }
 
 /**

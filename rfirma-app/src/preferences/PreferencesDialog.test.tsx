@@ -11,6 +11,7 @@ const defaults: Preferences = {
   offersOriginalFolder: false,
   rememberVisibleSignature: true,
   rememberActivity: true,
+  notifyNewVersion: true,
 };
 
 const noop = async () => {};
@@ -229,6 +230,23 @@ describe("PreferencesDialog", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, rememberActivity: true });
   });
 
+  /**
+   * Sin confirmación y sin condición (ID-180): no es como «Recordar mi
+   * actividad», que borra algo al apagarse. Este interruptor solo cambia si
+   * la franja se enseña.
+   */
+  it("turns Avisarme cuando haya una versión nueva off without asking", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderDialog({ onChange });
+
+    await user.click(
+      screen.getByRole("switch", { name: "Avisarme cuando haya una versión nueva" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, notifyNewVersion: false });
+  });
+
   it("closes on Cerrar", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
@@ -278,6 +296,9 @@ describe("PreferencesDialog", () => {
       within(privacy).getByRole("switch", { name: /Recordar mi actividad/ }),
     ).toBeInTheDocument();
     expect(within(privacy).getByRole("button", { name: "Vaciar la lista" })).toBeInTheDocument();
+    expect(
+      within(privacy).getByRole("switch", { name: /Avisarme cuando haya una versión nueva/ }),
+    ).toBeInTheDocument();
 
     const appearance = screen.getByRole("region", { name: "Apariencia" });
     expect(within(appearance).getByRole("combobox", { name: "Tema" })).toBeInTheDocument();

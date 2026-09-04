@@ -418,6 +418,7 @@ interface ConfigurationView {
   destination: string;
   rememberVisibleSignature: boolean;
   rememberActivity: boolean;
+  notifyNewVersion: boolean;
   theme: Theme;
   /**
    * **La única pregunta al entorno** (ID-184): si Preferencias puede ofrecer
@@ -461,6 +462,7 @@ export function tauriPreferences(): PreferencesStore {
         offersOriginalFolder: configuration.offersTheOriginalFolder,
         rememberVisibleSignature: configuration.rememberVisibleSignature,
         rememberActivity: configuration.rememberActivity,
+        notifyNewVersion: configuration.notifyNewVersion,
       };
     },
     save: async (preferences) => {
@@ -470,6 +472,7 @@ export function tauriPreferences(): PreferencesStore {
         theme: preferences.theme,
         rememberVisibleSignature: preferences.rememberVisibleSignature,
         rememberActivity: preferences.rememberActivity,
+        notifyNewVersion: preferences.notifyNewVersion,
       });
     },
     forgetActivity: () => invoke<void>("forget_activity"),
