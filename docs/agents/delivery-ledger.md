@@ -30,6 +30,12 @@
 
 - #201 y #202 (rebanadas de reubicación de UI entre `DocumentViewer` y `SigningPanel`) puntuaron `standard` y costaron muy por encima de su grada: ~250k y ~200k tokens, 189 y 143 llamadas de herramienta, 15-17 min cada uno — el triple de cualquier otro `standard` de la tanda. Los dos tocaban TSX + CSS + los cinco catálogos de i18n + dos ficheros de prueba. Señal: un ticket de UI que reubica un elemento entre dos componentes ya existentes y toca los cinco catálogos de locale tarifica como `complex`, no `standard`.
 
+- La triage lee `main` en el momento de la triage, y en ejecución paralela esa foto queda obsoleta antes de que el constructor arranque. Costó dos veces en la tanda de #250: a #269 se le puntuó asumiendo que el patrón de menú de servicio de KDE de #268 no existía todavía (ya se había fusionado), y a #276 se le puntuó asumiendo que `publish.yml` no estaba en `main` (se había fusionado con #275). Las dos veces hubo que corregir a mano el prompt del constructor. Señal para el despachador: cuando los bloqueantes de un ticket ya están cerrados, hay que asumir que sus artefactos SÍ están en `main` y decirlo, en vez de informar «no hay patrón que imitar».
+- #266 puntuó `standard`/sonnet por ser solo de configuración, y lo era — pero su criterio de aceptación dependía de una receta `just bundle` que el ADR-0013 daba por existente y no existía. Un ticket de solo-configuración cuyo criterio se verifica con una receta de `just` o un guion de empaquetado necesita comprobar antes si esa receta existe; cuando no existe, el ticket es `standard` como mucho y además hay que construir la receta.
+- Los dos tickets sobredimensionados de esta tanda (#275, #277) se construyeron igualmente bajo `oversized: build` a opus, y los dos llegaron con sus entregables completos y coherentes, un ciclo de arreglo cada uno. Para la forma de ticket de este repositorio, `oversized` desde el despachador ha significado hasta ahora «cuatro entregables relacionados en una sola rebanada de empaquetado», que opus entrega entero — no «demasiado grande para terminar».
+- #262 se retuvo deliberadamente fuera de su tanda por el orquestador por tocar el mismo fichero que el #272 en vuelo; construido después de fusionarse #272, volvió CLEAN con cero ciclos de arreglo y sin merge-fix. El solape de fichero entre miembros de una tanda merece el coste de reloj de serializarlos.
+- La vía de publicación de revisiones produjo dos revisiones con cuerpo vacío (en la PR #294 y la PR #303). En la #303 el re-revisor leyó la revisión vacía como una verificación e informó `blocked`; hubo que relanzarlo con instrucción explícita de comprobar que el cuerpo no estuviera vacío. Un revisor no debe tratar una revisión sin cuerpo en HEAD como evidencia de nada.
+
 ## Run log
 
 2026-08-31 spec=#46 sub=#47 model=opus effort=medium pr=#64 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=ready-to-merge
@@ -87,3 +93,29 @@
 2026-09-03 spec=#194 sub=#202 model=sonnet effort=medium pr=#214 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-03 spec=#194 sub=#203 model=sonnet effort=medium pr=#215 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-03 spec=#194 sub=#204 model=sonnet effort=medium pr=#216 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-04 spec=#250 sub=#254 model=none effort=none pr=none verdict=— cycles=0 mergefix=0 wave=1 outcome=escalated
+2026-09-04 spec=#250 sub=#252 model=sonnet effort=medium pr=#279 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#255 model=sonnet effort=medium pr=#280 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#253 model=opus effort=medium pr=#282 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#263 model=opus effort=medium pr=#281 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#265 model=sonnet effort=medium pr=#283 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#273 model=sonnet effort=medium pr=#284 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#256 model=sonnet effort=medium pr=#286 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-04 spec=#250 sub=#267 model=opus effort=medium pr=#285 verdict=CLEAN cycles=1 mergefix=1 wave=1 outcome=merged
+2026-09-04 spec=#250 sub=#264 model=sonnet effort=medium pr=#287 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-04 spec=#250 sub=#257 model=opus effort=medium pr=#288 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-04 spec=#250 sub=#270 model=opus effort=medium pr=#290 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-04 spec=#250 sub=#258 model=sonnet effort=medium pr=#291 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=merged
+2026-09-04 spec=#250 sub=#259 model=sonnet effort=medium pr=#292 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=merged
+2026-09-04 spec=#250 sub=#260 model=sonnet effort=medium pr=#293 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-09-04 spec=#250 sub=#271 model=opus effort=medium pr=#295 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=merged
+2026-09-04 spec=#250 sub=#261 model=opus effort=medium pr=#296 verdict=CLEAN cycles=0 mergefix=0 wave=5 outcome=merged
+2026-09-04 spec=#250 sub=#266 model=sonnet effort=medium pr=#294 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=merged
+2026-09-04 spec=#250 sub=#268 model=opus effort=medium pr=#298 verdict=CLEAN cycles=1 mergefix=0 wave=6 outcome=merged
+2026-09-04 spec=#250 sub=#272 model=sonnet effort=medium pr=#297 verdict=CLEAN cycles=1 mergefix=0 wave=6 outcome=merged
+2026-09-04 spec=#250 sub=#274 model=opus effort=medium pr=#299 verdict=CLEAN cycles=1 mergefix=0 wave=6 outcome=merged
+2026-09-04 spec=#250 sub=#269 model=opus effort=medium pr=#300 verdict=CLEAN cycles=1 mergefix=0 wave=7 outcome=merged
+2026-09-04 spec=#250 sub=#262 model=opus effort=medium pr=#302 verdict=CLEAN cycles=0 mergefix=0 wave=7 outcome=merged
+2026-09-04 spec=#250 sub=#275 model=opus effort=medium pr=#303 verdict=CLEAN cycles=1 mergefix=0 wave=8 outcome=merged
+2026-09-04 spec=#250 sub=#276 model=opus effort=medium pr=#304 verdict=CLEAN cycles=1 mergefix=0 wave=8 outcome=merged
+2026-09-04 spec=#250 sub=#277 model=opus effort=medium pr=#305 verdict=CLEAN cycles=1 mergefix=0 wave=8 outcome=merged
