@@ -10,6 +10,21 @@ import "./ErrorNotice.css";
  */
 export type ErrorSituation = keyof Catalog["errors"]["situations"];
 
+/**
+ * Las situaciones que se cuentan en **un solo renglón**: el título lo dice
+ * todo, y lo que iría debajo sería jerga o el remedio obvio (ID-211).
+ *
+ * Son las que no tienen `body` en el catálogo, así que la lista no es un gusto:
+ * `tsc` la obliga a cuadrar con las claves que existen.
+ */
+const ONE_LINE = ["keyNotRsa"] as const;
+
+type OneLineSituation = (typeof ONE_LINE)[number];
+
+function isOneLine(situation: ErrorSituation): situation is OneLineSituation {
+  return (ONE_LINE as readonly string[]).includes(situation);
+}
+
 interface ErrorNoticeProps {
   /** Nuestra situación, que sí está traducida. */
   situation: ErrorSituation;
@@ -17,8 +32,12 @@ interface ErrorNoticeProps {
    * El texto original tal cual llegó: el `CKR_*` de `cryptoki` o el mensaje
    * incrustado de la excepción del puente. **No se traduce ni se recorta**:
    * está para pegarlo en un informe de fallo.
+   *
+   * Sobra —y no se pone— en una situación de un solo renglón: el detalle crudo
+   * de una clave elíptica es la curva, que no le sirve a nadie que esté delante
+   * de esta pantalla.
    */
-  technicalDetail: string;
+  technicalDetail?: string;
 }
 
 /**
@@ -45,11 +64,17 @@ export function ErrorNotice({ situation, technicalDetail }: ErrorNoticeProps) {
         <AlertIcon />
         <span className="rf-title">{t(`errors.situations.${situation}.title`)}</span>
       </p>
-      <p className="rf-prose">{t(`errors.situations.${situation}.body`)}</p>
-      <details className="error-notice__detail">
-        <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
-        <pre className="error-notice__raw">{technicalDetail}</pre>
-      </details>
+      {!isOneLine(situation) && (
+        <>
+          <p className="rf-prose">
+            {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
+          </p>
+          <details className="error-notice__detail">
+            <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
+            <pre className="error-notice__raw">{technicalDetail}</pre>
+          </details>
+        </>
+      )}
     </div>
   );
 }

@@ -18,8 +18,15 @@ use crate::pkcs11::{self, CertificateRef, Store, TokenCertificate};
 ///
 /// Acuña las asas **aquí** y sustituye a las del listado anterior: la ventana
 /// solo puede señalar filas del listado que tiene delante.
+///
+/// `installed_dir` entra sólo para **clasificar**: un `.p12` instalado es un
+/// almacén NSS como el perfil de un navegador, y sin saber dónde viven los
+/// instalados cruzaría como [`pkcs11::StoreClass::Nssdb`] y la lista de
+/// Preferencias no sabría cuáles puede quitar (ID-198). La ruta no sale de
+/// aquí: lo que cruza es la clase (ADR-0011).
 pub fn listed_rows(
     stores: &[Store],
+    installed_dir: &Path,
     listed: &ListedCertificates,
     memory: &Memory,
 ) -> Result<Vec<CertificateView>, Failure> {
@@ -43,7 +50,8 @@ pub fn listed_rows(
                 holder_name,
                 id_number,
                 issuer: issuer_of(certificate.issuer().as_deref()),
-                store: store_name(certificate.reference().store().class()).to_owned(),
+                store: store_name(certificate.reference().store().class_under(installed_dir))
+                    .to_owned(),
                 status: certificate.status().into(),
                 remembered: remembered
                     .as_ref()
@@ -573,8 +581,13 @@ mod tests {
     fn with_nowhere_to_look_the_listing_says_so_instead_of_coming_back_empty() {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
 
-        let failure = listed_rows(&[], &ListedCertificates::new(), &a_memory(home.path()))
-            .expect_err("no hay donde buscar");
+        let failure = listed_rows(
+            &[],
+            &home.path().join("certificates"),
+            &ListedCertificates::new(),
+            &a_memory(home.path()),
+        )
+        .expect_err("no hay donde buscar");
 
         assert!(!failure.detail.is_empty(), "con su detalle crudo (ID-29)");
     }

@@ -44,6 +44,7 @@ function subjectFor(certificate: Certificate, t: TFunction): string | null {
     case "chrome":
       return t("pin.subjectBrowser", { browser: "Chrome" });
     case "nssdb":
+    case "installed":
       return t("pin.signingAs", {
         holder: certificate.holderName,
         idNumber: certificate.idNumber,

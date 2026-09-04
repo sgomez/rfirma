@@ -119,7 +119,7 @@ const aCertificate: Certificate = {
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
   store: "card",
-  status: { kind: "valid" },
+  status: { kind: "valid", notAfter: 1_894_752_000 },
   remembered: false,
 };
 
@@ -131,6 +131,7 @@ const aCertificate: Certificate = {
 function failingCertificateStore(failures: number, then: readonly Certificate[] = []) {
   let left = failures;
   const store: CertificateStore = {
+    ...emptyCertificateStore(),
     list: async () => {
       if (left > 0) {
         left -= 1;
@@ -148,7 +149,7 @@ function renderApp(
   documents: RecentDocument[] = [],
   pdfs: PdfSource = unavailablePdfSource(),
   settings: Partial<Preferences> = {},
-  certificates: CertificateStore = emptyCertificateStore(),
+  certificates: Partial<CertificateStore> = {},
   rubrics: RubricPicker = emptyRubricPicker(),
   signer: SigningBackend = unavailableSigningBackend(),
   invoked: Drop | null = null,
@@ -175,7 +176,7 @@ function renderApp(
       pdfs={pdfs}
       preferences={preferences}
       destinations={aDestination()}
-      certificates={certificates}
+      certificates={{ ...emptyCertificateStore(), ...certificates }}
       rubrics={rubrics}
       stamps={unavailableStampComposer()}
       signer={signer}
@@ -592,6 +593,72 @@ describe("App", () => {
     expect(await screen.findByRole("dialog", { name: "Preferencias" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByText("a.pdf")).toBeInTheDocument();
+  });
+
+  /**
+   * Preferencias y el desplegable de la firma salen del **mismo** listado: lo
+   * que se acaba de instalar aparece en los dos sin volver a arrancar (ID-198).
+   */
+  it("lists a just installed certificate in Preferences", async () => {
+    const user = userEvent.setup();
+    const p12: Certificate = { ...aCertificate, id: "p12", store: "installed" };
+    let found: readonly Certificate[] = [];
+    renderApp(
+      inMemoryRecents(),
+      [],
+      unavailablePdfSource(),
+      {},
+      {
+        list: async () => found,
+        install: async () => {
+          found = [p12];
+          return true;
+        },
+      },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    const certificates = await screen.findByRole("region", { name: "Certificados" });
+    expect(certificates).toHaveTextContent("Todavía no has instalado ninguno");
+
+    await user.click(within(certificates).getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await within(certificates).findByText("Ada Lovelace Byron")).toBeInTheDocument();
+  });
+
+  it("takes a removed certificate out of the list", async () => {
+    const user = userEvent.setup();
+    const p12: Certificate = { ...aCertificate, id: "p12", store: "installed" };
+    let found: readonly Certificate[] = [p12];
+    renderApp(
+      inMemoryRecents(),
+      [],
+      unavailablePdfSource(),
+      {},
+      {
+        list: async () => found,
+        remove: async () => {
+          found = [];
+        },
+      },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    const certificates = await screen.findByRole("region", { name: "Certificados" });
+    await within(certificates).findByText("Ada Lovelace Byron");
+
+    await user.click(
+      within(certificates).getByRole("button", {
+        name: "Quitar el certificado de Ada Lovelace Byron",
+      }),
+    );
+
+    expect(
+      await within(certificates).findByText("Todavía no has instalado ninguno"),
+    ).toBeInTheDocument();
   });
 
   it("opens About from the menu", async () => {

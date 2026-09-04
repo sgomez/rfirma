@@ -16,7 +16,8 @@
  * resultado no acabe disfrazado de fallo del token.
  */
 export type CertificateStatus =
-  | { kind: "valid" }
+  /** `notAfter` en segundos desde la época: cuándo deja de estar en vigor. */
+  | { kind: "valid"; notAfter: number }
   /** `notAfter` en segundos desde la época, como lo da el backend. */
   | { kind: "expired"; notAfter: number }
   /** `notBefore` en segundos desde la época. */
@@ -35,12 +36,16 @@ export type CertificateStatus =
 /**
  * De qué clase es el almacén de donde salió el certificado.
  *
+ * `installed` es el `.p12` que se metió en rFirma desde Preferencias (ID-192):
+ * es la única clase que se puede **quitar**, y por eso la lista de esa pantalla
+ * se queda exactamente con ella (ID-198).
+ *
  * Cruza la frontera como **clase en inglés** y nunca como texto ya escrito ni
  * como ruta: el rótulo lo pone el catálogo de esta ventana, igual que hace con
  * la `situation` de un fallo. Un nombre compuesto en Rust se saltaría los
  * catálogos y saldría en castellano en la versión en inglés.
  */
-export type CertificateStoreClass = "card" | "firefox" | "chrome" | "nssdb";
+export type CertificateStoreClass = "card" | "firefox" | "chrome" | "nssdb" | "installed";
 
 /** Un certificado elegible, con lo justo para pintarlo y para firmar con él. */
 export interface Certificate {
@@ -146,6 +151,18 @@ export function groupCertificates(certificates: readonly Certificate[]): Certifi
 export interface CertificateStore {
   /** Los certificados que hay ahora mismo en los tokens conectados. */
   list(): Promise<readonly Certificate[]>;
+  /**
+   * Mete un `.p12` en rFirma y responde si quedó instalado alguno.
+   *
+   * **Quien abre el selector de ficheros es el backend**, igual que con la
+   * rúbrica y con el destino (ID-63), así que la contraseña del fichero viaja
+   * antes de que exista fichero elegido. `false` es haber cerrado el selector
+   * sin elegir nada, que no es un fallo: deja la lista como estaba. Rechaza
+   * cuando el fichero no se puede abrir o cuando su clave no es RSA (ID-197).
+   */
+  install(password: string): Promise<boolean>;
+  /** Quita un `.p12` instalado, por el asa de su fila. */
+  remove(id: string): Promise<void>;
 }
 
 /**
@@ -156,5 +173,25 @@ export interface CertificateStore {
  * certificado» de la ficha.
  */
 export function emptyCertificateStore(): CertificateStore {
-  return { list: async () => [] };
+  return {
+    list: async () => [],
+    install: async () => false,
+    remove: async () => {},
+  };
+}
+
+/**
+ * Los que se instalaron en rFirma desde un `.p12`, que son los únicos que
+ * Preferencias enseña y los únicos que se pueden quitar (ID-198).
+ *
+ * El orden es el mismo del desplegable —alfabético por titular— para que la
+ * misma persona salga en el mismo sitio en las dos pantallas, y **los
+ * caducados no se caen**: que desaparezca no le explica nada a quien lo instaló.
+ */
+export function installedCertificates(
+  certificates: readonly Certificate[],
+): readonly Certificate[] {
+  return certificates
+    .filter((certificate) => certificate.store === "installed")
+    .sort(byHolderThenStore);
 }

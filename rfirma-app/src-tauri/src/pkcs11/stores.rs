@@ -69,6 +69,14 @@ pub enum StoreClass {
     /// Otro almacén NSS: un perfil fuera de sitio, o el que se apunte a mano.
     /// No se disfraza de Firefox ni de Chrome, porque no se sabe de quién es.
     Nssdb,
+    /// Un `.p12` instalado en rfirma (ID-192): el almacén que escribió
+    /// [`crate::app::certificates::install_pkcs12`].
+    ///
+    /// No se deduce del `configdir` como las otras tres, sino de estar **bajo
+    /// el directorio de instalados**, así que sólo la sabe decir
+    /// [`Store::class_under`]. Es la clase que separa la lista de Preferencias
+    /// —donde se quita— de los certificados que rfirma sólo lee (ID-198).
+    Installed,
 }
 
 /// Un almacén de certificados: el módulo que lo sirve y, si hace falta, **qué**
@@ -141,6 +149,21 @@ impl Store {
     /// Firefox (legado o XDG, ID-199) ni de Chrome se queda en
     /// [`StoreClass::Nssdb`] en vez de que se le atribuya un dueño que no se
     /// conoce.
+    /// De qué clase es **sabiendo dónde viven los `.p12` instalados**.
+    ///
+    /// Es [`Store::class`] más la única clase que no se puede leer del
+    /// `configdir`: un almacén de `installed_dir` es NSS igual que el perfil de
+    /// un navegador, y sin este dato saldría en la ventana como
+    /// [`StoreClass::Nssdb`], indistinguible de `~/.pki/nssdb`. La ruta entra,
+    /// pero no sale: lo que cruza sigue siendo la clase (ADR-0011).
+    pub fn class_under(&self, installed_dir: &Path) -> StoreClass {
+        if self.installed_directory_under(installed_dir).is_some() {
+            StoreClass::Installed
+        } else {
+            self.class()
+        }
+    }
+
     pub fn class(&self) -> StoreClass {
         let Some(profile) = self.profile() else {
             return StoreClass::Card;
@@ -440,6 +463,30 @@ mod tests {
         assert_eq!(
             stores,
             vec![PathBuf::from("/hay/uno.so"), PathBuf::from("/hay/otro.so")]
+        );
+    }
+
+    /// **Grada A.** Un `.p12` instalado y el `~/.pki/nssdb` del usuario son el
+    /// mismo almacén NSS visto desde el `configdir`: lo único que los separa es
+    /// estar bajo el directorio de instalados, y de ahí sale la clase que la
+    /// lista de Preferencias necesita para saber qué puede quitar (ID-198).
+    #[test]
+    fn a_store_under_the_installed_directory_is_its_own_class() {
+        let home = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+        let installed = home.path().join("certificates");
+        let mine = installed.join("2a01");
+        std::fs::create_dir_all(&mine).expect("deberia poder crearse el almacen");
+        std::fs::write(mine.join("cert9.db"), b"").expect("deberia poder escribirse cert9.db");
+        let elsewhere = home.path().join(".pki/nssdb");
+        std::fs::create_dir_all(&elsewhere).expect("deberia poder crearse el perfil");
+
+        assert_eq!(
+            Store::nss("/usr/lib/libsoftokn3.so", &mine).class_under(&installed),
+            StoreClass::Installed
+        );
+        assert_eq!(
+            Store::nss("/usr/lib/libsoftokn3.so", &elsewhere).class_under(&installed),
+            StoreClass::Chrome
         );
     }
 

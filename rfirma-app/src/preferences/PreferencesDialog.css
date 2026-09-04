@@ -162,3 +162,79 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Certificados en fichero: el rótulo de la sección y «Añadir…» comparten
+   renglón, con el botón pegado a la derecha (docs/design/preferencias.md). El
+   resto de secciones abren con el rótulo solo, y esta fila no les cambia nada
+   porque el hueco de la acción queda vacío. */
+.preferences__heading-row {
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.preferences__add-certificate {
+  flex: none;
+}
+
+/* «Todavía no has instalado ninguno» es un recuadro punteado, y no lleva
+   instrucciones dentro: el botón «Añadir…» ya está encima. */
+.preferences__certificates-empty {
+  padding: var(--rf-space-md);
+  border: 1px dashed var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  color: var(--rf-text-muted);
+  text-align: center;
+}
+
+.preferences__certificates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preferences__certificate {
+  align-items: center;
+  gap: var(--rf-space-sm);
+  padding: var(--rf-space-xs) 0;
+}
+
+/* El titular arriba y el renglón de `DNI · emisor · caduca el …` debajo. Lo
+   que identifica la fila es el certificado, no el fichero: del `.p12` no se
+   pinta ni la ruta (ID-196). */
+.preferences__certificate-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+.preferences__certificate-holder {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+}
+
+.preferences__remove-certificate {
+  flex: none;
+}
+
+/* La contraseña del `.p12`, en el mismo `.rf-dialog` de 420 px del diálogo del
+   secreto: es el otro modal que se pone delante de esta pantalla. */
+.preferences__password {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+  width: 420px;
+  max-width: 100%;
+}
+
+.preferences__password form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-md);
+}

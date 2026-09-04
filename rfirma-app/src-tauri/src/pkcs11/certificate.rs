@@ -147,8 +147,10 @@ fn agree<T: PartialEq + ?Sized>(one: Option<&T>, other: Option<&T>) -> bool {
 /// En qué estado está el certificado, decidido **antes** de pedir el PIN.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CertificateStatus {
-    /// En vigor, hasta donde se puede saber sin red.
-    Valid,
+    /// En vigor, hasta donde se puede saber sin red. La fecha en que deja de
+    /// estarlo va en segundos desde la época: es lo que la lista de
+    /// Preferencias pinta en la fila de cada `.p12` instalado.
+    Valid { not_after: u64 },
     /// Ya caducó. La fecha va en segundos desde la época.
     Expired { not_after: u64 },
     /// Todavía no ha entrado en vigor.
@@ -168,7 +170,7 @@ impl CertificateStatus {
     /// Si se puede firmar con él. Lo mira el recorrido de firma antes de abrir
     /// el diálogo del PIN.
     pub fn is_usable(&self) -> bool {
-        matches!(self, Self::Valid)
+        matches!(self, Self::Valid { .. })
     }
 }
 
@@ -249,7 +251,9 @@ impl TokenCertificate {
                 not_before: not_before.as_secs(),
             }
         } else {
-            CertificateStatus::Valid
+            CertificateStatus::Valid {
+                not_after: not_after.as_secs(),
+            }
         }
     }
 }

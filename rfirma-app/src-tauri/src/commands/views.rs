@@ -34,7 +34,10 @@ pub use super::failure::Failure;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum StatusView {
-    Valid,
+    #[serde(rename_all = "camelCase")]
+    Valid {
+        not_after: u64,
+    },
     #[serde(rename_all = "camelCase")]
     Expired {
         not_after: u64,
@@ -54,7 +57,7 @@ pub enum StatusView {
 impl From<CertificateStatus> for StatusView {
     fn from(status: CertificateStatus) -> Self {
         match status {
-            CertificateStatus::Valid => Self::Valid,
+            CertificateStatus::Valid { not_after } => Self::Valid { not_after },
             CertificateStatus::Expired { not_after } => Self::Expired { not_after },
             CertificateStatus::NotYetValid { not_before } => Self::NotYetValid { not_before },
             CertificateStatus::Revoked { reason } => Self::Revoked { reason },
@@ -108,6 +111,7 @@ pub fn store_name(class: StoreClass) -> &'static str {
         StoreClass::Firefox => "firefox",
         StoreClass::Chrome => "chrome",
         StoreClass::Nssdb => "nssdb",
+        StoreClass::Installed => "installed",
     }
 }
 
@@ -408,7 +412,9 @@ mod tests {
             id_number: "IDCES-00000000T".to_owned(),
             issuer: "FNMT-RCM".to_owned(),
             store: store_name(StoreClass::Firefox).to_owned(),
-            status: StatusView::Valid,
+            status: StatusView::Valid {
+                not_after: 1_900_000_000,
+            },
             remembered: false,
         };
         let json = serde_json::to_string(&view).expect("serializa");
@@ -428,9 +434,10 @@ mod tests {
             store_name(StoreClass::Firefox),
             store_name(StoreClass::Chrome),
             store_name(StoreClass::Nssdb),
+            store_name(StoreClass::Installed),
         ];
 
-        assert_eq!(names, ["card", "firefox", "chrome", "nssdb"]);
+        assert_eq!(names, ["card", "firefox", "chrome", "nssdb", "installed"]);
         for name in names {
             assert!(!name.contains('/'), "«{name}» parece una ruta");
             assert!(
