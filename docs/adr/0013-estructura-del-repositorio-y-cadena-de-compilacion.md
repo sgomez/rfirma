@@ -135,13 +135,15 @@ Lo que se configura, medido sobre los fuentes de `tauri-bundler` 2.9.4 en el
   (`/usr/lib/rfirma/librfirma_crypto.so`) y el origen relativo a `src-tauri/`. **No** por
   `bundle.resources`, que llega al mismo sitio sólo por la casualidad de que `productName`
   sea `rfirma`: la ruta la decide el ADR-0004, no `resource_dir()`.
-- **Las dependencias van como `recommends`, y el trío viaja junto**: `opensc-pkcs11`,
-  `libpcsclite1` y `pcscd` en Debian y Ubuntu; `opensc-libs`, `pcsc-lite-libs` y `pcsc-lite`
-  en Fedora. Débiles porque **rfirma firma sin OpenSC** —quien tenga el certificado en
-  Firefox, en `~/.pki/nssdb` o en un `.p12` no necesita ni el módulo ni el demonio— y apt y
-  dnf las instalan por omisión igual. **Declarar `opensc-pkcs11` sin `libpcsclite1` está
-  prohibido**: OpenSC lo abre con `dlopen` y su ausencia da **cero ranuras con `CKR_OK`**,
-  indistinguible de «no hay lector» ([#226](https://github.com/sgomez/rfirma/issues/226)).
+- **No se declara ninguna dependencia de tarjeta.** Hasta el
+  [#256](https://github.com/sgomez/rfirma/issues/256) el trío `opensc-pkcs11`,
+  `libpcsclite1` y `pcscd` (Debian y Ubuntu) o `opensc-libs`, `pcsc-lite-libs` y
+  `pcsc-lite` (Fedora) viajaba como `recommends`. Se retiró junto con la fontanería de
+  tarjeta del flatpak: la fontanería nunca se había publicado, tarjetas y DNIe no están
+  soportados en la v0.4, y `CANDIDATE_MODULES` (`pkcs11/stores.rs`) ya no lleva las rutas
+  de OpenSC del anfitrión, así que recomendar el paquete no serviría de nada. **rfirma
+  firma sin OpenSC** —quien tenga el certificado en Firefox, en `~/.pki/nssdb` o en un
+  `.p12` no necesita ni el módulo ni el demonio—.
   `libwebkit2gtk-4.1-0` y `libgtk-3-0` **no se declaran**: los inyecta el bundler solo.
 - **`compression: zstd` nivel 19 en el `.rpm`.** El `.deb` es gzip-6 y no es configurable;
   con 27,7 MB de `.so` dentro no hay razón para dejar en su valor de fábrica el único ajuste

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Verificacion reproducible del flatpak. Construye, instala y comprueba dentro
-# del sandbox: que el modulo PKCS#11 que empaqueta el propio flatpak carga, y
-# que la ventana arranca y sigue viva. La invariante del ADR-0012 —un solo
-# librfirma_crypto.so, libawt.so en ninguna parte— ya NO vive aqui: se comprueba
-# en packaging/verifica-contenido.sh, independiente del formato (ID-144).
+# del sandbox: que la ventana arranca y sigue viva. La invariante del ADR-0012
+# —un solo librfirma_crypto.so, libawt.so en ninguna parte— ya NO vive aqui: se
+# comprueba en packaging/verifica-contenido.sh, independiente del formato
+# (ID-144).
 #
 # QUE SE MIDE AQUI Y QUE NO.
 #
@@ -19,11 +19,11 @@
 # dentro del sandbox. No es una preferencia; dentro no se puede hoy, por tres
 # razones medidas:
 #
-#   1. NO HAY TOKEN. La fase 2 firma con PKCS#11, y el bundle empaqueta OpenSC
-#      para una tarjeta fisica (ID-40). El token de pruebas es SoftHSM, que no
-#      esta dentro y no puede entrar: montar el del anfitrion es apuntar
-#      LD_LIBRARY_PATH a librerias de otra glibc, que es exactamente lo que el
-#      ID-40 prohibe.
+#   1. NO HAY TOKEN. La fase 2 firma con PKCS#11, y el bundle no empaqueta
+#      ningun modulo PKCS#11 (tarjetas y DNIe no soportados en la v0.4, #256).
+#      El token de pruebas es SoftHSM, que vive en el anfitrion y no puede
+#      entrar: montarlo es apuntar LD_LIBRARY_PATH a librerias de otra glibc,
+#      que es exactamente lo que el ID-40 prohibe.
 #   2. NO HAY POPPLER. `pdfsig` y `pdftoppm` no estan ni en el bundle ni en
 #      org.gnome.Platform//50 (comprobado: `which pdfsig` no los encuentra), y
 #      son la puerta automatica de la TD-03.
@@ -37,15 +37,14 @@
 # romper "los permisos son los declarados y ninguno mas". Cerrar el hueco pide
 # un manifiesto de banco aparte, y eso es otra decision.
 #
-# Lo que SI se mide dentro del sandbox son los pasos 2, 3, 5 y 6: que el
-# modulo PKCS#11 que empaqueta el propio flatpak carga, que la ventana arranca
-# y sigue viva, que un documento entrado por el portal llega con sus bytes
-# intactos, y que el sandbox RECHAZA escribir en los almacenes NSS que el
-# manifiesto declara en solo lectura (#101, AC 3). El paso 5 no necesita el
+# Lo que SI se mide dentro del sandbox son los pasos 2, 4 y 5: que la ventana
+# arranca y sigue viva, que un documento entrado por el portal llega con sus
+# bytes intactos, y que el sandbox RECHAZA escribir en los almacenes NSS que
+# el manifiesto declara en solo lectura (#101, AC 3). El paso 4 no necesita el
 # WebView para comprobar el portal: usa `flatpak document-export`, la misma
 # via por la que el dialogo de abrir concede el permiso
 # (docs/research/flatpak-canal-unico.md, apartado 4), asi que no hace falta el
-# binario de prueba que el paso 4 SI necesita para el ciclo trifasico. Ver
+# binario de prueba que el paso 3 SI necesita para el ciclo trifasico. Ver
 # docs/research/flatpak-canal-unico.md.
 #
 # Uso: packaging/flatpak/verifica.sh
@@ -55,7 +54,7 @@
 #             la libreria nativa en la ruta canonica del ADR-0013
 #             (GRAALVM_HOME=CE 25; `just native`) y el frontend construido
 #             (`just build-ts`, que tauri-build lee de rfirma-app/dist).
-#             Para el paso 4, ademas: el token SoftHSM de la grada B
+#             Para el paso 3, ademas: el token SoftHSM de la grada B
 #             (`just token`) y poppler-utils (`pdfsig`, `pdftoppm`).
 set -uo pipefail
 
@@ -66,8 +65,8 @@ LAB=${LAB:-/tmp/rfirma-verifica}
 rm -rf "$LAB"; mkdir -p "$LAB"
 
 # El unico permiso extra del banco de pruebas es el laboratorio donde cae lo
-# que se inspecciona. En produccion NO se pasa ninguno: el modulo PKCS#11 lo
-# empaqueta el propio flatpak y los ficheros entran por portales.
+# que se inspecciona. En produccion NO se pasa ninguno: los ficheros entran
+# por portales.
 EXTRA=(--filesystem="$LAB")
 
 RAIZ_NATIVA="$RAIZ/rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so"
@@ -85,16 +84,7 @@ flatpak-builder --user --force-clean --install --repo="$LAB/repo" \
 echo "OK  ($(du -sh "$AQUI/build-dir/files" | cut -f1) instalados)"
 
 echo
-echo "### 2. el modulo PKCS#11 que empaqueta el flatpak"
-# El del anfitrion no carga aqui dentro (medido en #22): sus libopensc.so.13 y
-# libeac.so.3 no estan.
-flatpak run "${EXTRA[@]}" --command=sh "$APP" -c \
-    'ls -1 /app/lib/pkcs11/opensc-pkcs11.so && ls -1 /app/lib/libpcsclite.so.1' \
-    && echo "OK  modulo y cliente PC/SC presentes" \
-    || { echo "FALTA el modulo PKCS#11 o el cliente PC/SC"; exit 1; }
-
-echo
-echo "### 3. la ventana arranca (WebKitGTK del runtime)"
+echo "### 2. la ventana arranca (WebKitGTK del runtime)"
 # --log-session-bus NO es adorno: un proceso VIVO no es una ventana que se vea.
 # El v0.1 se entrego con la ventana pintando un error de DBus a pantalla
 # completa y este paso decia OK, porque solo miraba el pgrep. rfirma no escribe
@@ -123,7 +113,7 @@ fi
 echo "ninguna llamada al portal rechazada: OK"
 
 echo
-echo "### 4. el ciclo trifasico completo, contra la libreria DEL BUNDLE"
+echo "### 3. el ciclo trifasico completo, contra la libreria DEL BUNDLE"
 # Los bytes que se distribuyen, no los del arbol de construccion: se leen del
 # despliegue que acaba de instalar el paso 1. Si esto y `just test-native`
 # midiesen el mismo fichero, este paso no diria nada nuevo.
@@ -151,7 +141,7 @@ echo "          $(sha256sum "$LIB_BUNDLE/librfirma_crypto.so" | cut -c1-16)... \
 echo "OK  ciclo trifasico y pdfsig contra los bytes que se distribuyen"
 
 echo
-echo "### 5. el portal de documentos, dentro del sandbox"
+echo "### 4. el portal de documentos, dentro del sandbox"
 # DENTRO del sandbox: `flatpak run` hereda exactamente los mismos permisos
 # que el binario real, y `flatpak document-export` es la misma via por la que
 # el dialogo de abrir (Orden 7, commands/mod.rs) concede el permiso -contra la
@@ -202,7 +192,7 @@ echo "    -> el dia que los recientes persistan entre sesiones, reabrir por" \
      "el portal el mismo host path funcionara sin pedir permiso otra vez"
 
 echo
-echo "### 6. el sandbox no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
+echo "### 5. el sandbox no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
 # AC 3 del #101: "rfirma no puede escribir en el perfil de Firefox desde
 # dentro del sandbox, y hay constancia de haberlo comprobado". Esto NO es la
 # comprobacion que la TD del #95 deja como manual -esa depende de una maquina
@@ -266,12 +256,12 @@ else
 fi
 
 echo
-echo "### 7. bundle de un solo fichero"
+echo "### 6. bundle de un solo fichero"
 flatpak build-bundle "$LAB/repo" "$LAB/$APP.flatpak" "$APP" stable >/dev/null 2>&1 \
     && echo "$LAB/$APP.flatpak: $(du -h "$LAB/$APP.flatpak" | cut -f1)" \
     || { echo "build-bundle FALLO"; exit 1; }
 
 echo
-echo "### 8. la invariante del ADR-0012, sobre el bundle"
+echo "### 7. la invariante del ADR-0012, sobre el bundle"
 "$(dirname "$AQUI")/verifica-contenido.sh" "$LAB/$APP.flatpak" \
     || { echo "la puerta del contenido ha fallado"; exit 1; }

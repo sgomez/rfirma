@@ -21,20 +21,13 @@ use std::path::{Path, PathBuf};
 /// Los módulos que se buscan cuando nadie dice otra cosa, en orden.
 ///
 /// Se declaran por ruta absoluta y no se adivinan con `dlopen` a secas: cargar
-/// «el primer `opensc-pkcs11.so` del `LD_LIBRARY_PATH`» es dejar que el entorno
-/// decida con qué se firma.
+/// «el primero del `LD_LIBRARY_PATH`» es dejar que el entorno decida con qué
+/// se firma.
+///
+/// Tarjetas y DNIe no están soportados en la v0.4 (#256): la fontanería de
+/// OpenSC salió del flatpak y de esta lista, y lo que queda es SoftHSM, el
+/// token de pruebas.
 pub const CANDIDATE_MODULES: &[&str] = &[
-    // El que empaqueta el propio flatpak: los del anfitrión no cargan dentro
-    // del sandbox (`docs/research/flatpak-canal-unico.md`).
-    "/app/lib/pkcs11/opensc-pkcs11.so",
-    // Los del anfitrión, que es lo que hay debajo de `just dev`. OpenSC cubre
-    // el DNIe y las tarjetas corrientes; SoftHSM es el token de pruebas.
-    "/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so",
-    "/usr/lib/x86_64-linux-gnu/pkcs11/opensc-pkcs11.so",
-    "/usr/lib64/opensc-pkcs11.so",
-    "/usr/lib64/pkcs11/opensc-pkcs11.so",
-    "/usr/lib/opensc-pkcs11.so",
-    "/usr/lib/pkcs11/opensc-pkcs11.so",
     "/usr/lib/softhsm/libsofthsm2.so",
     "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so",
 ];
@@ -354,8 +347,8 @@ fn resolve_under(firefox: &Path, path: &str) -> PathBuf {
 
 /// Los candidatos que existen, sin repetir el mismo fichero dos veces.
 ///
-/// La deduplicación no es cosmética: la mayoría de distribuciones instalan
-/// `opensc-pkcs11.so` en un sitio y lo enlazan desde otro, y listar el mismo
+/// La deduplicación no es cosmética: la mayoría de distribuciones instalan un
+/// módulo PKCS#11 en un sitio y lo enlazan desde otro, y listar el mismo
 /// módulo dos veces enseñaría **cada certificado por duplicado** en el panel.
 /// Se compara por la ruta ya resuelta, que es lo que distingue dos ficheros de
 /// dos nombres del mismo.

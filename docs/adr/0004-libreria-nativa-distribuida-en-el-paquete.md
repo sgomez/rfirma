@@ -140,12 +140,12 @@ construida en un anfitrión `aarch64`, y arreglar la ruta multiarch clavada a
   construyó. Una puerta que no puedes reproducir en tu equipo es una puerta que un día se
   salta con `continue-on-error`.
 - **El sandbox es del flatpak, no de rfirma.** Todo lo que no expone hay que declararlo, y
-  eso alcanza a cosas que fuera son gratis: el módulo PKCS#11 lo empaqueta el propio
-  flatpak, y los documentos entran y salen por portales. En el `.deb` y el `.rpm` el
-  módulo PKCS#11 del sistema **se enciende solo** —`CANDIDATE_MODULES` ya lleva las rutas
-  del anfitrión, y el `/app/lib/pkcs11/opensc-pkcs11.so` que va primero en la lista
-  simplemente no está y se salta—, y el diálogo devuelve rutas de verdad
-  ([ADR-0011](0011-destino-del-documento-firmado.md)).
+  eso alcanza a cosas que fuera son gratis: los documentos entran y salen por portales, y
+  el diálogo devuelve rutas de verdad ([ADR-0011](0011-destino-del-documento-firmado.md)).
+  La fontanería de tarjeta —el cliente PC/SC y el módulo PKCS#11 de OpenSC— se retiró en
+  el [#256](https://github.com/sgomez/rfirma/issues/256): nunca se había publicado, y
+  tarjetas y DNIe no están soportados en la v0.4, ni en el flatpak ni en el `.deb`/`.rpm`.
+  `CANDIDATE_MODULES` solo lleva las rutas de SoftHSM, el token de pruebas.
 - **`--filesystem=home` queda cerrado por escrito**, y no por ancho: **no hace lo que
   hace falta**. El [#240](https://github.com/sgomez/rfirma/issues/240) midió que
   `GtkFileChooserNative` se enruta al portal en cuanto existe `/.flatpak-info`, sea cual
