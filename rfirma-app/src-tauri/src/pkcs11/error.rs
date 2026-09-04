@@ -15,8 +15,9 @@ use cryptoki::error::{Error, RvError};
 
 /// Situación que el usuario puede entender, y que el catálogo traduce.
 ///
-/// Cinco casos con nombre propio más el genérico: son los que el recorrido de
-/// firma sabe explicar y, en varios de ellos, sugerir qué hacer.
+/// Los casos con nombre propio más el genérico: son los que el recorrido de
+/// firma —y el de instalar un `.p12`— saben explicar y, en varios de ellos,
+/// sugerir qué hacer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
     /// El PIN no coincide con el del token. Quedan intentos.
@@ -31,6 +32,13 @@ pub enum Situation {
     ModuleNotFound,
     /// El token está, pero no tiene ningún objeto con esa etiqueta.
     CertificateNotFound,
+    /// El `.p12` que se quiere instalar no se ha podido abrir: la contraseña no
+    /// es la suya, o el fichero no es un PKCS#12 (ID-193).
+    Pkcs12Unreadable,
+    /// El certificado que trae el `.p12` no lleva una clave RSA, y el mecanismo
+    /// de firma es uno solo, RSA-SHA256 (ID-16, ID-197). Se dice **al
+    /// instalar**, no al firmar.
+    KeyNotRsa,
     /// Cualquier otra cosa. Enseña el código crudo y nada más.
     Unknown,
 }

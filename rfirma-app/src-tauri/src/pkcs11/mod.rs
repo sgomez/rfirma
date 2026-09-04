@@ -22,6 +22,7 @@
 
 pub mod certificate;
 pub mod error;
+pub mod nss;
 pub mod secret;
 pub mod stores;
 

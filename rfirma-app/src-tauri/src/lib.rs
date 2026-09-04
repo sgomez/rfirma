@@ -68,6 +68,10 @@ pub fn run() {
         // Se copia, no se referencia (ID-33): el almacén vive en una ruta fija
         // del directorio de datos, resuelta aquí una sola vez.
         rubric: rubric::RubricStore::at(paths.rubric_path()),
+        // Los `.p12` instalados viven en el directorio de datos y se releen en
+        // cada listado, no aquí: instalar y quitar son gestos de esta misma
+        // sesión (ID-192).
+        installed_certificates: paths.installed_certificates_dir(),
     };
 
     tauri::Builder::default()
@@ -224,6 +228,8 @@ pub fn run() {
             commands::pades_lower_left,
             commands::read_invocation,
             commands::check_for_new_version,
+            commands::install_certificate,
+            commands::remove_certificate,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");

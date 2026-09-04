@@ -76,6 +76,10 @@ pub struct Environment {
     pub memory: Memory,
     /// El almacén de la rúbrica: se copia, no se referencia (ID-33).
     pub rubric: crate::rubric::RubricStore,
+    /// Donde viven los almacenes NSS de los `.p12` instalados (ID-192). Lo
+    /// resuelve [`crate::paths::Paths::installed_certificates_dir`] al
+    /// arrancar.
+    pub installed_certificates: std::path::PathBuf,
 }
 
 impl Environment {
@@ -94,6 +98,24 @@ impl Environment {
     /// mismos.
     pub fn configuration(&self) -> Configuration {
         lock(&self.configuration).clone()
+    }
+
+    /// Los almacenes de **ahora mismo**: los que se resolvieron al arrancar más
+    /// los `.p12` instalados, que se leen del disco en cada llamada.
+    ///
+    /// Los instalados no pueden vivir en [`Self::stores`] porque cambian con la
+    /// sesión abierta: instalar uno y quitarlo son dos gestos de Preferencias, y
+    /// una lista fijada al arrancar dejaría el recién instalado sin listar hasta
+    /// el siguiente arranque (ID-192).
+    pub fn all_stores(&self) -> Vec<crate::pkcs11::Store> {
+        let mut stores = self.stores.clone();
+        if let Some(softoken) = crate::pkcs11::stores::softoken() {
+            stores.extend(crate::pkcs11::stores::installed_stores(
+                &softoken,
+                &self.installed_certificates,
+            ));
+        }
+        stores
     }
 }
 
@@ -155,6 +177,7 @@ mod tests {
             }),
             memory: a_memory(home.path()),
             rubric: crate::rubric::RubricStore::at(home.path().join("rubric.jpg")),
+            installed_certificates: home.path().join("certificates"),
         };
 
         let copy = environment.configuration();

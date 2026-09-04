@@ -64,6 +64,8 @@ pub fn situation_name(situation: Situation) -> &'static str {
         Situation::ExpiredSession => "expiredSession",
         Situation::ModuleNotFound => "moduleNotFound",
         Situation::CertificateNotFound => "certificateNotFound",
+        Situation::Pkcs12Unreadable => "pkcs12Unreadable",
+        Situation::KeyNotRsa => "keyNotRsa",
         Situation::Unknown => "unknown",
     }
 }
@@ -183,6 +185,8 @@ mod tests {
             Situation::ExpiredSession,
             Situation::ModuleNotFound,
             Situation::CertificateNotFound,
+            Situation::Pkcs12Unreadable,
+            Situation::KeyNotRsa,
             Situation::Unknown,
         ];
         for situation in all {

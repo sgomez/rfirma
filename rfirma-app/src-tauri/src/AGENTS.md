@@ -34,20 +34,20 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 230 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
+| `lib.rs` | 236 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 645 | **Las veintitrés órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/mod.rs` | 690 | **Las veinticinco órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 479 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
-| `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
+| `commands/failure.rs` | 216 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
 | `commands/guards.rs` | 657 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
-| `app/mod.rs` | 192 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
+| `app/mod.rs` | 215 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
-| `app/certificates.rs` | 578 | Qué certificados hay, cuál eligió la ventana, cuál se recordó y qué estampa el recuadro. |
+| `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
 | `app/signing.rs` | 718 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 897 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/invocation.rs` | 232 | La invocación desde fuera, `rfirma documento.pdf`: qué abre y qué hace la segunda (ID-157…ID-160). |
@@ -59,7 +59,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/window.rs` | 158 | El tamaño de la ventana entre sesiones, y si estaba maximizada (ID-72, ID-73). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
-| `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
+| `paths.rs` | 550 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
 | `dropped.rs` | 301 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157). |
 | **`memory/`** | | Lo que rFirma recuerda: siete memorias en dos mitades, una exenta, y la caché de la comprobación de versión, que no es una memoria del usuario (ADR-0010, ID-180). |
 | `memory/mod.rs` | 611 | El reparto de las siete memorias. Léelo antes que sus hermanos. |
@@ -81,10 +81,11 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `signing/session_seal.rs` | 152 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). |
 | `signing/language.rs` | 105 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). |
 | **`pkcs11/`** | | La única parte que habla con el token. |
-| `pkcs11/mod.rs` | 572 | La capa PKCS#11. |
-| `pkcs11/stores.rs` | 553 | Dónde se buscan los certificados. |
+| `pkcs11/mod.rs` | 718 | La capa PKCS#11. |
+| `pkcs11/stores.rs` | 675 | Dónde se buscan los certificados, incluidos los `.p12` instalados (ID-192). |
 | `pkcs11/certificate.rs` | 411 | El certificado tal y como sale del token. |
-| `pkcs11/error.rs` | 233 | Situaciones del token (ID-29, ADR-0009). |
+| `pkcs11/error.rs` | 241 | Situaciones del token (ID-29, ADR-0009). |
+| `pkcs11/nss.rs` | 402 | Cómo entra un `.p12` en un almacén NSS propio: el descodificador de PKCS#12 de `libsmime3` por FFI, sin criptografía propia y dentro del turno del token (ID-192, ID-193, ID-194). |
 | `pkcs11/secret.rs` | 194 | Cómo se le pide el secreto a cada almacén: sin sesión, por pantalla o en el teclado del lector, que se rechaza (ID-189, ID-191). |
 | **`destination/`** | | Dónde cae el firmado y por dónde entra el original (ADR-0011). |
 | `destination/mod.rs` | 353 | El reparto, y `DestinationFolder`. **No importa `memory`** (ID-83). |

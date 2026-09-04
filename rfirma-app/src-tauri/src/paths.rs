@@ -36,6 +36,8 @@ const STATE_FILE: &str = "state.json";
 /// La rúbrica se guarda ya normalizada a JPEG (ADR-0012), y la extensión lo
 /// dice: lo que hay ahí dentro nunca es el PNG que eligió el usuario.
 const RUBRIC_FILE: &str = "rubric.jpg";
+/// El directorio que reúne un almacén NSS por cada `.p12` instalado (ID-192).
+const INSTALLED_CERTIFICATES_DIRECTORY: &str = "certificates";
 
 /// El sistema operativo, reducido a lo único que cambia: dónde van las tres
 /// rutas.
@@ -187,6 +189,18 @@ impl Paths {
     /// (ID-33): quien la escribe es [`crate::rubric::RubricStore`].
     pub fn rubric_path(&self) -> PathBuf {
         self.data_dir.join(RUBRIC_FILE)
+    }
+
+    /// Donde viven los almacenes NSS de los `.p12` instalados, uno por
+    /// directorio (ID-192).
+    ///
+    /// Va en el directorio de **datos** y no en el de estado por lo mismo que
+    /// la rúbrica: es material que el usuario aportó y que la aplicación no
+    /// puede volver a fabricar. Del fichero original no queda nada —ni la ruta
+    /// ni una copia—, solo el `cert9.db` y el `key4.db` que NSS escribe dentro
+    /// (ID-196).
+    pub fn installed_certificates_dir(&self) -> PathBuf {
+        self.data_dir.join(INSTALLED_CERTIFICATES_DIRECTORY)
     }
 }
 

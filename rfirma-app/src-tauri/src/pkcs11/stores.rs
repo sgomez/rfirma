@@ -163,6 +163,22 @@ impl Store {
         let inside = after.split_once('\'')?.0;
         Some(inside.strip_prefix("sql:").unwrap_or(inside))
     }
+
+    /// El directorio de este almacén **cuando es el de un `.p12` instalado**
+    /// bajo `installed_dir`, y `None` en cualquier otro caso (ID-192).
+    ///
+    /// Es lo que hace que quitar un certificado instalado no pueda borrar el
+    /// perfil de Firefox de nadie: la comparación es por el **padre** del
+    /// directorio, y no por prefijo de cadena, porque un `configdir` con `..`
+    /// dentro llevaría a otro sitio compartiendo prefijo.
+    ///
+    /// La ruta sale de aquí, pero no sale del backend: quien la recibe es un
+    /// caso de uso de [`crate::app`], nunca la ventana (ADR-0011).
+    pub fn installed_directory_under(&self, installed_dir: &Path) -> Option<PathBuf> {
+        let directory = PathBuf::from(self.profile()?);
+        (directory.parent() == Some(installed_dir) && directory.join("cert9.db").is_file())
+            .then_some(directory)
+    }
 }
 
 impl From<&Path> for Store {
@@ -214,12 +230,7 @@ pub fn from_environment() -> Vec<Store> {
 
     // El softoken se busca una vez y sirve para todos los perfiles: lo que
     // cambia de un perfil a otro son los init args, no el módulo.
-    if let (Some(home), Some(softoken)) = (
-        home,
-        present_among(CANDIDATE_SOFTOKENS, |path| path.is_file())
-            .into_iter()
-            .next(),
-    ) {
+    if let (Some(home), Some(softoken)) = (home, softoken()) {
         stores.extend(
             nss_profiles(&home)
                 .into_iter()
@@ -228,6 +239,47 @@ pub fn from_environment() -> Vec<Store> {
     }
 
     stores
+}
+
+/// El softoken de NSS de esta máquina, que es el módulo que sirve **todos** los
+/// almacenes NSS: los perfiles de los navegadores y los `.p12` instalados.
+///
+/// Se busca una vez y vale para todos: lo que cambia de un almacén a otro son
+/// los init args, no el módulo.
+pub fn softoken() -> Option<PathBuf> {
+    present_among(CANDIDATE_SOFTOKENS, |path| path.is_file())
+        .into_iter()
+        .next()
+}
+
+/// Los almacenes NSS de los `.p12` instalados que hay bajo `directory`, en
+/// orden alfabético (ID-192).
+///
+/// Cada `.p12` instalado es **un directorio suyo** con su `cert9.db` dentro, y
+/// se lee exactamente como el perfil de un Firefox: mismo softoken, mismos init
+/// args, mismo `flags=readOnly`. Un directorio sin `cert9.db` se salta en vez
+/// de fallar, que es lo mismo que se hace con un perfil declarado y ausente:
+/// media instalación interrumpida no puede dejar sin listar a los demás.
+///
+/// El orden alfabético es el del nombre del directorio, que no dice nada de
+/// nadie —lo acuña [`crate::app::certificates`] al instalar—, y está solo para
+/// que la lista no baile entre arranques.
+pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        // Todavía no se ha instalado ninguno: no hay directorio, y eso es el
+        // primer arranque, no un fallo.
+        return Vec::new();
+    };
+    let mut installed: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.join("cert9.db").is_file())
+        .collect();
+    installed.sort();
+    installed
+        .iter()
+        .map(|profile| Store::nss(softoken, profile))
+        .collect()
 }
 
 /// Los pares (directorio de configuración, directorio de datos) de Firefox
