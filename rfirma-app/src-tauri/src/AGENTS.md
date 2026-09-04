@@ -20,9 +20,10 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (926), `app/documents.rs` (779), `app/signing.rs` (691)
-  y `app/recents.rs` (603). El mayor de `commands/` es `commands/mod.rs` (589);
-  ninguno de sus hermanos pasa de 406, y lo que los hace crecer es **prosa**:
+  `signing/placement.rs` (926), `app/documents.rs` (885), `app/signing.rs` (691)
+  y `commands/guards.rs` (645). Dentro de `commands/` el mayor es justo esa
+  guarda, y detrás va `commands/mod.rs` (589); lo que los hace crecer es
+  **prosa**:
   los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
   es un cuerpo, lo que ha entrado casi siempre es una decisión, y una decisión
   va en `app/`.
@@ -39,21 +40,21 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 589 | **Las veintiuna órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 366 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/views.rs` | 410 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 206 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
-| `commands/guards.rs` | 406 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
+| `commands/guards.rs` | 645 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 190 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 578 | Qué certificados hay, cuál eligió la ventana, cuál se recordó y qué estampa el recuadro. |
 | `app/signing.rs` | 691 | El recorrido de la firma en tres pasos y la sesión a medias. |
-| `app/documents.rs` | 779 | Por dónde entra el documento y dónde cae el firmado. |
+| `app/documents.rs` | 885 | Por dónde entra el documento y dónde cae el firmado. |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
-| `app/configuration.rs` | 344 | Los ajustes, del disco a la ventana y de vuelta. |
+| `app/configuration.rs` | 367 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/window.rs` | 158 | El tamaño de la ventana entre sesiones, y si estaba maximizada (ID-72, ID-73). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `paths.rs` | 536 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
@@ -85,12 +86,12 @@ misma PR que lo crea**, o el PR sale en rojo.
 | **`destination/`** | | Dónde cae el firmado y por dónde entra el original (ADR-0011). |
 | `destination/mod.rs` | 353 | El reparto, y `DestinationFolder`. **No importa `memory`** (ID-83). |
 | `destination/naming.rs` | 190 | Cómo se llama el firmado y qué pasa si el nombre existe. |
-| `destination/portal.rs` | 207 | El documento tal y como entra por el portal (ID-37). |
+| `destination/portal.rs` | 268 | El documento tal y como entra por el portal (ID-37). |
 | `destination/error.rs` | 114 | Situaciones del destino (ADR-0009). |
 | **`rubric/`** | | De lo que aporta el usuario al JPEG que acepta el puente (ADR-0012). |
 | `rubric/mod.rs` | 33 | El reparto. |
 | `rubric/normalize.rs` | 586 | La normalización. |
-| `rubric/store.rs` | 289 | Se copia, no se referencia (ID-33). |
+| `rubric/store.rs` | 314 | Se copia, no se referencia (ID-33). |
 | `rubric/error.rs` | 92 | Situaciones de la rúbrica (ADR-0009). |
 
 ## La regla de la dirección
@@ -121,8 +122,8 @@ en el código, no por que implemente el rasgo. Un `impl Serialize` a mano en un
 tipo de cruce se queda fuera del contrato **y** fuera de la guarda sin que nada
 se ponga rojo; si necesitas uno, publícalo por otra vía.
 
-Las cuatro guardas de conjunto están juntas en `commands/guards.rs`, y solo dos
-piden algo de ti:
+Las guardas de conjunto están juntas en `commands/guards.rs`, y tres piden algo
+de ti:
 
 - **La lista cerrada de órdenes** hay que renumerarla. El nombre de la prueba
   **ya no lleva el número dentro** (TD-11): el conteo vive en la aserción de
@@ -131,8 +132,13 @@ piden algo de ti:
 - **La lista de ficheros del módulo** (`SOURCES`) hay que ampliarla si creas un
   fichero nuevo dentro de `commands/`; una guarda propia se pone roja si se te
   olvida.
-- La **guarda de rutas** ya no hay que tocarla: descubre sola todo tipo que
-  derive `Serialize`, esté en el fichero de `commands/` que esté (ID-84).
+- **La guarda de rutas** (`the_portal_path_never_crosses_to_the_window`)
+  descubre sola todo tipo que derive `Serialize`, esté en el fichero de
+  `commands/` que esté (ID-84), pero **sí** hay que decidir dónde entra cada
+  uno: o se construye desde su caso de uso en `crossings_from_a_portal_document`
+  —lo normal, si detrás hay un documento—, o se declara en
+  `OUTPUTS_WITH_NO_DOCUMENT_BEHIND`. Su guarda hermana se pone roja mientras no
+  esté en una de las dos.
 - La del **hilo del portal** tampoco: un comando que llame a un `blocking_*` de
   un plugin necesita `#[tauri::command(async)]`, y ella lo vigila.
 

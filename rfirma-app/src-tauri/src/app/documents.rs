@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use crate::commands::views::{
     DestinationView, DroppedDocumentView, Failure, OpenedDocumentView, SignedDocumentView,
 };
-use crate::destination::{CheckedFolder, PortalDocument};
+use crate::destination::{CheckedFolder, DestinationFolder, PortalDocument};
 use crate::memory::{Configuration, Memory, OpenedDocuments};
 use crate::signing::Refusal;
 
@@ -165,10 +165,16 @@ fn file_name_of(landing: &Path) -> Option<String> {
 fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedDocumentView {
     let name = document.name().to_owned();
     let modified = modified_seconds(&document);
+    // `to_str` y no `to_string_lossy`: una ruta que no sea UTF-8 cruzaría con
+    // caracteres de reemplazo dentro y se pintaría como «la ruta real», que es
+    // justo la mentira que el ID-185 evita. Sin ruta legible, `None`, que es lo
+    // que el campo ya sabe decir.
+    let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
     OpenedDocumentView {
         id: opened.remember(document),
         name,
         modified,
+        path,
     }
 }
 
@@ -268,13 +274,44 @@ pub fn remember_the_folder(
 /// sandbox que para entonces ni existe.
 ///
 /// Vive aquí y no en [`PortalDocument`] para no darle a ese tipo un método que
-/// devuelva un directorio: que no lo tenga es lo que impide que «guardar junto
-/// al original» se cuele por la puerta de atrás (ADR-0011).
+/// devuelva un directorio: el sitio donde cae lo firmado lo decide
+/// [`CheckedFolder`] y nadie más, y esta carpeta es un dato sobre el original,
+/// no un destino (ADR-0011).
 pub fn folder_it_came_from(document: &PortalDocument) -> Option<&Path> {
     if document.came_through_the_portal() {
         return None;
     }
     document.reading_path().parent()
+}
+
+/// **Caso de uso.** Qué significa «junto al original» para **este** documento,
+/// o `None` si no significa nada (ID-183).
+///
+/// La capacidad es del documento y no del entorno, así que aquí no se
+/// pregunta por el canal ni hay ningún enum que lo clasifique: un documento
+/// sin identificador de portal *es* un documento de ruta directa, y «junto al
+/// original» es la carpeta en la que está. Uno que entró por el portal
+/// contesta que no hay carpeta original, y eso vale igual en un `.deb` —que
+/// también puede recibir una ruta del portal— que dentro del flatpak.
+///
+/// Si Preferencias llega a ofrecer la opción es otra pregunta, la única que se
+/// le hace al entorno: [`crate::destination::the_original_folder_can_be_offered`].
+pub fn next_to_the_original(document: &PortalDocument) -> Option<DestinationFolder> {
+    folder_it_came_from(document).map(DestinationFolder::at)
+}
+
+/// **Caso de uso.** La ruta real del documento, cuando se conoce (ID-185).
+///
+/// Fuera del sandbox se enseña, como hace cualquier aplicación de escritorio:
+/// el argumento de privacidad no se sostiene —el gestor de ficheros la enseña
+/// todo el día— y lo que sí se sostiene es la corrección. Bajo el portal la
+/// ruta **no se conoce**, así que lo que sale es `None` y no el enlace de
+/// `/run/user/…`, que sería devolver una mentira.
+pub fn real_path_of(document: &PortalDocument) -> Option<&Path> {
+    if document.came_through_the_portal() {
+        return None;
+    }
+    Some(document.reading_path())
 }
 
 /// El documento que se abrió con ese identificador.
@@ -303,8 +340,8 @@ fn modified_seconds(document: &PortalDocument) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::{
-        bytes_of, deliver, dropped_document, folder_it_came_from, note_opened, remember_the_folder,
-        starting_folder, told_as, where_it_lands,
+        bytes_of, deliver, dropped_document, folder_it_came_from, next_to_the_original,
+        note_opened, real_path_of, remember_the_folder, starting_folder, told_as, where_it_lands,
     };
     use crate::app::fixtures::a_memory;
     use crate::destination::{CheckedFolder, PortalDocument};
@@ -526,6 +563,74 @@ mod tests {
         let document = PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf");
 
         assert_eq!(folder_it_came_from(&document), None);
+    }
+
+    /// «Junto al original» es la carpeta **de ese documento**, y la contesta el
+    /// documento: no hay ningún enum de acceso a ficheros que clasifique el
+    /// entorno primero (ID-183).
+    #[test]
+    fn a_document_with_a_direct_path_offers_the_folder_it_is_in() {
+        let document = PortalDocument::opened("/home/quien/Contratos/contrato.pdf");
+
+        let folder = next_to_the_original(&document).expect("hay carpeta original");
+
+        assert_eq!(folder.path(), std::path::Path::new("/home/quien/Contratos"));
+        assert_eq!(folder.name(), "Contratos");
+    }
+
+    /// Y uno que entró por el portal contesta que **no hay carpeta original**.
+    /// Vale igual dentro del flatpak que en el `.deb`, que también puede
+    /// recibir una ruta del portal: quien lo decide es el documento, no el
+    /// canal (ID-183).
+    #[test]
+    fn a_document_from_the_portal_has_no_original_folder_to_offer() {
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf");
+
+        assert_eq!(next_to_the_original(&document), None);
+    }
+
+    /// Fuera del sandbox se enseña la ruta real, como cualquier aplicación de
+    /// escritorio (ID-185).
+    #[test]
+    fn outside_the_sandbox_the_real_path_of_the_document_is_told() {
+        let document = PortalDocument::opened("/home/quien/Contratos/contrato.pdf");
+
+        assert_eq!(
+            real_path_of(&document),
+            Some(std::path::Path::new("/home/quien/Contratos/contrato.pdf"))
+        );
+    }
+
+    /// Y bajo el portal **no se enseña ninguna**: el enlace de `/run/user/…` no
+    /// es la ruta del documento, así que devolverlo sería devolver una mentira
+    /// (ID-185, ADR-0011).
+    #[test]
+    fn the_portal_handle_is_never_told_as_the_real_path() {
+        let document = PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf");
+
+        assert_eq!(real_path_of(&document), None);
+    }
+
+    /// Y eso es lo que la ventana recibe: el documento del portal cruza sin
+    /// ruta, y el de ruta directa con la suya.
+    #[test]
+    fn the_opened_document_crosses_with_the_real_path_only_when_there_is_one() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let pdf = home.path().join("contrato.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n").expect("deberia escribirse el temporal");
+        let memory = a_memory(home.path());
+        let opened = OpenedDocuments::new();
+
+        let direct = note_opened(&memory, &Configuration::default(), &opened, pdf.clone());
+        let through_the_portal = note_opened(
+            &memory,
+            &Configuration::default(),
+            &opened,
+            std::path::PathBuf::from("/run/user/1000/doc/1e8b83b9/contrato.pdf"),
+        );
+
+        assert_eq!(direct.path.as_deref(), pdf.to_str());
+        assert_eq!(through_the_portal.path, None);
     }
 
     /// Lo pedido: la próxima vez el diálogo se abre donde estuvo la última vez,

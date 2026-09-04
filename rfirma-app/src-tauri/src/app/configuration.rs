@@ -42,6 +42,7 @@ pub fn shown(
         remember_visible_signature: configuration.remember_visible_signature,
         remember_activity: configuration.remember_activity,
         theme: configuration.theme,
+        offers_the_original_folder: crate::destination::the_original_folder_can_be_offered(),
     }
 }
 
@@ -136,6 +137,24 @@ mod tests {
     use crate::memory::{Configuration, Theme};
     use crate::signing::Language;
 
+    /// La única pregunta al entorno cruza como un booleano cuyo nombre **es la
+    /// pregunta**, y no como el canal en el que corre la aplicación (ID-184).
+    /// Quien la contesta es el destino, no los ajustes.
+    #[test]
+    fn the_configuration_carries_whether_the_original_folder_can_be_offered() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+        let view = shown(&Configuration::default(), home.path());
+
+        // Contra la marca del sandbox y no contra la propia función: comparar
+        // la vista con lo que la vista usa pasaría igual con el valor
+        // contrario, y no vería un cableado que devolviera siempre `false`.
+        assert_eq!(
+            view.offers_the_original_folder,
+            !std::path::Path::new("/.flatpak-info").exists()
+        );
+    }
+
     /// Lo elegido llega al disco **y** a la copia viva, en el mismo paso: una
     /// ventana que enseña un ajuste que el disco no tiene miente en la sesión
     /// siguiente.
@@ -150,6 +169,7 @@ mod tests {
             remember_visible_signature: false,
             remember_activity: true,
             theme: Theme::Dark,
+            offers_the_original_folder: false,
         };
 
         write(&memory, &live, &chosen).expect("deberia guardarse");
@@ -248,6 +268,7 @@ mod tests {
             remember_visible_signature: false,
             remember_activity: true,
             theme: Theme::Dark,
+            offers_the_original_folder: false,
         };
 
         let next = merged(&live, &chosen);
