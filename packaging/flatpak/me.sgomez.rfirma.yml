@@ -41,9 +41,17 @@ finish-args:
   # que es lo que WebKit acaba pintando como pagina. Medido con
   # `flatpak run --log-session-bus`: dos llamadas, una del proceso de red y
   # otra del proceso web, las dos rechazadas; con esta variable no se hace
-  # ninguna. La alternativa seria --share=network, y NO se toma: rfirma firma
-  # sin salir a la red y el permiso mas barato es el que no se pide.
+  # ninguna. SIGUE HACIENDO FALTA aunque ahora se comparta la red: lo que se
+  # quiere es que WebKit no consulte al portal por cada carga del esquema
+  # propio de Tauri, no que resuelva un proxy.
   - --env=GIO_USE_PROXY_RESOLVER=dummy
+  # La UNICA conexion saliente de rfirma (#270, ID-171): preguntar a GitHub si
+  # hay una version nueva. Es un aviso, no una actualizacion (ID-177): no se
+  # descarga ni se instala nada. Hasta el #270 este permiso NO estaba, porque
+  # firmar no sale a la red; entra ahora que hay codigo que lo consume, que es
+  # la misma regla por la que el permiso de los almacenes NSS no se amplia
+  # todavia. Sin el, la consulta falla y la aplicacion se calla (ID-180).
+  - --share=network
   # Carpeta donde cae el documento firmado (ADR-0011). El recorrido no lleva
   # dialogo por firma, asi que el fichero tiene que caer solo en algun sitio.
   # Es la concesion mas estrecha que resuelve el caso: NO --filesystem=home.

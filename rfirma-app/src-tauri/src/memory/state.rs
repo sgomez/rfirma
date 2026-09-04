@@ -59,7 +59,7 @@ pub struct State {
     pub last_open_folder: Option<PathBuf>,
     /// El tamaño de la ventana y si estaba maximizada (ID-72).
     ///
-    /// **Es la única memoria exenta de «Recordar mi actividad»** (ID-73): el
+    /// **Es la memoria exenta de «Recordar mi actividad»** (ID-73): el
     /// tamaño de una ventana no dice qué hizo quien firmó antes, así que
     /// apagar el interruptor —o vaciar la actividad— no se la lleva. Por eso
     /// [`State::forget_everything`] la conserva en vez de vaciarla con el
@@ -69,6 +69,30 @@ pub struct State {
     /// el cliente no puede pedirla, así que unas coordenadas guardadas serían
     /// una promesa que el compositor incumple (ADR-0010, enmienda).
     pub window: Option<WindowMemory>,
+    /// Cuándo se preguntó por última vez si hay una versión nueva, y qué se
+    /// contestó (ID-180).
+    ///
+    /// **No es una memoria del usuario**: no dice qué firmó ni por dónde
+    /// anduvo, dice cuándo habló rFirma con GitHub. Por eso está **exenta de
+    /// los dos interruptores**, como el tamaño de la ventana, y
+    /// [`State::forget_everything`] la conserva: borrarla no borraría nada de
+    /// nadie y solo conseguiría una conexión de más en el siguiente arranque.
+    pub version_check: Option<VersionCheck>,
+}
+
+/// La última vez que se preguntó por una versión nueva, y lo que se contestó.
+///
+/// Existe para **no preguntar más de una vez cada 24 h** (ID-180): sin este
+/// apunte, cada arranque sería una conexión saliente. Guarda lo anunciado y no
+/// si había versión nueva, porque «nueva» se decide contra la versión que se
+/// está ejecutando y esa cambia con cada actualización.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionCheck {
+    /// Cuándo se preguntó, en segundos desde el epoch.
+    pub checked_at: u64,
+    /// La versión que anunció GitHub, tal y como se leyó.
+    pub announced: String,
 }
 
 /// El tamaño de la ventana entre sesiones, sin la posición (ID-72).
@@ -143,12 +167,14 @@ impl State {
     /// actividad. Una carpeta del anfitrión que sobreviviera a «Vaciar la
     /// lista» diría por dónde anduvo quien firmó antes.
     ///
-    /// El tamaño de la ventana **no** se va con el resto (ID-73): es la única
-    /// memoria exenta.
+    /// El tamaño de la ventana **no** se va con el resto (ID-73), y tampoco la
+    /// caché de la comprobación de versión, que no es actividad de nadie.
     pub fn forget_everything(&mut self) {
         let window = self.window.take();
+        let version_check = self.version_check.take();
         *self = Self::default();
         self.window = window;
+        self.version_check = version_check;
     }
 
     /// Si no hay nada que recordar.
@@ -277,6 +303,32 @@ mod tests {
                 width: 1024.0,
                 height: 768.0,
                 maximized: false,
+            })
+        );
+    }
+
+    /// La caché de la comprobación de versión tampoco se va con la actividad:
+    /// no dice qué hizo quien firmó antes, dice cuándo se habló con GitHub
+    /// (ID-180).
+    #[test]
+    fn forgetting_everything_leaves_the_version_check_alone() {
+        let mut state = State {
+            last_open_folder: Some(Path::new("/home/quien/Documentos").to_path_buf()),
+            version_check: Some(VersionCheck {
+                checked_at: 1_756_000_000,
+                announced: "0.4.0".to_string(),
+            }),
+            ..State::default()
+        };
+
+        state.forget_everything();
+
+        assert!(state.last_open_folder.is_none());
+        assert_eq!(
+            state.version_check,
+            Some(VersionCheck {
+                checked_at: 1_756_000_000,
+                announced: "0.4.0".to_string(),
             })
         );
     }

@@ -173,12 +173,15 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 5] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 6] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
     "RubricView",
     "SecretView",
+    // Detrás de una versión publicada no hay ningún documento: lo que lleva es
+    // un número que vino de GitHub (ID-182).
+    "NewVersionView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
@@ -511,7 +514,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 22, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 23, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
