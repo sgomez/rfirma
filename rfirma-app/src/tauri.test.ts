@@ -26,6 +26,7 @@ const aConfiguration = {
   rememberVisibleSignature: true,
   rememberActivity: true,
   theme: "system",
+  offersTheOriginalFolder: false,
 };
 
 const anOrder = {
@@ -509,9 +510,16 @@ describe("los puertos de la configuración sobre Tauri", () => {
     expect(read).toEqual({
       theme: "system",
       destination: "Documentos",
+      offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
     });
+  });
+
+  it("reads whether the environment allows Junto al documento original", async () => {
+    invoke.mockResolvedValue({ ...aConfiguration, offersTheOriginalFolder: true });
+
+    expect((await tauriPreferences().read()).offersOriginalFolder).toBe(true);
   });
 
   it("falls back to the system theme when what is stored is not one of the three", async () => {
@@ -535,6 +543,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
     await tauriPreferences().save({
       theme: "dark",
       destination: "Documentos",
+      offersOriginalFolder: false,
       rememberVisibleSignature: false,
       rememberActivity: true,
     });
@@ -547,6 +556,33 @@ describe("los puertos de la configuración sobre Tauri", () => {
         rememberVisibleSignature: false,
       },
     });
+  });
+
+  /**
+   * `save` proyecta las claves del contrato en vez de esparcir `preferences`
+   * entero: `offersOriginalFolder` la contesta el backend y no cruza al
+   * escribir (ID-184), así que mandarla sería una clave que serde tira en
+   * silencio y que además nombra distinto al campo real (`offersTheOriginal
+   * Folder`).
+   */
+  it("never sends offersOriginalFolder back when the settings are written", async () => {
+    invoke.mockImplementation((command: string) =>
+      command === "read_configuration"
+        ? Promise.resolve({ ...aConfiguration, offersTheOriginalFolder: true })
+        : Promise.resolve(undefined),
+    );
+
+    await tauriPreferences().save({
+      theme: "dark",
+      destination: "Documentos",
+      offersOriginalFolder: true,
+      rememberVisibleSignature: true,
+      rememberActivity: true,
+    });
+
+    const [, { configuration }] = invoke.mock.calls.at(-1) as [string, { configuration: object }];
+    expect(configuration).not.toHaveProperty("offersOriginalFolder");
+    expect(configuration).toHaveProperty("offersTheOriginalFolder", true);
   });
 
   it("saves the language without touching the rest of the settings", async () => {

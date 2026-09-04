@@ -417,6 +417,12 @@ interface ConfigurationView {
   rememberVisibleSignature: boolean;
   rememberActivity: boolean;
   theme: Theme;
+  /**
+   * **La única pregunta al entorno** (ID-184): si Preferencias puede ofrecer
+   * «Junto al documento original». La contesta el backend; escribirla no
+   * sirve de nada, así que no cruza al revés.
+   */
+  offersTheOriginalFolder: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -438,6 +444,10 @@ function writeConfiguration(configuration: ConfigurationView): Promise<void> {
  *
  * El destino que se manda es el que se leyó: la ventana lo enseña y no lo
  * elige —bajo el sandbox hay una sola carpeta—, y el backend lo ignora.
+ *
+ * `offersOriginalFolder` tampoco cruza al escribir: la contesta el backend
+ * (ID-184), así que `save` proyecta explícitamente las claves que sí son del
+ * contrato de `ConfigurationView`, en vez de mandar `preferences` entero.
  */
 export function tauriPreferences(): PreferencesStore {
   return {
@@ -446,13 +456,19 @@ export function tauriPreferences(): PreferencesStore {
       return {
         theme: isTheme(configuration.theme) ? configuration.theme : DEFAULT_THEME,
         destination: configuration.destination,
+        offersOriginalFolder: configuration.offersTheOriginalFolder,
         rememberVisibleSignature: configuration.rememberVisibleSignature,
         rememberActivity: configuration.rememberActivity,
       };
     },
     save: async (preferences) => {
       const stored = await readConfiguration();
-      await writeConfiguration({ ...stored, ...preferences });
+      await writeConfiguration({
+        ...stored,
+        theme: preferences.theme,
+        rememberVisibleSignature: preferences.rememberVisibleSignature,
+        rememberActivity: preferences.rememberActivity,
+      });
     },
     forgetActivity: () => invoke<void>("forget_activity"),
     chooseFolder: () => invoke<string | null>("choose_destination"),

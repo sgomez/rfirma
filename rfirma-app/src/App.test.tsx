@@ -157,6 +157,7 @@ function renderApp(
     {
       theme: "system",
       destination: "Documentos",
+      offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
       ...settings,
@@ -261,6 +262,7 @@ describe("App", () => {
       read: async () => ({
         theme: "system",
         destination: "Documentos",
+        offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
       }),
@@ -624,6 +626,7 @@ describe("App", () => {
       read: async () => ({
         theme: "system",
         destination: "Documentos",
+        offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
       }),
