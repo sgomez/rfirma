@@ -11,6 +11,7 @@ Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
 | `me.sgomez.rfirma.yml` | El manifiesto |
 | `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
 | `verifica.sh` | Verificación reproducible dentro del sandbox |
+| [`../verifica-contenido.sh`](../verifica-contenido.sh) | La invariante del ADR-0012 (un solo `librfirma_crypto.so`, `libawt.so` en ninguna parte), independiente del formato |
 | `cargo-sources.json` / `node-sources.json` | Dependencias vendorizadas, generadas |
 | `sources.lock` | El sello que dice contra qué ficheros de bloqueo se generaron |
 | `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
@@ -55,19 +56,23 @@ construidos, así que van primero:
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
 just native
 just build-ts
-just token       # el paso 5 firma con el token de la grada B
+just token       # el paso 4 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` da ocho pasos. Dentro del sandbox comprueba lo que solo el sandbox
-puede romper: que la librería nativa esté —y **sola**, sin auxiliares de AWT—,
-que el módulo PKCS#11 que empaqueta el propio flatpak cargue, que la ventana
-arranque y siga viva, que un documento entrado por el portal llegue con sus
-bytes intactos, y que el sandbox **rechace escribir** en el perfil de Firefox
-y en `~/.pki/nssdb` — los dos únicos `--filesystem` que no van por portal
-(#101, AC 3).
+`verifica.sh` da ocho pasos. Dentro del sandbox comprueba lo que solo el
+sandbox puede romper: que el módulo PKCS#11 que empaqueta el propio flatpak
+cargue, que la ventana arranque y siga viva, que un documento entrado por el
+portal llegue con sus bytes intactos, y que el sandbox **rechace escribir** en
+el perfil de Firefox y en `~/.pki/nssdb` — los dos únicos `--filesystem` que no
+van por portal (#101, AC 3). La invariante del ADR-0012 —un solo
+`librfirma_crypto.so`, `libawt.so` en ninguna parte— ya no se comprueba dentro
+del sandbox: el paso 8 llama a
+[`../verifica-contenido.sh`](../verifica-contenido.sh), independiente del
+formato, sobre el `.flatpak` recién construido (la misma puerta corre sobre el
+`.deb`/`.rpm`, cuando existan).
 
-El paso 5 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
+El paso 4 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
 con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se
 distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
 verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
