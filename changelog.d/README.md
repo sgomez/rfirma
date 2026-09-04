@@ -20,7 +20,8 @@ cada uno escribe en su propio fichero.
   - Mecanismo de CHANGELOG por fragmentos (#252).
   ```
 
-  Categorías disponibles: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
+  Categorías disponibles: `Added`, `Changed`, `Deprecated`, `Removed`,
+  `Fixed`, `Security`.
 - En castellano, como el resto de la documentación del proyecto.
 - Cada línea de nota termina con el issue entre paréntesis, `(#N)`.
 
