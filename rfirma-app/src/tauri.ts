@@ -243,6 +243,10 @@ export function tauriDocumentDrops(): DocumentDrops {
         void stopping.then((stop) => stop());
       };
     },
+    pending: async () => {
+      const invoked = await invoke<DroppedDocumentView | null>("read_invocation");
+      return invoked === null ? null : dropOf(invoked);
+    },
   };
 }
 

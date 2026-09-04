@@ -1,4 +1,11 @@
-//! **Lo que se decide al soltar ficheros en la ventana** (ID-67, ID-68, ID-70).
+//! **Lo que se decide de los ficheros que llegan de fuera** (ID-67, ID-68,
+//! ID-70, ID-157, ID-158).
+//!
+//! Llegan por dos gestos —soltarlos en la ventana y nombrarlos en la línea de
+//! órdenes— y la regla es una sola: el primer PDF que se deje leer. Que la
+//! invocación se decida aquí y no en un módulo propio es el ID-158 escrito en
+//! código: un argumento que no es un PDF legible **no arranca ningún modo
+//! especial**, cuenta exactamente lo mismo que soltarlo dentro.
 //!
 //! El arrastre no pasa por el portal de ficheros: lo que llega son rutas, y
 //! aquí se decide cuál de ellas —si alguna— se abre. La decisión es de este
@@ -71,6 +78,31 @@ pub fn first_pdf(paths: &[PathBuf]) -> Dropped {
             ignored,
         },
     }
+}
+
+/// **El PDF que trae la invocación**, si es que trae alguno (ID-157, ID-158).
+///
+/// `command_line` es la línea de órdenes entera, con el ejecutable delante: es
+/// lo que dan tanto `std::env::args` como la segunda instancia, y descartarlo
+/// aquí evita que cada llamante se acuerde de hacerlo.
+///
+/// La invocación es **un argumento posicional desnudo** (ID-157), así que lo
+/// que empieza por `-` no es una ruta y no se mira; no cierra la puerta a
+/// banderas ni a subcomandos más adelante, solo dice que hoy no los hay.
+///
+/// `from` es la carpeta desde la que se invocó, y **hace falta**: una segunda
+/// invocación se decide dentro del proceso que ya estaba abierto, cuya carpeta
+/// de trabajo es otra, y una ruta relativa resuelta contra la suya abriría un
+/// fichero distinto o ninguno. Una ruta absoluta pasa intacta por
+/// [`Path::join`].
+pub fn invoked_pdf(command_line: &[String], from: &Path) -> Dropped {
+    let paths: Vec<PathBuf> = command_line
+        .iter()
+        .skip(1)
+        .filter(|argument| !argument.starts_with('-'))
+        .map(|argument| from.join(argument))
+        .collect();
+    first_pdf(&paths)
 }
 
 fn is_pdf(path: &Path) -> bool {
@@ -167,6 +199,90 @@ mod tests {
     #[test]
     fn dropping_nothing_is_not_a_failure() {
         assert_eq!(first_pdf(&[]), Dropped::Nothing);
+    }
+
+    /// El caso entero del ID-157: un argumento posicional desnudo y nada más.
+    #[test]
+    fn a_bare_positional_argument_is_the_document_that_opens() {
+        let pdf = a_temporary_pdf("invocado.pdf");
+
+        let invoked = invoked_pdf(
+            &["rfirma".to_owned(), pdf.display().to_string()],
+            Path::new("/"),
+        );
+
+        assert_eq!(
+            invoked,
+            Dropped::Opened {
+                path: pdf,
+                ignored: 0
+            }
+        );
+    }
+
+    /// Una ruta relativa se resuelve contra la carpeta desde la que se invocó,
+    /// que en la segunda instancia **no** es la del proceso que la atiende.
+    #[test]
+    fn a_relative_argument_is_resolved_against_the_folder_it_was_invoked_from() {
+        let pdf = a_temporary_pdf("relativo.pdf");
+        let folder = pdf.parent().expect("el temporal tiene carpeta").to_owned();
+
+        let invoked = invoked_pdf(
+            &[
+                "rfirma".to_owned(),
+                "rfirma-dropped-relativo.pdf".to_owned(),
+            ],
+            &folder,
+        );
+
+        assert!(matches!(invoked, Dropped::Opened { .. }));
+    }
+
+    /// ID-158: lo que no es un PDF legible se cuenta igual que si se hubiera
+    /// soltado, y no arranca ningún modo especial.
+    #[test]
+    fn an_argument_that_is_not_a_pdf_is_told_just_like_a_dropped_one() {
+        let other = a_temporary_pdf("hoja-invocada.ods");
+
+        assert_eq!(
+            invoked_pdf(
+                &["rfirma".to_owned(), other.display().to_string()],
+                Path::new("/")
+            ),
+            Dropped::NotAPdf { ignored: 0 }
+        );
+    }
+
+    /// Sin argumentos no hay invocación con documento: es arrancar la ventana.
+    #[test]
+    fn invoking_with_no_arguments_brings_no_document() {
+        assert_eq!(
+            invoked_pdf(&["rfirma".to_owned()], Path::new("/")),
+            Dropped::Nothing
+        );
+    }
+
+    /// Una bandera no es una ruta: ni se abre ni cuenta como fichero ignorado.
+    #[test]
+    fn a_flag_is_not_a_path_and_does_not_count() {
+        let pdf = a_temporary_pdf("con-bandera.pdf");
+
+        let invoked = invoked_pdf(
+            &[
+                "rfirma".to_owned(),
+                "--algo".to_owned(),
+                pdf.display().to_string(),
+            ],
+            Path::new("/"),
+        );
+
+        assert_eq!(
+            invoked,
+            Dropped::Opened {
+                path: pdf,
+                ignored: 0
+            }
+        );
     }
 
     /// La ruta exportada por el portal es una ruta como otra cualquiera: se

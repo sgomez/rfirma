@@ -199,6 +199,15 @@ fn no_signed_document() -> Failure {
     Failure::new("unknown", "no hay ningun documento firmado en esta sesion")
 }
 
+/// **Caso de uso.** Si hay una firma a medias en este momento (ID-160).
+///
+/// Es lo único que se le pregunta a la sesión desde fuera del recorrido de la
+/// firma, y se pregunta para **no** hacer algo: una segunda invocación no
+/// sustituye el documento mientras esto sea cierto.
+pub fn is_live(session: &SigningSession) -> bool {
+    lock(&session.open).is_some()
+}
+
 /// **Caso de uso.** Cancelar: se olvida el ciclo a medias.
 ///
 /// Existe porque un ciclo abierto que no se cierra deja el sello y los bytes a
@@ -343,7 +352,7 @@ fn no_open_cycle() -> Failure {
 #[cfg(test)]
 mod tests {
     use super::{
-        admitted_bytes, begin, cancel, config_for, finish, sign_on_token, signed_document,
+        admitted_bytes, begin, cancel, config_for, finish, is_live, sign_on_token, signed_document,
         signed_folder, take_signed_cycle, SigningSession,
     };
     use crate::app::fixtures::{a_certificate, a_memory, an_order};
@@ -427,6 +436,7 @@ mod tests {
             ("app/signing.rs", production_half()),
             ("app/recents.rs", half_of(include_str!("recents.rs"))),
             ("app/documents.rs", half_of(include_str!("documents.rs"))),
+            ("app/invocation.rs", half_of(include_str!("invocation.rs"))),
             ("app/preview.rs", half_of(include_str!("preview.rs"))),
             (
                 "commands/mod.rs",
@@ -574,6 +584,24 @@ mod tests {
 
         assert_eq!(signed_document(&session).expect("hay firmado"), landing);
         assert_eq!(signed_folder(&session).expect("y carpeta"), folder.path());
+    }
+
+    /// Una sesión sin ciclo abierto no está viva, y por eso una segunda
+    /// invocación puede sustituir el documento sin preguntar (ID-160).
+    #[test]
+    fn a_session_with_no_open_cycle_is_not_live() {
+        assert!(!is_live(&SigningSession::default()));
+    }
+
+    /// Y cancelar la deja como estaba: lo que bloqueaba la sustitución era el
+    /// ciclo, no haber empezado alguna vez.
+    #[test]
+    fn a_cancelled_session_is_not_live_either() {
+        let session = SigningSession::default();
+
+        cancel(&session);
+
+        assert!(!is_live(&session));
     }
 
     /// Ni la ruta ni nada que se le parezca sale por la orden: lo que la
