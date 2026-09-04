@@ -94,10 +94,10 @@ default:
 # Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
 check: tools check-repo check-java check-ts check-rust
 
-# Lo que no pertenece a ninguna cadena (ID-01): cuatro comprobaciones que tardan
+# Lo que no pertenece a ninguna cadena (ID-01): cinco comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions lint-python
+check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -1219,6 +1219,19 @@ check-ds-bundle:
 # Comprueba que las acciones de los workflows estan fijadas por SHA.
 check-actions:
     {{ justfile_directory() }}/.github/check-workflows.sh
+
+# El mecanismo de publicacion (ID-172, ID-174), y la unica parte de la tuberia
+# de entrega que NO se puede ensayar con una etiqueta `-rc.N`: el ensayo se
+# detiene justo antes de tocar el anfitrion, asi que si esto no se prueba aqui
+# no se prueba en ningun sitio. La pata remota no se simula: levanta el mismo
+# `rrsync` del `authorized_keys` del VPS detras de un `ssh` de mentira, asi que
+# una opcion de rsync que la orden forzada no admita se ve aqui y no el dia de
+# la entrega. Sin `rrsync` instalado esa pata avisa y se salta.
+#
+# Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
+check-publish:
+    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
+    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
 
 # El candado del ID-150 y sus vecinos, hermano de las otras dos de `check-repo`
 # y por los mismos motivos: cuesta milisegundos, no necesita ni bootstrap ni
