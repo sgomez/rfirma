@@ -1,7 +1,10 @@
 # Empaquetado flatpak
 
-`flatpak` es el **único canal de distribución** de rfirma
+`flatpak` es **uno de los tres canales de distribución** de rfirma, junto al
+`.deb` y el `.rpm`
 ([ADR-0004](../../docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)).
+Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
+([ADR-0013](../../docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md)).
 
 | Fichero | Qué es |
 |---|---|
@@ -86,8 +89,8 @@ cerrarlo pide un manifiesto de banco aparte.
 
 ## Pendiente antes de publicar
 
-El canal es propio: bundle en GitHub Releases y repositorio ostree en
-`rfirma.sgomez.me`. Ver el
+El canal es propio: paquetes en GitHub Releases y **tres** repositorios en
+`rfirma.sgomez.me` —ostree, apt y dnf—. Ver el
 [ADR-0015](../../docs/adr/0015-canal-de-distribucion-propio.md).
 
 - **Publicar el repositorio ostree.** `flatpak build-export` +

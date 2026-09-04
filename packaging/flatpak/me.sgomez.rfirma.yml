@@ -1,4 +1,5 @@
-# Manifiesto del flatpak de rfirma, el UNICO canal de distribucion (ADR-0015).
+# Manifiesto del flatpak de rfirma, UNO de los tres canales de distribucion
+# junto al .deb y el .rpm (ADR-0004, ADR-0015).
 #
 # Empaqueta rfirma-app. Hasta el #56 empaquetaba la sonda del #22
 # (packaging/flatpak/probe), que se borro al existir la frontera FFI real: dos
@@ -54,14 +55,23 @@ finish-args:
   # Ni --filesystem=home ni --filesystem=host: la ENTRADA de ficheros sigue
   # entrando por portales, y --filesystem=home tampoco devolveria la ruta
   # real del original (ADR-0011).
-  # EXCEPCION CONSCIENTE al ADR-0004 (#95, #101): un almacen de certificados
-  # NSS no es un documento y no hay portal que lo sirva. Sin esto el flatpak
-  # no ve ningun certificado de Firefox. `:ro` es la mitad importante: rfirma
-  # necesita LEER certificados y no tiene ningun motivo para escribir en el
-  # perfil ni en las claves de quien firma. Las rutas son las mismas que lee
-  # pkcs11::stores en el anfitrion (~/.mozilla/firefox via profiles.ini, y
-  # ~/.pki/nssdb). NO se declara --filesystem=home. No hace falta empaquetar
-  # NSS: el runtime org.gnome.Platform//50 ya trae libsoftokn3.so.
+  # EXCEPCION CONSCIENTE (#95, #101): un almacen de certificados NSS no es un
+  # documento y no hay portal que lo sirva. Sin esto el flatpak no ve ningun
+  # certificado de Firefox. NO se declara --filesystem=home. No hace falta
+  # empaquetar NSS: el runtime org.gnome.Platform//50 ya trae libsoftokn3.so.
+  #
+  # OJO: `:ro` YA NO ES «la mitad importante». El motivo para escribir en estos
+  # almacenes existe desde el #238: la CA local del servidor la instala la
+  # aplicacion ahi, en el primer arranque, y en los tres canales por igual. La
+  # decision, la lista completa de rutas y lo que cuesta ampliar el permiso
+  # estan en el ADR-0005; el permiso NO se amplia aqui todavia porque el codigo
+  # que lo consume es de la v0.5, y un permiso sin consumidor durante un ciclo
+  # entero es el mismo pasivo que se rechazo alli para la CA (#246).
+  #
+  # Y estas dos rutas ya no cubren lo que lee pkcs11::stores: Firefox 147 se
+  # mudo a XDG (~/.config/mozilla/firefox + ~/.local/share/mozilla/firefox) y
+  # Chrome M146 a ~/.local/share/pki/nssdb. Enumerarlas aqui y en el codigo es
+  # justo lo que se desincronizo; la lista canonica es la de pkcs11::stores.
   - --filesystem=~/.mozilla/firefox:ro
   - --filesystem=~/.pki/nssdb:ro
 

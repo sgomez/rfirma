@@ -9,6 +9,8 @@ cada pieza lleva la suya dentro.
 rfirma-native-bridge/   Maven -> GraalVM CE 25 -> librfirma_crypto.so (ADR-0004)
 rfirma-app/             Tauri: src-tauri/ (Rust) + src/ (React)
 packaging/flatpak/      manifiesto, generadores de fuentes y verificación
+packaging/repo/         la imagen nginx y la landing de rfirma.sgomez.me (ADR-0015)
+packaging/verifica-contenido.sh   la invariante del ADR-0012 sobre cualquier artefacto
 justfile                el único orquestador
 ```
 
@@ -64,6 +66,8 @@ realimentación que este repositorio decidió proteger en el
 | `check` | `tools check-repo check-java check-ts check-rust` | rápido |
 | `native` | `librfirma_crypto.so` con GraalVM CE 25 | lento |
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
+| `bundle` | `.deb` y `.rpm` con el *bundler* de Tauri | lento |
+| `check-glibc` | el suelo `GLIBC_2.34` sobre lo que se va a publicar | lento |
 | `flatpak-sources` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
 
@@ -117,9 +121,48 @@ Y la ruta de distribución **no es** el directorio de construcción: `native-ima
 emitiendo ahí los cinco auxiliares de AWT, así que un `install *.so` reintroduciría
 `libawt.so` — y con él, el aborto del proceso ante un JPEG con perfil ICC que midió el #36.
 
-En `tauri.conf.json`, **`bundle.active: false`**: el binario lo instala el manifiesto
-flatpak, como ya hace la sonda. Los empaquetadores de Tauri (`.deb`, AppImage) están
-descartados por el [#17](https://github.com/sgomez/rfirma/issues/17).
+## El *bundler* de Tauri está encendido, y produce `deb` y `rpm`
+
+`bundle.active: true`, `targets: ["deb", "rpm"]`. Estuvo apagado mientras el flatpak fue el
+canal único, y el [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md) lo revisó:
+son tres canales. **En el flatpak nada cambia** — ahí el binario lo sigue instalando el
+manifiesto, y el bundler no interviene.
+
+Lo que se configura, medido sobre los fuentes de `tauri-bundler` 2.9.4 en el
+[#228](https://github.com/sgomez/rfirma/issues/228):
+
+- **La librería nativa entra por `bundle.linux.<formato>.files`**, con la clave absoluta
+  (`/usr/lib/rfirma/librfirma_crypto.so`) y el origen relativo a `src-tauri/`. **No** por
+  `bundle.resources`, que llega al mismo sitio sólo por la casualidad de que `productName`
+  sea `rfirma`: la ruta la decide el ADR-0004, no `resource_dir()`.
+- **Las dependencias van como `recommends`, y el trío viaja junto**: `opensc-pkcs11`,
+  `libpcsclite1` y `pcscd` en Debian y Ubuntu; `opensc-libs`, `pcsc-lite-libs` y `pcsc-lite`
+  en Fedora. Débiles porque **rfirma firma sin OpenSC** —quien tenga el certificado en
+  Firefox, en `~/.pki/nssdb` o en un `.p12` no necesita ni el módulo ni el demonio— y apt y
+  dnf las instalan por omisión igual. **Declarar `opensc-pkcs11` sin `libpcsclite1` está
+  prohibido**: OpenSC lo abre con `dlopen` y su ausencia da **cero ranuras con `CKR_OK`**,
+  indistinguible de «no hay lector» ([#226](https://github.com/sgomez/rfirma/issues/226)).
+  `libwebkit2gtk-4.1-0` y `libgtk-3-0` **no se declaran**: los inyecta el bundler solo.
+- **`compression: zstd` nivel 19 en el `.rpm`.** El `.deb` es gzip-6 y no es configurable;
+  con 27,7 MB de `.so` dentro no hay razón para dejar en su valor de fábrica el único ajuste
+  que sí se puede tocar.
+- **La identidad de escritorio diverge entre canales, y es impuesta.** El bundler nombra el
+  lanzador `<productName>.desktop`, y `desktopTemplate` sustituye el contenido, no el nombre:
+  el flatpak está obligado a `me.sgomez.rfirma.desktop` y los nativos a `rfirma.desktop`. Se
+  usa **un `desktopTemplate` compartido por deb y rpm** con el mismo contenido que el del
+  flatpak, para que sólo diverja el nombre del fichero. Instalar el nuestro por `files`
+  dejaría **dos** entradas en el menú.
+- **No se envía `metainfo` en los paquetes nativos**, hoy: el bundler no instala nada de
+  AppStream, y el metainfo actual declara un `<launchable>` que en un `.deb` no existe. Un
+  metainfo que apunta a un lanzador inexistente es peor que ninguno. Quien lo necesita es el
+  repositorio del [ADR-0015](0015-canal-de-distribucion-propio.md), y es él quien lo recoge.
+
+**La invariante del ADR-0012 sale del sandbox a un script propio.**
+`packaging/verifica-contenido.sh <artefacto>` acepta un `.deb`, un `.rpm` o el `files/` de
+una construcción de flatpak, y afirma exactamente un `.so` bajo el directorio de la librería
+y `libawt.so` en ninguna parte. `verifica.sh` pasa a llamarlo en vez de arrancar el sandbox
+entero para comprobarlo, y el CI lo llama sobre cada artefacto **antes de subirlo**: es una
+puerta, no un informe.
 
 ## Los metadatos de `native-image` se versionan
 

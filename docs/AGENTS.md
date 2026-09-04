@@ -12,18 +12,18 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0001 | La clave privada nunca cruza a Java: firma trifásica |
 | 0002 | Las dependencias Java se consumen desde `~/.m2` |
 | 0003 | Memoria manual en la frontera FFI |
-| 0004 | La librería nativa va en el paquete, y el paquete es un flatpak |
-| 0005 | Servidor local HTTPS con CA propia |
+| 0004 | La librería nativa va en el paquete, y hay tres paquetes: flatpak, `.deb` y `.rpm` |
+| 0005 | Servidor local HTTPS, y la CA la instala la aplicación en los almacenes NSS |
 | 0006 | La firma visible se configura sobre el documento |
 | 0007 | Sin barra de menús: cabecera única |
 | 0008 | Licencia EUPL-1.2 |
-| 0009 | Catálogo de cadenas propio, seis idiomas, errores que clasifican situaciones |
+| 0009 | Catálogo de cadenas propio, cinco idiomas (enmendado), errores que clasifican situaciones |
 | 0010 | Qué recuerda rFirma entre sesiones y dónde |
 | 0011 | Dónde cae el documento firmado |
 | 0012 | La rúbrica la normaliza Rust, no Java |
-| 0013 | Estructura del repositorio y cadena de compilación (el `justfile`) |
+| 0013 | Estructura del repositorio y cadena de compilación (el `justfile`, el *bundler*) |
 | 0014 | Gradas de prueba y puerta de calidad (CRAP) |
-| 0015 | Canal de distribución propio |
+| 0015 | Canal propio: tres repositorios en `rfirma.sgomez.me` y Releases |
 | 0016 | El sello de sesión: una sola invariante |
 | 0017 | La arquitectura de los dos lados: puertos y capas |
 
@@ -46,7 +46,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 
 `ventana-principal` · `cabecera` · `bandeja-de-documentos` ·
 `visor-de-documento` · `panel-de-firma` · `preferencias` · `dialogo-pin` ·
-`dialogo-progreso-firma` · `acerca-de` · `design-system`
+`dialogo-progreso-firma` · `dialogo-paginas-sin-sello` · `acerca-de` ·
+`design-system`
 
 Al implementar una pantalla, **la ficha de esa pantalla es la fuente**, no el
 sistema de diseño entero (14 KB).

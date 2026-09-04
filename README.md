@@ -6,7 +6,7 @@
 
 ## 🚀 Características Clave
 * **Sin Dependencia de JRE:** Se ejecuta directamente como código de máquina nativo sin necesidad de tener Java instalado en el equipo del usuario.
-* **Distribución en flatpak:** Canal único, para cualquier distribución de Linux. El motor criptográfico compilado se instala junto a la aplicación en `/app/lib/rfirma/` y se carga dinámicamente al arrancar (ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)).
+* **Tres canales:** flatpak para cualquier distribución de Linux, y `.deb` y `.rpm` para las nativas. El motor criptográfico compilado se instala junto a la aplicación —`/app/lib/rfirma/` en el flatpak, `/usr/lib/rfirma/` en los nativos— y se carga dinámicamente al arrancar (ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)).
 * **Arranque Instantáneo:** Reduce los tiempos de arranque de ~3 segundos a menos de 100ms y el consumo de RAM a ~30-50MB.
 * **Integración del Sistema Operativo:** Acceso rápido y nativo a almacenes de certificados (DNI electrónico, FNMT) mediante APIs del sistema y PKCS#11.
 * **Interfaz Moderna:** Rediseño completo en React sobre un sistema de diseño propio en CSS (`docs/design/design-system.md`), en reemplazo de la interfaz Swing obsoleta.
@@ -22,7 +22,7 @@ El proyecto está diseñado de forma modular para desacoplar la interfaz y la in
    * Levanta un servidor local HTTPS/WS seguro (`127.0.0.1:63117`) para comunicarse con las sedes electrónicas.
    * Maneja el protocolo deep link `rfirma://` y `afirma://`.
    * Realiza la lectura y firma nativa de los certificados locales (incluyendo tarjetas inteligentes PKCS#11).
-3. **GraalVM FFI Bridge (Java Core):** Librería nativa compilada (`librfirma_crypto.so` más cinco auxiliares, ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)) que recibe los datos en formato JSON mediante FFI y procesa las fases de **Prefirma** y **Postfirma** (generación de los contenedores CAdES, PAdES, XAdES y FacturaE).
+3. **GraalVM FFI Bridge (Java Core):** Librería nativa compilada (**un solo fichero**, `librfirma_crypto.so`, ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)) que recibe los datos en formato JSON mediante FFI y procesa las fases de **Prefirma** y **Postfirma** (generación de los contenedores CAdES, PAdES, XAdES y FacturaE).
 
 ---
 
@@ -55,10 +55,20 @@ sigue dejando en su directorio de construcción **no se copian nunca**: con
 
 ## 📦 Instalación
 
-El **flatpak es el único canal soportado**
+Los canales son **tres** —flatpak, `.deb` y `.rpm`—, todos servidos desde
+`rfirma.sgomez.me` y desde las Releases de GitHub
 ([ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md),
 [ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)). No hace falta tener
 Java: el motor criptográfico va compilado dentro.
+
+**Elige uno solo.** Instalar rfirma por dos vías son dos aplicaciones con
+memorias separadas: ni los documentos recientes, ni la rúbrica, ni las
+preferencias se comparten, y no se migran. Es la conducta normal de Linux —el
+Firefox flatpak y el `.deb` tampoco comparten perfil—.
+
+> **Los canales nativos todavía no existen**: los decide el hito v0.4 y aún no
+> se han construido. Lo único instalable hoy es el flatpak que produce
+> `just flatpak`, en local.
 
 El bundle **no trae el runtime**: se consume del remoto de **Flathub**, así que
 añadirlo es requisito de instalación. Es de un solo uso, y `--user` no pide
@@ -79,9 +89,9 @@ flatpak run me.sgomez.rfirma
 
 > **v0.1 no se publica** ([ID-42](https://github.com/sgomez/rfirma/issues/46)):
 > el entregable es ese fichero `.flatpak`, instalable en local. El canal del
-> ADR-0015 —Releases con `SHA256SUMS`, repositorio ostree firmado con GPG en
-> `rfirma.sgomez.me` y `.flatpakref`— exige una clave GPG y un secreto de
-> despliegue que crea una persona, y queda fuera de este hito.
+> ADR-0015 —Releases firmadas y los tres repositorios de `rfirma.sgomez.me`—
+> exige una clave GPG y unos secretos de despliegue que crea una persona, y
+> llega con el hito v0.4.
 
 ---
 

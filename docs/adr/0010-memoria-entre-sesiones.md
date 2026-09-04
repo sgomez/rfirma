@@ -103,9 +103,11 @@ red.
 - La carpeta de destino se comprueba **antes de firmar**, no al guardar. Qué
   pasa cuando no está lo fija el
   [ADR-0011](0011-destino-del-documento-firmado.md), que retira la degradación
-  «junto al documento original» que aquí se describía: ese destino no existe
-  bajo el sandbox, y no se sustituye por otro. Firmar y luego no poder escribir
-  obliga a explicar que el documento está firmado pero en ningún sitio.
+  «junto al documento original» que aquí se describía. Ojo al matiz: ese destino
+  **existe** —es donde cae el firmado cuando el original no viene del portal—,
+  pero no como valor de repuesto de un ajuste, sino como consecuencia de dónde
+  está el documento. Firmar y luego no poder escribir obliga a explicar que el
+  documento está firmado pero en ningún sitio.
 - El formato de la rúbrica se valida al elegirla, no al firmar, porque los
   formatos admitidos se fijan en tiempo de construcción
   ([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)).

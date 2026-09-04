@@ -136,16 +136,17 @@ _Avoid_: portal, cliente web, tercero
 
 **Documento reciente**:
 Documento que la aplicación ha visto antes y ofrece para volver a él, sin
-guardar una copia: solo su identificador opaco y lo que hace falta para pintar
-su fila. Bajo el sandbox la aplicación nunca conoce la ruta original de un
-documento (ADR-0010, ADR-0011), así que el identificador no es ni deriva de
-una ruta.
-_Avoid_: historial, documento abierto, favorito, ruta
+guardar una copia: un identificador opaco y lo que hace falta para pintar su
+fila. La fila enseña la ruta **donde se conoce** y sólo el nombre donde no
+(ADR-0010, ADR-0011): bajo el sandbox la aplicación no conoce la ruta original
+de un documento que entra por el portal.
+_Avoid_: historial, documento abierto, favorito
 
 **Carpeta de destino**:
-Carpeta donde cae el documento firmado. La aplicación la enseña por su
-**nombre**, nunca por su ruta, y no la crea: si no está, no está.
-_Avoid_: carpeta fija, ruta de salida, junto al original
+Carpeta donde cae el documento firmado cuando el original entra por el portal
+y no tiene carpeta propia. La aplicación no la crea nunca: si no está, no está.
+La enseña por su ruta donde la conoce y por su nombre donde no (ADR-0011).
+_Avoid_: carpeta fija, ruta de salida
 
 **Preferencia**:
 Ajuste que el usuario elige y que la aplicación se limita a obedecer: el idioma,
@@ -163,7 +164,7 @@ _Avoid_: caché, historial, sesión
 **Sandbox**:
 Confinamiento del sistema operativo en el que corre la aplicación cuando se
 instala como flatpak: no ve el sistema de ficheros del anfitrión y toda entrada
-y salida de documentos pasa por los portales, así que nunca conoce la ruta
-original de un documento (ADR-0004, ADR-0011). Los canales nativos —`.deb`,
-`.rpm`— corren fuera de él.
+y salida de documentos pasa por los portales, así que no conoce la ruta original
+de un documento que entre por ahí (ADR-0004, ADR-0011). Los canales nativos
+—`.deb`, `.rpm`— corren fuera de él.
 _Avoid_: arenero, caja de arena, jaula, contenedor
