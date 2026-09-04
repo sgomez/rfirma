@@ -207,7 +207,7 @@ jobs:
       # Binarios preconstruidos: compilarlos desde fuente serian minutos en
       # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
       # hace falta porque no es una puerta, solo produce el lcov.
-      - uses: cargo-bins/cargo-binstall@9ef12faecb70a6811561bc924b14c09230a9b77e # v1.22.0
+      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
       - name: Herramienta de cobertura y de CRAP
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
@@ -308,7 +308,7 @@ jobs:
             opensc \
             libnss3-tools
 
-      - uses: cargo-bins/cargo-binstall@9ef12faecb70a6811561bc924b14c09230a9b77e # v1.22.0
+      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
         if: steps.scope.outputs.build == 'true'
       - name: Herramienta de cobertura y de CRAP
         if: steps.scope.outputs.build == 'true'

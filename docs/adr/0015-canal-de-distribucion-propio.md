@@ -101,7 +101,7 @@ dice que todavía no hay versión publicada, en vez de esconderse.
 
 | fichero | disparador | permisos | qué hace |
 |---|---|---|---|
-| `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | la matriz, la guardia de versión, el carril lento, `just check-glibc`, artefactos y digests como salidas |
+| `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | una sola construcción para el objetivo único `x86_64` (ID-147) —sin matriz: no hay nada que multiplicar, y repartir el empaquetado en jobs paralelos haría que los tres canales dejasen de llevar los mismos bytes—, la guardia de versión, el carril lento, `just check-glibc`, artefactos y digests como salidas |
 | `release.yml` | `push: tags v*` | `environment: release` | descarga los artefactos, firma, atesta la procedencia y crea la Release **en borrador** con el `pdf-puerta-manual` adjunto |
 | `publish.yml` | `release published`, si no es prerelease | `environment: release` | reconstruye los tres repositorios y los despliega |
 

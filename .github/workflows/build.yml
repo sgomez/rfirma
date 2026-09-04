@@ -200,13 +200,20 @@ jobs:
       # hasta que alguien mirase un `dpkg -I`.
       - name: Guardia de version
         id: version
+        # La entrada del llamador entra por `env:`, NO interpolada dentro del
+        # `run:`. Una expresion `${{ }}` se sustituye antes de que exista la
+        # shell, asi que un nombre de etiqueta valido como `v0.4.0$(curl ...)`
+        # se convertiria en texto del script. Este job no ve secretos, pero si
+        # produce los paquetes que `release.yml` firma: ejecutar codigo aqui es
+        # poder cambiar los bytes que luego se firman.
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
         run: |
           set -euo pipefail
           just check-version
           version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
             rfirma-app/src-tauri/tauri.conf.json)"
-          esperada="${{ inputs.expected-version }}"
-          esperada="${esperada#v}"
+          esperada="${EXPECTED_VERSION#v}"
           if [ -n "$esperada" ] && [ "$esperada" != "$version" ]; then
             echo "la version del arbol es $version y quien llama esperaba $esperada" >&2
             echo "la fuente es rfirma-app/src-tauri/tauri.conf.json (ID-150)" >&2
