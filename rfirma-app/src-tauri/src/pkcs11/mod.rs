@@ -102,28 +102,33 @@ pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate
 /// La lista se filtra a los que tienen una clave privada emparejada por
 /// `CKA_ID` en el mismo token (ID-07): un perfil de Firefox corriente trae
 /// más de cien certificados y solo un puñado son firmables, el resto son
-/// autoridades y certificados de páginas web. El filtro **no es solo para
-/// NSS**: se aplica a todos los almacenes por igual, y en una tarjeta no
-/// esconde nada porque todo lo que hay ahí ya es firmable.
+/// autoridades y certificados de páginas web. **En una tarjeta sin sesión el
+/// filtro no se aplica** ([`signable_certificates`]): ahí no hay nada que
+/// esconder porque todo lo que hay ya es firmable, y sin sesión iniciada una
+/// tarjeta corriente —SoftHSM entre ellas, comprobado— no enseña ninguna
+/// `CKO_PRIVATE_KEY`; filtrar igual la dejaría sin listar nada. Si la tarjeta
+/// sí acaba con sesión iniciada (ver más abajo), el filtro se aplica también
+/// a ella.
 ///
-/// El filtro solo se aplica por ranura si esa ranura **enseña alguna**
-/// `CKO_PRIVATE_KEY` sin sesión. Algunos módulos —SoftHSM entre ellos,
-/// comprobado— marcan sus claves privadas con `CKA_PRIVATE` de forma
-/// incondicional, y sin sesión no enseñan ninguna, tengan par o no: si se
-/// filtrase igualmente, una ranura así perdería **todos** sus certificados,
-/// no solo los que de verdad no tienen clave. Cero claves visibles no
-/// significa «aquí no hay nada firmable»; significa «este módulo no lo va a
-/// decir sin PIN». En ese caso se deja pasar la ranura entera sin filtrar.
-///
-/// El borde de esa vuelta atrás: **un perfil NSS con contraseña maestra se
-/// comporta igual**. Sin `C_Login` tampoco enseña sus `CKO_PRIVATE_KEY`, así
-/// que su ranura no se filtra y vuelve a listar sus ciento y pico entradas.
-/// Degrada en la dirección segura —enseña de más, nunca esconde algo
-/// firmable—, pero ahí el filtro del #100 no se nota; el sitio donde eso se
-/// arregla de verdad es más adelante, cuando ya haya sesión autenticada. El
-/// perfil desechable de las pruebas se monta con `--empty-password`, que es
-/// justo el caso en el que las claves sí se ven, así que ninguna prueba de
-/// grada B enseña este borde.
+/// En un almacén NSS sí se aplica siempre, y **sin vuelta atrás** (ID-190):
+/// antes, si la ranura no enseñaba ninguna clave visible, se devolvía el
+/// almacén entero sin filtrar, y esa vuelta atrás era la causa real de que un
+/// perfil de Firefox con contraseña maestra enseñase sus ciento y pico
+/// entradas con las CA dentro. Ahora, sin sesión iniciada, esa ranura se
+/// queda sin certificados firmables. Antes de filtrar, cada ranura que exige
+/// sesión y no tiene teclado propio la inicia a ciegas —sin PIN que ofrecer,
+/// ver [`log_in_before_listing`]—; el intento solo tiene éxito en el almacén
+/// sin protección real que describe ID-195 —un perfil NSS sin contraseña
+/// maestra, o el NSS propio de un `.p12` instalado—, así que contra una
+/// contraseña maestra de verdad falla en silencio, sin propagar el error: no
+/// hay PIN que pedir aquí, y `CKR_OK` de una tarjeta compartiendo el turno
+/// con el mismo módulo tampoco es un fallo de esta ranura. El perfil
+/// desechable de las pruebas se monta con `--empty-password`, que es justo el
+/// caso en el que las claves ya se ven sin necesitar sesión
+/// (`CKF_LOGIN_REQUIRED` a `false`), así que ninguna prueba de grada B
+/// ejercita el intento a ciegas contra un token que de verdad lo rechace
+/// —medido contra SoftHSM y contra un perfil NSS con contraseña real en
+/// `docs/research/token-flags-login.md`—.
 pub fn list_certificates(store: impl Into<Store>) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
     // Bajo el mismo turno que la firma: abrir un almacén NSS es inicializar el
@@ -138,27 +143,117 @@ fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificate>, TokenEr
     let mut found = Vec::new();
 
     for slot in usable_slots(&context)? {
-        let token_label = context.get_token_info(slot)?.label().trim().to_owned();
+        let info = context.get_token_info(slot)?;
+        let token_label = info.label().trim().to_owned();
         let session = context.open_ro_session(slot)?;
-        found.extend(signable_certificates(&session, store, &token_label)?);
+
+        // ID-190, segunda mitad: si la ranura exige sesión, se inicia antes de
+        // listar. Aquí no hay PIN que ofrecer —listar no lo pide, ver la nota
+        // de [`list_certificates`]—, así que el intento es a ciegas y solo
+        // tiene éxito en el almacén sin protección real que describe ID-195.
+        let logged_in = log_in_before_listing(&session, &info);
+        // El `?` de abajo, si `signable_certificates` falla, se lleva la
+        // función sin pasar por el `logout()` de más abajo. No hace falta
+        // repetir aquí el «salga bien o mal» de `sign_holding_the_turn`: el
+        // `Drop` de `Session` cierra la única sesión de la ranura al salir de
+        // este bucle, y con ella el estado de login que hubiera quedado.
+        found.extend(signable_certificates(
+            &session,
+            store,
+            &token_label,
+            logged_in,
+        )?);
+        if logged_in {
+            // Cerrada en cuanto ha servido para listar: dejarla abierta sería
+            // desbloquear el token para todo el proceso sin que nadie lo haya
+            // pedido (mismo motivo que el logout de sign_holding_the_turn).
+            let _ = session.logout();
+        }
     }
 
     Ok(found)
 }
 
-/// Los certificados de una ranura ya abierta que tienen clave privada —o,
-/// si la ranura no enseña ninguna clave privada sin sesión, todos los
-/// certificados sin filtrar (ver la nota de [`list_certificates`]).
+/// Inicia sesión antes de listar cuando la ranura la exige (ID-190).
+///
+/// Sin ella, `private_key_ids` no ve ninguna `CKO_PRIVATE_KEY` en un token que
+/// las protege, y antes de este cambio eso disparaba la vuelta atrás que aquí
+/// se retira: «sin claves visibles, devuelvo todos los certificados». Ahora,
+/// sin sesión iniciada, la ranura simplemente se queda sin certificados
+/// firmables.
+///
+/// El intento de `C_Login` es a ciegas, sin secreto (`login(User, None)`):
+/// solo tiene éxito en el almacén sin protección real que describe ID-195 —un
+/// perfil NSS sin contraseña maestra, o el NSS propio de un `.p12`
+/// instalado—. En cualquier otro —una contraseña maestra de verdad, o un
+/// módulo como SoftHSM que exige el PIN incluso para el intento vacío— falla
+/// en silencio: no hay PIN que pedir aquí, y propagar el error dejaría sin
+/// listar nada a quien tiene certificados en otro almacén.
+///
+/// **Se salta por completo cuando la ranura tiene teclado propio**
+/// (`protected_authentication_path`, ID-189): ahí `login(User, None)` no
+/// falla en silencio, cede el turno al pinpad y se queda bloqueada hasta que
+/// se teclee el PIN o el lector expire —justo lo que
+/// `docs/research/token-flags-login.md` documenta—. `list_certificates` es el
+/// camino de arranque, y colgarlo sobre un teclado sin nada en pantalla que
+/// lo explique va en contra del ID-190 y del ID-195.
+fn log_in_before_listing(session: &Session, info: &cryptoki::slot::TokenInfo) -> bool {
+    if !should_attempt_blind_login(info.login_required(), info.protected_authentication_path()) {
+        return false;
+    }
+
+    match session.login(UserType::User, None) {
+        Ok(()) => true,
+        // Ya autenticados contra este token por otra biblioteca del mismo
+        // proceso: no hay nada que iniciar, y tampoco nada que cerrar luego.
+        // Coincide a propósito con el `Err(_)` de abajo —aquí no hay PIN
+        // distinto que reintentar, a diferencia de `sign_holding_the_turn`,
+        // donde este mismo error sí separa un camino real—: se deja el brazo
+        // explícito para que quien lo lea no dé por hecho que el caso se
+        // olvidó.
+        Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => false,
+        Err(_) => false,
+    }
+}
+
+/// La decisión de [`log_in_before_listing`], separada de `Session` y
+/// `TokenInfo` —ninguno de los dos se puede construir fuera de un módulo
+/// PKCS#11 real— para poder fijarla con una prueba de unidad.
+fn should_attempt_blind_login(login_required: bool, protected_authentication_path: bool) -> bool {
+    login_required && !protected_authentication_path
+}
+
+/// Los certificados de una ranura ya abierta que tienen clave privada
+/// emparejada por `CKA_ID` en el mismo token (ID-07).
+///
+/// El filtro **no se aplica a una tarjeta sin sesión** ([`StoreClass::Card`]):
+/// ahí no hay nada que esconder porque todo lo que hay ya es firmable —una
+/// tarjeta o SoftHSM no traen autoridades sueltas mezcladas con las claves de
+/// la persona—, y sin sesión iniciada una tarjeta corriente (SoftHSM entre
+/// ellas, comprobado) no enseña ninguna `CKO_PRIVATE_KEY`: filtrar igual la
+/// dejaría sin listar nada, que es justo el fallo silencioso que
+/// [`list_certificates`] existe para evitar. **Cuando `log_in_before_listing`
+/// sí ha conseguido sesión** (`logged_in`), el filtro se aplica también a la
+/// tarjeta: las CA sueltas que algunas tarjetas llevan dentro pasarían sin
+/// filtrar si no, y eso es justo el ID-07 que este filtro existe para cubrir.
+///
+/// En un almacén NSS sí se aplica siempre, sin vuelta atrás (ID-190): antes,
+/// si la ranura no enseñaba ninguna clave visible, se devolvía el almacén
+/// entero sin filtrar, y esa vuelta atrás era la causa real de que un perfil
+/// de Firefox con contraseña maestra enseñase sus CA sueltas. Ahora, sin
+/// sesión iniciada, la ranura NSS simplemente se queda sin certificados
+/// firmables.
 fn signable_certificates(
     session: &Session,
     store: &Store,
     token_label: &str,
+    logged_in: bool,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    let visible_private_keys = private_key_ids(session)?;
-
-    if visible_private_keys.is_empty() {
+    if store.class() == StoreClass::Card && !logged_in {
         return all_certificates_in_session(session, store, token_label);
     }
+
+    let visible_private_keys = private_key_ids(session)?;
 
     let mut found = Vec::new();
     for certificate in all_certificates_in_session(session, store, token_label)? {
@@ -596,4 +691,27 @@ fn nul_inside(init_args: &str) -> TokenError {
         Situation::ModuleNotFound,
         format!("los init args «{init_args}» llevan un cero dentro"),
     )
+}
+
+#[cfg(test)]
+mod log_in_before_listing_tests {
+    use super::should_attempt_blind_login;
+
+    #[test]
+    fn skips_a_slot_that_does_not_require_login() {
+        assert!(!should_attempt_blind_login(false, false));
+    }
+
+    #[test]
+    fn attempts_a_blind_login_on_a_slot_without_a_reader_keypad() {
+        assert!(should_attempt_blind_login(true, false));
+    }
+
+    #[test]
+    fn skips_a_slot_with_a_reader_keypad_even_if_login_is_required() {
+        // login(User, None) cede el turno al pinpad y se queda colgada hasta
+        // que se teclee el PIN o el lector expire (ID-189): intentarlo aquí
+        // bloquearía list_certificates sin nada en pantalla que lo explique.
+        assert!(!should_attempt_blind_login(true, true));
+    }
 }

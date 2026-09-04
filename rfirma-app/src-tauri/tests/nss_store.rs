@@ -27,12 +27,16 @@
 //! verdad, donde dos claves privadas llevan la misma etiqueta, y es lo que hace
 //! obligatorio emparejar por `CKA_ID` (#98, ID-06).
 //!
-//! # La contraseña maestra es la cadena vacía
+//! # La contraseña maestra
 //!
-//! El perfil se crea con `certutil -N --empty-password`, que es el caso
-//! corriente de un Firefox recién instalado. Para `C_Login` la cadena vacía
-//! **no es lo mismo** que «sin PIN», y por eso este fichero incluye firmar y no
-//! solo listar.
+//! La mayoría de los perfiles de este fichero se crean con `certutil -N
+//! --empty-password`, que es el caso corriente de un Firefox recién
+//! instalado. Para `C_Login` la cadena vacía **no es lo mismo** que «sin
+//! PIN», y por eso este fichero incluye firmar y no solo listar. Otros
+//! ejercitan justo el caso contrario —una contraseña maestra de verdad,
+//! pasada como segundo argumento a `provision-profile.sh` (ID-190, #259)—,
+//! que es el borde en el que `CKF_LOGIN_REQUIRED` pasa a `true` y dispara el
+//! filtro firmable sin vuelta atrás.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -89,6 +93,34 @@ fn a_disposable_profile() -> (tempfile::TempDir, Store) {
     let provisioned = Command::new("bash")
         .arg(&script)
         .arg(directory.path())
+        .output()
+        .expect("deberia poder ejecutarse el script de aprovisionamiento");
+
+    assert!(
+        provisioned.status.success(),
+        "no se ha podido montar el perfil NSS con {}:\n{}\n{}",
+        script.display(),
+        String::from_utf8_lossy(&provisioned.stdout),
+        String::from_utf8_lossy(&provisioned.stderr),
+    );
+
+    let store = Store::nss(softoken(), directory.path());
+    (directory, store)
+}
+
+/// Lo mismo que [`a_disposable_profile`], pero con una contraseña maestra DE
+/// VERDAD: el borde que el intento de sesión a ciegas antes de listar no
+/// puede salvar sin PIN (ID-190, #259). Con ella `CKF_LOGIN_REQUIRED` pasa a
+/// `true` y las tres entradas del perfil —los dos certificados de persona y
+/// la CA suelta— dejan de verse sin sesión iniciada.
+fn a_disposable_profile_with_a_master_password() -> (tempfile::TempDir, Store) {
+    let directory = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let script = repository_root().join("testdata/nss/provision-profile.sh");
+
+    let provisioned = Command::new("bash")
+        .arg(&script)
+        .arg(directory.path())
+        .arg("secreto")
         .output()
         .expect("deberia poder ejecutarse el script de aprovisionamiento");
 
@@ -173,6 +205,27 @@ fn a_certificate_without_a_private_key_is_filtered_out_and_the_holders_is_not() 
     // Y sin pedir el PIN: el filtro busca la clave sin iniciar sesion (ID-08).
     // Si esto necesitase el PIN, no habria forma de decidir que enseñar antes
     // de pedirselo a nadie.
+}
+
+/// La vuelta atrás retirada (ID-190, #259): con una contraseña maestra DE
+/// VERDAD, sin `C_Login` correcto no se ve ninguna `CKO_PRIVATE_KEY` —el
+/// intento a ciegas antes de listar falla en silencio, `CKR_PIN_INCORRECT`
+/// medido en `docs/research/token-flags-login.md`—, así que la lista sale
+/// **vacía** en vez de traer las tres entradas del perfil con la CA dentro.
+/// Antes de este cambio, la ranura sin ninguna clave visible se dejaba pasar
+/// entera sin filtrar, y eso era justo el fallo que enseñaba ciento y pico
+/// entradas en un Firefox de verdad.
+#[test]
+fn a_profile_with_a_real_master_password_lists_nothing_without_it() {
+    let (_profile, store) = a_disposable_profile_with_a_master_password();
+
+    let found = pkcs11::list_certificates(&store).expect("listar no deberia pedir la contrasena");
+
+    assert!(
+        found.is_empty(),
+        "sin la contrasena maestra no deberia verse ninguna clave privada, \
+         asi que la lista firmable tenia que salir vacia: {found:?}"
+    );
 }
 
 /// El titular, el DNI y el emisor se leen del DER igual que en una tarjeta: no
