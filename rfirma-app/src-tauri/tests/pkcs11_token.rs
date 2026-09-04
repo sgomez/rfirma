@@ -201,9 +201,11 @@ fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it
 }
 
 /// La nota del módulo, fijada en una prueba: SoftHSM no enseña ninguna clave
-/// privada sin sesión, y aun así los cinco certificados del token salen sin
-/// pedir el PIN, porque una ranura sin ninguna clave visible no se filtra
-/// (ver la nota de [`pkcs11::list_certificates`]).
+/// privada sin sesión —ni con el intento a ciegas que ahora se hace antes de
+/// listar, `CKR_ARGUMENTS_BAD` medido en `docs/research/token-flags-login.md`—,
+/// y aun así los cinco certificados del token salen sin pedir el PIN, porque
+/// una tarjeta no filtra por clave visible (ID-190; ver la nota de
+/// [`pkcs11::list_certificates`]).
 #[test]
 fn listing_without_a_session_still_lists_them() {
     let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");

@@ -104,6 +104,34 @@ fn a_disposable_profile() -> (tempfile::TempDir, Store) {
     (directory, store)
 }
 
+/// Lo mismo que [`a_disposable_profile`], pero con una contraseña maestra DE
+/// VERDAD: el borde que el intento de sesión a ciegas antes de listar no
+/// puede salvar sin PIN (ID-190, #259). Con ella `CKF_LOGIN_REQUIRED` pasa a
+/// `true` y las tres entradas del perfil —los dos certificados de persona y
+/// la CA suelta— dejan de verse sin sesión iniciada.
+fn a_disposable_profile_with_a_master_password() -> (tempfile::TempDir, Store) {
+    let directory = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let script = repository_root().join("testdata/nss/provision-profile.sh");
+
+    let provisioned = Command::new("bash")
+        .arg(&script)
+        .arg(directory.path())
+        .arg("secreto")
+        .output()
+        .expect("deberia poder ejecutarse el script de aprovisionamiento");
+
+    assert!(
+        provisioned.status.success(),
+        "no se ha podido montar el perfil NSS con {}:\n{}\n{}",
+        script.display(),
+        String::from_utf8_lossy(&provisioned.stdout),
+        String::from_utf8_lossy(&provisioned.stderr),
+    );
+
+    let store = Store::nss(softoken(), directory.path());
+    (directory, store)
+}
+
 fn certificates(store: &Store) -> Vec<TokenCertificate> {
     pkcs11::list_certificates(store).expect("el perfil NSS deberia listarse")
 }
@@ -173,6 +201,27 @@ fn a_certificate_without_a_private_key_is_filtered_out_and_the_holders_is_not() 
     // Y sin pedir el PIN: el filtro busca la clave sin iniciar sesion (ID-08).
     // Si esto necesitase el PIN, no habria forma de decidir que enseñar antes
     // de pedirselo a nadie.
+}
+
+/// La vuelta atrás retirada (ID-190, #259): con una contraseña maestra DE
+/// VERDAD, sin `C_Login` correcto no se ve ninguna `CKO_PRIVATE_KEY` —el
+/// intento a ciegas antes de listar falla en silencio, `CKR_PIN_INCORRECT`
+/// medido en `docs/research/token-flags-login.md`—, así que la lista sale
+/// **vacía** en vez de traer las tres entradas del perfil con la CA dentro.
+/// Antes de este cambio, la ranura sin ninguna clave visible se dejaba pasar
+/// entera sin filtrar, y eso era justo el fallo que enseñaba ciento y pico
+/// entradas en un Firefox de verdad.
+#[test]
+fn a_profile_with_a_real_master_password_lists_nothing_without_it() {
+    let (_profile, store) = a_disposable_profile_with_a_master_password();
+
+    let found = pkcs11::list_certificates(&store).expect("listar no deberia pedir la contrasena");
+
+    assert!(
+        found.is_empty(),
+        "sin la contrasena maestra no deberia verse ninguna clave privada, \
+         asi que la lista firmable tenia que salir vacia: {found:?}"
+    );
 }
 
 /// El titular, el DNI y el emisor se leen del DER igual que en una tarjeta: no

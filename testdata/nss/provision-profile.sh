@@ -5,7 +5,7 @@
 # testdata/softhsm/provision-token.sh, y con el mismo material publico de la
 # FNMT que hay en testdata/fnmt/.
 #
-#   bash testdata/nss/provision-profile.sh <directorio>
+#   bash testdata/nss/provision-profile.sh <directorio> [contrasena-maestra]
 #
 # El perfil se crea EN EL DIRECTORIO QUE SE LE PASA y en ningun otro sitio: las
 # pruebas le pasan un directorio temporal. El perfil real de Firefox de nadie se
@@ -28,15 +28,20 @@
 # La CA suelta entra a proposito: es lo que un perfil de Firefox de verdad tiene
 # a cientos, y es lo que el filtro de #100 tendra que descartar.
 #
-# La contrasena maestra del perfil es la CADENA VACIA, que es el caso corriente
-# de un Firefox recien instalado y el que hace interesante a este ticket: para
-# C_Login la cadena vacia NO es lo mismo que «sin PIN».
+# La contrasena maestra del perfil es la CADENA VACIA por defecto, que es el
+# caso corriente de un Firefox recien instalado: para C_Login la cadena vacia
+# NO es lo mismo que «sin PIN». El segundo argumento opcional monta el perfil
+# con una contrasena maestra DE VERDAD en su lugar (ID-190, #259): el borde en
+# el que `CKF_LOGIN_REQUIRED` pasa a `true` y las claves privadas dejan de
+# verse sin sesion iniciada, que es la condicion que dispara el filtro
+# firmable sin vuelta atras.
 
 set -euo pipefail
 
 profile="${1:-}"
+master_password="${2:-}"
 [ -n "$profile" ] || {
-    echo "uso: $0 <directorio-del-perfil>" >&2
+    echo "uso: $0 <directorio-del-perfil> [contrasena-maestra]" >&2
     exit 2
 }
 
@@ -54,17 +59,22 @@ done
 mkdir -p "$profile"
 db="sql:$profile"
 
-# `certutil -N --empty-password` deja la contrasena maestra en la cadena vacia.
-# No es un descuido: es exactamente el perfil que hay que poder firmar sin
-# atascar a nadie en un dialogo imposible.
-if [ ! -f "$profile/cert9.db" ]; then
-    certutil -N -d "$db" --empty-password
-fi
+# El fichero de contrasena que quieren pk12util y certutil para ESTE perfil:
+# vacio de verdad cuando no se pide contrasena maestra, o la que se haya dado.
+master_password_file="$profile/.master-password"
+printf '%s' "$master_password" > "$master_password_file"
 
-# El fichero de contrasena que quieren pk12util y certutil: vacio de verdad, no
-# ausente.
-empty_password="$profile/.empty-password"
-: > "$empty_password"
+# `certutil -N --empty-password` deja la contrasena maestra en la cadena
+# vacia, que es exactamente el perfil que hay que poder firmar sin atascar a
+# nadie en un dialogo imposible. Con una contrasena de verdad, `-f` la fija
+# desde el fichero.
+if [ ! -f "$profile/cert9.db" ]; then
+    if [ -n "$master_password" ]; then
+        certutil -N -d "$db" -f "$master_password_file"
+    else
+        certutil -N -d "$db" --empty-password
+    fi
+fi
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -73,14 +83,14 @@ trap 'rm -rf "$workdir"' EXIT
 # por el apodo: los dos certificados de persona comparten apodo, asi que buscar
 # por el daria por importado el segundo en cuanto estuviera el primero.
 private_keys() {
-    certutil -K -d "$db" -f "$empty_password" 2>/dev/null | grep -c '^<' || true
+    certutil -K -d "$db" -f "$master_password_file" 2>/dev/null | grep -c '^<' || true
 }
 
 # import_pkcs12 <fichero .p12> <contrasena> <cuantas claves debe haber despues>
 import_pkcs12() {
     local p12="$1" password="$2" expected="$3"
     [ "$(private_keys)" -ge "$expected" ] && return 0
-    pk12util -i "$p12" -d "$db" -W "$password" -k "$empty_password" >/dev/null
+    pk12util -i "$p12" -d "$db" -W "$password" -k "$master_password_file" >/dev/null
     echo "importado $(basename "$p12")"
 }
 
@@ -97,7 +107,7 @@ import_ca() {
     # Con el primero de la cadena basta: lo que hace falta es que haya algo sin
     # clave privada dentro del almacen.
     openssl x509 -in "$workdir/ca.pem" -outform DER -out "$workdir/ca.der"
-    certutil -A -d "$db" -n "$nickname" -t ",," -i "$workdir/ca.der" -f "$empty_password"
+    certutil -A -d "$db" -n "$nickname" -t ",," -i "$workdir/ca.der" -f "$master_password_file"
     echo "importada la CA $nickname"
 }
 
