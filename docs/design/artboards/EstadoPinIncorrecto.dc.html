@@ -93,7 +93,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 .rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
 .rf-field--error .rf-input{border-width:2px}
 .rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
-.rf-field--error .rf-hint::before{content:"! ";}
 .rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
   border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
   font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
@@ -403,27 +402,96 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 <div class="rf-scrim">
 <div class="rf-dialog">
-  <div class="rf-stack" style="gap:4px">
-    <p class="rf-title">Introduce el PIN de la tarjeta</p>
-    <p class="rf-prose rf-text-muted">EIDAS CERTIFICADO PRUEBAS · 99999999R</p>
+  <div class="rf-stack" style="gap:4px;min-height:48px">
+    <p class="rf-title">{{titulo}}</p>
+    <sc-if value="{{haySujeto}}" hint-placeholder-val="{{true}}">
+      <p class="rf-prose rf-text-muted">{{sujeto}}</p>
+    </sc-if>
   </div>
   <div class="rf-field rf-field--error">
-    <label class="rf-label">PIN</label>
-    <div class="rf-input rf-row" style="letter-spacing:6px;font-size:18px">••••</div>
-    <span class="rf-hint">PIN incorrecto. Te quedan <strong>2 intentos</strong> antes de que la tarjeta se bloquee.</span>
+    <label class="rf-label">{{etiqueta}}</label>
+    <div class="rf-input rf-row" style="letter-spacing:{{espaciado}};font-size:18px">{{puntos}}</div>
+    <div style="min-height:17px">
+      <sc-if value="{{hayPista}}" hint-placeholder-val="{{true}}">
+        <span class="rf-hint">{{pista}}</span>
+      </sc-if>
+    </div>
   </div>
   <hr class="rf-divider">
   <div class="rf-row rf-gap-sm" style="justify-content:flex-end">
     <button class="rf-btn rf-btn--ghost">Cancelar</button>
-    <button class="rf-btn rf-btn--primary">Firmar</button>
+    <button class="rf-btn rf-btn--primary">{{boton}}</button>
   </div>
 </div></div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"almacen":{"editor":"enum","options":["modulo PKCS#11 · PIN · antes de listar","perfil de Firefox · contrasena · antes de listar","«.p12» instalado · contrasena · al firmar"],"default":"modulo PKCS#11 · PIN · antes de listar","section":"Clase de almacen"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   renderVals() {
-    return { tema: this.props.tema ?? "light" };
+    // ID-188: dos palabras, y las elige la CLASE DE ALMACEN. «contraseña» a un
+    // fichero (perfil NSS de navegador, «.p12» instalado), «PIN» a un módulo
+    // PKCS#11. Se diverge a propósito de AutoFirma, que le dice «contraseña» al
+    // módulo genérico porque tiene un registro de tarjetas que rFirma no tendrá.
+    //
+    // Lo que se nombra debajo del título está en los términos de quien firma —el
+    // certificado, el navegador, el fichero que instaló— y NUNCA en los de la
+    // implementación: ni la clase de módulo ni la etiqueta del token. Con el
+    // módulo PKCS#11 no hay ninguna de esas tres cosas todavía, así que no se
+    // pone línea: el hueco se reserva para que las tres posiciones midan igual.
+    //
+    // ID-190: el MOMENTO también cambia. Con sesión necesaria para listar, este
+    // diálogo aparece ANTES de que haya lista de certificados, así que no puede
+    // nombrar un certificado que aún no se ha elegido y el botón dice
+    // «Continuar» y no «Firmar».
+    //
+    // ID-191: no hay contador de reintentos, y es estructural: la información de
+    // token de PKCS#11 no lo trae ni con una tarjeta real. No se promete ninguno.
+    const casos = {
+      "modulo PKCS#11 · PIN · antes de listar": {
+        titulo: "Introduce el PIN",
+        sujeto: "",
+        haySujeto: false,
+        etiqueta: "PIN",
+        puntos: "••••",
+        espaciado: "6px",
+        pista: "PIN incorrecto",
+        boton: "Continuar"
+      },
+      "perfil de Firefox · contrasena · antes de listar": {
+        titulo: "Introduce la contraseña",
+        sujeto: "Tus certificados de Firefox",
+        haySujeto: true,
+        etiqueta: "Contraseña",
+        puntos: "•••••••••",
+        espaciado: "4px",
+        pista: "Contraseña incorrecta",
+        boton: "Continuar"
+      },
+      "«.p12» instalado · contrasena · al firmar": {
+        titulo: "Introduce la contraseña",
+        sujeto: "EIDAS CERTIFICADO PRUEBAS · 99999999R",
+        haySujeto: true,
+        etiqueta: "Contraseña",
+        puntos: "•••••••••",
+        espaciado: "4px",
+        pista: "Contraseña incorrecta",
+        boton: "Firmar"
+      }
+    };
+    const clave = this.props.almacen ?? "modulo PKCS#11 · PIN · antes de listar";
+    const c = casos[clave] || casos["modulo PKCS#11 · PIN · antes de listar"];
+    return {
+      tema: this.props.tema ?? "light",
+      titulo: c.titulo,
+      sujeto: c.sujeto,
+      haySujeto: c.haySujeto,
+      etiqueta: c.etiqueta,
+      puntos: c.puntos,
+      espaciado: c.espaciado,
+      pista: c.pista,
+      hayPista: c.pista !== "",
+      boton: c.boton
+    };
   }
 }
 </script>

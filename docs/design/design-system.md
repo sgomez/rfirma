@@ -184,8 +184,17 @@ reimplementar ni relajar:
   `--rf-focus-ring-offset` (2px) de desplazamiento, aplicado a todo
   `:focus-visible` bajo la raíz. Las dos medidas son tokens, no literales.
 - **El color nunca es el único indicador.** El botón secundario cambia borde
-  *y* color en hover; el campo con error cambia borde, sube el peso del texto de
-  ayuda y le antepone un glifo `!`.
+  *y* color en hover; el campo con error **engorda el borde a 2 px y sube a
+  negrita el texto de ayuda**.
+
+  **Sin glifo antepuesto, y no vuelve.** `.rf-field--error .rf-hint::before`
+  ponía un `"! "` delante de la ayuda; se retiró en la v0.4 del bundle, de los
+  catorce artboards y de los dos documentos que lo prescribían. El motivo es de
+  idioma: en castellano la exclamación **abre con `¡`**, así que un `!` suelto
+  delante de la frase se lee como una exclamación mal cerrada, no como un aviso.
+  El requisito se sigue cumpliendo sin él —el borde y el peso son dos
+  indicadores no cromáticos—, así que no hace falta sustituirlo por otro glifo:
+  si alguien quiere reponer una señal, que sea texto que se lea.
 - **Contraste.** Todo par texto/fondo del sistema cumple WCAG AA como mínimo, y
   los contornos de control cumplen el 3:1 de WCAG 1.4.11, en ambos temas.
 - **Movimiento reducido.** Ver sección 6.
@@ -255,7 +264,9 @@ toda la tarjeta es pulsable. Para un contenedor sin sombra ni relleno,
 ```
 
 Siempre `<label>` asociado por `for`/`id`; un placeholder no es una etiqueta.
-Entre campos, `--rf-space-md`. Error: `.rf-field--error` en el contenedor.
+Entre campos, `--rf-space-md`. Error: `.rf-field--error` en el contenedor, que
+engorda el borde y pone la ayuda en negrita — y nada más delante del texto (ver
+sección 8).
 
 ### Insignia
 

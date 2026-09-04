@@ -93,7 +93,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 .rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
 .rf-field--error .rf-input{border-width:2px}
 .rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
-.rf-field--error .rf-hint::before{content:"! ";}
 .rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
   border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
   font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
@@ -117,6 +116,16 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
     border-radius:var(--rf-radius-md);color:var(--rf-text)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
 </header>
+<sc-if value="{{hayVersionNueva}}" hint-placeholder-val="{{true}}">
+  <div class="rf-row rf-gap-xs" style="flex:none;padding:8px var(--rf-space-sm);
+    border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+    <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6M6 12l6-6 6 6"/></svg></span>
+    <p class="rf-prose" style="flex:1;min-width:0">Hay una versión nueva de rFirma: <strong>0.4.1</strong></p>
+    <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Cómo actualizar</button>
+    <span style="width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;
+      border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+  </div>
+</sc-if>
 <div class="rf-row" style="flex:1;min-height:0;align-items:stretch">
 <aside class="rf-stack rf-gap-sm" style="width:300px;flex:none;padding:var(--rf-space-sm);overflow:auto;
   border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
@@ -408,7 +417,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"caso":{"editor":"enum","options":["1 · recien abierto, sin colocar","1.1 · una pagina, sellada la 3","1.2 · una pagina, mirando otra","2 · todas, sin colocar","2.1 · todas, colocado","3 · algunas, sin colocar","3.1 · algunas, colocado","3.2 · algunas, en una pagina sellada"],"default":"1 · recien abierto, sin colocar","section":"Colocacion"},"tecleado":{"editor":"enum","options":["lo que digan los botones","10-40 · paginas que no existen","3-1 · rango al reves","1;2;3 · separador equivocado"],"default":"lo que digan los botones","section":"Colocacion"},"vista":{"editor":"enum","options":["fiel · el sello de verdad","recalculando","moviendo o redimensionando","no se ha podido dibujar"],"default":"fiel · el sello de verdad","section":"Vista previa"},"paginas":{"editor":"enum","options":["4","27","200"],"default":"27","section":"Documento"},"zoom":{"editor":"enum","options":["50 %","100 %","300 %"],"default":"100 %","section":"Visor"},"tamano":{"editor":"enum","options":["normal","al minimo"],"default":"normal","section":"Recuadro"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"caso":{"editor":"enum","options":["1 · recien abierto, sin colocar","1.1 · una pagina, sellada la 3","1.2 · una pagina, mirando otra","2 · todas, sin colocar","2.1 · todas, colocado","3 · algunas, sin colocar","3.1 · algunas, colocado","3.2 · algunas, en una pagina sellada"],"default":"1 · recien abierto, sin colocar","section":"Colocacion"},"tecleado":{"editor":"enum","options":["lo que digan los botones","10-40 · paginas que no existen","3-1 · rango al reves","1;2;3 · separador equivocado"],"default":"lo que digan los botones","section":"Colocacion"},"vista":{"editor":"enum","options":["fiel · el sello de verdad","recalculando","moviendo o redimensionando","no se ha podido dibujar"],"default":"fiel · el sello de verdad","section":"Vista previa"},"paginas":{"editor":"enum","options":["4","27","200"],"default":"27","section":"Documento"},"zoom":{"editor":"enum","options":["50 %","100 %","300 %"],"default":"100 %","section":"Visor"},"tamano":{"editor":"enum","options":["normal","al minimo"],"default":"normal","section":"Recuadro"},"version":{"editor":"enum","options":["hay version nueva","al dia"],"default":"hay version nueva","section":"Version"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   porElMedio(texto, cabeza, cola) {
     if (texto.length - cola.length <= cabeza) { return texto; }
@@ -671,7 +680,17 @@ class Component extends DCLogic {
       textoSello = "No se ha podido dibujar el sello";
     }
 
+    // --- La franja bajo la cabecera es EL SITIO DONDE rFIRMA NOTIFICA (ID-181).
+    // No es un apaño del aviso de version: es el patron de notificacion de la
+    // ventana, y el aviso de version es su primer inquilino. Se descartaron una
+    // insignia en el boton de menu (invisible hasta que se abre el menu, y solo
+    // sirve para lo que ya vive en «Acerca de») y una linea en el pie (rFirma no
+    // tiene barra de estado: estrenaba un mueble entero para una frase que casi
+    // siempre no esta). La palanca solo decide si hay algo que notificar. ---
+    const hayVersionNueva = (this.props.version ?? "hay version nueva") !== "al dia";
+
     return {
+      hayVersionNueva: hayVersionNueva,
       destinoOk: caso !== "no disponible",
       destinoRoto: caso === "no disponible",
       carpeta: "…/" + this.recortaCarpeta(par[0], cabezaCarpeta) + "/",

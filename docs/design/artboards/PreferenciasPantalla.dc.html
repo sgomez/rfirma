@@ -93,7 +93,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 .rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
 .rf-field--error .rf-input{border-width:2px}
 .rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
-.rf-field--error .rf-hint::before{content:"! ";}
 .rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
   border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
   font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
@@ -247,6 +246,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       background:var(--rf-bg);font-size:14px;font-weight:600">Firma</span>
     <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
       border-radius:var(--rf-radius-md);border:1px solid transparent;
+      font-size:14px;font-weight:600;color:var(--rf-text-muted)">Certificados</span>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
+      border-radius:var(--rf-radius-md);border:1px solid transparent;
       font-size:14px;font-weight:600;color:var(--rf-text-muted)">Privacidad</span>
     <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
       border-radius:var(--rf-radius-md);border:1px solid transparent;
@@ -269,11 +271,36 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </span>
         <div class="rf-stack" style="gap:4px;flex:1">
           <p class="rf-prose">Recordar la última configuración de firma visible</p>
-          <p class="rf-hint">El interruptor, las casillas, el motivo y el tamaño del recuadro se
-            reutilizan en el siguiente documento. La posición se recuerda por documento, no aquí.</p>
         </div>
       </div>
-      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs)">
+      <sc-if value="{{hayJuntoAlOriginal}}" hint-placeholder-val="{{true}}">
+      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs);min-height:182px">
+        <p class="rf-prose">Dónde se guarda el documento firmado</p>
+        <div class="rf-row rf-gap-xs" style="padding-top:2px">
+          <span style="width:18px;height:18px;flex:none;border-radius:var(--rf-radius-pill);
+            border:1px solid var(--rf-border-strong)"></span>
+          <p class="rf-prose" style="flex:1;min-width:0">Junto al documento original</p>
+        </div>
+        <div class="rf-row rf-gap-xs">
+          <span style="width:18px;height:18px;flex:none;border-radius:var(--rf-radius-pill);
+            border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center">
+            <span style="width:10px;height:10px;border-radius:var(--rf-radius-pill);background:var(--rf-primary)"></span>
+          </span>
+          <p class="rf-prose" style="flex:1;min-width:0">En esta carpeta</p>
+        </div>
+        <div style="padding-left:26px">
+          <div class="rf-row rf-gap-xs">
+          <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+          <p class="rf-prose" style="flex:1;min-width:0;font-weight:600;overflow:hidden;
+            text-overflow:ellipsis;white-space:nowrap">Documentos</p>
+          <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
+        </div>
+        </div>
+        <p class="rf-hint">La carpeta no se crea nunca.</p>
+      </div>
+      </sc-if>
+      <sc-if value="{{soloCarpeta}}" hint-placeholder-val="{{false}}">
+      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs);min-height:182px">
         <p class="rf-prose">Dónde se guarda el documento firmado</p>
         <div class="rf-row rf-gap-xs">
           <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
@@ -281,9 +308,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
             text-overflow:ellipsis;white-space:nowrap">Documentos</p>
           <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
         </div>
-        <p class="rf-hint">Se comprueba antes de firmar. Si no está o no se puede escribir se avisa en
-          el panel, y ahí mismo se puede cambiar. La carpeta no se crea nunca.</p>
+        <p class="rf-hint">La carpeta no se crea nunca.</p>
       </div>
+      </sc-if>
       <sc-if value="{{avisoGuardar}}" hint-placeholder-val="{{true}}">
         <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
           border-radius:var(--rf-radius-md);margin-top:var(--rf-space-xs)">
@@ -292,6 +319,68 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
             <p class="rf-title" style="font-size:14px">No se ha podido guardar el ajuste</p>
           </div>
           <p class="rf-hint">Se ha vuelto al valor anterior. Vuelve a intentarlo.</p>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="rf-stack rf-gap-sm">
+      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Certificados en fichero</p>
+      <hr class="rf-divider">
+      <div class="rf-row rf-gap-sm" style="justify-content:flex-end;padding-top:var(--rf-space-xs)">
+        <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Añadir…</button>
+      </div>
+      <sc-if value="{{errorEliptica}}" hint-placeholder-val="{{false}}">
+        <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
+          border-radius:var(--rf-radius-md)">
+          <div class="rf-row rf-gap-xs">
+            <span style="display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+            <p class="rf-title" style="font-size:14px">Ese certificado no es compatible con rFirma</p>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{hayInstalados}}" hint-placeholder-val="{{true}}">
+      <div class="rf-stack" style="border:1px solid var(--rf-border-subtle);
+        border-radius:var(--rf-radius-md);background:var(--rf-surface);overflow:hidden">
+      <div class="rf-row rf-gap-xs" style="padding:10px var(--rf-space-sm);align-items:flex-start">
+        <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+        <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+          <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">EIDAS CERTIFICADO PRUEBAS - NOMBRE APELLIDOUNO APELLIDODOS</p>
+          <p class="rf-body rf-text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">99999999R · AC FNMT Usuarios · caduca el 14/03/2028</p>
+        </div>
+        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Quitar</button>
+      </div>
+      <div class="rf-row rf-gap-xs" style="padding:10px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle);align-items:flex-start">
+        <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+        <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+          <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">SELLO ELECTRONICO DE PRUEBAS ENTIDAD FICTICIA SL</p>
+          <p class="rf-body rf-text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">B99999999 · AC Representación · caduca el 02/11/2027</p>
+        </div>
+        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Quitar</button>
+      </div>
+      <div class="rf-row rf-gap-xs" style="padding:10px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle);align-items:flex-start">
+        <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+        <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+          <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">EMPLEADO PUBLICO DE PRUEBAS - NOMBRE APELLIDOUNO APELLIDODOS</p>
+          <p class="rf-body rf-text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">99999999R · AC Administración Pública · caduca el 21/06/2027</p>
+        </div>
+        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Quitar</button>
+      </div>
+      <div class="rf-row rf-gap-xs" style="padding:10px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle);align-items:flex-start">
+        <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+        <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+          <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">EIDAS CERTIFICADO PRUEBAS ANTIGUO - NOMBRE APELLIDOUNO</p>
+          <p class="rf-body rf-text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">88888888T · AC FNMT Usuarios · caducó el 12/02/2026</p>
+        </div>
+          <span class="rf-badge" style="flex:none">Caducado</span>
+        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Quitar</button>
+      </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{sinInstalados}}" hint-placeholder-val="{{false}}">
+        <div class="rf-stack" style="align-items:center;justify-content:center;gap:var(--rf-space-xs);
+          padding:var(--rf-space-md);border:1px dashed var(--rf-border-strong);
+          border-radius:var(--rf-radius-md)">
+          <p class="rf-prose rf-text-muted">Todavía no has instalado ninguno</p>
         </div>
       </sc-if>
     </div>
@@ -307,8 +396,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </span>
         <div class="rf-stack" style="gap:4px;flex:1">
           <p class="rf-prose">Recordar mi actividad</p>
-          <p class="rf-hint">Los documentos recientes y el certificado que usaste la última vez.
-            Apagarlo borra lo ya guardado, previa confirmación.</p>
+          <p class="rf-hint">Los documentos recientes y el certificado que usaste la última vez.</p>
         </div>
       </div>
       <div style="padding-left:56px">
@@ -324,6 +412,16 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
           <p class="rf-hint">Los documentos recientes siguen guardados. Vuelve a intentarlo.</p>
         </div>
       </sc-if>
+        <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+          <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+            background:var(--rf-primary);margin-top:2px">
+            <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+              border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+          </span>
+          <div class="rf-stack" style="gap:4px;flex:1">
+            <p class="rf-prose">Avisarme cuando haya una versión nueva</p>
+          </div>
+        </div>
     </div>
 
     <div class="rf-stack rf-gap-sm">
@@ -371,11 +469,25 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b"},"ruta":{"editor":"enum","options":["el entorno sabe la ruta del documento","sandbox · no la sabe"],"default":"el entorno sabe la ruta del documento","section":"Destino"},"p12":{"editor":"enum","options":["cuatro instalados","ninguno todavia","error · clave eliptica"],"default":"cuatro instalados","section":"Certificados en fichero"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   renderVals() {
     const aviso = this.props.aviso ?? "ninguno";
+    // El aviso de version se da SIEMPRE y su ajuste esta SIEMPRE: no hay forma
+    // fiable de saber si las actualizaciones las gestiona un repositorio, asi que
+    // la condicion del ID-180 se retira y no queda palanca que decidir.
+    // ID-184: «junto al original» solo se ofrece si el entorno sabe devolver la
+    // ruta real del documento. Bajo el sandbox no la sabe, asi que la opcion no
+    // aparece — y los dos estados miden lo mismo (min-height del bloque), para
+    // que las secciones de debajo no salten.
+    const sabeRuta = (this.props.ruta ?? "el entorno sabe la ruta del documento") !== "sandbox · no la sabe";
+    const p12 = this.props.p12 ?? "cuatro instalados";
     return {
+      hayJuntoAlOriginal: sabeRuta,
+      soloCarpeta: !sabeRuta,
+      hayInstalados: p12 !== "ninguno todavia",
+      sinInstalados: p12 === "ninguno todavia",
+      errorEliptica: p12 === "error · clave eliptica",
       tema: this.props.tema ?? "light",
       ancho: this.props.ancho ?? 720,
       aviso: aviso,
