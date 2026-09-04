@@ -61,6 +61,8 @@ Los canales son **tres** —flatpak, `.deb` y `.rpm`—, todos servidos desde
 [ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)). No hace falta tener
 Java: el motor criptográfico va compilado dentro.
 
+### Elige un canal
+
 **Elige uno solo.** Instalar rFirma por dos vías son dos aplicaciones con
 memorias separadas: ni los documentos recientes, ni la rúbrica, ni las
 preferencias se comparten, y no se migran. Es la conducta normal de Linux —el
@@ -70,7 +72,26 @@ Firefox flatpak y el `.deb` tampoco comparten perfil—.
 > propio y aún no se han publicado. Hasta que la primera Release los sirva, lo
 > único instalable es el flatpak que produce `just flatpak`, en local.
 
-Las descargas van **siempre a la última publicación**, sin número de versión en
+**La vía recomendada es añadir el repositorio**, no descargar un fichero suelto:
+una vez dado de alta, las actualizaciones llegan solas con el gestor de
+paquetes del sistema (ADR-0015). Elige tu canal en
+<https://rfirma.sgomez.me>, que da la orden completa para flatpak, apt y dnf.
+
+El bundle de flatpak **no trae el runtime**: se consume del remoto de
+**Flathub**, así que añadirlo es requisito de instalación. Es de un solo uso, y
+`--user` no pide permisos de administración:
+
+```bash
+flatpak remote-add --user --if-not-exists \
+    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+```
+
+#### Descarga suelta (excepción)
+
+Si no quieres dar de alta el repositorio, cada canal también se sirve como
+fichero suelto en las Releases de GitHub. Es la vía sin actualizaciones
+automáticas: hay que repetir la descarga a mano en cada versión. Las
+descargas van **siempre a la última publicación**, sin número de versión en
 el enlace: así el README no envejece y no hay que sincronizarlo con nada
 (ID-151). Los nombres de los ficheros publicados no llevan versión, que es lo
 que hace que estos enlaces resuelvan:
@@ -83,16 +104,8 @@ Las candidatas (`-rc.N`) publican **solo el flatpak**: el campo `Version` de un
 RPM no admite guiones, así que un `.deb` o un `.rpm` de una candidata no existe
 (ID-154, `packaging/native-packages-allowed.sh`).
 
-El bundle **no trae el runtime**: se consume del remoto de **Flathub**, así que
-añadirlo es requisito de instalación. Es de un solo uso, y `--user` no pide
-permisos de administración:
-
-```bash
-flatpak remote-add --user --if-not-exists \
-    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-```
-
-Con el remoto puesto, `flatpak install` resuelve `org.gnome.Platform//50` solo:
+Con el remoto de Flathub puesto (arriba), `flatpak install` resuelve
+`org.gnome.Platform//50` solo:
 
 ```bash
 just flatpak                                          # produce el .flatpak
