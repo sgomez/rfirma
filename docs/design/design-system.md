@@ -108,10 +108,11 @@ línea, `.rf-prose`.
 
 Nota de despliegue: Inter **está autoalojada**, no servida desde una CDN. Los
 woff2 (subconjuntos `latin` y `latin-ext`) y su OFL viven junto al bundle y
-entran en el paquete. No es una preferencia: dentro del sandbox del flatpak no
-hay red —el manifiesto no declara `--share=network`— y la CSP hereda
-`default-src 'self'` sin `font-src`, así que un `@import` a Google Fonts no
-cargaría nunca y toda la aplicación caería a la sans del sistema.
+entran en el paquete. No es una preferencia: la CSP hereda `default-src 'self'`
+sin `font-src`, así que un `@import` a Google Fonts no cargaría nunca y toda la
+aplicación caería a la sans del sistema. El `--share=network` del manifiesto no
+cambia nada aquí: existe sólo para la consulta de versión a GitHub (#270), y la
+ventana sigue sin poder pedir un recurso de fuera.
 
 ---
 

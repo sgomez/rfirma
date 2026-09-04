@@ -35,6 +35,7 @@ pub mod preview;
 pub mod recents;
 pub mod rubric;
 pub mod signing;
+pub mod version;
 pub mod window;
 
 #[cfg(test)]

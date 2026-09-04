@@ -29,6 +29,7 @@ pub mod isolate;
 pub mod memory;
 pub mod paths;
 pub mod pkcs11;
+pub mod releases;
 pub mod rubric;
 pub mod signing;
 
@@ -222,6 +223,7 @@ pub fn run() {
             commands::preview_signature,
             commands::pades_lower_left,
             commands::read_invocation,
+            commands::check_for_new_version,
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");
