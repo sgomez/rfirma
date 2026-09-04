@@ -19,6 +19,8 @@ const cardCertificate: Certificate = {
 
 const firefoxCertificate: Certificate = { ...cardCertificate, store: "firefox" };
 
+const chromeCertificate: Certificate = { ...cardCertificate, store: "chrome" };
+
 const p12Certificate: Certificate = { ...cardCertificate, store: "nssdb" };
 
 const wrongPin: TokenFailure = {
@@ -59,6 +61,15 @@ describe("PinDialog", () => {
     expect(screen.getByRole("dialog", { name: "Introduce la contraseña" })).toBeVisible();
     expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
     expect(screen.getByText("Tus certificados de Firefox")).toBeInTheDocument();
+  });
+
+  // ID-188: la palabra la elige la clase de almacén, no el hardware. Chrome
+  // es otro perfil NSS, igual que Firefox, y también pide "contraseña".
+  it("calls it a password for a Chrome profile too, by store class", () => {
+    renderDialog({ certificate: chromeCertificate });
+
+    expect(screen.getByRole("dialog", { name: "Introduce la contraseña" })).toBeVisible();
+    expect(screen.getByText("Tus certificados de Chrome")).toBeInTheDocument();
   });
 
   it("says which certificate it is unlocking for a .p12 file", () => {
