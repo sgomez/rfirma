@@ -1,0 +1,29 @@
+# La otra mitad del ID-170. Fijar las acciones por SHA sin esto seria
+# congelarlas para siempre: lo que se compra al fijarlas no es inmunidad —el
+# SHA fijado puede ser malo desde el primer dia— sino que la actualizacion pase
+# por una PR que alguien mira, en vez de ocurrir en silencio (ADR-0015).
+#
+# MENSUAL Y AGRUPADO, y las dos cosas por el mismo motivo: un flujo de PRs que
+# nadie mira es peor que no tener ninguna. Semanal y de una en una son cinco
+# notificaciones al mes que se cierran sin leer, y a la sexta la revision es
+# una firma en blanco.
+#
+# SOLO `github-actions`. Las dependencias de Rust y de Node NO entran aqui a
+# proposito: cualquier cambio suyo mueve `Cargo.lock` o `pnpm-lock.yaml`, y con
+# ello hay que regenerar a mano `packaging/flatpak/cargo-sources.json` y
+# `sources.lock` (el generador no corre en este entorno). Una PR automatica que
+# nace roja en `check-flatpak-sources` no ayuda a nadie.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      acciones:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: 'chore(ci)'
+    labels:
+      - needs-triage
