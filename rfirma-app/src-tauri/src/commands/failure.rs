@@ -17,7 +17,7 @@ use crate::destination::DestinationError;
 use crate::ffi::BridgeError;
 use crate::isolate::IsolateGone;
 use crate::memory::{MemoryError, Situation as MemorySituation};
-use crate::pkcs11::{Situation, TokenError};
+use crate::pkcs11::{SecretOnTheReaderKeypad, Situation, TokenError};
 use crate::rubric::{RubricError, Situation as RubricSituation};
 use crate::signing::{Refusal, SealMismatch};
 
@@ -71,6 +71,12 @@ pub fn situation_name(situation: Situation) -> &'static str {
 impl From<TokenError> for Failure {
     fn from(error: TokenError) -> Self {
         Self::new(situation_name(error.situation()), error.detail())
+    }
+}
+
+impl From<SecretOnTheReaderKeypad> for Failure {
+    fn from(refusal: SecretOnTheReaderKeypad) -> Self {
+        Self::new(refusal.situation(), refusal.to_string())
     }
 }
 

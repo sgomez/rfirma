@@ -83,6 +83,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `pkcs11/stores.rs` | 553 | Dónde se buscan los certificados. |
 | `pkcs11/certificate.rs` | 411 | El certificado tal y como sale del token. |
 | `pkcs11/error.rs` | 233 | Situaciones del token (ID-29, ADR-0009). |
+| `pkcs11/secret.rs` | 194 | Cómo se le pide el secreto a cada almacén: sin sesión, por pantalla o en el teclado del lector, que se rechaza (ID-189, ID-191). |
 | **`destination/`** | | Dónde cae el firmado y por dónde entra el original (ADR-0011). |
 | `destination/mod.rs` | 353 | El reparto, y `DestinationFolder`. **No importa `memory`** (ID-83). |
 | `destination/naming.rs` | 190 | Cómo se llama el firmado y qué pasa si el nombre existe. |

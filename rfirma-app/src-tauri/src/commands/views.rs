@@ -19,7 +19,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::memory::{Badge, Theme};
-use crate::pkcs11::{CertificateStatus, StoreClass};
+use crate::pkcs11::{CertificateStatus, StoreClass, StoreSecret};
 use crate::signing::PageSet;
 
 pub use super::failure::Failure;
@@ -59,6 +59,38 @@ impl From<CertificateStatus> for StatusView {
             CertificateStatus::NotYetValid { not_before } => Self::NotYetValid { not_before },
             CertificateStatus::Revoked { reason } => Self::Revoked { reason },
             CertificateStatus::Unreadable { detail } => Self::Unreadable { detail },
+        }
+    }
+}
+
+/// **Cómo hay que pedirle el secreto al almacén**, tal y como sale de la
+/// prefirma (ID-189).
+///
+/// Es el espejo exacto de [`StoreSecret`], con las mismas tres variantes: la
+/// ventana lee `kind` y decide entre firmar directo y abrir el diálogo. La
+/// tercera —`typedOnTheReaderKeypad`— **no llega hoy a cruzar**, porque la
+/// prefirma la rechaza antes; está aquí porque el tipo es de tres variantes y
+/// partirlo en dos vocabularios, uno dentro y otro fuera, costaría más que la
+/// rama que sobra.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SecretView {
+    NotNeeded,
+    #[serde(rename_all = "camelCase")]
+    TypedOnScreen {
+        /// Cuántos intentos quedan. **Siempre vacío**: PKCS#11 no lo cuenta
+        /// (ID-191).
+        attempts_left: Option<u32>,
+    },
+    TypedOnTheReaderKeypad,
+}
+
+impl From<StoreSecret> for SecretView {
+    fn from(secret: StoreSecret) -> Self {
+        match secret {
+            StoreSecret::NotNeeded => Self::NotNeeded,
+            StoreSecret::TypedOnScreen { attempts_left } => Self::TypedOnScreen { attempts_left },
+            StoreSecret::TypedOnTheReaderKeypad => Self::TypedOnTheReaderKeypad,
         }
     }
 }
@@ -290,8 +322,10 @@ pub struct ConfigurationView {
 
 #[cfg(test)]
 mod tests {
-    use super::{store_name, CertificateView, OpenedDocumentView, SignedDocumentView, StatusView};
-    use crate::pkcs11::{CertificateStatus, StoreClass};
+    use super::{
+        store_name, CertificateView, OpenedDocumentView, SecretView, SignedDocumentView, StatusView,
+    };
+    use crate::pkcs11::{CertificateStatus, StoreClass, StoreSecret};
 
     #[test]
     fn the_status_crosses_with_its_payload() {
@@ -310,6 +344,28 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&unreadable).expect("serializa"),
             r#"{"kind":"unreadable","detail":"PEM error"}"#
+        );
+    }
+
+    /// Lo que la ventana lee para decidir entre firmar directo y abrir el
+    /// diálogo son estos tres nombres, así que están fijados aquí (ID-189).
+    #[test]
+    fn the_secret_crosses_as_one_of_three_kinds_and_never_as_a_string() {
+        assert_eq!(
+            serde_json::to_string(&SecretView::from(StoreSecret::NotNeeded)).expect("serializa"),
+            r#"{"kind":"notNeeded"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&SecretView::from(StoreSecret::TypedOnScreen {
+                attempts_left: None
+            }))
+            .expect("serializa"),
+            r#"{"kind":"typedOnScreen","attemptsLeft":null}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&SecretView::from(StoreSecret::TypedOnTheReaderKeypad))
+                .expect("serializa"),
+            r#"{"kind":"typedOnTheReaderKeypad"}"#
         );
     }
 

@@ -22,6 +22,7 @@
 
 pub mod certificate;
 pub mod error;
+pub mod secret;
 pub mod stores;
 
 use std::collections::{HashMap, HashSet};
@@ -41,6 +42,7 @@ use cryptoki::types::AuthPin;
 
 pub use certificate::{CertificateRef, CertificateStatus, TokenCertificate};
 pub use error::{Situation, TokenError};
+pub use secret::{SecretOnTheReaderKeypad, StoreSecret};
 pub use stores::{Store, StoreClass};
 
 /// El mecanismo del ID-16, en un solo sitio para que cambiarlo sea un cambio
@@ -342,6 +344,24 @@ fn configured_directory(init_args: &str) -> Option<&str> {
     let value = value.strip_prefix('\'')?;
     let value = value.split('\'').next()?;
     Some(value.strip_prefix("sql:").unwrap_or(value))
+}
+
+/// **Cómo hay que pedirle el secreto** al almacén de donde salió el
+/// certificado, leyendo las banderas de su ranura (ID-189).
+///
+/// No inicia sesión ni la pide: `C_GetTokenInfo` es una consulta pública, y por
+/// eso esto se puede preguntar **antes** del diálogo, que es justamente lo que
+/// permite decidir si hace falta diálogo.
+pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+    let store = reference.store();
+    the_store_is_really_there(&store)?;
+    let context = context(&store)?;
+    let slot = slot_of(&context, reference.token_label())?;
+    let info = context.get_token_info(slot)?;
+    Ok(StoreSecret::of_token(
+        info.login_required(),
+        info.protected_authentication_path(),
+    ))
 }
 
 /// Firma `data` con la clave privada que acompaña al certificado referenciado.
