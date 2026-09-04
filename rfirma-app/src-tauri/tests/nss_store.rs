@@ -27,12 +27,16 @@
 //! verdad, donde dos claves privadas llevan la misma etiqueta, y es lo que hace
 //! obligatorio emparejar por `CKA_ID` (#98, ID-06).
 //!
-//! # La contraseña maestra es la cadena vacía
+//! # La contraseña maestra
 //!
-//! El perfil se crea con `certutil -N --empty-password`, que es el caso
-//! corriente de un Firefox recién instalado. Para `C_Login` la cadena vacía
-//! **no es lo mismo** que «sin PIN», y por eso este fichero incluye firmar y no
-//! solo listar.
+//! La mayoría de los perfiles de este fichero se crean con `certutil -N
+//! --empty-password`, que es el caso corriente de un Firefox recién
+//! instalado. Para `C_Login` la cadena vacía **no es lo mismo** que «sin
+//! PIN», y por eso este fichero incluye firmar y no solo listar. Otros
+//! ejercitan justo el caso contrario —una contraseña maestra de verdad,
+//! pasada como segundo argumento a `provision-profile.sh` (ID-190, #259)—,
+//! que es el borde en el que `CKF_LOGIN_REQUIRED` pasa a `true` y dispara el
+//! filtro firmable sin vuelta atrás.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

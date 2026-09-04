@@ -59,9 +59,19 @@ done
 mkdir -p "$profile"
 db="sql:$profile"
 
+# Temporal y limpiado siempre al salir (trap): aqui vive tambien el fichero de
+# contrasena, que asi no deja residuo dentro del perfil "vacio de verdad" que
+# describe la cabecera.
+workdir="$(mktemp -d)"
+trap 'rm -rf "$workdir"' EXIT
+
 # El fichero de contrasena que quieren pk12util y certutil para ESTE perfil:
 # vacio de verdad cuando no se pide contrasena maestra, o la que se haya dado.
-master_password_file="$profile/.master-password"
+# NOTA: si se reejecuta sobre un directorio que YA tiene perfil, este segundo
+# argumento tiene que coincidir con el de la vez que lo creo — el script no
+# guarda que contrasena se uso, y una distinta aqui hace fallar los `certutil
+# -f` de mas abajo contra la base existente.
+master_password_file="$workdir/.master-password"
 printf '%s' "$master_password" > "$master_password_file"
 
 # `certutil -N --empty-password` deja la contrasena maestra en la cadena
@@ -75,9 +85,6 @@ if [ ! -f "$profile/cert9.db" ]; then
         certutil -N -d "$db" --empty-password
     fi
 fi
-
-workdir="$(mktemp -d)"
-trap 'rm -rf "$workdir"' EXIT
 
 # Cuantas claves privadas hay ya dentro. La idempotencia se mide por AHI y no
 # por el apodo: los dos certificados de persona comparten apodo, asi que buscar
