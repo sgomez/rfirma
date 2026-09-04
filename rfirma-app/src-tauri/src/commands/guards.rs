@@ -5,7 +5,7 @@
 //! de `tests/native_cycle.rs`.
 //!
 //! Están en un fichero aparte porque no son de ninguno de los otros: la de
-//! rutas recorre los tipos de salida vivan donde vivan, la de la lista cerrada
+//! rutas construye los tipos de salida vivan donde vivan, la de la lista cerrada
 //! cuenta las órdenes, la del hilo del portal mira cómo se declaran dos de
 //! ellas, y la del PIN comprueba que solo una lo recibe. Un fichero solo con
 //! pruebas es lo que hace que ninguna de las cuatro dependa de en qué fichero
@@ -98,7 +98,6 @@ fn serialising_derives(flattened: &str) -> usize {
 struct Output<'a> {
     file: &'a str,
     name: String,
-    body: String,
 }
 
 /// Todos los tipos de salida del módulo, **descubiertos y no enumerados**.
@@ -108,25 +107,24 @@ struct Output<'a> {
 /// tipo de salida nuevo queda cubierto **por existir**, esté en el fichero que
 /// esté: eso es el ID-84, y es lo que la lista fija de nombres de antes no
 /// hacía.
+///
+/// De cada uno se guarda **el nombre y nada más**: lo que se mira ya no es su
+/// cuerpo escrito, sino el valor que produce (ID-186).
 fn outputs() -> Vec<Output<'static>> {
     let mut found = Vec::new();
     for (file, source) in SOURCES {
         let flattened = attributes_on_one_line(production_half(source));
         let mut serialisable = false;
-        let mut open: Option<(String, String)> = None;
+        let mut open: Option<String> = None;
         for line in flattened.lines() {
             let trimmed = line.trim_start();
-            if let Some((name, body)) = open.as_mut() {
+            if let Some(name) = open.as_mut() {
                 if line == "}" {
                     found.push(Output {
                         file,
                         name: std::mem::take(name),
-                        body: std::mem::take(body),
                     });
                     open = None;
-                } else {
-                    body.push_str(line);
-                    body.push('\n');
                 }
                 continue;
             }
@@ -147,7 +145,7 @@ fn outputs() -> Vec<Output<'static>> {
                         .next()
                         .unwrap_or_default()
                         .to_owned();
-                    open = Some((name, String::new()));
+                    open = Some(name);
                 }
             }
             serialisable = false;
@@ -156,15 +154,190 @@ fn outputs() -> Vec<Output<'static>> {
     found
 }
 
-/// Bajo el sandbox la aplicación no conoce la ruta real de un documento, así
-/// que devolver una sería devolver una mentira (ADR-0011). Lo que sale son
-/// nombres.
+/// Los tipos de salida **detrás de los cuales no hay ningún documento**: lo
+/// que llevan sale del token, de una imagen o de un rectángulo, así que una
+/// ruta del portal no puede llegar hasta ellos por ningún camino.
 ///
-/// La lista de fugas mira **cómo se escribe una ruta en Rust** —un `PathBuf`,
-/// un `&Path`, un campo que se llame `path`— y los tres datos del almacén que
-/// son rutas del anfitrión disfrazadas.
+/// Es la otra mitad de [`the_portal_path_never_crosses_to_the_window`]: entre
+/// las dos tienen que sumar **todos** los tipos que el descubrimiento
+/// encuentra, y por eso un tipo de salida nuevo obliga a decidir en cuál de
+/// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
+/// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
+/// mirar nada.
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 5] = [
+    "StatusView",
+    "CertificateView",
+    "PlacementView",
+    "RubricView",
+    "RubricChoiceView",
+];
+
+/// El enlace que el portal concede, que es lo que **no** puede salir.
+const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
+
+/// Un valor que ya ha cruzado: el tipo del que salió y su JSON.
+struct Crossing {
+    name: &'static str,
+    json: serde_json::Value,
+}
+
+impl Crossing {
+    /// Ese valor, tal y como sale por el IPC.
+    fn of(name: &'static str, value: &impl serde::Serialize) -> Self {
+        Self {
+            name,
+            json: serde_json::to_value(value).expect("un tipo de salida tiene que serializar"),
+        }
+    }
+}
+
+/// Si esa cadena es una ruta del portal de documentos: `/run/user/<uid>/doc/…`.
+///
+/// Mira la **cadena entera** y no su principio: el detalle crudo de un fallo
+/// lleva el texto de un error del sistema, y ahí la ruta aparecería en medio de
+/// una frase y no como el valor del campo.
+fn is_a_portal_path(text: &str) -> bool {
+    text.match_indices("/run/user/").any(|(at, _)| {
+        text[at..]
+            .split('/')
+            .nth(4)
+            .is_some_and(|segment| segment == "doc")
+    })
+}
+
+/// La primera ruta del portal que haya **en cualquier punto** del valor: un
+/// campo, un campo de un campo o un elemento de una lista.
+fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(text) => is_a_portal_path(text).then(|| text.clone()),
+        serde_json::Value::Array(items) => items.iter().find_map(the_portal_path_inside),
+        serde_json::Value::Object(fields) => fields.values().find_map(the_portal_path_inside),
+        _ => None,
+    }
+}
+
+/// Todo lo que la producción produce **a partir de un documento del portal**,
+/// ya serializado.
+///
+/// No se fabrica ningún valor a mano: cada uno sale del caso de uso que lo
+/// produce de verdad, alimentado con el enlace del portal. Uno inventado campo
+/// a campo solo probaría que quien escribió la prueba no puso una ruta dentro.
+fn crossings_from_a_portal_document() -> Vec<Crossing> {
+    use crate::app::fixtures::a_memory;
+    use crate::app::{configuration, documents, recents};
+    use crate::destination::{CheckedFolder, DestinationFolder, PortalDocument};
+    use crate::memory::{Badge, Configuration, OpenedDocuments, RecentDocument, State};
+
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let document = PortalDocument::opened(A_PORTAL_HANDLE);
+    // El destino elegido es el **directorio de la concesión**, que es el peor
+    // caso: si de una carpeta saliera algo más que su último segmento, saldría
+    // aquí.
+    let configuration = Configuration {
+        destination: Some(DestinationFolder::at(
+            Path::new(A_PORTAL_HANDLE)
+                .parent()
+                .expect("la concesion tiene directorio"),
+        )),
+        remember_activity: true,
+        ..Configuration::default()
+    };
+
+    let opened_view = documents::note_opened(
+        &memory,
+        &configuration,
+        &opened,
+        std::path::PathBuf::from(A_PORTAL_HANDLE),
+    );
+    let failure = documents::bytes_of(&opened, &opened_view.id)
+        .expect_err("el enlace del portal no existe fuera del sandbox");
+    let dropped =
+        documents::dropped_document(&[std::path::PathBuf::from(A_PORTAL_HANDLE)], &opened)
+            .expect("se ha soltado un fichero");
+    let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
+
+    let mut crossings = vec![
+        Crossing::of("OpenedDocumentView", &opened_view),
+        Crossing::of("Failure", &failure),
+        Crossing::of("DroppedDocumentView", &dropped),
+        Crossing::of(
+            "DestinationView",
+            &documents::where_it_lands(&configuration, home.path(), &document),
+        ),
+        Crossing::of(
+            "SignedDocumentView",
+            &documents::told_as(document.reading_path(), &folder, 42),
+        ),
+        Crossing::of(
+            "ConfigurationView",
+            &configuration::shown(&configuration, home.path()),
+        ),
+    ];
+
+    // La bandeja se pinta de lo que hay **en el fichero de estado**, y bajo el
+    // sandbox lo que hay ahí son enlaces del portal: la fila se construye
+    // leyendo uno, que es por donde entra en producción. `RecentDocument::seen`
+    // no vale aquí porque canonicaliza, y este equipo no tiene el portal
+    // montado.
+    let entry: RecentDocument = serde_json::from_value(serde_json::json!({
+        "path": A_PORTAL_HANDLE,
+        "name": "contrato.pdf",
+        "badge": serde_json::to_value(Badge::Unsigned).expect("la insignia serializa"),
+        "modified": 1_700_000_000_u64,
+        "last_used": 1_700_000_100_u64,
+    }))
+    .expect("la fila del fichero de estado deberia leerse");
+    let mut state = State::default();
+    state.recents.record(entry);
+    memory
+        .remember_state(&configuration, &state)
+        .expect("deberia guardarse el estado");
+    for row in recents::listed_rows(&memory, &opened) {
+        crossings.push(Crossing::of("RecentDocumentView", &row));
+    }
+
+    crossings
+}
+
+/// **La ruta del portal no sale a la ventana, en ningún canal** (ADR-0011,
+/// ID-186).
+///
+/// La guarda mira **valor y no texto**. La que había leía `commands/` como
+/// fuente y buscaba `PathBuf`, `&Path` o un campo llamado `path`: eso vigila
+/// cómo se declara un tipo, no lo que acaba dentro de él, así que un `String`
+/// con una ruta pegada pasaba en verde. Y desde el ID-185 esa lectura además
+/// estorba: fuera del sandbox la ruta real **sí** se enseña, y lo que está mal
+/// no es que cruce una ruta, es que cruce la del portal.
+///
+/// Lo que se comprueba, entonces, es lo que de verdad manda el ADR-0011: bajo
+/// el sandbox la aplicación **no conoce** la ruta del documento, así que
+/// devolver el enlace de `/run/user/…` sería devolver una mentira.
 #[test]
-fn no_output_of_any_command_carries_a_host_path() {
+fn the_portal_path_never_crosses_to_the_window() {
+    let crossings = crossings_from_a_portal_document();
+
+    assert!(
+        crossings.len() >= 7,
+        "no se ha construido casi nada: {}",
+        crossings.len()
+    );
+    for crossing in &crossings {
+        assert!(
+            the_portal_path_inside(&crossing.json).is_none(),
+            "«{}» ha cruzado con una ruta del portal dentro: {}",
+            crossing.name,
+            crossing.json
+        );
+    }
+}
+
+/// Y lo que se comprueba son **todos** los tipos de salida del módulo: los que
+/// salen de un documento, construidos; los demás, declarados como tipos sin
+/// documento detrás (ID-84).
+#[test]
+fn every_output_type_is_either_built_from_a_document_or_declared_without_one() {
     let outputs = outputs();
     let declared: usize = SOURCES
         .iter()
@@ -178,29 +351,80 @@ fn no_output_of_any_command_carries_a_host_path() {
         outputs.len()
     );
     assert!(
-        outputs.len() >= 8,
+        outputs.len() >= 12,
         "los tipos de salida no se han encontrado: {}",
         outputs.len()
     );
 
-    for output in outputs {
-        for leak in [
-            "PathBuf",
-            "&Path",
-            "path:",
-            "module:",
-            "reading_path",
-            "init_args",
-            "configdir",
-        ] {
-            assert!(
-                !output.body.contains(leak),
-                "«{}» ({}) ha ganado un «{leak}»: eso es una ruta del anfitrion saliendo",
-                output.name,
-                output.file
-            );
-        }
+    let built: BTreeSet<&str> = crossings_from_a_portal_document()
+        .iter()
+        .map(|crossing| crossing.name)
+        .collect();
+    let without: BTreeSet<&str> = OUTPUTS_WITH_NO_DOCUMENT_BEHIND.into_iter().collect();
+
+    for output in &outputs {
+        assert!(
+            built.contains(output.name.as_str()) || without.contains(output.name.as_str()),
+            "«{}» ({}) no se construye desde un documento del portal ni esta declarado como \
+             tipo sin documento detras: la guarda de rutas no lo mira",
+            output.name,
+            output.file
+        );
     }
+
+    let known: BTreeSet<&str> = outputs.iter().map(|output| output.name.as_str()).collect();
+    for name in built.iter().chain(without.iter()) {
+        assert!(
+            known.contains(name),
+            "«{name}» ya no es un tipo de salida del modulo: sobra de la guarda"
+        );
+    }
+}
+
+/// El caso que **hoy pasa en verde y pasa a rojo** (TD-42): una ruta del portal
+/// metida dentro de un campo, y no como el campo entero.
+///
+/// La guarda vieja no la veía —leía la fuente, no el valor—, y esta prueba es
+/// la que dice que el cambio de texto a valor sirve para algo.
+#[test]
+fn a_portal_path_buried_inside_a_field_is_a_leak() {
+    let value = serde_json::json!({
+        "name": "contrato.pdf",
+        "failure": {
+            "situation": "documentUnreadable",
+            "detail": format!("no se ha podido leer {A_PORTAL_HANDLE}: no such file"),
+        },
+        "rows": [{ "id": "0f1e", "note": A_PORTAL_HANDLE }],
+    });
+
+    assert!(
+        the_portal_path_inside(&value).is_some(),
+        "una ruta del portal dentro de un campo es una fuga, este donde este"
+    );
+}
+
+/// Y el caso que hoy pasa en verde y **sigue pasando** (ID-185, TD-42): una
+/// ruta de `$HOME` dentro de un campo.
+///
+/// Queda por escrito porque es el que cambia de significado: el argumento de
+/// privacidad se retiró, así que la ruta real del documento se enseña como la
+/// enseña cualquier aplicación de escritorio. Lo que la guarda persigue es la
+/// del portal, que es la que no se conoce. `/run/user/1000/keyring` tampoco lo
+/// es: el portal de documentos es `doc`, y no todo lo que cuelga del directorio
+/// de ejecución.
+#[test]
+fn a_home_path_inside_a_field_is_not_a_leak() {
+    let value = serde_json::json!({
+        "name": "contrato.pdf",
+        "path": "/home/quien/Contratos/contrato.pdf",
+        "socket": "/run/user/1000/keyring/pkcs11",
+    });
+
+    assert_eq!(
+        the_portal_path_inside(&value),
+        None,
+        "solo la ruta del portal es una fuga: la real se enseña"
+    );
 }
 
 /// Los `.rs` que hay dentro de un directorio, **incluidos los de sus

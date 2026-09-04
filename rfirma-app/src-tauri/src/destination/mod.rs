@@ -60,7 +60,7 @@ pub mod portal;
 
 pub use error::{DestinationError, Situation};
 pub use naming::{numbered, signed_name, FIRST_NUMBER, MAX_NAMESAKES, SIGNED_SUFFIX};
-pub use portal::PortalDocument;
+pub use portal::{the_original_folder_can_be_offered, PortalDocument};
 
 use std::path::{Path, PathBuf};
 

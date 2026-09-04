@@ -161,12 +161,15 @@ pub struct SignedDocumentView {
     pub size_bytes: u64,
 }
 
-/// Un documento abierto, tal como la ventana lo recibe: **un identificador y un
-/// nombre, ninguna ruta** (ID-60, ADR-0011).
+/// Un documento abierto, tal como la ventana lo recibe: **un identificador, un
+/// nombre y la ruta real cuando se conoce** (ID-60, ID-185, ADR-0011).
 ///
 /// El `modified` sale de aquí y no lo calcula la ventana porque quien tocó el
 /// disco es el backend: la fila de la bandeja se pinta con metadatos cacheados
 /// y sin volver a abrir el fichero (ADR-0010).
+///
+/// Los bytes se siguen pidiendo **contra el identificador** y nunca contra la
+/// ruta (ID-66): `path` está para enseñarla, no para leer por ella.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedDocumentView {
@@ -176,6 +179,11 @@ pub struct OpenedDocumentView {
     pub name: String,
     /// El `mtime`, en segundos desde la época; `None` si no se pudo leer.
     pub modified: Option<u64>,
+    /// La ruta real del documento, o `None` si entró por el portal y no se
+    /// conoce (ID-185). Lo decide
+    /// [`crate::app::documents::real_path_of`], y lo que **nunca** sale es el
+    /// enlace de `/run/user/…`.
+    pub path: Option<String>,
 }
 
 /// Lo que la ventana recibe al soltar ficheros encima.
@@ -265,6 +273,19 @@ pub struct ConfigurationView {
     pub remember_activity: bool,
     /// El tema de la ventana. Ver [`Theme`].
     pub theme: Theme,
+    /// **La única pregunta al entorno** (ID-184): si Preferencias puede
+    /// ofrecer «guardar junto al original».
+    ///
+    /// Cruza como un booleano cuyo nombre **es la pregunta**, y no como el
+    /// canal en el que corre la aplicación: la ventana no tiene por qué saber
+    /// si hay un sandbox debajo, solo si pinta la opción. La contesta
+    /// [`crate::destination::the_original_folder_can_be_offered`].
+    ///
+    /// Viaja en un solo sentido, como el destino: lo que llegue en una
+    /// escritura se ignora, y por eso lleva `default` —la ventana no tiene que
+    /// devolverlo.
+    #[serde(default)]
+    pub offers_the_original_folder: bool,
 }
 
 #[cfg(test)]
@@ -347,20 +368,43 @@ mod tests {
         }
     }
 
+    /// El documento que entró por el portal cruza **sin ruta ninguna**: bajo el
+    /// sandbox no se conoce, y el enlace de `/run/user/…` no es la del usuario
+    /// (ID-185).
     #[test]
-    fn an_opened_document_is_told_with_an_identifier_and_a_name() {
+    fn an_opened_document_from_the_portal_is_told_without_a_path() {
         let view = OpenedDocumentView {
             id: "0f1e2d3c4b5a69788796a5b4c3d2e1f0".to_owned(),
             name: "contrato.pdf".to_owned(),
             modified: Some(1_700_000_000),
+            path: None,
         };
 
         let json = serde_json::to_string(&view).expect("serializa");
 
         assert_eq!(
             json,
-            r#"{"id":"0f1e2d3c4b5a69788796a5b4c3d2e1f0","name":"contrato.pdf","modified":1700000000}"#
+            r#"{"id":"0f1e2d3c4b5a69788796a5b4c3d2e1f0","name":"contrato.pdf","modified":1700000000,"path":null}"#
         );
         assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
+    }
+
+    /// Y el de ruta directa cruza **con la ruta real**, como la enseña
+    /// cualquier aplicación de escritorio (ID-185).
+    #[test]
+    fn an_opened_document_with_a_direct_path_is_told_with_the_real_one() {
+        let view = OpenedDocumentView {
+            id: "0f1e2d3c4b5a69788796a5b4c3d2e1f0".to_owned(),
+            name: "contrato.pdf".to_owned(),
+            modified: Some(1_700_000_000),
+            path: Some("/home/quien/Contratos/contrato.pdf".to_owned()),
+        };
+
+        let json = serde_json::to_string(&view).expect("serializa");
+
+        assert!(
+            json.contains(r#""path":"/home/quien/Contratos/contrato.pdf""#),
+            "la ruta real se enseña: {json}"
+        );
     }
 }

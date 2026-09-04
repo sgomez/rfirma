@@ -112,6 +112,34 @@ impl PortalDocument {
     }
 }
 
+/// Dónde se apunta a sí mismo un flatpak: el fichero que el propio `bwrap`
+/// deja dentro del sandbox.
+const SANDBOX_MARKER: &str = "/.flatpak-info";
+
+/// **La única pregunta al entorno** de todo el destino (ID-184): si
+/// Preferencias puede ofrecer «junto al original».
+///
+/// Se contesta **antes de que exista ningún documento**, que es cuando se
+/// pinta la pantalla de ajustes, así que no puede depender de uno. Lo que sí
+/// depende del documento —cuál es esa carpeta, o que no la haya— lo contesta
+/// el documento mismo, y por eso aquí no hay ningún enum de acceso a ficheros
+/// (ID-183).
+///
+/// Se resuelve como lo resuelven GTK, libportal y Firefox: mirando si existe
+/// `/.flatpak-info`. Dentro del sandbox **todo** entra por el portal, así que
+/// la carpeta del original no se conoce nunca y ofrecer la opción sería
+/// ofrecer algo que no se puede cumplir; fuera, un documento de ruta directa
+/// sí tiene carpeta, y uno del portal contesta que no la hay.
+pub fn the_original_folder_can_be_offered() -> bool {
+    !inside_a_sandbox(Path::new(SANDBOX_MARKER))
+}
+
+/// La misma pregunta sobre una marca cualquiera, que es lo que la hace
+/// comprobable sin un flatpak montado.
+fn inside_a_sandbox(marker: &Path) -> bool {
+    marker.exists()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -155,6 +183,38 @@ mod tests {
         let document = PortalDocument::opened("/home/quien/doc/1e8b83b9/original.pdf");
 
         assert_eq!(document.portal_id(), None);
+    }
+
+    /// La pregunta al entorno, con la marca del flatpak puesta: dentro del
+    /// sandbox no hay carpeta original que ofrecer, porque todo entra por el
+    /// portal (ID-184).
+    #[test]
+    fn inside_the_sandbox_the_original_folder_cannot_be_offered() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let marker = directory.path().join(".flatpak-info");
+        fs::write(&marker, b"[Application]\n").expect("deberia escribirse");
+
+        assert!(inside_a_sandbox(&marker));
+    }
+
+    /// Y sin la marca, que es el `.deb` y el `.rpm`: la opción se ofrece, y
+    /// cada documento contesta luego si tiene carpeta o no.
+    #[test]
+    fn outside_the_sandbox_the_original_folder_can_be_offered() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+        assert!(!inside_a_sandbox(&directory.path().join(".flatpak-info")));
+    }
+
+    /// La pregunta de verdad se contesta sobre `/.flatpak-info`, y este equipo
+    /// no es un sandbox: lo que se fija aquí es que las dos mitades son la
+    /// misma pregunta, no el valor de una de ellas.
+    #[test]
+    fn the_question_asked_to_the_environment_is_the_marker_of_the_sandbox() {
+        assert_eq!(
+            the_original_folder_can_be_offered(),
+            !inside_a_sandbox(Path::new(SANDBOX_MARKER))
+        );
     }
 
     #[test]
