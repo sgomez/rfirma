@@ -139,10 +139,18 @@ jobs:
           cache-dependency-path: rfirma-app/pnpm-lock.yaml
 
       # gettext trae msgfmt y msgcmp, que son `check-po` (ID-128).
-      - name: just y gettext
+      #
+      # Los seis de detras son los de `check-publish`: `build-tree.test.sh`
+      # construye los tres repositorios de verdad —importa bundles en un ostree,
+      # indexa un pool de apt y genera repodata— y sin ellos esa pata avisa y se
+      # salta, que es lo que pasa en un equipo de desarrollo pero no puede pasar
+      # aqui. Es la unica manera de comprobar el ID-173: que reconstruir el
+      # repositorio deja el mismo commit y nadie redescarga.
+      - name: just, gettext y las herramientas de los tres repositorios
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends just gettext
+          sudo apt-get install -y --no-install-recommends \
+            just gettext ostree flatpak dpkg-dev apt-utils createrepo-c rpm
 
       # ruff es la puerta del unico Python del repositorio (ID-164): la
       # extension de Nautilus corre dentro del proceso del gestor de ficheros y

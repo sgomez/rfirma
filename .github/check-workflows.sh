@@ -179,6 +179,66 @@ if [ -f "$PUBLISH" ]; then
         exit 1
     fi
     echo "OK  $PUBLISH publica con el guion probado y no lleva rsync suelto"
+
+    # LO QUE SE PUBLICA VA FIRMADO, SIEMPRE (ID-173, ID-175). `build-tree.sh`
+    # tiene un modo sin firma —se llama `SIN-FIRMA-SOLO-PRUEBAS`— porque las
+    # claves de rFirma las crea una persona y ninguna prueba puede fabricarse
+    # una que valga. Ese modo construye un arbol que apt y dnf rechazan en
+    # cuanto alguien lo anade, y el ostree recien reimportado no trae ninguna
+    # firma porque la firma no viaja dentro del bundle: si llegara a un
+    # workflow, la publicacion saldria muda y el fallo lo descubriria quien
+    # instala. De ahi que la salida de emergencia tenga candado.
+    if grep -q 'SIN-FIRMA-SOLO-PRUEBAS' "$PUBLISH"; then
+        echo "$PUBLISH no puede construir el arbol sin firmar (ID-173, ID-175)." >&2
+        echo "Ese modo es de packaging/repo/build-tree.test.sh y de nadie mas." >&2
+        exit 1
+    fi
+    if ! grep -q 'build-tree.sh serie arbol rfirma.asc "\$FINGERPRINT"' "$PUBLISH"; then
+        echo "$PUBLISH tiene que pasarle la huella a build-tree.sh (ID-173)." >&2
+        echo "Sin ella el ostree, el InRelease de apt y el repomd de dnf se" >&2
+        echo "sirven sin firma: la firma es metadato desacoplado y hay que" >&2
+        echo "reponerla en CADA reconstruccion." >&2
+        exit 1
+    fi
+    echo "OK  $PUBLISH construye el arbol firmado con la huella del repositorio"
+fi
+
+# ------------------------------------------------------------------ ID-175 --
+# EL ORDEN DE `release.yml`: FIRMAR EL `.rpm` -> `SHA256SUMS` -> ATESTAR ->
+# ADJUNTAR.
+#
+# No es de estilo: firmar un `.rpm` LO MODIFICA. Si se firmara despues de
+# calcular los resumenes, el `.rpm` de la Release y el que sirve el repositorio
+# dnf dejarian de ser los mismos bytes y se rompe la invariante de que los tres
+# canales llevan lo mismo (ID-144, ADR-0004); si se atestara antes de firmar,
+# la atestacion cubriria un fichero que ya no existe.
+#
+# Es un orden de pasos dentro de un fichero, o sea la clase de cosa que una
+# reordenacion bienintencionada rompe sin que falle una sola ejecucion: el
+# workflow sale verde igual y el estropicio se ve el dia que alguien verifica
+# la atestacion de un paquete descargado.
+if [ -f "$RELEASE" ]; then
+    linea_de() { grep -n "$1" "$RELEASE" | grep -vE ':[0-9]+:[[:space:]]*#' | head -1 | cut -d: -f1; }
+    firma_rpm="$(linea_de 'rpmsign --addsign')"
+    resumenes="$(linea_de 'sha256sum -- \*')"
+    atestacion="$(linea_de 'attest-build-provenance')"
+    adjuntar="$(linea_de 'gh release create')"
+
+    for paso in firma_rpm resumenes atestacion adjuntar; do
+        if [ -z "${!paso}" ]; then
+            echo "$RELEASE ya no tiene el paso '$paso' de la cadena de firma (ID-175)" >&2
+            exit 1
+        fi
+    done
+    if [ "$firma_rpm" -ge "$resumenes" ] || [ "$resumenes" -ge "$atestacion" ] \
+        || [ "$atestacion" -ge "$adjuntar" ]; then
+        echo "$RELEASE tiene los pasos en otro orden (ID-175, ADR-0015)." >&2
+        echo "Firmar un .rpm lo MODIFICA, asi que el orden es obligatorio:" >&2
+        echo "  firmar cada .rpm -> SHA256SUMS -> atestar -> adjuntar" >&2
+        echo "  y aqui estan en las lineas $firma_rpm, $resumenes, $atestacion, $adjuntar" >&2
+        exit 1
+    fi
+    echo "OK  $RELEASE firma cada .rpm antes de resumir, atestar y adjuntar"
 fi
 
 # ------------------------------------------------------------------ ID-174 --
