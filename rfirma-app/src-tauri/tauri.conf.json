@@ -25,8 +25,27 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": [],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"]
+    "active": true,
+    "targets": ["deb", "rpm"],
+    "category": "Utility",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so"
+        },
+        "desktopTemplate": "../../packaging/rfirma.desktop.hbs"
+      },
+      "rpm": {
+        "files": {
+          "/usr/lib/rfirma/librfirma_crypto.so": "../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so"
+        },
+        "desktopTemplate": "../../packaging/rfirma.desktop.hbs",
+        "compression": {
+          "type": "zstd",
+          "level": 19
+        }
+      }
+    }
   }
 }
