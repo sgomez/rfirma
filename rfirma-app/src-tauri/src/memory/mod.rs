@@ -396,6 +396,69 @@ mod tests {
         assert_eq!(state.window, Some(window));
     }
 
+    /// La invariante que promete el `///` de `remember_version_check`
+    /// —«escribe siempre, sin mirar interruptores»— comprobada desde donde se
+    /// cumple, igual que su hermana la del tamaño de la ventana.
+    #[test]
+    fn the_version_check_is_remembered_even_with_the_switch_off() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let (memory, _) = a_memory(directory.path());
+        memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        let check = VersionCheck {
+            checked_at: 1_757_000_000,
+            announced: "v0.5.0".to_owned(),
+        };
+        memory
+            .remember_version_check(check.clone())
+            .expect("deberia guardarse");
+
+        let state = memory.state().expect("deberia leerse").into_value();
+        assert_eq!(state.version_check, Some(check));
+    }
+
+    /// Apagar «Recordar mi actividad» no borra el apunte de la consulta: no
+    /// dice qué firmó nadie, dice cuándo habló rFirma con GitHub, y borrarlo
+    /// sólo conseguiría una conexión de más.
+    #[test]
+    fn turning_remember_activity_off_does_not_erase_the_version_check() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let (memory, paths) = a_memory(directory.path());
+        let check = VersionCheck {
+            checked_at: 1_757_000_000,
+            announced: "v0.5.0".to_owned(),
+        };
+        memory
+            .remember_state(&Configuration::default(), &a_state(directory.path()))
+            .expect("deberia guardarse");
+        memory
+            .remember_version_check(check.clone())
+            .expect("deberia guardarse");
+
+        memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        assert!(
+            paths.state_file().exists(),
+            "el apunte de la consulta no se ha ido, así que el fichero sigue"
+        );
+        let state = memory.state().expect("deberia leerse").into_value();
+        assert_eq!(state.version_check, Some(check));
+        assert!(
+            state.certificate.is_none(),
+            "el resto de la actividad sí se ha ido"
+        );
+    }
+
     #[test]
     fn with_remember_activity_off_nothing_is_written_even_if_someone_asks() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");

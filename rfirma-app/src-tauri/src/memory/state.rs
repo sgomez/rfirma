@@ -87,7 +87,6 @@ pub struct State {
 /// si había versión nueva, porque «nueva» se decide contra la versión que se
 /// está ejecutando y esa cambia con cada actualización.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct VersionCheck {
     /// Cuándo se preguntó, en segundos desde el epoch.
     pub checked_at: u64,

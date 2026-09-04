@@ -107,7 +107,10 @@ El canal es propio: paquetes en GitHub Releases y **tres** repositorios en
 
 ## Construir sin red
 
-Ya está hecho: **no hay `--share=network` en el manifiesto**. Las dependencias
+Ya está hecho: **ningún módulo declara `--share=network`**. El único
+`--share=network` del manifiesto está en `finish-args` —permiso de la
+aplicación ya instalada, para la consulta de versión a GitHub (#270)— y no
+alcanza a la construcción. Las dependencias
 de cargo entran vendorizadas desde `cargo-sources.json`, y `cargo build` corre
 con `--offline`.
 

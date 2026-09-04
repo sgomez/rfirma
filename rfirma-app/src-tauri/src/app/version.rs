@@ -63,7 +63,8 @@ impl Version {
 
     /// Una versión leída de una etiqueta, con o sin la `v` delante.
     pub fn parse(text: &str) -> Option<Self> {
-        let mut numbers = text.trim().trim_start_matches('v').split('.');
+        let text = text.trim();
+        let mut numbers = text.strip_prefix('v').unwrap_or(text).split('.');
         let mut next = || numbers.next()?.parse::<u64>().ok();
         let (major, minor, patch) = (next()?, next()?, next()?);
         if numbers.next().is_some() {
@@ -109,6 +110,11 @@ pub fn new_version(
 ///
 /// Un apunte que no se entiende —una versión escrita a mano en el
 /// `state.json`— se trata como si no estuviera: se vuelve a preguntar.
+///
+/// Con el reloj hacia atrás —un `checked_at` en el futuro— el
+/// `saturating_sub` da 0 y el apunte se considera fresco hasta que el reloj lo
+/// alcance. Se cura solo y el peor caso es no avisar de una versión nueva
+/// durante ese rato, que es la dirección segura del error.
 fn fresh_answer(memory: &Memory, now: SystemTime) -> Option<Version> {
     let check = memory
         .state()
