@@ -27,7 +27,7 @@ for _api_version in ("4.0", "3.0"):
     except ValueError:
         continue
 
-from gi.repository import Gio, GLib, GObject, Nautilus  # noqa: E402
+from gi.repository import Gio, GLib, GObject, Nautilus
 
 PDF_MIME_TYPE = "application/pdf"
 MENU_LABEL = "Firmar con rFirma"
@@ -42,7 +42,7 @@ def _is_a_signable_pdf(document):
             and not document.is_directory()
             and document.get_mime_type() == PDF_MIME_TYPE
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — corre dentro de Nautilus: nada sale de este módulo
         return False
 
 
@@ -51,7 +51,7 @@ def _path_of(document):
     try:
         location = document.get_location()
         return location.get_path() if location is not None else None
-    except Exception:
+    except Exception:  # noqa: BLE001 — corre dentro de Nautilus: nada sale de este módulo
         return None
 
 

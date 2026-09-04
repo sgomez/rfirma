@@ -248,7 +248,7 @@ def desktop_files() -> list[str]:
     paths = []
     for base, _dirs, files in os.walk(os.path.join(ROOT, "packaging")):
         for name in files:
-            if name.endswith(".desktop") or name.endswith(DESKTOP_TEMPLATE_SUFFIX):
+            if name.endswith((".desktop", DESKTOP_TEMPLATE_SUFFIX)):
                 paths.append(os.path.relpath(os.path.join(base, name), ROOT))
     return sorted(paths)
 
@@ -427,7 +427,7 @@ def check_rc_rule() -> None:
         ("1.0.0-beta.1", 1),
     ):
         code = subprocess.run(
-            [script, sample], capture_output=True, text=True
+            [script, sample], capture_output=True, text=True, check=False
         ).returncode
         if code != expected:
             verdict = "no produce" if expected else "produce"
@@ -436,7 +436,7 @@ def check_rc_rule() -> None:
                 f"({sample} {verdict} paquetes nativos, ID-154)"
             )
 
-    if subprocess.run([script], capture_output=True).returncode != 2:
+    if subprocess.run([script], capture_output=True, check=False).returncode != 2:
         fail(f"{RC_RULE} sin argumento deberia fallar con 2 (uso incorrecto)")
 
 

@@ -48,6 +48,13 @@ native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 # `crap` de `test` y esta linea.
 crap_version := "0.4.3"
 
+# La misma razon que crap_version: sin ruff.toml ni pyproject.toml en el
+# repositorio, el conjunto de reglas que aplica `ruff check` es el que traiga
+# la version instalada, y una `ruff` nueva puede poner `lint-python` en rojo
+# sin que nadie haya tocado una linea de Python. Clavada aqui e igual en
+# .github/workflows/ci.yml.
+ruff_version := "0.16.6"
+
 # El modulo FFI, oculto para la puerta CRAP del carril rapido. cargo-crap
 # puntua con `--missing pessimistic`, o sea que una funcion SIN datos de
 # cobertura vale 0 %, y la cobertura del carril rapido no incluye la grada C.
@@ -174,10 +181,14 @@ tools:
     fi
     # ruff es la puerta del unico Python del repositorio (ID-164) y va dentro de
     # `check-repo`, asi que sin el la cadena de TypeScript falla entera. No esta
-    # en apt: se instala desde PyPI.
+    # en apt: se instala desde PyPI. La version va clavada, igual que
+    # CRAP_VERSION mas abajo: sin ruff.toml ni pyproject.toml en el repositorio,
+    # el conjunto de reglas por defecto es el que traiga la version instalada,
+    # y una version distinta a la del CI (ver .github/workflows/ci.yml) puede
+    # poner esta puerta en rojo sin que nadie haya tocado una linea de Python.
     if ! command -v ruff >/dev/null; then
         echo "falta: ruff"
-        echo "  Instalalo con: pipx install ruff  (o: uv tool install ruff)"
+        echo "  Instalalo con: pipx install ruff=={{ ruff_version }}  (o: uv tool install ruff=={{ ruff_version }})"
         failures=1
     fi
     # Las librerias de sistema del WebView. pkg-config es quien decide, porque

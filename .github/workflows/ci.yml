@@ -66,6 +66,12 @@ env:
   # de vida, asi que una publicacion suya no puede poner en rojo un PR que no
   # la ha tocado. Tiene que coincidir con `crap_version` del justfile.
   CRAP_VERSION: '0.4.3'
+  # Version FIJADA de ruff, misma razon que CRAP_VERSION: sin ruff.toml ni
+  # pyproject.toml en el repositorio, el conjunto de reglas por defecto es el
+  # que traiga la version instalada, y una `ruff` nueva puede poner
+  # `lint-python` en rojo sin tocar una linea de Python. Tiene que coincidir
+  # con `ruff_version` del justfile.
+  RUFF_VERSION: '0.16.6'
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -145,7 +151,7 @@ jobs:
       # ejecutando recetas del justfile y nada mas. No esta en apt; pipx viene
       # con el runner y deja el binario en el PATH.
       - name: ruff
-        run: pipx install ruff
+        run: pipx install "ruff==${RUFF_VERSION}"
 
       # `check-repo` viaja aqui —y no en un cuarto job— porque son sellos
       # de milisegundos y montar un runner para ellos costaria cien veces mas
