@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Certificate } from "./certificate";
 import type { SignedDocument, SigningBackend, SigningOrder, StageResult } from "./flow";
+import type { StoreSecret } from "./secret";
 import type { TokenFailure } from "./token";
 import { acknowledgementFor, useSigning } from "./useSigning";
 
@@ -59,10 +60,13 @@ const anOrder = (): SigningOrder => ({
 const ok = <T>(value: T): StageResult<T> => ({ ok: true, value });
 const failed = (failure: TokenFailure): StageResult<never> => ({ ok: false, failure });
 
+// El caso corriente: el almacén pide el secreto por pantalla (ID-190).
+const typedOnScreen: StoreSecret = { kind: "typedOnScreen", attemptsLeft: null };
+
 /** Un backend de mentira: cada etapa devuelve lo que se le diga, en orden. */
 function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
   return {
-    presign: async () => ok(undefined),
+    presign: async () => ok(typedOnScreen),
     sign: async () => ok(undefined),
     postsign: async () => ok(signed),
     padesLowerLeft: async () => [0, 0],
@@ -74,7 +78,7 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
 // Grada A: las tres etapas son un puerto, y aquí se conducen con un doble.
 describe("useSigning", () => {
   it("asks for the PIN after the presignature, never before", async () => {
-    const presign = vi.fn(async () => ok(undefined));
+    const presign = vi.fn(async () => ok(typedOnScreen));
     const { result } = renderHook(() => useSigning(backendOf({ presign })));
 
     const started = act(() => result.current.start(certificate, anOrder()));
@@ -91,7 +95,7 @@ describe("useSigning", () => {
         backendOf({
           presign: async () => {
             calls.push("presign");
-            return ok(undefined);
+            return ok(typedOnScreen);
           },
           sign: async () => {
             calls.push("sign");
@@ -137,7 +141,7 @@ describe("useSigning", () => {
   });
 
   it("retries a wrong PIN without repeating the presignature", async () => {
-    const presign = vi.fn(async () => ok(undefined));
+    const presign = vi.fn(async () => ok(typedOnScreen));
     const sign = vi
       .fn<SigningBackend["sign"]>()
       .mockResolvedValueOnce(failed(wrongPin))
@@ -187,7 +191,7 @@ describe("useSigning", () => {
   });
 
   it("warns about an expired certificate before ever asking for the PIN", async () => {
-    const presign = vi.fn(async () => ok(undefined));
+    const presign = vi.fn(async () => ok(typedOnScreen));
     const { result } = renderHook(() => useSigning(backendOf({ presign })));
 
     await act(() =>
@@ -208,7 +212,7 @@ describe("useSigning", () => {
   });
 
   it("warns about a revoked certificate before ever asking for the PIN", async () => {
-    const presign = vi.fn(async () => ok(undefined));
+    const presign = vi.fn(async () => ok(typedOnScreen));
     const { result } = renderHook(() => useSigning(backendOf({ presign })));
 
     await act(() =>
@@ -226,6 +230,52 @@ describe("useSigning", () => {
       kind: "failed",
       failure: { situation: "certificateRevoked", detail: "revocado: keyCompromise" },
     });
+  });
+
+  /**
+   * ID-190: sin necesidad de sesión no hay diálogo. La ventana firma directo,
+   * con la cadena vacía, y nunca pasa por el estado «pin».
+   */
+  it("signs directly, with the empty string, when the store needs no session", async () => {
+    const sign = vi.fn(async () => ok(undefined));
+    const { result } = renderHook(() =>
+      useSigning(
+        backendOf({
+          presign: async () => ok({ kind: "notNeeded" }),
+          sign,
+        }),
+      ),
+    );
+
+    await act(() => result.current.start(certificate, anOrder()));
+
+    expect(sign).toHaveBeenCalledWith("");
+    expect(result.current.state).toEqual({
+      kind: "signed",
+      document: signed,
+      origin: anOrder().document,
+    });
+  });
+
+  /**
+   * Una tarjeta bloqueada ya no vive en el diálogo del secreto: la v0.4 retira
+   * tarjetas y DNIe del alcance, y con ellos el único estado que se resolvía
+   * ahí aparte de un secreto incorrecto (docs/design/dialogo-pin.md).
+   */
+  it("takes a locked pin out of the dialog too, unlike a wrong one", async () => {
+    const locked: TokenFailure = {
+      situation: "pinLocked",
+      detail: "CKR_PIN_LOCKED (C_Login)",
+      attemptsLeft: null,
+    };
+    const { result } = renderHook(() =>
+      useSigning(backendOf({ sign: async () => failed(locked) })),
+    );
+
+    await act(() => result.current.start(certificate, anOrder()));
+    await act(() => result.current.submitPin("0000"));
+
+    expect(result.current.state).toEqual({ kind: "failed", failure: locked });
   });
 
   it("goes back to the panel when the PIN dialog is cancelled", async () => {

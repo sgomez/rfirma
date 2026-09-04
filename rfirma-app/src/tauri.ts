@@ -43,6 +43,7 @@ import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SignedDocument, SigningBackend, StageResult } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
+import type { StoreSecret } from "./signing/secret";
 import type { StampComposer } from "./signing/stampPreview";
 import type { TokenFailure } from "./signing/token";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
@@ -92,7 +93,7 @@ export function tauriCertificateStore(): CertificateStore {
  */
 export function tauriSigningBackend(): SigningBackend {
   return {
-    presign: (order) => stage(() => invoke<void>("begin_signing", { order })),
+    presign: (order) => stage(() => invoke<StoreSecret>("begin_signing", { order })),
     sign: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
     postsign: () => stage(() => invoke<SignedDocument>("finish_signing")),
     padesLowerLeft: (placement) => invoke<[number, number]>("pades_lower_left", { placement }),
