@@ -136,10 +136,11 @@ _Avoid_: portal, cliente web, tercero
 
 **Documento reciente**:
 Documento que la aplicación ha visto antes y ofrece para volver a él, sin
-guardar una copia: un identificador opaco y lo que hace falta para pintar su
-fila. La fila enseña la ruta **donde se conoce** y sólo el nombre donde no
-(ADR-0010, ADR-0011): bajo el sandbox la aplicación no conoce la ruta original
-de un documento que entra por el portal.
+guardar una copia. Se **guarda** por su ruta canónica y se **referencia** desde
+la ventana por un identificador opaco, del que no se reconstruye ninguna ruta
+(ADR-0010). La fila enseña la ruta **donde se conoce** y sólo el nombre donde no
+(ADR-0011): un documento que entra por el portal no tiene ruta original que
+enseñar.
 _Avoid_: historial, documento abierto, favorito
 
 **Carpeta de destino**:

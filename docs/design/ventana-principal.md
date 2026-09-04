@@ -82,7 +82,7 @@ superposición, ni ventana atenuada, ni centrado.
   estorbar al gestor de ventanas, que ya sabe colocar: se pide un alto que quepa
   en un portátil y se baja el suelo hasta donde la ventana sigue siendo usable.
   El tamaño se sigue recordando entre sesiones, como estaba
-  ([ADR-0010](../adr/0010-que-recuerda-rfirma.md)); lo que no se hace es
+  ([ADR-0010](../adr/0010-memoria-entre-sesiones.md)); lo que no se hace es
   imponerlo por encima de la pantalla.
 
 ## La secuencia no es negociable

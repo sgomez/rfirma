@@ -17,7 +17,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0006 | La firma visible se configura sobre el documento |
 | 0007 | Sin barra de menús: cabecera única |
 | 0008 | Licencia EUPL-1.2 |
-| 0009 | Catálogo de cadenas propio, cinco idiomas (enmendado), errores que clasifican situaciones |
+| 0009 | Catálogo de cadenas propio, cinco idiomas, errores que clasifican situaciones |
 | 0010 | Qué recuerda rFirma entre sesiones y dónde |
 | 0011 | Dónde cae el documento firmado |
 | 0012 | La rúbrica la normaliza Rust, no Java |

@@ -32,17 +32,26 @@ pierde el trabajo.
   el `mtime`.
 - **Diez entradas, desalojo por último uso.** La bandeja no tiene buscador; si
   algún día hace falta uno, el límite estaba mal.
-- **Un reciente se identifica por un identificador opaco, no por su ruta**
-  (ID-62, [#82](https://github.com/sgomez/rfirma/pull/92)). Cuando se escribió
-  este ADR la aplicación aún hablaba con el disco directamente y una ruta
-  canónica bastaba; el sandbox descrito en el
-  [ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md) cambió esa
-  premisa — bajo el portal de documentos la aplicación **nunca** conoce la ruta
-  original, solo un identificador que acuña el backend al abrir el documento
-  y que guarda el registro en memoria (`memory::opened`). Guardar una ruta
-  habría sido guardar una mentira, y además es justo la fuga que cierra el
-  [ADR-0011](0011-destino-del-documento-firmado.md): un identificador no se
-  puede recorrer por fuerza bruta como una ruta.
+- **Un reciente se guarda por su ruta canónica; lo que cruza a la ventana es
+  un asa opaca.** Son las dos mitades de la misma decisión y conviene no
+  colapsarlas, porque este ADR las colapsó y se contradijo con el código
+  ([#232](https://github.com/sgomez/rfirma/issues/232)):
+  - **En disco** (`memory::recents`) la fila se identifica por la **ruta
+    absoluta canónica**. Ni hashes ni inodos: rompen con las copias y con los
+    sistemas de ficheros de red, y la ruta es además el mismo criterio que usa
+    el portal de flatpak, cuyo permiso va con la ruta y no con el inodo
+    (ID-38).
+  - **Hacia la ventana** (`memory::opened`, ID-62,
+    [#82](https://github.com/sgomez/rfirma/pull/92)) lo que sale es un
+    **identificador opaco** que acuña el backend al abrir el documento. De él
+    no se reconstruye ninguna ruta, y **no se puede recorrer por fuerza bruta
+    como una ruta**, que es la fuga que cierra.
+
+  Lo que la ventana **enseña** es otra cosa más, y la decide el
+  [ADR-0011](0011-destino-del-documento-firmado.md): la ruta real donde se
+  conoce, y sólo el nombre donde no —que bajo el portal es siempre—. El asa no
+  se retira por eso: sigue siendo cómo se **referencia** un documento, aunque
+  al lado viaje una ruta que se pueda leer.
 - **Al firmar entran dos filas**, el original y el firmado, y el firmado pasa a
   ser el documento activo. Fusionarlos en una fila que «evoluciona» esconde que
   hay dos ficheros en el disco, que es lo que el usuario necesita saber para no

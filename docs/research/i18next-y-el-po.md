@@ -7,7 +7,7 @@ intercambio entre nuestros catálogos y el `.po`— después de que el mapa
 descartara Lingui y Fluent y dejara el montaje donde está: **i18next 26.4.0**,
 **react-i18next 17.0.12** y los catálogos como objetos de TypeScript en
 `rfirma-app/src/i18n/locales/`, con `Catalog = typeof es` en `catalog.ts`
-([ADR-0009](../adr/0009-catalogo-de-cadenas-propio-y-seis-idiomas.md)).
+([ADR-0009](../adr/0009-catalogo-de-cadenas-propio-y-cinco-idiomas.md)).
 
 **Respuestas cortas.** El conversor **existe y está vivo**: `i18next-conv`
 17.0.0, publicado el **2026-06-19**, con el repositorio tocado el **2026-08-20**
