@@ -306,11 +306,21 @@ else
 fi
 
 # every_version_of_the_series_is_in_the_dnf_index
-if [ "$(grep -c '<package type="rpm">' "$tmp/arbol/rpm/repodata/"*primary.xml* 2>/dev/null || echo 0)" -ge 1 ] \
-    && [ "$(find "$tmp/arbol/rpm" -maxdepth 1 -name '*.rpm' | wc -l)" -eq "${#versiones[@]}" ]; then
+# `zcat -f` porque `createrepo_c` deja el primario comprimido y con un prefijo
+# de hash delante del nombre: ni la ruta ni la compresion son fijas.
+primario="$(find "$tmp/arbol/rpm/repodata" -name '*primary.xml*' | head -1)"
+if [ -n "$primario" ]; then
+    # `grep -o`, no `grep -c`: el XML del primario no viene con un paquete por
+    # linea y contar lineas daria uno.
+    en_indice="$(zcat -f "$primario" | grep -o '<package type="rpm">' | wc -l)"
+else
+    en_indice=0
+fi
+servidos="$(find "$tmp/arbol/rpm" -maxdepth 1 -name '*.rpm' | wc -l)"
+if [ "$en_indice" -eq "${#versiones[@]}" ] && [ "$servidos" -eq "${#versiones[@]}" ]; then
     ok "todas las versiones de la serie estan servidas por dnf"
 else
-    fail "el repositorio dnf no trae toda la serie"
+    fail "el repositorio dnf no trae toda la serie: $en_indice en el indice, $servidos servidos"
 fi
 
 # ---------------------------------------------------------------------------
