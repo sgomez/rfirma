@@ -14,12 +14,23 @@
 # de que la guarda este en el `if` del job y no dentro de un paso: un paso que
 # decide si sirve o no es un paso que un dia sirve.
 #
-# HASTA DONDE LLEGA HOY: la puerta. Descarga lo publicado y comprueba, con la
-# clave de rFirma, que lo que se va a servir es lo que se firmo. La
-# reconstruccion de los tres arboles —ostree, apt y dnf—, su firma y el
-# intercambio del enlace simbolico del anfitrion entran en este mismo fichero
-# en el #276, detras de esta puerta y como jobs que dependen de ella. Servir
-# primero y verificar despues no seria una tuberia mas corta: seria otra cosa.
+# DOS JOBS Y EL SEGUNDO CUELGA DEL PRIMERO: la puerta comprueba, con la clave
+# de rFirma, que lo que se va a servir es lo que se firmo; y solo entonces se
+# reconstruye el arbol y se publica. Servir primero y verificar despues no
+# seria una tuberia mas corta: seria otra cosa.
+#
+# EL MECANISMO DE LA PUBLICACION NO ESTA AQUI, esta en tres guiones de
+# `packaging/repo/` que se prueban solos (`just check-publish`): este
+# fichero baja la serie, construye el arbol y lo publica llamandolos. Es a
+# proposito: la unica parte de la tuberia que no puede ensayarse con una
+# etiqueta `-rc.N` es justo la que toca el anfitrion, asi que tiene que poder
+# probarse fuera de un workflow.
+#
+# LO QUE SIGUE SIN ESTAR EN NINGUN SITIO: Docker. Los repositorios no van
+# dentro de la imagen —una imagen no es sitio para datos que crecen—, asi que
+# no hay registro de imagenes ni un solo paso de Docker en esta tuberia. La
+# imagen es solo el servidor web con la landing, y la construye Coolify desde
+# `main` (ID-174).
 name: Publicacion
 
 on:
@@ -106,4 +117,80 @@ jobs:
           {
             echo "### $TAG verificada"
             echo "Firmada por ${{ steps.gpg.outputs.fingerprint }} y con la puerta del contenido pasada."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Reconstruye y publica
+    # DETRAS DE LA PUERTA. `needs` es lo que hace que verificar y servir sean
+    # dos cosas en ese orden y no dos cosas a la vez.
+    needs: verify
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # La misma sede del secreto que los otros dos workflows (ID-169): aqui
+    # entran la subclave —para verificar la serie y exportar la clave publica
+    # que se sirve— y la clave ssh del anfitrion.
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Clave de firma
+        id: gpg
+        uses: ./.github/actions/import-signing-key
+        with:
+          private-key: ${{ secrets.GPG_SIGNING_SUBKEY }}
+          passphrase: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
+          expected-fingerprint: ${{ vars.GPG_FINGERPRINT }}
+
+      # TODA la serie menor vigente, no solo la version recien publicada: el
+      # arbol se reconstruye entero, asi que lo que no se baje aqui deja de
+      # servirse.
+      - name: La serie vigente
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: packaging/repo/download-series.sh "$TAG" serie
+
+      - name: El arbol nuevo
+        env:
+          FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          gpg --armor --export "$FINGERPRINT" > rfirma.asc
+          packaging/repo/build-tree.sh serie arbol rfirma.asc
+
+      # La clave del CI en el anfitrion esta atada a
+      # `command="rrsync /srv/rfirma-repo"`: no da consola, solo sabe escribir
+      # en el directorio que ya sirve ficheros publicos. `StrictHostKeyChecking`
+      # se queda en `yes` y el anfitrion se conoce de antemano por su clave
+      # publica: aceptar la que venga seria entregarle el arbol a quien conteste.
+      - name: Llave del anfitrion
+        env:
+          SSH_KEY: ${{ secrets.PUBLISH_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.PUBLISH_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/publish
+          chmod 600 ~/.ssh/publish
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Publica
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          DESTINO: "${{ vars.PUBLISH_SSH_USER }}@${{ vars.PUBLISH_SSH_HOST }}:"
+          RSYNC_RSH: "ssh -i ~/.ssh/publish -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+        run: packaging/repo/publish-tree.sh arbol "$TAG" "$DESTINO"
+
+      - name: Resumen
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          {
+            echo "### $TAG en servicio"
+            echo "El arbol \`arboles/$TAG\` esta subido y \`actual\` apunta a el."
           } >> "$GITHUB_STEP_SUMMARY"

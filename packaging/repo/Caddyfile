@@ -5,9 +5,7 @@
 }
 
 :3000 {
-    root * /srv
     encode zstd gzip
-    file_server
 
     # Endpoint de comprobación de estado para Coolify / Docker
     handle /healthz {
@@ -31,7 +29,29 @@
     @hidden path */.*
     error @hidden 404
 
-    # Control de caché para la landing: actualización inmediata en nuevos despliegues
-    @landing path / /index.html
-    header @landing Cache-Control "no-cache, must-revalidate"
+    # LOS TRES REPOSITORIOS Y LA CLAVE NO ESTÁN EN LA IMAGEN: viven en el
+    # montaje de directorio del anfitrión, y se sirven **a través del enlace
+    # simbólico `actual`** (ADR-0015). Ese enlace es todo lo que cambia en un
+    # despliegue: la publicación sube el árbol nuevo a `arboles/<etiqueta>` y
+    # lo último que hace es reapuntar `actual`, así que aquí nunca se ve un
+    # árbol a medias y la vuelta atrás no toca esta configuración.
+    #
+    # Las rutas están fijadas por el ADR-0015 —viajan dentro del
+    # `.flatpakref` y de las órdenes de alta publicadas—, así que se enumeran
+    # en vez de servir el montaje entero: lo que no esté en esta lista no se
+    # sirve aunque alguien lo deje ahí.
+    @repositorio path /flatpak/* /apt/* /rpm/* /rfirma.asc /rfirma.flatpakref
+    handle @repositorio {
+        root * /srv/rfirma-repo/actual
+        file_server
+    }
+
+    # La landing, que sí va dentro de la imagen: control de caché para que un
+    # redespliegue se vea de inmediato.
+    handle {
+        root * /srv
+        file_server
+        @landing path / /index.html
+        header @landing Cache-Control "no-cache, must-revalidate"
+    }
 }

@@ -158,4 +158,50 @@ if [ -f "$PUBLISH" ]; then
         exit 1
     fi
     echo "OK  $PUBLISH solo reacciona a una Release publicada que no es candidata"
+
+    # EL MECANISMO DE LA PUBLICACION VIVE EN UN GUION QUE SE PRUEBA (ID-174).
+    # Es la unica parte de la tuberia que no se puede ensayar con una etiqueta
+    # `-rc.N` —el ensayo se detiene antes de tocar el anfitrion—, asi que un
+    # `rsync` escrito a mano dentro del workflow seria una orden que nadie ha
+    # ejecutado nunca hasta el dia de la entrega. Y el orden de las tres
+    # ordenes (arbol, enlace, poda) es lo que hace que un despliegue a medias
+    # no se vea: si se reparte entre pasos del YAML, deja de estar probado.
+    if ! grep -q 'packaging/repo/publish-tree.sh' "$PUBLISH"; then
+        echo "$PUBLISH tiene que publicar con packaging/repo/publish-tree.sh (ID-174)" >&2
+        exit 1
+    fi
+    sueltos="$(grep -nE '^[[:space:]]+(-[[:space:]]+)?(run:[[:space:]]*)?rsync ' "$PUBLISH" || true)"
+    if [ -n "$sueltos" ]; then
+        printf '%s\n' "$sueltos" >&2
+        echo >&2
+        echo "el rsync de la publicacion va en packaging/repo/publish-tree.sh, no aqui." >&2
+        echo "Ahi esta probado (just check-publish); en el YAML no lo prueba nadie." >&2
+        exit 1
+    fi
+    echo "OK  $PUBLISH publica con el guion probado y no lleva rsync suelto"
 fi
+
+# ------------------------------------------------------------------ ID-174 --
+# NI REGISTRO DE IMAGENES NI UN SOLO PASO DE DOCKER EN EL CI.
+#
+# Los repositorios no van dentro de la imagen —una imagen no es sitio para
+# datos que crecen: cada publicacion produciria una capa nueva con la historia
+# entera repetida—, y con los datos fuera la tuberia no toca Docker en ningun
+# momento. La imagen es solo el servidor web con la landing y la construye
+# Coolify desde `main`.
+#
+# Se vigila aqui porque la tentacion tiene nombre y viene sola: el dia que
+# alguien quiera «probar la imagen en el CI» anadira un `docker build`, y
+# detras de un `docker build` viene un registro, y detras de un registro
+# vienen los datos dentro de la imagen. Los comentarios quedan fuera: esta
+# prohibicion hay que poder explicarla nombrandola.
+docker="$(grep -rniE 'docker|ghcr\.io|container-registry' .github/workflows \
+    | grep -vE ':[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$docker" ]; then
+    printf '%s\n' "$docker" >&2
+    echo >&2
+    echo "ningun workflow toca Docker ni un registro de imagenes (ID-174, ADR-0015)." >&2
+    echo "Los tres repositorios llegan al anfitrion por rsync, fuera de la imagen." >&2
+    exit 1
+fi
+echo "OK  ningun workflow toca Docker ni un registro de imagenes"
