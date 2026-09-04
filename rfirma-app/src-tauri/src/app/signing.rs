@@ -20,7 +20,7 @@ use crate::commands::views::{Failure, SignedDocumentView};
 use crate::destination::PortalDocument;
 use crate::isolate::Isolate;
 use crate::memory::{Configuration, ListedCertificates, Memory, OpenedDocuments};
-use crate::pkcs11::{self, CertificateRef, Store, TokenCertificate};
+use crate::pkcs11::{self, CertificateRef, Store, StoreSecret, TokenCertificate};
 use crate::signing::{
     compose_layer2_text, AdmissibleDocument, SessionSeal, SignatureConfig, VisibleTextFields,
 };
@@ -67,6 +67,11 @@ struct InFlight {
 ///
 /// Antes de nada rechaza lo que no se puede firmar —cifrado, certificado, o no
 /// es un PDF—, **antes de que se pida el PIN**.
+///
+/// Devuelve **cómo hay que pedirle el secreto al almacén** (ID-189), que es lo
+/// que la ventana necesita para decidir si abre el diálogo o firma directo. Un
+/// almacén cuyo secreto se teclea en el teclado del lector se rechaza aquí, sin
+/// cruzar la frontera y sin pedirle nada a nadie.
 pub fn begin(
     order: &SigningOrder,
     stores: &[Store],
@@ -74,13 +79,16 @@ pub fn begin(
     opened: &OpenedDocuments,
     isolate: &Isolate,
     session: &SigningSession,
-) -> Result<(), Failure> {
+) -> Result<StoreSecret, Failure> {
     // Lo que la ventana manda es el identificador que se acuñó al abrir, y no
     // una ruta: quien sabe a qué documento del portal corresponde es el
     // registro, y solo él (ID-62).
     let document = documents::opened_document(opened, &order.document)?;
     let bytes = admitted_bytes(&document)?;
     let (config, reference, chain) = plan_signature(stores, listed, order)?;
+    // Se pregunta antes de cruzar la frontera: si el secreto se teclea en el
+    // lector, aquí se acaba el recorrido y no se ha intentado firmar nada.
+    let secret = pkcs11::store_secret(&reference)?.admitted()?;
     // Una copia para la sesión: la otra se va con la prefirma al otro lado de
     // la frontera.
     let certificate = reference.clone();
@@ -109,7 +117,7 @@ pub fn begin(
         certificate,
         seal,
     });
-    Ok(())
+    Ok(secret)
 }
 
 /// **Caso de uso.** Firma en el token, con el PIN que se acaba de teclear.

@@ -114,7 +114,7 @@ pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, OpenedDocumentView,
-    PlacementView, RecentDocumentView, SignedDocumentView,
+    PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -134,6 +134,9 @@ pub fn list_certificates(
 }
 
 /// **Orden 2.** Prefirma: cruza la frontera y deja el ciclo abierto.
+///
+/// Devuelve **cómo hay que pedirle el secreto al almacén** (ID-189): sin sesión
+/// no hay diálogo que abrir, y con ella la ventana sabe que toca pedirlo.
 #[tauri::command]
 pub fn begin_signing(
     order: SigningOrder,
@@ -141,7 +144,7 @@ pub fn begin_signing(
     isolate: State<'_, Isolate>,
     session: State<'_, SigningSession>,
     opened: State<'_, OpenedDocuments>,
-) -> Result<(), Failure> {
+) -> Result<SecretView, Failure> {
     app::signing::begin(
         &order,
         &environment.stores,
@@ -150,6 +153,7 @@ pub fn begin_signing(
         &isolate,
         &session,
     )
+    .map(SecretView::from)
 }
 
 /// **Orden 3.** Firma en el token, con el PIN que se acaba de teclear.

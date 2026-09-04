@@ -160,6 +160,9 @@ fn outputs() -> Vec<Output<'static>> {
 /// ningún camino. `RubricView` lleva Base64 y medidas; `StatusView`,
 /// `CertificateView` y `PlacementView`, lo que dicen sus nombres.
 ///
+/// `SecretView` tampoco puede llevarla: son dos banderas de `CK_TOKEN_INFO` y
+/// un contador vacío, y el almacén del que salen no aparece por ningún lado.
+///
 /// `RubricChoiceView` **no** está aquí, aunque lo estuvo: lleva un `Failure`
 /// con el detalle crudo del `RubricError`, y por ahí sí hay un camino desde
 /// el enlace del portal. Se construye con los demás.
@@ -170,11 +173,12 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 4] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 5] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
     "RubricView",
+    "SecretView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
