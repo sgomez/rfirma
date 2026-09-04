@@ -138,7 +138,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends just gettext
 
-      # `check-repo` viaja aqui —y no en un cuarto job— porque son dos sellos
+      # ruff es la puerta del unico Python del repositorio (ID-164): la
+      # extension de Nautilus corre dentro del proceso del gestor de ficheros y
+      # `ruff check` es lo unico que la vigila (TD-45). Se instala aqui y lo
+      # ejecuta `just lint-python`, dentro de `check-repo`, para que el CI siga
+      # ejecutando recetas del justfile y nada mas. No esta en apt; pipx viene
+      # con el runner y deja el binario en el PATH.
+      - name: ruff
+        run: pipx install ruff
+
+      # `check-repo` viaja aqui —y no en un cuarto job— porque son sellos
       # de milisegundos y montar un runner para ellos costaria cien veces mas
       # que ejecutarlos.
       - run: just check-repo check-ts
