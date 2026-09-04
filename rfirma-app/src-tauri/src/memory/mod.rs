@@ -1,17 +1,17 @@
-//! Lo que rFirma recuerda entre sesiones: **siete** memorias, partidas en dos
+//! Lo que rFirma recuerda entre sesiones: **seis** memorias, partidas en dos
 //! (ADR-0010 y su enmienda, #53) — más [`OpenedDocuments`], que no sobrevive al
 //! proceso y por eso no cuenta entre ellas.
 //!
-//! La séptima es el tamaño de la ventana (ID-72, ID-73, `app::window`): no
-//! mira ningún interruptor, así que sobrevive tanto a «Recordar mi actividad»
-//! como a «Recordar la última configuración de firma visible» apagados.
+//! **El tamaño de la ventana no es una de ellas**: rFirma abre siempre al
+//! tamaño de `tauri.conf.json` y quien quiera otra cosa maximiza o arrastra un
+//! borde, que es lo que hace todo el mundo (ADR-0010, enmienda).
 //!
 //! Dentro del estado viaja además un apunte que **no es una memoria del
-//! usuario** y por eso no cuenta entre las siete: [`VersionCheck`], cuándo se
+//! usuario** y por eso no cuenta entre las seis: [`VersionCheck`], cuándo se
 //! preguntó por última vez a GitHub si hay una versión nueva y qué contestó
 //! (ID-180, `app::version`). Es una caché para no salir a la red en cada
-//! arranque, no dice nada de quien firma, y por eso está exenta de los dos
-//! interruptores igual que el tamaño de la ventana.
+//! arranque, no dice nada de quien firma, y por eso es lo único exento de los
+//! dos interruptores.
 //!
 //! **Configuración** —lo que el usuario elige y la aplicación obedece— son el
 //! idioma, el tema, la carpeta de destino, los dos interruptores y la rúbrica.
@@ -52,9 +52,7 @@ pub use error::{MemoryError, Situation};
 pub use listed::ListedCertificates;
 pub use opened::OpenedDocuments;
 pub use recents::{Badge, Placement, RecentDocument, Recents, ShownBadge, CAPACITY};
-pub use state::{
-    BoxSize, RememberedFields, State, VersionCheck, VisibleSignatureMemory, WindowMemory,
-};
+pub use state::{BoxSize, RememberedFields, State, VersionCheck, VisibleSignatureMemory};
 pub use store::{Damage, JsonFile, Loaded, Recovery, FORMAT_VERSION};
 
 use crate::paths::Paths;
@@ -109,7 +107,7 @@ impl Memory {
     pub fn remember_configuration(&self, configuration: &Configuration) -> Result<(), MemoryError> {
         self.configuration.save(configuration)?;
         if !configuration.remember_activity {
-            self.erase_activity_but_keep_the_window()?;
+            self.erase_activity_but_keep_the_exempt()?;
         }
         Ok(())
     }
@@ -126,7 +124,7 @@ impl Memory {
         state: &State,
     ) -> Result<(), MemoryError> {
         if !configuration.remember_activity {
-            return self.erase_activity_but_keep_the_window();
+            return self.erase_activity_but_keep_the_exempt();
         }
         if configuration.remember_visible_signature {
             return self.state.save(state);
@@ -146,24 +144,15 @@ impl Memory {
     /// No es «Vaciar la lista» —eso son solo los recientes,
     /// [`Recents::clear`]—: esto se lleva también el certificado.
     pub fn forget_activity(&self) -> Result<(), MemoryError> {
-        self.erase_activity_but_keep_the_window()
-    }
-
-    /// El tamaño de la ventana y si estaba maximizada, sin mirar ningún
-    /// interruptor (ID-73): ninguno de los dos la cubre.
-    pub fn remember_window(&self, window: WindowMemory) -> Result<(), MemoryError> {
-        let mut state = self.state.load()?.into_value();
-        state.window = Some(window);
-        self.state.save(&state)
+        self.erase_activity_but_keep_the_exempt()
     }
 
     /// Cuándo se preguntó por una versión nueva y qué se contestó, sin mirar
     /// ningún interruptor (ID-180).
     ///
-    /// Escribe siempre, como [`Memory::remember_window`] y por el mismo
-    /// motivo: no es actividad de quien firma, es un apunte de rFirma sobre sí
-    /// misma. Con «Recordar mi actividad» apagado el `state.json` sobrevive
-    /// con esto y el tamaño de la ventana dentro, y nada más.
+    /// Escribe siempre porque no es actividad de quien firma, es un apunte de
+    /// rFirma sobre sí misma. Con «Recordar mi actividad» apagado el
+    /// `state.json` sobrevive con esto dentro, y nada más.
     pub fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError> {
         let mut state = self.state.load()?.into_value();
         state.version_check = Some(check);
@@ -171,8 +160,8 @@ impl Memory {
     }
 
     /// Borra lo acumulado —recientes, certificado, firma visible, última
-    /// carpeta— conservando lo que ningún interruptor cubre: el tamaño de la
-    /// ventana (ID-73) y la caché de la comprobación de versión (ID-180).
+    /// carpeta— conservando lo que ningún interruptor cubre: la caché de la
+    /// comprobación de versión (ID-180).
     ///
     /// Qué se conserva lo dice [`State::forget_everything`] y no esta función:
     /// así el día que haya una exención más no hay dos sitios que ponerse de
@@ -181,9 +170,9 @@ impl Memory {
     ///
     /// La lectura previa no puede vetar el borrado: en el camino de borrado
     /// por privacidad, un `state.json` que `load` no consiga leer se trata
-    /// como si no llevara ventana dentro —se pierde esa memoria, no el
+    /// como si no llevara nada exento dentro —se pierde ese apunte, no el
     /// borrado— en vez de dejar la actividad en el disco con un `Err`.
-    fn erase_activity_but_keep_the_window(&self) -> Result<(), MemoryError> {
+    fn erase_activity_but_keep_the_exempt(&self) -> Result<(), MemoryError> {
         let mut kept = self
             .state
             .load()
@@ -338,67 +327,9 @@ mod tests {
         );
     }
 
-    /// El ID-73 dicho como lo dice el issue: **apagar «Recordar mi actividad»
-    /// no borra el tamaño de la ventana**, la única memoria exenta.
-    #[test]
-    fn turning_remember_activity_off_does_not_erase_the_window_size() {
-        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-        let (memory, paths) = a_memory(directory.path());
-        let window = WindowMemory {
-            width: 1280.0,
-            height: 800.0,
-            maximized: false,
-        };
-        memory
-            .remember_state(&Configuration::default(), &a_state(directory.path()))
-            .expect("deberia guardarse");
-        memory.remember_window(window).expect("deberia guardarse");
-
-        memory
-            .remember_configuration(&Configuration {
-                remember_activity: false,
-                ..Configuration::default()
-            })
-            .expect("deberia guardarse la configuracion");
-
-        assert!(
-            paths.state_file().exists(),
-            "el tamaño de la ventana no se ha ido, así que el fichero sigue"
-        );
-        let state = memory.state().expect("deberia leerse").into_value();
-        assert_eq!(state.window, Some(window));
-        assert!(
-            state.certificate.is_none(),
-            "el resto de la actividad sí se ha ido"
-        );
-    }
-
-    /// `remember_window` no mira ningún interruptor: escribe siempre.
-    #[test]
-    fn the_window_size_is_remembered_even_with_the_switch_off() {
-        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-        let (memory, _) = a_memory(directory.path());
-        memory
-            .remember_configuration(&Configuration {
-                remember_activity: false,
-                ..Configuration::default()
-            })
-            .expect("deberia guardarse la configuracion");
-
-        let window = WindowMemory {
-            width: 1024.0,
-            height: 768.0,
-            maximized: true,
-        };
-        memory.remember_window(window).expect("deberia guardarse");
-
-        let state = memory.state().expect("deberia leerse").into_value();
-        assert_eq!(state.window, Some(window));
-    }
-
     /// La invariante que promete el `///` de `remember_version_check`
     /// —«escribe siempre, sin mirar interruptores»— comprobada desde donde se
-    /// cumple, igual que su hermana la del tamaño de la ventana.
+    /// cumple.
     #[test]
     fn the_version_check_is_remembered_even_with_the_switch_off() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
