@@ -13,6 +13,7 @@
 
 .about {
   width: 520px;
+  max-width: 520px;
   gap: 12px;
   padding: var(--rf-space-sm);
 }
