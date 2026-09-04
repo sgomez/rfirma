@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=rfirma
+Name=rFirma
 Exec=rfirma
 Icon=me.sgomez.rfirma
 Terminal=false
