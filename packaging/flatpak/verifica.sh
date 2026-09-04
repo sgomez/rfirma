@@ -7,7 +7,7 @@
 #
 # QUE SE MIDE AQUI Y QUE NO.
 #
-# El paso 4 corre el CICLO TRIFASICO COMPLETO con RUBRICA DE IMAGEN contra la
+# El paso 3 corre el CICLO TRIFASICO COMPLETO con RUBRICA DE IMAGEN contra la
 # libreria que ha quedado INSTALADA dentro del bundle —los bytes que se
 # distribuyen, sacados de /app/lib/rfirma— y valida el PDF con pdfsig. Eso es lo
 # que faltaba: la verificacion del #22 se corrio contra la imagen de SEIS
@@ -147,7 +147,7 @@ echo "### 4. el portal de documentos, dentro del sandbox"
 # el dialogo de abrir (Orden 7, commands/mod.rs) concede el permiso -contra la
 # RUTA del anfitrion, no el inodo- y devuelve la ruta montada que la
 # aplicacion ve (docs/research/flatpak-canal-unico.md, apartado 4). No hace
-# falta el binario de prueba que el paso 4 necesita: aqui no se firma nada,
+# falta el binario de prueba que el paso 3 necesita: aqui no se firma nada,
 # solo se comprueba que los bytes concedidos por el portal llegan, que es lo
 # que la Orden 8 (`read_document`) lee del disco.
 ENTRADA="$LAB/portal-entrada.pdf"

@@ -141,7 +141,8 @@ construida en un anfitrión `aarch64`, y arreglar la ruta multiarch clavada a
   salta con `continue-on-error`.
 - **El sandbox es del flatpak, no de rfirma.** Todo lo que no expone hay que declararlo, y
   eso alcanza a cosas que fuera son gratis: los documentos entran y salen por portales, y
-  el diálogo devuelve rutas de verdad ([ADR-0011](0011-destino-del-documento-firmado.md)).
+  la aplicación no conoce la ruta original. En el `.deb` y el `.rpm` el diálogo devuelve
+  rutas de verdad ([ADR-0011](0011-destino-del-documento-firmado.md)).
   La fontanería de tarjeta —el cliente PC/SC y el módulo PKCS#11 de OpenSC— se retiró en
   el [#256](https://github.com/sgomez/rfirma/issues/256): nunca se había publicado, y
   tarjetas y DNIe no están soportados en la v0.4, ni en el flatpak ni en el `.deb`/`.rpm`.
