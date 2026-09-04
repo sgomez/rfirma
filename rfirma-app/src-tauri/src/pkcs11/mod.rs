@@ -352,16 +352,23 @@ fn configured_directory(init_args: &str) -> Option<&str> {
 /// No inicia sesión ni la pide: `C_GetTokenInfo` es una consulta pública, y por
 /// eso esto se puede preguntar **antes** del diálogo, que es justamente lo que
 /// permite decidir si hace falta diálogo.
+///
+/// Aun así abre un almacén, y eso sí pasa por [`with_token_turn`]: para un
+/// perfil NSS con init args `context()` no cachea, así que el `Arc<Pkcs11>` que
+/// nace aquí llama a `C_Finalize` sobre el módulo al salir de la función y le
+/// tiraría la sesión a quien estuviese dentro de su turno.
 pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-    let store = reference.store();
-    the_store_is_really_there(&store)?;
-    let context = context(&store)?;
-    let slot = slot_of(&context, reference.token_label())?;
-    let info = context.get_token_info(slot)?;
-    Ok(StoreSecret::of_token(
-        info.login_required(),
-        info.protected_authentication_path(),
-    ))
+    with_token_turn(|| {
+        let store = reference.store();
+        the_store_is_really_there(&store)?;
+        let context = context(&store)?;
+        let slot = slot_of(&context, reference.token_label())?;
+        let info = context.get_token_info(slot)?;
+        Ok(StoreSecret::of_token(
+            info.login_required(),
+            info.protected_authentication_path(),
+        ))
+    })
 }
 
 /// Firma `data` con la clave privada que acompaña al certificado referenciado.
