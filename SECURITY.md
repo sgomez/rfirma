@@ -49,9 +49,15 @@ para el mismo enunciado —«esto lo hizo rFirma»— serían peor seguridad, no
 | Subclave de firma (caduca a los dos años) | Releases, ostree, apt, dnf y cada `.rpm` | Secreto del entorno `release` del CI, y en ninguna otra parte |
 
 **La pública** se sirve en <https://rfirma.sgomez.me/rfirma.asc> — es el `Signed-By` de apt
-y el `gpgkey` de dnf— y su huella se publica en la portada de ese mismo sitio. Añade la
-huella a lo que ya sepas de rFirma por otro camino: es lo que hace que la firma signifique
-algo.
+y el `gpgkey` de dnf— y su huella es:
+
+```
+C8D6 A81C 1ED4 3A28 D426  8112 A6E0 EE02 2344 6A16
+```
+
+La misma huella se publica en la portada de <https://rfirma.sgomez.me>. Contrástala con lo
+que descargues (`gpg --show-keys rfirma.asc`) y añádela a lo que ya sepas de rFirma por
+otro camino: es lo que hace que la firma signifique algo.
 
 **Si la subclave se filtra**, se revoca, se emite otra bajo la misma maestra y **la huella
 que tienes en tu `Signed-By` sigue valiendo**: no tienes que volver a dar de alta el
