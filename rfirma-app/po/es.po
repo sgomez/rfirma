@@ -795,6 +795,12 @@ msgstr "Dónde se guarda el documento firmado"
 msgid "preferences.destination.change"
 msgstr "Cambiar carpeta…"
 
+msgid "preferences.destination.nextToOriginal"
+msgstr "Junto al documento original"
+
+msgid "preferences.destination.inThisFolder"
+msgstr "En esta carpeta"
+
 msgid "preferences.theme.label"
 msgstr "Tema"
 

@@ -722,6 +722,12 @@ msgstr ""
 msgid "preferences.destination.change"
 msgstr ""
 
+msgid "preferences.destination.nextToOriginal"
+msgstr ""
+
+msgid "preferences.destination.inThisFolder"
+msgstr ""
+
 msgid "preferences.theme.label"
 msgstr ""
 

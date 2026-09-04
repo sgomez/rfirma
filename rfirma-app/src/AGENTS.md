@@ -35,7 +35,7 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 510 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `tauri.ts` | 523 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
 | `App.tsx` | 1045 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
@@ -78,8 +78,8 @@ rojo.
 | `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
 | **`preferences/`** | | Los ajustes. |
-| `preferences/preferences.ts` | 93 | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | 401 | La pantalla completa de ajustes, con su índice de secciones. |
+| `preferences/preferences.ts` | 106 | Lo que la aplicación recuerda. |
+| `preferences/PreferencesDialog.tsx` | 451 | La pantalla completa de ajustes, con su índice de secciones. |
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |

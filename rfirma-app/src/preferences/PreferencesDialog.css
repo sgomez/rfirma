@@ -136,8 +136,63 @@
   gap: 4px;
 }
 
+/* Los dos estados miden lo mismo (con y sin «Junto al documento original»),
+   medido sobre el artboard: así las secciones de debajo no saltan según el
+   canal (ID-184). */
+.preferences__destination--withMode {
+  min-height: 200px;
+}
+
 .preferences__destination-row {
   align-items: center;
+}
+
+/* Las dos opciones de destino, radios propios (ID-184): «Junto al documento
+   original» y «En esta carpeta», como los dibuja el artboard. */
+.preferences__destination-mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+  padding-top: 2px;
+}
+
+.preferences__destination-option {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  justify-content: flex-start;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* `appearance: none` y el pomo se dibuja con un `box-shadow` interior, en vez
+   de con un `::after`: el elemento sigue siendo el `<input>` de verdad, así
+   que el foco de teclado y `:checked` los da el navegador (lint/a11y/
+   useSemanticElements). */
+.preferences__destination-radio {
+  appearance: none;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-radius: var(--rf-radius-pill);
+  border: 1px solid var(--rf-border-strong);
+}
+
+.preferences__destination-radio:checked {
+  border-color: var(--rf-primary);
+  box-shadow: inset 0 0 0 4px var(--rf-primary);
+}
+
+.preferences__destination-radio:focus-visible {
+  outline: 2px solid var(--rf-primary);
+  outline-offset: 2px;
+}
+
+/* La carpeta cuelga de «En esta carpeta», así que se sangra bajo su radio: 18
+   px de circulo más la separación corta entre radio y texto. */
+.preferences__destination-row--indented {
+  margin-left: calc(18px + var(--rf-space-xs));
 }
 
 /* El nombre envuelve antes que cortarse, como el destino del pie del panel: lo

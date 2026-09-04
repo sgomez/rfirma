@@ -8,6 +8,8 @@ import type { Preferences } from "./preferences";
 const defaults: Preferences = {
   theme: "system",
   destination: "Documentos",
+  offersOriginalFolder: false,
+  saveNextToOriginal: false,
   rememberVisibleSignature: true,
   rememberActivity: true,
 };
@@ -95,6 +97,46 @@ describe("PreferencesDialog", () => {
     await user.click(screen.getByRole("button", { name: "Cambiar carpeta…" }));
 
     expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
+  });
+
+  // «Junto al documento original» solo cuando el entorno sabe devolver la ruta
+  // real del documento (ID-184): donde no la sabe, la opción no aparece y el
+  // ajuste se queda en la carpeta con su «Cambiar carpeta…», como antes.
+  it("offers Junto al documento original only when the environment allows it", () => {
+    renderDialog({ preferences: { ...defaults, offersOriginalFolder: false } });
+
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+    expect(screen.queryByText("Junto al documento original")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
+  });
+
+  it("shows the two destination options when the environment allows it", () => {
+    renderDialog({ preferences: { ...defaults, offersOriginalFolder: true } });
+
+    expect(screen.getByRole("radiogroup")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Junto al documento original" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "En esta carpeta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
+  });
+
+  it("starts on En esta carpeta and applies the choice as it is made", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderDialog({
+      preferences: { ...defaults, offersOriginalFolder: true },
+      onChange,
+    });
+
+    expect(screen.getByRole("radio", { name: "En esta carpeta" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Junto al documento original" })).not.toBeChecked();
+
+    await user.click(screen.getByRole("radio", { name: "Junto al documento original" }));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...defaults,
+      offersOriginalFolder: true,
+      saveNextToOriginal: true,
+    });
   });
 
   it("offers only the languages whose catalog is complete", async () => {

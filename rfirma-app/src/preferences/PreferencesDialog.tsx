@@ -287,9 +287,59 @@ export function PreferencesDialog({
                 )
               }
             />
-            <div className="preferences__destination">
-              <p className="rf-label">{t("preferences.destination.label")}</p>
-              <div className="rf-row rf-gap-sm preferences__destination-row">
+            <div
+              className={
+                preferences.offersOriginalFolder
+                  ? "preferences__destination preferences__destination--withMode"
+                  : "preferences__destination"
+              }
+            >
+              <p className="rf-label" id={`${titleId}-destination`}>
+                {t("preferences.destination.label")}
+              </p>
+              {preferences.offersOriginalFolder && (
+                <div
+                  className="preferences__destination-mode"
+                  role="radiogroup"
+                  aria-labelledby={`${titleId}-destination`}
+                >
+                  <label className="preferences__destination-option">
+                    <input
+                      type="radio"
+                      name={`${titleId}-destination-mode`}
+                      className="preferences__destination-radio"
+                      checked={preferences.saveNextToOriginal}
+                      onChange={() =>
+                        void change("signing", () =>
+                          onChange({ ...preferences, saveNextToOriginal: true }),
+                        )
+                      }
+                    />
+                    <span className="rf-prose">{t("preferences.destination.nextToOriginal")}</span>
+                  </label>
+                  <label className="preferences__destination-option">
+                    <input
+                      type="radio"
+                      name={`${titleId}-destination-mode`}
+                      className="preferences__destination-radio"
+                      checked={!preferences.saveNextToOriginal}
+                      onChange={() =>
+                        void change("signing", () =>
+                          onChange({ ...preferences, saveNextToOriginal: false }),
+                        )
+                      }
+                    />
+                    <span className="rf-prose">{t("preferences.destination.inThisFolder")}</span>
+                  </label>
+                </div>
+              )}
+              <div
+                className={
+                  preferences.offersOriginalFolder
+                    ? "rf-row rf-gap-sm preferences__destination-row preferences__destination-row--indented"
+                    : "rf-row rf-gap-sm preferences__destination-row"
+                }
+              >
                 <p className="rf-prose preferences__destination-folder">
                   {preferences.destination}
                 </p>

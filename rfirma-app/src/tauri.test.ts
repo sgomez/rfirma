@@ -26,6 +26,7 @@ const aConfiguration = {
   rememberVisibleSignature: true,
   rememberActivity: true,
   theme: "system",
+  offersTheOriginalFolder: false,
 };
 
 const anOrder = {
@@ -509,9 +510,17 @@ describe("los puertos de la configuración sobre Tauri", () => {
     expect(read).toEqual({
       theme: "system",
       destination: "Documentos",
+      offersOriginalFolder: false,
+      saveNextToOriginal: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
     });
+  });
+
+  it("reads whether the environment allows Junto al documento original", async () => {
+    invoke.mockResolvedValue({ ...aConfiguration, offersTheOriginalFolder: true });
+
+    expect((await tauriPreferences().read()).offersOriginalFolder).toBe(true);
   });
 
   it("falls back to the system theme when what is stored is not one of the three", async () => {
@@ -535,6 +544,8 @@ describe("los puertos de la configuración sobre Tauri", () => {
     await tauriPreferences().save({
       theme: "dark",
       destination: "Documentos",
+      offersOriginalFolder: false,
+      saveNextToOriginal: false,
       rememberVisibleSignature: false,
       rememberActivity: true,
     });
@@ -544,6 +555,8 @@ describe("los puertos de la configuración sobre Tauri", () => {
         ...aConfiguration,
         language: "en",
         theme: "dark",
+        offersOriginalFolder: false,
+        saveNextToOriginal: false,
         rememberVisibleSignature: false,
       },
     });

@@ -417,6 +417,12 @@ interface ConfigurationView {
   rememberVisibleSignature: boolean;
   rememberActivity: boolean;
   theme: Theme;
+  /**
+   * **La única pregunta al entorno** (ID-184): si Preferencias puede ofrecer
+   * «Junto al documento original». La contesta el backend; escribirla no
+   * sirve de nada, así que no cruza al revés.
+   */
+  offersTheOriginalFolder: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -438,6 +444,11 @@ function writeConfiguration(configuration: ConfigurationView): Promise<void> {
  *
  * El destino que se manda es el que se leyó: la ventana lo enseña y no lo
  * elige —bajo el sandbox hay una sola carpeta—, y el backend lo ignora.
+ *
+ * `saveNextToOriginal` no tiene todavía dónde guardarse en el disco: el
+ * `ConfigurationView` de hoy no la lleva, así que siempre se lee en `false` y
+ * lo que se escriba se pierde al releer (ID-184). El cableado que la persista
+ * queda para cuando el backend ate `next_to_the_original` a `where_it_lands`.
  */
 export function tauriPreferences(): PreferencesStore {
   return {
@@ -446,6 +457,8 @@ export function tauriPreferences(): PreferencesStore {
       return {
         theme: isTheme(configuration.theme) ? configuration.theme : DEFAULT_THEME,
         destination: configuration.destination,
+        offersOriginalFolder: configuration.offersTheOriginalFolder,
+        saveNextToOriginal: false,
         rememberVisibleSignature: configuration.rememberVisibleSignature,
         rememberActivity: configuration.rememberActivity,
       };
