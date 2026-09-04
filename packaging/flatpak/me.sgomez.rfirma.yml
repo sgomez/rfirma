@@ -5,8 +5,12 @@
 # (packaging/flatpak/probe), que se borro al existir la frontera FFI real: dos
 # implementaciones de la misma frontera es justo donde este proyecto lleva tres
 # hallazgos de fallo silencioso (ADR-0013). Todo lo demas —runtime, permisos, la
-# libreria nativa en /app/lib/rfirma, pcsc-lite y OpenSC— es lo que midio el #22
-# y se queda tal cual.
+# libreria nativa en /app/lib/rfirma— es lo que midio el #22 y se queda tal
+# cual.
+#
+# LA FONTANERIA DE TARJETA SE BORRO EN EL #256: pcsc-lite y OpenSC nunca se
+# publicaron, tarjetas y DNIe no estan soportados en la v0.4, y el manifiesto
+# ya no compila ninguno de los dos modulos.
 app-id: me.sgomez.rfirma
 # Rama fija: la version de cada entrega va en <releases> del metainfo, no en
 # la rama. Asi el usuario que instala 'stable' sigue recibiendo las siguientes.
@@ -24,9 +28,6 @@ finish-args:
   - --socket=fallback-x11
   - --share=ipc
   - --device=dri
-  # Lectores de tarjeta fisicos (DNIe): el demonio pcscd corre en el
-  # anfitrion y su socket aparece dentro en /run/pcscd/pcscd.comm.
-  - --socket=pcsc
   # Paliativo medido en #22: sin el, GTK3 del runtime commitea un buffer que
   # no es dmabuf con sincronizacion explicita negociada y Mutter mata el
   # proceso ("Explicit Sync only supported on dmabuf buffers", Error 71).
@@ -50,11 +51,11 @@ finish-args:
   # del sandbox mkdir y la escritura contestan OK y el fichero no aparece en
   # ninguna parte. La aplicacion NO debe crearla nunca: si no esta, no esta.
   - --filesystem=xdg-documents
-  # NO se declara --filesystem=host-os: el modulo PKCS#11 lo aporta el
-  # flatpak (modulo `opensc`). Los del anfitrion no cargan aqui dentro.
-  # Ni --filesystem=home ni --filesystem=host: la ENTRADA de ficheros sigue
-  # entrando por portales, y --filesystem=home tampoco devolveria la ruta
-  # real del original (ADR-0011).
+  # NI --filesystem=host-os NI --filesystem=home NI --filesystem=host: la
+  # ENTRADA de ficheros sigue entrando por portales, y --filesystem=home
+  # tampoco devolveria la ruta real del original (ADR-0011). Tarjetas y DNIe
+  # no estan soportados en la v0.4 (#256): no hay modulo PKCS#11 de tarjeta
+  # que empaquetar ni justificar aqui.
   # EXCEPCION CONSCIENTE (#95, #101): un almacen de certificados NSS no es un
   # documento y no hay portal que lo sirva. Sin esto el flatpak no ve ningun
   # certificado de Firefox. NO se declara --filesystem=home. No hace falta
@@ -134,81 +135,7 @@ modules:
       - type: dir
         path: ../../rfirma-native-bridge/target/lib/rfirma
 
-  # 2. Cliente PC/SC. El demonio pcscd corre en el ANFITRION; aqui solo va la
-  #    libreria cliente, que habla con el por el socket que expone
-  #    --socket=pcsc. Medido en #22: el runtime no la trae.
-  - name: pcsc-lite
-    buildsystem: meson
-    config-opts:
-      - -Dlibsystemd=false
-      - -Dlibudev=false
-      - -Dlibusb=false
-      - -Dpolkit=false
-      # El socket que expone --socket=pcsc aparece en /run/pcscd/pcscd.comm.
-      - -Dipcdir=/run/pcscd
-      - -Dusbdropdir=/app/lib/pcsc/drivers
-    sources:
-      - type: archive
-        url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.1.tar.xz
-        sha256: bfcfe38a20afc49849c6bf55325e38f449fc4b26d3923fdc32b969ae41a8741b
-    cleanup:
-      - /bin
-      - /sbin
-      - /include
-      - /lib/pkgconfig
-      - /share/man
-
-  # 3. El modulo PKCS#11 lo APORTA el flatpak, no el anfitrion. Medido en #22:
-  #    el opensc-pkcs11.so del anfitrion no carga dentro del sandbox porque sus
-  #    libopensc.so.13 y libeac.so.3 no estan, y apuntar LD_LIBRARY_PATH al
-  #    anfitrion mezcla librerias de otra glibc dentro del runtime.
-  - name: opensc
-    buildsystem: autotools
-    config-opts:
-      - --disable-static
-      - --disable-notify
-      - --disable-doc
-      - --disable-strict
-      - --enable-pcsc
-      - --with-pcsc-provider=libpcsclite.so.1
-    make-install-args:
-      # Por omision intenta escribir en /usr/share/p11-kit/modules, que en el
-      # sandbox de construccion es de solo lectura.
-      - p11kitdir=/app/share/p11-kit/modules
-      - completiondir=/app/share/bash-completion/completions
-    sources:
-      - type: archive
-        url: https://github.com/OpenSC/OpenSC/releases/download/0.27.1/opensc-0.27.1.tar.gz
-        sha256: 976f4a23eaf3397a1a2c3a7aac80bf971a8c3d829c9a79f06145bfaeeae5eca7
-    cleanup:
-      - /include
-      - /lib/pkgconfig
-      - /share/man
-      - /share/bash-completion
-      # De las veintidos herramientas de linea de ordenes solo se conservan
-      # las dos que sirven para diagnosticar una tarjeta en soporte.
-      - /bin/cardos-tool
-      - /bin/cryptoflex-tool
-      - /bin/dnie-tool
-      - /bin/dtrust-tool
-      - /bin/egk-tool
-      - /bin/eidenv
-      - /bin/gids-tool
-      - /bin/goid-tool
-      - /bin/iasecc-tool
-      - /bin/netkey-tool
-      - /bin/openpgp-tool
-      - /bin/opensc-asn1
-      - /bin/opensc-explorer
-      - /bin/piv-tool
-      - /bin/pkcs11-register
-      - /bin/pkcs15-crypt
-      - /bin/pkcs15-init
-      - /bin/pkcs15-tool
-      - /bin/sc-hsm-tool
-      - /bin/westcos-tool
-
-  # 4. La aplicacion. El binario se llama `rfirma` y coincide con `command:` de
+  # 2. La aplicacion. El binario se llama `rfirma` y coincide con `command:` de
   #    arriba y con el [[bin]] de rfirma-app/src-tauri/Cargo.toml: si cambias
   #    uno, cambia los tres.
   #

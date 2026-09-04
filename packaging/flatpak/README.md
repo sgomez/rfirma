@@ -44,8 +44,10 @@ es justo donde este proyecto lleva tres hallazgos de fallo silencioso
 Lo que midió está escrito en
 [`docs/research/flatpak-canal-unico.md`](../../docs/research/flatpak-canal-unico.md).
 
-El resto del manifiesto —runtime, permisos, la librería en `/app/lib/rfirma`,
-pcsc-lite y OpenSC— se quedó tal cual.
+El resto del manifiesto —runtime, permisos, la librería en `/app/lib/rfirma`—
+se quedó tal cual. La fontanería de tarjeta (`pcsc-lite` y `OpenSC`) se retiró
+en el [#256](https://github.com/sgomez/rfirma/issues/256): nunca se había
+publicado, y tarjetas y DNIe no están soportados en la v0.4.
 
 ## Verificar
 
@@ -60,19 +62,18 @@ just token       # el paso 4 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` da ocho pasos. Dentro del sandbox comprueba lo que solo el
-sandbox puede romper: que el módulo PKCS#11 que empaqueta el propio flatpak
-cargue, que la ventana arranque y siga viva, que un documento entrado por el
-portal llegue con sus bytes intactos, y que el sandbox **rechace escribir** en
-el perfil de Firefox y en `~/.pki/nssdb` — los dos únicos `--filesystem` que no
-van por portal (#101, AC 3). La invariante del ADR-0012 —un solo
-`librfirma_crypto.so`, `libawt.so` en ninguna parte— ya no se comprueba dentro
-del sandbox: el paso 8 llama a
+`verifica.sh` da siete pasos. Dentro del sandbox comprueba lo que solo el
+sandbox puede romper: que la ventana arranque y siga viva, que un documento
+entrado por el portal llegue con sus bytes intactos, y que el sandbox
+**rechace escribir** en el perfil de Firefox y en `~/.pki/nssdb` — los dos
+únicos `--filesystem` que no van por portal (#101, AC 3). La invariante del
+ADR-0012 —un solo `librfirma_crypto.so`, `libawt.so` en ninguna parte— ya no
+se comprueba dentro del sandbox: el paso 7 llama a
 [`../verifica-contenido.sh`](../verifica-contenido.sh), independiente del
 formato, sobre el `.flatpak` recién construido (la misma puerta corre sobre el
 `.deb`/`.rpm`, cuando existan).
 
-El paso 4 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
+El paso 3 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
 con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se
 distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
 verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
@@ -81,9 +82,11 @@ cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
 grada B (`just token`) y `poppler-utils`.
 
 Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
-dentro del sandbox, por tres razones medidas: dentro **no hay token** (el bundle
-empaqueta OpenSC para una tarjeta física, y montar el SoftHSM del anfitrión es
-justo el `LD_LIBRARY_PATH` de otra glibc que prohíbe el ID-40), **no hay
+dentro del sandbox, por tres razones medidas: dentro **no hay token** (el
+bundle no empaqueta ningún módulo PKCS#11 desde el
+[#256](https://github.com/sgomez/rfirma/issues/256) — tarjetas y DNIe no están
+soportados en la v0.4 —, y montar el SoftHSM del anfitrión es justo el
+`LD_LIBRARY_PATH` de otra glibc que prohíbe el ID-40), **no hay
 poppler** (`pdfsig` no está ni en el bundle ni en `org.gnome.Platform//50`), y
 **no hay por dónde entrar** (rfirma no tiene modo headless: el ciclo solo se
 alcanza por los `#[tauri::command]` desde el WebView, y un binario de prueba del
