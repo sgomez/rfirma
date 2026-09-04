@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rFirma — Firma electrónica nativa</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1a1a1a;
+    --bg: #ffffff;
+    --muted: #5a5a5a;
+    --accent: #0b5fff;
+    --border: #dcdcdc;
+    --code-bg: #f4f4f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #eaeaea;
+      --bg: #121212;
+      --muted: #aaaaaa;
+      --accent: #6ea8ff;
+      --border: #333333;
+      --code-bg: #1c1c1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.6;
+  }
+  header, main, footer {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem;
+  }
+  header {
+    padding-top: 3rem;
+  }
+  h1 {
+    margin-bottom: 0.25rem;
+    font-size: 2rem;
+  }
+  .tagline {
+    color: var(--muted);
+    margin-top: 0;
+  }
+  .badge {
+    display: inline-block;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 0.15rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  section {
+    margin-top: 2.5rem;
+  }
+  h2 {
+    font-size: 1.3rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem;
+  }
+  .notice {
+    border: 1px solid var(--accent);
+    background: var(--code-bg);
+    border-radius: 0.5rem;
+    padding: 0.9rem 1.1rem;
+    margin: 1rem 0;
+  }
+  .channel {
+    margin: 1.5rem 0;
+  }
+  .channel h3 {
+    margin-bottom: 0.25rem;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  a { color: var(--accent); }
+  ul.repos {
+    padding-left: 1.2rem;
+  }
+  footer {
+    color: var(--muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>rFirma</h1>
+  <p class="tagline">Firma electrónica nativa para Linux, sin depender de Java.</p>
+  <span class="badge">Alfa</span>
+</header>
+
+<main>
+
+<section id="repositorios">
+  <h2>Instala añadiendo un repositorio</h2>
+  <p>
+    Los tres canales de rFirma son repositorios propios, no ficheros sueltos: una vez añadido
+    uno, las actualizaciones llegan solas con el gestor de paquetes de tu sistema.
+  </p>
+
+  <div class="notice">
+    <strong>Todavía no hay ninguna versión publicada.</strong> Los repositorios de esta página
+    se están construyendo; hasta que exista la primera Release estas órdenes no van a
+    funcionar. Vuelve cuando rFirma anuncie su primera versión, o sigue el desarrollo en
+    <a href="https://github.com/sgomez/rfirma">github.com/sgomez/rfirma</a>.
+  </div>
+
+  <div class="channel">
+    <h3>flatpak</h3>
+    <p>Para cualquier distribución de Linux. Se resuelve del remoto propio, no de Flathub.</p>
+    <pre><code>flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</code></pre>
+  </div>
+
+  <div class="channel">
+    <h3>apt (Debian, Ubuntu y derivadas)</h3>
+    <pre><code>curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc >/dev/null
+sudo tee /etc/apt/sources.list.d/rfirma.sources &lt;&lt;'EOF'
+Types: deb
+URIs: https://rfirma.sgomez.me/apt/
+Suites: stable
+Components: main
+Signed-By: /usr/share/keyrings/rfirma.asc
+EOF
+sudo apt update &amp;&amp; sudo apt install rfirma</code></pre>
+  </div>
+
+  <div class="channel">
+    <h3>dnf (Fedora y derivadas)</h3>
+    <pre><code>sudo tee /etc/yum.repos.d/rfirma.repo &lt;&lt;'EOF'
+[rfirma]
+name=rfirma
+baseurl=https://rfirma.sgomez.me/rpm/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://rfirma.sgomez.me/rfirma.asc
+EOF
+sudo dnf install rfirma</code></pre>
+  </div>
+
+  <p>
+    Instalar por más de un canal a la vez da aplicaciones independientes, con memorias
+    separadas: ni los documentos recientes, ni la rúbrica, ni las preferencias se comparten.
+    Elige uno solo.
+  </p>
+</section>
+
+<section id="que-es">
+  <h2>Qué es rFirma</h2>
+  <p>
+    rFirma sustituye la interfaz Swing y el servidor de sockets en Java de AutoFirma por una
+    aplicación nativa (Tauri: Rust + React). La lógica criptográfica pesada —CAdES, PAdES,
+    XAdES y FacturaE— se apoya en el código original de
+    <a href="https://github.com/ctt-gob-es/clienteafirma">clienteafirma</a>, compilado con
+    GraalVM Native Image, sin que la clave privada salga nunca del sistema operativo.
+  </p>
+  <p>El código fuente vive en tres repositorios:</p>
+  <ul class="repos">
+    <li><a href="https://github.com/sgomez/rfirma">sgomez/rfirma</a> — la aplicación y el empaquetado.</li>
+    <li><a href="https://github.com/ctt-gob-es/clienteafirma">ctt-gob-es/clienteafirma</a> — el motor criptográfico original, del que se consume la lógica de firma.</li>
+    <li><a href="https://github.com/sgomez/rfirma/tree/main/rfirma-native-bridge">rfirma-native-bridge</a> — el puente FFI entre ambos.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>rFirma no es un producto oficial de la Administración. Está en fase alfa: puede
+  fallar y su forma puede cambiar sin aviso.</p>
+</footer>
+
+</body>
+</html>

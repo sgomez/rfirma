@@ -61,6 +61,8 @@ Los canales son **tres** —flatpak, `.deb` y `.rpm`—, todos servidos desde
 [ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)). No hace falta tener
 Java: el motor criptográfico va compilado dentro.
 
+### Elige un canal
+
 **Elige uno solo.** Instalar rFirma por dos vías son dos aplicaciones con
 memorias separadas: ni los documentos recientes, ni la rúbrica, ni las
 preferencias se comparten, y no se migran. Es la conducta normal de Linux —el
