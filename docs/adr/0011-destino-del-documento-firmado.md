@@ -51,17 +51,19 @@ aquí se decide *qué* ruta se conoce, allí *cuánto* de ella cabe en una líne
 
 ## La guarda vigila la ruta del portal, y es aproximada
 
-La guarda `no_output_of_any_command_carries_a_host_path` **se hace condicional y cambia de
-objetivo**. La lista negra de hoy —`PathBuf`, `&Path`, `path:`…, leída como texto sobre
-`commands/`— se retira: fuera del sandbox esos campos son legítimos, y además nunca impidió
-lo que todo el mundo creía que impedía —un `pub folder: String` que en ejecución valga
-`/home/<usuario>/Documentos` pasa hoy en verde—.
+La guarda se llama `the_portal_path_never_crosses_to_the_window` y mira **valores, no
+texto**. La que hubo, `no_output_of_any_command_carries_a_host_path`, se retiró: su lista
+negra —`PathBuf`, `&Path`, `path:`…, leída como texto sobre `commands/`— daba por malos
+campos que fuera del sandbox son legítimos, y nunca impidió lo que todo el mundo creía que
+impedía —un `pub folder: String` que en ejecución valga `/home/<usuario>/Documentos` pasaba
+en verde—.
 
-Lo que pasa a vigilar es lo que sí es una mentira en **cualquier** canal: **la ruta del
+Lo que vigila es lo que sí es una mentira en **cualquier** canal: **la ruta del
 portal (`/run/user/*/doc/`) no sale nunca a la ventana.** Ese directorio contiene un solo
 fichero, no es ninguna carpeta del usuario, y enseñarlo es exactamente el fallo que la
 guarda existe para evitar. Es una regla de **valor**, así que la comprueba una prueba que
-serializa cada vista y mira el JSON, no un `grep` sobre el fuente.
+construye cada vista desde su caso de uso con un enlace del portal, la serializa y recorre
+el JSON campo a campo, por hondo que esté, en vez de hacer un `grep` sobre el fuente.
 
 Y se dice en voz alta que **es aproximada**. Una guarda vendida como hermética que no lo es
 enseña a no volver a mirar.

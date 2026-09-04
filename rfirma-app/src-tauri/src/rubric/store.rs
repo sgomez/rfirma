@@ -45,11 +45,18 @@ impl RubricStore {
     /// Se valida al elegir, no al firmar (ADR-0010): un fichero que no vale
     /// falla con el diálogo del usuario todavía abierto.
     pub fn adopt(&self, source: &Path) -> Result<NormalizedRubric, RubricError> {
+        // Del origen se nombra **el último segmento y nada más**: bajo el
+        // sandbox `source` es el enlace del portal
+        // (`/run/user/<uid>/doc/<id>/firma.png`), y este detalle crudo cruza a
+        // la ventana dentro de `RubricChoiceView` (ADR-0011, ID-186). El
+        // nombre del fichero es el que la persona acaba de elegir y no dice
+        // dónde está.
+        let named = source
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let unreadable = |error: std::io::Error| {
-            RubricError::new(
-                Situation::SourceUnreadable,
-                format!("{}: {error}", source.display()),
-            )
+            RubricError::new(Situation::SourceUnreadable, format!("{named}: {error}"))
         };
 
         // Se lee **con tope**, no entero y luego se mide. `adopt` es el único
@@ -68,10 +75,7 @@ impl RubricStore {
         if bytes.len() > MAX_INPUT_BYTES {
             return Err(RubricError::new(
                 Situation::ImageTooLarge,
-                format!(
-                    "{} pasa del tope de {MAX_INPUT_BYTES} bytes",
-                    source.display()
-                ),
+                format!("{named} pasa del tope de {MAX_INPUT_BYTES} bytes"),
             ));
         }
 
@@ -232,6 +236,24 @@ mod tests {
 
         assert_eq!(error.situation(), Situation::SourceUnreadable);
         assert!(error.detail().contains("no-existe.png"));
+        assert!(!error.detail().contains(directory.path().to_str().unwrap()));
+    }
+
+    /// El detalle crudo cruza a la ventana dentro de `RubricChoiceView`, así
+    /// que **no** puede llevar el enlace del portal (ADR-0011, ID-186): la
+    /// rúbrica elegida se nombra por su último segmento.
+    #[test]
+    fn a_source_from_the_portal_is_named_without_its_grant_path() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let store = RubricStore::at(directory.path().join("rubric.jpg"));
+
+        let error = store
+            .adopt(Path::new("/run/user/1000/doc/1e8b83b9/firma.png"))
+            .expect_err("la concesion del portal no existe fuera del sandbox");
+
+        assert_eq!(error.situation(), Situation::SourceUnreadable);
+        assert!(error.detail().contains("firma.png"));
+        assert!(!error.detail().contains("/run/user/"));
     }
 
     #[test]
