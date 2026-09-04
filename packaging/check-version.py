@@ -10,9 +10,21 @@ el numero aparece quedan EN CANDADO: si divergen, esto se pone rojo.
     fuente    rfirma-app/src-tauri/tauri.conf.json   "version"
     candado   rfirma-app/package.json                "version"
     candado   rfirma-app/src-tauri/Cargo.toml        [package] version
+    candado   rfirma-app/src-tauri/Cargo.lock        [[package]] name = "rfirma"
     candado   packaging/.../metainfo.xml             <release version=...>
 
-`rfirma-native-bridge/pom.xml` es el QUINTO sitio y SALE del candado (ID-150):
+CUIDADO CON `Cargo.lock`: lo reescribe el primer `cargo` que corra despues de
+tocar `Cargo.toml`, y `packaging/flatpak/sources.lock` sella su `sha256`. Si se
+sube la version y no se regenera ese sello, quien se pone rojo NO es este
+candado sino `check-flatpak-sources`, antes que el, y con un mensaje que manda
+ejecutar `just flatpak-sources` —receta que no corre en el entorno de
+desarrollo—. Subir la version es, en orden: cambiar `tauri.conf.json`, cuadrar
+`package.json`, `Cargo.toml` y el metainfo, dejar que `cargo` reescriba
+`Cargo.lock`, y regenerar el `sha256` de los dos ficheros de bloqueo dentro de
+`packaging/flatpak/sources.lock` (`sha256sum`, sin tocar `cargo-sources.json`
+si no ha cambiado ninguna dependencia).
+
+`rfirma-native-bridge/pom.xml` es el SEXTO sitio y SALE del candado (ID-150):
 la version del puente es un artefacto interno que no lee nadie fuera del propio
 Maven, y atarla a la de la aplicacion solo produce commits de ruido. No se
 comprueba aqui a proposito; no lo anadas.
@@ -44,6 +56,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TAURI_CONF = "rfirma-app/src-tauri/tauri.conf.json"
 PACKAGE_JSON = "rfirma-app/package.json"
 CARGO_TOML = "rfirma-app/src-tauri/Cargo.toml"
+CARGO_LOCK = "rfirma-app/src-tauri/Cargo.lock"
 METAINFO = "packaging/flatpak/me.sgomez.rfirma.metainfo.xml"
 README = "README.md"
 RC_RULE = "packaging/native-packages-allowed.sh"
@@ -79,6 +92,30 @@ def cargo_version() -> str | None:
     return None
 
 
+def cargo_lock_version() -> str | None:
+    """La `version` del paquete `rfirma` dentro de Cargo.lock.
+
+    Va en el candado porque `cargo` la reescribe sola detras de `Cargo.toml`, y
+    `packaging/flatpak/sources.lock` sella el `sha256` del fichero: una version
+    a medio subir se manifiesta como un rojo de `check-flatpak-sources`, que
+    manda hacer algo que no es lo que hay que hacer.
+    """
+    package = None
+    for line in read(CARGO_LOCK).splitlines():
+        stripped = line.strip()
+        if stripped == "[[package]]":
+            package = None
+            continue
+        match = re.match(r'name\s*=\s*"([^"]+)"', stripped)
+        if match:
+            package = match.group(1)
+            continue
+        match = re.match(r'version\s*=\s*"([^"]+)"', stripped)
+        if match and package == "rfirma":
+            return match.group(1)
+    return None
+
+
 def newest_release(tree: ET.Element) -> ET.Element | None:
     """La primera <release> del metainfo: AppStream las quiere de nueva a vieja."""
     releases = tree.find("releases")
@@ -91,16 +128,36 @@ def check_lock(version: str) -> None:
     for path, found in (
         (PACKAGE_JSON, package_json_version()),
         (CARGO_TOML, cargo_version()),
+        (CARGO_LOCK, cargo_lock_version()),
     ):
         if found != version:
             fail(
                 f"{path} dice {found!r} y {TAURI_CONF} dice {version!r}. "
                 f"La fuente es {TAURI_CONF}: cambia el resto para que cuadre."
             )
+            if path == CARGO_LOCK:
+                fail(
+                    f"{CARGO_LOCK} lo reescribe `cargo` solo, pero su sha256 "
+                    f"esta sellado en packaging/flatpak/sources.lock: regenera "
+                    f"ese sello con `sha256sum` de los dos ficheros de bloqueo "
+                    f"o `check-flatpak-sources` se pondra rojo antes que esto."
+                )
 
 
 def check_metainfo(version: str) -> None:
     tree = ET.fromstring(read(METAINFO))
+
+    # El <name> es lo que GNOME Software ensena: prosa, como el `Name=` del
+    # lanzador y el titulo de la ventana (ID-166).
+    name = tree.find("name")
+    if name is None or (name.text or "").strip() != "rFirma":
+        fail(
+            f"{METAINFO}: <name> es "
+            f"{None if name is None else (name.text or '').strip()!r}. Es lo "
+            f"que se lee en el centro de software, asi que es prosa: `rFirma` "
+            f"(ID-166)."
+        )
+
     release = newest_release(tree)
     if release is None:
         fail(f"{METAINFO} no declara ninguna <release>")
@@ -238,7 +295,7 @@ def main() -> int:
         )
         return 1
 
-    print(f"candado de la version: {version} en los cuatro sitios, y el resto en orden")
+    print(f"candado de la version: {version} en los cinco sitios, y el resto en orden")
     return 0
 
 

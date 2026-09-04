@@ -3,7 +3,7 @@
 #
 # El motivo no es de politica, es del formato: el campo `Version` de un RPM no
 # admite guiones, asi que `0.4.0-rc.1` no tiene representacion valida ahi. El
-# ensayo de la tubula de publicacion es real —construye, firma y publica una
+# ensayo de la tuberia de publicacion es real —construye, firma y publica una
 # Release— pero mas ESTRECHO que la entrega: la candidata produce el flatpak y
 # nada mas.
 #
