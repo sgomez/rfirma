@@ -29,13 +29,6 @@ export interface Preferences {
    */
   offersOriginalFolder: boolean;
   /**
-   * Si el destino elegido es «Junto al documento original» en vez de la
-   * carpeta de `destination`. Solo tiene sentido cuando
-   * `offersOriginalFolder` es `true`; donde no lo es, la carpeta es el único
-   * destino que existe (ID-184).
-   */
-  saveNextToOriginal: boolean;
-  /**
    * «Recordar la última configuración de firma visible». Apagado significa
    * **no guardarla**, no guardarla y no aplicarla.
    */

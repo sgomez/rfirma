@@ -445,10 +445,9 @@ function writeConfiguration(configuration: ConfigurationView): Promise<void> {
  * El destino que se manda es el que se leyó: la ventana lo enseña y no lo
  * elige —bajo el sandbox hay una sola carpeta—, y el backend lo ignora.
  *
- * `saveNextToOriginal` no tiene todavía dónde guardarse en el disco: el
- * `ConfigurationView` de hoy no la lleva, así que siempre se lee en `false` y
- * lo que se escriba se pierde al releer (ID-184). El cableado que la persista
- * queda para cuando el backend ate `next_to_the_original` a `where_it_lands`.
+ * `offersOriginalFolder` tampoco cruza al escribir: la contesta el backend
+ * (ID-184), así que `save` proyecta explícitamente las claves que sí son del
+ * contrato de `ConfigurationView`, en vez de mandar `preferences` entero.
  */
 export function tauriPreferences(): PreferencesStore {
   return {
@@ -458,14 +457,18 @@ export function tauriPreferences(): PreferencesStore {
         theme: isTheme(configuration.theme) ? configuration.theme : DEFAULT_THEME,
         destination: configuration.destination,
         offersOriginalFolder: configuration.offersTheOriginalFolder,
-        saveNextToOriginal: false,
         rememberVisibleSignature: configuration.rememberVisibleSignature,
         rememberActivity: configuration.rememberActivity,
       };
     },
     save: async (preferences) => {
       const stored = await readConfiguration();
-      await writeConfiguration({ ...stored, ...preferences });
+      await writeConfiguration({
+        ...stored,
+        theme: preferences.theme,
+        rememberVisibleSignature: preferences.rememberVisibleSignature,
+        rememberActivity: preferences.rememberActivity,
+      });
     },
     forgetActivity: () => invoke<void>("forget_activity"),
     chooseFolder: () => invoke<string | null>("choose_destination"),
