@@ -303,6 +303,9 @@ pub struct ConfigurationView {
     pub remember_visible_signature: bool,
     /// «Recordar mi actividad».
     pub remember_activity: bool,
+    /// «Avisarme cuando haya una versión nueva». Siempre visible, sin
+    /// condición (ID-180).
+    pub notify_new_version: bool,
     /// El tema de la ventana. Ver [`Theme`].
     pub theme: Theme,
     /// **La única pregunta al entorno** (ID-184): si Preferencias puede

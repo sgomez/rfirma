@@ -26,6 +26,9 @@ msgstr "Cambiar"
 msgid "actions.dismiss"
 msgstr "Descartar"
 
+msgid "actions.copy"
+msgstr "Copiar"
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
@@ -810,6 +813,9 @@ msgstr ""
 msgid "preferences.rememberActivity.confirm.accept"
 msgstr "Borrar y apagar"
 
+msgid "preferences.notifyNewVersion.label"
+msgstr "Avisarme cuando haya una versión nueva"
+
 msgid "preferences.destination.label"
 msgstr "Dónde se guarda el documento firmado"
 
@@ -843,9 +849,22 @@ msgid "about.version"
 msgstr "Versión {{version}}"
 
 msgid "about.whatItDoes"
-msgstr ""
-"Firma y cofirma documentos PDF con tu certificado. El documento y la clave "
-"privada no salen de tu ordenador."
+msgstr "Firma y cofirma documentos PDF con tu certificado."
+
+msgid "about.update.newVersion"
+msgstr "Hay una versión nueva: {{version}}"
+
+msgid "about.update.upToDate"
+msgstr "Estás en la última versión"
+
+msgid "about.update.channel.flatpak"
+msgstr "Flatpak"
+
+msgid "about.update.channel.deb"
+msgstr "Debian y Ubuntu"
+
+msgid "about.update.channel.rpm"
+msgstr "Fedora y openSUSE"
 
 msgid "about.independence"
 msgstr ""

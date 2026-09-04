@@ -26,6 +26,9 @@ msgstr "Change"
 msgid "actions.dismiss"
 msgstr "Dismiss"
 
+msgid "actions.copy"
+msgstr "Copy"
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
@@ -797,6 +800,9 @@ msgstr ""
 msgid "preferences.rememberActivity.confirm.accept"
 msgstr "Erase and turn off"
 
+msgid "preferences.notifyNewVersion.label"
+msgstr "Notify me when there is a new version"
+
 msgid "preferences.destination.label"
 msgstr "Where the signed document is saved"
 
@@ -830,9 +836,22 @@ msgid "about.version"
 msgstr "Version {{version}}"
 
 msgid "about.whatItDoes"
-msgstr ""
-"Signs and countersigns PDF documents with your certificate. Neither the "
-"document nor the private key leaves your computer."
+msgstr "Signs and countersigns PDF documents with your certificate."
+
+msgid "about.update.newVersion"
+msgstr "There is a new version: {{version}}"
+
+msgid "about.update.upToDate"
+msgstr "You are on the latest version"
+
+msgid "about.update.channel.flatpak"
+msgstr "Flatpak"
+
+msgid "about.update.channel.deb"
+msgstr "Debian and Ubuntu"
+
+msgid "about.update.channel.rpm"
+msgstr "Fedora and openSUSE"
 
 msgid "about.independence"
 msgstr ""

@@ -1,13 +1,21 @@
 /*
- * Acerca de rFirma (docs/design/acerca-de.md): un `.rf-dialog` de 460 px sobre
- * `.rf-scrim`, en cuatro bloques.
+ * Acerca de rFirma (docs/design/acerca-de.md): un `.rf-dialog` de 520 px sobre
+ * `.rf-scrim`, en cinco bloques.
  *
  * El aviso de independencia no lleva regla propia a propósito: es un párrafo
  * como los demás, y darle borde o fondo sería enmarcarlo como alarma.
+ *
+ * 520 px y no 460: eran 460 hasta la v0.3, y con el bloque de «cómo
+ * actualizar» dentro las órdenes del `.deb` envolvían a cuatro renglones y el
+ * diálogo se estiraba hacia abajo, que es la dirección en la que menos sitio
+ * hay.
  */
 
 .about {
-  width: 460px;
+  width: 520px;
+  max-width: 520px;
+  gap: 12px;
+  padding: var(--rf-space-sm);
 }
 
 .about__identity {
@@ -16,10 +24,87 @@
   gap: 4px;
 }
 
-/* 32 px: los 48 de `.rf-heading` llenan medio diálogo de 460 px. Es el único
-   sitio de la aplicación donde el nombre se lee como portada. */
+/* 28 px, no los 32 de antes de la v0.3 ni los 48 de `.rf-heading`: con el
+   bloque de «cómo actualizar» dentro, el nombre a toda plana llenaba medio
+   diálogo. */
 .about__name {
-  font-size: 32px;
+  font-size: 28px;
+}
+
+.about__update {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+}
+
+.about__updateStatus {
+  align-items: center;
+}
+
+.about__upToDateIcon {
+  display: flex;
+  color: var(--rf-text-muted);
+}
+
+/* La tira de tres pastillas del selector de canal. */
+.about__channels {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+  align-self: flex-start;
+}
+
+.about__channel {
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--rf-radius-sm);
+  background: transparent;
+  color: var(--rf-text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.about__channel--active {
+  background: var(--rf-primary);
+  color: var(--rf-on-primary);
+}
+
+/* El bloque de órdenes: `min-height` de 98 px, lo que ocupan las cuatro
+   líneas del `.deb`, la más alta de las tres. Así los dos estados de versión
+   miden lo mismo por construcción, sin reservar ningún hueco vacío. */
+.about__commands {
+  align-items: flex-start;
+  padding: 10px var(--rf-space-xs) 10px var(--rf-space-sm);
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+  min-height: 98px;
+}
+
+.about__commandsText {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--rf-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.about__copy {
+  flex: none;
+  min-height: 28px;
+  padding: 0 var(--rf-space-xs);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .about__licenses {

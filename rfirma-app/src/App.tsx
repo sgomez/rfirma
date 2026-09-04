@@ -790,7 +790,7 @@ export function App({
           // descarga nada: lleva a *Acerca de*, que es donde están las órdenes
           // de alta del repositorio (ID-181), y así el `opener:deny-open-url`
           // del ID-85 sigue sin hacer falta.
-          newVersion !== null && !versionDismissed ? (
+          newVersion !== null && !versionDismissed && (settings?.notifyNewVersion ?? true) ? (
             <NotificationStrip
               message={t("notifications.newVersion.message", { version: newVersion.version })}
               action={{
@@ -915,7 +915,11 @@ export function App({
         />
       )}
       {dialog === "about" && (
-        <AboutDialog version={__APP_VERSION__} onClose={() => setDialog(null)} />
+        <AboutDialog
+          version={__APP_VERSION__}
+          newVersion={newVersion}
+          onClose={() => setDialog(null)}
+        />
       )}
       {sealLossPrompt !== null && (
         <UnsealedPagesDialog

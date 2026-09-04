@@ -58,6 +58,12 @@ pub struct Configuration {
     /// la misma promesa a quien firma en un ordenador compartido. Al apagarse
     /// **borra** lo ya recordado, y de eso se encarga [`super::Memory`].
     pub remember_activity: bool,
+    /// «Avisarme cuando haya una versión nueva» (ID-180). No condiciona la
+    /// comprobación —esa sigue corriendo cada 24 h, en Rust, pase lo que
+    /// pase—, solo si la ventana enseña la franja con lo que contestó.
+    /// Siempre visible en Preferencias, sin la condición que el ID-179
+    /// retiró.
+    pub notify_new_version: bool,
     /// El tema de la ventana. Ver [`Theme`].
     pub theme: Theme,
 }
@@ -72,6 +78,9 @@ impl Default for Configuration {
             // escondería justo lo que justificó el prototipo.
             remember_visible_signature: true,
             remember_activity: true,
+            // Se avisa siempre por omisión: apagarlo es el gesto explícito,
+            // no el punto de partida (ID-180).
+            notify_new_version: true,
             // Sin elegir, manda el sistema: es lo que hacía la ventana antes
             // de que el ajuste existiera, y una aplicación que se abre en
             // claro dentro de un escritorio oscuro parece rota.
@@ -91,6 +100,11 @@ mod tests {
 
         assert!(configuration.remember_visible_signature);
         assert!(configuration.remember_activity);
+    }
+
+    #[test]
+    fn notify_new_version_starts_on() {
+        assert!(Configuration::default().notify_new_version);
     }
 
     #[test]
@@ -127,6 +141,7 @@ mod tests {
 
         assert_eq!(configuration.language, Language::Galician);
         assert!(configuration.remember_activity);
+        assert!(configuration.notify_new_version);
     }
 
     #[test]
@@ -144,6 +159,7 @@ mod tests {
             vec![
                 "destination",
                 "language",
+                "notify_new_version",
                 "remember_activity",
                 "remember_visible_signature",
                 "theme",

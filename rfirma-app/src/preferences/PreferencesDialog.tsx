@@ -340,6 +340,16 @@ export function PreferencesDialog({
             {forgetFailure !== null && (
               <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
             )}
+            <Switch
+              checked={preferences.notifyNewVersion}
+              label={t("preferences.notifyNewVersion.label")}
+              wide
+              onChange={(checked) =>
+                void change("privacy", () =>
+                  onChange({ ...preferences, notifyNewVersion: checked }),
+                )
+              }
+            />
             {saveNotice("privacy")}
           </section>
 
