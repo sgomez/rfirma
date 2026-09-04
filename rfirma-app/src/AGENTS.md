@@ -49,11 +49,12 @@ rojo.
 | `documents/picker.ts` | 31 | Por dónde entra un documento. |
 | `documents/drops.ts` | 100 | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
-| `signing/flow.ts` | 165 | Las tres etapas de la trifásica. |
-| `signing/useSigning.ts` | 148 | El estado de la firma. |
+| `signing/flow.ts` | 172 | Las tres etapas de la trifásica. |
+| `signing/useSigning.ts` | 166 | El estado de la firma. |
 | `signing/SigningPanel.tsx` | 771 | El panel. |
 | `signing/CertificateSelect.tsx` | 289 | La elección de certificado. |
-| `signing/PinDialog.tsx` | 151 | El PIN. |
+| `signing/PinDialog.tsx` | 135 | El diálogo del secreto del almacén. |
+| `signing/secret.ts` | 25 | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
 | `signing/UnsealedPagesDialog.tsx` | 84 | El diálogo de páginas sin sello, justo antes de firmar (ID-105, ID-106). |
 | `signing/unsealedPages.ts` | 67 | Qué páginas del conjunto elegido pierde `correctPositionSignature` en silencio, en puntos PAdES. Sin React. |
@@ -63,7 +64,7 @@ rojo.
 | `signing/visibleSignature.ts` | 44 | Qué se estampa en el recuadro. |
 | `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
 | `signing/pageRange.ts` | 102 | El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React. |
-| `signing/token.ts` | 53 | Lo que el token puede contestar cuando algo va mal. |
+| `signing/token.ts` | 56 | Lo que el token puede contestar cuando algo va mal. |
 | `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
 | `signing/stampPreview.ts` | 113 | El sello que se ve dentro del recuadro antes de firmar: el puerto del ciclo en seco, sus estados y el umbral del documento grande. Sin React. |
 | `signing/useStampPreview.ts` | 163 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |

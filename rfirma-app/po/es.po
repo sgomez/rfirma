@@ -666,31 +666,30 @@ msgid "panel.signed.signAgain"
 msgstr "Volver a firmar"
 
 msgid "pin.title"
-msgstr "Introduce el PIN de la tarjeta"
+msgstr "Introduce el PIN"
+
+msgid "pin.titlePassword"
+msgstr "Introduce la contraseña"
 
 #. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
 msgid "pin.signingAs"
 msgstr "{{holder}} · {{idNumber}}"
 
+#. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
+msgid "pin.subjectBrowser"
+msgstr "Tus certificados de {{browser}}"
+
 msgid "pin.label"
 msgstr "PIN"
 
-msgid "pin.hint"
-msgstr "El PIN se usa solo para esta firma y no se guarda en ningún sitio."
+msgid "pin.labelPassword"
+msgstr "Contraseña"
 
 msgid "pin.incorrect"
-msgid_plural "pin.incorrect"
-msgstr[0] ""
-"PIN incorrecto. Te queda 1 intento antes de que la tarjeta se bloquee."
-msgstr[1] ""
-"PIN incorrecto. Te quedan {{count}} intentos antes de que la tarjeta se "
-"bloquee."
-msgstr[2] ""
-"PIN incorrecto. Te quedan {{count}} intentos antes de que la tarjeta se "
-"bloquee."
+msgstr "PIN incorrecto"
 
-msgid "pin.incorrectUnknown"
-msgstr "PIN incorrecto. La tarjeta se bloquea tras varios intentos fallidos."
+msgid "pin.incorrectPassword"
+msgstr "Contraseña incorrecta"
 
 msgid "pin.submit"
 msgstr "Firmar"

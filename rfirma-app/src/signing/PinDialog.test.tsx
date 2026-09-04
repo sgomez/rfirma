@@ -6,7 +6,7 @@ import type { Certificate } from "./certificate";
 import { PinDialog } from "./PinDialog";
 import type { TokenFailure } from "./token";
 
-const certificate: Certificate = {
+const cardCertificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
   holderName: "Ada Lovelace Byron",
@@ -16,6 +16,10 @@ const certificate: Certificate = {
   status: { kind: "valid" },
   remembered: false,
 };
+
+const firefoxCertificate: Certificate = { ...cardCertificate, store: "firefox" };
+
+const p12Certificate: Certificate = { ...cardCertificate, store: "nssdb" };
 
 const wrongPin: TokenFailure = {
   situation: "incorrectPin",
@@ -28,7 +32,7 @@ const noop = () => {};
 function renderDialog(props: Partial<Parameters<typeof PinDialog>[0]> = {}) {
   return renderWithCatalog(
     <PinDialog
-      certificate={certificate}
+      certificate={cardCertificate}
       failure={null}
       onSubmit={noop}
       onCancel={noop}
@@ -39,12 +43,41 @@ function renderDialog(props: Partial<Parameters<typeof PinDialog>[0]> = {}) {
 
 // Grada A: el diálogo no habla con el token, solo con quien lo montó.
 describe("PinDialog", () => {
-  it("says with which identity the document is being signed", () => {
+  it("calls it a PIN for a PKCS#11 module, without naming the module itself", () => {
+    renderDialog({ certificate: cardCertificate });
+
+    expect(screen.getByRole("dialog", { name: "Introduce el PIN" })).toBeVisible();
+    expect(screen.getByLabelText("PIN")).toBeInTheDocument();
+    // Ni la clase de almacén, ni el nombre del token.
+    expect(screen.queryByText(/PKCS#11/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/SoftHSM/)).not.toBeInTheDocument();
+  });
+
+  it("calls it a password for a file, and says whose certificates it is", () => {
+    renderDialog({ certificate: firefoxCertificate });
+
+    expect(screen.getByRole("dialog", { name: "Introduce la contraseña" })).toBeVisible();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
+    expect(screen.getByText("Tus certificados de Firefox")).toBeInTheDocument();
+  });
+
+  it("says which certificate it is unlocking for a .p12 file", () => {
+    renderDialog({ certificate: p12Certificate });
+
+    expect(screen.getByText("Ada Lovelace Byron · 99999999R")).toBeInTheDocument();
+  });
+
+  it("names nothing about a PKCS#11 module: not even the identity it signs with", () => {
+    renderDialog({ certificate: cardCertificate });
+
+    expect(screen.queryByText("Ada Lovelace Byron · 99999999R")).not.toBeInTheDocument();
+  });
+
+  it("carries no hint of any kind, reassuring or otherwise", () => {
     renderDialog();
 
-    expect(screen.getByRole("dialog", { name: "Introduce el PIN de la tarjeta" })).toBeVisible();
-    expect(screen.getByText("Ada Lovelace Byron · 99999999R")).toBeInTheDocument();
-    expect(screen.getByText(/no se guarda en ningún sitio/)).toBeInTheDocument();
+    expect(screen.queryByText(/se usa solo para esta firma/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no se guarda en ningún sitio/)).not.toBeInTheDocument();
   });
 
   it("hands the typed PIN over and never shows it in clear", async () => {
@@ -67,7 +100,7 @@ describe("PinDialog", () => {
   it("hands over the empty string when there is no master password to type", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    renderDialog({ onSubmit });
+    renderDialog({ certificate: firefoxCertificate, onSubmit });
 
     const submit = screen.getByRole("button", { name: "Firmar" });
     expect(submit).toBeEnabled();
@@ -81,8 +114,7 @@ describe("PinDialog", () => {
     const onSubmit = vi.fn();
     renderDialog({ failure: wrongPin, onSubmit });
 
-    // El diálogo sigue en pie, con el campo vacío y el aviso de intentos.
-    expect(screen.getByText(/Te quedan 2 intentos/)).toBeInTheDocument();
+    // El diálogo sigue en pie, con el campo vacío.
     const field = screen.getByLabelText("PIN");
     expect(field).toHaveValue("");
     expect(field).toHaveAttribute("aria-invalid", "true");
@@ -93,34 +125,19 @@ describe("PinDialog", () => {
     expect(onSubmit).toHaveBeenCalledWith("5678");
   });
 
-  it("counts the last attempt in the singular", () => {
-    renderDialog({ failure: { ...wrongPin, attemptsLeft: 1 } });
-
-    expect(screen.getByText(/Te queda 1 intento/)).toBeInTheDocument();
-  });
-
-  it("says it plainly when the module does not count the attempts", () => {
-    renderDialog({ failure: { ...wrongPin, attemptsLeft: null } });
-
-    expect(screen.getByText(/se bloquea tras varios intentos fallidos/)).toBeInTheDocument();
-  });
-
-  it("keeps the raw CKR apart and untranslated", () => {
+  // ID-191: PKCS#11 no cuenta los intentos que quedan, ni con una tarjeta
+  // delante. No hay contador que enseñar, y no se inventa ninguno.
+  it("shows the wrong-secret error in one line, with no remedy underneath", () => {
     renderDialog({ failure: wrongPin });
 
-    expect(screen.getByText("CKR_PIN_INCORRECT (C_Login)")).toBeInTheDocument();
-    expect(screen.getByText("Detalle técnico")).toBeInTheDocument();
+    expect(screen.getByText("PIN incorrecto")).toBeInTheDocument();
+    expect(screen.queryByText(/intento/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Detalle técnico/)).not.toBeInTheDocument();
   });
 
-  it("tells a locked card apart from a wrong PIN, and stops asking", () => {
-    renderDialog({
-      failure: { situation: "pinLocked", detail: "CKR_PIN_LOCKED (C_Login)", attemptsLeft: 0 },
-    });
+  it("calls the wrong secret a password when the store asks for one", () => {
+    renderDialog({ certificate: firefoxCertificate, failure: wrongPin });
 
-    expect(screen.getByText("La tarjeta está bloqueada")).toBeInTheDocument();
-    expect(screen.getByText(/PUK/)).toBeInTheDocument();
-    expect(screen.getByText("CKR_PIN_LOCKED (C_Login)")).toBeInTheDocument();
-    expect(screen.queryByLabelText("PIN")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Firmar" })).not.toBeInTheDocument();
+    expect(screen.getByText("Contraseña incorrecta")).toBeInTheDocument();
   });
 });

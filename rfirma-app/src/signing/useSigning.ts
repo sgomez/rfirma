@@ -64,9 +64,13 @@ export interface Signing {
  * desbloquea la clave sin saber todavía qué se va a firmar.
  *
  * Dónde se cuenta cada fallo lo decide `belongsToPinDialog`, y no este bucle:
- * el PIN incorrecto y la tarjeta bloqueada son respuestas a lo que el usuario
- * acaba de teclear, y se contestan en el diálogo; el resto sale al pie del
- * panel, que es el estado «error de firma» de la ficha.
+ * solo el PIN incorrecto es respuesta a lo que el usuario acaba de teclear, y
+ * se contesta en el diálogo; el resto —incluida la tarjeta bloqueada— sale al
+ * pie del panel, que es el estado «error de firma» de la ficha.
+ *
+ * El bucle ya no pasa siempre por el estado `pin`: cuando el almacén no
+ * necesita sesión (ID-190), `advance` arranca directamente con la cadena
+ * vacía y el diálogo no llega a abrirse.
  *
  * Quien implementa [`SigningBackend`] de verdad son las órdenes de Tauri del
  * #60; aquí solo se pide cada etapa por su turno.
@@ -81,22 +85,10 @@ export function useSigning(backend: SigningBackend): Signing {
   const routed = (failure: TokenFailure): SigningState =>
     belongsToPinDialog(failure) ? { kind: "pin", failure } : { kind: "failed", failure };
 
-  const start = async (certificate: Certificate | null, order: SigningOrder) => {
-    // El estado del certificado se sabe leyendo su DER, sin tocar la tarjeta:
-    // pedir el PIN para luego fallar por una fecha ya conocida es hacer teclear
-    // el secreto que desbloquea la clave para nada.
-    const refusal = refusalFor(certificate);
-    if (refusal) {
-      setState({ kind: "failed", failure: refusal });
-      return;
-    }
-    origin.current = order.document;
-    setState({ kind: "running", stage: "presign" });
-    const presigned = await backend.presign(order);
-    setState(presigned.ok ? { kind: "pin", failure: null } : routed(presigned.failure));
-  };
-
-  const submitPin = async (pin: string) => {
+  // Etapas 2 y 3, con el PIN que ya se tiene: el que se acaba de teclear, o la
+  // cadena vacía cuando el almacén no necesita sesión (ID-190). Es el único
+  // sitio donde `sign` se llama, tanto si el diálogo se abrió como si no.
+  const advance = async (pin: string) => {
     setState({ kind: "running", stage: "sign" });
     const signed = await backend.sign(pin);
     if (!signed.ok) {
@@ -110,6 +102,36 @@ export function useSigning(backend: SigningBackend): Signing {
         ? { kind: "signed", document: assembled.value, origin: origin.current ?? "" }
         : routed(assembled.failure),
     );
+  };
+
+  const start = async (certificate: Certificate | null, order: SigningOrder) => {
+    // El estado del certificado se sabe leyendo su DER, sin tocar la tarjeta:
+    // pedir el PIN para luego fallar por una fecha ya conocida es hacer teclear
+    // el secreto que desbloquea la clave para nada.
+    const refusal = refusalFor(certificate);
+    if (refusal) {
+      setState({ kind: "failed", failure: refusal });
+      return;
+    }
+    origin.current = order.document;
+    setState({ kind: "running", stage: "presign" });
+    const presigned = await backend.presign(order);
+    if (!presigned.ok) {
+      setState(routed(presigned.failure));
+      return;
+    }
+    // Sin necesidad de sesión no hay diálogo: se firma directo, con la cadena
+    // vacía (ID-190). El diálogo solo se abre cuando el almacén de verdad pide
+    // un secreto.
+    if (presigned.value.kind === "notNeeded") {
+      await advance("");
+      return;
+    }
+    setState({ kind: "pin", failure: null });
+  };
+
+  const submitPin = async (pin: string) => {
+    await advance(pin);
   };
 
   const cancel = () => {

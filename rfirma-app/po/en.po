@@ -663,26 +663,30 @@ msgid "panel.signed.signAgain"
 msgstr "Sign it again"
 
 msgid "pin.title"
-msgstr "Enter the card PIN"
+msgstr "Enter the PIN"
+
+msgid "pin.titlePassword"
+msgstr "Enter the password"
 
 #. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
 msgid "pin.signingAs"
 msgstr "{{holder}} · {{idNumber}}"
 
+#. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
+msgid "pin.subjectBrowser"
+msgstr "Your {{browser}} certificates"
+
 msgid "pin.label"
 msgstr "PIN"
 
-msgid "pin.hint"
-msgstr "The PIN is used for this signature only, and is not stored anywhere."
+msgid "pin.labelPassword"
+msgstr "Password"
 
 msgid "pin.incorrect"
-msgid_plural "pin.incorrect"
-msgstr[0] "Wrong PIN. You have 1 attempt left before the card locks."
-msgstr[1] "Wrong PIN. You have {{count}} attempts left before the card locks."
-msgstr[2] "Wrong PIN. You have {{count}} attempts left before the card locks."
+msgstr "Wrong PIN"
 
-msgid "pin.incorrectUnknown"
-msgstr "Wrong PIN. The card locks after a few failed attempts."
+msgid "pin.incorrectPassword"
+msgstr "Wrong password"
 
 msgid "pin.submit"
 msgstr "Sign"
