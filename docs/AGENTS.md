@@ -26,6 +26,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0015 | Canal propio: tres repositorios en `rfirma.sgomez.me` y Releases |
 | 0016 | El sello de sesión: una sola invariante |
 | 0017 | La arquitectura de los dos lados: puertos y capas |
+| 0018 | rFirma no es un lector de PDF: la firma empieza por un verbo |
 
 ## `research/` — mediciones (por qué algo es como es)
 

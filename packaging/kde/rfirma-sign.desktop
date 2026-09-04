@@ -1,0 +1,20 @@
+# El verbo del menú contextual de KDE: «Firmar con rFirma» sobre un PDF.
+#
+# rFirma no declara `application/pdf` en ningún lanzador (ID-155, ADR-0018): no
+# es el programa de los PDF, es lo que se hace con uno. Aquí el `MimeType` no
+# registra a nadie como candidato a abrir nada —un `Type=Service` no compite
+# por ser el predeterminado—, sólo dice sobre qué ficheros aparece el verbo.
+#
+# Lo instalan el `.deb` y el `.rpm` en /usr/share/kio/servicemenus/. El flatpak
+# no lo lleva a propósito (ID-162).
+[Desktop Entry]
+Type=Service
+MimeType=application/pdf;
+Actions=SignWithRfirma;
+X-KDE-Priority=TopLevel
+X-KDE-RequiredNumberOfUrls=1
+
+[Desktop Action SignWithRfirma]
+Name=Firmar con rFirma
+Icon=rfirma
+Exec=rfirma %f
