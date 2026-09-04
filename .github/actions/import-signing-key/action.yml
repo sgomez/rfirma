@@ -1,0 +1,153 @@
+# LA SEDE UNICA DE «COMO ENTRA LA CLAVE DE FIRMA EN UN RUNNER» (ID-169).
+#
+# UNA SOLA CLAVE GPG firma todo lo verificable por humanos —el `SHA256SUMS` de
+# las Releases, el repositorio ostree, el `InRelease` de apt, el `repomd.xml` y
+# cada `.rpm` de dnf— porque dos raices de confianza para el mismo enunciado
+# («esto lo hizo rFirma») son peor seguridad, no mejor. Y como la clave es una
+# sola, importarla es un solo fichero: `release.yml` la usa para firmar la
+# Release y `publish.yml` para lo que se sirve. Si esto se copiara en cada
+# workflow, la comprobacion de huella se caeria del segundo.
+#
+# LO QUE ENTRA ES LA SUBCLAVE, NUNCA LA MAESTRA. El secreto se produce con
+# `gpg --export-secret-subkeys`, asi que el CI puede FIRMAR pero no puede
+# certificar, ni crear subclaves, ni tocar la identidad. Si se filtra, se
+# revoca la subclave, se emite otra bajo la misma maestra y la huella que la
+# gente anadio a su `Signed-By` SIGUE VALIENDO. Con la maestra dentro, una
+# filtracion significa «todo el mundo tiene que volver a anadir el repositorio
+# a mano», que en un cliente de firma electronica es el peor final posible de
+# un incidente. La maestra vive fuera de linea con su certificado de
+# revocacion (ADR-0015, SECURITY.md).
+#
+# ESTA ACCION COMPRUEBA LA HUELLA, y esa es la mitad que justifica que sea una
+# accion y no tres lineas de `run:`. `vars.GPG_FINGERPRINT` es una VARIABLE del
+# repositorio, no un secreto: la huella es publica por definicion —esta en la
+# landing y en SECURITY.md— y tenerla fuera del secreto es lo que permite
+# comprobarla. Cambiar el secreto por otra clave deja de ser algo que pasa en
+# silencio y pasa a ser un fallo del job.
+#
+# Como se generan la clave y los secretos: `packaging/setup-signing-key.sh`.
+name: Importa la subclave de firma
+description: >-
+  Importa la subclave GPG de firma de rFirma en un anillo efimero del runner y
+  comprueba que su huella es la que el repositorio declara.
+
+inputs:
+  private-key:
+    description: >-
+      La subclave privada en armadura ASCII, tal cual sale de
+      `gpg --export-secret-subkeys --armor`. Viene de `secrets.GPG_SIGNING_SUBKEY`.
+    required: true
+  passphrase:
+    description: >-
+      La contrasena de la subclave. Viene de `secrets.GPG_SIGNING_PASSPHRASE`.
+    required: true
+  expected-fingerprint:
+    description: >-
+      La huella de 40 caracteres de la clave MAESTRA, sin espacios. Viene de
+      `vars.GPG_FINGERPRINT`, que es publica a proposito.
+    required: true
+
+outputs:
+  key-id:
+    description: >-
+      El identificador de la subclave de firma con `!` detras. El `!` no es
+      decorativo: sin el, gpg elige por su cuenta que subclave usar.
+    value: ${{ steps.import.outputs.key-id }}
+  fingerprint:
+    description: La huella de la clave maestra, ya comprobada.
+    value: ${{ steps.import.outputs.fingerprint }}
+  passphrase-file:
+    description: >-
+      Fichero con la contrasena, dentro del anillo efimero y con permisos 600.
+      Es lo que consumen `gpg --passphrase-file` y el `%__gpg_sign_cmd` de
+      `rpmsign`, que no saben leer una contrasena de ninguna otra manera sin
+      persona delante.
+    value: ${{ steps.import.outputs.passphrase-file }}
+  public-key:
+    description: >-
+      La clave publica exportada en armadura. Es el `rfirma.asc` que sirve la
+      landing, el `Signed-By` de apt y el `gpgkey` de dnf, y lo que hace falta
+      para que `rpm --checksig` pueda verificar lo que se acaba de firmar.
+    value: ${{ steps.import.outputs.public-key }}
+
+runs:
+  using: composite
+  steps:
+    - id: import
+      shell: bash
+      env:
+        PRIVATE_KEY: ${{ inputs.private-key }}
+        PASSPHRASE: ${{ inputs.passphrase }}
+        EXPECTED_FINGERPRINT: ${{ inputs.expected-fingerprint }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$PRIVATE_KEY" ] || [ -z "$PASSPHRASE" ]; then
+          echo "faltan los secretos de firma del entorno release." >&2
+          echo "se llaman GPG_SIGNING_SUBKEY y GPG_SIGNING_PASSPHRASE, y los" >&2
+          echo "produce packaging/setup-signing-key.sh (ADR-0015)." >&2
+          exit 1
+        fi
+        if [ -z "$EXPECTED_FINGERPRINT" ]; then
+          echo "falta la variable de repositorio GPG_FINGERPRINT." >&2
+          echo "es la huella publica de la clave maestra, sin espacios, y sin" >&2
+          echo "ella no hay manera de saber que la subclave importada es la" >&2
+          echo "que la gente tiene en su Signed-By." >&2
+          exit 1
+        fi
+
+        # UN ANILLO EFIMERO Y FUERA DEL ARBOL DE TRABAJO: nada de tocar el
+        # ~/.gnupg del runner, y nada que un `actions/upload-artifact` sobre el
+        # directorio del repositorio pueda llevarse por delante.
+        anillo="${RUNNER_TEMP}/gnupg"
+        rm -rf "$anillo"
+        mkdir -p "$anillo"
+        chmod 700 "$anillo"
+        echo "GNUPGHOME=$anillo" >> "$GITHUB_ENV"
+        export GNUPGHOME="$anillo"
+
+        contrasena="$anillo/passphrase"
+        umask 077
+        printf '%s' "$PASSPHRASE" > "$contrasena"
+
+        printf '%s\n' "$PRIVATE_KEY" | gpg --batch --import
+
+        # La huella de la MAESTRA es la que la gente anade a su Signed-By, asi
+        # que es la que se compara. `--with-colons` en vez de leer la salida
+        # bonita: el formato de esta ultima cambia entre versiones de gpg.
+        huella="$(gpg --batch --with-colons --list-secret-keys \
+          | awk -F: '$1 == "fpr" { print $10; exit }')"
+        esperada="$(printf '%s' "$EXPECTED_FINGERPRINT" | tr -d ' ' | tr 'a-f' 'A-F')"
+        if [ "$huella" != "$esperada" ]; then
+          echo "la clave importada no es la que el repositorio espera." >&2
+          echo "  importada: $huella" >&2
+          echo "  esperada:  $esperada (vars.GPG_FINGERPRINT)" >&2
+          exit 1
+        fi
+
+        # La subclave con capacidad de firma (`s` en el campo de uso). Si hay
+        # mas de una se coge la primera viva, que es lo que hace gpg tambien.
+        subclave="$(gpg --batch --with-colons --list-secret-keys \
+          | awk -F: '$1 == "ssb" && $12 ~ /s/ && $2 != "r" && $2 != "e" { print $5; exit }')"
+        if [ -z "$subclave" ]; then
+          echo "el secreto no contiene ninguna subclave de firma viva." >&2
+          echo "se exporta con: gpg --export-secret-subkeys --armor <huella>" >&2
+          exit 1
+        fi
+
+        publica="$anillo/rfirma.asc"
+        gpg --batch --armor --export "$huella" > "$publica"
+
+        # La confianza definitiva sobre la propia clave: sin esto, cada
+        # verificacion posterior escupe el aviso de «clave no certificada» y
+        # cualquier `gpg --verify` con `--status-fd` se vuelve ilegible.
+        printf '%s:6:\n' "$huella" | gpg --batch --import-ownertrust
+
+        {
+          echo "key-id=${subclave}!"
+          echo "fingerprint=$huella"
+          echo "passphrase-file=$contrasena"
+          echo "public-key=$publica"
+        } >> "$GITHUB_OUTPUT"
+
+        echo "subclave de firma $subclave importada (maestra $huella)"

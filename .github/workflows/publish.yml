@@ -1,0 +1,109 @@
+# El TERCERO de los tres workflows de la tuberia de entrega (ID-167,
+# ADR-0015): el que reacciona a la Release PUBLICADA. Su unico motivo para
+# cambiar es QUE SE SIRVE Y DONDE.
+#
+# PUBLICAR ES EL GESTO HUMANO, y este fichero es lo que cuelga de el. No
+# reacciona a la etiqueta —eso es `release.yml`, y deja la Release en borrador—
+# sino a `release: published`, que solo ocurre cuando una persona ha mirado el
+# PDF de la puerta manual y ha pulsado el boton. Una etiqueta no despliega nada
+# por si sola (segunda invariante del ADR-0015).
+#
+# Y NO ACTUA SI ES UNA PRERELEASE. Las etiquetas `v*-rc.N` producen una Release
+# marcada como prerelease y NO LLEGAN A NINGUN REPOSITORIO: es como se ensaya
+# la tuberia entera sin publicar una version de verdad (TD-44). Esa es la razon
+# de que la guarda este en el `if` del job y no dentro de un paso: un paso que
+# decide si sirve o no es un paso que un dia sirve.
+#
+# HASTA DONDE LLEGA HOY: la puerta. Descarga lo publicado y comprueba, con la
+# clave de rFirma, que lo que se va a servir es lo que se firmo. La
+# reconstruccion de los tres arboles —ostree, apt y dnf—, su firma y el
+# intercambio del enlace simbolico del anfitrion entran en este mismo fichero
+# en el #276, detras de esta puerta y como jobs que dependen de ella. Servir
+# primero y verificar despues no seria una tuberia mas corta: seria otra cosa.
+name: Publicacion
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+# Una publicacion cada vez, y sin cancelar la que este corriendo: por en medio
+# hay un `rsync` contra un anfitrion, y abortarlo deja un directorio a medias.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Comprueba lo publicado
+    # LA GUARDA DE LA CANDIDATA. `github.event.release.prerelease` lo pone
+    # `release.yml` a partir de la unica sede de esa regla
+    # (packaging/native-packages-allowed.sh, ID-154).
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # El mismo entorno que `release.yml`: mismo revisor humano y misma
+    # subclave. Es lo que hace que un ensayo de la tuberia pruebe de verdad el
+    # camino del secreto, y no solo la mitad de arriba.
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Assets de la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p paquetes
+          gh release download "$TAG" --dir paquetes
+          ls -l paquetes
+
+      # La publica basta para verificar, pero la clave entra por el mismo sitio
+      # que en `release.yml` —una sede unica, ID-169— y ademas asi el ensayo
+      # comprueba que el entorno de release es alcanzable tambien desde aqui.
+      - name: Clave de firma
+        id: gpg
+        uses: ./.github/actions/import-signing-key
+        with:
+          private-key: ${{ secrets.GPG_SIGNING_SUBKEY }}
+          passphrase: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
+          expected-fingerprint: ${{ vars.GPG_FINGERPRINT }}
+
+      # Dos comprobaciones y ninguna sobra: la firma dice quien lo hizo y el
+      # `sha256sum --check` dice que los ficheros descargados son esos. Sin la
+      # segunda, un asset cambiado despues de firmar pasaria la primera.
+      - name: La firma y los resumenes
+        run: |
+          set -euo pipefail
+          cd paquetes
+          gpg --verify SHA256SUMS.asc SHA256SUMS
+          # El PDF de la puerta manual va adjunto a la Release pero NO es un
+          # paquete y no entra en el SHA256SUMS: se descarta antes de
+          # comprobar, en vez de hacerle un hueco en el fichero firmado.
+          rm -f manual-gate.pdf
+          sha256sum --check --strict SHA256SUMS
+
+      # La puerta del contenido, otra vez y sobre lo PUBLICADO (ADR-0012,
+      # ID-144). `build.yml` ya la paso sobre lo que construyo; esta la pasa
+      # sobre lo que la gente se va a descargar, que es lo unico que importa
+      # cuando lo que viene detras es servirlo en un repositorio.
+      - name: Puerta del contenido
+        run: |
+          set -euo pipefail
+          for paquete in paquetes/*.flatpak paquetes/*.deb paquetes/*.rpm; do
+            [ -e "$paquete" ] || continue
+            packaging/verifica-contenido.sh "$paquete"
+          done
+
+      - name: Resumen
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          {
+            echo "### $TAG verificada"
+            echo "Firmada por ${{ steps.gpg.outputs.fingerprint }} y con la puerta del contenido pasada."
+          } >> "$GITHUB_STEP_SUMMARY"

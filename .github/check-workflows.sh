@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Las dos invariantes de los workflows que ninguna ejecucion detecta: que
-# ninguna accion entra por etiqueta (ID-170) y que el workflow de construccion
-# no ve un secreto jamas (ID-167).
+# Las invariantes de los workflows que ninguna ejecucion detecta: que ninguna
+# accion entra por etiqueta (ID-170), que el workflow de construccion no ve un
+# secreto jamas (ID-167), y las tres que sostienen la tuberia de entrega
+# —nadie hereda secretos en bloque, la Release nace en borrador (ID-168) y una
+# candidata no llega a ningun repositorio—.
 #
 # ------------------------------------------------------------------ ID-170 --
 # NINGUNA accion de terceros entra por etiqueta.
@@ -21,7 +23,7 @@
 # nadie sabe que version es ese SHA sin abrir un navegador, y Dependabot lo
 # necesita para saber desde donde actualiza.
 #
-# Uso: .github/check-actions-pinned.sh
+# Uso: .github/check-workflows.sh
 set -euo pipefail
 
 raiz="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -100,4 +102,60 @@ if [ -f "$BUILD" ]; then
         exit 1
     fi
     echo "OK  $BUILD es invocable, de solo lectura y no menciona ningun secreto"
+fi
+
+# ------------------------------------------------- ID-167, ID-168, ID-169 --
+# LAS INVARIANTES DE LOS OTROS DOS WORKFLOWS.
+#
+# La cabecera de build.yml deja dicho lo que ese fichero NO puede impedir por
+# si mismo: que un llamador escriba `secrets: inherit` y le entregue de golpe
+# todo el entorno de release, subclave GPG incluida. Eso se «vigila al revisar
+# release.yml», y una vigilancia que depende de que alguien se acuerde no es
+# una vigilancia. Aqui esta escrita.
+#
+# Las otras dos son del mismo tamano: la Release NACE EN BORRADOR (ID-168) y el
+# despliegue NO OCURRE PARA UNA PRERELEASE (ADR-0015). Las dos se pierden
+# borrando una sola linea, y ninguna ejecucion del CI las echaria de menos:
+# solo se notarian el dia de la entrega, publicando algo que nadie ha mirado.
+# Las lineas de comentario quedan fuera, igual que arriba: las cabeceras de
+# build.yml y de release.yml explican la prohibicion, y para explicarla tienen
+# que escribirla.
+herencias="$(grep -rn 'secrets:[[:space:]]*inherit' .github/workflows \
+    | grep -vE ':[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$herencias" ]; then
+    printf '%s\n' "$herencias" >&2
+    echo >&2
+    echo "ningun workflow hereda secretos en bloque (ID-167, ADR-0015)." >&2
+    echo "Heredarlos sobre build.yml le entrega el entorno de release entero." >&2
+    echo "Pasa uno a uno los que el workflow llamado declare." >&2
+    exit 1
+fi
+echo "OK  ningun workflow escribe 'secrets: inherit'"
+
+RELEASE=.github/workflows/release.yml
+if [ -f "$RELEASE" ]; then
+    if ! grep -q '^    environment: release$' "$RELEASE"; then
+        echo "$RELEASE tiene que firmar dentro de 'environment: release' (ADR-0015)" >&2
+        exit 1
+    fi
+    if ! grep -q -- '--draft' "$RELEASE"; then
+        echo "$RELEASE tiene que crear la Release en borrador (ID-168)." >&2
+        echo "Publicarla es el gesto humano; una etiqueta no publica nada." >&2
+        exit 1
+    fi
+    echo "OK  $RELEASE firma en el entorno de release y deja el borrador"
+fi
+
+PUBLISH=.github/workflows/publish.yml
+if [ -f "$PUBLISH" ]; then
+    if ! grep -q 'types: \[published\]' "$PUBLISH"; then
+        echo "$PUBLISH cuelga de 'release: types: [published]', no de la etiqueta (ID-167)" >&2
+        exit 1
+    fi
+    if ! grep -q 'github.event.release.prerelease' "$PUBLISH"; then
+        echo "$PUBLISH tiene que descartar las prereleases (ADR-0015)." >&2
+        echo "Una etiqueta -rc.N ensaya la tuberia y no llega a ningun repositorio." >&2
+        exit 1
+    fi
+    echo "OK  $PUBLISH solo reacciona a una Release publicada que no es candidata"
 fi
