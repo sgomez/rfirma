@@ -173,12 +173,15 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 5] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 6] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
     "RubricView",
     "SecretView",
+    // Detrás de una versión publicada no hay ningún documento: lo que lleva es
+    // un número que vino de GitHub (ID-182).
+    "NewVersionView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
@@ -511,7 +514,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 22, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 23, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
@@ -548,11 +551,14 @@ fn commands_of(source: &str) -> Vec<(&str, String, &str)> {
 /// `blocking_pick_file()` espera allí a un cierre que solo ese hilo puede
 /// ejecutar. Punto muerto: la ventana se clava y el diálogo no aparece.
 ///
-/// Las cuatro de hoy se nombran porque están escritas y se sabe lo que hacen.
+/// Las cinco de hoy se nombran porque están escritas y se sabe lo que hacen.
 /// Las dos del resumen entran en la lista **aunque no llamen a ningún
 /// `blocking_*`**: `open_path` del complemento `opener` es una llamada síncrona
 /// a D-Bus, y esperar ahí la respuesta del portal clava la ventana igual que el
-/// diálogo, sin que la mitad que se descubre sola las vea (TD-10).
+/// diálogo, sin que la mitad que se descubre sola las vea (TD-10). Y
+/// `check_for_new_version` entra por lo mismo: su cuerpo no dice `blocking_`,
+/// pero el puerto de red abre una conexión síncrona y esperarla en el hilo del
+/// bucle de eventos clava la ventana en cada arranque (ID-182).
 ///
 /// La regla general, en cambio, se **descubre**: toda orden cuyo cuerpo llame a
 /// un `blocking_*` de un plugin tiene que ser `(async)`, se llame como se
@@ -567,6 +573,7 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
         "pub fn read_document(",
         "pub fn open_signed_document(",
         "pub fn open_signed_folder(",
+        "pub fn check_for_new_version(",
     ] {
         let declaration = source
             .find(command)

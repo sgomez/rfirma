@@ -6,6 +6,13 @@
 //! mira ningún interruptor, así que sobrevive tanto a «Recordar mi actividad»
 //! como a «Recordar la última configuración de firma visible» apagados.
 //!
+//! Dentro del estado viaja además un apunte que **no es una memoria del
+//! usuario** y por eso no cuenta entre las siete: [`VersionCheck`], cuándo se
+//! preguntó por última vez a GitHub si hay una versión nueva y qué contestó
+//! (ID-180, `app::version`). Es una caché para no salir a la red en cada
+//! arranque, no dice nada de quien firma, y por eso está exenta de los dos
+//! interruptores igual que el tamaño de la ventana.
+//!
 //! **Configuración** —lo que el usuario elige y la aplicación obedece— son el
 //! idioma, el tema, la carpeta de destino, los dos interruptores y la rúbrica.
 //! **Estado** —lo que la aplicación acumula sola— son los documentos
@@ -45,7 +52,9 @@ pub use error::{MemoryError, Situation};
 pub use listed::ListedCertificates;
 pub use opened::OpenedDocuments;
 pub use recents::{Badge, Placement, RecentDocument, Recents, ShownBadge, CAPACITY};
-pub use state::{BoxSize, RememberedFields, State, VisibleSignatureMemory, WindowMemory};
+pub use state::{
+    BoxSize, RememberedFields, State, VersionCheck, VisibleSignatureMemory, WindowMemory,
+};
 pub use store::{Damage, JsonFile, Loaded, Recovery, FORMAT_VERSION};
 
 use crate::paths::Paths;
@@ -84,9 +93,9 @@ impl Memory {
     /// El estado guardado, o el vacío.
     ///
     /// No hace falta filtrar por el interruptor al leer: con «Recordar mi
-    /// actividad» apagado el fichero sobrevive, pero solo con el tamaño de la
-    /// ventana dentro —la única memoria exenta (ID-73)—, así que no hay nada
-    /// más que ocultar.
+    /// actividad» apagado el fichero sobrevive, pero solo con lo exento dentro
+    /// —el tamaño de la ventana (ID-73) y la caché de la comprobación de
+    /// versión (ID-180)—, así que no hay nada más que ocultar.
     pub fn state(&self) -> Result<Loaded<State>, MemoryError> {
         self.state.load()
     }
@@ -141,39 +150,51 @@ impl Memory {
     }
 
     /// El tamaño de la ventana y si estaba maximizada, sin mirar ningún
-    /// interruptor (ID-73): es la única memoria que ninguno de los dos cubre.
+    /// interruptor (ID-73): ninguno de los dos la cubre.
     pub fn remember_window(&self, window: WindowMemory) -> Result<(), MemoryError> {
         let mut state = self.state.load()?.into_value();
         state.window = Some(window);
         self.state.save(&state)
     }
 
-    /// Borra lo acumulado —recientes, certificado, firma visible, última
-    /// carpeta— conservando el tamaño de la ventana (ID-73).
+    /// Cuándo se preguntó por una versión nueva y qué se contestó, sin mirar
+    /// ningún interruptor (ID-180).
     ///
-    /// Si no había ventana guardada esto es exactamente el borrado de antes:
-    /// el fichero desaparece del disco. Si la había, queda un fichero con
-    /// solo ese campo, que es lo que promete «es la única memoria exenta».
+    /// Escribe siempre, como [`Memory::remember_window`] y por el mismo
+    /// motivo: no es actividad de quien firma, es un apunte de rFirma sobre sí
+    /// misma. Con «Recordar mi actividad» apagado el `state.json` sobrevive
+    /// con esto y el tamaño de la ventana dentro, y nada más.
+    pub fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError> {
+        let mut state = self.state.load()?.into_value();
+        state.version_check = Some(check);
+        self.state.save(&state)
+    }
+
+    /// Borra lo acumulado —recientes, certificado, firma visible, última
+    /// carpeta— conservando lo que ningún interruptor cubre: el tamaño de la
+    /// ventana (ID-73) y la caché de la comprobación de versión (ID-180).
+    ///
+    /// Qué se conserva lo dice [`State::forget_everything`] y no esta función:
+    /// así el día que haya una exención más no hay dos sitios que ponerse de
+    /// acuerdo. Si no quedaba nada exento esto es exactamente el borrado de
+    /// antes: el fichero desaparece del disco.
     ///
     /// La lectura previa no puede vetar el borrado: en el camino de borrado
     /// por privacidad, un `state.json` que `load` no consiga leer se trata
     /// como si no llevara ventana dentro —se pierde esa memoria, no el
     /// borrado— en vez de dejar la actividad en el disco con un `Err`.
     fn erase_activity_but_keep_the_window(&self) -> Result<(), MemoryError> {
-        let window = self
+        let mut kept = self
             .state
             .load()
             .map(Loaded::into_value)
-            .unwrap_or_default()
-            .window;
+            .unwrap_or_default();
+        kept.forget_everything();
         self.state.erase()?;
-        match window {
-            Some(window) => self.state.save(&State {
-                window: Some(window),
-                ..State::default()
-            }),
-            None => Ok(()),
+        if kept.is_empty() {
+            return Ok(());
         }
+        self.state.save(&kept)
     }
 }
 
@@ -373,6 +394,69 @@ mod tests {
 
         let state = memory.state().expect("deberia leerse").into_value();
         assert_eq!(state.window, Some(window));
+    }
+
+    /// La invariante que promete el `///` de `remember_version_check`
+    /// —«escribe siempre, sin mirar interruptores»— comprobada desde donde se
+    /// cumple, igual que su hermana la del tamaño de la ventana.
+    #[test]
+    fn the_version_check_is_remembered_even_with_the_switch_off() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let (memory, _) = a_memory(directory.path());
+        memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        let check = VersionCheck {
+            checked_at: 1_757_000_000,
+            announced: "v0.5.0".to_owned(),
+        };
+        memory
+            .remember_version_check(check.clone())
+            .expect("deberia guardarse");
+
+        let state = memory.state().expect("deberia leerse").into_value();
+        assert_eq!(state.version_check, Some(check));
+    }
+
+    /// Apagar «Recordar mi actividad» no borra el apunte de la consulta: no
+    /// dice qué firmó nadie, dice cuándo habló rFirma con GitHub, y borrarlo
+    /// sólo conseguiría una conexión de más.
+    #[test]
+    fn turning_remember_activity_off_does_not_erase_the_version_check() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let (memory, paths) = a_memory(directory.path());
+        let check = VersionCheck {
+            checked_at: 1_757_000_000,
+            announced: "v0.5.0".to_owned(),
+        };
+        memory
+            .remember_state(&Configuration::default(), &a_state(directory.path()))
+            .expect("deberia guardarse");
+        memory
+            .remember_version_check(check.clone())
+            .expect("deberia guardarse");
+
+        memory
+            .remember_configuration(&Configuration {
+                remember_activity: false,
+                ..Configuration::default()
+            })
+            .expect("deberia guardarse la configuracion");
+
+        assert!(
+            paths.state_file().exists(),
+            "el apunte de la consulta no se ha ido, así que el fichero sigue"
+        );
+        let state = memory.state().expect("deberia leerse").into_value();
+        assert_eq!(state.version_check, Some(check));
+        assert!(
+            state.certificate.is_none(),
+            "el resto de la actividad sí se ha ido"
+        );
     }
 
     #[test]

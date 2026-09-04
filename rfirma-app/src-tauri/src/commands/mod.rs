@@ -113,8 +113,8 @@ pub use failure::Failure;
 pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
-    CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, OpenedDocumentView,
-    PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
+    CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, NewVersionView,
+    OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -555,6 +555,37 @@ pub fn read_invocation(
 ) -> Option<DroppedDocumentView> {
     let invocation = pending.take()?;
     app::invocation::invoked_document(&invocation, &opened)
+}
+
+/// **Orden 23.** Si hay publicada una versión más nueva que esta, cuál es.
+///
+/// La pide la ventana al montarse y con eso pinta la franja (ID-181). No hay
+/// nada que descargar ni que instalar (ID-177): lo que devuelve es un número.
+///
+/// `None` es el silencio del ID-180, y cubre las tres formas de no tener nada
+/// que decir: no hay versión nueva, no hay red, o GitHub contestó algo que no
+/// se entiende. **Ninguna es un [`Failure`]**: nadie ha pedido esta consulta,
+/// así que nada de lo que le pase merece un aviso.
+///
+/// `(async)` no es decorativo: el puerto abre una conexión, y en el hilo del
+/// bucle de eventos eso sería la ventana clavada hasta que GitHub conteste.
+///
+/// El puerto se le pasa aquí —[`crate::releases::latest_release`]— igual que el
+/// entorno se le pasa a [`crate::paths`]: el caso de uso no sabe de dónde sale
+/// la cadena, y por eso las pruebas lo doblan sin abrir un socket (ID-182,
+/// TD-39).
+#[tauri::command(async)]
+pub fn check_for_new_version(environment: State<'_, Environment>) -> Option<NewVersionView> {
+    let announced = app::version::new_version(
+        app::version::Version::running(),
+        &environment.memory,
+        &crate::releases::latest_release,
+        std::time::SystemTime::now(),
+    )?;
+
+    Some(NewVersionView {
+        version: announced.to_string(),
+    })
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

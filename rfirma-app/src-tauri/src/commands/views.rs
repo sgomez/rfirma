@@ -320,6 +320,19 @@ pub struct ConfigurationView {
     pub offers_the_original_folder: bool,
 }
 
+/// **La versión nueva que se anuncia en la franja** (ID-181).
+///
+/// Un solo campo, y es el número: la franja no ofrece descargar nada (ID-177),
+/// su acción lleva a *Acerca de*, que es donde están las órdenes de alta del
+/// repositorio. Cruza como cadena porque lo que la ventana hace con ella es
+/// pintarla.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewVersionView {
+    /// La versión publicada, `mayor.menor.parche` y sin la `v` delante.
+    pub version: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

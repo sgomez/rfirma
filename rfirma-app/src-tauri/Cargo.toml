@@ -89,6 +89,16 @@ tauri-plugin-single-instance = "2"
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
 # saber leer su notAfter.
 x509-cert = "0.3"
+# La comprobacion de version nueva, y el UNICO sitio del programa que abre una
+# conexion (ID-182). Entra con `default-features = false` a proposito: las de
+# por omision traen rustls con aws-lc-rs —que exige cmake en la construccion del
+# flatpak— y `native-tls` usa el OpenSSL que ya trae tanto el anfitrion como
+# org.gnome.Sdk. Sin `json`: quien interpreta la respuesta es el caso de uso,
+# no el cliente HTTP.
+reqwest = { version = "0.13", default-features = false, features = [
+    "blocking",
+    "native-tls",
+] }
 
 [dev-dependencies]
 # Las pruebas del almacén de la rúbrica escriben de verdad en disco: copiar es
