@@ -60,16 +60,17 @@ just token       # el paso 4 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
-`verifica.sh` da siete pasos. Dentro del sandbox comprueba lo que solo el
+`verifica.sh` da ocho pasos. Dentro del sandbox comprueba lo que solo el
 sandbox puede romper: que el módulo PKCS#11 que empaqueta el propio flatpak
 cargue, que la ventana arranque y siga viva, que un documento entrado por el
 portal llegue con sus bytes intactos, y que el sandbox **rechace escribir** en
 el perfil de Firefox y en `~/.pki/nssdb` — los dos únicos `--filesystem` que no
 van por portal (#101, AC 3). La invariante del ADR-0012 —un solo
-`librfirma_crypto.so`, `libawt.so` en ninguna parte— ya no vive aquí: la
-comprueba [`../verifica-contenido.sh`](../verifica-contenido.sh), independiente
-del formato, sobre el `.flatpak` construido (o el `.deb`/`.rpm`, cuando
-existan).
+`librfirma_crypto.so`, `libawt.so` en ninguna parte— ya no se comprueba dentro
+del sandbox: el paso 8 llama a
+[`../verifica-contenido.sh`](../verifica-contenido.sh), independiente del
+formato, sobre el `.flatpak` recién construido (la misma puerta corre sobre el
+`.deb`/`.rpm`, cuando existan).
 
 El paso 4 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
 con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se

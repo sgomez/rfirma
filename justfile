@@ -1055,7 +1055,7 @@ check-glibc lib=native_lib:
         exit 1
     fi
     maximo="$(objdump -T "$lib" | grep -oE 'GLIBC_[0-9]+\.[0-9]+(\.[0-9]+)?' \
-        | sed 's/^GLIBC_//' | sort -V | tail -1)"
+        | sed 's/^GLIBC_//' | sort -V | tail -1 || true)"
     if [ -z "$maximo" ]; then
         echo "objdump no encontro ningun simbolo GLIBC_* en $lib" >&2
         exit 1

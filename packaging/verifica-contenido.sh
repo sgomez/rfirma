@@ -18,42 +18,49 @@
 # todavia (el #265 va antes que los paquetes a proposito). Las ramas .deb y
 # .rpm quedan listas para cuando el #266 los produzca.
 #
-# Uso: packaging/verifica-contenido.sh <paquete.flatpak|paquete.deb|paquete.rpm>
+# Uso: packaging/verifica-contenido.sh <paquete.flatpak|paquete.deb|paquete.rpm|files/>
 set -euo pipefail
 
 PAQUETE="${1:?uso: packaging/verifica-contenido.sh <paquete>}"
-[ -f "$PAQUETE" ] || { echo "no existe $PAQUETE" >&2; exit 1; }
+[ -e "$PAQUETE" ] || { echo "no existe $PAQUETE" >&2; exit 1; }
 
 LAB="$(mktemp -d)"
 trap 'rm -rf "$LAB"' EXIT
 
-case "$PAQUETE" in
-    *.flatpak)
-        # Se extrae con ostree/build-import-bundle, sin instalar: es mas
-        # barato y no depende de sandbox ni de permisos, y son exactamente
-        # los bytes que se van a distribuir (el mismo commit que produce
-        # `flatpak build-bundle`, ver el ADR-0015).
-        ostree init --mode=archive --repo="$LAB/repo" >/dev/null
-        flatpak build-import-bundle "$LAB/repo" "$PAQUETE" >/dev/null
-        ref="$(ostree refs --repo="$LAB/repo")"
-        ostree checkout --repo="$LAB/repo" -U "$ref" "$LAB/contenido" >/dev/null
-        ;;
-    *.deb)
-        dpkg-deb -x "$PAQUETE" "$LAB/contenido"
-        ;;
-    *.rpm)
-        mkdir -p "$LAB/contenido"
-        (cd "$LAB/contenido" && rpm2cpio "$PAQUETE" | cpio -idm --quiet)
-        ;;
-    *)
-        echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb o .rpm)" >&2
-        exit 1
-        ;;
-esac
+if [ -d "$PAQUETE" ]; then
+    # El files/ de una construccion de flatpak (ADR-0004, ADR-0013): ya son
+    # los bytes finales, no hay nada que extraer.
+    ln -s "$(realpath "$PAQUETE")" "$LAB/contenido"
+else
+    case "$PAQUETE" in
+        *.flatpak)
+            # Se extrae con ostree/build-import-bundle, sin instalar: es mas
+            # barato y no depende de sandbox ni de permisos, y son exactamente
+            # los bytes que se van a distribuir (el mismo commit que produce
+            # `flatpak build-bundle`, ver el ADR-0015).
+            ostree init --mode=archive --repo="$LAB/repo" >/dev/null
+            flatpak build-import-bundle "$LAB/repo" "$PAQUETE" >/dev/null
+            ref="$(ostree refs --repo="$LAB/repo")"
+            ostree checkout --repo="$LAB/repo" -U "$ref" "$LAB/contenido" >/dev/null
+            ;;
+        *.deb)
+            dpkg-deb -x "$PAQUETE" "$LAB/contenido"
+            ;;
+        *.rpm)
+            PAQUETE="$(realpath "$PAQUETE")"
+            mkdir -p "$LAB/contenido"
+            (cd "$LAB/contenido" && rpm2cpio "$PAQUETE" | cpio -idm --quiet)
+            ;;
+        *)
+            echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm o un directorio files/)" >&2
+            exit 1
+            ;;
+    esac
+fi
 
 echo "### contenido de $PAQUETE"
 
-encontrados="$(find "$LAB/contenido" -name 'librfirma_crypto.so')"
+encontrados="$(find -L "$LAB/contenido" -name 'librfirma_crypto.so')"
 n="$(printf '%s\n' "$encontrados" | grep -c . || true)"
 if [ "$n" -ne 1 ]; then
     echo "esperaba exactamente UN librfirma_crypto.so, encontrados: $n" >&2
@@ -62,7 +69,7 @@ if [ "$n" -ne 1 ]; then
 fi
 echo "OK  un solo librfirma_crypto.so ($encontrados)"
 
-if find "$LAB/contenido" -name 'libawt.so' | grep -q .; then
+if [ -n "$(find -L "$LAB/contenido" -name 'libawt.so')" ]; then
     echo "SOBRA libawt.so: un JPEG con perfil ICC aborta el proceso en vez de" >&2
     echo "dar un error recuperable (ADR-0012, docs/research/exclusion-afirma-ui-utils.md)" >&2
     exit 1

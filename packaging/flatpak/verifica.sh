@@ -269,4 +269,9 @@ echo
 echo "### 7. bundle de un solo fichero"
 flatpak build-bundle "$LAB/repo" "$LAB/$APP.flatpak" "$APP" stable >/dev/null 2>&1 \
     && echo "$LAB/$APP.flatpak: $(du -h "$LAB/$APP.flatpak" | cut -f1)" \
-    || echo "build-bundle FALLO"
+    || { echo "build-bundle FALLO"; exit 1; }
+
+echo
+echo "### 8. la invariante del ADR-0012, sobre el bundle"
+"$(dirname "$AQUI")/verifica-contenido.sh" "$LAB/$APP.flatpak" \
+    || { echo "la puerta del contenido ha fallado"; exit 1; }
