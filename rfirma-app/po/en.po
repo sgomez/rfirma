@@ -787,6 +787,12 @@ msgstr "Where the signed document is saved"
 msgid "preferences.destination.change"
 msgstr "Change folder…"
 
+msgid "preferences.destination.nextToOriginal"
+msgstr "Next to the original document"
+
+msgid "preferences.destination.inThisFolder"
+msgstr "In this folder"
+
 msgid "preferences.theme.label"
 msgstr "Theme"
 

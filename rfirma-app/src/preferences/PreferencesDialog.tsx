@@ -288,8 +288,20 @@ export function PreferencesDialog({
               }
             />
             <div className="preferences__destination">
-              <p className="rf-label">{t("preferences.destination.label")}</p>
+              <p className="rf-label" id={`${titleId}-destination`}>
+                {t("preferences.destination.label")}
+              </p>
+              {preferences.offersOriginalFolder && (
+                <p className="rf-prose preferences__destination-note">
+                  {t("preferences.destination.nextToOriginal")}
+                </p>
+              )}
               <div className="rf-row rf-gap-sm preferences__destination-row">
+                {preferences.offersOriginalFolder && (
+                  <span className="rf-prose preferences__destination-mode-label">
+                    {t("preferences.destination.inThisFolder")}
+                  </span>
+                )}
                 <p className="rf-prose preferences__destination-folder">
                   {preferences.destination}
                 </p>

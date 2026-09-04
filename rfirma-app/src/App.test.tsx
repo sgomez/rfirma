@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
@@ -149,18 +150,20 @@ function renderApp(
   certificates: CertificateStore = emptyCertificateStore(),
   rubrics: RubricPicker = emptyRubricPicker(),
   signer: SigningBackend = unavailableSigningBackend(),
+  invoked: Drop | null = null,
+  drops: FakeDocumentDrops = inMemoryDocumentDrops(invoked),
 ) {
   const preferences = inMemoryPreferences(
     {
       theme: "system",
       destination: "Documentos",
+      offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
       ...settings,
     },
     () => void recents.clear(),
   );
-  const drops = inMemoryDocumentDrops();
   renderWithCatalog(
     <App
       recents={recents}
@@ -259,6 +262,7 @@ describe("App", () => {
       read: async () => ({
         theme: "system",
         destination: "Documentos",
+        offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
       }),
@@ -622,6 +626,7 @@ describe("App", () => {
       read: async () => ({
         theme: "system",
         destination: "Documentos",
+        offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
       }),
@@ -1069,5 +1074,104 @@ describe("App, sin un certificado elegido todavía", () => {
     expect(
       screen.getByRole("application", { name: "Recuadro de la firma visible" }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * **La invocación desde fuera** (ID-157…ID-159): `rfirma documento.pdf`. Lo
+ * que el doble entrega por `pending` es lo mismo que devuelve `read_invocation`
+ * en Rust, y desemboca en la misma ventana que el arrastre — que es justo lo
+ * que estas dos pruebas comprueban: **no hay una segunda interfaz**.
+ */
+describe("App, invocada con un documento", () => {
+  it("opens the invoked PDF in the full window, just like a dropped one", async () => {
+    renderApp(
+      inMemoryRecents(),
+      [],
+      pdfsOf({ "contrato.pdf": 3 }),
+      {},
+      emptyCertificateStore(),
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      { document: document("contrato.pdf"), failure: null, ignored: 0 },
+    );
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("contrato.pdf")).toBeInTheDocument();
+    expect(within(panel).getByText(/^3 páginas/)).toBeInTheDocument();
+  });
+
+  /**
+   * `pending()` es una lectura que **consume**, y el efecto que la pide se
+   * rehace mientras la llamada está en vuelo: `<StrictMode>` lo hace en
+   * desarrollo, y en producción lo hace la lectura asíncrona de los ajustes
+   * cuando «Recordar mi actividad» viene apagado —cambia la identidad de
+   * `accept`—. Si la entrega dependiera del ciclo de vida del efecto, la
+   * respuesta llegaría a un efecto ya limpiado y el documento invocado
+   * desaparecería sin ningún aviso.
+   *
+   * Por eso el doble no contesta solo: la prueba deja que el efecto se rehaga
+   * con la lectura en vuelo y la contesta después.
+   */
+  it("delivers the invoked PDF when the effect remounts while the read is in flight", async () => {
+    let answer: (invoked: Drop | null) => void = () => {};
+    const base = inMemoryDocumentDrops();
+    let asked = 0;
+    const drops: FakeDocumentDrops = {
+      ...base,
+      pending: () => {
+        asked += 1;
+        return new Promise<Drop | null>((resolve) => {
+          answer = resolve;
+        });
+      },
+    };
+
+    renderApp(
+      inMemoryRecents(),
+      [],
+      pdfsOf({ "contrato.pdf": 3 }),
+      { rememberActivity: false },
+      emptyCertificateStore(),
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      null,
+      drops,
+    );
+
+    // Los ajustes ya han llegado, así que el efecto se ha rehecho: la lectura
+    // de la invocación sigue viva y no se ha vuelto a pedir.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(asked).toBe(1);
+
+    await act(async () => {
+      answer({ document: document("contrato.pdf"), failure: null, ignored: 0 });
+    });
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("contrato.pdf")).toBeInTheDocument();
+  });
+
+  /** ID-158: no arranca ningún modo especial, abre la ventana y lo dice. */
+  it("opens the normal window and says so when the argument is not a PDF", async () => {
+    renderApp(
+      inMemoryRecents(),
+      [],
+      unavailablePdfSource(),
+      {},
+      emptyCertificateStore(),
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      {
+        document: null,
+        failure: { situation: "notAPdf", detail: "el fichero no es un PDF" },
+        ignored: 0,
+      },
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
+    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
   });
 });

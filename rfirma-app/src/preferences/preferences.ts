@@ -23,6 +23,12 @@ export interface Preferences {
    */
   destination: string;
   /**
+   * Si Preferencias puede ofrecer «Junto al documento original» (ID-184). La
+   * contesta el entorno —si sabe devolver la ruta real del documento—, no el
+   * usuario: se lee, **no se guarda** al escribir, igual que `destination`.
+   */
+  offersOriginalFolder: boolean;
+  /**
    * «Recordar la última configuración de firma visible». Apagado significa
    * **no guardarla**, no guardarla y no aplicarla.
    */

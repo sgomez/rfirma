@@ -493,8 +493,9 @@ fn the_list_of_files_covers_the_whole_module() {
 }
 
 /// La lista sigue cerrada (ID-59): ocho órdenes, las tres de los ajustes, las
-/// tres de la bandeja, las dos del resumen tras firmar y la esquina PAdES
-/// del diálogo de páginas sin sello (ID-105).
+/// tres de la bandeja, las dos del resumen tras firmar, la esquina PAdES del
+/// diálogo de páginas sin sello (ID-105) y el documento con el que se invocó a
+/// la aplicación (ID-157).
 ///
 /// **El conteo vive en la aserción y no en el nombre** (TD-11): cambiar el
 /// número es la información, y cuatro sub-issues que renombraran la misma
@@ -510,7 +511,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 21, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 22, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la

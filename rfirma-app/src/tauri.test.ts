@@ -26,6 +26,7 @@ const aConfiguration = {
   rememberVisibleSignature: true,
   rememberActivity: true,
   theme: "system",
+  offersTheOriginalFolder: false,
 };
 
 const anOrder = {
@@ -509,9 +510,16 @@ describe("los puertos de la configuración sobre Tauri", () => {
     expect(read).toEqual({
       theme: "system",
       destination: "Documentos",
+      offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
     });
+  });
+
+  it("reads whether the environment allows Junto al documento original", async () => {
+    invoke.mockResolvedValue({ ...aConfiguration, offersTheOriginalFolder: true });
+
+    expect((await tauriPreferences().read()).offersOriginalFolder).toBe(true);
   });
 
   it("falls back to the system theme when what is stored is not one of the three", async () => {
@@ -535,6 +543,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
     await tauriPreferences().save({
       theme: "dark",
       destination: "Documentos",
+      offersOriginalFolder: false,
       rememberVisibleSignature: false,
       rememberActivity: true,
     });
@@ -547,6 +556,33 @@ describe("los puertos de la configuración sobre Tauri", () => {
         rememberVisibleSignature: false,
       },
     });
+  });
+
+  /**
+   * `save` proyecta las claves del contrato en vez de esparcir `preferences`
+   * entero: `offersOriginalFolder` la contesta el backend y no cruza al
+   * escribir (ID-184), así que mandarla sería una clave que serde tira en
+   * silencio y que además nombra distinto al campo real (`offersTheOriginal
+   * Folder`).
+   */
+  it("never sends offersOriginalFolder back when the settings are written", async () => {
+    invoke.mockImplementation((command: string) =>
+      command === "read_configuration"
+        ? Promise.resolve({ ...aConfiguration, offersTheOriginalFolder: true })
+        : Promise.resolve(undefined),
+    );
+
+    await tauriPreferences().save({
+      theme: "dark",
+      destination: "Documentos",
+      offersOriginalFolder: true,
+      rememberVisibleSignature: true,
+      rememberActivity: true,
+    });
+
+    const [, { configuration }] = invoke.mock.calls.at(-1) as [string, { configuration: object }];
+    expect(configuration).not.toHaveProperty("offersOriginalFolder");
+    expect(configuration).toHaveProperty("offersTheOriginalFolder", true);
   });
 
   it("saves the language without touching the rest of the settings", async () => {
@@ -697,5 +733,41 @@ describe("la bandeja sobre Tauri", () => {
     void tauriRecents().clear();
 
     expect(invoke).toHaveBeenCalledWith("forget_activity");
+  });
+});
+
+/**
+ * **Grada A**: la invocación desde fuera, contra un `invoke` falso.
+ *
+ * La costura es el nombre de la orden, `read_invocation`, y que lo que vuelve
+ * se traduzca **igual** que un arrastre: ese «igual» es el ID-159, y es lo
+ * único que hace que invocar y arrastrar dejen la misma ventana.
+ */
+describe("el documento con el que se invocó a la aplicación", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks the backend for it, and reads it like a drop", async () => {
+    invoke.mockResolvedValue({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+      failure: null,
+      ignored: 0,
+    });
+
+    const invoked = await tauriDocumentDrops().pending();
+
+    expect(invoke).toHaveBeenCalledWith("read_invocation");
+    expect(invoked).toMatchObject({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned" },
+      failure: null,
+      ignored: 0,
+    });
+  });
+
+  it("brings nothing when the application was opened without a document", async () => {
+    invoke.mockResolvedValue(null);
+
+    expect(await tauriDocumentDrops().pending()).toBeNull();
   });
 });

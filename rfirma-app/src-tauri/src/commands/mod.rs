@@ -1,6 +1,6 @@
 //! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
 //!
-//! Son veintiuna, y la lista es cerrada a propósito. Cada una rellena un puerto que
+//! Son veintidós, y la lista es cerrada a propósito. Cada una rellena un puerto que
 //! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
 //! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
 //! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
@@ -105,8 +105,10 @@ use crate::app::{self, Environment};
 use crate::isolate::Isolate;
 use crate::memory::OpenedDocuments;
 
+pub use crate::app::invocation::PendingInvocation;
 pub use crate::app::signing::SigningSession;
 pub use app::documents::dropped_document;
+pub use app::invocation::second_invocation;
 pub use failure::Failure;
 pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
@@ -534,6 +536,25 @@ pub fn preview_signature(
 pub fn pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure> {
     let placement = placement.placement()?;
     Ok([placement.rect.lower_left_x, placement.rect.lower_left_y])
+}
+
+/// **Orden 22.** El documento con el que se invocó a la aplicación, si vino con
+/// alguno (ID-157).
+///
+/// La pide la ventana una sola vez, al montarse, y lo que devuelve es lo mismo
+/// que emite un arrastre: la invocación termina en la ventana completa, en el
+/// estado en que la deja arrastrar un PDF (ID-159).
+///
+/// Es una orden y no un evento —al revés que [`DOCUMENT_DROPPED`]— porque el
+/// documento se conoce **antes** de que haya nadie escuchando: emitirlo al
+/// arrancar sería emitirlo al vacío. Se consume al leerla.
+#[tauri::command]
+pub fn read_invocation(
+    pending: State<'_, PendingInvocation>,
+    opened: State<'_, OpenedDocuments>,
+) -> Option<DroppedDocumentView> {
+    let invocation = pending.take()?;
+    app::invocation::invoked_document(&invocation, &opened)
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

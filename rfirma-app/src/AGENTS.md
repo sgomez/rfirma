@@ -35,8 +35,8 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 77 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 506 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 1022 | El árbol de la ventana y el estado que la recorre. |
+| `tauri.ts` | 526 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 1045 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 84 | El marco. |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
@@ -47,7 +47,7 @@ rojo.
 | `documents/DocumentTray.tsx` | 97 | La bandeja pintada. |
 | `documents/recents.ts` | 162 | Los diez recientes y su puerto. Misma capacidad que `memory::recents::CAPACITY`. |
 | `documents/picker.ts` | 31 | Por dónde entra un documento. |
-| `documents/drops.ts` | 74 | Qué ocurre al soltar ficheros encima. |
+| `documents/drops.ts` | 100 | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 165 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 148 | El estado de la firma. |
@@ -78,8 +78,8 @@ rojo.
 | `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
 | **`preferences/`** | | Los ajustes. |
-| `preferences/preferences.ts` | 93 | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | 401 | La pantalla completa de ajustes, con su índice de secciones. |
+| `preferences/preferences.ts` | 99 | Lo que la aplicación recuerda. |
+| `preferences/PreferencesDialog.tsx` | 413 | La pantalla completa de ajustes, con su índice de secciones. |
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |

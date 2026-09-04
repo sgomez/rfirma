@@ -129,15 +129,30 @@
 }
 
 /* La carpeta de destino: su **nombre** y el botón que abre el selector de
-   directorio. No es un desplegable, así que no hereda nada de `Select`. */
+   directorio. No es un desplegable, así que no hereda nada de `Select`.
+   El `min-height` va en las dos ramas —con y sin «Junto al documento
+   original»—, medido sobre el artboard: así las secciones de debajo no
+   saltan según el canal (ID-184). */
 .preferences__destination {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-height: 200px;
+}
+
+/* «Junto al documento original» es un hecho, no un ajuste: lo decide el
+   documento, no la persona (ADR-0011). Se enseña como texto, nunca como
+   control interactivo. */
+.preferences__destination-note {
+  padding-top: 2px;
 }
 
 .preferences__destination-row {
   align-items: center;
+}
+
+.preferences__destination-mode-label {
+  flex: none;
 }
 
 /* El nombre envuelve antes que cortarse, como el destino del pie del panel: lo
