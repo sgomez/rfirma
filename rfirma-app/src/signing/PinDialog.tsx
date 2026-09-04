@@ -19,11 +19,14 @@ interface PinDialogProps {
 }
 
 /**
- * Qué palabra usa el diálogo, y qué le pide al almacén (ID-188).
+ * Qué palabra usa el diálogo, y qué le pide al almacén (ID-188, #260).
  *
  * «PIN» para un módulo PKCS#11; «contraseña» para un fichero —un perfil NSS de
  * navegador, un `.p12` instalado—. No se discrimina por hardware: se diverge a
- * propósito de AutoFirma, que le dice «contraseña» al módulo genérico.
+ * propósito de AutoFirma, que le dice «contraseña» al módulo genérico. La
+ * elección es por la clase de almacén (`CertificateStoreClass`), nunca por el
+ * flag de ranura extraíble de PKCS#11: vale `false` tanto en SoftHSM como en
+ * NSS y no distingue nada.
  */
 function wordFor(store: CertificateStoreClass): "pin" | "password" {
   return store === "card" ? "pin" : "password";
