@@ -153,13 +153,28 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: packaging/repo/download-series.sh "$TAG" serie
 
+      # Las herramientas de los tres repositorios (ID-173, ID-175). No vienen
+      # en el runner y `build-tree.sh` las comprueba TODAS antes de escribir
+      # nada, asi que si una falta el arbol no llega a quedarse a medias.
+      - name: Herramientas de los tres repositorios
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ostree flatpak dpkg-dev apt-utils createrepo-c rpm gnupg
+
+      # El arbol se firma SIEMPRE, y por eso la huella es un argumento y no una
+      # opcion: apt y dnf rechazan un indice sin firma, y el ostree recien
+      # reimportado no trae ninguna (la firma no viaja dentro del bundle).
+      # GPG_PASSPHRASE_FILE es lo que evita que gpg se quede esperando un
+      # pinentry que aqui no hay nadie para contestar.
       - name: El arbol nuevo
         env:
           FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+          GPG_PASSPHRASE_FILE: ${{ steps.gpg.outputs.passphrase-file }}
         run: |
           set -euo pipefail
           gpg --armor --export "$FINGERPRINT" > rfirma.asc
-          packaging/repo/build-tree.sh serie arbol rfirma.asc
+          packaging/repo/build-tree.sh serie arbol rfirma.asc "$FINGERPRINT"
 
       # La clave del CI en el anfitrion esta atada a
       # `command="rrsync /srv/rfirma-repo"`: no da consola, solo sabe escribir

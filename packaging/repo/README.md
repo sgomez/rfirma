@@ -13,7 +13,7 @@ enlace simbólico.
 | `Caddyfile` | Configuración de Caddy (no-root, puerto 3000, cabeceras, healthcheck y las rutas de los tres repositorios) |
 | `Dockerfile` | `caddy:alpine` no-root más la landing y Caddyfile |
 | `download-series.sh` | Baja y verifica **toda** la serie menor vigente desde las Releases |
-| `build-tree.sh` | Reconstruye el árbol entero, desde cero, en un directorio nuevo |
+| `build-tree.sh` | Reconstruye los tres repositorios enteros, desde cero, en un directorio nuevo |
 | `publish-tree.sh` | Sube el árbol al anfitrión e intercambia el enlace `actual` |
 | `*.test.sh` | Las pruebas de los dos anteriores; `just check-publish` las corre |
 
@@ -41,6 +41,42 @@ Y el orden, que es todo el mecanismo:
 
 El árbol es **derivado**: la fuente de verdad son las Releases, que no se borran nunca. Se
 puede tirar `/srv/rfirma-repo` entero y volver a publicar; el servicio queda idéntico.
+
+## Qué hay dentro del árbol
+
+```
+rfirma.asc                          la clave pública: el Signed-By de apt y el gpgkey de dnf
+rfirma.flatpakref                   instalación de un clic, con la clave dentro
+flatpak/                            el repositorio ostree (modo archive), firmado
+apt/pool/main/r/rfirma/*.deb        toda la serie menor vigente
+apt/dists/stable/                   Release, InRelease, Release.gpg y main/binary-amd64/
+apt/rfirma.sources                  el deb822 de la landing, servido para descargarlo
+rpm/*.rpm                           toda la serie, con la firma ya dentro de cada paquete
+rpm/repodata/                       el índice y su repomd.xml.asc
+rpm/rfirma.repo                     el .repo de la landing, con la URL literal
+```
+
+Tres cosas que no son de estilo:
+
+- **Reconstruir no obliga a nadie a redescargar** (ID-173). Importar los mismos bundles en un
+  ostree vacío da el **mismo commit**, así que un cliente ya instalado no ve nada nuevo. Para
+  que eso siga siendo cierto hacen falta los tres cabos: `ostree init` delante,
+  **todos** los bundles de la serie y en orden de versión —la historia se trunca a lo que se
+  importe— y **re-firmar siempre**, porque la firma es metadato desacoplado que no viaja
+  dentro del bundle. Lo comprueba `build-tree.test.sh` construyendo el árbol dos veces.
+- **apt con suite `stable`, no repositorio plano** (ID-175). El plano es más barato y no
+  admite `Suites:`/`Components:` en un `.sources` deb822, que es el formato obligado para que
+  la clave vaya en `Signed-By` sin `apt-key`, retirado.
+- **Los `.rpm` llegan aquí ya firmados.** Firmar un `.rpm` lo modifica, así que se firma en
+  `release.yml` —antes del `SHA256SUMS` y antes de la atestación—; aquí sólo se rechaza el
+  que venga sin firma. El orden de esos pasos lo vigila `just check-actions`.
+
+**Las firmas del árbol no las prueba nadie automáticamente**, y no puede ser de otra manera:
+firmar necesita una clave privada, las de rFirma las crea una persona con
+`packaging/setup-signing-key.sh` y ninguna prueba puede fabricarse una que valga. Por eso
+`build-tree.sh` tiene un modo `SIN-FIRMA-SOLO-PRUEBAS` que es el que usa su test, y por eso
+`just check-actions` prohíbe que esa cadena aparezca en un workflow. El camino con clave se
+ensaya con una etiqueta `v*-rc.N`.
 
 ## Las pruebas: `just check-publish`
 

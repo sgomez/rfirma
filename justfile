@@ -1228,6 +1228,15 @@ check-actions:
 # una opcion de rsync que la orden forzada no admita se ve aqui y no el dia de
 # la entrega. Sin `rrsync` instalado esa pata avisa y se salta.
 #
+# La otra mitad, la del arbol, hace lo mismo con los tres repositorios: importa
+# bundles de flatpak en un ostree vacio DOS VECES y comprueba que sale el mismo
+# commit, que es el ID-173 entero —reconstruir no obliga a nadie a
+# redescargar—. Necesita ostree, flatpak, dpkg-dev, apt-utils, createrepo-c y
+# rpm; si falta alguna, avisa y se salta esa pata, y el CI las instala para que
+# ahi no se salte nunca. Las firmas no se prueban: las claves de rFirma las
+# crea una persona (`packaging/setup-signing-key.sh`) y eso se ensaya con una
+# etiqueta `-rc.N`.
+#
 # Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
 check-publish:
     {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
