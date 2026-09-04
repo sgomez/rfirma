@@ -127,7 +127,9 @@
 
   <div class="channel">
     <h3>flatpak</h3>
-    <p>Para cualquier distribución de Linux. Se resuelve del remoto propio, no de Flathub.</p>
+    <p>Para cualquier distribución de Linux. La aplicación se resuelve del remoto propio, no de
+    Flathub; el runtime (<code>org.gnome.Platform</code>) sí viene de Flathub, así que hace
+    falta tener ese remoto dado de alta.</p>
     <pre><code>flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</code></pre>
   </div>
 
@@ -174,11 +176,11 @@ sudo dnf install rfirma</code></pre>
     <a href="https://github.com/ctt-gob-es/clienteafirma">clienteafirma</a>, compilado con
     GraalVM Native Image, sin que la clave privada salga nunca del sistema operativo.
   </p>
-  <p>El código fuente vive en tres repositorios:</p>
+  <p>El código fuente vive en dos repositorios:</p>
   <ul class="repos">
-    <li><a href="https://github.com/sgomez/rfirma">sgomez/rfirma</a> — la aplicación y el empaquetado.</li>
+    <li><a href="https://github.com/sgomez/rfirma">sgomez/rfirma</a> — la aplicación, el empaquetado y (en
+    <a href="https://github.com/sgomez/rfirma/tree/main/rfirma-native-bridge">rfirma-native-bridge</a>) el puente FFI.</li>
     <li><a href="https://github.com/ctt-gob-es/clienteafirma">ctt-gob-es/clienteafirma</a> — el motor criptográfico original, del que se consume la lógica de firma.</li>
-    <li><a href="https://github.com/sgomez/rfirma/tree/main/rfirma-native-bridge">rfirma-native-bridge</a> — el puente FFI entre ambos.</li>
   </ul>
 </section>
 
