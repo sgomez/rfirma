@@ -247,8 +247,8 @@ frontal por el protocolo propio de Tauri, y **ese** sí pasa por el resolvedor d
 patrón que ya costó tres hallazgos en este proyecto (ADR-0013): la sonda y lo que se distribuye no
 ejercitan el mismo camino.
 
-**Y por qué `verifica.sh` decía OK.** Su paso 4 solo miraba que el proceso siguiera vivo a los diez
-segundos, y lo estaba: una ventana viva no es una ventana que se vea. Desde este hallazgo el paso 4
+**Y por qué `verifica.sh` decía OK.** Su paso 3 solo miraba que el proceso siguiera vivo a los diez
+segundos, y lo estaba: una ventana viva no es una ventana que se vea. Desde este hallazgo el paso 3
 corre con `--log-session-bus` y falla si el sandbox rechaza cualquier llamada al portal.
 
 ### 5.2. El binario apuntaba al servidor de vite (v0.1)
@@ -373,7 +373,7 @@ venía a quitar. El bundle queda como vehículo de pruebas previas, no como cana
 El apartado 4 dejaba pendiente comprobar, ya con la aplicación de verdad y no la sonda, que los
 bytes que el portal concede llegan a lo que la Orden 8 (`read_document`, `commands/mod.rs`) lee del
 disco, y si el permiso que apunta contra la ruta del anfitrión sobrevive a cerrar y reabrir la
-aplicación (ID-72). El paso 6 de `verifica.sh` mide las dos cosas.
+aplicación (ID-72). El paso 5 de `verifica.sh` mide las dos cosas.
 
 **Los bytes llegan intactos.** `flatpak document-export --app=me.sgomez.rfirma <fichero>` es la
 misma vía por la que el diálogo de la Orden 7 (`open_document`) concede el permiso: contra la ruta
@@ -402,7 +402,7 @@ declaraba para el resto de pasos.
 
 ## 10. Verificar dentro del sandbox sin depender del idioma del anfitrión (#101)
 
-El paso 7 de `verifica.sh` comprueba, dentro del sandbox, que escribir en
+El paso 6 de `verifica.sh` comprueba, dentro del sandbox, que escribir en
 `~/.mozilla/firefox` y en `~/.pki/nssdb` falla y que `profiles.ini` se lee. Dos
 trampas de esa comprobación, ninguna propia de NSS:
 
