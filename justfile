@@ -87,10 +87,10 @@ default:
 # Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
 check: tools check-repo check-java check-ts check-rust
 
-# Lo que no pertenece a ninguna cadena (ID-01): tres comprobaciones que tardan
+# Lo que no pertenece a ninguna cadena (ID-01): cuatro comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version
+check-repo: check-flatpak-sources check-ds-bundle check-version check-actions
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -1190,6 +1190,16 @@ check-flatpak-sources:
 # Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
 check-ds-bundle:
     {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
+
+# La puerta del ID-170, tercera hermana de `check-repo` y por los mismos
+# motivos: una accion fijada por etiqueta es codigo de un tercero que puede
+# cambiar bajo los pies del runner, y la convencion de fijarlas por SHA se
+# rompe sola —quien anada un paso copiara el `uses: foo/bar@v1` del README de
+# esa accion—.
+#
+# Comprueba que las acciones de los workflows estan fijadas por SHA.
+check-actions:
+    {{ justfile_directory() }}/.github/check-workflows.sh
 
 # El candado del ID-150 y sus vecinos, hermano de las otras dos de `check-repo`
 # y por los mismos motivos: cuesta milisegundos, no necesita ni bootstrap ni

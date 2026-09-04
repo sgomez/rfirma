@@ -1,0 +1,347 @@
+# El PRIMERO de los tres workflows de la tuberia de entrega (ID-167,
+# ADR-0015): el que CONSTRUYE. Los otros dos —el que reacciona a la etiqueta
+# `v*` y deja la Release en borrador, y el que reacciona a la Release
+# publicada— son ficheros aparte, y cada uno tiene un solo motivo para cambiar.
+# El de este es COMO SE CONSTRUYE, y nada mas.
+#
+# INVOCABLE, DE SOLO LECTURA Y SIN SECRETOS JAMAS. Es la primera de las cuatro
+# invariantes del ADR-0015, y no es cosmetica: `release.yml` va a vivir en un
+# `environment: release` con revisor humano y con la subclave GPG, asi que si
+# esto viese un secreto, reutilizarlo desde cualquier sitio seria un camino
+# hacia la clave de firma. Por eso:
+#
+#   - `permissions: contents: read`, que es lo unico que hace falta para
+#     descargarse el arbol;
+#   - ni una sola referencia a `secrets.*` — donde una accion pide un token
+#     se le da `github.token`, que es el mismo valor pero no obliga a que el
+#     llamador pase nada;
+#   - `workflow_call` NO declara ningun `secrets:`, asi que el llamador no
+#     tiene ninguna manera *declarada* de darle uno.
+#   Lo que este fichero no puede impedir es que un llamador escriba
+#   `secrets: inherit`. Eso se vigila al revisar `release.yml`, y esa es la
+#   razon de que sean tres ficheros y no uno.
+#
+# UN SOLO JOB, Y ES A PROPOSITO (ID-140). Los tres canales tienen que llevar
+# LOS MISMOS BYTES de `librfirma_crypto.so`, y native-image no promete dos
+# construcciones identicas: repartir el empaquetado en tres jobs paralelos
+# significaria tres librerias distintas, o pasar 28 MB por un artefacto para
+# volver a juntarlas. Un job que construye una vez y empaqueta tres veces es
+# mas corto de escribir y mas facil de creer.
+#
+# Y por eso `just flatpak bundle` es UNA SOLA INVOCACION: `just` ejecuta cada
+# dependencia una vez por invocacion, asi que `native` y `build-ts` corren una
+# vez y los dos empaquetadores consumen su resultado. Partirlo en dos ordenes
+# reconstruiria la libreria entre medias.
+#
+# NO HAY MATRIZ porque no hay nada que multiplicar: `x86_64` es el unico
+# objetivo de la v0.4 (ID-147).
+#
+# LAS PUERTAS SON RECETAS DE `just` Y SCRIPTS DEL REPOSITORIO, nunca pasos
+# `run:` escritos aqui (tercera invariante del ADR-0015): una puerta que no
+# puedes reproducir en tu equipo es una puerta que un dia se salta con
+# `continue-on-error`.
+name: Construccion
+
+on:
+  # El disparador de verdad: `release.yml` lo llama con la version de la
+  # etiqueta. No hay `push` ni `pull_request` — esto tarda mas de veinte
+  # minutos y no es el bucle de realimentacion de nadie; el que corre en cada
+  # PR es `ci.yml`.
+  workflow_call:
+    inputs:
+      expected-version:
+        description: >-
+          Version que el llamador cree estar construyendo, con o sin la `v`
+          delante. Si se da, tiene que coincidir con la de tauri.conf.json.
+        type: string
+        required: false
+        default: ''
+    outputs:
+      version:
+        description: La version construida, leida de tauri.conf.json (ID-150).
+        value: ${{ jobs.build.outputs.version }}
+      native-packages:
+        description: >-
+          `true` si la version produce .deb y .rpm; `false` si es una
+          candidata y solo hay flatpak (ID-154).
+        value: ${{ jobs.build.outputs.native-packages }}
+      packages-artifact:
+        description: Nombre del artefacto con los paquetes y su SHA256SUMS.
+        value: ${{ jobs.build.outputs.packages-artifact }}
+      digests:
+        description: El contenido de SHA256SUMS, tal cual, en una sola cadena.
+        value: ${{ jobs.build.outputs.digests }}
+
+  # A mano, para ensayar la construccion sin etiquetar nada. Sigue sin ver un
+  # secreto y sigue sin publicar nada: lo unico que produce son artefactos.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Tiene que coincidir con la de ci.yml y con la del justfile: GraalVM CE 25,
+  # porque la linea 21 aborta dentro del JNI_OnLoad de libawt.so con cualquier
+  # firma visible (issue #6).
+  GRAALVM_VERSION: '25'
+  CARGO_TERM_COLOR: always
+  # La rama y el nombre del bundle que produce la receta `flatpak`.
+  FLATPAK_BUNDLE: packaging/flatpak/me.sgomez.rfirma.flatpak
+
+jobs:
+  build:
+    name: Construye los tres canales
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      native-packages: ${{ steps.version.outputs.native-packages }}
+      packages-artifact: paquetes
+      digests: ${{ steps.digests.outputs.sha256sums }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # `github.token` y no `secrets.GITHUB_TOKEN`: el valor es el mismo, pero
+      # asi este fichero no menciona el contexto `secrets` en ninguna linea, y
+      # la invariante «sin secretos» se puede comprobar con un grep.
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ github.token }}
+
+      # La misma clave que ci.yml a proposito: las dependencias de AutoFirma no
+      # estan en Maven Central y llenarla cuesta compilarla entera, asi que las
+      # dos tuberias comparten el acierto.
+      - name: Cache de ~/.m2
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          package_json_file: rfirma-app/package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          # Fijada por SHA (ID-170), asi que la accion ya no puede leer el canal
+          # de la etiqueta con la que se invoca: hay que nombrarlo aqui.
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      # Cuatro grupos, y ninguno esta de adorno:
+      #   - la cadena de Tauri (WebKitGTK 4.1 y companiia), sin la cual el
+      #     build.rs de javascriptcore-rs-sys se cae sin decir de que va;
+      #   - flatpak, flatpak-builder y ostree, que son el primer canal y ademas
+      #     lo que necesita verifica-contenido.sh para mirar dentro del bundle;
+      #   - libarchive-tools (bsdtar), que es como verifica-contenido.sh abre un
+      #     .rpm sin instalar `rpm`;
+      #   - softhsm2, opensc, libnss3-tools y poppler-utils, que son la grada C
+      #     del ADR-0014: sin ellos no hay PDF de la puerta manual.
+      - name: Dependencias de sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            build-essential \
+            file \
+            gettext \
+            flatpak \
+            flatpak-builder \
+            ostree \
+            libarchive-tools \
+            poppler-utils \
+            softhsm2 \
+            opensc \
+            libnss3-tools
+
+      # El runtime NO viaja dentro del bundle (ADR-0015): se consume del remoto
+      # de Flathub, aqui y en el equipo de quien instale.
+      #
+      # `--install-deps-only` y no una lista de `flatpak install` escrita a
+      # mano: el runtime, el SDK y la extension de Rust los nombra ya el
+      # manifiesto, y la rama de la extension depende de la base freedesktop
+      # del runtime de GNOME. Copiarla aqui seria un segundo sitio donde
+      # equivocarse cada vez que suba el runtime.
+      - name: Runtime y SDK de Flathub
+        working-directory: packaging/flatpak
+        run: |
+          flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --install-deps-from=flathub --install-deps-only \
+            build-dir me.sgomez.rfirma.yml
+
+      # LA GUARDIA DE VERSION, en dos mitades.
+      #
+      # `just check-version` es el candado del ID-150: la version vive en cinco
+      # sitios y cuatro tienen que decir lo mismo que tauri.conf.json.
+      #
+      # La segunda mitad solo existe cuando llama otro workflow: comprueba que
+      # la version del arbol es la que el llamador cree estar construyendo. Sin
+      # esto, empujar `v0.4.0` sobre un arbol que dice `0.3.9` produciria una
+      # Release `v0.4.0` con paquetes `0.3.9` dentro, y nadie se enteraria
+      # hasta que alguien mirase un `dpkg -I`.
+      - name: Guardia de version
+        id: version
+        # La entrada del llamador entra por `env:`, NO interpolada dentro del
+        # `run:`. Una expresion `${{ }}` se sustituye antes de que exista la
+        # shell, asi que un nombre de etiqueta valido como `v0.4.0$(curl ...)`
+        # se convertiria en texto del script. Este job no ve secretos, pero si
+        # produce los paquetes que `release.yml` firma: ejecutar codigo aqui es
+        # poder cambiar los bytes que luego se firman.
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected-version }}
+        run: |
+          set -euo pipefail
+          just check-version
+          version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+            rfirma-app/src-tauri/tauri.conf.json)"
+          esperada="${EXPECTED_VERSION#v}"
+          if [ -n "$esperada" ] && [ "$esperada" != "$version" ]; then
+            echo "la version del arbol es $version y quien llama esperaba $esperada" >&2
+            echo "la fuente es rfirma-app/src-tauri/tauri.conf.json (ID-150)" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # LA REGLA DE LAS CANDIDATAS NO SE REIMPLEMENTA AQUI (ID-154): se
+          # consulta su unica sede.
+          if packaging/native-packages-allowed.sh "$version"; then
+            echo "native-packages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "native-packages=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Construyendo **$version**." >> "$GITHUB_STEP_SUMMARY"
+
+      # ----------------------------------------------------------------------
+      # EL ARTEFACTO DEL QUE SALEN LOS TRES CANALES
+      # ----------------------------------------------------------------------
+      - name: Libreria nativa
+        run: |
+          export GRAALVM_HOME="$JAVA_HOME"
+          just native
+
+      # El suelo de glibc del ADR-0015: se promete GLIBC_2.34 y lo hace verdad
+      # esta puerta, no un contenedor de construccion congelado (ID-149). Y se
+      # mide UNA VEZ, porque el mismo fichero cruza los tres canales.
+      - name: Suelo de glibc
+        run: just check-glibc
+
+      # EL CARRIL LENTO. Aqui si existe librfirma_crypto.so, asi que las pruebas
+      # de grada C —las que firman de verdad— se ejecutan en vez de quedarse
+      # ignoradas. Y de aqui sale el PDF de la puerta manual (TD-04, ID-168),
+      # que `release.yml` adjunta al borrador para que quien publique tenga
+      # delante lo que tiene que llevar a un validador oficial.
+      - name: Pruebas de grada C
+        run: just test-native
+
+      - name: PDF para el validador oficial
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pdf-puerta-manual
+          path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
+          if-no-files-found: warn
+
+      # ----------------------------------------------------------------------
+      # LOS TRES CANALES, DE UNA SOLA CONSTRUCCION
+      # ----------------------------------------------------------------------
+      # Una invocacion y no dos: ver la cabecera. `bundle` ya pasa
+      # verifica-contenido.sh sobre el .deb y sobre el .rpm; al flatpak se la
+      # pasa el paso siguiente, porque la receta `flatpak` no la lleva dentro.
+      - name: Empaqueta los tres canales
+        if: steps.version.outputs.native-packages == 'true'
+        run: just flatpak bundle
+
+      # Una candidata (`-rc.N`) no tiene representacion valida en el campo
+      # Version de un RPM, asi que produce flatpak y nada mas (ID-154). El
+      # ensayo de la tuberia es real, pero mas estrecho que la entrega.
+      - name: Empaqueta solo el flatpak (candidata)
+        if: steps.version.outputs.native-packages != 'true'
+        run: |
+          just flatpak
+          echo "Version candidata: sin .deb ni .rpm (ID-154)." >> "$GITHUB_STEP_SUMMARY"
+
+      # ----------------------------------------------------------------------
+      # LO QUE SE ENTREGA AL SIGUIENTE WORKFLOW
+      # ----------------------------------------------------------------------
+      - name: Reune los paquetes
+        run: |
+          set -euo pipefail
+          # Fuera del arbol de trabajo: lo que se sube no tiene por que dejar
+          # un directorio sin versionar dentro del repositorio.
+          destino="${{ runner.temp }}/paquetes"
+          mkdir -p "$destino"
+          cp "$FLATPAK_BUNDLE" "$destino/"
+          if [ "${{ steps.version.outputs.native-packages }}" = "true" ]; then
+            find rfirma-app/src-tauri/target/release/bundle \
+              -maxdepth 2 -type f \( -name '*.deb' -o -name '*.rpm' \) \
+              -exec cp {} "$destino/" \;
+          fi
+          ls -l "$destino"
+
+      # LA PUERTA DEL CONTENIDO (ADR-0012, ID-144), Y SOBRE LOS TRES FORMATOS:
+      # exactamente un librfirma_crypto.so y libawt.so en ninguna parte. Si
+      # libawt.so entra, un JPEG con perfil ICC deja de dar un error recuperable
+      # y aborta el proceso entero.
+      #
+      # Corre sobre los ficheros YA REUNIDOS y no sobre el arbol de
+      # construccion: lo que importa es lo que va a llegar a quien instale, que
+      # es exactamente lo que se sube en el paso siguiente. `just bundle` ya
+      # pasa la misma puerta sobre el .deb y el .rpm mientras los produce —esa
+      # es la que ve quien construye en su equipo—; esta es la del workflow, y
+      # ademas es la unica que cubre el flatpak, porque la receta `flatpak` no
+      # la lleva dentro.
+      - name: Puerta del contenido
+        run: |
+          set -euo pipefail
+          for paquete in "${{ runner.temp }}"/paquetes/*; do
+            packaging/verifica-contenido.sh "$paquete"
+          done
+
+      # El SHA256SUMS se calcula AQUI y viaja tambien como salida del workflow
+      # para que `release.yml` pueda comprobar que lo que firma son los bytes
+      # que salieron de aqui: firmar modifica el .rpm, asi que el orden de alli
+      # es firmar, resumir, atestar y adjuntar (ADR-0015), y este resumen es el
+      # punto de partida.
+      - name: Digests
+        id: digests
+        run: |
+          set -euo pipefail
+          cd "${{ runner.temp }}/paquetes"
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+          {
+            echo 'sha256sums<<FIN'
+            cat SHA256SUMS
+            echo FIN
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo '### Paquetes'
+            echo '```'
+            cat SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Paquetes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paquetes
+          path: ${{ runner.temp }}/paquetes/
+          if-no-files-found: error

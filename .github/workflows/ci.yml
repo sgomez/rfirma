@@ -80,10 +80,10 @@ jobs:
     name: Cadena Java
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@v1
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
         with:
           java-version: ${{ env.GRAALVM_VERSION }}
           distribution: graalvm-community
@@ -99,7 +99,7 @@ jobs:
       # binarios GPL de terceros, con las obligaciones de licencia que eso
       # arrastra.
       - name: Cache de ~/.m2
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.m2/repository
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
@@ -119,14 +119,14 @@ jobs:
     name: Cadena TypeScript
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # package_json_file: la raiz no tiene package.json (ID-01), asi que sin
       # esto la accion falla con "No pnpm version is specified".
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           package_json_file: rfirma-app/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: pnpm
@@ -148,25 +148,28 @@ jobs:
     name: Cadena Rust
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Rust necesita la cadena de Node aunque no ejecute una sola prueba de
       # TypeScript: tauri-build lee frontendDist (../dist) dentro de su propio
       # build.rs, asi que sin `vite build` clippy no llega a mirar ni una linea.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           package_json_file: rfirma-app/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: rfirma-app/pnpm-lock.yaml
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
+          # Fijada por SHA (ID-170), asi que la accion ya no puede leer el canal
+          # de la etiqueta con la que se invoca: hay que nombrarlo aqui.
+          toolchain: stable
           components: clippy, rustfmt, llvm-tools-preview
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: rfirma-app/src-tauri
 
@@ -204,7 +207,7 @@ jobs:
       # Binarios preconstruidos: compilarlos desde fuente serian minutos en
       # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
       # hace falta porque no es una puerta, solo produce el lcov.
-      - uses: cargo-bins/cargo-binstall@main
+      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
       - name: Herramienta de cobertura y de CRAP
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
@@ -223,7 +226,7 @@ jobs:
     name: Imagen nativa
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # El carril lento no corre por omision. Medido en este mismo
       # repositorio: native-image son 1 m 22 s y el job entero 3 m 14 s,
@@ -248,7 +251,7 @@ jobs:
 
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
         if: steps.scope.outputs.build == 'true'
-        uses: graalvm/setup-graalvm@v1
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
         with:
           java-version: ${{ env.GRAALVM_VERSION }}
           distribution: graalvm-community
@@ -256,29 +259,31 @@ jobs:
 
       - name: Cache de ~/.m2
         if: steps.scope.outputs.build == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.m2/repository
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         if: steps.scope.outputs.build == 'true'
         with:
           package_json_file: rfirma-app/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         if: steps.scope.outputs.build == 'true'
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: rfirma-app/pnpm-lock.yaml
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         if: steps.scope.outputs.build == 'true'
         with:
+          # Ver el comentario del mismo paso en el carril rapido.
+          toolchain: stable
           components: llvm-tools-preview
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         if: steps.scope.outputs.build == 'true'
         with:
           workspaces: rfirma-app/src-tauri
@@ -303,7 +308,7 @@ jobs:
             opensc \
             libnss3-tools
 
-      - uses: cargo-bins/cargo-binstall@main
+      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
         if: steps.scope.outputs.build == 'true'
       - name: Herramienta de cobertura y de CRAP
         if: steps.scope.outputs.build == 'true'
@@ -334,7 +339,7 @@ jobs:
       # posterior falla: un PDF que no valida es justo el que hay que mirar.
       - name: PDF para el validador oficial
         if: steps.scope.outputs.build == 'true' && !cancelled()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pdf-puerta-manual
           path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
@@ -389,7 +394,7 @@ jobs:
       STCERES: 'https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar'
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Avisa si quedan menos de 90 dias
         run: |
