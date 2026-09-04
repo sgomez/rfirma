@@ -241,16 +241,17 @@ pub fn from_environment() -> Vec<Store> {
 /// que se buscan, en orden.
 ///
 /// Hasta Firefox 146 los dos eran el mismo directorio, `~/.mozilla/firefox`.
-/// Firefox 147 se mudó a XDG: `profiles.ini` pasa a `~/.config/mozilla` y los
-/// perfiles —donde vive `cert9.db`— a `~/.local/share/mozilla/firefox`. Bajo
-/// XDG el `Path=` relativo de `profiles.ini` resuelve contra el directorio de
-/// **datos**, así que los dos entran **emparejados** (ID-199): declarar sólo
-/// el de configuración da cero certificados otra vez y sin error.
+/// Firefox 147 se mudó a XDG: `profiles.ini` pasa a
+/// `~/.config/mozilla/firefox` y los perfiles —donde vive `cert9.db`— a
+/// `~/.local/share/mozilla/firefox`. Bajo XDG el `Path=` relativo de
+/// `profiles.ini` resuelve contra el directorio de **datos**, así que los
+/// dos entran **emparejados** (ID-199): declarar sólo el de configuración da
+/// cero certificados otra vez y sin error.
 fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 2] {
     [
         (home.join(".mozilla/firefox"), home.join(".mozilla/firefox")),
         (
-            home.join(".config/mozilla"),
+            home.join(".config/mozilla/firefox"),
             home.join(".local/share/mozilla/firefox"),
         ),
     ]
@@ -578,18 +579,18 @@ mod tests {
         assert!(nss_profiles(home.path()).is_empty());
     }
 
-    /// Firefox 147 bajo XDG: `profiles.ini` en `~/.config/mozilla`, perfil y
-    /// `cert9.db` en `~/.local/share/mozilla/firefox`. Si el código resolviera
-    /// el `Path=` relativo contra el directorio de configuración en vez del de
-    /// datos —o sólo mirara uno de los dos—, este perfil no aparecería: es el
-    /// fallo silencioso que el ID-199 evita.
+    /// Firefox 147 bajo XDG: `profiles.ini` en `~/.config/mozilla/firefox`,
+    /// perfil y `cert9.db` en `~/.local/share/mozilla/firefox`. Si el código
+    /// resolviera el `Path=` relativo contra el directorio de configuración
+    /// en vez del de datos —o sólo mirara uno de los dos—, este perfil no
+    /// aparecería: es el fallo silencioso que el ID-199 evita.
     #[test]
     fn reads_a_firefox_profile_from_the_paired_xdg_config_and_data_dirs() {
         let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
-        let config = home.path().join(".config/mozilla");
+        let config = home.path().join(".config/mozilla/firefox");
         let data = home.path().join(".local/share/mozilla/firefox");
         let profile = data.join("cccccccc.default-release");
-        std::fs::create_dir_all(&config).expect("deberia poder crearse .config/mozilla");
+        std::fs::create_dir_all(&config).expect("deberia poder crearse .config/mozilla/firefox");
         std::fs::create_dir_all(&profile).expect("deberia poder crearse el perfil");
         std::fs::write(profile.join("cert9.db"), b"").expect("deberia poder escribirse");
         std::fs::write(

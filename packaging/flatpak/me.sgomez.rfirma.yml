@@ -70,12 +70,13 @@ finish-args:
   #
   # Firefox 147 se mudo a XDG y Chrome M146 tambien: las dos rutas de arriba
   # ya no cubren solas lo que lee pkcs11::stores. Firefox separa configuracion
-  # y datos -~/.config/mozilla lleva profiles.ini, ~/.local/share/mozilla/firefox
+  # y datos -~/.config/mozilla/firefox lleva profiles.ini, ~/.local/share/mozilla/firefox
   # lleva los perfiles con sus certificados-, asi que entran EMPAREJADAS: solo
   # una de las dos vuelve a dar cero certificados y sin error (ID-199). Chrome
   # entra entero en su ruta XDG, ~/.local/share/pki/nssdb, junto a la antigua.
   # Enumerarlas aqui y en el codigo es justo lo que se desincronizo; la lista
-  # canonica es la de pkcs11::stores.
+  # canonica es la de pkcs11::stores. El permiso de abajo, ~/.config/mozilla,
+  # se deja ancho a proposito: cubre el subdirectorio firefox sin listarlo.
   - --filesystem=~/.mozilla/firefox:ro
   - --filesystem=~/.pki/nssdb:ro
   - --filesystem=~/.config/mozilla:ro
