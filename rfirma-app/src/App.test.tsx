@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import type { DocumentInHand } from "./documents/document";
 import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
@@ -25,10 +26,27 @@ import type { PdfDocument, PdfPage, Viewport } from "./viewer/pdf";
 import type { Placement } from "./viewer/signatureBox";
 import { type PdfSource, unavailablePdfSource } from "./viewer/source";
 
-function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+/**
+ * **El documento que se tiene delante**: lo que entra por el diálogo o por el
+ * arrastre, y lo que se pinta y se firma. No es la fila (ID-287).
+ */
+function document(name: string, overrides: Partial<DocumentInHand> = {}): DocumentInHand {
   return {
     // El identificador lo acuña el backend y es opaco: aquí se finge con un
     // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
+    id: `id-${name}`,
+    name,
+    badge: "Unsigned",
+    modified: 1_700_000_000,
+    placement: null,
+    remembered: true,
+    ...overrides,
+  };
+}
+
+/** **La fila que se guarda**: con lo que arranca la bandeja en una prueba. */
+function row(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+  return {
     id: `id-${name}`,
     name,
     badge: "Unsigned",
@@ -146,7 +164,7 @@ function failingCertificateStore(failures: number, then: readonly Certificate[] 
 
 function renderApp(
   recents = inMemoryRecents(),
-  documents: RecentDocument[] = [],
+  documents: DocumentInHand[] = [],
   pdfs: PdfSource = unavailablePdfSource(),
   settings: Partial<Preferences> = {},
   certificates: Partial<CertificateStore> = {},
@@ -586,7 +604,7 @@ describe("App", () => {
 
   it("opens Preferences from the menu, over the window and without unmounting it", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("a.pdf")]));
+    renderApp(inMemoryRecents([row("a.pdf")]));
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -675,7 +693,7 @@ describe("App", () => {
 
   it("empties the tray when Remember my activity is turned off", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("a.pdf")]));
+    renderApp(inMemoryRecents([row("a.pdf")]));
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -696,7 +714,7 @@ describe("App", () => {
    */
   it("empties the tray and says the recents are still saved when the disk refuses", async () => {
     const user = userEvent.setup();
-    const recents = inMemoryRecents([document("a.pdf")]);
+    const recents = inMemoryRecents([row("a.pdf")]);
     const preferences: PreferencesStore = {
       read: async () => ({
         theme: "system",
@@ -743,7 +761,7 @@ describe("App", () => {
 
   it("stops remembering once Remember my activity is off, not just purges what there was", async () => {
     const user = userEvent.setup();
-    renderApp(inMemoryRecents([document("a.pdf")]), [document("factura.pdf")]);
+    renderApp(inMemoryRecents([row("a.pdf")]), [document("factura.pdf")]);
     await screen.findByText("a.pdf");
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -1007,6 +1025,103 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     await waitFor(() => expect(presign).toHaveBeenCalledOnce());
     expect(screen.queryByRole("dialog", { name: /sello/ })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **TD-64**: la ventana distingue el documento que se firma de la fila que se
+ * guarda (ID-287), y sabe pintar y firmar uno del que no queda rastro (ID-286).
+ *
+ * Se prueba por los puertos doblados —el selector entrega el documento, la
+ * bandeja es el almacén en memoria— porque eso es exactamente lo que hará la
+ * sede: entregar un documento por un puerto, sin fila detrás.
+ */
+describe("App, con un documento que no se recuerda", () => {
+  const remembered: Certificate = { ...aCertificate, remembered: true };
+
+  /** Un recuadro ya colocado, para llegar a «Firmar documento» sin gestos. */
+  const aPlacement: Placement = {
+    rect: { x0: 250, y0: 50, x1: 450, y1: 100 },
+    pages: { only: [1] },
+  };
+
+  /** Lo que mandará la sede: se pinta y se firma, pero no se guarda. */
+  const fromTheSede = () => document("de-la-sede.pdf", { remembered: false });
+
+  it("paints it in the viewer without leaving a row in the tray", async () => {
+    const user = userEvent.setup();
+    const recents = inMemoryRecents();
+    renderApp(recents, [fromTheSede()], pdfsOf({ "de-la-sede.pdf": 4 }));
+
+    await user.click(trayDropZone());
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("de-la-sede.pdf")).toBeInTheDocument();
+    expect(within(panel).getByText(/^4 páginas/)).toBeInTheDocument();
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(within(tray).queryByText("de-la-sede.pdf")).not.toBeInTheDocument();
+    await expect(recents.list()).resolves.toEqual([]);
+  });
+
+  it("leaves no placement behind when the box is put on it", async () => {
+    const user = userEvent.setup();
+    const recents = inMemoryRecents();
+    renderApp(
+      recents,
+      [fromTheSede()],
+      pdfsOf({ "de-la-sede.pdf": 4 }),
+      {},
+      { list: async () => [remembered] },
+    );
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByText("Colocación");
+
+    await user.click(within(panel).getByRole("radio", { name: /Todas las páginas/ }));
+
+    // El recuadro está puesto —la ventana lo pinta— y aun así no se ha escrito
+    // nada: no hay fila donde apuntarlo.
+    expect(
+      screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
+    ).not.toBeNull();
+    await expect(recents.list()).resolves.toEqual([]);
+  });
+
+  it("signs it, and signing it still leaves no row", async () => {
+    const user = userEvent.setup();
+    const recents = inMemoryRecents();
+    const presign = vi.fn(async () => ({
+      ok: true as const,
+      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+    }));
+    const signer: SigningBackend = {
+      presign,
+      sign: async () => ({ ok: true, value: undefined }),
+      postsign: async () => ({
+        ok: true,
+        value: { name: "de-la-sede-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
+      }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      discard: async () => {},
+    };
+    renderApp(
+      recents,
+      [document("de-la-sede.pdf", { remembered: false, placement: aPlacement })],
+      pdfsOf({ "de-la-sede.pdf": 4 }),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
+    await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(sign);
+
+    await waitFor(() => expect(presign).toHaveBeenCalledOnce());
+    await expect(recents.list()).resolves.toEqual([]);
   });
 });
 

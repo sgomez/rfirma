@@ -203,19 +203,21 @@ describe("los puertos del documento sobre Tauri", () => {
     expect(invoke.mock.calls.map(([command]) => command)).toEqual(["open_document"]);
   });
 
-  it("turns what the portal granted into a tray row badged Unsigned", async () => {
+  it("turns what the portal granted into a document in hand badged Unsigned", async () => {
     // Detectar si un PDF ya trae firmas es otro trabajo: se anota lo que se
     // sabe y no se inventa (ID-71).
     invoke.mockResolvedValue({ id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 });
 
     const chosen = await tauriDocumentPicker().choose();
 
-    expect(chosen).toMatchObject({
+    expect(chosen).toEqual({
       id: "0f1e2d3c",
       name: "contrato.pdf",
       badge: "Unsigned",
       modified: 1_700_000_000,
-      available: true,
+      placement: null,
+      // Lo eligió una persona, así que de esto queda rastro (ID-34).
+      remembered: true,
     });
   });
 
@@ -228,7 +230,7 @@ describe("los puertos del documento sobre Tauri", () => {
   it("asks for the bytes of a document by its identifier, never by a path", async () => {
     invoke.mockResolvedValue(new Uint8Array([1, 2, 3]).buffer);
 
-    await tauriPdfSource().open(aRow());
+    await tauriPdfSource().open(aDocument());
 
     expect(invoke).toHaveBeenCalledWith("read_document", { id: "0f1e2d3c" });
   });
@@ -242,7 +244,7 @@ describe("los puertos del documento sobre Tauri", () => {
       }),
     );
 
-    const outcome = await tauriPdfSource().open(aRow());
+    const outcome = await tauriPdfSource().open(aDocument());
 
     expect(outcome).toEqual({
       ok: false,
@@ -259,7 +261,7 @@ describe("los puertos del documento sobre Tauri", () => {
     // que cuando no se ha abierto nada.
     invoke.mockResolvedValue(new Uint8Array([0x25, 0x21, 0x3f]).buffer);
 
-    const outcome = await tauriPdfSource().open(aRow());
+    const outcome = await tauriPdfSource().open(aDocument());
 
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
@@ -434,7 +436,7 @@ describe("el puerto del arrastre sobre Tauri", () => {
 
     expect(dropped).toHaveLength(1);
     expect(dropped[0]).toMatchObject({
-      document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned", available: true },
+      document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned", remembered: true },
       failure: null,
       ignored: 2,
     });
@@ -494,15 +496,15 @@ describe("el puerto del arrastre sobre Tauri", () => {
 });
 
 /** Una fila de la bandeja, que es lo que entra por el puerto del visor. */
-function aRow() {
+/** El documento que se tiene delante, no la fila que se guarda (ID-287). */
+function aDocument() {
   return {
     id: "0f1e2d3c",
     name: "contrato.pdf",
     badge: "Unsigned" as const,
     modified: 1_700_000_000,
-    lastUsed: 1_700_000_000,
-    available: true,
     placement: null,
+    remembered: true,
   };
 }
 
@@ -713,7 +715,7 @@ describe("la bandeja sobre Tauri", () => {
     invoke.mockResolvedValue({ ...aStoredRow, available: true });
 
     await tauriRecents().record({
-      ...aRow(),
+      ...aDocument(),
       placement: { rect: { x0: 72, y0: 500, x1: 272, y1: 600 }, pages: { only: [3] } },
     });
 
@@ -726,7 +728,7 @@ describe("la bandeja sobre Tauri", () => {
   it("hands back the row the backend already had, box included", async () => {
     invoke.mockResolvedValue({ ...aStoredRow, available: true });
 
-    const noted = await tauriRecents().record(aRow());
+    const noted = await tauriRecents().record(aDocument());
 
     expect(invoke).toHaveBeenCalledWith("record_recent", { id: "0f1e2d3c", placement: null });
     expect(noted.placement).toEqual({

@@ -1,5 +1,5 @@
 import type { Placement } from "../viewer/signatureBox";
-import type { Badge, ShownBadge } from "./document";
+import type { Badge, DocumentInHand, ShownBadge } from "./document";
 
 /**
  * Cuántos se recuerdan. Es el mismo `memory::recents::CAPACITY` del backend:
@@ -9,8 +9,13 @@ import type { Badge, ShownBadge } from "./document";
 export const CAPACITY = 10;
 
 /**
- * Un documento de la bandeja, con lo que hace falta para pintar la fila **sin
- * abrirlo**.
+ * **La fila que se guarda**, con lo que hace falta para pintarla **sin abrir el
+ * documento**.
+ *
+ * No es el documento que se tiene delante —eso es
+ * [`DocumentInHand`](./document.ts)— sino lo que se persiste de él: se
+ * deduplica por ruta canónica, se ordena y sobrevive al reinicio. De un
+ * documento que no se recuerda no existe ninguna (ID-286, ID-287).
  *
  * Los cinco primeros campos son los de `memory::recents::RecentDocument`, que
  * es quien los persiste; `available` no se guarda nunca porque es un hecho
@@ -59,6 +64,25 @@ export interface RecentDocument {
  */
 export function shownBadge(document: RecentDocument): ShownBadge {
   return document.available ? document.badge : "Unavailable";
+}
+
+/**
+ * La fila de la bandeja, **puesta delante**.
+ *
+ * Es el camino de vuelta del ID-287: elegir una fila no es firmar la fila,
+ * es tomar en la mano el documento que hay detrás. Lo que se cae por el camino
+ * —cuándo se usó, si responde— es de la lista y no del trabajo; lo que se
+ * añade es que de este sí queda rastro, porque fila tiene.
+ */
+export function taken(row: RecentDocument): DocumentInHand {
+  return {
+    id: row.id,
+    name: row.name,
+    badge: row.badge,
+    modified: row.modified,
+    placement: row.placement,
+    remembered: true,
+  };
 }
 
 /**
@@ -128,7 +152,7 @@ export interface RecentsStore {
    * caído su recuadro. Un documento que ya estuvo abierto vuelve con su página
    * y su posición; uno nuevo vuelve sin ninguna, que es lo que pide el ID-22.
    */
-  record(document: RecentDocument): Promise<RecentDocument>;
+  record(document: DocumentInHand): Promise<RecentDocument>;
   /** Quita una fila. Ver [`forget`]. */
   forget(id: string): Promise<void>;
   /** Vacía la lista. Es el «Vaciar la lista» de Preferencias. */
@@ -147,8 +171,19 @@ export function inMemoryRecents(initial: readonly RecentDocument[] = []): Recent
   return {
     list: async () => entries,
     record: async (document) => {
-      const remembered = entries.find((entry) => entry.id === document.id)?.placement ?? null;
-      const noted = { ...document, placement: document.placement ?? remembered };
+      const previous = entries.find((entry) => entry.id === document.id);
+      const noted: RecentDocument = {
+        id: document.id,
+        name: document.name,
+        badge: document.badge,
+        modified: document.modified,
+        // De una fila que ya estaba se conserva cuándo se usó; una nueva nace
+        // ahora. Y lo que el portal acaba de conceder responde, por
+        // definición.
+        lastUsed: previous?.lastUsed ?? Math.floor(Date.now() / 1000),
+        available: previous?.available ?? true,
+        placement: document.placement ?? previous?.placement ?? null,
+      };
       entries = record(entries, noted);
       return noted;
     },
