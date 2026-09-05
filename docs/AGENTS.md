@@ -36,7 +36,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` ·
 `ca-en-los-almacenes-de-confianza` · `campos-de-firma-vacios` ·
 `contrato-protocolo-afirma` · `coordenadas-recuadro-pades` ·
-`exclusion-afirma-ui-utils` · `firma-visible-trifasica` ·
+`esquema-afirma-en-los-tres-canales` · `exclusion-afirma-ui-utils` ·
+`firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
 `native-image-postfirma-ce25` · `native-image-shared-pades` ·
