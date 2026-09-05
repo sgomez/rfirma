@@ -419,7 +419,9 @@ describe("App", () => {
     expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
 
     await user.click(trigger);
-    const rows = within(panel).getAllByRole("option");
+    // La lista vive en un portal, fuera de `panel` (ID-308): se busca en todo
+    // el documento, no dentro del panel.
+    const rows = screen.getAllByRole("option");
     const second = rows[1];
     if (second === undefined) throw new Error("la lista tenia que traer dos filas");
     await user.click(second);
@@ -1148,7 +1150,8 @@ describe("App, sin un certificado elegido todavía", () => {
     await screen.findByRole("document", { name: "Hoja del documento" });
     const panel = screen.getByRole("region", { name: "Panel de firma" });
     await user.click(await within(panel).findByRole("combobox", { name: "Certificado" }));
-    await user.click(within(panel).getAllByRole("option")[0] as HTMLElement);
+    // La lista vive en un portal, fuera de `panel` (ID-308).
+    await user.click(screen.getAllByRole("option")[0] as HTMLElement);
 
     traceOverSheet();
 

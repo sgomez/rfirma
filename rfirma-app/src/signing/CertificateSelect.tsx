@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { CertificateIcon, CheckIcon, ChevronDownIcon } from "../design-system/icons";
 import type { Certificate } from "./certificate";
@@ -45,6 +46,10 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
   // Dónde está el cursor del teclado mientras la lista está abierta. No es la
   // elección: moverse por la lista no elige nada hasta que se pulsa Intro.
   const [active, setActive] = useState(0);
+  // La posición del panel, calculada al abrir a partir del disparador: el
+  // panel vive en un portal, fuera de la columna que recorta, así que ya no
+  // puede colgar de su disparador con `position: absolute` normal.
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -68,6 +73,8 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
   // la primera fila, que **no** es elegirla.
   const show = () => {
     setActive(at === -1 ? 0 : at);
+    const rect = button.current?.getBoundingClientRect();
+    if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
     setOpen(true);
   };
 
@@ -78,11 +85,15 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
   }, [open]);
 
   // Pulsar fuera cierra, igual que el menú de la cabecera. Sin esto la lista se
-  // queda flotando sobre el panel mientras se toca otra cosa.
+  // queda flotando sobre el panel mientras se toca otra cosa. El panel vive en
+  // un portal, fuera de `container`, así que también cuenta como «dentro».
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!container.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (container.current?.contains(target)) return;
+      if (list.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -235,39 +246,45 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
           <ChevronDownIcon />
         </span>
       </button>
-      {open && (
-        <div className="certificate-select__layer">
+      {open &&
+        anchor &&
+        createPortal(
           <div
-            className="certificate-select__list"
-            ref={list}
-            id={listId}
-            role="listbox"
-            tabIndex={-1}
-            aria-label={t("panel.certificate.list")}
-            aria-activedescendant={`${optionId}-${active}`}
-            onKeyDown={onKeyDown}
+            className="certificate-select__layer"
+            style={{ top: anchor.top, left: anchor.left, width: anchor.width }}
           >
-            {groups.available.length > 0 && (
-              <>
-                <div className="certificate-select__group-label" role="presentation">
-                  {t("panel.certificate.groups.available")}
-                </div>
-                {groups.available.map((certificate, index) => renderOption(certificate, index))}
-              </>
-            )}
-            {groups.unusable.length > 0 && (
-              <>
-                <div className="certificate-select__group-label" role="presentation">
-                  {t("panel.certificate.groups.unusable")}
-                </div>
-                {groups.unusable.map((certificate, index) =>
-                  renderOption(certificate, groups.available.length + index),
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
+            <div
+              className="certificate-select__list"
+              ref={list}
+              id={listId}
+              role="listbox"
+              tabIndex={-1}
+              aria-label={t("panel.certificate.list")}
+              aria-activedescendant={`${optionId}-${active}`}
+              onKeyDown={onKeyDown}
+            >
+              {groups.available.length > 0 && (
+                <>
+                  <div className="certificate-select__group-label" role="presentation">
+                    {t("panel.certificate.groups.available")}
+                  </div>
+                  {groups.available.map((certificate, index) => renderOption(certificate, index))}
+                </>
+              )}
+              {groups.unusable.length > 0 && (
+                <>
+                  <div className="certificate-select__group-label" role="presentation">
+                    {t("panel.certificate.groups.unusable")}
+                  </div>
+                  {groups.unusable.map((certificate, index) =>
+                    renderOption(certificate, groups.available.length + index),
+                  )}
+                </>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
