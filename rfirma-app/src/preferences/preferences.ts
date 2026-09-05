@@ -46,6 +46,13 @@ export interface Preferences {
    * si la ventana enseña la franja con lo que contestó.
    */
   notifyNewVersion: boolean;
+  /**
+   * Si el aviso del primer arranque (CA local y permiso de red local, #365)
+   * ya se ha descartado. No es un ajuste de Preferencias: no hay fila que lo
+   * muestre, solo se lee al arrancar y se escribe una vez, al pulsar
+   * «Entendido».
+   */
+  trustNoticeSeen: boolean;
 }
 
 /**

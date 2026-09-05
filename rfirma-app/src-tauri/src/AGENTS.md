@@ -39,7 +39,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `ffi.rs` | 1148 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cuatro entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 693 | **Las veinticinco órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 479 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/views.rs` | 500 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 223 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
@@ -57,7 +57,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
-| `app/configuration.rs` | 367 | Los ajustes, del disco a la ventana y de vuelta. |
+| `app/configuration.rs` | 375 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/trust.rs` | 564 | **La CA local en los almacenes NSS**: cuándo se instala, el solape —con la vigente **sirviendo** hasta que caduca— y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
 | `app/site.rs` | 313 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
@@ -68,7 +68,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades, y la caché de la comprobación de versión, que no es una memoria del usuario y es lo único exento de los dos interruptores (ADR-0010, ID-180). |
 | `memory/mod.rs` | 542 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
 | `memory/state.rs` | 444 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
-| `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
+| `memory/configuration.rs` | 184 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 599 | Los diez recientes, por ruta canónica, con el conjunto de páginas y la posición del recuadro de cada uno (ID-74, ID-95). Lee las filas de v0.2 y descarta la que no entienda. |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |
 | `memory/opened.rs` | 262 | Los documentos abiertos en esta sesión: del identificador opaco al fichero, y si de cada concesión se guarda rastro (`Remembrance`, ID-286). |
