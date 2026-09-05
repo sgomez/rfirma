@@ -18,7 +18,7 @@
          firma visible—, pero el lenguaje de destino no se mueve. -->
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <autofirma.version>1.9.1</autofirma.version>
+    <autofirma.version>1.9.2</autofirma.version>
     <junit.version>5.11.4</junit.version>
 
     <!-- Las pruebas de grada C (ADR-0014) necesitan poppler (`pdfsig`), que el
