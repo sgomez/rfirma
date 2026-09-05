@@ -1,28 +1,30 @@
 //! **Lo que se decide de los ficheros que llegan de fuera** (ID-67, ID-68,
-//! ID-70, ID-157, ID-158).
+//! ID-70, ID-157, ID-158, ID-306).
 //!
 //! Llegan por dos gestos —soltarlos en la ventana y nombrarlos en la línea de
-//! órdenes— y la regla es una sola: el primer PDF que se deje leer. Que la
-//! invocación se decida aquí y no en un módulo propio es el ID-158 escrito en
-//! código: un argumento que no es un PDF legible **no arranca ningún modo
-//! especial**, cuenta exactamente lo mismo que soltarlo dentro.
+//! órdenes— y la regla es una sola: el primer PDF que se deje leer es el que se
+//! abre. Que la invocación se decida aquí y no en un módulo propio es el ID-158
+//! escrito en código: un argumento que no es un PDF legible **no arranca
+//! ningún modo especial**, cuenta exactamente lo mismo que soltarlo dentro.
 //!
 //! El arrastre no pasa por el portal de ficheros: lo que llega son rutas, y
-//! aquí se decide cuál de ellas —si alguna— se abre. La decisión es de este
+//! aquí se decide cuáles de ellas —si alguna— entran. La decisión es de este
 //! lado y no de la ventana por lo mismo que el diálogo se abre desde Rust
 //! (ID-63): **ninguna ruta del anfitrión cruza a la interfaz** (ADR-0011), así
 //! que quien las mira tiene que estar aquí.
 //!
-//! # Qué llega de verdad al soltar
+//! # Los N PDF entran en Recientes, y solo el primero se abre (ID-306)
 //!
-//! Está medido, no supuesto, en `docs/research/arrastre-bajo-el-sandbox.md`.
-//! El resumen que este módulo necesita: cuando el origen del arrastre habla el
-//! portal `FileTransfer` —Nautilus y cualquier GTK moderno— llega una ruta
-//! exportada en `/run/user/1000/doc/…` que **se lee desde cualquier carpeta**;
-//! cuando no lo habla, llega la ruta del anfitrión tal cual, y bajo el sandbox
-//! esa ruta solo existe si cae dentro de la carpeta de documentos. Esa última
-//! combinación es el único fallo real, y es el que [`Dropped::Unreadable`]
-//! nombra.
+//! Soltar varios PDF a la vez ya no calla a los que no fueron el primero: el
+//! primero se abre en el visor y **todos los demás que también sean un PDF
+//! legible** entran igual en Recientes, sin abrirse. Es la versión ligera de
+//! la ficha 11: sin cola y sin firma encadenada, solo una fila más por cada
+//! documento.
+//!
+//! Una carpeta soltada se recorre —**un solo nivel**, no sus subcarpetas— y sus
+//! ficheros se tratan como si se hubieran soltado uno a uno: los que sean PDF
+//! entran, y los que no, se cuentan como descartados igual que cualquier otro
+//! fichero que no lo sea.
 //!
 //! # Ser PDF es tener la extensión, aquí
 //!
@@ -36,17 +38,24 @@ use std::path::{Path, PathBuf};
 
 /// Qué hacer con lo que se acaba de soltar.
 ///
-/// `ignored` es **cuántos ficheros más** venían en el mismo gesto, sea cual sea
-/// el desenlace: la aplicación firma de uno en uno y callarse los demás es el
-/// silencio que el #81 viene a quitar (ID-70).
+/// `discarded` es cuántos ficheros más venían en el mismo gesto —sueltos
+/// directamente o encontrados al recorrer una carpeta— **y no han entrado en
+/// ningún sitio**: la variante ya dice por qué (ID-306).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Dropped {
-    /// El primer PDF soltado, que además se deja leer.
-    Opened { path: PathBuf, ignored: usize },
-    /// Ninguno de los ficheros soltados es un PDF.
-    NotAPdf { ignored: usize },
+    /// El primer PDF soltado que se deja leer, que es el que se abre en el
+    /// visor. `also_entering` es el resto de PDF del mismo gesto: entran
+    /// igual en Recientes, pero sin abrirse.
+    Opened {
+        path: PathBuf,
+        also_entering: Vec<PathBuf>,
+        discarded: usize,
+    },
+    /// Ninguno de los ficheros soltados —ni los que traía una carpeta
+    /// recorrida— es un PDF.
+    NotAPdf { discarded: usize },
     /// El primer PDF soltado está donde el sandbox no llega.
-    Unreadable { detail: String, ignored: usize },
+    Unreadable { detail: String, discarded: usize },
     /// No se ha soltado ningún fichero. No es un fallo y no se cuenta.
     Nothing,
 }
@@ -54,28 +63,32 @@ pub enum Dropped {
 /// La extensión que hace que un fichero cuente como PDF, mayúsculas aparte.
 const PDF: &str = "pdf";
 
-/// El primer PDF de los soltados, si se puede leer.
+/// El primer PDF de los soltados, si se puede leer, y qué hacer con el resto.
 ///
 /// **No se prueba con el siguiente** cuando el primero no se deja leer, y es a
 /// propósito: pasar al segundo abriría un documento que la persona no eligió
-/// primero y encima taparía el motivo por el que el suyo no se abrió.
+/// primero y encima taparía el motivo por el que el suyo no se abrió. Los
+/// demás PDF —si el primero sí se abrió— entran en Recientes igualmente: ver
+/// [`Dropped::Opened`].
 pub fn first_pdf(paths: &[PathBuf]) -> Dropped {
-    let ignored = paths.len().saturating_sub(1);
-    let Some(first) = paths.iter().find(|path| is_pdf(path)) else {
-        return if paths.is_empty() {
-            Dropped::Nothing
-        } else {
-            Dropped::NotAPdf { ignored }
-        };
+    if paths.is_empty() {
+        return Dropped::Nothing;
+    }
+    let candidates = expand_folders(paths);
+    let discarded = candidates.iter().filter(|path| !is_pdf(path)).count();
+    let mut pdfs = candidates.iter().filter(|path| is_pdf(path));
+    let Some(first) = pdfs.next() else {
+        return Dropped::NotAPdf { discarded };
     };
     match std::fs::File::open(first) {
         Ok(_) => Dropped::Opened {
             path: first.clone(),
-            ignored,
+            also_entering: pdfs.cloned().collect(),
+            discarded,
         },
         Err(error) => Dropped::Unreadable {
             detail: error.to_string(),
-            ignored,
+            discarded: candidates.len() - 1,
         },
     }
 }
@@ -105,6 +118,46 @@ pub fn invoked_pdf(command_line: &[String], from: &Path) -> Dropped {
     first_pdf(&paths)
 }
 
+/// Sustituye cada carpeta soltada por los ficheros que tiene dentro (ID-306).
+///
+/// **Un solo nivel**: no se entra en las subcarpetas de una carpeta soltada,
+/// así que una subcarpeta se ignora en silencio, igual que hoy se ignoraría
+/// cualquier ruta que ni siquiera fuera un fichero. Los ficheros que trae se
+/// dejan mezclados —PDF y no PDF— y es [`first_pdf`] quien decide cuáles
+/// entran y cuáles se cuentan como descartados, exactamente igual que con lo
+/// soltado directamente.
+///
+/// El orden es alfabético dentro de cada carpeta, para que el resultado no
+/// dependa del orden en que el sistema de ficheros entregue sus entradas.
+fn expand_folders(paths: &[PathBuf]) -> Vec<PathBuf> {
+    let mut expanded = Vec::with_capacity(paths.len());
+    for path in paths {
+        if path.is_dir() {
+            expanded.extend(files_within(path));
+        } else {
+            expanded.push(path.clone());
+        }
+    }
+    expanded
+}
+
+/// Los ficheros de primer nivel dentro de una carpeta, en orden alfabético.
+///
+/// Una carpeta que no se puede leer no es un fallo del gesto entero: se cuenta
+/// como si no hubiera traído ningún fichero.
+fn files_within(folder: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return Vec::new();
+    };
+    let mut found: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file())
+        .collect();
+    found.sort();
+    found
+}
+
 fn is_pdf(path: &Path) -> bool {
     path.extension()
         .is_some_and(|extension| extension.eq_ignore_ascii_case(PDF))
@@ -130,6 +183,14 @@ mod tests {
         std::env::temp_dir().join("rfirma-dropped-no-existe/contrato.pdf")
     }
 
+    /// Una carpeta temporal vacía, lista para que la prueba deje caer dentro
+    /// lo que necesite.
+    fn a_temporary_folder(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!("rfirma-dropped-folder-{name}"));
+        std::fs::create_dir_all(&path).expect("se puede crear el temporal");
+        path
+    }
+
     #[test]
     fn a_single_readable_pdf_is_the_one_that_opens() {
         let pdf = a_temporary_pdf("solo.pdf");
@@ -138,7 +199,8 @@ mod tests {
             first_pdf(std::slice::from_ref(&pdf)),
             Dropped::Opened {
                 path: pdf,
-                ignored: 0
+                also_entering: Vec::new(),
+                discarded: 0,
             }
         );
     }
@@ -147,11 +209,11 @@ mod tests {
     fn something_that_is_not_a_pdf_is_told_and_nothing_opens() {
         let other = a_temporary_pdf("hoja.ods");
 
-        assert_eq!(first_pdf(&[other]), Dropped::NotAPdf { ignored: 0 });
+        assert_eq!(first_pdf(&[other]), Dropped::NotAPdf { discarded: 1 });
     }
 
-    /// ID-70: se abre el primero que sea un PDF, aunque no sea el primero que
-    /// se soltó, y los demás se cuentan para poder decirlo.
+    /// ID-70/ID-306: se abre el primero que sea un PDF, aunque no sea el
+    /// primero que se soltó, y los que no lo son se cuentan como descartados.
     #[test]
     fn the_first_pdf_of_several_files_opens_and_the_rest_are_counted() {
         let other = a_temporary_pdf("hoja.ods");
@@ -159,10 +221,31 @@ mod tests {
         let another = a_temporary_pdf("contrato.pdf");
 
         assert_eq!(
-            first_pdf(&[other, pdf.clone(), another]),
+            first_pdf(&[other, pdf.clone(), another.clone()]),
             Dropped::Opened {
                 path: pdf,
-                ignored: 2
+                also_entering: vec![another],
+                discarded: 1,
+            }
+        );
+    }
+
+    /// ID-306: el que ha abierto la ventana no es el único que cuenta. Cada
+    /// PDF que vino en el mismo gesto entra igual en Recientes.
+    #[test]
+    fn every_pdf_dropped_together_also_enters_and_none_is_silenced() {
+        let first = a_temporary_pdf("primero.pdf");
+        let second = a_temporary_pdf("segundo.pdf");
+        let third = a_temporary_pdf("tercero.pdf");
+
+        let dropped = first_pdf(&[first.clone(), second.clone(), third.clone()]);
+
+        assert_eq!(
+            dropped,
+            Dropped::Opened {
+                path: first,
+                also_entering: vec![second, third],
+                discarded: 0,
             }
         );
     }
@@ -171,11 +254,11 @@ mod tests {
     fn a_pdf_the_sandbox_cannot_read_is_a_failure_with_its_raw_detail() {
         let unreachable = a_path_the_sandbox_cannot_reach();
 
-        let Dropped::Unreadable { detail, ignored } = first_pdf(&[unreachable]) else {
+        let Dropped::Unreadable { detail, discarded } = first_pdf(&[unreachable]) else {
             panic!("un PDF que no se puede abrir tiene que contarse como tal");
         };
 
-        assert_eq!(ignored, 0);
+        assert_eq!(discarded, 0);
         assert!(!detail.is_empty(), "el detalle crudo no se pierde (ID-29)");
     }
 
@@ -186,7 +269,7 @@ mod tests {
 
         let dropped = first_pdf(&[a_path_the_sandbox_cannot_reach(), readable]);
 
-        assert!(matches!(dropped, Dropped::Unreadable { ignored: 1, .. }));
+        assert!(matches!(dropped, Dropped::Unreadable { discarded: 1, .. }));
     }
 
     #[test]
@@ -199,6 +282,58 @@ mod tests {
     #[test]
     fn dropping_nothing_is_not_a_failure() {
         assert_eq!(first_pdf(&[]), Dropped::Nothing);
+    }
+
+    /// ID-306: una carpeta soltada se recorre y de ella solo cuentan sus PDF.
+    #[test]
+    fn a_dropped_folder_is_walked_and_only_its_pdfs_enter() {
+        let folder = a_temporary_folder("mixta");
+        let pdf = folder.join("factura.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n").expect("se puede escribir en el temporal");
+        std::fs::write(folder.join("nota.txt"), b"no es un pdf")
+            .expect("se puede escribir en el temporal");
+
+        assert_eq!(
+            first_pdf(&[folder]),
+            Dropped::Opened {
+                path: pdf,
+                also_entering: Vec::new(),
+                discarded: 1,
+            }
+        );
+    }
+
+    /// Una carpeta sin ningún PDF dentro se cuenta igual que un fichero que no
+    /// lo sea: nada que abrir, y lo de dentro, descartado.
+    #[test]
+    fn a_dropped_folder_with_no_pdf_inside_opens_nothing() {
+        let folder = a_temporary_folder("vacia-de-pdf");
+        std::fs::write(folder.join("nota.txt"), b"no es un pdf")
+            .expect("se puede escribir en el temporal");
+
+        assert_eq!(first_pdf(&[folder]), Dropped::NotAPdf { discarded: 1 });
+    }
+
+    /// Solo se recorre **un nivel**: una subcarpeta dentro de la carpeta
+    /// soltada se ignora en silencio, no se cuenta como descartada.
+    #[test]
+    fn a_subfolder_of_a_dropped_folder_is_not_walked_into() {
+        let folder = a_temporary_folder("con-subcarpeta");
+        let pdf = folder.join("factura.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n").expect("se puede escribir en el temporal");
+        let inner = folder.join("subcarpeta");
+        std::fs::create_dir_all(&inner).expect("se puede crear el temporal");
+        std::fs::write(inner.join("otra.pdf"), b"%PDF-1.4\n")
+            .expect("se puede escribir en el temporal");
+
+        assert_eq!(
+            first_pdf(&[folder]),
+            Dropped::Opened {
+                path: pdf,
+                also_entering: Vec::new(),
+                discarded: 0,
+            }
+        );
     }
 
     /// El caso entero del ID-157: un argumento posicional desnudo y nada más.
@@ -215,7 +350,8 @@ mod tests {
             invoked,
             Dropped::Opened {
                 path: pdf,
-                ignored: 0
+                also_entering: Vec::new(),
+                discarded: 0,
             }
         );
     }
@@ -249,7 +385,7 @@ mod tests {
                 &["rfirma".to_owned(), other.display().to_string()],
                 Path::new("/")
             ),
-            Dropped::NotAPdf { ignored: 0 }
+            Dropped::NotAPdf { discarded: 1 }
         );
     }
 
@@ -280,7 +416,8 @@ mod tests {
             invoked,
             Dropped::Opened {
                 path: pdf,
-                ignored: 0
+                also_entering: Vec::new(),
+                discarded: 0,
             }
         );
     }

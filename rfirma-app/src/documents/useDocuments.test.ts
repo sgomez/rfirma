@@ -73,6 +73,34 @@ describe("useDocuments", () => {
     expect(await store.list()).toEqual([]);
   });
 
+  /**
+   * ID-306: los PDF que entran de más al soltar varios a la vez se anotan en
+   * la bandeja, pero el documento activo no cambia — es lo que la persona
+   * tiene delante y `enter` no lo toca.
+   */
+  it("notes a document in the tray without making it active", async () => {
+    const store = inMemoryRecents();
+    const factura = document("factura.pdf");
+    const contrato = document("contrato.pdf");
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([factura])));
+    await act(() => result.current.open());
+
+    await act(() => result.current.enter(contrato));
+
+    expect(result.current.active).toEqual(factura);
+    expect(result.current.recents.map((row) => row.name)).toContain("contrato.pdf");
+  });
+
+  it("does not note anything when remembering is off", async () => {
+    const store = inMemoryRecents();
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker(), false));
+
+    await act(() => result.current.enter(document("contrato.pdf")));
+
+    expect(result.current.recents).toEqual([]);
+    expect(await store.list()).toEqual([]);
+  });
+
   it("leaves everything as it was when the portal is cancelled", async () => {
     const store = inMemoryRecents([row("a.pdf")]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));

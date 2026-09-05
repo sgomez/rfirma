@@ -20,7 +20,7 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (926), `app/documents.rs` (956), `app/signing.rs` (760),
+  `app/documents.rs` (986), `signing/placement.rs` (926), `app/signing.rs` (764),
   `memory/mod.rs` (611) y `app/recents.rs` (603). El mayor de `commands/` es justo `commands/guards.rs`
   (657), y detrás va `commands/mod.rs` (645); lo que los hace crecer es
   **prosa**: los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
@@ -48,8 +48,8 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/mod.rs` | 215 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
-| `app/signing.rs` | 760 | El recorrido de la firma en tres pasos y la sesión a medias. |
-| `app/documents.rs` | 956 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
+| `app/signing.rs` | 764 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 232 | La invocación desde fuera, `rfirma documento.pdf`: qué abre y qué hace la segunda (ID-157…ID-160). |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
@@ -60,7 +60,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
 | `paths.rs` | 637 | Las tres rutas de la memoria entre sesiones, más las dos de la CA local. Único sitio que conoce el sistema operativo (ADR-0010), y el único que puede crear un fichero `0600` de nacimiento. |
-| `dropped.rs` | 301 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157). |
+| `dropped.rs` | 438 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana —uno solo o varios, incluida una carpeta recorrida— o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157, ID-306). |
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades, y la caché de la comprobación de versión, que no es una memoria del usuario y es lo único exento de los dos interruptores (ADR-0010, ID-180). |
 | `memory/mod.rs` | 542 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
 | `memory/state.rs` | 444 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). |
