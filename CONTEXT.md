@@ -132,6 +132,25 @@ Sitio web de la Administración que origina la petición de firma y recibe el
 documento firmado.
 _Avoid_: portal, cliente web, tercero
 
+**Canal**:
+La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
+falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
+dónde viene la petición. Su credencial es el `idsession`, que viaja en la URL de
+arranque y se repite en cada mensaje.
+_Avoid_: socket, conexión, túnel
+
+**Conversación**:
+El ir y venir de mensajes sobre un canal ya abierto, con sus reglas: el eco
+antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del
+resultado, y un solo trámite vivo a la vez.
+_Avoid_: sesión de protocolo, diálogo, intercambio
+
+**Códec del protocolo**:
+La traducción entre el texto que viaja por el canal y las estructuras con las
+que se razona dentro: la URL de operación, la respuesta con sus campos
+separados, y el formato exacto de un error.
+_Avoid_: serializador, parser, marshalling
+
 ### Memoria de la aplicación
 
 **Documento reciente**:
