@@ -58,12 +58,12 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 367 | Los ajustes, del disco a la ventana y de vuelta. |
-| `app/trust.rs` | 379 | **La CA local en los almacenes NSS**: cuándo se instala, el solape y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
+| `app/trust.rs` | 564 | **La CA local en los almacenes NSS**: cuándo se instala, el solape —con la vigente **sirviendo** hasta que caduca— y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
 | `app/site.rs` | 313 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
-| `paths.rs` | 637 | Las tres rutas de la memoria entre sesiones, más las dos de la CA local. Único sitio que conoce el sistema operativo (ADR-0010), y el único que puede crear un fichero `0600` de nacimiento. |
+| `paths.rs` | 658 | Las tres rutas de la memoria entre sesiones, más las cuatro de la CA local: dos ranuras, la que sirve y la siguiente. Único sitio que conoce el sistema operativo (ADR-0010), y el único que puede crear un fichero `0600` de nacimiento. |
 | `dropped.rs` | 438 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana —uno solo o varios, incluida una carpeta recorrida— o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157, ID-306). |
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades, y la caché de la comprobación de versión, que no es una memoria del usuario y es lo único exento de los dos interruptores (ADR-0010, ID-180). |
 | `memory/mod.rs` | 542 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
@@ -114,13 +114,13 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `destination/error.rs` | 114 | Situaciones del destino (ADR-0009). |
 | **`tls/`** | | El material criptográfico del canal, y **solo la fábrica**: aquí no se registra nada en ningún almacén NSS ni se levanta ningún servidor (ADR-0005). |
 | `tls/mod.rs` | 27 | El reparto, y la tabla de las dos piezas con sus dos vidas (ID-220). |
-| `tls/authority.rs` | 400 | La **CA local**: P-256, `nameConstraints` armada byte a byte, `keyUsage` de solo firmar certificados y 900 días (ID-221, ID-225). |
+| `tls/authority.rs` | 425 | La **CA local**: P-256, `nameConstraints` armada byte a byte, `keyUsage` de solo firmar certificados y 900 días (ID-221, ID-225). |
 | `tls/server.rs` | 259 | El **certificado del servidor local**: `CN=localhost`, las dos entradas de la SAN, y en memoria (ID-222). |
-| `tls/store.rs` | 157 | Los dos ficheros de la CA local; la clave nace `0600` (ID-223). |
+| `tls/store.rs` | 336 | Las **dos ranuras** de la CA local —la que sirve y la siguiente del solape—, dos ficheros cada una; la clave nace `0600` (ID-223, ID-224). |
 | `tls/error.rs` | 79 | Situaciones del material del canal (ADR-0009). |
 | **`trust/`** | | **La confianza**: cómo entra la CA local en los almacenes NSS de la persona y cuándo toca renovarla (ADR-0005, ID-224, ID-227, ID-228). `tls/` fabrica y no registra; aquí se registra y no se fabrica. |
-| `trust/mod.rs` | 297 | El reparto, y las tres reglas **puras**: la etapa de la CA, el solape y que a mitad de un trámite no se toca nada. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. |
-| `trust/nss.rs` | 427 | El registro de verdad, por la API de NSS y **no** por `certutil`, que no está en el flatpak. No hay ni una llamada que borre: esa ausencia es el solape. |
+| `trust/mod.rs` | 353 | El reparto, y las tres reglas **puras**: la etapa de la CA, el solape y que a mitad de un trámite no se toca nada. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. |
+| `trust/nss.rs` | 417 | El registro de verdad, por la API de NSS y **no** por `certutil`, que no está en el flatpak. No hay ni una llamada que borre: esa ausencia es el solape. |
 | `trust/error.rs` | 82 | Situaciones de la confianza (ADR-0009). |
 | **`rubric/`** | | De lo que aporta el usuario al JPEG que acepta el puente (ADR-0012). |
 | `rubric/mod.rs` | 33 | El reparto. |

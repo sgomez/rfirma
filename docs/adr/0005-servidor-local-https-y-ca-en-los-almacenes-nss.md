@@ -135,6 +135,15 @@ correctamente las preferencias» y el comentario se reescribió un año después
    en *no tirar lo viejo todavía*, así que es barato, y convierte la reparación en el camino
    excepcional.
 
+   «Sigue sirviendo» es literal y es lo que le da sentido: la vigente **sigue siendo la que firma
+   el certificado del servidor local** hasta que caduca. Por eso el almacén guarda **dos ranuras**
+   —la que sirve y la siguiente— y no una: si la siguiente ocupara la ranura de la vigente al
+   fabricarse, el navegador que ya estaba abierto recibiría desde ese mismo arranque un
+   certificado firmado por una CA que no ha cargado, y el trámite inmediatamente posterior a la
+   renovación fallaría igual que sin solape. El relevo llega cuando la vigente caduca: la
+   siguiente pasa a servir **sin instalar nada**, porque lleva meses en los almacenes, y ahí es
+   donde el solape se cobra —nadie tiene que reiniciar el navegador—.
+
 4. **No se repara en caliente.** «Reparar y continuar» no existe —Chrome no relee el `nssdb`,
    Firefox envenena su caché tras haber fallado—: sólo existe **reparar y volver a empezar**, y
    se dice así, sin fingir lo otro. Además rfirma **no puede distinguir** «no hay confianza» de

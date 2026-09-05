@@ -9,14 +9,20 @@
 //! |---|---|
 //! | [`Stage`] | En qué punto de su vida está la CA local guardada |
 //! | [`Moment`] | Si estamos arrancando o **a mitad de un trámite** (ID-224) |
+//! | [`NextCa`] | Si hay ya una CA local siguiente fabricada, esperando turno |
 //! | [`PendingNotice`] | El aviso de reiniciar el navegador, que solo sale al terminar |
 //! | [`TrustStores`] | El puerto que escribe en un almacén NSS, doblable en pruebas |
 //! | [`nss::NssTrustStores`] | Su única implementación de verdad, por FFI |
 //!
 //! # Las tres reglas que este módulo sostiene
 //!
-//! - **El solape** (ID-224): instalar la CA siguiente **no retira la vigente**.
-//!   [`TrustStores::install`] solo añade; no hay ninguna llamada que borre.
+//! - **El solape** (ID-224): instalar la CA siguiente **no retira la vigente**
+//!   ni la releva. [`TrustStores::install`] solo añade; no hay ninguna llamada
+//!   que borre. Y la vigente **sigue firmando** el certificado del servidor
+//!   local hasta que caduque: la siguiente vive en su propia ranura del
+//!   almacén ([`crate::tls::LocalCaStore::write_next`]) y solo toma el relevo
+//!   ([`Work::PromoteTheNextOne`]) cuando la vigente se acaba, ya instalada
+//!   desde hace meses y sin reiniciar nada.
 //!   Dos certificados de confianza con el mismo sujeto conviven en Firefox y en
 //!   Chrome, en cualquier orden, y por eso comparten apodo: en NSS el apodo va
 //!   con el sujeto, no con el certificado.
@@ -56,10 +62,11 @@ pub enum Stage {
     /// La hay y le sobra vida: nada que hacer.
     Serving,
     /// Le quedan menos de [`OVERLAP_DAYS`]: toca fabricar la siguiente y
-    /// **añadirla** sin retirar esta.
+    /// **añadirla** sin retirar esta, que sigue sirviendo.
     Overlapping,
-    /// Ya caducó. El navegador dejó de confiar solo, que es exactamente lo que
-    /// la caducidad existe para conseguir.
+    /// Ya caducó, o le queda menos de un día —los días se cuentan hacia abajo,
+    /// ver [`crate::tls::LocalCa::days_left`]—. El navegador deja de confiar
+    /// solo, que es exactamente lo que la caducidad existe para conseguir.
     Expired,
 }
 
@@ -91,10 +98,25 @@ pub enum Moment {
     MidErrand,
 }
 
+/// Si hay ya una CA local **siguiente** fabricada, esperando su turno.
+///
+/// No sale de la etapa: la etapa mira la CA que sirve, y esto mira la otra
+/// ranura del almacén. Separa dos arranques que la etapa no distingue —el
+/// primero del solape, que fabrica la siguiente, y todos los demás, que solo la
+/// registran— y, sobre todo, separa una caducidad que se releva sin ruido de
+/// una que obliga a fabricar y a reiniciar el navegador.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NextCa {
+    /// Ninguna: la ranura de la siguiente está vacía.
+    None,
+    /// Ya fabricada y guardada, esperando a que la vigente caduque.
+    Waiting,
+}
+
 /// Lo que hay que hacer con los almacenes NSS ahora mismo.
 ///
-/// Las tres formas de trabajo **instalan**; lo que las separa es si hace falta
-/// fabricar una CA local nueva antes.
+/// Todas las formas de trabajo salvo [`Work::Nothing`] **instalan**; lo que las
+/// separa es qué CA local sirve al terminar y si hay que fabricar alguna.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Work {
     /// Nada. Es lo que sale **siempre** a mitad de un trámite.
@@ -104,24 +126,37 @@ pub enum Work {
     /// que ya la tiene no hace nada.
     InstallTheOneWeHave,
     /// Fabricar una CA local y registrarla: no había ninguna, o la que había ya
-    /// caducó.
+    /// caducó sin ninguna siguiente esperando.
     MakeOneAndInstallIt,
-    /// Fabricar la siguiente y **añadirla** junto a la vigente, que se queda
-    /// donde está. Es el solape del ID-224.
+    /// Fabricar la siguiente y **añadirla** junto a la vigente. La vigente
+    /// **sigue sirviendo** —sigue siendo la que firma el certificado del
+    /// servidor local— hasta que caduque. Es el primer arranque del solape
+    /// (ID-224).
     MakeTheNextAndInstallItToo,
+    /// Registrar las dos, la vigente y la siguiente que ya se fabricó en un
+    /// arranque anterior. Son todos los demás arranques del solape: la
+    /// siguiente **no se rehace** en cada uno.
+    InstallBothOfThem,
+    /// La vigente caducó y la siguiente lleva meses instalada: **toma el
+    /// relevo** sin fabricar nada. Es lo que el solape compra, y por eso aquí
+    /// no hay que reiniciar ningún navegador.
+    PromoteTheNextOne,
 }
 
-/// Qué toca hacer, dado el momento y la etapa.
+/// Qué toca hacer, dado el momento, la etapa y si hay una siguiente esperando.
 ///
 /// A mitad de un trámite la respuesta es [`Work::Nothing`] **siempre**, incluso
 /// con la CA caducada: instalarla ahí obligaría a parar el trámite para pedir
 /// que se reinicie el navegador y volver a empezar (ID-224).
-pub fn work_at(moment: Moment, stage: Stage) -> Work {
-    match (moment, stage) {
-        (Moment::MidErrand, _) => Work::Nothing,
-        (Moment::Startup, Stage::Serving) => Work::InstallTheOneWeHave,
-        (Moment::Startup, Stage::Absent | Stage::Expired) => Work::MakeOneAndInstallIt,
-        (Moment::Startup, Stage::Overlapping) => Work::MakeTheNextAndInstallItToo,
+pub fn work_at(moment: Moment, stage: Stage, next: NextCa) -> Work {
+    match (moment, stage, next) {
+        (Moment::MidErrand, _, _) => Work::Nothing,
+        (Moment::Startup, Stage::Serving, _) => Work::InstallTheOneWeHave,
+        (Moment::Startup, Stage::Absent, _) => Work::MakeOneAndInstallIt,
+        (Moment::Startup, Stage::Overlapping, NextCa::None) => Work::MakeTheNextAndInstallItToo,
+        (Moment::Startup, Stage::Overlapping, NextCa::Waiting) => Work::InstallBothOfThem,
+        (Moment::Startup, Stage::Expired, NextCa::Waiting) => Work::PromoteTheNextOne,
+        (Moment::Startup, Stage::Expired, NextCa::None) => Work::MakeOneAndInstallIt,
     }
 }
 
@@ -222,7 +257,7 @@ mod tests {
     }
 
     /// **ID-224.** «Reparar y continuar» no existe: ni con la CA caducada, ni
-    /// sin CA ninguna, ni en el solape.
+    /// sin CA ninguna, ni en el solape, ni con la siguiente ya esperando.
     #[test]
     fn nothing_is_ever_repaired_in_the_middle_of_an_errand() {
         for stage in [
@@ -231,18 +266,20 @@ mod tests {
             Stage::Overlapping,
             Stage::Expired,
         ] {
-            assert_eq!(work_at(Moment::MidErrand, stage), Work::Nothing);
+            for next in [NextCa::None, NextCa::Waiting] {
+                assert_eq!(work_at(Moment::MidErrand, stage, next), Work::Nothing);
+            }
         }
     }
 
     #[test]
-    fn the_first_boot_makes_a_local_ca_and_so_does_an_expired_one() {
+    fn the_first_boot_makes_a_local_ca_and_so_does_an_expired_one_with_no_successor() {
         assert_eq!(
-            work_at(Moment::Startup, Stage::Absent),
+            work_at(Moment::Startup, Stage::Absent, NextCa::None),
             Work::MakeOneAndInstallIt
         );
         assert_eq!(
-            work_at(Moment::Startup, Stage::Expired),
+            work_at(Moment::Startup, Stage::Expired, NextCa::None),
             Work::MakeOneAndInstallIt
         );
     }
@@ -252,7 +289,7 @@ mod tests {
     #[test]
     fn a_local_ca_that_still_serves_is_installed_but_never_remade() {
         assert_eq!(
-            work_at(Moment::Startup, Stage::Serving),
+            work_at(Moment::Startup, Stage::Serving, NextCa::None),
             Work::InstallTheOneWeHave
         );
     }
@@ -260,8 +297,28 @@ mod tests {
     #[test]
     fn the_overlap_installs_the_next_one_without_asking_for_the_current_one_back() {
         assert_eq!(
-            work_at(Moment::Startup, Stage::Overlapping),
+            work_at(Moment::Startup, Stage::Overlapping, NextCa::None),
             Work::MakeTheNextAndInstallItToo
+        );
+    }
+
+    /// La siguiente se fabrica **una vez**: los arranques que quedan del solape
+    /// se limitan a registrar las dos.
+    #[test]
+    fn the_next_local_ca_is_made_once_and_then_only_installed() {
+        assert_eq!(
+            work_at(Moment::Startup, Stage::Overlapping, NextCa::Waiting),
+            Work::InstallBothOfThem
+        );
+    }
+
+    /// **Lo que compra el solape**: la vigente se acaba y la siguiente, que
+    /// lleva meses en los almacenes, toma el relevo sin fabricar nada.
+    #[test]
+    fn an_expired_local_ca_with_a_successor_waiting_hands_over_instead_of_starting_again() {
+        assert_eq!(
+            work_at(Moment::Startup, Stage::Expired, NextCa::Waiting),
+            Work::PromoteTheNextOne
         );
     }
 

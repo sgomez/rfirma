@@ -68,12 +68,30 @@ impl LocalCa {
         Ok(Self { certificate, key })
     }
 
-    /// Una CA local a la que le queda **un solo día**, para poder ejercitar el
+    /// Una CA local a la que le quedan **dos días**, para poder ejercitar el
     /// solape sin esperar dos años y medio (ID-224).
+    ///
+    /// Dos y no uno **a propósito**: [`LocalCa::days_left`] redondea hacia
+    /// abajo, así que con un día bastaría **un segundo** entre fabricarla y
+    /// preguntarle —guardar dos ficheros, registrar en dos perfiles— para que
+    /// devolviera `0` y la etapa saliera caducada en vez de en solape. Con dos
+    /// días la cuenta da 1 o 2, y las dos están dentro del solape, que llega
+    /// hasta 119.
     #[cfg(test)]
     pub fn almost_expired_for_test() -> Result<Self, TlsError> {
         let key = generate_key()?;
-        let certificate = build_certificate(&key, 1).map_err(not_generated)?;
+        let certificate = build_certificate(&key, 2).map_err(not_generated)?;
+        Ok(Self { certificate, key })
+    }
+
+    /// Una CA local que **ya no vale**: caduca hoy mismo, así que
+    /// [`LocalCa::days_left`] devuelve `0` y la etapa es
+    /// [`crate::trust::Stage::Expired`]. No hay carrera posible: el número solo
+    /// puede bajar.
+    #[cfg(test)]
+    pub fn expired_for_test() -> Result<Self, TlsError> {
+        let key = generate_key()?;
+        let certificate = build_certificate(&key, 0).map_err(not_generated)?;
         Ok(Self { certificate, key })
     }
 
@@ -125,6 +143,13 @@ impl LocalCa {
     /// Es lo único que hace falta para decidir el solape (ID-221, ID-224), y
     /// por eso sale como número y no como fecha: quien decide es
     /// [`crate::trust::Stage`], que es puro y no sabe qué hora es.
+    ///
+    /// **Redondea hacia abajo**: se queda con los días enteros de la diferencia
+    /// y tira los segundos, así que a una CA a la que le quedan veintitrés
+    /// horas le devuelve `0` y [`crate::trust::Stage`] la da por caducada. El
+    /// error es siempre conservador —se releva hasta un día antes de tiempo,
+    /// nunca después—, pero conviene saberlo al leer
+    /// [`crate::trust::Stage::Expired`]: el último día cuenta como caducado.
     pub fn days_left(&self) -> Result<i64, TlsError> {
         let now = Asn1Time::days_from_now(0).map_err(damaged)?;
         let difference = now.diff(self.certificate.not_after()).map_err(damaged)?;

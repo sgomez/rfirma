@@ -29,7 +29,7 @@ use std::path::Path;
 use std::process::Command;
 
 use rfirma_lib::app::trust::refresh_local_ca_trust;
-use rfirma_lib::tls::{authority::COMMON_NAME, LocalCa, LocalCaStore};
+use rfirma_lib::tls::{authority::COMMON_NAME, CaFiles, LocalCa, LocalCaStore};
 use rfirma_lib::trust::{nss::is_trusted_ssl_ca, Moment, NssTrustStores, Situation, TrustStores};
 
 /// Lo que `certutil -L` imprime en la columna de la izquierda para una CA de
@@ -80,6 +80,18 @@ fn trusted_rows(profile: &Path) -> usize {
         .lines()
         .filter(|line| line.contains(COMMON_NAME) && line.contains(TRUSTED_FOR_TLS_ONLY))
         .count()
+}
+
+/// Un almacén de CA local con sus dos ranuras dentro de un directorio de datos
+/// desechable.
+fn a_store_in(data: &Path) -> LocalCaStore {
+    LocalCaStore::new(
+        CaFiles::new(data.join("ca-local.pem"), data.join("ca-local.key")),
+        CaFiles::new(
+            data.join("ca-local-next.pem"),
+            data.join("ca-local-next.key"),
+        ),
+    )
 }
 
 fn der_of(ca: &LocalCa) -> Vec<u8> {
@@ -211,10 +223,7 @@ fn a_directory_that_is_not_a_profile_says_the_store_is_unreachable() {
 fn the_first_boot_leaves_the_local_ca_trusted_in_a_real_profile() {
     let data = tempfile::tempdir().expect("deberia haber directorio temporal");
     let profile = a_disposable_profile();
-    let store = LocalCaStore::new(
-        data.path().join("ca-local.pem"),
-        data.path().join("ca-local.key"),
-    );
+    let store = a_store_in(data.path());
     let profiles = [profile.path().to_path_buf()];
 
     let mut first = refresh_local_ca_trust(&store, &profiles, &NssTrustStores, Moment::Startup)
@@ -239,10 +248,7 @@ fn the_first_boot_leaves_the_local_ca_trusted_in_a_real_profile() {
 fn nothing_is_written_in_a_real_profile_in_the_middle_of_an_errand() {
     let data = tempfile::tempdir().expect("deberia haber directorio temporal");
     let profile = a_disposable_profile();
-    let store = LocalCaStore::new(
-        data.path().join("ca-local.pem"),
-        data.path().join("ca-local.key"),
-    );
+    let store = a_store_in(data.path());
 
     let outcome = refresh_local_ca_trust(
         &store,
@@ -252,7 +258,65 @@ fn nothing_is_written_in_a_real_profile_in_the_middle_of_an_errand() {
     )
     .expect("no hacer nada no es un fallo");
 
-    assert!(outcome.nowhere());
+    assert!(!outcome.looked(), "no se ha abierto ningún perfil");
+    assert!(
+        !outcome.nowhere(),
+        "sin mirar no se puede afirmar que la CA no esté en ninguna parte"
+    );
     assert_eq!(trusted_rows(profile.path()), 0);
     assert!(store.read().expect("deberia leerse").is_none());
+}
+
+/// **El solape contra un perfil de verdad** (ID-224): la vigente sigue siendo
+/// la que sirve —la que firmará el certificado del servidor local— mientras la
+/// siguiente espera en su propia ranura, y `certutil -L` enseña las dos filas.
+///
+/// El relevo, cuando la vigente caduca, se comprueba en las pruebas unitarias
+/// del caso de uso: fabricar una CA ya caducada es un andamio `#[cfg(test)]` y
+/// no cruza a una prueba de integración.
+#[test]
+fn during_the_overlap_the_serving_ca_keeps_serving_and_both_are_trusted() {
+    let data = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let profile = a_disposable_profile();
+    let store = a_store_in(data.path());
+    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+
+    store.write(&current).expect("deberia guardarse la vigente");
+    install(profile.path(), &current);
+    store
+        .write_next(&next)
+        .expect("deberia guardarse la siguiente");
+    install(profile.path(), &next);
+
+    assert_eq!(
+        der_of(
+            &store
+                .read()
+                .expect("deberia leerse")
+                .expect("la vigente sigue guardada")
+        ),
+        der_of(&current),
+        "durante el solape la que firma sigue siendo la vigente"
+    );
+    assert_eq!(
+        trusted_rows(profile.path()),
+        2,
+        "listado:\n{}",
+        certutil_listing(profile.path())
+    );
+
+    // Y el relevo deja servir a la que llevaba meses instalada, sin tocar el
+    // perfil: `promote_next` no escribe en ningún almacén.
+    let promoted = store
+        .promote_next()
+        .expect("deberia poder relevarse")
+        .expect("habia una siguiente esperando");
+
+    assert_eq!(der_of(&promoted), der_of(&next));
+    assert_eq!(
+        trusted_rows(profile.path()),
+        2,
+        "el relevo no instala nada: las dos ya estaban"
+    );
 }

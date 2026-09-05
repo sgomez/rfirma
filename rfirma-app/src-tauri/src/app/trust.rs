@@ -2,7 +2,7 @@
 //! renovarla (ADR-0005, ID-221, ID-224, ID-227, ID-228).
 //!
 //! Es el caso de uso que junta las tres piezas que ninguna sabe de las otras:
-//! el almacén de dos ficheros de [`crate::tls::LocalCaStore`], los perfiles que
+//! las dos ranuras de [`crate::tls::LocalCaStore`], los perfiles que
 //! encuentra [`crate::pkcs11::stores::nss_profiles`] y el registro de
 //! [`crate::trust::TrustStores`].
 //!
@@ -10,8 +10,10 @@
 //!
 //! - **Cuándo**: al arrancar y nunca a mitad de un trámite (ID-224). Lo dice
 //!   [`crate::trust::work_at`] y aquí se obedece.
-//! - **Qué CA**: la que hay si le sobra vida, una nueva si no había o caducó, y
-//!   la siguiente —**junto a** la vigente— dentro del solape.
+//! - **Qué CA**: la que hay si le sobra vida, una nueva si no había o caducó
+//!   sin relevo, y la siguiente —**junto a** la vigente, que sigue firmando—
+//!   dentro del solape. El relevo llega cuando la vigente caduca: la siguiente
+//!   lleva meses instalada y pasa a servir sin pedir ningún reinicio.
 //! - **Dónde**: en todos los perfiles, y **un perfil que falle no deja sin CA a
 //!   los demás**, igual que un almacén que no carga no deja sin certificados al
 //!   listado (ID-03).
@@ -28,7 +30,8 @@ use std::path::{Path, PathBuf};
 
 use crate::tls::{LocalCa, LocalCaStore, TlsError};
 use crate::trust::{
-    self, nss::is_trusted_ssl_ca, Moment, PendingNotice, Stage, TrustError, TrustStores, Work,
+    self, nss::is_trusted_ssl_ca, Moment, NextCa, PendingNotice, Stage, TrustError, TrustStores,
+    Work,
 };
 
 /// Cómo quedó el registro de la CA local, sin nada que interrumpa.
@@ -50,8 +53,20 @@ pub struct TrustOutcome {
 
 impl TrustOutcome {
     /// Ni un almacén con la CA local: la sede no va a poder abrir el canal.
+    ///
+    /// Es una conclusión sobre el mundo, así que hace falta **haber mirado**: a
+    /// mitad de un trámite no se consulta ni un almacén (ID-224) y la respuesta
+    /// es `false`, que es «no lo sé», no «sí que está». Decir que la CA no está
+    /// en ninguna parte sin haber abierto ningún perfil sería contarle a la
+    /// persona un fallo que nadie ha medido.
     pub fn nowhere(&self) -> bool {
-        self.trusted == 0
+        self.looked() && self.trusted == 0
+    }
+
+    /// Si se ha llegado a mirar algún almacén. Falso **solo** a mitad de un
+    /// trámite, que es cuando el trabajo es [`Work::Nothing`].
+    pub fn looked(&self) -> bool {
+        !matches!(self.work, Work::Nothing)
     }
 }
 
@@ -67,11 +82,25 @@ pub fn refresh_local_ca_trust(
     moment: Moment,
 ) -> Result<TrustOutcome, TlsError> {
     let saved = store.read()?;
+    let waiting = store.read_next()?;
     let days_left = saved.as_ref().map(LocalCa::days_left).transpose()?;
     let stage = Stage::of(days_left);
-    let work = trust::work_at(moment, stage);
+    let work = trust::work_at(
+        moment,
+        stage,
+        if waiting.is_some() {
+            NextCa::Waiting
+        } else {
+            NextCa::None
+        },
+    );
 
-    let certificate = match work {
+    // `saved` no puede ser `None` en las ramas que la usan: sin CA guardada la
+    // etapa es `Absent`, y ahí el trabajo es fabricar una.
+    let serving = || saved.clone().expect("esa etapa sale de una CA guardada");
+    // Las CA locales que tienen que quedar de confianza al terminar. **La
+    // primera es la que sirve**, y en el solape son dos.
+    let certificates: Vec<LocalCa> = match work {
         Work::Nothing => {
             return Ok(TrustOutcome {
                 stage,
@@ -81,31 +110,55 @@ pub fn refresh_local_ca_trust(
                 notice: PendingNotice::none(),
             })
         }
-        // La que ya hay. `saved` no puede ser `None` aquí: sin CA guardada la
-        // etapa es `Absent` y el trabajo, fabricar una.
-        Work::InstallTheOneWeHave => saved.expect("la etapa Serving sale de una CA guardada"),
-        // Fabricar. En el solape la vigente **se queda donde está** dentro de
-        // los almacenes NSS: aquí solo se sustituye la que sirve.
-        Work::MakeOneAndInstallIt | Work::MakeTheNextAndInstallItToo => {
+        // La que ya hay, allí donde no esté.
+        Work::InstallTheOneWeHave => vec![serving()],
+        // Sin nada que heredar: se fabrica, y cualquier siguiente que hubiera
+        // quedado colgando deja de tener turno.
+        Work::MakeOneAndInstallIt => {
             let fresh = LocalCa::generate()?;
             store.write(&fresh)?;
-            fresh
+            store.forget_next()?;
+            vec![fresh]
         }
+        // **El solape empieza aquí**: la siguiente se guarda en su propia
+        // ranura y se instala, y la vigente **sigue sirviendo** —sigue siendo
+        // la que firma el certificado del servidor local— hasta que caduque.
+        Work::MakeTheNextAndInstallItToo => {
+            let next = LocalCa::generate()?;
+            store.write_next(&next)?;
+            vec![serving(), next]
+        }
+        // El solape ya en marcha: las dos se registran, y la siguiente no se
+        // vuelve a fabricar.
+        Work::InstallBothOfThem => vec![
+            serving(),
+            waiting.expect("esta rama sale de una siguiente esperando"),
+        ],
+        // **El relevo**: la siguiente lleva meses instalada, así que pasa a
+        // servir sin que nadie tenga que reiniciar el navegador.
+        Work::PromoteTheNextOne => vec![store
+            .promote_next()?
+            .expect("esta rama sale de una siguiente esperando")],
     };
 
-    let der = certificate.certificate().to_der().map_err(|error| {
-        TlsError::new(
-            crate::tls::Situation::MaterialDamaged,
-            format!("el certificado de la CA local no sale en DER: {error}"),
-        )
-    })?;
+    let ders = certificates
+        .iter()
+        .map(|ca| {
+            ca.certificate().to_der().map_err(|error| {
+                TlsError::new(
+                    crate::tls::Situation::MaterialDamaged,
+                    format!("el certificado de la CA local no sale en DER: {error}"),
+                )
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut trusted = 0;
     let mut installed = 0;
     let mut missed = Vec::new();
 
     for profile in profiles {
-        match settle(stores, profile, &der) {
+        match settle(stores, profile, &ders) {
             Ok(Settled::AlreadyThere) => trusted += 1,
             Ok(Settled::JustInstalled) => {
                 trusted += 1;
@@ -130,9 +183,9 @@ pub fn refresh_local_ca_trust(
 
 /// Cómo acabó un almacén concreto.
 enum Settled {
-    /// Ya tenía la CA local con los bits puestos.
+    /// Ya tenía **todas** las CA locales que tocaban, con los bits puestos.
     AlreadyThere,
-    /// Ha entrado ahora.
+    /// Al menos una ha entrado ahora.
     JustInstalled,
 }
 
@@ -143,12 +196,32 @@ enum Settled {
 /// el certificado puede entrar con confianza `,,` **sin que nada falle**. Un
 /// éxito parcial silencioso contado como almacén instalado sería peor que un
 /// error: la sede fallaría después, y el parte diría que todo fue bien.
-fn settle(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<Settled, TrustError> {
+fn settle(
+    stores: &dyn TrustStores,
+    profile: &Path,
+    ders: &[Vec<u8>],
+) -> Result<Settled, TrustError> {
+    let mut installed_any = false;
+    for der in ders {
+        if settle_one(stores, profile, der)? {
+            installed_any = true;
+        }
+    }
+    Ok(if installed_any {
+        Settled::JustInstalled
+    } else {
+        Settled::AlreadyThere
+    })
+}
+
+/// Deja una CA local de confianza en un almacén. Devuelve si ha hecho falta
+/// instalarla.
+fn settle_one(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<bool, TrustError> {
     if stores
         .trust_of(profile, der)?
         .is_some_and(is_trusted_ssl_ca)
     {
-        return Ok(Settled::AlreadyThere);
+        return Ok(false);
     }
     stores.install(profile, der, crate::tls::authority::COMMON_NAME)?;
     if !stores
@@ -164,7 +237,7 @@ fn settle(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<Settle
             ),
         ));
     }
-    Ok(Settled::JustInstalled)
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -253,6 +326,10 @@ mod tests {
         (directory, store)
     }
 
+    fn der_of(ca: &LocalCa) -> Vec<u8> {
+        ca.certificate().to_der().expect("deberia salir en DER")
+    }
+
     fn profiles() -> [PathBuf; 2] {
         [
             PathBuf::from("/perfiles/firefox"),
@@ -291,6 +368,11 @@ mod tests {
         assert_eq!(outcome.work, Work::Nothing);
         assert!(stores.inside(&profiles[0]).is_empty());
         assert!(store.read().expect("deberia leerse").is_none());
+        assert!(!outcome.looked(), "no se ha consultado ni un almacén");
+        assert!(
+            !outcome.nowhere(),
+            "sin mirar no se puede decir que la CA no esté en ninguna parte"
+        );
     }
 
     /// El aviso no se repite: el segundo arranque encuentra los bits puestos,
@@ -325,10 +407,7 @@ mod tests {
         // La CA vigente, ya registrada e instalada, a la que le queda un día:
         // es lo que dispara el solape.
         let current = LocalCa::almost_expired_for_test().expect("deberia fabricarse");
-        let current_der = current
-            .certificate()
-            .to_der()
-            .expect("deberia salir en DER");
+        let current_der = der_of(&current);
         store.write(&current).expect("deberia guardarse");
         for profile in &profiles {
             stores
@@ -352,6 +431,103 @@ mod tests {
                 .iter()
                 .all(|(_, nickname)| nickname == crate::tls::authority::COMMON_NAME),
             "las dos comparten apodo: en NSS el apodo va con el sujeto"
+        );
+        assert_eq!(
+            der_of(&store.read().unwrap().unwrap()),
+            current_der,
+            "la que firma el certificado del servidor local sigue siendo la vigente"
+        );
+        assert!(
+            store.read_next().unwrap().is_some(),
+            "la siguiente espera su turno en su propia ranura"
+        );
+    }
+
+    /// **El solape no se rehace en cada arranque.** El segundo arranque dentro
+    /// del solape registra las dos que ya hay y no fabrica una tercera, así que
+    /// tampoco vuelve a pedir que se reinicie el navegador.
+    #[test]
+    fn the_next_local_ca_is_not_remade_on_every_boot_of_the_overlap() {
+        let (_directory, store) = a_store();
+        let profiles = profiles();
+        let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+        store
+            .write(&LocalCa::almost_expired_for_test().expect("deberia fabricarse"))
+            .expect("deberia guardarse");
+
+        refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
+            .expect("deberia empezar el solape");
+        let next_der = der_of(&store.read_next().unwrap().unwrap());
+        let mut second = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
+            .expect("deberia repetirse sin fabricar nada");
+
+        assert_eq!(second.work, Work::InstallBothOfThem);
+        assert_eq!(stores.inside(&profiles[0]).len(), 2);
+        assert_eq!(
+            der_of(&store.read_next().unwrap().unwrap()),
+            next_der,
+            "la siguiente es la misma, no una tercera"
+        );
+        assert_eq!(second.notice.when_the_errand_ends(), None);
+    }
+
+    /// **Lo que compra el solape**: cuando la vigente caduca, la siguiente
+    /// —instalada meses antes— pasa a servir sin instalar nada y **sin pedir
+    /// que se reinicie el navegador**.
+    #[test]
+    fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
+        let (_directory, store) = a_store();
+        let profiles = profiles();
+        let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+        let expired = LocalCa::expired_for_test().expect("deberia fabricarse");
+        let waiting = LocalCa::generate().expect("deberia fabricarse");
+        store.write(&expired).expect("deberia guardarse");
+        store.write_next(&waiting).expect("deberia guardarse");
+        for profile in &profiles {
+            for ca in [&expired, &waiting] {
+                stores
+                    .install(profile, &der_of(ca), crate::tls::authority::COMMON_NAME)
+                    .expect("deberia registrarse");
+            }
+        }
+
+        let mut outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
+            .expect("deberia poder relevarse");
+
+        assert_eq!(outcome.stage, Stage::Expired);
+        assert_eq!(outcome.work, Work::PromoteTheNextOne);
+        assert_eq!(
+            der_of(&store.read().unwrap().unwrap()),
+            der_of(&waiting),
+            "la que esperaba es ahora la que sirve"
+        );
+        assert!(store.read_next().unwrap().is_none());
+        assert_eq!(
+            outcome.notice.when_the_errand_ends(),
+            None,
+            "ya estaba instalada: nadie tiene que reiniciar nada"
+        );
+    }
+
+    /// Una CA caducada **sin relevo** —un `$HOME` que se quedó parado más de
+    /// dos años— sí obliga a fabricar y a reiniciar el navegador. Es el camino
+    /// excepcional que el solape existe para hacer raro.
+    #[test]
+    fn an_expired_local_ca_with_no_successor_starts_again_from_scratch() {
+        let (_directory, store) = a_store();
+        let profiles = profiles();
+        let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+        let expired = LocalCa::expired_for_test().expect("deberia fabricarse");
+        store.write(&expired).expect("deberia guardarse");
+
+        let mut outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
+            .expect("deberia fabricarse otra");
+
+        assert_eq!(outcome.work, Work::MakeOneAndInstallIt);
+        assert_ne!(der_of(&store.read().unwrap().unwrap()), der_of(&expired));
+        assert_eq!(
+            outcome.notice.when_the_errand_ends(),
+            Some(Notice::RestartTheBrowser)
         );
     }
 

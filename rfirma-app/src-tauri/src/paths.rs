@@ -42,6 +42,10 @@ const INSTALLED_CERTIFICATES_DIRECTORY: &str = "certificates";
 const LOCAL_CA_CERTIFICATE_FILE: &str = "local-ca.crt.pem";
 /// La clave privada de la CA local, en PEM y en un fichero `0600` (ID-223).
 const LOCAL_CA_KEY_FILE: &str = "local-ca.key.pem";
+/// El certificado de la CA local **siguiente**, la del solape (ID-224).
+const NEXT_LOCAL_CA_CERTIFICATE_FILE: &str = "local-ca-next.crt.pem";
+/// La clave privada de la CA local **siguiente**, también `0600`.
+const NEXT_LOCAL_CA_KEY_FILE: &str = "local-ca-next.key.pem";
 
 /// El sistema operativo, reducido a lo único que cambia: dónde van las tres
 /// rutas.
@@ -222,6 +226,23 @@ impl Paths {
     /// [`create_owner_only_file`] (ID-223).
     pub fn local_ca_key_path(&self) -> PathBuf {
         self.data_dir.join(LOCAL_CA_KEY_FILE)
+    }
+
+    /// El certificado de la CA local **siguiente**: la que ya está instalada en
+    /// los almacenes y **todavía no firma nada** (ID-224).
+    ///
+    /// Es un fichero aparte y no una sustitución porque el solape exige que la
+    /// vigente siga sirviendo mientras la siguiente espera su turno: si la
+    /// siguiente ocupase la ranura de la vigente, el certificado del servidor
+    /// local saldría firmado por una CA que el navegador abierto aún no ha
+    /// cargado, que es justo el camino que el solape existe para evitar.
+    pub fn next_local_ca_certificate_path(&self) -> PathBuf {
+        self.data_dir.join(NEXT_LOCAL_CA_CERTIFICATE_FILE)
+    }
+
+    /// La clave privada de la CA local **siguiente**, `0600` igual que la otra.
+    pub fn next_local_ca_key_path(&self) -> PathBuf {
+        self.data_dir.join(NEXT_LOCAL_CA_KEY_FILE)
     }
 }
 
