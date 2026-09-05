@@ -36,6 +36,7 @@ pub mod frontier;
 pub mod handlers;
 pub mod in_hand;
 pub mod invocation;
+pub mod policies;
 pub mod preview;
 pub mod recents;
 pub mod rubric;

@@ -9,11 +9,13 @@
 //! la ventana no tiene no lo puede filtrar ni alterar, y el sello de sesión es
 //! justo lo que no puede cambiar entre la prefirma y la postfirma (ADR-0016).
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::app::certificates::StampedHolder;
-use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature};
+use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature, NOTHING_FROM_A_SITE};
+use crate::app::filtering::{self, FilterEngine};
 use crate::app::in_hand::DocumentInHand;
 use crate::app::{certificates, documents, lock, recents};
 use crate::commands::orders::SigningOrder;
@@ -22,6 +24,7 @@ use crate::destination::PortalDocument;
 use crate::isolate::Isolate;
 use crate::memory::{Configuration, ListedCertificates, Memory, OpenedDocuments};
 use crate::pkcs11::{self, CertificateRef, Store, StoreSecret, TokenCertificate};
+use crate::protocol::SiteFilter;
 use crate::signing::{
     compose_layer2_text, AdmissibleDocument, SessionSeal, SignatureConfig, VisibleTextFields,
 };
@@ -61,6 +64,11 @@ struct InFlight {
     /// entre la prefirma y la postfirma la tarjeta puede haberse retirado, y
     /// entonces no habría forma de saber con cuál se acababa de firmar.
     certificate: CertificateRef,
+    /// El DER del firmante, para poder devolvérselo a la sede junto con la
+    /// firma: el cable lleva los dos (`NativeSignDataProcessor.java:53`-`104`).
+    /// Viaja aquí por lo mismo que [`InFlight::certificate`]: entre la prefirma
+    /// y la postfirma la tarjeta puede haberse retirado.
+    signer_der: Vec<u8>,
     /// El sello, transportado aparte del ciclo que lo emitió.
     ///
     /// Están separados a propósito: si el sello viviera solo dentro de
@@ -92,12 +100,102 @@ pub fn begin(
     let document = DocumentInHand::taken(opened, &order.document)?;
     let bytes = admitted_bytes(document.document())?;
     let (config, reference, chain) = plan_signature(stores, listed, order)?;
+    open_the_cycle(
+        document,
+        bytes,
+        config,
+        reference,
+        chain,
+        &NOTHING_FROM_A_SITE,
+        isolate,
+        session,
+    )
+}
+
+/// **Caso de uso.** Prefirma de un trámite de sede (ID-263).
+///
+/// Es [`begin`] con dos diferencias, y las dos son de la sede:
+///
+/// 1. **El filtro se vuelve a comprobar antes del PIN** (ID-259), y por eso el
+///    certificado no lo resuelve [`plan_signature`] sino
+///    [`filtering::usable_certificate_for_the_site`]: que estuviera en la lista
+///    que la ventana enseñó no basta, porque la ventana no es quien hace
+///    cumplir lo que pidió la sede.
+/// 2. Los `extraParams` que la sede declaró viajan **debajo** de los seis
+///    ajustes de rFirma (ID-266, [`crate::app::policies`]).
+pub fn begin_for_the_site<E: FilterEngine>(
+    site: &SiteSigning<'_, E>,
+    order: &SigningOrder,
+    stores: &[Store],
+    listed: &ListedCertificates,
+    opened: &OpenedDocuments,
+    isolate: &Isolate,
+    session: &SigningSession,
+) -> Result<StoreSecret, Failure> {
+    let document = DocumentInHand::taken(opened, &order.document)?;
+    let bytes = admitted_bytes(document.document())?;
+    let found = pkcs11::list_certificates_across(stores)?;
+    let chosen = filtering::usable_certificate_for_the_site(
+        site.engine,
+        site.filter,
+        &found,
+        &order.certificate,
+        listed,
+    )?;
+    let config = config_for(order, chosen)?;
+    let reference = chosen.reference().clone();
+    let chain = vec![chosen.der().to_vec()];
+    open_the_cycle(
+        document,
+        bytes,
+        config,
+        reference,
+        chain,
+        site.from_the_site,
+        isolate,
+        session,
+    )
+}
+
+/// Lo que una firma tiene de trámite de sede, y que en el recorrido local no
+/// existe: el motor que hace cumplir el filtro y la política que ella declaró.
+///
+/// Van juntos porque llegan juntos —los dos salen de la misma operación— y
+/// porque separarlos invita a pasar uno y olvidar el otro, que es firmar con la
+/// política de la sede sin volver a comprobar su filtro, o al revés.
+pub struct SiteSigning<'a, E: FilterEngine> {
+    /// El motor de filtros, prestado del puente (ID-252).
+    pub engine: &'a E,
+    /// Lo que la sede pide del listado, que se comprueba otra vez (ID-259).
+    pub filter: &'a SiteFilter,
+    /// Los `extraParams` que declaró, ya expandidos (ID-266).
+    pub from_the_site: &'a BTreeMap<String, String>,
+}
+
+/// El cuerpo compartido de las dos prefirmas: lo único que las distingue es
+/// **con qué** se firma, y eso ya viene resuelto.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "es el cuerpo compartido de dos casos de uso, no una interfaz"
+)]
+fn open_the_cycle(
+    document: DocumentInHand,
+    bytes: Vec<u8>,
+    config: crate::signing::SignatureConfig,
+    reference: CertificateRef,
+    chain: Vec<Vec<u8>>,
+    from_the_site: &BTreeMap<String, String>,
+    isolate: &Isolate,
+    session: &SigningSession,
+) -> Result<StoreSecret, Failure> {
     // Se pregunta antes de cruzar la frontera: si el secreto se teclea en el
     // lector, aquí se acaba el recorrido y no se ha intentado firmar nada.
     let secret = pkcs11::store_secret(&reference)?.admitted()?;
     // Una copia para la sesión: la otra se va con la prefirma al otro lado de
     // la frontera.
     let certificate = reference.clone();
+    let signer_der = chain.first().cloned().unwrap_or_default();
+    let from_the_site = from_the_site.clone();
 
     let cycle = on_the_bridge(isolate, move |bridge| {
         // La comprobación se repite dentro del hilo porque el tipo que la
@@ -110,6 +208,7 @@ pub fn begin(
                 document,
                 chain: &chain,
                 config: &config,
+                from_the_site: &from_the_site,
                 certificate: &reference,
             },
         )
@@ -121,6 +220,7 @@ pub fn begin(
         document,
         signature: None,
         certificate,
+        signer_der,
         seal,
     });
     Ok(secret)
@@ -159,6 +259,7 @@ pub fn finish(
         signature,
         seal,
         certificate,
+        ..
     } = take_signed_cycle(session)?;
 
     let signed = on_the_bridge(isolate, move |bridge| {
@@ -187,6 +288,46 @@ pub fn finish(
     // (ID-79, ADR-0011).
     *lock(&session.delivered) = Some(landing);
     Ok(delivered)
+}
+
+/// La firma de un trámite de sede: lo que va al cable, y nada más.
+pub struct SiteSignature {
+    /// El PDF firmado, en bytes.
+    pub signed: Vec<u8>,
+    /// El DER del certificado firmante, que la sede recibe delante de la firma.
+    pub signer_der: Vec<u8>,
+}
+
+/// **Caso de uso.** Postfirma de un trámite de sede: ensambla y devuelve, y
+/// **no escribe nada** (ID-286, ID-264).
+///
+/// Tres cosas que la postfirma local hace y ésta **no**, y las tres son la
+/// misma decisión leída de tres sitios:
+///
+/// - no deja caer el documento en la carpeta de destino: que una sede escriba
+///   ficheros en el equipo está fuera del alcance por seguridad (ID-264), y el
+///   documento que ella mandó no deja rastro (ID-286);
+/// - no anota fila en la bandeja, ni «último documento»;
+/// - no recuerda el certificado. El del trámite lo acotó el filtro de la sede,
+///   y dejar que eso cambie el certificado por omisión de la persona sería
+///   dejar que la sede elija por ella.
+pub fn finish_for_the_site(
+    isolate: &Isolate,
+    session: &SigningSession,
+) -> Result<SiteSignature, Failure> {
+    let SignedCycle {
+        cycle,
+        signature,
+        seal,
+        signer_der,
+        ..
+    } = take_signed_cycle(session)?;
+
+    let signed = on_the_bridge(isolate, move |bridge| {
+        cycle.postsign(bridge, &signature, &seal)
+    })?;
+
+    Ok(SiteSignature { signed, signer_der })
 }
 
 /// **Caso de uso.** El fichero que quedó escrito en la última firma.
@@ -337,6 +478,7 @@ pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, Failur
         signature,
         seal: in_flight.seal,
         certificate: in_flight.certificate,
+        signer_der: in_flight.signer_der,
     })
 }
 
@@ -348,6 +490,7 @@ pub struct SignedCycle {
     signature: TokenSignature,
     seal: SessionSeal,
     certificate: CertificateRef,
+    signer_der: Vec<u8>,
 }
 
 /// Aplana las tres capas de resultado que devuelve un trabajo del isolate: el
@@ -374,8 +517,9 @@ fn no_open_cycle() -> Failure {
 #[cfg(test)]
 mod tests {
     use super::{
-        admitted_bytes, begin, cancel, config_for, finish, is_live, sign_on_token, signed_document,
-        signed_folder, take_signed_cycle, SigningSession,
+        admitted_bytes, begin, begin_for_the_site, cancel, config_for, finish, is_live,
+        sign_on_token, signed_document, signed_folder, take_signed_cycle, FilterEngine,
+        SigningSession, SiteFilter, SiteSigning,
     };
     use crate::app::fixtures::{a_certificate, a_memory, an_order};
     use crate::commands::orders::{PlacementOrder, SigningOrder};
@@ -383,6 +527,7 @@ mod tests {
     use crate::isolate::Isolate;
     use crate::memory::{Configuration, ListedCertificates, OpenedDocuments};
     use crate::signing::PageSet;
+    use std::collections::BTreeMap;
 
     /// **Grada A**: lo que se comprueba leyendo esta fuente son invariantes de
     /// forma —qué guarda la sesión y desde dónde se recuerda el certificado—.
@@ -457,6 +602,8 @@ mod tests {
         let writers = [
             ("app/signing.rs", production_half()),
             ("app/recents.rs", half_of(include_str!("recents.rs"))),
+            ("app/errand.rs", half_of(include_str!("errand.rs"))),
+            ("app/policies.rs", half_of(include_str!("policies.rs"))),
             ("app/documents.rs", half_of(include_str!("documents.rs"))),
             ("app/in_hand.rs", half_of(include_str!("in_hand.rs"))),
             ("app/invocation.rs", half_of(include_str!("invocation.rs"))),
@@ -517,6 +664,61 @@ mod tests {
         assert!(
             before_the_row.contains("if document.is_remembered() {"),
             "la fila del firmado se escribe sin preguntar si el documento se recuerda"
+        );
+    }
+
+    /// **ID-286 / ID-264**: la postfirma de un trámite de sede **no escribe
+    /// nada**.
+    ///
+    /// Se lee la fuente y no el resultado por lo mismo que sus hermanas: el
+    /// recorrido entero exige el puente, y lo que se vigila es una ausencia. Y
+    /// una ausencia sólo se comprueba mirando: si mañana alguien añade ahí la
+    /// entrega del documento «para que el usuario también tenga su copia»,
+    /// ninguna prueba de comportamiento se pondría roja.
+    #[test]
+    fn the_postsign_of_a_site_errand_writes_nothing_anywhere() {
+        let site_postsign = production_half()
+            .split_once("pub fn finish_for_the_site(")
+            .expect("la postfirma de la sede sigue aqui")
+            .1
+            .split_once("\n/// ")
+            .expect("y termina donde empieza la siguiente")
+            .0;
+
+        for forbidden in [
+            "documents::deliver",
+            "recents::",
+            "session.delivered",
+            "remember_the_certificate",
+        ] {
+            assert!(
+                !site_postsign.contains(forbidden),
+                "la postfirma de la sede llama a «{forbidden}»: el documento que manda una sede no \
+                 deja rastro (ID-286) y rFirma no guarda ficheros por orden suya (ID-264)"
+            );
+        }
+    }
+
+    /// **ID-259**: la prefirma de un trámite de sede vuelve a pasar el filtro
+    /// antes del PIN, y por eso no resuelve el certificado con
+    /// `plan_signature`, que no sabe nada de la sede.
+    #[test]
+    fn the_presign_of_a_site_errand_checks_the_filter_again_before_the_pin() {
+        let site_presign = production_half()
+            .split_once("pub fn begin_for_the_site<")
+            .expect("la prefirma de la sede sigue aqui")
+            .1
+            .split_once("\n/// ")
+            .expect("y termina donde empieza la siguiente")
+            .0;
+
+        assert!(
+            site_presign.contains("filtering::usable_certificate_for_the_site("),
+            "el filtro de la sede se vuelve a comprobar antes de pedir el secreto"
+        );
+        assert!(
+            !site_presign.contains("plan_signature("),
+            "y no por el camino local, que no sabe nada de la sede"
         );
     }
 
@@ -696,6 +898,48 @@ mod tests {
             .expect_err("no esta");
 
         assert_eq!(failure.situation, "documentUnreadable");
+    }
+
+    /// Y la de la sede tampoco: el documento se pide igual, por su
+    /// identificador, aunque quien lo abriera fuera el trámite (ID-62).
+    #[test]
+    fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
+        let order = SigningOrder {
+            document: "00000000000000000000000000000000".to_owned(),
+            ..an_order()
+        };
+        let engine = NoEngine;
+
+        let failure = begin_for_the_site(
+            &SiteSigning {
+                engine: &engine,
+                filter: &SiteFilter::default(),
+                from_the_site: &BTreeMap::new(),
+            },
+            &order,
+            &[],
+            &ListedCertificates::new(),
+            &OpenedDocuments::new(),
+            &Isolate::start(),
+            &SigningSession::default(),
+        )
+        .expect_err("ese documento no esta abierto");
+
+        assert_eq!(failure.situation, "documentUnreadable");
+    }
+
+    /// Un motor que nunca llega a que le pregunten: la prefirma de la sede se
+    /// para antes, en el documento.
+    struct NoEngine;
+
+    impl FilterEngine for NoEngine {
+        fn select(
+            &self,
+            _properties: &str,
+            _certificates: &str,
+        ) -> Result<Vec<usize>, crate::ffi::BridgeError> {
+            unreachable!("no se llega a filtrar nada")
+        }
     }
 
     /// La prefirma pide el documento **por su identificador**, y uno que no es

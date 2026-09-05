@@ -235,7 +235,7 @@ mod full_cycle {
     use base64::Engine;
     use rfirma_lib::app::cycle::{self, SigningRequest};
     use rfirma_lib::app::filtering;
-    use rfirma_lib::ffi::{FilterRequest, NativeBridge};
+    use rfirma_lib::ffi::{BridgeError, ExpandRequest, FilterRequest, NativeBridge};
     use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
     use rfirma_lib::protocol::site_filter;
     use rfirma_lib::rubric;
@@ -323,6 +323,60 @@ mod full_cycle {
         assert!(
             outside.is_empty(),
             "la sede lo excluye y el listado sale vacio, no completo"
+        );
+    }
+
+    /// **La quinta entrada, contra la librería de verdad** (ID-266).
+    ///
+    /// Por lo mismo que la del motor de filtros, y con un modo de fallo peor:
+    /// `AdESPolicyPropertiesManager` lee `policy.properties` por
+    /// `ResourceBundle`, que `native-image` **no alcanza solo**. Sin el
+    /// `-H:IncludeResourceBundles=policy` de `native-image.properties` la
+    /// expansión no revienta: devuelve las claves vacías, la firma se hace, y
+    /// lo que sale no lleva la política que la sede declaró.
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn the_policy_expander_survives_inside_the_native_image() {
+        let bridge = bridge();
+
+        let expanded = bridge
+            .expand_extra_params(ExpandRequest {
+                extra_params: "expPolicy=FirmaAGE\n",
+                format: "PAdES",
+            })
+            .expect("el expansor tiene que contestar desde dentro de la imagen");
+
+        assert!(
+            !expanded.contains("expPolicy="),
+            "la clave expandible se consume: {expanded}"
+        );
+        assert!(
+            expanded.contains("policyIdentifier=urn:oid:"),
+            "y el identificador sale del policy.properties de afirma-core: {expanded}"
+        );
+        assert!(
+            expanded.contains("signatureSubFilter=ETSI.CAdES.detached"),
+            "que es ademas el mismo subfiltro que rFirma envia siempre: {expanded}"
+        );
+    }
+
+    /// Una política que no se puede aplicar llega **con nombre propio** hasta
+    /// este lado, y no colapsada en «la firma no ha salido» (ID-266).
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn a_policy_that_does_not_fit_the_format_comes_back_named() {
+        let bridge = bridge();
+
+        let refused = bridge
+            .expand_extra_params(ExpandRequest {
+                extra_params: "expPolicy=PoliticaQueNoExiste\n",
+                format: "PAdES",
+            })
+            .expect_err("esa politica no se puede aplicar");
+
+        assert!(
+            matches!(refused, BridgeError::IncompatiblePolicy(_)),
+            "tenia que llegar con nombre propio: {refused:?}"
         );
     }
 
@@ -450,6 +504,7 @@ mod full_cycle {
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
                 config,
+                from_the_site: &cycle::NOTHING_FROM_A_SITE,
                 certificate: &reference,
             },
         )
@@ -619,6 +674,7 @@ mod full_cycle {
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
                 config,
+                from_the_site: &cycle::NOTHING_FROM_A_SITE,
                 certificate: &reference,
             },
         )
@@ -967,6 +1023,7 @@ mod full_cycle {
                 document: AdmissibleDocument::check(&pdf).expect("es admisible"),
                 chain: &chain,
                 config: &config,
+                from_the_site: &cycle::NOTHING_FROM_A_SITE,
                 certificate: &reference,
             },
         )

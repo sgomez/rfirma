@@ -46,7 +46,10 @@ pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMOR
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use launch::{drawn_ports, ChannelCredential, LaunchRequest, PROTOCOL_VERSION};
 pub use message::ChannelMessage;
-pub use operation::{read_operation, SelectCertificate, SiteOperation, SELECT_CERTIFICATE};
+pub use operation::{
+    pairs_of, read_operation, SelectCertificate, SignRequest, SignatureRound, SiteOperation,
+    ACCEPTED_ALGORITHMS, COSIGN, COUNTERSIGN, PADES, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
+};
 pub use parameters::{check_local_access_is_not_requested, check_minimum_client_version};
 pub use refusal::Refusal;
 pub use url::AfirmaUrl;
