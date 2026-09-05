@@ -103,10 +103,18 @@ fn verb_of(url: &AfirmaUrl) -> String {
 /// Los pares del `.properties` que la sede mandó dentro de `properties`.
 ///
 /// Viaja en Base64 **URL-safe** (`Base64.encode(bytes, true)` del original), y
-/// el descodificador es tolerante a propósito: acepta también el alfabeto
-/// normal y el relleno ausente. Un cliente que mande `+` y `/` no está
-/// atacando nada, y rechazarle la llamada entera por eso sería inventarse una
-/// incompatibilidad que el original no tiene.
+/// el descodificador es tolerante a propósito con lo que sí puede llegar: la
+/// `/` del alfabeto normal y el relleno ausente. Un cliente que mande `/` no
+/// está atacando nada, y rechazarle la llamada entera por eso sería inventarse
+/// una incompatibilidad que el original no tiene.
+///
+/// El `+` del alfabeto normal, en cambio, **nunca llega hasta aquí**:
+/// [`AfirmaUrl`] ya lo ha convertido en un espacio, porque el original pasa
+/// cada valor por `URLDecoder` (ver el encabezado de [`crate::protocol::url`]).
+/// Así que una sede que mande Base64 estándar con `+` se lleva el `SAF_03` —
+/// igual que en el original, que decodifica igual—, y aquí no hay ningún brazo
+/// que lo intente: sería código muerto que promete una tolerancia que no
+/// existe.
 fn declared_properties(url: &AfirmaUrl) -> Result<Vec<(String, String)>, Refusal> {
     let Some(encoded) = url.parameter("properties").filter(|it| !it.is_empty()) else {
         return Ok(Vec::new());
@@ -115,11 +123,7 @@ fn declared_properties(url: &AfirmaUrl) -> Result<Vec<(String, String)>, Refusal
     let normalized: String = encoded
         .chars()
         .filter(|character| *character != '=')
-        .map(|character| match character {
-            '+' => '-',
-            '/' => '_',
-            other => other,
-        })
+        .map(|character| if character == '/' { '_' } else { character })
         .collect();
 
     let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD
@@ -310,15 +314,35 @@ mod tests {
         assert_eq!(refusal.code(), SafCode::Params);
     }
 
-    /// El alfabeto normal se acepta igual que el URL-safe: rechazar la llamada
-    /// por eso sería una incompatibilidad que el original no tiene.
+    /// La `/` del alfabeto normal se acepta igual que el URL-safe: rechazar la
+    /// llamada por eso sería una incompatibilidad que el original no tiene. La
+    /// carga útil lleva una de verdad —`…OÑ` la produce—, que es lo que
+    /// ejercita la tolerancia en vez de darla por buena.
     #[test]
-    fn the_plain_base64_alphabet_is_accepted_too() {
-        let plain = base64::engine::general_purpose::STANDARD
-            .encode(b"filters=subject.contains:ANIA\xc3\x91EZ\n");
+    fn the_slash_of_the_plain_base64_alphabet_is_accepted_too() {
+        let plain =
+            base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:OÑ\n");
+        assert!(plain.contains('/'), "la carga util trae una barra: {plain}");
         let url = an_operation(&format!("op=selectcert&properties={plain}"));
 
         read_operation(&url).expect("se lee igual");
+    }
+
+    /// Y el `+` del alfabeto normal **no llega**: `URLDecoder` lo convirtió en
+    /// un espacio mucho antes, así que lo que se descodifica ya no es Base64.
+    /// Es lo mismo que hace el original, y queda apuntado aquí para que nadie
+    /// añada una tolerancia al `+` que no puede dispararse.
+    #[test]
+    fn a_plus_of_the_plain_base64_alphabet_never_makes_it_this_far() {
+        let plain =
+            base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:þ\n");
+        assert!(plain.contains('+'), "la carga util trae un mas: {plain}");
+        let url = an_operation(&format!("op=selectcert&properties={plain}"));
+
+        let refusal = read_operation(&url).expect_err("el mas ya es un espacio");
+
+        assert_eq!(refusal.code(), SafCode::Params);
+        assert_eq!(refusal.blame(), Some(Parameter::Properties));
     }
 
     #[test]

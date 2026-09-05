@@ -33,14 +33,18 @@ pub(crate) fn a_certificate_with_id(label: &str, cka_id: u8, der: &[u8]) -> Toke
     )
 }
 
-/// Un certificado que **sirve para firmar ahora mismo**: un X.509 de verdad,
-/// en vigor y legible, con el que se puede ejercitar todo lo que exige un
-/// estado utilizable.
+/// Un certificado **legible y en vigor**: un X.509 de verdad, bien formado y
+/// con fechas buenas, que es lo que `TokenCertificate::status`
+/// mira para darlo por utilizable.
 ///
 /// El DER sale de la fábrica de la CA local ([`crate::tls`]) por no tener que
-/// versionar un certificado de nadie: lo que hace falta aquí es un X.509 bien
-/// formado y con fechas buenas, y ése lo es. **Ningún dato de una persona real
-/// entra en una prueba.**
+/// versionar un certificado de nadie. **Ningún dato de una persona real entra
+/// en una prueba.**
+///
+/// **La clave no es RSA**: la CA local se genera sobre P-256 (ID-221), así que
+/// esto no pasa la puerta de `certificates::is_rsa` y no sirve para
+/// ejercitar nada que la exija. Lo que sostiene es el estado del certificado,
+/// no su clave.
 pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
     let ca = crate::tls::LocalCa::generate().expect("la CA local deberia generarse");
     let der = ca

@@ -62,6 +62,15 @@ pub enum Attendance {
 /// Para la sede es exactamente eso, que no se le ha abierto canal, y se lo
 /// dice por el suyo como cualquier otro rechazo (ID-248). Atender dos a la vez
 /// es meter a la persona en dos trámites de dos sedes con dos PIN a medias.
+///
+/// **Quien decide eso es [`LiveErrand::begin`], y nadie más.** No se pregunta
+/// primero y se apunta después: preguntar y apuntar son dos tomas del candado,
+/// y entre ellas cabe otra invocación —el enlace profundo y la instancia única
+/// son dos caminos distintos hasta aquí (#357, #362)—, así que las dos podrían
+/// verlo libre y quedar las dos servidas con un solo trámite apuntado. `begin`
+/// mira y apunta bajo el mismo candado y devuelve si la plaza era suya; el
+/// canal que ya se había abierto para la segunda se cierra y lo que la sede
+/// recibe es su `SAF_45`.
 pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErrand) -> Attendance {
     let url = match AfirmaUrl::parse(url) {
         Ok(url) => url,
@@ -72,22 +81,27 @@ pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErra
 
     match LaunchRequest::from_url(&url) {
         Ok(request) => {
-            if live.is_live() {
-                return refuse(
-                    &url,
-                    Refusal::new(
-                        SafCode::CannotOpenSocket,
-                        "ya hay un tramite de sede vivo: no se atienden dos a la vez",
-                    ),
-                    transport,
-                );
-            }
-
             let duty = ChannelDuty::Serve(request.credential().clone());
             match transport(request.ports(), duty) {
                 Ok(channel) => {
-                    live.begin(Errand::of(request.credential().clone(), channel.port()));
-                    Attendance::Serving(channel)
+                    let errand = Errand::of(request.credential().clone(), channel.port());
+                    if live.begin(errand) {
+                        return Attendance::Serving(channel);
+                    }
+
+                    // La plaza era de otra sede. Se suelta el canal recién
+                    // abierto —el rechazo vuelve a atar uno de los puertos que
+                    // sorteó esta— y se le contesta como a cualquier otro
+                    // rechazo del ID-248.
+                    drop(channel);
+                    refuse(
+                        &url,
+                        Refusal::new(
+                            SafCode::CannotOpenSocket,
+                            "ya hay un tramite de sede vivo: no se atienden dos a la vez",
+                        ),
+                        transport,
+                    )
                 }
                 Err(error) => Attendance::ChannelNotOpened(error),
             }

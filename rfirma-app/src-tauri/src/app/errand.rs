@@ -89,6 +89,12 @@ impl LiveErrand {
 
     /// Apunta el trámite que empieza. **No sustituye**: con uno vivo devuelve
     /// `false` y el que llega se queda fuera (ID-280).
+    ///
+    /// Es **la única puerta** del trámite único, y por eso mira y apunta bajo
+    /// el mismo candado: quien la llame decide con lo que devuelve y no con un
+    /// [`Self::is_live`] anterior, que sería mirar por una toma y apuntar por
+    /// otra. Su valor de retorno no es opcional.
+    #[must_use = "con uno vivo devuelve false y el que llega no queda apuntado (ID-280)"]
     pub fn begin(&self, errand: Errand) -> bool {
         let mut live = super::lock(&self.0);
         if live.is_some() {
@@ -108,6 +114,14 @@ impl LiveErrand {
     /// Se llama **al contestar** y no al cerrar la ventana, que es lo mismo que
     /// dice el ID-275 desde el otro lado: el desenlace que la ventana enseña ya
     /// no es parte del trámite.
+    ///
+    /// **Contestar no es la única salida, y hoy es la única que llama aquí.**
+    /// Una sede que se cae con el canal abierto, o una ventana de sede que se
+    /// cierra con el aspa en vez de cancelar, dejarían el trámite vivo para
+    /// siempre y todo `afirma://` posterior rechazado con `SAF_45`. No es
+    /// alcanzable mientras [`super::site::attend_launch`] no esté cableado;
+    /// quien lo cablee —la ventana de sede (#362) y los manejadores (#357)— ha
+    /// de atar **el cierre del canal** a esta llamada.
     pub fn end(&self) {
         *super::lock(&self.0) = None;
     }
@@ -644,7 +658,7 @@ mod tests {
     #[test]
     fn the_person_saying_no_is_the_only_cancellation() {
         let live = LiveErrand::default();
-        live.begin(Errand::of(a_credential(), 54001));
+        assert!(live.begin(Errand::of(a_credential(), 54001)));
 
         let reply = declined(&live);
 
@@ -670,6 +684,11 @@ mod tests {
             answer.on_the_wire(),
             WireAnswer::refused(SafCode::CannotOpenSocket).on_the_wire()
         );
+
+        // Y el trámite que sigue apuntado es el primero: el segundo no sustituye
+        // nada ni se cuela al lado, que es lo que el ID-280 prohíbe.
+        let errand = live.current().expect("el primer tramite sigue vivo");
+        assert_eq!(errand.port(), 54001);
     }
 
     /// Y en cuanto el primero contesta, la sede siguiente sí es atendida: lo que
