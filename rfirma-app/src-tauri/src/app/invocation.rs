@@ -17,13 +17,25 @@
 //!
 //! Si se sustituye se pierde la colocación de un recuadro, que no significa
 //! nada en otro documento; por eso no se pregunta.
+//!
+//! # La invocación que no nombra un fichero
+//!
+//! Desde el hito de la sede hay una segunda forma de invocar: el navegador
+//! abre `rfirma 'afirma://websocket?…'` al pulsar un enlace del esquema
+//! (ID-234, ID-235). Esa cadena **no es una ruta**, así que no baja a
+//! [`crate::dropped`]: se reconoce por el esquema —esté bien formada o no— y
+//! sale por [`Invocation::site_launch`], que es por donde la recogerá el
+//! trámite de sede. Lo que este módulo garantiza es que llega **entera**, con
+//! su `?` y sus pares intactos, también por el camino de la segunda instancia.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
 use crate::app::documents;
 use crate::commands::views::DroppedDocumentView;
 use crate::memory::OpenedDocuments;
+use crate::protocol::AfirmaUrl;
 
 /// Una invocación, tal y como llegó: la línea de órdenes y desde dónde se
 /// corrió.
@@ -58,6 +70,90 @@ impl Invocation {
             folder: std::env::current_dir().unwrap_or_default(),
         }
     }
+
+    /// La URL `afirma://` que trae la invocación, si la trae (ID-235).
+    ///
+    /// Se reconoce **por el esquema y nada más**: una URL rota es igualmente
+    /// de la sede, y lo que le toca después es un código del catálogo, no
+    /// intentar abrirla como fichero. Se devuelve tal cual llegó —el
+    /// escritorio la entrega entera en un solo argumento gracias al `%u` del
+    /// ID-234— porque los pares se leen luego, en `protocol`.
+    pub fn site_launch(&self) -> Option<&str> {
+        self.command_line
+            .iter()
+            .skip(1)
+            .map(String::as_str)
+            .find(|argument| AfirmaUrl::is_a_protocol_url(argument))
+    }
+}
+
+/// Qué hacer con los argumentos de este proceso **antes de montar nada**
+/// (ID-236).
+///
+/// `tauri-plugin-single-instance` lee la línea de órdenes con
+/// `std::env::args()`, que **entra en pánico** con un argumento que no sea
+/// UTF-8 válido, y lo hace dentro de su propio `setup`: ni la protección de
+/// [`Invocation::of_this_process`] (ID-158) ni el cierre de la segunda
+/// invocación llegan a tiempo. La única forma de que no pase por ahí es que
+/// para cuando el complemento mire, los argumentos ya sean legibles.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Arguments {
+    /// Todos son UTF-8 válido: el complemento puede leerlos sin morirse.
+    Readable,
+    /// Alguno no lo es, y hay que volver a arrancar con estos otros, ya
+    /// legibles, que dicen lo mismo con los bytes ilegibles sustituidos.
+    RerunWith(Vec<String>),
+}
+
+/// Decide lo anterior sobre una línea de órdenes cualquiera.
+///
+/// La sustitución es la misma de [`Invocation::of_this_process`]: un argumento
+/// ilegible acaba saliendo por `NotAPdf`, la puerta de siempre (ID-158). Una
+/// URL `afirma://` es UTF-8 por construcción, así que este camino no la toca.
+pub fn arguments_before_the_single_instance<I>(arguments: I) -> Arguments
+where
+    I: IntoIterator<Item = OsString>,
+{
+    let arguments: Vec<OsString> = arguments.into_iter().collect();
+    if arguments.iter().all(|argument| argument.to_str().is_some()) {
+        return Arguments::Readable;
+    }
+    Arguments::RerunWith(
+        arguments
+            .iter()
+            .map(|argument| argument.to_string_lossy().into_owned())
+            .collect(),
+    )
+}
+
+/// Deja la línea de órdenes de este proceso **legible**, volviendo a arrancar
+/// si hace falta (ID-236).
+///
+/// Se llama lo primero de todo, antes de construir la aplicación: para cuando
+/// el complemento de instancia única mire, los argumentos ya son UTF-8 y su
+/// `std::env::args()` no tiene con qué entrar en pánico. El proceso nuevo no
+/// vuelve a pasar por aquí, porque una sustitución lossy siempre sale legible.
+///
+/// Vuelve a arrancar con `spawn` y no con el `exec` de POSIX porque el
+/// condicional de sistema operativo solo puede vivir en
+/// [`crate::paths`] (ID-35, ADR-0010) y `exec` es de `std::os::unix`. Si ni
+/// siquiera se puede arrancar el proceso nuevo, se sigue: no abrir la ventana
+/// es peor que arriesgarse a un argumento ilegible, que es lo raro de lo raro.
+pub fn make_the_command_line_readable() {
+    let Arguments::RerunWith(arguments) = arguments_before_the_single_instance(std::env::args_os())
+    else {
+        return;
+    };
+    let Ok(executable) = std::env::current_exe() else {
+        return;
+    };
+    if std::process::Command::new(executable)
+        .args(arguments.iter().skip(1))
+        .spawn()
+        .is_ok()
+    {
+        std::process::exit(0);
+    }
 }
 
 /// **Caso de uso.** Qué abre una invocación, contado como la ventana lo
@@ -66,11 +162,20 @@ impl Invocation {
 /// Devuelve `None` cuando la invocación no nombra ningún fichero —arrancar la
 /// aplicación a secas—, igual que soltar nada no emite ningún evento. Un
 /// argumento que no es un PDF legible **sí** devuelve algo: la ventana normal
-/// diciéndolo (ID-158).
+/// diciéndolo (ID-158). La excepción es la URL `afirma://`, que no es un
+/// fichero fallido sino otra cosa: devuelve `None` y se recoge por
+/// [`Invocation::site_launch`] (ID-235).
 pub fn invoked_document(
     invocation: &Invocation,
     opened: &OpenedDocuments,
 ) -> Option<DroppedDocumentView> {
+    // Una invocación de la sede no abre ningún documento **ni avisa de nada**:
+    // no es un argumento que no se pueda abrir, es un argumento que no es un
+    // fichero (ID-235). Quien la atiende es el trámite de sede, leyéndola de
+    // [`Invocation::site_launch`].
+    if invocation.site_launch().is_some() {
+        return None;
+    }
     documents::told_as_dropped(
         crate::dropped::invoked_pdf(&invocation.command_line, &invocation.folder),
         opened,
@@ -228,5 +333,94 @@ mod tests {
     #[test]
     fn a_window_opened_with_nothing_pending_has_nothing_to_pick_up() {
         assert_eq!(PendingInvocation::default().take(), None);
+    }
+
+    /// La URL que entrega el escritorio, con sus pares y su credencial.
+    const A_LAUNCH: &str =
+        "afirma://websocket?ports=51000,51001&v=4&idsession=8jAkPZfRw2mQxN4TbYuL";
+
+    fn invoked_with_the_url(url: &str) -> Invocation {
+        Invocation {
+            command_line: vec!["rfirma".to_owned(), url.to_owned()],
+            folder: PathBuf::from("/"),
+        }
+    }
+
+    /// **ID-235.** La URL de la sede no es una ruta: ni se abre, ni se avisa de
+    /// que no se pudo abrir. Antes, `/casa/afirma://websocket?…` se buscaba en
+    /// el disco y la ventana anunciaba un fichero que no era un PDF.
+    #[test]
+    fn a_site_url_is_not_treated_as_a_file_path() {
+        let invocation = invoked_with_the_url(A_LAUNCH);
+
+        assert_eq!(invocation.site_launch(), Some(A_LAUNCH));
+        assert_eq!(invoked_document(&invocation, &OpenedDocuments::new()), None);
+    }
+
+    /// **TD-65.** Lo que se prueba del esquema es que la URL sobrevive **entera**
+    /// el camino de la instancia única: el complemento entrega la línea de
+    /// órdenes tal cual, y de ahí sale la misma cadena con su `?` y sus pares.
+    #[test]
+    fn the_whole_url_survives_the_single_instance_path() {
+        // La línea de órdenes tal y como la entrega el complemento en la
+        // segunda invocación, con la carpeta de trabajo del proceso que la
+        // atiende, que es otra.
+        let invocation = Invocation {
+            command_line: vec!["rfirma".to_owned(), A_LAUNCH.to_owned()],
+            folder: PathBuf::from("/otra/carpeta"),
+        };
+
+        assert_eq!(invocation.site_launch(), Some(A_LAUNCH));
+        assert_eq!(
+            second_invocation(&invocation, &OpenedDocuments::new(), false),
+            None,
+            "una invocación de sede no sustituye ningún documento"
+        );
+    }
+
+    /// El esquema no distingue mayúsculas: quien entrega la cadena es el
+    /// escritorio, y el ejecutable no es un argumento.
+    #[test]
+    fn the_scheme_is_recognised_whatever_the_case_and_never_in_the_executable() {
+        assert_eq!(
+            invoked_with_the_url("AFIRMA://selectcert?ports=51000").site_launch(),
+            Some("AFIRMA://selectcert?ports=51000")
+        );
+        assert_eq!(
+            Invocation {
+                command_line: vec!["afirma://rfirma".to_owned()],
+                folder: PathBuf::from("/"),
+            }
+            .site_launch(),
+            None
+        );
+    }
+
+    /// **ID-236.** Un argumento que no es UTF-8 haría entrar en pánico al
+    /// `std::env::args()` del complemento, así que la línea de órdenes se deja
+    /// legible antes de que él mire.
+    #[test]
+    fn an_argument_that_is_not_utf8_is_made_readable_before_the_plugin_reads_it() {
+        use std::os::unix::ffi::OsStringExt as _;
+
+        let unreadable = OsString::from_vec(vec![b'/', 0xff, b'.', b'p', b'd', b'f']);
+
+        assert_eq!(
+            arguments_before_the_single_instance(vec![OsString::from("rfirma"), unreadable]),
+            Arguments::RerunWith(vec!["rfirma".to_owned(), "/\u{fffd}.pdf".to_owned()])
+        );
+    }
+
+    /// Y una línea de órdenes normal —la URL de la sede lo es siempre— no
+    /// vuelve a arrancar nada.
+    #[test]
+    fn a_readable_command_line_reruns_nothing() {
+        assert_eq!(
+            arguments_before_the_single_instance(vec![
+                OsString::from("rfirma"),
+                OsString::from(A_LAUNCH),
+            ]),
+            Arguments::Readable
+        );
     }
 }

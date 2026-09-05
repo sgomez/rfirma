@@ -37,6 +37,18 @@ pub struct AfirmaUrl {
 }
 
 impl AfirmaUrl {
+    /// Si la cadena **viene por el esquema del protocolo**, esté bien formada
+    /// o no.
+    ///
+    /// Es la pregunta que se hace la invocación desde fuera antes de mirar
+    /// nada más (ID-235): un argumento que empieza por `afirma://` es de la
+    /// sede aunque el resto no se pueda leer, y lo que sigue es un rechazo con
+    /// su código, nunca un intento de abrirlo como fichero. Por eso no basta
+    /// con `parse(..).is_ok()`.
+    pub fn is_a_protocol_url(candidate: &str) -> bool {
+        strip_scheme(candidate).is_some()
+    }
+
     /// Parte la cadena, o dice por qué no es una URL del protocolo.
     ///
     /// El esquema se compara **sin distinguir mayúsculas**: quien entrega la
@@ -184,6 +196,22 @@ mod tests {
             AfirmaUrl::parse("AFIRMA://sign?op=sign").expect("el esquema no lleva mayusculas");
 
         assert_eq!(url.verb(), "sign");
+    }
+
+    /// El esquema se reconoce **antes** de leer nada, y una URL rota sigue
+    /// siendo de la sede: si no, acabaría abriéndose como si fuera un fichero.
+    #[test]
+    fn a_broken_url_is_still_recognised_as_coming_through_the_scheme() {
+        assert!(AfirmaUrl::is_a_protocol_url(
+            "AFIRMA://websocket?ports=51000"
+        ));
+        assert!(AfirmaUrl::is_a_protocol_url("afirma://"));
+        assert!(
+            AfirmaUrl::parse("afirma://").is_err(),
+            "y sigue siendo rota: reconocer el esquema no es leerla"
+        );
+        assert!(!AfirmaUrl::is_a_protocol_url("/casa/documento.pdf"));
+        assert!(!AfirmaUrl::is_a_protocol_url("afirma:/websocket"));
     }
 
     #[test]

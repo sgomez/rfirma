@@ -49,6 +49,13 @@ pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
 pub fn run() {
     use tauri::{Emitter, Manager};
 
+    // **Lo primero de todo** (ID-236): el complemento de instancia única lee la
+    // línea de órdenes con `std::env::args()`, que entra en pánico con un
+    // argumento que no sea UTF-8, y lo hace dentro de su propio `setup`. Para
+    // cuando mire, aquí ya se ha vuelto a arrancar con los argumentos
+    // legibles; el caso normal no hace nada.
+    app::invocation::make_the_command_line_readable();
+
     let paths = paths::Paths::from_environment().expect("debería saberse cuál es el HOME");
     let memory = memory::Memory::at(&paths);
     let configuration = memory
