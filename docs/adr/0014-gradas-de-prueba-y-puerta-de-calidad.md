@@ -23,15 +23,43 @@ sub-issue de #10 declara la grada de sus pruebas, y la grada decide el carril:
 | **A** | nada | sello de sesión, coordenadas del [#9](https://github.com/sgomez/rfirma/issues/9), composición del `layer2Text` y su máscara, `paths.rs` | rápido |
 | **B** | SoftHSM (`apt-get install softhsm2`, segundos) | firma `CKM_SHA256_RSA_PKCS`, listado de certificados, mapeo de `CKR_*` | rápido |
 | **C** | los seis `.so` (GraalVM, `just native`) | ciclo trifásico completo, PDF válido, rúbrica visible | lento |
-| **D** | red | OCSP en vivo contra el certificado revocado del kit | ni PR ni carril lento: cron |
+| **D** | **un tercero vivo mientras la prueba corre** | OCSP en vivo contra el certificado revocado del kit | ni PR ni carril lento: cron |
 
 La grada que sostiene la decisión es la **B**. Sin ella, «probar de verdad» y «tardar cuatro
 minutos» serían lo mismo, y la mitad del código de riesgo —PKCS#11— caería al carril que nadie
 espera. SoftHSM es de software y se instala en segundos: no hay razón para tratarlo como caro.
 
-La **D** la heredamos de #11 y no se toca: atar cada PR a la disponibilidad de
+La **D** la heredamos de #11 y su carril no se toca: atar cada PR a la disponibilidad de
 `sede.fnmt.gob.es` con `merge: auto` significa que un corte ajeno bloquea la entrega. Va a un
 job programado que abre una issue si falla.
+
+### La D es quién es el sujeto, no si en algún momento hubo red
+
+La columna «Necesita» de la D decía **«red»**, a secas, y eso es demasiado ancho: convierte en
+grada D cualquier prueba que en algún momento haya tocado un servidor ajeno, aunque el ajeno ya
+no esté delante cuando la prueba corre. Con esa lectura, **el banco de conformidad acabaría en
+el cron** —donde nadie lo mira, y donde no puede ser una puerta— sólo porque su accesorio se
+descarga.
+
+Lo que hace grada D a una prueba es que **el sujeto de la medición sea un tercero vivo**: que lo
+que se comprueba es cómo responde `sede.fnmt.gob.es` **hoy**, y que si está caído no hay
+veredicto. Un accesorio que se descarga en el paso de preparación, **a etiqueta fijada, con su
+`sha256` comprobado y cacheado**, no es eso: es un fichero en disco, exactamente igual que los
+`.p12` del kit de la FNMT, y la prueba que lo usa cae en la grada que le toque por lo demás que
+necesite.
+
+El caso que obliga a escribirlo es el **banco de conformidad** (TD-55): el `autoscript.js`
+publicado en el tag `v1.9.2` de `clienteafirma`, corriendo bajo Node contra el canal `wss://` de
+rfirma en `tests/conformance_bench.rs`. El sujeto es **nuestro** canal; el cliente publicado es
+el instrumento, y es un fichero de 219 KB con su huella. **Es grada B, en el carril rápido**, y
+es el único sitio donde se mide que hablamos el mismo dialecto que el cliente que ejecutan las
+sedes de verdad. Lo baja `just autoscript` —el pin, URL y `sha256`, vive en el `justfile`— y el
+CI lo hace en un paso propio, con caché por ese `sha256`.
+
+Con la mitad que impide que se apague solo: **si el accesorio falta, el CI falla; sólo se salta
+en local**. `just autoscript` sale con 1 si la descarga falla o si el `sha256` no cuadra, y la
+propia prueba mira la variable `CI` y falla en vez de saltarse. Un `skip` silencioso convertiría
+el banco en decoración el primer día que la descarga dejase de funcionar.
 
 ### Abrir un socket de escucha en el *loopback* es grada A
 

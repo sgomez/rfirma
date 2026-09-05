@@ -198,14 +198,22 @@ One entry point, `just`:
 apt-get install -y just maven libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
                    libayatana-appindicator3-dev libsoup-3.0-dev libxdo-dev
 cargo binstall cargo-llvm-cov cargo-crap
+just autoscript   # el accesorio del banco de conformidad; ver abajo
 just check
 ```
 
 `just tools` names whatever is still missing, and `just --list` shows the rest.
 The fast lane's three jobs are `just check-java`, `just check-repo check-ts`
 and `just check-rust` — together exactly what `just check` runs, minus the
-`tools` probe that each runner's setup actions already guarantee. So a local
-pass and a CI pass mean the same thing.
+`tools` probe that each runner's setup actions already guarantee.
+
+**One preparation step sits outside `just check`**: `just autoscript`, which
+downloads the conformance bench's fixture (`autoscript.js` at tag `v1.9.2`,
+pinned by `sha256`) into `testdata/conformance/`. CI runs it as its own,
+mandatory step in both lanes; locally it is optional, and without it
+`tests/conformance_bench.rs` **skips** — which is the one way a local pass and a
+CI pass differ. Run it once and they mean the same thing again. In CI the bench
+never skips: the test checks the `CI` variable and fails instead (ADR-0014).
 
 `just check` **no longer needs the native library at all**: `check-rust`
 dropped the `build` chain, so `RFIRMA_SKIP_NATIVE` is not needed to run it and
