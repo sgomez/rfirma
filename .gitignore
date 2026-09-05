@@ -44,3 +44,9 @@ packaging/flatpak/flatpak-cargo-generator.py
 # Python (packaging/): el bytecode que deja cualquier import o `py_compile`.
 __pycache__/
 *.pyc
+
+# El accesorio del banco de conformidad (TD-55): `autoscript.js` del tag v1.9.2
+# de clienteafirma. Es codigo AJENO (EUPL-1.1/GPL-2.0) que no distribuimos, asi
+# que no se copia al repositorio: lo descarga `just autoscript` a etiqueta
+# fijada y con el sha256 comprobado.
+testdata/conformance/

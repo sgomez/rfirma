@@ -63,6 +63,13 @@ ruff_version := "0.16.6"
 # medicion sin ella (`just crap-full`).
 ffi_allow := "src/ffi.rs"
 
+# El accesorio del banco de conformidad, FIJADO POR ETIQUETA Y POR SHA256. La
+# 1.9.2 no publica autoscript.js en npm ni en ningun artefacto: el unico origen
+# es el arbol del tag. Estas dos lineas son el pin, y estan tambien en el paso
+# "Banco de conformidad" de .github/workflows/ci.yml.
+autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
+autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
+
 # Las librerias de sistema que necesita el WebView de Tauri, como pares
 # "<modulo de pkg-config>:<paquete apt>". NO son dependencias de cargo: son
 # paquetes -dev del sistema, y sin ellas `cargo build` muere dentro del
@@ -319,6 +326,43 @@ lint-i18n: po-import
 # Provisiona el token SoftHSM `rfirma-test` desde testdata/fnmt/.
 token:
     ./testdata/softhsm/provision-token.sh
+
+# El accesorio del BANCO DE CONFORMIDAD (TD-55): el `autoscript.js` que sirve
+# una sede de verdad, corriendo bajo Node contra nuestro canal en
+# tests/conformance_bench.rs.
+#
+# NO SE COPIA AL REPOSITORIO: es codigo ajeno (EUPL-1.1/GPL-2.0) que no
+# distribuimos. Se descarga A ETIQUETA FIJADA —el tag v1.9.2, no `master`, que
+# va 219 commits por delante y sin publicar (ID-313)— y con el sha256
+# comprobado, asi que lo que corre es un fichero identificado, no lo que
+# hubiera hoy en una rama.
+#
+# ES UNA DESCARGA DE PREPARACION, NO UNA PRUEBA DE RED (ID-312): pasa una vez,
+# queda cacheada y a partir de ahi el banco es grada B. La grada D es que el
+# SUJETO de la prueba sea un tercero vivo, y aqui el sujeto es nuestro canal.
+#
+# Idempotente: si el fichero ya esta y su sha cuadra, no toca la red.
+autoscript:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    destino="{{ justfile_directory() }}/testdata/conformance/autoscript-1.9.2.js"
+    sha="{{ autoscript_sha256 }}"
+    if [ -f "$destino" ] && echo "$sha  $destino" | sha256sum --check --status; then
+        echo "autoscript.js v1.9.2 ya esta en testdata/conformance/"
+        exit 0
+    fi
+    mkdir -p "$(dirname "$destino")"
+    curl -sSL --fail --max-time 120 -o "$destino.parcial" "{{ autoscript_url }}"
+    if ! echo "$sha  $destino.parcial" | sha256sum --check --status; then
+        obtenido="$(sha256sum "$destino.parcial" | cut -d' ' -f1)"
+        rm -f "$destino.parcial"
+        echo "autoscript.js no cuadra con el sha fijado:" >&2
+        echo "  esperado $sha" >&2
+        echo "  obtenido $obtenido" >&2
+        exit 1
+    fi
+    mv "$destino.parcial" "$destino"
+    echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
 
 
 # ---------------------------------------------------------------------------
