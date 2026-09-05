@@ -144,15 +144,27 @@ pub fn make_the_command_line_readable() {
     else {
         return;
     };
-    let Ok(executable) = std::env::current_exe() else {
-        return;
+    let executable = match std::env::current_exe() {
+        Ok(executable) => executable,
+        Err(error) => {
+            // Se sigue adelante a sabiendas: no abrir la ventana sería peor que
+            // el pánico del complemento. Al menos queda dicho por qué.
+            eprintln!(
+                "rfirma: no se puede releer la línea de órdenes ilegible \
+                 ({error}); el arranque sigue con ella tal cual"
+            );
+            return;
+        }
     };
-    if std::process::Command::new(executable)
+    match std::process::Command::new(executable)
         .args(arguments.iter().skip(1))
         .spawn()
-        .is_ok()
     {
-        std::process::exit(0);
+        Ok(_) => std::process::exit(0),
+        Err(error) => eprintln!(
+            "rfirma: no se puede volver a arrancar con la línea de órdenes ya \
+             legible ({error}); el arranque sigue con ella tal cual"
+        ),
     }
 }
 
