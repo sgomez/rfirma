@@ -292,7 +292,7 @@ describe("los tokens sin tema", () => {
   });
 
   it("tiene dos escalones de movimiento reales, no tres", () => {
-    // Sección 6 y nota final de la sección 11.
+    // Sección 6 y nota final de la sección 12.
     const declared = themelessDeclarations(tokens);
 
     expect(declared.get("--rf-duration-fast")).toBe("150ms");

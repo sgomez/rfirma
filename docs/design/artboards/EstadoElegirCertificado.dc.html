@@ -291,32 +291,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       </sc-if>
       <span style="{{ estiloFlecha }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
     </button>
-    <sc-if value="{{ abierto }}" hint-placeholder-val="{{ true }}">
-      <div style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated)">
-        <ul style="list-style:none;margin:0;padding:0;max-height:232px;overflow-y:auto;background:var(--rf-surface);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
-          <sc-for list="{{ filas }}" as="fila" hint-placeholder-count="3">
-            <li>
-              <sc-if value="{{ fila.hayEncabezado }}" hint-placeholder-val="{{ false }}">
-                <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;margin:0;
-                  padding:8px var(--rf-space-sm) 4px;background:var(--rf-bg)">{{ fila.encabezado }}</p>
-              </sc-if>
-              <button type="button" style="{{ fila.estilo }}" disabled="{{ fila.inutil }}" onClick="{{ fila.elegir }}">
-                <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
-                  <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ fila.titular }}</span>
-                  <span class="rf-body rf-text-muted" style="line-height:1.35">{{ fila.linea }}</span>
-                  <sc-if value="{{ fila.inutil }}" hint-placeholder-val="{{ false }}">
-                    <span class="rf-body" style="line-height:1.35;font-weight:600">{{ fila.aviso }}</span>
-                  </sc-if>
-                </span>
-                <span style="display:flex;flex:none;width:16px;margin-top:3px;color:var(--rf-primary)">
-                  <sc-if value="{{ fila.elegida }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg></sc-if>
-                </span>
-              </button>
-            </li>
-          </sc-for>
-        </ul>
-      </div>
-    </sc-if>
   </div>
 </div>
     <hr class="rf-divider">
@@ -429,6 +403,48 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   </div>
 </aside>
 </div>
+
+<!-- CAPA FLOTANTE DEL DESPLEGABLE. Regla del sistema de diseno: un desplegable
+     se ve ENTERO aunque se salga de su contenedor y de la ventana. Aqui el
+     panel NO puede vivir pegado a su boton: la columna del panel lateral se
+     desplaza de verdad (740 px de contenido en 466 px visibles) y su
+     `overflow:auto` le cortaba 63,3 px de los 232 justo donde empieza el pie
+     de «Se guardara en / Firmar documento». Quitar ese `overflow` no es
+     opcion, porque la columna tiene que seguir desplazandose: el panel sube a
+     la raiz del artboard, que es lo que en la implementacion sera un portal.
+     Medido: el borde inferior del boton cae a 349,5 px del alto del artboard,
+     y los 4 px de separacion de siempre dan el `top:354px` redondeado al
+     pixel. El ancho es el del panel lateral por construccion: 360 px menos su
+     raya izquierda menos sus dos rellenos, con lo que la lista queda de 837 a
+     1164 px, exactamente sobre el boton. `estado` es la unica palanca que
+     moveria el anclaje, y solo abre la lista en «abierto», donde el boton
+     mide lo mismo con 2, 4 y 9 certificados. -->
+<sc-if value="{{ abierto }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;top:354px;right:var(--rf-space-sm);width:calc(360px - 1px - var(--rf-space-sm) * 2);z-index:5;border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated)">
+    <ul style="list-style:none;margin:0;padding:0;max-height:232px;overflow-y:auto;background:var(--rf-surface);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+      <sc-for list="{{ filas }}" as="fila" hint-placeholder-count="3">
+        <li>
+          <sc-if value="{{ fila.hayEncabezado }}" hint-placeholder-val="{{ false }}">
+            <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;margin:0;
+              padding:8px var(--rf-space-sm) 4px;background:var(--rf-bg)">{{ fila.encabezado }}</p>
+          </sc-if>
+          <button type="button" style="{{ fila.estilo }}" disabled="{{ fila.inutil }}" onClick="{{ fila.elegir }}">
+            <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
+              <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ fila.titular }}</span>
+              <span class="rf-body rf-text-muted" style="line-height:1.35">{{ fila.linea }}</span>
+              <sc-if value="{{ fila.inutil }}" hint-placeholder-val="{{ false }}">
+                <span class="rf-body" style="line-height:1.35;font-weight:600">{{ fila.aviso }}</span>
+              </sc-if>
+            </span>
+            <span style="display:flex;flex:none;width:16px;margin-top:3px;color:var(--rf-primary)">
+              <sc-if value="{{ fila.elegida }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg></sc-if>
+            </span>
+          </button>
+        </li>
+      </sc-for>
+    </ul>
+  </div>
+</sc-if>
 </div>
 </x-dc>
 <script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"estado":{"editor":"enum","options":["sin elegir","elegido","abierto"],"default":"abierto","section":"Selector"},"cuantos":{"editor":"enum","options":["2","4","9"],"default":"4","section":"Selector"},"caducados":{"editor":"boolean","default":true,"section":"Selector"},"orden":{"editor":"enum","options":["agrupado · utilizables primero","como hoy · el orden en que cargaron los modulos"],"default":"agrupado · utilizables primero","section":"Orden"},"$preview":{"width":1180,"height":700}}'>

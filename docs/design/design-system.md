@@ -278,6 +278,38 @@ sección 8).
 
 Una o dos palabras. No hay variantes de éxito ni de error (sección 2).
 
+### Desplegable
+
+Un `<select>` o un desplegable propio —el de certificados del panel de firma, el
+de la ventana de sede— **se ve entero aunque sobresalga**. No hay clase propia en
+el bundle: es una regla de colocación, y son cuatro puntos.
+
+1. **Ningún ancestro puede recortarlo.** Flota por encima de todo —del panel que
+   lo contiene, del pie, del diálogo y de la propia ventana— y sale del modal si
+   hace falta.
+2. **El alto de la lista no se recorta para que quepa.** Si no cabe, sobresale.
+   Bajar el `max-height` de la lista para que entre en la ventana es mutilar el
+   componente para tapar el fallo real.
+3. **Se ordena con lo que ya existe**: `z-index: 5` —el mismo de la cabecera de
+   la ventana principal— y `--rf-shadow-elevated`. Ni un color ni una sombra
+   literales.
+4. **Cuando el disparador vive dentro de una columna que se desplaza de verdad,
+   el panel no puede colgar de él**: se saca a la raíz —un **portal**— y se
+   ancla a la posición del disparador. Quitarle el `overflow` a la columna no es
+   opción, porque la columna sí tiene que desplazarse.
+
+**Está medido, y el defecto era anterior a la ventana de sede.** En
+`EstadoElegirCertificado` el panel colgaba del disparador dentro de la columna
+lateral, que desplaza 740 px de contenido en 466 px visibles: su `overflow: auto`
+**cortaba 63 px de los 232** de la lista, justo donde empieza el pie de «Se
+guardará en / Firmar documento», y lo hacía **en la opción por defecto** del
+artboard, con 4 y con 9 certificados. Las filas de abajo no se podían ni ver ni
+elegir. El arreglo dibujado —el panel a la raíz del artboard, anclado con las
+medidas del disparador— es el equivalente del portal que usará la
+implementación. El mismo defecto reapareció en la ventana de sede por otra vía,
+un `overflow: hidden` en el cuerpo de la ventana, y el recorte coincidía con el
+borde superior del pie, así que parecía que el pie tapaba la lista a medias.
+
 ### Ruta de destino
 
 Dónde va a caer un fichero: **la última carpeta y el nombre**, nunca la ruta
@@ -340,7 +372,73 @@ dentro; sin ese reinicio ninguna es la que se pinta.
 
 ---
 
-## 11. Por qué el sistema no es lo obvio
+## 11. Redacción: la interfaz es limpia
+
+**La gente no lee.** Una interfaz llena de texto no informa mejor: rompe la
+experiencia y hace que no se lea tampoco lo poco que importaba. La regla de
+partida es la de la v0.4 —**si borrar una frase no cambia lo que la persona
+puede hacer, la frase sobra**— y esta sección la completa con las **tres
+familias de frase que se borran**, no se reescriben más cortas.
+
+### 1 · Lo obvio
+
+Si el botón que hay al lado ya lo dice, o si se ve mirando, la frase sobra.
+
+| Antes | Después |
+| ----- | ------- |
+| «Has cancelado la firma. **No se ha firmado nada.**» | «Has cancelado la firma.» |
+| «…**No se firma nada.**» bajo el bloque de identidad, con el botón `Identificarse` debajo | *(borrado)* |
+| «**Han pasado 30 segundos.** La petición no ha llegado.» | «La petición no ha llegado.» |
+| «El PIN se usa solo para esta firma y **no se guarda en ningún sitio**.» | *(borrado)* |
+| «Si cancelas, se abandona el trámite y la sede recibirá que has cancelado.» | *(borrado)* |
+
+Aquí entra también **la explicación técnica**: «Aún no sabemos qué sede es: eso
+lo dice la petición, y todavía no ha llegado» explicaba por dentro algo que se
+veía solo. Y **la coletilla que no le sirve a quien mira**: «la sede ya lo sabe»,
+en los tres desenlaces, es cierta y no cambia ninguna decisión de quien lee.
+
+### 2 · Lo que infunde temor
+
+Las palabras que ponen a la persona en guardia sin darle información a cambio.
+**La ventana no tiene que asustar: tiene que decir qué se le pide.**
+
+| Antes | Después |
+| ----- | ------- |
+| Botón «**Entregar mis datos**» | «Identificarse» |
+| «**Se le entregarán** tu nombre, tu DNI…» | «Se enviarán tu nombre, tu DNI…» |
+| «La petición **dice venir de** sede.ejemplo.gob.es, que solicita una firma» | «sede.ejemplo.gob.es pide tu firma» |
+
+Nombrar el origen **a secas** no afirma que se haya verificado, así que
+«atribuir, no afirmar» se sigue cumpliendo sin el verbo de sospecha.
+
+### 3 · Lo que acusa
+
+Frases que señalan culpables o dan órdenes. Se enuncia el hecho y quien lee saca
+la conclusión.
+
+| Antes | Después |
+| ----- | ------- |
+| «La petición **no dice de dónde viene**. Solicita una firma. **Comprueba de dónde venías**», con triángulo de advertencia y borde de 2 px | «Origen sin identificar / La petición pide una firma y no indica de qué página viene», con icono de información y borde de 1 px |
+| «**El fallo es de** sede.ejemplo.gob.es: pide colocar la firma en una página añadida al final, y rFirma no hace eso» | «sede.ejemplo.gob.es pide colocar la firma en una página añadida al final, y rFirma no hace eso» |
+| «Si insiste, **dile** esto:» | «Para quien mantiene la sede:» |
+
+### Lo que no se recorta
+
+Recortar no es empobrecer el contenido. **No se toca**, por corta que quede la
+frase:
+
+- La distinción entre «no tienes ninguno» y «la sede excluyó los tuyos»: la
+  salida es distinta y la persona tiene que saber cuál es la suya.
+- La instrucción que sí es accionable, como «tras permitir, vuelve a la sede y
+  pulsa Reintentar».
+- La frase que no se puede deducir mirando, como «rFirma no guarda copia» cuando
+  la aplicación **sí** tiene bandeja de recientes.
+- La regla dura de no enumerar nunca lo que la sede descartó: eso no se recorta,
+  es que no se escribe.
+
+---
+
+## 12. Por qué el sistema no es lo obvio
 
 Cuatro puntos donde la especificación de partida no funcionaba y el sistema se
 apartó de ella. Están aquí porque, sin la explicación, parecen arbitrarios y

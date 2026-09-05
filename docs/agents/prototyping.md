@@ -146,6 +146,13 @@ baja a `main` es Markdown, no HTML:
   Qué se descartó y por qué. Enlace al canvas que lo validó.
   ```
 
+- **Una ventana con una secuencia lleva una sola ficha**, aunque tenga varios
+  artboards. La regla es «una ficha por pantalla» porque lo normal es que cada
+  pantalla se entienda sola; cuando los artboards son **momentos de la misma
+  ventana** —`ventana-de-sede.md`, con sus cinco
+  ([#332](https://github.com/sgomez/rfirma/issues/332))— partirla obligaría a
+  leer todos los ficheros para saber qué ve la persona de principio a fin. La
+  ficha lista entonces los estados en una tabla con su artboard.
 - **Un artboard de trabajo nace para morir.** Si para decidir has creado
   artboards o páginas aparte, al validar **se funden en el artboard de la
   pantalla y se borran**, del repositorio y del proyecto, en el mismo turno en
@@ -172,6 +179,18 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
 | _(ninguno en vuelo)_ | | | |
+
+El caso de uso **v0.5 · la ventana de sede** ([#317](https://github.com/sgomez/rfirma/issues/317))
+se validó el **05/09/2026** y salió de esta tabla. Es la excepción declarada a la
+regla de «una ficha por pantalla»: sus cinco artboards —`SedeEspera`,
+`SedeConsentimiento`, `SedeFirmando`, `SedeDesenlace` y `SedeSinCertificado`— son
+cinco momentos de **una sola ventana**, así que tienen **una sola ficha**,
+[`ventana-de-sede.md`](../design/ventana-de-sede.md)
+([#332](https://github.com/sgomez/rfirma/issues/332)). De rebote se tocaron
+`dialogo-pin` —el `autofocus` del campo del secreto—, `panel-de-firma` —el
+recorte del desplegable de certificados— y `design-system`, que estrena la regla
+de redacción y el componente de desplegable. Las cuatro enlazan el canvas desde
+su sección «Decisiones».
 
 El caso de uso **v0.4 · salir del sandbox** ([#250](https://github.com/sgomez/rfirma/issues/250))
 se validó el 04/09/2026 y salió de esta tabla: sus siete fichas —`ventana-principal`,

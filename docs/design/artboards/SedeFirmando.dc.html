@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{tema}}" style="width:720px;height:600px;display:flex;align-items:center;justify-content:center;background:var(--rf-surface);position:relative;overflow:hidden">
+
+<sc-if value="{{esHoy}}" hint-placeholder-val="{{false}}">
+  <div class="rf-stack" style="width:520px;height:420px;flex:none;align-items:center;justify-content:center;
+    border:1px dashed var(--rf-border-strong);border-radius:var(--rf-radius-lg);opacity:.7">
+    <p class="rf-prose rf-text-muted" style="text-align:center">Hoy, entre aceptar y volver a la sede,<br>no aparece ninguna ventana.</p>
+  </div>
+</sc-if>
+
+<sc-if value="{{hayVentana}}" hint-placeholder-val="{{true}}">
+<div style="width:520px;height:420px;flex:none;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--rf-bg);border:1px solid var(--rf-border-subtle);
+  border-radius:var(--rf-radius-lg);box-shadow:var(--rf-shadow-elevated)">
+
+  <div class="rf-row" style="height:32px;flex:none;gap:var(--rf-space-xs);
+    padding:0 6px 0 var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
+    background:var(--rf-surface)">
+    <span class="rf-body" style="font-weight:700;letter-spacing:.4px">rFirma</span>
+    <div style="flex:1"></div>
+    <span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+  </div>
+
+  <div style="flex:1;min-height:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;justify-content:center;gap:12px;overflow:hidden">
+
+    <div class="rf-row rf-gap-xs" style="align-items:flex-start;flex:none">
+      <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text)">
+        <sc-if value="{{esFirmando}}" hint-placeholder-val="{{true}}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg>
+        </sc-if>
+        <sc-if value="{{esDevolviendo}}" hint-placeholder-val="{{false}}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 7l5 5-5 5"/><path d="M20 4v16"/></svg>
+        </sc-if>
+      </span>
+      <div class="rf-stack" style="gap:5px;flex:1;min-width:0">
+        <p class="rf-title" style="font-size:17px;line-height:1.25">{{titulo}}</p>
+        <p class="rf-prose" style="font-size:13px">{{cuerpo}}</p>
+      </div>
+    </div>
+
+    <div class="rf-row rf-gap-xs" style="flex:none;align-items:center;min-height:38px;padding:0 var(--rf-space-sm);
+      border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+      <span style="display:flex;flex:none;color:var(--rf-text-muted)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+      <p class="rf-prose" style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solicitud de subvención 2026</p>
+      <span class="rf-body rf-text-muted" style="flex:none">27 pág. · 2,4 MB</span>
+    </div>
+
+    <div style="flex:none;height:4px;border-radius:var(--rf-radius-pill);background:var(--rf-border-subtle);overflow:hidden">
+      <div style="width:{{avance}};height:100%;border-radius:var(--rf-radius-pill);background:var(--rf-primary)"></div>
+    </div>
+
+  </div>
+
+  <div class="rf-row rf-gap-sm" style="flex:none;padding:10px var(--rf-space-md);
+    border-top:1px solid var(--rf-border-subtle);align-items:center;height:56px">
+    <div style="flex:1"></div>
+    <sc-if value="{{hayCancelar}}" hint-placeholder-val="{{false}}">
+      <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:36px">Cancelar</button>
+    </sc-if>
+  </div>
+
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"momento":{"editor":"enum","options":["hoy \u00b7 la ventana no aparece","firmando \u00b7 sin parada","firmando \u00b7 se puede cancelar","devolviendo a la sede"],"default":"firmando \u00b7 se puede cancelar","section":"Momento"},"$preview":{"width":720,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // EL HUECO QUE ESTA PANTALLA TAPA. Entre que la persona pulsa «Firmar» en
+    // `SedeConsentimiento` y que `SedeDesenlace` cuenta como acabo, hoy no hay
+    // ventana ninguna: la de consentimiento se cierra y no aparece nada hasta
+    // que la sede recibe la respuesta. Eso es lo que dibuja la opcion «hoy».
+    //
+    // POR QUE NO ES `EstadoFirmando`. En la ventana principal el dialogo lista
+    // TRES fases —«Preparando la firma (prefirma)», «Firmando», «Ensamblando
+    // el PDF (postfirma)»— porque alli la persona ha pedido un fichero firmado
+    // y el reparto trifasico explica por que tarda. Aqui no: el resultado no
+    // aterriza en ningun sitio que se pueda ensenar, se va por el canal a la
+    // sede. Contar «prefirma» y «postfirma» seria estado interno del motor, que
+    // es justo lo que no se ensena. Se reutiliza lo que si vale: la misma barra
+    // de 4 px de `SedeEspera`, la misma fila de documento de `SedeDesenlace` y
+    // la misma cabecera y pie de las tres ventanas de sede.
+    //
+    // LO QUE DE VERDAD LE IMPORTA A QUIEN FIRMA son dos momentos, y ninguno de
+    // los dos es criptografico: se esta firmando, y el resultado esta volviendo
+    // a la sede. El segundo importa porque es el unico tramo en el que ya no
+    // depende de rFirma y en el que cerrar la ventana si tendria consecuencias.
+    //
+    // NADA POR DEBAJO DEL PLIEGUE: el contenido mas alto de las tres opciones
+    // con ventana ocupa lo mismo, porque el bloque de titulo, la fila del
+    // documento y la barra estan siempre, y el pie tiene `min-height:56px` para
+    // que aparecer y desaparecer «Cancelar» no mueva nada de sitio.
+    const momento = this.props.momento ?? "firmando · se puede cancelar";
+    const esHoy = momento.indexOf("hoy") === 0;
+    const esDevolviendo = momento.indexOf("devolviendo") === 0;
+    const esFirmando = !esHoy && !esDevolviendo;
+    const sePuedeParar = momento.indexOf("se puede cancelar") > 0;
+
+    return {
+      tema: this.props.tema ?? "light",
+      esHoy: esHoy,
+      hayVentana: !esHoy,
+      esFirmando: esFirmando,
+      esDevolviendo: esDevolviendo,
+
+      // Sin verborrea y sin nombrar ninguna fase del motor. «Firmando» a secas
+      // y el certificado con el que se firma, que es lo unico que la persona
+      // acaba de elegir y lo unico que puede reconocer como suyo.
+      titulo: esDevolviendo ? "Enviando la firma a sede.ejemplo.gob.es"
+        : "Firmando",
+      cuerpo: esDevolviendo ? "No cierres la ventana."
+        : "Con ADA LOVELACE BYRON · 99999999R.",
+
+      // La barra avanza de verdad entre las dos opciones: si las dos marcaran
+      // lo mismo, «firmando» y «devolviendo» se verian igual de lejos.
+      avance: esDevolviendo ? "88%" : "45%",
+
+      // LA PREGUNTA ABIERTA: hasta donde se puede parar. Mientras rFirma firma,
+      // parar es limpio —la sede no ha recibido nada—. Cuando la respuesta ya
+      // va de camino no hay nada que cancelar, y por eso ahi el pie se queda
+      // vacio en vez de ofrecer un boton que mentiria.
+      hayCancelar: esFirmando && sePuedeParar
+    };
+  }
+}
+</script>
+</body>
+</html>

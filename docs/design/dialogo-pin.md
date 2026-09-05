@@ -51,6 +51,19 @@ sesión no forma parte de ella y cae donde el almacén lo pida.
 5. Divisor y, abajo a la derecha, «Cancelar» (`--ghost`) y `Continuar` o
    `Firmar` (`--primary`).
 
+### El campo del secreto lleva `autofocus`
+
+**Al abrirse el diálogo se puede teclear sin tocar nada**, y el foco se dibuja:
+el campo sale con el anillo de `--rf-focus-ring` y el cursor dentro. **Hoy no
+está soportado**, así que esto no es sólo dibujo: es una decisión que va al
+spec.
+
+El argumento es que el diálogo tiene **una sola entrada** y en los tres almacenes
+—PIN de módulo PKCS#11, contraseña de perfil de Firefox, contraseña de `.p12`—
+el gesto siguiente es siempre teclear. Aparece igual cuando el diálogo lo abre la
+[ventana de sede](ventana-de-sede.md), porque ahí es exactamente el mismo
+diálogo.
+
 ### La palabra la elige la clase de almacén
 
 **«PIN» para un módulo PKCS#11; «contraseña» para un fichero** —un perfil NSS de
@@ -81,6 +94,7 @@ nada.
 - El campo va a **18 px**, con 6 px de tracking cuando es un PIN de cuatro
   dígitos y 4 px cuando es una contraseña.
 - Acciones abajo a la derecha, `Cancelar` fantasma a la izquierda del primario.
+- El campo **nace con el foco**, dibujado con `--rf-focus-ring`.
 
 ## Estados
 
@@ -131,3 +145,10 @@ distintos serían dos verdades.
 
 Decidido en el [#250](https://github.com/sgomez/rfirma/issues/250) (ID-188,
 ID-190, ID-191, ID-195).
+
+El **`autofocus` del campo del secreto** se añadió al validar la
+[ventana de sede](ventana-de-sede.md) el 05/09/2026
+([#317](https://github.com/sgomez/rfirma/issues/317)), sobre el mismo artboard
+«6 · Pidiendo PIN». Se descartó darle al diálogo de sede una palanca de contexto
+propia: la pantalla es idéntica a la del recorrido local, y con ella se fue la
+frase que explicaba que cancelar cancela.

@@ -410,7 +410,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   </div>
   <div class="rf-field ">
     <label class="rf-label">{{etiqueta}}</label>
-    <div class="rf-input rf-row" style="letter-spacing:{{espaciado}};font-size:18px">{{puntos}}</div>
+    <div class="rf-input rf-row" style="letter-spacing:{{espaciado}};font-size:18px;
+      border-color:var(--rf-focus-ring);outline:2px solid var(--rf-focus-ring);outline-offset:2px">{{puntos}}<span
+      style="width:1px;height:20px;margin-left:1px;background:var(--rf-text)"></span></div>
     <div style="min-height:17px">
       <sc-if value="{{hayPista}}" hint-placeholder-val="{{true}}">
         <span class="rf-hint">{{pista}}</span>
@@ -478,6 +480,8 @@ class Component extends DCLogic {
         boton: "Firmar"
       }
     };
+    // El campo del secreto LLEVA `autofocus` y el foco se dibuja: al abrirse el
+    // dialogo se puede teclear sin tocar nada. Va al spec, no solo al dibujo.
     const clave = this.props.almacen ?? "modulo PKCS#11 · PIN · antes de listar";
     const c = casos[clave] || casos["modulo PKCS#11 · PIN · antes de listar"];
     return {
