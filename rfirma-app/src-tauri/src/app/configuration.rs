@@ -44,6 +44,7 @@ pub fn shown(
         notify_new_version: configuration.notify_new_version,
         theme: configuration.theme,
         offers_the_original_folder: crate::destination::the_original_folder_can_be_offered(),
+        trust_notice_seen: configuration.trust_notice_seen,
     }
 }
 
@@ -126,6 +127,7 @@ pub fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration
         remember_activity: chosen.remember_activity,
         notify_new_version: chosen.notify_new_version,
         theme: chosen.theme,
+        trust_notice_seen: chosen.trust_notice_seen,
     }
 }
 
@@ -173,6 +175,7 @@ mod tests {
             notify_new_version: true,
             theme: Theme::Dark,
             offers_the_original_folder: false,
+            trust_notice_seen: false,
         };
 
         write(&memory, &live, &chosen).expect("deberia guardarse");
@@ -273,6 +276,7 @@ mod tests {
             notify_new_version: true,
             theme: Theme::Dark,
             offers_the_original_folder: false,
+            trust_notice_seen: false,
         };
 
         let next = merged(&live, &chosen);

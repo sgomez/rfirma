@@ -182,6 +182,7 @@ function renderApp(
       rememberVisibleSignature: true,
       rememberActivity: true,
       notifyNewVersion: true,
+      trustNoticeSeen: false,
       ...settings,
     },
     () => void recents.clear(),
@@ -289,6 +290,7 @@ describe("App", () => {
         rememberVisibleSignature: true,
         rememberActivity: true,
         notifyNewVersion: true,
+        trustNoticeSeen: false,
       }),
       save: refused,
       forgetActivity: async () => {},
@@ -723,6 +725,7 @@ describe("App", () => {
         rememberVisibleSignature: true,
         rememberActivity: true,
         notifyNewVersion: true,
+        trustNoticeSeen: false,
       }),
       save: async () => {},
       forgetActivity: async () => {
