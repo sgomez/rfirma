@@ -60,6 +60,7 @@ realimentación que este repositorio decidió proteger en el
 | --- | --- | --- |
 | `tools` | comprueba herramientas y nombra la que falte | rápido |
 | `bootstrap` | `~/.m2` contra la etiqueta `v1.9.1` | rápido |
+| `autoscript` | el accesorio del banco de conformidad, a etiqueta y `sha256` fijados | preparación |
 | `lint` | `-Xlint:all` + `biome` + `cargo clippy` + `cargo fmt --check` | rápido |
 | `test` | `mvn test` + `vitest` + `cargo test` | rápido |
 | `build` | puente Java + `tsc -b && vite build` + `cargo build` | rápido |
@@ -95,6 +96,27 @@ exactamente lo que `just check` ejecuta —hoy repartido en un job por carril—
 pase local significa lo mismo. Crece por dentro, y puede repartirse; su nombre y su
 papel no cambian. `tsc -b` va **dentro** de `build`, no en una receta aparte: un
 `build` que compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
+
+### Hay dos recetas de preparación, y ninguna corre dentro de `check`
+
+`bootstrap` y `autoscript` no son un carril: son lo que hay que tener **antes**. Las dos bajan
+algo ajeno —los módulos de `clienteafirma` a `~/.m2` la primera, el `autoscript.js` del tag
+`v1.9.2` a `testdata/conformance/` la segunda—, las dos son idempotentes y las dos fijan qué
+bajan: `bootstrap` por etiqueta y `-Dclienteafirma.version`, `autoscript` por etiqueta **y por
+`sha256`**, con URL y huella escritas como variables del `justfile`.
+
+Se diferencian en una sola cosa, y es deliberada: **`bootstrap` se encadena desde `check`**
+—`check-java` lo arrastra por `test-java`, porque sin `~/.m2` no hay nada que compilar— y
+**`autoscript` no**. Encadenarlo obligaría a tener red para un `just check` local, y con la
+mitad de lo que baja no hay forma de distinguir «no hay red aquí» de «el accesorio falta». El
+reparto que sí distingue es el otro: **el CI le da un paso propio y obligatorio**, y en local la
+prueba se salta diciendo qué ejecutar. `check` sigue significando lo mismo en los dos sitios;
+lo que cambia es si el banco de conformidad participa.
+
+Que esto sea preparación y no red en el carril es lo que deja el **banco de conformidad** en la
+grada B en vez de en el cron; el argumento entero está en el
+[ADR-0014](0014-gradas-de-prueba-y-puerta-de-calidad.md). No choca con «el flatpak se construye
+sin red» de más abajo: aquella regla es sobre la **construcción del paquete**, y sigue en pie.
 
 `bootstrap.sh` **no crece**. Sigue resolviendo `~/.m2` y nada más. Instalar GraalVM,
 `flatpak-builder` o el token de pruebas son cosas con `sudo`, SDKMAN o

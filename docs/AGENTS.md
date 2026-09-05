@@ -45,6 +45,14 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `recuadro-replicado-pdfsig` · `rutas-reales-con-filesystem-home` ·
 `token-flags-login` · `token-pkcs11-pruebas`
 
+## Sueltos en `docs/`
+
+`pruebas-manuales-protocolo.md` (2 KB) — la **segunda puerta manual** del
+ADR-0014: lo del protocolo `afirma://` que necesita un navegador o una sede de
+verdad y por eso no lo tiene el CI. Se ejecuta una vez por etiqueta `v*`. Se
+abre para **ejecutarla** o para mover una fila, no para entender el protocolo:
+eso está en `research/contrato-protocolo-afirma.md`.
+
 ## `design/` — una ficha por pantalla (lo que ve el usuario)
 
 `ventana-principal` · `cabecera` · `bandeja-de-documentos` ·

@@ -11,9 +11,9 @@ junto al validador oficial. Se ejecuta **una vez por etiqueta `v*`**, por una pe
 > ninguna de las tres.
 
 Todo lo que sí corre solo está en las gradas: el códec y la conversación en `src/protocol/`, el
-canal y el cliente de prueba en `tests/protocol_channel.rs` (grada A, puerto `:0`), las tres
-operaciones contra el token en `tests/protocol_operations.rs` (grada B), y el paseo completo en
-`tests/native_cycle.rs` (grada C).
+**cliente de canal** —el propio, en Rust— en `tests/channel_client.rs` (puerto `:0`), el **banco
+de conformidad** —el `autoscript.js` publicado del tag `v1.9.2`, bajo Node— en
+`tests/conformance_bench.rs`, y el paseo completo en `tests/native_cycle.rs` (grada C).
 
 ## La lista
 
@@ -58,14 +58,18 @@ sede coinciden de verdad.
 Cancelar desde la ventana del trámite y comprobar que la sede recibe `err-11:=AF500001` y lo
 trata como cancelación, no como error.
 
-*Por qué no cabe en una grada*: el formato lo comprueban los fixtures de la grada A; lo que **no**
-se puede comprobar sin `autoscript.js` de verdad es que el cliente lo interprete como
-cancelación, que es una restricción rígida de ocho caracteres.
+*Por qué no cabe en una grada, hoy*: el formato lo comprueban los fixtures de la grada A, y que
+el cliente lo interprete como cancelación **sí** lo puede medir ya el banco de conformidad. Lo
+que falta es el otro extremo: hasta que exista el trámite que se cancela desde la ventana
+([#362](https://github.com/sgomez/rfirma/issues/362),
+[#363](https://github.com/sgomez/rfirma/issues/363)) no hay nada que cancelar. **Es la próxima
+fila que sale de esta lista**, y sale al banco, no a otra grada.
 
 ## Condición de salida
 
 Esta lista **no es permanente**. El día que exista un arnés de navegador sin cabeza capaz de
 **conceder el permiso de red local** y de **sembrar el `nssdb`** de forma reproducible, las filas
-1, 2 y 5 bajan a una grada nueva y este fichero se queda con las que necesitan una sede de verdad
-—la 3 y la 4—. Está escrito aquí y no en el ADR porque es estado de la lista, y lo lee quien la
-ejecuta.
+1 y 2 bajan a una grada nueva. La 5 no espera a eso: baja al **banco de conformidad** en cuanto
+haya un trámite que cancelar. Este fichero se queda entonces con las que necesitan una sede de
+verdad —la 3 y la 4—. Está escrito aquí y no en el ADR porque es estado de la lista, y lo lee
+quien la ejecuta.
