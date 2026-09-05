@@ -74,6 +74,15 @@
       </exclusions>
     </dependency>
 
+    <!-- SONDEO #314 (rama desechable): el motor de filtros de certificado del
+         original. Se trae SIN exclusiones a proposito: la pregunta del sondeo
+         es justamente si hace falta alguna. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-keystores-filters</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.graalvm.sdk</groupId>
       <artifactId>graal-sdk</artifactId>

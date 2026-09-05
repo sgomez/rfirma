@@ -151,6 +151,36 @@ public final class NativeBridge {
         return json.append('}').toString();
     }
 
+    /**
+     * SONDEO #314 (rama desechable): filtra certificados con el motor del
+     * original. Entran N certificados en DER (Base64, separados por {@code ';'})
+     * y la cadena {@code filters=} de la sede; sale
+     * {@code {"ok":true,"selected":[0,2]}}.
+     */
+    @CEntryPoint(name = "autofirma_filter_certificates")
+    public static CCharPointer filterCertificates(
+            final IsolateThread thread,
+            final CCharPointer certChainB64,
+            final CCharPointer filterParams) {
+        try {
+            final int[] selected = CertificateFilterBridge.select(
+                    CTypeConversion.toJavaString(certChainB64),
+                    CTypeConversion.toJavaString(filterParams));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true,\"selected\":[");
+            for (int i = 0; i < selected.length; i++) {
+                if (i > 0) {
+                    json.append(',');
+                }
+                json.append(selected[i]);
+            }
+            return toUnmanagedCString(json.append("]}").toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
     private static void field(final StringBuilder json, final String name, final String value) {
         json.append(",\"").append(name).append("\":");
         if (value == null) {
