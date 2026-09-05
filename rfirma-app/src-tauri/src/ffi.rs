@@ -311,6 +311,20 @@ pub struct PostSignRequest<'a> {
     pub pkcs1_b64: &'a str,
 }
 
+/// Lo que hace falta para acotar un listado con el filtro de la sede.
+///
+/// No lleva sello ni sesión, y no es un olvido: la llamada es **sin estado**
+/// (ID-252). El sello existe para que la postfirma no se desvíe de la prefirma,
+/// y aquí no hay dos fases que atar.
+#[derive(Clone, Copy, Debug)]
+pub struct FilterRequest<'a> {
+    /// La expresión de la sede en formato `java.util.Properties`, **literal**
+    /// (ID-256): quien la interpreta es el motor.
+    pub filter_properties: &'a str,
+    /// Los certificados a acotar, Base64 del DER separado por `;`, en su orden.
+    pub certificates_b64: &'a str,
+}
+
 /// Lo que puede salir mal al cruzar la frontera.
 ///
 /// [`BridgeError::Failed`] es el puente contestando `{"ok":false}`: no es un
@@ -399,6 +413,8 @@ type PostSignSymbol = unsafe extern "C" fn(
     *const c_char,
 ) -> *mut c_char;
 
+type FilterSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
+
 /// La librería nativa cargada, con su isolate de GraalVM ya creado.
 ///
 /// **No es `Sync`, y es a propósito**: el `IsolateThread` de GraalVM pertenece
@@ -416,6 +432,7 @@ pub struct NativeBridge {
     path: PathBuf,
     presign: PreSignSymbol,
     postsign: PostSignSymbol,
+    filter: FilterSymbol,
     free_string: FreeStringSymbol,
     tear_down: TearDownIsolate,
 }
@@ -467,11 +484,12 @@ impl NativeBridge {
         // el contrato de GraalVM para esas entradas, y los punteros a función
         // valen mientras `library` siga cargada, que es lo que garantiza
         // guardarla en el mismo valor.
-        let (create, presign, postsign, free_string, tear_down) = unsafe {
+        let (create, presign, postsign, filter, free_string, tear_down) = unsafe {
             (
                 resolve::<CreateIsolate>(&library, b"graal_create_isolate\0")?,
                 resolve::<PreSignSymbol>(&library, b"autofirma_pades_presign\0")?,
                 resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
+                resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
                 resolve::<TearDownIsolate>(&library, b"graal_tear_down_isolate\0")?,
             )
@@ -491,6 +509,7 @@ impl NativeBridge {
             path: path.to_path_buf(),
             presign,
             postsign,
+            filter,
             free_string,
             tear_down,
         })
@@ -544,6 +563,28 @@ impl NativeBridge {
             }
         })?;
         parse_postsign(&json)
+    }
+
+    /// Acota un listado de certificados con la expresión de filtro de la sede.
+    ///
+    /// **Sin estado y sin sello** (ADR-0016, ID-252): no abre ninguna sesión
+    /// trifásica, así que no hay nada que atar entre dos llamadas. El DER ya
+    /// viaja en cada certificado.
+    ///
+    /// Devuelve los **índices** que pasan, sobre la lista que se le dio y en su
+    /// orden. Índices y no certificados porque quien llamó ya los tiene: lo que
+    /// le falta es saber cuáles siguen dentro.
+    pub fn filter_certificates(
+        &self,
+        request: FilterRequest<'_>,
+    ) -> Result<Vec<usize>, BridgeError> {
+        let properties = c_string(request.filter_properties, "la expresion de filtro")?;
+        let certificates = c_string(request.certificates_b64, "los certificados")?;
+        let json = self.call(|thread| {
+            // SAFETY: los tres argumentos viven hasta que la llamada vuelve.
+            unsafe { (self.filter)(thread, properties.as_ptr(), certificates.as_ptr()) }
+        })?;
+        parse_filter_selection(&json)
     }
 
     /// El único sitio que toca un puntero devuelto por el puente: llama, adopta
@@ -630,6 +671,30 @@ pub fn parse_postsign(json: &str) -> Result<Vec<u8>, BridgeError> {
     base64::engine::general_purpose::STANDARD
         .decode(field(&response, "pdf")?)
         .map_err(|error| BridgeError::MalformedResponse(format!("pdf no es Base64: {error}")))
+}
+
+/// El JSON del filtro: `{"ok":true,"selected":[0,2]}`.
+///
+/// Se separa de la llamada por lo mismo que [`parse_presign`]: la forma del
+/// JSON tiene que poder probarse sin librería nativa delante.
+pub fn parse_filter_selection(json: &str) -> Result<Vec<usize>, BridgeError> {
+    let response = parse_response(json)?;
+    let selected = response
+        .get("selected")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| BridgeError::MalformedResponse("falta el campo \"selected\"".to_owned()))?;
+
+    selected
+        .iter()
+        .map(|index| {
+            index
+                .as_u64()
+                .and_then(|index| usize::try_from(index).ok())
+                .ok_or_else(|| {
+                    BridgeError::MalformedResponse(format!("«{index}» no es un indice del listado"))
+                })
+        })
+        .collect()
 }
 
 fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
@@ -889,6 +954,45 @@ mod tests {
             parse_postsign(r#"{"ok":true,"pdf":"JVBERi0="}"#).expect("es el JSON del contrato");
 
         assert_eq!(pdf, b"%PDF-");
+    }
+
+    /// El filtro contesta con los índices que pasan, y ni uno mas: lo que se
+    /// filtró es el listado de quien llamó, no una copia que vuelva.
+    #[test]
+    fn a_filter_answer_comes_back_as_the_rows_that_survived() {
+        let selected =
+            parse_filter_selection(r#"{"ok":true,"selected":[0,2]}"#).expect("es valida");
+
+        assert_eq!(selected, vec![0, 2]);
+    }
+
+    /// Excluirlos a todos es una **respuesta**, no un fallo: el `[]` es lo que
+    /// permite decir «la sede los excluyó» (ID-258).
+    #[test]
+    fn an_empty_selection_is_an_answer_and_not_a_failure() {
+        assert_eq!(
+            parse_filter_selection(r#"{"ok":true,"selected":[]}"#).expect("es valida"),
+            Vec::<usize>::new()
+        );
+    }
+
+    #[test]
+    fn a_selection_that_is_not_a_list_of_rows_is_a_malformed_answer() {
+        assert!(parse_filter_selection(r#"{"ok":true}"#).is_err());
+        assert!(parse_filter_selection(r#"{"ok":true,"selected":"0,2"}"#).is_err());
+        assert!(parse_filter_selection(r#"{"ok":true,"selected":[-1]}"#).is_err());
+    }
+
+    /// Y un fallo del motor de filtros llega como cualquier otro del puente,
+    /// con el mensaje de Java sin traducir.
+    #[test]
+    fn a_failure_of_the_filter_engine_travels_like_any_other() {
+        let error = parse_filter_selection(
+            r#"{"ok":false,"error":"java.lang.IllegalArgumentException: mal"}"#,
+        )
+        .expect_err("el motor ha fallado");
+
+        assert!(error.to_string().contains("IllegalArgumentException"));
     }
 
     #[test]

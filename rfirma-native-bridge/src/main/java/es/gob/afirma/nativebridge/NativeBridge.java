@@ -17,8 +17,10 @@ import org.graalvm.word.PointerBase;
  * {@link PadesBridge} y devuelve JSON; lo que hace la firma vive alli, donde se
  * puede probar sin construir la imagen nativa.
  *
- * <p><b>Tres entradas y ni una mas</b>: {@code autofirma_pades_presign},
- * {@code autofirma_pades_postsign} y {@code autofirma_free_string}. Se instancia
+ * <p><b>Cuatro entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * {@code autofirma_pades_postsign}, {@code autofirma_filter_certificates} y
+ * {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
+ * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
  * que referencia los preprocesadores XAdES, FacturaE, ASiC y PKCS1 y haria
  * alcanzable todo el arbol de formatos dentro de la imagen.
@@ -39,6 +41,7 @@ import org.graalvm.word.PointerBase;
  * <pre>
  * presign  ok  {"ok":true,"session":"&lt;xml&gt;","pre":"&lt;b64 DER&gt;","stamp":"&lt;b64&gt;"}
  * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}
+ * filter   ok  {"ok":true,"selected":[0,2]}
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -137,6 +140,49 @@ public final class NativeBridge {
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "pdf", Base64.getEncoder().encodeToString(signed));
             return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Acota un listado de certificados con la expresion de filtro de la sede.
+     *
+     * <p><b>Sin estado y sin sello</b> (ADR-0016, ID-252): no abre sesion
+     * trifasica ninguna, asi que no hay nada que atar entre dos llamadas. El
+     * DER ya viaja en cada certificado.
+     *
+     * <p>La expresion cruza <b>literal</b> (ID-256): quien decide es el motor,
+     * y la lista blanca de criterios de Rust decide <i>si se llama</i>, no
+     * <i>que se aplica</i>.
+     *
+     * @param filterProperties las claves {@code filter=} / {@code filters=} /
+     *                         {@code filters.N=} en formato
+     *                         {@code java.util.Properties}.
+     * @param certificatesB64  los certificados a acotar, Base64 del DER
+     *                         separado por {@code ';'}, en su orden.
+     * @return JSON con los indices que pasan. Propiedad del llamante: se libera
+     *         con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_filter_certificates")
+    public static CCharPointer filterCertificates(
+            final IsolateThread thread,
+            final CCharPointer filterProperties,
+            final CCharPointer certificatesB64) {
+        try {
+            final int[] selected = FilterBridge.select(
+                    SessionStamp.parseParams(CTypeConversion.toJavaString(filterProperties)),
+                    FilterBridge.parseCertificates(CTypeConversion.toJavaString(certificatesB64)));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true,\"selected\":[");
+            for (int i = 0; i < selected.length; i++) {
+                if (i > 0) {
+                    json.append(',');
+                }
+                json.append(selected[i]);
+            }
+            return toUnmanagedCString(json.append("]}").toString());
         }
         catch (final Throwable e) {
             return toUnmanagedCString(errorJson(e));

@@ -19,7 +19,7 @@ misma PR que lo crea**, o el PR sale en rojo.
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
-- El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
+- El fichero más grande del backend es `ffi.rs`, con 1097 líneas; detrás van
   `app/documents.rs` (986), `signing/placement.rs` (926), `app/signing.rs` (764),
   `memory/mod.rs` (611) y `app/recents.rs` (603). El mayor de `commands/` es justo `commands/guards.rs`
   (657), y detrás va `commands/mod.rs` (645); lo que los hace crecer es
@@ -36,7 +36,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `main.rs` | 8 | El binario. No hay nada dentro. |
 | `lib.rs` | 196 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
-| `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
+| `ffi.rs` | 1097 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cuatro entradas**, y ninguna firma. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 693 | **Las veinticinco órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 479 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
@@ -46,10 +46,11 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/guards.rs` | 657 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 216 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
-| `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
+| `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
 | `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
 | `app/signing.rs` | 764 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
+| `app/filtering.rs` | 343 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 232 | La invocación desde fuera, `rfirma documento.pdf`: qué abre y qué hace la segunda (ID-157…ID-160). |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
@@ -82,10 +83,11 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `signing/session_seal.rs` | 152 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). |
 | `signing/language.rs` | 105 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). |
 | **`protocol/`** | | Lo que pide la sede, leído de una URL `afirma://` y nada más. Puro, sin sockets ni puente (ID-244, TD-53). |
-| `protocol/mod.rs` | 41 | El reparto, y las tres cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
+| `protocol/mod.rs` | 43 | El reparto, y las tres cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `protocol/url.rs` | 249 | Una URL `afirma://` partida en verbo y pares, con las rarezas de `extractParams`. |
 | `protocol/launch.rs` | 361 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
 | `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
+| `protocol/filters.rs` | 383 | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor, no qué se aplica (ID-256, ID-257, ID-260). |
 | `protocol/parameters.rs` | 142 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
 | `protocol/message.rs` | 179 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
 | `protocol/refusal.rs` | 170 | Los `SAF_` que rfirma produce hoy, con la línea que sale al cable. Se subsume en la frontera de errores del #349. |

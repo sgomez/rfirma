@@ -34,7 +34,10 @@ final class TestFixtures {
     private static final Path ACTIVE_P12 = Path.of("..", "testdata", "fnmt", "active-rsa.p12");
     /** El segundo certificado del kit. Aqui solo se usa por ser OTRO, no por estar revocado. */
     private static final Path REVOKED_P12 = Path.of("..", "testdata", "fnmt", "revoked-rsa.p12");
+    /** El caducado del kit. Su contrasena NO es la de los otros dos (ver testdata/fnmt/README.md). */
+    private static final Path EXPIRED_P12 = Path.of("..", "testdata", "fnmt", "expired-rsa.p12");
     private static final char[] PASSWORD = "1234".toCharArray();
+    private static final char[] EXPIRED_PASSWORD = "G5cp,fYC9gje".toCharArray();
 
     private TestFixtures() { }
 
@@ -53,9 +56,13 @@ final class TestFixtures {
     }
 
     private static KeyStore keyStore(final Path p12) throws Exception {
+        return keyStore(p12, PASSWORD);
+    }
+
+    private static KeyStore keyStore(final Path p12, final char[] password) throws Exception {
         final KeyStore ks = KeyStore.getInstance("PKCS12");
         try (InputStream in = Files.newInputStream(p12)) {
-            ks.load(in, PASSWORD);
+            ks.load(in, password);
         }
         return ks;
     }
@@ -81,6 +88,23 @@ final class TestFixtures {
     /** Otra cadena distinta del kit, para las pruebas que necesitan una que no sea la del sello. */
     static X509Certificate[] otherCertificateChain() throws Exception {
         return certificateChain(keyStore(REVOKED_P12));
+    }
+
+    /** El certificado de titular del camino feliz, suelto. */
+    static X509Certificate activeCertificate() throws Exception {
+        return certificateChain()[0];
+    }
+
+    /**
+     * El certificado <b>caducado</b> del kit (notAfter 2020-11-08), suelto.
+     *
+     * <p>Es lo que hace observable el {@code nonexpired} implicito de la ETSI
+     * que hereda el motor de filtros (ID-254): sin el, «se oculta el caducado»
+     * no se puede distinguir de «no se filtro nada».
+     */
+    static X509Certificate expiredCertificate() throws Exception {
+        final KeyStore ks = keyStore(EXPIRED_P12, EXPIRED_PASSWORD);
+        return certificateChain(ks)[0];
     }
 
     private static X509Certificate[] certificateChain(final KeyStore ks) throws Exception {

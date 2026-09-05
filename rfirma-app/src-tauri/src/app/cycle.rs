@@ -358,9 +358,13 @@ mod tests {
     #[test]
     fn java_has_no_entry_point_for_the_signing_phase() {
         // Delegar la fase 2 en Java exige una entrada nueva en la librería, y
-        // esta prueba es la que se pondría roja al añadirla. Son tres: las dos
-        // fases que sí son de Java, y la que libera las cadenas del ID-11.
+        // esta prueba es la que se pondría roja al añadirla. Son cuatro: las dos
+        // fases que sí son de Java, la que libera las cadenas del ID-11, y el
+        // motor de filtros que se le pide prestado al original (ID-252) —que no
+        // firma nada: entra el DER público de cada certificado y salen los
+        // índices que pasan—.
         let expected: BTreeSet<String> = [
+            "autofirma_filter_certificates",
             "autofirma_free_string",
             "autofirma_pades_postsign",
             "autofirma_pades_presign",
