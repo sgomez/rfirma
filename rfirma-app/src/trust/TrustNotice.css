@@ -1,0 +1,15 @@
+/*
+ * El aviso del primer arranque: 440 px sobre el velo, tres párrafos y un solo
+ * botón. No lleva artboard propio (es texto, no una pantalla nueva).
+ */
+
+.trust-notice {
+  width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}
+
+.trust-notice__actions {
+  justify-content: flex-end;
+}

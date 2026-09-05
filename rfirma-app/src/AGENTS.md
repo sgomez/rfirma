@@ -99,6 +99,8 @@ rojo.
 | **`design-system/`** | | `design-system/icons.tsx` (226), copiados en línea de los artboards. |
 | **`updates/`** | | `updates/newVersion.ts` (39): el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
+| **`trust/`** | | El aviso del primer arranque (#365): la CA local y el permiso de red local, explicados juntos y sin condición. No es un puerto, no habla con Tauri. |
+| `trust/TrustNotice.tsx` | 49 | El diálogo, montado sin condición en `main.tsx`. |
 | **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
 
 ## El circuito de cadenas (ADR-0009 enmendado, ID-121…ID-130)

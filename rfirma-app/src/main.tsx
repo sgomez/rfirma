@@ -28,6 +28,7 @@ import {
   tauriStampComposer,
   tauriVersionCheck,
 } from "./tauri";
+import { TrustNotice } from "./trust/TrustNotice";
 
 const root = document.getElementById("root");
 if (!root) {
@@ -52,6 +53,9 @@ if (!root) {
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
+// `TrustNotice` (#365) no es un puerto: no habla con Tauri, así que no hay
+// nada que doblar ni que cablear aquí más que montarlo.
+//
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
 const preference = tauriLanguagePreference();
 const i18n = createI18n(await preference.read());
@@ -63,6 +67,9 @@ const preferences = tauriPreferences();
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
+      {/* Sin condición: se explica antes de que el navegador pregunte, no como
+          reacción a un fallo (ID-231, #365). */}
+      <TrustNotice />
       <App
         recents={recents}
         picker={tauriDocumentPicker()}

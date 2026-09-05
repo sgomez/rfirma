@@ -844,3 +844,18 @@ msgstr ""
 msgid "about.licenses.afirma"
 msgstr ""
 
+msgid "trust.notice.title"
+msgstr ""
+
+msgid "trust.notice.localCa"
+msgstr ""
+
+msgid "trust.notice.localNetwork"
+msgstr ""
+
+msgid "trust.notice.cannotTellIfDenied"
+msgstr ""
+
+msgid "trust.notice.acknowledge"
+msgstr ""
+
