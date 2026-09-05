@@ -79,6 +79,13 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `signing/properties.rs` | 179 | Los `extraParams` en el formato del puente. |
 | `signing/session_seal.rs` | 152 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). |
 | `signing/language.rs` | 105 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). |
+| **`protocol/`** | | Lo que pide la sede, leído de una URL `afirma://` y nada más. Puro, sin sockets ni puente (ID-244, TD-53). |
+| `protocol/mod.rs` | 41 | El reparto, y las tres cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
+| `protocol/url.rs` | 249 | Una URL `afirma://` partida en verbo y pares, con las rarezas de `extractParams`. |
+| `protocol/launch.rs` | 320 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
+| `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
+| `protocol/parameters.rs` | 142 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
+| `protocol/refusal.rs` | 110 | Los `SAF_` que este módulo produce. Se subsume en la frontera de errores del #349. |
 | **`pkcs11/`** | | La única parte que habla con el token. |
 | `pkcs11/mod.rs` | 718 | La capa PKCS#11. |
 | `pkcs11/stores.rs` | 675 | Dónde se buscan los certificados, incluidos los `.p12` instalados (ID-192). |

@@ -160,6 +160,14 @@ dónde viene la petición. Su credencial es el `idsession`, que viaja en la URL 
 arranque y se repite en cada mensaje.
 _Avoid_: socket, conexión, túnel
 
+**Credencial de canal**:
+El `idsession` que la sede sortea y manda en la URL de arranque, y que repite en
+cada mensaje del canal. **No es un identificador de transacción**: es lo único
+que impide que otra página abierta en el mismo equipo use el canal. Un valor mal
+formado se rechaza; nunca se ignora, porque un canal sin credencial es un canal
+sin cerradura.
+_Avoid_: id de sesión, token, identificador de transacción
+
 **Conversación**:
 El ir y venir de mensajes sobre un canal ya abierto, con sus reglas: el eco
 antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del

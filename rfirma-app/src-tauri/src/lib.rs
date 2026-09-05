@@ -29,6 +29,7 @@ pub mod isolate;
 pub mod memory;
 pub mod paths;
 pub mod pkcs11;
+pub mod protocol;
 pub mod releases;
 pub mod rubric;
 pub mod signing;
