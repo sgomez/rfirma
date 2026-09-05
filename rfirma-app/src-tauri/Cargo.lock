@@ -3282,6 +3282,7 @@ dependencies = [
  "cryptoki",
  "futures-util",
  "getrandom 0.3.4",
+ "gio",
  "image",
  "libloading 0.8.9",
  "native-tls",

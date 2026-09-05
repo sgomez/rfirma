@@ -99,6 +99,11 @@ x509-cert = "0.3"
 # El `Sink` y el `Stream` del socket: `tokio-tungstenite` los expone pero no
 # reexporta el rasgo, asi que hace falta nombrarlo. Ya estaba en el arbol como
 # dependencia transitiva; aqui solo se hace directa.
+# Quien de verdad sabe si `afirma://` tiene manejador registrado (ID-240): la
+# API de GIO, no una llamada a `xdg-mime` por linea de comandos. Ya estaba en
+# el arbol como dependencia transitiva de tauri (via el GTK que trae
+# webkit2gtk); aqui solo se hace directa.
+gio = "0.18"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 # El transporte del canal: un servidor WebSocket sobre TLS en 127.0.0.1
 # (ID-212). Las caracteristicas de TLS de este crate son SOLO de cliente, asi

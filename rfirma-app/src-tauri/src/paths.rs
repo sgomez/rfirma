@@ -306,6 +306,22 @@ pub fn documents_folder_of(
     }
 }
 
+/// El directorio de configuración de la persona **sin `rfirma/` detrás**.
+///
+/// [`Paths::config_file`] cuelga de este mismo directorio, pero dentro de
+/// `rfirma/`; esto es el directorio a secas, porque ahí viven ficheros que no
+/// son de esta aplicación y que aun así hay que escribir: el `mimeapps.list`
+/// del escritorio, que es donde se apunta quién atiende `afirma://` (ID-238).
+///
+/// Vive aquí, y no en [`crate::desktop`], porque el reparto XDG —la variable
+/// si es absoluta, y si no `$HOME/.config`— es conocimiento del sistema
+/// operativo, y de eso sabe este módulo y ningún otro (ID-35).
+pub fn xdg_config_home(
+    environment: &dyn Fn(&str) -> Option<OsString>,
+) -> Result<PathBuf, HomeUnknown> {
+    xdg_directory(environment, "XDG_CONFIG_HOME", ".config")
+}
+
 /// `$XDG_*_HOME` si está y es absoluta, y si no `$HOME/<relativa>`.
 ///
 /// La especificación XDG manda **ignorar** un valor relativo, no tratarlo como
@@ -380,6 +396,28 @@ mod tests {
 
     fn resolve(platform: Platform, pairs: &[(&str, &str)]) -> Paths {
         Paths::resolve(platform, &environment(pairs)).expect("deberia resolverse")
+    }
+
+    /// El directorio de configuración a secas no lleva `rfirma/` detrás: lo
+    /// que se escribe ahí es del escritorio, no de esta aplicación (ID-238).
+    #[test]
+    fn the_configuration_home_has_no_application_directory_behind_it() {
+        let home = xdg_config_home(&environment(&[
+            ("HOME", "/home/quien"),
+            ("XDG_CONFIG_HOME", "/home/quien/.config"),
+        ]))
+        .expect("deberia resolverse");
+
+        assert_eq!(home, PathBuf::from("/home/quien/.config"));
+    }
+
+    /// Sin la variable, la caída es `$HOME/.config`, como manda XDG.
+    #[test]
+    fn without_the_variable_the_configuration_home_falls_back_under_home() {
+        let home =
+            xdg_config_home(&environment(&[("HOME", "/home/quien")])).expect("deberia resolverse");
+
+        assert_eq!(home, PathBuf::from("/home/quien/.config"));
     }
 
     #[test]
