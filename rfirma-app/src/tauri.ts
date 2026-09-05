@@ -218,8 +218,10 @@ const DOCUMENT_DROPPED = "document-dropped";
  */
 interface DroppedDocumentView {
   document: OpenedDocumentView | null;
+  /** El resto de PDF del mismo gesto: entran igual en Recientes (ID-306). */
+  alsoEntering: OpenedDocumentView[];
   failure: { situation: string; detail: string } | null;
-  ignored: number;
+  discarded: number;
 }
 
 /**
@@ -261,6 +263,7 @@ export function tauriDocumentDrops(): DocumentDrops {
 function dropOf(view: DroppedDocumentView): Drop {
   return {
     document: view.document === null ? null : inHandOf(view.document),
+    alsoEntering: view.alsoEntering.map(inHandOf),
     failure:
       view.failure === null
         ? null
@@ -268,7 +271,7 @@ function dropOf(view: DroppedDocumentView): Drop {
             situation: view.failure.situation as ErrorSituation,
             detail: view.failure.detail,
           },
-    ignored: view.ignored,
+    discarded: view.discarded,
   };
 }
 

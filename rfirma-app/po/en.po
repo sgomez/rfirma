@@ -217,13 +217,13 @@ msgstr ""
 "Dropping a file does not give us permission to read from every folder. Open "
 "it with the open button, which does."
 
-msgid "errors.situations.droppedOnlyFirst.title"
-msgstr "We only opened the first PDF"
+msgid "errors.situations.droppedSomeDiscarded.title"
+msgstr "Some files were not added"
 
-msgid "errors.situations.droppedOnlyFirst.body"
+msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"rFirma signs one document at a time. The other files you dropped are still "
-"where they were: drop them once you are done with this one."
+"The other PDFs you dropped are already in Recent. The ones that were not "
+"PDFs were not added."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "The box falls outside the page"

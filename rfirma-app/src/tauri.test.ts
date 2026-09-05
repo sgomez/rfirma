@@ -430,15 +430,34 @@ describe("el puerto del arrastre sobre Tauri", () => {
 
     window.emit({
       document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+      alsoEntering: [],
       failure: null,
-      ignored: 2,
+      discarded: 2,
     });
 
     expect(dropped).toHaveLength(1);
     expect(dropped[0]).toMatchObject({
       document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned", remembered: true },
       failure: null,
-      ignored: 2,
+      discarded: 2,
+    });
+  });
+
+  /** ID-306: cada PDF del mismo gesto entra igual en Recientes. */
+  it("also turns the rest of the dropped PDFs into tray rows", () => {
+    const window = listening();
+    const dropped: unknown[] = [];
+    tauriDocumentDrops().subscribe((drop) => dropped.push(drop));
+
+    window.emit({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+      alsoEntering: [{ id: "1a2b3c4d", name: "factura.pdf", modified: 1_700_000_001 }],
+      failure: null,
+      discarded: 0,
+    });
+
+    expect(dropped[0]).toMatchObject({
+      alsoEntering: [{ id: "1a2b3c4d", name: "factura.pdf", badge: "Unsigned", remembered: true }],
     });
   });
 
@@ -449,14 +468,16 @@ describe("el puerto del arrastre sobre Tauri", () => {
 
     window.emit({
       document: null,
+      alsoEntering: [],
       failure: { situation: "droppedFileUnreadable", detail: "os error 2" },
-      ignored: 0,
+      discarded: 0,
     });
 
     expect(dropped[0]).toEqual({
       document: null,
+      alsoEntering: [],
       failure: { situation: "droppedFileUnreadable", detail: "os error 2" },
-      ignored: 0,
+      discarded: 0,
     });
   });
 
@@ -770,8 +791,9 @@ describe("el documento con el que se invocó a la aplicación", () => {
   it("asks the backend for it, and reads it like a drop", async () => {
     invoke.mockResolvedValue({
       document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+      alsoEntering: [],
       failure: null,
-      ignored: 0,
+      discarded: 0,
     });
 
     const invoked = await tauriDocumentDrops().pending();
@@ -780,7 +802,7 @@ describe("el documento con el que se invocó a la aplicación", () => {
     expect(invoked).toMatchObject({
       document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned" },
       failure: null,
-      ignored: 0,
+      discarded: 0,
     });
   });
 

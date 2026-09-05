@@ -793,8 +793,8 @@ describe("App", () => {
  */
 describe("App, al soltar ficheros en la ventana", () => {
   /** Lo que Rust emite al soltar un PDF que sí se abre. */
-  function anOpened(name: string, ignored = 0) {
-    return { document: document(name), failure: null, ignored };
+  function anOpened(name: string, alsoEntering: DocumentInHand[] = [], discarded = 0) {
+    return { document: document(name), alsoEntering, failure: null, discarded };
   }
 
   it("opens a dropped PDF exactly like the dialog does", async () => {
@@ -815,22 +815,37 @@ describe("App, al soltar ficheros en la ventana", () => {
 
     drops.drop({
       document: null,
+      alsoEntering: [],
       failure: { situation: "notAPdf", detail: "el fichero no es un PDF" },
-      ignored: 0,
+      discarded: 0,
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
   });
 
-  /** ID-70: se abre el primero, y los demás no se callan. */
-  it("opens the first PDF of several and says that it only opened that one", async () => {
+  /** ID-306: se abre el primero, y el resto entra igual en Recientes. */
+  it("opens the first of several dropped PDFs and lists the rest in the tray", async () => {
     const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
 
-    drops.drop(anOpened("factura.pdf", 2));
+    drops.drop(anOpened("factura.pdf", [document("contrato.pdf")]));
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Solo hemos abierto el primer PDF");
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(await within(tray).findByText("contrato.pdf")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  /** ID-306: lo que no era un PDF sí se cuenta, y por qué. */
+  it("says how many were discarded when some of what was dropped was not a PDF", async () => {
+    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
+
+    drops.drop(anOpened("factura.pdf", [], 2));
+
+    await screen.findByRole("region", { name: "Panel de firma" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Algunos ficheros no se han añadido",
+    );
   });
 
   /**
@@ -844,11 +859,12 @@ describe("App, al soltar ficheros en la ventana", () => {
 
     drops.drop({
       document: null,
+      alsoEntering: [],
       failure: {
         situation: "droppedFileUnreadable",
         detail: "No such file or directory (os error 2)",
       },
-      ignored: 0,
+      discarded: 0,
     });
 
     const alert = await screen.findByRole("alert");
@@ -866,7 +882,7 @@ describe("App, al soltar ficheros en la ventana", () => {
       [document("otro.pdf")],
       pdfsOf({ "factura.pdf": 2, "otro.pdf": 3 }),
     );
-    drops.drop(anOpened("factura.pdf", 2));
+    drops.drop(anOpened("factura.pdf", [], 2));
     await screen.findByRole("alert");
 
     await user.click(trayDropZone());
@@ -1292,7 +1308,7 @@ describe("App, invocada con un documento", () => {
       emptyCertificateStore(),
       emptyRubricPicker(),
       unavailableSigningBackend(),
-      { document: document("contrato.pdf"), failure: null, ignored: 0 },
+      { document: document("contrato.pdf"), alsoEntering: [], failure: null, discarded: 0 },
     );
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -1346,7 +1362,7 @@ describe("App, invocada con un documento", () => {
     expect(asked).toBe(1);
 
     await act(async () => {
-      answer({ document: document("contrato.pdf"), failure: null, ignored: 0 });
+      answer({ document: document("contrato.pdf"), alsoEntering: [], failure: null, discarded: 0 });
     });
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
@@ -1365,8 +1381,9 @@ describe("App, invocada con un documento", () => {
       unavailableSigningBackend(),
       {
         document: null,
+        alsoEntering: [],
         failure: { situation: "notAPdf", detail: "el fichero no es un PDF" },
-        ignored: 0,
+        discarded: 0,
       },
     );
 
