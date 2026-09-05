@@ -851,9 +851,9 @@ describe("App, al soltar ficheros en la ventana", () => {
     const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
     expect(await within(tray).findByText("contrato.pdf")).toBeInTheDocument();
     expect(within(tray).getByText("anexo.pdf")).toBeInTheDocument();
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Algunos ficheros no se han añadido",
-    );
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("Algunos ficheros no se han añadido");
+    expect(notice).toHaveTextContent("se han descartado 2 ficheros");
   });
 
   /** ID-306: lo que no era un PDF sí se cuenta, y por qué. */
