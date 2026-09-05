@@ -31,15 +31,24 @@ Cinco hechos gobiernan el hito:
    toca, y su redacción es distinta —y menos alarmante— que la del de red local.
 3. **La concesión se recuerda**, por origen de la sede, entre pestañas y entre sesiones, en
    los dos navegadores. En Firefox hay que marcar una casilla; en Chrome es automática.
-4. **AutoFirma sufre exactamente lo mismo**, y peor: su `autoscript.js` colapsa *todos* los
-   fallos de conexión en un único código `AS620017` «no se ha podido invocar a la aplicación
-   nativa», tras **33 segundos** de reintentos. Es un problema del ecosistema, no de rfirma.
+4. **AutoFirma sufre exactamente lo mismo**, y peor: tras **28 segundos** de reintentos en
+   bucle, **no enseña ningún diálogo** —arranca sin ventana y se rinde en silencio— y quien
+   pinta el error es la sede, con un mensaje genérico y **sin código**. Medido en el
+   [#324](https://github.com/sgomez/rfirma/issues/324). Es un problema del ecosistema, no de
+   rfirma.
 5. **La distinción «denegado» vs «no hay servidor» no se puede hacer desde el evento del
    WebSocket** —la especificación de WebSocket lo prohíbe—, pero **sí** con la Permissions
    API antes de conectar. Ese es el remedio, y es del lado de la sede, no de rfirma.
 
 Y un corolario incómodo: **rfirma no controla el lado que puede arreglarlo.** Quien pinta el
 mensaje de error es `autoscript.js`, que sirve la sede.
+
+> **Estado de las medidas.** Este informe se escribió sin ejecutar nada en un navegador, y
+> dejaba la sección 6 como deuda. Esa deuda **está saldada**: la lista se pasó a mano el
+> 2026-09-05 sobre Chrome 152, Firefox 155 y AutoFirma 1.9.0, y **los resultados están
+> incorporados a lo largo de este documento**. La pasada completa, con el montaje y los
+> literales, vive en el
+> [#324](https://github.com/sgomez/rfirma/issues/324#issuecomment-5551318737).
 
 ## 0. Qué había en el ADR-0005, y qué cambia
 
@@ -79,10 +88,18 @@ consola que citan nombra el espacio:
 
 ### 1.2 El texto del aviso
 
+**Medido** (Chrome 152, Firefox 155):
+
 | Navegador | Texto del aviso (*loopback*) | Texto del aviso (red local) |
 |---|---|---|
-| Chrome / Edge 147+ | *«`example.com` wants to… Access other apps and services on this device»* | *«Access other devices on your local network»* |
-| Firefox 153+ | *«…wants access to other apps and services on your device»* | *«…wants access to local network devices»* |
+| Chrome 152 | *«`example.com` wants to access other apps and services on this device»* | — |
+| Chrome 152, en castellano | **«`example.com` quiere acceder a otras aplicaciones y servicios de este dispositivo.»**, botones **Bloquear** / **Permitir** | — |
+| Firefox 155 | *«`example.com` wants to access other apps and services on this device»* | *«…wants to access apps and services on devices connected to your local network»* |
+
+Las dos redacciones de Firefox **existen y son distintas**, y los dos permisos se piden por
+separado: con el de *loopback* ya concedido, una conexión a una IP `192.168.x.x` vuelve a
+preguntar. El literal de Firefox **en castellano** sigue sin capturar: el paquete no traía el
+idioma instalado en el equipo de la medida.
 
 Fuentes: la [documentación de LNA de QZ Tray](https://github.com/qzind/tray/wiki/LNA) —una
 aplicación local con WebSocket seguro a *loopback*, el análogo técnico más cercano a
@@ -100,15 +117,27 @@ navegador no sabe, ni puede saber antes de conectar, qué hay al otro lado del p
 ### 1.3 Dónde sale, y con qué botones
 
 - **Chrome / Edge:** burbuja modal anclada bajo la barra de direcciones, botones **Allow** /
-  **Block**. QZ Tray documenta una trampa importante:
+  **Block**, más una **✕** para descartar sin decidir. QZ Tray documenta una trampa
+  importante:
 
   > *⚠️ WARNING: Ignoring this pop-up three time is equivalent to clicking 'block'!*
 
-  Es la regla general de *permission fatigue* de Chrome, y significa que **cerrar el aviso
-  tres veces deniega de forma persistente** sin que la persona haya dicho que no.
+  Es la regla general de *permission fatigue* de Chrome, y **está confirmada a mano**: tres
+  descartes con la ✕ y **a la cuarta ya no pregunta**, con la Permissions API devolviendo
+  `denied`. Peor aún, Chrome presenta ese estado como **«Automatically blocked»**, así que
+  quien cerró el aviso «por quitarlo de en medio» acaba donde quien pulsó *Block*, **sin
+  recordar haber bloqueado nada**.
 - **Firefox:** panel de permiso junto a la barra de direcciones, botones **Allow** / **Block**
-  y **casilla «Remember my choice for this site»**. Sin marcarla, la denegación queda como
-  **«Blocked Temporarily»** y el aviso vuelve a salir.
+  y **casilla «Remember my choice»**. **No hay ✕**, así que el camino de «ignorar tres veces»
+  no existe aquí. Sin marcar la casilla, la denegación **no aparece en los ajustes** y aun así
+  bloquea: medido, `local-network` devolvía `denied` mientras Preferencias no mostraba fila
+  alguna. La persona no tiene dónde deshacerla salvo reiniciando el navegador.
+
+  Y un plazo que no estaba previsto: **Firefox abandona la conexión a los ~20 s con el aviso
+  todavía en pantalla** (21074 ms y 20072 ms en dos medidas), sin que la persona haya tocado
+  nada. Chrome no lo hace. Es un requisito de diseño para la sede: **no puede dar por perdido
+  el intento con el primer cierre**, o la primera visita de cada persona en Firefox falla
+  siempre.
 
 ### 1.4 El caso que no sale ninguno
 
@@ -141,10 +170,26 @@ Los dos navegadores la ejercen:
 Que la clave sea **el espacio de direcciones y no la IP concreta** es el hecho más útil de
 esta sección: significa que **la concesión no se pierde porque `autoscript.js` sortee otros
 tres puertos en la siguiente visita** (sección 3), y que un solo *Allow* cubre cualquier
-puerto de *loopback* que la sede intente después.
+puerto de *loopback* que la sede intente después. **Confirmado a mano**: concedido en un
+puerto, otros tres abrieron sin preguntar, en ~44 ms.
+
+También está confirmada la persistencia en toda su extensión —recargar, segunda pestaña
+simultánea, cerrar las pestañas, y **cerrar y reabrir el navegador entero**—, en los dos.
+
+Y una asimetría que conviene saber antes de escribir instrucciones de reparación:
+
+| Navegación privada | Firefox 155 | Chrome 152 |
+|---|---|---|
+| ¿Pregunta, pese a estar concedido en la ventana normal? | **Sí** | **No: hereda la concesión del perfil** |
+| ¿Ofrece casilla de recordar? | **No** | n/a |
+| ¿Recuerda dentro de la sesión privada? | Sí | Sí |
+| ¿Se olvida al cerrarla? | **Sí** | **No** |
+
+**Chrome en incógnito no aísla nada** de este permiso.
 
 Cuánto dura la concesión de Chrome sin uso —Chrome caduca algunos permisos por inactividad—
-**no está determinado** por fuente primaria. Va a la lista de comprobación.
+**sigue sin determinar**: no hay fuente primaria y la medida exige semanas de espera. Es uno de
+los dos únicos puntos de la sección 6 que quedan sin pasar.
 
 ## 3. Qué le pasa hoy a AutoFirma
 
@@ -198,6 +243,21 @@ nativa mediante websocket»* (`:337-420`). Antes de rendirse muestra un diálogo
 con «reintentar / cancelar» (`Dialog.showErrorDialog(ERROR_CONNECTING_AFIRMA, …)`,
 `:1525-1565`).
 
+**Medido contra una sede real** (`valide.redsara.es`, AutoFirma 1.9.0, permiso denegado en
+Chrome 152):
+
+- **28 segundos** hasta rendirse, del mismo orden que los ≈ 33 calculados aquí.
+- **AutoFirma no enseña nada.** En modo WebSocket arranca sin ventana, se rinde en silencio y
+  **no queda proceso suyo vivo** al terminar. Todo lo que ve la persona lo pinta la sede.
+- El diálogo de la sede es **genérico y no muestra el código**: dice que no es posible conectar
+  con AutoFirma, con botones *Reintentar* / *Cerrar*. El `AS620017` se queda dentro.
+- La consola confirma la mecánica: **AutoFirma se ata a un solo puerto de los tres**, y ese da
+  `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS` mientras los otros dos dan
+  `ERR_CONNECTION_REFUSED`, en bucle hasta agotar los intentos.
+
+O sea: **el navegador tenía el diagnóstico exacto y la sede no lo usa**. El listón que rfirma
+tiene que superar es aún más bajo de lo que este informe suponía.
+
 Sólo distingue fallos **posteriores** a tener conexión: cierre del socket (`AS420002`),
 memoria (`AS620018`), cancelación, y los `err-XX:` del protocolo.
 
@@ -237,21 +297,42 @@ NET_ERROR(CACHED_IP_ADDRESS_SPACE_BLOCKED_BY_LOCAL_NETWORK_ACCESS_POLICY, -384)
 `chrome://net-export` **no es una fuente que la aplicación web pueda leer**. Sirve para
 soporte, no para diagnóstico automático.
 
+**Matiz medido: los códigos de cierre no son iguales en los dos navegadores.**
+
+| Situación | Chrome 152 | Firefox 155 |
+|---|---|---|
+| Permiso denegado | `1006` (consola: `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`) | `1006` |
+| Fallo de TLS | `1006` (consola: `ERR_CERT_AUTHORITY_INVALID`) | **`1015`** |
+| Plazo de ~20 s agotado con el aviso abierto | no aplica | `1006` |
+
+Firefox **sí distingue el fallo de TLS con `1015`**; Chrome lo colapsa todo en `1006`. No
+rompe la conclusión de esta sección —«denegado» y «no hay nadie» siguen siendo el mismo
+`1006`—, pero deja una rendija útil: en Firefox, un `1015` **descarta** el problema de permiso
+y **señala la CA**, que es el remedio opuesto.
+
 ### 4.2 El orden real de los fallos
 
-Importa para redactar los mensajes, porque **los tres modos de fallo son secuenciales y sólo
-uno es visible cada vez**:
+**Los dos navegadores lo ordenan al revés**, y esto se midió a mano porque la predicción de
+este informe era la contraria.
 
-1. **El permiso de LNA se evalúa primero**, antes de abrir el socket. Denegado, **no hay
-   saludo TLS**: la CA es irrelevante en este escalón.
-2. **Concedido el permiso, va el saludo TLS.** Sin la CA de rfirma en el almacén NSS, falla
-   aquí. Esto es lo que sostiene el ADR-0005: la CA sigue siendo obligatoria, pero **por
-   detrás** del permiso.
-3. **Superado el TLS, va el eco.** Si no vuelve `"OK"`, es que hay *algo* escuchando en ese
-   puerto que no es rfirma.
+- **Firefox: el permiso va primero.** Con la CA no instalada y el permiso sin decidir, saca la
+  burbuja y **espera**, sin adelantar ningún error de TLS.
+- **Chrome: el TLS falla antes.** Mismo montaje: `net::ERR_CERT_AUTHORITY_INVALID` a los
+  **7 ms**, con la burbuja del permiso todavía en pantalla y sin contestar.
 
-Un mensaje que diga «instala la CA» cuando el fallo es (1) manda a la persona por el camino
-equivocado, y es exactamente el remedio opuesto.
+La traza real de AutoFirma lo remacha: de los tres puertos que sortea la sede, **sólo el que
+tenía a alguien escuchando** dio `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`; los otros dos
+dieron `ERR_CONNECTION_REFUSED`. Si el gate se aplicara antes de conectar, los tres darían
+bloqueo. **En Chrome el permiso se comprueba al final, cuando la conexión ya ha prosperado.**
+
+Lo que sí se mantiene, y sostiene el ADR-0005, es que **la CA sigue siendo obligatoria**: sin
+ella no hay eco aunque el permiso esté concedido. Lo que cambia es el diagnóstico: **en Chrome
+el orden de los fallos no sirve para separarlos**, porque una CA sin instalar produce un fallo
+inmediato e indistinguible aunque el permiso siga sin decidir. Separarlos exige la Permissions
+API (sección 4.3), no la cronología.
+
+Un mensaje que diga «instala la CA» cuando el fallo es el del permiso sigue mandando a la
+persona por el camino equivocado, y es exactamente el remedio opuesto.
 
 ### 4.3 Lo que sí funciona: preguntar antes de conectar
 
@@ -265,14 +346,21 @@ La Permissions API expone el estado sin provocar el aviso, y devuelve `"granted"
 - `"prompt"` → todavía no ha preguntado: conectar y dejar que pregunte, avisando antes de
   qué va el aviso que va a salir.
 
-**Cuál es el nombre exacto del descriptor no está determinado.** La especificación nombra
-`local-network` y `loopback-network`; varias guías de terceros usan
-`navigator.permissions.query({ name: "local-network-access" })`; y Playwright registró
-`local-network-access` como nombre de permiso concedible
-([microsoft/playwright#37861](https://github.com/microsoft/playwright/issues/37861)). Son
-tres nombres candidatos y **hay que comprobarlos con `navigator.permissions.query` en cada
-navegador** —una `TypeError` distingue el inválido del válido—. Va a la lista de
-comprobación.
+**El descriptor está medido, y hay que usar `loopback-network`.**
+
+| Descriptor | Chrome 152 | Firefox 155 |
+|---|---|---|
+| `loopback-network` | acepta; sigue el estado real | acepta; sigue el estado real |
+| `local-network-access` | acepta; **alias** del anterior, cambia a la vez | **lanza `TypeError`** |
+| `local-network` | acepta, pero es **otro** permiso: se queda en `prompt` | igual: otro permiso |
+
+Estados observados con `loopback-network`: `prompt` de partida → `granted` tras *Allow* →
+`denied` tras *Block*, en los dos navegadores. `local-network` **nunca se movió** al conceder
+el de *loopback*: son dos permisos independientes, como decía la sección 1.1.
+
+Y un aviso para quien lo implemente: **la detección de capacidades por excepción no vale**.
+Chrome **no lanza** con nombres que no aplican y Firefox sí, así que la distinción hay que
+hacerla por el **estado**, nunca por el `catch`.
 
 Y la limitación de fondo: **la Permissions API la llama la sede, no rfirma**. Todo este
 remedio vive en `autoscript.js`, código que no controlamos. Lo que rfirma **sí** puede
@@ -299,8 +387,10 @@ users»*, la nota de la versión 147 dice *«WebSocket connections to local addr
 trigger permission prompts»*, y tanto QZ Tray como Citrix describen el aviso apareciendo con
 un WebSocket. **La lectura más probable es que la guía de Sprinklr esté escrita contra la
 fase de prueba para desarrolladores (Chrome 142–146), donde el bloqueo existía sin aviso.**
-Pero es un hecho que decide el hito, así que **no se da por resuelto aquí**: es el punto 1 de
-la lista de comprobación.
+**Resuelto a mano, y a favor de Chromium: el aviso sale.** Comprobado con un WebSocket a
+`wss://127.0.0.1` en Chrome 152 y en Firefox 155, con perfil nuevo y desde un origen HTTPS
+público. La guía de Sprinklr describe la fase de prueba para desarrolladores, no el
+comportamiento actual. **El hito sigue en pie.**
 
 ## 5. Si es automatizable
 
@@ -350,7 +440,8 @@ además, una lista que se desincroniza sola.
 
 - **Leer el texto del aviso.** Es UI nativa del navegador, fuera del DOM. Comprobar la
   redacción exacta es inevitablemente manual, y hay que rehacerlo en cada versión.
-- **Comprobar la conducta de «ignorar tres veces»** de Chrome.
+- **Comprobar la conducta de «ignorar tres veces»** de Chrome. Medida ya a mano —tres ✕ y a la
+  cuarta `denied`—, pero cada versión mayor obliga a repetirla, y no hay forma de guionizarla.
 - **El `iframe`.** Si la sede embebe el cliente en un `iframe` de otro origen, hace falta
   `allow="loopback-network"` en el elemento, porque el permiso es *policy-controlled* con
   lista blanca `["self"]`. Eso **lo escribe la sede**; si no lo hace, no hay nada que rfirma
@@ -364,60 +455,77 @@ WebSocket abre con permiso concedido y no abre sin él, y que la aplicación no 
 ninguno de los dos casos. Todo lo demás —redacciones, ubicación del aviso, botones— es la
 lista de la sección 6, ejecutada a mano una vez por cada versión mayor de cada navegador.
 
-## 6. Lista de comprobación manual
+## 6. La lista de comprobación manual, y lo que dio
 
-Lo que **no** se ha podido documentar desde fuente primaria. Cada punto dice qué mirar, en
-qué navegador y con qué montaje.
+**Pasada entera el 2026-09-05** sobre Chrome 152.0.7977.64, Firefox 155.0 y AutoFirma 1.9.0,
+con perfil de navegador nuevo en cada punto. Los resultados están incorporados a las secciones
+1 a 5; aquí queda el índice y el montaje, para poder repetirla en cada versión mayor.
 
-**Montaje común.** Una página HTTPS servida desde un origen público real (no `localhost`),
-que abra `new WebSocket("wss://127.0.0.1:<puerto>")` contra rfirma —o contra AutoFirma— ya
-escuchando y con su CA confiada. Perfil de navegador **nuevo** en cada pasada; si no, la
-concesión de la pasada anterior enmascara el resultado.
+**Montaje.** Origen HTTPS público real (`https://example.com`), con el código en la consola de
+DevTools. Al otro lado, un servidor WebSocket sobre TLS mínimo —sólo el *handshake* 101—
+escuchando en `127.0.0.1` en varios puertos a la vez, con una cadena CA + hoja emitida al
+efecto. Dos trampas del montaje, que cuestan una tarde si no se saben:
 
-1. **[Decide el hito] ¿Sale aviso al abrir un WebSocket a *loopback*?**
-   Chrome/Edge **147+** y Firefox **154+**. Resuelve la contradicción de la sección 4.4.
-   Si la respuesta fuese que no sale ninguno, **la v0.5 no puede prometer el flujo de sede
-   por WebSocket sin política de empresa**, y hay que volver al #308.
-2. **El texto literal del aviso de *loopback*, con captura**, en Chrome 147+ y Firefox 154+,
-   **en castellano**, que es lo que verá quien lo use. Los textos de la sección 1.2 son la
-   redacción inglesa; la traducción no se ha podido leer.
-3. **¿Nombra el aviso a la aplicación, el puerto o el proceso?** La respuesta esperada es que
-   no. Confirmarlo, porque de ello depende toda la redacción de nuestra documentación.
-4. **Persistencia.** Conceder, cerrar la pestaña, volver: ¿pregunta otra vez? Cerrar el
-   navegador entero y volver: ¿pregunta? Abrir la misma sede en otra pestaña a la vez: ¿una
-   sola concesión?
-5. **Persistencia entre puertos.** Conceder con un puerto y forzar que `autoscript.js` sortee
-   otros tres: ¿vuelve a preguntar? La sección 2 dice que no debería, porque la clave es el
-   espacio de direcciones. **Confirmarlo es lo que sostiene el diseño entero.**
-6. **Caducidad por inactividad en Chrome.** Conceder y no volver en varias semanas. No hay
-   fuente primaria sobre si Chrome revoca los permisos de LNA por desuso.
-7. **Ignorar tres veces en Chrome** (cerrar la burbuja con la ✕, no pulsar *Block*):
-   comprobar que la cuarta vez ya no pregunta y el estado es `"denied"`.
-8. **Navegación privada** en los dos navegadores: ¿pregunta?, ¿recuerda dentro de la sesión
-   privada?, ¿se olvida al cerrarla?
-9. **El descriptor de la Permissions API.** En la consola de cada navegador:
-   ```js
-   for (const n of ["loopback-network", "local-network", "local-network-access"]) {
-     try { console.log(n, (await navigator.permissions.query({name: n})).state); }
-     catch (e) { console.log(n, "INVÁLIDO", e.name); }
-   }
-   ```
-   Anotar cuál acepta cada navegador y qué estado devuelve antes de conceder, después de
-   conceder y después de denegar. **Es el punto que decide si la sección 4.3 es
-   implementable.**
-10. **Firefox: ¿de verdad hay dos redacciones?** Provocar el aviso contra `127.0.0.1` y
-    contra una IP `192.168.x.x` y comprobar que el texto cambia, y que las entradas de
-    `about:preferences#permissionsData` son distintas.
-11. **AutoFirma de verdad, el oráculo.** Con AutoFirma 1.9.x instalada y una sede real, en
-    Chrome 147+ y Firefox 154+: denegar el permiso y **cronometrar** lo que tarda en salir el
-    diálogo de error y anotar su texto exacto. La predicción de la sección 3.2 es ≈ 33
-    segundos y un mensaje que dice que la aplicación no está instalada.
-12. **El orden de los fallos de la sección 4.2.** Con la CA **no** instalada: comprobar que
-    el aviso de permiso sale igualmente y que el fallo de TLS es posterior. Es lo que
-    confirma que un mensaje sobre la CA sería el remedio equivocado en el escalón (1).
-13. **Chrome: nombre y ubicación del ajuste.** Confirmar si en la versión instalada se llama
-    «Local network access» o «Apps on device», y anotar la ruta exacta en castellano, que es
-    lo que hay que escribir en nuestra documentación de reparación.
+- **Firefox rechaza un autofirmado que sea a la vez CA y certificado de servidor**
+  (`mozilla::pkix` no admite `CA:TRUE` en la hoja); Chrome sí lo traga. Hace falta cadena de
+  dos niveles, con la CA en el perfil vía `certutil -A -d sql:<perfil> -t "C,,"`.
+- Chrome acepta `--ignore-certificate-errors` (la banda amarilla de «marca no compatible» es
+  normal); **Firefox no tiene equivalente**.
+
+| # | Punto | Resultado | Dónde está |
+|---|---|---|---|
+| 1 | ¿Sale aviso con un WebSocket a *loopback*? | **Sí, en los dos.** El hito sigue en pie | § 4.4 |
+| 2 | Texto literal del aviso | Capturado; el castellano de Chrome, en la tabla | § 1.2 |
+| 3 | ¿Nombra aplicación, puerto o proceso? | **No.** Sólo el origen de la sede | § 1.2 |
+| 4 | Persistencia (pestaña, ventana, reinicio) | **Total en los dos** | § 2 |
+| 5 | Persistencia entre puertos | **Confirmada**: la clave es el espacio de direcciones | § 2 |
+| 6 | Caducidad por inactividad en Chrome | **Sin medir** (exige semanas) | — |
+| 7 | Ignorar tres veces en Chrome | **Confirmado**, y se presenta como «Automatically blocked» | § 1.3 |
+| 8 | Navegación privada | Firefox aísla; **Chrome en incógnito no** | § 2 |
+| 9 | Descriptor de la Permissions API | **`loopback-network`**, el único común | § 4.3 |
+| 10 | Firefox: ¿dos redacciones? | **Sí**, y son dos permisos separados | § 1.2 |
+| 11 | AutoFirma, el oráculo | **28 s, ningún diálogo propio, mensaje genérico sin código** | § 3.2 |
+| 12 | El orden de los fallos | **Al revés en cada navegador**; el informe lo tenía mal | § 4.2 |
+| 13 | Chrome: nombre y ruta del ajuste | **«Apps on device»**, `chrome://settings/content/loopbackNetwork` | abajo |
+| 14 | El selector con dos manejadores de `afirma://` | Ni Chrome ni Firefox eligen; **manda `mimeapps.list`** | abajo |
+
+La pasada completa, con literales y trazas, está en el
+[#324](https://github.com/sgomez/rfirma/issues/324#issuecomment-5551318737).
+
+### 6.1 Dónde se repara en Chrome (punto 13)
+
+- Página global: `chrome://settings/content/loopbackNetwork`, donde el sitio figura como
+  *«Not allowed to access other apps and services on this device»*.
+- Por sitio: icono a la izquierda de la barra de direcciones → **Apps on device** →
+  **«Automatically blocked»** + botón **Reset permission**.
+
+En Firefox, *Settings → Privacy & Security*, sección **«Device apps and services»** — donde
+**no** aparecen las denegaciones hechas sin marcar «Remember my choice», aunque bloqueen.
+
+### 6.2 Qué pasa con dos aplicaciones registradas para `afirma://` (punto 14)
+
+Medido con un `.desktop` de pruebas junto a la `afirma.desktop` de AutoFirma:
+
+- **Basta instalar el `.desktop` en `~/.local/share/applications`** y correr
+  `update-desktop-database` para que el `default` pase a ser el nuevo, sin escribir nada en
+  `mimeapps.list`: el ámbito de usuario gana al del sistema. **Instalar rfirma le quitaría el
+  `afirma://` a AutoFirma sin que la persona elija.**
+- **Firefox no pinta un selector**: nombra la aplicación que dice el escritorio, con «*Choose a
+  different application*» —que ahí sí lista las dos—, casilla «*Always allow*» y
+  *Cancel* / *Open link*. La elección se guarda **dentro de Firefox**, en
+  *Preferences → Applications*, **por encima de `mimeapps.list`**.
+- **Chrome tampoco elige**: «*Open …?*», *Always allow*, abrir o cancelar. Pero delega en el
+  escritorio, y **es GNOME quien saca su propio selector** con las dos aplicaciones, **sin
+  casilla de recordar** y **volviendo a salir cada vez**.
+
+Tres consecuencias para el registro del esquema:
+
+1. `mimeapps.list` decide el primer escalón; el diseño que dependa de él se sostiene.
+2. **Hay que escribir un `default` explícito en `[Default Applications]`**. Sin él, GNOME
+   pregunta en cada invocación y no ofrece forma de callarlo.
+3. **Firefox puede desautorizar a `mimeapps.list`**: si la persona marcó «always allow» sobre
+   AutoFirma, rfirma reescribirá el fichero sin efecto alguno. Cualquier interfaz de rfirma que
+   presuma de controlar el manejador tiene que decirlo, y mandar a *Preferences → Applications*.
 
 ## Lo que este informe deja decidido
 
@@ -432,16 +540,18 @@ concesión de la pasada anterior enmascara el resultado.
 - **rfirma no puede diagnosticar la denegación**: el fallo ocurre entero dentro del navegador
   y no llega ni un paquete. Lo único que puede es **describir los dos casos y sus dos
   remedios opuestos** en Preferencias y en la documentación, y no prometer más.
-- **AutoFirma no lo hace mejor**: 33 segundos y un único `AS620017` para todo. El listón que
-  hay que superar es bajísimo.
+- **AutoFirma no lo hace mejor**: **28 segundos medidos**, ningún diálogo propio, y un mensaje
+  de la sede genérico y **sin código**. El listón que hay que superar es bajísimo.
 - **El puerto no es fijo**: la sede sortea tres al azar y rfirma tiene que aceptar la lista
   que le llega en `afirma://websocket?ports=…`. Corrige la redacción del ADR-0005, sin
   cambiar su decisión.
 
 ## Lo que no se ha medido
 
-- **Nada se ha ejecutado en un navegador.** Todo lo de arriba es lectura de fuentes; la
-  sección 6 es la deuda.
+- **La caducidad por inactividad de los permisos de Chrome**: exige semanas de espera y no hay
+  fuente primaria.
+- **El literal del aviso de Firefox en castellano**: el equipo de la medida no tenía el idioma
+  instalado en el paquete.
 - **WebRTC y WebTransport** no se han mirado: no están en el camino de `autoscript.js`.
 - **La conducta de Safari** —no hay canal de rfirma para macOS, y LNA no está anunciado allí.
 - **Edge, Brave, Opera y Vivaldi** heredan el comportamiento de Chromium, pero cada uno pinta
