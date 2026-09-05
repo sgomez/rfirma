@@ -9,7 +9,8 @@
 //! *fail-open* —un criterio que no reconoce lo ignora en silencio, y el listado
 //! sale más ancho de lo que la sede pidió—, así que aquí hay una **lista
 //! blanca**: un criterio que no esté en ella es un `SAF_03` y no se filtra a
-//! medias.
+//! medias. Ese cierre del *fail-open*, comprobado en Rust antes de llamar al
+//! puente, es el ID-255.
 //!
 //! **Lo que la lista blanca cierra, y lo que no.** Cierra el criterio
 //! *desconocido*. **No** cierra el criterio conocido con el argumento
@@ -201,7 +202,8 @@ fn value_of<'a>(properties: &'a [(String, String)], key: &str) -> Option<&'a str
         .map(|(_, value)| value.as_str())
 }
 
-/// Un criterio que la lista blanca no reconoce **no se ignora**: se rechaza.
+/// Un criterio que la lista blanca no reconoce **no se ignora**: se rechaza
+/// (ID-255).
 ///
 /// Es la única diferencia deliberada con el original, y va en la dirección
 /// segura. Allí un criterio desconocido se cae por el `else` final y el filtro
@@ -316,7 +318,7 @@ mod tests {
     }
 
     /// La lista blanca es *fail-closed*, al revés que el original: un criterio
-    /// desconocido no se ignora, se rechaza.
+    /// desconocido no se ignora, se rechaza (ID-255).
     #[test]
     fn a_criterion_outside_the_whitelist_is_refused_instead_of_ignored() {
         let refusal = site_filter(&properties(&[(
