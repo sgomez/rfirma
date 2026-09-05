@@ -219,12 +219,23 @@ public final class NativeBridge {
     }
 
     /**
+     * Hasta donde se sigue la cadena de causas.
+     *
+     * {@code initCause} prohibe la autocausa, pero no un ciclo de longitud dos
+     * ({@code A -> B -> A}), que si se puede construir pasando las causas por
+     * constructor. Nada del puente construye eso hoy; el tope esta porque un
+     * bucle sobre datos que vienen de AutoFirma conviene que tenga fondo, y un
+     * ciclo aqui se llevaria el hilo del isolate entero.
+     */
+    private static final int MAX_CAUSE_DEPTH = 32;
+
+    /**
      * La clase de fallo, mirando tambien las causas: AutoFirma envuelve sus
      * excepciones antes de que lleguen hasta aqui.
      */
     static String kindOf(final Throwable e) {
         Throwable cause = e;
-        while (cause != null) {
+        for (int depth = 0; cause != null && depth < MAX_CAUSE_DEPTH; depth++) {
             if (UNREGISTERED_SIGNATURES_EXCEPTION.equals(cause.getClass().getName())) {
                 return UNREGISTERED_SIGNATURES_KIND;
             }

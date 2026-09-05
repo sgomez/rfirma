@@ -1,5 +1,5 @@
 //! **Las guardas de lo que sale hacia la sede**, hermanas de las de
-//! [`crate::commands::guards`] (ID-291, TD-58).
+//! [`rfirma_lib::commands::guards`] (ID-291, TD-58).
 //!
 //! La de allí comprueba que la ruta del portal no cruza a la ventana; ésta
 //! comprueba que **nada nuestro cruza el socket**: ni ruta, ni nombre de
@@ -9,21 +9,30 @@
 //! dentro, y se recorre campo a campo lo que se queda para comprobar que no
 //! aparece en lo que sale.
 //!
-//! Sólo en pruebas.
+//! **Grada A**: no toca token, ni librería nativa, ni red.
+//!
+//! Vive en `tests/` y no dentro de `app/` a propósito: para mirar a la vez lo
+//! que se queda (los tipos de [`rfirma_lib::commands`]) y lo que sale (los de
+//! [`rfirma_lib::protocol`]) hay que nombrar las dos capas, y un módulo de
+//! `app/` no puede nombrar al adaptador sin ir contra la flecha del ID-81 —la
+//! guarda `module_directions` lo denuncia, y con razón, porque lee la mitad de
+//! producción de cada fichero de `src/` y un módulo declarado `#[cfg(test)]`
+//! entero no tiene `mod tests` por el que cortar—. Como prueba de integración
+//! entra por la puerta pública del crate y no hay flecha que torcer.
 
 use serde_json::Value;
 
-use crate::app::frontier;
-use crate::app::site::{attend_launch, Attendance};
-use crate::channel::Situation as ChannelSituation;
-use crate::channel::{answer, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown};
-use crate::commands::failure::Failure;
-use crate::destination::{DestinationError, Situation as DestinationSituation};
-use crate::ffi::BridgeError;
-use crate::pkcs11::{Situation as TokenSituation, TokenError};
-use crate::protocol::{SafCode, WireAnswer};
-use crate::rubric::{RubricError, Situation as RubricSituation};
-use crate::signing::Refusal as Inadmissible;
+use rfirma_lib::app::frontier;
+use rfirma_lib::app::site::{attend_launch, Attendance};
+use rfirma_lib::channel::Situation as ChannelSituation;
+use rfirma_lib::channel::{answer, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown};
+use rfirma_lib::commands::failure::Failure;
+use rfirma_lib::destination::{DestinationError, Situation as DestinationSituation};
+use rfirma_lib::ffi::BridgeError;
+use rfirma_lib::pkcs11::{Situation as TokenSituation, TokenError};
+use rfirma_lib::protocol::{SafCode, WireAnswer};
+use rfirma_lib::rubric::{RubricError, Situation as RubricSituation};
+use rfirma_lib::signing::Refusal as Inadmissible;
 
 /// El enlace que el portal concede, que es lo que **no** puede salir. El mismo
 /// literal que usa la guarda hermana de `commands/guards.rs`.
@@ -59,6 +68,13 @@ fn a_transport(
 /// Cada fallo sale de su error de dominio con el enlace del portal, el nombre
 /// del documento y el certificado dentro, que es donde de verdad viajan: en el
 /// detalle crudo del ID-29.
+///
+/// Y los tres valores **por separado**, además de dentro del detalle: `Failure`
+/// solo tiene tres campos, así que el detalle es una sola hoja que los
+/// concatena, y buscar únicamente esa frase entera dejaría pasar una línea que
+/// llevara sólo el nombre del documento o sólo el certificado. La comprobación
+/// del criterio ("ni ruta, ni nombre de documento, ni certificado") es la de
+/// cada uno suelto.
 fn what_stays_inside() -> Vec<(&'static str, Value)> {
     let inside_the_detail =
         format!("no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con {A_CERTIFICATE}");
@@ -93,6 +109,14 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
             serde_json::to_value(Failure::from(BridgeError::Failed(inside_the_detail)))
                 .expect("serializa"),
         ),
+        (
+            "los valores contaminados de la URL",
+            Value::Array(vec![
+                Value::String(A_PORTAL_HANDLE.to_owned()),
+                Value::String(A_DOCUMENT_NAME.to_owned()),
+                Value::String(A_CERTIFICATE.to_owned()),
+            ]),
+        ),
     ]
 }
 
@@ -100,7 +124,7 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
 ///
 /// Dos orígenes, que son los dos únicos que escriben en el socket: el cometido
 /// con el que [`attend_launch`] abre el canal, y lo que
-/// [`crate::channel::conversation`] contesta a cada mensaje. Y encima, la
+/// [`rfirma_lib::channel::conversation`] contesta a cada mensaje. Y encima, la
 /// traducción de cada situación del ID-29, que es lo que saldrá en cuanto haya
 /// operaciones que fallen.
 fn everything_that_goes_out_to_the_site() -> Vec<String> {
@@ -111,8 +135,15 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     // Una invocación con el enlace del portal, el documento y el certificado
     // metidos en sus parámetros, y mal formada para que sea un rechazo: es el
     // peor caso, porque el rechazo es justo lo que sale por el cable.
+    //
+    // La versión es la **buena** (`v=4`) a propósito. Con una versión vieja el
+    // rechazo se decide en `check_protocol_version`, antes de leer `idsession`,
+    // `dat` y `fileid`, y entonces la línea que sale no depende de la URL: la
+    // guarda pasaría sin que ninguno de los tres valores contaminados llegara a
+    // tocarse. Con `v=4` el rechazo lo decide la credencial mal formada, que es
+    // el parámetro contaminado, y la respuesta examinada nace de él.
     let url = format!(
-        "afirma://websocket?ports=54001&v=3&idsession=no-vale-{A_CERTIFICATE}\
+        "afirma://websocket?ports=54001&v=4&idsession=no-vale-{A_CERTIFICATE}\
          &dat=file://{A_PORTAL_HANDLE}&fileid={A_DOCUMENT_NAME}"
     );
 
@@ -213,7 +244,7 @@ fn every_line_that_goes_out_is_one_the_closed_catalogue_can_produce() {
     let mut possible: Vec<String> = Vec::new();
     for code in SafCode::ALL {
         possible.push(WireAnswer::refused(code).on_the_wire());
-        for parameter in crate::protocol::Parameter::ALL {
+        for parameter in rfirma_lib::protocol::Parameter::ALL {
             possible.push(WireAnswer::refused_because_of(code, parameter).on_the_wire());
         }
     }
@@ -222,7 +253,7 @@ fn every_line_that_goes_out_is_one_the_closed_catalogue_can_produce() {
     possible.push(WireAnswer::Nothing.on_the_wire());
     // El `OK` del eco no es una respuesta de la frontera, pero sí sale por el
     // mismo socket.
-    possible.push(crate::channel::ECHO_OK.to_owned());
+    possible.push(rfirma_lib::channel::ECHO_OK.to_owned());
 
     for line in everything_that_goes_out_to_the_site() {
         assert!(
@@ -258,7 +289,9 @@ fn the_shadow_attack_code_is_named_only_where_the_catalogue_is_declared() {
     let mut files = Vec::new();
     rust_files_under(&sources, &mut files);
 
-    let allowed = ["codes.rs", "guards.rs"];
+    // Sólo donde se declara el catálogo: esta guarda ya no vive en `src/`, y la
+    // hermana de `commands/guards.rs` no nombra el código.
+    let allowed = ["codes.rs"];
     for file in files {
         let name = file
             .file_name()

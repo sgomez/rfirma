@@ -128,10 +128,24 @@ pub fn code_of_inadmissible(refusal: Inadmissible) -> SafCode {
 /// operación que puede generar firmas no válidas y que la sede tiene que
 /// confirmar, que es exactamente lo que dice `SAF_50`. Todo lo demás es la
 /// firma que no ha salido.
+///
+/// El resto se enumera en un brazo compartido en vez de colapsarlo en un `_`:
+/// colapsarlo es la decisión correcta —todas son la firma que no sale—, pero
+/// con el comodín una variante nueva de [`BridgeError`] se traduciría sola a
+/// `SAF_09` sin que nada se pusiera rojo, y la regla del módulo es que una
+/// situación nueva no compile hasta que se le decida código.
 pub fn code_of_bridge(error: &BridgeError) -> SafCode {
     match error {
         BridgeError::PdfHasUnregisteredSignatures(_) => SafCode::ConfirmationNeeded,
-        _ => SafCode::SignatureFailed,
+        BridgeError::ExecutablePathUnknown(_)
+        | BridgeError::NotFound(_)
+        | BridgeError::Load { .. }
+        | BridgeError::MissingSymbol { .. }
+        | BridgeError::IsolateFailed(_)
+        | BridgeError::InvalidArgument(_)
+        | BridgeError::NullResponse
+        | BridgeError::MalformedResponse(_)
+        | BridgeError::Failed(_) => SafCode::SignatureFailed,
     }
 }
 

@@ -39,6 +39,23 @@ class ErrorJsonTest {
         assertEquals(NativeBridge.UNREGISTERED_SIGNATURES_KIND, NativeBridge.kindOf(wrapped));
     }
 
+    /**
+     * Un ciclo de causas de longitud dos <b>no cuelga el hilo del isolate</b>.
+     *
+     * <p>{@code initCause} prohibe la autocausa, pero {@code A -> B -> A} si se
+     * construye pasando las causas por constructor, y sin tope el recorrido no
+     * termina nunca. Nada del puente construye eso hoy: el tope esta porque los
+     * datos vienen de AutoFirma.
+     */
+    @Test
+    void a_cycle_in_the_causes_does_not_hang_the_walk() {
+        final Throwable first = new IllegalStateException("la primera");
+        final Throwable second = new IllegalStateException("la segunda", first);
+        first.initCause(second);
+
+        assertEquals(NativeBridge.GENERIC_FAILURE_KIND, NativeBridge.kindOf(first));
+    }
+
     @Test
     void anything_else_is_a_plain_failure() {
         assertEquals(NativeBridge.GENERIC_FAILURE_KIND,
