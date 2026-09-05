@@ -38,6 +38,10 @@ const STATE_FILE: &str = "state.json";
 const RUBRIC_FILE: &str = "rubric.jpg";
 /// El directorio que reúne un almacén NSS por cada `.p12` instalado (ID-192).
 const INSTALLED_CERTIFICATES_DIRECTORY: &str = "certificates";
+/// El certificado de la CA local, en PEM (ADR-0005, ID-221).
+const LOCAL_CA_CERTIFICATE_FILE: &str = "local-ca.crt.pem";
+/// La clave privada de la CA local, en PEM y en un fichero `0600` (ID-223).
+const LOCAL_CA_KEY_FILE: &str = "local-ca.key.pem";
 
 /// El sistema operativo, reducido a lo único que cambia: dónde van las tres
 /// rutas.
@@ -202,6 +206,49 @@ impl Paths {
     pub fn installed_certificates_dir(&self) -> PathBuf {
         self.data_dir.join(INSTALLED_CERTIFICATES_DIRECTORY)
     }
+
+    /// El certificado de la **CA local** (ADR-0005).
+    ///
+    /// Va en el directorio de **datos** y no en el de estado por la misma razón
+    /// que los almacenes de los `.p12`: es material criptográfico que la
+    /// aplicación no puede volver a fabricar sin cambiar lo que el navegador ya
+    /// tiene registrado. El **certificado del servidor local** no aparece aquí
+    /// ni aparecerá: no se guarda en ningún sitio (ID-222).
+    pub fn local_ca_certificate_path(&self) -> PathBuf {
+        self.data_dir.join(LOCAL_CA_CERTIFICATE_FILE)
+    }
+
+    /// La clave privada de la **CA local**, que se escribe `0600` con
+    /// [`create_owner_only_file`] (ID-223).
+    pub fn local_ca_key_path(&self) -> PathBuf {
+        self.data_dir.join(LOCAL_CA_KEY_FILE)
+    }
+}
+
+/// Crea un fichero **legible solo por su dueño desde el primer byte**.
+///
+/// No es [`restrict_to_owner`] con otro nombre: ahí el modo se corrige
+/// *después* de escribir, y entre el `create` y el `chmod` el contenido está
+/// legible para cualquier cuenta de la máquina. Para la clave privada de la CA
+/// local el ADR-0005 exige lo contrario —«creado con ese modo desde el
+/// principio y no con un `chmod` posterior»—, que es el trato de `~/.ssh/id_*`.
+///
+/// Está en este fichero por lo mismo que [`restrict_to_owner`]: los modos POSIX
+/// son conocimiento de sistema operativo, y el ID-35 lo quiere en un solo sitio.
+/// En los sistemas que no los entienden se cae al `create` normal, y la
+/// protección la da la ACL heredada del perfil del usuario.
+pub fn create_owner_only_file(path: &Path) -> std::io::Result<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+
+        const OWNER_ONLY_FILE: u32 = 0o600;
+
+        options.mode(OWNER_ONLY_FILE);
+    }
+    options.open(path)
 }
 
 /// El nombre de la carpeta de documentos cuando nadie dice otra cosa.
@@ -546,5 +593,45 @@ mod tests {
         };
         assert_eq!(mode(&inside), 0o700);
         assert_eq!(mode(&file), 0o600);
+    }
+
+    /// Aquí por la misma razón que la de arriba: leer el modo pide
+    /// `std::os::unix`, y este es el único fichero que puede nombrarlo.
+    #[cfg(unix)]
+    #[test]
+    fn the_private_key_file_is_born_unreadable_for_anyone_else() {
+        use std::io::Write as _;
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let key = directory.path().join("local-ca.key.pem");
+
+        let mut file = create_owner_only_file(&key).expect("deberia crearse");
+        file.write_all(b"-----BEGIN PRIVATE KEY-----")
+            .expect("deberia escribirse");
+
+        assert_eq!(
+            std::fs::metadata(&key)
+                .expect("deberia leerse")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600,
+            "el modo va en el `open`, no en un `chmod` posterior (ADR-0005)"
+        );
+    }
+
+    #[test]
+    fn the_local_ca_lives_in_the_data_directory_and_the_server_certificate_nowhere() {
+        let paths = Paths::under("/tmp/raiz");
+
+        assert_eq!(
+            paths.local_ca_certificate_path(),
+            PathBuf::from("/tmp/raiz/data/rfirma/local-ca.crt.pem")
+        );
+        assert_eq!(
+            paths.local_ca_key_path(),
+            PathBuf::from("/tmp/raiz/data/rfirma/local-ca.key.pem")
+        );
     }
 }
