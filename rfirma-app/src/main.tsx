@@ -28,6 +28,7 @@ import {
   tauriStampComposer,
   tauriVersionCheck,
 } from "./tauri";
+import { TrustNotice } from "./trust/TrustNotice";
 
 const root = document.getElementById("root");
 if (!root) {
@@ -52,6 +53,12 @@ if (!root) {
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
+// `TrustNotice` (#365) no es un puerto: no habla con Tauri, así que no hay
+// nada que doblar ni que cablear aquí más que montarlo. Lo que sí cruza a
+// Tauri es si ya se descartó: `trustNoticeSeen` viaja en la misma
+// configuración que el resto de ajustes, y se lee aquí, antes de pintar,
+// para que el aviso no llegue a montarse en el segundo arranque en adelante.
+//
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
 const preference = tauriLanguagePreference();
 const i18n = createI18n(await preference.read());
@@ -59,10 +66,20 @@ const i18n = createI18n(await preference.read());
 const recents = tauriRecents();
 
 const preferences = tauriPreferences();
+const initialPreferences = await preferences.read();
 
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
+      {/* Sin condición salvo el descarte ya persistido: se explica antes de
+          que el navegador pregunte, no como reacción a un fallo (ID-231,
+          #365), y solo en el primer arranque. */}
+      <TrustNotice
+        seen={initialPreferences.trustNoticeSeen}
+        onAcknowledge={() => {
+          void preferences.save({ ...initialPreferences, trustNoticeSeen: true });
+        }}
+      />
       <App
         recents={recents}
         picker={tauriDocumentPicker()}

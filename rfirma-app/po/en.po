@@ -912,3 +912,27 @@ msgstr "rFirma: EUPL-1.2."
 
 msgid "about.licenses.afirma"
 msgstr "Cliente @firma libraries: GPL-2.0+ / EUPL-1.1."
+
+msgid "trust.notice.title"
+msgstr "When a government site asks you to sign"
+
+msgid "trust.notice.localCa"
+msgstr ""
+"rFirma has installed a local certificate authority on your computer. That "
+"is what lets the browser accept the connection to rFirma when a "
+"government site asks you to sign."
+
+msgid "trust.notice.localNetwork"
+msgstr ""
+"The first time, the browser will ask you to allow local network access. "
+"It asks on behalf of the site, not of rFirma, so you may not recognise "
+"it. Allow it when it appears: one grant is enough, even if the site "
+"tries up to three connections."
+
+msgid "trust.notice.cannotTellIfDenied"
+msgstr ""
+"If you deny it, rFirma cannot tell and cannot say so: that prompt happens "
+"entirely inside the browser."
+
+msgid "trust.notice.acknowledge"
+msgstr "Got it"

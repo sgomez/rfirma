@@ -13,6 +13,7 @@ const defaults: Preferences = {
   rememberVisibleSignature: true,
   rememberActivity: true,
   notifyNewVersion: true,
+  trustNoticeSeen: false,
 };
 
 const noop = async () => {};

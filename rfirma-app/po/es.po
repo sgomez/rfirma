@@ -926,3 +926,27 @@ msgstr "rFirma: EUPL-1.2."
 
 msgid "about.licenses.afirma"
 msgstr "Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1."
+
+msgid "trust.notice.title"
+msgstr "Cuando una sede te pida la firma"
+
+msgid "trust.notice.localCa"
+msgstr ""
+"rFirma ha instalado en tu ordenador una entidad de confianza local. Es lo "
+"que hace falta para que el navegador acepte la conexión con rFirma cuando "
+"una sede electrónica te pida firmar."
+
+msgid "trust.notice.localNetwork"
+msgstr ""
+"La primera vez, el navegador te pedirá permiso para acceder a la red "
+"local. Lo pide en nombre de la sede, no de rFirma, así que puede que no lo "
+"reconozcas. Permítelo cuando aparezca: con un solo permiso basta, aunque "
+"la sede pruebe hasta tres conexiones."
+
+msgid "trust.notice.cannotTellIfDenied"
+msgstr ""
+"Si lo deniegas, rFirma no podrá saberlo ni decírtelo: ese aviso ocurre por "
+"completo dentro del navegador."
+
+msgid "trust.notice.acknowledge"
+msgstr "Entendido"

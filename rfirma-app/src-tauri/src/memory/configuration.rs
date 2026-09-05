@@ -66,6 +66,11 @@ pub struct Configuration {
     pub notify_new_version: bool,
     /// El tema de la ventana. Ver [`Theme`].
     pub theme: Theme,
+    /// Si el aviso del primer arranque (CA local y permiso de red local, #365)
+    /// ya se ha descartado. Empieza en `false` y se vuelve `true` para
+    /// siempre en cuanto se pulsa «Entendido»: no es un ajuste que se pueda
+    /// reactivar desde Preferencias, es una marca de que ya se explicó.
+    pub trust_notice_seen: bool,
 }
 
 impl Default for Configuration {
@@ -85,6 +90,9 @@ impl Default for Configuration {
             // de que el ajuste existiera, y una aplicación que se abre en
             // claro dentro de un escritorio oscuro parece rota.
             theme: Theme::System,
+            // Sin descartar por omisión: es la primera vez, así que el aviso
+            // tiene que aparecer.
+            trust_notice_seen: false,
         }
     }
 }
@@ -105,6 +113,11 @@ mod tests {
     #[test]
     fn notify_new_version_starts_on() {
         assert!(Configuration::default().notify_new_version);
+    }
+
+    #[test]
+    fn the_trust_notice_has_not_been_seen_by_default() {
+        assert!(!Configuration::default().trust_notice_seen);
     }
 
     #[test]
@@ -163,6 +176,7 @@ mod tests {
                 "remember_activity",
                 "remember_visible_signature",
                 "theme",
+                "trust_notice_seen",
             ],
             "la rubrica es una copia en el almacen, nunca un campo con la ruta del original"
         );

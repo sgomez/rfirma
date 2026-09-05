@@ -331,6 +331,11 @@ pub struct ConfigurationView {
     /// devolverlo.
     #[serde(default)]
     pub offers_the_original_folder: bool,
+    /// Si el aviso del primer arranque (CA local y permiso de red local,
+    /// #365) ya se ha descartado. Viaja en los dos sentidos: la ventana lo lee
+    /// para decidir si lo monta y lo manda de vuelta con `true` en cuanto se
+    /// pulsa «Entendido», para que no vuelva en el siguiente arranque.
+    pub trust_notice_seen: bool,
 }
 
 /// **La versión nueva que se anuncia en la franja** (ID-181).

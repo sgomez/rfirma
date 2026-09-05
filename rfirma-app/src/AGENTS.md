@@ -34,8 +34,8 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 82 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 552 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `main.tsx` | 99 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 563 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
 | `App.tsx` | 1129 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
@@ -80,7 +80,7 @@ rojo.
 | `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
 | **`preferences/`** | | Los ajustes. |
-| `preferences/preferences.ts` | 99 | Lo que la aplicación recuerda. |
+| `preferences/preferences.ts` | 113 | Lo que la aplicación recuerda. |
 | `preferences/PreferencesDialog.tsx` | 413 | La pantalla completa de ajustes, con su índice de secciones. |
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
@@ -99,6 +99,8 @@ rojo.
 | **`design-system/`** | | `design-system/icons.tsx` (226), copiados en línea de los artboards. |
 | **`updates/`** | | `updates/newVersion.ts` (39): el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
+| **`trust/`** | | El aviso del primer arranque (#365): la CA local y el permiso de red local, explicados juntos y sin condición. No es un puerto, no habla con Tauri. |
+| `trust/TrustNotice.tsx` | 87 | El diálogo del primer arranque, montado en `main.tsx` mientras `Preferences.trustNoticeSeen` siga en `false`. |
 | **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
 
 ## El circuito de cadenas (ADR-0009 enmendado, ID-121…ID-130)
