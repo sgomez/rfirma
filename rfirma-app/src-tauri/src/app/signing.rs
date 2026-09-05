@@ -14,6 +14,7 @@ use std::sync::Mutex;
 
 use crate::app::certificates::StampedHolder;
 use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature};
+use crate::app::in_hand::DocumentInHand;
 use crate::app::{certificates, documents, lock, recents};
 use crate::commands::orders::SigningOrder;
 use crate::commands::views::{Failure, SignedDocumentView};
@@ -48,7 +49,12 @@ pub struct SigningSession {
 
 struct InFlight {
     cycle: OpenCycle,
-    document: PortalDocument,
+    /// **El documento en curso, que no es la fila que se guarda** (ID-287).
+    ///
+    /// Viaja entero y no como una ruta porque de él depende algo más que
+    /// dónde cae el firmado: si de este documento se guarda rastro o no
+    /// (ID-286), y eso se decidió al abrirlo.
+    document: DocumentInHand,
     signature: Option<TokenSignature>,
     /// Con qué certificado se está firmando, para poder recordarlo **si la
     /// postfirma termina bien**. Viaja aquí y no se relee del token al acabar:
@@ -83,8 +89,8 @@ pub fn begin(
     // Lo que la ventana manda es el identificador que se acuñó al abrir, y no
     // una ruta: quien sabe a qué documento del portal corresponde es el
     // registro, y solo él (ID-62).
-    let document = documents::opened_document(opened, &order.document)?;
-    let bytes = admitted_bytes(&document)?;
+    let document = DocumentInHand::taken(opened, &order.document)?;
+    let bytes = admitted_bytes(document.document())?;
     let (config, reference, chain) = plan_signature(stores, listed, order)?;
     // Se pregunta antes de cruzar la frontera: si el secreto se teclea en el
     // lector, aquí se acaba el recorrido y no se ha intentado firmar nada.
@@ -159,15 +165,23 @@ pub fn finish(
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
-    let (landing, delivered) =
-        documents::deliver(configuration, documents_folder, &document, &signed)?;
+    let (landing, delivered) = documents::deliver(
+        configuration,
+        documents_folder,
+        document.document(),
+        &signed,
+    )?;
     // **Después** de que el documento haya caído, y no antes: mientras la
     // postfirma pueda fallar todavía no se ha firmado nada con este
     // certificado (#110).
     certificates::remember_the_certificate(memory, configuration, &certificate);
     // Y aquí, y **solo aquí**, se escribe la insignia `Firmado` (ID-76): el
     // documento que la lleva es el que acaba de caer, y nada más lo escribe.
-    recents::note_signed(memory, configuration, &landing);
+    // De un documento que no se recuerda no se escribe fila ninguna (ID-286):
+    // este es el camino para firmar sin dejar rastro en la bandeja.
+    if document.is_remembered() {
+        recents::note_signed(memory, configuration, &landing);
+    }
     // Y aquí se guarda la ruta, para los dos botones del resumen: es lo único
     // que puede llevar al usuario hasta el fichero, porque él nunca la ve
     // (ID-79, ADR-0011).
@@ -330,7 +344,7 @@ pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, Failur
 /// postfirma.
 pub struct SignedCycle {
     cycle: OpenCycle,
-    document: PortalDocument,
+    document: DocumentInHand,
     signature: TokenSignature,
     seal: SessionSeal,
     certificate: CertificateRef,
@@ -444,6 +458,7 @@ mod tests {
             ("app/signing.rs", production_half()),
             ("app/recents.rs", half_of(include_str!("recents.rs"))),
             ("app/documents.rs", half_of(include_str!("documents.rs"))),
+            ("app/in_hand.rs", half_of(include_str!("in_hand.rs"))),
             ("app/invocation.rs", half_of(include_str!("invocation.rs"))),
             ("app/preview.rs", half_of(include_str!("preview.rs"))),
             (
@@ -479,6 +494,29 @@ mod tests {
         assert!(
             postsign.contains("recents::note_signed("),
             "a quien solo llama la postfirma"
+        );
+    }
+
+    /// **ID-286 / TD-64**: y de un documento que no se recuerda no se escribe
+    /// fila ninguna, tampoco la del firmado.
+    ///
+    /// Se lee la fuente y no el resultado por lo mismo que la de arriba: el
+    /// recorrido entero exige el puente, y lo que se vigila es que la llamada
+    /// esté **detrás** de la pregunta y no al lado.
+    #[test]
+    fn a_document_that_is_not_remembered_gets_no_row_when_it_is_signed() {
+        let postsign = production_half()
+            .split_once("pub fn finish(")
+            .expect("la postfirma sigue aqui")
+            .1;
+        let before_the_row = postsign
+            .split_once("recents::note_signed(")
+            .expect("la postfirma anota la fila")
+            .0;
+
+        assert!(
+            before_the_row.contains("if document.is_remembered() {"),
+            "la fila del firmado se escribe sin preguntar si el documento se recuerda"
         );
     }
 

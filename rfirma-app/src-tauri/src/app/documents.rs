@@ -31,6 +31,27 @@ pub fn note_opened(
     told_as_opened(document, opened)
 }
 
+/// **Caso de uso.** Apunta un documento **del que no se guarda rastro** y lo
+/// cuenta como la ventana lo entiende (ID-286).
+///
+/// Es la otra puerta de entrada, la que usará el documento que manda una sede:
+/// se lee y se firma por el mismo recorrido que cualquier otro —de ahí que
+/// devuelva lo mismo—, pero de él no queda nada. Por eso **no apunta la carpeta
+/// de la que salió**: «la última carpeta usada» es memoria del usuario, y la
+/// sede no es el usuario.
+pub fn note_opened_unrecorded(opened: &OpenedDocuments, handle: PathBuf) -> OpenedDocumentView {
+    let document = PortalDocument::opened(handle);
+    let name = document.name().to_owned();
+    let modified = modified_seconds(&document);
+    let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
+    OpenedDocumentView {
+        id: opened.remember_unrecorded(document),
+        name,
+        modified,
+        path,
+    }
+}
+
 /// **Caso de uso.** Los bytes del documento abierto, contra su identificador.
 pub fn bytes_of(opened: &OpenedDocuments, id: &str) -> Result<Vec<u8>, Failure> {
     let document = opened_document(opened, id)?;
@@ -341,7 +362,7 @@ pub fn opened_document(opened: &OpenedDocuments, id: &str) -> Result<PortalDocum
 }
 
 /// El `mtime` del documento, en segundos desde la época.
-fn modified_seconds(document: &PortalDocument) -> Option<u64> {
+pub(crate) fn modified_seconds(document: &PortalDocument) -> Option<u64> {
     std::fs::metadata(document.reading_path())
         .and_then(|metadata| metadata.modified())
         .ok()?
@@ -354,7 +375,8 @@ fn modified_seconds(document: &PortalDocument) -> Option<u64> {
 mod tests {
     use super::{
         bytes_of, deliver, dropped_document, folder_it_came_from, next_to_the_original,
-        note_opened, real_path_of, remember_the_folder, starting_folder, told_as, where_it_lands,
+        note_opened, note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder,
+        starting_folder, told_as, where_it_lands,
     };
     use crate::app::fixtures::a_memory;
     use crate::destination::{CheckedFolder, PortalDocument};
@@ -644,6 +666,43 @@ mod tests {
 
         assert_eq!(direct.path.as_deref(), pdf.to_str());
         assert_eq!(through_the_portal.path, None);
+    }
+
+    /// **TD-64**: el documento que no se recuerda entra por la misma puerta y
+    /// se lee igual —tiene identificador y nombre— pero **no se convierte en
+    /// «último documento»**: la carpeta de la que salió no se apunta (ID-286).
+    #[test]
+    fn a_document_that_is_not_remembered_does_not_become_the_last_folder_used() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let contracts = home.path().join("Contratos");
+        std::fs::create_dir(&contracts).expect("deberia crearse la carpeta de prueba");
+        let pdf = contracts.join("de-la-sede.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n").expect("deberia escribirse el temporal");
+        let memory = a_memory(home.path());
+        let opened = OpenedDocuments::new();
+
+        let view = note_opened_unrecorded(&opened, pdf.clone());
+
+        assert_eq!(view.name, "de-la-sede.pdf");
+        assert_eq!(bytes_of(&opened, &view.id), Ok(b"%PDF-1.4\n".to_vec()));
+        assert_eq!(remembered_folder(&memory), None);
+    }
+
+    /// Y el mismo fichero abierto por el diálogo sí la apunta: la diferencia
+    /// está en la puerta por la que entró, no en el fichero.
+    #[test]
+    fn the_same_file_opened_by_the_dialog_does_remember_the_folder() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let contracts = home.path().join("Contratos");
+        std::fs::create_dir(&contracts).expect("deberia crearse la carpeta de prueba");
+        let pdf = contracts.join("contrato.pdf");
+        std::fs::write(&pdf, b"%PDF-1.4\n").expect("deberia escribirse el temporal");
+        let memory = a_memory(home.path());
+        let opened = OpenedDocuments::new();
+
+        note_opened(&memory, &Configuration::default(), &opened, pdf);
+
+        assert_eq!(remembered_folder(&memory), Some(contracts));
     }
 
     /// Lo pedido: la próxima vez el diálogo se abre donde estuvo la última vez,
