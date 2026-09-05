@@ -165,7 +165,7 @@ fn parse_ports(declared: Option<&str>) -> Result<Vec<u16>, Refusal> {
         .map(|port| {
             port.parse::<i64>()
                 .ok()
-                .map(i64::abs)
+                .map(i64::unsigned_abs)
                 .and_then(|port| u16::try_from(port).ok())
                 .filter(|port| *port != 0)
                 .ok_or_else(|| {
@@ -294,6 +294,7 @@ mod tests {
             "ports=49152,abc",
             "ports=0",
             "ports=70000",
+            "ports=-9223372036854775808",
         ] {
             let url = format!("afirma://websocket?{ports}&v=4&idsession=abc");
             let refusal = LaunchRequest::parse(&url).expect_err("no es un puerto");

@@ -33,7 +33,7 @@ pub const IMPLEMENTED_AUTOFIRMA_VERSION: &str = "1.9.2";
 /// puntos, y un texto adicional pegado al último número.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Version {
-    parts: Vec<i64>,
+    parts: Vec<i32>,
     additional_text: String,
 }
 
@@ -59,7 +59,7 @@ impl Version {
 
         let mut numbers = Vec::with_capacity(parts.len());
         for part in leading {
-            numbers.push(part.parse::<i64>().map_err(|_| MalformedVersion)?);
+            numbers.push(part.parse::<i32>().map_err(|_| MalformedVersion)?);
         }
 
         let limit = last
@@ -71,7 +71,7 @@ impl Version {
             Some(index) if index > 0 => (&last[..index], last[index..].to_owned()),
             _ => (*last, String::new()),
         };
-        numbers.push(number.parse::<i64>().map_err(|_| MalformedVersion)?);
+        numbers.push(number.parse::<i32>().map_err(|_| MalformedVersion)?);
 
         Ok(Self {
             parts: numbers,
@@ -130,17 +130,21 @@ impl Version {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MalformedVersion;
 
-/// `Character.isSpaceChar` del primer carácter: sólo separadores de espacio
-/// —el espacio normal y sus parientes—, **no** el tabulador ni el salto de
-/// línea, que en Java son `isWhitespace` pero no `isSpaceChar`.
+/// `Character.isSpaceChar` del primer carácter: la lista **blanca** de las tres
+/// categorías Unicode que ese método acepta —`SPACE_SEPARATOR` (Zs),
+/// `LINE_SEPARATOR` (Zl) y `PARAGRAPH_SEPARATOR` (Zp)—, y nada más. El
+/// tabulador, el salto de línea y el `U+0085` son `isWhitespace` en Java pero
+/// **no** `isSpaceChar`, así que aquí tampoco cuentan.
 fn starts_with_space(text: &str) -> bool {
     text.chars().next().is_some_and(|character| {
-        character == ' '
-            || (character.is_whitespace()
-                && !matches!(
-                    character,
-                    '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | '\u{1c}'..='\u{1f}'
-                ))
+        matches!(
+            character,
+            // `SPACE_SEPARATOR` (Zs)
+            ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+                ..='\u{200a}' | '\u{202f}' | '\u{205f}' | '\u{3000}'
+            // `LINE_SEPARATOR` (Zl) y `PARAGRAPH_SEPARATOR` (Zp)
+            | '\u{2028}' | '\u{2029}'
+        )
     })
 }
 
@@ -211,6 +215,24 @@ mod tests {
             Version::parse("1.7.").expect("java la parte igual"),
             Version::parse("1.7").expect("parsea")
         );
+    }
+
+    #[test]
+    fn only_a_space_separator_subtracts_and_no_other_whitespace() {
+        // Zs, Zl y Zp restan, como `isSpaceChar`.
+        for separator in ["\u{a0}", "\u{2028}", "\u{3000}"] {
+            assert!(!greater(&format!("1.7{separator}RC1"), "1.7"));
+        }
+        // El resto de espacios en blanco de Java no son `isSpaceChar`: suman.
+        for whitespace in ["\t", "\n", "\u{b}", "\r", "\u{85}"] {
+            assert!(greater(&format!("1.7{whitespace}RC1"), "1.7"));
+        }
+    }
+
+    #[test]
+    fn a_part_that_overflows_an_int_does_not_parse_because_java_uses_parse_int() {
+        assert_eq!(Version::parse("1.3000000000"), Err(MalformedVersion));
+        assert_eq!(Version::parse("3000000000.1"), Err(MalformedVersion));
     }
 
     #[test]

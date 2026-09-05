@@ -156,8 +156,7 @@ _Avoid_: portal, cliente web, tercero
 **Canal**:
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
 falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
-dónde viene la petición. Su credencial es el `idsession`, que viaja en la URL de
-arranque y se repite en cada mensaje.
+dónde viene la petición. Lo que lo cierra es la **credencial de canal**, abajo.
 _Avoid_: socket, conexión, túnel
 
 **Credencial de canal**:
