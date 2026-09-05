@@ -9,7 +9,7 @@
 set -e
 
 UPSTREAM_REPO="https://github.com/ctt-gob-es/clienteafirma.git"
-UPSTREAM_VERSION="1.9.1"
+UPSTREAM_VERSION="1.9.2"
 TEMP_DIR="target/upstream-clone"
 
 echo "=== rfirma Bootstrap: Comprobando dependencias de Autofirma ==="
@@ -40,13 +40,21 @@ else
     rm -rf "$TEMP_DIR"
     mkdir -p "target"
     
-    # Intentar clonar la versión tag específica, fallback a rama por defecto si falla
-    git clone --branch "v$UPSTREAM_VERSION" --depth 1 "$UPSTREAM_REPO" "$TEMP_DIR" || \
-    git clone --depth 1 "$UPSTREAM_REPO" "$TEMP_DIR"
+    # SOLO el tag, sin reserva. La reserva a la rama por defecto que habia aqui
+    # instalaba jar ETIQUETADOS "$UPSTREAM_VERSION" construidos desde `master`,
+    # que es como el .so acabo llevando dentro codigo de Autofirma sin publicar
+    # (#330). Si el tag no se puede clonar, se para.
+    git clone --branch "v$UPSTREAM_VERSION" --depth 1 "$UPSTREAM_REPO" "$TEMP_DIR"
     
     echo "Compilando e instalando dependencias de Autofirma en el repositorio local..."
     cd "$TEMP_DIR"
-    mvn clean install -DskipTests
+    # -Dclienteafirma.version OBLIGATORIO: el pom del tag v1.9.2 declara
+    # <clienteafirma.version>1.9</clienteafirma.version> con el proyecto en
+    # 1.9.2, asi que sin esto los 42 pom de modulo se bajan afirma-core:1.9 de
+    # Central en vez de usar el modulo del reactor. `afirma-crypto-cades` no
+    # compila (Map<String,byte[]> contra byte[] en getASiCSData) y, peor, lo que
+    # si compila lo hace contra la 1.9 en silencio. Medido en el #330.
+    mvn clean install -DskipTests -Dclienteafirma.version="$UPSTREAM_VERSION"
     cd ../..
     
     # Limpiar el clon temporal

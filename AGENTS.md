@@ -14,7 +14,15 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 1. **Sin Duplicación de Código de dependencias Java:**
    * **No copies ni hagas enlaces simbólicos** de los submódulos originales de Java (`afirma-core`, `afirma-crypto-*`, etc.) en este repositorio.
    * Deben consumirse estrictamente desde la caché local de Maven (`~/.m2`) como dependencias ordinarias en el `pom.xml` de `rfirma-native-bridge`.
-   * El repositorio original se compila mediante `mvn clean install` en su propia ubicación.
+   * El repositorio original se compila **en el tag `v1.9.2`** y con
+     `mvn clean install -Dclienteafirma.version=1.9.2` en su propia ubicación. **La propiedad no es
+     opcional**: el `pom.xml` de ese tag declara `<clienteafirma.version>1.9</clienteafirma.version>`
+     con el proyecto en `1.9.2`, así que sin ella los 42 POM de módulo se bajan `afirma-core:1.9` de
+     Maven Central en vez de usar el módulo del reactor —`afirma-crypto-cades` no compila y, peor,
+     lo que sí compila lo hace contra la 1.9 **en silencio**—. Lo automatiza `bootstrap.sh`; medido
+     en el [#330](https://github.com/sgomez/rfirma/issues/330).
+   * **La 1.9.2 no está en Maven Central** (la 1.9 y la 1.9.1 sí). No hay red: si no está en
+     `~/.m2`, hay que construirla.
    
 2. **Gestión de Memoria en la Frontera FFI (Evitar Double-Free):**
    * GraalVM Native Image libera automáticamente la memoria de los strings C creados con `CTypeConversion.toCString(...)` al salir del bloque de recurso (`try-with-resources`).
