@@ -25,22 +25,5 @@ updates:
           - '*'
     commit-message:
       prefix: 'chore(ci)'
-    # pnpm/action-setup se queda en la linea 4 a proposito. Sus mayores rompen
-    # la CI —el paso falla con «Something went wrong, self-installer exits with
-    # code 1», medido en la PR #307 sobre las cadenas TypeScript y Rust— y la
-    # propia accion se declara deprecada en la v6, remitiendo a `pnpm/setup`.
-    # Lo que toca no es subir de mayor, sino migrar de accion: issue #320.
-    # Cuando esa migracion entre, esta condicion sobra y se retira.
-    #
-    # Ojo con una rareza de esta accion al leer `ci.yml`: upstream etiqueto el
-    # mismo commit como v4.4.0 y como v5.0.0 (`fc06bc1`, «run the action on
-    # Node.js 24»). Los flujos lo fijan como v4.4.0, que es la version que
-    # cuadra con esta condicion; que ese SHA responda tambien al nombre v5.0.0
-    # no significa que el mayor se haya colado. Lo que frena esta condicion es
-    # la v6, que es la que rompe.
-    ignore:
-      - dependency-name: pnpm/action-setup
-        update-types:
-          - version-update:semver-major
     labels:
       - needs-triage
