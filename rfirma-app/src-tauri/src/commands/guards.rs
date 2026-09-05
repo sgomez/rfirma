@@ -187,6 +187,12 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 6] = [
 /// El enlace que el portal concede, que es lo que **no** puede salir.
 const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
 
+/// Un segundo enlace del portal, en la misma concesión que [`A_PORTAL_HANDLE`].
+///
+/// Existe para que `also_entering` de `DroppedDocumentView` no salga vacío: con
+/// una sola ruta soltada la guarda del ADR-0011 nunca recorre ese campo.
+const ANOTHER_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/segundo.pdf";
+
 /// Un valor que ya ha cruzado: el tipo del que salió y su JSON.
 struct Crossing {
     name: &'static str,
@@ -265,9 +271,14 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
     );
     let failure = documents::bytes_of(&opened, &opened_view.id)
         .expect_err("el enlace del portal no existe fuera del sandbox");
-    let dropped =
-        documents::dropped_document(&[std::path::PathBuf::from(A_PORTAL_HANDLE)], &opened)
-            .expect("se ha soltado un fichero");
+    let dropped = documents::dropped_document(
+        &[
+            std::path::PathBuf::from(A_PORTAL_HANDLE),
+            std::path::PathBuf::from(ANOTHER_PORTAL_HANDLE),
+        ],
+        &opened,
+    )
+    .expect("se ha soltado un fichero");
     let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
     // Elegir como rúbrica el enlace del portal: el caso de uso de verdad, con
     // el `FilePath` que concede el diálogo. Falla porque la concesión no

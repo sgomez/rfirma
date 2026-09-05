@@ -453,23 +453,33 @@ export function App({
         setDropNotice(drop.failure && { about: activeIdRef.current, failure: drop.failure });
         return;
       }
-      // ID-306: los demás PDF del mismo gesto entran igual en Recientes, sin
-      // abrirse — sin cola y sin firma encadenada, una fila más por cada uno.
-      for (const entering of drop.alsoEntering) {
-        void enterDocument(entering);
-      }
       setDropNotice(
         drop.discarded > 0
           ? {
               about: drop.document.id,
               failure: {
                 situation: "droppedSomeDiscarded",
-                detail: `se han descartado ${drop.discarded} ficheros`,
+                detail:
+                  drop.discarded === 1
+                    ? "se ha descartado 1 fichero"
+                    : `se han descartado ${drop.discarded} ficheros`,
               },
             }
           : null,
       );
-      void acceptDocument(drop.document);
+      // ID-306: los demás PDF del mismo gesto entran igual en Recientes, sin
+      // abrirse — sin cola y sin firma encadenada, una fila más por cada uno.
+      // Se anotan **uno detrás de otro**, nunca en paralelo: `store.record`
+      // lee y reescribe el estado entero sin cerrojo (`app/recents.rs`), y dos
+      // llamadas solapadas pierden una actualización o entrelazan el fichero
+      // temporal compartido. Corregido tras revisión en la PR #370.
+      const document = drop.document;
+      void (async () => {
+        for (const entering of drop.alsoEntering) {
+          await enterDocument(entering);
+        }
+        await acceptDocument(document);
+      })();
     };
     arrivedRef.current = arrived;
     const stop = drops.subscribe(arrived);
