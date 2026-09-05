@@ -226,7 +226,10 @@ async fn an_echo_with_another_credential_is_refused_and_the_channel_closes() {
 
     let answer = intruder.echo("otraPaginaDelEquipo0").await;
 
-    assert_eq!(answer, Some("SAF_46: Id de sesion invalido".to_owned()));
+    assert_eq!(
+        answer,
+        Some("SAF_46: Id de sesion invalido; el parametro que falla es 'idsession'".to_owned())
+    );
     assert!(
         !intruder.is_still_open().await,
         "el canal se cierra detras del rechazo"
@@ -244,17 +247,14 @@ async fn a_launch_with_an_unsupported_version_is_refused_over_the_socket() {
     .expect_err("la version 3 no se habla aqui");
     assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
 
-    let canal = AChannel::serving(ChannelDuty::Refuse(refusal.code())).await;
+    let canal = AChannel::serving(ChannelDuty::Refuse(refusal.answer())).await;
     let mut client = canal.a_client().await;
 
     let answer = client.echo(CREDENTIAL).await;
 
     assert_eq!(
         answer,
-        Some(
-            "SAF_21: La version de Autofirma instalada no es compatible con este tramite"
-                .to_owned()
-        )
+        Some("SAF_21: Este tramite no es compatible con la version instalada".to_owned())
     );
     assert!(
         !client.is_still_open().await,

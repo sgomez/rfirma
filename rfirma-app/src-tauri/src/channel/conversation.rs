@@ -16,7 +16,7 @@
 //! (ID-248) no expone ninguna capacidad: conteste quien conteste y diga lo que
 //! diga, recibe el `SAF_` y se cierra.
 
-use crate::protocol::{ChannelCredential, ChannelMessage, SafCode};
+use crate::protocol::{ChannelCredential, ChannelMessage, Parameter, SafCode, WireAnswer};
 
 /// La respuesta exacta al eco (`ECHO_OK_RESPONSE`,
 /// `AfirmaWebSocketServerV4.java:35`).
@@ -33,7 +33,7 @@ pub enum ChannelDuty {
     /// Es lo que rfirma hace **mejor que el original**, que se mata y deja a la
     /// sede reintentando quince veces hasta un `ApplicationNotFoundException`
     /// falso.
-    Refuse(SafCode),
+    Refuse(WireAnswer),
 }
 
 /// Lo que el servidor hace con un mensaje.
@@ -62,17 +62,22 @@ impl Answer {
 /// segunda cerradura no depende de que la primera siga puesta mañana.
 pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer {
     if !from_loopback {
-        return Answer::ReplyAndClose(SafCode::ExternalRequestToSocket.on_the_wire());
+        return Answer::ReplyAndClose(
+            WireAnswer::refused(SafCode::ExternalRequestToSocket).on_the_wire(),
+        );
     }
 
     let credential = match duty {
-        ChannelDuty::Refuse(code) => return Answer::ReplyAndClose(code.on_the_wire()),
+        ChannelDuty::Refuse(answer) => return Answer::ReplyAndClose(answer.on_the_wire()),
         ChannelDuty::Serve(credential) => credential,
     };
 
     let message = ChannelMessage::read(message);
     if message.credential() != Some(credential.as_str()) {
-        return Answer::ReplyAndClose(SafCode::InvalidSessionId.on_the_wire());
+        return Answer::ReplyAndClose(
+            WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
+                .on_the_wire(),
+        );
     }
 
     match message {
@@ -87,7 +92,7 @@ pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer 
         // eso comparte brazo en vez de tener uno propio con un código que nadie
         // produciría.
         ChannelMessage::Operation { .. } | ChannelMessage::NotOfTheProtocol => {
-            Answer::ReplyAndClose(SafCode::UnsupportedOperation.on_the_wire())
+            Answer::ReplyAndClose(WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire())
         }
     }
 }
@@ -123,7 +128,9 @@ mod tests {
 
         assert_eq!(
             answer,
-            Answer::ReplyAndClose("SAF_46: Id de sesion invalido".to_owned())
+            Answer::ReplyAndClose(
+                "SAF_46: Id de sesion invalido; el parametro que falla es 'idsession'".to_owned()
+            )
         );
     }
 
@@ -143,7 +150,8 @@ mod tests {
         assert_eq!(
             answer,
             Answer::ReplyAndClose(
-                "SAF_47: Peticion al socket desde IP externa o sin identificar".to_owned()
+                "SAF_47: Peticion al canal desde una direccion externa o sin identificar"
+                    .to_owned()
             )
         );
     }
@@ -152,14 +160,13 @@ mod tests {
     /// ninguna capacidad**: ni con la credencial buena hace otra cosa.
     #[test]
     fn a_channel_opened_to_refuse_answers_the_code_to_whatever_arrives_and_closes() {
-        let duty = ChannelDuty::Refuse(SafCode::UnsupportedProcedure);
+        let duty = ChannelDuty::Refuse(WireAnswer::refused(SafCode::UnsupportedProcedure));
 
         for message in [echo_with(CREDENTIAL), "afirma://sign?op=sign".to_owned()] {
             assert_eq!(
                 answer(&duty, true, &message),
                 Answer::ReplyAndClose(
-                    "SAF_21: La version de Autofirma instalada no es compatible con este tramite"
-                        .to_owned()
+                    "SAF_21: Este tramite no es compatible con la version instalada".to_owned()
                 )
             );
         }
@@ -201,7 +208,10 @@ mod tests {
             String::new(),
         ];
 
-        for duty in [serving(), ChannelDuty::Refuse(SafCode::Params)] {
+        for duty in [
+            serving(),
+            ChannelDuty::Refuse(WireAnswer::refused(SafCode::Params)),
+        ] {
             for from_loopback in [true, false] {
                 for message in &messages {
                     let text = answer(&duty, from_loopback, message).text().to_owned();

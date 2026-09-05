@@ -153,7 +153,7 @@ fn hexadecimal_byte(digits: Option<&[u8]>) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::refusal::SafCode;
+    use crate::protocol::codes::SafCode;
 
     #[test]
     fn the_launch_invocation_is_split_into_verb_and_parameters() {

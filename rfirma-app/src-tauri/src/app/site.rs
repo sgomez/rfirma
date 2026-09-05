@@ -24,7 +24,7 @@
 //! En producción lo cumple [`crate::channel`].
 
 use crate::channel::{ChannelDuty, ChannelError, OpenChannel};
-use crate::protocol::{drawn_ports, AfirmaUrl, LaunchRequest, Refusal, SafCode};
+use crate::protocol::{drawn_ports, AfirmaUrl, LaunchRequest, Refusal, WireAnswer};
 
 /// **El puerto de transporte** (ID-214): ata uno de esos puertos y sirve el
 /// canal para ese cometido.
@@ -41,8 +41,9 @@ pub enum Attendance {
     RefusingOverTheChannel {
         /// El canal abierto para contestar, que no expone ninguna capacidad.
         channel: OpenChannel,
-        /// El código que se contestará.
-        code: SafCode,
+        /// Lo que se contestará: el código del catálogo y, si el rechazo es
+        /// de un parámetro, cuál (ID-290).
+        answer: WireAnswer,
     },
     /// La invocación se rechaza y **no hay socket** por el que decirlo: sin
     /// `ports` en la URL, o con todos ocupados. Lo cuenta la ventana.
@@ -81,10 +82,10 @@ fn refuse(url: &AfirmaUrl, refusal: Refusal, transport: ChannelTransport<'_>) ->
         return Attendance::RefusingInTheWindow(refusal);
     }
 
-    match transport(&ports, ChannelDuty::Refuse(refusal.code())) {
+    match transport(&ports, ChannelDuty::Refuse(refusal.answer())) {
         Ok(channel) => Attendance::RefusingOverTheChannel {
             channel,
-            code: refusal.code(),
+            answer: refusal.answer(),
         },
         // Ningún puerto libre: el rechazo sigue siendo el de la invocación, y
         // ahora sólo cabe la ventana.
@@ -98,7 +99,7 @@ mod tests {
 
     use super::*;
     use crate::channel::{Shutdown, Situation};
-    use crate::protocol::ChannelCredential;
+    use crate::protocol::{ChannelCredential, Parameter, SafCode};
 
     /// **Grada A**: el transporte doblado por un cierre. Aquí no se ata ningún
     /// puerto ni se abre ningún socket (TD-52).
@@ -190,16 +191,16 @@ mod tests {
             &|ports, duty| transport.open(ports, duty),
         );
 
-        let Attendance::RefusingOverTheChannel { channel, code } = attendance else {
+        let Attendance::RefusingOverTheChannel { channel, answer } = attendance else {
             panic!("hay puertos, asi que hay socket: {attendance:?}");
         };
-        assert_eq!(code, SafCode::UnsupportedProcedure);
+        assert_eq!(answer, WireAnswer::refused(SafCode::UnsupportedProcedure));
         assert_eq!(channel.port(), 54001);
         assert_eq!(
             transport.asked_once(),
             (
                 vec![54001, 54002],
-                ChannelDuty::Refuse(SafCode::UnsupportedProcedure)
+                ChannelDuty::Refuse(WireAnswer::refused(SafCode::UnsupportedProcedure))
             ),
             "ese canal no sirve la conversacion: sólo contesta el codigo"
         );
@@ -234,10 +235,13 @@ mod tests {
             &|ports, duty| transport.open(ports, duty),
         );
 
-        let Attendance::RefusingOverTheChannel { code, .. } = attendance else {
+        let Attendance::RefusingOverTheChannel { answer, .. } = attendance else {
             panic!("habia puertos: {attendance:?}");
         };
-        assert_eq!(code, SafCode::Params);
+        assert_eq!(
+            answer,
+            WireAnswer::refused_because_of(SafCode::Params, Parameter::IdSession)
+        );
     }
 
     /// Lo que no es una URL del protocolo no trae puertos que leer.

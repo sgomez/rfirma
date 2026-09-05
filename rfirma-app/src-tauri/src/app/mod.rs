@@ -31,6 +31,7 @@ pub mod configuration;
 pub mod cycle;
 pub mod documents;
 pub mod filtering;
+pub mod frontier;
 pub mod in_hand;
 pub mod invocation;
 pub mod preview;
