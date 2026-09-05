@@ -119,6 +119,27 @@ almacenes es indistinguible sin decirlo.
 _Avoid_: keystore, repositorio de certificados, llavero, «el conjunto de
 certificados de la máquina»
 
+**Almacén NSS**:
+El almacén de un navegador —el perfil de Firefox, la base de datos de Chrome—,
+que es a la vez de donde salen certificados para firmar y **donde la aplicación
+registra la CA local** para que ese navegador confíe en el servidor local. Es el
+único tipo de almacén en el que rfirma escribe.
+_Avoid_: nssdb, base de datos de certificados, almacén del navegador
+
+**CA local**:
+Certificado que rfirma genera en la máquina de la persona y registra en sus
+almacenes NSS. No identifica a nadie ni firma documentos: su único trabajo es
+firmar el certificado del servidor local. Es lo que se queda dentro del
+navegador y puede sobrevivir a la desinstalación, así que su caducidad es la
+red.
+_Avoid_: ancla, ancla de confianza, CA raíz, certificado raíz
+
+**Certificado del servidor local**:
+El que rfirma presenta en cada saludo TLS del servidor local, firmado por la CA
+local. No se guarda en ningún sitio: se genera al arrancar y vive lo que vive el
+proceso.
+_Avoid_: hoja, certificado de servidor, certificado TLS
+
 ### Invocación
 
 **Petición de firma**:
@@ -131,6 +152,25 @@ _Avoid_: request, encargo, trabajo de firma
 Sitio web de la Administración que origina la petición de firma y recibe el
 documento firmado.
 _Avoid_: portal, cliente web, tercero
+
+**Canal**:
+La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
+falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
+dónde viene la petición. Su credencial es el `idsession`, que viaja en la URL de
+arranque y se repite en cada mensaje.
+_Avoid_: socket, conexión, túnel
+
+**Conversación**:
+El ir y venir de mensajes sobre un canal ya abierto, con sus reglas: el eco
+antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del
+resultado, y un solo trámite vivo a la vez.
+_Avoid_: sesión de protocolo, diálogo, intercambio
+
+**Códec del protocolo**:
+La traducción entre el texto que viaja por el canal y las estructuras con las
+que se razona dentro: la URL de operación, la respuesta con sus campos
+separados, y el formato exacto de un error.
+_Avoid_: serializador, parser, marshalling
 
 ### Memoria de la aplicación
 

@@ -33,6 +33,21 @@ La **D** la heredamos de #11 y no se toca: atar cada PR a la disponibilidad de
 `sede.fnmt.gob.es` con `merge: auto` significa que un corte ajeno bloquea la entrega. Va a un
 job programado que abre una issue si falla.
 
+### Abrir un socket de escucha en el *loopback* es grada A
+
+La columna «Necesita» habla de **lo que hay que instalar**, y para escuchar en `127.0.0.1` no
+hay que instalar nada: es el sistema operativo. Así que el servidor local del protocolo
+`afirma://` —levantarlo, completar el saludo TLS, aceptar o rechazar el `Origin` y la dirección
+de origen— **es grada A y carril rápido**, aunque monte un servidor de verdad, y aunque por eso
+viva en `tests/` en vez de en un `#[cfg(test)]`. La **D** sigue siendo red *ajena*: lo que
+depende de un tercero que puede estar caído.
+
+Con una regla que no es opcional: **el puerto se le pide al sistema (`:0`), nunca se fija**.
+`cargo test` corre los ficheros de prueba en paralelo, y dos pruebas con un puerto fijo se pisan
+de forma intermitente —el fallo más caro que existe, porque se atribuye a cualquier otra cosa—.
+Como efecto secundario, pedir el puerto al sistema ejercita gratis lo que la sede hace de
+verdad: ofrecer tres puertos y quedarse con el que abra.
+
 ### Las pruebas de la grada C se compilan siempre y se ejecutan solo en el lento
 
 Se marcan con **`#[ignore]`**, en un fichero que lo dice por su nombre (`tests/native_cycle.rs`),
@@ -54,6 +69,25 @@ porque `pdftotext` no la ve y da un falso negativo.
 vez por etiqueta `v*`. VALIDe es red, web y sin API estable, así que no cabe en ningún carril, y
 el destino del mapa promete precisamente eso —«que un validador oficial acepte la firma»—. Sin
 escribirlo, un check en verde se lee como una promesa que el CI no puede demostrar.
+
+### La segunda puerta manual: el navegador de verdad
+
+Desde la v0.5 hay una segunda comprobación que no corre sola, y por el mismo motivo que la
+primera: **necesita un navegador o una sede de verdad**, y meter cualquiera de los dos en el CI
+sería comprobar sobre todo cosas del navegador. Vive en `docs/pruebas-manuales-protocolo.md` y
+se ejecuta **por etiqueta `v*`**, junto al validador oficial.
+
+Su criterio de entrada está escrito **como prohibición**, que es lo único que impide que una
+lista manual se llene sola de lo que costaba automatizar:
+
+> Entra en la lista **sólo** lo que necesita un navegador de verdad o una sede de verdad, y por
+> tanto no lo puede tener el CI. Si una comprobación cabe en A, B o C, va ahí, **aunque sea
+> incómoda**. Añadir una fila obliga a justificar en la propia fila por qué no cabe en ninguna
+> de las tres.
+
+La lista lleva además su **condición de salida** —qué la haría innecesaria— dentro del propio
+fichero, no aquí: el ADR fija que la puerta existe y con qué criterio se llena; qué la sustituiría
+es estado de la lista, y ahí lo lee quien la ejecuta.
 
 ## La prueba del ciclo completo tiene dueño
 
@@ -98,6 +132,15 @@ La puerta vive en el **carril rápido**, que es donde un agente la lee, con
 **`--allow` sobre la ruta del módulo FFI**: `--allow` analiza el fichero y oculta sus funciones,
 que es exactamente el matiz que hace falta. El **carril lento repite la medición sin esa
 exclusión**, y ahí ese módulo da la cara con la cobertura de la grada C incluida.
+
+**`--allow` corrige una cobertura que se mide en otro carril; no perdona a un módulo por ser
+difícil de probar.** La distinción es la que sostiene la puerta entera: el módulo FFI se oculta
+en el carril rápido porque **sí está probado**, sólo que en la grada C, y el carril lento lo
+vuelve a medir sin la exclusión. Un `--allow` concedido a un módulo que nadie mide en ningún
+carril —«es entrada/salida», «es fontanería»— desactiva la puerta por precedente, y el segundo
+entra solo. Si un módulo de entrada/salida no baja de 30, la conversación es **sobre el corte
+del módulo**, no sobre el umbral: que la parte con lógica sea una capa aparte y probable es
+exactamente la señal que la métrica existe para dar.
 
 ### Puerta absoluta, sin trinquete
 
