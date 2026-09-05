@@ -30,6 +30,7 @@ pub mod certificates;
 pub mod configuration;
 pub mod cycle;
 pub mod documents;
+pub mod in_hand;
 pub mod invocation;
 pub mod preview;
 pub mod recents;

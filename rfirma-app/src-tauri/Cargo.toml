@@ -85,6 +85,13 @@ tauri-plugin-opener = "2"
 # `recents.json` acaban con el ultimo en cerrar pisando al otro, y el `.deb`
 # quita el aislamiento del flatpak que hoy lo tapa a medias.
 tauri-plugin-single-instance = "2"
+# La CA local y el certificado del servidor local: generarlos y firmar el
+# segundo con la primera (ID-225). Se descarto `rcgen` porque arrastra `ring`, y
+# `x509-cert` —que ya esta aqui para LEER certificados— porque obligaria a
+# firmar con RSA en Rust. Ya estaba en el arbol como dependencia transitiva de
+# `native-tls`; aqui solo se hace directa, asi que `Cargo.lock` cambia en una
+# sola linea y `cargo-sources.json` no se toca.
+openssl = "0.10"
 # Solo para leer del certificado el titular y las fechas de validez. Un
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
 # saber leer su notAfter.
