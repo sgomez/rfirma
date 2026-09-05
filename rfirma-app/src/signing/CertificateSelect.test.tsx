@@ -40,10 +40,10 @@ const twins: readonly Certificate[] = [
 
 function renderSelect(props: Partial<Parameters<typeof CertificateSelect>[0]> = {}) {
   const onChoose = vi.fn();
-  renderWithCatalog(
+  const { container } = renderWithCatalog(
     <CertificateSelect certificates={twins} chosen={null} onChoose={onChoose} {...props} />,
   );
-  return { onChoose };
+  return { onChoose, container };
 }
 
 const trigger = () => screen.getByRole("combobox", { name: "Certificado" });
@@ -69,6 +69,18 @@ describe("CertificateSelect", () => {
 
   /** El caso que hace falta el asa: dos filas con la misma etiqueta y el mismo
    * titular, y elegir la segunda tiene que elegir **la segunda**. */
+  /** ID-308: la lista se monta en un portal, fuera del ancestro que recorta,
+   * no dentro del árbol que envuelve al disparador. */
+  it("mounts the list panel in a portal outside its own container", async () => {
+    const { container } = renderSelect();
+
+    await userEvent.click(trigger());
+
+    const list = screen.getByRole("listbox");
+    expect(container.contains(list)).toBe(false);
+    expect(document.body.contains(list)).toBe(true);
+  });
+
   it("tells two certificates with the same label apart by their handle", async () => {
     const { onChoose } = renderSelect();
 

@@ -72,13 +72,17 @@
 /* Superpuesta y no en flujo: la firma visible y el botón de firmar no se
    mueven al abrirla, y con nueve certificados el panel sigue midiendo lo
    mismo. Un acordeón que empuja el contenido saca el botón primario de la
-   vista justo mientras se elige. */
+   vista justo mientras se elige.
+   Montada en un portal (`design-system.md` §10, ID-308): la columna lateral
+   que contiene al disparador desplaza 740 px en 466 px visibles y su
+   `overflow: auto` recortaba 63 px de los 232 de la lista. El panel se saca
+   a la raíz del documento y se ancla por posición (`top`/`left`/`width`
+   inline, calculados del disparador), así que `top`/`right`/`left` ya no
+   valen aquí: son `position: fixed` puro. El `z-index` es el mismo que el de
+   la cabecera de la ventana principal (`shell/Header.css`), no uno propio. */
 .certificate-select__layer {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  left: 0;
-  z-index: 20;
+  position: fixed;
+  z-index: 5;
   border-radius: var(--rf-radius-md);
   box-shadow: var(--rf-shadow-elevated);
 }

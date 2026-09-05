@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Certificate, CertificateStoreClass } from "./certificate";
 import "./PinDialog.css";
@@ -71,10 +71,20 @@ export function PinDialog({ certificate, failure, onSubmit, onCancel }: PinDialo
   const titleId = useId();
   const pinId = useId();
   const errorId = useId();
+  const field = useRef<HTMLInputElement>(null);
 
   const word = wordFor(certificate.store);
   const subject = subjectFor(certificate, t);
   const incorrect = failure?.situation === "incorrectPin";
+
+  // Firmar con teclado no debería empezar con un clic para poder teclear: el
+  // diálogo se abre con el foco ya puesto en el campo del secreto. El `ref` y
+  // no el atributo `autoFocus`: ese atributo mueve el foco por su cuenta
+  // fuera del ciclo de React, y el linter de accesibilidad lo prohíbe por
+  // eso — la persona que navega por teclado puede no esperarlo.
+  useEffect(() => {
+    field.current?.focus();
+  }, []);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -110,6 +120,7 @@ export function PinDialog({ certificate, failure, onSubmit, onCancel }: PinDialo
                 word === "pin" ? "rf-input pin-dialog__pin" : "rf-input pin-dialog__password"
               }
               id={pinId}
+              ref={field}
               type="password"
               value={pin}
               autoComplete="off"

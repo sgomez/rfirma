@@ -91,6 +91,12 @@ describe("PinDialog", () => {
     expect(screen.queryByText(/no se guarda en ningún sitio/)).not.toBeInTheDocument();
   });
 
+  it("takes focus on its secret field as soon as it appears", () => {
+    renderDialog();
+
+    expect(screen.getByLabelText("PIN")).toHaveFocus();
+  });
+
   it("hands the typed PIN over and never shows it in clear", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
