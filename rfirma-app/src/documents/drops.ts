@@ -1,5 +1,5 @@
 import type { DocumentFailure } from "../viewer/source";
-import type { RecentDocument } from "./recents";
+import type { DocumentInHand } from "./document";
 
 /**
  * Lo que le ocurre a la ventana cuando alguien suelta ficheros encima.
@@ -10,7 +10,7 @@ import type { RecentDocument } from "./recents";
  */
 export interface Drop {
   /** El documento que se ha abierto, o `null` si no se ha abierto ninguno. */
-  document: RecentDocument | null;
+  document: DocumentInHand | null;
   /** Por qué no se ha abierto ninguno. `null` cuando sí se abrió. */
   failure: DocumentFailure | null;
   /**

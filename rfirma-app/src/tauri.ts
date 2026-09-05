@@ -29,7 +29,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Badge } from "./documents/document";
+import type { Badge, DocumentInHand } from "./documents/document";
 import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import type { RecentDocument, RecentsStore } from "./documents/recents";
@@ -143,7 +143,7 @@ export function tauriDocumentPicker(): DocumentPicker {
   return {
     choose: async () => {
       const opened = await invoke<OpenedDocumentView | null>("open_document");
-      return opened === null ? null : recentOf(opened);
+      return opened === null ? null : inHandOf(opened);
     },
   };
 }
@@ -260,7 +260,7 @@ export function tauriDocumentDrops(): DocumentDrops {
 /** Lo soltado, en el vocabulario de la ventana. */
 function dropOf(view: DroppedDocumentView): Drop {
   return {
-    document: view.document === null ? null : recentOf(view.document),
+    document: view.document === null ? null : inHandOf(view.document),
     failure:
       view.failure === null
         ? null
@@ -273,28 +273,30 @@ function dropOf(view: DroppedDocumentView): Drop {
 }
 
 /**
- * Un documento recién abierto, como fila de la bandeja.
+ * Un documento recién abierto, **puesto delante**.
  *
  * Lo comparten el diálogo y el arrastre a propósito: soltar un PDF tiene que
  * dejar exactamente lo mismo que elegirlo, y dos conversiones parecidas es
  * justo por donde dejarían de serlo.
+ *
+ * Sale con `remembered` en `true` porque los dos caminos son una persona
+ * eligiendo un fichero suyo: de eso queda rastro (ID-34). El documento que no
+ * se recuerda es el que mandará una sede (ID-286), y entra por otro puerto.
  */
-function recentOf(opened: OpenedDocumentView): RecentDocument {
+function inHandOf(opened: OpenedDocumentView): DocumentInHand {
   return {
     id: opened.id,
     name: opened.name,
-    // Un documento recién abierto se anota como **no firmado** (ID-71): saber
+    // Un documento recién abierto se tiene por **no firmado** (ID-71): saber
     // si un PDF ya trae firmas es otro trabajo, y el panel ya declara ese dato
     // como desconocido. Se anota lo que se sabe.
     badge: "Unsigned",
     modified: opened.modified,
-    lastUsed: Math.floor(Date.now() / 1000),
-    // Lo acaba de conceder el portal, así que responde.
-    available: true,
     // Dónde cayó su recuadro la última vez lo sabe el backend, que guarda la
     // bandeja por ruta canónica: llega al anotarlo, no al abrirlo.
     placement: null,
-  } satisfies RecentDocument;
+    remembered: true,
+  } satisfies DocumentInHand;
 }
 
 /**
