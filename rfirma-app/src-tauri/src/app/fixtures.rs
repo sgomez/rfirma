@@ -75,14 +75,14 @@ pub(crate) fn an_order() -> SigningOrder {
     SigningOrder {
         document: "/run/user/1000/doc/1e8b83b9/contrato.pdf".to_owned(),
         certificate: "FIRMA".to_owned(),
-        placement: PlacementOrder {
+        placement: Some(PlacementOrder {
             page: 1,
             pages: crate::signing::PageSet::only_page(1),
             page_count: 3,
             media_box: [0.0, 0.0, 595.0, 842.0],
             rotation: 0,
             rect: [72.0, 500.0, 272.0, 600.0],
-        },
+        }),
         fields: VisibleFieldsOrder {
             signer_name: true,
             issuer: true,

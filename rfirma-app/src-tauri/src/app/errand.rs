@@ -53,8 +53,8 @@ use crate::commands::Failure;
 use crate::memory::{handles, ListedCertificates, Memory, OpenedDocuments};
 use crate::pkcs11::{self, Store};
 use crate::protocol::{
-    read_operation, ChannelCredential, Refusal, SafCode, SelectCertificate, SignRequest,
-    SignatureRound, SiteFilter, SiteOperation, WireAnswer,
+    read_operation, visible_signature_of, ChannelCredential, Refusal, SafCode, SelectCertificate,
+    SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
 };
 use crate::signing::AdmissibleDocument;
 
@@ -196,6 +196,10 @@ pub struct SigningConsent {
     pub certificates: Vec<CertificateView>,
     /// Los `extraParams` de la sede, **ya expandidos** (ID-266).
     pub from_the_site: BTreeMap<String, String>,
+    /// Qué recuadro pide la sede, ya decidido (ID-282). Lo que hay que saber de
+    /// él está en [`crate::protocol::visible`]; aquí sólo viaja, porque la
+    /// prefirma no vuelve a mirar los `extraParams` para averiguarlo.
+    pub visible: SiteVisibleSignature,
     /// Lo que la sede pide del listado, para volver a comprobarlo (ID-259).
     pub filter: SiteFilter,
 }
@@ -358,7 +362,9 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
 ///    no es un PDF se rechaza sobre los bytes, sin token y **antes** de que la
 ///    persona vea nada que consentir.
 /// 2. **La política después**, porque una que no se puede aplicar hace que no
-///    haya firma que ofrecer (ID-266).
+///    haya firma que ofrecer (ID-266). Y pegado a ella el recuadro, que se lee
+///    de los `extraParams` **ya expandidos** (ID-282), en el mismo sitio en el
+///    que lo mira el original.
 /// 3. **El listado**, con la criba de la sede encima de la de rFirma (ID-258).
 /// 4. Y sólo entonces se guarda el documento y se pide el consentimiento: hasta
 ///    aquí no se ha escrito ni un byte en el disco.
@@ -396,6 +402,14 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
             }
         };
 
+    // El recuadro se decide sobre los `extraParams` ya expandidos, que es donde
+    // mira el original (ID-282, ID-283, ID-284). Las dos negativas caen aquí, a
+    // tiempo: sin visor, sin diálogo y antes de que haya nada que consentir.
+    let visible = match visible_signature_of(&from_the_site) {
+        Ok(visible) => visible,
+        Err(refusal) => return answering(live, SiteReply::RefusedByTheProtocol(refusal)),
+    };
+
     let accepted = match accepted_listing(desk, request.filter(), ours, live) {
         Ok(accepted) => accepted,
         Err(step) => return step,
@@ -424,6 +438,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
             desk.memory,
         ),
         from_the_site,
+        visible,
         filter: request.filter().clone(),
     })
 }
@@ -1042,6 +1057,108 @@ mod tests {
             !scratch_file.exists(),
             "el fichero de paso se borra al contestar (ID-286)"
         );
+    }
+
+    /// **ID-282**: cuando la sede manda posición y página, la firma sigue
+    /// adelante y el consentimiento lo dice: hay recuadro, y lo puso ella.
+    #[test]
+    fn a_box_the_site_placed_is_honoured_and_the_signature_goes_on() {
+        let asked = a_consent_to_sign(
+            "signaturePositionOnPageLowerLeftX=100\n\
+             signaturePositionOnPageLowerLeftY=100\n\
+             signaturePositionOnPageUpperRightX=300\n\
+             signaturePositionOnPageUpperRightY=180\n\
+             signaturePages=-1\n\
+             visibleSignature=want\n",
+        );
+
+        let ErrandStep::AskingToSign(consent) = asked else {
+            panic!("hay recuadro y hay certificado: {asked:?}");
+        };
+        assert_eq!(consent.visible, SiteVisibleSignature::PlacedByTheSite);
+        assert_eq!(
+            consent
+                .from_the_site
+                .get("signaturePages")
+                .map(String::as_str),
+            Some("-1"),
+            "la pagina contada desde el final la resuelve el puente, no rFirma (ID-284)"
+        );
+    }
+
+    /// **ID-282**: y sin ella, `optional` firma invisible sin hacer esperar a
+    /// nadie.
+    #[test]
+    fn an_optional_box_the_site_never_placed_is_signed_invisible() {
+        let asked = a_consent_to_sign("visibleSignature=optional\nvisibleAppearance=custom\n");
+
+        let ErrandStep::AskingToSign(consent) = asked else {
+            panic!("se firma igual, sin recuadro: {asked:?}");
+        };
+        assert_eq!(consent.visible, SiteVisibleSignature::Declined);
+    }
+
+    /// **ID-283**: un recuadro obligatorio que no viene colocado cancela con el
+    /// código que el original ya tiene, y **antes** de que haya nada que
+    /// consentir.
+    #[test]
+    fn a_mandatory_box_the_site_never_placed_cancels_before_anyone_is_asked() {
+        let asked = a_consent_to_sign("visibleSignature=want\n");
+
+        let ErrandStep::Answering(reply) = asked else {
+            panic!("no hay donde colocar el recuadro: {asked:?}");
+        };
+        assert!(
+            reply.on_the_wire().starts_with("SAF_43"),
+            "lo que sale es el codigo de la firma visible: {}",
+            reply.on_the_wire()
+        );
+    }
+
+    /// **ID-284**: y una página en blanco añadida al documento se rechaza,
+    /// porque eso es modificarlo antes de firmarlo.
+    #[test]
+    fn a_page_appended_to_the_document_is_refused_before_anyone_is_asked() {
+        let asked = a_consent_to_sign("signaturePages=append\n");
+
+        let ErrandStep::Answering(reply) = asked else {
+            panic!("no se anaden paginas: {asked:?}");
+        };
+        assert!(
+            reply.on_the_wire().starts_with("SAF_03"),
+            "lo que sale es el rechazo del parametro: {}",
+            reply.on_the_wire()
+        );
+    }
+
+    /// El consentimiento de una firma cuya política se expande a ese bloque:
+    /// lo que cambia entre las pruebas del recuadro es sólo eso.
+    fn a_consent_to_sign(expanded: &str) -> ErrandStep {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::answering(expanded);
+        let scratch = home.path().join("errand");
+
+        consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature("sign", "")),
+            ours,
+            &live,
+        )
     }
 
     /// **ID-266**: una política que no se puede aplicar no se firma alrededor,

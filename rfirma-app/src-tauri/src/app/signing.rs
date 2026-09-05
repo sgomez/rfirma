@@ -416,7 +416,13 @@ pub fn config_for(
 ) -> Result<SignatureConfig, Failure> {
     let holder = certificates::stamped_holder_of(chosen);
     Ok(SignatureConfig {
-        placement: order.placement.placement()?,
+        // Sin colocación no hay geometría que emitir, y las claves del recuadro
+        // que traiga la sede llegan al puente intactas (ID-282).
+        placement: order
+            .placement
+            .as_ref()
+            .map(|placement| placement.placement())
+            .transpose()?,
         layer2_text: layer2_text_of(order, &holder),
         rubric_image: order.rubric.clone(),
         // Un motivo vacío **no se envía**: `signReason` con la cadena vacía
@@ -754,9 +760,10 @@ mod tests {
 
         let config = config_for(&an_order(), &certificate).expect("el recuadro cabe");
 
-        assert_eq!(config.placement.pages, PageSet::only_page(1));
-        assert_eq!(config.placement.rect.lower_left_x, 72);
-        assert_eq!(config.placement.rect.upper_right_y, 600);
+        let placement = config.placement.expect("la ventana coloco el recuadro");
+        assert_eq!(placement.pages, PageSet::only_page(1));
+        assert_eq!(placement.rect.lower_left_x, 72);
+        assert_eq!(placement.rect.upper_right_y, 600);
     }
 
     #[test]
@@ -764,16 +771,34 @@ mod tests {
         // iText lo recortaría sin decir nada y la firma saldría válida igual,
         // con la rúbrica de trece puntos de ancho (ID-22).
         let order = SigningOrder {
-            placement: PlacementOrder {
+            placement: Some(PlacementOrder {
                 rect: [72.0, 500.0, 900.0, 600.0],
-                ..an_order().placement
-            },
+                ..an_order().placement.expect("el andamio trae recuadro")
+            }),
             ..an_order()
         };
 
         let failure = config_for(&order, &a_certificate("FIRMA", &[])).expect_err("se sale");
 
         assert_eq!(failure.situation, "boxOutOfPage");
+    }
+
+    /// **ID-282**: una firma de sede llega **sin colocación**, y de ahí no sale
+    /// ninguna clave de geometría. Es así como los `signaturePositionOnPage*`
+    /// que mandó la sede cruzan al puente crudos: no hay nada que los pise.
+    #[test]
+    fn a_signature_the_site_placed_carries_no_geometry_of_our_own() {
+        let order = SigningOrder {
+            placement: None,
+            ..an_order()
+        };
+
+        let config = config_for(&order, &a_certificate("FIRMA", &[])).expect("no hay que colocar");
+
+        assert_eq!(config.placement, None);
+        for key in crate::signing::Setting::Geometry.keys() {
+            assert!(!config.extra_params().contains_key(*key), "'{key}' es suya");
+        }
     }
 
     #[test]

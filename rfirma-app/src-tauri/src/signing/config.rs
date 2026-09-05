@@ -46,7 +46,10 @@ const LAYER2_FONT_SIZE: &str = "0";
 pub enum Setting {
     /// El subfiltro, siempre [`SUB_FILTER`].
     SubFilter,
-    /// La geometría del recuadro: las páginas y las cuatro esquinas.
+    /// La geometría del recuadro: las páginas y las cuatro esquinas. **No
+    /// emite nada cuando la firma no lleva colocación nuestra**, que es como
+    /// los `signaturePositionOnPage*` de una sede llegan crudos al puente
+    /// (ID-282).
     Geometry,
     /// El texto del recuadro, ya compuesto por rFirma.
     Layer2Text,
@@ -149,8 +152,19 @@ impl Placement {
 /// Lo que distingue una firma de otra a igualdad de documento y certificado.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignatureConfig {
-    /// Dónde cae el recuadro y en qué páginas.
-    pub placement: Placement,
+    /// Dónde cae el recuadro y en qué páginas, **cuando lo coloca rFirma**.
+    ///
+    /// `None` no es «una firma sin recuadro»: es «el recuadro no lo pone este
+    /// lado». Los dos caminos del recuadro **no comparten conversión**
+    /// (ID-282):
+    ///
+    /// - **Lo elige la persona** sobre el visor: llega aquí `Some`, ya con el
+    ///   `T⁻¹` de la `/Rotate` aplicado por [`super::placement`].
+    /// - **Lo elige la sede**: llega `None`, y sus `signaturePositionOnPage*`
+    ///   cruzan al puente tal y como vinieron, porque esta configuración no
+    ///   emite ninguna clave que los pise
+    ///   ([`crate::protocol::visible`], [`crate::app::policies::merged_with`]).
+    pub placement: Option<Placement>,
     /// El texto del recuadro, compuesto por
     /// [`super::layer2_text::compose_layer2_text`]. Puede estar vacío.
     pub layer2_text: String,
@@ -179,7 +193,9 @@ impl SignatureConfig {
 
         let mut params = BTreeMap::new();
         params.insert(SUB_FILTER_KEY.to_owned(), SUB_FILTER.to_owned());
-        params.extend(placement.extra_params());
+        if let Some(placement) = placement {
+            params.extend(placement.extra_params());
+        }
         params.insert(LAYER2_TEXT_KEY.to_owned(), layer2_text.clone());
         // Se envía siempre, y siempre cero: no es un ajuste del usuario, es lo
         // que enciende el reparto del alto entre las líneas.
@@ -208,11 +224,13 @@ mod tests {
         }
     }
 
-    fn placed_on(pages: PageSet) -> Placement {
-        Placement {
+    /// La colocación de rFirma, que es la del camino local: el recuadro lo
+    /// puso la persona sobre el visor.
+    fn placed_on(pages: PageSet) -> Option<Placement> {
+        Some(Placement {
             rect: a_rect(),
             pages,
-        }
+        })
     }
 
     fn minimal() -> SignatureConfig {
@@ -403,6 +421,27 @@ mod tests {
                 Some(&literal.to_owned())
             );
         }
+    }
+
+    /// **ID-282**: en el camino de la sede rFirma no coloca nada, y eso se ve
+    /// en que la geometría **no emite ni una clave**: las que mandó la sede
+    /// llegan al puente sin que nadie las pise.
+    #[test]
+    fn emits_no_geometry_at_all_when_the_box_is_not_placed_by_rfirma() {
+        let config = SignatureConfig {
+            placement: None,
+            ..complete()
+        };
+
+        let params = config.extra_params();
+
+        for key in Setting::Geometry.keys() {
+            assert!(
+                !params.contains_key(*key),
+                "'{key}' la pone la sede, no rFirma"
+            );
+        }
+        assert!(params.contains_key("signatureSubFilter"), "lo demas sigue");
     }
 
     /// ID-91: «todas» no es un modo aparte. Lo único que cambia entre `all` y

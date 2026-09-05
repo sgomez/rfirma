@@ -476,7 +476,7 @@ mod full_cycle {
     /// queda quieto para que las cuatro midan la misma region de la pagina.
     fn a_config_of(text: &str, rubric: Option<String>) -> SignatureConfig {
         SignatureConfig {
-            placement: Placement {
+            placement: Some(Placement {
                 rect: PadesRect {
                     lower_left_x: BOX_LEFT as i32,
                     lower_left_y: BOX_BOTTOM as i32,
@@ -484,7 +484,7 @@ mod full_cycle {
                     upper_right_y: BOX_TOP as i32,
                 },
                 pages: PageSet::only_page(1),
-            },
+            }),
             layer2_text: text.to_owned(),
             rubric_image: rubric,
             sign_reason: None,
@@ -818,15 +818,19 @@ mod full_cycle {
         // El segundo recuadro va más abajo: dos firmas visibles en el mismo
         // sitio se taparían, y lo que se quiere ver es que las dos están.
         let base = a_config_of("Firmado por: PRUEBAS FNMT", None);
+        let placed = base
+            .placement
+            .clone()
+            .expect("el caso local coloca el recuadro");
         let lower = SignatureConfig {
-            placement: Placement {
+            placement: Some(Placement {
                 rect: PadesRect {
                     lower_left_y: BOX_BOTTOM as i32 - 150,
                     upper_right_y: BOX_TOP as i32 - 150,
-                    ..base.placement.rect
+                    ..placed.rect
                 },
-                ..base.placement.clone()
-            },
+                ..placed
+            }),
             ..base
         };
         let second = sign(&first, &lower);

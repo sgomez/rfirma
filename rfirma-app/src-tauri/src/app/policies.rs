@@ -92,6 +92,7 @@ pub fn merged_with(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::signing::SignatureConfig;
     use std::cell::RefCell;
 
     /// **Grada A**: ni token, ni librería nativa, ni socket (TD-51, TD-52).
@@ -193,5 +194,36 @@ mod tests {
                 ("policyIdentifier", "urn:oid:1"),
             ])
         );
+    }
+
+    /// **ID-282**: y el recuadro que puso la sede sobrevive la mezcla **letra
+    /// por letra**, porque una firma de sede no lleva colocación nuestra y la
+    /// configuración no emite ni una clave de geometría que la pise. Aquí es
+    /// donde «pasarlas crudas» se puede ver.
+    #[test]
+    fn the_box_the_site_placed_reaches_the_bridge_exactly_as_it_came() {
+        let hers = params(&[
+            ("signaturePositionOnPageLowerLeftX", "100"),
+            ("signaturePositionOnPageLowerLeftY", "100"),
+            ("signaturePositionOnPageUpperRightX", "300"),
+            ("signaturePositionOnPageUpperRightY", "180"),
+            ("signaturePages", "1-3,-3--1"),
+        ]);
+        let ours = SignatureConfig {
+            placement: None,
+            layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
+            rubric_image: None,
+            sign_reason: None,
+        };
+
+        let merged = merged_with(hers.clone(), ours.extra_params());
+
+        for (key, value) in &hers {
+            assert_eq!(
+                merged.get(key),
+                Some(value),
+                "'{key}' lo ajusto la sede contra AutoFirma y cruza sin tocar"
+            );
+        }
     }
 }

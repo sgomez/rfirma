@@ -123,7 +123,7 @@ mod tests {
     fn a_page_set_of_twenty_travels_as_a_single_presign_request() {
         let pages = PageSet::only(1..=20).expect("veinte paginas no es vacio");
         let config = SignatureConfig {
-            placement: Placement {
+            placement: Some(Placement {
                 rect: PadesRect {
                     lower_left_x: 48,
                     lower_left_y: 179,
@@ -131,7 +131,7 @@ mod tests {
                     upper_right_y: 260,
                 },
                 pages,
-            },
+            }),
             layer2_text: String::new(),
             rubric_image: None,
             sign_reason: None,

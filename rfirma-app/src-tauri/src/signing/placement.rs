@@ -25,6 +25,22 @@
 //! (`PdfUtil.getPositionOnPage`), y el recuadro se guarda en espacio de usuario
 //! y no en píxeles, o el zoom lo desplaza solo.
 //!
+//! **Y esa MediaBox no siempre es la MediaBox.** Lo que manda la ventana es el
+//! `page.view` de `pdf.js`, que es la **CropBox** recortada contra la MediaBox
+//! cuando las dos difieren, y es lo único que `pdf.js` deja cruzar al hilo
+//! principal. Para el paso 1 es justo lo que hace falta —es la caja con la que
+//! `pdf.js` construyó su viewport—; para el `T⁻¹` del paso 2 haría falta la
+//! MediaBox de verdad, que es la que lee `PdfReader.getPageSize`. Con
+//! `/Rotate` 0 el `T⁻¹` es la identidad y no hay error; en páginas rotadas de
+//! un documento con las dos cajas distintas el recuadro se desplaza esa
+//! diferencia. Medido en el #354 y escrito entero —incluido por qué corregirlo
+//! pide una entrada nueva del puente— en
+//! `docs/research/coordenadas-recuadro-pades.md`.
+//!
+//! Nada de esto alcanza al recuadro que coloca una sede: ahí no hay conversión
+//! ninguna y las coordenadas cruzan crudas (ID-282,
+//! [`crate::protocol::visible`]).
+//!
 //! La tabla de `T`, las dieciséis mediciones que la respaldan y el banco de
 //! pruebas están en `docs/research/coordenadas-recuadro-pades.md`. Si sube la
 //! versión de `afirma-lib-itext`, vuelve a medirla: es un hecho sobre esa
