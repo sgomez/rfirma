@@ -495,7 +495,6 @@ describe("el puerto del arrastre sobre Tauri", () => {
   });
 });
 
-/** Una fila de la bandeja, que es lo que entra por el puerto del visor. */
 /** El documento que se tiene delante, no la fila que se guarda (ID-287). */
 function aDocument() {
   return {

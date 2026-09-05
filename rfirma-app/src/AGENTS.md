@@ -44,10 +44,10 @@ rojo.
 | `shell/menuAnchor.ts` | 25 | Dónde se ancla el menú de dos entradas. |
 | **`documents/`** | | La bandeja. |
 | `documents/document.ts` | 69 | El vocabulario del documento: **el que se tiene delante** (`DocumentInHand`) y las insignias. No es la fila (ID-287). |
-| `documents/useDocuments.ts` | 176 | El estado de la bandeja. |
+| `documents/useDocuments.ts` | 171 | El estado de la bandeja. |
 | `documents/DocumentTray.tsx` | 97 | La bandeja pintada. |
-| `documents/recents.ts` | 197 | Los diez recientes —**la fila que se guarda**— y su puerto, con el camino de vuelta a la mano (`taken`). Misma capacidad que `memory::recents::CAPACITY`. |
-| `documents/picker.ts` | 34 | Por dónde entra un documento. |
+| `documents/recents.ts` | 199 | Los diez recientes —**la fila que se guarda**— y su puerto, con el camino de vuelta a la mano (`taken`). Misma capacidad que `memory::recents::CAPACITY`. |
+| `documents/picker.ts` | 32 | Por dónde entra un documento. |
 | `documents/drops.ts` | 100 | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 172 | Las tres etapas de la trifásica. |

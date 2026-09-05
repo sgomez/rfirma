@@ -163,8 +163,10 @@ export interface RecentsStore {
  * Los recientes que viven solo durante la sesión y se olvidan al cerrar. Es el
  * doble de las pruebas de la bandeja, que así corren sin backend.
  *
- * Imita la única regla del backend que la ventana nota: una fila que vuelve a
- * anotarse **conserva su recuadro** si la nueva no trae ninguno.
+ * Imita las reglas del backend que la ventana nota: una fila que vuelve a
+ * anotarse **conserva su recuadro** si la nueva no trae ninguno, y por lo
+ * demás se reemplaza entera —`lastUsed` pasa a ser ahora y `available` vuelve
+ * a `true`, igual que hacen `Recents::record` e `is_available()`—.
  */
 export function inMemoryRecents(initial: readonly RecentDocument[] = []): RecentsStore {
   let entries = initial.slice(0, CAPACITY);
@@ -177,11 +179,11 @@ export function inMemoryRecents(initial: readonly RecentDocument[] = []): Recent
         name: document.name,
         badge: document.badge,
         modified: document.modified,
-        // De una fila que ya estaba se conserva cuándo se usó; una nueva nace
-        // ahora. Y lo que el portal acaba de conceder responde, por
-        // definición.
-        lastUsed: previous?.lastUsed ?? Math.floor(Date.now() / 1000),
-        available: previous?.available ?? true,
+        // Anotar es siempre «acabo de usarlo»: la fecha se refresca aunque la
+        // fila ya estuviera. Y lo que el portal acaba de conceder responde,
+        // por definición, así que una fila caída revive al reabrirla.
+        lastUsed: Math.floor(Date.now() / 1000),
+        available: true,
         placement: document.placement ?? previous?.placement ?? null,
       };
       entries = record(entries, noted);
