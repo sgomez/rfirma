@@ -76,6 +76,10 @@ DESKTOP_TEMPLATE_SUFFIX = ".desktop.hbs"
 # El verbo del menu contextual, palabra por palabra (ID-165).
 VERB = "Firmar con rFirma"
 
+# El unico `MimeType` que un lanzador puede declarar: el esquema de la sede
+# (ID-234). No registra a rFirma como lectora de ningun fichero.
+ALLOWED_SCHEME_HANDLER = "x-scheme-handler/afirma"
+
 failures: list[str] = []
 
 
@@ -341,21 +345,36 @@ def check_desktop_names() -> None:
 def check_no_pdf_handler() -> None:
     """ID-155: rFirma es un verbo, no el programa de los PDF.
 
-    Un `MimeType=` en un lanzador (`Type=Application`) la registra como
-    candidata a lector predeterminado y produce «Abrir con rFirma», que miente
-    sobre lo que va a pasar. En un `Type=Service` la misma clave no registra
-    nada: filtra en que menu contextual aparece el verbo, y ahi es obligatoria.
+    Lo que un lanzador (`Type=Application`) no puede declarar es un **tipo de
+    documento**: `application/pdf` y compania la registran como candidata a
+    lector predeterminado y producen «Abrir con rFirma», que miente sobre lo
+    que va a pasar. Un `x-scheme-handler/…` es otra cosa —registra quien
+    atiende un esquema de URL, no quien abre un fichero— y el ID-234 lo exige
+    para `afirma://`, asi que se admite y solo ese.
+
+    En un `Type=Service` la misma clave no registra nada: filtra en que menu
+    contextual aparece el verbo, y ahi es obligatoria.
     """
     for path in desktop_files():
         entry = desktop_groups(path).get("Desktop Entry", {})
         if entry.get("Type") == "Service":
             continue
-        if "MimeType" in entry:
+        declared = [t for t in entry.get("MimeType", "").split(";") if t]
+        offenders = [t for t in declared if not t.startswith("x-scheme-handler/")]
+        if offenders:
             fail(
-                f"{path}: declara `MimeType={entry['MimeType']}`. Un lanzador "
-                f"con tipo asociado convierte a rFirma en candidata a lector "
-                f"de PDF, y rFirma es un verbo (ID-155, ADR-0018)."
+                f"{path}: declara `MimeType={';'.join(offenders)}`. Un lanzador "
+                f"con tipo de documento asociado convierte a rFirma en "
+                f"candidata a lector de PDF, y rFirma es un verbo "
+                f"(ID-155, ADR-0018)."
             )
+        for scheme in declared:
+            if scheme != ALLOWED_SCHEME_HANDLER:
+                fail(
+                    f"{path}: declara `MimeType={scheme}`. El unico esquema que "
+                    f"rFirma atiende es `{ALLOWED_SCHEME_HANDLER}` "
+                    f"(ID-234, ADR-0018)."
+                )
 
 
 def check_kde_servicemenu(conf: dict) -> None:
