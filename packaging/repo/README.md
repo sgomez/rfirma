@@ -106,11 +106,18 @@ Ni el CI ni ningún agente pueden hacer esto: hay que hacerlo a mano una vez.
 1. **Usuario y directorio en el VPS**, con el directorio que ya sirve Caddy:
 
    ```bash
-   sudo adduser --system --group --home /var/lib/rfirma-publish rfirma-publish
+   sudo adduser --system --group --home /var/lib/rfirma-publish --shell /bin/sh rfirma-publish
    sudo mkdir -p /srv/rfirma-repo
    sudo chown rfirma-publish:rfirma-publish /srv/rfirma-repo
    sudo chmod 755 /srv/rfirma-repo
    ```
+
+   **`--shell /bin/sh` no es un descuido.** `adduser --system` deja `/usr/sbin/nologin` por
+   su cuenta, y sshd lanza la orden forzada *a través del shell del usuario*: con `nologin`,
+   lo que viaja por la conexión es «This account is currently not available» en vez del
+   protocolo de rsync, y `rsync` responde `protocol version mismatch -- is your shell clean?`.
+   Quien cierra la puerta es `command=`+`restrict`, no la ausencia de shell. Si el usuario ya
+   existe: `sudo chsh -s /bin/sh rfirma-publish`.
 
 2. **La clave de despliegue, atada a una orden forzada.** La clave privada va al secreto
    `PUBLISH_SSH_KEY` del entorno `release` y la pública al `authorized_keys` del usuario, con
