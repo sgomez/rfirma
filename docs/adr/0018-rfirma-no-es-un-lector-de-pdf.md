@@ -8,10 +8,17 @@ rFirma entra en la lista de candidatas a lector predeterminado y, si alguien la 
 sistema termina en una aplicación que no sabe pasar de página. La etiqueta miente sobre lo que va a
 pasar al pulsarla.
 
-rFirma **no declara ningún tipo de fichero en ningún lanzador**. Lo que instala es un **verbo** en el
+rFirma **no declara ningún tipo de documento en ningún lanzador**. Lo que instala es un **verbo** en el
 menú contextual del gestor de ficheros: **«Firmar con rFirma»**, al primer nivel, sobre un PDF. El
 nombre lleva el «con rFirma» a propósito: compite con «Abrir con» y «Comprimir», y «Firmar» a secas
 no dice quién firma ni deja sitio a un futuro «Firmar como …».
+
+**Lo que sí declara el lanzador es el esquema `afirma://`**, y no es una excepción a lo anterior:
+`MimeType=x-scheme-handler/afirma;` no registra a rFirma como candidata a abrir ningún fichero, sólo
+dice quién atiende las URL de ese esquema, que es lo que el ID-234 necesita para que la sede
+electrónica pueda invocarla. La regla, dicha con precisión, es **ningún tipo de documento** en un
+lanzador `Type=Application` —ni `application/pdf` ni ningún otro—, y de esquemas exactamente uno, el
+de la sede.
 
 ## Consecuencias
 
@@ -53,7 +60,8 @@ del documento.
 ## Cómo se vigila
 
 `packaging/check-version.py` (`just check-version`, en el CI) comprueba las cuatro cosas que este ADR
-fija: que ningún lanzador de tipo `Application` declara `MimeType` —y ahí entra, sobre todo, la
+fija: que ningún lanzador de tipo `Application` declara un `MimeType` de documento, y que el único
+esquema que admite es `x-scheme-handler/afirma` —y ahí entra, sobre todo, la
 plantilla `packaging/rfirma.desktop.hbs`, que es el lanzador que de verdad instalan el `.deb` y el
 `.rpm`; el `.hbs` del nombre la dejaba fuera de un barrido por `*.desktop`, así que la puerta lo
 recorre por su sufijo y además exige que el `desktopTemplate` declarado en `tauri.conf.json` para
