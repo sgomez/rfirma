@@ -88,6 +88,16 @@ que sólo se ve con la ventana vacía no decide nada:
 | B | Línea en el pie | rFirma **no tiene barra de estado**: estrenaba un mueble entero para una frase que casi siempre no está |
 | **C** | **Franja bajo la cabecera** | **elegida**: se ve sin abrir nada, es descartable y desaparece del todo cuando no hay nada que decir |
 
+**El segundo inquilino del hueco es el banner de quién atiende `afirma://`**
+(#364): la misma franja de 41 px, con la pregunta y tres respuestas —*Sí*,
+*Ahora no*, *No volver a preguntar*— en lugar de una acción y la `×`. Sale al
+arrancar, y solo mientras los enlaces los atienda otra aplicación y no se haya
+pedido dejar de preguntar; en el flatpak no sale nunca, porque ahí no hay nada
+que elegir. **Cede el sitio al aviso de versión** cuando los dos tendrían algo
+que decir: dos franjas a la vez serían 82 px comidos a la ventana, y la
+pregunta puede esperar al arranque siguiente. Dónde se cambia lo mismo sin
+banner: [preferencias.md](preferencias.md).
+
 Lo que la franja **no** es: un sitio para errores del recorrido. El error de
 firma se queda en el pie del panel, como dice más abajo, y los fallos de
 Preferencias van dentro de su sección.

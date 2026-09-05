@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import type { UrlHandlers } from "../desktop/urlHandlers";
 import { classify, type NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
@@ -20,10 +21,16 @@ import { Select } from "./Select";
 import { Switch } from "./Switch";
 import { THEMES } from "./theme";
 
-/** Las cuatro secciones del índice, en el orden en que se apilan (ID-69). */
-const SECTIONS = ["signing", "certificates", "privacy", "appearance"] as const;
+/** Las cinco secciones del índice, en el orden en que se apilan (ID-69). */
+const SECTIONS = ["signing", "certificates", "sites", "privacy", "appearance"] as const;
 
 type Section = (typeof SECTIONS)[number];
+
+/**
+ * El valor del desplegable de sedes cuando no hay `default` escrito: lo que
+ * decida el escritorio. No es un manejador, así que elegirlo no escribe nada.
+ */
+const UNCHOSEN = "";
 
 /** Lo que puede recibir el foco dentro de la pantalla. */
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -87,6 +94,17 @@ interface PreferencesDialogProps {
   onInstallCertificate: (password: string) => Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   onRemoveCertificate: (id: string) => Promise<void>;
+  /**
+   * Quién atiende los enlaces `afirma://`, ya preguntado, o `null` mientras no
+   * se sepa. `available: false` es el flatpak, y entonces esta pantalla enseña
+   * la frase fija en vez del desplegable (ID-240).
+   */
+  urlHandlers: UrlHandlers | null;
+  /**
+   * Deja apuntado quién atiende los enlaces. Rechaza si el escritorio no lo
+   * acepta, como cualquier otro ajuste (ID-70).
+   */
+  onChooseUrlHandler: (handler: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -141,6 +159,8 @@ export function PreferencesDialog({
   installedCertificates,
   onInstallCertificate,
   onRemoveCertificate,
+  urlHandlers,
+  onChooseUrlHandler,
   onClose,
 }: PreferencesDialogProps) {
   const { t, i18n } = useTranslation();
@@ -335,6 +355,19 @@ export function PreferencesDialog({
     sections.current.set(section, element);
   };
 
+  /**
+   * Quién enseña el desplegable como elegido, que **solo** puede ser alguien
+   * que siga registrado. Un `default` escrito que ya no está entre los
+   * manejadores —la otra aplicación se desinstaló después de elegirla— es tan
+   * «nadie» como no haber elegido nunca: en los dos casos lo que hay es lo que
+   * decida el escritorio, y enseñar el primero de la lista sería mentir.
+   */
+  const chosenUrlHandler = urlHandlers?.handlers.some(
+    (handler) => handler.id === urlHandlers.current,
+  )
+    ? (urlHandlers.current ?? UNCHOSEN)
+    : UNCHOSEN;
+
   return (
     <div
       className="preferences"
@@ -474,6 +507,67 @@ export function PreferencesDialog({
                 ))}
               </ul>
             )}
+          </section>
+
+          <section
+            className="preferences__section-body"
+            aria-labelledby={`${titleId}-sites`}
+            ref={register("sites")}
+          >
+            {heading("sites")}
+            {/* Tres estados, no dos. Mientras `urlHandlers` es `null` no se
+                sabe **nada**: ni quién atiende los enlaces ni si este canal
+                puede cambiarlo, así que la sección se queda sin desplegable y
+                sin frase, que es lo que promete el `catch` de `App.tsx`. Un
+                desplegable montado con lo que todavía no ha contestado el
+                backend saldría vacío y sin valor. */}
+            {urlHandlers === null ? null : !urlHandlers.available ? (
+              /* En el flatpak no hay portal para manejadores predeterminados y
+                 `set_as_default_for_type()` miente (ID-240): se dice dónde se
+                 cambia, en vez de enseñar un control que no cumpliría. */
+              <p className="rf-prose">{t("preferences.urlHandler.inTheSandbox")}</p>
+            ) : (
+              <>
+                <Select
+                  label={t("preferences.urlHandler.label")}
+                  value={chosenUrlHandler}
+                  /* Mientras no haya elegido nadie que siga registrado, el
+                     desplegable no puede enseñar el primero de la lista como si
+                     estuviera elegido: lo que hay entonces es lo que decida el
+                     escritorio, y esa opción desaparece en cuanto se elige a
+                     alguien. */
+                  options={[
+                    ...(chosenUrlHandler === UNCHOSEN
+                      ? [{ value: UNCHOSEN, label: t("preferences.urlHandler.unchosen") }]
+                      : []),
+                    ...urlHandlers.handlers.map((handler) => ({
+                      value: handler.id,
+                      label: handler.name,
+                    })),
+                  ]}
+                  onChange={(handler) => {
+                    if (handler === UNCHOSEN) return;
+                    void change("sites", () => onChooseUrlHandler(handler));
+                  }}
+                />
+                {/* No se puede deducir mirando, así que no se recorta (§11):
+                    Firefox guarda su propia elección y la impone (ID-241). */}
+                <p className="rf-hint">{t("preferences.urlHandler.firefoxKeepsItsOwn")}</p>
+                {/* Aquí se deshace el «No volver a preguntar» del banner, y
+                    solo aquí: en el flatpak no hay banner que apagar. */}
+                <Switch
+                  checked={preferences.askAboutUrlHandler}
+                  label={t("preferences.askAboutUrlHandler.label")}
+                  wide
+                  onChange={(checked) =>
+                    void change("sites", () =>
+                      onChange({ ...preferences, askAboutUrlHandler: checked }),
+                    )
+                  }
+                />
+              </>
+            )}
+            {saveNotice("sites")}
           </section>
 
           <section

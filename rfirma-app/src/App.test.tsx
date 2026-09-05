@@ -2,6 +2,11 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import {
+  inMemoryUrlHandlers,
+  type UrlHandlerChoice,
+  type UrlHandlers,
+} from "./desktop/urlHandlers";
 import type { DocumentInHand } from "./documents/document";
 import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
@@ -173,6 +178,7 @@ function renderApp(
   invoked: Drop | null = null,
   drops: FakeDocumentDrops = inMemoryDocumentDrops(invoked),
   versions: VersionCheck = inMemoryVersionCheck(),
+  urlHandlers: UrlHandlerChoice = inMemoryUrlHandlers(handlersThatAreOurs()),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -183,6 +189,7 @@ function renderApp(
       rememberActivity: true,
       notifyNewVersion: true,
       trustNoticeSeen: false,
+      askAboutUrlHandler: true,
       ...settings,
     },
     () => void recents.clear(),
@@ -201,10 +208,25 @@ function renderApp(
       signer={signer}
       opener={unavailableOpener()}
       versions={versions}
+      urlHandlers={urlHandlers}
       menuAnchor="header"
     />,
   );
   return { recents, preferences, drops };
+}
+
+/**
+ * Quién atiende `afirma://` cuando la prueba no habla de eso: ya es rFirma, así
+ * que el banner no tiene nada que preguntar y no se monta.
+ */
+function handlersThatAreOurs(overrides: Partial<UrlHandlers> = {}): UrlHandlers {
+  return {
+    available: true,
+    handlers: [{ id: "rfirma.desktop", name: "rFirma" }],
+    current: "rfirma.desktop",
+    ours: "rfirma.desktop",
+    ...overrides,
+  };
 }
 
 /**
@@ -291,6 +313,7 @@ describe("App", () => {
         rememberActivity: true,
         notifyNewVersion: true,
         trustNoticeSeen: false,
+        askAboutUrlHandler: true,
       }),
       save: refused,
       forgetActivity: async () => {},
@@ -310,6 +333,7 @@ describe("App", () => {
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
         versions={inMemoryVersionCheck()}
+        urlHandlers={inMemoryUrlHandlers(handlersThatAreOurs())}
         menuAnchor="header"
       />,
     );
@@ -726,6 +750,7 @@ describe("App", () => {
         rememberActivity: true,
         notifyNewVersion: true,
         trustNoticeSeen: false,
+        askAboutUrlHandler: true,
       }),
       save: async () => {},
       forgetActivity: async () => {
@@ -747,6 +772,7 @@ describe("App", () => {
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
         versions={inMemoryVersionCheck()}
+        urlHandlers={inMemoryUrlHandlers(handlersThatAreOurs())}
         menuAnchor="header"
       />,
     );
@@ -1503,6 +1529,101 @@ describe("App, invocada con un documento", () => {
       await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
       // La ventana sigue entera debajo: descartar no navega a ninguna parte.
       expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * El banner de quién atiende `afirma://` (ID-239), probado **por los
+   * puertos** (TD-63): lo que decide es si sale y qué escribe, y las dos cosas
+   * salen de lo que contesten `UrlHandlerChoice` y los ajustes.
+   */
+  describe("the who-opens-site-links banner", () => {
+    const withHandlers = (handlers: UrlHandlerChoice, settings: Partial<Preferences> = {}) =>
+      renderApp(
+        inMemoryRecents(),
+        [],
+        unavailablePdfSource(),
+        settings,
+        emptyCertificateStore(),
+        emptyRubricPicker(),
+        unavailableSigningBackend(),
+        null,
+        inMemoryDocumentDrops(),
+        inMemoryVersionCheck(),
+        handlers,
+      );
+
+    it("asks at startup when somebody else opens the links", async () => {
+      withHandlers(inMemoryUrlHandlers(handlersThatAreOurs({ current: "otra.desktop" })));
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "¿Quieres que rFirma atienda los enlaces de las sedes?",
+      );
+    });
+
+    it("says nothing when rFirma already opens them", async () => {
+      withHandlers(inMemoryUrlHandlers(handlersThatAreOurs()));
+
+      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    /** ID-240: donde no se puede elegir, no hay banner ni promesa. */
+    it("says nothing where the choice cannot be made at all", async () => {
+      withHandlers(
+        inMemoryUrlHandlers(handlersThatAreOurs({ available: false, handlers: [], current: null })),
+      );
+
+      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("writes rFirma as the handler when the answer is yes, and then goes away", async () => {
+      const user = userEvent.setup();
+      const chosen = vi.fn();
+      withHandlers(inMemoryUrlHandlers(handlersThatAreOurs({ current: "otra.desktop" }), chosen));
+
+      await screen.findByRole("status");
+      await user.click(screen.getByRole("button", { name: "Sí" }));
+
+      expect(chosen).toHaveBeenCalledWith("rfirma.desktop");
+      await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    });
+
+    /** «Ahora no» dura lo que la sesión: no se anota nada en el disco. */
+    it("keeps «not now» out of the settings", async () => {
+      const user = userEvent.setup();
+      const { preferences } = withHandlers(
+        inMemoryUrlHandlers(handlersThatAreOurs({ current: "otra.desktop" })),
+      );
+
+      await screen.findByRole("status");
+      await user.click(screen.getByRole("button", { name: "Ahora no" }));
+
+      await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+      expect((await preferences.read()).askAboutUrlHandler).toBe(true);
+    });
+
+    it("remembers «do not ask again» between sessions", async () => {
+      const user = userEvent.setup();
+      const { preferences } = withHandlers(
+        inMemoryUrlHandlers(handlersThatAreOurs({ current: "otra.desktop" })),
+      );
+
+      await screen.findByRole("status");
+      await user.click(screen.getByRole("button", { name: "No volver a preguntar" }));
+
+      await waitFor(async () => expect((await preferences.read()).askAboutUrlHandler).toBe(false));
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("does not ask again once it was told not to", async () => {
+      withHandlers(inMemoryUrlHandlers(handlersThatAreOurs({ current: "otra.desktop" })), {
+        askAboutUrlHandler: false,
+      });
+
+      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
   });
 });

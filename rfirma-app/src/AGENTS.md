@@ -34,9 +34,9 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 99 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 563 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 1129 | El árbol de la ventana y el estado que la recorre. |
+| `main.tsx` | 104 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 587 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 1229 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | 74 | La franja de notificación: el patrón, no el aviso concreto (ID-207). |
@@ -80,8 +80,8 @@ rojo.
 | `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
 | **`preferences/`** | | Los ajustes. |
-| `preferences/preferences.ts` | 113 | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | 413 | La pantalla completa de ajustes, con su índice de secciones. |
+| `preferences/preferences.ts` | 120 | Lo que la aplicación recuerda. |
+| `preferences/PreferencesDialog.tsx` | 743 | La pantalla completa de ajustes, con su índice de **cinco** secciones. |
 | `preferences/Switch.tsx` | 62 | El interruptor. |
 | `preferences/Select.tsx` | 189 | El desplegable. |
 | `preferences/theme.ts` | 40 | El tema de la ventana. |
@@ -97,6 +97,9 @@ rojo.
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
 | **`design-system/`** | | `design-system/icons.tsx` (226), copiados en línea de los artboards. |
+| **`desktop/`** | | El escritorio de la persona, en el lado de la interfaz: quién atiende `afirma://` (ID-238…ID-241). |
+| `desktop/urlHandlers.ts` | 94 | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras: si ya los atiende rFirma y si el banner tiene algo que preguntar. Sin React. |
+| `desktop/UrlHandlerBanner.tsx` | 70 | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
 | **`updates/`** | | `updates/newVersion.ts` (39): el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
 | **`trust/`** | | El aviso del primer arranque (#365): la CA local y el permiso de red local, explicados juntos y sin condición. No es un puerto, no habla con Tauri. |

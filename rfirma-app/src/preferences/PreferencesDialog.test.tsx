@@ -14,6 +14,7 @@ const defaults: Preferences = {
   rememberActivity: true,
   notifyNewVersion: true,
   trustNoticeSeen: false,
+  askAboutUrlHandler: true,
 };
 
 const noop = async () => {};
@@ -48,6 +49,16 @@ function renderDialog(props: Partial<Parameters<typeof PreferencesDialog>[0]> = 
       installedCertificates={[]}
       onInstallCertificate={async () => true}
       onRemoveCertificate={noop}
+      urlHandlers={{
+        available: true,
+        handlers: [
+          { id: "rfirma.desktop", name: "rFirma" },
+          { id: "otra.desktop", name: "La otra" },
+        ],
+        current: "otra.desktop",
+        ours: "rfirma.desktop",
+      }}
+      onChooseUrlHandler={noop}
       onClose={noop}
       {...props}
     />,
@@ -297,8 +308,8 @@ describe("PreferencesDialog", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  /** Los ajustes, repartidos en las cuatro secciones del ID-69. */
-  it("lays the settings out in four sections with an index to the left", () => {
+  /** Los ajustes, repartidos en las secciones del ID-69. */
+  it("lays the settings out in sections with an index to the left", () => {
     renderDialog();
 
     const index = screen.getByRole("navigation", { name: "Secciones" });
@@ -306,7 +317,7 @@ describe("PreferencesDialog", () => {
       within(index)
         .getAllByRole("button")
         .map((row) => row.textContent),
-    ).toEqual(["Firma", "Certificados", "Privacidad", "Apariencia"]);
+    ).toEqual(["Firma", "Certificados", "Sedes", "Privacidad", "Apariencia"]);
 
     const signing = screen.getByRole("region", { name: "Firma" });
     expect(
@@ -611,6 +622,125 @@ describe("PreferencesDialog", () => {
 
       const certificates = screen.getByRole("region", { name: "Certificados" });
       expect(await within(certificates).findByRole("alert")).toBeInTheDocument();
+    });
+  });
+
+  // Quién atiende los enlaces `afirma://` (ID-238, ID-240, ID-241).
+  describe("who opens site links", () => {
+    it("offers what the desktop says is registered, with no application name of its own", async () => {
+      const user = userEvent.setup();
+      renderDialog({
+        urlHandlers: {
+          available: true,
+          handlers: [{ id: "otra.desktop", name: "La otra" }],
+          current: null,
+          ours: "rfirma.desktop",
+        },
+      });
+
+      await user.click(
+        screen.getByRole("combobox", { name: "Quién atiende los enlaces de las sedes" }),
+      );
+
+      const options = screen.getAllByRole("option").map((option) => option.textContent);
+      expect(options).toEqual(["Lo que decida el escritorio", "La otra"]);
+    });
+
+    it("writes the chosen handler by its desktop file", async () => {
+      const user = userEvent.setup();
+      const onChooseUrlHandler = vi.fn(noop);
+      renderDialog({ onChooseUrlHandler });
+
+      await user.click(
+        screen.getByRole("combobox", { name: "Quién atiende los enlaces de las sedes" }),
+      );
+      await user.click(screen.getByRole("option", { name: "rFirma" }));
+
+      expect(onChooseUrlHandler).toHaveBeenCalledWith("rfirma.desktop");
+    });
+
+    it("warns that Firefox keeps its own choice apart", () => {
+      renderDialog();
+
+      expect(screen.getByText(/Firefox usa la elección/)).toBeInTheDocument();
+    });
+
+    it("undoes «do not ask again» right there", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn(noop);
+      renderDialog({
+        preferences: { ...defaults, askAboutUrlHandler: false },
+        onChange,
+      });
+
+      await user.click(screen.getByRole("switch", { name: "Preguntarme al arrancar" }));
+
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ askAboutUrlHandler: true }));
+    });
+
+    it("shows a fixed sentence and no control at all where nobody can be chosen", () => {
+      renderDialog({
+        urlHandlers: { available: false, handlers: [], current: null, ours: "rfirma.desktop" },
+      });
+
+      expect(
+        screen.queryByRole("combobox", { name: "Quién atiende los enlaces de las sedes" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("switch", { name: "Preguntarme al arrancar" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/se elige en los ajustes del escritorio/)).toBeInTheDocument();
+    });
+
+    it("shows neither the dropdown nor the sentence while nothing is known yet", () => {
+      renderDialog({ urlHandlers: null });
+
+      expect(
+        screen.queryByRole("combobox", { name: "Quién atiende los enlaces de las sedes" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("switch", { name: "Preguntarme al arrancar" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/se elige en los ajustes del escritorio/)).not.toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "Sedes" })).toBeInTheDocument();
+    });
+
+    it("falls back to the desktop when the written default is no longer registered", async () => {
+      const user = userEvent.setup();
+      renderDialog({
+        urlHandlers: {
+          available: true,
+          handlers: [{ id: "otra.desktop", name: "La otra" }],
+          current: "desinstalada.desktop",
+          ours: "rfirma.desktop",
+        },
+      });
+
+      const dropdown = screen.getByRole("combobox", {
+        name: "Quién atiende los enlaces de las sedes",
+      });
+      expect(dropdown).toHaveTextContent("Lo que decida el escritorio");
+
+      await user.click(dropdown);
+      const options = screen.getAllByRole("option").map((option) => option.textContent);
+      expect(options).toEqual(["Lo que decida el escritorio", "La otra"]);
+    });
+
+    it("shows in the section that the choice could not be saved", async () => {
+      const user = userEvent.setup();
+      renderDialog({
+        onChooseUrlHandler: async () => {
+          throw { situation: "handlerListUnwritable", detail: "Permission denied" };
+        },
+      });
+
+      await user.click(
+        screen.getByRole("combobox", { name: "Quién atiende los enlaces de las sedes" }),
+      );
+      await user.click(screen.getByRole("option", { name: "rFirma" }));
+
+      const sites = screen.getByRole("region", { name: "Sedes" });
+      expect(await within(sites).findByRole("alert")).toBeInTheDocument();
     });
   });
 });

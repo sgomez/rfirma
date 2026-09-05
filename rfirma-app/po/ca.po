@@ -61,6 +61,24 @@ msgstr ""
 msgid "errors.situations.unknown.body"
 msgstr ""
 
+msgid "errors.situations.handlerNotAvailable.title"
+msgstr ""
+
+msgid "errors.situations.handlerNotAvailable.body"
+msgstr ""
+
+msgid "errors.situations.handlerListUnreadable.title"
+msgstr ""
+
+msgid "errors.situations.handlerListUnreadable.body"
+msgstr ""
+
+msgid "errors.situations.handlerListUnwritable.title"
+msgstr ""
+
+msgid "errors.situations.handlerListUnwritable.body"
+msgstr ""
+
 msgid "errors.situations.notAnAcceptedImage.title"
 msgstr ""
 
@@ -288,6 +306,18 @@ msgstr ""
 
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
 msgid "notifications.newVersion.action"
+msgstr ""
+
+msgid "urlHandler.banner.message"
+msgstr ""
+
+msgid "urlHandler.banner.accept"
+msgstr ""
+
+msgid "urlHandler.banner.later"
+msgstr ""
+
+msgid "urlHandler.banner.never"
 msgstr ""
 
 msgid "header.menu"
@@ -731,6 +761,26 @@ msgid "preferences.sections.privacy"
 msgstr ""
 
 msgid "preferences.sections.appearance"
+msgstr ""
+
+msgid "preferences.sections.sites"
+msgstr ""
+
+msgid "preferences.urlHandler.label"
+msgstr ""
+
+msgid "preferences.urlHandler.unchosen"
+msgstr ""
+
+#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
+msgid "preferences.urlHandler.firefoxKeepsItsOwn"
+msgstr ""
+
+#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
+msgid "preferences.urlHandler.inTheSandbox"
+msgstr ""
+
+msgid "preferences.askAboutUrlHandler.label"
 msgstr ""
 
 msgid "preferences.rememberVisibleSignature.label"

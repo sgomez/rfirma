@@ -336,6 +336,45 @@ pub struct ConfigurationView {
     /// para decidir si lo monta y lo manda de vuelta con `true` en cuanto se
     /// pulsa «Entendido», para que no vuelva en el siguiente arranque.
     pub trust_notice_seen: bool,
+    /// Si al arrancar se pregunta quién atiende los enlaces `afirma://`
+    /// (ID-239). Viaja en los dos sentidos: el banner lo apaga con «No volver
+    /// a preguntar» y Preferencias lo vuelve a encender, que es lo que lo hace
+    /// deshacible ahí mismo.
+    pub ask_about_url_handler: bool,
+}
+
+/// **Quién atiende los enlaces `afirma://`**, tal como lo ve Preferencias
+/// (ID-238, ID-240).
+///
+/// Un solo tipo para las dos situaciones, y la que manda es `available`: dentro
+/// del flatpak no hay pregunta posible, así que la lista **no es corta, es que
+/// no existe**. Una lista vacía sin este booleano se leería como «no hay ningún
+/// manejador instalado», que es otra cosa y llevaría a enseñar un desplegable
+/// vacío en vez de la frase fija del ID-240.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UrlHandlersView {
+    /// Si el escritorio puede contestar quién atiende. `false` es el flatpak,
+    /// y con él Preferencias enseña la frase fija.
+    pub available: bool,
+    /// Lo que el escritorio diga que hay registrado, tal cual y sin ningún
+    /// nombre cableado (ID-238).
+    pub handlers: Vec<UrlHandlerView>,
+    /// El `.desktop` apuntado hoy como `default` explícito, si hay alguno.
+    pub current: Option<String>,
+    /// El `.desktop` con el que se registra rFirma, para que la ventana sepa
+    /// si ya está elegida sin cablearlo.
+    pub ours: String,
+}
+
+/// Un manejador registrado: lo que se lee y lo que se escribe.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UrlHandlerView {
+    /// El fichero `.desktop`, que es lo que va al `mimeapps.list`.
+    pub id: String,
+    /// El nombre visible, tal y como lo dio el escritorio.
+    pub name: String,
 }
 
 /// **La versión nueva que se anuncia en la franja** (ID-181).

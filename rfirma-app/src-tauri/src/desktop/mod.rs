@@ -43,6 +43,19 @@ use std::path::Path;
 /// aquí por una razón distinta.
 const SANDBOX_MARKER: &str = "/.flatpak-info";
 
+/// El fichero `.desktop` con el que rFirma queda registrada en `.deb` y
+/// `.rpm`, que es el que hay que escribir para que el escritorio la llame.
+///
+/// No se pregunta al escritorio «cuál de estos eres tú»: GIO da los
+/// manejadores del esquema y ninguno viene marcado como propio. Sale del
+/// `productName` de `tauri.conf.json`, que es de donde el *bundler* saca el
+/// nombre del lanzador, y una prueba de este módulo lo cuadra con él para que
+/// renombrar el producto no deje esta constante mintiendo.
+///
+/// En el flatpak el lanzador se llama de otra manera —`me.sgomez.rfirma`—,
+/// pero ahí no hay nada que elegir (ID-240), así que esta constante no se usa.
+pub const OUR_DESKTOP_FILE: &str = "rfirma.desktop";
+
 /// El canal de distribución en el que corre este proceso (ADR-0004).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Channel {
@@ -204,6 +217,22 @@ mod tests {
         let handlers = registered_handlers_for_scheme(Channel::Native, "afirma");
 
         assert!(matches!(handlers, RegisteredHandlers::Known(_)));
+    }
+
+    /// El lanzador que se escribe como `default` es el que instalan el `.deb`
+    /// y el `.rpm`, y el *bundler* lo llama como el `productName`: si el
+    /// producto se renombra, esta prueba se pone roja antes de que rFirma se
+    /// registre a sí misma con un nombre que no existe.
+    #[test]
+    fn our_desktop_file_is_the_one_the_bundler_installs() {
+        let configuration: serde_json::Value =
+            serde_json::from_str(include_str!("../../tauri.conf.json"))
+                .expect("tauri.conf.json deberia ser JSON");
+        let product = configuration["productName"]
+            .as_str()
+            .expect("tauri.conf.json deberia declarar productName");
+
+        assert_eq!(OUR_DESKTOP_FILE, format!("{product}.desktop"));
     }
 
     /// El manejador que se ofrece lleva las dos cosas: lo que se lee y lo que

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutDialog } from "./about/AboutDialog";
+import { UrlHandlerBanner } from "./desktop/UrlHandlerBanner";
+import {
+  theBannerHasSomethingToAsk,
+  type UrlHandlerChoice,
+  type UrlHandlers,
+} from "./desktop/urlHandlers";
 import { DocumentTray } from "./documents/DocumentTray";
 import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
@@ -87,6 +93,8 @@ interface AppProps {
   opener: SignedDocumentOpener;
   /** Si hay una versión nueva publicada. Ver [`VersionCheck`]. */
   versions: VersionCheck;
+  /** Quién atiende los enlaces `afirma://`. Ver [`UrlHandlerChoice`]. */
+  urlHandlers: UrlHandlerChoice;
   /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
 }
@@ -114,6 +122,7 @@ export function App({
   signer,
   opener,
   versions,
+  urlHandlers,
   menuAnchor,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
@@ -123,6 +132,12 @@ export function App({
   // segunda memoria aquí sería una regla más que no manda nadie.
   const [newVersion, setNewVersion] = useState<NewVersion | null>(null);
   const [versionDismissed, setVersionDismissed] = useState(false);
+  // Quién atiende los enlaces `afirma://`, preguntado una vez al arrancar, y
+  // si el banner se ha descartado **para esta sesión** —«Ahora no»—. Lo que
+  // sobrevive al cierre es lo otro, «No volver a preguntar», que es un ajuste
+  // y viaja en la configuración (ID-239).
+  const [handlers, setHandlers] = useState<UrlHandlers | null>(null);
+  const [handlerBannerDismissed, setHandlerBannerDismissed] = useState(false);
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   // Por qué no se pudo pintar el último documento que se eligió. Vive al lado
   // del PDF y no dentro del visor porque lo produce quien abre, y el visor solo
@@ -278,6 +293,28 @@ export function App({
       current = false;
     };
   }, [versions]);
+
+  // Quién atiende `afirma://` se pregunta **una vez, al arrancar**, por lo
+  // mismo que la versión: es lo que decide si sale el banner, y el banner es
+  // preventivo por narices —cuando el trámite lo atiende la otra aplicación,
+  // rFirma ni se ejecuta— (ID-239). Dentro del flatpak la respuesta es que no
+  // se puede saber, y entonces no hay banner ni desplegable (ID-240).
+  useEffect(() => {
+    let current = true;
+    urlHandlers
+      .who()
+      .then((who) => {
+        if (current) setHandlers(who);
+      })
+      .catch(() => {
+        // Que el escritorio no conteste no es asunto de quien está firmando:
+        // sin respuesta no hay banner, y Preferencias enseña la sección sin
+        // desplegable.
+      });
+    return () => {
+      current = false;
+    };
+  }, [urlHandlers]);
 
   // El tema elegido, puesto en el documento. Es lo único de los ajustes que no
   // se pinta dentro de la ventana sino **sobre** ella: los tokens de color
@@ -667,6 +704,40 @@ export function App({
     }
   };
 
+  /**
+   * Deja apuntado quién atiende los enlaces `afirma://` y lo refleja sin
+   * volver a preguntar al escritorio: lo que se acaba de escribir es lo que
+   * hay. Si el escritorio lo rechaza, **el rechazo sigue su camino** hasta
+   * Preferencias, que sabe dónde va el aviso (ID-70).
+   */
+  const chooseUrlHandler = async (handler: string) => {
+    await urlHandlers.choose(handler);
+    setHandlers((who) => (who === null ? who : { ...who, current: handler }));
+  };
+
+  /**
+   * El «Sí» del banner: el mismo atajo que el desplegable, con rFirma como
+   * elegida (ID-239). Si el escritorio lo rechaza el banner se queda donde
+   * estaba —no se ha elegido nada— y quien quiera enterarse del porqué lo
+   * intenta en Preferencias, que es la pantalla que enseña los fallos.
+   */
+  const acceptUrlHandler = () => {
+    if (handlers === null) return;
+    void chooseUrlHandler(handlers.ours).catch(() => {});
+  };
+
+  /**
+   * El «No volver a preguntar»: apaga el ajuste **y** cierra el banner. Es lo
+   * único del banner que sobrevive al cierre de la aplicación, y se vuelve a
+   * encender en Preferencias.
+   */
+  const neverAskAboutUrlHandler = () => {
+    setHandlerBannerDismissed(true);
+    if (settings !== null) {
+      void changeSettings({ ...settings, askAboutUrlHandler: false }).catch(() => {});
+    }
+  };
+
   // ── La vista previa del sello (ID-107) ───────────────────────────────────
   //
   // La orden en seco es **la misma** que se manda a firmar: por eso lo que se
@@ -845,6 +916,17 @@ export function App({
               dismissLabel={t("actions.dismiss")}
               onDismiss={() => setVersionDismissed(true)}
             />
+          ) : // El segundo inquilino del hueco, y el que cede: el aviso de
+          // versión llega una vez cada 24 h y esta pregunta puede esperar al
+          // arranque siguiente (ID-239). Dos franjas a la vez serían 82 px
+          // comidos a una ventana cuyo mínimo son 560.
+          !handlerBannerDismissed &&
+            theBannerHasSomethingToAsk(handlers, settings?.askAboutUrlHandler ?? false) ? (
+            <UrlHandlerBanner
+              onAccept={acceptUrlHandler}
+              onLater={() => setHandlerBannerDismissed(true)}
+              onNever={neverAskAboutUrlHandler}
+            />
           ) : null
         }
         tray={
@@ -959,6 +1041,8 @@ export function App({
           installedCertificates={installed}
           onInstallCertificate={installCertificate}
           onRemoveCertificate={removeCertificate}
+          urlHandlers={handlers}
+          onChooseUrlHandler={chooseUrlHandler}
           onClose={() => setDialog(null)}
         />
       )}

@@ -53,6 +53,13 @@ export interface Preferences {
    * «Entendido».
    */
   trustNoticeSeen: boolean;
+  /**
+   * Si al arrancar se pregunta quién atiende los enlaces `afirma://`
+   * (ID-239). Es el «No volver a preguntar» del banner, guardado del revés
+   * —lo que se guarda es si se sigue preguntando—, y **se deshace en
+   * Preferencias**: es un interruptor más de la sección de sedes.
+   */
+  askAboutUrlHandler: boolean;
 }
 
 /**

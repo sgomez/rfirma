@@ -63,6 +63,24 @@ msgstr ""
 "Vuelve a intentarlo. Si sigue ocurriendo, adjunta el detalle técnico al "
 "informe del fallo."
 
+msgid "errors.situations.handlerNotAvailable.title"
+msgstr "No se puede cambiar quién atiende los enlaces"
+
+msgid "errors.situations.handlerNotAvailable.body"
+msgstr "Esta versión de rFirma no puede escribir esa elección: se cambia en los ajustes del escritorio."
+
+msgid "errors.situations.handlerListUnreadable.title"
+msgstr "No se ha podido leer la elección del escritorio"
+
+msgid "errors.situations.handlerListUnreadable.body"
+msgstr "El fichero donde el escritorio la guarda no se ha podido leer, así que se ha dejado como estaba."
+
+msgid "errors.situations.handlerListUnwritable.title"
+msgstr "No se ha podido guardar quién atiende los enlaces"
+
+msgid "errors.situations.handlerListUnwritable.body"
+msgstr "El fichero donde el escritorio la guarda no se ha podido escribir."
+
 msgid "errors.situations.notAnAcceptedImage.title"
 msgstr "Esa imagen no vale como rúbrica"
 
@@ -340,6 +358,18 @@ msgstr "Hay una versión nueva de rFirma: {{version}}"
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
 msgid "notifications.newVersion.action"
 msgstr "Cómo actualizar"
+
+msgid "urlHandler.banner.message"
+msgstr "¿Quieres que rFirma atienda los enlaces de las sedes?"
+
+msgid "urlHandler.banner.accept"
+msgstr "Sí"
+
+msgid "urlHandler.banner.later"
+msgstr "Ahora no"
+
+msgid "urlHandler.banner.never"
+msgstr "No volver a preguntar"
 
 msgid "header.menu"
 msgstr "Menú"
@@ -807,6 +837,26 @@ msgstr "Privacidad"
 
 msgid "preferences.sections.appearance"
 msgstr "Apariencia"
+
+msgid "preferences.sections.sites"
+msgstr "Sedes"
+
+msgid "preferences.urlHandler.label"
+msgstr "Quién atiende los enlaces de las sedes"
+
+msgid "preferences.urlHandler.unchosen"
+msgstr "Lo que decida el escritorio"
+
+#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
+msgid "preferences.urlHandler.firefoxKeepsItsOwn"
+msgstr "Firefox usa la elección que guarda en sus propias preferencias."
+
+#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
+msgid "preferences.urlHandler.inTheSandbox"
+msgstr "Esta versión no puede cambiarlo: se elige en los ajustes del escritorio."
+
+msgid "preferences.askAboutUrlHandler.label"
+msgstr "Preguntarme al arrancar"
 
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Recordar la última configuración de firma visible"
