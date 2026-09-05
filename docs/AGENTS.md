@@ -40,7 +40,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
 `native-image-postfirma-ce25` · `native-image-shared-pades` ·
-`opensc-del-sistema` · `p12-en-almacen-nss` · `pades-triphase-contract` ·
+`nssdb-trusted-server-cert` · `opensc-del-sistema` · `p12-en-almacen-nss` ·
+`pades-triphase-contract` ·
 `pkcs11-mecanismo-firma` · `prefirma-en-seco-pdfjs` ·
 `recuadro-replicado-pdfsig` · `rutas-reales-con-filesystem-home` ·
 `token-flags-login` · `token-pkcs11-pruebas`
