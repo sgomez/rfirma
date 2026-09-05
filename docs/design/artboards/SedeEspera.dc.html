@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{tema}}" style="width:720px;height:600px;display:flex;align-items:center;justify-content:center;background:var(--rf-surface);position:relative;overflow:hidden">
+
+<div style="width:520px;height:420px;flex:none;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--rf-bg);border:1px solid var(--rf-border-subtle);
+  border-radius:var(--rf-radius-lg);box-shadow:var(--rf-shadow-elevated)">
+
+  <div class="rf-row" style="height:32px;flex:none;gap:var(--rf-space-xs);
+    padding:0 6px 0 var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
+    background:var(--rf-surface)">
+    <span class="rf-body" style="font-weight:700;letter-spacing:.4px">rFirma</span>
+    <div style="flex:1"></div>
+    <span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+  </div>
+
+  <div style="flex:1;min-height:0;position:relative">
+    <div style="position:absolute;inset:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;justify-content:{{alineado}};gap:10px;overflow:hidden">
+
+      <div class="rf-row rf-gap-xs" style="align-items:flex-start;flex:none">
+        <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text-muted)">
+          <sc-if value="{{esEsperando}}" hint-placeholder-val="{{true}}">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </sc-if>
+          <sc-if value="{{esReparacion}}" hint-placeholder-val="{{false}}">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>
+          </sc-if>
+        </span>
+        <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
+          <p class="rf-title" style="font-size:15px;line-height:1.25">{{titulo}}</p>
+          <p class="rf-hint">{{entradilla}}</p>
+        </div>
+      </div>
+
+      <sc-if value="{{esEsperando}}" hint-placeholder-val="{{true}}">
+        <div style="flex:none;height:4px;margin-top:4px;border-radius:var(--rf-radius-pill);background:var(--rf-border-subtle);overflow:hidden">
+          <div style="width:38%;height:100%;border-radius:var(--rf-radius-pill);background:var(--rf-primary)"></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{caPrimero}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row rf-gap-xs" style="flex:none;align-items:center;padding:8px 10px;
+          border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span style="display:flex;flex:none;color:var(--rf-text-muted)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v6c0 4.5 3 7.6 7.5 9 4.5-1.4 7.5-4.5 7.5-9V6z"/></svg></span>
+          <p class="rf-body" style="flex:1;min-width:0;line-height:1.45">Falta la <strong>CA local de rFirma</strong>.</p>
+          <button class="rf-btn rf-btn--primary" style="flex:none;min-height:28px;padding:0 10px;font-size:12px">Instalar…</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{esReparacion}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row" style="flex:none;gap:3px;padding:3px;align-self:flex-start;
+          border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-pill);background:var(--rf-surface)">
+          <span style="height:26px;padding:0 14px;display:flex;align-items:center;border-radius:var(--rf-radius-pill);
+            font-size:12px;font-weight:600;background:{{fondoChrome}};color:{{textoChrome}}">Chrome</span>
+          <span style="height:26px;padding:0 14px;display:flex;align-items:center;border-radius:var(--rf-radius-pill);
+            font-size:12px;font-weight:600;background:{{fondoFirefox}};color:{{textoFirefox}}">Firefox</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{esChrome}}" hint-placeholder-val="{{false}}">
+        <div class="rf-stack" style="gap:8px;flex:none">
+          <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+            <span style="width:20px;height:20px;flex:none;border-radius:var(--rf-radius-pill);
+              border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;
+              font-size:11px;font-weight:700">1</span>
+            <p class="rf-prose" style="flex:1;min-width:0;font-size:13px">Pulsa <strong>Permitir</strong> en la franja bajo la barra de direcciones.</p>
+          </div>
+          <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+            <span style="width:20px;height:20px;flex:none;border-radius:var(--rf-radius-pill);
+              border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;
+              font-size:11px;font-weight:700">2</span>
+            <div class="rf-stack" style="gap:6px;flex:1;min-width:0">
+              <p class="rf-prose" style="font-size:13px">Si ya no está:</p>
+              <div class="rf-row" style="gap:6px">
+                <div class="rf-input rf-row" style="flex:1;min-width:0;min-height:30px;padding:0 10px;font-size:12px;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">chrome://settings/content/loopbackNetwork</div>
+                <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:30px;padding:0 10px;font-size:12px;gap:6px">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+                  Copiar</button>
+              </div>
+              <p class="rf-hint">O: candado › Configuración de sitios › Acceso a la red local.</p>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{esFirefox}}" hint-placeholder-val="{{false}}">
+        <div class="rf-stack" style="gap:8px;flex:none">
+          <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+            <span style="width:20px;height:20px;flex:none;border-radius:var(--rf-radius-pill);
+              border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;
+              font-size:11px;font-weight:700">1</span>
+            <p class="rf-prose" style="flex:1;min-width:0;font-size:13px">Pulsa <strong>Permitir</strong> en el panel junto a la barra de direcciones.</p>
+          </div>
+          <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+            <span style="width:20px;height:20px;flex:none;border-radius:var(--rf-radius-pill);
+              border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;
+              font-size:11px;font-weight:700">2</span>
+            <p class="rf-prose" style="flex:1;min-width:0;font-size:13px">Si ya no está: candado › <strong>Conexión segura</strong> › <strong>Más información</strong> › <strong>Permisos</strong> › Acceso a la red local.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{caDespues}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row rf-gap-xs" style="flex:none;align-items:center;padding:8px 10px;
+          border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span style="display:flex;flex:none;color:var(--rf-text-muted)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v6c0 4.5 3 7.6 7.5 9 4.5-1.4 7.5-4.5 7.5-9V6z"/></svg></span>
+          <p class="rf-body" style="flex:1;min-width:0;line-height:1.45">Falta la <strong>CA local de rFirma</strong>.</p>
+          <button class="rf-btn rf-btn--primary" style="flex:none;min-height:28px;padding:0 10px;font-size:12px">Instalar…</button>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <sc-if value="{{hayScroll}}" hint-placeholder-val="{{false}}">
+      <span style="position:absolute;left:0;right:0;bottom:0;height:36px;pointer-events:none;
+        background:linear-gradient(to bottom, transparent, var(--rf-bg))"></span>
+      <span style="position:absolute;right:5px;top:8px;width:4px;height:170px;border-radius:var(--rf-radius-pill);
+        background:var(--rf-border-strong);opacity:.5"></span>
+    </sc-if>
+  </div>
+
+  <div class="rf-row rf-gap-sm" style="flex:none;padding:8px var(--rf-space-md);
+    border-top:1px solid var(--rf-border-subtle);align-items:center">
+    <sc-if value="{{esReparacion}}" hint-placeholder-val="{{false}}">
+      <p class="rf-hint" style="flex:1;min-width:0;font-weight:700;color:var(--rf-text)">Tras permitir, vuelve a la sede y pulsa <strong>Reintentar</strong>.</p>
+    </sc-if>
+    <sc-if value="{{esEsperando}}" hint-placeholder-val="{{true}}">
+      <div style="flex:1"></div>
+    </sc-if>
+    <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:36px">{{botonCierre}}</button>
+  </div>
+
+</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"momento":{"editor":"enum","options":["esperando","no-va-chrome","no-va-firefox"],"default":"esperando","section":"Momento"},"$preview":{"width":720,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // La ventana de sede en su PRIMER estado. Material fijo del #332, que aqui
+    // solo se dibuja:
+    //
+    // - Retardo de ~400 ms antes de pintar nada. El camino feliz abre el canal
+    //   en ~44 ms, asi que quien ve «esperando» es quien espera de verdad; por
+    //   debajo del retardo no se ensena ningun fogonazo.
+    // - Un solo umbral, ~30 s desde la invocacion, para pasar de «esperando» a
+    //   «esto no va». NUNCA se cierra sola: no hay temporizador de cierre en
+    //   ninguna de las tres opciones.
+    // - Solo texto, sin capturas: el aviso del navegador se describe por su
+    //   FORMA (franja bajo la barra en Chrome, panel colgando en Firefox) y se
+    //   cita el boton «Permitir».
+    // - El camino de reparacion NO diagnostica: rfirma no puede saber si el
+    //   permiso se denegio, asi que no hay mensaje de causa, hay un conmutador
+    //   entre dos recetas y la persona elige la suya.
+    // - La direccion de Chrome se COPIA, no se pulsa (rfirma no puede abrir un
+    //   «chrome://» y `opener:deny-open-url` sigue denegado), con la ruta por
+    //   el candado al lado como segunda via.
+    // - El bloque de la CA local va APARTE del conmutador y PRIMERO en Chrome:
+    //   sin CA instalada el navegador ni siquiera llega a preguntar, asi que en
+    //   Chrome precede a la receta; en Firefox la sigue.
+    // - Cerrar la ventana durante la espera abandona el tramite y libera el
+    //   `idsession`, sin pedir confirmacion: por eso el boton es fantasma y no
+    //   hay dialogo detras.
+    //
+    // La frase obligatoria «tras permitir, vuelve a la sede y pulsa Reintentar»
+    // vive en el PIE y no como tercer paso: es el desenlace de las dos recetas,
+    // no un paso de una, y en el pie se queda visible aunque el cuerpo se
+    // desplace. `Reintentar` es un boton de la SEDE, no de esta ventana, y por
+    // eso esta ventana no lo tiene.
+    const m = this.props.momento ?? "esperando";
+    const esEsperando = m === "esperando";
+    const esChrome = m === "no-va-chrome";
+    const esFirefox = m === "no-va-firefox";
+    const esReparacion = esChrome || esFirefox;
+
+    const activo = "var(--rf-primary)";
+    const activoTexto = "var(--rf-on-primary)";
+    const inactivo = "transparent";
+    const inactivoTexto = "var(--rf-text-muted)";
+
+    return {
+      tema: this.props.tema ?? "light",
+      esEsperando: esEsperando,
+      esReparacion: esReparacion,
+      esChrome: esChrome,
+      esFirefox: esFirefox,
+      alineado: esEsperando ? "center" : "flex-start",
+      caPrimero: esChrome,
+      caDespues: esFirefox,
+      titulo: esEsperando ? "Conectando con la sede" : "La petición no ha llegado",
+      entradilla: esEsperando
+        ? "Una página quiere que firmes un documento."
+        : "Suele faltar el permiso del navegador.",
+      fondoChrome: esChrome ? activo : inactivo,
+      textoChrome: esChrome ? activoTexto : inactivoTexto,
+      fondoFirefox: esFirefox ? activo : inactivo,
+      textoFirefox: esFirefox ? activoTexto : inactivoTexto,
+      // Las dos recetas caben en los 420 px de alto de la ventana, y esa es la
+      // razon de que el texto este tan recortado: el boton «Copiar» y la ruta
+      // por el candado NO pueden quedar bajo el pliegue, que es donde caian con
+      // la primera redaccion.
+      hayScroll: false,
+      botonCierre: esEsperando ? "Cancelar" : "Cerrar"
+    };
+  }
+}
+</script>
+</body>
+</html>

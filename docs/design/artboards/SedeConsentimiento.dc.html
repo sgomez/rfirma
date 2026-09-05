@@ -1,0 +1,423 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{tema}}" style="width:720px;height:600px;display:flex;align-items:center;justify-content:center;background:var(--rf-surface);position:relative;overflow:hidden">
+
+<div style="width:520px;height:420px;flex:none;display:flex;flex-direction:column;
+  background:var(--rf-bg);border:1px solid var(--rf-border-subtle);
+  border-radius:var(--rf-radius-lg);box-shadow:var(--rf-shadow-elevated)">
+
+  <div class="rf-row" style="height:32px;flex:none;gap:var(--rf-space-xs);
+    padding:0 6px 0 var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
+    background:var(--rf-surface);border-radius:var(--rf-radius-lg) var(--rf-radius-lg) 0 0">
+    <span class="rf-body" style="font-weight:700;letter-spacing:.4px">rFirma</span>
+    <div style="flex:1"></div>
+    <span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+  </div>
+
+  <div style="flex:1;min-height:0;position:relative">
+    <div style="position:absolute;inset:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;gap:10px">
+
+      <sc-if value="{{esSelector}}" hint-placeholder-val="{{false}}">
+        <p class="rf-title" style="flex:none;font-size:16px">Elige un certificado</p>
+      </sc-if>
+
+      <sc-if value="{{hayOrigen}}" hint-placeholder-val="{{true}}">
+        <p class="rf-title" style="flex:none;font-size:15px;line-height:1.35"><strong>{{sede}}</strong>{{peticion}}</p>
+      </sc-if>
+
+      <sc-if value="{{sinOrigen}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row rf-gap-xs" style="flex:none;align-items:flex-start;padding:10px;
+          border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text-muted)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></span>
+          <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+            <p class="rf-title" style="font-size:14px;line-height:1.3">Origen sin identificar</p>
+            <p class="rf-hint">La petición pide una firma y no indica de qué página viene.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{hayDoc}}" hint-placeholder-val="{{true}}">
+        <div class="rf-stack" style="gap:6px;flex:none;padding:10px var(--rf-space-sm);
+          border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+            <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text-muted)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+            <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+              <p class="rf-title" style="font-size:14px;line-height:1.3;{{estiloTitulo}}">{{tituloDoc}}</p>
+              <sc-if value="{{hayMetaDoc}}" hint-placeholder-val="{{true}}">
+                <p class="rf-body rf-text-muted">{{metaDoc}}</p>
+              </sc-if>
+            </div>
+          </div>
+          <sc-if value="{{hayCofirma}}" hint-placeholder-val="{{false}}">
+            <p class="rf-body" style="line-height:1.5">Ya lleva <strong>1 firma</strong>: la tuya será una <strong>cofirma</strong>.</p>
+          </sc-if>
+        </div>
+      </sc-if>
+
+
+      <sc-if value="{{haySelector}}" hint-placeholder-val="{{true}}">
+        <div class="rf-stack rf-gap-xs" style="flex:none">
+          <sc-if value="{{hayEtiquetaCert}}" hint-placeholder-val="{{true}}">
+            <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">{{etiquetaCert}}</p>
+          </sc-if>
+          <div style="position:relative">
+            <button type="button" style="display:flex;align-items:center;gap:var(--rf-space-xs);width:100%;text-align:left;padding:var(--rf-space-sm);background:var(--rf-surface);color:var(--rf-text);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);font-family:inherit;cursor:pointer" onClick="{{alternar}}">
+              <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+              <sc-if value="{{elegido}}" hint-placeholder-val="{{true}}">
+                <span class="rf-stack" style="gap:6px;flex:1;min-width:0">
+                  <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{titular}}</span>
+                  <span class="rf-body rf-text-muted" style="line-height:1.35">{{linea}}</span>
+                </span>
+              </sc-if>
+              <sc-if value="{{noElegido}}" hint-placeholder-val="{{false}}">
+                <span class="rf-body" style="flex:1;font-weight:600">Elegir certificado</span>
+              </sc-if>
+              <span style="{{estiloFlecha}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+            </button>
+            <sc-if value="{{abierto}}" hint-placeholder-val="{{false}}">
+              <div style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated)">
+                <ul style="list-style:none;margin:0;padding:0;max-height:232px;overflow-y:auto;background:var(--rf-surface);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+                  <sc-for list="{{filas}}" as="fila" hint-placeholder-count="3">
+                    <li>
+                      <sc-if value="{{fila.hayEncabezado}}" hint-placeholder-val="{{false}}">
+                        <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;margin:0;
+                          padding:8px var(--rf-space-sm) 4px;background:var(--rf-bg)">{{fila.encabezado}}</p>
+                      </sc-if>
+                      <button type="button" style="{{fila.estilo}}" disabled="{{fila.inutil}}" onClick="{{fila.elegir}}">
+                        <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
+                          <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{fila.titular}}</span>
+                          <span class="rf-body rf-text-muted" style="line-height:1.35">{{fila.linea}}</span>
+                          <sc-if value="{{fila.inutil}}" hint-placeholder-val="{{false}}">
+                            <span class="rf-body" style="line-height:1.35;font-weight:600">{{fila.aviso}}</span>
+                          </sc-if>
+                        </span>
+                        <span style="display:flex;flex:none;width:16px;margin-top:3px;color:var(--rf-primary)">
+                          <sc-if value="{{fila.elegida}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg></sc-if>
+                        </span>
+                      </button>
+                    </li>
+                  </sc-for>
+                </ul>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{hayAcotado}}" hint-placeholder-val="{{false}}">
+        <p class="rf-prose" style="flex:none;font-size:13px">{{sede}} <strong>ha limitado los certificados válidos</strong>.</p>
+      </sc-if>
+
+      <sc-if value="{{hayEntrega}}" hint-placeholder-val="{{false}}">
+        <div class="rf-stack" style="gap:4px;flex:none;padding:10px var(--rf-space-sm);
+          border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <p class="rf-prose" style="font-size:13px">Se enviarán tu <strong>nombre</strong>, tu <strong>NIF</strong>, el <strong>emisor</strong> del certificado y su <strong>número de serie</strong>.</p>
+        </div>
+      </sc-if>
+
+
+    </div>
+  </div>
+
+  <div class="rf-row rf-gap-xs" style="flex:none;padding:10px var(--rf-space-md);
+    border-top:1px solid var(--rf-border-subtle);justify-content:flex-end">
+    <sc-if value="{{hayCancelar}}" hint-placeholder-val="{{true}}">
+      <button class="rf-btn rf-btn--ghost" style="min-height:36px">Cancelar</button>
+    </sc-if>
+    <button class="rf-btn rf-btn--primary" style="min-height:36px">{{botonPrincipal}}</button>
+  </div>
+
+</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"forma":{"editor":"enum","options":["hoy · selector de certificado","confirmacion"],"default":"confirmacion","section":"Forma del consentimiento"},"situacion":{"editor":"enum","options":["un certificado","varios acotados por la sede","entregar identidad · selectcert","PDF sin titulo · sin origen"],"default":"un certificado","section":"Situacion"},"lote":{"editor":"enum","options":["uno","varios"],"default":"uno","section":"Documentos (fuera de la v0.5)"},"$preview":{"width":720,"height":600}}'>
+// La fila del desplegable, COPIADA DE `EstadoElegirCertificado`: mismas clases,
+// mismo relleno (12/16), misma raya entre filas y misma atenuacion para la que
+// no se puede elegir. Aqui no se dibuja una lista propia de certificados.
+const FILA = "display:flex;align-items:flex-start;gap:var(--rf-space-xs);width:100%;" +
+  "text-align:left;padding:12px var(--rf-space-sm);background:transparent;" +
+  "color:var(--rf-text);border:0;font-family:inherit";
+
+const TODOS = [
+  { id: 1, titular: "ADA LOVELACE BYRON", dni: "99999999R", emisor: "AC FNMT Usuarios", almacen: "Instalado en rFirma", aviso: "" },
+  { id: 2, titular: "GRACE HOPPER MURRAY", dni: "88888888T", emisor: "AC Representación", almacen: "Chrome", aviso: "" },
+  { id: 3, titular: "ALAN TURING MATHISON", dni: "77777777P", emisor: "AC FNMT Usuarios", almacen: "Firefox", aviso: "Caducó el 3 de marzo de 2020" }
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    // EL CORAZON DEL #317. Sostiene la invariante mas fuerte del hito: una sede
+    // NUNCA provoca una firma silenciosa. `headless` y `mandatoryCertSelection`
+    // se ignoran los dos, asi que esta pantalla aparece SIEMPRE, tambien con un
+    // solo certificado.
+    //
+    // UN SOLO DOCUMENTO. La peticion trae `op`, `idsession`, `algorithm`,
+    // `format`, `dat` (UN PDF en Base64) y `properties`. No hay lote ni `batch`
+    // en este hito, asi que aqui no se dibuja ningun caso de varios documentos
+    // ni se escribe un plural que lo sugiera. Y NO existe ningun parametro con
+    // el nombre del documento: el `extraData` con el nombre del fichero va en la
+    // RESPUESTA, y `appname` esta roto en el original. La sede NUNCA nombra el
+    // documento, asi que aqui no se inventa ni nombre de fichero ni ruta. Se
+    // ensena solo lo que se sabe con verdad: el origen atribuido, lo que el PDF
+    // dice de si mismo y el certificado con el que se firmaria. No hay visor.
+    //
+    // EL ORIGEN VA ATRIBUIDO EN LA PROPIA FRASE, no en una explicacion aparte:
+    // «la peticion dice venir de …». Ese «dice venir» ES el registro del #312 y
+    // se basta solo; el parrafo que contaba que rFirma no puede comprobarlo se
+    // ha borrado. Sin origen valido (falta, vale `null`, o no empieza por
+    // `https://` — los tres el mismo caso) no se inventa nombre: se avisa con
+    // peso, y se puede consentir igual.
+    //
+    // REGLA DURA: jamas se enumeran los certificados descartados POR LA SEDE ni
+    // el criterio que los descarto. Eso seria contarle a la persona la politica
+    // de la sede. De ahi que «varios acotados» diga SOLO que la sede ha
+    // limitado, sin decir que ha limitado ni por que. El caso de que la sede
+    // excluya TODOS los certificados YA NO VIVE AQUI: no es una variante de
+    // esta pantalla sino otra situacion —sin nada que consentir, sin nada que
+    // elegir y con otra salida—, y se dibuja entera en `SedeSinCertificado`,
+    // opcion «excluidos».
+    // Lo que si se ordena y se agrupa dentro del desplegable es lo de siempre
+    // —disponibles arriba, no utilizables abajo—, que es estado del almacen de
+    // la persona y no politica de nadie.
+    const forma = this.props.forma ?? "confirmacion";
+    const sit = this.props.situacion ?? "un certificado";
+    // PALANCA `lote`: COMPROBACION DE RESISTENCIA, NO ALCANCE DEL HITO. El
+    // `batch` esta FUERA de la v0.5 (contrato del protocolo §6; «Out of scope»
+    // del mapa #308, ficha 18b, v1.0). Se dibuja solo para ver si la ventana
+    // aguantaria N documentos sin crecer.
+    //
+    // EL DATO QUE DECIDE EL DIBUJO: el `batch` viaja con URL de prefirma y de
+    // posfirma, y los documentos los resuelve el `DocumentManager` DEL SERVIDOR
+    // DE LA SEDE. rFirma no recibe los PDF, recibe una definicion de lote: no
+    // hay titulo, ni paginas, ni tamano, ni nada que listar. Por eso `varios`
+    // ensena UN RECUENTO y nada mas — ni lista, ni nombres, ni desplazamiento —
+    // y por eso la ventana mide lo mismo con 2 que con 200.
+    const esLote = (this.props.lote ?? "uno") === "varios";
+
+    const esSelector = forma === "hoy · selector de certificado";
+    const esConfirmacion = !esSelector;
+
+    const esUno = sit === "un certificado";
+    const esVarios = sit === "varios acotados por la sede";
+    const esIdentidad = sit === "entregar identidad · selectcert";
+    const esSinTitulo = sit === "PDF sin titulo · sin origen";
+
+    const sede = "sede.ejemplo.gob.es";
+
+    const visibles = esVarios ? TODOS : [TODOS[0]];
+
+    // El PDF cofirmado y el PDF sin titulo son documentos distintos a proposito:
+    // asi la palanca de situacion cambia el bloque entero y no una linea.
+    let tituloDoc = "Solicitud de subvención 2026";
+    let metaDoc = "27 páginas · 2,4 MB";
+    let estiloTitulo = "";
+    if (esVarios) {
+      tituloDoc = "Convenio de colaboración";
+      metaDoc = "12 páginas · 860 KB";
+    }
+    if (esSinTitulo) {
+      tituloDoc = "Un PDF sin título";
+      metaDoc = "8 páginas · 310 KB";
+      estiloTitulo = "color:var(--rf-text-muted);font-weight:400";
+    }
+    if (esLote) {
+      tituloDoc = "12 documentos";
+      metaDoc = "";
+      estiloTitulo = "";
+    }
+
+    const hayDocumento = !esIdentidad;
+
+    // Mover una palanca reinicia lo que se haya tocado con el raton.
+    const clave = [forma, sit, esLote].join("|");
+    const s = (this.state && this.state.clave === clave) ? this.state : {};
+    // En «hoy» el desplegable nace ABIERTO: es la unica forma de ver que esa
+    // pantalla no dice ni quien pide ni que se firma, solo una lista.
+    const abierto = s.abierto !== undefined ? s.abierto : esSelector;
+    const elegidoId = s.elegidoId !== undefined ? s.elegidoId
+      : (visibles.length ? visibles[0].id : null);
+    const elegido = visibles.filter(function (c) { return c.id === elegidoId; })[0] || null;
+
+    const self = this;
+    const filas = visibles.map(function (c, indice) {
+      const inutil = Boolean(c.aviso);
+      const ultima = indice === visibles.length - 1;
+      const anterior = indice > 0 ? visibles[indice - 1] : null;
+      const abreGrupo = visibles.length > 1 &&
+        (indice === 0 || Boolean(anterior.aviso) !== inutil);
+      return {
+        hayEncabezado: abreGrupo,
+        encabezado: inutil ? "No utilizables" : "Disponibles",
+        titular: c.titular,
+        linea: c.dni + " · " + c.emisor + " · " + c.almacen,
+        aviso: c.aviso,
+        inutil: inutil,
+        elegida: c.id === elegidoId,
+        estilo: FILA +
+          (ultima ? "" : ";border-bottom:1px solid var(--rf-border-subtle)") +
+          (inutil ? ";cursor:not-allowed;opacity:.55" : ";cursor:pointer"),
+        elegir: inutil ? function () {} : function () {
+          self.setState({ clave: clave, abierto: false, elegidoId: c.id });
+        }
+      };
+    });
+
+    return {
+      tema: this.props.tema ?? "light",
+      sede: sede,
+      esSelector: esSelector,
+
+      // El selector de hoy no dice ni quien pide ni que se firma: esa es
+      // exactamente la carencia que la opcion «hoy» pone delante.
+      hayOrigen: esConfirmacion && !esSinTitulo,
+      sinOrigen: esConfirmacion && esSinTitulo,
+      peticion: esIdentidad ? " pide que te identifiques." : " pide tu firma.",
+
+      hayDoc: esConfirmacion && hayDocumento,
+      tituloDoc: tituloDoc,
+      metaDoc: metaDoc,
+      hayMetaDoc: Boolean(metaDoc),
+      estiloTitulo: estiloTitulo,
+      hayCofirma: esVarios && !esLote,
+
+      hayAcotado: esConfirmacion && esVarios,
+
+      // EL MISMO desplegable en las dos formas. Con el certificado en una linea,
+      // «confirmacion escrita» y «confirmacion · certificado plegado» dejaban de
+      // distinguirse en nada: eran la misma pantalla y se han fundido en una.
+      haySelector: true,
+      hayEtiquetaCert: esConfirmacion,
+      etiquetaCert: esIdentidad ? "Te identificarás con" : "Firmarás con",
+      abierto: abierto,
+      filas: filas,
+      elegido: Boolean(elegido),
+      noElegido: !elegido,
+      titular: elegido ? elegido.titular : "",
+      linea: elegido ? elegido.dni + " · Emitido por " + elegido.emisor : "",
+      estiloFlecha: "display:flex;flex:none;color:var(--rf-text-muted)" +
+        (abierto ? ";transform:rotate(180deg)" : ""),
+      alternar: function () {
+        self.setState({ clave: clave, abierto: !abierto, elegidoId: elegidoId });
+      },
+
+      hayEntrega: esConfirmacion && esIdentidad,
+
+      hayCancelar: true,
+      botonPrincipal: esSelector ? "Aceptar"
+        : esIdentidad ? "Identificarse"
+        : "Firmar"
+    };
+  }
+}
+</script>
+</body>
+</html>
