@@ -30,6 +30,7 @@ pub mod certificates;
 pub mod configuration;
 pub mod cycle;
 pub mod documents;
+pub mod errand;
 pub mod filtering;
 pub mod frontier;
 pub mod in_hand;

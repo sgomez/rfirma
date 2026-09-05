@@ -22,6 +22,7 @@
 
 use serde_json::Value;
 
+use rfirma_lib::app::errand::LiveErrand;
 use rfirma_lib::app::frontier;
 use rfirma_lib::app::site::{attend_launch, Attendance};
 use rfirma_lib::channel::Situation as ChannelSituation;
@@ -147,9 +148,29 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
          &dat=file://{A_PORTAL_HANDLE}&fileid={A_DOCUMENT_NAME}"
     );
 
-    match attend_launch(&url, &transport) {
+    let live = LiveErrand::default();
+    match attend_launch(&url, &transport, &live) {
         Attendance::RefusingOverTheChannel { answer, .. } => lines.push(answer.on_the_wire()),
         other => panic!("con puertos el rechazo sale por el socket: {other:?}"),
+    }
+
+    // Y la invocación que llega con un trámite ya vivo (ID-280), que es la otra
+    // línea que `attend_launch` puede escribir en el socket: la URL es buena,
+    // así que el rechazo es el del trámite y no el de la credencial.
+    let good = format!(
+        "afirma://websocket?ports=54002&v=4&idsession={CREDENTIAL}\
+         &dat={A_PORTAL_HANDLE}&fileid={A_DOCUMENT_NAME}"
+    );
+    assert!(
+        matches!(
+            attend_launch(&good, &transport, &live),
+            Attendance::Serving(_)
+        ),
+        "la primera invocacion abre el canal"
+    );
+    match attend_launch(&good, &transport, &live) {
+        Attendance::RefusingOverTheChannel { answer, .. } => lines.push(answer.on_the_wire()),
+        other => panic!("con un tramite vivo la segunda se rechaza: {other:?}"),
     }
 
     for duty in duties.borrow().iter() {
