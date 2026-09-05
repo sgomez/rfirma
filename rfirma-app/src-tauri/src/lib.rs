@@ -15,8 +15,9 @@
 //!   [`memory`], lo que se recuerda entre sesiones; [`destination`], por dónde
 //!   entra el documento y dónde cae el firmado; [`dropped`], qué se abre de lo
 //!   que se suelta en la ventana; [`tls`], la CA local y el certificado del
-//!   servidor local que el canal necesita; y [`paths`], el único sitio que sabe
-//!   qué sistema operativo hay debajo.
+//!   servidor local que el canal necesita; [`desktop`], el canal de
+//!   distribución y quién dice el escritorio que atiende `afirma://`; y
+//!   [`paths`], el único sitio que sabe qué sistema operativo hay debajo.
 //!
 //! Si te encuentras escribiendo Rust que sabe qué es un PDF, te has salido de
 //! estos módulos.
@@ -24,6 +25,7 @@
 pub mod app;
 pub mod channel;
 pub mod commands;
+pub mod desktop;
 pub mod destination;
 pub mod dropped;
 pub mod ffi;
