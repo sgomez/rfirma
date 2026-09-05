@@ -14,8 +14,9 @@
 //!   [`isolate`], la frontera con la librería nativa y el hilo que la posee;
 //!   [`memory`], lo que se recuerda entre sesiones; [`destination`], por dónde
 //!   entra el documento y dónde cae el firmado; [`dropped`], qué se abre de lo
-//!   que se suelta en la ventana; y [`paths`], el único sitio que sabe qué
-//!   sistema operativo hay debajo.
+//!   que se suelta en la ventana; [`tls`], la CA local y el certificado del
+//!   servidor local que el canal necesita; y [`paths`], el único sitio que sabe
+//!   qué sistema operativo hay debajo.
 //!
 //! Si te encuentras escribiendo Rust que sabe qué es un PDF, te has salido de
 //! estos módulos.
@@ -33,6 +34,7 @@ pub mod protocol;
 pub mod releases;
 pub mod rubric;
 pub mod signing;
+pub mod tls;
 
 /// La escotilla para apuntar a **otro** módulo PKCS#11.
 ///
