@@ -1,18 +1,37 @@
 # El servidor local usa HTTPS, y la CA la instala la aplicación en los almacenes NSS de cada persona
 
 Las sedes electrónicas invocan al cliente de firma desde una página servida por HTTPS, así
-que `rfirma` levanta un servidor **HTTPS** en `127.0.0.1:63117` con un certificado
-autofirmado generado en la primera ejecución. Para que el navegador confíe en él, **la
-propia aplicación** registra su CA local en los **almacenes NSS de la persona que la usa**,
-en su sesión y en su primer arranque. Ni el instalador, ni `root`, ni un `postinst`, ni un
-`pkexec`, ni el almacén de CA del sistema.
+que `rfirma` levanta un servidor **HTTPS** en `127.0.0.1`. Para que el navegador confíe en
+él, **la propia aplicación** registra su **CA local** en los **almacenes NSS de la persona
+que la usa**, en su sesión y en su primer arranque. Ni el instalador, ni `root`, ni un
+`postinst`, ni un `pkexec`, ni el almacén de CA del sistema.
 
-El puerto y el protocolo **no son variables de diseño**: `autoscript.js`, que sirve la sede
-y no nosotros, tiene cableados `SERVER_HOST = "127.0.0.1"` y
+Son **dos piezas** y conviene no confundirlas:
+
+- La **CA local** es lo que se registra en los almacenes NSS. No identifica a nadie ni firma
+  documentos: su único trabajo es firmar la otra pieza. **Se conserva su clave privada**, y
+  **vive 2–3 años** (§ *La retirada*).
+- El **certificado del servidor local** es el que rfirma presenta en cada saludo TLS:
+  `CN=localhost`, SAN `DNS:localhost` **e** `IP:127.0.0.1` —esa forma exacta, la única que
+  pasa en los cuatro verificadores medidos en el
+  [#310](https://github.com/sgomez/rfirma/issues/310) y el
+  [#326](https://github.com/sgomez/rfirma/issues/326)—, firmado por la CA local. **No se
+  guarda en disco**: se genera en memoria en cada arranque y vive lo que vive el proceso.
+
+El *host* y el protocolo **no son variables de diseño**: `autoscript.js`, que sirve la sede y
+no nosotros, tiene cableados `SERVER_HOST = "127.0.0.1"` y
 `URL_REQUEST_PREFIX = "wss://" + SERVER_HOST + ":"`. Migrar a `ws://` en texto plano no
 está sobre la mesa, y **ninguna CA pública puede emitir para `127.0.0.1`**: el CA/Browser
 Forum lo prohíbe desde el 11 de noviembre de 2015 por ser IP reservada, y los existentes
-debían revocarse antes del 1 de octubre de 2016. La CA propia es obligatoria.
+debían revocarse antes del 1 de octubre de 2016. La CA local es obligatoria.
+
+**El puerto sí es variable, y no lo elegimos nosotros.** Una redacción anterior de este ADR
+decía `127.0.0.1:63117`, y es falso para el transporte vigente: la sede **sortea tres puertos**
+del rango efímero y los manda en `afirma://websocket?ports=…`; rfirma se queda con el primero
+que abra. El `63117` es el puerto fijo del protocolo v3, que no es el camino de este hito.
+Medido en el [#309](https://github.com/sgomez/rfirma/issues/309). Que el puerto cambie de un
+trámite a otro **no afecta al permiso de red local**: la concesión del navegador persiste por
+*(origen de la sede, espacio de direcciones)*, no por IP y puerto.
 
 **La v0.4 decide esto y no implementa nada; el código va con el servidor del protocolo, que
 es la v0.5.** Instalar una raíz de confianza en el navegador de alguien para un servidor que
@@ -86,16 +105,50 @@ correctamente las preferencias» y el comentario se reescribió un año después
 
 ## La retirada, decidida antes que la instalación
 
-1. **La CA caduca sola.** Vida corta —90 días— renovada por la aplicación mientras siga
-   instalada y en uso. Es lo único que funciona cuando la desinstalación es un `apt remove` a
-   las tres de la mañana en una máquina con cuatro usuarios: el residuo tiene fecha de
-   caducidad garantizada sin depender de que nadie haga nada.
-2. **Retirada explícita desde Preferencias**, siempre disponible. Es además el camino de
-   reparación cuando un perfil nuevo se queda sin la confianza.
-3. **Borrado por huella del certificado, nunca por *nickname*.** Es literalmente el fallo
+1. **La CA local caduca sola, a los 2–3 años.** Su caducidad es **lo único** que hace que un
+   residuo abandonado deje de valer sin que nadie se acuerde de borrarlo: su clave privada vive
+   en el `$HOME`, que un `apt remove` no toca, pero queda inerte en cuanto el navegador deja
+   de confiar. Es lo único que funciona cuando la desinstalación es un `apt remove` a las tres
+   de la mañana en una máquina con cuatro usuarios.
+
+   > Una redacción anterior decía **90 días**, y era un agujero disfrazado de prudencia. Los 90
+   > días se le ponían a una pieza que **ya no existe** —el certificado del servidor local ya no
+   > se guarda en ningún sitio— y, sobre todo, **a partir de la v0.5 la aplicación la abre la
+   > sede**: una caducidad más corta que el hueco entre dos usos garantiza el camino malo todas
+   > las veces, porque quien firma dos o tres veces al año se la encontraría caducada casi
+   > siempre. Diez años, como AutoFirma, es no tener red: el
+   > [#225](https://github.com/sgomez/rfirma/issues/225) midió el resultado, CA huérfanas
+   > válidas hasta 2033. Dentro de la banda 2–3 el número es un juicio; los dos valen igual.
+
+2. **Reemitir el certificado del servidor local no toca el `nssdb`.** El punto de confianza es
+   la CA local; el certificado del servidor viaja en el saludo TLS. Por eso generarlo en memoria
+   en cada arranque es gratis y no interrumpe a nadie.
+
+3. **Solape: la CA local siguiente se instala meses antes**, mientras la vigente sigue
+   sirviendo. El [#326](https://github.com/sgomez/rfirma/issues/326) midió que dos certificados
+   de confianza con el mismo sujeto conviven en Firefox y en Chrome, en cualquier orden. Consiste
+   en *no tirar lo viejo todavía*, así que es barato, y convierte la reparación en el camino
+   excepcional.
+
+4. **No se repara en caliente.** «Reparar y continuar» no existe —Chrome no relee el `nssdb`,
+   Firefox envenena su caché tras haber fallado—: sólo existe **reparar y volver a empezar**, y
+   se dice así, sin fingir lo otro. Además rfirma **no puede distinguir** «no hay confianza» de
+   «el navegador ha denegado el acceso a la red local»
+   ([#309](https://github.com/sgomez/rfirma/issues/309)): el saludo TLS ni siquiera empieza.
+   El aviso de **«reinicia el navegador» va al final del trámite**, no al empezarlo: es el único
+   momento en el que interrumpir no cuesta nada.
+
+5. **Retirada explícita desde Preferencias**, siempre disponible. Con el solape puede haber **dos
+   CA locales vivas a la vez**, y la retirada **tiene que llevarse las dos**.
+
+6. **Borrado por huella del certificado, nunca por *nickname*.** Es literalmente el fallo
    medido en el #225: hay CA huérfanas de AutoFirma marcadas `CT,C,C` y válidas hasta 2033
    que ningún desinstalador retira, porque borra por un *nickname* que ya no es el que usa la
    versión actual.
+
+7. **Verificar la confianza es leer los bits con `certutil -L`, no verificar una cadena.** El
+   #326 midió que el veredicto de `vfychain` puede salir **invertido** respecto a lo que hace el
+   navegador de verdad.
 
 No hay retirada desde el `prerm`: `root` no tiene sesión, y recorrer los `$HOME` ajenos es
 justo lo que la Debian Policy §9.1.2 existe para impedir. La caducidad es la red.
@@ -138,15 +191,56 @@ loopback», que son remedios opuestos— es de la v0.5.
 - **Declarar en el flatpak sólo los almacenes de un navegador**, o sólo los no confinados.
   Es la división menos predecible de todas: la misma instalación funcionaría o no según qué
   navegador tenga abierto la persona. El #246 lo descarta por eso, no por coste.
+- **Un certificado del servidor local autofirmado, sin CA local**, registrado él mismo como
+  certificado de confianza. El #326 midió que **existe**: carga sin aviso en Firefox 155 y
+  Chrome 152. Se descarta por **robustez**, no por seguridad —en residuo están empatadas: una
+  clave, 2–3 años, y `nameConstraints` deja a la CA local acotada exactamente a los mismos
+  nombres que podría afirmar un certificado de servidor—. Se sostiene sobre una intersección
+  estrecha y no documentada de dos verificadores: la única cadena de bits que sirve en los dos
+  es `PC,,`, y **cada bit por separado falla en uno de ellos**, siendo uno de esos fallos el
+  fatal (`ERR_CERT_INVALID` en Chrome, sin salida manual). Un cambio en el verificador de
+  Chrome rompería rfirma sin aviso y sin remedio para la persona. Su única ventaja real —cada
+  renovación se ve, o sea reinicio del navegador— es justo lo que el solape hace innecesario.
+- **El modelo AutoFirma**: CA local con la clave privada **tirada** más certificado del
+  servidor guardado en disco y de vida larga. Está **dominado** por la opción anterior, que es
+  lo mismo con una pieza menos y la misma renovación visible. Y su promesa de «residuo inerte»
+  **no es cierta en rfirma**: AutoFirma puede decirlo porque su `.pfx` vive en el directorio de
+  instalación y se lo lleva el desinstalador; aquí las claves viven en el `$HOME`, que un
+  `apt remove` no toca. No existe ningún diseño con cero claves privadas en disco: sólo cambia
+  cuál es la que está ahí.
+- **Un gancho de sesión** —autoarranque XDG o unidad de usuario de `systemd`— que diera un
+  momento tranquilo anterior al navegador. Funciona, y es la respuesta más directa al hecho de
+  que desde la v0.5 la aplicación la abre la sede: al iniciar sesión el navegador aún no ha
+  arrancado, así que los dos obstáculos medidos desaparecen. Pero el solape le quita casi todo
+  el trabajo, y lo que queda no paga sus dos costes: **partir el comportamiento de los tres
+  canales** —un flatpak no instala unidades de usuario ni escribe en `~/.config/autostart`:
+  tendría que pedirlo por el portal `Background`, con su diálogo de permiso— y meter justo el
+  diálogo que este ADR se esfuerza en no tener. Tampoco garantiza el orden si la persona
+  restaura sesión con el navegador dentro. Vuelve **como enmienda explícita a este ADR, y con
+  el flatpak degradado a propósito**, el día que el solape se demuestre insuficiente.
 
 ## Consequences
 
-- La CA **no se distribuye precompilada**: su clave privada sólo puede vivir en la máquina
-  de quien la usa, con permisos restrictivos. Y **no se protege con una constante en el
+- La CA local **no se distribuye precompilada**: su clave privada sólo puede vivir en la
+  máquina de quien la usa, con permisos restrictivos. Y **no se protege con una constante en el
   código** —`RestoreConfigLinux.java` lleva `KS_PASSWORD = "654321"` en el fuente público de
   AutoFirma—.
-- **La CA va restringida**: `keyUsage` reducido a `keyCertSign`+`cRLSign`, y
-  `nameConstraints` limitando la emisión a `localhost` y `127.0.0.1`.
+- **La clave privada de la CA local va en un fichero propio, `0600`, sin cifrar**, creado con
+  ese modo desde el principio y no con un `chmod` posterior. Dentro del flatpak, en el
+  directorio de datos de la aplicación. Es el mismo trato que `~/.ssh/id_*` y el llavero de GPG.
+- **El atacante que ya ejecuta código como la persona queda declarado fuera del modelo de
+  amenaza**, y se declara aquí para que nadie lo «mejore» dentro de un año. Se descartó el
+  llavero del escritorio (Secret Service) porque **no aísla por aplicación**: cualquier proceso
+  que corra como la persona habla por D-Bus con un llavero ya desbloqueado y lee el secreto, y
+  el portal `org.freedesktop.portal.Secret` aísla a un flatpak de otro flatpak, no de un binario
+  corriente. Y porque el suelo no lo pone nuestro fichero: ese mismo atacante **escribe él en el
+  `nssdb`** y planta su propia raíz de confianza, sin `nameConstraints` y sin caducidad, que es
+  estrictamente más poderoso que robarnos nada.
+- **La CA local va restringida**: `keyUsage` reducido a `keyCertSign`+`cRLSign`, y
+  `nameConstraints` limitando la emisión a `localhost` y `127.0.0.1` — que el
+  [#310](https://github.com/sgomez/rfirma/issues/310) midió que se imponen de verdad en los tres
+  motores, incluida la restricción sobre `iPAddress`, y con la violación **visible y no
+  salteable**.
 - **`-d sql:<ruta>` explícito, siempre.** Sobre el backend DBM la operación **falla en
   silencio**: `certutil -A` devuelve 0 y la confianza se pierde. No se hereda el heurístico
   del `pkcs11.txt` de AutoFirma, anterior a NSS 3.35.
