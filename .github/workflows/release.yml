@@ -120,6 +120,36 @@ jobs:
           passphrase: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
           expected-fingerprint: ${{ vars.GPG_FINGERPRINT }}
 
+      # LA HUELLA QUE SE PUBLICA TIENE QUE SER LA DE LA CLAVE QUE FIRMA. El
+      # paso de arriba ata el SECRETO a `vars.GPG_FINGERPRINT`, pero lo que lee
+      # una persona antes de fiarse de un paquete no es esa variable: es
+      # `SECURITY.md` y la portada del sitio. Esos dos eran texto suelto que no
+      # comprobaba nadie, y una huella equivocada ahi no rompe ninguna
+      # construccion: solo hace que quien verifique este verificando contra
+      # nada. Paso medido, no hipotetico: se publico una huella que no
+      # correspondia a ninguna clave y no se puso rojo nada.
+      #
+      # Va aqui y no en `check-workflows.sh` a proposito: la comparacion solo
+      # significa algo con la huella de la clave REAL delante, y esa no existe
+      # hasta que la subclave esta importada. En local no hay con que comparar.
+      - name: La huella publicada es la que firma
+        env:
+          FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          for fichero in SECURITY.md packaging/repo/index.html; do
+            # La huella se publica agrupada de cuatro en cuatro, como la
+            # imprime gpg: con espacios en el Markdown y con `&nbsp;` en el
+            # HTML. Se quitan los dos antes de comparar, no la huella.
+            if ! sed 's/&nbsp;/ /g; s/[[:space:]]//g' "$fichero" \
+                 | grep -qiF "$FINGERPRINT"; then
+              echo "::error file=$fichero::$fichero no publica la huella de la clave que firma ($FINGERPRINT)" >&2
+              echo "Si has rotado la clave, actualiza ahi la huella nueva." >&2
+              exit 1
+            fi
+            echo "OK  $fichero publica la huella de la clave que firma"
+          done
+
       # --- 1 de 4: FIRMAR EL `.rpm` -----------------------------------------
       # En dnf hay dos interruptores independientes y los dos van a 1
       # (ADR-0015): `repo_gpgcheck` verifica el indice —eso es del #276— y
