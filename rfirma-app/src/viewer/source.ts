@@ -1,4 +1,4 @@
-import type { RecentDocument } from "../documents/recents";
+import type { DocumentInHand } from "../documents/document";
 import { classify } from "../errors/classify";
 import type { ErrorSituation } from "../errors/ErrorNotice";
 import type { PdfDocument } from "./pdf";
@@ -41,15 +41,16 @@ export type OpenedPdf =
  * Es un puerto por lo mismo que lo es el selector: bajo el sandbox los bytes
  * los entrega el **portal**, no una ruta que el WebView pueda abrir. La
  * aplicación nunca conoce la ruta original de un documento, así que aquí no hay
- * ni una URL: entra el documento de la bandeja y sale el PDF ya abierto.
+ * ni una URL: entra el documento que se tiene delante —tenga fila detrás o no
+ * (ID-287)— y sale el PDF ya abierto.
  */
 export interface PdfSource {
   /** El documento abierto, o el fallo que lo impidió. */
-  open(document: RecentDocument): Promise<OpenedPdf>;
+  open(document: DocumentInHand): Promise<OpenedPdf>;
 }
 
 /** Lee los bytes de un documento. Lo aporta el backend, por el portal. */
-export type ReadDocument = (document: RecentDocument) => Promise<Uint8Array>;
+export type ReadDocument = (document: DocumentInHand) => Promise<Uint8Array>;
 
 /**
  * El origen de verdad: los bytes del portal, abiertos con `pdf.js`.

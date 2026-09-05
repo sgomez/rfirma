@@ -35,19 +35,19 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 82 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 542 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 1093 | El árbol de la ventana y el estado que la recorre. |
+| `tauri.ts` | 552 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 1129 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | 74 | La franja de notificación: el patrón, no el aviso concreto (ID-207). |
 | `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
 | `shell/menuAnchor.ts` | 25 | Dónde se ancla el menú de dos entradas. |
 | **`documents/`** | | La bandeja. |
-| `documents/document.ts` | 13 | El vocabulario de la bandeja. |
-| `documents/useDocuments.ts` | 156 | El estado de la bandeja. |
+| `documents/document.ts` | 69 | El vocabulario del documento: **el que se tiene delante** (`DocumentInHand`) y las insignias. No es la fila (ID-287). |
+| `documents/useDocuments.ts` | 171 | El estado de la bandeja. |
 | `documents/DocumentTray.tsx` | 97 | La bandeja pintada. |
-| `documents/recents.ts` | 162 | Los diez recientes y su puerto. Misma capacidad que `memory::recents::CAPACITY`. |
-| `documents/picker.ts` | 31 | Por dónde entra un documento. |
+| `documents/recents.ts` | 199 | Los diez recientes —**la fila que se guarda**— y su puerto, con el camino de vuelta a la mano (`taken`). Misma capacidad que `memory::recents::CAPACITY`. |
+| `documents/picker.ts` | 32 | Por dónde entra un documento. |
 | `documents/drops.ts` | 100 | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
 | `signing/flow.ts` | 172 | Las tres etapas de la trifásica. |
@@ -75,7 +75,7 @@ rojo.
 | `viewer/pdfjsLoader.ts` | 81 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
 | `viewer/zoom.ts` | 186 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
-| `viewer/source.ts` | 104 | De dónde salen los bytes del documento. |
+| `viewer/source.ts` | 105 | De dónde salen los bytes del documento. |
 | `viewer/signatureBox.ts` | 452 | El recuadro: dónde se guarda, **el conjunto propio de cada opción** (#188), cómo se redimensiona y cómo se traza. |
 | `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |

@@ -1,4 +1,4 @@
-import type { RecentDocument } from "./recents";
+import type { DocumentInHand } from "./document";
 
 /**
  * Por dónde entra un documento en la aplicación.
@@ -9,13 +9,14 @@ import type { RecentDocument } from "./recents";
  * WebView no puede abrir el explorador del sistema por su cuenta, y un campo
  * de fichero en el HTML sería justamente el segundo camino que no debe haber.
  *
- * Devuelve el documento ya canonicalizado y con sus metadatos cacheados,
- * porque eso lo sabe quien tocó el disco —`memory::recents::RecentDocument`—
- * y no la interfaz.
+ * Devuelve el documento ya canonicalizado y con sus metadatos, porque eso lo
+ * sabe quien tocó el disco y no la interfaz. Y devuelve un documento **en la
+ * mano**, no una fila: quien decide si se anota es la bandeja, y lo que sale
+ * del diálogo se recuerda porque lo eligió una persona (ID-287).
  */
 export interface DocumentPicker {
   /** Abre el explorador del sistema. `null` si se cancela. */
-  choose(): Promise<RecentDocument | null>;
+  choose(): Promise<DocumentInHand | null>;
 }
 
 /**
@@ -23,7 +24,7 @@ export interface DocumentPicker {
  * luego se comporta como una cancelación. Es el doble de las pruebas; quien
  * habla con el portal de verdad es `tauriDocumentPicker`.
  */
-export function inMemoryDocumentPicker(documents: readonly RecentDocument[] = []): DocumentPicker {
+export function inMemoryDocumentPicker(documents: readonly DocumentInHand[] = []): DocumentPicker {
   const pending = documents.slice();
   return {
     choose: async () => pending.shift() ?? null,

@@ -1,10 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import type { DocumentInHand } from "./document";
 import { inMemoryDocumentPicker } from "./picker";
 import { inMemoryRecents, type RecentDocument } from "./recents";
 import { useDocuments } from "./useDocuments";
 
-function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
+/** Una fila de la bandeja: lo que se guarda. */
+function row(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
     // El identificador lo acuña el backend y es opaco: aquí se finge con un
     // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
@@ -19,11 +21,24 @@ function document(name: string, overrides: Partial<RecentDocument> = {}): Recent
   };
 }
 
+/** Un documento en la mano: lo que se pinta y se firma (ID-287). */
+function document(name: string, overrides: Partial<DocumentInHand> = {}): DocumentInHand {
+  return {
+    id: `id-${name}`,
+    name,
+    badge: "Unsigned",
+    modified: 1_700_000_000,
+    placement: null,
+    remembered: true,
+    ...overrides,
+  };
+}
+
 // Grada A: los dos puertos son dobles en memoria, así que no hay ni portal ni
 // fichero de estado.
 describe("useDocuments", () => {
   it("lists what the store remembers, without opening anything", async () => {
-    const store = inMemoryRecents([document("a.pdf")]);
+    const store = inMemoryRecents([row("a.pdf")]);
 
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));
 
@@ -39,7 +54,9 @@ describe("useDocuments", () => {
     await act(() => result.current.open());
 
     expect(result.current.active).toEqual(factura);
-    expect(result.current.recents).toEqual([factura]);
+    // Y la fila que queda es la del mismo documento, con lo que solo la lista
+    // sabe: cuándo se usó y que la ruta responde.
+    expect(result.current.recents).toEqual([row("factura.pdf", { lastUsed: expect.any(Number) })]);
   });
 
   it("does not remember the document opened through the portal when remembering is off", async () => {
@@ -57,7 +74,7 @@ describe("useDocuments", () => {
   });
 
   it("leaves everything as it was when the portal is cancelled", async () => {
-    const store = inMemoryRecents([document("a.pdf")]);
+    const store = inMemoryRecents([row("a.pdf")]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));
     await waitFor(() => expect(result.current.recents).toHaveLength(1));
 
@@ -72,7 +89,7 @@ describe("useDocuments", () => {
     // mismo contrato —con otro identificador, ID-62— vuelve con su recuadro.
     const contrato = document("contrato.pdf");
     const box = { rect: { x0: 72, y0: 500, x1: 272, y1: 600 }, pages: { only: [3] } };
-    const store = inMemoryRecents([{ ...contrato, placement: box }]);
+    const store = inMemoryRecents([row("contrato.pdf", { placement: box })]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([contrato])));
 
     await act(() => result.current.open());
@@ -81,10 +98,9 @@ describe("useDocuments", () => {
   });
 
   it("does not let a brand new document inherit the position of another one", async () => {
-    const contrato = document("contrato.pdf");
     const box = { rect: { x0: 72, y0: 500, x1: 272, y1: 600 }, pages: { only: [3] } };
     const nomina = document("nomina.pdf");
-    const store = inMemoryRecents([{ ...contrato, placement: box }]);
+    const store = inMemoryRecents([row("contrato.pdf", { placement: box })]);
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([nomina])));
 
     await act(() => result.current.open());
@@ -102,7 +118,9 @@ describe("useDocuments", () => {
     await act(() => result.current.place(box));
 
     expect(result.current.recents[0]?.placement).toEqual(box);
-    await expect(store.list()).resolves.toEqual([{ ...contrato, placement: box }]);
+    await expect(store.list()).resolves.toEqual([
+      row("contrato.pdf", { placement: box, lastUsed: expect.any(Number) }),
+    ]);
   });
 
   it("has no row to write the box on when remembering is off", async () => {
@@ -151,6 +169,65 @@ describe("useDocuments", () => {
     act(() => result.current.reopen());
 
     expect(result.current.active?.placement).toEqual(box);
+  });
+
+  /**
+   * **TD-64**: un documento que no se recuerda se pone delante igual —se pinta
+   * y se firma— pero no deja fila en la bandeja. Es el camino que necesita el
+   * documento que manda una sede (ID-286).
+   */
+  it("puts a document that is not remembered in front without writing a row", async () => {
+    const store = inMemoryRecents();
+    const fromTheSede = document("de-la-sede.pdf", { remembered: false });
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([fromTheSede])));
+
+    await act(() => result.current.open());
+
+    expect(result.current.active).toEqual(fromTheSede);
+    expect(result.current.recents).toEqual([]);
+    await expect(store.list()).resolves.toEqual([]);
+  });
+
+  it("has no row to write the box on for a document that is not remembered", async () => {
+    const store = inMemoryRecents();
+    const fromTheSede = document("de-la-sede.pdf", { remembered: false });
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([fromTheSede])));
+    await act(() => result.current.open());
+
+    await act(() =>
+      result.current.place({ rect: { x0: 10, y0: 20, x1: 210, y1: 120 }, pages: { only: [2] } }),
+    );
+
+    expect(result.current.recents).toEqual([]);
+    await expect(store.list()).resolves.toEqual([]);
+  });
+
+  it("keeps a document that is not remembered in front when it is reopened", async () => {
+    // No tiene fila de donde reponerse, así que se repone de sí mismo: lo que
+    // «Volver a firmar» necesita es otra referencia, no otra fuente.
+    const store = inMemoryRecents();
+    const fromTheSede = document("de-la-sede.pdf", { remembered: false });
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([fromTheSede])));
+    await act(() => result.current.open());
+    const before = result.current.active;
+
+    act(() => result.current.reopen());
+
+    expect(result.current.active).toEqual(fromTheSede);
+    expect(result.current.active).not.toBe(before);
+  });
+
+  it("takes the row chosen in the tray in hand, and it is remembered", async () => {
+    const store = inMemoryRecents([row("a.pdf")]);
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));
+    await waitFor(() => expect(result.current.recents).toHaveLength(1));
+
+    act(() => {
+      const chosen = result.current.recents[0];
+      if (chosen) result.current.select(chosen);
+    });
+
+    expect(result.current.active).toEqual(document("a.pdf"));
   });
 
   it("has nothing to reopen without a document in front", () => {

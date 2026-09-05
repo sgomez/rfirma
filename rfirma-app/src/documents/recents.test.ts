@@ -74,6 +74,29 @@ describe("inMemoryRecents", () => {
     expect(await store.list()).toHaveLength(CAPACITY);
   });
 
+  // El puerto real reemplaza la fila entera y solo rescata el recuadro:
+  // `Recents::record` inserta el documento recién visto y `available` ni
+  // siquiera se persiste. El doble tiene que hacer lo mismo o las pruebas de
+  // la ventana comprueban una conducta que el backend no tiene.
+  it("refreshes when it was last used and revives a row that had stopped answering", async () => {
+    const store = inMemoryRecents([
+      document("a.pdf", { lastUsed: 1_600_000_000, available: false, placement: null }),
+    ]);
+
+    const noted = await store.record({
+      id: "id-a.pdf",
+      name: "a.pdf",
+      badge: "Unsigned",
+      modified: 1_700_000_000,
+      placement: null,
+      remembered: true,
+    });
+
+    expect(noted.available).toBe(true);
+    expect(noted.lastUsed).toBeGreaterThan(1_600_000_000);
+    expect(await store.list()).toEqual([noted]);
+  });
+
   it("empties the list", async () => {
     const store = inMemoryRecents([document("a.pdf")]);
 

@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Placement } from "../viewer/signatureBox";
+import type { DocumentInHand } from "./document";
 import type { DocumentPicker } from "./picker";
-import { place as placedIn, type RecentDocument, type RecentsStore } from "./recents";
+import { place as placedIn, type RecentDocument, type RecentsStore, taken } from "./recents";
 
 export interface Documents {
   /** Los recientes, el más reciente primero. */
   recents: RecentDocument[];
-  /** El documento que se está firmando, o `null` si no hay ninguno. */
-  active: RecentDocument | null;
+  /**
+   * El documento que se está firmando, o `null` si no hay ninguno.
+   *
+   * **No es una fila de la bandeja** (ID-287): puede no tener ninguna detrás,
+   * y entonces de él no queda rastro en ninguna parte.
+   */
+  active: DocumentInHand | null;
   /** Abre un documento por el portal. Ver [`DocumentPicker`]. */
   open: () => Promise<void>;
   /**
@@ -18,9 +24,9 @@ export interface Documents {
    * arrastrar acabe exactamente donde acaba el diálogo —anotado en la bandeja
    * si toca, y activo— en vez de por un camino paralelo que se pareciera.
    */
-  accept: (document: RecentDocument) => Promise<void>;
-  /** Cambia de documento desde una fila de la bandeja. */
-  select: (document: RecentDocument) => void;
+  accept: (document: DocumentInHand) => Promise<void>;
+  /** Cambia de documento desde una fila de la bandeja. Ver `taken` en `recents.ts`. */
+  select: (row: RecentDocument) => void;
   /**
    * **Vuelve a leer del disco el documento que hay delante**, sin cambiar de
    * documento.
@@ -42,8 +48,9 @@ export interface Documents {
    * documento y de esta página (ID-74): el siguiente documento arranca con el
    * recuadro donde toque, no donde lo dejó el anterior (ID-22).
    *
-   * Sin documento activo no hace nada, y con «Recordar mi actividad» apagado
-   * tampoco: no hay fila donde apuntarlo.
+   * Sin documento activo no hace nada; con «Recordar mi actividad» apagado
+   * tampoco, y de un documento que no se recuerda tampoco: en los dos últimos
+   * casos no hay fila donde apuntarlo (ID-286).
    */
   place: (placement: Placement | null) => Promise<void>;
   /** Quita una fila de la lista. Ver `forget` en `recents.ts`. */
@@ -74,7 +81,7 @@ export function useDocuments(
   remember = true,
 ): Documents {
   const [recents, setRecents] = useState<RecentDocument[]>([]);
-  const [active, setActive] = useState<RecentDocument | null>(null);
+  const [active, setActive] = useState<DocumentInHand | null>(null);
 
   // Los recientes se pintan con lo cacheado: esta es la única lectura, y no
   // abre ningún PDF (ADR-0010). Revalidar —comparar el `mtime`— es cosa del
@@ -90,10 +97,12 @@ export function useDocuments(
   }, [store]);
 
   const accept = useCallback(
-    async (document: RecentDocument) => {
-      // El documento se abre igual; lo que la preferencia decide es si queda
-      // rastro de haberlo abierto.
-      if (!remember) {
+    async (document: DocumentInHand) => {
+      // El documento se abre igual; lo que se decide aquí es si queda rastro
+      // de haberlo abierto, y son dos cosas distintas las que pueden decir que
+      // no: la preferencia «Recordar mi actividad» (ID-34) y el documento
+      // mismo, que puede venir de donde no se recuerda nada (ID-286).
+      if (!remember || !document.remembered) {
         setActive(document);
         return;
       }
@@ -103,7 +112,7 @@ export function useDocuments(
       // posición sin que la ventana guarde nada por su cuenta.
       const noted = await store.record(document);
       setRecents(await store.list());
-      setActive(noted);
+      setActive(taken(noted));
     },
     [store, remember],
   );
@@ -131,7 +140,10 @@ export function useDocuments(
 
   const place = useCallback(
     async (placement: Placement | null) => {
-      if (!remember || active === null) return;
+      // Sin fila detrás no hay dónde apuntarlo, y de un documento que no se
+      // recuerda no la hay nunca (ID-286): el recuadro se queda donde la
+      // ventana lo tiene puesto y se pierde al cerrarlo.
+      if (!remember || active === null || !active.remembered) return;
       // La fila se actualiza, el documento activo **no**: cambiarlo volvería a
       // disparar la apertura del PDF en cada arrastre del recuadro, y lo que ha
       // cambiado no es qué documento hay delante sino dónde cae su firma.
@@ -148,9 +160,12 @@ export function useDocuments(
   const reopen = useCallback(() => {
     setActive((current) => {
       if (current === null) return null;
-      return { ...(recents.find((row) => row.id === current.id) ?? current) };
+      const row = recents.find((entry) => entry.id === current.id);
+      return row === undefined ? { ...current } : taken(row);
     });
   }, [recents]);
 
-  return { recents, active, open, accept, select: setActive, reopen, place, forget, forgetAll };
+  const select = useCallback((row: RecentDocument) => setActive(taken(row)), []);
+
+  return { recents, active, open, accept, select, reopen, place, forget, forgetAll };
 }
