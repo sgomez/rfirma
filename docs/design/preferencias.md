@@ -17,8 +17,8 @@ está delante el foco no se escapa a los controles de la ventana.
 Tres regiones, de izquierda a derecha y de arriba abajo:
 
 1. **Índice de secciones**, columna fija a la izquierda. Encabezado
-   «Preferencias» y una fila por sección —*Firma*, *Certificados*, *Privacidad*,
-   *Apariencia*—. La sección activa lleva fondo y borde; las demás van en
+   «Preferencias» y una fila por sección —*Firma*, *Certificados*, *Sedes*,
+   *Privacidad*, *Apariencia*—. La sección activa lleva fondo y borde; las demás van en
    `--rf-text-muted` sin borde. Existe para el desplazamiento vertical: con la
    sección de certificados en fichero, la columna de contenido ya no cabe de una
    vez en la ventana mínima.
@@ -169,6 +169,33 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
    pantalla construiría el camino más corto al tropiezo —el kit de pruebas de la
    FNMT trae una carpeta entera de claves ECC—, y el fallo aparecería al firmar,
    con el documento delante.
+
+### Sedes
+
+**Un solo control, y solo donde se puede cumplir** (ID-238, ID-240).
+
+- **Quién atiende los enlaces de las sedes** (desplegable), con lo que el
+  escritorio diga que hay registrado para `afirma://`: **ningún nombre de
+  aplicación está escrito en el código**, ni «AutoFirma» ni «rFirma». Elegir
+  escribe un `default` explícito en el `mimeapps.list` del `$HOME`, y **solo
+  ahí**. Mientras no haya ninguno escrito, el valor es *Lo que decida el
+  escritorio*, que desaparece de la lista en cuanto se elige a alguien: enseñar
+  el primero de la lista como si estuviera elegido sería mentir.
+- Debajo, la ayuda que **no se puede deducir mirando** (§11 del
+  [sistema de diseño](design-system.md)): «Firefox usa la elección que guarda en
+  sus propias preferencias». Es cierta, no la ve nadie y cambia lo que la
+  persona hará si el enlace le sigue abriendo otra aplicación (ID-241).
+- **Preguntarme al arrancar** (interruptor, activo por omisión): es lo que
+  deshace el «No volver a preguntar» del banner de la
+  [ventana principal](ventana-principal.md). Vive aquí porque es donde alguien
+  va a buscar la pregunta que apagó.
+
+**En el flatpak no hay ni desplegable ni interruptor**, sino una frase fija:
+«Esta versión no puede cambiarlo: se elige en los ajustes del escritorio».
+Medido: dentro del sandbox GIO contesta `None` a todos los esquemas, no existe
+ningún portal de manejadores predeterminados y `set_as_default_for_type()`
+**devuelve `True` mintiendo** (ID-240). Un desplegable ahí sería un control que
+finge elegir, que es justo lo que esta ficha ya descartó para el destino.
 
 ### Privacidad
 

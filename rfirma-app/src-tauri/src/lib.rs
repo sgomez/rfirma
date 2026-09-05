@@ -207,6 +207,8 @@ pub fn run() {
             commands::pades_lower_left,
             commands::read_invocation,
             commands::check_for_new_version,
+            commands::url_handlers,
+            commands::choose_url_handler,
             commands::install_certificate,
             commands::remove_certificate,
         ])

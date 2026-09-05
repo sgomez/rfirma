@@ -45,6 +45,7 @@ pub fn shown(
         theme: configuration.theme,
         offers_the_original_folder: crate::destination::the_original_folder_can_be_offered(),
         trust_notice_seen: configuration.trust_notice_seen,
+        ask_about_url_handler: configuration.ask_about_url_handler,
     }
 }
 
@@ -128,6 +129,7 @@ pub fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration
         notify_new_version: chosen.notify_new_version,
         theme: chosen.theme,
         trust_notice_seen: chosen.trust_notice_seen,
+        ask_about_url_handler: chosen.ask_about_url_handler,
     }
 }
 
@@ -176,6 +178,7 @@ mod tests {
             theme: Theme::Dark,
             offers_the_original_folder: false,
             trust_notice_seen: false,
+            ask_about_url_handler: true,
         };
 
         write(&memory, &live, &chosen).expect("deberia guardarse");
@@ -277,6 +280,7 @@ mod tests {
             theme: Theme::Dark,
             offers_the_original_folder: false,
             trust_notice_seen: false,
+            ask_about_url_handler: true,
         };
 
         let next = merged(&live, &chosen);
@@ -288,6 +292,21 @@ mod tests {
         assert_eq!(next.language, Language::English);
         assert!(!next.remember_visible_signature);
         assert_eq!(next.theme, Theme::Dark);
+    }
+
+    /// «No volver a preguntar» viaja de vuelta y se guarda: es lo único del
+    /// banner de quién atiende `afirma://` que sobrevive al cierre (ID-239),
+    /// y por eso Preferencias puede volver a encenderlo.
+    #[test]
+    fn not_asking_about_the_url_handler_again_travels_back_from_the_window() {
+        let live = Configuration::default();
+        let chosen = ConfigurationView {
+            ask_about_url_handler: false,
+            ..shown(&live, std::path::Path::new("/home/quien/Documentos"))
+        };
+
+        assert!(live.ask_about_url_handler);
+        assert!(!merged(&live, &chosen).ask_about_url_handler);
     }
 
     /// Un tema desconocido no puede tumbar la lectura de los ajustes: lo que

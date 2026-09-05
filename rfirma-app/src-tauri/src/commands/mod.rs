@@ -115,6 +115,7 @@ pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, NewVersionView,
     OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
+    UrlHandlerView, UrlHandlersView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -634,6 +635,34 @@ pub fn remove_certificate(id: String, environment: State<'_, Environment>) -> Re
         &id,
         &environment.listed,
     )
+}
+
+/// **Orden 26.** Quién atiende los enlaces `afirma://`, para pintar
+/// Preferencias y decidir si sale el banner (ID-238, ID-239, ID-240).
+///
+/// Dentro del flatpak contesta `available: false` sin llamar a nada, y esa es
+/// toda la respuesta: la frase fija que se enseña entonces es de la ventana.
+///
+/// Sin `$HOME` ni `$XDG_CONFIG_HOME` no hay `mimeapps.list` que leer, y eso no
+/// es un fallo que merezca un aviso: se contesta que no se sabe quién atiende,
+/// igual que cuando el fichero no existe todavía.
+#[tauri::command(async)]
+pub fn url_handlers() -> UrlHandlersView {
+    let channel = crate::desktop::Channel::detected();
+    let list = crate::desktop::choice::mimeapps_list_from_environment().unwrap_or_default();
+    app::handlers::who_handles(channel, &list)
+}
+
+/// **Orden 27.** Deja apuntado quién atiende los enlaces `afirma://` (ID-238).
+///
+/// `handler` es uno de los ficheros `.desktop` que dio la orden anterior: aquí
+/// no se cablea ningún nombre de aplicación, ni el de rFirma.
+#[tauri::command(async)]
+pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
+    let channel = crate::desktop::Channel::detected();
+    let list = crate::desktop::choice::mimeapps_list_from_environment()
+        .map_err(|error| Failure::new("handlerListUnwritable", error.to_string()))?;
+    app::handlers::chosen(channel, &list, &handler)
 }
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.

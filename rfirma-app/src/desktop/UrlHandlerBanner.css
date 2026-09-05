@@ -1,0 +1,42 @@
+/*
+ * El banner de quién atiende `afirma://` (ID-239): la misma franja de 41 px de
+ * `NotificationStrip`, con tres respuestas en vez de una acción y la `×`.
+ *
+ * Comparte medidas con ella a propósito —mismo alto, mismo borde, misma
+ * superficie— porque ocupa el mismo hueco de la ventana: dos franjas con
+ * alturas distintas serían dos componentes donde hay uno.
+ */
+
+.url-handler-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  height: 41px;
+  padding: 0 var(--rf-space-sm) 0 var(--rf-space-md);
+  border-bottom: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
+}
+
+.url-handler-banner__icon {
+  display: flex;
+  color: var(--rf-text-muted);
+}
+
+/* La pregunta se recorta en una línea: la franja no crece, y las tres
+   respuestas no se pueden empujar fuera de la ventana. */
+.url-handler-banner__message {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Los tres botones son más bajos que el mínimo de `.rf-btn`, igual que los de
+   la franja de notificación: van dentro de una franja de 41 px. */
+.url-handler-banner__answer {
+  min-height: 29px;
+  padding: 0 var(--rf-space-xs);
+  font-size: 13px;
+}

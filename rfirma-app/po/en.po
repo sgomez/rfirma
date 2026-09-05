@@ -63,6 +63,24 @@ msgstr ""
 "Try again. If it keeps happening, attach the technical detail to the bug "
 "report."
 
+msgid "errors.situations.handlerNotAvailable.title"
+msgstr "Cannot change who opens these links"
+
+msgid "errors.situations.handlerNotAvailable.body"
+msgstr "This build of rFirma cannot write that choice: change it in your desktop settings."
+
+msgid "errors.situations.handlerListUnreadable.title"
+msgstr "Could not read the desktop's choice"
+
+msgid "errors.situations.handlerListUnreadable.body"
+msgstr "The file where the desktop keeps it could not be read, so it was left as it was."
+
+msgid "errors.situations.handlerListUnwritable.title"
+msgstr "Could not save who opens these links"
+
+msgid "errors.situations.handlerListUnwritable.body"
+msgstr "The file where the desktop keeps it could not be written."
+
 msgid "errors.situations.notAnAcceptedImage.title"
 msgstr "That image cannot be used as a rubric"
 
@@ -332,6 +350,18 @@ msgstr "There is a new version of rFirma: {{version}}"
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
 msgid "notifications.newVersion.action"
 msgstr "How to update"
+
+msgid "urlHandler.banner.message"
+msgstr "Do you want rFirma to open site links?"
+
+msgid "urlHandler.banner.accept"
+msgstr "Yes"
+
+msgid "urlHandler.banner.later"
+msgstr "Not now"
+
+msgid "urlHandler.banner.never"
+msgstr "Don't ask again"
 
 msgid "header.menu"
 msgstr "Menu"
@@ -794,6 +824,26 @@ msgstr "Privacy"
 
 msgid "preferences.sections.appearance"
 msgstr "Appearance"
+
+msgid "preferences.sections.sites"
+msgstr "Sites"
+
+msgid "preferences.urlHandler.label"
+msgstr "Who opens site links"
+
+msgid "preferences.urlHandler.unchosen"
+msgstr "Whatever the desktop decides"
+
+#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
+msgid "preferences.urlHandler.firefoxKeepsItsOwn"
+msgstr "Firefox uses the choice kept in its own preferences."
+
+#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
+msgid "preferences.urlHandler.inTheSandbox"
+msgstr "This build cannot change it: choose it in your desktop settings."
+
+msgid "preferences.askAboutUrlHandler.label"
+msgstr "Ask me at startup"
 
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Remember the last visible signature setup"

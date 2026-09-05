@@ -26,6 +26,7 @@ import {
   tauriSignedDocumentOpener,
   tauriSigningBackend,
   tauriStampComposer,
+  tauriUrlHandlers,
   tauriVersionCheck,
 } from "./tauri";
 import { TrustNotice } from "./trust/TrustNotice";
@@ -50,6 +51,9 @@ if (!root) {
 // y el de la versión del #271, `tauriVersionCheck`, que es la única conexión
 // saliente de la aplicación y sólo sirve para poner una franja bajo la cabecera
 // (ID-181).
+// y el de quién atiende `afirma://` del #364, `tauriUrlHandlers`, que es el
+// único que escribe fuera de rFirma —en el `mimeapps.list` de la persona— y el
+// que dentro del flatpak contesta que no se puede saber (ID-240).
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
@@ -93,6 +97,7 @@ createRoot(root).render(
         signer={tauriSigningBackend()}
         opener={tauriSignedDocumentOpener()}
         versions={tauriVersionCheck()}
+        urlHandlers={tauriUrlHandlers()}
       />
     </LanguageProvider>
   </StrictMode>,

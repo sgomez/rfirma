@@ -13,6 +13,7 @@
 use serde::Serialize;
 
 use crate::app::cycle;
+use crate::desktop::error::DesktopError;
 use crate::destination::DestinationError;
 use crate::ffi::BridgeError;
 use crate::isolate::IsolateGone;
@@ -79,6 +80,18 @@ impl From<TokenError> for Failure {
 impl From<SecretOnTheReaderKeypad> for Failure {
     fn from(refusal: SecretOnTheReaderKeypad) -> Self {
         Self::new(refusal.situation(), refusal.to_string())
+    }
+}
+
+impl From<DesktopError> for Failure {
+    fn from(error: DesktopError) -> Self {
+        // Las tres situaciones del escritorio las nombra
+        // `app::handlers::situation_name`, que es donde viven junto al caso de
+        // uso que las produce (ID-29).
+        Self::new(
+            crate::app::handlers::situation_name(error.situation()),
+            error.detail().to_owned(),
+        )
     }
 }
 

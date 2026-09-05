@@ -134,6 +134,53 @@ pub fn choose_handler_for_scheme(
     })
 }
 
+/// Quién está apuntado hoy como `default` **explícito** de `scheme` en `list`,
+/// si es que hay alguno (ID-238).
+///
+/// Es lo que el desplegable de Preferencias enseña como valor: sin esto habría
+/// que enseñar un desplegable sin elegido, o recordar aparte lo último que se
+/// escribió, que es una segunda verdad que se desincroniza en cuanto la
+/// persona toca el escritorio por otro lado.
+///
+/// **Solo mira el `[Default Applications]` del `$HOME`**, que es lo único que
+/// esta aplicación escribe: una asociación añadida no elige nada, y lo que el
+/// escritorio resuelva por su cuenta cuando no hay `default` no se adivina
+/// aquí. Dentro del sandbox no hay lista del anfitrión que leer (ID-240), así
+/// que no se lee ninguna y la respuesta es que no se sabe.
+pub fn current_default_for_scheme(channel: Channel, list: &Path, scheme: &str) -> Option<String> {
+    if channel == Channel::Flatpak {
+        return None;
+    }
+    let content = fs::read_to_string(list).ok()?;
+    default_in(&content, &content_type_for(scheme))
+}
+
+/// El `default` de `content_type` dentro de un `mimeapps.list` ya leído.
+///
+/// La mitad pura de [`current_default_for_scheme`]. El valor es una **lista**
+/// separada por `;`: de ella manda la primera entrada, que es la que el
+/// escritorio prueba antes que ninguna.
+fn default_in(content: &str, content_type: &str) -> Option<String> {
+    let mut inside = false;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            inside = trimmed == DEFAULT_APPLICATIONS;
+            continue;
+        }
+        if !inside || key_of(line) != Some(content_type) {
+            continue;
+        }
+        let (_, value) = trimmed.split_once('=')?;
+        return value
+            .split(';')
+            .map(str::trim)
+            .find(|entry| !entry.is_empty())
+            .map(str::to_owned);
+    }
+    None
+}
+
 /// El contenido del `mimeapps.list` con el `default` de `content_type` puesto
 /// a `handler`, y **todo lo demás intacto**.
 ///
@@ -431,6 +478,75 @@ mod tests {
         assert_eq!(
             written.overridden_by(),
             [ChoiceOverride::FirefoxKeepsItsOwn]
+        );
+    }
+
+    /// El valor del desplegable es el `default` explícito que hay escrito, y
+    /// lo que se lee es lo mismo que se escribió.
+    #[test]
+    fn the_written_default_is_what_gets_read_back() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let list = directory.path().join("mimeapps.list");
+        choose_handler_for_scheme(Channel::Native, &list, "afirma", "rfirma.desktop")
+            .expect("deberia escribirse");
+
+        let current = current_default_for_scheme(Channel::Native, &list, "afirma");
+
+        assert_eq!(current.as_deref(), Some("rfirma.desktop"));
+    }
+
+    /// Sin fichero no hay elección hecha, y eso no es un fallo: es la primera
+    /// vez.
+    #[test]
+    fn no_list_means_nobody_has_been_chosen() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+        let current = current_default_for_scheme(
+            Channel::Native,
+            &directory.path().join("mimeapps.list"),
+            "afirma",
+        );
+
+        assert_eq!(current, None);
+    }
+
+    /// Una asociación añadida **no** es una elección: el `default` solo se lee
+    /// del grupo que manda.
+    #[test]
+    fn an_added_association_is_not_the_default() {
+        let content = "[Added Associations]\nx-scheme-handler/afirma=autofirma.desktop;\n";
+
+        assert_eq!(default_in(content, "x-scheme-handler/afirma"), None);
+    }
+
+    /// De la lista de manejadores manda el primero, que es el que el
+    /// escritorio prueba antes que ninguno.
+    #[test]
+    fn the_first_entry_of_the_list_is_the_one_that_answers() {
+        let content =
+            "[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop;autofirma.desktop;\n";
+
+        assert_eq!(
+            default_in(content, "x-scheme-handler/afirma"),
+            Some("rfirma.desktop".to_owned())
+        );
+    }
+
+    /// Dentro del sandbox no se lee ningún `mimeapps.list`: el del anfitrión
+    /// no se ve y el de dentro no manda (ID-240).
+    #[test]
+    fn inside_the_sandbox_nothing_is_read_either() {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let list = directory.path().join("mimeapps.list");
+        std::fs::write(
+            &list,
+            "[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop;\n",
+        )
+        .expect("deberia escribirse");
+
+        assert_eq!(
+            current_default_for_scheme(Channel::Flatpak, &list, "afirma"),
+            None
         );
     }
 }

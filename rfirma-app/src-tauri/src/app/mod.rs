@@ -33,6 +33,7 @@ pub mod documents;
 pub mod errand;
 pub mod filtering;
 pub mod frontier;
+pub mod handlers;
 pub mod in_hand;
 pub mod invocation;
 pub mod preview;

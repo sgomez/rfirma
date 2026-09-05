@@ -71,6 +71,14 @@ pub struct Configuration {
     /// siempre en cuanto se pulsa «Entendido»: no es un ajuste que se pueda
     /// reactivar desde Preferencias, es una marca de que ya se explicó.
     pub trust_notice_seen: bool,
+    /// Si al arrancar se pregunta quién atiende los enlaces `afirma://`
+    /// (ID-239). Es el «No volver a preguntar» del banner, guardado del revés
+    /// —lo que se guarda es si se sigue preguntando— para que el valor por
+    /// omisión sea el que trae la aplicación recién instalada y no haga falta
+    /// escribirlo nunca. Se puede volver a encender desde Preferencias: el
+    /// banner es la única cosa que se descarta para siempre y **se deshace ahí
+    /// mismo**.
+    pub ask_about_url_handler: bool,
 }
 
 impl Default for Configuration {
@@ -93,6 +101,11 @@ impl Default for Configuration {
             // Sin descartar por omisión: es la primera vez, así que el aviso
             // tiene que aparecer.
             trust_notice_seen: false,
+            // Se pregunta: el banner es preventivo por narices (ID-239).
+            // Cuando el trámite lo atiende la otra aplicación rFirma ni se
+            // ejecuta, así que si no lo pregunta al arrancar no lo pregunta
+            // nunca.
+            ask_about_url_handler: true,
         }
     }
 }
@@ -113,6 +126,13 @@ mod tests {
     #[test]
     fn notify_new_version_starts_on() {
         assert!(Configuration::default().notify_new_version);
+    }
+
+    /// Recién instalada, la aplicación pregunta quién atiende `afirma://`:
+    /// el silencio se elige, no se hereda (ID-239).
+    #[test]
+    fn the_url_handler_is_asked_about_by_default() {
+        assert!(Configuration::default().ask_about_url_handler);
     }
 
     #[test]
@@ -170,6 +190,7 @@ mod tests {
         assert_eq!(
             fields,
             vec![
+                "ask_about_url_handler",
                 "destination",
                 "language",
                 "notify_new_version",

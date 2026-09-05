@@ -18,6 +18,7 @@ const {
   tauriRubricPicker,
   tauriSigningBackend,
   tauriStampComposer,
+  tauriUrlHandlers,
   tauriVersionCheck,
 } = await import("./tauri");
 
@@ -30,6 +31,7 @@ const aConfiguration = {
   theme: "system",
   offersTheOriginalFolder: false,
   trustNoticeSeen: false,
+  askAboutUrlHandler: true,
 };
 
 const anOrder = {
@@ -553,6 +555,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       rememberActivity: true,
       notifyNewVersion: true,
       trustNoticeSeen: false,
+      askAboutUrlHandler: true,
     });
   });
 
@@ -588,6 +591,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       rememberActivity: true,
       notifyNewVersion: true,
       trustNoticeSeen: false,
+      askAboutUrlHandler: true,
     });
 
     expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
@@ -622,6 +626,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       rememberActivity: true,
       notifyNewVersion: true,
       trustNoticeSeen: true,
+      askAboutUrlHandler: true,
     });
 
     const [, { configuration }] = invoke.mock.calls.at(-1) as [string, { configuration: object }];
@@ -836,5 +841,36 @@ describe("el puerto de la versión sobre Tauri", () => {
     invoke.mockResolvedValue(null);
 
     expect(await tauriVersionCheck().latest()).toBeNull();
+  });
+});
+
+describe("quién atiende los enlaces sobre Tauri", () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it("asks the backend who opens afirma:// links, and nothing else", async () => {
+    const answer = {
+      available: true,
+      handlers: [{ id: "rfirma.desktop", name: "rFirma" }],
+      current: null,
+      ours: "rfirma.desktop",
+    };
+    invoke.mockResolvedValue(answer);
+
+    expect(await tauriUrlHandlers().who()).toEqual(answer);
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("url_handlers");
+  });
+
+  // Lo que se manda es el fichero `.desktop`, que es lo único que entiende el
+  // `mimeapps.list`: la ventana no manda un nombre de aplicación (ID-238).
+  it("sends the desktop file of the chosen handler", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriUrlHandlers().choose("rfirma.desktop");
+
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("choose_url_handler", {
+      handler: "rfirma.desktop",
+    });
   });
 });
