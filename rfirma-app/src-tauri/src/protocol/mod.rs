@@ -13,8 +13,8 @@
 //!
 //! El contrato que se reproduce está medido en
 //! `docs/research/contrato-protocolo-afirma.md`, sobre el tag `v1.9.2` de
-//! `clienteafirma`. Tres decisiones se apartan del original **a propósito**, y
-//! las tres endurecen:
+//! `clienteafirma`. Cuatro decisiones se apartan del original **a propósito**,
+//! y las cuatro endurecen:
 //!
 //! 1. Un `idsession` mal formado se **rechaza** (`SAF_03`). El original lo pone
 //!    a `null`, y un `null` desactiva la comprobación entera del canal: abre un
@@ -24,6 +24,10 @@
 //! 3. `mcv` se compara contra la versión de AutoFirma que rFirma **declara
 //!    implementar** ([`version::IMPLEMENTED_AUTOFIRMA_VERSION`]), que es un
 //!    número distinto de la versión de rFirma (ID-250).
+//! 4. Un criterio de `filters=` **fuera de la lista blanca** se rechaza
+//!    (`SAF_03`) en vez de ignorarse. El original lo descarta en silencio y
+//!    sirve el listado entero, que es más ancho de lo que la sede pidió
+//!    ([`filters`], ID-256).
 //!
 //! Y una que **no** se aparta aunque tiente: la comparación de `mcv` no es
 //! semver, y se reproduce tal cual (ID-251, [`version`]).

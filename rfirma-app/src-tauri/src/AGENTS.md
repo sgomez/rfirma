@@ -50,7 +50,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
 | `app/signing.rs` | 764 | El recorrido de la firma en tres pasos y la sesión a medias. |
 | `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
-| `app/filtering.rs` | 343 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
+| `app/filtering.rs` | 340 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 232 | La invocación desde fuera, `rfirma documento.pdf`: qué abre y qué hace la segunda (ID-157…ID-160). |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
@@ -87,7 +87,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `protocol/url.rs` | 249 | Una URL `afirma://` partida en verbo y pares, con las rarezas de `extractParams`. |
 | `protocol/launch.rs` | 361 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
 | `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
-| `protocol/filters.rs` | 383 | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor, no qué se aplica (ID-256, ID-257, ID-260). |
+| `protocol/filters.rs` | 419 | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor, no qué se aplica (ID-256, ID-257, ID-260). |
 | `protocol/parameters.rs` | 142 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
 | `protocol/message.rs` | 179 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
 | `protocol/refusal.rs` | 170 | Los `SAF_` que rfirma produce hoy, con la línea que sale al cable. Se subsume en la frontera de errores del #349. |

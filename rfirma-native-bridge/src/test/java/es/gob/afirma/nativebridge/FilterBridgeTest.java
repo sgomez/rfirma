@@ -159,6 +159,31 @@ class FilterBridgeTest {
     }
 
     /**
+     * El valor de un criterio con eñe y con tildes —lo normal en un apellido
+     * espanol— llega al motor <b>identico</b> a como lo escribio la sede. El
+     * bloque viaja en UTF-8 y {@link SessionStamp#parseParams(String)} lo lee
+     * con un {@code Reader}: la sobrecarga de {@code Properties.load} que toma
+     * un flujo de bytes descodifica ISO-8859-1 por contrato, y convertiria
+     * cada letra acentuada en dos caracteres, ninguno el bueno. El motor no
+     * casaria con nada, devolveria un listado vacio, y la aplicacion lo
+     * contaria como «la sede los excluyo» (ID-258) en vez de como un filtro
+     * mutilado. Nada mas se pondria rojo.
+     */
+    @Test
+    void a_value_with_accents_reaches_the_engine_unchanged() throws Exception {
+        final String expression = "subject.contains:MU\u00d1OZ P\u00c9REZ";
+
+        final Properties parsed = SessionStamp.parseParams("filters=" + expression + "\n");
+
+        assertEquals(expression, parsed.getProperty("filters"),
+                "la expresion cruza literal al motor (ID-256), tambien fuera del ASCII");
+        // Y el motor la entiende: ninguno de los del kit lleva ese apellido, asi
+        // que el listado sale vacio por el criterio, no por la codificacion.
+        assertArrayEquals(new int[] {},
+                FilterBridge.select(parsed, List.of(TestFixtures.activeCertificate())));
+    }
+
+    /**
      * ID-260: los cuatro criterios que nadie ha podido medir —hace falta un
      * DNIe, un certificado SSL, uno cualificado y uno de seudonimo emitidos de
      * verdad— <b>se aceptan</b>. Lo que se fija aqui es que el motor los
@@ -168,13 +193,18 @@ class FilterBridgeTest {
     @Test
     void the_four_unmeasured_criteria_are_accepted_even_without_coverage_of_their_verdict()
             throws Exception {
-        final List<X509Certificate> listing = List.of(TestFixtures.activeCertificate());
+        final List<X509Certificate> listing =
+                List.of(TestFixtures.activeCertificate(), TestFixtures.expiredCertificate());
 
         for (final String criterion : new String[] {
                 "qualified:2.16.724.1.3.5.3.2", "pseudonym:true", "ssl:true", "dnie:true" }) {
             final int[] selected = FilterBridge.select(filters("filters=" + criterion), listing);
 
-            assertTrue(selected.length <= 1, "el motor contesta con " + criterion);
+            // Con dos certificados el listado ya puede decir algo: lo que se fija
+            // es que el motor *criba* —contesta con un subconjunto propio— y no
+            // que cribe bien, que es la cobertura que falta.
+            assertTrue(selected.length < listing.size(),
+                    "el motor entiende " + criterion + " y contesta cribando");
         }
     }
 }

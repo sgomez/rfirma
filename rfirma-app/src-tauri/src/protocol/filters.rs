@@ -11,6 +11,17 @@
 //! blanca**: un criterio que no esté en ella es un `SAF_03` y no se filtra a
 //! medias.
 //!
+//! **Lo que la lista blanca cierra, y lo que no.** Cierra el criterio
+//! *desconocido*. **No** cierra el criterio conocido con el argumento
+//! malformado: `CertFilterManager` sólo añade `ThumbPrintCertificateFilter` si
+//! el argumento parte en exactamente dos trozos, y `PolicyIdFilter` sólo si los
+//! OID no vienen vacíos; si no, devuelve un `MultipleCertificateFilter` de cero
+//! filtros, que por construcción acepta a todos. Un `thumbprint:SHA1` o un
+//! `policyid:` a secas siguen dejando el listado entero, igual que en el
+//! original. Validar los argumentos de los cuatro criterios que los llevan
+//! queda fuera de este módulo: haría falta reimplementar aquí lo que el motor
+//! interpreta, que es justo lo que el ID-253 evita.
+//!
 //! # Las tres formas de declararlo, y su precedencia
 //!
 //! Los filtros no son un parámetro propio: viajan dentro de `properties`, como
@@ -115,6 +126,13 @@ impl SiteFilter {
     /// invertida suelta y parte el bloque en un salto de línea, así que un
     /// `subject.rfc2254` con escapes del RFC 2254 llegaría mutilado. Escapando
     /// aquí, lo que el motor lee es byte a byte lo que escribió la sede.
+    ///
+    /// El bloque sale en **UTF-8** y el puente lo lee con un `Reader` en UTF-8
+    /// (`SessionStamp.parseParams`), no con la sobrecarga de `Properties.load`
+    /// que toma un flujo de bytes: aquella descodifica ISO-8859-1 por contrato
+    /// y mutilaría en silencio cualquier `subject.contains:` con eñe o con
+    /// tilde —el caso normal en España—, que el motor devolvería como listado
+    /// vacío y la aplicación contaría como «la sede los excluyó» (ID-258).
     pub fn as_java_properties(&self) -> String {
         let mut block = String::new();
         for (key, value) in &self.declared {
@@ -379,6 +397,22 @@ mod tests {
             filter.as_java_properties(),
             "filters=subject.rfc2254:(cn=PEREZ\\\\, JUAN)\n"
         );
+    }
+
+    /// Un valor **no ASCII** cruza igual de entero. El escapado no lo toca, y
+    /// el bloque viaja en UTF-8: quien lo descodifique como ISO-8859-1 al otro
+    /// lado convertiría cada letra acentuada en dos caracteres, ninguno el
+    /// bueno, y el filtro no casaría con nada sin que nada se pusiera rojo.
+    #[test]
+    fn a_value_with_accents_reaches_the_engine_unchanged() {
+        let expression = "subject.contains:MUÑOZ PÉREZ";
+        let filter = site_filter(&properties(&[("filters", expression)])).expect("es aceptable");
+
+        let block = filter.as_java_properties();
+
+        assert_eq!(block, "filters=subject.contains:MUÑOZ PÉREZ\n");
+        assert!(block.contains('Ñ'));
+        assert!(block.contains('É'));
     }
 
     /// Un salto de línea dentro del valor partiría el bloque en dos claves.
