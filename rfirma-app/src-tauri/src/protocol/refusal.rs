@@ -31,10 +31,6 @@ pub enum SafCode {
     /// `SAF_41`, `ERROR_MINIMUM_VERSION_NON_SATISTIED`: la sede exige una
     /// versión de cliente mayor que la que se implementa.
     MinimumVersionNonSatisfied,
-    /// `SAF_02`, `ERROR_UNSUPPORTED_PROTOCOL`: lo que llegó por el canal no
-    /// empieza por `afirma://` y tampoco es el eco
-    /// (`ProtocolInvocationLauncher.java:172`-`178`).
-    UnsupportedProtocol,
     /// `SAF_04`, `ERROR_UNSUPPORTED_OPERATION`: la operación que pide la URL no
     /// es ninguna de las que se atienden.
     UnsupportedOperation,
@@ -53,7 +49,6 @@ impl SafCode {
             Self::Params => "SAF_03",
             Self::UnsupportedProcedure => "SAF_21",
             Self::MinimumVersionNonSatisfied => "SAF_41",
-            Self::UnsupportedProtocol => "SAF_02",
             Self::UnsupportedOperation => "SAF_04",
             Self::InvalidSessionId => "SAF_46",
             Self::ExternalRequestToSocket => "SAF_47",
@@ -76,7 +71,6 @@ impl SafCode {
             Self::MinimumVersionNonSatisfied => {
                 "El tramite requiere una version mas reciente de Autofirma"
             }
-            Self::UnsupportedProtocol => "Protocolo no soportado",
             Self::UnsupportedOperation => "Operacion no soportada",
             Self::InvalidSessionId => "Id de sesion invalido",
             Self::ExternalRequestToSocket => {
@@ -146,7 +140,6 @@ mod tests {
         assert_eq!(SafCode::Params.as_str(), "SAF_03");
         assert_eq!(SafCode::UnsupportedProcedure.as_str(), "SAF_21");
         assert_eq!(SafCode::MinimumVersionNonSatisfied.as_str(), "SAF_41");
-        assert_eq!(SafCode::UnsupportedProtocol.as_str(), "SAF_02");
         assert_eq!(SafCode::UnsupportedOperation.as_str(), "SAF_04");
         assert_eq!(SafCode::InvalidSessionId.as_str(), "SAF_46");
         assert_eq!(SafCode::ExternalRequestToSocket.as_str(), "SAF_47");

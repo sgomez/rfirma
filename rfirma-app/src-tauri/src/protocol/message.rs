@@ -46,7 +46,9 @@ pub enum ChannelMessage {
         url: AfirmaUrl,
     },
     /// Ni un eco ni una URL del protocolo. El original lo rechaza con `SAF_02`
-    /// (`ProtocolInvocationLauncher.java:172`-`178`).
+    /// (`ProtocolInvocationLauncher.java:172`-`178`), pero por el canal nunca
+    /// llega tan lejos: no repite credencial, y la guardia de la credencial va
+    /// antes, así que sale con `SAF_46`.
     NotOfTheProtocol,
 }
 

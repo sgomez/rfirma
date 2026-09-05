@@ -80,11 +80,14 @@ pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer 
         // Las operaciones —`selectcert`, `sign`, `cosign`— llegan con el
         // trámite de sede; hoy no hay ninguna registrada, y una operación que
         // no se atiende es `SAF_04` en el original.
-        ChannelMessage::Operation { .. } => {
+        //
+        // `NotOfTheProtocol` no llega hasta aquí: no repite ninguna credencial,
+        // así que la guardia de arriba ya lo ha sacado con `SAF_46` —igual que
+        // el original, que mira el `idsession` antes de mirar el mensaje—. Por
+        // eso comparte brazo en vez de tener uno propio con un código que nadie
+        // produciría.
+        ChannelMessage::Operation { .. } | ChannelMessage::NotOfTheProtocol => {
             Answer::ReplyAndClose(SafCode::UnsupportedOperation.on_the_wire())
-        }
-        ChannelMessage::NotOfTheProtocol => {
-            Answer::ReplyAndClose(SafCode::UnsupportedProtocol.on_the_wire())
         }
     }
 }

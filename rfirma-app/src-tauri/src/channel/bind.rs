@@ -43,7 +43,7 @@ pub fn bind_first_free(ports: &[u16]) -> Result<TcpListener, ChannelError> {
     Err(ChannelError::new(
         Situation::NoDrawnPortIsFree,
         if refused.is_empty() {
-            "la invocacion no trajo ningun puerto al que atarse".to_owned()
+            "no quedaba ningun puerto al que atarse".to_owned()
         } else {
             refused.join("; ")
         },

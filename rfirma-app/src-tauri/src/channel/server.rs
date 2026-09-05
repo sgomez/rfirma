@@ -176,7 +176,13 @@ async fn accept_until_stopped(
         tokio::select! {
             _ = &mut stopped => break,
             accepted = listener.accept() => {
-                let Ok((stream, peer)) = accepted else { break };
+                // Un `accept` que falla en el *loopback* es un transitorio
+                // —`EMFILE`, `ENFILE`, `ECONNABORTED`—, no el final del canal:
+                // romper el bucle aquí dejaría a rFirma sin escuchar en
+                // silencio, sin `ChannelError` y sin que `OpenChannel` se
+                // entere. Se descarta la conexión y se sigue atendiendo; el
+                // canal sólo se apaga por su asa.
+                let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
                 tokio::spawn(async move {

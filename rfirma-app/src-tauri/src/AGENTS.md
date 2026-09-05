@@ -56,7 +56,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 367 | Los ajustes, del disco a la ventana y de vuelta. |
-| `app/site.rs` | 306 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
+| `app/site.rs` | 309 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
@@ -84,16 +84,16 @@ misma PR que lo crea**, o el PR sale en rojo.
 | **`protocol/`** | | Lo que pide la sede, leído de una URL `afirma://` y nada más. Puro, sin sockets ni puente (ID-244, TD-53). |
 | `protocol/mod.rs` | 41 | El reparto, y las tres cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `protocol/url.rs` | 249 | Una URL `afirma://` partida en verbo y pares, con las rarezas de `extractParams`. |
-| `protocol/launch.rs` | 360 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
+| `protocol/launch.rs` | 361 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
 | `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
 | `protocol/parameters.rs` | 142 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
-| `protocol/message.rs` | 177 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
-| `protocol/refusal.rs` | 177 | Los `SAF_` que rfirma produce hoy, con la línea que sale al cable. Se subsume en la frontera de errores del #349. |
+| `protocol/message.rs` | 179 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
+| `protocol/refusal.rs` | 170 | Los `SAF_` que rfirma produce hoy, con la línea que sale al cable. Se subsume en la frontera de errores del #349. |
 | **`channel/`** | | **El canal**: el servidor `wss://` sobre el *loopback* y qué se contesta a cada mensaje (ID-212…ID-219). No sabe por qué se abre: eso es de `app/site.rs`. |
 | `channel/mod.rs` | 28 | El reparto, y la tabla de las tres piezas. Léelo antes que sus hermanos. |
 | `channel/bind.rs` | 131 | Ata uno de los puertos que sorteó la sede, siempre en `127.0.0.1` y **nunca el 63117** (ID-215). |
-| `channel/server.rs` | 224 | El servidor: `async fn` que recibe el escuchador atado y devuelve puerto y asa de apagado (ID-213). **No existe escuchador en claro.** |
-| `channel/conversation.rs` | 213 | Qué se contesta a cada mensaje, sin socket delante: las tres guardias del original y el `OK` del eco. |
+| `channel/server.rs` | 230 | El servidor: `async fn` que recibe el escuchador atado y devuelve puerto y asa de apagado (ID-213). **No existe escuchador en claro.** |
+| `channel/conversation.rs` | 216 | Qué se contesta a cada mensaje, sin socket delante: las tres guardias del original y el `OK` del eco. |
 | `channel/error.rs` | 78 | Situaciones del canal (ADR-0009). |
 | **`pkcs11/`** | | La única parte que habla con el token. |
 | `pkcs11/mod.rs` | 718 | La capa PKCS#11. |
