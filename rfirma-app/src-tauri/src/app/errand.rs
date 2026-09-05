@@ -1116,10 +1116,17 @@ mod tests {
     }
 
     /// **ID-284**: y una página en blanco añadida al documento se rechaza,
-    /// porque eso es modificarlo antes de firmarlo.
+    /// porque eso es modificarlo antes de firmarlo. Con el recuadro puesto,
+    /// que es la única situación en la que el original la añade de verdad.
     #[test]
     fn a_page_appended_to_the_document_is_refused_before_anyone_is_asked() {
-        let asked = a_consent_to_sign("signaturePages=append\n");
+        let asked = a_consent_to_sign(
+            "signaturePositionOnPageLowerLeftX=100\n\
+             signaturePositionOnPageLowerLeftY=100\n\
+             signaturePositionOnPageUpperRightX=300\n\
+             signaturePositionOnPageUpperRightY=180\n\
+             signaturePages=append\n",
+        );
 
         let ErrandStep::Answering(reply) = asked else {
             panic!("no se anaden paginas: {asked:?}");
@@ -1128,6 +1135,18 @@ mod tests {
             reply.on_the_wire().starts_with("SAF_03"),
             "lo que sale es el rechazo del parametro: {}",
             reply.on_the_wire()
+        );
+    }
+
+    /// Pero sin recuadro el original no añade ninguna página, así que el
+    /// trámite sigue adelante y se firma invisible.
+    #[test]
+    fn an_appended_page_without_a_box_never_happens_and_the_errand_goes_on() {
+        let asked = a_consent_to_sign("signaturePages=append\n");
+
+        assert!(
+            matches!(asked, ErrandStep::AskingToSign(_)),
+            "sin esquinas no hay pagina que anadir: {asked:?}"
         );
     }
 

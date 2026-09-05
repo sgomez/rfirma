@@ -102,17 +102,24 @@ pub enum SiteVisibleSignature {
 ///   comprueba tras cancelarse el diálogo, y el mismo código que el original
 ///   acaba emitiendo (ID-283). rFirma no enseña el diálogo, así que llega aquí
 ///   directamente.
-/// - **`SAF_03` nombrando `properties`** cuando la lista de páginas empieza por
-///   `append`: añadir una página en blanco es modificar el documento antes de
-///   firmarlo (ID-284). No se contesta `SAF_43` para que la sede pueda
-///   distinguir las dos cosas: una es un recuadro que falta, y la otra un valor
-///   que rFirma no atiende.
+/// - **`SAF_03` nombrando `properties`** cuando la sede **puso el recuadro** y
+///   la lista de páginas que manda empieza por `append`: añadir una página en
+///   blanco es modificar el documento antes de firmarlo (ID-284). No se
+///   contesta `SAF_43` para que la sede pueda distinguir las dos cosas: una es
+///   un recuadro que falta, y la otra un valor que rFirma no atiende.
+///
+/// El orden importa: **la negativa del `append` va detrás del recuadro**,
+/// porque sin las cuatro esquinas el original tampoco añade página ninguna
+/// (`PdfSessionManager.java:383-390` sólo llama a `PdfUtil.getPages` dentro del
+/// `if (signaturePositionOnPage != null)`, y ese rectángulo lo exige entero
+/// `PdfUtil.getPositionOnPage:467-470`). Un `visibleSignature=optional` con
+/// `signaturePages=append` y sin esquinas no toca el documento: firma
+/// invisible, como pide el original.
 pub fn visible_signature_of(
     params: &BTreeMap<String, String>,
 ) -> Result<SiteVisibleSignature, Refusal> {
-    refuse_an_appended_page(params)?;
-
     if the_site_placed_the_box(params) {
+        refuse_an_appended_page(params)?;
         return Ok(SiteVisibleSignature::PlacedByTheSite);
     }
 
@@ -141,13 +148,25 @@ fn the_site_placed_the_box(params: &BTreeMap<String, String>) -> bool {
 }
 
 /// Si la sede declaró el recuadro obligatorio.
+///
+/// Sin recortar espacios, que es como lo lee el original:
+/// `checkShowRubricDialogIsCanceled` compara con `equalsIgnoreCase` a secas
+/// (`ProtocolInvocationLauncherSign.java:960`-`979`), así que un
+/// `visibleSignature=" WANT "` allí no es obligatorio y la firma sale
+/// invisible. Recortar aquí endurecería una negativa que el original no hace.
 fn the_site_makes_it_mandatory(params: &BTreeMap<String, String>) -> bool {
     params
         .get(VISIBLE_SIGNATURE)
-        .is_some_and(|value| value.trim().eq_ignore_ascii_case(WANT))
+        .is_some_and(|value| value.eq_ignore_ascii_case(WANT))
 }
 
-/// La negativa del `append`, en las dos claves que lo admiten.
+/// La negativa del `append`, en **la** clave que manda.
+///
+/// Se mira una sola: `signaturePages` si está, y sólo si no está,
+/// `signaturePage`. Es la cuenta exacta del original
+/// (`PdfUtil.getPages:699-703` lee la singular únicamente cuando la plural
+/// falta), así que `signaturePages=2` con `signaturePage=append` firma en la
+/// página 2 sin añadir nada, igual que allí.
 ///
 /// **Sólo cuenta como primer elemento de la lista**, que es el único sitio
 /// donde el original añade la página (`PdfUtil.java:711-713`). El propio
@@ -155,26 +174,29 @@ fn the_site_makes_it_mandatory(params: &BTreeMap<String, String>) -> bool {
 /// ahí dentro no crea ninguna página: rechazarlo sería inventarse una
 /// incompatibilidad con las sedes que copian esa cadena.
 fn refuse_an_appended_page(params: &BTreeMap<String, String>) -> Result<(), Refusal> {
-    for key in [PAGES, PAGE] {
-        let Some(value) = params.get(key) else {
-            continue;
-        };
-        if first_of(value).eq_ignore_ascii_case(APPEND) {
-            return Err(Refusal::about(
-                Parameter::Properties,
-                format!(
-                    "'{key}={value}' pide anadir una pagina en blanco al documento, y eso es \
-                     modificarlo antes de firmarlo"
-                ),
-            ));
-        }
+    let key = if params.contains_key(PAGES) {
+        PAGES
+    } else {
+        PAGE
+    };
+    let Some(value) = params.get(key) else {
+        return Ok(());
+    };
+    if first_of(value).eq_ignore_ascii_case(APPEND) {
+        return Err(Refusal::about(
+            Parameter::Properties,
+            format!(
+                "'{key}={value}' pide anadir una pagina en blanco al documento, y eso es \
+                 modificarlo antes de firmarlo"
+            ),
+        ));
     }
     Ok(())
 }
 
 /// El primer elemento de una lista separada por comas, ya sin espacios.
 fn first_of(value: &str) -> &str {
-    value.split(',').next().unwrap_or(value).trim()
+    value.split(',').next().unwrap_or_default().trim()
 }
 
 #[cfg(test)]
@@ -255,10 +277,20 @@ mod tests {
     /// La bandera se lee como la lee el original: sin distinguir mayúsculas.
     #[test]
     fn the_mandatory_flag_is_read_without_telling_capitals_apart() {
-        let refusal = visible_signature_of(&asked(&[("visibleSignature", " WANT ")]))
+        let refusal = visible_signature_of(&asked(&[("visibleSignature", "WANT")]))
             .expect_err("sigue siendo obligatorio");
 
         assert_eq!(refusal.code(), SafCode::VisibleSignature);
+    }
+
+    /// Y **con espacios alrededor deja de serlo**, que es también como la lee
+    /// el original: `equalsIgnoreCase` sin `trim()`.
+    #[test]
+    fn the_mandatory_flag_padded_with_spaces_is_not_mandatory_either_in_the_original() {
+        assert_eq!(
+            visible_signature_of(&asked(&[("visibleSignature", " WANT ")])),
+            Ok(SiteVisibleSignature::Declined)
+        );
     }
 
     /// Con posición y página, `want` es una firma más: no hay nada que
@@ -339,6 +371,46 @@ mod tests {
             assert_eq!(refusal.code(), SafCode::Params);
             assert_eq!(refusal.blame(), Some(Parameter::Properties));
         }
+    }
+
+    /// Sin recuadro puesto no hay página que añadir: el original tampoco mira
+    /// la lista, así que `optional` firma invisible en vez de rechazarse.
+    #[test]
+    fn an_append_without_the_box_placed_adds_no_page_and_signs_invisible() {
+        let asked = asked(&[
+            ("visibleSignature", "optional"),
+            ("signaturePages", "append"),
+        ]);
+
+        assert_eq!(
+            visible_signature_of(&asked),
+            Ok(SiteVisibleSignature::Declined)
+        );
+    }
+
+    /// Y con `want` sin esquinas la negativa sigue siendo la del recuadro que
+    /// falta, no la del `append`.
+    #[test]
+    fn an_append_without_the_box_placed_is_still_the_missing_box_refusal() {
+        let refusal = visible_signature_of(&asked(&[
+            ("visibleSignature", "want"),
+            ("signaturePages", "append"),
+        ]))
+        .expect_err("no hay donde colocar el recuadro");
+
+        assert_eq!(refusal.code(), SafCode::VisibleSignature);
+    }
+
+    /// El plural gana al singular, también para el `append`: `PdfUtil.getPages`
+    /// ni lee `signaturePage` cuando viene `signaturePages`.
+    #[test]
+    fn the_plural_key_wins_so_an_append_in_the_singular_one_is_never_read() {
+        let asked = placed(&[("signaturePages", "2"), ("signaturePage", "append")]);
+
+        assert_eq!(
+            visible_signature_of(&asked),
+            Ok(SiteVisibleSignature::PlacedByTheSite)
+        );
     }
 
     /// Pero el `append` que el diálogo del original emite **detrás** de una

@@ -140,7 +140,11 @@ pub struct SigningOrder {
     /// sus propios `extraParams` y esos cruzan al puente crudos. Aplicarles el
     /// `T⁻¹` de este camino los movería fuera de donde ella los puso; ver
     /// [`crate::protocol::visible`].
-    #[serde(default)]
+    ///
+    /// **Sin `#[serde(default)]` a propósito**: la ventana siempre lo manda, y
+    /// que faltara en el JSON no puede degradarse a firma invisible en
+    /// silencio —es la misma degradación que el ID-22 rechaza en el recuadro—.
+    /// Que falte es un error de deserialización, y así se ve.
     pub placement: Option<PlacementOrder>,
     pub fields: VisibleFieldsOrder,
     /// El motivo. Vacío es «sin motivo».

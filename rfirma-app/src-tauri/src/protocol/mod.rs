@@ -28,9 +28,12 @@
 //!    (`SAF_03`) en vez de ignorarse. El original lo descarta en silencio y
 //!    sirve el listado entero, que es más ancho de lo que la sede pidió
 //!    ([`filters`], ID-256).
-//! 5. **`signaturePages=append` se rechaza** (`SAF_03`). El original añade una
-//!    página en blanco al documento, y modificar lo que se va a firmar antes de
-//!    firmarlo no es una firma de lo que la sede mandó ([`visible`], ID-284).
+//! 5. **`signaturePages=append` se rechaza** (`SAF_03`) cuando la sede puso el
+//!    recuadro. El original añade una página en blanco al documento, y
+//!    modificar lo que se va a firmar antes de firmarlo no es una firma de lo
+//!    que la sede mandó ([`visible`], ID-284). Sin las cuatro esquinas el
+//!    original tampoco añade página, así que ahí no se endurece nada: se firma
+//!    invisible igual que allí.
 //!
 //! Y una que **no** se aparta aunque tiente: la comparación de `mcv` no es
 //! semver, y se reproduce tal cual (ID-251, [`version`]).
