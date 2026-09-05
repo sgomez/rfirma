@@ -222,13 +222,13 @@ msgstr ""
 "Arrastrar no nos da permiso para leer de cualquier carpeta. Ábrelo con el "
 "botón de abrir, que sí nos lo da."
 
-msgid "errors.situations.droppedOnlyFirst.title"
-msgstr "Solo hemos abierto el primer PDF"
+msgid "errors.situations.droppedSomeDiscarded.title"
+msgstr "Algunos ficheros no se han añadido"
 
-msgid "errors.situations.droppedOnlyFirst.body"
+msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"rFirma firma de uno en uno. Los demás ficheros que has soltado siguen donde "
-"estaban: arrástralos cuando termines con este."
+"Los demás PDF que has soltado ya están en Recientes. Los que no eran PDF no "
+"se han añadido."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "El recuadro se sale de la página"

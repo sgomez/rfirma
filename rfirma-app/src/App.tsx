@@ -443,6 +443,7 @@ export function App({
   // sobrevive a los remontajes, y la respuesta se entrega por el manejador
   // vigente en ese momento en vez de por el que la pidió.
   const invocationAsked = useRef(false);
+  const enterDocument = documents.enter;
   const arrivedRef = useRef<(drop: Drop) => void>(() => {});
   useEffect(() => {
     const arrived = (drop: Drop) => {
@@ -453,17 +454,32 @@ export function App({
         return;
       }
       setDropNotice(
-        drop.ignored > 0
+        drop.discarded > 0
           ? {
               about: drop.document.id,
               failure: {
-                situation: "droppedOnlyFirst",
-                detail: `se han soltado ${drop.ignored + 1} ficheros`,
+                situation: "droppedSomeDiscarded",
+                detail:
+                  drop.discarded === 1
+                    ? "se ha descartado 1 fichero"
+                    : `se han descartado ${drop.discarded} ficheros`,
               },
             }
           : null,
       );
-      void acceptDocument(drop.document);
+      // ID-306: los demás PDF del mismo gesto entran igual en Recientes, sin
+      // abrirse — sin cola y sin firma encadenada, una fila más por cada uno.
+      // Se anotan **uno detrás de otro**, nunca en paralelo: `store.record`
+      // lee y reescribe el estado entero sin cerrojo (`app/recents.rs`), y dos
+      // llamadas solapadas pierden una actualización o entrelazan el fichero
+      // temporal compartido. Corregido tras revisión en la PR #370.
+      const document = drop.document;
+      void (async () => {
+        for (const entering of drop.alsoEntering) {
+          await enterDocument(entering);
+        }
+        await acceptDocument(document);
+      })();
     };
     arrivedRef.current = arrived;
     const stop = drops.subscribe(arrived);
@@ -479,7 +495,7 @@ export function App({
       });
     }
     return stop;
-  }, [drops, acceptDocument]);
+  }, [drops, acceptDocument, enterDocument]);
 
   // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado
   // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas

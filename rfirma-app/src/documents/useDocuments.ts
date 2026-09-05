@@ -25,6 +25,16 @@ export interface Documents {
    * si toca, y activo— en vez de por un camino paralelo que se pareciera.
    */
   accept: (document: DocumentInHand) => Promise<void>;
+  /**
+   * Anota un documento en la bandeja **sin ponerlo delante**.
+   *
+   * Es lo que reciben los PDF que entran en Recientes de más al soltar varios
+   * a la vez (ID-306): cada uno es una fila, pero el que hay delante —el
+   * documento activo— no cambia. Con «Recordar mi actividad» apagado, o si el
+   * documento no se recuerda (ID-286), no hace nada: no hay fila donde
+   * apuntarlo.
+   */
+  enter: (document: DocumentInHand) => Promise<void>;
   /** Cambia de documento desde una fila de la bandeja. Ver `taken` en `recents.ts`. */
   select: (row: RecentDocument) => void;
   /**
@@ -117,6 +127,18 @@ export function useDocuments(
     [store, remember],
   );
 
+  const enter = useCallback(
+    async (document: DocumentInHand) => {
+      // Las dos razones por las que no queda rastro son las mismas que en
+      // [`accept`]: la preferencia (ID-34) y el documento que viene de donde
+      // no se recuerda nada (ID-286).
+      if (!remember || !document.remembered) return;
+      await store.record(document);
+      setRecents(await store.list());
+    },
+    [store, remember],
+  );
+
   const open = useCallback(async () => {
     const chosen = await picker.choose();
     if (chosen === null) return;
@@ -167,5 +189,5 @@ export function useDocuments(
 
   const select = useCallback((row: RecentDocument) => setActive(taken(row)), []);
 
-  return { recents, active, open, accept, select, reopen, place, forget, forgetAll };
+  return { recents, active, open, accept, enter, select, reopen, place, forget, forgetAll };
 }

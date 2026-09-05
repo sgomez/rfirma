@@ -84,25 +84,35 @@ pub(crate) fn told_as_dropped(
 ) -> Option<DroppedDocumentView> {
     match decided {
         crate::dropped::Dropped::Nothing => None,
-        crate::dropped::Dropped::Opened { path, ignored } => Some(DroppedDocumentView {
+        crate::dropped::Dropped::Opened {
+            path,
+            also_entering,
+            discarded,
+        } => Some(DroppedDocumentView {
             document: Some(told_as_opened(PortalDocument::opened(path), opened)),
+            also_entering: also_entering
+                .into_iter()
+                .map(|path| told_as_opened(PortalDocument::opened(path), opened))
+                .collect(),
             failure: None,
-            ignored,
+            discarded,
         }),
-        crate::dropped::Dropped::NotAPdf { ignored } => Some(DroppedDocumentView {
+        crate::dropped::Dropped::NotAPdf { discarded } => Some(DroppedDocumentView {
             document: None,
+            also_entering: Vec::new(),
             failure: Some(Failure::from(Refusal::NotAPdf)),
-            ignored,
+            discarded,
         }),
         // El aviso que el ID-68 exige: no es «ha fallado» a secas, es una
         // situación propia cuyo texto dice qué hacer —usar el botón de abrir,
         // que sí pasa por el portal—. Por qué existe este caso y desde qué
         // carpetas ocurre está medido en
         // `docs/research/arrastre-bajo-el-sandbox.md`.
-        crate::dropped::Dropped::Unreadable { detail, ignored } => Some(DroppedDocumentView {
+        crate::dropped::Dropped::Unreadable { detail, discarded } => Some(DroppedDocumentView {
             document: None,
+            also_entering: Vec::new(),
             failure: Some(Failure::new("droppedFileUnreadable", detail)),
-            ignored,
+            discarded,
         }),
     }
 }
@@ -462,7 +472,8 @@ mod tests {
         assert_eq!(document.name, "rfirma-commands-soltado.pdf");
         assert_eq!(document.id.len(), 32);
         assert_eq!(view.failure, None);
-        assert_eq!(view.ignored, 0);
+        assert_eq!(view.discarded, 0);
+        assert!(view.also_entering.is_empty());
         assert_eq!(opened.len(), 1);
     }
 
@@ -503,6 +514,25 @@ mod tests {
     #[test]
     fn dropping_no_files_at_all_says_nothing() {
         assert_eq!(dropped_document(&[], &OpenedDocuments::new()), None);
+    }
+
+    /// ID-306: los PDF que no fueron el primero también apuntan documento, con
+    /// su propio identificador opaco, para poder entrar en Recientes.
+    #[test]
+    fn every_dropped_pdf_gets_its_own_opened_document_to_enter_recients_with() {
+        let opened = OpenedDocuments::new();
+        let first = std::env::temp_dir().join("rfirma-commands-primero.pdf");
+        let second = std::env::temp_dir().join("rfirma-commands-segundo.pdf");
+        std::fs::write(&first, b"%PDF-1.4\n").expect("se puede escribir en el temporal");
+        std::fs::write(&second, b"%PDF-1.4\n").expect("se puede escribir en el temporal");
+
+        let view = dropped_document(&[first, second], &opened).expect("algo se ha soltado");
+
+        let document = view.document.expect("el primero se abre");
+        assert_eq!(view.also_entering.len(), 1);
+        assert_eq!(view.also_entering[0].name, "rfirma-commands-segundo.pdf");
+        assert_ne!(document.id, view.also_entering[0].id, "cada uno con su asa");
+        assert_eq!(opened.len(), 2);
     }
 
     #[test]

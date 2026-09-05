@@ -147,7 +147,7 @@ mod tests {
         let view = invoked_document(&invoked_with(&pdf), &opened).expect("algo trae");
 
         assert!(view.failure.is_none(), "un PDF legible se abre y no avisa");
-        assert_eq!(view.ignored, 0);
+        assert_eq!(view.discarded, 0);
         let document = view.document.expect("y el documento cruza ya apuntado");
         assert_eq!(document.name, "rfirma-invocation-contrato.pdf");
     }

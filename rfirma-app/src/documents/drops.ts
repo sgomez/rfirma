@@ -5,22 +5,27 @@ import type { DocumentInHand } from "./document";
  * Lo que le ocurre a la ventana cuando alguien suelta ficheros encima.
  *
  * Es lo mismo que devuelve el diálogo —un documento ya abierto y
- * canonicalizado— más las dos cosas que solo pasan al soltar: que lo soltado no
- * valga, y que sean varios.
+ * canonicalizado— más lo que solo pasa al soltar: que lo soltado no valga, y
+ * que sean varios, incluidos los que trajera una carpeta soltada.
  */
 export interface Drop {
-  /** El documento que se ha abierto, o `null` si no se ha abierto ninguno. */
+  /** El documento que se ha abierto en el visor, o `null` si no se ha abierto ninguno. */
   document: DocumentInHand | null;
+  /**
+   * El resto de PDF del mismo gesto —sueltos directamente o encontrados
+   * dentro de una carpeta— que entran igual en Recientes, sin abrirse
+   * (ID-306). Sin cola y sin firma encadenada: solo una fila más por cada
+   * uno.
+   */
+  alsoEntering: DocumentInHand[];
   /** Por qué no se ha abierto ninguno. `null` cuando sí se abrió. */
   failure: DocumentFailure | null;
   /**
-   * Cuántos ficheros más venían en el mismo gesto y no se han abierto.
-   *
-   * La aplicación firma de uno en uno, así que se abre el primero que sea un
-   * PDF **y se dice** (ID-70): callarse los demás dejaría a la persona sin
-   * saber cuál de los cinco que soltó tiene delante.
+   * Cuántos ficheros más venían en el mismo gesto y no han entrado en ningún
+   * sitio: no son PDF, o —cuando el primero no se pudo leer— no se han
+   * llegado a probar (ID-70, ID-306).
    */
-  ignored: number;
+  discarded: number;
 }
 
 /**
