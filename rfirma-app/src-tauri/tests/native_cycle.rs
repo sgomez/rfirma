@@ -234,8 +234,10 @@ mod full_cycle {
 
     use base64::Engine;
     use rfirma_lib::app::cycle::{self, SigningRequest};
-    use rfirma_lib::ffi::NativeBridge;
+    use rfirma_lib::app::filtering;
+    use rfirma_lib::ffi::{FilterRequest, NativeBridge};
     use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
+    use rfirma_lib::protocol::site_filter;
     use rfirma_lib::rubric;
     use rfirma_lib::signing::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
@@ -287,6 +289,61 @@ mod full_cycle {
 
     fn reference() -> CertificateRef {
         signing_certificate().reference().clone()
+    }
+
+    /// **La cuarta entrada, contra la librería de verdad** (ID-252, TD-56).
+    ///
+    /// Las pruebas de grada A del motor viven en el puente Java, donde se
+    /// ejecuta sobre la JVM. Lo que sólo se puede comprobar aquí es que ese
+    /// motor **sigue estando dentro de la imagen nativa**: `native-image`
+    /// descarta lo que no alcanza, así que un `CertFilterManager` que se
+    /// quedara fuera no daría error de compilación —daría una respuesta vacía o
+    /// una excepción en tiempo de ejecución, con la sede delante—.
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn the_filter_engine_survives_inside_the_native_image() {
+        let bridge = bridge();
+        let certificate = signing_certificate();
+        let der = base64::engine::general_purpose::STANDARD.encode(certificate.der());
+
+        let inside = bridge
+            .filter_certificates(FilterRequest {
+                filter_properties: "filters=subject.contains:EIDAS CERTIFICADO PRUEBAS\n",
+                certificates_b64: &der,
+            })
+            .expect("el motor tiene que contestar desde dentro de la imagen");
+        assert_eq!(inside, vec![0]);
+
+        let outside = bridge
+            .filter_certificates(FilterRequest {
+                filter_properties: "filters=subject.contains:NO ESTA EN EL SUBJECT\n",
+                certificates_b64: &der,
+            })
+            .expect("el motor tiene que contestar desde dentro de la imagen");
+        assert!(
+            outside.is_empty(),
+            "la sede lo excluye y el listado sale vacio, no completo"
+        );
+    }
+
+    /// Y el camino entero, con el puente de verdad haciendo de motor: los
+    /// criterios de rFirma primero y la expresión de la sede después (ID-258).
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn the_use_case_bounds_the_listing_through_the_real_bridge() {
+        let bridge = bridge();
+        let listing = vec![signing_certificate()];
+        let filter = site_filter(&[(
+            "filters".to_owned(),
+            "subject.contains:EIDAS CERTIFICADO PRUEBAS".to_owned(),
+        )])
+        .expect("el criterio esta en la lista blanca");
+
+        let kept = filtering::keep_what_the_site_accepts(&bridge, &filter, listing)
+            .expect("el motor contesta");
+
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].reference().label(), ACTIVE);
     }
 
     /// Un PDF de una página, escrito a mano.

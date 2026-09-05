@@ -467,7 +467,7 @@ Cada expresión es una **conjunción** de criterios separados por `;` (`FILTERS_
 | `ssl:` | certificado SSL |
 | `qualified:` | cualificado, con el valor como argumento |
 | `signingcert:` / `authcert:` | certificado de firma / de autenticación |
-| `nonexpired:` | `true` muestra los caducados, `false` los oculta |
+| `nonexpired:` | **al reves de lo que el nombre sugiere**: `false` muestra los caducados y `true` los oculta, porque el original construye `new ExpiredCertificateFilter(!parseBoolean(valor))` (`CertFilterManager.java:216`-`219`). Medido en el [#350](https://github.com/sgomez/rfirma/issues/350) |
 | `sscd:` | dispositivo cualificado de creación de firma |
 | `subject.rfc2254:` / `issuer.rfc2254:` | filtro LDAP RFC 2254 sobre el DN |
 | `issuer.rfc2254.recurse:` | igual, recorriendo la cadena de emisores |

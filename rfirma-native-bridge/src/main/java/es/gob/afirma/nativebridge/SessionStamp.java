@@ -1,6 +1,6 @@
 package es.gob.afirma.nativebridge;
 
-import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -317,7 +317,10 @@ public final class SessionStamp {
             return params;
         }
         try {
-            params.load(new ByteArrayInputStream(raw.getBytes(StandardCharsets.UTF_8)));
+            // Con un Reader, y no con un InputStream: la sobrecarga de flujo de bytes
+            // descodifica ISO-8859-1 por contrato, y mutilaria en silencio cualquier
+            // valor no ASCII (un "subject.contains:MUNOZ" con enye, p.ej.).
+            params.load(new StringReader(raw));
         }
         catch (final java.io.IOException e) {
             throw new IllegalArgumentException("extraParams mal formados: " + e.getMessage(), e);

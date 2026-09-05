@@ -74,6 +74,34 @@
       </exclusions>
     </dependency>
 
+    <!-- El motor de filtros de certificado del original (ID-252). NO lleva
+         exclusion de afirma-ui-utils, y no es un olvido: medido en el #350, este
+         modulo no la arrastra —su unica dependencia es afirma-core-keystores—,
+         la imagen nativa engorda un 2,4 % (27 723 872 -> 28 379 232 B) y los 47
+         metodos de AWT alcanzables que quedan son de iText y ya estaban. La
+         exclusion de las dos dependencias de arriba SIGUE HACIENDO FALTA.
+         Del modulo se toma el MOTOR, no el parseo: la lista blanca de criterios
+         se aplica en Rust (protocol/filters.rs) antes de llamar aqui. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-keystores-filters</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+
+    <!-- afirma-core-keystores EXPLICITO, y no por gusto: el pom publicado de
+         afirma-keystores-filters:1.9.2 pide a su hermano
+         ${clienteafirma.version}, y esa propiedad vale 1.9 en el POM padre del
+         tag v1.9.2 (la misma trampa que documenta el CLAUDE.md para el
+         bootstrap). Sin esta linea, `mvn dependency:tree` baja
+         afirma-core-keystores:1.9 —cuyo pom ni siquiera esta en la cache— y el
+         puente compilaria contra la 1.9 EN SILENCIO. Aqui vive
+         CertificateFilter, que es lo que devuelve el motor. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-core-keystores</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.graalvm.sdk</groupId>
       <artifactId>graal-sdk</artifactId>

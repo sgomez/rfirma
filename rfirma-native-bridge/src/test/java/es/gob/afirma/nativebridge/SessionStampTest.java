@@ -232,4 +232,22 @@ class SessionStampTest {
         assertTrue(SessionStamp.parseParams("").isEmpty());
         assertTrue(SessionStamp.parseParams(null).isEmpty());
     }
+
+    /**
+     * El mismo bloque tambien lleva texto de persona —la rubrica de una firma
+     * visible, y la expresion de filtro de una sede—, asi que se lee con un
+     * {@code Reader} en UTF-8. La sobrecarga de {@code Properties.load} que
+     * toma un flujo de bytes descodifica ISO-8859-1 por contrato y mutilaria
+     * en silencio cada letra acentuada.
+     */
+    @Test
+    void reads_a_value_with_accents_without_mangling_it() {
+        final String rubric = "Firmado por MU\u00d1OZ P\u00c9REZ, Jos\u00e9";
+
+        final Properties parsed =
+                SessionStamp.parseParams("signReason=" + rubric + "\nprofile=baseline\n");
+
+        assertEquals(rubric, parsed.getProperty("signReason"));
+        assertEquals("baseline", parsed.getProperty("profile"));
+    }
 }
