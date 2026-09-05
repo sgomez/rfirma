@@ -137,6 +137,10 @@ pub fn code_of_inadmissible(refusal: Inadmissible) -> SafCode {
 pub fn code_of_bridge(error: &BridgeError) -> SafCode {
     match error {
         BridgeError::PdfHasUnregisteredSignatures(_) => SafCode::ConfirmationNeeded,
+        // La sede declaró una política que no se puede aplicar: no es la firma
+        // que no sale, es lo que ella pidió, y el catálogo tiene código para
+        // eso (ID-266).
+        BridgeError::IncompatiblePolicy(_) => SafCode::InvalidPolicy,
         BridgeError::ExecutablePathUnknown(_)
         | BridgeError::NotFound(_)
         | BridgeError::Load { .. }
@@ -220,6 +224,9 @@ mod tests {
             "lo que dijera Java".to_owned(),
         )));
         codes.push(code_of_bridge(&BridgeError::PdfHasUnregisteredSignatures(
+            "lo que dijera Java".to_owned(),
+        )));
+        codes.push(code_of_bridge(&BridgeError::IncompatiblePolicy(
             "lo que dijera Java".to_owned(),
         )));
         codes.push(code_of_broken_seal());

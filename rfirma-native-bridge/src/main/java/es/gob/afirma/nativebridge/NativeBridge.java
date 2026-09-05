@@ -17,9 +17,9 @@ import org.graalvm.word.PointerBase;
  * {@link PadesBridge} y devuelve JSON; lo que hace la firma vive alli, donde se
  * puede probar sin construir la imagen nativa.
  *
- * <p><b>Cuatro entradas y ni una mas</b>: {@code autofirma_pades_presign},
- * {@code autofirma_pades_postsign}, {@code autofirma_filter_certificates} y
- * {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
+ * <p><b>Cinco entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * {@code autofirma_pades_postsign}, {@code autofirma_filter_certificates},
+ * {@code autofirma_expand_extra_params} y {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
  * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
  * que referencia los preprocesadores XAdES, FacturaE, ASiC y PKCS1 y haria
@@ -42,6 +42,7 @@ import org.graalvm.word.PointerBase;
  * presign  ok  {"ok":true,"session":"&lt;xml&gt;","pre":"&lt;b64 DER&gt;","stamp":"&lt;b64&gt;"}
  * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}
  * filter   ok  {"ok":true,"selected":[0,2]}
+ * expand   ok  {"ok":true,"params":"&lt;bloque properties&gt;"}
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -190,6 +191,38 @@ public final class NativeBridge {
     }
 
     /**
+     * Expande la politica de firma que declara la sede (ID-266).
+     *
+     * <p>La expansion es del original: {@code ExtraParamsProcessor} vive dentro
+     * de {@code afirma-core} y sabe en que se convierte
+     * {@code expPolicy=FirmaAGE}. Aqui solo se cruzan las cadenas.
+     *
+     * @param extraParams los {@code extraParams} de la sede, en formato
+     *                    {@code java.util.Properties}.
+     * @param format      el formato de firma, {@code PAdES}.
+     * @return JSON con el bloque expandido. Propiedad del llamante: se libera
+     *         con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_expand_extra_params")
+    public static CCharPointer expandExtraParams(
+            final IsolateThread thread,
+            final CCharPointer extraParams,
+            final CCharPointer format) {
+        try {
+            final String expanded = ExtraParamsBridge.expand(
+                    SessionStamp.parseParams(CTypeConversion.toJavaString(extraParams)),
+                    CTypeConversion.toJavaString(format));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "params", expanded);
+            return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
      * La clase de fallo que Rust distingue de un fallo cualquiera (ID-296).
      *
      * <p>Un PDF con firmas no registradas no es un error del puente: es una
@@ -197,6 +230,16 @@ public final class NativeBridge {
      * puede distinguir del resto al otro lado de la frontera.
      */
     static final String UNREGISTERED_SIGNATURES_KIND = "pdfHasUnregisteredSignatures";
+
+    /**
+     * La otra clase con nombre propio: la politica que la sede declara no se
+     * puede aplicar al formato pedido (ID-266).
+     *
+     * <p>Sin nombre propio se colapsaria en «la firma no ha salido», y lo que
+     * ha pasado es que la sede pidio una politica que no existe o que no case
+     * con PAdES: eso tiene codigo propio en el catalogo publicado.
+     */
+    static final String INCOMPATIBLE_POLICY_KIND = "incompatiblePolicy";
 
     /** La clase con la que se marca todo lo demas. */
     static final String GENERIC_FAILURE_KIND = "failed";
@@ -208,6 +251,10 @@ public final class NativeBridge {
      */
     private static final String UNREGISTERED_SIGNATURES_EXCEPTION =
             "es.gob.afirma.signers.pades.common.PdfHasUnregisteredSignaturesException";
+
+    /** Igual que la de arriba, y por lo mismo: se compara por nombre. */
+    private static final String INCOMPATIBLE_POLICY_EXCEPTION =
+            "es.gob.afirma.core.signers.ExtraParamsProcessor$IncompatiblePolicyException";
 
     static String errorJson(final Throwable e) {
         final String message = e.getMessage() == null ? e.getClass().getName()
@@ -238,6 +285,9 @@ public final class NativeBridge {
         for (int depth = 0; cause != null && depth < MAX_CAUSE_DEPTH; depth++) {
             if (UNREGISTERED_SIGNATURES_EXCEPTION.equals(cause.getClass().getName())) {
                 return UNREGISTERED_SIGNATURES_KIND;
+            }
+            if (INCOMPATIBLE_POLICY_EXCEPTION.equals(cause.getClass().getName())) {
+                return INCOMPATIBLE_POLICY_KIND;
             }
             cause = cause.getCause() == cause ? null : cause.getCause();
         }

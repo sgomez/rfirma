@@ -54,17 +54,23 @@ pub enum Parameter {
     Data,
     /// `properties`: los `extraParams` de la operacion, filtros incluidos.
     Properties,
+    /// `format`: el formato de firma que pide la sede.
+    Format,
+    /// `algorithm`: el algoritmo con el que se firma.
+    Algorithm,
 }
 
 impl Parameter {
     /// Todos, para las pruebas de totalidad.
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 8] = [
         Self::Ports,
         Self::ProtocolVersion,
         Self::IdSession,
         Self::MinimumClientVersion,
         Self::Data,
         Self::Properties,
+        Self::Format,
+        Self::Algorithm,
     ];
 
     /// El nombre con el que viaja en la URL del protocolo.
@@ -76,6 +82,8 @@ impl Parameter {
             Self::MinimumClientVersion => "mcv",
             Self::Data => "dat",
             Self::Properties => "properties",
+            Self::Format => "format",
+            Self::Algorithm => "algorithm",
         }
     }
 }

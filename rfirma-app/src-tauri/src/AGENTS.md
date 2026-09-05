@@ -19,9 +19,9 @@ misma PR que lo crea**, o el PR sale en rojo.
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
-- El fichero más grande del backend es `ffi.rs`, con 1148 líneas; detrás van
-  `app/documents.rs` (986), `signing/placement.rs` (926), `app/signing.rs` (764),
-  `memory/mod.rs` (611) y `app/recents.rs` (603). El mayor de `commands/` es justo `commands/guards.rs`
+- El fichero más grande del backend es `app/errand.rs`, con 1473 líneas; detrás
+  van `ffi.rs` (1204), `app/documents.rs` (986), `app/signing.rs` (951) y
+  `signing/placement.rs` (926). El mayor de `commands/` es justo `commands/guards.rs`
   (672), y detrás va `commands/mod.rs` (645); lo que los hace crecer es
   **prosa**: los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
   es un cuerpo, lo que ha entrado casi siempre es una decisión, y una decisión
@@ -36,7 +36,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `main.rs` | 8 | El binario. No hay nada dentro. |
 | `lib.rs` | 217 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
-| `ffi.rs` | 1148 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cuatro entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
+| `ffi.rs` | 1204 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 722 | **Las veintisiete órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 539 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
@@ -46,15 +46,16 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/guards.rs` | 672 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 221 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
-| `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
+| `app/cycle.rs` | 477 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
 | `app/certificates.rs` | 756 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
-| `app/signing.rs` | 764 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/signing.rs` | 951 | El recorrido de la firma en tres pasos y la sesión a medias, y su gemelo de sede: **la postfirma que no escribe nada** (ID-286, ID-264). |
 | `app/frontier.rs` | 301 | **La frontera de errores**: el único sitio donde una situación del ID-29 se convierte en el código `SAF_NN` que recibe la sede (ID-288, ID-292). |
 | `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
-| `app/errand.rs` | 810 | **El trámite de sede**: la operación que llega por el canal, el momento del consentimiento —que no se salta nunca— y lo que la sede recibe, más el trámite vivo del que sólo hay uno (ID-272, ID-275, ID-276, ID-280). |
+| `app/errand.rs` | 1473 | **El trámite de sede**: la operación que llega por el canal, el momento del consentimiento —que no se salta nunca— y lo que la sede recibe, más el trámite vivo del que sólo hay uno y el fichero de paso que se borra con él (ID-272, ID-275, ID-276, ID-280, ID-286). |
 | `app/filtering.rs` | 340 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 496 | La invocación desde fuera, `rfirma documento.pdf`: qué abre, qué hace la segunda y por dónde sale la URL `afirma://` que no es una ruta (ID-157…ID-160, ID-235, ID-236). |
+| `app/policies.rs` | 194 | **La política de firma que declara la sede**: `expPolicy` expandido por `ExtraParamsProcessor` del original, y quién manda cuando la sede y rFirma tocan la misma clave (ID-266). |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
@@ -96,10 +97,10 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `protocol/launch.rs` | 366 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
 | `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
 | `protocol/filters.rs` | 430 | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor, no qué se aplica (ID-256, ID-257, ID-260). |
-| `protocol/operation.rs` | 380 | Lo que la sede pide por el canal ya abierto: el verbo, las dos guardias comunes y el `properties` del que salen los filtros (ID-263, ID-272, ID-276). |
+| `protocol/operation.rs` | 751 | Lo que la sede pide por el canal ya abierto: el verbo, las dos guardias comunes, el `properties` del que salen los filtros y la petición de firma —`sign` y `cosign` en PAdES; `countersign`, `save` y `signandsave` con su rechazo propio— (ID-263, ID-264, ID-272, ID-276). |
 | `protocol/parameters.rs` | 145 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
 | `protocol/message.rs` | 179 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
-| `protocol/codes.rs` | 559 | **El catálogo publicado**: los cincuenta y tres `SAF_00`…`SAF_52` con frase nuestra, el parámetro que se nombra detrás, y las tres respuestas que no son códigos —`CANCEL`, `MEMORY_ERROR`, `NULL`— (ID-289, ID-290, ID-293). |
+| `protocol/codes.rs` | 567 | **El catálogo publicado**: los cincuenta y tres `SAF_00`…`SAF_52` con frase nuestra, el parámetro que se nombra detrás, y las tres respuestas que no son códigos —`CANCEL`, `MEMORY_ERROR`, `NULL`— (ID-289, ID-290, ID-293). |
 | `protocol/refusal.rs` | 105 | El rechazo del protocolo: el código que sale al cable y el detalle crudo que **no** sale (ID-291). |
 | **`channel/`** | | **El canal**: el servidor `wss://` sobre el *loopback* y qué se contesta a cada mensaje (ID-212…ID-219). No sabe por qué se abre: eso es de `app/site.rs`. |
 | `channel/mod.rs` | 28 | El reparto, y la tabla de las tres piezas. Léelo antes que sus hermanos. |
@@ -216,7 +217,10 @@ Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 Cinco ficheros vigilan invariantes leyendo el código **como texto**, no
 ejecutándolo: `app/cycle.rs`, `app/signing.rs`, `tests/site_frontier_guards.rs`,
 `commands/guards.rs` y `tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
-dentro. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
+dentro. Dos de las de `app/signing.rs` comprueban **ausencias** —que la postfirma
+de un trámite de sede no entregue el documento, no anote fila y no recuerde el
+certificado (ID-286, ID-264)—, y una ausencia no la vigila ninguna prueba de
+comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
 
 - **`production_half` corta por `"\nmod tests {"`**, así que todo lo que quede
   **después** del módulo de pruebas es invisible para la guarda. Si estás

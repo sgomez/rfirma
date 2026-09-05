@@ -48,8 +48,9 @@ class BridgeContractTest {
         }
 
         assertEquals(
-                Set.of("autofirma_filter_certificates", "autofirma_free_string",
-                        "autofirma_pades_postsign", "autofirma_pades_presign"),
+                Set.of("autofirma_expand_extra_params", "autofirma_filter_certificates",
+                        "autofirma_free_string", "autofirma_pades_postsign",
+                        "autofirma_pades_presign"),
                 names,
                 "cambiar un nombre aqui rompe el enlace de Rust en tiempo de ejecucion, no de compilacion");
     }

@@ -82,6 +82,7 @@ pub fn compose(
                 document,
                 chain: &chain,
                 config: &config,
+                from_the_site: &crate::app::cycle::NOTHING_FROM_A_SITE,
                 certificate: &reference,
             },
         )?;

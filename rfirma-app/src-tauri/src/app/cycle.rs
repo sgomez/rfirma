@@ -52,6 +52,10 @@ use crate::signing::{
     to_java_properties, AdmissibleDocument, Refusal, SealMismatch, SessionSeal, SignatureConfig,
 };
 
+/// Ningún `extraParam` de sede: el recorrido local, que es el de siempre.
+pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
+    std::collections::BTreeMap::new();
+
 /// El algoritmo de firma, en el nombre que entiende Java.
 ///
 /// Va emparejado con `CKM_SHA256_RSA_PKCS` del ID-16, que es el mecanismo con
@@ -77,6 +81,12 @@ pub struct SigningRequest<'a> {
     pub chain: &'a [Vec<u8>],
     /// Dónde cae el recuadro y qué lleva dentro.
     pub config: &'a SignatureConfig,
+    /// Los `extraParams` que la sede declaró, **ya expandidos** (ID-266).
+    ///
+    /// Van **debajo** de los seis ajustes de rFirma: la sede decide la política
+    /// de firma y rFirma el recuadro que la persona vio y consintió. En el
+    /// recorrido local es [`NOTHING_FROM_A_SITE`].
+    pub from_the_site: &'a std::collections::BTreeMap<String, String>,
     /// Con qué clave se firmará la fase 2. Solo son coordenadas: ni el PIN ni
     /// la clave viven en este tipo.
     pub certificate: &'a CertificateRef,
@@ -215,7 +225,10 @@ pub fn presign(
         .map(|der| base64(der))
         .collect::<Vec<_>>()
         .join(CHAIN_SEPARATOR);
-    let extra_params = to_java_properties(&request.config.extra_params());
+    let extra_params = to_java_properties(&super::policies::merged_with(
+        request.from_the_site.clone(),
+        request.config.extra_params(),
+    ));
 
     let presigned = bridge.presign(PreSignRequest {
         pdf_b64: &pdf_b64,
@@ -362,8 +375,10 @@ mod tests {
         // fases que sí son de Java, la que libera las cadenas del ID-11, y el
         // motor de filtros que se le pide prestado al original (ID-252) —que no
         // firma nada: entra el DER público de cada certificado y salen los
-        // índices que pasan—.
+        // índices que pasan—, más el expansor de política del ID-266, que
+        // tampoco firma: entra un bloque de texto y sale otro.
         let expected: BTreeSet<String> = [
+            "autofirma_expand_extra_params",
             "autofirma_filter_certificates",
             "autofirma_free_string",
             "autofirma_pades_postsign",

@@ -325,6 +325,18 @@ pub struct FilterRequest<'a> {
     pub certificates_b64: &'a str,
 }
 
+/// Lo que hace falta para expandir la política de firma que declara la sede.
+///
+/// Tampoco lleva sello ni sesión, y por lo mismo que [`FilterRequest`]: entra
+/// un bloque de `extraParams` y sale el mismo bloque expandido (ID-266).
+#[derive(Clone, Copy, Debug)]
+pub struct ExpandRequest<'a> {
+    /// Los `extraParams` de la sede, en formato `java.util.Properties`.
+    pub extra_params: &'a str,
+    /// El formato de firma, que es lo que decide en qué expande la política.
+    pub format: &'a str,
+}
+
 /// Lo que puede salir mal al cruzar la frontera.
 ///
 /// [`BridgeError::Failed`] es el puente contestando `{"ok":false}`: no es un
@@ -362,6 +374,12 @@ pub enum BridgeError {
     MalformedResponse(String),
     /// El puente ha contestado `{"ok":false,...}`.
     Failed(String),
+    /// El puente ha contestado `{"ok":false,"kind":"incompatiblePolicy",...}`:
+    /// la política que la sede declaró en `expPolicy` no se puede aplicar al
+    /// formato pedido (ID-266). **No es la firma que no sale**: es la sede
+    /// pidiendo algo que no existe, y por eso llega con nombre propio en vez
+    /// de colapsada en [`BridgeError::Failed`].
+    IncompatiblePolicy(String),
     /// El puente ha contestado `{"ok":false,"kind":"pdfHasUnregisteredSignatures",...}`:
     /// el PDF trae firmas que su propio diccionario no registra, y firmarlo
     /// encima puede invalidar las que ya tenía. **No es un fallo cualquiera**
@@ -388,6 +406,9 @@ impl fmt::Display for BridgeError {
             Self::NullResponse => write!(f, "el puente ha devuelto NULL"),
             Self::MalformedResponse(detail) => write!(f, "respuesta ilegible del puente: {detail}"),
             Self::Failed(detail) => write!(f, "el puente ha fallado: {detail}"),
+            Self::IncompatiblePolicy(detail) => {
+                write!(f, "la politica de firma no se puede aplicar: {detail}")
+            }
             Self::PdfHasUnregisteredSignatures(detail) => {
                 write!(f, "el PDF trae firmas no registradas: {detail}")
             }
@@ -424,6 +445,8 @@ type PostSignSymbol = unsafe extern "C" fn(
 
 type FilterSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
 
+type ExpandSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
+
 /// La librería nativa cargada, con su isolate de GraalVM ya creado.
 ///
 /// **No es `Sync`, y es a propósito**: el `IsolateThread` de GraalVM pertenece
@@ -431,7 +454,7 @@ type FilterSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_ch
 /// silencioso de esta frontera, así que el tipo no deja.
 pub struct NativeBridge {
     /// Nadie la lee, y aun así tiene que estar: es lo que mantiene cargada la
-    /// librería —y por tanto válidos los cinco punteros a función de abajo—
+    /// librería —y por tanto válidos los seis punteros a función de abajo—
     /// mientras el puente viva. Soltarla antes sería un `dlclose` con el
     /// isolate dentro.
     #[expect(dead_code, reason = "mantiene viva la librería de los punteros")]
@@ -442,6 +465,7 @@ pub struct NativeBridge {
     presign: PreSignSymbol,
     postsign: PostSignSymbol,
     filter: FilterSymbol,
+    expand: ExpandSymbol,
     free_string: FreeStringSymbol,
     tear_down: TearDownIsolate,
 }
@@ -493,12 +517,13 @@ impl NativeBridge {
         // el contrato de GraalVM para esas entradas, y los punteros a función
         // valen mientras `library` siga cargada, que es lo que garantiza
         // guardarla en el mismo valor.
-        let (create, presign, postsign, filter, free_string, tear_down) = unsafe {
+        let (create, presign, postsign, filter, expand, free_string, tear_down) = unsafe {
             (
                 resolve::<CreateIsolate>(&library, b"graal_create_isolate\0")?,
                 resolve::<PreSignSymbol>(&library, b"autofirma_pades_presign\0")?,
                 resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
                 resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
+                resolve::<ExpandSymbol>(&library, b"autofirma_expand_extra_params\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
                 resolve::<TearDownIsolate>(&library, b"graal_tear_down_isolate\0")?,
             )
@@ -519,6 +544,7 @@ impl NativeBridge {
             presign,
             postsign,
             filter,
+            expand,
             free_string,
             tear_down,
         })
@@ -596,6 +622,22 @@ impl NativeBridge {
         parse_filter_selection(&json)
     }
 
+    /// Expande la política de firma que declara la sede (ID-266).
+    ///
+    /// **Sin estado y sin sello**, igual que [`Self::filter_certificates`]:
+    /// entra el bloque de `extraParams` de la sede y sale el mismo bloque con
+    /// `expPolicy` ya convertido en las claves que le corresponden. Quien sabe
+    /// en qué expande es `ExtraParamsProcessor`, de `afirma-core`.
+    pub fn expand_extra_params(&self, request: ExpandRequest<'_>) -> Result<String, BridgeError> {
+        let params = c_string(request.extra_params, "los extraParams")?;
+        let format = c_string(request.format, "el formato")?;
+        let json = self.call(|thread| {
+            // SAFETY: los tres argumentos viven hasta que la llamada vuelve.
+            unsafe { (self.expand)(thread, params.as_ptr(), format.as_ptr()) }
+        })?;
+        parse_expanded_params(&json)
+    }
+
     /// El único sitio que toca un puntero devuelto por el puente: llama, adopta
     /// la cadena y la libera al salir.
     fn call<F>(&self, invoke: F) -> Result<String, BridgeError>
@@ -612,7 +654,7 @@ impl NativeBridge {
 
 /// Busca un símbolo y se queda el **puntero a función**, no el préstamo.
 ///
-/// Se resuelven los cinco de una vez al cargar, y antes de crear el isolate,
+/// Se resuelven los seis de una vez al cargar, y antes de crear el isolate,
 /// por tres razones: que la librería que no exporta alguno falle al abrirse en
 /// vez de a la primera firma —o, en el caso de `autofirma_free_string`, en vez
 /// de no fallar nunca y filtrar en silencio—; que un símbolo que falta no deje
@@ -706,9 +748,22 @@ pub fn parse_filter_selection(json: &str) -> Result<Vec<usize>, BridgeError> {
         .collect()
 }
 
+/// El JSON de la expansión: `{"ok":true,"params":"<bloque properties>"}`.
+///
+/// Se separa de la llamada por lo mismo que [`parse_presign`]: la forma del
+/// JSON tiene que poder probarse sin librería nativa delante.
+pub fn parse_expanded_params(json: &str) -> Result<String, BridgeError> {
+    let response = parse_response(json)?;
+    Ok(field(&response, "params")?.to_owned())
+}
+
 /// La clase de fallo con la que el puente marca un PDF con firmas no
 /// registradas (`NativeBridge.errorJson`, ID-296).
 const UNREGISTERED_SIGNATURES_KIND: &str = "pdfHasUnregisteredSignatures";
+
+/// La clase de fallo con la que el puente marca una política que no se puede
+/// aplicar (`NativeBridge.errorJson`, ID-266).
+const INCOMPATIBLE_POLICY_KIND: &str = "incompatiblePolicy";
 
 fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
     let value: serde_json::Value = serde_json::from_str(json)
@@ -730,6 +785,7 @@ fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
                     Some(UNREGISTERED_SIGNATURES_KIND) => {
                         BridgeError::PdfHasUnregisteredSignatures(detail)
                     }
+                    Some(INCOMPATIBLE_POLICY_KIND) => BridgeError::IncompatiblePolicy(detail),
                     _ => BridgeError::Failed(detail),
                 },
             )

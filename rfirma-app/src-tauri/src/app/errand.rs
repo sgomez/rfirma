@@ -4,8 +4,17 @@
 //! [`super::site`] atiende la **invocación** —abre el canal en uno de los
 //! puertos que la sede sorteó— y este módulo atiende lo que viene después: la
 //! operación que llega por ese canal ya abierto, el momento del consentimiento
-//! y la respuesta. Hoy la única operación que se atiende es `selectcert`
-//! ([`crate::protocol::operation`]).
+//! y la respuesta. Las operaciones que se atienden son `selectcert`, `sign` y
+//! `cosign` ([`crate::protocol::operation`], ID-263).
+//!
+//! # El documento de la sede no se recuerda (ID-286)
+//!
+//! Lo que la sede manda entra por [`crate::memory::OpenedDocuments::remember_unrecorded`]
+//! —la puerta que **no** deja rastro— y se escribe en un fichero de paso que
+//! este módulo borra en cuanto el trámite contesta. De él no queda fila en
+//! Recientes, ni colocación del recuadro, ni «último documento»: la postfirma
+//! del trámite es [`super::signing::finish_for_the_site`], que ensambla y
+//! devuelve los bytes sin escribir nada.
 //!
 //! # Los dos canales van desacompasados (ID-275)
 //!
@@ -33,26 +42,37 @@
 //! persona en dos trámites de dos sedes con dos PIN a medias. Y es un cerrojo
 //! **de proceso** porque la instancia es única (ID-160, ID-279, ID-281).
 
-use std::path::Path;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use base64::Engine as _;
 
 use crate::commands::views::CertificateView;
 use crate::commands::Failure;
-use crate::memory::{ListedCertificates, Memory};
+use crate::memory::{handles, ListedCertificates, Memory, OpenedDocuments};
 use crate::pkcs11::{self, Store};
 use crate::protocol::{
-    read_operation, ChannelCredential, Refusal, SafCode, SelectCertificate, SiteFilter,
-    SiteOperation, WireAnswer,
+    read_operation, ChannelCredential, Refusal, SafCode, SelectCertificate, SignRequest,
+    SignatureRound, SiteFilter, SiteOperation, WireAnswer,
 };
+use crate::signing::AdmissibleDocument;
 
 use super::filtering::{self, FilterEngine};
 use super::frontier;
+use super::policies::{self, PolicyEngine};
+use super::signing::SiteSignature;
 
 /// **El trámite vivo del proceso**, si lo hay (ID-280).
+///
+/// Guarda además el **fichero de paso** del documento que mandó la sede, y lo
+/// borra al terminar: de ese documento no queda rastro ninguno (ID-286), y el
+/// único sitio donde se sabe que el trámite ha acabado es aquí.
 #[derive(Default)]
-pub struct LiveErrand(Mutex<Option<Errand>>);
+pub struct LiveErrand {
+    errand: Mutex<Option<Errand>>,
+    scratch: Mutex<Option<PathBuf>>,
+}
 
 /// Lo que se sabe de un trámite en curso.
 ///
@@ -82,6 +102,12 @@ impl Errand {
 }
 
 impl LiveErrand {
+    /// Apunta el fichero de paso del documento que mandó la sede, para
+    /// borrarlo al contestar.
+    fn keep_the_scratch(&self, path: PathBuf) {
+        *super::lock(&self.scratch) = Some(path);
+    }
+
     /// Apunta el trámite que empieza. **No sustituye**: con uno vivo devuelve
     /// `false` y el que llega se queda fuera (ID-280).
     ///
@@ -92,7 +118,7 @@ impl LiveErrand {
     /// «¿hay trámite vivo?» que preguntar antes: la plaza se pide aquí.
     #[must_use = "con uno vivo devuelve false y el que llega no queda apuntado (ID-280)"]
     pub fn begin(&self, errand: Errand) -> bool {
-        let mut live = super::lock(&self.0);
+        let mut live = super::lock(&self.errand);
         if live.is_some() {
             return false;
         }
@@ -102,7 +128,7 @@ impl LiveErrand {
 
     /// El trámite vivo, si lo hay.
     pub fn current(&self) -> Option<Errand> {
-        super::lock(&self.0).clone()
+        super::lock(&self.errand).clone()
     }
 
     /// Se acabó: la sede ya tiene su respuesta.
@@ -119,7 +145,21 @@ impl LiveErrand {
     /// quien lo cablee —la ventana de sede (#362) y los manejadores (#357)— ha
     /// de atar **el cierre del canal** a esta llamada.
     pub fn end(&self) {
-        *super::lock(&self.0) = None;
+        *super::lock(&self.errand) = None;
+        // Y el documento que mandó la sede se va con él: de él no queda rastro
+        // ninguno (ID-286). Si el borrado falla —el fichero ya no está, o el
+        // directorio se ha ido— no hay nada que contarle a nadie: el trámite ha
+        // terminado y esto es limpieza.
+        if let Some(scratch) = super::lock(&self.scratch).take() {
+            let _ = std::fs::remove_file(scratch);
+        }
+    }
+
+    /// El fichero de paso apuntado, si lo hay. **Sólo para las pruebas**: nadie
+    /// del recorrido necesita la ruta, que es justamente lo que no cruza.
+    #[cfg(test)]
+    pub fn scratch_path(&self) -> Option<PathBuf> {
+        super::lock(&self.scratch).clone()
     }
 }
 
@@ -129,9 +169,35 @@ pub enum ErrandStep {
     /// **El momento del consentimiento** (ID-272, ID-276): la ventana enseña
     /// estas filas y la persona decide. La sede no recibe nada todavía.
     AskingForConsent(Vec<CertificateView>),
+    /// **El momento del consentimiento de una firma** (ID-272): la ventana
+    /// enseña el documento que la sede manda y estas filas, y la persona
+    /// decide. La sede no recibe nada todavía.
+    AskingToSign(SigningConsent),
     /// No hay nada que consentir: esto es lo que la sede recibe, y sale ya
     /// (ID-275).
     Answering(SiteReply),
+}
+
+/// Lo que hay delante de la persona cuando una sede pide una firma.
+///
+/// No es una vista: es lo que hace falta para **seguir** el trámite si se
+/// consiente, y por eso lleva dentro cosas que la ventana no pinta —el filtro y
+/// los `extraParams`—. Las dos se vuelven a usar en la prefirma: el filtro
+/// porque se comprueba otra vez antes del PIN (ID-259) y los `extraParams`
+/// porque son la política que la sede declaró (ID-266).
+#[derive(Debug)]
+pub struct SigningConsent {
+    /// El identificador con el que la ventana nombra el documento de la sede.
+    /// **No es una ruta** (ADR-0011).
+    pub document: String,
+    /// `sign` o `cosign`, que es lo que hay que contarle a la persona.
+    pub round: SignatureRound,
+    /// Los certificados que la sede acepta, ya cribados.
+    pub certificates: Vec<CertificateView>,
+    /// Los `extraParams` de la sede, **ya expandidos** (ID-266).
+    pub from_the_site: BTreeMap<String, String>,
+    /// Lo que la sede pide del listado, para volver a comprobarlo (ID-259).
+    pub filter: SiteFilter,
 }
 
 /// Lo que se le contesta a la sede, y lo que queda para la ventana.
@@ -145,6 +211,18 @@ pub enum SiteReply {
     /// más**, tal y como lo espera el cliente publicado
     /// (`ProtocolInvocationLauncherSelectCert.java:262`).
     Certificate(String),
+    /// La firma que la sede pidió, en la forma que espera el cliente publicado:
+    /// el certificado y la firma en Base64 URL-safe, separados por `|`
+    /// (`NativeSignDataProcessor.java:53`-`104`, `RESULT_SEPARATOR` en `:23`).
+    ///
+    /// El tercer campo —`extraData`— **no se emite**: sólo lleva el nombre del
+    /// fichero cargado, y aquí el documento lo mandó la sede.
+    Signature {
+        /// El DER del firmante, en Base64 URL-safe.
+        certificate: String,
+        /// El PDF firmado, en Base64 URL-safe.
+        signature: String,
+    },
     /// La persona ha dicho que no (ID-293).
     Cancelled,
     /// La sede recibe el código; la ventana, la situación entera.
@@ -166,6 +244,10 @@ impl SiteReply {
     pub fn on_the_wire(&self) -> String {
         match self {
             Self::Certificate(encoded) => encoded.clone(),
+            Self::Signature {
+                certificate,
+                signature,
+            } => format!("{certificate}{RESULT_SEPARATOR}{signature}"),
             Self::Cancelled => frontier::cancelled().on_the_wire(),
             Self::Refused { answer, .. } => answer.on_the_wire(),
             Self::RefusedByTheProtocol(refusal) => refusal.answer().on_the_wire(),
@@ -179,6 +261,35 @@ impl SiteReply {
             _ => None,
         }
     }
+}
+
+/// El separador de los campos de la respuesta de firma
+/// (`NativeSignDataProcessor.java:23`).
+const RESULT_SEPARATOR: char = '|';
+
+/// Todo lo que un trámite necesita tener a mano.
+///
+/// Es un tipo y no ocho argumentos porque los ocho viajan siempre juntos: son
+/// la raíz de composición vista desde el trámite de sede, igual que
+/// [`super::Environment`] lo es desde una orden de la ventana.
+pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine> {
+    /// El motor de filtros, prestado del puente (ID-252).
+    pub engine: &'a E,
+    /// El expansor de política, prestado del mismo sitio (ID-266).
+    pub policies: &'a P,
+    /// Dónde se buscan los certificados.
+    pub stores: &'a [Store],
+    /// Dónde viven los `.p12` instalados (ID-192).
+    pub installed_dir: &'a Path,
+    /// Los certificados listados en esta sesión.
+    pub listed: &'a ListedCertificates,
+    /// Los documentos abiertos en esta sesión.
+    pub opened: &'a OpenedDocuments,
+    /// La memoria entre sesiones.
+    pub memory: &'a Memory,
+    /// Dónde cae el fichero de paso del documento que manda la sede, que se
+    /// borra al contestar (ID-286).
+    pub scratch_dir: &'a Path,
 }
 
 /// **Caso de uso.** Atiende la operación que llegó por el canal ya abierto.
@@ -199,21 +310,17 @@ impl SiteReply {
 /// **en la frontera** (ID-288): por eso se llama a
 /// [`pkcs11::list_certificates_across`] y no al caso de uso de
 /// [`filtering`], que la entrega ya envuelta para la ventana.
-pub fn attend_operation<E: FilterEngine>(
-    engine: &E,
-    stores: &[Store],
-    installed_dir: &Path,
-    listed: &ListedCertificates,
-    memory: &Memory,
+pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     url: &crate::protocol::AfirmaUrl,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let request = match read_operation(url) {
-        Ok(SiteOperation::SelectCertificate(request)) => request,
+    let operation = match read_operation(url) {
+        Ok(operation) => operation,
         Err(refusal) => return answering(live, SiteReply::RefusedByTheProtocol(refusal)),
     };
 
-    let ours = match pkcs11::list_certificates_across(stores) {
+    let ours = match pkcs11::list_certificates_across(desk.stores) {
         Ok(ours) => ours,
         Err(error) => {
             let code = frontier::code_of_token(error.situation());
@@ -227,7 +334,158 @@ pub fn attend_operation<E: FilterEngine>(
         }
     };
 
-    consent_for(engine, &request, ours, installed_dir, listed, memory, live)
+    match operation {
+        SiteOperation::SelectCertificate(request) => consent_for(
+            desk.engine,
+            &request,
+            ours,
+            desk.installed_dir,
+            desk.listed,
+            desk.memory,
+            live,
+        ),
+        SiteOperation::Sign(request) => consent_to_sign(desk, &request, ours, live),
+    }
+}
+
+/// **Caso de uso.** El momento del consentimiento de una firma, sobre un
+/// listado que **ya** pasó por los criterios de rFirma (ID-258, ID-272).
+///
+/// El orden de los cuatro pasos es la decisión de este módulo, y ninguno es
+/// intercambiable:
+///
+/// 1. **La admisibilidad primero** (ID-63): un PDF cifrado, certificado o que
+///    no es un PDF se rechaza sobre los bytes, sin token y **antes** de que la
+///    persona vea nada que consentir.
+/// 2. **La política después**, porque una que no se puede aplicar hace que no
+///    haya firma que ofrecer (ID-266).
+/// 3. **El listado**, con la criba de la sede encima de la de rFirma (ID-258).
+/// 4. Y sólo entonces se guarda el documento y se pide el consentimiento: hasta
+///    aquí no se ha escrito ni un byte en el disco.
+///
+/// Es público por lo mismo que [`consent_for`]: **éste no lista el token**, y
+/// eso es lo que permite probar la decisión entera en grada A con un listado de
+/// andamio (TD-20, TD-51).
+pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
+    request: &SignRequest,
+    ours: Vec<crate::pkcs11::TokenCertificate>,
+    live: &LiveErrand,
+) -> ErrandStep {
+    if let Err(inadmissible) = AdmissibleDocument::check(request.document()) {
+        return answering(
+            live,
+            SiteReply::Refused {
+                answer: WireAnswer::refused(frontier::code_of_inadmissible(inadmissible)),
+                failure: inadmissible.into(),
+            },
+        );
+    }
+
+    let from_the_site =
+        match policies::expanded_for_the_site(desk.policies, request.declared_params()) {
+            Ok(expanded) => expanded,
+            Err(error) => {
+                return answering(
+                    live,
+                    SiteReply::Refused {
+                        answer: WireAnswer::refused(frontier::code_of_bridge(&error)),
+                        failure: error.into(),
+                    },
+                )
+            }
+        };
+
+    let accepted = match accepted_listing(desk, request.filter(), ours, live) {
+        Ok(accepted) => accepted,
+        Err(step) => return step,
+    };
+
+    let document = match keep_the_document(desk, live, request.document()) {
+        Ok(document) => document,
+        Err(failure) => {
+            return answering(
+                live,
+                SiteReply::Refused {
+                    answer: WireAnswer::refused(SafCode::CannotSaveData),
+                    failure,
+                },
+            )
+        }
+    };
+
+    ErrandStep::AskingToSign(SigningConsent {
+        document,
+        round: request.round(),
+        certificates: super::certificates::rows_of(
+            accepted,
+            desk.installed_dir,
+            desk.listed,
+            desk.memory,
+        ),
+        from_the_site,
+        filter: request.filter().clone(),
+    })
+}
+
+/// El listado que la sede acepta, o el paso que la despacha con su código.
+///
+/// Es el cuerpo que [`consent_for`] y [`consent_to_sign`] comparten: las dos
+/// cribas son las mismas y los dos códigos también, porque la sede no distingue
+/// si se quedó sin certificados pidiendo identidad o pidiendo firma.
+fn accepted_listing<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
+    filter: &SiteFilter,
+    ours: Vec<crate::pkcs11::TokenCertificate>,
+    live: &LiveErrand,
+) -> Result<Vec<crate::pkcs11::TokenCertificate>, ErrandStep> {
+    let accepted =
+        filtering::keep_what_the_site_accepts(desk.engine, filter, ours).map_err(|failure| {
+            answering(
+                live,
+                SiteReply::Refused {
+                    answer: WireAnswer::refused(SafCode::CannotAccessKeystore),
+                    failure,
+                },
+            )
+        })?;
+
+    if accepted.is_empty() {
+        return Err(answering(
+            live,
+            SiteReply::Refused {
+                answer: WireAnswer::refused(SafCode::NoCertificatesInKeystore),
+                failure: Failure::new(
+                    "certificateNotFound",
+                    "no queda ningun certificado que la sede acepte",
+                ),
+            },
+        ));
+    }
+    Ok(accepted)
+}
+
+/// Deja el documento que mandó la sede donde se pueda leer y firmar, **sin que
+/// quede rastro de él** (ID-286).
+///
+/// Entra por [`OpenedDocuments::remember_unrecorded`], que es la puerta que no
+/// escribe fila, y el fichero de paso queda apuntado en el trámite vivo para
+/// borrarlo al contestar. El nombre es un asa acuñada y no el que la sede
+/// quisiera: la sede no nombra ficheros en este equipo.
+fn keep_the_document<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
+    live: &LiveErrand,
+    bytes: &[u8],
+) -> Result<String, Failure> {
+    std::fs::create_dir_all(desk.scratch_dir)
+        .map_err(|error| Failure::new("folderMissing", error.to_string()))?;
+    let path = desk.scratch_dir.join(format!("{}.pdf", handles::mint()));
+    std::fs::write(&path, bytes).map_err(|error| Failure::new("unwritable", error.to_string()))?;
+    let _ = crate::paths::restrict_to_owner(&path);
+    live.keep_the_scratch(path.clone());
+    Ok(desk
+        .opened
+        .remember_unrecorded(crate::destination::PortalDocument::opened(path)))
 }
 
 /// **Caso de uso.** El momento del consentimiento sobre un listado que **ya**
@@ -349,6 +607,22 @@ pub fn identity_handed_over<E: FilterEngine>(
     over(live, SiteReply::Certificate(on_the_wire(chosen.der())))
 }
 
+/// **Caso de uso.** Lo que la sede recibe cuando la firma ha terminado
+/// (ID-275).
+///
+/// El certificado delante y la firma detrás, separados por `|`, los dos en
+/// Base64 URL-safe: es lo que `processSignResponse` parte
+/// (`autoscript.js:2512`-`2549`).
+pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteReply {
+    over(
+        live,
+        SiteReply::Signature {
+            certificate: on_the_wire(&signed.signer_der),
+            signature: on_the_wire(&signed.signed),
+        },
+    )
+}
+
 /// **Caso de uso.** La persona ha dicho que no: `CANCEL` sale en el acto
 /// (ID-275, ID-293).
 pub fn declined(live: &LiveErrand) -> SiteReply {
@@ -380,6 +654,7 @@ mod tests {
 
     use super::*;
     use crate::app::fixtures::{a_memory, a_usable_certificate, listed_from};
+    use crate::app::in_hand::DocumentInHand;
     use crate::app::site::{attend_launch, Attendance};
     use crate::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown};
     use crate::ffi::BridgeError;
@@ -443,8 +718,74 @@ mod tests {
 
     fn requested(url: &AfirmaUrl) -> SelectCertificate {
         let SiteOperation::SelectCertificate(request) =
-            read_operation(url).expect("es una operacion que se atiende");
+            read_operation(url).expect("es una operacion que se atiende")
+        else {
+            panic!("es una seleccion de certificado");
+        };
         request
+    }
+
+    /// El puesto de trabajo del trámite, con todo doblado (TD-51, TD-52).
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "es el constructor de un tipo de ocho campos, no una interfaz"
+    )]
+    fn a_desk<'a>(
+        engine: &'a AnEngine,
+        policies: &'a APolicyEngine,
+        stores: &'a [Store],
+        home: &'a Path,
+        listed: &'a ListedCertificates,
+        opened: &'a OpenedDocuments,
+        memory: &'a Memory,
+        scratch: &'a Path,
+    ) -> ErrandDesk<'a, AnEngine, APolicyEngine> {
+        ErrandDesk {
+            engine,
+            policies,
+            stores,
+            installed_dir: home,
+            listed,
+            opened,
+            memory,
+            scratch_dir: scratch,
+        }
+    }
+
+    /// Un expansor de política doblado: devuelve lo que se le programó, y
+    /// apunta lo que se le pidió.
+    struct APolicyEngine {
+        asked: RefCell<Vec<String>>,
+        answer: Result<String, ()>,
+    }
+
+    impl APolicyEngine {
+        fn answering(block: &str) -> Self {
+            Self {
+                asked: RefCell::new(Vec::new()),
+                answer: Ok(block.to_owned()),
+            }
+        }
+
+        fn that_refuses_the_policy() -> Self {
+            Self {
+                asked: RefCell::new(Vec::new()),
+                answer: Err(()),
+            }
+        }
+    }
+
+    impl PolicyEngine for APolicyEngine {
+        fn expand(
+            &self,
+            extra_params: &str,
+            _format: &str,
+        ) -> Result<String, crate::ffi::BridgeError> {
+            self.asked.borrow_mut().push(extra_params.to_owned());
+            self.answer.clone().map_err(|()| {
+                crate::ffi::BridgeError::IncompatiblePolicy("no se puede aplicar".to_owned())
+            })
+        }
     }
 
     /// **El trazador entero** (TD-51): invocación, canal, operación leída del
@@ -516,6 +857,358 @@ mod tests {
             live.current().is_none(),
             "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada (ID-275)"
         );
+    }
+
+    /// Un PDF mínimo, que es lo que la sede manda dentro de `dat`.
+    const A_PDF: &[u8] = b"%PDF-1.7\n";
+
+    /// La petición de firma ya leída, que es lo que recibe el caso de uso.
+    fn signature_requested(url: &AfirmaUrl) -> SignRequest {
+        let SiteOperation::Sign(request) =
+            read_operation(url).expect("es una operacion que se atiende")
+        else {
+            panic!("es una firma");
+        };
+        request
+    }
+
+    /// La operación de firma tal y como llega por el canal.
+    fn a_signature(verb: &str, extra: &str) -> AfirmaUrl {
+        let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
+        let text = format!(
+            "afirma://{verb}?op={verb}&idsession={CREDENTIAL}&format=PAdES&\
+             algorithm=SHA256withRSA&dat={document}{extra}"
+        );
+        let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+            panic!("una URL del protocolo es una operacion");
+        };
+        url
+    }
+
+    /// **El trazador de la firma** (TD-51): invocación, canal, operación leída
+    /// del mensaje, política expandida, listado filtrado, consentimiento y
+    /// respuesta, sin abrir un socket y sin token (TD-52).
+    ///
+    /// La firma de verdad —prefirma, PIN y postfirma— es la grada C; lo que
+    /// esta prueba fija es la decisión que hay a cada lado de ella.
+    #[test]
+    fn a_signature_goes_from_the_launch_to_the_consent_and_back_to_the_wire() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let asked = RefCell::new(Vec::new());
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies =
+            APolicyEngine::answering("policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9\n");
+        let scratch = home.path().join("errand");
+
+        // 1. La sede invoca, y el canal queda sirviendo su conversación.
+        let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+        assert!(
+            matches!(attendance, Attendance::Serving(_)),
+            "la invocacion es buena: {attendance:?}"
+        );
+
+        // 2. Por ese canal llega la firma, y lo que sale es el consentimiento.
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature("sign", "")),
+            ours.clone(),
+            &live,
+        );
+        let ErrandStep::AskingToSign(consent) = step else {
+            panic!("hay un certificado que la sede acepta: {step:?}");
+        };
+        assert_eq!(consent.round, SignatureRound::First);
+        assert_eq!(consent.certificates.len(), 1);
+        assert_eq!(
+            consent
+                .from_the_site
+                .get("policyIdentifier")
+                .map(String::as_str),
+            Some("urn:oid:2.16.724.1.3.1.1.2.1.9"),
+            "la politica la expandio el motor del original (ID-266)"
+        );
+        assert_eq!(
+            std::fs::read(
+                DocumentInHand::taken(&opened, &consent.document)
+                    .expect("el documento esta en la mano")
+                    .reading_path()
+            )
+            .expect("el fichero de paso existe"),
+            A_PDF,
+            "lo que se firma es lo que la sede mando"
+        );
+        assert!(
+            live.current().is_some(),
+            "consintiendo, el tramite sigue vivo"
+        );
+
+        // 3. La firma termina y la sede recibe certificado y firma, en ese
+        //    orden y separados por `|`.
+        let reply = signature_handed_over(
+            &live,
+            &SiteSignature {
+                signed: b"%PDF-1.7 firmado".to_vec(),
+                signer_der: ours[0].der().to_vec(),
+            },
+        );
+        let encode = base64::engine::general_purpose::URL_SAFE;
+        assert_eq!(
+            reply.on_the_wire(),
+            format!(
+                "{}|{}",
+                encode.encode(ours[0].der()),
+                encode.encode(b"%PDF-1.7 firmado")
+            )
+        );
+        assert!(
+            live.current().is_none(),
+            "contestada la sede, el tramite deja de estar vivo (ID-275)"
+        );
+    }
+
+    /// **ID-286 / TD-64**: del documento que manda la sede no queda fila en
+    /// Recientes, ni colocación del recuadro, ni fichero de paso.
+    #[test]
+    fn the_document_a_site_sends_leaves_no_trace_at_all() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature("cosign", "")),
+            ours.clone(),
+            &live,
+        );
+
+        let ErrandStep::AskingToSign(consent) = step else {
+            panic!("hay un certificado que la sede acepta: {step:?}");
+        };
+        assert_eq!(consent.round, SignatureRound::Again);
+        assert!(
+            !DocumentInHand::taken(&opened, &consent.document)
+                .expect("el documento esta en la mano")
+                .is_remembered(),
+            "el documento de la sede entra por la puerta que no recuerda (ID-286)"
+        );
+        assert!(
+            super::super::recents::listed_rows(&memory, &opened).is_empty(),
+            "no deja fila en Recientes"
+        );
+        assert_eq!(
+            memory
+                .state()
+                .map(crate::memory::Loaded::into_value)
+                .ok()
+                .and_then(|state| state.visible_signature),
+            None,
+            "ni colocacion del recuadro"
+        );
+
+        // Y el fichero de paso se va con el trámite.
+        let scratch_file = live.scratch_path().expect("hay fichero de paso");
+        assert!(scratch_file.exists());
+        declined(&live);
+        assert!(
+            !scratch_file.exists(),
+            "el fichero de paso se borra al contestar (ID-286)"
+        );
+    }
+
+    /// **ID-266**: una política que no se puede aplicar no se firma alrededor,
+    /// y la sede recibe el código que el catálogo tiene para eso.
+    #[test]
+    fn a_policy_that_cannot_be_applied_is_answered_with_the_code_of_an_invalid_policy() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::that_refuses_the_policy();
+        let scratch = home.path().join("errand");
+
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature("sign", "")),
+            ours.clone(),
+            &live,
+        );
+
+        let ErrandStep::Answering(reply) = step else {
+            panic!("la politica no se puede aplicar: {step:?}");
+        };
+        assert_eq!(
+            reply.on_the_wire(),
+            WireAnswer::refused(SafCode::InvalidPolicy).on_the_wire()
+        );
+        assert!(
+            !scratch.exists(),
+            "no se ha escrito nada: la politica se mira antes que el documento"
+        );
+    }
+
+    /// Lo que no se puede firmar se rechaza **sobre los bytes**, antes de pedir
+    /// nada y antes de escribir nada (ID-63, ID-292).
+    #[test]
+    fn a_document_that_is_not_a_pdf_is_refused_before_anything_is_written() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+        let text = format!(
+            "afirma://sign?op=sign&idsession={CREDENTIAL}&format=PAdES&algorithm=SHA256&dat={}",
+            base64::engine::general_purpose::URL_SAFE.encode(b"esto no es un PDF")
+        );
+        let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+            panic!("una URL del protocolo es una operacion");
+        };
+
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&url),
+            ours.clone(),
+            &live,
+        );
+
+        let ErrandStep::Answering(reply) = step else {
+            panic!("eso no es un PDF: {step:?}");
+        };
+        assert_eq!(
+            reply.on_the_wire(),
+            WireAnswer::refused(SafCode::InvalidPdf).on_the_wire()
+        );
+        assert!(!scratch.exists(), "no se ha escrito nada");
+    }
+
+    /// **ID-263**: la contrafirma llega hasta aquí como `SAF_04`, por el mismo
+    /// camino que cualquier otro rechazo del protocolo, y sin tocar el token.
+    #[test]
+    fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let listed = ListedCertificates::new();
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let engine = AnEngine::answering(&[]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        let step = attend_operation(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &a_signature("countersign", ""),
+            &live,
+        );
+
+        let ErrandStep::Answering(reply) = step else {
+            panic!("countersign no existe en PAdES: {step:?}");
+        };
+        assert_eq!(
+            reply.on_the_wire(),
+            WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
+        );
+    }
+
+    /// **ID-264**: y `save` y `signandsave` salen por el mismo sitio, que es lo
+    /// que hace comprobable que estén fuera.
+    #[test]
+    fn saving_by_order_of_a_site_is_answered_with_the_same_refusal() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let listed = ListedCertificates::new();
+        let opened = OpenedDocuments::new();
+        let engine = AnEngine::answering(&[]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        for verb in ["save", "signandsave"] {
+            let live = LiveErrand::default();
+            let step = attend_operation(
+                &a_desk(
+                    &engine,
+                    &policies,
+                    &[],
+                    home.path(),
+                    &listed,
+                    &opened,
+                    &memory,
+                    &scratch,
+                ),
+                &a_signature(verb, ""),
+                &live,
+            );
+
+            let ErrandStep::Answering(reply) = step else {
+                panic!("«{verb}» esta fuera del alcance: {step:?}");
+            };
+            assert_eq!(
+                reply.on_the_wire(),
+                WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
+            );
+            assert!(!scratch.exists(), "y no ha escrito nada");
+        }
     }
 
     /// **ID-272**: el consentimiento aparece **también** con un solo
@@ -606,12 +1299,21 @@ mod tests {
         let properties =
             base64::engine::general_purpose::URL_SAFE.encode(b"filters=inventado:loquesea\n");
 
+        let engine = AnEngine::answering(&[]);
+        let policies = APolicyEngine::answering("");
+        let listed = ListedCertificates::new();
+        let opened = OpenedDocuments::new();
         let step = attend_operation(
-            &AnEngine::answering(&[]),
-            &[],
-            home.path(),
-            &ListedCertificates::new(),
-            &memory,
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                home.path(),
+            ),
             &an_operation(&format!("&properties={properties}")),
             &live,
         );
@@ -633,12 +1335,21 @@ mod tests {
         let memory = a_memory(home.path());
         let live = LiveErrand::default();
 
+        let engine = AnEngine::answering(&[]);
+        let policies = APolicyEngine::answering("");
+        let listed = ListedCertificates::new();
+        let opened = OpenedDocuments::new();
         let step = attend_operation(
-            &AnEngine::answering(&[]),
-            &[],
-            home.path(),
-            &ListedCertificates::new(),
-            &memory,
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                home.path(),
+            ),
             &an_operation(""),
             &live,
         );
