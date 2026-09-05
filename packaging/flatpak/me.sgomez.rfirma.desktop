@@ -1,7 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=rFirma
-Exec=rfirma
+Exec=rfirma %u
 Icon=me.sgomez.rfirma
 Terminal=false
 Categories=Utility;
+MimeType=x-scheme-handler/afirma;
