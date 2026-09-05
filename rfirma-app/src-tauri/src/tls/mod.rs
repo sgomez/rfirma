@@ -24,4 +24,4 @@ pub mod store;
 pub use authority::LocalCa;
 pub use error::{Situation, TlsError};
 pub use server::LocalServerCertificate;
-pub use store::LocalCaStore;
+pub use store::{CaFiles, LocalCaStore};

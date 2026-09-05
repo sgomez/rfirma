@@ -64,7 +64,34 @@ impl LocalCa {
     /// Fabrica una CA local nueva, válida desde ahora mismo.
     pub fn generate() -> Result<Self, TlsError> {
         let key = generate_key()?;
-        let certificate = build_certificate(&key).map_err(not_generated)?;
+        let certificate = build_certificate(&key, VALIDITY_DAYS).map_err(not_generated)?;
+        Ok(Self { certificate, key })
+    }
+
+    /// Una CA local a la que le quedan **dos días**, para poder ejercitar el
+    /// solape sin esperar dos años y medio (ID-224).
+    ///
+    /// Dos y no uno **a propósito**: [`LocalCa::days_left`] redondea hacia
+    /// abajo, así que con un día bastaría **un segundo** entre fabricarla y
+    /// preguntarle —guardar dos ficheros, registrar en dos perfiles— para que
+    /// devolviera `0` y la etapa saliera caducada en vez de en solape. Con dos
+    /// días la cuenta da 1 o 2, y las dos están dentro del solape, que llega
+    /// hasta 119.
+    #[cfg(test)]
+    pub fn almost_expired_for_test() -> Result<Self, TlsError> {
+        let key = generate_key()?;
+        let certificate = build_certificate(&key, 2).map_err(not_generated)?;
+        Ok(Self { certificate, key })
+    }
+
+    /// Una CA local que **ya no vale**: caduca hoy mismo, así que
+    /// [`LocalCa::days_left`] devuelve `0` y la etapa es
+    /// [`crate::trust::Stage::Expired`]. No hay carrera posible: el número solo
+    /// puede bajar.
+    #[cfg(test)]
+    pub fn expired_for_test() -> Result<Self, TlsError> {
+        let key = generate_key()?;
+        let certificate = build_certificate(&key, 0).map_err(not_generated)?;
         Ok(Self { certificate, key })
     }
 
@@ -110,6 +137,24 @@ impl LocalCa {
     pub fn private_key_pem(&self) -> Result<Vec<u8>, TlsError> {
         self.key.private_key_to_pem_pkcs8().map_err(not_generated)
     }
+
+    /// Cuántos días le quedan de vida, **negativo si ya caducó**.
+    ///
+    /// Es lo único que hace falta para decidir el solape (ID-221, ID-224), y
+    /// por eso sale como número y no como fecha: quien decide es
+    /// [`crate::trust::Stage`], que es puro y no sabe qué hora es.
+    ///
+    /// **Redondea hacia abajo**: se queda con los días enteros de la diferencia
+    /// y tira los segundos, así que a una CA a la que le quedan veintitrés
+    /// horas le devuelve `0` y [`crate::trust::Stage`] la da por caducada. El
+    /// error es siempre conservador —se releva hasta un día antes de tiempo,
+    /// nunca después—, pero conviene saberlo al leer
+    /// [`crate::trust::Stage::Expired`]: el último día cuenta como caducado.
+    pub fn days_left(&self) -> Result<i64, TlsError> {
+        let now = Asn1Time::days_from_now(0).map_err(damaged)?;
+        let difference = now.diff(self.certificate.not_after()).map_err(damaged)?;
+        Ok(i64::from(difference.days))
+    }
 }
 
 impl std::fmt::Debug for LocalCa {
@@ -139,7 +184,10 @@ pub(super) fn random_serial() -> Result<Asn1Integer, openssl::error::ErrorStack>
 }
 
 /// El certificado autofirmado de la CA local.
-fn build_certificate(key: &PKey<Private>) -> Result<X509, openssl::error::ErrorStack> {
+fn build_certificate(
+    key: &PKey<Private>,
+    validity_days: u32,
+) -> Result<X509, openssl::error::ErrorStack> {
     let mut name = X509Name::builder()?;
     name.append_entry_by_nid(Nid::COMMONNAME, COMMON_NAME)?;
     let name = name.build();
@@ -154,7 +202,7 @@ fn build_certificate(key: &PKey<Private>) -> Result<X509, openssl::error::ErrorS
     builder.set_issuer_name(&name)?;
     builder.set_pubkey(key)?;
     let not_before = Asn1Time::days_from_now(0)?;
-    let not_after = Asn1Time::days_from_now(VALIDITY_DAYS)?;
+    let not_after = Asn1Time::days_from_now(validity_days)?;
     builder.set_not_before(&not_before)?;
     builder.set_not_after(&not_after)?;
     builder.append_extension(BasicConstraints::new().critical().ca().pathlen(0).build()?)?;

@@ -69,13 +69,22 @@ finish-args:
   # certificado de Firefox. NO se declara --filesystem=home. No hace falta
   # empaquetar NSS: el runtime org.gnome.Platform//50 ya trae libsoftokn3.so.
   #
-  # OJO: `:ro` YA NO ES «la mitad importante». El motivo para escribir en estos
-  # almacenes existe desde el #238: la CA local del servidor la instala la
-  # aplicacion ahi, en el primer arranque, y en los tres canales por igual. La
-  # decision, la lista completa de rutas y lo que cuesta ampliar el permiso
-  # estan en el ADR-0005; el permiso NO se amplia aqui todavia porque el codigo
-  # que lo consume es de la v0.5, y un permiso sin consumidor durante un ciclo
-  # entero es el mismo pasivo que se rechazo alli para la CA (#246).
+  # EL PERMISO ES DE LECTURA Y ESCRITURA, y eso es el enunciado (ID-228): la CA
+  # local del servidor la instala la aplicacion en estos almacenes, en el primer
+  # arranque, y en los tres canales por igual. Lo consume app::trust y lo
+  # escribe trust::nss por la API de NSS. Sin esto la CA no entra en el flatpak
+  # y la sede no llega a completar el saludo TLS.
+  #
+  # Lo que cuesta, dicho entero y sin adornos (ADR-0005): un atacante que ya
+  # ejecute codigo dentro de rfirma pasa de LEER logins.json, key4.db y
+  # cookies.sqlite -que ya podia desde el #101- a poder SUSTITUIRLOS y a poder
+  # plantar una raiz de confianza propia. Sigue sin ser --filesystem=home:
+  # ~/.ssh, ~/.gnupg, los llaveros y ~/.aws no aparecen por ninguna parte.
+  #
+  # Se declara SIN `:create`: un perfil que no existe lo crea el navegador, no
+  # nosotros, y materializar un directorio en el $HOME de la persona sin que
+  # nada lo use es el pasivo que el ADR-0005 rechaza. Un perfil ausente se salta
+  # (Situation::StoreUnreachable) y no deja sin CA a los demas.
   #
   # Firefox 147 se mudo a XDG y Chrome M146 tambien: las dos rutas de arriba
   # ya no cubren solas lo que lee pkcs11::stores. Firefox separa configuracion
@@ -86,11 +95,11 @@ finish-args:
   # Enumerarlas aqui y en el codigo es justo lo que se desincronizo; la lista
   # canonica es la de pkcs11::stores. El permiso de abajo, ~/.config/mozilla,
   # se deja ancho a proposito: cubre el subdirectorio firefox sin listarlo.
-  - --filesystem=~/.mozilla/firefox:ro
-  - --filesystem=~/.pki/nssdb:ro
-  - --filesystem=~/.config/mozilla:ro
-  - --filesystem=~/.local/share/mozilla/firefox:ro
-  - --filesystem=~/.local/share/pki/nssdb:ro
+  - --filesystem=~/.mozilla/firefox
+  - --filesystem=~/.pki/nssdb
+  - --filesystem=~/.config/mozilla
+  - --filesystem=~/.local/share/mozilla/firefox
+  - --filesystem=~/.local/share/pki/nssdb
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
