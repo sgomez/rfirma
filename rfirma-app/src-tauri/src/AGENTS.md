@@ -63,8 +63,11 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
-| `paths.rs` | 658 | Las tres rutas de la memoria entre sesiones, más las cuatro de la CA local: dos ranuras, la que sirve y la siguiente. Único sitio que conoce el sistema operativo (ADR-0010), y el único que puede crear un fichero `0600` de nacimiento. |
-| `desktop.rs` | 150 | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`, por GIO. Dentro del sandbox no llama a nada: no hay pregunta que valga (ID-240). |
+| `paths.rs` | 696 | Las tres rutas de la memoria entre sesiones, más las cuatro de la CA local: dos ranuras, la que sirve y la siguiente. Único sitio que conoce el sistema operativo (ADR-0010), y el único que puede crear un fichero `0600` de nacimiento. |
+| **`desktop/`** | | El escritorio de la persona: en qué canal corre esto, quién atiende `afirma://` y cómo se elige (ID-237…ID-242). |
+| `desktop/mod.rs` | 233 | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`, por GIO. Dentro del sandbox no llama a nada: no hay pregunta que valga (ID-240). Léelo antes que sus hermanos. |
+| `desktop/choice.rs` | 430 | Elegir manejador: el `default` **explícito** en el `mimeapps.list` del `$HOME`, con todo lo demás intacto, y la advertencia de que Firefox guarda la suya aparte (ID-238, ID-241). |
+| `desktop/error.rs` | 73 | Situaciones de elegir manejador (ADR-0009). |
 | `dropped.rs` | 438 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana —uno solo o varios, incluida una carpeta recorrida— o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157, ID-306). |
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades, y la caché de la comprobación de versión, que no es una memoria del usuario y es lo único exento de los dos interruptores (ADR-0010, ID-180). |
 | `memory/mod.rs` | 542 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
