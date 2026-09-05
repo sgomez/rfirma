@@ -836,6 +836,26 @@ describe("App, al soltar ficheros en la ventana", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  /**
+   * ID-306: soltar N ficheros deja N filas en la bandeja, no una, y a la vez
+   * se dice cuántos se descartaron — las dos cosas del mismo gesto, no dos
+   * casos por separado.
+   */
+  it("drops N files into N tray rows and counts the discarded ones in the same gesture", async () => {
+    const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
+
+    drops.drop(anOpened("factura.pdf", [document("contrato.pdf"), document("anexo.pdf")], 2));
+
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
+    expect(await within(tray).findByText("contrato.pdf")).toBeInTheDocument();
+    expect(within(tray).getByText("anexo.pdf")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Algunos ficheros no se han añadido",
+    );
+  });
+
   /** ID-306: lo que no era un PDF sí se cuenta, y por qué. */
   it("says how many were discarded when some of what was dropped was not a PDF", async () => {
     const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
