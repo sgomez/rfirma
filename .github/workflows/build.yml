@@ -121,9 +121,10 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
-          package_json_file: rfirma-app/package.json
+          working-directory: rfirma-app
+          install: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24

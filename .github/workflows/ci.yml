@@ -127,11 +127,22 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # package_json_file: la raiz no tiene package.json (ID-01), asi que sin
-      # esto la accion falla con "No pnpm version is specified".
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      # working-directory: la raiz no tiene package.json (ID-01), asi que sin
+      # esto la accion no encuentra el `packageManager` del que sale la version
+      # de pnpm, y falla con "No pnpm version is specified".
+      #
+      # install: false porque las dependencias las instala `just deps`, dentro
+      # de la receta que ejecute el job. La accion las instalaria por su cuenta
+      # —es su valor por omision— y eso sacaria del justfile un paso que hoy
+      # esta dentro.
+      #
+      # No instala Node: sin `runtime` ni `devEngines.runtime` en el manifiesto,
+      # la accion no toca el tiempo de ejecucion, y de eso sigue encargandose
+      # `actions/setup-node` en el paso siguiente.
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
-          package_json_file: rfirma-app/package.json
+          working-directory: rfirma-app
+          install: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -176,9 +187,10 @@ jobs:
       # Rust necesita la cadena de Node aunque no ejecute una sola prueba de
       # TypeScript: tauri-build lee frontendDist (../dist) dentro de su propio
       # build.rs, asi que sin `vite build` clippy no llega a mirar ni una linea.
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         with:
-          package_json_file: rfirma-app/package.json
+          working-directory: rfirma-app
+          install: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -288,10 +300,11 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
         if: steps.scope.outputs.build == 'true'
         with:
-          package_json_file: rfirma-app/package.json
+          working-directory: rfirma-app
+          install: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         if: steps.scope.outputs.build == 'true'
         with:
