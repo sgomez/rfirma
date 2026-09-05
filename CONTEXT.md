@@ -156,9 +156,16 @@ _Avoid_: portal, cliente web, tercero
 **Canal**:
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
 falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
-dónde viene la petición. Su credencial es el `idsession`, que viaja en la URL de
-arranque y se repite en cada mensaje.
+dónde viene la petición. Lo que lo cierra es la **credencial de canal**, abajo.
 _Avoid_: socket, conexión, túnel
+
+**Credencial de canal**:
+El `idsession` que la sede sortea y manda en la URL de arranque, y que repite en
+cada mensaje del canal. **No es un identificador de transacción**: es lo único
+que impide que otra página abierta en el mismo equipo use el canal. Un valor mal
+formado se rechaza; nunca se ignora, porque un canal sin credencial es un canal
+sin cerradura.
+_Avoid_: id de sesión, token, identificador de transacción
 
 **Conversación**:
 El ir y venir de mensajes sobre un canal ya abierto, con sus reglas: el eco
