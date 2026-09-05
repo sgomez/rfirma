@@ -41,8 +41,18 @@ Desde una página que lance `afirma://websocket?…`, comprobar que rfirma arran
 entera en **flatpak**, en **`.deb`** y en **`.rpm`**. Incluye la convivencia con AutoFirma
 instalada ([#325](https://github.com/sgomez/rfirma/issues/325)): qué aplicación gana.
 
+Con **dos manejadores del esquema instalados** —rfirma y AutoFirma— se ensaya además la elección
+explícita ([#358](https://github.com/sgomez/rfirma/issues/358)): con la entrada
+`x-scheme-handler/afirma=rfirma.desktop;` escrita por rfirma en `[Default Applications]` del
+`~/.config/mimeapps.list`, la invocación va **directa a rfirma y no sale el selector**, ni en esta
+ni en las siguientes; **borrando esa entrada** del fichero, el selector vuelve a salir en cada
+invocación. Si en `~/.config/` hay un `gnome-mimeapps.list` con una entrada para el esquema, manda
+él y el ensayo mide otra cosa: hay que mirarlo antes.
+
 *Por qué no cabe en una grada*: es el registro `x-scheme-handler` del escritorio sobre un paquete
-instalado, no código.
+instalado, no código. Que la entrada quede escrita donde el escritorio la lee sí lo miden las
+gradas A y B (`src/desktop/choice.rs`); lo que ninguna puede medir es la conducta del escritorio
+al leerla (TD-65).
 
 ### 4. Un trámite completo contra una sede real
 

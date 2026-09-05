@@ -25,7 +25,6 @@
 //! copie el truco de Firefox de AutoFirma. El registro de la aplicación sigue
 //! siendo pasivo: el `MimeType=x-scheme-handler/afirma;` declarado en los
 //! lanzadores de `packaging/`, que el escritorio recoge por su cuenta.
-
 //!
 //! | Pieza | Qué es |
 //! |---|---|

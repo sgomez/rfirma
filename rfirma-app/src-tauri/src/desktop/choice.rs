@@ -143,7 +143,13 @@ pub fn choose_handler_for_scheme(
 /// tenía este esquema, se sustituye en su sitio en vez de duplicarlo —dos
 /// líneas con la misma clave dejan al escritorio eligiendo por su cuenta—.
 fn with_explicit_default(content: &str, content_type: &str, handler: &str) -> String {
-    let entry = format!("{content_type}={handler}");
+    // El valor de `[Default Applications]` es una **lista** de *Desktop File
+    // ID* en el sentido del formato de fichero clave, y la convención de todo
+    // el escritorio es cerrarla con el separador. GLib descarta el trozo
+    // vacío final al leer, así que las dos formas valen; se sale con la misma
+    // que escriben las demás herramientas para que nadie dude al leer el
+    // fichero.
+    let entry = format!("{content_type}={handler};");
     let mut lines: Vec<String> = Vec::new();
     let mut inside_the_group = false;
     let mut written = false;
@@ -262,7 +268,7 @@ mod tests {
 
         assert_eq!(
             updated,
-            "[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop\n"
+            "[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop;\n"
         );
     }
 
@@ -279,7 +285,7 @@ mod tests {
         assert_eq!(
             updated,
             "[Added Associations]\nx-scheme-handler/afirma=autofirma.desktop;\n\
-             \n[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop\n"
+             \n[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop;\n"
         );
     }
 
@@ -296,7 +302,7 @@ mod tests {
         assert_eq!(
             updated,
             "[Default Applications]\napplication/pdf=evince.desktop\n\
-             x-scheme-handler/afirma=rfirma.desktop\n"
+             x-scheme-handler/afirma=rfirma.desktop;\n"
         );
     }
 
@@ -315,7 +321,7 @@ mod tests {
         assert_eq!(
             updated,
             "[Default Applications]\n\
-             x-scheme-handler/afirma=rfirma.desktop\n\
+             x-scheme-handler/afirma=rfirma.desktop;\n\
              application/pdf=evince.desktop\n"
         );
         assert_eq!(updated.matches("x-scheme-handler/afirma").count(), 1);
@@ -342,7 +348,7 @@ mod tests {
         assert!(updated.contains(
             "[Default Applications]\n\
              application/pdf=evince.desktop\n\
-             x-scheme-handler/afirma=rfirma.desktop\n\n[Removed Associations]"
+             x-scheme-handler/afirma=rfirma.desktop;\n\n[Removed Associations]"
         ));
     }
 
@@ -357,7 +363,7 @@ mod tests {
         );
 
         assert!(updated.contains("#x-scheme-handler/afirma=autofirma.desktop\n"));
-        assert!(updated.contains("\nx-scheme-handler/afirma=rfirma.desktop\n"));
+        assert!(updated.contains("\nx-scheme-handler/afirma=rfirma.desktop;\n"));
     }
 
     /// **Grada B**: sobre un fichero de verdad, y sin que haya que crearlo
@@ -373,7 +379,7 @@ mod tests {
         assert_eq!(written.list(), list);
         assert_eq!(
             fs::read_to_string(&list).expect("deberia leerse"),
-            "[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop\n"
+            "[Default Applications]\nx-scheme-handler/afirma=rfirma.desktop;\n"
         );
     }
 
