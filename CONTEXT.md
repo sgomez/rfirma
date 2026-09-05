@@ -186,7 +186,8 @@ El `autoscript.js` **publicado**, fijado al tag `v1.9.2` y corriendo bajo Node,
 con el que se comprueba que rfirma habla con el cliente real y no con una idea
 propia de él. Es el otro trabajo, no el mismo que el del **cliente de canal**:
 aquél cubre lo que el real no puede provocar, y éste cubre lo que el real hace.
-No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché.
+No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché
+(`just autoscript`), y vive en `tests/conformance_bench.rs`.
 _Avoid_: tests de integración, e2e, banco de pruebas
 
 **Códec del protocolo**:

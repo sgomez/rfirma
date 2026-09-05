@@ -9,6 +9,12 @@
 # una firma valga: eso es grada C y vive en el carril lento. Lee la seccion de
 # CI de docs/agents/code-host.md antes de fiarte de un check en verde.
 #
+# CON UNA PREPARACION QUE `just check` NO ENCADENA: `just autoscript`, que baja
+# el accesorio del banco de conformidad a etiqueta y sha256 fijados. Fuera de
+# `check` a proposito, para que un `just check` local siga corriendo sin red;
+# aqui es un paso propio y OBLIGATORIO, y ademas la prueba mira la variable CI
+# y falla en vez de saltarse (ADR-0013, ADR-0014).
+#
 # TRES JOBS Y NO UNO, POR TIEMPO DE PARED. Las tres cadenas no se necesitan
 # entre si, asi que encadenarlas era pagar la suma cuando se puede pagar la mas
 # lenta. Y cada job instala solo lo suyo: el de Java no necesita las librerias
@@ -248,6 +254,31 @@ jobs:
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
 
+      # EL BANCO DE CONFORMIDAD (TD-55): `autoscript.js` del tag v1.9.2, el
+      # mismo fichero que sirve una sede de verdad, para que hable con nuestro
+      # canal bajo Node en tests/conformance_bench.rs.
+      #
+      # Es una DESCARGA DE PREPARACION, NO UNA PRUEBA DE RED (ID-312): pasa una
+      # vez, la cache la guarda por su sha256 y a partir de ahi el banco es
+      # grada B. La grada D es que el SUJETO de la prueba sea un tercero vivo,
+      # y aqui el sujeto es nuestro canal.
+      #
+      # La clave de cache ES el sha del fichero: cambiar el pin en el justfile
+      # invalida la entrada sola, sin acordarse de nada.
+      #
+      # AQUI NO HAY `continue-on-error`: si esto falla, el banco falta, y un
+      # banco que se salta en silencio es decoracion. `just autoscript` sale con
+      # 1 tanto si la descarga falla como si el sha no cuadra, y ademas
+      # tests/conformance_bench.rs comprueba la variable CI y falla en vez de
+      # saltarse. Solo en local se salta.
+      - name: Cache del banco de conformidad
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: testdata/conformance
+          key: autoscript-567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439
+      - name: Banco de conformidad (autoscript.js v1.9.2)
+        run: just autoscript
+
       # Sin RFIRMA_SKIP_NATIVE: `check-rust` ya no encadena `check-native`, asi
       # que no hay nada que saltarse. Y sin `cargo build --release`, que es un
       # arbol de dependencias entero que aqui no ejecuta nadie — lo compila el
@@ -351,6 +382,20 @@ jobs:
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+
+      # El mismo accesorio que el carril rapido, y por la misma razon: aqui
+      # `just test-native` y `just crap-full` vuelven a ejecutar la suite
+      # entera, banco de conformidad incluido, y con CI puesta un accesorio que
+      # falta es un fallo, no un salto.
+      - name: Cache del banco de conformidad
+        if: steps.scope.outputs.build == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: testdata/conformance
+          key: autoscript-567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439
+      - name: Banco de conformidad (autoscript.js v1.9.2)
+        if: steps.scope.outputs.build == 'true'
+        run: just autoscript
 
       - name: Construye la libreria nativa
         if: steps.scope.outputs.build == 'true'
