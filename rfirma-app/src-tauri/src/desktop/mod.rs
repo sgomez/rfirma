@@ -18,10 +18,23 @@
 //! que parece funcionar y no funciona. La frase fija que se enseña en ese caso
 //! es cosa de Preferencias (#364); aquí solo se detecta y se lee.
 //!
-//! **Registro pasivo (ID-237):** este módulo solo lee. Ningún fichero de este
-//! repositorio escribe en un `mimeapps.list` del sistema — el único registro
-//! es el `MimeType=x-scheme-handler/afirma;` declarado en los lanzadores de
-//! `packaging/`, que el escritorio recoge por su cuenta.
+//! **Registro pasivo (ID-237):** lo único que se escribe aquí es el
+//! `mimeapps.list` **de la persona**, y solo cuando ella elige manejador. No
+//! hay ningún fichero de este repositorio que escriba en un `mimeapps.list`
+//! del sistema, ni que toque el orden alfabético del `mimeinfo.cache`, ni que
+//! copie el truco de Firefox de AutoFirma. El registro de la aplicación sigue
+//! siendo pasivo: el `MimeType=x-scheme-handler/afirma;` declarado en los
+//! lanzadores de `packaging/`, que el escritorio recoge por su cuenta.
+
+//!
+//! | Pieza | Qué es |
+//! |---|---|
+//! | este fichero | El canal, y quién dice el escritorio que atiende un esquema. |
+//! | [`choice`] | Elegir manejador: el `default` explícito en el `mimeapps.list` de la persona (ID-238, ID-241). |
+//! | [`error`] | Las situaciones de leer y escribir esa elección (ADR-0009). |
+
+pub mod choice;
+pub mod error;
 
 use std::path::Path;
 
@@ -64,7 +77,7 @@ pub enum RegisteredHandlers {
     /// Fuera del sandbox: la lista que da el escritorio, tal cual. Ningún
     /// nombre de aplicación está cableado en este módulo — lo que haya aquí
     /// es lo que GIO haya encontrado, sea lo que sea.
-    Known(Vec<String>),
+    Known(Vec<RegisteredHandler>),
     /// Dentro del sandbox no hay pregunta posible (ID-240): no se ha llamado
     /// a GIO, ni al portal, ni a `xdg-mime`.
     NotAvailableInsideTheSandbox,
@@ -81,15 +94,61 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
     match channel {
         Channel::Flatpak => RegisteredHandlers::NotAvailableInsideTheSandbox,
         Channel::Native => {
-            let content_type = format!("x-scheme-handler/{scheme}");
-            let names = gio::AppInfo::all_for_type(&content_type)
+            let handlers = gio::AppInfo::all_for_type(&content_type_for(scheme))
                 .iter()
-                .map(gio::prelude::AppInfoExt::name)
-                .map(|name| name.to_string())
+                .filter_map(|info| {
+                    // Sin `.desktop` no hay nada que escribir en el
+                    // `[Default Applications]`, así que un manejador sin
+                    // identificador no es elegible y no se ofrece.
+                    let id = gio::prelude::AppInfoExt::id(info)?;
+                    Some(RegisteredHandler::new(
+                        gio::prelude::AppInfoExt::name(info).to_string(),
+                        id.to_string(),
+                    ))
+                })
                 .collect();
-            RegisteredHandlers::Known(names)
+            RegisteredHandlers::Known(handlers)
         }
     }
+}
+
+/// Un manejador registrado, tal y como lo da el escritorio: lo que la persona
+/// lee y lo que se escribe por ella.
+///
+/// Los dos no son el mismo dato y hacen falta los dos: el desplegable enseña
+/// el nombre —«AutoFirma», «Firefox», lo que sea— y el `mimeapps.list` solo
+/// entiende de ficheros `.desktop`. Ninguno de los dos está cableado aquí
+/// (ID-238).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegisteredHandler {
+    name: String,
+    id: String,
+}
+
+impl RegisteredHandler {
+    /// Un manejador con su nombre visible y su fichero `.desktop`.
+    pub fn new(name: impl Into<String>, id: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            id: id.into(),
+        }
+    }
+
+    /// El nombre que enseña el desplegable, tal y como lo dio el escritorio.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// El fichero `.desktop` con el que se escribe el `default`.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
+/// El tipo de contenido de un esquema de URL, que es como lo nombra el
+/// `mimeapps.list`.
+fn content_type_for(scheme: &str) -> String {
+    format!("x-scheme-handler/{scheme}")
 }
 
 #[cfg(test)]
@@ -146,5 +205,29 @@ mod tests {
         let handlers = registered_handlers_for_scheme(Channel::Native, "afirma");
 
         assert!(matches!(handlers, RegisteredHandlers::Known(_)));
+    }
+
+    /// El manejador que se ofrece lleva las dos cosas: lo que se lee y lo que
+    /// se escribe.
+    #[test]
+    fn a_handler_carries_both_the_name_and_the_desktop_file() {
+        let handler = RegisteredHandler::new("AutoFirma", "autofirma.desktop");
+
+        assert_eq!(handler.name(), "AutoFirma");
+        assert_eq!(handler.id(), "autofirma.desktop");
+    }
+
+    /// Todo manejador que el escritorio nombre se puede escribir como
+    /// `default`: uno sin fichero `.desktop` no se ofrece, porque elegirlo no
+    /// haría nada.
+    #[test]
+    fn every_offered_handler_can_be_written_as_a_default() {
+        let RegisteredHandlers::Known(handlers) =
+            registered_handlers_for_scheme(Channel::Native, "http")
+        else {
+            panic!("fuera del sandbox tiene que haber lista");
+        };
+
+        assert!(handlers.iter().all(|handler| !handler.id().is_empty()));
     }
 }
