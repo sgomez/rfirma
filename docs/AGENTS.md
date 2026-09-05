@@ -50,7 +50,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `ventana-principal` · `cabecera` · `bandeja-de-documentos` ·
 `visor-de-documento` · `panel-de-firma` · `preferencias` · `dialogo-pin` ·
 `dialogo-progreso-firma` · `dialogo-paginas-sin-sello` · `acerca-de` ·
-`design-system`
+`ventana-de-sede` (la ventana que abre una sede por `afirma://`, entera: espera,
+consentimiento, firma, desenlace y sin certificado utilizable) · `design-system`
 
 Al implementar una pantalla, **la ficha de esa pantalla es la fuente**, no el
 sistema de diseño entero (14 KB).

@@ -134,6 +134,17 @@ mientras se elige. La capa va a `calc(100% + 4px)` del disparador, con
 `--rf-shadow-elevated` y la lista recortada a **232 px** con desplazamiento
 propio, que son tres filas y media: el borde cortado es lo que dice que hay más.
 
+**La lista se ve entera, y para eso sale de la columna.** La columna del panel
+lateral **se desplaza de verdad** —740 px de contenido en 466 px visibles—, así
+que su `overflow: auto` no se puede quitar; y con el panel colgando del
+disparador dentro de esa columna, ese `overflow` **cortaba 63 px de los 232**,
+justo donde empieza el pie de «Se guardará en / Firmar documento», con 4 y con 9
+certificados. Las filas de abajo no se podían ni ver ni elegir. La lista **se
+saca a un portal** anclado a la posición del disparador: es la regla de
+desplegable de [design-system.md](design-system.md), y el artboard la dibuja
+sacando el panel a la raíz. El anclaje sigue siendo `calc(100% + 4px)` bajo el
+disparador y el ancho, el de la columna.
+
 **Cada fila lleva el almacén.** Titular en `.rf-title` a 14 px y, debajo,
 `DNI · emisor · almacén` en `.rf-body rf-text-muted`. El almacén no es adorno:
 el mismo certificado en el perfil de Firefox y en `~/.pki/nssdb` es
@@ -554,6 +565,15 @@ tokens. Si se repiten en otra pantalla, hay que subirlos a
 
 - El botón «Cambiar» junto al nombre del documento se retiró: la bandeja ya
   hace eso, y dos caminos para lo mismo es uno de más.
+- **El desplegable de certificados se recortaba, y llevaba haciéndolo desde
+  antes de la v0.5**: 63 px de los 232, en la opción por defecto del artboard.
+  Se descartó bajarle el `max-height` a la lista para que cupiera —eso mutila el
+  componente para tapar el fallo— y quitarle el `overflow` a la columna lateral,
+  que tiene que seguir desplazándose. Se saca a un portal. Se arregló al validar
+  la [ventana de sede](ventana-de-sede.md) el 05/09/2026
+  ([#317](https://github.com/sgomez/rfirma/issues/317)), que reutiliza este
+  mismo desplegable, y la regla quedó escrita en
+  [design-system.md](design-system.md).
 - **La elección de páginas vive en el panel, no en el visor.** Se probaron una
   tira de miniaturas bajo la hoja y una etiqueta colgando del propio recuadro.
   La tira se rompe a las 200 páginas y añade mobiliario al visor; la etiqueta
