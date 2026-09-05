@@ -74,11 +74,16 @@ detectar»: no se puede detectar lo que no se ha declarado, y declararlo `:ro` c
 mismo que declararlo `rw` y que funcione. Lo que sí puede decir la interfaz, en los tres
 canales, es **cuántos almacenes ha encontrado**, que es un hecho y no una detección.
 
-**El permiso entra con el código de la v0.5, no antes.** Un permiso concedido sin ningún
-consumidor durante un ciclo entero es el mismo pasivo que se rechaza arriba para la CA, y
-agrava el caso el `:create`, que materializa un directorio en el `$HOME` de la persona sin
-que nada lo use. En la v0.4 del manifiesto cambia **una sola cosa: el comentario**, que hoy
-afirma que rfirma «no tiene ningún motivo para escribir en el perfil» y eso ya es falso.
+**El permiso está puesto desde la v0.5**, que es cuando entró el código que lo consume
+(`app::trust`), y ni un ciclo antes: un permiso sin consumidor es el mismo pasivo que se
+rechaza arriba para la CA. Va **sin `:create`**: un perfil que no existe lo crea el
+navegador, no nosotros, y materializar un directorio en el `$HOME` de la persona sin que
+nada lo use es ese mismo pasivo con otra cara. Un perfil ausente se salta y no deja sin CA
+a los demás.
+
+Y con el permiso se invierte **la comprobación** de `packaging/flatpak/verifica.sh`: donde
+exigía que el sandbox **no** pudiera escribir en esas rutas, ahora exige que **sí** pueda.
+La inversión es el enunciado; leerla como un descuido es lo único que hay que evitar.
 
 ## Cuándo, y qué se le dice a la persona
 
@@ -241,15 +246,30 @@ loopback», que son remedios opuestos— es de la v0.5.
   [#310](https://github.com/sgomez/rfirma/issues/310) midió que se imponen de verdad en los tres
   motores, incluida la restricción sobre `iPAddress`, y con la violación **visible y no
   salteable**.
-- **`-d sql:<ruta>` explícito, siempre.** Sobre el backend DBM la operación **falla en
-  silencio**: `certutil -A` devuelve 0 y la confianza se pierde. No se hereda el heurístico
-  del `pkcs11.txt` de AutoFirma, anterior a NSS 3.35.
+- **Se registra por la API de NSS, no por `certutil`.** El binario de `libnss3-tools` no
+  está en el runtime del flatpak y `libnss3.so` sí, y el ADR-0004 manda que los tres canales
+  ejecuten literalmente el mismo código. Es la misma vía por la que ya entra un `.p12`
+  (`docs/research/p12-en-almacen-nss.md`), con sus dos cuidados: `NSS_NoDB_Init` más
+  `SECMOD_OpenUserDB` —nunca `NSS_Init` sobre un `configdir`, que no convive con el
+  `C_Initialize` de `cryptoki`— y **dentro del turno del token**.
+- **`sql:<ruta>` explícito, siempre.** Sobre el backend DBM la operación **falla en
+  silencio**: se devuelve éxito y la confianza se pierde. No se hereda el heurístico del
+  `pkcs11.txt` de AutoFirma, anterior a NSS 3.35.
+- **Los bits son `C,,` y solo `C,,`**: CA de confianza para TLS y para nada más. El
+  `TCP,TCP,TCP` que pone AutoFirma en `~/.pki/nssdb` le regala a la CA local una confianza
+  —correo, certificados de cliente— que nadie le ha pedido.
+- **Lo que se escribe y lo que se lee no son el mismo número.** La confianza no vive como
+  máscara de bits sino como un `CKA_TRUST_SERVER_AUTH` del softoken, y al leerla de vuelta un
+  `CKT_NSS_TRUSTED_DELEGATOR` viene siempre con `CERTDB_NS_TRUSTED_CA` puesto encima. La
+  comprobación mira los dos bits que importan y **no** compara el número entero.
 - **Contraseña maestra de Firefox.** Los bits de confianza son atributos autenticados: sin
-  login, `-t` deja **el certificado añadido con confianza `,,`** —éxito parcial silencioso—,
-  y `certutil` reintenta con `PK11_Authenticate`, que **bloquea leyendo del tty**. Nunca
-  lanzarlo con `stdin` conectado a un terminal.
+  sesión iniciada, el certificado puede quedar añadido con confianza `,,` —éxito parcial
+  silencioso—. rfirma **no inicia sesión y no pide nada**: registra su función de contraseña
+  devolviendo `NULL`, para que ninguna ruta de NSS se quede esperando a un diálogo que aquí
+  no existe, y **relee los bits** después de escribir. Un perfil que no los tenga puestos se
+  cuenta como no instalado y se dice al final.
 - **Nunca fiarse del código de salida como única señal**: hay que verificar que la confianza
-  quedó puesta.
+  quedó puesta, leyendo los bits.
 - Un administrador puede neutralizar el almacén NSS de Chrome por política
   (`CAPlatformIntegrationEnabled: false`, Chrome 131+). No es evitable; conviene detectarlo
   antes que fallar sin explicación.

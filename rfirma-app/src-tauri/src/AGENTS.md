@@ -34,7 +34,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 196 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
+| `lib.rs` | 197 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 1148 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cuatro entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
@@ -45,7 +45,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
 | `commands/guards.rs` | 668 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
-| `app/mod.rs` | 218 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
+| `app/mod.rs` | 219 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
 | `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
 | `app/signing.rs` | 764 | El recorrido de la firma en tres pasos y la sesión a medias. |
@@ -58,6 +58,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 367 | Los ajustes, del disco a la ventana y de vuelta. |
+| `app/trust.rs` | 379 | **La CA local en los almacenes NSS**: cuándo se instala, el solape y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
 | `app/site.rs` | 313 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
@@ -113,10 +114,14 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `destination/error.rs` | 114 | Situaciones del destino (ADR-0009). |
 | **`tls/`** | | El material criptográfico del canal, y **solo la fábrica**: aquí no se registra nada en ningún almacén NSS ni se levanta ningún servidor (ADR-0005). |
 | `tls/mod.rs` | 27 | El reparto, y la tabla de las dos piezas con sus dos vidas (ID-220). |
-| `tls/authority.rs` | 377 | La **CA local**: P-256, `nameConstraints` armada byte a byte, `keyUsage` de solo firmar certificados y 900 días (ID-221, ID-225). |
+| `tls/authority.rs` | 400 | La **CA local**: P-256, `nameConstraints` armada byte a byte, `keyUsage` de solo firmar certificados y 900 días (ID-221, ID-225). |
 | `tls/server.rs` | 259 | El **certificado del servidor local**: `CN=localhost`, las dos entradas de la SAN, y en memoria (ID-222). |
 | `tls/store.rs` | 157 | Los dos ficheros de la CA local; la clave nace `0600` (ID-223). |
 | `tls/error.rs` | 79 | Situaciones del material del canal (ADR-0009). |
+| **`trust/`** | | **La confianza**: cómo entra la CA local en los almacenes NSS de la persona y cuándo toca renovarla (ADR-0005, ID-224, ID-227, ID-228). `tls/` fabrica y no registra; aquí se registra y no se fabrica. |
+| `trust/mod.rs` | 297 | El reparto, y las tres reglas **puras**: la etapa de la CA, el solape y que a mitad de un trámite no se toca nada. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. |
+| `trust/nss.rs` | 427 | El registro de verdad, por la API de NSS y **no** por `certutil`, que no está en el flatpak. No hay ni una llamada que borre: esa ausencia es el solape. |
+| `trust/error.rs` | 82 | Situaciones de la confianza (ADR-0009). |
 | **`rubric/`** | | De lo que aporta el usuario al JPEG que acepta el puente (ADR-0012). |
 | `rubric/mod.rs` | 33 | El reparto. |
 | `rubric/normalize.rs` | 586 | La normalización. |

@@ -39,8 +39,10 @@
 #
 # Lo que SI se mide dentro del sandbox son los pasos 2, 4 y 5: que la ventana
 # arranca y sigue viva, que un documento entrado por el portal llega con sus
-# bytes intactos, y que el sandbox RECHAZA escribir en los almacenes NSS que
-# el manifiesto declara en solo lectura (#101, AC 3). El paso 4 no necesita el
+# bytes intactos, y que el sandbox SI PUEDE escribir en los almacenes NSS que
+# el manifiesto declara, que es donde entra la CA local (ID-228, #344). El
+# paso 5 estuvo invertido hasta el #344 -exigia que la escritura fallara-
+# porque hasta la v0.5 no habia codigo que escribiera ahi. El paso 4 no necesita el
 # WebView para comprobar el portal: usa `flatpak document-export`, la misma
 # via por la que el dialogo de abrir concede el permiso
 # (docs/research/flatpak-canal-unico.md, apartado 4), asi que no hace falta el
@@ -192,64 +194,61 @@ echo "    -> el dia que los recientes persistan entre sesiones, reabrir por" \
      "el portal el mismo host path funcionara sin pedir permiso otra vez"
 
 echo
-echo "### 5. el sandbox no puede escribir en los almacenes NSS (:ro, #101 AC 3)"
-# AC 3 del #101: "rfirma no puede escribir en el perfil de Firefox desde
-# dentro del sandbox, y hay constancia de haberlo comprobado". Esto NO es la
-# comprobacion que la TD del #95 deja como manual -esa depende de una maquina
-# y un perfil reales-; esta es una propiedad del sandbox, medible sin ninguno
-# de los dos: :ro tiene que sostenerse tanto si hay perfil como si no.
+echo "### 5. el sandbox SI puede escribir en los almacenes NSS (ID-228, #344)"
+# El permiso paso de :ro a lectura y escritura cuando entro el codigo que lo
+# consume: la CA local se instala en los almacenes NSS de la persona desde
+# dentro del sandbox (ADR-0005, ID-228). Asi que esta comprobacion esta
+# INVERTIDA respecto a la que hubo hasta el #344 -donde se exigia que la
+# escritura fallara-, y esa inversion es el enunciado, no un descuido: sin ella
+# la CA no entra y la sede no completa el saludo TLS.
 #
 # TRAMPA MEDIDA (misma clase que xdg-documents, #27): si la ruta NO existe en
-# el ANFITRION, flatpak no monta nada y el intento de escritura falla por
-# ENOENT igual que si :ro estuviese haciendo su trabajo -un "OK" que no ha
-# medido nada. Por eso la funcion distingue tres desenlaces: la escritura se
-# permitio (FALLO, :ro no se sostiene), la ruta no esta montada pese a existir
-# en el anfitrion (FALLO, no se ha medido lo que se creia medir) y no hay nada
-# que montar porque el anfitrion no tiene esa ruta (AVISO, nada que medir).
+# el ANFITRION, flatpak no monta nada y la escritura falla por ENOENT. Eso ya no
+# es un falso verde sino un falso rojo, pero la distincion de tres desenlaces
+# sigue haciendo falta igual: la escritura se permitio (OK), la ruta no esta
+# montada pese a existir en el anfitrion (FALLO: falta el permiso en el
+# manifiesto) y no hay nada que montar porque el anfitrion no tiene esa ruta
+# (AVISO, nada que medir).
 #
-# NINGUNO de los tres desenlaces se decide leyendo un mensaje de error. Un
-# `grep` a la salida de `touch` solo acierta con coreutils en ingles: `flatpak
-# run` propaga LANG/LC_* del anfitrion al sandbox y org.gnome.Platform//50 trae
-# la extension de locale, asi que en un escritorio en castellano el mensaje es
-# "No existe el fichero o el directorio" y la rama de "no esta montado" no se
-# dispararia -otro falso verde, justo el que esta funcion cierra-. Asi que el
-# montaje se decide con un `test -d` DENTRO del sandbox, que es la pregunta de
-# verdad, y el mensaje de `touch` queda como informacion para quien lea la
-# salida. La ruta viaja por RUTA_RO en el entorno y no interpolada dentro de las
-# comillas simples de `sh -c`, para que un $HOME con comillas no rompa la orden.
-comprueba_ro() {
+# NINGUN desenlace se decide leyendo un mensaje de error. `flatpak run` propaga
+# LANG/LC_* del anfitrion, asi que en un escritorio en castellano el mensaje de
+# `touch` es otro; el montaje se decide con un `test -d` DENTRO del sandbox, que
+# es la pregunta de verdad. La ruta viaja por RUTA_NSS en el entorno y no
+# interpolada dentro de las comillas simples de `sh -c`, para que un $HOME con
+# comillas no rompa la orden.
+comprueba_escritura() {
     local etiqueta="$1" ruta="$2"
     if [ ! -e "$ruta" ]; then
         echo "AVISO  $etiqueta: no existe $ruta en el anfitrion, nada que medir"
         return 0
     fi
     local salida
-    salida=$(flatpak run "${EXTRA[@]}" --env=RUTA_RO="$ruta" --command=sh "$APP" -c \
-        '[ -d "$RUTA_RO" ] && echo MONTADO || echo NO_MONTADO
-         touch "$RUTA_RO/verifica-escritura-107" 2>&1; echo RC=$?') \
+    salida=$(flatpak run "${EXTRA[@]}" --env=RUTA_NSS="$ruta" --command=sh "$APP" -c \
+        '[ -d "$RUTA_NSS" ] && echo MONTADO || echo NO_MONTADO
+         touch "$RUTA_NSS/verifica-escritura-344" 2>&1; echo RC=$?
+         rm -f "$RUTA_NSS/verifica-escritura-344"') \
         || { echo "NO HE PODIDO EJECUTAR LA COMPROBACION EN $etiqueta"; exit 1; }
-    if echo "$salida" | grep -q "RC=0"; then
-        echo "ESCRITURA PERMITIDA en $etiqueta dentro del sandbox (:ro no se sostiene):"
-        echo "$salida"
-        flatpak run "${EXTRA[@]}" --env=RUTA_RO="$ruta" --command=sh "$APP" -c \
-            'rm -f "$RUTA_RO/verifica-escritura-107"' 2>/dev/null
-        exit 1
-    fi
     if ! echo "$salida" | grep -q "^MONTADO$"; then
         echo "$etiqueta NO ESTA MONTADO dentro del sandbox (existe en el anfitrion"
-        echo "en $ruta pero dentro no hay directorio): no se ha medido nada"
+        echo "en $ruta pero dentro no hay directorio): falta el permiso del ID-228"
         echo "$salida"
         exit 1
     fi
-    echo "OK  $etiqueta: escritura denegada dentro del sandbox"
+    if ! echo "$salida" | grep -q "RC=0"; then
+        echo "ESCRITURA DENEGADA en $etiqueta dentro del sandbox: la CA local no"
+        echo "puede entrar y la sede no completara el saludo TLS (ID-228)"
+        echo "$salida"
+        exit 1
+    fi
+    echo "OK  $etiqueta: escritura permitida dentro del sandbox"
     echo "    $salida"
 }
-comprueba_ro "perfil de Firefox" "$HOME/.mozilla/firefox"
-comprueba_ro "almacen NSS del sistema" "$HOME/.pki/nssdb"
+comprueba_escritura "perfil de Firefox" "$HOME/.mozilla/firefox"
+comprueba_escritura "almacen NSS del sistema" "$HOME/.pki/nssdb"
 
 if [ -f "$HOME/.mozilla/firefox/profiles.ini" ]; then
     flatpak run "${EXTRA[@]}" --command=cat "$APP" "$HOME/.mozilla/firefox/profiles.ini" >/dev/null \
-        && echo "OK  profiles.ini se lee dentro del sandbox (la mitad que SI hace falta)" \
+        && echo "OK  profiles.ini se lee dentro del sandbox (la otra mitad del permiso)" \
         || { echo "NO HE PODIDO LEER profiles.ini dentro del sandbox"; exit 1; }
 else
     echo "AVISO  no hay profiles.ini en el anfitrion, la lectura no se mide"

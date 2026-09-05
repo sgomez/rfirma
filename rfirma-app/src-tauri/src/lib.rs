@@ -36,6 +36,7 @@ pub mod releases;
 pub mod rubric;
 pub mod signing;
 pub mod tls;
+pub mod trust;
 
 /// La escotilla para apuntar a **otro** módulo PKCS#11.
 ///
