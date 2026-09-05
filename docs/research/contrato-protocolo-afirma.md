@@ -1,5 +1,42 @@
 # El contrato del protocolo `afirma://` según `autoscript.js`
 
+> ## ⚠️ Este informe está medido contra `master`, que **no está publicado**
+>
+> **No te fíes de él hasta que se rehaga.** Lo descubierto en el
+> [#318](https://github.com/sgomez/rfirma/issues/318): el clon de `clienteafirma` estaba en
+> `master` (219 commits por delante del último *release*), y **buena parte de lo que este
+> informe describe no existe en la versión publicada, la 1.9.2**.
+>
+> Comprobado contra el tag `v1.9.2`:
+>
+> | | v1.9.2 (publicado) | `master` (lo que midió este informe) |
+> | --- | --- | --- |
+> | `autoscript.js` | **1.9.0**, `VERSION_CODE = 3` | 1.10.1, `VERSION_CODE = 4` |
+> | protocolo **4.1** | **no existe** | sí |
+> | `#wait` / `getresult?` por WebSocket | **no existe** (el `#wait` que hay es del camino de servlets) | sí |
+> | códigos **`AF…`** | **no existen** | sí |
+> | errores que entiende el WebSocket | **sólo `SAF_NN`** | `err-00:=AF…` y `SAF_` |
+> | `servicetimeout` | **no existe** | sí |
+> | servidor | `AfirmaWebSocketServerV4` | `AfirmaWebSocketServerV4Sup` |
+>
+> Así que **§2 (negociación de versión) y §5 (códigos de error) describen una versión que
+> ninguna sede ejecuta hoy**, y la recomendación de anunciarse como 4.1 era errónea. El resto
+> —§1 arranque y puertos, §3 el contrato de las cuatro operaciones, §4 filtros, §6 lo que queda
+> fuera— hay que releerlo contra el tag antes de darlo por bueno.
+>
+> **Corrección que sí está medida contra `v1.9.2`, y que tumba la premisa mayor de este
+> informe**: la ausencia de `#wait` **no** es un problema. Una vez respondido el eco, el cliente
+> publicado hace `ws.send(url)` y se queda esperando en `ws.onmessage` **sin ningún
+> temporizador** (`autoscript.js` de `v1.9.2`, `:2258`-`2267`). Los 15 reintentos × 2 s son de
+> la fase de **conexión**, no de la respuesta a la operación. Es decir: **una firma que pide PIN
+> cabe de sobra en el camino síncrono**, y la frase de este informe de que «el par
+> `#wait`/`getresult?` no es opcional» es falsa para la versión publicada.
+>
+> Rehacerlo es el
+> [#329](https://github.com/sgomez/rfirma/issues/329). El clon de `clienteafirma` ya está
+> puesto en el tag `v1.9.2`.
+
+
 Sondeo del [#224](https://github.com/sgomez/rfirma/issues/224), hijo del mapa
 [#217](https://github.com/sgomez/rfirma/issues/217). Va un hito por delante: mide
 lo que la **v0.5** tendrá que implementar, para que el hito no se pare esperando
