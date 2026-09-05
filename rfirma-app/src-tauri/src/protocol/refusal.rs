@@ -7,7 +7,9 @@
 //! toma por una firma. Por eso el rechazo **nace ya con su código**, y no se
 //! traduce después.
 //!
-//! Aquí sólo están los tres códigos que este módulo puede producir. El catálogo
+//! Aquí sólo están los códigos que rfirma sabe producir hoy: los tres del
+//! parseo de la invocación y los cuatro que nacen dentro del canal ya abierto.
+//! El catálogo
 //! entero —los cincuenta y tres— y la frontera que los escribe en el cable son
 //! del #349; cuando llegue, este enumerado se subsume en él y esta caja
 //! desaparece. Mientras tanto, el detalle viaja aparte y **no** se envía: el
@@ -16,7 +18,7 @@
 
 use std::fmt;
 
-/// Los códigos de error del protocolo que este módulo sabe producir.
+/// Los códigos de error del protocolo que rfirma sabe producir hoy.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SafCode {
     /// `SAF_03`, `ERROR_PARAMS`: error en los parámetros de entrada. Es el
@@ -29,6 +31,15 @@ pub enum SafCode {
     /// `SAF_41`, `ERROR_MINIMUM_VERSION_NON_SATISTIED`: la sede exige una
     /// versión de cliente mayor que la que se implementa.
     MinimumVersionNonSatisfied,
+    /// `SAF_04`, `ERROR_UNSUPPORTED_OPERATION`: la operación que pide la URL no
+    /// es ninguna de las que se atienden.
+    UnsupportedOperation,
+    /// `SAF_46`, `ERROR_INVALID_SESSION_ID`: el mensaje no repite la credencial
+    /// del canal, o repite otra (`AfirmaWebSocketServerV4.java:72`-`78`).
+    InvalidSessionId,
+    /// `SAF_47`, `ERROR_EXTERNAL_REQUEST_TO_SOCKET`: la petición no viene del
+    /// *loopback* (`AfirmaWebSocketServerV4.java:61`-`68`).
+    ExternalRequestToSocket,
 }
 
 impl SafCode {
@@ -38,7 +49,39 @@ impl SafCode {
             Self::Params => "SAF_03",
             Self::UnsupportedProcedure => "SAF_21",
             Self::MinimumVersionNonSatisfied => "SAF_41",
+            Self::UnsupportedOperation => "SAF_04",
+            Self::InvalidSessionId => "SAF_46",
+            Self::ExternalRequestToSocket => "SAF_47",
         }
+    }
+
+    /// La descripción con la que el código viaja por el canal.
+    ///
+    /// El formato es `SAF_NN: <descripción>`
+    /// (`ProtocolInvocationLauncherErrorManager.getErrorMessage`, `:183`-`185`),
+    /// y la sede enseña **la respuesta entera**, así que el texto es el del
+    /// catálogo del original y no una redacción propia. Sólo están los códigos
+    /// que rfirma produce hoy; el catálogo de los cincuenta y tres es del #349.
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::Params => "Error en los parametros de entrada",
+            Self::UnsupportedProcedure => {
+                "La version de Autofirma instalada no es compatible con este tramite"
+            }
+            Self::MinimumVersionNonSatisfied => {
+                "El tramite requiere una version mas reciente de Autofirma"
+            }
+            Self::UnsupportedOperation => "Operacion no soportada",
+            Self::InvalidSessionId => "Id de sesion invalido",
+            Self::ExternalRequestToSocket => {
+                "Peticion al socket desde IP externa o sin identificar"
+            }
+        }
+    }
+
+    /// La línea entera tal y como sale al cable: `SAF_NN: <descripción>`.
+    pub fn on_the_wire(self) -> String {
+        format!("{}: {}", self.as_str(), self.description())
     }
 }
 
@@ -97,6 +140,23 @@ mod tests {
         assert_eq!(SafCode::Params.as_str(), "SAF_03");
         assert_eq!(SafCode::UnsupportedProcedure.as_str(), "SAF_21");
         assert_eq!(SafCode::MinimumVersionNonSatisfied.as_str(), "SAF_41");
+        assert_eq!(SafCode::UnsupportedOperation.as_str(), "SAF_04");
+        assert_eq!(SafCode::InvalidSessionId.as_str(), "SAF_46");
+        assert_eq!(SafCode::ExternalRequestToSocket.as_str(), "SAF_47");
+    }
+
+    /// Lo que la sede recibe es la línea entera, y lo único que el cliente
+    /// publicado mira son los cuatro primeros caracteres (§5 del informe).
+    #[test]
+    fn a_code_travels_as_the_whole_line_the_published_client_recognises() {
+        let line = SafCode::InvalidSessionId.on_the_wire();
+
+        assert_eq!(line, "SAF_46: Id de sesion invalido");
+        assert!(line.starts_with("SAF_"));
+        assert!(
+            line.len() > 4,
+            "una linea de cuatro caracteres no es un error para el cliente publicado"
+        );
     }
 
     #[test]

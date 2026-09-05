@@ -96,6 +96,27 @@ openssl = "0.10"
 # certificado caducado se rechaza ANTES de pedir el PIN, y para eso hay que
 # saber leer su notAfter.
 x509-cert = "0.3"
+# El `Sink` y el `Stream` del socket: `tokio-tungstenite` los expone pero no
+# reexporta el rasgo, asi que hace falta nombrarlo. Ya estaba en el arbol como
+# dependencia transitiva; aqui solo se hace directa.
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+# El transporte del canal: un servidor WebSocket sobre TLS en 127.0.0.1
+# (ID-212). Las caracteristicas de TLS de este crate son SOLO de cliente, asi
+# que el servidor va con `handshake` y nada mas: `accept_async` recibe el
+# stream ya cifrado. Nada de `rustls`: seria una segunda pila de TLS en el
+# mismo binario (ID-217).
+tokio-tungstenite = { version = "0.30", default-features = false, features = [
+    "handshake",
+] }
+# El servidor no posee su runtime (ID-213): es una `async fn` que en produccion
+# corre sobre `tauri::async_runtime` y en pruebas sobre `#[tokio::test]`. Ya
+# estaba en el arbol como dependencia transitiva de tauri; aqui solo se hace
+# directa.
+tokio = { version = "1", features = ["net", "rt", "sync", "io-util", "macros"] }
+# El saludo TLS del servidor local, sobre el OpenSSL del sistema que ya usa
+# `reqwest`. Ya estaban las dos en el arbol; aqui solo se hacen directas.
+native-tls = "0.2"
+tokio-native-tls = "0.3"
 # La comprobacion de version nueva, y el UNICO sitio del programa que abre una
 # conexion (ID-182). Entra con `default-features = false` a proposito: las de
 # por omision traen rustls con aws-lc-rs —que exige cmake en la construccion del
@@ -108,6 +129,12 @@ reqwest = { version = "0.13", default-features = false, features = [
 ] }
 
 [dev-dependencies]
+# El cliente de canal y las pruebas del servidor abren sockets de verdad
+# (grada B): hace falta un runtime con hilos y el `#[tokio::test]`.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+# El cliente de canal habla `wss://` de verdad: aqui si se usa la pila de TLS
+# de cliente del crate, que es la unica que trae.
+tokio-tungstenite = { version = "0.30", features = ["native-tls"] }
 # Las pruebas del almacén de la rúbrica escriben de verdad en disco: copiar es
 # justo el comportamiento que se prueba, y sobre un disco simulado no se
 # probaría nada.

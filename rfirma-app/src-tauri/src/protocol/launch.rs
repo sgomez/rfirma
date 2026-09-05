@@ -124,6 +124,18 @@ impl LaunchRequest {
     }
 }
 
+/// **Los puertos que la sede sorteó, se acepte la invocación o no** (ID-248).
+///
+/// Existe aparte de [`LaunchRequest`] porque un rechazo se contesta *por el
+/// socket cuando hay socket*: para atarse a un puerto y decir el `SAF_` hace
+/// falta leer `ports` de una URL que, por lo demás, ya se ha rechazado —una
+/// versión de protocolo que no se habla, una credencial mal formada—. Lo que no
+/// se pueda leer es una lista vacía, y una lista vacía es el único caso en el
+/// que el rechazo sale sólo por ventana.
+pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
+    parse_ports(url.parameter("ports")).unwrap_or_default()
+}
+
 /// `v`, con la regla que hace que la omisión caiga en «no soportada».
 ///
 /// Un `v` que no es un entero **no** es un rechazo aparte: el original lo
@@ -267,6 +279,34 @@ mod tests {
             .expect("un solo caracter esta bien formado");
 
         assert_eq!(request.credential().as_str(), "a");
+    }
+
+    /// Los puertos se leen **aunque la invocación se rechace**: es lo que
+    /// permite contestar el `SAF_` por el socket en vez de por la ventana
+    /// (ID-248).
+    #[test]
+    fn the_drawn_ports_are_readable_from_a_launch_that_is_refused() {
+        let url =
+            AfirmaUrl::parse("afirma://websocket?ports=54001,54002&v=3&idsession=malformado!")
+                .expect("es una URL del protocolo");
+
+        assert!(
+            LaunchRequest::from_url(&url).is_err(),
+            "ni la version ni la credencial valen"
+        );
+        assert_eq!(drawn_ports(&url), vec![54001, 54002]);
+    }
+
+    /// Lo que no se puede leer es una lista vacía, y una lista vacía es el
+    /// único caso en el que el rechazo sale sólo por ventana.
+    #[test]
+    fn a_launch_without_readable_ports_draws_none() {
+        let without = AfirmaUrl::parse("afirma://websocket?v=3").expect("es una URL del protocolo");
+        let unreadable = AfirmaUrl::parse("afirma://websocket?ports=setenta&v=4")
+            .expect("es una URL del protocolo");
+
+        assert!(drawn_ports(&without).is_empty());
+        assert!(drawn_ports(&unreadable).is_empty());
     }
 
     #[test]

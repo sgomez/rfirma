@@ -22,6 +22,7 @@
 //! estos módulos.
 
 pub mod app;
+pub mod channel;
 pub mod commands;
 pub mod destination;
 pub mod dropped;

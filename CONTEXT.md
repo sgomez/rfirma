@@ -173,6 +173,22 @@ antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del
 resultado, y un solo trámite vivo a la vez.
 _Avoid_: sesión de protocolo, diálogo, intercambio
 
+**Cliente de canal**:
+El cliente propio, escrito en Rust, con el que se prueba el canal: saluda por
+`wss://`, manda el eco y comprueba los **caminos de rechazo que un cliente
+conforme no puede provocar** —una credencial que no coincide, un canal abierto
+sólo para rechazar, alguien que intenta hablar en claro—. No es el cliente de
+nadie: existe para las pruebas.
+_Avoid_: cliente de pruebas, mock del navegador, simulador de sede
+
+**Banco de conformidad**:
+El `autoscript.js` **publicado**, fijado al tag `v1.9.2` y corriendo bajo Node,
+con el que se comprueba que rfirma habla con el cliente real y no con una idea
+propia de él. Es el otro trabajo, no el mismo que el del **cliente de canal**:
+aquél cubre lo que el real no puede provocar, y éste cubre lo que el real hace.
+No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché.
+_Avoid_: tests de integración, e2e, banco de pruebas
+
 **Códec del protocolo**:
 La traducción entre el texto que viaja por el canal y las estructuras con las
 que se razona dentro: la URL de operación, la respuesta con sus campos
