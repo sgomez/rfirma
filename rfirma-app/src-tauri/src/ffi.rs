@@ -362,6 +362,12 @@ pub enum BridgeError {
     MalformedResponse(String),
     /// El puente ha contestado `{"ok":false,...}`.
     Failed(String),
+    /// El puente ha contestado `{"ok":false,"kind":"pdfHasUnregisteredSignatures",...}`:
+    /// el PDF trae firmas que su propio diccionario no registra, y firmarlo
+    /// encima puede invalidar las que ya tenía. **No es un fallo cualquiera**
+    /// (ID-296): es la situación que la sede tiene que confirmar, y por eso
+    /// llega con nombre propio en vez de colapsada en [`BridgeError::Failed`].
+    PdfHasUnregisteredSignatures(String),
 }
 
 impl fmt::Display for BridgeError {
@@ -382,6 +388,9 @@ impl fmt::Display for BridgeError {
             Self::NullResponse => write!(f, "el puente ha devuelto NULL"),
             Self::MalformedResponse(detail) => write!(f, "respuesta ilegible del puente: {detail}"),
             Self::Failed(detail) => write!(f, "el puente ha fallado: {detail}"),
+            Self::PdfHasUnregisteredSignatures(detail) => {
+                write!(f, "el PDF trae firmas no registradas: {detail}")
+            }
         }
     }
 }
@@ -697,18 +706,34 @@ pub fn parse_filter_selection(json: &str) -> Result<Vec<usize>, BridgeError> {
         .collect()
 }
 
+/// La clase de fallo con la que el puente marca un PDF con firmas no
+/// registradas (`NativeBridge.errorJson`, ID-296).
+const UNREGISTERED_SIGNATURES_KIND: &str = "pdfHasUnregisteredSignatures";
+
 fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
     let value: serde_json::Value = serde_json::from_str(json)
         .map_err(|error| BridgeError::MalformedResponse(format!("{error}: {json}")))?;
     match value.get("ok").and_then(serde_json::Value::as_bool) {
         Some(true) => Ok(value),
-        Some(false) => Err(BridgeError::Failed(
-            value
+        Some(false) => {
+            let detail = value
                 .get("error")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("sin detalle")
-                .to_owned(),
-        )),
+                .to_owned();
+            // `kind` es la clase de fallo, y sólo una se distingue (ID-296).
+            // Un puente viejo no lo trae y un puente nuevo puede traer una
+            // clase que aquí no se conozca: las dos son `Failed`, que es
+            // exactamente lo que eran antes.
+            Err(
+                match value.get("kind").and_then(serde_json::Value::as_str) {
+                    Some(UNREGISTERED_SIGNATURES_KIND) => {
+                        BridgeError::PdfHasUnregisteredSignatures(detail)
+                    }
+                    _ => BridgeError::Failed(detail),
+                },
+            )
+        }
         None => Err(BridgeError::MalformedResponse(format!(
             "no trae \"ok\": {json}"
         ))),
@@ -1003,6 +1028,32 @@ mod tests {
         let message = error.to_string();
         assert!(matches!(error, BridgeError::Failed(_)), "{message}");
         assert!(message.contains("java.io.IOException"), "{message}");
+    }
+
+    /// **El PDF con firmas no registradas se distingue de un fallo
+    /// cualquiera** (ID-296): el puente lo marca con `kind` y aquí llega con
+    /// nombre propio, que es lo que hace posible el `SAF_50`.
+    #[test]
+    fn a_pdf_with_unregistered_signatures_is_not_just_a_failure() {
+        let error = parse_presign(
+            r#"{"ok":false,"kind":"pdfHasUnregisteredSignatures","error":"PdfHasUnregisteredSignaturesException"}"#,
+        )
+        .expect_err("ok:false es un fallo");
+
+        assert!(
+            matches!(error, BridgeError::PdfHasUnregisteredSignatures(_)),
+            "{error}"
+        );
+    }
+
+    /// Y una clase que este binario no conozca —o un puente sin `kind`— sigue
+    /// siendo lo que era: un fallo del puente.
+    #[test]
+    fn a_failure_kind_this_binary_does_not_know_is_still_a_failure() {
+        let error = parse_presign(r#"{"ok":false,"kind":"loQueSea","error":"algo"}"#)
+            .expect_err("ok:false es un fallo");
+
+        assert!(matches!(error, BridgeError::Failed(_)), "{error}");
     }
 
     #[test]

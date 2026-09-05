@@ -31,6 +31,7 @@ pub mod configuration;
 pub mod cycle;
 pub mod documents;
 pub mod filtering;
+pub mod frontier;
 pub mod in_hand;
 pub mod invocation;
 pub mod preview;
@@ -42,6 +43,8 @@ pub mod version;
 
 #[cfg(test)]
 pub(crate) mod fixtures;
+#[cfg(test)]
+mod guards;
 
 use std::sync::Mutex;
 

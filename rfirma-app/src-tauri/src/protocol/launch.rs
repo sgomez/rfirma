@@ -21,7 +21,8 @@
 //!   (`AfirmaWebSocketServerV4.java:72`): un `idsession` malo abre ahí un canal
 //!   sin cerradura. Aquí es `SAF_03` (ID-249).
 
-use super::refusal::{Refusal, SafCode};
+use super::codes::{Parameter, SafCode};
+use super::refusal::Refusal;
 use super::url::AfirmaUrl;
 
 /// El verbo de la invocación de arranque, y el único que abre canal.
@@ -57,7 +58,8 @@ impl ChannelCredential {
     /// pasa `[A-Za-z0-9]`.
     pub fn parse(value: &str) -> Result<Self, Refusal> {
         if value.is_empty() {
-            return Err(Refusal::params(
+            return Err(Refusal::about(
+                Parameter::IdSession,
                 "la invocacion no trae credencial de canal ('idsession'), y sin ella el canal \
                  quedaria sin cerradura",
             ));
@@ -66,7 +68,8 @@ impl ChannelCredential {
             .chars()
             .all(|character| character.is_ascii_alphanumeric())
         {
-            return Err(Refusal::params(
+            return Err(Refusal::about(
+                Parameter::IdSession,
                 "la credencial de canal ('idsession') tiene caracteres que no son letras ni \
                  digitos ASCII",
             ));
@@ -166,7 +169,8 @@ fn check_protocol_version(declared: Option<&str>) -> Result<(), Refusal> {
 /// camino del protocolo 3, que aquí no existe (ID-247).
 fn parse_ports(declared: Option<&str>) -> Result<Vec<u16>, Refusal> {
     let Some(declared) = declared.filter(|value| !value.is_empty()) else {
-        return Err(Refusal::params(
+        return Err(Refusal::about(
+            Parameter::Ports,
             "la invocacion no trae puertos ('ports'), y el camino sin puertos del original es el \
              del protocolo 3",
         ));
@@ -181,9 +185,10 @@ fn parse_ports(declared: Option<&str>) -> Result<Vec<u16>, Refusal> {
                 .and_then(|port| u16::try_from(port).ok())
                 .filter(|port| *port != 0)
                 .ok_or_else(|| {
-                    Refusal::params(format!(
-                        "el parametro 'ports' trae un valor que no es un puerto: {port}"
-                    ))
+                    Refusal::about(
+                        Parameter::Ports,
+                        format!("el parametro 'ports' trae un valor que no es un puerto: {port}"),
+                    )
                 })
         })
         .collect()

@@ -36,12 +36,12 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `main.rs` | 8 | El binario. No hay nada dentro. |
 | `lib.rs` | 196 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
-| `ffi.rs` | 1097 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cuatro entradas**, y ninguna firma. |
+| `ffi.rs` | 1097 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cuatro entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
 | `commands/mod.rs` | 693 | **Las veinticinco órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 479 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
-| `commands/failure.rs` | 216 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
+| `commands/failure.rs` | 223 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
 | `commands/guards.rs` | 657 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
@@ -49,6 +49,8 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
 | `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
 | `app/signing.rs` | 764 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/frontier.rs` | 286 | **La frontera de errores**: el único sitio donde una situación del ID-29 se convierte en el código `SAF_NN` que recibe la sede (ID-288, ID-292). |
+| `app/guards.rs` | 278 | Las guardas de lo que sale hacia la sede: nada nuestro cruza el socket, y el catálogo es cerrado (ID-291, TD-58). Solo en pruebas. |
 | `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
 | `app/filtering.rs` | 340 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
@@ -57,7 +59,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 367 | Los ajustes, del disco a la ventana y de vuelta. |
-| `app/site.rs` | 309 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
+| `app/site.rs` | 313 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí. |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
@@ -85,17 +87,18 @@ misma PR que lo crea**, o el PR sale en rojo.
 | **`protocol/`** | | Lo que pide la sede, leído de una URL `afirma://` y nada más. Puro, sin sockets ni puente (ID-244, TD-53). |
 | `protocol/mod.rs` | 49 | El reparto, y las cuatro cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `protocol/url.rs` | 249 | Una URL `afirma://` partida en verbo y pares, con las rarezas de `extractParams`. |
-| `protocol/launch.rs` | 361 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
+| `protocol/launch.rs` | 366 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
 | `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
 | `protocol/filters.rs` | 430 | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor, no qué se aplica (ID-256, ID-257, ID-260). |
-| `protocol/parameters.rs` | 142 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
+| `protocol/parameters.rs` | 145 | Las dos guardias comunes a toda operación: `mcv` y el `dat` que pide un fichero local (ID-250, ID-267). |
 | `protocol/message.rs` | 179 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
-| `protocol/refusal.rs` | 170 | Los `SAF_` que rfirma produce hoy, con la línea que sale al cable. Se subsume en la frontera de errores del #349. |
+| `protocol/codes.rs` | 505 | **El catálogo publicado**: los cincuenta y tres `SAF_00`…`SAF_52` con frase nuestra, el parámetro que se nombra detrás, y las tres respuestas que no son códigos —`CANCEL`, `MEMORY_ERROR`, `NULL`— (ID-289, ID-290, ID-293). |
+| `protocol/refusal.rs` | 105 | El rechazo del protocolo: el código que sale al cable y el detalle crudo que **no** sale (ID-291). |
 | **`channel/`** | | **El canal**: el servidor `wss://` sobre el *loopback* y qué se contesta a cada mensaje (ID-212…ID-219). No sabe por qué se abre: eso es de `app/site.rs`. |
 | `channel/mod.rs` | 28 | El reparto, y la tabla de las tres piezas. Léelo antes que sus hermanos. |
 | `channel/bind.rs` | 131 | Ata uno de los puertos que sorteó la sede, siempre en `127.0.0.1` y **nunca el 63117** (ID-215). |
 | `channel/server.rs` | 230 | El servidor: `async fn` que recibe el escuchador atado y devuelve puerto y asa de apagado (ID-213). **No existe escuchador en claro.** |
-| `channel/conversation.rs` | 216 | Qué se contesta a cada mensaje, sin socket delante: las tres guardias del original y el `OK` del eco. |
+| `channel/conversation.rs` | 223 | Qué se contesta a cada mensaje, sin socket delante: las tres guardias del original y el `OK` del eco. |
 | `channel/error.rs` | 78 | Situaciones del canal (ADR-0009). |
 | **`pkcs11/`** | | La única parte que habla con el token. |
 | `pkcs11/mod.rs` | 718 | La capa PKCS#11. |
@@ -120,6 +123,21 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `rubric/normalize.rs` | 586 | La normalización. |
 | `rubric/store.rs` | 314 | Se copia, no se referencia (ID-33). |
 | `rubric/error.rs` | 92 | Situaciones de la rúbrica (ADR-0009). |
+
+## Al tocar lo que sale hacia la sede
+
+Todo lo que la sede recibe cuando no sale una firma pasa por `protocol/codes.rs`
+—el catálogo cerrado— y se decide en `app/frontier.rs` —la única traducción de
+una situación del ID-29 a un código—. Dos cosas que salen mal si se olvidan:
+
+- **Un código no se escribe a mano.** Nadie compone una cadena `SAF_…`: se
+  construye un `WireAnswer` y se llama a `on_the_wire()`. `app/guards.rs`
+  compara lo que sale contra las líneas que el `enum` puede producir, así que un
+  código acuñado sale en rojo.
+- **Una situación nueva del ID-29 no compila** hasta que se le decide código:
+  cada traducción de `app/frontier.rs` es un `match` cerrado sobre el enumerado
+  de su módulo. Lo que la prueba añade encima es que el código elegido esté en el
+  catálogo, y que no sea nunca `SAF_48`, que la 1.9.2 no puede producir (ID-295).
 
 ## La regla de la dirección
 
@@ -181,9 +199,9 @@ Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 
 ## Las pruebas que se leen a sí mismas
 
-Cuatro ficheros vigilan invariantes leyendo el código **como texto**, no
-ejecutándolo: `app/cycle.rs`, `app/signing.rs`, `commands/guards.rs` y
-`tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
+Cinco ficheros vigilan invariantes leyendo el código **como texto**, no
+ejecutándolo: `app/cycle.rs`, `app/signing.rs`, `app/guards.rs`,
+`commands/guards.rs` y `tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
 dentro. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
 
 - **`production_half` corta por `"\nmod tests {"`**, así que todo lo que quede

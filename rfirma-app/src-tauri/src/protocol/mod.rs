@@ -32,6 +32,7 @@
 //! Y una que **no** se aparta aunque tiente: la comparación de `mcv` no es
 //! semver, y se reproduce tal cual (ID-251, [`version`]).
 
+pub mod codes;
 pub mod filters;
 pub mod launch;
 pub mod message;
@@ -40,10 +41,11 @@ pub mod refusal;
 pub mod url;
 pub mod version;
 
+pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use launch::{drawn_ports, ChannelCredential, LaunchRequest, PROTOCOL_VERSION};
 pub use message::ChannelMessage;
 pub use parameters::{check_local_access_is_not_requested, check_minimum_client_version};
-pub use refusal::{Refusal, SafCode};
+pub use refusal::Refusal;
 pub use url::AfirmaUrl;
 pub use version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};

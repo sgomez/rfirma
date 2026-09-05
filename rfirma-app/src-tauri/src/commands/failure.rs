@@ -106,7 +106,14 @@ impl From<SealMismatch> for Failure {
 
 impl From<BridgeError> for Failure {
     fn from(error: BridgeError) -> Self {
-        Self::new("bridgeFailed", error.to_string())
+        // Un fallo del puente es `bridgeFailed` menos en un caso: el PDF con
+        // firmas no registradas es una situación propia, porque no es un fallo
+        // sino algo que hay que confirmar (ID-296).
+        let situation = match error {
+            BridgeError::PdfHasUnregisteredSignatures(_) => "pdfHasUnregisteredSignatures",
+            _ => "bridgeFailed",
+        };
+        Self::new(situation, error.to_string())
     }
 }
 

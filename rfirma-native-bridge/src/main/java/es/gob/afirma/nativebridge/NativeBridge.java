@@ -189,12 +189,48 @@ public final class NativeBridge {
         }
     }
 
+    /**
+     * La clase de fallo que Rust distingue de un fallo cualquiera (ID-296).
+     *
+     * <p>Un PDF con firmas no registradas no es un error del puente: es una
+     * situacion que la sede tiene que confirmar, y sin nombre propio aqui no se
+     * puede distinguir del resto al otro lado de la frontera.
+     */
+    static final String UNREGISTERED_SIGNATURES_KIND = "pdfHasUnregisteredSignatures";
+
+    /** La clase con la que se marca todo lo demas. */
+    static final String GENERIC_FAILURE_KIND = "failed";
+
+    /**
+     * El nombre de la excepcion de AutoFirma que se distingue. Se compara por
+     * nombre y no por {@code instanceof} para no obligar a que la clase este
+     * enlazada en la imagen nativa por una rama de error.
+     */
+    private static final String UNREGISTERED_SIGNATURES_EXCEPTION =
+            "es.gob.afirma.signers.pades.common.PdfHasUnregisteredSignaturesException";
+
     static String errorJson(final Throwable e) {
         final String message = e.getMessage() == null ? e.getClass().getName()
                 : e.getClass().getName() + ": " + e.getMessage();
         final StringBuilder json = new StringBuilder("{\"ok\":false");
+        field(json, "kind", kindOf(e));
         field(json, "error", message);
         return json.append('}').toString();
+    }
+
+    /**
+     * La clase de fallo, mirando tambien las causas: AutoFirma envuelve sus
+     * excepciones antes de que lleguen hasta aqui.
+     */
+    static String kindOf(final Throwable e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (UNREGISTERED_SIGNATURES_EXCEPTION.equals(cause.getClass().getName())) {
+                return UNREGISTERED_SIGNATURES_KIND;
+            }
+            cause = cause.getCause() == cause ? null : cause.getCause();
+        }
+        return GENERIC_FAILURE_KIND;
     }
 
     private static void field(final StringBuilder json, final String name, final String value) {
