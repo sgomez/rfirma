@@ -52,16 +52,19 @@ pub enum Parameter {
     MinimumClientVersion,
     /// `dat`: los datos a firmar.
     Data,
+    /// `properties`: los `extraParams` de la operacion, filtros incluidos.
+    Properties,
 }
 
 impl Parameter {
     /// Todos, para las pruebas de totalidad.
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Ports,
         Self::ProtocolVersion,
         Self::IdSession,
         Self::MinimumClientVersion,
         Self::Data,
+        Self::Properties,
     ];
 
     /// El nombre con el que viaja en la URL del protocolo.
@@ -72,6 +75,7 @@ impl Parameter {
             Self::IdSession => "idsession",
             Self::MinimumClientVersion => "mcv",
             Self::Data => "dat",
+            Self::Properties => "properties",
         }
     }
 }

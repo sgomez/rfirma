@@ -194,23 +194,50 @@ pub fn invoked_document(
     )
 }
 
+/// En qué queda una segunda invocación sobre la aplicación ya abierta (ID-160,
+/// ID-279).
+#[derive(Debug, PartialEq, Eq)]
+pub enum SecondInvocation {
+    /// **No pasa nada**: hay una firma a medias y no se sustituye (ID-160), o
+    /// la invocación no nombraba nada que abrir.
+    NothingHappens,
+    /// Lo que la ventana tenía delante se sustituye por esto, sin preguntar.
+    ReplacesWhatWasThere(Box<DroppedDocumentView>),
+    /// **Una invocación de sede abre lo suyo** y no sustituye nada (ID-279).
+    /// Lo que sale es la URL entera, que es lo que atiende
+    /// [`super::site::attend_launch`].
+    OpensItsOwnWindow(String),
+}
+
 /// **Caso de uso.** Qué hace una segunda invocación sobre la ventana que ya
-/// estaba abierta (ID-160).
+/// estaba abierta (ID-160, ID-279).
 ///
-/// **Sustituye lo que hubiera, sin preguntar**, salvo con una sesión de firma
-/// viva: entonces no devuelve nada y no se toca nada. `signing_is_live` llega
-/// resuelto y no como la sesión entera a propósito — lo que decide aquí es
-/// «hay una firma a medias, sí o no», y pedir la sesión ataría esta regla al
-/// ciclo trifásico para leer un booleano.
+/// **Sustituye lo que hubiera, sin preguntar**, con dos excepciones:
+///
+/// 1. Con una **sesión de firma viva** no se toca nada: es el único estado
+///    donde perder el hilo cuesta un PIN. `signing_is_live` llega resuelto y no
+///    como la sesión entera a propósito — lo que decide aquí es «hay una firma
+///    a medias, sí o no», y pedir la sesión ataría esta regla al ciclo
+///    trifásico para leer un booleano.
+/// 2. Un **`afirma://` nunca sustituye**: abre su propia ventana (ID-279), y
+///    por eso una firma local a medias tampoco lo detiene —no le quita a nadie
+///    lo que tenía delante—. Si además se atiende o se rechaza es cosa del
+///    trámite vivo (ID-280), y eso lo decide [`super::site::attend_launch`].
 pub fn second_invocation(
     invocation: &Invocation,
     opened: &OpenedDocuments,
     signing_is_live: bool,
-) -> Option<DroppedDocumentView> {
-    if signing_is_live {
-        return None;
+) -> SecondInvocation {
+    if let Some(url) = invocation.site_launch() {
+        return SecondInvocation::OpensItsOwnWindow(url.to_owned());
     }
-    invoked_document(invocation, opened)
+    if signing_is_live {
+        return SecondInvocation::NothingHappens;
+    }
+    match invoked_document(invocation, opened) {
+        Some(view) => SecondInvocation::ReplacesWhatWasThere(Box::new(view)),
+        None => SecondInvocation::NothingHappens,
+    }
 }
 
 /// **Lo que traía la invocación que abrió la ventana**, hasta que la ventana lo
@@ -301,8 +328,11 @@ mod tests {
         let pdf = a_temporary_pdf("segundo.pdf");
         let opened = OpenedDocuments::new();
 
-        let view = second_invocation(&invoked_with(&pdf), &opened, false).expect("sustituye");
+        let second = second_invocation(&invoked_with(&pdf), &opened, false);
 
+        let SecondInvocation::ReplacesWhatWasThere(view) = second else {
+            panic!("sustituye: {second:?}");
+        };
         assert!(
             view.document.is_some(),
             "el documento nuevo es el que queda"
@@ -317,7 +347,7 @@ mod tests {
 
         assert_eq!(
             second_invocation(&invoked_with(&pdf), &OpenedDocuments::new(), true),
-            None
+            SecondInvocation::NothingHappens
         );
     }
 
@@ -329,7 +359,35 @@ mod tests {
 
         assert_eq!(
             second_invocation(&invoked_with(&other), &OpenedDocuments::new(), true),
-            None
+            SecondInvocation::NothingHappens
+        );
+    }
+
+    /// **ID-279**: la invocación de una sede **abre lo suyo y no sustituye
+    /// nada**, aunque la ventana tenga un documento delante.
+    #[test]
+    fn a_site_launch_opens_its_own_window_and_replaces_nothing() {
+        assert_eq!(
+            second_invocation(
+                &invoked_with_the_url(A_LAUNCH),
+                &OpenedDocuments::new(),
+                false
+            ),
+            SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
+        );
+    }
+
+    /// Y una firma local a medias tampoco la detiene: no le quita a nadie lo
+    /// que tenía delante, así que la regla del ID-160 no la alcanza (ID-279).
+    #[test]
+    fn a_live_signing_session_does_not_stop_a_site_launch() {
+        assert_eq!(
+            second_invocation(
+                &invoked_with_the_url(A_LAUNCH),
+                &OpenedDocuments::new(),
+                true
+            ),
+            SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
         );
     }
 
@@ -385,8 +443,8 @@ mod tests {
         assert_eq!(invocation.site_launch(), Some(A_LAUNCH));
         assert_eq!(
             second_invocation(&invocation, &OpenedDocuments::new(), false),
-            None,
-            "una invocación de sede no sustituye ningún documento"
+            SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned()),
+            "una invocación de sede no sustituye ningún documento: abre lo suyo"
         );
     }
 

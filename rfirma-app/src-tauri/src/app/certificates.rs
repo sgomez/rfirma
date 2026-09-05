@@ -31,6 +31,21 @@ pub fn listed_rows(
     memory: &Memory,
 ) -> Result<Vec<CertificateView>, Failure> {
     let found = pkcs11::list_certificates_across(stores)?;
+    Ok(rows_of(found, installed_dir, listed, memory))
+}
+
+/// Las filas de un listado **ya hecho**, con sus asas recién acuñadas.
+///
+/// Sale de [`listed_rows`] porque el camino de la sede lista otra cosa: lo que
+/// la ventana enseña allí es lo que sobrevive al filtro de la sede
+/// ([`super::filtering`], ID-252), y no el listado entero. Pintar una fila es
+/// lo mismo en los dos casos; **qué se pinta** es la decisión que cambia.
+pub fn rows_of(
+    found: Vec<TokenCertificate>,
+    installed_dir: &Path,
+    listed: &ListedCertificates,
+    memory: &Memory,
+) -> Vec<CertificateView> {
     // Lo recordado se lee **una vez** y no una por fila: es el mismo fichero de
     // estado para todas.
     let remembered = remembered_certificate(memory);
@@ -39,7 +54,7 @@ pub fn listed_rows(
             .iter()
             .map(|certificate| certificate.reference().clone()),
     );
-    Ok(found
+    found
         .into_iter()
         .zip(handles)
         .map(|(certificate, id)| {
@@ -58,7 +73,7 @@ pub fn listed_rows(
                     .is_some_and(|one| one.is_the_same_as(certificate.reference())),
             }
         })
-        .collect())
+        .collect()
 }
 
 /// El OID de `rsaEncryption`, que es la única clave con la que rfirma sabe

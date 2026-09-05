@@ -24,7 +24,9 @@
 //! En producción lo cumple [`crate::channel`].
 
 use crate::channel::{ChannelDuty, ChannelError, OpenChannel};
-use crate::protocol::{drawn_ports, AfirmaUrl, LaunchRequest, Refusal, WireAnswer};
+use crate::protocol::{drawn_ports, AfirmaUrl, LaunchRequest, Refusal, SafCode, WireAnswer};
+
+use super::errand::{Errand, LiveErrand};
 
 /// **El puerto de transporte** (ID-214): ata uno de esos puertos y sirve el
 /// canal para ese cometido.
@@ -54,7 +56,13 @@ pub enum Attendance {
 }
 
 /// Atiende la invocación de arranque que llegó por el esquema `afirma://`.
-pub fn attend_launch(url: &str, transport: ChannelTransport<'_>) -> Attendance {
+///
+/// `live` es el trámite de sede a medias, si lo hay: **con uno vivo, la
+/// invocación se rechaza** con `SAF_45` mientras el primero siga vivo (ID-280).
+/// Para la sede es exactamente eso, que no se le ha abierto canal, y se lo
+/// dice por el suyo como cualquier otro rechazo (ID-248). Atender dos a la vez
+/// es meter a la persona en dos trámites de dos sedes con dos PIN a medias.
+pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErrand) -> Attendance {
     let url = match AfirmaUrl::parse(url) {
         Ok(url) => url,
         // Ni siquiera es una URL del protocolo: no hay `ports` que leer, así
@@ -64,9 +72,23 @@ pub fn attend_launch(url: &str, transport: ChannelTransport<'_>) -> Attendance {
 
     match LaunchRequest::from_url(&url) {
         Ok(request) => {
+            if live.is_live() {
+                return refuse(
+                    &url,
+                    Refusal::new(
+                        SafCode::CannotOpenSocket,
+                        "ya hay un tramite de sede vivo: no se atienden dos a la vez",
+                    ),
+                    transport,
+                );
+            }
+
             let duty = ChannelDuty::Serve(request.credential().clone());
             match transport(request.ports(), duty) {
-                Ok(channel) => Attendance::Serving(channel),
+                Ok(channel) => {
+                    live.begin(Errand::of(request.credential().clone(), channel.port()));
+                    Attendance::Serving(channel)
+                }
                 Err(error) => Attendance::ChannelNotOpened(error),
             }
         }
@@ -162,6 +184,7 @@ mod tests {
                 "ports=54001,54002,54003&v=4&idsession={CREDENTIAL}"
             )),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let Attendance::Serving(channel) = attendance else {
@@ -189,6 +212,7 @@ mod tests {
         let attendance = attend_launch(
             &a_launch(&format!("ports=54001,54002&v=3&idsession={CREDENTIAL}")),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let Attendance::RefusingOverTheChannel { channel, answer } = attendance else {
@@ -215,6 +239,7 @@ mod tests {
         let attendance = attend_launch(
             &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let Attendance::RefusingInTheWindow(refusal) = attendance else {
@@ -233,6 +258,7 @@ mod tests {
         let attendance = attend_launch(
             &a_launch("ports=54001&v=4&idsession=no-vale-esta"),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let Attendance::RefusingOverTheChannel { answer, .. } = attendance else {
@@ -249,9 +275,11 @@ mod tests {
     fn something_that_is_not_a_protocol_url_never_reaches_the_transport() {
         let transport = ATransport::default();
 
-        let attendance = attend_launch("https://sede.example/firmar", &|ports, duty| {
-            transport.open(ports, duty)
-        });
+        let attendance = attend_launch(
+            "https://sede.example/firmar",
+            &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
+        );
 
         assert!(matches!(attendance, Attendance::RefusingInTheWindow(_)));
         transport.was_never_asked();
@@ -266,6 +294,7 @@ mod tests {
         let attendance = attend_launch(
             &a_launch(&format!("ports=54001&v=4&idsession={CREDENTIAL}")),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let Attendance::ChannelNotOpened(error) = attendance else {
@@ -283,6 +312,7 @@ mod tests {
         let attendance = attend_launch(
             &a_launch(&format!("ports=54001&v=3&idsession={CREDENTIAL}")),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let Attendance::RefusingInTheWindow(refusal) = attendance else {
@@ -301,6 +331,7 @@ mod tests {
         let _ = attend_launch(
             &a_launch(&format!("ports=54001,54002&v=3&idsession={CREDENTIAL}")),
             &|ports, duty| transport.open(ports, duty),
+            &LiveErrand::default(),
         );
 
         let (ports, _) = transport.asked_once();

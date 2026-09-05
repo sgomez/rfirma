@@ -120,10 +120,19 @@ pub fn run() {
                 // medias: quien invoca quiere ver la aplicación, y enseñarle el PIN
                 // que dejó a medias es la respuesta correcta.
                 let _ = window.set_focus();
-                if let Some(substitution) = substitution {
+                match substitution {
                     // Por la **misma** puerta que el arrastre: el estado en que
                     // queda la ventana es el mismo, no uno parecido (ID-159).
-                    let _ = window.emit(commands::DOCUMENT_DROPPED, substitution);
+                    app::invocation::SecondInvocation::ReplacesWhatWasThere(view) => {
+                        let _ = window.emit(commands::DOCUMENT_DROPPED, *view);
+                    }
+                    // Una invocación de sede **no sustituye nunca** lo que la
+                    // ventana tuviera delante (ID-279): abre lo suyo, y quien
+                    // la atiende es el trámite de sede
+                    // ([`app::site::attend_launch`]) con la ventana de sede,
+                    // que se cablea aparte.
+                    app::invocation::SecondInvocation::OpensItsOwnWindow(_)
+                    | app::invocation::SecondInvocation::NothingHappens => {}
                 }
             },
         ))
