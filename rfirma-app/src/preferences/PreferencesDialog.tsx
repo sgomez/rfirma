@@ -355,6 +355,19 @@ export function PreferencesDialog({
     sections.current.set(section, element);
   };
 
+  /**
+   * Quién enseña el desplegable como elegido, que **solo** puede ser alguien
+   * que siga registrado. Un `default` escrito que ya no está entre los
+   * manejadores —la otra aplicación se desinstaló después de elegirla— es tan
+   * «nadie» como no haber elegido nunca: en los dos casos lo que hay es lo que
+   * decida el escritorio, y enseñar el primero de la lista sería mentir.
+   */
+  const chosenUrlHandler = urlHandlers?.handlers.some(
+    (handler) => handler.id === urlHandlers.current,
+  )
+    ? (urlHandlers.current ?? UNCHOSEN)
+    : UNCHOSEN;
+
   return (
     <div
       className="preferences"
@@ -502,7 +515,13 @@ export function PreferencesDialog({
             ref={register("sites")}
           >
             {heading("sites")}
-            {urlHandlers !== null && !urlHandlers.available ? (
+            {/* Tres estados, no dos. Mientras `urlHandlers` es `null` no se
+                sabe **nada**: ni quién atiende los enlaces ni si este canal
+                puede cambiarlo, así que la sección se queda sin desplegable y
+                sin frase, que es lo que promete el `catch` de `App.tsx`. Un
+                desplegable montado con lo que todavía no ha contestado el
+                backend saldría vacío y sin valor. */}
+            {urlHandlers === null ? null : !urlHandlers.available ? (
               /* En el flatpak no hay portal para manejadores predeterminados y
                  `set_as_default_for_type()` miente (ID-240): se dice dónde se
                  cambia, en vez de enseñar un control que no cumpliría. */
@@ -511,16 +530,17 @@ export function PreferencesDialog({
               <>
                 <Select
                   label={t("preferences.urlHandler.label")}
-                  value={urlHandlers?.current ?? UNCHOSEN}
-                  /* Mientras no haya `default` escrito, el desplegable no puede
-                     enseñar el primero de la lista como si estuviera elegido:
-                     lo que hay entonces es lo que decida el escritorio, y esa
-                     opción desaparece en cuanto se elige a alguien. */
+                  value={chosenUrlHandler}
+                  /* Mientras no haya elegido nadie que siga registrado, el
+                     desplegable no puede enseñar el primero de la lista como si
+                     estuviera elegido: lo que hay entonces es lo que decida el
+                     escritorio, y esa opción desaparece en cuanto se elige a
+                     alguien. */
                   options={[
-                    ...(urlHandlers?.current === null
+                    ...(chosenUrlHandler === UNCHOSEN
                       ? [{ value: UNCHOSEN, label: t("preferences.urlHandler.unchosen") }]
                       : []),
-                    ...(urlHandlers?.handlers ?? []).map((handler) => ({
+                    ...urlHandlers.handlers.map((handler) => ({
                       value: handler.id,
                       label: handler.name,
                     })),

@@ -692,6 +692,40 @@ describe("PreferencesDialog", () => {
       expect(screen.getByText(/se elige en los ajustes del escritorio/)).toBeInTheDocument();
     });
 
+    it("shows neither the dropdown nor the sentence while nothing is known yet", () => {
+      renderDialog({ urlHandlers: null });
+
+      expect(
+        screen.queryByRole("combobox", { name: "Quién atiende los enlaces de las sedes" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("switch", { name: "Preguntarme al arrancar" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/se elige en los ajustes del escritorio/)).not.toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "Sedes" })).toBeInTheDocument();
+    });
+
+    it("falls back to the desktop when the written default is no longer registered", async () => {
+      const user = userEvent.setup();
+      renderDialog({
+        urlHandlers: {
+          available: true,
+          handlers: [{ id: "otra.desktop", name: "La otra" }],
+          current: "desinstalada.desktop",
+          ours: "rfirma.desktop",
+        },
+      });
+
+      const dropdown = screen.getByRole("combobox", {
+        name: "Quién atiende los enlaces de las sedes",
+      });
+      expect(dropdown).toHaveTextContent("Lo que decida el escritorio");
+
+      await user.click(dropdown);
+      const options = screen.getAllByRole("option").map((option) => option.textContent);
+      expect(options).toEqual(["Lo que decida el escritorio", "La otra"]);
+    });
+
     it("shows in the section that the choice could not be saved", async () => {
       const user = userEvent.setup();
       renderDialog({

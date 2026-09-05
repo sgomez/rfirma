@@ -697,6 +697,13 @@ export function App({
    * falla, el rechazo sigue su camino hasta Preferencias, que es quien sabe
    * dónde va el aviso (ID-70).
    */
+  const chooseDestination = async () => {
+    const chosen = await preferences.chooseFolder();
+    if (chosen !== null && settings !== null) {
+      setSettings({ ...settings, destination: chosen });
+    }
+  };
+
   /**
    * Deja apuntado quién atiende los enlaces `afirma://` y lo refleja sin
    * volver a preguntar al escritorio: lo que se acaba de escribir es lo que
@@ -728,13 +735,6 @@ export function App({
     setHandlerBannerDismissed(true);
     if (settings !== null) {
       void changeSettings({ ...settings, askAboutUrlHandler: false }).catch(() => {});
-    }
-  };
-
-  const chooseDestination = async () => {
-    const chosen = await preferences.chooseFolder();
-    if (chosen !== null && settings !== null) {
-      setSettings({ ...settings, destination: chosen });
     }
   };
 

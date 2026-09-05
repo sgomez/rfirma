@@ -660,8 +660,15 @@ pub fn url_handlers() -> UrlHandlersView {
 #[tauri::command(async)]
 pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
     let channel = crate::desktop::Channel::detected();
-    let list = crate::desktop::choice::mimeapps_list_from_environment()
-        .map_err(|error| Failure::new("handlerListUnwritable", error.to_string()))?;
+    // La clave del catálogo la nombra `situation_name`, que es quien ata esta
+    // situación con la que trae `From<DesktopError>`: cablearla aquí serían dos
+    // sitios diciendo lo mismo sin nada que los obligue.
+    let list = crate::desktop::choice::mimeapps_list_from_environment().map_err(|error| {
+        Failure::new(
+            app::handlers::situation_name(crate::desktop::error::Situation::TheListIsNotWritable),
+            error.to_string(),
+        )
+    })?;
     app::handlers::chosen(channel, &list, &handler)
 }
 
