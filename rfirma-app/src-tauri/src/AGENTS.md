@@ -34,7 +34,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 192 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
+| `lib.rs` | 194 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
@@ -59,7 +59,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 76 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
 | `releases.rs` | 88 | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación y devuelve el cuerpo tal cual (ID-178, ID-182). |
-| `paths.rs` | 550 | Las tres rutas de la memoria entre sesiones. Único sitio que conoce el sistema operativo (ADR-0010). |
+| `paths.rs` | 637 | Las tres rutas de la memoria entre sesiones, más las dos de la CA local. Único sitio que conoce el sistema operativo (ADR-0010), y el único que puede crear un fichero `0600` de nacimiento. |
 | `dropped.rs` | 301 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157). |
 | **`memory/`** | | Lo que rFirma recuerda: seis memorias en dos mitades, y la caché de la comprobación de versión, que no es una memoria del usuario y es lo único exento de los dos interruptores (ADR-0010, ID-180). |
 | `memory/mod.rs` | 542 | El reparto de las seis memorias. Léelo antes que sus hermanos. |
@@ -92,6 +92,12 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `destination/naming.rs` | 190 | Cómo se llama el firmado y qué pasa si el nombre existe. |
 | `destination/portal.rs` | 268 | El documento tal y como entra por el portal (ID-37). |
 | `destination/error.rs` | 114 | Situaciones del destino (ADR-0009). |
+| **`tls/`** | | El material criptográfico del canal, y **solo la fábrica**: aquí no se registra nada en ningún almacén NSS ni se levanta ningún servidor (ADR-0005). |
+| `tls/mod.rs` | 27 | El reparto, y la tabla de las dos piezas con sus dos vidas (ID-220). |
+| `tls/authority.rs` | 377 | La **CA local**: P-256, `nameConstraints` armada byte a byte, `keyUsage` de solo firmar certificados y 900 días (ID-221, ID-225). |
+| `tls/server.rs` | 259 | El **certificado del servidor local**: `CN=localhost`, las dos entradas de la SAN, y en memoria (ID-222). |
+| `tls/store.rs` | 157 | Los dos ficheros de la CA local; la clave nace `0600` (ID-223). |
+| `tls/error.rs` | 79 | Situaciones del material del canal (ADR-0009). |
 | **`rubric/`** | | De lo que aporta el usuario al JPEG que acepta el puente (ADR-0012). |
 | `rubric/mod.rs` | 33 | El reparto. |
 | `rubric/normalize.rs` | 586 | La normalización. |
