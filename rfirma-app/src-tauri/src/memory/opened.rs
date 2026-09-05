@@ -24,14 +24,39 @@ use std::sync::Mutex;
 use super::handles::mint;
 use crate::destination::PortalDocument;
 
+/// **Si de este documento se guarda rastro** (ID-286, ID-287).
+///
+/// Es una propiedad de la concesión, no del fichero: el mismo PDF puede
+/// entrar por el diálogo —y entonces se recuerda— y llegar mandado por una
+/// sede —y entonces no—. Por eso vive junto al documento abierto y no en la
+/// bandeja: cuando la bandeja tiene que decidir si escribe, ya es tarde para
+/// preguntarle a nadie por dónde entró.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Remembrance {
+    /// El recorrido local: fila en la bandeja, colocación del recuadro y
+    /// carpeta de la que salió.
+    Remembered,
+    /// **Nada de eso** (ID-286): ni fila, ni colocación, ni «último
+    /// documento». Es lo que la sede manda a firmar.
+    Unrecorded,
+}
+
 /// Los documentos que se han abierto en esta sesión.
 #[derive(Debug, Default)]
 pub struct OpenedDocuments {
     /// El orden de llegada junto al documento: sin él, dos concesiones de la
     /// misma ruta no se podrían distinguir por antigüedad y
     /// [`OpenedDocuments::last_id_of`] devolvería una cualquiera.
-    documents: Mutex<HashMap<String, (u64, PortalDocument)>>,
+    documents: Mutex<HashMap<String, Grant>>,
     granted: AtomicU64,
+}
+
+/// Una concesión apuntada: cuándo llegó, qué documento es y si se recuerda.
+#[derive(Debug)]
+struct Grant {
+    order: u64,
+    document: PortalDocument,
+    remembrance: Remembrance,
 }
 
 impl OpenedDocuments {
@@ -46,9 +71,29 @@ impl OpenedDocuments {
     /// distintos, y eso es lo correcto: el identificador nombra una concesión
     /// del portal, no un fichero del disco del usuario.
     pub fn remember(&self, document: PortalDocument) -> String {
+        self.grant(document, Remembrance::Remembered)
+    }
+
+    /// Apunta un documento **del que no se guarda rastro** (ID-286).
+    ///
+    /// Devuelve un identificador igual que [`OpenedDocuments::remember`] —se
+    /// lee por el mismo sitio y se firma por el mismo recorrido—, pero lo que
+    /// se apunte con él no dejará fila en la bandeja.
+    pub fn remember_unrecorded(&self, document: PortalDocument) -> String {
+        self.grant(document, Remembrance::Unrecorded)
+    }
+
+    fn grant(&self, document: PortalDocument, remembrance: Remembrance) -> String {
         let id = mint();
         let order = self.granted.fetch_add(1, Ordering::Relaxed);
-        lock(&self.documents).insert(id.clone(), (order, document));
+        lock(&self.documents).insert(
+            id.clone(),
+            Grant {
+                order,
+                document,
+                remembrance,
+            },
+        );
         id
     }
 
@@ -56,7 +101,12 @@ impl OpenedDocuments {
     pub fn get(&self, id: &str) -> Option<PortalDocument> {
         lock(&self.documents)
             .get(id)
-            .map(|(_, document)| document.clone())
+            .map(|grant| grant.document.clone())
+    }
+
+    /// Si de ese documento se guarda rastro, si sigue apuntado.
+    pub fn remembrance(&self, id: &str) -> Option<Remembrance> {
+        lock(&self.documents).get(id).map(|grant| grant.remembrance)
     }
 
     /// El identificador **más reciente** que se apuntó para esa ruta de
@@ -67,11 +117,16 @@ impl OpenedDocuments {
     /// nuevo para el documento que la ventana ya tiene delante y la fila
     /// activa dejaría de reconocerse. El más reciente y no uno cualquiera
     /// porque el orden de un `HashMap` no es orden.
+    ///
+    /// Solo mira las concesiones que **se recuerdan**: una fila de la bandeja
+    /// nunca es un documento de sede, así que prestarle el identificador de
+    /// uno sería darle a la ventana el asa de algo que no está en la lista.
     pub fn last_id_of(&self, reading_path: &Path) -> Option<String> {
         lock(&self.documents)
             .iter()
-            .filter(|(_, (_, document))| document.reading_path() == reading_path)
-            .max_by_key(|(_, (order, _))| *order)
+            .filter(|(_, grant)| grant.remembrance == Remembrance::Remembered)
+            .filter(|(_, grant)| grant.document.reading_path() == reading_path)
+            .max_by_key(|(_, grant)| grant.order)
             .map(|(id, _)| id.clone())
     }
 
@@ -143,6 +198,40 @@ mod tests {
                 .get(&second)
                 .map(|document| document.name().to_owned()),
             Some("factura.pdf".to_owned())
+        );
+    }
+
+    /// **ID-286**: de qué documentos se guarda rastro se decide al apuntarlos,
+    /// y es una propiedad de la concesión y no del fichero.
+    #[test]
+    fn a_grant_says_whether_the_document_it_stands_for_is_remembered() {
+        let opened = OpenedDocuments::new();
+
+        let remembered = opened.remember(PortalDocument::opened(A_PORTAL_HANDLE));
+        let unrecorded = opened.remember_unrecorded(PortalDocument::opened(A_PORTAL_HANDLE));
+
+        assert_eq!(
+            opened.remembrance(&remembered),
+            Some(Remembrance::Remembered)
+        );
+        assert_eq!(
+            opened.remembrance(&unrecorded),
+            Some(Remembrance::Unrecorded)
+        );
+        assert_eq!(opened.remembrance("00000000000000000000000000000000"), None);
+    }
+
+    /// Y una fila de la bandeja nunca toma prestado el identificador de una
+    /// concesión que no se recuerda: en la lista no hay documentos de sede.
+    #[test]
+    fn the_tray_never_borrows_the_identifier_of_a_document_that_is_not_remembered() {
+        let opened = OpenedDocuments::new();
+        let remembered = opened.remember(PortalDocument::opened(A_PORTAL_HANDLE));
+        opened.remember_unrecorded(PortalDocument::opened(A_PORTAL_HANDLE));
+
+        assert_eq!(
+            opened.last_id_of(Path::new(A_PORTAL_HANDLE)),
+            Some(remembered)
         );
     }
 

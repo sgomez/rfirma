@@ -50,7 +50,7 @@ pub mod store;
 pub use configuration::{Configuration, Theme};
 pub use error::{MemoryError, Situation};
 pub use listed::ListedCertificates;
-pub use opened::OpenedDocuments;
+pub use opened::{OpenedDocuments, Remembrance};
 pub use recents::{Badge, Placement, RecentDocument, Recents, ShownBadge, CAPACITY};
 pub use state::{BoxSize, RememberedFields, State, VersionCheck, VisibleSignatureMemory};
 pub use store::{Damage, JsonFile, Loaded, Recovery, FORMAT_VERSION};

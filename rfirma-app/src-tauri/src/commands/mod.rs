@@ -312,7 +312,7 @@ pub fn record_recent(
     environment: State<'_, Environment>,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<RecentDocumentView, Failure> {
-    app::recents::record(
+    app::in_hand::take(
         &environment.memory,
         &environment.configuration(),
         &opened,

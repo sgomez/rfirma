@@ -20,7 +20,7 @@ misma PR que lo crea**, o el PR sale en rojo.
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `ffi.rs`, con 993 líneas; detrás van
-  `signing/placement.rs` (926), `app/documents.rs` (897), `app/signing.rs` (726),
+  `signing/placement.rs` (926), `app/documents.rs` (956), `app/signing.rs` (760),
   `memory/mod.rs` (611) y `app/recents.rs` (603). El mayor de `commands/` es justo `commands/guards.rs`
   (657), y detrás va `commands/mod.rs` (645); lo que los hace crecer es
   **prosa**: los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
@@ -38,7 +38,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 993 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 690 | **Las veinticinco órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/mod.rs` | 693 | **Las veinticinco órdenes de Tauri**, y nada más que sus cuerpos. |
 | `commands/views.rs` | 479 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 216 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
@@ -48,8 +48,9 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/mod.rs` | 215 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 458 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI (ID-82). |
 | `app/certificates.rs` | 728 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
-| `app/signing.rs` | 718 | El recorrido de la firma en tres pasos y la sesión a medias. |
-| `app/documents.rs` | 897 | Por dónde entra el documento y dónde cae el firmado. |
+| `app/signing.rs` | 760 | El recorrido de la firma en tres pasos y la sesión a medias. |
+| `app/documents.rs` | 956 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
+| `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 232 | La invocación desde fuera, `rfirma documento.pdf`: qué abre y qué hace la segunda (ID-157…ID-160). |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
@@ -66,7 +67,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `memory/configuration.rs` | 154 | Lo que el usuario elige y la aplicación obedece. |
 | `memory/recents.rs` | 599 | Los diez recientes, por ruta canónica, con el conjunto de páginas y la posición del recuadro de cada uno (ID-74, ID-95). Lee las filas de v0.2 y descarta la que no entienda. |
 | `memory/store.rs` | 463 | El fichero JSON versionado que soporta las dos memorias. |
-| `memory/opened.rs` | 179 | Los documentos abiertos en esta sesión: del identificador opaco al fichero. |
+| `memory/opened.rs` | 262 | Los documentos abiertos en esta sesión: del identificador opaco al fichero, y si de cada concesión se guarda rastro (`Remembrance`, ID-286). |
 | `memory/listed.rs` | 168 | Los certificados listados en esta sesión: del asa opaca a la referencia. |
 | `memory/handles.rs` | 90 | Cómo se acuña un asa opaca (ID-61, ADR-0011). |
 | `memory/error.rs` | 89 | Situaciones de la memoria (ADR-0009). |
