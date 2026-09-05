@@ -195,10 +195,23 @@ cuando no viene o no parsea es `DEFAULT_JAVASCRIPT_VERSION_CODE = 1` (`:66`, `:1
 **cada** petición (`autoscript.js:2069`-`2072`). AutoFirma la lee en `UrlParameters`
 (`MINIMUM_CLIENT_VERSION_PARAM = "mcv"`,
 `<clienteafirma>/afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/UrlParameters.java:73`,
-`260`-`261`) y la compara contra la versión de la aplicación **sólo en la firma**, devolviendo
-`SAF_41` si no se cumple (`ProtocolInvocationLauncherSign.java:142`-`150`). En `selectcert` no se
-comprueba: `ProtocolInvocationLauncherSelectCert.java` no menciona
-`ERROR_MINIMUM_VERSION_NON_SATISTIED` en ninguna línea.
+`260`-`261`) y la compara contra la versión de la aplicación, devolviendo `SAF_41` si no se cumple.
+La comprobación está en **los cuatro lanzadores** que la pueden recibir, con el mismo código
+literal: `ProtocolInvocationLauncherSign.java:142`-`150`,
+`ProtocolInvocationLauncherSelectCert.java:89`-`98`, `…Load.java:73`-`77` y `…Save.java:62`-`66`.
+
+> **Corregido.** La versión anterior de este informe decía que se comprobaba «sólo en la firma» y
+> que `selectcert` no la miraba. Es falso: `ProtocolInvocationLauncherSelectCert.java:89` la
+> comprueba igual que la firma. Para rfirma la diferencia es que `mcv` afecta a **las dos**
+> operaciones de su alcance mínimo, no a una.
+
+**No es semver, y no se parece.** La comparación la hace una clase propia,
+`<clienteafirma>/afirma-simple/src/main/java/es/gob/afirma/standalone/protocol/Version.java`
+(constructor en `:21`-`56`, `greaterThan` en `:120`-`…`), cuyas reglas contradicen semver justo
+donde importa: **más partes separadas por punto es más nueva** (`1.7.0.0` > `1.7.0`), **un sufijo
+de texto suma** (`1.7a` > `1.7`) salvo si empieza por espacio (`1.7 RC1` < `1.7`), y el sufijo se
+compara **sin distinguir mayúsculas** (`1.7A` == `1.7a`). En semver un sufijo de *prerelease* hace
+la versión **menor**: implementar semver aquí da veredictos distintos a los del original.
 
 > Detalle que conviene registrar, y que sigue siendo cierto en el tag: la constante homónima del
 > lanzador, `MIN_REQUESTED_VERSION_PARAM = "mcv"` (`ProtocolInvocationLauncher.java:81`), **no se
