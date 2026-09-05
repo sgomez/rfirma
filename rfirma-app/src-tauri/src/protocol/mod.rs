@@ -29,12 +29,14 @@
 //! semver, y se reproduce tal cual (ID-251, [`version`]).
 
 pub mod launch;
+pub mod message;
 pub mod parameters;
 pub mod refusal;
 pub mod url;
 pub mod version;
 
-pub use launch::{ChannelCredential, LaunchRequest, PROTOCOL_VERSION};
+pub use launch::{drawn_ports, ChannelCredential, LaunchRequest, PROTOCOL_VERSION};
+pub use message::ChannelMessage;
 pub use parameters::{check_local_access_is_not_requested, check_minimum_client_version};
 pub use refusal::{Refusal, SafCode};
 pub use url::AfirmaUrl;
