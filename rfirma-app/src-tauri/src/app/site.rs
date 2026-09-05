@@ -89,11 +89,13 @@ pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErra
                         return Attendance::Serving(channel);
                     }
 
-                    // La plaza era de otra sede. Se suelta el canal recién
-                    // abierto —el rechazo vuelve a atar uno de los puertos que
-                    // sorteó esta— y se le contesta como a cualquier otro
-                    // rechazo del ID-248.
-                    drop(channel);
+                    // La plaza era de otra sede. El canal recién abierto se
+                    // cierra **por su asa** —soltarlo sin más no la ejecuta:
+                    // `Shutdown` es un `FnOnce` en una caja y dejar caer la
+                    // caja no llama a nadie—, y sólo después se le contesta
+                    // como a cualquier otro rechazo del ID-248, volviendo a
+                    // atar uno de los puertos que sorteó esta.
+                    channel.close();
                     refuse(
                         &url,
                         Refusal::new(

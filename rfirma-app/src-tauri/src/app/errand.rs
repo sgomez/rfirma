@@ -82,18 +82,14 @@ impl Errand {
 }
 
 impl LiveErrand {
-    /// Si hay un trámite de sede a medias ahora mismo.
-    pub fn is_live(&self) -> bool {
-        super::lock(&self.0).is_some()
-    }
-
     /// Apunta el trámite que empieza. **No sustituye**: con uno vivo devuelve
     /// `false` y el que llega se queda fuera (ID-280).
     ///
     /// Es **la única puerta** del trámite único, y por eso mira y apunta bajo
     /// el mismo candado: quien la llame decide con lo que devuelve y no con un
-    /// [`Self::is_live`] anterior, que sería mirar por una toma y apuntar por
-    /// otra. Su valor de retorno no es opcional.
+    /// [`Self::current`] anterior, que sería mirar por una toma y apuntar por
+    /// otra. Su valor de retorno no es opcional, y por eso no hay ningún
+    /// «¿hay trámite vivo?» que preguntar antes: la plaza se pide aquí.
     #[must_use = "con uno vivo devuelve false y el que llega no queda apuntado (ID-280)"]
     pub fn begin(&self, errand: Errand) -> bool {
         let mut live = super::lock(&self.0);
@@ -471,7 +467,10 @@ mod tests {
             matches!(attendance, Attendance::Serving(_)),
             "la invocacion es buena: {attendance:?}"
         );
-        assert!(live.is_live(), "el tramite queda vivo mientras se atiende");
+        assert!(
+            live.current().is_some(),
+            "el tramite queda vivo mientras se atiende"
+        );
 
         // 2. Por ese canal llega la operación, y lo que sale es el momento del
         //    consentimiento con el listado que la sede acepta.
@@ -490,7 +489,10 @@ mod tests {
             panic!("hay un certificado que la sede acepta: {step:?}");
         };
         assert_eq!(rows.len(), 1);
-        assert!(live.is_live(), "consintiendo, el tramite sigue vivo");
+        assert!(
+            live.current().is_some(),
+            "consintiendo, el tramite sigue vivo"
+        );
 
         // 3. La persona se identifica, y la sede recibe el certificado.
         let reply = identity_handed_over(
@@ -511,7 +513,7 @@ mod tests {
         );
         assert_eq!(reply.on_the_wire(), *encoded);
         assert!(
-            !live.is_live(),
+            live.current().is_none(),
             "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada (ID-275)"
         );
     }
@@ -663,7 +665,7 @@ mod tests {
         let reply = declined(&live);
 
         assert_eq!(reply.on_the_wire(), "CANCEL");
-        assert!(!live.is_live(), "cancelado, el tramite se acaba");
+        assert!(live.current().is_none(), "cancelado, el tramite se acaba");
     }
 
     /// **ID-280**: con un trámite vivo, el segundo `afirma://` se rechaza por su
@@ -688,6 +690,58 @@ mod tests {
         // Y el trámite que sigue apuntado es el primero: el segundo no sustituye
         // nada ni se cuela al lado, que es lo que el ID-280 prohíbe.
         let errand = live.current().expect("el primer tramite sigue vivo");
+        assert_eq!(errand.port(), 54001);
+    }
+
+    /// **ID-280, la carrera**: entre pedir el canal y apuntar el trámite cabe
+    /// otra invocación —el enlace profundo y la instancia única son dos caminos
+    /// distintos hasta [`attend_launch`] (#357, #362)—. Aquí la otra se lleva la
+    /// plaza **mientras** el transporte abre, y la que llega tarde no se cuela
+    /// al lado: se le **cierra por su asa** el canal recién abierto y sale su
+    /// rechazo. Preguntando antes de apuntar, las dos quedarían servidas.
+    #[test]
+    fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_refused() {
+        use std::cell::Cell;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let live = LiveErrand::default();
+        let closed = Arc::new(AtomicBool::new(false));
+        let opened = Cell::new(0_u8);
+
+        // Un transporte que, la primera vez que se le pide un canal, deja que
+        // otra invocación apunte su trámite antes de devolverlo.
+        let transport = |ports: &[u16], _duty: ChannelDuty| {
+            opened.set(opened.get() + 1);
+            if opened.get() == 1 {
+                assert!(live.begin(Errand::of(a_credential(), 54001)));
+                let closed = Arc::clone(&closed);
+                return Ok(OpenChannel::new(
+                    ports[0],
+                    Shutdown::of(move || closed.store(true, Ordering::SeqCst)),
+                ));
+            }
+            Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
+        };
+
+        let attendance = attend_launch(&a_launch("55001,55002"), &transport, &live);
+
+        let Attendance::RefusingOverTheChannel { answer, .. } = attendance else {
+            panic!("la que llega tarde se rechaza por su socket: {attendance:?}");
+        };
+        assert_eq!(
+            answer.on_the_wire(),
+            WireAnswer::refused(SafCode::CannotOpenSocket).on_the_wire()
+        );
+        assert!(
+            closed.load(Ordering::SeqCst),
+            "el canal de la que llega tarde deja de escuchar: soltarlo sin llamar al asa no lo cierra"
+        );
+
+        // Y el trámite apuntado sigue siendo el de la otra, entero.
+        let errand = live
+            .current()
+            .expect("el tramite de la otra sede sigue vivo");
         assert_eq!(errand.port(), 54001);
     }
 
