@@ -198,10 +198,10 @@ msgstr ""
 msgid "errors.situations.droppedFileUnreadable.body"
 msgstr ""
 
-msgid "errors.situations.droppedOnlyFirst.title"
+msgid "errors.situations.droppedSomeDiscarded.title"
 msgstr ""
 
-msgid "errors.situations.droppedOnlyFirst.body"
+msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
 
 msgid "errors.situations.boxOutOfPage.title"

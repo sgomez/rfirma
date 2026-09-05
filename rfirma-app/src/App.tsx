@@ -443,6 +443,7 @@ export function App({
   // sobrevive a los remontajes, y la respuesta se entrega por el manejador
   // vigente en ese momento en vez de por el que la pidió.
   const invocationAsked = useRef(false);
+  const enterDocument = documents.enter;
   const arrivedRef = useRef<(drop: Drop) => void>(() => {});
   useEffect(() => {
     const arrived = (drop: Drop) => {
@@ -452,13 +453,18 @@ export function App({
         setDropNotice(drop.failure && { about: activeIdRef.current, failure: drop.failure });
         return;
       }
+      // ID-306: los demás PDF del mismo gesto entran igual en Recientes, sin
+      // abrirse — sin cola y sin firma encadenada, una fila más por cada uno.
+      for (const entering of drop.alsoEntering) {
+        void enterDocument(entering);
+      }
       setDropNotice(
-        drop.ignored > 0
+        drop.discarded > 0
           ? {
               about: drop.document.id,
               failure: {
-                situation: "droppedOnlyFirst",
-                detail: `se han soltado ${drop.ignored + 1} ficheros`,
+                situation: "droppedSomeDiscarded",
+                detail: `se han descartado ${drop.discarded} ficheros`,
               },
             }
           : null,
@@ -479,7 +485,7 @@ export function App({
       });
     }
     return stop;
-  }, [drops, acceptDocument]);
+  }, [drops, acceptDocument, enterDocument]);
 
   // El acuse de recibo, solo si sigue siendo de lo que hay delante. El estado
   // «Firmado» guarda el asa del documento que se firmó; el recuento de páginas

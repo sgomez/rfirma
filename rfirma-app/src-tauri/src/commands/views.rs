@@ -225,19 +225,25 @@ pub struct OpenedDocumentView {
 /// Lo que la ventana recibe al soltar ficheros encima.
 ///
 /// **Ninguna ruta** (ADR-0011). Lo que se suelta son rutas del anfitrión, y
-/// justamente por eso la decisión de cuál se abre se toma en el backend: lo que
-/// cruza es el documento ya apuntado, con su identificador opaco, igual que si
-/// se hubiera elegido por el diálogo.
+/// justamente por eso la decisión de cuáles entran se toma en el backend: lo
+/// que cruza son los documentos ya apuntados, con su identificador opaco,
+/// igual que si se hubieran elegido por el diálogo.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DroppedDocumentView {
-    /// El documento que se ha abierto, o `None` si no se ha abierto ninguno.
+    /// El documento que se ha abierto en el visor, o `None` si no se ha
+    /// abierto ninguno.
     pub document: Option<OpenedDocumentView>,
+    /// El resto de PDF que venían en el mismo gesto —sueltos directamente o
+    /// encontrados al recorrer una carpeta— y que entran igual en Recientes,
+    /// sin abrirse (ID-306).
+    pub also_entering: Vec<OpenedDocumentView>,
     /// Por qué no se ha abierto ninguno. `None` cuando sí se abrió.
     pub failure: Option<Failure>,
-    /// Cuántos ficheros más venían en el mismo gesto y no se han abierto: la
-    /// aplicación firma de uno en uno y lo dice (ID-70).
-    pub ignored: usize,
+    /// Cuántos ficheros más venían en el mismo gesto y no han entrado en
+    /// ningún sitio: no son PDF, o —cuando el primero no se pudo leer— no se
+    /// han llegado a probar (ID-70, ID-306).
+    pub discarded: usize,
 }
 
 /// El recuadro colocado, tal como cruza en los dos sentidos: **el rectángulo
