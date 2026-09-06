@@ -1,19 +1,4 @@
-//! Guardia del kit FNMT de `testdata/fnmt/`. **Grada A** (no necesita nada):
-//! carril rápido.
-//!
-//! Aquí está la mitad *dura* de la bomba de relojería del ADR-0014: el día que
-//! `active-rsa.p12` caduque, esta prueba falla nombrando el fichero, la fecha y
-//! el enlace a STCERES. La otra mitad —el aviso a 90 días— vive en el cron
-//! semanal de `.github/workflows/ci.yml`, porque avisar aquí rompería todos los
-//! PRs a la vez un día cualquiera de 2028.
-//!
-//! **Sin congelar el reloj**: se lee la hora del sistema. Un reloj falso
-//! escondería fallos reales de validación de cadena.
-//!
-//! No se parsea el PKCS#12 —haría falta una dependencia para leer una fecha que
-//! ya está escrita—. En su lugar la fecha se ancla a la **huella del fichero**:
-//! si alguien sustituye el kit sin actualizar `ACTIVE_EXPIRY_*`, la comprobación de
-//! huella falla primero y obliga a tocar las dos cosas a la vez.
+//! Guardia del kit de certificados de prueba FNMT en `testdata/fnmt/` (ADR-0014).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -21,20 +6,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
 
-/// De donde se descarga el kit cuando toque renovarlo. Lo imprime el fallo.
+/// URL de descarga de STCERES para renovación del kit.
 const STCERES: &str =
     "https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar";
 
-/// `notAfter` de `active-rsa.p12`, en segundos desde la época:
-/// **2028-10-30 10:06:59 GMT**. Comprobado con
-/// `openssl pkcs12 -in active-rsa.p12 -passin pass:1234 -clcerts -nokeys -legacy -nodes
-///  | openssl x509 -noout -dates`.
+/// `notAfter` de `active-rsa.p12` en segundos desde la época UNIX.
 const ACTIVE_EXPIRY_EPOCH: u64 = 1_856_513_219;
 const ACTIVE_EXPIRY_ISO: &str = "2028-10-30";
 
-/// Huella SHA-256 de cada `.p12` tal cual está versionado, copiada de
-/// `testdata/fnmt/README.md`. Sin esto, la fecha de arriba podría quedarse
-/// mintiendo sobre un fichero que ya no es el mismo.
+/// Huellas SHA-256 de los ficheros `.p12` versionados.
 const FINGERPRINTS: [(&str, &str); 3] = [
     (
         "active-rsa.p12",
@@ -51,7 +31,6 @@ const FINGERPRINTS: [(&str, &str); 3] = [
 ];
 
 fn kit_dir() -> PathBuf {
-    // CARGO_MANIFEST_DIR es rfirma-app/src-tauri.
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../testdata/fnmt")
         .canonicalize()

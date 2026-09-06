@@ -1,58 +1,4 @@
-//! El módulo PKCS#11 contra un token de verdad. **Grada B** (SoftHSM): carril
-//! rápido, segundos (ADR-0014, TD-01).
-//!
-//! # Cómo se monta el token
-//!
-//! ```sh
-//! sudo apt install -y softhsm2 opensc
-//! just token          # o: bash testdata/softhsm/provision-token.sh
-//! ```
-//!
-//! El script es idempotente y `just check` lo ejecuta solo, así que en la
-//! práctica basta con tener los paquetes. Provisiona el token `rfirma-test`
-//! (PIN `1234`) desde `testdata/fnmt/`, que es material público de la FNMT:
-//!
-//! | `CKA_ID` | etiqueta | qué tiene | para qué |
-//! | --- | --- | --- | --- |
-//! | `01` | `FNMT-ACTIVO-99999999R` | clave + certificado | camino feliz |
-//! | `02` | `FNMT-CADUCADO-99999999R` | clave + certificado | caducó en 2020 |
-//! | `03` | `FNMT-REVOCADO-99999999R` | clave + certificado | revocado en 2024, en vigor |
-//! | `04` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del activo |
-//! | `05` | `FNMT-GEMELO-99999999R` | clave + certificado | par de claves del caducado |
-//!
-//! Los dos gemelos comparten `CKA_LABEL` y no comparten nada más: son la
-//! reproducción de lo que hay en un perfil de Firefox de verdad, donde dos
-//! claves privadas llevan la misma etiqueta.
-//!
-//! Los cinco llevan clave (#100): sin ella el filtro de certificados
-//! firmables (ID-07) los haría desaparecer del listado, y el caducado y el
-//! revocado existen justamente para que el listado tenga que clasificarlos.
-//!
-//! El detalle del entorno está en `docs/research/token-pkcs11-pruebas.md`.
-//!
-//! # Por qué estas pruebas listan sin iniciar sesión
-//!
-//! [`pkcs11::list_certificates`] no pide el PIN (ID-08): el filtro de #100
-//! busca la clave privada sin sesión, y en NSS y en una tarjeta real eso basta
-//! para saber que existe. **SoftHSM no se comporta así.** Sus objetos
-//! `CKO_PRIVATE_KEY` llevan `CKA_PRIVATE` de forma incondicional —comprobado
-//! con `pkcs11-tool`, con `p11tool --write` sin `--mark-private`, y con un
-//! `C_SetAttributeValue` directo, que devuelve `CKR_ATTRIBUTE_READ_ONLY`—, así
-//! que sin sesión SoftHSM no enseña ninguna clave, tenga par o no.
-//!
-//! Por eso el filtro no se aplica por ranura si esa ranura no enseña
-//! **ninguna** clave privada sin sesión: cero claves visibles no significa
-//! «aquí no hay nada firmable», significa «este módulo no lo va a decir sin
-//! PIN» (ver la nota de [`pkcs11::list_certificates`]). Gracias a eso
-//! `list_certificates` a secas —sin sesión— vuelve a listar los cinco
-//! certificados de este token, y estas pruebas no necesitan ningún escape
-//! autenticado. Lo comprueba `listing_without_a_session_still_lists_them`.
-//!
-//! # Lo que aquí no se comprueba
-//!
-//! Que el revocado esté revocado: eso es preguntárselo al OCSP de la FNMT, o
-//! sea red, o sea **grada D**, que va al cron y nunca a un PR (TD-08). Aquí solo
-//! se comprueba que un certificado en vigor no se confunde con uno caducado.
+//! Pruebas de integración del backend contra el módulo PKCS#11 SoftHSM (ADR-0014).
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -73,14 +19,12 @@ const PIN: &str = "1234";
 const ACTIVE: &str = "FNMT-ACTIVO-99999999R";
 const EXPIRED: &str = "FNMT-CADUCADO-99999999R";
 const REVOKED: &str = "FNMT-REVOCADO-99999999R";
-/// Los dos certificados que comparten etiqueta y no comparten clave.
+/// Dos certificados que comparten etiqueta y no comparten clave.
 const TWIN: &str = "FNMT-GEMELO-99999999R";
 const TWIN_OF_THE_ACTIVE_KEY: u8 = 0x04;
 const TWIN_OF_THE_EXPIRED_KEY: u8 = 0x05;
 
-/// Lo mismo que firma el recorrido real: un bloque DER de `SignedAttributes`
-/// que nadie ha hasheado antes de llegar aquí. Que sea DER de verdad da igual
-/// para lo que se prueba; que **no** sea un hash, no.
+/// Bloque DER de SignedAttributes para firmar.
 const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
 
 fn module() -> PathBuf {
@@ -115,9 +59,7 @@ fn certificate_labelled(label: &str) -> TokenCertificate {
         })
 }
 
-/// La referencia **tal y como sale del token**, con su `CKA_ID` incluido. No se
-/// fabrica a mano: quien firma parte de lo que devolvió el listado, y una
-/// referencia inventada aquí no probaría el mismo camino.
+/// Referencia tal y como sale del token con su CKA_ID.
 fn reference(label: &str) -> CertificateRef {
     certificate_labelled(label).reference().clone()
 }
@@ -138,10 +80,6 @@ fn epoch(seconds: u64) -> SystemTime {
     UNIX_EPOCH + Duration::from_secs(seconds)
 }
 
-// ---------------------------------------------------------------------------
-// Listar
-// ---------------------------------------------------------------------------
-
 #[test]
 fn listing_gives_back_what_it_takes_to_find_each_certificate_again() {
     let certificate = certificate_labelled(ACTIVE);
@@ -150,19 +88,9 @@ fn listing_gives_back_what_it_takes_to_find_each_certificate_again() {
     assert_eq!(reference.module(), module().as_path());
     assert_eq!(reference.token_label(), TOKEN);
     assert_eq!(reference.label(), ACTIVE);
-    // El CKA_ID es la coordenada que empareja el certificado con su clave, y
-    // sin ella lo persistido no basta para reencontrar este certificado y no
-    // otro con su misma etiqueta.
     assert_eq!(reference.cka_id(), Some([0x01].as_slice()));
 }
 
-/// El titular se lee del DER cuando hace falta pintarlo, y **no** viaja dentro
-/// de la referencia: lo que se persiste son cuatro coordenadas y nada más (ID-32,
-/// ADR-0010).
-///
-/// Que la etiqueta de este token concreto lleve el DNI dentro no es asunto
-/// nuestro: la etiqueta la pone quien provisiona el token, y es justamente el
-/// dato que hay que guardar para reencontrar el certificado.
 #[test]
 fn the_holder_is_readable_for_display_but_is_not_part_of_the_reference() {
     let certificate = certificate_labelled(ACTIVE);
@@ -180,9 +108,6 @@ fn the_holder_is_readable_for_display_but_is_not_part_of_the_reference() {
     );
 }
 
-/// El emisor sale del **issuer** del DER, y en un certificado de persona física
-/// de la FNMT no hay otro sitio de donde sacarlo: su subject **no lleva `O=`**.
-/// Leerlo de ahí dejaba el panel en «Emitido por » y nada más.
 #[test]
 fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it_with() {
     let certificate = certificate_labelled(ACTIVE);
@@ -200,12 +125,6 @@ fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it
     );
 }
 
-/// La nota del módulo, fijada en una prueba: SoftHSM no enseña ninguna clave
-/// privada sin sesión —ni con el intento a ciegas que ahora se hace antes de
-/// listar, `CKR_ARGUMENTS_BAD` medido en `docs/research/token-flags-login.md`—,
-/// y aun así los cinco certificados del token salen sin pedir el PIN, porque
-/// una tarjeta no filtra por clave visible (ID-190; ver la nota de
-/// [`pkcs11::list_certificates`]).
 #[test]
 fn listing_without_a_session_still_lists_them() {
     let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");
@@ -222,18 +141,12 @@ fn listing_without_a_session_still_lists_them() {
     );
 }
 
-// ---------------------------------------------------------------------------
-// Clasificar el certificado, antes de pedir el PIN
-// ---------------------------------------------------------------------------
-
 #[test]
 fn an_expired_certificate_is_told_apart_from_a_token_failure() {
     let status = certificate_labelled(EXPIRED).status();
 
-    // Ni es un TokenError ni pretende serlo: es un estado del certificado.
     match status {
         CertificateStatus::Expired { not_after } => {
-            // 2020-11-08 12:48:35 GMT, segun testdata/fnmt/README.md.
             assert_eq!(not_after, 1_604_839_715);
         }
         other => panic!("el certificado caducado se ha clasificado como {other:?}"),
@@ -242,9 +155,6 @@ fn an_expired_certificate_is_told_apart_from_a_token_failure() {
 
 #[test]
 fn a_certificate_in_date_is_usable_even_if_its_issuer_revoked_it() {
-    // El revocado sigue en vigor hasta 2028: sin red no se puede saber mas, y
-    // fingir lo contrario seria mentir. La revocacion la decide el OCSP, que es
-    // grada D (TD-08).
     for label in [ACTIVE, REVOKED] {
         assert!(
             certificate_labelled(label).status().is_usable(),
@@ -257,7 +167,6 @@ fn a_certificate_in_date_is_usable_even_if_its_issuer_revoked_it() {
 fn the_same_certificate_changes_status_with_the_clock_and_not_with_the_token() {
     let certificate = certificate_labelled(ACTIVE);
 
-    // 2028-10-30 10:06:59 GMT es su notAfter (testdata/fnmt/README.md).
     assert!(certificate.status_at(epoch(1_856_513_218)).is_usable());
     assert!(matches!(
         certificate.status_at(epoch(1_856_513_220)),
@@ -268,10 +177,6 @@ fn the_same_certificate_changes_status_with_the_clock_and_not_with_the_token() {
         CertificateStatus::NotYetValid { .. }
     ));
 }
-
-// ---------------------------------------------------------------------------
-// Firmar
-// ---------------------------------------------------------------------------
 
 fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
     let parsed =
@@ -290,7 +195,6 @@ fn signing_produces_a_signature_that_the_certificate_public_key_verifies() {
     let certificate = certificate_labelled(ACTIVE);
     let raw = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("la firma deberia salir");
 
-    // RSA 2048: la firma cruda mide exactamente el modulo.
     assert_eq!(raw.len(), 256);
 
     let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
@@ -299,14 +203,6 @@ fn signing_produces_a_signature_that_the_certificate_public_key_verifies() {
         .expect("la firma no verifica contra la clave publica del certificado");
 }
 
-/// La prueba que el sub-issue #49 pide explícitamente: si alguien cambia el
-/// mecanismo a `CKM_RSA_PKCS` sobre un hash, esto tiene que ponerse rojo.
-///
-/// Firmar `SHA-256(PRESIGN)` con `CKM_RSA_PKCS` es lo que haría ese cambio, y
-/// produce una firma RSA impecable —el token no protesta— que **ningún**
-/// validador CAdES reconoce, porque le falta el envoltorio `DigestInfo`. La
-/// única defensa es esta: comprobar que ese resultado NO verifica y que el
-/// nuestro SÍ.
 #[test]
 fn signing_a_hash_with_the_bare_rsa_mechanism_would_not_verify() {
     let certificate = certificate_labelled(ACTIVE);
@@ -332,15 +228,7 @@ fn signing_a_hash_with_the_bare_rsa_mechanism_would_not_verify() {
     assert_ne!(ours, over_a_hash);
 }
 
-/// El mecanismo descartado, invocado a mano contra el mismo token. No usa el
-/// módulo de rfirma a propósito: es el contraejemplo, no una capacidad.
-///
-/// Lo que sí toma prestado de rfirma es el **turno del token**: iniciar sesión
-/// por fuera de él sería cruzarse con las firmas de verdad —doce pruebas en
-/// hilos del mismo proceso— y hacer que el `login` de aquí le devuelva
-/// `CKR_USER_ALREADY_LOGGED_IN` a un `pkcs11::sign` con PIN equivocado, o que
-/// su `logout()` cierre esta sesión entre el `login` y el `sign`. El candado no
-/// es reentrante: dentro del cierre no puede llamarse a `pkcs11::sign`.
+/// Mecanismo CKM_RSA_PKCS invocado a mano como contraejemplo.
 fn sign_with_bare_rsa_pkcs(data: &[u8]) -> Vec<u8> {
     pkcs11::with_token_turn(|| sign_with_bare_rsa_pkcs_holding_the_turn(data))
 }
@@ -353,9 +241,6 @@ fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
     use cryptoki::types::AuthPin;
 
     let context = Pkcs11::new(module()).expect("modulo");
-    // Este proceso ya inicializo el modulo por el camino de rfirma; SoftHSM
-    // comparte estado por dlopen, asi que la segunda vez devuelve
-    // CKR_CRYPTOKI_ALREADY_INITIALIZED y eso esta bien.
     let _ = context.initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK));
 
     let slot = context
@@ -371,8 +256,6 @@ fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
         .expect("el token rfirma-test");
 
     let session = context.open_ro_session(slot).expect("sesion");
-    // Con el turno cogido nadie mas del proceso tiene sesion iniciada contra
-    // este token, asi que este login tiene que salir limpio.
     session
         .login(UserType::User, Some(&AuthPin::new(PIN.into())))
         .expect("el login del contraejemplo, con el turno del token cogido");
@@ -390,9 +273,6 @@ fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
         .sign(&Mechanism::RsaPkcs, key, data)
         .expect("CKM_RSA_PKCS deberia firmar cualquier bloque que le quepa");
 
-    // Se cierra la sesion autenticada antes de soltar el turno, igual que hace
-    // pkcs11::sign: dejarla abierta dejaria el token desbloqueado para las
-    // pruebas que vengan detras.
     let _ = session.logout();
 
     signature
@@ -400,23 +280,12 @@ fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
 
 #[test]
 fn signing_the_same_bytes_twice_gives_the_same_signature() {
-    // PKCS#1 v1.5 es determinista. Si esto cambia, alguien ha cambiado el
-    // relleno a PSS y la prefirma de Java ya no cuadra.
     let once = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("firma");
     let twice = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("firma");
 
     assert_eq!(once, twice);
 }
 
-/// **La prueba del #98.** Dos certificados con la **misma** `CKA_LABEL` y
-/// distinto `CKA_ID` firman cada uno con **su** clave.
-///
-/// Es el fallo que no se nota: buscando la clave por etiqueta el token devuelve
-/// una de las dos arbitrariamente, la firma sale, el PDF se cierra, y lo que ha
-/// firmado es una clave que no es la del certificado que la persona eligió. Por
-/// eso no basta con que cada firma verifique: hace falta comprobar también que
-/// **no** verifica contra el otro certificado, que es lo que estaría pasando si
-/// alguien volviera a emparejar por etiqueta.
 #[test]
 fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
     let one = certificate_with_cka_id(TWIN_OF_THE_ACTIVE_KEY);
@@ -444,13 +313,6 @@ fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// El asa opaca y la clase del almacén
-// ---------------------------------------------------------------------------
-
-/// El caso que hace falta el asa, contra etiquetas repetidas **de verdad**: los
-/// dos gemelos comparten `CKA_LABEL`, y cada asa tiene que llevar a su
-/// certificado y no al primero de los dos.
 #[test]
 fn each_of_two_certificates_sharing_a_label_comes_back_by_its_own_handle() {
     let found = certificates();
@@ -478,8 +340,6 @@ fn each_of_two_certificates_sharing_a_label_comes_back_by_its_own_handle() {
     }
 }
 
-/// Y el asa no lleva dentro nada de lo que nombra: ni la ruta del módulo, ni el
-/// token, ni la etiqueta (ADR-0011).
 #[test]
 fn the_handle_of_a_real_certificate_carries_nothing_of_it() {
     let listed = ListedCertificates::new();
@@ -494,18 +354,12 @@ fn the_handle_of_a_real_certificate_carries_nothing_of_it() {
     }
 }
 
-/// SoftHSM entra por un módulo a secas, así que su clase es la de una tarjeta:
-/// es lo que la ventana enseñará en la tercera columna de la fila.
 #[test]
 fn a_plain_pkcs11_module_is_a_card_store() {
     let store = certificate_labelled(ACTIVE).reference().store();
 
     assert_eq!(store.class(), StoreClass::Card);
 }
-
-// ---------------------------------------------------------------------------
-// Clasificar los errores del token
-// ---------------------------------------------------------------------------
 
 fn signing_error(reference: &CertificateRef, pin: &str) -> TokenError {
     pkcs11::sign(reference, pin, PRESIGN).expect_err("esto tenia que fallar")
@@ -539,8 +393,6 @@ fn a_module_that_is_not_there_is_not_a_token_error() {
     assert!(error.detail().contains("no-hay-ningun-modulo-aqui.so"));
 }
 
-/// La promesa del ID-03: no tener un almacén instalado no puede dejar sin
-/// certificados a quien sí tiene el otro.
 #[test]
 fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
     let stores = vec![
@@ -559,8 +411,6 @@ fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
     );
 }
 
-/// Y la otra mitad: cuando **nadie** ha podido cargar, lo que se cuenta es el
-/// fallo y no un «no hay ninguno» que seria mentira.
 #[test]
 fn tells_the_failure_apart_from_an_empty_list_when_no_store_loads() {
     let stores = vec![
@@ -574,8 +424,6 @@ fn tells_the_failure_apart_from_an_empty_list_when_no_store_loads() {
     assert_eq!(error.situation(), Situation::ModuleNotFound);
 }
 
-/// Sin almacenes tampoco se calla: quedarse sin donde buscar es un fallo de
-/// configuracion, no una lista vacia.
 #[test]
 fn having_nowhere_to_look_is_a_failure_and_not_an_empty_list() {
     let error =
@@ -593,9 +441,6 @@ fn a_cka_id_that_is_not_in_the_token_says_so_instead_of_failing_generically() {
     assert_eq!(error.situation(), Situation::CertificateNotFound);
 }
 
-/// Una referencia recordada por una versión anterior al #98 no lleva `CKA_ID`.
-/// Firmar con ella se rechaza en vez de caer de vuelta en la etiqueta: el
-/// respaldo por etiqueta es justo el fallo que este cambio cierra.
 #[test]
 fn a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label() {
     let remembered = CertificateRef::new(module(), TOKEN, ACTIVE, None);
@@ -605,18 +450,3 @@ fn a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label() {
     assert_eq!(error.situation(), Situation::CertificateNotFound);
     assert!(error.detail().contains("CKA_ID"), "{}", error.detail());
 }
-
-// Antes de #100, el caducado y el revocado entraban en el token SIN clave a
-// proposito, y esta prueba pedia una firma con ellos para comprobar que eso
-// es un fallo del token y no del certificado. Con el filtro de #100 esa
-// referencia ya no la devuelve nunca el listado -un certificado sin clave no
-// se ofrece-, y el propio script de aprovisionamiento les da su clave (misma
-// razon: si no la tuvieran, el filtro los haria desaparecer y las pruebas de
-// estado de mas arriba se quedarian sin sujeto). El token ya no tiene ningun
-// certificado sin clave, asi que el escenario de esta prueba no se puede
-// reproducir con una referencia real; lo que cubria -un CKA_ID sin clave
-// emparejada- lo siguen comprobando
-// a_cka_id_that_is_not_in_the_token_says_so_instead_of_failing_generically (un
-// CKA_ID que no esta en el token) y
-// a_reference_without_a_cka_id_refuses_to_sign_instead_of_guessing_by_label
-// (una referencia sin CKA_ID).

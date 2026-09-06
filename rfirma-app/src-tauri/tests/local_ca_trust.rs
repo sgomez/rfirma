@@ -1,29 +1,4 @@
-//! **La CA local dentro de un almacén NSS de verdad** (ADR-0005, ID-227,
-//! ID-228, TD-60). **Grada B** (ADR-0014, TD-02): carril rápido, segundos.
-//!
-//! # El oráculo es `certutil -L`, y solo `certutil -L`
-//!
-//! La confianza se comprueba **leyendo los bits**, nunca verificando una
-//! cadena: el #326 midió que el veredicto de `vfychain` sale **invertido**
-//! respecto a lo que hace Firefox de verdad, así que no vale ni de oráculo
-//! binario (ID-227, TD-60). Aquí no aparece `vfychain` por ninguna parte, y no
-//! debe aparecer.
-//!
-//! `certutil -L` imprime **una línea por certificado**, no por apodo: dos CA
-//! locales con el mismo sujeto y el mismo apodo salen como dos filas
-//! `rFirma CA local … C,,`. Eso es lo que hace que el solape del ID-224 sea
-//! comprobable desde fuera y no una promesa.
-//!
-//! # Cómo se monta el perfil
-//!
-//! ```sh
-//! sudo apt install -y libnss3 libnss3-tools
-//! ```
-//!
-//! Cada prueba se hace **su propio perfil desechable** en un directorio
-//! temporal, con `certutil -N --empty-password`, que es un Firefox recién
-//! instalado. El perfil real de nadie se toca jamás: aquí no aparece
-//! `~/.mozilla`.
+//! Integración de la CA local en almacén NSS real (ADR-0005, ADR-0014).
 
 use std::path::Path;
 use std::process::Command;
@@ -32,11 +7,10 @@ use rfirma_lib::app::trust::refresh_local_ca_trust;
 use rfirma_lib::tls::{authority::COMMON_NAME, CaFiles, LocalCa, LocalCaStore};
 use rfirma_lib::trust::{nss::is_trusted_ssl_ca, Moment, NssTrustStores, Situation, TrustStores};
 
-/// Lo que `certutil -L` imprime en la columna de la izquierda para una CA de
-/// confianza para TLS y para nada más.
+/// Marca de confianza TLS en la salida de `certutil -L`.
 const TRUSTED_FOR_TLS_ONLY: &str = "C,,";
 
-/// Un perfil NSS vacío y desechable, el de un Firefox recién instalado.
+/// Perfil NSS temporal desechable.
 fn a_disposable_profile() -> tempfile::TempDir {
     let directory = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
     let created = Command::new("certutil")
@@ -56,10 +30,7 @@ fn a_disposable_profile() -> tempfile::TempDir {
     directory
 }
 
-/// El listado del almacén, tal y como lo imprime `certutil -L`.
-///
-/// **Este es el oráculo del TD-60**: los bits, leídos por la herramienta de
-/// NSS, sin verificar ninguna cadena.
+/// Contenido devuelto por `certutil -L`.
 fn certutil_listing(profile: &Path) -> String {
     let listed = Command::new("certutil")
         .args(["-L", "-d"])
@@ -74,7 +45,7 @@ fn certutil_listing(profile: &Path) -> String {
     String::from_utf8_lossy(&listed.stdout).into_owned()
 }
 
-/// Cuántas filas de la CA local hay marcadas como CA de confianza para TLS.
+/// Filas de CA local marcadas como de confianza para TLS.
 fn trusted_rows(profile: &Path) -> usize {
     certutil_listing(profile)
         .lines()
@@ -82,8 +53,7 @@ fn trusted_rows(profile: &Path) -> usize {
         .count()
 }
 
-/// Un almacén de CA local con sus dos ranuras dentro de un directorio de datos
-/// desechable.
+/// Almacén de CA local en un directorio temporal.
 fn a_store_in(data: &Path) -> LocalCaStore {
     LocalCaStore::new(
         CaFiles::new(data.join("ca-local.pem"), data.join("ca-local.key")),
@@ -106,8 +76,6 @@ fn install(profile: &Path, ca: &LocalCa) {
         .expect("la CA local deberia entrar en el perfil");
 }
 
-/// **El criterio de aceptación entero, leído por `certutil -L`**: la CA local
-/// queda dentro y marcada como CA de confianza para TLS, y **solo** para TLS.
 #[test]
 fn the_local_ca_ends_up_trusted_and_certutil_reads_the_bits() {
     let profile = a_disposable_profile();
@@ -123,8 +91,6 @@ fn the_local_ca_ends_up_trusted_and_certutil_reads_the_bits() {
     assert_eq!(trusted_rows(profile.path()), 1, "listado:\n{listing}");
 }
 
-/// **El solape** (ID-224, TD-60): dos certificados de confianza con el mismo
-/// sujeto conviven, y `certutil -L` los enseña como dos filas.
 #[test]
 fn two_local_ca_with_the_same_subject_live_together() {
     let profile = a_disposable_profile();
@@ -142,8 +108,6 @@ fn two_local_ca_with_the_same_subject_live_together() {
     );
 }
 
-/// **En cualquier orden** (ID-224): meter primero la que servirá y después la
-/// que sirve tiene que dar exactamente lo mismo.
 #[test]
 fn the_overlap_holds_whichever_order_they_arrive_in() {
     let profile = a_disposable_profile();
@@ -165,8 +129,6 @@ fn the_overlap_holds_whichever_order_they_arrive_in() {
     assert!(bits.is_some_and(is_trusted_ssl_ca), "bits: {bits:?}");
 }
 
-/// Registrar la misma CA dos veces no duplica nada: es lo que permite llamar al
-/// caso de uso en cada arranque sin ensuciar el perfil de la persona.
 #[test]
 fn installing_the_same_local_ca_twice_leaves_one_row() {
     let profile = a_disposable_profile();
@@ -178,8 +140,6 @@ fn installing_the_same_local_ca_twice_leaves_one_row() {
     assert_eq!(trusted_rows(profile.path()), 1);
 }
 
-/// Los bits se leen de vuelta, y una CA que no está no da `Some(0)` ni un
-/// fallo: da `None`.
 #[test]
 fn the_bits_come_back_and_a_ca_that_is_not_there_is_not_a_failure() {
     let profile = a_disposable_profile();
@@ -200,9 +160,6 @@ fn the_bits_come_back_and_a_ca_that_is_not_there_is_not_a_failure() {
     );
 }
 
-/// Un directorio que no es un perfil NSS se dice, y se dice como lo que es: el
-/// almacén no se ha podido abrir. Es la situación con la que sale el flatpak al
-/// que le falte el permiso del ID-228.
 #[test]
 fn a_directory_that_is_not_a_profile_says_the_store_is_unreachable() {
     let nowhere = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -216,9 +173,6 @@ fn a_directory_that_is_not_a_profile_says_the_store_is_unreachable() {
     assert!(!error.detail().is_empty());
 }
 
-/// **El caso de uso entero contra un perfil de verdad**: el primer arranque
-/// deja la CA local fabricada, guardada y de confianza, y `certutil -L` lo
-/// confirma. El segundo no vuelve a escribir ni vuelve a avisar.
 #[test]
 fn the_first_boot_leaves_the_local_ca_trusted_in_a_real_profile() {
     let data = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -242,8 +196,6 @@ fn the_first_boot_leaves_the_local_ca_trusted_in_a_real_profile() {
     assert_eq!(trusted_rows(profile.path()), 1);
 }
 
-/// **ID-224.** Con un trámite en marcha no se toca el perfil de nadie, ni
-/// siquiera cuando no hay CA local ninguna.
 #[test]
 fn nothing_is_written_in_a_real_profile_in_the_middle_of_an_errand() {
     let data = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -267,13 +219,6 @@ fn nothing_is_written_in_a_real_profile_in_the_middle_of_an_errand() {
     assert!(store.read().expect("deberia leerse").is_none());
 }
 
-/// **El solape contra un perfil de verdad** (ID-224): la vigente sigue siendo
-/// la que sirve —la que firmará el certificado del servidor local— mientras la
-/// siguiente espera en su propia ranura, y `certutil -L` enseña las dos filas.
-///
-/// El relevo, cuando la vigente caduca, se comprueba en las pruebas unitarias
-/// del caso de uso: fabricar una CA ya caducada es un andamio `#[cfg(test)]` y
-/// no cruza a una prueba de integración.
 #[test]
 fn during_the_overlap_the_serving_ca_keeps_serving_and_both_are_trusted() {
     let data = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -306,8 +251,6 @@ fn during_the_overlap_the_serving_ca_keeps_serving_and_both_are_trusted() {
         certutil_listing(profile.path())
     );
 
-    // Y el relevo deja servir a la que llevaba meses instalada, sin tocar el
-    // perfil: `promote_next` no escribe en ningún almacén.
     let promoted = store
         .promote_next()
         .expect("deberia poder relevarse")
