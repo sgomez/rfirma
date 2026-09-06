@@ -52,6 +52,15 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * En **inglés**: todo el identificador — nombres de variables, funciones, tipos, módulos, ficheros y ramas — y también los nombres de los tests (`fn signs_pdf_without_rubric()`, `it('rejects a PNG rubric')`).
    * Los textos que ve la persona usuaria (etiquetas de la UI, mensajes de error mostrados) van en castellano; las claves de i18n que los identifican, en inglés.
 
+6. **Comentarios: el defecto es ninguno.**
+   * Se aplica el capítulo «Comments» de *Clean Code* sin excepciones locales: el nombre es el comentario, y un bloque que necesita explicación se extrae a una función con ese nombre.
+   * Formas máximas: la cabecera `//!` de un módulo es **una frase** —qué es y qué no es—; el `///` de un elemento público es **una línea**; dentro de un cuerpo, un `//` solo si dice algo que el código no puede decir.
+   * Cada cosa tiene su destino, y no es el comentario: el porqué de una decisión va a un ADR; una advertencia a agentes de alcance general va al mapa del backend (`rfirma-app/src-tauri/src/AGENTS.md`); lo que ya dice la tabla del mapa no se repite; un conteo, un número de PR o la interfaz del otro lado no van a ninguna parte.
+   * **El enlace a un ADR es la excepción**: solo donde el código hace algo que parece un error y no lo es, una línea, citando el ADR por número (`ADR-0005`), nunca por ruta ni por epígrafe. El número es estable porque un ADR se reescribe en su sitio y nunca se supera.
+   * Los identificadores de especificación (`ID-NN`, `TD-NN`, `RD-NN`, `RT-NN`) se citan cortos y solo si existen en el catálogo de `docs/spec/`; una guarda de grada A los vigila, y también los `ADR-NNNN`.
+   * Aplica al código nuevo **y al movido**: mover un fichero es la ocasión de podarlo, no de trasladar su prosa.
+   * En revisión, un comentario nuevo de más de dos líneas pide justificación en el PR.
+
 ---
 
 ## 🛠️ Herramientas y Estado de Configuración del Entorno

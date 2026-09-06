@@ -300,3 +300,38 @@ comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos c
   y no con `super::super::…`: las dos aristas prohibidas del RD-12 —el trámite
   nombrando a `channel`, a `app::codec` o a `app::transport`— se le escaparían
   si fueran relativas.
+
+## Al escribir un comentario
+
+El defecto es ninguno (restricción 6 del `AGENTS.md` raíz). Lo que hoy acaba en
+un comentario tiene otro destino:
+
+| Lo que el comentario dice | A dónde va |
+|---|---|
+| El porqué de una decisión | Un ADR; en el código queda **una línea** con su número (`ADR-0012`), y solo donde el código parece un error y no lo es |
+| El cómo | Se borra: el nombre de la función lo dice |
+| Una cita de especificación | Se queda, corta (`ID-23`), y solo si el identificador está en el catálogo de `docs/spec/`, **la única fuente válida** |
+| Una advertencia a agentes | Aquí, en la sección que le toque, si es general; se borra si el tipo ya la hace innecesaria |
+| La interfaz del otro lado, un número de PR, un conteo | A ninguna parte |
+
+La cabecera `//!` de un módulo es **una frase** —qué es y qué no es— más el
+número del ADR si lo hay. Lo que la tabla «Dónde vive qué» ya dice de ese módulo
+no se repite: si las dos cuentan lo mismo, se borra de la cabecera y se conserva
+la tabla.
+
+Dos ejemplos de este backend, tal como quedan tras la poda:
+
+- **Se queda.** En `rubric/normalize.rs`, antes de fijar `max_alloc` en el
+  decodificador, hay un tope de memoria que parece redundante con el tope de
+  10 MB de la entrada. No lo es —un PNG uniforme comprime 1000:1 y una reserva
+  que falla aborta el proceso—, así que ahí queda una línea:
+  `// El tope de entrada no acota lo decodificado (ADR-0012).` Las seis líneas
+  que hoy lo explican se van al ADR-0012, que aún no lo cuenta: la poda lo
+  enmienda en la misma PR.
+- **Se va.** La cabecera de `commands/mod.rs` dice «Son veintidós» y enumera
+  los puertos de TypeScript que rellena cada orden, con el número de PR de cada
+  uno. El conteo es falso (el que lo sabe es la aserción de
+  `the_list_of_commands_is_closed_and_this_is_how_long_it_is`), los puertos son
+  la interfaz del otro lado y los PR son histórico. Nada de eso va a ninguna
+  parte; queda: `//! Las órdenes de Tauri: lo único que la ventana puede pedir.
+  No deciden nada.`
