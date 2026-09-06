@@ -503,8 +503,8 @@ outline path:
 # pedirle al backend y los tipos que cruzan la frontera, con los nombres de
 # campo que ve TypeScript.
 #
-# PARA QUE SIRVE: para saber esto mismo hay que leer hoy `commands/mod.rs`
-# (12 200 caracteres) y `commands/views.rs` (13 766). El contrato son ~3665, y
+# PARA QUE SIRVE: para saber esto mismo hay que leer hoy los cinco ficheros de
+# ordenes de `commands/` y los cuatro de `commands/views/`. El contrato son ~3665, y
 # es MAS correcto que las fuentes: de los cinco parametros de `begin_signing`,
 # cuatro son estado que Tauri inyecta y NO cruzan; aqui no aparecen. Quien va a
 # tocar la interfaz empieza por aqui y no abre `commands/` jamas.
@@ -685,7 +685,7 @@ contract src=(tauri / "src"):
     # Una sola escritura: asi un `head` encadenado no deja a medias la receta ni
     # la mata por senal.
     printf '%s\n%s\n\n%s\n%s%s\n\n%s\n' \
-        "ORDENES DE TAURI                          (commands/mod.rs)" \
+        "ORDENES DE TAURI                          (commands/<contexto>.rs)" \
         "  Sin el estado inyectado (State<...>, AppHandle): no cruza." \
         "$orders" \
         $'\nTIPOS QUE CRUZAN                          (el resto de commands/)\n  Campos con el nombre que ve la ventana.\n' \

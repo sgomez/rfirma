@@ -462,15 +462,14 @@ fn commands_of(source: &str) -> Vec<(&str, String, &str)> {
 
 #[test]
 fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
-    let source = production_half(source_of("commands/mod.rs"));
-
-    for command in [
-        "pub fn open_document(",
-        "pub fn read_document(",
-        "pub fn open_signed_document(",
-        "pub fn open_signed_folder(",
-        "pub fn check_for_new_version(",
+    for (file, command) in [
+        ("commands/documents.rs", "pub fn open_document("),
+        ("commands/documents.rs", "pub fn read_document("),
+        ("commands/documents.rs", "pub fn open_signed_document("),
+        ("commands/documents.rs", "pub fn open_signed_folder("),
+        ("commands/desktop.rs", "pub fn check_for_new_version("),
     ] {
+        let source = production_half(source_of(file));
         let declaration = source
             .find(command)
             .unwrap_or_else(|| panic!("no esta la orden «{command}»"));
@@ -481,7 +480,10 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
         );
     }
 
-    let commands = commands_of(source);
+    let commands: Vec<_> = sources()
+        .iter()
+        .flat_map(|(_, source)| commands_of(production_half(source)))
+        .collect();
     assert!(
         commands.len() >= 14,
         "el troceado de ordenes ha encontrado {}: si no las ve todas, no vigila nada",
@@ -502,7 +504,7 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
 
 #[test]
 fn every_command_of_the_site_errand_runs_off_the_main_thread() {
-    let source = production_half(source_of("commands/mod.rs"));
+    let source = production_half(source_of("commands/site.rs"));
 
     const OF_THE_ERRAND: [&str; 6] = [
         "pub fn close_site_window(",
