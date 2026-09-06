@@ -1,43 +1,4 @@
-//! **Cómo entra un `.p12` en un almacén NSS propio**, sin que rfirma descifre
-//! nada (ID-192, ID-193).
-//!
-//! El fichero no se parsea aquí ni en ningún otro sitio de Rust: lo abre el
-//! descodificador de PKCS#12 de NSS, que ya está en las tres formas de
-//! distribución, y lo que queda detrás es un almacén NSS corriente —`cert9.db`
-//! y `key4.db` y nada más— que el resto de [`crate::pkcs11`] abre como abre el
-//! perfil de un Firefox. **No es un motor de firma**: `C_Sign` sigue siendo el
-//! único sitio que toca la clave (ADR-0001).
-//!
-//! # Dos cosas que se midieron y no son las que uno supondría
-//!
-//! Las dos están en `docs/research/p12-en-almacen-nss.md`:
-//!
-//! - **Los símbolos de PKCS#12 no están en `libnss3.so`**, sino en
-//!   `libsmime3.so`. Por eso aquí se cargan dos bibliotecas y no una.
-//! - **`NSS_Init` sobre un `configdir` y el `C_Initialize` de `cryptoki` no
-//!   pueden convivir** (ID-194). Con softoken ya inicializado, cualquier
-//!   `NSS_*_Init` falla; y al revés es peor, porque
-//!   [`super::initialized`] se traga a propósito el
-//!   `CKR_CRYPTOKI_ALREADY_INITIALIZED` y entonces lista **el almacén de NSS**
-//!   creyendo que lista el que le pidieron, sin ningún error. Lo que salva el
-//!   camino es que aquí no se inicializa NSS con base de datos:
-//!   `NSS_NoDB_Init` más `SECMOD_OpenUserDB` abren el almacén del fichero como
-//!   una ranura suelta, y todo ello **dentro del turno del token**
-//!   ([`super::with_token_turn`]), que ya garantiza que softoken no está
-//!   inicializado, y termina con `SECMOD_CloseUserDB` y `NSS_Shutdown` antes de
-//!   soltarlo.
-//!
-//! # Lo que no hace
-//!
-//! - **No mete la cadena de CA en el almacén.** Entrarían con el apodo `(NULL)`
-//!   —medido en el sondeo— y el listado las descartaría igual, porque solo
-//!   enseña certificados con clave privada emparejada (ID-07).
-//! - **No reintenta la contraseña con los bytes intercambiados.** El
-//!   descodificador quiere un `BMPString` UCS-2 *big endian*, que es lo que
-//!   escribe [`bmp_string`]; un `.p12` generado con UCS-2 *little endian* y una
-//!   contraseña con acentos necesitaría el reintento que hace `pk12util`. No
-//!   hay ningún fichero con el que probarlo, y código sin prueba que lo mire es
-//!   código que no se sabe si funciona.
+//! Importación de ficheros PKCS#12 en almacenes NSS propios (ADR-0001).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;
@@ -48,37 +9,24 @@ use libloading::Library;
 use super::error::{Situation, TokenError};
 use super::stores::present_among;
 
-/// Dónde puede estar `libnss3.so`, que es quien inicializa NSS y abre la ranura.
-///
-/// Se declaran por ruta absoluta y no se adivinan con `dlopen` a secas, por lo
-/// mismo que [`super::stores::CANDIDATE_SOFTOKENS`]: cargar «la primera del
-/// `LD_LIBRARY_PATH`» es dejar que el entorno decida.
+/// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
     "/usr/lib/x86_64-linux-gnu/libnss3.so",
     "/usr/lib64/libnss3.so",
     "/usr/lib/libnss3.so",
 ];
 
-/// Dónde puede estar `libsmime3.so`, que es donde viven **de verdad** los
-/// `SEC_PKCS12Decoder*`.
+/// Rutas candidatas para localizar la biblioteca `libsmime3.so`.
 pub const CANDIDATE_SMIME: &[&str] = &[
     "/usr/lib/x86_64-linux-gnu/libsmime3.so",
     "/usr/lib64/libsmime3.so",
     "/usr/lib/libsmime3.so",
 ];
 
-/// `SECSuccess`, que es lo único que devuelve bien una función de NSS.
 const SEC_SUCCESS: c_int = 0;
-/// `PR_TRUE`.
 const PR_TRUE: c_int = 1;
-/// `siBuffer`, el tipo de `SECItem` para una tira de bytes cualquiera.
 const SI_BUFFER: c_uint = 0;
 
-/// Los init args con los que se **crea** el almacén de un `.p12`.
-///
-/// `readWrite` porque aquí se escribe; el mismo directorio se abre luego en
-/// solo lectura por [`super::stores::Store::nss`], que es como se lee todo lo
-/// demás.
 fn module_spec(directory: &Path) -> String {
     format!(
         "configDir='sql:{}' certPrefix='' keyPrefix='' \
@@ -87,7 +35,6 @@ fn module_spec(directory: &Path) -> String {
     )
 }
 
-/// El `SECItem` de NSS: tipo, bytes y longitud.
 #[repr(C)]
 struct SecItem {
     kind: c_uint,
@@ -95,7 +42,6 @@ struct SecItem {
     len: c_uint,
 }
 
-/// El de la contraseña, con los bytes vivos al lado para que el puntero valga.
 struct Password {
     bytes: Vec<u8>,
 }
@@ -110,11 +56,6 @@ impl Password {
     }
 }
 
-/// La contraseña tal y como la quiere el descodificador: UCS-2 *big endian* y
-/// terminada en dos ceros, que es lo que un `BMPString` de PKCS#12 lleva
-/// dentro.
-///
-/// La longitud **incluye** el terminador, igual que en `pk12util`.
 fn bmp_string(password: &str) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(password.len() * 2 + 2);
     for unit in password.encode_utf16() {
@@ -124,12 +65,6 @@ fn bmp_string(password: &str) -> Vec<u8> {
     bytes
 }
 
-/// Lo que NSS llama cuando le hace falta la contraseña de una ranura.
-///
-/// Devuelve siempre `NULL`, que para NSS es «no hay contraseña que dar». El
-/// almacén se crea **sin contraseña de almacén** —ver [`import_pkcs12`]—, así
-/// que este camino no se recorre; registrarlo igual es lo que garantiza que
-/// ninguna ruta de NSS se quede esperando a un diálogo que aquí no existe.
 extern "C" fn no_password(
     _slot: *mut c_void,
     _retry: c_int,
@@ -138,12 +73,6 @@ extern "C" fn no_password(
     std::ptr::null_mut()
 }
 
-/// Lo que NSS llama cuando el apodo de un certificado ya está cogido en el
-/// almacén de destino.
-///
-/// Aquí el almacén de destino es de un solo fichero y acaba de crearse, así
-/// que no hay con qué chocar. Se registra por lo mismo que [`no_password`]: un
-/// `NULL` en su sitio sería una llamada a la dirección cero.
 extern "C" fn keep_the_nickname(
     _old: *mut SecItem,
     cancel: *mut c_int,
@@ -156,11 +85,6 @@ extern "C" fn keep_the_nickname(
     std::ptr::null_mut()
 }
 
-/// Las dos bibliotecas de NSS, cargadas una vez para todo el proceso.
-///
-/// No se descargan nunca a propósito: NSS deja estado global —la función de
-/// contraseña, entre otras— y descargar el `.so` que lo sostiene mientras el
-/// proceso sigue vivo es un fallo de los que no dejan rastro.
 struct Nss {
     nss: Library,
     smime: Library,
@@ -189,10 +113,6 @@ fn first_present(candidates: &[&str], name: &str) -> Result<Library, String> {
     unsafe { Library::new(&path) }.map_err(|error| format!("{}: {error}", path.display()))
 }
 
-/// El puntero a una función de una biblioteca ya cargada.
-///
-/// Devuelve el fallo con el nombre del símbolo dentro: una NSS a la que le
-/// falte uno de los quince es un diagnóstico, no un `None` cualquiera.
 fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenError> {
     // SAFETY: cada tipo `T` de este módulo es la firma declarada en la cabecera
     // pública de NSS para ese símbolo, y las bibliotecas viven hasta que muere
@@ -210,12 +130,6 @@ fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenErr
         })
 }
 
-/// Un fallo de una llamada a NSS, con el paso dentro.
-///
-/// No lleva el `PR_GetError()` de NSPR: sacarlo obligaría a cargar una tercera
-/// biblioteca, y el código que devuelve **no es de fiar cuando la llamada tuvo
-/// éxito** —`PK11_InitPin` devuelve `SECSuccess` dejando un error viejo puesto,
-/// medido en el sondeo—, así que lo que se dice es qué paso falló.
 fn failed(step: &str) -> TokenError {
     TokenError::new(
         Situation::Pkcs12Unreadable,
@@ -223,20 +137,7 @@ fn failed(step: &str) -> TokenError {
     )
 }
 
-/// **Mete el `.p12` en un almacén NSS recién creado en `directory`.**
-///
-/// `password` es la contraseña **del fichero**, la que teclea quien lo
-/// instala; se usa para descifrarlo y no se guarda en ninguna parte (ID-196).
-/// El almacén queda **sin contraseña de almacén**, que es lo que hace que sus
-/// certificados se listen luego sin teclear nada (ID-195): la protección real
-/// de un `.p12` instalado es la del directorio de datos de la aplicación, con
-/// sus permisos, y no una segunda contraseña que nadie ha pedido.
-///
-/// # Tiene que llamarse dentro del turno del token
-///
-/// [`super::with_token_turn`] es lo único que garantiza que `libsoftokn3.so` no
-/// está inicializado mientras NSS vive (ID-194). Fuera del turno esto no falla:
-/// lista el almacén equivocado, que es peor.
+/// Importa un fichero PKCS#12 en el almacén NSS indicado.
 pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<(), TokenError> {
     let libraries = libraries()?;
 
@@ -302,14 +203,11 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
         return Err(TokenError::new(
             Situation::Pkcs12Unreadable,
             "NSS no ha podido arrancar sin base de datos: algo del proceso tiene ya \
-             inicializado el softoken (ID-194, ¿RFIRMA_PKCS11_MODULE apuntando a \
+             inicializado el softoken (¿RFIRMA_PKCS11_MODULE apuntando a \
              libsoftokn3.so?)",
         ));
     }
 
-    // A partir de aquí NSS está vivo y **todos** los caminos de salida tienen
-    // que apagarlo: dejarlo encendido es dejar el proceso listando el almacén
-    // equivocado (ID-194).
     let outcome = (|| {
         let slot = open_user_db(spec.as_ptr());
         if slot.is_null() {
@@ -346,8 +244,6 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
                 {
                     return Err(failed("SEC_PKCS12DecoderUpdate"));
                 }
-                // El primero que falla cuando la contraseña no es la del
-                // fichero: la comprobación de integridad va con ella.
                 if decoder_verify(decoder) != SEC_SUCCESS {
                     return Err(failed("SEC_PKCS12DecoderVerify"));
                 }
@@ -378,7 +274,6 @@ mod tests {
     use super::{bmp_string, module_spec};
     use std::path::Path;
 
-    /// **Grada A**: son cadenas, no llaman a NSS.
     #[test]
     fn the_password_travels_as_a_big_endian_bmp_string_with_its_terminator() {
         assert_eq!(
@@ -387,8 +282,6 @@ mod tests {
         );
     }
 
-    /// Un carácter fuera de ASCII ocupa sus dos bytes en el mismo orden, que es
-    /// lo que separa un `BMPString` de una cadena de bytes.
     #[test]
     fn a_password_outside_ascii_keeps_the_big_endian_order() {
         assert_eq!(bmp_string("ñ"), vec![0x00, 0xf1, 0, 0]);
@@ -399,8 +292,6 @@ mod tests {
         assert_eq!(bmp_string(""), vec![0, 0]);
     }
 
-    /// El almacén se crea en formato `sql:` y en lectura y escritura: es el
-    /// único momento en el que rfirma escribe dentro de un almacén NSS.
     #[test]
     fn the_store_is_created_in_sql_format_and_writable() {
         let spec = module_spec(Path::new("/casa/datos/rfirma/certificates/abc"));
