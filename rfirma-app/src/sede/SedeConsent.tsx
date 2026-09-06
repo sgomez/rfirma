@@ -89,6 +89,19 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
 
         {stage.document !== null && <DocumentCard document={stage.document} />}
 
+        {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
+            y mismo borde de 1 px que el origen sin identificar. No hay un
+            sexto momento (ID-298): se pregunta aquí, dentro del mismo
+            consentimiento. */}
+        {stage.document?.hasUnregisteredSignatures && (
+          <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
+            <span className="sede-consent__icon">
+              <InfoIcon size={18} />
+            </span>
+            <p className="rf-hint">{t("sede.consent.unrecognizedSignatures")}</p>
+          </div>
+        )}
+
         <div className="rf-stack rf-gap-xs sede-consent__certificate">
           <p className="rf-label sede-consent__label">
             {identity ? t("sede.consent.identifyWith") : t("sede.consent.signWith")}

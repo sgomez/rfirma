@@ -42,6 +42,14 @@ export interface SiteDocument {
    * **cofirma**, y eso se dice antes de consentir.
    */
   signatures: number;
+  /**
+   * Si alguna de las firmas que ya trae el PDF es de un `/SubFilter` que
+   * rFirma no sabe leer (#355). No es un rechazo — el PDF certificado sí
+   * invalida con certeza y por eso se rechaza sin preguntar; esto es
+   * desconocimiento nuestro (ID-298). Se dice con una frase de información,
+   * dentro del mismo consentimiento: no hay un sexto momento (ID-302).
+   */
+  hasUnregisteredSignatures: boolean;
 }
 
 /**

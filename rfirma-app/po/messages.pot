@@ -1011,6 +1011,11 @@ msgstr ""
 msgid "sede.consent.willSend"
 msgstr ""
 
+#. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
+#. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
+msgid "sede.consent.unrecognizedSignatures"
+msgstr ""
+
 msgid "sede.consent.sign"
 msgstr ""
 

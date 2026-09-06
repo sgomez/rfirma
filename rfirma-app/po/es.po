@@ -1064,7 +1064,9 @@ msgid "sede.repair.firefoxAllow"
 msgstr "Pulsa Permitir en el panel junto a la barra de direcciones."
 
 msgid "sede.repair.firefoxGone"
-msgstr "Si ya no está: candado › Conexión segura › Más información › Permisos › Acceso a la red local."
+msgstr ""
+"Si ya no está: candado › Conexión segura › Más información › Permisos › "
+"Acceso a la red local."
 
 #. `Reintentar` es un botón de la sede, no de esta ventana.
 msgid "sede.repair.retry"
@@ -1108,7 +1110,16 @@ msgid "sede.consent.narrowedUnknownOrigin"
 msgstr "La sede ha limitado los certificados válidos."
 
 msgid "sede.consent.willSend"
-msgstr "Se enviarán tu nombre, tu NIF, el emisor del certificado y su número de serie."
+msgstr ""
+"Se enviarán tu nombre, tu NIF, el emisor del certificado y su número de "
+"serie."
+
+#. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
+#. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
+msgid "sede.consent.unrecognizedSignatures"
+msgstr ""
+"rFirma no reconoce alguna de las firmas que ya tiene este documento, y al "
+"añadir la tuya podrían dejar de verse como válidas"
 
 msgid "sede.consent.sign"
 msgstr "Firmar"
@@ -1160,10 +1171,14 @@ msgid "sede.outcome.autoClose"
 msgstr "Se cerrará sola dentro de {{seconds}} s."
 
 msgid "sede.refusals.appendedSignaturePage"
-msgstr "{{origin}} pide colocar la firma en una página añadida al final, y rFirma no hace eso."
+msgstr ""
+"{{origin}} pide colocar la firma en una página añadida al final, y rFirma no "
+"hace eso."
 
 msgid "sede.refusals.unsupportedFilter"
-msgstr "{{origin}} pide filtrar los certificados con un criterio que rFirma no reconoce."
+msgstr ""
+"{{origin}} pide filtrar los certificados con un criterio que rFirma no "
+"reconoce."
 
 msgid "sede.refusals.unsupportedProtocolVersion"
 msgstr "{{origin}} habla una versión del protocolo que rFirma no entiende."
@@ -1172,7 +1187,9 @@ msgid "sede.refusals.missingFormat"
 msgstr "{{origin}} no dice en qué formato hay que firmar."
 
 msgid "sede.refusals.errandInFlight"
-msgstr "{{origin}} pide una firma con otro trámite abierto, y rFirma atiende uno cada vez."
+msgstr ""
+"{{origin}} pide una firma con otro trámite abierto, y rFirma atiende uno "
+"cada vez."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} ha enviado algo que rFirma no puede atender."
