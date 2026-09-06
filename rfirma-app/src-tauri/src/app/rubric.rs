@@ -1,24 +1,10 @@
-//! Elegir la rúbrica: adopta en el almacén lo que el diálogo del portal
-//! concede (ID-82).
-//!
-//! No decide nada que [`crate::rubric::RubricStore::adopt`] no decida ya —leer
-//! con tope, normalizar, copiar—: la única razón por la que este módulo existe
-//! es la regla de dirección, que a [`crate::commands`] solo le deja llamar a
-//! [`crate::app`] (ID-79, ID-81). Las seis situaciones de fallo se prueban a
-//! fondo en `rubric::store` y `rubric::normalize`; aquí solo se prueba que la
-//! orden llama a lo que tiene que llamar, que es lo que TD-21 pide de un caso
-//! de uso nuevo.
+//! Caso de uso para la adopción y consulta de la rúbrica (ADR-0012).
 
 use tauri_plugin_dialog::FilePath;
 
 use crate::rubric::{NormalizedRubric, RubricError, RubricStore, Situation};
 
-/// Adopta la imagen que el usuario acaba de elegir en el diálogo del portal.
-///
-/// Clasifica aquí lo que la orden no debe clasificar (ID-79): un `FilePath`
-/// que el portal no resuelve a una ruta local es la misma familia de fallo
-/// que una imagen que `RubricStore::adopt` rechaza, así que ambos casos
-/// terminan en el mismo `Result`.
+/// Adopta la imagen seleccionada por el usuario en el almacén de rúbricas.
 pub fn choose(store: &RubricStore, chosen: FilePath) -> Result<NormalizedRubric, RubricError> {
     let source = chosen
         .into_path()
@@ -26,8 +12,7 @@ pub fn choose(store: &RubricStore, chosen: FilePath) -> Result<NormalizedRubric,
     store.adopt(&source)
 }
 
-/// La rúbrica que ya estaba adoptada, si la hay: lo que `read_rubric` pide al
-/// arrancar para que una sesión nueva encuentre la de la anterior (ID-33).
+/// Consulta la rúbrica guardada en el almacén si existe.
 pub fn stored(store: &RubricStore) -> Result<Option<Vec<u8>>, RubricError> {
     store.stored()
 }
@@ -43,7 +28,6 @@ mod tests {
     use super::{choose, stored};
     use crate::rubric::RubricStore;
 
-    /// **Grada A**: escribe en un directorio temporal, sin token ni puente.
     fn a_png(path: &std::path::Path) {
         let mut image = RgbaImage::new(10, 10);
         for pixel in image.pixels_mut() {

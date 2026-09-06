@@ -1,8 +1,4 @@
-//! De lo que el usuario aporta a lo único que el puente acepta: un **JPEG
-//! opaco y sin perfil ICC** (ID-23, ADR-0012).
-//!
-//! Aquí no se toca el disco: entran bytes y salen bytes. Leer el fichero y
-//! copiarlo al almacén es cosa de [`super::store`].
+//! Normalización de imágenes de rúbrica a JPEG opaco sin perfil ICC (ADR-0012).
 
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
@@ -13,49 +9,29 @@ use std::io::Cursor;
 
 use super::error::{RubricError, Situation};
 
-/// Calidad del JPEG de salida (ADR-0012).
+/// Calidad de compresión del JPEG de salida (ADR-0012).
 pub const JPEG_QUALITY: u8 = 90;
 
-/// Lado mayor máximo, en píxeles (ADR-0012). Por encima se reescala, y el
-/// reescalado **es silencioso**: es la operación que el usuario habría pedido.
+/// Lado mayor máximo en píxeles antes de reescalar (ADR-0012).
 pub const MAX_SIDE_PX: u32 = 1000;
 
-/// Tope del fichero de entrada, 10 MB (ADR-0012). Se comprueba **dos** veces y
-/// siempre antes de decodificar: [`super::store::RubricStore::adopt`] lo
-/// comprueba mientras lee, que es donde de verdad protege —nunca mete en
-/// memoria más de este tope— y [`normalize`] lo vuelve a comprobar sobre los
-/// bytes, que es su contrato para quien la llame sin pasar por el almacén.
-///
-/// Un fichero pequeño puede seguir siendo una imagen enorme, así que este tope
-/// no basta por sí solo: ver [`MAX_DECODED_BYTES`].
+/// Tamaño máximo permitido para el fichero de entrada en bytes (ADR-0012).
 pub const MAX_INPUT_BYTES: usize = 10 * 1024 * 1024;
 
-/// Tope de la imagen **ya descomprimida**, 512 MB: el mismo `max_alloc` que
-/// trae `Limits::default()` del crate `image`.
-///
-/// [`MAX_INPUT_BYTES`] no cubre esto. Un PNG uniforme comprime ~1000:1, así
-/// que un fichero holgadamente dentro del tope de entrada puede declarar unas
-/// dimensiones que reserven gigabytes, y un `Vec` que no se puede reservar
-/// aborta el proceso en vez de devolver un error. Es la bomba de
-/// descompresión de siempre, y aquí se corta antes de reservar nada.
+/// Límite máximo de memoria para la imagen descomprimida en bytes.
 pub const MAX_DECODED_BYTES: u64 = 512 * 1024 * 1024;
 
-/// Un formato de entrada admitido.
-///
-/// Son dos y nada más (ADR-0012): ni un TIFF ni un WebP aparecen en la vida
-/// real de una firma escaneada, y cada decodificador de más es superficie
-/// sobre un fichero que elige el usuario.
+/// Formatos de imagen de entrada admitidos para rúbricas (ADR-0012).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AcceptedFormat {
-    /// PNG, el caso normal de una rúbrica recortada.
+    /// Formato PNG.
     Png,
-    /// JPEG, el caso normal de una rúbrica escaneada.
+    /// Formato JPEG.
     Jpeg,
 }
 
 impl AcceptedFormat {
-    /// El tipo MIME. Es lo que filtra el selector del portal, **no** la
-    /// extensión: la extensión miente (ADR-0012).
+    /// Tipo MIME correspondiente al formato.
     pub fn mime(self) -> &'static str {
         match self {
             Self::Png => "image/png",
@@ -79,16 +55,7 @@ impl AcceptedFormat {
     }
 }
 
-/// Los formatos que rFirma admite **ahora mismo**, preguntándoselo al
-/// decodificador que hay montado.
-///
-/// Que esto sea una función y no una constante del puente es justo lo que se
-/// ganó al normalizar en Rust: mientras la normalización vivía en Java, los
-/// formatos había que declararlos en el comando de `native-image` —la traza de
-/// una rúbrica PNG no cubre una JPEG— y quedaban congelados en tiempo de
-/// construcción (ADR-0012). Un formato queda fuera de la lista si el binario
-/// no trae su decodificador, y eso se sabe al arrancar, no al compilar el
-/// puente.
+/// Formatos admitidos por el decodificador disponible en tiempo de ejecución.
 pub fn accepted_formats() -> Vec<AcceptedFormat> {
     [AcceptedFormat::Png, AcceptedFormat::Jpeg]
         .into_iter()
@@ -99,8 +66,6 @@ pub fn accepted_formats() -> Vec<AcceptedFormat> {
         .collect()
 }
 
-/// «image/png, image/jpeg»: la lista que lleva el mensaje de rechazo, tomada
-/// de la capacidad real y no de un literal que se quedaría desfasado.
 fn accepted_formats_label() -> String {
     accepted_formats()
         .iter()
@@ -109,34 +74,25 @@ fn accepted_formats_label() -> String {
         .join(", ")
 }
 
-/// Una rúbrica ya normalizada: JPEG opaco, sin perfil ICC, lista para el
-/// puente.
-///
-/// Solo se construye en [`normalize`], así que tener una en la mano ya
-/// significa que la imagen pasó por aquí.
+/// Rúbrica normalizada lista para su uso en firmas visibles (ADR-0012).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NormalizedRubric {
     jpeg: Vec<u8>,
 }
 
 impl NormalizedRubric {
-    /// Los bytes del JPEG, que es lo que se guarda en el almacén.
+    /// Contenido binario del JPEG normalizado.
     pub fn bytes(&self) -> &[u8] {
         &self.jpeg
     }
 
-    /// Los mismos bytes en Base64, que es exactamente lo que viaja al puente
-    /// en `signatureRubricImage`
-    /// ([`crate::signing::SignatureConfig::rubric_image`]).
+    /// Contenido binario del JPEG codificado en Base64.
     pub fn to_base64(&self) -> String {
         BASE64.encode(&self.jpeg)
     }
 }
 
-/// Convierte un PNG o un JPEG cualquiera en el JPEG que el puente exige.
-///
-/// Un fichero que no sea PNG ni JPEG se rechaza aquí, con el diálogo del
-/// usuario todavía abierto, y no al firmar (ADR-0010).
+/// Normaliza los bytes de una imagen a JPEG opaco sin perfil ICC (ADR-0012).
 pub fn normalize(bytes: &[u8]) -> Result<NormalizedRubric, RubricError> {
     if bytes.len() > MAX_INPUT_BYTES {
         return Err(RubricError::new(
@@ -160,21 +116,8 @@ pub fn normalize(bytes: &[u8]) -> Result<NormalizedRubric, RubricError> {
         })?;
 
     let image = decode_upright(bytes, format)?;
-
-    // Se aplana **antes** de reescalar. `imageops::resize` interpola cada canal
-    // por separado y sin premultiplicar, así que un píxel transparente aporta su
-    // RGB a los vecinos aunque su alfa sea 0: muchas herramientas dejan
-    // `(0, 0, 0, 0)` bajo el recorte, y eso saldría como una orla gris en el
-    // borde del trazo, que es donde una firma es casi todo borde. Aplanado ya no
-    // queda alfa que interpolar. Cuesta aplanar a resolución completa, y para 10
-    // MB de entrada eso es irrelevante.
     let opaque = downscale(flatten_onto_white(&image));
 
-    // El JPEG se emite pelado: `JpegEncoder` no incrusta perfil ICC si no se le
-    // da uno, y no se le da. No es cosmética —`com.aowagie.text.Jpeg` parsea el
-    // APP2 y construye un `java.awt.color.ICC_Profile`, o sea que un perfil
-    // sRGB incrustado devolvería a AWT por la puerta de atrás, en una librería
-    // nativa que ya no lleva ni `libawt.so` ni `liblcms.so` (ADR-0012).
     let mut jpeg = Vec::new();
     JpegEncoder::new_with_quality(&mut Cursor::new(&mut jpeg), JPEG_QUALITY)
         .write_image(
@@ -188,20 +131,6 @@ pub fn normalize(bytes: &[u8]) -> Result<NormalizedRubric, RubricError> {
     Ok(NormalizedRubric { jpeg })
 }
 
-/// Decodifica **enderezando**: la orientación EXIF se aplica aquí y no en
-/// ningún otro sitio.
-///
-/// `load_from_memory_with_format` acaba en `ImageReader::decode()`, que no
-/// consulta la orientación —monta el decodificador, aplica los `Limits` y
-/// convierte—, así que hay que preguntársela al decodificador a mano. No es
-/// teórico: el JPEG es «el caso normal de una rúbrica escaneada», y una firma
-/// fotografiada con el móvil llega con `Orientation` 6 u 8. Como al almacén va
-/// el JPEG ya normalizado, y el JPEG de salida no lleva EXIF, un giro que no se
-/// aplicase aquí quedaría **congelado**: girada en la miniatura y girada en el
-/// PDF firmado, sin nada que dijera cómo enderezarla.
-///
-/// El tope de memoria hay que reponerlo a mano, y no es opcional: ver
-/// [`MAX_DECODED_BYTES`].
 fn decode_upright(
     bytes: &[u8],
     format: AcceptedFormat,
@@ -214,15 +143,6 @@ fn decode_upright(
         .map_err(damaged)?;
     let orientation = decoder.orientation().map_err(damaged)?;
 
-    // `into_decoder` **no** hace el `limits.reserve(decoder.total_bytes())` que
-    // sí hace `ImageReader::decode()`, y ese `reserve` es el único sitio donde
-    // se comprueba el búfer *de salida* contra `max_alloc`. El `set_limits` que
-    // sí queda no lo suple: en PNG y en JPEG solo hace `check_support` y
-    // `check_dimensions`, y los topes de lado son `None`. Sin esta comprobación
-    // el tope de 10 MB de la entrada no protege de nada, porque un PNG uniforme
-    // comprime ~1000:1: 3,3 MB en disco declaran 3,3 GB de búfer, y un `Vec`
-    // que no se puede reservar **aborta el proceso**, que es justo el modo de
-    // fallo que el ADR-0012 existe para convertir en error recuperable.
     let decoded_bytes = decoder.total_bytes();
     let mut limits = image::Limits::default();
     limits.max_alloc = Some(MAX_DECODED_BYTES);
@@ -233,10 +153,6 @@ fn decode_upright(
         )
     })?;
 
-    // `decode()` pasa al decodificador lo que queda del presupuesto *después*
-    // del `reserve`, y aquí se hace igual: sin esta línea el decodificador
-    // conservaría los suyos enteros y el pico dejaría de estar acotado por
-    // `MAX_DECODED_BYTES` para estarlo por el doble.
     decoder.set_limits(limits).map_err(damaged)?;
 
     let mut image = image::DynamicImage::from_decoder(decoder).map_err(damaged)?;
@@ -244,10 +160,6 @@ fn decode_upright(
     Ok(image)
 }
 
-/// Reescala solo si hace falta, conservando la proporción.
-///
-/// Sobre `RgbImage` y no sobre `DynamicImage` a propósito: cuando llega aquí el
-/// alfa ya está aplanado, y ese orden es lo que evita los halos del borde.
 fn downscale(image: image::RgbImage) -> image::RgbImage {
     let longest = image.width().max(image.height());
     if longest <= MAX_SIDE_PX {
@@ -263,20 +175,6 @@ fn downscale(image: image::RgbImage) -> image::RgbImage {
     )
 }
 
-/// Aplana el canal alfa sobre **blanco**.
-///
-/// Esto parece un bug y no lo es: la rúbrica del PDF es siempre un JPEG opaco
-/// (`new Jpeg`, no `Image.getInstance`), y el JPEG no tiene alfa, así que **la
-/// transparencia no es ofrecible con ningún formato de entrada** (ID-24,
-/// ADR-0012). Un PNG recortado sale con fondo blanco, que es además lo que
-/// producía el original: en `removeAlphaChannel` la línea `g.setColor(...)`
-/// está comentada y `Graphics2D` arranca en blanco. No se avisa con un cartel;
-/// la miniatura del panel de firma enseña el resultado real, sobre blanco, y el
-/// usuario ve lo que va a salir antes de firmar.
-///
-/// Se compone a mano en vez de con `to_rgb8` porque `to_rgb8` **descarta** el
-/// alfa sin componer: un píxel transparente saldría con el color que llevara
-/// debajo, casi siempre negro.
 fn flatten_onto_white(image: &image::DynamicImage) -> image::RgbImage {
     let source = image.to_rgba8();
     let mut opaque = image::RgbImage::new(source.width(), source.height());
@@ -287,7 +185,6 @@ fn flatten_onto_white(image: &image::DynamicImage) -> image::RgbImage {
     opaque
 }
 
-/// `canal * alfa + 255 * (1 - alfa)`, en enteros y con redondeo.
 fn over_white(channels: [u8; 3], alpha: u8) -> [u8; 3] {
     let alpha = u32::from(alpha);
     channels.map(|channel| {
@@ -301,7 +198,6 @@ mod tests {
     use super::*;
     use image::{Rgba, RgbaImage};
 
-    /// **Grada A**: son bytes en memoria, no hace falta ni token ni puente.
     fn png(width: u32, height: u32, pixel: Rgba<u8>) -> Vec<u8> {
         let mut image = RgbaImage::new(width, height);
         for target in image.pixels_mut() {
@@ -319,8 +215,6 @@ mod tests {
             .expect("un PNG opaco deberia normalizarse")
             .jpeg;
 
-        // Un APP2 «ICC_PROFILE» metido justo detrás del SOI: es exactamente el
-        // segmento que `com.aowagie.text.Jpeg` busca.
         let profile = b"ICC_PROFILE\0\x01\x01payload".to_vec();
         let length = u16::try_from(profile.len() + 2).expect("el perfil de prueba es pequeno");
         let mut with_profile = vec![0xFF, 0xD8, 0xFF, 0xE2];
@@ -334,9 +228,6 @@ mod tests {
     fn accepts_png_and_jpeg_as_a_runtime_capability() {
         let formats = accepted_formats();
 
-        // Esto documenta lo que hoy hay compilado; **no** es la prueba del
-        // criterio. La prueba es el bucle de debajo, que decodifica una muestra
-        // de cada formato que la lista anuncia.
         assert_eq!(formats, vec![AcceptedFormat::Png, AcceptedFormat::Jpeg]);
         for format in formats {
             let sample = match format {
@@ -347,7 +238,6 @@ mod tests {
                         .jpeg
                 }
             };
-            // La lista solo vale si el decodificador esta de verdad ahi.
             assert!(
                 normalize(&sample).is_ok(),
                 "{} figura como admitido pero no se decodifica",
@@ -365,7 +255,6 @@ mod tests {
             image::guess_format(normalized.bytes()).ok(),
             Some(ImageFormat::Jpeg)
         );
-        // Y en Base64 es literalmente el valor de `signatureRubricImage`.
         assert_eq!(
             BASE64
                 .decode(normalized.to_base64())
@@ -416,8 +305,6 @@ mod tests {
     fn a_half_transparent_pixel_lands_between_its_colour_and_white() {
         assert_eq!(over_white([0, 0, 0], 0), [255, 255, 255]);
         assert_eq!(over_white([0, 0, 0], 255), [0, 0, 0]);
-        // 127/255 de blanco: alfa 128 sobre negro da 127, no 128, porque el
-        // blanco pesa 255 - 128 = 127 partes de 255.
         assert_eq!(over_white([0, 0, 0], 128), [127, 127, 127]);
         assert_eq!(over_white([64, 128, 192], 51), [217, 230, 242]);
     }
@@ -463,21 +350,19 @@ mod tests {
         assert_eq!(decoded.height(), MAX_SIDE_PX / 4);
     }
 
-    /// Un JPEG con un APP1 `Exif` que dice `Orientation` 6 —girar 90° en el
-    /// sentido de las agujas—, que es lo que graba un móvil sujetado de lado.
     fn jpeg_rotated_by_exif(width: u32, height: u32) -> Vec<u8> {
         let plain = normalize(&png(width, height, Rgba([10, 20, 30, 255])))
             .expect("el JPEG de prueba deberia normalizarse")
             .jpeg;
 
-        let mut tiff = b"MM\x00\x2A\x00\x00\x00\x08".to_vec(); // big endian, IFD en 8
-        tiff.extend_from_slice(&1_u16.to_be_bytes()); // una sola entrada
-        tiff.extend_from_slice(&0x0112_u16.to_be_bytes()); // Orientation
-        tiff.extend_from_slice(&3_u16.to_be_bytes()); // SHORT
-        tiff.extend_from_slice(&1_u32.to_be_bytes()); // un valor
-        tiff.extend_from_slice(&6_u16.to_be_bytes()); // el valor, alineado a la izquierda
-        tiff.extend_from_slice(&0_u16.to_be_bytes()); // relleno del campo de 4 bytes
-        tiff.extend_from_slice(&0_u32.to_be_bytes()); // no hay IFD siguiente
+        let mut tiff = b"MM\x00\x2A\x00\x00\x00\x08".to_vec();
+        tiff.extend_from_slice(&1_u16.to_be_bytes());
+        tiff.extend_from_slice(&0x0112_u16.to_be_bytes());
+        tiff.extend_from_slice(&3_u16.to_be_bytes());
+        tiff.extend_from_slice(&1_u32.to_be_bytes());
+        tiff.extend_from_slice(&6_u16.to_be_bytes());
+        tiff.extend_from_slice(&0_u16.to_be_bytes());
+        tiff.extend_from_slice(&0_u32.to_be_bytes());
 
         let mut payload = b"Exif\0\0".to_vec();
         payload.extend_from_slice(&tiff);
@@ -498,18 +383,9 @@ mod tests {
         let decoded =
             image::load_from_memory(normalized.bytes()).expect("la salida deberia decodificarse");
 
-        // La orientacion 6 intercambia los lados: si no se aplicase, saldria
-        // 40x10 y la firma quedaria tumbada, congelada asi en el almacen.
         assert_eq!((decoded.width(), decoded.height()), (10, 40));
     }
 
-    /// Un PNG **diminuto** que declara unas dimensiones enormes: la bomba de
-    /// descompresión de siempre.
-    ///
-    /// Basta con la cabecera, porque el decodificador saca `total_bytes()` del
-    /// IHDR y no de los datos: son 30000x30000 en RGBA, o sea 3,35 GB de búfer
-    /// declarados por unas decenas de bytes de fichero, holgadamente dentro del
-    /// tope de entrada de 10 MB.
     fn png_declaring(width: u32, height: u32) -> Vec<u8> {
         fn crc32(bytes: &[u8]) -> u32 {
             let mut crc = 0xFFFF_FFFF_u32;
@@ -538,12 +414,8 @@ mod tests {
 
         let mut header = width.to_be_bytes().to_vec();
         header.extend_from_slice(&height.to_be_bytes());
-        header.extend_from_slice(&[8, 6, 0, 0, 0]); // 8 bits, RGBA, sin entrelazar
+        header.extend_from_slice(&[8, 6, 0, 0, 0]);
 
-        // Un IDAT con un zlib de un solo byte, en bloque almacenado: el
-        // decodificador se monta leyendo hasta el primer IDAT, y con eso ya
-        // sabe declarar `total_bytes()`. Los datos de la imagen no llegan a
-        // leerse nunca, que es justo lo que la prueba comprueba.
         let idat = [
             0x78, 0x01, 0x01, 0x01, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x01,
         ];
@@ -565,7 +437,6 @@ mod tests {
 
         let error = normalize(&bomb).expect_err("una bomba de descompresion deberia rechazarse");
 
-        // Recuperable, no un aborto del proceso: es de lo que va el ADR-0012.
         assert_eq!(error.situation(), Situation::ImageTooLarge);
         assert!(error.detail().contains("descomprimida"));
     }
