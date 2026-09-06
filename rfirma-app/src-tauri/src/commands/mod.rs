@@ -829,9 +829,14 @@ pub fn site_begin_signing(
         &session,
     )
     .map(SecretView::from)
-    .inspect_err(|failure| {
+    // El código que va al cable lo trae la negativa desde donde la situación
+    // todavía tenía tipo (ID-292): aquí sólo se separa lo que recibe la sede
+    // de lo que recibe la ventana, que es la situación entera (ID-291).
+    .map_err(|refusal| {
         consent.forget();
-        app::errand::the_signature_did_not_come_out(&live, failure.clone());
+        let failure = refusal.failure().clone();
+        app::errand::the_signature_did_not_come_out(&live, refusal);
+        failure
     })
 }
 
@@ -853,8 +858,10 @@ pub fn site_finish_signing(
 ) -> Result<(), Failure> {
     consent.forget();
 
-    let signed = app::signing::finish_for_the_site(&isolate, &session).inspect_err(|failure| {
-        app::errand::the_signature_did_not_come_out(&live, failure.clone());
+    let signed = app::signing::finish_for_the_site(&isolate, &session).map_err(|refusal| {
+        let failure = refusal.failure().clone();
+        app::errand::the_signature_did_not_come_out(&live, refusal);
+        failure
     })?;
     app::errand::signature_handed_over(&live, &signed);
     Ok(())
@@ -1110,7 +1117,74 @@ pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
 #[cfg(test)]
 mod tests {
-    use super::{pades_lower_left, PlacementOrder};
+    use super::{pades_lower_left, PendingSignature, PlacementOrder, SiteConsent};
+    use crate::commands::views::SignatureRoundView;
+    use crate::protocol::SiteFilter;
+
+    /// Lo mínimo que hace falta para tener una firma consentida.
+    fn a_pending_signature() -> PendingSignature {
+        PendingSignature {
+            document: "00000000000000000000000000000000".to_owned(),
+            filter: SiteFilter::default(),
+            from_the_site: std::collections::BTreeMap::new(),
+            unregistered_signatures: false,
+        }
+    }
+
+    /// **ID-276**: los dos consentimientos no son intercambiables, y la
+    /// asimetría es la que protege. Con una firma consentida no hay
+    /// identificación que entregar: un `site_identify` que llegara ahí falla,
+    /// que es lo correcto —la sede pidió firmar, no un certificado—.
+    #[test]
+    fn a_consented_signature_is_never_an_identity_to_hand_over() {
+        let consent = SiteConsent::default();
+
+        consent.remember_signature(a_pending_signature());
+
+        assert!(
+            consent.what_the_site_asked().is_none(),
+            "una firma consentida no entrega identidad"
+        );
+        assert!(consent.the_signature_consented().is_some());
+    }
+
+    /// Y al revés: con una identificación consentida no hay nada que firmar.
+    #[test]
+    fn a_consented_identity_is_never_a_signature_to_begin() {
+        let consent = SiteConsent::default();
+
+        consent.remember_identity(SiteFilter::default());
+
+        assert!(consent.the_signature_consented().is_none());
+        assert!(consent.what_the_site_asked().is_some());
+    }
+
+    /// Y olvidar deja las dos preguntas sin respuesta: lo que se contestó una
+    /// vez no se contesta dos (ID-275).
+    #[test]
+    fn forgetting_leaves_nothing_to_answer_with() {
+        let consent = SiteConsent::default();
+        consent.remember_signature(a_pending_signature());
+
+        consent.forget();
+
+        assert!(consent.the_signature_consented().is_none());
+        assert!(consent.what_the_site_asked().is_none());
+    }
+
+    /// La ronda cruza con el nombre del verbo que la sede usó, y no con el de
+    /// la variante del protocolo: es lo que la ventana enseña.
+    #[test]
+    fn the_round_crosses_named_as_the_site_asked_for_it() {
+        assert_eq!(
+            serde_json::to_value(SignatureRoundView::Sign).expect("la ronda cruza"),
+            serde_json::json!("sign")
+        );
+        assert_eq!(
+            serde_json::to_value(SignatureRoundView::Cosign).expect("la ronda cruza"),
+            serde_json::json!("cosign")
+        );
+    }
 
     /// El mismo ejemplo numérico del hallazgo: con `/Rotate 0` la esquina
     /// PAdES coincide con la de espacio de usuario, que es el único caso que

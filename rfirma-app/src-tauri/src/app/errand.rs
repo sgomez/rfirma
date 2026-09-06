@@ -62,7 +62,7 @@ use crate::signing::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use super::filtering::{self, FilterEngine};
 use super::frontier;
 use super::policies::{self, PolicyEngine};
-use super::signing::SiteSignature;
+use super::signing::{SiteRefusal, SiteSignature};
 
 /// **El trámite vivo del proceso**, si lo hay (ID-280).
 ///
@@ -246,9 +246,16 @@ pub struct SigningConsent {
     pub certificates: Vec<CertificateView>,
     /// Los `extraParams` de la sede, **ya expandidos** (ID-266).
     pub from_the_site: BTreeMap<String, String>,
-    /// Qué recuadro pide la sede, ya decidido (ID-282). Lo que hay que saber de
-    /// él está en [`crate::protocol::visible`]; aquí sólo viaja, porque la
-    /// prefirma no vuelve a mirar los `extraParams` para averiguarlo.
+    /// Qué recuadro pide la sede, ya decidido (ID-282).
+    ///
+    /// **La prefirma no lo lee, y no es un olvido**: el recuadro lo coloca la
+    /// sede en sus propios `extraParams` y ésos cruzan crudos al puente, así
+    /// que no hay nada que emitir desde aquí. El trabajo de este campo ya está
+    /// hecho cuando llega: lo hizo [`visible_signature_of`] **antes** del
+    /// consentimiento, al rechazar con `SAF_43` el recuadro que la sede exige
+    /// y no puede colocar, y al decidir que un `optional` sin sitio se firma
+    /// invisible. Lo que queda es el registro de esa decisión, que es lo que
+    /// las pruebas de esta unidad miran.
     pub visible: SiteVisibleSignature,
     /// Lo que la sede pide del listado, para volver a comprobarlo (ID-259).
     pub filter: SiteFilter,
@@ -719,14 +726,14 @@ pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteR
 /// **Caso de uso.** La firma no ha salido, y la sede se entera en el acto
 /// (ID-275).
 ///
-/// **Un solo código para todo este tramo, y es una decisión.** Las situaciones
-/// que la frontera distingue con código propio —el documento que no se puede
-/// firmar, la política que no se puede aplicar, el listado que se queda vacío,
-/// el almacén que no se puede abrir— se deciden **antes** del consentimiento y
-/// ya salieron con el suyo ([`consent_to_sign`]). Lo que puede fallar después
-/// es el ciclo trifásico, y desde la sede eso es una sola cosa: la firma que no
-/// ha salido, que es el `SAF_09` con el que el original despacha
-/// `ProtocolInvocationLauncherSign`.
+/// **El código lo trae la situación, no este sitio** (ID-292). Después del
+/// consentimiento se falla por muchas cosas que no son «la firma no ha
+/// salido» —el token que no está o está bloqueado, el certificado que la sede
+/// ya no acepta, la política que declaró y no se puede aplicar, el sello del
+/// ADR-0016 que no cuadra—, y todas tienen código propio en el catálogo. Quien
+/// lo decide es [`super::signing`], donde la situación todavía tiene tipo, y
+/// llega aquí dentro de [`SiteRefusal`] ya resuelto: `SAF_09` es lo que sale
+/// cuando de verdad es la firma la que no ha salido, y no el saco de todo.
 ///
 /// La precisión no se pierde por el camino: el [`Failure`] entero se queda para
 /// la ventana, que es la que puede contarle a la persona qué ha pasado (ID-29,
@@ -736,12 +743,12 @@ pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteR
 /// firma en el token no cierra el trámite porque la persona puede volver a
 /// teclearlo, igual que en el recorrido local. Lo que cierra el trámite es la
 /// prefirma que no abre el ciclo y la postfirma que no ensambla.
-pub fn the_signature_did_not_come_out(live: &LiveErrand, failure: Failure) -> SiteReply {
+pub fn the_signature_did_not_come_out(live: &LiveErrand, refusal: SiteRefusal) -> SiteReply {
     over(
         live,
         SiteReply::Refused {
-            answer: WireAnswer::refused(SafCode::SignatureFailed),
-            failure,
+            answer: WireAnswer::refused(refusal.code()),
+            failure: refusal.into_failure(),
         },
     )
 }
@@ -1373,8 +1380,8 @@ mod tests {
     }
 
     /// **ID-322 / ID-291**: la firma que no sale se le cuenta a la sede con un
-    /// código del catálogo —el mismo para todo el ciclo trifásico— y a la
-    /// ventana con la situación entera, que es la que sí puede ser precisa.
+    /// código del catálogo y a la ventana con la situación entera, que es la
+    /// que sí puede ser precisa.
     #[test]
     fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signature() {
         let live = LiveErrand::default();
@@ -1384,7 +1391,10 @@ mod tests {
 
         let reply = the_signature_did_not_come_out(
             &live,
-            Failure::new("sealMismatch", "el sello de sesion no cuadra"),
+            SiteRefusal::new(
+                SafCode::SignatureFailed,
+                Failure::new("bridgeFailed", "la prefirma no ha salido"),
+            ),
         );
 
         assert_eq!(
@@ -1394,12 +1404,38 @@ mod tests {
         );
         assert_eq!(
             reply.failure().map(|failure| failure.situation.as_str()),
-            Some("sealMismatch"),
+            Some("bridgeFailed"),
             "y la ventana se queda con la situacion entera (ID-29)"
         );
         assert!(
             live.current().is_none(),
             "la firma que no sale cierra el tramite igual que la que sale"
+        );
+    }
+
+    /// **ID-292**: y el código lo manda la situación, no el sitio donde se
+    /// falla. El sello del ADR-0016 que no cuadra es `SAF_42`, no el `SAF_09`
+    /// de la firma que no sale: la sede tiene que poder distinguir «no se ha
+    /// podido firmar» de «se firmó y no se pudo ensamblar».
+    #[test]
+    fn a_broken_session_seal_is_answered_with_its_own_code() {
+        let live = LiveErrand::default();
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        assert!(live.begin(Errand::of(a_credential(), 54001)));
+
+        the_signature_did_not_come_out(
+            &live,
+            SiteRefusal::new(
+                frontier::code_of_broken_seal(),
+                Failure::new("sealMismatch", "el sello de sesion no cuadra"),
+            ),
+        );
+
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            Some(WireAnswer::refused(SafCode::PostprocessingData).on_the_wire()),
+            "el sello roto sale con SAF_42, que es el que el catalogo tiene para el"
         );
     }
 

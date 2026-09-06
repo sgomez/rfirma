@@ -26,6 +26,8 @@
 //! un nombre de documento, un certificado ni los intentos de PIN que quedan.
 //! Lo comprueba campo a campo [`super::guards`].
 
+use crate::app::cycle::CycleError;
+use crate::app::signing::CycleFailure;
 use crate::channel::Situation as ChannelSituation;
 use crate::destination::Situation as DestinationSituation;
 use crate::ffi::BridgeError;
@@ -157,6 +159,33 @@ pub fn code_of_bridge(error: &BridgeError) -> SafCode {
 /// existe pero no se ha podido ensamblar.
 pub fn code_of_broken_seal() -> SafCode {
     SafCode::PostprocessingData
+}
+
+/// El código de un tramo trifásico que no ha salido.
+///
+/// Es la traducción del trayecto de la sede que **no** puede decidirse por el
+/// sitio donde se falla (ID-292): la prefirma y la postfirma fallan por cosas
+/// muy distintas —el token que no está o está bloqueado, el documento que no
+/// se puede firmar, la política que la sede declaró y no se puede aplicar, el
+/// sello del ADR-0016 que no cuadra— y cada una tiene ya su código aquí
+/// arriba. Colapsarlas todas en `SAF_09` dejaría a la sede sin poder decirle a
+/// la persona qué arreglar.
+///
+/// Sólo dos brazos deciden código propio, y los dos son lo mismo visto de
+/// cerca: un almacén al que no se ha podido llegar, y un puente que no está.
+pub fn code_of_cycle(failure: &CycleFailure) -> SafCode {
+    match failure {
+        CycleFailure::DocumentUnreadable(_) => SafCode::CannotReadData,
+        CycleFailure::Cycle(CycleError::Inadmissible(refusal)) => code_of_inadmissible(*refusal),
+        CycleFailure::Cycle(CycleError::Bridge(error)) => code_of_bridge(error),
+        CycleFailure::Cycle(CycleError::Token(error)) => code_of_token(error.situation()),
+        CycleFailure::Cycle(CycleError::Seal(_)) => code_of_broken_seal(),
+        // El secreto se teclea en el teclado del lector: desde la sede eso es
+        // un almacén al que no se puede acceder.
+        CycleFailure::SecretOnTheReaderKeypad(_) => SafCode::CannotAccessKeystore,
+        // Sin hilo del isolate no hay puente, y sin puente no hay firma.
+        CycleFailure::Gone(_) => SafCode::SignatureFailed,
+    }
 }
 
 /// **La cancelación de la persona**, y el único sitio del que sale (ID-293).
@@ -304,5 +333,56 @@ mod tests {
             code_of_bridge(&BridgeError::Failed("otra cosa".to_owned())),
             SafCode::SignatureFailed
         );
+    }
+
+    /// **ID-292 sobre el tramo trifásico**: lo que falla después del
+    /// consentimiento **no** es todo la misma cosa, y por eso no sale con el
+    /// mismo código. Sin esto, quien firma sin la tarjeta puesta recibe «no se
+    /// ha podido completar la firma» en vez de «no se ha podido encontrar el
+    /// almacén», y la sede no puede decirle qué arreglar.
+    #[test]
+    fn what_breaks_after_the_consent_keeps_its_own_code() {
+        for (failure, expected) in [
+            (
+                CycleFailure::Cycle(CycleError::Token(crate::pkcs11::TokenError::new(
+                    TokenSituation::TokenAbsent,
+                    "no hay tarjeta",
+                ))),
+                SafCode::CannotFindKeystore,
+            ),
+            (
+                CycleFailure::Cycle(CycleError::Bridge(BridgeError::IncompatiblePolicy(
+                    "la politica de la sede".to_owned(),
+                ))),
+                SafCode::InvalidPolicy,
+            ),
+            (
+                CycleFailure::Cycle(CycleError::Inadmissible(Inadmissible::Encrypted)),
+                SafCode::PdfWrongPassword,
+            ),
+            (
+                CycleFailure::DocumentUnreadable("ya no esta".to_owned()),
+                SafCode::CannotReadData,
+            ),
+            (
+                CycleFailure::Cycle(CycleError::Bridge(BridgeError::Failed(
+                    "lo que dijera Java".to_owned(),
+                ))),
+                SafCode::SignatureFailed,
+            ),
+        ] {
+            assert_eq!(code_of_cycle(&failure), expected, "{failure:?}");
+        }
+    }
+
+    /// Y el sello del ADR-0016 es el caso que más se distingue: la firma
+    /// **existe** y lo que no ha salido es el ensamblado, que es lo que dice
+    /// `SAF_42` y no `SAF_09`.
+    #[test]
+    fn a_broken_session_seal_is_not_a_signature_that_did_not_come_out() {
+        let broken = CycleFailure::Cycle(CycleError::Seal(crate::signing::SealMismatch));
+
+        assert_eq!(code_of_cycle(&broken), SafCode::PostprocessingData);
+        assert_eq!(code_of_cycle(&broken), code_of_broken_seal());
     }
 }

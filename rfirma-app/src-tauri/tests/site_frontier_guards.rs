@@ -213,9 +213,13 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     lines.push(
         rfirma_lib::app::errand::the_signature_did_not_come_out(
             &LiveErrand::default(),
-            Failure::from(BridgeError::Failed(format!(
-                "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con {A_CERTIFICATE}"
-            ))),
+            rfirma_lib::app::signing::SiteRefusal::new(
+                frontier::code_of_bridge(&BridgeError::Failed(String::new())),
+                Failure::from(BridgeError::Failed(format!(
+                    "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con \
+                     {A_CERTIFICATE}"
+                ))),
+            ),
         )
         .on_the_wire(),
     );
