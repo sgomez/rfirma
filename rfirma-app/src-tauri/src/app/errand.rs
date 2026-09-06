@@ -142,6 +142,12 @@ impl LiveErrand {
     /// contestar: quien la reciba después de eso no escribe nada, que es lo que
     /// hace que cancelar dos veces —o cerrar la ventana con la sede ya
     /// servida— no mande nada por el cable (ID-340).
+    ///
+    /// **Sólo hay un asa apuntada, y la última gana.** Del trámite vivo hay uno
+    /// solo, así que una segunda operación sobre él suelta el asa anterior: esa
+    /// conexión se cierra sin línea, que es exactamente lo que dice el ID-323
+    /// para un canal que se queda sin quien le conteste. Es la conducta que se
+    /// quiere, no un descuido.
     pub fn answer_through(&self, reply: ReplyHandle) {
         *super::lock(&self.reply) = Some(reply);
     }

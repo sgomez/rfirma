@@ -910,8 +910,10 @@ pub fn attend_site_operation(
         app::errand::ErrandStep::AskingToSign(_) => {}
         // Ya está contestada: `attend_operation` cierra el trámite y escribe la
         // línea por el asa (ID-322). Lo que la ventana enseñe de eso es del
-        // #394.
-        app::errand::ErrandStep::Answering(_) => {}
+        // #394. Lo que sí toca aquí es olvidar el consentimiento apuntado: sin
+        // trámite vivo no queda nada que consentir, y un `site_identify` que
+        // llegara después listaría el token para no escribir en ninguna parte.
+        app::errand::ErrandStep::Answering(_) => consent.forget(),
     }
 }
 
