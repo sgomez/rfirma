@@ -226,6 +226,10 @@ pub fn run() {
         // y la respuesta: el filtro se vuelve a comprobar antes de entregar
         // nada (ID-259) y la ventana no puede devolverlo.
         .manage(commands::SiteConsent::default())
+        // En qué momento está el trámite, para la ventana de sede que todavía
+        // no ha puesto la escucha. Sin esto el primer momento se emite al vacío
+        // y la ventana se queda en blanco.
+        .manage(commands::PendingSiteErrand::default())
         // Dónde vive la CA local y en qué perfiles NSS tiene que estar, para
         // que la ventana de sede pueda instalarla sin volver a resolver rutas.
         .manage(local_ca_trust)
@@ -301,6 +305,7 @@ pub fn run() {
             commands::site_install_certificate,
             commands::site_look_again,
             commands::install_local_ca,
+            commands::read_site_errand,
         ])
         // **El arranque, que es un adaptador y no decide nada** (ID-324, TD-70):
         // el caso de uso refresca la CA local, mira si la invocación es de sede
@@ -395,18 +400,24 @@ fn open_the_channel(
 /// redimensionable y sin la cabecera de la aplicación —la barra de título de 32
 /// px con la cruz la pinta ella misma, `docs/design/ventana-de-sede.md`—.
 ///
-/// El trámite se le publica **por un evento** y no por un sondeo (ID-338), y en
-/// cuanto la página está cargada: un evento emitido antes no lo escucha nadie,
-/// porque el frontal todavía no se ha montado. Lo que se le publica es la
-/// espera —el canal está en pie y la petición de la sede no ha llegado—; el
-/// origen y la operación llegan con ella, por el canal ya abierto.
+/// Lo que se le publica es la espera —el canal está en pie y la petición de la
+/// sede no ha llegado—; el origen y la operación llegan con ella, por el canal
+/// ya abierto.
+///
+/// **El primer momento no se emite, se guarda**: emitirlo aquí sería emitirlo
+/// al vacío, porque entre que la página carga y que el frontal tiene puesta la
+/// escucha van dos idas y vueltas por el IPC. La ventana lo pide al montarse
+/// con `read_site_errand`, igual que la invocación con documento pide el suyo
+/// con `read_invocation`. Los momentos siguientes sí llegan por el evento
+/// (ID-338), que es cuando ya hay quien los oiga.
 fn open_the_site_window(app: &tauri::AppHandle, content: &app::startup::SiteWindowContent<'_>) {
-    use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder};
+    use tauri::{Manager as _, WebviewUrl, WebviewWindowBuilder};
 
-    // La vista se compone **antes** de construir la ventana: el evento se emite
-    // desde el manejador de carga de página, que no puede prestarse nada de
-    // aquí.
-    let view = view_of(content);
+    // El momento se guarda **antes** de construir la ventana: en cuanto la
+    // página cargue, el frontal lo pedirá con `read_site_errand`, y lo que se
+    // guarda aquí tiene que estar puesto ya.
+    app.state::<commands::PendingSiteErrand>()
+        .hold(view_of(content));
 
     let built = WebviewWindowBuilder::new(
         app,
@@ -417,11 +428,6 @@ fn open_the_site_window(app: &tauri::AppHandle, content: &app::startup::SiteWind
     .inner_size(520.0, 420.0)
     .resizable(false)
     .decorations(false)
-    .on_page_load(move |window, payload| {
-        if payload.event() == tauri::webview::PageLoadEvent::Finished {
-            let _ = window.emit(commands::SITE_ERRAND, view.clone());
-        }
-    })
     .build();
 
     if let Err(error) = built {

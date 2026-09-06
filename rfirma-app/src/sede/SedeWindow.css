@@ -7,9 +7,21 @@
  * §10 del sistema de diseño. Se desplaza en vertical y nada más.
  */
 
+/*
+ * **Llena el hueco, no mide 520 x 420 px.**
+ *
+ * El tamaño de la ficha es el que se le pide a la ventana
+ * (`inner_size(520, 420)` en `lib.rs`), y el compositor no tiene por qué darlo
+ * exacto: en GNOME/Wayland, una ventana sin decoraciones sale con 26 px de
+ * inset por lado —+52 en cada eje, medido, y constante sea cual sea el tamaño
+ * pedido—. Con la caja fija, esos 52 px quedaban de `body` desnudo alrededor y
+ * el diálogo parecía un modal flotando dentro de un marco vacío.
+ *
+ * Fijar el tamaño aquí era además fijarlo dos veces: quien manda es la ventana.
+ */
 .sede-window {
-  width: 520px;
-  height: 420px;
+  width: 100%;
+  height: 100%;
   flex: none;
   display: flex;
   flex-direction: column;

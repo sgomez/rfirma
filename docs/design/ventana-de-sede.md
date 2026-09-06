@@ -41,6 +41,14 @@ principal a un trámite que es ajeno y corto.
 ni menú, ni bandeja de recientes, ni pie de destino: sugerir que hay más dentro
 invita a buscar cosas que no están. Tres regiones fijas en los cinco momentos:
 
+Los 520 × 420 son **lo que se le pide a la ventana**, no una caja fija dentro de
+ella: el diálogo llena el hueco que dé el compositor. En GNOME/Wayland una
+ventana sin decoraciones sale con 26 px de inset por lado —+52 en cada eje,
+constante sea cual sea el tamaño pedido—, y con la caja fija ese margen quedaba
+de fondo desnudo alrededor, con el diálogo flotando dentro como si fuera un
+modal de otra ventana.
+
+
 1. **Barra de título de 32 px** — el nombre `rFirma` en `.rf-body` con peso 700 y
    la cruz de cerrar a la derecha. Fondo `--rf-surface`, raya inferior
    `--rf-border-subtle`.

@@ -89,6 +89,16 @@ export interface SiteCommands {
    * (ID-338). Que no llegue nunca es la respuesta normal.
    */
   watch(onView: (view: SiteErrandView) => void): () => void;
+  /**
+   * `read_site_errand`: en qué momento está el trámite **ahora**, para la
+   * ventana que acaba de montarse (ID-338).
+   *
+   * El evento sólo lo oye quien ya estaba escuchando, y el primer momento se
+   * publica antes de que el frontal exista. Por eso ese se **pide**, igual que
+   * la invocación con documento pide la suya, y los siguientes se escuchan.
+   * `null` es la respuesta de una ventana que no es de sede.
+   */
+  readErrand(): Promise<SiteErrandView | null>;
   /** `site_identify`: la persona se identifica ante la sede. */
   identify(certificate: string): Promise<StageResult<void>>;
   /** `site_decline`: la sede recibe `CANCEL` en el acto. */
@@ -288,6 +298,15 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     watch(onChange) {
       listener = onChange;
       const stop = commands.watch((view) => void receive(view));
+
+      // La escucha se pone primero y el momento guardado se pide después: así
+      // ningún momento se cuela entre las dos cosas. Y si mientras se leía ha
+      // llegado uno por el evento, ese manda —`arrivals` lo delata—, porque el
+      // guardado es por definición el mismo o más viejo.
+      void commands.readErrand().then((view) => {
+        if (view !== null && arrivals === 0) void receive(view);
+      });
+
       return () => {
         listener = null;
         stop();
