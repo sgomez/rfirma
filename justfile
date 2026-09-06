@@ -530,8 +530,10 @@ outline path:
 # que esa guarda tiene `attributes_on_one_line`.
 #
 # Las FUENTES se descubren por ruta, igual que en esa guarda: todo `.rs` de
-# `commands/` y de cualquier `<contexto>/adapters/` bajo `src/` (RD-02), sin
-# lista de ficheros. `src` se puede apuntar a otro arbol para probar la receta.
+# `commands/` y, en el `adapters/` de cualquier contexto bajo `src/`, los
+# `tauri*.rs`, `views*.rs` y `orders*.rs` (RD-02): el adaptador de Tauri y nada
+# mas, porque un adaptador de persistencia tambien deriva Serialize y no cruza.
+# Sin lista de ficheros. `src` se puede apuntar a otro arbol para probar la receta.
 #
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 contract src=(tauri / "src"):
@@ -540,7 +542,8 @@ contract src=(tauri / "src"):
     cd "{{ src }}" || exit 1
 
     files=$(find . -type f -name '*.rs' \
-        \( -path './commands/*' -o -path './*/adapters/*' \) \
+        \( -path './commands/*' -o -path './*/adapters/tauri*' \
+           -o -path './*/adapters/views*' -o -path './*/adapters/orders*' \) \
         ! -name 'tests.rs' ! -name 'guards.rs' \
         | sed 's#^\./##' | LC_ALL=C sort)
 
@@ -685,10 +688,10 @@ contract src=(tauri / "src"):
     # Una sola escritura: asi un `head` encadenado no deja a medias la receta ni
     # la mata por senal.
     printf '%s\n%s\n\n%s\n%s%s\n\n%s\n' \
-        "ORDENES DE TAURI                          (commands/<contexto>.rs)" \
+        "ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)" \
         "  Sin el estado inyectado (State<...>, AppHandle): no cruza." \
         "$orders" \
-        $'\nTIPOS QUE CRUZAN                          (el resto de commands/)\n  Campos con el nombre que ve la ventana.\n' \
+        $'\nTIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y orders.rs)\n  Campos con el nombre que ve la ventana.\n' \
         "$crossing$lent" \
         "-- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --" \
         2>/dev/null | cat -s

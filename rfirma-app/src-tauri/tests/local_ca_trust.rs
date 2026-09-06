@@ -3,10 +3,12 @@
 use std::path::Path;
 use std::process::Command;
 
-use rfirma_lib::app::trust::refresh_local_ca_trust;
-use rfirma_lib::pkcs11::RealNssHost;
-use rfirma_lib::tls::{authority::COMMON_NAME, CaFiles, LocalCa, LocalCaStore};
-use rfirma_lib::trust::{nss::is_trusted_ssl_ca, Moment, NssTrustStores, Situation, TrustStores};
+use rfirma_lib::identity::adapters::pkcs11::RealNssHost;
+use rfirma_lib::site::adapters::nss::{is_trusted_ssl_ca, NssTrustStores};
+use rfirma_lib::site::adapters::tls::{authority::COMMON_NAME, CaFiles, LocalCa, LocalCaStore};
+use rfirma_lib::site::application::trust::refresh_local_ca_trust;
+use rfirma_lib::site::domain::trust::{Moment, Situation};
+use rfirma_lib::site::ports::TrustStores;
 
 /// Marca de confianza TLS en la salida de `certutil -L`.
 const TRUSTED_FOR_TLS_ONLY: &str = "C,,";

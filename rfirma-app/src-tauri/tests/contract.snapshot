@@ -1,4 +1,4 @@
-ORDENES DE TAURI                          (commands/<contexto>.rs)
+ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   Sin el estado inyectado (State<...>, AppHandle): no cruza.
 
         read_invocation() -> Option<DroppedDocumentView>
@@ -39,47 +39,13 @@ ORDENES DE TAURI                          (commands/<contexto>.rs)
   async install_local_ca()
         read_site_errand() -> Option<SiteErrandView>
 
-TIPOS QUE CRUZAN                          (el resto de commands/)
+TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y orders.rs)
   Campos con el nombre que ve la ventana.
 
   pub struct Failure
       situation: String
       detail: String
       attemptsLeft: Option<u32>
-
-  pub struct VisibleFieldsOrder
-      signerName: bool
-      issuer: bool
-      signedAt: bool
-      reason: bool
-
-  pub struct PlacementOrder
-      page: u32
-      pages: PageSet
-      pageCount: u32
-      mediaBox: [f64; 4]
-      rotation: i32
-      rect: [f64; 4]
-
-  pub struct SigningOrder
-      document: String
-      certificate: String
-      placement: Option<PlacementOrder>
-      fields: VisibleFieldsOrder
-      reason: String
-      signedAt: String
-      rubric: Option<String>
-      language: String
-      allowUnregisteredSignatures: bool
-
-  pub struct RubricView
-      base64: String
-      width: u32
-      height: u32
-
-  pub struct RubricChoiceView
-      rubric: Option<RubricView>
-      failure: Option<Failure>
 
   pub struct UrlHandlersView
       available: bool
@@ -93,6 +59,15 @@ TIPOS QUE CRUZAN                          (el resto de commands/)
 
   pub struct NewVersionView
       version: String
+
+  pub struct RubricView
+      base64: String
+      width: u32
+      height: u32
+
+  pub struct RubricChoiceView
+      rubric: Option<RubricView>
+      failure: Option<Failure>
 
   pub struct DestinationView
       folder: String
@@ -139,6 +114,31 @@ TIPOS QUE CRUZAN                          (el resto de commands/)
       store: String
       status: StatusView
       remembered: bool
+
+  pub struct VisibleFieldsOrder
+      signerName: bool
+      issuer: bool
+      signedAt: bool
+      reason: bool
+
+  pub struct PlacementOrder
+      page: u32
+      pages: PageSet
+      pageCount: u32
+      mediaBox: [f64; 4]
+      rotation: i32
+      rect: [f64; 4]
+
+  pub struct SigningOrder
+      document: String
+      certificate: String
+      placement: Option<PlacementOrder>
+      fields: VisibleFieldsOrder
+      reason: String
+      signedAt: String
+      rubric: Option<String>
+      language: String
+      allowUnregisteredSignatures: bool
 
   pub enum StatusView   (serde: etiqueta "kind")
       Valid { notAfter: u64 }
@@ -199,15 +199,15 @@ TIPOS QUE CRUZAN                          (el resto de commands/)
 
   PRESTADOS DE OTROS MODULOS
 
-  pub enum Badge   [memory/recents.rs]
+  pub enum Badge   [documents/adapters/recents_store.rs]
       Signed
       Unsigned
 
-  pub enum PageSet   [signing/placement.rs]
+  pub enum PageSet   [signing/domain/placement.rs]
       All
       Only(BTreeSet<u32>)
 
-  pub enum Theme   [memory/configuration.rs]
+  pub enum Theme   [signing/application/configuration_memory.rs]
       System
       Light
       Dark

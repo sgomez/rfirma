@@ -11,7 +11,7 @@ rojo.
 ## Presupuesto de lectura
 
 - **Para saber qué puede pedirle la ventana al backend, `just contract`. No abras
-  `src-tauri/src/commands/`.** Imprime las órdenes y los tipos que cruzan, con
+  `src-tauri/src/<contexto>/adapters/`.** Imprime las órdenes y los tipos que cruzan, con
   los nombres de campo que ve TypeScript (`holderName`, no `holder_name`), y sin
   el estado que Tauri inyecta y que nunca cruza. Se genera de las fuentes en cada
   ejecución, así que no puede quedarse obsoleto.
@@ -40,7 +40,7 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 110 | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 659 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `tauri.ts` | 659 | Los puertos que hablan con Tauri. La otra cara de los `adapters/tauri.rs` de cada contexto. |
 | `App.tsx` | 1290 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |

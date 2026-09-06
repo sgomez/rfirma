@@ -1,5 +1,5 @@
 use super::{situation_name, Failure};
-use crate::pkcs11::Situation;
+use crate::identity::adapters::pkcs11::Situation;
 
 #[test]
 fn every_token_situation_has_a_camel_case_name_for_the_catalogue() {
@@ -26,7 +26,7 @@ fn every_token_situation_has_a_camel_case_name_for_the_catalogue() {
 
 #[test]
 fn a_failure_keeps_the_raw_detail_of_the_token() {
-    let failure: Failure = crate::pkcs11::TokenError::new(
+    let failure: Failure = crate::identity::adapters::pkcs11::TokenError::new(
         Situation::CertificateNotFound,
         "el token no tiene ninguna clave privada etiquetada X",
     )

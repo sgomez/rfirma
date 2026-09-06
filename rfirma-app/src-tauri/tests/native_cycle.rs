@@ -2,10 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
-use rfirma_lib::ffi::{
+use rfirma_lib::signing::adapters::ffi::{
     locate, BridgeError, NativeBridge, PostSignRequest, PreSignRequest, LIBRARY_FILE,
 };
-use rfirma_lib::signing::SessionSeal;
+use rfirma_lib::signing::domain::SessionSeal;
 
 /// Un PDF mínimo en Base64 no válido para firmar.
 const NOT_A_PDF_B64: &str = "bm8gc295IHVuIFBERg==";
@@ -136,15 +136,17 @@ mod full_cycle {
     use std::process::Command;
 
     use base64::Engine;
-    use rfirma_lib::app::cycle::{self, SigningRequest};
-    use rfirma_lib::app::filtering;
-    use rfirma_lib::ffi::{BridgeError, ExpandRequest, FilterRequest, NativeBridge};
-    use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
-    use rfirma_lib::protocol::site_filter;
-    use rfirma_lib::rubric;
-    use rfirma_lib::signing::{
+    use rfirma_lib::documents::adapters::rubric;
+    use rfirma_lib::identity::adapters::pkcs11::{self, CertificateRef, TokenCertificate};
+    use rfirma_lib::signing::adapters::ffi::{
+        BridgeError, ExpandRequest, FilterRequest, NativeBridge,
+    };
+    use rfirma_lib::signing::application::cycle::{self, SigningRequest};
+    use rfirma_lib::signing::application::filtering;
+    use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
     };
+    use rfirma_lib::site::domain::protocol::site_filter;
 
     use super::bridge;
 
@@ -314,7 +316,7 @@ mod full_cycle {
         }
         pdf.extend_from_slice(
             format!(
-                "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref_at}\n%%EOF\n",
+                "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref_at}\n::EOF\n",
                 objects.len() + 1
             )
             .as_bytes(),
