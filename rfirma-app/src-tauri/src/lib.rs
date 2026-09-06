@@ -70,6 +70,12 @@ pub fn run() {
     app::invocation::make_the_command_line_readable();
 
     let paths = paths::Paths::from_environment().expect("debería saberse cuál es el HOME");
+
+    // La CA local entra en los almacenes NSS **antes de atender nada** (ID-329):
+    // sin esto ningún navegador intenta siquiera abrir el canal local con una
+    // sede.
+    refresh_local_ca_trust_at_startup(&paths);
+
     let memory = memory::Memory::at(&paths);
     let configuration = memory
         .configuration()
@@ -226,4 +232,41 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");
+}
+
+/// Refresca la confianza en la CA local en los almacenes NSS del arranque
+/// (ID-329). No devuelve nada y no interrumpe el arranque: un almacén que no
+/// se deja escribir se cuenta y se dice, pero no impide que entren los demás
+/// ni que la ventana llegue a abrirse, y lo mismo si no se encuentra ningún
+/// perfil o si el material de la CA local no se puede leer o escribir.
+fn refresh_local_ca_trust_at_startup(paths: &paths::Paths) {
+    let store = tls::LocalCaStore::of(paths);
+    let profiles = std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .map(|home| pkcs11::stores::nss_profiles(&home))
+        .unwrap_or_default();
+    let stores = trust::NssTrustStores;
+
+    let outcome = match app::trust::refresh_local_ca_trust(
+        &store,
+        &profiles,
+        &stores,
+        trust::Moment::Startup,
+    ) {
+        Ok(outcome) => outcome,
+        Err(error) => {
+            eprintln!(
+                "rfirma: no se puede refrescar la CA local ({error}); el \
+                 arranque sigue sin ella"
+            );
+            return;
+        }
+    };
+
+    // Qué decir es una regla y vive en `app::trust`, probada allí sin
+    // arrancar Tauri; aquí solo se imprime lo que decide (ver hilo del
+    // #397).
+    for line in app::trust::narrate_startup_outcome(outcome, &profiles) {
+        eprintln!("{line}");
+    }
 }

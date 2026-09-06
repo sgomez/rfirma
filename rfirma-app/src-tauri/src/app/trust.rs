@@ -30,8 +30,8 @@ use std::path::{Path, PathBuf};
 
 use crate::tls::{LocalCa, LocalCaStore, TlsError};
 use crate::trust::{
-    self, nss::is_trusted_ssl_ca, Moment, NextCa, PendingNotice, Stage, TrustError, TrustStores,
-    Work,
+    self, nss::is_trusted_ssl_ca, Moment, NextCa, Notice, PendingNotice, Stage, TrustError,
+    TrustStores, Work,
 };
 
 /// Cómo quedó el registro de la CA local, sin nada que interrumpa.
@@ -68,6 +68,53 @@ impl TrustOutcome {
     pub fn looked(&self) -> bool {
         !matches!(self.work, Work::Nothing)
     }
+}
+
+/// **Lo que el arranque tiene que decir por `stderr`**, dado cómo ha quedado
+/// el refresco de la CA local (ID-329).
+///
+/// Separada de quien llama porque decidir **qué se dice** es una regla, no
+/// cableado, y aquí sí se puede probar sin arrancar Tauri. `profiles` es la
+/// lista que se intentó recorrer: distingue «no había ningún perfil» de «los
+/// había y ninguno se dejó escribir», que [`TrustOutcome::nowhere`] por sí
+/// sola no puede —las dos frases dicen cosas distintas a quien lee el
+/// `stderr` buscando por qué la sede no abre el canal.
+pub fn narrate_startup_outcome(mut outcome: TrustOutcome, profiles: &[PathBuf]) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    if outcome.nowhere() {
+        lines.push(if profiles.is_empty() {
+            "rfirma: no se ha encontrado ningún almacén NSS; ninguna sede va \
+             a poder abrir el canal local"
+                .to_string()
+        } else {
+            "rfirma: la CA local no ha entrado en ninguno de los almacenes \
+             NSS encontrados; ninguna sede va a poder abrir el canal local"
+                .to_string()
+        });
+    }
+
+    match outcome.notice.when_the_errand_ends() {
+        Some(Notice::RestartTheBrowser) => {
+            lines.push("rfirma: se ha instalado la CA local; reinicia el navegador".to_string());
+        }
+        None => {}
+    }
+
+    if !outcome.missed.is_empty() {
+        let detalle = outcome
+            .missed
+            .iter()
+            .map(|(profile, error)| format!("{} ({error})", profile.display()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        lines.push(format!(
+            "rfirma: la CA local no ha entrado en {} almacén(es) NSS: {detalle}",
+            outcome.missed.len()
+        ));
+    }
+
+    lines
 }
 
 /// **Deja la CA local instalada y de confianza en los perfiles NSS.**
@@ -560,5 +607,96 @@ mod tests {
 
         assert!(outcome.nowhere());
         assert!(!outcome.notice.is_pending());
+    }
+
+    /// Un `TrustOutcome` a medida para probar `narrate_startup_outcome` sin
+    /// pasar por `refresh_local_ca_trust` ni por ningún doble de almacenes.
+    fn an_outcome(
+        trusted: usize,
+        missed: Vec<(PathBuf, TrustError)>,
+        notice: PendingNotice,
+    ) -> TrustOutcome {
+        TrustOutcome {
+            stage: Stage::Absent,
+            work: Work::MakeOneAndInstallIt,
+            trusted,
+            missed,
+            notice,
+        }
+    }
+
+    /// Sin ningún perfil, la única línea dice que no hay dónde instalar,
+    /// **no** que ninguno se haya dejado escribir: son dos hechos distintos.
+    #[test]
+    fn nowhere_with_no_profiles_says_there_is_nowhere_to_install() {
+        let outcome = an_outcome(0, Vec::new(), PendingNotice::none());
+
+        let lines = narrate_startup_outcome(outcome, &[]);
+
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].contains("no se ha encontrado ningún almacén"));
+    }
+
+    /// Con perfiles que existen pero que se han quedado todos sin la CA
+    /// local, la línea de `nowhere` no dice que no había ninguno: dice que no
+    /// ha entrado en los que había, y el detalle de abajo cuenta por qué.
+    #[test]
+    fn nowhere_with_profiles_that_all_refused_names_the_profiles_instead() {
+        let profile = PathBuf::from("/home/persona/.mozilla/firefox/perfil");
+        let missed = vec![(
+            profile.clone(),
+            TrustError::new(Situation::StoreUnreachable, "el perfil está bloqueado"),
+        )];
+        let outcome = an_outcome(0, missed, PendingNotice::none());
+
+        let lines = narrate_startup_outcome(outcome, std::slice::from_ref(&profile));
+
+        assert_eq!(lines.len(), 2);
+        assert!(!lines[0].contains("no se ha encontrado ningún almacén"));
+        assert!(lines[0].contains("no ha entrado en ninguno"));
+        assert!(lines[1].contains("1 almacén(es) NSS"));
+    }
+
+    /// Un almacén ya de confianza no dice nada: ni `nowhere`, ni aviso, ni
+    /// detalle.
+    #[test]
+    fn an_outcome_that_was_already_trusted_says_nothing() {
+        let outcome = an_outcome(1, Vec::new(), PendingNotice::none());
+
+        let lines = narrate_startup_outcome(outcome, &[PathBuf::from("/home/persona/perfil")]);
+
+        assert!(lines.is_empty());
+    }
+
+    /// Instalar de verdad pide reiniciar el navegador, y solo eso.
+    #[test]
+    fn installing_asks_to_restart_the_browser() {
+        let outcome = an_outcome(1, Vec::new(), PendingNotice::after_installing());
+
+        let lines = narrate_startup_outcome(outcome, &[PathBuf::from("/home/persona/perfil")]);
+
+        assert_eq!(
+            lines,
+            vec!["rfirma: se ha instalado la CA local; reinicia el navegador"]
+        );
+    }
+
+    /// Un perfil que falla junto a otro que sí entra no dispara `nowhere`
+    /// (`trusted` no es cero): solo se cuenta el que se ha quedado fuera.
+    #[test]
+    fn one_missed_profile_among_others_only_reports_the_miss() {
+        let profile = PathBuf::from("/home/persona/perfil-b");
+        let missed = vec![(
+            profile.clone(),
+            TrustError::new(Situation::StoreUnreachable, "sin permiso de escritura"),
+        )];
+        let outcome = an_outcome(1, missed, PendingNotice::after_installing());
+
+        let lines =
+            narrate_startup_outcome(outcome, &[PathBuf::from("/home/persona/perfil-a"), profile]);
+
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("reinicia el navegador"));
+        assert!(lines[1].contains("1 almacén(es) NSS"));
     }
 }
