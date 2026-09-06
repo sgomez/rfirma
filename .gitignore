@@ -50,3 +50,5 @@ __pycache__/
 # que no se copia al repositorio: lo descarga `just autoscript` a etiqueta
 # fijada y con el sha256 comprobado.
 testdata/conformance/
+
+.scratch
