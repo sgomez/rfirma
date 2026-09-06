@@ -95,7 +95,11 @@ fn install(
     p12: &Path,
     password: &str,
 ) -> Result<(), rfirma_lib::commands::Failure> {
-    certificates::install_pkcs12(installed, FilePath::from(p12), password)
+    Ok(certificates::install_pkcs12(
+        installed,
+        FilePath::from(p12),
+        password,
+    )?)
 }
 
 /// Almacenes instalados actualmente bajo `installed`.
@@ -287,7 +291,10 @@ fn a_certificate_from_somewhere_else_is_not_removed() {
     let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
         .expect_err("no viene de este directorio");
 
-    assert_eq!(failure.situation, "certificateNotFound");
+    assert_eq!(
+        rfirma_lib::commands::Failure::from(failure).situation,
+        "certificateNotFound"
+    );
     assert_eq!(
         installed_stores(elsewhere.path()).len(),
         1,

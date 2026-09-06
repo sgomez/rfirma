@@ -106,6 +106,15 @@ pub struct ViewerRect {
     pub y1: f64,
 }
 
+/// El recuadro de firma visible tal como lo recuerda la bandeja: rectángulo y páginas.
+#[derive(Clone, Debug, PartialEq)]
+pub struct VisibleBox {
+    /// Coordenadas del recuadro en espacio de usuario PDF: [x0, y0, x1, y1].
+    pub rect: [f64; 4],
+    /// Páginas en las que estampar la firma.
+    pub pages: PageSet,
+}
+
 /// El recuadro en espacio de usuario PDF, redondeado a entero.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct UserSpaceRect {
@@ -338,6 +347,43 @@ impl PageSet {
         Ok(())
     }
 }
+
+/// Por qué la colocación que pidió la ventana no vale.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PlacementError {
+    /// El destino no existe en el documento.
+    OutOfDocument(OutOfDocument),
+    /// La página está girada un ángulo que no es múltiplo de 90.
+    BadRotation(i32),
+    /// El recuadro no cabe en la página.
+    OutOfPage(OutOfPage),
+}
+
+impl From<OutOfDocument> for PlacementError {
+    fn from(out: OutOfDocument) -> Self {
+        Self::OutOfDocument(out)
+    }
+}
+
+impl From<OutOfPage> for PlacementError {
+    fn from(out: OutOfPage) -> Self {
+        Self::OutOfPage(out)
+    }
+}
+
+impl fmt::Display for PlacementError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::OutOfDocument(out) => write!(f, "{out}"),
+            Self::BadRotation(degrees) => {
+                write!(f, "una pagina no puede estar girada {degrees} grados")
+            }
+            Self::OutOfPage(out) => write!(f, "{out}"),
+        }
+    }
+}
+
+impl std::error::Error for PlacementError {}
 
 /// Literal con el que el puente nombra todas las páginas.
 const ALL_PAGES: &str = "all";

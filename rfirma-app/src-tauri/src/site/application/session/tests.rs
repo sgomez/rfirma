@@ -94,9 +94,10 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
     )
     .expect_err("ese documento no esta abierto");
 
-    assert_eq!(failure.failure().situation, "documentUnreadable");
+    let (told, code) = crate::site::adapters::frontier::told(&failure);
+    assert_eq!(told.situation, "documentUnreadable");
     assert_eq!(
-        failure.code(),
+        code,
         SafCode::CannotReadData,
         "y la sede recibe el codigo de lo que ha pasado, no uno para todo"
     );

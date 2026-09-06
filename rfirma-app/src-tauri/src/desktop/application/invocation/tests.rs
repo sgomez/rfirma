@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::*;
+use crate::commands::Failure;
 
 /// **Grada A**: una línea de órdenes y un fichero temporal. Ni token, ni
 /// puente, ni ventana.
@@ -24,7 +25,7 @@ fn a_pdf_named_in_the_command_line_opens_like_a_dropped_one() {
 
     let view = invoked_document(&invoked_with(&pdf), &opened).expect("algo trae");
 
-    assert!(view.failure.is_none(), "un PDF legible se abre y no avisa");
+    assert!(view.refused.is_none(), "un PDF legible se abre y no avisa");
     assert_eq!(view.discarded, 0);
     let document = view.document.expect("y el documento cruza ya apuntado");
     assert_eq!(document.name, "rfirma-invocation-contrato.pdf");
@@ -38,7 +39,7 @@ fn an_argument_that_is_not_a_pdf_opens_the_normal_window_and_says_so() {
 
     assert!(view.document.is_none(), "no se abre ningun documento");
     assert_eq!(
-        view.failure.expect("y se dice por que").situation,
+        Failure::from(view.refused.expect("y se dice por que")).situation,
         "notAPdf"
     );
 }

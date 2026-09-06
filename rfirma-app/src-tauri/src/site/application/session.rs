@@ -2,7 +2,6 @@
 
 use std::collections::BTreeMap;
 
-use crate::commands::Failure;
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::identity::adapters::pkcs11;
@@ -13,14 +12,44 @@ use crate::identity::domain::store::Store;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::filtering;
+use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::Refusal as Inadmissible;
 use crate::signing::ports::FilterEngine;
-use crate::site::application::frontier;
-use crate::site::domain::protocol::{SafCode, SiteFilter};
+use crate::site::domain::protocol::SiteFilter;
 
 use crate::signing::application::session::{
-    admitted_bytes_with_situation, config_for, on_the_bridge_with_situation, open_the_cycle,
-    take_signed_cycle, CycleFailure, SignedCycle, SigningSession,
+    admitted_bytes, config_for, on_the_bridge, open_the_cycle, take_signed_cycle, CycleFailure,
+    SignedCycle, SigningSession,
 };
+
+/// Por qué el trámite no sigue, antes de traducirlo a la ventana y al cable.
+#[derive(Debug)]
+pub enum SiteRefusal {
+    /// El token no ha dejado listar los certificados.
+    Token(TokenError),
+    /// El documento que manda la sede no se puede firmar.
+    Inadmissible(Inadmissible),
+    /// Las políticas de la sede no se han podido expandir.
+    Policies(BridgeError),
+    /// El filtro de la sede no se ha podido aplicar al listado.
+    CouldNotFilter(filtering::FilteringError),
+    /// La sede excluye todos los certificados que hay.
+    NoCertificateTheSiteAccepts,
+    /// El certificado elegido ya no vale para la sede.
+    NotUsableForTheSite(filtering::FilteringError),
+    /// La carpeta de paso del documento no se ha podido crear.
+    ScratchFolderMissing(String),
+    /// El documento de paso no se ha podido escribir.
+    ScratchUnwritable(String),
+    /// El ciclo de firma ha fallado.
+    Cycle(CycleFailure),
+}
+
+impl From<CycleFailure> for SiteRefusal {
+    fn from(failure: CycleFailure) -> Self {
+        Self::Cycle(failure)
+    }
+}
 
 /// Prefirma de un trámite de sede aplicando los filtros solicitados.
 pub fn begin_for_the_site<E: FilterEngine>(
@@ -32,10 +61,9 @@ pub fn begin_for_the_site<E: FilterEngine>(
     isolate: &Isolate,
     session: &SigningSession,
 ) -> Result<StoreSecret, SiteRefusal> {
-    let document = DocumentInHand::taken(opened, &order.document)
-        .map_err(|failure| SiteRefusal::new(SafCode::CannotReadData, failure))?;
-    let bytes = admitted_bytes_with_situation(document.document())?;
-    let found = pkcs11::list_certificates_across(stores)?;
+    let document = DocumentInHand::taken(opened, &order.document).map_err(CycleFailure::from)?;
+    let bytes = admitted_bytes(document.document())?;
+    let found = pkcs11::list_certificates_across(stores).map_err(CycleFailure::from)?;
     let chosen = filtering::usable_certificate_for_the_site(
         site.engine,
         site.filter,
@@ -43,9 +71,8 @@ pub fn begin_for_the_site<E: FilterEngine>(
         &order.certificate,
         listed,
     )
-    .map_err(|failure| SiteRefusal::new(SafCode::NoCertificatesInKeystore, failure))?;
-    let config = config_for(order, chosen)
-        .map_err(|failure| SiteRefusal::new(SafCode::VisibleSignature, failure))?;
+    .map_err(SiteRefusal::NotUsableForTheSite)?;
+    let config = config_for(order, chosen).map_err(CycleFailure::from)?;
     let reference = chosen.reference().clone();
     let chain = vec![chosen.der().to_vec()];
     Ok(open_the_cycle(
@@ -58,47 +85,6 @@ pub fn begin_for_the_site<E: FilterEngine>(
         isolate,
         session,
     )?)
-}
-
-/// Resultado de rechazo de un trámite de sede con código de protocolo y detalle local.
-#[derive(Debug)]
-pub struct SiteRefusal {
-    code: SafCode,
-    failure: Failure,
-}
-
-impl SiteRefusal {
-    /// Une el código del catálogo con la situación que lo decidió.
-    pub fn new(code: SafCode, failure: Failure) -> Self {
-        Self { code, failure }
-    }
-
-    /// Código que se enviará a la sede.
-    pub fn code(&self) -> SafCode {
-        self.code
-    }
-
-    /// Situación para la ventana.
-    pub fn failure(&self) -> &Failure {
-        &self.failure
-    }
-
-    /// Convierte el rechazo en el fallo para la ventana.
-    pub fn into_failure(self) -> Failure {
-        self.failure
-    }
-}
-
-impl From<CycleFailure> for SiteRefusal {
-    fn from(failure: CycleFailure) -> Self {
-        Self::new(frontier::code_of_cycle(&failure), Failure::from(failure))
-    }
-}
-
-impl From<TokenError> for SiteRefusal {
-    fn from(error: TokenError) -> Self {
-        Self::new(frontier::code_of_token(error.situation()), error.into())
-    }
 }
 
 /// Contexto de firma requerido por un trámite de sede.
@@ -130,10 +116,9 @@ pub fn finish_for_the_site(
         seal,
         signer_der,
         ..
-    } = take_signed_cycle(session)
-        .map_err(|failure| SiteRefusal::new(SafCode::SignatureFailed, failure))?;
+    } = take_signed_cycle(session)?;
 
-    let signed = on_the_bridge_with_situation(isolate, move |bridge| {
+    let signed = on_the_bridge(isolate, move |bridge| {
         cycle.postsign(bridge, &signature, &seal)
     })?;
 

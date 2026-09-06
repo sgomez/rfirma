@@ -2,10 +2,10 @@
 
 use base64::Engine as _;
 
-use crate::site::domain::protocol::{read_operation, AfirmaUrl, SiteOperation};
+use crate::site::domain::protocol::{read_operation, AfirmaUrl, SiteOperation, WireAnswer};
 
+use crate::site::adapters::frontier;
 use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
-use crate::site::application::frontier;
 
 const RESULT_SEPARATOR: char = '|';
 
@@ -35,7 +35,9 @@ impl ProtocolCodec for V4Codec {
                 )
             }
             SiteOutcome::Cancelled => frontier::cancelled().on_the_wire(),
-            SiteOutcome::Refused { answer, .. } => answer.on_the_wire(),
+            SiteOutcome::Refused(refusal) => {
+                WireAnswer::refused(frontier::code_of(refusal)).on_the_wire()
+            }
             SiteOutcome::RefusedByTheProtocol(refusal) => refusal.answer().on_the_wire(),
         }
     }

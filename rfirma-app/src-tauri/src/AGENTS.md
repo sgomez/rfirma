@@ -31,7 +31,7 @@ Lo que hoy va contra eso está declarado, arista por arista, en
 `tests/module_directions_debt.txt`. **La lista solo mengua**: una arista nueva
 fuera de ella pone la guarda en rojo, y una línea que deje de ser infracción
 también. Quién la vacía: #439 (los casos de uso hablan al puente y a los
-motores por puertos), #440 (`Failure` deja de ser un tipo de `commands/`) y #443
+motores por puertos), #440 (los casos de uso devuelven dominio y cada contexto traduce en `adapters/failures.rs`; **hecho**) y #443
 (las raíces de composición por contexto, que reparten `Environment` y `Memory`
 y sacan de `lib.rs` lo que no es cableado). Lo que no caiga en ninguno se anota
 en #443. Para regenerarla, `MODULE_DIRECTIONS_DUMP=1 cargo test --test
@@ -41,7 +41,7 @@ module_directions -- --nocapture` la vuelca línea a línea.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `commands/failure.rs` | 181 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). Pruebas en `commands/failure/tests.rs` (40). |
+| `commands/failure.rs` | 29 | `Failure`, lo que cruza a la ventana cuando algo salió mal (ADR-0009). No importa nada de ningún contexto: cada uno traduce lo suyo en su `adapters/failures.rs` (#440). Pruebas en `commands/failure/tests.rs` (11). |
 | `commands/guards.rs` | 581 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`. Solo en pruebas. |
 | `fixtures.rs` | 80 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos. Solo en pruebas. |
 | `lib.rs` | 405 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Absorbe hasta el #443 los dos repartos que desaparecieron: `Environment` —la raíz de composición— con la carpeta de destino elegida, y `Memory`, las dos memorias y sus dos soportes (ADR-0010). Empieza aquí para ver el cableado. Pruebas en `tests.rs` (59). |

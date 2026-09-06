@@ -8,8 +8,8 @@ fn a_pdf(directory: &Path, name: &str) -> std::path::PathBuf {
     path
 }
 
-fn a_placement() -> PlacementView {
-    PlacementView {
+fn a_placement() -> VisibleBox {
+    VisibleBox {
         rect: [10.0, 20.0, 210.0, 70.0],
         pages: PageSet::only_page(3),
     }

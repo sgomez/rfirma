@@ -4,12 +4,12 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use crate::commands::Failure;
-use crate::documents::adapters::views::SignedDocumentView;
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::application::{documents, recents};
+use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::told::SignedDocument;
 use crate::identity::adapters::pkcs11;
 use crate::identity::application::certificates;
 use crate::identity::application::certificates::StampedHolder;
@@ -26,8 +26,10 @@ use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, TokenSignature, NOTHING_FROM_A_SITE,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::Refusal;
 use crate::signing::domain::{
-    compose_layer2_text, AdmissibleDocument, SessionSeal, SignatureConfig, VisibleTextFields,
+    compose_layer2_text, AdmissibleDocument, PlacementError, SessionSeal, SignatureConfig,
+    VisibleTextFields,
 };
 use crate::Memory;
 
@@ -55,11 +57,11 @@ pub fn begin(
     opened: &OpenedDocuments,
     isolate: &Isolate,
     session: &SigningSession,
-) -> Result<StoreSecret, Failure> {
+) -> Result<StoreSecret, CycleFailure> {
     let document = DocumentInHand::taken(opened, &order.document)?;
     let bytes = admitted_bytes(document.document())?;
     let (config, reference, chain) = plan_signature(stores, listed, order)?;
-    Ok(open_the_cycle(
+    open_the_cycle(
         document,
         bytes,
         config,
@@ -68,20 +70,46 @@ pub fn begin(
         &NOTHING_FROM_A_SITE,
         isolate,
         session,
-    )?)
+    )
 }
 
-/// Errores tipados durante el tramo trifásico de firma.
+/// Por qué la firma local no ha salido, desde abrir el documento hasta entregarlo.
 #[derive(Debug)]
 pub enum CycleFailure {
-    /// El documento no se ha podido leer del disco.
-    DocumentUnreadable(String),
+    /// El documento no se ha podido abrir, leer ni entregar.
+    Document(DocumentError),
+    /// La colocación del recuadro no vale.
+    Placement(PlacementError),
     /// El ciclo ha fallado en alguna de sus comprobaciones.
     Cycle(CycleError),
     /// El secreto debe introducirse en el teclado del lector.
     SecretOnTheReaderKeypad(SecretOnTheReaderKeypad),
     /// El hilo del isolate no está disponible.
     Gone(IsolateGone),
+    /// No hay ninguna firma empezada.
+    NoOpenCycle,
+    /// Todavía no se ha firmado en el token.
+    NotSignedYet,
+    /// No hay ningún documento firmado en esta sesión.
+    NoSignedDocument,
+}
+
+impl From<DocumentError> for CycleFailure {
+    fn from(error: DocumentError) -> Self {
+        Self::Document(error)
+    }
+}
+
+impl From<PlacementError> for CycleFailure {
+    fn from(error: PlacementError) -> Self {
+        Self::Placement(error)
+    }
+}
+
+impl From<Refusal> for CycleFailure {
+    fn from(refusal: Refusal) -> Self {
+        Self::Cycle(CycleError::from(refusal))
+    }
 }
 
 impl From<CycleError> for CycleFailure {
@@ -127,7 +155,7 @@ pub(crate) fn open_the_cycle(
     let signer_der = chain.first().cloned().unwrap_or_default();
     let from_the_site = from_the_site.clone();
 
-    let cycle = on_the_bridge_with_situation(isolate, move |bridge| {
+    let cycle = on_the_bridge(isolate, move |bridge| {
         let document = AdmissibleDocument::check(&bytes)?;
         cycle::presign(
             bridge,
@@ -154,9 +182,9 @@ pub(crate) fn open_the_cycle(
 }
 
 /// Fase de firma en el token PKCS#11 con el PIN proporcionado (ADR-0001).
-pub fn sign_on_token(session: &SigningSession, pin: &str) -> Result<(), Failure> {
+pub fn sign_on_token(session: &SigningSession, pin: &str) -> Result<(), CycleFailure> {
     let mut open = lock(&session.open);
-    let in_flight = open.as_mut().ok_or_else(no_open_cycle)?;
+    let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
     in_flight.signature = Some(in_flight.cycle.sign_on_token(pin)?);
     Ok(())
 }
@@ -168,7 +196,7 @@ pub fn finish(
     memory: &Memory,
     configuration: &Configuration,
     documents_folder: &Path,
-) -> Result<SignedDocumentView, Failure> {
+) -> Result<SignedDocument, CycleFailure> {
     let SignedCycle {
         cycle,
         document,
@@ -197,23 +225,19 @@ pub fn finish(
 }
 
 /// Ruta del último documento firmado entregado en esta sesión (ADR-0011).
-pub fn signed_document(session: &SigningSession) -> Result<PathBuf, Failure> {
+pub fn signed_document(session: &SigningSession) -> Result<PathBuf, CycleFailure> {
     lock(&session.delivered)
         .clone()
-        .ok_or_else(no_signed_document)
+        .ok_or(CycleFailure::NoSignedDocument)
 }
 
 /// Directorio del último documento firmado entregado en esta sesión (ADR-0011).
-pub fn signed_folder(session: &SigningSession) -> Result<PathBuf, Failure> {
+pub fn signed_folder(session: &SigningSession) -> Result<PathBuf, CycleFailure> {
     let landing = signed_document(session)?;
     landing
         .parent()
         .map(Path::to_path_buf)
-        .ok_or_else(no_signed_document)
-}
-
-fn no_signed_document() -> Failure {
-    Failure::new("unknown", "no hay ningun documento firmado en esta sesion")
+        .ok_or(CycleFailure::NoSignedDocument)
 }
 
 /// Indica si hay una sesión de firma activa en curso.
@@ -255,7 +279,7 @@ fn layer2_text_of(order: &SigningOrder, holder: &StampedHolder) -> String {
 pub fn config_for(
     order: &SigningOrder,
     chosen: &TokenCertificate,
-) -> Result<SignatureConfig, Failure> {
+) -> Result<SignatureConfig, PlacementError> {
     let holder = certificates::stamped_holder_of(chosen);
     Ok(SignatureConfig {
         placement: order
@@ -274,7 +298,7 @@ pub(crate) fn plan_signature(
     stores: &[Store],
     listed: &ListedCertificates,
     order: &SigningOrder,
-) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), Failure> {
+) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), CycleFailure> {
     let found = pkcs11::list_certificates_across(stores)?;
     let chosen = certificates::usable_certificate(&found, &order.certificate, listed)?;
     Ok((
@@ -285,15 +309,9 @@ pub(crate) fn plan_signature(
 }
 
 /// Obtiene y valida los bytes de un documento para firmar.
-pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, Failure> {
-    admitted_bytes_with_situation(document).map_err(Failure::from)
-}
-
-pub(crate) fn admitted_bytes_with_situation(
-    document: &PortalDocument,
-) -> Result<Vec<u8>, CycleFailure> {
+pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, CycleFailure> {
     let bytes = std::fs::read(document.reading_path())
-        .map_err(|error| CycleFailure::DocumentUnreadable(error.to_string()))?;
+        .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
     AdmissibleDocument::check(&bytes).map_err(CycleError::from)?;
     Ok(bytes)
 }
@@ -302,19 +320,17 @@ pub(crate) fn admitted_bytes_with_situation(
 pub fn unregistered_signatures_in(
     opened: &OpenedDocuments,
     document: &str,
-) -> Result<bool, Failure> {
+) -> Result<bool, CycleFailure> {
     let in_hand = DocumentInHand::taken(opened, document)?;
     let bytes = admitted_bytes(in_hand.document())?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 
 /// Extrae el ciclo completado en el token de la sesión activa.
-pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, Failure> {
+pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, CycleFailure> {
     let mut open = lock(&session.open);
-    let in_flight = open.take().ok_or_else(no_open_cycle)?;
-    let signature = in_flight
-        .signature
-        .ok_or_else(|| Failure::new("unknown", "todavía no se ha firmado en el token"))?;
+    let in_flight = open.take().ok_or(CycleFailure::NoOpenCycle)?;
+    let signature = in_flight.signature.ok_or(CycleFailure::NotSignedYet)?;
     Ok(SignedCycle {
         cycle: in_flight.cycle,
         document: in_flight.document,
@@ -340,25 +356,12 @@ pub(crate) fn on_the_bridge<T: Send + 'static>(
     task: impl FnOnce(&crate::signing::adapters::ffi::NativeBridge) -> Result<T, cycle::CycleError>
         + Send
         + 'static,
-) -> Result<T, Failure> {
-    on_the_bridge_with_situation(isolate, task).map_err(Failure::from)
-}
-
-pub(crate) fn on_the_bridge_with_situation<T: Send + 'static>(
-    isolate: &Isolate,
-    task: impl FnOnce(&crate::signing::adapters::ffi::NativeBridge) -> Result<T, cycle::CycleError>
-        + Send
-        + 'static,
 ) -> Result<T, CycleFailure> {
     match isolate.run(task) {
         Err(gone) => Err(gone.into()),
         Ok(Err(bridge)) => Err(CycleError::from(bridge).into()),
         Ok(Ok(outcome)) => outcome.map_err(CycleFailure::from),
     }
-}
-
-fn no_open_cycle() -> Failure {
-    Failure::new("unknown", "no hay ninguna firma empezada")
 }
 
 #[cfg(test)]

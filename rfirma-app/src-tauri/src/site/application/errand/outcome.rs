@@ -2,11 +2,9 @@
 
 use std::collections::BTreeMap;
 
-use crate::commands::Failure;
-use crate::identity::adapters::views::CertificateView;
-use crate::site::domain::protocol::{
-    Refusal, SignatureRound, SiteFilter, SiteVisibleSignature, WireAnswer,
-};
+use crate::identity::domain::certificate::ListedCertificate;
+use crate::site::application::session::SiteRefusal;
+use crate::site::domain::protocol::{Refusal, SignatureRound, SiteFilter, SiteVisibleSignature};
 
 /// En qué queda la operación que llegó por el canal.
 #[derive(Debug)]
@@ -14,7 +12,7 @@ pub enum ErrandStep {
     /// Momento de consentimiento de certificado para la ventana.
     AskingForConsent {
         /// Certificados aceptados por la sede, ya cribados.
-        certificates: Vec<CertificateView>,
+        certificates: Vec<ListedCertificate>,
         /// Filtro solicitado por la sede para volver a comprobarlo (ADR-0011).
         filter: SiteFilter,
     },
@@ -72,7 +70,7 @@ pub struct SigningConsent {
     /// Modalidad de firma solicitada.
     pub round: SignatureRound,
     /// Certificados aceptados por la sede, ya cribados.
-    pub certificates: Vec<CertificateView>,
+    pub certificates: Vec<ListedCertificate>,
     /// Parámetros adicionales de la sede, ya expandidos.
     pub from_the_site: BTreeMap<String, String>,
     /// Recuadro de firma visible decidido para la petición (ADR-0019).
@@ -97,22 +95,17 @@ pub enum SiteOutcome {
     },
     /// Trámite cancelado por la persona.
     Cancelled,
-    /// Rechazo con respuesta para el cable y detalle para la ventana.
-    Refused {
-        /// Lo que sale al cable.
-        answer: WireAnswer,
-        /// Situación detallada para la ventana.
-        failure: Failure,
-    },
+    /// Rechazo con su situación, que el adaptador traduce al cable y a la ventana.
+    Refused(SiteRefusal),
     /// Rechazo directo del protocolo.
     RefusedByTheProtocol(Refusal),
 }
 
 impl SiteOutcome {
-    /// Detalle de fallo para la ventana, si lo hay.
-    pub fn failure(&self) -> Option<&Failure> {
+    /// La situación del rechazo, si lo hay.
+    pub fn refusal(&self) -> Option<&SiteRefusal> {
         match self {
-            Self::Refused { failure, .. } => Some(failure),
+            Self::Refused(refusal) => Some(refusal),
             _ => None,
         }
     }
@@ -126,7 +119,7 @@ pub enum Moment {
     /// Consentimiento de identificación con certificados cribados.
     AskingForConsent {
         /// Filas ya cribadas en orden de presentación.
-        certificates: Vec<CertificateView>,
+        certificates: Vec<ListedCertificate>,
     },
     /// Consentimiento de firma de documento con certificados cribados.
     AskingToSign {
@@ -135,7 +128,7 @@ pub enum Moment {
         /// Modalidad de firma solicitada.
         round: SignatureRound,
         /// Filas ya cribadas en orden de presentación.
-        certificates: Vec<CertificateView>,
+        certificates: Vec<ListedCertificate>,
         /// Si el documento contiene firmas que no se pueden interpretar.
         unregistered_signatures: bool,
     },

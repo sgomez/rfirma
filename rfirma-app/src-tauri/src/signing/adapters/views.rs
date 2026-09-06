@@ -3,8 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::identity::domain::certificate::CertificateStatus;
+use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
-use crate::signing::domain::PageSet;
+use crate::signing::domain::{PageSet, VisibleBox};
 
 /// Estado de un certificado tal como cruza a la ventana.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -52,6 +53,24 @@ pub struct PlacementView {
     pub pages: PageSet,
 }
 
+impl From<VisibleBox> for PlacementView {
+    fn from(placed: VisibleBox) -> Self {
+        Self {
+            rect: placed.rect,
+            pages: placed.pages,
+        }
+    }
+}
+
+impl From<PlacementView> for VisibleBox {
+    fn from(view: PlacementView) -> Self {
+        Self {
+            rect: view.rect,
+            pages: view.pages,
+        }
+    }
+}
+
 /// Configuración de la aplicación visible para la ventana (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -75,6 +94,38 @@ pub struct ConfigurationView {
     pub trust_notice_seen: bool,
     /// Si se debe consultar por el manejador de enlaces del protocolo.
     pub ask_about_url_handler: bool,
+}
+
+impl From<Preferences> for ConfigurationView {
+    fn from(preferences: Preferences) -> Self {
+        Self {
+            language: preferences.language,
+            destination: preferences.destination,
+            remember_visible_signature: preferences.remember_visible_signature,
+            remember_activity: preferences.remember_activity,
+            notify_new_version: preferences.notify_new_version,
+            theme: preferences.theme,
+            offers_the_original_folder: preferences.offers_the_original_folder,
+            trust_notice_seen: preferences.trust_notice_seen,
+            ask_about_url_handler: preferences.ask_about_url_handler,
+        }
+    }
+}
+
+impl From<ConfigurationView> for Preferences {
+    fn from(view: ConfigurationView) -> Self {
+        Self {
+            language: view.language,
+            destination: view.destination,
+            remember_visible_signature: view.remember_visible_signature,
+            remember_activity: view.remember_activity,
+            notify_new_version: view.notify_new_version,
+            theme: view.theme,
+            offers_the_original_folder: view.offers_the_original_folder,
+            trust_notice_seen: view.trust_notice_seen,
+            ask_about_url_handler: view.ask_about_url_handler,
+        }
+    }
 }
 
 #[cfg(test)]

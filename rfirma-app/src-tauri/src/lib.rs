@@ -248,7 +248,10 @@ pub fn run() {
                             return;
                         };
                         let _ = window.set_focus();
-                        let _ = window.emit(DOCUMENT_DROPPED, *view);
+                        let _ = window.emit(
+                            DOCUMENT_DROPPED,
+                            documents::adapters::views::DroppedDocumentView::from(*view),
+                        );
                     }
                     desktop::application::invocation::SecondInvocation::OpensItsOwnWindow(url) => {
                         let handle = app.clone();
@@ -307,7 +310,10 @@ pub fn run() {
             else {
                 return;
             };
-            let _ = window.emit(DOCUMENT_DROPPED, dropped);
+            let _ = window.emit(
+                DOCUMENT_DROPPED,
+                documents::adapters::views::DroppedDocumentView::from(dropped),
+            );
         })
         .invoke_handler(tauri::generate_handler![
             identity::adapters::tauri::list_certificates,

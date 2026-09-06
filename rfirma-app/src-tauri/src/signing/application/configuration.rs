@@ -2,12 +2,34 @@
 
 use std::sync::Mutex;
 
-use crate::commands::Failure;
 use crate::documents::domain::destination::DestinationFolder;
-use crate::signing::adapters::views::ConfigurationView;
-use crate::signing::application::configuration_memory::Configuration;
+use crate::signing::application::configuration_memory::{Configuration, Theme};
+use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::Language;
 use crate::Memory;
+
+/// La configuración tal como la enseña y la devuelve la ventana de preferencias (ADR-0011).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Preferences {
+    /// Idioma seleccionado.
+    pub language: String,
+    /// Nombre de la carpeta de destino.
+    pub destination: String,
+    /// Si se recuerda la última configuración de firma visible.
+    pub remember_visible_signature: bool,
+    /// Si se conserva el historial de actividad reciente.
+    pub remember_activity: bool,
+    /// Si se notifica la disponibilidad de nuevas versiones.
+    pub notify_new_version: bool,
+    /// Tema visual de la ventana.
+    pub theme: Theme,
+    /// Si la plataforma permite guardar junto al original.
+    pub offers_the_original_folder: bool,
+    /// Si se ha mostrado ya el aviso de confianza inicial.
+    pub trust_notice_seen: bool,
+    /// Si se debe consultar por el manejador de enlaces del protocolo.
+    pub ask_about_url_handler: bool,
+}
 
 /// Resuelve el idioma soportado a partir de su código o devuelve castellano por omisión.
 pub fn language_of(tag: &str) -> Language {
@@ -20,13 +42,10 @@ pub fn language_of(tag: &str) -> Language {
     }
 }
 
-/// Proyecta la configuración guardada como vista para la ventana.
-pub fn shown(
-    configuration: &Configuration,
-    documents_folder: &std::path::Path,
-) -> ConfigurationView {
+/// Proyecta la configuración guardada como preferencias para la ventana.
+pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) -> Preferences {
     let folder = crate::chosen_folder(configuration, documents_folder.to_path_buf());
-    ConfigurationView {
+    Preferences {
         language: configuration.language.tag().to_owned(),
         destination: folder.name().to_owned(),
         remember_visible_signature: configuration.remember_visible_signature,
@@ -44,8 +63,8 @@ pub fn shown(
 pub fn write(
     memory: &Memory,
     live: &Mutex<Configuration>,
-    chosen: &ConfigurationView,
-) -> Result<(), Failure> {
+    chosen: &Preferences,
+) -> Result<(), MemoryError> {
     let mut live = crate::lock(live);
     let next = merged(&live, chosen);
     memory.remember_configuration(&next)?;
@@ -58,7 +77,7 @@ pub fn choose_destination(
     memory: &Memory,
     live: &Mutex<Configuration>,
     folder: DestinationFolder,
-) -> Result<String, Failure> {
+) -> Result<String, MemoryError> {
     let mut live = crate::lock(live);
     let next = Configuration {
         destination: Some(folder),
@@ -75,13 +94,12 @@ pub fn choose_destination(
 }
 
 /// Borra la actividad acumulada conservando las preferencias (ADR-0010).
-pub fn forget_activity(memory: &Memory) -> Result<(), Failure> {
-    memory.forget_activity()?;
-    Ok(())
+pub fn forget_activity(memory: &Memory) -> Result<(), MemoryError> {
+    memory.forget_activity()
 }
 
 /// Combina la configuración viva con los campos modificables desde la ventana.
-pub fn merged(live: &Configuration, chosen: &ConfigurationView) -> Configuration {
+pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
     Configuration {
         language: language_of(&chosen.language),
         destination: live.destination.clone(),

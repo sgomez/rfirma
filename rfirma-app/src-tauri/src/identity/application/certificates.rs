@@ -4,22 +4,37 @@ use std::path::Path;
 
 use tauri_plugin_dialog::FilePath;
 
-use crate::commands::Failure;
 use crate::identity::adapters::pkcs11;
-use crate::identity::adapters::views::{store_name, CertificateView};
 use crate::identity::application::listed::ListedCertificates;
-use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
+use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
 use crate::signing::application::configuration_memory::Configuration;
+use crate::signing::domain::memory_error::{MemoryError, Situation as StoreSituation};
 use crate::Memory;
 
-/// Certificados de los tokens conectados clasificados como filas para la vista (ADR-0011).
+/// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum InstallError {
+    /// El token o el fichero han dicho que no.
+    Token(TokenError),
+    /// El almacén del `.p12` no se ha podido crear ni quitar del disco.
+    Store(MemoryError),
+}
+
+impl From<TokenError> for InstallError {
+    fn from(error: TokenError) -> Self {
+        Self::Token(error)
+    }
+}
+
+/// Certificados de los tokens conectados, ya como filas con su asa (ADR-0011).
 pub fn listed_rows(
     stores: &[Store],
     installed_dir: &Path,
     listed: &ListedCertificates,
     memory: &Memory,
-) -> Result<Vec<CertificateView>, Failure> {
+) -> Result<Vec<ListedCertificate>, TokenError> {
     let found = pkcs11::list_certificates_across(stores)?;
     Ok(rows_of(found, installed_dir, listed, memory))
 }
@@ -30,7 +45,7 @@ pub fn rows_of(
     installed_dir: &Path,
     listed: &ListedCertificates,
     memory: &Memory,
-) -> Vec<CertificateView> {
+) -> Vec<ListedCertificate> {
     let remembered = remembered_certificate(memory);
     let handles = listed.replace(
         found
@@ -42,15 +57,14 @@ pub fn rows_of(
         .zip(handles)
         .map(|(certificate, id)| {
             let (holder_name, id_number) = holder_of(certificate.subject().as_deref());
-            CertificateView {
+            ListedCertificate {
                 id,
                 label: certificate.reference().label().to_owned(),
                 holder_name,
                 id_number,
                 issuer: issuer_of(certificate.issuer().as_deref()),
-                store: store_name(certificate.reference().store().class_under(installed_dir))
-                    .to_owned(),
-                status: certificate.status().into(),
+                store: certificate.reference().store().class_under(installed_dir),
+                status: certificate.status(),
                 remembered: remembered
                     .as_ref()
                     .is_some_and(|one| one.is_the_same_as(certificate.reference())),
@@ -67,26 +81,26 @@ pub fn install_pkcs12(
     installed_dir: &Path,
     chosen: FilePath,
     password: &str,
-) -> Result<(), Failure> {
+) -> Result<(), InstallError> {
     let softoken = pkcs11::stores::softoken().ok_or_else(|| {
-        Failure::new(
-            "moduleNotFound",
+        TokenError::new(
+            Situation::ModuleNotFound,
             "no esta libsoftokn3.so en ninguna de las rutas conocidas",
         )
     })?;
 
     let source = chosen
         .into_path()
-        .map_err(|error| Failure::new("pkcs12Unreadable", error.to_string()))?;
+        .map_err(|error| TokenError::new(Situation::Pkcs12Unreadable, error.to_string()))?;
     let pkcs12 = std::fs::read(&source)
-        .map_err(|error| Failure::new("pkcs12Unreadable", error.to_string()))?;
+        .map_err(|error| TokenError::new(Situation::Pkcs12Unreadable, error.to_string()))?;
 
     let directory = installed_dir.join(crate::documents::domain::handles::mint());
     std::fs::create_dir_all(&directory).map_err(|error| {
-        Failure::new(
-            "settingsUnwritable",
+        InstallError::Store(MemoryError::new(
+            StoreSituation::Unwritable,
             format!("no se ha podido crear el almacen del .p12: {error}"),
-        )
+        ))
     })?;
     let _ = crate::desktop::adapters::paths::restrict_to_owner(&directory);
 
@@ -145,28 +159,30 @@ pub fn remove_installed(
     installed_dir: &Path,
     handle: &str,
     listed: &ListedCertificates,
-) -> Result<(), Failure> {
-    let reference = listed.get(handle).ok_or_else(|| {
-        Failure::new(
-            "certificateNotFound",
-            "el certificado elegido no es de la ultima busqueda",
-        )
-    })?;
+) -> Result<(), InstallError> {
+    let reference = listed.get(handle).ok_or_else(not_from_the_last_listing)?;
     let directory = reference
         .store()
         .installed_directory_under(installed_dir)
         .ok_or_else(|| {
-            Failure::new(
-                "certificateNotFound",
+            TokenError::new(
+                Situation::CertificateNotFound,
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
     std::fs::remove_dir_all(&directory).map_err(|error| {
-        Failure::new(
-            "settingsUnwritable",
+        InstallError::Store(MemoryError::new(
+            StoreSituation::Unwritable,
             format!("no se ha podido quitar el almacen del .p12: {error}"),
-        )
+        ))
     })
+}
+
+fn not_from_the_last_listing() -> TokenError {
+    TokenError::new(
+        Situation::CertificateNotFound,
+        "el certificado elegido no es de la ultima busqueda",
+    )
 }
 
 /// El certificado recordado de la sesión anterior si existe en el estado.
@@ -196,7 +212,7 @@ pub fn stamped_holder_named(
     handle: &str,
     stores: &[Store],
     listed: &ListedCertificates,
-) -> Result<StampedHolder, Failure> {
+) -> Result<StampedHolder, TokenError> {
     let certificates = pkcs11::list_certificates_across(stores)?;
     let chosen = certificate_behind(&certificates, handle, listed)?;
     Ok(stamped_holder_of(chosen))
@@ -207,19 +223,14 @@ pub fn certificate_behind<'a>(
     certificates: &'a [TokenCertificate],
     handle: &str,
     listed: &ListedCertificates,
-) -> Result<&'a TokenCertificate, Failure> {
-    let wanted = listed.get(handle).ok_or_else(|| {
-        Failure::new(
-            "certificateNotFound",
-            "el certificado elegido no es de la ultima busqueda",
-        )
-    })?;
+) -> Result<&'a TokenCertificate, TokenError> {
+    let wanted = listed.get(handle).ok_or_else(not_from_the_last_listing)?;
     certificates
         .iter()
         .find(|certificate| certificate.reference() == &wanted)
         .ok_or_else(|| {
-            Failure::new(
-                "certificateNotFound",
+            TokenError::new(
+                Situation::CertificateNotFound,
                 format!("el token ya no tiene {}", wanted.label()),
             )
         })
@@ -230,12 +241,12 @@ pub fn usable_certificate<'a>(
     certificates: &'a [TokenCertificate],
     handle: &str,
     listed: &ListedCertificates,
-) -> Result<&'a TokenCertificate, Failure> {
+) -> Result<&'a TokenCertificate, TokenError> {
     let chosen = certificate_behind(certificates, handle, listed)?;
     let status = chosen.status();
     if !status.is_usable() {
-        return Err(Failure::new(
-            "certificateNotFound",
+        return Err(TokenError::new(
+            Situation::CertificateNotFound,
             format!("{}: {status:?}", chosen.reference().label()),
         ));
     }

@@ -61,5 +61,40 @@ impl fmt::Display for DestinationError {
 
 impl std::error::Error for DestinationError {}
 
+/// Por qué un documento no se ha podido abrir, leer o entregar.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DocumentError {
+    /// El documento no está abierto o no se ha podido leer.
+    Unreadable(String),
+    /// La carpeta de destino no vale (ADR-0011).
+    Destination(DestinationError),
+    /// La carpeta de destino no ha dejado escribir el fichero firmado.
+    FolderUnwritable(String),
+}
+
+impl DocumentError {
+    /// El documento cuyo identificador ya no está abierto en esta sesión.
+    pub fn no_longer_open() -> Self {
+        Self::Unreadable("el documento ya no esta abierto en esta sesion".to_owned())
+    }
+}
+
+impl From<DestinationError> for DocumentError {
+    fn from(error: DestinationError) -> Self {
+        Self::Destination(error)
+    }
+}
+
+impl fmt::Display for DocumentError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Unreadable(detail) | Self::FolderUnwritable(detail) => f.write_str(detail),
+            Self::Destination(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for DocumentError {}
+
 #[cfg(test)]
 mod tests;

@@ -2,6 +2,7 @@ use super::{
     admitted_bytes, begin, cancel, config_for, finish, is_live, sign_on_token, signed_document,
     signed_folder, take_signed_cycle, SigningSession,
 };
+use crate::commands::Failure;
 use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::fixtures::{a_certificate, a_memory, an_order};
@@ -195,7 +196,7 @@ fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
 
     let failure = config_for(&order, &a_certificate("FIRMA", &[])).expect_err("se sale");
 
-    assert_eq!(failure.situation, "boxOutOfPage");
+    assert_eq!(Failure::from(failure).situation, "boxOutOfPage");
 }
 
 #[test]
@@ -225,7 +226,7 @@ fn there_is_nothing_to_finish_when_no_cycle_was_started() {
         panic!("no hay ciclo abierto que llevarse");
     };
 
-    assert_eq!(failure.situation, "unknown");
+    assert_eq!(Failure::from(failure).situation, "unknown");
 }
 
 #[test]
@@ -235,7 +236,7 @@ fn there_is_nothing_to_open_before_the_first_signature_of_the_session() {
     let Err(failure) = signed_document(&session) else {
         panic!("no se ha firmado nada todavia");
     };
-    assert_eq!(failure.situation, "unknown");
+    assert_eq!(Failure::from(failure).situation, "unknown");
     assert!(signed_folder(&session).is_err());
 }
 
@@ -293,7 +294,7 @@ fn what_is_not_a_pdf_is_refused_before_the_pin() {
     let failure =
         admitted_bytes(&PortalDocument::opened(other)).expect_err("no es un PDF que firmar");
 
-    assert_eq!(failure.situation, "notAPdf");
+    assert_eq!(Failure::from(failure).situation, "notAPdf");
 }
 
 #[test]
@@ -303,7 +304,7 @@ fn a_document_that_is_gone_is_told_apart_from_one_that_is_not_a_pdf() {
     let failure = admitted_bytes(&PortalDocument::opened(home.path().join("no-esta.pdf")))
         .expect_err("no esta");
 
-    assert_eq!(failure.situation, "documentUnreadable");
+    assert_eq!(Failure::from(failure).situation, "documentUnreadable");
 }
 
 #[test]
@@ -323,7 +324,7 @@ fn a_signature_cannot_begin_on_a_document_that_is_not_open() {
     )
     .expect_err("ese documento no esta abierto");
 
-    assert_eq!(failure.situation, "documentUnreadable");
+    assert_eq!(Failure::from(failure).situation, "documentUnreadable");
 }
 
 #[test]
@@ -339,7 +340,7 @@ fn the_postsign_stops_before_the_bridge_when_no_cycle_was_started() {
     )
     .expect_err("no hay ciclo abierto");
 
-    assert_eq!(failure.situation, "unknown");
+    assert_eq!(Failure::from(failure).situation, "unknown");
 }
 
 #[test]
@@ -347,7 +348,7 @@ fn the_pin_has_nothing_to_sign_when_no_cycle_was_started() {
     let failure =
         sign_on_token(&SigningSession::default(), "1234").expect_err("no hay ciclo abierto");
 
-    assert_eq!(failure.situation, "unknown");
+    assert_eq!(Failure::from(failure).situation, "unknown");
 }
 
 #[test]

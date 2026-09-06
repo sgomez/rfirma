@@ -6,6 +6,7 @@ use crate::site::application::errand::{Moment, NoCertificate, NoChannel};
 use crate::site::domain::protocol::{Refusal, RefusalSituation, SignatureRound};
 
 use crate::identity::adapters::views::CertificateView;
+use crate::identity::domain::certificate::ListedCertificate;
 
 /// Trámite de sede tal como lo recibe su ventana.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -56,10 +57,12 @@ impl SiteErrandView {
     }
 
     /// Estado de solicitud de consentimiento para identificación.
-    pub fn asking_for_consent(certificates: Vec<CertificateView>) -> Self {
+    pub fn asking_for_consent(certificates: &[ListedCertificate]) -> Self {
         Self {
             origin: None,
-            stage: SiteStageView::AskingForConsent { certificates },
+            stage: SiteStageView::AskingForConsent {
+                certificates: rows_of(certificates),
+            },
         }
     }
 
@@ -67,7 +70,7 @@ impl SiteErrandView {
     pub fn asking_to_sign(
         document: &str,
         round: SignatureRound,
-        certificates: &[CertificateView],
+        certificates: &[ListedCertificate],
         unregistered_signatures: bool,
     ) -> Self {
         Self {
@@ -75,20 +78,26 @@ impl SiteErrandView {
             stage: SiteStageView::AskingToSign {
                 document: document.to_owned(),
                 round: round.into(),
-                certificates: certificates.to_vec(),
+                certificates: rows_of(certificates),
                 unregistered_signatures,
             },
         }
     }
 }
 
+fn rows_of(certificates: &[ListedCertificate]) -> Vec<CertificateView> {
+    certificates
+        .iter()
+        .cloned()
+        .map(CertificateView::from)
+        .collect()
+}
+
 impl From<&Moment> for SiteErrandView {
     fn from(moment: &Moment) -> Self {
         match moment {
             Moment::Waiting => Self::waiting(),
-            Moment::AskingForConsent { certificates } => {
-                Self::asking_for_consent(certificates.clone())
-            }
+            Moment::AskingForConsent { certificates } => Self::asking_for_consent(certificates),
             Moment::AskingToSign {
                 document,
                 round,

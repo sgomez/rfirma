@@ -2,7 +2,11 @@
 
 use serde::Serialize;
 
+use crate::documents::application::recents::RecentRow;
 use crate::documents::domain::recents::Badge;
+use crate::documents::domain::told::{
+    Destination, DroppedDocument, OpenedDocument, SignedDocument,
+};
 
 use crate::commands::Failure;
 use crate::signing::adapters::views::PlacementView;
@@ -19,6 +23,16 @@ pub struct DestinationView {
     pub writable: bool,
 }
 
+impl From<Destination> for DestinationView {
+    fn from(destination: Destination) -> Self {
+        Self {
+            folder: destination.folder,
+            name: destination.name,
+            writable: destination.writable,
+        }
+    }
+}
+
 /// Documento firmado resultante (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +43,16 @@ pub struct SignedDocumentView {
     pub folder: String,
     /// Tamaño en bytes del fichero escrito.
     pub size_bytes: u64,
+}
+
+impl From<SignedDocument> for SignedDocumentView {
+    fn from(signed: SignedDocument) -> Self {
+        Self {
+            name: signed.name,
+            folder: signed.folder,
+            size_bytes: signed.size_bytes,
+        }
+    }
 }
 
 /// Documento abierto para su visualización o firma (ADR-0011).
@@ -45,6 +69,17 @@ pub struct OpenedDocumentView {
     pub path: Option<String>,
 }
 
+impl From<OpenedDocument> for OpenedDocumentView {
+    fn from(opened: OpenedDocument) -> Self {
+        Self {
+            id: opened.id,
+            name: opened.name,
+            modified: opened.modified,
+            path: opened.path,
+        }
+    }
+}
+
 /// Resultado de soltar ficheros sobre la ventana (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,6 +92,21 @@ pub struct DroppedDocumentView {
     pub failure: Option<Failure>,
     /// Número de ficheros descartados que no se incorporaron.
     pub discarded: usize,
+}
+
+impl From<DroppedDocument> for DroppedDocumentView {
+    fn from(dropped: DroppedDocument) -> Self {
+        Self {
+            document: dropped.document.map(OpenedDocumentView::from),
+            also_entering: dropped
+                .also_entering
+                .into_iter()
+                .map(OpenedDocumentView::from)
+                .collect(),
+            failure: dropped.refused.map(Failure::from),
+            discarded: dropped.discarded,
+        }
+    }
 }
 
 /// Entrada de la lista de documentos recientes (ADR-0011).
@@ -77,6 +127,20 @@ pub struct RecentDocumentView {
     pub available: bool,
     /// Posición del recuadro guardada para este documento.
     pub placement: Option<PlacementView>,
+}
+
+impl From<RecentRow> for RecentDocumentView {
+    fn from(row: RecentRow) -> Self {
+        Self {
+            id: row.id,
+            name: row.name,
+            badge: row.badge,
+            modified: row.modified,
+            last_used: row.last_used,
+            available: row.available,
+            placement: row.placement.map(PlacementView::from),
+        }
+    }
 }
 
 #[cfg(test)]

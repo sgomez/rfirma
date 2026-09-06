@@ -25,8 +25,8 @@ pub fn close_site_window(app: tauri::AppHandle) {
 pub fn site_identify(certificate: String, app_handle: tauri::AppHandle) -> Result<(), Failure> {
     site_window::with_the_desk(&app_handle, |desk, live| {
         crate::site::application::errand::consent(desk, &certificate, live)
-    })
-    .map(|_| ())
+    })?;
+    Ok(())
 }
 
 /// Cancela el trámite ante la sede.
@@ -41,9 +41,10 @@ pub fn site_begin_signing(
     certificate: String,
     app_handle: tauri::AppHandle,
 ) -> Result<SecretView, Failure> {
-    match site_window::with_the_desk(&app_handle, |desk, live| {
+    let consented = site_window::with_the_desk(&app_handle, |desk, live| {
         crate::site::application::errand::consent(desk, &certificate, live)
-    })? {
+    })?;
+    match consented {
         crate::site::application::errand::Consented::SigningWith(secret) => {
             Ok(SecretView::from(secret))
         }
@@ -57,7 +58,10 @@ pub fn site_begin_signing(
 /// Postfirma del trámite de sede y entrega del resultado a la sede.
 #[tauri::command(async)]
 pub fn site_finish_signing(app_handle: tauri::AppHandle) -> Result<(), Failure> {
-    site_window::with_the_desk(&app_handle, crate::site::application::errand::finish)
+    Ok(site_window::with_the_desk(
+        &app_handle,
+        crate::site::application::errand::finish,
+    )?)
 }
 
 /// Abre el diálogo para instalar un certificado desde la ventana de sede.

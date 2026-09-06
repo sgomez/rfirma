@@ -212,13 +212,19 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Crossing> {
+    use crate::commands::Failure;
     use crate::documents::adapters::recents_store::RecentDocument;
+    use crate::documents::adapters::views::{
+        DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
+        SignedDocumentView,
+    };
     use crate::documents::application::opened::OpenedDocuments;
     use crate::documents::application::{documents, recents};
     use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
     use crate::documents::domain::portal::PortalDocument;
     use crate::documents::domain::recents::Badge;
     use crate::fixtures::a_memory;
+    use crate::signing::adapters::views::ConfigurationView;
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;
     use crate::signing::application::state::State;
@@ -237,22 +243,26 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         ..Configuration::default()
     };
 
-    let opened_view = documents::note_opened(
+    let opened_view = OpenedDocumentView::from(documents::note_opened(
         &memory,
         &configuration,
         &opened,
         std::path::PathBuf::from(A_PORTAL_HANDLE),
+    ));
+    let failure = Failure::from(
+        documents::bytes_of(&opened, &opened_view.id)
+            .expect_err("el enlace del portal no existe fuera del sandbox"),
     );
-    let failure = documents::bytes_of(&opened, &opened_view.id)
-        .expect_err("el enlace del portal no existe fuera del sandbox");
-    let dropped = documents::dropped_document(
-        &[
-            std::path::PathBuf::from(A_PORTAL_HANDLE),
-            std::path::PathBuf::from(ANOTHER_PORTAL_HANDLE),
-        ],
-        &opened,
-    )
-    .expect("se ha soltado un fichero");
+    let dropped = DroppedDocumentView::from(
+        documents::dropped_document(
+            &[
+                std::path::PathBuf::from(A_PORTAL_HANDLE),
+                std::path::PathBuf::from(ANOTHER_PORTAL_HANDLE),
+            ],
+            &opened,
+        )
+        .expect("se ha soltado un fichero"),
+    );
     let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
     let refused_rubric = crate::documents::application::rubric::choose(
         &crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg")),
@@ -266,15 +276,19 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         Crossing::of("DroppedDocumentView", &dropped),
         Crossing::of(
             "DestinationView",
-            &documents::where_it_lands(&configuration, home.path(), &document),
+            &DestinationView::from(documents::where_it_lands(
+                &configuration,
+                home.path(),
+                &document,
+            )),
         ),
         Crossing::of(
             "SignedDocumentView",
-            &documents::told_as(document.reading_path(), &folder, 42),
+            &SignedDocumentView::from(documents::told_as(document.reading_path(), &folder, 42)),
         ),
         Crossing::of(
             "ConfigurationView",
-            &configuration::shown(&configuration, home.path()),
+            &ConfigurationView::from(configuration::shown(&configuration, home.path())),
         ),
         Crossing::of(
             "RubricChoiceView",
@@ -296,7 +310,10 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         .remember_state(&configuration, &state)
         .expect("deberia guardarse el estado");
     for row in recents::listed_rows(&memory, &opened) {
-        crossings.push(Crossing::of("RecentDocumentView", &row));
+        crossings.push(Crossing::of(
+            "RecentDocumentView",
+            &RecentDocumentView::from(row),
+        ));
     }
 
     crossings

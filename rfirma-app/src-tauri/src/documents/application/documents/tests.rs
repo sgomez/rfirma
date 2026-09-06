@@ -3,6 +3,7 @@ use super::{
     note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder, starting_folder,
     told_as, where_it_lands,
 };
+use crate::commands::Failure;
 use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::destination::CheckedFolder;
@@ -43,7 +44,7 @@ fn what_the_dialog_granted_is_noted_and_read_back_by_its_identifier() {
 fn a_document_that_is_not_open_in_this_session_cannot_be_read() {
     let failure = bytes_of(&OpenedDocuments::new(), "0").expect_err("no esta abierto");
 
-    assert_eq!(failure.situation, "documentUnreadable");
+    assert_eq!(Failure::from(failure).situation, "documentUnreadable");
 }
 
 #[test]
@@ -78,7 +79,7 @@ fn a_dropped_pdf_crosses_as_an_opened_document() {
     let document = view.document.expect("y se ha abierto");
     assert_eq!(document.name, "rfirma-commands-soltado.pdf");
     assert_eq!(document.id.len(), 32);
-    assert_eq!(view.failure, None);
+    assert_eq!(view.refused, None);
     assert_eq!(view.discarded, 0);
     assert!(view.also_entering.is_empty());
     assert_eq!(opened.len(), 1);
@@ -93,7 +94,7 @@ fn dropping_something_that_is_not_a_pdf_opens_nothing_and_says_so() {
 
     assert!(view.document.is_none());
     assert_eq!(
-        view.failure.map(|failure| failure.situation),
+        view.refused.map(|refused| Failure::from(refused).situation),
         Some("notAPdf".to_owned())
     );
     assert!(opened.is_empty(), "no se apunta lo que no se abre");
@@ -106,7 +107,7 @@ fn a_dropped_file_the_sandbox_cannot_read_names_its_own_situation() {
 
     let view = dropped_document(&[unreachable], &opened).expect("algo se ha soltado");
 
-    let failure = view.failure.expect("se cuenta como un fallo con nombre");
+    let failure = Failure::from(view.refused.expect("se cuenta como un fallo con nombre"));
     assert_eq!(failure.situation, "droppedFileUnreadable");
     assert!(!failure.detail.is_empty());
 }
@@ -445,7 +446,7 @@ fn a_destination_folder_that_is_not_there_is_told_and_never_created() {
     let failure =
         deliver(&Configuration::default(), &missing, &document, b"x").expect_err("no esta");
 
-    assert_eq!(failure.situation, "folderMissing");
+    assert_eq!(Failure::from(failure).situation, "folderMissing");
     assert!(!missing.exists(), "la carpeta se ha creado, y no debía");
 }
 
