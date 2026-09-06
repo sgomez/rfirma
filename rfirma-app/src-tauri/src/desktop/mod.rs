@@ -1,79 +1,32 @@
-//! **El canal de distribución** en el que corre este proceso, y **quién dice
-//! el escritorio que atiende** `afirma://` (ID-237, ID-240, ID-242, #340).
-//!
-//! Las dos preguntas van juntas porque la segunda solo tiene sentido a la luz
-//! de la primera. Fuera del sandbox —`.deb` y `.rpm`— GIO sabe leer el
-//! `mimeinfo.cache` del sistema y contesta de verdad. Dentro del flatpak no
-//! hay ninguna pregunta que valga la pena hacer (ID-240), medido:
-//!
-//! - GIO contesta `None`/lista vacía a todos los esquemas, porque el sandbox
-//!   no ve el `mimeapps.list` del anfitrión.
-//! - No existe ningún portal para manejadores predeterminados:
-//!   `OpenURI.SchemeSupported` dice *si hay alguien*, nunca *quién*.
-//! - `xdg-mime` no está en el runtime.
-//! - `set_as_default_for_type()` **devuelve `true` mintiendo**.
-//!
-//! Por eso este módulo nunca intenta ninguna de esas cuatro cosas dentro del
-//! sandbox: la respuesta correcta ahí es «no se puede saber», no un intento
-//! que parece funcionar y no funciona. La frase fija que se enseña en ese caso
-//! es cosa de Preferencias (#364); aquí solo se detecta y se lee.
-//!
-//! **Registro pasivo (ID-237):** lo único que se escribe aquí es el
-//! `mimeapps.list` **de la persona**, y solo cuando ella elige manejador. No
-//! hay ningún fichero de este repositorio que escriba en un `mimeapps.list`
-//! del sistema, ni que toque el orden alfabético del `mimeinfo.cache`, ni que
-//! copie el truco de Firefox de AutoFirma. El registro de la aplicación sigue
-//! siendo pasivo: el `MimeType=x-scheme-handler/afirma;` declarado en los
-//! lanzadores de `packaging/`, que el escritorio recoge por su cuenta.
-//!
-//! | Pieza | Qué es |
-//! |---|---|
-//! | este fichero | El canal, y quién dice el escritorio que atiende un esquema. |
-//! | [`choice`] | Elegir manejador: el `default` explícito en el `mimeapps.list` de la persona (ID-238, ID-241). |
-//! | [`error`] | Las situaciones de leer y escribir esa elección (ADR-0009). |
+//! Canal de distribución y consulta de manejadores del esquema afirma:// en el escritorio (ADR-0015).
 
 pub mod choice;
 pub mod error;
 
 use std::path::Path;
 
-/// Dónde se apunta a sí mismo un flatpak: el fichero que el propio `bwrap`
-/// deja dentro del sandbox. Mismo criterio que
-/// [`crate::destination::the_original_folder_can_be_offered`], preguntado
-/// aquí por una razón distinta.
+/// Fichero testigo que indica ejecución dentro de un contenedor flatpak.
 const SANDBOX_MARKER: &str = "/.flatpak-info";
 
-/// El fichero `.desktop` con el que rFirma queda registrada en `.deb` y
-/// `.rpm`, que es el que hay que escribir para que el escritorio la llame.
-///
-/// No se pregunta al escritorio «cuál de estos eres tú»: GIO da los
-/// manejadores del esquema y ninguno viene marcado como propio. Sale del
-/// `productName` de `tauri.conf.json`, que es de donde el *bundler* saca el
-/// nombre del lanzador, y una prueba de este módulo lo cuadra con él para que
-/// renombrar el producto no deje esta constante mintiendo.
-///
-/// En el flatpak el lanzador se llama de otra manera —`me.sgomez.rfirma`—,
-/// pero ahí no hay nada que elegir (ID-240), así que esta constante no se usa.
+/// Fichero .desktop con el que rFirma queda registrada en paquetes nativos.
 pub const OUR_DESKTOP_FILE: &str = "rfirma.desktop";
 
-/// El canal de distribución en el que corre este proceso (ADR-0004).
+/// Canal de distribución en el que corre el proceso (ADR-0015).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Channel {
-    /// `.deb` o `.rpm`: sin sandbox, el escritorio contesta de verdad.
+    /// Instalación nativa sin aislamiento (.deb o .rpm).
     Native,
-    /// El flatpak: cualquier pregunta al escritorio sobre manejadores está
-    /// cerrada o miente (ID-240).
+    /// Instalación en contenedor flatpak.
     Flatpak,
 }
 
 impl Channel {
-    /// El canal detectado por `/.flatpak-info`.
+    /// Detecta el canal examinando la presencia del testigo de sandbox.
     pub fn detected() -> Self {
         Self::over(Path::new(SANDBOX_MARKER))
     }
 
-    /// La misma pregunta sobre una marca cualquiera, que es lo que la hace
-    /// comprobable sin un flatpak montado.
+    /// Determina el canal según la existencia de la ruta testigo.
     fn over(marker: &Path) -> Self {
         if marker.exists() {
             Self::Flatpak
@@ -83,25 +36,16 @@ impl Channel {
     }
 }
 
-/// Lo que se puede saber sobre quién atiende un esquema de URL.
+/// Manejadores registrados según las capacidades del entorno.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RegisteredHandlers {
-    /// Fuera del sandbox: la lista que da el escritorio, tal cual. Ningún
-    /// nombre de aplicación está cableado en este módulo — lo que haya aquí
-    /// es lo que GIO haya encontrado, sea lo que sea.
+    /// Lista de manejadores proporcionada por el escritorio.
     Known(Vec<RegisteredHandler>),
-    /// Dentro del sandbox no hay pregunta posible (ID-240): no se ha llamado
-    /// a GIO, ni al portal, ni a `xdg-mime`.
+    /// No disponible dentro del sandbox flatpak.
     NotAvailableInsideTheSandbox,
 }
 
-/// Quién dice el escritorio que atiende `scheme` (sin el `x-scheme-handler/`
-/// por delante; lo añade esta función).
-///
-/// Dentro del sandbox no se ejecuta ninguna llamada: la rama de
-/// [`Channel::Flatpak`] no toca GIO en absoluto, que es la única forma de que
-/// un `set_as_default_for_type()` mintiendo no acabe filtrándose como
-/// respuesta (ID-240).
+/// Consulta los manejadores registrados en el escritorio para un esquema.
 pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> RegisteredHandlers {
     match channel {
         Channel::Flatpak => RegisteredHandlers::NotAvailableInsideTheSandbox,
@@ -109,9 +53,6 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
             let handlers = gio::AppInfo::all_for_type(&content_type_for(scheme))
                 .iter()
                 .filter_map(|info| {
-                    // Sin `.desktop` no hay nada que escribir en el
-                    // `[Default Applications]`, así que un manejador sin
-                    // identificador no es elegible y no se ofrece.
                     let id = gio::prelude::AppInfoExt::id(info)?;
                     Some(RegisteredHandler::new(
                         gio::prelude::AppInfoExt::name(info).to_string(),
@@ -124,13 +65,7 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
     }
 }
 
-/// Un manejador registrado, tal y como lo da el escritorio: lo que la persona
-/// lee y lo que se escribe por ella.
-///
-/// Los dos no son el mismo dato y hacen falta los dos: el desplegable enseña
-/// el nombre —«AutoFirma», «Firefox», lo que sea— y el `mimeapps.list` solo
-/// entiende de ficheros `.desktop`. Ninguno de los dos está cableado aquí
-/// (ID-238).
+/// Manejador registrado con nombre visible e identificador de escritorio.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RegisteredHandler {
     name: String,
@@ -138,7 +73,7 @@ pub struct RegisteredHandler {
 }
 
 impl RegisteredHandler {
-    /// Un manejador con su nombre visible y su fichero `.desktop`.
+    /// Construye un manejador registrado.
     pub fn new(name: impl Into<String>, id: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -146,19 +81,18 @@ impl RegisteredHandler {
         }
     }
 
-    /// El nombre que enseña el desplegable, tal y como lo dio el escritorio.
+    /// Nombre visible del manejador para la interfaz.
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// El fichero `.desktop` con el que se escribe el `default`.
+    /// Identificador del fichero .desktop asociado.
     pub fn id(&self) -> &str {
         &self.id
     }
 }
 
-/// El tipo de contenido de un esquema de URL, que es como lo nombra el
-/// `mimeapps.list`.
+/// Tipo MIME asociado al esquema de URL.
 fn content_type_for(scheme: &str) -> String {
     format!("x-scheme-handler/{scheme}")
 }
@@ -168,9 +102,6 @@ mod tests {
     use super::*;
     use std::fs;
 
-    /// Con la marca puesta, el canal es el flatpak — el mismo criterio que
-    /// [`crate::destination::the_original_folder_can_be_offered`] comprueba
-    /// para su propia pregunta.
     #[test]
     fn the_marker_present_means_the_flatpak_channel() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -180,7 +111,6 @@ mod tests {
         assert_eq!(Channel::over(&marker), Channel::Flatpak);
     }
 
-    /// Sin la marca, el canal es el nativo: `.deb` y `.rpm`.
     #[test]
     fn no_marker_means_the_native_channel() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -191,16 +121,11 @@ mod tests {
         );
     }
 
-    /// La pregunta de verdad se hace sobre `/.flatpak-info`, no sobre otra
-    /// cosa.
     #[test]
     fn the_real_question_is_asked_over_the_well_known_marker() {
         assert_eq!(SANDBOX_MARKER, "/.flatpak-info");
     }
 
-    /// Dentro del sandbox no hay lista que leer: ni vacía, ni con nombres.
-    /// Es una situación distinta de «no hay ningún manejador», que sí sería
-    /// una lista vacía fuera del sandbox.
     #[test]
     fn inside_the_sandbox_there_is_no_answer_at_all() {
         let handlers = registered_handlers_for_scheme(Channel::Flatpak, "afirma");
@@ -208,10 +133,6 @@ mod tests {
         assert_eq!(handlers, RegisteredHandlers::NotAvailableInsideTheSandbox);
     }
 
-    /// Fuera del sandbox la pregunta se hace de verdad, a GIO. El registro
-    /// real del escritorio de cada canal **se ensaya, no se prueba aquí**
-    /// (TD-65): lo que esta prueba fija es que la rama nativa produce una
-    /// lista, cualquiera que sea su contenido en esta máquina.
     #[test]
     fn outside_the_sandbox_the_answer_comes_from_the_desktop() {
         let handlers = registered_handlers_for_scheme(Channel::Native, "afirma");
@@ -219,10 +140,6 @@ mod tests {
         assert!(matches!(handlers, RegisteredHandlers::Known(_)));
     }
 
-    /// El lanzador que se escribe como `default` es el que instalan el `.deb`
-    /// y el `.rpm`, y el *bundler* lo llama como el `productName`: si el
-    /// producto se renombra, esta prueba se pone roja antes de que rFirma se
-    /// registre a sí misma con un nombre que no existe.
     #[test]
     fn our_desktop_file_is_the_one_the_bundler_installs() {
         let configuration: serde_json::Value =
@@ -235,8 +152,6 @@ mod tests {
         assert_eq!(OUR_DESKTOP_FILE, format!("{product}.desktop"));
     }
 
-    /// El manejador que se ofrece lleva las dos cosas: lo que se lee y lo que
-    /// se escribe.
     #[test]
     fn a_handler_carries_both_the_name_and_the_desktop_file() {
         let handler = RegisteredHandler::new("AutoFirma", "autofirma.desktop");
@@ -245,9 +160,6 @@ mod tests {
         assert_eq!(handler.id(), "autofirma.desktop");
     }
 
-    /// Todo manejador que el escritorio nombre se puede escribir como
-    /// `default`: uno sin fichero `.desktop` no se ofrece, porque elegirlo no
-    /// haría nada.
     #[test]
     fn every_offered_handler_can_be_written_as_a_default() {
         let RegisteredHandlers::Known(handlers) =
