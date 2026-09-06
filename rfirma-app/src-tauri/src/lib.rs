@@ -430,8 +430,8 @@ fn view_of(content: &app::startup::SiteWindowContent<'_>) -> commands::SiteErran
         // Lo único que se sabe al abrirla es que el canal está en pie: el
         // origen y la operación llegan con la petición de la sede (ID-338).
         SiteWindowContent::TheErrand(_) => commands::SiteErrandView::waiting(),
-        SiteWindowContent::ADeadEnd(DeadEnd::NoPortLeft) => {
-            commands::SiteErrandView::no_channel(commands::NoChannelView::PortsTaken)
+        SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
+            commands::SiteErrandView::no_channel(commands::NoChannelView::ChannelNotOpened)
         }
         SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => {
             commands::SiteErrandView::no_channel(commands::NoChannelView::LocalCaMissing)

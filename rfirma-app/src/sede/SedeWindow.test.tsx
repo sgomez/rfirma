@@ -164,7 +164,7 @@ describe("SedeWindow", () => {
 
   describe("1b · the channel that will never open", () => {
     it("shows the repair screen straight away, without waiting for the threshold", () => {
-      const { port } = scriptedErrand({ kind: "noChannel", reason: "portsTaken" });
+      const { port } = scriptedErrand({ kind: "noChannel", reason: "channelNotOpened" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       // Sin relojes falsos y sin adelantar nada: el backend ya sabe que no hay
@@ -183,7 +183,7 @@ describe("SedeWindow", () => {
     });
 
     it("abandons the errand when closed: nothing has been answered", () => {
-      const { port, calls } = scriptedErrand({ kind: "noChannel", reason: "portsTaken" });
+      const { port, calls } = scriptedErrand({ kind: "noChannel", reason: "channelNotOpened" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));

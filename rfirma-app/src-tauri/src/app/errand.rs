@@ -54,8 +54,9 @@ use crate::commands::Failure;
 use crate::memory::{handles, ListedCertificates, Memory, OpenedDocuments};
 use crate::pkcs11::{self, Store};
 use crate::protocol::{
-    read_operation, visible_signature_of, ChannelCredential, Refusal, SafCode, SelectCertificate,
-    SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
+    read_operation, visible_signature_of, AfirmaUrl, ChannelCredential, Refusal, SafCode,
+    SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
+    SiteVisibleSignature, WireAnswer,
 };
 use crate::signing::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 
@@ -82,7 +83,7 @@ pub struct LiveErrand {
     errand: Mutex<Option<Errand>>,
     scratch: Mutex<Option<PathBuf>>,
     reply: Mutex<Option<ReplyHandle>>,
-    asked: Mutex<Option<crate::protocol::AfirmaUrl>>,
+    asked: Mutex<Option<AfirmaUrl>>,
 }
 
 /// Lo que se sabe de un trámite en curso.
@@ -121,7 +122,7 @@ impl LiveErrand {
 
     /// Apunta la petición que la sede mandó por el canal, para poder volver a
     /// atenderla sin que ella la mande otra vez (ID-341).
-    fn keep_the_request(&self, url: crate::protocol::AfirmaUrl) {
+    fn keep_the_request(&self, url: AfirmaUrl) {
         *super::lock(&self.asked) = Some(url);
     }
 
@@ -177,7 +178,7 @@ impl LiveErrand {
     /// vuelve a mirar, y lo que se atiende es la misma petición, por el mismo
     /// canal y con la misma asa. Sin esto la única salida sería que la sede
     /// invocara otra vez.
-    pub fn the_request(&self) -> Option<crate::protocol::AfirmaUrl> {
+    pub fn the_request(&self) -> Option<AfirmaUrl> {
         super::lock(&self.asked).clone()
     }
 
@@ -431,7 +432,7 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine> {
 /// [`filtering`], que la entrega ya envuelta para la ventana.
 pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
     desk: &ErrandDesk<'_, E, P>,
-    url: &crate::protocol::AfirmaUrl,
+    url: &AfirmaUrl,
     live: &LiveErrand,
 ) -> ErrandStep {
     let operation = match read_operation(url) {
@@ -2332,6 +2333,104 @@ mod tests {
             live.the_request().as_ref(),
             Some(&url),
             "con la peticion apuntada, volver a mirar no reinicia nada"
+        );
+    }
+
+    /// **ID-278, ID-341.** Y por el camino de la firma, lo mismo: la decisión
+    /// vive en `accepted_listing`, que es lo que `consent_to_sign` comparte
+    /// con [`consent_for`], y llega **después** de la admisibilidad del
+    /// documento y de la política —a tiempo, antes de escribir el fichero de
+    /// paso—. Ese orden es lo que se clava aquí, y lo clava el par: con un PDF
+    /// bueno sale la pantalla del almacén vacío, y con algo que no es un PDF
+    /// sale el `SAF_43` aunque tampoco haya ni un certificado.
+    #[test]
+    fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let listed = ListedCertificates::new();
+        let opened = OpenedDocuments::new();
+        let engine = AnEngine::answering(&[]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        let live = LiveErrand::default();
+        assert!(
+            live.begin(Errand::of(a_credential(), 54001)),
+            "la plaza es suya"
+        );
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature("sign", "")),
+            Vec::new(),
+            &live,
+        );
+
+        assert!(
+            matches!(
+                step,
+                ErrandStep::NoCertificate {
+                    reason: NoCertificate::NotOne,
+                    owned: 0,
+                    answered: None,
+                }
+            ),
+            "sin ni un certificado la ventana lo enseña con su motivo: {step:?}"
+        );
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            None,
+            "a la sede no se le ha dicho nada todavia"
+        );
+        assert!(
+            live.current().is_some(),
+            "y el tramite sigue vivo: instalar uno todavia lo arregla"
+        );
+        assert!(
+            !scratch.exists(),
+            "y no se ha escrito el fichero de paso: la decision llega antes"
+        );
+
+        // La otra mitad del orden: lo que el documento no admisible despacha,
+        // lo despacha **antes** de mirar el almacén.
+        let inadmissible = LiveErrand::default();
+        assert!(
+            inadmissible.begin(Errand::of(a_credential(), 54002)),
+            "la plaza es suya"
+        );
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature_over(b"esto no es un PDF", "sign", "")),
+            Vec::new(),
+            &inadmissible,
+        );
+        let ErrandStep::Answering(reply) = step else {
+            panic!("la admisibilidad va primero, y eso no es un PDF: {step:?}");
+        };
+        assert_eq!(
+            reply.on_the_wire(),
+            WireAnswer::refused(SafCode::InvalidPdf).on_the_wire(),
+            "el almacen vacio no le roba el turno a la admisibilidad"
         );
     }
 

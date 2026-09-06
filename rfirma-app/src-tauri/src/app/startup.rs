@@ -68,8 +68,13 @@ pub enum SiteWindowContent<'a> {
 /// llegar a intentarlo. Por eso se dicen en la ventana y no por el cable.
 #[derive(Debug)]
 pub enum DeadEnd {
-    /// Todos los puertos que sorteó la sede estaban ocupados (ID-215).
-    NoPortLeft,
+    /// El canal no se ha podido abrir. La causa la lleva el
+    /// [`ChannelError`](crate::channel::ChannelError) que la trae —no quedaba
+    /// ningún puerto sorteado libre (ID-215), el material TLS no sirve, o el
+    /// escuchador no llegó a escuchar—, y **ninguna de las tres se distingue
+    /// en la ventana**: la reparación es la misma, así que lo que se nombra
+    /// aquí es lo único que se sabe seguro.
+    ChannelNotOpened,
     /// La CA local no ha quedado en ningún almacén NSS (ID-329): ninguna sede
     /// va a poder abrir el canal, aunque el canal esté en pie.
     NoLocalCa,
@@ -192,7 +197,7 @@ pub fn attend_site_launch(
         // Los dos callejones del ID-341. No hay socket por el que decirlo, y
         // que no se diga en ninguna parte es el #390.
         Attendance::ChannelNotOpened(_) => {
-            window(SiteWindowContent::ADeadEnd(DeadEnd::NoPortLeft));
+            window(SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened));
         }
         Attendance::RefusingInTheWindow(refusal) => {
             window(SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(
@@ -365,7 +370,7 @@ mod tests {
         fn window(&self, content: SiteWindowContent<'_>) {
             self.note(&match content {
                 SiteWindowContent::TheErrand(errand) => format!("ventana:{}", errand.port()),
-                SiteWindowContent::ADeadEnd(DeadEnd::NoPortLeft) => {
+                SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
                     "ventana:sin-puertos".to_owned()
                 }
                 SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => "ventana:sin-ca".to_owned(),

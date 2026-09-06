@@ -593,14 +593,16 @@ pub enum SiteStageView {
 /// Por qué no hay canal por el que hablar con la sede (ID-341).
 ///
 /// Las dos son **conclusiones medidas**, no sospechas: la primera la da el
-/// transporte al no poder atar ni uno de los puertos sorteados, y la segunda
-/// sale de haber abierto los perfiles NSS y no haber dejado la CA local en
-/// ninguno (`TrustOutcome::nowhere`).
+/// transporte al no devolver ningún canal, y la segunda sale de haber abierto
+/// los perfiles NSS y no haber dejado la CA local en ninguno
+/// (`TrustOutcome::nowhere`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NoChannelView {
-    /// Todos los puertos que sorteó la sede estaban ocupados (ID-215).
-    PortsTaken,
+    /// El canal no se ha podido abrir: sin puertos libres entre los que
+    /// sorteó la sede (ID-215), sin material TLS utilizable, o sin llegar a
+    /// escuchar. Las tres se reparan igual, así que cruzan como una sola.
+    ChannelNotOpened,
     /// La CA local no ha quedado en ningún almacén NSS: sin ella ningún
     /// navegador llega siquiera a intentar el canal (ID-329).
     LocalCaMissing,
@@ -720,11 +722,11 @@ mod tests {
     #[test]
     fn the_dead_ends_cross_named_and_never_written_out() {
         assert_eq!(
-            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::PortsTaken))
+            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::ChannelNotOpened))
                 .expect("el callejon cruza"),
             serde_json::json!({
                 "origin": null,
-                "stage": { "kind": "noChannel", "reason": "portsTaken" },
+                "stage": { "kind": "noChannel", "reason": "channelNotOpened" },
             })
         );
         assert_eq!(

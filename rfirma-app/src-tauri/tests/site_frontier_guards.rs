@@ -118,7 +118,7 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
         // contaminada.
         (
             "SiteErrandView (sin canal)",
-            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::PortsTaken))
+            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::ChannelNotOpened))
                 .expect("serializa"),
         ),
         (
