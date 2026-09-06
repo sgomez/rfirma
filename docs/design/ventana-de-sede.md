@@ -130,11 +130,27 @@ El corazón del ticket: la pantalla que hoy no existe.
 - **Acción principal**: `Firmar`, o `Identificarse` cuando la operación es
   `selectcert`. `Cancelar` en `--ghost`.
 
-Cuatro situaciones dibujadas: un certificado; varios **acotados por la sede** —con
+Cinco situaciones dibujadas: un certificado; varios **acotados por la sede** —con
 la nota «*sede* ha limitado los certificados válidos» **debajo** del desplegable,
 porque es una nota sobre lo que la lista contiene y se lee después de verla—;
-entrega de identidad sin firma; y el PDF **sin título y sin origen**, que junta
-los dos silencios y **no rellena ninguno con un invento**.
+entrega de identidad sin firma; el PDF **sin título y sin origen**, que junta
+los dos silencios y **no rellena ninguno con un invento**; y **ya firmado y con
+alguna firma no reconocida** (#355, #363).
+
+En esta quinta situación el PDF trae alguna firma cuyo `/SubFilter` rFirma no
+sabe leer. **No es un rechazo**: el PDF certificado sí invalida con certeza y
+por eso se rechaza sin preguntar; esto es desconocimiento nuestro, y rechazarlo
+dejaría a rFirma rechazando documentos que AutoFirma sí firma (ID-298). Se
+pregunta, y la pregunta vive **dentro del mismo consentimiento** — no hay un
+sexto momento. La frase es de información, no de alarma: «rFirma no reconoce
+alguna de las firmas que ya tiene este documento, y al añadir la tuya podrían
+dejar de verse como válidas», con el mismo icono de información y el mismo
+borde de 1 px que el origen sin identificar (ID-302). El botón sigue diciendo
+`Firmar`, y **«firmas sin registrar» no aparece en la interfaz**. Cancelar aquí
+es cancelar el trámite, como en cualquier otra situación del consentimiento.
+No se enseña recuento ni titulares de las firmas que sí se entienden: rFirma no
+tiene validador y no lo va a tener en esta versión, y enseñar «válida» sin
+poder sostenerlo es peor que el silencio (ID-305).
 
 ### 3 · Firmando — `SedeFirmando`
 

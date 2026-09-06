@@ -61,6 +61,7 @@ const signedDocument = {
   pages: 27,
   sizeBytes: 2_400_000,
   signatures: 0,
+  hasUnregisteredSignatures: false,
 };
 
 /** Deja pasar el tiempo con los relojes falsos, y deja que React repinte. */
@@ -164,6 +165,7 @@ describe("SedeWindow", () => {
           pages: 27,
           sizeBytes: 2_400_000,
           signatures: 0,
+          hasUnregisteredSignatures: false,
         },
         certificates: [certificate()],
         narrowed: false,
@@ -188,7 +190,13 @@ describe("SedeWindow", () => {
     it("names an untitled PDF for what it is instead of inventing one", () => {
       const { port } = scriptedErrand(
         consenting({
-          document: { title: null, pages: 8, sizeBytes: 310_000, signatures: 0 },
+          document: {
+            title: null,
+            pages: 8,
+            sizeBytes: 310_000,
+            signatures: 0,
+            hasUnregisteredSignatures: false,
+          },
         }),
       );
       renderWithCatalog(<SedeWindow errands={port} />);
@@ -199,12 +207,61 @@ describe("SedeWindow", () => {
     it("warns that the signature will be a countersignature when the PDF is already signed", () => {
       const { port } = scriptedErrand(
         consenting({
-          document: { title: "Convenio", pages: 12, sizeBytes: 860_000, signatures: 1 },
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            signatures: 1,
+            hasUnregisteredSignatures: false,
+          },
         }),
       );
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText(/la tuya será una cofirma/)).toBeInTheDocument();
+    });
+
+    it("warns with an information note, not an alert, when the PDF carries a signature rFirma cannot read", () => {
+      const { port } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            signatures: 1,
+            hasUnregisteredSignatures: true,
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(
+        screen.getByText(
+          "rFirma no reconoce alguna de las firmas que ya tiene este documento, y al añadir la tuya podrían dejar de verse como válidas",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/firmas sin registrar/i)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Firmar" })).toBeInTheDocument();
+    });
+
+    it("cancels the errand from the unrecognized-signatures note like any other consent", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            signatures: 1,
+            hasUnregisteredSignatures: true,
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+      expect(calls.cancel).toHaveBeenCalled();
     });
 
     it("leaves a calm label, not a warning, when the request has no valid origin", () => {

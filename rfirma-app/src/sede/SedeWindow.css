@@ -154,6 +154,7 @@
 }
 
 .sede-consent__unknown-origin,
+.sede-consent__unrecognized-signatures,
 .sede-consent__document,
 .sede-consent__sends {
   align-items: flex-start;
@@ -167,7 +168,8 @@
  * Etiqueta serena y no advertencia: borde de 1 px y el mismo icono de
  * información del resto de la aplicación, nunca un triángulo.
  */
-.sede-consent__unknown-origin {
+.sede-consent__unknown-origin,
+.sede-consent__unrecognized-signatures {
   border-color: var(--rf-border-strong);
 }
 

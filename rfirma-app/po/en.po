@@ -1049,7 +1049,9 @@ msgid "sede.repair.firefoxAllow"
 msgstr "Press Allow on the panel next to the address bar."
 
 msgid "sede.repair.firefoxGone"
-msgstr "If it is gone: padlock › Secure connection › More information › Permissions › Local network access."
+msgstr ""
+"If it is gone: padlock › Secure connection › More information › "
+"Permissions › Local network access."
 
 #. `Reintentar` es un botón de la sede, no de esta ventana.
 msgid "sede.repair.retry"
@@ -1069,10 +1071,13 @@ msgid "sede.consent.unknownOriginTitle"
 msgstr "Unidentified origin"
 
 msgid "sede.consent.unknownOriginSignature"
-msgstr "The request asks for a signature and does not say which page it comes from."
+msgstr ""
+"The request asks for a signature and does not say which page it comes from."
 
 msgid "sede.consent.unknownOriginIdentity"
-msgstr "The request asks you to identify yourself and does not say which page it comes from."
+msgstr ""
+"The request asks you to identify yourself and does not say which page it "
+"comes from."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.
@@ -1093,7 +1098,16 @@ msgid "sede.consent.narrowedUnknownOrigin"
 msgstr "The site has narrowed down the valid certificates."
 
 msgid "sede.consent.willSend"
-msgstr "Your name, your ID number, the certificate issuer and its serial number will be sent."
+msgstr ""
+"Your name, your ID number, the certificate issuer and its serial number will "
+"be sent."
+
+#. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
+#. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
+msgid "sede.consent.unrecognizedSignatures"
+msgstr ""
+"rFirma does not recognize some of the signatures already on this "
+"document, and adding yours could make them stop showing as valid"
 
 msgid "sede.consent.sign"
 msgstr "Sign"
@@ -1145,19 +1159,26 @@ msgid "sede.outcome.autoClose"
 msgstr "It will close by itself in {{seconds}} s."
 
 msgid "sede.refusals.appendedSignaturePage"
-msgstr "{{origin}} asks to place the signature on a page appended at the end, and rFirma does not do that."
+msgstr ""
+"{{origin}} asks to place the signature on a page appended at the end, and "
+"rFirma does not do that."
 
 msgid "sede.refusals.unsupportedFilter"
-msgstr "{{origin}} asks to filter certificates by a criterion rFirma does not recognise."
+msgstr ""
+"{{origin}} asks to filter certificates by a criterion rFirma does not "
+"recognise."
 
 msgid "sede.refusals.unsupportedProtocolVersion"
-msgstr "{{origin}} speaks a version of the protocol rFirma does not understand."
+msgstr ""
+"{{origin}} speaks a version of the protocol rFirma does not understand."
 
 msgid "sede.refusals.missingFormat"
 msgstr "{{origin}} does not say in which format to sign."
 
 msgid "sede.refusals.errandInFlight"
-msgstr "{{origin}} asks for a signature with another errand open, and rFirma handles one at a time."
+msgstr ""
+"{{origin}} asks for a signature with another errand open, and rFirma handles "
+"one at a time."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} sent something rFirma cannot handle."
