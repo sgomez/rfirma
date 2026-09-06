@@ -70,6 +70,14 @@ widget replicado. Se recuerda por documento: «las páginas 3, 7 y 9» no
 significa nada en otro PDF.
 _Avoid_: ancla, posición de la firma, página de firma
 
+**Recuadro que pide la sede**:
+La firma visible que un trámite de sede trae ya puesta en sus `extraParams`:
+cuatro esquinas y una página, calibradas contra AutoFirma. No es una
+colocación: no nace de un arrastre, no se guarda y no se convierte. Cruza al
+puente tal y como vino, y rFirma solo decide si la petición lleva recuadro, si
+no lo lleva o si lo que pide no se atiende.
+_Avoid_: colocación de la sede, posición remota, recuadro del protocolo
+
 **Espacio de usuario**:
 Sistema de coordenadas del propio PDF, en puntos, con el origen donde lo ponga
 la MediaBox de la página. Es donde rFirma guarda el recuadro de la firma

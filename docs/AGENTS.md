@@ -27,6 +27,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0016 | El sello de sesión: una sola invariante |
 | 0017 | La arquitectura de los dos lados: puertos y capas |
 | 0018 | rFirma no es un lector de PDF: la firma empieza por un verbo |
+| 0019 | El recuadro que pide la sede cruza crudo al puente, sin la conversión del local |
 
 ## `research/` — mediciones (por qué algo es como es)
 
