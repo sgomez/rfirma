@@ -1,26 +1,8 @@
-//! El sello de sesión: una sola invariante entre prefirma y postfirma
-//! (ADR-0016, ID-17).
-//!
-//! La postfirma PAdES **regenera el PDF entero**, así que exige recibir lo
-//! mismo que la prefirma en tres cosas a la vez: los `extraParams` **efectivos**
-//! —no los enviados: `PdfSessionManager` reescribe el `Properties` que recibe y
-//! `PAdESTriPhaseSigner:174` no lo clona—, el instante de firma y la zona
-//! horaria. Si alguna difiere, la postfirma **completa sin error** y el PDF sale
-//! con `Digest Mismatch`: la firma se invalida en silencio.
-//!
-//! Las tres viajan juntas en un bloque que el puente compone y que rFirma
-//! **transporta sin leer**. La comprobación es entonces una comparación de
-//! bytes, y no hay manera de olvidarse de un campo porque no hay campos que
-//! recordar.
+//! Sello de sesión opaco entre prefirma y postfirma (ADR-0016).
 
 use std::fmt;
 
 /// Bloque opaco que devuelve la prefirma y que la postfirma exige idéntico.
-///
-/// **Es opaco por diseño.** Aquí no hay ni un `get`, ni un `parse`, ni un
-/// campo: en cuanto Rust interpreta el sello puede reconstruirlo, y un sello
-/// reconstruible no protege de nada. Si algún día hace falta un valor de
-/// dentro, la respuesta es que la prefirma lo devuelva aparte.
 #[derive(Clone, PartialEq, Eq)]
 pub struct SessionSeal(String);
 
@@ -46,8 +28,6 @@ impl SessionSeal {
     }
 }
 
-/// `Debug` deliberadamente mudo: ni siquiera en un registro de fallos se
-/// enseña el interior del sello, para que nadie se acostumbre a leerlo.
 impl fmt::Debug for SessionSeal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "SessionSeal({} bytes)", self.0.len())
@@ -55,9 +35,6 @@ impl fmt::Debug for SessionSeal {
 }
 
 /// El sello que llega a la postfirma no es el que produjo la prefirma.
-///
-/// Abortar aquí es lo único que separa un error visible de un PDF firmado que
-/// no valida y que nadie sabe por qué.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SealMismatch;
 
@@ -116,8 +93,6 @@ mod tests {
 
     #[test]
     fn rejects_a_seal_whose_time_zone_changed() {
-        // El tercero, el que nadie esperaba (#23): el desfase entra dentro del
-        // rango firmado, así que un mismo instante en otra zona invalida.
         let changed = seal_of(
             r#"{"signatureSubFilter":"ETSI.CAdES.detached"}"#,
             "2026-08-31T12:00:00",
@@ -128,7 +103,6 @@ mod tests {
 
     #[test]
     fn carries_an_opaque_seal_through_untouched() {
-        // Contenido que rFirma no sabe leer, y que tiene que dar igual.
         let payload = "\u{1}\u{0}no es JSON, ni falta que hace\u{7f}ñ€\n";
         let seal = SessionSeal::from_bridge(payload);
         assert_eq!(seal.as_bridge_payload(), payload);

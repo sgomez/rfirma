@@ -1,57 +1,31 @@
-//! El texto del recuadro de la firma visible, redactado por rFirma.
-//!
-//! **No hay comodines**: `$$SUBJECTCN$$` y `$$SIGNDATE$$` no salen de
-//! aquí. Componer el texto entero en Rust y enviarlo ya resuelto en
-//! `layer2Text` es lo que permite que siga al idioma de la aplicación, y lo que
-//! deja fuera las rarezas del original —entre ellas que `$$PSEUDONYM$$`
-//! estampe su literal en el PDF cuando el certificado no lleva el OID
-//! `2.5.4.65`—.
-//!
-//! **Es un solo párrafo**, con las frases separadas por puntos y sin saltos de
-//! línea forzados: iText reparte el tamaño de letra entre `alto del recuadro /
-//! número de líneas`, así que menos líneas es letra más grande. El **motivo**
-//! es la excepción y va en su propio renglón: es texto libre, puede ser largo,
-//! y dentro del párrafo encogería la letra de todo lo demás.
+//! Composición del texto de rúbrica en capa 2 para la firma visible.
 
 use super::language::Language;
 
 /// Carácter sustitutivo de la máscara. Es el de AutoFirma por omisión.
 const OBFUSCATED_CHAR: char = '*';
 
-/// Posiciones de la máscara por omisión de AutoFirma: `true` se ve, `false` se
-/// oculta. Tres ocultas y cuatro visibles, y todo lo que sobre por el final se
-/// oculta también.
+/// Posiciones de la máscara por omisión: true se ve, false se oculta.
 const MASK_POSITIONS: [bool; 7] = [false, false, false, true, true, true, true];
 
-/// Dígitos seguidos que hacen falta para que un texto se considere un
-/// identificador enmascarable.
+/// Dígitos seguidos necesarios para considerar un texto enmascarable.
 const MIN_DIGITS: usize = 3;
 
-/// Cuántos dígitos lleva el cuerpo de un DNI, un NIE o un CIF, ya sin la letra
-/// inicial y sin el carácter de control del final.
+/// Dígitos del cuerpo de un DNI, NIE o CIF.
 const IDENTIFIER_DIGITS: std::ops::RangeInclusive<usize> = 7..=8;
 
-/// Lo que el usuario ha marcado en las casillas del panel de firma.
-///
-/// `None` es «la casilla está sin marcar»; el dato no aparece en el recuadro.
-/// La rúbrica no está aquí porque es una imagen, no texto.
+/// Campos marcados en el panel de firma visible.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct VisibleTextFields<'a> {
-    /// El `CN` del subject **entero y en claro**, nombre y DNI juntos, que es
-    /// como lo enseña AutoFirma. La máscara la aplica el compositor: llega
-    /// aquí sin tocar.
+    /// Nombre del firmante.
     pub signer_name: Option<&'a str>,
-    /// La autoridad emisora, la misma que se enseña en el desplegable.
+    /// Autoridad emisora del certificado.
     pub issuer: Option<&'a str>,
-    /// Fecha y hora de la firma, **ya formateadas** por quien llama. Tiene que
-    /// ser el mismo instante que acabará dentro del sello de sesión: el
-    /// recuadro se estampa antes de la prefirma y el PDF ya no se vuelve a
-    /// tocar.
+    /// Fecha y hora de la firma ya formateadas.
     pub signed_at: Option<&'a str>,
     /// Motivo de la firma.
     pub reason: Option<&'a str>,
-    /// Si el certificado es **de seudónimo**: entonces el `CN` se estampa sin
-    /// enmascarar, como hace el original (`PdfSessionManager.java:206-214`).
+    /// Indica si el certificado es de seudónimo.
     pub pseudonym: bool,
 }
 
@@ -107,8 +81,6 @@ fn labels(language: Language) -> Layer2Labels {
 /// ver [`super::config::SignatureConfig`].
 pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -> String {
     let labels = labels(language);
-    // Destructurado exhaustivo: una casilla nueva no compila hasta que alguien
-    // decida en qué parte del recuadro cae.
     let VisibleTextFields {
         signer_name,
         issuer,
@@ -147,21 +119,7 @@ pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -
     }
 }
 
-/// Enmascara los identificadores que lleve dentro un texto, que es como el
-/// original tapa el DNI: sobre el `CN`, no sobre un campo aparte
-/// (`PdfVisibleAreasUtils.getLayerText:262-267`).
-///
-/// Los certificados españoles llevan el DNI dentro del `CN` —«ADA LOVELACE
-/// BYRON - 99999999R»—, así que enmascarar ahí es enmascararlo donde de verdad
-/// está. Se parte el texto en fragmentos alfanuméricos y solo se enmascaran
-/// los que **encajan con el patrón** de DNI, NIE o CIF: nadie se apellida como
-/// un DNI, y ceñirse al patrón deja el resto del nombre intacto.
-///
-/// Aquí está la diferencia con el original, y es a propósito: él le pasa a
-/// `countDigits` la cadena entera (`PdfVisibleAreasUtils.java:707`), de modo
-/// que sobre un nombre completo el recuento decide por una rama que no es la
-/// del fragmento que enmascara. Como aquí la máscara se aplica **al fragmento
-/// solo**, el recuento es el suyo y la rama la correcta.
+/// Enmascara los identificadores dentro de un texto.
 pub fn obfuscate_ids(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut obfuscated = String::with_capacity(text.len());
@@ -186,12 +144,7 @@ pub fn obfuscate_ids(text: &str) -> String {
     obfuscated
 }
 
-/// Si un fragmento alfanumérico es un DNI, un NIE o un CIF.
-///
-/// Los tres son el mismo esqueleto: una letra inicial opcional —la `X`, `Y` o
-/// `Z` del NIE, la de tipo de un CIF—, siete u ocho dígitos, y un carácter de
-/// control que puede ser letra o dígito. Un número de teléfono o un año no
-/// entran, que es lo que hace seguro aplicar esto sobre un nombre.
+/// Comprueba si un fragmento alfanumérico encaja con un identificador.
 fn looks_like_an_identifier(fragment: &str) -> bool {
     if !fragment.is_ascii() {
         return false;
@@ -206,46 +159,15 @@ fn looks_like_an_identifier(fragment: &str) -> bool {
     IDENTIFIER_DIGITS.contains(&body.len()) && body.chars().all(|c| c.is_ascii_digit())
 }
 
-/// Enmascara un identificador con la máscara por omisión de AutoFirma.
-///
-/// **Es cosmética.** El certificado viaja entero dentro de la firma con el DNI
-/// en claro, y cualquier lector de PDF lo enseña al inspeccionarla: esto
-/// protege de la lectura casual del recuadro, no del documento. Por eso no
-/// tiene interruptor —se aplica siempre— y por eso tampoco se apoya en
-/// `obfuscateCertText`, que solo actúa al sustituir comodines y aquí no hay.
-///
-/// Replica `PdfVisibleAreasUtils.obfuscateIds:660-691` con la máscara por
-/// omisión de `PdfTextMask`, **incluida la segmentación**: el texto se parte
-/// por los caracteres que no son alfanuméricos y la máscara cae solo sobre el
-/// segmento que contiene la racha de dígitos. Así `IDCES-99999999R` —la forma
-/// en la que el RDN `serialNumber` de la FNMT y del DNIe trae el número— sale
-/// como `IDCES-***9999**` y no como un borrón entero de asteriscos.
-///
-/// Con sus tres rarezas, que se replican y no se corrigen:
-///
-/// 1. Las letras del segmento se ocultan siempre (por eso `99999999R` acaba
-///    en `**`).
-/// 2. Un segmento con menos dígitos que posiciones visibles se enmascara
-///    **desde atrás**, que deja los dígitos intactos y oculta lo de delante.
-/// 3. El recuento de dígitos que decide entre las dos ramas es el de **toda
-///    la cadena**, no el del segmento (`PdfVisibleAreasUtils.java:707` le pasa
-///    a `countDigits` el array entero). Es incoherente con el resto del
-///    algoritmo, pero es lo que estampa AutoFirma en el PDF.
+/// Enmascara un identificador con la máscara por omisión.
 pub fn mask_id_number(id: &str) -> String {
     let mut chars: Vec<char> = id.chars().collect();
-    // Rareza 3: el recuento es global aunque el enmascarado sea por segmento.
     let digits = chars.iter().filter(|c| c.is_ascii_digit()).count();
 
-    // El bucle exterior de `obfuscateIds`. `digit_run` se reinicia con las
-    // letras y **no** con los separadores, igual que el `digitCount` de Java;
-    // `found` sobrevive a las letras que vengan detrás de la racha.
     let mut digit_run = 0usize;
     let mut segment_start = 0usize;
     let mut found = false;
     for index in 0..chars.len() {
-        // `Character.isLetterOrDigit` es Unicode: una eñe o una tilde no
-        // parten el segmento. Dígito sí se lee en ASCII: un DNI o un NIE no
-        // traen otra cosa.
         if chars[index].is_alphanumeric() {
             if chars[index].is_ascii_digit() {
                 digit_run += 1;
@@ -271,8 +193,7 @@ pub fn mask_id_number(id: &str) -> String {
     chars.into_iter().collect()
 }
 
-/// Aplica la máscara a un segmento, con `digits` contados sobre la cadena
-/// entera. Es `PdfVisibleAreasUtils.obfuscate:704-761`.
+/// Aplica la máscara a un segmento.
 fn obfuscate(chars: &mut [char], start: usize, length: usize, digits: usize) {
     let plain = MASK_POSITIONS.iter().filter(|visible| **visible).count();
     let segment = &mut chars[start..start + length];
@@ -446,27 +367,20 @@ mod tests {
         );
     }
 
-    /// Los cuatro formatos españoles que llegan en el `CN`, con el DNI o el
-    /// CIF dentro: se tapa el identificador y **solo** el identificador.
     #[test]
     fn masks_the_identifier_of_every_spanish_common_name() {
-        // FNMT de persona física.
         assert_eq!(
             obfuscate_ids("ADA LOVELACE BYRON - 99999999R"),
             "ADA LOVELACE BYRON - ***9999**"
         );
-        // Empleado público.
         assert_eq!(
             obfuscate_ids("ADA LOVELACE BYRON - NIF 99999999R"),
             "ADA LOVELACE BYRON - NIF ***9999**"
         );
-        // Representante de empresa: el NIE de la persona y el CIF de la
-        // sociedad, los dos tapados.
         assert_eq!(
             obfuscate_ids("X1234567L - EMPRESA EJEMPLO SL - A12345674"),
             "****4567* - EMPRESA EJEMPLO SL - ****4567*"
         );
-        // DNIe: su `CN` viene con la coma ya desescapada y sin identificador.
         assert_eq!(
             obfuscate_ids("APELLIDO1 APELLIDO2, ADA (FIRMA)"),
             "APELLIDO1 APELLIDO2, ADA (FIRMA)"
@@ -476,7 +390,6 @@ mod tests {
     #[test]
     fn leaves_alone_what_is_not_an_identifier() {
         assert_eq!(obfuscate_ids("ADA LOVELACE BYRON"), "ADA LOVELACE BYRON");
-        // Un teléfono tiene nueve dígitos y un año cuatro: ninguno encaja.
         assert_eq!(obfuscate_ids("600123456 y 2026"), "600123456 y 2026");
         assert_eq!(obfuscate_ids("ANDRÉS PEÑA"), "ANDRÉS PEÑA");
         assert_eq!(obfuscate_ids(""), "");
@@ -501,8 +414,6 @@ mod tests {
 
     #[test]
     fn masks_from_the_back_when_there_are_fewer_digits_than_visible_positions() {
-        // La rareza de AutoFirma: con tres dígitos la máscara se aplica desde
-        // atrás y los que se ocultan son los caracteres de delante.
         assert_eq!(mask_id_number("AB123"), "*B123");
     }
 
@@ -515,14 +426,9 @@ mod tests {
 
     #[test]
     fn keeps_the_digit_run_across_a_separator_like_java_does() {
-        // `digitCount` de Java solo se reinicia con letras, así que `12-345`
-        // sí llega a la racha mínima; el segmento enmascarado es el segundo.
         assert_eq!(mask_id_number("12-345"), "12-*45");
     }
 
-    /// La rareza 3 del original —el recuento de dígitos sobre toda la cadena—
-    /// no llega al recuadro: la máscara la aplica [`obfuscate_ids`] sobre el
-    /// fragmento suelto, donde el recuento es el del propio identificador.
     #[test]
     fn counts_the_digits_of_the_identifier_and_not_those_of_the_whole_name() {
         assert_eq!(

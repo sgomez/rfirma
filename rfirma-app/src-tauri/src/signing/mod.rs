@@ -1,17 +1,4 @@
-//! Las reglas puras de la firma: qué se le pide al puente y qué se le exige de
-//! vuelta (#50).
-//!
-//! Aquí no hay efectos. No se abre un fichero, no se habla con el token, no se
-//! dibuja nada y no se llama a la librería nativa: son las reglas que convierten
-//! lo que el usuario ha marcado en una configuración de firma, más la invariante
-//! que impide que la postfirma invalide la firma en silencio. Por eso se prueba
-//! entera en el carril rápido (grada A).
-//!
-//! Este módulo **no importa [`crate::ffi`]** y no debe volver a hacerlo
-//! (ID-82): el ciclo trifásico, que sí cruza la frontera, es un caso de uso y
-//! vive en [`crate::app::cycle`]. La frontera sí importa de aquí el sello de
-//! sesión, que es infraestructura mirando al dominio y es la dirección correcta
-//! (ID-81). Lo vigila `tests/module_directions.rs`.
+//! Reglas de firma puras sin efectos secundarios.
 
 pub mod admissibility;
 pub mod config;

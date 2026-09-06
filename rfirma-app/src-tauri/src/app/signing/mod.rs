@@ -1,17 +1,4 @@
-//! **El recorrido de la firma, partido en tres porque el PIN va en medio.**
-//!
-//! [`begin`] → [`sign_on_token`] → [`finish`]. Un solo paso que hiciera las
-//! tres cosas dejaría a la ventana sin nada que contar durante los segundos de
-//! la postfirma, y —lo que importa más— obligaría a mandar el PIN junto con el
-//! documento, cuando todavía no se sabe si el documento se puede firmar.
-//!
-//! El ciclo a medias vive en [`SigningSession`], **no en la ventana**: lo que
-//! la ventana no tiene no lo puede filtrar ni alterar, y el sello de sesión es
-//! justo lo que no puede cambiar entre la prefirma y la postfirma (ADR-0016).
-//!
-//! Éste es el recorrido **local**; el de un trámite de sede —la prefirma que
-//! vuelve a pasar el filtro de la sede y la postfirma que no escribe nada— es
-//! [`site`], que comparte con éste la sesión y la firma en el token.
+//! Sesión local de firma trifásica: prefirma, firma en el token y postfirma (ADR-0001, ADR-0016).
 
 pub mod site;
 
@@ -39,63 +26,23 @@ use crate::signing::{
 
 pub use site::{begin_for_the_site, finish_for_the_site, SiteRefusal, SiteSignature, SiteSigning};
 
-/// El ciclo a medias, entre el PIN y la postfirma.
-///
-/// Vive en el backend y **no cruza a la ventana**: lo que la ventana no tiene
-/// no lo puede perder ni alterar, y el sello de sesión es justo lo que no puede
-/// cambiar entre la prefirma y la postfirma (ADR-0016).
+/// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]
 pub struct SigningSession {
     open: Mutex<Option<InFlight>>,
-    /// **Dónde cayó el último documento firmado en esta sesión.**
-    ///
-    /// No es parte del ciclo —el ciclo ya terminó cuando esto se escribe— pero
-    /// vive aquí por lo mismo que él: bajo el sandbox la ventana nunca conoce
-    /// la ruta (ADR-0011), así que la única forma de que «Abrir el PDF» y
-    /// «Abrir la carpeta» lleguen al fichero es que el backend recuerde a
-    /// dónde lo dejó. Lo que cruza sigue siendo el nombre.
-    ///
-    /// Se pisa en cada firma que termina bien: el resumen que hay delante es
-    /// siempre el del último documento firmado.
     delivered: Mutex<Option<PathBuf>>,
 }
 
 struct InFlight {
     cycle: OpenCycle,
-    /// **El documento en curso, que no es la fila que se guarda** (ID-287).
-    ///
-    /// Viaja entero y no como una ruta porque de él depende algo más que
-    /// dónde cae el firmado: si de este documento se guarda rastro o no
-    /// (ID-286), y eso se decidió al abrirlo.
     document: DocumentInHand,
     signature: Option<TokenSignature>,
-    /// Con qué certificado se está firmando, para poder recordarlo **si la
-    /// postfirma termina bien**. Viaja aquí y no se relee del token al acabar:
-    /// entre la prefirma y la postfirma la tarjeta puede haberse retirado, y
-    /// entonces no habría forma de saber con cuál se acababa de firmar.
     certificate: CertificateRef,
-    /// El DER del firmante, para poder devolvérselo a la sede junto con la
-    /// firma: el cable lleva los dos (`NativeSignDataProcessor.java:53`-`104`).
-    /// Viaja aquí por lo mismo que [`InFlight::certificate`]: entre la prefirma
-    /// y la postfirma la tarjeta puede haberse retirado.
     signer_der: Vec<u8>,
-    /// El sello, transportado aparte del ciclo que lo emitió.
-    ///
-    /// Están separados a propósito: si el sello viviera solo dentro de
-    /// [`OpenCycle`], compararlo consigo mismo no comprobaría nada. Esta es la
-    /// copia que viaja, y [`OpenCycle::postsign`] exige que llegue idéntica.
     seal: SessionSeal,
 }
 
-/// **Caso de uso.** Prefirma: cruza la frontera y deja el ciclo abierto.
-///
-/// Antes de nada rechaza lo que no se puede firmar —cifrado, certificado, o no
-/// es un PDF—, **antes de que se pida el PIN**.
-///
-/// Devuelve **cómo hay que pedirle el secreto al almacén** (ID-189), que es lo
-/// que la ventana necesita para decidir si abre el diálogo o firma directo. Un
-/// almacén cuyo secreto se teclea en el teclado del lector se rechaza aquí, sin
-/// cruzar la frontera y sin pedirle nada a nadie.
+/// Prefirma local: valida admisibilidad, prepara la configuración y abre el ciclo.
 pub fn begin(
     order: &SigningOrder,
     stores: &[Store],
@@ -104,9 +51,6 @@ pub fn begin(
     isolate: &Isolate,
     session: &SigningSession,
 ) -> Result<StoreSecret, Failure> {
-    // Lo que la ventana manda es el identificador que se acuñó al abrir, y no
-    // una ruta: quien sabe a qué documento del portal corresponde es el
-    // registro, y solo él (ID-62).
     let document = DocumentInHand::taken(opened, &order.document)?;
     let bytes = admitted_bytes(document.document())?;
     let (config, reference, chain) = plan_signature(stores, listed, order)?;
@@ -122,25 +66,16 @@ pub fn begin(
     )?)
 }
 
-/// **Lo que puede salir mal en el tramo trifásico, con la situación todavía
-/// tipada.**
-///
-/// Es lo que [`begin_for_the_site`] y [`finish_for_the_site`] necesitan y
-/// [`Failure`] ya no puede dar: el ciclo falla por el documento, por el token,
-/// por el puente —incluida la política que la sede declaró y no se puede
-/// aplicar— y por el sello del ADR-0016, y cada una de esas cosas tiene su
-/// código. El recorrido local no mira esto: para él todas son [`Failure`], y
-/// la conversión es automática.
+/// Errores tipados durante el tramo trifásico de firma.
 #[derive(Debug)]
 pub enum CycleFailure {
     /// El documento no se ha podido leer del disco.
     DocumentUnreadable(String),
-    /// El ciclo ha dicho que no: el documento, el token, el puente o el sello.
+    /// El ciclo ha fallado en alguna de sus comprobaciones.
     Cycle(CycleError),
-    /// El secreto se teclea en el teclado del lector: no hay PIN que pedir, y
-    /// aquí se acaba el recorrido sin haber firmado nada.
+    /// El secreto debe introducirse en el teclado del lector.
     SecretOnTheReaderKeypad(SecretOnTheReaderKeypad),
-    /// El hilo del isolate se ha caído, así que no hay puente.
+    /// El hilo del isolate no está disponible.
     Gone(IsolateGone),
 }
 
@@ -168,8 +103,6 @@ impl From<IsolateGone> for CycleFailure {
     }
 }
 
-/// El cuerpo compartido de las dos prefirmas: lo único que las distingue es
-/// **con qué** se firma, y eso ya viene resuelto.
 #[expect(
     clippy::too_many_arguments,
     reason = "es el cuerpo compartido de dos casos de uso, no una interfaz"
@@ -184,19 +117,12 @@ pub(super) fn open_the_cycle(
     isolate: &Isolate,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    // Se pregunta antes de cruzar la frontera: si el secreto se teclea en el
-    // lector, aquí se acaba el recorrido y no se ha intentado firmar nada.
     let secret = pkcs11::store_secret(&reference)?.admitted()?;
-    // Una copia para la sesión: la otra se va con la prefirma al otro lado de
-    // la frontera.
     let certificate = reference.clone();
     let signer_der = chain.first().cloned().unwrap_or_default();
     let from_the_site = from_the_site.clone();
 
     let cycle = on_the_bridge_with_situation(isolate, move |bridge| {
-        // La comprobación se repite dentro del hilo porque el tipo que la
-        // garantiza presta los bytes y los bytes viajan: no es un `if`
-        // olvidable, es el único constructor de `AdmissibleDocument`.
         let document = AdmissibleDocument::check(&bytes)?;
         cycle::presign(
             bridge,
@@ -222,11 +148,7 @@ pub(super) fn open_the_cycle(
     Ok(secret)
 }
 
-/// **Caso de uso.** Firma en el token, con el PIN que se acaba de teclear.
-///
-/// **La única fase que toca la clave privada, y no cruza la FFI** (ADR-0001).
-/// El PIN entra por aquí, se usa en `C_Login` y no se guarda en ningún sitio:
-/// ni en la sesión, ni en el registro, ni de vuelta a la ventana.
+/// Fase de firma en el token PKCS#11 con el PIN proporcionado (ADR-0001).
 pub fn sign_on_token(session: &SigningSession, pin: &str) -> Result<(), Failure> {
     let mut open = lock(&session.open);
     let in_flight = open.as_mut().ok_or_else(no_open_cycle)?;
@@ -234,14 +156,7 @@ pub fn sign_on_token(session: &SigningSession, pin: &str) -> Result<(), Failure>
     Ok(())
 }
 
-/// **Caso de uso.** Postfirma: comprueba el sello, ensambla el PDF y lo deja
-/// caer.
-///
-/// El documento cae **sin diálogo** (ID-36, ADR-0011): lo único que se elige es
-/// la carpeta, y se eligió una vez.
-///
-/// Y es aquí donde se apunta el certificado usado: este es el **único** punto
-/// del programa en el que una firma ha terminado bien (#110).
+/// Postfirma: verifica el sello, compone el PDF y lo entrega en destino (ADR-0011, ADR-0016).
 pub fn finish(
     isolate: &Isolate,
     session: &SigningSession,
@@ -268,43 +183,22 @@ pub fn finish(
         document.document(),
         &signed,
     )?;
-    // **Después** de que el documento haya caído, y no antes: mientras la
-    // postfirma pueda fallar todavía no se ha firmado nada con este
-    // certificado (#110).
     certificates::remember_the_certificate(memory, configuration, &certificate);
-    // Y aquí, y **solo aquí**, se escribe la insignia `Firmado` (ID-76): el
-    // documento que la lleva es el que acaba de caer, y nada más lo escribe.
-    // De un documento que no se recuerda no se escribe fila ninguna (ID-286):
-    // este es el camino para firmar sin dejar rastro en la bandeja.
     if document.is_remembered() {
         recents::note_signed(memory, configuration, &landing);
     }
-    // Y aquí se guarda la ruta, para los dos botones del resumen: es lo único
-    // que puede llevar al usuario hasta el fichero, porque él nunca la ve
-    // (ID-79, ADR-0011).
     *lock(&session.delivered) = Some(landing);
     Ok(delivered)
 }
 
-/// **Caso de uso.** El fichero que quedó escrito en la última firma.
-///
-/// Devuelve la ruta **hacia dentro**, para que la orden se la dé al portal: no
-/// cruza a la ventana ni por asomo (ADR-0011). Sin firma terminada en esta
-/// sesión no hay nada que abrir, y eso es un fallo y no un silencio: los dos
-/// botones solo se pintan con el resumen delante, así que llegar aquí sin
-/// documento entregado es que algo se ha descolocado.
+/// Ruta del último documento firmado entregado en esta sesión (ADR-0011).
 pub fn signed_document(session: &SigningSession) -> Result<PathBuf, Failure> {
     lock(&session.delivered)
         .clone()
         .ok_or_else(no_signed_document)
 }
 
-/// **Caso de uso.** La carpeta donde quedó el fichero de la última firma.
-///
-/// Es el directorio padre de [`signed_document`], y no la carpeta de destino
-/// leída otra vez de la configuración: si el usuario la ha cambiado desde que
-/// firmó, «Abrir la carpeta» tiene que abrir aquella en la que está el fichero
-/// del resumen, no la que se usaría en la siguiente firma.
+/// Directorio del último documento firmado entregado en esta sesión (ADR-0011).
 pub fn signed_folder(session: &SigningSession) -> Result<PathBuf, Failure> {
     let landing = signed_document(session)?;
     landing
@@ -313,29 +207,20 @@ pub fn signed_folder(session: &SigningSession) -> Result<PathBuf, Failure> {
         .ok_or_else(no_signed_document)
 }
 
-/// Ninguna firma ha terminado todavía en esta sesión.
 fn no_signed_document() -> Failure {
     Failure::new("unknown", "no hay ningun documento firmado en esta sesion")
 }
 
-/// **Caso de uso.** Si hay una firma a medias en este momento (ID-160).
-///
-/// Es lo único que se le pregunta a la sesión desde fuera del recorrido de la
-/// firma, y se pregunta para **no** hacer algo: una segunda invocación no
-/// sustituye el documento mientras esto sea cierto.
+/// Indica si hay una sesión de firma activa en curso.
 pub fn is_live(session: &SigningSession) -> bool {
     lock(&session.open).is_some()
 }
 
-/// **Caso de uso.** Cancelar: se olvida el ciclo a medias.
-///
-/// Existe porque un ciclo abierto que no se cierra deja el sello y los bytes a
-/// firmar vivos en memoria hasta que se cierre la ventana.
+/// Cancela la sesión activa descartando el ciclo en curso.
 pub fn cancel(session: &SigningSession) {
     *lock(&session.open) = None;
 }
 
-/// El texto del recuadro que sale de la orden y del titular.
 fn layer2_text_of(order: &SigningOrder, holder: &StampedHolder) -> String {
     compose_layer2_text(
         &VisibleTextFields {
@@ -361,19 +246,13 @@ fn layer2_text_of(order: &SigningOrder, holder: &StampedHolder) -> String {
     )
 }
 
-/// La configuración de firma que sale de la orden y del certificado elegido.
-///
-/// El nombre y el emisor se leen **del DER**, no de la orden: la ventana solo
-/// manda el asa, y componer el recuadro con lo que la ventana diga sería dejar
-/// que estampe cualquier nombre.
+/// Configuración de firma construida a partir de la orden y del certificado seleccionado.
 pub fn config_for(
     order: &SigningOrder,
     chosen: &TokenCertificate,
 ) -> Result<SignatureConfig, Failure> {
     let holder = certificates::stamped_holder_of(chosen);
     Ok(SignatureConfig {
-        // Sin colocación no hay geometría que emitir, y las claves del recuadro
-        // que traiga la sede llegan al puente intactas (ID-282).
         placement: order
             .placement
             .as_ref()
@@ -381,25 +260,11 @@ pub fn config_for(
             .transpose()?,
         layer2_text: layer2_text_of(order, &holder),
         rubric_image: order.rubric.clone(),
-        // Un motivo vacío **no se envía**: `signReason` con la cadena vacía
-        // estampa una etiqueta «Motivo:» sin nada detrás.
         sign_reason: (!order.reason.is_empty()).then(|| order.reason.clone()),
-        // La pregunta se hizo antes del PIN, y esto es lo que contestó
-        // (ID-301). Sin consentimiento no se emite la clave y el puente aborta
-        // la cofirma, que es lo correcto.
         allow_unregistered_signatures: order.allow_unregistered_signatures,
     })
 }
 
-/// Lo que hay que saber del token y de la orden antes de cruzar la frontera.
-///
-/// Junta las dos preguntas que se le hacen al token —qué certificado es, y si
-/// todavía sirve— con la configuración que sale de él, porque las tres son la
-/// misma decisión: **con qué se firma**.
-///
-/// Lo comparte [`crate::app::preview`], que llega al puente con exactamente
-/// este mismo plan: la vista previa que se compusiera con otra configuración
-/// enseñaría un sello que la firma no va a estampar.
 pub(crate) fn plan_signature(
     stores: &[Store],
     listed: &ListedCertificates,
@@ -414,17 +279,11 @@ pub(crate) fn plan_signature(
     ))
 }
 
-/// Los bytes del documento, ya admitidos.
-///
-/// La puerta rápida del #60: se decide sobre los bytes, sin token y sin
-/// frontera, y por eso puede caer **antes del diálogo del PIN**.
+/// Obtiene y valida los bytes de un documento para firmar.
 pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, Failure> {
     admitted_bytes_with_situation(document).map_err(Failure::from)
 }
 
-/// [`admitted_bytes`] con la situación **todavía tipada**, que es lo que el
-/// trámite de sede necesita para emitir el código del catálogo que le toca a
-/// un PDF cifrado o certificado (ID-292) en vez de uno solo para todos.
 pub(super) fn admitted_bytes_with_situation(
     document: &PortalDocument,
 ) -> Result<Vec<u8>, CycleFailure> {
@@ -434,16 +293,7 @@ pub(super) fn admitted_bytes_with_situation(
     Ok(bytes)
 }
 
-/// **Caso de uso.** Si el documento que se va a firmar trae **firmas que
-/// rFirma no sabe leer** (ID-297, ID-300).
-///
-/// La ventana lo pregunta **antes** de armar la orden, porque el aviso vive
-/// delante del PIN y no detrás: la respuesta de la persona es lo que viaja
-/// luego en [`SigningOrder::allow_unregistered_signatures`]. Se decide sobre
-/// los bytes, sin token y sin cruzar la frontera, igual que la admisibilidad.
-///
-/// Un documento inadmisible sale por aquí con su negativa de siempre: no tiene
-/// sentido preguntar por las firmas de un PDF que no se va a poder firmar.
+/// Comprueba si el documento contiene firmas previas no reconocibles.
 pub fn unregistered_signatures_in(
     opened: &OpenedDocuments,
     document: &str,
@@ -453,13 +303,7 @@ pub fn unregistered_signatures_in(
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 
-/// Se lleva el ciclo a medias de la sesión, exigiendo que el token ya haya
-/// firmado.
-///
-/// **Se lo lleva, no lo copia**: al salir de aquí la sesión queda vacía, así
-/// que una postfirma que falle no deja un ciclo colgando que un segundo intento
-/// pudiera reusar con otro sello. El ciclo se reabre desde la prefirma o no se
-/// reabre.
+/// Extrae el ciclo completado en el token de la sesión activa.
 pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, Failure> {
     let mut open = lock(&session.open);
     let in_flight = open.take().ok_or_else(no_open_cycle)?;
@@ -476,23 +320,16 @@ pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, Failur
     })
 }
 
-/// El ciclo ya firmado en el token, sacado de la sesión y listo para la
-/// postfirma.
+/// Ciclo firmado en el token preparado para la postfirma.
 pub struct SignedCycle {
-    cycle: OpenCycle,
-    document: DocumentInHand,
-    signature: TokenSignature,
-    seal: SessionSeal,
-    certificate: CertificateRef,
-    signer_der: Vec<u8>,
+    pub cycle: OpenCycle,
+    pub document: DocumentInHand,
+    pub signature: TokenSignature,
+    pub seal: SessionSeal,
+    pub certificate: CertificateRef,
+    pub signer_der: Vec<u8>,
 }
 
-/// Aplana las tres capas de resultado que devuelve un trabajo del isolate: el
-/// hilo puede haberse caído, la librería puede no haber abierto, y el ciclo
-/// puede haber fallado.
-///
-/// Lo comparte [`crate::app::preview`]: el isolate es uno y las tres capas de
-/// resultado son las mismas, se esté firmando o solo viendo.
 pub(crate) fn on_the_bridge<T: Send + 'static>(
     isolate: &Isolate,
     task: impl FnOnce(&crate::ffi::NativeBridge) -> Result<T, cycle::CycleError> + Send + 'static,
@@ -500,9 +337,6 @@ pub(crate) fn on_the_bridge<T: Send + 'static>(
     on_the_bridge_with_situation(isolate, task).map_err(Failure::from)
 }
 
-/// [`on_the_bridge`] con la situación **todavía tipada**: las tres capas se
-/// aplanan igual, pero lo que sale sigue sabiendo si fue el puente, el token o
-/// el sello, que es lo que la sede necesita para recibir su código (ID-292).
 pub(crate) fn on_the_bridge_with_situation<T: Send + 'static>(
     isolate: &Isolate,
     task: impl FnOnce(&crate::ffi::NativeBridge) -> Result<T, cycle::CycleError> + Send + 'static,
@@ -531,21 +365,12 @@ mod tests {
     use crate::memory::{Configuration, ListedCertificates, OpenedDocuments};
     use crate::signing::PageSet;
 
-    /// **Grada A**: lo que se comprueba leyendo esta fuente son invariantes de
-    /// forma —qué guarda la sesión y desde dónde se recuerda el certificado—.
-    /// El ciclo contra el token y `pdfsig` es la grada C de
-    /// `tests/native_cycle.rs`.
     const SOURCE: &str = include_str!("mod.rs");
 
-    /// La mitad de producción, sin las pruebas: si no, esta comprobación se
-    /// leería a sí misma y encontraría siempre sus propios literales.
     fn production_half() -> &'static str {
         half_of(SOURCE)
     }
 
-    /// La mitad de producción de **cualquier** fuente, sin sus pruebas: si no,
-    /// estas comprobaciones leerían los literales de los tests y se creerían
-    /// cualquier cosa.
     fn half_of(source: &'static str) -> &'static str {
         source
             .split_once("\nmod tests {")
@@ -555,8 +380,6 @@ mod tests {
 
     #[test]
     fn the_pin_is_never_kept_in_the_half_open_cycle() {
-        // Entra por `sign_on_token`, se usa en el token y no se guarda: ni en
-        // la sesión a medias, ni en ningún tipo de salida.
         let session = production_half()
             .split_once("struct InFlight {")
             .expect("la sesión sigue aquí")
@@ -573,8 +396,7 @@ mod tests {
 
     #[test]
     fn the_seal_travels_apart_from_the_cycle_that_issued_it() {
-        // Si el sello viviera solo dentro de `OpenCycle`, compararlo consigo
-        // mismo no comprobaría nada y el ADR-0016 sería un comentario.
+        // ADR-0016.
         let session = production_half()
             .split_once("struct InFlight {")
             .expect("la sesión sigue aquí")
@@ -583,22 +405,6 @@ mod tests {
         assert!(session.contains("seal: SessionSeal"));
     }
 
-    /// **La insignia `Firmado` la escribe solo la postfirma** (ID-76).
-    ///
-    /// Se lee la fuente y no el resultado porque lo que se vigila es una
-    /// propiedad de **todo** el backend, no de un recorrido: un
-    /// `Badge::Signed` nuevo en el caso de uso que abre un documento, o en la
-    /// orden que anota la fila, pondría `Firmado` en un PDF que rFirma no ha
-    /// firmado. Contar las firmas de un PDF ajeno es la ficha 14 y es de v1.0.
-    ///
-    /// La vista previa entra en la lista aunque no escriba nada: componer el
-    /// PDF con un `PK1` inventado y anotar `Firmado` sería poner la insignia a
-    /// un documento que nadie ha firmado (ID-136).
-    ///
-    /// La mitad de comportamiento la fija
-    /// `the_signed_document_is_the_only_row_that_gets_the_signed_badge`, en
-    /// [`crate::app::recents`]; esta es la que solo se ve mirando los cuatro
-    /// ficheros a la vez.
     #[test]
     fn the_signed_badge_is_written_by_the_postsign_and_by_nothing_else() {
         let writers = [
@@ -669,12 +475,6 @@ mod tests {
         );
     }
 
-    /// **ID-286 / TD-64**: y de un documento que no se recuerda no se escribe
-    /// fila ninguna, tampoco la del firmado.
-    ///
-    /// Se lee la fuente y no el resultado por lo mismo que la de arriba: el
-    /// recorrido entero exige el puente, y lo que se vigila es que la llamada
-    /// esté **detrás** de la pregunta y no al lado.
     #[test]
     fn a_document_that_is_not_remembered_gets_no_row_when_it_is_signed() {
         let postsign = production_half()
@@ -692,11 +492,6 @@ mod tests {
         );
     }
 
-    /// **Elegir no es firmar.** Lo que recuerda el certificado es la postfirma,
-    /// y solo ella: si `remember_the_certificate` apareciera también en el caso
-    /// de uso que lista o en el que prefirma, elegir uno en el desplegable y
-    /// cerrar sin firmar cambiaría lo recordado —y con «Recordar mi actividad»
-    /// apagado escribiría en disco por cada clic—.
     #[test]
     fn only_the_postsign_remembers_the_certificate() {
         let source = production_half();
@@ -732,8 +527,6 @@ mod tests {
 
     #[test]
     fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
-        // iText lo recortaría sin decir nada y la firma saldría válida igual,
-        // con la rúbrica de trece puntos de ancho (ID-22).
         let order = SigningOrder {
             placement: Some(PlacementOrder {
                 rect: [72.0, 500.0, 900.0, 600.0],
@@ -749,7 +542,6 @@ mod tests {
 
     #[test]
     fn an_empty_reason_is_not_sent_at_all() {
-        // `signReason` vacío estampa una etiqueta «Motivo:» sin nada detrás.
         let config = config_for(&an_order(), &a_certificate("FIRMA", &[])).expect("cabe");
 
         assert_eq!(config.sign_reason, None);
@@ -778,8 +570,6 @@ mod tests {
         assert_eq!(failure.situation, "unknown");
     }
 
-    /// Los dos botones del resumen no tienen nada que abrir hasta que una
-    /// firma termina: preguntar antes es un fallo, no un silencio.
     #[test]
     fn there_is_nothing_to_open_before_the_first_signature_of_the_session() {
         let session = SigningSession::default();
@@ -791,9 +581,6 @@ mod tests {
         assert!(signed_folder(&session).is_err());
     }
 
-    /// Y la ruta que abren la guarda la sesión, **no la ventana**: bajo el
-    /// sandbox la ventana nunca conoce la ruta del fichero (ADR-0011), así que
-    /// las dos órdenes no reciben ninguna y leen la que dejó la postfirma.
     #[test]
     fn the_two_openers_read_the_landing_the_postsign_left_behind() {
         let session = SigningSession::default();
@@ -805,15 +592,11 @@ mod tests {
         assert_eq!(signed_folder(&session).expect("y carpeta"), folder.path());
     }
 
-    /// Una sesión sin ciclo abierto no está viva, y por eso una segunda
-    /// invocación puede sustituir el documento sin preguntar (ID-160).
     #[test]
     fn a_session_with_no_open_cycle_is_not_live() {
         assert!(!is_live(&SigningSession::default()));
     }
 
-    /// Y cancelar la deja como estaba: lo que bloqueaba la sustitución era el
-    /// ciclo, no haber empezado alguna vez.
     #[test]
     fn a_cancelled_session_is_not_live_either() {
         let session = SigningSession::default();
@@ -823,8 +606,6 @@ mod tests {
         assert!(!is_live(&session));
     }
 
-    /// Ni la ruta ni nada que se le parezca sale por la orden: lo que la
-    /// sesión guarda se queda dentro (ADR-0011).
     #[test]
     fn the_remembered_landing_never_leaves_the_backend() {
         let crossing = production_half()
@@ -845,8 +626,6 @@ mod tests {
         );
     }
 
-    /// Lo que no es un PDF cae **antes del diálogo del PIN** (#60): se decide
-    /// sobre los bytes, sin token y sin cruzar la frontera.
     #[test]
     fn what_is_not_a_pdf_is_refused_before_the_pin() {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -859,8 +638,6 @@ mod tests {
         assert_eq!(failure.situation, "notAPdf");
     }
 
-    /// Y un documento que ya no está se cuenta aparte: el fallo no es que no
-    /// sea un PDF, es que no se puede leer.
     #[test]
     fn a_document_that_is_gone_is_told_apart_from_one_that_is_not_a_pdf() {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -871,8 +648,6 @@ mod tests {
         assert_eq!(failure.situation, "documentUnreadable");
     }
 
-    /// La prefirma pide el documento **por su identificador**, y uno que no es
-    /// de esta sesión no abre ningún ciclo.
     #[test]
     fn a_signature_cannot_begin_on_a_document_that_is_not_open() {
         let order = SigningOrder {
@@ -893,8 +668,6 @@ mod tests {
         assert_eq!(failure.situation, "documentUnreadable");
     }
 
-    /// Y la postfirma no ensambla nada si no hay ciclo: se para antes de cruzar
-    /// la frontera, no después.
     #[test]
     fn the_postsign_stops_before_the_bridge_when_no_cycle_was_started() {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -911,8 +684,6 @@ mod tests {
         assert_eq!(failure.situation, "unknown");
     }
 
-    /// El PIN no tiene nada que firmar sin un ciclo abierto, y esa es la única
-    /// respuesta: no se abre uno por el camino.
     #[test]
     fn the_pin_has_nothing_to_sign_when_no_cycle_was_started() {
         let failure =
@@ -921,8 +692,6 @@ mod tests {
         assert_eq!(failure.situation, "unknown");
     }
 
-    /// Cancelar deja la sesión vacía, que es lo que suelta el sello y los bytes
-    /// a firmar sin esperar a que se cierre la ventana.
     #[test]
     fn cancelling_leaves_no_cycle_behind() {
         let session = SigningSession::default();

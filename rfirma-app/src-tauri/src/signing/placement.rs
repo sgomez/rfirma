@@ -1,50 +1,4 @@
-//! Del recuadro que se arrastra sobre el visor al `/Rect` del PDF (ID-21,
-//! ID-22).
-//!
-//! Son **dos pasos**, y el segundo no se ve venir:
-//!
-//! 1. **Lienzo → espacio de usuario PDF.** Es lo que hace `convertToPdfPoint`
-//!    de `pdf.js`: invertir la matriz del viewport, que deshace de golpe la
-//!    escala, el volteo del eje Y, la `/Rotate` de la página y el origen de la
-//!    MediaBox. El resultado es **exactamente el `/Rect` que acabará teniendo
-//!    el widget de firma**.
-//! 2. **Espacio de usuario → `extraParams`.** `T⁻¹`. AutoFirma entrega el
-//!    rectángulo tal cual a `setVisibleSignature(Rectangle, page, null)`, pero
-//!    iText lo transforma según la `/Rotate` **al cerrar el documento**, antes
-//!    de escribir el `/Rect`. Como el widget acaba en `T(entrada)` y queremos
-//!    que acabe en el rectángulo del paso 1, hay que entregar `T⁻¹` de ese
-//!    rectángulo.
-//!
-//! `T` usa los **límites superiores** de la MediaBox, no la anchura ni la
-//! altura. Con la MediaBox en el origen las dos cosas coinciden y el error se
-//! esconde: sin rotación y con la MediaBox en `(0,0)` los dos caminos dan lo
-//! mismo, así que el fallo no aparece en el PDF de prueba de nadie y coloca la
-//! firma en el sitio equivocado en el del usuario, sin lanzar excepción.
-//!
-//! Las coordenadas se emiten como enteros porque AutoFirma las lee como `int`
-//! (`PdfUtil.getPositionOnPage`), y el recuadro se guarda en espacio de usuario
-//! y no en píxeles, o el zoom lo desplaza solo.
-//!
-//! **Y esa MediaBox no siempre es la MediaBox.** Lo que manda la ventana es el
-//! `page.view` de `pdf.js`, que es la **CropBox** recortada contra la MediaBox
-//! cuando las dos difieren, y es lo único que `pdf.js` deja cruzar al hilo
-//! principal. Para el paso 1 es justo lo que hace falta —es la caja con la que
-//! `pdf.js` construyó su viewport—; para el `T⁻¹` del paso 2 haría falta la
-//! MediaBox de verdad, que es la que lee `PdfReader.getPageSize`. Con
-//! `/Rotate` 0 el `T⁻¹` es la identidad y no hay error; en páginas rotadas de
-//! un documento con las dos cajas distintas el recuadro se desplaza esa
-//! diferencia. Medido en el #354 y escrito entero —incluido por qué corregirlo
-//! pide una entrada nueva del puente— en
-//! `docs/research/coordenadas-recuadro-pades.md`.
-//!
-//! Nada de esto alcanza al recuadro que coloca una sede: ahí no hay conversión
-//! ninguna y las coordenadas cruzan crudas (ID-282,
-//! [`crate::protocol::visible`]).
-//!
-//! La tabla de `T`, las dieciséis mediciones que la respaldan y el banco de
-//! pruebas están en `docs/research/coordenadas-recuadro-pades.md`. Si sube la
-//! versión de `afirma-lib-itext`, vuelve a medirla: es un hecho sobre esa
-//! librería, no sobre el formato PAdES.
+//! Conversión geométrica del recuadro visual a coordenadas PAdES del puente nativo.
 
 use super::config::PadesRect;
 use serde::{Deserialize, Serialize};
@@ -234,12 +188,7 @@ impl Page {
         }
     }
 
-    /// Paso 2: espacio de usuario → puntos PAdES, con la guardia del ID-22.
-    ///
-    /// Un recuadro que se saliera de la página **iText lo recortaría en
-    /// silencio** y la firma saldría válida igual, con la rúbrica de 13 pt de
-    /// ancho en vez de los 200 que se dibujaron. Aquí se rechaza antes de
-    /// firmar.
+    /// Convierte coordenadas de espacio de usuario a puntos PAdES.
     pub fn pades_rect(&self, rect: &UserSpaceRect) -> Result<PadesRect, OutOfPage> {
         self.check_fits(rect)?;
         let (ax, ay) = self.inverse_itext(rect.lower_left_x, rect.lower_left_y);
@@ -347,10 +296,7 @@ fn round(value: f64) -> i32 {
     (value + 0.5).floor() as i32
 }
 
-/// El recuadro no cabe en la página (ID-22).
-///
-/// Lleva el límite dentro a propósito: «no cabe» sin decir dónde acaba la
-/// página obliga a quien lo lee a ir a buscarlo.
+/// El recuadro no cabe en la página.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct OutOfPage {
     /// La página en la que se intentó colocar, 1-based.
@@ -376,59 +322,29 @@ impl fmt::Display for OutOfPage {
 
 impl std::error::Error for OutOfPage {}
 
-/// **En qué páginas se estampa el recuadro** (ID-91).
-///
-/// Nunca un `u32` desnudo. «Esta página», «algunas» y «todas» no son tres
-/// modos: son un conjunto de tamaño 1, *k* o *n*, y el puente acepta un
-/// conjunto cualquiera —`all` da **exactamente el mismo resultado** que la
-/// lista completa: mismas anotaciones y un solo campo `Signature1`—.
-///
-/// El tipo con nombre existe porque el puente convive con **dos convenios
-/// incompatibles para el valor `0`**: `signaturePages` lo lee como «la primera
-/// página» y `imagePage` como «todas». Un número desnudo invita a importar el
-/// equivocado y a firmar en la página de al lado sin que nadie proteste
-/// (`docs/research/ancla-y-paginas-en-el-puente.md`).
-///
-/// Cruza y se guarda como **`"all"` o `{ "only": [1, 3] }`**, que es el único
-/// trozo de la gramática de `signaturePages` que rFirma habla: ni `append`, ni
-/// los negativos, ni los rangos, porque los tres nombran páginas que el visor
-/// no sabe pintar.
-///
-/// Los dos `serde` son **derivados y no escritos a mano** aunque el formato se
-/// pudiera apretar más: un tipo que cruza sin `derive(Serialize)` es invisible
-/// para la guarda de rutas del ADR-0011 y para `just contract`, que descubren
-/// los tipos por ese derive. Un formato más corto no vale quedarse fuera de
-/// las dos.
+/// En qué páginas se estampa el recuadro.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum PageSet {
-    /// Todas las páginas del documento, sean cuantas sean. Cruza como `"all"`,
-    /// que es además el literal que el puente lee.
+    /// Todas las páginas del documento, sean cuantas sean.
     All,
-    /// Estas y ninguna más, **1-based**, ordenadas y sin repetir. Cruza como
-    /// `{ "only": [1, 3] }`.
+    /// Estas y ninguna más, 1-based, ordenadas y sin repetir.
     Only(BTreeSet<u32>),
 }
 
 impl PageSet {
-    /// El conjunto de una sola página, que es lo que significaba el
-    /// `signaturePage` de v0.2.
+    /// El conjunto de una sola página.
     pub fn only_page(page: u32) -> Self {
         Self::Only(BTreeSet::from([page]))
     }
 
-    /// Un conjunto explícito, o `None` si venía vacío: un conjunto sin páginas
-    /// no coloca el recuadro en ninguna parte, y el puente lo trataría como si
-    /// la clave faltara —o sea, firmando en la última—.
+    /// Un conjunto explícito, o `None` si venía vacío.
     pub fn only(pages: impl IntoIterator<Item = u32>) -> Option<Self> {
         let pages: BTreeSet<u32> = pages.into_iter().collect();
         (!pages.is_empty()).then_some(Self::Only(pages))
     }
 
     /// Las páginas que este conjunto nombra en un documento de `page_count`.
-    ///
-    /// Es donde se ve el ID-91: [`PageSet::All`] y la lista completa **dan lo
-    /// mismo**.
     pub fn resolve(&self, page_count: u32) -> BTreeSet<u32> {
         match self {
             Self::All => (1..=page_count).collect(),
@@ -437,10 +353,6 @@ impl PageSet {
     }
 
     /// El literal de `signaturePages`.
-    ///
-    /// Único sitio donde el conjunto se convierte en texto del puente (ID-91):
-    /// mientras siga siendo uno solo, el convenio de `imagePage` no puede
-    /// colarse por descuido.
     pub fn literal(&self) -> String {
         match self {
             Self::All => ALL_PAGES.to_owned(),
@@ -452,14 +364,7 @@ impl PageSet {
         }
     }
 
-    /// **La validación del destino** (ID-94): que el documento tenga esas
-    /// páginas.
-    ///
-    /// Se comprueba aquí porque **no hay excepción que capturar**:
-    /// `PdfUtil.getPages` no lanza nunca —recorta, avisa por `WARNING` y cae en
-    /// la última página—, de modo que un destino fuera de rango se firma en la
-    /// última con cara de éxito y la respuesta de la prefirma no dice dónde
-    /// acabó el widget. La única defensa es no llamar al puente.
+    /// Valida que el documento contenga las páginas solicitadas.
     pub fn validate(&self, page_count: u32) -> Result<(), OutOfDocument> {
         let missing: Vec<u32> = match self {
             Self::All => Vec::new(),
@@ -479,15 +384,13 @@ impl PageSet {
     }
 }
 
-/// El literal con el que el puente nombra «todas las páginas». **No es `0`**:
-/// ese es el convenio de `imagePage`, y aquí significaría «la primera».
+/// Literal con el que el puente nombra todas las páginas.
 const ALL_PAGES: &str = "all";
 
-/// El destino no existe en el documento (ID-94).
+/// El destino no existe en el documento.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OutOfDocument {
-    /// Las páginas pedidas que el documento no tiene. Vacía cuando lo que
-    /// fallaba era que el conjunto no nombraba ninguna página.
+    /// Las páginas pedidas que el documento no tiene.
     pub missing: Vec<u32>,
     /// Cuántas páginas tiene el documento de verdad.
     pub page_count: u32,
@@ -816,8 +719,6 @@ mod tests {
         );
     }
 
-    /// ID-91: «esta página», «algunas» y «todas» son un conjunto de tamaño 1,
-    /// *k* y *n*, y `all` **da exactamente lo mismo** que la lista completa.
     #[test]
     fn resolves_all_to_the_very_same_pages_the_full_list_names() {
         assert_eq!(
@@ -837,9 +738,6 @@ mod tests {
         assert_eq!(PageSet::only([]), None);
     }
 
-    /// **TD-30, sin puente**: el destino se valida en Rust porque
-    /// `PdfUtil.getPages` no lanza —recorta y firma en la última con cara de
-    /// éxito—, así que no hay excepción que capturar.
     #[test]
     fn refuses_a_page_the_document_does_not_have() {
         let refusal = PageSet::only_page(99)
@@ -858,9 +756,6 @@ mod tests {
         assert_eq!(refusal.missing, vec![4, 9]);
     }
 
-    /// El `0` es la trampa de los dos convenios: en `signaturePages` sería «la
-    /// primera página» y en `imagePage` «todas». Aquí no es ninguna de las dos,
-    /// porque las páginas se cuentan desde 1.
     #[test]
     fn refuses_the_page_zero_instead_of_guessing_which_convention_it_meant() {
         assert!(PageSet::only_page(0).validate(3).is_err());
@@ -875,16 +770,11 @@ mod tests {
         assert!(PageSet::All.validate(3).is_ok());
     }
 
-    /// `all` sobre un documento sin páginas no nombra ninguna, y el puente lo
-    /// leería como si la clave faltara.
     #[test]
     fn refuses_all_when_the_document_has_no_pages() {
         assert!(PageSet::All.validate(0).is_err());
     }
 
-    /// «Todas» cruza con **el mismo literal que lee el puente**, y la lista
-    /// dice de qué es la lista: `{ "only": [...] }` no se puede confundir con
-    /// las coordenadas de al lado.
     #[test]
     fn crosses_as_the_word_all_or_as_the_list_it_names() {
         assert_eq!(
