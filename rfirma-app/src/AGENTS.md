@@ -20,6 +20,11 @@ rojo.
   manejador interno con su número de línea y la primera línea de su bloque `/**`;
   desde ahí, `sed -n 'A,Bp;C,Dp'` con **todos** los tramos en una sola llamada —
   un turno por tramo sale más caro que haber leído el módulo entero.
+- **El typecheck es `tsc -b` (o `just check-ts`), nunca `tsc --noEmit`.** El
+  `tsconfig.json` de la raíz de `rfirma-app/` es `{"files": [], "references":
+  [...]}`: `pnpm exec tsc --noEmit` sale en verde **sin mirar un solo fichero**.
+  `vitest` tampoco compila los `*.test.ts`, así que un campo nuevo en un tipo
+  compartido que solo usan las pruebas pasa los dos y cae en el CI.
 - Los tests viven en `*.test.ts(x)` **al lado** del módulo. No los abras salvo
   que vayas a tocarlos; `grep -n "it(\|describe(" <fichero>.test.tsx` dice qué
   cubren en una línea por caso.
@@ -140,6 +145,13 @@ entera. Y **el extractor lee también los comentarios**, así que un `t()` de
 ejemplo dentro de un bloque `/** */` cuenta como clave usada: puede poner
 `extract --ci` en rojo o falsear el recuento de claves sin uso.
 
+**Al ampliar el catálogo, la primera pasada de `just po` se espera en rojo.** El
+orden es: escribir la cadena en el `.pot` → `just po` (`msgmerge` deja las
+entradas nuevas vacías y `po-import.mjs` aborta con «po/es.po no está completo, y
+es el original») → traducir las entradas nuevas en los `.po` → `just po` otra
+vez. Esa primera pasada roja **no es una regresión**: es la receta diciendo qué
+falta por traducir.
+
 **El idioma que no está al 100 % no genera `.ts`**, así que no puede llegar al
 desplegable: no es una comprobación, es que no existe. `just po --all` genera
 también los incompletos, rellenando con castellano, para quien traduce; nunca
@@ -153,10 +165,9 @@ capacidad nueva, el orden es: el puerto en su módulo de dominio → `tauri.ts` 
 `main.tsx`. Las fichas de pantalla viven en `docs/design/` (ver
 `docs/AGENTS.md`).
 
-## Dos trampas al probar el visor
+## Trampas al probar
 
-Las dos costaron un ciclo de arreglo entero en el visor, y ninguna se ve
-leyendo el código:
+Cada una costó un ciclo de arreglo entero, y ninguna se ve leyendo el código:
 
 - **`jsdom` no trae `ResizeObserver` ni `scrollIntoView`.** Un módulo que los
   use necesita guardia (`typeof ResizeObserver === "undefined"`) o revienta
@@ -166,3 +177,7 @@ leyendo el código:
   nada** — y `fireEvent.wheel` pasa igual, con lo que la prueba tampoco lo
   denuncia. Engancha el evento nativo a mano con `{ passive: false }`, y en la
   prueba despacha un evento nativo `cancelable` y comprueba `defaultPrevented`.
+- **Con `vi.useFakeTimers()`, `userEvent.click(...)` se cuelga** hasta agotar el
+  `testTimeout`, aunque se le pasen `advanceTimers` y `delay: null`. En una
+  prueba con relojes falsos, `fireEvent.click(...)`. Ejemplo real:
+  `sede/SedeWindow.test.tsx`, momento 1.

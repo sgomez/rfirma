@@ -86,7 +86,7 @@ sin pty ni reenvío de puertos): no da consola, sólo sabe escribir en el direct
 sirve ficheros públicos. El destino es un **montaje de directorio del anfitrión**
 (`/srv/rfirma-repo`), **no** un volumen con nombre de Docker, que sólo escribe `root`.
 
-La imagen es **`nginx:alpine` con la configuración y la landing, y nada más**, construida
+La imagen es **`caddy:alpine` con la configuración y la landing, y nada más**, construida
 por Coolify desde `main` con el `Dockerfile` de `packaging/repo/`. **Los datos no van dentro
 de la imagen**: cada publicación produciría una capa nueva con la historia entera repetida.
 Con los datos fuera, el CI de publicación no toca Docker en ningún momento.
