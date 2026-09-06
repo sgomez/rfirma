@@ -42,7 +42,7 @@
 use std::collections::BTreeMap;
 
 use super::codes::{Parameter, SafCode};
-use super::refusal::Refusal;
+use super::refusal::{Refusal, RefusalSituation};
 
 /// Las cuatro esquinas del recuadro, en la convención del original
 /// (`PdfExtraParams`).
@@ -189,7 +189,8 @@ fn refuse_an_appended_page(params: &BTreeMap<String, String>) -> Result<(), Refu
                 "'{key}={value}' pide anadir una pagina en blanco al documento, y eso es \
                  modificarlo antes de firmarlo"
             ),
-        ));
+        )
+        .because(RefusalSituation::AppendedSignaturePage));
     }
     Ok(())
 }

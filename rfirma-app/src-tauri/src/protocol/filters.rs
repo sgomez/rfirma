@@ -45,7 +45,7 @@
 //! la sede llama al motor igualmente. Lo que **no** pasa por aquí es el listado
 //! local de rFirma, que sigue enseñando el caducado con su estado (ID-254).
 
-use super::refusal::Refusal;
+use super::refusal::{Refusal, RefusalSituation};
 
 /// La clave de la primera forma.
 const FILTER: &str = "filter";
@@ -229,7 +229,8 @@ fn check_is_accepted(key: &str, criterion: &str) -> Result<(), Refusal> {
 
     Err(Refusal::params(format!(
         "el criterio de filtro '{trimmed}' de '{key}' no esta en la lista blanca"
-    )))
+    ))
+    .because(RefusalSituation::UnsupportedFilter))
 }
 
 #[cfg(test)]

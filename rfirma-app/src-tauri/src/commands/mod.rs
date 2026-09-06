@@ -114,8 +114,9 @@ pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, NewVersionView,
-    OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignatureRoundView,
-    SignedDocumentView, SiteErrandView, SiteStageView, UrlHandlerView, UrlHandlersView,
+    NoCertificateView, NoChannelView, OpenedDocumentView, PlacementView, RecentDocumentView,
+    RefusalSituationView, SecretView, SignatureRoundView, SignedDocumentView, SiteErrandView,
+    SiteOutcomeView, SiteStageView, UrlHandlerView, UrlHandlersView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -867,6 +868,54 @@ pub fn site_finish_signing(
     Ok(())
 }
 
+/// **Orden 34.** Lleva a instalar un certificado desde la ventana de sede
+/// (ID-278, ID-341).
+///
+/// Es el arreglo de «no tienes ninguno», y por eso es la acción principal de
+/// esa pantalla. Abre el mismo diálogo del portal que [`install_certificate`] y
+/// mete el `.p12` en un almacén propio: **la instalación es una sola**, y ésta
+/// existe para que la ventana de sede no tenga que conocer la contraseña de la
+/// ventana principal ni al revés.
+///
+/// Devuelve `false` cuando el diálogo se cerró sin elegir nada, que no es un
+/// fallo: es lo que deja el almacén como estaba, y la pantalla igual.
+///
+/// Es `async` como todas las órdenes del trámite (ID-337), y aquí además es
+/// obligatorio: dentro llama al `blocking_pick_file` del complemento de
+/// diálogo, que en el hilo del bucle de eventos se cuelga para siempre y sin
+/// error visible.
+#[tauri::command(async)]
+pub fn site_install_certificate(
+    app_handle: tauri::AppHandle,
+    environment: State<'_, Environment>,
+    password: String,
+) -> Result<bool, Failure> {
+    install_certificate(app_handle, environment, password)
+}
+
+/// **Orden 35.** Vuelve a mirar el almacén, por si se instaló un certificado
+/// con la ventana abierta (ID-278, ID-341).
+///
+/// **Continúa el trámite, no lo reinicia**: se vuelve a atender la petición que
+/// la sede mandó por el canal —la que [`crate::app::errand::LiveErrand`] tiene
+/// apuntada—, con el mismo canal, la misma asa y el mismo trámite vivo. La sede
+/// no ha recibido nada todavía y no tiene que invocar otra vez.
+///
+/// Sin trámite vivo no hay nada que volver a mirar, y es la respuesta correcta:
+/// quien llegue aquí después de que el trámite haya contestado no mueve nada.
+///
+/// Es `async` como todas las órdenes del trámite (ID-337).
+#[tauri::command(async)]
+pub fn site_look_again(app_handle: tauri::AppHandle) {
+    use tauri::Manager as _;
+
+    let Some(url) = app_handle.state::<app::errand::LiveErrand>().the_request() else {
+        return;
+    };
+
+    dispatch_the_site_operation(&app_handle, &url);
+}
+
 /// **Lo que la sede pidió, hasta que la persona conteste.**
 ///
 /// Vive en el adaptador y no en [`crate::app::errand::Errand`] a propósito: el
@@ -1023,15 +1072,30 @@ pub fn attend_site_operation(
 ) {
     use tauri::Manager as _;
 
+    let live = app.state::<app::errand::LiveErrand>();
+
+    // Lo primero, antes de nada que pueda contestar: el asa es por donde sale
+    // todo lo que este trámite le diga a la sede (ID-321).
+    live.answer_through(reply);
+
+    dispatch_the_site_operation(app, &url);
+}
+
+/// **Atiende la operación con el escritorio armado desde el estado**, y publica
+/// lo que salga en la ventana de sede.
+///
+/// Aparte de [`attend_site_operation`] porque se atiende **dos veces la misma
+/// petición** (ID-341): la primera cuando llega por el canal con su asa, y la
+/// segunda cuando quien no tenía ningún certificado instala uno y vuelve a
+/// mirar. El asa se apunta una sola vez, en la primera; lo de aquí no la toca.
+fn dispatch_the_site_operation(app: &tauri::AppHandle, url: &crate::protocol::AfirmaUrl) {
+    use tauri::Manager as _;
+
     let environment = app.state::<Environment>();
     let opened = app.state::<OpenedDocuments>();
     let live = app.state::<app::errand::LiveErrand>();
     let consent = app.state::<SiteConsent>();
     let isolate = app.state::<Isolate>();
-
-    // Lo primero, antes de nada que pueda contestar: el asa es por donde sale
-    // todo lo que este trámite le diga a la sede (ID-321).
-    live.answer_through(reply);
 
     let bridge = TheBridge::borrowed_from(&isolate);
     let stores = environment.all_stores();
@@ -1050,7 +1114,7 @@ pub fn attend_site_operation(
         scratch_dir: &scratch_dir,
     };
 
-    match app::errand::attend_operation(&desk, &url, &live) {
+    match app::errand::attend_operation(&desk, url, &live) {
         app::errand::ErrandStep::AskingForConsent {
             certificates,
             filter,
@@ -1070,6 +1134,21 @@ pub fn attend_site_operation(
                 unregistered_signatures: asked.unregistered_signatures,
             });
             publish_to_the_site_window(app, view);
+        }
+        // **El callejón que sí tiene arreglo** (ID-278, ID-341): la ventana lo
+        // dice con su motivo, y con `NotOne` el trámite sigue vivo —no se ha
+        // escrito nada en el cable— esperando a que se instale uno y se vuelva
+        // a mirar.
+        //
+        // El consentimiento se olvida en las dos: aquí no hay nada que
+        // consentir ni nada que elegir, así que lo que quedara apuntado de un
+        // reparto anterior no vale ya para nada.
+        app::errand::ErrandStep::NoCertificate { reason, owned, .. } => {
+            consent.forget();
+            publish_to_the_site_window(
+                app,
+                SiteErrandView::without_certificates(reason.into(), owned),
+            );
         }
         // Ya está contestada: `attend_operation` cierra el trámite y escribe la
         // línea por el asa (ID-322). Lo que la ventana enseñe de eso es del

@@ -12,11 +12,42 @@ use std::fmt;
 
 use super::codes::{Parameter, SafCode, WireAnswer};
 
+/// **Qué situación es este rechazo**, clasificada y no redactada (ADR-0009,
+/// ID-29).
+///
+/// Es lo que la ventana de sede necesita para nombrar el rechazo en el idioma
+/// de la persona: el código `SAF_NN` es del cable y su frase la escribe el
+/// catálogo del original, así que ninguno de los dos sirve para lo que se pinta
+/// aquí dentro. Se clasifica **donde se rechaza** y no por el código, porque un
+/// mismo `SAF_03` cubre situaciones que la ventana cuenta distinto.
+///
+/// [`Self::Unknown`] es el valor por defecto y **no es un descuido**: la
+/// mayoría de los rechazos no tienen una frase propia que decir, y el detalle
+/// crudo —lo único accionable de esa pantalla— viaja aparte.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum RefusalSituation {
+    /// `signaturePages=append`: la sede pide añadir una página en blanco, que
+    /// es modificar el documento antes de firmarlo (ID-284).
+    AppendedSignaturePage,
+    /// Un criterio de filtro que no está en la lista blanca (ID-256).
+    UnsupportedFilter,
+    /// La sede declara una versión del protocolo que aquí no se habla (ID-251).
+    UnsupportedProtocolVersion,
+    /// La petición de firma no trae `format`.
+    MissingFormat,
+    /// Ya hay un trámite de sede vivo: no se atienden dos a la vez (ID-280).
+    ErrandInFlight,
+    /// Cualquier otro: la ventana lo cuenta en general y enseña el detalle.
+    #[default]
+    Unknown,
+}
+
 /// Un rechazo: lo que va a la sede y el detalle que se queda aquí.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Refusal {
     code: SafCode,
     blame: Option<Parameter>,
+    situation: RefusalSituation,
     detail: String,
 }
 
@@ -26,6 +57,7 @@ impl Refusal {
         Self {
             code,
             blame: None,
+            situation: RefusalSituation::Unknown,
             detail: detail.into(),
         }
     }
@@ -41,8 +73,23 @@ impl Refusal {
         Self {
             code: SafCode::Params,
             blame: Some(blame),
+            situation: RefusalSituation::Unknown,
             detail: detail.into(),
         }
+    }
+
+    /// **El mismo rechazo, dicho por su situación** (ID-341): lo que sale al
+    /// cable no cambia ni un carácter, y lo que cambia es cómo lo nombra la
+    /// ventana.
+    #[must_use = "devuelve el rechazo clasificado, no lo modifica en su sitio"]
+    pub fn because(mut self, situation: RefusalSituation) -> Self {
+        self.situation = situation;
+        self
+    }
+
+    /// Qué situación es, para la ventana y nunca para el cable.
+    pub fn situation(&self) -> RefusalSituation {
+        self.situation
     }
 
     /// El código que la sede recibe.
@@ -89,6 +136,24 @@ mod tests {
         assert_eq!(refusal.code(), SafCode::Params);
         assert_eq!(refusal.detail(), "el parametro 'ports' no es numerico");
         assert!(refusal.to_string().starts_with("SAF_03: "));
+    }
+
+    /// **Clasificar no toca el cable** (ID-341): la situación es de la ventana,
+    /// y el código y el parámetro salen igual que sin ella.
+    #[test]
+    fn the_situation_of_a_refusal_changes_nothing_that_goes_out() {
+        let plain = Refusal::about(Parameter::Properties, "'signaturePages=append'");
+        let classified = plain
+            .clone()
+            .because(RefusalSituation::AppendedSignaturePage);
+
+        assert_eq!(plain.situation(), RefusalSituation::Unknown);
+        assert_eq!(
+            classified.situation(),
+            RefusalSituation::AppendedSignaturePage
+        );
+        assert_eq!(classified.answer(), plain.answer());
+        assert_eq!(classified.detail(), plain.detail());
     }
 
     /// Y lo que sale al cable **no lleva el detalle**, sólo el código, su frase

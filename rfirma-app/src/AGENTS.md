@@ -107,8 +107,8 @@ rojo.
 | `desktop/urlHandlers.ts` | 94 | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras: si ya los atiende rFirma y si el banner tiene algo que preguntar. Sin React. |
 | `desktop/UrlHandlerBanner.tsx` | 70 | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
 | **`sede/`** | | **La ventana que abre una sede** por `afirma://` (#362): una ventana con una secuencia de cinco momentos, no cinco pantallas. Ficha: `docs/design/ventana-de-sede.md`. |
-| `sede/errand.ts` | 248 | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y los tres relojes (retardo, umbral, cierre a los 15 s). Sin React. |
-| `sede/SedeWindow.tsx` | 161 | El marco de 520 × 420 px y el reparto entre los cinco momentos. El PIN se monta encima, sin pantalla propia (ID-273). |
+| `sede/errand.ts` | 268 | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand`, los tres relojes (retardo, umbral, cierre a los 15 s) y el callejón sin salida que llega ya medido del backend (ID-341). Sin React. |
+| `sede/SedeWindow.tsx` | 175 | El marco de 520 × 420 px y el reparto entre los cinco momentos. El PIN se monta encima, sin pantalla propia (ID-273), y el canal que ya no se va a abrir reusa la pantalla de la espera sin esperar al reloj (ID-341). |
 | `sede/SedeFrame.tsx` | 69 | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
 | `sede/SedeWaiting.tsx` | 151 | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
 | `sede/SedeConsent.tsx` | 173 | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual (ID-269), y la quinta situación —firma no reconocida (#363)—. |

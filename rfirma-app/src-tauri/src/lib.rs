@@ -169,8 +169,12 @@ pub fn run() {
                         let attendance = app::startup::attend_site_launch(
                             &url,
                             &|ports, duty| open_the_channel(&second_store, ports, duty, app),
-                            &|_| open_the_site_window(&handle),
+                            &|content| open_the_site_window(&handle, &content),
                             app.state::<app::errand::LiveErrand>().inner(),
+                            // A mitad de un trámite no se abre ni un almacén
+                            // NSS (ID-224), así que de la CA local no se sabe
+                            // nada aquí y no se cuenta como obstáculo.
+                            app::startup::LocalCaReach::NotAnObstacle,
                         );
                         hold_the_channel(app, attendance);
                     }
@@ -284,6 +288,8 @@ pub fn run() {
             commands::site_decline,
             commands::site_begin_signing,
             commands::site_finish_signing,
+            commands::site_install_certificate,
+            commands::site_look_again,
         ])
         // **El arranque, que es un adaptador y no decide nada** (ID-324, TD-70):
         // el caso de uso refresca la CA local, mira si la invocación es de sede
@@ -299,7 +305,7 @@ pub fn run() {
                     stores: &trust::NssTrustStores,
                 },
                 &|ports, duty| open_the_channel(&ca_store, ports, duty, &handle),
-                &|_| open_the_site_window(&handle),
+                &|content| open_the_site_window(&handle, &content),
                 app.state::<app::errand::LiveErrand>().inner(),
             );
 
@@ -383,8 +389,13 @@ fn open_the_channel(
 /// porque el frontal todavía no se ha montado. Lo que se le publica es la
 /// espera —el canal está en pie y la petición de la sede no ha llegado—; el
 /// origen y la operación llegan con ella, por el canal ya abierto.
-fn open_the_site_window(app: &tauri::AppHandle) {
+fn open_the_site_window(app: &tauri::AppHandle, content: &app::startup::SiteWindowContent<'_>) {
     use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder};
+
+    // La vista se compone **antes** de construir la ventana: el evento se emite
+    // desde el manejador de carga de página, que no puede prestarse nada de
+    // aquí.
+    let view = view_of(content);
 
     let built = WebviewWindowBuilder::new(
         app,
@@ -395,9 +406,9 @@ fn open_the_site_window(app: &tauri::AppHandle) {
     .inner_size(520.0, 420.0)
     .resizable(false)
     .decorations(false)
-    .on_page_load(|window, payload| {
+    .on_page_load(move |window, payload| {
         if payload.event() == tauri::webview::PageLoadEvent::Finished {
-            let _ = window.emit(commands::SITE_ERRAND, commands::SiteErrandView::waiting());
+            let _ = window.emit(commands::SITE_ERRAND, view.clone());
         }
     })
     .build();
@@ -407,15 +418,39 @@ fn open_the_site_window(app: &tauri::AppHandle) {
     }
 }
 
+/// **Lo que la ventana de sede recibe al abrirse** (ID-341).
+///
+/// Es traducir y nada más: quién abre la ventana y con qué lo decide
+/// [`app::startup::attend_site_launch`], y aquí sólo se pone en la forma que
+/// cruza el IPC.
+fn view_of(content: &app::startup::SiteWindowContent<'_>) -> commands::SiteErrandView {
+    use app::startup::{DeadEnd, SiteWindowContent};
+
+    match content {
+        // Lo único que se sabe al abrirla es que el canal está en pie: el
+        // origen y la operación llegan con la petición de la sede (ID-338).
+        SiteWindowContent::TheErrand(_) => commands::SiteErrandView::waiting(),
+        SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
+            commands::SiteErrandView::no_channel(commands::NoChannelView::ChannelNotOpened)
+        }
+        SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => {
+            commands::SiteErrandView::no_channel(commands::NoChannelView::LocalCaMissing)
+        }
+        SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
+            commands::SiteErrandView::refused(refusal)
+        }
+    }
+}
+
 /// Sostiene el canal que se acaba de abrir, o cuenta por qué no lo hay.
 ///
 /// Soltar el [`channel::OpenChannel`] suelta con él su asa de apagado, y el
 /// servidor deja de aceptar conexiones: el canal tiene que vivir tanto como el
 /// trámite, así que se guarda en el estado.
 ///
-/// Un rechazo que no tiene socket por el que salir se dice por `stderr` y no
-/// por una ventana: la principal no se enseña con una invocación de sede
-/// (ID-328), y la de sede no existe sin trámite (ID-334).
+/// Un rechazo que no tiene socket por el que salir **ya se ha enseñado en la
+/// ventana de sede** (ID-341); lo de aquí es la línea del registro, que es para
+/// quien lee `stderr` y no para quien está delante.
 fn hold_the_channel(app: &tauri::AppHandle, attendance: app::site::Attendance) {
     use app::site::Attendance;
     use tauri::Manager as _;

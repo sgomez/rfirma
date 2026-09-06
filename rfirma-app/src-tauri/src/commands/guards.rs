@@ -173,7 +173,7 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 11] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 15] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -195,6 +195,26 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 11] = [
     // Y detrás de si lo que se pide es firmar o cofirmar no hay más que el
     // verbo con el que la sede lo pidió.
     "SignatureRoundView",
+    // Detrás de un callejón sin salida no hay ningún documento, y no puede
+    // haberlo (ID-341): los tres ocurren **antes** de que la sede haya mandado
+    // nada —el canal no se abrió, o el rechazo no tenía por dónde salir—, y lo
+    // que llevan es un nombre de situación, un motivo y el detalle crudo de un
+    // rechazo del protocolo, que nace de la URL y no de ningún fichero.
+    "NoChannelView",
+    // `SiteOutcomeView::Refused` lleva el detalle **crudo** de un `Refusal`, y
+    // un `Refusal` sí puede llevar dentro el asa del portal (los hay sobre
+    // `Parameter::Data`, el fichero de paso). Aquí no hay documento detrás
+    // **mientras el único constructor sea el del callejón sin salida**:
+    // `SiteErrandView::refused`, llamado sólo desde `view_of` con el `Refusal`
+    // de `DeadEnd::RefusedWithoutChannel`, que nace de leer la URL de arranque.
+    // Si `SiteStageView::Outcome` acaba enseñando rechazos nacidos de un
+    // documento, esta línea sale de aquí y el tipo se construye en
+    // `crossings_from_a_portal_document`.
+    "SiteOutcomeView",
+    "RefusalSituationView",
+    // Y detrás de no tener ningún certificado tampoco: lo que lleva es un
+    // motivo y un recuento del almacén de la persona (ID-277, ID-278).
+    "NoCertificateView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
@@ -538,7 +558,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 33, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 35, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
@@ -647,10 +667,18 @@ fn every_command_of_the_site_errand_runs_off_the_main_thread() {
     // Una lista con nombre, y no un literal en el `for`: las órdenes del
     // trámite (ID-336) entran aquí según se escriben, y la lista dice cuáles se
     // han mirado ya.
-    const OF_THE_ERRAND: [&str; 3] = [
+    const OF_THE_ERRAND: [&str; 5] = [
         "pub fn close_site_window(",
         "pub fn site_identify(",
         "pub fn site_decline(",
+        // Las dos del callejón sin salida (ID-341). La de instalar es además
+        // la única que cae de lleno en el ID-337: por debajo hay un
+        // `blocking_pick_file`, y sin el `(async)` la ventana se clava sin
+        // error. No la ve la guarda que se descubre sola porque su cuerpo
+        // delega en `install_certificate` y no dice `blocking_` en ninguna
+        // parte.
+        "pub fn site_install_certificate(",
+        "pub fn site_look_again(",
     ];
 
     for command in OF_THE_ERRAND {

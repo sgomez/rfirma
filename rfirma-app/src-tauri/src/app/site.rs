@@ -24,7 +24,9 @@
 //! En producción lo cumple [`crate::channel`].
 
 use crate::channel::{ChannelDuty, ChannelError, OpenChannel};
-use crate::protocol::{drawn_ports, AfirmaUrl, LaunchRequest, Refusal, SafCode, WireAnswer};
+use crate::protocol::{
+    drawn_ports, AfirmaUrl, LaunchRequest, Refusal, RefusalSituation, SafCode, WireAnswer,
+};
 
 use super::errand::{Errand, LiveErrand};
 
@@ -107,7 +109,8 @@ pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErra
                         Refusal::new(
                             SafCode::CannotOpenSocket,
                             "ya hay un tramite de sede vivo: no se atienden dos a la vez",
-                        ),
+                        )
+                        .because(RefusalSituation::ErrandInFlight),
                         transport,
                     )
                 }

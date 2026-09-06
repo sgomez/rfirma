@@ -54,8 +54,9 @@ use crate::commands::Failure;
 use crate::memory::{handles, ListedCertificates, Memory, OpenedDocuments};
 use crate::pkcs11::{self, Store};
 use crate::protocol::{
-    read_operation, visible_signature_of, ChannelCredential, Refusal, SafCode, SelectCertificate,
-    SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
+    read_operation, visible_signature_of, AfirmaUrl, ChannelCredential, Refusal, SafCode,
+    SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
+    SiteVisibleSignature, WireAnswer,
 };
 use crate::signing::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 
@@ -82,6 +83,7 @@ pub struct LiveErrand {
     errand: Mutex<Option<Errand>>,
     scratch: Mutex<Option<PathBuf>>,
     reply: Mutex<Option<ReplyHandle>>,
+    asked: Mutex<Option<AfirmaUrl>>,
 }
 
 /// Lo que se sabe de un trámite en curso.
@@ -116,6 +118,12 @@ impl LiveErrand {
     /// borrarlo al contestar.
     fn keep_the_scratch(&self, path: PathBuf) {
         *super::lock(&self.scratch) = Some(path);
+    }
+
+    /// Apunta la petición que la sede mandó por el canal, para poder volver a
+    /// atenderla sin que ella la mande otra vez (ID-341).
+    fn keep_the_request(&self, url: AfirmaUrl) {
+        *super::lock(&self.asked) = Some(url);
     }
 
     /// Apunta el trámite que empieza. **No sustituye**: con uno vivo devuelve
@@ -163,6 +171,17 @@ impl LiveErrand {
         }
     }
 
+    /// **Lo que la sede pidió por el canal**, mientras el trámite siga vivo.
+    ///
+    /// Se apunta para poder **volver a atenderlo sin reiniciar nada** (ID-341):
+    /// quien no tenía ningún certificado instala uno con la ventana abierta y
+    /// vuelve a mirar, y lo que se atiende es la misma petición, por el mismo
+    /// canal y con la misma asa. Sin esto la única salida sería que la sede
+    /// invocara otra vez.
+    pub fn the_request(&self) -> Option<AfirmaUrl> {
+        super::lock(&self.asked).clone()
+    }
+
     /// El trámite vivo, si lo hay.
     pub fn current(&self) -> Option<Errand> {
         super::lock(&self.errand).clone()
@@ -194,6 +213,8 @@ impl LiveErrand {
         if let Some(scratch) = super::lock(&self.scratch).take() {
             let _ = std::fs::remove_file(scratch);
         }
+        // Y la petición: sin trámite vivo no hay nada que volver a atender.
+        *super::lock(&self.asked) = None;
     }
 
     /// El fichero de paso apuntado, si lo hay. **Sólo para las pruebas**: nadie
@@ -223,9 +244,40 @@ pub enum ErrandStep {
     /// enseña el documento que la sede manda y estas filas, y la persona
     /// decide. La sede no recibe nada todavía.
     AskingToSign(SigningConsent),
+    /// **No hay ningún certificado con el que seguir** (ID-278, ID-341): no es
+    /// una variante del consentimiento, porque aquí no hay nada que consentir
+    /// ni nada que elegir.
+    NoCertificate {
+        /// Cuál de las dos situaciones es. Lo que las separa es la salida: una
+        /// tiene arreglo y la otra no.
+        reason: NoCertificate,
+        /// Cuántos certificados tiene la persona en su almacén. Es **su**
+        /// estado, y nunca cuáles descartó la sede (ID-277).
+        owned: usize,
+        /// Lo que la sede ya ha recibido, cuando le tocaba recibir algo.
+        ///
+        /// `None` es [`NoCertificate::NotOne`]: no ha salido nada al cable y el
+        /// trámite sigue vivo (ver [`no_certificate_at_all`]).
+        answered: Option<SiteReply>,
+    },
     /// No hay nada que consentir: esto es lo que la sede recibe, y sale ya
     /// (ID-275).
     Answering(SiteReply),
+}
+
+/// Por qué no queda ningún certificado con el que seguir (ID-278).
+///
+/// Las dos **se tienen que sentir distintas porque la salida es distinta**: una
+/// tiene arreglo y no depende de la sede, la otra no lo tiene porque quien
+/// decide es la sede.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NoCertificate {
+    /// La persona no tiene ni uno instalado. Instalar uno lo arregla, así que
+    /// el trámite espera y la sede no recibe nada todavía.
+    NotOne,
+    /// La sede los ha excluido todos. Instalar otro no arregla nada, y ella ya
+    /// tiene su `SAF_19` (ID-275).
+    TheSiteExcludedThemAll,
 }
 
 /// Lo que hay delante de la persona cuando una sede pide una firma.
@@ -380,13 +432,17 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine> {
 /// [`filtering`], que la entrega ya envuelta para la ventana.
 pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
     desk: &ErrandDesk<'_, E, P>,
-    url: &crate::protocol::AfirmaUrl,
+    url: &AfirmaUrl,
     live: &LiveErrand,
 ) -> ErrandStep {
     let operation = match read_operation(url) {
         Ok(operation) => operation,
         Err(refusal) => return answering(live, SiteReply::RefusedByTheProtocol(refusal)),
     };
+
+    // La petición se apunta antes de atenderla: es lo que deja volver a
+    // mirar el almacén sin reiniciar el trámite (ID-341).
+    live.keep_the_request(url.clone());
 
     let ours = match pkcs11::list_certificates_across(desk.stores) {
         Ok(ours) => ours,
@@ -541,6 +597,11 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine>(
     ours: Vec<crate::pkcs11::TokenCertificate>,
     live: &LiveErrand,
 ) -> Result<Vec<crate::pkcs11::TokenCertificate>, ErrandStep> {
+    if ours.is_empty() {
+        return Err(no_certificate_at_all());
+    }
+
+    let owned = ours.len();
     let accepted =
         filtering::keep_what_the_site_accepts(desk.engine, filter, ours).map_err(|failure| {
             answering(
@@ -553,16 +614,7 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine>(
         })?;
 
     if accepted.is_empty() {
-        return Err(answering(
-            live,
-            SiteReply::Refused {
-                answer: WireAnswer::refused(SafCode::NoCertificatesInKeystore),
-                failure: Failure::new(
-                    "certificateNotFound",
-                    "no queda ningun certificado que la sede acepte",
-                ),
-            },
-        ));
+        return Err(no_certificate_the_site_accepts(live, owned));
     }
     Ok(accepted)
 }
@@ -604,6 +656,11 @@ pub fn consent_for<E: FilterEngine>(
     memory: &Memory,
     live: &LiveErrand,
 ) -> ErrandStep {
+    if ours.is_empty() {
+        return no_certificate_at_all();
+    }
+
+    let owned = ours.len();
     let accepted = match filtering::keep_what_the_site_accepts(engine, request.filter(), ours) {
         Ok(accepted) => accepted,
         // Lo único que puede fallar después de la criba de rFirma es el motor
@@ -623,17 +680,8 @@ pub fn consent_for<E: FilterEngine>(
 
     if accepted.is_empty() {
         // La sede se entera en el acto (ID-275); la ventana enseña **cuál de
-        // las dos** situaciones del ID-278 es, y para eso le llega el detalle.
-        return answering(
-            live,
-            SiteReply::Refused {
-                answer: WireAnswer::refused(SafCode::NoCertificatesInKeystore),
-                failure: Failure::new(
-                    "certificateNotFound",
-                    "no queda ningun certificado que la sede acepte",
-                ),
-            },
-        );
+        // las dos** situaciones del ID-278 es (ID-341).
+        return no_certificate_the_site_accepts(live, owned);
     }
 
     // Y aquí **no** se mira cuántos hay: con uno solo se consiente igual
@@ -765,6 +813,47 @@ pub fn declined(live: &LiveErrand) -> SiteReply {
 /// deshace (`autoscript.js:2462`-`2471`).
 fn on_the_wire(der: &[u8]) -> String {
     base64::engine::general_purpose::URL_SAFE.encode(der)
+}
+
+/// **La persona no tiene ni un certificado** (ID-278, ID-341).
+///
+/// **No sale nada al cable y el trámite sigue vivo**, y es lo único que lo
+/// separa de que la sede los excluya a todos: aquí hay arreglo y no depende de
+/// la sede —instalar uno y volver a mirar—, así que contestarle ya sería cerrar
+/// la única puerta que quedaba abierta. Las dos salidas de la ventana —el pie y
+/// la cruz— siguen siendo [`declined`], y la sede recibe su `CANCEL` en cuanto
+/// la persona diga que no (ID-340).
+fn no_certificate_at_all() -> ErrandStep {
+    ErrandStep::NoCertificate {
+        reason: NoCertificate::NotOne,
+        owned: 0,
+        answered: None,
+    }
+}
+
+/// **La sede los ha excluido todos** (ID-278): recibe su `SAF_19` en el acto y
+/// la ventana enseña cuántos tiene la persona.
+///
+/// Los dos a la vez, y por eso está en una sola función: el código sale al
+/// cable —instalar otro certificado no arreglaría nada, así que no hay nada que
+/// esperar— y el paso que se devuelve lleva la misma decisión contada para la
+/// ventana.
+fn no_certificate_the_site_accepts(live: &LiveErrand, owned: usize) -> ErrandStep {
+    let answered = over(
+        live,
+        SiteReply::Refused {
+            answer: WireAnswer::refused(SafCode::NoCertificatesInKeystore),
+            failure: Failure::new(
+                "certificateNotFound",
+                "no queda ningun certificado que la sede acepte",
+            ),
+        },
+    );
+    ErrandStep::NoCertificate {
+        reason: NoCertificate::TheSiteExcludedThemAll,
+        owned,
+        answered: Some(answered),
+    }
 }
 
 /// Contesta y cierra el trámite: la sede ya tiene lo suyo.
@@ -1917,7 +2006,8 @@ mod tests {
     }
 
     /// **ID-258 / ID-278**: si la sede los excluye a todos, lo que recibe es
-    /// `SAF_19`, y sale ya.
+    /// `SAF_19`, y sale ya. La ventana enseña la otra mitad: cuál de las dos
+    /// situaciones es y cuántos certificados tiene la persona (ID-341).
     #[test]
     fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1937,7 +2027,12 @@ mod tests {
             &live,
         );
 
-        let ErrandStep::Answering(reply) = step else {
+        let ErrandStep::NoCertificate {
+            reason,
+            owned,
+            answered: Some(reply),
+        } = step
+        else {
             panic!("no hay nada que consentir: {step:?}");
         };
         assert_eq!(
@@ -1948,6 +2043,8 @@ mod tests {
             reply.failure().is_some(),
             "la ventana enseña la situacion entera (ID-275)"
         );
+        assert_eq!(reason, NoCertificate::TheSiteExcludedThemAll);
+        assert_eq!(owned, 1, "y cuantos tiene la persona, que es su almacen");
     }
 
     /// Un rechazo del protocolo —un criterio fuera de la lista blanca— sale con
@@ -2173,6 +2270,211 @@ mod tests {
                 .failure()
                 .is_some_and(|it| it.situation == "certificateNotFound"),
             "la ventana sabe cual es la situacion: {reply:?}"
+        );
+    }
+
+    /// **ID-278, ID-341.** Sin ni un certificado instalado **no sale nada al
+    /// cable** y el trámite sigue vivo: la ventana lo enseña con su motivo, y
+    /// la petición queda apuntada para poder volver a atenderla —instalar uno y
+    /// volver a mirar— sin que la sede invoque otra vez.
+    #[test]
+    fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let listed = ListedCertificates::new();
+        let engine = AnEngine::answering(&[]);
+
+        let live = LiveErrand::default();
+        assert!(
+            live.begin(Errand::of(a_credential(), 54001)),
+            "la plaza es suya"
+        );
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        let url = arriving_over_the_channel(&format!(
+            "afirma://selectcert?op=selectcert&idsession={CREDENTIAL}"
+        ));
+
+        // El listado vacío es el de la persona que no tiene ninguno. Se le
+        // habla al caso de uso que **no** lista el token, que es donde vive la
+        // decisión y donde se prueba entera (TD-20, TD-51).
+        live.keep_the_request(url.clone());
+        let step = consent_for(
+            &engine,
+            &requested(&url),
+            Vec::new(),
+            home.path(),
+            &listed,
+            &memory,
+            &live,
+        );
+
+        assert!(
+            matches!(
+                step,
+                ErrandStep::NoCertificate {
+                    reason: NoCertificate::NotOne,
+                    owned: 0,
+                    answered: None,
+                }
+            ),
+            "la ventana lo enseña con su motivo: {step:?}"
+        );
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            None,
+            "a la sede no se le ha dicho nada todavia"
+        );
+        assert!(
+            live.current().is_some(),
+            "y el tramite sigue vivo: instalar uno todavia lo arregla"
+        );
+        assert_eq!(
+            live.the_request().as_ref(),
+            Some(&url),
+            "con la peticion apuntada, volver a mirar no reinicia nada"
+        );
+    }
+
+    /// **ID-278, ID-341.** Y por el camino de la firma, lo mismo: la decisión
+    /// vive en `accepted_listing`, que es lo que `consent_to_sign` comparte
+    /// con [`consent_for`], y llega **después** de la admisibilidad del
+    /// documento y de la política —a tiempo, antes de escribir el fichero de
+    /// paso—. Ese orden es lo que se clava aquí, y lo clava el par: con un PDF
+    /// bueno sale la pantalla del almacén vacío, y con algo que no es un PDF
+    /// sale el `SAF_43` aunque tampoco haya ni un certificado.
+    #[test]
+    fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let listed = ListedCertificates::new();
+        let opened = OpenedDocuments::new();
+        let engine = AnEngine::answering(&[]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        let live = LiveErrand::default();
+        assert!(
+            live.begin(Errand::of(a_credential(), 54001)),
+            "la plaza es suya"
+        );
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature("sign", "")),
+            Vec::new(),
+            &live,
+        );
+
+        assert!(
+            matches!(
+                step,
+                ErrandStep::NoCertificate {
+                    reason: NoCertificate::NotOne,
+                    owned: 0,
+                    answered: None,
+                }
+            ),
+            "sin ni un certificado la ventana lo enseña con su motivo: {step:?}"
+        );
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            None,
+            "a la sede no se le ha dicho nada todavia"
+        );
+        assert!(
+            live.current().is_some(),
+            "y el tramite sigue vivo: instalar uno todavia lo arregla"
+        );
+        assert!(
+            !scratch.exists(),
+            "y no se ha escrito el fichero de paso: la decision llega antes"
+        );
+
+        // La otra mitad del orden: lo que el documento no admisible despacha,
+        // lo despacha **antes** de mirar el almacén.
+        let inadmissible = LiveErrand::default();
+        assert!(
+            inadmissible.begin(Errand::of(a_credential(), 54002)),
+            "la plaza es suya"
+        );
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature_over(b"esto no es un PDF", "sign", "")),
+            Vec::new(),
+            &inadmissible,
+        );
+        let ErrandStep::Answering(reply) = step else {
+            panic!("la admisibilidad va primero, y eso no es un PDF: {step:?}");
+        };
+        assert_eq!(
+            reply.on_the_wire(),
+            WireAnswer::refused(SafCode::InvalidPdf).on_the_wire(),
+            "el almacen vacio no le roba el turno a la admisibilidad"
+        );
+    }
+
+    /// Y decir que no desde esa pantalla es decir que no al trámite: la sede
+    /// recibe su `CANCEL` en el acto (ID-340), y con él se va la petición
+    /// apuntada.
+    #[test]
+    fn leaving_the_no_certificate_screen_cancels_the_errand() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let listed = ListedCertificates::new();
+        let engine = AnEngine::answering(&[]);
+
+        let live = LiveErrand::default();
+        assert!(
+            live.begin(Errand::of(a_credential(), 54001)),
+            "la plaza es suya"
+        );
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        let url = arriving_over_the_channel(&format!(
+            "afirma://selectcert?op=selectcert&idsession={CREDENTIAL}"
+        ));
+        live.keep_the_request(url.clone());
+        consent_for(
+            &engine,
+            &requested(&url),
+            Vec::new(),
+            home.path(),
+            &listed,
+            &memory,
+            &live,
+        );
+
+        declined(&live);
+
+        assert_eq!(
+            what_the_site_received(&mut wire).as_deref(),
+            Some(crate::protocol::CANCELLED),
+            "la sede recibe su CANCEL"
+        );
+        assert!(
+            live.the_request().is_none(),
+            "y no queda nada que reatender"
         );
     }
 

@@ -32,18 +32,70 @@ use crate::channel::OpenChannel;
 use crate::tls::LocalCaStore;
 use crate::trust::{Moment, TrustStores};
 
+use crate::protocol::Refusal;
+
 use super::errand::{Errand, LiveErrand};
 use super::invocation::Invocation;
 use super::site::{self, Attendance, ChannelTransport};
 use super::trust;
 
-/// **El abridor de la ventana de sede** (ID-333, ID-334): crea la ventana y le
-/// publica el trámite.
+/// **El abridor de la ventana de sede** (ID-333, ID-334, ID-341): crea la
+/// ventana y le publica lo que ha pasado.
 ///
-/// Recibe el trámite ya apuntado —el que se quedó con la plaza en
-/// [`LiveErrand::begin`]— y no devuelve nada: si la ventana no se puede crear
-/// no hay decisión que tomar aquí, y quien la crea es quien lo cuenta.
-pub type SiteWindowOpener<'a> = &'a dyn Fn(&Errand);
+/// No devuelve nada: si la ventana no se puede crear no hay decisión que tomar
+/// aquí, y quien la crea es quien lo cuenta.
+pub type SiteWindowOpener<'a> = &'a dyn Fn(SiteWindowContent<'_>);
+
+/// Con qué se abre la ventana de sede.
+///
+/// **Una invocación de sede acaba siempre en algo que se enseña** (ID-341): o
+/// el trámite, o el callejón sin salida en el que quedó. Lo que no puede pasar
+/// es que no quede nada, que es el síntoma del #390 —una ventana que no aparece
+/// y una web esperando—.
+#[derive(Debug)]
+pub enum SiteWindowContent<'a> {
+    /// El trámite que se quedó con la plaza (ID-280): el canal está en pie y la
+    /// petición de la sede llegará por él.
+    TheErrand(&'a Errand),
+    /// El trámite no puede seguir, y esto es por qué.
+    ADeadEnd(DeadEnd),
+}
+
+/// Un camino en el que el trámite no puede seguir (ID-341).
+///
+/// Los tres tienen en común que **no hay socket por el que decirlo**: o no se
+/// ha podido atar ninguno, o la sede no sorteó ninguno, o el navegador no va a
+/// llegar a intentarlo. Por eso se dicen en la ventana y no por el cable.
+#[derive(Debug)]
+pub enum DeadEnd {
+    /// El canal no se ha podido abrir. La causa la lleva el
+    /// [`ChannelError`](crate::channel::ChannelError) que la trae —no quedaba
+    /// ningún puerto sorteado libre (ID-215), el material TLS no sirve, o el
+    /// escuchador no llegó a escuchar—, y **ninguna de las tres se distingue
+    /// en la ventana**: la reparación es la misma, así que lo que se nombra
+    /// aquí es lo único que se sabe seguro.
+    ChannelNotOpened,
+    /// La CA local no ha quedado en ningún almacén NSS (ID-329): ninguna sede
+    /// va a poder abrir el canal, aunque el canal esté en pie.
+    NoLocalCa,
+    /// El rechazo no tiene por dónde salir: sin `ports` en la URL, o con todos
+    /// ocupados. La ventana enseña su situación y su detalle (ID-291).
+    RefusedWithoutChannel(Refusal),
+}
+
+/// **Si la CA local ha llegado a algún almacén NSS**, y sólo cuando se ha
+/// mirado (ID-224, ID-329).
+///
+/// A mitad de un trámite no se abre ni un perfil, así que la respuesta ahí no
+/// es «no está»: es que nadie lo ha medido, y contarle a la persona un fallo
+/// que nadie ha medido es peor que callarse.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LocalCaReach {
+    /// Se ha mirado y no está en ninguno.
+    Nowhere,
+    /// O está en alguno, o no se ha mirado.
+    NotAnObstacle,
+}
 
 /// **Los almacenes de confianza del arranque** (ID-329): dónde está guardada la
 /// CA local, qué perfiles NSS hay y quién sabe escribir en ellos.
@@ -95,7 +147,7 @@ pub fn attend_startup(
     window: SiteWindowOpener<'_>,
     live: &LiveErrand,
 ) -> Startup {
-    let said = refresh_the_local_ca(trust);
+    let (said, local_ca) = refresh_the_local_ca(trust);
 
     let Some(url) = invocation.site_launch() else {
         return Startup {
@@ -106,7 +158,7 @@ pub fn attend_startup(
 
     Startup {
         said,
-        opening: Opening::TheSiteErrand(attend_site_launch(url, transport, window, live)),
+        opening: Opening::TheSiteErrand(attend_site_launch(url, transport, window, live, local_ca)),
     }
 }
 
@@ -130,11 +182,31 @@ pub fn attend_site_launch(
     transport: ChannelTransport<'_>,
     window: SiteWindowOpener<'_>,
     live: &LiveErrand,
+    local_ca: LocalCaReach,
 ) -> Attendance {
     let attendance = site::attend_launch(url, transport, live);
 
-    if let Attendance::Serving { errand, .. } = &attendance {
-        window(errand);
+    match &attendance {
+        // **Con la CA local en ninguna parte el canal está en pie y no sirve de
+        // nada** (ID-329, ID-341): el navegador ni llega a intentarlo, así que
+        // lo que hay delante es el callejón y no la espera.
+        Attendance::Serving { errand, .. } => match local_ca {
+            LocalCaReach::Nowhere => window(SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa)),
+            LocalCaReach::NotAnObstacle => window(SiteWindowContent::TheErrand(errand)),
+        },
+        // Los dos callejones del ID-341. No hay socket por el que decirlo, y
+        // que no se diga en ninguna parte es el #390.
+        Attendance::ChannelNotOpened(_) => {
+            window(SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened));
+        }
+        Attendance::RefusingInTheWindow(refusal) => {
+            window(SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(
+                refusal.clone(),
+            )));
+        }
+        // **Un rechazo con socket no abre ventana** (ID-334): la sede recibe su
+        // código por donde preguntó, y ahí se acaba.
+        Attendance::RefusingOverTheChannel { .. } => {}
     }
 
     attendance
@@ -146,13 +218,28 @@ pub fn attend_site_launch(
 /// El material que no se puede leer ni escribir tampoco interrumpe el arranque:
 /// se dice y se sigue, porque la ventana principal no depende de la CA local
 /// para abrirse.
-fn refresh_the_local_ca(trust: TrustAtStartup<'_>) -> Vec<String> {
+fn refresh_the_local_ca(trust: TrustAtStartup<'_>) -> (Vec<String>, LocalCaReach) {
     match trust::refresh_local_ca_trust(trust.store, trust.profiles, trust.stores, Moment::Startup)
     {
-        Ok(outcome) => trust::narrate_startup_outcome(outcome, trust.profiles),
-        Err(error) => vec![format!(
-            "rfirma: no se puede refrescar la CA local ({error}); el arranque sigue sin ella"
-        )],
+        Ok(outcome) => {
+            let reach = if outcome.nowhere() {
+                LocalCaReach::Nowhere
+            } else {
+                LocalCaReach::NotAnObstacle
+            };
+            (
+                trust::narrate_startup_outcome(outcome, trust.profiles),
+                reach,
+            )
+        }
+        // Un material que no se puede ni leer no dice que la CA no esté en
+        // ningún almacén: dice que no se ha podido mirar (ID-224).
+        Err(error) => (
+            vec![format!(
+                "rfirma: no se puede refrescar la CA local ({error}); el arranque sigue sin ella"
+            )],
+            LocalCaReach::NotAnObstacle,
+        ),
     }
 }
 
@@ -220,7 +307,7 @@ mod tests {
     use std::path::Path;
     use std::sync::Mutex;
 
-    use crate::channel::{ChannelDuty, ChannelError, Shutdown};
+    use crate::channel::{ChannelDuty, ChannelError, Shutdown, Situation};
     use crate::trust::TrustError;
 
     /// La credencial que sortea la sede: veinte alfanuméricos.
@@ -238,6 +325,11 @@ mod tests {
     #[derive(Default)]
     struct World {
         steps: Mutex<Vec<String>>,
+        /// Todos los puertos que sorteó la sede están ocupados: el transporte
+        /// no ata ni uno.
+        every_port_taken: bool,
+        /// Las CA locales que han quedado registradas, por perfil.
+        trusted: Mutex<Vec<(std::path::PathBuf, Vec<u8>)>>,
     }
 
     impl World {
@@ -263,34 +355,70 @@ mod tests {
             _duty: ChannelDuty,
         ) -> Result<OpenChannel, ChannelError> {
             self.note("canal");
+            if self.every_port_taken {
+                return Err(ChannelError::new(
+                    Situation::NoDrawnPortIsFree,
+                    "los tres puertos sorteados estan ocupados",
+                ));
+            }
             let port = *ports.first().expect("la sede sorteó puertos");
             Ok(OpenChannel::new(port, Shutdown::of(|| {})))
         }
 
-        /// El abridor de ventana: apunta el puerto del trámite que se le
-        /// publica.
-        fn window(&self, errand: &Errand) {
-            self.note(&format!("ventana:{}", errand.port()));
+        /// El abridor de ventana: apunta con qué se le abre —el puerto del
+        /// trámite, o el callejón sin salida que se enseña—.
+        fn window(&self, content: SiteWindowContent<'_>) {
+            self.note(&match content {
+                SiteWindowContent::TheErrand(errand) => format!("ventana:{}", errand.port()),
+                SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
+                    "ventana:sin-puertos".to_owned()
+                }
+                SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => "ventana:sin-ca".to_owned(),
+                SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
+                    format!("ventana:rechazo:{}", refusal.code())
+                }
+            });
         }
     }
+
+    /// Los bits de confianza de una CA local que **sí** ha quedado registrada,
+    /// los mismos que `is_trusted_ssl_ca` acepta.
+    const TRUSTED: u32 = 0x38;
 
     impl TrustStores for World {
         fn install(
             &self,
-            _profile: &Path,
-            _certificate_der: &[u8],
+            profile: &Path,
+            certificate_der: &[u8],
             _nickname: &str,
         ) -> Result<(), TrustError> {
             self.note("confianza");
+            self.trusted
+                .lock()
+                .expect("el doble no envenena su cerrojo")
+                .push((profile.to_path_buf(), certificate_der.to_vec()));
             Ok(())
         }
 
+        /// Lo que este perfil sabe de esa CA: nada hasta que se instala, y los
+        /// bits de confianza después.
+        ///
+        /// **Contestar siempre `None` no es un doble más simple, es uno que
+        /// miente**: con él `settle_one` concluye que la CA entró sin bits, y
+        /// el arranque entero quedaba como si la CA local no hubiera llegado a
+        /// ningún almacén.
         fn trust_of(
             &self,
-            _profile: &Path,
-            _certificate_der: &[u8],
+            profile: &Path,
+            certificate_der: &[u8],
         ) -> Result<Option<u32>, TrustError> {
-            Ok(None)
+            let installed = self
+                .trusted
+                .lock()
+                .expect("el doble no envenena su cerrojo")
+                .iter()
+                .any(|(where_, der)| where_ == profile && der == certificate_der);
+            Ok(installed.then_some(TRUSTED))
         }
     }
 
@@ -328,7 +456,7 @@ mod tests {
                 stores: world,
             },
             &|ports, duty| world.transport(ports, duty),
-            &|errand| world.window(errand),
+            &|content| world.window(content),
             &live,
         )
     }
@@ -475,8 +603,9 @@ mod tests {
         let attendance = attend_site_launch(
             &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
             &|ports, duty| world.transport(ports, duty),
-            &|errand| world.window(errand),
+            &|content| world.window(content),
             &live,
+            LocalCaReach::NotAnObstacle,
         );
 
         assert!(
@@ -500,8 +629,9 @@ mod tests {
         let attendance = attend_site_launch(
             &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
             &|ports, duty| world.transport(ports, duty),
-            &|errand| world.window(errand),
+            &|content| world.window(content),
             &live,
+            LocalCaReach::NotAnObstacle,
         );
 
         assert!(matches!(attendance, Attendance::Serving { .. }));
@@ -509,6 +639,104 @@ mod tests {
             world.steps(),
             ["canal".to_owned(), format!("ventana:{}", PORTS[0])],
             "ni un almacén se abre en la segunda invocación"
+        );
+    }
+
+    /// **ID-341.** Con todos los puertos sorteados ocupados no hay canal por el
+    /// que hablar, y el desenlace **se enseña en la ventana**: el #390 era
+    /// justamente que no se enseñaba en ninguna parte.
+    #[test]
+    fn every_port_taken_shows_the_dead_end_in_the_site_window() {
+        let world = World {
+            every_port_taken: true,
+            ..World::default()
+        };
+        let (_directory, store) = a_store();
+        let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
+
+        let startup = starting_with(&world, &store, &invocation);
+
+        assert!(
+            matches!(
+                startup.opening,
+                Opening::TheSiteErrand(Attendance::ChannelNotOpened(_))
+            ),
+            "no se ha podido abrir el canal: {:?}",
+            startup.opening
+        );
+        assert_eq!(
+            world.steps(),
+            ["confianza", "canal", "ventana:sin-puertos"],
+            "el desenlace no se pierde: se enseña en la ventana"
+        );
+    }
+
+    /// **ID-341.** Sin `ports` en la URL el rechazo tampoco tiene socket por el
+    /// que salir: va a la ventana, y **al transporte no se le pide nada**.
+    #[test]
+    fn a_launch_without_ports_shows_its_refusal_in_the_window() {
+        let world = World::default();
+        let (_directory, store) = a_store();
+        let invocation = invoked_with(&[&format!("afirma://websocket?v=4&idsession={CREDENTIAL}")]);
+
+        let startup = starting_with(&world, &store, &invocation);
+
+        assert!(
+            matches!(
+                startup.opening,
+                Opening::TheSiteErrand(Attendance::RefusingInTheWindow(_))
+            ),
+            "sin puertos el rechazo es de la ventana: {:?}",
+            startup.opening
+        );
+        assert_eq!(
+            world.steps(),
+            ["confianza", "ventana:rechazo:SAF_03"],
+            "sin puertos no se intenta abrir ningun socket"
+        );
+    }
+
+    /// **ID-329, ID-341.** La CA local que no ha entrado en ningún almacén NSS
+    /// llega a la ventana como lo que es: el desenlace que impide abrir el
+    /// canal, aunque el canal esté en pie.
+    #[test]
+    fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
+        let world = World::default();
+        let (_directory, store) = a_store();
+        let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
+
+        // Sin ningún perfil NSS que recorrer, la CA local no queda en ninguno:
+        // es la misma conclusión medida que `TrustOutcome::nowhere`.
+        let live = LiveErrand::default();
+        let startup = attend_startup(
+            &invocation,
+            TrustAtStartup {
+                store: &store,
+                profiles: &[],
+                stores: &world,
+            },
+            &|ports, duty| world.transport(ports, duty),
+            &|content| world.window(content),
+            &live,
+        );
+
+        assert!(
+            matches!(
+                startup.opening,
+                Opening::TheSiteErrand(Attendance::Serving { .. })
+            ),
+            "el canal se abre igual: {:?}",
+            startup.opening
+        );
+        assert_eq!(
+            world.steps(),
+            ["canal", "ventana:sin-ca"],
+            "lo que se enseña es el callejon, no la espera"
+        );
+        assert!(
+            startup.said.iter().any(|line| line.contains("canal local")),
+            "y se dice por stderr: {:?}",
+            startup.said
         );
     }
 

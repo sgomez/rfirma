@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::app::errand::SigningConsent;
 use crate::memory::{Badge, Theme};
 use crate::pkcs11::{CertificateStatus, StoreClass, StoreSecret};
-use crate::protocol::SignatureRound;
+use crate::protocol::{Refusal, RefusalSituation, SignatureRound};
 use crate::signing::PageSet;
 
 pub use super::failure::Failure;
@@ -422,6 +422,47 @@ impl SiteErrandView {
         }
     }
 
+    /// **El canal no se ha abierto y ya no va a abrirse** (ID-341): o todos los
+    /// puertos que sorteó la sede estaban ocupados, o la CA local no está en
+    /// ningún almacén NSS y ningún navegador va a intentarlo siquiera.
+    ///
+    /// No hay socket por el que decirlo, así que se dice aquí: una ventana que
+    /// aparece y desaparece en silencio es indistinguible de un rFirma roto.
+    pub fn no_channel(reason: NoChannelView) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::NoChannel { reason },
+        }
+    }
+
+    /// **El rechazo que no tiene socket por el que salir** (ID-341): sin
+    /// `ports` en la URL, o con todos ocupados.
+    ///
+    /// Lo que cruza es la **situación** clasificada y el detalle crudo, nunca
+    /// una frase redactada aquí (ADR-0009, ID-29, ID-291): la prosa la pone la
+    /// ventana y el detalle es lo único accionable de esa pantalla, para
+    /// llevárselo a quien mantiene la sede.
+    pub fn refused(refusal: &Refusal) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::Outcome {
+                outcome: SiteOutcomeView::Refused {
+                    situation: refusal.situation().into(),
+                    detail: refusal.detail().to_owned(),
+                },
+            },
+        }
+    }
+
+    /// **No hay ningún certificado con el que seguir** (ID-278), con su motivo
+    /// y cuántos tiene la persona en su almacén.
+    pub fn without_certificates(reason: NoCertificateView, owned: usize) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::NoCertificate { reason, owned },
+        }
+    }
+
     /// **El momento del consentimiento** (ID-272, ID-276): la sede pidió
     /// identificación y éstas son las filas que acepta.
     ///
@@ -520,12 +561,136 @@ pub enum SiteStageView {
         /// decir que no al trámite, y sale `CANCEL` (ID-299, ID-303).
         unregistered_signatures: bool,
     },
+    /// **El canal no se ha abierto y ya no va a abrirse** (ID-341). No hay
+    /// socket por el que hablar, así que el desenlace es de la ventana y de
+    /// nadie más.
+    NoChannel {
+        /// Por qué no lo hay. Es lo único que se dice: la reparación —las dos
+        /// recetas de navegador y la dirección del ajuste de red local de
+        /// Chrome, que se copia y no se pulsa— la pinta la ventana, que no
+        /// diagnostica.
+        reason: NoChannelView,
+    },
+    /// El trámite acabó y esto es lo que la ventana enseña. La sede, cuando
+    /// tenía canal, ya recibió su código por él (ID-248).
+    Outcome {
+        /// Cómo acabó.
+        outcome: SiteOutcomeView,
+    },
+    /// **No hay ningún certificado con el que seguir** (ID-278): no es una
+    /// variante del consentimiento, porque aquí no hay nada que consentir ni
+    /// nada que elegir.
+    #[serde(rename_all = "camelCase")]
+    NoCertificate {
+        /// Cuál de las dos situaciones es, que es lo que decide si hay arreglo.
+        reason: NoCertificateView,
+        /// Cuántos certificados tiene la persona. Es estado de **su** almacén,
+        /// y nunca cuáles descartó la sede ni con qué criterio (ID-277).
+        owned: usize,
+    },
+}
+
+/// Por qué no hay canal por el que hablar con la sede (ID-341).
+///
+/// Las dos son **conclusiones medidas**, no sospechas: la primera la da el
+/// transporte al no devolver ningún canal, y la segunda sale de haber abierto
+/// los perfiles NSS y no haber dejado la CA local en ninguno
+/// (`TrustOutcome::nowhere`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NoChannelView {
+    /// El canal no se ha podido abrir: sin puertos libres entre los que
+    /// sorteó la sede (ID-215), sin material TLS utilizable, o sin llegar a
+    /// escuchar. Las tres se reparan igual, así que cruzan como una sola.
+    ChannelNotOpened,
+    /// La CA local no ha quedado en ningún almacén NSS: sin ella ningún
+    /// navegador llega siquiera a intentar el canal (ID-329).
+    LocalCaMissing,
+}
+
+/// Cómo acabó el trámite, tal como lo enseña la ventana.
+///
+/// Sólo el rechazo por ahora: firmado y cancelado los enseña el recorrido que
+/// los produce, y aquí sólo entra lo que se decide **antes** de que haya nada
+/// que consentir.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SiteOutcomeView {
+    /// rFirma rechazó la petición.
+    Refused {
+        /// La situación **clasificada** (ADR-0009, ID-29): la frase la escribe
+        /// la ventana en el idioma de la persona.
+        situation: RefusalSituationView,
+        /// El detalle crudo, sin traducir ni recortar. Es lo único accionable
+        /// de la pantalla, y **no sale al cable** (ID-291).
+        detail: String,
+    },
+}
+
+/// Las situaciones de rechazo que la ventana sabe nombrar (ID-341).
+///
+/// Es [`crate::protocol::RefusalSituation`] tal y como cruza: un nombre y nada
+/// más, porque el texto es del catálogo de la ventana (ADR-0009, ID-291).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RefusalSituationView {
+    /// `signaturePages=append` (ID-284).
+    AppendedSignaturePage,
+    /// Un criterio de filtro fuera de la lista blanca (ID-256).
+    UnsupportedFilter,
+    /// Una versión del protocolo que aquí no se habla (ID-251).
+    UnsupportedProtocolVersion,
+    /// La petición de firma no trae `format`.
+    MissingFormat,
+    /// Ya hay un trámite de sede vivo (ID-280).
+    ErrandInFlight,
+    /// Cualquier otro: la ventana lo cuenta en general y enseña el detalle.
+    Unknown,
+}
+
+impl From<RefusalSituation> for RefusalSituationView {
+    fn from(situation: RefusalSituation) -> Self {
+        match situation {
+            RefusalSituation::AppendedSignaturePage => Self::AppendedSignaturePage,
+            RefusalSituation::UnsupportedFilter => Self::UnsupportedFilter,
+            RefusalSituation::UnsupportedProtocolVersion => Self::UnsupportedProtocolVersion,
+            RefusalSituation::MissingFormat => Self::MissingFormat,
+            RefusalSituation::ErrandInFlight => Self::ErrandInFlight,
+            RefusalSituation::Unknown => Self::Unknown,
+        }
+    }
+}
+
+impl From<crate::app::errand::NoCertificate> for NoCertificateView {
+    fn from(reason: crate::app::errand::NoCertificate) -> Self {
+        match reason {
+            crate::app::errand::NoCertificate::NotOne => Self::None,
+            crate::app::errand::NoCertificate::TheSiteExcludedThemAll => Self::Excluded,
+        }
+    }
+}
+
+/// Por qué no queda ningún certificado con el que seguir (ID-278).
+///
+/// Las dos **se sienten distintas porque la salida es distinta**: una tiene
+/// arreglo y no depende de la sede; la otra no lo tiene, porque quien decide es
+/// la sede.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NoCertificateView {
+    /// La persona no tiene ninguno instalado. Instalar uno lo arregla, y por
+    /// eso el trámite **sigue vivo** mientras esta pantalla está delante.
+    None,
+    /// La sede los ha excluido todos. Instalar otro no arregla nada, y la sede
+    /// ya recibió su `SAF_19` (ID-275).
+    Excluded,
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        store_name, CertificateView, OpenedDocumentView, SecretView, SignedDocumentView, StatusView,
+        store_name, CertificateView, NoCertificateView, NoChannelView, OpenedDocumentView,
+        RefusalSituation, SecretView, SignedDocumentView, SiteErrandView, StatusView,
     };
     use crate::pkcs11::{CertificateStatus, StoreClass, StoreSecret};
 
@@ -546,6 +711,69 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&unreadable).expect("serializa"),
             r#"{"kind":"unreadable","detail":"PEM error"}"#
+        );
+    }
+
+    /// **Los tres callejones sin salida, tal y como cruzan** (ID-341).
+    ///
+    /// Los nombres están fijados aquí porque son el contrato con la ventana:
+    /// lo que cruza es una situación clasificada y su detalle crudo, y ni una
+    /// frase redactada en el backend (ADR-0009, ID-29, ID-291).
+    #[test]
+    fn the_dead_ends_cross_named_and_never_written_out() {
+        assert_eq!(
+            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::ChannelNotOpened))
+                .expect("el callejon cruza"),
+            serde_json::json!({
+                "origin": null,
+                "stage": { "kind": "noChannel", "reason": "channelNotOpened" },
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::LocalCaMissing))
+                .expect("el callejon cruza"),
+            serde_json::json!({
+                "origin": null,
+                "stage": { "kind": "noChannel", "reason": "localCaMissing" },
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SiteErrandView::without_certificates(
+                NoCertificateView::None,
+                0
+            ))
+            .expect("el callejon cruza"),
+            serde_json::json!({
+                "origin": null,
+                "stage": { "kind": "noCertificate", "reason": "none", "owned": 0 },
+            })
+        );
+    }
+
+    /// Y el rechazo sin canal cruza con **la situación y el detalle**: la
+    /// situación es la que la ventana sabe nombrar, y el detalle lo único
+    /// accionable de esa pantalla.
+    #[test]
+    fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail() {
+        let refusal = crate::protocol::Refusal::new(
+            crate::protocol::SafCode::UnsupportedProcedure,
+            "la sede declara la version de protocolo 3",
+        )
+        .because(RefusalSituation::UnsupportedProtocolVersion);
+
+        assert_eq!(
+            serde_json::to_value(SiteErrandView::refused(&refusal)).expect("el rechazo cruza"),
+            serde_json::json!({
+                "origin": null,
+                "stage": {
+                    "kind": "outcome",
+                    "outcome": {
+                        "kind": "refused",
+                        "situation": "unsupportedProtocolVersion",
+                        "detail": "la sede declara la version de protocolo 3",
+                    },
+                },
+            })
         );
     }
 

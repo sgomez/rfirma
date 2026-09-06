@@ -27,7 +27,7 @@ use futures_util::{SinkExt, StreamExt};
 use native_tls::{Certificate, TlsConnector};
 use rfirma_lib::app::errand::LiveErrand;
 use rfirma_lib::app::site::Attendance;
-use rfirma_lib::app::startup::attend_site_launch;
+use rfirma_lib::app::startup::{attend_site_launch, LocalCaReach};
 use rfirma_lib::channel::{
     bind_first_free, serve, ChannelDuty, OpenChannel, ReplyHandle, SiteOperations,
     THE_PORT_OF_THE_THIRD_PROTOCOL,
@@ -393,6 +393,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
             windows.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         },
         &live,
+        LocalCaReach::NotAnObstacle,
     );
 
     let Attendance::Serving { channel, .. } = &attendance else {

@@ -4,7 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
 import type { Errand, ErrandStage, SiteErrandPort } from "./errand";
-import { noErrand, OUTCOME_CLOSE_MS, UNREACHABLE_AFTER_MS, WAITING_GRACE_MS } from "./errand";
+import {
+  CHROME_LOCAL_NETWORK_SETTINGS,
+  noErrand,
+  OUTCOME_CLOSE_MS,
+  UNREACHABLE_AFTER_MS,
+  WAITING_GRACE_MS,
+} from "./errand";
 import { SedeWindow } from "./SedeWindow";
 
 /**
@@ -153,6 +159,37 @@ describe("SedeWindow", () => {
       fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
 
       expect(calls.cancel).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("1b · the channel that will never open", () => {
+    it("shows the repair screen straight away, without waiting for the threshold", () => {
+      const { port } = scriptedErrand({ kind: "noChannel", reason: "channelNotOpened" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      // Sin relojes falsos y sin adelantar nada: el backend ya sabe que no hay
+      // canal, así que «Conectando» sería mentira desde el primer píxel.
+      expect(screen.getByText("La petición no ha llegado")).toBeInTheDocument();
+    });
+
+    it("gives Chrome's local-network address to copy, and never as something to click", () => {
+      const { port } = scriptedErrand({ kind: "noChannel", reason: "localCaMissing" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      const address = screen.getByText(CHROME_LOCAL_NETWORK_SETTINGS);
+      expect(address).toBeInTheDocument();
+      expect(address.closest("a")).toBeNull();
+      expect(screen.getByRole("button", { name: /Copiar/ })).toBeInTheDocument();
+    });
+
+    it("abandons the errand when closed: nothing has been answered", () => {
+      const { port, calls } = scriptedErrand({ kind: "noChannel", reason: "channelNotOpened" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+
+      expect(calls.cancel).toHaveBeenCalledOnce();
+      expect(calls.close).not.toHaveBeenCalled();
     });
   });
 
