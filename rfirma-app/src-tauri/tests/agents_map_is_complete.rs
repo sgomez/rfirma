@@ -1,4 +1,4 @@
-//! Guarda que comprueba que cada módulo del código está documentado en su `AGENTS.md`.
+//! Guarda que comprueba que cada módulo del código está en el `AGENTS.md` de su zona o en el de su contexto (RD-10).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -67,11 +67,43 @@ fn tracked_modules(root: &Path, zone: &Zone) -> Vec<String> {
         .collect()
 }
 
-/// Módulos de la zona ausentes del índice.
-fn absent_from(map: &str, modules: &[String]) -> Vec<String> {
+/// Los índices de la zona: el raíz y uno por cada carpeta de primer nivel que tenga el suyo.
+fn maps_of(root: &Path, zone: &Zone, modules: &[String]) -> Vec<(String, String)> {
+    let mut maps = vec![(String::new(), read(root, zone.map))];
+    let mut folders: Vec<&str> = modules
+        .iter()
+        .filter_map(|relative| relative.split_once('/').map(|(folder, _)| folder))
+        .collect();
+    folders.sort_unstable();
+    folders.dedup();
+    for folder in folders {
+        let map = format!("{}/{folder}/AGENTS.md", zone.root);
+        if root.join(&map).is_file() {
+            maps.push((format!("{folder}/"), read(root, &map)));
+        }
+    }
+    maps
+}
+
+fn read(root: &Path, map: &str) -> String {
+    fs::read_to_string(root.join(map))
+        .unwrap_or_else(|error| panic!("deberia leerse {map}: {error}"))
+}
+
+/// Comprueba si algún índice nombra al módulo: el raíz por su ruta entera, el de su contexto por la ruta desde ahí.
+fn is_named(relative: &str, maps: &[(String, String)]) -> bool {
+    maps.iter().any(|(prefix, map)| {
+        relative
+            .strip_prefix(prefix.as_str())
+            .is_some_and(|inside| map.contains(&format!("`{inside}`")))
+    })
+}
+
+/// Módulos de la zona ausentes de todos sus índices.
+fn absent_from(maps: &[(String, String)], modules: &[String]) -> Vec<String> {
     modules
         .iter()
-        .filter(|relative| !map.contains(relative.as_str()))
+        .filter(|relative| !is_named(relative, maps))
         .cloned()
         .collect()
 }
@@ -89,13 +121,13 @@ fn every_module_is_named_in_the_map_of_its_zone() {
             modules.len()
         );
 
-        let map = fs::read_to_string(root.join(zone.map))
-            .unwrap_or_else(|error| panic!("deberia leerse {}: {error}", zone.map));
+        let maps = maps_of(&root, zone, &modules);
 
-        let missing = absent_from(&map, &modules);
+        let missing = absent_from(&maps, &modules);
         assert!(
             missing.is_empty(),
-            "{} es lo que un agente lee en vez de explorar {}, y no nombra estos modulos:\n{}\n\
+            "{} es lo que un agente lee en vez de explorar {}, y ni el ni los indices por \
+             contexto nombran estos modulos:\n{}\n\
              Anade una fila por cada uno: ruta, tamano y que es, en una frase.",
             zone.map,
             zone.root,
@@ -104,16 +136,26 @@ fn every_module_is_named_in_the_map_of_its_zone() {
     }
 }
 
+fn root_map(map: &str) -> (String, String) {
+    (String::new(), map.to_owned())
+}
+
+fn context_map(context: &str, map: &str) -> (String, String) {
+    (format!("{context}/"), map.to_owned())
+}
+
 #[test]
 fn a_map_that_forgets_a_module_is_caught() {
-    let map = "| `memory/recents.rs` | 406 | Los diez recientes. |";
+    let maps = [root_map(
+        "| `memory/recents.rs` | 406 | Los diez recientes. |",
+    )];
     let modules = [
         "memory/recents.rs".to_owned(),
         "memory/brand_new.rs".to_owned(),
     ];
 
     assert_eq!(
-        absent_from(map, &modules),
+        absent_from(&maps, &modules),
         vec!["memory/brand_new.rs".to_owned()],
         "la guarda tiene que ver el modulo que falta y solo ese"
     );
@@ -121,14 +163,50 @@ fn a_map_that_forgets_a_module_is_caught() {
 
 #[test]
 fn a_bare_file_name_does_not_count_as_naming_the_module() {
-    let map = "| `mod.rs` | 406 | Algo. |";
+    let maps = [root_map("| `mod.rs` | 406 | Algo. |")];
     let modules = ["memory/mod.rs".to_owned()];
 
     assert_eq!(
-        absent_from(map, &modules),
+        absent_from(&maps, &modules),
         modules.to_vec(),
         "nombrar el fichero suelto no vale: hay seis `mod.rs` y se taparian entre ellos"
     );
+}
+
+#[test]
+fn a_module_named_in_the_map_of_its_context_is_not_missing() {
+    let maps = [
+        root_map("| `site/` | — | El contexto de sede: ver `site/AGENTS.md`. |"),
+        context_map(
+            "site",
+            "| `adapters/tauri.rs` | 80 | Las ordenes de sede. |",
+        ),
+    ];
+    let modules = [
+        "site/adapters/tauri.rs".to_owned(),
+        "site/domain/errand.rs".to_owned(),
+        "memory/recents.rs".to_owned(),
+    ];
+
+    assert_eq!(
+        absent_from(&maps, &modules),
+        vec![
+            "site/domain/errand.rs".to_owned(),
+            "memory/recents.rs".to_owned()
+        ],
+        "el mapa del contexto nombra por la ruta desde su carpeta, y no cubre a otros"
+    );
+}
+
+#[test]
+fn a_context_map_does_not_name_a_module_of_another_context() {
+    let maps = [
+        root_map(""),
+        context_map("site", "| `adapters/tauri.rs` | 80 | Las ordenes. |"),
+    ];
+    let modules = ["identity/adapters/tauri.rs".to_owned()];
+
+    assert_eq!(absent_from(&maps, &modules), modules.to_vec());
 }
 
 #[test]
