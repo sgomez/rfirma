@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 // De `vitest/config`, no de `vite`: es el `defineConfig` que conoce la clave
@@ -77,6 +77,16 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    // **Dos puntos de entrada** (ID-335): la ventana principal y la de sede,
+    // cada una con su HTML y su montaje. Sin esta lista sólo se empaqueta
+    // `index.html`, y la ventana de sede —que Tauri abre por
+    // `WebviewUrl::App("sede.html")`— cargaría una página que no existe.
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, "index.html"),
+        sede: resolve(import.meta.dirname, "sede.html"),
+      },
+    },
   },
   test: {
     environment: "jsdom",

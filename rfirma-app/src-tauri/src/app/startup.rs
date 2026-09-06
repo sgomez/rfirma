@@ -284,6 +284,22 @@ impl HeldChannel {
         }
     }
 
+    /// **¿Hay canal sirviendo al trámite?**
+    ///
+    /// La pregunta que hay que hacerse antes de mandar a la ventana de sede a
+    /// esperar: esperar sólo tiene sentido si queda alguien escuchando la
+    /// petición del navegador. Mira **la ranura del trámite y sólo ésa**: un
+    /// canal de rechazo (ID-248) vive lo justo para decir su código y no
+    /// atiende a nadie más.
+    ///
+    /// No dice nada de la CA local ni de los almacenes NSS: eso lo contesta
+    /// [`crate::app::trust::refresh_local_ca_trust`], y confundir las dos
+    /// preguntas es lo que hacía que la orden 36 publicase «Conectando con la
+    /// sede» sobre un canal que nunca se abrió.
+    pub fn is_serving(&self) -> bool {
+        super::lock(&self.serving).is_some()
+    }
+
     /// Sostiene el canal de un **rechazo** mientras contesta (ID-248).
     ///
     /// Vive lo justo para decir su código: no se le suelta en el acto porque
@@ -788,6 +804,32 @@ mod tests {
         held.hold_a_refusal(a_channel(PORTS[1], &closed));
 
         assert_eq!(closed_ports(&closed), vec![PORTS[0]]);
+    }
+
+    /// Sin canal del trámite no hay a quién esperar, y la ranura lo dice.
+    ///
+    /// Es lo que separa las dos situaciones desde las que se llega al botón de
+    /// instalar la CA local: con el canal en pie la petición de la sede puede
+    /// llegar todavía, y sin él la pantalla de reparación es la respuesta.
+    #[test]
+    fn an_unheld_channel_is_not_serving() {
+        let held = HeldChannel::default();
+
+        assert!(!held.is_serving());
+    }
+
+    /// Un canal de rechazo **no** es un canal sirviendo: vive lo justo para
+    /// decir su código (ID-248) y nadie va a atender por él la petición.
+    #[test]
+    fn only_the_channel_of_the_errand_counts_as_serving() {
+        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let held = HeldChannel::default();
+
+        held.hold_a_refusal(a_channel(PORTS[0], &closed));
+        assert!(!held.is_serving());
+
+        held.hold(a_channel(PORTS[1], &closed));
+        assert!(held.is_serving());
     }
 
     /// **ID-280.** Y un trámite nuevo sí cierra el canal del anterior: si hay

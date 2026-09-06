@@ -558,7 +558,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 35, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 36, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
@@ -667,10 +667,13 @@ fn every_command_of_the_site_errand_runs_off_the_main_thread() {
     // Una lista con nombre, y no un literal en el `for`: las órdenes del
     // trámite (ID-336) entran aquí según se escriben, y la lista dice cuáles se
     // han mirado ya.
-    const OF_THE_ERRAND: [&str; 5] = [
+    const OF_THE_ERRAND: [&str; 6] = [
         "pub fn close_site_window(",
         "pub fn site_identify(",
         "pub fn site_decline(",
+        // La que instala la CA local, que es la acción principal de la
+        // pantalla de reparación (ID-329, ID-341).
+        "pub fn install_local_ca(",
         // Las dos del callejón sin salida (ID-341). La de instalar es además
         // la única que cae de lleno en el ID-337: por debajo hay un
         // `blocking_pick_file`, y sin el `(async)` la ventana se clava sin

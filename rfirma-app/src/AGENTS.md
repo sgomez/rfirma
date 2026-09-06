@@ -39,8 +39,8 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 119 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 589 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `main.tsx` | 110 | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | 659 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
 | `App.tsx` | 1290 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
@@ -77,8 +77,8 @@ rojo.
 | `signing/useStampPreview.ts` | 163 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
 | **`viewer/`** | | El visor de PDF. |
 | `viewer/DocumentViewer.tsx` | 991 | El visor y los tres gestos del recuadro. El botón de sellar vive en `signing/SigningPanel.tsx` desde #194; el estado del sello, en su propia pastilla flotante, desde #202. |
-| `viewer/pdf.ts` | 88 | La frontera con `pdf.js`, escrita como puerto. |
-| `viewer/pdfjsLoader.ts` | 81 | El worker de `pdf.js`, empaquetado por Vite. |
+| `viewer/pdf.ts` | 97 | La frontera con `pdf.js`, escrita como puerto. El `/Title` de los metadatos es opcional: lo mira la ventana de sede, no el visor. |
+| `viewer/pdfjsLoader.ts` | 87 | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
 | `viewer/zoom.ts` | 186 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
 | `viewer/source.ts` | 105 | De dónde salen los bytes del documento. |
@@ -107,6 +107,8 @@ rojo.
 | `desktop/urlHandlers.ts` | 94 | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras: si ya los atiende rFirma y si el banner tiene algo que preguntar. Sin React. |
 | `desktop/UrlHandlerBanner.tsx` | 70 | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
 | **`sede/`** | | **La ventana que abre una sede** por `afirma://` (#362): una ventana con una secuencia de cinco momentos, no cinco pantallas. Ficha: `docs/design/ventana-de-sede.md`. |
+| `sede/main.tsx` | 47 | **El cableado de la ventana de sede** (`sede.html`, ID-335): su propio montaje, con el puerto de verdad y sin nada del árbol de la principal. |
+| `sede/siteErrands.ts` | 364 | El adaptador del puerto: convierte cada momento que empuja el backend en el `Errand` que espera la ventana, y pone los dos que no vienen de él —el secreto y los dos tramos de la firma—. Sin React y sin Tauri (TD-78). |
 | `sede/errand.ts` | 268 | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand`, los tres relojes (retardo, umbral, cierre a los 15 s) y el callejón sin salida que llega ya medido del backend (ID-341). Sin React. |
 | `sede/SedeWindow.tsx` | 175 | El marco de 520 × 420 px y el reparto entre los cinco momentos. El PIN se monta encima, sin pantalla propia (ID-273), y el canal que ya no se va a abrir reusa la pantalla de la espera sin esperar al reloj (ID-341). |
 | `sede/SedeFrame.tsx` | 69 | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |

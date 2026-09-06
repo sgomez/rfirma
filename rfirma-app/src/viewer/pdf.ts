@@ -72,6 +72,15 @@ export interface PdfPage {
 /** El documento abierto. */
 export interface PdfDocument {
   readonly pageCount: number;
+  /**
+   * El `/Title` de los metadatos, si el PDF lo trae.
+   *
+   * Es **opcional** porque el visor no lo mira: quien lo necesita es la ventana
+   * de sede, donde el título de los metadatos es lo único que hay para nombrar
+   * el documento que manda la sede (ID-270). Un doble de las pruebas que no lo
+   * ponga sigue siendo un `PdfDocument`.
+   */
+  readonly title?: string | null;
   /** La página `number`, 1-based. */
   getPage(number: number): Promise<PdfPage>;
 }
