@@ -24,9 +24,8 @@ crea**, o el PR sale en rojo.
   cubre sin leerlo: `grep -n 'fn ' <hermano>` — los nombres son frases en inglés
   y dicen la invariante entera.
 - El fichero de pruebas más grande del backend es `app/errand/tests.rs`, con
-  1627 líneas; de producción, `ffi.rs` (640) y `commands/mod.rs` (503) son los
-  dos únicos por encima de las 500 líneas, y ya lo eran antes de sacar las
-  pruebas a su hermano. Lo que los hace crecer es **prosa**: los cuerpos siguen
+  1627 líneas; de producción, `ffi.rs` (640) es el único por encima de las 500
+  líneas. Lo que hace crecer a las órdenes es **prosa**: los cuerpos siguen
   siendo desempaquetar, llamar y traducir. Si lo que crece es un cuerpo, lo que
   ha entrado casi siempre es una decisión, y una decisión va en `app/`.
 - El primer bloque `//!` de cada módulo es su contrato. `head -40 <fichero>` casi
@@ -41,8 +40,17 @@ crea**, o el PR sale en rojo.
 | `isolate.rs` | 84 | El hilo dueño del isolate de GraalVM. Pruebas en `isolate/tests.rs` (44). |
 | `ffi.rs` | 640 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). Pruebas en `ffi/tests.rs` (361). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 503 | **Las treinta y siete órdenes de Tauri**, y nada más que sus cuerpos. Las nueve de sede son desempaquetar el `State`, llamar a un verbo de `app/errand/` y traducir (RD-07): ninguna decide ni guarda estado propio. Pruebas en `commands/tests.rs` (37). |
-| `commands/views.rs` | 238 | Los tipos que cruzan a la ventana principal y las conversiones que los producen (ID-80). Los de la ventana de sede están aparte, en `views_site.rs`. Pruebas en `commands/views/tests.rs` (131). |
+| `commands/mod.rs` | 90 | Solo `mod` y `pub use`: **las treinta y siete órdenes de Tauri** viven en un fichero por contexto y `lib.rs` las sigue registrando como `commands::nombre`. Cada orden se reexporta junto a sus dos macros `__cmd__` y `__tauri_command_name_`, que es lo que `generate_handler!` busca. |
+| `commands/identity.rs` | 58 | Las tres órdenes de identidad: listar certificados, instalar y quitar un `.p12`. |
+| `commands/documents.rs` | 193 | Las once órdenes de documentos: abrir por el portal, leer, recientes, rúbrica, destino y abrir el PDF firmado o su carpeta. |
+| `commands/signing.rs` | 120 | Las diez órdenes de firma local: el ciclo (prefirma, PIN, postfirma, cancelar), la previsualización, la esquina PAdES, la configuración y las firmas no registradas. Pruebas en `commands/signing/tests.rs` (37). |
+| `commands/site.rs` | 99 | Las nueve órdenes del trámite de sede: desempaquetar el `State`, llamar a un verbo de `app/errand/` y traducir (RD-07). Ninguna decide ni guarda estado propio. |
+| `commands/desktop.rs` | 60 | Las cuatro órdenes del escritorio: invocación, versión publicada y manejadores de `afirma://`. |
+| `commands/views.rs` | 17 | Solo `mod` y `pub use`: los tipos que cruzan a la ventana principal viven en un fichero por contexto y `app/` los sigue nombrando como `commands::views::Tipo`. Los de la ventana de sede están aparte, en `views_site.rs`. |
+| `commands/views/identity.rs` | 63 | `CertificateView`, `SecretView` y el nombre en inglés de cada clase de almacén. Pruebas en `commands/views/identity/tests.rs`. |
+| `commands/views/documents.rs` | 84 | Destino, PDF firmado, documento abierto, soltado y reciente. Pruebas en `commands/views/documents/tests.rs`. |
+| `commands/views/signing.rs` | 83 | `StatusView`, `PlacementView` y `ConfigurationView`. Pruebas en `commands/views/signing/tests.rs`. |
+| `commands/views/desktop.rs` | 41 | Manejadores de `afirma://` y versión nueva. Sin pruebas propias. |
 | `commands/views_site.rs` | 248 | Los tipos que cruzan a la **ventana de sede** y su única conversión, del `Moment` del trámite a la vista (ID-338, ID-341). Aparte por ventana, como `rubric.rs` lo está por tamaño. Pruebas en `commands/views_site/tests.rs` (72). |
 | `commands/site_window.rs` | 69 | **El adaptador de la ventana de sede**: la crea, le publica el momento del trámite y arma la mesa desde el `State` cuando el transporte entrega una operación (ID-330, ID-333, ID-338). Sin decisión dentro. |
 | `commands/rubric.rs` | 73 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). Pruebas en `commands/rubric/tests.rs` (50). |
@@ -200,7 +208,7 @@ respuesta por su forma:
 - **Una decisión del trámite** —qué se enseña, qué se contesta, qué se
   recuerda— va en `app/errand/`: en `desk.rs` si se toma sobre la mesa, en
   `replies.rs` si es lo que la sede recibe, en `state.rs` si es memoria. Los
-  verbos de `mod.rs` son la única puerta, y una orden de `commands/mod.rs` no
+  verbos de `mod.rs` son la única puerta, y una orden de `commands/site.rs` no
   hace más que llamar a uno.
 - **Cómo se escribe algo en el cable** va en `app/codec.rs`, detrás de
   `ProtocolCodec`; **por dónde entra y sale** va en `app/transport.rs`, detrás de
@@ -218,12 +226,13 @@ respuesta por su forma:
 
 ## Al añadir o cambiar una orden de Tauri
 
-El cuerpo de la orden va en `commands/mod.rs` y **lo que decide, en `app/`**: si
+El cuerpo de la orden va en el `commands/<contexto>.rs` de su contexto —y su
+reexportación en `commands/mod.rs`— y **lo que decide, en `app/`**: si
 lo que estás escribiendo dentro de la orden no es desempaquetar el `State` ni
 traducir el resultado, está en el fichero equivocado (ID-79).
 
 Lo que escribas aquí es lo que verá quien trabaje en la interfaz: `just contract`
-genera el contrato de las dos partes leyendo `commands/mod.rs` y los tipos que
+genera el contrato de las dos partes leyendo todo `commands/` y los tipos que
 derivan `Serialize`. **No hay nada que actualizar** —una orden nueva aparece por
 existir—, pero sí dos cosas que salen mal si te descuidas: un tipo de salida sin
 `Serialize` no cruza y no se publica, y un `#[tauri::command]` sin `async` sale
