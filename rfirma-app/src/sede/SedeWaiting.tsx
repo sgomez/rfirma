@@ -39,7 +39,10 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
   const localCa = (
     <div className="rf-row rf-gap-xs sede-waiting__ca">
       <p className="rf-body sede-waiting__ca-text">{t("sede.repair.caMissing")}</p>
-      <button type="button" className="rf-btn rf-btn--ghost" onClick={onInstallLocalCa}>
+      {/* `--primary`, y es el único de la pantalla: la tabla «Estados» de la
+          ficha da instalar la CA como la **acción principal** de este estado.
+          Sin ella el navegador ni llega a preguntar por el permiso. */}
+      <button type="button" className="rf-btn rf-btn--primary" onClick={onInstallLocalCa}>
         {t("sede.repair.installCa")}
       </button>
     </div>
@@ -72,7 +75,10 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
                 En Firefox va después. */}
             {browser === "chrome" && localCa}
 
-            <div className="rf-row rf-gap-xs sede-waiting__tabs" role="tablist">
+            {/* Dos botones normales y no `tablist`: no gobiernan ningún
+                `tabpanel`, y unas pestañas que no controlan nada le mienten al
+                lector de pantalla. `aria-pressed` dice la verdad con menos. */}
+            <div className="rf-row rf-gap-xs sede-waiting__tabs">
               <BrowserTab id="chrome" chosen={browser} onChoose={setBrowser} />
               <BrowserTab id="firefox" chosen={browser} onChoose={setBrowser} />
             </div>
@@ -100,8 +106,7 @@ function BrowserTab({
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={id === chosen}
+      aria-pressed={id === chosen}
       className={`rf-btn sede-waiting__tab${id === chosen ? " sede-waiting__tab--chosen" : ""}`}
       onClick={() => onChoose(id)}
     >

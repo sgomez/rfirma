@@ -55,6 +55,14 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
   return { port, calls };
 }
 
+/** El documento del artboard, el mismo que se enseña al consentir. */
+const signedDocument = {
+  title: "Solicitud de subvención 2026",
+  pages: 27,
+  sizeBytes: 2_400_000,
+  signatures: 0,
+};
+
 /** Deja pasar el tiempo con los relojes falsos, y deja que React repinte. */
 async function elapse(ms: number) {
   await act(async () => {
@@ -101,12 +109,27 @@ describe("SedeWindow", () => {
 
       await elapse(UNREACHABLE_AFTER_MS);
 
-      expect(screen.getByRole("tab", { name: "Chrome" })).toHaveAttribute("aria-selected", "true");
-      expect(screen.getByRole("tab", { name: "Firefox" })).toHaveAttribute(
-        "aria-selected",
+      expect(screen.getByRole("button", { name: "Chrome" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Firefox" })).toHaveAttribute(
+        "aria-pressed",
         "false",
       );
       expect(screen.getByText(/franja bajo la barra de direcciones/)).toBeInTheDocument();
+    });
+
+    it("gives the local CA the screen's only main action, because nothing works without it", async () => {
+      const { port, calls } = scriptedErrand({ kind: "waiting" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await elapse(UNREACHABLE_AFTER_MS);
+
+      const install = screen.getByRole("button", { name: "Instalar…" });
+      expect(install).toHaveClass("rf-btn--primary");
+      fireEvent.click(install);
+      expect(calls.installLocalCa).toHaveBeenCalledOnce();
     });
 
     it("puts the mandatory sentence in the footer, and has no Retry button of its own", async () => {
@@ -336,8 +359,32 @@ describe("SedeWindow", () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
+    it("still shows what was signed: the outcome is where you check it was that document", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "signed", document: signedDocument },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Solicitud de subvención 2026")).toBeInTheDocument();
+      expect(screen.getByText("27 páginas · 2,4 MB")).toBeInTheDocument();
+    });
+
+    it("shows no document in a refusal, because there never was one", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "refused", situation: "missingFormat", detail: "format=" },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.queryByText("Solicitud de subvención 2026")).not.toBeInTheDocument();
+    });
+
     it("says rFirma keeps no copy, which is the one thing you cannot deduce", () => {
-      const { port } = scriptedErrand({ kind: "outcome", outcome: { kind: "signed" } });
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "signed", document: signedDocument },
+      });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText("Firmado y enviado")).toBeInTheDocument();
@@ -345,7 +392,10 @@ describe("SedeWindow", () => {
     });
 
     it("adds nothing to a cancellation: the title already says it", () => {
-      const { port } = scriptedErrand({ kind: "outcome", outcome: { kind: "cancelled" } });
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "cancelled", document: signedDocument },
+      });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText("Has cancelado la firma")).toBeInTheDocument();
@@ -374,7 +424,10 @@ describe("SedeWindow", () => {
     });
 
     it("closes by itself after fifteen seconds, and not before", async () => {
-      const { port, calls } = scriptedErrand({ kind: "outcome", outcome: { kind: "signed" } });
+      const { port, calls } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "signed", document: signedDocument },
+      });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       await elapse(OUTCOME_CLOSE_MS - 1_000);
@@ -393,6 +446,28 @@ describe("SedeWindow", () => {
       expect(screen.getByText("No tienes ningún certificado")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
+      // Sin «Cerrar» la única salida sería la cruz de la barra de título.
+      expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
+    });
+
+    it("leaves through the same verb from the footer and from the title bar cross", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+      const { unmount } = renderWithCatalog(<SedeWindow errands={port} />);
+
+      await user.click(screen.getByRole("button", { name: "Cerrar" }));
+      unmount();
+
+      const second = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+      renderWithCatalog(<SedeWindow errands={second.port} />);
+      await user.click(screen.getByRole("button", { name: "Cerrar la ventana" }));
+
+      // La sede no ha recibido nada: irse es abandonar el trámite por las dos
+      // puertas, que es lo único que libera el `idsession`.
+      expect(calls.cancel).toHaveBeenCalledOnce();
+      expect(calls.close).not.toHaveBeenCalled();
+      expect(second.calls.cancel).toHaveBeenCalledOnce();
+      expect(second.calls.close).not.toHaveBeenCalled();
     });
 
     it("leaves no main action when the site excluded them all: installing another fixes nothing", () => {
@@ -430,7 +505,10 @@ describe("SedeWindow", () => {
 
   describe("the window's shape", () => {
     it("has no application header, no menu, no tray and no destination footer", () => {
-      const { port } = scriptedErrand({ kind: "outcome", outcome: { kind: "cancelled" } });
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "cancelled", document: signedDocument },
+      });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.queryByRole("banner")).not.toBeInTheDocument();

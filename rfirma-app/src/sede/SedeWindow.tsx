@@ -63,7 +63,10 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
   if (stage.kind === "waiting" && waiting === "hidden") return null;
 
   return (
-    <div className="rf-scrim">
+    /* En el momento del secreto el velo lo pinta `PinDialog`, que trae el suyo:
+       dos `.rf-scrim` superpuestos oscurecerían el doble, y la ficha dice que
+       ese diálogo no cambia en nada respecto al recorrido local. */
+    <div className={`rf-scrim${stage.kind === "secret" ? " sede-window__scrim--clear" : ""}`}>
       <section
         className="sede-window"
         role="dialog"
@@ -83,6 +86,12 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             type="button"
             className="sede-window__close"
             aria-label={t("sede.window.close")}
+            /* `close()` sólo cuando la sede **ya tiene su respuesta**, que es
+               el desenlace y nada más. En todo lo demás —también en «sin
+               certificado utilizable»— irse es abandonar el trámite, y eso es
+               `cancel()`: es lo que libera el `idsession`. La salida del pie
+               llama al mismo verbo en cada momento; no hay dos puertas que
+               hagan cosas distintas. */
             onClick={stage.kind === "outcome" ? close : cancel}
           >
             <CloseIcon size={14} />
@@ -131,7 +140,7 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             owned={stage.owned}
             onInstall={() => void errands.installCertificate()}
             onLookAgain={() => void errands.lookAgain()}
-            onClose={close}
+            onLeave={cancel}
           />
         )}
       </section>

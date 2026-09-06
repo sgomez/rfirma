@@ -125,6 +125,26 @@ export function CheckIcon({ size = 12, strokeWidth = 3 }: IconProps & { strokeWi
   );
 }
 
+/** El círculo con la marca dentro: el desenlace «Firmado y enviado». */
+export function CheckCircleIcon({ size = 24 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5 11 15.5 16.5 9" />
+    </svg>
+  );
+}
+
+/** El círculo con el aspa dentro: el desenlace «Has cancelado la firma». */
+export function CrossCircleIcon({ size = 24 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 9l6 6M15 9l-6 6" />
+    </svg>
+  );
+}
+
 /** La carpeta de la fila «Se guardará en». */
 export function FolderIcon({ size = 20 }: IconProps) {
   return (
@@ -234,7 +254,6 @@ export function ArrowUpIcon({ size = 18 }: IconProps) {
   );
 }
 
-/** El icono del botón «Copiar» del bloque de órdenes, en *Acerca de*. */
 /** La cruz de cerrar de la barra de título de la ventana de sede. */
 export function CloseIcon({ size = 14 }: IconProps) {
   return (
@@ -244,6 +263,7 @@ export function CloseIcon({ size = 14 }: IconProps) {
   );
 }
 
+/** El icono del botón «Copiar» del bloque de órdenes, en *Acerca de*. */
 export function CopyIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">

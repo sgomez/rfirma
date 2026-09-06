@@ -168,6 +168,13 @@ Tres desenlaces, y en los tres la sede ya ha recibido su respuesta.
 | Cancelado | «Has cancelado la firma» | Nada: el título ya lo dice |
 | Rechazo | «rFirma ha rechazado la petición» | La incompatibilidad enunciada nombrando el origen, más un **detalle copiable** |
 
+En **firmado** y en **cancelado** el cuerpo enseña además **la fila del
+documento** —título de los metadatos, páginas y tamaño, la misma del
+consentimiento—: es lo único que dice *qué* se acaba de firmar, y hace falta
+justo en la pantalla que avisa de que rFirma no guarda copia. En el **rechazo**
+no la hay, porque ahí nunca llegó a haber documento. Cada desenlace se encabeza
+con su icono: visto, aspa y triángulo.
+
 El **rechazo** cubre los del transporte (#316) —filtro no reconocido,
 `signaturePages=append`, versión de protocolo no soportada, falta `format`, un
 segundo `afirma://` con un trámite vivo—, que ocurren **antes** de que haya nada
@@ -195,9 +202,16 @@ Las dos opciones **se tienen que sentir distintas porque la salida es distinta**
   microacción `Volver a buscar` en `--ghost`, copiada de «4 · Sin certificados»,
   por si se instaló mientras la ventana estaba abierta.
 - **La sede los ha excluido todos.** Instalar otro no arregla nada, porque quien
-  decide es la sede: la pantalla se queda **sin acción principal** y la única
-  salida es `Cerrar`. Se dice cuántos tienes —«tus 3 certificados»— porque eso es
-  estado del almacén de la persona, y ahí se acaba.
+  decide es la sede: la pantalla se queda **sin acción principal**. Se dice
+  cuántos tienes —«tus 3 certificados»— porque eso es estado del almacén de la
+  persona, y ahí se acaba.
+
+`Cerrar` está en el pie de las dos, porque en las dos hay que poder salir con
+una etiqueta y no sólo por la cruz. `Volver a buscar` es una **microacción del
+cuerpo**, no del pie. Y salir de aquí **abandona el trámite**: la sede no ha
+recibido nada todavía, así que las dos puertas —el pie y la cruz— liberan el
+`idsession`, igual que durante la espera y el consentimiento. Sólo el desenlace
+cierra sin cancelar, que es donde la sede ya tiene su respuesta.
 
 ### El diálogo del secreto no cambia
 

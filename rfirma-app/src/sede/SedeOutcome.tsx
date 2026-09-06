@@ -1,7 +1,19 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { CopyIcon } from "../design-system/icons";
-import { OUTCOME_CLOSE_MS, type RefusalSituation, type SiteOutcome } from "./errand";
+import {
+  AlertIcon,
+  CheckCircleIcon,
+  CopyIcon,
+  CrossCircleIcon,
+  FileIcon,
+} from "../design-system/icons";
+import { formatSize } from "../signing/SigningPanel";
+import {
+  OUTCOME_CLOSE_MS,
+  type RefusalSituation,
+  type SiteDocument,
+  type SiteOutcome,
+} from "./errand";
 import { SedeBody, useOutcomeClock } from "./SedeFrame";
 
 interface SedeOutcomeProps {
@@ -44,7 +56,18 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
       }
     >
       <div className="rf-stack sede-outcome">
-        <p className="rf-title sede-outcome__title">{title(outcome, t)}</p>
+        <div className="rf-row rf-gap-xs sede-outcome__head">
+          <span className="sede-outcome__icon">
+            <OutcomeIcon kind={outcome.kind} />
+          </span>
+          <p className="rf-title sede-outcome__title">{title(outcome, t)}</p>
+        </div>
+        {outcome.kind !== "refused" && outcome.document !== null && (
+          /* Lo único que dice **qué** se acaba de firmar —o dejar sin firmar—
+             en la pantalla que confirma que rFirma no guarda copia. En el
+             rechazo no se enseña porque ahí nunca llegó a haber documento. */
+          <DocumentRow document={outcome.document} />
+        )}
         {outcome.kind === "signed" && (
           <>
             <p className="rf-prose">
@@ -80,6 +103,45 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
         )}
       </div>
     </SedeBody>
+  );
+}
+
+/** Los tres del artboard: visto, aspa y triángulo, uno por desenlace. */
+function OutcomeIcon({ kind }: { kind: SiteOutcome["kind"] }) {
+  switch (kind) {
+    case "signed":
+      return <CheckCircleIcon size={24} />;
+    case "cancelled":
+      return <CrossCircleIcon size={24} />;
+    default:
+      return <AlertIcon size={24} />;
+  }
+}
+
+/**
+ * El documento en una línea: la misma información que se enseñó al consentir,
+ * sin la cofirma —ya no hay nada que decidir— y sin nombre de fichero, que el
+ * protocolo no trae.
+ */
+function DocumentRow({ document }: { document: SiteDocument }) {
+  const { t, i18n } = useTranslation();
+  const untitled = document.title === null || document.title.trim() === "";
+
+  return (
+    <div className="rf-row rf-gap-xs sede-outcome__document">
+      <span className="sede-outcome__icon">
+        <FileIcon size={18} />
+      </span>
+      <p className={`rf-prose sede-outcome__document-title${untitled ? " rf-text-muted" : ""}`}>
+        {untitled ? t("sede.consent.untitled") : document.title}
+      </p>
+      <span className="rf-body rf-text-muted sede-outcome__document-meta">
+        {[
+          t("panel.document.pages", { count: document.pages }),
+          formatSize(document.sizeBytes, i18n.language),
+        ].join(" · ")}
+      </span>
+    </div>
   );
 }
 

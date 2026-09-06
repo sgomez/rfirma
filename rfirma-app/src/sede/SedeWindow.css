@@ -220,6 +220,52 @@
   justify-content: center;
 }
 
+/*
+ * El velo de la ventana se apaga mientras está el diálogo del secreto: el suyo
+ * es el que se ve, y la colocación del `.rf-scrim` se mantiene para que la
+ * ventana siga centrada debajo.
+ */
+.sede-window__scrim--clear {
+  background: transparent;
+}
+
+.sede-outcome__head {
+  align-items: flex-start;
+}
+
+.sede-outcome__icon {
+  display: flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--rf-text-muted);
+}
+
+.sede-outcome__head .sede-outcome__icon {
+  color: var(--rf-text);
+}
+
+.sede-outcome__document {
+  flex: none;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+.sede-outcome__document-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sede-outcome__document-meta {
+  flex: none;
+}
+
 .sede-outcome__detail {
   align-items: center;
   gap: var(--rf-space-xs);
@@ -245,4 +291,9 @@
 .sede-no-certificate {
   height: 100%;
   justify-content: center;
+}
+
+/* La microacción del cuerpo, alineada a la izquierda y sin estirarse. */
+.sede-no-certificate__look-again {
+  flex: none;
 }

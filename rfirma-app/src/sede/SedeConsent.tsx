@@ -37,8 +37,9 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
       stage.certificates[0] ??
       null,
   );
-  const identity = operation === "selectcert";
-  const action = consentActionKey(operation);
+  // `selectcert` es identificarse y todo lo demás es firmar: una sola pregunta,
+  // resuelta en el vocabulario del trámite y no repetida aquí.
+  const identity = consentActionKey(operation) === "identify";
 
   return (
     <SedeBody
@@ -54,7 +55,7 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
             disabled={chosen === null}
             onClick={() => chosen !== null && onConsent(chosen.id)}
           >
-            {action === "identify" ? t("sede.consent.identify") : t("sede.consent.sign")}
+            {identity ? t("sede.consent.identify") : t("sede.consent.sign")}
           </button>
         </>
       }

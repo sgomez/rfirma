@@ -61,8 +61,13 @@ export type RefusalSituation = keyof Catalog["sede"]["refusals"];
  * puede llevar.
  */
 export type SiteOutcome =
-  | { kind: "signed" }
-  | { kind: "cancelled" }
+  /**
+   * Firmado y cancelado llevan el documento —el mismo que se enseñó al
+   * consentir— porque es lo único que dice **qué** se acaba de firmar o dejar
+   * sin firmar, y en el rechazo no hay ninguno: ocurre antes de que llegue.
+   */
+  | { kind: "signed"; document: SiteDocument | null }
+  | { kind: "cancelled"; document: SiteDocument | null }
   | {
       kind: "refused";
       situation: RefusalSituation;
