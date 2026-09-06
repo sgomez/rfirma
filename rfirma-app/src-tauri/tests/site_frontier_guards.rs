@@ -207,6 +207,22 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     // Y el desenlace nuevo del #392, que es el que el trámite escribe por el asa
     // cuando la persona dice que no o cierra la ventana sin contestar (ID-340).
     lines.push(rfirma_lib::app::errand::declined(&LiveErrand::default()).on_the_wire());
+    // Y el del #393: la firma que no ha salido. El fallo que se le pasa lleva
+    // dentro los tres valores contaminados, que es lo que hace la comprobación:
+    // a la sede sale el código, y el detalle se queda para la ventana (ID-291).
+    lines.push(
+        rfirma_lib::app::errand::the_signature_did_not_come_out(
+            &LiveErrand::default(),
+            rfirma_lib::app::signing::SiteRefusal::new(
+                frontier::code_of_bridge(&BridgeError::Failed(String::new())),
+                Failure::from(BridgeError::Failed(format!(
+                    "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con \
+                     {A_CERTIFICATE}"
+                ))),
+            ),
+        )
+        .on_the_wire(),
+    );
 
     lines
 }

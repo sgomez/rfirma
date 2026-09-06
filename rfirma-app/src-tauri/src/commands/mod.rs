@@ -114,8 +114,8 @@ pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, NewVersionView,
-    OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
-    SiteErrandView, SiteStageView, UrlHandlerView, UrlHandlersView,
+    OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignatureRoundView,
+    SignedDocumentView, SiteErrandView, SiteStageView, UrlHandlerView, UrlHandlersView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -765,7 +765,109 @@ pub fn site_decline(live: State<'_, app::errand::LiveErrand>, consent: State<'_,
     app::errand::declined(&live);
 }
 
-/// **Lo que la sede pidió del listado, hasta que la persona conteste.**
+/// **Orden 32.** La persona ha consentido firmar, y elige con qué certificado
+/// (ID-272).
+///
+/// Es [`begin_signing`] del trámite de sede, y de la ventana llega **sólo el
+/// asa del certificado**: el documento, el filtro y la política que declaró la
+/// sede salen del consentimiento que este mismo adaptador apuntó, porque
+/// hacerlos cumplir no es cosa de la ventana (ID-259, ID-266).
+///
+/// Devuelve cómo hay que pedirle el secreto al almacén, igual que su gemela
+/// local: el PIN entra después por [`sign_with_pin`], que es la misma orden
+/// para los dos recorridos porque la fase que toca la clave privada no sabe de
+/// sedes (ADR-0001).
+///
+/// Si la prefirma no sale, la sede se entera en el acto y el trámite se cierra
+/// (ID-275); la ventana recibe además la situación entera (ID-29).
+///
+/// Es `async` como todas las órdenes del trámite (ID-337).
+#[tauri::command(async)]
+pub fn site_begin_signing(
+    certificate: String,
+    environment: State<'_, Environment>,
+    isolate: State<'_, Isolate>,
+    session: State<'_, SigningSession>,
+    opened: State<'_, OpenedDocuments>,
+    live: State<'_, app::errand::LiveErrand>,
+    consent: State<'_, SiteConsent>,
+) -> Result<SecretView, Failure> {
+    let Some(pending) = consent.the_signature_consented() else {
+        return Err(Failure::new(
+            "siteErrandNotLive",
+            "no hay ninguna firma pendiente que consentir",
+        ));
+    };
+
+    let bridge = TheBridge::borrowed_from(&isolate);
+    let order = SigningOrder {
+        document: pending.document,
+        certificate,
+        // La sede coloca su recuadro en sus propios `extraParams`, y ésos
+        // cruzan al puente crudos: aquí no hay visor sobre el que arrastrar
+        // nada, y emitir una colocación nuestra movería el suyo (ID-282).
+        placement: None,
+        fields: orders::VisibleFieldsOrder::default(),
+        reason: String::new(),
+        signed_at: String::new(),
+        rubric: None,
+        language: String::new(),
+        allow_unregistered_signatures: pending.unregistered_signatures,
+    };
+
+    app::signing::begin_for_the_site(
+        &app::signing::SiteSigning {
+            engine: &bridge,
+            filter: &pending.filter,
+            from_the_site: &pending.from_the_site,
+        },
+        &order,
+        &environment.all_stores(),
+        &environment.listed,
+        &opened,
+        &isolate,
+        &session,
+    )
+    .map(SecretView::from)
+    // El código que va al cable lo trae la negativa desde donde la situación
+    // todavía tenía tipo (ID-292): aquí sólo se separa lo que recibe la sede
+    // de lo que recibe la ventana, que es la situación entera (ID-291).
+    .map_err(|refusal| {
+        consent.forget();
+        let failure = refusal.failure().clone();
+        app::errand::the_signature_did_not_come_out(&live, refusal);
+        failure
+    })
+}
+
+/// **Orden 33.** Postfirma del trámite de sede: la sede recibe el certificado y
+/// el PDF firmado, y con eso el trámite termina (ID-275).
+///
+/// **No devuelve el documento**, y esa ausencia es la decisión: el firmado de
+/// una sede no cae en ninguna carpeta, no anota fila en la bandeja y no cambia
+/// el certificado recordado (ID-264, ID-286). Lo que la ventana enseña después
+/// es un desenlace, no un fichero.
+///
+/// Es `async` como todas las órdenes del trámite (ID-337).
+#[tauri::command(async)]
+pub fn site_finish_signing(
+    isolate: State<'_, Isolate>,
+    session: State<'_, SigningSession>,
+    live: State<'_, app::errand::LiveErrand>,
+    consent: State<'_, SiteConsent>,
+) -> Result<(), Failure> {
+    consent.forget();
+
+    let signed = app::signing::finish_for_the_site(&isolate, &session).map_err(|refusal| {
+        let failure = refusal.failure().clone();
+        app::errand::the_signature_did_not_come_out(&live, refusal);
+        failure
+    })?;
+    app::errand::signature_handed_over(&live, &signed);
+    Ok(())
+}
+
+/// **Lo que la sede pidió, hasta que la persona conteste.**
 ///
 /// Vive en el adaptador y no en [`crate::app::errand::Errand`] a propósito: el
 /// trámite guarda la credencial, el puerto y por dónde se contesta (ID-321), y
@@ -773,21 +875,72 @@ pub fn site_decline(live: State<'_, app::errand::LiveErrand>, consent: State<'_,
 /// [`attend_site_operation`], y esto es su memoria entre el momento del
 /// consentimiento y la respuesta.
 ///
-/// Hace falta porque el filtro **se vuelve a comprobar antes de entregar nada**
-/// (ID-259): que el certificado estuviera en la lista que la ventana enseñó no
-/// basta, y la ventana no puede devolver un filtro que nunca cruzó.
+/// Hace falta porque lo que la sede pidió **se vuelve a comprobar antes de
+/// entregar nada** (ID-259, ID-266): que el certificado estuviera en la lista
+/// que la ventana enseñó no basta, y la ventana no puede devolver ni un filtro
+/// ni una política que nunca cruzaron.
 #[derive(Default)]
-pub struct SiteConsent(std::sync::Mutex<Option<crate::protocol::SiteFilter>>);
+pub struct SiteConsent(std::sync::Mutex<Option<PendingConsent>>);
+
+/// Lo que queda pendiente de contestar, según lo que la sede pidiera.
+enum PendingConsent {
+    /// `selectcert`: para entregar identidad basta con volver a comprobar el
+    /// filtro (ID-276).
+    Identity(crate::protocol::SiteFilter),
+    /// `sign` o `cosign`: además del filtro hacen falta el documento y la
+    /// política que la sede declaró.
+    Signature(PendingSignature),
+}
+
+/// **Lo que hace falta para firmar cuando la persona ya ha consentido**, y que
+/// la ventana no puede devolver.
+///
+/// Es la mitad del consentimiento que **no** es para mirar: las filas, la ronda
+/// y el aviso de las firmas ilegibles se los lleva la ventana en su
+/// [`SiteStageView`]; esto se queda aquí porque es lo que hace cumplir lo que
+/// pidió la sede, y eso no se le pregunta a la ventana (ID-259, ID-266).
+#[derive(Clone)]
+struct PendingSignature {
+    /// El asa del documento que mandó la sede, la misma que cruzó a la ventana.
+    document: String,
+    /// Lo que la sede pide del listado, que se vuelve a comprobar (ID-259).
+    filter: crate::protocol::SiteFilter,
+    /// Los `extraParams` que declaró, ya expandidos (ID-266).
+    from_the_site: std::collections::BTreeMap<String, String>,
+    /// Que el documento trae firmas que rFirma no sabe leer (ID-297).
+    ///
+    /// Se apunta porque **consentir el trámite es consentirlas**: la pregunta
+    /// viaja dentro del momento del consentimiento y decir que no a ella es
+    /// cancelar el trámite entero (ID-299, ID-301). Quien firma después de eso
+    /// ya ha dicho que sí, y sin esta clave el puente abortaría la cofirma.
+    unregistered_signatures: bool,
+}
 
 impl SiteConsent {
-    /// Apunta lo que la sede pide del listado.
-    fn remember(&self, filter: crate::protocol::SiteFilter) {
-        *app::lock(&self.0) = Some(filter);
+    /// Apunta lo que la sede pide del listado para identificarse.
+    fn remember_identity(&self, filter: crate::protocol::SiteFilter) {
+        *app::lock(&self.0) = Some(PendingConsent::Identity(filter));
+    }
+
+    /// Apunta lo que hace falta para firmar lo que la sede mandó.
+    fn remember_signature(&self, pending: PendingSignature) {
+        *app::lock(&self.0) = Some(PendingConsent::Signature(pending));
     }
 
     /// Lo que la sede pidió, si hay una identificación pendiente.
     fn what_the_site_asked(&self) -> Option<crate::protocol::SiteFilter> {
-        app::lock(&self.0).clone()
+        match &*app::lock(&self.0) {
+            Some(PendingConsent::Identity(filter)) => Some(filter.clone()),
+            _ => None,
+        }
+    }
+
+    /// Lo que hace falta para firmar, si hay una firma pendiente.
+    fn the_signature_consented(&self) -> Option<PendingSignature> {
+        match &*app::lock(&self.0) {
+            Some(PendingConsent::Signature(pending)) => Some(pending.clone()),
+            _ => None,
+        }
     }
 
     /// Se acabó el consentimiento: ni la ventana ni el canal tienen ya nada
@@ -902,12 +1055,22 @@ pub fn attend_site_operation(
             certificates,
             filter,
         } => {
-            consent.remember(filter);
+            consent.remember_identity(filter);
             publish_to_the_site_window(app, SiteErrandView::asking_for_consent(certificates));
         }
-        // El consentimiento de una firma es del #393: hasta que lo haya, la
-        // sede se queda con su plazo y la ventana con la espera.
-        app::errand::ErrandStep::AskingToSign(_) => {}
+        app::errand::ErrandStep::AskingToSign(asked) => {
+            // La vista se compone antes de desguazar el consentimiento: lo que
+            // la ventana enseña y lo que se queda para hacer cumplir lo que
+            // pidió la sede son las dos mitades de lo mismo (ID-259, ID-266).
+            let view = SiteErrandView::asking_to_sign(&asked);
+            consent.remember_signature(PendingSignature {
+                document: asked.document,
+                filter: asked.filter,
+                from_the_site: asked.from_the_site,
+                unregistered_signatures: asked.unregistered_signatures,
+            });
+            publish_to_the_site_window(app, view);
+        }
         // Ya está contestada: `attend_operation` cierra el trámite y escribe la
         // línea por el asa (ID-322). Lo que la ventana enseñe de eso es del
         // #394. Lo que sí toca aquí es olvidar el consentimiento apuntado: sin
@@ -954,7 +1117,74 @@ pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
 #[cfg(test)]
 mod tests {
-    use super::{pades_lower_left, PlacementOrder};
+    use super::{pades_lower_left, PendingSignature, PlacementOrder, SiteConsent};
+    use crate::commands::views::SignatureRoundView;
+    use crate::protocol::SiteFilter;
+
+    /// Lo mínimo que hace falta para tener una firma consentida.
+    fn a_pending_signature() -> PendingSignature {
+        PendingSignature {
+            document: "00000000000000000000000000000000".to_owned(),
+            filter: SiteFilter::default(),
+            from_the_site: std::collections::BTreeMap::new(),
+            unregistered_signatures: false,
+        }
+    }
+
+    /// **ID-276**: los dos consentimientos no son intercambiables, y la
+    /// asimetría es la que protege. Con una firma consentida no hay
+    /// identificación que entregar: un `site_identify` que llegara ahí falla,
+    /// que es lo correcto —la sede pidió firmar, no un certificado—.
+    #[test]
+    fn a_consented_signature_is_never_an_identity_to_hand_over() {
+        let consent = SiteConsent::default();
+
+        consent.remember_signature(a_pending_signature());
+
+        assert!(
+            consent.what_the_site_asked().is_none(),
+            "una firma consentida no entrega identidad"
+        );
+        assert!(consent.the_signature_consented().is_some());
+    }
+
+    /// Y al revés: con una identificación consentida no hay nada que firmar.
+    #[test]
+    fn a_consented_identity_is_never_a_signature_to_begin() {
+        let consent = SiteConsent::default();
+
+        consent.remember_identity(SiteFilter::default());
+
+        assert!(consent.the_signature_consented().is_none());
+        assert!(consent.what_the_site_asked().is_some());
+    }
+
+    /// Y olvidar deja las dos preguntas sin respuesta: lo que se contestó una
+    /// vez no se contesta dos (ID-275).
+    #[test]
+    fn forgetting_leaves_nothing_to_answer_with() {
+        let consent = SiteConsent::default();
+        consent.remember_signature(a_pending_signature());
+
+        consent.forget();
+
+        assert!(consent.the_signature_consented().is_none());
+        assert!(consent.what_the_site_asked().is_none());
+    }
+
+    /// La ronda cruza con el nombre del verbo que la sede usó, y no con el de
+    /// la variante del protocolo: es lo que la ventana enseña.
+    #[test]
+    fn the_round_crosses_named_as_the_site_asked_for_it() {
+        assert_eq!(
+            serde_json::to_value(SignatureRoundView::Sign).expect("la ronda cruza"),
+            serde_json::json!("sign")
+        );
+        assert_eq!(
+            serde_json::to_value(SignatureRoundView::Cosign).expect("la ronda cruza"),
+            serde_json::json!("cosign")
+        );
+    }
 
     /// El mismo ejemplo numérico del hallazgo: con `/Rotate 0` la esquina
     /// PAdES coincide con la de espacio de usuario, que es el único caso que

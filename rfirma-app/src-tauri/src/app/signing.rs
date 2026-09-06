@@ -14,17 +14,22 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::app::certificates::StampedHolder;
-use crate::app::cycle::{self, OpenCycle, SigningRequest, TokenSignature, NOTHING_FROM_A_SITE};
+use crate::app::cycle::{
+    self, CycleError, OpenCycle, SigningRequest, TokenSignature, NOTHING_FROM_A_SITE,
+};
 use crate::app::filtering::{self, FilterEngine};
+use crate::app::frontier;
 use crate::app::in_hand::DocumentInHand;
 use crate::app::{certificates, documents, lock, recents};
 use crate::commands::orders::SigningOrder;
 use crate::commands::views::{Failure, SignedDocumentView};
 use crate::destination::PortalDocument;
-use crate::isolate::Isolate;
+use crate::isolate::{Isolate, IsolateGone};
 use crate::memory::{Configuration, ListedCertificates, Memory, OpenedDocuments};
-use crate::pkcs11::{self, CertificateRef, Store, StoreSecret, TokenCertificate};
-use crate::protocol::SiteFilter;
+use crate::pkcs11::{
+    self, CertificateRef, SecretOnTheReaderKeypad, Store, StoreSecret, TokenCertificate, TokenError,
+};
+use crate::protocol::{SafCode, SiteFilter};
 use crate::signing::{
     compose_layer2_text, AdmissibleDocument, SessionSeal, SignatureConfig, VisibleTextFields,
 };
@@ -100,7 +105,7 @@ pub fn begin(
     let document = DocumentInHand::taken(opened, &order.document)?;
     let bytes = admitted_bytes(document.document())?;
     let (config, reference, chain) = plan_signature(stores, listed, order)?;
-    open_the_cycle(
+    Ok(open_the_cycle(
         document,
         bytes,
         config,
@@ -109,7 +114,7 @@ pub fn begin(
         &NOTHING_FROM_A_SITE,
         isolate,
         session,
-    )
+    )?)
 }
 
 /// **Caso de uso.** Prefirma de un trámite de sede (ID-263).
@@ -123,6 +128,13 @@ pub fn begin(
 ///    cumplir lo que pidió la sede.
 /// 2. Los `extraParams` que la sede declaró viajan **debajo** de los seis
 ///    ajustes de rFirma (ID-266, [`crate::app::policies`]).
+///
+/// Y una tercera, que es de dónde sale lo que la sede recibe: cada negativa
+/// vuelve con **su** código del catálogo y no con uno solo para todas
+/// (ID-292). Aquí no se firma nada más que en el ciclo trifásico, pero se
+/// llega a él por el token, por el filtro de la sede y por la política que
+/// ella declaró, y esas tres son situaciones distintas que la sede sabe
+/// contarle a la persona.
 pub fn begin_for_the_site<E: FilterEngine>(
     site: &SiteSigning<'_, E>,
     order: &SigningOrder,
@@ -131,9 +143,12 @@ pub fn begin_for_the_site<E: FilterEngine>(
     opened: &OpenedDocuments,
     isolate: &Isolate,
     session: &SigningSession,
-) -> Result<StoreSecret, Failure> {
-    let document = DocumentInHand::taken(opened, &order.document)?;
-    let bytes = admitted_bytes(document.document())?;
+) -> Result<StoreSecret, SiteRefusal> {
+    // El asa que se consintió tiene que seguir en el registro: si no está, no
+    // hay documento que leer, y eso es lo que se le dice a la sede.
+    let document = DocumentInHand::taken(opened, &order.document)
+        .map_err(|failure| SiteRefusal::new(SafCode::CannotReadData, failure))?;
+    let bytes = admitted_bytes_with_situation(document.document())?;
     let found = pkcs11::list_certificates_across(stores)?;
     let chosen = filtering::usable_certificate_for_the_site(
         site.engine,
@@ -141,11 +156,18 @@ pub fn begin_for_the_site<E: FilterEngine>(
         &found,
         &order.certificate,
         listed,
-    )?;
-    let config = config_for(order, chosen)?;
+    )
+    // La sede ya no acepta el certificado que la ventana enseñó (ID-259): para
+    // ella, ninguno que valga. Es el mismo código con el que
+    // `errand::identity_handed_over` despacha esta misma situación.
+    .map_err(|failure| SiteRefusal::new(SafCode::NoCertificatesInKeystore, failure))?;
+    // Sin colocación nuestra esto no puede fallar hoy (ID-282), pero si algún
+    // día fallara sería por el recuadro, que tiene código propio.
+    let config = config_for(order, chosen)
+        .map_err(|failure| SiteRefusal::new(SafCode::VisibleSignature, failure))?;
     let reference = chosen.reference().clone();
     let chain = vec![chosen.der().to_vec()];
-    open_the_cycle(
+    Ok(open_the_cycle(
         document,
         bytes,
         config,
@@ -154,7 +176,103 @@ pub fn begin_for_the_site<E: FilterEngine>(
         site.from_the_site,
         isolate,
         session,
-    )
+    )?)
+}
+
+/// **Lo que la sede recibe cuando algo no sale**: el código que le toca a la
+/// situación, y la situación entera para la ventana (ID-291).
+///
+/// Existe porque los dos destinos necesitan cosas distintas y ninguna sirve
+/// para la otra. La ventana se arregla con [`Failure`], que lleva la situación
+/// en texto; el cable necesita un código del catálogo publicado, y ese código
+/// **lo manda la verdad de la situación, no el sitio donde se ha fallado**
+/// (ID-292). Deducirlo del texto sería un `match` sobre cadenas con un
+/// comodín, justo lo que la regla de [`frontier`] prohíbe: por eso el código
+/// viaja decidido desde donde la situación todavía tenía tipo.
+#[derive(Debug)]
+pub struct SiteRefusal {
+    code: SafCode,
+    failure: Failure,
+}
+
+impl SiteRefusal {
+    /// Une el código del catálogo con la situación que lo decidió.
+    pub fn new(code: SafCode, failure: Failure) -> Self {
+        Self { code, failure }
+    }
+
+    /// El código que va al cable.
+    pub fn code(&self) -> SafCode {
+        self.code
+    }
+
+    /// La situación entera, para la ventana.
+    pub fn failure(&self) -> &Failure {
+        &self.failure
+    }
+
+    /// La situación entera, quedándosela.
+    pub fn into_failure(self) -> Failure {
+        self.failure
+    }
+}
+
+impl From<CycleFailure> for SiteRefusal {
+    fn from(failure: CycleFailure) -> Self {
+        Self::new(frontier::code_of_cycle(&failure), Failure::from(failure))
+    }
+}
+
+impl From<TokenError> for SiteRefusal {
+    fn from(error: TokenError) -> Self {
+        Self::new(frontier::code_of_token(error.situation()), error.into())
+    }
+}
+
+/// **Lo que puede salir mal en el tramo trifásico, con la situación todavía
+/// tipada.**
+///
+/// Es lo que [`begin_for_the_site`] y [`finish_for_the_site`] necesitan y
+/// [`Failure`] ya no puede dar: el ciclo falla por el documento, por el token,
+/// por el puente —incluida la política que la sede declaró y no se puede
+/// aplicar— y por el sello del ADR-0016, y cada una de esas cosas tiene su
+/// código. El recorrido local no mira esto: para él todas son [`Failure`], y
+/// la conversión es automática.
+#[derive(Debug)]
+pub enum CycleFailure {
+    /// El documento no se ha podido leer del disco.
+    DocumentUnreadable(String),
+    /// El ciclo ha dicho que no: el documento, el token, el puente o el sello.
+    Cycle(CycleError),
+    /// El secreto se teclea en el teclado del lector: no hay PIN que pedir, y
+    /// aquí se acaba el recorrido sin haber firmado nada.
+    SecretOnTheReaderKeypad(SecretOnTheReaderKeypad),
+    /// El hilo del isolate se ha caído, así que no hay puente.
+    Gone(IsolateGone),
+}
+
+impl From<CycleError> for CycleFailure {
+    fn from(error: CycleError) -> Self {
+        Self::Cycle(error)
+    }
+}
+
+impl From<TokenError> for CycleFailure {
+    fn from(error: TokenError) -> Self {
+        Self::Cycle(CycleError::from(error))
+    }
+}
+
+impl From<SecretOnTheReaderKeypad> for CycleFailure {
+    fn from(refusal: SecretOnTheReaderKeypad) -> Self {
+        Self::SecretOnTheReaderKeypad(refusal)
+    }
+}
+
+impl From<IsolateGone> for CycleFailure {
+    fn from(gone: IsolateGone) -> Self {
+        Self::Gone(gone)
+    }
 }
 
 /// Lo que una firma tiene de trámite de sede, y que en el recorrido local no
@@ -187,7 +305,7 @@ fn open_the_cycle(
     from_the_site: &BTreeMap<String, String>,
     isolate: &Isolate,
     session: &SigningSession,
-) -> Result<StoreSecret, Failure> {
+) -> Result<StoreSecret, CycleFailure> {
     // Se pregunta antes de cruzar la frontera: si el secreto se teclea en el
     // lector, aquí se acaba el recorrido y no se ha intentado firmar nada.
     let secret = pkcs11::store_secret(&reference)?.admitted()?;
@@ -197,7 +315,7 @@ fn open_the_cycle(
     let signer_der = chain.first().cloned().unwrap_or_default();
     let from_the_site = from_the_site.clone();
 
-    let cycle = on_the_bridge(isolate, move |bridge| {
+    let cycle = on_the_bridge_with_situation(isolate, move |bridge| {
         // La comprobación se repite dentro del hilo porque el tipo que la
         // garantiza presta los bytes y los bytes viajan: no es un `if`
         // olvidable, es el único constructor de `AdmissibleDocument`.
@@ -314,16 +432,22 @@ pub struct SiteSignature {
 pub fn finish_for_the_site(
     isolate: &Isolate,
     session: &SigningSession,
-) -> Result<SiteSignature, Failure> {
+) -> Result<SiteSignature, SiteRefusal> {
     let SignedCycle {
         cycle,
         signature,
         seal,
         signer_der,
         ..
-    } = take_signed_cycle(session)?;
+    } = take_signed_cycle(session)
+        // Llegar aquí sin ciclo abierto es que el trámite se ha descolocado:
+        // no es ninguna situación que la sede sepa contar, es la firma que no
+        // ha salido.
+        .map_err(|failure| SiteRefusal::new(SafCode::SignatureFailed, failure))?;
 
-    let signed = on_the_bridge(isolate, move |bridge| {
+    // Y aquí sí: el sello que no cuadra (ADR-0016) y la política que la sede
+    // declaró y no se puede aplicar tienen código propio, y salen con él.
+    let signed = on_the_bridge_with_situation(isolate, move |bridge| {
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
@@ -463,9 +587,16 @@ pub(crate) fn plan_signature(
 /// La puerta rápida del #60: se decide sobre los bytes, sin token y sin
 /// frontera, y por eso puede caer **antes del diálogo del PIN**.
 pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, Failure> {
+    admitted_bytes_with_situation(document).map_err(Failure::from)
+}
+
+/// [`admitted_bytes`] con la situación **todavía tipada**, que es lo que el
+/// trámite de sede necesita para emitir el código del catálogo que le toca a
+/// un PDF cifrado o certificado (ID-292) en vez de uno solo para todos.
+fn admitted_bytes_with_situation(document: &PortalDocument) -> Result<Vec<u8>, CycleFailure> {
     let bytes = std::fs::read(document.reading_path())
-        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
-    AdmissibleDocument::check(&bytes)?;
+        .map_err(|error| CycleFailure::DocumentUnreadable(error.to_string()))?;
+    AdmissibleDocument::check(&bytes).map_err(CycleError::from)?;
     Ok(bytes)
 }
 
@@ -532,10 +663,20 @@ pub(crate) fn on_the_bridge<T: Send + 'static>(
     isolate: &Isolate,
     task: impl FnOnce(&crate::ffi::NativeBridge) -> Result<T, cycle::CycleError> + Send + 'static,
 ) -> Result<T, Failure> {
+    on_the_bridge_with_situation(isolate, task).map_err(Failure::from)
+}
+
+/// [`on_the_bridge`] con la situación **todavía tipada**: las tres capas se
+/// aplanan igual, pero lo que sale sigue sabiendo si fue el puente, el token o
+/// el sello, que es lo que la sede necesita para recibir su código (ID-292).
+pub(crate) fn on_the_bridge_with_situation<T: Send + 'static>(
+    isolate: &Isolate,
+    task: impl FnOnce(&crate::ffi::NativeBridge) -> Result<T, cycle::CycleError> + Send + 'static,
+) -> Result<T, CycleFailure> {
     match isolate.run(task) {
         Err(gone) => Err(gone.into()),
-        Ok(Err(bridge)) => Err(bridge.into()),
-        Ok(Ok(outcome)) => outcome.map_err(Failure::from),
+        Ok(Err(bridge)) => Err(CycleError::from(bridge).into()),
+        Ok(Ok(outcome)) => outcome.map_err(CycleFailure::from),
     }
 }
 
@@ -547,7 +688,7 @@ fn no_open_cycle() -> Failure {
 mod tests {
     use super::{
         admitted_bytes, begin, begin_for_the_site, cancel, config_for, finish, is_live,
-        sign_on_token, signed_document, signed_folder, take_signed_cycle, FilterEngine,
+        sign_on_token, signed_document, signed_folder, take_signed_cycle, FilterEngine, SafCode,
         SigningSession, SiteFilter, SiteSigning,
     };
     use crate::app::fixtures::{a_certificate, a_memory, an_order};
@@ -973,7 +1114,12 @@ mod tests {
         )
         .expect_err("ese documento no esta abierto");
 
-        assert_eq!(failure.situation, "documentUnreadable");
+        assert_eq!(failure.failure().situation, "documentUnreadable");
+        assert_eq!(
+            failure.code(),
+            SafCode::CannotReadData,
+            "y la sede recibe el codigo de lo que ha pasado, no uno para todo (ID-292)"
+        );
     }
 
     /// Un motor que nunca llega a que le pregunten: la prefirma de la sede se

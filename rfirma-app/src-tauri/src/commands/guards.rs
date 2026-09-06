@@ -173,7 +173,7 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 10] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 11] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -186,10 +186,15 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 10] = [
     // lleva son ficheros `.desktop` que dio el escritorio (ID-238).
     "UrlHandlersView",
     "UrlHandlerView",
-    // Detrás del trámite recién abierto no hay ningún documento: el canal está
-    // en pie y la petición de la sede no ha llegado (ID-338).
+    // Detrás del trámite de sede no hay ningún documento **del portal**: en la
+    // espera no hay ninguno todavía (ID-338), y el que manda la sede se nombra
+    // con un asa acuñada y nunca con la ruta de su fichero de paso, que además
+    // se borra al contestar (ID-286).
     "SiteErrandView",
     "SiteStageView",
+    // Y detrás de si lo que se pide es firmar o cofirmar no hay más que el
+    // verbo con el que la sede lo pidió.
+    "SignatureRoundView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
@@ -533,7 +538,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 31, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 33, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la

@@ -282,6 +282,8 @@ pub fn run() {
             commands::close_site_window,
             commands::site_identify,
             commands::site_decline,
+            commands::site_begin_signing,
+            commands::site_finish_signing,
         ])
         // **El arranque, que es un adaptador y no decide nada** (ID-324, TD-70):
         // el caso de uso refresca la CA local, mira si la invocación es de sede

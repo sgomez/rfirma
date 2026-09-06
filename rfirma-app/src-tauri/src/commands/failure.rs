@@ -13,6 +13,7 @@
 use serde::Serialize;
 
 use crate::app::cycle;
+use crate::app::signing::CycleFailure;
 use crate::desktop::error::DesktopError;
 use crate::destination::DestinationError;
 use crate::ffi::BridgeError;
@@ -187,6 +188,17 @@ impl From<cycle::CycleError> for Failure {
             cycle::CycleError::Bridge(error) => error.into(),
             cycle::CycleError::Token(error) => error.into(),
             cycle::CycleError::Seal(error) => error.into(),
+        }
+    }
+}
+
+impl From<CycleFailure> for Failure {
+    fn from(failure: CycleFailure) -> Self {
+        match failure {
+            CycleFailure::DocumentUnreadable(detail) => Self::new("documentUnreadable", detail),
+            CycleFailure::Cycle(error) => error.into(),
+            CycleFailure::SecretOnTheReaderKeypad(refusal) => refusal.into(),
+            CycleFailure::Gone(gone) => gone.into(),
         }
     }
 }
