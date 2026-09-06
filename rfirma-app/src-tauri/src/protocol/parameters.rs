@@ -1,32 +1,12 @@
-//! Los parámetros que trae **cualquier** operación, y sus dos guardias.
-//!
-//! Es `UrlParameters` del original
-//! (`es/gob/afirma/core/misc/protocol/UrlParameters.java`) reducido a lo que
-//! afecta a todas las operaciones por igual: la versión mínima que exige la
-//! sede y el origen de los datos. Lo propio de cada operación —`format`,
-//! `algorithm`, los filtros— no vive aquí.
-//!
-//! Las dos guardias se comprueban **en los cuatro lanzadores** del original,
-//! `selectcert` incluido y no sólo en la firma (ID-251), así que aquí son
-//! funciones sueltas: las llama cada operación, no un constructor que sólo la
-//! firma usaría.
+//! Las dos guardias comunes a toda operación: versión mínima y acceso local.
 
 use super::codes::{Parameter, SafCode};
 use super::refusal::Refusal;
 use super::version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
 
-/// El prefijo que el original prohíbe en `dat` (`UrlParameters.java:300`-`303`).
 const LOCAL_FILE_PREFIX: &str = "file:/";
 
-/// `mcv`: la versión mínima de cliente que exige la sede.
-///
-/// Se compara contra [`IMPLEMENTED_AUTOFIRMA_VERSION`], que es la versión de
-/// AutoFirma que rFirma declara implementar y **no** la versión de rFirma
-/// (ID-250). La comparación es la del original, que no es semver (ID-251,
-/// [`super::version`]).
-///
-/// Ausente es «no exige nada»: el `buildUrl` del cliente publicado sólo
-/// antepone `mcv` cuando la sede llamó a `setMinimumClientVersion`.
+/// Comprueba la versión mínima de cliente que exige la sede.
 pub fn check_minimum_client_version(requested: Option<&str>) -> Result<(), Refusal> {
     let Some(requested) = requested.filter(|value| !value.is_empty()) else {
         return Ok(());
@@ -54,14 +34,7 @@ pub fn check_minimum_client_version(requested: Option<&str>) -> Result<(), Refus
     Ok(())
 }
 
-/// `dat`: los datos a firmar, y la defensa contra leer ficheros del equipo.
-///
-/// Un `dat` que empieza por `file:/` es la sede pidiendo que rFirma le abra un
-/// fichero local y se lo firme (ID-267). El original ya lo prohíbe con
-/// `ParameterLocalAccessRequestedException`; aquí, además, **sin distinguir
-/// mayúsculas y sin dejarse engañar por espacios delante**, que al original sí
-/// se le cuelan. No cuesta nada: el Base64 de una operación real nunca empieza
-/// por espacio.
+/// Comprueba que los datos a firmar no pidan un fichero local.
 pub fn check_local_access_is_not_requested(data: &str) -> Result<(), Refusal> {
     let candidate = data.trim_start().to_ascii_lowercase();
 

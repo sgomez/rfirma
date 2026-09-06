@@ -1,36 +1,11 @@
-//! La comparación de versiones del original, que **no es semver** (ID-251).
-//!
-//! Es la clase `Version` de `afirma-simple`
-//! (`es/gob/afirma/standalone/protocol/Version.java`) reproducida regla a
-//! regla. Sus cuatro trampas contradicen semver justo donde importa, y las
-//! cuatro tienen prueba aquí aunque ninguna dispare con lo que mandan las sedes
-//! —que piden `1.6`, `1.7` y `1.8`— porque son **la razón de que este fichero
-//! exista** en vez de un `use semver::Version` (TD-54):
-//!
-//! | caso | aquí | semver |
-//! |---|---|---|
-//! | `1.7.0.0` vs `1.7` | mayor: más partes gana | iguales |
-//! | `1.7a` vs `1.7` | mayor: el sufijo **suma** | menor: es un *prerelease* |
-//! | `1.7 RC1` vs `1.7` | menor: el sufijo empieza por espacio | ni siquiera parsea |
-//! | `1.7A` vs `1.7a` | iguales: el sufijo no distingue mayúsculas | distintas |
-//!
-//! Lo que se compara contra `mcv` es
-//! [`IMPLEMENTED_AUTOFIRMA_VERSION`], **no** la versión de rFirma (ID-250).
+//! El comparador de versiones del original, que no es semver.
 
 use std::cmp::Ordering;
 
 /// La versión de AutoFirma que rFirma declara implementar.
-///
-/// Es un número distinto de la versión de rFirma, y separarlos no es cosmético:
-/// con la versión del producto —`0.5`— cualquier sede que exija `mcv=1.9.x`
-/// obtendría `0.5 < 1.9.x` y **nunca** se firmaría ahí (ID-250).
-///
-/// Declararla **no promete un catálogo de operaciones**: una sede que pida
-/// `save` se lleva su `SAF_04` igual.
 pub const IMPLEMENTED_AUTOFIRMA_VERSION: &str = "1.9.2";
 
-/// Una versión legible partida como la parte el original: números separados por
-/// puntos, y un texto adicional pegado al último número.
+/// Una versión legible del protocolo.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Version {
     parts: Vec<i32>,
@@ -39,15 +14,6 @@ pub struct Version {
 
 impl Version {
     /// Parte la cadena, o dice que no tiene forma de versión.
-    ///
-    /// Reproduce el constructor de `Version.java:21`-`56`, incluidas dos
-    /// rarezas de Java que cambian el veredicto:
-    ///
-    /// - `split("\\.")` **descarta los trozos vacíos del final**, así que
-    ///   `1.7.` es `1.7` y no un error;
-    /// - todas las partes menos la última tienen que ser un entero entero; la
-    ///   última puede ser un entero seguido de texto (`1.7a`), pero si empieza
-    ///   por algo que no es un dígito, no parsea.
     pub fn parse(legible: &str) -> Result<Self, MalformedVersion> {
         let mut parts: Vec<&str> = legible.split('.').collect();
         while parts.last().is_some_and(|part| part.is_empty()) {
@@ -79,11 +45,7 @@ impl Version {
         })
     }
 
-    /// `true` si esta versión es **estrictamente mayor** que la otra.
-    ///
-    /// Es `greaterThan` de `Version.java:120`-`166`, en el mismo orden de
-    /// ramas: primero los números parte a parte, luego el número de partes, y
-    /// sólo entonces el texto adicional.
+    /// Si esta versión es estrictamente mayor que la otra.
     pub fn greater_than(&self, other: &Self) -> bool {
         for (mine, theirs) in self.parts.iter().zip(other.parts.iter()) {
             match mine.cmp(theirs) {
@@ -102,7 +64,6 @@ impl Version {
         self.additional_text_greater_than(&other.additional_text)
     }
 
-    /// Las cinco ramas del texto adicional, tal cual las escribe el original.
     fn additional_text_greater_than(&self, theirs: &str) -> bool {
         let mine = self.additional_text.as_str();
 
@@ -125,25 +86,16 @@ impl Version {
     }
 }
 
-/// Una cadena que no tiene forma de versión. El lanzador la convierte en
-/// `SAF_03`, como cualquier otro fallo de parámetros.
+/// Una cadena que no tiene forma de versión.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MalformedVersion;
 
-/// `Character.isSpaceChar` del primer carácter: la lista **blanca** de las tres
-/// categorías Unicode que ese método acepta —`SPACE_SEPARATOR` (Zs),
-/// `LINE_SEPARATOR` (Zl) y `PARAGRAPH_SEPARATOR` (Zp)—, y nada más. El
-/// tabulador, el salto de línea y el `U+0085` son `isWhitespace` en Java pero
-/// **no** `isSpaceChar`, así que aquí tampoco cuentan.
 fn starts_with_space(text: &str) -> bool {
     text.chars().next().is_some_and(|character| {
         matches!(
             character,
-            // `SPACE_SEPARATOR` (Zs)
             ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
-                ..='\u{200a}' | '\u{202f}' | '\u{205f}' | '\u{3000}'
-            // `LINE_SEPARATOR` (Zl) y `PARAGRAPH_SEPARATOR` (Zp)
-            | '\u{2028}' | '\u{2029}'
+                ..='\u{200a}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{2028}' | '\u{2029}'
         )
     })
 }

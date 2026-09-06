@@ -1,45 +1,12 @@
-//! **El catálogo publicado**: los cincuenta y tres códigos `SAF_00`…`SAF_52`,
-//! y lo único que además de ellos entiende el cliente de la sede (ID-289).
-//!
-//! No hay forma de señalar un fallo que no sea con el prefijo `SAF_`
-//! (`docs/research/contrato-protocolo-afirma.md`, §5): lo que no empiece por
-//! ahí, no sea `CANCEL`, `MEMORY_ERROR` o `NULL`, el `autoscript.js` lo entrega
-//! a la sede **como si fuera una firma**. Por eso el catálogo es un `enum`
-//! cerrado y no una cadena: aquí no se acuña ningún código, y no existen los
-//! `AF…` ni los `AS…`, que son de `master` (ID-289, ID-294).
-//!
-//! Detrás del código va **frase nuestra, en castellano fijo** (ID-290), no el
-//! texto de `protocolmessages.properties`: la sede enseña la respuesta entera,
-//! así que lo que se lee ahí es responsabilidad de rFirma. Donde el original
-//! colapsa cualquier fallo de parámetros en un `SAF_03` mudo, la frase **nombra
-//! el parámetro** que vino mal ([`Parameter`]).
-//!
-//! Las frases van **sin acentos**, igual que el catálogo del original tal y
-//! como llega al cable: la respuesta viaja por un canal que ninguna sede
-//! declara codificado, y el ASCII es lo único que se lee igual en todas.
-//!
-//! Y el detalle crudo de nuestras situaciones (ID-29) **no está aquí ni puede
-//! llegar**: lo que sale al cable se compone de un código de este `enum` y de
-//! una frase constante, y nada más (ID-291).
+//! El catálogo publicado de respuestas hacia la sede.
 
 use std::fmt;
 
-/// La cancelación de la persona, que **no es un código**
-/// (`ProtocolInvocationLauncherSign.java:104`).
 pub const CANCELLED: &str = "CANCEL";
-
-/// La respuesta que el cliente lee como falta de memoria
-/// (`autoscript.js:2312`-`2315`).
 pub const OUT_OF_MEMORY: &str = "MEMORY_ERROR";
-
-/// La respuesta que el cliente lee como «error desconocido»
-/// (`autoscript.js:2324`-`2327`).
 pub const NOTHING: &str = "NULL";
 
 /// El parámetro de la llamada que la sede mandó mal.
-///
-/// Es una lista cerrada de **nombres del protocolo**, no texto libre: lo que
-/// sale al cable no puede depender de lo que traía la URL (ID-291).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Parameter {
     /// `ports`: los puertos que la sede sorteó.
@@ -108,8 +75,7 @@ pub enum SafCode {
     NullUri,
     /// `SAF_02`, `ERROR_UNSUPPORTED_PROTOCOL`.
     UnsupportedProtocol,
-    /// `SAF_03`, `ERROR_PARAMS`. El cajón de sastre del original, y el único
-    /// que nombra el parámetro que vino mal (ID-290).
+    /// `SAF_03`, `ERROR_PARAMS`.
     Params,
     /// `SAF_04`, `ERROR_UNSUPPORTED_OPERATION`.
     UnsupportedOperation,
@@ -199,9 +165,7 @@ pub enum SafCode {
     InvalidSessionId,
     /// `SAF_47`, `ERROR_EXTERNAL_REQUEST_TO_SOCKET`.
     ExternalRequestToSocket,
-    /// `SAF_48`, `ERROR_PDF_SHADOW_ATTACK`. **Está en el catálogo y rFirma no
-    /// lo emite nunca** (ID-295): `PdfShadowAttackException` es de `master`, y
-    /// la 1.9.2 contra la que se firma no la lanza. Lo vigila una guarda.
+    /// `SAF_48`, `ERROR_PDF_SHADOW_ATTACK`.
     PdfShadowAttack,
     /// `SAF_49`, `ERROR_SIGNING_LTS_SIGNATURE`.
     SigningLtsSignature,
@@ -213,12 +177,6 @@ pub enum SafCode {
     LockedKeystore,
 }
 
-/// **El catálogo, fila a fila**: el código tal y como viaja por el cable y la
-/// frase nuestra que lo acompaña (ID-289, ID-290).
-///
-/// La fila `n` es la del código `SAF_nn`, y la variante de [`SafCode`] que la
-/// nombra es la `n`-ésima: la tabla y el `enum` se emparejan por posición, y
-/// una prueba lo comprueba fila a fila.
 const CATALOGUE: [(&str, &str); 53] = [
     ("SAF_00", "No se han podido leer los datos a firmar"),
     ("SAF_01", "La llamada no trae ninguna direccion"),
@@ -402,7 +360,7 @@ impl SafCode {
         self.entry().0
     }
 
-    /// La frase nuestra que acompaña al código (ID-290).
+    /// La frase nuestra que acompaña al código.
     pub fn phrase(self) -> &'static str {
         self.entry().1
     }
@@ -414,11 +372,7 @@ impl fmt::Display for SafCode {
     }
 }
 
-/// **Todo lo que rFirma puede contestarle a la sede cuando no sale una firma**,
-/// y nada más (ID-289).
-///
-/// Es el tipo por el que pasa la frontera: quien escribe en el socket escribe
-/// [`WireAnswer::on_the_wire`] y no una cadena suya.
+/// Respuestas que rFirma puede contestar a la sede cuando no sale una firma.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WireAnswer {
     /// Un código del catálogo, con el parámetro que lo provocó cuando lo hay.
@@ -428,7 +382,7 @@ pub enum WireAnswer {
         /// El parámetro que la sede mandó mal, si el rechazo es de uno.
         blame: Option<Parameter>,
     },
-    /// La persona ha cancelado. **Ningún rechazo nuestro es esto** (ID-293).
+    /// La persona ha cancelado.
     Cancelled,
     /// No hay memoria para el resultado.
     OutOfMemory,
@@ -442,7 +396,7 @@ impl WireAnswer {
         Self::Refused { code, blame: None }
     }
 
-    /// Un rechazo que sabe **qué parámetro** vino mal (ID-290).
+    /// Un rechazo que indica el parámetro que falló.
     pub fn refused_because_of(code: SafCode, blame: Parameter) -> Self {
         Self::Refused {
             code,
@@ -451,10 +405,6 @@ impl WireAnswer {
     }
 
     /// La línea entera tal y como sale al cable.
-    ///
-    /// `SAF_NN: <frase>`, y con el parámetro nombrado detrás cuando el rechazo
-    /// es de uno. Nada de aquí sale de una entrada: ni el detalle crudo, ni la
-    /// ruta, ni el nombre del documento, ni el certificado (ID-291).
     pub fn on_the_wire(self) -> String {
         match self {
             Self::Refused { code, blame: None } => format!("{}: {}", code.as_str(), code.phrase()),
@@ -479,8 +429,6 @@ mod tests {
     use super::*;
     use std::collections::BTreeSet;
 
-    /// **Exactitud**: el catálogo es el publicado, `SAF_00`…`SAF_52`, y no hay
-    /// ni un código acuñado (ID-289, TD-57).
     #[test]
     fn the_catalogue_is_the_fifty_three_published_codes_and_nothing_else() {
         let literals: BTreeSet<&str> = SafCode::ALL.iter().map(|code| code.as_str()).collect();
@@ -491,9 +439,6 @@ mod tests {
         assert_eq!(literals, expected);
     }
 
-    /// Y el emparejamiento entre el `enum` y la tabla es por posición, así que
-    /// se comprueba fila a fila: una variante metida en el sitio equivocado
-    /// desplazaría todas las frases sin que nada más se pusiera rojo.
     #[test]
     fn each_variant_sits_on_the_row_of_its_own_number() {
         for (number, code) in SafCode::ALL.iter().enumerate() {
@@ -502,8 +447,6 @@ mod tests {
         }
     }
 
-    /// **Totalidad**: cada código tiene frase nuestra, y ninguna es la cadena
-    /// vacía ni lleva acentos que el cable no garantiza (ID-290).
     #[test]
     fn every_code_carries_a_phrase_of_ours_in_plain_ascii() {
         for code in SafCode::ALL {
@@ -517,8 +460,6 @@ mod tests {
         }
     }
 
-    /// Lo que la sede recibe es la línea entera, y el cliente publicado sólo
-    /// mira los cuatro primeros caracteres (§5 del informe).
     #[test]
     fn every_refusal_travels_as_a_line_the_published_client_recognises() {
         for code in SafCode::ALL {
@@ -532,8 +473,6 @@ mod tests {
         }
     }
 
-    /// Y donde el original deja un `SAF_03` mudo, la respuesta **nombra el
-    /// parámetro** (ID-290).
     #[test]
     fn a_bad_parameter_is_named_behind_the_code() {
         let line = WireAnswer::refused_because_of(SafCode::Params, Parameter::Ports).on_the_wire();
@@ -544,8 +483,6 @@ mod tests {
         );
     }
 
-    /// Las tres respuestas que no son códigos van **desnudas**: cualquier
-    /// adorno las convertiría en una firma a ojos del cliente (§5).
     #[test]
     fn the_three_answers_that_are_not_codes_travel_bare() {
         assert_eq!(WireAnswer::Cancelled.on_the_wire(), "CANCEL");

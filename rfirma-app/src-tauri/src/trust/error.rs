@@ -1,37 +1,19 @@
-//! Los fallos de registrar la confianza **se clasifican, no se traducen**
-//! (ADR-0009), igual que los del material del canal en [`crate::tls::error`].
-//!
-//! Son tres situaciones y no más, porque desde fuera solo hay tres remedios
-//! distintos: no está NSS, no se ha podido abrir el almacén de la persona —el
-//! caso del flatpak sin el permiso del ID-228— y el certificado ha entrado pero
-//! sus bits de confianza no se han escrito.
-//!
-//! **Ninguna de las tres para un trámite** (ID-224): quien las recibe cuenta
-//! cuántos almacenes han quedado sin la CA y lo dice **al terminar**.
+//! Clasificación de errores de almacenes NSS para la interfaz (ADR-0009).
 
 use std::fmt;
 
-/// Situación que la persona puede entender, y que el catálogo traduce.
+/// Situación del fallo de almacén NSS para su presentación en interfaz (ADR-0009).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
-    /// No está `libnss3.so`, que es quien abre un almacén NSS para escribir.
+    /// Biblioteca NSS no disponible en el sistema.
     NssMissing,
-    /// El almacén NSS de la persona no se ha podido abrir en lectura y
-    /// escritura. Es lo que pasa en el flatpak cuando falta el permiso del
-    /// ID-228, y también cuando el perfil está a medio crear.
+    /// Almacén NSS inaccesible en lectura o escritura.
     StoreUnreachable,
-    /// El certificado de la CA local ha entrado en el almacén, pero sus bits de
-    /// confianza no se han podido escribir. Sin ellos el navegador no confía,
-    /// así que **no cuenta como instalado**.
+    /// No se pudieron registrar los bits de confianza en el almacén.
     TrustNotWritten,
 }
 
-/// Un fallo al registrar la CA local: la situación traducible y el detalle
-/// crudo.
-///
-/// [`TrustError::detail`] nunca está vacío y **nunca** está traducido: es lo
-/// que se pega en un informe de fallo, con el nombre de la llamada de NSS que
-/// falló dentro.
+/// Error al interactuar con almacenes NSS con situación clasificada y detalle técnico.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrustError {
     situation: Situation,
@@ -39,7 +21,7 @@ pub struct TrustError {
 }
 
 impl TrustError {
-    /// Un fallo con su detalle técnico, sin traducir.
+    /// Crea un nuevo fallo con situación y detalle técnico.
     pub fn new(situation: Situation, detail: impl Into<String>) -> Self {
         Self {
             situation,
@@ -47,12 +29,12 @@ impl TrustError {
         }
     }
 
-    /// La situación que la interfaz enseña, ya clasificada.
+    /// Situación clasificada del error.
     pub fn situation(&self) -> Situation {
         self.situation
     }
 
-    /// El detalle técnico crudo. Nunca vacío, nunca traducido.
+    /// Detalle técnico del error.
     pub fn detail(&self) -> &str {
         &self.detail
     }

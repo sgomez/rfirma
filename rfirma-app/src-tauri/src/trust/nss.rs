@@ -1,42 +1,4 @@
-//! **Cómo entra la CA local en un almacén NSS de la persona** (ID-227, ID-228).
-//!
-//! Por la API de NSS y no por `certutil`: el binario de `libnss3-tools` está en
-//! esta máquina de desarrollo, pero **no en el runtime del flatpak**, y el
-//! ADR-0004 manda que los tres canales ejecuten literalmente el mismo código.
-//! `libnss3.so` sí está en los tres —`org.gnome.Platform` lo trae—, que es lo
-//! mismo que ya explota [`crate::pkcs11::nss`] para meter un `.p12`.
-//!
-//! # Los mismos dos cuidados que el importador de `.p12`
-//!
-//! Están medidos en `docs/research/p12-en-almacen-nss.md` y valen igual aquí:
-//!
-//! - **`NSS_Init` sobre un `configdir` y el `C_Initialize` de `cryptoki` no
-//!   pueden convivir** (ID-194). Por eso se abre el perfil con `NSS_NoDB_Init`
-//!   más `SECMOD_OpenUserDB`, y **dentro** de [`crate::pkcs11::with_token_turn`]
-//!   —que aquí se toma solo, sin que quien llama tenga que acordarse—.
-//! - **Todos los caminos de salida apagan NSS.** Dejarlo encendido deja al
-//!   proceso listando el almacén equivocado, sin ningún error.
-//!
-//! # Lo que hace, y lo que no
-//!
-//! Hace lo mismo que `certutil -A -t "C,,"`: `PK11_ImportCert` con
-//! `includeTrust` en falso y después `CERT_ChangeCertTrust`, que es el orden
-//! del propio `certutil`. Los bits son [`TRUSTED_SSL_CA`] y **solo** esos: la
-//! CA local no vale para correo ni para firma de código, y `TCP,TCP,TCP` —lo
-//! que pone AutoFirma— le regala una confianza que nadie le ha pedido.
-//!
-//! **No borra nada.** No hay ninguna llamada de retirada en este fichero, y esa
-//! ausencia es el solape del ID-224: instalar la CA siguiente deja la vigente
-//! donde estaba. Cuando se escriba la retirada de Preferencias irá **por huella
-//! del certificado y nunca por apodo**, que es literalmente el fallo medido en
-//! el #225.
-//!
-//! # El apodo se comparte a propósito
-//!
-//! Las dos CA locales que conviven durante el solape llevan el **mismo** apodo,
-//! porque en NSS el apodo va con el **sujeto** y no con el certificado: dos
-//! certificados del mismo sujeto con apodos distintos es lo que NSS rechaza, no
-//! lo contrario.
+//! Gestión de certificados y confianza en almacenes NSS mediante FFI (ADR-0005).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;
@@ -50,47 +12,23 @@ use crate::pkcs11::nss::CANDIDATE_NSS;
 use crate::pkcs11::stores::present_among;
 use crate::pkcs11::with_token_turn;
 
-/// `SECSuccess`, que es lo único que devuelve bien una función de NSS.
 const SEC_SUCCESS: c_int = 0;
-/// `PR_FALSE`.
 const PR_FALSE: c_int = 0;
-/// `PR_TRUE`.
 const PR_TRUE: c_int = 1;
-/// `siBuffer`, el tipo de `SECItem` para una tira de bytes cualquiera.
 const SI_BUFFER: c_uint = 0;
-/// `CK_INVALID_HANDLE`: el certificado entra **sin** clave privada emparejada.
 const NO_KEY: c_ulong = 0;
 
-/// `CERTDB_VALID_CA`.
 const CERTDB_VALID_CA: u32 = 0x0008;
-/// `CERTDB_TRUSTED_CA`.
 const CERTDB_TRUSTED_CA: u32 = 0x0010;
 
-/// Los bits que hacen a un certificado **una CA de confianza para TLS**, y
-/// nada más.
-///
-/// Es lo que `certutil -L` enseña como `C,,`. Ni `T` (`CERTDB_TRUSTED_CLIENT_CA`,
-/// que es confianza para certificados de cliente) ni las dos columnas de la
-/// derecha: la CA local firma un `CN=localhost` y no avala correo de nadie.
+/// Bits que identifican una CA de confianza para TLS en NSS.
 pub const TRUSTED_SSL_CA: u32 = CERTDB_VALID_CA | CERTDB_TRUSTED_CA;
 
-/// **Si esos bits son los de una CA de confianza para TLS.**
-///
-/// No es `== TRUSTED_SSL_CA`, y esa tentación cuesta una tarde: lo que se
-/// escribe y lo que se lee **no son el mismo número**. La confianza no vive en
-/// `cert9.db` como una máscara de bits, sino como un `CKA_TRUST_SERVER_AUTH`
-/// del softoken, y al volver de ahí un `CKT_NSS_TRUSTED_DELEGATOR` se
-/// reconstruye siempre con `CERTDB_NS_TRUSTED_CA` puesto encima. Se comprueban
-/// los dos bits que importan y se ignora el resto.
+/// Comprueba si los bits corresponden a una CA de confianza para TLS.
 pub fn is_trusted_ssl_ca(flags: u32) -> bool {
     flags & TRUSTED_SSL_CA == TRUSTED_SSL_CA
 }
 
-/// Los init args con los que se abre el perfil de la persona **para escribir**.
-///
-/// Sin `tokenDescription`: aquí no se crea nada, se abre lo que ya existe, y
-/// renombrarle el token al perfil de un Firefox ajeno sería tocar lo que no es
-/// nuestro.
 fn read_write_spec(profile: &Path) -> String {
     format!(
         "configDir='sql:{}' certPrefix='' keyPrefix='' flags=readWrite",
@@ -98,7 +36,6 @@ fn read_write_spec(profile: &Path) -> String {
     )
 }
 
-/// El `SECItem` de NSS: tipo, bytes y longitud.
 #[repr(C)]
 struct SecItem {
     kind: c_uint,
@@ -106,7 +43,6 @@ struct SecItem {
     len: c_uint,
 }
 
-/// El `CERTCertTrust` de NSS: tres juegos de bits, uno por uso.
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct CertTrust {
@@ -115,13 +51,6 @@ struct CertTrust {
     object_signing: c_uint,
 }
 
-/// Lo que NSS llama cuando le hace falta la contraseña de una ranura.
-///
-/// Devuelve siempre `NULL`, que para NSS es «no hay contraseña que dar».
-/// Escribir un certificado **sin clave privada** en `cert9.db` no pide sesión
-/// iniciada, así que este camino no se recorre; registrarlo igual es lo que
-/// garantiza que ningún perfil con contraseña maestra deje a rfirma esperando
-/// a un diálogo que aquí no existe.
 extern "C" fn no_password(
     _slot: *mut c_void,
     _retry: c_int,
@@ -132,16 +61,12 @@ extern "C" fn no_password(
 
 static LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
 
-/// `libnss3.so`, cargada una vez para todo el proceso y nunca descargada, por
-/// lo mismo que en [`crate::pkcs11::nss`]: NSS deja estado global.
 fn library() -> Result<&'static Library, TrustError> {
     let loaded = LIBRARY.get_or_init(|| {
         let path = present_among(CANDIDATE_NSS, |path| path.is_file())
             .into_iter()
             .next()
             .ok_or_else(|| "no esta libnss3.so en ninguna de las rutas conocidas".to_owned())?;
-        // SAFETY: la ruta sale de la lista cerrada de candidatos de
-        // `pkcs11::nss`, no del entorno, y la biblioteca es la NSS del sistema.
         unsafe { Library::new(&path) }.map_err(|error| format!("{}: {error}", path.display()))
     });
     loaded
@@ -150,9 +75,6 @@ fn library() -> Result<&'static Library, TrustError> {
 }
 
 fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TrustError> {
-    // SAFETY: cada tipo `T` de este módulo es la firma declarada en la cabecera
-    // pública de NSS para ese símbolo, y la biblioteca vive hasta que muere el
-    // proceso.
     unsafe { library.get::<T>(name) }
         .map(|symbol| *symbol)
         .map_err(|error| {
@@ -185,7 +107,6 @@ type ChangeCertTrust = extern "C" fn(*mut c_void, *mut c_void, *mut CertTrust) -
 type GetCertTrust = extern "C" fn(*const c_void, *mut CertTrust) -> c_int;
 type DestroyCertificate = extern "C" fn(*mut c_void);
 
-/// Los doce símbolos de NSS que hacen falta aquí, resueltos de una vez.
 struct Api {
     no_db_init: NoDbInit,
     shutdown: Shutdown,
@@ -223,11 +144,6 @@ impl Api {
     }
 }
 
-/// Abre el perfil, hace el trabajo y **siempre** apaga NSS y cierra el perfil.
-///
-/// Se toma [`crate::pkcs11::with_token_turn`] aquí dentro: es el único sitio
-/// donde se sabe que hace falta, y dejárselo a quien llama es dejarle un fallo
-/// que no da error, solo un listado del almacén equivocado (ID-194).
 fn within<T>(
     profile: &Path,
     work: impl FnOnce(&Api, *mut c_void) -> Result<T, TrustError>,
@@ -246,21 +162,17 @@ fn within<T>(
         if (api.no_db_init)(std::ptr::null()) != SEC_SUCCESS {
             return Err(TrustError::new(
                 Situation::StoreUnreachable,
-                "NSS no ha podido arrancar sin base de datos: algo del proceso tiene ya \
-                 inicializado el softoken (ID-194)",
+                "NSS no ha podido arrancar sin base de datos: el softoken ya está inicializado",
             ));
         }
 
-        // A partir de aquí NSS está vivo y **todos** los caminos de salida
-        // tienen que apagarlo.
         let outcome = (|| {
             let slot = (api.open_user_db)(spec.as_ptr());
             if slot.is_null() {
                 return Err(TrustError::new(
                     Situation::StoreUnreachable,
                     format!(
-                        "SECMOD_OpenUserDB no ha podido abrir «{}» en lectura y escritura \
-                         (¿falta el permiso del manifiesto del flatpak, ID-228?)",
+                        "SECMOD_OpenUserDB no ha podido abrir «{}» en lectura y escritura",
                         profile.display()
                     ),
                 ));
@@ -278,7 +190,6 @@ fn within<T>(
     })
 }
 
-/// El `SECItem` que envuelve un DER prestado, sin copiarlo.
 fn der_item(der: &mut [u8]) -> SecItem {
     SecItem {
         kind: SI_BUFFER,
@@ -287,7 +198,7 @@ fn der_item(der: &mut [u8]) -> SecItem {
     }
 }
 
-/// La implementación de verdad de [`TrustStores`]: NSS por FFI.
+/// Implementación de [`TrustStores`] mediante la API C de NSS por FFI.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NssTrustStores;
 
@@ -310,8 +221,6 @@ impl TrustStores for NssTrustStores {
             let handle = (api.default_cert_db)();
             let mut item = der_item(&mut der);
 
-            // `copyDER` en verdadero: NSS se queda con su propia copia, así que
-            // `der` puede morir al salir de aquí.
             let certificate =
                 (api.new_temp_certificate)(handle, &mut item, std::ptr::null(), PR_FALSE, PR_TRUE);
             if certificate.is_null() {
@@ -322,8 +231,6 @@ impl TrustStores for NssTrustStores {
             }
 
             let written = (|| {
-                // El mismo orden que `certutil -A`: entra sin confianza y
-                // después se le escribe.
                 if (api.import_cert)(slot, certificate, NO_KEY, nickname.as_ptr(), PR_FALSE)
                     != SEC_SUCCESS
                 {
@@ -372,10 +279,6 @@ impl TrustStores for NssTrustStores {
 mod tests {
     use super::*;
 
-    /// **Grada A**: son cadenas, no llaman a NSS.
-    ///
-    /// El perfil se abre en formato `sql:` y en lectura y escritura, que es el
-    /// permiso que el ID-228 le pide al manifiesto del flatpak.
     #[test]
     fn the_profile_is_opened_read_write_and_in_sql_format() {
         let spec = read_write_spec(Path::new("/home/quien/.mozilla/firefox/perfil"));
@@ -384,17 +287,11 @@ mod tests {
         assert!(spec.contains("flags=readWrite"));
     }
 
-    /// Abrir el perfil de otro **no le cambia el nombre al token**: lo que se
-    /// abre ya existe y no es nuestro.
     #[test]
     fn opening_someone_elses_profile_does_not_rename_their_token() {
         assert!(!read_write_spec(Path::new("/tmp/perfil")).contains("tokenDescription"));
     }
 
-    /// La CA local es de confianza **para TLS y para nada más**: es el `C,,` de
-    /// `certutil`, no el `TCP,TCP,TCP` de AutoFirma.
-    /// Lo que devuelve el softoken lleva `CERTDB_NS_TRUSTED_CA` de propina, y
-    /// eso **sigue siendo** una CA de confianza para TLS.
     #[test]
     fn the_bits_that_come_back_from_the_softoken_still_read_as_trusted() {
         assert!(is_trusted_ssl_ca(0x38));

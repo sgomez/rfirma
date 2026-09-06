@@ -1,32 +1,9 @@
-//! Una URL `afirma://` partida en lo único que tiene: un verbo y unos pares.
-//!
-//! El transporte de la 1.9.2 manda **URLs por el socket** —«*la comunicación
-//! por sockets/websockets no debería utilizar URLs*», dice el propio AutoFirma—
-//! así que tanto la invocación de arranque como cada operación posterior llegan
-//! con esta forma. Partirlas es lo primero que pasa en las dos, y por eso está
-//! aquí y no en [`super::launch`].
-//!
-//! Se reproduce `extractParams` del original
-//! (`ProtocolInvocationLauncher.java:942`-`966`) con sus tres rarezas, porque el
-//! banco de conformidad manda lo que manda el `autoscript.js` publicado y no lo
-//! que sería razonable:
-//!
-//! - **un par sin `=`, o con el `=` en la posición 0, se descarta** (el
-//!   original exige `equalsPos > 0`);
-//! - **la clave no se descodifica**, sólo el valor;
-//! - **el valor pasa por `URLDecoder`**, que convierte `+` en espacio. Da igual
-//!   para lo que mandan las sedes —el Base64 del protocolo es URL-safe y no
-//!   lleva `+`— pero cambiarlo sería hablar otro idioma que el original.
-//!
-//! No se usa ningún crate de URL: el idioma que hay que hablar no es el de la
-//! RFC 3986, es el de `extractParams`.
+//! Una URL `afirma://` partida en un verbo y unos pares.
 
 use std::collections::BTreeMap;
 
 use super::refusal::Refusal;
 
-/// El esquema, lo único que el original comprueba de la cadena entera
-/// (`ProtocolInvocationLauncher.java:172`-`178`).
 const SCHEME: &str = "afirma://";
 
 /// Una URL `afirma://` ya partida.
@@ -37,28 +14,12 @@ pub struct AfirmaUrl {
 }
 
 impl AfirmaUrl {
-    /// Si la cadena **viene por el esquema del protocolo**, esté bien formada
-    /// o no.
-    ///
-    /// Es la pregunta que se hace la invocación desde fuera antes de mirar
-    /// nada más (ID-235): un argumento que empieza por `afirma://` es de la
-    /// sede aunque el resto no se pueda leer, y lo que sigue es un rechazo con
-    /// su código, nunca un intento de abrirlo como fichero. Por eso no basta
-    /// con `parse(..).is_ok()`.
+    /// Si la cadena viene por el esquema del protocolo, esté bien formada o no.
     pub fn is_a_protocol_url(candidate: &str) -> bool {
         strip_scheme(candidate).is_some()
     }
 
     /// Parte la cadena, o dice por qué no es una URL del protocolo.
-    ///
-    /// El esquema se compara **sin distinguir mayúsculas**: quien entrega la
-    /// cadena es el sistema operativo a través del manejador registrado, y un
-    /// esquema es insensible a las mayúsculas por definición. El verbo, en
-    /// cambio, se guarda tal cual: los que reconoce el original —`websocket`,
-    /// `selectcert`, `sign`, `cosign`— van siempre en minúsculas.
-    ///
-    /// Una clave repetida se queda con **el último** valor, que es lo que hace
-    /// el `HashMap` del original.
     pub fn parse(url: &str) -> Result<Self, Refusal> {
         let Some(rest) = strip_scheme(url) else {
             return Err(Refusal::params(format!(
@@ -113,13 +74,6 @@ fn strip_scheme(url: &str) -> Option<&str> {
         .then(|| &url[SCHEME.len()..])
 }
 
-/// `URLDecoder.decode(valor, "UTF-8")`, con la tolerancia que el original no
-/// tiene.
-///
-/// El original lanza si el escape está mal formado; aquí un `%` suelto o un
-/// `%ZZ` se deja **literal**. La diferencia no la puede provocar el cliente
-/// publicado —`encodeURIComponent` no produce escapes rotos— y romper por ella
-/// convertiría un byte perdido en una invocación entera rechazada.
 fn url_decode(value: &str) -> String {
     let bytes = value.as_bytes();
     let mut decoded: Vec<u8> = Vec::with_capacity(bytes.len());
@@ -198,8 +152,6 @@ mod tests {
         assert_eq!(url.verb(), "sign");
     }
 
-    /// El esquema se reconoce **antes** de leer nada, y una URL rota sigue
-    /// siendo de la sede: si no, acabaría abriéndose como si fuera un fichero.
     #[test]
     fn a_broken_url_is_still_recognised_as_coming_through_the_scheme() {
         assert!(AfirmaUrl::is_a_protocol_url(

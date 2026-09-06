@@ -1,30 +1,4 @@
-//! **La CA local en los almacenes NSS de la persona**: instalarla, solaparla y
-//! renovarla (ADR-0005, ID-221, ID-224, ID-227, ID-228).
-//!
-//! Es el caso de uso que junta las tres piezas que ninguna sabe de las otras:
-//! las dos ranuras de [`crate::tls::LocalCaStore`], los perfiles que
-//! encuentra [`crate::pkcs11::stores::nss_profiles`] y el registro de
-//! [`crate::trust::TrustStores`].
-//!
-//! # Lo que decide, en una frase cada uno
-//!
-//! - **Cuándo**: al arrancar y nunca a mitad de un trámite (ID-224). Lo dice
-//!   [`crate::trust::work_at`] y aquí se obedece.
-//! - **Qué CA**: la que hay si le sobra vida, una nueva si no había o caducó
-//!   sin relevo, y la siguiente —**junto a** la vigente, que sigue firmando—
-//!   dentro del solape. El relevo llega cuando la vigente caduca: la siguiente
-//!   lleva meses instalada y pasa a servir sin pedir ningún reinicio.
-//! - **Dónde**: en todos los perfiles, y **un perfil que falle no deja sin CA a
-//!   los demás**, igual que un almacén que no carga no deja sin certificados al
-//!   listado (ID-03).
-//! - **Qué se dice**: nada mientras se hace, y «reinicia el navegador» **al
-//!   terminar**, y solo si de verdad ha entrado en algún almacén.
-//!
-//! # Un almacén que ya la tiene no se toca
-//!
-//! Antes de escribir se **leen los bits** (ID-227, TD-60): un perfil que ya
-//! tiene la CA local marcada como CA de confianza para TLS no se reescribe y no
-//! cuenta para el aviso. Sin eso, cada arranque pediría reiniciar el navegador.
+//! Gestión del registro y renovación de la CA local en almacenes NSS (ADR-0005).
 
 use std::path::{Path, PathBuf};
 
@@ -34,51 +8,34 @@ use crate::trust::{
     TrustStores, Work,
 };
 
-/// Cómo quedó el registro de la CA local, sin nada que interrumpa.
+/// Resultado del proceso de verificación o instalación de la CA local.
 #[derive(Debug)]
 pub struct TrustOutcome {
-    /// En qué punto de su vida estaba la CA local guardada.
+    /// Fase del ciclo de vida de la CA local.
     pub stage: Stage,
-    /// Qué se decidió hacer.
+    /// Acción realizada sobre los almacenes.
     pub work: Work,
-    /// Almacenes en los que la CA local **está** de confianza al terminar,
-    /// tanto si ya lo estaba como si ha entrado ahora.
+    /// Número de almacenes donde la CA local es de confianza.
     pub trusted: usize,
-    /// Los almacenes que se han quedado sin ella, con el motivo de cada uno.
-    /// No para nada: es lo que se cuenta al final.
+    /// Almacenes donde no se pudo registrar la CA local y sus errores.
     pub missed: Vec<(PathBuf, TrustError)>,
-    /// El aviso, que **solo sale al terminar el trámite** (ID-224).
+    /// Aviso pendiente para la persona usuaria.
     pub notice: PendingNotice,
 }
 
 impl TrustOutcome {
-    /// Ni un almacén con la CA local: la sede no va a poder abrir el canal.
-    ///
-    /// Es una conclusión sobre el mundo, así que hace falta **haber mirado**: a
-    /// mitad de un trámite no se consulta ni un almacén (ID-224) y la respuesta
-    /// es `false`, que es «no lo sé», no «sí que está». Decir que la CA no está
-    /// en ninguna parte sin haber abierto ningún perfil sería contarle a la
-    /// persona un fallo que nadie ha medido.
+    /// Indica si la CA local no está presente en ningún almacén revisado.
     pub fn nowhere(&self) -> bool {
         self.looked() && self.trusted == 0
     }
 
-    /// Si se ha llegado a mirar algún almacén. Falso **solo** a mitad de un
-    /// trámite, que es cuando el trabajo es [`Work::Nothing`].
+    /// Indica si se llegó a comprobar algún almacén.
     pub fn looked(&self) -> bool {
         !matches!(self.work, Work::Nothing)
     }
 }
 
-/// **Lo que el arranque tiene que decir por `stderr`**, dado cómo ha quedado
-/// el refresco de la CA local (ID-329).
-///
-/// Separada de quien llama porque decidir **qué se dice** es una regla, no
-/// cableado, y aquí sí se puede probar sin arrancar Tauri. `profiles` es la
-/// lista que se intentó recorrer: distingue «no había ningún perfil» de «los
-/// había y ninguno se dejó escribir», que [`TrustOutcome::nowhere`] por sí
-/// sola no puede —las dos frases dicen cosas distintas a quien lee el
-/// `stderr` buscando por qué la sede no abre el canal.
+/// Genera los mensajes descriptivos del resultado de confianza para registro.
 pub fn narrate_startup_outcome(mut outcome: TrustOutcome, profiles: &[PathBuf]) -> Vec<String> {
     let mut lines = Vec::new();
 
@@ -400,9 +357,6 @@ mod tests {
         assert!(!outcome.nowhere());
         assert_eq!(stores.inside(&profiles[0]).len(), 1);
     }
-
-    /// **ID-224.** Con un trámite en marcha no se toca ni un almacén, ni
-    /// siquiera cuando no hay CA local ninguna.
     #[test]
     fn nothing_is_written_in_the_middle_of_an_errand() {
         let (_directory, store) = a_store();
@@ -421,9 +375,6 @@ mod tests {
             "sin mirar no se puede decir que la CA no esté en ninguna parte"
         );
     }
-
-    /// El aviso no se repite: el segundo arranque encuentra los bits puestos,
-    /// no escribe y no dice nada.
     #[test]
     fn the_second_boot_says_nothing_because_the_bits_are_already_there() {
         let (_directory, store) = a_store();
@@ -443,9 +394,6 @@ mod tests {
         assert_eq!(second.work, Work::InstallTheOneWeHave);
         assert_eq!(stores.inside(&profiles[0]).len(), 1);
     }
-
-    /// **El solape.** La CA siguiente **se añade**; la vigente sigue dentro del
-    /// almacén, con el mismo apodo y sin que nadie la haya retirado.
     #[test]
     fn the_next_local_ca_goes_in_next_to_the_current_one() {
         let (_directory, store) = a_store();
@@ -489,10 +437,6 @@ mod tests {
             "la siguiente espera su turno en su propia ranura"
         );
     }
-
-    /// **El solape no se rehace en cada arranque.** El segundo arranque dentro
-    /// del solape registra las dos que ya hay y no fabrica una tercera, así que
-    /// tampoco vuelve a pedir que se reinicie el navegador.
     #[test]
     fn the_next_local_ca_is_not_remade_on_every_boot_of_the_overlap() {
         let (_directory, store) = a_store();
@@ -517,10 +461,6 @@ mod tests {
         );
         assert_eq!(second.notice.when_the_errand_ends(), None);
     }
-
-    /// **Lo que compra el solape**: cuando la vigente caduca, la siguiente
-    /// —instalada meses antes— pasa a servir sin instalar nada y **sin pedir
-    /// que se reinicie el navegador**.
     #[test]
     fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
         let (_directory, store) = a_store();
@@ -555,10 +495,6 @@ mod tests {
             "ya estaba instalada: nadie tiene que reiniciar nada"
         );
     }
-
-    /// Una CA caducada **sin relevo** —un `$HOME` que se quedó parado más de
-    /// dos años— sí obliga a fabricar y a reiniciar el navegador. Es el camino
-    /// excepcional que el solape existe para hacer raro.
     #[test]
     fn an_expired_local_ca_with_no_successor_starts_again_from_scratch() {
         let (_directory, store) = a_store();
@@ -577,9 +513,6 @@ mod tests {
             Some(Notice::RestartTheBrowser)
         );
     }
-
-    /// **ID-03 otra vez.** Un perfil que no se deja escribir no deja sin CA a
-    /// los demás, y lo que no ha entrado se cuenta al final.
     #[test]
     fn a_profile_that_refuses_does_not_leave_the_others_without_the_local_ca() {
         let (_directory, store) = a_store();
@@ -594,9 +527,6 @@ mod tests {
         assert_eq!(outcome.missed[0].0, profiles[1]);
         assert_eq!(outcome.missed[0].1.situation(), Situation::StoreUnreachable);
     }
-
-    /// Sin ningún perfil no hay dónde instalar, y eso se dice: es el caso en el
-    /// que la sede no va a poder abrir el canal.
     #[test]
     fn a_machine_without_nss_profiles_ends_up_with_the_ca_nowhere() {
         let (_directory, store) = a_store();
@@ -624,9 +554,6 @@ mod tests {
             notice,
         }
     }
-
-    /// Sin ningún perfil, la única línea dice que no hay dónde instalar,
-    /// **no** que ninguno se haya dejado escribir: son dos hechos distintos.
     #[test]
     fn nowhere_with_no_profiles_says_there_is_nowhere_to_install() {
         let outcome = an_outcome(0, Vec::new(), PendingNotice::none());
@@ -636,10 +563,6 @@ mod tests {
         assert_eq!(lines.len(), 1);
         assert!(lines[0].contains("no se ha encontrado ningún almacén"));
     }
-
-    /// Con perfiles que existen pero que se han quedado todos sin la CA
-    /// local, la línea de `nowhere` no dice que no había ninguno: dice que no
-    /// ha entrado en los que había, y el detalle de abajo cuenta por qué.
     #[test]
     fn nowhere_with_profiles_that_all_refused_names_the_profiles_instead() {
         let profile = PathBuf::from("/home/persona/.mozilla/firefox/perfil");
@@ -656,9 +579,6 @@ mod tests {
         assert!(lines[0].contains("no ha entrado en ninguno"));
         assert!(lines[1].contains("1 almacén(es) NSS"));
     }
-
-    /// Un almacén ya de confianza no dice nada: ni `nowhere`, ni aviso, ni
-    /// detalle.
     #[test]
     fn an_outcome_that_was_already_trusted_says_nothing() {
         let outcome = an_outcome(1, Vec::new(), PendingNotice::none());
@@ -667,8 +587,6 @@ mod tests {
 
         assert!(lines.is_empty());
     }
-
-    /// Instalar de verdad pide reiniciar el navegador, y solo eso.
     #[test]
     fn installing_asks_to_restart_the_browser() {
         let outcome = an_outcome(1, Vec::new(), PendingNotice::after_installing());
@@ -680,9 +598,6 @@ mod tests {
             vec!["rfirma: se ha instalado la CA local; reinicia el navegador"]
         );
     }
-
-    /// Un perfil que falla junto a otro que sí entra no dispara `nowhere`
-    /// (`trusted` no es cero): solo se cuenta el que se ha quedado fuera.
     #[test]
     fn one_missed_profile_among_others_only_reports_the_miss() {
         let profile = PathBuf::from("/home/persona/perfil-b");

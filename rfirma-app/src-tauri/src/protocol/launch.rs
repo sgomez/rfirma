@@ -1,25 +1,4 @@
-//! La invocación de arranque: `afirma://websocket?ports=…&v=4&jvc=3&idsession=…`
-//!
-//! Es la **única** URL del esquema que llega al sistema operativo
-//! (`autoscript.js:2138`-`2158`); todo lo demás viaja luego por dentro del
-//! canal. Trae exactamente cuatro parámetros, y de los cuatro este módulo lee
-//! tres: `jvc` se ignora a propósito (ID-245), porque en la 1.9.2 su único
-//! efecto es un aviso modal que rFirma no da.
-//!
-//! Tres reglas se apartan del original, y las tres cierran la puerta que el
-//! original deja abierta:
-//!
-//! - **`v` ausente es la versión 1**, no la 4 (`getVersion`,
-//!   `ProtocolInvocationLauncher.java:923`-`939`), así que el camino de versión
-//!   no soportada se alcanza **por omisión**, que es el caso realista (ID-246).
-//! - **Sólo se habla el 4.** El original admite también el 3, cuyo camino es
-//!   puerto fijo `63117` y **sin credencial de canal**; rFirma no abre nunca un
-//!   canal sin credencial, así que el 3 no existe aquí (ID-247). No rompe
-//!   compatibilidad: el `autoscript.js` de la 1.9.2 manda siempre `v=4`.
-//! - **Un `idsession` mal formado se rechaza.** El original lo pone a `null`, y
-//!   un `null` desactiva la comprobación del canal entera
-//!   (`AfirmaWebSocketServerV4.java:72`): un `idsession` malo abre ahí un canal
-//!   sin cerradura. Aquí es `SAF_03` (ID-249).
+//! La invocación de arranque: puertos, versión de protocolo y credencial de canal.
 
 use super::codes::{Parameter, SafCode};
 use super::refusal::{Refusal, RefusalSituation};
@@ -28,34 +7,17 @@ use super::url::AfirmaUrl;
 /// El verbo de la invocación de arranque, y el único que abre canal.
 pub const LAUNCH_VERB: &str = "websocket";
 
-/// La versión de protocolo que se habla, y la única que se acepta (ID-245,
-/// ID-247).
+/// La versión de protocolo que se habla, y la única que se acepta.
 pub const PROTOCOL_VERSION: i64 = 4;
 
-/// La versión que se supone cuando la sede no manda `v`. No está soportada, y
-/// ese es justo el punto (ID-246).
 const VERSION_WHEN_ABSENT: i64 = 1;
 
-/// El `idsession`: la **credencial del canal**, no un identificador de
-/// transacción.
-///
-/// Es lo único que impide que otra página del mismo equipo use el canal ya
-/// abierto: viaja en la invocación de arranque y se repite en cada mensaje
-/// posterior, eco incluido. Existir como tipo propio, y no como `String`, es lo
-/// que hace imposible construirla sin pasar por su validación.
+/// La credencial del canal.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChannelCredential(String);
 
 impl ChannelCredential {
     /// La credencial, si el valor está bien formado.
-    ///
-    /// La regla de bien formado es **la del original** (`getChannelInfo`,
-    /// `ProtocolInvocationLauncher.java:992`-`1008`): no vacía y sólo letras o
-    /// dígitos. El suelo de 16 caracteres que pedía el sentido común se
-    /// descarta por compatibilidad —el cliente publicado sortea veinte, pero
-    /// nada del contrato lo garantiza—. Lo que sí se estrecha es el alfabeto:
-    /// `Character.isLetterOrDigit` acepta cualquier letra Unicode, y aquí sólo
-    /// pasa `[A-Za-z0-9]`.
     pub fn parse(value: &str) -> Result<Self, Refusal> {
         if value.is_empty() {
             return Err(Refusal::about(
@@ -127,23 +89,11 @@ impl LaunchRequest {
     }
 }
 
-/// **Los puertos que la sede sorteó, se acepte la invocación o no** (ID-248).
-///
-/// Existe aparte de [`LaunchRequest`] porque un rechazo se contesta *por el
-/// socket cuando hay socket*: para atarse a un puerto y decir el `SAF_` hace
-/// falta leer `ports` de una URL que, por lo demás, ya se ha rechazado —una
-/// versión de protocolo que no se habla, una credencial mal formada—. Lo que no
-/// se pueda leer es una lista vacía, y una lista vacía es el único caso en el
-/// que el rechazo sale sólo por ventana.
+/// Los puertos que la sede sorteó, se acepte la invocación o no.
 pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
     parse_ports(url.parameter("ports")).unwrap_or_default()
 }
 
-/// `v`, con la regla que hace que la omisión caiga en «no soportada».
-///
-/// Un `v` que no es un entero **no** es un rechazo aparte: el original lo
-/// registra y se queda con el 1 (`getVersion`), o sea con el mismo camino que
-/// la omisión. Aquí igual, y por eso el rechazo es siempre `SAF_21`.
 fn check_protocol_version(declared: Option<&str>) -> Result<(), Refusal> {
     let version = declared
         .and_then(|value| value.trim().parse::<i64>().ok())
@@ -160,14 +110,6 @@ fn check_protocol_version(declared: Option<&str>) -> Result<(), Refusal> {
     .because(RefusalSituation::UnsupportedProtocolVersion))
 }
 
-/// `ports`, los tres puertos sorteados.
-///
-/// El original hace `Math.abs` sobre cada valor y lanza si alguno no es
-/// numérico (`getChannelInfo`, `ProtocolInvocationLauncher.java:977`-`990`). Se
-/// reproduce el valor absoluto y se añade lo que el original se deja: un puerto
-/// fuera de `1..=65535` no se puede atar, así que es un parámetro malo y no un
-/// intento de conexión que fracasa después. Sin `ports`, el original se iría al
-/// camino del protocolo 3, que aquí no existe (ID-247).
 fn parse_ports(declared: Option<&str>) -> Result<Vec<u16>, Refusal> {
     let Some(declared) = declared.filter(|value| !value.is_empty()) else {
         return Err(Refusal::about(
@@ -287,9 +229,6 @@ mod tests {
         assert_eq!(request.credential().as_str(), "a");
     }
 
-    /// Los puertos se leen **aunque la invocación se rechace**: es lo que
-    /// permite contestar el `SAF_` por el socket en vez de por la ventana
-    /// (ID-248).
     #[test]
     fn the_drawn_ports_are_readable_from_a_launch_that_is_refused() {
         let url =
@@ -303,8 +242,6 @@ mod tests {
         assert_eq!(drawn_ports(&url), vec![54001, 54002]);
     }
 
-    /// Lo que no se puede leer es una lista vacía, y una lista vacía es el
-    /// único caso en el que el rechazo sale sólo por ventana.
     #[test]
     fn a_launch_without_readable_ports_draws_none() {
         let without = AfirmaUrl::parse("afirma://websocket?v=3").expect("es una URL del protocolo");

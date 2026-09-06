@@ -1,42 +1,4 @@
-//! **La confianza**: cómo entra la CA local en los almacenes NSS de la persona
-//! y cuándo toca renovarla (ADR-0005, ID-221, ID-224, ID-227, ID-228).
-//!
-//! [`crate::tls`] fabrica el material y no registra nada; aquí se registra, y
-//! **no se fabrica nada**. Son dos mitades del mismo ADR con dos motivos
-//! distintos para cambiar.
-//!
-//! | Pieza | Qué es |
-//! |---|---|
-//! | [`Stage`] | En qué punto de su vida está la CA local guardada |
-//! | [`Moment`] | Si estamos arrancando o **a mitad de un trámite** (ID-224) |
-//! | [`NextCa`] | Si hay ya una CA local siguiente fabricada, esperando turno |
-//! | [`PendingNotice`] | El aviso de reiniciar el navegador, que solo sale al terminar |
-//! | [`TrustStores`] | El puerto que escribe en un almacén NSS, doblable en pruebas |
-//! | [`nss::NssTrustStores`] | Su única implementación de verdad, por FFI |
-//!
-//! # Las tres reglas que este módulo sostiene
-//!
-//! - **El solape** (ID-224): instalar la CA siguiente **no retira la vigente**
-//!   ni la releva. [`TrustStores::install`] solo añade; no hay ninguna llamada
-//!   que borre. Y la vigente **sigue firmando** el certificado del servidor
-//!   local hasta que caduque: la siguiente vive en su propia ranura del
-//!   almacén ([`crate::tls::LocalCaStore::write_next`]) y solo toma el relevo
-//!   ([`Work::PromoteTheNextOne`]) cuando la vigente se acaba, ya instalada
-//!   desde hace meses y sin reiniciar nada.
-//!   Dos certificados de confianza con el mismo sujeto conviven en Firefox y en
-//!   Chrome, en cualquier orden, y por eso comparten apodo: en NSS el apodo va
-//!   con el sujeto, no con el certificado.
-//! - **No se repara en caliente** (ID-224): [`work_at`] devuelve
-//!   [`Work::Nothing`] siempre que el momento sea [`Moment::MidErrand`], sea
-//!   cual sea la etapa. Chrome no relee su `nssdb` y Firefox envenena su caché
-//!   de confianza tras haber fallado, así que «reparar y continuar» no existe.
-//! - **El aviso llega al final** (ID-224): [`PendingNotice`] no lo suelta a
-//!   mitad de nada; hay que preguntárselo con
-//!   [`PendingNotice::when_the_errand_ends`].
-//!
-//! Comprobar que la confianza está puesta es **leer los bits**
-//! ([`TrustStores::trust_of`]), nunca verificar una cadena: el veredicto de
-//! `vfychain` sale invertido respecto a Firefox (ID-227, TD-60).
+//! Registro y gestión de confianza de la CA local en almacenes NSS (ADR-0005).
 
 pub mod error;
 pub mod nss;
@@ -46,35 +8,24 @@ use std::path::Path;
 pub use error::{Situation, TrustError};
 pub use nss::NssTrustStores;
 
-/// Cuánto antes de caducar se instala la CA local siguiente.
-///
-/// Es el **solape**: durante estos días hay dos CA locales de confianza en el
-/// almacén, la que sirve y la que servirá. Cuatro meses son de sobra para que
-/// alguien que firma dos o tres veces al año se encuentre la siguiente ya
-/// instalada, que es justo el caso que hace raro el camino de reparar.
+/// Días de solape previos a la caducidad para instalar la CA siguiente (ADR-0005).
 pub const OVERLAP_DAYS: i64 = 120;
 
-/// En qué punto de su vida está la CA local que hay guardada.
+/// Estado del ciclo de vida de la CA local guardada (ADR-0005).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {
-    /// No hay ninguna: primer arranque, o `$HOME` limpio.
+    /// No hay CA local guardada.
     Absent,
-    /// La hay y le sobra vida: nada que hacer.
+    /// CA local vigente con validez suficiente.
     Serving,
-    /// Le quedan menos de [`OVERLAP_DAYS`]: toca fabricar la siguiente y
-    /// **añadirla** sin retirar esta, que sigue sirviendo.
+    /// CA local en periodo de solape previo a caducar.
     Overlapping,
-    /// Ya caducó, o le queda menos de un día —los días se cuentan hacia abajo,
-    /// ver [`crate::tls::LocalCa::days_left`]—. El navegador deja de confiar
-    /// solo, que es exactamente lo que la caducidad existe para conseguir.
+    /// CA local caducada.
     Expired,
 }
 
 impl Stage {
-    /// La etapa a partir de los días que le queden al certificado guardado.
-    ///
-    /// `None` es «no hay CA local guardada», que **no es un fallo**: es el
-    /// primer arranque.
+    /// Determina la etapa a partir de los días restantes de validez.
     pub fn of(days_left: Option<i64>) -> Self {
         match days_left {
             None => Stage::Absent,
@@ -85,69 +36,42 @@ impl Stage {
     }
 }
 
-/// Cuándo se está mirando la confianza.
-///
-/// No es un detalle de registro: es lo único que separa instalar de no tocar
-/// nada (ID-224).
+/// Momento en el que se evalúa el estado de confianza (ADR-0005).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Moment {
-    /// Al arrancar rfirma, que es el único momento en el que pedir que se
-    /// reinicie el navegador no le cuesta nada a nadie.
+    /// Arranque de la aplicación.
     Startup,
-    /// Con un trámite de una sede en marcha.
+    /// Trámite de sede en curso.
     MidErrand,
 }
 
-/// Si hay ya una CA local **siguiente** fabricada, esperando su turno.
-///
-/// No sale de la etapa: la etapa mira la CA que sirve, y esto mira la otra
-/// ranura del almacén. Separa dos arranques que la etapa no distingue —el
-/// primero del solape, que fabrica la siguiente, y todos los demás, que solo la
-/// registran— y, sobre todo, separa una caducidad que se releva sin ruido de
-/// una que obliga a fabricar y a reiniciar el navegador.
+/// Estado de existencia de la CA local siguiente en el almacén.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NextCa {
-    /// Ninguna: la ranura de la siguiente está vacía.
+    /// No hay CA siguiente fabricada.
     None,
-    /// Ya fabricada y guardada, esperando a que la vigente caduque.
+    /// Hay una CA siguiente esperando relevo.
     Waiting,
 }
 
-/// Lo que hay que hacer con los almacenes NSS ahora mismo.
-///
-/// Todas las formas de trabajo salvo [`Work::Nothing`] **instalan**; lo que las
-/// separa es qué CA local sirve al terminar y si hay que fabricar alguna.
+/// Acción a ejecutar sobre los almacenes NSS (ADR-0005).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Work {
-    /// Nada. Es lo que sale **siempre** a mitad de un trámite.
+    /// No realizar ninguna acción.
     Nothing,
-    /// Registrar la que ya hay, allí donde no esté. Es lo que cubre el perfil
-    /// de Firefox creado después de la instalación de rfirma, y en un almacén
-    /// que ya la tiene no hace nada.
+    /// Registrar la CA existente en los perfiles donde falte.
     InstallTheOneWeHave,
-    /// Fabricar una CA local y registrarla: no había ninguna, o la que había ya
-    /// caducó sin ninguna siguiente esperando.
+    /// Fabricar una CA local e instalarla.
     MakeOneAndInstallIt,
-    /// Fabricar la siguiente y **añadirla** junto a la vigente. La vigente
-    /// **sigue sirviendo** —sigue siendo la que firma el certificado del
-    /// servidor local— hasta que caduque. Es el primer arranque del solape
-    /// (ID-224).
+    /// Fabricar la CA siguiente e instalarla manteniendo la vigente.
     MakeTheNextAndInstallItToo,
-    /// Registrar las dos, la vigente y la siguiente que ya se fabricó en un
-    /// arranque anterior. Son todos los demás arranques del solape: la
-    /// siguiente **no se rehace** en cada uno.
+    /// Registrar tanto la CA vigente como la siguiente.
     InstallBothOfThem,
-    /// La vigente caducó y la siguiente lleva meses instalada: **toma el
-    /// relevo** sin fabricar nada. Es lo que el solape compra, y por eso aquí
-    /// no hay que reiniciar ningún navegador.
+    /// Promover la CA siguiente a vigente sin fabricar material nuevo.
     PromoteTheNextOne,
 }
 
-/// Qué toca hacer, dado el momento, la etapa y si hay una siguiente esperando.
-///
-/// A mitad de un trámite la respuesta es [`Work::Nothing`] **siempre**, incluso
-/// con la CA caducada: instalarla ahí obligaría a parar el trámite para pedir
-/// que se reinicie el navegador y volver a empezar (ID-224).
+/// Determina la acción a realizar según el momento, etapa y existencia de CA siguiente (ADR-0005).
 pub fn work_at(moment: Moment, stage: Stage, next: NextCa) -> Work {
     match (moment, stage, next) {
         (Moment::MidErrand, _, _) => Work::Nothing,
@@ -163,56 +87,44 @@ pub fn work_at(moment: Moment, stage: Stage, next: NextCa) -> Work {
 /// Lo que se le dice a la persona cuando se ha tocado un almacén NSS.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Notice {
-    /// «Se ha instalado la CA local: reinicia el navegador.» Ni Chrome relee su
-    /// `nssdb` en caliente ni Firefox olvida un fallo de confianza anterior.
+    /// Indicación de reiniciar el navegador.
     RestartTheBrowser,
 }
 
-/// Un aviso que espera a que termine el trámite (ID-224).
-///
-/// No hay forma de sacarlo a mitad: [`PendingNotice::mid_errand`] devuelve
-/// `None` siempre, y el aviso solo sale por
-/// [`PendingNotice::when_the_errand_ends`], que además **se lo lleva**, para
-/// que no se repita en el trámite siguiente.
+/// Aviso diferido que espera a la finalización del trámite (ADR-0005).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PendingNotice(Option<Notice>);
 
 impl PendingNotice {
-    /// No hay nada que avisar.
+    /// Construye un estado sin aviso pendiente.
     pub fn none() -> Self {
         Self(None)
     }
 
-    /// Se ha instalado la CA local en al menos un almacén.
+    /// Registra el aviso tras la instalación de certificados.
     pub fn after_installing() -> Self {
         Self(Some(Notice::RestartTheBrowser))
     }
 
-    /// Lo que se enseña a mitad de un trámite: **nada, nunca**.
+    /// Consulta el aviso durante el trámite.
     pub fn mid_errand(&self) -> Option<Notice> {
         None
     }
 
-    /// El aviso, ya al terminar el trámite. Se lo lleva.
+    /// Extrae el aviso pendiente al finalizar el trámite.
     pub fn when_the_errand_ends(&mut self) -> Option<Notice> {
         self.0.take()
     }
 
-    /// Si queda algo por avisar.
+    /// Comprueba si hay un aviso pendiente.
     pub fn is_pending(&self) -> bool {
         self.0.is_some()
     }
 }
 
-/// **El puerto que escribe en los almacenes NSS de la persona.**
-///
-/// Solo **añade** confianza: no hay ninguna operación que retire, y eso es el
-/// solape del ID-224 escrito en el tipo. La retirada explícita —que tiene que
-/// llevarse las dos CA vivas y borrar **por huella, nunca por apodo**— es de
-/// Preferencias y no de este puerto.
+/// Puerto de interacción con los almacenes NSS (ADR-0005).
 pub trait TrustStores {
-    /// Mete el certificado en el almacén de `profile` y le pone los bits de CA
-    /// de confianza para TLS. Idempotente: repetirlo no duplica nada.
+    /// Instala el certificado en el almacén de perfil indicado con permisos de confianza TLS.
     fn install(
         &self,
         profile: &Path,
@@ -220,11 +132,7 @@ pub trait TrustStores {
         nickname: &str,
     ) -> Result<(), TrustError>;
 
-    /// Los bits de confianza TLS que tiene ese certificado en ese almacén, o
-    /// `None` si el certificado no está.
-    ///
-    /// Es la comprobación del ID-227: se **leen los bits**, no se verifica una
-    /// cadena.
+    /// Obtiene los bits de confianza TLS configurados para el certificado en el almacén.
     fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError>;
 }
 
@@ -242,7 +150,6 @@ mod tests {
         assert_eq!(Stage::of(Some(700)), Stage::Serving);
     }
 
-    /// El solape empieza [`OVERLAP_DAYS`] antes, no el día de la caducidad.
     #[test]
     fn the_next_local_ca_goes_in_months_before_the_current_one_expires() {
         assert_eq!(Stage::of(Some(OVERLAP_DAYS)), Stage::Serving);
@@ -256,8 +163,6 @@ mod tests {
         assert_eq!(Stage::of(Some(-40)), Stage::Expired);
     }
 
-    /// **ID-224.** «Reparar y continuar» no existe: ni con la CA caducada, ni
-    /// sin CA ninguna, ni en el solape, ni con la siguiente ya esperando.
     #[test]
     fn nothing_is_ever_repaired_in_the_middle_of_an_errand() {
         for stage in [
@@ -284,8 +189,6 @@ mod tests {
         );
     }
 
-    /// Una CA local con vida de sobra **no se rehace**, pero sí se registra:
-    /// el perfil de Firefox creado ayer no la tiene y nadie más va a ponérsela.
     #[test]
     fn a_local_ca_that_still_serves_is_installed_but_never_remade() {
         assert_eq!(
@@ -302,8 +205,6 @@ mod tests {
         );
     }
 
-    /// La siguiente se fabrica **una vez**: los arranques que quedan del solape
-    /// se limitan a registrar las dos.
     #[test]
     fn the_next_local_ca_is_made_once_and_then_only_installed() {
         assert_eq!(
@@ -312,8 +213,6 @@ mod tests {
         );
     }
 
-    /// **Lo que compra el solape**: la vigente se acaba y la siguiente, que
-    /// lleva meses en los almacenes, toma el relevo sin fabricar nada.
     #[test]
     fn an_expired_local_ca_with_a_successor_waiting_hands_over_instead_of_starting_again() {
         assert_eq!(
@@ -322,8 +221,6 @@ mod tests {
         );
     }
 
-    /// El aviso **no** sale a mitad del trámite, ni siquiera preguntándole
-    /// directamente (ID-224).
     #[test]
     fn the_notice_never_shows_up_in_the_middle_of_an_errand() {
         let pending = PendingNotice::after_installing();

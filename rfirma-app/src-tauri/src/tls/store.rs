@@ -1,19 +1,4 @@
-//! Dónde vive la CA local entre dos arranques (ID-221, ID-223, ADR-0005).
-//!
-//! Son **dos ficheros** y no un PKCS#12: un `.p12` habría que cifrarlo con una
-//! contraseña, y la contraseña acabaría en el código —que es exactamente el
-//! `KS_PASSWORD = "654321"` de AutoFirma—. Así que el certificado va en PEM
-//! corriente y la clave privada en un PEM sin cifrar dentro de un fichero
-//! `0600`, el mismo trato que `~/.ssh/id_*`. Quien ya ejecuta código como la
-//! persona está **declarado fuera del modelo de amenaza** por el ADR-0005: ese
-//! atacante escribe él en el `nssdb` y planta una raíz sin restricciones ni
-//! caducidad, que es estrictamente más poderoso que robarnos esta.
-//!
-//! El almacén **no decide nada**: no renueva, no reinstala y no decide cuándo
-//! empieza ni cuándo acaba el solape. Solo sostiene **dos ranuras** —la CA que
-//! sirve y la siguiente, que espera su turno—, lee lo que hay y escribe lo que
-//! le den. Quién ocupa cada ranura y cuándo lo decide el caso de uso que
-//! registra en los almacenes NSS.
+//! Persistencia en disco de la CA local y su solape (ADR-0005).
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -22,9 +7,7 @@ use super::authority::LocalCa;
 use super::error::{Situation, TlsError};
 use crate::paths::{create_owner_only_file, restrict_to_owner, Paths};
 
-/// **El par de ficheros de una CA local**: su certificado y su clave.
-///
-/// Es una ranura, no la CA: el almacén tiene dos, la que sirve y la siguiente.
+/// Par de ficheros en disco de una CA local: certificado y clave privada.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CaFiles {
     certificate_path: PathBuf,
@@ -32,7 +15,7 @@ pub struct CaFiles {
 }
 
 impl CaFiles {
-    /// La ranura que vive en esas dos rutas.
+    /// Construye una ranura de ficheros a partir de las rutas de certificado y clave.
     pub fn new(certificate_path: impl Into<PathBuf>, key_path: impl Into<PathBuf>) -> Self {
         Self {
             certificate_path: certificate_path.into(),
@@ -40,12 +23,11 @@ impl CaFiles {
         }
     }
 
-    /// La ruta del certificado, que es lo que se registra en los almacenes NSS.
+    /// Ruta del fichero de certificado.
     pub fn certificate_path(&self) -> &Path {
         &self.certificate_path
     }
 
-    /// La CA local que hubiera en esta ranura, o `None` si está vacía.
     fn read(&self) -> Result<Option<LocalCa>, TlsError> {
         if !self.certificate_path.exists() || !self.key_path.exists() {
             return Ok(None);
@@ -55,11 +37,6 @@ impl CaFiles {
         LocalCa::from_pem(&certificate, &key).map(Some)
     }
 
-    /// Guarda la CA local en esta ranura, sustituyendo la que hubiera.
-    ///
-    /// La clave se crea **ya** con el modo `0600` y no con un `chmod` posterior
-    /// (ADR-0005): entre el `create` y el `chmod` la clave privada estaría
-    /// legible para cualquier cuenta de la máquina.
     fn write(&self, ca: &LocalCa) -> Result<(), TlsError> {
         let unwritable = |path: &Path, error: std::io::Error| {
             TlsError::new(
@@ -82,7 +59,6 @@ impl CaFiles {
             .map_err(|error| unwritable(&self.certificate_path, error))
     }
 
-    /// Vacía la ranura. Que ya estuviera vacía **no es un fallo**.
     fn empty(&self) -> Result<(), TlsError> {
         let unwritable = |path: &Path, error: std::io::Error| {
             TlsError::new(
@@ -110,16 +86,7 @@ fn read_file(path: &Path) -> Result<Vec<u8>, TlsError> {
     })
 }
 
-/// **Las dos ranuras de la CA local**: la que sirve y la siguiente.
-///
-/// Son dos y no una porque el solape del ID-224 exige que durante meses haya
-/// **dos CA locales vivas**: la vigente, que es la que firma el certificado del
-/// servidor local en cada arranque, y la siguiente, ya instalada en los
-/// almacenes NSS y esperando a que la vigente caduque. Guardar la siguiente
-/// encima de la vigente dejaría el solape sin efecto —el navegador que ya
-/// estaba abierto recibiría un certificado firmado por una CA que no ha
-/// cargado— y el trámite inmediatamente posterior a la renovación fallaría
-/// igual que sin solape.
+/// Almacén de la CA local vigente y la siguiente para el periodo de solape (ADR-0005).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LocalCaStore {
     serving: CaFiles,
@@ -127,12 +94,12 @@ pub struct LocalCaStore {
 }
 
 impl LocalCaStore {
-    /// El almacén con esas dos ranuras.
+    /// Crea el almacén con las ranuras de la CA vigente y siguiente.
     pub fn new(serving: CaFiles, next: CaFiles) -> Self {
         Self { serving, next }
     }
 
-    /// El almacén en el directorio de datos de la aplicación.
+    /// Construye el almacén a partir de las rutas de la aplicación.
     pub fn of(paths: &Paths) -> Self {
         Self::new(
             CaFiles::new(paths.local_ca_certificate_path(), paths.local_ca_key_path()),
@@ -143,41 +110,32 @@ impl LocalCaStore {
         )
     }
 
-    /// La ruta del certificado de la CA que **sirve**.
+    /// Ruta del certificado de la CA local vigente.
     pub fn certificate_path(&self) -> &Path {
         self.serving.certificate_path()
     }
 
-    /// La CA local que sirve, o `None` si todavía no hay ninguna.
-    ///
-    /// La ausencia **no es un fallo**: un `$HOME` sin CA local es el primer
-    /// arranque. Lo que sí lo es —y se dice— es que los ficheros estén y no se
-    /// entiendan.
+    /// Lee la CA local vigente si existe.
     pub fn read(&self) -> Result<Option<LocalCa>, TlsError> {
         self.serving.read()
     }
 
-    /// Guarda la CA que sirve, sustituyendo la que hubiera.
+    /// Guarda la CA local vigente sustituyendo la anterior.
     pub fn write(&self, ca: &LocalCa) -> Result<(), TlsError> {
         self.serving.write(ca)
     }
 
-    /// La CA local **siguiente** si ya está fabricada, o `None`.
+    /// Lee la CA local siguiente si existe.
     pub fn read_next(&self) -> Result<Option<LocalCa>, TlsError> {
         self.next.read()
     }
 
-    /// Guarda la CA local siguiente **sin tocar la que sirve**.
+    /// Guarda la CA local siguiente sin modificar la vigente.
     pub fn write_next(&self, ca: &LocalCa) -> Result<(), TlsError> {
         self.next.write(ca)
     }
 
-    /// **La siguiente pasa a servir**: se copia a la ranura de la vigente y la
-    /// suya se vacía.
-    ///
-    /// Es el final del solape, y la razón de que valga la pena: la CA que toma
-    /// el relevo lleva meses instalada en los almacenes, así que el navegador
-    /// ya confía en ella y no hay que reiniciar nada.
+    /// Promueve la CA local siguiente a vigente y vacía su ranura.
     pub fn promote_next(&self) -> Result<Option<LocalCa>, TlsError> {
         let Some(next) = self.next.read()? else {
             return Ok(None);
@@ -187,8 +145,7 @@ impl LocalCaStore {
         Ok(Some(next))
     }
 
-    /// Tira la CA local siguiente que hubiera. Se hace al fabricar una vigente
-    /// nueva: la que esperaba turno ya no lo tendrá.
+    /// Elimina la CA local siguiente.
     pub fn forget_next(&self) -> Result<(), TlsError> {
         self.next.empty()
     }
@@ -223,7 +180,7 @@ mod tests {
         let restored = store
             .read()
             .expect("deberia leerse")
-            .expect("la CA local se conserva entre arranques (ID-221)");
+            .expect("la CA local se conserva entre arranques");
 
         assert_eq!(
             restored.certificate().to_pem().unwrap(),
@@ -245,10 +202,6 @@ mod tests {
         assert_eq!(error.situation(), Situation::MaterialDamaged);
     }
 
-    /// **El solape, del lado del almacén**: la siguiente se guarda **al lado**
-    /// de la vigente, no encima. Si la sustituyera, el certificado del servidor
-    /// local pasaría a salir firmado por una CA que el navegador abierto no ha
-    /// cargado, y el trámite siguiente fallaría igual que sin solape.
     #[test]
     fn the_next_local_ca_is_saved_beside_the_serving_one_and_not_over_it() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -284,8 +237,6 @@ mod tests {
         );
     }
 
-    /// **El relevo**: la siguiente pasa a servir y su ranura queda vacía, así
-    /// que el arranque de después ya no ve ninguna esperando turno.
     #[test]
     fn the_next_local_ca_takes_over_and_leaves_its_slot_empty() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -318,7 +269,6 @@ mod tests {
         assert!(store.read_next().unwrap().is_none());
     }
 
-    /// Sin ninguna siguiente esperando, el relevo no es un fallo: es un `None`.
     #[test]
     fn a_takeover_without_a_next_local_ca_is_not_a_failure() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -327,10 +277,4 @@ mod tests {
         assert!(store.promote_next().expect("no es un fallo").is_none());
         assert!(store.forget_next().is_ok(), "tirar lo que no hay tampoco");
     }
-
-    // El modo `0600` del fichero de la clave **no se comprueba aquí**: leerlo
-    // pide `std::os::unix`, y el ID-35 deja ese conocimiento en un solo
-    // fichero. La prueba vive junto a la puerta que lo pone, en `paths.rs`
-    // (`the_private_key_file_is_born_unreadable_for_anyone_else`), igual que la
-    // de `restrict_to_owner` que usa la memoria entre sesiones.
 }

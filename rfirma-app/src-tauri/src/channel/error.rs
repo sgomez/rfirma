@@ -1,33 +1,19 @@
-//! Los fallos del canal **se clasifican, no se traducen** (ADR-0009), igual
-//! que los del material que lo cifra en [`crate::tls::error`].
-//!
-//! Son tres situaciones y no más, porque desde fuera sólo hay tres remedios
-//! distintos: ningún puerto de los que sorteó la sede se ha podido atar, el
-//! material del saludo TLS no sirve, y el escuchador no ha llegado a escuchar.
-//! Ninguna de las tres es un `SAF_`: un canal que no se abre no tiene por
-//! dónde contestar, así que lo que sale de aquí va a la ventana.
+//! Clasificación de errores del canal local para la interfaz (ADR-0009).
 
 use std::fmt;
 
-/// Situación del canal que la persona puede entender, y que el catálogo
-/// traduce.
+/// Situación del fallo del canal para su presentación en interfaz (ADR-0009).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
-    /// Ninguno de los puertos que la sede sorteó estaba libre. En el original
-    /// es `SAF_45` en un diálogo y **matar la aplicación entera**
-    /// (`ProtocolInvocationLauncher.java:248`-`250`); aquí es un aviso en la
-    /// ventana y la aplicación sigue viva.
+    /// Ninguno de los puertos sorteados por la sede estaba libre.
     NoDrawnPortIsFree,
-    /// El certificado del servidor local no se puede usar para el saludo TLS.
-    /// Es material recién fabricado, así que esto es la pila de TLS diciendo
-    /// que no.
+    /// El material criptográfico no puede utilizarse para la conexión TLS.
     MaterialNotUsable,
-    /// El escuchador estaba atado pero no ha llegado a escuchar: el sistema
-    /// operativo diciendo que no en medio.
+    /// Error del sistema al intentar iniciar la escucha en el socket.
     NotListening,
 }
 
-/// Un fallo del canal: la situación traducible y el detalle crudo.
+/// Fallo del canal compuesto por situación clasificada y detalle técnico.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChannelError {
     situation: Situation,
@@ -35,7 +21,7 @@ pub struct ChannelError {
 }
 
 impl ChannelError {
-    /// Un fallo con su detalle técnico, sin traducir.
+    /// Crea un nuevo fallo con situación y detalle técnico.
     pub fn new(situation: Situation, detail: impl Into<String>) -> Self {
         Self {
             situation,
@@ -43,12 +29,12 @@ impl ChannelError {
         }
     }
 
-    /// La situación que la interfaz enseña, ya clasificada.
+    /// Situación clasificada del error.
     pub fn situation(&self) -> Situation {
         self.situation
     }
 
-    /// El detalle técnico crudo. Nunca vacío, nunca traducido.
+    /// Detalle técnico del error.
     pub fn detail(&self) -> &str {
         &self.detail
     }
