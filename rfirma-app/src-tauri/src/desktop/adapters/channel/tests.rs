@@ -1,4 +1,5 @@
 use super::*;
+use crate::desktop::domain::handlers::OUR_DESKTOP_FILE;
 use std::fs;
 
 #[test]

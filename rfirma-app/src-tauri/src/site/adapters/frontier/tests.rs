@@ -6,11 +6,11 @@ use crate::documents::domain::rubric::Situation as RubricSituation;
 use crate::identity::domain::error::{Situation as TokenSituation, TokenError};
 use crate::signing::adapters::failures::{code_of_broken_seal, code_of_memory};
 use crate::signing::application::cycle::CycleError;
-use crate::signing::application::filtering::FilteringError;
 use crate::signing::application::session::CycleFailure;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::memory_error::Situation as MemorySituation;
 use crate::signing::domain::Refusal as Inadmissible;
+use crate::site::application::filtering::FilteringError;
 
 fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
     vec![

@@ -8,10 +8,10 @@ use crate::site::domain::protocol::SiteFilter;
 
 use super::outcome::{ErrandStep, NoCertificate, SiteOutcome};
 use super::state::LiveErrand;
-use crate::signing::application::filtering;
-use crate::signing::ports::FilterEngine;
+use crate::site::application::filtering;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::session::SiteSignature;
+use crate::site::ports::FilterEngine;
 
 /// Caso de uso: la persona consiente identificarse y entrega el certificado.
 pub fn identify_with<E: FilterEngine>(

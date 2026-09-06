@@ -43,3 +43,13 @@ fn escape(text: &str, is_key: bool) -> String {
 
 #[cfg(test)]
 mod tests;
+
+/// Combina los parámetros de la sede con la configuración propia de rFirma: la nuestra manda.
+pub fn merged_with(
+    from_the_site: BTreeMap<String, String>,
+    ours: BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    let mut merged = from_the_site;
+    merged.extend(ours);
+    merged
+}

@@ -1,5 +1,8 @@
-//! Puertos del contexto de firma: el puente, los dos motores que presta y el hilo que lo aloja.
+//! Puertos del contexto de firma: el puente, el hilo que lo aloja y lo que el ciclo le pide al token.
 
+use crate::identity::domain::certificate::CertificateRef;
+use crate::identity::domain::error::TokenError;
+use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::isolate_gone::IsolateGone;
 
@@ -21,18 +24,16 @@ pub trait IsolateHost {
     ) -> Result<Result<T, BridgeError>, IsolateGone>;
 }
 
-/// Interfaz para evaluar filtros de certificados contra el motor de filtrado.
-pub trait FilterEngine {
-    /// Devuelve los índices de los certificados que cumplen los criterios.
-    fn select(
-        &self,
-        filter_properties: &str,
-        certificates_b64: &str,
-    ) -> Result<Vec<usize>, BridgeError>;
-}
+/// Lo que el ciclo le pide al token: cómo pide el secreto y la firma de unos bytes; nunca la clave (ADR-0001).
+pub trait Signer {
+    /// Cómo hay que pedirle el secreto al almacén del certificado.
+    fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
 
-/// Expansor de la política de firma declarada por la sede.
-pub trait PolicyEngine {
-    /// Expande las propiedades de política de firma en formato Java Properties.
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError>;
+    /// Firma `data` con la clave privada que acompaña al certificado.
+    fn sign(
+        &self,
+        reference: &CertificateRef,
+        pin: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, TokenError>;
 }

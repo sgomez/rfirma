@@ -4,12 +4,12 @@ use crate::commands::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::identity::adapters::failures::{code_of_secret_on_the_reader_keypad, code_of_token};
 use crate::signing::application::cycle::CycleError;
-use crate::signing::application::filtering::FilteringError;
 use crate::signing::application::session::CycleFailure;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::memory_error::{MemoryError, Situation as MemorySituation};
 use crate::signing::domain::{PlacementError, Refusal, SealMismatch};
+use crate::site::application::filtering::FilteringError;
 use crate::site::domain::protocol::SafCode;
 
 fn memory_told(situation: MemorySituation) -> (&'static str, SafCode) {

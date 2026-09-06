@@ -22,5 +22,5 @@ pub use placement::{
     BoxSize, MediaBox, OutOfDocument, OutOfPage, Page, PageSet, PlacementError, Rotation, Spot,
     UserSpaceRect, ViewerRect, VisibleBox,
 };
-pub use properties::to_java_properties;
+pub use properties::{merged_with, to_java_properties};
 pub use session_seal::{SealMismatch, SessionSeal};

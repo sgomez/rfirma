@@ -5,6 +5,7 @@ use tauri::State;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::Environment;
 
+use super::registry::DesktopRegistry;
 use super::views::{NewVersionView, UrlHandlersView};
 use crate::commands::Failure;
 use crate::desktop::application::invocation::PendingInvocation;
@@ -43,7 +44,7 @@ pub fn url_handlers() -> UrlHandlersView {
     let channel = crate::desktop::adapters::channel::Channel::detected();
     let list =
         crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
-    crate::desktop::application::handlers::who_handles(channel, &list).into()
+    crate::desktop::application::handlers::who_handles(&DesktopRegistry::of(channel, list)).into()
 }
 
 /// Establece el manejador preferido para el esquema afirma:// (ADR-0015).
@@ -53,6 +54,7 @@ pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
     let list = crate::desktop::adapters::choice::mimeapps_list_from_environment()
         .map_err(|error| DesktopError::new(Situation::TheListIsNotWritable, error.to_string()))?;
     Ok(crate::desktop::application::handlers::chosen(
-        channel, &list, &handler,
+        &DesktopRegistry::of(channel, list),
+        &handler,
     )?)
 }

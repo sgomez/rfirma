@@ -13,8 +13,9 @@ use crate::identity::domain::secret::StoreSecret;
 use crate::signing::adapters::orders::{SigningOrder, VisibleFieldsOrder};
 use crate::site::domain::protocol::AfirmaUrl;
 
-use crate::signing::ports::{FilterEngine, IsolateHost, PolicyEngine};
+use crate::signing::ports::IsolateHost;
 use crate::site::application::session::{self as signing, SiteSigning};
+use crate::site::ports::{FilterEngine, PolicyEngine};
 
 pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ProtocolCodec, ReplyHandle, Transport};

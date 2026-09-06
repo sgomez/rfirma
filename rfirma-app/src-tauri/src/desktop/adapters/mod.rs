@@ -4,6 +4,7 @@ pub mod channel;
 pub mod choice;
 pub mod failures;
 pub mod paths;
+pub mod registry;
 pub mod releases;
 pub mod tauri;
 pub mod views;

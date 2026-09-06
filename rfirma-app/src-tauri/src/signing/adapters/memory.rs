@@ -2,13 +2,19 @@
 
 use std::sync::Mutex;
 
+use std::path::{Path, PathBuf};
+
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::domain::version_check::VersionCheck;
+use crate::documents::domain::destination::DestinationFolder;
+use crate::documents::domain::recents::Recents;
+use crate::identity::domain::certificate::CertificateRef;
 use crate::lock;
 use crate::signing::adapters::state::State;
 use crate::signing::adapters::store::{JsonFile, Loaded};
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::memory_error::MemoryError;
+use crate::signing::domain::{BoxSize, Spot};
 
 /// Las dos memorias y sus dos soportes (ADR-0010).
 #[derive(Debug)]
@@ -110,6 +116,81 @@ impl Memory {
             return Ok(());
         }
         self.state.save(&kept)
+    }
+}
+
+impl Memory {
+    fn loaded_state(&self) -> State {
+        self.state
+            .load()
+            .map(Loaded::into_value)
+            .unwrap_or_default()
+    }
+
+    fn remember_state_as_configured(&self, state: &State) -> Result<(), MemoryError> {
+        self.remember_state(&self.configuration(), state)
+    }
+}
+
+impl crate::documents::ports::DocumentsMemory for Memory {
+    fn chosen_destination(&self) -> Option<DestinationFolder> {
+        lock(&self.live).destination.clone()
+    }
+
+    fn last_open_folder(&self) -> Option<PathBuf> {
+        self.state().ok()?.into_value().last_open_folder
+    }
+
+    fn remember_last_open_folder(&self, folder: &Path) -> Result<(), MemoryError> {
+        let mut state = self.state()?.into_value();
+        state.last_open_folder = Some(folder.to_path_buf());
+        self.remember_state_as_configured(&state)
+    }
+
+    fn recents(&self) -> Recents<Spot> {
+        self.loaded_state().recents
+    }
+
+    fn box_size(&self) -> BoxSize {
+        self.loaded_state()
+            .visible_signature
+            .map(|remembered| remembered.size)
+            .unwrap_or_default()
+    }
+
+    fn remember_recents(
+        &self,
+        recents: &Recents<Spot>,
+        size: Option<BoxSize>,
+    ) -> Result<(), MemoryError> {
+        let mut state = self.loaded_state();
+        state.recents = recents.clone();
+        if let Some(size) = size {
+            state.visible_signature.get_or_insert_default().size = size;
+        }
+        self.remember_state_as_configured(&state)
+    }
+}
+
+impl crate::identity::ports::CertificateMemory for Memory {
+    fn remembered_certificate(&self) -> Option<CertificateRef> {
+        self.state().ok()?.into_value().certificate
+    }
+
+    fn remember_the_certificate(&self, reference: &CertificateRef) -> Result<(), MemoryError> {
+        let mut state = self.state()?.into_value();
+        state.certificate = Some(reference.clone());
+        self.remember_state_as_configured(&state)
+    }
+}
+
+impl crate::desktop::ports::VersionMemory for Memory {
+    fn last_version_check(&self) -> Option<VersionCheck> {
+        self.state().ok()?.into_value().version_check
+    }
+
+    fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError> {
+        Memory::remember_version_check(self, check)
     }
 }
 

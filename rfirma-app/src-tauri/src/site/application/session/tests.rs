@@ -4,8 +4,8 @@ use crate::fixtures::{a_certificate, an_order, NoIsolate, NoToken};
 use crate::identity::application::listed::ListedCertificates;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::session::{config_for, SigningSession};
-use crate::signing::ports::FilterEngine;
 use crate::site::domain::protocol::{SafCode, SiteFilter};
+use crate::site::ports::FilterEngine;
 use std::collections::BTreeMap;
 
 const SOURCE: &str = include_str!("../session.rs");

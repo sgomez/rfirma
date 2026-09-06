@@ -144,10 +144,10 @@ mod full_cycle {
         BridgeError, ExpandRequest, FilterRequest, NativeBridge,
     };
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
-    use rfirma_lib::signing::application::filtering;
     use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
     };
+    use rfirma_lib::site::application::filtering;
     use rfirma_lib::site::domain::protocol::site_filter;
 
     use super::bridge;

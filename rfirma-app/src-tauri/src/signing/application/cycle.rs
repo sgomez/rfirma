@@ -113,7 +113,7 @@ pub fn presign<B: Bridge + ?Sized>(
         .map(|der| base64(der))
         .collect::<Vec<_>>()
         .join(CHAIN_SEPARATOR);
-    let extra_params = to_java_properties(&super::policies::merged_with(
+    let extra_params = to_java_properties(&crate::signing::domain::merged_with(
         request.from_the_site.clone(),
         request.config.extra_params(),
     ));
