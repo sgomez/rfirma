@@ -173,7 +173,7 @@ fn outputs() -> Vec<Output<'static>> {
 /// las dos entra. Sin esta lista, «no lo he construido» y «no puede llevar una
 /// ruta» serían indistinguibles, que es como una guarda se queda en verde sin
 /// mirar nada.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 8] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 10] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -186,6 +186,10 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 8] = [
     // lleva son ficheros `.desktop` que dio el escritorio (ID-238).
     "UrlHandlersView",
     "UrlHandlerView",
+    // Detrás del trámite recién abierto no hay ningún documento: el canal está
+    // en pie y la petición de la sede no ha llegado (ID-338).
+    "SiteErrandView",
+    "SiteStageView",
 ];
 
 /// El enlace que el portal concede, que es lo que **no** puede salir.
@@ -529,7 +533,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 28, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 29, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Cada orden del módulo, desde su atributo `#[tauri::command…]` hasta la
@@ -618,6 +622,35 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
             "#[tauri::command(async)]",
             "«{name}» llama a un blocking_* de un plugin desde el hilo del bucle de \
              eventos: tiene que ser #[tauri::command(async)] o la ventana se clava sin error"
+        );
+    }
+}
+
+/// **Todas las órdenes del trámite de sede son `(async)`** (ID-337, TD-76).
+///
+/// Es la misma trampa que la guarda de arriba y **ninguna otra la vigila
+/// aquí**: la mitad que se descubre sola mira los cuerpos que llaman a un
+/// `blocking_*` de un complemento, y las del trámite no llaman a ninguno. Lo
+/// que las cuelga es otra cosa: una orden sobre una `fn` que no es `async`
+/// corre dentro del manejador del IPC, en el hilo del bucle de eventos, y
+/// cerrar desde ahí la ventana que está preguntando es pedirle al bucle que se
+/// espere a sí mismo.
+#[test]
+fn every_command_of_the_site_errand_runs_off_the_main_thread() {
+    let source = production_half(source_of("mod.rs"));
+
+    // Una lista con nombre, y no un literal en el `for`: las órdenes del
+    // trámite (ID-336) entran aquí según se escriben —hoy sólo está la
+    // primera—, y la lista dice cuáles se han mirado ya.
+    const OF_THE_ERRAND: [&str; 1] = ["pub fn close_site_window("];
+
+    for command in OF_THE_ERRAND {
+        let declaration = source
+            .find(command)
+            .unwrap_or_else(|| panic!("no esta la orden «{command}»"));
+        assert!(
+            source[..declaration].ends_with("#[tauri::command(async)]\n"),
+            "«{command}» tiene que ser #[tauri::command(async)]"
         );
     }
 }

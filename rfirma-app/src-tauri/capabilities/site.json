@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "site",
+  "description": "Permisos de la ventana de sede (ID-333). Nace aparte de la principal porque lo que necesita es otra cosa: escuchar el evento del trámite (`site-errand`, ID-338) —que es `core:event|listen` y sí pasa por la ACL— y cerrarse. El complemento `opener` entra aquí denegado igual que en la principal (ID-85, ADR-0011).",
+  "windows": ["site"],
+  "permissions": [
+    "core:default",
+    "opener:deny-open-path",
+    "opener:deny-open-url",
+    "opener:deny-reveal-item-in-dir"
+  ]
+}

@@ -390,6 +390,49 @@ pub struct NewVersionView {
     pub version: String,
 }
 
+/// **El trámite de sede, tal como lo recibe su ventana** (ID-338, ID-339).
+///
+/// Viaja por un **evento** y no por una orden: el trámite empuja cada momento
+/// nuevo, y que no llegue nunca es la respuesta normal, porque la mayoría de
+/// los arranques no vienen de una sede.
+///
+/// Al abrirse la ventana sólo se sabe que el canal está en pie: el origen y la
+/// operación llegan con la petición, que es lo que la sede manda **después**
+/// por el canal ya abierto. Por eso aquí no hay ni ruta ni identificador de
+/// documento: detrás de una espera no hay ningún documento todavía.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteErrandView {
+    /// Quién pide la firma, nombrado **a secas** (ID-271). Durante la espera
+    /// todavía no se sabe.
+    pub origin: Option<String>,
+    /// En qué momento de la secuencia está la ventana.
+    pub stage: SiteStageView,
+}
+
+impl SiteErrandView {
+    /// El trámite recién abierto: el canal está en pie y la petición no ha
+    /// llegado.
+    pub fn waiting() -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::Waiting,
+        }
+    }
+}
+
+/// El momento de la secuencia que la ventana de sede enseña.
+///
+/// Hoy sólo existe la espera, que es el único momento que hay **antes** de que
+/// la sede mande su petición por el canal.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SiteStageView {
+    /// El canal está abierto y la petición no ha llegado. Cuánto se espera
+    /// antes de decir algo lo decide el reloj de la ventana, no el backend.
+    Waiting,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

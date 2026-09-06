@@ -42,6 +42,7 @@ pub mod recents;
 pub mod rubric;
 pub mod signing;
 pub mod site;
+pub mod startup;
 pub mod trust;
 pub mod version;
 

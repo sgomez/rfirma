@@ -850,7 +850,7 @@ mod tests {
         // 1. La sede invoca, y el canal queda sirviendo su conversación.
         let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
         assert!(
-            matches!(attendance, Attendance::Serving(_)),
+            matches!(attendance, Attendance::Serving { .. }),
             "la invocacion es buena: {attendance:?}"
         );
         assert!(
@@ -962,7 +962,7 @@ mod tests {
         // 1. La sede invoca, y el canal queda sirviendo su conversación.
         let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
         assert!(
-            matches!(attendance, Attendance::Serving(_)),
+            matches!(attendance, Attendance::Serving { .. }),
             "la invocacion es buena: {attendance:?}"
         );
 
@@ -1640,7 +1640,7 @@ mod tests {
         let asked = RefCell::new(Vec::new());
 
         let first = attend_launch(&a_launch("54001"), &a_transport(&asked), &live);
-        assert!(matches!(first, Attendance::Serving(_)), "{first:?}");
+        assert!(matches!(first, Attendance::Serving { .. }), "{first:?}");
 
         let second = attend_launch(&a_launch("55001"), &a_transport(&asked), &live);
         let Attendance::RefusingOverTheChannel { answer, .. } = second else {
@@ -1721,7 +1721,7 @@ mod tests {
 
         let next = attend_launch(&a_launch("55001"), &a_transport(&asked), &live);
 
-        assert!(matches!(next, Attendance::Serving(_)), "{next:?}");
+        assert!(matches!(next, Attendance::Serving { .. }), "{next:?}");
     }
 
     /// El trámite vivo recuerda **la credencial y el puerto**, que es lo que

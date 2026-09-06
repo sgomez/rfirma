@@ -25,7 +25,12 @@ use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use native_tls::{Certificate, TlsConnector};
-use rfirma_lib::channel::{bind_first_free, serve, ChannelDuty, OpenChannel};
+use rfirma_lib::app::errand::LiveErrand;
+use rfirma_lib::app::site::Attendance;
+use rfirma_lib::app::startup::attend_site_launch;
+use rfirma_lib::channel::{
+    bind_first_free, serve, ChannelDuty, OpenChannel, THE_PORT_OF_THE_THIRD_PROTOCOL,
+};
 use rfirma_lib::protocol::{ChannelCredential, LaunchRequest, SafCode};
 use rfirma_lib::tls::{LocalCa, LocalServerCertificate};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -326,4 +331,72 @@ async fn once_closed_the_channel_accepts_no_new_conversations() {
     }
 
     assert!(refused, "el canal cerrado seguia aceptando conversaciones");
+}
+
+/// **El arranque entero, hasta el `OK`** (ID-324, ID-326, TD-72): llega la
+/// invocación de una sede, el caso de uso ata el primero libre de los puertos
+/// que sorteó —**nunca el 63117**, ni aunque venga sorteado (ID-215)—, abre la
+/// ventana de sede y el eco de la sede recibe su `OK` sobre ese mismo canal.
+///
+/// Es la única prueba que junta el caso de uso con el canal de verdad: las de
+/// `app::startup` doblan el transporte y no abren ni un socket (TD-70).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
+    let free = {
+        let mut ports = Vec::new();
+        for _ in 0..2 {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("puerto efimero");
+            ports.push(listener.local_addr().expect("atado").port());
+        }
+        ports
+    };
+    // La sede sortea el puerto del protocolo 3 por delante de los suyos: aun
+    // así rfirma no se ata jamás a él (ID-215).
+    let drawn = [THE_PORT_OF_THE_THIRD_PROTOCOL, free[0], free[1]];
+
+    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let ca_pem = ca.certificate_pem().expect("la CA local en PEM");
+    let certificate =
+        LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
+
+    let windows = std::sync::atomic::AtomicUsize::new(0);
+    let live = LiveErrand::default();
+    let url = format!(
+        "afirma://websocket?ports={},{},{}&v=4&idsession={CREDENTIAL}",
+        drawn[0], drawn[1], drawn[2]
+    );
+
+    let attendance = attend_site_launch(
+        &url,
+        // El transporte de producción, con el runtime de la prueba en el sitio
+        // del de Tauri: atar y servir son los mismos dos pasos (ID-213).
+        &|ports, duty| {
+            let listener = bind_first_free(ports)?;
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(serve(listener, &certificate, duty))
+            })
+        },
+        &|_| {
+            windows.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        },
+        &live,
+    );
+
+    let Attendance::Serving { channel, .. } = &attendance else {
+        panic!("la invocacion era buena: {attendance:?}");
+    };
+    assert_eq!(
+        channel.port(),
+        free[0],
+        "el canal queda en el primero libre que sorteo la sede, y nunca en el 63117"
+    );
+    assert_eq!(
+        windows.load(std::sync::atomic::Ordering::SeqCst),
+        1,
+        "con trámite hay una ventana de sede, y una sola (ID-334)"
+    );
+
+    let mut client = ChannelClient::connect(channel.port(), Some(&ca_pem)).await;
+
+    assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
 }

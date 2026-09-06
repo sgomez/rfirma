@@ -115,7 +115,7 @@ pub use rubric::{RubricChoiceView, RubricView};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, NewVersionView,
     OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
-    UrlHandlerView, UrlHandlersView,
+    SiteErrandView, SiteStageView, UrlHandlerView, UrlHandlersView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -687,6 +687,45 @@ pub fn unregistered_signatures(
 ) -> Result<bool, Failure> {
     app::signing::unregistered_signatures_in(&opened, &document)
 }
+
+/// **Orden 29.** Cierra la ventana de sede. La sede ya tiene su respuesta.
+///
+/// Es `async` como todas las órdenes del trámite (ID-337): una orden sobre una
+/// `fn` que no lo es corre en el hilo del bucle de eventos, y ahí cerrar la
+/// ventana desde dentro de su propio manejador de IPC es pedirle al bucle que
+/// se espere a sí mismo.
+///
+/// Cierra **la ventana de la etiqueta [`SITE_WINDOW`]**, y no la que pregunta:
+/// hoy sólo la invoca `sede.html`, pero el nombre de la orden promete la de
+/// sede y es la que cierra. Que no exista es una respuesta válida —cerrar dos
+/// veces es lo mismo que cerrar una—.
+///
+/// No devuelve nada: cerrar la ventana que está preguntando no deja a nadie a
+/// quien contarle que no se ha podido. El trámite **no termina aquí** —termina
+/// al contestarle a la sede (ID-275)—, así que esto no toca
+/// [`crate::app::errand::LiveErrand`].
+#[tauri::command(async)]
+pub fn close_site_window(app: tauri::AppHandle) {
+    use tauri::Manager as _;
+
+    if let Some(window) = app.get_webview_window(SITE_WINDOW) {
+        let _ = window.close();
+    }
+}
+
+/// La etiqueta de la ventana de sede (ID-333).
+///
+/// Es **suya y sólo suya**: la ventana principal es `main`, y las dos existen a
+/// la vez sin que una tape a la otra.
+pub const SITE_WINDOW: &str = "site";
+
+/// El nombre del evento con el que la ventana de sede recibe el trámite
+/// (ID-338).
+///
+/// Es un **evento y no un sondeo**: el trámite empuja cada momento nuevo. Que
+/// no llegue nunca es la respuesta normal, porque la mayoría de los arranques
+/// no vienen de una sede —y entonces esta ventana ni siquiera existe (ID-334)—.
+pub const SITE_ERRAND: &str = "site-errand";
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.
 ///

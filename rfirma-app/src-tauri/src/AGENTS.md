@@ -21,8 +21,8 @@ misma PR que lo crea**, o el PR sale en rojo.
   frases en inglés y dicen la invariante entera.
 - El fichero más grande del backend es `app/errand.rs`, con 1774 líneas; detrás
   van `ffi.rs` (1204), `app/signing.rs` (1056), `app/documents.rs` (986) y
-  `signing/placement.rs` (942). El mayor de `commands/` es justo `commands/guards.rs`
-  (672), y detrás va `commands/mod.rs` (745); lo que los hace crecer es
+  `signing/placement.rs` (942). El mayor de `commands/` es `commands/mod.rs`
+  (784), y detrás va `commands/guards.rs` (705); lo que los hace crecer es
   **prosa**: los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
   es un cuerpo, lo que ha entrado casi siempre es una decisión, y una decisión
   va en `app/`.
@@ -34,16 +34,16 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 218 | Registro de comandos, complementos y estados de Tauri, y la instancia única (ID-160). Empieza aquí para ver el cableado. |
+| `lib.rs` | 418 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `app/startup.rs` y no decide nada**: los tres puertos que le pasa, la ventana de sede y el canal sostenido (ID-324…ID-334). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 1204 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 738 | **Las veintiocho órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 539 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/mod.rs` | 784 | **Las veintinueve órdenes de Tauri**, y nada más que sus cuerpos. |
+| `commands/views.rs` | 582 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 236 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 253 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
-| `commands/guards.rs` | 672 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
+| `commands/guards.rs` | 705 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 221 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 477 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
@@ -61,7 +61,8 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 394 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/trust.rs` | 702 | **La CA local en los almacenes NSS**: cuándo se instala, el solape —con la vigente **sirviendo** hasta que caduca— y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
-| `app/site.rs` | 360 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí, y con un trámite vivo la segunda invocación se rechaza (ID-280). |
+| `app/startup.rs` | 577 | **Qué se abre al arrancar** (TD-70): el único seam nuevo del hito. Recibe la invocación y tres puertos —transporte de canal, almacenes de confianza y abridor de ventana— y decide si se enseña la principal o se atiende un trámite de sede (ID-324, ID-328…ID-329, ID-334). Aquí vive el canal sostenido. |
+| `app/site.rs` | 366 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí, y con un trámite vivo la segunda invocación se rechaza (ID-280). |
 | `app/handlers.rs` | 157 | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta: lo que se puede saber, lo que se escribe y el nombre de catálogo de cada situación (ID-238…ID-240). |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 97 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
@@ -209,6 +210,13 @@ Rust llame a la API de un plugin —`tauri-plugin-dialog`, `tauri-plugin-opener`
 desde dentro de una orden no necesita permiso ninguno: `default.json` lleva solo
 `core:default` y las dos funcionan. Confirmado dos veces, ID-63 con `dialog` y
 el #131 con `opener`, la segunda desmintiendo la suposición contraria.
+
+Lo que **sí** filtran es lo que la ventana escucha: `listen()` es
+`core:event|listen` y pasa por la ACL. Por eso cada ventana necesita una
+capacidad que la nombre —`capabilities/default.json` para `main`,
+`capabilities/site.json` para `site` (ID-333)—: una ventana que no esté en
+ninguna nace sin permisos y no oye ni sus propios eventos (`site-errand`,
+ID-338).
 
 Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 `app/` al que llama (TD-21).
