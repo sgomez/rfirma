@@ -11,6 +11,7 @@ use crate::documents::domain::recents::Badge;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::state::{BoxSize, State};
 use crate::signing::domain::memory_error::MemoryError;
+use crate::signing::domain::CompletedCycle;
 use crate::signing::domain::VisibleBox;
 use crate::Memory;
 
@@ -136,7 +137,12 @@ fn canonical_or_raw(path: &Path) -> std::path::PathBuf {
 }
 
 /// Anota un documento recién firmado en la bandeja con la insignia de firmado.
-pub fn note_signed(memory: &Memory, configuration: &Configuration, landing: &Path) {
+pub fn note_signed(
+    memory: &Memory,
+    configuration: &Configuration,
+    landing: &Path,
+    _proof: &CompletedCycle,
+) {
     let Ok(noted) = RecentDocument::seen(landing, Badge::Signed, SystemTime::now()) else {
         return;
     };

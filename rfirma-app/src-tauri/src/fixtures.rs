@@ -6,6 +6,8 @@ use crate::desktop::adapters::paths::Paths;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
+use crate::signing::domain::bridge::PreSignature;
+use crate::signing::domain::{CompletedCycle, SessionSeal, TokenSignature};
 use crate::Memory;
 
 /// Construye un certificado de prueba con la etiqueta y DER proporcionados.
@@ -78,4 +80,17 @@ pub(crate) fn an_order() -> SigningOrder {
         language: "es".to_owned(),
         allow_unregistered_signatures: false,
     }
+}
+
+/// Un ciclo trifásico terminado con una firma inventada, para quien necesite la prueba de que hubo uno.
+pub(crate) fn a_completed_cycle() -> CompletedCycle {
+    let stamp = SessionSeal::from_bridge("el sello de la prefirma");
+    PreSignature {
+        session: "<xml/>".to_owned(),
+        pre_sign: b"123".to_vec(),
+        stamp: stamp.clone(),
+    }
+    .sealed_with(&TokenSignature::invented(), &stamp)
+    .expect("el sello es el mismo")
+    .completed_with(b"%PDF-1.7 firmado".to_vec())
 }

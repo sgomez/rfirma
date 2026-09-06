@@ -1,12 +1,25 @@
-//! Adaptadores de los motores de filtrado y políticas sobre el puente nativo (ADR-0017).
+//! Adaptadores del puente y de los motores de filtrado y políticas sobre la librería nativa (ADR-0017).
 
 use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::adapters::isolate::Isolate;
-use crate::signing::domain::bridge::{BridgeError, ExpandRequest, FilterRequest};
+use crate::signing::domain::bridge::{
+    BridgeError, ExpandRequest, FilterRequest, PostSignRequest, PreSignRequest, PreSignature,
+};
 use crate::signing::domain::isolate_gone::IsolateGone;
 
+use crate::signing::ports::Bridge;
 use crate::signing::ports::FilterEngine;
 use crate::signing::ports::PolicyEngine;
+
+impl Bridge for NativeBridge {
+    fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
+        NativeBridge::presign(self, request)
+    }
+
+    fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError> {
+        NativeBridge::postsign(self, request)
+    }
+}
 
 impl FilterEngine for NativeBridge {
     fn select(

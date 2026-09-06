@@ -22,7 +22,6 @@ identity/application/certificates.rs -> identity::adapters::pkcs11
 identity/application/certificates.rs -> signing::application::configuration_memory::Configuration
 signing/adapters/tauri.rs -> documents::application::opened::OpenedDocuments
 signing/application/cycle.rs -> identity::adapters::pkcs11
-signing/application/cycle.rs -> signing::adapters::ffi::NativeBridge
 signing/application/filtering.rs -> identity::adapters::pkcs11
 signing/application/filtering.rs -> identity::application::listed::ListedCertificates
 signing/application/preview.rs -> documents::application::documents

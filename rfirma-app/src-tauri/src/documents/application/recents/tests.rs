@@ -1,5 +1,5 @@
 use super::*;
-use crate::fixtures::a_memory;
+use crate::fixtures::{a_completed_cycle, a_memory};
 use crate::signing::adapters::store::Loaded;
 use crate::signing::domain::PageSet;
 use std::fs;
@@ -215,7 +215,7 @@ fn the_signed_document_is_the_only_row_that_gets_the_signed_badge() {
         b"%PDF-1.7 firmado",
     );
 
-    note_signed(&memory, &configuration, &landing);
+    note_signed(&memory, &configuration, &landing, &a_completed_cycle());
 
     let rows = listed_rows(&memory, &opened);
     let signed: Vec<&str> = rows
@@ -238,7 +238,7 @@ fn reopening_a_document_that_rfirma_signed_does_not_take_its_badge_away() {
         "contrato_firmado.pdf",
         b"%PDF-1.7 firmado",
     );
-    note_signed(&memory, &configuration, &landing);
+    note_signed(&memory, &configuration, &landing, &a_completed_cycle());
 
     let id = opened.remember(PortalDocument::opened(landing));
     let row = record(&memory, &configuration, &opened, &id, None).expect("deberia anotarse");

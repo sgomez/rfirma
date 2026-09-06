@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use rfirma_lib::signing::adapters::ffi::{
-    locate, BridgeError, NativeBridge, PostSignRequest, PreSignRequest, LIBRARY_FILE,
+    locate, parse_presign, BridgeError, NativeBridge, PostSignRequest, PreSignRequest, LIBRARY_FILE,
 };
-use rfirma_lib::signing::domain::SessionSeal;
+use rfirma_lib::signing::domain::TokenSignature;
 
 /// Un PDF mínimo en Base64 no válido para firmar.
 const NOT_A_PDF_B64: &str = "bm8gc295IHVuIFBERg==";
@@ -13,8 +13,9 @@ const NOT_A_PDF_B64: &str = "bm8gc295IHVuIFBERg==";
 /// Un certificado sintético no válido.
 const NOT_A_CERTIFICATE_B64: &str = "bm8gc295IHVuIGNlcnRpZmljYWRv";
 
-/// Una firma sintética no válida.
-const NOT_A_SIGNATURE_B64: &str = "bm8gc295IHVuYSBmaXJtYQ==";
+/// Una prefirma sintética no válida, tal como la contaría el puente.
+const NOT_A_PRESIGN_JSON: &str =
+    r#"{"ok":true,"session":"<xml/>","pre":"MTIz","stamp":"bm8gc295IHVuIHNlbGxv"}"#;
 
 fn library() -> PathBuf {
     let executable = std::env::current_exe().expect("debería haber ejecutable");
@@ -40,14 +41,15 @@ fn presign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError
 }
 
 fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError> {
-    let stamp = SessionSeal::from_bridge("bm8gc295IHVuIHNlbGxv");
+    let presigned = parse_presign(NOT_A_PRESIGN_JSON)?;
+    let sealed = presigned
+        .sealed_with(&TokenSignature::invented(), presigned.stamp())
+        .expect("el sello es el mismo");
     bridge
         .postsign(PostSignRequest {
             pdf_b64: NOT_A_PDF_B64,
             certificate_chain_b64: NOT_A_CERTIFICATE_B64,
-            stamp: &stamp,
-            session: "<xml/>",
-            pkcs1_b64: NOT_A_SIGNATURE_B64,
+            sealed: &sealed,
         })
         .map(|_| ())
 }
@@ -385,6 +387,7 @@ mod full_cycle {
         cycle
             .postsign(&bridge, &signature, &cycle.seal_in_transit())
             .expect("la postfirma deberia ensamblar el PDF")
+            .into_pdf()
     }
 
     fn write_to_target(name: &str, bytes: &[u8]) -> PathBuf {
@@ -524,6 +527,7 @@ mod full_cycle {
                 &cycle.seal_in_transit(),
             )
             .expect("la postfirma deberia componer el PDF con el PK1 inventado")
+            .into_pdf()
     }
 
     /// Área del recuadro en píxeles.
@@ -769,7 +773,7 @@ mod full_cycle {
 
         let outcome = cycle
             .postsign(&bridge, &signature, &tampered)
-            .map(|pdf| format!("un PDF de {} bytes", pdf.len()));
+            .map(|completed| format!("un PDF de {} bytes", completed.pdf().len()));
 
         assert!(
             matches!(outcome, Err(cycle::CycleError::Seal(_))),

@@ -118,11 +118,14 @@ pub fn finish_for_the_site(
         ..
     } = take_signed_cycle(session)?;
 
-    let signed = on_the_bridge(isolate, move |bridge| {
+    let completed = on_the_bridge(isolate, move |bridge| {
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
-    Ok(SiteSignature { signed, signer_der })
+    Ok(SiteSignature {
+        signed: completed.into_pdf(),
+        signer_der,
+    })
 }
 
 #[cfg(test)]

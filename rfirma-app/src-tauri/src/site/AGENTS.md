@@ -76,7 +76,8 @@ orden de Tauri para la ventana. Dos cosas que salen mal si se olvidan:
 - **Un código no se escribe a mano.** Nadie compone una cadena `SAF_…`: se
   construye un `WireAnswer` y se llama a `on_the_wire()`.
   `tests/site_frontier_guards.rs` compara lo que sale contra las líneas que el
-  `enum` puede producir, así que un código acuñado sale en rojo.
+  `enum` puede producir, así que un código acuñado sale en rojo; y `SafCode`
+  no se construye desde texto, con el cebo en `compile_fail.rs` de la raíz.
 - **Una situación nueva no compila** hasta que se le decide código y vista:
   `told` en `adapters/frontier.rs` es un `match` cerrado sobre `SiteRefusal`, y
   cada contexto tiene el suyo en su `adapters/failures.rs`. Lo que la prueba añade encima es que el código elegido

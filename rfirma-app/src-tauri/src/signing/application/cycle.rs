@@ -5,11 +5,14 @@ use base64::Engine;
 use crate::identity::adapters::pkcs11;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
-use crate::signing::adapters::ffi::NativeBridge;
-use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest};
+use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::{
-    to_java_properties, AdmissibleDocument, Refusal, SealMismatch, SessionSeal, SignatureConfig,
+    to_java_properties, AdmissibleDocument, CompletedCycle, Refusal, SealMismatch, SessionSeal,
+    SignatureConfig,
 };
+use crate::signing::ports::Bridge;
+
+pub use crate::signing::domain::TokenSignature;
 
 /// Conjunto vacío de parámetros adicionales para firmas locales.
 pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
@@ -89,46 +92,17 @@ impl From<SealMismatch> for CycleError {
     }
 }
 
-/// Longitud en bytes para una firma sintética RSA de 2048 bits.
-const INVENTED_PKCS1_BYTES: usize = 256;
-
-/// Firma producida por el token PKCS#11.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TokenSignature(Vec<u8>);
-
-impl TokenSignature {
-    /// Firma sintética utilizada exclusivamente en la prefirma en seco.
-    pub fn invented() -> Self {
-        Self(vec![0; INVENTED_PKCS1_BYTES])
-    }
-
-    /// Firma cruda tal como la devolvió el token.
-    pub fn raw(&self) -> &[u8] {
-        &self.0
-    }
-
-    /// Firma codificada en Base64 para el campo PK1.
-    pub fn to_pkcs1_base64(&self) -> String {
-        base64(&self.0)
-    }
-}
-
 /// Ciclo de firma iniciado a la espera de la firma del token (ADR-0016).
 pub struct OpenCycle {
     pdf_b64: String,
     chain_b64: String,
-    session: String,
-    to_be_signed: Vec<u8>,
-    seal: SessionSeal,
+    presigned: PreSignature,
     certificate: CertificateRef,
     already_signed_before: bool,
 }
 
 /// Fase 1: ejecuta la prefirma PAdES enviando documento y parámetros al puente.
-pub fn presign(
-    bridge: &NativeBridge,
-    request: SigningRequest<'_>,
-) -> Result<OpenCycle, CycleError> {
+pub fn presign(bridge: &impl Bridge, request: SigningRequest<'_>) -> Result<OpenCycle, CycleError> {
     let pdf_b64 = base64(request.document.bytes());
     let chain_b64 = request
         .chain
@@ -151,9 +125,7 @@ pub fn presign(
     Ok(OpenCycle {
         pdf_b64,
         chain_b64,
-        session: presigned.session().to_owned(),
-        to_be_signed: presigned.pre_sign().to_vec(),
-        seal: presigned.stamp().clone(),
+        presigned,
         certificate: request.certificate.clone(),
         already_signed_before: request.document.already_signed(),
     })
@@ -162,7 +134,7 @@ pub fn presign(
 impl OpenCycle {
     /// Bytes que el token debe firmar, sin hashear.
     pub fn to_be_signed(&self) -> &[u8] {
-        &self.to_be_signed
+        self.presigned.pre_sign()
     }
 
     /// Certificado con el que se abrió el ciclo.
@@ -177,31 +149,29 @@ impl OpenCycle {
 
     /// Copia del sello de sesión para transportarlo a la postfirma (ADR-0016).
     pub fn seal_in_transit(&self) -> SessionSeal {
-        self.seal.clone()
+        self.presigned.stamp().clone()
     }
 
     /// Fase 2: firma los bytes en el token PKCS#11 (ADR-0001).
     pub fn sign_on_token(&self, pin: &str) -> Result<TokenSignature, CycleError> {
-        let signature = pkcs11::sign(&self.certificate, pin, &self.to_be_signed)?;
-        Ok(TokenSignature(signature))
+        let signature = pkcs11::sign(&self.certificate, pin, self.presigned.pre_sign())?;
+        Ok(TokenSignature::from_token(signature))
     }
 
-    /// Fase 3: verifica el sello de sesión y ensambla el PDF firmado (ADR-0016).
+    /// Fase 3: sella la prefirma con la firma del token y ensambla el PDF firmado (ADR-0016).
     pub fn postsign(
         &self,
-        bridge: &NativeBridge,
+        bridge: &impl Bridge,
         signature: &TokenSignature,
         returned: &SessionSeal,
-    ) -> Result<Vec<u8>, CycleError> {
-        self.seal.verify_unchanged(returned)?;
-
-        Ok(bridge.postsign(PostSignRequest {
+    ) -> Result<CompletedCycle, CycleError> {
+        let sealed = self.presigned.sealed_with(signature, returned)?;
+        let pdf = bridge.postsign(PostSignRequest {
             pdf_b64: &self.pdf_b64,
             certificate_chain_b64: &self.chain_b64,
-            stamp: returned,
-            session: &self.session,
-            pkcs1_b64: &signature.to_pkcs1_base64(),
-        })?)
+            sealed: &sealed,
+        })?;
+        Ok(sealed.completed_with(pdf))
     }
 }
 
@@ -209,7 +179,7 @@ impl std::fmt::Debug for OpenCycle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OpenCycle")
             .field("certificate", &self.certificate)
-            .field("to_be_signed_bytes", &self.to_be_signed.len())
+            .field("to_be_signed_bytes", &self.presigned.pre_sign().len())
             .field("cosigning", &self.already_signed_before)
             .finish_non_exhaustive()
     }

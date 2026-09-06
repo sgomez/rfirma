@@ -254,9 +254,9 @@ impl NativeBridge {
     pub fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError> {
         let pdf = c_string(request.pdf_b64, "el PDF")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
-        let stamp = c_string(request.stamp.as_bridge_payload(), "el sello")?;
-        let session = c_string(request.session, "la sesión")?;
-        let pkcs1 = c_string(request.pkcs1_b64, "el PKCS#1")?;
+        let stamp = c_string(request.sealed.stamp().as_bridge_payload(), "el sello")?;
+        let session = c_string(request.sealed.session(), "la sesión")?;
+        let pkcs1 = c_string(request.sealed.pkcs1_b64(), "el PKCS#1")?;
         let json = self.call(|thread| unsafe {
             (self.postsign)(
                 thread,

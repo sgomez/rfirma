@@ -1,6 +1,15 @@
-//! Puertos del contexto de firma: los dos motores que presta el puente.
+//! Puertos del contexto de firma: el puente de la prefirma y la postfirma, y los dos motores que presta.
 
-use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
+
+/// El puente nativo visto desde el ciclo: prefirma y postfirma, y ninguna entrada que firme (ADR-0001).
+pub trait Bridge {
+    /// Prefirma PAdES: los atributos que el token firmará y el sello de sesión.
+    fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError>;
+
+    /// Postfirma PAdES: el PDF firmado a partir de una prefirma ya sellada.
+    fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError>;
+}
 
 /// Interfaz para evaluar filtros de certificados contra el motor de filtrado.
 pub trait FilterEngine {
