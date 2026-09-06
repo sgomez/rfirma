@@ -74,11 +74,7 @@ pub fn narrate_startup_outcome(mut outcome: TrustOutcome, profiles: &[PathBuf]) 
     lines
 }
 
-/// **Deja la CA local instalada y de confianza en los perfiles NSS.**
-///
-/// Devuelve el parte de cómo quedó. **No falla por un perfil**: el único error
-/// que sale por el `Result` es el del material —no poder leer o escribir la CA
-/// local—, porque sin CA no hay nada que registrar en ninguna parte.
+/// Registra y renueva la CA local en los almacenes NSS indicados (ADR-0005).
 pub fn refresh_local_ca_trust(
     store: &LocalCaStore,
     profiles: &[PathBuf],
@@ -99,11 +95,7 @@ pub fn refresh_local_ca_trust(
         },
     );
 
-    // `saved` no puede ser `None` en las ramas que la usan: sin CA guardada la
-    // etapa es `Absent`, y ahí el trabajo es fabricar una.
     let serving = || saved.clone().expect("esa etapa sale de una CA guardada");
-    // Las CA locales que tienen que quedar de confianza al terminar. **La
-    // primera es la que sirve**, y en el solape son dos.
     let certificates: Vec<LocalCa> = match work {
         Work::Nothing => {
             return Ok(TrustOutcome {
@@ -114,32 +106,22 @@ pub fn refresh_local_ca_trust(
                 notice: PendingNotice::none(),
             })
         }
-        // La que ya hay, allí donde no esté.
         Work::InstallTheOneWeHave => vec![serving()],
-        // Sin nada que heredar: se fabrica, y cualquier siguiente que hubiera
-        // quedado colgando deja de tener turno.
         Work::MakeOneAndInstallIt => {
             let fresh = LocalCa::generate()?;
             store.write(&fresh)?;
             store.forget_next()?;
             vec![fresh]
         }
-        // **El solape empieza aquí**: la siguiente se guarda en su propia
-        // ranura y se instala, y la vigente **sigue sirviendo** —sigue siendo
-        // la que firma el certificado del servidor local— hasta que caduque.
         Work::MakeTheNextAndInstallItToo => {
             let next = LocalCa::generate()?;
             store.write_next(&next)?;
             vec![serving(), next]
         }
-        // El solape ya en marcha: las dos se registran, y la siguiente no se
-        // vuelve a fabricar.
         Work::InstallBothOfThem => vec![
             serving(),
             waiting.expect("esta rama sale de una siguiente esperando"),
         ],
-        // **El relevo**: la siguiente lleva meses instalada, así que pasa a
-        // servir sin que nadie tenga que reiniciar el navegador.
         Work::PromoteTheNextOne => vec![store
             .promote_next()?
             .expect("esta rama sale de una siguiente esperando")],
@@ -185,21 +167,11 @@ pub fn refresh_local_ca_trust(
     })
 }
 
-/// Cómo acabó un almacén concreto.
 enum Settled {
-    /// Ya tenía **todas** las CA locales que tocaban, con los bits puestos.
     AlreadyThere,
-    /// Al menos una ha entrado ahora.
     JustInstalled,
 }
 
-/// **El éxito de la escritura no es la señal**: se vuelve a leer.
-///
-/// El ADR-0005 lo deja escrito y tiene un caso concreto detrás: los bits de
-/// confianza son atributos autenticados, y en un perfil con contraseña maestra
-/// el certificado puede entrar con confianza `,,` **sin que nada falle**. Un
-/// éxito parcial silencioso contado como almacén instalado sería peor que un
-/// error: la sede fallaría después, y el parte diría que todo fue bien.
 fn settle(
     stores: &dyn TrustStores,
     profile: &Path,
@@ -218,8 +190,6 @@ fn settle(
     })
 }
 
-/// Deja una CA local de confianza en un almacén. Devuelve si ha hecho falta
-/// instalarla.
 fn settle_one(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<bool, TrustError> {
     if stores
         .trust_of(profile, der)?
@@ -251,11 +221,8 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
-    /// Un certificado registrado en el doble: su DER y con qué apodo entró.
     type Registered = (Vec<u8>, String);
 
-    /// Un doble de los almacenes NSS: recuerda qué le han metido a cada perfil
-    /// y **nunca borra nada**, que es la propiedad del solape.
     #[derive(Default)]
     struct Doubled {
         contents: Mutex<HashMap<PathBuf, Vec<Registered>>>,
@@ -399,8 +366,6 @@ mod tests {
         let (_directory, store) = a_store();
         let profiles = profiles();
         let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
-        // La CA vigente, ya registrada e instalada, a la que le queda un día:
-        // es lo que dispara el solape.
         let current = LocalCa::almost_expired_for_test().expect("deberia fabricarse");
         let current_der = der_of(&current);
         store.write(&current).expect("deberia guardarse");
@@ -539,8 +504,6 @@ mod tests {
         assert!(!outcome.notice.is_pending());
     }
 
-    /// Un `TrustOutcome` a medida para probar `narrate_startup_outcome` sin
-    /// pasar por `refresh_local_ca_trust` ni por ningún doble de almacenes.
     fn an_outcome(
         trusted: usize,
         missed: Vec<(PathBuf, TrustError)>,

@@ -86,13 +86,7 @@ impl From<SealMismatch> for CycleError {
     }
 }
 
-/// Cuántos bytes ocupa el `PK1` inventado de [`TokenSignature::invented`].
-///
-/// Son los de una firma RSA de 2048 bits, que es la de los certificados de
-/// firma que rFirma maneja. La longitud no cambia lo que se pinta —el hueco que
-/// el PAdES reserva para la firma se rellena igual—, así que aquí no hace falta
-/// leerle el módulo al certificado ni hacer criptografía RSA en Rust, que es
-/// justo lo que el proyecto delega en el token.
+/// Longitud en bytes para una firma sintética RSA de 2048 bits.
 const INVENTED_PKCS1_BYTES: usize = 256;
 
 /// Firma producida por el token PKCS#11.

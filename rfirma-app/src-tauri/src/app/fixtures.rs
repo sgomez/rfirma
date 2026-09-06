@@ -1,9 +1,4 @@
-//! Los andamios que comparten las pruebas de los casos de uso.
-//!
-//! Existe para no repetirlos en cuatro ficheros: un certificado del token, un
-//! registro de asas ya listadas, una orden de firma completa y una memoria
-//! sobre un directorio temporal. Es `#[cfg(test)]` entero, así que no llega al
-//! binario.
+//! Andamios y datos de prueba compartidos entre casos de uso.
 
 use std::path::Path;
 
@@ -12,15 +7,12 @@ use crate::memory::{ListedCertificates, Memory};
 use crate::paths::Paths;
 use crate::pkcs11::{CertificateRef, TokenCertificate};
 
-/// Un certificado del token con el DER que se le dé. Con basura dentro el
-/// estado sale `Unreadable`, que es justo lo que hace falta para probar la
-/// negativa sin fabricar un X.509.
+/// Construye un certificado de prueba con la etiqueta y DER proporcionados.
 pub(crate) fn a_certificate(label: &str, der: &[u8]) -> TokenCertificate {
     a_certificate_with_id(label, 0x01, der)
 }
 
-/// El mismo, con el `CKA_ID` a la vista: es lo único que distingue dos
-/// certificados que comparten etiqueta.
+/// Construye un certificado de prueba especificando su CKA_ID.
 pub(crate) fn a_certificate_with_id(label: &str, cka_id: u8, der: &[u8]) -> TokenCertificate {
     TokenCertificate::new(
         CertificateRef::new(
@@ -33,18 +25,7 @@ pub(crate) fn a_certificate_with_id(label: &str, cka_id: u8, der: &[u8]) -> Toke
     )
 }
 
-/// Un certificado **legible y en vigor**: un X.509 de verdad, bien formado y
-/// con fechas buenas, que es lo que `TokenCertificate::status`
-/// mira para darlo por utilizable.
-///
-/// El DER sale de la fábrica de la CA local ([`crate::tls`]) por no tener que
-/// versionar un certificado de nadie. **Ningún dato de una persona real entra
-/// en una prueba.**
-///
-/// **La clave no es RSA**: la CA local se genera sobre P-256 (ID-221), así que
-/// esto no pasa la puerta de `certificates::is_rsa` y no sirve para
-/// ejercitar nada que la exija. Lo que sostiene es el estado del certificado,
-/// no su clave.
+/// Construye un certificado X.509 válido generado con la CA local de pruebas.
 pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
     let ca = crate::tls::LocalCa::generate().expect("la CA local deberia generarse");
     let der = ca
@@ -54,7 +35,7 @@ pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
     a_certificate(label, &der)
 }
 
-/// Un registro con esos certificados ya listados, y sus asas.
+/// Inicializa un registro de certificados listados y devuelve sus identificadores.
 pub(crate) fn listed_from(certificates: &[TokenCertificate]) -> (ListedCertificates, Vec<String>) {
     let listed = ListedCertificates::new();
     let handles = listed.replace(
@@ -65,12 +46,12 @@ pub(crate) fn listed_from(certificates: &[TokenCertificate]) -> (ListedCertifica
     (listed, handles)
 }
 
-/// Una memoria cuyos dos ficheros cuelgan de un directorio temporal.
+/// Crea una memoria aislada bajo la ruta temporal indicada.
 pub(crate) fn a_memory(root: &Path) -> Memory {
     Memory::at(&Paths::under(root))
 }
 
-/// La orden de firma completa que sirve de punto de partida a las pruebas.
+/// Genera una orden de firma completa de partida para pruebas.
 pub(crate) fn an_order() -> SigningOrder {
     SigningOrder {
         document: "/run/user/1000/doc/1e8b83b9/contrato.pdf".to_owned(),
