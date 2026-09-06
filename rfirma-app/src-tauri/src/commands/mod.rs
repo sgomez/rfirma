@@ -1,95 +1,4 @@
-//! **Las órdenes de Tauri**: lo único que la ventana puede pedirle al backend.
-//!
-//! Son veintidós, y la lista es cerrada a propósito. Cada una rellena un puerto que
-//! la interfaz ya tenía declarado —`CertificateStore`, `Layer2Composer` y
-//! `SigningBackend` desde el #76, `DocumentPicker` y `PdfSource` desde el #82,
-//! `PreferencesStore` y `LanguagePreference` desde que hay dónde guardar,
-//! `RecentsStore` desde el #126, y `RubricPicker` desde el #128—,
-//! así que la ventana no aprende nada nuevo de Tauri: sigue hablando con los
-//! mismos puertos y es `main.tsx` quien elige estas implementaciones.
-//!
-//! # Una orden desempaqueta, llama y traduce. No decide nada
-//!
-//! Ese es el ID-79 y es lo único que hay en los cuerpos de abajo: sacar del
-//! `State` lo que ese caso de uso pide, llamarlo, y convertir lo que devuelve
-//! en un tipo de [`views`]. Quien decide está en [`crate::app`], y se prueba
-//! desde allí llamándolo por su nombre (TD-20). Si un cuerpo de aquí necesita
-//! una condición que no sea desempaquetar o traducir, esa condición pertenece a
-//! [`crate::app`] y este fichero se ha vuelto a estropear.
-//!
-//! El reparto del módulo:
-//!
-//! - [`views`], los tipos que cruzan a la ventana y las conversiones que los
-//!   producen; [`failure`], la mitad de eso que cuenta lo que ha salido mal;
-//!   [`rubric`], los mismos dos papeles pero solo para la rúbrica —aparte por
-//!   tamaño, no porque sea otra cosa.
-//! - [`orders`], lo que la ventana manda, ya deserializado.
-//! - `guards`, las cuatro pruebas que necesitan ver **todas** las órdenes a la
-//!   vez (ID-85). Solo existe en las pruebas.
-//!
-//! # Los ajustes se guardan al elegirlos, y en el disco
-//!
-//! [`read_configuration`] y [`write_configuration`] son las dos mitades del
-//! puerto `PreferencesStore`, y [`forget_activity`] es lo que promete «Recordar
-//! mi actividad» al apagarse. Las tres pasan por [`crate::memory::Memory`], que
-//! es el único sitio donde los dos interruptores no se pueden olvidar
-//! (ADR-0010).
-//!
-//! # El documento entra por el portal y se nombra con un identificador
-//!
-//! [`open_document`] abre el diálogo del sistema **desde Rust** (ID-63), apunta
-//! lo que el portal conceda en [`crate::memory::OpenedDocuments`] y devuelve un
-//! identificador opaco; [`read_document`] entrega sus bytes contra ese
-//! identificador. Ninguna de las dos devuelve una ruta.
-//!
-//! # La rúbrica se elige con su propio diálogo, y se copia
-//!
-//! [`choose_rubric`] abre el diálogo del sistema filtrado a imágenes, y
-//! adopta lo que el portal conceda en [`crate::rubric::RubricStore`] —se
-//! copia, no se referencia (ID-33)—. Cancelar y una imagen que no vale no son
-//! lo mismo: cancelar es `None`, una imagen inválida es
-//! `Some(RubricChoiceView::refused(..))`, porque el frontal la cuenta con el
-//! panel de firma todavía abierto y no como un fallo que reviente la promesa.
-//! [`read_rubric`] es la otra mitad: lee lo que un `choose_rubric` de una
-//! sesión anterior dejó adoptado, para que la ventana la encuentre puesta al
-//! arrancar.
-//!
-//! # El destino se enseña antes de firmar, y se elige con un selector de directorio
-//!
-//! [`preview_destination`] contesta lo que el pie del panel enseña: la carpeta
-//! y el **nombre** con el que el documento va a caer, más si esa carpeta se
-//! puede escribir —de [`crate::destination::CheckedFolder::check`], nunca de un
-//! literal (ID-67)—. [`choose_destination`] abre el selector de directorio del
-//! sistema y guarda lo que conceda: es un desplegable menos, y un control que
-//! fingía elegir menos (ID-65).
-//!
-//! # Y hay un camino más, que no es una orden
-//!
-//! Soltar un fichero en la ventana desemboca en el mismo sitio, pero **al
-//! revés**: no lo pide la ventana, le ocurre. Por eso [`dropped_document`] no
-//! es una orden más sino lo que alimenta el evento [`DOCUMENT_DROPPED`],
-//! que `lib.rs` emite desde el manejador del arrastre nativo (ID-67).
-//!
-//! # La bandeja está en el disco y cada fila recuerda su recuadro
-//!
-//! [`list_recents`], [`record_recent`] y [`forget_recent`] son tres cuartos del
-//! puerto `RecentsStore`; el cuarto, «Vaciar la lista», ya era
-//! [`forget_activity`] y no se duplica. Lo que cruza en las tres es el
-//! **identificador opaco** (ID-62): la deduplicación de la bandeja sigue siendo
-//! por la ruta canónica que solo Rust conoce (ID-75). La insignia `Firmado` no
-//! la escribe ninguna de ellas —solo [`finish_signing`], ID-76—.
-//!
-//! # El recorrido está partido en tres porque el PIN va en medio
-//!
-//! [`begin_signing`] → [`sign_with_pin`] → [`finish_signing`]. El porqué está
-//! en [`crate::app::signing`], que es quien lo hace.
-//!
-//! # Y hay un cuarto paso que no firma: la vista previa
-//!
-//! [`preview_signature`] recorre el mismo ciclo con un `PK1` inventado y
-//! devuelve el PDF compuesto, sin PIN y sin escribir nada (ID-136). Lo que la
-//! ventana pinta dentro del recuadro es entonces **el sello**, no un dibujo
-//! parecido.
+//! Las órdenes de Tauri: lo único que la ventana puede pedir. No deciden nada.
 
 pub mod failure;
 pub mod orders;
@@ -127,11 +36,7 @@ pub use views_site::{
     SiteOutcomeView, SiteStageView,
 };
 
-/// **Orden 1.** Los certificados de los tokens conectados.
-///
-/// No pide el PIN: los certificados son objetos públicos y su estado se decide
-/// leyendo el DER. Pedir el secreto que desbloquea la clave para luego decir
-/// que el certificado caducó es hacerlo teclear para nada.
+/// Certificados de los tokens conectados.
 #[tauri::command]
 pub fn list_certificates(
     environment: State<'_, Environment>,
@@ -144,10 +49,7 @@ pub fn list_certificates(
     )
 }
 
-/// **Orden 2.** Prefirma: cruza la frontera y deja el ciclo abierto.
-///
-/// Devuelve **cómo hay que pedirle el secreto al almacén** (ID-189): sin sesión
-/// no hay diálogo que abrir, y con ella la ventana sabe que toca pedirlo.
+/// Prefirma: cruza la frontera y deja el ciclo abierto.
 #[tauri::command]
 pub fn begin_signing(
     order: SigningOrder,
@@ -167,16 +69,13 @@ pub fn begin_signing(
     .map(SecretView::from)
 }
 
-/// **Orden 3.** Firma en el token, con el PIN que se acaba de teclear.
-///
-/// El PIN entra por aquí y no se guarda en ningún sitio: ni en la sesión, ni en
-/// el registro, ni de vuelta a la ventana (ADR-0001).
+/// Firma en el token con la clave privada (ADR-0001).
 #[tauri::command]
 pub fn sign_with_pin(pin: String, session: State<'_, SigningSession>) -> Result<(), Failure> {
     app::signing::sign_on_token(&session, &pin)
 }
 
-/// **Orden 4.** Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
+/// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
 #[tauri::command]
 pub fn finish_signing(
     environment: State<'_, Environment>,
@@ -192,26 +91,13 @@ pub fn finish_signing(
     )
 }
 
-/// **Orden 5.** Cancelar: se olvida el ciclo a medias.
+/// Cancela el ciclo de firma a medias.
 #[tauri::command]
 pub fn cancel_signing(session: State<'_, SigningSession>) {
     app::signing::cancel(&session);
 }
 
-/// **Orden 6.** Abre el diálogo del sistema y apunta lo que el portal conceda.
-///
-/// El diálogo se abre **desde aquí y no desde el frontal** (ID-63): así la
-/// ventana sigue con un solo fichero que conoce `invoke`, y la lista de
-/// permisos de `capabilities/default.json` no crece, porque los permisos de
-/// Tauri v2 vigilan lo que la ventana puede pedir y no lo que Rust hace.
-/// Filtra por PDF porque es lo único que la aplicación sabe firmar (ID-64).
-///
-/// Cerrar el diálogo sin elegir nada devuelve `None`, que **no es un fallo**:
-/// es lo que deja el documento activo, la lista y el visor como estaban
-/// (ID-73).
-///
-/// El diálogo se abre en la última carpeta usada, y donde esa no se puede
-/// saber, en la de destino: ver [`crate::app::documents::starting_folder`].
+/// Abre el diálogo del sistema y apunta lo que el portal conceda.
 #[tauri::command(async)]
 pub fn open_document(
     app_handle: tauri::AppHandle,
@@ -243,13 +129,7 @@ pub fn open_document(
     )))
 }
 
-/// **Orden 7.** Los bytes del documento abierto, **como bytes** (ID-66).
-///
-/// Devuelve una [`tauri::ipc::Response`] y no un `Vec<u8>`: serializado a JSON,
-/// un PDF de unos pocos megabytes se convierte en un array de miles de números
-/// y multiplica el tamaño y el tiempo. Esta es la respuesta binaria que el
-/// puente de Tauri ofrece justo para esto, y al otro lado llega un
-/// `ArrayBuffer` que `pdf.js` abre sin nada en medio.
+/// Los bytes del documento abierto.
 #[tauri::command(async)]
 pub fn read_document(
     id: String,
@@ -260,17 +140,13 @@ pub fn read_document(
     )?))
 }
 
-/// **Orden 8.** Lo que hay guardado, para pintar Preferencias al abrir.
-///
-/// Lee de la copia viva y no del disco: el fichero se leyó una vez al arrancar
-/// (`lib.rs`), y volver a leerlo aquí abriría la puerta a que la ventana y las
-/// órdenes de firma vieran configuraciones distintas.
+/// Configuración guardada para la ventana de preferencias.
 #[tauri::command]
 pub fn read_configuration(environment: State<'_, Environment>) -> ConfigurationView {
     app::configuration::shown(&environment.configuration(), &environment.documents_folder)
 }
 
-/// **Orden 9.** Guarda lo que el usuario acaba de elegir.
+/// Guarda la configuración elegida por el usuario.
 #[tauri::command(async)]
 pub fn write_configuration(
     configuration: ConfigurationView,
@@ -283,11 +159,7 @@ pub fn write_configuration(
     )
 }
 
-/// **Orden 10.** Olvida lo acumulado: los recientes y el certificado.
-///
-/// Es «Vaciar la lista» y también lo que arrastra apagar «Recordar mi
-/// actividad» (ID-34): las dos son la misma promesa y por eso son la misma
-/// orden.
+/// Olvida los documentos recientes y el certificado usado.
 #[tauri::command(async)]
 pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failure> {
     app::configuration::forget_activity(&environment.memory)
@@ -295,12 +167,7 @@ pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failur
 
 /// **Orden 11.** La bandeja entera, la más reciente primero.
 ///
-/// `available` se **recalcula aquí** contra el disco de ahora mismo y no se
-/// persiste nunca: una ruta que no responde sale con `available: false` —la
-/// ventana la pinta `No disponible`— y la fila **revive** cuando la ruta
-/// reaparece. Nadie la purga por su cuenta.
-///
-/// No abre ni un PDF: la fila se pinta con lo cacheado (ADR-0010).
+/// Bandeja de documentos recientes (ADR-0010).
 #[tauri::command(async)]
 pub fn list_recents(
     environment: State<'_, Environment>,
@@ -309,12 +176,7 @@ pub fn list_recents(
     app::recents::listed_rows(&environment.memory, &opened)
 }
 
-/// **Orden 12.** Anota en la bandeja el documento abierto, y dónde cayó su
-/// recuadro.
-///
-/// Devuelve la fila ya lista para pintar porque es donde la ventana recupera lo
-/// que ya se sabía del documento: su insignia cacheada y su recuadro. El
-/// recuadro entra entero y se guarda partido (ID-74).
+/// Anota en la bandeja el documento abierto y su recuadro.
 #[tauri::command(async)]
 pub fn record_recent(
     id: String,
@@ -331,10 +193,7 @@ pub fn record_recent(
     )
 }
 
-/// **Orden 13.** Quita una fila de la bandeja.
-///
-/// Es lo único que saca una fila. Vaciar la lista entera es
-/// [`forget_activity`], que además se lleva el certificado.
+/// Quita una fila de la bandeja de recientes.
 #[tauri::command(async)]
 pub fn forget_recent(
     id: String,
@@ -349,21 +208,7 @@ pub fn forget_recent(
     )
 }
 
-/// **Orden 14.** Abre el diálogo del portal y adopta la imagen elegida como
-/// rúbrica.
-///
-/// Filtra por PNG y JPEG, que es lo único que
-/// [`crate::rubric::normalize`] admite. Se abre **desde aquí y no desde el
-/// frontal**, por la misma razón que [`open_document`] (ID-63): la ventana
-/// sigue sin pedir el permiso del diálogo.
-///
-/// Cerrar el diálogo sin elegir nada devuelve `None`, y **no es un fallo**: es
-/// lo que deja la rúbrica ya elegida como estaba (ID-73). Una imagen que no
-/// vale —no es PNG ni JPEG, está dañada, pasa del tope— tampoco es un fallo
-/// que reviente la promesa: viaja como `RubricChoiceView::refused`, con el
-/// panel de firma todavía abierto (ADR-0010), porque es justo lo que
-/// [`crate::signing::rubric::RubricPicker`] del frontal espera encontrar en su
-/// `RubricChoice`.
+/// Abre el diálogo del portal y adopta la imagen elegida como rúbrica (ADR-0012).
 #[tauri::command(async)]
 pub fn choose_rubric(
     app_handle: tauri::AppHandle,
@@ -382,30 +227,14 @@ pub fn choose_rubric(
     })
 }
 
-/// **Orden 15.** La rúbrica ya adoptada, si la hay, para que una sesión nueva
-/// la encuentre puesta (ID-33).
-///
-/// El JPEG sobrevive en [`crate::rubric::RubricStore`] aunque se cierre la
-/// aplicación; sin esta orden nadie lo leía nunca en producción y «Tu
-/// rúbrica» arrancaba siempre apagada. Se llama una vez, al montar. Es
-/// `(async)` como [`list_recents`]: lee del disco, y no de la copia viva que
-/// [`read_configuration`] sí tiene a mano.
+/// La rúbrica adoptada si la hay (ADR-0012).
 #[tauri::command(async)]
 pub fn read_rubric(environment: State<'_, Environment>) -> Result<Option<RubricView>, Failure> {
     let stored = app::rubric::stored(&environment.rubric)?;
     Ok(stored.map(|bytes| RubricView::from_bytes(&bytes)))
 }
 
-/// **Orden 16.** Dónde va a caer el documento que hay delante, **antes** de
-/// firmarlo.
-///
-/// Es lo que el pie del panel enseña: la carpeta y el nombre, los dos por su
-/// nombre (ID-63). Escribe nada y **no crea la carpeta**; que no esté o no se
-/// deje escribir viaja como un destino no escribible y no como un fallo, porque
-/// el botón de firmar sigue vivo y lo que se ofrece es `Cambiar` (ID-67).
-///
-/// Es `(async)` como [`list_recents`]: mira el disco —la carpeta y sus
-/// homónimos— y no la copia viva.
+/// Destino previsto para el documento antes de firmar.
 #[tauri::command(async)]
 pub fn preview_destination(
     id: String,
@@ -420,19 +249,7 @@ pub fn preview_destination(
     ))
 }
 
-/// **Orden 17.** Abre el selector de directorio del sistema y guarda la carpeta
-/// de destino que conceda.
-///
-/// Sustituye al desplegable que recibía una sola opción, que es un control que
-/// fingía elegir (ID-65). Se abre **desde aquí y no desde el frontal**, por la
-/// misma razón que [`open_document`] (ID-63), y lo que vuelve es el **último
-/// segmento** de lo concedido: un directorio del portal llega como
-/// `/run/user/1000/doc/<id>/Documentos`, cuyo último segmento es el nombre de la
-/// carpeta, así que la ventana enseña lo mismo conozcamos la ruta real o no
-/// (ADR-0011).
-///
-/// Cerrar el diálogo sin elegir devuelve `None`, y **no es un fallo**: deja la
-/// carpeta que hubiera.
+/// Abre el selector de directorio y guarda la carpeta de destino elegida (ADR-0011).
 #[tauri::command(async)]
 pub fn choose_destination(
     app_handle: tauri::AppHandle,
@@ -454,18 +271,7 @@ pub fn choose_destination(
     .map(Some)
 }
 
-/// **Orden 18.** Abre el PDF firmado con el visor del sistema.
-///
-/// Bajo el sandbox esto **no es comodidad**: la ventana nunca conoce la ruta
-/// del fichero (ADR-0011) y el usuario tampoco la ve, así que este botón y el
-/// siguiente son la única forma que tiene de llegar a lo que acaba de firmar
-/// (ID-79).
-///
-/// Por eso la orden **no recibe ninguna ruta**: la que se abre es la del
-/// último documento entregado, que guarda la sesión de firma. Lo que la
-/// ventana no tiene no lo puede pedir mal.
-///
-/// Debajo es el portal `OpenURI`, que fuera del sandbox cae en `xdg-open`.
+/// Abre el PDF firmado con el visor del sistema (ADR-0011).
 #[tauri::command(async)]
 pub fn open_signed_document(
     app_handle: tauri::AppHandle,
@@ -480,15 +286,7 @@ pub fn open_signed_document(
         .map_err(|error| Failure::new("unknown", error.to_string()))
 }
 
-/// **Orden 19.** Abre la carpeta donde quedó el PDF firmado.
-///
-/// La carpeta es la del fichero del resumen y no la de destino leída otra vez:
-/// si el usuario la ha cambiado desde que firmó, abrir la nueva le enseñaría un
-/// directorio donde su documento no está.
-///
-/// El mismo portal que [`open_signed_document`], con el directorio en vez del
-/// fichero: el gestor de archivos lo abre y el usuario ve dentro lo que acaba
-/// de firmar, junto a las firmas anteriores que **siguen ahí** (ID-81).
+/// Abre la carpeta donde quedó el PDF firmado (ADR-0011).
 #[tauri::command(async)]
 pub fn open_signed_folder(
     app_handle: tauri::AppHandle,
@@ -503,20 +301,7 @@ pub fn open_signed_folder(
         .map_err(|error| Failure::new("unknown", error.to_string()))
 }
 
-/// **Orden 20.** El PDF con el sello que va a quedar, compuesto sin firmar
-/// (ID-136).
-///
-/// La **prefirma en seco**: el ciclo trifásico entero con un `PK1` inventado,
-/// para que la ventana pinte dentro del recuadro lo que va a quedar de verdad y
-/// no una aproximación dibujada. **No pide PIN** y **no toca el disco de
-/// destino**; el porqué de las dos está en [`crate::app::preview`].
-///
-/// Devuelve una [`tauri::ipc::Response`] por lo mismo que [`read_document`]: un
-/// PDF serializado a JSON es un array de miles de números.
-///
-/// Es `(async)` porque el trabajo se va al hilo del isolate y la espera es de
-/// segundos en un documento grande —≈1,9 s en un escaneado de 37 MB—: en el
-/// hilo del bucle de eventos eso es la ventana clavada.
+/// Previsualización de la firma sobre el PDF sin firmar ni pedir PIN.
 #[tauri::command(async)]
 pub fn preview_signature(
     order: SigningOrder,
@@ -533,32 +318,14 @@ pub fn preview_signature(
     )?))
 }
 
-/// **Orden 21.** La esquina inferior izquierda del recuadro, en puntos PAdES
-/// (ID-105).
-///
-/// `correctPositionSignature` (`PdfUtil.java:607-632`) descarta en silencio,
-/// antes de firmar, cualquier página del conjunto donde esta esquina no cabe
-/// — comparada contra el ancho y el alto de **cada** página. El diálogo de
-/// páginas sin sello anticipa esa guardia, pero la conversión de espacio de
-/// usuario a puntos PAdES (`T⁻¹` de la `/Rotate`, `signing::placement`) no
-/// tiene copia en TypeScript: la pide aquí, en vez de recalcularla del lado
-/// de la ventana.
+/// Esquina inferior izquierda del recuadro en puntos PAdES.
 #[tauri::command]
 pub fn pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure> {
     let placement = placement.placement()?;
     Ok([placement.rect.lower_left_x, placement.rect.lower_left_y])
 }
 
-/// **Orden 22.** El documento con el que se invocó a la aplicación, si vino con
-/// alguno (ID-157).
-///
-/// La pide la ventana una sola vez, al montarse, y lo que devuelve es lo mismo
-/// que emite un arrastre: la invocación termina en la ventana completa, en el
-/// estado en que la deja arrastrar un PDF (ID-159).
-///
-/// Es una orden y no un evento —al revés que [`DOCUMENT_DROPPED`]— porque el
-/// documento se conoce **antes** de que haya nadie escuchando: emitirlo al
-/// arrancar sería emitirlo al vacío. Se consume al leerla.
+/// Documento con el que se invocó la aplicación si lo hubo.
 #[tauri::command]
 pub fn read_invocation(
     pending: State<'_, PendingInvocation>,
@@ -568,23 +335,7 @@ pub fn read_invocation(
     app::invocation::invoked_document(&invocation, &opened)
 }
 
-/// **Orden 23.** Si hay publicada una versión más nueva que esta, cuál es.
-///
-/// La pide la ventana al montarse y con eso pinta la franja (ID-181). No hay
-/// nada que descargar ni que instalar (ID-177): lo que devuelve es un número.
-///
-/// `None` es el silencio del ID-180, y cubre las tres formas de no tener nada
-/// que decir: no hay versión nueva, no hay red, o GitHub contestó algo que no
-/// se entiende. **Ninguna es un [`Failure`]**: nadie ha pedido esta consulta,
-/// así que nada de lo que le pase merece un aviso.
-///
-/// `(async)` no es decorativo: el puerto abre una conexión, y en el hilo del
-/// bucle de eventos eso sería la ventana clavada hasta que GitHub conteste.
-///
-/// El puerto se le pasa aquí —[`crate::releases::latest_release`]— igual que el
-/// entorno se le pasa a [`crate::paths`]: el caso de uso no sabe de dónde sale
-/// la cadena, y por eso las pruebas lo doblan sin abrir un socket (ID-182,
-/// TD-39).
+/// Comprueba si hay una versión nueva publicada.
 #[tauri::command(async)]
 pub fn check_for_new_version(environment: State<'_, Environment>) -> Option<NewVersionView> {
     let announced = app::version::new_version(
@@ -599,19 +350,7 @@ pub fn check_for_new_version(environment: State<'_, Environment>) -> Option<NewV
     })
 }
 
-/// **Orden 24.** Instala un `.p12` como almacén propio de rfirma (ID-192).
-///
-/// Abre el diálogo del portal filtrado a `.p12` y `.pfx` —**desde aquí y no
-/// desde el frontal**, por lo mismo que [`choose_rubric`] (ID-63)— y mete lo
-/// que traiga dentro en un almacén NSS nuevo. `password` es la contraseña
-/// **del fichero**, que es lo único que hace falta para abrirlo y lo único que
-/// la ventana pide: del fichero no se recuerda nada, ni la ruta ni una copia
-/// (ID-196), así que la ventana no lo nombra ni antes ni después.
-///
-/// Devuelve `false` cuando el diálogo se cerró sin elegir nada, que **no es un
-/// fallo**: es lo que deja la lista de instalados como estaba. Un fichero que
-/// no se puede abrir —contraseña que no es la suya— o que trae una clave que no
-/// es RSA (ID-197) sí es un [`Failure`], y entonces no queda instalado nada.
+/// Instala un fichero PKCS#12 en un almacén propio.
 #[tauri::command(async)]
 pub fn install_certificate(
     app_handle: tauri::AppHandle,
@@ -632,11 +371,7 @@ pub fn install_certificate(
         .map(|()| true)
 }
 
-/// **Orden 25.** Quita un `.p12` instalado, por el asa de su fila.
-///
-/// Lo que se borra es el almacén entero, que es lo único que quedó del fichero.
-/// Un asa que no sea de un `.p12` instalado —la de un certificado del perfil de
-/// Firefox— se rechaza sin tocar nada.
+/// Desinstala un certificado PKCS#12 previamente instalado.
 #[tauri::command(async)]
 pub fn remove_certificate(id: String, environment: State<'_, Environment>) -> Result<(), Failure> {
     app::certificates::remove_installed(
@@ -646,15 +381,7 @@ pub fn remove_certificate(id: String, environment: State<'_, Environment>) -> Re
     )
 }
 
-/// **Orden 26.** Quién atiende los enlaces `afirma://`, para pintar
-/// Preferencias y decidir si sale el banner (ID-238, ID-239, ID-240).
-///
-/// Dentro del flatpak contesta `available: false` sin llamar a nada, y esa es
-/// toda la respuesta: la frase fija que se enseña entonces es de la ventana.
-///
-/// Sin `$HOME` ni `$XDG_CONFIG_HOME` no hay `mimeapps.list` que leer, y eso no
-/// es un fallo que merezca un aviso: se contesta que no se sabe quién atiende,
-/// igual que cuando el fichero no existe todavía.
+/// Manejadores registrados para el esquema afirma:// en el escritorio (ADR-0015).
 #[tauri::command(async)]
 pub fn url_handlers() -> UrlHandlersView {
     let channel = crate::desktop::Channel::detected();
@@ -662,16 +389,10 @@ pub fn url_handlers() -> UrlHandlersView {
     app::handlers::who_handles(channel, &list)
 }
 
-/// **Orden 27.** Deja apuntado quién atiende los enlaces `afirma://` (ID-238).
-///
-/// `handler` es uno de los ficheros `.desktop` que dio la orden anterior: aquí
-/// no se cablea ningún nombre de aplicación, ni el de rFirma.
+/// Establece el manejador preferido para el esquema afirma:// (ADR-0015).
 #[tauri::command(async)]
 pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
     let channel = crate::desktop::Channel::detected();
-    // La clave del catálogo la nombra `situation_name`, que es quien ata esta
-    // situación con la que trae `From<DesktopError>`: cablearla aquí serían dos
-    // sitios diciendo lo mismo sin nada que los obligue.
     let list = crate::desktop::choice::mimeapps_list_from_environment().map_err(|error| {
         Failure::new(
             app::handlers::situation_name(crate::desktop::error::Situation::TheListIsNotWritable),
@@ -681,14 +402,7 @@ pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
     app::handlers::chosen(channel, &list, &handler)
 }
 
-/// **Orden 28.** Si el documento abierto trae **firmas que rFirma no sabe
-/// leer** (ID-297, ID-300).
-///
-/// La ventana la llama justo antes de firmar, y con un `true` enseña el aviso y
-/// pide permiso: sin ese permiso la orden de firma no lleva
-/// `allowCosigningUnregisteredSignatures` y el puente aborta la cofirma
-/// (ID-301). No dice cuántas firmas hay ni de quién son, y no las valida
-/// (ID-305): la pregunta es de sí o no.
+/// Comprueba si el documento contiene firmas previas no registradas.
 #[tauri::command(async)]
 pub fn unregistered_signatures(
     document: String,
@@ -697,22 +411,7 @@ pub fn unregistered_signatures(
     app::signing::unregistered_signatures_in(&opened, &document)
 }
 
-/// **Orden 29.** Cierra la ventana de sede. La sede ya tiene su respuesta.
-///
-/// Es `async` como todas las órdenes del trámite (ID-337): una orden sobre una
-/// `fn` que no lo es corre en el hilo del bucle de eventos, y ahí cerrar la
-/// ventana desde dentro de su propio manejador de IPC es pedirle al bucle que
-/// se espere a sí mismo.
-///
-/// Cierra **la ventana de la etiqueta [`SITE_WINDOW`]**, y no la que pregunta:
-/// hoy sólo la invoca `sede.html`, pero el nombre de la orden promete la de
-/// sede y es la que cierra. Que no exista es una respuesta válida —cerrar dos
-/// veces es lo mismo que cerrar una—.
-///
-/// No devuelve nada: cerrar la ventana que está preguntando no deja a nadie a
-/// quien contarle que no se ha podido. El trámite **no termina aquí** —termina
-/// al contestarle a la sede (ID-275)—, así que esto no toca
-/// [`crate::app::errand::LiveErrand`].
+/// Cierra la ventana del trámite de sede.
 #[tauri::command(async)]
 pub fn close_site_window(app: tauri::AppHandle) {
     use tauri::Manager as _;
@@ -722,15 +421,7 @@ pub fn close_site_window(app: tauri::AppHandle) {
     }
 }
 
-/// **Orden 30.** La persona se identifica ante la sede con uno de los
-/// certificados que tenía delante (ID-276).
-///
-/// El certificado sale al cable **desde el caso de uso** (ID-322), y lo que
-/// vuelve a la ventana es sólo el desenlace: el trámite ya terminó para la
-/// sede, que no espera a que nadie cierre nada (ID-275). Qué se consintió lo
-/// sabe el trámite, no esta orden.
-///
-/// Es `async` como todas las órdenes del trámite (ID-337).
+/// Identifica a la persona ante la sede con el certificado elegido.
 #[tauri::command(async)]
 pub fn site_identify(certificate: String, app_handle: tauri::AppHandle) -> Result<(), Failure> {
     site_window::with_the_desk(&app_handle, |desk, live| {
@@ -739,32 +430,13 @@ pub fn site_identify(certificate: String, app_handle: tauri::AppHandle) -> Resul
     .map(|_| ())
 }
 
-/// **Orden 31.** La persona dice que no: la sede recibe `CANCEL` en el acto
-/// (ID-293, ID-275).
-///
-/// Contestada la sede, ya no queda asa: cancelar dos veces —o cerrar la ventana
-/// después de haber contestado— no escribe nada (ID-340).
-///
-/// Es `async` como todas las órdenes del trámite (ID-337).
+/// Cancela el trámite ante la sede.
 #[tauri::command(async)]
 pub fn site_decline(live: State<'_, app::errand::LiveErrand>) {
     app::errand::decline(&live);
 }
 
-/// **Orden 32.** La persona ha consentido firmar, y elige con qué certificado
-/// (ID-272).
-///
-/// Es [`begin_signing`] del trámite de sede, y de la ventana llega **sólo el
-/// asa del certificado**: el documento, el filtro y la política que declaró la
-/// sede los tiene el trámite, porque hacerlos cumplir no es cosa de la ventana
-/// (ID-259, ID-266).
-///
-/// Devuelve cómo hay que pedirle el secreto al almacén, igual que su gemela
-/// local: el PIN entra después por [`sign_with_pin`], que es la misma orden
-/// para los dos recorridos porque la fase que toca la clave privada no sabe de
-/// sedes (ADR-0001).
-///
-/// Es `async` como todas las órdenes del trámite (ID-337).
+/// Inicia la firma del trámite de sede con el certificado elegido (ADR-0001).
 #[tauri::command(async)]
 pub fn site_begin_signing(
     certificate: String,
@@ -781,36 +453,13 @@ pub fn site_begin_signing(
     }
 }
 
-/// **Orden 33.** Postfirma del trámite de sede: la sede recibe el certificado y
-/// el PDF firmado, y con eso el trámite termina (ID-275).
-///
-/// **No devuelve el documento**, y esa ausencia es la decisión: el firmado de
-/// una sede no cae en ninguna carpeta, no anota fila en la bandeja y no cambia
-/// el certificado recordado (ID-264, ID-286). Lo que la ventana enseña después
-/// es un desenlace, no un fichero.
-///
-/// Es `async` como todas las órdenes del trámite (ID-337).
+/// Postfirma del trámite de sede y entrega del resultado a la sede.
 #[tauri::command(async)]
 pub fn site_finish_signing(app_handle: tauri::AppHandle) -> Result<(), Failure> {
     site_window::with_the_desk(&app_handle, app::errand::finish)
 }
 
-/// **Orden 34.** Lleva a instalar un certificado desde la ventana de sede
-/// (ID-278, ID-341).
-///
-/// Es el arreglo de «no tienes ninguno», y por eso es la acción principal de
-/// esa pantalla. Abre el mismo diálogo del portal que [`install_certificate`] y
-/// mete el `.p12` en un almacén propio: **la instalación es una sola**, y ésta
-/// existe para que la ventana de sede no tenga que conocer la contraseña de la
-/// ventana principal ni al revés.
-///
-/// Devuelve `false` cuando el diálogo se cerró sin elegir nada, que no es un
-/// fallo: es lo que deja el almacén como estaba, y la pantalla igual.
-///
-/// Es `async` como todas las órdenes del trámite (ID-337), y aquí además es
-/// obligatorio: dentro llama al `blocking_pick_file` del complemento de
-/// diálogo, que en el hilo del bucle de eventos se cuelga para siempre y sin
-/// error visible.
+/// Abre el diálogo para instalar un certificado desde la ventana de sede.
 #[tauri::command(async)]
 pub fn site_install_certificate(
     app_handle: tauri::AppHandle,
@@ -820,14 +469,7 @@ pub fn site_install_certificate(
     install_certificate(app_handle, environment, password)
 }
 
-/// **Orden 35.** Vuelve a mirar el almacén, por si se instaló un certificado
-/// con la ventana abierta (ID-278, ID-341).
-///
-/// **Continúa el trámite, no lo reinicia**: quien lo decide es
-/// [`crate::app::errand::look_again`], con la petición que el trámite tiene
-/// apuntada, el mismo canal, la misma asa y el mismo trámite vivo.
-///
-/// Es `async` como todas las órdenes del trámite (ID-337).
+/// Vuelve a consultar los certificados disponibles en el trámite de sede.
 #[tauri::command(async)]
 pub fn site_look_again(app_handle: tauri::AppHandle) {
     let looked = site_window::with_the_desk(&app_handle, |desk, live| {
@@ -836,15 +478,7 @@ pub fn site_look_again(app_handle: tauri::AppHandle) {
     site_window::publish_what_moved(&app_handle, looked);
 }
 
-/// **Orden 36.** Instala la CA local en los almacenes NSS de la persona
-/// (ID-329, ID-341).
-///
-/// Qué se instala, con qué momento y en qué queda la pantalla de reparación lo
-/// decide [`crate::app::startup::repair_the_local_ca`]; aquí se desempaqueta
-/// el estado y se publica lo que dejó apuntado, por el mismo evento que todo lo
-/// demás (ID-338).
-///
-/// Es `async` como todas las órdenes del trámite (ID-337).
+/// Instala la CA local en los almacenes NSS del usuario (ADR-0005).
 #[tauri::command(async)]
 pub fn install_local_ca(
     app_handle: tauri::AppHandle,
@@ -856,36 +490,19 @@ pub fn install_local_ca(
     site_window::publish_the_moment(&app_handle);
 }
 
-/// **Orden 37.** En qué momento está el trámite de sede, para la ventana que
-/// acaba de montarse (ID-338).
-///
-/// La pide la ventana de sede una sola vez, al montarse, y es una **orden y no
-/// un evento** por lo mismo que [`read_invocation`]: el primer momento se
-/// conoce antes de que haya nadie escuchando, así que emitirlo sería emitirlo
-/// al vacío. De ahí en adelante manda el evento [`SITE_ERRAND`].
-///
-/// `None` es la respuesta normal de una ventana que no es de sede.
+/// Consulta el momento actual del trámite de sede.
 #[tauri::command]
 pub fn read_site_errand(live: State<'_, app::errand::LiveErrand>) -> Option<SiteErrandView> {
     live.moment().as_ref().map(SiteErrandView::from)
 }
 
-/// El nombre del evento con el que la ventana se entera de un arrastre.
-///
-/// Es un **evento** y no una orden más a propósito: el arrastre no lo
-/// pide la ventana, le ocurre. En Tauri v2 el arrastre y la soltura del WebView
-/// vienen desactivados por omisión a favor del evento nativo (ID-67), así que
-/// un manejador de soltura en el JSX no se dispararía nunca; lo que hay debajo
-/// es esto, y al otro lado lo recoge el puerto `DocumentDrops`.
+/// Nombre del evento emitido cuando se suelta un documento en la ventana.
 pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
 #[cfg(test)]
 mod tests {
     use super::{pades_lower_left, PlacementOrder};
 
-    /// El mismo ejemplo numérico del hallazgo: con `/Rotate 0` la esquina
-    /// PAdES coincide con la de espacio de usuario, que es el único caso que
-    /// cubrían las pruebas de `unsealedPages.test.ts` antes de este cambio.
     #[test]
     fn matches_user_space_when_the_page_is_not_rotated() {
         let placement: PlacementOrder = serde_json::from_value(serde_json::json!({
@@ -904,9 +521,6 @@ mod tests {
         );
     }
 
-    /// Con `/Rotate 90` la esquina PAdES **no** coincide con la de espacio de
-    /// usuario: es el caso que el hallazgo señala como el que hacía que el
-    /// diálogo avisara de páginas que no se caían, o al revés.
     #[test]
     fn diverges_from_user_space_when_the_page_is_rotated() {
         let placement: PlacementOrder = serde_json::from_value(serde_json::json!({
