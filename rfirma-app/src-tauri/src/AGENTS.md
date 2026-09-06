@@ -60,7 +60,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 394 | Los ajustes, del disco a la ventana y de vuelta. |
-| `app/trust.rs` | 564 | **La CA local en los almacenes NSS**: cuándo se instala, el solape —con la vigente **sirviendo** hasta que caduca— y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
+| `app/trust.rs` | 702 | **La CA local en los almacenes NSS**: cuándo se instala, el solape —con la vigente **sirviendo** hasta que caduca— y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
 | `app/site.rs` | 360 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí, y con un trámite vivo la segunda invocación se rechaza (ID-280). |
 | `app/handlers.rs` | 157 | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta: lo que se puede saber, lo que se escribe y el nombre de catálogo de cada situación (ID-238…ID-240). |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |

@@ -247,7 +247,7 @@ fn refresh_local_ca_trust_at_startup(paths: &paths::Paths) {
         .unwrap_or_default();
     let stores = trust::NssTrustStores;
 
-    let mut outcome = match app::trust::refresh_local_ca_trust(
+    let outcome = match app::trust::refresh_local_ca_trust(
         &store,
         &profiles,
         &stores,
@@ -263,27 +263,10 @@ fn refresh_local_ca_trust_at_startup(paths: &paths::Paths) {
         }
     };
 
-    if outcome.nowhere() {
-        eprintln!(
-            "rfirma: no se ha encontrado ningún almacén NSS; ninguna sede va \
-             a poder abrir el canal local"
-        );
-    }
-
-    if outcome.notice.when_the_errand_ends().is_some() {
-        eprintln!("rfirma: se ha instalado la CA local; reinicia el navegador");
-    }
-
-    if !outcome.missed.is_empty() {
-        let detalle = outcome
-            .missed
-            .iter()
-            .map(|(profile, error)| format!("{} ({error})", profile.display()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        eprintln!(
-            "rfirma: la CA local no ha entrado en {} almacén(es) NSS: {detalle}",
-            outcome.missed.len()
-        );
+    // Qué decir es una regla y vive en `app::trust`, probada allí sin
+    // arrancar Tauri; aquí solo se imprime lo que decide (ver hilo del
+    // #397).
+    for line in app::trust::narrate_startup_outcome(outcome, &profiles) {
+        eprintln!("{line}");
     }
 }
