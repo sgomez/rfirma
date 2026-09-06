@@ -55,6 +55,7 @@ const anOrder = (): SigningOrder => ({
   signedAt: "31/08/26, 12:00:00",
   rubric: null,
   language: "es",
+  allowUnregisteredSignatures: false,
 });
 
 const ok = <T>(value: T): StageResult<T> => ({ ok: true, value });
@@ -70,6 +71,7 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
     sign: async () => ok(undefined),
     postsign: async () => ok(signed),
     padesLowerLeft: async () => [0, 0],
+    unregisteredSignatures: async () => false,
     discard: async () => {},
     ...overrides,
   };

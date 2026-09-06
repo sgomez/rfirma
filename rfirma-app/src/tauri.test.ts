@@ -50,6 +50,7 @@ const anOrder = {
   signedAt: "31/08/26, 12:00:00",
   rubric: null,
   language: "es",
+  allowUnregisteredSignatures: false,
 };
 
 /**

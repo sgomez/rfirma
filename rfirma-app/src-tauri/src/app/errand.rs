@@ -56,7 +56,7 @@ use crate::protocol::{
     read_operation, visible_signature_of, ChannelCredential, Refusal, SafCode, SelectCertificate,
     SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
 };
-use crate::signing::AdmissibleDocument;
+use crate::signing::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 
 use super::filtering::{self, FilterEngine};
 use super::frontier;
@@ -202,6 +202,13 @@ pub struct SigningConsent {
     pub visible: SiteVisibleSignature,
     /// Lo que la sede pide del listado, para volver a comprobarlo (ID-259).
     pub filter: SiteFilter,
+    /// Que el documento trae **firmas que rFirma no sabe leer** (ID-297).
+    ///
+    /// La pregunta vive **dentro** de este consentimiento y no en un sexto
+    /// momento (ID-298): la ventana lo enseña con lo demás, y si la persona
+    /// dice que no, lo que sale es `CANCEL` (ID-303). No hay recuento ni
+    /// titulares detrás, y las firmas previas no se validan (ID-305).
+    pub unregistered_signatures: bool,
 }
 
 /// Lo que se le contesta a la sede, y lo que queda para la ventana.
@@ -360,7 +367,9 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
 ///
 /// 1. **La admisibilidad primero** (ID-63): un PDF cifrado, certificado o que
 ///    no es un PDF se rechaza sobre los bytes, sin token y **antes** de que la
-///    persona vea nada que consentir.
+///    persona vea nada que consentir. Del mismo husmeo sale si el documento
+///    trae firmas que no sabemos leer, que **no es un rechazo**: viaja con el
+///    consentimiento para que la pregunta quepa dentro de él (ID-299).
 /// 2. **La política después**, porque una que no se puede aplicar hace que no
 ///    haya firma que ofrecer (ID-266). Y pegado a ella el recuadro, que se lee
 ///    de los `extraParams` **ya expandidos** (ID-282), en el mismo sitio en el
@@ -378,17 +387,20 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
     ours: Vec<crate::pkcs11::TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    if let Err(inadmissible) = AdmissibleDocument::check(request.document()) {
-        return answering(
-            live,
-            SiteReply::Refused {
-                answer: WireAnswer::refused(frontier::code_of_inadmissible(inadmissible)),
-                failure: inadmissible.into(),
-            },
-        );
-    }
+    let admitted = match AdmissibleDocument::check(request.document()) {
+        Ok(admitted) => admitted,
+        Err(inadmissible) => {
+            return answering(
+                live,
+                SiteReply::Refused {
+                    answer: WireAnswer::refused(frontier::code_of_inadmissible(inadmissible)),
+                    failure: inadmissible.into(),
+                },
+            )
+        }
+    };
 
-    let from_the_site =
+    let mut from_the_site =
         match policies::expanded_for_the_site(desk.policies, request.declared_params()) {
             Ok(expanded) => expanded,
             Err(error) => {
@@ -401,6 +413,21 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
                 )
             }
         };
+
+    // `allowCosigningUnregisteredSignatures` es de rFirma desde el ID-301: se
+    // lee lo que declaró la sede y se **quita** del bloque, para que un `=true`
+    // suyo no cruce al puente sin que nadie lo haya consentido.
+    let allowed_by_the_site = from_the_site
+        .remove(ALLOW_UNREGISTERED_KEY)
+        .map(|declared| declared.trim().eq_ignore_ascii_case("true"));
+    let unregistered_signatures = admitted.has_unregistered_signatures();
+    // `=false` es la sede contestando que no a la pregunta que íbamos a hacer,
+    // y una negativa a esa pregunta sale como `CANCEL`, igual que si la hubiera
+    // dicho la persona (ID-301, ID-303). `SAF_50` no es de aquí: queda para el
+    // puente, que es quien puede ver lo que el husmeo de bytes no vio.
+    if unregistered_signatures && allowed_by_the_site == Some(false) {
+        return answering(live, SiteReply::Cancelled);
+    }
 
     // El recuadro se decide sobre los `extraParams` ya expandidos, que es donde
     // mira el original (ID-282, ID-283, ID-284). Las dos negativas caen aquí, a
@@ -440,6 +467,9 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
         from_the_site,
         visible,
         filter: request.filter().clone(),
+        // Un `=true` de la sede **no salta la pregunta** (ID-301): lo que la
+        // enciende es lo que dicen los bytes, y nada más.
+        unregistered_signatures,
     })
 }
 
@@ -877,6 +907,10 @@ mod tests {
     /// Un PDF mínimo, que es lo que la sede manda dentro de `dat`.
     const A_PDF: &[u8] = b"%PDF-1.7\n";
 
+    /// Un PDF con una firma previa **que rFirma no sabe leer** (ID-297).
+    const A_PDF_SIGNED_BY_SOMETHING_ELSE: &[u8] =
+        b"%PDF-1.7\n9 0 obj\n<< /Type /Sig /SubFilter /adbe.pkcs7.whatever >>\nendobj\n";
+
     /// La petición de firma ya leída, que es lo que recibe el caso de uso.
     fn signature_requested(url: &AfirmaUrl) -> SignRequest {
         let SiteOperation::Sign(request) =
@@ -889,7 +923,12 @@ mod tests {
 
     /// La operación de firma tal y como llega por el canal.
     fn a_signature(verb: &str, extra: &str) -> AfirmaUrl {
-        let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
+        a_signature_over(A_PDF, verb, extra)
+    }
+
+    /// La misma operación, sobre el documento que se le diga.
+    fn a_signature_over(pdf: &[u8], verb: &str, extra: &str) -> AfirmaUrl {
+        let document = base64::engine::general_purpose::URL_SAFE.encode(pdf);
         let text = format!(
             "afirma://{verb}?op={verb}&idsession={CREDENTIAL}&format=PAdES&\
              algorithm=SHA256withRSA&dat={document}{extra}"
@@ -1153,6 +1192,11 @@ mod tests {
     /// El consentimiento de una firma cuya política se expande a ese bloque:
     /// lo que cambia entre las pruebas del recuadro es sólo eso.
     fn a_consent_to_sign(expanded: &str) -> ErrandStep {
+        a_consent_to_sign_over(A_PDF, expanded)
+    }
+
+    /// El mismo consentimiento, sobre el documento que se le diga.
+    fn a_consent_to_sign_over(pdf: &[u8], expanded: &str) -> ErrandStep {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
         let memory = a_memory(home.path());
         let ours = vec![a_usable_certificate("FIRMA")];
@@ -1174,10 +1218,83 @@ mod tests {
                 &memory,
                 &scratch,
             ),
-            &signature_requested(&a_signature("sign", "")),
+            &signature_requested(&a_signature_over(pdf, "sign", "")),
             ours,
             &live,
         )
+    }
+
+    /// **ID-297 / ID-298 / ID-299**: un PDF con firmas que rFirma no sabe leer
+    /// **no se rechaza**; la pregunta viaja dentro del consentimiento.
+    #[test]
+    fn a_pdf_with_signatures_it_cannot_read_is_asked_about_inside_the_consent() {
+        let asked = a_consent_to_sign_over(A_PDF_SIGNED_BY_SOMETHING_ELSE, "");
+
+        let ErrandStep::AskingToSign(consent) = asked else {
+            panic!("no es un rechazo, es un aviso: {asked:?}");
+        };
+        assert!(consent.unregistered_signatures);
+    }
+
+    /// **ID-299**: y de un PDF corriente no se dice nada.
+    #[test]
+    fn an_ordinary_pdf_asks_about_no_unregistered_signature() {
+        let asked = a_consent_to_sign("");
+
+        let ErrandStep::AskingToSign(consent) = asked else {
+            panic!("hay certificado que la sede acepta: {asked:?}");
+        };
+        assert!(!consent.unregistered_signatures);
+    }
+
+    /// **ID-301**: la sede puede declarar que le vale, y aun así se pregunta.
+    /// Lo que **no** puede es colar su `=true` hasta el puente: la clave sale
+    /// del bloque que viaja con el consentimiento.
+    #[test]
+    fn a_site_that_allows_unregistered_signatures_does_not_skip_the_question() {
+        let asked = a_consent_to_sign_over(
+            A_PDF_SIGNED_BY_SOMETHING_ELSE,
+            "allowCosigningUnregisteredSignatures=true\n",
+        );
+
+        let ErrandStep::AskingToSign(consent) = asked else {
+            panic!("se pregunta igual: {asked:?}");
+        };
+        assert!(consent.unregistered_signatures);
+        assert!(
+            !consent
+                .from_the_site
+                .contains_key("allowCosigningUnregisteredSignatures"),
+            "al puente solo se le manda tras el consentimiento (ID-301)"
+        );
+    }
+
+    /// **ID-301 / ID-303**: y si la sede dice que no, se respeta como rechazo,
+    /// y lo que sale al cable es `CANCEL` —nunca `SAF_50`, que queda para lo
+    /// que sólo el puente puede ver—.
+    #[test]
+    fn a_site_that_forbids_unregistered_signatures_is_answered_with_a_cancel() {
+        let asked = a_consent_to_sign_over(
+            A_PDF_SIGNED_BY_SOMETHING_ELSE,
+            "allowCosigningUnregisteredSignatures=false\n",
+        );
+
+        let ErrandStep::Answering(reply) = asked else {
+            panic!("la sede ya contesto que no: {asked:?}");
+        };
+        assert_eq!(reply.on_the_wire(), "CANCEL");
+    }
+
+    /// Y ese `=false` no rechaza nada cuando no hay ninguna firma sin
+    /// registrar: es la respuesta a una pregunta que no se hace.
+    #[test]
+    fn a_site_that_forbids_unregistered_signatures_still_signs_an_ordinary_pdf() {
+        let asked = a_consent_to_sign("allowCosigningUnregisteredSignatures=false\n");
+
+        let ErrandStep::AskingToSign(consent) = asked else {
+            panic!("no hay nada que rechazar: {asked:?}");
+        };
+        assert!(!consent.unregistered_signatures);
     }
 
     /// **ID-266**: una política que no se puede aplicar no se firma alrededor,

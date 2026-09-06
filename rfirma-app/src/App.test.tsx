@@ -973,6 +973,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      unregisteredSignatures: async () => false,
       discard: async () => {},
     };
     renderApp(
@@ -1028,6 +1029,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      unregisteredSignatures: async () => false,
       discard: async () => {},
     };
     renderApp(
@@ -1069,6 +1071,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
         value: { name: "factura.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      unregisteredSignatures: async () => false,
       discard: async () => {},
     };
     renderApp(
@@ -1167,6 +1170,7 @@ describe("App, con un documento que no se recuerda", () => {
         value: { name: "de-la-sede-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      unregisteredSignatures: async () => false,
       discard: async () => {},
     };
     renderApp(
@@ -1187,6 +1191,97 @@ describe("App, con un documento que no se recuerda", () => {
 
     await waitFor(() => expect(presign).toHaveBeenCalledOnce());
     await expect(recents.list()).resolves.toEqual([]);
+  });
+});
+
+/**
+ * El aviso de las firmas sin registrar, con el panel y el diálogo a la vez
+ * (ID-297…ID-301).
+ *
+ * Vive en la grada A y aquí y no en el diálogo suelto porque lo que se prueba
+ * es **la fila**: la pregunta va antes del PIN, y el permiso solo viaja hasta
+ * el backend cuando alguien la ha contestado que sí.
+ */
+describe("App · firmas sin registrar", () => {
+  const remembered: Certificate = { ...aCertificate, remembered: true };
+
+  const aPlacement: Placement = {
+    rect: { x0: 250, y0: 50, x1: 450, y1: 100 },
+    pages: { only: [1] },
+  };
+
+  /** El panel con «Firmar documento» ya disponible, sobre ese firmante. */
+  async function readyToSign(signer: SigningBackend) {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("cofirmado.pdf", { placement: aPlacement })],
+      pdfsOf({ "cofirmado.pdf": 4 }),
+      {},
+      { list: async () => [remembered] },
+      emptyRubricPicker(),
+      signer,
+    );
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
+    await waitFor(() => expect(sign).toBeEnabled());
+    return { user, sign };
+  }
+
+  /** Un firmante sobre un documento con firmas que rFirma no sabe leer. */
+  function signerOverAnUnreadableSignature(presign: SigningBackend["presign"]): SigningBackend {
+    return {
+      presign,
+      sign: async () => ({ ok: true, value: undefined }),
+      postsign: async () => ({
+        ok: true,
+        value: { name: "cofirmado-firmado.pdf", folder: "Documentos", sizeBytes: 1 },
+      }),
+      padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
+      unregisteredSignatures: async () => true,
+      discard: async () => {},
+    };
+  }
+
+  it("asks before the pin, and only then lets the bridge cosign", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOverAnUnreadableSignature(async (order) => {
+        presigned.push(order);
+        return { ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } };
+      }),
+    );
+
+    await user.click(sign);
+
+    expect(presigned).toHaveLength(0);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Este PDF trae firmas que no entendemos",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "Firmar de todos modos" }));
+
+    await waitFor(() => expect(presigned).toHaveLength(1));
+    expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
+  });
+
+  it("signs nothing when the question is answered no", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOverAnUnreadableSignature(async (order) => {
+        presigned.push(order);
+        return { ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } };
+      }),
+    );
+
+    await user.click(sign);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Este PDF trae firmas que no entendemos",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(presigned).toHaveLength(0);
   });
 });
 

@@ -35,8 +35,8 @@ rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.tsx` | 104 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 587 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
-| `App.tsx` | 1229 | El árbol de la ventana y el estado que la recorre. |
+| `tauri.ts` | 589 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
+| `App.tsx` | 1290 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | 74 | La franja de notificación: el patrón, no el aviso concreto (ID-207). |
@@ -50,7 +50,7 @@ rojo.
 | `documents/picker.ts` | 32 | Por dónde entra un documento. |
 | `documents/drops.ts` | 100 | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
 | **`signing/`** | | La firma, en el lado de la interfaz. |
-| `signing/flow.ts` | 172 | Las tres etapas de la trifásica. |
+| `signing/flow.ts` | 194 | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | 166 | El estado de la firma. |
 | `signing/SigningPanel.tsx` | 771 | El panel. |
 | `signing/CertificateSelect.tsx` | 289 | La elección de certificado. |
@@ -58,6 +58,7 @@ rojo.
 | `signing/secret.ts` | 25 | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
 | `signing/UnsealedPagesDialog.tsx` | 84 | El diálogo de páginas sin sello, justo antes de firmar (ID-105, ID-106). |
+| `signing/UnregisteredSignaturesDialog.tsx` | 69 | El aviso de las firmas previas que rFirma no sabe leer, en la misma fila que el anterior (ID-297…ID-301, ID-305). |
 | `signing/unsealedPages.ts` | 67 | Qué páginas del conjunto elegido pierde `correctPositionSignature` en silencio, en puntos PAdES. Sin React. |
 | `signing/SignedPanel.tsx` | 144 | El resumen tras firmar, y sus tres salidas (ID-79). |
 | `signing/certificate.ts` | 160 | El certificado, en el lado de la interfaz, con el orden y el agrupado del desplegable. |

@@ -488,6 +488,7 @@ mod full_cycle {
             layer2_text: text.to_owned(),
             rubric_image: rubric,
             sign_reason: None,
+            allow_unregistered_signatures: false,
         }
     }
 

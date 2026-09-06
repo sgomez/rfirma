@@ -428,6 +428,10 @@ pub fn config_for(
         // Un motivo vacío **no se envía**: `signReason` con la cadena vacía
         // estampa una etiqueta «Motivo:» sin nada detrás.
         sign_reason: (!order.reason.is_empty()).then(|| order.reason.clone()),
+        // La pregunta se hizo antes del PIN, y esto es lo que contestó
+        // (ID-301). Sin consentimiento no se emite la clave y el puente aborta
+        // la cofirma, que es lo correcto.
+        allow_unregistered_signatures: order.allow_unregistered_signatures,
     })
 }
 
@@ -463,6 +467,25 @@ pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, Failure> {
         .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
     AdmissibleDocument::check(&bytes)?;
     Ok(bytes)
+}
+
+/// **Caso de uso.** Si el documento que se va a firmar trae **firmas que
+/// rFirma no sabe leer** (ID-297, ID-300).
+///
+/// La ventana lo pregunta **antes** de armar la orden, porque el aviso vive
+/// delante del PIN y no detrás: la respuesta de la persona es lo que viaja
+/// luego en [`SigningOrder::allow_unregistered_signatures`]. Se decide sobre
+/// los bytes, sin token y sin cruzar la frontera, igual que la admisibilidad.
+///
+/// Un documento inadmisible sale por aquí con su negativa de siempre: no tiene
+/// sentido preguntar por las firmas de un PDF que no se va a poder firmar.
+pub fn unregistered_signatures_in(
+    opened: &OpenedDocuments,
+    document: &str,
+) -> Result<bool, Failure> {
+    let in_hand = DocumentInHand::taken(opened, document)?;
+    let bytes = admitted_bytes(in_hand.document())?;
+    Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 
 /// Se lleva el ciclo a medias de la sesión, exigiendo que el token ya haya
