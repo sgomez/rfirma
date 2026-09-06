@@ -1,10 +1,4 @@
-//! **Las pruebas del trámite**, en grada A: ni token, ni librería nativa, ni
-//! socket (TD-51, TD-52). El transporte es un cierre, el códec el de la
-//! versión 4 —o uno en memoria—, y los dos motores del puente, dobles.
-//!
-//! Van en un fichero aparte y no al pie de cada módulo porque prueban el
-//! trámite entero, del arranque a la línea que sale, y eso cruza los cinco
-//! ficheros del módulo.
+//! Pruebas del trámite de sede en grada A.
 
 use std::cell::RefCell;
 use std::path::Path;
@@ -30,8 +24,7 @@ use crate::protocol::{
 };
 use base64::Engine as _;
 
-/// **Grada A**: ni token, ni librería nativa, ni socket (TD-51, TD-52). El
-/// transporte es un cierre y el motor de filtros, un doble.
+/// Motor de filtrado simulado para pruebas.
 struct AnEngine {
     answers: RefCell<Vec<Vec<usize>>>,
 }
@@ -71,8 +64,7 @@ fn a_launch(ports: &str) -> String {
     format!("afirma://websocket?ports={ports}&v=4&idsession={CREDENTIAL}")
 }
 
-/// **El cable, sin socket delante** (TD-52): el asa que el servidor le da
-/// al trámite y el otro extremo, por donde la prueba lee lo que sale.
+/// Asa de respuesta simulada y su receptor para pruebas.
 fn the_wire() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     (
@@ -119,8 +111,7 @@ fn what_the_site_received(wire: &mut tokio::sync::oneshot::Receiver<String>) -> 
     wire.try_recv().ok()
 }
 
-/// La operación tal y como entra de verdad: por el canal, con las tres
-/// guardias delante, y dejando la respuesta para el trámite (ID-320).
+/// Petición tal y como llega por el canal.
 fn arriving_over_the_channel(message: &str) -> AfirmaUrl {
     let answered = what_the_channel_answers(&ChannelDuty::Serve(a_credential()), true, message);
     let Answer::Pending(url) = answered else {
@@ -148,7 +139,7 @@ fn requested(url: &AfirmaUrl) -> SelectCertificate {
     request
 }
 
-/// El puesto de trabajo del trámite, con todo doblado (TD-51, TD-52).
+/// Mesa de trabajo del trámite configurada para pruebas.
 #[expect(
     clippy::too_many_arguments,
     reason = "es el constructor de un tipo de ocho campos, no una interfaz"
@@ -209,7 +200,6 @@ impl PolicyEngine for APolicyEngine {
     }
 }
 
-/// **Un códec en memoria** (RT-01): no lee la URL —contesta lo que se le
 /// programó— y escribe cada desenlace tal cual se imprime, para que la prueba
 /// vea que lo que sale al cable lo decide el códec y no el trámite.
 struct ACodec {
@@ -237,17 +227,6 @@ impl ProtocolCodec for ACodec {
         format!("{outcome:?}")
     }
 }
-
-/// **RT-01**: los tres verbos, con un códec, un motor de filtros y un
-/// transporte en memoria, mirando el `SiteOutcome` y el estado del trámite y
-/// nada más: ni el JSON del cable ni el `State` de Tauri.
-///
-/// En grada A no hay ningún almacén que listar, así que atender acaba en lo
-/// que la mesa contesta cuando no encuentra el almacén: sale por el asa con
-/// la palabra del códec y el trámite termina. Con la plaza libre otra vez,
-/// volver a mirar no tiene petición, consentir no tiene nada delante, y
-/// declinar es lo único que escribe: la palabra del códec, y el trámite acaba
-/// sin nada que consentir.
 #[test]
 fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memory() {
     let opened = RefCell::new(Vec::new());
@@ -344,9 +323,6 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
         "y no queda nada que consentir"
     );
 }
-
-/// **RT-01**, la otra mitad: lo que el códec dice que no se atiende sale al
-/// cable con la palabra del códec, y el trámite acaba sin dejar momento nuevo.
 #[test]
 fn what_the_codec_does_not_attend_is_answered_with_the_codec_s_own_line() {
     let live = LiveErrand::speaking(Arc::new(ACodec::answering(vec![SiteRequest::NotAttended(
@@ -392,11 +368,6 @@ fn what_the_codec_does_not_attend_is_answered_with_the_codec_s_own_line() {
         "lo que no se atiende no se apunta"
     );
 }
-
-/// **El trazador entero** (TD-51): invocación, canal, operación leída del
-/// mensaje, listado filtrado, consentimiento y respuesta, sin abrir un
-/// socket (TD-52). Lo único doblado, además del transporte, es el listado
-/// del token, que es lo que [`attend_operation`] añade encima.
 #[test]
 fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -419,8 +390,6 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     );
 
     // 2. Por ese canal llega la operación. La conversación la deja
-    //    pendiente —no escribe nada y no cierra (ID-320)— y el trámite se
-    //    queda con el asa por la que se le contestará (ID-321).
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
     let url = arriving_over_the_channel(&format!(
@@ -450,7 +419,7 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     assert_eq!(
         what_the_site_received(&mut wire),
         None,
-        "el momento del consentimiento no escribe nada en el cable (ID-275)"
+        "el momento del consentimiento no escribe nada en el cable"
     );
 
     // 3. La persona se identifica, y la sede recibe el certificado.
@@ -473,7 +442,6 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     // Y el códec lo escribe en Base64 URL-safe y nada más.
     let encoded = base64::engine::general_purpose::URL_SAFE.encode(ours[0].der());
     assert_eq!(on_the_wire(&reply), encoded);
-    // Y **el texto exacto que sale al cable** es ése y nada más (TD-72).
     assert_eq!(
         what_the_site_received(&mut wire),
         Some(encoded.clone()),
@@ -481,13 +449,9 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     );
     assert!(
         live.current().is_none(),
-        "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada (ID-275)"
+        "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada"
     );
 }
-
-/// **La gemela del trazador** (TD-72): la persona dice que no, y lo que sale
-/// al cable es `CANCEL` en el acto. Después de contestar, ni cancelar otra
-/// vez ni cerrar la ventana escriben nada (ID-340).
 #[test]
 fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_it() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -535,13 +499,9 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
     assert!(live.current().is_none());
 
     // Y ya no queda asa: cerrar la ventana después de haber contestado —que
-    // es lo mismo que cancelar (ID-340)— no manda nada.
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), None);
 }
-
-/// **ID-323.** Una conexión que se cae con la operación pendiente no tumba
-/// el trámite: el desenlace se enseña igual y no se reintenta.
 #[test]
 fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_errand_down() {
     let live = a_live();
@@ -567,7 +527,6 @@ fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_erra
 /// Un PDF mínimo, que es lo que la sede manda dentro de `dat`.
 const A_PDF: &[u8] = b"%PDF-1.7\n";
 
-/// Un PDF con una firma previa **que rFirma no sabe leer** (ID-297).
 const A_PDF_SIGNED_BY_SOMETHING_ELSE: &[u8] =
     b"%PDF-1.7\n9 0 obj\n<< /Type /Sig /SubFilter /adbe.pkcs7.whatever >>\nendobj\n";
 
@@ -601,7 +560,6 @@ fn a_signature_over(pdf: &[u8], verb: &str, extra: &str) -> AfirmaUrl {
 
 /// La misma operación de firma, entrando **por el canal**: con las tres
 /// guardias de la conversación delante y quedando pendiente de que el
-/// trámite conteste (ID-320).
 fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
     let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
     arriving_over_the_channel(&format!(
@@ -610,10 +568,8 @@ fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
     ))
 }
 
-/// **El trazador entero de la firma** (TD-51, TD-72): invocación,
 /// operación llegada por el canal, política expandida, listado filtrado,
 /// consentimiento, y **el texto exacto que sale al cable** cuando la firma
-/// termina, sin abrir un socket y sin token (TD-52).
 ///
 /// La firma de verdad —prefirma, PIN y postfirma— es la grada C; lo que
 /// esta prueba fija es la decisión que hay a cada lado de ella, y que la
@@ -643,8 +599,6 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     );
 
     // 2. Por ese canal llega la firma. La conversación la deja pendiente
-    //    —no escribe nada y no cierra (ID-320)— y el trámite se queda con
-    //    el asa por la que se le contestará (ID-321).
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
     let url = a_signature_arriving_over_the_channel(verb);
@@ -674,7 +628,7 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
             .get("policyIdentifier")
             .map(String::as_str),
         Some("urn:oid:2.16.724.1.3.1.1.2.1.9"),
-        "la politica la expandio el motor del original (ID-266)"
+        "la politica la expandio el motor del original"
     );
     assert_eq!(
         std::fs::read(
@@ -693,7 +647,7 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     assert_eq!(
         what_the_site_received(&mut wire),
         None,
-        "el momento del consentimiento no escribe nada en el cable (ID-275)"
+        "el momento del consentimiento no escribe nada en el cable"
     );
 
     // 3. La persona consiente y teclea el PIN. La firma termina y la sede
@@ -732,31 +686,21 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     );
     assert!(
         live.current().is_none(),
-        "contestada la sede, el tramite deja de estar vivo (ID-275)"
+        "contestada la sede, el tramite deja de estar vivo"
     );
     assert!(
         !scratch_file.exists(),
-        "el fichero de paso se borra al contestar (ID-286, ID-332)"
+        "el fichero de paso se borra al contestar"
     );
 }
-
-/// **TD-72**, con `sign`: la sede manda un documento y recibe su firma.
 #[test]
 fn a_signature_goes_all_the_way_from_the_launch_to_the_wire() {
     the_whole_signature_errand("sign", SignatureRound::First);
 }
-
-/// **TD-72**, con `cosign`: el mismo recorrido, y lo único que cambia es la
-/// ronda que se le cuenta a la persona.
 #[test]
 fn a_cosignature_goes_all_the_way_from_the_launch_to_the_wire() {
     the_whole_signature_errand("cosign", SignatureRound::Again);
 }
-
-/// **La gemela del trazador** (TD-72): la persona dice que no a la firma, y
-/// lo que sale al cable es `CANCEL` en el acto. Del documento que mandó la
-/// sede no queda tampoco el fichero de paso: se borra por la salida que sea
-/// (ID-332).
 #[test]
 fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -814,18 +758,13 @@ fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() 
     assert!(live.current().is_none());
     assert!(
         !scratch_file.exists(),
-        "el fichero de paso se borra tambien al cancelar (ID-332)"
+        "el fichero de paso se borra tambien al cancelar"
     );
 
     // Y ya no queda asa: cerrar la ventana después de haber contestado no
-    // manda nada (ID-340).
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), None);
 }
-
-/// **ID-322 / ID-291**: la firma que no sale se le cuenta a la sede con un
-/// código del catálogo y a la ventana con la situación entera, que es la
-/// que sí puede ser precisa.
 #[test]
 fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signature() {
     let live = a_live();
@@ -844,23 +783,18 @@ fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signatu
     assert_eq!(
         what_the_site_received(&mut wire),
         Some("SAF_09: No se ha podido completar la firma electronica".to_owned()),
-        "la sede recibe el codigo del catalogo, sin una palabra del detalle (ID-291)"
+        "la sede recibe el codigo del catalogo, sin una palabra del detalle"
     );
     assert_eq!(
         reply.failure().map(|failure| failure.situation.as_str()),
         Some("bridgeFailed"),
-        "y la ventana se queda con la situacion entera (ID-29)"
+        "y la ventana se queda con la situacion entera"
     );
     assert!(
         live.current().is_none(),
         "la firma que no sale cierra el tramite igual que la que sale"
     );
 }
-
-/// **ID-292**: y el código lo manda la situación, no el sitio donde se
-/// falla. El sello del ADR-0016 que no cuadra es `SAF_42`, no el `SAF_09`
-/// de la firma que no sale: la sede tiene que poder distinguir «no se ha
-/// podido firmar» de «se firmó y no se pudo ensamblar».
 #[test]
 fn a_broken_session_seal_is_answered_with_its_own_code() {
     let live = a_live();
@@ -882,9 +816,6 @@ fn a_broken_session_seal_is_answered_with_its_own_code() {
         "el sello roto sale con SAF_42, que es el que el catalogo tiene para el"
     );
 }
-
-/// **ID-286 / TD-64**: del documento que manda la sede no queda fila en
-/// Recientes, ni colocación del recuadro, ni fichero de paso.
 #[test]
 fn the_document_a_site_sends_leaves_no_trace_at_all() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -921,7 +852,7 @@ fn the_document_a_site_sends_leaves_no_trace_at_all() {
         !DocumentInHand::taken(&opened, &consent.document)
             .expect("el documento esta en la mano")
             .is_remembered(),
-        "el documento de la sede entra por la puerta que no recuerda (ID-286)"
+        "el documento de la sede entra por la puerta que no recuerda"
     );
     assert!(
         super::super::recents::listed_rows(&memory, &opened).is_empty(),
@@ -943,12 +874,9 @@ fn the_document_a_site_sends_leaves_no_trace_at_all() {
     declined(&live);
     assert!(
         !scratch_file.exists(),
-        "el fichero de paso se borra al contestar (ID-286)"
+        "el fichero de paso se borra al contestar"
     );
 }
-
-/// **ID-282**: cuando la sede manda posición y página, la firma sigue
-/// adelante y el consentimiento lo dice: hay recuadro, y lo puso ella.
 #[test]
 fn a_box_the_site_placed_is_honoured_and_the_signature_goes_on() {
     let asked = a_consent_to_sign(
@@ -970,12 +898,9 @@ fn a_box_the_site_placed_is_honoured_and_the_signature_goes_on() {
             .get("signaturePages")
             .map(String::as_str),
         Some("-1"),
-        "la pagina contada desde el final la resuelve el puente, no rFirma (ID-284)"
+        "la pagina contada desde el final la resuelve el puente, no rFirma"
     );
 }
-
-/// **ID-282**: y sin ella, `optional` firma invisible sin hacer esperar a
-/// nadie.
 #[test]
 fn an_optional_box_the_site_never_placed_is_signed_invisible() {
     let asked = a_consent_to_sign("visibleSignature=optional\nvisibleAppearance=custom\n");
@@ -985,10 +910,6 @@ fn an_optional_box_the_site_never_placed_is_signed_invisible() {
     };
     assert_eq!(consent.visible, SiteVisibleSignature::Declined);
 }
-
-/// **ID-283**: un recuadro obligatorio que no viene colocado cancela con el
-/// código que el original ya tiene, y **antes** de que haya nada que
-/// consentir.
 #[test]
 fn a_mandatory_box_the_site_never_placed_cancels_before_anyone_is_asked() {
     let asked = a_consent_to_sign("visibleSignature=want\n");
@@ -1002,10 +923,6 @@ fn a_mandatory_box_the_site_never_placed_cancels_before_anyone_is_asked() {
         on_the_wire(&reply)
     );
 }
-
-/// **ID-284**: y una página en blanco añadida al documento se rechaza,
-/// porque eso es modificarlo antes de firmarlo. Con el recuadro puesto,
-/// que es la única situación en la que el original la añade de verdad.
 #[test]
 fn a_page_appended_to_the_document_is_refused_before_anyone_is_asked() {
     let asked = a_consent_to_sign(
@@ -1025,9 +942,6 @@ fn a_page_appended_to_the_document_is_refused_before_anyone_is_asked() {
         on_the_wire(&reply)
     );
 }
-
-/// Pero sin recuadro el original no añade ninguna página, así que el
-/// trámite sigue adelante y se firma invisible.
 #[test]
 fn an_appended_page_without_a_box_never_happens_and_the_errand_goes_on() {
     let asked = a_consent_to_sign("signaturePages=append\n");
@@ -1072,9 +986,6 @@ fn a_consent_to_sign_over(pdf: &[u8], expanded: &str) -> ErrandStep {
         &live,
     )
 }
-
-/// **ID-297 / ID-298 / ID-299**: un PDF con firmas que rFirma no sabe leer
-/// **no se rechaza**; la pregunta viaja dentro del consentimiento.
 #[test]
 fn a_pdf_with_signatures_it_cannot_read_is_asked_about_inside_the_consent() {
     let asked = a_consent_to_sign_over(A_PDF_SIGNED_BY_SOMETHING_ELSE, "");
@@ -1084,8 +995,6 @@ fn a_pdf_with_signatures_it_cannot_read_is_asked_about_inside_the_consent() {
     };
     assert!(consent.unregistered_signatures);
 }
-
-/// **ID-299**: y de un PDF corriente no se dice nada.
 #[test]
 fn an_ordinary_pdf_asks_about_no_unregistered_signature() {
     let asked = a_consent_to_sign("");
@@ -1095,10 +1004,6 @@ fn an_ordinary_pdf_asks_about_no_unregistered_signature() {
     };
     assert!(!consent.unregistered_signatures);
 }
-
-/// **ID-301**: la sede puede declarar que le vale, y aun así se pregunta.
-/// Lo que **no** puede es colar su `=true` hasta el puente: la clave sale
-/// del bloque que viaja con el consentimiento.
 #[test]
 fn a_site_that_allows_unregistered_signatures_does_not_skip_the_question() {
     let asked = a_consent_to_sign_over(
@@ -1114,13 +1019,9 @@ fn a_site_that_allows_unregistered_signatures_does_not_skip_the_question() {
         !consent
             .from_the_site
             .contains_key("allowCosigningUnregisteredSignatures"),
-        "al puente solo se le manda tras el consentimiento (ID-301)"
+        "al puente solo se le manda tras el consentimiento"
     );
 }
-
-/// **ID-301 / ID-303**: y si la sede dice que no, se respeta como rechazo,
-/// y lo que sale al cable es `CANCEL` —nunca `SAF_50`, que queda para lo
-/// que sólo el puente puede ver—.
 #[test]
 fn a_site_that_forbids_unregistered_signatures_is_answered_with_a_cancel() {
     let asked = a_consent_to_sign_over(
@@ -1133,9 +1034,6 @@ fn a_site_that_forbids_unregistered_signatures_is_answered_with_a_cancel() {
     };
     assert_eq!(on_the_wire(&reply), "CANCEL");
 }
-
-/// Y ese `=false` no rechaza nada cuando no hay ninguna firma sin
-/// registrar: es la respuesta a una pregunta que no se hace.
 #[test]
 fn a_site_that_forbids_unregistered_signatures_still_signs_an_ordinary_pdf() {
     let asked = a_consent_to_sign("allowCosigningUnregisteredSignatures=false\n");
@@ -1145,9 +1043,6 @@ fn a_site_that_forbids_unregistered_signatures_still_signs_an_ordinary_pdf() {
     };
     assert!(!consent.unregistered_signatures);
 }
-
-/// **ID-266**: una política que no se puede aplicar no se firma alrededor,
-/// y la sede recibe el código que el catálogo tiene para eso.
 #[test]
 fn a_policy_that_cannot_be_applied_is_answered_with_the_code_of_an_invalid_policy() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1188,9 +1083,6 @@ fn a_policy_that_cannot_be_applied_is_answered_with_the_code_of_an_invalid_polic
         "no se ha escrito nada: la politica se mira antes que el documento"
     );
 }
-
-/// Lo que no se puede firmar se rechaza **sobre los bytes**, antes de pedir
-/// nada y antes de escribir nada (ID-63, ID-292).
 #[test]
 fn a_document_that_is_not_a_pdf_is_refused_before_anything_is_written() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1235,9 +1127,6 @@ fn a_document_that_is_not_a_pdf_is_refused_before_anything_is_written() {
     );
     assert!(!scratch.exists(), "no se ha escrito nada");
 }
-
-/// **ID-263**: la contrafirma llega hasta aquí como `SAF_04`, por el mismo
-/// camino que cualquier otro rechazo del protocolo, y sin tocar el token.
 #[test]
 fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1273,9 +1162,6 @@ fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
         WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
     );
 }
-
-/// **ID-264**: y `save` y `signandsave` salen por el mismo sitio, que es lo
-/// que hace comprobable que estén fuera.
 #[test]
 fn saving_by_order_of_a_site_is_answered_with_the_same_refusal() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1314,9 +1200,6 @@ fn saving_by_order_of_a_site_is_answered_with_the_same_refusal() {
         assert!(!scratch.exists(), "y no ha escrito nada");
     }
 }
-
-/// **ID-272**: el consentimiento aparece **también** con un solo
-/// certificado, y ni `headless` ni `mandatoryCertSelection` lo quitan.
 #[test]
 fn neither_headless_nor_the_mandatory_selection_skips_the_consent() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1344,9 +1227,6 @@ fn neither_headless_nor_the_mandatory_selection_skips_the_consent() {
     };
     assert_eq!(rows.len(), 1, "uno solo se consiente igual");
 }
-
-/// Los dos parámetros **ni se leen**: la prueba de arriba mira la conducta,
-/// y ésta mira que no exista el camino que la cambiaría.
 #[test]
 fn the_two_parameters_of_the_silent_signature_are_not_read_anywhere() {
     let production = concat!(
@@ -1359,14 +1239,10 @@ fn the_two_parameters_of_the_silent_signature_are_not_read_anywhere() {
     for parameter in ["\"headless\"", "\"mandatoryCertSelection\""] {
         assert!(
             !production.contains(parameter),
-            "{parameter} se lee en algun sitio: el consentimiento se podria saltar (ID-272)"
+            "{parameter} se lee en algun sitio: el consentimiento se podria saltar"
         );
     }
 }
-
-/// **ID-258 / ID-278**: si la sede los excluye a todos, lo que recibe es
-/// `SAF_19`, y sale ya. La ventana enseña la otra mitad: cuál de las dos
-/// situaciones es y cuántos certificados tiene la persona (ID-341).
 #[test]
 fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1400,14 +1276,11 @@ fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
     );
     assert!(
         reply.failure().is_some(),
-        "la ventana enseña la situacion entera (ID-275)"
+        "la ventana enseña la situacion entera"
     );
     assert_eq!(reason, NoCertificate::TheSiteExcludedThemAll);
     assert_eq!(owned, 1, "y cuantos tiene la persona, que es su almacen");
 }
-
-/// Un rechazo del protocolo —un criterio fuera de la lista blanca— sale con
-/// su código **sin tocar el token**.
 #[test]
 fn a_refusal_of_the_protocol_never_reaches_the_token() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1444,9 +1317,6 @@ fn a_refusal_of_the_protocol_never_reaches_the_token() {
         WireAnswer::refused(SafCode::Params).on_the_wire()
     );
 }
-
-/// Sin ningún almacén donde mirar, la sede recibe el código de la situación
-/// del token, traducido por la frontera y no por este módulo (ID-288).
 #[test]
 fn a_token_that_cannot_be_listed_answers_with_the_code_of_its_own_situation() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1484,9 +1354,6 @@ fn a_token_that_cannot_be_listed_answers_with_the_code_of_its_own_situation() {
         .on_the_wire()
     );
 }
-
-/// **ID-293**: la cancelación es la persona diciendo que no, y sale en el
-/// acto.
 #[test]
 fn the_person_saying_no_is_the_only_cancellation() {
     let live = a_live();
@@ -1497,9 +1364,6 @@ fn the_person_saying_no_is_the_only_cancellation() {
     assert_eq!(on_the_wire(&reply), "CANCEL");
     assert!(live.current().is_none(), "cancelado, el tramite se acaba");
 }
-
-/// **ID-280**: con un trámite vivo, el segundo `afirma://` se rechaza por su
-/// propio socket mientras el primero siga vivo.
 #[test]
 fn a_second_launch_is_refused_while_the_first_errand_is_live() {
     let live = a_live();
@@ -1518,17 +1382,9 @@ fn a_second_launch_is_refused_while_the_first_errand_is_live() {
     );
 
     // Y el trámite que sigue apuntado es el primero: el segundo no sustituye
-    // nada ni se cuela al lado, que es lo que el ID-280 prohíbe.
     let errand = live.current().expect("el primer tramite sigue vivo");
     assert_eq!(errand.port(), 54001);
 }
-
-/// **ID-280, la carrera**: entre pedir el canal y apuntar el trámite cabe
-/// otra invocación —el enlace profundo y la instancia única son dos caminos
-/// distintos hasta [`attend_launch`] (#357, #362)—. Aquí la otra se lleva la
-/// plaza **mientras** el transporte abre, y la que llega tarde no se cuela
-/// al lado: se le **cierra por su asa** el canal recién abierto y sale su
-/// rechazo. Preguntando antes de apuntar, las dos quedarían servidas.
 #[test]
 fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_refused() {
     use std::cell::Cell;
@@ -1574,9 +1430,6 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
         .expect("el tramite de la otra sede sigue vivo");
     assert_eq!(errand.port(), 54001);
 }
-
-/// Y en cuanto el primero contesta, la sede siguiente sí es atendida: lo que
-/// cierra el trámite es la respuesta, no que se cierre una ventana (ID-275).
 #[test]
 fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
     let live = a_live();
@@ -1589,10 +1442,6 @@ fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
 
     assert!(matches!(next, Attendance::Serving { .. }), "{next:?}");
 }
-
-/// El trámite vivo recuerda **la credencial y el puerto**, que es lo que
-/// hace falta para saber con quién se está hablando. El documento de la
-/// sede no se recuerda (ID-286).
 #[test]
 fn the_live_errand_remembers_the_credential_and_the_port_and_nothing_else() {
     let live = a_live();
@@ -1604,9 +1453,6 @@ fn the_live_errand_remembers_the_credential_and_the_port_and_nothing_else() {
     assert_eq!(errand.credential().as_str(), CREDENTIAL);
     assert_eq!(errand.port(), 54001);
 }
-
-/// **ID-259**: un certificado que la sede ya no acepta no se entrega, y lo
-/// que ella recibe es que no hay ninguno que valga.
 #[test]
 fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
     let ours: Vec<TokenCertificate> = vec![a_usable_certificate("FIRMA")];
@@ -1633,11 +1479,6 @@ fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
         "la ventana sabe cual es la situacion: {reply:?}"
     );
 }
-
-/// **ID-278, ID-341.** Sin ni un certificado instalado **no sale nada al
-/// cable** y el trámite sigue vivo: la ventana lo enseña con su motivo, y
-/// la petición queda apuntada para poder volver a atenderla —instalar uno y
-/// volver a mirar— sin que la sede invoque otra vez.
 #[test]
 fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1658,7 +1499,6 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
 
     // El listado vacío es el de la persona que no tiene ninguno. Se le
     // habla al caso de uso que **no** lista el token, que es donde vive la
-    // decisión y donde se prueba entera (TD-20, TD-51).
     live.keep_the_request(url.clone());
     let step = consent_for(
         &engine,
@@ -1696,14 +1536,6 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
         "con la peticion apuntada, volver a mirar no reinicia nada"
     );
 }
-
-/// **ID-278, ID-341.** Y por el camino de la firma, lo mismo: la decisión
-/// vive en `accepted_listing`, que es lo que `consent_to_sign` comparte
-/// con [`consent_for`], y llega **después** de la admisibilidad del
-/// documento y de la política —a tiempo, antes de escribir el fichero de
-/// paso—. Ese orden es lo que se clava aquí, y lo clava el par: con un PDF
-/// bueno sale la pantalla del almacén vacío, y con algo que no es un PDF
-/// sale el `SAF_43` aunque tampoco haya ni un certificado.
 #[test]
 fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1794,10 +1626,6 @@ fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
         "el almacen vacio no le roba el turno a la admisibilidad"
     );
 }
-
-/// Y decir que no desde esa pantalla es decir que no al trámite: la sede
-/// recibe su `CANCEL` en el acto (ID-340), y con él se va la petición
-/// apuntada.
 #[test]
 fn leaving_the_no_certificate_screen_cancels_the_errand() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");

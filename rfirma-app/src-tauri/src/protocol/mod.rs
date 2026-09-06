@@ -1,42 +1,4 @@
-//! Lo que pide la sede, leído de una URL `afirma://` y nada más (ID-244).
-//!
-//! Aquí no hay efectos: no se abre un socket, no se llama al puente y no se
-//! toca el disco. Se lee una cadena y se dice qué pide —puertos sorteados,
-//! versión de protocolo, credencial de canal y versión mínima exigida— o por
-//! qué se rechaza. Por eso se prueba entero como función pura, igual que
-//! [`crate::signing::placement`] (TD-53).
-//!
-//! **El parseo es de rFirma, no del puente** (ID-244): las reglas de versión y
-//! de credencial se aplican sobre la URL antes de que exista canal, y la lista
-//! blanca de filtros se comprueba antes de llamar a Java. Del puente se toma el
-//! motor de filtros, no el parseo.
-//!
-//! El contrato que se reproduce está medido en
-//! `docs/research/contrato-protocolo-afirma.md`, sobre el tag `v1.9.2` de
-//! `clienteafirma`. Cinco decisiones se apartan del original **a propósito**,
-//! y las cinco endurecen:
-//!
-//! 1. Un `idsession` mal formado se **rechaza** (`SAF_03`). El original lo pone
-//!    a `null`, y un `null` desactiva la comprobación entera del canal: abre un
-//!    canal sin cerradura (ID-249).
-//! 2. **El protocolo 3 no existe**: su camino es puerto fijo y sin credencial, y
-//!    rFirma no abre nunca un canal sin credencial (ID-247). Sólo `v=4` pasa.
-//! 3. `mcv` se compara contra la versión de AutoFirma que rFirma **declara
-//!    implementar** ([`version::IMPLEMENTED_AUTOFIRMA_VERSION`]), que es un
-//!    número distinto de la versión de rFirma (ID-250).
-//! 4. Un criterio de `filters=` **fuera de la lista blanca** se rechaza
-//!    (`SAF_03`) en vez de ignorarse. El original lo descarta en silencio y
-//!    sirve el listado entero, que es más ancho de lo que la sede pidió
-//!    ([`filters`], ID-256).
-//! 5. **`signaturePages=append` se rechaza** (`SAF_03`) cuando la sede puso el
-//!    recuadro. El original añade una página en blanco al documento, y
-//!    modificar lo que se va a firmar antes de firmarlo no es una firma de lo
-//!    que la sede mandó ([`visible`], ID-284). Sin las cuatro esquinas el
-//!    original tampoco añade página, así que ahí no se endurece nada: se firma
-//!    invisible igual que allí.
-//!
-//! Y una que **no** se aparta aunque tiente: la comparación de `mcv` no es
-//! semver, y se reproduce tal cual (ID-251, [`version`]).
+//! Lo que pide la sede, leído de una URL `afirma://` y sin efectos.
 
 pub mod codes;
 pub mod filters;

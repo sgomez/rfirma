@@ -1,30 +1,4 @@
-//! **El servidor del canal**: WebSocket sobre TLS en `127.0.0.1` (ID-212,
-//! ID-213).
-//!
-//! # No existe escuchador en claro
-//!
-//! Rechazar `ws://` no es una comprobación que haya que escribir: es una ruta
-//! que no hay. Todo lo que se acepta aquí pasa por [`tokio_native_tls`] antes
-//! de llegar al saludo WebSocket, así que un cliente que hable en claro se
-//! queda en el saludo TLS y no ve un servidor de protocolo al otro lado.
-//!
-//! Por eso [`tokio_tungstenite`] entra **sin ninguna característica de TLS**:
-//! las suyas son de cliente, y `accept_async` recibe el *stream* ya cifrado.
-//!
-//! # No posee su runtime
-//!
-//! [`serve`] es una `async fn` que recibe el escuchador **ya enlazado**
-//! ([`crate::channel::bind`]) y devuelve el puerto y un asa de apagado
-//! ([`OpenChannel`]). En producción corre sobre `tauri::async_runtime`; en
-//! pruebas, con `#[tokio::test]`. Eso es lo que permite atar un puerto efímero
-//! desde una prueba sin montar la aplicación.
-//!
-//! # El original es oráculo, no código prestado
-//!
-//! `AfirmaWebSocketServer` y compañía se leen para saber **qué** hace el
-//! servidor —el orden de las guardias, el `OK` del eco, el formato del
-//! error—; no se traducen (ID-219). Lo que hace cada mensaje está en
-//! [`crate::channel::conversation`], sin socket delante.
+//! Servidor WebSocket local sobre TLS para operaciones con la sede (ADR-0005).
 
 use std::net::{SocketAddr, TcpListener};
 use std::sync::Arc;
@@ -41,41 +15,27 @@ use crate::channel::reply::ReplyHandle;
 use crate::protocol::AfirmaUrl;
 use crate::tls::LocalServerCertificate;
 
-/// **Quién atiende la operación que llegó por el canal** (ID-330).
-///
-/// El servidor no sabe qué es un trámite: cuando la conversación dice que el
-/// mensaje es una operación legítima ([`Answer::Pending`]), se la entrega a
-/// esto junto con el asa por la que se contesta, y se queda esperando. Lo
-/// cumple el adaptador, que es quien puede armar el escritorio del trámite
-/// desde el estado de la aplicación.
-///
-/// Es `Arc` y no una referencia porque cada conexión se atiende en su propia
-/// tarea del runtime, que vive más que la llamada que abrió el canal.
+/// Manejador que atiende la operación recibida por el canal.
 pub type SiteOperations = Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>;
 
-/// **Un canal abierto**: en qué puerto quedó y cómo se apaga.
-///
-/// Quien lo recibe es responsable de tenerlo vivo: soltarlo no apaga nada por
-/// sí solo, pero perder el asa deja el canal escuchando hasta que muera el
-/// proceso.
+/// Canal abierto con su puerto de escucha y asa de cierre.
 pub struct OpenChannel {
     port: u16,
     shutdown: Shutdown,
 }
 
 impl OpenChannel {
-    /// Un canal abierto en ese puerto, que se apaga con esa asa.
+    /// Crea un canal abierto con su puerto y asa de cierre.
     pub fn new(port: u16, shutdown: Shutdown) -> Self {
         Self { port, shutdown }
     }
 
-    /// El puerto en el que quedó escuchando: uno de los que sorteó la sede.
+    /// Puerto en el que escucha el canal.
     pub fn port(&self) -> u16 {
         self.port
     }
 
-    /// Deja de escuchar. Las conversaciones en curso terminan; no se acepta
-    /// ninguna nueva.
+    /// Cierra el canal y deja de escuchar conexiones.
     pub fn close(self) {
         self.shutdown.now();
     }
@@ -89,30 +49,22 @@ impl std::fmt::Debug for OpenChannel {
     }
 }
 
-/// **El asa de apagado**: una función y nada más.
-///
-/// Es un cierre y no un `JoinHandle` ni un `Sender` para que el puerto de
-/// transporte del caso de uso ([`crate::app::site`]) no tenga que nombrar a
-/// `tokio`: una prueba dobla el transporte con un asa que no apaga nada.
+/// Asa para apagar el servidor del canal.
 pub struct Shutdown(Box<dyn FnOnce() + Send>);
 
 impl Shutdown {
-    /// El asa que ejecuta eso al apagar.
+    /// Construye un asa de apagado a partir de una clausura.
     pub fn of(closing: impl FnOnce() + Send + 'static) -> Self {
         Self(Box::new(closing))
     }
 
-    /// Apaga.
+    /// Ejecuta el apagado del servidor.
     pub fn now(self) {
         (self.0)();
     }
 }
 
-/// Levanta el canal sobre un escuchador ya enlazado.
-///
-/// Vuelve en cuanto está escuchando: la aceptación de conexiones se queda en
-/// una tarea del runtime que llame, y termina cuando se cierra
-/// [`OpenChannel`].
+/// Inicia la escucha del canal sobre un listener ya enlazado.
 pub async fn serve(
     listener: TcpListener,
     certificate: &LocalServerCertificate,
@@ -144,14 +96,7 @@ pub async fn serve(
     ))
 }
 
-/// **Ata y sirve**: los dos pasos del canal, para quien tiene un runtime de
-/// Tauri detrás.
-///
-/// Es lo que cumple el puerto de transporte del caso de uso
-/// ([`crate::app::site::ChannelTransport`]) en producción. Corre sobre
-/// `tauri::async_runtime` —el runtime de la aplicación, que sobrevive a esta
-/// llamada— y no sobre uno propio: un runtime creado y soltado aquí se
-/// llevaría por delante la tarea que acepta conexiones (ID-213).
+/// Enlaza el primer puerto disponible y arranca el servidor del canal.
 pub fn open(
     ports: &[u16],
     certificate: &LocalServerCertificate,
@@ -162,7 +107,6 @@ pub fn open(
     tauri::async_runtime::block_on(serve(listener, certificate, duty, operations))
 }
 
-/// El certificado del servidor local, envuelto en lo que la pila de TLS acepta.
 fn acceptor_for(certificate: &LocalServerCertificate) -> Result<TlsAcceptor, ChannelError> {
     let material = |error: String| ChannelError::new(Situation::MaterialNotUsable, error);
 
@@ -181,7 +125,6 @@ fn acceptor_for(certificate: &LocalServerCertificate) -> Result<TlsAcceptor, Cha
     Ok(TlsAcceptor::from(acceptor))
 }
 
-/// Acepta conexiones hasta que se cierre el canal.
 async fn accept_until_stopped(
     listener: tokio::net::TcpListener,
     acceptor: Arc<TlsAcceptor>,
@@ -195,20 +138,11 @@ async fn accept_until_stopped(
         tokio::select! {
             _ = &mut stopped => break,
             accepted = listener.accept() => {
-                // Un `accept` que falla en el *loopback* es un transitorio
-                // —`EMFILE`, `ENFILE`, `ECONNABORTED`—, no el final del canal:
-                // romper el bucle aquí dejaría a rFirma sin escuchar en
-                // silencio, sin `ChannelError` y sin que `OpenChannel` se
-                // entere. Se descarta la conexión y se sigue atendiendo; el
-                // canal sólo se apaga por su asa.
                 let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
                 let operations = Arc::clone(&operations);
                 tokio::spawn(async move {
-                    // Una conexión que se cae —un saludo TLS que no cuadra, una
-                    // sede que cierra— no se lleva el canal por delante: la
-                    // siguiente invocación vuelve a llamar.
                     let _ = attend(stream, peer, &acceptor, &duty, &operations).await;
                 });
             }
@@ -216,8 +150,6 @@ async fn accept_until_stopped(
     }
 }
 
-/// Una conversación entera sobre una conexión: saludo TLS, saludo WebSocket y
-/// los mensajes.
 async fn attend(
     stream: tokio::net::TcpStream,
     peer: SocketAddr,
@@ -244,12 +176,6 @@ async fn attend(
                 socket.close(None).await?;
                 break;
             }
-            // **La operación queda pendiente** (ID-320): no se escribe nada y
-            // la conexión se queda abierta hasta que el trámite entregue la
-            // respuesta, que es lo que la sede espera mientras la persona
-            // decide. Que el asa se suelte sin contestar —un trámite que se fue
-            // sin responder— cierra el canal sin escribir: la sede se queda con
-            // su propio plazo y no con una línea inventada aquí (ID-322).
             Answer::Pending(url) => {
                 let (sender, receiver) = oneshot::channel();
                 operations(url, ReplyHandle::of(sender));

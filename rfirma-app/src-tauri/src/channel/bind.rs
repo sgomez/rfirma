@@ -1,31 +1,13 @@
-//! **Atarse a uno de los puertos que sorteó la sede**, y a ninguno más
-//! (ID-215).
-//!
-//! Los tres puertos vienen en `ports=` de la URL de arranque y se prueban en el
-//! orden en que la sede los mandó (`AfirmaWebSocketServerManager.startService`,
-//! §«Qué pasa si ningún puerto está libre» del informe del protocolo). Aquí no
-//! hay puerto por omisión: **el 63117 no se ata jamás**, ni siquiera para
-//! contestar un error, porque es el puerto fijo del protocolo 3 y el protocolo
-//! 3 no existe en rfirma (ID-247).
-//!
-//! Se ata **sólo en `127.0.0.1`**. Un `0.0.0.0` abriría el canal a la red
-//! local, y la guardia de origen del original —`SAF_47`— es la segunda
-//! cerradura, no la primera.
+//! Selección y enlace del primer puerto libre sorteado por la sede (ADR-0005).
 
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 
 use crate::channel::error::{ChannelError, Situation};
 
-/// El puerto fijo del protocolo 3 (`DEFAULT_WEBSOCKET_PORT`,
-/// `ProtocolInvocationLauncher.java:87`). **Nunca se ata** (ID-215).
+/// Puerto fijo del protocolo 3 que nunca se enlaza.
 pub const THE_PORT_OF_THE_THIRD_PROTOCOL: u16 = 63117;
 
 /// Ata el primero de los puertos sorteados que esté libre.
-///
-/// Devuelve el escuchador **ya enlazado**, que es lo que
-/// [`crate::channel::server::serve`] recibe (ID-213): quien ata y quien sirve
-/// son dos pasos, y por eso una prueba puede pasarle un puerto efímero sin
-/// montar nada.
 pub fn bind_first_free(ports: &[u16]) -> Result<TcpListener, ChannelError> {
     let mut refused = Vec::new();
 
@@ -54,8 +36,6 @@ pub fn bind_first_free(ports: &[u16]) -> Result<TcpListener, ChannelError> {
 mod tests {
     use super::*;
 
-    /// **Grada B**: se atan puertos de verdad, siempre en el *loopback* y
-    /// siempre efímeros.
     fn an_occupied_port() -> (TcpListener, u16) {
         let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0)))
             .expect("el sistema deberia dar un puerto efimero");
@@ -107,9 +87,6 @@ mod tests {
         drop(occupied);
     }
 
-    /// El puerto del protocolo 3 no se ata **aunque la sede lo sortee**
-    /// (ID-215): rfirma no habla ese protocolo, y un canal ahí sería rfirma
-    /// haciéndose pasar por el AutoFirma que sí lo habla.
     #[test]
     fn the_port_of_the_third_protocol_is_never_bound() {
         let error = bind_first_free(&[THE_PORT_OF_THE_THIRD_PROTOCOL])
