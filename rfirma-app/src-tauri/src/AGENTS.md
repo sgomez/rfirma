@@ -300,3 +300,27 @@ comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos c
   y no con `super::super::…`: las dos aristas prohibidas del RD-12 —el trámite
   nombrando a `channel`, a `app::codec` o a `app::transport`— se le escaparían
   si fueran relativas.
+
+## Al escribir un comentario
+
+La regla es la restricción 6 del `AGENTS.md` raíz. Lo que solo vale aquí: la
+cabecera `//!` de un módulo no repite lo que la tabla «Dónde vive qué» ya dice
+de él; si las dos cuentan lo mismo, se borra de la cabecera y se conserva la
+tabla.
+
+Dos ejemplos de este backend, tal como quedan tras la poda:
+
+- **Se queda.** En `rubric/normalize.rs`, antes de fijar `max_alloc` en el
+  decodificador, hay un tope de memoria que parece redundante con el tope de
+  10 MB de la entrada. No lo es —un PNG uniforme comprime 1000:1 y una reserva
+  que falla aborta el proceso—, así que ahí queda una línea:
+  `// El tope de entrada no acota lo decodificado (ADR-0012).` Las seis líneas
+  que hoy lo explican se van al ADR-0012, que aún no lo cuenta: la poda lo
+  enmienda en la misma PR.
+- **Se va.** La cabecera de `commands/mod.rs` dice «Son veintidós» y enumera
+  los puertos de TypeScript que rellena cada orden, con el número de PR de cada
+  uno. El conteo es falso (el que lo sabe es la aserción de
+  `the_list_of_commands_is_closed_and_this_is_how_long_it_is`), los puertos son
+  la interfaz del otro lado y los PR son histórico. Nada de eso va a ninguna
+  parte; queda: `//! Las órdenes de Tauri: lo único que la ventana puede pedir.
+  No deciden nada.`
