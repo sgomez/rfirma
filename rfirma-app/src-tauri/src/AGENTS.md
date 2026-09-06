@@ -3,9 +3,11 @@
 Este índice **sustituye a explorar el árbol**. Localiza el módulo por su línea,
 abre **solo** ese fichero, y solo el tramo que necesitas.
 
-`tests/agents_map_is_complete.rs` comprueba que aquí está listado, por su ruta,
-todo `.rs` versionado bajo `src/`. **Un módulo nuevo se añade a esta tabla en la
-misma PR que lo crea**, o el PR sale en rojo.
+`tests/agents_map_is_complete.rs` comprueba que todo `.rs` versionado bajo
+`src/` está listado, por su ruta, aquí o en el `AGENTS.md` de su contexto
+(`<contexto>/AGENTS.md`, que nombra por la ruta desde su carpeta; RD-10 del
+#408). **Un módulo nuevo se añade a la tabla que le toque en la misma PR que lo
+crea**, o el PR sale en rojo.
 
 ## Presupuesto de lectura
 
@@ -46,7 +48,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/rubric.rs` | 73 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). Pruebas en `commands/rubric/tests.rs` (50). |
 | `commands/failure.rs` | 180 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). Pruebas en `commands/failure/tests.rs` (40). |
 | `commands/orders.rs` | 97 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). Pruebas en `commands/orders/tests.rs` (73). |
-| `commands/guards.rs` | 530 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
+| `commands/guards.rs` | 562 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y cualquier `<contexto>/adapters/`. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 90 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. Pruebas en `app/tests.rs` (56). |
 | `app/cycle.rs` | 216 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. Pruebas en `app/cycle/tests.rs` (108). |
@@ -183,7 +185,11 @@ infraestructura. Ningún módulo de dominio nombra a `app/` ni a `commands/`, y
 entre hermanos el que sabe menos no nombra al que sabe más (`ffi` importa
 `signing`, no al revés). Si vas a añadir capacidad nueva, el orden es: la regla
 pura en su módulo de dominio → el caso de uso en `app/` → el cuerpo de la orden
-en `commands/`. Lo vigila `tests/module_directions.rs` (ADR-0017).
+en `commands/`. Lo vigila `tests/module_directions.rs` (ADR-0017). La misma
+guarda entiende el árbol por contextos del #408: una carpeta de `src/` con
+`domain/`, `ports.rs`, `application/` o `adapters/` dentro es un contexto, y ahí
+la regla se lee de la ruta (RD-03) sin lista de excepciones; las carpetas sin
+capas siguen bajo la regla de siempre.
 
 ## Al tocar el trámite de sede
 
@@ -236,9 +242,9 @@ de ti:
   **ya no lleva el número dentro** (TD-11): el conteo vive en la aserción de
   `the_list_of_commands_is_closed_and_this_is_how_long_it_is`, porque cambiar el
   número es la información y renombrar la prueba en cada sub-issue no dice nada.
-- **La lista de ficheros del módulo** (`SOURCES`) hay que ampliarla si creas un
-  fichero nuevo dentro de `commands/`; una guarda propia se pone roja si se te
-  olvida.
+- **Ninguna lista de ficheros**: las guardas leen en tiempo de prueba todo
+  `.rs` de `commands/` y de cualquier `<contexto>/adapters/`, menos los
+  `tests.rs` hermanos y la propia guarda. `just contract` descubre igual.
 - **La guarda de rutas** (`the_portal_path_never_crosses_to_the_window`)
   descubre sola todo tipo que derive `Serialize`, esté en el fichero de
   `commands/` que esté (ID-84), pero **sí** hay que decidir dónde entra cada
@@ -272,7 +278,7 @@ Siete ficheros vigilan invariantes leyendo el código **como texto**, no
 ejecutándolo: `app/cycle.rs`, `app/signing/mod.rs`, `app/signing/site.rs`,
 `tests/site_frontier_guards.rs`, `commands/guards.rs`,
 `tests/module_directions.rs` y `tests/adr_citations_resolve.rs`. Abren el `.rs`
-con `include_str!` y buscan cadenas dentro; la última pide a git la lista de
+con `include_str!` o lo leen del disco y buscan cadenas dentro; la última pide a git la lista de
 todos los `.rs` versionados y falla, con fichero y línea, por cada `ADR-NNNN`
 citado sin fichero en `docs/adr/`. Las de `app/signing/site.rs` comprueban **ausencias** —que la postfirma
 de un trámite de sede no entregue el documento, no anote fila y no recuerde el

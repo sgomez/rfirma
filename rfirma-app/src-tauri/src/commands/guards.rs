@@ -2,32 +2,56 @@
 
 use std::collections::BTreeSet;
 use std::path::Path;
-
-/// Ficheros del módulo con su código fuente.
-const SOURCES: [(&str, &str); 7] = [
-    ("mod.rs", include_str!("mod.rs")),
-    ("failure.rs", include_str!("failure.rs")),
-    ("orders.rs", include_str!("orders.rs")),
-    ("rubric.rs", include_str!("rubric.rs")),
-    ("site_window.rs", include_str!("site_window.rs")),
-    ("views.rs", include_str!("views.rs")),
-    ("views_site.rs", include_str!("views_site.rs")),
-];
+use std::sync::OnceLock;
 
 /// Fichero excluido de las comprobaciones de tipos.
 const THIS_FILE: &str = "guards.rs";
 
-/// Obtiene el código fuente de un fichero del módulo por su nombre.
-fn source_of(file: &str) -> &'static str {
-    SOURCES
-        .iter()
-        .find(|(name, _)| *name == file)
-        .map(|(_, source)| *source)
-        .unwrap_or_else(|| panic!("«{file}» tiene que estar en la lista del modulo"))
+/// Comprueba si la ruta, relativa a `src/`, es de un adaptador: `commands/` o cualquier `adapters/` de un contexto (RD-02).
+fn is_an_adapter(relative: &str) -> bool {
+    let mut segments = relative.split('/');
+    let first = segments.next().unwrap_or_default();
+    first == "commands" || segments.next() == Some("adapters")
 }
 
-/// El código fuente de un fichero de `SOURCES`, ya sin módulo de pruebas: vive en su
-/// `tests.rs` hermano y `include_str!` no lo trae.
+/// Comprueba si el fichero es de producción: ni pruebas hermanas ni esta guarda.
+fn is_production(relative: &str) -> bool {
+    let name = relative.rsplit('/').next().unwrap_or_default();
+    name != "tests.rs" && name != THIS_FILE
+}
+
+/// Ficheros de adaptador bajo `src/`, con su código, sin lista que mantener.
+fn adapter_sources_under(src: &Path) -> Vec<(String, String)> {
+    let mut found: Vec<(String, String)> = rust_files_under(src, "")
+        .into_iter()
+        .filter(|relative| is_an_adapter(relative) && is_production(relative))
+        .map(|relative| {
+            let source = std::fs::read_to_string(src.join(&relative))
+                .unwrap_or_else(|error| panic!("deberia leerse {relative}: {error}"));
+            (relative, source)
+        })
+        .collect();
+    found.sort();
+    found
+}
+
+/// Los ficheros de adaptador de este crate, leídos una sola vez.
+fn sources() -> &'static [(String, String)] {
+    static SOURCES: OnceLock<Vec<(String, String)>> = OnceLock::new();
+    SOURCES
+        .get_or_init(|| adapter_sources_under(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src")))
+}
+
+/// Obtiene el código fuente de un fichero por su ruta relativa a `src/`.
+fn source_of(file: &str) -> &'static str {
+    sources()
+        .iter()
+        .find(|(name, _)| name == file)
+        .map(|(_, source)| source.as_str())
+        .unwrap_or_else(|| panic!("«{file}» tiene que ser un adaptador de src/"))
+}
+
+/// El código fuente de un fichero, ya sin módulo de pruebas: vive en su `tests.rs` hermano.
 fn production_half(source: &str) -> &str {
     source
 }
@@ -73,10 +97,10 @@ struct Output<'a> {
     name: String,
 }
 
-/// Descubre todos los tipos de salida serializables declarados en el módulo.
+/// Descubre todos los tipos de salida serializables declarados en los adaptadores.
 fn outputs() -> Vec<Output<'static>> {
     let mut found = Vec::new();
-    for (file, source) in SOURCES {
+    for (file, source) in sources() {
         let flattened = attributes_on_one_line(production_half(source));
         let mut serialisable = false;
         let mut open: Option<String> = None;
@@ -282,7 +306,7 @@ fn the_portal_path_never_crosses_to_the_window() {
 #[test]
 fn every_output_type_is_either_built_from_a_document_or_declared_without_one() {
     let outputs = outputs();
-    let declared: usize = SOURCES
+    let declared: usize = sources()
         .iter()
         .map(|(_, source)| serialising_derives(&attributes_on_one_line(production_half(source))))
         .sum();
@@ -375,29 +399,37 @@ fn rust_files_under(directory: &Path, prefix: &str) -> Vec<String> {
 }
 
 #[test]
-fn the_list_of_files_covers_the_whole_module() {
-    let listed: BTreeSet<&str> = SOURCES.iter().map(|(file, _)| *file).collect();
-    let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/commands");
-    let present: BTreeSet<String> = rust_files_under(&directory, "")
+fn an_adapter_in_a_new_context_is_discovered_without_editing_any_list() {
+    let tree = tempfile::tempdir().expect("deberia crearse un directorio temporal");
+    for (relative, source) in [
+        ("commands/mod.rs", "#[tauri::command]\npub fn one() {}\n"),
+        ("commands/guards.rs", "pub struct NotThis;\n"),
+        ("commands/tests.rs", "pub struct NotThisEither;\n"),
+        (
+            "site/adapters/tauri.rs",
+            "#[tauri::command]\npub fn two() {}\n",
+        ),
+        ("site/adapters/tauri/tests.rs", ""),
+        ("site/domain/errand.rs", "pub struct NotAnAdapter;\n"),
+        ("site/application/attend.rs", ""),
+        ("memory/recents.rs", ""),
+    ] {
+        let path = tree.path().join(relative);
+        std::fs::create_dir_all(path.parent().expect("tiene carpeta")).expect("carpeta");
+        std::fs::write(path, source).expect("fichero");
+    }
+
+    let found: Vec<String> = adapter_sources_under(tree.path())
         .into_iter()
-        .filter(|name| name != THIS_FILE)
-        .filter(|name| name != "tests.rs" && !name.ends_with("/tests.rs"))
+        .map(|(relative, _)| relative)
         .collect();
 
-    let missing: Vec<&String> = present
-        .iter()
-        .filter(|name| !listed.contains(name.as_str()))
-        .collect();
-
-    assert!(
-        missing.is_empty(),
-        "estos ficheros del modulo no los recorre la guarda de rutas: {missing:?}"
-    );
+    assert_eq!(found, ["commands/mod.rs", "site/adapters/tauri.rs"]);
 }
 
 #[test]
 fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
-    let orders: usize = SOURCES
+    let orders: usize = sources()
         .iter()
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
@@ -430,7 +462,7 @@ fn commands_of(source: &str) -> Vec<(&str, String, &str)> {
 
 #[test]
 fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
-    let source = production_half(source_of("mod.rs"));
+    let source = production_half(source_of("commands/mod.rs"));
 
     for command in [
         "pub fn open_document(",
@@ -470,7 +502,7 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
 
 #[test]
 fn every_command_of_the_site_errand_runs_off_the_main_thread() {
-    let source = production_half(source_of("mod.rs"));
+    let source = production_half(source_of("commands/mod.rs"));
 
     const OF_THE_ERRAND: [&str; 6] = [
         "pub fn close_site_window(",
@@ -494,7 +526,7 @@ fn every_command_of_the_site_errand_runs_off_the_main_thread() {
 
 #[test]
 fn the_pin_is_taken_by_a_single_command() {
-    let takers: usize = SOURCES
+    let takers: usize = sources()
         .iter()
         .map(|(_, source)| production_half(source).matches("pin: String").count())
         .sum();

@@ -529,15 +529,24 @@ outline path:
 # rustfmt parte un derive largo en varias lineas, que es el mismo motivo por el
 # que esa guarda tiene `attributes_on_one_line`.
 #
+# Las FUENTES se descubren por ruta, igual que en esa guarda: todo `.rs` de
+# `commands/` y de cualquier `<contexto>/adapters/` bajo `src/` (RD-02), sin
+# lista de ficheros. `src` se puede apuntar a otro arbol para probar la receta.
+#
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
-contract:
+contract src=(tauri / "src"):
     #!/usr/bin/env bash
     set -u
-    cd {{ tauri }}/src/commands
+    cd "{{ src }}" || exit 1
 
-    # El extractor de tipos se usa dos veces —para los de `commands/` y para los
-    # que estos toman prestados de otros modulos—, asi que vive en un fichero y
-    # no duplicado. `only` lo limita a un tipo por su nombre.
+    files=$(find . -type f -name '*.rs' \
+        \( -path './commands/*' -o -path './*/adapters/*' \) \
+        ! -name 'tests.rs' ! -name 'guards.rs' \
+        | sed 's#^\./##' | LC_ALL=C sort)
+
+    # El extractor de tipos se usa dos veces —para los de los adaptadores y para
+    # los que estos toman prestados de otros modulos—, asi que vive en un
+    # fichero y no duplicado. `only` lo limita a un tipo por su nombre.
     program=$(mktemp)
     trap 'rm -f "$program"' EXIT
     printf '%s' '
@@ -639,10 +648,10 @@ contract:
         gsub(/\( +/, "(", buf); gsub(/,? *\)/, ")", buf)
         printf "  %-6s%s\n", (async ? "async " : ""), buf
     }
-    ' mod.rs)
+    ' $files)
 
     crossing=""
-    for source in $(ls *.rs | grep -v '^guards\.rs$'); do
+    for source in $files; do
         crossing="$crossing$(awk -f "$program" -v only="" -v source="" "$source")"$'\n'
     done
 
@@ -664,9 +673,9 @@ contract:
         | grep -vxF "$defined" || true)
     lent=""
     for type in $borrowed; do
-        for candidate in $(grep -rl "^pub \(struct\|enum\) $type" .. --include='*.rs'); do
+        for candidate in $(grep -rl "^pub \(struct\|enum\) $type" . --include='*.rs' | LC_ALL=C sort); do
             lent="$lent$(awk -f "$program" -v only="$type" \
-                -v source="$(realpath --relative-to=.. "$candidate")" "$candidate")"$'\n'
+                -v source="$(realpath --relative-to=. "$candidate")" "$candidate")"$'\n'
         done
     done
     if [ -n "$lent" ]; then
