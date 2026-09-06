@@ -163,13 +163,17 @@ fn a_citation_without_a_file_is_caught_and_named_with_file_and_line() {
         },
         Source {
             path: "src/broken.rs",
-            text: "fn b() {}\n\n/// Ver ADR-0099 y ADR-0005.\nfn c() {}\n",
+            text: concat!(
+                "fn b() {}\n\n/// Ver ",
+                "ADR-",
+                "0099 y ADR-0005.\nfn c() {}\n"
+            ),
         },
     ];
 
     assert_eq!(
         dangling_citations(&sources, &existing),
-        vec!["src/broken.rs:3: ADR-0099"]
+        vec![concat!("src/broken.rs:3: ", "ADR-", "0099")]
     );
 }
 
