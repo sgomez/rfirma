@@ -1,8 +1,7 @@
 use super::*;
 
-fn every_code_of_ours() -> Vec<SafCode> {
-    let mut codes = Vec::new();
-    for situation in [
+fn every_token_code() -> Vec<SafCode> {
+    [
         TokenSituation::IncorrectPin,
         TokenSituation::PinLocked,
         TokenSituation::TokenAbsent,
@@ -12,55 +11,90 @@ fn every_code_of_ours() -> Vec<SafCode> {
         TokenSituation::Pkcs12Unreadable,
         TokenSituation::KeyNotRsa,
         TokenSituation::Unknown,
-    ] {
-        codes.push(code_of_token(situation));
-    }
-    for situation in [MemorySituation::Unreadable, MemorySituation::Unwritable] {
-        codes.push(code_of_memory(situation));
-    }
-    for situation in [
+    ]
+    .into_iter()
+    .map(code_of_token)
+    .collect()
+}
+
+fn every_memory_code() -> Vec<SafCode> {
+    [MemorySituation::Unreadable, MemorySituation::Unwritable]
+        .into_iter()
+        .map(code_of_memory)
+        .collect()
+}
+
+fn every_destination_code() -> Vec<SafCode> {
+    [
         DestinationSituation::FolderMissing,
         DestinationSituation::NotAFolder,
         DestinationSituation::FolderUnreadable,
         DestinationSituation::NoFreeName,
-    ] {
-        codes.push(code_of_destination(situation));
-    }
-    for situation in [
+    ]
+    .into_iter()
+    .map(code_of_destination)
+    .collect()
+}
+
+fn every_rubric_code() -> Vec<SafCode> {
+    [
         RubricSituation::NotAnAcceptedImage,
         RubricSituation::DamagedImage,
         RubricSituation::ImageTooLarge,
         RubricSituation::SourceUnreadable,
         RubricSituation::StoreUnwritable,
         RubricSituation::StoreUnreadable,
-    ] {
-        codes.push(code_of_rubric(situation));
-    }
-    for situation in [
+    ]
+    .into_iter()
+    .map(code_of_rubric)
+    .collect()
+}
+
+fn every_channel_code() -> Vec<SafCode> {
+    [
         ChannelSituation::NoDrawnPortIsFree,
         ChannelSituation::MaterialNotUsable,
         ChannelSituation::NotListening,
-    ] {
-        codes.push(code_of_channel(situation));
-    }
-    for refusal in [
+    ]
+    .into_iter()
+    .map(code_of_channel)
+    .collect()
+}
+
+fn every_inadmissible_code() -> Vec<SafCode> {
+    [
         Inadmissible::NotAPdf,
         Inadmissible::Encrypted,
         Inadmissible::Certified,
-    ] {
-        codes.push(code_of_inadmissible(refusal));
-    }
-    codes.push(code_of_bridge(&BridgeError::Failed(
-        "lo que dijera Java".to_owned(),
-    )));
-    codes.push(code_of_bridge(&BridgeError::PdfHasUnregisteredSignatures(
-        "lo que dijera Java".to_owned(),
-    )));
-    codes.push(code_of_bridge(&BridgeError::IncompatiblePolicy(
-        "lo que dijera Java".to_owned(),
-    )));
-    codes.push(code_of_broken_seal());
-    codes
+    ]
+    .into_iter()
+    .map(code_of_inadmissible)
+    .collect()
+}
+
+fn every_bridge_code() -> Vec<SafCode> {
+    [
+        BridgeError::Failed("lo que dijera Java".to_owned()),
+        BridgeError::PdfHasUnregisteredSignatures("lo que dijera Java".to_owned()),
+        BridgeError::IncompatiblePolicy("lo que dijera Java".to_owned()),
+    ]
+    .iter()
+    .map(code_of_bridge)
+    .collect()
+}
+
+fn every_code_of_ours() -> Vec<SafCode> {
+    [
+        every_token_code(),
+        every_memory_code(),
+        every_destination_code(),
+        every_rubric_code(),
+        every_channel_code(),
+        every_inadmissible_code(),
+        every_bridge_code(),
+        vec![code_of_broken_seal()],
+    ]
+    .concat()
 }
 
 #[test]
