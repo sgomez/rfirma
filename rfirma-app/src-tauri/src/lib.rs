@@ -49,6 +49,7 @@ pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
 
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {
+    use app::errand::Transport as _;
     use tauri::{Emitter, Manager};
 
     // **Antes que nada**: si lo que se pide es la ayuda, se imprime y se
@@ -88,7 +89,7 @@ pub fn run() {
 
     // Y su copia para la orden 36, que instala la CA local cuando la persona lo
     // pide desde la pantalla de reparación de la ventana de sede (ID-341).
-    let local_ca_trust = commands::LocalCaTrust {
+    let local_ca_trust = app::startup::LocalCaTrust {
         store: ca_store.clone(),
         profiles: nss_profiles.clone(),
     };
@@ -173,17 +174,21 @@ pub fn run() {
                     // mitad de un trámite (ID-224, ID-329).
                     app::invocation::SecondInvocation::OpensItsOwnWindow(url) => {
                         let handle = app.clone();
+                        let transport = the_transport(&second_store, app);
                         let attendance = app::startup::attend_site_launch(
                             &url,
-                            &|ports, duty| open_the_channel(&second_store, ports, duty, app),
-                            &|content| open_the_site_window(&handle, &content),
+                            &|ports, duty| transport.open(ports, duty),
+                            &|_| commands::open_the_site_window(&handle),
                             app.state::<app::errand::LiveErrand>().inner(),
                             // A mitad de un trámite no se abre ni un almacén
                             // NSS (ID-224), así que de la CA local no se sabe
                             // nada aquí y no se cuenta como obstáculo.
                             app::startup::LocalCaReach::NotAnObstacle,
                         );
-                        hold_the_channel(app, attendance);
+                        say(app::startup::hold_the_channel(
+                            &app.state::<app::startup::HeldChannel>(),
+                            attendance,
+                        ));
                     }
                     // Y quien invoca sin nada que abrir quiere ver lo que ya
                     // había, que es lo que la ventana principal tiene delante.
@@ -215,21 +220,15 @@ pub fn run() {
         // arranque, porque es el único momento en que los argumentos son los de
         // **esta** invocación.
         .manage(commands::PendingInvocation::of(invocation.clone()))
-        // **El trámite de sede vivo del proceso** (ID-325, ID-280). Vacío en el
-        // arranque normal, que es la mayoría: sólo lo llena `attend_launch`.
+        // **El trámite de sede vivo del proceso** (ID-325, ID-280), con todo lo
+        // que recuerda: qué se consintió y en qué momento está (RD-01). Vacío
+        // en el arranque normal, que es la mayoría: sólo lo llena
+        // `attend_launch`.
         .manage(app::errand::LiveErrand::default())
         // Y el canal abierto, sostenido: soltar un [`channel::OpenChannel`]
         // suelta con él su asa de apagado, y el servidor deja de aceptar
         // conexiones.
         .manage(app::startup::HeldChannel::default())
-        // Lo que la sede pidio del listado, entre el momento del consentimiento
-        // y la respuesta: el filtro se vuelve a comprobar antes de entregar
-        // nada (ID-259) y la ventana no puede devolverlo.
-        .manage(commands::SiteConsent::default())
-        // En qué momento está el trámite, para la ventana de sede que todavía
-        // no ha puesto la escucha. Sin esto el primer momento se emite al vacío
-        // y la ventana se queda en blanco.
-        .manage(commands::PendingSiteErrand::default())
         // Dónde vive la CA local y en qué perfiles NSS tiene que estar, para
         // que la ventana de sede pueda instalarla sin volver a resolver rutas.
         .manage(local_ca_trust)
@@ -250,8 +249,7 @@ pub fn run() {
             if window.label() == commands::SITE_WINDOW
                 && matches!(event, tauri::WindowEvent::CloseRequested { .. })
             {
-                window.state::<commands::SiteConsent>().forget();
-                app::errand::declined(&window.state::<app::errand::LiveErrand>());
+                app::errand::decline(&window.state::<app::errand::LiveErrand>());
                 return;
             }
 
@@ -313,6 +311,7 @@ pub fn run() {
         // obedece lo que devuelve.
         .setup(move |app| {
             let handle = app.handle().clone();
+            let transport = the_transport(&ca_store, &handle);
             let startup = app::startup::attend_startup(
                 &invocation,
                 app::startup::TrustAtStartup {
@@ -320,16 +319,14 @@ pub fn run() {
                     profiles: &nss_profiles,
                     stores: &trust::NssTrustStores,
                 },
-                &|ports, duty| open_the_channel(&ca_store, ports, duty, &handle),
-                &|content| open_the_site_window(&handle, &content),
+                &|ports, duty| transport.open(ports, duty),
+                &|_| commands::open_the_site_window(&handle),
                 app.state::<app::errand::LiveErrand>().inner(),
             );
 
             // Qué se dice de la CA local es una regla y vive en `app::trust`,
             // probada allí sin arrancar Tauri; aquí sólo se imprime (#397).
-            for line in &startup.said {
-                eprintln!("{line}");
-            }
+            say(startup.said);
 
             match startup.opening {
                 // **Con una invocación de sede la principal no se enseña**
@@ -341,7 +338,10 @@ pub fn run() {
                     }
                 }
                 app::startup::Opening::TheSiteErrand(attendance) => {
-                    hold_the_channel(app.handle(), attendance);
+                    say(app::startup::hold_the_channel(
+                        &app.state::<app::startup::HeldChannel>(),
+                        attendance,
+                    ));
                 }
             }
 
@@ -359,146 +359,23 @@ fn nss_profiles_of_this_home() -> Vec<std::path::PathBuf> {
         .unwrap_or_default()
 }
 
-/// **El transporte de producción** (ID-326): ata el primero libre de los
-/// puertos que sorteó la sede y sirve sobre el runtime de Tauri.
-///
-/// El certificado del servidor local se fabrica **aquí dentro** y no antes de
-/// arrancar: la CA que lo firma puede estar naciendo en este mismo arranque
-/// —el refresco es lo primero que hace el caso de uso—, así que leerla antes de
-/// llamarlo sería leerla antes de que exista.
-fn open_the_channel(
-    store: &tls::LocalCaStore,
-    ports: &[u16],
-    duty: channel::ChannelDuty,
-    app: &tauri::AppHandle,
-) -> Result<channel::OpenChannel, channel::ChannelError> {
-    let unusable =
-        |detail: String| channel::ChannelError::new(channel::Situation::MaterialNotUsable, detail);
-    let ca = store
-        .read()
-        .map_err(|error| unusable(error.to_string()))?
-        .ok_or_else(|| {
-            unusable(
-                "no hay CA local con la que firmar el certificado del servidor local".to_owned(),
-            )
-        })?;
-    let certificate =
-        tls::LocalServerCertificate::issued_by(&ca).map_err(|error| unusable(error.to_string()))?;
-
-    // **Quien atiende la operacion es el adaptador** (ID-330): arma el
-    // escritorio del tramite desde el estado de Tauri y le entrega el asa por
-    // la que se le contestara a la sede. El canal no sabe nada de tramites.
+/// **El transporte de producción** (ID-326): el `wss` sobre el *loopback*, que
+/// entrega lo que llega al adaptador del trámite. Quien atiende la operación es
+/// el adaptador (ID-330): arma la mesa del trámite desde el estado de Tauri, y
+/// el canal no sabe nada de trámites.
+fn the_transport(store: &tls::LocalCaStore, app: &tauri::AppHandle) -> app::transport::LoopbackWss {
     let handle = app.clone();
-    let operations: channel::SiteOperations = std::sync::Arc::new(move |url, reply| {
-        commands::attend_site_operation(&handle, url, reply);
-    });
-
-    channel::open(ports, &certificate, duty, operations)
-}
-
-/// **La ventana de sede** (ID-333, ID-334): de diálogo, 520 × 420, no
-/// redimensionable y sin la cabecera de la aplicación, pero **con las
-/// decoraciones del sistema** (`docs/design/ventana-de-sede.md`): la barra de
-/// título la pone el escritorio. Una pintada por el frontal no la mueve el
-/// gestor de ventanas, y dejaba una ventana que no se podía arrastrar.
-///
-/// Cerrar por la cruz del sistema es lo mismo que cerrarla por dentro: el
-/// manejador de `CloseRequested` de esta etiqueta ya abandona el trámite
-/// (ID-340).
-///
-/// Lo que se le publica es la espera —el canal está en pie y la petición de la
-/// sede no ha llegado—; el origen y la operación llegan con ella, por el canal
-/// ya abierto.
-///
-/// **El primer momento no se emite, se guarda**: emitirlo aquí sería emitirlo
-/// al vacío, porque entre que la página carga y que el frontal tiene puesta la
-/// escucha van dos idas y vueltas por el IPC. La ventana lo pide al montarse
-/// con `read_site_errand`, igual que la invocación con documento pide el suyo
-/// con `read_invocation`. Los momentos siguientes sí llegan por el evento
-/// (ID-338), que es cuando ya hay quien los oiga.
-fn open_the_site_window(app: &tauri::AppHandle, content: &app::startup::SiteWindowContent<'_>) {
-    use tauri::{Manager as _, WebviewUrl, WebviewWindowBuilder};
-
-    // El momento se guarda **antes** de construir la ventana: en cuanto la
-    // página cargue, el frontal lo pedirá con `read_site_errand`, y lo que se
-    // guarda aquí tiene que estar puesto ya.
-    app.state::<commands::PendingSiteErrand>()
-        .hold(view_of(content));
-
-    let built = WebviewWindowBuilder::new(
-        app,
-        commands::SITE_WINDOW,
-        WebviewUrl::App("sede.html".into()),
+    app::transport::LoopbackWss::new(
+        store.clone(),
+        std::sync::Arc::new(move |url, reply| {
+            commands::attend_site_operation(&handle, url, reply);
+        }),
     )
-    .title("rFirma")
-    .inner_size(520.0, 420.0)
-    .resizable(false)
-    .build();
-
-    if let Err(error) = built {
-        eprintln!("rfirma: no se puede abrir la ventana de sede ({error})");
-    }
 }
 
-/// **Lo que la ventana de sede recibe al abrirse** (ID-341).
-///
-/// Es traducir y nada más: quién abre la ventana y con qué lo decide
-/// [`app::startup::attend_site_launch`], y aquí sólo se pone en la forma que
-/// cruza el IPC.
-fn view_of(content: &app::startup::SiteWindowContent<'_>) -> commands::SiteErrandView {
-    use app::startup::{DeadEnd, SiteWindowContent};
-
-    match content {
-        // Lo único que se sabe al abrirla es que el canal está en pie: el
-        // origen y la operación llegan con la petición de la sede (ID-338).
-        SiteWindowContent::TheErrand(_) => commands::SiteErrandView::waiting(),
-        SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
-            commands::SiteErrandView::no_channel(commands::NoChannelView::ChannelNotOpened)
-        }
-        SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => {
-            commands::SiteErrandView::no_channel(commands::NoChannelView::LocalCaMissing)
-        }
-        SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
-            commands::SiteErrandView::refused(refusal)
-        }
-    }
-}
-
-/// Sostiene el canal que se acaba de abrir, o cuenta por qué no lo hay.
-///
-/// Soltar el [`channel::OpenChannel`] suelta con él su asa de apagado, y el
-/// servidor deja de aceptar conexiones: el canal tiene que vivir tanto como el
-/// trámite, así que se guarda en el estado.
-///
-/// Un rechazo que no tiene socket por el que salir **ya se ha enseñado en la
-/// ventana de sede** (ID-341); lo de aquí es la línea del registro, que es para
-/// quien lee `stderr` y no para quien está delante.
-fn hold_the_channel(app: &tauri::AppHandle, attendance: app::site::Attendance) {
-    use app::site::Attendance;
-    use tauri::Manager as _;
-
-    match attendance {
-        Attendance::Serving { channel, .. } => {
-            app.state::<app::startup::HeldChannel>().hold(channel);
-        }
-        // **Por su propia ranura, nunca por la del trámite** (ID-279, ID-280):
-        // con un trámite ya vivo el canal que llega es el del `SAF_45`, y
-        // guardarlo donde el que sirve cerraría el del primero —el que llega
-        // dejaría fuera al que estaba, y la sede del trámite en marcha se
-        // quedaría esperando igual que en el #390—.
-        Attendance::RefusingOverTheChannel { channel, .. } => {
-            app.state::<app::startup::HeldChannel>()
-                .hold_a_refusal(channel);
-        }
-        Attendance::RefusingInTheWindow(refusal) => eprintln!(
-            "rfirma: la invocacion de sede se rechaza con {} y no hay canal por el que decirlo: {}",
-            refusal.answer().on_the_wire(),
-            refusal.detail()
-        ),
-        Attendance::ChannelNotOpened(error) => {
-            eprintln!(
-                "rfirma: la invocacion de sede era buena pero no se abrio el canal ({error})"
-            );
-        }
+/// Lo que los casos de uso dejan dicho para `stderr`, impreso y nada más.
+fn say(lines: Vec<String>) {
+    for line in lines {
+        eprintln!("{line}");
     }
 }

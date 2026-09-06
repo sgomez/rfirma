@@ -27,9 +27,11 @@
 //! aquí habría sido inventarse una segunda copia de la misma cosa.
 
 pub mod certificates;
+pub mod codec;
 pub mod configuration;
 pub mod cycle;
 pub mod documents;
+pub mod engines;
 pub mod errand;
 pub mod filtering;
 pub mod frontier;
@@ -43,6 +45,7 @@ pub mod rubric;
 pub mod signing;
 pub mod site;
 pub mod startup;
+pub mod transport;
 pub mod trust;
 pub mod version;
 

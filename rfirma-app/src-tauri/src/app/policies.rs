@@ -30,7 +30,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::ffi::{BridgeError, ExpandRequest, NativeBridge};
+use crate::ffi::BridgeError;
 use crate::protocol::{pairs_of, PADES};
 use crate::signing::to_java_properties;
 
@@ -44,15 +44,6 @@ use crate::signing::to_java_properties;
 pub trait PolicyEngine {
     /// El bloque `java.util.Properties` expandido, a partir del de la sede.
     fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError>;
-}
-
-impl PolicyEngine for NativeBridge {
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError> {
-        self.expand_extra_params(ExpandRequest {
-            extra_params,
-            format,
-        })
-    }
 }
 
 /// **Caso de uso.** Los `extraParams` que la sede declaró, con su política ya

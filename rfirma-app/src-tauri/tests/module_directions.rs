@@ -64,6 +64,9 @@ enum Origin {
     Layer(Layer),
     /// Una carpeta concreta de `src/`, para las dos direcciones del #136.
     Module(&'static str),
+    /// Todo lo que cuelga de esa ruta de `src/`, para las dos aristas del
+    /// trámite (RD-12, #406).
+    Under(&'static str),
 }
 
 /// Una arista prohibida: quién no puede nombrar a quién, adónde debería ir en
@@ -81,7 +84,7 @@ struct Direction {
     reason: &'static str,
 }
 
-const DIRECTIONS: [Direction; 5] = [
+const DIRECTIONS: [Direction; 8] = [
     Direction {
         from: Origin::Layer(Layer::Domain),
         forbidden: "app",
@@ -130,6 +133,39 @@ const DIRECTIONS: [Direction; 5] = [
         reason: "`DestinationFolder` es un concepto del destino y vive en \
                  `destination/`; desenvolver la configuración lo hace `app/` (ID-83)",
     },
+    Direction {
+        from: Origin::Under("app/errand/"),
+        forbidden: "channel",
+        // Los tres tipos que **cruzan** el puerto —el cometido con el que se
+        // abre, el canal abierto y su error— son vocabulario del puerto aunque
+        // vivan en `channel/`: los nombra `ports.rs` para declararlo, y nadie
+        // mas del tramite los necesita.
+        except: &[
+            "channel::ChannelDuty",
+            "channel::ChannelError",
+            "channel::OpenChannel",
+        ],
+        instead: "el tramite recibe el transporte por su puerto (`app/errand/ports.rs`); \
+                  el `wss` sobre el loopback es `app/transport.rs`, y quien lo instancia \
+                  es la negociacion de arranque (`app/site.rs`)",
+        reason: "el tramite no importa el transporte concreto, solo su puerto (RD-12, #406)",
+    },
+    Direction {
+        from: Origin::Under("app/errand/"),
+        forbidden: "app::codec",
+        except: &[],
+        instead: "el tramite recibe el codec por su puerto (`app/errand/ports.rs`); \
+                  el de la version 4 es `app/codec.rs`, y quien lo instancia es la \
+                  negociacion de arranque (`app/site.rs`)",
+        reason: "el tramite no importa el codec concreto, solo su puerto (RD-12, #406)",
+    },
+    Direction {
+        from: Origin::Under("app/errand/"),
+        forbidden: "app::transport",
+        except: &[],
+        instead: "lo mismo que con `channel`: el transporte entra por el puerto",
+        reason: "el tramite no importa el transporte concreto, solo su puerto (RD-12, #406)",
+    },
 ];
 
 /// Un fichero de producción del backend, listo para mirarle los `use`.
@@ -170,6 +206,10 @@ fn tracked_modules() -> Vec<Module> {
         .expect("la lista de git deberia ser UTF-8")
         .lines()
         .filter(|entry| entry.ends_with(".rs"))
+        // Un `tests.rs` es la mitad de pruebas de su carpeta, escrita en un
+        // fichero aparte en vez de tras `mod tests`: no participa en el grafo
+        // que se compila, igual que un `#[cfg(test)]` al pie.
+        .filter(|entry| !entry.ends_with("/tests.rs"))
         .map(|entry| {
             let relative = entry
                 .strip_prefix("src/")
@@ -318,13 +358,20 @@ fn applies_to(direction: &Direction, module: &Module) -> bool {
     match direction.from {
         Origin::Layer(layer) => module.layer == layer,
         Origin::Module(folder) => module.folder == folder,
+        Origin::Under(prefix) => module.name.starts_with(prefix),
     }
 }
 
 /// ¿Este camino importado cae dentro de lo que la dirección prohíbe?
 fn is_forbidden(direction: &Direction, path: &str) -> bool {
-    let first = path.split("::").next().unwrap_or_default();
-    if first != direction.forbidden {
+    // Un segmento prohibe la carpeta entera; un camino con `::` prohibe solo
+    // ese modulo y lo que cuelga de el (`app::codec`, `app::transport`).
+    let hits = if direction.forbidden.contains("::") {
+        path == direction.forbidden || path.starts_with(&format!("{}::", direction.forbidden))
+    } else {
+        path.split("::").next().unwrap_or_default() == direction.forbidden
+    };
+    if !hits {
         return false;
     }
     !direction
@@ -407,6 +454,28 @@ fn the_directions_that_are_allowed_are_still_there() {
             .any(|path| path.starts_with("destination")),
         "`memory/configuration.rs` deberia seguir importando `destination`: es la \
          direccion correcta, la memoria guardando un concepto del destino (ID-83)"
+    );
+    assert!(
+        imports("app/transport.rs")
+            .iter()
+            .any(|path| path.starts_with("channel")),
+        "`app/transport.rs` deberia seguir importando `channel`: es el adaptador del \
+         transporte, y es el unico sitio de `app/` que lo nombra por el tramite (RD-04)"
+    );
+    assert!(
+        imports("app/site.rs")
+            .iter()
+            .any(|path| path == "app::codec::V4Codec"),
+        "`app/site.rs` deberia seguir instanciando `V4Codec`: la negociacion de arranque \
+         es el unico sitio que decide el codec (RD-05)"
+    );
+    assert!(
+        imports("app/errand/desk.rs")
+            .iter()
+            .any(|path| path.starts_with("app::filtering")),
+        "`app/errand/desk.rs` deberia seguir nombrando `app::filtering` con `crate::`: \
+         la guarda solo lee `use crate::`, y el tramite escribe asi sus importaciones \
+         para que las dos aristas prohibidas del RD-12 no se le escapen"
     );
 }
 

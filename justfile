@@ -104,7 +104,7 @@ check: tools check-repo check-java check-ts check-rust
 # Lo que no pertenece a ninguna cadena (ID-01): cinco comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python
+check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish check-contract lint-python
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -684,6 +684,24 @@ contract:
         "-- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --" \
         2>/dev/null | cat -s
     exit 0
+
+# EL CONTRATO VENTANA-BACKEND ESTA CONGELADO MIENTRAS DURE EL #406 (RT-02): la
+# salida de `just contract` se capturo antes de tocar el tramite de sede y tiene
+# que ser identica al terminar. Es el oraculo de la ventana: si esta receta se
+# pone roja, un tipo de cruce o una orden ha cambiado de forma, y eso es un
+# cambio de contrato que se discute en el issue, no se acomoda aqui. Cuando el
+# spec termine, la instantanea se retira con esta receta.
+#
+# Comprueba que `just contract` sigue siendo el de la instantanea.
+check-contract:
+    #!/usr/bin/env bash
+    set -eu
+    snapshot={{ tauri }}/tests/contract.snapshot
+    if ! diff -u "$snapshot" <(just contract); then
+        echo "el contrato ventana-backend ha cambiado; ver RT-02 del #406" >&2
+        exit 1
+    fi
+    echo "check-contract: el contrato es el de la instantanea"
 
 # ---------------------------------------------------------------------------
 # Medicion

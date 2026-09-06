@@ -20,12 +20,14 @@ use std::path::Path;
 /// están **todos**: sin ella, un fichero nuevo con un tipo de salida dentro
 /// pasaría sin que nadie lo mirara, que es justo el fallo que el ID-84 viene a
 /// arreglar.
-const SOURCES: [(&str, &str); 5] = [
+const SOURCES: [(&str, &str); 7] = [
     ("mod.rs", include_str!("mod.rs")),
     ("failure.rs", include_str!("failure.rs")),
     ("orders.rs", include_str!("orders.rs")),
     ("rubric.rs", include_str!("rubric.rs")),
+    ("site_window.rs", include_str!("site_window.rs")),
     ("views.rs", include_str!("views.rs")),
+    ("views_site.rs", include_str!("views_site.rs")),
 ];
 
 /// Este mismo fichero no se recorre: no tiene producción, solo las guardas, y
@@ -205,7 +207,7 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 15] = [
     // un `Refusal` sí puede llevar dentro el asa del portal (los hay sobre
     // `Parameter::Data`, el fichero de paso). Aquí no hay documento detrás
     // **mientras el único constructor sea el del callejón sin salida**:
-    // `SiteErrandView::refused`, llamado sólo desde `view_of` con el `Refusal`
+    // `SiteErrandView::refused`, llamado sólo desde `SiteErrandView::from` con el `Refusal`
     // de `DeadEnd::RefusedWithoutChannel`, que nace de leer la URL de arranque.
     // Si `SiteStageView::Outcome` acaba enseñando rechazos nacidos de un
     // documento, esta línea sale de aquí y el tipo se construye en

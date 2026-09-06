@@ -14,26 +14,59 @@
 //!    AutoFirma asume la 3 justamente *cuando `ports` falta*—: sin puertos no
 //!    hay por dónde contestar.
 //!
-//! # El servidor es un puerto
+//! # El servidor es un puerto, y el códec también
 //!
 //! El caso de uso no construye el servidor: lo recibe como
 //! [`ChannelTransport`], un cierre, igual que [`crate::app::version`] recibe la
-//! red (ID-182). Es **la única costura nueva del hito** (ID-214, TD-51), y es
-//! lo que hace que ninguna prueba de aquí abra un socket (TD-52): las de este
-//! módulo doblan el transporte con un cierre que apunta lo que se le pidió.
-//! En producción lo cumple [`crate::channel`].
+//! red (ID-182). Es lo que hace que ninguna prueba de aquí abra un socket
+//! (TD-52): las de este módulo doblan el transporte con un cierre que apunta lo
+//! que se le pidió. En producción lo cumple [`crate::app::transport`].
+//!
+//! Y **aquí, y sólo aquí, se decide qué códec y qué transporte** hablan con la
+//! sede ([`negotiate`], RD-05): el códec negociado entra en el trámite con la
+//! plaza, y desde entonces el trámite lee y contesta con él sin saber cuál es.
+
+use std::sync::Arc;
 
 use crate::channel::{ChannelDuty, ChannelError, OpenChannel};
 use crate::protocol::{
-    drawn_ports, AfirmaUrl, LaunchRequest, Refusal, RefusalSituation, SafCode, WireAnswer,
+    drawn_ports, AfirmaUrl, ChannelCredential, LaunchRequest, Refusal, RefusalSituation, SafCode,
+    WireAnswer,
 };
 
-use super::errand::{Errand, LiveErrand};
+use super::errand::{Errand, LiveErrand, NegotiatedCodec};
+use crate::app::codec::V4Codec;
 
-/// **El puerto de transporte** (ID-214): ata uno de esos puertos y sirve el
-/// canal para ese cometido.
-pub type ChannelTransport<'a> =
-    &'a dyn Fn(&[u16], ChannelDuty) -> Result<OpenChannel, ChannelError>;
+pub use super::errand::ChannelTransport;
+
+/// **Lo que la negociación de arranque decide** (RD-05): con qué códec se
+/// habla y por qué transporte.
+///
+/// Hoy hay una sola rama —`v=4` con puertos sorteados—, así que el códec es
+/// siempre [`V4Codec`] y el transporte, el `wss` sobre el *loopback* en uno de
+/// esos puertos con esa credencial. Cualquier otra invocación se rechaza
+/// exactamente como antes, con los mismos códigos: la negociación es
+/// [`LaunchRequest::from_url`] con el códec puesto al lado.
+pub struct Negotiated {
+    /// El códec con el que se leerán las operaciones y se escribirán las
+    /// respuestas de este canal.
+    pub codec: NegotiatedCodec,
+    /// Los puertos que sorteó la sede, en el orden en que los mandó.
+    pub ports: Vec<u16>,
+    /// La credencial que cerrará el canal.
+    pub credential: ChannelCredential,
+}
+
+/// **La negociación de arranque**: qué códec y qué transporte hablan con esta
+/// sede, a partir de la URL (RD-05).
+pub fn negotiate(url: &AfirmaUrl) -> Result<Negotiated, Refusal> {
+    let request = LaunchRequest::from_url(url)?;
+    Ok(Negotiated {
+        codec: Arc::new(V4Codec),
+        ports: request.ports().to_vec(),
+        credential: request.credential().clone(),
+    })
+}
 
 /// En qué queda la invocación de una sede.
 #[derive(Debug)]
@@ -87,12 +120,13 @@ pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErra
         Err(refusal) => return Attendance::RefusingInTheWindow(refusal),
     };
 
-    match LaunchRequest::from_url(&url) {
-        Ok(request) => {
-            let duty = ChannelDuty::Serve(request.credential().clone());
-            match transport(request.ports(), duty) {
+    match negotiate(&url) {
+        Ok(negotiated) => {
+            let duty = ChannelDuty::Serve(negotiated.credential.clone());
+            match transport(&negotiated.ports, duty) {
                 Ok(channel) => {
-                    let errand = Errand::of(request.credential().clone(), channel.port());
+                    let errand =
+                        Errand::of(negotiated.credential, channel.port(), negotiated.codec);
                     if live.begin(errand.clone()) {
                         return Attendance::Serving { channel, errand };
                     }
