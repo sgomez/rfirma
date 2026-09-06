@@ -1,68 +1,40 @@
-//! Las tres rutas de la memoria entre sesiones, y **el único sitio del código
-//! con un `cfg!` de sistema operativo** (ID-35, ADR-0010).
-//!
-//! Las rutas no son la decisión: la decisión es que hay **tres nombres** —
-//! [`Paths::config_file`], [`Paths::state_file`] y [`Paths::rubric_path`]— y
-//! que el resto de la aplicación no sabe qué sistema hay debajo. Añadir macOS
-//! o Windows toca este fichero y ninguno más; si aparece un segundo `cfg!` de
-//! sistema operativo en el repositorio, algo se ha hecho mal, y hay una prueba
-//! que lo comprueba (`tests/single_cfg_os_site.rs`).
-//!
-//! La separación entre **configuración** y **estado** es la razón de que esto
-//! no sea una sola carpeta: en Windows el estado no debe viajar en un perfil
-//! móvil y la configuración sí, y en Linux `XDG_STATE_HOME` existe justo para
-//! eso. macOS no distingue las dos cosas, y ahí la separación se colapsa a dos
-//! ficheros en el mismo directorio.
-//!
-//! El hito v0.1 es solo Linux; las otras dos columnas se escriben ahora porque
-//! el momento de saberlo es antes de escribir este fichero, no después.
-//!
-//! Resolver una ruta no toca el disco: no crea un directorio ni lo comprueba.
-//! Quien escribe es [`crate::memory`], y crea el directorio en ese momento. La
-//! única función de este fichero que sí toca el disco es
-//! [`restrict_to_owner`], y está aquí por la misma razón que todo lo demás:
-//! los permisos POSIX son conocimiento de sistema operativo, y el ID-35 dice
-//! que ese conocimiento vive en un solo sitio.
+//! Resolución de rutas del sistema y permisos de fichero entre sesiones (ADR-0010).
 
 use std::ffi::OsString;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-/// El nombre de la aplicación dentro de cada directorio del sistema.
+/// Nombre de la aplicación dentro de cada directorio del sistema.
 pub const APPLICATION_DIRECTORY: &str = "rfirma";
 
 const CONFIG_FILE: &str = "config.json";
 const STATE_FILE: &str = "state.json";
-/// La rúbrica se guarda ya normalizada a JPEG (ADR-0012), y la extensión lo
-/// dice: lo que hay ahí dentro nunca es el PNG que eligió el usuario.
+/// Nombre del fichero de rúbrica normalizada (ADR-0012).
 const RUBRIC_FILE: &str = "rubric.jpg";
-/// El directorio que reúne un almacén NSS por cada `.p12` instalado (ID-192).
+/// Directorio para almacenes NSS de certificados importados.
 const INSTALLED_CERTIFICATES_DIRECTORY: &str = "certificates";
-/// El certificado de la CA local, en PEM (ADR-0005, ID-221).
+/// Fichero del certificado de la CA local (ADR-0005).
 const LOCAL_CA_CERTIFICATE_FILE: &str = "local-ca.crt.pem";
-/// La clave privada de la CA local, en PEM y en un fichero `0600` (ID-223).
+/// Fichero de clave privada de la CA local (ADR-0005).
 const LOCAL_CA_KEY_FILE: &str = "local-ca.key.pem";
-/// El certificado de la CA local **siguiente**, la del solape (ID-224).
+/// Fichero del certificado siguiente de la CA local (ADR-0005).
 const NEXT_LOCAL_CA_CERTIFICATE_FILE: &str = "local-ca-next.crt.pem";
-/// La clave privada de la CA local **siguiente**, también `0600`.
+/// Fichero de clave privada siguiente de la CA local (ADR-0005).
 const NEXT_LOCAL_CA_KEY_FILE: &str = "local-ca-next.key.pem";
 
-/// El sistema operativo, reducido a lo único que cambia: dónde van las tres
-/// rutas.
+/// Plataformas soportadas para la resolución de rutas.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Platform {
-    /// `XDG_CONFIG_HOME`, `XDG_STATE_HOME` y `XDG_DATA_HOME`.
+    /// Entorno Linux basado en estándares XDG.
     Linux,
-    /// `%APPDATA%` para lo que puede viajar y `%LOCALAPPDATA%` para lo que no.
+    /// Entorno Windows basado en perfiles de usuario.
     Windows,
-    /// `~/Library/Application Support`, el mismo directorio para las tres.
+    /// Entorno macOS basado en Application Support.
     MacOs,
 }
 
 impl Platform {
-    /// El sistema sobre el que se ha compilado. **Este es el `cfg!`**: el resto
-    /// del módulo es código normal que recibe una [`Platform`], y por eso las
-    /// tres columnas de la tabla del ADR-0010 se prueban en cualquier máquina.
+    /// Plataforma sobre la que se compila la aplicación (ADR-0010).
     pub const CURRENT: Self = if cfg!(target_os = "windows") {
         Self::Windows
     } else if cfg!(target_os = "macos") {
@@ -72,18 +44,7 @@ impl Platform {
     };
 }
 
-/// Deja `path` **solo para su dueño**: `0700` si es directorio, `0600` si es
-/// fichero.
-///
-/// Dentro de la memoria van las rutas canónicas de los últimos documentos y la
-/// etiqueta del token. No es el titular ni el DNI —el ID-32 se cumple—, pero
-/// «Recordar mi actividad» se justifica en el ADR-0010 como la promesa a quien
-/// firma en un **ordenador compartido**, y con el umask habitual (0755/0644)
-/// cualquier otra cuenta local puede leer esa lista.
-///
-/// En los sistemas que no entienden de modos POSIX no hace nada y no es un
-/// fallo: la protección equivalente en Windows la da la ACL heredada del perfil
-/// del usuario, y `%LOCALAPPDATA%` ya no es legible por otras cuentas.
+/// Restringe los permisos de una ruta exclusivamente a su propietario.
 pub fn restrict_to_owner(path: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {
@@ -106,18 +67,14 @@ pub fn restrict_to_owner(path: &Path) -> std::io::Result<()> {
     }
 }
 
-/// El entorno no dice dónde vive el usuario.
-///
-/// No se inventa un directorio ni se cae a `.`: escribir la configuración en el
-/// directorio de trabajo es peor que no escribirla, porque nadie la vuelve a
-/// encontrar.
+/// Error producido cuando no se puede determinar el directorio personal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HomeUnknown {
     variable: &'static str,
 }
 
 impl HomeUnknown {
-    /// La variable de entorno que hacía falta y no estaba.
+    /// Variable de entorno requerida no encontrada.
     pub fn variable(&self) -> &'static str {
         self.variable
     }
@@ -131,7 +88,7 @@ impl fmt::Display for HomeUnknown {
 
 impl std::error::Error for HomeUnknown {}
 
-/// Los tres directorios ya resueltos, con `rfirma/` incluido.
+/// Rutas resueltas de configuración, estado y datos de la aplicación.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Paths {
     config_dir: PathBuf,
@@ -140,17 +97,12 @@ pub struct Paths {
 }
 
 impl Paths {
-    /// Las rutas del sistema sobre el que corre la aplicación.
+    /// Resuelve las rutas a partir de las variables de entorno actuales.
     pub fn from_environment() -> Result<Self, HomeUnknown> {
         Self::resolve(Platform::CURRENT, &|name| std::env::var_os(name))
     }
 
-    /// Las rutas de `platform`, leyendo el entorno con `environment`.
-    ///
-    /// Es pública para que las pruebas cubran las tres columnas del ADR-0010
-    /// sin tocar el entorno del proceso —cambiarlo es global y las pruebas
-    /// corren en hilos—, y para que un empaquetado pueda resolverlas contra
-    /// otro entorno si algún día hace falta.
+    /// Resuelve las rutas para una plataforma dada usando una función de entorno (ADR-0010).
     pub fn resolve(
         platform: Platform,
         environment: &dyn Fn(&str) -> Option<OsString>,
@@ -168,12 +120,7 @@ impl Paths {
         })
     }
 
-    /// Las tres rutas colgando de `root`, para pruebas y para arrancar contra
-    /// un directorio temporal.
-    ///
-    /// Reproduce la separación de Linux —`config/`, `state/` y `data/`— porque
-    /// una prueba que escribe las dos memorias en el mismo fichero no probaría
-    /// que están partidas.
+    /// Construye las rutas bajo un directorio raíz arbitrario.
     pub fn under(root: impl AsRef<Path>) -> Self {
         let root = root.as_ref();
         Self {
@@ -183,81 +130,48 @@ impl Paths {
         }
     }
 
-    /// El fichero de **configuración**: lo que el usuario elige.
+    /// Ruta del fichero de configuración de la aplicación.
     pub fn config_file(&self) -> PathBuf {
         self.config_dir.join(CONFIG_FILE)
     }
 
-    /// El fichero de **estado**: lo que la aplicación acumula sola.
+    /// Ruta del fichero de estado de la aplicación.
     pub fn state_file(&self) -> PathBuf {
         self.state_dir.join(STATE_FILE)
     }
 
-    /// La copia de la rúbrica. Es la copia, nunca la ruta del original
-    /// (ID-33): quien la escribe es [`crate::rubric::RubricStore`].
+    /// Ruta de la copia local de la rúbrica (ADR-0012).
     pub fn rubric_path(&self) -> PathBuf {
         self.data_dir.join(RUBRIC_FILE)
     }
 
-    /// Donde viven los almacenes NSS de los `.p12` instalados, uno por
-    /// directorio (ID-192).
-    ///
-    /// Va en el directorio de **datos** y no en el de estado por lo mismo que
-    /// la rúbrica: es material que el usuario aportó y que la aplicación no
-    /// puede volver a fabricar. Del fichero original no queda nada —ni la ruta
-    /// ni una copia—, solo el `cert9.db` y el `key4.db` que NSS escribe dentro
-    /// (ID-196).
+    /// Directorio de certificados instalados en almacenes NSS.
     pub fn installed_certificates_dir(&self) -> PathBuf {
         self.data_dir.join(INSTALLED_CERTIFICATES_DIRECTORY)
     }
 
-    /// El certificado de la **CA local** (ADR-0005).
-    ///
-    /// Va en el directorio de **datos** y no en el de estado por la misma razón
-    /// que los almacenes de los `.p12`: es material criptográfico que la
-    /// aplicación no puede volver a fabricar sin cambiar lo que el navegador ya
-    /// tiene registrado. El **certificado del servidor local** no aparece aquí
-    /// ni aparecerá: no se guarda en ningún sitio (ID-222).
+    /// Ruta del certificado de la CA local (ADR-0005).
     pub fn local_ca_certificate_path(&self) -> PathBuf {
         self.data_dir.join(LOCAL_CA_CERTIFICATE_FILE)
     }
 
-    /// La clave privada de la **CA local**, que se escribe `0600` con
-    /// [`create_owner_only_file`] (ID-223).
+    /// Ruta de la clave privada de la CA local (ADR-0005).
     pub fn local_ca_key_path(&self) -> PathBuf {
         self.data_dir.join(LOCAL_CA_KEY_FILE)
     }
 
-    /// El certificado de la CA local **siguiente**: la que ya está instalada en
-    /// los almacenes y **todavía no firma nada** (ID-224).
-    ///
-    /// Es un fichero aparte y no una sustitución porque el solape exige que la
-    /// vigente siga sirviendo mientras la siguiente espera su turno: si la
-    /// siguiente ocupase la ranura de la vigente, el certificado del servidor
-    /// local saldría firmado por una CA que el navegador abierto aún no ha
-    /// cargado, que es justo el camino que el solape existe para evitar.
+    /// Ruta del certificado siguiente de la CA local (ADR-0005).
     pub fn next_local_ca_certificate_path(&self) -> PathBuf {
         self.data_dir.join(NEXT_LOCAL_CA_CERTIFICATE_FILE)
     }
 
-    /// La clave privada de la CA local **siguiente**, `0600` igual que la otra.
+    /// Ruta de la clave privada siguiente de la CA local (ADR-0005).
     pub fn next_local_ca_key_path(&self) -> PathBuf {
         self.data_dir.join(NEXT_LOCAL_CA_KEY_FILE)
     }
 }
 
-/// Crea un fichero **legible solo por su dueño desde el primer byte**.
-///
-/// No es [`restrict_to_owner`] con otro nombre: ahí el modo se corrige
-/// *después* de escribir, y entre el `create` y el `chmod` el contenido está
-/// legible para cualquier cuenta de la máquina. Para la clave privada de la CA
-/// local el ADR-0005 exige lo contrario —«creado con ese modo desde el
-/// principio y no con un `chmod` posterior»—, que es el trato de `~/.ssh/id_*`.
-///
-/// Está en este fichero por lo mismo que [`restrict_to_owner`]: los modos POSIX
-/// son conocimiento de sistema operativo, y el ID-35 lo quiere en un solo sitio.
-/// En los sistemas que no los entienden se cae al `create` normal, y la
-/// protección la da la ACL heredada del perfil del usuario.
+/// Crea un fichero con permisos restringidos exclusivamente a su dueño desde su creación (ADR-0005).
 pub fn create_owner_only_file(path: &Path) -> std::io::Result<std::fs::File> {
     let mut options = std::fs::OpenOptions::new();
     options.write(true).create(true).truncate(true);
@@ -272,29 +186,15 @@ pub fn create_owner_only_file(path: &Path) -> std::io::Result<std::fs::File> {
     options.open(path)
 }
 
-/// El nombre de la carpeta de documentos cuando nadie dice otra cosa.
+/// Nombre por defecto del directorio de documentos.
 const DOCUMENTS_DIRECTORY: &str = "Documents";
 
-/// La carpeta de documentos del usuario, que es donde cae lo firmado cuando no
-/// se ha elegido otra (ADR-0011).
-///
-/// Está aquí y no en [`crate::destination`] por la razón de siempre: dónde
-/// tiene sus documentos un usuario depende del sistema operativo, y el ID-35
-/// pone ese conocimiento en un solo fichero. Lo que hace el destino con la
-/// ruta —comprobarla sin crearla jamás— no depende de nada de esto.
+/// Directorio de documentos del usuario actual (ADR-0011).
 pub fn documents_folder() -> Result<PathBuf, HomeUnknown> {
     documents_folder_of(Platform::CURRENT, &|name| std::env::var_os(name))
 }
 
-/// La carpeta de documentos de `platform`, leyendo el entorno con
-/// `environment`. Pública por lo mismo que [`Paths::resolve`]: para probar las
-/// tres columnas sin tocar el entorno del proceso.
-///
-/// **No se lee `~/.config/user-dirs.dirs`.** En un sistema en castellano la
-/// carpeta se llama `Documentos` y `XDG_DOCUMENTS_DIR` es quien lo dice; si no
-/// lo dice, el destino que sale de aquí no existirá, y entonces la aplicación
-/// **avisa y no escribe** (ID-38). Eso es lo correcto: inventarse la carpeta
-/// —o crearla— es justo el fallo silencioso que el ADR-0011 cierra.
+/// Resuelve el directorio de documentos para una plataforma dada (ADR-0011).
 pub fn documents_folder_of(
     platform: Platform,
     environment: &dyn Fn(&str) -> Option<OsString>,
@@ -306,27 +206,14 @@ pub fn documents_folder_of(
     }
 }
 
-/// El directorio de configuración de la persona **sin `rfirma/` detrás**.
-///
-/// [`Paths::config_file`] cuelga de este mismo directorio, pero dentro de
-/// `rfirma/`; esto es el directorio a secas, porque ahí viven ficheros que no
-/// son de esta aplicación y que aun así hay que escribir: el `mimeapps.list`
-/// del escritorio, que es donde se apunta quién atiende `afirma://` (ID-238).
-///
-/// Vive aquí, y no en [`crate::desktop`], porque el reparto XDG —la variable
-/// si es absoluta, y si no `$HOME/.config`— es conocimiento del sistema
-/// operativo, y de eso sabe este módulo y ningún otro (ID-35).
+/// Directorio base de configuración XDG del usuario.
 pub fn xdg_config_home(
     environment: &dyn Fn(&str) -> Option<OsString>,
 ) -> Result<PathBuf, HomeUnknown> {
     xdg_directory(environment, "XDG_CONFIG_HOME", ".config")
 }
 
-/// `$XDG_*_HOME` si está y es absoluta, y si no `$HOME/<relativa>`.
-///
-/// La especificación XDG manda **ignorar** un valor relativo, no tratarlo como
-/// relativo a nada: una `XDG_CONFIG_HOME=.config` heredada de un script no
-/// puede acabar escribiendo en el directorio de trabajo de turno.
+/// Resuelve un directorio XDG considerando rutas absolutas y respaldo en HOME.
 fn xdg_directory(
     environment: &dyn Fn(&str) -> Option<OsString>,
     variable: &'static str,
@@ -365,8 +252,6 @@ fn windows_directories(
     environment: &dyn Fn(&str) -> Option<OsString>,
 ) -> Result<[PathBuf; 3], HomeUnknown> {
     let roaming = home(environment, "APPDATA")?;
-    // `%LOCALAPPDATA%` no impide otra cosa que una lista de rutas locales viaje
-    // por la red, que es exactamente lo que el estado es.
     let local = home(environment, "LOCALAPPDATA")?;
     Ok([roaming.clone(), local, roaming])
 }
@@ -385,7 +270,6 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    /// **Grada A**: no lee el entorno del proceso ni toca el disco.
     fn environment(pairs: &[(&str, &str)]) -> impl Fn(&str) -> Option<OsString> {
         let map: HashMap<String, OsString> = pairs
             .iter()
@@ -398,8 +282,6 @@ mod tests {
         Paths::resolve(platform, &environment(pairs)).expect("deberia resolverse")
     }
 
-    /// El directorio de configuración a secas no lleva `rfirma/` detrás: lo
-    /// que se escribe ahí es del escritorio, no de esta aplicación (ID-238).
     #[test]
     fn the_configuration_home_has_no_application_directory_behind_it() {
         let home = xdg_config_home(&environment(&[
@@ -411,7 +293,6 @@ mod tests {
         assert_eq!(home, PathBuf::from("/home/quien/.config"));
     }
 
-    /// Sin la variable, la caída es `$HOME/.config`, como manda XDG.
     #[test]
     fn without_the_variable_the_configuration_home_falls_back_under_home() {
         let home =
@@ -622,13 +503,10 @@ mod tests {
 
         assert!(
             !documents.exists(),
-            "resolver una ruta no toca el disco, y la de destino no se crea nunca (ID-38)"
+            "resolver una ruta no toca el disco, y la de destino no se crea nunca (ADR-0011)"
         );
     }
 
-    /// La prueba de los permisos vive aquí, y no junto a quien los pide, porque
-    /// leer un modo POSIX necesita `std::os::unix` y este es el único fichero
-    /// que puede tener un condicional de sistema operativo (ID-35).
     #[cfg(unix)]
     #[test]
     fn restricting_leaves_the_directory_and_the_file_only_for_their_owner() {
@@ -654,8 +532,6 @@ mod tests {
         assert_eq!(mode(&file), 0o600);
     }
 
-    /// Aquí por la misma razón que la de arriba: leer el modo pide
-    /// `std::os::unix`, y este es el único fichero que puede nombrarlo.
     #[cfg(unix)]
     #[test]
     fn the_private_key_file_is_born_unreadable_for_anyone_else() {

@@ -1,27 +1,19 @@
-//! Los fallos de elegir manejador **se clasifican, no se traducen**
-//! (ADR-0009), igual que los del canal en [`crate::channel::error`].
-//!
-//! Son tres situaciones y no más, porque desde fuera solo hay tres remedios
-//! distintos: dentro del sandbox no hay nada que hacer, un `mimeapps.list`
-//! ilegible no se pisa, y uno que no se deja escribir es cosa de permisos.
+//! Clasificación de errores al consultar o registrar manejadores del escritorio (ADR-0009).
 
 use std::fmt;
 
 /// Situación al leer o escribir quién atiende un esquema (ADR-0009).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
-    /// Dentro del flatpak no hay `mimeapps.list` del anfitrión que valga
-    /// (ID-240): ni se lee ni se escribe, y no se finge que sí.
+    /// No disponible dentro del sandbox flatpak.
     NotAvailableInsideTheSandbox,
-    /// El `mimeapps.list` de la persona existe y no se ha podido leer. No se
-    /// escribe encima: reescribirlo entero perdería lo que hubiera dentro.
+    /// El fichero mimeapps.list no se ha podido leer.
     TheListIsNotReadable,
-    /// El `mimeapps.list` de la persona no se ha podido escribir.
+    /// El fichero mimeapps.list no se ha podido escribir.
     TheListIsNotWritable,
 }
 
-/// Un fallo del registro del esquema: la situación traducible y el detalle
-/// crudo.
+/// Fallo del registro de manejadores con situación clasificada y detalle técnico.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DesktopError {
     situation: Situation,
@@ -29,7 +21,7 @@ pub struct DesktopError {
 }
 
 impl DesktopError {
-    /// Un fallo con su detalle técnico, sin traducir.
+    /// Construye un fallo con su situación y detalle técnico.
     pub fn new(situation: Situation, detail: impl Into<String>) -> Self {
         Self {
             situation,
@@ -37,12 +29,12 @@ impl DesktopError {
         }
     }
 
-    /// La situación que la interfaz enseña, ya clasificada.
+    /// Situación clasificada del error.
     pub fn situation(&self) -> Situation {
         self.situation
     }
 
-    /// El detalle técnico crudo. Nunca vacío, nunca traducido.
+    /// Detalle técnico sin traducir.
     pub fn detail(&self) -> &str {
         &self.detail
     }
@@ -60,7 +52,6 @@ impl std::error::Error for DesktopError {}
 mod tests {
     use super::*;
 
-    /// El fallo lleva su detalle crudo al lado de la situación (ADR-0009).
     #[test]
     fn a_failure_keeps_its_untranslated_detail_next_to_the_situation() {
         let error = DesktopError::new(Situation::TheListIsNotWritable, "Permission denied");
