@@ -130,27 +130,14 @@ correctamente las preferencias» y el comentario se reescribió un año después
    en cada arranque es gratis y no interrumpe a nadie.
 
 3. **Solape: la CA local siguiente se instala meses antes**, mientras la vigente sigue
-   sirviendo. El [#326](https://github.com/sgomez/rfirma/issues/326) midió que dos certificados
-   de confianza con el mismo sujeto conviven en Firefox y en Chrome, en cualquier orden. Consiste
-   en *no tirar lo viejo todavía*, así que es barato, y convierte la reparación en el camino
-   excepcional.
-
-   «Sigue sirviendo» es literal y es lo que le da sentido: la vigente **sigue siendo la que firma
-   el certificado del servidor local** hasta que caduca. Por eso el almacén guarda **dos ranuras**
-   —la que sirve y la siguiente— y no una: si la siguiente ocupara la ranura de la vigente al
-   fabricarse, el navegador que ya estaba abierto recibiría desde ese mismo arranque un
-   certificado firmado por una CA que no ha cargado, y el trámite inmediatamente posterior a la
-   renovación fallaría igual que sin solape. El relevo llega cuando la vigente caduca: la
-   siguiente pasa a servir **sin instalar nada**, porque lleva meses en los almacenes, y ahí es
-   donde el solape se cobra —nadie tiene que reiniciar el navegador—.
+   sirviendo. Consiste en *no tirar lo viejo todavía*, así que es barato, y convierte la
+   reparación en el camino excepcional. Cómo se detecta, cuándo se renueva y qué hace cada
+   arranque, en § *El solape, de arranque en arranque*.
 
 4. **No se repara en caliente.** «Reparar y continuar» no existe —Chrome no relee el `nssdb`,
    Firefox envenena su caché tras haber fallado—: sólo existe **reparar y volver a empezar**, y
-   se dice así, sin fingir lo otro. Además rfirma **no puede distinguir** «no hay confianza» de
-   «el navegador ha denegado el acceso a la red local»
-   ([#309](https://github.com/sgomez/rfirma/issues/309)): el saludo TLS ni siquiera empieza.
-   El aviso de **«reinicia el navegador» va al final del trámite**, no al empezarlo: es el único
-   momento en el que interrumpir no cuesta nada.
+   se dice así, sin fingir lo otro. Lo que eso implica a mitad de un trámite, en § *A mitad de
+   un trámite no se toca la CA*.
 
 5. **Retirada explícita desde Preferencias**, siempre disponible. Con el solape puede haber **dos
    CA locales vivas a la vez**, y la retirada **tiene que llevarse las dos**.
@@ -160,12 +147,120 @@ correctamente las preferencias» y el comentario se reescribió un año después
    que ningún desinstalador retira, porque borra por un *nickname* que ya no es el que usa la
    versión actual.
 
-7. **Verificar la confianza es leer los bits con `certutil -L`, no verificar una cadena.** El
-   #326 midió que el veredicto de `vfychain` puede salir **invertido** respecto a lo que hace el
-   navegador de verdad.
+7. **Verificar la confianza es leer los bits, no verificar una cadena.** § *La confianza se
+   lee, no se verifica*.
 
 No hay retirada desde el `prerm`: `root` no tiene sesión, y recorrer los `$HOME` ajenos es
 justo lo que la Debian Policy §9.1.2 existe para impedir. La caducidad es la red.
+
+## La confianza se lee, no se verifica
+
+**Los bits son `C,,` y solo `C,,`**: CA de confianza para TLS y para nada más. Son dos bits,
+`CERTDB_VALID_CA` y `CERTDB_TRUSTED_CA`. Ni `T` —confianza para certificados de cliente— ni las
+dos columnas de la derecha: la CA local firma un `CN=localhost` y no avala el correo de nadie.
+El `TCP,TCP,TCP` que pone AutoFirma en `~/.pki/nssdb` le regala una confianza que nadie le ha
+pedido.
+
+**Comprobar que la confianza está puesta es leer esos dos bits**, lo que `certutil -L` enseña,
+y **nunca verificar una cadena**. El [#326](https://github.com/sgomez/rfirma/issues/326) midió
+que el veredicto de `vfychain` puede salir **invertido** respecto a lo que hace el navegador de
+verdad, así que un verificador de cadena no responde a la pregunta que importa.
+
+**Lo que se escribe y lo que se lee no son el mismo número.** La confianza no vive en
+`cert9.db` como máscara de bits sino como un `CKA_TRUST_SERVER_AUTH` del softoken, y al leerla
+de vuelta un `CKT_NSS_TRUSTED_DELEGATOR` viene siempre con `CERTDB_NS_TRUSTED_CA` puesto
+encima. La comprobación mira que **los dos bits que importan estén** y no compara la máscara
+entera: comparar con igualdad da «no instalada» sobre un almacén que sí lo está.
+
+Se lee **dos veces por almacén**, antes y después de escribir:
+
+- **Antes**, para no tocar un almacén que ya la tiene. Un perfil con la CA local marcada como
+  CA de confianza para TLS **no se reescribe y no cuenta para el aviso**; sin esto cada
+  arranque pediría reiniciar el navegador.
+- **Después**, porque **el éxito de la escritura no es la señal.** Los bits de confianza son
+  atributos autenticados: en un perfil de Firefox con contraseña maestra el certificado puede
+  entrar con confianza `,,` **sin que nada falle**. rfirma **no inicia sesión y no pide nada**
+  —registra su función de contraseña devolviendo `NULL`, para que ninguna ruta de NSS se quede
+  esperando a un diálogo que aquí no existe— y relee. Un perfil que no tenga los bits puestos se
+  cuenta como no instalado y se dice al final: un éxito parcial silencioso contado como
+  instalado sería peor que un error, porque la sede fallaría después y el parte diría que todo
+  fue bien.
+
+## El solape, de arranque en arranque
+
+**La CA local vive 900 días** —dos años y medio largos, dentro de la banda 2–3 de § *La
+retirada*— y **la siguiente se fabrica e instala cuando a la vigente le quedan menos de 120
+días**. Cuatro meses son de sobra para que quien firma dos o tres veces al año se encuentre la
+siguiente ya instalada, que es justo el caso que hace raro el camino de reparar.
+
+**Cómo se detecta.** Sin abrir ningún almacén: la **etapa** de la CA local sale de los días
+que le quedan a la que hay guardada —ausente, sirviendo, en solape, caducada— y, aparte, de si
+la ranura de la siguiente está ocupada. Los almacenes se abren después, para instalar lo que
+la etapa haya decidido. Que no haya CA guardada **no es un fallo**: es el primer arranque.
+
+**El almacén guarda dos ranuras, la que sirve y la siguiente**, y no una. Si la siguiente
+ocupara la ranura de la vigente al fabricarse, el navegador que ya estaba abierto recibiría
+desde ese mismo arranque un certificado firmado por una CA que no ha cargado, y el trámite
+inmediatamente posterior a la renovación fallaría igual que sin solape. «Sigue sirviendo» es
+literal: la vigente **sigue siendo la que firma el certificado del servidor local** hasta que
+caduca.
+
+**Lo que hace cada arranque**, según la etapa y la ranura de la siguiente:
+
+| La CA que sirve | La siguiente | Trabajo |
+|---|---|---|
+| Sirviendo | — | Registrar la que hay allí donde falte. Cubre el perfil de Firefox creado después de instalar rfirma; en un almacén que ya la tiene no hace nada. |
+| Ausente | — | Fabricar una e instalarla. |
+| En solape | Vacía | Fabricar la siguiente y **añadirla** junto a la vigente. Es el primer arranque del solape. |
+| En solape | Esperando | Registrar las dos. La siguiente **no se rehace** en cada arranque. |
+| Caducada | Esperando | **El relevo**: la siguiente pasa a servir sin fabricar nada y sin instalar nada, porque lleva meses en los almacenes. Es lo que el solape compra: nadie reinicia el navegador. |
+| Caducada | Vacía | Fabricar una e instalarla, y pedir el reinicio. Es el camino excepcional: un `$HOME` que se quedó parado más de dos años. |
+
+**Instalar solo añade.** En el registro no hay ninguna llamada que borre, y esa ausencia *es*
+el solape: instalar la siguiente deja la vigente donde estaba. El #326 midió que dos
+certificados de confianza con el mismo sujeto conviven en Firefox y en Chrome, en cualquier
+orden. La retirada, cuando se escriba desde Preferencias, va aparte y por huella (§ *La
+retirada*, punto 6).
+
+**Las dos CA locales llevan el mismo apodo**, a propósito: en NSS el apodo va con el
+**sujeto** y no con el certificado. Dos certificados del mismo sujeto con apodos distintos es
+lo que NSS rechaza, no lo contrario.
+
+**Un perfil que falle no deja sin CA a los demás**, igual que un almacén que no carga no deja
+sin certificados al listado. Los que se quedan sin ella se cuentan al final, con su motivo.
+
+## A mitad de un trámite no se toca la CA
+
+Con un trámite de una sede en marcha **no se abre ningún almacén, no se instala, no se repara
+y no se avisa**, sea cual sea la etapa de la CA local, **incluso caducada**. Instalarla ahí
+obligaría a parar el trámite para pedir que se reinicie el navegador y volver a empezar, por
+los dos hechos medidos en § *Cuándo, y qué se le dice a la persona*: Chrome no relee su
+`nssdb` y Firefox envenena su caché tras haber fallado. Es lo único que separa instalar de no
+tocar nada, y no es un detalle de registro: la CA se refresca **antes de atender nada**, en
+el arranque, y ahí termina.
+
+**Lo que no se ha medido no se afirma.** Si a mitad de un trámite no se ha abierto ni un
+perfil, la respuesta a «¿ha llegado la CA a algún almacén?» no es «no está»: es que nadie lo
+ha mirado. Contarle a la persona un fallo que nadie ha medido es peor que callarse, así que
+«la CA no está en ningún almacén» solo se dice cuando se ha mirado.
+
+**El aviso pendiente sale solo al terminar.** «Se ha instalado la CA local: reinicia el
+navegador» se guarda cuando de verdad ha entrado en algún almacén —no cuando ya estaba— y no
+hay forma de sacarlo a mitad de nada: se pregunta al terminar el trámite, y al preguntarlo se
+consume, para que no se repita en el siguiente. El segundo arranque encuentra los bits puestos
+y no avisa.
+
+**La reparación que pide la persona es la única excepción, y no es en caliente.** Desde la
+ventana de sede, cuando el canal no llega a abrirse, hay un botón que instala la CA local. Es
+«reparar y volver a empezar» con el dedo de la persona encima, así que ejecuta exactamente **el
+trabajo del arranque** —instalar la que hay, o fabricarla si no la hay— y no el de mitad de
+trámite, que está definido como «no hacer nada». Su aviso de reiniciar el navegador **se
+descarta**: la ventana de sede no tiene dónde ponerlo. Y lo que esa pantalla ve después son
+**dos preguntas y no una**: si la CA local ha quedado en algún almacén, y si hay canal
+sirviendo. El canal **no se reabre desde ahí** —el transporte se abre una sola vez, en el
+arranque, y allí se emite el certificado del servidor—, así que con CA instalada y sin canal la
+respuesta es la pantalla de reparación definitiva, la que lleva la dirección del ajuste del
+navegador, y no una espera sobre algo que ya se sabe que no va a llegar.
 
 ## La CA no resuelve la conectividad
 
@@ -232,6 +327,26 @@ loopback», que son remedios opuestos— es de la v0.5.
   diálogo que este ADR se esfuerza en no tener. Tampoco garantiza el orden si la persona
   restaura sesión con el navegador dentro. Vuelve **como enmienda explícita a este ADR, y con
   el flatpak degradado a propósito**, el día que el solape se demuestre insuficiente.
+- **Verificar la confianza con un verificador de cadena** (`vfychain`, o construir la cadena
+  desde NSS). Responde a otra pregunta: el #326 midió su veredicto invertido respecto a
+  Firefox. Lo que decide el navegador son los bits, así que se leen los bits.
+- **Comparar la máscara de confianza entera** con lo que se escribió. Falla sobre un almacén
+  que sí tiene la CA, porque el softoken devuelve `CERTDB_NS_TRUSTED_CA` de propina; se
+  comprueban los dos bits que importan y se ignora el resto.
+- **Una sola ranura para la CA local**, sustituyendo la vigente al fabricar la siguiente.
+  Rompe el trámite inmediatamente posterior a la renovación: el navegador abierto recibiría un
+  certificado firmado por una CA que no ha cargado.
+- **Rehacer la siguiente en cada arranque del solape.** Metería una CA nueva en los almacenes
+  cada vez, y cada una pediría su reinicio; la siguiente se fabrica una vez y se registra las
+  veces que haga falta.
+- **Apodos distintos para las dos CA del solape.** Es justo lo que NSS rechaza: el apodo va
+  con el sujeto.
+- **Instalar o reparar a mitad de un trámite**, aunque solo sea con la CA caducada. Ni Chrome
+  ni Firefox lo recogerían sin reiniciar, así que solo serviría para parar el trámite. La única
+  reparación durante un trámite es la que la persona pide con el botón delante, y es «volver a
+  empezar», no «continuar».
+- **Decir «la CA no está en ningún almacén» a mitad de un trámite.** No se ha abierto ningún
+  perfil, así que nadie lo ha medido; se calla.
 
 ## Consequences
 
@@ -264,21 +379,6 @@ loopback», que son remedios opuestos— es de la v0.5.
 - **`sql:<ruta>` explícito, siempre.** Sobre el backend DBM la operación **falla en
   silencio**: se devuelve éxito y la confianza se pierde. No se hereda el heurístico del
   `pkcs11.txt` de AutoFirma, anterior a NSS 3.35.
-- **Los bits son `C,,` y solo `C,,`**: CA de confianza para TLS y para nada más. El
-  `TCP,TCP,TCP` que pone AutoFirma en `~/.pki/nssdb` le regala a la CA local una confianza
-  —correo, certificados de cliente— que nadie le ha pedido.
-- **Lo que se escribe y lo que se lee no son el mismo número.** La confianza no vive como
-  máscara de bits sino como un `CKA_TRUST_SERVER_AUTH` del softoken, y al leerla de vuelta un
-  `CKT_NSS_TRUSTED_DELEGATOR` viene siempre con `CERTDB_NS_TRUSTED_CA` puesto encima. La
-  comprobación mira los dos bits que importan y **no** compara el número entero.
-- **Contraseña maestra de Firefox.** Los bits de confianza son atributos autenticados: sin
-  sesión iniciada, el certificado puede quedar añadido con confianza `,,` —éxito parcial
-  silencioso—. rfirma **no inicia sesión y no pide nada**: registra su función de contraseña
-  devolviendo `NULL`, para que ninguna ruta de NSS se quede esperando a un diálogo que aquí
-  no existe, y **relee los bits** después de escribir. Un perfil que no los tenga puestos se
-  cuenta como no instalado y se dice al final.
-- **Nunca fiarse del código de salida como única señal**: hay que verificar que la confianza
-  quedó puesta, leyendo los bits.
 - Un administrador puede neutralizar el almacén NSS de Chrome por política
   (`CAPlatformIntegrationEnabled: false`, Chrome 131+). No es evitable; conviene detectarlo
   antes que fallar sin explicación.

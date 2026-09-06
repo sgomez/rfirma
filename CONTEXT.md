@@ -142,6 +142,15 @@ navegador y puede sobrevivir a la desinstalación, así que su caducidad es la
 red.
 _Avoid_: ancla, ancla de confianza, CA raíz, certificado raíz
 
+**Solape**:
+Los meses en los que hay dos CA locales de confianza en los almacenes NSS: la
+que sirve y la siguiente. La siguiente se fabrica e instala cuando a la vigente
+le queda poca vida y espera en su propia ranura; la vigente sigue firmando el
+certificado del servidor local hasta que caduca, y entonces la siguiente toma el
+relevo sin instalar nada y sin reiniciar ningún navegador. Instalar solo añade:
+nada se borra durante el solape.
+_Avoid_: rotación, renovación en caliente, rollover
+
 **Certificado del servidor local**:
 El que rfirma presenta en cada saludo TLS del servidor local, firmado por la CA
 local. No se guarda en ningún sitio: se genera al arrancar y vive lo que vive el
