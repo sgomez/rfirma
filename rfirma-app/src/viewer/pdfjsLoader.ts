@@ -33,8 +33,14 @@ export function pdfjsLoader(): PdfLoader {
     async load(bytes) {
       const document = await getDocument({ data: bytes, standardFontDataUrl: STANDARD_FONTS })
         .promise;
+      // `pdf.js` tipa el diccionario de información como `Object` a secas, así
+      // que el `/Title` hay que estrecharlo aquí: es una cadena si el PDF lo
+      // trae, y no está si no. Sin título es `null`, que es lo que la ventana
+      // de sede entiende por «Documento sin título» (ID-270).
+      const { info } = (await document.getMetadata()) as { info: { Title?: string } };
       return {
         pageCount: document.numPages,
+        title: info.Title ?? null,
         getPage: async (number) => adaptPage(await document.getPage(number)),
       } satisfies PdfDocument;
     },

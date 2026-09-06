@@ -916,6 +916,63 @@ pub fn site_look_again(app_handle: tauri::AppHandle) {
     dispatch_the_site_operation(&app_handle, &url);
 }
 
+/// **Dónde está la CA local y qué perfiles NSS hay que dejarla de confianza**
+/// (ID-329), para que la ventana de sede pueda instalarla cuando el canal no
+/// llega a abrirse.
+///
+/// Las mismas dos cosas que el arranque le pasa a
+/// [`crate::app::startup::attend_startup`], sostenidas aquí porque la orden 36
+/// las necesita mucho después: el arranque las resuelve una vez y esto es su
+/// copia viva.
+pub struct LocalCaTrust {
+    /// Las dos ranuras de la CA local: la que sirve y la del solape.
+    pub store: crate::tls::LocalCaStore,
+    /// Los perfiles NSS que se intentan recorrer.
+    pub profiles: Vec<std::path::PathBuf>,
+}
+
+/// **Orden 36.** Instala la CA local en los almacenes NSS de la persona
+/// (ID-329, ID-341).
+///
+/// Es la **acción principal** de la pantalla de reparación: sin la CA local
+/// ningún navegador llega a intentar el canal, así que el resto de la receta
+/// —el permiso de red local— sobra hasta que esté. La pide la persona, con el
+/// botón delante; no es un refresco automático a mitad de trámite, que es lo
+/// que el ID-224 prohíbe.
+///
+/// Por eso el momento que se le pasa al caso de uso es [`Moment::Startup`] y no
+/// [`Moment::MidErrand`]: lo que se pide es exactamente el trabajo del arranque
+/// —instalar la que hay, o fabricarla si no la hay—, mientras que `MidErrand`
+/// está definido como «no hacer nada». El aviso de reiniciar el navegador se
+/// descarta aquí y no se enseña: la ventana de sede no tiene dónde ponerlo, y
+/// esa es la mitad del ID-224 que sigue en pie.
+///
+/// Lo que la ventana ve después es el resultado, publicado por el mismo evento
+/// que todo lo demás (ID-338): con la CA en algún almacén se vuelve a la
+/// espera, porque el canal sigue en pie y la petición puede llegar ya; sin
+/// ella, la misma pantalla de reparación.
+///
+/// Es `async` como todas las órdenes del trámite (ID-337).
+#[tauri::command(async)]
+pub fn install_local_ca(app_handle: tauri::AppHandle, trust: State<'_, LocalCaTrust>) {
+    use crate::trust::{Moment, NssTrustStores};
+
+    let reached = app::trust::refresh_local_ca_trust(
+        &trust.store,
+        &trust.profiles,
+        &NssTrustStores,
+        Moment::Startup,
+    )
+    .is_ok_and(|outcome| !outcome.nowhere());
+
+    let view = if reached {
+        SiteErrandView::waiting()
+    } else {
+        SiteErrandView::no_channel(NoChannelView::LocalCaMissing)
+    };
+    publish_to_the_site_window(&app_handle, view);
+}
+
 /// **Lo que la sede pidió, hasta que la persona conteste.**
 ///
 /// Vive en el adaptador y no en [`crate::app::errand::Errand`] a propósito: el

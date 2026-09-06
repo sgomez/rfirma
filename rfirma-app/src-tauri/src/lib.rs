@@ -86,6 +86,13 @@ pub fn run() {
     // (ID-327) desde el manejador del complemento de instancia única.
     let second_store = ca_store.clone();
 
+    // Y su copia para la orden 36, que instala la CA local cuando la persona lo
+    // pide desde la pantalla de reparación de la ventana de sede (ID-341).
+    let local_ca_trust = commands::LocalCaTrust {
+        store: ca_store.clone(),
+        profiles: nss_profiles.clone(),
+    };
+
     let memory = memory::Memory::at(&paths);
     let configuration = memory
         .configuration()
@@ -219,6 +226,9 @@ pub fn run() {
         // y la respuesta: el filtro se vuelve a comprobar antes de entregar
         // nada (ID-259) y la ventana no puede devolverlo.
         .manage(commands::SiteConsent::default())
+        // Dónde vive la CA local y en qué perfiles NSS tiene que estar, para
+        // que la ventana de sede pueda instalarla sin volver a resolver rutas.
+        .manage(local_ca_trust)
         // Los documentos abiertos, del identificador opaco al documento del
         // portal (ID-61). Vive mientras vive el proceso.
         .manage(memory::OpenedDocuments::new())
@@ -290,6 +300,7 @@ pub fn run() {
             commands::site_finish_signing,
             commands::site_install_certificate,
             commands::site_look_again,
+            commands::install_local_ca,
         ])
         // **El arranque, que es un adaptador y no decide nada** (ID-324, TD-70):
         // el caso de uso refresca la CA local, mira si la invocación es de sede

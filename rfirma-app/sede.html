@@ -1,0 +1,20 @@
+<!doctype html>
+<!--
+  El segundo punto de entrada del frontal (ID-335). Lo carga la ventana de
+  etiqueta `site`, que abre `app::startup` sólo cuando hay trámite (ID-334):
+  arrancar rFirma a mano no llega aquí nunca.
+
+  No monta `App` ni nada de la ventana principal: la de sede es una ventana con
+  una secuencia de cinco momentos, sin cabecera, sin bandeja y sin visor.
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rFirma</title>
+  </head>
+  <body class="rf-root">
+    <div id="root"></div>
+    <script type="module" src="/src/sede/main.tsx"></script>
+  </body>
+</html>
