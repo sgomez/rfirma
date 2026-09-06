@@ -713,6 +713,220 @@ pub fn close_site_window(app: tauri::AppHandle) {
     }
 }
 
+/// **Orden 30.** La persona se identifica ante la sede con uno de los
+/// certificados que tenía delante (ID-276).
+///
+/// El certificado sale al cable **desde el caso de uso** (ID-322), y lo que
+/// vuelve a la ventana es sólo el desenlace: el trámite ya terminó para la
+/// sede, que no espera a que nadie cierre nada (ID-275).
+///
+/// Es `async` como todas las órdenes del trámite (ID-337).
+#[tauri::command(async)]
+pub fn site_identify(
+    certificate: String,
+    environment: State<'_, Environment>,
+    isolate: State<'_, Isolate>,
+    live: State<'_, app::errand::LiveErrand>,
+    consent: State<'_, SiteConsent>,
+) -> Result<(), Failure> {
+    let Some(filter) = consent.what_the_site_asked() else {
+        return Err(Failure::new(
+            "siteErrandNotLive",
+            "no hay ninguna identificacion pendiente que contestar",
+        ));
+    };
+    consent.forget();
+
+    let reply = app::errand::identify_with(
+        &TheBridge::borrowed_from(&isolate),
+        &environment.all_stores(),
+        &filter,
+        &certificate,
+        &environment.listed,
+        &live,
+    );
+
+    match reply.failure() {
+        Some(failure) => Err(failure.clone()),
+        None => Ok(()),
+    }
+}
+
+/// **Orden 31.** La persona dice que no: la sede recibe `CANCEL` en el acto
+/// (ID-293, ID-275).
+///
+/// Contestada la sede, ya no queda asa: cancelar dos veces —o cerrar la ventana
+/// después de haber contestado— no escribe nada (ID-340).
+///
+/// Es `async` como todas las órdenes del trámite (ID-337).
+#[tauri::command(async)]
+pub fn site_decline(live: State<'_, app::errand::LiveErrand>, consent: State<'_, SiteConsent>) {
+    consent.forget();
+    app::errand::declined(&live);
+}
+
+/// **Lo que la sede pidió del listado, hasta que la persona conteste.**
+///
+/// Vive en el adaptador y no en [`crate::app::errand::Errand`] a propósito: el
+/// trámite guarda la credencial, el puerto y por dónde se contesta (ID-321), y
+/// la operación la lleva quien la está atendiendo. Quien la atiende es
+/// [`attend_site_operation`], y esto es su memoria entre el momento del
+/// consentimiento y la respuesta.
+///
+/// Hace falta porque el filtro **se vuelve a comprobar antes de entregar nada**
+/// (ID-259): que el certificado estuviera en la lista que la ventana enseñó no
+/// basta, y la ventana no puede devolver un filtro que nunca cruzó.
+#[derive(Default)]
+pub struct SiteConsent(std::sync::Mutex<Option<crate::protocol::SiteFilter>>);
+
+impl SiteConsent {
+    /// Apunta lo que la sede pide del listado.
+    fn remember(&self, filter: crate::protocol::SiteFilter) {
+        *app::lock(&self.0) = Some(filter);
+    }
+
+    /// Lo que la sede pidió, si hay una identificación pendiente.
+    fn what_the_site_asked(&self) -> Option<crate::protocol::SiteFilter> {
+        app::lock(&self.0).clone()
+    }
+
+    /// Se acabó el consentimiento: ni la ventana ni el canal tienen ya nada
+    /// que contestar con esto.
+    pub fn forget(&self) {
+        *app::lock(&self.0) = None;
+    }
+}
+
+/// **El puente prestado**, que es quien sabe filtrar y expandir políticas
+/// (ID-252, ID-266).
+///
+/// Los dos motores del trámite corren en el hilo del isolate y por eso el
+/// escritorio los recibe como puertos: aquí se cumplen contra [`Isolate`], que
+/// es lo único que puede tocar `librfirma_crypto.so`.
+struct TheBridge<'a> {
+    isolate: &'a Isolate,
+}
+
+impl<'a> TheBridge<'a> {
+    /// El puente que corre en ese isolate.
+    fn borrowed_from(isolate: &'a Isolate) -> Self {
+        Self { isolate }
+    }
+
+    /// Lo que devuelve el hilo del isolate, aplanado: el hilo que ya no está es
+    /// el puente que no contesta, y para el trámite es la firma que no sale.
+    fn ran<T: Send + 'static>(
+        outcome: Result<Result<T, crate::ffi::BridgeError>, crate::isolate::IsolateGone>,
+    ) -> Result<T, crate::ffi::BridgeError> {
+        outcome.unwrap_or_else(|_| {
+            Err(crate::ffi::BridgeError::Failed(
+                "el hilo del isolate ya no esta".to_owned(),
+            ))
+        })
+    }
+}
+
+impl app::filtering::FilterEngine for TheBridge<'_> {
+    fn select(
+        &self,
+        filter_properties: &str,
+        certificates_b64: &str,
+    ) -> Result<Vec<usize>, crate::ffi::BridgeError> {
+        let properties = filter_properties.to_owned();
+        let certificates = certificates_b64.to_owned();
+        Self::ran(self.isolate.run(move |bridge| {
+            app::filtering::FilterEngine::select(bridge, &properties, &certificates)
+        }))?
+    }
+}
+
+impl app::policies::PolicyEngine for TheBridge<'_> {
+    fn expand(&self, extra_params: &str, format: &str) -> Result<String, crate::ffi::BridgeError> {
+        let declared = extra_params.to_owned();
+        let format = format.to_owned();
+        Self::ran(
+            self.isolate
+                .run(move |bridge| app::policies::PolicyEngine::expand(bridge, &declared, &format)),
+        )?
+    }
+}
+
+/// **La operación de la sede, atendida con el escritorio armado desde el estado
+/// de la aplicación** (ID-330).
+///
+/// No es una orden: la llama el canal, no la ventana. Lo que hace es lo que
+/// hace una orden —desempaquetar el estado, llamar al caso de uso y traducir—,
+/// y por eso el escritorio se arma **aquí** y no dentro de
+/// [`crate::app::errand::attend_operation`].
+///
+/// Qué pasa después lo decide el [`crate::app::errand::ErrandStep`] (ID-331):
+/// el momento del consentimiento se publica hacia la ventana y no escribe nada
+/// en el cable; la operación que ya tiene respuesta ya la escribió el caso de
+/// uso al cerrarse el trámite (ID-322).
+pub fn attend_site_operation(
+    app: &tauri::AppHandle,
+    url: crate::protocol::AfirmaUrl,
+    reply: crate::channel::ReplyHandle,
+) {
+    use tauri::Manager as _;
+
+    let environment = app.state::<Environment>();
+    let opened = app.state::<OpenedDocuments>();
+    let live = app.state::<app::errand::LiveErrand>();
+    let consent = app.state::<SiteConsent>();
+    let isolate = app.state::<Isolate>();
+
+    // Lo primero, antes de nada que pueda contestar: el asa es por donde sale
+    // todo lo que este trámite le diga a la sede (ID-321).
+    live.answer_through(reply);
+
+    let bridge = TheBridge::borrowed_from(&isolate);
+    let stores = environment.all_stores();
+    // El documento que manda la sede se escribe en un fichero de paso que el
+    // trámite borra al contestar (ID-286): de él no queda rastro, así que el
+    // sitio es el de los ficheros que no se guardan.
+    let scratch_dir = std::env::temp_dir();
+    let desk = app::errand::ErrandDesk {
+        engine: &bridge,
+        policies: &bridge,
+        stores: &stores,
+        installed_dir: &environment.installed_certificates,
+        listed: &environment.listed,
+        opened: &opened,
+        memory: &environment.memory,
+        scratch_dir: &scratch_dir,
+    };
+
+    match app::errand::attend_operation(&desk, &url, &live) {
+        app::errand::ErrandStep::AskingForConsent {
+            certificates,
+            filter,
+        } => {
+            consent.remember(filter);
+            publish_to_the_site_window(app, SiteErrandView::asking_for_consent(certificates));
+        }
+        // El consentimiento de una firma es del #393: hasta que lo haya, la
+        // sede se queda con su plazo y la ventana con la espera.
+        app::errand::ErrandStep::AskingToSign(_) => {}
+        // Ya está contestada: `attend_operation` cierra el trámite y escribe la
+        // línea por el asa (ID-322). Lo que la ventana enseñe de eso es del
+        // #394.
+        app::errand::ErrandStep::Answering(_) => {}
+    }
+}
+
+/// Le publica el trámite a la ventana de sede, si sigue abierta.
+///
+/// Que no esté es una respuesta válida: sin ventana no hay a quien contarle
+/// nada, y el trámite no depende de que la haya.
+fn publish_to_the_site_window(app: &tauri::AppHandle, view: SiteErrandView) {
+    use tauri::{Emitter as _, Manager as _};
+
+    if let Some(window) = app.get_webview_window(SITE_WINDOW) {
+        let _ = window.emit(SITE_ERRAND, view);
+    }
+}
+
 /// La etiqueta de la ventana de sede (ID-333).
 ///
 /// Es **suya y sólo suya**: la ventana principal es `main`, y las dos existen a

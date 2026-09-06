@@ -183,6 +183,10 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
             for from_loopback in [true, false] {
                 match answer(duty, from_loopback, &message) {
                     Answer::Reply(text) | Answer::ReplyAndClose(text) => lines.push(text),
+                    // La operación que queda pendiente **no escribe nada**
+                    // (ID-320): lo que salga después lo escribe el trámite, y
+                    // eso es lo que se recoge más abajo.
+                    Answer::Pending(_) => {}
                 }
             }
         }
@@ -200,6 +204,9 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
         lines.push(WireAnswer::refused(code).on_the_wire());
     }
     lines.push(frontier::cancelled().on_the_wire());
+    // Y el desenlace nuevo del #392, que es el que el trámite escribe por el asa
+    // cuando la persona dice que no o cierra la ventana sin contestar (ID-340).
+    lines.push(rfirma_lib::app::errand::declined(&LiveErrand::default()).on_the_wire());
 
     lines
 }

@@ -1,13 +1,14 @@
 //! **El canal**: la conexión `wss://` que la sede abre contra el servidor
 //! local, y lo que hace falta para sostenerla (ADR-0005, ID-212…ID-219).
 //!
-//! Tres piezas y ninguna decisión de trámite:
+//! Cuatro piezas y ninguna decisión de trámite:
 //!
 //! | Módulo | Qué hace |
 //! |---|---|
 //! | [`bind`] | ata uno de los puertos que sorteó la sede, y nunca el 63117 |
 //! | [`server`] | levanta el WebSocket sobre TLS y acepta conexiones |
 //! | [`conversation`] | qué se contesta a cada mensaje, sin socket delante |
+//! | [`reply`] | el asa por la que se contesta la operación que quedó pendiente |
 //!
 //! **No existe escuchador en claro**: no hay ruta que sirva `ws://` (ID-212).
 //!
@@ -20,9 +21,11 @@
 pub mod bind;
 pub mod conversation;
 pub mod error;
+pub mod reply;
 pub mod server;
 
 pub use bind::{bind_first_free, THE_PORT_OF_THE_THIRD_PROTOCOL};
 pub use conversation::{answer, Answer, ChannelDuty, ECHO_OK};
 pub use error::{ChannelError, Situation};
-pub use server::{open, serve, OpenChannel, Shutdown};
+pub use reply::ReplyHandle;
+pub use server::{open, serve, OpenChannel, Shutdown, SiteOperations};

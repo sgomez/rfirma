@@ -48,6 +48,7 @@ use std::sync::Mutex;
 
 use base64::Engine as _;
 
+use crate::channel::ReplyHandle;
 use crate::commands::views::CertificateView;
 use crate::commands::Failure;
 use crate::memory::{handles, ListedCertificates, Memory, OpenedDocuments};
@@ -68,10 +69,19 @@ use super::signing::SiteSignature;
 /// Guarda además el **fichero de paso** del documento que mandó la sede, y lo
 /// borra al terminar: de ese documento no queda rastro ninguno (ID-286), y el
 /// único sitio donde se sabe que el trámite ha acabado es aquí.
+///
+/// Y guarda **por dónde se le contesta a la sede** (ID-321): la operación llega
+/// por el canal y su respuesta sale mucho después —cuando la persona ha
+/// consentido o ha dicho que no—, así que el asa tiene que esperar en algún
+/// sitio, y el sitio es éste. Es lo que la forma del dominio ya pedía:
+/// [`identity_handed_over`], [`signature_handed_over`] y [`declined`] reciben
+/// `&LiveErrand` y devuelven lo que la sede recibe **después** del hecho, así
+/// que quien tiene el trámite tiene que poder escribirlo en el cable.
 #[derive(Default)]
 pub struct LiveErrand {
     errand: Mutex<Option<Errand>>,
     scratch: Mutex<Option<PathBuf>>,
+    reply: Mutex<Option<ReplyHandle>>,
 }
 
 /// Lo que se sabe de un trámite en curso.
@@ -126,6 +136,27 @@ impl LiveErrand {
         true
     }
 
+    /// **Apunta por dónde se le contesta a la sede** (ID-321).
+    ///
+    /// El asa la trae la operación que llegó por el canal, y se gasta al
+    /// contestar: quien la reciba después de eso no escribe nada, que es lo que
+    /// hace que cancelar dos veces —o cerrar la ventana con la sede ya
+    /// servida— no mande nada por el cable (ID-340).
+    pub fn answer_through(&self, reply: ReplyHandle) {
+        *super::lock(&self.reply) = Some(reply);
+    }
+
+    /// Contesta esto a la sede, si queda asa por la que contestar.
+    ///
+    /// Sin asa no hay nada que hacer, y es la respuesta correcta en los dos
+    /// casos en que pasa: un trámite que ya contestó y una operación que se
+    /// despachó sin canal detrás.
+    fn answer_the_site(&self, text: String) {
+        if let Some(reply) = super::lock(&self.reply).take() {
+            reply.answer(text);
+        }
+    }
+
     /// El trámite vivo, si lo hay.
     pub fn current(&self) -> Option<Errand> {
         super::lock(&self.errand).clone()
@@ -137,15 +168,19 @@ impl LiveErrand {
     /// dice el ID-275 desde el otro lado: el desenlace que la ventana enseña ya
     /// no es parte del trámite.
     ///
-    /// **Contestar no es la única salida, y hoy es la única que llama aquí.**
-    /// Una sede que se cae con el canal abierto, o una ventana de sede que se
-    /// cierra con el aspa en vez de cancelar, dejarían el trámite vivo para
-    /// siempre y todo `afirma://` posterior rechazado con `SAF_45`. No es
-    /// alcanzable mientras [`super::site::attend_launch`] no esté cableado;
-    /// quien lo cablee —la ventana de sede (#362) y los manejadores (#357)— ha
-    /// de atar **el cierre del canal** a esta llamada.
+    /// **Contestar no es la única salida.** Cerrar la ventana de sede sin
+    /// haber contestado es cancelar (ID-340), y sale por aquí igual porque lo
+    /// que hace es llamar a [`declined`]: la sede recibe su `CANCEL` en el acto
+    /// y el trámite deja de estar vivo. Lo que sigue sin pasar por aquí es una
+    /// sede que se cae con el canal abierto: eso no tumba el trámite (ID-323),
+    /// el desenlace se enseña en la ventana igual y el trámite acaba cuando la
+    /// persona conteste, aunque ya no haya nadie escuchando.
     pub fn end(&self) {
         *super::lock(&self.errand) = None;
+        // Y el asa se cierra con él: soltarla sin escribir cierra la conexión
+        // sin línea ninguna, que es lo que corresponde cuando el trámite acaba
+        // sin respuesta que dar.
+        drop(super::lock(&self.reply).take());
         // Y el documento que mandó la sede se va con él: de él no queda rastro
         // ninguno (ID-286). Si el borrado falla —el fichero ya no está, o el
         // directorio se ha ido— no hay nada que contarle a nadie: el trámite ha
@@ -168,7 +203,16 @@ impl LiveErrand {
 pub enum ErrandStep {
     /// **El momento del consentimiento** (ID-272, ID-276): la ventana enseña
     /// estas filas y la persona decide. La sede no recibe nada todavía.
-    AskingForConsent(Vec<CertificateView>),
+    AskingForConsent {
+        /// Los certificados que la sede acepta, ya cribados.
+        certificates: Vec<CertificateView>,
+        /// Lo que la sede pide del listado, para volver a comprobarlo (ID-259).
+        ///
+        /// Viaja con las filas por lo mismo que dentro de [`SigningConsent`]:
+        /// el filtro se vuelve a aplicar antes de entregar el certificado, y la
+        /// ventana no puede devolver algo que nunca cruzo (ADR-0011).
+        filter: SiteFilter,
+    },
     /// **El momento del consentimiento de una firma** (ID-272): la ventana
     /// enseña el documento que la sede manda y estas filas, y la persona
     /// decide. La sede no recibe nada todavía.
@@ -581,12 +625,10 @@ pub fn consent_for<E: FilterEngine>(
 
     // Y aquí **no** se mira cuántos hay: con uno solo se consiente igual
     // (ID-272).
-    ErrandStep::AskingForConsent(super::certificates::rows_of(
-        accepted,
-        installed_dir,
-        listed,
-        memory,
-    ))
+    ErrandStep::AskingForConsent {
+        certificates: super::certificates::rows_of(accepted, installed_dir, listed, memory),
+        filter: request.filter().clone(),
+    }
 }
 
 /// **Caso de uso.** La persona se identifica: la sede recibe el certificado en
@@ -688,7 +730,14 @@ fn answering(live: &LiveErrand, reply: SiteReply) -> ErrandStep {
 }
 
 /// Lo mismo, cuando lo que se devuelve es la respuesta y nada más.
+///
+/// **Éste es el único sitio que escribe en el cable** (ID-322): la línea sale
+/// de [`SiteReply::on_the_wire`], que es o el certificado, o la firma, o
+/// `CANCEL`, o un `SAF_` del catálogo cerrado —nunca un mensaje redactado
+/// aquí—. Y sale antes de cerrar el trámite, porque cerrarlo es lo que gasta el
+/// asa.
 fn over(live: &LiveErrand, reply: SiteReply) -> SiteReply {
+    live.answer_the_site(reply.on_the_wire());
     live.end();
     reply
 }
@@ -701,7 +750,10 @@ mod tests {
     use crate::app::fixtures::{a_memory, a_usable_certificate, listed_from};
     use crate::app::in_hand::DocumentInHand;
     use crate::app::site::{attend_launch, Attendance};
-    use crate::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown};
+    use crate::channel::{
+        answer as what_the_channel_answers, Answer, ChannelDuty, ChannelError, OpenChannel,
+        ReplyHandle, Shutdown,
+    };
     use crate::ffi::BridgeError;
     use crate::pkcs11::TokenCertificate;
     use crate::protocol::{AfirmaUrl, ChannelMessage};
@@ -749,6 +801,28 @@ mod tests {
 
     fn a_launch(ports: &str) -> String {
         format!("afirma://websocket?ports={ports}&v=4&idsession={CREDENTIAL}")
+    }
+
+    /// **El cable, sin socket delante** (TD-52): el asa que el servidor le da
+    /// al trámite y el otro extremo, por donde la prueba lee lo que sale.
+    fn the_wire() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        (ReplyHandle::of(sender), receiver)
+    }
+
+    /// Lo que sale al cable, si ha salido algo.
+    fn what_the_site_received(wire: &mut tokio::sync::oneshot::Receiver<String>) -> Option<String> {
+        wire.try_recv().ok()
+    }
+
+    /// La operación tal y como entra de verdad: por el canal, con las tres
+    /// guardias delante, y dejando la respuesta para el trámite (ID-320).
+    fn arriving_over_the_channel(message: &str) -> AfirmaUrl {
+        let answered = what_the_channel_answers(&ChannelDuty::Serve(a_credential()), true, message);
+        let Answer::Pending(url) = answered else {
+            panic!("una operacion legitima queda pendiente: {answered:?}");
+        };
+        url
     }
 
     /// La operación tal y como llega por el canal: se lee con el códec del
@@ -858,9 +932,14 @@ mod tests {
             "el tramite queda vivo mientras se atiende"
         );
 
-        // 2. Por ese canal llega la operación, y lo que sale es el momento del
-        //    consentimiento con el listado que la sede acepta.
-        let url = an_operation("");
+        // 2. Por ese canal llega la operación. La conversación la deja
+        //    pendiente —no escribe nada y no cierra (ID-320)— y el trámite se
+        //    queda con el asa por la que se le contestará (ID-321).
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        let url = arriving_over_the_channel(&format!(
+            "afirma://selectcert?op=selectcert&idsession={CREDENTIAL}"
+        ));
         let request = requested(&url);
         let step = consent_for(
             &engine,
@@ -871,13 +950,21 @@ mod tests {
             &memory,
             &live,
         );
-        let ErrandStep::AskingForConsent(rows) = step else {
+        let ErrandStep::AskingForConsent {
+            certificates: rows, ..
+        } = step
+        else {
             panic!("hay un certificado que la sede acepta: {step:?}");
         };
         assert_eq!(rows.len(), 1);
         assert!(
             live.current().is_some(),
             "consintiendo, el tramite sigue vivo"
+        );
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            None,
+            "el momento del consentimiento no escribe nada en el cable (ID-275)"
         );
 
         // 3. La persona se identifica, y la sede recibe el certificado.
@@ -898,9 +985,94 @@ mod tests {
             "el certificado viaja en Base64 URL-safe y nada mas"
         );
         assert_eq!(reply.on_the_wire(), *encoded);
+        // Y **el texto exacto que sale al cable** es ése y nada más (TD-72).
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            Some(encoded.clone()),
+            "la sede recibe el certificado en el acto, por el asa del tramite"
+        );
         assert!(
             live.current().is_none(),
             "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada (ID-275)"
+        );
+    }
+
+    /// **La gemela del trazador** (TD-72): la persona dice que no, y lo que sale
+    /// al cable es `CANCEL` en el acto. Después de contestar, ni cancelar otra
+    /// vez ni cerrar la ventana escriben nada (ID-340).
+    #[test]
+    fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_it() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let live = LiveErrand::default();
+        let asked = RefCell::new(Vec::new());
+        let engine = AnEngine::answering(&[&[0]]);
+
+        let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+        assert!(
+            matches!(attendance, Attendance::Serving { .. }),
+            "la invocacion es buena: {attendance:?}"
+        );
+
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        let url = arriving_over_the_channel(&format!(
+            "afirma://selectcert?op=selectcert&idsession={CREDENTIAL}"
+        ));
+        let step = consent_for(
+            &engine,
+            &requested(&url),
+            ours,
+            home.path(),
+            &listed,
+            &memory,
+            &live,
+        );
+        assert!(
+            matches!(step, ErrandStep::AskingForConsent { .. }),
+            "hay algo que consentir: {step:?}"
+        );
+        assert_eq!(what_the_site_received(&mut wire), None);
+
+        let reply = declined(&live);
+
+        assert!(matches!(reply, SiteReply::Cancelled), "{reply:?}");
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            Some("CANCEL".to_owned()),
+            "cancelar sale al cable en el acto, sin esperar a que nadie cierre nada"
+        );
+        assert!(live.current().is_none());
+
+        // Y ya no queda asa: cerrar la ventana después de haber contestado —que
+        // es lo mismo que cancelar (ID-340)— no manda nada.
+        declined(&live);
+        assert_eq!(what_the_site_received(&mut wire), None);
+    }
+
+    /// **ID-323.** Una conexión que se cae con la operación pendiente no tumba
+    /// el trámite: el desenlace se enseña igual y no se reintenta.
+    #[test]
+    fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_errand_down() {
+        let live = LiveErrand::default();
+        let (handle, wire) = the_wire();
+        live.answer_through(handle);
+        assert!(live.begin(Errand::of(a_credential(), 54001)));
+
+        // La sede se fue: al otro extremo del asa ya no hay nadie.
+        drop(wire);
+
+        let reply = declined(&live);
+
+        assert!(
+            matches!(reply, SiteReply::Cancelled),
+            "el desenlace es el mismo, lo lea alguien o no: {reply:?}"
+        );
+        assert!(
+            live.current().is_none(),
+            "y el tramite termina igual, sin reintentar nada"
         );
     }
 
@@ -1485,7 +1657,10 @@ mod tests {
             &live,
         );
 
-        let ErrandStep::AskingForConsent(rows) = step else {
+        let ErrandStep::AskingForConsent {
+            certificates: rows, ..
+        } = step
+        else {
             panic!("el consentimiento no se salta nunca: {step:?}");
         };
         assert_eq!(rows.len(), 1, "uno solo se consiente igual");

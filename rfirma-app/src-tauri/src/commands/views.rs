@@ -419,18 +419,37 @@ impl SiteErrandView {
             stage: SiteStageView::Waiting,
         }
     }
+
+    /// **El momento del consentimiento** (ID-272, ID-276): la sede pidió
+    /// identificación y éstas son las filas que acepta.
+    ///
+    /// Enseñarlas es lo único que pasa: la sede no recibe nada hasta que la
+    /// persona conteste (ID-275).
+    pub fn asking_for_consent(certificates: Vec<CertificateView>) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::AskingForConsent { certificates },
+        }
+    }
 }
 
 /// El momento de la secuencia que la ventana de sede enseña.
 ///
-/// Hoy sólo existe la espera, que es el único momento que hay **antes** de que
-/// la sede mande su petición por el canal.
+/// Dos momentos: la espera —lo único que hay **antes** de que la sede mande su
+/// petición por el canal— y el consentimiento de una identificación.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SiteStageView {
     /// El canal está abierto y la petición no ha llegado. Cuánto se espera
     /// antes de decir algo lo decide el reloj de la ventana, no el backend.
     Waiting,
+    /// La sede pide identificación, y éstos son los certificados que acepta
+    /// (ID-276). La persona elige uno o dice que no; hasta entonces la sede no
+    /// recibe nada (ID-272, ID-275).
+    AskingForConsent {
+        /// Las filas ya cribadas, en el orden en el que se enseñan.
+        certificates: Vec<CertificateView>,
+    },
 }
 
 #[cfg(test)]

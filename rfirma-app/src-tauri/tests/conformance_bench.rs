@@ -212,9 +212,14 @@ async fn the_channel_on_one_of(
 ) -> OpenChannel {
     let listener = bind_first_free(&drawn_ports(url))
         .expect("alguno de los tres sorteados deberia estar libre");
-    serve(listener, &material.certificate, duty)
-        .await
-        .expect("el canal deberia levantarse")
+    serve(
+        listener,
+        &material.certificate,
+        duty,
+        std::sync::Arc::new(|_, _| {}),
+    )
+    .await
+    .expect("el canal deberia levantarse")
 }
 
 // ---------------------------------------------------------------------------
