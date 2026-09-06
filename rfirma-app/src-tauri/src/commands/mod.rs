@@ -695,13 +695,22 @@ pub fn unregistered_signatures(
 /// ventana desde dentro de su propio manejador de IPC es pedirle al bucle que
 /// se espere a sí mismo.
 ///
+/// Cierra **la ventana de la etiqueta [`SITE_WINDOW`]**, y no la que pregunta:
+/// hoy sólo la invoca `sede.html`, pero el nombre de la orden promete la de
+/// sede y es la que cierra. Que no exista es una respuesta válida —cerrar dos
+/// veces es lo mismo que cerrar una—.
+///
 /// No devuelve nada: cerrar la ventana que está preguntando no deja a nadie a
 /// quien contarle que no se ha podido. El trámite **no termina aquí** —termina
 /// al contestarle a la sede (ID-275)—, así que esto no toca
 /// [`crate::app::errand::LiveErrand`].
 #[tauri::command(async)]
-pub fn close_site_window(window: tauri::WebviewWindow) {
-    let _ = window.close();
+pub fn close_site_window(app: tauri::AppHandle) {
+    use tauri::Manager as _;
+
+    if let Some(window) = app.get_webview_window(SITE_WINDOW) {
+        let _ = window.close();
+    }
 }
 
 /// La etiqueta de la ventana de sede (ID-333).

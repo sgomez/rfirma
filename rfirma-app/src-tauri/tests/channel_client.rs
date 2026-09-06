@@ -382,7 +382,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
         &live,
     );
 
-    let Attendance::Serving(channel) = &attendance else {
+    let Attendance::Serving { channel, .. } = &attendance else {
         panic!("la invocacion era buena: {attendance:?}");
     };
     assert_eq!(

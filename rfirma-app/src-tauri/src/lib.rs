@@ -392,8 +392,17 @@ fn hold_the_channel(app: &tauri::AppHandle, attendance: app::site::Attendance) {
     use tauri::Manager as _;
 
     match attendance {
-        Attendance::Serving(channel) | Attendance::RefusingOverTheChannel { channel, .. } => {
+        Attendance::Serving { channel, .. } => {
             app.state::<app::startup::HeldChannel>().hold(channel);
+        }
+        // **Por su propia ranura, nunca por la del trámite** (ID-279, ID-280):
+        // con un trámite ya vivo el canal que llega es el del `SAF_45`, y
+        // guardarlo donde el que sirve cerraría el del primero —el que llega
+        // dejaría fuera al que estaba, y la sede del trámite en marcha se
+        // quedaría esperando igual que en el #390—.
+        Attendance::RefusingOverTheChannel { channel, .. } => {
+            app.state::<app::startup::HeldChannel>()
+                .hold_a_refusal(channel);
         }
         Attendance::RefusingInTheWindow(refusal) => eprintln!(
             "rfirma: la invocacion de sede se rechaza con {} y no hay canal por el que decirlo: {}",

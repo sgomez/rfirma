@@ -120,8 +120,11 @@ pub fn attend_startup(
 ///
 /// **La ventana se abre sólo cuando hay trámite** (ID-334), y quién se queda
 /// con la plaza lo decide [`LiveErrand::begin`] y nadie más (ID-280): lo que se
-/// le publica a la ventana es el trámite que quedó apuntado, no el que se
-/// intentó.
+/// le publica a la ventana es **el trámite que viene dentro del `Serving`**,
+/// que es exactamente el que quedó apuntado. Preguntárselo después a
+/// [`LiveErrand::current`] dejaba dos rendijas —un `Serving` sin ventana si
+/// `current()` volviera vacío, y publicar un trámite distinto del que se quedó
+/// la plaza— que por aquí no existen.
 pub fn attend_site_launch(
     url: &str,
     transport: ChannelTransport<'_>,
@@ -130,10 +133,8 @@ pub fn attend_site_launch(
 ) -> Attendance {
     let attendance = site::attend_launch(url, transport, live);
 
-    if let Attendance::Serving(_) = attendance {
-        if let Some(errand) = live.current() {
-            window(&errand);
-        }
+    if let Attendance::Serving { errand, .. } = &attendance {
+        window(errand);
     }
 
     attendance
@@ -165,14 +166,48 @@ fn refresh_the_local_ca(trust: TrustAtStartup<'_>) -> Vec<String> {
 ///
 /// Vive en el estado de Tauri, como el trámite (ID-325). Cuando el asa de
 /// respuesta entre en [`LiveErrand`] (ID-321) éste es el sitio del que saldrá.
+///
+/// # Dos ranuras, y la razón es el ID-280
+///
+/// Un canal de rechazo (`SAF_45` y cualquier otro del ID-248) **no puede
+/// compartir ranura con el del trámite**: cuando llega una segunda invocación
+/// con un trámite ya vivo, [`site::attend_launch`] abre un canal nuevo sólo
+/// para decir el código, y meterlo donde estaba el del trámite cerraría
+/// justamente el canal que está sirviendo al primero —el que llega dejaría
+/// fuera al que estaba, que es lo contrario del criterio (ID-279, ID-280) y el
+/// síntoma mismo del #390—.
+///
+/// Así que el que sirve y el que rechaza se guardan aparte: `hold` es del
+/// trámite y `hold_a_refusal` del rechazo, y ninguno toca la ranura del otro.
 #[derive(Default)]
-pub struct HeldChannel(std::sync::Mutex<Option<OpenChannel>>);
+pub struct HeldChannel {
+    /// El canal del trámite que se quedó con la plaza.
+    serving: std::sync::Mutex<Option<OpenChannel>>,
+    /// El canal abierto sólo para contestar un rechazo por el socket (ID-248).
+    refusing: std::sync::Mutex<Option<OpenChannel>>,
+}
 
 impl HeldChannel {
-    /// Se queda con el canal. El que hubiera **se cierra**: sólo hay un trámite
-    /// a la vez (ID-280), y el anterior ya no tiene quien lo conteste.
+    /// Se queda con el canal **del trámite**. El que hubiera sirviendo **se
+    /// cierra**: sólo hay un trámite a la vez (ID-280), y si hay uno nuevo
+    /// sirviendo es que el anterior terminó y ya no tiene quien lo conteste.
     pub fn hold(&self, channel: OpenChannel) {
-        if let Some(previous) = super::lock(&self.0).replace(channel) {
+        if let Some(previous) = super::lock(&self.serving).replace(channel) {
+            previous.close();
+        }
+    }
+
+    /// Sostiene el canal de un **rechazo** mientras contesta (ID-248).
+    ///
+    /// Vive lo justo para decir su código: no se le suelta en el acto porque
+    /// soltarlo apaga el servidor antes de que la sede llegue a conectarse, y
+    /// no se cierra a mano porque nadie sabe aquí cuándo ha contestado. Lo
+    /// cierra el rechazo siguiente, y si no llega ninguno, el fin del proceso.
+    ///
+    /// **Nunca toca el canal del trámite vivo**: un rechazo es exactamente el
+    /// caso en el que el anterior sí tiene quien lo conteste.
+    pub fn hold_a_refusal(&self, channel: OpenChannel) {
+        if let Some(previous) = super::lock(&self.refusing).replace(channel) {
             previous.close();
         }
     }
@@ -311,7 +346,7 @@ mod tests {
         assert!(
             matches!(
                 startup.opening,
-                Opening::TheSiteErrand(Attendance::Serving(_))
+                Opening::TheSiteErrand(Attendance::Serving { .. })
             ),
             "una invocación de sede atiende el trámite y no enseña la principal: {:?}",
             startup.opening
@@ -414,7 +449,7 @@ mod tests {
         assert!(
             matches!(
                 startup.opening,
-                Opening::TheSiteErrand(Attendance::Serving(_))
+                Opening::TheSiteErrand(Attendance::Serving { .. })
             ),
             "y el trámite se atiende igual: {:?}",
             startup.opening
@@ -469,11 +504,74 @@ mod tests {
             &live,
         );
 
-        assert!(matches!(attendance, Attendance::Serving(_)));
+        assert!(matches!(attendance, Attendance::Serving { .. }));
         assert_eq!(
             world.steps(),
             ["canal".to_owned(), format!("ventana:{}", PORTS[0])],
             "ni un almacén se abre en la segunda invocación"
         );
+    }
+
+    /// Un canal que apunta su cierre: es lo único que hace falta para ver a
+    /// [`HeldChannel`] por dentro, porque cerrar es lo único que hace.
+    fn a_channel(port: u16, closed: &std::sync::Arc<Mutex<Vec<u16>>>) -> OpenChannel {
+        let closed = std::sync::Arc::clone(closed);
+        OpenChannel::new(
+            port,
+            Shutdown::of(move || super::super::lock(&closed).push(port)),
+        )
+    }
+
+    /// Qué puertos se han cerrado hasta ahora.
+    fn closed_ports(closed: &std::sync::Arc<Mutex<Vec<u16>>>) -> Vec<u16> {
+        super::super::lock(closed).clone()
+    }
+
+    /// **ID-279, ID-280.** Sostener el canal de un rechazo **no cierra el del
+    /// trámite vivo**: con un trámite en marcha, el que llega se queda fuera, y
+    /// eso es exactamente lo contrario de que el que llega eche al que estaba.
+    ///
+    /// Es la mitad que no ve
+    /// [`a_second_launch_with_a_live_errand_gets_no_window_of_its_own`]: ésa es
+    /// de grada A sobre el caso de uso y no llega hasta la ranura.
+    #[test]
+    fn a_refusal_never_closes_the_channel_of_the_live_errand() {
+        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let held = HeldChannel::default();
+
+        held.hold(a_channel(PORTS[0], &closed));
+        held.hold_a_refusal(a_channel(PORTS[1], &closed));
+
+        assert!(
+            closed_ports(&closed).is_empty(),
+            "el canal del trámite vivo sigue sirviendo: {:?}",
+            closed_ports(&closed)
+        );
+    }
+
+    /// Un rechazo detrás de otro sí cierra al anterior: el primero ya contestó
+    /// lo suyo, y su puerto no tiene por qué seguir atado.
+    #[test]
+    fn a_new_refusal_closes_the_refusal_it_replaces() {
+        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let held = HeldChannel::default();
+
+        held.hold_a_refusal(a_channel(PORTS[0], &closed));
+        held.hold_a_refusal(a_channel(PORTS[1], &closed));
+
+        assert_eq!(closed_ports(&closed), vec![PORTS[0]]);
+    }
+
+    /// **ID-280.** Y un trámite nuevo sí cierra el canal del anterior: si hay
+    /// otro sirviendo es que el primero terminó.
+    #[test]
+    fn a_new_serving_channel_closes_the_one_it_replaces() {
+        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let held = HeldChannel::default();
+
+        held.hold(a_channel(PORTS[0], &closed));
+        held.hold(a_channel(PORTS[1], &closed));
+
+        assert_eq!(closed_ports(&closed), vec![PORTS[0]]);
     }
 }

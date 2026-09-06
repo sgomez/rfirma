@@ -639,9 +639,9 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
 fn every_command_of_the_site_errand_runs_off_the_main_thread() {
     let source = production_half(source_of("mod.rs"));
 
-    // Una lista con nombre, y no un literal en el `for`: las ocho órdenes del
-    // trámite (ID-336) entran aquí según se escriben, y la lista dice cuáles se
-    // han mirado ya.
+    // Una lista con nombre, y no un literal en el `for`: las órdenes del
+    // trámite (ID-336) entran aquí según se escriben —hoy sólo está la
+    // primera—, y la lista dice cuáles se han mirado ya.
     const OF_THE_ERRAND: [&str; 1] = ["pub fn close_site_window("];
 
     for command in OF_THE_ERRAND {

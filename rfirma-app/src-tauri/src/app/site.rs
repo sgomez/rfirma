@@ -37,7 +37,13 @@ pub type ChannelTransport<'a> =
 #[derive(Debug)]
 pub enum Attendance {
     /// El canal está abierto y sirviendo la conversación.
-    Serving(OpenChannel),
+    Serving {
+        /// El canal abierto, que sirve la conversación de la sede.
+        channel: OpenChannel,
+        /// El trámite que se quedó con la plaza (ID-280): el que apuntó
+        /// [`LiveErrand::begin`], no el que se intentó.
+        errand: Errand,
+    },
     /// La invocación se rechaza, y el rechazo va **por el socket**: el canal
     /// está abierto sólo para decir el código al primer mensaje y cerrar.
     RefusingOverTheChannel {
@@ -85,8 +91,8 @@ pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErra
             match transport(request.ports(), duty) {
                 Ok(channel) => {
                     let errand = Errand::of(request.credential().clone(), channel.port());
-                    if live.begin(errand) {
-                        return Attendance::Serving(channel);
+                    if live.begin(errand.clone()) {
+                        return Attendance::Serving { channel, errand };
                     }
 
                     // La plaza era de otra sede. El canal recién abierto se
@@ -203,7 +209,7 @@ mod tests {
             &LiveErrand::default(),
         );
 
-        let Attendance::Serving(channel) = attendance else {
+        let Attendance::Serving { channel, .. } = attendance else {
             panic!("la invocacion era buena: {attendance:?}");
         };
         assert_eq!(channel.port(), 54001);

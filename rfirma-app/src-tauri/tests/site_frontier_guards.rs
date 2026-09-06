@@ -164,7 +164,7 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     assert!(
         matches!(
             attend_launch(&good, &transport, &live),
-            Attendance::Serving(_)
+            Attendance::Serving { .. }
         ),
         "la primera invocacion abre el canal"
     );
