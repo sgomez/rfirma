@@ -3,11 +3,11 @@
 use std::path::Path;
 
 use crate::commands::Failure;
-use crate::documents::adapters::portal::PortalDocument;
-use crate::documents::adapters::recents_store::Badge;
 use crate::documents::adapters::views::RecentDocumentView;
 use crate::documents::application::opened::{OpenedDocuments, Remembrance};
 use crate::documents::application::{documents, recents};
+use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::recents::Badge;
 use crate::signing::adapters::views::PlacementView;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::Memory;

@@ -3,15 +3,15 @@
 use serde::Serialize;
 
 use crate::desktop::domain::error::DesktopError;
-use crate::documents::adapters::rubric::{RubricError, Situation as RubricSituation};
 use crate::documents::domain::destination::DestinationError;
-use crate::identity::adapters::pkcs11::SecretOnTheReaderKeypad;
+use crate::documents::domain::rubric::{RubricError, Situation as RubricSituation};
 use crate::identity::domain::error::{Situation, TokenError};
-use crate::signing::adapters::ffi::BridgeError;
-use crate::signing::adapters::isolate::IsolateGone;
-use crate::signing::adapters::memory_error::{MemoryError, Situation as MemorySituation};
+use crate::identity::domain::secret::SecretOnTheReaderKeypad;
 use crate::signing::application::cycle;
 use crate::signing::application::session::CycleFailure;
+use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::memory_error::{MemoryError, Situation as MemorySituation};
 use crate::signing::domain::{Refusal, SealMismatch};
 
 /// Representación de un fallo devuelto a la ventana (ADR-0009).

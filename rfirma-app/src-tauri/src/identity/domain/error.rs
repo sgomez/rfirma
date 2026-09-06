@@ -116,5 +116,33 @@ fn function_name(function: Function) -> String {
     format!("C_{function:?}")
 }
 
+/// Detalle del error cuando la biblioteca `libnss3.so` no está disponible.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NssUnavailable {
+    detail: String,
+}
+
+impl NssUnavailable {
+    /// Construye un error con el detalle correspondiente.
+    pub fn new(detail: impl Into<String>) -> Self {
+        Self {
+            detail: detail.into(),
+        }
+    }
+
+    /// Detalle del motivo por el que la biblioteca no está disponible.
+    pub fn detail(&self) -> &str {
+        &self.detail
+    }
+}
+
+impl std::fmt::Display for NssUnavailable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.detail)
+    }
+}
+
+impl std::error::Error for NssUnavailable {}
+
 #[cfg(test)]
 mod tests;

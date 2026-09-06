@@ -8,17 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::signing::domain::PageSet;
 
+pub use crate::documents::domain::recents::Badge;
+
 /// Capacidad máxima del historial de documentos recientes.
 pub const CAPACITY: usize = 10;
-
-/// Estado de firma persistido en caché para un documento reciente.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Badge {
-    /// Documento con al menos una firma.
-    Signed,
-    /// Documento sin firmas.
-    Unsigned,
-}
 
 /// Estado de firma visualizado en la interfaz, incluyendo disponibilidad actual.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

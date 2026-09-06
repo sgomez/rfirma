@@ -25,10 +25,10 @@ use std::sync::Mutex;
 use desktop::adapters::paths::Paths;
 use documents::domain::destination::DestinationFolder;
 use identity::application::listed::ListedCertificates;
-use signing::adapters::memory_error::MemoryError;
 use signing::adapters::store::{JsonFile, Loaded};
 use signing::application::configuration_memory::Configuration;
 use signing::application::state::{State, VersionCheck};
+use signing::domain::memory_error::MemoryError;
 
 /// Variable de entorno para sobreescribir el módulo PKCS#11.
 pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";

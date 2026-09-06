@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use x509_cert::der::Decode;
 use x509_cert::Certificate;
 
-use crate::identity::adapters::pkcs11::stores::Store;
+use crate::identity::domain::store::Store;
 
 /// Coordenadas de persistencia para reencontrar un certificado en el almacén (ADR-0010).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

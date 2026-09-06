@@ -1,9 +1,12 @@
 //! Reglas de firma puras sin efectos secundarios.
 
 pub mod admissibility;
+pub mod bridge;
 pub mod config;
+pub mod isolate_gone;
 pub mod language;
 pub mod layer2_text;
+pub mod memory_error;
 pub mod placement;
 pub mod properties;
 pub mod session_seal;

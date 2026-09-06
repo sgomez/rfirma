@@ -3,12 +3,12 @@
 use std::path::{Path, PathBuf};
 
 use crate::commands::Failure;
-use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::adapters::views::{
     DestinationView, DroppedDocumentView, OpenedDocumentView, SignedDocumentView,
 };
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+use crate::documents::domain::portal::PortalDocument;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::Refusal;
 use crate::Memory;

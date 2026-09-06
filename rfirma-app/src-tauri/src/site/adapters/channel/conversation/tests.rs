@@ -1,4 +1,5 @@
 use super::*;
+use crate::site::domain::protocol::ChannelCredential;
 
 const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 

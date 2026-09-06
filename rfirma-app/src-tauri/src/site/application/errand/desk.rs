@@ -5,8 +5,9 @@ use std::path::{Path, PathBuf};
 use crate::commands::Failure;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::handles;
-use crate::identity::adapters::pkcs11::{self, Store};
+use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::store::Store;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{

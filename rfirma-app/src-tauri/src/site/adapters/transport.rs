@@ -2,8 +2,9 @@
 
 use std::sync::Arc;
 
-use crate::site::adapters::channel::{self, ChannelDuty, ChannelError, OpenChannel};
+use crate::site::adapters::channel;
 use crate::site::adapters::tls::{LocalCaStore, LocalServerCertificate};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
 
 use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
 

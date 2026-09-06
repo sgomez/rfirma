@@ -3,8 +3,8 @@
 use crate::commands::Failure;
 use crate::documents::application::documents;
 use crate::documents::application::opened::OpenedDocuments;
-use crate::identity::adapters::pkcs11::Store;
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::store::Store;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::cycle::{self, SigningRequest, TokenSignature};

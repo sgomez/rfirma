@@ -1,8 +1,9 @@
 //! Respuestas finales del trámite para la sede y la ventana (ADR-0009).
 
 use crate::commands::Failure;
-use crate::identity::adapters::pkcs11::{self, Store};
+use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::store::Store;
 use crate::site::domain::protocol::{SafCode, SiteFilter, WireAnswer};
 
 use super::outcome::{ErrandStep, NoCertificate, SiteOutcome};

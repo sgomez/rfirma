@@ -1,20 +1,11 @@
 //! Evaluación y respuesta a los mensajes del canal local (ADR-0005).
 
-use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelCredential, ChannelMessage, Parameter, SafCode, WireAnswer,
-};
+use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, Parameter, SafCode, WireAnswer};
+
+pub use crate::site::domain::channel::ChannelDuty;
 
 /// Respuesta exacta al mensaje de eco del protocolo.
 pub const ECHO_OK: &str = "OK";
-
-/// Cometido con el que se abrió el canal local.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ChannelDuty {
-    /// Servir la conversación con la credencial acordada.
-    Serve(ChannelCredential),
-    /// Contestar un rechazo al primer mensaje y cerrar.
-    Refuse(WireAnswer),
-}
 
 /// Respuesta del servidor ante un mensaje recibido por el canal.
 #[derive(Clone, Debug, PartialEq, Eq)]

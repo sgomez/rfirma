@@ -5,7 +5,8 @@ use base64::Engine;
 use crate::identity::adapters::pkcs11;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
-use crate::signing::adapters::ffi::{BridgeError, NativeBridge, PostSignRequest, PreSignRequest};
+use crate::signing::adapters::ffi::NativeBridge;
+use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest};
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, Refusal, SealMismatch, SessionSeal, SignatureConfig,
 };

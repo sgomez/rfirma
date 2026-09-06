@@ -3,9 +3,10 @@
 use base64::Engine as _;
 
 use crate::commands::Failure;
-use crate::identity::adapters::pkcs11::{self, Store};
+use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::store::Store;
 use crate::signing::ports::FilterEngine;
 use crate::site::domain::protocol::SiteFilter;
 

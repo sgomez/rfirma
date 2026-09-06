@@ -6,7 +6,7 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
 use serde::Serialize;
 
-use crate::documents::adapters::rubric::NormalizedRubric;
+use crate::documents::domain::rubric::NormalizedRubric;
 
 pub use crate::commands::Failure;
 

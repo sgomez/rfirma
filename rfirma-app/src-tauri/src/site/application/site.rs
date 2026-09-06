@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::site::adapters::channel::{ChannelDuty, ChannelError, OpenChannel};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
 use crate::site::domain::protocol::{
     drawn_ports, AfirmaUrl, ChannelCredential, LaunchRequest, Refusal, RefusalSituation, SafCode,
     WireAnswer,

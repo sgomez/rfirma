@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::signing::adapters::memory_error::{MemoryError, Situation};
+use crate::signing::domain::memory_error::{MemoryError, Situation};
 
 /// Versión del formato de los ficheros de memoria.
 pub const FORMAT_VERSION: u64 = 1;
