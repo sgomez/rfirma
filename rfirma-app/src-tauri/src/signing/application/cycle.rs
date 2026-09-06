@@ -2,9 +2,9 @@
 
 use base64::Engine;
 
-use crate::identity::adapters::pkcs11;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
+use crate::identity::ports::Token;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Refusal, SealMismatch, SessionSeal,
@@ -102,7 +102,10 @@ pub struct OpenCycle {
 }
 
 /// Fase 1: ejecuta la prefirma PAdES enviando documento y parámetros al puente.
-pub fn presign(bridge: &impl Bridge, request: SigningRequest<'_>) -> Result<OpenCycle, CycleError> {
+pub fn presign<B: Bridge + ?Sized>(
+    bridge: &B,
+    request: SigningRequest<'_>,
+) -> Result<OpenCycle, CycleError> {
     let pdf_b64 = base64(request.document.bytes());
     let chain_b64 = request
         .chain
@@ -153,15 +156,19 @@ impl OpenCycle {
     }
 
     /// Fase 2: firma los bytes en el token PKCS#11 (ADR-0001).
-    pub fn sign_on_token(&self, pin: &str) -> Result<TokenSignature, CycleError> {
-        let signature = pkcs11::sign(&self.certificate, pin, self.presigned.pre_sign())?;
+    pub fn sign_on_token(
+        &self,
+        token: &dyn Token,
+        pin: &str,
+    ) -> Result<TokenSignature, CycleError> {
+        let signature = token.sign(&self.certificate, pin, self.presigned.pre_sign())?;
         Ok(TokenSignature::from_token(signature))
     }
 
     /// Fase 3: sella la prefirma con la firma del token y ensambla el PDF firmado (ADR-0016).
-    pub fn postsign(
+    pub fn postsign<B: Bridge + ?Sized>(
         &self,
-        bridge: &impl Bridge,
+        bridge: &B,
         signature: &TokenSignature,
         returned: &SessionSeal,
     ) -> Result<CompletedCycle, CycleError> {

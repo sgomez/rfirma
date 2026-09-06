@@ -4,11 +4,11 @@ use std::path::Path;
 
 use tauri_plugin_dialog::FilePath;
 
-use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
+use crate::identity::ports::Token;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::memory_error::{MemoryError, Situation as StoreSituation};
 use crate::Memory;
@@ -30,12 +30,13 @@ impl From<TokenError> for InstallError {
 
 /// Certificados de los tokens conectados, ya como filas con su asa (ADR-0011).
 pub fn listed_rows(
+    token: &dyn Token,
     stores: &[Store],
     installed_dir: &Path,
     listed: &ListedCertificates,
     memory: &Memory,
 ) -> Result<Vec<ListedCertificate>, TokenError> {
-    let found = pkcs11::list_certificates_across(stores)?;
+    let found = token.list_across(stores)?;
     Ok(rows_of(found, installed_dir, listed, memory))
 }
 
@@ -78,17 +79,11 @@ const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
 
 /// Instala un PKCS#12 importándolo a un almacén NSS aislado (ADR-0011).
 pub fn install_pkcs12(
+    token: &dyn Token,
     installed_dir: &Path,
     chosen: FilePath,
     password: &str,
 ) -> Result<(), InstallError> {
-    let softoken = pkcs11::stores::softoken().ok_or_else(|| {
-        TokenError::new(
-            Situation::ModuleNotFound,
-            "no esta libsoftokn3.so en ninguna de las rutas conocidas",
-        )
-    })?;
-
     let source = chosen
         .into_path()
         .map_err(|error| TokenError::new(Situation::Pkcs12Unreadable, error.to_string()))?;
@@ -104,10 +99,9 @@ pub fn install_pkcs12(
     })?;
     let _ = crate::desktop::adapters::paths::restrict_to_owner(&directory);
 
-    let store = pkcs11::Store::nss(&softoken, &directory);
-    let installed =
-        pkcs11::with_token_turn(|| pkcs11::nss::import_pkcs12(&directory, &pkcs12, password))
-            .and_then(|()| only_rsa_keys(&store));
+    let installed = token
+        .import_pkcs12(&directory, &pkcs12, password)
+        .and_then(|store| only_rsa_keys(token, &store));
 
     if let Err(error) = installed {
         let _ = std::fs::remove_dir_all(&directory);
@@ -121,18 +115,18 @@ pub fn install_pkcs12(
 }
 
 /// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA.
-fn only_rsa_keys(store: &pkcs11::Store) -> Result<(), pkcs11::TokenError> {
-    let found = pkcs11::list_certificates(store)?;
+fn only_rsa_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
+    let found = token.list(store)?;
     if found.is_empty() {
-        return Err(pkcs11::TokenError::new(
-            pkcs11::Situation::Pkcs12Unreadable,
+        return Err(TokenError::new(
+            Situation::Pkcs12Unreadable,
             "el fichero no ha dejado ningun certificado con clave privada dentro",
         ));
     }
     for certificate in &found {
         if !is_rsa(certificate) {
-            return Err(pkcs11::TokenError::new(
-                pkcs11::Situation::KeyNotRsa,
+            return Err(TokenError::new(
+                Situation::KeyNotRsa,
                 format!("{}: la clave no es RSA", certificate.reference().label()),
             ));
         }
@@ -209,11 +203,12 @@ pub fn remember_the_certificate(
 
 /// Datos del titular del certificado elegido requeridos para la firma visible.
 pub fn stamped_holder_named(
+    token: &dyn Token,
     handle: &str,
     stores: &[Store],
     listed: &ListedCertificates,
 ) -> Result<StampedHolder, TokenError> {
-    let certificates = pkcs11::list_certificates_across(stores)?;
+    let certificates = token.list_across(stores)?;
     let chosen = certificate_behind(&certificates, handle, listed)?;
     Ok(stamped_holder_of(chosen))
 }

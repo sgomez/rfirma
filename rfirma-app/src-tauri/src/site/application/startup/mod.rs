@@ -5,13 +5,12 @@ pub mod repair;
 
 use std::path::PathBuf;
 
-use crate::site::adapters::tls::LocalCaStore;
 use crate::site::domain::trust::Moment as TrustMoment;
-use crate::site::ports::TrustStores;
+use crate::site::ports::{LocalCaSlots, TrustStores};
 
 use crate::site::domain::protocol::Refusal;
 
-use super::errand::{Errand, LiveErrand, Moment, NoChannel};
+use super::errand::{Errand, LiveErrand, Moment, NegotiatedCodec, NoChannel};
 use super::site::{self, Attendance, ChannelTransport};
 use super::trust;
 use crate::desktop::application::invocation::Invocation;
@@ -55,7 +54,7 @@ pub enum LocalCaReach {
 #[derive(Clone, Copy)]
 pub struct TrustAtStartup<'a> {
     /// Almacén de la CA local.
-    pub store: &'a LocalCaStore,
+    pub store: &'a dyn LocalCaSlots,
     /// Rutas de perfiles NSS detectados.
     pub profiles: &'a [PathBuf],
     /// Interfaz de acceso a los almacenes de confianza.
@@ -84,6 +83,7 @@ pub enum Opening {
 pub fn attend_startup(
     invocation: &Invocation,
     trust: TrustAtStartup<'_>,
+    codec: &NegotiatedCodec,
     transport: ChannelTransport<'_>,
     window: SiteWindowOpener<'_>,
     live: &LiveErrand,
@@ -99,19 +99,22 @@ pub fn attend_startup(
 
     Startup {
         said,
-        opening: Opening::TheSiteErrand(attend_site_launch(url, transport, window, live, local_ca)),
+        opening: Opening::TheSiteErrand(attend_site_launch(
+            url, codec, transport, window, live, local_ca,
+        )),
     }
 }
 
 /// Atiende una invocación de sede y abre la ventana asociada según el resultado.
 pub fn attend_site_launch(
     url: &str,
+    codec: &NegotiatedCodec,
     transport: ChannelTransport<'_>,
     window: SiteWindowOpener<'_>,
     live: &LiveErrand,
     local_ca: LocalCaReach,
 ) -> Attendance {
-    let attendance = site::attend_launch(url, transport, live);
+    let attendance = site::attend_launch(url, codec, transport, live);
 
     match &attendance {
         Attendance::Serving { errand, .. } => match local_ca {

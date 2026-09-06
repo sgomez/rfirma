@@ -2,28 +2,29 @@
 
 use std::path::PathBuf;
 
-use crate::site::adapters::nss::NssTrustStores;
-use crate::site::adapters::tls::LocalCaStore;
 use crate::site::domain::trust::Moment as TrustMoment;
+use crate::site::ports::{LocalCaSlots, TrustStores};
 
 use super::super::errand::{LiveErrand, Moment, NoChannel};
 use super::super::trust;
 use super::channel::HeldChannel;
 
-/// Configuración persistida de la CA local y perfiles NSS para tareas de reparación (ADR-0005).
+/// La CA local, sus almacenes y los perfiles NSS que la reparación toca (ADR-0005).
 pub struct LocalCaTrust {
-    /// Almacén de la CA local.
-    pub store: LocalCaStore,
+    /// Las dos ranuras de la CA local.
+    pub store: Box<dyn LocalCaSlots + Send + Sync>,
     /// Perfiles NSS de navegadores detectados.
     pub profiles: Vec<PathBuf>,
+    /// Los almacenes de confianza donde se registra.
+    pub stores: Box<dyn TrustStores + Send + Sync>,
 }
 
 /// Instala la CA local a petición de la persona y actualiza el estado de la ventana (ADR-0005).
 pub fn repair_the_local_ca(trust: &LocalCaTrust, held: &HeldChannel, live: &LiveErrand) -> Moment {
     let in_some_store = trust::refresh_local_ca_trust(
-        &trust.store,
+        trust.store.as_ref(),
         &trust.profiles,
-        &NssTrustStores::new(crate::identity::adapters::pkcs11::RealNssHost),
+        trust.stores.as_ref(),
         TrustMoment::Startup,
     )
     .is_ok_and(|outcome| !outcome.nowhere());

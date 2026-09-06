@@ -31,9 +31,9 @@ Lo que hoy va contra eso está declarado, arista por arista, en
 `tests/module_directions_debt.txt`. **La lista solo mengua**: una arista nueva
 fuera de ella pone la guarda en rojo, y una línea que deje de ser infracción
 también. Quién la vacía: #439 (el ciclo habla al puente por el puerto `Bridge`
-de `signing/ports.rs`; **hecho**), #440 (los casos de uso devuelven dominio y cada contexto traduce en `adapters/failures.rs`; **hecho**) y #443
-(las raíces de composición por contexto, que reparten `Environment` y `Memory`
-y sacan de `lib.rs` lo que no es cableado). Lo que no caiga en ninguno se anota
+de `signing/ports.rs`; **hecho**), #440 (los casos de uso devuelven dominio y cada contexto traduce en `adapters/failures.rs`; **hecho**), #453 (el token, el hilo del puente, el códec y las ranuras de la CA local entran por un puerto; **hecho**: lo que queda son las aristas `-> <otro>::ports::…`) y #443
+(las raíces de composición por contexto, que reparten `Environment`, `Memory`
+y los puertos entre contextos, y sacan de `lib.rs` lo que no es cableado). Lo que no caiga en ninguno se anota
 en #443. Para regenerarla, `MODULE_DIRECTIONS_DUMP=1 cargo test --test
 module_directions -- --nocapture` la vuelca línea a línea.
 
@@ -44,8 +44,8 @@ module_directions -- --nocapture` la vuelca línea a línea.
 | `commands/failure.rs` | 29 | `Failure`, lo que cruza a la ventana cuando algo salió mal (ADR-0009). No importa nada de ningún contexto: cada uno traduce lo suyo en su `adapters/failures.rs` (#440). Pruebas en `commands/failure/tests.rs` (11). |
 | `commands/guards.rs` | 581 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`. Solo en pruebas. |
 | `compile_fail.rs` | 67 | **Lo que ya no compila**: un doctest `compile_fail` por cada tipo que sustituyó a una guarda textual (#439), y uno positivo que recorre las mismas rutas para que un error de ruta no los deje vacíos. Solo con `cargo test --doc`, que `cargo test` ya incluye; en estable rustdoc no comprueba el código de error, solo que no compila. |
-| `fixtures.rs` | 96 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos, incluido `a_completed_cycle()`, la prueba de que hubo un ciclo. Solo en pruebas. |
-| `lib.rs` | 426 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Absorbe hasta el #443 los dos repartos que desaparecieron: `Environment` —la raíz de composición— con la carpeta de destino elegida, y `Memory`, las dos memorias y sus dos soportes (ADR-0010). Empieza aquí para ver el cableado. Pruebas en `tests.rs` (59). |
+| `fixtures.rs` | 211 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos: `a_completed_cycle()`, la prueba de que hubo un ciclo, y los dobles de los puertos —`NoToken`, `NoIsolate` e `InMemoryCaSlots`— con los que la grada A no toca token, hilo ni disco. Solo en pruebas. |
+| `lib.rs` | 437 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Absorbe hasta el #443 los dos repartos que desaparecieron: `Environment` —la raíz de composición— con la carpeta de destino elegida, y `Memory`, las dos memorias y sus dos soportes (ADR-0010). Empieza aquí para ver el cableado. Pruebas en `tests.rs` (59). |
 | `main.rs` | 6 | El binario. No hay nada dentro. |
 | `tests/memory.rs` | 336 | Las pruebas de `Memory`: los dos interruptores y lo exento. Las declara `tests.rs`. |
 

@@ -10,7 +10,7 @@ use openssl::x509::extension::{
 };
 use openssl::x509::{X509Name, X509};
 
-use super::authority::{generate_key, random_serial, LocalCa, PERMITTED_DNS_NAME};
+use crate::site::domain::local_ca::{generate_key, random_serial, LocalCa, PERMITTED_DNS_NAME};
 use crate::site::domain::tls_error::{Situation, TlsError};
 
 /// Nombre común (CN) del certificado del servidor local.

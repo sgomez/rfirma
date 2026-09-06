@@ -5,9 +5,8 @@ use super::{
 use crate::commands::Failure;
 use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::application::opened::OpenedDocuments;
-use crate::fixtures::{a_certificate, a_memory, an_order};
+use crate::fixtures::{a_certificate, a_memory, an_order, NoIsolate, NoToken};
 use crate::identity::application::listed::ListedCertificates;
-use crate::signing::adapters::isolate::Isolate;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::PageSet;
@@ -231,10 +230,11 @@ fn a_signature_cannot_begin_on_a_document_that_is_not_open() {
 
     let failure = begin(
         &order,
+        &NoToken,
         &[],
         &ListedCertificates::new(),
         &OpenedDocuments::new(),
-        &Isolate::start(),
+        &NoIsolate,
         &SigningSession::default(),
     )
     .expect_err("ese documento no esta abierto");
@@ -247,7 +247,7 @@ fn the_postsign_stops_before_the_bridge_when_no_cycle_was_started() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
 
     let failure = finish(
-        &Isolate::start(),
+        &NoIsolate,
         &SigningSession::default(),
         &a_memory(home.path()),
         &Configuration::default(),
@@ -260,8 +260,8 @@ fn the_postsign_stops_before_the_bridge_when_no_cycle_was_started() {
 
 #[test]
 fn the_pin_has_nothing_to_sign_when_no_cycle_was_started() {
-    let failure =
-        sign_on_token(&SigningSession::default(), "1234").expect_err("no hay ciclo abierto");
+    let failure = sign_on_token(&NoToken, &SigningSession::default(), "1234")
+        .expect_err("no hay ciclo abierto");
 
     assert_eq!(Failure::from(failure).situation, "unknown");
 }

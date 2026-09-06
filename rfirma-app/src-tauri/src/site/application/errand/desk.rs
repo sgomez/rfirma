@@ -4,9 +4,10 @@ use std::path::{Path, PathBuf};
 
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::handles;
-use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::Store;
+use crate::identity::ports::Token;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
@@ -21,17 +22,18 @@ use super::state::LiveErrand;
 use crate::signing::application::filtering;
 use crate::signing::application::policies;
 use crate::signing::application::session::SigningSession;
-use crate::signing::ports::FilterEngine;
-use crate::signing::ports::PolicyEngine;
+use crate::signing::ports::{FilterEngine, IsolateHost, PolicyEngine};
 use crate::site::application::session::SiteRefusal;
 use crate::Environment;
 
 /// Dependencias agrupadas necesarias para la ejecución de un trámite de sede.
-pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine> {
+pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, I: IsolateHost> {
     /// Motor de filtros criptográficos.
     pub engine: &'a E,
     /// Expansor de políticas de firma.
     pub policies: &'a P,
+    /// El token que lista y firma.
+    pub token: &'a dyn Token,
     /// Almacenes de certificados disponibles.
     pub stores: Vec<Store>,
     /// Directorio de certificados instalados.
@@ -45,12 +47,12 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine> {
     /// Directorio temporal para ficheros de paso.
     pub scratch_dir: PathBuf,
     /// Aislado de GraalVM para operaciones criptográficas.
-    pub isolate: &'a Isolate,
+    pub isolate: &'a I,
     /// Sesión activa de firma.
     pub session: &'a SigningSession,
 }
 
-impl<'a> ErrandDesk<'a, Isolate, Isolate> {
+impl<'a> ErrandDesk<'a, Isolate, Isolate, Isolate> {
     /// Construye la mesa del trámite a partir del entorno de la aplicación.
     pub fn at(
         environment: &'a Environment,
@@ -61,6 +63,7 @@ impl<'a> ErrandDesk<'a, Isolate, Isolate> {
         Self {
             engine: isolate,
             policies: isolate,
+            token: environment.token.as_ref(),
             stores: environment.all_stores(),
             installed_dir: &environment.installed_certificates,
             listed: &environment.listed,
@@ -74,8 +77,8 @@ impl<'a> ErrandDesk<'a, Isolate, Isolate> {
 }
 
 /// Atiende la operación recibida por el canal local evaluando los certificados disponibles.
-pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+pub fn attend_operation<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     url: &AfirmaUrl,
     request: SiteRequest,
     live: &LiveErrand,
@@ -89,7 +92,7 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
 
     live.keep_the_request(url.clone());
 
-    let ours = match pkcs11::list_certificates_across(&desk.stores) {
+    let ours = match desk.token.list_across(&desk.stores) {
         Ok(ours) => ours,
         Err(error) => {
             return answering(live, SiteOutcome::Refused(SiteRefusal::Token(error)));
@@ -112,10 +115,10 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
 }
 
 /// Prepara el paso de consentimiento para una firma o cofirma de sede.
-pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     request: &SignRequest,
-    ours: Vec<crate::identity::adapters::pkcs11::TokenCertificate>,
+    ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
     let admitted = match AdmissibleDocument::check(request.document()) {
@@ -175,12 +178,12 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
     })
 }
 
-fn accepted_listing<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+fn accepted_listing<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     filter: &SiteFilter,
-    ours: Vec<crate::identity::adapters::pkcs11::TokenCertificate>,
+    ours: Vec<TokenCertificate>,
     live: &LiveErrand,
-) -> Result<Vec<crate::identity::adapters::pkcs11::TokenCertificate>, ErrandStep> {
+) -> Result<Vec<TokenCertificate>, ErrandStep> {
     if ours.is_empty() {
         return Err(no_certificate_at_all());
     }
@@ -200,8 +203,8 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine>(
     Ok(accepted)
 }
 
-fn keep_the_document<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+fn keep_the_document<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     live: &LiveErrand,
     bytes: &[u8],
 ) -> Result<String, SiteRefusal> {
@@ -223,7 +226,7 @@ fn keep_the_document<E: FilterEngine, P: PolicyEngine>(
 pub fn consent_for<E: FilterEngine>(
     engine: &E,
     request: &SelectCertificate,
-    ours: Vec<crate::identity::adapters::pkcs11::TokenCertificate>,
+    ours: Vec<TokenCertificate>,
     installed_dir: &Path,
     listed: &ListedCertificates,
     memory: &Memory,

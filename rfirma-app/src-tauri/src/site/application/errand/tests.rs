@@ -8,12 +8,11 @@ use super::*;
 use crate::commands::Failure;
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
-use crate::fixtures::{a_memory, a_usable_certificate, listed_from};
+use crate::fixtures::{a_memory, a_usable_certificate, listed_from, NoIsolate, NoToken};
 use crate::identity::adapters::pkcs11::Store;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::ffi::BridgeError;
-use crate::signing::adapters::isolate::Isolate;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{CycleFailure, SigningSession};
 use crate::site::adapters::channel::{
@@ -101,11 +100,6 @@ fn on_the_wire(outcome: &SiteOutcome) -> String {
     V4Codec.encode(outcome)
 }
 
-/// Aislado cuyo puente no abre para pruebas.
-static AN_ISOLATE: std::sync::LazyLock<Isolate> = std::sync::LazyLock::new(|| {
-    Isolate::start_with(|| Err(BridgeError::Failed("no hay libreria en grada A".to_owned())))
-});
-
 /// Una sesión de firma vacía, compartida: nadie de aquí abre un ciclo.
 static A_SESSION: std::sync::LazyLock<SigningSession> =
     std::sync::LazyLock::new(SigningSession::default);
@@ -156,17 +150,18 @@ fn a_desk<'a>(
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
     scratch: &'a Path,
-) -> ErrandDesk<'a, AnEngine, APolicyEngine> {
+) -> ErrandDesk<'a, AnEngine, APolicyEngine, NoIsolate> {
     ErrandDesk {
         engine,
         policies,
+        token: &NoToken,
         stores: stores.to_vec(),
         installed_dir: home,
         listed,
         opened,
         memory,
         scratch_dir: scratch.to_path_buf(),
-        isolate: &AN_ISOLATE,
+        isolate: &NoIsolate,
         session: &A_SESSION,
     }
 }
@@ -377,7 +372,12 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     let asked = RefCell::new(Vec::new());
     let engine = AnEngine::answering(&[&[0], &[0]]);
 
-    let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+    let attendance = attend_launch(
+        &a_launch("54001,54002,54003"),
+        &a_codec(),
+        &a_transport(&asked),
+        &live,
+    );
     assert!(
         matches!(attendance, Attendance::Serving { .. }),
         "la invocacion es buena: {attendance:?}"
@@ -457,7 +457,12 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
     let asked = RefCell::new(Vec::new());
     let engine = AnEngine::answering(&[&[0]]);
 
-    let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+    let attendance = attend_launch(
+        &a_launch("54001,54002,54003"),
+        &a_codec(),
+        &a_transport(&asked),
+        &live,
+    );
     assert!(
         matches!(attendance, Attendance::Serving { .. }),
         "la invocacion es buena: {attendance:?}"
@@ -573,7 +578,12 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     let policies = APolicyEngine::answering("policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9\n");
     let scratch = home.path().join("errand");
 
-    let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+    let attendance = attend_launch(
+        &a_launch("54001,54002,54003"),
+        &a_codec(),
+        &a_transport(&asked),
+        &live,
+    );
     assert!(
         matches!(attendance, Attendance::Serving { .. }),
         "la invocacion es buena: {attendance:?}"
@@ -692,7 +702,12 @@ fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() 
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
 
-    let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+    let attendance = attend_launch(
+        &a_launch("54001,54002,54003"),
+        &a_codec(),
+        &a_transport(&asked),
+        &live,
+    );
     assert!(
         matches!(attendance, Attendance::Serving { .. }),
         "la invocacion es buena: {attendance:?}"
@@ -1344,10 +1359,10 @@ fn a_second_launch_is_refused_while_the_first_errand_is_live() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
-    let first = attend_launch(&a_launch("54001"), &a_transport(&asked), &live);
+    let first = attend_launch(&a_launch("54001"), &a_codec(), &a_transport(&asked), &live);
     assert!(matches!(first, Attendance::Serving { .. }), "{first:?}");
 
-    let second = attend_launch(&a_launch("55001"), &a_transport(&asked), &live);
+    let second = attend_launch(&a_launch("55001"), &a_codec(), &a_transport(&asked), &live);
     let Attendance::RefusingOverTheChannel { answer, .. } = second else {
         panic!("el segundo se rechaza por su socket: {second:?}");
     };
@@ -1382,7 +1397,7 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
         Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
     };
 
-    let attendance = attend_launch(&a_launch("55001,55002"), &transport, &live);
+    let attendance = attend_launch(&a_launch("55001,55002"), &a_codec(), &transport, &live);
 
     let Attendance::RefusingOverTheChannel { answer, .. } = attendance else {
         panic!("la que llega tarde se rechaza por su socket: {attendance:?}");
@@ -1406,10 +1421,10 @@ fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
-    attend_launch(&a_launch("54001"), &a_transport(&asked), &live);
+    attend_launch(&a_launch("54001"), &a_codec(), &a_transport(&asked), &live);
     declined(&live);
 
-    let next = attend_launch(&a_launch("55001"), &a_transport(&asked), &live);
+    let next = attend_launch(&a_launch("55001"), &a_codec(), &a_transport(&asked), &live);
 
     assert!(matches!(next, Attendance::Serving { .. }), "{next:?}");
 }
@@ -1418,7 +1433,7 @@ fn the_live_errand_remembers_the_credential_and_the_port_and_nothing_else() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
-    attend_launch(&a_launch("54001"), &a_transport(&asked), &live);
+    attend_launch(&a_launch("54001"), &a_codec(), &a_transport(&asked), &live);
 
     let errand = live.current().expect("hay tramite vivo");
     assert_eq!(errand.credential().as_str(), CREDENTIAL);

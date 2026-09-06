@@ -1,14 +1,140 @@
 //! Andamios y datos de prueba compartidos entre casos de uso.
 
 use std::path::Path;
+use std::sync::Mutex;
 
 use crate::desktop::adapters::paths::Paths;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::store::Store;
+use crate::identity::ports::Token;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
-use crate::signing::domain::bridge::PreSignature;
+use crate::signing::domain::bridge::{BridgeError, PreSignature};
+use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{CompletedCycle, SessionSeal, TokenSignature};
+use crate::signing::ports::{Bridge, IsolateHost};
+use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
+use crate::site::ports::LocalCaSlots;
 use crate::Memory;
+
+/// Un token sin certificados que no sabe firmar: cada almacén está vacío.
+pub(crate) struct NoToken;
+
+impl Token for NoToken {
+    fn list(&self, _store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(Vec::new())
+    }
+
+    fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+        Ok(StoreSecret::NotNeeded)
+    }
+
+    fn sign(
+        &self,
+        _reference: &CertificateRef,
+        _pin: &str,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "este token no tiene con que firmar",
+        ))
+    }
+
+    fn import_pkcs12(
+        &self,
+        _directory: &Path,
+        _pkcs12: &[u8],
+        _password: &str,
+    ) -> Result<Store, TokenError> {
+        Err(TokenError::new(
+            Situation::Pkcs12Unreadable,
+            "este token no importa nada",
+        ))
+    }
+}
+
+/// Un hilo del puente cuya librería no abre: lo que la grada A tiene en vez del isolate.
+pub(crate) struct NoIsolate;
+
+impl IsolateHost for NoIsolate {
+    fn run<T: Send + 'static>(
+        &self,
+        _task: impl FnOnce(&dyn Bridge) -> T + Send + 'static,
+    ) -> Result<Result<T, BridgeError>, IsolateGone> {
+        Ok(Err(BridgeError::Failed(
+            "no hay libreria en grada A".to_owned(),
+        )))
+    }
+}
+
+/// Las dos ranuras de la CA local en memoria, escribibles o no.
+#[derive(Default)]
+pub(crate) struct InMemoryCaSlots {
+    serving: Mutex<Option<LocalCa>>,
+    next: Mutex<Option<LocalCa>>,
+    unwritable: bool,
+}
+
+impl InMemoryCaSlots {
+    /// Unas ranuras en las que no se puede escribir, como un disco de solo lectura.
+    pub(crate) fn unwritable() -> Self {
+        Self {
+            unwritable: true,
+            ..Self::default()
+        }
+    }
+
+    fn writing(&self) -> Result<(), TlsError> {
+        if self.unwritable {
+            return Err(TlsError::new(
+                TlsSituation::MaterialUnwritable,
+                "estas ranuras no dejan escribir",
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl LocalCaSlots for InMemoryCaSlots {
+    fn serving(&self) -> Result<Option<LocalCa>, TlsError> {
+        Ok(crate::lock(&self.serving).clone())
+    }
+
+    fn write_serving(&self, ca: &LocalCa) -> Result<(), TlsError> {
+        self.writing()?;
+        *crate::lock(&self.serving) = Some(ca.clone());
+        Ok(())
+    }
+
+    fn next(&self) -> Result<Option<LocalCa>, TlsError> {
+        Ok(crate::lock(&self.next).clone())
+    }
+
+    fn write_next(&self, ca: &LocalCa) -> Result<(), TlsError> {
+        self.writing()?;
+        *crate::lock(&self.next) = Some(ca.clone());
+        Ok(())
+    }
+
+    fn promote_next(&self) -> Result<Option<LocalCa>, TlsError> {
+        self.writing()?;
+        let promoted = crate::lock(&self.next).take();
+        if let Some(ca) = &promoted {
+            *crate::lock(&self.serving) = Some(ca.clone());
+        }
+        Ok(promoted)
+    }
+
+    fn forget_next(&self) -> Result<(), TlsError> {
+        self.writing()?;
+        *crate::lock(&self.next) = None;
+        Ok(())
+    }
+}
 
 /// Construye un certificado de prueba con la etiqueta y DER proporcionados.
 pub(crate) fn a_certificate(label: &str, der: &[u8]) -> TokenCertificate {
@@ -30,8 +156,7 @@ pub(crate) fn a_certificate_with_id(label: &str, cka_id: u8, der: &[u8]) -> Toke
 
 /// Construye un certificado X.509 válido generado con la CA local de pruebas.
 pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
-    let ca =
-        crate::site::adapters::tls::LocalCa::generate().expect("la CA local deberia generarse");
+    let ca = LocalCa::generate().expect("la CA local deberia generarse");
     let der = ca
         .certificate()
         .to_der()

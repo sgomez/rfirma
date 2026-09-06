@@ -1,4 +1,5 @@
 use super::*;
+use crate::fixtures::InMemoryCaSlots;
 use crate::site::adapters::nss::TRUSTED_SSL_CA;
 use crate::site::domain::trust::{Notice, Situation};
 use std::collections::HashMap;
@@ -70,12 +71,8 @@ impl TrustStores for Doubled {
     }
 }
 
-fn a_store() -> (tempfile::TempDir, LocalCaStore) {
-    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let store = LocalCaStore::of(&crate::desktop::adapters::paths::Paths::under(
-        directory.path(),
-    ));
-    (directory, store)
+fn a_store() -> InMemoryCaSlots {
+    InMemoryCaSlots::default()
 }
 
 fn der_of(ca: &LocalCa) -> Vec<u8> {
@@ -91,7 +88,7 @@ fn profiles() -> [PathBuf; 2] {
 
 #[test]
 fn the_first_boot_makes_the_local_ca_and_leaves_it_trusted_everywhere() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
@@ -107,7 +104,7 @@ fn the_first_boot_makes_the_local_ca_and_leaves_it_trusted_everywhere() {
 }
 #[test]
 fn nothing_is_written_in_the_middle_of_an_errand() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
@@ -116,7 +113,7 @@ fn nothing_is_written_in_the_middle_of_an_errand() {
 
     assert_eq!(outcome.work, Work::Nothing);
     assert!(stores.inside(&profiles[0]).is_empty());
-    assert!(store.read().expect("deberia leerse").is_none());
+    assert!(store.serving().expect("deberia leerse").is_none());
     assert!(!outcome.looked(), "no se ha consultado ni un almacén");
     assert!(
         !outcome.nowhere(),
@@ -125,7 +122,7 @@ fn nothing_is_written_in_the_middle_of_an_errand() {
 }
 #[test]
 fn the_second_boot_says_nothing_because_the_bits_are_already_there() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
 
@@ -144,19 +141,15 @@ fn the_second_boot_says_nothing_because_the_bits_are_already_there() {
 }
 #[test]
 fn the_next_local_ca_goes_in_next_to_the_current_one() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
     let current = LocalCa::almost_expired_for_test().expect("deberia fabricarse");
     let current_der = der_of(&current);
-    store.write(&current).expect("deberia guardarse");
+    store.write_serving(&current).expect("deberia guardarse");
     for profile in &profiles {
         stores
-            .install(
-                profile,
-                &current_der,
-                crate::site::adapters::tls::authority::COMMON_NAME,
-            )
+            .install(profile, &current_der, COMMON_NAME)
             .expect("deberia registrarse la vigente");
     }
 
@@ -172,40 +165,38 @@ fn the_next_local_ca_goes_in_next_to_the_current_one() {
         "la CA vigente sigue de confianza durante el solape"
     );
     assert!(
-        inside
-            .iter()
-            .all(|(_, nickname)| nickname == crate::site::adapters::tls::authority::COMMON_NAME),
+        inside.iter().all(|(_, nickname)| nickname == COMMON_NAME),
         "las dos comparten apodo: en NSS el apodo va con el sujeto"
     );
     assert_eq!(
-        der_of(&store.read().unwrap().unwrap()),
+        der_of(&store.serving().unwrap().unwrap()),
         current_der,
         "la que firma el certificado del servidor local sigue siendo la vigente"
     );
     assert!(
-        store.read_next().unwrap().is_some(),
+        store.next().unwrap().is_some(),
         "la siguiente espera su turno en su propia ranura"
     );
 }
 #[test]
 fn the_next_local_ca_is_not_remade_on_every_boot_of_the_overlap() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
     store
-        .write(&LocalCa::almost_expired_for_test().expect("deberia fabricarse"))
+        .write_serving(&LocalCa::almost_expired_for_test().expect("deberia fabricarse"))
         .expect("deberia guardarse");
 
     refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
         .expect("deberia empezar el solape");
-    let next_der = der_of(&store.read_next().unwrap().unwrap());
+    let next_der = der_of(&store.next().unwrap().unwrap());
     let mut second = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
         .expect("deberia repetirse sin fabricar nada");
 
     assert_eq!(second.work, Work::InstallBothOfThem);
     assert_eq!(stores.inside(&profiles[0]).len(), 2);
     assert_eq!(
-        der_of(&store.read_next().unwrap().unwrap()),
+        der_of(&store.next().unwrap().unwrap()),
         next_der,
         "la siguiente es la misma, no una tercera"
     );
@@ -213,21 +204,17 @@ fn the_next_local_ca_is_not_remade_on_every_boot_of_the_overlap() {
 }
 #[test]
 fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
     let expired = LocalCa::expired_for_test().expect("deberia fabricarse");
     let waiting = LocalCa::generate().expect("deberia fabricarse");
-    store.write(&expired).expect("deberia guardarse");
+    store.write_serving(&expired).expect("deberia guardarse");
     store.write_next(&waiting).expect("deberia guardarse");
     for profile in &profiles {
         for ca in [&expired, &waiting] {
             stores
-                .install(
-                    profile,
-                    &der_of(ca),
-                    crate::site::adapters::tls::authority::COMMON_NAME,
-                )
+                .install(profile, &der_of(ca), COMMON_NAME)
                 .expect("deberia registrarse");
         }
     }
@@ -238,11 +225,11 @@ fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
     assert_eq!(outcome.stage, Stage::Expired);
     assert_eq!(outcome.work, Work::PromoteTheNextOne);
     assert_eq!(
-        der_of(&store.read().unwrap().unwrap()),
+        der_of(&store.serving().unwrap().unwrap()),
         der_of(&waiting),
         "la que esperaba es ahora la que sirve"
     );
-    assert!(store.read_next().unwrap().is_none());
+    assert!(store.next().unwrap().is_none());
     assert_eq!(
         outcome.notice.when_the_errand_ends(),
         None,
@@ -251,17 +238,17 @@ fn the_waiting_local_ca_takes_over_without_asking_for_a_restart() {
 }
 #[test]
 fn an_expired_local_ca_with_no_successor_starts_again_from_scratch() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
     let expired = LocalCa::expired_for_test().expect("deberia fabricarse");
-    store.write(&expired).expect("deberia guardarse");
+    store.write_serving(&expired).expect("deberia guardarse");
 
     let mut outcome = refresh_local_ca_trust(&store, &profiles, &stores, Moment::Startup)
         .expect("deberia fabricarse otra");
 
     assert_eq!(outcome.work, Work::MakeOneAndInstallIt);
-    assert_ne!(der_of(&store.read().unwrap().unwrap()), der_of(&expired));
+    assert_ne!(der_of(&store.serving().unwrap().unwrap()), der_of(&expired));
     assert_eq!(
         outcome.notice.when_the_errand_ends(),
         Some(Notice::RestartTheBrowser)
@@ -269,7 +256,7 @@ fn an_expired_local_ca_with_no_successor_starts_again_from_scratch() {
 }
 #[test]
 fn a_profile_that_refuses_does_not_leave_the_others_without_the_local_ca() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let profiles = profiles();
     let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]).refusing(&profiles[1]);
 
@@ -283,7 +270,7 @@ fn a_profile_that_refuses_does_not_leave_the_others_without_the_local_ca() {
 }
 #[test]
 fn a_machine_without_nss_profiles_ends_up_with_the_ca_nowhere() {
-    let (_directory, store) = a_store();
+    let store = a_store();
     let stores = Doubled::default();
 
     let outcome = refresh_local_ca_trust(&store, &[], &stores, Moment::Startup)

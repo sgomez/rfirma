@@ -381,7 +381,7 @@ mod full_cycle {
         .expect("la prefirma deberia salir");
 
         let signature = cycle
-            .sign_on_token(PIN)
+            .sign_on_token(&pkcs11::RealToken, PIN)
             .expect("el token deberia firmar los atributos");
 
         cycle
@@ -760,7 +760,9 @@ mod full_cycle {
             },
         )
         .expect("la prefirma deberia salir");
-        let signature = cycle.sign_on_token(PIN).expect("el token deberia firmar");
+        let signature = cycle
+            .sign_on_token(&pkcs11::RealToken, PIN)
+            .expect("el token deberia firmar");
 
         (bridge, cycle, signature)
     }

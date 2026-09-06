@@ -5,6 +5,7 @@ use std::thread;
 
 use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::domain::bridge::BridgeError;
+use crate::signing::ports::{Bridge, IsolateHost};
 
 pub use crate::signing::domain::isolate_gone::IsolateGone;
 
@@ -64,6 +65,15 @@ impl Isolate {
             }))
             .map_err(|_| IsolateGone)?;
         wait.recv().map_err(|_| IsolateGone)
+    }
+}
+
+impl IsolateHost for Isolate {
+    fn run<T: Send + 'static>(
+        &self,
+        task: impl FnOnce(&dyn Bridge) -> T + Send + 'static,
+    ) -> Result<Result<T, BridgeError>, IsolateGone> {
+        Isolate::run(self, move |bridge| task(bridge))
     }
 }
 

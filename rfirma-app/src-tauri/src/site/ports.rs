@@ -1,10 +1,12 @@
-//! Puertos del contexto de sede: códec, transporte y almacenes de confianza (ADR-0017).
+//! Puertos del contexto de sede: códec, transporte, almacenes de confianza y ranuras de la CA local (ADR-0017).
 
 use std::path::Path;
 use std::sync::Arc;
 
 use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
+use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::AfirmaUrl;
+use crate::site::domain::tls_error::TlsError;
 use crate::site::domain::trust_error::TrustError;
 
 use crate::site::application::errand::outcome::SiteOutcome;
@@ -74,6 +76,27 @@ pub trait TrustStores {
 
     /// Obtiene los bits de confianza TLS configurados para el certificado en el almacén.
     fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError>;
+}
+
+/// Las dos ranuras de la CA local: la que sirve y la siguiente del solape (ADR-0005).
+pub trait LocalCaSlots {
+    /// La CA local que sirve, si la hay.
+    fn serving(&self) -> Result<Option<LocalCa>, TlsError>;
+
+    /// Guarda la CA local que sirve sustituyendo la anterior.
+    fn write_serving(&self, ca: &LocalCa) -> Result<(), TlsError>;
+
+    /// La CA local siguiente, si la hay.
+    fn next(&self) -> Result<Option<LocalCa>, TlsError>;
+
+    /// Guarda la CA local siguiente sin tocar la que sirve.
+    fn write_next(&self, ca: &LocalCa) -> Result<(), TlsError>;
+
+    /// Promueve la siguiente a la que sirve y vacía su ranura.
+    fn promote_next(&self) -> Result<Option<LocalCa>, TlsError>;
+
+    /// Vacía la ranura de la siguiente.
+    fn forget_next(&self) -> Result<(), TlsError>;
 }
 
 #[cfg(test)]

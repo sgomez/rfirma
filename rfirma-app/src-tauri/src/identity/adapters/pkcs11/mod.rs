@@ -24,39 +24,55 @@ pub use crate::identity::domain::certificate::{
 pub use crate::identity::domain::error::NssUnavailable;
 pub use crate::identity::domain::error::{Situation, TokenError};
 pub use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
+use crate::identity::ports::Token;
 pub use nss::RealNssHost;
 pub use stores::{Store, StoreClass};
 
 /// Mecanismo de firma digital utilizado en las operaciones PKCS#11.
 const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;
 
+/// El adaptador del puerto [`Token`] sobre los módulos PKCS#11 del sistema.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RealToken;
+
+impl Token for RealToken {
+    fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        list_certificates(store)
+    }
+
+    fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+        store_secret(reference)
+    }
+
+    fn sign(
+        &self,
+        reference: &CertificateRef,
+        pin: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, TokenError> {
+        sign(reference, pin, data)
+    }
+
+    fn import_pkcs12(
+        &self,
+        directory: &Path,
+        pkcs12: &[u8],
+        password: &str,
+    ) -> Result<Store, TokenError> {
+        let softoken = stores::softoken().ok_or_else(|| {
+            TokenError::new(
+                Situation::ModuleNotFound,
+                "no esta libsoftokn3.so en ninguna de las rutas conocidas",
+            )
+        })?;
+        with_token_turn(|| nss::import_pkcs12(directory, pkcs12, password))?;
+        Ok(Store::nss(&softoken, directory))
+    }
+}
+
 /// Lista los certificados presentes en todos los almacenes indicados.
 pub fn list_certificates_across(stores: &[Store]) -> Result<Vec<TokenCertificate>, TokenError> {
-    if stores.is_empty() {
-        return Err(TokenError::new(
-            Situation::ModuleNotFound,
-            "no hay ningun modulo PKCS#11 donde buscar certificados",
-        ));
-    }
-
-    let mut found = Vec::new();
-    let mut any_loaded = false;
-    let mut refused: Option<TokenError> = None;
-
-    for store in stores {
-        match list_certificates(store) {
-            Ok(certificates) => {
-                any_loaded = true;
-                found.extend(certificates);
-            }
-            Err(error) => refused = refused.or(Some(error)),
-        }
-    }
-
-    match refused {
-        Some(error) if !any_loaded => Err(error),
-        _ => Ok(found),
-    }
+    RealToken.list_across(stores)
 }
 
 /// Lista los certificados firmables disponibles en el almacén indicado.

@@ -13,8 +13,7 @@ use crate::identity::domain::secret::StoreSecret;
 use crate::signing::adapters::orders::{SigningOrder, VisibleFieldsOrder};
 use crate::site::domain::protocol::AfirmaUrl;
 
-use crate::signing::ports::FilterEngine;
-use crate::signing::ports::PolicyEngine;
+use crate::signing::ports::{FilterEngine, IsolateHost, PolicyEngine};
 use crate::site::application::session::{self as signing, SiteSigning};
 
 pub use crate::site::application::session::SiteRefusal;
@@ -29,8 +28,8 @@ pub use request::SiteRequest;
 pub use state::{Errand, LiveErrand, NegotiatedCodec};
 
 /// Atiende la operación recibida por el canal local.
-pub fn attend<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+pub fn attend<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     url: AfirmaUrl,
     reply: ReplyHandle,
     live: &LiveErrand,
@@ -40,16 +39,16 @@ pub fn attend<E: FilterEngine, P: PolicyEngine>(
 }
 
 /// Reevalúa la petición recibida tras un cambio en los certificados disponibles.
-pub fn look_again<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+pub fn look_again<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     live: &LiveErrand,
 ) -> Option<ErrandStep> {
     let url = live.the_request()?;
     dispatch(desk, url, live)
 }
 
-fn dispatch<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+fn dispatch<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     url: AfirmaUrl,
     live: &LiveErrand,
 ) -> Option<ErrandStep> {
@@ -93,14 +92,15 @@ pub enum ConsentError {
 }
 
 /// Registra el consentimiento con el certificado seleccionado y avanza el trámite.
-pub fn consent<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+pub fn consent<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     certificate: &str,
     live: &LiveErrand,
 ) -> Result<Consented, ConsentError> {
     if let Some(filter) = live.what_the_site_asked() {
         let outcome = identify_with(
             desk.engine,
+            desk.token,
             &desk.stores,
             &filter,
             certificate,
@@ -132,6 +132,7 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
     signing::begin_for_the_site(
         &SiteSigning {
             engine: desk.engine,
+            token: desk.token,
             filter: &pending.filter,
             from_the_site: &pending.from_the_site,
         },
@@ -147,8 +148,8 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
 }
 
 /// Completa la fase final de la firma para la sede y entrega el resultado.
-pub fn finish<E: FilterEngine, P: PolicyEngine>(
-    desk: &ErrandDesk<'_, E, P>,
+pub fn finish<E: FilterEngine, P: PolicyEngine, I: IsolateHost>(
+    desk: &ErrandDesk<'_, E, P, I>,
     live: &LiveErrand,
 ) -> Result<(), SiteRefusal> {
     let signed = signing::finish_for_the_site(desk.isolate, desk.session)

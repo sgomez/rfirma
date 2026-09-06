@@ -2,13 +2,13 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::site::adapters::tls::{LocalCa, LocalCaStore};
-use crate::site::domain::tls_error::TlsError;
+use crate::site::domain::local_ca::{LocalCa, COMMON_NAME};
+use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
 use crate::site::domain::trust::is_trusted_ssl_ca;
 use crate::site::domain::trust::{
     self, Moment, NextCa, Notice, PendingNotice, Stage, TrustError, Work,
 };
-use crate::site::ports::TrustStores;
+use crate::site::ports::{LocalCaSlots, TrustStores};
 
 /// Resultado del proceso de verificación o instalación de la CA local.
 #[derive(Debug)]
@@ -78,13 +78,13 @@ pub fn narrate_startup_outcome(mut outcome: TrustOutcome, profiles: &[PathBuf]) 
 
 /// Registra y renueva la CA local en los almacenes NSS indicados (ADR-0005).
 pub fn refresh_local_ca_trust(
-    store: &LocalCaStore,
+    store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
     stores: &dyn TrustStores,
     moment: Moment,
 ) -> Result<TrustOutcome, TlsError> {
-    let saved = store.read()?;
-    let waiting = store.read_next()?;
+    let saved = store.serving()?;
+    let waiting = store.next()?;
     let days_left = saved.as_ref().map(LocalCa::days_left).transpose()?;
     let stage = Stage::of(days_left);
     let work = trust::work_at(
@@ -111,7 +111,7 @@ pub fn refresh_local_ca_trust(
         Work::InstallTheOneWeHave => vec![serving()],
         Work::MakeOneAndInstallIt => {
             let fresh = LocalCa::generate()?;
-            store.write(&fresh)?;
+            store.write_serving(&fresh)?;
             store.forget_next()?;
             vec![fresh]
         }
@@ -134,7 +134,7 @@ pub fn refresh_local_ca_trust(
         .map(|ca| {
             ca.certificate().to_der().map_err(|error| {
                 TlsError::new(
-                    crate::site::adapters::tls::Situation::MaterialDamaged,
+                    TlsSituation::MaterialDamaged,
                     format!("el certificado de la CA local no sale en DER: {error}"),
                 )
             })
@@ -199,11 +199,7 @@ fn settle_one(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<bo
     {
         return Ok(false);
     }
-    stores.install(
-        profile,
-        der,
-        crate::site::adapters::tls::authority::COMMON_NAME,
-    )?;
+    stores.install(profile, der, COMMON_NAME)?;
     if !stores
         .trust_of(profile, der)?
         .is_some_and(is_trusted_ssl_ca)

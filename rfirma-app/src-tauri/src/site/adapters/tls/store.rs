@@ -3,9 +3,10 @@
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
-use super::authority::LocalCa;
 use crate::desktop::adapters::paths::{create_owner_only_file, restrict_to_owner, Paths};
+use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::tls_error::{Situation, TlsError};
+use crate::site::ports::LocalCaSlots;
 
 /// Par de ficheros en disco de una CA local: certificado y clave privada.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -148,6 +149,32 @@ impl LocalCaStore {
     /// Elimina la CA local siguiente.
     pub fn forget_next(&self) -> Result<(), TlsError> {
         self.next.empty()
+    }
+}
+
+impl LocalCaSlots for LocalCaStore {
+    fn serving(&self) -> Result<Option<LocalCa>, TlsError> {
+        self.read()
+    }
+
+    fn write_serving(&self, ca: &LocalCa) -> Result<(), TlsError> {
+        self.write(ca)
+    }
+
+    fn next(&self) -> Result<Option<LocalCa>, TlsError> {
+        self.read_next()
+    }
+
+    fn write_next(&self, ca: &LocalCa) -> Result<(), TlsError> {
+        LocalCaStore::write_next(self, ca)
+    }
+
+    fn promote_next(&self) -> Result<Option<LocalCa>, TlsError> {
+        LocalCaStore::promote_next(self)
+    }
+
+    fn forget_next(&self) -> Result<(), TlsError> {
+        LocalCaStore::forget_next(self)
     }
 }
 
