@@ -156,7 +156,7 @@ fn tracked_modules() -> Vec<Module> {
                 layer: layer_of(&relative, &folder),
                 name: relative,
                 folder,
-                source: production_half(&source),
+                source,
             }
         })
         .collect();
@@ -177,15 +177,6 @@ fn layer_of(relative: &str, folder: &str) -> Layer {
         (_, "app") => Layer::UseCases,
         _ => Layer::Domain,
     }
-}
-
-/// Mitad de producción de un módulo antes de mod tests.
-fn production_half(source: &str) -> String {
-    source
-        .split_once("\nmod tests {")
-        .map(|(before, _)| before)
-        .unwrap_or(source)
-        .to_owned()
 }
 
 /// Caminos crate:: que importa una línea, ya desplegados.
