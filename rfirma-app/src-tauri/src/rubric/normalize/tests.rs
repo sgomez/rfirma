@@ -114,8 +114,7 @@ fn a_half_transparent_pixel_lands_between_its_colour_and_white() {
 
 #[test]
 fn a_file_that_is_neither_png_nor_jpeg_says_which_formats_are_accepted() {
-    let error =
-        normalize(b"GIF89a and then some bytes").expect_err("un GIF deberia rechazarse");
+    let error = normalize(b"GIF89a and then some bytes").expect_err("un GIF deberia rechazarse");
 
     assert_eq!(error.situation(), Situation::NotAnAcceptedImage);
     assert!(error.detail().contains("image/png"));
@@ -135,8 +134,7 @@ fn a_png_that_is_broken_is_damaged_and_not_an_unknown_format() {
 
 #[test]
 fn a_file_over_the_input_cap_is_rejected_before_decoding() {
-    let error =
-        normalize(&vec![0_u8; MAX_INPUT_BYTES + 1]).expect_err("deberia pasar del tope");
+    let error = normalize(&vec![0_u8; MAX_INPUT_BYTES + 1]).expect_err("deberia pasar del tope");
 
     assert_eq!(error.situation(), Situation::ImageTooLarge);
 }

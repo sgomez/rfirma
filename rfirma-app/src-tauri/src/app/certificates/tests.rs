@@ -41,8 +41,7 @@ fn a_subject_without_that_rdn_is_not_a_pseudonym_certificate() {
 
 #[test]
 fn the_issuer_is_the_authority_and_not_the_organisation_of_the_holder() {
-    let subject =
-        "CN=EIDAS CERTIFICADO PRUEBAS - 99999999R, serialNumber=IDCES-99999999R, C=ES";
+    let subject = "CN=EIDAS CERTIFICADO PRUEBAS - 99999999R, serialNumber=IDCES-99999999R, C=ES";
     let issuer = "CN=AC FNMT Usuarios, OU=Ceres, O=FNMT-RCM, C=ES";
 
     assert_eq!(issuer_of(Some(issuer)), "AC FNMT Usuarios");

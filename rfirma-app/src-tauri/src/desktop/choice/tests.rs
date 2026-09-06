@@ -140,9 +140,8 @@ fn inside_the_sandbox_no_default_is_written() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let list = directory.path().join("mimeapps.list");
 
-    let refused =
-        choose_handler_for_scheme(Channel::Flatpak, &list, "afirma", "rfirma.desktop")
-            .expect_err("no deberia escribirse dentro del sandbox");
+    let refused = choose_handler_for_scheme(Channel::Flatpak, &list, "afirma", "rfirma.desktop")
+        .expect_err("no deberia escribirse dentro del sandbox");
 
     assert_eq!(refused.situation(), Situation::NotAvailableInsideTheSandbox);
     assert!(!list.exists());

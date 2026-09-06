@@ -53,8 +53,8 @@ fn with_every_drawn_port_taken_there_is_no_channel() {
 
 #[test]
 fn the_port_of_the_third_protocol_is_never_bound() {
-    let error = bind_first_free(&[THE_PORT_OF_THE_THIRD_PROTOCOL])
-        .expect_err("ese puerto no se ata jamas");
+    let error =
+        bind_first_free(&[THE_PORT_OF_THE_THIRD_PROTOCOL]).expect_err("ese puerto no se ata jamas");
 
     assert_eq!(error.situation(), Situation::NoDrawnPortIsFree);
     assert!(

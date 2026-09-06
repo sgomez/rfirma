@@ -138,8 +138,8 @@ fn pages_counted_from_the_end_are_resolved_by_the_bridge_and_by_nobody_else() {
 #[test]
 fn a_page_appended_to_the_document_is_refused_because_signing_never_modifies_it() {
     for key in ["signaturePages", "signaturePage"] {
-        let refusal = visible_signature_of(&placed(&[(key, "append")]))
-            .expect_err("no se anaden paginas");
+        let refusal =
+            visible_signature_of(&placed(&[(key, "append")])).expect_err("no se anaden paginas");
 
         assert_eq!(refusal.code(), SafCode::Params);
         assert_eq!(refusal.blame(), Some(Parameter::Properties));

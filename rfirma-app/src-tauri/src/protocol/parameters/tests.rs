@@ -36,8 +36,7 @@ fn the_comparison_is_against_autofirma_and_not_against_the_version_of_rfirma() {
 #[test]
 fn a_minimum_version_that_does_not_parse_is_a_parameter_error() {
     for requested in ["ultima", "1.a", "1..9"] {
-        let refusal =
-            check_minimum_client_version(Some(requested)).expect_err("no es una version");
+        let refusal = check_minimum_client_version(Some(requested)).expect_err("no es una version");
 
         assert_eq!(refusal.code(), SafCode::Params, "con {requested}");
     }

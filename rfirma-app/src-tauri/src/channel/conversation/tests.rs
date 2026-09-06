@@ -49,8 +49,7 @@ fn a_request_that_does_not_come_from_the_loopback_is_refused_first() {
     assert_eq!(
         answer,
         Answer::ReplyAndClose(
-            "SAF_47: Peticion al canal desde una direccion externa o sin identificar"
-                .to_owned()
+            "SAF_47: Peticion al canal desde una direccion externa o sin identificar".to_owned()
         )
     );
 }

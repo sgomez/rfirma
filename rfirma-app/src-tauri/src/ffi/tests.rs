@@ -205,16 +205,14 @@ fn a_presign_answer_comes_back_split_into_its_three_pieces() {
 
 #[test]
 fn a_postsign_answer_comes_back_as_the_bytes_of_the_pdf() {
-    let pdf =
-        parse_postsign(r#"{"ok":true,"pdf":"JVBERi0="}"#).expect("es el JSON del contrato");
+    let pdf = parse_postsign(r#"{"ok":true,"pdf":"JVBERi0="}"#).expect("es el JSON del contrato");
 
     assert_eq!(pdf, b"%PDF-");
 }
 
 #[test]
 fn a_filter_answer_comes_back_as_the_rows_that_survived() {
-    let selected =
-        parse_filter_selection(r#"{"ok":true,"selected":[0,2]}"#).expect("es valida");
+    let selected = parse_filter_selection(r#"{"ok":true,"selected":[0,2]}"#).expect("es valida");
 
     assert_eq!(selected, vec![0, 2]);
 }
@@ -236,10 +234,9 @@ fn a_selection_that_is_not_a_list_of_rows_is_a_malformed_answer() {
 
 #[test]
 fn a_failure_of_the_filter_engine_travels_like_any_other() {
-    let error = parse_filter_selection(
-        r#"{"ok":false,"error":"java.lang.IllegalArgumentException: mal"}"#,
-    )
-    .expect_err("el motor ha fallado");
+    let error =
+        parse_filter_selection(r#"{"ok":false,"error":"java.lang.IllegalArgumentException: mal"}"#)
+            .expect_err("el motor ha fallado");
 
     assert!(error.to_string().contains("IllegalArgumentException"));
 }
@@ -284,16 +281,16 @@ fn an_answer_without_the_ok_field_is_not_a_signature() {
 
 #[test]
 fn an_answer_missing_a_field_is_not_a_signature_either() {
-    let error = parse_presign(r#"{"ok":true,"session":"<xml/>","pre":"MTIz"}"#)
-        .expect_err("falta stamp");
+    let error =
+        parse_presign(r#"{"ok":true,"session":"<xml/>","pre":"MTIz"}"#).expect_err("falta stamp");
 
     assert!(error.to_string().contains("stamp"), "{error}");
 }
 
 #[test]
 fn a_field_that_is_not_base64_is_a_malformed_answer_and_not_a_panic() {
-    let error = parse_postsign(r#"{"ok":true,"pdf":"esto no es base64 %%%"}"#)
-        .expect_err("no es Base64");
+    let error =
+        parse_postsign(r#"{"ok":true,"pdf":"esto no es base64 %%%"}"#).expect_err("no es Base64");
 
     assert!(matches!(error, BridgeError::MalformedResponse(_)));
 }

@@ -60,11 +60,7 @@ impl TrustStores for Doubled {
         Ok(())
     }
 
-    fn trust_of(
-        &self,
-        profile: &Path,
-        certificate_der: &[u8],
-    ) -> Result<Option<u32>, TrustError> {
+    fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError> {
         Ok(self
             .inside(profile)
             .iter()

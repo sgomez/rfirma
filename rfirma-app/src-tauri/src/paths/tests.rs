@@ -200,9 +200,8 @@ fn the_documents_folder_follows_the_xdg_variable_when_the_system_localises_it() 
 
 #[test]
 fn without_the_xdg_variable_the_documents_folder_is_the_english_default() {
-    let documents =
-        documents_folder_of(Platform::Linux, &environment(&[("HOME", "/home/quien")]))
-            .expect("deberia resolverse");
+    let documents = documents_folder_of(Platform::Linux, &environment(&[("HOME", "/home/quien")]))
+        .expect("deberia resolverse");
 
     assert_eq!(documents, PathBuf::from("/home/quien/Documents"));
 }

@@ -42,8 +42,7 @@ fn choosing_a_file_that_is_not_an_image_fails_without_touching_the_store() {
     fs::write(&source, b"esto no es una imagen").expect("deberia escribirse");
     let store = RubricStore::at(home.path().join("rubric.jpg"));
 
-    let error =
-        choose(&store, FilePath::from(source.as_path())).expect_err("deberia rechazarse");
+    let error = choose(&store, FilePath::from(source.as_path())).expect_err("deberia rechazarse");
 
     assert_eq!(
         error.situation(),

@@ -247,8 +247,7 @@ fn a_criterion_outside_the_whitelist_refuses_the_whole_call() {
 
 #[test]
 fn the_slash_of_the_plain_base64_alphabet_is_accepted_too() {
-    let plain =
-        base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:OÑ\n");
+    let plain = base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:OÑ\n");
     assert!(plain.contains('/'), "la carga util trae una barra: {plain}");
     let url = an_operation(&format!("op=selectcert&properties={plain}"));
 
@@ -257,8 +256,7 @@ fn the_slash_of_the_plain_base64_alphabet_is_accepted_too() {
 
 #[test]
 fn a_plus_of_the_plain_base64_alphabet_never_makes_it_this_far() {
-    let plain =
-        base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:þ\n");
+    let plain = base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:þ\n");
     assert!(plain.contains('+'), "la carga util trae un mas: {plain}");
     let url = an_operation(&format!("op=selectcert&properties={plain}"));
 

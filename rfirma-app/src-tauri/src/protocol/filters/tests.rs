@@ -155,8 +155,8 @@ fn a_value_with_accents_reaches_the_engine_unchanged() {
 
 #[test]
 fn a_newline_inside_a_value_cannot_split_the_block() {
-    let filter = site_filter(&properties(&[("filters", "subject.contains:A\nB")]))
-        .expect("es aceptable");
+    let filter =
+        site_filter(&properties(&[("filters", "subject.contains:A\nB")])).expect("es aceptable");
 
     assert_eq!(
         filter.as_java_properties(),

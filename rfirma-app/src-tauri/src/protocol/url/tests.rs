@@ -3,10 +3,9 @@ use crate::protocol::codes::SafCode;
 
 #[test]
 fn the_launch_invocation_is_split_into_verb_and_parameters() {
-    let url = AfirmaUrl::parse(
-        "afirma://websocket?ports=49152,50001,60123&v=4&jvc=3&idsession=abc123",
-    )
-    .expect("la invocacion de arranque publicada deberia parsearse");
+    let url =
+        AfirmaUrl::parse("afirma://websocket?ports=49152,50001,60123&v=4&jvc=3&idsession=abc123")
+            .expect("la invocacion de arranque publicada deberia parsearse");
 
     assert_eq!(url.verb(), "websocket");
     assert_eq!(url.parameter("ports"), Some("49152,50001,60123"));
@@ -26,8 +25,7 @@ fn a_url_without_query_is_still_a_verb() {
 
 #[test]
 fn the_scheme_is_compared_ignoring_case() {
-    let url =
-        AfirmaUrl::parse("AFIRMA://sign?op=sign").expect("el esquema no lleva mayusculas");
+    let url = AfirmaUrl::parse("AFIRMA://sign?op=sign").expect("el esquema no lleva mayusculas");
 
     assert_eq!(url.verb(), "sign");
 }

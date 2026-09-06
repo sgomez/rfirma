@@ -128,8 +128,7 @@ fn recording_a_document_that_was_already_there_moves_it_to_the_front() {
     recents.record(seen(&second));
 
     recents.record(
-        RecentDocument::seen(&first, Badge::Signed, SystemTime::now())
-            .expect("deberia anotarse"),
+        RecentDocument::seen(&first, Badge::Signed, SystemTime::now()).expect("deberia anotarse"),
     );
 
     assert_eq!(recents.len(), 2, "la misma ruta canonica no se duplica");
@@ -150,8 +149,7 @@ fn signing_puts_two_rows_in_the_tray_and_not_one_that_evolves() {
 
     recents.record(seen(&original));
     recents.record(
-        RecentDocument::seen(&signed, Badge::Signed, SystemTime::now())
-            .expect("deberia anotarse"),
+        RecentDocument::seen(&signed, Badge::Signed, SystemTime::now()).expect("deberia anotarse"),
     );
 
     assert_eq!(recents.len(), 2);
@@ -191,8 +189,7 @@ fn a_path_that_cannot_be_canonicalised_never_enters_the_list() {
 fn reads_a_v0_2_row_as_the_set_of_the_one_page_it_named() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let document = a_document(directory.path(), "contrato.pdf");
-    let mut written =
-        serde_json::to_value(vec![seen(&document)]).expect("deberia serializarse");
+    let mut written = serde_json::to_value(vec![seen(&document)]).expect("deberia serializarse");
     written[0]["placement"] = serde_json::json!({
         "page": 3,
         "lower_left_x": 48.0,

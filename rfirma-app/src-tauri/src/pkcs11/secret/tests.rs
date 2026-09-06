@@ -30,8 +30,7 @@ fn a_reader_with_its_own_keypad_is_told_apart_from_the_screen() {
 
 #[test]
 fn the_attempts_left_are_empty_because_pkcs11_never_counts_them() {
-    let StoreSecret::TypedOnScreen { attempts_left } = StoreSecret::of_token(true, false)
-    else {
+    let StoreSecret::TypedOnScreen { attempts_left } = StoreSecret::of_token(true, false) else {
         panic!("un almacen con sesion y sin teclado pide el secreto por pantalla");
     };
     assert_eq!(attempts_left, None);

@@ -7,6 +7,9 @@ use std::process::Command;
 /// El único fichero autorizado, relativo a la raíz del repositorio.
 const THE_ONLY_SITE: &str = "rfirma-app/src-tauri/src/paths.rs";
 
+/// El hermano de pruebas de `THE_ONLY_SITE`, autorizado por la misma razón (issue #444).
+const THE_ONLY_SITE_TESTS: &str = "rfirma-app/src-tauri/src/paths/tests.rs";
+
 /// Fichero de esta prueba para no acusarse a sí misma.
 const THIS_TEST: &str = "rfirma-app/src-tauri/tests/single_cfg_os_site.rs";
 
@@ -56,7 +59,7 @@ fn paths_rs_is_the_only_file_in_the_repository_that_knows_the_operating_system()
 
     let mut offenders: Vec<String> = Vec::new();
     for relative in &files {
-        if relative == THE_ONLY_SITE || relative == THIS_TEST {
+        if relative == THE_ONLY_SITE || relative == THE_ONLY_SITE_TESTS || relative == THIS_TEST {
             continue;
         }
         let contents = fs::read_to_string(root.join(relative)).unwrap_or_else(|error| {

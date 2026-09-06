@@ -30,11 +30,7 @@ impl World {
             .clone()
     }
 
-    fn transport(
-        &self,
-        ports: &[u16],
-        _duty: ChannelDuty,
-    ) -> Result<OpenChannel, ChannelError> {
+    fn transport(&self, ports: &[u16], _duty: ChannelDuty) -> Result<OpenChannel, ChannelError> {
         self.note("canal");
         if self.every_port_taken {
             return Err(ChannelError::new(
@@ -77,11 +73,7 @@ impl TrustStores for World {
         Ok(())
     }
 
-    fn trust_of(
-        &self,
-        profile: &Path,
-        certificate_der: &[u8],
-    ) -> Result<Option<u32>, TrustError> {
+    fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError> {
         let installed = self
             .trusted
             .lock()
@@ -242,8 +234,7 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
     let live = LiveErrand::default();
     assert!(
         live.begin(Errand::of(
-            crate::protocol::ChannelCredential::parse(CREDENTIAL)
-                .expect("la credencial es buena"),
+            crate::protocol::ChannelCredential::parse(CREDENTIAL).expect("la credencial es buena"),
             PORTS[0],
             std::sync::Arc::new(crate::app::codec::V4Codec),
         )),

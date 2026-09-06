@@ -34,9 +34,8 @@ fn an_echo_that_forgot_the_credential_carries_none() {
 
 #[test]
 fn an_operation_repeats_the_credential_in_its_own_parameter() {
-    let message = ChannelMessage::read(
-        "afirma://sign?op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES",
-    );
+    let message =
+        ChannelMessage::read("afirma://sign?op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES");
 
     assert_eq!(message.credential(), Some("8jAkPZfRw2mQxN4TbYuL"));
     let ChannelMessage::Operation { url } = &message else {

@@ -34,8 +34,7 @@ fn a_pdf_named_in_the_command_line_opens_like_a_dropped_one() {
 fn an_argument_that_is_not_a_pdf_opens_the_normal_window_and_says_so() {
     let other = a_temporary_pdf("hoja.ods");
 
-    let view =
-        invoked_document(&invoked_with(&other), &OpenedDocuments::new()).expect("algo trae");
+    let view = invoked_document(&invoked_with(&other), &OpenedDocuments::new()).expect("algo trae");
 
     assert!(view.document.is_none(), "no se abre ningun documento");
     assert_eq!(
@@ -194,8 +193,7 @@ fn a_window_opened_with_nothing_pending_has_nothing_to_pick_up() {
     assert_eq!(PendingInvocation::default().take(), None);
 }
 
-const A_LAUNCH: &str =
-    "afirma://websocket?ports=51000,51001&v=4&idsession=8jAkPZfRw2mQxN4TbYuL";
+const A_LAUNCH: &str = "afirma://websocket?ports=51000,51001&v=4&idsession=8jAkPZfRw2mQxN4TbYuL";
 
 fn invoked_with_the_url(url: &str) -> Invocation {
     Invocation {

@@ -83,9 +83,8 @@ fn does_not_mistake_the_word_for_the_entry() {
 
 #[test]
 fn refuses_a_certified_pdf() {
-    let pdf = a_pdf(
-        "9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj",
-    );
+    let pdf =
+        a_pdf("9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj");
 
     assert_eq!(
         AdmissibleDocument::check(&pdf).expect_err("está certificado"),

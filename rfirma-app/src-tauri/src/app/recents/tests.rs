@@ -130,8 +130,7 @@ fn a_document_that_was_open_before_gets_its_page_and_position_back() {
     let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &configuration, &opened, &id, Some(a_placement(3)))
-        .expect("deberia anotarse");
+    record(&memory, &configuration, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
 
     let again = opened.remember(PortalDocument::opened(path));
     let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
@@ -156,8 +155,7 @@ fn a_brand_new_document_does_not_inherit_the_position_of_another_one() {
     .expect("deberia anotarse");
 
     let (_, second) = an_opened_pdf(directory.path(), "nomina.pdf", &opened);
-    let row =
-        record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
+    let row = record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, None);
 }
@@ -172,8 +170,7 @@ fn with_the_visible_signature_switch_off_the_box_starts_at_its_default_every_tim
     };
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &configuration, &opened, &id, Some(a_placement(3)))
-        .expect("deberia anotarse");
+    record(&memory, &configuration, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
 
     let again = opened.remember(PortalDocument::opened(path));
     let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
@@ -198,8 +195,8 @@ fn a_pdf_that_already_carries_signatures_still_enters_as_unsigned() {
     );
     let id = opened.remember(PortalDocument::opened(path));
 
-    let row = record(&memory, &Configuration::default(), &opened, &id, None)
-        .expect("deberia anotarse");
+    let row =
+        record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
 
     assert_eq!(row.badge, Badge::Unsigned);
 }
@@ -336,8 +333,7 @@ fn a_document_gets_its_whole_page_set_back_and_not_just_a_page() {
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "expediente.pdf", &opened);
     let placed = placed_on(PageSet::All);
-    record(&memory, &configuration, &opened, &id, Some(placed.clone()))
-        .expect("deberia anotarse");
+    record(&memory, &configuration, &opened, &id, Some(placed.clone())).expect("deberia anotarse");
 
     let again = opened.remember(PortalDocument::opened(path));
     let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");

@@ -6,8 +6,7 @@ const PUBLISHED: &str =
 
 #[test]
 fn the_launch_invocation_the_published_client_sends_is_read_whole() {
-    let request =
-        LaunchRequest::parse(PUBLISHED).expect("la invocacion publicada deberia valer");
+    let request = LaunchRequest::parse(PUBLISHED).expect("la invocacion publicada deberia valer");
 
     assert_eq!(request.ports(), [49152, 50001, 60123]);
     assert_eq!(request.credential().as_str(), "BQXf7mJ2Kd9pLzR3tYvW");
@@ -49,9 +48,8 @@ fn a_version_that_is_not_a_number_falls_into_the_same_hole_as_an_absent_one() {
 
 #[test]
 fn a_version_written_with_spaces_is_trimmed_like_in_the_original() {
-    let request =
-        LaunchRequest::parse("afirma://websocket?ports=49152&v=%204%20&idsession=abc")
-            .expect("el original hace trim antes de parsear");
+    let request = LaunchRequest::parse("afirma://websocket?ports=49152&v=%204%20&idsession=abc")
+        .expect("el original hace trim antes de parsear");
 
     assert_eq!(request.ports(), [49152]);
 }
@@ -90,9 +88,8 @@ fn a_short_credential_is_accepted_because_the_original_has_no_floor() {
 
 #[test]
 fn the_drawn_ports_are_readable_from_a_launch_that_is_refused() {
-    let url =
-        AfirmaUrl::parse("afirma://websocket?ports=54001,54002&v=3&idsession=malformado!")
-            .expect("es una URL del protocolo");
+    let url = AfirmaUrl::parse("afirma://websocket?ports=54001,54002&v=3&idsession=malformado!")
+        .expect("es una URL del protocolo");
 
     assert!(
         LaunchRequest::from_url(&url).is_err(),
@@ -104,8 +101,8 @@ fn the_drawn_ports_are_readable_from_a_launch_that_is_refused() {
 #[test]
 fn a_launch_without_readable_ports_draws_none() {
     let without = AfirmaUrl::parse("afirma://websocket?v=3").expect("es una URL del protocolo");
-    let unreadable = AfirmaUrl::parse("afirma://websocket?ports=setenta&v=4")
-        .expect("es una URL del protocolo");
+    let unreadable =
+        AfirmaUrl::parse("afirma://websocket?ports=setenta&v=4").expect("es una URL del protocolo");
 
     assert!(drawn_ports(&without).is_empty());
     assert!(drawn_ports(&unreadable).is_empty());

@@ -1,7 +1,7 @@
 use super::{
-    bytes_of, deliver, dropped_document, folder_it_came_from, next_to_the_original,
-    note_opened, note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder,
-    starting_folder, told_as, where_it_lands,
+    bytes_of, deliver, dropped_document, folder_it_came_from, next_to_the_original, note_opened,
+    note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder, starting_folder,
+    told_as, where_it_lands,
 };
 use crate::app::fixtures::a_memory;
 use crate::destination::{CheckedFolder, PortalDocument};
