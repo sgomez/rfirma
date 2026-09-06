@@ -1,4 +1,6 @@
 use super::*;
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine as _;
 use image::{Rgba, RgbaImage};
 
 fn png(width: u32, height: u32, pixel: Rgba<u8>) -> Vec<u8> {

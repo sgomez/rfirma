@@ -1,6 +1,6 @@
 //! Puertos del contexto de firma: los dos motores que presta el puente.
 
-use crate::signing::adapters::ffi::BridgeError;
+use crate::signing::domain::bridge::BridgeError;
 
 /// Interfaz para evaluar filtros de certificados contra el motor de filtrado.
 pub trait FilterEngine {

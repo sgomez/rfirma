@@ -2,7 +2,8 @@
 
 use serde::Serialize;
 
-use crate::identity::adapters::pkcs11::{StoreClass, StoreSecret};
+use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::store::StoreClass;
 
 use crate::signing::adapters::views::StatusView;
 

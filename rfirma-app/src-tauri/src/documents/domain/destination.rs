@@ -5,7 +5,7 @@ pub use super::naming::{numbered, signed_name, FIRST_NUMBER, MAX_NAMESAKES, SIGN
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::adapters::portal::PortalDocument;
+use crate::documents::domain::portal::PortalDocument;
 
 use serde::{Deserialize, Serialize};
 

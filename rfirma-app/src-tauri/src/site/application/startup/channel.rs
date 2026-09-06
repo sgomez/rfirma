@@ -1,6 +1,6 @@
 //! Gestión del ciclo de vida y retención de canales de comunicación abiertos con la sede.
 
-use crate::site::adapters::channel::OpenChannel;
+use crate::site::domain::channel::OpenChannel;
 
 use super::super::site::Attendance;
 

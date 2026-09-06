@@ -2,7 +2,7 @@
 
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 
-use crate::site::adapters::channel::error::{ChannelError, Situation};
+use crate::site::domain::channel::{ChannelError, Situation};
 
 /// Puerto fijo del protocolo 3 que nunca se enlaza.
 pub const THE_PORT_OF_THE_THIRD_PROTOCOL: u16 = 63117;

@@ -3,7 +3,10 @@
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 
-use crate::signing::adapters::ffi::{BridgeError, NativeBridge};
+use crate::signing::adapters::ffi::NativeBridge;
+use crate::signing::domain::bridge::BridgeError;
+
+pub use crate::signing::domain::isolate_gone::IsolateGone;
 
 type Job = Box<dyn FnOnce(&Result<NativeBridge, BridgeError>) + Send>;
 
@@ -12,18 +15,6 @@ type Job = Box<dyn FnOnce(&Result<NativeBridge, BridgeError>) + Send>;
 pub struct Isolate {
     jobs: Sender<Job>,
 }
-
-/// Error cuando el hilo del isolate ha terminado inesperadamente.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct IsolateGone;
-
-impl std::fmt::Display for IsolateGone {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("el hilo de la librería nativa se ha caído")
-    }
-}
-
-impl std::error::Error for IsolateGone {}
 
 impl Isolate {
     /// Arranca el hilo sin abrir la librería todavía.

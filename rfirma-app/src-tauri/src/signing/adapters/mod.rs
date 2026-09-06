@@ -3,7 +3,6 @@
 pub mod engines;
 pub mod ffi;
 pub mod isolate;
-pub mod memory_error;
 pub mod orders;
 pub mod store;
 pub mod tauri;

@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::documents::adapters::recents_store::Badge;
+use crate::documents::domain::recents::Badge;
 
 use crate::commands::Failure;
 use crate::signing::adapters::views::PlacementView;

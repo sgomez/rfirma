@@ -2,9 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::site::adapters::nss::is_trusted_ssl_ca;
 use crate::site::adapters::tls::{LocalCa, LocalCaStore};
 use crate::site::domain::tls_error::TlsError;
+use crate::site::domain::trust::is_trusted_ssl_ca;
 use crate::site::domain::trust::{
     self, Moment, NextCa, Notice, PendingNotice, Stage, TrustError, Work,
 };

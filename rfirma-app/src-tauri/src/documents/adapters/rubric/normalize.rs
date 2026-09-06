@@ -1,13 +1,11 @@
 //! Normalización de imágenes de rúbrica a JPEG opaco sin perfil ICC (ADR-0012).
 
-use base64::engine::general_purpose::STANDARD as BASE64;
-use base64::Engine as _;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
 use image::{ExtendedColorType, ImageDecoder as _, ImageEncoder, ImageFormat, ImageReader};
 use std::io::Cursor;
 
-use super::error::{RubricError, Situation};
+pub use crate::documents::domain::rubric::{NormalizedRubric, RubricError, Situation};
 
 /// Calidad de compresión del JPEG de salida (ADR-0012).
 pub const JPEG_QUALITY: u8 = 90;
@@ -72,24 +70,6 @@ fn accepted_formats_label() -> String {
         .map(|format| format.mime())
         .collect::<Vec<_>>()
         .join(", ")
-}
-
-/// Rúbrica normalizada lista para su uso en firmas visibles (ADR-0012).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NormalizedRubric {
-    jpeg: Vec<u8>,
-}
-
-impl NormalizedRubric {
-    /// Contenido binario del JPEG normalizado.
-    pub fn bytes(&self) -> &[u8] {
-        &self.jpeg
-    }
-
-    /// Contenido binario del JPEG codificado en Base64.
-    pub fn to_base64(&self) -> String {
-        BASE64.encode(&self.jpeg)
-    }
 }
 
 /// Normaliza los bytes de una imagen a JPEG opaco sin perfil ICC (ADR-0012).

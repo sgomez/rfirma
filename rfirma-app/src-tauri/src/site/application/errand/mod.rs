@@ -10,7 +10,7 @@ pub mod state;
 mod tests;
 
 use crate::commands::Failure;
-use crate::identity::adapters::pkcs11::StoreSecret;
+use crate::identity::domain::secret::StoreSecret;
 use crate::signing::adapters::orders::{SigningOrder, VisibleFieldsOrder};
 use crate::site::domain::protocol::AfirmaUrl;
 

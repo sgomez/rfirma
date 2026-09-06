@@ -199,7 +199,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
 
   PRESTADOS DE OTROS MODULOS
 
-  pub enum Badge   [documents/adapters/recents_store.rs]
+  pub enum Badge   [documents/domain/recents.rs]
       Signed
       Unsigned
 

@@ -1,4 +1,5 @@
-use crate::documents::adapters::recents_store::{Badge, Placement, RecentDocument};
+use crate::documents::adapters::recents_store::{Placement, RecentDocument};
+use crate::documents::domain::recents::Badge;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::signing::application::state::{BoxSize, VisibleSignatureMemory};
 use crate::signing::domain::Language;

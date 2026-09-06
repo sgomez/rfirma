@@ -4,8 +4,8 @@ use std::fs::{self, File};
 use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
-use super::error::{RubricError, Situation};
 use super::normalize::{normalize, NormalizedRubric, MAX_INPUT_BYTES};
+use crate::documents::domain::rubric::{RubricError, Situation};
 
 /// Almacén persistente de la rúbrica normalizada.
 #[derive(Clone, Debug, PartialEq, Eq)]

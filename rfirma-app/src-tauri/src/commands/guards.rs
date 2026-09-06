@@ -212,11 +212,12 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Crossing> {
-    use crate::documents::adapters::portal::PortalDocument;
-    use crate::documents::adapters::recents_store::{Badge, RecentDocument};
+    use crate::documents::adapters::recents_store::RecentDocument;
     use crate::documents::application::opened::OpenedDocuments;
     use crate::documents::application::{documents, recents};
     use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+    use crate::documents::domain::portal::PortalDocument;
+    use crate::documents::domain::recents::Badge;
     use crate::fixtures::a_memory;
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;

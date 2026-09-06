@@ -5,24 +5,27 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::commands::Failure;
-use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::application::{documents, recents};
-use crate::identity::adapters::pkcs11::{self, SecretOnTheReaderKeypad, Store, StoreSecret};
+use crate::documents::domain::portal::PortalDocument;
+use crate::identity::adapters::pkcs11;
 use crate::identity::application::certificates;
 use crate::identity::application::certificates::StampedHolder;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
+use crate::identity::domain::store::Store;
 use crate::lock;
-use crate::signing::adapters::isolate::{Isolate, IsolateGone};
+use crate::signing::adapters::isolate::Isolate;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, TokenSignature, NOTHING_FROM_A_SITE,
 };
+use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{
     compose_layer2_text, AdmissibleDocument, SessionSeal, SignatureConfig, VisibleTextFields,
 };

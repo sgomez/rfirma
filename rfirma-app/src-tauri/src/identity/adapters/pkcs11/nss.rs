@@ -9,7 +9,7 @@ use libloading::Library;
 use crate::identity::ports::NssHost;
 
 use super::stores::present_among;
-use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
 
 /// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
@@ -86,34 +86,6 @@ extern "C" fn keep_the_nickname(
     }
     std::ptr::null_mut()
 }
-
-/// Detalle del error cuando la biblioteca `libnss3.so` no está disponible.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NssUnavailable {
-    detail: String,
-}
-
-impl NssUnavailable {
-    /// Construye un error con el detalle correspondiente.
-    pub fn new(detail: impl Into<String>) -> Self {
-        Self {
-            detail: detail.into(),
-        }
-    }
-
-    /// Detalle del motivo por el que la biblioteca no está disponible.
-    pub fn detail(&self) -> &str {
-        &self.detail
-    }
-}
-
-impl std::fmt::Display for NssUnavailable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.detail)
-    }
-}
-
-impl std::error::Error for NssUnavailable {}
 
 /// Adaptador de [`NssHost`] sobre la biblioteca `libnss3.so` del sistema y el turno del token.
 #[derive(Clone, Copy, Debug, Default)]

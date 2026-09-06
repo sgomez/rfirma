@@ -5,10 +5,11 @@ use std::path::Path;
 use tauri_plugin_dialog::FilePath;
 
 use crate::commands::Failure;
-use crate::identity::adapters::pkcs11::{self, Store};
+use crate::identity::adapters::pkcs11;
 use crate::identity::adapters::views::{store_name, CertificateView};
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::store::Store;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::Memory;
 

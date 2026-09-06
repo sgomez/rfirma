@@ -116,5 +116,16 @@ impl PendingNotice {
     }
 }
 
+const CERTDB_VALID_CA: u32 = 0x0008;
+const CERTDB_TRUSTED_CA: u32 = 0x0010;
+
+/// Bits que identifican una CA de confianza para TLS en NSS.
+pub const TRUSTED_SSL_CA: u32 = CERTDB_VALID_CA | CERTDB_TRUSTED_CA;
+
+/// Comprueba si los bits corresponden a una CA de confianza para TLS.
+pub fn is_trusted_ssl_ca(flags: u32) -> bool {
+    flags & TRUSTED_SSL_CA == TRUSTED_SSL_CA
+}
+
 #[cfg(test)]
 mod tests;

@@ -1,7 +1,6 @@
 //! Capa de acceso a tokens criptográficos y firma nativa PKCS#11 (ADR-0001).
 
 pub mod nss;
-pub mod secret;
 pub mod stores;
 
 use std::collections::{HashMap, HashSet};
@@ -22,9 +21,10 @@ use cryptoki::types::AuthPin;
 pub use crate::identity::domain::certificate::{
     CertificateRef, CertificateStatus, TokenCertificate,
 };
+pub use crate::identity::domain::error::NssUnavailable;
 pub use crate::identity::domain::error::{Situation, TokenError};
-pub use nss::{NssUnavailable, RealNssHost};
-pub use secret::{SecretOnTheReaderKeypad, StoreSecret};
+pub use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
+pub use nss::RealNssHost;
 pub use stores::{Store, StoreClass};
 
 /// Mecanismo de firma digital utilizado en las operaciones PKCS#11.

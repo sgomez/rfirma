@@ -1,7 +1,9 @@
 //! Adaptadores de los motores de filtrado y políticas sobre el puente nativo (ADR-0017).
 
-use crate::signing::adapters::ffi::{BridgeError, ExpandRequest, FilterRequest, NativeBridge};
-use crate::signing::adapters::isolate::{Isolate, IsolateGone};
+use crate::signing::adapters::ffi::NativeBridge;
+use crate::signing::adapters::isolate::Isolate;
+use crate::signing::domain::bridge::{BridgeError, ExpandRequest, FilterRequest};
+use crate::signing::domain::isolate_gone::IsolateGone;
 
 use crate::signing::ports::FilterEngine;
 use crate::signing::ports::PolicyEngine;

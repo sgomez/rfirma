@@ -20,9 +20,8 @@ del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 |---|---|---|
 | `mod.rs`, `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | | Solo `pub mod`: el reparto del contexto y el de cada capa. |
 | `adapters/engines.rs` | 62 | Los adaptadores de `FilterEngine` y `PolicyEngine` sobre el puente y sobre el hilo del aislado, donde se resuelve la doble `Result` (RD-06). Pruebas en `adapters/engines/tests.rs` (12). |
-| `adapters/ffi.rs` | 640 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). Pruebas en `adapters/ffi/tests.rs` (358). |
-| `adapters/isolate.rs` | 84 | El hilo dueño del isolate de GraalVM. Pruebas en `adapters/isolate/tests.rs` (44). |
-| `adapters/memory_error.rs` | 56 | Situaciones de la memoria (ADR-0009). Pruebas en `adapters/memory_error/tests.rs` (16). |
+| `adapters/ffi.rs` | 421 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). Pruebas en `adapters/ffi/tests.rs` (358). |
+| `adapters/isolate.rs` | 75 | El hilo dueño del isolate de GraalVM. Pruebas en `adapters/isolate/tests.rs` (44). |
 | `adapters/orders.rs` | 97 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). Pruebas en `adapters/orders/tests.rs` (73). |
 | `adapters/store.rs` | 210 | El fichero JSON versionado que soporta las dos memorias. Pruebas en `adapters/store/tests.rs` (181). |
 | `adapters/tauri.rs` | 120 | Las diez órdenes de firma local: el ciclo (prefirma, PIN, postfirma, cancelar), la previsualización, la esquina PAdES, la configuración y las firmas no registradas. Pruebas en `adapters/tauri/tests.rs` (37). |
@@ -36,10 +35,13 @@ del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 | `application/session.rs` | 360 | La sesión **local**: prefirma, firma en el token y la postfirma que entrega el documento; la sesión a medias es la misma para los dos recorridos (ADR-0001). Pruebas en `application/session/tests.rs` (348). |
 | `application/state.rs` | 85 | El estado que la aplicación acumula por su cuenta (ID-31), y lo **global** de la firma visible (ID-74). Pruebas en `application/state/tests.rs` (255). |
 | `domain/admissibility.rs` | 235 | Lo que no se puede firmar, decidido antes del PIN, y lo que **sí se puede pero no entendemos**: el `/SubFilter` que el puente no lee (ID-297, ID-299). Pruebas en `domain/admissibility/tests.rs` (151). |
+| `domain/bridge.rs` | 230 | El vocabulario con el que se habla al puente: las cuatro peticiones, la prefirma, `BridgeError` y dónde se busca la librería. Sin la carga: eso es `adapters/ffi.rs`, y sus pruebas siguen allí. |
 | `domain/config.rs` | 169 | Los siete ajustes de firma y ni uno más (ID-18). Aquí viven `Placement` y `PadesRect` (ID-90). Pruebas en `domain/config/tests.rs` (256). |
+| `domain/isolate_gone.rs` | 13 | El marcador de que el hilo del isolate murió, sin el hilo. |
 | `domain/language.rs` | 48 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). Pruebas en `domain/language/tests.rs` (34). |
 | `domain/layer2_text.rs` | 245 | El texto del recuadro visible: un párrafo, y la máscara sobre el `CN`. Pruebas en `domain/layer2_text/tests.rs` (193). |
-| `domain/mod.rs` | 21 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. |
+| `domain/memory_error.rs` | 56 | Situaciones de la memoria (ADR-0009). Pruebas en `domain/memory_error/tests.rs` (16). |
+| `domain/mod.rs` | 24 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. |
 | `domain/placement.rs` | 376 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21), y `PageSet`: en qué páginas se estampa y si el documento las tiene (ID-91, ID-94). Pruebas en `domain/placement/tests.rs` (375). |
 | `domain/properties.rs` | 45 | Los `extraParams` en el formato del puente. Pruebas en `domain/properties/tests.rs` (92). |
 | `domain/session_seal.rs` | 50 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). Pruebas en `domain/session_seal/tests.rs` (75). |

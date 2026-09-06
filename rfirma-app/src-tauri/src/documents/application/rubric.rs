@@ -2,7 +2,8 @@
 
 use tauri_plugin_dialog::FilePath;
 
-use crate::documents::adapters::rubric::{NormalizedRubric, RubricError, RubricStore, Situation};
+use crate::documents::adapters::rubric::RubricStore;
+use crate::documents::domain::rubric::{NormalizedRubric, RubricError, Situation};
 
 /// Adopta la imagen seleccionada por el usuario en el almacén de rúbricas.
 pub fn choose(store: &RubricStore, chosen: FilePath) -> Result<NormalizedRubric, RubricError> {

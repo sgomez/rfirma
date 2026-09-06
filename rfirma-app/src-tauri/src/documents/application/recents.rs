@@ -4,10 +4,11 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use crate::commands::Failure;
-use crate::documents::adapters::portal::PortalDocument;
-use crate::documents::adapters::recents_store::{Badge, Placement, RecentDocument};
+use crate::documents::adapters::recents_store::{Placement, RecentDocument};
 use crate::documents::adapters::views::RecentDocumentView;
 use crate::documents::application::opened::OpenedDocuments;
+use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::recents::Badge;
 use crate::signing::adapters::views::PlacementView;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::state::{BoxSize, State};

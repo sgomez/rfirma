@@ -1,14 +1,14 @@
 //! Frontera de traducción de errores y situaciones internas a códigos de protocolo hacia la sede.
 
-use crate::documents::adapters::rubric::Situation as RubricSituation;
 use crate::documents::domain::destination::Situation as DestinationSituation;
+use crate::documents::domain::rubric::Situation as RubricSituation;
 use crate::identity::adapters::pkcs11::Situation as TokenSituation;
-use crate::signing::adapters::ffi::BridgeError;
-use crate::signing::adapters::memory_error::Situation as MemorySituation;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::CycleFailure;
+use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::memory_error::Situation as MemorySituation;
 use crate::signing::domain::Refusal as Inadmissible;
-use crate::site::adapters::channel::Situation as ChannelSituation;
+use crate::site::domain::channel::Situation as ChannelSituation;
 use crate::site::domain::protocol::{SafCode, WireAnswer};
 
 /// Mapea situaciones del token a códigos de error del protocolo.

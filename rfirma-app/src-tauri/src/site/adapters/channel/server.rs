@@ -10,59 +10,14 @@ use tokio_native_tls::TlsAcceptor;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::site::adapters::channel::conversation::{answer, Answer, ChannelDuty};
-use crate::site::adapters::channel::error::{ChannelError, Situation};
 use crate::site::adapters::channel::reply::ReplyHandle;
 use crate::site::adapters::tls::LocalServerCertificate;
+use crate::site::domain::channel::{ChannelError, Situation};
+pub use crate::site::domain::channel::{OpenChannel, Shutdown};
 use crate::site::domain::protocol::AfirmaUrl;
 
 /// Manejador que atiende la operación recibida por el canal.
 pub type SiteOperations = Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>;
-
-/// Canal abierto con su puerto de escucha y asa de cierre.
-pub struct OpenChannel {
-    port: u16,
-    shutdown: Shutdown,
-}
-
-impl OpenChannel {
-    /// Crea un canal abierto con su puerto y asa de cierre.
-    pub fn new(port: u16, shutdown: Shutdown) -> Self {
-        Self { port, shutdown }
-    }
-
-    /// Puerto en el que escucha el canal.
-    pub fn port(&self) -> u16 {
-        self.port
-    }
-
-    /// Cierra el canal y deja de escuchar conexiones.
-    pub fn close(self) {
-        self.shutdown.now();
-    }
-}
-
-impl std::fmt::Debug for OpenChannel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("OpenChannel")
-            .field("port", &self.port)
-            .finish_non_exhaustive()
-    }
-}
-
-/// Asa para apagar el servidor del canal.
-pub struct Shutdown(Box<dyn FnOnce() + Send>);
-
-impl Shutdown {
-    /// Construye un asa de apagado a partir de una clausura.
-    pub fn of(closing: impl FnOnce() + Send + 'static) -> Self {
-        Self(Box::new(closing))
-    }
-
-    /// Ejecuta el apagado del servidor.
-    pub fn now(self) {
-        (self.0)();
-    }
-}
 
 /// Inicia la escucha del canal sobre un listener ya enlazado.
 pub async fn serve(

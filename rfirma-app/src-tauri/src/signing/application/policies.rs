@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::signing::adapters::ffi::BridgeError;
+use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::to_java_properties;
 use crate::signing::ports::PolicyEngine;
 use crate::site::domain::protocol::{pairs_of, PADES};

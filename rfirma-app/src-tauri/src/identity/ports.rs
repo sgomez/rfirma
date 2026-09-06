@@ -2,7 +2,7 @@
 
 use libloading::Library;
 
-use crate::identity::adapters::pkcs11::nss::NssUnavailable;
+use crate::identity::domain::error::NssUnavailable;
 
 /// Puerto para interactuar con la biblioteca NSS y el turno global del token.
 pub trait NssHost {

@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::site::adapters::channel::{ChannelDuty, ChannelError, OpenChannel};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
 use crate::site::domain::protocol::AfirmaUrl;
 use crate::site::domain::trust_error::TrustError;
 

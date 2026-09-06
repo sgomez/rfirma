@@ -5,8 +5,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
-use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::domain::handles::mint;
+use crate::documents::domain::portal::PortalDocument;
 
 /// Modalidad de persistencia asociada a un documento abierto.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

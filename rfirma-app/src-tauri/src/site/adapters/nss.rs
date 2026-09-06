@@ -9,22 +9,13 @@ use crate::identity::ports::NssHost;
 use crate::site::domain::trust_error::{Situation, TrustError};
 use crate::site::ports::TrustStores;
 
+pub use crate::site::domain::trust::{is_trusted_ssl_ca, TRUSTED_SSL_CA};
+
 const SEC_SUCCESS: c_int = 0;
 const PR_FALSE: c_int = 0;
 const PR_TRUE: c_int = 1;
 const SI_BUFFER: c_uint = 0;
 const NO_KEY: c_ulong = 0;
-
-const CERTDB_VALID_CA: u32 = 0x0008;
-const CERTDB_TRUSTED_CA: u32 = 0x0010;
-
-/// Bits que identifican una CA de confianza para TLS en NSS.
-pub const TRUSTED_SSL_CA: u32 = CERTDB_VALID_CA | CERTDB_TRUSTED_CA;
-
-/// Comprueba si los bits corresponden a una CA de confianza para TLS.
-pub fn is_trusted_ssl_ca(flags: u32) -> bool {
-    flags & TRUSTED_SSL_CA == TRUSTED_SSL_CA
-}
 
 fn read_write_spec(profile: &Path) -> String {
     format!(
