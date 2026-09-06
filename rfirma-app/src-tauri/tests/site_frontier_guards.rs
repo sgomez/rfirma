@@ -307,13 +307,10 @@ fn the_shadow_attack_code_is_named_only_where_the_catalogue_is_declared() {
             .file_name()
             .and_then(|name| name.to_str())
             .expect("todo fichero tiene nombre");
-        if allowed.contains(&name) {
+        if allowed.contains(&name) || name == "tests.rs" {
             continue;
         }
-        let source = fs::read_to_string(&file).expect("la fuente deberia leerse");
-        let production = source
-            .split_once("\nmod tests {")
-            .map_or(source.as_str(), |(before, _)| before);
+        let production = fs::read_to_string(&file).expect("la fuente deberia leerse");
         assert!(
             !production.contains("PdfShadowAttack"),
             "{} nombra el codigo del shadow attack, y ese no se emite nunca",

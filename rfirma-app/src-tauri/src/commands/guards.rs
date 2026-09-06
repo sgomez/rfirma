@@ -26,12 +26,10 @@ fn source_of(file: &str) -> &'static str {
         .unwrap_or_else(|| panic!("«{file}» tiene que estar en la lista del modulo"))
 }
 
-/// Extrae la sección de código de producción excluyendo el módulo de pruebas.
+/// El código fuente de un fichero de `SOURCES`, ya sin módulo de pruebas: vive en su
+/// `tests.rs` hermano y `include_str!` no lo trae.
 fn production_half(source: &str) -> &str {
     source
-        .split_once("\nmod tests {")
-        .map(|(before, _)| before)
-        .unwrap_or(source)
 }
 
 /// Aplana atributos de múltiples líneas a una sola línea.
@@ -383,6 +381,7 @@ fn the_list_of_files_covers_the_whole_module() {
     let present: BTreeSet<String> = rust_files_under(&directory, "")
         .into_iter()
         .filter(|name| name != THIS_FILE)
+        .filter(|name| name != "tests.rs" && !name.ends_with("/tests.rs"))
         .collect();
 
     let missing: Vec<&String> = present
