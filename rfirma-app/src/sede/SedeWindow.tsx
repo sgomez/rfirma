@@ -1,6 +1,5 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CloseIcon } from "../design-system/icons";
 import { PinDialog } from "../signing/PinDialog";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConsent } from "./SedeConsent";
@@ -20,10 +19,15 @@ interface SedeWindowProps {
  * `afirma://` (docs/design/ventana-de-sede.md).
  *
  * **Una ventana con una secuencia, no cinco pantallas**: los cinco momentos
- * comparten las tres regiones fijas —barra de título de 32 px, cuerpo y pie— y
- * lo único que cambia es lo que va dentro. Sin cabecera de aplicación, sin
- * menú, sin bandeja y sin pie de destino: sugerir que hay más dentro invita a
- * buscar cosas que no están.
+ * comparten las dos regiones fijas —cuerpo y pie— y lo único que cambia es lo
+ * que va dentro. Sin cabecera de aplicación, sin menú, sin bandeja y sin pie de
+ * destino: sugerir que hay más dentro invita a buscar cosas que no están.
+ *
+ * **La barra de título es la del sistema operativo**, no una pintada aquí: una
+ * de mentira no la mueve el gestor de ventanas, así que la ventana no se podía
+ * ni arrastrar. Con ella vienen gratis el título, la cruz, el menú del gestor y
+ * el arrastre; y cerrar por la cruz llega igual al backend, que ya trata
+ * `CloseRequested` sobre esta ventana como abandonar el trámite (ID-340).
  *
  * Los tres relojes del trámite viven aquí y no en el backend, porque son
  * conducta de la ventana:
@@ -51,7 +55,6 @@ export function SedeWindow({ errands }: SedeWindowProps) {
  */
 function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPort }) {
   const { t } = useTranslation();
-  const titleId = useId();
   const stage = errand.stage;
   const waiting = useWaitingClock();
 
@@ -71,33 +74,9 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
         className="sede-window"
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-label={t("app.name")}
         data-stage={stage.kind}
       >
-        {/* Un `div` y no un `header`: un punto de referencia «banner» dentro
-            de un diálogo sería mentira, y esta ventana **no** tiene cabecera
-            de aplicación (ADR-0007). Es una barra de título y nada más. */}
-        <div className="rf-row sede-window__bar">
-          <span className="rf-body sede-window__brand" id={titleId}>
-            {t("app.name")}
-          </span>
-          <div className="sede-window__spacer" />
-          <button
-            type="button"
-            className="sede-window__close"
-            aria-label={t("sede.window.close")}
-            /* `close()` sólo cuando la sede **ya tiene su respuesta**, que es
-               el desenlace y nada más. En todo lo demás —también en «sin
-               certificado utilizable»— irse es abandonar el trámite, y eso es
-               `cancel()`: es lo que libera el `idsession`. La salida del pie
-               llama al mismo verbo en cada momento; no hay dos puertas que
-               hagan cosas distintas. */
-            onClick={stage.kind === "outcome" ? close : cancel}
-          >
-            <CloseIcon size={14} />
-          </button>
-        </div>
-
         {stage.kind === "waiting" && (
           <SedeWaiting
             moment={waiting === "unreachable" ? "unreachable" : "connecting"}

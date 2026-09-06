@@ -1,6 +1,6 @@
 /*
- * La ventana de sede: diálogo de 520 × 420 px con tres regiones fijas
- * (docs/design/ventana-de-sede.md).
+ * La ventana de sede: diálogo de 520 × 420 px con dos regiones fijas —cuerpo y
+ * pie— bajo la barra de título del sistema (docs/design/ventana-de-sede.md).
  *
  * El cuerpo **no lleva `overflow: hidden`**: el desplegable de certificados
  * flota por encima de la ventana y recortarlo aquí fue el defecto medido en la
@@ -8,16 +8,14 @@
  */
 
 /*
- * **Llena el hueco, no mide 520 x 420 px.**
+ * **Llena el hueco, no lo fija.**
  *
- * El tamaño de la ficha es el que se le pide a la ventana
- * (`inner_size(520, 420)` en `lib.rs`), y el compositor no tiene por qué darlo
- * exacto: en GNOME/Wayland, una ventana sin decoraciones sale con 26 px de
- * inset por lado —+52 en cada eje, medido, y constante sea cual sea el tamaño
- * pedido—. Con la caja fija, esos 52 px quedaban de `body` desnudo alrededor y
- * el diálogo parecía un modal flotando dentro de un marco vacío.
- *
- * Fijar el tamaño aquí era además fijarlo dos veces: quien manda es la ventana.
+ * Los 520 x 420 de la ficha son lo que se le pide a la ventana
+ * (`inner_size` en `lib.rs`); repetirlos aquí sería fijar el tamaño dos veces,
+ * y cuando las dos cifras no coincidían —una ventana sin decoraciones salía con
+ * 26 px de inset por lado en GNOME/Wayland— la diferencia quedaba de fondo
+ * desnudo alrededor, con el diálogo flotando dentro como un modal de otra
+ * ventana. Quien manda es la ventana.
  */
 .sede-window {
   width: 100%;
@@ -26,48 +24,6 @@
   display: flex;
   flex-direction: column;
   background: var(--rf-bg);
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-lg);
-  box-shadow: var(--rf-shadow-elevated);
-}
-
-/* Barra de título de 32 px: el nombre y la cruz, sin menú y sin nada más. */
-.sede-window__bar {
-  height: 32px;
-  flex: none;
-  gap: var(--rf-space-xs);
-  padding: 0 6px 0 var(--rf-space-sm);
-  border-bottom: 1px solid var(--rf-border-subtle);
-  background: var(--rf-surface);
-  border-radius: var(--rf-radius-lg) var(--rf-radius-lg) 0 0;
-}
-
-.sede-window__brand {
-  font-weight: 700;
-  letter-spacing: 0.4px;
-}
-
-.sede-window__spacer {
-  flex: 1;
-}
-
-.sede-window__close {
-  width: 24px;
-  height: 24px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--rf-text-muted);
-  cursor: pointer;
-  border-radius: var(--rf-radius-md);
-}
-
-.sede-window__close:hover {
-  color: var(--rf-text);
 }
 
 /* La caja útil son ≈329 px: 16 px arriba y abajo, --rf-space-md a los lados. */

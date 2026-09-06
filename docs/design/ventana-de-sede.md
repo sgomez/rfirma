@@ -37,26 +37,26 @@ principal a un trámite que es ajeno y corto.
 
 ## Forma de la ventana
 
-**Ventana tipo diálogo de 520 × 420 px.** No lleva la cabecera de la aplicación,
-ni menú, ni bandeja de recientes, ni pie de destino: sugerir que hay más dentro
-invita a buscar cosas que no están. Tres regiones fijas en los cinco momentos:
+**Ventana tipo diálogo de 520 × 420 px, con la barra de título del sistema.**
+No lleva la cabecera de la aplicación, ni menú, ni bandeja de recientes, ni pie
+de destino: sugerir que hay más dentro invita a buscar cosas que no están. Dos
+regiones fijas en los cinco momentos:
 
-Los 520 × 420 son **lo que se le pide a la ventana**, no una caja fija dentro de
-ella: el diálogo llena el hueco que dé el compositor. En GNOME/Wayland una
-ventana sin decoraciones sale con 26 px de inset por lado —+52 en cada eje,
-constante sea cual sea el tamaño pedido—, y con la caja fija ese margen quedaba
-de fondo desnudo alrededor, con el diálogo flotando dentro como si fuera un
-modal de otra ventana.
-
-
-1. **Barra de título de 32 px** — el nombre `rFirma` en `.rf-body` con peso 700 y
-   la cruz de cerrar a la derecha. Fondo `--rf-surface`, raya inferior
-   `--rf-border-subtle`.
-2. **Cuerpo**, `flex:1`, con 16 px de relleno arriba y abajo y `--rf-space-md` a
+1. **Cuerpo**, `flex:1`, con 16 px de relleno arriba y abajo y `--rf-space-md` a
    los lados: la caja útil son **≈329 px**.
-3. **Pie**, con raya superior y las acciones a la derecha. En los momentos de
+2. **Pie**, con raya superior y las acciones a la derecha. En los momentos de
    firma y de salida mide **56 px clavados**, con `height` fijo, para que
    aparecer y desaparecer «Cancelar» no mueva nada de sitio.
+
+**La barra de título la pone el escritorio, no el frontal.** Se dibujó una
+propia de 32 px con el nombre y la cruz, y era un error: una barra pintada en
+HTML no la conoce el gestor de ventanas, así que la ventana **no se podía
+mover, ni arrastrar, ni nada de lo que se espera de una ventana**. Con las
+decoraciones del sistema vienen el título, la cruz, el menú del gestor y el
+arrastre, ya en el idioma y el tema del escritorio. Además, quitarlas hacía que
+GNOME/Wayland diera 26 px de inset por lado —+52 en cada eje, constante sea cual
+sea el tamaño pedido—, y con ese margen el diálogo quedaba flotando dentro de un
+marco vacío; con las decoraciones puestas, la ventana mide lo que se le pide.
 
 En los artboards la ventana se dibuja centrada sobre un lienzo de 720 × 600 px
 que representa el escritorio, para que se vea su tamaño real.
@@ -233,8 +233,10 @@ Las dos opciones **se tienen que sentir distintas porque la salida es distinta**
 `Cerrar` está en el pie de las dos, porque en las dos hay que poder salir con
 una etiqueta y no sólo por la cruz. `Volver a buscar` es una **microacción del
 cuerpo**, no del pie. Y salir de aquí **abandona el trámite**: la sede no ha
-recibido nada todavía, así que las dos puertas —el pie y la cruz— liberan el
-`idsession`, igual que durante la espera y el consentimiento. Sólo el desenlace
+recibido nada todavía, así que las dos puertas —el pie y la cruz del sistema—
+liberan el `idsession`, igual que durante la espera y el consentimiento. La del
+pie pasa por el frontal; la del sistema llega al backend como `CloseRequested`,
+y allí abandona el trámite igual. Sólo el desenlace
 cierra sin cancelar, que es donde la sede ya tiene su respuesta.
 
 ### El diálogo del secreto no cambia
