@@ -137,7 +137,7 @@ crea**, o el PR sale en rojo.
 | `pkcs11/stores.rs` | 298 | Dónde se buscan los certificados, incluidos los `.p12` instalados (ID-192). Pruebas en `pkcs11/stores/tests.rs` (239). |
 | `pkcs11/certificate.rs` | 183 | El certificado tal y como sale del token. Pruebas en `pkcs11/certificate/tests.rs` (140). |
 | `pkcs11/error.rs` | 120 | Situaciones del token (ID-29, ADR-0009). Pruebas en `pkcs11/error/tests.rs` (78). |
-| `pkcs11/nss.rs` | 273 | Cómo entra un `.p12` en un almacén NSS propio: el descodificador de PKCS#12 de `libsmime3` por FFI, sin criptografía propia y dentro del turno del token (ID-192, ID-193, ID-194). Pruebas en `pkcs11/nss/tests.rs` (28). |
+| `pkcs11/nss.rs` | 343 | Cómo entra un `.p12` en un almacén NSS propio: el descodificador de PKCS#12 de `libsmime3` por FFI, sin criptografía propia y dentro del turno del token (ID-192, ID-193, ID-194). Declara el puerto `NssHost` y su adaptador `RealNssHost` para la carga compartida de `libnss3.so`. Pruebas en `pkcs11/nss/tests.rs` (28). |
 | `pkcs11/secret.rs` | 63 | Cómo se le pide el secreto a cada almacén: sin sesión, por pantalla o en el teclado del lector, que se rechaza (ID-189, ID-191). Pruebas en `pkcs11/secret/tests.rs` (69). |
 | **`destination/`** | | Dónde cae el firmado y por dónde entra el original (ADR-0011). |
 | `destination/mod.rs` | 103 | El reparto, y `DestinationFolder`. **No importa `memory`** (ID-83). Pruebas en `destination/tests.rs` (143). |
@@ -152,7 +152,7 @@ crea**, o el PR sale en rojo.
 | `tls/error.rs` | 52 | Situaciones del material del canal (ADR-0009). Pruebas en `tls/error/tests.rs` (11). |
 | **`trust/`** | | **La confianza**: cómo entra la CA local en los almacenes NSS de la persona y cuándo toca renovarla (ADR-0005, ID-224, ID-227, ID-228). `tls/` fabrica y no registra; aquí se registra y no se fabrica. |
 | `trust/mod.rs` | 140 | El reparto, y las tres reglas **puras**: la etapa de la CA, el solape y que a mitad de un trámite no se toca nada. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `trust/tests.rs` (109). |
-| `trust/nss.rs` | 279 | El registro de verdad, por la API de NSS y **no** por `certutil`, que no está en el flatpak. No hay ni una llamada que borre: esa ausencia es el solape. Pruebas en `trust/nss/tests.rs` (34). |
+| `trust/nss.rs` | 275 | El registro de verdad, por la API de NSS y **no** por `certutil`, que no está en el flatpak. Consume `NssHost` para la carga de NSS y el turno del token. No hay ni una llamada que borre: esa ausencia es el solape. Pruebas en `trust/nss/tests.rs` (34). |
 | `trust/error.rs` | 52 | Situaciones de la confianza (ADR-0009). Pruebas en `trust/error/tests.rs` (11). |
 | **`rubric/`** | | De lo que aporta el usuario al JPEG que acepta el puente (ADR-0012). |
 | `rubric/mod.rs` | 12 | El reparto. |

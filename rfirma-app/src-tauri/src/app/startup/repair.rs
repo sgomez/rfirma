@@ -22,7 +22,7 @@ pub fn repair_the_local_ca(trust: &LocalCaTrust, held: &HeldChannel, live: &Live
     let in_some_store = trust::refresh_local_ca_trust(
         &trust.store,
         &trust.profiles,
-        &NssTrustStores,
+        &NssTrustStores::new(crate::pkcs11::RealNssHost),
         TrustMoment::Startup,
     )
     .is_ok_and(|outcome| !outcome.nowhere());

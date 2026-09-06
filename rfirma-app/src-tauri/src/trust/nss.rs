@@ -2,15 +2,12 @@
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;
-use std::sync::OnceLock;
 
 use libloading::Library;
 
 use super::error::{Situation, TrustError};
 use super::TrustStores;
-use crate::pkcs11::nss::CANDIDATE_NSS;
-use crate::pkcs11::stores::present_among;
-use crate::pkcs11::with_token_turn;
+use crate::pkcs11::NssHost;
 
 const SEC_SUCCESS: c_int = 0;
 const PR_FALSE: c_int = 0;
@@ -57,21 +54,6 @@ extern "C" fn no_password(
     _argument: *mut c_void,
 ) -> *mut c_char {
     std::ptr::null_mut()
-}
-
-static LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
-
-fn library() -> Result<&'static Library, TrustError> {
-    let loaded = LIBRARY.get_or_init(|| {
-        let path = present_among(CANDIDATE_NSS, |path| path.is_file())
-            .into_iter()
-            .next()
-            .ok_or_else(|| "no esta libnss3.so en ninguna de las rutas conocidas".to_owned())?;
-        unsafe { Library::new(&path) }.map_err(|error| format!("{}: {error}", path.display()))
-    });
-    loaded
-        .as_ref()
-        .map_err(|detail| TrustError::new(Situation::NssMissing, detail.clone()))
 }
 
 fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TrustError> {
@@ -124,8 +106,7 @@ struct Api {
 }
 
 impl Api {
-    fn resolve() -> Result<Self, TrustError> {
-        let nss = library()?;
+    fn resolve(nss: &'static Library) -> Result<Self, TrustError> {
         Ok(Self {
             no_db_init: symbol(nss, b"NSS_NoDB_Init\0")?,
             shutdown: symbol(nss, b"NSS_Shutdown\0")?,
@@ -144,52 +125,6 @@ impl Api {
     }
 }
 
-fn within<T>(
-    profile: &Path,
-    work: impl FnOnce(&Api, *mut c_void) -> Result<T, TrustError>,
-) -> Result<T, TrustError> {
-    let api = Api::resolve()?;
-    let spec = CString::new(read_write_spec(profile)).map_err(|_| {
-        TrustError::new(
-            Situation::StoreUnreachable,
-            "la ruta del perfil lleva un cero dentro",
-        )
-    })?;
-
-    with_token_turn(|| {
-        (api.set_password_func)(no_password);
-
-        if (api.no_db_init)(std::ptr::null()) != SEC_SUCCESS {
-            return Err(TrustError::new(
-                Situation::StoreUnreachable,
-                "NSS no ha podido arrancar sin base de datos: el softoken ya está inicializado",
-            ));
-        }
-
-        let outcome = (|| {
-            let slot = (api.open_user_db)(spec.as_ptr());
-            if slot.is_null() {
-                return Err(TrustError::new(
-                    Situation::StoreUnreachable,
-                    format!(
-                        "SECMOD_OpenUserDB no ha podido abrir «{}» en lectura y escritura",
-                        profile.display()
-                    ),
-                ));
-            }
-
-            let done = work(&api, slot);
-
-            (api.close_user_db)(slot);
-            (api.free_slot)(slot);
-            done
-        })();
-
-        (api.shutdown)();
-        outcome
-    })
-}
-
 fn der_item(der: &mut [u8]) -> SecItem {
     SecItem {
         kind: SI_BUFFER,
@@ -199,10 +134,71 @@ fn der_item(der: &mut [u8]) -> SecItem {
 }
 
 /// Implementación de [`TrustStores`] mediante la API C de NSS por FFI.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NssTrustStores;
+#[derive(Clone, Copy, Debug)]
+pub struct NssTrustStores<H> {
+    host: H,
+}
 
-impl TrustStores for NssTrustStores {
+impl<H> NssTrustStores<H> {
+    /// Construye el acceso a los almacenes NSS sobre el anfitrión indicado.
+    pub const fn new(host: H) -> Self {
+        Self { host }
+    }
+}
+
+impl<H: NssHost> NssTrustStores<H> {
+    fn within<T>(
+        &self,
+        profile: &Path,
+        work: impl FnOnce(&Api, *mut c_void) -> Result<T, TrustError>,
+    ) -> Result<T, TrustError> {
+        let nss = self.host.library().map_err(|unavailable| {
+            TrustError::new(Situation::NssMissing, unavailable.detail().to_owned())
+        })?;
+        let api = Api::resolve(nss)?;
+        let spec = CString::new(read_write_spec(profile)).map_err(|_| {
+            TrustError::new(
+                Situation::StoreUnreachable,
+                "la ruta del perfil lleva un cero dentro",
+            )
+        })?;
+
+        self.host.with_token_turn(|| {
+            (api.set_password_func)(no_password);
+
+            if (api.no_db_init)(std::ptr::null()) != SEC_SUCCESS {
+                return Err(TrustError::new(
+                    Situation::StoreUnreachable,
+                    "NSS no ha podido arrancar sin base de datos: el softoken ya está inicializado",
+                ));
+            }
+
+            let outcome = (|| {
+                let slot = (api.open_user_db)(spec.as_ptr());
+                if slot.is_null() {
+                    return Err(TrustError::new(
+                        Situation::StoreUnreachable,
+                        format!(
+                            "SECMOD_OpenUserDB no ha podido abrir «{}» en lectura y escritura",
+                            profile.display()
+                        ),
+                    ));
+                }
+
+                let done = work(&api, slot);
+
+                (api.close_user_db)(slot);
+                (api.free_slot)(slot);
+                done
+            })();
+
+            (api.shutdown)();
+            outcome
+        })
+    }
+}
+
+impl<H: NssHost> TrustStores for NssTrustStores<H> {
     fn install(
         &self,
         profile: &Path,
@@ -217,7 +213,7 @@ impl TrustStores for NssTrustStores {
         })?;
         let mut der = certificate_der.to_vec();
 
-        within(profile, |api, slot| {
+        self.within(profile, |api, slot| {
             let handle = (api.default_cert_db)();
             let mut item = der_item(&mut der);
 
@@ -254,7 +250,7 @@ impl TrustStores for NssTrustStores {
     fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError> {
         let mut der = certificate_der.to_vec();
 
-        within(profile, |api, _slot| {
+        self.within(profile, |api, _slot| {
             let handle = (api.default_cert_db)();
             let mut item = der_item(&mut der);
 

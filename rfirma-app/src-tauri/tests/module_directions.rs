@@ -31,7 +31,7 @@ struct Direction {
     reason: &'static str,
 }
 
-const DIRECTIONS: [Direction; 8] = [
+const DIRECTIONS: [Direction; 9] = [
     Direction {
         from: Origin::Layer(Layer::Domain),
         forbidden: "app",
@@ -75,6 +75,14 @@ const DIRECTIONS: [Direction; 8] = [
                   un concepto del destino; desenvolver la configuración lo hace `app/`",
         reason: "`DestinationFolder` es un concepto del destino y vive en \
                  `destination/`; desenvolver la configuración lo hace `app/` (ID-83)",
+    },
+    Direction {
+        from: Origin::Module("trust"),
+        forbidden: "pkcs11",
+        except: &["pkcs11::NssHost"],
+        instead: "la confianza consume NSS y el turno por el puerto `pkcs11::NssHost` \
+                  ofrecido por el contexto de identidad (RD-08)",
+        reason: "la confianza deja de importar el módulo del token (RD-08, #435)",
     },
     Direction {
         from: Origin::Under("app/errand/"),
@@ -570,6 +578,13 @@ fn the_directions_that_are_allowed_are_still_there() {
         "`app/errand/desk.rs` deberia seguir nombrando `app::filtering` con `crate::`: \
          la guarda solo lee `use crate::`, y el tramite escribe asi sus importaciones \
          para que las dos aristas prohibidas del RD-12 no se le escapen"
+    );
+    assert!(
+        imports("trust/nss.rs")
+            .iter()
+            .any(|path| path == "pkcs11::NssHost"),
+        "`trust/nss.rs` deberia nombrar `pkcs11::NssHost`: el puerto ofrecido por \
+         el contexto de identidad (RD-08)"
     );
 }
 
