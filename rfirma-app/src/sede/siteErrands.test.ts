@@ -238,6 +238,49 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
   });
 });
 
+describe("un momento del backend gana a lo que estuviera en vuelo", () => {
+  /** Una promesa que se resuelve cuando la prueba quiera. */
+  function deferred<T>() {
+    let release: (value: T) => void = () => {};
+    const promise = new Promise<T>((resolve) => {
+      release = resolve;
+    });
+    return { promise, release: (value: T) => release(value) };
+  }
+
+  it("drops a slow document description overtaken by a later moment", async () => {
+    const slow = deferred<DescribedDocument>();
+    const { push, last, seen } = watched({ describeDocument: async () => slow.promise });
+
+    push(ASKING_TO_SIGN);
+    // El trámite termina mientras el documento se está leyendo: lo que la
+    // ventana tiene delante ya no es el consentimiento.
+    push({ origin: null, stage: { kind: "waiting" } });
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("waiting"));
+
+    slow.release(described);
+    await Promise.resolve();
+
+    expect(seen.map((errand) => errand?.stage.kind)).toEqual(["waiting"]);
+  });
+
+  it("drops the local moment of a consent overtaken while the backend answered", async () => {
+    const slow = deferred<{ ok: true; value: { kind: "typedOnScreen"; attemptsLeft: null } }>();
+    const { push, port, last, seen } = watched({ beginSigning: async () => slow.promise });
+
+    push(ASKING_TO_SIGN);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    const consenting = port.consent("handle-1");
+    push({ origin: null, stage: { kind: "waiting" } });
+    slow.release({ ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } });
+    await consenting;
+
+    expect(last()?.stage.kind).toBe("waiting");
+    expect(seen.map((errand) => errand?.stage.kind)).toEqual(["consent", "signing", "waiting"]);
+  });
+});
+
 describe("los momentos que pone el adaptador", () => {
   it("walks from consent to the secret, the two signing legs and the outcome", async () => {
     const { push, port, seen, calls, last } = watched();

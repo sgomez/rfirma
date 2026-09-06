@@ -637,7 +637,11 @@ export function tauriSiteErrands(): SiteErrandPort {
       stage(() => invoke<StoreSecret>("site_begin_signing", { certificate })),
     signWithPin: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
     finishSigning: () => stage(() => invoke<void>("site_finish_signing")),
-    installCertificate: () => invoke<boolean>("site_install_certificate", { password: "" }),
+    // Un `.p12` con contraseña —el caso normal— rechaza aquí, y desde esta
+    // pantalla no hay contraseña que mandar: lo que le queda a la persona es la
+    // misma pantalla, no una promesa sin recoger.
+    installCertificate: () =>
+      invoke<boolean>("site_install_certificate", { password: "" }).catch(() => false),
     lookAgain: () => invoke<void>("site_look_again"),
     installLocalCa: () => invoke<void>("install_local_ca"),
     closeWindow: () => invoke<void>("close_site_window"),

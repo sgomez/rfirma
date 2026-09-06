@@ -948,16 +948,20 @@ pub struct LocalCaTrust {
 /// esa es la mitad del ID-224 que sigue en pie.
 ///
 /// Lo que la ventana ve después es el resultado, publicado por el mismo evento
-/// que todo lo demás (ID-338): con la CA en algún almacén se vuelve a la
-/// espera, porque el canal sigue en pie y la petición puede llegar ya; sin
-/// ella, la misma pantalla de reparación.
+/// que todo lo demás (ID-338), y son **dos preguntas y no una**: si la CA local
+/// ha quedado en algún almacén, y si hay canal sirviendo. Las decide
+/// [`what_the_repair_leaves`].
 ///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
-pub fn install_local_ca(app_handle: tauri::AppHandle, trust: State<'_, LocalCaTrust>) {
+pub fn install_local_ca(
+    app_handle: tauri::AppHandle,
+    trust: State<'_, LocalCaTrust>,
+    held: State<'_, app::startup::HeldChannel>,
+) {
     use crate::trust::{Moment, NssTrustStores};
 
-    let reached = app::trust::refresh_local_ca_trust(
+    let in_some_store = app::trust::refresh_local_ca_trust(
         &trust.store,
         &trust.profiles,
         &NssTrustStores,
@@ -965,12 +969,35 @@ pub fn install_local_ca(app_handle: tauri::AppHandle, trust: State<'_, LocalCaTr
     )
     .is_ok_and(|outcome| !outcome.nowhere());
 
-    let view = if reached {
-        SiteErrandView::waiting()
-    } else {
-        SiteErrandView::no_channel(NoChannelView::LocalCaMissing)
-    };
+    let view = what_the_repair_leaves(in_some_store, held.is_serving());
     publish_to_the_site_window(&app_handle, view);
+}
+
+/// **En qué queda la pantalla de reparación después de instalar la CA local**
+/// (ID-341).
+///
+/// Las dos preguntas son distintas y hasta el #402 se confundían: que la CA haya
+/// entrado en un almacén NSS no dice que el canal esté en pie. Al botón se llega
+/// desde tres sitios —`LocalCaMissing`, `ChannelNotOpened` y la espera pasada
+/// [`UNREACHABLE_AFTER_MS`](SiteErrandView)— y sólo desde el primero es cierto
+/// que el canal sigue sirviendo.
+///
+/// Y el canal **no se reabre desde aquí**: [`crate::app::site::open_the_channel`]
+/// se llama una sola vez, en el arranque, y allí se emite el certificado del
+/// servidor. Así que con la CA instalada pero sin canal la respuesta correcta es
+/// la pantalla de reparación definitiva —la que lleva la dirección del ajuste
+/// del navegador—, no treinta segundos de «Conectando con la sede» sobre algo
+/// que el backend ya sabe que no va a llegar.
+fn what_the_repair_leaves(in_some_store: bool, channel_is_serving: bool) -> SiteErrandView {
+    match (in_some_store, channel_is_serving) {
+        // Sin CA en ningún almacén ningún navegador llega a intentar el canal:
+        // la reparación sigue siendo instalarla.
+        (false, _) => SiteErrandView::no_channel(NoChannelView::LocalCaMissing),
+        // Con CA y con canal la petición de la sede puede llegar ya.
+        (true, true) => SiteErrandView::waiting(),
+        // Con CA y sin canal, lo que de verdad le pasa a la persona.
+        (true, false) => SiteErrandView::no_channel(NoChannelView::ChannelNotOpened),
+    }
 }
 
 /// **Lo que la sede pidió, hasta que la persona conteste.**
@@ -1253,7 +1280,9 @@ pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
 #[cfg(test)]
 mod tests {
-    use super::{pades_lower_left, PendingSignature, PlacementOrder, SiteConsent};
+    use super::{
+        pades_lower_left, what_the_repair_leaves, PendingSignature, PlacementOrder, SiteConsent,
+    };
     use crate::commands::views::SignatureRoundView;
     use crate::protocol::SiteFilter;
 
@@ -1264,6 +1293,49 @@ mod tests {
             filter: SiteFilter::default(),
             from_the_site: std::collections::BTreeMap::new(),
             unregistered_signatures: false,
+        }
+    }
+
+    /// **La reparación no manda esperar sobre un canal que no existe**
+    /// (ID-341).
+    ///
+    /// Al botón de instalar la CA local se llega desde `channelNotOpened`
+    /// también, y desde ahí instalarla no reabre nada: el canal se abre una
+    /// sola vez, en el arranque. Publicar `waiting` ahí tapaba la pantalla de
+    /// reparación —la que lleva la dirección del ajuste del navegador— con
+    /// «Conectando con la sede» durante treinta segundos, para volver después
+    /// a la misma pantalla.
+    #[test]
+    fn the_repair_only_waits_when_a_channel_is_serving() {
+        assert_eq!(
+            serde_json::to_value(what_the_repair_leaves(true, false)).expect("el callejon cruza"),
+            serde_json::json!({
+                "origin": null,
+                "stage": { "kind": "noChannel", "reason": "channelNotOpened" },
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(what_the_repair_leaves(true, true)).expect("la espera cruza"),
+            serde_json::json!({
+                "origin": null,
+                "stage": { "kind": "waiting" },
+            })
+        );
+    }
+
+    /// Y sin CA en ningún almacén la respuesta sigue siendo instalarla, haya
+    /// canal o no: ningún navegador llega a intentar abrirlo (ID-329).
+    #[test]
+    fn the_repair_asks_for_the_local_ca_again_when_it_reached_no_store() {
+        for serving in [false, true] {
+            assert_eq!(
+                serde_json::to_value(what_the_repair_leaves(false, serving))
+                    .expect("el callejon cruza"),
+                serde_json::json!({
+                    "origin": null,
+                    "stage": { "kind": "noChannel", "reason": "localCaMissing" },
+                })
+            );
         }
     }
 

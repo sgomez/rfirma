@@ -300,12 +300,19 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       const certificate = stage.certificates.find((one) => one.id === certificateId);
       if (certificate === undefined) return;
 
+      // El mismo contador que protege la lectura del documento, y por lo mismo:
+      // consentir espera al backend, y un momento suyo que llegue mientras
+      // tanto manda. Sin esto, el momento local que se publica al volver de la
+      // orden pisaría el que el backend acaba de publicar.
+      const arrival = arrivals;
+
       // `selectcert` no firma nada: la sede recibe la identidad y el trámite
       // termina ahí (ID-275). El tramo que se enseña es el de entregar, que es
       // el único que hay.
       if (errand.operation === "selectcert") {
         move({ kind: "signing", certificate, phase: "returning" });
         const identified = await commands.identify(certificateId);
+        if (arrival !== arrivals) return;
         finish(identified.ok ? { kind: "signed", document: null } : refusedBy(identified.failure));
         return;
       }
@@ -313,6 +320,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       signing = { certificate, document: stage.document };
       move({ kind: "signing", certificate, phase: "signing" });
       const begun = await commands.beginSigning(certificateId);
+      if (arrival !== arrivals) return;
       if (!begun.ok) {
         finish(refusedBy(begun.failure));
         return;
