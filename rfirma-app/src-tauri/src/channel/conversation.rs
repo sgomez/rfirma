@@ -11,12 +11,22 @@
 //! 2. El mensaje repite la credencial del canal, o `SAF_46` —y no se ejecuta—.
 //! 3. Sólo entonces se mira si es el eco o una operación.
 //!
+//! Hay **tres desenlaces** y no dos: contestar, contestar y cerrar, y aceptar
+//! la operación y **dejarla pendiente** (ID-320). El tercero es el de las
+//! operaciones de sede, que no tienen respuesta en el momento en que llegan:
+//! entre el mensaje y su respuesta hay una persona que tiene que consentir. Aun
+//! así esta función sigue siendo pura y síncrona —no recibe el escritorio del
+//! trámite ni nada que haga entrada y salida—: lo único que decide es que el
+//! mensaje es una operación legítima que va al trámite.
+//!
 //! Y antes de las tres, la que el original no tiene: **para qué se abrió el
 //! canal** ([`ChannelDuty`]). Un canal abierto para contestar un rechazo
 //! (ID-248) no expone ninguna capacidad: conteste quien conteste y diga lo que
 //! diga, recibe el `SAF_` y se cierra.
 
-use crate::protocol::{ChannelCredential, ChannelMessage, Parameter, SafCode, WireAnswer};
+use crate::protocol::{
+    AfirmaUrl, ChannelCredential, ChannelMessage, Parameter, SafCode, WireAnswer,
+};
 
 /// La respuesta exacta al eco (`ECHO_OK_RESPONSE`,
 /// `AfirmaWebSocketServerV4.java:35`).
@@ -43,13 +53,27 @@ pub enum Answer {
     Reply(String),
     /// Escribe esto y cierra el canal.
     ReplyAndClose(String),
+    /// **La operación se acepta y queda pendiente** (ID-320): no se escribe
+    /// nada y la conexión no se cierra. Quien contesta es el trámite, cuando la
+    /// persona haya consentido o dicho que no, y lo hace por el asa de
+    /// respuesta ([`crate::channel::ReplyHandle`], ID-321).
+    ///
+    /// Lleva dentro la operación ya partida: leerla es lo único que decide esta
+    /// función, y volver a leerla en el servidor sería partir la misma URL dos
+    /// veces.
+    Pending(AfirmaUrl),
 }
 
 impl Answer {
-    /// El texto que se escribe, sea cual sea el desenlace.
-    pub fn text(&self) -> &str {
+    /// El texto que se escribe, cuando se escribe alguno.
+    ///
+    /// La operación pendiente no escribe ninguno todavía (ID-320), y por eso
+    /// esto es un [`Option`] y no una cadena vacía: nada de lo que sale al
+    /// cable puede confundirse con «no ha salido nada».
+    pub fn text(&self) -> Option<&str> {
         match self {
-            Self::Reply(text) | Self::ReplyAndClose(text) => text,
+            Self::Reply(text) | Self::ReplyAndClose(text) => Some(text),
+            Self::Pending(_) => None,
         }
     }
 }
@@ -82,16 +106,18 @@ pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer 
 
     match message {
         ChannelMessage::Echo { .. } => Answer::Reply(ECHO_OK.to_owned()),
-        // Las operaciones —`selectcert`, `sign`, `cosign`— llegan con el
-        // trámite de sede; hoy no hay ninguna registrada, y una operación que
-        // no se atiende es `SAF_04` en el original.
-        //
+        // Las operaciones —`selectcert`, `sign`, `cosign`— van al trámite, y
+        // **no se contestan aquí**: entre el mensaje y su respuesta hay una
+        // persona que tiene que consentir (ID-320). Qué operación es, si se
+        // atiende y con qué código se rechaza cuando no, lo decide
+        // [`crate::app::errand::attend_operation`]; esta función sólo dice que
+        // el mensaje es legítimo.
+        ChannelMessage::Operation { url } => Answer::Pending(url),
         // `NotOfTheProtocol` no llega hasta aquí: no repite ninguna credencial,
         // así que la guardia de arriba ya lo ha sacado con `SAF_46` —igual que
-        // el original, que mira el `idsession` antes de mirar el mensaje—. Por
-        // eso comparte brazo en vez de tener uno propio con un código que nadie
-        // produciría.
-        ChannelMessage::Operation { .. } | ChannelMessage::NotOfTheProtocol => {
+        // el original, que mira el `idsession` antes de mirar el mensaje—. Se
+        // contesta con el `SAF_04` del original por si algún día llegara.
+        ChannelMessage::NotOfTheProtocol => {
             Answer::ReplyAndClose(WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire())
         }
     }
@@ -107,6 +133,11 @@ mod tests {
         ChannelDuty::Serve(
             ChannelCredential::parse(CREDENTIAL).expect("veinte alfanumericos son credencial"),
         )
+    }
+
+    /// Lo que se escribió, cuando la prueba da por hecho que se escribió algo.
+    fn written(answer: &Answer) -> &str {
+        answer.text().expect("esta respuesta escribe en el cable")
     }
 
     fn echo_with(credential: &str) -> String {
@@ -138,7 +169,7 @@ mod tests {
     fn an_echo_without_credential_gets_the_invalid_session_code_too() {
         let answer = answer(&serving(), true, "echo=@EOF");
 
-        assert!(answer.text().starts_with("SAF_46"));
+        assert!(written(&answer).starts_with("SAF_46"));
     }
 
     /// La guardia de origen es la primera de las tres, y se contesta **antes**
@@ -172,16 +203,47 @@ mod tests {
         }
     }
 
+    /// **TD-73.** Una operación legítima **queda pendiente**: no se escribe
+    /// nada, el canal no se cierra y quien contesta es el trámite.
     #[test]
-    fn an_operation_is_not_attended_yet_and_says_so_with_the_code_of_the_original() {
-        let message = format!("afirma://sign?op=sign&idsession={CREDENTIAL}");
+    fn a_legitimate_operation_is_left_pending_and_nothing_is_written() {
+        let message = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}");
 
         let answer = answer(&serving(), true, &message);
 
-        assert_eq!(
-            answer,
-            Answer::ReplyAndClose("SAF_04: Operacion no soportada".to_owned())
-        );
+        let Answer::Pending(url) = answer else {
+            panic!("la operacion va al tramite: {answer:?}");
+        };
+        assert_eq!(url.verb(), "selectcert");
+    }
+
+    /// **TD-73**, la otra mitad: ninguna de las tres guardias del original deja
+    /// pasar la operación, y las tres contestan en el acto.
+    #[test]
+    fn none_of_the_three_guards_lets_an_operation_through() {
+        let operation = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}");
+        let refusing = ChannelDuty::Refuse(WireAnswer::refused(SafCode::UnsupportedProcedure));
+
+        let guarded = [
+            // El origen: ni siquiera se mira qué pide.
+            answer(&serving(), false, &operation),
+            // La credencial del canal.
+            answer(
+                &serving(),
+                true,
+                "afirma://selectcert?op=selectcert&idsession=otraPaginaDelEquipo0",
+            ),
+            // Y el cometido: un canal abierto para rechazar no atiende nada.
+            answer(&refusing, true, &operation),
+        ];
+
+        for answer in guarded {
+            assert!(
+                matches!(answer, Answer::ReplyAndClose(_)),
+                "la guardia contesta en el acto y cierra: {answer:?}"
+            );
+            assert!(written(&answer).starts_with("SAF_"));
+        }
     }
 
     #[test]
@@ -189,9 +251,9 @@ mod tests {
         let answer = answer(&serving(), true, "GET / HTTP/1.1");
 
         assert!(
-            answer.text().starts_with("SAF_46"),
+            written(&answer).starts_with("SAF_46"),
             "sin credencial no se llega ni a mirar que es: {}",
-            answer.text()
+            written(&answer)
         );
     }
 
@@ -205,6 +267,7 @@ mod tests {
             echo_with("otra"),
             "GET / HTTP/1.1".to_owned(),
             "afirma://sign?op=sign".to_owned(),
+            format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}"),
             String::new(),
         ];
 
@@ -214,7 +277,16 @@ mod tests {
         ] {
             for from_loopback in [true, false] {
                 for message in &messages {
-                    let text = answer(&duty, from_loopback, message).text().to_owned();
+                    // La operación pendiente no escribe **nada**, que es la
+                    // única forma de salir de aquí sin ser `OK` ni `SAF_`
+                    // (ID-320): lo que conteste después pasa por
+                    // [`crate::app::errand::SiteReply::on_the_wire`].
+                    let Some(text) = answer(&duty, from_loopback, message)
+                        .text()
+                        .map(str::to_owned)
+                    else {
+                        continue;
+                    };
                     assert!(
                         text == ECHO_OK || text.starts_with("SAF_"),
                         "el canal ha escrito algo que la sede tomaria por una firma: {text}"

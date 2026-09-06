@@ -168,7 +168,7 @@ pub fn run() {
                         let handle = app.clone();
                         let attendance = app::startup::attend_site_launch(
                             &url,
-                            &|ports, duty| open_the_channel(&second_store, ports, duty),
+                            &|ports, duty| open_the_channel(&second_store, ports, duty, app),
                             &|_| open_the_site_window(&handle),
                             app.state::<app::errand::LiveErrand>().inner(),
                         );
@@ -211,6 +211,10 @@ pub fn run() {
         // suelta con él su asa de apagado, y el servidor deja de aceptar
         // conexiones.
         .manage(app::startup::HeldChannel::default())
+        // Lo que la sede pidio del listado, entre el momento del consentimiento
+        // y la respuesta: el filtro se vuelve a comprobar antes de entregar
+        // nada (ID-259) y la ventana no puede devolverlo.
+        .manage(commands::SiteConsent::default())
         // Los documentos abiertos, del identificador opaco al documento del
         // portal (ID-61). Vive mientras vive el proceso.
         .manage(memory::OpenedDocuments::new())
@@ -221,6 +225,18 @@ pub fn run() {
         // aquí son rutas del anfitrión, y se quedan aquí: lo que cruza es el
         // documento ya apuntado (ADR-0011).
         .on_window_event(|window, event| {
+            // **Cerrar la ventana de sede sin haber contestado es cancelar**
+            // (ID-340): la sede recibe `CANCEL` en el acto, sin esperar a nada.
+            // Despues de contestar ya no queda asa por la que escribir, asi que
+            // cerrarla entonces —que es lo que hace la orden 29— no manda nada.
+            if window.label() == commands::SITE_WINDOW
+                && matches!(event, tauri::WindowEvent::CloseRequested { .. })
+            {
+                window.state::<commands::SiteConsent>().forget();
+                app::errand::declined(&window.state::<app::errand::LiveErrand>());
+                return;
+            }
+
             let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
             else {
                 return;
@@ -264,6 +280,8 @@ pub fn run() {
             commands::install_certificate,
             commands::remove_certificate,
             commands::close_site_window,
+            commands::site_identify,
+            commands::site_decline,
         ])
         // **El arranque, que es un adaptador y no decide nada** (ID-324, TD-70):
         // el caso de uso refresca la CA local, mira si la invocación es de sede
@@ -278,7 +296,7 @@ pub fn run() {
                     profiles: &nss_profiles,
                     stores: &trust::NssTrustStores,
                 },
-                &|ports, duty| open_the_channel(&ca_store, ports, duty),
+                &|ports, duty| open_the_channel(&ca_store, ports, duty, &handle),
                 &|_| open_the_site_window(&handle),
                 app.state::<app::errand::LiveErrand>().inner(),
             );
@@ -328,6 +346,7 @@ fn open_the_channel(
     store: &tls::LocalCaStore,
     ports: &[u16],
     duty: channel::ChannelDuty,
+    app: &tauri::AppHandle,
 ) -> Result<channel::OpenChannel, channel::ChannelError> {
     let unusable =
         |detail: String| channel::ChannelError::new(channel::Situation::MaterialNotUsable, detail);
@@ -342,7 +361,15 @@ fn open_the_channel(
     let certificate =
         tls::LocalServerCertificate::issued_by(&ca).map_err(|error| unusable(error.to_string()))?;
 
-    channel::open(ports, &certificate, duty)
+    // **Quien atiende la operacion es el adaptador** (ID-330): arma el
+    // escritorio del tramite desde el estado de Tauri y le entrega el asa por
+    // la que se le contestara a la sede. El canal no sabe nada de tramites.
+    let handle = app.clone();
+    let operations: channel::SiteOperations = std::sync::Arc::new(move |url, reply| {
+        commands::attend_site_operation(&handle, url, reply);
+    });
+
+    channel::open(ports, &certificate, duty, operations)
 }
 
 /// **La ventana de sede** (ID-333, ID-334): de diálogo, 520 × 420, no

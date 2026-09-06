@@ -37,7 +37,21 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::channel::conversation::{answer, Answer, ChannelDuty};
 use crate::channel::error::{ChannelError, Situation};
+use crate::channel::reply::ReplyHandle;
+use crate::protocol::AfirmaUrl;
 use crate::tls::LocalServerCertificate;
+
+/// **Quién atiende la operación que llegó por el canal** (ID-330).
+///
+/// El servidor no sabe qué es un trámite: cuando la conversación dice que el
+/// mensaje es una operación legítima ([`Answer::Pending`]), se la entrega a
+/// esto junto con el asa por la que se contesta, y se queda esperando. Lo
+/// cumple el adaptador, que es quien puede armar el escritorio del trámite
+/// desde el estado de la aplicación.
+///
+/// Es `Arc` y no una referencia porque cada conexión se atiende en su propia
+/// tarea del runtime, que vive más que la llamada que abrió el canal.
+pub type SiteOperations = Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>;
 
 /// **Un canal abierto**: en qué puerto quedó y cómo se apaga.
 ///
@@ -103,6 +117,7 @@ pub async fn serve(
     listener: TcpListener,
     certificate: &LocalServerCertificate,
     duty: ChannelDuty,
+    operations: SiteOperations,
 ) -> Result<OpenChannel, ChannelError> {
     let port = listener
         .local_addr()
@@ -117,7 +132,9 @@ pub async fn serve(
         .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?;
 
     let (stop, stopped) = oneshot::channel();
-    tokio::spawn(accept_until_stopped(listener, acceptor, duty, stopped));
+    tokio::spawn(accept_until_stopped(
+        listener, acceptor, duty, operations, stopped,
+    ));
 
     Ok(OpenChannel::new(
         port,
@@ -139,9 +156,10 @@ pub fn open(
     ports: &[u16],
     certificate: &LocalServerCertificate,
     duty: ChannelDuty,
+    operations: SiteOperations,
 ) -> Result<OpenChannel, ChannelError> {
     let listener = crate::channel::bind::bind_first_free(ports)?;
-    tauri::async_runtime::block_on(serve(listener, certificate, duty))
+    tauri::async_runtime::block_on(serve(listener, certificate, duty, operations))
 }
 
 /// El certificado del servidor local, envuelto en lo que la pila de TLS acepta.
@@ -168,6 +186,7 @@ async fn accept_until_stopped(
     listener: tokio::net::TcpListener,
     acceptor: Arc<TlsAcceptor>,
     duty: ChannelDuty,
+    operations: SiteOperations,
     stopped: oneshot::Receiver<()>,
 ) {
     tokio::pin!(stopped);
@@ -185,11 +204,12 @@ async fn accept_until_stopped(
                 let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
+                let operations = Arc::clone(&operations);
                 tokio::spawn(async move {
                     // Una conexión que se cae —un saludo TLS que no cuadra, una
                     // sede que cierra— no se lleva el canal por delante: la
                     // siguiente invocación vuelve a llamar.
-                    let _ = attend(stream, peer, &acceptor, &duty).await;
+                    let _ = attend(stream, peer, &acceptor, &duty, &operations).await;
                 });
             }
         }
@@ -203,6 +223,7 @@ async fn attend(
     peer: SocketAddr,
     acceptor: &TlsAcceptor,
     duty: &ChannelDuty,
+    operations: &SiteOperations,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let from_loopback = peer.ip().is_loopback();
     let encrypted = acceptor.accept(stream).await?;
@@ -220,6 +241,21 @@ async fn attend(
             Answer::Reply(reply) => socket.send(Message::text(reply)).await?,
             Answer::ReplyAndClose(reply) => {
                 socket.send(Message::text(reply)).await?;
+                socket.close(None).await?;
+                break;
+            }
+            // **La operación queda pendiente** (ID-320): no se escribe nada y
+            // la conexión se queda abierta hasta que el trámite entregue la
+            // respuesta, que es lo que la sede espera mientras la persona
+            // decide. Que el asa se suelte sin contestar —un trámite que se fue
+            // sin responder— cierra el canal sin escribir: la sede se queda con
+            // su propio plazo y no con una línea inventada aquí (ID-322).
+            Answer::Pending(url) => {
+                let (sender, receiver) = oneshot::channel();
+                operations(url, ReplyHandle::of(sender));
+                if let Ok(reply) = receiver.await {
+                    socket.send(Message::text(reply)).await?;
+                }
                 socket.close(None).await?;
                 break;
             }

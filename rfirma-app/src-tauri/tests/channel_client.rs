@@ -29,7 +29,8 @@ use rfirma_lib::app::errand::LiveErrand;
 use rfirma_lib::app::site::Attendance;
 use rfirma_lib::app::startup::attend_site_launch;
 use rfirma_lib::channel::{
-    bind_first_free, serve, ChannelDuty, OpenChannel, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    bind_first_free, serve, ChannelDuty, OpenChannel, ReplyHandle, SiteOperations,
+    THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use rfirma_lib::protocol::{ChannelCredential, LaunchRequest, SafCode};
 use rfirma_lib::tls::{LocalCa, LocalServerCertificate};
@@ -53,13 +54,19 @@ struct AChannel {
 impl AChannel {
     /// Levanta el canal para ese cometido, sobre un puerto que da el sistema.
     async fn serving(duty: ChannelDuty) -> Self {
+        Self::serving_with(duty, no_operations()).await
+    }
+
+    /// Lo mismo, con el trámite doblado: quien atiende la operación que quede
+    /// pendiente (ID-320, ID-330).
+    async fn serving_with(duty: ChannelDuty, operations: SiteOperations) -> Self {
         let ca = LocalCa::generate().expect("la CA local deberia generarse");
         let certificate =
             LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
         let listener = std::net::TcpListener::bind("127.0.0.1:0")
             .expect("el sistema deberia dar un puerto efimero");
 
-        let channel = serve(listener, &certificate, duty)
+        let channel = serve(listener, &certificate, duty, operations)
             .await
             .expect("el canal deberia levantarse");
 
@@ -291,6 +298,7 @@ async fn the_channel_ends_up_on_one_of_the_ports_the_site_drew() {
         listener,
         &certificate,
         ChannelDuty::Serve(ChannelCredential::parse(CREDENTIAL).expect("credencial")),
+        no_operations(),
     )
     .await
     .expect("el canal deberia levantarse");
@@ -373,7 +381,12 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
         &|ports, duty| {
             let listener = bind_first_free(ports)?;
             tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(serve(listener, &certificate, duty))
+                tokio::runtime::Handle::current().block_on(serve(
+                    listener,
+                    &certificate,
+                    duty,
+                    no_operations(),
+                ))
             })
         },
         &|_| {
@@ -399,4 +412,63 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
     let mut client = ChannelClient::connect(channel.port(), Some(&ca_pem)).await;
 
     assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
+}
+
+/// Un trámite que no atiende nada: la operación que llegue se queda sin
+/// contestar, que es lo que hacen todas las pruebas que no la mandan.
+fn no_operations() -> SiteOperations {
+    std::sync::Arc::new(|_, _| {})
+}
+
+/// **La operación queda pendiente y la contesta el trámite** (ID-320, ID-321):
+/// el canal no escribe nada al recibirla, y lo que la sede acaba leyendo es lo
+/// que se escribió por el asa mucho después.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
+    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(None));
+    let keeping = std::sync::Arc::clone(&held);
+
+    let channel = AChannel::serving_with(
+        ChannelDuty::Serve(ChannelCredential::parse(CREDENTIAL).expect("credencial")),
+        std::sync::Arc::new(move |url, reply| {
+            assert_eq!(url.verb(), "selectcert");
+            // El asa se guarda, que es lo que hace el trámite mientras la
+            // persona decide: aquí no se contesta.
+            *keeping.lock().expect("el candado") = Some(reply);
+        }),
+    )
+    .await;
+    let mut client = channel.a_client().await;
+
+    // El eco primero, como hace el cliente publicado.
+    assert_eq!(client.echo(CREDENTIAL).await.as_deref(), Some("OK"));
+
+    let operation = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}");
+    client
+        .socket
+        .send(Message::text(operation))
+        .await
+        .expect("la operacion deberia salir");
+
+    // Nadie ha contestado todavía, y el canal sigue abierto.
+    let waited = tokio::time::timeout(Duration::from_millis(300), client.socket.next()).await;
+    assert!(
+        waited.is_err(),
+        "la operacion no se contesta hasta que lo haga el tramite: {waited:?}"
+    );
+
+    let reply = held
+        .lock()
+        .expect("el candado")
+        .take()
+        .expect("el tramite recibio el asa");
+    reply.answer("CANCEL".to_owned());
+
+    let answered = tokio::time::timeout(PATIENCE, client.socket.next())
+        .await
+        .expect("la respuesta del tramite deberia llegar")
+        .expect("hay mensaje")
+        .expect("y se lee");
+    assert_eq!(answered.into_text().expect("es texto").as_str(), "CANCEL");
 }
