@@ -22,7 +22,7 @@
 //!   sin cerradura. Aquí es `SAF_03` (ID-249).
 
 use super::codes::{Parameter, SafCode};
-use super::refusal::Refusal;
+use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
 
 /// El verbo de la invocación de arranque, y el único que abre canal.
@@ -156,7 +156,8 @@ fn check_protocol_version(declared: Option<&str>) -> Result<(), Refusal> {
     Err(Refusal::new(
         SafCode::UnsupportedProcedure,
         format!("la sede declara la version de protocolo {version} y aqui se habla la {PROTOCOL_VERSION}"),
-    ))
+    )
+    .because(RefusalSituation::UnsupportedProtocolVersion))
 }
 
 /// `ports`, los tres puertos sorteados.

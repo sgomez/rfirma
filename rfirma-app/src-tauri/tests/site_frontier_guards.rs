@@ -28,10 +28,11 @@ use rfirma_lib::app::site::{attend_launch, Attendance};
 use rfirma_lib::channel::Situation as ChannelSituation;
 use rfirma_lib::channel::{answer, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown};
 use rfirma_lib::commands::failure::Failure;
+use rfirma_lib::commands::{NoCertificateView, NoChannelView, SiteErrandView};
 use rfirma_lib::destination::{DestinationError, Situation as DestinationSituation};
 use rfirma_lib::ffi::BridgeError;
 use rfirma_lib::pkcs11::{Situation as TokenSituation, TokenError};
-use rfirma_lib::protocol::{SafCode, WireAnswer};
+use rfirma_lib::protocol::{Refusal, SafCode, WireAnswer};
 use rfirma_lib::rubric::{RubricError, Situation as RubricSituation};
 use rfirma_lib::signing::Refusal as Inadmissible;
 
@@ -109,6 +110,32 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
             "BridgeError",
             serde_json::to_value(Failure::from(BridgeError::Failed(inside_the_detail)))
                 .expect("serializa"),
+        ),
+        // **Los desenlaces del #394**, que son lo último que se queda dentro:
+        // el callejón sin salida y el rechazo que no tiene socket por el que
+        // salir. Del segundo, lo que se mira es el **detalle crudo**, que es
+        // justo lo que el ID-291 no deja cruzar y aquí nace de la URL
+        // contaminada.
+        (
+            "SiteErrandView (sin canal)",
+            serde_json::to_value(SiteErrandView::no_channel(NoChannelView::PortsTaken))
+                .expect("serializa"),
+        ),
+        (
+            "SiteErrandView (rechazo sin canal)",
+            serde_json::to_value(SiteErrandView::refused(&Refusal::about(
+                rfirma_lib::protocol::Parameter::Data,
+                format!("no se puede leer '{A_PORTAL_HANDLE}' ({A_DOCUMENT_NAME})"),
+            )))
+            .expect("serializa"),
+        ),
+        (
+            "SiteErrandView (sin certificado)",
+            serde_json::to_value(SiteErrandView::without_certificates(
+                NoCertificateView::None,
+                0,
+            ))
+            .expect("serializa"),
         ),
         (
             "los valores contaminados de la URL",
@@ -225,6 +252,43 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     );
 
     lines
+}
+
+/// **Los dos callejones sin salida no escriben ni una línea** (ID-341, TD-74).
+///
+/// Es la otra mitad de la guarda: lo que sale al cable se comprueba contra el
+/// catálogo, y de estos dos hay que comprobar que **no sale nada** —no hay
+/// socket por el que decirlo, así que una línea aquí sería una escrita en un
+/// canal que no existe—.
+#[test]
+fn the_dead_ends_write_nothing_on_the_wire() {
+    // Sin `ports` no hay socket que abrir, y con el transporte que no ata nada
+    // tampoco: los dos acaban en la ventana.
+    let duties = std::cell::RefCell::new(Vec::new());
+    let live = LiveErrand::default();
+
+    let without_ports = format!("afirma://websocket?v=4&idsession={CREDENTIAL}");
+    match attend_launch(&without_ports, &a_transport(&duties), &live) {
+        Attendance::RefusingInTheWindow(_) => {}
+        other => panic!("sin puertos el rechazo es de la ventana: {other:?}"),
+    }
+    assert!(
+        duties.borrow().is_empty(),
+        "sin puertos no se le pide nada al transporte, ni para contestar"
+    );
+
+    let with_every_port_taken =
+        format!("afirma://websocket?ports=54001&v=4&idsession={CREDENTIAL}");
+    let refuses_everything = |_: &[u16], _: ChannelDuty| {
+        Err(ChannelError::new(
+            ChannelSituation::NoDrawnPortIsFree,
+            "el puerto sorteado esta ocupado",
+        ))
+    };
+    match attend_launch(&with_every_port_taken, &refuses_everything, &live) {
+        Attendance::ChannelNotOpened(_) => {}
+        other => panic!("con el puerto ocupado no hay canal: {other:?}"),
+    }
 }
 
 /// Cada hoja de un valor ya serializado: las cadenas y los números, que son lo

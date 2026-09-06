@@ -105,6 +105,20 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             onCancel={cancel}
           />
         )}
+        {/* **El callejón sin salida es la misma pantalla, sin el reloj**
+            (ID-341): cuando el backend ya sabe que no hay canal —ni un puerto
+            libre, o la CA local en ninguna parte— esperar treinta segundos a
+            un umbral sería enseñar «Conectando» sabiendo que no conecta. La
+            reparación no cambia porque tampoco cambia lo que la persona puede
+            hacer, y ahí es donde vive la dirección del ajuste de Chrome, que
+            se copia y no se pulsa. */}
+        {stage.kind === "noChannel" && (
+          <SedeWaiting
+            moment="unreachable"
+            onInstallLocalCa={() => void errands.installLocalCa()}
+            onCancel={cancel}
+          />
+        )}
         {stage.kind === "consent" && (
           <SedeConsent
             origin={errand.origin}

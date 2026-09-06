@@ -59,7 +59,7 @@ use base64::Engine as _;
 use super::codes::{Parameter, SafCode};
 use super::filters::{site_filter, SiteFilter};
 use super::parameters::{check_local_access_is_not_requested, check_minimum_client_version};
-use super::refusal::Refusal;
+use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
 
 /// El verbo de la selección de certificado, tal y como viaja por el cable.
@@ -222,7 +222,8 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// nada de lo demás, porque una sede que pide XAdES no se merece un `SAF_03`
 /// sobre el algoritmo cuando lo que pasa es que ese formato no se atiende.
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
-    let format = required(url, "format", Parameter::Format)?;
+    let format = required(url, "format", Parameter::Format)
+        .map_err(|refusal| refusal.because(RefusalSituation::MissingFormat))?;
     if !format.trim().eq_ignore_ascii_case(PADES) {
         return Err(Refusal::new(
             SafCode::UnsupportedFormat,

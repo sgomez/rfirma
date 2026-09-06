@@ -58,7 +58,7 @@ pub use operation::{
     ACCEPTED_ALGORITHMS, COSIGN, COUNTERSIGN, PADES, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{check_local_access_is_not_requested, check_minimum_client_version};
-pub use refusal::Refusal;
+pub use refusal::{Refusal, RefusalSituation};
 pub use url::AfirmaUrl;
 pub use version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
 pub use visible::{visible_signature_of, SiteVisibleSignature};

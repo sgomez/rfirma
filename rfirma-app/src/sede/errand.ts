@@ -95,6 +95,13 @@ export type ErrandStage =
    */
   | { kind: "waiting" }
   /**
+   * **El canal no se ha abierto y ya no va a abrirse** (ID-341). No es el
+   * umbral del reloj: aquí rFirma ya lo sabe —no le queda ni un puerto que
+   * atar, o la CA local no ha entrado en ningún almacén— y por eso se enseña la
+   * pantalla de reparación sin esperar los treinta segundos.
+   */
+  | { kind: "noChannel"; reason: NoChannelReason }
+  /**
    * El corazón del trámite: una **confirmación escrita**, no el selector de
    * certificados (ID-269). Aparece siempre, también con un solo certificado:
    * `headless` y `mandatoryCertSelection` se ignoran los dos (ID-272).
@@ -135,6 +142,19 @@ export type ErrandStage =
  * nada—; cuando la respuesta ya va de camino no hay nada que cancelar.
  */
 export type SigningPhase = "signing" | "returning";
+
+/**
+ * Por qué no hay canal por el que hablar con la sede.
+ *
+ * Las dos llegan **medidas** desde el backend, y ninguna de las dos se
+ * diagnostica en la ventana: la pantalla de reparación es la misma para las
+ * dos, porque rFirma no puede saber si el permiso del navegador se denegó.
+ */
+export type NoChannelReason =
+  /** Todos los puertos que sorteó la sede estaban ocupados. */
+  | "portsTaken"
+  /** La CA local no ha entrado en ningún almacén NSS: sin ella no hay canal. */
+  | "localCaMissing";
 
 /** Por qué no hay ningún certificado con el que seguir. */
 export type NoCertificateReason =
