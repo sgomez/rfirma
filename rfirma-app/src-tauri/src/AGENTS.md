@@ -267,11 +267,13 @@ Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 
 ## Las pruebas que se leen a sí mismas
 
-Seis ficheros vigilan invariantes leyendo el código **como texto**, no
+Siete ficheros vigilan invariantes leyendo el código **como texto**, no
 ejecutándolo: `app/cycle.rs`, `app/signing/mod.rs`, `app/signing/site.rs`,
-`tests/site_frontier_guards.rs`, `commands/guards.rs` y
-`tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
-dentro. Las de `app/signing/site.rs` comprueban **ausencias** —que la postfirma
+`tests/site_frontier_guards.rs`, `commands/guards.rs`,
+`tests/module_directions.rs` y `tests/adr_citations_resolve.rs`. Abren el `.rs`
+con `include_str!` y buscan cadenas dentro; la última pide a git la lista de
+todos los `.rs` versionados y falla, con fichero y línea, por cada `ADR-NNNN`
+citado sin fichero en `docs/adr/`. Las de `app/signing/site.rs` comprueban **ausencias** —que la postfirma
 de un trámite de sede no entregue el documento, no anote fila y no recuerde el
 certificado (ID-286, ID-264)—, y una ausencia no la vigila ninguna prueba de
 comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
@@ -306,7 +308,9 @@ comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos c
 La regla es la restricción 6 del `AGENTS.md` raíz. Lo que solo vale aquí: la
 cabecera `//!` de un módulo no repite lo que la tabla «Dónde vive qué» ya dice
 de él; si las dos cuentan lo mismo, se borra de la cabecera y se conserva la
-tabla.
+tabla. Las citas `ID-NN`/`TD-NN` que ya hay se toleran hasta que la poda pase
+por su zona, y entonces pasan a citar un ADR o se borran; no se añaden nuevas.
+`tests/adr_citations_resolve.rs` vigila que cada `ADR-NNNN` citado exista.
 
 Dos ejemplos de este backend, tal como quedan tras la poda:
 

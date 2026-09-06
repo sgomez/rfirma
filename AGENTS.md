@@ -57,7 +57,7 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
    * Formas máximas: la cabecera `//!` de un módulo es **una frase** —qué es y qué no es—; el `///` de un elemento público es **una línea**; dentro de un cuerpo, un `//` solo si dice algo que el código no puede decir.
    * Cada cosa tiene su destino, y no es el comentario: el porqué de una decisión va a un ADR; una advertencia a agentes de alcance general va al mapa del backend (`rfirma-app/src-tauri/src/AGENTS.md`); lo que ya dice la tabla del mapa no se repite; un conteo, un número de PR o la interfaz del otro lado no van a ninguna parte.
    * **El enlace a un ADR es la excepción**: solo donde el código hace algo que parece un error y no lo es, una línea, citando el ADR por número (`ADR-0005`), nunca por ruta ni por epígrafe. El número es estable porque un ADR se reescribe en su sitio y nunca se supera.
-   * Los identificadores de especificación (`ID-NN`, `TD-NN`, `RD-NN`, `RT-NN`) se citan cortos y solo si existen en el catálogo de `docs/spec/`; una guarda de grada A los vigila, y también los `ADR-NNNN`.
+   * Una cita a un identificador de especificación (`ID-NN`, `TD-NN`, `RD-NN`, `RT-NN`) que ya exista se tolera como cita corta mientras la poda no pase por su zona; al podar, o pasa a citar el ADR que recoja la decisión, o se borra. **No se escriben citas nuevas** a identificadores de spec en código. Una guarda de grada A (`tests/adr_citations_resolve.rs`) vigila que cada `ADR-NNNN` citado tenga fichero en `docs/adr/`, y nada más.
    * Aplica al código nuevo **y al movido**: mover un fichero es la ocasión de podarlo, no de trasladar su prosa.
    * En revisión, un comentario nuevo de más de dos líneas pide justificación en el PR.
 
