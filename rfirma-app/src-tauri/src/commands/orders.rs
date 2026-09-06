@@ -134,7 +134,18 @@ pub struct SigningOrder {
     /// cerrar el documento la hace [`crate::signing::placement`], y con ella
     /// viene gratis la guardia del ID-22 —un recuadro que se saliera de la
     /// página iText **lo recorta en silencio** y la firma sale válida igual—.
-    pub placement: PlacementOrder,
+    ///
+    /// **Falta en el trámite de sede, y por eso es opcional** (ID-282): ahí no
+    /// hay visor sobre el que arrastrar nada, el recuadro lo coloca la sede en
+    /// sus propios `extraParams` y esos cruzan al puente crudos. Aplicarles el
+    /// `T⁻¹` de este camino los movería fuera de donde ella los puso; ver
+    /// [`crate::protocol::visible`].
+    ///
+    /// **Sin `#[serde(default)]` a propósito**: la ventana siempre lo manda, y
+    /// que faltara en el JSON no puede degradarse a firma invisible en
+    /// silencio —es la misma degradación que el ID-22 rechaza en el recuadro—.
+    /// Que falte es un error de deserialización, y así se ve.
+    pub placement: Option<PlacementOrder>,
     pub fields: VisibleFieldsOrder,
     /// El motivo. Vacío es «sin motivo».
     pub reason: String,

@@ -95,6 +95,43 @@ sobre esa librería, no sobre el formato PAdES.
    leyendo el `/Rect` del widget del PDF firmado, y rasterizando con `pdftoppm`
    si se quiere ver.
 
+## `page.view` es la CropBox, e iText transforma con la MediaBox
+
+Medido en el #354, sobre `pdfjs-dist` 6.3.289 y `afirma-lib-itext` 1.7:
+
+- El `page.view` que la ventana manda como `mediaBox` **no siempre es la
+  MediaBox**: en el trabajador de `pdf.js` (`pdf.worker.mjs`, `get view()`) es
+  la intersección de la CropBox con la MediaBox, y sólo cae en la MediaBox
+  cuando no hay CropBox o las dos coinciden. Es además **lo único que cruza al
+  hilo principal**: el manejador `GetPage` devuelve `rotate`, `ref`, `userUnit`
+  y `view`, y nada más. Desde la API pública de `pdf.js` **no hay forma de
+  conocer la MediaBox**.
+- iText, en cambio, mide con la MediaBox: `PdfReader.getPageSize(int)` lee
+  `/MediaBox` (`javap -c` sobre `PdfReader.class`, `PdfName.MEDIABOX`), y
+  `getPageSizeWithRotation` se construye sobre ella. La CropBox sólo aparece en
+  `getBoxSize(int, String)`, que el camino de la firma no llama.
+
+Consecuencia, y su alcance:
+
+- **Paso 1 (lienzo → espacio de usuario) está bien** precisamente porque usa
+  `page.view`: es la misma caja con la que `pdf.js` construyó el viewport, así
+  que la inversa devuelve coordenadas absolutas correctas.
+- **Paso 2 (`T⁻¹`) usa los límites superiores de esa misma caja**, y ahí
+  debería usar los de la MediaBox. Con `/Rotate` 0 el `T⁻¹` es la identidad y
+  **no hay error ninguno**; el desplazamiento sólo aparece en páginas rotadas de
+  documentos donde las dos cajas difieren, y vale exactamente la diferencia
+  entre ellas.
+- La guardia del ID-22 (`check_fits`) queda comprobando contra el área visible
+  en vez de contra el papel, que es **más estricta**, no menos.
+
+**Corregirlo exige la MediaBox, y hoy no está al alcance de la ventana.** No la
+da `pdf.js` y no la puede sacar Rust: `signing/admissibility.rs` es
+explícitamente «esto no es un lector de PDF». La vía sería una entrada nueva del
+puente que devuelva la geometría de cada página, lo que arrastra un cambio en
+Java y una reconstrucción de la imagen nativa. Queda escrito aquí y anotado en
+`signing/placement.rs`; **nada de esto toca al camino de la sede**, donde no hay
+conversión ninguna (ID-282).
+
 ## Qué se midió
 
 Dieciséis casos, todos con el mismo arrastre de pantalla `(60,80)–(260,160)`,

@@ -19,9 +19,9 @@ misma PR que lo crea**, o el PR sale en rojo.
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
-- El fichero más grande del backend es `app/errand.rs`, con 1473 líneas; detrás
-  van `ffi.rs` (1204), `app/documents.rs` (986), `app/signing.rs` (951) y
-  `signing/placement.rs` (926). El mayor de `commands/` es justo `commands/guards.rs`
+- El fichero más grande del backend es `app/errand.rs`, con 1638 líneas; detrás
+  van `ffi.rs` (1204), `app/signing.rs` (1033), `app/documents.rs` (986) y
+  `signing/placement.rs` (942). El mayor de `commands/` es justo `commands/guards.rs`
   (672), y detrás va `commands/mod.rs` (645); lo que los hace crecer es
   **prosa**: los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
   es un cuerpo, lo que ha entrado casi siempre es una decisión, y una decisión
@@ -42,20 +42,20 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `commands/views.rs` | 539 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 236 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
-| `commands/orders.rs` | 234 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
+| `commands/orders.rs` | 241 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
 | `commands/guards.rs` | 672 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Solo en pruebas. |
 | **`app/`** | | Los casos de uso. Es la interfaz por la que se prueba (ID-77, TD-20). |
 | `app/mod.rs` | 221 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 477 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
 | `app/certificates.rs` | 756 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
-| `app/signing.rs` | 951 | El recorrido de la firma en tres pasos y la sesión a medias, y su gemelo de sede: **la postfirma que no escribe nada** (ID-286, ID-264). |
+| `app/signing.rs` | 1033 | El recorrido de la firma en tres pasos y la sesión a medias, y su gemelo de sede: **la postfirma que no escribe nada** (ID-286, ID-264). |
 | `app/frontier.rs` | 301 | **La frontera de errores**: el único sitio donde una situación del ID-29 se convierte en el código `SAF_NN` que recibe la sede (ID-288, ID-292). |
 | `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
-| `app/errand.rs` | 1473 | **El trámite de sede**: la operación que llega por el canal, el momento del consentimiento —que no se salta nunca— y lo que la sede recibe, más el trámite vivo del que sólo hay uno y el fichero de paso que se borra con él (ID-272, ID-275, ID-276, ID-280, ID-286). |
+| `app/errand.rs` | 1638 | **El trámite de sede**: la operación que llega por el canal, el momento del consentimiento —que no se salta nunca— y lo que la sede recibe, más el trámite vivo del que sólo hay uno y el fichero de paso que se borra con él (ID-272, ID-275, ID-276, ID-280, ID-286). |
 | `app/filtering.rs` | 340 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 496 | La invocación desde fuera, `rfirma documento.pdf`: qué abre, qué hace la segunda y por dónde sale la URL `afirma://` que no es una ruta (ID-157…ID-160, ID-235, ID-236). |
-| `app/policies.rs` | 194 | **La política de firma que declara la sede**: `expPolicy` expandido por `ExtraParamsProcessor` del original, y quién manda cuando la sede y rFirma tocan la misma clave (ID-266). |
+| `app/policies.rs` | 229 | **La política de firma que declara la sede**: `expPolicy` expandido por `ExtraParamsProcessor` del original, y quién manda cuando la sede y rFirma tocan la misma clave (ID-266). |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
@@ -84,15 +84,15 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `memory/error.rs` | 89 | Situaciones de la memoria (ADR-0009). |
 | **`signing/`** | | Las reglas puras de la firma. |
 | `signing/mod.rs` | 32 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. **No importa `ffi`** (ID-82). |
-| `signing/config.rs` | 431 | Los seis ajustes de firma y ni uno más (ID-18). Aquí viven `Placement` y `PadesRect` (ID-90). |
-| `signing/placement.rs` | 926 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21), y `PageSet`: en qué páginas se estampa y si el documento las tiene (ID-91, ID-94). |
+| `signing/config.rs` | 470 | Los seis ajustes de firma y ni uno más (ID-18). Aquí viven `Placement` y `PadesRect` (ID-90). |
+| `signing/placement.rs` | 942 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21), y `PageSet`: en qué páginas se estampa y si el documento las tiene (ID-91, ID-94). |
 | `signing/admissibility.rs` | 316 | Lo que no se puede firmar, decidido antes del PIN. |
 | `signing/layer2_text.rs` | 533 | El texto del recuadro visible: un párrafo, y la máscara sobre el `CN`. |
 | `signing/properties.rs` | 179 | Los `extraParams` en el formato del puente. |
 | `signing/session_seal.rs` | 152 | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). |
 | `signing/language.rs` | 105 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). |
 | **`protocol/`** | | Lo que pide la sede, leído de una URL `afirma://` y nada más. Puro, sin sockets ni puente (ID-244, TD-53). |
-| `protocol/mod.rs` | 53 | El reparto, y las cuatro cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
+| `protocol/mod.rs` | 61 | El reparto, y las cinco cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `protocol/url.rs` | 277 | Una URL `afirma://` partida en verbo y pares, con las rarezas de `extractParams`. |
 | `protocol/launch.rs` | 366 | La invocación de arranque: puertos, versión de protocolo y credencial de canal (ID-245…ID-249). |
 | `protocol/version.rs` | 226 | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas (ID-251, TD-54). |
@@ -102,6 +102,7 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `protocol/message.rs` | 179 | Lo que llega por el canal ya abierto —el eco, una operación o nada del protocolo— y con qué credencial viene. Puro (ID-244, TD-53). |
 | `protocol/codes.rs` | 567 | **El catálogo publicado**: los cincuenta y tres `SAF_00`…`SAF_52` con frase nuestra, el parámetro que se nombra detrás, y las tres respuestas que no son códigos —`CANCEL`, `MEMORY_ERROR`, `NULL`— (ID-289, ID-290, ID-293). |
 | `protocol/refusal.rs` | 105 | El rechazo del protocolo: el código que sale al cable y el detalle crudo que **no** sale (ID-291). |
+| `protocol/visible.rs` | 365 | **El recuadro que pide la sede**: si lleva posición y página se honran **crudas** —el camino de la sede no comparte conversión con el local—, si no, se firma invisible o se cancela con `SAF_43`, y `signaturePages=append` se rechaza (ID-282…ID-284). |
 | **`channel/`** | | **El canal**: el servidor `wss://` sobre el *loopback* y qué se contesta a cada mensaje (ID-212…ID-219). No sabe por qué se abre: eso es de `app/site.rs`. |
 | `channel/mod.rs` | 28 | El reparto, y la tabla de las tres piezas. Léelo antes que sus hermanos. |
 | `channel/bind.rs` | 131 | Ata uno de los puertos que sorteó la sede, siempre en `127.0.0.1` y **nunca el 63117** (ID-215). |
