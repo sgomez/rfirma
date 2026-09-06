@@ -13,6 +13,7 @@ pub fn list_certificates(
     environment: State<'_, Environment>,
 ) -> Result<Vec<CertificateView>, Failure> {
     Ok(crate::identity::application::certificates::listed_rows(
+        environment.token.as_ref(),
         &environment.all_stores(),
         &environment.installed_certificates,
         &environment.listed,
@@ -41,6 +42,7 @@ pub fn install_certificate(
     };
 
     crate::identity::application::certificates::install_pkcs12(
+        environment.token.as_ref(),
         &environment.installed_certificates,
         chosen,
         &password,

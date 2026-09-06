@@ -41,6 +41,8 @@ pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
 /// Entorno de composición que agrupa almacenes, configuración y persistencia.
 pub struct Environment {
+    /// El token por el que se lista y se firma.
+    pub token: Box<dyn identity::ports::Token + Send + Sync>,
     /// Almacenes de certificados configurados.
     pub stores: Vec<crate::identity::adapters::pkcs11::Store>,
     /// Certificados del último listado.
@@ -208,9 +210,15 @@ pub fn run() {
     let second_store = ca_store.clone();
 
     let local_ca_trust = site::application::startup::LocalCaTrust {
-        store: ca_store.clone(),
+        store: Box::new(ca_store.clone()),
         profiles: nss_profiles.clone(),
+        stores: Box::new(site::adapters::nss::NssTrustStores::new(
+            identity::adapters::pkcs11::RealNssHost,
+        )),
     };
+    let codec: site::application::errand::NegotiatedCodec =
+        std::sync::Arc::new(site::adapters::codec::V4Codec);
+    let second_codec = codec.clone();
 
     let memory = Memory::at(&paths);
     let configuration = memory
@@ -218,6 +226,7 @@ pub fn run() {
         .map(signing::adapters::store::Loaded::into_value)
         .unwrap_or_default();
     let environment = Environment {
+        token: Box::new(identity::adapters::pkcs11::RealToken),
         stores: identity::adapters::pkcs11::stores::from_environment(),
         listed: identity::application::listed::ListedCertificates::new(),
         documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),
@@ -261,6 +270,7 @@ pub fn run() {
                         let transport = the_transport(&second_store, app);
                         let attendance = site::application::startup::attend_site_launch(
                             &url,
+                            &second_codec,
                             &|ports, duty| transport.open(ports, duty),
                             &|_| site::adapters::window::open_the_site_window(&handle),
                             app.state::<site::application::errand::LiveErrand>().inner(),
@@ -369,6 +379,7 @@ pub fn run() {
                     profiles: &nss_profiles,
                     stores: &nss_stores,
                 },
+                &codec,
                 &|ports, duty| transport.open(ports, duty),
                 &|_| site::adapters::window::open_the_site_window(&handle),
                 app.state::<site::application::errand::LiveErrand>().inner(),

@@ -147,7 +147,7 @@ fn the_rfirma_criteria_run_before_the_expression_of_the_site() {
         .expect("el caso de uso sigue aqui")
         .1;
     let ours = body
-        .find("pkcs11::list_certificates_across")
+        .find("token.list_across")
         .expect("los criterios de rFirma");
     let theirs = body
         .find("keep_what_the_site_accepts")

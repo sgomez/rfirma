@@ -1,7 +1,8 @@
 # Deuda de dirección (RD-03, #449): aristas que la guarda de tests/module_directions.rs
 # tolera mientras la ola 2 las vacía. Solo mengua: una línea que deje de ser
 # infracción pone la guarda en rojo, y una arista nueva fuera de la lista también.
-# Quién la vacía: #439 (puente y motores), #440 (Failure), #443 (raíces de composición).
+# Quién la vacía: #439 (puente y motores), #440 (Failure), #453 (puertos de token, aislado,
+# canal y CA local) y #443 (raíces de composición, que reparten los puertos entre contextos).
 desktop/adapters/tauri.rs -> documents::application::opened::OpenedDocuments
 desktop/application/handlers.rs -> desktop::adapters::channel
 desktop/application/handlers.rs -> desktop::adapters::choice::choose_handler_for_scheme
@@ -18,62 +19,56 @@ documents/application/recents.rs -> signing::application::configuration_memory::
 documents/application/recents.rs -> signing::application::state::BoxSize
 documents/application/recents.rs -> signing::application::state::State
 documents/application/rubric.rs -> documents::adapters::rubric::RubricStore
-identity/application/certificates.rs -> identity::adapters::pkcs11
 identity/application/certificates.rs -> signing::application::configuration_memory::Configuration
 signing/adapters/tauri.rs -> documents::application::opened::OpenedDocuments
-signing/application/cycle.rs -> identity::adapters::pkcs11
-signing/application/filtering.rs -> identity::adapters::pkcs11
+signing/application/cycle.rs -> identity::ports::Token
 signing/application/filtering.rs -> identity::application::listed::ListedCertificates
+signing/application/filtering.rs -> identity::ports::Token
 signing/application/preview.rs -> documents::application::documents
 signing/application/preview.rs -> documents::application::opened::OpenedDocuments
 signing/application/preview.rs -> identity::application::listed::ListedCertificates
-signing/application/preview.rs -> signing::adapters::isolate::Isolate
+signing/application/preview.rs -> identity::ports::Token
 signing/application/preview.rs -> signing::adapters::orders::SigningOrder
 signing/application/session.rs -> documents::application::documents
 signing/application/session.rs -> documents::application::in_hand::DocumentInHand
 signing/application/session.rs -> documents::application::opened::OpenedDocuments
 signing/application/session.rs -> documents::application::recents
-signing/application/session.rs -> identity::adapters::pkcs11
 signing/application/session.rs -> identity::application::certificates
 signing/application/session.rs -> identity::application::certificates::StampedHolder
 signing/application/session.rs -> identity::application::listed::ListedCertificates
-signing/application/session.rs -> signing::adapters::isolate::Isolate
+signing/application/session.rs -> identity::ports::Token
 signing/application/session.rs -> signing::adapters::orders::SigningOrder
 signing/application/state.rs -> documents::adapters::recents_store::Recents
 site/adapters/window.rs -> documents::application::opened::OpenedDocuments
 site/adapters/window.rs -> signing::application::session::SigningSession
 site/application/errand/desk.rs -> documents::application::opened::OpenedDocuments
-site/application/errand/desk.rs -> identity::adapters::pkcs11
 site/application/errand/desk.rs -> identity::application::listed::ListedCertificates
+site/application/errand/desk.rs -> identity::ports::Token
 site/application/errand/desk.rs -> signing::adapters::isolate::Isolate
 site/application/errand/desk.rs -> signing::application::filtering
 site/application/errand/desk.rs -> signing::application::policies
 site/application/errand/desk.rs -> signing::application::session::SigningSession
 site/application/errand/desk.rs -> signing::ports::FilterEngine
+site/application/errand/desk.rs -> signing::ports::IsolateHost
 site/application/errand/desk.rs -> signing::ports::PolicyEngine
 site/application/errand/mod.rs -> signing::adapters::orders::SigningOrder
 site/application/errand/mod.rs -> signing::adapters::orders::VisibleFieldsOrder
 site/application/errand/mod.rs -> signing::ports::FilterEngine
+site/application/errand/mod.rs -> signing::ports::IsolateHost
 site/application/errand/mod.rs -> signing::ports::PolicyEngine
-site/application/errand/replies.rs -> identity::adapters::pkcs11
 site/application/errand/replies.rs -> identity::application::listed::ListedCertificates
+site/application/errand/replies.rs -> identity::ports::Token
 site/application/errand/replies.rs -> signing::application::filtering
 site/application/errand/replies.rs -> signing::ports::FilterEngine
 site/application/session.rs -> documents::application::in_hand::DocumentInHand
 site/application/session.rs -> documents::application::opened::OpenedDocuments
-site/application/session.rs -> identity::adapters::pkcs11
 site/application/session.rs -> identity::application::listed::ListedCertificates
-site/application/session.rs -> signing::adapters::isolate::Isolate
+site/application/session.rs -> identity::ports::Token
 site/application/session.rs -> signing::adapters::orders::SigningOrder
 site/application/session.rs -> signing::application::filtering
 site/application/session.rs -> signing::application::session
 site/application/session.rs -> signing::ports::FilterEngine
-site/application/site.rs -> site::adapters::codec::V4Codec
+site/application/session.rs -> signing::ports::IsolateHost
 site/application/startup/mod.rs -> desktop::application::invocation::Invocation
-site/application/startup/mod.rs -> site::adapters::tls::LocalCaStore
-site/application/startup/repair.rs -> site::adapters::nss::NssTrustStores
-site/application/startup/repair.rs -> site::adapters::tls::LocalCaStore
-site/application/trust.rs -> site::adapters::tls::LocalCa
-site/application/trust.rs -> site::adapters::tls::LocalCaStore
 site/ports.rs -> site::application::errand::outcome::SiteOutcome
 site/ports.rs -> site::application::errand::request::SiteRequest

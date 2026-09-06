@@ -2,11 +2,11 @@
 
 use base64::Engine as _;
 
-use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::store::Store;
+use crate::identity::ports::Token;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::ports::FilterEngine;
 use crate::site::domain::protocol::SiteFilter;
@@ -39,10 +39,11 @@ impl From<BridgeError> for FilteringError {
 /// Caso de uso: obtiene los certificados de los almacenes aceptados por la sede.
 pub fn listing_the_site_accepts<E: FilterEngine>(
     engine: &E,
+    token: &dyn Token,
     stores: &[Store],
     filter: &SiteFilter,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
-    let ours = pkcs11::list_certificates_across(stores)?;
+    let ours = token.list_across(stores)?;
     keep_what_the_site_accepts(engine, filter, ours)
 }
 

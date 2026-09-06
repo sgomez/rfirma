@@ -24,9 +24,15 @@ use rfirma_lib::site::adapters::channel::{
 use rfirma_lib::site::adapters::codec::V4Codec;
 use rfirma_lib::site::adapters::frontier;
 use rfirma_lib::site::adapters::views::{NoCertificateView, NoChannelView, SiteErrandView};
-use rfirma_lib::site::application::errand::{LiveErrand, ProtocolCodec, SiteRefusal};
+use rfirma_lib::site::application::errand::{
+    LiveErrand, NegotiatedCodec, ProtocolCodec, SiteRefusal,
+};
 use rfirma_lib::site::application::site::{attend_launch, Attendance};
 use rfirma_lib::site::domain::protocol::{Refusal, SafCode, WireAnswer};
+
+fn a_codec() -> NegotiatedCodec {
+    std::sync::Arc::new(V4Codec)
+}
 
 /// Enlace del portal que no puede salir.
 const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
@@ -132,7 +138,7 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     );
 
     let live = LiveErrand::default();
-    match attend_launch(&url, &transport, &live) {
+    match attend_launch(&url, &a_codec(), &transport, &live) {
         Attendance::RefusingOverTheChannel { answer, .. } => lines.push(answer.on_the_wire()),
         other => panic!("con puertos el rechazo sale por el socket: {other:?}"),
     }
@@ -143,12 +149,12 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     );
     assert!(
         matches!(
-            attend_launch(&good, &transport, &live),
+            attend_launch(&good, &a_codec(), &transport, &live),
             Attendance::Serving { .. }
         ),
         "la primera invocacion abre el canal"
     );
-    match attend_launch(&good, &transport, &live) {
+    match attend_launch(&good, &a_codec(), &transport, &live) {
         Attendance::RefusingOverTheChannel { answer, .. } => lines.push(answer.on_the_wire()),
         other => panic!("con un tramite vivo la segunda se rechaza: {other:?}"),
     }
@@ -208,7 +214,7 @@ fn the_dead_ends_write_nothing_on_the_wire() {
     let live = LiveErrand::default();
 
     let without_ports = format!("afirma://websocket?v=4&idsession={CREDENTIAL}");
-    match attend_launch(&without_ports, &a_transport(&duties), &live) {
+    match attend_launch(&without_ports, &a_codec(), &a_transport(&duties), &live) {
         Attendance::RefusingInTheWindow(_) => {}
         other => panic!("sin puertos el rechazo es de la ventana: {other:?}"),
     }
@@ -225,7 +231,12 @@ fn the_dead_ends_write_nothing_on_the_wire() {
             "el puerto sorteado esta ocupado",
         ))
     };
-    match attend_launch(&with_every_port_taken, &refuses_everything, &live) {
+    match attend_launch(
+        &with_every_port_taken,
+        &a_codec(),
+        &refuses_everything,
+        &live,
+    ) {
         Attendance::ChannelNotOpened(_) => {}
         other => panic!("con el puerto ocupado no hay canal: {other:?}"),
     }

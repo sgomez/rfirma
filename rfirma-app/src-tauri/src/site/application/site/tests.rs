@@ -3,6 +3,11 @@ use std::cell::RefCell;
 use super::*;
 use crate::site::adapters::channel::{Shutdown, Situation};
 use crate::site::domain::protocol::{ChannelCredential, Parameter, SafCode};
+use std::sync::Arc;
+
+fn a_codec() -> NegotiatedCodec {
+    Arc::new(crate::site::adapters::codec::V4Codec)
+}
 
 /// Transporte simulado con un cierre para pruebas.
 #[derive(Default)]
@@ -61,6 +66,7 @@ fn a_good_launch_opens_the_channel_on_one_of_the_drawn_ports() {
         &a_launch(&format!(
             "ports=54001,54002,54003&v=4&idsession={CREDENTIAL}"
         )),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -87,6 +93,7 @@ fn a_refusal_is_answered_over_the_socket_when_the_site_drew_ports() {
 
     let attendance = attend_launch(
         &a_launch(&format!("ports=54001,54002&v=3&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -112,6 +119,7 @@ fn without_drawn_ports_the_refusal_is_only_shown_in_the_window() {
 
     let attendance = attend_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -129,6 +137,7 @@ fn a_malformed_credential_is_refused_over_the_socket() {
 
     let attendance = attend_launch(
         &a_launch("ports=54001&v=4&idsession=no-vale-esta"),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -148,6 +157,7 @@ fn something_that_is_not_a_protocol_url_never_reaches_the_transport() {
 
     let attendance = attend_launch(
         "https://sede.example/firmar",
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -162,6 +172,7 @@ fn a_good_launch_with_every_port_taken_has_no_channel_to_speak_through() {
 
     let attendance = attend_launch(
         &a_launch(&format!("ports=54001&v=4&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -178,6 +189,7 @@ fn a_refusal_that_cannot_be_answered_over_a_socket_falls_back_to_the_window() {
 
     let attendance = attend_launch(
         &a_launch(&format!("ports=54001&v=3&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );
@@ -194,6 +206,7 @@ fn the_ports_that_reach_the_transport_are_the_ones_the_url_carried() {
 
     let _ = attend_launch(
         &a_launch(&format!("ports=54001,54002&v=3&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| transport.open(ports, duty),
         &LiveErrand::default(),
     );

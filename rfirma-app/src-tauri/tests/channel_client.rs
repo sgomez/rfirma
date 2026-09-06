@@ -8,8 +8,9 @@ use rfirma_lib::site::adapters::channel::{
     bind_first_free, serve, ChannelDuty, OpenChannel, ReplyHandle, SiteOperations,
     THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
+use rfirma_lib::site::adapters::codec::V4Codec;
 use rfirma_lib::site::adapters::tls::{LocalCa, LocalServerCertificate};
-use rfirma_lib::site::application::errand::LiveErrand;
+use rfirma_lib::site::application::errand::{LiveErrand, NegotiatedCodec};
 use rfirma_lib::site::application::site::Attendance;
 use rfirma_lib::site::application::startup::{attend_site_launch, LocalCaReach};
 use rfirma_lib::site::domain::protocol::{ChannelCredential, LaunchRequest, SafCode};
@@ -321,6 +322,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
 
     let attendance = attend_site_launch(
         &url,
+        &(std::sync::Arc::new(V4Codec) as NegotiatedCodec),
         &|ports, duty| {
             let listener = bind_first_free(ports)?;
             tokio::task::block_in_place(|| {

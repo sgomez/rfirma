@@ -1,7 +1,5 @@
 //! Invocación de sede por esquema de URL y negociación de canal (ADR-0005, ADR-0017).
 
-use std::sync::Arc;
-
 use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
 use crate::site::domain::protocol::{
     drawn_ports, AfirmaUrl, ChannelCredential, LaunchRequest, Refusal, RefusalSituation, SafCode,
@@ -9,7 +7,6 @@ use crate::site::domain::protocol::{
 };
 
 use super::errand::{Errand, LiveErrand, NegotiatedCodec};
-use crate::site::adapters::codec::V4Codec;
 
 pub use super::errand::ChannelTransport;
 
@@ -24,10 +21,10 @@ pub struct Negotiated {
 }
 
 /// Negocia el protocolo y parámetros de canal a partir de la URL de invocación.
-pub fn negotiate(url: &AfirmaUrl) -> Result<Negotiated, Refusal> {
+pub fn negotiate(url: &AfirmaUrl, codec: &NegotiatedCodec) -> Result<Negotiated, Refusal> {
     let request = LaunchRequest::from_url(url)?;
     Ok(Negotiated {
-        codec: Arc::new(V4Codec),
+        codec: codec.clone(),
         ports: request.ports().to_vec(),
         credential: request.credential().clone(),
     })
@@ -57,13 +54,18 @@ pub enum Attendance {
 }
 
 /// Atiende la invocación de arranque recibida por el protocolo afirma://.
-pub fn attend_launch(url: &str, transport: ChannelTransport<'_>, live: &LiveErrand) -> Attendance {
+pub fn attend_launch(
+    url: &str,
+    codec: &NegotiatedCodec,
+    transport: ChannelTransport<'_>,
+    live: &LiveErrand,
+) -> Attendance {
     let url = match AfirmaUrl::parse(url) {
         Ok(url) => url,
         Err(refusal) => return Attendance::RefusingInTheWindow(refusal),
     };
 
-    match negotiate(&url) {
+    match negotiate(&url, codec) {
         Ok(negotiated) => {
             let duty = ChannelDuty::Serve(negotiated.credential.clone());
             match transport(&negotiated.ports, duty) {

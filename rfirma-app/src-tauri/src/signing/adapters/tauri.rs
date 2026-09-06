@@ -24,10 +24,11 @@ pub fn begin_signing(
 ) -> Result<SecretView, Failure> {
     Ok(crate::signing::application::session::begin(
         &order,
+        environment.token.as_ref(),
         &environment.all_stores(),
         &environment.listed,
         &opened,
-        &isolate,
+        &*isolate,
         &session,
     )?
     .into())
@@ -35,9 +36,15 @@ pub fn begin_signing(
 
 /// Firma en el token con la clave privada (ADR-0001).
 #[tauri::command]
-pub fn sign_with_pin(pin: String, session: State<'_, SigningSession>) -> Result<(), Failure> {
+pub fn sign_with_pin(
+    pin: String,
+    environment: State<'_, Environment>,
+    session: State<'_, SigningSession>,
+) -> Result<(), Failure> {
     Ok(crate::signing::application::session::sign_on_token(
-        &session, &pin,
+        environment.token.as_ref(),
+        &session,
+        &pin,
     )?)
 }
 
@@ -49,7 +56,7 @@ pub fn finish_signing(
     session: State<'_, SigningSession>,
 ) -> Result<SignedDocumentView, Failure> {
     Ok(crate::signing::application::session::finish(
-        &isolate,
+        &*isolate,
         &session,
         &environment.memory,
         &environment.configuration(),
@@ -75,10 +82,11 @@ pub fn preview_signature(
     Ok(tauri::ipc::Response::new(
         crate::signing::application::preview::compose(
             &order,
+            environment.token.as_ref(),
             &environment.all_stores(),
             &environment.listed,
             &opened,
-            &isolate,
+            &*isolate,
         )?,
     ))
 }

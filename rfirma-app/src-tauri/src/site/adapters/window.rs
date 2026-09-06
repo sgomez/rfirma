@@ -58,7 +58,7 @@ pub(super) fn publish_what_moved(app: &tauri::AppHandle, step: Option<ErrandStep
 /// Desempaqueta del estado de Tauri los componentes de la mesa del trámite.
 pub(super) fn with_the_desk<R>(
     app: &tauri::AppHandle,
-    call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate>, &LiveErrand) -> R,
+    call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate, Isolate>, &LiveErrand) -> R,
 ) -> R {
     let environment = app.state::<Environment>();
     let opened = app.state::<OpenedDocuments>();

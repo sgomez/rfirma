@@ -2,7 +2,7 @@ use super::{
     attribute, certificate_behind, holder_of, is_pseudonym, issuer_of, listed_rows,
     remember_the_certificate, remembered_certificate, usable_certificate,
 };
-use crate::fixtures::{a_certificate, a_certificate_with_id, a_memory, listed_from};
+use crate::fixtures::{a_certificate, a_certificate_with_id, a_memory, listed_from, NoToken};
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::error::Situation;
 use crate::signing::application::configuration_memory::Configuration;
@@ -105,6 +105,7 @@ fn with_nowhere_to_look_the_listing_says_so_instead_of_coming_back_empty() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
 
     let failure = listed_rows(
+        &NoToken,
         &[],
         &home.path().join("certificates"),
         &ListedCertificates::new(),

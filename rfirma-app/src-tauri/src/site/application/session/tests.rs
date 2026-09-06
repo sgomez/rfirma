@@ -1,8 +1,7 @@
 use super::{begin_for_the_site, SiteSigning};
 use crate::documents::application::opened::OpenedDocuments;
-use crate::fixtures::{a_certificate, an_order};
+use crate::fixtures::{a_certificate, an_order, NoIsolate, NoToken};
 use crate::identity::application::listed::ListedCertificates;
-use crate::signing::adapters::isolate::Isolate;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::session::{config_for, SigningSession};
 use crate::signing::ports::FilterEngine;
@@ -82,6 +81,7 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
     let failure = begin_for_the_site(
         &SiteSigning {
             engine: &engine,
+            token: &NoToken,
             filter: &SiteFilter::default(),
             from_the_site: &BTreeMap::new(),
         },
@@ -89,7 +89,7 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
         &[],
         &ListedCertificates::new(),
         &OpenedDocuments::new(),
-        &Isolate::start(),
+        &NoIsolate,
         &SigningSession::default(),
     )
     .expect_err("ese documento no esta abierto");

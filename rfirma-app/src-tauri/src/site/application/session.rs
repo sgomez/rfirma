@@ -4,17 +4,16 @@ use std::collections::BTreeMap;
 
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
-use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
-use crate::signing::adapters::isolate::Isolate;
+use crate::identity::ports::Token;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::filtering;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::Refusal as Inadmissible;
-use crate::signing::ports::FilterEngine;
+use crate::signing::ports::{FilterEngine, IsolateHost};
 use crate::site::domain::protocol::SiteFilter;
 
 use crate::signing::application::session::{
@@ -58,12 +57,12 @@ pub fn begin_for_the_site<E: FilterEngine>(
     stores: &[Store],
     listed: &ListedCertificates,
     opened: &OpenedDocuments,
-    isolate: &Isolate,
+    isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, SiteRefusal> {
     let document = DocumentInHand::taken(opened, &order.document).map_err(CycleFailure::from)?;
     let bytes = admitted_bytes(document.document())?;
-    let found = pkcs11::list_certificates_across(stores).map_err(CycleFailure::from)?;
+    let found = site.token.list_across(stores).map_err(CycleFailure::from)?;
     let chosen = filtering::usable_certificate_for_the_site(
         site.engine,
         site.filter,
@@ -76,6 +75,7 @@ pub fn begin_for_the_site<E: FilterEngine>(
     let reference = chosen.reference().clone();
     let chain = vec![chosen.der().to_vec()];
     Ok(open_the_cycle(
+        site.token,
         document,
         bytes,
         config,
@@ -91,6 +91,8 @@ pub fn begin_for_the_site<E: FilterEngine>(
 pub struct SiteSigning<'a, E: FilterEngine> {
     /// Motor de filtros sobre certificados.
     pub engine: &'a E,
+    /// El token que lista y firma.
+    pub token: &'a dyn Token,
     /// Filtro de certificados declarado por la sede.
     pub filter: &'a SiteFilter,
     /// Parámetros adicionales declarados por la sede.
@@ -107,7 +109,7 @@ pub struct SiteSignature {
 
 /// Postfirma de un trámite de sede que devuelve el resultado sin persistir en disco (ADR-0011).
 pub fn finish_for_the_site(
-    isolate: &Isolate,
+    isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<SiteSignature, SiteRefusal> {
     let SignedCycle {

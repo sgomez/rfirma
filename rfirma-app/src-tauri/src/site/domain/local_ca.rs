@@ -105,13 +105,13 @@ impl std::fmt::Debug for LocalCa {
     }
 }
 
-pub(super) fn generate_key() -> Result<PKey<Private>, TlsError> {
+pub fn generate_key() -> Result<PKey<Private>, TlsError> {
     let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).map_err(not_generated)?;
     let key = EcKey::generate(&group).map_err(not_generated)?;
     PKey::from_ec_key(key).map_err(not_generated)
 }
 
-pub(super) fn random_serial() -> Result<Asn1Integer, openssl::error::ErrorStack> {
+pub fn random_serial() -> Result<Asn1Integer, openssl::error::ErrorStack> {
     let mut serial = BigNum::new()?;
     serial.rand(159, MsbOption::MAYBE_ZERO, false)?;
     serial.to_asn1_integer()

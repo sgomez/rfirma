@@ -1,4 +1,5 @@
 use super::*;
+use crate::fixtures::InMemoryCaSlots;
 
 use crate::site::adapters::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown, Situation};
 use crate::site::domain::trust_error::TrustError;
@@ -84,12 +85,12 @@ impl TrustStores for World {
     }
 }
 
-fn a_store() -> (tempfile::TempDir, LocalCaStore) {
-    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let store = LocalCaStore::of(&crate::desktop::adapters::paths::Paths::under(
-        directory.path(),
-    ));
-    (directory, store)
+fn a_store() -> InMemoryCaSlots {
+    InMemoryCaSlots::default()
+}
+
+fn a_codec() -> NegotiatedCodec {
+    std::sync::Arc::new(crate::site::adapters::codec::V4Codec)
 }
 
 fn invoked_with(arguments: &[&str]) -> Invocation {
@@ -105,7 +106,7 @@ fn a_launch(parameters: &str) -> String {
     format!("afirma://websocket?ports=51001,51002,51003&{parameters}")
 }
 
-fn starting_with(world: &World, store: &LocalCaStore, invocation: &Invocation) -> Startup {
+fn starting_with(world: &World, store: &InMemoryCaSlots, invocation: &Invocation) -> Startup {
     let profiles = [PathBuf::from("/perfiles/firefox")];
     let live = LiveErrand::default();
     attend_startup(
@@ -115,6 +116,7 @@ fn starting_with(world: &World, store: &LocalCaStore, invocation: &Invocation) -
             profiles: &profiles,
             stores: world,
         },
+        &a_codec(),
         &|ports, duty| world.transport(ports, duty),
         &|content| world.window(content),
         &live,
@@ -124,7 +126,7 @@ fn starting_with(world: &World, store: &LocalCaStore, invocation: &Invocation) -
 #[test]
 fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
     let world = World::default();
-    let (_directory, store) = a_store();
+    let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -151,7 +153,7 @@ fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
 #[test]
 fn a_pdf_shows_the_main_window_and_never_reaches_the_transport() {
     let world = World::default();
-    let (_directory, store) = a_store();
+    let store = a_store();
     let invocation = invoked_with(&["/tmp/contrato.pdf"]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -171,7 +173,7 @@ fn a_pdf_shows_the_main_window_and_never_reaches_the_transport() {
 #[test]
 fn starting_with_nothing_shows_the_main_window() {
     let world = World::default();
-    let (_directory, store) = a_store();
+    let store = a_store();
 
     let startup = starting_with(&world, &store, &invoked_with(&[]));
 
@@ -182,7 +184,7 @@ fn starting_with_nothing_shows_the_main_window() {
 #[test]
 fn a_refused_launch_opens_no_site_window() {
     let world = World::default();
-    let (_directory, store) = a_store();
+    let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=3&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -205,9 +207,7 @@ fn a_refused_launch_opens_no_site_window() {
 #[test]
 fn unwritable_local_ca_material_is_said_but_does_not_stop_the_errand() {
     let world = World::default();
-    let store = LocalCaStore::of(&crate::desktop::adapters::paths::Paths::under(Path::new(
-        "/proc/rfirma-no-se-puede-escribir",
-    )));
+    let store = InMemoryCaSlots::unwritable();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -246,6 +246,7 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
 
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| world.transport(ports, duty),
         &|content| world.window(content),
         &live,
@@ -270,6 +271,7 @@ fn a_second_invocation_never_touches_the_trust_stores() {
 
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec(),
         &|ports, duty| world.transport(ports, duty),
         &|content| world.window(content),
         &live,
@@ -290,7 +292,7 @@ fn every_port_taken_shows_the_dead_end_in_the_site_window() {
         every_port_taken: true,
         ..World::default()
     };
-    let (_directory, store) = a_store();
+    let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -313,7 +315,7 @@ fn every_port_taken_shows_the_dead_end_in_the_site_window() {
 #[test]
 fn a_launch_without_ports_shows_its_refusal_in_the_window() {
     let world = World::default();
-    let (_directory, store) = a_store();
+    let store = a_store();
     let invocation = invoked_with(&[&format!("afirma://websocket?v=4&idsession={CREDENTIAL}")]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -336,7 +338,7 @@ fn a_launch_without_ports_shows_its_refusal_in_the_window() {
 #[test]
 fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
     let world = World::default();
-    let (_directory, store) = a_store();
+    let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
     let live = LiveErrand::default();
@@ -347,6 +349,7 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
             profiles: &[],
             stores: &world,
         },
+        &a_codec(),
         &|ports, duty| world.transport(ports, duty),
         &|content| world.window(content),
         &live,

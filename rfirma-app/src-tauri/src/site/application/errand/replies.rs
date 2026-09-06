@@ -1,8 +1,9 @@
 //! Respuestas finales del trámite para la sede y la ventana (ADR-0009).
 
-use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::Store;
+use crate::identity::ports::Token;
 use crate::site::domain::protocol::SiteFilter;
 
 use super::outcome::{ErrandStep, NoCertificate, SiteOutcome};
@@ -15,13 +16,14 @@ use crate::site::application::session::SiteSignature;
 /// Caso de uso: la persona consiente identificarse y entrega el certificado.
 pub fn identify_with<E: FilterEngine>(
     engine: &E,
+    token: &dyn Token,
     stores: &[Store],
     filter: &SiteFilter,
     handle: &str,
     listed: &ListedCertificates,
     live: &LiveErrand,
 ) -> SiteOutcome {
-    let found = match pkcs11::list_certificates_across(stores) {
+    let found = match token.list_across(stores) {
         Ok(found) => found,
         Err(error) => return over(live, SiteOutcome::Refused(SiteRefusal::Token(error))),
     };
@@ -33,7 +35,7 @@ pub fn identify_with<E: FilterEngine>(
 pub fn identity_handed_over<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
-    found: &[crate::identity::adapters::pkcs11::TokenCertificate],
+    found: &[TokenCertificate],
     handle: &str,
     listed: &ListedCertificates,
     live: &LiveErrand,

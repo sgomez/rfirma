@@ -13,6 +13,7 @@ use crate::signing::application::configuration_memory::Configuration;
 fn the_environment_hands_out_a_copy_of_the_live_configuration() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let environment = Environment {
+        token: Box::new(crate::fixtures::NoToken),
         stores: Vec::new(),
         listed: ListedCertificates::new(),
         documents_folder: home.path().to_path_buf(),

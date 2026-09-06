@@ -10,7 +10,6 @@ use crate::documents::application::{documents, recents};
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::told::SignedDocument;
-use crate::identity::adapters::pkcs11;
 use crate::identity::application::certificates;
 use crate::identity::application::certificates::StampedHolder;
 use crate::identity::application::listed::ListedCertificates;
@@ -18,8 +17,8 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
 use crate::identity::domain::store::Store;
+use crate::identity::ports::Token;
 use crate::lock;
-use crate::signing::adapters::isolate::Isolate;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::cycle::{
@@ -31,6 +30,7 @@ use crate::signing::domain::{
     compose_layer2_text, AdmissibleDocument, PlacementError, SessionSeal, SignatureConfig,
     VisibleTextFields,
 };
+use crate::signing::ports::IsolateHost;
 use crate::Memory;
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
@@ -52,16 +52,18 @@ struct InFlight {
 /// Prefirma local: valida admisibilidad, prepara la configuración y abre el ciclo.
 pub fn begin(
     order: &SigningOrder,
+    token: &dyn Token,
     stores: &[Store],
     listed: &ListedCertificates,
     opened: &OpenedDocuments,
-    isolate: &Isolate,
+    isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
     let document = DocumentInHand::taken(opened, &order.document)?;
     let bytes = admitted_bytes(document.document())?;
-    let (config, reference, chain) = plan_signature(stores, listed, order)?;
+    let (config, reference, chain) = plan_signature(token, stores, listed, order)?;
     open_the_cycle(
+        token,
         document,
         bytes,
         config,
@@ -141,16 +143,17 @@ impl From<IsolateGone> for CycleFailure {
     reason = "es el cuerpo compartido de dos casos de uso, no una interfaz"
 )]
 pub(crate) fn open_the_cycle(
+    token: &dyn Token,
     document: DocumentInHand,
     bytes: Vec<u8>,
     config: crate::signing::domain::SignatureConfig,
     reference: CertificateRef,
     chain: Vec<Vec<u8>>,
     from_the_site: &BTreeMap<String, String>,
-    isolate: &Isolate,
+    isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let secret = pkcs11::store_secret(&reference)?.admitted()?;
+    let secret = token.secret_of(&reference)?.admitted()?;
     let certificate = reference.clone();
     let signer_der = chain.first().cloned().unwrap_or_default();
     let from_the_site = from_the_site.clone();
@@ -182,16 +185,20 @@ pub(crate) fn open_the_cycle(
 }
 
 /// Fase de firma en el token PKCS#11 con el PIN proporcionado (ADR-0001).
-pub fn sign_on_token(session: &SigningSession, pin: &str) -> Result<(), CycleFailure> {
+pub fn sign_on_token(
+    token: &dyn Token,
+    session: &SigningSession,
+    pin: &str,
+) -> Result<(), CycleFailure> {
     let mut open = lock(&session.open);
     let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
-    in_flight.signature = Some(in_flight.cycle.sign_on_token(pin)?);
+    in_flight.signature = Some(in_flight.cycle.sign_on_token(token, pin)?);
     Ok(())
 }
 
 /// Postfirma: verifica el sello, compone el PDF y lo entrega en destino (ADR-0011, ADR-0016).
 pub fn finish(
-    isolate: &Isolate,
+    isolate: &impl IsolateHost,
     session: &SigningSession,
     memory: &Memory,
     configuration: &Configuration,
@@ -295,11 +302,12 @@ pub fn config_for(
 }
 
 pub(crate) fn plan_signature(
+    token: &dyn Token,
     stores: &[Store],
     listed: &ListedCertificates,
     order: &SigningOrder,
 ) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), CycleFailure> {
-    let found = pkcs11::list_certificates_across(stores)?;
+    let found = token.list_across(stores)?;
     let chosen = certificates::usable_certificate(&found, &order.certificate, listed)?;
     Ok((
         config_for(order, chosen)?,
@@ -352,8 +360,8 @@ pub struct SignedCycle {
 }
 
 pub(crate) fn on_the_bridge<T: Send + 'static>(
-    isolate: &Isolate,
-    task: impl FnOnce(&crate::signing::adapters::ffi::NativeBridge) -> Result<T, cycle::CycleError>
+    isolate: &impl IsolateHost,
+    task: impl FnOnce(&dyn crate::signing::ports::Bridge) -> Result<T, cycle::CycleError>
         + Send
         + 'static,
 ) -> Result<T, CycleFailure> {

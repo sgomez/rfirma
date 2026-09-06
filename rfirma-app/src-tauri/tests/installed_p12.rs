@@ -96,6 +96,7 @@ fn install(
     password: &str,
 ) -> Result<(), rfirma_lib::commands::Failure> {
     Ok(certificates::install_pkcs12(
+        &pkcs11::RealToken,
         installed,
         FilePath::from(p12),
         password,
