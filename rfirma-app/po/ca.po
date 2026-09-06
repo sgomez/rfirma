@@ -919,3 +919,189 @@ msgstr ""
 
 msgid "trust.notice.acknowledge"
 msgstr ""
+
+#. La ventana de sede (docs/design/ventana-de-sede.md). Nombre de la aplicación
+#. en la barra de título: no se traduce, se reutiliza `app.name`.
+msgid "sede.window.close"
+msgstr ""
+
+msgid "sede.waiting.title"
+msgstr ""
+
+msgid "sede.waiting.lead"
+msgstr ""
+
+msgid "sede.unreachable.title"
+msgstr ""
+
+msgid "sede.unreachable.lead"
+msgstr ""
+
+msgid "sede.repair.caMissing"
+msgstr ""
+
+msgid "sede.repair.installCa"
+msgstr ""
+
+#. Nombre propio del navegador: no se traduce.
+msgid "sede.repair.chrome"
+msgstr ""
+
+#. Nombre propio del navegador: no se traduce.
+msgid "sede.repair.firefox"
+msgstr ""
+
+msgid "sede.repair.chromeAllow"
+msgstr ""
+
+msgid "sede.repair.chromeGone"
+msgstr ""
+
+msgid "sede.repair.chromePadlock"
+msgstr ""
+
+msgid "sede.repair.firefoxAllow"
+msgstr ""
+
+msgid "sede.repair.firefoxGone"
+msgstr ""
+
+#. `Reintentar` es un botón de la sede, no de esta ventana.
+msgid "sede.repair.retry"
+msgstr ""
+
+#. El sujeto de las frases cuando la petición no trae un origen válido.
+msgid "sede.origin.unknown"
+msgstr ""
+
+msgid "sede.consent.asksSignature"
+msgstr ""
+
+msgid "sede.consent.asksIdentity"
+msgstr ""
+
+msgid "sede.consent.unknownOriginTitle"
+msgstr ""
+
+msgid "sede.consent.unknownOriginSignature"
+msgstr ""
+
+msgid "sede.consent.unknownOriginIdentity"
+msgstr ""
+
+#. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
+#. nunca en la petición.
+msgid "sede.consent.untitled"
+msgstr ""
+
+msgid "sede.consent.signWith"
+msgstr ""
+
+msgid "sede.consent.identifyWith"
+msgstr ""
+
+#. Nunca se enumera lo que la sede descartó ni con qué criterio.
+msgid "sede.consent.narrowed"
+msgstr ""
+
+msgid "sede.consent.narrowedUnknownOrigin"
+msgstr ""
+
+msgid "sede.consent.willSend"
+msgstr ""
+
+msgid "sede.consent.sign"
+msgstr ""
+
+msgid "sede.consent.identify"
+msgstr ""
+
+msgid "sede.signing.title"
+msgstr ""
+
+msgid "sede.signing.with"
+msgstr ""
+
+msgid "sede.returning.title"
+msgstr ""
+
+msgid "sede.returning.titleUnknownOrigin"
+msgstr ""
+
+msgid "sede.returning.body"
+msgstr ""
+
+msgid "sede.outcome.signedTitle"
+msgstr ""
+
+msgid "sede.outcome.signedBody"
+msgstr ""
+
+msgid "sede.outcome.signedBodyUnknownOrigin"
+msgstr ""
+
+#. No se deduce mirando: la aplicación sí tiene bandeja de recientes.
+msgid "sede.outcome.signedNote"
+msgstr ""
+
+msgid "sede.outcome.cancelledTitle"
+msgstr ""
+
+msgid "sede.outcome.refusedTitle"
+msgstr ""
+
+msgid "sede.outcome.refusedNote"
+msgstr ""
+
+msgid "sede.outcome.detail"
+msgstr ""
+
+msgid "sede.outcome.autoClose"
+msgstr ""
+
+msgid "sede.refusals.appendedSignaturePage"
+msgstr ""
+
+msgid "sede.refusals.unsupportedFilter"
+msgstr ""
+
+msgid "sede.refusals.unsupportedProtocolVersion"
+msgstr ""
+
+msgid "sede.refusals.missingFormat"
+msgstr ""
+
+msgid "sede.refusals.errandInFlight"
+msgstr ""
+
+msgid "sede.refusals.unknown"
+msgstr ""
+
+msgid "sede.noCertificate.noneTitle"
+msgstr ""
+
+msgid "sede.noCertificate.noneBody"
+msgstr ""
+
+msgid "sede.noCertificate.noneBodyUnknownOrigin"
+msgstr ""
+
+msgid "sede.noCertificate.noneHint"
+msgstr ""
+
+msgid "sede.noCertificate.install"
+msgstr ""
+
+msgid "sede.noCertificate.lookAgain"
+msgstr ""
+
+#. La sede excluyó todos los certificados de la persona. Se dice cuántos tiene
+#. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.
+msgid "sede.noCertificate.excludedTitle"
+msgid_plural "sede.noCertificate.excludedTitle"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "sede.noCertificate.excludedBody"
+msgstr ""

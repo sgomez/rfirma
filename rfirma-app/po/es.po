@@ -67,13 +67,17 @@ msgid "errors.situations.handlerNotAvailable.title"
 msgstr "No se puede cambiar quién atiende los enlaces"
 
 msgid "errors.situations.handlerNotAvailable.body"
-msgstr "Esta versión de rFirma no puede escribir esa elección: se cambia en los ajustes del escritorio."
+msgstr ""
+"Esta versión de rFirma no puede escribir esa elección: se cambia en los "
+"ajustes del escritorio."
 
 msgid "errors.situations.handlerListUnreadable.title"
 msgstr "No se ha podido leer la elección del escritorio"
 
 msgid "errors.situations.handlerListUnreadable.body"
-msgstr "El fichero donde el escritorio la guarda no se ha podido leer, así que se ha dejado como estaba."
+msgstr ""
+"El fichero donde el escritorio la guarda no se ha podido leer, así que se ha "
+"dejado como estaba."
 
 msgid "errors.situations.handlerListUnwritable.title"
 msgstr "No se ha podido guardar quién atiende los enlaces"
@@ -827,9 +831,9 @@ msgstr "Este PDF trae firmas que no entendemos"
 #. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
 msgid "unregisteredSignatures.body"
 msgstr ""
-"Alguna de las firmas que ya tiene no está en un formato que rFirma sepa leer, "
-"así que no podemos decirte nada de ella. Puedes firmar igual: tu firma será "
-"válida, y las que ya estaban se quedan como están."
+"Alguna de las firmas que ya tiene no está en un formato que rFirma sepa "
+"leer, así que no podemos decirte nada de ella. Puedes firmar igual: tu firma "
+"será válida, y las que ya estaban se quedan como están."
 
 msgid "unregisteredSignatures.confirm"
 msgstr "Firmar de todos modos"
@@ -867,7 +871,8 @@ msgstr "Firefox usa la elección que guarda en sus propias preferencias."
 
 #. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
 msgid "preferences.urlHandler.inTheSandbox"
-msgstr "Esta versión no puede cambiarlo: se elige en los ajustes del escritorio."
+msgstr ""
+"Esta versión no puede cambiarlo: se elige en los ajustes del escritorio."
 
 msgid "preferences.askAboutUrlHandler.label"
 msgstr "Preguntarme al arrancar"
@@ -1002,10 +1007,10 @@ msgstr ""
 
 msgid "trust.notice.localNetwork"
 msgstr ""
-"La primera vez, el navegador te pedirá permiso para acceder a la red "
-"local. Lo pide en nombre de la sede, no de rFirma, así que puede que no lo "
-"reconozcas. Permítelo cuando aparezca: con un solo permiso basta, aunque "
-"la sede pruebe hasta tres conexiones."
+"La primera vez, el navegador te pedirá permiso para acceder a la red local. "
+"Lo pide en nombre de la sede, no de rFirma, así que puede que no lo "
+"reconozcas. Permítelo cuando aparezca: con un solo permiso basta, aunque la "
+"sede pruebe hasta tres conexiones."
 
 msgid "trust.notice.cannotTellIfDenied"
 msgstr ""
@@ -1014,3 +1019,189 @@ msgstr ""
 
 msgid "trust.notice.acknowledge"
 msgstr "Entendido"
+
+#. La ventana de sede (docs/design/ventana-de-sede.md). Nombre de la aplicación
+#. en la barra de título: no se traduce, se reutiliza `app.name`.
+msgid "sede.window.close"
+msgstr "Cerrar la ventana"
+
+msgid "sede.waiting.title"
+msgstr "Conectando con la sede"
+
+msgid "sede.waiting.lead"
+msgstr "Una página quiere que firmes un documento."
+
+msgid "sede.unreachable.title"
+msgstr "La petición no ha llegado"
+
+msgid "sede.unreachable.lead"
+msgstr "Suele faltar el permiso del navegador."
+
+msgid "sede.repair.caMissing"
+msgstr "Falta la CA local de rFirma."
+
+msgid "sede.repair.installCa"
+msgstr "Instalar…"
+
+#. Nombre propio del navegador: no se traduce.
+msgid "sede.repair.chrome"
+msgstr "Chrome"
+
+#. Nombre propio del navegador: no se traduce.
+msgid "sede.repair.firefox"
+msgstr "Firefox"
+
+msgid "sede.repair.chromeAllow"
+msgstr "Pulsa Permitir en la franja bajo la barra de direcciones."
+
+msgid "sede.repair.chromeGone"
+msgstr "Si ya no está:"
+
+msgid "sede.repair.chromePadlock"
+msgstr "O: candado › Configuración de sitios › Acceso a la red local."
+
+msgid "sede.repair.firefoxAllow"
+msgstr "Pulsa Permitir en el panel junto a la barra de direcciones."
+
+msgid "sede.repair.firefoxGone"
+msgstr "Si ya no está: candado › Conexión segura › Más información › Permisos › Acceso a la red local."
+
+#. `Reintentar` es un botón de la sede, no de esta ventana.
+msgid "sede.repair.retry"
+msgstr "Tras permitir, vuelve a la sede y pulsa Reintentar."
+
+#. El sujeto de las frases cuando la petición no trae un origen válido.
+msgid "sede.origin.unknown"
+msgstr "La petición"
+
+msgid "sede.consent.asksSignature"
+msgstr "{{origin}} pide tu firma."
+
+msgid "sede.consent.asksIdentity"
+msgstr "{{origin}} pide que te identifiques."
+
+msgid "sede.consent.unknownOriginTitle"
+msgstr "Origen sin identificar"
+
+msgid "sede.consent.unknownOriginSignature"
+msgstr "La petición pide una firma y no indica de qué página viene."
+
+msgid "sede.consent.unknownOriginIdentity"
+msgstr "La petición pide que te identifiques y no indica de qué página viene."
+
+#. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
+#. nunca en la petición.
+msgid "sede.consent.untitled"
+msgstr "Un PDF sin título"
+
+msgid "sede.consent.signWith"
+msgstr "Firmarás con"
+
+msgid "sede.consent.identifyWith"
+msgstr "Te identificarás con"
+
+#. Nunca se enumera lo que la sede descartó ni con qué criterio.
+msgid "sede.consent.narrowed"
+msgstr "{{origin}} ha limitado los certificados válidos."
+
+msgid "sede.consent.narrowedUnknownOrigin"
+msgstr "La sede ha limitado los certificados válidos."
+
+msgid "sede.consent.willSend"
+msgstr "Se enviarán tu nombre, tu NIF, el emisor del certificado y su número de serie."
+
+msgid "sede.consent.sign"
+msgstr "Firmar"
+
+msgid "sede.consent.identify"
+msgstr "Identificarse"
+
+msgid "sede.signing.title"
+msgstr "Firmando"
+
+msgid "sede.signing.with"
+msgstr "Con {{holder}} · {{idNumber}}."
+
+msgid "sede.returning.title"
+msgstr "Enviando la firma a {{origin}}"
+
+msgid "sede.returning.titleUnknownOrigin"
+msgstr "Enviando la firma"
+
+msgid "sede.returning.body"
+msgstr "No cierres la ventana."
+
+msgid "sede.outcome.signedTitle"
+msgstr "Firmado y enviado"
+
+msgid "sede.outcome.signedBody"
+msgstr "La firma ya está en {{origin}}."
+
+msgid "sede.outcome.signedBodyUnknownOrigin"
+msgstr "La firma ya se ha enviado."
+
+#. No se deduce mirando: la aplicación sí tiene bandeja de recientes.
+msgid "sede.outcome.signedNote"
+msgstr "rFirma no guarda copia."
+
+msgid "sede.outcome.cancelledTitle"
+msgstr "Has cancelado la firma"
+
+msgid "sede.outcome.refusedTitle"
+msgstr "rFirma ha rechazado la petición"
+
+msgid "sede.outcome.refusedNote"
+msgstr "Para quien mantiene la sede:"
+
+msgid "sede.outcome.detail"
+msgstr "Detalle"
+
+msgid "sede.outcome.autoClose"
+msgstr "Se cerrará sola dentro de {{seconds}} s."
+
+msgid "sede.refusals.appendedSignaturePage"
+msgstr "{{origin}} pide colocar la firma en una página añadida al final, y rFirma no hace eso."
+
+msgid "sede.refusals.unsupportedFilter"
+msgstr "{{origin}} pide filtrar los certificados con un criterio que rFirma no reconoce."
+
+msgid "sede.refusals.unsupportedProtocolVersion"
+msgstr "{{origin}} habla una versión del protocolo que rFirma no entiende."
+
+msgid "sede.refusals.missingFormat"
+msgstr "{{origin}} no dice en qué formato hay que firmar."
+
+msgid "sede.refusals.errandInFlight"
+msgstr "{{origin}} pide una firma con otro trámite abierto, y rFirma atiende uno cada vez."
+
+msgid "sede.refusals.unknown"
+msgstr "{{origin}} ha enviado algo que rFirma no puede atender."
+
+msgid "sede.noCertificate.noneTitle"
+msgstr "No tienes ningún certificado"
+
+msgid "sede.noCertificate.noneBody"
+msgstr "Necesitas uno instalado para firmar en {{origin}}."
+
+msgid "sede.noCertificate.noneBodyUnknownOrigin"
+msgstr "Necesitas uno instalado para firmar."
+
+msgid "sede.noCertificate.noneHint"
+msgstr "Consíguelo en la FNMT o en tu comunidad autónoma."
+
+msgid "sede.noCertificate.install"
+msgstr "Instalar un certificado…"
+
+msgid "sede.noCertificate.lookAgain"
+msgstr "Volver a buscar"
+
+#. La sede excluyó todos los certificados de la persona. Se dice cuántos tiene
+#. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.
+msgid "sede.noCertificate.excludedTitle"
+msgid_plural "sede.noCertificate.excludedTitle"
+msgstr[0] "{{origin}} no acepta tu certificado"
+msgstr[1] "{{origin}} no acepta ninguno de tus {{count}} certificados"
+msgstr[2] "{{origin}} no acepta ninguno de tus {{count}} certificados"
+
+msgid "sede.noCertificate.excludedBody"
+msgstr "Tendrás que continuar desde la sede."
