@@ -13,6 +13,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
+import { noErrand } from "./sede/errand";
+import { SedeWindow } from "./sede/SedeWindow";
 import {
   tauriCertificateStore,
   tauriDestinations,
@@ -63,11 +65,21 @@ if (!root) {
 // configuración que el resto de ajustes, y se lee aquí, antes de pintar,
 // para que el aviso no llegue a montarse en el segundo arranque en adelante.
 //
+// `SedeWindow` (#362) sí es un puerto, `SiteErrandPort`, y aquí se cablea el
+// **doble** `noErrand`: el canal `wss://` todavía no llega hasta la ventana, y
+// un trámite que no existe es exactamente lo que hay que enseñar mientras
+// tanto —nada—. Los cinco momentos se prueban por ese puerto, sin backend
+// (TD-63). Cuando el trámite cruce, lo único que cambia es esta línea.
+//
 // El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
 const preference = tauriLanguagePreference();
 const i18n = createI18n(await preference.read());
 
 const recents = tauriRecents();
+
+// Fuera del árbol: `SedeWindow` se resuscribe cuando el puerto cambia de
+// identidad, y un `noErrand()` nuevo en cada pintada lo haría en bucle.
+const errands = noErrand();
 
 const preferences = tauriPreferences();
 const initialPreferences = await preferences.read();
@@ -84,6 +96,9 @@ createRoot(root).render(
           void preferences.save({ ...initialPreferences, trustNoticeSeen: true });
         }}
       />
+      {/* La ventana de sede no es una pantalla de la principal: cuando hay
+          trámite lo tapa todo, y sin trámite no se monta. */}
+      <SedeWindow errands={errands} />
       <App
         recents={recents}
         picker={tauriDocumentPicker()}

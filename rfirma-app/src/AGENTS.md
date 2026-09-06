@@ -34,7 +34,7 @@ rojo.
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `main.tsx` | 104 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
+| `main.tsx` | 119 | **El cableado**: quién implementa cada puerto. Empieza aquí siempre. |
 | `tauri.ts` | 589 | Los puertos que hablan con Tauri. La otra cara de `commands/mod.rs`. |
 | `App.tsx` | 1290 | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | | La ventana y su cabecera (ADR-0007). |
@@ -97,10 +97,19 @@ rojo.
 | **`errors/`** | | Los fallos que ve el usuario. |
 | `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
 | `errors/ErrorNotice.tsx` | 55 | El aviso. |
-| **`design-system/`** | | `design-system/icons.tsx` (226), copiados en línea de los artboards. |
+| **`design-system/`** | | `design-system/icons.tsx` (254), copiados en línea de los artboards. |
 | **`desktop/`** | | El escritorio de la persona, en el lado de la interfaz: quién atiende `afirma://` (ID-238…ID-241). |
 | `desktop/urlHandlers.ts` | 94 | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras: si ya los atiende rFirma y si el banner tiene algo que preguntar. Sin React. |
 | `desktop/UrlHandlerBanner.tsx` | 70 | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
+| **`sede/`** | | **La ventana que abre una sede** por `afirma://` (#362): una ventana con una secuencia de cinco momentos, no cinco pantallas. Ficha: `docs/design/ventana-de-sede.md`. |
+| `sede/errand.ts` | 235 | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y los tres relojes (retardo, umbral, cierre a los 15 s). Sin React. |
+| `sede/SedeWindow.tsx` | 152 | El marco de 520 × 420 px y el reparto entre los cinco momentos. El PIN se monta encima, sin pantalla propia (ID-273). |
+| `sede/SedeFrame.tsx` | 63 | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
+| `sede/SedeWaiting.tsx` | 146 | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
+| `sede/SedeConsent.tsx` | 159 | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual (ID-269). |
+| `sede/SedeSigning.tsx` | 82 | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
+| `sede/SedeOutcome.tsx` | 135 | 4 · Los tres desenlaces y el detalle copiable del rechazo. |
+| `sede/SedeNoCertificate.tsx` | 86 | 5 · Sin certificado utilizable, y sus dos salidas distintas (ID-278). |
 | **`updates/`** | | `updates/newVersion.ts` (39): el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | | `about/AboutDialog.tsx` (78). |
 | **`trust/`** | | El aviso del primer arranque (#365): la CA local y el permiso de red local, explicados juntos y sin condición. No es un puerto, no habla con Tauri. |

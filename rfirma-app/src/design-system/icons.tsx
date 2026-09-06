@@ -235,6 +235,15 @@ export function ArrowUpIcon({ size = 18 }: IconProps) {
 }
 
 /** El icono del botón «Copiar» del bloque de órdenes, en *Acerca de*. */
+/** La cruz de cerrar de la barra de título de la ventana de sede. */
+export function CloseIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
 export function CopyIcon({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">

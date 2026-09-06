@@ -1,0 +1,248 @@
+/*
+ * La ventana de sede: diálogo de 520 × 420 px con tres regiones fijas
+ * (docs/design/ventana-de-sede.md).
+ *
+ * El cuerpo **no lleva `overflow: hidden`**: el desplegable de certificados
+ * flota por encima de la ventana y recortarlo aquí fue el defecto medido en la
+ * §10 del sistema de diseño. Se desplaza en vertical y nada más.
+ */
+
+.sede-window {
+  width: 520px;
+  height: 420px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--rf-bg);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-lg);
+  box-shadow: var(--rf-shadow-elevated);
+}
+
+/* Barra de título de 32 px: el nombre y la cruz, sin menú y sin nada más. */
+.sede-window__bar {
+  height: 32px;
+  flex: none;
+  gap: var(--rf-space-xs);
+  padding: 0 6px 0 var(--rf-space-sm);
+  border-bottom: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
+  border-radius: var(--rf-radius-lg) var(--rf-radius-lg) 0 0;
+}
+
+.sede-window__brand {
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.sede-window__spacer {
+  flex: 1;
+}
+
+.sede-window__close {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--rf-text-muted);
+  cursor: pointer;
+  border-radius: var(--rf-radius-md);
+}
+
+.sede-window__close:hover {
+  color: var(--rf-text);
+}
+
+/* La caja útil son ≈329 px: 16 px arriba y abajo, --rf-space-md a los lados. */
+.sede-window__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px var(--rf-space-md);
+}
+
+.sede-window__footer {
+  flex: none;
+  padding: 10px var(--rf-space-md);
+  border-top: 1px solid var(--rf-border-subtle);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/*
+ * 56 px clavados en los momentos de firma y de salida: aparecer y desaparecer
+ * «Cancelar» no puede mover nada de sitio.
+ */
+.sede-window__footer--steady {
+  height: 56px;
+  padding-block: 0;
+}
+
+.sede-window .rf-stack {
+  gap: 10px;
+}
+
+/* 1 · Esperando el canal */
+
+.sede-waiting {
+  height: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.sede-waiting--repair {
+  height: auto;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.sede-waiting__ca {
+  align-items: center;
+  gap: var(--rf-space-xs);
+  padding: 8px var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+.sede-waiting__ca-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sede-waiting__tabs {
+  gap: var(--rf-space-xs);
+}
+
+.sede-waiting__tab--chosen {
+  background: var(--rf-primary);
+  color: var(--rf-on-primary);
+  border-color: var(--rf-primary);
+}
+
+.sede-waiting__steps {
+  margin: 0;
+  padding-left: 20px;
+  gap: 6px;
+}
+
+.sede-waiting__address {
+  align-items: center;
+  gap: var(--rf-space-xs);
+  margin-top: 4px;
+}
+
+.sede-waiting__retry {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--rf-text);
+}
+
+/* 2 · Consentimiento */
+
+.sede-consent__icon {
+  display: flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--rf-text-muted);
+}
+
+.sede-consent__unknown-origin,
+.sede-consent__document,
+.sede-consent__sends {
+  align-items: flex-start;
+  padding: 10px var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+/*
+ * Etiqueta serena y no advertencia: borde de 1 px y el mismo icono de
+ * información del resto de la aplicación, nunca un triángulo.
+ */
+.sede-consent__unknown-origin {
+  border-color: var(--rf-border-strong);
+}
+
+.sede-consent__unknown-origin-text,
+.sede-consent__document-text {
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sede-consent__document-head {
+  align-items: flex-start;
+}
+
+/* El PDF sin título se nombra como lo que es, en gris y sin peso. */
+.sede-consent__untitled {
+  color: var(--rf-text-muted);
+  font-weight: 400;
+}
+
+.sede-consent__label {
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* 3 · Firmando */
+
+.sede-signing {
+  height: 100%;
+  justify-content: center;
+}
+
+.sede-signing__track {
+  height: 6px;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-surface);
+  border: 1px solid var(--rf-border-subtle);
+  overflow: hidden;
+}
+
+.sede-signing__bar {
+  height: 100%;
+  background: var(--rf-primary);
+}
+
+/* 4 · Desenlace */
+
+.sede-outcome {
+  height: 100%;
+  justify-content: center;
+}
+
+.sede-outcome__detail {
+  align-items: center;
+  gap: var(--rf-space-xs);
+  padding: 8px var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+.sede-outcome__detail-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sede-outcome__auto-close {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 5 · Sin certificado utilizable */
+
+.sede-no-certificate {
+  height: 100%;
+  justify-content: center;
+}
