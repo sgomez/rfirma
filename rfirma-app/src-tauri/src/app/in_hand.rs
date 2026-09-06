@@ -1,24 +1,4 @@
-//! **El documento que la aplicación tiene delante**, que no es la fila que se
-//! guarda en la bandeja (ID-287).
-//!
-//! Hasta aquí los dos conceptos eran el mismo tipo: el único camino para tener
-//! un documento delante —con su insignia y su recuadro— era escribir su fila
-//! con [`crate::app::recents::record`], y firmar terminaba escribiendo otra.
-//! Eso vale mientras todo lo que se firma sea algo que el usuario abrió; deja
-//! de valer en cuanto quien manda el documento es una sede, porque **de ese no
-//! se guarda nada** (ID-286): ni fila, ni colocación del recuadro, ni «último
-//! documento».
-//!
-//! Así que son dos:
-//!
-//! - [`DocumentInHand`] —lo de aquí— es el documento **en curso**: el
-//!   identificador con el que la ventana lo nombra, la concesión del portal
-//!   que hay detrás y si de él se guarda rastro. Vive lo que dura el trabajo.
-//! - [`crate::memory::RecentDocument`] es la **fila**: lo que se persiste, se
-//!   deduplica por ruta canónica y se pinta en la bandeja.
-//!
-//! Quien decide si la segunda existe es la primera, y por eso el interruptor
-//! ([`crate::memory::Remembrance`]) viaja con la concesión y no con la fila.
+//! Caso de uso del documento en curso durante la sesión (ADR-0011).
 
 use std::path::Path;
 
@@ -27,11 +7,7 @@ use crate::commands::views::{Failure, PlacementView, RecentDocumentView};
 use crate::destination::PortalDocument;
 use crate::memory::{Badge, Configuration, Memory, OpenedDocuments, Remembrance};
 
-/// El documento que la aplicación tiene entre manos.
-///
-/// **No es una fila de la bandeja** y no se persiste: es lo que hace falta para
-/// trabajar con el documento en curso —leerlo, firmarlo— más la única cosa que
-/// hay que saber para no dejar rastro de él cuando no se debe.
+/// Representa el documento en curso durante la sesión.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DocumentInHand {
     id: String,
@@ -40,13 +16,7 @@ pub struct DocumentInHand {
 }
 
 impl DocumentInHand {
-    /// **Caso de uso.** Toma en la mano el documento abierto con ese
-    /// identificador.
-    ///
-    /// Lo que la ventana manda es el identificador que se acuñó al abrir, y no
-    /// una ruta: quien sabe a qué concesión del portal corresponde es el
-    /// registro, y solo él (ID-62). De ahí sale también si se recuerda, que se
-    /// decidió por dónde entró el documento y no aquí.
+    /// Carga el documento abierto asociado a un identificador.
     pub fn taken(opened: &OpenedDocuments, id: &str) -> Result<Self, Failure> {
         let document = documents::opened_document(opened, id)?;
         let remembrance = opened.remembrance(id).unwrap_or(Remembrance::Unrecorded);
@@ -57,12 +27,12 @@ impl DocumentInHand {
         })
     }
 
-    /// El identificador con el que la ventana lo nombra.
+    /// Identificador del documento.
     pub fn id(&self) -> &str {
         &self.id
     }
 
-    /// La concesión del portal que hay detrás.
+    /// Documento gestionado por el portal.
     pub fn document(&self) -> &PortalDocument {
         &self.document
     }
@@ -72,19 +42,13 @@ impl DocumentInHand {
         self.document.reading_path()
     }
 
-    /// Si de este documento se guarda rastro.
+    /// Indica si el documento debe registrarse en el historial.
     pub fn is_remembered(&self) -> bool {
         self.remembrance == Remembrance::Remembered
     }
 }
 
-/// **Caso de uso.** Pone delante el documento abierto y, **solo si se
-/// recuerda**, deja su fila en la bandeja.
-///
-/// Es el único sitio donde se decide esa diferencia. Lo que devuelve tiene la
-/// misma forma en los dos casos —la ventana pinta lo mismo— pero uno ha
-/// escrito en el disco y el otro no ha tocado nada: ni fila, ni la colocación
-/// del recuadro, ni el tamaño global.
+/// Pone delante el documento abierto y lo registra en la bandeja si corresponde.
 pub fn take(
     memory: &Memory,
     configuration: &Configuration,
@@ -99,13 +63,7 @@ pub fn take(
     Ok(told_without_a_row(&in_hand, placement))
 }
 
-/// El documento en curso contado como la ventana lo entiende, **sin fila
-/// detrás**.
-///
-/// La insignia es `Sin firmar` y no la cacheada porque no hay nada cacheado: de
-/// este documento no se guardó nunca nada, y firmarlo tampoco guardará. El
-/// recuadro que sale es el que entró, devuelto tal cual: la ventana lo tiene
-/// puesto, pero nadie lo ha recordado.
+/// Construye una vista del documento en curso sin persistir en el historial.
 fn told_without_a_row(
     in_hand: &DocumentInHand,
     placement: Option<PlacementView>,
@@ -121,7 +79,6 @@ fn told_without_a_row(
     }
 }
 
-/// Ahora mismo, en segundos desde la época.
 fn now_in_seconds() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -134,8 +91,6 @@ mod tests {
     use crate::app::fixtures::a_memory;
     use crate::signing::PageSet;
 
-    /// **Grada A**: ficheros de verdad en un directorio temporal, que es lo que
-    /// hace falta para canonicalizar una ruta y para leer un `mtime`.
     fn a_pdf(directory: &Path, name: &str) -> std::path::PathBuf {
         let path = directory.join(name);
         std::fs::write(&path, b"%PDF-1.7\n").expect("deberia escribirse");
@@ -149,8 +104,6 @@ mod tests {
         }
     }
 
-    /// El recorrido local no cambia: el documento que se abrió por el diálogo
-    /// deja su fila, con su recuadro, exactamente como antes.
     #[test]
     fn a_document_that_is_remembered_still_leaves_its_row() {
         let home = tempfile::tempdir().expect("deberia crearse");
@@ -168,8 +121,6 @@ mod tests {
         assert_eq!(recents::listed_rows(&memory, &opened).len(), 1);
     }
 
-    /// **TD-64**: el documento que no se recuerda no aparece en la bandeja y no
-    /// deja colocación del recuadro, aunque la ventana lo haya arrastrado.
     #[test]
     fn a_document_that_is_not_remembered_leaves_neither_row_nor_placement() {
         let home = tempfile::tempdir().expect("deberia crearse");
@@ -196,8 +147,6 @@ mod tests {
         );
     }
 
-    /// Y el mismo fichero abierto por los dos caminos no comparte destino: la
-    /// concesión que se recuerda escribe, la que no, no.
     #[test]
     fn remembrance_belongs_to_the_grant_and_not_to_the_file() {
         let home = tempfile::tempdir().expect("deberia crearse");
@@ -215,7 +164,6 @@ mod tests {
         assert_eq!(recents::listed_rows(&memory, &opened).len(), 1);
     }
 
-    /// Un identificador que no es de esta sesión no pone nada delante.
     #[test]
     fn an_identifier_of_no_session_puts_nothing_in_hand() {
         let opened = OpenedDocuments::new();

@@ -1,22 +1,4 @@
-//! Los documentos recientes: **diez**, por ruta canónica, con metadatos
-//! cacheados (ID-33, ADR-0010).
-//!
-//! Tres decisiones que parecen detalles y no lo son:
-//!
-//! - **Se cachean metadatos, no solo rutas.** Sin caché habría que parsear diez
-//!   PDFs antes de pintar la bandeja, porque la insignia `Firmado`/`Sin firmar`
-//!   no se deduce de la ruta. Se revalida solo el documento que se selecciona,
-//!   comparando el `mtime`.
-//! - **Se identifican por su ruta absoluta canónica.** Nada de hashes ni
-//!   inodos: rompen con las copias y con los sistemas de ficheros de red. Es
-//!   además el mismo criterio que usa el portal de flatpak, cuyo permiso va
-//!   con la **ruta** y no con el inodo (ID-38, ADR-0011): las dos mitades de
-//!   esa coincidencia están atadas por las pruebas de
-//!   [`crate::destination::portal`].
-//! - **Una ruta que ya no responde no se purga en silencio.** La fila se marca
-//!   [`ShownBadge::Unavailable`] y **sigue en la lista**: un PDF en un USB
-//!   desmontado no está borrado, y decírselo al usuario es más útil que hacerlo
-//!   desaparecer.
+//! Gestión del historial de documentos recientes con metadatos cacheados (ADR-0010, ADR-0011).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,74 +8,47 @@ use serde::{Deserialize, Serialize};
 
 use crate::signing::PageSet;
 
-/// Cuántos se recuerdan. La bandeja no tiene buscador; si algún día hace falta
-/// uno, este límite estaba mal.
+/// Capacidad máxima del historial de documentos recientes.
 pub const CAPACITY: usize = 10;
 
-/// La insignia **guardada**. Solo puede ser una de estas dos: se conoce
-/// abriendo el documento, y por eso se cachea.
+/// Estado de firma persistido en caché para un documento reciente.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Badge {
-    /// Ya lleva al menos una firma.
+    /// Documento con al menos una firma.
     Signed,
-    /// Todavía no lleva ninguna.
+    /// Documento sin firmas.
     Unsigned,
 }
 
-/// La insignia que **se pinta**, que es la guardada más el tercer valor que no
-/// se guarda nunca porque depende del disco de ahora mismo.
+/// Estado de firma visualizado en la interfaz, incluyendo disponibilidad actual.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ShownBadge {
-    /// Ya lleva al menos una firma.
+    /// Documento con al menos una firma.
     Signed,
-    /// Todavía no lleva ninguna.
+    /// Documento sin firmas.
     Unsigned,
-    /// La ruta ya no responde. La fila se atenúa y ofrece quitarla; nadie la
-    /// purga por su cuenta.
+    /// El fichero ya no está accesible en la ruta registrada.
     Unavailable,
 }
 
-/// **Dónde cayó el recuadro en este documento**: el conjunto de páginas y la
-/// esquina inferior izquierda, en espacio de usuario PDF (ID-74, ID-95).
-///
-/// Es la mitad **por documento** de lo que se recuerda de la firma visible. La
-/// otra mitad —el interruptor, las cinco casillas, el motivo y el **tamaño**
-/// del recuadro— es global y vive en
-/// [`VisibleSignatureMemory`](super::state::VisibleSignatureMemory): reponer
-/// sobre un documento nuevo una posición elegida para otro es justo lo que
-/// rechaza el ID-22, mientras que el tamaño sí se hereda porque no depende de
-/// la página.
-///
-/// **El conjunto de páginas también es por documento**: «las páginas 3, 7 y 9»
-/// no significa nada en otro PDF.
-///
-/// No lleva el tamaño **a propósito**: dos sitios donde guardar el mismo ancho
-/// es un sitio donde divergen.
+/// Posición y páginas configuradas para la firma visible en un documento (ADR-0006).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Placement {
     /// Esquina inferior izquierda, eje X, en espacio de usuario PDF.
     pub lower_left_x: f64,
     /// Esquina inferior izquierda, eje Y, en espacio de usuario PDF.
     pub lower_left_y: f64,
-    /// En qué páginas se estampa.
+    /// Páginas en las que estampar la firma visible.
     pub pages: PageSet,
 }
 
 impl<'de> Deserialize<'de> for Placement {
-    /// **Lee también las filas que dejó v0.2**, que guardaban `page` en vez de
-    /// `pages` (ID-95).
-    ///
-    /// `{ page: 3 }` significaba exactamente `{ pages: [3] }`, así que se lee
-    /// como tal y **no se versiona el formato**: una versión para un campo que
-    /// se traduce solo sería una versión que hay que subir la próxima vez.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
         struct Stored {
             lower_left_x: f64,
             lower_left_y: f64,
-            /// v0.3.
             pages: Option<PageSet>,
-            /// v0.2: una sola página.
             page: Option<u32>,
         }
 
@@ -110,8 +65,7 @@ impl<'de> Deserialize<'de> for Placement {
     }
 }
 
-/// Un documento de la bandeja, con lo que hace falta para pintar la fila sin
-/// abrirlo.
+/// Metadatos cacheados de un documento reciente.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RecentDocument {
     path: PathBuf,
@@ -119,20 +73,12 @@ pub struct RecentDocument {
     badge: Badge,
     modified: Option<u64>,
     last_used: u64,
-    /// Dónde cayó el recuadro en **este** documento. `None` mientras nadie lo
-    /// haya colocado, y también cuando «Recordar la última configuración de
-    /// firma visible» está apagado: apagado significa **no guardarla**.
     #[serde(default)]
     placement: Option<Placement>,
 }
 
 impl RecentDocument {
-    /// El documento que se acaba de usar, leyendo del disco lo que se cachea.
-    ///
-    /// **Canonicaliza la ruta**, y por eso puede fallar: se construye cuando el
-    /// documento se abre o se firma, o sea cuando está ahí. Una ruta que no se
-    /// puede canonicalizar no entra en la lista, porque no se sabría contra qué
-    /// comparar la siguiente.
+    /// Construye una entrada reciente a partir de una ruta verificada.
     pub fn seen(path: &Path, badge: Badge, at: SystemTime) -> std::io::Result<Self> {
         let path = fs::canonicalize(path)?;
         let modified = fs::metadata(&path)
@@ -149,56 +95,47 @@ impl RecentDocument {
         })
     }
 
-    /// La ruta canónica, que es lo que identifica la fila.
+    /// Ruta canónica del documento.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
-    /// El nombre del fichero, cacheado para pintar la fila.
+    /// Nombre de fichero para visualización.
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    /// La insignia cacheada.
+    /// Insignia de firma en caché.
     pub fn badge(&self) -> Badge {
         self.badge
     }
 
-    /// El `mtime` cacheado, en segundos desde la época. Es contra este valor
-    /// contra el que se revalida el documento al seleccionarlo.
+    /// Fecha de última modificación registrada en segundos desde la época UNIX.
     pub fn modified(&self) -> Option<u64> {
         self.modified
     }
 
-    /// Cuándo se usó por última vez, en segundos desde la época.
-    ///
-    /// Es **dato para pintar la fila**, no el criterio de desalojo: el desalojo
-    /// es por posición en la lista, y la posición la fija [`Recents::record`]
-    /// insertando al frente. Hoy las dos cosas coinciden porque `record` es la
-    /// única mutación; si algún día algo inserta con un `last_used` viejo —una
-    /// fusión de dos bandejas, una migración—, el que manda seguirá siendo el
-    /// orden, y entonces habrá que decidir cuál de los dos es la verdad.
+    /// Fecha de último acceso registrada en segundos desde la época UNIX.
     pub fn last_used(&self) -> u64 {
         self.last_used
     }
 
-    /// Dónde cayó el recuadro en este documento, si alguien lo colocó.
+    /// Posición del recuadro visible configurada en este documento.
     pub fn placement(&self) -> Option<&Placement> {
         self.placement.as_ref()
     }
 
-    /// Coloca —o descoloca— el recuadro de este documento.
+    /// Asigna o elimina la posición del recuadro visible para este documento.
     pub fn place(&mut self, placement: Option<Placement>) {
         self.placement = placement;
     }
 
-    /// Si la ruta responde ahora mismo.
+    /// Comprueba si el fichero existe actualmente en la ruta registrada.
     pub fn is_available(&self) -> bool {
         self.path.exists()
     }
 
-    /// La insignia que se pinta: la cacheada, o `No disponible` si la ruta ya
-    /// no responde.
+    /// Estado de firma calculado para visualización.
     pub fn shown_badge(&self) -> ShownBadge {
         if !self.is_available() {
             return ShownBadge::Unavailable;
@@ -223,13 +160,7 @@ fn seconds_since_epoch(instant: SystemTime) -> Option<u64> {
         .map(|elapsed| elapsed.as_secs())
 }
 
-/// La bandeja: como mucho [`CAPACITY`] documentos, el más reciente primero.
-///
-/// El límite es una invariante del tipo y no una propiedad de [`Recents::record`]:
-/// también se aplica **al deserializar**, para que un `state.json` con quince
-/// entradas —editado a mano, escrito por una rFirma futura con otro límite,
-/// fusionado por un sincronizador— no pinte quince filas hasta el siguiente
-/// `record`.
+/// Colección acotada de documentos recientes ordenados por fecha de uso.
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct Recents {
@@ -237,13 +168,6 @@ pub struct Recents {
 }
 
 impl<'de> Deserialize<'de> for Recents {
-    /// **Una fila que no se sepa leer se descarta, y las demás siguen**
-    /// (ID-95): la bandeja es actividad, no datos del usuario, y perder las
-    /// diez porque una traía un campo raro es perder nueve por nada.
-    ///
-    /// Por eso las filas se leen de una en una desde su JSON en vez de
-    /// deserializar el vector entero: un `Vec<RecentDocument>` falla entero al
-    /// primer elemento que no encaje.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let rows = Vec::<serde_json::Value>::deserialize(deserializer)?;
         let mut entries: Vec<RecentDocument> = rows
@@ -256,16 +180,7 @@ impl<'de> Deserialize<'de> for Recents {
 }
 
 impl Recents {
-    /// Anota un documento: pasa al frente, y si ya estaba —misma ruta
-    /// canónica— sustituye a la entrada anterior en vez de duplicarla.
-    ///
-    /// Al firmar se anotan **dos**, el original y el firmado: son dos ficheros
-    /// en el disco y fundirlos en una fila que «evoluciona» escondería cuál se
-    /// va a mandar.
-    /// Una fila que vuelve a anotarse **conserva su recuadro**: la posición es
-    /// del documento, no de la apertura, y el identificador opaco cambia en
-    /// cada concesión del portal (ID-62). Sin esto, reabrir el mismo contrato
-    /// borraría dónde había caído su recuadro, que es lo contrario del ID-74.
+    /// Registra un documento reciente colocándolo en cabeza y conservando posición previa.
     pub fn record(&mut self, mut document: RecentDocument) {
         let remembered = self
             .entries
@@ -280,53 +195,46 @@ impl Recents {
         self.entries.truncate(CAPACITY);
     }
 
-    /// La fila de una ruta, si está.
+    /// Obtiene la entrada correspondiente a una ruta si existe.
     pub fn entry(&self, path: &Path) -> Option<&RecentDocument> {
         self.entries.iter().find(|entry| entry.path == path)
     }
 
-    /// Coloca el recuadro de una fila. Si la ruta no está, no hace nada: la
-    /// fila la crea [`Recents::record`] al abrir el documento.
+    /// Actualiza la posición de recuadro asociada a una ruta registrada.
     pub fn place(&mut self, path: &Path, placement: Option<Placement>) {
         if let Some(entry) = self.entries.iter_mut().find(|entry| entry.path == path) {
             entry.place(placement);
         }
     }
 
-    /// Descoloca **todos** los recuadros, dejando las filas donde están.
-    ///
-    /// Es lo que hace «Recordar la última configuración de firma visible» al
-    /// apagarse: la bandeja es actividad y la sigue guardando «Recordar mi
-    /// actividad», pero dónde cayó el recuadro es firma visible y apagado
-    /// significa no guardarlo (ID-74).
+    /// Elimina las posiciones de recuadro configuradas en todos los recientes.
     pub fn forget_placements(&mut self) {
         for entry in &mut self.entries {
             entry.place(None);
         }
     }
 
-    /// Los documentos, del más reciente al más antiguo.
+    /// Lista ordenada de documentos recientes.
     pub fn entries(&self) -> &[RecentDocument] {
         &self.entries
     }
 
-    /// Quita una fila concreta. Es lo que ofrece la fila `No disponible`, y es
-    /// el usuario quien lo pide.
+    /// Elimina una ruta concreta del historial de recientes.
     pub fn forget(&mut self, path: &Path) {
         self.entries.retain(|entry| entry.path != path);
     }
 
-    /// «Vaciar la lista»: hoy no, mañana sí. No apaga ningún interruptor.
+    /// Vacía todas las entradas del historial.
     pub fn clear(&mut self) {
         self.entries.clear();
     }
 
-    /// Cuántos hay.
+    /// Número de entradas en el historial.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
-    /// Si no hay ninguno.
+    /// Comprueba si el historial está vacío.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -337,8 +245,6 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-    /// **Grada A**: ficheros de verdad en un directorio temporal, que es lo que
-    /// hace falta para canonicalizar una ruta y para que deje de existir.
     fn a_document(directory: &Path, name: &str) -> PathBuf {
         let path = directory.join(name);
         fs::write(&path, b"%PDF-1.7 de prueba").expect("deberia escribirse");
@@ -442,8 +348,6 @@ mod tests {
         let mut written = Recents::default();
         for index in 0..CAPACITY + 5 {
             let document = a_document(directory.path(), &format!("de-fuera-{index}.pdf"));
-            // Sin pasar por `record`: es lo que hace quien edita el fichero a
-            // mano o una rFirma con otro limite.
             written.entries.push(seen(&document));
         }
         let json = serde_json::to_string(&written).expect("deberia serializarse");
@@ -527,9 +431,6 @@ mod tests {
         assert!(failure.is_err());
     }
 
-    /// **ID-95**: la fila que v0.2 guardó con `page` se lee como el conjunto de
-    /// esa única página, que es exactamente lo que significaba. **No hay
-    /// migración ni versión de formato**: el campo se traduce al leerlo.
     #[test]
     fn reads_a_v0_2_row_as_the_set_of_the_one_page_it_named() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -551,9 +452,6 @@ mod tests {
         assert_eq!(placement.lower_left_x, 48.0);
     }
 
-    /// La otra mitad del ID-95: una fila ilegible **se descarta sola**, y las
-    /// demás llegan. Perder las diez porque una traía un campo que nadie sabe
-    /// leer es perder nueve por nada.
     #[test]
     fn discards_a_row_it_cannot_read_without_dragging_the_others() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -569,8 +467,6 @@ mod tests {
         assert_eq!(read.entries()[0].name(), "segundo.pdf");
     }
 
-    /// El conjunto de páginas es **de este documento** (ID-95), así que viaja
-    /// en la fila y vuelve entero.
     #[test]
     fn remembers_the_page_set_of_each_document() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");

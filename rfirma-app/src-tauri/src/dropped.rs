@@ -1,75 +1,27 @@
-//! **Lo que se decide de los ficheros que llegan de fuera** (ID-67, ID-68,
-//! ID-70, ID-157, ID-158, ID-306).
-//!
-//! Llegan por dos gestos —soltarlos en la ventana y nombrarlos en la línea de
-//! órdenes— y la regla es una sola: el primer PDF que se deje leer es el que se
-//! abre. Que la invocación se decida aquí y no en un módulo propio es el ID-158
-//! escrito en código: un argumento que no es un PDF legible **no arranca
-//! ningún modo especial**, cuenta exactamente lo mismo que soltarlo dentro.
-//!
-//! El arrastre no pasa por el portal de ficheros: lo que llega son rutas, y
-//! aquí se decide cuáles de ellas —si alguna— entran. La decisión es de este
-//! lado y no de la ventana por lo mismo que el diálogo se abre desde Rust
-//! (ID-63): **ninguna ruta del anfitrión cruza a la interfaz** (ADR-0011), así
-//! que quien las mira tiene que estar aquí.
-//!
-//! # Los N PDF entran en Recientes, y solo el primero se abre (ID-306)
-//!
-//! Soltar varios PDF a la vez ya no calla a los que no fueron el primero: el
-//! primero se abre en el visor y **todos los demás que también sean un PDF
-//! legible** entran igual en Recientes, sin abrirse. Es la versión ligera de
-//! la ficha 11: sin cola y sin firma encadenada, solo una fila más por cada
-//! documento.
-//!
-//! Una carpeta soltada se recorre —**un solo nivel**, no sus subcarpetas— y sus
-//! ficheros se tratan como si se hubieran soltado uno a uno: los que sean PDF
-//! entran, y los que no, se cuentan como descartados igual que cualquier otro
-//! fichero que no lo sea.
-//!
-//! # Ser PDF es tener la extensión, aquí
-//!
-//! La misma regla que el diálogo, que filtra con `add_filter("PDF", &["pdf"])`
-//! (ID-64): si el explorador de archivos deja elegir por extensión, soltar no
-//! puede ser más estricto. Mirar los bytes es el trabajo de
-//! [`crate::signing::AdmissibleDocument`], que sigue corriendo antes de pedir
-//! el PIN y sigue siendo quien rechaza un `.pdf` que no lo es.
+//! Clasificación de ficheros soltados en la ventana o recibidos por línea de órdenes (ADR-0011).
 
 use std::path::{Path, PathBuf};
 
-/// Qué hacer con lo que se acaba de soltar.
-///
-/// `discarded` es cuántos ficheros más venían en el mismo gesto —sueltos
-/// directamente o encontrados al recorrer una carpeta— **y no han entrado en
-/// ningún sitio**: la variante ya dice por qué (ID-306).
+/// Resultado de clasificar los ficheros soltados o recibidos.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Dropped {
-    /// El primer PDF soltado que se deja leer, que es el que se abre en el
-    /// visor. `also_entering` es el resto de PDF del mismo gesto: entran
-    /// igual en Recientes, pero sin abrirse.
+    /// El primer PDF legible y el resto de documentos que entran en recientes.
     Opened {
         path: PathBuf,
         also_entering: Vec<PathBuf>,
         discarded: usize,
     },
-    /// Ninguno de los ficheros soltados —ni los que traía una carpeta
-    /// recorrida— es un PDF.
+    /// Ninguno de los ficheros soltados o recorridos es un PDF.
     NotAPdf { discarded: usize },
-    /// El primer PDF soltado está donde el sandbox no llega.
+    /// El primer PDF no se ha podido leer.
     Unreadable { detail: String, discarded: usize },
-    /// No se ha soltado ningún fichero. No es un fallo y no se cuenta.
+    /// No se ha proporcionado ningún fichero.
     Nothing,
 }
 
-/// La extensión que hace que un fichero cuente como PDF, mayúsculas aparte.
 const PDF: &str = "pdf";
 
-/// El primer PDF de los soltados, si se puede leer, y qué hacer con el resto.
-///
-/// **No se prueba con el siguiente** cuando el primero no se deja leer, y es a
-/// propósito: pasar al segundo abriría un documento que la persona no eligió
-/// primero y encima taparía el motivo por el que el suyo no se abrió. Los
-/// demás PDF —si el primero sí se abrió— entran en Recientes igualmente: ver
-/// [`Dropped::Opened`].
+/// Clasifica los ficheros soltados y selecciona el primer PDF legible.
 pub fn first_pdf(paths: &[PathBuf]) -> Dropped {
     if paths.is_empty() {
         return Dropped::Nothing;
@@ -93,21 +45,7 @@ pub fn first_pdf(paths: &[PathBuf]) -> Dropped {
     }
 }
 
-/// **El PDF que trae la invocación**, si es que trae alguno (ID-157, ID-158).
-///
-/// `command_line` es la línea de órdenes entera, con el ejecutable delante: es
-/// lo que dan tanto `std::env::args` como la segunda instancia, y descartarlo
-/// aquí evita que cada llamante se acuerde de hacerlo.
-///
-/// La invocación es **un argumento posicional desnudo** (ID-157), así que lo
-/// que empieza por `-` no es una ruta y no se mira; no cierra la puerta a
-/// banderas ni a subcomandos más adelante, solo dice que hoy no los hay.
-///
-/// `from` es la carpeta desde la que se invocó, y **hace falta**: una segunda
-/// invocación se decide dentro del proceso que ya estaba abierto, cuya carpeta
-/// de trabajo es otra, y una ruta relativa resuelta contra la suya abriría un
-/// fichero distinto o ninguno. Una ruta absoluta pasa intacta por
-/// [`Path::join`].
+/// Extrae y clasifica el PDF recibido por línea de órdenes si existe.
 pub fn invoked_pdf(command_line: &[String], from: &Path) -> Dropped {
     let paths: Vec<PathBuf> = command_line
         .iter()
@@ -118,17 +56,6 @@ pub fn invoked_pdf(command_line: &[String], from: &Path) -> Dropped {
     first_pdf(&paths)
 }
 
-/// Sustituye cada carpeta soltada por los ficheros que tiene dentro (ID-306).
-///
-/// **Un solo nivel**: no se entra en las subcarpetas de una carpeta soltada,
-/// así que una subcarpeta se ignora en silencio, igual que hoy se ignoraría
-/// cualquier ruta que ni siquiera fuera un fichero. Los ficheros que trae se
-/// dejan mezclados —PDF y no PDF— y es [`first_pdf`] quien decide cuáles
-/// entran y cuáles se cuentan como descartados, exactamente igual que con lo
-/// soltado directamente.
-///
-/// El orden es alfabético dentro de cada carpeta, para que el resultado no
-/// dependa del orden en que el sistema de ficheros entregue sus entradas.
 fn expand_folders(paths: &[PathBuf]) -> Vec<PathBuf> {
     let mut expanded = Vec::with_capacity(paths.len());
     for path in paths {
@@ -141,10 +68,6 @@ fn expand_folders(paths: &[PathBuf]) -> Vec<PathBuf> {
     expanded
 }
 
-/// Los ficheros de primer nivel dentro de una carpeta, en orden alfabético.
-///
-/// Una carpeta que no se puede leer no es un fallo del gesto entero: se cuenta
-/// como si no hubiera traído ningún fichero.
 fn files_within(folder: &Path) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(folder) else {
         return Vec::new();
@@ -167,24 +90,16 @@ fn is_pdf(path: &Path) -> bool {
 mod tests {
     use super::*;
 
-    /// **Grada A**: la decisión es una lista de rutas y un `open`, así que corre
-    /// en el carril rápido. Lo que no se prueba aquí es el arrastre de verdad:
-    /// en el CI no hay escritorio, ni portal, ni quien arrastre.
     fn a_temporary_pdf(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!("rfirma-dropped-{name}"));
         std::fs::write(&path, b"%PDF-1.4\n").expect("se puede escribir en el temporal");
         path
     }
 
-    /// Una ruta que **no existe dentro del sandbox**, que es exactamente la
-    /// forma del fallo medido: el fichero está en el anfitrión y aquí da
-    /// `ENOENT`.
     fn a_path_the_sandbox_cannot_reach() -> PathBuf {
         std::env::temp_dir().join("rfirma-dropped-no-existe/contrato.pdf")
     }
 
-    /// Una carpeta temporal vacía, lista para que la prueba deje caer dentro
-    /// lo que necesite.
     fn a_temporary_folder(name: &str) -> PathBuf {
         let path = std::env::temp_dir().join(format!("rfirma-dropped-folder-{name}"));
         std::fs::create_dir_all(&path).expect("se puede crear el temporal");
@@ -212,8 +127,6 @@ mod tests {
         assert_eq!(first_pdf(&[other]), Dropped::NotAPdf { discarded: 1 });
     }
 
-    /// ID-70/ID-306: se abre el primero que sea un PDF, aunque no sea el
-    /// primero que se soltó, y los que no lo son se cuentan como descartados.
     #[test]
     fn the_first_pdf_of_several_files_opens_and_the_rest_are_counted() {
         let other = a_temporary_pdf("hoja.ods");
@@ -230,8 +143,6 @@ mod tests {
         );
     }
 
-    /// ID-306: el que ha abierto la ventana no es el único que cuenta. Cada
-    /// PDF que vino en el mismo gesto entra igual en Recientes.
     #[test]
     fn every_pdf_dropped_together_also_enters_and_none_is_silenced() {
         let first = a_temporary_pdf("primero.pdf");
@@ -259,10 +170,9 @@ mod tests {
         };
 
         assert_eq!(discarded, 0);
-        assert!(!detail.is_empty(), "el detalle crudo no se pierde (ID-29)");
+        assert!(!detail.is_empty(), "el detalle crudo no se pierde");
     }
 
-    /// Y no se prueba con el siguiente: el segundo PDF no es el que se eligió.
     #[test]
     fn an_unreadable_first_pdf_does_not_fall_through_to_the_next_one() {
         let readable = a_temporary_pdf("segundo.pdf");
@@ -284,7 +194,6 @@ mod tests {
         assert_eq!(first_pdf(&[]), Dropped::Nothing);
     }
 
-    /// ID-306: una carpeta soltada se recorre y de ella solo cuentan sus PDF.
     #[test]
     fn a_dropped_folder_is_walked_and_only_its_pdfs_enter() {
         let folder = a_temporary_folder("mixta");
@@ -303,8 +212,6 @@ mod tests {
         );
     }
 
-    /// Una carpeta sin ningún PDF dentro se cuenta igual que un fichero que no
-    /// lo sea: nada que abrir, y lo de dentro, descartado.
     #[test]
     fn a_dropped_folder_with_no_pdf_inside_opens_nothing() {
         let folder = a_temporary_folder("vacia-de-pdf");
@@ -314,8 +221,6 @@ mod tests {
         assert_eq!(first_pdf(&[folder]), Dropped::NotAPdf { discarded: 1 });
     }
 
-    /// Solo se recorre **un nivel**: una subcarpeta dentro de la carpeta
-    /// soltada se ignora en silencio, no se cuenta como descartada.
     #[test]
     fn a_subfolder_of_a_dropped_folder_is_not_walked_into() {
         let folder = a_temporary_folder("con-subcarpeta");
@@ -336,7 +241,6 @@ mod tests {
         );
     }
 
-    /// El caso entero del ID-157: un argumento posicional desnudo y nada más.
     #[test]
     fn a_bare_positional_argument_is_the_document_that_opens() {
         let pdf = a_temporary_pdf("invocado.pdf");
@@ -356,8 +260,6 @@ mod tests {
         );
     }
 
-    /// Una ruta relativa se resuelve contra la carpeta desde la que se invocó,
-    /// que en la segunda instancia **no** es la del proceso que la atiende.
     #[test]
     fn a_relative_argument_is_resolved_against_the_folder_it_was_invoked_from() {
         let pdf = a_temporary_pdf("relativo.pdf");
@@ -374,8 +276,6 @@ mod tests {
         assert!(matches!(invoked, Dropped::Opened { .. }));
     }
 
-    /// ID-158: lo que no es un PDF legible se cuenta igual que si se hubiera
-    /// soltado, y no arranca ningún modo especial.
     #[test]
     fn an_argument_that_is_not_a_pdf_is_told_just_like_a_dropped_one() {
         let other = a_temporary_pdf("hoja-invocada.ods");
@@ -389,7 +289,6 @@ mod tests {
         );
     }
 
-    /// Sin argumentos no hay invocación con documento: es arrancar la ventana.
     #[test]
     fn invoking_with_no_arguments_brings_no_document() {
         assert_eq!(
@@ -398,7 +297,6 @@ mod tests {
         );
     }
 
-    /// Una bandera no es una ruta: ni se abre ni cuenta como fichero ignorado.
     #[test]
     fn a_flag_is_not_a_path_and_does_not_count() {
         let pdf = a_temporary_pdf("con-bandera.pdf");
@@ -422,9 +320,6 @@ mod tests {
         );
     }
 
-    /// La ruta exportada por el portal es una ruta como otra cualquiera: se
-    /// mira su extensión igual, y el nombre sigue estando en el último
-    /// segmento.
     #[test]
     fn a_path_exported_by_the_portal_is_a_path_like_any_other() {
         let exported = PathBuf::from("/run/user/1000/doc/1e20dd88/contrato.pdf");

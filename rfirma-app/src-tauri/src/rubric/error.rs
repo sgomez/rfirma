@@ -1,47 +1,25 @@
-//! Los fallos de la rúbrica **se clasifican, no se traducen** (ADR-0009), igual
-//! que los del token en [`crate::pkcs11::error`].
-//!
-//! El ADR-0012 cuenta **tres** fallos de la imagen —no es PNG ni JPEG, está
-//! dañada, es demasiado grande— y ninguno más: el reescalado es silencioso
-//! porque es la operación que el usuario habría pedido de todos modos. A esos
-//! tres se suman [`Situation::SourceUnreadable`],
-//! [`Situation::StoreUnwritable`] y [`Situation::StoreUnreadable`], que no
-//! hablan de la imagen sino del disco: el ADR no los enumera porque no son
-//! fallos *de la rúbrica*, pero leer el fichero elegido y leer o escribir la
-//! copia pueden fallar, y desaparecer no es una opción. Decir «no es PNG ni
-//! JPEG» de un fichero que no se ha podido ni leer sería mentirle al usuario.
-//!
-//! El origen y el almacén tienen situación propia cada uno **a propósito**: el
-//! catálogo no dice lo mismo con «no hemos podido leer el fichero que
-//! elegiste» que con «no hemos podido leer tu rúbrica guardada», y el usuario
-//! no hace lo mismo en un caso que en el otro.
+//! Clasificación de situaciones de fallo al procesar la rúbrica (ADR-0009, ADR-0012).
 
 use std::fmt;
 
-/// Situación que el usuario puede entender, y que el catálogo traduce.
+/// Situaciones de fallo de la rúbrica traducibles por el catálogo.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
-    /// El fichero no es ni PNG ni JPEG. El mensaje dice qué formatos valen.
+    /// El fichero no es un formato admitido (PNG o JPEG).
     NotAnAcceptedImage,
-    /// Es PNG o JPEG, pero el decodificador no ha podido con él.
+    /// La imagen está dañada o no se puede decodificar.
     DamagedImage,
-    /// El fichero pasa del tope de entrada ([`super::MAX_INPUT_BYTES`]).
+    /// El fichero excede el tamaño máximo permitido.
     ImageTooLarge,
-    /// El fichero que eligió el usuario no se ha podido leer.
+    /// No se ha podido leer el fichero de origen.
     SourceUnreadable,
-    /// La rúbrica ya normalizada no se ha podido escribir en el almacén.
+    /// No se ha podido escribir en el almacén de rúbricas.
     StoreUnwritable,
-    /// El almacén existe pero la rúbrica guardada no se ha podido leer. No es
-    /// [`Situation::SourceUnreadable`]: ahí el fichero lo acaba de elegir el
-    /// usuario, aquí es una copia nuestra que se ha vuelto ilegible.
+    /// No se ha podido leer la rúbrica del almacén.
     StoreUnreadable,
 }
 
-/// Un fallo al preparar la rúbrica: la situación traducible y el detalle crudo.
-///
-/// [`RubricError::detail`] nunca está vacío y **nunca** está traducido: es lo
-/// que se pega en un informe de fallo. El mensaje que ve el usuario lo compone
-/// el catálogo de cadenas a partir de [`RubricError::situation`].
+/// Fallo de la rúbrica clasificado con situación y detalle técnico.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RubricError {
     situation: Situation,
@@ -49,7 +27,7 @@ pub struct RubricError {
 }
 
 impl RubricError {
-    /// Un fallo con su detalle técnico, sin traducir.
+    /// Construye un fallo con su situación y detalle técnico.
     pub fn new(situation: Situation, detail: impl Into<String>) -> Self {
         Self {
             situation,
@@ -57,12 +35,12 @@ impl RubricError {
         }
     }
 
-    /// La situación que la interfaz enseña, ya clasificada.
+    /// Situación clasificada para la interfaz.
     pub fn situation(&self) -> Situation {
         self.situation
     }
 
-    /// El detalle técnico crudo. Nunca vacío, nunca traducido.
+    /// Detalle técnico del fallo.
     pub fn detail(&self) -> &str {
         &self.detail
     }

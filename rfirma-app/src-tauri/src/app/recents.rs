@@ -1,33 +1,4 @@
-//! **La bandeja, del disco a la ventana y de vuelta** (ID-75, ADR-0010).
-//!
-//! Las reglas de la bandeja —capacidad diez, deduplicación por ruta canónica,
-//! insignia `No disponible`— ya estaban en [`crate::memory::recents`]. Lo que
-//! hay aquí es lo que faltaba: **quién la lee y quién la escribe**, y las dos
-//! traducciones que eso exige.
-//!
-//! # La fila se guarda por ruta y cruza por identificador
-//!
-//! La bandeja deduplica por la ruta canónica, que **solo Rust conoce** y que no
-//! sale de este proceso (ADR-0011). Lo que cruza a la ventana es el
-//! identificador opaco que acuñó [`OpenedDocuments`] (ID-62), así que listar
-//! implica darle uno a cada fila: el de la concesión del portal que ya haya, y
-//! si no lo hay, uno recién acuñado contra la ruta guardada. Sin eso, la fila
-//! se pintaría pero no se podría abrir.
-//!
-//! # El recuadro se guarda partido y cruza entero
-//!
-//! El ID-74 reparte lo que se recuerda de la firma visible: el **tamaño** es
-//! global y la **página y la posición** son de cada documento. La ventana, en
-//! cambio, pinta un rectángulo. Juntar las dos mitades al salir y volver a
-//! partirlas al entrar es de aquí, y de ningún otro sitio: hacerlo en
-//! TypeScript sería tener el reparto del ID-74 en los dos lados.
-//!
-//! # `available` no se persiste
-//!
-//! Se recalcula en cada listado contra el disco de ahora mismo. Una ruta que no
-//! responde da `available: false` —la ventana la pinta `No disponible`— y la
-//! fila **revive** cuando la ruta reaparece. Nadie la purga por su cuenta: eso
-//! solo lo hace [`forget`].
+//! Caso de uso de la bandeja de documentos recientes (ADR-0010, ADR-0011).
 
 use std::path::Path;
 use std::time::SystemTime;
@@ -38,10 +9,7 @@ use crate::memory::{
     Badge, BoxSize, Configuration, Memory, OpenedDocuments, Placement, RecentDocument, State,
 };
 
-/// **Caso de uso.** La bandeja entera, la más reciente primero.
-///
-/// No abre ni un PDF: se pinta con lo cacheado (ADR-0010). Lo único que toca el
-/// disco es comprobar si cada ruta sigue respondiendo.
+/// Devuelve la lista de documentos recientes ordenados por fecha de uso.
 pub fn listed_rows(memory: &Memory, opened: &OpenedDocuments) -> Vec<RecentDocumentView> {
     let state = loaded_state(memory);
     let size = state
@@ -57,19 +25,7 @@ pub fn listed_rows(memory: &Memory, opened: &OpenedDocuments) -> Vec<RecentDocum
         .collect()
 }
 
-/// **Caso de uso.** Anota el documento abierto en la bandeja y devuelve su fila
-/// ya lista para pintar.
-///
-/// Devuelve la fila y no nada porque es donde la ventana recupera **lo que ya
-/// se sabía de ese documento**: su insignia cacheada y dónde había caído su
-/// recuadro. El identificador que sale es el mismo que entró, así que la fila
-/// activa sigue siendo la misma para la ventana.
-///
-/// La insignia que se escribe es la que la fila ya tuviera, y `Sin firmar` si
-/// es nueva: **`Firmado` solo lo escribe [`super::signing::finish`]** (ID-76).
-/// Un PDF que ya venga con firmas entra `Sin firmar` a propósito —contar las
-/// firmas de un PDF ajeno es de v1.0—, y reabrir uno que rFirma firmó no le
-/// quita la suya.
+/// Anota un documento abierto en la bandeja de recientes y devuelve su fila para la interfaz.
 pub fn record(
     memory: &Memory,
     configuration: &Configuration,
@@ -111,11 +67,7 @@ pub fn record(
     })
 }
 
-/// **Caso de uso.** Quita una fila de la bandeja.
-///
-/// Es lo único que la saca: una ruta que no responde **sigue en la lista** y es
-/// el usuario quien decide quitarla. Vaciar la lista entera es otra orden,
-/// `forget_activity`, porque se lleva también el certificado.
+/// Elimina un documento de la bandeja de recientes.
 pub fn forget(
     memory: &Memory,
     configuration: &Configuration,
@@ -133,24 +85,12 @@ pub fn forget(
     Ok(())
 }
 
-/// La ruta canónica de `path`, y `path` tal cual si no se puede canonicalizar.
-///
-/// Las filas se guardan **siempre** por ruta canónica ([`RecentDocument::seen`]),
-/// así que buscar una por la ruta cruda no la encuentra en cuanto el camino pasa
-/// por un enlace simbólico. Canonicalizar falla cuando la ruta ya no responde, y
-/// ahí la cruda es lo único que hay: es justo la fila `No disponible` que el
-/// usuario quiere quitar, y compararla cruda es lo que la encuentra si se guardó
-/// sin enlaces por medio.
+/// Devuelve la ruta canónica o la ruta original si no puede canonicalizarse.
 fn canonical_or_raw(path: &Path) -> std::path::PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
-/// Anota el documento **recién firmado** con la insignia `Firmado`.
-///
-/// Es el único sitio de toda la aplicación donde se escribe esa insignia, y lo
-/// llama [`super::signing::finish`] después de que el PDF haya caído
-/// (ID-76). Un fallo al escribir el estado **no tumba la firma**: el documento
-/// ya está en el disco, y perder su fila es una molestia, no un error de firma.
+/// Anota un documento recién firmado en la bandeja con la insignia de firmado.
 pub fn note_signed(memory: &Memory, configuration: &Configuration, landing: &Path) {
     let Ok(noted) = RecentDocument::seen(landing, Badge::Signed, SystemTime::now()) else {
         return;
@@ -160,11 +100,7 @@ pub fn note_signed(memory: &Memory, configuration: &Configuration, landing: &Pat
     let _ = memory.remember_state(configuration, &state);
 }
 
-/// El estado guardado, o el de un primer arranque si no se pudo leer.
-///
-/// Un `state.json` ilegible ya se apartó al leerlo ([`crate::memory::store`]) y
-/// no puede impedir que la bandeja se pinte: lo que se pierde es lo que había
-/// dentro, no la sesión.
+/// Obtiene el estado persistido o uno por defecto si no pudo cargarse.
 fn loaded_state(memory: &Memory) -> State {
     memory
         .state()
@@ -172,8 +108,7 @@ fn loaded_state(memory: &Memory) -> State {
         .unwrap_or_default()
 }
 
-/// La fila tal como la ventana la recibe, con `available` recalculado y el
-/// recuadro ya entero.
+/// Convierte una entrada de recientes en una vista para la ventana.
 fn told_as_row(
     entry: &RecentDocument,
     size: BoxSize,
@@ -190,19 +125,13 @@ fn told_as_row(
     }
 }
 
-/// El identificador con el que esa ruta cruza: el de la concesión que ya haya,
-/// y si no, uno recién acuñado.
-///
-/// Reusarlo importa: la ventana tiene delante el identificador que le dio
-/// `open_document`, y acuñar otro para la misma fila la dejaría sin reconocer
-/// cuál de la bandeja es la que está firmando.
+/// Obtiene o asigna un identificador opaco para la ruta del documento.
 fn identifier_for(path: &Path, opened: &OpenedDocuments) -> String {
     opened
         .last_id_of(path)
         .unwrap_or_else(|| opened.remember(PortalDocument::opened(path.to_path_buf())))
 }
 
-/// Las dos mitades juntas: la esquina del documento y el tamaño global.
 fn joined(spot: &Placement, size: BoxSize) -> PlacementView {
     PlacementView {
         pages: spot.pages.clone(),
@@ -215,7 +144,6 @@ fn joined(spot: &Placement, size: BoxSize) -> PlacementView {
     }
 }
 
-/// Y el reparto de vuelta: la esquina es del documento, el tamaño es de todos.
 fn split(placement: PlacementView) -> (Placement, BoxSize) {
     let [x0, y0, x1, y1] = placement.rect;
     (
@@ -231,7 +159,6 @@ fn split(placement: PlacementView) -> (Placement, BoxSize) {
     )
 }
 
-/// Guarda el tamaño en lo global sin tocar el resto de lo que hubiera.
 fn remember_the_size(state: &mut State, size: BoxSize) {
     state.visible_signature.get_or_insert_default().size = size;
 }
@@ -245,8 +172,6 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
-    /// **Grada A**: ficheros de verdad en un directorio temporal. Ni token, ni
-    /// librería nativa, ni red.
     fn a_pdf(directory: &Path, name: &str, bytes: &[u8]) -> PathBuf {
         let path = directory.join(name);
         fs::write(&path, bytes).expect("deberia escribirse");
@@ -282,7 +207,6 @@ mod tests {
         record(&memory, &configuration, &opened, &first, None).expect("deberia anotarse");
         record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
 
-        // Otra sesión: otro registro de documentos abiertos, la misma memoria.
         let next_session = OpenedDocuments::new();
         let rows = listed_rows(&memory, &next_session);
 
@@ -347,9 +271,6 @@ mod tests {
         assert_eq!(names, vec!["nomina.pdf".to_owned()]);
     }
 
-    /// La fila se guarda por ruta canónica, así que quitarla comparando la ruta
-    /// cruda que abrió la ventana era un no-op silencioso en cuanto el camino
-    /// pasaba por un enlace simbólico.
     #[test]
     fn a_row_opened_through_a_symlink_is_still_the_row_that_forget_takes_out() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -379,8 +300,6 @@ mod tests {
         record(&memory, &configuration, &opened, &id, Some(a_placement(3)))
             .expect("deberia anotarse");
 
-        // Otra apertura del mismo fichero: identificador nuevo (ID-62), misma
-        // fila.
         let again = opened.remember(PortalDocument::opened(path));
         let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
 
@@ -407,7 +326,7 @@ mod tests {
         let row =
             record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
 
-        assert_eq!(row.placement, None, "eso es lo que rechaza el ID-22");
+        assert_eq!(row.placement, None);
     }
 
     #[test]
@@ -436,9 +355,6 @@ mod tests {
 
     #[test]
     fn a_pdf_that_already_carries_signatures_still_enters_as_unsigned() {
-        // Contar las firmas de un PDF ajeno es la ficha 14 y es de v1.0
-        // (ID-76): lo que entra es lo que se sabe, y de un PDF que rFirma no
-        // ha firmado se sabe que no lo ha firmado.
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
         let memory = a_memory(directory.path());
         let opened = OpenedDocuments::new();
@@ -526,8 +442,6 @@ mod tests {
         let (_, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
         record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
 
-        // Sesión nueva: el registro de abiertos empieza vacío y la fila viene
-        // del disco.
         let next_session = OpenedDocuments::new();
         let rows = listed_rows(&memory, &next_session);
 
@@ -581,9 +495,6 @@ mod tests {
         );
     }
 
-    /// El conjunto de páginas es **por documento** (ID-95) y vuelve entero,
-    /// incluido «todas»: lo que se parte entre el documento y lo global es el
-    /// rectángulo, no las páginas.
     #[test]
     fn a_document_gets_its_whole_page_set_back_and_not_just_a_page() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
