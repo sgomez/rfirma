@@ -1,20 +1,4 @@
-//! El certificado que se recordó, contra un token de verdad. **Grada B**
-//! (SoftHSM): carril rápido, segundos (ADR-0014, TD-01).
-//!
-//! El token lo monta `just token` desde `testdata/fnmt/`, igual que para
-//! `tests/pkcs11_token.rs`; la tabla de sus cinco certificados está
-//! documentada allí.
-//!
-//! Lo que se comprueba aquí es el **ciclo entre sesiones**, que es lo único
-//! que necesita el token y que las pruebas de grada A no pueden decir: firmar,
-//! cerrar, volver a abrir y encontrar puesto el mismo certificado. Las
-//! coordenadas que se escriben salen del listado real y no de una referencia
-//! inventada, porque una referencia fabricada a mano probaría que dos
-//! literales son iguales y no que el certificado se reencuentra.
-//!
-//! No hay PIN en ninguna de estas pruebas, y no es un atajo: los certificados
-//! son objetos públicos del token, y reencontrar el recordado al arrancar tiene
-//! que poder hacerse sin pedirle nada a nadie (#110).
+//! Ciclo de persistencia del certificado recordado entre sesiones contra token SoftHSM (ADR-0014).
 
 use std::path::PathBuf;
 
@@ -24,8 +8,7 @@ use rfirma_lib::pkcs11::{self, CertificateRef, TokenCertificate};
 
 const TOKEN: &str = "rfirma-test";
 const ACTIVE: &str = "FNMT-ACTIVO-99999999R";
-/// Los dos que comparten `CKA_LABEL` y no comparten clave: son la razón de que
-/// la referencia lleve `CKA_ID`.
+/// Certificados gemelos que comparten `CKA_LABEL` pero difieren en `CKA_ID`.
 const TWIN: &str = "FNMT-GEMELO-99999999R";
 
 fn module() -> PathBuf {
@@ -72,13 +55,12 @@ fn reference(label: &str) -> CertificateRef {
         .expect("acaba de comprobarse que hay alguno")
 }
 
-/// La memoria de una sesión: dos ficheros en un directorio temporal, como los
-/// tendría quien acaba de instalar la aplicación.
+/// Memoria de sesión en un directorio temporal.
 fn a_session(root: &std::path::Path) -> Memory {
     Memory::at(&Paths::under(root))
 }
 
-/// Con qué certificado se firmó, apuntado como lo apunta la postfirma.
+/// Persiste el certificado en el estado de la sesión.
 fn remember(memory: &Memory, reference: &CertificateRef) {
     let mut state = memory
         .state()
@@ -90,7 +72,7 @@ fn remember(memory: &Memory, reference: &CertificateRef) {
         .expect("deberia guardarse el estado");
 }
 
-/// Lo que hace el arranque: leer lo recordado y buscarlo en el token de ahora.
+/// Busca el certificado recordado en el token actual.
 fn found_again(memory: &Memory) -> Option<CertificateRef> {
     let remembered = memory
         .state()
@@ -103,8 +85,6 @@ fn found_again(memory: &Memory) -> Option<CertificateRef> {
         .find(|listed| remembered.is_the_same_as(listed))
 }
 
-/// El ciclo entero: se firma con uno, se cierra la sesión, y la siguiente
-/// arranca con ese mismo puesto.
 #[test]
 fn the_certificate_signed_with_comes_back_in_the_next_session() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -112,13 +92,9 @@ fn the_certificate_signed_with_comes_back_in_the_next_session() {
 
     remember(&a_session(directory.path()), &used);
 
-    // Otra `Memory` sobre las mismas rutas: es lo que hay al volver a abrir.
     assert_eq!(found_again(&a_session(directory.path())), Some(used));
 }
 
-/// Y vuelve el **exacto**, no el primero que comparta etiqueta: los dos
-/// gemelos del token tienen el mismo `CKA_LABEL` y distinto `CKA_ID`, que es
-/// justo la colisión que hay en un perfil de Firefox de verdad.
 #[test]
 fn the_twin_that_was_used_is_the_one_that_comes_back() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -131,9 +107,6 @@ fn the_twin_that_was_used_is_the_one_that_comes_back() {
     assert_eq!(found_again(&a_session(directory.path())), Some(second));
 }
 
-/// Un certificado recordado que ya no está —tarjeta fuera, perfil borrado— no
-/// se encuentra, y eso **no es un error**: el arranque sigue y el panel vuelve
-/// a «Sin certificado» sin ruido (ADR-0010).
 #[test]
 fn a_remembered_certificate_that_is_gone_is_simply_not_found() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -145,9 +118,6 @@ fn a_remembered_certificate_that_is_gone_is_simply_not_found() {
     assert_eq!(found_again(&a_session(directory.path())), None);
 }
 
-/// Con «Recordar mi actividad» apagado no se escribe ningún certificado, ni
-/// siquiera pidiéndolo: lo impide `Memory::remember_state`, que es donde no se
-/// puede olvidar (ID-34).
 #[test]
 fn with_the_activity_switch_off_no_certificate_reaches_the_disk() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -175,9 +145,6 @@ fn with_the_activity_switch_off_no_certificate_reaches_the_disk() {
     assert_eq!(found_again(&a_session(directory.path())), None);
 }
 
-/// Lo que recordó una versión anterior al #98 y al #99 no lleva `CKA_ID` ni
-/// `init_args`, y el arranque tiene que sobrevivirlo: se reencuentra el
-/// certificado por las coordenadas que sí tiene.
 #[test]
 fn a_certificate_remembered_by_an_older_version_still_starts_the_session() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");

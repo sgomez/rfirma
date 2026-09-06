@@ -1,24 +1,4 @@
-//! **Las guardas de lo que sale hacia la sede**, hermanas de las de
-//! [`rfirma_lib::commands::guards`] (ID-291, TD-58).
-//!
-//! La de allí comprueba que la ruta del portal no cruza a la ventana; ésta
-//! comprueba que **nada nuestro cruza el socket**: ni ruta, ni nombre de
-//! documento, ni certificado, ni intentos de PIN restantes. El método es el
-//! mismo, y por eso son hermanas: no se inventa ningún valor a mano, se
-//! construye lo que sale **desde su caso de uso** con un enlace del portal
-//! dentro, y se recorre campo a campo lo que se queda para comprobar que no
-//! aparece en lo que sale.
-//!
-//! **Grada A**: no toca token, ni librería nativa, ni red.
-//!
-//! Vive en `tests/` y no dentro de `app/` a propósito: para mirar a la vez lo
-//! que se queda (los tipos de [`rfirma_lib::commands`]) y lo que sale (los de
-//! [`rfirma_lib::protocol`]) hay que nombrar las dos capas, y un módulo de
-//! `app/` no puede nombrar al adaptador sin ir contra la flecha del ID-81 —la
-//! guarda `module_directions` lo denuncia, y con razón, porque lee la mitad de
-//! producción de cada fichero de `src/` y un módulo declarado `#[cfg(test)]`
-//! entero no tiene `mod tests` por el que cortar—. Como prueba de integración
-//! entra por la puerta pública del crate y no hay flecha que torcer.
+//! Guardas de lo que sale hacia la sede por el canal local (ADR-0011).
 
 use serde_json::Value;
 
@@ -37,16 +17,13 @@ use rfirma_lib::protocol::{Refusal, SafCode, WireAnswer};
 use rfirma_lib::rubric::{RubricError, Situation as RubricSituation};
 use rfirma_lib::signing::Refusal as Inadmissible;
 
-/// El enlace que el portal concede, que es lo que **no** puede salir. El mismo
-/// literal que usa la guarda hermana de `commands/guards.rs`.
+/// Enlace del portal que no puede salir.
 const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
 
-/// El nombre del documento, que tampoco sale: la sede sabe qué mandó, no cómo
-/// se llama aquí.
+/// Nombre del documento que no puede salir.
 const A_DOCUMENT_NAME: &str = "contrato.pdf";
 
-/// El certificado con el que se firmaría. Es inventado a propósito: ningún dato
-/// de una persona real entra en una prueba.
+/// Certificado inventado de pruebas.
 const A_CERTIFICATE: &str = "CN=CERTIFICADO DE PRUEBAS RFIRMA, SERIALNUMBER=IDCES-00000000T";
 
 /// Los intentos de PIN que quedan, que son de la ventana y de nadie más.
@@ -55,8 +32,7 @@ const ATTEMPTS_LEFT: u32 = 2;
 /// La credencial de canal de una invocación bien formada.
 const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 
-/// Un transporte que abre siempre y apunta el cometido con el que se le llamó:
-/// el cometido es la otra mitad de lo que acaba en el cable.
+/// Transporte de prueba que registra el cometido con el que se le llamó.
 fn a_transport(
     duties: &std::cell::RefCell<Vec<ChannelDuty>>,
 ) -> impl Fn(&[u16], ChannelDuty) -> Result<OpenChannel, ChannelError> + '_ {
@@ -66,18 +42,7 @@ fn a_transport(
     }
 }
 
-/// **Todo lo que se queda dentro**, ya serializado como cruza a la ventana.
-///
-/// Cada fallo sale de su error de dominio con el enlace del portal, el nombre
-/// del documento y el certificado dentro, que es donde de verdad viajan: en el
-/// detalle crudo del ID-29.
-///
-/// Y los tres valores **por separado**, además de dentro del detalle: `Failure`
-/// solo tiene tres campos, así que el detalle es una sola hoja que los
-/// concatena, y buscar únicamente esa frase entera dejaría pasar una línea que
-/// llevara sólo el nombre del documento o sólo el certificado. La comprobación
-/// del criterio ("ni ruta, ni nombre de documento, ni certificado") es la de
-/// cada uno suelto.
+/// Todo lo que se queda dentro, ya serializado como cruza a la ventana.
 fn what_stays_inside() -> Vec<(&'static str, Value)> {
     let inside_the_detail =
         format!("no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con {A_CERTIFICATE}");
@@ -112,11 +77,6 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
             serde_json::to_value(Failure::from(BridgeError::Failed(inside_the_detail)))
                 .expect("serializa"),
         ),
-        // **Los desenlaces del #394**, que son lo último que se queda dentro:
-        // el callejón sin salida y el rechazo que no tiene socket por el que
-        // salir. Del segundo, lo que se mira es el **detalle crudo**, que es
-        // justo lo que el ID-291 no deja cruzar y aquí nace de la URL
-        // contaminada.
         (
             "SiteErrandView (sin canal)",
             serde_json::to_value(SiteErrandView::no_channel(NoChannelView::ChannelNotOpened))
@@ -149,28 +109,12 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
     ]
 }
 
-/// **Todo lo que sale hacia la sede**, construido desde su caso de uso.
-///
-/// Dos orígenes, que son los dos únicos que escriben en el socket: el cometido
-/// con el que [`attend_launch`] abre el canal, y lo que
-/// [`rfirma_lib::channel::conversation`] contesta a cada mensaje. Y encima, la
-/// traducción de cada situación del ID-29, que es lo que saldrá en cuanto haya
-/// operaciones que fallen.
+/// Todo lo que sale hacia la sede, construido desde su caso de uso.
 fn everything_that_goes_out_to_the_site() -> Vec<String> {
     let mut lines = Vec::new();
 
     let duties = std::cell::RefCell::new(Vec::new());
     let transport = a_transport(&duties);
-    // Una invocación con el enlace del portal, el documento y el certificado
-    // metidos en sus parámetros, y mal formada para que sea un rechazo: es el
-    // peor caso, porque el rechazo es justo lo que sale por el cable.
-    //
-    // La versión es la **buena** (`v=4`) a propósito. Con una versión vieja el
-    // rechazo se decide en `check_protocol_version`, antes de leer `idsession`,
-    // `dat` y `fileid`, y entonces la línea que sale no depende de la URL: la
-    // guarda pasaría sin que ninguno de los tres valores contaminados llegara a
-    // tocarse. Con `v=4` el rechazo lo decide la credencial mal formada, que es
-    // el parámetro contaminado, y la respuesta examinada nace de él.
     let url = format!(
         "afirma://websocket?ports=54001&v=4&idsession=no-vale-{A_CERTIFICATE}\
          &dat=file://{A_PORTAL_HANDLE}&fileid={A_DOCUMENT_NAME}"
@@ -182,9 +126,6 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
         other => panic!("con puertos el rechazo sale por el socket: {other:?}"),
     }
 
-    // Y la invocación que llega con un trámite ya vivo (ID-280), que es la otra
-    // línea que `attend_launch` puede escribir en el socket: la URL es buena,
-    // así que el rechazo es el del trámite y no el de la credencial.
     let good = format!(
         "afirma://websocket?ports=54002&v=4&idsession={CREDENTIAL}\
          &dat={A_PORTAL_HANDLE}&fileid={A_DOCUMENT_NAME}"
@@ -211,9 +152,6 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
             for from_loopback in [true, false] {
                 match answer(duty, from_loopback, &message) {
                     Answer::Reply(text) | Answer::ReplyAndClose(text) => lines.push(text),
-                    // La operación que queda pendiente **no escribe nada**
-                    // (ID-320): lo que salga después lo escribe el trámite, y
-                    // eso es lo que se recoge más abajo.
                     Answer::Pending(_) => {}
                 }
             }
@@ -232,13 +170,8 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
         lines.push(WireAnswer::refused(code).on_the_wire());
     }
     lines.push(frontier::cancelled().on_the_wire());
-    // Y el desenlace nuevo del #392, que es el que el trámite escribe por el asa
-    // cuando la persona dice que no o cierra la ventana sin contestar (ID-340).
     let codec = V4Codec;
     lines.push(codec.encode(&rfirma_lib::app::errand::declined(&LiveErrand::default())));
-    // Y el del #393: la firma que no ha salido. El fallo que se le pasa lleva
-    // dentro los tres valores contaminados, que es lo que hace la comprobación:
-    // a la sede sale el código, y el detalle se queda para la ventana (ID-291).
     lines.push(
         codec.encode(&rfirma_lib::app::errand::the_signature_did_not_come_out(
             &LiveErrand::default(),
@@ -255,16 +188,8 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     lines
 }
 
-/// **Los dos callejones sin salida no escriben ni una línea** (ID-341, TD-74).
-///
-/// Es la otra mitad de la guarda: lo que sale al cable se comprueba contra el
-/// catálogo, y de estos dos hay que comprobar que **no sale nada** —no hay
-/// socket por el que decirlo, así que una línea aquí sería una escrita en un
-/// canal que no existe—.
 #[test]
 fn the_dead_ends_write_nothing_on_the_wire() {
-    // Sin `ports` no hay socket que abrir, y con el transporte que no ata nada
-    // tampoco: los dos acaban en la ventana.
     let duties = std::cell::RefCell::new(Vec::new());
     let live = LiveErrand::default();
 
@@ -292,8 +217,7 @@ fn the_dead_ends_write_nothing_on_the_wire() {
     }
 }
 
-/// Cada hoja de un valor ya serializado: las cadenas y los números, que son lo
-/// que puede aparecer copiado en otro sitio.
+/// Hojas de un valor ya serializado.
 fn leaves(value: &Value, into: &mut Vec<String>) {
     match value {
         Value::String(text) => into.push(text.clone()),
@@ -304,11 +228,7 @@ fn leaves(value: &Value, into: &mut Vec<String>) {
     }
 }
 
-/// Si esa línea menciona esa hoja.
-///
-/// Una hoja que es un número se busca como **palabra entera**: el `02` de
-/// `SAF_02` no es los dos intentos de PIN que quedan, y confundirlos pondría la
-/// guarda roja para siempre por el motivo equivocado.
+/// Comprueba si la línea menciona la hoja.
 fn mentions(line: &str, leaf: &str) -> bool {
     if leaf.chars().all(|letter| letter.is_ascii_digit()) {
         return line
@@ -318,12 +238,6 @@ fn mentions(line: &str, leaf: &str) -> bool {
     line.contains(leaf)
 }
 
-/// **Nada de lo que se queda dentro cruza el socket** (ID-291, TD-58).
-///
-/// Ni la ruta del portal, ni el nombre del documento, ni el certificado, ni los
-/// intentos de PIN que quedan. Se recorre campo a campo lo que la ventana sí
-/// recibe y se comprueba que ninguna de esas hojas aparece en ninguna de las
-/// líneas que salen al cable.
 #[test]
 fn nothing_of_ours_crosses_the_socket() {
     let outgoing = everything_that_goes_out_to_the_site();
@@ -345,9 +259,6 @@ fn nothing_of_ours_crosses_the_socket() {
     }
 }
 
-/// Y lo que sale **no puede ser otra cosa que el catálogo** (ID-289, TD-57): la
-/// lista de líneas posibles es finita y se calcula del `enum`, así que una
-/// línea que no esté en ella es un código acuñado.
 #[test]
 fn every_line_that_goes_out_is_one_the_closed_catalogue_can_produce() {
     let mut possible: Vec<String> = Vec::new();
@@ -360,8 +271,6 @@ fn every_line_that_goes_out_is_one_the_closed_catalogue_can_produce() {
     possible.push(WireAnswer::Cancelled.on_the_wire());
     possible.push(WireAnswer::OutOfMemory.on_the_wire());
     possible.push(WireAnswer::Nothing.on_the_wire());
-    // El `OK` del eco no es una respuesta de la frontera, pero sí sale por el
-    // mismo socket.
     possible.push(rfirma_lib::channel::ECHO_OK.to_owned());
 
     for line in everything_that_goes_out_to_the_site() {
@@ -372,12 +281,6 @@ fn every_line_that_goes_out_is_one_the_closed_catalogue_can_produce() {
     }
 }
 
-/// **`SAF_48` no se emite nunca** (ID-295), y esto se lee en el código y no en
-/// una ejecución: el código del *shadow attack* sólo puede aparecer donde se
-/// declara el catálogo y en esta guarda.
-///
-/// `PdfShadowAttackException` es de `master`; la 1.9.2 contra la que se firma no
-/// la lanza, así que emitirlo sería inventarse una situación.
 #[test]
 fn the_shadow_attack_code_is_named_only_where_the_catalogue_is_declared() {
     use std::fs;
@@ -398,8 +301,6 @@ fn the_shadow_attack_code_is_named_only_where_the_catalogue_is_declared() {
     let mut files = Vec::new();
     rust_files_under(&sources, &mut files);
 
-    // Sólo donde se declara el catálogo: esta guarda ya no vive en `src/`, y la
-    // hermana de `commands/guards.rs` no nombra el código.
     let allowed = ["codes.rs"];
     for file in files {
         let name = file
@@ -410,8 +311,6 @@ fn the_shadow_attack_code_is_named_only_where_the_catalogue_is_declared() {
             continue;
         }
         let source = fs::read_to_string(&file).expect("la fuente deberia leerse");
-        // Sólo la mitad de producción, igual que las guardas hermanas: una
-        // prueba que comprueba que el código **no** sale sí puede nombrarlo.
         let production = source
             .split_once("\nmod tests {")
             .map_or(source.as_str(), |(before, _)| before);

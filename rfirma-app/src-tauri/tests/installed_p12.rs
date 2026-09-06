@@ -1,30 +1,4 @@
-//! **Un `.p12` instalado**: entra sin que rfirma descifre nada, se lista sin
-//! teclear su contraseña y se firma con él. **Grada B** (ADR-0014, TD-02):
-//! carril rápido, segundos.
-//!
-//! # Qué hace falta
-//!
-//! ```sh
-//! sudo apt install -y libnss3 openssl
-//! ```
-//!
-//! `libnss3` trae las dos bibliotecas que abren el fichero —`libnss3.so` y
-//! `libsmime3.so`, ver `docs/research/p12-en-almacen-nss.md`— y `libsoftokn3.so`,
-//! que es el que sirve el almacén después. Aquí **no** hace falta
-//! `libnss3-tools`: no se llama a `pk12util` ni a `certutil`, que es justo la
-//! dependencia que el ID-193 evita.
-//!
-//! # El material
-//!
-//! El `.p12` RSA es el `active-rsa.p12` del kit **de pruebas** de la FNMT que
-//! ya está versionado en `testdata/fnmt/` (en la raíz del repositorio) (TD-41). **El certificado personal
-//! del titular no se usa aquí ni en ninguna otra prueba.**
-//!
-//! El de clave elíptica se **fabrica** con `openssl` en un directorio temporal
-//! y no se versiona: el kit de la FNMT trae una rama ECC entera, pero vive
-//! fuera del repositorio y no está en el carril rápido. Es material que sí se
-//! puede fabricar —al revés que un revocado de verdad— y el ADR-0014 dice que
-//! entonces se fabrica.
+//! Ciclo de vida de un archivo PKCS#12 instalado en almacén NSS (ADR-0014).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -40,12 +14,11 @@ use sha2::Sha256;
 use tauri_plugin_dialog::FilePath;
 use x509_cert::der::{Decode, Encode};
 
-/// La contraseña de `active-rsa.p12`, publicada por la propia FNMT.
+/// Contraseña de `active-rsa.p12` del kit de pruebas.
 const KIT_PASSWORD: &str = "1234";
-/// La del `.p12` de clave elíptica que fabrica esta prueba.
+/// Contraseña del `.p12` de clave elíptica que fabrica esta prueba.
 const EC_PASSWORD: &str = "1234";
-/// Lo que se le pide al token: un bloque de `SignedAttributes` sin hashear,
-/// igual que en el recorrido real.
+/// Bloque DER de prueba de `SignedAttributes` sin hashear.
 const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
 
 fn repository_root() -> PathBuf {
@@ -60,11 +33,7 @@ fn kit_p12() -> PathBuf {
     repository_root().join("testdata/fnmt/active-rsa.p12")
 }
 
-/// Un `.p12` con clave elíptica, recién fabricado en `directory`.
-///
-/// Se fabrica en vez de versionarse por lo que dice la cabecera de este
-/// fichero. Si `openssl` no está, la prueba falla nombrándolo: saltársela en
-/// silencio dejaría el ID-197 sin vigilar.
+/// Genera un `.p12` con clave elíptica en `directory`.
 fn an_elliptic_curve_p12(directory: &Path) -> PathBuf {
     let key = directory.join("ec.pem");
     let certificate = directory.join("ec-cert.pem");
@@ -116,7 +85,7 @@ fn run_openssl(arguments: &[&str]) {
     );
 }
 
-/// El directorio de los `.p12` instalados, vacío y desechable.
+/// Directorio temporal desechable para almacenes instalados.
 fn an_empty_installation() -> tempfile::TempDir {
     tempfile::tempdir().expect("deberia poder crearse un directorio temporal")
 }
@@ -129,7 +98,7 @@ fn install(
     app::certificates::install_pkcs12(installed, FilePath::from(p12), password)
 }
 
-/// Los almacenes que hay instalados ahora mismo bajo `installed`.
+/// Almacenes instalados actualmente bajo `installed`.
 fn installed_stores(installed: &Path) -> Vec<Store> {
     let softoken = pkcs11::stores::softoken().expect(
         "falta libsoftokn3.so. Las pruebas de grada B del .p12 instalado lo necesitan:\n  \
@@ -155,14 +124,6 @@ fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
     VerifyingKey::<Sha256>::new(public_key)
 }
 
-// ---------------------------------------------------------------------------
-// Instalar
-// ---------------------------------------------------------------------------
-
-/// El criterio de aceptación central (TD-41): un `.p12` RSA del kit se instala
-/// y sus certificados se listan **sin teclear la contraseña**. La del fichero
-/// se teclea una vez, al instalarlo, y no vuelve a hacer falta: el almacén que
-/// queda detrás no lleva contraseña propia (ID-195).
 #[test]
 fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
     let installed = an_empty_installation();
@@ -177,8 +138,6 @@ fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
         .is_some_and(|subject| subject.contains("EIDAS")));
 }
 
-/// La otra mitad del TD-41: una clave elíptica **se rechaza al instalar**, no
-/// al firmar (ID-197), y lo dice con su propia situación.
 #[test]
 fn a_p12_with_an_elliptic_curve_key_is_refused_at_install() {
     let installed = an_empty_installation();
@@ -191,8 +150,6 @@ fn a_p12_with_an_elliptic_curve_key_is_refused_at_install() {
     assert_eq!(failure.situation, "keyNotRsa");
 }
 
-/// Y el rechazo **no deja nada puesto**: media instalación sería un almacén con
-/// un certificado que no se puede firmar, listado como si sirviera.
 #[test]
 fn a_refused_p12_leaves_no_store_behind() {
     let installed = an_empty_installation();
@@ -207,9 +164,6 @@ fn a_refused_p12_leaves_no_store_behind() {
     );
 }
 
-/// La contraseña que no es la del fichero no instala nada, y se distingue de
-/// una clave que no sirve: son dos situaciones distintas y la ventana las
-/// cuenta distinto.
 #[test]
 fn a_wrong_password_is_told_apart_from_a_key_that_does_not_serve() {
     let installed = an_empty_installation();
@@ -221,8 +175,6 @@ fn a_wrong_password_is_told_apart_from_a_key_that_does_not_serve() {
     assert!(installed_stores(installed.path()).is_empty());
 }
 
-/// **Del fichero no se recuerda nada** (ID-196): en el almacén no queda ni una
-/// copia del `.p12` ni su nombre, solo las dos bases de datos que escribe NSS.
 #[test]
 fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     let installed = an_empty_installation();
@@ -253,8 +205,6 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     );
 }
 
-/// Dos `.p12` instalados son **dos almacenes**, no uno con dos cosas dentro
-/// (ID-192): mezclarlos haría imposible quitar uno solo.
 #[test]
 fn two_installed_files_are_two_stores() {
     let installed = an_empty_installation();
@@ -266,14 +216,6 @@ fn two_installed_files_are_two_stores() {
     assert_eq!(certificates(installed.path()).len(), 2);
 }
 
-// ---------------------------------------------------------------------------
-// Firmar
-// ---------------------------------------------------------------------------
-
-/// El otro criterio de aceptación: se firma con un certificado que vino de un
-/// `.p12`, y la firma verifica contra **su** clave pública. `C_Sign` sigue
-/// siendo el único sitio que toca la clave (ADR-0001): aquí no hay más
-/// criptografía que la del token.
 #[test]
 fn a_certificate_that_came_from_a_p12_signs() {
     let installed = an_empty_installation();
@@ -294,8 +236,6 @@ fn a_certificate_that_came_from_a_p12_signs() {
         .expect("la firma no verifica contra la clave publica del certificado");
 }
 
-/// Un `.p12` instalado se abre **sin secreto que pedir** (ID-195), que es lo
-/// que hace que su diálogo del PIN no aparezca.
 #[test]
 fn an_installed_p12_asks_for_no_secret() {
     let installed = an_empty_installation();
@@ -311,12 +251,6 @@ fn an_installed_p12_asks_for_no_secret() {
     assert_eq!(secret, pkcs11::StoreSecret::NotNeeded);
 }
 
-// ---------------------------------------------------------------------------
-// Quitar
-// ---------------------------------------------------------------------------
-
-/// Quitar un instalado borra su almacén entero, que es lo único que quedaba del
-/// fichero.
 #[test]
 fn removing_an_installed_certificate_deletes_its_store() {
     let installed = an_empty_installation();
@@ -336,8 +270,6 @@ fn removing_an_installed_certificate_deletes_its_store() {
     assert!(installed_stores(installed.path()).is_empty());
 }
 
-/// Y **solo** borra dentro del directorio de los instalados: un certificado de
-/// otro almacén se rechaza sin tocar nada de nadie.
 #[test]
 fn a_certificate_from_somewhere_else_is_not_removed() {
     let installed = an_empty_installation();

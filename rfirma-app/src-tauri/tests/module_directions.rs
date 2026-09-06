@@ -1,86 +1,33 @@
-//! **La dirección de las dependencias entre módulos, escrita como prueba**
-//! (ID-81, ID-82, ID-83, ADR-0017).
-//!
-//! **Grada A**: lee ficheros del repositorio y nada más. Sin token, sin
-//! librería nativa y sin red.
-//!
-//! Rust no vigila la dirección *dentro* de un crate: `signing` podía importar
-//! `ffi` mientras `ffi` importaba `signing`, y `destination` importar `memory`
-//! mientras `memory` importaba `destination`, y todo compilaba. Por eso los dos
-//! ciclos vivieron ahí sin que nadie se enterara hasta el #136, y por eso hace
-//! falta una guarda: sin ella la pregunta «¿dónde pongo este tipo?» vuelve a no
-//! tener respuesta deducible en cuanto alguien añada el `use` cómodo.
-//!
-//! Lo que se comprueba son las **aristas prohibidas**, no las permitidas. Son
-//! de dos clases:
-//!
-//! - **Contra la capa** (ID-81): un módulo de dominio o de infraestructura que
-//!   nombra a `app/` o a `commands/`, y `app/` que nombra a un cuerpo de orden
-//!   en vez de a los tipos de frontera. La flecha va siempre hacia dentro.
-//! - **Contra un hermano**: las dos direcciones que cerraron los ciclos del
-//!   #136. `ffi` sigue importando `signing::SessionSeal` y `memory` sigue
-//!   importando `destination`, que son infraestructura mirando al dominio y son
-//!   las direcciones correctas.
-//!
-//! Se mira **la mitad de producción** de cada módulo, cortando por `mod tests`.
-//! Un `use` dentro de `#[cfg(test)]` no participa en el grafo que se compila y
-//! no cierra ningún ciclo: `destination/portal.rs` comprueba contra
-//! `memory::RecentDocument` que el identificador del portal sigue a la ruta y no
-//! al inodo, y esa comprobación es de las dos cosas a la vez.
-//!
-//! Se leen **las líneas `use crate::`** (TD-22), no los caminos absolutos escritos
-//! en medio de una expresión: un `crate::app::algo()` en línea se le escapa. Es un
-//! agujero conocido y estrecho —el estilo del backend es importar arriba y usar el
-//! nombre corto— y taparlo pediría un análisis del árbol sintáctico, que es
-//! justamente lo que `cargo-pup` habría dado y el ADR-0017 descarta por el
-//! toolchain nightly que exige.
-//!
-//! Si esta prueba te ha puesto el PR en rojo, el `use` que has añadido no es el
-//! problema: es el síntoma. Lo que has escrito pertenece al otro lado de la
-//! flecha —normalmente a `app/`, que es donde viven las decisiones—.
+//! Guarda de dirección de dependencias entre módulos del backend (ADR-0017).
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-/// Las capas del backend, de fuera adentro (ID-81, ADR-0017).
+/// Capas del backend (ADR-0017).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Layer {
-    /// `lib.rs` y `main.rs`: el cableado. Ve a todo el mundo por definición.
     CompositionRoot,
-    /// `commands/`: el adaptador de Tauri. Puede nombrar a cualquiera.
     Adapter,
-    /// `app/`: los casos de uso.
     UseCases,
-    /// El resto: dominio e infraestructura. No miran hacia fuera.
     Domain,
 }
 
-/// Quién tiene prohibida la arista.
+/// Ámbito de aplicación de una arista prohibida.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Origin {
-    /// Una capa entera.
     Layer(Layer),
-    /// Una carpeta concreta de `src/`, para las dos direcciones del #136.
     Module(&'static str),
-    /// Todo lo que cuelga de esa ruta de `src/`, para las dos aristas del
-    /// trámite (RD-12, #406).
     Under(&'static str),
 }
 
-/// Una arista prohibida: quién no puede nombrar a quién, adónde debería ir en
-/// su lugar y qué decisión lo dice.
+/// Arista prohibida entre módulos.
 struct Direction {
     from: Origin,
-    /// El primer segmento de `crate::…` que no puede aparecer dentro.
     forbidden: &'static str,
-    /// Los caminos de ese segmento que **sí** están permitidos, por prefijo.
     except: &'static [&'static str],
-    /// Hacia dónde apunta la flecha correcta, para que el fallo se lea sin
-    /// abrir el ADR.
     instead: &'static str,
-    /// La decisión que lo dice.
     reason: &'static str,
 }
 
@@ -105,10 +52,6 @@ const DIRECTIONS: [Direction; 8] = [
     Direction {
         from: Origin::Layer(Layer::UseCases),
         forbidden: "commands",
-        // `app/` sí nombra los tipos de frontera —lo que la ventana manda y lo
-        // que se le devuelve—, que viven en `commands/` por el ID-80. Lo que no
-        // puede nombrar es un **cuerpo de orden**: eso sería el caso de uso
-        // llamando a su propio adaptador.
         except: &["commands::views", "commands::orders", "commands::Failure"],
         instead: "el cuerpo de la orden llama al caso de uso, no al contrario; si hace \
                   falta compartir algo, baja a `app/` o a un tipo de frontera de \
@@ -136,10 +79,6 @@ const DIRECTIONS: [Direction; 8] = [
     Direction {
         from: Origin::Under("app/errand/"),
         forbidden: "channel",
-        // Los tres tipos que **cruzan** el puerto —el cometido con el que se
-        // abre, el canal abierto y su error— son vocabulario del puerto aunque
-        // vivan en `channel/`: los nombra `ports.rs` para declararlo, y nadie
-        // mas del tramite los necesita.
         except: &[
             "channel::ChannelDuty",
             "channel::ChannelError",
@@ -183,12 +122,7 @@ fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Los módulos **versionados** de `src/`, preguntándoselo a git.
-///
-/// Se le pregunta a git y no se recorre el árbol a mano por la misma razón que
-/// en `single_cfg_os_site.rs`: un repositorio con árboles de trabajo enlazados
-/// dentro —como los que usan los agentes— tiene copias enteras del código en
-/// otras ramas, que no son este PR.
+/// Módulos versionados de src obtenidos desde git.
 fn tracked_modules() -> Vec<Module> {
     let root = manifest_dir();
     let listing = Command::new("git")
@@ -206,9 +140,6 @@ fn tracked_modules() -> Vec<Module> {
         .expect("la lista de git deberia ser UTF-8")
         .lines()
         .filter(|entry| entry.ends_with(".rs"))
-        // Un `tests.rs` es la mitad de pruebas de su carpeta, escrita en un
-        // fichero aparte en vez de tras `mod tests`: no participa en el grafo
-        // que se compila, igual que un `#[cfg(test)]` al pie.
         .filter(|entry| !entry.ends_with("/tests.rs"))
         .map(|entry| {
             let relative = entry
@@ -248,7 +179,7 @@ fn layer_of(relative: &str, folder: &str) -> Layer {
     }
 }
 
-/// La mitad de producción de un módulo: lo que hay antes de `mod tests`.
+/// Mitad de producción de un módulo antes de mod tests.
 fn production_half(source: &str) -> String {
     source
         .split_once("\nmod tests {")
@@ -257,16 +188,7 @@ fn production_half(source: &str) -> String {
         .to_owned()
 }
 
-/// Los caminos `crate::…` que **importa** una línea, ya desplegados.
-///
-/// Solo son importes las líneas `use`: los nombres prohibidos aparecen también
-/// en los comentarios de contrato, y ahí decir «no importa `ffi`» es justamente
-/// lo contrario de importarlo.
-///
-/// Se despliegan las llaves porque `use crate::{app, memory};` y
-/// `use crate::commands::{views, Failure};` son la misma arista escrita corta, y
-/// una guarda que solo mire el primer segmento acusa a la segunda sin motivo y
-/// deja pasar la primera.
+/// Caminos crate:: que importa una línea, ya desplegados.
 fn crate_imports(line: &str) -> Vec<String> {
     let trimmed = line.trim_start();
     if !(trimmed.starts_with("use ") || trimmed.starts_with("pub use ")) {
@@ -278,7 +200,7 @@ fn crate_imports(line: &str) -> Vec<String> {
     expand(after.trim_end().trim_end_matches(';'))
 }
 
-/// Despliega un camino de `use` con llaves en los caminos que nombra.
+/// Despliega un camino de use con llaves.
 fn expand(path: &str) -> Vec<String> {
     let path = path.trim();
     let Some(brace) = path.find('{') else {
@@ -302,8 +224,7 @@ fn expand(path: &str) -> Vec<String> {
         .collect()
 }
 
-/// El camino que hay hasta el primer separador: corta el alias (`as`), la coma
-/// y lo que venga detrás.
+/// Camino hasta el primer separador.
 fn head_of(path: &str) -> String {
     path.split([' ', ',', ';', '}'])
         .next()
@@ -312,7 +233,7 @@ fn head_of(path: &str) -> String {
         .to_owned()
 }
 
-/// El desplazamiento de la llave que cierra la que abre en `0`.
+/// Desplazamiento de la llave de cierre.
 fn closing_brace(from: &str) -> Option<usize> {
     let mut depth = 0usize;
     for (offset, character) in from.char_indices() {
@@ -330,7 +251,7 @@ fn closing_brace(from: &str) -> Option<usize> {
     None
 }
 
-/// Parte por las comas que **no** están dentro de unas llaves.
+/// Divide por comas que no están dentro de llaves.
 fn split_at_top_level(inner: &str) -> Vec<&str> {
     let mut items = Vec::new();
     let mut depth = 0usize;
@@ -353,7 +274,7 @@ fn split_at_top_level(inner: &str) -> Vec<&str> {
         .collect()
 }
 
-/// ¿Le toca a este módulo esta dirección?
+/// Comprueba si le toca a este módulo esta dirección.
 fn applies_to(direction: &Direction, module: &Module) -> bool {
     match direction.from {
         Origin::Layer(layer) => module.layer == layer,
@@ -362,10 +283,8 @@ fn applies_to(direction: &Direction, module: &Module) -> bool {
     }
 }
 
-/// ¿Este camino importado cae dentro de lo que la dirección prohíbe?
+/// Comprueba si este camino importado cae dentro de lo prohibido.
 fn is_forbidden(direction: &Direction, path: &str) -> bool {
-    // Un segmento prohibe la carpeta entera; un camino con `::` prohibe solo
-    // ese modulo y lo que cuelga de el (`app::codec`, `app::transport`).
     let hits = if direction.forbidden.contains("::") {
         path == direction.forbidden || path.starts_with(&format!("{}::", direction.forbidden))
     } else {
@@ -421,12 +340,6 @@ fn no_module_imports_against_the_direction_of_the_layers() {
     );
 }
 
-/// Las direcciones **buenas** que los dos ciclos dejaron en pie.
-///
-/// Sin esto la guarda sería feliz con un backend en el que `ffi` y `memory`
-/// hubieran dejado de hablar con el dominio: no habría aristas prohibidas
-/// porque no habría aristas. Que la de al lado siga existiendo es lo que hace
-/// que la prohibición signifique algo.
 #[test]
 fn the_directions_that_are_allowed_are_still_there() {
     let modules = tracked_modules();
@@ -479,9 +392,6 @@ fn the_directions_that_are_allowed_are_still_there() {
     );
 }
 
-/// Cada capa tiene módulos de verdad. Si `layer_of` deja de clasificar —porque
-/// alguien renombra `app/`, por ejemplo—, la guarda pasaría en verde sin mirar
-/// nada, que es la única forma en la que una prueba así puede mentir.
 #[test]
 fn every_layer_has_modules_to_watch() {
     let modules = tracked_modules();
@@ -498,7 +408,7 @@ fn every_layer_has_modules_to_watch() {
     }
 }
 
-/// Las formas de `use` que la guarda dice leer, escritas enteras.
+/// Formas de use que la guarda lee.
 const THE_FORMS_IT_READS: [(&str, &[&str]); 7] = [
     ("use crate::ffi::Bridge;", &["ffi::Bridge"]),
     (
@@ -541,8 +451,7 @@ fn the_reader_understands_every_form_of_use_it_claims_to() {
     }
 }
 
-/// Lo que **no** es un importe. Ninguna de estas líneas puede disparar la
-/// guarda, o el PR rojo lo daría cualquier fichero con un comentario honesto.
+/// Líneas que no son un importe.
 const WHAT_MUST_NOT_TRIP_IT: [&str; 5] = [
     "//! `signing/mod.rs` **no importa** `crate::ffi` (ID-82).",
     "/// Ver `crate::app::cycle` para el recorrido entero.",
