@@ -51,6 +51,17 @@ pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
 pub fn run() {
     use tauri::{Emitter, Manager};
 
+    // **Antes que nada**: si lo que se pide es la ayuda, se imprime y se
+    // termina. No se monta ventana ni se toca la memoria, y tampoco se vuelve
+    // a arrancar por los argumentos ilegibles: una bandera de ayuda es UTF-8
+    // por construcción.
+    if app::invocation::help_was_asked_for(
+        std::env::args_os().map(|argument| argument.to_string_lossy().into_owned()),
+    ) {
+        println!("{}", app::invocation::HELP);
+        return;
+    }
+
     // **Lo primero de todo** (ID-236): el complemento de instancia única lee la
     // línea de órdenes con `std::env::args()`, que entra en pánico con un
     // argumento que no sea UTF-8, y lo hace dentro de su propio `setup`. Para

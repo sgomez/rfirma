@@ -168,6 +168,76 @@ pub fn make_the_command_line_readable() {
     }
 }
 
+/// Las tres formas de pedir la ayuda.
+///
+/// `--help` y `-h` son lo que espera quien viene de cualquier programa de
+/// consola; `-help` es la que documenta AutoFirma, y se acepta para que quien
+/// llega con su manual delante no se quede sin nada (ID-157).
+pub const HELP_FLAGS: [&str; 3] = ["--help", "-help", "-h"];
+
+/// La ayuda, tal y como sale por la salida estándar.
+///
+/// Dice **lo que rFirma acepta** y, detrás, lo que AutoFirma acepta y aquí no
+/// existe. Lo segundo no es cortesía: la línea de órdenes de AutoFirma firma
+/// sin preguntar, y rFirma no tiene modo desatendido ni lo va a tener, así que
+/// callarse esas órdenes deja a quien las busca probándolas una a una.
+pub const HELP: &str = "\
+rfirma — firma y cofirma de documentos PDF en PAdES.
+
+Uso:
+  rfirma [documento…]
+  rfirma «afirma://…»
+  rfirma --help
+
+Argumentos:
+  documento           Ruta de un PDF: se abre en la ventana, listo para firmar.
+                      Lo que no sea un PDF abre la ventana igual y lo dice.
+  afirma://…          La llamada de una sede electrónica. La entrega el
+                      navegador a través del manejador del esquema; a mano,
+                      sirve para probar.
+
+Opciones:
+  -h, -help, --help   Muestra esta ayuda y termina.
+
+Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
+  websocket           Abre el canal en uno de los puertos que sortea la sede.
+  echo                Comprobación de vida.
+  selectcert          Elegir certificado, consentido por la persona.
+  sign                Firma PAdES de un PDF.
+  cosign              Cofirma PAdES de un PDF.
+  countersign, save y signandsave se rechazan con su código del catálogo.
+
+Compatibilidad con AutoFirma:
+  rFirma la sustituye en la llamada desde el navegador —el esquema afirma://—,
+  que es como la usan las sedes electrónicas. NO implementa su línea de órdenes
+  de firma desatendida, así que ninguna de estas órdenes ni de estos parámetros
+  existe aquí:
+
+    órdenes      sign, cosign, countersign, listaliases, verify, batchsign
+    parámetros   -i, -o, -alias, -filter, -store, -format, -password,
+                 -algorithm, -config, -operation, -gui, -certgui, -preurl,
+                 -posturl, -hformat, -halgorithm, -r, -xml
+
+  Toda firma la consiente la persona delante de la ventana. No hay modo
+  desatendido y no está previsto que lo haya.
+";
+
+/// Si la línea de órdenes pide la ayuda.
+///
+/// Se mira **antes de montar nada** y en cualquier posición: quien escribe
+/// `rfirma documento.pdf --help` está pidiendo la ayuda, no una firma. El
+/// ejecutable de delante no cuenta.
+pub fn help_was_asked_for<I, S>(arguments: I) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    arguments
+        .into_iter()
+        .skip(1)
+        .any(|argument| HELP_FLAGS.contains(&argument.as_ref()))
+}
+
 /// **Caso de uso.** Qué abre una invocación, contado como la ventana lo
 /// entiende.
 ///
@@ -389,6 +459,79 @@ mod tests {
             ),
             SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
         );
+    }
+
+    /// La ayuda se pide con las tres formas, y en cualquier posición: quien
+    /// escribe `rfirma documento.pdf --help` quiere la ayuda, no una firma.
+    #[test]
+    fn the_help_is_asked_for_with_any_of_its_three_flags_and_from_any_position() {
+        for flag in ["--help", "-help", "-h"] {
+            assert!(help_was_asked_for(["rfirma", flag]), "con {flag} sola");
+            assert!(
+                help_was_asked_for(["rfirma", "documento.pdf", flag]),
+                "con {flag} detrás de un documento"
+            );
+        }
+    }
+
+    /// Y no se pide con nada más. El nombre del ejecutable no cuenta: un
+    /// binario que se llamara `-h` no dispararía la ayuda.
+    #[test]
+    fn nothing_else_asks_for_the_help() {
+        assert!(!help_was_asked_for(["rfirma"]));
+        assert!(!help_was_asked_for(["rfirma", "documento.pdf"]));
+        assert!(!help_was_asked_for([
+            "rfirma",
+            "afirma://websocket?ports=51000"
+        ]));
+        assert!(!help_was_asked_for(["rfirma", "--helpful"]));
+        assert!(!help_was_asked_for(["-h"]), "el ejecutable no cuenta");
+    }
+
+    /// El texto nombra **todo** lo que AutoFirma acepta por línea de órdenes,
+    /// para que quien llegue con su manual delante no lo pruebe una a una.
+    #[test]
+    fn the_help_names_every_autofirma_command_and_parameter() {
+        for command in [
+            "sign",
+            "cosign",
+            "countersign",
+            "listaliases",
+            "verify",
+            "batchsign",
+        ] {
+            assert!(HELP.contains(command), "falta la orden {command}");
+        }
+        for parameter in [
+            "-i",
+            "-o",
+            "-alias",
+            "-filter",
+            "-store",
+            "-format",
+            "-password",
+            "-algorithm",
+            "-config",
+            "-operation",
+            "-gui",
+            "-certgui",
+            "-preurl",
+            "-posturl",
+            "-hformat",
+            "-halgorithm",
+            "-r",
+            "-xml",
+        ] {
+            assert!(HELP.contains(parameter), "falta el parámetro {parameter}");
+        }
+    }
+
+    /// Y nombra las tres formas de pedirla, incluida la de AutoFirma.
+    #[test]
+    fn the_help_names_the_three_ways_of_asking_for_it() {
+        for flag in HELP_FLAGS {
+            assert!(HELP.contains(flag), "falta {flag}");
+        }
     }
 
     #[test]
