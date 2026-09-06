@@ -93,5 +93,6 @@ pub(crate) fn an_order() -> SigningOrder {
         signed_at: "31/08/26, 12:00:00".to_owned(),
         rubric: None,
         language: "es".to_owned(),
+        allow_unregistered_signatures: false,
     }
 }

@@ -820,6 +820,20 @@ msgstr "El sello aparecerá en {{sealed}} de las {{chosen}} páginas elegidas."
 msgid "sealLoss.confirm"
 msgstr "Firmar de todos modos"
 
+#. El titular del aviso de firmas que rFirma no sabe leer, antes de firmar.
+msgid "unregisteredSignatures.title"
+msgstr "Este PDF trae firmas que no entendemos"
+
+#. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
+msgid "unregisteredSignatures.body"
+msgstr ""
+"Alguna de las firmas que ya tiene no está en un formato que rFirma sepa leer, "
+"así que no podemos decirte nada de ella. Puedes firmar igual: tu firma será "
+"válida, y las que ya estaban se quedan como están."
+
+msgid "unregisteredSignatures.confirm"
+msgstr "Firmar de todos modos"
+
 msgid "preferences.title"
 msgstr "Preferencias"
 

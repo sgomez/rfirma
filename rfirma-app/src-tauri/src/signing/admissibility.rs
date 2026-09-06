@@ -55,6 +55,25 @@ const DOC_MDP: &[u8] = b"/DocMDP";
 /// justo el caso de la cofirma, y está aquí para poder decirlo.
 const BYTE_RANGE: &[u8] = b"/ByteRange";
 
+/// La clave `/SubFilter` de un diccionario de firma, que es la que dice **con
+/// qué formato** se firmó.
+const SUB_FILTER: &[u8] = b"/SubFilter";
+
+/// Los cuatro subfiltros que el puente sabe leer, tal y como los nombra
+/// `PdfUtil.SUPPORTED_SUBFILTERS` de la 1.9.2 —con la barra delante, porque ahí
+/// se comparan contra el `toString()` de un `PdfName`—.
+///
+/// **Uno de los cuatro es `/ETSI.RFC3161`** —el sello de tiempo de documento— y
+/// entre ellos **no está** `/adbe.x509.rsa.sha1`, que sí es un subfiltro de la
+/// norma: la lista no es la del PDF, es la del original, y es la del original
+/// la que decide si el puente aborta.
+const KNOWN_SUB_FILTERS: [&[u8]; 4] = [
+    b"/ETSI.RFC3161",
+    b"/adbe.pkcs7.detached",
+    b"/ETSI.CAdES.detached",
+    b"/adbe.pkcs7.sha1",
+];
+
 /// Por qué no se puede firmar este documento.
 ///
 /// Son situaciones, no mensajes: quien las traduce es el catálogo de cadenas
@@ -111,6 +130,7 @@ impl std::error::Error for Refusal {}
 pub struct AdmissibleDocument<'a> {
     pdf: &'a [u8],
     already_signed: bool,
+    unregistered_signatures: bool,
 }
 
 impl<'a> AdmissibleDocument<'a> {
@@ -128,6 +148,7 @@ impl<'a> AdmissibleDocument<'a> {
         Ok(Self {
             pdf,
             already_signed: contains(pdf, BYTE_RANGE),
+            unregistered_signatures: has_unregistered_signatures(pdf),
         })
     }
 
@@ -144,6 +165,19 @@ impl<'a> AdmissibleDocument<'a> {
     /// prueba pueda afirmar que la segunda firma vio la primera.
     pub fn already_signed(&self) -> bool {
         self.already_signed
+    }
+
+    /// Si el documento trae **firmas que no sabemos leer** (ID-297).
+    ///
+    /// **No es una negativa**: informa. Quien decide es la persona, dentro del
+    /// consentimiento (ID-298, ID-299), y sólo si dice que sí se le manda al
+    /// puente `allowCosigningUnregisteredSignatures=true`, que es lo que evita
+    /// que `PdfSessionManager` aborte la cofirma (ID-300, ID-301).
+    ///
+    /// Ni se validan las firmas previas ni se cuenta cuántas hay (ID-305): la
+    /// pregunta es de sí o no.
+    pub fn has_unregistered_signatures(&self) -> bool {
+        self.unregistered_signatures
     }
 }
 
@@ -186,6 +220,57 @@ fn looks_like_an_entry(after: &[u8]) -> bool {
     // `/Encrypt 12 0 R`: la referencia indirecta.
     let digits = rest.iter().take_while(|byte| byte.is_ascii_digit()).count();
     digits > 0 && rest[digits..].first().is_some_and(u8::is_ascii_whitespace)
+}
+
+/// Busca un `/SubFilter` cuyo valor no sea uno de [`KNOWN_SUB_FILTERS`].
+///
+/// El original recorre el xref con iText y mira sólo los diccionarios con
+/// `/Type /Sig` (`PdfUtil.pdfHasUnregisteredSignatures`); aquí se husmean los
+/// bytes, y eso significa que **no se ata el `/SubFilter` a su diccionario**.
+/// La holgura está elegida a propósito y va en el sentido bueno: de más sale
+/// una pregunta —que es lo peor que puede pasar, porque esto no rechaza
+/// (ID-299)—, y de menos contesta el puente, que es el juez de verdad y tiene
+/// su propio código (`SAF_50`, ID-303).
+///
+/// Un valor que no sea un nombre —una referencia indirecta— no cuenta: leerlo
+/// pediría el recorrido del xref que este módulo no hace y no va a hacer.
+fn has_unregistered_signatures(pdf: &[u8]) -> bool {
+    let mut from = 0;
+    while let Some(offset) = find(&pdf[from..], SUB_FILTER) {
+        let after = from + offset + SUB_FILTER.len();
+        if let Some(name) = name_at(&pdf[after..]) {
+            if !KNOWN_SUB_FILTERS.contains(&name) {
+                return true;
+            }
+        }
+        from = after;
+    }
+    false
+}
+
+/// El nombre PDF que sigue a una clave, si lo que sigue es un nombre.
+///
+/// Un nombre acaba en el primer espacio o delimitador (`%PDF-2.0`, 7.3.5); la
+/// barra inicial va dentro, que es como los nombra [`KNOWN_SUB_FILTERS`].
+fn name_at(after: &[u8]) -> Option<&[u8]> {
+    let start = after.iter().position(|byte| !byte.is_ascii_whitespace())?;
+    let rest = &after[start..];
+    if rest.first() != Some(&b'/') {
+        return None;
+    }
+    let end = rest[1..]
+        .iter()
+        .position(|byte| byte.is_ascii_whitespace() || is_delimiter(*byte))
+        .map_or(rest.len(), |length| length + 1);
+    Some(&rest[..end])
+}
+
+/// Los delimitadores de la sintaxis del PDF (`%PDF-2.0`, tabla 2).
+fn is_delimiter(byte: u8) -> bool {
+    matches!(
+        byte,
+        b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}' | b'/' | b'%'
+    )
 }
 
 fn contains(haystack: &[u8], needle: &[u8]) -> bool {
@@ -304,6 +389,50 @@ mod tests {
         let document = AdmissibleDocument::check(&pdf).expect("se cofirma");
 
         assert!(document.already_signed());
+    }
+
+    #[test]
+    fn admits_a_pdf_whose_previous_signatures_it_cannot_read_and_says_so() {
+        // ID-297 / ID-299: no es una negativa, es un aviso.
+        let pdf = a_pdf(
+            "9 0 obj\n<< /Type /Sig /SubFilter /ETSI.CAdES.detached /ByteRange [0 8 9 2] >>\nendobj\n             10 0 obj\n<< /Type /Sig /SubFilter /adbe.pkcs7.somethingelse >>\nendobj",
+        );
+
+        let document = AdmissibleDocument::check(&pdf).expect("no se rechaza, se pregunta");
+
+        assert!(document.has_unregistered_signatures());
+    }
+
+    #[test]
+    fn says_nothing_about_a_pdf_signed_only_with_subfilters_the_bridge_reads() {
+        let pdf = a_pdf(
+            "9 0 obj\n<< /Type /Sig /SubFilter/adbe.pkcs7.detached >>\nendobj\n             10 0 obj\n<< /Type /Sig /SubFilter /adbe.pkcs7.sha1 >>\nendobj\n             11 0 obj\n<< /Type /DocTimeStamp /SubFilter /ETSI.RFC3161 >>\nendobj",
+        );
+
+        let document = AdmissibleDocument::check(&pdf).expect("es un PDF corriente");
+
+        assert!(!document.has_unregistered_signatures());
+    }
+
+    #[test]
+    fn does_not_ask_about_a_subfilter_it_cannot_even_read() {
+        // Una referencia indirecta pediría recorrer el xref, y eso es del
+        // puente: aquí se calla y contesta él (ID-303).
+        let pdf = a_pdf("9 0 obj\n<< /Type /Sig /SubFilter 12 0 R >>\nendobj");
+
+        let document = AdmissibleDocument::check(&pdf).expect("es un PDF");
+
+        assert!(!document.has_unregistered_signatures());
+    }
+
+    #[test]
+    fn an_ordinary_pdf_has_no_unregistered_signatures() {
+        let pdf = a_pdf("1 0 obj\n<< /Type /Catalog >>\nendobj");
+
+        let document = AdmissibleDocument::check(&pdf).expect("es un PDF corriente");
+
+        assert!(!document.has_unregistered_signatures());
+        assert!(!document.already_signed());
     }
 
     #[test]

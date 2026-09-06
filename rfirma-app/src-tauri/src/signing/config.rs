@@ -1,4 +1,4 @@
-//! La configuración de firma: seis ajustes y ni uno más (ID-18).
+//! La configuración de firma: siete ajustes y ni uno más (ID-18).
 //!
 //! Todo lo demás se hereda de AutoFirma sin enviarse. Quedan fuera a propósito
 //! (ID-20) la política de firma, la ciudad, el contacto, el perfil,
@@ -29,6 +29,13 @@ const LAYER2_TEXT_KEY: &str = "layer2Text";
 const RUBRIC_IMAGE_KEY: &str = "signatureRubricImage";
 const SIGN_REASON_KEY: &str = "signReason";
 const LAYER2_FONT_SIZE_KEY: &str = "layer2FontSize";
+/// La clave con la que se le dice al puente que siga adelante con un PDF que
+/// trae firmas sin registrar (`PdfSessionManager`).
+///
+/// Es pública porque **también hay que quitarla** de los `extraParams` que
+/// declara una sede: desde el ID-301 la clave es de rFirma, y la sede no puede
+/// mandársela al puente por su cuenta.
+pub const ALLOW_UNREGISTERED_KEY: &str = "allowCosigningUnregisteredSignatures";
 
 /// El tamaño de letra del recuadro, **cero**, que no es un tamaño: es lo que
 /// hace que el compositor reparta `alto del recuadro / número de líneas` y
@@ -39,8 +46,8 @@ const LAYER2_FONT_SIZE_KEY: &str = "layer2FontSize";
 /// verlo, y lo ve antes de firmar.
 const LAYER2_FONT_SIZE: &str = "0";
 
-/// Los seis ajustes de la configuración de firma. La lista es cerrada: si
-/// alguien quiere un séptimo, tiene que añadir una variante aquí y decir qué
+/// Los siete ajustes de la configuración de firma. La lista es cerrada: si
+/// alguien quiere un octavo, tiene que añadir una variante aquí y decir qué
 /// clave emite, y eso ya no se cuela en una revisión.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Setting {
@@ -59,17 +66,21 @@ pub enum Setting {
     SignReason,
     /// El tamaño de letra del recuadro, siempre [`LAYER2_FONT_SIZE`].
     Layer2FontSize,
+    /// Que se cofirme un PDF con firmas que no sabemos leer. **No emite nada
+    /// mientras nadie lo haya consentido** (ID-301).
+    AllowUnregisteredSignatures,
 }
 
 impl Setting {
-    /// Los seis.
-    pub const ALL: [Self; 6] = [
+    /// Los siete.
+    pub const ALL: [Self; 7] = [
         Self::SubFilter,
         Self::Geometry,
         Self::Layer2Text,
         Self::RubricImage,
         Self::SignReason,
         Self::Layer2FontSize,
+        Self::AllowUnregisteredSignatures,
     ];
 
     /// Las claves de `extraParams` que emite este ajuste.
@@ -87,6 +98,7 @@ impl Setting {
             Self::RubricImage => &[RUBRIC_IMAGE_KEY],
             Self::SignReason => &[SIGN_REASON_KEY],
             Self::Layer2FontSize => &[LAYER2_FONT_SIZE_KEY],
+            Self::AllowUnregisteredSignatures => &[ALLOW_UNREGISTERED_KEY],
         }
     }
 }
@@ -173,6 +185,15 @@ pub struct SignatureConfig {
     pub rubric_image: Option<String>,
     /// El motivo de la firma. `None` si no lo hay.
     pub sign_reason: Option<String>,
+    /// Si la persona ya ha consentido cofirmar un PDF con **firmas que no
+    /// sabemos leer** (ID-297, ID-301).
+    ///
+    /// `false` **no emite la clave**, y esa ausencia es la decisión: sin ella
+    /// `PdfSessionManager` aborta la cofirma, que es justo lo que tiene que
+    /// pasar mientras nadie haya dicho que sí. Al puente sólo se le manda
+    /// `true`, y sólo después del consentimiento —nunca por omisión, ni
+    /// aunque lo pida la sede—.
+    pub allow_unregistered_signatures: bool,
 }
 
 impl SignatureConfig {
@@ -189,6 +210,7 @@ impl SignatureConfig {
             layer2_text,
             rubric_image,
             sign_reason,
+            allow_unregistered_signatures,
         } = self;
 
         let mut params = BTreeMap::new();
@@ -205,6 +227,11 @@ impl SignatureConfig {
         }
         if let Some(reason) = sign_reason {
             params.insert(SIGN_REASON_KEY.to_owned(), reason.clone());
+        }
+        // Sólo `true`, y sólo consentido: la ausencia es lo que hace que el
+        // puente aborte una cofirma que nadie ha aceptado (ID-301).
+        if *allow_unregistered_signatures {
+            params.insert(ALLOW_UNREGISTERED_KEY.to_owned(), "true".to_owned());
         }
         params
     }
@@ -239,6 +266,7 @@ mod tests {
             layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
             rubric_image: None,
             sign_reason: None,
+            allow_unregistered_signatures: false,
         }
     }
 
@@ -246,13 +274,14 @@ mod tests {
         SignatureConfig {
             rubric_image: Some("/9j/4AAQSkZJRg==".to_owned()),
             sign_reason: Some("Conforme".to_owned()),
+            allow_unregistered_signatures: true,
             ..minimal()
         }
     }
 
     #[test]
     fn closes_the_configuration_and_this_is_how_many_settings_it_has() {
-        assert_eq!(Setting::ALL.len(), 6);
+        assert_eq!(Setting::ALL.len(), 7);
     }
 
     #[test]
@@ -276,7 +305,7 @@ mod tests {
     fn emits_every_key_the_settings_declare() {
         // La dirección contraria a la de arriba: una clave declarada en
         // `Setting::keys()` que `extra_params` no llegue a emitir nunca sería
-        // una promesa muerta. `complete()` tiene los seis ajustes puestos, así
+        // una promesa muerta. `complete()` tiene los siete ajustes puestos, así
         // que sobre ella la contención va en los dos sentidos.
         let declared: HashSet<&str> = Setting::ALL
             .iter()
@@ -401,6 +430,27 @@ mod tests {
     #[test]
     fn never_sends_the_singular_page_key() {
         assert!(!complete().extra_params().contains_key("signaturePage"));
+    }
+
+    /// **ID-301**: la clave que le dice al puente que siga adelante con un PDF
+    /// que trae firmas sin registrar **no se emite por omisión**.
+    #[test]
+    fn says_nothing_to_the_bridge_about_unregistered_signatures_until_someone_consents() {
+        assert!(!minimal()
+            .extra_params()
+            .contains_key("allowCosigningUnregisteredSignatures"));
+
+        let consented = SignatureConfig {
+            allow_unregistered_signatures: true,
+            ..minimal()
+        };
+
+        assert_eq!(
+            consented
+                .extra_params()
+                .get("allowCosigningUnregisteredSignatures"),
+            Some(&"true".to_owned())
+        );
     }
 
     /// El conjunto de tamaño 1, el de tamaño *k* y el de tamaño *n*: la misma

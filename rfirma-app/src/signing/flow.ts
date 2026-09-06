@@ -89,6 +89,15 @@ export interface SigningOrder {
   rubric: string | null;
   /** El idioma de las etiquetas del recuadro. */
   language: string;
+  /**
+   * Que la persona ya ha dicho que sí a cofirmar un PDF con **firmas que
+   * rFirma no sabe leer** (ID-297, ID-301).
+   *
+   * Sin ese permiso el backend no le manda al puente
+   * `allowCosigningUnregisteredSignatures`, y el puente aborta la cofirma:
+   * eso es lo correcto mientras nadie haya contestado a la pregunta.
+   */
+  allowUnregisteredSignatures: boolean;
 }
 
 /** Lo que devuelve una etapa: salió, o falló con una situación clasificada. */
@@ -132,6 +141,14 @@ export interface SigningBackend {
    */
   padesLowerLeft(placement: SigningOrder["placement"]): Promise<readonly [number, number]>;
   /**
+   * Si el documento trae **firmas que rFirma no sabe leer** (ID-297, ID-300).
+   *
+   * Tampoco es una etapa: se decide sobre los bytes, sin token y sin cruzar la
+   * frontera, y se pregunta **antes** del PIN para que el aviso quepa delante
+   * de él. No dice cuántas hay ni de quién son, y no las valida (ID-305).
+   */
+  unregisteredSignatures(document: string): Promise<boolean>;
+  /**
    * Olvida el ciclo a medias: la cuarta operación **no es una etapa**, es la
    * salida.
    *
@@ -171,6 +188,7 @@ export function unavailableSigningBackend(): SigningBackend {
     sign: missing,
     postsign: missing,
     padesLowerLeft: () => Promise.reject(new Error("no hay orden de firma expuesta todavia")),
+    unregisteredSignatures: async () => false,
     discard: async () => {},
   };
 }

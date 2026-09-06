@@ -29,6 +29,7 @@ import { SignedPanel } from "./signing/SignedPanel";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
 import { composesOnRelease, type StampComposer, type StampRequest } from "./signing/stampPreview";
+import { UnregisteredSignaturesDialog } from "./signing/UnregisteredSignaturesDialog";
 import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { acknowledgementFor, useSigning } from "./signing/useSigning";
@@ -205,6 +206,13 @@ export function App({
   const [sealLossPrompt, setSealLossPrompt] = useState<{
     fallen: number;
     chosen: number;
+    certificate: Certificate;
+    order: SigningOrder;
+  } | null>(null);
+  // El aviso de las firmas sin registrar (ID-297…ID-301), guardado igual que el
+  // anterior: decir que sí no rehace el viaje a `pdf.js`, manda la misma orden
+  // con el permiso puesto.
+  const [unregisteredPrompt, setUnregisteredPrompt] = useState<{
     certificate: Certificate;
     order: SigningOrder;
   } | null>(null);
@@ -829,6 +837,34 @@ export function App({
       language: i18n.resolvedLanguage ?? i18n.language,
     });
 
+    // ID-297 / ID-300: si el documento trae firmas que no sabemos leer, la
+    // pregunta va **antes** del PIN. No es un rechazo: sin ella el puente
+    // aborta la cofirma con `PdfHasUnregisteredSignaturesException`, y con un
+    // «sí» la orden sale con el permiso puesto. Si la orden que lo averigua
+    // falla, no se inventa un aviso: la prefirma dirá lo que pasa de verdad.
+    const unregistered = await signer.unregisteredSignatures(order.document).catch(() => false);
+    if (unregistered) {
+      setUnregisteredPrompt({ certificate: chosen, order });
+      return;
+    }
+
+    await signUnlessTheSealFalls(chosen, order, pdf, placement);
+  };
+
+  /**
+   * La segunda mitad de `sign`: el aviso de páginas sin sello y, si no hay nada
+   * que avisar, la firma.
+   *
+   * Está aparte porque los dos avisos previos —éste y el de las firmas sin
+   * registrar— van en fila: aceptar el primero tiene que caer justo aquí, y no
+   * volver a empezar.
+   */
+  const signUnlessTheSealFalls = async (
+    chosen: Certificate,
+    order: SigningOrder,
+    pdf: PdfDocument,
+    placement: Placement,
+  ) => {
     // ID-105: `correctPositionSignature` descarta en silencio, contra cada
     // página, aquella donde no cabe la esquina inferior izquierda del
     // recuadro. Es el único aviso que queda desde que se cayó la tira del
@@ -855,6 +891,20 @@ export function App({
     }
 
     await signing.start(chosen, order);
+  };
+
+  // `Firmar de todos modos` del aviso de las firmas sin registrar: la misma
+  // orden, ahora con el permiso que el puente necesita (ID-301).
+  const signWithUnregisteredSignatures = async () => {
+    if (unregisteredPrompt === null || pdf === null || placement === null) return;
+    const { certificate: chosen, order } = unregisteredPrompt;
+    setUnregisteredPrompt(null);
+    await signUnlessTheSealFalls(
+      chosen,
+      { ...order, allowUnregisteredSignatures: true },
+      pdf,
+      placement,
+    );
   };
 
   // `Firmar de todos modos`: la orden ya estaba armada, se manda tal cual.
@@ -1053,6 +1103,12 @@ export function App({
           onClose={() => setDialog(null)}
         />
       )}
+      {unregisteredPrompt !== null && (
+        <UnregisteredSignaturesDialog
+          onConfirm={() => void signWithUnregisteredSignatures()}
+          onCancel={() => setUnregisteredPrompt(null)}
+        />
+      )}
       {sealLossPrompt !== null && (
         <UnsealedPagesDialog
           fallen={sealLossPrompt.fallen}
@@ -1167,6 +1223,9 @@ function signingOrderFor({
     // no es quererla dentro del recuadro.
     rubric: signature.rubric && rubric !== null ? base64Of(rubric) : null,
     language,
+    // Nadie ha consentido nada todavía: el permiso se pone al aceptar el aviso
+    // de las firmas sin registrar, y en ningún otro sitio (ID-301).
+    allowUnregisteredSignatures: false,
   };
 }
 

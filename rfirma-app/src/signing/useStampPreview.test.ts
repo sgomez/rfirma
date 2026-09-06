@@ -35,6 +35,7 @@ function anOrder(rect: [number, number, number, number] = [50, 60, 250, 140]): S
     signedAt: "3 de septiembre de 2026, 12:00",
     rubric: null,
     language: "es",
+    allowUnregisteredSignatures: false,
   };
 }
 

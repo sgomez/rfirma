@@ -104,6 +104,7 @@ export function tauriSigningBackend(): SigningBackend {
     sign: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
     postsign: () => stage(() => invoke<SignedDocument>("finish_signing")),
     padesLowerLeft: (placement) => invoke<[number, number]>("pades_lower_left", { placement }),
+    unregisteredSignatures: (document) => invoke<boolean>("unregistered_signatures", { document }),
     discard: cancelSigning,
   };
 }

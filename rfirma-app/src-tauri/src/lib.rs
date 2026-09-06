@@ -209,6 +209,7 @@ pub fn run() {
             commands::check_for_new_version,
             commands::url_handlers,
             commands::choose_url_handler,
+            commands::unregistered_signatures,
             commands::install_certificate,
             commands::remove_certificate,
         ])

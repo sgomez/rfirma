@@ -214,6 +214,7 @@ mod tests {
             layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
             rubric_image: None,
             sign_reason: None,
+            allow_unregistered_signatures: false,
         };
 
         let merged = merged_with(hers.clone(), ours.extra_params());

@@ -672,6 +672,22 @@ pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
     app::handlers::chosen(channel, &list, &handler)
 }
 
+/// **Orden 28.** Si el documento abierto trae **firmas que rFirma no sabe
+/// leer** (ID-297, ID-300).
+///
+/// La ventana la llama justo antes de firmar, y con un `true` enseña el aviso y
+/// pide permiso: sin ese permiso la orden de firma no lleva
+/// `allowCosigningUnregisteredSignatures` y el puente aborta la cofirma
+/// (ID-301). No dice cuántas firmas hay ni de quién son, y no las valida
+/// (ID-305): la pregunta es de sí o no.
+#[tauri::command(async)]
+pub fn unregistered_signatures(
+    document: String,
+    opened: State<'_, OpenedDocuments>,
+) -> Result<bool, Failure> {
+    app::signing::unregistered_signatures_in(&opened, &document)
+}
+
 /// El nombre del evento con el que la ventana se entera de un arrastre.
 ///
 /// Es un **evento** y no una orden más a propósito: el arrastre no lo

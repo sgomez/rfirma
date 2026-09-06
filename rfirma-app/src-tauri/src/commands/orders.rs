@@ -155,6 +155,14 @@ pub struct SigningOrder {
     pub rubric: Option<String>,
     /// El idioma en el que se componen las etiquetas del recuadro.
     pub language: String,
+    /// Que la persona ya ha dicho que sí a cofirmar un PDF con **firmas que
+    /// rFirma no sabe leer** (ID-297, ID-301).
+    ///
+    /// Llega desde la ventana porque la pregunta es suya —el aviso se enseña
+    /// antes de pedir el PIN— y `#[serde(default)]` porque una orden que no lo
+    /// diga es una orden que nadie ha consentido: **por omisión, no**.
+    #[serde(default)]
+    pub allow_unregistered_signatures: bool,
 }
 
 #[cfg(test)]

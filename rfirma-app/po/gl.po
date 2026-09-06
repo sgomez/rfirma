@@ -745,6 +745,17 @@ msgstr ""
 msgid "sealLoss.confirm"
 msgstr ""
 
+#. El titular del aviso de firmas que rFirma no sabe leer, antes de firmar.
+msgid "unregisteredSignatures.title"
+msgstr ""
+
+#. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
+msgid "unregisteredSignatures.body"
+msgstr ""
+
+msgid "unregisteredSignatures.confirm"
+msgstr ""
+
 msgid "preferences.title"
 msgstr ""
 

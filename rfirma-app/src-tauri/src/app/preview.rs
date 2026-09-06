@@ -135,6 +135,7 @@ mod tests {
             layer2_text: String::new(),
             rubric_image: None,
             sign_reason: None,
+            allow_unregistered_signatures: false,
         };
 
         let params = config.extra_params();
