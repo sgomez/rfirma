@@ -26,18 +26,23 @@
 //! (TD-70), y es lo que deja la conducta del #390 probada entera en grada A,
 //! sin Tauri, sin navegador y sin ventana (TD-71).
 
+pub mod channel;
+pub mod repair;
+
 use std::path::PathBuf;
 
-use crate::channel::OpenChannel;
 use crate::tls::LocalCaStore;
-use crate::trust::{Moment, TrustStores};
+use crate::trust::{Moment as TrustMoment, TrustStores};
 
 use crate::protocol::Refusal;
 
-use super::errand::{Errand, LiveErrand};
+use super::errand::{Errand, LiveErrand, Moment, NoChannel};
 use super::invocation::Invocation;
 use super::site::{self, Attendance, ChannelTransport};
 use super::trust;
+
+pub use channel::{hold_the_channel, HeldChannel};
+pub use repair::{repair_the_local_ca, LocalCaTrust};
 
 /// **El abridor de la ventana de sede** (ID-333, ID-334, ID-341): crea la
 /// ventana y le publica lo que ha pasado.
@@ -191,18 +196,28 @@ pub fn attend_site_launch(
         // nada** (ID-329, ID-341): el navegador ni llega a intentarlo, así que
         // lo que hay delante es el callejón y no la espera.
         Attendance::Serving { errand, .. } => match local_ca {
-            LocalCaReach::Nowhere => window(SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa)),
-            LocalCaReach::NotAnObstacle => window(SiteWindowContent::TheErrand(errand)),
+            LocalCaReach::Nowhere => open(
+                live,
+                window,
+                SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
+            ),
+            LocalCaReach::NotAnObstacle => open(live, window, SiteWindowContent::TheErrand(errand)),
         },
         // Los dos callejones del ID-341. No hay socket por el que decirlo, y
         // que no se diga en ninguna parte es el #390.
         Attendance::ChannelNotOpened(_) => {
-            window(SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened));
+            open(
+                live,
+                window,
+                SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened),
+            );
         }
         Attendance::RefusingInTheWindow(refusal) => {
-            window(SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(
-                refusal.clone(),
-            )));
+            open(
+                live,
+                window,
+                SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
+            );
         }
         // **Un rechazo con socket no abre ventana** (ID-334): la sede recibe su
         // código por donde preguntó, y ahí se acaba.
@@ -212,6 +227,33 @@ pub fn attend_site_launch(
     attendance
 }
 
+/// Apunta el momento con el que se abre la ventana **antes** de abrirla: en
+/// cuanto la página cargue, el frontal lo pedirá, y lo que se guarda aquí tiene
+/// que estar puesto ya (ID-338).
+fn open(live: &LiveErrand, window: SiteWindowOpener<'_>, content: SiteWindowContent<'_>) {
+    live.note(content.moment());
+    window(content);
+}
+
+impl SiteWindowContent<'_> {
+    /// **El momento con el que se abre la ventana** (ID-341): lo único que se
+    /// sabe de un trámite al abrirla es que el canal está en pie —el origen y
+    /// la operación llegan con la petición de la sede—, y de un callejón, cuál
+    /// es.
+    pub fn moment(&self) -> Moment {
+        match self {
+            Self::TheErrand(_) => Moment::Waiting,
+            Self::ADeadEnd(DeadEnd::ChannelNotOpened) => {
+                Moment::NoChannel(NoChannel::ChannelNotOpened)
+            }
+            Self::ADeadEnd(DeadEnd::NoLocalCa) => Moment::NoChannel(NoChannel::LocalCaMissing),
+            Self::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
+                Moment::RefusedWithoutChannel(refusal.clone())
+            }
+        }
+    }
+}
+
 /// Deja la CA local de confianza donde se pueda, y devuelve lo que hay que
 /// decir (ID-329).
 ///
@@ -219,8 +261,12 @@ pub fn attend_site_launch(
 /// se dice y se sigue, porque la ventana principal no depende de la CA local
 /// para abrirse.
 fn refresh_the_local_ca(trust: TrustAtStartup<'_>) -> (Vec<String>, LocalCaReach) {
-    match trust::refresh_local_ca_trust(trust.store, trust.profiles, trust.stores, Moment::Startup)
-    {
+    match trust::refresh_local_ca_trust(
+        trust.store,
+        trust.profiles,
+        trust.stores,
+        TrustMoment::Startup,
+    ) {
         Ok(outcome) => {
             let reach = if outcome.nowhere() {
                 LocalCaReach::Nowhere
@@ -243,88 +289,14 @@ fn refresh_the_local_ca(trust: TrustAtStartup<'_>) -> (Vec<String>, LocalCaReach
     }
 }
 
-/// **El canal abierto, sostenido mientras haga falta.**
-///
-/// No es una decisión, es una consecuencia: soltar un [`OpenChannel`] suelta
-/// con él su asa de apagado —el emisor del `oneshot` que espera el servidor—, y
-/// la tarea que acepta conexiones termina. Sin alguien que lo guarde, el canal
-/// que acaba de abrirse se cierra en cuanto el arranque devuelve, y la sede se
-/// queda esperando exactamente igual que en el #390.
-///
-/// Vive en el estado de Tauri, como el trámite (ID-325). Cuando el asa de
-/// respuesta entre en [`LiveErrand`] (ID-321) éste es el sitio del que saldrá.
-///
-/// # Dos ranuras, y la razón es el ID-280
-///
-/// Un canal de rechazo (`SAF_45` y cualquier otro del ID-248) **no puede
-/// compartir ranura con el del trámite**: cuando llega una segunda invocación
-/// con un trámite ya vivo, [`site::attend_launch`] abre un canal nuevo sólo
-/// para decir el código, y meterlo donde estaba el del trámite cerraría
-/// justamente el canal que está sirviendo al primero —el que llega dejaría
-/// fuera al que estaba, que es lo contrario del criterio (ID-279, ID-280) y el
-/// síntoma mismo del #390—.
-///
-/// Así que el que sirve y el que rechaza se guardan aparte: `hold` es del
-/// trámite y `hold_a_refusal` del rechazo, y ninguno toca la ranura del otro.
-#[derive(Default)]
-pub struct HeldChannel {
-    /// El canal del trámite que se quedó con la plaza.
-    serving: std::sync::Mutex<Option<OpenChannel>>,
-    /// El canal abierto sólo para contestar un rechazo por el socket (ID-248).
-    refusing: std::sync::Mutex<Option<OpenChannel>>,
-}
-
-impl HeldChannel {
-    /// Se queda con el canal **del trámite**. El que hubiera sirviendo **se
-    /// cierra**: sólo hay un trámite a la vez (ID-280), y si hay uno nuevo
-    /// sirviendo es que el anterior terminó y ya no tiene quien lo conteste.
-    pub fn hold(&self, channel: OpenChannel) {
-        if let Some(previous) = super::lock(&self.serving).replace(channel) {
-            previous.close();
-        }
-    }
-
-    /// **¿Hay canal sirviendo al trámite?**
-    ///
-    /// La pregunta que hay que hacerse antes de mandar a la ventana de sede a
-    /// esperar: esperar sólo tiene sentido si queda alguien escuchando la
-    /// petición del navegador. Mira **la ranura del trámite y sólo ésa**: un
-    /// canal de rechazo (ID-248) vive lo justo para decir su código y no
-    /// atiende a nadie más.
-    ///
-    /// No dice nada de la CA local ni de los almacenes NSS: eso lo contesta
-    /// [`crate::app::trust::refresh_local_ca_trust`], y confundir las dos
-    /// preguntas es lo que hacía que la orden 36 publicase «Conectando con la
-    /// sede» sobre un canal que nunca se abrió.
-    pub fn is_serving(&self) -> bool {
-        super::lock(&self.serving).is_some()
-    }
-
-    /// Sostiene el canal de un **rechazo** mientras contesta (ID-248).
-    ///
-    /// Vive lo justo para decir su código: no se le suelta en el acto porque
-    /// soltarlo apaga el servidor antes de que la sede llegue a conectarse, y
-    /// no se cierra a mano porque nadie sabe aquí cuándo ha contestado. Lo
-    /// cierra el rechazo siguiente, y si no llega ninguno, el fin del proceso.
-    ///
-    /// **Nunca toca el canal del trámite vivo**: un rechazo es exactamente el
-    /// caso en el que el anterior sí tiene quien lo conteste.
-    pub fn hold_a_refusal(&self, channel: OpenChannel) {
-        if let Some(previous) = super::lock(&self.refusing).replace(channel) {
-            previous.close();
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use crate::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown, Situation};
+    use crate::trust::TrustError;
     use std::path::Path;
     use std::sync::Mutex;
-
-    use crate::channel::{ChannelDuty, ChannelError, Shutdown, Situation};
-    use crate::trust::TrustError;
 
     /// La credencial que sortea la sede: veinte alfanuméricos.
     const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
@@ -611,7 +583,8 @@ mod tests {
             live.begin(Errand::of(
                 crate::protocol::ChannelCredential::parse(CREDENTIAL)
                     .expect("la credencial es buena"),
-                PORTS[0]
+                PORTS[0],
+                std::sync::Arc::new(crate::app::codec::V4Codec),
             )),
             "el primero se queda con la plaza"
         );
@@ -754,94 +727,5 @@ mod tests {
             "y se dice por stderr: {:?}",
             startup.said
         );
-    }
-
-    /// Un canal que apunta su cierre: es lo único que hace falta para ver a
-    /// [`HeldChannel`] por dentro, porque cerrar es lo único que hace.
-    fn a_channel(port: u16, closed: &std::sync::Arc<Mutex<Vec<u16>>>) -> OpenChannel {
-        let closed = std::sync::Arc::clone(closed);
-        OpenChannel::new(
-            port,
-            Shutdown::of(move || super::super::lock(&closed).push(port)),
-        )
-    }
-
-    /// Qué puertos se han cerrado hasta ahora.
-    fn closed_ports(closed: &std::sync::Arc<Mutex<Vec<u16>>>) -> Vec<u16> {
-        super::super::lock(closed).clone()
-    }
-
-    /// **ID-279, ID-280.** Sostener el canal de un rechazo **no cierra el del
-    /// trámite vivo**: con un trámite en marcha, el que llega se queda fuera, y
-    /// eso es exactamente lo contrario de que el que llega eche al que estaba.
-    ///
-    /// Es la mitad que no ve
-    /// [`a_second_launch_with_a_live_errand_gets_no_window_of_its_own`]: ésa es
-    /// de grada A sobre el caso de uso y no llega hasta la ranura.
-    #[test]
-    fn a_refusal_never_closes_the_channel_of_the_live_errand() {
-        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
-        let held = HeldChannel::default();
-
-        held.hold(a_channel(PORTS[0], &closed));
-        held.hold_a_refusal(a_channel(PORTS[1], &closed));
-
-        assert!(
-            closed_ports(&closed).is_empty(),
-            "el canal del trámite vivo sigue sirviendo: {:?}",
-            closed_ports(&closed)
-        );
-    }
-
-    /// Un rechazo detrás de otro sí cierra al anterior: el primero ya contestó
-    /// lo suyo, y su puerto no tiene por qué seguir atado.
-    #[test]
-    fn a_new_refusal_closes_the_refusal_it_replaces() {
-        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
-        let held = HeldChannel::default();
-
-        held.hold_a_refusal(a_channel(PORTS[0], &closed));
-        held.hold_a_refusal(a_channel(PORTS[1], &closed));
-
-        assert_eq!(closed_ports(&closed), vec![PORTS[0]]);
-    }
-
-    /// Sin canal del trámite no hay a quién esperar, y la ranura lo dice.
-    ///
-    /// Es lo que separa las dos situaciones desde las que se llega al botón de
-    /// instalar la CA local: con el canal en pie la petición de la sede puede
-    /// llegar todavía, y sin él la pantalla de reparación es la respuesta.
-    #[test]
-    fn an_unheld_channel_is_not_serving() {
-        let held = HeldChannel::default();
-
-        assert!(!held.is_serving());
-    }
-
-    /// Un canal de rechazo **no** es un canal sirviendo: vive lo justo para
-    /// decir su código (ID-248) y nadie va a atender por él la petición.
-    #[test]
-    fn only_the_channel_of_the_errand_counts_as_serving() {
-        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
-        let held = HeldChannel::default();
-
-        held.hold_a_refusal(a_channel(PORTS[0], &closed));
-        assert!(!held.is_serving());
-
-        held.hold(a_channel(PORTS[1], &closed));
-        assert!(held.is_serving());
-    }
-
-    /// **ID-280.** Y un trámite nuevo sí cierra el canal del anterior: si hay
-    /// otro sirviendo es que el primero terminó.
-    #[test]
-    fn a_new_serving_channel_closes_the_one_it_replaces() {
-        let closed = std::sync::Arc::new(Mutex::new(Vec::new()));
-        let held = HeldChannel::default();
-
-        held.hold(a_channel(PORTS[0], &closed));
-        held.hold(a_channel(PORTS[1], &closed));
-
-        assert_eq!(closed_ports(&closed), vec![PORTS[0]]);
     }
 }

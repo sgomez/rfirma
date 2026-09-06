@@ -1,0 +1,215 @@
+ORDENES DE TAURI                          (commands/mod.rs)
+  Sin el estado inyectado (State<...>, AppHandle): no cruza.
+
+        list_certificates() -> Result<Vec<CertificateView>, Failure>
+        begin_signing(order: SigningOrder) -> Result<SecretView, Failure>
+        sign_with_pin(pin: String) -> Result<(), Failure>
+        finish_signing() -> Result<SignedDocumentView, Failure>
+        cancel_signing()
+  async open_document() -> Result<Option<OpenedDocumentView>, Failure>
+  async read_document(id: String) -> Result<tauri::ipc::Response, Failure>
+        read_configuration() -> ConfigurationView
+  async write_configuration(configuration: ConfigurationView) -> Result<(), Failure>
+  async forget_activity() -> Result<(), Failure>
+  async list_recents() -> Vec<RecentDocumentView>
+  async record_recent(id: String, placement: Option<PlacementView>) -> Result<RecentDocumentView, Failure>
+  async forget_recent(id: String) -> Result<(), Failure>
+  async choose_rubric() -> Option<RubricChoiceView>
+  async read_rubric() -> Result<Option<RubricView>, Failure>
+  async preview_destination(id: String) -> Result<DestinationView, Failure>
+  async choose_destination() -> Result<Option<String>, Failure>
+  async open_signed_document() -> Result<(), Failure>
+  async open_signed_folder() -> Result<(), Failure>
+  async preview_signature(order: SigningOrder) -> Result<tauri::ipc::Response, Failure>
+        pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure>
+        read_invocation() -> Option<DroppedDocumentView>
+  async check_for_new_version() -> Option<NewVersionView>
+  async install_certificate(password: String) -> Result<bool, Failure>
+  async remove_certificate(id: String) -> Result<(), Failure>
+  async url_handlers() -> UrlHandlersView
+  async choose_url_handler(handler: String) -> Result<(), Failure>
+  async unregistered_signatures(document: String) -> Result<bool, Failure>
+  async close_site_window()
+  async site_identify(certificate: String) -> Result<(), Failure>
+  async site_decline()
+  async site_begin_signing(certificate: String) -> Result<SecretView, Failure>
+  async site_finish_signing() -> Result<(), Failure>
+  async site_install_certificate(password: String) -> Result<bool, Failure>
+  async site_look_again()
+  async install_local_ca()
+        read_site_errand() -> Option<SiteErrandView>
+
+TIPOS QUE CRUZAN                          (el resto de commands/)
+  Campos con el nombre que ve la ventana.
+
+  pub struct Failure
+      situation: String
+      detail: String
+      attemptsLeft: Option<u32>
+
+  pub struct VisibleFieldsOrder
+      signerName: bool
+      issuer: bool
+      signedAt: bool
+      reason: bool
+
+  pub struct PlacementOrder
+      page: u32
+      pages: PageSet
+      pageCount: u32
+      mediaBox: [f64; 4]
+      rotation: i32
+      rect: [f64; 4]
+
+  pub struct SigningOrder
+      document: String
+      certificate: String
+      placement: Option<PlacementOrder>
+      fields: VisibleFieldsOrder
+      reason: String
+      signedAt: String
+      rubric: Option<String>
+      language: String
+      allowUnregisteredSignatures: bool
+
+  pub struct RubricView
+      base64: String
+      width: u32
+      height: u32
+
+  pub struct RubricChoiceView
+      rubric: Option<RubricView>
+      failure: Option<Failure>
+
+  pub enum StatusView   (serde: etiqueta "kind")
+      Valid { notAfter: u64 }
+      Expired { notAfter: u64 }
+      NotYetValid { notBefore: u64 }
+      Revoked { reason: String }
+      Unreadable { detail: String }
+
+  pub enum SecretView   (serde: etiqueta "kind")
+      NotNeeded
+      TypedOnScreen { attemptsLeft: Option<u32> }
+      TypedOnTheReaderKeypad
+
+  pub struct CertificateView
+      id: String
+      label: String
+      holderName: String
+      idNumber: String
+      issuer: String
+      store: String
+      status: StatusView
+      remembered: bool
+
+  pub struct DestinationView
+      folder: String
+      name: Option<String>
+      writable: bool
+
+  pub struct SignedDocumentView
+      name: String
+      folder: String
+      sizeBytes: u64
+
+  pub struct OpenedDocumentView
+      id: String
+      name: String
+      modified: Option<u64>
+      path: Option<String>
+
+  pub struct DroppedDocumentView
+      document: Option<OpenedDocumentView>
+      alsoEntering: Vec<OpenedDocumentView>
+      failure: Option<Failure>
+      discarded: usize
+
+  pub struct PlacementView
+      rect: [f64; 4]
+      pages: PageSet
+
+  pub struct RecentDocumentView
+      id: String
+      name: String
+      badge: Badge
+      modified: Option<u64>
+      lastUsed: u64
+      available: bool
+      placement: Option<PlacementView>
+
+  pub struct ConfigurationView
+      language: String
+      destination: String
+      rememberVisibleSignature: bool
+      rememberActivity: bool
+      notifyNewVersion: bool
+      theme: Theme
+      offersTheOriginalFolder: bool
+      trustNoticeSeen: bool
+      askAboutUrlHandler: bool
+
+  pub struct UrlHandlersView
+      available: bool
+      handlers: Vec<UrlHandlerView>
+      current: Option<String>
+      ours: String
+
+  pub struct UrlHandlerView
+      id: String
+      name: String
+
+  pub struct NewVersionView
+      version: String
+
+  pub struct SiteErrandView
+      origin: Option<String>
+      stage: SiteStageView
+
+  pub enum SignatureRoundView
+      Sign
+      Cosign
+
+  pub enum SiteStageView   (serde: etiqueta "kind")
+      Waiting
+      AskingForConsent { certificates: Vec<CertificateView> }
+      AskingToSign { document: String, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool }
+      NoChannel { reason: NoChannelView }
+      Outcome { outcome: SiteOutcomeView }
+      NoCertificate { reason: NoCertificateView, owned: usize }
+
+  pub enum NoChannelView
+      ChannelNotOpened
+      LocalCaMissing
+
+  pub enum SiteOutcomeView   (serde: etiqueta "kind")
+      Refused { situation: RefusalSituationView, detail: String }
+
+  pub enum RefusalSituationView
+      AppendedSignaturePage
+      UnsupportedFilter
+      UnsupportedProtocolVersion
+      MissingFormat
+      ErrandInFlight
+      Unknown
+
+  pub enum NoCertificateView
+      None
+      Excluded
+
+  PRESTADOS DE OTROS MODULOS
+
+  pub enum Badge   [memory/recents.rs]
+      Signed
+      Unsigned
+
+  pub enum PageSet   [signing/placement.rs]
+      All
+      Only(BTreeSet<u32>)
+
+  pub enum Theme   [memory/configuration.rs]
+      System
+      Light
+      Dark
+
+-- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --

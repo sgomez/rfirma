@@ -220,7 +220,7 @@ mod tests {
     /// PDF sin firmar saldría por la puerta con cara de firmado.
     #[test]
     fn only_the_dry_run_invents_a_pkcs1() {
-        let signing = include_str!("signing.rs")
+        let signing = include_str!("signing/mod.rs")
             .split_once("\nmod tests {")
             .map(|(before, _)| before)
             .unwrap_or_default();

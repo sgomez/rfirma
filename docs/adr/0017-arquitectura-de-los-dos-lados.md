@@ -29,9 +29,12 @@ Al añadir capacidad nueva el orden es: **el puerto en su módulo de dominio →
 
 ## El backend: capas con una dirección
 
-El equivalente en Rust no son puertos —Rust tiene `trait`, pero un `trait` por dependencia en
-un backend que se prueba con dobles reales y ficheros temporales sería ceremonia sin comprador—.
-Es **una dirección**, la del ID-81, y va siempre hacia dentro:
+El equivalente en Rust no son puertos por sistema —Rust tiene `trait`, pero un `trait` por
+dependencia en un backend que se prueba con dobles reales y ficheros temporales sería ceremonia
+sin comprador—. Los pocos que hay (`FilterEngine`, `PolicyEngine`, `TrustStores`, y desde el #406
+`ProtocolCodec` y `Transport` en `app/errand/ports.rs`) existen porque tienen **dos compradores
+reales**: el adaptador de producción y el doble en memoria de las pruebas. Lo que sí es de este
+ADR es **una dirección**, la del ID-81, y va siempre hacia dentro:
 
 ```
 commands/  →  app/  →  dominio e infraestructura
@@ -91,8 +94,11 @@ Para que no se le atribuyan decisiones que no toma:
 
 - **No decide cómo se prueba nada.** Las gradas de prueba y la puerta de calidad son el
   ADR-0014, y siguen siendo suyas.
-- **No introduce `trait` de puerto en el backend**, ni inyección de dependencias, ni un
-  contenedor. Las dependencias de un caso de uso son argumentos de función y tipos concretos.
+- **No introduce `trait` de puerto por sistema en el backend**, ni inyección de dependencias, ni
+  un contenedor. Las dependencias de un caso de uso son argumentos de función y, salvo los cinco
+  puertos con doble en memoria, tipos concretos. Cuál se declara y dónde lo dice cada spec, no
+  este ADR; lo que este ADR añade es que **el caso de uso no nombra al adaptador concreto de su
+  puerto**, y la guarda lo vigila para el trámite de sede (RD-12 del #406).
 - **No dice cuántos módulos hay ni cómo se llaman.** Eso lo dice el mapa
   (`src-tauri/src/AGENTS.md`), que se actualiza en la misma PR que crea un módulo.
 - **No dice dónde vive un tipo de salida.** Eso es el ID-80: en `commands/views.rs`.

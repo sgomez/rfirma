@@ -280,7 +280,7 @@ mod tests {
                     // La operación pendiente no escribe **nada**, que es la
                     // única forma de salir de aquí sin ser `OK` ni `SAF_`
                     // (ID-320): lo que conteste después pasa por
-                    // [`crate::app::errand::SiteReply::on_the_wire`].
+                    // el códec negociado ([`crate::app::codec::V4Codec`]).
                     let Some(text) = answer(&duty, from_loopback, message)
                         .text()
                         .map(str::to_owned)

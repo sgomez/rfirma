@@ -94,7 +94,9 @@
 pub mod failure;
 pub mod orders;
 pub mod rubric;
+pub mod site_window;
 pub mod views;
+pub mod views_site;
 
 #[cfg(test)]
 mod guards;
@@ -112,11 +114,17 @@ pub use app::invocation::second_invocation;
 pub use failure::Failure;
 pub use orders::{PlacementOrder, SigningOrder};
 pub use rubric::{RubricChoiceView, RubricView};
+pub use site_window::{
+    attend_site_operation, open_the_site_window, publish_the_moment, SITE_ERRAND, SITE_WINDOW,
+};
 pub use views::{
     CertificateView, ConfigurationView, DestinationView, DroppedDocumentView, NewVersionView,
-    NoCertificateView, NoChannelView, OpenedDocumentView, PlacementView, RecentDocumentView,
-    RefusalSituationView, SecretView, SignatureRoundView, SignedDocumentView, SiteErrandView,
-    SiteOutcomeView, SiteStageView, UrlHandlerView, UrlHandlersView,
+    OpenedDocumentView, PlacementView, RecentDocumentView, SecretView, SignedDocumentView,
+    UrlHandlerView, UrlHandlersView,
+};
+pub use views_site::{
+    NoCertificateView, NoChannelView, RefusalSituationView, SignatureRoundView, SiteErrandView,
+    SiteOutcomeView, SiteStageView,
 };
 
 /// **Orden 1.** Los certificados de los tokens conectados.
@@ -719,38 +727,16 @@ pub fn close_site_window(app: tauri::AppHandle) {
 ///
 /// El certificado sale al cable **desde el caso de uso** (ID-322), y lo que
 /// vuelve a la ventana es sólo el desenlace: el trámite ya terminó para la
-/// sede, que no espera a que nadie cierre nada (ID-275).
+/// sede, que no espera a que nadie cierre nada (ID-275). Qué se consintió lo
+/// sabe el trámite, no esta orden.
 ///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
-pub fn site_identify(
-    certificate: String,
-    environment: State<'_, Environment>,
-    isolate: State<'_, Isolate>,
-    live: State<'_, app::errand::LiveErrand>,
-    consent: State<'_, SiteConsent>,
-) -> Result<(), Failure> {
-    let Some(filter) = consent.what_the_site_asked() else {
-        return Err(Failure::new(
-            "siteErrandNotLive",
-            "no hay ninguna identificacion pendiente que contestar",
-        ));
-    };
-    consent.forget();
-
-    let reply = app::errand::identify_with(
-        &TheBridge::borrowed_from(&isolate),
-        &environment.all_stores(),
-        &filter,
-        &certificate,
-        &environment.listed,
-        &live,
-    );
-
-    match reply.failure() {
-        Some(failure) => Err(failure.clone()),
-        None => Ok(()),
-    }
+pub fn site_identify(certificate: String, app_handle: tauri::AppHandle) -> Result<(), Failure> {
+    site_window::with_the_desk(&app_handle, |desk, live| {
+        app::errand::consent(desk, &certificate, live)
+    })
+    .map(|_| ())
 }
 
 /// **Orden 31.** La persona dice que no: la sede recibe `CANCEL` en el acto
@@ -761,9 +747,8 @@ pub fn site_identify(
 ///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
-pub fn site_decline(live: State<'_, app::errand::LiveErrand>, consent: State<'_, SiteConsent>) {
-    consent.forget();
-    app::errand::declined(&live);
+pub fn site_decline(live: State<'_, app::errand::LiveErrand>) {
+    app::errand::decline(&live);
 }
 
 /// **Orden 32.** La persona ha consentido firmar, y elige con qué certificado
@@ -771,74 +756,29 @@ pub fn site_decline(live: State<'_, app::errand::LiveErrand>, consent: State<'_,
 ///
 /// Es [`begin_signing`] del trámite de sede, y de la ventana llega **sólo el
 /// asa del certificado**: el documento, el filtro y la política que declaró la
-/// sede salen del consentimiento que este mismo adaptador apuntó, porque
-/// hacerlos cumplir no es cosa de la ventana (ID-259, ID-266).
+/// sede los tiene el trámite, porque hacerlos cumplir no es cosa de la ventana
+/// (ID-259, ID-266).
 ///
 /// Devuelve cómo hay que pedirle el secreto al almacén, igual que su gemela
 /// local: el PIN entra después por [`sign_with_pin`], que es la misma orden
 /// para los dos recorridos porque la fase que toca la clave privada no sabe de
 /// sedes (ADR-0001).
 ///
-/// Si la prefirma no sale, la sede se entera en el acto y el trámite se cierra
-/// (ID-275); la ventana recibe además la situación entera (ID-29).
-///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
 pub fn site_begin_signing(
     certificate: String,
-    environment: State<'_, Environment>,
-    isolate: State<'_, Isolate>,
-    session: State<'_, SigningSession>,
-    opened: State<'_, OpenedDocuments>,
-    live: State<'_, app::errand::LiveErrand>,
-    consent: State<'_, SiteConsent>,
+    app_handle: tauri::AppHandle,
 ) -> Result<SecretView, Failure> {
-    let Some(pending) = consent.the_signature_consented() else {
-        return Err(Failure::new(
+    match site_window::with_the_desk(&app_handle, |desk, live| {
+        app::errand::consent(desk, &certificate, live)
+    })? {
+        app::errand::Consented::SigningWith(secret) => Ok(SecretView::from(secret)),
+        app::errand::Consented::IdentityHandedOver => Err(Failure::new(
             "siteErrandNotLive",
-            "no hay ninguna firma pendiente que consentir",
-        ));
-    };
-
-    let bridge = TheBridge::borrowed_from(&isolate);
-    let order = SigningOrder {
-        document: pending.document,
-        certificate,
-        // La sede coloca su recuadro en sus propios `extraParams`, y ésos
-        // cruzan al puente crudos: aquí no hay visor sobre el que arrastrar
-        // nada, y emitir una colocación nuestra movería el suyo (ID-282).
-        placement: None,
-        fields: orders::VisibleFieldsOrder::default(),
-        reason: String::new(),
-        signed_at: String::new(),
-        rubric: None,
-        language: String::new(),
-        allow_unregistered_signatures: pending.unregistered_signatures,
-    };
-
-    app::signing::begin_for_the_site(
-        &app::signing::SiteSigning {
-            engine: &bridge,
-            filter: &pending.filter,
-            from_the_site: &pending.from_the_site,
-        },
-        &order,
-        &environment.all_stores(),
-        &environment.listed,
-        &opened,
-        &isolate,
-        &session,
-    )
-    .map(SecretView::from)
-    // El código que va al cable lo trae la negativa desde donde la situación
-    // todavía tenía tipo (ID-292): aquí sólo se separa lo que recibe la sede
-    // de lo que recibe la ventana, que es la situación entera (ID-291).
-    .map_err(|refusal| {
-        consent.forget();
-        let failure = refusal.failure().clone();
-        app::errand::the_signature_did_not_come_out(&live, refusal);
-        failure
-    })
+            "lo que habia pendiente era una identificacion, y ya se ha entregado",
+        )),
+    }
 }
 
 /// **Orden 33.** Postfirma del trámite de sede: la sede recibe el certificado y
@@ -851,21 +791,8 @@ pub fn site_begin_signing(
 ///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
-pub fn site_finish_signing(
-    isolate: State<'_, Isolate>,
-    session: State<'_, SigningSession>,
-    live: State<'_, app::errand::LiveErrand>,
-    consent: State<'_, SiteConsent>,
-) -> Result<(), Failure> {
-    consent.forget();
-
-    let signed = app::signing::finish_for_the_site(&isolate, &session).map_err(|refusal| {
-        let failure = refusal.failure().clone();
-        app::errand::the_signature_did_not_come_out(&live, refusal);
-        failure
-    })?;
-    app::errand::signature_handed_over(&live, &signed);
-    Ok(())
+pub fn site_finish_signing(app_handle: tauri::AppHandle) -> Result<(), Failure> {
+    site_window::with_the_desk(&app_handle, app::errand::finish)
 }
 
 /// **Orden 34.** Lleva a instalar un certificado desde la ventana de sede
@@ -896,406 +823,40 @@ pub fn site_install_certificate(
 /// **Orden 35.** Vuelve a mirar el almacén, por si se instaló un certificado
 /// con la ventana abierta (ID-278, ID-341).
 ///
-/// **Continúa el trámite, no lo reinicia**: se vuelve a atender la petición que
-/// la sede mandó por el canal —la que [`crate::app::errand::LiveErrand`] tiene
-/// apuntada—, con el mismo canal, la misma asa y el mismo trámite vivo. La sede
-/// no ha recibido nada todavía y no tiene que invocar otra vez.
-///
-/// Sin trámite vivo no hay nada que volver a mirar, y es la respuesta correcta:
-/// quien llegue aquí después de que el trámite haya contestado no mueve nada.
+/// **Continúa el trámite, no lo reinicia**: quien lo decide es
+/// [`crate::app::errand::look_again`], con la petición que el trámite tiene
+/// apuntada, el mismo canal, la misma asa y el mismo trámite vivo.
 ///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
 pub fn site_look_again(app_handle: tauri::AppHandle) {
-    use tauri::Manager as _;
-
-    let Some(url) = app_handle.state::<app::errand::LiveErrand>().the_request() else {
-        return;
-    };
-
-    dispatch_the_site_operation(&app_handle, &url);
-}
-
-/// **Dónde está la CA local y qué perfiles NSS hay que dejarla de confianza**
-/// (ID-329), para que la ventana de sede pueda instalarla cuando el canal no
-/// llega a abrirse.
-///
-/// Las mismas dos cosas que el arranque le pasa a
-/// [`crate::app::startup::attend_startup`], sostenidas aquí porque la orden 36
-/// las necesita mucho después: el arranque las resuelve una vez y esto es su
-/// copia viva.
-pub struct LocalCaTrust {
-    /// Las dos ranuras de la CA local: la que sirve y la del solape.
-    pub store: crate::tls::LocalCaStore,
-    /// Los perfiles NSS que se intentan recorrer.
-    pub profiles: Vec<std::path::PathBuf>,
+    let looked = site_window::with_the_desk(&app_handle, |desk, live| {
+        app::errand::look_again(desk, live)
+    });
+    site_window::publish_what_moved(&app_handle, looked);
 }
 
 /// **Orden 36.** Instala la CA local en los almacenes NSS de la persona
 /// (ID-329, ID-341).
 ///
-/// Es la **acción principal** de la pantalla de reparación: sin la CA local
-/// ningún navegador llega a intentar el canal, así que el resto de la receta
-/// —el permiso de red local— sobra hasta que esté. La pide la persona, con el
-/// botón delante; no es un refresco automático a mitad de trámite, que es lo
-/// que el ID-224 prohíbe.
-///
-/// Por eso el momento que se le pasa al caso de uso es [`Moment::Startup`] y no
-/// [`Moment::MidErrand`]: lo que se pide es exactamente el trabajo del arranque
-/// —instalar la que hay, o fabricarla si no la hay—, mientras que `MidErrand`
-/// está definido como «no hacer nada». El aviso de reiniciar el navegador se
-/// descarta aquí y no se enseña: la ventana de sede no tiene dónde ponerlo, y
-/// esa es la mitad del ID-224 que sigue en pie.
-///
-/// Lo que la ventana ve después es el resultado, publicado por el mismo evento
-/// que todo lo demás (ID-338), y son **dos preguntas y no una**: si la CA local
-/// ha quedado en algún almacén, y si hay canal sirviendo. Las decide
-/// [`what_the_repair_leaves`].
+/// Qué se instala, con qué momento y en qué queda la pantalla de reparación lo
+/// decide [`crate::app::startup::repair_the_local_ca`]; aquí se desempaqueta
+/// el estado y se publica lo que dejó apuntado, por el mismo evento que todo lo
+/// demás (ID-338).
 ///
 /// Es `async` como todas las órdenes del trámite (ID-337).
 #[tauri::command(async)]
 pub fn install_local_ca(
     app_handle: tauri::AppHandle,
-    trust: State<'_, LocalCaTrust>,
+    trust: State<'_, app::startup::LocalCaTrust>,
     held: State<'_, app::startup::HeldChannel>,
+    live: State<'_, app::errand::LiveErrand>,
 ) {
-    use crate::trust::{Moment, NssTrustStores};
-
-    let in_some_store = app::trust::refresh_local_ca_trust(
-        &trust.store,
-        &trust.profiles,
-        &NssTrustStores,
-        Moment::Startup,
-    )
-    .is_ok_and(|outcome| !outcome.nowhere());
-
-    let view = what_the_repair_leaves(in_some_store, held.is_serving());
-    publish_to_the_site_window(&app_handle, view);
+    app::startup::repair_the_local_ca(&trust, &held, &live);
+    site_window::publish_the_moment(&app_handle);
 }
 
-/// **En qué queda la pantalla de reparación después de instalar la CA local**
-/// (ID-341).
-///
-/// Las dos preguntas son distintas y hasta el #402 se confundían: que la CA haya
-/// entrado en un almacén NSS no dice que el canal esté en pie. Al botón se llega
-/// desde tres sitios —`LocalCaMissing`, `ChannelNotOpened` y la espera pasada
-/// [`UNREACHABLE_AFTER_MS`](SiteErrandView)— y sólo desde el primero es cierto
-/// que el canal sigue sirviendo.
-///
-/// Y el canal **no se reabre desde aquí**: [`crate::app::site::open_the_channel`]
-/// se llama una sola vez, en el arranque, y allí se emite el certificado del
-/// servidor. Así que con la CA instalada pero sin canal la respuesta correcta es
-/// la pantalla de reparación definitiva —la que lleva la dirección del ajuste
-/// del navegador—, no treinta segundos de «Conectando con la sede» sobre algo
-/// que el backend ya sabe que no va a llegar.
-fn what_the_repair_leaves(in_some_store: bool, channel_is_serving: bool) -> SiteErrandView {
-    match (in_some_store, channel_is_serving) {
-        // Sin CA en ningún almacén ningún navegador llega a intentar el canal:
-        // la reparación sigue siendo instalarla.
-        (false, _) => SiteErrandView::no_channel(NoChannelView::LocalCaMissing),
-        // Con CA y con canal la petición de la sede puede llegar ya.
-        (true, true) => SiteErrandView::waiting(),
-        // Con CA y sin canal, lo que de verdad le pasa a la persona.
-        (true, false) => SiteErrandView::no_channel(NoChannelView::ChannelNotOpened),
-    }
-}
-
-/// **Lo que la sede pidió, hasta que la persona conteste.**
-///
-/// Vive en el adaptador y no en [`crate::app::errand::Errand`] a propósito: el
-/// trámite guarda la credencial, el puerto y por dónde se contesta (ID-321), y
-/// la operación la lleva quien la está atendiendo. Quien la atiende es
-/// [`attend_site_operation`], y esto es su memoria entre el momento del
-/// consentimiento y la respuesta.
-///
-/// Hace falta porque lo que la sede pidió **se vuelve a comprobar antes de
-/// entregar nada** (ID-259, ID-266): que el certificado estuviera en la lista
-/// que la ventana enseñó no basta, y la ventana no puede devolver ni un filtro
-/// ni una política que nunca cruzaron.
-#[derive(Default)]
-pub struct SiteConsent(std::sync::Mutex<Option<PendingConsent>>);
-
-/// Lo que queda pendiente de contestar, según lo que la sede pidiera.
-enum PendingConsent {
-    /// `selectcert`: para entregar identidad basta con volver a comprobar el
-    /// filtro (ID-276).
-    Identity(crate::protocol::SiteFilter),
-    /// `sign` o `cosign`: además del filtro hacen falta el documento y la
-    /// política que la sede declaró.
-    Signature(PendingSignature),
-}
-
-/// **Lo que hace falta para firmar cuando la persona ya ha consentido**, y que
-/// la ventana no puede devolver.
-///
-/// Es la mitad del consentimiento que **no** es para mirar: las filas, la ronda
-/// y el aviso de las firmas ilegibles se los lleva la ventana en su
-/// [`SiteStageView`]; esto se queda aquí porque es lo que hace cumplir lo que
-/// pidió la sede, y eso no se le pregunta a la ventana (ID-259, ID-266).
-#[derive(Clone)]
-struct PendingSignature {
-    /// El asa del documento que mandó la sede, la misma que cruzó a la ventana.
-    document: String,
-    /// Lo que la sede pide del listado, que se vuelve a comprobar (ID-259).
-    filter: crate::protocol::SiteFilter,
-    /// Los `extraParams` que declaró, ya expandidos (ID-266).
-    from_the_site: std::collections::BTreeMap<String, String>,
-    /// Que el documento trae firmas que rFirma no sabe leer (ID-297).
-    ///
-    /// Se apunta porque **consentir el trámite es consentirlas**: la pregunta
-    /// viaja dentro del momento del consentimiento y decir que no a ella es
-    /// cancelar el trámite entero (ID-299, ID-301). Quien firma después de eso
-    /// ya ha dicho que sí, y sin esta clave el puente abortaría la cofirma.
-    unregistered_signatures: bool,
-}
-
-impl SiteConsent {
-    /// Apunta lo que la sede pide del listado para identificarse.
-    fn remember_identity(&self, filter: crate::protocol::SiteFilter) {
-        *app::lock(&self.0) = Some(PendingConsent::Identity(filter));
-    }
-
-    /// Apunta lo que hace falta para firmar lo que la sede mandó.
-    fn remember_signature(&self, pending: PendingSignature) {
-        *app::lock(&self.0) = Some(PendingConsent::Signature(pending));
-    }
-
-    /// Lo que la sede pidió, si hay una identificación pendiente.
-    fn what_the_site_asked(&self) -> Option<crate::protocol::SiteFilter> {
-        match &*app::lock(&self.0) {
-            Some(PendingConsent::Identity(filter)) => Some(filter.clone()),
-            _ => None,
-        }
-    }
-
-    /// Lo que hace falta para firmar, si hay una firma pendiente.
-    fn the_signature_consented(&self) -> Option<PendingSignature> {
-        match &*app::lock(&self.0) {
-            Some(PendingConsent::Signature(pending)) => Some(pending.clone()),
-            _ => None,
-        }
-    }
-
-    /// Se acabó el consentimiento: ni la ventana ni el canal tienen ya nada
-    /// que contestar con esto.
-    pub fn forget(&self) {
-        *app::lock(&self.0) = None;
-    }
-}
-
-/// **El puente prestado**, que es quien sabe filtrar y expandir políticas
-/// (ID-252, ID-266).
-///
-/// Los dos motores del trámite corren en el hilo del isolate y por eso el
-/// escritorio los recibe como puertos: aquí se cumplen contra [`Isolate`], que
-/// es lo único que puede tocar `librfirma_crypto.so`.
-struct TheBridge<'a> {
-    isolate: &'a Isolate,
-}
-
-impl<'a> TheBridge<'a> {
-    /// El puente que corre en ese isolate.
-    fn borrowed_from(isolate: &'a Isolate) -> Self {
-        Self { isolate }
-    }
-
-    /// Lo que devuelve el hilo del isolate, aplanado: el hilo que ya no está es
-    /// el puente que no contesta, y para el trámite es la firma que no sale.
-    fn ran<T: Send + 'static>(
-        outcome: Result<Result<T, crate::ffi::BridgeError>, crate::isolate::IsolateGone>,
-    ) -> Result<T, crate::ffi::BridgeError> {
-        outcome.unwrap_or_else(|_| {
-            Err(crate::ffi::BridgeError::Failed(
-                "el hilo del isolate ya no esta".to_owned(),
-            ))
-        })
-    }
-}
-
-impl app::filtering::FilterEngine for TheBridge<'_> {
-    fn select(
-        &self,
-        filter_properties: &str,
-        certificates_b64: &str,
-    ) -> Result<Vec<usize>, crate::ffi::BridgeError> {
-        let properties = filter_properties.to_owned();
-        let certificates = certificates_b64.to_owned();
-        Self::ran(self.isolate.run(move |bridge| {
-            app::filtering::FilterEngine::select(bridge, &properties, &certificates)
-        }))?
-    }
-}
-
-impl app::policies::PolicyEngine for TheBridge<'_> {
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, crate::ffi::BridgeError> {
-        let declared = extra_params.to_owned();
-        let format = format.to_owned();
-        Self::ran(
-            self.isolate
-                .run(move |bridge| app::policies::PolicyEngine::expand(bridge, &declared, &format)),
-        )?
-    }
-}
-
-/// **La operación de la sede, atendida con el escritorio armado desde el estado
-/// de la aplicación** (ID-330).
-///
-/// No es una orden: la llama el canal, no la ventana. Lo que hace es lo que
-/// hace una orden —desempaquetar el estado, llamar al caso de uso y traducir—,
-/// y por eso el escritorio se arma **aquí** y no dentro de
-/// [`crate::app::errand::attend_operation`].
-///
-/// Qué pasa después lo decide el [`crate::app::errand::ErrandStep`] (ID-331):
-/// el momento del consentimiento se publica hacia la ventana y no escribe nada
-/// en el cable; la operación que ya tiene respuesta ya la escribió el caso de
-/// uso al cerrarse el trámite (ID-322).
-pub fn attend_site_operation(
-    app: &tauri::AppHandle,
-    url: crate::protocol::AfirmaUrl,
-    reply: crate::channel::ReplyHandle,
-) {
-    use tauri::Manager as _;
-
-    let live = app.state::<app::errand::LiveErrand>();
-
-    // Lo primero, antes de nada que pueda contestar: el asa es por donde sale
-    // todo lo que este trámite le diga a la sede (ID-321).
-    live.answer_through(reply);
-
-    dispatch_the_site_operation(app, &url);
-}
-
-/// **Atiende la operación con el escritorio armado desde el estado**, y publica
-/// lo que salga en la ventana de sede.
-///
-/// Aparte de [`attend_site_operation`] porque se atiende **dos veces la misma
-/// petición** (ID-341): la primera cuando llega por el canal con su asa, y la
-/// segunda cuando quien no tenía ningún certificado instala uno y vuelve a
-/// mirar. El asa se apunta una sola vez, en la primera; lo de aquí no la toca.
-fn dispatch_the_site_operation(app: &tauri::AppHandle, url: &crate::protocol::AfirmaUrl) {
-    use tauri::Manager as _;
-
-    let environment = app.state::<Environment>();
-    let opened = app.state::<OpenedDocuments>();
-    let live = app.state::<app::errand::LiveErrand>();
-    let consent = app.state::<SiteConsent>();
-    let isolate = app.state::<Isolate>();
-
-    let bridge = TheBridge::borrowed_from(&isolate);
-    let stores = environment.all_stores();
-    // El documento que manda la sede se escribe en un fichero de paso que el
-    // trámite borra al contestar (ID-286): de él no queda rastro, así que el
-    // sitio es el de los ficheros que no se guardan.
-    let scratch_dir = std::env::temp_dir();
-    let desk = app::errand::ErrandDesk {
-        engine: &bridge,
-        policies: &bridge,
-        stores: &stores,
-        installed_dir: &environment.installed_certificates,
-        listed: &environment.listed,
-        opened: &opened,
-        memory: &environment.memory,
-        scratch_dir: &scratch_dir,
-    };
-
-    match app::errand::attend_operation(&desk, url, &live) {
-        app::errand::ErrandStep::AskingForConsent {
-            certificates,
-            filter,
-        } => {
-            consent.remember_identity(filter);
-            publish_to_the_site_window(app, SiteErrandView::asking_for_consent(certificates));
-        }
-        app::errand::ErrandStep::AskingToSign(asked) => {
-            // La vista se compone antes de desguazar el consentimiento: lo que
-            // la ventana enseña y lo que se queda para hacer cumplir lo que
-            // pidió la sede son las dos mitades de lo mismo (ID-259, ID-266).
-            let view = SiteErrandView::asking_to_sign(&asked);
-            consent.remember_signature(PendingSignature {
-                document: asked.document,
-                filter: asked.filter,
-                from_the_site: asked.from_the_site,
-                unregistered_signatures: asked.unregistered_signatures,
-            });
-            publish_to_the_site_window(app, view);
-        }
-        // **El callejón que sí tiene arreglo** (ID-278, ID-341): la ventana lo
-        // dice con su motivo, y con `NotOne` el trámite sigue vivo —no se ha
-        // escrito nada en el cable— esperando a que se instale uno y se vuelva
-        // a mirar.
-        //
-        // El consentimiento se olvida en las dos: aquí no hay nada que
-        // consentir ni nada que elegir, así que lo que quedara apuntado de un
-        // reparto anterior no vale ya para nada.
-        app::errand::ErrandStep::NoCertificate { reason, owned, .. } => {
-            consent.forget();
-            publish_to_the_site_window(
-                app,
-                SiteErrandView::without_certificates(reason.into(), owned),
-            );
-        }
-        // Ya está contestada: `attend_operation` cierra el trámite y escribe la
-        // línea por el asa (ID-322). Lo que la ventana enseñe de eso es del
-        // #394. Lo que sí toca aquí es olvidar el consentimiento apuntado: sin
-        // trámite vivo no queda nada que consentir, y un `site_identify` que
-        // llegara después listaría el token para no escribir en ninguna parte.
-        app::errand::ErrandStep::Answering(_) => consent.forget(),
-    }
-}
-
-/// Le publica el trámite a la ventana de sede, si sigue abierta.
-///
-/// Que no esté es una respuesta válida: sin ventana no hay a quien contarle
-/// nada, y el trámite no depende de que la haya.
-///
-/// Antes de emitir **se guarda** en [`PendingSiteErrand`]: el evento sólo lo
-/// oye quien ya estaba escuchando, y la ventana pregunta por el último momento
-/// nada más montarse ([`read_site_errand`]).
-fn publish_to_the_site_window(app: &tauri::AppHandle, view: SiteErrandView) {
-    use tauri::{Emitter as _, Manager as _};
-
-    app.state::<PendingSiteErrand>().hold(view.clone());
-
-    if let Some(window) = app.get_webview_window(SITE_WINDOW) {
-        let _ = window.emit(SITE_ERRAND, view);
-    }
-}
-
-/// **El último momento del trámite, guardado para quien todavía no escuchaba.**
-///
-/// La ventana de sede se abre y **acto seguido** se le publica en qué quedó el
-/// arranque, pero entre que la página termina de cargar y que el frontal tiene
-/// puesta la escucha hay dos idas y vueltas por el IPC —montar React y
-/// registrar el `listen`—. El evento emitido en medio no lo oye nadie, y la
-/// ventana se queda con el `body` desnudo y sin nada encima.
-///
-/// Es el mismo agujero que ya tenía la invocación con documento, y se tapa
-/// igual (ver [`read_invocation`]): el momento se **guarda** y la ventana lo
-/// **pide** al montarse. Los momentos siguientes siguen llegando por el evento,
-/// que es lo que dice el ID-338; lo que deja de depender del orden es el
-/// primero.
-#[derive(Default)]
-pub struct PendingSiteErrand(std::sync::Mutex<Option<SiteErrandView>>);
-
-impl PendingSiteErrand {
-    /// Guarda el momento, pisando el anterior: lo que interesa es el último.
-    pub fn hold(&self, view: SiteErrandView) {
-        if let Ok(mut held) = self.0.lock() {
-            *held = Some(view);
-        }
-    }
-
-    /// El último momento guardado, si hay alguno.
-    ///
-    /// **No se consume.** Al revés que la invocación, aquí releer es lo
-    /// correcto: la ventana puede recargarse, y lo que tiene que enseñar
-    /// entonces es el momento en el que está el trámite, no ninguno.
-    fn read(&self) -> Option<SiteErrandView> {
-        self.0.lock().ok()?.clone()
-    }
-}
-
-/// **Orden 33.** En qué momento está el trámite de sede, para la ventana que
+/// **Orden 37.** En qué momento está el trámite de sede, para la ventana que
 /// acaba de montarse (ID-338).
 ///
 /// La pide la ventana de sede una sola vez, al montarse, y es una **orden y no
@@ -1305,23 +866,9 @@ impl PendingSiteErrand {
 ///
 /// `None` es la respuesta normal de una ventana que no es de sede.
 #[tauri::command]
-pub fn read_site_errand(pending: State<'_, PendingSiteErrand>) -> Option<SiteErrandView> {
-    pending.read()
+pub fn read_site_errand(live: State<'_, app::errand::LiveErrand>) -> Option<SiteErrandView> {
+    live.moment().as_ref().map(SiteErrandView::from)
 }
-
-/// La etiqueta de la ventana de sede (ID-333).
-///
-/// Es **suya y sólo suya**: la ventana principal es `main`, y las dos existen a
-/// la vez sin que una tape a la otra.
-pub const SITE_WINDOW: &str = "site";
-
-/// El nombre del evento con el que la ventana de sede recibe el trámite
-/// (ID-338).
-///
-/// Es un **evento y no un sondeo**: el trámite empuja cada momento nuevo. Que
-/// no llegue nunca es la respuesta normal, porque la mayoría de los arranques
-/// no vienen de una sede —y entonces esta ventana ni siquiera existe (ID-334)—.
-pub const SITE_ERRAND: &str = "site-errand";
 
 /// El nombre del evento con el que la ventana se entera de un arrastre.
 ///
@@ -1334,167 +881,7 @@ pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        pades_lower_left, what_the_repair_leaves, PendingSignature, PendingSiteErrand,
-        PlacementOrder, SiteConsent, SiteErrandView,
-    };
-    use crate::commands::views::SignatureRoundView;
-    use crate::protocol::SiteFilter;
-
-    /// **El momento guardado sigue ahí para quien monta después** (ID-338).
-    ///
-    /// Es la regresión del defecto que dejaba la ventana de sede en negro: el
-    /// primer momento se publicaba con un evento nada más abrirla, y el frontal
-    /// todavía tardaba dos idas y vueltas por el IPC en poner la escucha. Con
-    /// el momento guardado, llegar tarde deja de costar nada.
-    #[test]
-    fn the_errand_survives_a_window_that_was_not_listening_yet() {
-        let pending = PendingSiteErrand::default();
-        assert_eq!(pending.read(), None, "sin trámite no hay nada que contar");
-
-        pending.hold(SiteErrandView::waiting());
-
-        assert_eq!(pending.read(), Some(SiteErrandView::waiting()));
-    }
-
-    /// **Leerlo no lo consume**, al revés que la invocación con documento.
-    ///
-    /// La ventana puede recargarse, y lo que tiene que enseñar entonces es el
-    /// momento en el que está el trámite, no ninguno.
-    #[test]
-    fn reading_the_errand_leaves_it_where_it_was() {
-        let pending = PendingSiteErrand::default();
-        pending.hold(SiteErrandView::waiting());
-
-        assert!(pending.read().is_some());
-        assert!(pending.read().is_some(), "la segunda lectura da lo mismo");
-    }
-
-    /// **El último momento pisa al anterior**: lo que la ventana pide al
-    /// montarse es dónde está el trámite ahora, no por dónde pasó.
-    #[test]
-    fn the_last_moment_is_the_one_that_is_kept() {
-        let pending = PendingSiteErrand::default();
-        pending.hold(SiteErrandView::waiting());
-        pending.hold(SiteErrandView::no_channel(
-            super::NoChannelView::ChannelNotOpened,
-        ));
-
-        assert_eq!(
-            pending.read(),
-            Some(SiteErrandView::no_channel(
-                super::NoChannelView::ChannelNotOpened
-            ))
-        );
-    }
-
-    /// Lo mínimo que hace falta para tener una firma consentida.
-    fn a_pending_signature() -> PendingSignature {
-        PendingSignature {
-            document: "00000000000000000000000000000000".to_owned(),
-            filter: SiteFilter::default(),
-            from_the_site: std::collections::BTreeMap::new(),
-            unregistered_signatures: false,
-        }
-    }
-
-    /// **La reparación no manda esperar sobre un canal que no existe**
-    /// (ID-341).
-    ///
-    /// Al botón de instalar la CA local se llega desde `channelNotOpened`
-    /// también, y desde ahí instalarla no reabre nada: el canal se abre una
-    /// sola vez, en el arranque. Publicar `waiting` ahí tapaba la pantalla de
-    /// reparación —la que lleva la dirección del ajuste del navegador— con
-    /// «Conectando con la sede» durante treinta segundos, para volver después
-    /// a la misma pantalla.
-    #[test]
-    fn the_repair_only_waits_when_a_channel_is_serving() {
-        assert_eq!(
-            serde_json::to_value(what_the_repair_leaves(true, false)).expect("el callejon cruza"),
-            serde_json::json!({
-                "origin": null,
-                "stage": { "kind": "noChannel", "reason": "channelNotOpened" },
-            })
-        );
-        assert_eq!(
-            serde_json::to_value(what_the_repair_leaves(true, true)).expect("la espera cruza"),
-            serde_json::json!({
-                "origin": null,
-                "stage": { "kind": "waiting" },
-            })
-        );
-    }
-
-    /// Y sin CA en ningún almacén la respuesta sigue siendo instalarla, haya
-    /// canal o no: ningún navegador llega a intentar abrirlo (ID-329).
-    #[test]
-    fn the_repair_asks_for_the_local_ca_again_when_it_reached_no_store() {
-        for serving in [false, true] {
-            assert_eq!(
-                serde_json::to_value(what_the_repair_leaves(false, serving))
-                    .expect("el callejon cruza"),
-                serde_json::json!({
-                    "origin": null,
-                    "stage": { "kind": "noChannel", "reason": "localCaMissing" },
-                })
-            );
-        }
-    }
-
-    /// **ID-276**: los dos consentimientos no son intercambiables, y la
-    /// asimetría es la que protege. Con una firma consentida no hay
-    /// identificación que entregar: un `site_identify` que llegara ahí falla,
-    /// que es lo correcto —la sede pidió firmar, no un certificado—.
-    #[test]
-    fn a_consented_signature_is_never_an_identity_to_hand_over() {
-        let consent = SiteConsent::default();
-
-        consent.remember_signature(a_pending_signature());
-
-        assert!(
-            consent.what_the_site_asked().is_none(),
-            "una firma consentida no entrega identidad"
-        );
-        assert!(consent.the_signature_consented().is_some());
-    }
-
-    /// Y al revés: con una identificación consentida no hay nada que firmar.
-    #[test]
-    fn a_consented_identity_is_never_a_signature_to_begin() {
-        let consent = SiteConsent::default();
-
-        consent.remember_identity(SiteFilter::default());
-
-        assert!(consent.the_signature_consented().is_none());
-        assert!(consent.what_the_site_asked().is_some());
-    }
-
-    /// Y olvidar deja las dos preguntas sin respuesta: lo que se contestó una
-    /// vez no se contesta dos (ID-275).
-    #[test]
-    fn forgetting_leaves_nothing_to_answer_with() {
-        let consent = SiteConsent::default();
-        consent.remember_signature(a_pending_signature());
-
-        consent.forget();
-
-        assert!(consent.the_signature_consented().is_none());
-        assert!(consent.what_the_site_asked().is_none());
-    }
-
-    /// La ronda cruza con el nombre del verbo que la sede usó, y no con el de
-    /// la variante del protocolo: es lo que la ventana enseña.
-    #[test]
-    fn the_round_crosses_named_as_the_site_asked_for_it() {
-        assert_eq!(
-            serde_json::to_value(SignatureRoundView::Sign).expect("la ronda cruza"),
-            serde_json::json!("sign")
-        );
-        assert_eq!(
-            serde_json::to_value(SignatureRoundView::Cosign).expect("la ronda cruza"),
-            serde_json::json!("cosign")
-        );
-    }
+    use super::{pades_lower_left, PlacementOrder};
 
     /// El mismo ejemplo numérico del hallazgo: con `/Rotate 0` la esquina
     /// PAdES coincide con la de espacio de usuario, que es el único caso que

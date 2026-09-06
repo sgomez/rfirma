@@ -22,7 +22,8 @@
 
 use serde_json::Value;
 
-use rfirma_lib::app::errand::LiveErrand;
+use rfirma_lib::app::codec::V4Codec;
+use rfirma_lib::app::errand::{LiveErrand, ProtocolCodec};
 use rfirma_lib::app::frontier;
 use rfirma_lib::app::site::{attend_launch, Attendance};
 use rfirma_lib::channel::Situation as ChannelSituation;
@@ -233,12 +234,13 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     lines.push(frontier::cancelled().on_the_wire());
     // Y el desenlace nuevo del #392, que es el que el trámite escribe por el asa
     // cuando la persona dice que no o cierra la ventana sin contestar (ID-340).
-    lines.push(rfirma_lib::app::errand::declined(&LiveErrand::default()).on_the_wire());
+    let codec = V4Codec;
+    lines.push(codec.encode(&rfirma_lib::app::errand::declined(&LiveErrand::default())));
     // Y el del #393: la firma que no ha salido. El fallo que se le pasa lleva
     // dentro los tres valores contaminados, que es lo que hace la comprobación:
     // a la sede sale el código, y el detalle se queda para la ventana (ID-291).
     lines.push(
-        rfirma_lib::app::errand::the_signature_did_not_come_out(
+        codec.encode(&rfirma_lib::app::errand::the_signature_did_not_come_out(
             &LiveErrand::default(),
             rfirma_lib::app::signing::SiteRefusal::new(
                 frontier::code_of_bridge(&BridgeError::Failed(String::new())),
@@ -247,8 +249,7 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
                      {A_CERTIFICATE}"
                 ))),
             ),
-        )
-        .on_the_wire(),
+        )),
     );
 
     lines

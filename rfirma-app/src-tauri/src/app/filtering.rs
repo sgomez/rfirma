@@ -33,7 +33,7 @@
 use base64::Engine as _;
 
 use crate::commands::Failure;
-use crate::ffi::{BridgeError, FilterRequest, NativeBridge};
+use crate::ffi::BridgeError;
 use crate::memory::ListedCertificates;
 use crate::pkcs11::{self, Store, TokenCertificate};
 use crate::protocol::SiteFilter;
@@ -51,19 +51,6 @@ pub trait FilterEngine {
         filter_properties: &str,
         certificates_b64: &str,
     ) -> Result<Vec<usize>, BridgeError>;
-}
-
-impl FilterEngine for NativeBridge {
-    fn select(
-        &self,
-        filter_properties: &str,
-        certificates_b64: &str,
-    ) -> Result<Vec<usize>, BridgeError> {
-        self.filter_certificates(FilterRequest {
-            filter_properties,
-            certificates_b64,
-        })
-    }
 }
 
 /// **Caso de uso.** El listado que la sede acepta, de los tokens conectados.

@@ -19,13 +19,13 @@ misma PR que lo crea**, o el PR sale en rojo.
   salvo que vayas a tocarlos. Para saber qué cubren sin leerlos:
   `awk '/#\[cfg\(test\)\]/,0' <fichero> | grep -n '    fn '` — los nombres son
   frases en inglés y dicen la invariante entera.
-- El fichero más grande del backend es `app/errand.rs`, con 2382 líneas; detrás
-  van `ffi.rs` (1204), `app/signing.rs` (1202), `app/documents.rs` (986) y
-  `signing/placement.rs` (942). El mayor de `commands/` es `commands/mod.rs`
-  (1438), y detrás va `commands/views.rs` (897); lo que los hace crecer es
-  **prosa**: los cuerpos siguen siendo desempaquetar, llamar y traducir. Si lo que crece
-  es un cuerpo, lo que ha entrado casi siempre es una decisión, y una decisión
-  va en `app/`.
+- El fichero más grande del backend es `app/errand/tests.rs`, con 1660 líneas,
+  y son todo pruebas; de producción, `ffi.rs` (1204), `app/documents.rs` (986),
+  `signing/placement.rs` (942) y `app/signing/mod.rs` (937). El mayor de
+  `commands/` es `commands/mod.rs` (927), y detrás va `commands/views.rs`
+  (539); lo que los hace crecer es **prosa**: los cuerpos siguen siendo
+  desempaquetar, llamar y traducir. Si lo que crece es un cuerpo, lo que ha
+  entrado casi siempre es una decisión, y una decisión va en `app/`.
 - El primer bloque `//!` de cada módulo es su contrato. `head -40 <fichero>` casi
   siempre basta para decidir si es el fichero que buscas.
 
@@ -34,12 +34,14 @@ misma PR que lo crea**, o el PR sale en rojo.
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `main.rs` | 8 | El binario. No hay nada dentro. |
-| `lib.rs` | 482 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `app/startup.rs` y no decide nada**: los tres puertos que le pasa, la ventana de sede y el canal sostenido (ID-324…ID-334). Empieza aquí para ver el cableado. |
+| `lib.rs` | 381 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `app/startup/` y no decide nada**: compone el transporte de producción (`app/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Empieza aquí para ver el cableado. |
 | `isolate.rs` | 179 | El hilo dueño del isolate de GraalVM. |
 | `ffi.rs` | 1204 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). |
 | **`commands/`** | | El adaptador de Tauri: desempaqueta, llama a `app/` y traduce (ID-79). |
-| `commands/mod.rs` | 1438 | **Las treinta y seis órdenes de Tauri**, y nada más que sus cuerpos. |
-| `commands/views.rs` | 897 | Los tipos que cruzan a la ventana y las conversiones que los producen (ID-80). |
+| `commands/mod.rs` | 927 | **Las treinta y siete órdenes de Tauri**, y nada más que sus cuerpos. Las nueve de sede son desempaquetar el `State`, llamar a un verbo de `app/errand/` y traducir (RD-07): ninguna decide ni guarda estado propio. |
+| `commands/views.rs` | 539 | Los tipos que cruzan a la ventana principal y las conversiones que los producen (ID-80). Los de la ventana de sede están aparte, en `views_site.rs`. |
+| `commands/views_site.rs` | 435 | Los tipos que cruzan a la **ventana de sede** y su única conversión, del `Moment` del trámite a la vista (ID-338, ID-341). Aparte por ventana, como `rubric.rs` lo está por tamaño. |
+| `commands/site_window.rs` | 129 | **El adaptador de la ventana de sede**: la crea, le publica el momento del trámite y arma la mesa desde el `State` cuando el transporte entrega una operación (ID-330, ID-333, ID-338). Sin decisión dentro. |
 | `commands/rubric.rs` | 151 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). |
 | `commands/failure.rs` | 248 | Cómo se le cuenta a la ventana que algo salió mal (ID-29). |
 | `commands/orders.rs` | 253 | Lo que la ventana manda, ya deserializado, y **la validación del destino** antes de llamar al puente (ID-94). |
@@ -48,21 +50,37 @@ misma PR que lo crea**, o el PR sale en rojo.
 | `app/mod.rs` | 221 | El reparto, `Environment` —la raíz de composición— y la carpeta de destino elegida (ID-83). Léelo antes que sus hermanos. |
 | `app/cycle.rs` | 477 | El ciclo trifásico: prefirma Java, firma Rust, postfirma Java. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `app/filtering.rs`, y no firma. |
 | `app/certificates.rs` | 756 | Qué certificados hay, cuál eligió la ventana, cuál se recordó, qué estampa el recuadro, y instalar o quitar un `.p12` (ID-192, ID-197). |
-| `app/signing.rs` | 1202 | El recorrido de la firma en tres pasos y la sesión a medias, y su gemelo de sede: **la postfirma que no escribe nada** (ID-286, ID-264). |
+| **`app/signing/`** | | El recorrido de la firma en tres pasos, y su gemelo de sede. |
+| `app/signing/mod.rs` | 937 | La sesión **local**: prefirma, firma en el token y la postfirma que entrega el documento; la sesión a medias es la misma para los dos recorridos (ADR-0001). |
+| `app/signing/site.rs` | 350 | La sesión **de sede**: la prefirma que vuelve a pasar el filtro de la sede (ID-259) y **la postfirma que no escribe nada** (ID-286, ID-264), con el código que le toca a cada negativa (ID-292). |
 | `app/frontier.rs` | 388 | **La frontera de errores**: el único sitio donde una situación del ID-29 se convierte en el código `SAF_NN` que recibe la sede (ID-288, ID-292). |
 | `app/documents.rs` | 986 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). |
-| `app/errand.rs` | 2382 | **El trámite de sede**: la operación que llega por el canal, el momento del consentimiento —que no se salta nunca— y lo que la sede recibe, más el trámite vivo del que sólo hay uno y el fichero de paso que se borra con él (ID-272, ID-275, ID-276, ID-280, ID-286). |
-| `app/filtering.rs` | 340 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). |
+| **`app/errand/`** | | **El trámite de sede** (#406): un módulo profundo con interfaz de tres verbos —`attend`, `consent`, `decline`, más `finish` porque el PIN va en medio— que posee **toda** la memoria del trámite y toma el códec y el transporte por dos puertos. No nombra a ningún adaptador concreto: lo vigila `tests/module_directions.rs` (RD-12). |
+| `app/errand/mod.rs` | 303 | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. |
+| `app/errand/state.rs` | 432 | El estado del trámite con un solo dueño (`LiveErrand`): el trámite vivo, el códec negociado, el asa de respuesta, la petición apuntada, el fichero de paso, lo consentido y el último momento (ID-280, ID-321, ID-338, ID-341). |
+| `app/errand/request.rs` | 31 | `SiteRequest`: lo que la sede quiere, sin versión (RD-02). |
+| `app/errand/outcome.rs` | 246 | El vocabulario de salida: `SiteOutcome` —lo que la sede recibe, sin versión— y lo que queda para la ventana: `ErrandStep`, `SigningConsent`, `NoCertificate`, `Moment`. |
+| `app/errand/ports.rs` | 169 | **Los dos puertos**: `ProtocolCodec` y `Transport`, con el `ReplyHandle` por el que se contesta mucho después (RD-03, RD-04). Un cierre con la firma del transporte **es** un transporte. |
+| `app/errand/desk.rs` | 375 | La mesa del trámite (`ErrandDesk`) y los dos consentimientos que se deciden sobre ella: el orden de las cribas, la admisibilidad, la política y el recuadro (ID-258, ID-266, ID-272, ID-282). La de producción se arma aquí, no en la orden. |
+| `app/errand/replies.rs` | 193 | Las respuestas finales, y **el único sitio que escribe en el cable** (ID-322): identidad entregada, firma entregada, la que no salió y la cancelación. |
+| `app/errand/tests.rs` | 1660 | Las pruebas del trámite entero, en grada A. Solo en pruebas; la guarda de dirección no lo lee. |
+| `app/codec.rs` | 143 | **El códec de la versión 4**: `protocol/` detrás del puerto, sin lógica nueva (RD-03). Lo instancia la negociación de arranque. |
+| `app/transport.rs` | 63 | **El transporte de producción**: el `wss` sobre el *loopback* con puerto sorteado, `channel/` detrás del puerto (RD-04, ID-326). Único sitio de `app/` que nombra a `channel` por el trámite. |
+| `app/engines.rs` | 97 | Los adaptadores de `FilterEngine` y `PolicyEngine` sobre el puente y sobre el hilo del aislado, donde se resuelve la doble `Result` (RD-06). |
+| `app/filtering.rs` | 327 | El listado que la sede acepta: los criterios de rFirma primero y la expresión de la sede después, aplicada por el motor prestado del puente (ID-252, ID-258, ID-259). Aquí se **declara** el puerto `FilterEngine`; su adaptador está en `app/engines.rs`. |
 | `app/in_hand.rs` | 227 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). |
 | `app/invocation.rs` | 496 | La invocación desde fuera, `rfirma documento.pdf`: qué abre, qué hace la segunda y por dónde sale la URL `afirma://` que no es una ruta (ID-157…ID-160, ID-235, ID-236). |
-| `app/policies.rs` | 229 | **La política de firma que declara la sede**: `expPolicy` expandido por `ExtraParamsProcessor` del original, y quién manda cuando la sede y rFirma tocan la misma clave (ID-266). |
+| `app/policies.rs` | 221 | **La política de firma que declara la sede**: `expPolicy` expandido por `ExtraParamsProcessor` del original, y quién manda cuando la sede y rFirma tocan la misma clave (ID-266). Aquí se **declara** el puerto `PolicyEngine`; su adaptador está en `app/engines.rs`. |
 | `app/preview.rs` | 231 | La prefirma en seco: el ciclo entero con un `PK1` inventado, sin PIN y sin escribir, para pintar el sello de verdad (ID-136, ID-110). |
 | `app/recents.rs` | 603 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). |
 | `app/rubric.rs` | 113 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). |
 | `app/configuration.rs` | 394 | Los ajustes, del disco a la ventana y de vuelta. |
 | `app/trust.rs` | 702 | **La CA local en los almacenes NSS**: cuándo se instala, el solape —con la vigente **sirviendo** hasta que caduca— y el aviso que llega al terminar. Nunca se repara a mitad de un trámite (ID-224, ID-227). |
-| `app/startup.rs` | 847 | **Qué se abre al arrancar** (TD-70): el único seam nuevo del hito. Recibe la invocación y tres puertos —transporte de canal, almacenes de confianza y abridor de ventana— y decide si se enseña la principal o se atiende un trámite de sede (ID-324, ID-328…ID-329, ID-334). Aquí vive el canal sostenido, y **con qué se abre la ventana de sede: el trámite o el callejón sin salida** (ID-341). |
-| `app/site.rs` | 369 | **La invocación de una sede**: abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). El **puerto de transporte** se declara aquí, y con un trámite vivo la segunda invocación se rechaza (ID-280). |
+| **`app/startup/`** | | **Qué se abre al arrancar** (TD-70), y lo que el arranque de sede sostiene después. |
+| `app/startup/mod.rs` | 731 | Recibe la invocación y tres puertos —transporte, almacenes de confianza y abridor de ventana— y decide si se enseña la principal o se atiende un trámite de sede (ID-324, ID-328…ID-329, ID-334). Apunta **con qué momento se abre la ventana de sede**: el trámite o el callejón sin salida (ID-341). |
+| `app/startup/channel.rs` | 209 | El canal abierto, sostenido en sus dos ranuras —el del trámite y el de un rechazo— y quién lo sostiene o cuenta por qué no lo hay (ID-325, ID-279, ID-280). |
+| `app/startup/repair.rs` | 115 | La reparación de la CA local desde la ventana de sede, y en qué queda esa pantalla: dos preguntas, no una (ID-329, ID-341). |
+| `app/site.rs` | 403 | **La invocación de una sede**: **la negociación de arranque** —qué códec y qué transporte, en un solo sitio (RD-05)—, abre el canal en uno de los puertos sorteados, y decide si un rechazo sale por el socket o por la ventana (ID-214, ID-215, ID-248). Con un trámite vivo la segunda invocación se rechaza (ID-280). |
 | `app/handlers.rs` | 157 | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta: lo que se puede saber, lo que se escribe y el nombre de catálogo de cada situación (ID-238…ID-240). |
 | `app/version.rs` | 382 | Si hay una versión nueva publicada: el puerto de red doblable, la caché de 24 h y la comparación de versiones (ID-177, ID-178, ID-180, ID-182). |
 | `app/fixtures.rs` | 97 | Los andamios que comparten las pruebas de `app/`. Solo en pruebas. |
@@ -166,6 +184,31 @@ entre hermanos el que sabe menos no nombra al que sabe más (`ffi` importa
 pura en su módulo de dominio → el caso de uso en `app/` → el cuerpo de la orden
 en `commands/`. Lo vigila `tests/module_directions.rs` (ADR-0017).
 
+## Al tocar el trámite de sede
+
+La sede tiene la forma «adaptadores, casos de uso, puertos» que el resto del
+backend todavía no tiene (#406), y la pregunta «¿dónde pongo esto?» tiene
+respuesta por su forma:
+
+- **Una decisión del trámite** —qué se enseña, qué se contesta, qué se
+  recuerda— va en `app/errand/`: en `desk.rs` si se toma sobre la mesa, en
+  `replies.rs` si es lo que la sede recibe, en `state.rs` si es memoria. Los
+  verbos de `mod.rs` son la única puerta, y una orden de `commands/mod.rs` no
+  hace más que llamar a uno.
+- **Cómo se escribe algo en el cable** va en `app/codec.rs`, detrás de
+  `ProtocolCodec`; **por dónde entra y sale** va en `app/transport.rs`, detrás de
+  `Transport`. Qué códec y qué transporte se instancian lo decide
+  `app/site.rs::negotiate`, y nadie más. No hay nada por si acaso (RD-10): un
+  adaptador nuevo es un fichero nuevo, no un `if`.
+- **Lo que la ventana de sede ve** es un `Moment` del trámite traducido en
+  `commands/views_site.rs`; quién lo publica es `commands/site_window.rs`.
+- Las pruebas del trámite van en `app/errand/tests.rs`, con el códec de la
+  versión 4 o uno en memoria, el transporte doblado por un cierre y los dos
+  motores del puente doblados (TD-51, TD-52). Dos oráculos están congelados
+  mientras dure el #406: `just check-contract` compara `just contract` con
+  `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad
+  no se tocan.
+
 ## Al añadir o cambiar una orden de Tauri
 
 El cuerpo de la orden va en `commands/mod.rs` y **lo que decide, en `app/`**: si
@@ -224,10 +267,11 @@ Y una prueba nueva no se escribe contra la orden, sino contra el caso de uso de
 
 ## Las pruebas que se leen a sí mismas
 
-Cinco ficheros vigilan invariantes leyendo el código **como texto**, no
-ejecutándolo: `app/cycle.rs`, `app/signing.rs`, `tests/site_frontier_guards.rs`,
-`commands/guards.rs` y `tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
-dentro. Dos de las de `app/signing.rs` comprueban **ausencias** —que la postfirma
+Seis ficheros vigilan invariantes leyendo el código **como texto**, no
+ejecutándolo: `app/cycle.rs`, `app/signing/mod.rs`, `app/signing/site.rs`,
+`tests/site_frontier_guards.rs`, `commands/guards.rs` y
+`tests/module_directions.rs`. Abren el `.rs` con `include_str!` y buscan cadenas
+dentro. Las de `app/signing/site.rs` comprueban **ausencias** —que la postfirma
 de un trámite de sede no entregue el documento, no anote fila y no recuerde el
 certificado (ID-286, ID-264)—, y una ausencia no la vigila ninguna prueba de
 comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos cosas:
@@ -245,7 +289,14 @@ comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos c
   Decídelo al planificar el cambio, no al final.
 - **No todas descubren solas, y la de al lado sí.** La guarda de rutas de
   `commands/guards.rs` encuentra por su cuenta cada tipo nuevo, y eso enseña a
-  confiar; la de `app/signing.rs` que vigila quién escribe el sello firmado lleva
-  una **lista fija** de ficheros de `app/` y de `commands/`. Un módulo nuevo de
-  `app/` que pueda escribir en la bandeja hay que añadirlo a mano a esa lista, o
-  queda sin vigilar y en verde.
+  confiar; la de `app/signing/mod.rs` que vigila quién escribe el sello firmado
+  lleva una **lista fija** de ficheros de `app/` y de `commands/`. Un módulo
+  nuevo de `app/` que pueda escribir en la bandeja hay que añadirlo a mano a esa
+  lista, o queda sin vigilar y en verde.
+- **La guarda de dirección no lee un `tests.rs`**: es la mitad de pruebas de su
+  carpeta en un fichero aparte (`app/errand/tests.rs`), y se salta igual que un
+  `mod tests` al pie. Lo que sí lee son las líneas `use crate::` de producción,
+  y por eso el trámite escribe sus importaciones de `app/` con `crate::app::…`
+  y no con `super::super::…`: las dos aristas prohibidas del RD-12 —el trámite
+  nombrando a `channel`, a `app::codec` o a `app::transport`— se le escaparían
+  si fueran relativas.
