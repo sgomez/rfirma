@@ -7,11 +7,18 @@ use std::sync::OnceLock;
 /// Fichero excluido de las comprobaciones de tipos.
 const THIS_FILE: &str = "guards.rs";
 
-/// Comprueba si la ruta, relativa a `src/`, es de un adaptador: `commands/` o cualquier `adapters/` de un contexto (RD-02).
+/// Comprueba si la ruta, relativa a `src/`, es del adaptador de Tauri: `commands/` o, en el `adapters/` de un contexto, un `tauri*`, `views*` u `orders*` (RD-02).
 fn is_an_adapter(relative: &str) -> bool {
     let mut segments = relative.split('/');
     let first = segments.next().unwrap_or_default();
-    first == "commands" || segments.next() == Some("adapters")
+    if first == "commands" {
+        return true;
+    }
+    let name = relative.rsplit('/').next().unwrap_or_default();
+    segments.next() == Some("adapters")
+        && ["tauri", "views", "orders"]
+            .iter()
+            .any(|stem| name.starts_with(stem))
 }
 
 /// Comprueba si el fichero es de producción: ni pruebas hermanas ni esta guarda.
@@ -205,10 +212,15 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Crossing> {
-    use crate::app::fixtures::a_memory;
-    use crate::app::{configuration, documents, recents};
-    use crate::destination::{CheckedFolder, DestinationFolder, PortalDocument};
-    use crate::memory::{Badge, Configuration, OpenedDocuments, RecentDocument, State};
+    use crate::documents::adapters::portal::PortalDocument;
+    use crate::documents::adapters::recents_store::{Badge, RecentDocument};
+    use crate::documents::application::opened::OpenedDocuments;
+    use crate::documents::application::{documents, recents};
+    use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+    use crate::fixtures::a_memory;
+    use crate::signing::application::configuration;
+    use crate::signing::application::configuration_memory::Configuration;
+    use crate::signing::application::state::State;
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -241,8 +253,8 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
     )
     .expect("se ha soltado un fichero");
     let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
-    let refused_rubric = crate::app::rubric::choose(
-        &crate::rubric::RubricStore::at(home.path().join("rubric.jpg")),
+    let refused_rubric = crate::documents::application::rubric::choose(
+        &crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg")),
         tauri_plugin_dialog::FilePath::Path(std::path::PathBuf::from(A_PORTAL_HANDLE)),
     )
     .expect_err("el enlace del portal no existe fuera del sandbox");
@@ -265,7 +277,7 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         ),
         Crossing::of(
             "RubricChoiceView",
-            &crate::commands::RubricChoiceView::refused(&refused_rubric),
+            &crate::documents::adapters::tauri_rubric::RubricChoiceView::refused(&refused_rubric),
         ),
     ];
 
@@ -410,6 +422,11 @@ fn an_adapter_in_a_new_context_is_discovered_without_editing_any_list() {
             "#[tauri::command]\npub fn two() {}\n",
         ),
         ("site/adapters/tauri/tests.rs", ""),
+        ("site/adapters/views.rs", "pub struct AView;\n"),
+        (
+            "site/adapters/channel/server.rs",
+            "pub struct NotThisEither;\n",
+        ),
         ("site/domain/errand.rs", "pub struct NotAnAdapter;\n"),
         ("site/application/attend.rs", ""),
         ("memory/recents.rs", ""),
@@ -424,7 +441,14 @@ fn an_adapter_in_a_new_context_is_discovered_without_editing_any_list() {
         .map(|(relative, _)| relative)
         .collect();
 
-    assert_eq!(found, ["commands/mod.rs", "site/adapters/tauri.rs"]);
+    assert_eq!(
+        found,
+        [
+            "commands/mod.rs",
+            "site/adapters/tauri.rs",
+            "site/adapters/views.rs"
+        ]
+    );
 }
 
 #[test]
@@ -463,11 +487,14 @@ fn commands_of(source: &str) -> Vec<(&str, String, &str)> {
 #[test]
 fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
     for (file, command) in [
-        ("commands/documents.rs", "pub fn open_document("),
-        ("commands/documents.rs", "pub fn read_document("),
-        ("commands/documents.rs", "pub fn open_signed_document("),
-        ("commands/documents.rs", "pub fn open_signed_folder("),
-        ("commands/desktop.rs", "pub fn check_for_new_version("),
+        ("documents/adapters/tauri.rs", "pub fn open_document("),
+        ("documents/adapters/tauri.rs", "pub fn read_document("),
+        (
+            "documents/adapters/tauri.rs",
+            "pub fn open_signed_document(",
+        ),
+        ("documents/adapters/tauri.rs", "pub fn open_signed_folder("),
+        ("desktop/adapters/tauri.rs", "pub fn check_for_new_version("),
     ] {
         let source = production_half(source_of(file));
         let declaration = source
@@ -504,7 +531,7 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
 
 #[test]
 fn every_command_of_the_site_errand_runs_off_the_main_thread() {
-    let source = production_half(source_of("commands/site.rs"));
+    let source = production_half(source_of("site/adapters/tauri.rs"));
 
     const OF_THE_ERRAND: [&str; 6] = [
         "pub fn close_site_window(",

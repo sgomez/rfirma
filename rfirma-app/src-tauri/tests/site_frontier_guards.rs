@@ -2,20 +2,24 @@
 
 use serde_json::Value;
 
-use rfirma_lib::app::codec::V4Codec;
-use rfirma_lib::app::errand::{LiveErrand, ProtocolCodec};
-use rfirma_lib::app::frontier;
-use rfirma_lib::app::site::{attend_launch, Attendance};
-use rfirma_lib::channel::Situation as ChannelSituation;
-use rfirma_lib::channel::{answer, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown};
 use rfirma_lib::commands::failure::Failure;
-use rfirma_lib::commands::{NoCertificateView, NoChannelView, SiteErrandView};
-use rfirma_lib::destination::{DestinationError, Situation as DestinationSituation};
-use rfirma_lib::ffi::BridgeError;
-use rfirma_lib::pkcs11::{Situation as TokenSituation, TokenError};
-use rfirma_lib::protocol::{Refusal, SafCode, WireAnswer};
-use rfirma_lib::rubric::{RubricError, Situation as RubricSituation};
-use rfirma_lib::signing::Refusal as Inadmissible;
+use rfirma_lib::documents::adapters::rubric::{RubricError, Situation as RubricSituation};
+use rfirma_lib::documents::domain::destination::{
+    DestinationError, Situation as DestinationSituation,
+};
+use rfirma_lib::identity::adapters::pkcs11::{Situation as TokenSituation, TokenError};
+use rfirma_lib::signing::adapters::ffi::BridgeError;
+use rfirma_lib::signing::domain::Refusal as Inadmissible;
+use rfirma_lib::site::adapters::channel::Situation as ChannelSituation;
+use rfirma_lib::site::adapters::channel::{
+    answer, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown,
+};
+use rfirma_lib::site::adapters::codec::V4Codec;
+use rfirma_lib::site::adapters::views::{NoCertificateView, NoChannelView, SiteErrandView};
+use rfirma_lib::site::application::errand::{LiveErrand, ProtocolCodec};
+use rfirma_lib::site::application::frontier;
+use rfirma_lib::site::application::site::{attend_launch, Attendance};
+use rfirma_lib::site::domain::protocol::{Refusal, SafCode, WireAnswer};
 
 /// Enlace del portal que no puede salir.
 const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
@@ -85,7 +89,7 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
         (
             "SiteErrandView (rechazo sin canal)",
             serde_json::to_value(SiteErrandView::refused(&Refusal::about(
-                rfirma_lib::protocol::Parameter::Data,
+                rfirma_lib::site::domain::protocol::Parameter::Data,
                 format!("no se puede leer '{A_PORTAL_HANDLE}' ({A_DOCUMENT_NAME})"),
             )))
             .expect("serializa"),
@@ -171,19 +175,23 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     }
     lines.push(frontier::cancelled().on_the_wire());
     let codec = V4Codec;
-    lines.push(codec.encode(&rfirma_lib::app::errand::declined(&LiveErrand::default())));
     lines.push(
-        codec.encode(&rfirma_lib::app::errand::the_signature_did_not_come_out(
+        codec.encode(&rfirma_lib::site::application::errand::declined(
             &LiveErrand::default(),
-            rfirma_lib::app::signing::SiteRefusal::new(
+        )),
+    );
+    lines.push(codec.encode(
+        &rfirma_lib::site::application::errand::the_signature_did_not_come_out(
+            &LiveErrand::default(),
+            rfirma_lib::site::application::session::SiteRefusal::new(
                 frontier::code_of_bridge(&BridgeError::Failed(String::new())),
                 Failure::from(BridgeError::Failed(format!(
                     "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con \
                      {A_CERTIFICATE}"
                 ))),
             ),
-        )),
-    );
+        ),
+    ));
 
     lines
 }
@@ -264,14 +272,14 @@ fn every_line_that_goes_out_is_one_the_closed_catalogue_can_produce() {
     let mut possible: Vec<String> = Vec::new();
     for code in SafCode::ALL {
         possible.push(WireAnswer::refused(code).on_the_wire());
-        for parameter in rfirma_lib::protocol::Parameter::ALL {
+        for parameter in rfirma_lib::site::domain::protocol::Parameter::ALL {
             possible.push(WireAnswer::refused_because_of(code, parameter).on_the_wire());
         }
     }
     possible.push(WireAnswer::Cancelled.on_the_wire());
     possible.push(WireAnswer::OutOfMemory.on_the_wire());
     possible.push(WireAnswer::Nothing.on_the_wire());
-    possible.push(rfirma_lib::channel::ECHO_OK.to_owned());
+    possible.push(rfirma_lib::site::adapters::channel::ECHO_OK.to_owned());
 
     for line in everything_that_goes_out_to_the_site() {
         assert!(

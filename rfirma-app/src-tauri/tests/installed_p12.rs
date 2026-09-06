@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rfirma_lib::app;
-use rfirma_lib::memory::ListedCertificates;
-use rfirma_lib::pkcs11::{self, Store, TokenCertificate};
+use rfirma_lib::identity::adapters::pkcs11::{self, Store, TokenCertificate};
+use rfirma_lib::identity::application::certificates;
+use rfirma_lib::identity::application::listed::ListedCertificates;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;
@@ -95,7 +95,7 @@ fn install(
     p12: &Path,
     password: &str,
 ) -> Result<(), rfirma_lib::commands::Failure> {
-    app::certificates::install_pkcs12(installed, FilePath::from(p12), password)
+    certificates::install_pkcs12(installed, FilePath::from(p12), password)
 }
 
 /// Almacenes instalados actualmente bajo `installed`.
@@ -264,7 +264,7 @@ fn removing_an_installed_certificate_deletes_its_store() {
             .map(|certificate| certificate.reference().clone()),
     );
 
-    app::certificates::remove_installed(installed.path(), &handles[0], &listed)
+    certificates::remove_installed(installed.path(), &handles[0], &listed)
         .expect("deberia poder quitarse");
 
     assert!(installed_stores(installed.path()).is_empty());
@@ -284,7 +284,7 @@ fn a_certificate_from_somewhere_else_is_not_removed() {
             .map(|certificate| certificate.reference().clone()),
     );
 
-    let failure = app::certificates::remove_installed(installed.path(), &handles[0], &listed)
+    let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
         .expect_err("no viene de este directorio");
 
     assert_eq!(failure.situation, "certificateNotFound");

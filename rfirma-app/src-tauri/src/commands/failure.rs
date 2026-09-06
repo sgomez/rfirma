@@ -2,16 +2,17 @@
 
 use serde::Serialize;
 
-use crate::app::cycle;
-use crate::app::signing::CycleFailure;
-use crate::desktop::error::DesktopError;
-use crate::destination::DestinationError;
-use crate::ffi::BridgeError;
-use crate::isolate::IsolateGone;
-use crate::memory::{MemoryError, Situation as MemorySituation};
-use crate::pkcs11::{SecretOnTheReaderKeypad, Situation, TokenError};
-use crate::rubric::{RubricError, Situation as RubricSituation};
-use crate::signing::{Refusal, SealMismatch};
+use crate::desktop::domain::error::DesktopError;
+use crate::documents::adapters::rubric::{RubricError, Situation as RubricSituation};
+use crate::documents::domain::destination::DestinationError;
+use crate::identity::adapters::pkcs11::SecretOnTheReaderKeypad;
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::signing::adapters::ffi::BridgeError;
+use crate::signing::adapters::isolate::IsolateGone;
+use crate::signing::adapters::memory_error::{MemoryError, Situation as MemorySituation};
+use crate::signing::application::cycle;
+use crate::signing::application::session::CycleFailure;
+use crate::signing::domain::{Refusal, SealMismatch};
 
 /// Representación de un fallo devuelto a la ventana (ADR-0009).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -66,7 +67,7 @@ impl From<SecretOnTheReaderKeypad> for Failure {
 impl From<DesktopError> for Failure {
     fn from(error: DesktopError) -> Self {
         Self::new(
-            crate::app::handlers::situation_name(error.situation()),
+            crate::desktop::application::handlers::situation_name(error.situation()),
             error.detail().to_owned(),
         )
     }
@@ -135,8 +136,10 @@ impl From<RubricError> for Failure {
 }
 
 /// Nombre en camelCase de una situación del destino.
-fn destination_situation_name(situation: crate::destination::Situation) -> &'static str {
-    use crate::destination::Situation as Where;
+fn destination_situation_name(
+    situation: crate::documents::domain::destination::Situation,
+) -> &'static str {
+    use crate::documents::domain::destination::Situation as Where;
     match situation {
         Where::FolderMissing => "folderMissing",
         Where::NotAFolder => "notAFolder",

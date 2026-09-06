@@ -1,21 +1,6 @@
-//! Reglas de firma puras sin efectos secundarios.
+//! Contexto `signing` (ADR-0017).
 
-pub mod admissibility;
-pub mod config;
-pub mod language;
-pub mod layer2_text;
-pub mod placement;
-pub mod properties;
-pub mod session_seal;
-
-pub use admissibility::{AdmissibleDocument, Refusal};
-pub use config::{
-    PadesRect, Placement, Setting, SignatureConfig, ALLOW_UNREGISTERED_KEY, SUB_FILTER,
-};
-pub use language::Language;
-pub use layer2_text::{compose_layer2_text, mask_id_number, VisibleTextFields};
-pub use placement::{
-    MediaBox, OutOfDocument, OutOfPage, Page, PageSet, Rotation, UserSpaceRect, ViewerRect,
-};
-pub use properties::to_java_properties;
-pub use session_seal::{SealMismatch, SessionSeal};
+pub mod adapters;
+pub mod application;
+pub mod domain;
+pub mod ports;

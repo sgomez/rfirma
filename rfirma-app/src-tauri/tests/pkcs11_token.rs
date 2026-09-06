@@ -3,10 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use rfirma_lib::memory::ListedCertificates;
-use rfirma_lib::pkcs11::{
+use rfirma_lib::identity::adapters::pkcs11::{
     self, CertificateRef, CertificateStatus, Situation, StoreClass, TokenCertificate, TokenError,
 };
+use rfirma_lib::identity::application::listed::ListedCertificates;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;

@@ -6,9 +6,11 @@ use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
 use std::time::Duration;
 
-use rfirma_lib::channel::{bind_first_free, serve, ChannelDuty, OpenChannel};
-use rfirma_lib::protocol::{drawn_ports, AfirmaUrl, LaunchRequest, SafCode, PROTOCOL_VERSION};
-use rfirma_lib::tls::{LocalCa, LocalServerCertificate};
+use rfirma_lib::site::adapters::channel::{bind_first_free, serve, ChannelDuty, OpenChannel};
+use rfirma_lib::site::adapters::tls::{LocalCa, LocalServerCertificate};
+use rfirma_lib::site::domain::protocol::{
+    drawn_ports, AfirmaUrl, LaunchRequest, SafCode, PROTOCOL_VERSION,
+};
 
 /// Tiempo máximo de espera para respuestas en pruebas.
 const PATIENCE: Duration = Duration::from_secs(40);

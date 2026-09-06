@@ -1,127 +1,14 @@
-//! Guarda de dirección de dependencias entre módulos del backend (ADR-0017).
+//! Guarda de dirección entre capas y contextos del backend, leída de las rutas (ADR-0017, RD-03).
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-/// Capas del backend (ADR-0017).
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Layer {
-    CompositionRoot,
-    Adapter,
-    UseCases,
-    Domain,
-}
-
-/// Ámbito de aplicación de una arista prohibida.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Origin {
-    Layer(Layer),
-    Module(&'static str),
-    Under(&'static str),
-}
-
-/// Arista prohibida entre módulos.
-struct Direction {
-    from: Origin,
-    forbidden: &'static str,
-    except: &'static [&'static str],
-    instead: &'static str,
-    reason: &'static str,
-}
-
-const DIRECTIONS: [Direction; 9] = [
-    Direction {
-        from: Origin::Layer(Layer::Domain),
-        forbidden: "app",
-        except: &[],
-        instead: "`app/` nombra al dominio, nunca al reves: el caso de uso llama a este \
-                  modulo y le pasa lo que haga falta como argumento",
-        reason: "la dirección es hacia el dominio (ID-81)",
-    },
-    Direction {
-        from: Origin::Layer(Layer::Domain),
-        forbidden: "commands",
-        except: &[],
-        instead: "`commands/` nombra a `app/` y `app/` al dominio: lo que este modulo \
-                  necesitaba de la ventana se lo tiene que dar quien le llama",
-        reason: "la dirección es hacia el dominio, y el adaptador de Tauri es la capa \
-                 mas externa de todas (ID-79, ID-81)",
-    },
-    Direction {
-        from: Origin::Layer(Layer::UseCases),
-        forbidden: "commands",
-        except: &["commands::views", "commands::orders", "commands::Failure"],
-        instead: "el cuerpo de la orden llama al caso de uso, no al contrario; si hace \
-                  falta compartir algo, baja a `app/` o a un tipo de frontera de \
-                  `commands/views.rs`",
-        reason: "`commands/` es el adaptador y `app/` lo que decide (ID-79, ID-81)",
-    },
-    Direction {
-        from: Origin::Module("signing"),
-        forbidden: "ffi",
-        except: &[],
-        instead: "`ffi` puede nombrar a `signing`, que es infraestructura mirando al \
-                  dominio; lo que cruza la frontera nativa es `app/cycle.rs`",
-        reason: "el ciclo trifásico es un caso de uso y vive en `app/cycle.rs`; \
-                 `signing/` son reglas puras y no cruza la frontera nativa (ID-82)",
-    },
-    Direction {
-        from: Origin::Module("destination"),
-        forbidden: "memory",
-        except: &[],
-        instead: "`memory` puede nombrar a `destination`, que es la memoria guardando \
-                  un concepto del destino; desenvolver la configuración lo hace `app/`",
-        reason: "`DestinationFolder` es un concepto del destino y vive en \
-                 `destination/`; desenvolver la configuración lo hace `app/` (ID-83)",
-    },
-    Direction {
-        from: Origin::Module("trust"),
-        forbidden: "pkcs11",
-        except: &["pkcs11::NssHost"],
-        instead: "la confianza consume NSS y el turno por el puerto `pkcs11::NssHost` \
-                  ofrecido por el contexto de identidad (RD-08)",
-        reason: "la confianza deja de importar el módulo del token (RD-08, #435)",
-    },
-    Direction {
-        from: Origin::Under("app/errand/"),
-        forbidden: "channel",
-        except: &[
-            "channel::ChannelDuty",
-            "channel::ChannelError",
-            "channel::OpenChannel",
-        ],
-        instead: "el tramite recibe el transporte por su puerto (`app/errand/ports.rs`); \
-                  el `wss` sobre el loopback es `app/transport.rs`, y quien lo instancia \
-                  es la negociacion de arranque (`app/site.rs`)",
-        reason: "el tramite no importa el transporte concreto, solo su puerto (RD-12, #406)",
-    },
-    Direction {
-        from: Origin::Under("app/errand/"),
-        forbidden: "app::codec",
-        except: &[],
-        instead: "el tramite recibe el codec por su puerto (`app/errand/ports.rs`); \
-                  el de la version 4 es `app/codec.rs`, y quien lo instancia es la \
-                  negociacion de arranque (`app/site.rs`)",
-        reason: "el tramite no importa el codec concreto, solo su puerto (RD-12, #406)",
-    },
-    Direction {
-        from: Origin::Under("app/errand/"),
-        forbidden: "app::transport",
-        except: &[],
-        instead: "lo mismo que con `channel`: el transporte entra por el puerto",
-        reason: "el tramite no importa el transporte concreto, solo su puerto (RD-12, #406)",
-    },
-];
-
 /// Un fichero de producción del backend, listo para mirarle los `use`.
 struct Module {
     /// Su ruta relativa a `src/`, que es como lo nombra el mapa y el mensaje.
     name: String,
-    /// La carpeta de `src/` en la que vive, o `""` si cuelga de la raíz.
-    folder: String,
-    layer: Layer,
     /// Su sitio en el árbol por contextos, si vive en él (RD-02).
     place: Option<Place>,
     source: String,
@@ -300,16 +187,10 @@ fn tracked_modules() -> Vec<Module> {
                 .strip_prefix("src/")
                 .expect("git deberia listar dentro de src/")
                 .to_owned();
-            let folder = relative
-                .split_once('/')
-                .map(|(folder, _)| folder.to_owned())
-                .unwrap_or_default();
             let source = fs::read_to_string(root.join(entry))
                 .unwrap_or_else(|error| panic!("deberia poder leerse {entry}: {error}"));
             Module {
-                layer: layer_of(&relative, &folder),
                 name: relative,
-                folder,
                 place: None,
                 source,
             }
@@ -332,15 +213,6 @@ fn place_modules(modules: &mut [Module]) {
     let contexts = contexts_among(&names);
     for module in modules.iter_mut() {
         module.place = place_of(&module.name, &contexts);
-    }
-}
-
-fn layer_of(relative: &str, folder: &str) -> Layer {
-    match (relative, folder) {
-        ("lib.rs" | "main.rs", _) => Layer::CompositionRoot,
-        (_, "commands") => Layer::Adapter,
-        (_, "app") => Layer::UseCases,
-        _ => Layer::Domain,
     }
 }
 
@@ -430,63 +302,16 @@ fn split_at_top_level(inner: &str) -> Vec<&str> {
         .collect()
 }
 
-/// Comprueba si le toca a este módulo esta dirección.
-fn applies_to(direction: &Direction, module: &Module) -> bool {
-    if module.place.is_some() {
-        return false;
-    }
-    match direction.from {
-        Origin::Layer(layer) => module.layer == layer,
-        Origin::Module(folder) => module.folder == folder,
-        Origin::Under(prefix) => module.name.starts_with(prefix),
-    }
-}
-
-/// Comprueba si este camino importado cae dentro de lo prohibido.
-fn is_forbidden(direction: &Direction, path: &str) -> bool {
-    let hits = if direction.forbidden.contains("::") {
-        path == direction.forbidden || path.starts_with(&format!("{}::", direction.forbidden))
-    } else {
-        path.split("::").next().unwrap_or_default() == direction.forbidden
-    };
-    if !hits {
-        return false;
-    }
-    !direction
-        .except
-        .iter()
-        .any(|allowed| path == *allowed || path.starts_with(&format!("{allowed}::")))
+/// Una arista contra el RD-03: la línea que la nombra en la lista de deuda, y el mensaje entero.
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct Offence {
+    edge: String,
+    message: String,
 }
 
 /// Aristas contra la dirección en un árbol, cada una con su motivo y adónde mover la decisión.
-fn offences_in(modules: &[Module]) -> Vec<String> {
+fn offences_in(modules: &[Module]) -> Vec<Offence> {
     let mut offences = Vec::new();
-
-    for direction in &DIRECTIONS {
-        for module in modules
-            .iter()
-            .filter(|module| applies_to(direction, module))
-        {
-            for line in module.source.lines() {
-                let against: Vec<String> = crate_imports(line)
-                    .into_iter()
-                    .filter(|path| is_forbidden(direction, path))
-                    .collect();
-                if against.is_empty() {
-                    continue;
-                }
-                offences.push(format!(
-                    "arista sobrante: `{}` -> `crate::{}`\n    {}\n  {}\n  la flecha va al reves: {}",
-                    module.name,
-                    against.join("`, `crate::"),
-                    line.trim(),
-                    direction.reason,
-                    direction.instead,
-                ));
-            }
-        }
-    }
-
     let names: Vec<String> = modules.iter().map(|module| module.name.clone()).collect();
     let contexts = contexts_among(&names);
     for module in modules.iter() {
@@ -498,110 +323,131 @@ fn offences_in(modules: &[Module]) -> Vec<String> {
                 let Some(instead) = context_offence(place, &path, &contexts) else {
                     continue;
                 };
-                offences.push(format!(
-                    "arista sobrante: `{}` -> `crate::{}`\n    {}\n  {} de `{}` no puede nombrar eso (RD-03)\n  la flecha va al reves: {}",
-                    module.name,
-                    path,
-                    line.trim(),
-                    place.tier.folder(),
-                    place.context,
-                    instead,
-                ));
+                offences.push(Offence {
+                    edge: format!("{} -> {}", module.name, path),
+                    message: format!(
+                        "arista sobrante: `{}` -> `crate::{}`\n    {}\n  {} de `{}` no puede nombrar eso (RD-03)\n  la flecha va al reves: {}",
+                        module.name,
+                        path,
+                        line.trim(),
+                        place.tier.folder(),
+                        place.context,
+                        instead,
+                    ),
+                });
             }
         }
     }
-
     offences
+}
+
+/// La lista de deuda: aristas `application -> adapters` (y hermanas) que la ola 2 vacía, una por línea.
+const DEBT_FILE: &str = "tests/module_directions_debt.txt";
+
+/// Las aristas de la lista, ya sin comentarios ni líneas vacías.
+fn debt_in(text: &str) -> Vec<String> {
+    text.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Lo que queda por explicar entre un árbol y su lista de deuda: aristas nuevas y líneas fósiles.
+fn what_the_debt_does_not_explain(
+    offences: &[Offence],
+    debt: &[String],
+) -> (Vec<Offence>, Vec<String>) {
+    let unlisted = offences
+        .iter()
+        .filter(|offence| !debt.contains(&offence.edge))
+        .cloned()
+        .collect();
+    let fossils = debt
+        .iter()
+        .filter(|edge| !offences.iter().any(|offence| offence.edge == **edge))
+        .cloned()
+        .collect();
+    (unlisted, fossils)
 }
 
 #[test]
 fn no_module_imports_against_the_direction_of_the_layers() {
     let offences = offences_in(&tracked_modules());
-
-    assert!(
-        offences.is_empty(),
-        "{} arista(s) apuntan contra la direccion del ADR-0017:\n\n{}\n\n\
-         No relajes la regla ni le anadas una excepcion: mueve la decision. Lo que \
-         necesitaba ese `use` pertenece al otro lado de la flecha —casi siempre a \
-         los casos de uso—, y este modulo debe recibirlo ya decidido como argumento.",
-        offences.len(),
-        offences.join("\n\n")
-    );
-}
-
-#[test]
-fn the_directions_that_are_allowed_are_still_there() {
-    let modules = tracked_modules();
-    let imports = |name: &str| -> BTreeSet<String> {
-        modules
-            .iter()
-            .find(|module| module.name == name)
-            .unwrap_or_else(|| panic!("`{name}` deberia existir en src/"))
-            .source
-            .lines()
-            .flat_map(crate_imports)
-            .collect()
-    };
-
-    assert!(
-        imports("ffi.rs")
-            .iter()
-            .any(|path| path.starts_with("signing::")),
-        "`ffi.rs` deberia seguir importando de `signing` —hoy `SessionSeal`—: es la \
-         direccion correcta, infraestructura mirando al dominio (ADR-0016)"
-    );
-    assert!(
-        imports("memory/configuration.rs")
-            .iter()
-            .any(|path| path.starts_with("destination")),
-        "`memory/configuration.rs` deberia seguir importando `destination`: es la \
-         direccion correcta, la memoria guardando un concepto del destino (ID-83)"
-    );
-    assert!(
-        imports("app/transport.rs")
-            .iter()
-            .any(|path| path.starts_with("channel")),
-        "`app/transport.rs` deberia seguir importando `channel`: es el adaptador del \
-         transporte, y es el unico sitio de `app/` que lo nombra por el tramite (RD-04)"
-    );
-    assert!(
-        imports("app/site.rs")
-            .iter()
-            .any(|path| path == "app::codec::V4Codec"),
-        "`app/site.rs` deberia seguir instanciando `V4Codec`: la negociacion de arranque \
-         es el unico sitio que decide el codec (RD-05)"
-    );
-    assert!(
-        imports("app/errand/desk.rs")
-            .iter()
-            .any(|path| path.starts_with("app::filtering")),
-        "`app/errand/desk.rs` deberia seguir nombrando `app::filtering` con `crate::`: \
-         la guarda solo lee `use crate::`, y el tramite escribe asi sus importaciones \
-         para que las dos aristas prohibidas del RD-12 no se le escapen"
-    );
-    assert!(
-        imports("trust/nss.rs")
-            .iter()
-            .any(|path| path == "pkcs11::NssHost"),
-        "`trust/nss.rs` deberia nombrar `pkcs11::NssHost`: el puerto ofrecido por \
-         el contexto de identidad (RD-08)"
-    );
-}
-
-#[test]
-fn every_layer_has_modules_to_watch() {
-    let modules = tracked_modules();
-    for layer in [
-        Layer::CompositionRoot,
-        Layer::Adapter,
-        Layer::UseCases,
-        Layer::Domain,
-    ] {
-        assert!(
-            modules.iter().any(|module| module.layer == layer),
-            "ninguna ruta de src/ cae en la capa {layer:?}; la guarda se ha quedado ciega"
-        );
+    if std::env::var_os("MODULE_DIRECTIONS_DUMP").is_some() {
+        for offence in &offences {
+            println!("{}", offence.edge);
+        }
     }
+    let debt = fs::read_to_string(manifest_dir().join(DEBT_FILE))
+        .map(|text| debt_in(&text))
+        .unwrap_or_default();
+
+    let (unlisted, fossils) = what_the_debt_does_not_explain(&offences, &debt);
+
+    assert!(
+        unlisted.is_empty(),
+        "{} arista(s) apuntan contra la direccion del ADR-0017 y no estan en {DEBT_FILE}:\n\n{}\n\n\
+         No relajes la regla ni anadas la arista a la lista: mueve la decision. Lo que \
+         necesitaba ese `use` pertenece al otro lado de la flecha —casi siempre a \
+         los casos de uso—, y este modulo debe recibirlo ya decidido como argumento. \
+         La lista de deuda solo mengua.",
+        unlisted.len(),
+        unlisted
+            .iter()
+            .map(|offence| offence.message.clone())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    );
+    assert!(
+        fossils.is_empty(),
+        "{} linea(s) de {DEBT_FILE} ya no son una infraccion; borralas en esta misma PR:\n  {}",
+        fossils.len(),
+        fossils.join("\n  ")
+    );
+}
+
+#[test]
+fn an_edge_that_is_not_in_the_debt_list_turns_it_red() {
+    let offences = offences_in(&synthetic_tree(
+        "site/application/thing.rs",
+        "use crate::site::adapters::channel::OpenChannel;\n",
+    ));
+    let listed =
+        vec!["site/application/thing.rs -> site::adapters::channel::OpenChannel".to_owned()];
+
+    let (unlisted, fossils) = what_the_debt_does_not_explain(&offences, &listed);
+    assert!(
+        unlisted.is_empty() && fossils.is_empty(),
+        "{unlisted:?} {fossils:?}"
+    );
+
+    let (unlisted, _) = what_the_debt_does_not_explain(&offences, &[]);
+    assert_eq!(
+        unlisted, offences,
+        "sin la linea en la lista, la arista sigue siendo roja"
+    );
+}
+
+#[test]
+fn a_debt_line_that_is_no_longer_an_offence_turns_it_red() {
+    let offences = offences_in(&synthetic_tree(
+        "site/application/thing.rs",
+        "use crate::site::ports::Transport;\n",
+    ));
+    assert!(offences.is_empty(), "el puerto ya esta puesto");
+
+    let fossil = "site/application/thing.rs -> site::adapters::channel::OpenChannel".to_owned();
+    let (_, fossils) = what_the_debt_does_not_explain(&offences, std::slice::from_ref(&fossil));
+    assert_eq!(fossils, [fossil]);
+}
+
+#[test]
+fn the_debt_list_reads_past_comments_and_blank_lines() {
+    assert_eq!(
+        debt_in("# la ola 2 vacia esto\n\n  a/application/x.rs -> a::adapters::y  \n"),
+        ["a/application/x.rs -> a::adapters::y"]
+    );
 }
 
 /// Formas de use que la guarda lee.
@@ -706,8 +552,6 @@ fn synthetic_tree(name: &str, source: &str) -> Vec<Module> {
         .map(|context| (format!("{context}/domain/mod.rs"), String::new()))
         .chain([(name.to_owned(), source.to_owned())])
         .map(|(name, source)| Module {
-            folder: name.split('/').next().unwrap_or_default().to_owned(),
-            layer: Layer::Domain,
             place: None,
             name,
             source,
@@ -763,6 +607,29 @@ fn a_context_is_recognised_by_a_layer_in_its_path() {
 }
 
 #[test]
+fn a_module_outside_every_context_is_left_alone() {
+    let offences = |name: &str, source: &str| offences_in(&synthetic_tree(name, source));
+
+    assert!(
+        offences(
+            "commands/failure.rs",
+            "use crate::site::application::errand::Errand;\n"
+        )
+        .is_empty(),
+        "`commands/` es raiz hasta el #440 y la guarda lo tolera"
+    );
+    assert_eq!(
+        offences(
+            "site/application/thing.rs",
+            "use crate::commands::Failure;\n"
+        )
+        .len(),
+        1,
+        "pero un caso de uso sigue sin poder nombrarlo"
+    );
+}
+
+#[test]
 fn every_forbidden_edge_between_layers_and_contexts_turns_red_with_a_hint() {
     let mut red = 0usize;
     for from_context in CONTEXTS {
@@ -785,7 +652,7 @@ fn every_forbidden_edge_between_layers_and_contexts_turns_red_with_a_hint() {
                         1,
                         "{edge} deberia dar una arista: {offences:?}"
                     );
-                    let offence = &offences[0];
+                    let offence = &offences[0].message;
                     assert!(offence.contains(&edge), "{offence}");
                     assert!(offence.contains("RD-03"), "{offence}");
                     assert!(
@@ -799,41 +666,5 @@ fn every_forbidden_edge_between_layers_and_contexts_turns_red_with_a_hint() {
     assert!(
         red > 100,
         "la regla prohibe mas de cien combinaciones; se han visto {red}"
-    );
-}
-
-#[test]
-fn the_old_tree_is_reached_from_the_new_one_under_the_old_rule() {
-    let offences = |name: &str, source: &str| offences_in(&synthetic_tree(name, source));
-
-    assert_eq!(
-        offences("site/domain/thing.rs", "use crate::memory::Memory;\n").len(),
-        1,
-        "el dominio no nombra nada del crate, tampoco del arbol antiguo"
-    );
-    assert!(
-        offences("site/application/thing.rs", "use crate::memory::Memory;\n").is_empty(),
-        "un caso de uso puede seguir usando un modulo antiguo mientras no se mueva"
-    );
-    assert_eq!(
-        offences(
-            "site/application/thing.rs",
-            "use crate::commands::Failure;\n"
-        )
-        .len(),
-        1,
-        "el adaptador antiguo sigue siendo el adaptador"
-    );
-    assert!(
-        offences("site/adapters/thing.rs", "use crate::commands::Failure;\n").is_empty(),
-        "un adaptador puede nombrar lo que quiera"
-    );
-    assert!(
-        offences(
-            "site/adapters/thing.rs",
-            "use crate::app::Environment;\nuse crate::commands::views::View;\n"
-        )
-        .is_empty(),
-        "la regla de carpeta fija no alcanza al arbol por contextos"
     );
 }

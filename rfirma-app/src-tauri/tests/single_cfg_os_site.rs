@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// El único fichero autorizado, relativo a la raíz del repositorio.
-const THE_ONLY_SITE: &str = "rfirma-app/src-tauri/src/paths.rs";
+const THE_ONLY_SITE: &str = "rfirma-app/src-tauri/src/desktop/adapters/paths.rs";
 
 /// El hermano de pruebas de `THE_ONLY_SITE`, autorizado por la misma razón (issue #444).
-const THE_ONLY_SITE_TESTS: &str = "rfirma-app/src-tauri/src/paths/tests.rs";
+const THE_ONLY_SITE_TESTS: &str = "rfirma-app/src-tauri/src/desktop/adapters/paths/tests.rs";
 
 /// Fichero de esta prueba para no acusarse a sí misma.
 const THIS_TEST: &str = "rfirma-app/src-tauri/tests/single_cfg_os_site.rs";
