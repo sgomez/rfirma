@@ -75,6 +75,28 @@ que falta es el otro extremo: hasta que exista el trámite que se cancela desde 
 [#363](https://github.com/sgomez/rfirma/issues/363)) no hay nada que cancelar. **Es la próxima
 fila que sale de esta lista**, y sale al banco, no a otra grada.
 
+### 6. El trámite entero sobre el árbol de desarrollo
+
+Con `just dev` en una terminal y `just dev-handler` en otra —que registra el binario de
+`target/debug` como manejador del esquema en la sesión del usuario—, pulsar el enlace `afirma://`
+de una sede y comprobar tres cosas seguidas:
+
+1. lo que se abre es la **ventana de sede** y no la principal;
+2. delante queda lo que la sede manda —el documento, si es firma o cofirma, y los certificados
+   que ella acepta—, y al consentir se pide el PIN;
+3. el trámite **termina**: la sede da la firma por buena, y cancelando en vez de firmar recibe
+   `CANCEL`.
+
+Al acabar, `just dev-handler-off` le devuelve el esquema a quien lo tuviera.
+
+*Por qué no cabe en una grada* (TD-79): las dos mitades son del escritorio y no del código. Qué
+aplicación arranca al pulsar el enlace lo decide el registro `x-scheme-handler` —lo mismo que la
+fila 3, y por eso ésta va debajo—, y **qué ventana se abre** sólo se ve con un gestor de ventanas
+delante: que el arranque decida abrir la de sede lo miden las gradas A y B
+(`src/app/startup.rs`), y que el trámite entero llegue del canal al cable, la grada A
+(`src/app/errand.rs`, TD-72); lo que ninguna puede medir es que esas dos decisiones se vean sobre
+una pantalla de verdad.
+
 ## Condición de salida
 
 Esta lista **no es permanente**. El día que exista un arnés de navegador sin cabeza capaz de

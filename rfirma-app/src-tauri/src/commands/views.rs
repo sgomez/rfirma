@@ -18,8 +18,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::app::errand::SigningConsent;
 use crate::memory::{Badge, Theme};
 use crate::pkcs11::{CertificateStatus, StoreClass, StoreSecret};
+use crate::protocol::SignatureRound;
 use crate::signing::PageSet;
 
 pub use super::failure::Failure;
@@ -431,12 +433,58 @@ impl SiteErrandView {
             stage: SiteStageView::AskingForConsent { certificates },
         }
     }
+
+    /// **El momento del consentimiento de una firma** (ID-272): la sede manda
+    /// un documento, dice si lo que pide es firmarlo o cofirmarlo, y éstas son
+    /// las filas que acepta.
+    ///
+    /// El documento cruza por su **asa**, que es como lo nombra la ventana para
+    /// leerlo con [`super::read_document`]: la ruta del fichero de paso no sale
+    /// de aquí, y de ella no queda rastro en cuanto el trámite conteste
+    /// (ID-286, ADR-0011).
+    pub fn asking_to_sign(consent: &SigningConsent) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::AskingToSign {
+                document: consent.document.clone(),
+                round: consent.round.into(),
+                certificates: consent.certificates.clone(),
+                unregistered_signatures: consent.unregistered_signatures,
+            },
+        }
+    }
+}
+
+/// Cuál de las dos firmas ha pedido la sede, tal y como se le cuenta a la
+/// persona.
+///
+/// Se nombran como los verbos con los que la sede las pide —`sign` y
+/// `cosign`— y no como las variantes de
+/// [`SignatureRound`](crate::protocol::SignatureRound), porque lo que la
+/// ventana enseña es lo que la sede pidió.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SignatureRoundView {
+    /// La sede manda un documento y pide su firma.
+    Sign,
+    /// La sede manda un documento ya firmado y pide una firma más encima.
+    Cosign,
+}
+
+impl From<SignatureRound> for SignatureRoundView {
+    fn from(round: SignatureRound) -> Self {
+        match round {
+            SignatureRound::First => Self::Sign,
+            SignatureRound::Again => Self::Cosign,
+        }
+    }
 }
 
 /// El momento de la secuencia que la ventana de sede enseña.
 ///
-/// Dos momentos: la espera —lo único que hay **antes** de que la sede mande su
-/// petición por el canal— y el consentimiento de una identificación.
+/// Tres momentos: la espera —lo único que hay **antes** de que la sede mande su
+/// petición por el canal— y los dos consentimientos, el de una identificación y
+/// el de una firma.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SiteStageView {
@@ -449,6 +497,28 @@ pub enum SiteStageView {
     AskingForConsent {
         /// Las filas ya cribadas, en el orden en el que se enseñan.
         certificates: Vec<CertificateView>,
+    },
+    /// La sede pide una firma o una cofirma sobre el documento que manda, y
+    /// éstos son los certificados que acepta (ID-272). La persona consiente y
+    /// teclea el PIN, o dice que no; hasta entonces la sede no recibe nada
+    /// (ID-275).
+    #[serde(rename_all = "camelCase")]
+    AskingToSign {
+        /// El asa con la que la ventana nombra el documento que manda la sede,
+        /// la misma que lee [`super::read_document`]. **No es una ruta**: del
+        /// documento de una sede no queda rastro (ID-286, ADR-0011).
+        document: String,
+        /// Si lo que se pide es firmar o cofirmar, que es parte de lo que hay
+        /// que contarle a la persona antes de que consienta.
+        round: SignatureRoundView,
+        /// Las filas ya cribadas, en el orden en el que se enseñan.
+        certificates: Vec<CertificateView>,
+        /// Que el documento trae **firmas que rFirma no sabe leer** (ID-297).
+        ///
+        /// Viaja **dentro** del consentimiento y no como un rechazo aparte,
+        /// para que la pregunta quepa dentro de él: decir que no a esto es
+        /// decir que no al trámite, y sale `CANCEL` (ID-299, ID-303).
+        unregistered_signatures: bool,
     },
 }
 

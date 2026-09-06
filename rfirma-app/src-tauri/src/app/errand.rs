@@ -716,6 +716,36 @@ pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteR
     )
 }
 
+/// **Caso de uso.** La firma no ha salido, y la sede se entera en el acto
+/// (ID-275).
+///
+/// **Un solo código para todo este tramo, y es una decisión.** Las situaciones
+/// que la frontera distingue con código propio —el documento que no se puede
+/// firmar, la política que no se puede aplicar, el listado que se queda vacío,
+/// el almacén que no se puede abrir— se deciden **antes** del consentimiento y
+/// ya salieron con el suyo ([`consent_to_sign`]). Lo que puede fallar después
+/// es el ciclo trifásico, y desde la sede eso es una sola cosa: la firma que no
+/// ha salido, que es el `SAF_09` con el que el original despacha
+/// `ProtocolInvocationLauncherSign`.
+///
+/// La precisión no se pierde por el camino: el [`Failure`] entero se queda para
+/// la ventana, que es la que puede contarle a la persona qué ha pasado (ID-29,
+/// ID-291).
+///
+/// **El PIN equivocado no pasa por aquí**, y esa ausencia es la decisión: la
+/// firma en el token no cierra el trámite porque la persona puede volver a
+/// teclearlo, igual que en el recorrido local. Lo que cierra el trámite es la
+/// prefirma que no abre el ciclo y la postfirma que no ensambla.
+pub fn the_signature_did_not_come_out(live: &LiveErrand, failure: Failure) -> SiteReply {
+    over(
+        live,
+        SiteReply::Refused {
+            answer: WireAnswer::refused(SafCode::SignatureFailed),
+            failure,
+        },
+    )
+}
+
 /// **Caso de uso.** La persona ha dicho que no: `CANCEL` sale en el acto
 /// (ID-275, ID-293).
 pub fn declined(live: &LiveErrand) -> SiteReply {
@@ -1117,14 +1147,31 @@ mod tests {
         url
     }
 
-    /// **El trazador de la firma** (TD-51): invocación, canal, operación leída
-    /// del mensaje, política expandida, listado filtrado, consentimiento y
-    /// respuesta, sin abrir un socket y sin token (TD-52).
+    /// La misma operación de firma, entrando **por el canal**: con las tres
+    /// guardias de la conversación delante y quedando pendiente de que el
+    /// trámite conteste (ID-320).
+    fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
+        let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
+        arriving_over_the_channel(&format!(
+            "afirma://{verb}?op={verb}&idsession={CREDENTIAL}&format=PAdES&\
+             algorithm=SHA256withRSA&dat={document}"
+        ))
+    }
+
+    /// **El trazador entero de la firma** (TD-51, TD-72): invocación,
+    /// operación llegada por el canal, política expandida, listado filtrado,
+    /// consentimiento, y **el texto exacto que sale al cable** cuando la firma
+    /// termina, sin abrir un socket y sin token (TD-52).
     ///
     /// La firma de verdad —prefirma, PIN y postfirma— es la grada C; lo que
-    /// esta prueba fija es la decisión que hay a cada lado de ella.
-    #[test]
-    fn a_signature_goes_from_the_launch_to_the_consent_and_back_to_the_wire() {
+    /// esta prueba fija es la decisión que hay a cada lado de ella, y que la
+    /// sede recibe exactamente lo que parte `processSignResponse`: el
+    /// certificado, `|`, la firma, y **ningún tercer campo**.
+    ///
+    /// Se recorre igual para `sign` y para `cosign` porque en PAdES cofirmar es
+    /// volver a firmar: lo único que cambia es lo que se le cuenta a la persona
+    /// antes de que consienta.
+    fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
         let memory = a_memory(home.path());
         let ours = vec![a_usable_certificate("FIRMA")];
@@ -1144,7 +1191,12 @@ mod tests {
             "la invocacion es buena: {attendance:?}"
         );
 
-        // 2. Por ese canal llega la firma, y lo que sale es el consentimiento.
+        // 2. Por ese canal llega la firma. La conversación la deja pendiente
+        //    —no escribe nada y no cierra (ID-320)— y el trámite se queda con
+        //    el asa por la que se le contestará (ID-321).
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        let url = a_signature_arriving_over_the_channel(verb);
         let step = consent_to_sign(
             &a_desk(
                 &engine,
@@ -1156,14 +1208,14 @@ mod tests {
                 &memory,
                 &scratch,
             ),
-            &signature_requested(&a_signature("sign", "")),
+            &signature_requested(&url),
             ours.clone(),
             &live,
         );
         let ErrandStep::AskingToSign(consent) = step else {
             panic!("hay un certificado que la sede acepta: {step:?}");
         };
-        assert_eq!(consent.round, SignatureRound::First);
+        assert_eq!(consent.round, round, "la ronda es la que pidio la sede");
         assert_eq!(consent.certificates.len(), 1);
         assert_eq!(
             consent
@@ -1187,9 +1239,17 @@ mod tests {
             live.current().is_some(),
             "consintiendo, el tramite sigue vivo"
         );
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            None,
+            "el momento del consentimiento no escribe nada en el cable (ID-275)"
+        );
 
-        // 3. La firma termina y la sede recibe certificado y firma, en ese
-        //    orden y separados por `|`.
+        // 3. La persona consiente y teclea el PIN. La firma termina y la sede
+        //    recibe certificado y firma, en ese orden y separados por `|`.
+        let scratch_file = live
+            .scratch_path()
+            .expect("el fichero de paso queda apuntado en el tramite");
         let reply = signature_handed_over(
             &live,
             &SiteSignature {
@@ -1197,18 +1257,149 @@ mod tests {
                 signer_der: ours[0].der().to_vec(),
             },
         );
+        assert!(
+            matches!(reply, SiteReply::Signature { .. }),
+            "la firma ha terminado: {reply:?}"
+        );
+
         let encode = base64::engine::general_purpose::URL_SAFE;
+        let line = what_the_site_received(&mut wire)
+            .expect("la sede recibe la firma en el acto, por el asa del tramite");
         assert_eq!(
-            reply.on_the_wire(),
+            line,
             format!(
                 "{}|{}",
                 encode.encode(ours[0].der()),
                 encode.encode(b"%PDF-1.7 firmado")
-            )
+            ),
+            "el texto exacto del cable es el certificado y la firma, en Base64 URL-safe"
+        );
+        assert_eq!(
+            line.split('|').count(),
+            2,
+            "el cliente publicado parte por `|` y no espera ningun tercer campo"
         );
         assert!(
             live.current().is_none(),
             "contestada la sede, el tramite deja de estar vivo (ID-275)"
+        );
+        assert!(
+            !scratch_file.exists(),
+            "el fichero de paso se borra al contestar (ID-286, ID-332)"
+        );
+    }
+
+    /// **TD-72**, con `sign`: la sede manda un documento y recibe su firma.
+    #[test]
+    fn a_signature_goes_all_the_way_from_the_launch_to_the_wire() {
+        the_whole_signature_errand("sign", SignatureRound::First);
+    }
+
+    /// **TD-72**, con `cosign`: el mismo recorrido, y lo único que cambia es la
+    /// ronda que se le cuenta a la persona.
+    #[test]
+    fn a_cosignature_goes_all_the_way_from_the_launch_to_the_wire() {
+        the_whole_signature_errand("cosign", SignatureRound::Again);
+    }
+
+    /// **La gemela del trazador** (TD-72): la persona dice que no a la firma, y
+    /// lo que sale al cable es `CANCEL` en el acto. Del documento que mandó la
+    /// sede no queda tampoco el fichero de paso: se borra por la salida que sea
+    /// (ID-332).
+    #[test]
+    fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = LiveErrand::default();
+        let asked = RefCell::new(Vec::new());
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
+        assert!(
+            matches!(attendance, Attendance::Serving { .. }),
+            "la invocacion es buena: {attendance:?}"
+        );
+
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        let url = a_signature_arriving_over_the_channel("sign");
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&url),
+            ours,
+            &live,
+        );
+        assert!(
+            matches!(step, ErrandStep::AskingToSign(_)),
+            "hay algo que consentir: {step:?}"
+        );
+        assert_eq!(what_the_site_received(&mut wire), None);
+        let scratch_file = live
+            .scratch_path()
+            .expect("el fichero de paso queda apuntado en el tramite");
+
+        let reply = declined(&live);
+
+        assert!(matches!(reply, SiteReply::Cancelled), "{reply:?}");
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            Some("CANCEL".to_owned()),
+            "cancelar sale al cable en el acto, sin esperar a que nadie cierre nada"
+        );
+        assert!(live.current().is_none());
+        assert!(
+            !scratch_file.exists(),
+            "el fichero de paso se borra tambien al cancelar (ID-332)"
+        );
+
+        // Y ya no queda asa: cerrar la ventana después de haber contestado no
+        // manda nada (ID-340).
+        declined(&live);
+        assert_eq!(what_the_site_received(&mut wire), None);
+    }
+
+    /// **ID-322 / ID-291**: la firma que no sale se le cuenta a la sede con un
+    /// código del catálogo —el mismo para todo el ciclo trifásico— y a la
+    /// ventana con la situación entera, que es la que sí puede ser precisa.
+    #[test]
+    fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signature() {
+        let live = LiveErrand::default();
+        let (handle, mut wire) = the_wire();
+        live.answer_through(handle);
+        assert!(live.begin(Errand::of(a_credential(), 54001)));
+
+        let reply = the_signature_did_not_come_out(
+            &live,
+            Failure::new("sealMismatch", "el sello de sesion no cuadra"),
+        );
+
+        assert_eq!(
+            what_the_site_received(&mut wire),
+            Some("SAF_09: No se ha podido completar la firma electronica".to_owned()),
+            "la sede recibe el codigo del catalogo, sin una palabra del detalle (ID-291)"
+        );
+        assert_eq!(
+            reply.failure().map(|failure| failure.situation.as_str()),
+            Some("sealMismatch"),
+            "y la ventana se queda con la situacion entera (ID-29)"
+        );
+        assert!(
+            live.current().is_none(),
+            "la firma que no sale cierra el tramite igual que la que sale"
         );
     }
 
