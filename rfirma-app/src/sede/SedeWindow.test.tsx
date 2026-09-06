@@ -540,28 +540,30 @@ describe("SedeWindow", () => {
       expect(screen.getByText("No tienes ningún certificado")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
-      // Sin «Cerrar» la única salida sería la cruz de la barra de título.
+      // Sin «Cerrar» la única salida sería la cruz del sistema, que ya no pasa
+      // por aquí: la atiende `CloseRequested` en el backend.
       expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
     });
 
-    it("leaves through the same verb from the footer and from the title bar cross", async () => {
+    /*
+     * La barra de título es la del sistema, así que la cruz **no la pinta esta
+     * ventana** y no hay dos puertas que comparar: la del pie es la única que
+     * pasa por aquí. Irse por la del sistema llega a `CloseRequested`, y de que
+     * eso abandone el trámite responde el backend (ID-340).
+     */
+    it("leaves through the footer, and the window paints no cross of its own", async () => {
       const user = userEvent.setup();
       const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
-      const { unmount } = renderWithCatalog(<SedeWindow errands={port} />);
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.queryByRole("button", { name: "Cerrar la ventana" })).toBeNull();
 
       await user.click(screen.getByRole("button", { name: "Cerrar" }));
-      unmount();
 
-      const second = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
-      renderWithCatalog(<SedeWindow errands={second.port} />);
-      await user.click(screen.getByRole("button", { name: "Cerrar la ventana" }));
-
-      // La sede no ha recibido nada: irse es abandonar el trámite por las dos
-      // puertas, que es lo único que libera el `idsession`.
+      // La sede no ha recibido nada: irse es abandonar el trámite, que es lo
+      // único que libera el `idsession`.
       expect(calls.cancel).toHaveBeenCalledOnce();
       expect(calls.close).not.toHaveBeenCalled();
-      expect(second.calls.cancel).toHaveBeenCalledOnce();
-      expect(second.calls.close).not.toHaveBeenCalled();
     });
 
     it("leaves no main action when the site excluded them all: installing another fixes nothing", () => {

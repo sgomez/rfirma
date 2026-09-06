@@ -397,8 +397,14 @@ fn open_the_channel(
 }
 
 /// **La ventana de sede** (ID-333, ID-334): de diálogo, 520 × 420, no
-/// redimensionable y sin la cabecera de la aplicación —la barra de título de 32
-/// px con la cruz la pinta ella misma, `docs/design/ventana-de-sede.md`—.
+/// redimensionable y sin la cabecera de la aplicación, pero **con las
+/// decoraciones del sistema** (`docs/design/ventana-de-sede.md`): la barra de
+/// título la pone el escritorio. Una pintada por el frontal no la mueve el
+/// gestor de ventanas, y dejaba una ventana que no se podía arrastrar.
+///
+/// Cerrar por la cruz del sistema es lo mismo que cerrarla por dentro: el
+/// manejador de `CloseRequested` de esta etiqueta ya abandona el trámite
+/// (ID-340).
 ///
 /// Lo que se le publica es la espera —el canal está en pie y la petición de la
 /// sede no ha llegado—; el origen y la operación llegan con ella, por el canal
@@ -427,7 +433,6 @@ fn open_the_site_window(app: &tauri::AppHandle, content: &app::startup::SiteWind
     .title("rFirma")
     .inner_size(520.0, 420.0)
     .resizable(false)
-    .decorations(false)
     .build();
 
     if let Err(error) = built {

@@ -1020,11 +1020,6 @@ msgstr ""
 msgid "trust.notice.acknowledge"
 msgstr "Entendido"
 
-#. La ventana de sede (docs/design/ventana-de-sede.md). Nombre de la aplicación
-#. en la barra de título: no se traduce, se reutiliza `app.name`.
-msgid "sede.window.close"
-msgstr "Cerrar la ventana"
-
 msgid "sede.waiting.title"
 msgstr "Conectando con la sede"
 
