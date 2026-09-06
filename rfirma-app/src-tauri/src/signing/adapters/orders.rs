@@ -2,8 +2,9 @@
 
 use serde::Deserialize;
 
-use crate::commands::Failure;
-use crate::signing::domain::{MediaBox, Page, PageSet, Placement, Rotation, UserSpaceRect};
+use crate::signing::domain::{
+    MediaBox, Page, PageSet, Placement, PlacementError, Rotation, UserSpaceRect,
+};
 
 /// Lo que la ventana ha marcado en las casillas del recuadro.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
@@ -35,39 +36,26 @@ pub struct PlacementOrder {
 
 impl PlacementOrder {
     /// La colocación en puntos PAdES, o la negativa si el destino no existe o el recuadro se sale de la página.
-    pub fn placement(&self) -> Result<Placement, Failure> {
-        self.pages
-            .validate(self.page_count)
-            .map_err(|out| Failure::new(PAGE_OUT_OF_DOCUMENT, out.to_string()))?;
-        PageSet::only_page(self.page)
-            .validate(self.page_count)
-            .map_err(|out| Failure::new(PAGE_OUT_OF_DOCUMENT, out.to_string()))?;
+    pub fn placement(&self) -> Result<Placement, PlacementError> {
+        self.pages.validate(self.page_count)?;
+        PageSet::only_page(self.page).validate(self.page_count)?;
 
         let [x0, y0, x1, y1] = self.media_box;
-        let rotation = Rotation::from_degrees(self.rotation).ok_or_else(|| {
-            Failure::new(
-                "unknown",
-                format!("una pagina no puede estar girada {} grados", self.rotation),
-            )
-        })?;
+        let rotation = Rotation::from_degrees(self.rotation)
+            .ok_or(PlacementError::BadRotation(self.rotation))?;
         let page = Page {
             number: self.page,
             media_box: MediaBox::new(x0, y0, x1, y1),
             rotation,
         };
         let [left, bottom, right, top] = self.rect;
-        let rect = page
-            .pades_rect(&UserSpaceRect::rounded(left, bottom, right, top))
-            .map_err(|out| Failure::new("boxOutOfPage", out.to_string()))?;
+        let rect = page.pades_rect(&UserSpaceRect::rounded(left, bottom, right, top))?;
         Ok(Placement {
             rect,
             pages: self.pages.clone(),
         })
     }
 }
-
-/// La situación con la que la ventana pinta un destino que el documento no tiene.
-const PAGE_OUT_OF_DOCUMENT: &str = "pageOutOfDocument";
 
 /// La orden de firma completa: todo lo que distingue esta firma de otra.
 #[derive(Clone, Debug, Deserialize)]

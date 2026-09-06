@@ -1,17 +1,17 @@
 use super::*;
-use crate::identity::adapters::views::CertificateView;
-use crate::signing::adapters::views::StatusView;
+use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
+use crate::identity::domain::store::StoreClass;
 
 fn asking_with(label: &str) -> Moment {
     Moment::AskingForConsent {
-        certificates: vec![CertificateView {
+        certificates: vec![ListedCertificate {
             id: "cert-1".to_owned(),
             label: label.to_owned(),
             holder_name: String::new(),
             id_number: String::new(),
             issuer: String::new(),
-            store: "card".to_owned(),
-            status: StatusView::Valid { not_after: 0 },
+            store: StoreClass::Card,
+            status: CertificateStatus::Valid { not_after: 0 },
             remembered: false,
         }],
     }

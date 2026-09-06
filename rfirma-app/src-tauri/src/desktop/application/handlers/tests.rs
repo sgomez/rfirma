@@ -1,4 +1,5 @@
 use super::*;
+use crate::desktop::domain::error::Situation;
 
 #[test]
 fn inside_the_sandbox_nothing_can_be_known() {
@@ -43,24 +44,6 @@ fn choosing_inside_the_sandbox_fails_with_its_own_situation() {
     )
     .expect_err("dentro del sandbox no se escribe");
 
-    assert_eq!(failure.situation, "handlerNotAvailable");
-    assert!(!failure.detail.is_empty());
-}
-
-#[test]
-fn every_desktop_situation_has_its_own_catalog_key() {
-    let names = [
-        situation_name(Situation::NotAvailableInsideTheSandbox),
-        situation_name(Situation::TheListIsNotReadable),
-        situation_name(Situation::TheListIsNotWritable),
-    ];
-
-    assert!(names.iter().all(|name| name.starts_with("handler")));
-    assert_eq!(
-        names
-            .iter()
-            .collect::<std::collections::BTreeSet<_>>()
-            .len(),
-        names.len()
-    );
+    assert_eq!(failure.situation(), Situation::NotAvailableInsideTheSandbox);
+    assert!(!failure.detail().is_empty());
 }

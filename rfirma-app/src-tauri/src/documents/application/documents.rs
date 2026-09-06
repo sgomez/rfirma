@@ -2,15 +2,14 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::commands::Failure;
-use crate::documents::adapters::views::{
-    DestinationView, DroppedDocumentView, OpenedDocumentView, SignedDocumentView,
-};
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::told::{
+    Destination, DropRefusal, DroppedDocument, OpenedDocument, SignedDocument,
+};
 use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::domain::Refusal;
 use crate::Memory;
 
 /// Registra el documento abierto por el usuario y actualiza la última carpeta usada.
@@ -19,19 +18,19 @@ pub fn note_opened(
     configuration: &Configuration,
     opened: &OpenedDocuments,
     handle: PathBuf,
-) -> OpenedDocumentView {
+) -> OpenedDocument {
     let document = PortalDocument::opened(handle);
     remember_the_folder(memory, configuration, &document);
     told_as_opened(document, opened)
 }
 
 /// Registra un documento en curso sin guardar rastro en el historial ni recordar carpeta.
-pub fn note_opened_unrecorded(opened: &OpenedDocuments, handle: PathBuf) -> OpenedDocumentView {
+pub fn note_opened_unrecorded(opened: &OpenedDocuments, handle: PathBuf) -> OpenedDocument {
     let document = PortalDocument::opened(handle);
     let name = document.name().to_owned();
     let modified = modified_seconds(&document);
     let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
-    OpenedDocumentView {
+    OpenedDocument {
         id: opened.remember_unrecorded(document),
         name,
         modified,
@@ -40,53 +39,50 @@ pub fn note_opened_unrecorded(opened: &OpenedDocuments, handle: PathBuf) -> Open
 }
 
 /// Devuelve el contenido en bytes del documento abierto por su identificador.
-pub fn bytes_of(opened: &OpenedDocuments, id: &str) -> Result<Vec<u8>, Failure> {
+pub fn bytes_of(opened: &OpenedDocuments, id: &str) -> Result<Vec<u8>, DocumentError> {
     let document = opened_document(opened, id)?;
     std::fs::read(document.reading_path())
-        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))
+        .map_err(|error| DocumentError::Unreadable(error.to_string()))
 }
 
 /// Procesa los ficheros soltados en la ventana y registra el primer PDF válido.
-pub fn dropped_document(
-    paths: &[PathBuf],
-    opened: &OpenedDocuments,
-) -> Option<DroppedDocumentView> {
+pub fn dropped_document(paths: &[PathBuf], opened: &OpenedDocuments) -> Option<DroppedDocument> {
     told_as_dropped(crate::documents::domain::dropped::first_pdf(paths), opened)
 }
 
-/// Convierte el resultado de procesamiento de arrastre en una vista para la ventana.
+/// Convierte el resultado de procesamiento de arrastre en lo que se cuenta a la ventana.
 pub(crate) fn told_as_dropped(
     decided: crate::documents::domain::dropped::Dropped,
     opened: &OpenedDocuments,
-) -> Option<DroppedDocumentView> {
+) -> Option<DroppedDocument> {
     match decided {
         crate::documents::domain::dropped::Dropped::Nothing => None,
         crate::documents::domain::dropped::Dropped::Opened {
             path,
             also_entering,
             discarded,
-        } => Some(DroppedDocumentView {
+        } => Some(DroppedDocument {
             document: Some(told_as_opened(PortalDocument::opened(path), opened)),
             also_entering: also_entering
                 .into_iter()
                 .map(|path| told_as_opened(PortalDocument::opened(path), opened))
                 .collect(),
-            failure: None,
+            refused: None,
             discarded,
         }),
         crate::documents::domain::dropped::Dropped::NotAPdf { discarded } => {
-            Some(DroppedDocumentView {
+            Some(DroppedDocument {
                 document: None,
                 also_entering: Vec::new(),
-                failure: Some(Failure::from(Refusal::NotAPdf)),
+                refused: Some(DropRefusal::NotAPdf),
                 discarded,
             })
         }
         crate::documents::domain::dropped::Dropped::Unreadable { detail, discarded } => {
-            Some(DroppedDocumentView {
+            Some(DroppedDocument {
                 document: None,
                 also_entering: Vec::new(),
-                failure: Some(Failure::new("droppedFileUnreadable", detail)),
+                refused: Some(DropRefusal::Unreadable(detail)),
                 discarded,
             })
         }
@@ -99,12 +95,12 @@ pub fn deliver(
     documents_folder: &Path,
     document: &PortalDocument,
     signed: &[u8],
-) -> Result<(PathBuf, SignedDocumentView), Failure> {
+) -> Result<(PathBuf, SignedDocument), DocumentError> {
     let chosen = crate::chosen_folder(configuration, documents_folder.to_path_buf());
     let folder = CheckedFolder::check(&chosen)?;
     let landing = folder.landing_for(document)?;
     std::fs::write(&landing, signed)
-        .map_err(|error| Failure::new("folderUnwritable", error.to_string()))?;
+        .map_err(|error| DocumentError::FolderUnwritable(error.to_string()))?;
     let told = told_as(&landing, &folder, signed.len() as u64);
     Ok((landing, told))
 }
@@ -114,10 +110,10 @@ pub fn where_it_lands(
     configuration: &Configuration,
     documents_folder: &Path,
     document: &PortalDocument,
-) -> DestinationView {
+) -> Destination {
     let chosen = crate::chosen_folder(configuration, documents_folder.to_path_buf());
     let Ok(folder) = CheckedFolder::check(&chosen) else {
-        return DestinationView {
+        return Destination {
             folder: chosen.name().to_owned(),
             name: None,
             writable: false,
@@ -127,16 +123,16 @@ pub fn where_it_lands(
         .landing_for(document)
         .ok()
         .and_then(|landing| file_name_of(&landing));
-    DestinationView {
+    Destination {
         folder: folder.name().to_owned(),
         name,
         writable: true,
     }
 }
 
-/// Construye la vista de un documento firmado para la ventana (ADR-0011).
-pub fn told_as(landing: &Path, folder: &CheckedFolder, size_bytes: u64) -> SignedDocumentView {
-    SignedDocumentView {
+/// Lo que se cuenta de un documento firmado ya entregado (ADR-0011).
+pub fn told_as(landing: &Path, folder: &CheckedFolder, size_bytes: u64) -> SignedDocument {
+    SignedDocument {
         name: file_name_of(landing).unwrap_or_default(),
         folder: folder.name().to_owned(),
         size_bytes,
@@ -150,11 +146,11 @@ fn file_name_of(landing: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
-fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedDocumentView {
+fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedDocument {
     let name = document.name().to_owned();
     let modified = modified_seconds(&document);
     let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
-    OpenedDocumentView {
+    OpenedDocument {
         id: opened.remember(document),
         name,
         modified,
@@ -229,13 +225,11 @@ pub fn real_path_of(document: &PortalDocument) -> Option<&Path> {
 }
 
 /// Obtiene el documento abierto correspondiente al identificador opaco.
-pub fn opened_document(opened: &OpenedDocuments, id: &str) -> Result<PortalDocument, Failure> {
-    opened.get(id).ok_or_else(|| {
-        Failure::new(
-            "documentUnreadable",
-            "el documento ya no esta abierto en esta sesion",
-        )
-    })
+pub fn opened_document(
+    opened: &OpenedDocuments,
+    id: &str,
+) -> Result<PortalDocument, DocumentError> {
+    opened.get(id).ok_or_else(DocumentError::no_longer_open)
 }
 
 pub(crate) fn modified_seconds(document: &PortalDocument) -> Option<u64> {

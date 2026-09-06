@@ -616,7 +616,7 @@ fn a_module_outside_every_context_is_left_alone() {
             "use crate::site::application::errand::Errand;\n"
         )
         .is_empty(),
-        "`commands/` es raiz hasta el #440 y la guarda lo tolera"
+        "`commands/` es raiz y la guarda lo tolera"
     );
     assert_eq!(
         offences(

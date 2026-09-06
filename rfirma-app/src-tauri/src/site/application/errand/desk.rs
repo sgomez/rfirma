@@ -2,7 +2,6 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::commands::Failure;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::handles;
 use crate::identity::adapters::pkcs11;
@@ -11,8 +10,7 @@ use crate::identity::domain::store::Store;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    visible_signature_of, AfirmaUrl, SafCode, SelectCertificate, SignRequest, SiteFilter,
-    WireAnswer,
+    visible_signature_of, AfirmaUrl, SelectCertificate, SignRequest, SiteFilter,
 };
 use crate::Memory;
 
@@ -25,7 +23,7 @@ use crate::signing::application::policies;
 use crate::signing::application::session::SigningSession;
 use crate::signing::ports::FilterEngine;
 use crate::signing::ports::PolicyEngine;
-use crate::site::application::frontier;
+use crate::site::application::session::SiteRefusal;
 use crate::Environment;
 
 /// Dependencias agrupadas necesarias para la ejecución de un trámite de sede.
@@ -94,14 +92,7 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
     let ours = match pkcs11::list_certificates_across(&desk.stores) {
         Ok(ours) => ours,
         Err(error) => {
-            let code = frontier::code_of_token(error.situation());
-            return answering(
-                live,
-                SiteOutcome::Refused {
-                    answer: WireAnswer::refused(code),
-                    failure: error.into(),
-                },
-            );
+            return answering(live, SiteOutcome::Refused(SiteRefusal::Token(error)));
         }
     };
 
@@ -132,10 +123,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
         Err(inadmissible) => {
             return answering(
                 live,
-                SiteOutcome::Refused {
-                    answer: WireAnswer::refused(frontier::code_of_inadmissible(inadmissible)),
-                    failure: inadmissible.into(),
-                },
+                SiteOutcome::Refused(SiteRefusal::Inadmissible(inadmissible)),
             )
         }
     };
@@ -144,13 +132,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
         match policies::expanded_for_the_site(desk.policies, request.declared_params()) {
             Ok(expanded) => expanded,
             Err(error) => {
-                return answering(
-                    live,
-                    SiteOutcome::Refused {
-                        answer: WireAnswer::refused(frontier::code_of_bridge(&error)),
-                        failure: error.into(),
-                    },
-                )
+                return answering(live, SiteOutcome::Refused(SiteRefusal::Policies(error)))
             }
         };
 
@@ -174,15 +156,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
 
     let document = match keep_the_document(desk, live, request.document()) {
         Ok(document) => document,
-        Err(failure) => {
-            return answering(
-                live,
-                SiteOutcome::Refused {
-                    answer: WireAnswer::refused(SafCode::CannotSaveData),
-                    failure,
-                },
-            )
-        }
+        Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
     };
 
     ErrandStep::AskingToSign(SigningConsent {
@@ -213,13 +187,10 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine>(
 
     let owned = ours.len();
     let accepted =
-        filtering::keep_what_the_site_accepts(desk.engine, filter, ours).map_err(|failure| {
+        filtering::keep_what_the_site_accepts(desk.engine, filter, ours).map_err(|error| {
             answering(
                 live,
-                SiteOutcome::Refused {
-                    answer: WireAnswer::refused(SafCode::CannotAccessKeystore),
-                    failure,
-                },
+                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
             )
         })?;
 
@@ -233,11 +204,12 @@ fn keep_the_document<E: FilterEngine, P: PolicyEngine>(
     desk: &ErrandDesk<'_, E, P>,
     live: &LiveErrand,
     bytes: &[u8],
-) -> Result<String, Failure> {
+) -> Result<String, SiteRefusal> {
     std::fs::create_dir_all(&desk.scratch_dir)
-        .map_err(|error| Failure::new("folderMissing", error.to_string()))?;
+        .map_err(|error| SiteRefusal::ScratchFolderMissing(error.to_string()))?;
     let path = desk.scratch_dir.join(format!("{}.pdf", handles::mint()));
-    std::fs::write(&path, bytes).map_err(|error| Failure::new("unwritable", error.to_string()))?;
+    std::fs::write(&path, bytes)
+        .map_err(|error| SiteRefusal::ScratchUnwritable(error.to_string()))?;
     let _ = crate::desktop::adapters::paths::restrict_to_owner(&path);
     live.keep_the_scratch(path.clone());
     Ok(desk
@@ -264,13 +236,10 @@ pub fn consent_for<E: FilterEngine>(
     let owned = ours.len();
     let accepted = match filtering::keep_what_the_site_accepts(engine, request.filter(), ours) {
         Ok(accepted) => accepted,
-        Err(failure) => {
+        Err(error) => {
             return answering(
                 live,
-                SiteOutcome::Refused {
-                    answer: WireAnswer::refused(SafCode::CannotAccessKeystore),
-                    failure,
-                },
+                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
             )
         }
     };

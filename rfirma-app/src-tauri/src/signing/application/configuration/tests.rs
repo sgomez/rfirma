@@ -1,8 +1,7 @@
 use std::sync::Mutex;
 
-use super::{choose_destination, forget_activity, language_of, merged, shown, write};
+use super::{choose_destination, forget_activity, language_of, merged, shown, write, Preferences};
 use crate::fixtures::a_memory;
-use crate::signing::adapters::views::ConfigurationView;
 use crate::signing::application::configuration_memory::{Configuration, Theme};
 use crate::signing::domain::Language;
 
@@ -23,7 +22,7 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let live = Mutex::new(Configuration::default());
-    let chosen = ConfigurationView {
+    let chosen = Preferences {
         language: "en".to_owned(),
         destination: "Documentos".to_owned(),
         remember_visible_signature: false,
@@ -120,7 +119,7 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
         ),
         ..Configuration::default()
     };
-    let chosen = ConfigurationView {
+    let chosen = Preferences {
         language: "en".to_owned(),
         destination: "Otra".to_owned(),
         remember_visible_signature: false,
@@ -146,7 +145,7 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
 #[test]
 fn not_asking_about_the_url_handler_again_travels_back_from_the_window() {
     let live = Configuration::default();
-    let chosen = ConfigurationView {
+    let chosen = Preferences {
         ask_about_url_handler: false,
         ..shown(&live, std::path::Path::new("/home/quien/Documentos"))
     };

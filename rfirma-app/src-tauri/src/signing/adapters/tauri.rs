@@ -22,21 +22,23 @@ pub fn begin_signing(
     session: State<'_, SigningSession>,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<SecretView, Failure> {
-    crate::signing::application::session::begin(
+    Ok(crate::signing::application::session::begin(
         &order,
         &environment.all_stores(),
         &environment.listed,
         &opened,
         &isolate,
         &session,
-    )
-    .map(SecretView::from)
+    )?
+    .into())
 }
 
 /// Firma en el token con la clave privada (ADR-0001).
 #[tauri::command]
 pub fn sign_with_pin(pin: String, session: State<'_, SigningSession>) -> Result<(), Failure> {
-    crate::signing::application::session::sign_on_token(&session, &pin)
+    Ok(crate::signing::application::session::sign_on_token(
+        &session, &pin,
+    )?)
 }
 
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
@@ -46,13 +48,14 @@ pub fn finish_signing(
     isolate: State<'_, Isolate>,
     session: State<'_, SigningSession>,
 ) -> Result<SignedDocumentView, Failure> {
-    crate::signing::application::session::finish(
+    Ok(crate::signing::application::session::finish(
         &isolate,
         &session,
         &environment.memory,
         &environment.configuration(),
         &environment.documents_folder,
-    )
+    )?
+    .into())
 }
 
 /// Cancela el ciclo de firma a medias.
@@ -94,6 +97,7 @@ pub fn read_configuration(environment: State<'_, Environment>) -> ConfigurationV
         &environment.configuration(),
         &environment.documents_folder,
     )
+    .into()
 }
 
 /// Guarda la configuración elegida por el usuario.
@@ -102,17 +106,19 @@ pub fn write_configuration(
     configuration: ConfigurationView,
     environment: State<'_, Environment>,
 ) -> Result<(), Failure> {
-    crate::signing::application::configuration::write(
+    Ok(crate::signing::application::configuration::write(
         &environment.memory,
         &environment.configuration,
-        &configuration,
-    )
+        &configuration.into(),
+    )?)
 }
 
 /// Olvida los documentos recientes y el certificado usado.
 #[tauri::command(async)]
 pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failure> {
-    crate::signing::application::configuration::forget_activity(&environment.memory)
+    Ok(crate::signing::application::configuration::forget_activity(
+        &environment.memory,
+    )?)
 }
 
 /// Comprueba si el documento contiene firmas previas no registradas.
@@ -121,5 +127,5 @@ pub fn unregistered_signatures(
     document: String,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<bool, Failure> {
-    crate::signing::application::session::unregistered_signatures_in(&opened, &document)
+    Ok(crate::signing::application::session::unregistered_signatures_in(&opened, &document)?)
 }

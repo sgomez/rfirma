@@ -4,9 +4,9 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use crate::documents::adapters::views::DroppedDocumentView;
 use crate::documents::application::documents;
 use crate::documents::application::opened::OpenedDocuments;
+use crate::documents::domain::told::DroppedDocument;
 use crate::site::domain::protocol::AfirmaUrl;
 
 /// Invocación recibida con sus argumentos y carpeta de trabajo.
@@ -154,7 +154,7 @@ where
 pub fn invoked_document(
     invocation: &Invocation,
     opened: &OpenedDocuments,
-) -> Option<DroppedDocumentView> {
+) -> Option<DroppedDocument> {
     if invocation.site_launch().is_some() {
         return None;
     }
@@ -173,7 +173,7 @@ pub enum SecondInvocation {
     /// Se ignora la segunda invocación.
     NothingHappens,
     /// Sustituye el documento activo por el nuevo.
-    ReplacesWhatWasThere(Box<DroppedDocumentView>),
+    ReplacesWhatWasThere(Box<DroppedDocument>),
     /// Abre una ventana dedicada para atender el trámite de sede.
     OpensItsOwnWindow(String),
 }

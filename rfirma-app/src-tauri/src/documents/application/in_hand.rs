@@ -2,14 +2,14 @@
 
 use std::path::Path;
 
-use crate::commands::Failure;
-use crate::documents::adapters::views::RecentDocumentView;
 use crate::documents::application::opened::{OpenedDocuments, Remembrance};
+use crate::documents::application::recents::{RecentRow, RecentsError};
 use crate::documents::application::{documents, recents};
+use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
-use crate::signing::adapters::views::PlacementView;
 use crate::signing::application::configuration_memory::Configuration;
+use crate::signing::domain::VisibleBox;
 use crate::Memory;
 
 /// Representa el documento en curso durante la sesión.
@@ -22,7 +22,7 @@ pub struct DocumentInHand {
 
 impl DocumentInHand {
     /// Carga el documento abierto asociado a un identificador.
-    pub fn taken(opened: &OpenedDocuments, id: &str) -> Result<Self, Failure> {
+    pub fn taken(opened: &OpenedDocuments, id: &str) -> Result<Self, DocumentError> {
         let document = documents::opened_document(opened, id)?;
         let remembrance = opened.remembrance(id).unwrap_or(Remembrance::Unrecorded);
         Ok(Self {
@@ -59,8 +59,8 @@ pub fn take(
     configuration: &Configuration,
     opened: &OpenedDocuments,
     id: &str,
-    placement: Option<PlacementView>,
-) -> Result<RecentDocumentView, Failure> {
+    placement: Option<VisibleBox>,
+) -> Result<RecentRow, RecentsError> {
     let in_hand = DocumentInHand::taken(opened, id)?;
     if in_hand.is_remembered() {
         return recents::record(memory, configuration, opened, id, placement);
@@ -68,12 +68,9 @@ pub fn take(
     Ok(told_without_a_row(&in_hand, placement))
 }
 
-/// Construye una vista del documento en curso sin persistir en el historial.
-fn told_without_a_row(
-    in_hand: &DocumentInHand,
-    placement: Option<PlacementView>,
-) -> RecentDocumentView {
-    RecentDocumentView {
+/// La fila del documento en curso sin persistir en el historial.
+fn told_without_a_row(in_hand: &DocumentInHand, placement: Option<VisibleBox>) -> RecentRow {
+    RecentRow {
         id: in_hand.id().to_owned(),
         name: in_hand.document().name().to_owned(),
         badge: Badge::Unsigned,

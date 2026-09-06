@@ -22,19 +22,21 @@ del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 | `adapters/rubric/mod.rs` | 11 | El reparto. |
 | `adapters/rubric/normalize.rs` | 177 | La normalización. Pruebas en `adapters/rubric/normalize/tests.rs` (257). |
 | `adapters/rubric/store.rs` | 89 | Se copia, no se referencia (ID-33). Pruebas en `adapters/rubric/store/tests.rs` (171). |
-| `adapters/tauri.rs` | 191 | Las once órdenes de documentos: abrir por el portal, leer, recientes, rúbrica, destino y abrir el PDF firmado o su carpeta. |
+| `adapters/failures.rs` | 106 | La única traducción de las situaciones de documentos —destino, rúbrica, documento, bandeja, soltado— a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs` (47). |
+| `adapters/tauri.rs` | 203 | Las once órdenes de documentos: abrir por el portal, leer, recientes, rúbrica, destino y abrir el PDF firmado o su carpeta. |
 | `adapters/tauri_rubric.rs` | 73 | Los mismos dos papeles que `views.rs`, solo para la rúbrica: aparte por tamaño, no porque sea otra cosa (ID-82). Pruebas en `adapters/tauri_rubric/tests.rs` (50). |
-| `adapters/views.rs` | 83 | Destino, PDF firmado, documento abierto, soltado y reciente. Pruebas en `adapters/views/tests.rs`. |
+| `adapters/views.rs` | 147 | Destino, PDF firmado, documento abierto, soltado y reciente, con su `From` desde `domain/told.rs` y `RecentRow`. Pruebas en `adapters/views/tests.rs`. |
 | `application/documents.rs` | 245 | Por dónde entra el documento y dónde cae el firmado, y las dos puertas de entrada: la que recuerda y la que no (ID-286). Pruebas en `application/documents/tests.rs` (528). |
-| `application/in_hand.rs` | 94 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). Pruebas en `application/in_hand/tests.rs` (85). |
+| `application/in_hand.rs` | 91 | **El documento en curso**, que no es la fila que se guarda: quién lo tiene delante, si de él queda rastro y quién decide que la bandeja escriba (ID-286, ID-287). Pruebas en `application/in_hand/tests.rs` (85). |
 | `application/opened.rs` | 104 | Los documentos abiertos en esta sesión: del identificador opaco al fichero, y si de cada concesión se guarda rastro (`Remembrance`, ID-286). Pruebas en `application/opened/tests.rs` (104). |
-| `application/recents.rs` | 171 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75). Pruebas en `application/recents/tests.rs` (342). |
+| `application/recents.rs` | 208 | La bandeja, del disco a la ventana: quién la lee, quién la escribe y el reparto del recuadro (ID-74, ID-75); `RecentRow` es la fila y `RecentsError` por qué no se anota. Pruebas en `application/recents/tests.rs` (348). |
 | `application/rubric.rs` | 21 | Adopta en el almacén lo que el diálogo del portal concede, y lee lo que ya había: envoltorio fino sobre `RubricStore` que solo existe por la regla de dirección (ID-79, TD-21). Pruebas en `application/rubric/tests.rs` (74). |
 | `domain/destination.rs` | 101 | `DestinationFolder` y dónde cae el firmado. Pruebas en `domain/destination/tests.rs` (141). |
 | `domain/dropped.rs` | 90 | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana —uno solo o varios, incluida una carpeta recorrida— o nombrados en la línea de órdenes (ID-67, ID-68, ID-70, ID-157, ID-306). Pruebas en `domain/dropped/tests.rs` (242). |
-| `domain/error.rs` | 65 | Situaciones del destino (ADR-0009). Pruebas en `domain/error/tests.rs` (25). |
+| `domain/error.rs` | 100 | Situaciones del destino y `DocumentError`: por qué un documento no se abre, no se lee o no se entrega (ADR-0009). Pruebas en `domain/error/tests.rs` (25). |
 | `domain/handles.rs` | 30 | Cómo se acuña un asa opaca (ID-61, ADR-0011). Pruebas en `domain/handles/tests.rs` (26). |
 | `domain/naming.rs` | 55 | Cómo se llama el firmado y qué pasa si el nombre existe. Pruebas en `domain/naming/tests.rs` (72). |
 | `domain/portal.rs` | 65 | El documento tal y como entra por el portal (ID-37). Pruebas en `domain/portal/tests.rs` (101). |
+| `domain/told.rs` | 58 | Lo que el caso de uso cuenta de un documento —abierto, soltado, destino, firmado— antes de que la vista le ponga el formato del cable. Sin pruebas propias. |
 | `domain/recents.rs` | 12 | La insignia de un reciente. Cruza a la ventana: el contrato la presta de aquí. |
 | `domain/rubric.rs` | 78 | La rúbrica ya normalizada y sus situaciones (ADR-0009, ADR-0012). Pruebas en `domain/rubric/tests.rs` (11). |

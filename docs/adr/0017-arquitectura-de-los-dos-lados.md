@@ -57,11 +57,13 @@ en `app/cycle.rs` (ID-82). `memory` puede importar `destination::DestinationFold
 `destination` no puede importar `memory`, porque desenvolver la configuración lo hace `app/`
 (ID-83).
 
-Hay **una excepción escrita**, y es la única: `app/` nombra los tipos de frontera de
-`commands/` —`commands::views`, `commands::orders` y `commands::Failure`—. Los tipos que cruzan
-a la ventana viven en `commands/` por el ID-80, y el caso de uso los produce. Lo que `app/` no
-puede nombrar es un **cuerpo de orden**: eso sería el caso de uso llamando a su propio
-adaptador, y la guarda lo rechaza.
+No hay excepciones escritas. Un caso de uso devuelve **dominio** —su enumerado de situación,
+sus tipos— y quien lo traduce a lo que cruza a la ventana es el adaptador de Tauri de su
+contexto, en `adapters/views.rs` y `adapters/failures.rs`. Cada situación se traduce **una sola
+vez**: del mismo `match` salen la vista que recibe la ventana (`Failure`) y el código de cable
+que recibe la sede (`SafCode`), así que una variante nueva sin decidir vista y código no
+compila. Lo que `app/` tampoco puede nombrar es un **cuerpo de orden**: eso sería el caso de
+uso llamando a su propio adaptador, y la guarda lo rechaza.
 
 ## La regla se vigila, no se recuerda
 
@@ -88,6 +90,16 @@ mantener. Se **reconsiderará si `cargo-pup` llega a funcionar en estable**; mie
 guarda se escribe a mano, que además da el mensaje de fallo en castellano y con el ID de la
 decisión dentro.
 
+### Sin tipos de frontera en los casos de uso
+
+La primera versión de esta regla tenía una excepción escrita: `app/` podía nombrar los tipos
+de frontera de `commands/` —las vistas y `Failure`— porque el caso de uso los producía. Se
+descarta porque obligaba a traducir cada situación **dos veces**, en dos tablas que nadie
+mantenía a la par: la de la ventana en `commands/failure.rs` y la del cable en la frontera
+de sede; y porque una excepción a tres caminos es la puerta por la que entra la cuarta. Con
+la traducción en el adaptador de cada contexto, la regla se lee de la ruta y no necesita
+excepción (#440).
+
 ## Lo que este ADR **no** decide
 
 Para que no se le atribuyan decisiones que no toma:
@@ -104,8 +116,6 @@ Para que no se le atribuyan decisiones que no toma:
 - **No dice dónde vive un tipo de salida.** Eso es el ID-80: en `commands/views.rs`.
 - **No decide nada sobre la frontera FFI ni sobre la memoria** —son el ADR-0003 y el ADR-0010—;
   solo dice desde qué lado se las nombra.
-- **No convierte la excepción de `app/ → commands/` en un patrón.** Es un permiso a tres
-  caminos concretos, escrito en la guarda para que ampliarlo cueste una decisión y no un `use`.
 
 ## Consecuencias
 

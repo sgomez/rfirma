@@ -1,4 +1,5 @@
 use super::*;
+use crate::commands::Failure;
 use crate::fixtures::{a_certificate, listed_from};
 use crate::signing::adapters::ffi::BridgeError;
 use crate::site::domain::protocol::site_filter;
@@ -98,6 +99,7 @@ fn a_certificate_the_site_no_longer_accepts_is_refused_before_the_pin() {
     )
     .expect_err("la sede lo excluye");
 
+    let failure = Failure::from(failure);
     assert_eq!(failure.situation, "certificateNotFound");
     assert!(failure.detail.contains("FIRMA"), "{}", failure.detail);
 }
@@ -117,6 +119,7 @@ fn an_unusable_certificate_never_reaches_the_engine() {
     )
     .expect_err("no es legible");
 
+    let failure = Failure::from(failure);
     assert!(failure.detail.contains("Unreadable"), "{}", failure.detail);
     assert!(
         engine.asked.borrow().is_empty(),
@@ -132,6 +135,7 @@ fn an_index_outside_the_listing_is_a_failure_and_not_a_silent_shorter_list() {
     let failure = keep_what_the_site_accepts(&engine, &a_filter("ssl:true"), certificates)
         .expect_err("7 no es una fila");
 
+    let failure = Failure::from(failure);
     assert!(failure.detail.contains('7'), "{}", failure.detail);
 }
 

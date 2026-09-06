@@ -10,6 +10,7 @@ use super::views::{DestinationView, OpenedDocumentView, RecentDocumentView};
 use crate::commands::Failure;
 use crate::signing::adapters::views::PlacementView;
 use crate::signing::application::session::SigningSession;
+use crate::signing::domain::VisibleBox;
 
 /// Abre el diálogo del sistema y apunta lo que el portal conceda.
 #[tauri::command(async)]
@@ -35,12 +36,15 @@ pub fn open_document(
     let handle = chosen
         .into_path()
         .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
-    Ok(Some(crate::documents::application::documents::note_opened(
-        &environment.memory,
-        &configuration,
-        &opened,
-        handle,
-    )))
+    Ok(Some(
+        crate::documents::application::documents::note_opened(
+            &environment.memory,
+            &configuration,
+            &opened,
+            handle,
+        )
+        .into(),
+    ))
 }
 
 /// Los bytes del documento abierto.
@@ -63,6 +67,9 @@ pub fn list_recents(
     opened: State<'_, OpenedDocuments>,
 ) -> Vec<RecentDocumentView> {
     crate::documents::application::recents::listed_rows(&environment.memory, &opened)
+        .into_iter()
+        .map(RecentDocumentView::from)
+        .collect()
 }
 
 /// Anota en la bandeja el documento abierto y su recuadro.
@@ -73,13 +80,14 @@ pub fn record_recent(
     environment: State<'_, Environment>,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<RecentDocumentView, Failure> {
-    crate::documents::application::in_hand::take(
+    Ok(crate::documents::application::in_hand::take(
         &environment.memory,
         &environment.configuration(),
         &opened,
         &id,
-        placement,
-    )
+        placement.map(VisibleBox::from),
+    )?
+    .into())
 }
 
 /// Quita una fila de la bandeja de recientes.
@@ -89,12 +97,12 @@ pub fn forget_recent(
     environment: State<'_, Environment>,
     opened: State<'_, OpenedDocuments>,
 ) -> Result<(), Failure> {
-    crate::documents::application::recents::forget(
+    Ok(crate::documents::application::recents::forget(
         &environment.memory,
         &environment.configuration(),
         &opened,
         &id,
-    )
+    )?)
 }
 
 /// Abre el diálogo del portal y adopta la imagen elegida como rúbrica (ADR-0012).
@@ -137,7 +145,8 @@ pub fn preview_destination(
         &environment.configuration(),
         &environment.documents_folder,
         &document,
-    ))
+    )
+    .into())
 }
 
 /// Abre el selector de directorio y guarda la carpeta de destino elegida (ADR-0011).
@@ -154,12 +163,13 @@ pub fn choose_destination(
     let folder = chosen
         .into_path()
         .map_err(|error| Failure::new("folderMissing", error.to_string()))?;
-    crate::signing::application::configuration::choose_destination(
-        &environment.memory,
-        &environment.configuration,
-        crate::documents::domain::destination::DestinationFolder::at(folder),
-    )
-    .map(Some)
+    Ok(Some(
+        crate::signing::application::configuration::choose_destination(
+            &environment.memory,
+            &environment.configuration,
+            crate::documents::domain::destination::DestinationFolder::at(folder),
+        )?,
+    ))
 }
 
 /// Abre el PDF firmado con el visor del sistema (ADR-0011).

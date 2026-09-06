@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::*;
+use crate::commands::Failure;
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::fixtures::{a_memory, a_usable_certificate, listed_from};
@@ -13,12 +14,13 @@ use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::ffi::BridgeError;
 use crate::signing::adapters::isolate::Isolate;
-use crate::signing::application::session::SigningSession;
+use crate::signing::application::cycle::CycleError;
+use crate::signing::application::session::{CycleFailure, SigningSession};
 use crate::site::adapters::channel::{
     answer as what_the_channel_answers, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown,
 };
 use crate::site::adapters::codec::V4Codec;
-use crate::site::application::frontier;
+use crate::site::adapters::frontier;
 use crate::site::application::session::{SiteRefusal, SiteSignature};
 use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::domain::protocol::{
@@ -271,15 +273,15 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
 
     let (handle, mut wire) = the_wire();
     let step = attend(&desk, an_operation(""), handle, &live).expect("hay codec negociado");
-    let ErrandStep::Answering(SiteOutcome::Refused { answer, failure }) = &step else {
+    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = &step else {
         panic!("sin almacen la mesa contesta en el acto: {step:?}");
     };
-    assert_eq!(*answer, WireAnswer::refused(SafCode::CannotFindKeystore));
+    let (failure, code) = frontier::told(refusal);
+    assert_eq!(code, SafCode::CannotFindKeystore);
     assert_eq!(failure.situation, "moduleNotFound");
     assert!(
-        what_the_site_received(&mut wire).is_some_and(
-            |line| line.starts_with("Refused { answer: Refused { code: CannotFindKeystore")
-        ),
+        what_the_site_received(&mut wire)
+            .is_some_and(|line| line.starts_with("Refused(Token(TokenError")),
         "lo que sale lo escribe el codec negociado, no el tramite"
     );
     assert!(
@@ -303,7 +305,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
     assert!(look_again(&desk, &live).is_none());
 
     let refused = consent(&desk, "cualquiera", &live).expect_err("no hay nada consentible");
-    assert_eq!(refused.situation, "siteErrandNotLive");
+    assert_eq!(Failure::from(refused).situation, "siteErrandNotLive");
     assert!(what_the_site_received(&mut wire).is_none());
     assert!(live.current().is_some(), "y el tramite sigue vivo");
 
@@ -749,10 +751,9 @@ fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signatu
 
     let reply = the_signature_did_not_come_out(
         &live,
-        SiteRefusal::new(
-            SafCode::SignatureFailed,
-            Failure::new("bridgeFailed", "la prefirma no ha salido"),
-        ),
+        SiteRefusal::Cycle(CycleFailure::Cycle(CycleError::Bridge(
+            BridgeError::Failed("la prefirma no ha salido".to_owned()),
+        ))),
     );
 
     assert_eq!(
@@ -761,8 +762,10 @@ fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signatu
         "la sede recibe el codigo del catalogo, sin una palabra del detalle"
     );
     assert_eq!(
-        reply.failure().map(|failure| failure.situation.as_str()),
-        Some("bridgeFailed"),
+        reply
+            .refusal()
+            .map(|refusal| Failure::from(refusal).situation),
+        Some("bridgeFailed".to_owned()),
         "y la ventana se queda con la situacion entera"
     );
     assert!(
@@ -779,10 +782,9 @@ fn a_broken_session_seal_is_answered_with_its_own_code() {
 
     the_signature_did_not_come_out(
         &live,
-        SiteRefusal::new(
-            frontier::code_of_broken_seal(),
-            Failure::new("sealMismatch", "el sello de sesion no cuadra"),
-        ),
+        SiteRefusal::Cycle(CycleFailure::Cycle(CycleError::Seal(
+            crate::signing::domain::SealMismatch,
+        ))),
     );
 
     assert_eq!(
@@ -1248,7 +1250,7 @@ fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
         WireAnswer::refused(SafCode::NoCertificatesInKeystore).on_the_wire()
     );
     assert!(
-        reply.failure().is_some(),
+        reply.refusal().is_some(),
         "la ventana enseña la situacion entera"
     );
     assert_eq!(reason, NoCertificate::TheSiteExcludedThemAll);
@@ -1321,7 +1323,7 @@ fn a_token_that_cannot_be_listed_answers_with_the_code_of_its_own_situation() {
     };
     assert_eq!(
         on_the_wire(&reply),
-        WireAnswer::refused(frontier::code_of_token(
+        WireAnswer::refused(crate::identity::adapters::failures::code_of_token(
             crate::identity::adapters::pkcs11::Situation::ModuleNotFound
         ))
         .on_the_wire()
@@ -1443,8 +1445,8 @@ fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
     );
     assert!(
         reply
-            .failure()
-            .is_some_and(|it| it.situation == "certificateNotFound"),
+            .refusal()
+            .is_some_and(|it| Failure::from(it).situation == "certificateNotFound"),
         "la ventana sabe cual es la situacion: {reply:?}"
     );
 }

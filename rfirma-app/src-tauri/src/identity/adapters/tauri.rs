@@ -12,12 +12,15 @@ use crate::commands::Failure;
 pub fn list_certificates(
     environment: State<'_, Environment>,
 ) -> Result<Vec<CertificateView>, Failure> {
-    crate::identity::application::certificates::listed_rows(
+    Ok(crate::identity::application::certificates::listed_rows(
         &environment.all_stores(),
         &environment.installed_certificates,
         &environment.listed,
         &environment.memory,
-    )
+    )?
+    .into_iter()
+    .map(CertificateView::from)
+    .collect())
 }
 
 /// Instala un fichero PKCS#12 en un almacén propio.
@@ -41,16 +44,18 @@ pub fn install_certificate(
         &environment.installed_certificates,
         chosen,
         &password,
-    )
-    .map(|()| true)
+    )?;
+    Ok(true)
 }
 
 /// Desinstala un certificado PKCS#12 previamente instalado.
 #[tauri::command(async)]
 pub fn remove_certificate(id: String, environment: State<'_, Environment>) -> Result<(), Failure> {
-    crate::identity::application::certificates::remove_installed(
-        &environment.installed_certificates,
-        &id,
-        &environment.listed,
+    Ok(
+        crate::identity::application::certificates::remove_installed(
+            &environment.installed_certificates,
+            &id,
+            &environment.listed,
+        )?,
     )
 }

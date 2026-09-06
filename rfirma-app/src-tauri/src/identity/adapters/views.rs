@@ -2,6 +2,7 @@
 
 use serde::Serialize;
 
+use crate::identity::domain::certificate::ListedCertificate;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
 
@@ -56,6 +57,21 @@ pub struct CertificateView {
     pub status: StatusView,
     /// Si fue el certificado usado en la última firma.
     pub remembered: bool,
+}
+
+impl From<ListedCertificate> for CertificateView {
+    fn from(certificate: ListedCertificate) -> Self {
+        Self {
+            id: certificate.id,
+            label: certificate.label,
+            holder_name: certificate.holder_name,
+            id_number: certificate.id_number,
+            issuer: certificate.issuer,
+            store: store_name(certificate.store).to_owned(),
+            status: certificate.status.into(),
+            remembered: certificate.remembered,
+        }
+    }
 }
 
 #[cfg(test)]

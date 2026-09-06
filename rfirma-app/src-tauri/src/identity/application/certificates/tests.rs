@@ -4,6 +4,7 @@ use super::{
 };
 use crate::fixtures::{a_certificate, a_certificate_with_id, a_memory, listed_from};
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::error::Situation;
 use crate::signing::application::configuration_memory::Configuration;
 
 #[test]
@@ -111,7 +112,7 @@ fn with_nowhere_to_look_the_listing_says_so_instead_of_coming_back_empty() {
     )
     .expect_err("no hay donde buscar");
 
-    assert!(!failure.detail.is_empty(), "con su detalle crudo");
+    assert!(!failure.detail().is_empty(), "con su detalle crudo");
 }
 
 #[test]
@@ -121,8 +122,8 @@ fn refuses_a_certificate_that_is_no_longer_in_the_token() {
 
     let failure = usable_certificate(&[], &handles[0], &listed).expect_err("ya no esta");
 
-    assert_eq!(failure.situation, "certificateNotFound");
-    assert!(failure.detail.contains("FIRMA"), "{}", failure.detail);
+    assert_eq!(failure.situation(), Situation::CertificateNotFound);
+    assert!(failure.detail().contains("FIRMA"), "{}", failure.detail());
 }
 
 #[test]
@@ -132,7 +133,7 @@ fn refuses_a_handle_that_is_not_from_the_last_listing() {
     let failure = usable_certificate(&[], "00000000000000000000000000000000", &listed)
         .expect_err("no es de la ultima busqueda");
 
-    assert_eq!(failure.situation, "certificateNotFound");
+    assert_eq!(failure.situation(), Situation::CertificateNotFound);
 }
 
 #[test]
@@ -159,8 +160,12 @@ fn looks_at_the_status_again_between_listing_and_signing() {
     let failure =
         usable_certificate(&certificates, &handles[0], &listed).expect_err("no es legible");
 
-    assert_eq!(failure.situation, "certificateNotFound");
-    assert!(failure.detail.contains("Unreadable"), "{}", failure.detail);
+    assert_eq!(failure.situation(), Situation::CertificateNotFound);
+    assert!(
+        failure.detail().contains("Unreadable"),
+        "{}",
+        failure.detail()
+    );
 }
 
 #[test]

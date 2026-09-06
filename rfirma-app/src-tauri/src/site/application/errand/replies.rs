@@ -1,17 +1,16 @@
 //! Respuestas finales del trámite para la sede y la ventana (ADR-0009).
 
-use crate::commands::Failure;
 use crate::identity::adapters::pkcs11;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::store::Store;
-use crate::site::domain::protocol::{SafCode, SiteFilter, WireAnswer};
+use crate::site::domain::protocol::SiteFilter;
 
 use super::outcome::{ErrandStep, NoCertificate, SiteOutcome};
 use super::state::LiveErrand;
 use crate::signing::application::filtering;
 use crate::signing::ports::FilterEngine;
-use crate::site::application::frontier;
-use crate::site::application::session::{SiteRefusal, SiteSignature};
+use crate::site::application::session::SiteRefusal;
+use crate::site::application::session::SiteSignature;
 
 /// Caso de uso: la persona consiente identificarse y entrega el certificado.
 pub fn identify_with<E: FilterEngine>(
@@ -24,16 +23,7 @@ pub fn identify_with<E: FilterEngine>(
 ) -> SiteOutcome {
     let found = match pkcs11::list_certificates_across(stores) {
         Ok(found) => found,
-        Err(error) => {
-            let code = frontier::code_of_token(error.situation());
-            return over(
-                live,
-                SiteOutcome::Refused {
-                    answer: WireAnswer::refused(code),
-                    failure: error.into(),
-                },
-            );
-        }
+        Err(error) => return over(live, SiteOutcome::Refused(SiteRefusal::Token(error))),
     };
 
     identity_handed_over(engine, filter, &found, handle, listed, live)
@@ -51,13 +41,10 @@ pub fn identity_handed_over<E: FilterEngine>(
     let chosen =
         match filtering::usable_certificate_for_the_site(engine, filter, found, handle, listed) {
             Ok(chosen) => chosen,
-            Err(failure) => {
+            Err(error) => {
                 return over(
                     live,
-                    SiteOutcome::Refused {
-                        answer: WireAnswer::refused(SafCode::NoCertificatesInKeystore),
-                        failure,
-                    },
+                    SiteOutcome::Refused(SiteRefusal::NotUsableForTheSite(error)),
                 )
             }
         };
@@ -78,13 +65,7 @@ pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteO
 
 /// Caso de uso: la firma falla y se notifica el rechazo correspondiente a la sede.
 pub fn the_signature_did_not_come_out(live: &LiveErrand, refusal: SiteRefusal) -> SiteOutcome {
-    over(
-        live,
-        SiteOutcome::Refused {
-            answer: WireAnswer::refused(refusal.code()),
-            failure: refusal.into_failure(),
-        },
-    )
+    over(live, SiteOutcome::Refused(refusal))
 }
 
 /// Caso de uso: la persona cancela el trámite.
@@ -105,13 +86,7 @@ pub(super) fn no_certificate_at_all() -> ErrandStep {
 pub(super) fn no_certificate_the_site_accepts(live: &LiveErrand, owned: usize) -> ErrandStep {
     let answered = over(
         live,
-        SiteOutcome::Refused {
-            answer: WireAnswer::refused(SafCode::NoCertificatesInKeystore),
-            failure: Failure::new(
-                "certificateNotFound",
-                "no queda ningun certificado que la sede acepte",
-            ),
-        },
+        SiteOutcome::Refused(SiteRefusal::NoCertificateTheSiteAccepts),
     );
     ErrandStep::NoCertificate {
         reason: NoCertificate::TheSiteExcludedThemAll,

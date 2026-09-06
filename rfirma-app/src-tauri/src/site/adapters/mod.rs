@@ -2,6 +2,7 @@
 
 pub mod channel;
 pub mod codec;
+pub mod frontier;
 pub mod nss;
 pub mod tauri;
 pub mod tls;

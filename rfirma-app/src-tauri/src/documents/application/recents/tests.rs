@@ -17,12 +17,12 @@ fn an_opened_pdf(directory: &Path, name: &str, opened: &OpenedDocuments) -> (Pat
     (path, id)
 }
 
-fn a_placement(page: u32) -> PlacementView {
+fn a_placement(page: u32) -> VisibleBox {
     placed_on(PageSet::only_page(page))
 }
 
-fn placed_on(pages: PageSet) -> PlacementView {
-    PlacementView {
+fn placed_on(pages: PageSet) -> VisibleBox {
+    VisibleBox {
         rect: [72.0, 500.0, 272.0, 600.0],
         pages,
     }
@@ -256,7 +256,13 @@ fn no_row_carries_the_path_the_backend_dedupes_by() {
 
     let rows = listed_rows(&memory, &opened);
 
-    let told = serde_json::to_string(&rows).expect("deberia serializarse");
+    let told = serde_json::to_string(
+        &rows
+            .into_iter()
+            .map(crate::documents::adapters::views::RecentDocumentView::from)
+            .collect::<Vec<_>>(),
+    )
+    .expect("deberia serializarse");
     assert!(
         !told.contains(&path.to_string_lossy().into_owned()),
         "lo que cruza es el identificador opaco y nada mas: {told}"

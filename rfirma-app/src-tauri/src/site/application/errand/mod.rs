@@ -9,7 +9,6 @@ pub mod state;
 #[cfg(test)]
 mod tests;
 
-use crate::commands::Failure;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::adapters::orders::{SigningOrder, VisibleFieldsOrder};
 use crate::site::domain::protocol::AfirmaUrl;
@@ -18,6 +17,7 @@ use crate::signing::ports::FilterEngine;
 use crate::signing::ports::PolicyEngine;
 use crate::site::application::session::{self as signing, SiteSigning};
 
+pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ProtocolCodec, ReplyHandle, Transport};
 pub use desk::{attend_operation, consent_for, consent_to_sign, ErrandDesk};
 pub use outcome::{ErrandStep, Moment, NoCertificate, NoChannel, SigningConsent, SiteOutcome};
@@ -83,12 +83,21 @@ pub enum Consented {
     SigningWith(StoreSecret),
 }
 
+/// Por qué la ventana no obtiene lo que pidió del trámite.
+#[derive(Debug)]
+pub enum ConsentError {
+    /// No hay ninguna identificación ni firma pendiente que contestar.
+    NothingPending,
+    /// El trámite se ha rechazado, y la sede ya lo sabe.
+    Refused(SiteRefusal),
+}
+
 /// Registra el consentimiento con el certificado seleccionado y avanza el trámite.
 pub fn consent<E: FilterEngine, P: PolicyEngine>(
     desk: &ErrandDesk<'_, E, P>,
     certificate: &str,
     live: &LiveErrand,
-) -> Result<Consented, Failure> {
+) -> Result<Consented, ConsentError> {
     if let Some(filter) = live.what_the_site_asked() {
         let outcome = identify_with(
             desk.engine,
@@ -98,17 +107,14 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
             desk.listed,
             live,
         );
-        return match outcome.failure() {
-            Some(failure) => Err(failure.clone()),
-            None => Ok(Consented::IdentityHandedOver),
+        return match outcome {
+            SiteOutcome::Refused(refusal) => Err(ConsentError::Refused(refusal)),
+            _ => Ok(Consented::IdentityHandedOver),
         };
     }
 
     let Some(pending) = live.the_signature_consented() else {
-        return Err(Failure::new(
-            "siteErrandNotLive",
-            "no hay ninguna identificacion ni firma pendiente que contestar",
-        ));
+        return Err(ConsentError::NothingPending);
     };
 
     let order = SigningOrder {
@@ -137,25 +143,25 @@ pub fn consent<E: FilterEngine, P: PolicyEngine>(
         desk.session,
     )
     .map(Consented::SigningWith)
-    .map_err(|refusal| {
-        let failure = refusal.failure().clone();
-        the_signature_did_not_come_out(live, refusal);
-        failure
-    })
+    .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))
 }
 
 /// Completa la fase final de la firma para la sede y entrega el resultado.
 pub fn finish<E: FilterEngine, P: PolicyEngine>(
     desk: &ErrandDesk<'_, E, P>,
     live: &LiveErrand,
-) -> Result<(), Failure> {
-    let signed = signing::finish_for_the_site(desk.isolate, desk.session).map_err(|refusal| {
-        let failure = refusal.failure().clone();
-        the_signature_did_not_come_out(live, refusal);
-        failure
-    })?;
+) -> Result<(), SiteRefusal> {
+    let signed = signing::finish_for_the_site(desk.isolate, desk.session)
+        .map_err(|refusal| told_to_the_site(live, refusal))?;
     signature_handed_over(live, &signed);
     Ok(())
+}
+
+fn told_to_the_site(live: &LiveErrand, refusal: SiteRefusal) -> SiteRefusal {
+    match the_signature_did_not_come_out(live, refusal) {
+        SiteOutcome::Refused(refusal) => refusal,
+        answered => unreachable!("una firma que no sale es siempre un rechazo: {answered:?}"),
+    }
 }
 
 /// Cancela el trámite de sede notificando cancelación a la sede.

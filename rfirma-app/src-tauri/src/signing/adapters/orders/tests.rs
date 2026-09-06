@@ -42,6 +42,7 @@ fn refuses_a_destination_the_document_does_not_have_before_calling_the_bridge() 
         .placement()
         .expect_err("un documento de tres paginas no tiene la 99");
 
+    let failure = crate::commands::Failure::from(failure);
     assert_eq!(failure.situation, "pageOutOfDocument");
     assert!(failure.detail.contains("99"), "{}", failure.detail);
 }
@@ -54,7 +55,7 @@ fn refuses_a_drag_page_the_document_does_not_have() {
     let order: PlacementOrder = serde_json::from_value(sent).expect("la orden del visor");
 
     assert_eq!(
-        order.placement().expect_err("la 9 no existe").situation,
+        crate::commands::Failure::from(order.placement().expect_err("la 9 no existe")).situation,
         "pageOutOfDocument"
     );
 }

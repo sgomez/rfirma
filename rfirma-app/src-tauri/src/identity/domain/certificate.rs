@@ -179,5 +179,21 @@ impl TokenCertificate {
     }
 }
 
+/// Certificado de un listado, con su asa acuñada y lo que la ventana enseña de él.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ListedCertificate {
+    /// Asa opaca asignada al listar.
+    pub id: String,
+    pub label: String,
+    pub holder_name: String,
+    pub id_number: String,
+    pub issuer: String,
+    /// Clase de almacén del certificado.
+    pub store: crate::identity::domain::store::StoreClass,
+    pub status: CertificateStatus,
+    /// Si fue el certificado usado en la última firma.
+    pub remembered: bool,
+}
+
 #[cfg(test)]
 mod tests;

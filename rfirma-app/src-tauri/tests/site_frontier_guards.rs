@@ -3,21 +3,28 @@
 use serde_json::Value;
 
 use rfirma_lib::commands::failure::Failure;
+use rfirma_lib::documents::adapters::failures::{code_of_destination, code_of_rubric};
 use rfirma_lib::documents::adapters::rubric::{RubricError, Situation as RubricSituation};
 use rfirma_lib::documents::domain::destination::{
     DestinationError, Situation as DestinationSituation,
 };
+use rfirma_lib::identity::adapters::failures::code_of_token;
 use rfirma_lib::identity::adapters::pkcs11::{Situation as TokenSituation, TokenError};
+use rfirma_lib::signing::adapters::failures::{
+    code_of_bridge, code_of_broken_seal, code_of_inadmissible,
+};
 use rfirma_lib::signing::adapters::ffi::BridgeError;
+use rfirma_lib::signing::application::cycle::CycleError;
+use rfirma_lib::signing::application::session::CycleFailure;
 use rfirma_lib::signing::domain::Refusal as Inadmissible;
 use rfirma_lib::site::adapters::channel::Situation as ChannelSituation;
 use rfirma_lib::site::adapters::channel::{
     answer, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown,
 };
 use rfirma_lib::site::adapters::codec::V4Codec;
+use rfirma_lib::site::adapters::frontier;
 use rfirma_lib::site::adapters::views::{NoCertificateView, NoChannelView, SiteErrandView};
-use rfirma_lib::site::application::errand::{LiveErrand, ProtocolCodec};
-use rfirma_lib::site::application::frontier;
+use rfirma_lib::site::application::errand::{LiveErrand, ProtocolCodec, SiteRefusal};
 use rfirma_lib::site::application::site::{attend_launch, Attendance};
 use rfirma_lib::site::domain::protocol::{Refusal, SafCode, WireAnswer};
 
@@ -163,13 +170,13 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     }
 
     for code in [
-        frontier::code_of_token(TokenSituation::IncorrectPin),
-        frontier::code_of_destination(DestinationSituation::FolderMissing),
-        frontier::code_of_rubric(RubricSituation::DamagedImage),
+        code_of_token(TokenSituation::IncorrectPin),
+        code_of_destination(DestinationSituation::FolderMissing),
+        code_of_rubric(RubricSituation::DamagedImage),
         frontier::code_of_channel(ChannelSituation::NoDrawnPortIsFree),
-        frontier::code_of_inadmissible(Inadmissible::NotAPdf),
-        frontier::code_of_bridge(&BridgeError::Failed("lo que dijera Java".to_owned())),
-        frontier::code_of_broken_seal(),
+        code_of_inadmissible(Inadmissible::NotAPdf),
+        code_of_bridge(&BridgeError::Failed("lo que dijera Java".to_owned())),
+        code_of_broken_seal(),
     ] {
         lines.push(WireAnswer::refused(code).on_the_wire());
     }
@@ -183,13 +190,12 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     lines.push(codec.encode(
         &rfirma_lib::site::application::errand::the_signature_did_not_come_out(
             &LiveErrand::default(),
-            rfirma_lib::site::application::session::SiteRefusal::new(
-                frontier::code_of_bridge(&BridgeError::Failed(String::new())),
-                Failure::from(BridgeError::Failed(format!(
+            SiteRefusal::Cycle(CycleFailure::Cycle(CycleError::Bridge(
+                BridgeError::Failed(format!(
                     "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con \
                      {A_CERTIFICATE}"
-                ))),
-            ),
+                )),
+            ))),
         ),
     ));
 
