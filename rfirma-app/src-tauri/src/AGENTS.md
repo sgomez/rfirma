@@ -303,21 +303,10 @@ comportamiento. Antes de tocar uno de esos módulos, o las guardas mismas, dos c
 
 ## Al escribir un comentario
 
-El defecto es ninguno (restricción 6 del `AGENTS.md` raíz). Lo que hoy acaba en
-un comentario tiene otro destino:
-
-| Lo que el comentario dice | A dónde va |
-|---|---|
-| El porqué de una decisión | Un ADR; en el código queda **una línea** con su número (`ADR-0012`), y solo donde el código parece un error y no lo es |
-| El cómo | Se borra: el nombre de la función lo dice |
-| Una cita de especificación | Se queda, corta (`ID-23`), y solo si el identificador está en el catálogo de `docs/spec/`, **la única fuente válida** |
-| Una advertencia a agentes | Aquí, en la sección que le toque, si es general; se borra si el tipo ya la hace innecesaria |
-| La interfaz del otro lado, un número de PR, un conteo | A ninguna parte |
-
-La cabecera `//!` de un módulo es **una frase** —qué es y qué no es— más el
-número del ADR si lo hay. Lo que la tabla «Dónde vive qué» ya dice de ese módulo
-no se repite: si las dos cuentan lo mismo, se borra de la cabecera y se conserva
-la tabla.
+La regla es la restricción 6 del `AGENTS.md` raíz. Lo que solo vale aquí: la
+cabecera `//!` de un módulo no repite lo que la tabla «Dónde vive qué» ya dice
+de él; si las dos cuentan lo mismo, se borra de la cabecera y se conserva la
+tabla.
 
 Dos ejemplos de este backend, tal como quedan tras la poda:
 
