@@ -61,7 +61,7 @@ ruff_version := "0.16.6"
 # Sin esta exclusion los peores CRAP del repositorio serian justo el codigo que
 # SI esta probado, solo que en el otro carril. El carril lento repite la
 # medicion sin ella (`just crap-full`).
-ffi_allow := "src/ffi.rs"
+ffi_allow := "src/signing/adapters/ffi.rs"
 
 # El accesorio del banco de conformidad, FIJADO POR ETIQUETA Y POR SHA256. La
 # 1.9.2 no publica autoscript.js en npm ni en ningun artefacto: el unico origen
