@@ -1335,9 +1335,105 @@ seal-ds-bundle:
     echo
     echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
-# Abre la ventana con recarga en caliente.
-dev: check-native po-import
-    cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev
+# Abre la ventana con recarga en caliente. Lo que le pases va a la
+# aplicacion, no a cargo: `just dev documento.pdf`, `just dev --help`. El
+# doble `--` es de `tauri dev`, que separa los argumentos del runner de los de
+# la aplicacion (`tauri dev -- [runnerArgs] -- [appArgs]`).
+#
+# Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
+dev *args: check-native po-import
+    cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
+
+# Registra el binario de DESARROLLO como manejador de afirma:// en la sesion
+# del usuario, para no tener que construir e instalar el .deb en cada cambio.
+# Escribe ~/.local/share/applications/rfirma-dev.desktop y lo pone por
+# omision para el esquema. Se deshace con `just dev-handler-off`.
+#
+# COMO SE USA: en una terminal, `just dev`; en otra (una sola vez),
+# `just dev-handler`. Al pulsar el enlace de la sede, el escritorio arranca
+# target/debug/rfirma con la URL, y la instancia unica se la entrega a la
+# ventana que ya tienes abierta con recarga en caliente.
+#
+# SIN `just dev` DELANTE NO SIRVE: el binario de debug carga la interfaz de
+# http://localhost:1420 (build.devUrl), no de dist/, asi que arrancado solo
+# ensena una ventana en blanco.
+#
+# Firefox guarda su propia eleccion aparte de la del escritorio: si ya dijo
+# que abre afirma:// con AutoFirma, hay que quitarlo en sus Ajustes ->
+# Aplicaciones.
+#
+# Registra el binario de desarrollo como manejador de afirma://.
+dev-handler:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    binario="{{ tauri }}/target/debug/rfirma"
+    destino="$HOME/.local/share/applications"
+    fichero="$destino/rfirma-dev.desktop"
+    mkdir -p "$destino"
+    # Quien atendia el esquema antes se guarda, para que dev-handler-off
+    # pueda devolverselo: en un equipo con AutoFirma al lado es SU lanzador,
+    # y dejarlo sin manejador seria romper lo que ya funcionaba.
+    previo="$destino/.rfirma-dev-handler-previo"
+    if [ ! -f "$previo" ]; then
+        xdg-mime query default x-scheme-handler/afirma > "$previo" || true
+    fi
+    {
+        echo "[Desktop Entry]"
+        echo "Type=Application"
+        echo "Name=rFirma (desarrollo)"
+        echo "Comment=NO INSTALADO: apunta al arbol de desarrollo. just dev-handler-off lo quita."
+        echo "Exec=env RFIRMA_LIB_DIR=$(dirname "{{ native_lib }}") $binario %u"
+        echo "Terminal=false"
+        echo "NoDisplay=true"
+        echo "Categories=Utility;"
+        echo "MimeType=x-scheme-handler/afirma;"
+    } > "$fichero"
+    command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
+    xdg-mime default rfirma-dev.desktop x-scheme-handler/afirma
+    echo
+    echo "manejador de afirma://: $(xdg-mime query default x-scheme-handler/afirma)"
+    echo "  -> $fichero"
+    if [ ! -x "$binario" ]; then
+        echo
+        echo "AVISO: todavia no existe $binario." >&2
+        echo "Arranca 'just dev' antes de pulsar el enlace de la sede." >&2
+    fi
+
+# Deshace lo anterior: borra el .desktop de desarrollo y dice quien queda
+# atendiendo el esquema.
+#
+# Quita el manejador de desarrollo de afirma://.
+dev-handler-off:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    destino="$HOME/.local/share/applications"
+    previo="$destino/.rfirma-dev-handler-previo"
+    rm -f "$destino/rfirma-dev.desktop"
+    command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
+    # Se le devuelve el esquema a quien lo tenia, si lo tenia alguien.
+    if [ -s "$previo" ] && [ "$(cat "$previo")" != "rfirma-dev.desktop" ]; then
+        xdg-mime default "$(cat "$previo")" x-scheme-handler/afirma || true
+    fi
+    rm -f "$previo"
+    echo "manejador de afirma://: $(xdg-mime query default x-scheme-handler/afirma || echo 'ninguno')"
+
+# El .deb y el .rpm REUTILIZANDO la libreria nativa que ya esta construida.
+# Es `bundle` sin `native` delante: mismo resultado mientras no hayas tocado
+# el puente Java, y sin los tres minutos de native-image ni el ciclo de maven.
+# Si has tocado rfirma-native-bridge/, esta receta NO se entera: usa `bundle`.
+#
+# El .deb y el .rpm sin reconstruir la libreria nativa.
+bundle-quick: check-native build-ts
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ justfile_directory() }}"
+    (cd "{{ app }}" && pnpm exec tauri build)
+    salida="rfirma-app/src-tauri/target/release/bundle"
+    for formato in deb rpm; do
+        paquete="$(find "$salida/$formato" -maxdepth 1 -type f -name "*.$formato" | sort | tail -1)"
+        packaging/verifica-contenido.sh "$paquete"
+        echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
+    done
 
 # Borra lo construido.
 clean:
