@@ -183,12 +183,13 @@ pub fn run() {
         .setup(move |app| {
             let handle = app.handle().clone();
             let transport = the_transport(&ca_store, &handle);
+            let nss_stores = trust::NssTrustStores::new(pkcs11::RealNssHost);
             let startup = app::startup::attend_startup(
                 &invocation,
                 app::startup::TrustAtStartup {
                     store: &ca_store,
                     profiles: &nss_profiles,
-                    stores: &trust::NssTrustStores,
+                    stores: &nss_stores,
                 },
                 &|ports, duty| transport.open(ports, duty),
                 &|_| commands::open_the_site_window(&handle),

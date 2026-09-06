@@ -4,11 +4,16 @@ use std::path::Path;
 use std::process::Command;
 
 use rfirma_lib::app::trust::refresh_local_ca_trust;
+use rfirma_lib::pkcs11::RealNssHost;
 use rfirma_lib::tls::{authority::COMMON_NAME, CaFiles, LocalCa, LocalCaStore};
 use rfirma_lib::trust::{nss::is_trusted_ssl_ca, Moment, NssTrustStores, Situation, TrustStores};
 
 /// Marca de confianza TLS en la salida de `certutil -L`.
 const TRUSTED_FOR_TLS_ONLY: &str = "C,,";
+
+fn stores() -> NssTrustStores<RealNssHost> {
+    NssTrustStores::new(RealNssHost)
+}
 
 /// Perfil NSS temporal desechable.
 fn a_disposable_profile() -> tempfile::TempDir {
@@ -71,7 +76,7 @@ fn der_of(ca: &LocalCa) -> Vec<u8> {
 }
 
 fn install(profile: &Path, ca: &LocalCa) {
-    NssTrustStores
+    stores()
         .install(profile, &der_of(ca), COMMON_NAME)
         .expect("la CA local deberia entrar en el perfil");
 }
@@ -123,7 +128,7 @@ fn the_overlap_holds_whichever_order_they_arrive_in() {
         "listado:\n{}",
         certutil_listing(profile.path())
     );
-    let bits = NssTrustStores
+    let bits = stores()
         .trust_of(profile.path(), &der_of(&current))
         .expect("deberian leerse los bits");
     assert!(bits.is_some_and(is_trusted_ssl_ca), "bits: {bits:?}");
@@ -148,12 +153,12 @@ fn the_bits_come_back_and_a_ca_that_is_not_there_is_not_a_failure() {
 
     install(profile.path(), &installed);
 
-    assert!(NssTrustStores
+    assert!(stores()
         .trust_of(profile.path(), &der_of(&installed))
         .expect("deberian leerse los bits")
         .is_some_and(is_trusted_ssl_ca));
     assert_eq!(
-        NssTrustStores
+        stores()
             .trust_of(profile.path(), &der_of(&stranger))
             .expect("no estar no es un fallo"),
         None
@@ -165,7 +170,7 @@ fn a_directory_that_is_not_a_profile_says_the_store_is_unreachable() {
     let nowhere = tempfile::tempdir().expect("deberia haber directorio temporal");
     let ca = LocalCa::generate().expect("deberia fabricarse");
 
-    let error = NssTrustStores
+    let error = stores()
         .install(&nowhere.path().join("no-existe"), &der_of(&ca), COMMON_NAME)
         .expect_err("un perfil que no se puede abrir no es un éxito");
 
@@ -180,9 +185,9 @@ fn the_first_boot_leaves_the_local_ca_trusted_in_a_real_profile() {
     let store = a_store_in(data.path());
     let profiles = [profile.path().to_path_buf()];
 
-    let mut first = refresh_local_ca_trust(&store, &profiles, &NssTrustStores, Moment::Startup)
+    let mut first = refresh_local_ca_trust(&store, &profiles, &stores(), Moment::Startup)
         .expect("deberia poder instalarse");
-    let mut second = refresh_local_ca_trust(&store, &profiles, &NssTrustStores, Moment::Startup)
+    let mut second = refresh_local_ca_trust(&store, &profiles, &stores(), Moment::Startup)
         .expect("deberia poder repetirse");
 
     assert_eq!(first.trusted, 1);
@@ -205,7 +210,7 @@ fn nothing_is_written_in_a_real_profile_in_the_middle_of_an_errand() {
     let outcome = refresh_local_ca_trust(
         &store,
         &[profile.path().to_path_buf()],
-        &NssTrustStores,
+        &stores(),
         Moment::MidErrand,
     )
     .expect("no hacer nada no es un fallo");

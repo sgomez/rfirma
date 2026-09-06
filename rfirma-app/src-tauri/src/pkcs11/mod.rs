@@ -23,6 +23,7 @@ use cryptoki::types::AuthPin;
 
 pub use certificate::{CertificateRef, CertificateStatus, TokenCertificate};
 pub use error::{Situation, TokenError};
+pub use nss::{NssHost, NssUnavailable, RealNssHost};
 pub use secret::{SecretOnTheReaderKeypad, StoreSecret};
 pub use stores::{Store, StoreClass};
 
