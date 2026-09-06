@@ -20,6 +20,9 @@ pub(crate) mod fixtures;
 #[cfg(test)]
 mod tests;
 
+#[cfg(doctest)]
+mod compile_fail;
+
 use std::sync::Mutex;
 
 use desktop::adapters::paths::Paths;

@@ -30,8 +30,8 @@ quiera del propio contexto, y los casos de uso de otro solo a través de
 Lo que hoy va contra eso está declarado, arista por arista, en
 `tests/module_directions_debt.txt`. **La lista solo mengua**: una arista nueva
 fuera de ella pone la guarda en rojo, y una línea que deje de ser infracción
-también. Quién la vacía: #439 (los casos de uso hablan al puente y a los
-motores por puertos), #440 (los casos de uso devuelven dominio y cada contexto traduce en `adapters/failures.rs`; **hecho**) y #443
+también. Quién la vacía: #439 (el ciclo habla al puente por el puerto `Bridge`
+de `signing/ports.rs`; **hecho**), #440 (los casos de uso devuelven dominio y cada contexto traduce en `adapters/failures.rs`; **hecho**) y #443
 (las raíces de composición por contexto, que reparten `Environment` y `Memory`
 y sacan de `lib.rs` lo que no es cableado). Lo que no caiga en ninguno se anota
 en #443. Para regenerarla, `MODULE_DIRECTIONS_DUMP=1 cargo test --test
@@ -43,8 +43,9 @@ module_directions -- --nocapture` la vuelca línea a línea.
 |---|---|---|
 | `commands/failure.rs` | 29 | `Failure`, lo que cruza a la ventana cuando algo salió mal (ADR-0009). No importa nada de ningún contexto: cada uno traduce lo suyo en su `adapters/failures.rs` (#440). Pruebas en `commands/failure/tests.rs` (11). |
 | `commands/guards.rs` | 581 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`. Solo en pruebas. |
-| `fixtures.rs` | 80 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos. Solo en pruebas. |
-| `lib.rs` | 405 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Absorbe hasta el #443 los dos repartos que desaparecieron: `Environment` —la raíz de composición— con la carpeta de destino elegida, y `Memory`, las dos memorias y sus dos soportes (ADR-0010). Empieza aquí para ver el cableado. Pruebas en `tests.rs` (59). |
+| `compile_fail.rs` | 67 | **Lo que ya no compila**: un doctest `compile_fail` por cada tipo que sustituyó a una guarda textual (#439), y uno positivo que recorre las mismas rutas para que un error de ruta no los deje vacíos. Solo con `cargo test --doc`, que `cargo test` ya incluye; en estable rustdoc no comprueba el código de error, solo que no compila. |
+| `fixtures.rs` | 96 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos, incluido `a_completed_cycle()`, la prueba de que hubo un ciclo. Solo en pruebas. |
+| `lib.rs` | 426 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Absorbe hasta el #443 los dos repartos que desaparecieron: `Environment` —la raíz de composición— con la carpeta de destino elegida, y `Memory`, las dos memorias y sus dos soportes (ADR-0010). Empieza aquí para ver el cableado. Pruebas en `tests.rs` (59). |
 | `main.rs` | 6 | El binario. No hay nada dentro. |
 | `tests/memory.rs` | 336 | Las pruebas de `Memory`: los dos interruptores y lo exento. Las declara `tests.rs`. |
 
@@ -92,15 +93,22 @@ orden, sino contra el caso de uso al que llama.
 ## Las pruebas que se leen a sí mismas
 
 Vigilan invariantes leyendo el código **como texto**:
-`signing/application/cycle/tests.rs` (la clave privada no cruza al puente,
-ADR-0001, contando `bridge.`), `signing/application/session/tests.rs` (quién
-escribe el sello de firmado, con una **lista fija** de ficheros que hay que
-ampliar a mano), `site/application/session/tests.rs` (la postfirma de sede no
+`signing/application/cycle/tests.rs` (los cinco puntos de entrada de Java y el
+mecanismo del token, leyendo `adapters/ffi.rs` y `pkcs11/mod.rs`),
+`signing/application/session/tests.rs` (el PIN no se guarda en el ciclo a
+medias), `site/application/session/tests.rs` (la postfirma de sede no
 escribe nada), `tests/site_frontier_guards.rs`, `commands/guards.rs`,
 `tests/module_directions.rs`, `tests/single_cfg_os_site.rs` y
 `tests/adr_citations_resolve.rs`. Abren el `.rs` con `include_str!` o lo leen
 del disco: mover un fichero que una de ellas lee obliga a reapuntarla, y a
 comprobar con un cebo que sigue poniéndose roja.
+
+Tres invariantes que antes se leían como texto las sostiene ya el sistema de
+tipos, con su cebo en `compile_fail.rs` (#439): la postfirma solo acepta una
+`SealedPreSignature`, que solo sale de una `PreSignature` con la firma del
+token y el sello intacto; el sello de firmado de la bandeja exige un
+`CompletedCycle`, que solo devuelve la postfirma; y `SafCode` no se construye
+desde una cadena.
 
 ## Al escribir un comentario
 

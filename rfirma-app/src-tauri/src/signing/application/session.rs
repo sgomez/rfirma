@@ -206,7 +206,7 @@ pub fn finish(
         ..
     } = take_signed_cycle(session)?;
 
-    let signed = on_the_bridge(isolate, move |bridge| {
+    let completed = on_the_bridge(isolate, move |bridge| {
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
@@ -214,11 +214,11 @@ pub fn finish(
         configuration,
         documents_folder,
         document.document(),
-        &signed,
+        completed.pdf(),
     )?;
     certificates::remember_the_certificate(memory, configuration, &certificate);
     if document.is_remembered() {
-        recents::note_signed(memory, configuration, &landing);
+        recents::note_signed(memory, configuration, &landing, &completed);
     }
     *lock(&session.delivered) = Some(landing);
     Ok(delivered)

@@ -4,7 +4,9 @@ use std::fmt;
 use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
 
-use super::SessionSeal;
+use base64::Engine;
+
+use super::{SealMismatch, SessionSeal};
 
 /// Nombre del fichero de la librería nativa compartida (ADR-0004, ADR-0012).
 pub const LIBRARY_FILE: &str = "librfirma_crypto.so";
@@ -108,6 +110,97 @@ impl PreSignature {
     pub fn stamp(&self) -> &SessionSeal {
         &self.stamp
     }
+
+    /// Junta la prefirma con la firma del token, solo si el sello volvió intacto (ADR-0016).
+    pub fn sealed_with(
+        &self,
+        signature: &TokenSignature,
+        returned: &SessionSeal,
+    ) -> Result<SealedPreSignature, SealMismatch> {
+        self.stamp.verify_unchanged(returned)?;
+        Ok(SealedPreSignature {
+            session: self.session.clone(),
+            pkcs1_b64: signature.to_pkcs1_base64(),
+            stamp: returned.clone(),
+        })
+    }
+}
+
+/// Longitud en bytes de una firma sintética RSA de 2048 bits.
+const INVENTED_PKCS1_BYTES: usize = 256;
+
+/// Firma PKCS#1 producida por el token; el puente nunca la recibe suelta.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TokenSignature(Vec<u8>);
+
+impl TokenSignature {
+    /// Firma tal como la devolvió el token.
+    pub fn from_token(raw: Vec<u8>) -> Self {
+        Self(raw)
+    }
+
+    /// Firma sintética utilizada exclusivamente en la prefirma en seco.
+    pub fn invented() -> Self {
+        Self(vec![0; INVENTED_PKCS1_BYTES])
+    }
+
+    /// Firma cruda tal como la devolvió el token.
+    pub fn raw(&self) -> &[u8] {
+        &self.0
+    }
+
+    /// Firma codificada en Base64 para el campo PK1.
+    pub fn to_pkcs1_base64(&self) -> String {
+        base64::engine::general_purpose::STANDARD.encode(&self.0)
+    }
+}
+
+/// Prefirma ya firmada por el token con su sello comprobado: lo único que acepta la postfirma.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SealedPreSignature {
+    session: String,
+    pkcs1_b64: String,
+    stamp: SessionSeal,
+}
+
+impl SealedPreSignature {
+    /// Datos trifásicos de la prefirma.
+    pub fn session(&self) -> &str {
+        &self.session
+    }
+
+    /// Firma PKCS#1 en Base64 sobre los atributos firmados.
+    pub fn pkcs1_b64(&self) -> &str {
+        &self.pkcs1_b64
+    }
+
+    /// Sello que la prefirma emitió y la postfirma exige idéntico.
+    pub fn stamp(&self) -> &SessionSeal {
+        &self.stamp
+    }
+
+    /// Cierra el ciclo con el PDF que devolvió la postfirma.
+    pub fn completed_with(self, pdf: Vec<u8>) -> CompletedCycle {
+        CompletedCycle { pdf }
+    }
+}
+
+/// Ciclo trifásico terminado: solo existe si hubo prefirma, firma y postfirma con el sello intacto.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CompletedCycle {
+    pdf: Vec<u8>,
+}
+
+impl CompletedCycle {
+    /// Bytes del PDF firmado.
+    pub fn pdf(&self) -> &[u8] {
+        &self.pdf
+    }
+
+    /// Bytes del PDF firmado, en propiedad.
+    pub fn into_pdf(self) -> Vec<u8> {
+        self.pdf
+    }
 }
 
 /// Parámetros para la llamada de prefirma PAdES.
@@ -130,12 +223,8 @@ pub struct PostSignRequest<'a> {
     pub pdf_b64: &'a str,
     /// Misma cadena de certificados.
     pub certificate_chain_b64: &'a str,
-    /// Sello devuelto por la prefirma.
-    pub stamp: &'a SessionSeal,
-    /// Datos trifásicos devueltos por la prefirma.
-    pub session: &'a str,
-    /// Firma PKCS#1 en Base64 calculada sobre los atributos firmados.
-    pub pkcs1_b64: &'a str,
+    /// Prefirma firmada por el token con el sello ya comprobado.
+    pub sealed: &'a SealedPreSignature,
 }
 
 /// Parámetros para acotar un listado con el filtro de la sede.
@@ -228,3 +317,6 @@ impl From<LibraryNotFound> for BridgeError {
         Self::NotFound(error)
     }
 }
+
+#[cfg(test)]
+mod tests;

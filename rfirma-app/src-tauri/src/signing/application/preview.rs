@@ -37,7 +37,8 @@ pub fn compose(
             },
         )?;
         let seal = cycle.seal_in_transit();
-        cycle.postsign(bridge, &TokenSignature::invented(), &seal)
+        let completed = cycle.postsign(bridge, &TokenSignature::invented(), &seal)?;
+        Ok(completed.into_pdf())
     })
 }
 
