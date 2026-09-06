@@ -1,20 +1,4 @@
-//! **Lo que cruza a la ventana**: los tipos de salida, las conversiones que
-//! los producen y los nombres en inglés con los que el catálogo los traduce.
-//!
-//! Viven aquí y no intercalados entre los cuerpos de las órdenes (ID-80): una
-//! orden desempaqueta el estado, llama a un caso de uso y traduce el resultado
-//! a uno de estos tipos, y quien quiere saber qué ve la ventana lee un fichero
-//! y no doscientas líneas de órdenes.
-//!
-//! # Ninguno lleva una ruta del anfitrión
-//!
-//! No es una recomendación, es una consecuencia del ADR-0011: bajo el sandbox
-//! la aplicación **no conoce** la ruta real de un documento —el portal solo la
-//! da a un llamante `is_host`, que un flatpak nunca es—, así que devolver una
-//! sería devolver una mentira. Lo que sale de aquí son **nombres**: el del
-//! fichero firmado y el de la carpeta donde cayó. La guarda que lo vigila está
-//! en [`super::guards`] y recorre **todos** los ficheros de este módulo, así
-//! que un tipo de salida nuevo queda cubierto por existir (ID-84).
+//! Tipos de salida que cruzan hacia la ventana principal y sus conversiones (ADR-0011).
 
 use serde::{Deserialize, Serialize};
 
@@ -24,13 +8,7 @@ use crate::signing::PageSet;
 
 pub use super::failure::Failure;
 
-/// El estado de un certificado tal como cruza a la ventana.
-///
-/// Las cinco variantes llevan **su carga**, incluidas `notYetValid` y
-/// `unreadable`: sin ellas, `refusalFor` en TypeScript acababa fabricando la
-/// prosa del detalle («el DER no es un X.509 legible») justo en el hueco que el
-/// ID-29 reserva al texto original crudo. El dato de verdad lo tiene Rust, que
-/// es quien lee el DER.
+/// Estado de un certificado tal como cruza a la ventana.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum StatusView {
@@ -66,23 +44,14 @@ impl From<CertificateStatus> for StatusView {
     }
 }
 
-/// **Cómo hay que pedirle el secreto al almacén**, tal y como sale de la
-/// prefirma (ID-189).
-///
-/// Es el espejo exacto de [`StoreSecret`], con las mismas tres variantes: la
-/// ventana lee `kind` y decide entre firmar directo y abrir el diálogo. La
-/// tercera —`typedOnTheReaderKeypad`— **no llega hoy a cruzar**, porque la
-/// prefirma la rechaza antes; está aquí porque el tipo es de tres variantes y
-/// partirlo en dos vocabularios, uno dentro y otro fuera, costaría más que la
-/// rama que sobra.
+/// Forma de solicitar el secreto al almacén de claves.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SecretView {
     NotNeeded,
     #[serde(rename_all = "camelCase")]
     TypedOnScreen {
-        /// Cuántos intentos quedan. **Siempre vacío**: PKCS#11 no lo cuenta
-        /// (ID-191).
+        /// Intentos restantes.
         attempts_left: Option<u32>,
     },
     TypedOnTheReaderKeypad,
@@ -98,13 +67,7 @@ impl From<StoreSecret> for SecretView {
     }
 }
 
-/// El nombre en inglés de una clase de almacén, que es la clave con la que el
-/// catálogo de la ventana la traduce.
-///
-/// Es la forma del ID-29 aplicada a algo que no es un fallo: cruza la **clase**
-/// y el rótulo lo pone la ventana, igual que con la `situation` de [`Failure`].
-/// Componer aquí «Perfil de Firefox» se saltaría los catálogos y sacaría
-/// castellano en la versión en inglés.
+/// Nombre en inglés de una clase de almacén para su traducción en la ventana.
 pub fn store_name(class: StoreClass) -> &'static str {
     match class {
         StoreClass::Card => "card",
@@ -115,278 +78,159 @@ pub fn store_name(class: StoreClass) -> &'static str {
     }
 }
 
-/// Un certificado, con lo justo para pintar su fila y para volver a encontrarlo.
-///
-/// **No lleva el DER, ni la ruta del módulo, ni el `configdir` del perfil.** El
-/// DER es de quien lee X.509, que es Rust; los otros dos son rutas del
-/// anfitrión (ADR-0011). Lo que la ventana devuelve para firmar es el `id`, y
-/// el backend reencuentra el resto en [`crate::memory::ListedCertificates`].
+/// Certificado para mostrar en la lista y volver a seleccionarlo.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CertificateView {
-    /// El asa acuñada al listar. **Sin significado para la ventana**: no se
-    /// deriva de nada del certificado y de ella no se reconstruye ninguna ruta.
-    ///
-    /// Es lo que identifica la fila, y no la `label`: las etiquetas se repiten
-    /// —dos claves con el mismo `CKA_LABEL` en un perfil de Firefox, dos
-    /// `FNMT-GEMELO-99999999R` en el token de pruebas— y buscando por etiqueta
-    /// se cogía siempre el primero, así que el segundo era inelegible.
+    /// Asa opaca asignada al listar.
     pub id: String,
     pub label: String,
     pub holder_name: String,
     pub id_number: String,
     pub issuer: String,
-    /// De qué clase es el almacén de donde salió: `card`, `firefox`, `chrome`
-    /// o `nssdb`. **Nunca una ruta y nunca el rótulo ya escrito**: el mismo
-    /// certificado en el perfil de Firefox y en `~/.pki/nssdb` es
-    /// indistinguible sin esto, y quien lo traduce es el catálogo de la
-    /// ventana.
+    /// Clase de almacén del certificado.
     pub store: String,
     pub status: StatusView,
-    /// Si es **el que se usó la última vez** (#110).
-    ///
-    /// Es un `bool` y no una segunda orden porque la ventana ya está pidiendo
-    /// esta lista: preguntar aparte cuál se recordó obligaría a encadenar dos
-    /// llamadas para pintar el desplegable una vez. Y es una propiedad de la
-    /// **fila**, no del certificado: dice cuál viene ya puesto, y con el
-    /// recordado fuera del token no viene marcada ninguna, que es como el panel
-    /// vuelve a «Sin certificado» sin ruido.
+    /// Si fue el certificado usado en la última firma.
     pub remembered: bool,
 }
 
-/// Dónde va a caer el documento que hay delante: **la carpeta y el nombre**,
-/// los dos por su nombre y ninguno por su ruta (ID-63, ADR-0011).
-///
-/// Es lo que el pie del panel de firma enseña **antes** de firmar, así que trae
-/// las dos cosas que hacen falta para pintarlo: el nombre con el que va a caer
-/// —el que compone [`CheckedFolder::landing_for`](crate::destination::CheckedFolder::landing_for),
-/// con su sufijo y su número de desempate ya resueltos— y si la carpeta se
-/// puede escribir, que decide [`CheckedFolder::check`](crate::destination::CheckedFolder::check)
-/// y no un literal (ID-67).
-///
-/// `name` es `None` cuando la carpeta no está o no se deja escribir: sin
-/// carpeta comprobada no hay dónde resolver el homónimo, y aventurar un nombre
-/// sería prometer un fichero que nadie va a escribir.
+/// Destino previsto para el documento firmado (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DestinationView {
-    /// El **nombre** de la carpeta de destino, su último segmento.
+    /// Nombre de la carpeta de destino.
     pub folder: String,
-    /// El nombre del fichero firmado que va a caer ahí, homónimos incluidos.
+    /// Nombre del fichero firmado resultante.
     pub name: Option<String>,
-    /// Si esa carpeta está y se puede escribir **ahora mismo**. No se persiste:
-    /// es un hecho sobre el disco de este instante.
+    /// Si la carpeta de destino tiene permisos de escritura.
     pub writable: bool,
 }
 
-/// El documento firmado, tal como la ventana lo cuenta: **dos nombres, ninguna
-/// ruta** (ADR-0011).
+/// Documento firmado resultante (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignedDocumentView {
-    /// El nombre del fichero resultante.
+    /// Nombre del fichero resultante.
     pub name: String,
-    /// El nombre de la carpeta donde quedó. No su ruta.
+    /// Nombre de la carpeta de destino.
     pub folder: String,
-    /// Cuántos bytes se han escrito.
-    ///
-    /// Sale de la escritura misma —`std::fs::write` recibe la rebanada y su
-    /// longitud es el tamaño— y **no de volver a mirar el fichero** (ID-77):
-    /// preguntarle al disco por algo que ya se sabe abre la ventana a que el
-    /// resumen cuente un tamaño distinto del que se acaba de escribir.
+    /// Tamaño en bytes del fichero escrito.
     pub size_bytes: u64,
 }
 
-/// Un documento abierto, tal como la ventana lo recibe: **un identificador, un
-/// nombre y la ruta real cuando se conoce** (ID-60, ID-185, ADR-0011).
-///
-/// El `modified` sale de aquí y no lo calcula la ventana porque quien tocó el
-/// disco es el backend: la fila de la bandeja se pinta con metadatos cacheados
-/// y sin volver a abrir el fichero (ADR-0010).
-///
-/// Los bytes se siguen pidiendo **contra el identificador** y nunca contra la
-/// ruta (ID-66): `path` está para enseñarla, no para leer por ella.
+/// Documento abierto para su visualización o firma (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedDocumentView {
-    /// El identificador opaco que acuñó [`crate::memory::OpenedDocuments`].
+    /// Identificador opaco asignado al documento.
     pub id: String,
-    /// El nombre del fichero. No su ruta.
+    /// Nombre del fichero.
     pub name: String,
-    /// El `mtime`, en segundos desde la época; `None` si no se pudo leer.
+    /// Fecha de modificación en segundos Unix.
     pub modified: Option<u64>,
-    /// La ruta real del documento, o `None` si entró por el portal y no se
-    /// conoce (ID-185). Lo decide
-    /// [`crate::app::documents::real_path_of`], y lo que **nunca** sale es el
-    /// enlace de `/run/user/…`.
+    /// Ruta en el anfitrión si está disponible.
     pub path: Option<String>,
 }
 
-/// Lo que la ventana recibe al soltar ficheros encima.
-///
-/// **Ninguna ruta** (ADR-0011). Lo que se suelta son rutas del anfitrión, y
-/// justamente por eso la decisión de cuáles entran se toma en el backend: lo
-/// que cruza son los documentos ya apuntados, con su identificador opaco,
-/// igual que si se hubieran elegido por el diálogo.
+/// Resultado de soltar ficheros sobre la ventana (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DroppedDocumentView {
-    /// El documento que se ha abierto en el visor, o `None` si no se ha
-    /// abierto ninguno.
+    /// Documento abierto en el visor.
     pub document: Option<OpenedDocumentView>,
-    /// El resto de PDF que venían en el mismo gesto —sueltos directamente o
-    /// encontrados al recorrer una carpeta— y que entran igual en Recientes,
-    /// sin abrirse (ID-306).
+    /// Documentos adicionales incorporados a recientes.
     pub also_entering: Vec<OpenedDocumentView>,
-    /// Por qué no se ha abierto ninguno. `None` cuando sí se abrió.
+    /// Motivo del fallo si no se pudo abrir ningún documento.
     pub failure: Option<Failure>,
-    /// Cuántos ficheros más venían en el mismo gesto y no han entrado en
-    /// ningún sitio: no son PDF, o —cuando el primero no se pudo leer— no se
-    /// han llegado a probar (ID-70, ID-306).
+    /// Número de ficheros descartados que no se incorporaron.
     pub discarded: usize,
 }
 
-/// El recuadro colocado, tal como cruza en los dos sentidos: **el rectángulo
-/// en espacio de usuario PDF y el conjunto de páginas**, y ninguna ruta.
-///
-/// Es la forma del ID-90 —`{ rect, pages }`, un registro llano y no una unión
-/// de un brazo— y la misma que la ventana tiene en `viewer/signatureBox.ts`.
-///
-/// El rectángulo cruza **entero** aunque se guarde partido (ID-74): la ventana
-/// pinta un rectángulo, no una esquina más un tamaño global, y quien junta las
-/// dos mitades es [`crate::app::recents`]. Componer el rectángulo en TypeScript
-/// sería poner el reparto del ID-74 en los dos lados. El conjunto de páginas no
-/// se parte: es entero del documento (ID-95).
+/// Posición y páginas del recuadro de firma visible.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacementView {
-    /// El recuadro en espacio de usuario: `[x0, y0, x1, y1]`.
+    /// Coordenadas del recuadro en espacio de usuario PDF: [x0, y0, x1, y1].
     pub rect: [f64; 4],
-    /// En qué páginas se estampa: `"all"` o la lista, **1-based**.
+    /// Páginas en las que estampar la firma.
     pub pages: PageSet,
 }
 
-/// Una fila de la bandeja, tal como la ventana la recibe: **un identificador
-/// opaco y un nombre, ninguna ruta** (ID-62, ID-75, ADR-0011).
-///
-/// La deduplicación de la bandeja sigue siendo por la ruta canónica que **solo
-/// Rust conoce**; lo que cruza es el identificador con el que se piden los
-/// bytes.
+/// Entrada de la lista de documentos recientes (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecentDocumentView {
-    /// El identificador opaco con el que se lee el documento.
+    /// Identificador opaco del documento.
     pub id: String,
-    /// El nombre del fichero. No su ruta.
+    /// Nombre del fichero.
     pub name: String,
-    /// La insignia cacheada. `Unavailable` no está aquí: se recalcula al
-    /// listar y viaja en `available`.
+    /// Insignia o estado del documento.
     pub badge: Badge,
-    /// El `mtime` cacheado, en segundos desde la época.
+    /// Fecha de modificación en segundos Unix.
     pub modified: Option<u64>,
-    /// Cuándo se usó por última vez, en segundos desde la época.
+    /// Fecha de último uso en segundos Unix.
     pub last_used: u64,
-    /// Si la ruta responde **ahora mismo**. No se persiste nunca: es un hecho
-    /// sobre el disco de este instante, y por eso lo recalcula el backend en
-    /// cada listado.
+    /// Si el fichero sigue existiendo en disco.
     pub available: bool,
-    /// Dónde cayó el recuadro en este documento, con el tamaño global ya
-    /// puesto. `None` si nadie lo colocó.
+    /// Posición del recuadro guardada para este documento.
     pub placement: Option<PlacementView>,
 }
 
-/// La configuración, tal como la ventana la ve: **ningún `PathBuf`**.
-///
-/// El destino sale por su [`nombre`](crate::destination::DestinationFolder::name) y
-/// nunca por su ruta, igual que todo lo demás que cruza (ADR-0011). Y va en un
-/// solo sentido de verdad: la ventana **no elige la carpeta** —bajo el sandbox
-/// hay una y solo una—, así que el destino que llegue en una escritura se
-/// ignora. Está aquí para pintarlo, no para cambiarlo.
+/// Configuración de la aplicación visible para la ventana (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConfigurationView {
-    /// La etiqueta corta del idioma: `es`, `ca`, `eu`, `gl`, `va` o `en`.
+    /// Idioma seleccionado.
     pub language: String,
-    /// El **nombre** de la carpeta de destino. Nunca su ruta.
+    /// Nombre de la carpeta de destino.
     pub destination: String,
-    /// «Recordar la última configuración de firma visible».
+    /// Si se recuerda la última configuración de firma visible.
     pub remember_visible_signature: bool,
-    /// «Recordar mi actividad».
+    /// Si se conserva el historial de actividad reciente.
     pub remember_activity: bool,
-    /// «Avisarme cuando haya una versión nueva». Siempre visible, sin
-    /// condición (ID-180).
+    /// Si se notifica la disponibilidad de nuevas versiones.
     pub notify_new_version: bool,
-    /// El tema de la ventana. Ver [`Theme`].
+    /// Tema visual de la ventana.
     pub theme: Theme,
-    /// **La única pregunta al entorno** (ID-184): si Preferencias puede
-    /// ofrecer «guardar junto al original».
-    ///
-    /// Cruza como un booleano cuyo nombre **es la pregunta**, y no como el
-    /// canal en el que corre la aplicación: la ventana no tiene por qué saber
-    /// si hay un sandbox debajo, solo si pinta la opción. La contesta
-    /// [`crate::destination::the_original_folder_can_be_offered`].
-    ///
-    /// Viaja en un solo sentido, como el destino: lo que llegue en una
-    /// escritura se ignora, y por eso lleva `default` —la ventana no tiene que
-    /// devolverlo.
+    /// Si la plataforma permite guardar junto al original.
     #[serde(default)]
     pub offers_the_original_folder: bool,
-    /// Si el aviso del primer arranque (CA local y permiso de red local,
-    /// #365) ya se ha descartado. Viaja en los dos sentidos: la ventana lo lee
-    /// para decidir si lo monta y lo manda de vuelta con `true` en cuanto se
-    /// pulsa «Entendido», para que no vuelva en el siguiente arranque.
+    /// Si se ha mostrado ya el aviso de confianza inicial.
     pub trust_notice_seen: bool,
-    /// Si al arrancar se pregunta quién atiende los enlaces `afirma://`
-    /// (ID-239). Viaja en los dos sentidos: el banner lo apaga con «No volver
-    /// a preguntar» y Preferencias lo vuelve a encender, que es lo que lo hace
-    /// deshacible ahí mismo.
+    /// Si se debe consultar por el manejador de enlaces del protocolo.
     pub ask_about_url_handler: bool,
 }
 
-/// **Quién atiende los enlaces `afirma://`**, tal como lo ve Preferencias
-/// (ID-238, ID-240).
-///
-/// Un solo tipo para las dos situaciones, y la que manda es `available`: dentro
-/// del flatpak no hay pregunta posible, así que la lista **no es corta, es que
-/// no existe**. Una lista vacía sin este booleano se leería como «no hay ningún
-/// manejador instalado», que es otra cosa y llevaría a enseñar un desplegable
-/// vacío en vez de la frase fija del ID-240.
+/// Estado del manejador de enlaces afirma:// en el sistema.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UrlHandlersView {
-    /// Si el escritorio puede contestar quién atiende. `false` es el flatpak,
-    /// y con él Preferencias enseña la frase fija.
+    /// Si el entorno permite consultar manejadores de protocolo.
     pub available: bool,
-    /// Lo que el escritorio diga que hay registrado, tal cual y sin ningún
-    /// nombre cableado (ID-238).
+    /// Manejadores registrados en el escritorio.
     pub handlers: Vec<UrlHandlerView>,
-    /// El `.desktop` apuntado hoy como `default` explícito, si hay alguno.
+    /// Manejador asignado por defecto.
     pub current: Option<String>,
-    /// El `.desktop` con el que se registra rFirma, para que la ventana sepa
-    /// si ya está elegida sin cablearlo.
+    /// Identificador de escritorio de esta aplicación.
     pub ours: String,
 }
 
-/// Un manejador registrado: lo que se lee y lo que se escribe.
+/// Manejador registrado para el esquema de protocolo.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UrlHandlerView {
-    /// El fichero `.desktop`, que es lo que va al `mimeapps.list`.
+    /// Identificador de la aplicación en el escritorio.
     pub id: String,
-    /// El nombre visible, tal y como lo dio el escritorio.
+    /// Nombre visible de la aplicación.
     pub name: String,
 }
 
-/// **La versión nueva que se anuncia en la franja** (ID-181).
-///
-/// Un solo campo, y es el número: la franja no ofrece descargar nada (ID-177),
-/// su acción lleva a *Acerca de*, que es donde están las órdenes de alta del
-/// repositorio. Cruza como cadena porque lo que la ventana hace con ella es
-/// pintarla.
+/// Notificación de nueva versión disponible.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewVersionView {
-    /// La versión publicada, `mayor.menor.parche` y sin la `v` delante.
+    /// Versión publicada.
     pub version: String,
 }
 
@@ -399,9 +243,6 @@ mod tests {
 
     #[test]
     fn the_status_crosses_with_its_payload() {
-        // Los dos cabos del #76: sin la carga, `refusalFor` en TypeScript
-        // fabricaba la prosa del detalle en el hueco que el ID-29 reserva al
-        // texto original crudo.
         let not_yet = StatusView::from(CertificateStatus::NotYetValid { not_before: 42 });
         let unreadable = StatusView::from(CertificateStatus::Unreadable {
             detail: "PEM error".to_owned(),
@@ -417,8 +258,6 @@ mod tests {
         );
     }
 
-    /// Lo que la ventana lee para decidir entre firmar directo y abrir el
-    /// diálogo son estos tres nombres, así que están fijados aquí (ID-189).
     #[test]
     fn the_secret_crosses_as_one_of_three_kinds_and_never_as_a_string() {
         assert_eq!(
@@ -474,9 +313,6 @@ mod tests {
         assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
     }
 
-    /// El almacén cruza como **clase en inglés** y no como rótulo ni como
-    /// ruta: el nombre en castellano lo pone el catálogo de la ventana, igual
-    /// que hace con la `situation` de un fallo.
     #[test]
     fn the_store_crosses_as_a_class_and_never_as_a_path() {
         let names = [
@@ -497,9 +333,6 @@ mod tests {
         }
     }
 
-    /// El documento que entró por el portal cruza **sin ruta ninguna**: bajo el
-    /// sandbox no se conoce, y el enlace de `/run/user/…` no es la del usuario
-    /// (ID-185).
     #[test]
     fn an_opened_document_from_the_portal_is_told_without_a_path() {
         let view = OpenedDocumentView {
@@ -518,8 +351,6 @@ mod tests {
         assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
     }
 
-    /// Y el de ruta directa cruza **con la ruta real**, como la enseña
-    /// cualquier aplicación de escritorio (ID-185).
     #[test]
     fn an_opened_document_with_a_direct_path_is_told_with_the_real_one() {
         let view = OpenedDocumentView {

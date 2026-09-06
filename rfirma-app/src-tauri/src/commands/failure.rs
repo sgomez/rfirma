@@ -1,14 +1,4 @@
-//! **Cómo se le cuenta a la ventana que algo ha salido mal.**
-//!
-//! Un fallo no cruza como el error del módulo que lo produjo: cruza como un
-//! [`Failure`], que es la forma del ID-29 —una **situación** nuestra, en
-//! `camelCase`, que el catálogo traduce a cada idioma, y el texto original
-//! **crudo** al lado— y la misma que ya tiene `TokenFailure` en TypeScript.
-//!
-//! Aquí viven el tipo, las conversiones desde cada error de dominio y los
-//! nombres en `camelCase` con los que el catálogo los traduce (ID-80). Va
-//! aparte de [`super::views`] por tamaño: son dos ficheros porque ninguno de
-//! los dos puede pasar de 400 líneas, no porque sean dos cosas distintas.
+//! Traducción de errores a tipos deserializables por la ventana (ADR-0009).
 
 use serde::Serialize;
 
@@ -23,30 +13,20 @@ use crate::pkcs11::{SecretOnTheReaderKeypad, Situation, TokenError};
 use crate::rubric::{RubricError, Situation as RubricSituation};
 use crate::signing::{Refusal, SealMismatch};
 
-/// Lo que la ventana recibe cuando algo sale mal.
-///
-/// Es la forma del ID-29 y la misma que ya tiene `TokenFailure` en TypeScript:
-/// una **situación** nuestra, que el catálogo traduce a cada idioma, y el
-/// texto original **crudo** al lado, sin traducir ni recortar, para poder
-/// pegarlo en un informe.
+/// Representación de un fallo devuelto a la ventana (ADR-0009).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Failure {
-    /// El nombre de la situación, en `camelCase`, tal cual lo espera la unión
-    /// de TypeScript.
+    /// Identificador en camelCase de la situación.
     pub situation: String,
-    /// El detalle crudo. Nunca vacío.
+    /// Detalle descriptivo original del error.
     pub detail: String,
-    /// Cuántos intentos de PIN quedan, cuando el módulo lo dice.
+    /// Intentos restantes cuando aplique.
     pub attempts_left: Option<u32>,
 }
 
 impl Failure {
-    /// Un fallo con su situación y su detalle.
-    ///
-    /// Es público porque los casos de uso de [`crate::app`] fracasan con este
-    /// tipo: el ID-79 les deja decidir **que** algo no se puede hacer, y a este
-    /// módulo, cómo se le cuenta a la ventana.
+    /// Construye un nuevo fallo a partir de su situación y detalle.
     pub fn new(situation: &str, detail: impl Into<String>) -> Self {
         Self {
             situation: situation.to_owned(),
@@ -56,8 +36,7 @@ impl Failure {
     }
 }
 
-/// El nombre en `camelCase` de una situación del token, que es la clave con la
-/// que el catálogo la traduce.
+/// Nombre en camelCase de una situación del almacén o token.
 pub fn situation_name(situation: Situation) -> &'static str {
     match situation {
         Situation::IncorrectPin => "incorrectPin",
@@ -86,9 +65,6 @@ impl From<SecretOnTheReaderKeypad> for Failure {
 
 impl From<DesktopError> for Failure {
     fn from(error: DesktopError) -> Self {
-        // Las tres situaciones del escritorio las nombra
-        // `app::handlers::situation_name`, que es donde viven junto al caso de
-        // uso que las produce (ID-29).
         Self::new(
             crate::app::handlers::situation_name(error.situation()),
             error.detail().to_owned(),
@@ -120,9 +96,6 @@ impl From<SealMismatch> for Failure {
 
 impl From<BridgeError> for Failure {
     fn from(error: BridgeError) -> Self {
-        // Un fallo del puente es `bridgeFailed` menos en un caso: el PDF con
-        // firmas no registradas es una situación propia, porque no es un fallo
-        // sino algo que hay que confirmar (ID-296).
         let situation = match error {
             BridgeError::PdfHasUnregisteredSignatures(_) => "pdfHasUnregisteredSignatures",
             _ => "bridgeFailed",
@@ -137,7 +110,7 @@ impl From<IsolateGone> for Failure {
     }
 }
 
-/// El nombre en `camelCase` de una situación de la rúbrica.
+/// Nombre en camelCase de una situación de la rúbrica.
 fn rubric_situation_name(situation: RubricSituation) -> &'static str {
     match situation {
         RubricSituation::NotAnAcceptedImage => "notAnAcceptedImage",
@@ -161,7 +134,7 @@ impl From<RubricError> for Failure {
     }
 }
 
-/// El nombre en `camelCase` de una situación del destino.
+/// Nombre en camelCase de una situación del destino.
 fn destination_situation_name(situation: crate::destination::Situation) -> &'static str {
     use crate::destination::Situation as Where;
     match situation {
