@@ -13,6 +13,7 @@ use crate::identity::adapters::pkcs11::Store;
 use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::ffi::BridgeError;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{CycleFailure, SigningSession};
 use crate::site::adapters::channel::{
@@ -26,7 +27,6 @@ use crate::site::domain::protocol::{
     read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, SafCode, SelectCertificate,
     SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
 };
-use crate::Memory;
 use base64::Engine as _;
 
 /// Motor de filtrado simulado para pruebas.

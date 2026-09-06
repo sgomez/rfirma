@@ -8,9 +8,9 @@ use crate::documents::application::{documents, recents};
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::VisibleBox;
-use crate::Memory;
 
 /// Representa el documento en curso durante la sesión.
 #[derive(Clone, Debug, PartialEq)]

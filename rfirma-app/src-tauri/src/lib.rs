@@ -25,13 +25,10 @@ mod compile_fail;
 
 use std::sync::Mutex;
 
-use desktop::adapters::paths::Paths;
 use documents::domain::destination::DestinationFolder;
 use identity::application::listed::ListedCertificates;
-use signing::adapters::store::{JsonFile, Loaded};
+use signing::adapters::memory::Memory;
 use signing::application::configuration_memory::Configuration;
-use signing::application::state::{State, VersionCheck};
-use signing::domain::memory_error::MemoryError;
 
 /// Variable de entorno para sobreescribir el módulo PKCS#11.
 pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
@@ -96,96 +93,6 @@ pub fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// Las dos memorias y sus dos soportes (ADR-0010).
-#[derive(Clone, Debug, PartialEq)]
-pub struct Memory {
-    configuration: JsonFile<Configuration>,
-    state: JsonFile<State>,
-}
-
-impl Memory {
-    /// La memoria que vive en las rutas dadas.
-    pub fn at(paths: &Paths) -> Self {
-        Self {
-            configuration: JsonFile::at(paths.config_file()),
-            state: JsonFile::at(paths.state_file()),
-        }
-    }
-
-    /// El soporte de la configuración.
-    pub fn configuration_file(&self) -> &JsonFile<Configuration> {
-        &self.configuration
-    }
-
-    /// El soporte del estado.
-    pub fn state_file(&self) -> &JsonFile<State> {
-        &self.state
-    }
-
-    /// La configuración guardada, o la de por omisión.
-    pub fn configuration(&self) -> Result<Loaded<Configuration>, MemoryError> {
-        self.configuration.load()
-    }
-
-    /// El estado guardado, o el vacío.
-    pub fn state(&self) -> Result<Loaded<State>, MemoryError> {
-        self.state.load()
-    }
-
-    /// Guarda la configuración y borra el estado si la actividad queda desactivada (ADR-0010).
-    pub fn remember_configuration(&self, configuration: &Configuration) -> Result<(), MemoryError> {
-        self.configuration.save(configuration)?;
-        if !configuration.remember_activity {
-            self.erase_activity_but_keep_the_exempt()?;
-        }
-        Ok(())
-    }
-
-    /// Guarda el estado según lo que permitan los dos interruptores (ADR-0010).
-    pub fn remember_state(
-        &self,
-        configuration: &Configuration,
-        state: &State,
-    ) -> Result<(), MemoryError> {
-        if !configuration.remember_activity {
-            return self.erase_activity_but_keep_the_exempt();
-        }
-        if configuration.remember_visible_signature {
-            return self.state.save(state);
-        }
-        let mut without_the_box = state.clone();
-        without_the_box.visible_signature = None;
-        without_the_box.recents.forget_placements();
-        self.state.save(&without_the_box)
-    }
-
-    /// Olvida lo acumulado conservando los datos exentos (ADR-0010).
-    pub fn forget_activity(&self) -> Result<(), MemoryError> {
-        self.erase_activity_but_keep_the_exempt()
-    }
-
-    /// Guarda el registro de comprobación de versión sin depender de interruptores de actividad.
-    pub fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError> {
-        let mut state = self.state.load()?.into_value();
-        state.version_check = Some(check);
-        self.state.save(&state)
-    }
-
-    fn erase_activity_but_keep_the_exempt(&self) -> Result<(), MemoryError> {
-        let mut kept = self
-            .state
-            .load()
-            .map(Loaded::into_value)
-            .unwrap_or_default();
-        kept.forget_everything();
-        self.state.erase()?;
-        if kept.is_empty() {
-            return Ok(());
-        }
-        self.state.save(&kept)
-    }
-}
-
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {
     use site::application::errand::Transport as _;
@@ -221,10 +128,7 @@ pub fn run() {
     let second_codec = codec.clone();
 
     let memory = Memory::at(&paths);
-    let configuration = memory
-        .configuration()
-        .map(signing::adapters::store::Loaded::into_value)
-        .unwrap_or_default();
+    let configuration = memory.configuration();
     let environment = Environment {
         token: Box::new(identity::adapters::pkcs11::RealToken),
         stores: identity::adapters::pkcs11::stores::from_environment(),

@@ -9,9 +9,9 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::memory_error::{MemoryError, Situation as StoreSituation};
-use crate::Memory;
 
 /// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq)]

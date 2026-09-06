@@ -19,6 +19,7 @@ use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 use crate::lock;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::cycle::{
@@ -31,7 +32,6 @@ use crate::signing::domain::{
     VisibleTextFields,
 };
 use crate::signing::ports::IsolateHost;
-use crate::Memory;
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]

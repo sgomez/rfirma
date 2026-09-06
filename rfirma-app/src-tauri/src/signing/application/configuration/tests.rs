@@ -42,7 +42,7 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
     );
     assert_eq!(
         memory
-            .configuration()
+            .stored_configuration()
             .expect("deberia leerse lo guardado")
             .value()
             .theme,
@@ -64,7 +64,7 @@ fn forgetting_the_activity_keeps_the_settings() {
     memory
         .remember_state(
             &settings,
-            &crate::signing::application::state::State {
+            &crate::signing::adapters::state::State {
                 certificate: Some(crate::identity::adapters::pkcs11::CertificateRef::new(
                     "/usr/lib/softhsm/libsofthsm2.so",
                     "rfirma-test",
@@ -89,7 +89,7 @@ fn forgetting_the_activity_keeps_the_settings() {
     );
     assert_eq!(
         memory
-            .configuration()
+            .stored_configuration()
             .expect("deberia leerse")
             .value()
             .theme,

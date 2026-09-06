@@ -3,17 +3,19 @@
 use std::path::Path;
 use std::time::SystemTime;
 
-use crate::documents::adapters::recents_store::{Placement, RecentDocument};
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
+use crate::documents::domain::recents::RecentDocument;
+use crate::signing::adapters::memory::Memory;
+use crate::signing::adapters::state::State;
 use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::application::state::{BoxSize, State};
 use crate::signing::domain::memory_error::MemoryError;
+use crate::signing::domain::BoxSize;
 use crate::signing::domain::CompletedCycle;
+use crate::signing::domain::Spot;
 use crate::signing::domain::VisibleBox;
-use crate::Memory;
 
 /// Fila de la bandeja de documentos recientes (ADR-0011).
 #[derive(Clone, Debug, PartialEq)]
@@ -85,7 +87,7 @@ pub fn record(
     let badge = state
         .recents
         .entry(&path)
-        .map_or(Badge::Unsigned, RecentDocument::badge);
+        .map_or(Badge::Unsigned, RecentDocument::<Spot>::badge);
     let noted = RecentDocument::seen(&path, badge, SystemTime::now())
         .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
     let canonical = noted.path().to_path_buf();
@@ -160,7 +162,7 @@ fn loaded_state(memory: &Memory) -> State {
 }
 
 /// Convierte una entrada de recientes en su fila.
-fn told_as_row(entry: &RecentDocument, size: BoxSize, opened: &OpenedDocuments) -> RecentRow {
+fn told_as_row(entry: &RecentDocument<Spot>, size: BoxSize, opened: &OpenedDocuments) -> RecentRow {
     RecentRow {
         id: identifier_for(entry.path(), opened),
         name: entry.name().to_owned(),
@@ -179,7 +181,7 @@ fn identifier_for(path: &Path, opened: &OpenedDocuments) -> String {
         .unwrap_or_else(|| opened.remember(PortalDocument::opened(path.to_path_buf())))
 }
 
-fn joined(spot: &Placement, size: BoxSize) -> VisibleBox {
+fn joined(spot: &Spot, size: BoxSize) -> VisibleBox {
     VisibleBox {
         pages: spot.pages.clone(),
         rect: [
@@ -191,10 +193,10 @@ fn joined(spot: &Placement, size: BoxSize) -> VisibleBox {
     }
 }
 
-fn split(placement: VisibleBox) -> (Placement, BoxSize) {
+fn split(placement: VisibleBox) -> (Spot, BoxSize) {
     let [x0, y0, x1, y1] = placement.rect;
     (
-        Placement {
+        Spot {
             lower_left_x: x0,
             lower_left_y: y0,
             pages: placement.pages,

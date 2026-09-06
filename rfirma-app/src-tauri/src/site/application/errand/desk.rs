@@ -9,11 +9,11 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 use crate::signing::adapters::isolate::Isolate;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
     visible_signature_of, AfirmaUrl, SelectCertificate, SignRequest, SiteFilter,
 };
-use crate::Memory;
 
 use super::outcome::{ErrandStep, SigningConsent, SiteOutcome};
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};

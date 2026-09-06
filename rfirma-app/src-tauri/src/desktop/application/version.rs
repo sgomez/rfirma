@@ -2,8 +2,8 @@
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::signing::application::state::VersionCheck;
-use crate::Memory;
+use crate::desktop::domain::version_check::VersionCheck;
+use crate::signing::adapters::memory::Memory;
 
 /// Puerto de red que obtiene el cuerpo de la última publicación.
 pub type ReleaseFeed<'a> = &'a dyn Fn() -> Option<String>;

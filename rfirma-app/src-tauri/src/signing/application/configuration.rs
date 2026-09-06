@@ -3,10 +3,10 @@
 use std::sync::Mutex;
 
 use crate::documents::domain::destination::DestinationFolder;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::application::configuration_memory::{Configuration, Theme};
 use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::Language;
-use crate::Memory;
 
 /// La configuración tal como la enseña y la devuelve la ventana de preferencias (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq)]

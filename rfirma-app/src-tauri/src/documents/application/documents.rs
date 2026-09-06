@@ -9,8 +9,8 @@ use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::told::{
     Destination, DropRefusal, DroppedDocument, OpenedDocument, SignedDocument,
 };
+use crate::signing::adapters::memory::Memory;
 use crate::signing::application::configuration_memory::Configuration;
-use crate::Memory;
 
 /// Registra el documento abierto por el usuario y actualiza la última carpeta usada.
 pub fn note_opened(

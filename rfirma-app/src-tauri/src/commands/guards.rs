@@ -213,7 +213,6 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Crossing> {
     use crate::commands::Failure;
-    use crate::documents::adapters::recents_store::RecentDocument;
     use crate::documents::adapters::views::{
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
         SignedDocumentView,
@@ -223,11 +222,12 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
     use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
     use crate::documents::domain::portal::PortalDocument;
     use crate::documents::domain::recents::Badge;
+    use crate::documents::domain::recents::RecentDocument;
     use crate::fixtures::a_memory;
+    use crate::signing::adapters::state::State;
     use crate::signing::adapters::views::ConfigurationView;
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;
-    use crate::signing::application::state::State;
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -296,14 +296,15 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         ),
     ];
 
-    let entry: RecentDocument = serde_json::from_value(serde_json::json!({
-        "path": A_PORTAL_HANDLE,
-        "name": "contrato.pdf",
-        "badge": serde_json::to_value(Badge::Unsigned).expect("la insignia serializa"),
-        "modified": 1_700_000_000_u64,
-        "last_used": 1_700_000_100_u64,
-    }))
-    .expect("la fila del fichero de estado deberia leerse");
+    let entry: RecentDocument<crate::signing::domain::Spot> =
+        serde_json::from_value(serde_json::json!({
+            "path": A_PORTAL_HANDLE,
+            "name": "contrato.pdf",
+            "badge": serde_json::to_value(Badge::Unsigned).expect("la insignia serializa"),
+            "modified": 1_700_000_000_u64,
+            "last_used": 1_700_000_100_u64,
+        }))
+        .expect("la fila del fichero de estado deberia leerse");
     let mut state = State::default();
     state.recents.record(entry);
     memory

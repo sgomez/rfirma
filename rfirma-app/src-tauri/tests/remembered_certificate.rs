@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::identity::adapters::pkcs11::{self, CertificateRef, TokenCertificate};
+use rfirma_lib::signing::adapters::memory::Memory;
 use rfirma_lib::signing::application::configuration_memory::Configuration;
-use rfirma_lib::Memory;
 
 const TOKEN: &str = "rfirma-test";
 const ACTIVE: &str = "FNMT-ACTIVO-99999999R";

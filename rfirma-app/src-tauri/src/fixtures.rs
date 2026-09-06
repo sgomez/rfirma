@@ -10,6 +10,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
+use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
 use crate::signing::domain::bridge::{BridgeError, PreSignature};
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -18,7 +19,6 @@ use crate::signing::ports::{Bridge, IsolateHost};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
 use crate::site::ports::LocalCaSlots;
-use crate::Memory;
 
 /// Un token sin certificados que no sabe firmar: cada almacén está vacío.
 pub(crate) struct NoToken;

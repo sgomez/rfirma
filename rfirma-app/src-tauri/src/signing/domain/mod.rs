@@ -19,8 +19,8 @@ pub use config::{
 pub use language::Language;
 pub use layer2_text::{compose_layer2_text, mask_id_number, VisibleTextFields};
 pub use placement::{
-    MediaBox, OutOfDocument, OutOfPage, Page, PageSet, PlacementError, Rotation, UserSpaceRect,
-    ViewerRect, VisibleBox,
+    BoxSize, MediaBox, OutOfDocument, OutOfPage, Page, PageSet, PlacementError, Rotation, Spot,
+    UserSpaceRect, ViewerRect, VisibleBox,
 };
 pub use properties::to_java_properties;
 pub use session_seal::{SealMismatch, SessionSeal};

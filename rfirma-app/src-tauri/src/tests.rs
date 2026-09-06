@@ -3,7 +3,6 @@ use std::sync::Mutex;
 
 use crate::{chosen_folder, Environment};
 
-mod memory;
 use crate::documents::domain::destination::DestinationFolder;
 use crate::fixtures::a_memory;
 use crate::identity::application::listed::ListedCertificates;
