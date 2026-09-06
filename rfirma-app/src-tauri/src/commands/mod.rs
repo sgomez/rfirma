@@ -1247,12 +1247,66 @@ fn dispatch_the_site_operation(app: &tauri::AppHandle, url: &crate::protocol::Af
 ///
 /// Que no esté es una respuesta válida: sin ventana no hay a quien contarle
 /// nada, y el trámite no depende de que la haya.
+///
+/// Antes de emitir **se guarda** en [`PendingSiteErrand`]: el evento sólo lo
+/// oye quien ya estaba escuchando, y la ventana pregunta por el último momento
+/// nada más montarse ([`read_site_errand`]).
 fn publish_to_the_site_window(app: &tauri::AppHandle, view: SiteErrandView) {
     use tauri::{Emitter as _, Manager as _};
+
+    app.state::<PendingSiteErrand>().hold(view.clone());
 
     if let Some(window) = app.get_webview_window(SITE_WINDOW) {
         let _ = window.emit(SITE_ERRAND, view);
     }
+}
+
+/// **El último momento del trámite, guardado para quien todavía no escuchaba.**
+///
+/// La ventana de sede se abre y **acto seguido** se le publica en qué quedó el
+/// arranque, pero entre que la página termina de cargar y que el frontal tiene
+/// puesta la escucha hay dos idas y vueltas por el IPC —montar React y
+/// registrar el `listen`—. El evento emitido en medio no lo oye nadie, y la
+/// ventana se queda con el `body` desnudo y sin nada encima.
+///
+/// Es el mismo agujero que ya tenía la invocación con documento, y se tapa
+/// igual (ver [`read_invocation`]): el momento se **guarda** y la ventana lo
+/// **pide** al montarse. Los momentos siguientes siguen llegando por el evento,
+/// que es lo que dice el ID-338; lo que deja de depender del orden es el
+/// primero.
+#[derive(Default)]
+pub struct PendingSiteErrand(std::sync::Mutex<Option<SiteErrandView>>);
+
+impl PendingSiteErrand {
+    /// Guarda el momento, pisando el anterior: lo que interesa es el último.
+    pub fn hold(&self, view: SiteErrandView) {
+        if let Ok(mut held) = self.0.lock() {
+            *held = Some(view);
+        }
+    }
+
+    /// El último momento guardado, si hay alguno.
+    ///
+    /// **No se consume.** Al revés que la invocación, aquí releer es lo
+    /// correcto: la ventana puede recargarse, y lo que tiene que enseñar
+    /// entonces es el momento en el que está el trámite, no ninguno.
+    fn read(&self) -> Option<SiteErrandView> {
+        self.0.lock().ok()?.clone()
+    }
+}
+
+/// **Orden 33.** En qué momento está el trámite de sede, para la ventana que
+/// acaba de montarse (ID-338).
+///
+/// La pide la ventana de sede una sola vez, al montarse, y es una **orden y no
+/// un evento** por lo mismo que [`read_invocation`]: el primer momento se
+/// conoce antes de que haya nadie escuchando, así que emitirlo sería emitirlo
+/// al vacío. De ahí en adelante manda el evento [`SITE_ERRAND`].
+///
+/// `None` es la respuesta normal de una ventana que no es de sede.
+#[tauri::command]
+pub fn read_site_errand(pending: State<'_, PendingSiteErrand>) -> Option<SiteErrandView> {
+    pending.read()
 }
 
 /// La etiqueta de la ventana de sede (ID-333).
@@ -1281,10 +1335,58 @@ pub const DOCUMENT_DROPPED: &str = "document-dropped";
 #[cfg(test)]
 mod tests {
     use super::{
-        pades_lower_left, what_the_repair_leaves, PendingSignature, PlacementOrder, SiteConsent,
+        pades_lower_left, what_the_repair_leaves, PendingSignature, PendingSiteErrand,
+        PlacementOrder, SiteConsent, SiteErrandView,
     };
     use crate::commands::views::SignatureRoundView;
     use crate::protocol::SiteFilter;
+
+    /// **El momento guardado sigue ahí para quien monta después** (ID-338).
+    ///
+    /// Es la regresión del defecto que dejaba la ventana de sede en negro: el
+    /// primer momento se publicaba con un evento nada más abrirla, y el frontal
+    /// todavía tardaba dos idas y vueltas por el IPC en poner la escucha. Con
+    /// el momento guardado, llegar tarde deja de costar nada.
+    #[test]
+    fn the_errand_survives_a_window_that_was_not_listening_yet() {
+        let pending = PendingSiteErrand::default();
+        assert_eq!(pending.read(), None, "sin trámite no hay nada que contar");
+
+        pending.hold(SiteErrandView::waiting());
+
+        assert_eq!(pending.read(), Some(SiteErrandView::waiting()));
+    }
+
+    /// **Leerlo no lo consume**, al revés que la invocación con documento.
+    ///
+    /// La ventana puede recargarse, y lo que tiene que enseñar entonces es el
+    /// momento en el que está el trámite, no ninguno.
+    #[test]
+    fn reading_the_errand_leaves_it_where_it_was() {
+        let pending = PendingSiteErrand::default();
+        pending.hold(SiteErrandView::waiting());
+
+        assert!(pending.read().is_some());
+        assert!(pending.read().is_some(), "la segunda lectura da lo mismo");
+    }
+
+    /// **El último momento pisa al anterior**: lo que la ventana pide al
+    /// montarse es dónde está el trámite ahora, no por dónde pasó.
+    #[test]
+    fn the_last_moment_is_the_one_that_is_kept() {
+        let pending = PendingSiteErrand::default();
+        pending.hold(SiteErrandView::waiting());
+        pending.hold(SiteErrandView::no_channel(
+            super::NoChannelView::ChannelNotOpened,
+        ));
+
+        assert_eq!(
+            pending.read(),
+            Some(SiteErrandView::no_channel(
+                super::NoChannelView::ChannelNotOpened
+            ))
+        );
+    }
 
     /// Lo mínimo que hace falta para tener una firma consentida.
     fn a_pending_signature() -> PendingSignature {

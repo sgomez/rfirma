@@ -36,6 +36,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
   let emit: ((view: SiteErrandView) => void) | null = null;
   const calls = {
     watch: vi.fn(),
+    readErrand: vi.fn(),
     identify: vi.fn(),
     decline: vi.fn(),
     beginSigning: vi.fn(),
@@ -52,6 +53,10 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
       calls.watch();
       emit = onView;
       return stop;
+    },
+    readErrand: async () => {
+      calls.readErrand();
+      return null;
     },
     identify: async (id) => {
       calls.identify(id);
@@ -126,6 +131,59 @@ describe("la suscripción al trámite", () => {
     unwatch();
     push({ origin: null, stage: { kind: "waiting" } });
     await vi.waitFor(() => expect(seen).toHaveLength(0));
+  });
+
+  /*
+   * La regresión de la ventana en negro: el backend publica el primer momento
+   * nada más abrir la ventana, y para entonces el frontal todavía no ha
+   * registrado el `listen`. Ese momento no llega nunca por el evento, y sin
+   * momento `SedeWindow` no pinta nada.
+   */
+  it("takes the errand that was published before anyone was listening", async () => {
+    const { seen } = watched({
+      // El evento no trae nada: quien lo emitió lo hizo antes de esto.
+      watch: () => () => {},
+      readErrand: async () => ({ origin: null, stage: { kind: "waiting" } }),
+    });
+
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]?.stage.kind).toBe("waiting");
+  });
+
+  it("asks for the errand only after the listener is in place", async () => {
+    const order: string[] = [];
+    watched({
+      watch: () => {
+        order.push("watch");
+        return () => {};
+      },
+      readErrand: async () => {
+        order.push("readErrand");
+        return null;
+      },
+    });
+
+    await vi.waitFor(() => expect(order).toEqual(["watch", "readErrand"]));
+  });
+
+  /*
+   * El guardado es, por definición, el mismo momento o uno más viejo: si
+   * mientras se leía ha entrado uno por el evento, repintar el guardado
+   * encima retrocedería el trámite.
+   */
+  it("lets a moment that arrived by event win over the stored one", async () => {
+    const { seen, push } = watched({
+      watch: (onView) => {
+        // Un momento entra por el evento antes de que la lectura resuelva.
+        queueMicrotask(() => onView(ASKING_TO_SIGN));
+        return () => {};
+      },
+      readErrand: async () => ({ origin: null, stage: { kind: "waiting" } }),
+    });
+
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    expect(seen.map((errand) => errand?.stage.kind)).not.toContain("waiting");
+    expect(push).toBeDefined();
   });
 });
 

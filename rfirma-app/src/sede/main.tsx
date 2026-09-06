@@ -6,7 +6,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createI18n } from "../i18n/i18n";
 import { LanguageProvider } from "../i18n/LanguageProvider";
-import { tauriLanguagePreference, tauriSiteErrands } from "../tauri";
+import { applyTheme } from "../preferences/theme";
+import { tauriLanguagePreference, tauriPreferences, tauriSiteErrands } from "../tauri";
 import { SedeWindow } from "./SedeWindow";
 
 /**
@@ -25,6 +26,13 @@ import { SedeWindow } from "./SedeWindow";
  *
  * El idioma sale de la preferencia guardada, nunca del navegador (ID-02), y de
  * la misma configuración que lee la ventana principal.
+ *
+ * El **tema** sale de esa misma configuración, y hay que aplicarlo aquí a mano:
+ * los tokens de color cuelgan de `<html>`, así que quien los pone tiene que
+ * salir del árbol de React, y quien lo hacía —`App`— es de la ventana
+ * principal y aquí no se monta. Sin esto la ventana de sede ignora el ajuste y
+ * se queda con lo que diga `prefers-color-scheme`, que es otra cosa: `system`
+ * **no es** el valor elegido, es la ausencia de elección.
  */
 const root = document.getElementById("root");
 if (!root) {
@@ -32,7 +40,15 @@ if (!root) {
 }
 
 const preference = tauriLanguagePreference();
-const i18n = createI18n(await preference.read());
+// Las dos lecturas van a la vez: son la misma configuración en el disco y
+// encadenarlas sólo retrasaría el primer pintado.
+const [language, settings] = await Promise.all([preference.read(), tauriPreferences().read()]);
+
+// Antes de montar nada: aplicarlo después dejaría ver un parpadeo del tema que
+// no es.
+applyTheme(settings.theme);
+
+const i18n = createI18n(language);
 
 // Fuera del árbol: `SedeWindow` se resuscribe cuando el puerto cambia de
 // identidad, y uno nuevo en cada pintada lo suscribiría en bucle.

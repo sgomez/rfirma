@@ -631,6 +631,7 @@ export function tauriSiteErrands(): SiteErrandPort {
         void stopping.then((stop) => stop());
       };
     },
+    readErrand: () => invoke<SiteErrandView | null>("read_site_errand"),
     identify: (certificate) => stage(() => invoke<void>("site_identify", { certificate })),
     decline: () => invoke<void>("site_decline"),
     beginSigning: (certificate) =>
