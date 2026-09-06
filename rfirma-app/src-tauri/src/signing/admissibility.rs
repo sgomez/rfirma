@@ -1,30 +1,4 @@
-//! Lo que **no se puede firmar**, decidido antes de pedir el PIN.
-//!
-//! Un PDF cifrado, uno certificado con `DocMDP` y uno que no es un PDF fallan
-//! los tres dentro de la prefirma, con una excepción de Java que no dice gran
-//! cosa —y, en el caso del certificado, después de que la persona haya tecleado
-//! el PIN—. El acuerdo del #60 es el contrario: se rechazan **antes**, con un
-//! mensaje que dice por qué. Pedir el secreto que desbloquea la clave para
-//! luego negarse por algo que ya se sabía del documento es hacerlo teclear para
-//! nada.
-//!
-//! # Esto no es un lector de PDF, y no debe llegar a serlo
-//!
-//! Aquí no se analiza el documento: se buscan **tres marcas** en sus bytes. El
-//! juez de verdad sigue siendo el puente, que rechazará lo que se le cuele; lo
-//! de aquí es la puerta rápida que evita el diálogo del PIN. Por eso los fallos
-//! de este módulo son de un solo sentido y están elegidos así a propósito:
-//!
-//! - **Un falso positivo se ve.** Sale una negativa con su motivo, y quien la
-//!   recibe puede protestar.
-//! - **Un falso negativo también se ve**, un paso más allá: el puente falla.
-//!
-//! Lo que no puede pasar es lo tercero —dejar pasar algo que se firma mal en
-//! silencio—, y eso no está en manos de este módulo sino del sello de sesión.
-//!
-//! Si te encuentras escribiendo aquí un analizador de tablas de referencias
-//! cruzadas, te has salido: eso es el trabajo del puente, y duplicarlo sería
-//! tener dos opiniones sobre el mismo documento.
+//! Detección rápida de admisibilidad de documentos antes de solicitar el PIN.
 
 use std::fmt;
 
@@ -167,15 +141,7 @@ impl<'a> AdmissibleDocument<'a> {
         self.already_signed
     }
 
-    /// Si el documento trae **firmas que no sabemos leer** (ID-297).
-    ///
-    /// **No es una negativa**: informa. Quien decide es la persona, dentro del
-    /// consentimiento (ID-298, ID-299), y sólo si dice que sí se le manda al
-    /// puente `allowCosigningUnregisteredSignatures=true`, que es lo que evita
-    /// que `PdfSessionManager` aborte la cofirma (ID-300, ID-301).
-    ///
-    /// Ni se validan las firmas previas ni se cuenta cuántas hay (ID-305): la
-    /// pregunta es de sí o no.
+    /// Indica si el documento contiene firmas con subfiltros no registrados.
     pub fn has_unregistered_signatures(&self) -> bool {
         self.unregistered_signatures
     }
@@ -186,14 +152,7 @@ fn has_header(pdf: &[u8]) -> bool {
     contains(window, HEADER)
 }
 
-/// Busca `/Encrypt` **como entrada de un diccionario**, no como texto suelto.
-///
-/// La diferencia importa: `/Encrypt` a secas aparece en cualquier PDF que hable
-/// de PDFs, y rechazar uno de esos sería negarse a firmar un documento
-/// perfectamente firmable. Como entrada del tráiler solo tiene dos formas —una
-/// referencia indirecta (`/Encrypt 12 0 R`, que es la que exige la norma para
-/// el manejador estándar) o un diccionario en el sitio—, y ninguna de las dos
-/// aparece dentro de una frase.
+/// Busca `/Encrypt` como entrada de un diccionario.
 fn is_encrypted(pdf: &[u8]) -> bool {
     let mut from = 0;
     while let Some(offset) = find(&pdf[from..], ENCRYPT) {
@@ -223,17 +182,6 @@ fn looks_like_an_entry(after: &[u8]) -> bool {
 }
 
 /// Busca un `/SubFilter` cuyo valor no sea uno de [`KNOWN_SUB_FILTERS`].
-///
-/// El original recorre el xref con iText y mira sólo los diccionarios con
-/// `/Type /Sig` (`PdfUtil.pdfHasUnregisteredSignatures`); aquí se husmean los
-/// bytes, y eso significa que **no se ata el `/SubFilter` a su diccionario**.
-/// La holgura está elegida a propósito y va en el sentido bueno: de más sale
-/// una pregunta —que es lo peor que puede pasar, porque esto no rechaza
-/// (ID-299)—, y de menos contesta el puente, que es el juez de verdad y tiene
-/// su propio código (`SAF_50`, ID-303).
-///
-/// Un valor que no sea un nombre —una referencia indirecta— no cuenta: leerlo
-/// pediría el recorrido del xref que este módulo no hace y no va a hacer.
 fn has_unregistered_signatures(pdf: &[u8]) -> bool {
     let mut from = 0;
     while let Some(offset) = find(&pdf[from..], SUB_FILTER) {
@@ -382,8 +330,6 @@ mod tests {
 
     #[test]
     fn admits_an_already_signed_pdf_because_that_is_the_cosigning_path() {
-        // Una firma previa **no** es un motivo de rechazo: es el caso que el
-        // #60 tiene que cubrir, y el documento sale marcado como ya firmado.
         let pdf = a_pdf("9 0 obj\n<< /Type /Sig /ByteRange [0 840 960 240] >>\nendobj");
 
         let document = AdmissibleDocument::check(&pdf).expect("se cofirma");
@@ -393,7 +339,6 @@ mod tests {
 
     #[test]
     fn admits_a_pdf_whose_previous_signatures_it_cannot_read_and_says_so() {
-        // ID-297 / ID-299: no es una negativa, es un aviso.
         let pdf = a_pdf(
             "9 0 obj\n<< /Type /Sig /SubFilter /ETSI.CAdES.detached /ByteRange [0 8 9 2] >>\nendobj\n             10 0 obj\n<< /Type /Sig /SubFilter /adbe.pkcs7.somethingelse >>\nendobj",
         );
@@ -416,8 +361,6 @@ mod tests {
 
     #[test]
     fn does_not_ask_about_a_subfilter_it_cannot_even_read() {
-        // Una referencia indirecta pediría recorrer el xref, y eso es del
-        // puente: aquí se calla y contesta él (ID-303).
         let pdf = a_pdf("9 0 obj\n<< /Type /Sig /SubFilter 12 0 R >>\nendobj");
 
         let document = AdmissibleDocument::check(&pdf).expect("es un PDF");

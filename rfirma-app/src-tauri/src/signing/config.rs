@@ -1,11 +1,4 @@
-//! La configuración de firma: siete ajustes y ni uno más (ID-18).
-//!
-//! Todo lo demás se hereda de AutoFirma sin enviarse. Quedan fuera a propósito
-//! (ID-20) la política de firma, la ciudad, el contacto, el perfil,
-//! `signReservedSize` —los 27 000 por omisión dan un `/Contents` de 54 002, que
-//! sobra— y las dos llaves de la trifásica `doNotUseCertChainOnPostSign` e
-//! `includeOnlySignningCertificate`, que solo tienen sentido cuando la
-//! postfirma corre en otra máquina y aquí corre en la del usuario.
+//! Configuración de firma PAdES para el puente nativo.
 
 use std::collections::BTreeMap;
 
@@ -13,10 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::placement::PageSet;
 
-/// Subfiltro de la firma. Se envía **explícito** aunque parezca redundante: el
-/// javadoc de `PdfExtraParams.SIGNATURE_SUBFILTER` **miente**, dice que por
-/// omisión es `adbe.pkcs7.detached` y el código cae en `ETSI.CAdES.detached`.
-/// Fiarse del javadoc es firmar con un subfiltro distinto del que se cree.
+/// Subfiltro de la firma.
 pub const SUB_FILTER: &str = "ETSI.CAdES.detached";
 
 const SUB_FILTER_KEY: &str = "signatureSubFilter";
@@ -29,34 +19,18 @@ const LAYER2_TEXT_KEY: &str = "layer2Text";
 const RUBRIC_IMAGE_KEY: &str = "signatureRubricImage";
 const SIGN_REASON_KEY: &str = "signReason";
 const LAYER2_FONT_SIZE_KEY: &str = "layer2FontSize";
-/// La clave con la que se le dice al puente que siga adelante con un PDF que
-/// trae firmas sin registrar (`PdfSessionManager`).
-///
-/// Es pública porque **también hay que quitarla** de los `extraParams` que
-/// declara una sede: desde el ID-301 la clave es de rFirma, y la sede no puede
-/// mandársela al puente por su cuenta.
+/// Clave para autorizar la cofirma de firmas no registradas en el puente.
 pub const ALLOW_UNREGISTERED_KEY: &str = "allowCosigningUnregisteredSignatures";
 
-/// El tamaño de letra del recuadro, **cero**, que no es un tamaño: es lo que
-/// hace que el compositor reparta `alto del recuadro / número de líneas` y
-/// ajuste la letra desde ahí. Sin la clave, `PdfSessionManager:261-272` cae en
-/// su valor por omisión —12 pt— y ese funciona como **tope**: solo encoge,
-/// nunca crece, así que un recuadro de media página salía con letra minúscula.
-/// **Sin tope superior**: si alguien traza un recuadro grande es porque quiere
-/// verlo, y lo ve antes de firmar.
+/// Tamaño de letra cero para cálculo proporcional por alto de línea.
 const LAYER2_FONT_SIZE: &str = "0";
 
-/// Los siete ajustes de la configuración de firma. La lista es cerrada: si
-/// alguien quiere un octavo, tiene que añadir una variante aquí y decir qué
-/// clave emite, y eso ya no se cuela en una revisión.
+/// Ajustes cerrados de la configuración de firma.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Setting {
     /// El subfiltro, siempre [`SUB_FILTER`].
     SubFilter,
-    /// La geometría del recuadro: las páginas y las cuatro esquinas. **No
-    /// emite nada cuando la firma no lleva colocación nuestra**, que es como
-    /// los `signaturePositionOnPage*` de una sede llegan crudos al puente
-    /// (ID-282).
+    /// Geometría del recuadro: páginas y cuatro esquinas.
     Geometry,
     /// El texto del recuadro, ya compuesto por rFirma.
     Layer2Text,
@@ -66,8 +40,7 @@ pub enum Setting {
     SignReason,
     /// El tamaño de letra del recuadro, siempre [`LAYER2_FONT_SIZE`].
     Layer2FontSize,
-    /// Que se cofirme un PDF con firmas que no sabemos leer. **No emite nada
-    /// mientras nadie lo haya consentido** (ID-301).
+    /// Consentimiento para cofirmar firmas no registradas.
     AllowUnregisteredSignatures,
 }
 
@@ -103,17 +76,7 @@ impl Setting {
     }
 }
 
-/// El rectángulo de la firma visible, ya en puntos PAdES.
-///
-/// Los valores son los que espera `setVisibleSignature`, no el `/Rect` que
-/// acabará teniendo el widget: la conversión desde el recuadro que el usuario
-/// arrastra en el visor —incluida la inversa de la rotación de la página— la
-/// hace [`super::placement::Page::place`].
-///
-/// **No lleva página**: en qué páginas se estampa es [`PageSet`], y las dos
-/// mitades juntas son [`Placement`]. Con el widget replicado el rectángulo es
-/// forzosamente el mismo en todas (ID-96), así que hay un rectángulo y un
-/// conjunto, no un rectángulo por página.
+/// Rectángulo de la firma visible en puntos PAdES.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PadesRect {
@@ -127,12 +90,7 @@ pub struct PadesRect {
     pub upper_right_y: i32,
 }
 
-/// **La colocación**: dónde cae el recuadro y en qué páginas (ID-90).
-///
-/// Es un registro llano y **no una unión de un brazo**: un `kind` que nunca
-/// discrimina es ruido, y no ahorraría la migración del día que entre otra
-/// rama de colocación, porque en esa rama `rect` y `pages` tienen que
-/// desaparecer, no convivir.
+/// Colocación del recuadro y páginas de destino.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Placement {
@@ -164,47 +122,21 @@ impl Placement {
 /// Lo que distingue una firma de otra a igualdad de documento y certificado.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignatureConfig {
-    /// Dónde cae el recuadro y en qué páginas, **cuando lo coloca rFirma**.
-    ///
-    /// `None` no es «una firma sin recuadro»: es «el recuadro no lo pone este
-    /// lado». Los dos caminos del recuadro **no comparten conversión**
-    /// (ID-282):
-    ///
-    /// - **Lo elige la persona** sobre el visor: llega aquí `Some`, ya con el
-    ///   `T⁻¹` de la `/Rotate` aplicado por [`super::placement`].
-    /// - **Lo elige la sede**: llega `None`, y sus `signaturePositionOnPage*`
-    ///   cruzan al puente tal y como vinieron, porque esta configuración no
-    ///   emite ninguna clave que los pise
-    ///   ([`crate::protocol::visible`], [`crate::app::policies::merged_with`]).
+    /// Dónde cae el recuadro y en qué páginas cuando lo coloca rFirma.
     pub placement: Option<Placement>,
-    /// El texto del recuadro, compuesto por
-    /// [`super::layer2_text::compose_layer2_text`]. Puede estar vacío.
+    /// El texto del recuadro, compuesto por [`super::layer2_text::compose_layer2_text`].
     pub layer2_text: String,
-    /// La rúbrica en JPEG opaco y sin perfil ICC, en base64. `None` si no la
-    /// hay.
+    /// La rúbrica en JPEG opaco y sin perfil ICC, en base64. `None` si no la hay.
     pub rubric_image: Option<String>,
     /// El motivo de la firma. `None` si no lo hay.
     pub sign_reason: Option<String>,
-    /// Si la persona ya ha consentido cofirmar un PDF con **firmas que no
-    /// sabemos leer** (ID-297, ID-301).
-    ///
-    /// `false` **no emite la clave**, y esa ausencia es la decisión: sin ella
-    /// `PdfSessionManager` aborta la cofirma, que es justo lo que tiene que
-    /// pasar mientras nadie haya dicho que sí. Al puente sólo se le manda
-    /// `true`, y sólo después del consentimiento —nunca por omisión, ni
-    /// aunque lo pida la sede—.
+    /// Consentimiento para cofirmar firmas no registradas.
     pub allow_unregistered_signatures: bool,
 }
 
 impl SignatureConfig {
     /// Los `extraParams` que rFirma envía al puente.
-    ///
-    /// `layer2Text` se emite **siempre**, aunque esté vacío: si la clave falta
-    /// y tampoco hay `signatureRubricImage`, `PdfSessionManager` inyecta su
-    /// texto por omisión, en castellano fijo y con comodines dentro.
     pub fn extra_params(&self) -> BTreeMap<String, String> {
-        // Destructurado exhaustivo A PROPÓSITO: un quinto campo no compila
-        // hasta que alguien lo declare también en `Setting`.
         let Self {
             placement,
             layer2_text,
@@ -219,8 +151,6 @@ impl SignatureConfig {
             params.extend(placement.extra_params());
         }
         params.insert(LAYER2_TEXT_KEY.to_owned(), layer2_text.clone());
-        // Se envía siempre, y siempre cero: no es un ajuste del usuario, es lo
-        // que enciende el reparto del alto entre las líneas.
         params.insert(LAYER2_FONT_SIZE_KEY.to_owned(), LAYER2_FONT_SIZE.to_owned());
         if let Some(image) = rubric_image {
             params.insert(RUBRIC_IMAGE_KEY.to_owned(), image.clone());
@@ -228,8 +158,6 @@ impl SignatureConfig {
         if let Some(reason) = sign_reason {
             params.insert(SIGN_REASON_KEY.to_owned(), reason.clone());
         }
-        // Sólo `true`, y sólo consentido: la ausencia es lo que hace que el
-        // puente aborte una cofirma que nadie ha aceptado (ID-301).
         if *allow_unregistered_signatures {
             params.insert(ALLOW_UNREGISTERED_KEY.to_owned(), "true".to_owned());
         }
@@ -251,8 +179,6 @@ mod tests {
         }
     }
 
-    /// La colocación de rFirma, que es la del camino local: el recuadro lo
-    /// puso la persona sobre el visor.
     fn placed_on(pages: PageSet) -> Option<Placement> {
         Some(Placement {
             rect: a_rect(),
@@ -373,10 +299,6 @@ mod tests {
         );
     }
 
-    /// El tamaño de letra viaja con **valor cero**, que es lo que hace
-    /// que el compositor reparta el alto del recuadro entre sus líneas. Sin la
-    /// clave, el valor por omisión del puente actúa como tope y la letra solo
-    /// encoge.
     #[test]
     fn always_sends_the_font_size_as_zero() {
         for config in [minimal(), complete()] {
@@ -406,8 +328,6 @@ mod tests {
 
     #[test]
     fn never_sends_what_the_spec_ruled_out() {
-        // ID-20. `includeOnlySignningCertificate` va con la errata de
-        // AutoFirma: es el nombre real de la clave.
         let ruled_out = [
             "signReservedSize",
             "policyIdentifier",
@@ -424,16 +344,11 @@ mod tests {
         }
     }
 
-    /// El singular y el plural conviven en el puente y **gana el plural**
-    /// (`PdfUtil.getPages:699-703`), así que enviar los dos describiría una
-    /// configuración que solo se entiende leyendo el código de AutoFirma.
     #[test]
     fn never_sends_the_singular_page_key() {
         assert!(!complete().extra_params().contains_key("signaturePage"));
     }
 
-    /// **ID-301**: la clave que le dice al puente que siga adelante con un PDF
-    /// que trae firmas sin registrar **no se emite por omisión**.
     #[test]
     fn says_nothing_to_the_bridge_about_unregistered_signatures_until_someone_consents() {
         assert!(!minimal()
@@ -453,8 +368,6 @@ mod tests {
         );
     }
 
-    /// El conjunto de tamaño 1, el de tamaño *k* y el de tamaño *n*: la misma
-    /// clave, tres literales.
     #[test]
     fn writes_the_page_set_as_the_bridge_reads_it() {
         for (pages, literal) in [
@@ -473,9 +386,6 @@ mod tests {
         }
     }
 
-    /// **ID-282**: en el camino de la sede rFirma no coloca nada, y eso se ve
-    /// en que la geometría **no emite ni una clave**: las que mandó la sede
-    /// llegan al puente sin que nadie las pise.
     #[test]
     fn emits_no_geometry_at_all_when_the_box_is_not_placed_by_rfirma() {
         let config = SignatureConfig {
@@ -494,10 +404,6 @@ mod tests {
         assert!(params.contains_key("signatureSubFilter"), "lo demas sigue");
     }
 
-    /// ID-91: «todas» no es un modo aparte. Lo único que cambia entre `all` y
-    /// la lista completa es el literal; las otras cuatro claves de la
-    /// geometría son las mismas, que es lo que hace que «algunas» no cueste
-    /// nada de más.
     #[test]
     fn changes_nothing_but_the_page_set_between_all_and_the_full_list() {
         let all = SignatureConfig {

@@ -1,33 +1,4 @@
-//! La frontera FFI: cargar `librfirma_crypto.so` y volver de ella sin fugas ni
-//! dobles liberaciones (ID-10, ID-11; ADR-0003, ADR-0004, ADR-0013).
-//!
-//! Aquí **no hay orquestación**: se cruza la frontera y se vuelve. Quién llama
-//! a la prefirma, quién firma el PKCS#1 con el token y quién comprueba el sello
-//! entre las dos fases vive fuera de este fichero.
-//!
-//! Tres cosas que este módulo no delega en nadie:
-//!
-//! 1. **De dónde sale la librería.** De una ruta **relativa al ejecutable**
-//!    (`../lib/rfirma`), sobreescribible con [`LIBRARY_DIRECTORY_VARIABLE`]. Ni
-//!    `LD_LIBRARY_PATH` ni `RPATH`: el flatpak instala el fichero en
-//!    `/app/lib/rfirma` y el binario en `/app/bin`, así que la ruta relativa ya
-//!    es la correcta sin tocar el entorno de nadie.
-//! 2. **Qué se dice cuando no está.** El fallo nombra **las dos rutas que se
-//!    miraron**, con su procedencia. No es cortesía: cuando faltaban ficheros,
-//!    la firma no fallaba al cargar sino más tarde, con un error engañoso sobre
-//!    el formato de la imagen, y el rato que costó encontrarlo lo pagó el #36.
-//! 3. **Quién libera el JSON.** Java lo reserva a mano en el C-heap
-//!    (`UnmanagedMemory.malloc`) y **Rust llama a `autofirma_free_string`**.
-//!    Nunca al revés: `CTypeConversion.toCString` liberaría al salir del bloque
-//!    y esta parte haría un doble `free`. Aquí eso no se recuerda a mano —lo
-//!    recuerda [`BridgeString`], que libera al soltarse, exactamente una vez.
-//!
-//! **Por qué se busca en las dos rutas y no solo en la del entorno.** Un
-//! `RFIRMA_LIB_DIR` apuntando a un directorio vacío no puede acabar en «no hay
-//! librería» a secas: el mensaje tiene que enseñar también dónde habría mirado
-//! por omisión, o quien depura no sabe si le falta el fichero o le sobra la
-//! variable. Buscar en las dos y nombrarlas las dos es la única versión de esto
-//! que no miente.
+//! Frontera FFI con `librfirma_crypto.so` compilada con GraalVM Native Image (ADR-0003, ADR-0004).
 
 use std::ffi::{CStr, CString, OsString};
 use std::fmt;
@@ -38,27 +9,20 @@ use base64::Engine;
 
 use crate::signing::SessionSeal;
 
-/// El único fichero que hace falta (ADR-0004, ADR-0012).
-///
-/// Era una lista de seis hasta el #36: al excluir `afirma-ui-utils` los cinco
-/// auxiliares de AWT dejaron de hacer falta, y volver a ponerlos convierte un
-/// error recuperable ante un JPEG con perfil ICC en un aborto del proceso.
+/// Nombre del fichero de la librería nativa compartida (ADR-0004, ADR-0012).
 pub const LIBRARY_FILE: &str = "librfirma_crypto.so";
 
-/// La variable que sobreescribe el directorio de la librería.
+/// Variable de entorno que sobreescribe el directorio de la librería nativa.
 pub const LIBRARY_DIRECTORY_VARIABLE: &str = "RFIRMA_LIB_DIR";
 
-/// El directorio de la librería relativo al del ejecutable.
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
 
-/// De dónde salió un directorio candidato. Va en el mensaje de fallo, porque
-/// «no está en /app/lib/rfirma» y «no está donde apunta tu variable» se
-/// arreglan de maneras distintas.
+/// Procedencia de un directorio candidato para la librería nativa.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Origin {
-    /// El valor de [`LIBRARY_DIRECTORY_VARIABLE`].
+    /// Directorio indicado en [`LIBRARY_DIRECTORY_VARIABLE`].
     Override,
-    /// `../lib/rfirma` desde el directorio del ejecutable.
+    /// Directorio relativo al ejecutable.
     RelativeToExecutable,
 }
 
@@ -71,7 +35,7 @@ impl fmt::Display for Origin {
     }
 }
 
-/// Un sitio donde se ha mirado, y por qué se miró ahí.
+/// Directorio candidato para la librería nativa y su procedencia.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Candidate {
     directory: PathBuf,
@@ -79,17 +43,17 @@ pub struct Candidate {
 }
 
 impl Candidate {
-    /// El directorio, tal cual se miró.
+    /// Directorio examinado.
     pub fn directory(&self) -> &Path {
         &self.directory
     }
 
-    /// De dónde salió.
+    /// Procedencia del candidato.
     pub fn origin(&self) -> Origin {
         self.origin
     }
 
-    /// El fichero completo que se buscó dentro.
+    /// Ruta esperada del fichero de la librería en este directorio.
     pub fn library_path(&self) -> PathBuf {
         self.directory.join(LIBRARY_FILE)
     }
@@ -101,16 +65,7 @@ impl fmt::Display for Candidate {
     }
 }
 
-/// Los sitios donde se busca la librería, **en orden**: primero la variable de
-/// entorno, después la ruta relativa al ejecutable.
-///
-/// Recibe el entorno y el directorio del ejecutable en vez de leerlos, por la
-/// misma razón que [`crate::paths::Paths::resolve`]: cambiar el entorno del
-/// proceso es global y las pruebas corren en hilos.
-///
-/// Una variable vacía se ignora igual que si no estuviera: heredar
-/// `RFIRMA_LIB_DIR=` de un script no puede acabar buscando en el directorio de
-/// trabajo de turno.
+/// Directorios candidatos donde buscar la librería nativa en orden de prioridad.
 pub fn candidates(
     environment: &dyn Fn(&str) -> Option<OsString>,
     executable_directory: &Path,
@@ -129,15 +84,11 @@ pub fn candidates(
     found
 }
 
-/// Quita el `..` cuando se puede, para que el mensaje de fallo enseñe una ruta
-/// que se pueda pegar en un `ls`. Si el directorio no existe —que es justo el
-/// caso interesante— se queda la ruta tal cual, que sigue siendo cierta.
 fn normalise(path: PathBuf) -> PathBuf {
     path.canonicalize().unwrap_or(path)
 }
 
-/// El primer candidato que contiene la librería, o el fallo que nombra todos
-/// los que se miraron.
+/// Localiza el fichero de la librería nativa en los directorios candidatos.
 pub fn locate(
     environment: &dyn Fn(&str) -> Option<OsString>,
     executable_directory: &Path,
@@ -150,17 +101,14 @@ pub fn locate(
         .ok_or(LibraryNotFound { looked_at })
 }
 
-/// La librería nativa no está en ninguno de los sitios donde se miró.
-///
-/// El `Display` los nombra **todos**, uno por línea y con su procedencia: es la
-/// única información que convierte «rfirma no arranca» en algo accionable.
+/// Error cuando la librería nativa no se encuentra en ningún directorio candidato.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LibraryNotFound {
     looked_at: Vec<Candidate>,
 }
 
 impl LibraryNotFound {
-    /// Los sitios donde se miró, en el orden en que se miraron.
+    /// Candidatos examinados.
     pub fn looked_at(&self) -> &[Candidate] {
         &self.looked_at
     }
@@ -179,40 +127,28 @@ impl fmt::Display for LibraryNotFound {
 impl std::error::Error for LibraryNotFound {}
 
 /// Quien sabe liberar una cadena del puente.
-///
-/// Es un rasgo y no una llamada directa para que la disciplina de memoria se
-/// pueda probar **sin la librería nativa**: la grada C comprueba que el ciclo
-/// real no se cae, y la grada A comprueba —contando— que cada puntero se libera
-/// una vez y solo una.
+/// Capacidad de liberar una cadena asignada por el puente (ADR-0003).
 pub trait FreeBridgeString {
-    /// Libera un puntero que devolvió el puente. Nunca se llama con nulo.
+    /// Libera un puntero que devolvió el puente.
     ///
     /// # Safety
     ///
-    /// `pointer` tiene que venir de este mismo puente y no haberse liberado
-    /// antes: liberar dos veces corrompe el montón sin decir nada.
+    /// `pointer` tiene que venir de este mismo puente y no haberse liberado antes.
     unsafe fn free(&self, pointer: *mut c_char);
 }
 
-/// Una cadena **propiedad de Rust** que vino del puente.
-///
-/// Existe para que «hay que llamar a `autofirma_free_string`» deje de ser algo
-/// que alguien recuerda: se libera al soltarse, en todos los caminos, incluidos
-/// los de error y los de pánico. El puntero se pone a nulo al liberarlo, así
-/// que un doble `free` no es que sea improbable: no hay forma de escribirlo.
+/// Cadena asignada por el puente cuya memoria gestiona Rust (ADR-0003).
 pub struct BridgeString<D: FreeBridgeString> {
     pointer: *mut c_char,
     deallocator: D,
 }
 
 impl<D: FreeBridgeString> BridgeString<D> {
-    /// Adopta el puntero que acaba de devolver el puente.
+    /// Adopta el puntero devuelto por el puente.
     ///
     /// # Safety
     ///
-    /// `pointer` tiene que ser nulo o una cadena C terminada en `\0` reservada
-    /// por el puente, y nadie más puede quedarse una copia: a partir de aquí la
-    /// libera este valor.
+    /// `pointer` debe ser nulo o una cadena C válida reservada por el puente.
     pub unsafe fn adopt(pointer: *mut c_char, deallocator: D) -> Result<Self, BridgeError> {
         if pointer.is_null() {
             return Err(BridgeError::NullResponse);
@@ -223,14 +159,8 @@ impl<D: FreeBridgeString> BridgeString<D> {
         })
     }
 
-    /// El contenido, copiado a memoria de Rust.
-    ///
-    /// Copiar no es un descuido: la cadena de origen se libera en cuanto este
-    /// valor se suelta, y devolver algo que apunte dentro sería devolver
-    /// memoria liberada.
+    /// Copia el contenido a un `String` de Rust.
     pub fn to_utf8_lossy(&self) -> String {
-        // SAFETY: el puntero no es nulo (lo comprueba `adopt`) y sigue vivo
-        // porque solo lo libera `Drop`.
         unsafe { CStr::from_ptr(self.pointer) }
             .to_string_lossy()
             .into_owned()
@@ -240,18 +170,13 @@ impl<D: FreeBridgeString> BridgeString<D> {
 impl<D: FreeBridgeString> Drop for BridgeString<D> {
     fn drop(&mut self) {
         if !self.pointer.is_null() {
-            // SAFETY: el puntero vino del puente, no es nulo, y este es el único
-            // sitio que lo libera —después queda a nulo—.
             unsafe { self.deallocator.free(self.pointer) };
             self.pointer = std::ptr::null_mut();
         }
     }
 }
 
-/// Lo que devuelve la prefirma, ya separado en sus tres piezas.
-///
-/// `session` y `stamp` son **opacos**: viajan a la postfirma tal cual (ADR-0016)
-/// y aquí nadie los interpreta.
+/// Resultado de la prefirma descompuesto en sus partes (ADR-0016).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreSignature {
     session: String,
@@ -260,131 +185,102 @@ pub struct PreSignature {
 }
 
 impl PreSignature {
-    /// El `TriphaseData` de la prefirma, para devolvérselo a la postfirma.
+    /// Datos trifásicos de la prefirma para la postfirma.
     pub fn session(&self) -> &str {
         &self.session
     }
 
-    /// Los bytes DER de los atributos firmados: lo que el token firma.
-    ///
-    /// Son los bytes **sin hashear**; el mecanismo del token es
-    /// `CKM_SHA256_RSA_PKCS`, que hashea él.
+    /// Bytes DER de los atributos firmados.
     pub fn pre_sign(&self) -> &[u8] {
         &self.pre_sign
     }
 
-    /// El sello de sesión, que la postfirma exige idéntico.
+    /// Sello de sesión emitido por la prefirma.
     pub fn stamp(&self) -> &SessionSeal {
         &self.stamp
     }
 }
 
-/// Lo que hace falta para prefirmar. Todo en Base64 salvo lo que no lo es,
-/// porque es lo que el puente espera.
+/// Parámetros para la llamada de prefirma PAdES.
 #[derive(Clone, Copy, Debug)]
 pub struct PreSignRequest<'a> {
-    /// El PDF de entrada en Base64.
+    /// PDF de entrada en Base64.
     pub pdf_b64: &'a str,
-    /// El algoritmo, p. ej. `SHA256withRSA`.
+    /// Algoritmo de firma.
     pub algorithm: &'a str,
-    /// La cadena de certificados en Base64, separada por `;`.
+    /// Cadena de certificados en Base64 separada por punto y coma.
     pub certificate_chain_b64: &'a str,
-    /// Los `extraParams`, en formato `java.util.Properties`.
+    /// Parámetros adicionales en formato de propiedades.
     pub extra_params: &'a str,
 }
 
-/// Lo que hace falta para postfirmar.
-///
-/// No lleva ni algoritmo ni `extraParams`: los toma el puente del sello, que es
-/// justamente lo que impide que se desvíen de la prefirma (ADR-0016).
+/// Parámetros para la llamada de postfirma PAdES (ADR-0016).
 #[derive(Clone, Copy, Debug)]
 pub struct PostSignRequest<'a> {
-    /// El **mismo** PDF de entrada que recibió la prefirma, en Base64.
+    /// Mismo PDF de entrada que recibió la prefirma, en Base64.
     pub pdf_b64: &'a str,
-    /// La **misma** cadena de certificados.
+    /// Misma cadena de certificados.
     pub certificate_chain_b64: &'a str,
-    /// El sello que devolvió la prefirma, tal cual.
+    /// Sello devuelto por la prefirma.
     pub stamp: &'a SessionSeal,
-    /// El `TriphaseData` de la prefirma, tal cual.
+    /// Datos trifásicos devueltos por la prefirma.
     pub session: &'a str,
-    /// El PKCS#1 que calculó el token sobre los atributos firmados, en Base64.
+    /// Firma PKCS#1 en Base64 calculada sobre los atributos firmados.
     pub pkcs1_b64: &'a str,
 }
 
-/// Lo que hace falta para acotar un listado con el filtro de la sede.
-///
-/// No lleva sello ni sesión, y no es un olvido: la llamada es **sin estado**
-/// (ID-252). El sello existe para que la postfirma no se desvíe de la prefirma,
-/// y aquí no hay dos fases que atar.
+/// Parámetros para acotar un listado con el filtro de la sede.
 #[derive(Clone, Copy, Debug)]
 pub struct FilterRequest<'a> {
-    /// La expresión de la sede en formato `java.util.Properties`, **literal**
-    /// (ID-256): quien la interpreta es el motor.
+    /// Expresión de la sede en formato de propiedades.
     pub filter_properties: &'a str,
-    /// Los certificados a acotar, Base64 del DER separado por `;`, en su orden.
+    /// Certificados en Base64 del DER separados por punto y coma.
     pub certificates_b64: &'a str,
 }
 
-/// Lo que hace falta para expandir la política de firma que declara la sede.
-///
-/// Tampoco lleva sello ni sesión, y por lo mismo que [`FilterRequest`]: entra
-/// un bloque de `extraParams` y sale el mismo bloque expandido (ID-266).
+/// Parámetros para expandir la política de firma que declara la sede.
 #[derive(Clone, Copy, Debug)]
 pub struct ExpandRequest<'a> {
-    /// Los `extraParams` de la sede, en formato `java.util.Properties`.
+    /// Parámetros de la sede en formato de propiedades.
     pub extra_params: &'a str,
-    /// El formato de firma, que es lo que decide en qué expande la política.
+    /// Formato de firma.
     pub format: &'a str,
 }
 
-/// Lo que puede salir mal al cruzar la frontera.
-///
-/// [`BridgeError::Failed`] es el puente contestando `{"ok":false}`: no es un
-/// fallo de la frontera, es la firma que no ha podido hacerse, y lleva el texto
-/// crudo de Java sin traducir para poder pegarlo en un informe.
+/// Errores posibles al cruzar la frontera FFI con el puente nativo.
 #[derive(Debug)]
 pub enum BridgeError {
-    /// No se sabe dónde está el ejecutable, así que no hay desde dónde medir la
-    /// ruta relativa de la librería. Aquí todavía no se ha cruzado ninguna
-    /// frontera: el puente no ha tenido nada que ver.
+    /// No se puede determinar la ruta del ejecutable.
     ExecutablePathUnknown(String),
     /// No hay librería que cargar.
     NotFound(LibraryNotFound),
-    /// `dlopen` ha fallado.
+    /// Error de carga dinámica de la librería.
     Load {
-        /// El fichero que se intentó abrir.
+        /// Fichero que se intentó abrir.
         path: PathBuf,
-        /// Lo que dijo `dlopen`.
+        /// Detalle devuelto por el cargador dinámico.
         detail: String,
     },
-    /// Falta un símbolo: la librería no es la que este código espera.
+    /// Falta un símbolo esperado en la librería.
     MissingSymbol {
-        /// El símbolo que no estaba.
+        /// Símbolo ausente.
         symbol: String,
-        /// Lo que dijo `dlsym`.
+        /// Detalle devuelto por el cargador dinámico.
         detail: String,
     },
-    /// GraalVM no ha podido crear el isolate.
+    /// Error al crear el isolate de GraalVM.
     IsolateFailed(c_int),
-    /// Un argumento lleva un `\0` dentro y no puede ser una cadena C.
+    /// Argumento con byte nulo no convertible a CString.
     InvalidArgument(&'static str),
-    /// El puente ha devuelto un puntero nulo, que no es una respuesta.
+    /// El puente ha devuelto un puntero nulo.
     NullResponse,
-    /// El puente ha contestado algo que no es el JSON del contrato.
+    /// Respuesta con formato no válido devuelta por el puente.
     MalformedResponse(String),
-    /// El puente ha contestado `{"ok":false,...}`.
+    /// Fallo devuelto por el puente nativo.
     Failed(String),
-    /// El puente ha contestado `{"ok":false,"kind":"incompatiblePolicy",...}`:
-    /// la política que la sede declaró en `expPolicy` no se puede aplicar al
-    /// formato pedido (ID-266). **No es la firma que no sale**: es la sede
-    /// pidiendo algo que no existe, y por eso llega con nombre propio en vez
-    /// de colapsada en [`BridgeError::Failed`].
+    /// La política de firma no se puede aplicar al formato solicitado.
     IncompatiblePolicy(String),
-    /// El puente ha contestado `{"ok":false,"kind":"pdfHasUnregisteredSignatures",...}`:
-    /// el PDF trae firmas que su propio diccionario no registra, y firmarlo
-    /// encima puede invalidar las que ya tenía. **No es un fallo cualquiera**
-    /// (ID-296): es la situación que la sede tiene que confirmar, y por eso
-    /// llega con nombre propio en vez de colapsada en [`BridgeError::Failed`].
+    /// El PDF contiene firmas no registradas en su diccionario.
     PdfHasUnregisteredSignatures(String),
 }
 
@@ -555,24 +451,20 @@ impl NativeBridge {
         &self.path
     }
 
-    /// Prefirma PAdES: devuelve el `TriphaseData`, los bytes que hay que firmar
-    /// y el sello de sesión.
+    /// Prefirma PAdES: devuelve el `TriphaseData`, los bytes a firmar y el sello de sesión.
     pub fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
         let pdf = c_string(request.pdf_b64, "el PDF")?;
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let extra = c_string(request.extra_params, "los extraParams")?;
-        let json = self.call(|thread| {
-            // SAFETY: los cinco argumentos viven hasta que la llamada vuelve.
-            unsafe {
-                (self.presign)(
-                    thread,
-                    pdf.as_ptr(),
-                    algorithm.as_ptr(),
-                    chain.as_ptr(),
-                    extra.as_ptr(),
-                )
-            }
+        let json = self.call(|thread| unsafe {
+            (self.presign)(
+                thread,
+                pdf.as_ptr(),
+                algorithm.as_ptr(),
+                chain.as_ptr(),
+                extra.as_ptr(),
+            )
         })?;
         parse_presign(&json)
     }
@@ -584,92 +476,55 @@ impl NativeBridge {
         let stamp = c_string(request.stamp.as_bridge_payload(), "el sello")?;
         let session = c_string(request.session, "la sesión")?;
         let pkcs1 = c_string(request.pkcs1_b64, "el PKCS#1")?;
-        let json = self.call(|thread| {
-            // SAFETY: los seis argumentos viven hasta que la llamada vuelve.
-            unsafe {
-                (self.postsign)(
-                    thread,
-                    pdf.as_ptr(),
-                    chain.as_ptr(),
-                    stamp.as_ptr(),
-                    session.as_ptr(),
-                    pkcs1.as_ptr(),
-                )
-            }
+        let json = self.call(|thread| unsafe {
+            (self.postsign)(
+                thread,
+                pdf.as_ptr(),
+                chain.as_ptr(),
+                stamp.as_ptr(),
+                session.as_ptr(),
+                pkcs1.as_ptr(),
+            )
         })?;
         parse_postsign(&json)
     }
 
     /// Acota un listado de certificados con la expresión de filtro de la sede.
-    ///
-    /// **Sin estado y sin sello** (ADR-0016, ID-252): no abre ninguna sesión
-    /// trifásica, así que no hay nada que atar entre dos llamadas. El DER ya
-    /// viaja en cada certificado.
-    ///
-    /// Devuelve los **índices** que pasan, sobre la lista que se le dio y en su
-    /// orden. Índices y no certificados porque quien llamó ya los tiene: lo que
-    /// le falta es saber cuáles siguen dentro.
     pub fn filter_certificates(
         &self,
         request: FilterRequest<'_>,
     ) -> Result<Vec<usize>, BridgeError> {
         let properties = c_string(request.filter_properties, "la expresion de filtro")?;
         let certificates = c_string(request.certificates_b64, "los certificados")?;
-        let json = self.call(|thread| {
-            // SAFETY: los tres argumentos viven hasta que la llamada vuelve.
-            unsafe { (self.filter)(thread, properties.as_ptr(), certificates.as_ptr()) }
+        let json = self.call(|thread| unsafe {
+            (self.filter)(thread, properties.as_ptr(), certificates.as_ptr())
         })?;
         parse_filter_selection(&json)
     }
 
-    /// Expande la política de firma que declara la sede (ID-266).
-    ///
-    /// **Sin estado y sin sello**, igual que [`Self::filter_certificates`]:
-    /// entra el bloque de `extraParams` de la sede y sale el mismo bloque con
-    /// `expPolicy` ya convertido en las claves que le corresponden. Quien sabe
-    /// en qué expande es `ExtraParamsProcessor`, de `afirma-core`.
+    /// Expande la política de firma que declara la sede.
     pub fn expand_extra_params(&self, request: ExpandRequest<'_>) -> Result<String, BridgeError> {
         let params = c_string(request.extra_params, "los extraParams")?;
         let format = c_string(request.format, "el formato")?;
-        let json = self.call(|thread| {
-            // SAFETY: los tres argumentos viven hasta que la llamada vuelve.
-            unsafe { (self.expand)(thread, params.as_ptr(), format.as_ptr()) }
-        })?;
+        let json =
+            self.call(|thread| unsafe { (self.expand)(thread, params.as_ptr(), format.as_ptr()) })?;
         parse_expanded_params(&json)
     }
 
-    /// El único sitio que toca un puntero devuelto por el puente: llama, adopta
-    /// la cadena y la libera al salir.
     fn call<F>(&self, invoke: F) -> Result<String, BridgeError>
     where
         F: FnOnce(*mut c_void) -> *mut c_char,
     {
         let returned = invoke(self.thread);
-        // SAFETY: lo que devuelve el puente es una cadena C reservada con
-        // `UnmanagedMemory.malloc` y nadie más se queda una copia (ID-11).
         let owned = unsafe { BridgeString::adopt(returned, BridgeDeallocator { bridge: self }) }?;
         Ok(owned.to_utf8_lossy())
     }
 }
 
-/// Busca un símbolo y se queda el **puntero a función**, no el préstamo.
-///
-/// Se resuelven los seis de una vez al cargar, y antes de crear el isolate,
-/// por tres razones: que la librería que no exporta alguno falle al abrirse en
-/// vez de a la primera firma —o, en el caso de `autofirma_free_string`, en vez
-/// de no fallar nunca y filtrar en silencio—; que un símbolo que falta no deje
-/// un isolate huérfano ni un `dlclose` con el isolate dentro; y que firmar y
-/// desmontar no paguen un `dlsym` cada uno.
-///
-/// # Safety
-///
-/// `T` tiene que ser la firma real del símbolo, y el puntero solo vale mientras
-/// la librería siga cargada.
 unsafe fn resolve<T: Copy>(
     library: &libloading::Library,
     name: &'static [u8],
 ) -> Result<T, BridgeError> {
-    // SAFETY: el nombre está terminado en `\0` y la firma la pone quien llama.
     let symbol = unsafe { library.get::<T>(name) }.map_err(|error| BridgeError::MissingSymbol {
         symbol: String::from_utf8_lossy(&name[..name.len() - 1]).into_owned(),
         detail: error.to_string(),
@@ -682,9 +537,6 @@ impl Drop for NativeBridge {
         if self.isolate.is_null() {
             return;
         }
-        // SAFETY: el isolate lo creó este mismo valor y nadie más lo ha
-        // destruido; el símbolo se resolvió al abrir, así que aquí no hay nada
-        // que pueda fallar en silencio; después de esto el puente ya no se usa.
         unsafe {
             (self.tear_down)(self.thread);
         }
@@ -697,11 +549,7 @@ fn c_string(value: &str, name: &'static str) -> Result<CString, BridgeError> {
     CString::new(value).map_err(|_| BridgeError::InvalidArgument(name))
 }
 
-/// El JSON de la prefirma: `{"ok":true,"session":..,"pre":..,"stamp":..}`.
-///
-/// Se separa de la llamada para que el contrato se pueda probar sin librería
-/// nativa: la forma del JSON es lo que se rompe cuando alguien toca el puente,
-/// y esa prueba tiene que estar en el carril rápido.
+/// Parsea la respuesta JSON de prefirma.
 pub fn parse_presign(json: &str) -> Result<PreSignature, BridgeError> {
     let response = parse_response(json)?;
     let session = field(&response, "session")?.to_owned();
@@ -716,7 +564,7 @@ pub fn parse_presign(json: &str) -> Result<PreSignature, BridgeError> {
     })
 }
 
-/// El JSON de la postfirma: `{"ok":true,"pdf":"<b64>"}`.
+/// Parsea la respuesta JSON de postfirma.
 pub fn parse_postsign(json: &str) -> Result<Vec<u8>, BridgeError> {
     let response = parse_response(json)?;
     base64::engine::general_purpose::STANDARD
@@ -724,10 +572,7 @@ pub fn parse_postsign(json: &str) -> Result<Vec<u8>, BridgeError> {
         .map_err(|error| BridgeError::MalformedResponse(format!("pdf no es Base64: {error}")))
 }
 
-/// El JSON del filtro: `{"ok":true,"selected":[0,2]}`.
-///
-/// Se separa de la llamada por lo mismo que [`parse_presign`]: la forma del
-/// JSON tiene que poder probarse sin librería nativa delante.
+/// Parsea la respuesta JSON del filtrado de certificados.
 pub fn parse_filter_selection(json: &str) -> Result<Vec<usize>, BridgeError> {
     let response = parse_response(json)?;
     let selected = response
@@ -748,21 +593,13 @@ pub fn parse_filter_selection(json: &str) -> Result<Vec<usize>, BridgeError> {
         .collect()
 }
 
-/// El JSON de la expansión: `{"ok":true,"params":"<bloque properties>"}`.
-///
-/// Se separa de la llamada por lo mismo que [`parse_presign`]: la forma del
-/// JSON tiene que poder probarse sin librería nativa delante.
+/// Parsea la respuesta JSON de expansión de parámetros.
 pub fn parse_expanded_params(json: &str) -> Result<String, BridgeError> {
     let response = parse_response(json)?;
     Ok(field(&response, "params")?.to_owned())
 }
 
-/// La clase de fallo con la que el puente marca un PDF con firmas no
-/// registradas (`NativeBridge.errorJson`, ID-296).
 const UNREGISTERED_SIGNATURES_KIND: &str = "pdfHasUnregisteredSignatures";
-
-/// La clase de fallo con la que el puente marca una política que no se puede
-/// aplicar (`NativeBridge.errorJson`, ID-266).
 const INCOMPATIBLE_POLICY_KIND: &str = "incompatiblePolicy";
 
 fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
@@ -776,10 +613,6 @@ fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("sin detalle")
                 .to_owned();
-            // `kind` es la clase de fallo, y sólo una se distingue (ID-296).
-            // Un puente viejo no lo trae y un puente nuevo puede traer una
-            // clase que aquí no se conozca: las dos son `Failed`, que es
-            // exactamente lo que eran antes.
             Err(
                 match value.get("kind").and_then(serde_json::Value::as_str) {
                     Some(UNREGISTERED_SIGNATURES_KIND) => {
@@ -910,15 +743,6 @@ mod tests {
         assert_eq!(error.looked_at().len(), 1);
     }
 
-    /// El contador de la instrumentación de memoria de la grada A: reserva la
-    /// cadena como la reservaría el puente y **lleva la cuenta de lo que sigue
-    /// vivo**.
-    ///
-    /// Anotar las direcciones liberadas y buscar repetidas no valdría: el
-    /// asignador reutiliza la dirección que se acaba de liberar, así que dos
-    /// vueltas seguidas dan el mismo puntero sin que nadie haya liberado dos
-    /// veces. Lo que delata un doble `free` es liberar algo que ya no está
-    /// vivo, y eso es lo que se comprueba.
     #[derive(Default)]
     struct Counter {
         live: RefCell<HashSet<usize>>,
@@ -929,10 +753,8 @@ mod tests {
         fn allocate(&self, contents: &str) -> *mut c_char {
             let bytes = contents.as_bytes();
             let layout = Layout::array::<u8>(bytes.len() + 1).expect("cabe");
-            // SAFETY: el tamaño no es cero (siempre hay al menos el `\0`).
             let pointer = unsafe { alloc(layout) };
             assert!(!pointer.is_null(), "sin memoria");
-            // SAFETY: el bloque acaba de reservarse con ese tamaño exacto.
             unsafe {
                 std::ptr::copy_nonoverlapping(bytes.as_ptr(), pointer, bytes.len());
                 pointer.add(bytes.len()).write(0);
@@ -961,9 +783,6 @@ mod tests {
                 "doble free: {pointer:?} ya se había liberado"
             );
             self.freed.set(self.freed.get() + 1);
-            // SAFETY: el puntero salió de `Counter::allocate`, sigue vivo (lo
-            // acaba de comprobar el registro) y el tamaño se recalcula sobre la
-            // misma cadena que hay dentro.
             unsafe {
                 let length = CStr::from_ptr(pointer).to_bytes().len();
                 let layout = Layout::array::<u8>(length + 1).expect("cabe");
@@ -972,15 +791,12 @@ mod tests {
         }
     }
 
-    /// El camino de ida y vuelta completo bajo instrumentación: una cadena
-    /// reservada fuera de Rust, leída, y liberada **una sola vez** (ID-11).
     #[test]
     fn every_pointer_the_bridge_returns_is_freed_exactly_once() {
         let counter = Counter::default();
 
         for _ in 0..1_000 {
             let pointer = counter.allocate(r#"{"ok":true,"pdf":"AAAA"}"#);
-            // SAFETY: el puntero acaba de reservarse y nadie más lo tiene.
             let owned = unsafe { BridgeString::adopt(pointer, &counter) }.expect("no es nulo");
             assert_eq!(owned.to_utf8_lossy(), r#"{"ok":true,"pdf":"AAAA"}"#);
         }
@@ -994,7 +810,6 @@ mod tests {
         let counter = Counter::default();
 
         let pointer = counter.allocate("esto no es JSON");
-        // SAFETY: el puntero acaba de reservarse y nadie más lo tiene.
         let owned = unsafe { BridgeString::adopt(pointer, &counter) }.expect("no es nulo");
         let error = parse_presign(&owned.to_utf8_lossy()).expect_err("no es el JSON del contrato");
         drop(owned);
@@ -1007,7 +822,6 @@ mod tests {
     fn a_null_answer_is_an_error_and_frees_nothing() {
         let counter = Counter::default();
 
-        // SAFETY: adoptar un nulo es justo lo que se está probando.
         let adopted = unsafe { BridgeString::adopt(std::ptr::null_mut(), &counter) };
 
         assert!(matches!(adopted, Err(BridgeError::NullResponse)));
@@ -1037,8 +851,6 @@ mod tests {
         assert_eq!(pdf, b"%PDF-");
     }
 
-    /// El filtro contesta con los índices que pasan, y ni uno mas: lo que se
-    /// filtró es el listado de quien llamó, no una copia que vuelva.
     #[test]
     fn a_filter_answer_comes_back_as_the_rows_that_survived() {
         let selected =
@@ -1047,8 +859,6 @@ mod tests {
         assert_eq!(selected, vec![0, 2]);
     }
 
-    /// Excluirlos a todos es una **respuesta**, no un fallo: el `[]` es lo que
-    /// permite decir «la sede los excluyó» (ID-258).
     #[test]
     fn an_empty_selection_is_an_answer_and_not_a_failure() {
         assert_eq!(
@@ -1064,8 +874,6 @@ mod tests {
         assert!(parse_filter_selection(r#"{"ok":true,"selected":[-1]}"#).is_err());
     }
 
-    /// Y un fallo del motor de filtros llega como cualquier otro del puente,
-    /// con el mensaje de Java sin traducir.
     #[test]
     fn a_failure_of_the_filter_engine_travels_like_any_other() {
         let error = parse_filter_selection(
@@ -1086,9 +894,6 @@ mod tests {
         assert!(message.contains("java.io.IOException"), "{message}");
     }
 
-    /// **El PDF con firmas no registradas se distingue de un fallo
-    /// cualquiera** (ID-296): el puente lo marca con `kind` y aquí llega con
-    /// nombre propio, que es lo que hace posible el `SAF_50`.
     #[test]
     fn a_pdf_with_unregistered_signatures_is_not_just_a_failure() {
         let error = parse_presign(
@@ -1102,8 +907,6 @@ mod tests {
         );
     }
 
-    /// Y una clase que este binario no conozca —o un puente sin `kind`— sigue
-    /// siendo lo que era: un fallo del puente.
     #[test]
     fn a_failure_kind_this_binary_does_not_know_is_still_a_failure() {
         let error = parse_presign(r#"{"ok":false,"kind":"loQueSea","error":"algo"}"#)
@@ -1135,9 +938,6 @@ mod tests {
         assert!(matches!(error, BridgeError::MalformedResponse(_)));
     }
 
-    /// Cada variante tiene que decir **lo suyo**: la tesis del módulo es que un
-    /// fallo de esta frontera no reaparezca disfrazado de otro, y eso solo se
-    /// sostiene si el texto de cada una nombra su propia situación.
     #[test]
     fn every_failure_of_the_border_says_what_actually_went_wrong() {
         let directory = tempfile::tempdir().expect("debería haber directorio temporal");
@@ -1186,8 +986,6 @@ mod tests {
         }
     }
 
-    /// El fallo de `current_exe` no es una respuesta ilegible del puente: ahí
-    /// todavía no se ha cruzado nada.
     #[test]
     fn not_knowing_where_the_executable_is_does_not_blame_the_bridge() {
         let error = BridgeError::ExecutablePathUnknown("no such file".to_owned()).to_string();

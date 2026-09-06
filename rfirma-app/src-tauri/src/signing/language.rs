@@ -1,27 +1,8 @@
-//! Los cinco idiomas de la aplicación (ADR-0009, enmendado por el ID-124).
-//!
-//! Aquí solo vive la *enumeración*: los catálogos de la interfaz son del #55.
-//! El texto de la firma visible los necesita antes que la interfaz porque es
-//! contenido del PDF, y sigue al idioma de la aplicación en vez de quedarse en
-//! castellano fijo como hace AutoFirma (ID-30).
+//! Los cinco idiomas soportados por la aplicación (ADR-0009).
 
 use serde::{Deserialize, Serialize};
 
 /// Idioma de la aplicación: `es`, `ca`, `eu`, `gl` y `en`.
-///
-/// El valencià salió en v0.3 (ID-124), y no por una decisión sobre lenguas:
-/// `Intl.PluralRules("va")` no da la categoría `many` que `es` y `ca` sí usan
-/// —cuántas categorías devuelve exactamente depende del CLDR del intérprete—,
-/// de modo que ese catálogo está roto para plurales en cuanto los plurales
-/// entran. `ca-ES-valencia` sí resuelve a `ca`, pero **no se soportan variantes
-/// de ningún idioma**: las reglas de plural se definen sobre el idioma.
-///
-/// La lista es la misma que la de `src/i18n/locales/`, que sale de `po/`.
-///
-/// Se persiste por su [`Language::tag`] —`"es"`, `"ca"`…— y no por el nombre de
-/// la variante: el fichero de configuración lo escribe rFirma pero lo lee
-/// cualquiera que abra un informe de fallo, y `"spanish"` no es lo que dice un
-/// locale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Language {
     /// Español.
@@ -42,7 +23,7 @@ pub enum Language {
 }
 
 impl Language {
-    /// Los cinco, en el orden del ADR-0009 enmendado.
+    /// Los cinco idiomas soportados.
     pub const ALL: [Self; 5] = [
         Self::Spanish,
         Self::Catalan,
@@ -74,7 +55,7 @@ mod tests {
         assert_eq!(
             Language::ALL.map(Language::tag),
             ["es", "ca", "eu", "gl", "en"],
-            "el valencia salio en v0.3 (ID-124) y no vuelve por la puerta de atras"
+            "los cinco idiomas no coinciden con los esperados"
         );
     }
 
@@ -84,9 +65,6 @@ mod tests {
         assert_eq!(tags.len(), Language::ALL.len());
     }
 
-    /// Los cinco `#[serde(rename)]` repiten los cinco brazos de [`Language::tag`],
-    /// y dos listas iguales escritas dos veces se separan. Esto las ata: cambiar
-    /// una sin la otra pone el PR en rojo.
     #[test]
     fn is_persisted_by_the_very_tag_it_reports() {
         for language in Language::ALL {
