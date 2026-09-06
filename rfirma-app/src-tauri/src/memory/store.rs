@@ -1,22 +1,4 @@
-//! El soporte de las dos memorias: un fichero JSON versionado que se escribe
-//! **atómicamente** y que, cuando no se entiende, se aparta en vez de matar la
-//! aplicación (ADR-0010).
-//!
-//! Tres reglas, y las tres son del ADR:
-//!
-//! - **Escritura atómica**: temporal, `sync_all` y `rename`. Un fichero a medio
-//!   escribir es una configuración que reaparece mutilada en el siguiente
-//!   arranque, y sin el `sync_all` un apagón la deja de longitud cero.
-//! - **`"version": 1` en los dos ficheros.** Se lee **antes** de deserializar,
-//!   sobre el JSON en crudo: un fichero de una versión futura no se interpreta
-//!   con las reglas de esta, se aparta.
-//! - **Si no parsea o la versión es desconocida, se renombra a `.bak`** y se
-//!   arranca con los valores por omisión, avisando **una vez**. Una preferencia
-//!   corrupta no puede impedir firmar, así que esto no es un error: es una
-//!   [`Recovery`] que viaja junto al valor.
-//!
-//! Que **no haya fichero** no es nada de lo anterior: es el primer arranque, y
-//! da los valores por omisión sin aviso ninguno.
+//! Soporte en disco de las dos memorias con escritura atómica y versión de formato (ADR-0010).
 
 use std::fs;
 use std::io::Write;
@@ -29,25 +11,21 @@ use serde_json::Value;
 
 use super::error::{MemoryError, Situation};
 
-/// La versión del formato de los dos ficheros. Sube cuando un cambio deje de
-/// poder leerse con las reglas de la anterior; entonces esto necesitará una
-/// migración, y hasta que exista un fichero de la versión vieja se aparta.
+/// Versión del formato de los ficheros de memoria.
 pub const FORMAT_VERSION: u64 = 1;
 
 const VERSION_KEY: &str = "version";
 
-/// Por qué se apartó lo que había guardado.
+/// Causa por la que se apartó lo que había guardado.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Damage {
-    /// El fichero no es JSON, o no es el JSON que este tipo describe.
+    /// El fichero no es JSON o no coincide con la estructura esperada.
     Unparsable(String),
-    /// El JSON está bien pero declara una versión que esta rFirma no conoce
-    /// —o no declara ninguna—. Casi siempre es una rFirma más nueva que ya
-    /// escribió ahí.
+    /// Versión declarada desconocida o ausente.
     UnknownVersion(Option<u64>),
 }
 
-/// Lo que había guardado no se pudo usar y se apartó. Se avisa **una vez**.
+/// Registro de contenido corrupto o desconocido que hubo que apartar.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Recovery {
     backup: Option<PathBuf>,
@@ -55,24 +33,18 @@ pub struct Recovery {
 }
 
 impl Recovery {
-    /// Dónde quedó lo que había, por si alguien quiere mirarlo.
-    ///
-    /// `None` cuando **no se pudo apartar** —el directorio no deja escribir, el
-    /// `.bak` está ocupado por un directorio—. Sigue siendo una [`Recovery`] y
-    /// no un error: lo roto continúa en su sitio y se reintentará en el
-    /// siguiente arranque, pero la aplicación arranca igual con los valores por
-    /// omisión, que es lo que promete el ADR-0010.
+    /// Ruta del fichero de respaldo si pudo apartarse (ADR-0010).
     pub fn backup(&self) -> Option<&Path> {
         self.backup.as_deref()
     }
 
-    /// Qué le pasaba.
+    /// Causa del descarte.
     pub fn damage(&self) -> &Damage {
         &self.damage
     }
 }
 
-/// Lo leído, y el aviso si hubo que apartar algo para poder leerlo.
+/// Contenido leído junto con el eventual aviso de recuperación.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Loaded<T> {
     value: T,
@@ -80,23 +52,23 @@ pub struct Loaded<T> {
 }
 
 impl<T> Loaded<T> {
-    /// El valor, siempre. En el peor caso, el de por omisión.
+    /// Referencia al valor cargado o por omisión.
     pub fn value(&self) -> &T {
         &self.value
     }
 
-    /// El valor, para quedárselo.
+    /// Consume el envoltorio y devuelve el valor.
     pub fn into_value(self) -> T {
         self.value
     }
 
-    /// El aviso, si hubo que apartar lo que había.
+    /// Aviso de recuperación si el contenido previo tuvo que apartarse.
     pub fn recovery(&self) -> Option<&Recovery> {
         self.recovery.as_ref()
     }
 }
 
-/// Un fichero JSON versionado que guarda un `T`.
+/// Fichero JSON versionado con escritura atómica para un tipo `T` (ADR-0010).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JsonFile<T> {
     path: PathBuf,
@@ -104,7 +76,7 @@ pub struct JsonFile<T> {
 }
 
 impl<T> JsonFile<T> {
-    /// El fichero que vive en `path`.
+    /// Crea una referencia al fichero en la ruta indicada.
     pub fn at(path: impl Into<PathBuf>) -> Self {
         Self {
             path: path.into(),
@@ -112,17 +84,12 @@ impl<T> JsonFile<T> {
         }
     }
 
-    /// El fichero que respalda esta memoria.
+    /// Ruta al fichero en disco.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
-    /// Olvida lo guardado borrando el soporte.
-    ///
-    /// Es lo que hace «Recordar mi actividad» al apagarse: conservar el fichero
-    /// mientras la preferencia dice que no se recuerda nada incumple lo que
-    /// promete el rótulo (ADR-0010). Un soporte que ya no estaba no es un
-    /// fallo.
+    /// Elimina el fichero en disco si existe (ADR-0010).
     pub fn erase(&self) -> Result<(), MemoryError> {
         match fs::remove_file(&self.path) {
             Ok(()) => Ok(()),
@@ -143,12 +110,7 @@ impl<T> JsonFile<T> {
 }
 
 impl<T: DeserializeOwned + Default> JsonFile<T> {
-    /// Lee lo guardado, o los valores por omisión.
-    ///
-    /// Solo devuelve `Err` cuando el fichero **está y no se deja leer**. Que no
-    /// esté, que no parsee o que traiga otra versión no es un fallo: es un
-    /// arranque con los valores por omisión, con aviso en los dos últimos
-    /// casos.
+    /// Carga el valor guardado o devuelve el valor por omisión si no existe o fue descartado.
     pub fn load(&self) -> Result<Loaded<T>, MemoryError> {
         let bytes = match fs::read(&self.path) {
             Ok(bytes) => bytes,
@@ -189,13 +151,6 @@ impl<T: DeserializeOwned + Default> JsonFile<T> {
         serde_json::from_value(document).map_err(|error| Damage::Unparsable(error.to_string()))
     }
 
-    /// Aparta lo que no se ha podido usar. El `.bak` es **uno**: el interesante
-    /// es el último, y guardar historia de ficheros rotos no ayuda a nadie.
-    ///
-    /// **No puede fallar.** Es el camino de recuperación: si el `rename` no se
-    /// puede hacer, devolver un error dejaría que un fichero corrupto impidiese
-    /// arrancar, que es exactamente lo que el ADR-0010 prohíbe. Lo que no se
-    /// pudo apartar se cuenta en la [`Recovery`], con `backup()` a `None`.
     fn set_aside(&self, damage: Damage) -> Recovery {
         let candidate = self.backup_path();
         let backup = fs::rename(&self.path, &candidate).ok().map(|()| candidate);
@@ -204,21 +159,7 @@ impl<T: DeserializeOwned + Default> JsonFile<T> {
 }
 
 impl<T: Serialize> JsonFile<T> {
-    /// Escribe el valor, sustituyendo lo que hubiera.
-    ///
-    /// Temporal, `sync_all` y `rename` (ADR-0010): mientras el `rename` no
-    /// ocurre, lo que hay en disco sigue siendo lo anterior, entero.
-    ///
-    /// El `sync_all` no sobra. Cerrar el temporal no lo sincroniza, así que sin
-    /// él el `rename` puede llegar al disco antes que los datos y un corte de
-    /// corriente deja un `config.json` de longitud cero: atómico respecto a
-    /// otros procesos, pero no respecto a un apagón.
-    ///
-    /// El directorio y el fichero quedan **solo para el dueño** donde el
-    /// sistema entiende de modos: dentro van las rutas de los últimos
-    /// documentos, y «Recordar mi actividad» es la promesa a quien firma en un
-    /// ordenador compartido. El modo sale de [`crate::paths`], que es el único
-    /// sitio que sabe de sistemas operativos (ID-35).
+    /// Escribe atómicamente el valor serializado en disco (ADR-0010).
     pub fn save(&self, value: &T) -> Result<(), MemoryError> {
         let document = self.versioned(value)?;
         if let Some(parent) = self.path.parent() {
@@ -233,14 +174,11 @@ impl<T: Serialize> JsonFile<T> {
         Self::write_and_sync(&temporary, &document)
             .map_err(|error| MemoryError::about(Situation::Unwritable, &temporary, &error))?;
         fs::rename(&temporary, &self.path).map_err(|error| {
-            // El `rename` que falla deja el temporal escrito; barrerlo es parte
-            // de fallar sin dejar rastro.
             let _ = fs::remove_file(&temporary);
             MemoryError::about(Situation::Unwritable, &self.path, &error)
         })
     }
 
-    /// Escribe el temporal y lo baja al disco antes de que nadie lo renombre.
     fn write_and_sync(temporary: &Path, document: &[u8]) -> std::io::Result<()> {
         let mut file = fs::File::create(temporary)?;
         crate::paths::restrict_to_owner(temporary)?;
@@ -248,10 +186,6 @@ impl<T: Serialize> JsonFile<T> {
         file.sync_all()
     }
 
-    /// El JSON del valor con `"version"` metido dentro.
-    ///
-    /// La versión se pone aquí y no como un campo del tipo para que ningún `T`
-    /// pueda escribir un número distinto del que este módulo sabe leer.
     fn versioned(&self, value: &T) -> Result<Vec<u8>, MemoryError> {
         let unwritable = |detail: String| {
             MemoryError::new(
@@ -277,8 +211,6 @@ mod tests {
     use super::*;
     use serde::Deserialize;
 
-    /// **Grada A**: un directorio temporal, sin token, sin librería nativa y
-    /// sin red.
     #[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
     struct Remembered {
         answer: u32,
@@ -356,7 +288,6 @@ mod tests {
         fs::create_dir_all(file.path().parent().expect("deberia tener padre"))
             .expect("deberia crearse");
         fs::write(file.path(), b"{esto tampoco es JSON").expect("deberia escribirse");
-        // Un directorio ocupando el sitio del `.bak`: `rename` no puede con el.
         fs::create_dir(directory.path().join("rfirma/config.json.bak")).expect("deberia crearse");
 
         let loaded = file
@@ -415,7 +346,6 @@ mod tests {
         let file = a_file(directory.path());
         file.save(&Remembered { answer: 1 })
             .expect("deberia escribirse");
-        // Un directorio en el sitio del fichero: `rename` no puede con el.
         let taken = directory.path().join("rfirma/otro.json");
         fs::create_dir(&taken).expect("deberia crearse el directorio");
         let blocked: JsonFile<Remembered> = JsonFile::at(&taken);
@@ -435,7 +365,6 @@ mod tests {
     #[test]
     fn a_support_that_exists_but_cannot_be_read_is_a_failure_and_not_the_defaults() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-        // Un directorio en el sitio del fichero: existe, pero `read` no puede.
         let taken = directory.path().join("config.json");
         fs::create_dir(&taken).expect("deberia crearse el directorio");
 

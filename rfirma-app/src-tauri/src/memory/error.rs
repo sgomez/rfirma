@@ -1,33 +1,18 @@
-//! Los fallos de la memoria **se clasifican, no se traducen** (ADR-0009), igual
-//! que los de la rúbrica en [`crate::rubric::error`].
-//!
-//! Aquí solo hay dos, y es a propósito: **un fichero que no se deja leer** y
-//! **un fichero que no se deja escribir**. Que el contenido no parsee o venga
-//! de una versión desconocida **no es un fallo**: es una
-//! [`Recovery`](super::Recovery), se aparta a `.bak` y la aplicación arranca
-//! con los valores por omisión. Una preferencia corrupta no puede impedir
-//! firmar (ADR-0010), así que no puede ser un error.
+//! Clasificación de errores de persistencia entre sesiones (ADR-0009, ADR-0010).
 
 use std::fmt;
 use std::path::Path;
 
-/// Situación que el usuario puede entender, y que el catálogo traduce.
+/// Situación de fallo en persistencia clasificable para la interfaz (ADR-0009).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
-    /// El fichero está pero no se ha podido leer. No es «no hay nada
-    /// guardado»: eso son los valores por omisión y no se avisa de ello.
+    /// El fichero existe pero no se ha podido leer.
     Unreadable,
-    /// No se ha podido escribir. Lo que hubiera guardado **sigue intacto**: la
-    /// escritura es atómica y el fallo ocurre sobre el temporal o en el
-    /// `rename`.
+    /// No se ha podido escribir en el soporte de persistencia.
     Unwritable,
 }
 
-/// Un fallo de la memoria: la situación traducible y el detalle crudo.
-///
-/// [`MemoryError::detail`] nunca está vacío y **nunca** está traducido: nombra
-/// el fichero y arrastra el error del sistema, que es lo que se pega en un
-/// informe de fallo.
+/// Error de persistencia con situación y detalle técnico (ADR-0009).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MemoryError {
     situation: Situation,
@@ -73,7 +58,6 @@ mod tests {
     use std::io::ErrorKind;
     use std::path::PathBuf;
 
-    /// **Grada A**: ni disco ni token.
     #[test]
     fn a_failure_names_the_file_next_to_the_situation() {
         let error = MemoryError::about(

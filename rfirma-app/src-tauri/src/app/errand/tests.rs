@@ -75,8 +75,7 @@ fn the_wire() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
     )
 }
 
-/// El códec negociado en todas estas pruebas: el de la versión 4, que es el
-/// único que hay.
+/// Códec negociado para pruebas.
 fn a_codec() -> NegotiatedCodec {
     Arc::new(V4Codec)
 }
@@ -96,8 +95,7 @@ fn on_the_wire(outcome: &SiteOutcome) -> String {
     V4Codec.encode(outcome)
 }
 
-/// Un aislado cuyo puente no abre: ninguna prueba de aquí cruza la frontera,
-/// y la mesa lo pide igual porque consentir una firma lo necesita.
+/// Aislado cuyo puente no abre para pruebas.
 static AN_ISOLATE: std::sync::LazyLock<Isolate> = std::sync::LazyLock::new(|| {
     Isolate::start_with(|| Err(BridgeError::Failed("no hay libreria en grada A".to_owned())))
 });
@@ -120,8 +118,7 @@ fn arriving_over_the_channel(message: &str) -> AfirmaUrl {
     url
 }
 
-/// La operación tal y como llega por el canal: se lee con el códec del
-/// protocolo, que es por donde entra de verdad.
+/// Operación leída con el códec del protocolo.
 fn an_operation(parameters: &str) -> AfirmaUrl {
     let text = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}{parameters}");
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
@@ -168,8 +165,7 @@ fn a_desk<'a>(
     }
 }
 
-/// Un expansor de política doblado: devuelve lo que se le programó, y
-/// apunta lo que se le pidió.
+/// Expansor de política para pruebas.
 struct APolicyEngine {
     asked: RefCell<Vec<String>>,
     answer: Result<String, ()>,
@@ -200,8 +196,7 @@ impl PolicyEngine for APolicyEngine {
     }
 }
 
-/// programó— y escribe cada desenlace tal cual se imprime, para que la prueba
-/// vea que lo que sale al cable lo decide el códec y no el trámite.
+/// Códec simulado para pruebas.
 struct ACodec {
     answers: std::sync::Mutex<Vec<SiteRequest>>,
 }
@@ -236,8 +231,6 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
     };
     let live = LiveErrand::default();
 
-    // El transporte en memoria abre el canal por el puerto, y la plaza se
-    // pide con el códec en memoria como negociado.
     let channel = Transport::open(&transport, &[54001], ChannelDuty::Serve(a_credential()))
         .expect("el transporte en memoria abre");
     let codec: NegotiatedCodec = Arc::new(ACodec::answering(Vec::new()));
@@ -266,7 +259,6 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
         &scratch,
     );
 
-    // Verbo 1: atender. Sin almacen que listar, la mesa contesta en el acto.
     let (handle, mut wire) = the_wire();
     let step = attend(&desk, an_operation(""), handle, &live).expect("hay codec negociado");
     let ErrandStep::Answering(SiteOutcome::Refused { answer, failure }) = &step else {
@@ -294,22 +286,17 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
         "el codec negociado sobrevive al tramite: el canal sigue en pie"
     );
 
-    // La plaza vuelve a estar libre: la siguiente sede la pide con el mismo
-    // codec, y esta vez la persona dice que no antes de que llegue nada.
     assert!(live.begin(Errand::of(a_credential(), channel.port(), codec)));
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
 
-    // Verbo 1, otra vez: sin peticion apuntada no hay nada que volver a mirar.
     assert!(look_again(&desk, &live).is_none());
 
-    // Verbo 2 sin nada delante que consentir: se rechaza sin tocar el cable.
     let refused = consent(&desk, "cualquiera", &live).expect_err("no hay nada consentible");
     assert_eq!(refused.situation, "siteErrandNotLive");
     assert!(what_the_site_received(&mut wire).is_none());
     assert!(live.current().is_some(), "y el tramite sigue vivo");
 
-    // Verbo 3: declinar escribe la palabra del codec, y se acaba.
     let outcome = decline(&live);
     assert!(matches!(outcome, SiteOutcome::Cancelled));
     assert_eq!(
@@ -378,7 +365,6 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     let asked = RefCell::new(Vec::new());
     let engine = AnEngine::answering(&[&[0], &[0]]);
 
-    // 1. La sede invoca, y el canal queda sirviendo su conversación.
     let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
     assert!(
         matches!(attendance, Attendance::Serving { .. }),
@@ -389,7 +375,6 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
         "el tramite queda vivo mientras se atiende"
     );
 
-    // 2. Por ese canal llega la operación. La conversación la deja
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
     let url = arriving_over_the_channel(&format!(
@@ -422,7 +407,6 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
         "el momento del consentimiento no escribe nada en el cable"
     );
 
-    // 3. La persona se identifica, y la sede recibe el certificado.
     let reply = identity_handed_over(
         &engine,
         request.filter(),
@@ -439,7 +423,6 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
         ours[0].der(),
         "lo que la persona entrego es su DER, sin envolver"
     );
-    // Y el códec lo escribe en Base64 URL-safe y nada más.
     let encoded = base64::engine::general_purpose::URL_SAFE.encode(ours[0].der());
     assert_eq!(on_the_wire(&reply), encoded);
     assert_eq!(
@@ -498,7 +481,6 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
     );
     assert!(live.current().is_none());
 
-    // Y ya no queda asa: cerrar la ventana después de haber contestado —que
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), None);
 }
@@ -509,7 +491,6 @@ fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_erra
     live.answer_through(handle);
     assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));
 
-    // La sede se fue: al otro extremo del asa ya no hay nadie.
     drop(wire);
 
     let reply = declined(&live);
@@ -558,8 +539,7 @@ fn a_signature_over(pdf: &[u8], verb: &str, extra: &str) -> AfirmaUrl {
     url
 }
 
-/// La misma operación de firma, entrando **por el canal**: con las tres
-/// guardias de la conversación delante y quedando pendiente de que el
+/// Operación de firma entrando por el canal.
 fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
     let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
     arriving_over_the_channel(&format!(
@@ -568,17 +548,7 @@ fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
     ))
 }
 
-/// operación llegada por el canal, política expandida, listado filtrado,
-/// consentimiento, y **el texto exacto que sale al cable** cuando la firma
-///
-/// La firma de verdad —prefirma, PIN y postfirma— es la grada C; lo que
-/// esta prueba fija es la decisión que hay a cada lado de ella, y que la
-/// sede recibe exactamente lo que parte `processSignResponse`: el
-/// certificado, `|`, la firma, y **ningún tercer campo**.
-///
-/// Se recorre igual para `sign` y para `cosign` porque en PAdES cofirmar es
-/// volver a firmar: lo único que cambia es lo que se le cuenta a la persona
-/// antes de que consienta.
+/// Trámite completo de firma con el canal abierto.
 fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -591,14 +561,12 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     let policies = APolicyEngine::answering("policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9\n");
     let scratch = home.path().join("errand");
 
-    // 1. La sede invoca, y el canal queda sirviendo su conversación.
     let attendance = attend_launch(&a_launch("54001,54002,54003"), &a_transport(&asked), &live);
     assert!(
         matches!(attendance, Attendance::Serving { .. }),
         "la invocacion es buena: {attendance:?}"
     );
 
-    // 2. Por ese canal llega la firma. La conversación la deja pendiente
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
     let url = a_signature_arriving_over_the_channel(verb);
@@ -650,8 +618,6 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
         "el momento del consentimiento no escribe nada en el cable"
     );
 
-    // 3. La persona consiente y teclea el PIN. La firma termina y la sede
-    //    recibe certificado y firma, en ese orden y separados por `|`.
     let scratch_file = live
         .scratch_path()
         .expect("el fichero de paso queda apuntado en el tramite");
@@ -761,7 +727,6 @@ fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() 
         "el fichero de paso se borra tambien al cancelar"
     );
 
-    // Y ya no queda asa: cerrar la ventana después de haber contestado no
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), None);
 }
@@ -868,7 +833,6 @@ fn the_document_a_site_sends_leaves_no_trace_at_all() {
         "ni colocacion del recuadro"
     );
 
-    // Y el fichero de paso se va con el trámite.
     let scratch_file = live.scratch_path().expect("hay fichero de paso");
     assert!(scratch_file.exists());
     declined(&live);
@@ -952,8 +916,7 @@ fn an_appended_page_without_a_box_never_happens_and_the_errand_goes_on() {
     );
 }
 
-/// El consentimiento de una firma cuya política se expande a ese bloque:
-/// lo que cambia entre las pruebas del recuadro es sólo eso.
+/// Consentimiento de una firma con política expandida.
 fn a_consent_to_sign(expanded: &str) -> ErrandStep {
     a_consent_to_sign_over(A_PDF, expanded)
 }
@@ -1381,7 +1344,6 @@ fn a_second_launch_is_refused_while_the_first_errand_is_live() {
         WireAnswer::refused(SafCode::CannotOpenSocket).on_the_wire()
     );
 
-    // Y el trámite que sigue apuntado es el primero: el segundo no sustituye
     let errand = live.current().expect("el primer tramite sigue vivo");
     assert_eq!(errand.port(), 54001);
 }
@@ -1395,8 +1357,6 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
     let closed = Arc::new(AtomicBool::new(false));
     let opened = Cell::new(0_u8);
 
-    // Un transporte que, la primera vez que se le pide un canal, deja que
-    // otra invocación apunte su trámite antes de devolverlo.
     let transport = |ports: &[u16], _duty: ChannelDuty| {
         opened.set(opened.get() + 1);
         if opened.get() == 1 {
@@ -1424,7 +1384,6 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
         "el canal de la que llega tarde deja de escuchar: soltarlo sin llamar al asa no lo cierra"
     );
 
-    // Y el trámite apuntado sigue siendo el de la otra, entero.
     let errand = live
         .current()
         .expect("el tramite de la otra sede sigue vivo");
@@ -1497,8 +1456,6 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
         "afirma://selectcert?op=selectcert&idsession={CREDENTIAL}"
     ));
 
-    // El listado vacío es el de la persona que no tiene ninguno. Se le
-    // habla al caso de uso que **no** lista el token, que es donde vive la
     live.keep_the_request(url.clone());
     let step = consent_for(
         &engine,
@@ -1595,8 +1552,6 @@ fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
         "y no se ha escrito el fichero de paso: la decision llega antes"
     );
 
-    // La otra mitad del orden: lo que el documento no admisible despacha,
-    // lo despacha **antes** de mirar el almacén.
     let inadmissible = a_live();
     assert!(
         inadmissible.begin(Errand::of(a_credential(), 54002, a_codec())),

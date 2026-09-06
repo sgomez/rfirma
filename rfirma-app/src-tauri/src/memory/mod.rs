@@ -1,42 +1,4 @@
-//! Lo que rFirma recuerda entre sesiones: **seis** memorias, partidas en dos
-//! (ADR-0010 y su enmienda, #53) — más [`OpenedDocuments`], que no sobrevive al
-//! proceso y por eso no cuenta entre ellas.
-//!
-//! **El tamaño de la ventana no es una de ellas**: rFirma abre siempre al
-//! tamaño de `tauri.conf.json` y quien quiera otra cosa maximiza o arrastra un
-//! borde, que es lo que hace todo el mundo (ADR-0010, enmienda).
-//!
-//! Dentro del estado viaja además un apunte que **no es una memoria del
-//! usuario** y por eso no cuenta entre las seis: [`VersionCheck`], cuándo se
-//! preguntó por última vez a GitHub si hay una versión nueva y qué contestó
-//! (ID-180, `app::version`). Es una caché para no salir a la red en cada
-//! arranque, no dice nada de quien firma, y por eso es lo único exento de los
-//! dos interruptores.
-//!
-//! **Configuración** —lo que el usuario elige y la aplicación obedece— son el
-//! idioma, el tema, la carpeta de destino, los dos interruptores y la rúbrica.
-//! **Estado** —lo que la aplicación acumula sola— son los documentos
-//! recientes, la última configuración de firma visible y el certificado usado.
-//! La que se olvida siempre al contarlas es la quinta, el certificado.
-//!
-//! La partición **no es estética**: en Windows el estado no debe viajar en un
-//! perfil móvil y la configuración sí, y en Linux `XDG_STATE_HOME` existe justo
-//! para eso. Borrar el estado no reconfigura la aplicación; borrar la
-//! configuración no pierde el trabajo. Dónde cae cada fichero lo resuelve
-//! [`crate::paths`], que es el único sitio del código que sabe qué sistema
-//! operativo hay debajo.
-//!
-//! La rúbrica no es un campo de ninguna de las dos estructuras: es una imagen y
-//! se guarda **como copia** en [`crate::rubric::RubricStore`], sobre la ruta que
-//! da [`crate::paths::Paths::rubric_path`]. Guardar la ruta del original —lo
-//! que hace AutoFirma— la pierde en silencio en cuanto el usuario mueve el PNG.
-//!
-//! [`Memory`] es la única puerta a los dos ficheros, y existe por una razón
-//! concreta: **los dos interruptores no se pueden olvidar**. Guardar el estado
-//! con «Recordar mi actividad» apagado no escribe nada, y guardar la
-//! configuración con ese interruptor recién apagado **borra** el estado que
-//! hubiera. Si eso viviera en quien llama, el día que alguien añada una llamada
-//! nueva el rótulo pasaría a mentir.
+//! Persistencia entre sesiones: configuración y estado en dos ficheros separados (ADR-0010).
 
 pub mod configuration;
 pub mod error;
@@ -57,7 +19,7 @@ pub use store::{Damage, JsonFile, Loaded, Recovery, FORMAT_VERSION};
 
 use crate::paths::Paths;
 
-/// Las dos memorias y sus dos soportes.
+/// Las dos memorias y sus dos soportes (ADR-0010).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Memory {
     configuration: JsonFile<Configuration>,
@@ -89,21 +51,11 @@ impl Memory {
     }
 
     /// El estado guardado, o el vacío.
-    ///
-    /// No hace falta filtrar por el interruptor al leer: con «Recordar mi
-    /// actividad» apagado el fichero sobrevive, pero solo con lo exento dentro
-    /// —el tamaño de la ventana (ID-73) y la caché de la comprobación de
-    /// versión (ID-180)—, así que no hay nada más que ocultar.
     pub fn state(&self) -> Result<Loaded<State>, MemoryError> {
         self.state.load()
     }
 
-    /// Guarda la configuración y, si «Recordar mi actividad» queda apagado,
-    /// **borra el estado**.
-    ///
-    /// Conservar el fichero mientras la preferencia dice que no se recuerda
-    /// nada incumple lo que promete el rótulo (ADR-0010). Por eso el borrado
-    /// está aquí y no en quien llama.
+    /// Guarda la configuración y borra el estado si la actividad queda desactivada (ADR-0010).
     pub fn remember_configuration(&self, configuration: &Configuration) -> Result<(), MemoryError> {
         self.configuration.save(configuration)?;
         if !configuration.remember_activity {
@@ -112,12 +64,7 @@ impl Memory {
         Ok(())
     }
 
-    /// Guarda el estado **según lo que permitan los dos interruptores**.
-    ///
-    /// Con «Recordar mi actividad» apagado no se escribe nada y se borra lo que
-    /// hubiera. Con «Recordar la última configuración de firma visible»
-    /// apagado se escribe el resto, pero el recuadro no: apagado significa no
-    /// guardarlo, y no guardarlo y no aplicarlo.
+    /// Guarda el estado según lo que permitan los dos interruptores (ADR-0010).
     pub fn remember_state(
         &self,
         configuration: &Configuration,
@@ -129,49 +76,24 @@ impl Memory {
         if configuration.remember_visible_signature {
             return self.state.save(state);
         }
-        // Apagado se lleva **las dos mitades** de la firma visible (ID-74): lo
-        // global y también dónde cayó el recuadro en cada fila, que vive en los
-        // recientes. Guardar solo una dejaría el recuadro reponiéndose con el
-        // interruptor apagado.
         let mut without_the_box = state.clone();
         without_the_box.visible_signature = None;
         without_the_box.recents.forget_placements();
         self.state.save(&without_the_box)
     }
 
-    /// Olvida lo acumulado sin tocar ningún interruptor.
-    ///
-    /// No es «Vaciar la lista» —eso son solo los recientes,
-    /// [`Recents::clear`]—: esto se lleva también el certificado.
+    /// Olvida lo acumulado conservando los datos exentos (ADR-0010).
     pub fn forget_activity(&self) -> Result<(), MemoryError> {
         self.erase_activity_but_keep_the_exempt()
     }
 
-    /// Cuándo se preguntó por una versión nueva y qué se contestó, sin mirar
-    /// ningún interruptor (ID-180).
-    ///
-    /// Escribe siempre porque no es actividad de quien firma, es un apunte de
-    /// rFirma sobre sí misma. Con «Recordar mi actividad» apagado el
-    /// `state.json` sobrevive con esto dentro, y nada más.
+    /// Guarda el registro de comprobación de versión sin depender de interruptores de actividad.
     pub fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError> {
         let mut state = self.state.load()?.into_value();
         state.version_check = Some(check);
         self.state.save(&state)
     }
 
-    /// Borra lo acumulado —recientes, certificado, firma visible, última
-    /// carpeta— conservando lo que ningún interruptor cubre: la caché de la
-    /// comprobación de versión (ID-180).
-    ///
-    /// Qué se conserva lo dice [`State::forget_everything`] y no esta función:
-    /// así el día que haya una exención más no hay dos sitios que ponerse de
-    /// acuerdo. Si no quedaba nada exento esto es exactamente el borrado de
-    /// antes: el fichero desaparece del disco.
-    ///
-    /// La lectura previa no puede vetar el borrado: en el camino de borrado
-    /// por privacidad, un `state.json` que `load` no consiga leer se trata
-    /// como si no llevara nada exento dentro —se pierde ese apunte, no el
-    /// borrado— en vez de dejar la actividad en el disco con un `Err`.
     fn erase_activity_but_keep_the_exempt(&self) -> Result<(), MemoryError> {
         let mut kept = self
             .state
@@ -196,8 +118,6 @@ mod tests {
     use std::path::Path;
     use std::time::SystemTime;
 
-    /// **Grada A**: dos ficheros en un directorio temporal. Sin token, sin
-    /// librería nativa y sin red.
     fn a_memory(root: &Path) -> (Memory, Paths) {
         let paths = Paths::under(root);
         (Memory::at(&paths), paths)
@@ -310,8 +230,6 @@ mod tests {
             })
             .expect("deberia guardarse la configuracion");
 
-        // Se comprueba leyendo el soporte, no la estructura en memoria: lo que
-        // promete el rótulo es que en el disco no queda nada.
         assert!(
             !paths.state_file().exists(),
             "apagar el interruptor tiene que borrar el fichero de estado"
@@ -327,9 +245,6 @@ mod tests {
         );
     }
 
-    /// La invariante que promete el `///` de `remember_version_check`
-    /// —«escribe siempre, sin mirar interruptores»— comprobada desde donde se
-    /// cumple.
     #[test]
     fn the_version_check_is_remembered_even_with_the_switch_off() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -353,9 +268,6 @@ mod tests {
         assert_eq!(state.version_check, Some(check));
     }
 
-    /// Apagar «Recordar mi actividad» no borra el apunte de la consulta: no
-    /// dice qué firmó nadie, dice cuándo habló rFirma con GitHub, y borrarlo
-    /// sólo conseguiría una conexión de más.
     #[test]
     fn turning_remember_activity_off_does_not_erase_the_version_check() {
         let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -423,8 +335,6 @@ mod tests {
         assert!(stored.visible_signature.is_none());
         assert_eq!(stored.recents.len(), 1);
         assert!(stored.certificate.is_some());
-        // La otra mitad del ID-74: la fila sigue —es actividad— pero sin dónde
-        // cayó su recuadro, que es firma visible.
         assert!(
             stored.recents.entries()[0].placement().is_none(),
             "apagado no guarda tampoco la posicion de cada documento"
@@ -486,10 +396,6 @@ mod tests {
             .exists());
     }
 
-    /// La quinta memoria del grupo de configuración es la rúbrica, y no es un
-    /// campo: es la **copia** que guarda el almacén sobre
-    /// [`Paths::rubric_path`]. Lo que se comprueba es justo lo que AutoFirma
-    /// hace mal: que en la configuración no queda ninguna ruta al original.
     #[test]
     fn the_rubric_is_persisted_as_a_copy_and_never_as_a_path_to_the_original() {
         use crate::rubric::RubricStore;

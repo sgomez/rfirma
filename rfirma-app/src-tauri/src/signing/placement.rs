@@ -1,4 +1,4 @@
-//! Conversión geométrica del recuadro visual a coordenadas PAdES del puente nativo.
+//! Conversión geométrica del recuadro visual a coordenadas PAdES del puente nativo (ADR-0006).
 
 use super::config::PadesRect;
 use serde::{Deserialize, Serialize};
@@ -19,13 +19,7 @@ pub enum Rotation {
 }
 
 impl Rotation {
-    /// La `/Rotate` que trae el PDF, normalizada.
-    ///
-    /// Acepta múltiplos de 90 de cualquier signo y magnitud (`-90`, `450`),
-    /// porque eso es lo que permite el formato. Cualquier otra cosa devuelve
-    /// `None`: no se redondea al cuadrante más cercano, porque una página con
-    /// una `/Rotate` que el formato no admite es un documento roto y firmarlo
-    /// a ojo colocaría la firma en cualquier sitio.
+    /// La `/Rotate` que trae el PDF, normalizada a múltiplos de 90°.
     pub fn from_degrees(degrees: i32) -> Option<Self> {
         match degrees.rem_euclid(360) {
             0 => Some(Self::None),
@@ -48,12 +42,6 @@ impl Rotation {
 }
 
 /// La MediaBox de la página, con las esquinas ya ordenadas.
-///
-/// El PDF permite darlas en cualquier orden, así que [`MediaBox::new`]
-/// normaliza. Lo que importa de ella aquí son las **esquinas superiores**
-/// ([`MediaBox::upper_x`] y [`MediaBox::upper_y`]): son las que entran en `T`,
-/// y confundirlas con la anchura y la altura es el fallo que este módulo
-/// existe para no cometer.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MediaBox {
     lower_x: f64,
@@ -83,12 +71,12 @@ impl MediaBox {
         self.lower_y
     }
 
-    /// Esquina superior derecha, eje X. `mx1` en la tabla de `T`.
+    /// Esquina superior derecha, eje X.
     pub fn upper_x(&self) -> f64 {
         self.upper_x
     }
 
-    /// Esquina superior derecha, eje Y. `my1` en la tabla de `T`.
+    /// Esquina superior derecha, eje Y.
     pub fn upper_y(&self) -> f64 {
         self.upper_y
     }
@@ -97,8 +85,7 @@ impl MediaBox {
 /// La página sobre la que se ha arrastrado el recuadro.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Page {
-    /// Número de página **1-based**, tal cual lo numera `pdf.js`: sin
-    /// corrección, porque `signaturePage` usa el mismo criterio.
+    /// Número de página 1-based, tal cual lo numera el visor.
     pub number: u32,
     /// La MediaBox de esa página.
     pub media_box: MediaBox,
@@ -106,11 +93,7 @@ pub struct Page {
     pub rotation: Rotation,
 }
 
-/// El recuadro tal y como se arrastra: píxeles del lienzo del visor.
-///
-/// Es un dato **de paso**, no de almacenamiento: en cuanto se convierte a
-/// [`UserSpaceRect`] se tira. Guardar píxeles es la trampa que hace que el
-/// recuadro se mueva solo al cambiar el zoom.
+/// El recuadro tal y como se arrastra en píxeles del lienzo del visor.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewerRect {
     /// Primera esquina del arrastre, eje X.
@@ -123,11 +106,7 @@ pub struct ViewerRect {
     pub y1: f64,
 }
 
-/// El recuadro en **espacio de usuario PDF**, que es como se guarda.
-///
-/// Es el `/Rect` que acabará teniendo el widget de firma, ya redondeado a
-/// entero. No depende del zoom: los píxeles se derivan de aquí en cada pintada,
-/// nunca al revés.
+/// El recuadro en espacio de usuario PDF, redondeado a entero.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct UserSpaceRect {
     /// Esquina inferior izquierda, eje X.
@@ -141,17 +120,7 @@ pub struct UserSpaceRect {
 }
 
 impl UserSpaceRect {
-    /// Las dos esquinas del recuadro tal y como salen del visor: **con
-    /// decimales**.
-    ///
-    /// `convertToPdfPoint` de `pdf.js` invierte una matriz, así que lo que la
-    /// ventana tiene son fracciones de punto, no puntos. El redondeo a entero
-    /// es de este módulo —AutoFirma lee las coordenadas como `int`— y por eso
-    /// entra por aquí y no por un `Math.round` en TypeScript, que sería una
-    /// segunda copia de la misma regla.
-    ///
-    /// Las esquinas se ordenan por lo mismo que en [`Page::to_user_space`]: se
-    /// arrastra en cualquier dirección y el recuadro es el mismo.
+    /// Construye el recuadro redondeado a entero a partir de coordenadas decimales.
     pub fn rounded(x0: f64, y0: f64, x1: f64, y1: f64) -> Self {
         Self {
             lower_left_x: round(x0.min(x1)),
@@ -163,19 +132,12 @@ impl UserSpaceRect {
 }
 
 impl Page {
-    /// Los dos pasos de una vez: del arrastre del visor a los puntos PAdES.
-    ///
-    /// `zoom` es la escala del viewport de `pdf.js` con la que se dibujó el
-    /// arrastre, y tiene que ser mayor que cero.
+    /// Convierte el arrastre del visor a coordenadas PAdES.
     pub fn place(&self, rect: &ViewerRect, zoom: f64) -> Result<PadesRect, OutOfPage> {
         self.pades_rect(&self.to_user_space(rect, zoom))
     }
 
-    /// Paso 1: lienzo → espacio de usuario PDF.
-    ///
-    /// Réplica de `convertToPdfPoint` de `pdf.js`: invierte la matriz del
-    /// viewport que construye `PageViewport`. Por eso el zoom desaparece aquí y
-    /// no vuelve a aparecer.
+    /// Convierte del lienzo al espacio de usuario PDF invirtiendo la matriz del visor.
     pub fn to_user_space(&self, rect: &ViewerRect, zoom: f64) -> UserSpaceRect {
         let transform = self.viewport_transform(zoom);
         let (ax, ay) = invert(transform, rect.x0, rect.y0);
@@ -201,10 +163,8 @@ impl Page {
         })
     }
 
-    /// `T⁻¹` sobre un punto, según la `/Rotate`. La tabla vive en
-    /// `docs/research/coordenadas-recuadro-pades.md`.
+    /// Aplica la transformación inversa a un punto según la rotación de la página.
     fn inverse_itext(&self, x: i32, y: i32) -> (i32, i32) {
-        // Los límites superiores de la MediaBox, NO la anchura ni la altura.
         let upper_x = round(self.media_box.upper_x());
         let upper_y = round(self.media_box.upper_y());
         match self.rotation {
@@ -242,8 +202,7 @@ impl Page {
         }
     }
 
-    /// La matriz del viewport de `pdf.js`, tal y como la construye
-    /// `PageViewport`: `[a, b, c, d, e, f]`.
+    /// Matriz del visor de PDF según escala y rotación.
     fn viewport_transform(&self, zoom: f64) -> [f64; 6] {
         let media = &self.media_box;
         let center_x = (media.lower_x() + media.upper_x()) / 2.0;
@@ -254,8 +213,6 @@ impl Page {
             Rotation::Half => (-1.0, 0.0, 0.0, 1.0),
             Rotation::ThreeQuarters => (0.0, -1.0, -1.0, 0.0),
         };
-        // En los cuartos de vuelta el lienzo intercambia los ejes, así que los
-        // desplazamientos también se intercambian.
         let (offset_x, offset_y) = if a == 0.0 {
             (
                 (center_y - media.lower_y()).abs() * zoom,
@@ -278,7 +235,7 @@ impl Page {
     }
 }
 
-/// `applyInverseTransform` de `pdf.js`.
+/// Aplica la transformación inversa de matriz al punto.
 fn invert(m: [f64; 6], x: f64, y: f64) -> (f64, f64) {
     let determinant = m[0] * m[3] - m[1] * m[2];
     let dx = x - m[4];
@@ -289,9 +246,7 @@ fn invert(m: [f64; 6], x: f64, y: f64) -> (f64, f64) {
     )
 }
 
-/// Redondeo al entero más cercano, con el medio punto hacia arriba: el mismo
-/// criterio que `Math.round` de JavaScript, que es quien redondeaba en la
-/// medición del banco de pruebas.
+/// Redondeo al entero más cercano con medio punto hacia arriba.
 fn round(value: f64) -> i32 {
     (value + 0.5).floor() as i32
 }
@@ -421,7 +376,6 @@ impl std::error::Error for OutOfDocument {}
 mod tests {
     use super::{MediaBox, OutOfPage, Page, PageSet, Rotation, UserSpaceRect, ViewerRect};
 
-    /// El arrastre de pantalla con el que se midieron los dieciséis casos.
     const DRAG: ViewerRect = ViewerRect {
         x0: 60.0,
         y0: 80.0,
@@ -432,31 +386,18 @@ mod tests {
     const A4: [f64; 4] = [0.0, 0.0, 595.0, 842.0];
     const A5: [f64; 4] = [0.0, 0.0, 420.0, 595.0];
     const LETTER: [f64; 4] = [0.0, 0.0, 612.0, 792.0];
-    /// La MediaBox desplazada: la que destapa el uso de la anchura en vez del
-    /// límite superior.
     const OFFSET: [f64; 4] = [20.0, 30.0, 615.0, 872.0];
 
-    /// Un caso del banco de `research/9-coordenadas-pdfjs`: lo que se arrastró
-    /// y lo que salió medido del `/Rect` del PDF firmado de verdad.
     struct Case {
         name: &'static str,
         page: u32,
         media_box: [f64; 4],
         rotate: i32,
         zoom: f64,
-        /// El `/Rect` del widget, o sea el paso 1.
         widget: [i32; 4],
-        /// Los `signaturePositionOnPage*`, o sea el paso 2.
         params: [i32; 4],
     }
 
-    /// Los dieciséis casos de `prototipos/9-coordenadas-pdfjs/salidas/*.properties`.
-    ///
-    /// Todos con el mismo arrastre, [`DRAG`]. No son aritmética sobre el papel:
-    /// cada uno se firmó con el ciclo trifásico entero y se comprobó leyendo el
-    /// `/Rect` del widget del PDF resultante.
-    // La tabla se lee en columnas: expandida a un campo por línea son ciento
-    // cuarenta y cuatro líneas y deja de verse que los casos se emparejan.
     #[rustfmt::skip]
     const BANK: [Case; 16] = [
         Case { name: "a4",                 page: 1, media_box: A4,     rotate: 0,   zoom: 1.0,  widget: [60, 682, 260, 762],  params: [60, 682, 260, 762] },
@@ -529,9 +470,6 @@ mod tests {
 
     #[test]
     fn covers_the_four_rotations_with_a_displaced_media_box() {
-        // El criterio que separa la implementación correcta de la que acierta
-        // por casualidad: /Rotate distinto de 0 Y MediaBox fuera del origen a
-        // la vez. Si alguien adelgaza el banco, esta prueba se queja.
         for degrees in [90, 180, 270] {
             assert!(
                 BANK.iter().any(|case| case.media_box == OFFSET
@@ -544,9 +482,6 @@ mod tests {
 
     #[test]
     fn uses_the_upper_bounds_of_the_media_box_and_not_the_width() {
-        // La misma página en tamaño y rotación, movida de sitio. Si el paso 2
-        // usara la anchura (595 en los dos casos) en vez del límite superior,
-        // los dos darían lo mismo.
         let at_origin = Page {
             number: 1,
             media_box: MediaBox::new(0.0, 0.0, 595.0, 842.0),
@@ -566,8 +501,6 @@ mod tests {
 
     #[test]
     fn emits_integer_coordinates() {
-        // El arrastre cae en medio punto por todas partes; lo que sale son
-        // enteros porque `PadesRect` no sabe guardar otra cosa.
         let page = Page {
             number: 1,
             media_box: MediaBox::new(0.0, 0.0, 595.0, 842.0),
@@ -597,9 +530,6 @@ mod tests {
 
     #[test]
     fn keeps_the_box_still_when_the_zoom_changes() {
-        // El mismo sitio del documento, dibujado a dos escalas: en píxeles el
-        // arrastre es otro, en espacio de usuario es el mismo. Esto es lo que
-        // se rompe si el recuadro se guarda en píxeles.
         let page = Page {
             number: 1,
             media_box: MediaBox::new(20.0, 30.0, 615.0, 872.0),
@@ -658,9 +588,6 @@ mod tests {
 
     #[test]
     fn rejects_a_box_that_falls_short_of_a_displaced_origin() {
-        // El otro lado de la guardia: con la MediaBox desplazada, la página no
-        // empieza en (0,0) y un recuadro «dentro del papel» puede quedarse
-        // fuera por abajo.
         let page = Page {
             number: 1,
             media_box: MediaBox::new(20.0, 30.0, 615.0, 872.0),
@@ -700,8 +627,6 @@ mod tests {
 
     #[test]
     fn normalises_a_drag_made_in_any_direction() {
-        // Se arrastra tan a menudo de abajo a la derecha hacia arriba a la
-        // izquierda como al revés; el recuadro es el mismo.
         let page = Page {
             number: 1,
             media_box: MediaBox::new(0.0, 0.0, 595.0, 842.0),
@@ -803,8 +728,6 @@ mod tests {
         }
     }
 
-    /// Ni `0` («todas» en el convenio de `imagePage`), ni `append`, ni los
-    /// rangos: lo que rFirma no sabe pintar, no lo sabe leer.
     #[test]
     fn refuses_a_page_set_written_in_a_grammar_it_does_not_speak() {
         for written in [
@@ -820,9 +743,6 @@ mod tests {
         }
     }
 
-    /// El conjunto vacío sí se puede escribir —`{ "only": [] }` es JSON
-    /// válido—, así que quien lo rechaza es la validación del destino y no el
-    /// deserializador: no nombra ninguna página de ningún documento.
     #[test]
     fn refuses_an_empty_set_when_the_destination_is_validated() {
         let empty: PageSet =
