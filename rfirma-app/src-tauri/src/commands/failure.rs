@@ -2,16 +2,20 @@
 
 use serde::Serialize;
 
-/// Representación de un fallo devuelto a la ventana (ADR-0009).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Failure {
-    /// Identificador en camelCase de la situación.
-    pub situation: String,
-    /// Detalle descriptivo original del error.
-    pub detail: String,
-    /// Intentos restantes cuando aplique.
-    pub attempts_left: Option<u32>,
+use crate::crossing::crossing;
+
+crossing! {
+    /// Representación de un fallo devuelto a la ventana (ADR-0009).
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct Failure {
+        /// Identificador en camelCase de la situación.
+        pub situation: String,
+        /// Detalle descriptivo original del error.
+        pub detail: String,
+        /// Intentos restantes cuando aplique.
+        pub attempts_left: Option<u32>,
+    }
 }
 
 impl Failure {

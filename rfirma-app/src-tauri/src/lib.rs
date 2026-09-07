@@ -1,5 +1,6 @@
 //! Composición y arranque de la aplicación Tauri: construye las raíces de los cinco contextos y las registra.
 
+pub mod crossing;
 pub mod desktop;
 pub mod documents;
 pub mod identity;

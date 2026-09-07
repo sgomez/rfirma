@@ -1,4 +1,4 @@
-//! `just contract` descubre órdenes y tipos de cruce en cualquier `adapters/` de un contexto (RD-02).
+//! `just contract` descubre las órdenes en cualquier `adapters/` de un contexto (RD-02) y saca los tipos del registro, no del fuente (#441).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -15,17 +15,12 @@ const A_LEGACY_ORDER: &str =
     "#[tauri::command]\npub fn legacy_order(name: String) -> String {\n    name\n}\n";
 
 const AN_ADAPTER_IN_A_NEW_CONTEXT: &str = "\
-use serde::Serialize;
-
-#[derive(Serialize)]
-#[serde(rename_all = \"camelCase\")]
-pub struct SyntheticView {
-    pub holder_name: String,
-}
-
 #[tauri::command(async)]
-pub fn synthetic_order(app: tauri::AppHandle) -> SyntheticView {
-    SyntheticView { holder_name: String::new() }
+pub fn synthetic_order(
+    app: tauri::AppHandle,
+    root: State<'_, SyntheticRoot>,
+) -> Result<(), Failure> {
+    Ok(())
 }
 ";
 
@@ -36,13 +31,13 @@ fn write(root: &Path, relative: &str, source: &str) {
 }
 
 #[test]
-fn an_adapter_in_a_new_context_appears_in_the_contract_without_editing_any_list() {
+fn an_order_in_a_new_context_appears_in_the_contract_and_the_types_come_from_the_registry() {
     let tree = tempfile::tempdir().expect("deberia crearse un directorio temporal");
     write(tree.path(), "commands/mod.rs", A_LEGACY_ORDER);
     write(
         tree.path(),
         "commands/guards.rs",
-        "#[derive(Serialize)]\npub struct NotThis;\n",
+        "#[tauri::command]\npub fn not_this() {}\n",
     );
     write(
         tree.path(),
@@ -52,12 +47,12 @@ fn an_adapter_in_a_new_context_appears_in_the_contract_without_editing_any_list(
     write(
         tree.path(),
         "synthetic/adapters/tauri/tests.rs",
-        "#[derive(Serialize)]\npub struct NotThisEither;\n",
+        "#[tauri::command]\npub fn not_this_either() {}\n",
     );
     write(
         tree.path(),
         "synthetic/domain/thing.rs",
-        "#[derive(Serialize)]\npub struct NotAnAdapter;\n",
+        "#[tauri::command]\npub fn not_an_adapter() {}\n",
     );
 
     let output = Command::new("just")
@@ -78,12 +73,12 @@ fn an_adapter_in_a_new_context_appears_in_the_contract_without_editing_any_list(
         "{contract}"
     );
     assert!(
-        contract.contains("async synthetic_order() -> SyntheticView"),
+        contract.contains("async synthetic_order() -> Result<(), Failure>"),
         "{contract}"
     );
-    assert!(contract.contains("pub struct SyntheticView"), "{contract}");
-    assert!(contract.contains("holderName: String"), "{contract}");
-    for excluded in ["NotThis", "NotThisEither", "NotAnAdapter"] {
+    assert!(contract.contains("pub struct Failure"), "{contract}");
+    assert!(contract.contains("attemptsLeft: Option<u32>"), "{contract}");
+    for excluded in ["not_this", "not_this_either", "not_an_adapter"] {
         assert!(
             !contract.contains(excluded),
             "{excluded} no es un adaptador: {contract}"

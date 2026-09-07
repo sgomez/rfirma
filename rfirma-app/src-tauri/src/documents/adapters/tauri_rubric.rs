@@ -6,20 +6,24 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine as _;
 use serde::Serialize;
 
+use crate::crossing::crossing;
+
 use crate::documents::domain::rubric::NormalizedRubric;
 
 use crate::commands::Failure;
 
-/// Rúbrica normalizada con imagen en Base64 y dimensiones (ADR-0011, ADR-0012).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RubricView {
-    /// Imagen JPEG normalizada en Base64.
-    pub base64: String,
-    /// Anchura en píxeles.
-    pub width: u32,
-    /// Altura en píxeles.
-    pub height: u32,
+crossing! {
+    /// Rúbrica normalizada con imagen en Base64 y dimensiones (ADR-0011, ADR-0012).
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct RubricView {
+        /// Imagen JPEG normalizada en Base64.
+        pub base64: String,
+        /// Anchura en píxeles.
+        pub width: u32,
+        /// Altura en píxeles.
+        pub height: u32,
+    }
 }
 
 impl RubricView {
@@ -41,14 +45,16 @@ impl RubricView {
     }
 }
 
-/// Resultado de la selección de una rúbrica.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RubricChoiceView {
-    /// Rúbrica adoptada si la imagen era válida.
-    pub rubric: Option<RubricView>,
-    /// Causa del fallo si no se pudo adoptar la imagen.
-    pub failure: Option<Failure>,
+crossing! {
+    /// Resultado de la selección de una rúbrica.
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct RubricChoiceView {
+        /// Rúbrica adoptada si la imagen era válida.
+        pub rubric: Option<RubricView>,
+        /// Causa del fallo si no se pudo adoptar la imagen.
+        pub failure: Option<Failure>,
+    }
 }
 
 impl RubricChoiceView {

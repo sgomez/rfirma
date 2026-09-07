@@ -1,4 +1,4 @@
-//! Lo que ya no compila: el cebo de cada tipo que sustituyó a una guarda que leía el código como texto (#439).
+//! Lo que ya no compila: el cebo de cada tipo que sustituyó a una guarda que leía el código como texto (#439, #441).
 
 /// ```
 /// use rfirma_lib::signing::adapters::ffi::parse_presign;
@@ -65,3 +65,33 @@ pub struct NoSafCodeIsMadeFromAString;
 /// let _: SafCode = "SAF_48".parse().unwrap();
 /// ```
 pub struct NoSafCodeIsParsedFromAString;
+
+/// ```
+/// use rfirma_lib::commands::Failure;
+/// use rfirma_lib::crossing::WindowCrossing;
+///
+/// fn crosses<T: WindowCrossing>() -> &'static str {
+///     T::CROSSING.name
+/// }
+/// assert_eq!(crosses::<Failure>(), "Failure");
+/// assert!(rfirma_lib::crossing::all_crossings()
+///     .iter()
+///     .any(|crossing| crossing.name == "Failure"));
+/// ```
+pub struct ATypeDeclaredWithCrossingIsAWindowCrossingAndIsInTheRegistry;
+
+/// ```compile_fail,E0277
+/// use rfirma_lib::crossing::WindowCrossing;
+///
+/// struct Handmade;
+///
+/// impl serde::Serialize for Handmade {
+///     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+///         serializer.serialize_unit()
+///     }
+/// }
+///
+/// fn crosses<T: WindowCrossing>() {}
+/// crosses::<Handmade>();
+/// ```
+pub struct AHandmadeSerializeIsNotAWindowCrossing;

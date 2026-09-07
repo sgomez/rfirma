@@ -104,7 +104,7 @@ check: tools check-repo check-java check-ts check-rust
 # Lo que no pertenece a ninguna cadena (ID-01): cinco comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish check-contract lint-python
+check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -124,7 +124,7 @@ check-ts: check-po lint-ts lint-i18n build-ts test-ts
 # dos arboles distintos. El peaje aceptado es que aqui las pruebas corren solo
 # instrumentadas; sin instrumentar las ejecuta `test-native` en cada empujon a
 # main.
-check-rust: lint-rust crap
+check-rust: lint-rust crap check-contract
 
 # El bucle corto de quien quiera formatear antes de commitear. Voluntaria, y
 # deliberadamente NO es un hook de pre-commit (ADR-0014): en un repositorio
@@ -537,180 +537,20 @@ outline path:
 #
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 contract src=(tauri / "src"):
-    #!/usr/bin/env bash
-    set -u
-    cd "{{ src }}" || exit 1
+    cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
-    files=$(find . -type f -name '*.rs' \
-        \( -path './commands/*' -o -path './*/adapters/tauri*' \
-           -o -path './*/adapters/views*' -o -path './*/adapters/orders*' \) \
-        ! -name 'tests.rs' ! -name 'guards.rs' \
-        | sed 's#^\./##' | LC_ALL=C sort)
-
-    # El extractor de tipos se usa dos veces —para los de los adaptadores y para
-    # los que estos toman prestados de otros modulos—, asi que vive en un
-    # fichero y no duplicado. `only` lo limita a un tipo por su nombre.
-    program=$(mktemp)
-    trap 'rm -f "$program"' EXIT
-    printf '%s' '
-    function camel(s,   out, i, parts, n) {
-        if (!camelize) return s
-        n = split(s, parts, "_")
-        out = parts[1]
-        for (i = 2; i <= n; i++) out = out toupper(substr(parts[i], 1, 1)) substr(parts[i], 2)
-        return out
-    }
-    function take_attr(a) {
-        if (a ~ /^#\[derive/) derive = a
-        else if (a ~ /^#\[serde/) serde = a
-    }
-    function reset() { derive = ""; serde = "" }
-
-    # Las pruebas del final no cuentan: sus tipos no cruzan nada.
-    /^#\[cfg\(test\)\]/ { exit }
-
-    !inty {
-        if (collecting) {
-            buf = buf " " $0
-            if ($0 ~ /\][ \t]*$/) { collecting = 0; take_attr(buf) }
-            next
-        }
-        if ($0 ~ /^#\[/) {
-            if ($0 ~ /\][ \t]*$/) take_attr($0)
-            else { buf = $0; collecting = 1 }
-            next
-        }
-    }
-    !inty && /^pub (struct|enum) / {
-        name = $3; sub(/[ \t]*\{$/, "", name); sub(/<.*/, "", name)
-        if (derive !~ /Serialize|Deserialize/) { reset(); next }
-        if (only != "" && only != name) { reset(); next }
-        camelize = (serde ~ /camelCase/)
-        tag = ""
-        if (match(serde, /tag = "[^"]+"/)) tag = substr(serde, RSTART + 7, RLENGTH - 8)
-        head = $0
-        sub(/[ \t]*\{[ \t]*$/, "", head)
-        isenum = ($2 == "enum")
-        printf "\n  %s", head
-        if (tag != "") printf "   (serde: etiqueta \"%s\")", tag
-        if (source != "") printf "   [%s]", source
-        printf "\n"
-        inty = 1
-        next
-    }
-    !inty { reset(); next }
-
-    inty && /^\}/ { inty = 0; reset(); next }
-    inty && /^[ \t]*(\/\/|#\[)/ { next }
-    inty && /^[ \t]*$/ { next }
-
-    # Una variante de enum con campos se junta en una sola linea.
-    inty && variant != "" {
-        if ($0 ~ /^[ \t]*\},?[ \t]*$/) {
-            printf "      %s { %s }\n", variant, fields
-            variant = ""; fields = ""
-            next
-        }
-        line = $0; sub(/^[ \t]+/, "", line); sub(/,[ \t]*$/, "", line)
-        split(line, kv, ":")
-        f = kv[1]; sub(/^pub /, "", f)
-        fields = fields (fields == "" ? "" : ", ") camel(f) ": " substr(line, index(line, ":") + 2)
-        next
-    }
-    inty && isenum && /^[ \t]+[A-Z][A-Za-z0-9]*[ \t]*\{[ \t]*$/ {
-        variant = $1; sub(/[ \t]*\{$/, "", variant); fields = ""
-        next
-    }
-    inty && isenum {
-        line = $0; sub(/^[ \t]+/, "", line); sub(/,[ \t]*$/, "", line)
-        printf "      %s\n", line
-        next
-    }
-    inty {
-        line = $0; sub(/^[ \t]+/, "", line); sub(/,[ \t]*$/, "", line); sub(/^pub /, "", line)
-        split(line, kv, ":")
-        printf "      %s: %s\n", camel(kv[1]), substr(line, index(line, ":") + 2)
-        next
-    }
-    ' > "$program"
-
-    # Lo unico que se dice aqui es lo que la salida NO ensena: los parametros
-    # que se han quitado. Lo demas ya lo sabe quien lee.
-    orders=$(awk '
-    /#\[tauri::command/ { taking = 1; async = ($0 ~ /async/); buf = ""; next }
-    taking {
-        buf = buf " " $0
-        if ($0 !~ /\{[ \t]*$/) next
-        taking = 0
-        gsub(/[ \t]+/, " ", buf)
-        sub(/ \{$/, "", buf)
-        sub(/^ *pub fn /, "", buf)
-        # El estado inyectado no cruza: fuera.
-        gsub(/ *[a-z_]+: State<[^>]*>,?/, "", buf)
-        gsub(/ *[a-z_]+: tauri::AppHandle,?/, "", buf)
-        gsub(/\( +/, "(", buf); gsub(/,? *\)/, ")", buf)
-        printf "  %-6s%s\n", (async ? "async " : ""), buf
-    }
-    ' $files)
-
-    crossing=""
-    for source in $files; do
-        crossing="$crossing$(awk -f "$program" -v only="" -v source="" "$source")"$'\n'
-    done
-
-    # Un tipo que aparece en un campo pero no se define arriba viene prestado de
-    # otro modulo (`Badge` de `memory/recents.rs`, `Theme` de
-    # `memory/configuration.rs`). Sin el, el contrato nombra algo que no explica
-    # y quien lo lee tiene que ir a buscarlo: justo el viaje que esto evita.
-    defined=$(printf '%s' "$crossing" | sed -n 's/^  pub \(struct\|enum\) \([A-Za-z0-9_]*\).*/\2/p')
-    #
-    # Se miran TODAS las lineas de cuerpo, no solo los campos con `nombre: tipo`:
-    # un tipo puede aparecer solo dentro de una variante de enum. Lo que no sea
-    # un tipo de verdad —el nombre de una variante— no lo encuentra el grep de
-    # abajo y se cae solo, sin ruido.
-    borrowed=$(printf '%s' "$crossing" \
-        | sed -n 's/^      //p' \
-        | grep -o '[A-Z][A-Za-z0-9_]*' \
-        | sort -u \
-        | grep -vxF -e Option -e Vec -e String -e Box -e Result -e HashMap -e BTreeMap \
-        | grep -vxF "$defined" || true)
-    lent=""
-    for type in $borrowed; do
-        for candidate in $(grep -rl "^pub \(struct\|enum\) $type" . --include='*.rs' | LC_ALL=C sort); do
-            lent="$lent$(awk -f "$program" -v only="$type" \
-                -v source="$(realpath --relative-to=. "$candidate")" "$candidate")"$'\n'
-        done
-    done
-    if [ -n "$lent" ]; then
-        lent=$'\n  PRESTADOS DE OTROS MODULOS\n'"$lent"
-    fi
-
-    # Una sola escritura: asi un `head` encadenado no deja a medias la receta ni
-    # la mata por senal.
-    printf '%s\n%s\n\n%s\n%s%s\n\n%s\n' \
-        "ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)" \
-        "  Sin el estado inyectado (State<...>, AppHandle): no cruza." \
-        "$orders" \
-        $'\nTIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y orders.rs)\n  Campos con el nombre que ve la ventana.\n' \
-        "$crossing$lent" \
-        "-- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --" \
-        2>/dev/null | cat -s
-    exit 0
-
-# EL CONTRATO VENTANA-BACKEND ESTA CONGELADO MIENTRAS DURE EL #406 (RT-02): la
-# salida de `just contract` se capturo antes de tocar el tramite de sede y tiene
-# que ser identica al terminar. Es el oraculo de la ventana: si esta receta se
-# pone roja, un tipo de cruce o una orden ha cambiado de forma, y eso es un
-# cambio de contrato que se discute en el issue, no se acomoda aqui. Cuando el
-# spec termine, la instantanea se retira con esta receta.
+# EL CONTRATO VENTANA-BACKEND NO CAMBIA (RD-11 del #408): `tests/contract.snapshot`
+# es el oraculo de la ventana. Si esta receta se pone roja, un tipo de cruce o
+# una orden ha cambiado de forma, y eso se discute en el issue, no se acomoda
+# aqui. Vive en `check-rust` porque el contrato se genera desde el crate.
 #
 # Comprueba que `just contract` sigue siendo el de la instantanea.
-check-contract:
+check-contract: build-ts
     #!/usr/bin/env bash
     set -eu
     snapshot={{ tauri }}/tests/contract.snapshot
     if ! diff -u "$snapshot" <(just contract); then
-        echo "el contrato ventana-backend ha cambiado; ver RT-02 del #406" >&2
+        echo "el contrato ventana-backend ha cambiado; ver RD-11 del #408" >&2
         exit 1
     fi
     echo "check-contract: el contrato es el de la instantanea"
