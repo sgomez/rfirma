@@ -100,6 +100,13 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       available: bool
       placement: Option<PlacementView>
 
+  pub enum StatusView   (serde: etiqueta "kind")
+      Valid { notAfter: u64 }
+      Expired { notAfter: u64 }
+      NotYetValid { notBefore: u64 }
+      Revoked { reason: String }
+      Unreadable { detail: String }
+
   pub enum SecretView   (serde: etiqueta "kind")
       NotNeeded
       TypedOnScreen { attemptsLeft: Option<u32> }
@@ -139,13 +146,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       rubric: Option<String>
       language: String
       allowUnregisteredSignatures: bool
-
-  pub enum StatusView   (serde: etiqueta "kind")
-      Valid { notAfter: u64 }
-      Expired { notAfter: u64 }
-      NotYetValid { notBefore: u64 }
-      Revoked { reason: String }
-      Unreadable { detail: String }
 
   pub struct PlacementView
       rect: [f64; 4]

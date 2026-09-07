@@ -8,7 +8,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::{CertificateMemory, Token};
-use crate::signing::domain::memory_error::MemoryError;
+use crate::memory_error::MemoryError;
 use crate::site::domain::local_ca::LocalCa;
 
 /// Un token sin certificados que no sabe firmar: cada almacén está vacío.

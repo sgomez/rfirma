@@ -4,11 +4,47 @@ use serde::Serialize;
 
 use crate::crossing::crossing;
 
-use crate::identity::domain::certificate::ListedCertificate;
+use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
 
-use crate::signing::adapters::views::StatusView;
+crossing! {
+    /// Estado de un certificado tal como cruza a la ventana.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum StatusView {
+        #[serde(rename_all = "camelCase")]
+        Valid {
+            not_after: u64,
+        },
+        #[serde(rename_all = "camelCase")]
+        Expired {
+            not_after: u64,
+        },
+        #[serde(rename_all = "camelCase")]
+        NotYetValid {
+            not_before: u64,
+        },
+        Revoked {
+            reason: String,
+        },
+        Unreadable {
+            detail: String,
+        },
+    }
+}
+
+impl From<CertificateStatus> for StatusView {
+    fn from(status: CertificateStatus) -> Self {
+        match status {
+            CertificateStatus::Valid { not_after } => Self::Valid { not_after },
+            CertificateStatus::Expired { not_after } => Self::Expired { not_after },
+            CertificateStatus::NotYetValid { not_before } => Self::NotYetValid { not_before },
+            CertificateStatus::Revoked { reason } => Self::Revoked { reason },
+            CertificateStatus::Unreadable { detail } => Self::Unreadable { detail },
+        }
+    }
+}
 
 crossing! {
     /// Forma de solicitar el secreto al almacén de claves.

@@ -9,7 +9,7 @@ use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::recents::Badge;
 use crate::documents::domain::recents::RecentDocument;
 use crate::documents::ports::{DocumentFiles, DocumentsMemory};
-use crate::signing::domain::memory_error::MemoryError;
+use crate::memory_error::MemoryError;
 use crate::signing::domain::BoxSize;
 use crate::signing::domain::CompletedCycle;
 use crate::signing::domain::Spot;

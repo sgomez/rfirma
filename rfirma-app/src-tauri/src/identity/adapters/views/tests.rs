@@ -1,7 +1,7 @@
-use super::{store_name, CertificateView, SecretView};
+use super::{store_name, CertificateView, SecretView, StatusView};
+use crate::identity::domain::certificate::CertificateStatus;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
-use crate::signing::adapters::views::StatusView;
 
 #[test]
 fn the_secret_crosses_as_one_of_three_kinds_and_never_as_a_string() {
@@ -62,4 +62,21 @@ fn the_store_crosses_as_a_class_and_never_as_a_path() {
             "«{name}» no es una clase en ingles"
         );
     }
+}
+
+#[test]
+fn the_status_crosses_with_its_payload() {
+    let not_yet = StatusView::from(CertificateStatus::NotYetValid { not_before: 42 });
+    let unreadable = StatusView::from(CertificateStatus::Unreadable {
+        detail: "PEM error".to_owned(),
+    });
+
+    assert_eq!(
+        serde_json::to_string(&not_yet).expect("serializa"),
+        r#"{"kind":"notYetValid","notBefore":42}"#
+    );
+    assert_eq!(
+        serde_json::to_string(&unreadable).expect("serializa"),
+        r#"{"kind":"unreadable","detail":"PEM error"}"#
+    );
 }

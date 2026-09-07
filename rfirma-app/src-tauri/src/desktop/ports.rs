@@ -3,7 +3,7 @@
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::domain::version_check::VersionCheck;
-use crate::signing::domain::memory_error::MemoryError;
+use crate::memory_error::MemoryError;
 
 /// Quién atiende un esquema según el escritorio, y cómo se elige (ADR-0015).
 pub trait HandlerRegistry {
