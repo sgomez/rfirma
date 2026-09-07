@@ -128,7 +128,8 @@ fn every_module_is_named_in_the_map_of_its_zone() {
             missing.is_empty(),
             "{} es lo que un agente lee en vez de explorar {}, y ni el ni los indices por \
              contexto nombran estos modulos:\n{}\n\
-             Anade una fila por cada uno: ruta, tamano y que es, en una frase.",
+             Anade una fila por cada uno: ruta y que es, en una frase. Sin tamanos: \
+             los da `just outline`.",
             zone.map,
             zone.root,
             missing.join("\n")
@@ -146,9 +147,7 @@ fn context_map(context: &str, map: &str) -> (String, String) {
 
 #[test]
 fn a_map_that_forgets_a_module_is_caught() {
-    let maps = [root_map(
-        "| `memory/recents.rs` | 406 | Los diez recientes. |",
-    )];
+    let maps = [root_map("| `memory/recents.rs` | Los diez recientes. |")];
     let modules = [
         "memory/recents.rs".to_owned(),
         "memory/brand_new.rs".to_owned(),
@@ -163,7 +162,7 @@ fn a_map_that_forgets_a_module_is_caught() {
 
 #[test]
 fn a_bare_file_name_does_not_count_as_naming_the_module() {
-    let maps = [root_map("| `mod.rs` | 406 | Algo. |")];
+    let maps = [root_map("| `mod.rs` | Algo. |")];
     let modules = ["memory/mod.rs".to_owned()];
 
     assert_eq!(
@@ -176,11 +175,8 @@ fn a_bare_file_name_does_not_count_as_naming_the_module() {
 #[test]
 fn a_module_named_in_the_map_of_its_context_is_not_missing() {
     let maps = [
-        root_map("| `site/` | — | El contexto de sede: ver `site/AGENTS.md`. |"),
-        context_map(
-            "site",
-            "| `adapters/tauri.rs` | 80 | Las ordenes de sede. |",
-        ),
+        root_map("| `site/` | El contexto de sede: ver `site/AGENTS.md`. |"),
+        context_map("site", "| `adapters/tauri.rs` | Las ordenes de sede. |"),
     ];
     let modules = [
         "site/adapters/tauri.rs".to_owned(),
@@ -202,7 +198,7 @@ fn a_module_named_in_the_map_of_its_context_is_not_missing() {
 fn a_context_map_does_not_name_a_module_of_another_context() {
     let maps = [
         root_map(""),
-        context_map("site", "| `adapters/tauri.rs` | 80 | Las ordenes. |"),
+        context_map("site", "| `adapters/tauri.rs` | Las ordenes. |"),
     ];
     let modules = ["identity/adapters/tauri.rs".to_owned()];
 

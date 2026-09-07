@@ -37,91 +37,91 @@ rojo.
 
 ## Dónde vive qué
 
-| Módulo | Líneas | Qué es |
-|---|---|---|
-| `main.tsx` | 110 | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | 659 | Los puertos que hablan con Tauri. La otra cara de los `adapters/tauri.rs` de cada contexto. |
-| `App.tsx` | 1290 | El árbol de la ventana y el estado que la recorre. |
-| **`shell/`** | | La ventana y su cabecera (ADR-0007). |
-| `shell/MainWindow.tsx` | 98 | El marco, con el hueco de la franja entre la cabecera y las regiones. |
-| `shell/NotificationStrip.tsx` | 74 | La franja de notificación: el patrón, no el aviso concreto (ID-207). |
-| `shell/Header.tsx` | 118 | La cabecera única, sin barra de menús. |
-| `shell/menuAnchor.ts` | 25 | Dónde se ancla el menú de dos entradas. |
-| **`documents/`** | | La bandeja. |
-| `documents/document.ts` | 69 | El vocabulario del documento: **el que se tiene delante** (`DocumentInHand`) y las insignias. No es la fila (ID-287). |
-| `documents/useDocuments.ts` | 171 | El estado de la bandeja. |
-| `documents/DocumentTray.tsx` | 97 | La bandeja pintada. |
-| `documents/recents.ts` | 199 | Los diez recientes —**la fila que se guarda**— y su puerto, con el camino de vuelta a la mano (`taken`). Misma capacidad que `memory::recents::CAPACITY`. |
-| `documents/picker.ts` | 32 | Por dónde entra un documento. |
-| `documents/drops.ts` | 100 | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
-| **`signing/`** | | La firma, en el lado de la interfaz. |
-| `signing/flow.ts` | 194 | Las tres etapas de la trifásica. |
-| `signing/useSigning.ts` | 166 | El estado de la firma. |
-| `signing/SigningPanel.tsx` | 771 | El panel. |
-| `signing/CertificateSelect.tsx` | 289 | La elección de certificado. |
-| `signing/PinDialog.tsx` | 135 | El diálogo del secreto del almacén. |
-| `signing/secret.ts` | 25 | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
-| `signing/SigningProgressDialog.tsx` | 106 | El progreso. |
-| `signing/UnsealedPagesDialog.tsx` | 84 | El diálogo de páginas sin sello, justo antes de firmar (ID-105, ID-106). |
-| `signing/UnregisteredSignaturesDialog.tsx` | 69 | El aviso de las firmas previas que rFirma no sabe leer, en la misma fila que el anterior (ID-297…ID-301, ID-305). |
-| `signing/unsealedPages.ts` | 67 | Qué páginas del conjunto elegido pierde `correctPositionSignature` en silencio, en puntos PAdES. Sin React. |
-| `signing/SignedPanel.tsx` | 144 | El resumen tras firmar, y sus tres salidas (ID-79). |
-| `signing/certificate.ts` | 160 | El certificado, en el lado de la interfaz, con el orden y el agrupado del desplegable. |
-| `signing/destination.ts` | 160 | Dónde cae el firmado, el recorte de esa línea —la función pura del ID-64— y quién lleva al usuario hasta el fichero (ID-79). |
-| `signing/visibleSignature.ts` | 44 | Qué se estampa en el recuadro. |
-| `signing/rubric.ts` | 77 | La rúbrica que va dentro del recuadro. |
-| `signing/pageRange.ts` | 102 | El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React. |
-| `signing/token.ts` | 56 | Lo que el token puede contestar cuando algo va mal. |
-| `signing/failure.ts` | 55 | El fallo de firma, clasificado. |
-| `signing/stampPreview.ts` | 113 | El sello que se ve dentro del recuadro antes de firmar: el puerto del ciclo en seco, sus estados y el umbral del documento grande. Sin React. |
-| `signing/useStampPreview.ts` | 163 | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
-| **`viewer/`** | | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | 991 | El visor y los tres gestos del recuadro. El botón de sellar vive en `signing/SigningPanel.tsx` desde #194; el estado del sello, en su propia pastilla flotante, desde #202. |
-| `viewer/pdf.ts` | 97 | La frontera con `pdf.js`, escrita como puerto. El `/Title` de los metadatos es opcional: lo mira la ventana de sede, no el visor. |
-| `viewer/pdfjsLoader.ts` | 87 | El worker de `pdf.js`, empaquetado por Vite. |
-| `viewer/renderQueue.ts` | 101 | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
-| `viewer/zoom.ts` | 186 | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
-| `viewer/source.ts` | 105 | De dónde salen los bytes del documento. |
-| `viewer/signatureBox.ts` | 452 | El recuadro: dónde se guarda, **el conjunto propio de cada opción** (#188), cómo se redimensiona y cómo se traza. |
-| `viewer/useBoxDrag.ts` | 178 | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
-| `viewer/useBoxTrace.ts` | 130 | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
-| **`preferences/`** | | Los ajustes. |
-| `preferences/preferences.ts` | 120 | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | 743 | La pantalla completa de ajustes, con su índice de **cinco** secciones. |
-| `preferences/Switch.tsx` | 62 | El interruptor. |
-| `preferences/Select.tsx` | 189 | El desplegable. |
-| `preferences/theme.ts` | 40 | El tema de la ventana. |
-| **`i18n/`** | | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los dieciséis bloques de comentario que explican el mecanismo —no para quien traduce— están indexados en `i18n/AGENTS.md`. |
-| `i18n/catalog.ts` | 28 | La forma del catálogo. |
-| `i18n/i18n.ts` | 40 | La traducción. |
-| `i18n/LanguageProvider.tsx` | 81 | El contexto. |
-| `i18n/languages.ts` | 30 | Los idiomas publicados: reexporta lo que generó `po-import`. |
-| `i18n/i18next.d.ts` | 23 | Las claves, para `tsc` y el editor. Se versiona; `resources.d.ts` no. |
-| `i18n/preference.ts` | 34 | De dónde sale y a dónde vuelve el idioma. |
-| `i18n/locales/*.ts` | — | **Generados, no versionados.** Salen de `po/`. No se leen ni se editan. |
-| **`errors/`** | | Los fallos que ve el usuario. |
-| `errors/classify.ts` | 57 | Un fallo con la forma del ID-29: una situación, no un mensaje. |
-| `errors/ErrorNotice.tsx` | 55 | El aviso. |
-| **`design-system/`** | | `design-system/icons.tsx` (274), copiados en línea de los artboards. |
-| **`desktop/`** | | El escritorio de la persona, en el lado de la interfaz: quién atiende `afirma://` (ID-238…ID-241). |
-| `desktop/urlHandlers.ts` | 94 | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras: si ya los atiende rFirma y si el banner tiene algo que preguntar. Sin React. |
-| `desktop/UrlHandlerBanner.tsx` | 70 | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
-| **`sede/`** | | **La ventana que abre una sede** por `afirma://` (#362): una ventana con una secuencia de cinco momentos, no cinco pantallas. Ficha: `docs/design/ventana-de-sede.md`. |
-| `sede/main.tsx` | 47 | **El cableado de la ventana de sede** (`sede.html`, ID-335): su propio montaje, con el puerto de verdad y sin nada del árbol de la principal. |
-| `sede/siteErrands.ts` | 364 | El adaptador del puerto: convierte cada momento que empuja el backend en el `Errand` que espera la ventana, y pone los dos que no vienen de él —el secreto y los dos tramos de la firma—. Sin React y sin Tauri (TD-78). |
-| `sede/errand.ts` | 268 | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand`, los tres relojes (retardo, umbral, cierre a los 15 s) y el callejón sin salida que llega ya medido del backend (ID-341). Sin React. |
-| `sede/SedeWindow.tsx` | 175 | El marco de 520 × 420 px y el reparto entre los cinco momentos. El PIN se monta encima, sin pantalla propia (ID-273), y el canal que ya no se va a abrir reusa la pantalla de la espera sin esperar al reloj (ID-341). |
-| `sede/SedeFrame.tsx` | 69 | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
-| `sede/SedeWaiting.tsx` | 151 | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
-| `sede/SedeConsent.tsx` | 173 | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual (ID-269), y la quinta situación —firma no reconocida (#363)—. |
-| `sede/SedeSigning.tsx` | 82 | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
-| `sede/SedeOutcome.tsx` | 197 | 4 · Los tres desenlaces, con el documento que se acaba de firmar, y el detalle copiable del rechazo. |
-| `sede/SedeNoCertificate.tsx` | 103 | 5 · Sin certificado utilizable, y sus dos salidas distintas (ID-278). |
-| **`updates/`** | | `updates/newVersion.ts` (39): el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
-| **`about/`** | | `about/AboutDialog.tsx` (78). |
-| **`trust/`** | | El aviso del primer arranque (#365): la CA local y el permiso de red local, explicados juntos y sin condición. No es un puerto, no habla con Tauri. |
-| `trust/TrustNotice.tsx` | 87 | El diálogo del primer arranque, montado en `main.tsx` mientras `Preferences.trustNoticeSeen` siga en `false`. |
-| **Andamiaje** | | `test-setup.ts` (10), `testing/render.tsx` (25), `vite-env.d.ts` (5). No son la aplicación. |
+| Módulo | Qué es |
+|---|---|
+| `main.tsx` | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
+| `tauri.ts` | Los puertos que hablan con Tauri. La otra cara de los `adapters/tauri.rs` de cada contexto. |
+| `App.tsx` | El árbol de la ventana y el estado que la recorre. |
+| **`shell/`** | La ventana y su cabecera (ADR-0007). |
+| `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
+| `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto (ID-207). |
+| `shell/Header.tsx` | La cabecera única, sin barra de menús. |
+| `shell/menuAnchor.ts` | Dónde se ancla el menú de dos entradas. |
+| **`documents/`** | La bandeja. |
+| `documents/document.ts` | El vocabulario del documento: **el que se tiene delante** (`DocumentInHand`) y las insignias. No es la fila (ID-287). |
+| `documents/useDocuments.ts` | El estado de la bandeja. |
+| `documents/DocumentTray.tsx` | La bandeja pintada. |
+| `documents/recents.ts` | Los diez recientes —**la fila que se guarda**— y su puerto, con el camino de vuelta a la mano (`taken`). Misma capacidad que `memory::recents::CAPACITY`. |
+| `documents/picker.ts` | Por dónde entra un documento. |
+| `documents/drops.ts` | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera (ID-157). |
+| **`signing/`** | La firma, en el lado de la interfaz. |
+| `signing/flow.ts` | Las tres etapas de la trifásica. |
+| `signing/useSigning.ts` | El estado de la firma. |
+| `signing/SigningPanel.tsx` | El panel. |
+| `signing/CertificateSelect.tsx` | La elección de certificado. |
+| `signing/PinDialog.tsx` | El diálogo del secreto del almacén. |
+| `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
+| `signing/SigningProgressDialog.tsx` | El progreso. |
+| `signing/UnsealedPagesDialog.tsx` | El diálogo de páginas sin sello, justo antes de firmar (ID-105, ID-106). |
+| `signing/UnregisteredSignaturesDialog.tsx` | El aviso de las firmas previas que rFirma no sabe leer, en la misma fila que el anterior (ID-297…ID-301, ID-305). |
+| `signing/unsealedPages.ts` | Qué páginas del conjunto elegido pierde `correctPositionSignature` en silencio, en puntos PAdES. Sin React. |
+| `signing/SignedPanel.tsx` | El resumen tras firmar, y sus tres salidas (ID-79). |
+| `signing/certificate.ts` | El certificado, en el lado de la interfaz, con el orden y el agrupado del desplegable. |
+| `signing/destination.ts` | Dónde cae el firmado, el recorte de esa línea —la función pura del ID-64— y quién lleva al usuario hasta el fichero (ID-79). |
+| `signing/visibleSignature.ts` | Qué se estampa en el recuadro. |
+| `signing/rubric.ts` | La rúbrica que va dentro del recuadro. |
+| `signing/pageRange.ts` | El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React. |
+| `signing/token.ts` | Lo que el token puede contestar cuando algo va mal. |
+| `signing/failure.ts` | El fallo de firma, clasificado. |
+| `signing/stampPreview.ts` | El sello que se ve dentro del recuadro antes de firmar: el puerto del ciclo en seco, sus estados y el umbral del documento grande. Sin React. |
+| `signing/useStampPreview.ts` | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
+| **`viewer/`** | El visor de PDF. |
+| `viewer/DocumentViewer.tsx` | El visor y los tres gestos del recuadro. El botón de sellar vive en `signing/SigningPanel.tsx` desde #194; el estado del sello, en su propia pastilla flotante, desde #202. |
+| `viewer/pdf.ts` | La frontera con `pdf.js`, escrita como puerto. El `/Title` de los metadatos es opcional: lo mira la ventana de sede, no el visor. |
+| `viewer/pdfjsLoader.ts` | El worker de `pdf.js`, empaquetado por Vite. |
+| `viewer/renderQueue.ts` | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
+| `viewer/zoom.ts` | El zoom: rango continuo, «ajustar» como modo y el tope del mapa de bits. Sin React. |
+| `viewer/source.ts` | De dónde salen los bytes del documento. |
+| `viewer/signatureBox.ts` | El recuadro: dónde se guarda, **el conjunto propio de cada opción** (#188), cómo se redimensiona y cómo se traza. |
+| `viewer/useBoxDrag.ts` | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
+| `viewer/useBoxTrace.ts` | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer (#190). Hermano del anterior, no un modo suyo. |
+| **`preferences/`** | Los ajustes. |
+| `preferences/preferences.ts` | Lo que la aplicación recuerda. |
+| `preferences/PreferencesDialog.tsx` | La pantalla completa de ajustes, con su índice de **cinco** secciones. |
+| `preferences/Switch.tsx` | El interruptor. |
+| `preferences/Select.tsx` | El desplegable. |
+| `preferences/theme.ts` | El tema de la ventana. |
+| **`i18n/`** | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los dieciséis bloques de comentario que explican el mecanismo —no para quien traduce— están indexados en `i18n/AGENTS.md`. |
+| `i18n/catalog.ts` | La forma del catálogo. |
+| `i18n/i18n.ts` | La traducción. |
+| `i18n/LanguageProvider.tsx` | El contexto. |
+| `i18n/languages.ts` | Los idiomas publicados: reexporta lo que generó `po-import`. |
+| `i18n/i18next.d.ts` | Las claves, para `tsc` y el editor. Se versiona; `resources.d.ts` no. |
+| `i18n/preference.ts` | De dónde sale y a dónde vuelve el idioma. |
+| `i18n/locales/*.ts` | **Generados, no versionados.** Salen de `po/`. No se leen ni se editan. |
+| **`errors/`** | Los fallos que ve el usuario. |
+| `errors/classify.ts` | Un fallo con la forma del ID-29: una situación, no un mensaje. |
+| `errors/ErrorNotice.tsx` | El aviso. |
+| **`design-system/`** | `design-system/icons.tsx`, copiados en línea de los artboards. |
+| **`desktop/`** | El escritorio de la persona, en el lado de la interfaz: quién atiende `afirma://` (ID-238…ID-241). |
+| `desktop/urlHandlers.ts` | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras: si ya los atiende rFirma y si el banner tiene algo que preguntar. Sin React. |
+| `desktop/UrlHandlerBanner.tsx` | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
+| **`sede/`** | **La ventana que abre una sede** por `afirma://` (#362): una ventana con una secuencia de cinco momentos, no cinco pantallas. Ficha: `docs/design/ventana-de-sede.md`. |
+| `sede/main.tsx` | **El cableado de la ventana de sede** (`sede.html`, ID-335): su propio montaje, con el puerto de verdad y sin nada del árbol de la principal. |
+| `sede/siteErrands.ts` | El adaptador del puerto: convierte cada momento que empuja el backend en el `Errand` que espera la ventana, y pone los dos que no vienen de él —el secreto y los dos tramos de la firma—. Sin React y sin Tauri (TD-78). |
+| `sede/errand.ts` | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand`, los tres relojes (retardo, umbral, cierre a los 15 s) y el callejón sin salida que llega ya medido del backend (ID-341). Sin React. |
+| `sede/SedeWindow.tsx` | El marco de 520 × 420 px y el reparto entre los cinco momentos. El PIN se monta encima, sin pantalla propia (ID-273), y el canal que ya no se va a abrir reusa la pantalla de la espera sin esperar al reloj (ID-341). |
+| `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
+| `sede/SedeWaiting.tsx` | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
+| `sede/SedeConsent.tsx` | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual (ID-269), y la quinta situación —firma no reconocida (#363)—. |
+| `sede/SedeSigning.tsx` | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
+| `sede/SedeOutcome.tsx` | 4 · Los tres desenlaces, con el documento que se acaba de firmar, y el detalle copiable del rechazo. |
+| `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas (ID-278). |
+| **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
+| **`about/`** | `about/AboutDialog.tsx`. |
+| **`trust/`** | El aviso del primer arranque (#365): la CA local y el permiso de red local, explicados juntos y sin condición. No es un puerto, no habla con Tauri. |
+| `trust/TrustNotice.tsx` | El diálogo del primer arranque, montado en `main.tsx` mientras `Preferences.trustNoticeSeen` siga en `false`. |
+| **Andamiaje** | `test-setup.ts`, `testing/render.tsx`, `vite-env.d.ts`. No son la aplicación. |
 
 ## El circuito de cadenas (ADR-0009 enmendado, ID-121…ID-130)
 

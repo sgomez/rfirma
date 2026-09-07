@@ -84,9 +84,12 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 
 ### 🗺️ Mapas: lee el índice antes que el código
 
-Hay un índice por zona, y **cada uno da el tamaño de cada fichero antes de que
-lo abras**. Son la primera lectura de cualquier trabajo, y en la mayoría de los
-casos la única que hace falta además del fichero que vas a tocar:
+Hay un índice por zona, y **cada uno dice en una frase qué es cada fichero, para
+que sepas cuál abrir sin explorar el árbol**. No dan tamaños: un número en un
+mapa envejece en el commit siguiente y nadie lo vigila — el tamaño lo da
+`just outline` en el momento en que lo necesitas, y ahí es exacto. Son la
+primera lectura de cualquier trabajo, y en la mayoría de los casos la única que
+hace falta además del fichero que vas a tocar:
 
 * `rfirma-app/src-tauri/src/AGENTS.md` — mapa del backend Rust.
 * `rfirma-app/src/AGENTS.md` — mapa de la interfaz.
