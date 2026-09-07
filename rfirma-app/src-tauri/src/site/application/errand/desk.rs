@@ -8,7 +8,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
     visible_signature_of, AfirmaUrl, LoadRequest, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SiteFilter,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
 };
 
 use super::outcome::{
@@ -163,7 +163,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
 /// Lo que se firma, desacoplado de si vino de `sign` o de `signandsave`.
 struct SignatureAsk<'a> {
     document: &'a [u8],
-    round: crate::site::domain::protocol::SignatureRound,
+    round: SignatureRound,
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
 }

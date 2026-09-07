@@ -84,9 +84,6 @@ pub fn declined(live: &LiveErrand) -> SiteOutcome {
 }
 
 /// Caso de uso: se escribe en la ruta que la persona eligió el fichero que pidió la sede.
-///
-/// `signer_der` es con qué contestar si esto viene de `signandsave` (`None` en `save`): quien
-/// llama ya tiene el consentimiento en la mano, y no se lee de `LiveErrand`.
 pub fn saved(
     scratch: &dyn Scratch,
     path: &Path,

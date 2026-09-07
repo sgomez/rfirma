@@ -265,12 +265,13 @@ impl SiteSigning for TheNeighbours<'_> {
 /// el guardado de `signandsave` sin pasar por ningún ciclo de firma real (grada A no tiene uno).
 struct ASignerThatSucceeds<'a> {
     neighbours: TheNeighbours<'a>,
+    listed: Vec<TokenCertificate>,
     signature: SiteSignature,
 }
 
 impl Certificates for ASignerThatSucceeds<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
-        self.neighbours.listed()
+        Ok(self.listed.clone())
     }
 
     fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
@@ -1562,6 +1563,7 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
                 opened: &opened,
                 memory: &memory,
             },
+            listed: ours.clone(),
             signature: SiteSignature {
                 signed: b"%PDF-1.7 firmado".to_vec(),
                 signer_der: ours[0].der().to_vec(),
@@ -1571,27 +1573,19 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
     };
 
-    let (handle, mut wire) = the_wire();
-    live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
         54001,
         a_codec()
     )));
+    let (handle, mut wire) = the_wire();
     let url = a_sign_and_save("");
-    let step = consent_to_sign_and_save(&desk, &sign_and_save_requested(&url), ours, &live);
-    let ErrandStep::AskingToSign(asked) = step else {
+    // Por `attend`, como llega en produccion: `dispatch` reparte a `attend_operation` y es
+    // `remembered` quien rellena la memoria del tramite, no la prueba.
+    let step = attend(&desk, url, handle, &live).expect("hay codec negociado");
+    let ErrandStep::AskingToSign(_) = step else {
         panic!("hay un certificado que la sede acepta: {step:?}");
     };
-    // El envio a `finish` lee las pistas de la memoria del tramite, que solo `dispatch`
-    // rellena en produccion: aqui se apunta a mano, como hace `consent_to_sign` con el resto.
-    live.remember_signature(state::PendingSignature {
-        document: asked.document.clone(),
-        filter: asked.filter.clone(),
-        from_the_site: asked.from_the_site.clone(),
-        unregistered_signatures: asked.unregistered_signatures,
-        saving: asked.saving.clone(),
-    });
     assert_eq!(
         what_the_site_received(&mut wire),
         None,
