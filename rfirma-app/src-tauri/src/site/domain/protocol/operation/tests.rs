@@ -91,16 +91,85 @@ fn a_countersignature_in_pades_is_refused_with_the_code_of_the_original() {
 }
 
 #[test]
-fn saving_files_by_order_of_a_site_is_refused_on_purpose() {
-    for verb in [SAVE, SIGN_AND_SAVE] {
-        let refusal = read_operation(&a_signature(verb, "")).expect_err("esta fuera");
+fn signing_and_saving_by_order_of_a_site_is_refused_on_purpose() {
+    let refusal = read_operation(&a_signature(SIGN_AND_SAVE, "")).expect_err("esta fuera");
 
-        assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
-        assert!(
-            refusal.detail().contains("no guarda ficheros"),
-            "«{verb}» se rechaza por lo que es, no por desconocido: {}",
-            refusal.detail()
-        );
+    assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+    assert!(
+        refusal.detail().contains("no guarda ficheros"),
+        "«{SIGN_AND_SAVE}» se rechaza por lo que es, no por desconocido: {}",
+        refusal.detail()
+    );
+}
+
+#[test]
+fn a_save_carries_its_document_and_its_optional_dialog_hints() {
+    let url = an_operation(&format!(
+        "op=save&dat={}&title=Guardar&filename=firma.pdf&exts=pdf,p7s&desc=Documentos",
+        dat(b"%PDF-1.7\n")
+    ));
+
+    let SiteOperation::Save(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un guardado");
+    };
+    assert_eq!(request.data(), b"%PDF-1.7\n");
+    assert_eq!(request.title(), Some("Guardar"));
+    assert_eq!(request.filename(), Some("firma.pdf"));
+    assert_eq!(request.extensions(), ["pdf", "p7s"]);
+    assert_eq!(request.description(), Some("Documentos"));
+}
+
+#[test]
+fn a_save_without_dat_names_the_parameter_like_the_original() {
+    let url = an_operation("op=save&title=Guardar");
+
+    let refusal = read_operation(&url).expect_err("dat es obligatorio");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Data));
+}
+
+#[test]
+fn a_load_reads_all_its_optional_parameters() {
+    let url = an_operation(
+        "op=load&title=Cargar&exts=pdf, p7s&desc=Documentos&filePath=/home/persona&multiload=true",
+    );
+
+    let SiteOperation::Load(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una carga");
+    };
+    assert_eq!(request.title(), Some("Cargar"));
+    assert_eq!(request.extensions(), ["pdf", "p7s"]);
+    assert_eq!(request.description(), Some("Documentos"));
+    assert_eq!(request.starting_folder(), Some("/home/persona"));
+    assert!(request.multiple());
+}
+
+#[test]
+fn a_load_without_multiload_is_a_single_file_load() {
+    let url = an_operation("op=load");
+
+    let SiteOperation::Load(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una carga");
+    };
+    assert!(!request.multiple());
+    assert!(request.extensions().is_empty());
+}
+
+#[test]
+fn multiload_follows_java_boolean_parse_boolean() {
+    for (value, expected) in [
+        ("true", true),
+        ("TRUE", true),
+        ("false", false),
+        ("otra-cosa", false),
+    ] {
+        let url = an_operation(&format!("op=load&multiload={value}"));
+
+        let SiteOperation::Load(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es una carga");
+        };
+        assert_eq!(request.multiple(), expected, "multiload={value}");
     }
 }
 

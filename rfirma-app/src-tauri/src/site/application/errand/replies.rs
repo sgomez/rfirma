@@ -1,5 +1,7 @@
 //! Respuestas finales del trámite para la sede y la ventana (ADR-0009).
 
+use std::path::Path;
+
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::site::domain::protocol::SiteFilter;
 use crate::site::domain::signing::SiteSignature;
@@ -8,7 +10,7 @@ use super::outcome::{ErrandStep, NoCertificate, SiteOutcome};
 use super::state::LiveErrand;
 use crate::site::application::filtering;
 use crate::site::application::session::SiteRefusal;
-use crate::site::ports::{Certificates, FilterEngine};
+use crate::site::ports::{Certificates, FilterEngine, Scratch};
 
 /// Caso de uso: la persona consiente identificarse y entrega el certificado.
 pub fn identify_with<E: FilterEngine>(
@@ -73,6 +75,38 @@ pub fn the_signature_did_not_come_out(live: &LiveErrand, refusal: SiteRefusal) -
 /// Caso de uso: la persona cancela el trámite.
 pub fn declined(live: &LiveErrand) -> SiteOutcome {
     over(live, SiteOutcome::Cancelled)
+}
+
+/// Caso de uso: se escribe en la ruta que la persona eligió el fichero que pidió la sede.
+pub fn saved(scratch: &dyn Scratch, path: &Path, data: &[u8], live: &LiveErrand) -> SiteOutcome {
+    match scratch.write(path, data) {
+        Ok(()) => over(live, SiteOutcome::Saved),
+        Err(detail) => over(
+            live,
+            SiteOutcome::Refused(SiteRefusal::CannotSaveData(detail)),
+        ),
+    }
+}
+
+/// Caso de uso: se leen los ficheros que la persona eligió y se entregan a la sede.
+pub fn loaded(
+    scratch: &dyn Scratch,
+    chosen: &[(String, std::path::PathBuf)],
+    live: &LiveErrand,
+) -> SiteOutcome {
+    let mut files = Vec::with_capacity(chosen.len());
+    for (name, path) in chosen {
+        match scratch.read(path) {
+            Ok(bytes) => files.push((name.clone(), bytes)),
+            Err(detail) => {
+                return over(
+                    live,
+                    SiteOutcome::Refused(SiteRefusal::CannotLoadData(detail)),
+                )
+            }
+        }
+    }
+    over(live, SiteOutcome::Loaded(files))
 }
 
 /// Paso cuando la persona no tiene ningún certificado instalado.

@@ -7,10 +7,11 @@ use crate::documents::domain::handles;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    visible_signature_of, AfirmaUrl, SelectCertificate, SignRequest, SiteFilter,
+    visible_signature_of, AfirmaUrl, LoadRequest, SaveRequest, SelectCertificate, SignRequest,
+    SiteFilter,
 };
 
-use super::outcome::{ErrandStep, SigningConsent, SiteOutcome};
+use super::outcome::{ErrandStep, LoadingConsent, SavingConsent, SigningConsent, SiteOutcome};
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::SiteRequest;
 use super::state::LiveErrand;
@@ -56,6 +57,15 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     live.keep_the_request(url.clone());
 
+    // `save` y `load` no miran certificados: se despachan antes de pedirlos, o un equipo sin
+    // certificados se lleva un rechazo de token en una operación que no los necesita.
+    match operation {
+        SiteRequest::Save(request) => return consent_to_save(request),
+        SiteRequest::Load(request) => return consent_to_load(request),
+        SiteRequest::SelectCertificate(_) | SiteRequest::Sign(_) => {}
+        SiteRequest::NotAttended(_) => unreachable!("se ha despachado arriba"),
+    }
+
     let ours = match desk.neighbours.listed() {
         Ok(ours) => ours,
         Err(error) => {
@@ -68,8 +78,32 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             consent_for(desk.engine, &request, ours, &desk.neighbours, live)
         }
         SiteRequest::Sign(request) => consent_to_sign(desk, &request, ours, live),
-        SiteRequest::NotAttended(_) => unreachable!("se ha despachado arriba"),
+        SiteRequest::Save(_) | SiteRequest::Load(_) | SiteRequest::NotAttended(_) => {
+            unreachable!("se ha despachado arriba")
+        }
     }
+}
+
+/// Prepara el paso de guardado: la orden de Tauri abrirá el diálogo del portal.
+fn consent_to_save(request: SaveRequest) -> ErrandStep {
+    ErrandStep::Saving(SavingConsent {
+        data: request.data().to_vec(),
+        title: request.title().map(str::to_owned),
+        filename: request.filename().map(str::to_owned),
+        extensions: request.extensions().to_vec(),
+        description: request.description().map(str::to_owned),
+    })
+}
+
+/// Prepara el paso de carga: la orden de Tauri abrirá el selector del portal.
+fn consent_to_load(request: LoadRequest) -> ErrandStep {
+    ErrandStep::Loading(LoadingConsent {
+        title: request.title().map(str::to_owned),
+        extensions: request.extensions().to_vec(),
+        description: request.description().map(str::to_owned),
+        starting_folder: request.starting_folder().map(str::to_owned),
+        multiple: request.multiple(),
+    })
 }
 
 /// Prepara el paso de consentimiento para una firma o cofirma de sede.

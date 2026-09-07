@@ -152,13 +152,17 @@ pub trait ScratchDocuments {
     fn open_unrecorded(&self, path: PathBuf) -> String;
 }
 
-/// La carpeta de paso del trámite: donde cae el documento de la sede y de donde se borra (ADR-0016).
+/// El acceso a disco del trámite: la carpeta de paso del documento de la sede (ADR-0016) y las
+/// rutas que la persona elige por el diálogo del portal al guardar o cargar (ADR-0011).
 pub trait Scratch {
     /// Se asegura de que la carpeta de paso existe.
     fn make_the_folder(&self, folder: &Path) -> Result<(), String>;
 
     /// Deja los bytes del documento en esa ruta.
     fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String>;
+
+    /// Lee los bytes de esa ruta.
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String>;
 
     /// Borra el fichero de paso, y calla si ya no estaba.
     fn erase(&self, path: &Path);

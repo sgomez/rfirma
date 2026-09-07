@@ -60,6 +60,26 @@ fn with_a_key_each_field_is_ciphered_on_its_own_and_recoverable() {
 }
 
 #[test]
+fn a_save_goes_out_as_a_plain_ok_never_ciphered() {
+    let key = a_key();
+
+    assert_eq!(RelayCodec::new(None).encode(&SiteOutcome::Saved), "OK");
+    assert_eq!(RelayCodec::new(Some(key)).encode(&SiteOutcome::Saved), "OK");
+}
+
+#[test]
+fn a_load_ciphers_its_content_but_never_its_name() {
+    let key = a_key();
+    let outcome = SiteOutcome::Loaded(vec![("firma.pdf".to_owned(), b"%PDF".to_vec())]);
+
+    let wire = RelayCodec::new(Some(key.clone())).encode(&outcome);
+    let (name, content) = wire.split_once(':').expect("nombre y contenido");
+
+    assert_eq!(name, "firma.pdf");
+    assert_eq!(decrypt(content, Some(&key)).expect("descifra"), b"%PDF");
+}
+
+#[test]
 fn errors_travel_in_plain_text_even_with_a_key() {
     let key = a_key();
     let codec = RelayCodec::new(Some(key));

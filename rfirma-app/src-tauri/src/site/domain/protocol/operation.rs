@@ -28,6 +28,9 @@ pub const COUNTERSIGN: &str = "countersign";
 /// El verbo que guarda un fichero en el equipo.
 pub const SAVE: &str = "save";
 
+/// El verbo que carga uno o varios ficheros del equipo.
+pub const LOAD: &str = "load";
+
 /// El verbo que firma y además guarda.
 pub const SIGN_AND_SAVE: &str = "signandsave";
 
@@ -44,6 +47,10 @@ pub enum SiteOperation {
     SelectCertificate(SelectCertificate),
     /// `sign` o `cosign` sobre un PDF: la sede pide una firma.
     Sign(SignRequest),
+    /// `save`: la sede pide guardar un fichero en el equipo.
+    Save(SaveRequest),
+    /// `load`: la sede pide cargar uno o varios ficheros del equipo.
+    Load(LoadRequest),
 }
 
 /// Cuál de las dos firmas pidió la sede.
@@ -113,6 +120,80 @@ impl SelectCertificate {
     }
 }
 
+/// La petición de `save`: guardar un fichero en el equipo (`UrlParametersToSave`, 1.9.2).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SaveRequest {
+    data: Vec<u8>,
+    title: Option<String>,
+    filename: Option<String>,
+    extensions: Vec<String>,
+    description: Option<String>,
+}
+
+impl SaveRequest {
+    /// El fichero que la sede pide guardar, en bytes.
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
+
+    /// Título del diálogo de guardado, si la sede lo declaró.
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
+    }
+
+    /// Nombre de fichero que propone la sede.
+    pub fn filename(&self) -> Option<&str> {
+        self.filename.as_deref()
+    }
+
+    /// Extensiones admitidas por el filtro del diálogo.
+    pub fn extensions(&self) -> &[String] {
+        &self.extensions
+    }
+
+    /// Descripción del filtro de extensiones, si la sede la declaró.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+}
+
+/// La petición de `load`: cargar uno o varios ficheros del equipo (`UrlParametersToLoad`, 1.9.2).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LoadRequest {
+    title: Option<String>,
+    extensions: Vec<String>,
+    description: Option<String>,
+    starting_folder: Option<String>,
+    multiple: bool,
+}
+
+impl LoadRequest {
+    /// Título del selector, si la sede lo declaró.
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
+    }
+
+    /// Extensiones admitidas por el filtro del selector.
+    pub fn extensions(&self) -> &[String] {
+        &self.extensions
+    }
+
+    /// Descripción del filtro de extensiones, si la sede la declaró.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    /// Carpeta inicial sugerida por la sede, nunca la única fuente de lectura.
+    pub fn starting_folder(&self) -> Option<&str> {
+        self.starting_folder.as_deref()
+    }
+
+    /// Si la sede pide varios ficheros (`multiload=true`) o uno solo.
+    pub fn multiple(&self) -> bool {
+        self.multiple
+    }
+}
+
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
 pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     check_minimum_client_version(url.parameter("mcv"))?;
@@ -131,7 +212,9 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
             "'countersign' no existe en PAdES: AOPDFSigner.countersign lanza una \
              UnsupportedOperationException",
         )),
-        SAVE | SIGN_AND_SAVE => Err(Refusal::new(
+        SAVE => save_request(url),
+        LOAD => load_request(url),
+        SIGN_AND_SAVE => Err(Refusal::new(
             SafCode::UnsupportedOperation,
             "rFirma no guarda ficheros por orden de una sede",
         )),
@@ -183,6 +266,54 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
         filter: site_filter(&declared)?,
         declared,
     }))
+}
+
+/// La petición de guardado: solo `dat` es obligatorio (`ProtocolInvocationLauncherSave`, 1.9.2).
+fn save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+    let data = required(url, "dat", Parameter::Data)?;
+    let document = decode_base64(data, Parameter::Data)?;
+    Ok(SiteOperation::Save(SaveRequest {
+        data: document,
+        title: optional(url, "title"),
+        filename: optional(url, "filename"),
+        extensions: comma_list(url, "exts"),
+        description: optional(url, "desc"),
+    }))
+}
+
+/// La petición de carga: nada es obligatorio (`ProtocolInvocationLauncherLoad`, 1.9.2).
+fn load_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+    Ok(SiteOperation::Load(LoadRequest {
+        title: optional(url, "title"),
+        extensions: comma_list(url, "exts"),
+        description: optional(url, "desc"),
+        starting_folder: optional(url, "filePath"),
+        multiple: url
+            .parameter("multiload")
+            .is_some_and(|value| value.eq_ignore_ascii_case("true")),
+    }))
+}
+
+/// Un parámetro opcional, o nada si no vino o vino vacío.
+fn optional(url: &AfirmaUrl, name: &str) -> Option<String> {
+    url.parameter(name)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+/// Una lista separada por comas, o vacía si el parámetro no vino.
+fn comma_list(url: &AfirmaUrl, name: &str) -> Vec<String> {
+    url.parameter(name)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|piece| !piece.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Un parámetro que la operación exige, o el `SAF_03` que lo nombra.

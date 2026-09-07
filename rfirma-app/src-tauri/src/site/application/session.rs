@@ -30,6 +30,10 @@ pub enum SiteRefusal {
     ScratchFolderMissing(String),
     /// El documento de paso no se ha podido escribir.
     ScratchUnwritable(String),
+    /// El fichero elegido por la persona para guardar no se ha podido escribir.
+    CannotSaveData(String),
+    /// Uno de los ficheros elegidos por la persona para cargar no se ha podido leer.
+    CannotLoadData(String),
     /// La firma no ha salido, y quien la hizo ya dijo con qué código y con qué vista.
     Signing(SigningRefusal),
 }
