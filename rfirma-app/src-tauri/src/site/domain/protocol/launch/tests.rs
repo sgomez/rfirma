@@ -247,3 +247,98 @@ fn a_refusal_location_is_none_without_ports_nor_the_third_protocol() {
 
     assert_eq!(location_for_a_refusal(&url), None);
 }
+
+#[test]
+fn a_launch_with_only_rtservlet_is_refused_as_an_unrecognized_verb() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&rtservlet=https://relay.example/retrieve\
+         &key=12345678",
+    )
+    .expect_err("sin stservlet la forma fileid-only queda fuera de alcance");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+}
+
+#[test]
+fn a_relay_launch_with_fileid_needs_rtservlet_and_stores_the_channel_info() {
+    let request = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc123&rtservlet=https://relay.example/retrieve\
+         &stservlet=https://relay.example/store&key=12345678&id=tx-1",
+    )
+    .expect("la variante fileid deberia valer");
+
+    let ChannelLocation::Relay(info) = request.location() else {
+        panic!("una operacion con servlet negocia canal de servidor intermedio");
+    };
+    assert_eq!(info.operation.verb(), "sign");
+    assert_eq!(info.fileid.as_deref(), Some("abc123"));
+    assert_eq!(
+        info.retrieve_servlet.as_deref(),
+        Some("https://relay.example/retrieve")
+    );
+    assert_eq!(info.store_servlet, "https://relay.example/store");
+    assert_eq!(info.id, "tx-1");
+    assert!(info.key.is_some());
+    assert!(!info.active_wait);
+}
+
+#[test]
+fn a_relay_launch_with_inline_dat_does_not_need_rtservlet_nor_key() {
+    let request = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.example/store\
+         &id=tx-2",
+    )
+    .expect("la variante dat inline deberia valer");
+
+    let ChannelLocation::Relay(info) = request.location() else {
+        panic!("una operacion con servlet negocia canal de servidor intermedio");
+    };
+    assert!(info.retrieve_servlet.is_none());
+    assert!(info.fileid.is_none());
+    assert!(info.key.is_none());
+}
+
+#[test]
+fn a_relay_launch_without_stservlet_is_refused() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&rtservlet=https://relay.example/retrieve\
+         &id=tx-3",
+    )
+    .expect_err("sin stservlet no se puede subir la respuesta");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+}
+
+#[test]
+fn a_relay_launch_with_fileid_but_no_rtservlet_is_refused() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&stservlet=https://relay.example/store\
+         &id=tx-4",
+    )
+    .expect_err("sin rtservlet no se puede recuperar el fileid");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+}
+
+#[test]
+fn a_relay_launch_with_neither_dat_nor_fileid_is_refused() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&stservlet=https://relay.example/store&id=tx-5",
+    )
+    .expect_err("sin datos que operar no hay nada que hacer");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+}
+
+#[test]
+fn a_relay_launch_reads_the_active_wait_flag() {
+    let request = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx-6&aw=true",
+    )
+    .expect("la operacion deberia valer");
+
+    let ChannelLocation::Relay(info) = request.location() else {
+        panic!("una operacion con servlet negocia canal de servidor intermedio");
+    };
+    assert!(info.active_wait);
+}

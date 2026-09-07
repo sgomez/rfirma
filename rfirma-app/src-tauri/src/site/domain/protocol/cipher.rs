@@ -13,6 +13,7 @@ const REQUIRED_KEY_LENGTH: usize = 8;
 const PADDING_SEPARATOR: char = '.';
 
 /// Clave de cifrado DES derivada del parámetro `key` de la URL; nunca se imprime ni se registra.
+#[derive(Clone, PartialEq, Eq)]
 pub struct CipherKey([u8; REQUIRED_KEY_LENGTH]);
 
 impl CipherKey {

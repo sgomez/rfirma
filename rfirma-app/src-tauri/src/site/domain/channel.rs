@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::protocol::{NegotiatedCredential, WireAnswer};
+use super::protocol::{NegotiatedCredential, Refusal, RelayChannelInfo, WireAnswer};
 
 /// Cometido con el que se abrió el canal local.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -21,6 +21,8 @@ pub enum ChannelLocation {
     Drawn(Vec<u16>),
     /// Puerto fijo, atado tal cual.
     Fixed(u16),
+    /// Servidor intermedio: sin puerto que escuchar, la operación viaja con sus servlets.
+    Relay(RelayChannelInfo),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,6 +33,8 @@ pub enum Situation {
     MaterialNotUsable,
     /// Error del sistema al intentar iniciar la escucha en el socket.
     NotListening,
+    /// El servidor intermedio no pudo completar la operación; el detalle va en `refusal()`.
+    Relay,
 }
 
 /// Fallo del canal compuesto por situación clasificada y detalle técnico.
@@ -38,6 +42,7 @@ pub enum Situation {
 pub struct ChannelError {
     situation: Situation,
     detail: String,
+    refusal: Option<Refusal>,
 }
 
 impl ChannelError {
@@ -46,6 +51,16 @@ impl ChannelError {
         Self {
             situation,
             detail: detail.into(),
+            refusal: None,
+        }
+    }
+
+    /// Un fallo del servidor intermedio, ya clasificado con su `SAF_NN` y su detalle (ADR-0009).
+    pub fn refused(refusal: Refusal) -> Self {
+        Self {
+            situation: Situation::Relay,
+            detail: refusal.detail().to_owned(),
+            refusal: Some(refusal),
         }
     }
 
@@ -58,6 +73,11 @@ impl ChannelError {
     pub fn detail(&self) -> &str {
         &self.detail
     }
+
+    /// El rechazo ya clasificado, cuando este error lo trae (servidor intermedio).
+    pub fn refusal(&self) -> Option<&Refusal> {
+        self.refusal.as_ref()
+    }
 }
 
 impl fmt::Display for ChannelError {
@@ -68,21 +88,42 @@ impl fmt::Display for ChannelError {
 
 impl std::error::Error for ChannelError {}
 
-/// Canal abierto con su puerto de escucha y asa de cierre.
+/// Canal abierto con su puerto de escucha, asa de cierre y, si la trae, la entrega ya resuelta.
 pub struct OpenChannel {
     port: u16,
     shutdown: Shutdown,
+    delivery: Option<Delivery>,
 }
 
 impl OpenChannel {
-    /// Crea un canal abierto con su puerto y asa de cierre.
+    /// Crea un canal abierto con su puerto y asa de cierre, sin entrega pendiente.
     pub fn new(port: u16, shutdown: Shutdown) -> Self {
-        Self { port, shutdown }
+        Self {
+            port,
+            shutdown,
+            delivery: None,
+        }
+    }
+
+    /// Un canal que, además, trae ya resuelta la operación a entregar: quien lo abre no espera a
+    /// un mensaje futuro (servidor intermedio), así que la entrega no puede correr hasta que
+    /// quien llama haya registrado el trámite, o se atendería sin él (ADR-0016).
+    pub fn with_delivery(port: u16, shutdown: Shutdown, delivery: Delivery) -> Self {
+        Self {
+            port,
+            shutdown,
+            delivery: Some(delivery),
+        }
     }
 
     /// Puerto en el que escucha el canal.
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    /// Retira la entrega pendiente, si la trae, para que quien la retira decida cuándo dispararla.
+    pub fn take_delivery(&mut self) -> Option<Delivery> {
+        self.delivery.take()
     }
 
     /// Cierra el canal y deja de escuchar conexiones.
@@ -109,6 +150,21 @@ impl Shutdown {
     }
 
     /// Ejecuta el apagado del servidor.
+    pub fn now(self) {
+        (self.0)();
+    }
+}
+
+/// Entrega diferida de una operación ya resuelta al abrir el canal.
+pub struct Delivery(Box<dyn FnOnce() + Send>);
+
+impl Delivery {
+    /// Construye una entrega a partir de una clausura.
+    pub fn of(delivering: impl FnOnce() + Send + 'static) -> Self {
+        Self(Box::new(delivering))
+    }
+
+    /// Dispara la entrega.
     pub fn now(self) {
         (self.0)();
     }

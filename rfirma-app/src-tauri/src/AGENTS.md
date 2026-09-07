@@ -30,7 +30,7 @@ que usan los vecinos. `lib.rs` las construye en ese orden sobre la misma
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
-| `lib.rs` | 304 | `roots()`, que construye las cinco raíces, y `run()`: complementos, órdenes por su ruta entera en `generate_handler!`, instancia única (ADR-0010) y el arranque, que obedece a `site/application/startup/`. Sin pruebas propias. |
+| `lib.rs` | 339 | `roots()`, que construye las cinco raíces, y `run()`: complementos, órdenes por su ruta entera en `generate_handler!`, instancia única (ADR-0010) y el arranque, que obedece a `site/application/startup/`. `the_transport` compone el `wss` y el servidor intermedio en un solo cierre, elegido por la ubicación de canal. Sin pruebas propias. |
 | `main.rs` | 6 | El binario. No hay nada dentro. |
 | `crossing.rs` | 365 | `WindowCrossing`, el rasgo de lo que cruza a la ventana, y `crossing!`, el macro que lo declara y deja su forma en un registro de `inventory`. De ahí salen los tipos del contrato y la guarda de rutas. Pruebas en `crossing/tests.rs` (174). |
 | `crossing/failure.rs` | 31 | `Failure`, lo que cruza cuando algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`. Pruebas en `crossing/failure/tests.rs` (11). |

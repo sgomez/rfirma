@@ -65,6 +65,12 @@ impl AfirmaUrl {
     pub fn parameter(&self, name: &str) -> Option<&str> {
         self.parameters.get(name).map(String::as_str)
     }
+
+    /// La misma URL con un parámetro añadido o sustituido (servidor intermedio: `dat` resuelto).
+    pub fn with_parameter(mut self, name: &str, value: String) -> Self {
+        self.parameters.insert(name.to_owned(), value);
+        self
+    }
 }
 
 /// Quita `afirma://` sin distinguir mayúsculas, o dice que no estaba.

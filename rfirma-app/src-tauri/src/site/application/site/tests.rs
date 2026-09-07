@@ -12,6 +12,10 @@ fn a_codec_table() -> CodecTable {
     CodecTable {
         v4: Arc::new(V4Codec),
         v3: Arc::new(V3Codec),
+        relay: Arc::new(|key| {
+            Arc::new(crate::site::adapters::codec_relay::RelayCodec::new(key))
+                as crate::site::application::errand::NegotiatedCodec
+        }),
     }
 }
 
@@ -46,6 +50,7 @@ impl ATransport {
         let port = match location {
             ChannelLocation::Drawn(ports) => *ports.first().expect("se ata uno de los sorteados"),
             ChannelLocation::Fixed(port) => *port,
+            ChannelLocation::Relay(_) => 0,
         };
         Ok(OpenChannel::new(port, Shutdown::of(|| {})))
     }
@@ -215,6 +220,82 @@ fn the_negotiation_table_decides_codec_and_location_by_the_shape_of_the_launch()
             }
         }
     }
+}
+
+#[test]
+fn the_negotiation_table_picks_the_relay_codec_for_an_operation_with_servlet() {
+    let transport = ATransport::default();
+    let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
+               example/store&id=tx-1&key=12345678";
+
+    let attendance = attend_launch(
+        url,
+        &a_codec_table(),
+        &|location, duty| transport.open(location, duty),
+        &LiveErrand::default(),
+    );
+
+    let Attendance::Serving { errand, .. } = &attendance else {
+        panic!("se esperaba servir, salio {attendance:?}");
+    };
+    let (asked_location, _) = transport.asked_once();
+    assert!(matches!(asked_location, ChannelLocation::Relay(_)));
+
+    let outcome = SiteOutcome::Signature {
+        signer_der: vec![0xfb, 0xff, 0xbf],
+        signed: b"%PDF".to_vec(),
+    };
+    let key = crate::site::domain::protocol::CipherKey::from_url_parameter("12345678")
+        .expect("longitud correcta")
+        .expect("un valor no vacio siempre produce clave");
+    assert_eq!(
+        errand.codec().encode(&outcome),
+        crate::site::adapters::codec_relay::RelayCodec::new(Some(key)).encode(&outcome),
+        "la fila de servidor intermedio cifra con la clave que trajo la url"
+    );
+}
+
+#[test]
+fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
+    use crate::site::adapters::relay::Relay;
+    use crate::site::application::tests::InMemoryServlets;
+    use crate::site::ports::{Inbox, ReplyHandle, Transport as _};
+    use std::sync::Mutex;
+
+    let live = Arc::new(LiveErrand::default());
+    let codec_was_already_registered = Arc::new(Mutex::new(None));
+
+    let inbox: Inbox = {
+        let live = Arc::clone(&live);
+        let seen = Arc::clone(&codec_was_already_registered);
+        Arc::new(move |_url, reply: ReplyHandle| {
+            *seen.lock().expect("el candado") = Some(live.codec().is_some());
+            reply.answer("respuesta".to_owned());
+        })
+    };
+    let relay = Relay::new(
+        Arc::new(InMemoryServlets::default()),
+        inbox,
+        Arc::new(|| {}),
+        Arc::new(|_refusal| {}),
+    );
+
+    let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
+               example/store&id=tx-order&key=12345678";
+
+    let attendance = attend_launch(
+        url,
+        &a_codec_table(),
+        &|location, duty| relay.open(location, duty),
+        &live,
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        *codec_was_already_registered.lock().expect("el candado"),
+        Some(true),
+        "la entrega debe llegar despues de registrar el tramite, no antes"
+    );
 }
 
 #[test]

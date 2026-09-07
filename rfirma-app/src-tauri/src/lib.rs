@@ -87,6 +87,10 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         codecs: site::application::site::CodecTable {
             v4: Arc::new(site::adapters::codec::V4Codec),
             v3: Arc::new(site::adapters::codec_v3::V3Codec),
+            relay: Arc::new(|key| {
+                Arc::new(site::adapters::codec_relay::RelayCodec::new(key))
+                    as site::application::errand::NegotiatedCodec
+            }),
         },
         scratch_dir: std::env::temp_dir(),
         scratch: Arc::new(site::adapters::scratch::RealScratch),
@@ -102,7 +106,6 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
 
 /// Punto de entrada compartido por el binario y por las pruebas.
 pub fn run() {
-    use site::application::errand::Transport as _;
     use tauri::{Emitter, Manager};
 
     if desktop::application::invocation::help_was_asked_for(
@@ -162,7 +165,7 @@ pub fn run() {
                         let attendance = site::application::startup::attend_site_launch(
                             &url,
                             &site.codecs,
-                            &|location, duty| transport.open(location, duty),
+                            &transport,
                             &|_| site::adapters::window::open_the_site_window(&handle),
                             &site.errand,
                             // A mitad de un trámite no se toca la CA local (ADR-0005).
@@ -253,7 +256,7 @@ pub fn run() {
                     stores: site.trust.stores.as_ref(),
                 },
                 &site.codecs,
-                &|location, duty| transport.open(location, duty),
+                &transport,
                 &|_| site::adapters::window::open_the_site_window(&handle),
                 &site.errand,
             );
@@ -288,18 +291,45 @@ fn nss_profiles_of_this_home() -> Vec<std::path::PathBuf> {
         .unwrap_or_default()
 }
 
-/// Transporte de producción sobre loopback wss.
+/// Transporte de producción: `wss` sobre loopback o servidor intermedio, según la ubicación de canal.
 fn the_transport(
     store: &site::adapters::tls::LocalCaStore,
     app: &tauri::AppHandle,
-) -> site::adapters::transport::LoopbackWss {
-    let handle = app.clone();
-    site::adapters::transport::LoopbackWss::new(
-        store.clone(),
-        std::sync::Arc::new(move |url, reply| {
+) -> impl Fn(
+    &site::domain::channel::ChannelLocation,
+    site::domain::channel::ChannelDuty,
+) -> Result<site::domain::channel::OpenChannel, site::domain::channel::ChannelError>
+       + 'static {
+    use site::application::errand::Transport as _;
+
+    let inbox: site::application::errand::Inbox = {
+        let handle = app.clone();
+        Arc::new(move |url, reply| {
             site::adapters::window::attend_site_operation(&handle, url, reply);
-        }),
-    )
+        })
+    };
+
+    let wss = site::adapters::transport::LoopbackWss::new(store.clone(), inbox.clone());
+
+    let relay = site::adapters::relay::Relay::new(
+        Arc::new(site::adapters::servlets::RelayServlets::default()),
+        inbox,
+        {
+            let handle = app.clone();
+            Arc::new(move || handle.exit(0))
+        },
+        {
+            let handle = app.clone();
+            Arc::new(move |refusal| {
+                site::adapters::window::note_a_relay_failure(&handle, refusal);
+            })
+        },
+    );
+
+    move |location, duty| match location {
+        site::domain::channel::ChannelLocation::Relay(_) => relay.open(location, duty),
+        _ => wss.open(location, duty),
+    }
 }
 
 /// Lo que los casos de uso dejan dicho para `stderr`, impreso y nada más.

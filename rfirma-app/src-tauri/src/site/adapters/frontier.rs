@@ -7,6 +7,7 @@ use crate::site::application::errand::{ConsentError, SiteRefusal};
 use crate::site::application::filtering::FilteringError;
 use crate::site::domain::channel::Situation as ChannelSituation;
 use crate::site::domain::protocol::{SafCode, WireAnswer};
+use crate::site::domain::relay_error::Situation as RelaySituation;
 
 /// La vista para la ventana y el código para la sede de un rechazo, decididos juntos.
 pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
@@ -85,6 +86,17 @@ pub fn code_of_channel(situation: ChannelSituation) -> SafCode {
             SafCode::CannotOpenSocket
         }
         ChannelSituation::MaterialNotUsable => SafCode::CannotAccessSslKeystore,
+        // El servidor intermedio siempre trae su propio rechazo ya clasificado (ver `code_of_relay`).
+        ChannelSituation::Relay => SafCode::CannotOpenSocket,
+    }
+}
+
+/// Código de protocolo de una situación del servidor intermedio, calcados del original.
+pub fn code_of_relay(situation: RelaySituation) -> SafCode {
+    match situation {
+        RelaySituation::ServletUnreachable => SafCode::RecoveringData,
+        RelaySituation::DecryptionFailed => SafCode::DecryptingData,
+        RelaySituation::UploadRejected => SafCode::SendingResult,
     }
 }
 

@@ -331,6 +331,11 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
         &CodecTable {
             v4: std::sync::Arc::new(V4Codec),
             v3: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v3::V3Codec),
+            relay: std::sync::Arc::new(|key| {
+                std::sync::Arc::new(rfirma_lib::site::adapters::codec_relay::RelayCodec::new(
+                    key,
+                )) as rfirma_lib::site::application::errand::NegotiatedCodec
+            }),
         },
         &|ports, duty| {
             let listener = bind_first_free(ports)?;
