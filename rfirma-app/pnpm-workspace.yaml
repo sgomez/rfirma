@@ -4,7 +4,9 @@
 # instalar en silencio si no se le dice que hacer con el (ERR_PNPM_IGNORED_BUILDS,
 # que rompe `pnpm install --frozen-lockfile` del CI). Llega como dependencia de
 # i18next-cli, que solo lo usa para analizar el codigo; no hace falta compilar
-# nada nativo, asi que va a `false` y la herramienta funciona igual.
+# nada nativo, asi que va a `false` y la herramienta funciona igual. lefthook va
+# a `true` por lo contrario: su script de instalacion es lo que descarga el
+# binario de la plataforma, y sin el `pnpm exec lefthook` no existe.
 #
 # minimumReleaseAgeExclude: la politica de cadena de suministro de pnpm frena
 # los paquetes recien publicados. i18next-cli publica 24 veces en 30 dias
@@ -12,5 +14,6 @@
 # cuando se sube es una persona, no el reloj.
 allowBuilds:
   '@swc/core': false
+  lefthook: true
 minimumReleaseAgeExclude:
   - i18next-cli@1.72.4

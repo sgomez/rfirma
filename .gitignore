@@ -57,3 +57,8 @@ testdata/conformance/
 # `cargo llvm-cov`: se escriben en el CWD del test, fuera de `target`.
 *.profraw
 *.profdata
+
+# La anulacion por maquina de la puerta de pre-push (lefthook.yml): quien
+# necesite saltarse un trabajo en su equipo lo hace aqui y no en el fichero
+# versionado.
+lefthook-local.yml

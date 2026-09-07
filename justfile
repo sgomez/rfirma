@@ -26,6 +26,12 @@
 #
 # `just tools` los comprueba TODOS y falla nombrando lo que falte, con la orden
 # de apt lista para copiar. Ejecutalo antes que nada si algo no compila.
+#
+# HAY UNA PUERTA LOCAL DE FORMATO ANTES DEL PUSH, en lefthook.yml, que instala
+# `just deps` sin que nadie tenga que acordarse (ADR-0014). Solo comprueba
+# formato, se mide en segundos, y cuando bloquea nombra la receta `fmt-*` que lo
+# arregla. Se salta con `git push --no-verify`, y saltarsela solo adelanta el
+# mismo fallo al CI, que es quien manda.
 
 # GraalVM CE 25: lo fijo el issue #6. La linea 21 aborta dentro del JNI_OnLoad
 # de libawt.so con cualquier firma visible, asi que no sirve para construir.
@@ -126,10 +132,9 @@ check-ts: check-po lint-ts lint-i18n build-ts test-ts
 # main.
 check-rust: lint-rust crap check-contract
 
-# El bucle corto de quien quiera formatear antes de commitear. Voluntaria, y
-# deliberadamente NO es un hook de pre-commit (ADR-0014): en un repositorio
-# movido por agentes un hook desconocido se esquiva con --no-verify o explota
-# sin que nadie entienda por que.
+# El bucle corto de quien quiera pasar el linting entero antes de commitear. No
+# es la puerta de pre-push de lefthook.yml, que es otra cosa y mucho mas corta
+# (ADR-0014): esa corre sola, solo mira el formato y se mide en segundos.
 #
 # Solo lint, sin build ni test.
 quick: lint
@@ -249,6 +254,10 @@ tools:
 bootstrap:
     ./bootstrap.sh
 
+# El `prepare` de package.json instala de paso la puerta de pre-push
+# (lefthook.yml). No hay una receta que la instale aparte a proposito: una
+# puerta que hay que acordarse de encender no la tiene nadie encendida.
+#
 # Instala las dependencias de node de rfirma-app.
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
@@ -766,6 +775,34 @@ lint-java: bootstrap
 # Biome sobre rfirma-app.
 lint-ts: po-import
     cd {{ app }} && pnpm exec biome ci .
+
+# LAS RECETAS QUE ESCRIBEN, no las que comprueban: son las que nombra la puerta
+# de pre-push (lefthook.yml) cuando bloquea, asi que su nombre es parte del
+# mensaje de error y no cambia sin cambiarlo alli.
+#
+# Formatea las tres cadenas escribiendo.
+fmt: fmt-rust fmt-ts fmt-python
+
+# SIN build-ts, al contrario que lint-rust: rustfmt parsea, no compila, y esa
+# dependencia convertiria en minutos una receta de tres decimas.
+#
+# rustfmt sobre rfirma-app/src-tauri.
+fmt-rust:
+    cd {{ tauri }} && cargo fmt --all
+
+# SIN po-import, al contrario que lint-ts: biome.json excluye src/i18n/locales,
+# que es lo unico que po-import genera, asi que aqui no pinta nada.
+#
+# Formateador de biome sobre rfirma-app.
+fmt-ts:
+    cd {{ app }} && pnpm exec biome format --write .
+
+# NO es lo que comprueba el CI, que corre `ruff check`: son dos cosas distintas,
+# y `ruff format` solo lo vigila la puerta local.
+#
+# `ruff format` sobre packaging.
+fmt-python:
+    ruff format {{ justfile_directory() }}/packaging
 
 # Depende de build-ts porque tauri-build lee frontendDist (../dist) ya en
 # build.rs: sin el, clippy se cae antes de mirar una sola linea de Rust.

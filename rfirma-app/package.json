@@ -12,7 +12,8 @@
     "lint": "biome ci .",
     "format": "biome check --write .",
     "test": "vitest run --reporter=dot",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "@tauri-apps/api": "2.11.1",
@@ -36,6 +37,7 @@
     "@vitejs/plugin-react": "6.1.1",
     "i18next-cli": "1.72.4",
     "jsdom": "30.0.1",
+    "lefthook": "2.1.12",
     "typescript": "7.0.2",
     "vite": "8.2.2",
     "vitest": "4.1.11"
