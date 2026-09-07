@@ -27,11 +27,7 @@ function replacingOrFailing(source, literal, replacement) {
  * siendo el cliente publicado; solo se le obliga a hablar como uno de la versión 3.
  */
 function forcedToTheThirdProtocol(source) {
-  source = replacingOrFailing(
-    source,
-    "var PROTOCOL_VERSION = 4;",
-    "var PROTOCOL_VERSION = 3;",
-  );
+  source = replacingOrFailing(source, "var PROTOCOL_VERSION = 4;", "var PROTOCOL_VERSION = 3;");
   source = replacingOrFailing(
     source,
     'var url = "afirma://websocket?ports=" + portsLine\n\t\t\t\t\t+ "&v=" + PROTOCOL_VERSION',
