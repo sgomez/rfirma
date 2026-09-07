@@ -52,3 +52,8 @@ __pycache__/
 testdata/conformance/
 
 .scratch
+
+# Datos brutos de cobertura que vuelca cada ejecucion instrumentada de
+# `cargo llvm-cov`: se escriben en el CWD del test, fuera de `target`.
+*.profraw
+*.profdata
