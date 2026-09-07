@@ -87,6 +87,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         codecs: site::application::site::CodecTable {
             v4: Arc::new(site::adapters::codec::V4Codec),
             v3: Arc::new(site::adapters::codec_v3::V3Codec),
+            v1: Arc::new(site::adapters::codec_v1::V1Codec),
             relay: Arc::new(|key| {
                 Arc::new(site::adapters::codec_relay::RelayCodec::new(key))
                     as site::application::errand::NegotiatedCodec
@@ -311,6 +312,8 @@ fn the_transport(
 
     let wss = site::adapters::transport::LoopbackWss::new(store.clone(), inbox.clone());
 
+    let service = site::adapters::service::RawTlsService::new(store.clone(), inbox.clone());
+
     let relay = site::adapters::relay::Relay::new(
         Arc::new(site::adapters::servlets::RelayServlets::default()),
         inbox,
@@ -328,6 +331,7 @@ fn the_transport(
 
     move |location, duty| match location {
         site::domain::channel::ChannelLocation::Relay(_) => relay.open(location, duty),
+        site::domain::channel::ChannelLocation::Service(_) => service.open(location, duty),
         _ => wss.open(location, duty),
     }
 }

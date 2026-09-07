@@ -18,7 +18,7 @@ pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMOR
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use framing::{
     credential_matches, http_response, read_request, split_response, FragmentBuffer, FramedRequest,
-    NotOfTheFraming, RESPONSE_MAX_SIZE,
+    NotOfTheFraming, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
 };
 pub use launch::{
     drawn_ports, location_for_a_refusal, ChannelCredential, LaunchRequest, NegotiatedCredential,

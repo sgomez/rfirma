@@ -10,6 +10,7 @@ pub mod frontier;
 pub mod nss;
 pub mod relay;
 pub mod scratch;
+pub mod service;
 pub mod servlets;
 pub mod tauri;
 pub mod tls;

@@ -18,6 +18,9 @@ const RESET: &str = "-";
 /// Tamaño máximo de cada parte de una respuesta fragmentada (`RESPONSE_MAX_SIZE`, línea 57).
 pub const RESPONSE_MAX_SIZE: usize = 1_000_000;
 
+/// Respuesta a un `fragment=` que no es todavía el último (`MORE_DATA_NEED`, línea 47).
+pub const MORE_DATA_NEED: &str = "MORE_DATA_NEED";
+
 /// Una petición del framing `service`, ya leída y lista para el trámite.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FramedRequest {

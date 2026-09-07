@@ -131,6 +131,16 @@ globalThis.location = pageLocation;
 globalThis.screen = { width: 1920, height: 1080 };
 globalThis.XMLHttpRequest = undefined;
 
+/**
+ * Sin `WebSocket` en el entorno (`isWebSocketsSupported()`, autoscript.js:197-199), el cliente
+ * publicado cae al transporte sin WebSocket (`AppAfirmaJSSocket`) y lanza `afirma://service?…`
+ * en vez de `afirma://websocket?…`. Node trae `WebSocket` como global desde la 22, así que hay
+ * que quitarlo a propósito para medir este modo.
+ */
+if (mode === "service") {
+  delete globalThis.WebSocket;
+}
+
 const rawSource = readFileSync(autoscriptPath, "utf8");
 const source = mode === "v3" ? forcedToTheThirdProtocol(rawSource) : rawSource;
 runInThisContext(source, { filename: autoscriptPath });

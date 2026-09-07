@@ -33,6 +33,7 @@ fn a_codec() -> CodecTable {
     CodecTable {
         v4: std::sync::Arc::new(V4Codec),
         v3: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v3::V3Codec),
+        v1: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v1::V1Codec),
         relay: std::sync::Arc::new(|key| {
             std::sync::Arc::new(rfirma_lib::site::adapters::codec_relay::RelayCodec::new(
                 key,

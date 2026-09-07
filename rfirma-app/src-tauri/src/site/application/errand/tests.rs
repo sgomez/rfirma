@@ -111,6 +111,7 @@ fn a_codec_table() -> crate::site::application::site::CodecTable {
     crate::site::application::site::CodecTable {
         v4: Arc::new(V4Codec),
         v3: Arc::new(crate::site::adapters::codec_v3::V3Codec),
+        v1: Arc::new(crate::site::adapters::codec_v1::V1Codec),
         relay: Arc::new(|key| {
             Arc::new(crate::site::adapters::codec_relay::RelayCodec::new(key))
                 as crate::site::application::errand::NegotiatedCodec

@@ -15,6 +15,9 @@ use rfirma_lib::site::domain::protocol::{
     THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 
+/// La versión de `service` que habla el cliente publicado cuando no hay WebSocket.
+const THE_SERVICE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS: i64 = 1;
+
 /// Tiempo máximo de espera para respuestas en pruebas.
 const PATIENCE: Duration = Duration::from_secs(40);
 
@@ -29,6 +32,8 @@ enum BenchMode {
     Fourth,
     /// El fuente reescrito antes de ejecutarlo: sin `ports`, `v=3` y el puerto fijo.
     Third,
+    /// Sin `WebSocket` en el entorno: el cliente publicado cae a `afirma://service?v=1`.
+    Service,
 }
 
 impl BenchMode {
@@ -36,6 +41,7 @@ impl BenchMode {
         match self {
             Self::Fourth => "v4",
             Self::Third => "v3",
+            Self::Service => "service",
         }
     }
 }
@@ -335,5 +341,44 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
         channel.port(),
         THE_PORT_OF_THE_THIRD_PROTOCOL,
         "el canal se abre en el puerto fijo, no en uno sorteado"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn without_websocket_the_published_client_falls_back_to_service_v1() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_as(material.ca_pem_file.path(), BenchMode::Service);
+    let url = client.the_launch_url();
+
+    let parsed =
+        AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
+    let launch = LaunchRequest::from_url(&parsed).expect("la version 1 de 'service' se habla aqui");
+
+    assert_eq!(
+        launch.version(),
+        THE_SERVICE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS,
+        "sin WebSocket el cliente publicado habla la version 1 de 'service'"
+    );
+    let ChannelLocation::Service(ports) = launch.location() else {
+        panic!(
+            "el cliente publicado sortea puertos tambien para 'service': {:?}",
+            launch.location()
+        );
+    };
+    assert!(
+        !ports.is_empty(),
+        "'service' sortea puertos igual que la version 4 de 'websocket'"
+    );
+    let NegotiatedCredential::Required(credential) = launch.credential() else {
+        panic!("el cliente publicado manda idsession tambien en 'service'");
+    };
+    assert_eq!(
+        credential.as_str().len(),
+        20,
+        "la credencial de canal son veinte alfanumericos, igual que en 'websocket'"
     );
 }

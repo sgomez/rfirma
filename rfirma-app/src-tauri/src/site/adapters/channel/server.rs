@@ -63,7 +63,10 @@ pub fn open(
     tauri::async_runtime::block_on(serve(listener, certificate, duty, operations))
 }
 
-fn acceptor_for(certificate: &LocalServerCertificate) -> Result<TlsAcceptor, ChannelError> {
+/// El aceptador TLS del material del servidor local, compartido con el transporte `service`.
+pub(crate) fn acceptor_for(
+    certificate: &LocalServerCertificate,
+) -> Result<TlsAcceptor, ChannelError> {
     let material = |error: String| ChannelError::new(Situation::MaterialNotUsable, error);
 
     let identity = Identity::from_pkcs8(

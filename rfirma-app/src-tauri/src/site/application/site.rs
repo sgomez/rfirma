@@ -23,6 +23,8 @@ pub struct CodecTable {
     pub v4: NegotiatedCodec,
     /// Códec de la versión 3: puerto fijo, sin sorteo.
     pub v3: NegotiatedCodec,
+    /// Códec de la versión 1 del transporte `service`, sin WebSocket.
+    pub v1: NegotiatedCodec,
     /// Códec del servidor intermedio, construido con la clave de cada invocación.
     pub relay: RelayCodecFactory,
 }
@@ -53,6 +55,7 @@ pub fn negotiate(url: &AfirmaUrl, codecs: &CodecTable) -> Result<Negotiated, Ref
     let request = LaunchRequest::from_url(url)?;
     let codec = match request.location() {
         ChannelLocation::Relay(info) => (codecs.relay)(info.key.clone()),
+        ChannelLocation::Service(_) => codecs.v1.clone(),
         _ => codecs.codec_for(request.version()),
     };
     Ok(Negotiated {
