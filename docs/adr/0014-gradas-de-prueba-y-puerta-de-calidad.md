@@ -187,50 +187,35 @@ instala con `cargo binstall` a una **versión fijada** en el `justfile`. Si se a
 se quita en una línea y no arrastra nada: es una comprobación aparte, no un formato que impregne
 el código.
 
-## Un solo hook: la puerta de formato de pre-push
+## Un solo hook: formato, antes del push
 
-**Sin hook de pre-commit, y un `pre-push` que solo mira el formato.** `just check` sigue siendo el
-único punto de entrada que promete `docs/agents/code-host.md`: esta puerta no comprueba nada que
-`check` no comprobara ya, solo lo comprueba antes y gratis.
-
-Lo que la trajo es medido. La [PR #489](https://github.com/sgomez/rfirma/pull/489) pasó las
-pruebas en local, se publicó, y la review la bloqueó por `cargo fmt --all -- --check` en cuatro
-ficheros: un ciclo entero de review, arreglo y re-review por algo que se arregla con una orden y
-no admite criterio. El formato es determinista y tiene un botón de arreglar; no es material de
-review ni de CI en rojo.
-
-El gestor es **lefthook**, declarado como dependencia de desarrollo de `rfirma-app` y fijado a una
-versión exacta por la misma razón que `cargo-crap`. Se instala solo desde el `prepare` de
-`package.json`, o sea que `just deps` y cualquier `pnpm install` lo dejan puesto: una puerta que
-hay que acordarse de encender no la tiene nadie encendida. La configuración es `lefthook.yml` en
-la raíz.
-
-Dentro va **solo formato**, y ahí está toda la decisión: `cargo fmt --all -- --check`, el
+`pre-push` con **lefthook**, y dentro **solo formato**: `cargo fmt --all -- --check`, el
 formateador de biome y `ruff format --check`, filtrados por glob y en paralelo, de modo que una
-push que no toca Rust no arranca cargo. Ni clippy, ni pruebas, ni nada que compile o que dependa
-de `build-ts`. El objetivo es que la puerta se mida en segundos: la única forma de que un hook
-sobreviva es que quien empuja no note que está.
+push que no toca Rust no arranca cargo. Ni clippy, ni pruebas, ni nada que compile o dependa de
+`build-ts`: la puerta se mide en segundos o no sobrevive. No comprueba nada que `just check` no
+comprobara ya, y `just check` sigue siendo el único punto de entrada que promete
+`docs/agents/code-host.md`.
 
-Las dos objeciones del [#33](https://github.com/sgomez/rfirma/issues/33), que en su día bastaron
-para no tener ninguno, siguen siendo ciertas y por eso la puerta está construida contra ellas:
+El gestor va como dependencia de desarrollo de `rfirma-app`, a versión exacta por la misma razón
+que `cargo-crap`, y lo instala el `prepare` de `package.json`: cualquier `pnpm install` —`just
+deps` incluido— la deja puesta. `bootstrap.sh` no crece (ADR-0013). La configuración es
+`lefthook.yml` en la raíz.
 
-- **«Se esquiva con `--no-verify`»**. Se esquiva, sí, y no se intenta impedir: lo que hay detrás
-  es el CI, que no se esquiva. Adelantarse a un fallo barato no exige ser infranqueable.
-- **«Explota sin que nadie entienda por qué»**. Cada trabajo se salta solo, con un aviso y sin
-  bloquear, si su herramienta no está —`cargo` y `ruff` no viven en el `PATH` de una shell no
-  interactiva, que es exactamente lo que es un hook de git—, y cuando sí falla el mensaje nombra
-  la receta que lo arregla. De ahí salen `just fmt`, `fmt-rust`, `fmt-ts` y `fmt-python`, que
-  escriben; hasta ahora solo había recetas que comprobaban.
+Cada trabajo se salta solo, con un aviso y sin bloquear, si su herramienta no está: `cargo` y
+`ruff` no viven en el `PATH` de una shell no interactiva, que es lo que es un hook de git. Cuando
+falla, el mensaje nombra la receta que lo arregla —`just fmt`, y `fmt-rust`, `fmt-ts` y
+`fmt-python`, que escriben, frente a las `lint-*`, que comprueban—.
 
-Lo que sí se mantiene del #33 es que **`bootstrap.sh` no crece** (ADR-0013): quien instala el
-gestor es pnpm, no él.
+`ruff format` es la única de las tres que el CI no ejecuta: la cadena de Python es `ruff check`,
+que es otra cosa. La puerta local es aquí más estricta a propósito, acotada por su glob a
+`packaging/**.py`.
 
-Sigue existiendo la receta **`just quick`** —solo `lint`, sin `build` ni `test`— para el bucle
-corto de quien quiera pasar el linting entero antes de commitear.
+### Considered Options
 
-`ruff format` es la única de las tres que el CI **no** ejecuta: la cadena de Python es
-`ruff check`, que es otra cosa. La puerta local es aquí más estricta que el CI a propósito, y el
-glob la limita a las pushes que tocan `packaging/**/*.py`.
+**Ningún hook**, que es lo que hubo hasta ahora: se temía que uno desconocido se esquivara con
+`--no-verify` o explotara sin que nadie entendiera por qué. Lo primero se acepta —detrás está el
+CI, que no se esquiva, y adelantarse a un fallo barato no exige ser infranqueable—; lo segundo lo
+cierran el aviso y el mensaje de arriba.
 
 ## La bomba de relojería del kit FNMT
 
