@@ -21,6 +21,9 @@ pub enum ChannelLocation {
     Drawn(Vec<u16>),
     /// Puerto fijo, atado tal cual.
     Fixed(u16),
+    /// Puertos sorteados por la sede para el transporte `service`: no caben en `Drawn`, que ya
+    /// significa wss.
+    Service(Vec<u16>),
     /// Servidor intermedio: sin puerto que escuchar, la operación viaja con sus servlets.
     Relay(RelayChannelInfo),
 }

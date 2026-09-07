@@ -3,12 +3,14 @@
 pub mod channel;
 pub mod codec;
 pub mod codec_relay;
+pub mod codec_v1;
 pub mod codec_v3;
 pub mod desk;
 pub mod frontier;
 pub mod nss;
 pub mod relay;
 pub mod scratch;
+pub mod service;
 pub mod servlets;
 pub mod tauri;
 pub mod tls;

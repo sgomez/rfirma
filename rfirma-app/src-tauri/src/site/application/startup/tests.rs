@@ -102,6 +102,7 @@ fn a_codec_table() -> crate::site::application::site::CodecTable {
     crate::site::application::site::CodecTable {
         v4: std::sync::Arc::new(crate::site::adapters::codec::V4Codec),
         v3: std::sync::Arc::new(crate::site::adapters::codec_v3::V3Codec),
+        v1: std::sync::Arc::new(crate::site::adapters::codec_v1::V1Codec),
         relay: std::sync::Arc::new(|key| {
             std::sync::Arc::new(crate::site::adapters::codec_relay::RelayCodec::new(key))
                 as crate::site::application::errand::NegotiatedCodec
