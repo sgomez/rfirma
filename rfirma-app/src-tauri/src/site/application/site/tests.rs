@@ -256,6 +256,49 @@ fn the_negotiation_table_picks_the_relay_codec_for_an_operation_with_servlet() {
 }
 
 #[test]
+fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
+    use crate::site::adapters::relay::Relay;
+    use crate::site::application::tests::InMemoryServlets;
+    use crate::site::ports::{Inbox, ReplyHandle, Transport as _};
+    use std::sync::Mutex;
+
+    let live = Arc::new(LiveErrand::default());
+    let codec_was_already_registered = Arc::new(Mutex::new(None));
+
+    let inbox: Inbox = {
+        let live = Arc::clone(&live);
+        let seen = Arc::clone(&codec_was_already_registered);
+        Arc::new(move |_url, reply: ReplyHandle| {
+            *seen.lock().expect("el candado") = Some(live.codec().is_some());
+            reply.answer("respuesta".to_owned());
+        })
+    };
+    let relay = Relay::new(
+        Arc::new(InMemoryServlets::default()),
+        inbox,
+        Arc::new(|| {}),
+        Arc::new(|_refusal| {}),
+    );
+
+    let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
+               example/store&id=tx-order&key=12345678";
+
+    let attendance = attend_launch(
+        url,
+        &a_codec_table(),
+        &|location, duty| relay.open(location, duty),
+        &live,
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        *codec_was_already_registered.lock().expect("el candado"),
+        Some(true),
+        "la entrega debe llegar despues de registrar el tramite, no antes"
+    );
+}
+
+#[test]
 fn a_good_launch_opens_the_channel_on_one_of_the_drawn_ports() {
     let transport = ATransport::default();
 

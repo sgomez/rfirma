@@ -227,9 +227,10 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
 }
 
 /// Si la invocación tiene la forma de una operación con servidor intermedio: un verbo de
-/// operación (no `websocket`) que trae al menos uno de los dos servlets.
+/// operación (no `websocket`) que trae `stservlet`, el único parámetro que exige siempre
+/// `from_relay_url` (la variante `fileid` sin `stservlet` queda fuera a propósito: ver `site/AGENTS.md`).
 fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
-    url.parameter("rtservlet").is_some() || url.parameter("stservlet").is_some()
+    url.parameter("stservlet").is_some()
 }
 
 fn location_of(version: i64, ports: Option<&str>) -> Result<ChannelLocation, Refusal> {

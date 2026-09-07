@@ -249,6 +249,17 @@ fn a_refusal_location_is_none_without_ports_nor_the_third_protocol() {
 }
 
 #[test]
+fn a_launch_with_only_rtservlet_is_refused_as_an_unrecognized_verb() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&rtservlet=https://relay.example/retrieve\
+         &key=12345678",
+    )
+    .expect_err("sin stservlet la forma fileid-only queda fuera de alcance");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+}
+
+#[test]
 fn a_relay_launch_with_fileid_needs_rtservlet_and_stores_the_channel_info() {
     let request = LaunchRequest::parse(
         "afirma://sign?algorithm=SHA256withRSA&fileid=abc123&rtservlet=https://relay.example/retrieve\

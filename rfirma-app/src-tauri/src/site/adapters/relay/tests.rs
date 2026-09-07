@@ -126,6 +126,17 @@ fn duty() -> ChannelDuty {
     ChannelDuty::Serve(NegotiatedCredential::Absent)
 }
 
+/// Abre el canal y dispara su entrega diferida, como haría `attend_launch` tras registrar el
+/// trámite.
+fn opened_and_delivered(relay: &Relay, info: &ChannelLocation) -> OpenChannel {
+    let mut channel = relay.open(info, duty()).expect("abre y entrega");
+    channel
+        .take_delivery()
+        .expect("una operacion Serve siempre trae entrega")
+        .now();
+    channel
+}
+
 fn a_fileid_info(
     retrieve_servlet: Option<&str>,
     key: Option<CipherKey>,
@@ -158,7 +169,7 @@ fn the_fileid_variant_downloads_and_deciphers_before_delivering() {
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), false));
 
-    relay.open(&info, duty()).expect("abre y entrega");
+    opened_and_delivered(&relay, &info);
 
     let (operation, _reply) = spy.take_reply();
     assert_eq!(operation.parameter("dat"), Some("contenido-a-firmar"));
@@ -180,7 +191,7 @@ fn the_inline_dat_variant_never_calls_get() {
         active_wait: false,
     });
 
-    relay.open(&info, duty()).expect("abre y entrega");
+    opened_and_delivered(&relay, &info);
 
     let (operation, _reply) = spy.take_reply();
     assert_eq!(operation.parameter("dat"), Some("ya-viene-dentro"));
@@ -199,7 +210,7 @@ fn wait_is_called_before_get_when_the_site_asks_for_it() {
     let (relay, _spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), true));
 
-    relay.open(&info, duty()).expect("abre y entrega");
+    opened_and_delivered(&relay, &info);
 
     assert_eq!(servlets.log(), vec!["wait", "get"]);
 }
@@ -218,7 +229,7 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
         active_wait: false,
     });
 
-    relay.open(&info, duty()).expect("abre y entrega");
+    opened_and_delivered(&relay, &info);
     let (_operation, reply) = spy.take_reply();
     reply.answer("la-respuesta-cifrada".to_owned());
 
@@ -244,7 +255,7 @@ fn a_rejected_upload_notifies_without_closing_the_process() {
         active_wait: false,
     });
 
-    relay.open(&info, duty()).expect("abre y entrega");
+    opened_and_delivered(&relay, &info);
     let (_operation, reply) = spy.take_reply();
     reply.answer("la-respuesta-cifrada".to_owned());
 
@@ -289,4 +300,20 @@ fn undecipherable_content_refuses_with_saf_15() {
 
     let refusal = error.refusal().expect("trae su propio rechazo clasificado");
     assert_eq!(refusal.code(), SafCode::DecryptingData);
+}
+
+#[test]
+fn a_refuse_duty_uploads_the_given_answer_without_waiting_resolving_or_delivering() {
+    let servlets = Arc::new(OrderedSpy::default());
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(a_key()), true));
+    let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
+
+    relay
+        .open(&info, ChannelDuty::Refuse(answer))
+        .expect("sube el rechazo");
+
+    assert_eq!(servlets.log(), vec!["put"]);
+    assert!(spy.delivered.lock().expect("el candado").is_none());
+    assert_eq!(spy.exits(), 1);
 }

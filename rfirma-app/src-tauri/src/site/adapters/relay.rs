@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
 use crate::site::domain::channel::{
-    ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown, Situation,
+    ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown, Situation,
 };
 use crate::site::domain::protocol::{decrypt, AfirmaUrl, Refusal, RelayChannelInfo};
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
@@ -43,7 +43,7 @@ impl Transport for Relay {
     fn open(
         &self,
         location: &ChannelLocation,
-        _duty: ChannelDuty,
+        duty: ChannelDuty,
     ) -> Result<OpenChannel, ChannelError> {
         let ChannelLocation::Relay(info) = location else {
             return Err(ChannelError::new(
@@ -51,6 +51,25 @@ impl Transport for Relay {
                 "esta ubicacion de canal no es la de un servidor intermedio",
             ));
         };
+
+        let servlets = Arc::clone(&self.servlets);
+        let store_servlet = info.store_servlet.clone();
+        let id = info.id.clone();
+        let exit = Arc::clone(&self.exit);
+        let on_upload_failure = Arc::clone(&self.on_upload_failure);
+        let upload = move |text: String| match servlets.store(&store_servlet, &id, &text) {
+            Ok(()) => exit(),
+            Err(error) => on_upload_failure(refusal_of(error)),
+        };
+
+        // Un rechazo se sube tal cual, sin esperar ni resolver operación: no hay trámite que registrar.
+        match duty {
+            ChannelDuty::Refuse(answer) => {
+                upload(answer.on_the_wire());
+                return Ok(OpenChannel::new(0, Shutdown::of(|| {})));
+            }
+            ChannelDuty::Serve(_) => {}
+        }
 
         if info.active_wait {
             self.servlets
@@ -61,22 +80,11 @@ impl Transport for Relay {
         let operation = resolve_operation(info, self.servlets.as_ref())
             .map_err(|error| ChannelError::refused(refusal_of(error)))?;
 
-        let servlets = Arc::clone(&self.servlets);
-        let store_servlet = info.store_servlet.clone();
-        let id = info.id.clone();
-        let exit = Arc::clone(&self.exit);
-        let on_upload_failure = Arc::clone(&self.on_upload_failure);
-        let reply =
-            ReplyHandle::of(
-                move |text: String| match servlets.store(&store_servlet, &id, &text) {
-                    Ok(()) => exit(),
-                    Err(error) => on_upload_failure(refusal_of(error)),
-                },
-            );
+        let inbox = Arc::clone(&self.inbox);
+        let reply = ReplyHandle::of(upload);
+        let delivery = Delivery::of(move || (inbox)(operation, reply));
 
-        (self.inbox)(operation, reply);
-
-        Ok(OpenChannel::new(0, Shutdown::of(|| {})))
+        Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery))
     }
 }
 

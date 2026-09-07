@@ -101,10 +101,15 @@ pub fn attend_launch(
         Ok(negotiated) => {
             let duty = ChannelDuty::Serve(negotiated.credential.clone());
             match transport(&negotiated.location, duty) {
-                Ok(channel) => {
+                Ok(mut channel) => {
+                    // Se retira antes de begin(): dispatch() exige un códec ya registrado.
+                    let delivery = channel.take_delivery();
                     let errand =
                         Errand::of(negotiated.credential, channel.port(), negotiated.codec);
                     if live.begin(errand.clone()) {
+                        if let Some(delivery) = delivery {
+                            delivery.now();
+                        }
                         return Attendance::Serving { channel, errand };
                     }
 
