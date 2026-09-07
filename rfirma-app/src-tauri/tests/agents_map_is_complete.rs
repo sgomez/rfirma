@@ -1,4 +1,4 @@
-//! Guarda que comprueba que cada módulo del código está en el `AGENTS.md` de su zona o en el de su contexto (RD-10).
+//! Guarda de los mapas: cada módulo está en el `AGENTS.md` de su zona, y cada fila dice qué es el fichero, no cómo funciona (ADR-0017).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -67,20 +67,31 @@ fn tracked_modules(root: &Path, zone: &Zone) -> Vec<String> {
         .collect()
 }
 
-/// Los índices de la zona: el raíz y uno por cada carpeta de primer nivel que tenga el suyo.
-fn maps_of(root: &Path, zone: &Zone, modules: &[String]) -> Vec<(String, String)> {
-    let mut maps = vec![(String::new(), read(root, zone.map))];
+/// Las carpetas de primer nivel con mapa propio, con la ruta del suyo.
+fn context_maps(root: &Path, zone: &Zone, modules: &[String]) -> Vec<(String, String)> {
     let mut folders: Vec<&str> = modules
         .iter()
         .filter_map(|relative| relative.split_once('/').map(|(folder, _)| folder))
         .collect();
     folders.sort_unstable();
     folders.dedup();
-    for folder in folders {
-        let map = format!("{}/{folder}/AGENTS.md", zone.root);
-        if root.join(&map).is_file() {
-            maps.push((format!("{folder}/"), read(root, &map)));
-        }
+    folders
+        .into_iter()
+        .map(|folder| {
+            (
+                folder.to_owned(),
+                format!("{}/{folder}/AGENTS.md", zone.root),
+            )
+        })
+        .filter(|(_, map)| root.join(map).is_file())
+        .collect()
+}
+
+/// Los índices de la zona: el raíz y uno por cada carpeta de primer nivel que tenga el suyo.
+fn maps_of(root: &Path, zone: &Zone, modules: &[String]) -> Vec<(String, String)> {
+    let mut maps = vec![(String::new(), read(root, zone.map))];
+    for (folder, map) in context_maps(root, zone, modules) {
+        maps.push((format!("{folder}/"), read(root, &map)));
     }
     maps
 }
@@ -128,7 +139,8 @@ fn every_module_is_named_in_the_map_of_its_zone() {
             missing.is_empty(),
             "{} es lo que un agente lee en vez de explorar {}, y ni el ni los indices por \
              contexto nombran estos modulos:\n{}\n\
-             Anade una fila por cada uno: ruta, tamano y que es, en una frase.",
+             Anade una fila por cada uno: ruta y que es, en una frase. Sin tamanos: \
+             los da `just outline`.",
             zone.map,
             zone.root,
             missing.join("\n")
@@ -146,9 +158,7 @@ fn context_map(context: &str, map: &str) -> (String, String) {
 
 #[test]
 fn a_map_that_forgets_a_module_is_caught() {
-    let maps = [root_map(
-        "| `memory/recents.rs` | 406 | Los diez recientes. |",
-    )];
+    let maps = [root_map("| `memory/recents.rs` | Los diez recientes. |")];
     let modules = [
         "memory/recents.rs".to_owned(),
         "memory/brand_new.rs".to_owned(),
@@ -163,7 +173,7 @@ fn a_map_that_forgets_a_module_is_caught() {
 
 #[test]
 fn a_bare_file_name_does_not_count_as_naming_the_module() {
-    let maps = [root_map("| `mod.rs` | 406 | Algo. |")];
+    let maps = [root_map("| `mod.rs` | Algo. |")];
     let modules = ["memory/mod.rs".to_owned()];
 
     assert_eq!(
@@ -176,11 +186,8 @@ fn a_bare_file_name_does_not_count_as_naming_the_module() {
 #[test]
 fn a_module_named_in_the_map_of_its_context_is_not_missing() {
     let maps = [
-        root_map("| `site/` | — | El contexto de sede: ver `site/AGENTS.md`. |"),
-        context_map(
-            "site",
-            "| `adapters/tauri.rs` | 80 | Las ordenes de sede. |",
-        ),
+        root_map("| `site/` | El contexto de sede: ver `site/AGENTS.md`. |"),
+        context_map("site", "| `adapters/tauri.rs` | Las ordenes de sede. |"),
     ];
     let modules = [
         "site/adapters/tauri.rs".to_owned(),
@@ -202,7 +209,7 @@ fn a_module_named_in_the_map_of_its_context_is_not_missing() {
 fn a_context_map_does_not_name_a_module_of_another_context() {
     let maps = [
         root_map(""),
-        context_map("site", "| `adapters/tauri.rs` | 80 | Las ordenes. |"),
+        context_map("site", "| `adapters/tauri.rs` | Las ordenes. |"),
     ];
     let modules = ["identity/adapters/tauri.rs".to_owned()];
 
@@ -215,4 +222,140 @@ fn the_tests_of_the_window_are_not_asked_of_the_map() {
     assert!(is_a_test_file("App.test.tsx"));
     assert!(!is_a_test_file("signing/flow.ts"));
     assert!(!is_a_test_file("testing/render.tsx"));
+}
+
+/// Lo que cabe en una fila de mapa: una frase que dice qué es el fichero.
+const THE_LONGEST_ROW: usize = 300;
+
+/// Prefijos de los identificadores de la especificación, que mueren con ella.
+const SPEC_CITATIONS: [&str; 4] = ["ID-", "TD-", "RD-", "RT-"];
+
+/// Todos los mapas del repositorio, por su ruta.
+fn every_map(root: &Path) -> Vec<(String, String)> {
+    let mut maps = Vec::new();
+    for zone in &ZONES {
+        maps.push((zone.map.to_owned(), read(root, zone.map)));
+        let modules = tracked_modules(root, zone);
+        for (_, map) in context_maps(root, zone, &modules) {
+            let content = read(root, &map);
+            maps.push((map, content));
+        }
+    }
+    maps
+}
+
+/// La cabecera de la tabla que reparte los módulos de una zona.
+const THE_TABLE_OF_MODULES: &str = "| Módulo | Qué es |";
+
+/// Las filas de la tabla de módulos, que es la única que describe ficheros.
+fn rows_of(map: &str) -> Vec<&str> {
+    let mut rows = Vec::new();
+    let mut inside = false;
+    for line in map.lines() {
+        if line.starts_with(THE_TABLE_OF_MODULES) {
+            inside = true;
+        } else if !line.starts_with('|') {
+            inside = false;
+        } else if inside && line.contains('`') {
+            rows.push(line);
+        }
+    }
+    rows
+}
+
+/// Comprueba si el texto cita un identificador de la especificación o un número de issue.
+fn cites_something_that_dies(row: &str) -> bool {
+    let dies_after = |prefix: &str| {
+        row.match_indices(prefix)
+            .any(|(at, _)| row[at + prefix.len()..].starts_with(|c: char| c.is_ascii_digit()))
+    };
+    let is_an_issue = row.match_indices('#').any(|(at, _)| {
+        let before_it_starts = at == 0 || matches!(&row[at - 1..at], " " | "(");
+        before_it_starts && row[at + 1..].starts_with(|c: char| c.is_ascii_digit())
+    });
+
+    SPEC_CITATIONS.iter().any(|prefix| dies_after(prefix)) || is_an_issue
+}
+
+/// Lo que sobra de una fila, si sobra algo.
+fn what_is_wrong_with(row: &str) -> Option<String> {
+    if cites_something_that_dies(row) {
+        return Some(
+            "cita un ID-NN o un numero de issue, que mueren antes que el codigo".to_owned(),
+        );
+    }
+    let length = row.chars().count();
+    if length > THE_LONGEST_ROW {
+        return Some(format!(
+            "son {length} caracteres: a partir de {THE_LONGEST_ROW} ya no dice que es, cuenta como funciona"
+        ));
+    }
+    None
+}
+
+#[test]
+fn a_map_row_says_what_the_file_is_and_stops_there() {
+    let root = repository_root();
+    let mut wrong = Vec::new();
+
+    for (path, map) in every_map(&root) {
+        for row in rows_of(&map) {
+            if let Some(reason) = what_is_wrong_with(row) {
+                let start: String = row.chars().take(60).collect();
+                wrong.push(format!("{path}\n  {start}…\n  {reason}"));
+            }
+        }
+    }
+
+    assert!(
+        wrong.is_empty(),
+        "un mapa dice que es cada fichero para que un agente sepa cual abrir; el como lo dice el \
+         codigo, que no se desincroniza, y el porque un ADR:\n\n{}",
+        wrong.join("\n\n")
+    );
+}
+
+#[test]
+fn only_the_table_of_modules_is_read() {
+    let map = format!(
+        "{THE_TABLE_OF_MODULES}\n|---|---|\n| `a.rs` | Algo. |\n\n\
+         | Bloque | Qué decide |\n|---|---|\n| L1-26 (`entriesOf`) | Otra cosa. |\n"
+    );
+
+    assert_eq!(
+        rows_of(&map),
+        vec!["| `a.rs` | Algo. |"],
+        "el indice de comentarios de bloque de i18n no es un mapa de modulos"
+    );
+}
+
+#[test]
+fn a_row_that_explains_how_it_works_is_caught() {
+    let short =
+        "| `domain/trust.rs` | Las reglas de la CA local: cuando se instala y cuando se solapa. |";
+    assert_eq!(what_is_wrong_with(short), None);
+
+    let long = format!("| `a.rs` | {} |", "y ademas ".repeat(40));
+    assert!(what_is_wrong_with(&long).is_some());
+}
+
+#[test]
+fn a_row_that_cites_the_spec_or_an_issue_is_caught() {
+    assert!(cites_something_that_dies(
+        "| `a.rs` | Lo que sea (ID-215). |"
+    ));
+    assert!(cites_something_that_dies("| `a.rs` | Lo que sea (TD-9). |"));
+    assert!(cites_something_that_dies(
+        "| `a.rs` | Lo que sea, del #453. |"
+    ));
+    assert!(!cites_something_that_dies(
+        "| `a.rs` | Lo que sea (ADR-0017). |"
+    ));
+    assert!(!cites_something_that_dies(
+        "| `a.rs` | El identificador RD del formulario. |"
+    ));
+    assert!(
+        !cites_something_that_dies("| `a.rs` | El modulo PKCS#11 del sistema. |"),
+        "PKCS#11 no es un numero de issue"
+    );
 }
