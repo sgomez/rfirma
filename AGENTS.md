@@ -70,7 +70,46 @@ Reemplazar la interfaz Swing y el servidor sockets en Java de **AutoFirma** (cuy
 * **Cargo (Rust):** Instalado en `~/.cargo/bin`, pero **no está en el `PATH` de una shell no interactiva** de este entorno. `command -v cargo` falla y `just tools` lo denuncia. Exporta el `PATH` antes de cualquier receta de Rust.
 * **Cadena de Tauri (`rfirma-app/src-tauri/`):** **ya compila en este equipo de desarrollo** (confirmado de forma independiente en #49 y #50) — `pkg-config --exists` encuentra `webkit2gtk-4.1`, `javascriptcoregtk-4.1` y `libsoup-3.0`, y `cargo build`, `cargo test`, `cargo clippy`, `cargo llvm-cov` y `cargo crap` corren enteros. Dos peros siguen en pie: exporta el `PATH` de Cargo primero (ver la entrada de arriba), y `cargo` necesita `rfirma-app/dist` ya construido antes de compilar nada —**sin excepción, tampoco `cargo test --lib` ni `cargo clippy --lib`**, porque `lib.rs` llama a `tauri::generate_context!()` y revienta con «The `frontendDist` configuration is set to `"../dist"` but this path doesn't exist»—. Y en un árbol limpio `pnpm install` + `vite build` **no basta**: `src/i18n/locales/*.ts` se genera desde `po/*.po` y no está versionado, así que el arranque es `pnpm install` → `just po-import` → recién entonces cualquier receta de Rust. Si en algún equipo vuelve a faltar una de esas bibliotecas de sistema, el fallo aparece como `pkg-config exited with status code 1` dentro del `build.rs` de `javascriptcore-rs-sys` sin nombrar el paquete que falta; la lista completa vive en el paso «Dependencias de sistema de Tauri» de `.github/workflows/ci.yml`.
 * **`cargo-crap` (puerta CRAP, ADR-0014):** `--fail-above` es un interruptor sin valor; el umbral va aparte, en `--threshold 30`. El ADR-0014 los escribe juntos (`--fail-above` con «umbral 30» al lado) y confunde — la invocación real está en el `justfile`, no copies la del ADR literalmente.
+* **`target/` compartido entre worktrees:** el `justfile` apunta
+  `CARGO_TARGET_DIR` a `.claude/worktrees/target` **cuando corre desde un
+  worktree**, y deja el del checkout principal donde estaba. Sin esto cada
+  agente recompila el árbol de dependencias de Tauri desde cero: 73 s y entre
+  6,8 y 13 GB por worktree; compartiéndolo, el primero lo paga una vez y los
+  demás entran en 11 s. El principal se queda fuera porque cargo toma un
+  cerrojo sobre el `target/` mientras compila, y no tiene sentido que un
+  `cargo` a mano espere al agente de turno. Descartado `sccache`, medido:
+  acierta el 0 % entre dos `target/` distintos (ADR-0014).
 * **Prueba de Concepto FFI:** Se encuentra una PoC funcional del enlace FFI en `clienteafirma/autofirma-native-bridge/rust-poc`. Compila y se ejecuta con éxito.
+
+---
+
+## 🚦 Qué ejecutar y cuándo
+
+La puerta del repositorio es `just check`, y **no es tuya: es del CI**, que la
+reparte en tres runners simultáneos y por eso paga el carril más lento. En un
+portátil se pagan los tres sumados, y repetirla tras cada arreglo es el gasto
+más grande de una ronda de entrega. La escalera es esta y no tiene más
+peldaños:
+
+| Cuándo | Qué |
+| --- | --- |
+| En cada rojo → verde | Solo la prueba que estás tocando: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
+| Antes de commitear | `just fmt` y **`just check-changed`**, una vez y no por arreglo: deduce de lo que cambia respecto a `origin/main` qué carriles hacen falta |
+| Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |
+| `just check` entero | Solo si tocas el `justfile` o `.github/` — y entonces `check-changed` ya dispara las tres cadenas sin que tengas que decidirlo |
+
+Tres avisos que ahorran una ronda:
+
+* **`just check-rust` no es un bucle de realimentación, es la puerta CRAP.**
+  `cargo llvm-cov` compila un árbol instrumentado **aparte** del de `cargo
+  test` y de `clippy`, así que iterar con él paga dos compilaciones completas
+  para responder a lo que `cargo test <filtro>` responde en segundos.
+* **Un `cargo test` suelto necesita `rfirma-app/dist` y el token**, que es lo
+  que le añaden las recetas: desde un árbol limpio el arranque sigue siendo
+  `pnpm install` → `just po-import` → `just build-ts` → `just token`.
+* **La salida de una suite verde es contexto tirado.** Filtra por nombre y usa
+  el reportero más callado de cada cadena; en rojo, vuelve a correr solo el
+  fichero o el nombre que falló, nunca la suite.
 
 ---
 

@@ -54,6 +54,33 @@ native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 # `crap` de `test` y esta linea.
 crap_version := "0.4.3"
 
+# UN SOLO target/ PARA TODOS LOS WORKTREES DE AGENTES, y el del checkout
+# principal intacto.
+#
+# Cada agente constructor trabaja en un worktree propio, asi que sin esto cada
+# uno recompila el arbol de dependencias de Tauri desde cero: medidos entre 6,8
+# y 13 GB por worktree, y 73 s de reloj antes de que la primera prueba diga
+# nada. Compartiendolo, el primero paga la compilacion entera una vez y los
+# demas entran en 11 s.
+#
+# EL PRINCIPAL SE QUEDA FUERA A PROPOSITO: cargo toma un cerrojo sobre el
+# target/ mientras compila, asi que meterlo dentro haria que un `cargo` a mano
+# esperase a que terminara el agente de turno. Los agentes si se serializan
+# entre si, y eso no cuesta nada con `execution: sequential`
+# (docs/agents/developer-defaults.md).
+#
+# Descartado sccache, y medido: entre dos target/ distintos acierta el 0 % de
+# las veces, porque su clave depende de las rutas de los --extern (ADR-0014).
+worktree_target := ```
+    own=$(git rev-parse --git-dir 2>/dev/null || true)
+    common=$(git rev-parse --git-common-dir 2>/dev/null || true)
+    if [ -n "$own" ] && [ "$own" != "$common" ] && cd "$common/.." 2>/dev/null; then
+        printf '%s' "$PWD/.claude/worktrees/target"
+    fi
+```
+
+export CARGO_TARGET_DIR := if worktree_target == "" { tauri / "target" } else { worktree_target }
+
 # La misma razon que crap_version: sin ruff.toml ni pyproject.toml en el
 # repositorio, el conjunto de reglas que aplica `ruff check` es el que traiga
 # la version instalada, y una `ruff` nueva puede poner `lint-python` en rojo
@@ -131,6 +158,47 @@ check-ts: check-po lint-ts lint-i18n build-ts test-ts
 # instrumentadas; sin instrumentar las ejecuta `test-native` en cada empujon a
 # main.
 check-rust: lint-rust crap check-contract
+
+# LA PUERTA QUE SE CORRE EN LOCAL, y `check` entero la que corre el CI. La
+# diferencia no es de rigor sino de sitio: el CI reparte las tres cadenas en
+# tres runners que arrancan a la vez, asi que le cuesta la mas lenta; en un
+# portatil cuestan la suma, y un cambio que solo toca `rfirma-app/src/` paga
+# ademas Maven y un arbol instrumentado de cargo que no miran una linea suya.
+#
+# EL CARRIL SE DEDUCE DE LO QUE CAMBIA respecto a origin/main, contando lo
+# committeado, lo del indice, lo del arbol y lo sin seguir. `check-repo` corre
+# siempre porque son cuatro segundos, y lo que no se sabe leer —el justfile,
+# los workflows, bootstrap.sh— dispara las tres cadenas: son justo los ficheros
+# que pueden romper cualquiera de ellas.
+#
+# La puerta antes de commitear: solo los carriles que toca el cambio.
+check-changed:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    base=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD)
+    changed=$({ git diff --name-only "$base"; git ls-files -o --exclude-standard; } | sort -u)
+    if [ -z "$changed" ]; then
+        echo "check-changed: nada que comprobar respecto a origin/main"
+        exit 0
+    fi
+    lanes="check-repo"
+    touched() { printf '%s\n' "$changed" | grep -qE "$1"; }
+    if touched '^(justfile|\.github/|bootstrap\.sh)'; then
+        lanes="$lanes check-java check-ts check-rust"
+    else
+        touched '^rfirma-native-bridge/' && lanes="$lanes check-java" || true
+        touched '^rfirma-app/(src/|po/|package\.json|pnpm-lock|tsconfig|vite|biome)' \
+            && lanes="$lanes check-ts" || true
+        # docs/adr y los AGENTS.md entran por Rust y no por despiste: sus
+        # guardas —adr_citations_resolve y agents_map_is_complete— son pruebas
+        # de la grada A, y viven en el carril de Rust aunque el fichero que las
+        # rompe sea prosa.
+        touched '^rfirma-app/src-tauri/|^docs/adr/|AGENTS\.md$' \
+            && lanes="$lanes check-rust" || true
+    fi
+    lanes=$(printf '%s\n' $lanes | awk '!seen[$0]++' | tr '\n' ' ')
+    echo "check-changed: $lanes"
+    exec {{ just_executable() }} $lanes
 
 # El bucle corto de quien quiera pasar el linting entero antes de commitear. No
 # es la puerta de pre-push de lefthook.yml, que es otra cosa y mucho mas corta
