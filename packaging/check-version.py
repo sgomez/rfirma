@@ -191,17 +191,15 @@ def check_metainfo(version: str) -> None:
         fail(f"{METAINFO}: la <release> no lleva `date` (ID-152)")
 
     details = [
-        url.text or ""
-        for url in release.findall("url")
-        if url.get("type") == "details"
+        url.text or "" for url in release.findall("url") if url.get("type") == "details"
     ]
     if not details:
         fail(
-            f"{METAINFO}: la <release> no lleva <url type=\"details\"> al "
+            f'{METAINFO}: la <release> no lleva <url type="details"> al '
             f"CHANGELOG (ID-152)"
         )
     elif not any("CHANGELOG" in url for url in details):
-        fail(f"{METAINFO}: el <url type=\"details\"> no apunta al CHANGELOG")
+        fail(f'{METAINFO}: el <url type="details"> no apunta al CHANGELOG')
 
     if release.find("description") is not None:
         fail(

@@ -1436,6 +1436,83 @@
     },
     {
         "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-darwin-arm64/-/lefthook-darwin-arm64-2.1.12.tgz",
+        "sha512": "192523a9a0aec406253cea2f6e35c4584dc70086bfc4e4244d3999f77ef389e4257633cb4da0bbface451e8c4acb09fe0fdae2065a1f903a86ed9e1fe73ce63c",
+        "dest-filename": "lefthook-darwin-arm64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-darwin-x64/-/lefthook-darwin-x64-2.1.12.tgz",
+        "sha512": "a80507492c3fec07e2e70c64a0b931391c5289c09e4c15f254b9d1803e9866b6bab9dbe2a33a4adc0a24f59e8521678a7391418a344c48d0f118f4d1121b2371",
+        "dest-filename": "lefthook-darwin-x64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-freebsd-arm64/-/lefthook-freebsd-arm64-2.1.12.tgz",
+        "sha512": "1476517ca96214d6f2cf9e33b2819d55ef66baaebb70d8c14d9ea3acf3d48c8ef152ec82c12a7303ed4ea62c094f4d0bf693f964638d06a9c664a9eba42fbb53",
+        "dest-filename": "lefthook-freebsd-arm64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-freebsd-x64/-/lefthook-freebsd-x64-2.1.12.tgz",
+        "sha512": "1d84193c6cb60c3131edd6eea2dbac269ba3639abd8a038b831dfaa9e79070d42ebef7461cf8f6646488b062a1a09d1dc3941ae249ca2683c01c465059d57fa2",
+        "dest-filename": "lefthook-freebsd-x64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-linux-arm64/-/lefthook-linux-arm64-2.1.12.tgz",
+        "sha512": "8a98ceae2d8f07fb24e27a0fac742e3397dca4d0639a52a8e2a32d5f22e7c5e3b11981d66737f45e2d0eb6b5c743ffed3a9adcbf8d000ef854b9275c1aa8a02f",
+        "dest-filename": "lefthook-linux-arm64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-linux-x64/-/lefthook-linux-x64-2.1.12.tgz",
+        "sha512": "0e653ac5fbea56815d5be493c9cef4608e11cbcbe41c6287c7e209d49b3f19a72ae5dbfe7e2c0dcf095eddb8b6f0490be8ff3163aec1fc27d07d18f8491538b6",
+        "dest-filename": "lefthook-linux-x64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-openbsd-arm64/-/lefthook-openbsd-arm64-2.1.12.tgz",
+        "sha512": "bdbd09edb1252efa1a0964269dadc79edb2fa0da8cb060217e38c2f7db2cd4e742b5eb9f64a337471095a0c0446c3e7422dbf673551ad801554e896d5454f2d5",
+        "dest-filename": "lefthook-openbsd-arm64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-openbsd-x64/-/lefthook-openbsd-x64-2.1.12.tgz",
+        "sha512": "40e9a10d6a8f3cae3ef7db1c6a77c499b263511f89602f77aa1affd1ba790e3dcb691de454535673acce414b0e4cfcbf2c2e8f1bbe7d2de8ff9abfc1b6350bd9",
+        "dest-filename": "lefthook-openbsd-x64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-windows-arm64/-/lefthook-windows-arm64-2.1.12.tgz",
+        "sha512": "784ac4cabf401e44458fa4f1a4241e286774b3a22bb4bfd510867fb2c83c74d7c6fb2711e23016fc8025ac94b0ebf6505dbdd6b562da43a400e5cf932e1eef9a",
+        "dest-filename": "lefthook-windows-arm64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook-windows-x64/-/lefthook-windows-x64-2.1.12.tgz",
+        "sha512": "d21f9698355d0eb8938e5a03fd46e33eafd9b6a69a2653c0746715c0c084740c5f6c5d054e00db297de282e8bd83653fa86db2e90a5586dcf58de8917bb72d6b",
+        "dest-filename": "lefthook-windows-x64-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
+        "url": "https://registry.npmjs.org/lefthook/-/lefthook-2.1.12.tgz",
+        "sha512": "dae39ec5fb2bad1842893516746c83c92c551c784e149f0c41e8ecdbb74cde1ba0ad0078f3fcf565595a368c696754a7cd0d4668321b3b9ac0be2730ca292761",
+        "dest-filename": "lefthook-2.1.12.tgz",
+        "dest": "flatpak-node/pnpm-tarballs"
+    },
+    {
+        "type": "file",
         "url": "https://registry.npmjs.org/lightningcss-android-arm64/-/lightningcss-android-arm64-1.33.0.tgz",
         "sha512": "804a514da94a768b29e016fca96b5cda23a013949e2079694b5ba9f5b16adb003262197551d4ce6d88877bdf3310cf5242f4a8a906752100f424da60dcc979a6",
         "dest-filename": "lightningcss-android-arm64-1.33.0.tgz",

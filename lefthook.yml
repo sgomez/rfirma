@@ -1,0 +1,54 @@
+# Puerta local de formato, previa al push.
+#
+# Se adelanta a lo que el CI ya comprueba: `cargo fmt --all -- --check` puso en
+# rojo la PR #489 despues de publicarla y costo un ciclo entero de review, fix y
+# re-review por algo que se arregla solo con una orden. El CI no cambia; esta es
+# la copia barata que corre antes.
+#
+# SOLO COMPROBACIONES INSTANTANEAS Y DETERMINISTAS: formato y nada mas. Ni
+# clippy, ni pruebas, ni nada que compile o dependa de `build-ts`, que tardan
+# minutos; una puerta lenta se acaba saltando, y esas ya las cubre el CI.
+#
+# CADA TRABAJO SE SALTA SOLO SI SU HERRAMIENTA NO ESTA, con un aviso y sin
+# bloquear: una puerta que rompe el push por un entorno incompleto se desactiva
+# en una semana. Y todos anteponen ~/.cargo/bin y ~/.local/bin al PATH porque un
+# hook de git es una shell no interactiva, donde cargo y ruff no estan.
+#
+# Se instala sola: el `prepare` de rfirma-app/package.json corre
+# `lefthook install` en cada `pnpm install`, y `just deps` con el.
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: fmt-rust
+      glob: "rfirma-app/src-tauri/**.rs"
+      fail_text: "arreglalo con: just fmt-rust"
+      run: |
+        export PATH="$HOME/.cargo/bin:$PATH"
+        if ! command -v cargo >/dev/null; then
+          echo "aviso: cargo no esta disponible; me salto el formato de Rust"
+          exit 0
+        fi
+        cd rfirma-app/src-tauri && cargo fmt --all -- --check
+
+    - name: fmt-ts
+      glob: "rfirma-app/**.{ts,tsx,js,jsx,mjs,json,css,html}"
+      fail_text: "arreglalo con: just fmt-ts"
+      run: |
+        cd rfirma-app
+        if ! command -v pnpm >/dev/null || [ ! -x node_modules/.bin/biome ]; then
+          echo "aviso: biome no esta instalado (just deps); me salto el formato de TypeScript"
+          exit 0
+        fi
+        pnpm exec biome format .
+
+    - name: fmt-python
+      glob: "packaging/**.py"
+      fail_text: "arreglalo con: just fmt-python"
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        if ! command -v ruff >/dev/null; then
+          echo "aviso: ruff no esta disponible; me salto el formato de Python"
+          exit 0
+        fi
+        ruff format --check packaging

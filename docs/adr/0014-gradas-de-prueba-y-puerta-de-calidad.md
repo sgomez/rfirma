@@ -187,17 +187,50 @@ instala con `cargo binstall` a una **versión fijada** en el `justfile`. Si se a
 se quita en una línea y no arrastra nada: es una comprobación aparte, no un formato que impregne
 el código.
 
-## Sin hook de pre-commit
+## Un solo hook: la puerta de formato de pre-push
 
-**Ninguno**, y `just check` sigue siendo el único punto de entrada que promete
-`docs/agents/code-host.md`. El [#33](https://github.com/sgomez/rfirma/issues/33) suponía que
-`bootstrap.sh` instalaría el gestor de hooks; el ADR-0013, escrito después, decidió que
-**`bootstrap.sh` no crece**. Y en un repositorio movido por agentes un hook desconocido se
-esquiva con `--no-verify` o explota sin que nadie entienda por qué.
+**Sin hook de pre-commit, y un `pre-push` que solo mira el formato.** `just check` sigue siendo el
+único punto de entrada que promete `docs/agents/code-host.md`: esta puerta no comprueba nada que
+`check` no comprobara ya, solo lo comprueba antes y gratis.
 
-Se añade en su lugar una receta **`just quick`** —solo `lint`, sin `build` ni `test`— para el
-bucle corto de quien quiera formatear antes de commitear. Voluntaria, visible en `just --list`, y
-sin tocar el contrato de `check`.
+Lo que la trajo es medido. La [PR #489](https://github.com/sgomez/rfirma/pull/489) pasó las
+pruebas en local, se publicó, y la review la bloqueó por `cargo fmt --all -- --check` en cuatro
+ficheros: un ciclo entero de review, arreglo y re-review por algo que se arregla con una orden y
+no admite criterio. El formato es determinista y tiene un botón de arreglar; no es material de
+review ni de CI en rojo.
+
+El gestor es **lefthook**, declarado como dependencia de desarrollo de `rfirma-app` y fijado a una
+versión exacta por la misma razón que `cargo-crap`. Se instala solo desde el `prepare` de
+`package.json`, o sea que `just deps` y cualquier `pnpm install` lo dejan puesto: una puerta que
+hay que acordarse de encender no la tiene nadie encendida. La configuración es `lefthook.yml` en
+la raíz.
+
+Dentro va **solo formato**, y ahí está toda la decisión: `cargo fmt --all -- --check`, el
+formateador de biome y `ruff format --check`, filtrados por glob y en paralelo, de modo que una
+push que no toca Rust no arranca cargo. Ni clippy, ni pruebas, ni nada que compile o que dependa
+de `build-ts`. El objetivo es que la puerta se mida en segundos: la única forma de que un hook
+sobreviva es que quien empuja no note que está.
+
+Las dos objeciones del [#33](https://github.com/sgomez/rfirma/issues/33), que en su día bastaron
+para no tener ninguno, siguen siendo ciertas y por eso la puerta está construida contra ellas:
+
+- **«Se esquiva con `--no-verify`»**. Se esquiva, sí, y no se intenta impedir: lo que hay detrás
+  es el CI, que no se esquiva. Adelantarse a un fallo barato no exige ser infranqueable.
+- **«Explota sin que nadie entienda por qué»**. Cada trabajo se salta solo, con un aviso y sin
+  bloquear, si su herramienta no está —`cargo` y `ruff` no viven en el `PATH` de una shell no
+  interactiva, que es exactamente lo que es un hook de git—, y cuando sí falla el mensaje nombra
+  la receta que lo arregla. De ahí salen `just fmt`, `fmt-rust`, `fmt-ts` y `fmt-python`, que
+  escriben; hasta ahora solo había recetas que comprobaban.
+
+Lo que sí se mantiene del #33 es que **`bootstrap.sh` no crece** (ADR-0013): quien instala el
+gestor es pnpm, no él.
+
+Sigue existiendo la receta **`just quick`** —solo `lint`, sin `build` ni `test`— para el bucle
+corto de quien quiera pasar el linting entero antes de commitear.
+
+`ruff format` es la única de las tres que el CI **no** ejecuta: la cadena de Python es
+`ruff check`, que es otra cosa. La puerta local es aquí más estricta que el CI a propósito, y el
+glob la limita a las pushes que tocan `packaging/**/*.py`.
 
 ## La bomba de relojería del kit FNMT
 
