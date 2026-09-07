@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
-use crate::documents::domain::portal::PortalDocument;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::holder::{stamped_holder_of, StampedHolder};
@@ -32,7 +32,7 @@ pub struct SigningSession {
 struct InFlight {
     cycle: OpenCycle,
     handle: String,
-    document: PortalDocument,
+    document: Document,
     signature: Option<TokenSignature>,
     certificate: CertificateRef,
     signer_der: Vec<u8>,
@@ -45,7 +45,7 @@ pub struct DocumentToSign {
     /// El asa que dio el portal al abrirlo.
     pub handle: String,
     /// El documento tal como entró por el portal.
-    pub document: PortalDocument,
+    pub document: Document,
 }
 
 /// Prefirma local: valida admisibilidad, prepara la configuración y abre el ciclo.
@@ -226,7 +226,7 @@ pub struct Signed {
     /// El asa con la que la ventana nombra el documento firmado.
     pub handle: String,
     /// El documento que se firmó.
-    pub document: PortalDocument,
+    pub document: Document,
     /// El ciclo completado, con el PDF firmado dentro.
     pub completed: CompletedCycle,
     /// El certificado con el que se firmó.
@@ -335,7 +335,7 @@ pub fn config_for(
 }
 
 /// Obtiene y valida los bytes de un documento para firmar.
-pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, CycleFailure> {
+pub fn admitted_bytes(document: &Document) -> Result<Vec<u8>, CycleFailure> {
     let bytes = std::fs::read(document.reading_path())
         .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
     AdmissibleDocument::check(&bytes).map_err(CycleError::from)?;
@@ -343,7 +343,7 @@ pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, CycleFailure
 }
 
 /// Comprueba si el documento contiene firmas previas no reconocibles.
-pub fn unregistered_signatures_in(document: &PortalDocument) -> Result<bool, CycleFailure> {
+pub fn unregistered_signatures_in(document: &Document) -> Result<bool, CycleFailure> {
     let bytes = admitted_bytes(document)?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
@@ -368,7 +368,7 @@ pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, CycleF
 pub struct SignedCycle {
     pub cycle: OpenCycle,
     pub handle: String,
-    pub document: PortalDocument,
+    pub document: Document,
     pub signature: TokenSignature,
     pub seal: SessionSeal,
     pub certificate: CertificateRef,

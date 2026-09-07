@@ -5,7 +5,7 @@ use std::process::Command;
 
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
-use rfirma_lib::identity::application::listed::ListedCertificates;
+use rfirma_lib::identity::application::certificates::ListedCertificates;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::store::Store;
 use rsa::pkcs1v15::{Signature, VerifyingKey};

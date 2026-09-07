@@ -1,6 +1,6 @@
 use super::{begin_for_the_site, finish_for_the_site, SiteTerms};
 use crate::fixtures::{a_certificate, an_order, Directory, NoIsolate, NoToken};
-use crate::identity::application::listed::ListedCertificates;
+use crate::identity::application::certificates::ListedCertificates;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::application::session::{config_for, SigningSession};
 use crate::site::domain::protocol::{SafCode, SiteFilter};

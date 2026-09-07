@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use crate::desktop::adapters::paths::Paths;
-use crate::identity::application::listed::ListedCertificates;
+use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};

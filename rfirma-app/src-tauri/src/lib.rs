@@ -59,13 +59,13 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         token: Box::new(identity::adapters::pkcs11::RealToken),
         stores: identity::adapters::pkcs11::stores::from_environment(),
         installed_certificates: paths.installed_certificates_dir(),
-        listed: identity::application::listed::ListedCertificates::new(),
+        listed: identity::application::certificates::ListedCertificates::new(),
         memory: memory.clone(),
     };
     let documents = DocumentsRoot {
         documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),
         rubric: documents::adapters::rubric::RubricStore::at(paths.rubric_path()),
-        opened: documents::application::opened::OpenedDocuments::new(),
+        opened: documents::application::documents::OpenedDocuments::new(),
         memory: memory.clone(),
     };
     let desktop = DesktopRoot {

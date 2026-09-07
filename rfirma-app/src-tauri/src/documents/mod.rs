@@ -9,11 +9,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use adapters::rubric::RubricStore;
-use application::opened::OpenedDocuments;
+use application::documents::OpenedDocuments;
 use domain::destination::DestinationFolder;
+use domain::document::Document;
 use domain::dropped::Dropped;
 use domain::error::DocumentError;
-use domain::portal::PortalDocument;
 use domain::told::{DroppedDocument, SignedDocument};
 use ports::DocumentsMemory;
 
@@ -36,26 +36,25 @@ impl DocumentsRoot {
     }
 
     /// El documento abierto tras el asa.
-    pub fn opened_document(&self, handle: &str) -> Result<PortalDocument, DocumentError> {
+    pub fn opened_document(&self, handle: &str) -> Result<Document, DocumentError> {
         application::documents::opened_document(&self.opened, handle)
     }
 
     /// Si del documento tras el asa se guarda rastro en la bandeja.
     pub fn is_remembered(&self, handle: &str) -> bool {
-        application::in_hand::DocumentInHand::taken(&self.opened, handle)
-            .is_ok_and(|in_hand| in_hand.is_remembered())
+        self.opened_document(handle)
+            .is_ok_and(|document| document.is_remembered())
     }
 
     /// Apunta un documento sin rastro y devuelve su asa.
     pub fn open_unrecorded(&self, path: PathBuf) -> String {
-        self.opened
-            .remember_unrecorded(PortalDocument::opened(path))
+        self.opened.mint(Document::passing_through(path))
     }
 
     /// Deja el firmado en la carpeta de destino y dice dónde cayó.
     pub fn deliver(
         &self,
-        document: &PortalDocument,
+        document: &Document,
         signed: &[u8],
     ) -> Result<(PathBuf, SignedDocument), DocumentError> {
         application::documents::deliver(&self.chosen_folder(), document, signed)

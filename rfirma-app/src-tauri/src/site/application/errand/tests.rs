@@ -6,11 +6,10 @@ use std::sync::Arc;
 
 use super::*;
 use crate::commands::Failure;
-use crate::documents::application::in_hand::DocumentInHand;
-use crate::documents::application::opened::OpenedDocuments;
-use crate::documents::domain::portal::PortalDocument;
+use crate::documents::application::documents::{self, OpenedDocuments};
+use crate::documents::domain::document::Document;
 use crate::fixtures::{a_memory, a_usable_certificate, listed_from, NoIsolate, NoToken};
-use crate::identity::application::listed::ListedCertificates;
+use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
@@ -177,8 +176,7 @@ impl Certificates for TheNeighbours<'_> {
 
 impl ScratchDocuments for TheNeighbours<'_> {
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
-        self.opened
-            .remember_unrecorded(PortalDocument::opened(path))
+        self.opened.mint(Document::passing_through(path))
     }
 }
 
@@ -722,7 +720,7 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     );
     assert_eq!(
         std::fs::read(
-            DocumentInHand::taken(&opened, &consent.document)
+            documents::opened_document(&opened, &consent.document)
                 .expect("el documento esta en la mano")
                 .reading_path()
         )
@@ -941,7 +939,7 @@ fn the_document_a_site_sends_leaves_no_trace_at_all() {
     };
     assert_eq!(consent.round, SignatureRound::Again);
     assert!(
-        !DocumentInHand::taken(&opened, &consent.document)
+        !documents::opened_document(&opened, &consent.document)
             .expect("el documento esta en la mano")
             .is_remembered(),
         "el documento de la sede entra por la puerta que no recuerda"

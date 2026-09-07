@@ -2,14 +2,17 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
-use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::handles::Handles;
 use crate::documents::domain::told::{
     Destination, DropRefusal, DroppedDocument, OpenedDocument, SignedDocument,
 };
 use crate::documents::ports::DocumentsMemory;
+
+/// Los documentos abiertos en esta sesión, cada uno tras su asa.
+pub type OpenedDocuments = Handles<Document>;
 
 /// Registra el documento abierto por el usuario y actualiza la última carpeta usada.
 pub fn note_opened(
@@ -17,23 +20,14 @@ pub fn note_opened(
     opened: &OpenedDocuments,
     handle: PathBuf,
 ) -> OpenedDocument {
-    let document = PortalDocument::opened(handle);
+    let document = Document::opened(handle);
     remember_the_folder(memory, &document);
     told_as_opened(document, opened)
 }
 
 /// Registra un documento en curso sin guardar rastro en el historial ni recordar carpeta.
 pub fn note_opened_unrecorded(opened: &OpenedDocuments, handle: PathBuf) -> OpenedDocument {
-    let document = PortalDocument::opened(handle);
-    let name = document.name().to_owned();
-    let modified = modified_seconds(&document);
-    let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
-    OpenedDocument {
-        id: opened.remember_unrecorded(document),
-        name,
-        modified,
-        path,
-    }
+    told_as_opened(Document::passing_through(handle), opened)
 }
 
 /// Devuelve el contenido en bytes del documento abierto por su identificador.
@@ -60,10 +54,10 @@ pub fn told_as_dropped(
             also_entering,
             discarded,
         } => Some(DroppedDocument {
-            document: Some(told_as_opened(PortalDocument::opened(path), opened)),
+            document: Some(told_as_opened(Document::opened(path), opened)),
             also_entering: also_entering
                 .into_iter()
-                .map(|path| told_as_opened(PortalDocument::opened(path), opened))
+                .map(|path| told_as_opened(Document::opened(path), opened))
                 .collect(),
             refused: None,
             discarded,
@@ -90,7 +84,7 @@ pub fn told_as_dropped(
 /// Guarda el documento firmado en la carpeta de destino resolviendo homónimos (ADR-0011).
 pub fn deliver(
     chosen: &DestinationFolder,
-    document: &PortalDocument,
+    document: &Document,
     signed: &[u8],
 ) -> Result<(PathBuf, SignedDocument), DocumentError> {
     let folder = CheckedFolder::check(chosen)?;
@@ -102,7 +96,7 @@ pub fn deliver(
 }
 
 /// Calcula la ruta prevista de destino antes de firmar sin escribir en disco (ADR-0011).
-pub fn where_it_lands(chosen: &DestinationFolder, document: &PortalDocument) -> Destination {
+pub fn where_it_lands(chosen: &DestinationFolder, document: &Document) -> Destination {
     let Ok(folder) = CheckedFolder::check(chosen) else {
         return Destination {
             folder: chosen.name().to_owned(),
@@ -137,12 +131,12 @@ fn file_name_of(landing: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
-fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedDocument {
+fn told_as_opened(document: Document, opened: &OpenedDocuments) -> OpenedDocument {
     let name = document.name().to_owned();
     let modified = modified_seconds(&document);
     let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
     OpenedDocument {
-        id: opened.remember(document),
+        id: opened.mint(document),
         name,
         modified,
         path,
@@ -178,7 +172,7 @@ pub fn chosen_folder(
 }
 
 /// Registra la carpeta de procedencia de un documento si es conocida.
-pub fn remember_the_folder(memory: &dyn DocumentsMemory, document: &PortalDocument) {
+pub fn remember_the_folder(memory: &dyn DocumentsMemory, document: &Document) {
     let Some(folder) = folder_it_came_from(document) else {
         return;
     };
@@ -189,7 +183,7 @@ pub fn remember_the_folder(memory: &dyn DocumentsMemory, document: &PortalDocume
 }
 
 /// Devuelve la carpeta de procedencia del documento o `None` si proviene del portal (ADR-0011).
-pub fn folder_it_came_from(document: &PortalDocument) -> Option<&Path> {
+pub fn folder_it_came_from(document: &Document) -> Option<&Path> {
     if document.came_through_the_portal() {
         return None;
     }
@@ -197,12 +191,12 @@ pub fn folder_it_came_from(document: &PortalDocument) -> Option<&Path> {
 }
 
 /// Obtiene la carpeta junto al original si el documento no entró por el portal.
-pub fn next_to_the_original(document: &PortalDocument) -> Option<DestinationFolder> {
+pub fn next_to_the_original(document: &Document) -> Option<DestinationFolder> {
     folder_it_came_from(document).map(DestinationFolder::at)
 }
 
 /// Devuelve la ruta real del documento si no procede del portal.
-pub fn real_path_of(document: &PortalDocument) -> Option<&Path> {
+pub fn real_path_of(document: &Document) -> Option<&Path> {
     if document.came_through_the_portal() {
         return None;
     }
@@ -210,14 +204,11 @@ pub fn real_path_of(document: &PortalDocument) -> Option<&Path> {
 }
 
 /// Obtiene el documento abierto correspondiente al identificador opaco.
-pub fn opened_document(
-    opened: &OpenedDocuments,
-    id: &str,
-) -> Result<PortalDocument, DocumentError> {
+pub fn opened_document(opened: &OpenedDocuments, id: &str) -> Result<Document, DocumentError> {
     opened.get(id).ok_or_else(DocumentError::no_longer_open)
 }
 
-pub(crate) fn modified_seconds(document: &PortalDocument) -> Option<u64> {
+pub(crate) fn modified_seconds(document: &Document) -> Option<u64> {
     std::fs::metadata(document.reading_path())
         .and_then(|metadata| metadata.modified())
         .ok()?

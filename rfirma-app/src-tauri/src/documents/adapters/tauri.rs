@@ -75,7 +75,7 @@ pub fn record_recent(
     placement: Option<PlacementView>,
     documents: State<'_, DocumentsRoot>,
 ) -> Result<RecentDocumentView, Failure> {
-    Ok(crate::documents::application::in_hand::take(
+    Ok(crate::documents::application::recents::take(
         documents.memory.as_ref(),
         &documents.opened,
         &id,

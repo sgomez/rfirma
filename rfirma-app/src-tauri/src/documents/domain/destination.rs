@@ -5,7 +5,7 @@ pub use super::naming::{numbered, signed_name, FIRST_NUMBER, MAX_NAMESAKES, SIGN
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::document::Document;
 
 use serde::{Deserialize, Serialize};
 
@@ -80,7 +80,7 @@ impl CheckedFolder {
     }
 
     /// Calcula la ruta final del documento firmado resolviendo homónimos (ADR-0011).
-    pub fn landing_for(&self, document: &PortalDocument) -> Result<PathBuf, DestinationError> {
+    pub fn landing_for(&self, document: &Document) -> Result<PathBuf, DestinationError> {
         let name = signed_name(document.name());
         let first = self.path.join(&name);
         if !first.exists() {

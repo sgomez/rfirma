@@ -217,10 +217,10 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
         SignedDocumentView,
     };
-    use crate::documents::application::opened::OpenedDocuments;
+    use crate::documents::application::documents::OpenedDocuments;
     use crate::documents::application::{documents, recents};
     use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
-    use crate::documents::domain::portal::PortalDocument;
+    use crate::documents::domain::document::Document;
     use crate::documents::domain::recents::Badge;
     use crate::documents::domain::recents::RecentDocument;
     use crate::fixtures::a_memory;
@@ -232,7 +232,7 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let opened = OpenedDocuments::new();
-    let document = PortalDocument::opened(A_PORTAL_HANDLE);
+    let document = Document::opened(A_PORTAL_HANDLE);
     let chosen = DestinationFolder::at(
         Path::new(A_PORTAL_HANDLE)
             .parent()

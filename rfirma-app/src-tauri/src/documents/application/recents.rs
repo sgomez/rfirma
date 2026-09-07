@@ -3,9 +3,9 @@
 use std::path::Path;
 use std::time::SystemTime;
 
-use crate::documents::application::opened::OpenedDocuments;
+use crate::documents::application::documents::{self, OpenedDocuments};
+use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
-use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
 use crate::documents::domain::recents::RecentDocument;
 use crate::documents::ports::DocumentsMemory;
@@ -64,6 +64,38 @@ pub fn listed_rows(memory: &dyn DocumentsMemory, opened: &OpenedDocuments) -> Ve
         .iter()
         .map(|entry| told_as_row(entry, size, opened))
         .collect()
+}
+
+/// Pone delante el documento abierto y lo anota en la bandeja solo si de él queda rastro.
+pub fn take(
+    memory: &dyn DocumentsMemory,
+    opened: &OpenedDocuments,
+    id: &str,
+    placement: Option<VisibleBox>,
+) -> Result<RecentRow, RecentsError> {
+    let document = documents::opened_document(opened, id)?;
+    if document.is_remembered() {
+        return record(memory, opened, id, placement);
+    }
+    Ok(told_without_a_row(id, &document, placement))
+}
+
+fn told_without_a_row(id: &str, document: &Document, placement: Option<VisibleBox>) -> RecentRow {
+    RecentRow {
+        id: id.to_owned(),
+        name: document.name().to_owned(),
+        badge: Badge::Unsigned,
+        modified: documents::modified_seconds(document),
+        last_used: now_in_seconds(),
+        available: document.reading_path().exists(),
+        placement,
+    }
+}
+
+fn now_in_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_secs())
 }
 
 /// Anota un documento abierto en la bandeja de recientes y devuelve su fila para la interfaz.
@@ -148,8 +180,8 @@ fn told_as_row(entry: &RecentDocument<Spot>, size: BoxSize, opened: &OpenedDocum
 /// Obtiene o asigna un identificador opaco para la ruta del documento.
 fn identifier_for(path: &Path, opened: &OpenedDocuments) -> String {
     opened
-        .last_id_of(path)
-        .unwrap_or_else(|| opened.remember(PortalDocument::opened(path.to_path_buf())))
+        .last_where(|document| document.is_remembered() && document.reading_path() == path)
+        .unwrap_or_else(|| opened.mint(Document::opened(path)))
 }
 
 fn joined(spot: &Spot, size: BoxSize) -> VisibleBox {

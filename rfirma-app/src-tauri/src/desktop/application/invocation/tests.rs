@@ -3,7 +3,7 @@ use std::path::Path;
 use super::*;
 use crate::commands::Failure;
 use crate::documents::application::documents::told_as_dropped;
-use crate::documents::application::opened::OpenedDocuments;
+use crate::documents::application::documents::OpenedDocuments;
 
 fn told(
     invocation: &Invocation,

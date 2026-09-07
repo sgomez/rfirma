@@ -5,8 +5,8 @@ fn a_folder() -> tempfile::TempDir {
     tempfile::tempdir().expect("deberia haber directorio temporal")
 }
 
-fn a_document() -> PortalDocument {
-    PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf")
+fn a_document() -> Document {
+    Document::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf")
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn a_second_signature_is_numbered_instead_of_overwriting_the_first() {
 fn cosigning_the_signed_document_does_not_stack_a_second_suffix() {
     let root = a_folder();
     let checked = CheckedFolder::at(root.path()).expect("deberia comprobarse");
-    let already_signed = PortalDocument::opened("/run/user/1000/doc/aa/contrato-firmado.pdf");
+    let already_signed = Document::opened("/run/user/1000/doc/aa/contrato-firmado.pdf");
 
     let landing = checked
         .landing_for(&already_signed)
@@ -109,7 +109,7 @@ fn the_third_cosignature_keeps_counting_instead_of_stacking() {
     fs::write(root.path().join("contrato-firmado.pdf"), b"la primera").expect("deberia escribirse");
     fs::write(root.path().join("contrato-firmado-2.pdf"), b"la segunda")
         .expect("deberia escribirse");
-    let signed_twice = PortalDocument::opened("/run/user/1000/doc/aa/contrato-firmado-2.pdf");
+    let signed_twice = Document::opened("/run/user/1000/doc/aa/contrato-firmado-2.pdf");
 
     let landing = checked
         .landing_for(&signed_twice)

@@ -12,7 +12,7 @@ cambia es dónde cae el fichero, y eso lo decide **el documento, no el empaqueta
 
 Esta es la regla entera. No hay `FileAccess::{Portal, Direct}`, ni sondeo del entorno, ni
 enum que diga en qué canal corremos: la capacidad ya vive en el código desde el
-[#22](https://github.com/sgomez/rfirma/issues/22) —`PortalDocument` reconoce el enlace del
+[#22](https://github.com/sgomez/rfirma/issues/22) —`Document` reconoce el enlace del
 portal por el prefijo `/run/user/*/doc/`— y un enum que sondease `/.flatpak-info` sería una
 segunda fuente de verdad para algo que el código ya sabe.
 
