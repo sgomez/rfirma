@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::BridgeError;
@@ -144,6 +144,15 @@ pub trait Certificates {
         found: &'a [TokenCertificate],
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError>;
+
+    /// El certificado recordado entre sesiones, si lo hay.
+    fn remembered(&self) -> Option<CertificateRef>;
+
+    /// Apunta el certificado elegido para la próxima sede que lo pegue.
+    fn remember(&self, chosen: &CertificateRef);
+
+    /// Olvida el certificado recordado.
+    fn forget_the_remembered(&self);
 }
 
 /// El documento de paso del trámite, apuntado como abierto sin rastro para que la ventana lo lea (ADR-0011).

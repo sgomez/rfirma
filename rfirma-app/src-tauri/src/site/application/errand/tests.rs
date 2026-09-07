@@ -9,11 +9,12 @@ use crate::crossing::Failure;
 use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::documents::domain::document::Document;
 use crate::identity::application::certificates::ListedCertificates;
-use crate::identity::application::tests::{a_usable_certificate, listed_from, NoToken};
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::application::tests::{a_usable_certificate, listed_from, NoMemory, NoToken};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
+use crate::identity::ports::CertificateMemory;
 use crate::identity::ports::Token as _;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::memory::Memory;
@@ -31,8 +32,8 @@ use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, SafCode,
-    SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
+    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter,
+    SafCode, SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
     SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -203,6 +204,18 @@ impl Certificates for TheNeighbours<'_> {
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        self.memory.remembered_certificate()
+    }
+
+    fn remember(&self, chosen: &CertificateRef) {
+        crate::identity::application::certificates::remember_the_certificate(self.memory, chosen);
+    }
+
+    fn forget_the_remembered(&self) {
+        crate::identity::application::certificates::forget_the_certificate(self.memory);
     }
 }
 
@@ -569,11 +582,13 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_o
     let reply = identity_handed_over(
         &engine,
         request.filter(),
+        false,
         &ours,
         &rows[0].id,
         &crate::site::application::tests::Directory {
             certificates: ours.clone(),
             listed: &listed,
+            memory: &memory,
         },
         &live,
     );
@@ -1825,9 +1840,6 @@ fn a_refusal_of_the_protocol_never_reaches_the_token() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let live = a_live();
-    let properties =
-        base64::engine::general_purpose::URL_SAFE.encode(b"filters=inventado:loquesea\n");
-
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let listed = ListedCertificates::new();
@@ -1843,17 +1855,17 @@ fn a_refusal_of_the_protocol_never_reaches_the_token() {
             &memory,
             home.path(),
         ),
-        &an_operation(&format!("&properties={properties}")),
-        decoded(&an_operation(&format!("&properties={properties}"))),
+        &an_operation("&dat=file:///etc/shadow"),
+        decoded(&an_operation("&dat=file:///etc/shadow")),
         &live,
     );
 
     let ErrandStep::Answering(reply) = step else {
-        panic!("el criterio no esta en la lista blanca: {step:?}");
+        panic!("el protocolo rechaza la lectura de un fichero local: {step:?}");
     };
     assert_eq!(
         on_the_wire(&reply),
-        WireAnswer::refused(SafCode::Params).on_the_wire()
+        WireAnswer::refused_because_of(SafCode::Params, Parameter::Data).on_the_wire()
     );
 }
 #[test]
@@ -2041,11 +2053,13 @@ fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
     let reply = identity_handed_over(
         &AnEngine::answering(&[&[]]),
         &SiteFilter::default(),
+        false,
         &ours,
         &handles[0],
         &crate::site::application::tests::Directory {
             certificates: ours.clone(),
             listed: &listed,
+            memory: &NoMemory,
         },
         &live,
     );
@@ -2259,4 +2273,158 @@ fn leaving_the_no_certificate_screen_cancels_the_errand() {
 
 fn a_credential() -> ChannelCredential {
     ChannelCredential::parse(CREDENTIAL).expect("es una credencial buena")
+}
+#[test]
+fn a_sticky_selection_answers_with_the_remembered_certificate_without_asking() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[0].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+
+    let engine = AnEngine::answering(&[&[0]]);
+    let request = requested(&an_operation("&sticky=true"));
+    let step = consent_for(
+        &engine,
+        &request,
+        ours.clone(),
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
+        &live,
+    );
+
+    assert!(
+        step.moment().is_none(),
+        "el certificado pegado no abre ningun momento: {step:?}"
+    );
+    let ErrandStep::Answering(reply) = &step else {
+        panic!("la sede recibe el certificado en el acto: {step:?}");
+    };
+    assert_eq!(
+        on_the_wire(reply),
+        base64::engine::general_purpose::URL_SAFE.encode(ours[0].der())
+    );
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(base64::engine::general_purpose::URL_SAFE.encode(ours[0].der()))
+    );
+}
+#[test]
+fn a_sticky_selection_asks_when_the_remembered_one_is_outside_the_filter() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA"), a_usable_certificate("OTRO")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[1].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let request = requested(&an_operation("&sticky=true"));
+    let neighbours = a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory);
+    let step = consent_for(&engine, &request, ours.clone(), &neighbours, &live);
+
+    let ErrandStep::AskingForConsent {
+        certificates: rows,
+        sticky,
+        ..
+    } = step
+    else {
+        panic!("el recordado no cruza el filtro: se pregunta");
+    };
+    assert!(sticky, "la sede pego el certificado que se elija");
+
+    let reply = identity_handed_over(
+        &engine,
+        request.filter(),
+        sticky,
+        &ours,
+        &rows[0].id,
+        &neighbours,
+        &live,
+    );
+    assert!(matches!(reply, SiteOutcome::Certificate(_)));
+    assert!(
+        memory
+            .remembered_certificate()
+            .is_some_and(|one| one.is_the_same_as(ours[0].reference())),
+        "el elegido queda recordado"
+    );
+}
+#[test]
+fn resetsticky_forgets_the_remembered_one_and_asks_all_the_same() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[0].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+
+    let engine = AnEngine::answering(&[&[0]]);
+    let request = requested(&an_operation("&sticky=true&resetsticky=true"));
+    let step = consent_for(
+        &engine,
+        &request,
+        ours.clone(),
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
+        &live,
+    );
+
+    assert!(
+        matches!(step, ErrandStep::AskingForConsent { .. }),
+        "olvidado el recordado, se pregunta: {step:?}"
+    );
+    assert_eq!(
+        memory.remembered_certificate(),
+        None,
+        "'resetsticky' olvida antes de resolver"
+    );
+}
+#[test]
+fn without_sticky_the_remembered_certificate_changes_nothing() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[0].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+
+    let engine = AnEngine::answering(&[&[0]]);
+    let request = requested(&an_operation(""));
+    let neighbours = a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory);
+    let step = consent_for(&engine, &request, ours.clone(), &neighbours, &live);
+
+    let ErrandStep::AskingForConsent {
+        certificates: rows,
+        sticky,
+        ..
+    } = step
+    else {
+        panic!("sin 'sticky' se pregunta siempre");
+    };
+    assert!(!sticky, "sin 'sticky' no hay nada que recordar");
+    assert!(
+        memory.remembered_certificate().is_some(),
+        "el recordado sigue donde estaba"
+    );
+
+    let reply = identity_handed_over(
+        &AnEngine::answering(&[&[0]]),
+        request.filter(),
+        sticky,
+        &ours,
+        &rows[0].id,
+        &neighbours,
+        &live,
+    );
+    assert!(matches!(reply, SiteOutcome::Certificate(_)));
 }

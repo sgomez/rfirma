@@ -275,8 +275,7 @@ mod full_cycle {
         let filter = site_filter(&[(
             "filters".to_owned(),
             "subject.contains:EIDAS CERTIFICADO PRUEBAS".to_owned(),
-        )])
-        .expect("el criterio esta en la lista blanca");
+        )]);
 
         let kept = filtering::keep_what_the_site_accepts(&bridge, &filter, listing)
             .expect("el motor contesta");

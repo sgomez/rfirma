@@ -182,6 +182,12 @@ impl crate::identity::ports::CertificateMemory for Memory {
         state.certificate = Some(reference.clone());
         self.remember_state_as_configured(&state)
     }
+
+    fn forget_the_certificate(&self) -> Result<(), MemoryError> {
+        let mut state = self.state()?.into_value();
+        state.certificate = None;
+        self.remember_state_as_configured(&state)
+    }
 }
 
 impl crate::desktop::ports::VersionMemory for Memory {

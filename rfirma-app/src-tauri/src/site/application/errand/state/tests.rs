@@ -65,7 +65,7 @@ fn a_consented_signature_is_never_an_identity_to_hand_over() {
 #[test]
 fn a_consented_identity_is_never_a_signature_to_begin() {
     let live = LiveErrand::default();
-    live.remember_identity(SiteFilter::default());
+    live.remember_identity(SiteFilter::default(), false);
 
     assert!(live.what_the_site_asked().is_some());
     assert!(live.the_signature_consented().is_none());
@@ -78,7 +78,7 @@ fn ending_leaves_nothing_to_answer_with() {
     live.end();
     assert!(live.the_signature_consented().is_none());
 
-    live.remember_identity(SiteFilter::default());
+    live.remember_identity(SiteFilter::default(), false);
     live.end();
     assert!(live.what_the_site_asked().is_none());
 }

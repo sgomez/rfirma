@@ -74,7 +74,7 @@ impl Errand {
 
 /// Consentimiento pendiente según la operación solicitada.
 enum PendingConsent {
-    Identity(SiteFilter),
+    Identity(SiteFilter, bool),
     Signature(PendingSignature),
     Saving(SavingConsent),
     Loading(LoadingConsent),
@@ -173,9 +173,9 @@ impl LiveErrand {
             .map(|scratch| scratch.path.clone())
     }
 
-    /// Registra el filtro de consentimiento de identidad.
-    pub(super) fn remember_identity(&self, filter: SiteFilter) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Identity(filter));
+    /// Registra el filtro de consentimiento de identidad y si la sede lo pegó.
+    pub(super) fn remember_identity(&self, filter: SiteFilter, sticky: bool) {
+        *crate::lock(&self.consent) = Some(PendingConsent::Identity(filter, sticky));
     }
 
     /// Registra los datos de consentimiento de firma.
@@ -209,10 +209,10 @@ impl LiveErrand {
         }
     }
 
-    /// Filtro de identidad pendiente, si lo hay.
-    pub(super) fn what_the_site_asked(&self) -> Option<SiteFilter> {
+    /// Filtro de identidad pendiente y si la sede lo pegó, si lo hay.
+    pub(super) fn what_the_site_asked(&self) -> Option<(SiteFilter, bool)> {
         match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Identity(filter)) => Some(filter.clone()),
+            Some(PendingConsent::Identity(filter, sticky)) => Some((filter.clone(), *sticky)),
             _ => None,
         }
     }

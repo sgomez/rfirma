@@ -1,6 +1,6 @@
 use super::{begin_for_the_site, finish_for_the_site, SiteTerms};
 use crate::identity::application::certificates::ListedCertificates;
-use crate::identity::application::tests::{a_certificate, NoToken};
+use crate::identity::application::tests::{a_certificate, NoMemory, NoToken};
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::application::session::{config_for, SigningSession};
 use crate::signing::application::tests::{an_order, NoIsolate};
@@ -100,6 +100,7 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
         &Directory {
             certificates,
             listed: &listed,
+            memory: &NoMemory,
         },
         &NobodyHasItOpen,
     )

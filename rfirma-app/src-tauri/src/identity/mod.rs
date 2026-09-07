@@ -78,6 +78,16 @@ impl IdentityRoot {
         application::certificates::remember_the_certificate(self.memory.as_ref(), reference);
     }
 
+    /// El certificado recordado entre sesiones, si lo hay.
+    pub fn remembered_certificate(&self) -> Option<CertificateRef> {
+        self.memory.remembered_certificate()
+    }
+
+    /// Olvida el certificado recordado.
+    pub fn forget_the_certificate(&self) {
+        application::certificates::forget_the_certificate(self.memory.as_ref());
+    }
+
     /// El directorio de los `.p12` instalados.
     pub fn installed_certificates(&self) -> &Path {
         &self.installed_certificates

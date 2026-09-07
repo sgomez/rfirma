@@ -30,7 +30,10 @@ pub use operation::{
     SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS, COSIGN, COUNTERSIGN, LOAD, PADES, SAVE,
     SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
-pub use parameters::{check_local_access_is_not_requested, check_minimum_client_version};
+pub use parameters::{
+    check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,
+    StickyCertificate,
+};
 pub use refusal::{Refusal, RefusalSituation};
 pub use url::AfirmaUrl;
 pub use version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};

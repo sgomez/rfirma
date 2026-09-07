@@ -19,6 +19,8 @@ pub enum ErrandStep {
         certificates: Vec<ListedCertificate>,
         /// Filtro solicitado por la sede para volver a comprobarlo (ADR-0011).
         filter: SiteFilter,
+        /// Si la sede pidió recordar el certificado que se elija.
+        sticky: bool,
     },
     /// Momento de consentimiento de firma de documento para la ventana.
     AskingToSign(SigningConsent),

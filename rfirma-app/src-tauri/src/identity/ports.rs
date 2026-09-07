@@ -81,4 +81,7 @@ pub trait CertificateMemory {
 
     /// Apunta el certificado con el que se acaba de firmar, según permitan los interruptores.
     fn remember_the_certificate(&self, reference: &CertificateRef) -> Result<(), MemoryError>;
+
+    /// Olvida el certificado recordado.
+    fn forget_the_certificate(&self) -> Result<(), MemoryError>;
 }

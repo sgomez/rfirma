@@ -183,6 +183,14 @@ pub fn remember_the_certificate(memory: &dyn CertificateMemory, reference: &Cert
     let _ = memory.remember_the_certificate(reference);
 }
 
+/// Olvida el certificado recordado entre sesiones.
+pub fn forget_the_certificate(memory: &dyn CertificateMemory) {
+    if memory.remembered_certificate().is_none() {
+        return;
+    }
+    let _ = memory.forget_the_certificate();
+}
+
 /// Resuelve el certificado asociado a un asa en el listado actual.
 pub fn certificate_behind<'a>(
     certificates: &'a [TokenCertificate],

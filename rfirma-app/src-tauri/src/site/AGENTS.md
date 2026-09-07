@@ -53,13 +53,13 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
-| `domain/protocol/filters.rs` | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor. Pruebas en `domain/protocol/filters/tests.rs`. |
+| `domain/protocol/filters.rs` | La expresión de filtro de la sede, que cruza entera al motor, y el catálogo de criterios medidos contra el original. Pruebas en `domain/protocol/filters/tests.rs`. |
 | `domain/protocol/framing.rs` | **El framing artesanal del transporte `service`**, sin socket: lector y escritor puros. Pruebas en `domain/protocol/framing/tests.rs`. |
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cinco cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado o de carga. Pruebas en `domain/protocol/operation/tests.rs`. |
-| `domain/protocol/parameters.rs` | Las dos guardias comunes a toda operación. Pruebas en `domain/protocol/parameters/tests.rs`. |
+| `domain/protocol/parameters.rs` | Lo común a toda operación: las dos guardias y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
 | `domain/protocol/url.rs` | Una URL `afirma://` partida en verbo y pares, con las rarezas del original. Pruebas en `domain/protocol/url/tests.rs`. |
 | `domain/protocol/version.rs` | El comparador de versiones del original, que **no es semver**, y sus cuatro trampas. Pruebas en `domain/protocol/version/tests.rs`. |
