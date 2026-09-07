@@ -1,8 +1,10 @@
-//! Guardas de verificación para las órdenes y tipos del adaptador de Tauri (ADR-0011).
+//! Guardas de verificación para las órdenes y los tipos que cruzan a la ventana (ADR-0011): las órdenes se leen del fuente, los tipos del registro.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::OnceLock;
+
+use crate::crossing::{all_crossings, type_names_in, Crossing};
 
 /// Fichero excluido de las comprobaciones de tipos.
 const THIS_FILE: &str = "guards.rs";
@@ -63,90 +65,52 @@ fn production_half(source: &str) -> &str {
     source
 }
 
-/// Aplana atributos de múltiples líneas a una sola línea.
-fn attributes_on_one_line(source: &str) -> String {
-    let mut joined = String::new();
-    let mut open = 0i32;
-    for line in source.lines() {
-        let trimmed = line.trim_start();
-        let starts_an_attribute = open == 0 && trimmed.starts_with("#[");
-        if starts_an_attribute || open > 0 {
-            if open == 0 {
-                joined.push_str(line);
-            } else {
-                joined.push_str(trimmed);
-            }
-            open += line.matches('[').count() as i32 - line.matches(']').count() as i32;
-            if open <= 0 {
-                open = 0;
-                joined.push('\n');
-            }
-            continue;
-        }
-        joined.push_str(line);
-        joined.push('\n');
+/// Los tipos del registro que cruzan de verdad: los declarados en una prueba hermana no salen a ninguna ventana.
+fn registry() -> Vec<&'static Crossing> {
+    all_crossings()
+        .into_iter()
+        .filter(|crossing| !crossing.file.ends_with("/tests.rs"))
+        .collect()
+}
+
+/// Los tipos de salida: lo que el registro dice que deriva `Serialize` y no es prestado.
+fn outputs() -> Vec<&'static Crossing> {
+    registry()
+        .into_iter()
+        .filter(|crossing| crossing.lent_from.is_none() && crossing.serialises())
+        .collect()
+}
+
+/// Lo que la biblioteca estándar y Tauri ponen en una firma y no hay que explicar.
+const NOT_OURS: [&str; 11] = [
+    "Option",
+    "Vec",
+    "String",
+    "Box",
+    "Result",
+    "HashMap",
+    "BTreeMap",
+    "BTreeSet",
+    "State",
+    "AppHandle",
+    "Response",
+];
+
+/// Los tipos que nombra la firma de una orden, sin el estado inyectado ni lo que no es nuestro.
+fn types_named_by(signature: &str) -> Vec<&str> {
+    let mut rest = signature;
+    let mut words = Vec::new();
+    while let Some(at) = rest.find("State<") {
+        words.extend(type_names_in(&rest[..at]));
+        let after = &rest[at + "State<".len()..];
+        let close = after.find('>').expect("State<...> se cierra");
+        rest = &after[close + 1..];
     }
-    joined
-}
-
-/// Cuenta cuántas derivaciones de Serialize contiene el código aplanado.
-fn serialising_derives(flattened: &str) -> usize {
-    flattened
-        .lines()
-        .map(str::trim_start)
-        .filter(|line| line.starts_with("#[derive(") && line.contains("Serialize"))
-        .count()
-}
-
-/// Tipo de salida serializable descubierto.
-struct Output<'a> {
-    file: &'a str,
-    name: String,
-}
-
-/// Descubre todos los tipos de salida serializables declarados en los adaptadores.
-fn outputs() -> Vec<Output<'static>> {
-    let mut found = Vec::new();
-    for (file, source) in sources() {
-        let flattened = attributes_on_one_line(production_half(source));
-        let mut serialisable = false;
-        let mut open: Option<String> = None;
-        for line in flattened.lines() {
-            let trimmed = line.trim_start();
-            if let Some(name) = open.as_mut() {
-                if line == "}" {
-                    found.push(Output {
-                        file,
-                        name: std::mem::take(name),
-                    });
-                    open = None;
-                }
-                continue;
-            }
-            if trimmed.starts_with("#[derive(") {
-                serialisable = trimmed.contains("Serialize");
-                continue;
-            }
-            if trimmed.is_empty() || trimmed.starts_with("#[") || trimmed.starts_with("///") {
-                continue;
-            }
-            let declaration = trimmed
-                .strip_prefix("pub struct ")
-                .or_else(|| trimmed.strip_prefix("pub enum "));
-            if let Some(rest) = declaration {
-                if serialisable {
-                    let name = rest
-                        .split(|letter: char| !letter.is_alphanumeric() && letter != '_')
-                        .next()
-                        .unwrap_or_default()
-                        .to_owned();
-                    open = Some(name);
-                }
-            }
-            serialisable = false;
-        }
-    }
-    found
+    words.extend(type_names_in(rest));
+    words.retain(|word| !NOT_OURS.contains(word));
+    words.sort_unstable();
+    words.dedup();
+    words
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
@@ -174,14 +138,14 @@ const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
 /// Segunda ruta de prueba concedida por el portal.
 const ANOTHER_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/segundo.pdf";
 
-/// Registro de un tipo y su serialización JSON.
-struct Crossing {
+/// Un tipo de salida ya serializado, con su nombre.
+struct Serialised {
     name: &'static str,
     json: serde_json::Value,
 }
 
-impl Crossing {
-    /// Construye un cruce a partir de un valor serializable.
+impl Serialised {
+    /// Serializa un valor de salida bajo su nombre.
     fn of(name: &'static str, value: &impl serde::Serialize) -> Self {
         Self {
             name,
@@ -211,7 +175,7 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 }
 
 /// Genera todas las salidas producidas a partir de un documento del portal.
-fn crossings_from_a_portal_document() -> Vec<Crossing> {
+fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::commands::Failure;
     use crate::documents::adapters::views::{
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
@@ -273,22 +237,22 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
             .expect_err("el enlace del portal no existe fuera del sandbox");
 
     let mut crossings = vec![
-        Crossing::of("OpenedDocumentView", &opened_view),
-        Crossing::of("Failure", &failure),
-        Crossing::of("DroppedDocumentView", &dropped),
-        Crossing::of(
+        Serialised::of("OpenedDocumentView", &opened_view),
+        Serialised::of("Failure", &failure),
+        Serialised::of("DroppedDocumentView", &dropped),
+        Serialised::of(
             "DestinationView",
             &DestinationView::from(documents::where_it_lands(&chosen, &document)),
         ),
-        Crossing::of(
+        Serialised::of(
             "SignedDocumentView",
             &SignedDocumentView::from(documents::told_as(document.reading_path(), &folder, 42)),
         ),
-        Crossing::of(
+        Serialised::of(
             "ConfigurationView",
             &ConfigurationView::from(configuration::shown(&configuration, home.path())),
         ),
-        Crossing::of(
+        Serialised::of(
             "RubricChoiceView",
             &crate::documents::adapters::tauri_rubric::RubricChoiceView::refused(&refused_rubric),
         ),
@@ -309,7 +273,7 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         .remember_state(&configuration, &state)
         .expect("deberia guardarse el estado");
     for row in recents::listed_rows(&memory, &opened) {
-        crossings.push(Crossing::of(
+        crossings.push(Serialised::of(
             "RecentDocumentView",
             &RecentDocumentView::from(row),
         ));
@@ -335,17 +299,6 @@ fn the_portal_path_never_crosses_to_the_window() {
 #[test]
 fn every_output_type_is_either_built_from_a_document_or_declared_without_one() {
     let outputs = outputs();
-    let declared: usize = sources()
-        .iter()
-        .map(|(_, source)| serialising_derives(&attributes_on_one_line(production_half(source))))
-        .sum();
-    assert_eq!(
-        outputs.len(),
-        declared,
-        "el modulo declara {declared} tipos serializables y el descubrimiento ha encontrado {}: \
-         uno se esta escapando de la guarda",
-        outputs.len()
-    );
     assert!(
         outputs.len() >= 12,
         "los tipos de salida no se han encontrado: {}",
@@ -360,7 +313,7 @@ fn every_output_type_is_either_built_from_a_document_or_declared_without_one() {
 
     for output in &outputs {
         assert!(
-            built.contains(output.name.as_str()) || without.contains(output.name.as_str()),
+            built.contains(output.name) || without.contains(output.name),
             "«{}» ({}) no se construye desde un documento del portal ni esta declarado como \
              tipo sin documento detras: la guarda de rutas no lo mira",
             output.name,
@@ -368,13 +321,101 @@ fn every_output_type_is_either_built_from_a_document_or_declared_without_one() {
         );
     }
 
-    let known: BTreeSet<&str> = outputs.iter().map(|output| output.name.as_str()).collect();
+    let known: BTreeSet<&str> = outputs.iter().map(|output| output.name).collect();
     for name in built.iter().chain(without.iter()) {
         assert!(
             known.contains(name),
-            "«{name}» ya no es un tipo de salida del modulo: sobra de la guarda"
+            "«{name}» ya no es un tipo de salida del registro: sobra de la guarda"
         );
     }
+}
+
+#[test]
+fn every_type_a_command_names_is_in_the_registry() {
+    let registered: BTreeSet<&str> = registry().iter().map(|crossing| crossing.name).collect();
+    let signatures: Vec<(String, String)> = sources()
+        .iter()
+        .flat_map(|(_, source)| commands_of(source))
+        .map(|(_, name, block)| {
+            let signature = block
+                .split_once("pub fn ")
+                .and_then(|(_, after)| after.split_once('{'))
+                .map(|(signature, _)| signature.to_owned())
+                .unwrap_or_default();
+            (name, signature)
+        })
+        .collect();
+    assert!(signatures.len() >= 14, "el troceado de ordenes no las ve");
+
+    for (name, signature) in &signatures {
+        for ty in types_named_by(signature) {
+            assert!(
+                registered.contains(ty),
+                "«{name}» cruza «{ty}» y no esta en el registro: declaralo con `crossing!`, \
+                 que un `impl Serialize` a mano no cruza"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_type_a_crossing_names_is_in_the_registry_and_every_lent_one_is_named() {
+    let registry = registry();
+    let registered: BTreeSet<&str> = registry.iter().map(|crossing| crossing.name).collect();
+    assert_eq!(
+        registered.len(),
+        registry.len(),
+        "un tipo esta registrado dos veces"
+    );
+
+    let mut named: BTreeSet<&str> = BTreeSet::new();
+    for crossing in registry
+        .iter()
+        .filter(|crossing| crossing.lent_from.is_none())
+    {
+        for ty in crossing.referenced_types() {
+            if NOT_OURS.contains(&ty) {
+                continue;
+            }
+            assert!(
+                registered.contains(ty),
+                "«{}» nombra «{ty}» y el contrato no lo explica: declaralo con `crossing!` \
+                 o, si es de otro modulo, prestalo con `crossing! {{ lent from … }}`",
+                crossing.name
+            );
+            named.insert(ty);
+        }
+    }
+    for lent in registry
+        .iter()
+        .filter(|crossing| crossing.lent_from.is_some())
+    {
+        assert!(
+            named.contains(lent.name),
+            "«{}» esta prestado y ningun tipo de cruce lo nombra: sobra",
+            lent.name
+        );
+    }
+}
+
+#[test]
+fn a_type_declared_in_a_test_sibling_does_not_count_as_a_crossing() {
+    assert!(all_crossings()
+        .iter()
+        .any(|crossing| crossing.file.ends_with("/tests.rs")));
+    assert!(registry()
+        .iter()
+        .all(|crossing| !crossing.file.ends_with("/tests.rs")));
+}
+
+#[test]
+fn the_types_named_by_a_signature_leave_out_the_injected_state_and_the_standard_library() {
+    assert_eq!(
+        types_named_by(
+            "record_recent(id: String, placement: Option<PlacementView>, root: State<'_, DocumentsRoot>, app: tauri::AppHandle) -> Result<RecentDocumentView, Failure>"
+        ),
+        ["Failure", "PlacementView", "RecentDocumentView"]
+    );
 }
 
 #[test]
@@ -578,31 +619,4 @@ fn the_pin_is_taken_by_a_single_command() {
         .sum();
 
     assert_eq!(takers, 1, "el PIN entra por una sola orden");
-}
-
-#[test]
-fn a_derive_broken_across_lines_is_still_seen() {
-    let broken = "#[derive(\n    Clone,\n    Debug,\n    Serialize,\n)]\npub struct Leaky {\n}\n";
-
-    let flattened = attributes_on_one_line(broken);
-
-    assert_eq!(
-        serialising_derives(&flattened),
-        1,
-        "un derive partido en varias lineas sigue siendo un tipo de salida"
-    );
-    assert!(
-        flattened
-            .lines()
-            .next()
-            .is_some_and(|line| line.starts_with("#[derive(") && line.contains("Serialize")),
-        "el atributo tiene que quedar en una sola linea: {flattened}"
-    );
-}
-
-#[test]
-fn what_is_not_an_attribute_is_left_alone() {
-    let source = "pub struct Plain {\n    name: String,\n}\n";
-
-    assert_eq!(attributes_on_one_line(source), source);
 }

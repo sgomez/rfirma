@@ -132,6 +132,10 @@ reqwest = { version = "0.13", default-features = false, features = [
     "blocking",
     "native-tls",
 ] }
+# El registro de los tipos que cruzan a la ventana (ADR-0011): cada `crossing!`
+# deja su descripcion en una seccion del enlazador y de ahi salen el contrato y
+# la guarda de rutas, sin lista que mantener ni fuente que leer como texto.
+inventory = "0.3"
 
 [dev-dependencies]
 # El cliente de canal y las pruebas del servidor abren sockets de verdad

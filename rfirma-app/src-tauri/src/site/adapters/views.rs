@@ -2,20 +2,24 @@
 
 use serde::Serialize;
 
+use crate::crossing::crossing;
+
 use crate::site::application::errand::{Moment, NoCertificate, NoChannel};
 use crate::site::domain::protocol::{Refusal, RefusalSituation, SignatureRound};
 
 use crate::identity::adapters::views::CertificateView;
 use crate::identity::domain::certificate::ListedCertificate;
 
-/// Trámite de sede tal como lo recibe su ventana.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SiteErrandView {
-    /// Origen de la petición.
-    pub origin: Option<String>,
-    /// Etapa actual del trámite.
-    pub stage: SiteStageView,
+crossing! {
+    /// Trámite de sede tal como lo recibe su ventana.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SiteErrandView {
+        /// Origen de la petición.
+        pub origin: Option<String>,
+        /// Etapa actual del trámite.
+        pub stage: SiteStageView,
+    }
 }
 
 impl SiteErrandView {
@@ -118,14 +122,16 @@ impl From<&Moment> for SiteErrandView {
     }
 }
 
-/// Tipo de operación de firma solicitada por la sede.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SignatureRoundView {
-    /// Firma inicial de un documento.
-    Sign,
-    /// Cofirma de un documento previamente firmado.
-    Cosign,
+crossing! {
+    /// Tipo de operación de firma solicitada por la sede.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum SignatureRoundView {
+        /// Firma inicial de un documento.
+        Sign,
+        /// Cofirma de un documento previamente firmado.
+        Cosign,
+    }
 }
 
 impl From<SignatureRound> for SignatureRoundView {
@@ -137,88 +143,96 @@ impl From<SignatureRound> for SignatureRoundView {
     }
 }
 
-/// Etapa del trámite mostrada en la ventana de sede.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum SiteStageView {
-    /// En espera de la petición de la sede.
-    Waiting,
-    /// Solicitud de consentimiento de identificación.
-    AskingForConsent {
-        /// Certificados disponibles para la selección.
-        certificates: Vec<CertificateView>,
-    },
-    /// Solicitud de consentimiento de firma.
+crossing! {
+    /// Etapa del trámite mostrada en la ventana de sede.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum SiteStageView {
+        /// En espera de la petición de la sede.
+        Waiting,
+        /// Solicitud de consentimiento de identificación.
+        AskingForConsent {
+            /// Certificados disponibles para la selección.
+            certificates: Vec<CertificateView>,
+        },
+        /// Solicitud de consentimiento de firma.
+        #[serde(rename_all = "camelCase")]
+        AskingToSign {
+            /// Asa del documento que manda la sede.
+            document: String,
+            /// Tipo de firma solicitada.
+            round: SignatureRoundView,
+            /// Certificados disponibles para la selección.
+            certificates: Vec<CertificateView>,
+            /// Si el documento incluye firmas no reconocidas.
+            unregistered_signatures: bool,
+        },
+        /// Canal no disponible.
+        NoChannel {
+            /// Causa de la indisponibilidad.
+            reason: NoChannelView,
+        },
+        /// Resultado final del trámite.
+        Outcome {
+            /// Desenlace del trámite.
+            outcome: SiteOutcomeView,
+        },
+        /// Sin certificados aplicables.
+        #[serde(rename_all = "camelCase")]
+        NoCertificate {
+            /// Causa de la ausencia de certificados.
+            reason: NoCertificateView,
+            /// Número de certificados en el almacén.
+            owned: usize,
+        },
+    }
+}
+
+crossing! {
+    /// Causa por la que no hay canal de comunicación con la sede.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "camelCase")]
-    AskingToSign {
-        /// Asa del documento que manda la sede.
-        document: String,
-        /// Tipo de firma solicitada.
-        round: SignatureRoundView,
-        /// Certificados disponibles para la selección.
-        certificates: Vec<CertificateView>,
-        /// Si el documento incluye firmas no reconocidas.
-        unregistered_signatures: bool,
-    },
-    /// Canal no disponible.
-    NoChannel {
-        /// Causa de la indisponibilidad.
-        reason: NoChannelView,
-    },
-    /// Resultado final del trámite.
-    Outcome {
-        /// Desenlace del trámite.
-        outcome: SiteOutcomeView,
-    },
-    /// Sin certificados aplicables.
+    pub enum NoChannelView {
+        /// No se pudo abrir el puerto local.
+        ChannelNotOpened,
+        /// La entidad emisora local no está instalada.
+        LocalCaMissing,
+    }
+}
+
+crossing! {
+    /// Desenlace del trámite mostrado en la ventana.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum SiteOutcomeView {
+        /// Petición rechazada.
+        Refused {
+            /// Clasificación de la situación de rechazo.
+            situation: RefusalSituationView,
+            /// Detalle descriptivo del rechazo.
+            detail: String,
+        },
+    }
+}
+
+crossing! {
+    /// Clasificación de situaciones de rechazo conocidas por la ventana.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "camelCase")]
-    NoCertificate {
-        /// Causa de la ausencia de certificados.
-        reason: NoCertificateView,
-        /// Número de certificados en el almacén.
-        owned: usize,
-    },
-}
-
-/// Causa por la que no hay canal de comunicación con la sede.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum NoChannelView {
-    /// No se pudo abrir el puerto local.
-    ChannelNotOpened,
-    /// La entidad emisora local no está instalada.
-    LocalCaMissing,
-}
-
-/// Desenlace del trámite mostrado en la ventana.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum SiteOutcomeView {
-    /// Petición rechazada.
-    Refused {
-        /// Clasificación de la situación de rechazo.
-        situation: RefusalSituationView,
-        /// Detalle descriptivo del rechazo.
-        detail: String,
-    },
-}
-
-/// Clasificación de situaciones de rechazo conocidas por la ventana.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum RefusalSituationView {
-    /// Parámetro de páginas añadidas no admitido.
-    AppendedSignaturePage,
-    /// Criterio de filtrado no soportado.
-    UnsupportedFilter,
-    /// Versión de protocolo no compatible.
-    UnsupportedProtocolVersion,
-    /// Falta el formato de firma en la petición.
-    MissingFormat,
-    /// Ya existe otro trámite en curso.
-    ErrandInFlight,
-    /// Situación de rechazo no clasificada.
-    Unknown,
+    pub enum RefusalSituationView {
+        /// Parámetro de páginas añadidas no admitido.
+        AppendedSignaturePage,
+        /// Criterio de filtrado no soportado.
+        UnsupportedFilter,
+        /// Versión de protocolo no compatible.
+        UnsupportedProtocolVersion,
+        /// Falta el formato de firma en la petición.
+        MissingFormat,
+        /// Ya existe otro trámite en curso.
+        ErrandInFlight,
+        /// Situación de rechazo no clasificada.
+        Unknown,
+    }
 }
 
 impl From<RefusalSituation> for RefusalSituationView {
@@ -243,14 +257,16 @@ impl From<NoCertificate> for NoCertificateView {
     }
 }
 
-/// Causa por la que no hay certificado disponible.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum NoCertificateView {
-    /// No hay certificados instalados en el almacén.
-    None,
-    /// Ninguno de los certificados cumple los criterios de la sede.
-    Excluded,
+crossing! {
+    /// Causa por la que no hay certificado disponible.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum NoCertificateView {
+        /// No hay certificados instalados en el almacén.
+        None,
+        /// Ninguno de los certificados cumple los criterios de la sede.
+        Excluded,
+    }
 }
 
 #[cfg(test)]

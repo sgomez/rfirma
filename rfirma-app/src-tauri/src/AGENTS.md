@@ -49,10 +49,11 @@ pide, y lo sirve un adaptador sobre la raíz del que lo tiene (por ejemplo
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `commands/failure.rs` | 29 | `Failure`, lo que cruza a la ventana cuando algo salió mal (ADR-0009). No importa nada de ningún contexto: cada uno traduce lo suyo en su `adapters/failures.rs` (#440). Pruebas en `commands/failure/tests.rs` (11). |
-| `commands/guards.rs` | 608 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`. Solo en pruebas. |
-| `compile_fail.rs` | 67 | **Lo que ya no compila**: un doctest `compile_fail` por cada tipo que sustituyó a una guarda textual (#439), y uno positivo que recorre las mismas rutas para que un error de ruta no los deje vacíos. Solo con `cargo test --doc`, que `cargo test` ya incluye; en estable rustdoc no comprueba el código de error, solo que no compila. |
+| `commands/guards.rs` | 628 | Las guardas que ven todas las órdenes a la vez (ID-85): las órdenes las leen del fuente por ruta —`commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`—, y los tipos del registro de `crossing.rs`: todo lo que nombra una orden o un tipo de cruce está registrado, y todo prestado se nombra. Solo en pruebas. |
+| `compile_fail.rs` | 97 | **Lo que ya no compila**: un doctest `compile_fail` por cada tipo que sustituyó a una guarda textual (#439, #441), y uno positivo que recorre las mismas rutas para que un error de ruta no los deje vacíos. Solo con `cargo test --doc`, que `cargo test` ya incluye; en estable rustdoc no comprueba el código de error, solo que no compila. |
+| `crossing.rs` | 358 | `WindowCrossing`, el rasgo de lo que cruza a la ventana, y `crossing!`, el macro que declara un tipo tal cual y deja su descripción —campos, tipos y atributos de serde— en un registro de `inventory` que el enlazador completa. De ahí salen la sección de tipos del contrato (`types_section()`) y la guarda de rutas. Pruebas en `crossing/tests.rs` (174), cuyos tipos sintéticos también se registran: las guardas los apartan por venir de un `tests.rs`. |
 | `fixtures.rs` | 265 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos: `a_completed_cycle()`, la prueba de que hubo un ciclo; `a_memory()`, la memoria real en un temporal; y los dobles de los puertos —`NoToken`, `NoIsolate`, `NoMemory`, `InMemoryCaSlots` y `Directory`, los certificados que ve un trámite— con los que la grada A no toca token, hilo ni disco. Solo en pruebas. |
-| `lib.rs` | 315 | `roots()`, que construye las cinco raíces sobre las rutas y la memoria de esta máquina, y `run()`: registro de comandos, complementos y las cinco raíces en Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los puertos y obedece lo que devuelve (ID-324…ID-334). Empieza aquí para ver el cableado. Sin pruebas propias: cada raíz se prueba desde su contexto. |
+| `lib.rs` | 316 | `roots()`, que construye las cinco raíces sobre las rutas y la memoria de esta máquina, y `run()`: registro de comandos, complementos y las cinco raíces en Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los puertos y obedece lo que devuelve (ID-324…ID-334). Empieza aquí para ver el cableado. Sin pruebas propias: cada raíz se prueba desde su contexto. |
 | `main.rs` | 6 | El binario. No hay nada dentro. |
 
 ## Presupuesto de lectura
@@ -78,20 +79,25 @@ hay algo más que eso, está en el fichero equivocado. La orquestación entre
 contextos —entregar el firmado, anotarlo en la bandeja, recordar el
 certificado— es de la orden, no del caso de uso: `finish_signing` es el ejemplo.
 
-`just contract` genera el contrato de las dos partes leyendo `commands/` y, en
-cada `adapters/`, los `tauri*.rs`, `views*.rs` y `orders*.rs` —el adaptador de
-Tauri de cada contexto, y nada más—. **No hay nada que actualizar** —una orden
-nueva aparece por existir—, pero un tipo de salida sin `Serialize` no cruza y no
-se publica, y un `#[tauri::command]` sin `async` sale publicado como
-bloqueante, que es justo la trampa que cuelga la ventana. El extractor y la
-guarda de rutas reconocen el tipo por el **macro** `derive(Serialize)` escrito
-en el código, no por que implemente el rasgo.
+`just contract` (`examples/contract.rs`) genera el contrato de las dos partes:
+las **órdenes** las lee del fuente —`commands/` y, en cada `adapters/`, los
+`tauri*.rs`, `views*.rs` y `orders*.rs`—, y los **tipos** los saca del
+registro de `crossing.rs`, que el enlazador completa con cada `crossing!`.
+**No hay nada que actualizar** —una orden nueva aparece por existir, y un tipo
+por declararse con el macro—, pero un `#[tauri::command]` sin `async` sale
+publicado como bloqueante, que es justo la trampa que cuelga la ventana. Un
+tipo con `derive(Serialize)` o `impl Serialize` a mano fuera de `crossing!`
+no es un `WindowCrossing`: no está en el contrato, y la guarda del registro
+se pone roja en la orden que lo devuelve. Lo que un tipo de cruce toma
+prestado de otro módulo (`Badge`, `PageSet`, `Theme`) se declara en el
+`views.rs` que lo usa con `crossing! { lent from "<ruta>": … }`, y el
+compilador comprueba esa copia contra el tipo real.
 
 Las guardas de conjunto están en `commands/guards.rs` y leen los mismos
 ficheros: la lista cerrada de órdenes hay que renumerarla en
 `the_list_of_commands_is_closed_and_this_is_how_long_it_is`; la guarda de rutas
-(`the_portal_path_never_crosses_to_the_window`) descubre sola cada tipo que
-derive `Serialize`, pero hay que decidir dónde entra —en
+(`the_portal_path_never_crosses_to_the_window`) descubre sola cada tipo del
+registro que deriva `Serialize`, pero hay que decidir dónde entra —en
 `crossings_from_a_portal_document` si detrás hay un documento, o en
 `OUTPUTS_WITH_NO_DOCUMENT_BEHIND`—; y un comando que llame a un `blocking_*` de
 un plugin necesita `#[tauri::command(async)]`. Los permisos de
@@ -115,12 +121,13 @@ antes que la expresión de la sede), `tests/site_frontier_guards.rs`, `commands/
 del disco: mover un fichero que una de ellas lee obliga a reapuntarla, y a
 comprobar con un cebo que sigue poniéndose roja.
 
-Tres invariantes que antes se leían como texto las sostiene ya el sistema de
-tipos, con su cebo en `compile_fail.rs` (#439): la postfirma solo acepta una
-`SealedPreSignature`, que solo sale de una `PreSignature` con la firma del
+Cuatro invariantes que antes se leían como texto las sostiene ya el sistema de
+tipos, con su cebo en `compile_fail.rs` (#439, #441): la postfirma solo acepta
+una `SealedPreSignature`, que solo sale de una `PreSignature` con la firma del
 token y el sello intacto; el sello de firmado de la bandeja exige un
-`CompletedCycle`, que solo devuelve la postfirma; y `SafCode` no se construye
-desde una cadena.
+`CompletedCycle`, que solo devuelve la postfirma; `SafCode` no se construye
+desde una cadena; y un tipo cruza a la ventana solo si es un `WindowCrossing`,
+que solo escribe `crossing!`.
 
 ## Al escribir un comentario
 
