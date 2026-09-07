@@ -6,7 +6,7 @@ use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
 use crate::identity::application::tests::{a_certificate, NoToken};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
-use crate::signing::application::tests::{an_order, NoIsolate};
+use crate::signing::application::tests::{an_order, DocumentsInMemory, NoIsolate};
 use crate::signing::domain::{PageSet, SigningChoice};
 
 fn chosen(order: &SigningOrder) -> SigningChoice {
@@ -202,21 +202,22 @@ fn the_remembered_landing_never_leaves_the_backend() {
 
 #[test]
 fn what_is_not_a_pdf_is_refused_before_the_pin() {
-    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let other = home.path().join("hoja.ods");
-    std::fs::write(&other, b"PK\x03\x04").expect("deberia escribirse el temporal");
+    let other = "/home/quien/Contratos/hoja.ods";
+    let files = DocumentsInMemory::default().with(other, b"PK\x03\x04");
 
-    let failure = admitted_bytes(&Document::opened(other)).expect_err("no es un PDF que firmar");
+    let failure =
+        admitted_bytes(&files, &Document::opened(other)).expect_err("no es un PDF que firmar");
 
     assert_eq!(Failure::from(failure).situation, "notAPdf");
 }
 
 #[test]
 fn a_document_that_is_gone_is_told_apart_from_one_that_is_not_a_pdf() {
-    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-
-    let failure =
-        admitted_bytes(&Document::opened(home.path().join("no-esta.pdf"))).expect_err("no esta");
+    let failure = admitted_bytes(
+        &DocumentsInMemory::default(),
+        &Document::opened("/home/quien/Contratos/no-esta.pdf"),
+    )
+    .expect_err("no esta");
 
     assert_eq!(Failure::from(failure).situation, "documentUnreadable");
 }
@@ -226,6 +227,7 @@ fn a_signature_cannot_begin_on_a_document_that_is_not_open() {
     let order = an_order();
 
     let failure = begin(
+        &DocumentsInMemory::default(),
         DocumentToSign {
             handle: order.document.clone(),
             document: Document::opened("/run/user/1000/doc/1e8b83b9/no-esta.pdf"),

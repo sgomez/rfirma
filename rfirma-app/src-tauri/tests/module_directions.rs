@@ -297,6 +297,61 @@ fn split_at_top_level(inner: &str) -> Vec<&str> {
         .collect()
 }
 
+/// Lo del mundo que la guarda de dirección no ve, porque no se nombra con `crate::` (ADR-0017).
+const THE_WORLD: [(&str, &str); 6] = [
+    ("std::fs", "el disco"),
+    ("std::env", "el entorno del proceso"),
+    ("std::process", "el proceso"),
+    ("libloading", "una biblioteca cargada en memoria"),
+    ("tauri_plugin_", "un complemento de Tauri"),
+    ("tauri", "Tauri"),
+];
+
+/// Capas donde el mundo no entra: solo por un puerto (ADR-0017).
+fn keeps_the_world_out(tier: Tier) -> bool {
+    matches!(tier, Tier::Domain | Tier::Ports | Tier::Application)
+}
+
+/// Lo del mundo que nombra una línea de código, si nombra algo.
+fn world_named_in(line: &str) -> Option<(&'static str, &'static str)> {
+    let code = line.trim();
+    if code.starts_with("//") {
+        return None;
+    }
+    THE_WORLD.into_iter().find(|(name, _)| code.contains(name))
+}
+
+/// Aristas hacia el mundo desde una capa que no puede tocarlo.
+fn world_offences_in(modules: &[Module]) -> Vec<Offence> {
+    let mut offences = Vec::new();
+    for module in modules.iter() {
+        let Some(place) = &module.place else {
+            continue;
+        };
+        if !keeps_the_world_out(place.tier) {
+            continue;
+        }
+        for line in module.source.lines() {
+            let Some((name, what)) = world_named_in(line) else {
+                continue;
+            };
+            offences.push(Offence {
+                edge: format!("{} -> {name}", module.name),
+                message: format!(
+                    "el mundo entra por la puerta de atras: `{}` nombra `{name}`\n    {}\n                       {} de `{}` no puede tocar {what} (RD-02)\n                       declara un puerto en `{}/ports.rs`, ponle su adaptador en `{}/adapters/`                      y que el caso de uso lo reciba como `&dyn Puerto`",
+                    module.name,
+                    line.trim(),
+                    place.tier.folder(),
+                    place.context,
+                    place.context,
+                    place.context,
+                ),
+            });
+        }
+    }
+    offences
+}
+
 /// Una arista contra el RD-03: la línea que la nombra en la lista de deuda, y el mensaje entero.
 #[derive(Clone, PartialEq, Eq, Debug)]
 struct Offence {
@@ -334,6 +389,24 @@ fn offences_in(modules: &[Module]) -> Vec<Offence> {
         }
     }
     offences
+}
+
+#[test]
+fn the_world_only_gets_in_through_a_port() {
+    let offences = world_offences_in(&tracked_modules());
+
+    assert!(
+        offences.is_empty(),
+        "{} sitio(s) tocan el mundo desde dentro:\n\n{}\n\n\
+         No relajes la regla: el dominio y los casos de uso reciben hechos y puertos, \
+         nunca el disco, el entorno ni un tipo de la ventana.",
+        offences.len(),
+        offences
+            .iter()
+            .map(|offence| offence.message.clone())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    );
 }
 
 #[test]
@@ -576,4 +649,55 @@ fn every_forbidden_edge_between_layers_and_contexts_turns_red_with_a_hint() {
         red > 100,
         "la regla prohibe mas de cien combinaciones; se han visto {red}"
     );
+}
+
+#[test]
+fn naming_the_world_from_a_layer_that_cannot_touch_it_turns_red_with_a_hint() {
+    for context in CONTEXTS {
+        for tier in TIERS {
+            for (name, _) in THE_WORLD {
+                let source = format!("use {name}::whatever;");
+                let tree = synthetic_tree(&synthetic_path(context, tier), &source);
+
+                let offences = world_offences_in(&tree);
+
+                if keeps_the_world_out(tier) {
+                    let message = offences
+                        .first()
+                        .unwrap_or_else(|| {
+                            panic!("`{name}` en {}/{tier:?} tenia que ponerse rojo", context)
+                        })
+                        .message
+                        .clone();
+                    assert!(
+                        message.contains(&format!("{context}/ports.rs"))
+                            && message.contains(&format!("{context}/adapters/")),
+                        "el mensaje tiene que decir adonde mover la decision: {message}"
+                    );
+                } else {
+                    assert!(
+                        offences.is_empty(),
+                        "`{name}` en {context}/{tier:?} es donde tiene que estar: {offences:?}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn what_only_looks_like_the_world_is_left_alone() {
+    for source in [
+        "use std::io::ErrorKind;",
+        "use std::path::PathBuf;",
+        "/// El adaptador de Tauri traduce esto con std::fs.",
+        "// std::env::temp_dir() vive en la raiz de composicion",
+    ] {
+        let tree = synthetic_tree(&synthetic_path("documents", Tier::Application), source);
+
+        assert!(
+            world_offences_in(&tree).is_empty(),
+            "«{source}» no toca el mundo"
+        );
+    }
 }

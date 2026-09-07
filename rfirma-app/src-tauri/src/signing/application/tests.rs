@@ -8,7 +8,7 @@ use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFiel
 use crate::signing::domain::bridge::{BridgeError, PreSignature};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{CompletedCycle, SessionSeal, TokenSignature};
-use crate::signing::ports::{Bridge, IsolateHost};
+use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost};
 
 /// Un hilo del puente cuya librería no abre: lo que la grada A tiene en vez del isolate.
 pub(crate) struct NoIsolate;
@@ -21,6 +21,27 @@ impl IsolateHost for NoIsolate {
         Ok(Err(BridgeError::Failed(
             "no hay libreria en grada A".to_owned(),
         )))
+    }
+}
+
+/// Los documentos que la grada A da a firmar, sin disco detrás.
+#[derive(Default)]
+pub(crate) struct DocumentsInMemory(std::collections::BTreeMap<std::path::PathBuf, Vec<u8>>);
+
+impl DocumentsInMemory {
+    /// Con ese documento dentro.
+    pub(crate) fn with(mut self, path: impl Into<std::path::PathBuf>, bytes: &[u8]) -> Self {
+        self.0.insert(path.into(), bytes.to_vec());
+        self
+    }
+}
+
+impl DocumentBytes for DocumentsInMemory {
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
+        self.0
+            .get(path)
+            .cloned()
+            .ok_or_else(|| "no such file or directory".to_owned())
     }
 }
 

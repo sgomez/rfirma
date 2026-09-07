@@ -23,6 +23,7 @@ pub fn open_document(
     let mut dialog = app_handle.dialog().file().add_filter("PDF", &["pdf"]);
     if let Some(folder) = crate::documents::application::documents::starting_folder(
         documents.memory.as_ref(),
+        documents.files.as_ref(),
         &documents.chosen_folder(),
     ) {
         dialog = dialog.set_directory(folder);
@@ -36,6 +37,7 @@ pub fn open_document(
     Ok(Some(
         crate::documents::application::documents::note_opened(
             documents.memory.as_ref(),
+            documents.files.as_ref(),
             &documents.opened,
             handle,
         )
@@ -50,7 +52,11 @@ pub fn read_document(
     documents: State<'_, DocumentsRoot>,
 ) -> Result<tauri::ipc::Response, Failure> {
     Ok(tauri::ipc::Response::new(
-        crate::documents::application::documents::bytes_of(&documents.opened, &id)?,
+        crate::documents::application::documents::bytes_of(
+            documents.files.as_ref(),
+            &documents.opened,
+            &id,
+        )?,
     ))
 }
 
@@ -61,6 +67,7 @@ pub fn read_document(
 pub fn list_recents(documents: State<'_, DocumentsRoot>) -> Vec<RecentDocumentView> {
     crate::documents::application::recents::listed_rows(
         documents.memory.as_ref(),
+        documents.files.as_ref(),
         &documents.opened,
     )
     .into_iter()
@@ -77,6 +84,7 @@ pub fn record_recent(
 ) -> Result<RecentDocumentView, Failure> {
     Ok(crate::documents::application::recents::take(
         documents.memory.as_ref(),
+        documents.files.as_ref(),
         &documents.opened,
         &id,
         placement.map(VisibleBox::from),
@@ -89,6 +97,7 @@ pub fn record_recent(
 pub fn forget_recent(id: String, documents: State<'_, DocumentsRoot>) -> Result<(), Failure> {
     Ok(crate::documents::application::recents::forget(
         documents.memory.as_ref(),
+        documents.files.as_ref(),
         &documents.opened,
         &id,
     )?)
@@ -132,6 +141,7 @@ pub fn preview_destination(
 ) -> Result<DestinationView, Failure> {
     let document = documents.opened_document(&id)?;
     Ok(crate::documents::application::documents::where_it_lands(
+        documents.files.as_ref(),
         &documents.chosen_folder(),
         &document,
     )

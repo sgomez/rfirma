@@ -2,14 +2,12 @@
 
 use std::path::Path;
 
-use tauri_plugin_dialog::FilePath;
-
 use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{holder_of, issuer_of};
 use crate::identity::domain::store::Store;
-use crate::identity::ports::{CertificateMemory, Token};
+use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
 use crate::signing::domain::memory_error::{MemoryError, Situation as StoreSituation};
 
 /// Los certificados del último listado, cada uno tras su asa.
@@ -82,36 +80,31 @@ const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
 /// Instala un PKCS#12 importándolo a un almacén NSS aislado (ADR-0011).
 pub fn install_pkcs12(
     token: &dyn Token,
+    folder: &dyn InstalledFolder,
     installed_dir: &Path,
-    chosen: FilePath,
+    pkcs12: &[u8],
     password: &str,
 ) -> Result<(), InstallError> {
-    let source = chosen
-        .into_path()
-        .map_err(|error| TokenError::new(Situation::Pkcs12Unreadable, error.to_string()))?;
-    let pkcs12 = std::fs::read(&source)
-        .map_err(|error| TokenError::new(Situation::Pkcs12Unreadable, error.to_string()))?;
-
     let directory = installed_dir.join(crate::documents::domain::handles::mint());
-    std::fs::create_dir_all(&directory).map_err(|error| {
+    folder.make(&directory).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
             format!("no se ha podido crear el almacen del .p12: {error}"),
         ))
     })?;
-    let _ = crate::desktop::adapters::paths::restrict_to_owner(&directory);
+    folder.restrict_to_owner(&directory);
 
     let installed = token
-        .import_pkcs12(&directory, &pkcs12, password)
+        .import_pkcs12(&directory, pkcs12, password)
         .and_then(|store| only_rsa_keys(token, &store));
 
     if let Err(error) = installed {
-        let _ = std::fs::remove_dir_all(&directory);
+        let _ = folder.remove(&directory);
         return Err(error.into());
     }
 
     for file in ["cert9.db", "key4.db"] {
-        let _ = crate::desktop::adapters::paths::restrict_to_owner(&directory.join(file));
+        folder.restrict_to_owner(&directory.join(file));
     }
     Ok(())
 }
@@ -152,6 +145,7 @@ fn is_rsa(certificate: &TokenCertificate) -> bool {
 
 /// Elimina el almacén correspondiente a un certificado PKCS#12 instalado (ADR-0011).
 pub fn remove_installed(
+    folder: &dyn InstalledFolder,
     installed_dir: &Path,
     handle: &str,
     listed: &ListedCertificates,
@@ -166,7 +160,7 @@ pub fn remove_installed(
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
-    std::fs::remove_dir_all(&directory).map_err(|error| {
+    folder.remove(&directory).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
             format!("no se ha podido quitar el almacen del .p12: {error}"),

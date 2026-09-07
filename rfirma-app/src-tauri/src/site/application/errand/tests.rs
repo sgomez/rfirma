@@ -190,13 +190,16 @@ impl SiteSigning for TheNeighbours<'_> {
         .map_err(CycleFailure::from)
         .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
         session::begin_for_the_site(
+            &crate::signing::adapters::files::RealDocumentBytes,
             DocumentToSign {
                 handle: request.document.to_owned(),
                 document,
             },
             request.certificate,
-            request.from_the_site,
-            request.allow_unregistered_signatures,
+            session::DeclaredByTheSite {
+                parameters: request.from_the_site,
+                allow_unregistered_signatures: request.allow_unregistered_signatures,
+            },
             &NoToken,
             &NoIsolate,
             &A_SESSION,
@@ -263,6 +266,7 @@ fn a_desk<'a>(
             memory,
         },
         scratch_dir: scratch.to_path_buf(),
+        scratch: std::sync::Arc::new(crate::site::adapters::scratch::RealScratch),
     }
 }
 
@@ -946,7 +950,12 @@ fn the_document_a_site_sends_leaves_no_trace_at_all() {
         "el documento de la sede entra por la puerta que no recuerda"
     );
     assert!(
-        crate::documents::application::recents::listed_rows(&memory, &opened).is_empty(),
+        crate::documents::application::recents::listed_rows(
+            &memory,
+            &crate::documents::adapters::files::RealFiles,
+            &opened
+        )
+        .is_empty(),
         "no deja fila en Recientes"
     );
     assert_eq!(

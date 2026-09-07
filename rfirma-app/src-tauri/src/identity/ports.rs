@@ -1,11 +1,9 @@
-//! Puertos del contexto de identidad: el token, la carga compartida de NSS y el certificado recordado.
+//! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados y el certificado recordado.
 
 use std::path::Path;
 
-use libloading::Library;
-
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
+use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::signing::domain::memory_error::MemoryError;
@@ -64,13 +62,16 @@ pub trait Token {
     }
 }
 
-/// Puerto para interactuar con la biblioteca NSS y el turno global del token.
-pub trait NssHost {
-    /// Biblioteca `libnss3.so` del sistema cargada en memoria.
-    fn library(&self) -> Result<&'static Library, NssUnavailable>;
+/// La carpeta donde vive cada `.p12` instalado, con sus permisos (ADR-0011).
+pub trait InstalledFolder {
+    /// Crea la carpeta del almacén recién instalado.
+    fn make(&self, directory: &Path) -> Result<(), String>;
 
-    /// Ejecuta una operación bajo el turno global del token.
-    fn with_token_turn<T>(&self, work: impl FnOnce() -> T) -> T;
+    /// Deja la ruta legible solo por su dueño.
+    fn restrict_to_owner(&self, path: &Path);
+
+    /// Borra la carpeta del almacén y todo lo que hubiera dentro.
+    fn remove(&self, directory: &Path) -> Result<(), String>;
 }
 
 /// El certificado con el que se firmó la última vez, recordado entre sesiones (ADR-0010).

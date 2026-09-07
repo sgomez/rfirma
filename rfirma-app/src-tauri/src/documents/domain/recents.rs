@@ -1,6 +1,5 @@
 //! La bandeja de recientes: los diez últimos, por ruta canónica, con lo que quien firma quiera recordar de cada uno (ADR-0010, ADR-0011).
 
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -47,21 +46,16 @@ fn nothing<S>() -> Option<S> {
 }
 
 impl<S> RecentDocument<S> {
-    /// Construye una entrada reciente a partir de una ruta verificada.
-    pub fn seen(path: &Path, badge: Badge, at: SystemTime) -> std::io::Result<Self> {
-        let path = fs::canonicalize(path)?;
-        let modified = fs::metadata(&path)
-            .and_then(|metadata| metadata.modified())
-            .ok()
-            .and_then(seconds_since_epoch);
-        Ok(Self {
+    /// Construye una entrada reciente sobre una ruta ya canónica y su instante de modificación.
+    pub fn seen(path: PathBuf, modified: Option<u64>, badge: Badge, at: SystemTime) -> Self {
+        Self {
             name: file_name(&path),
             path,
             badge,
             modified,
             last_used: seconds_since_epoch(at).unwrap_or_default(),
             placement: None,
-        })
+        }
     }
 
     /// Ruta canónica del documento.

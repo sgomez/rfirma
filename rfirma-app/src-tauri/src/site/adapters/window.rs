@@ -75,6 +75,7 @@ pub(super) fn with_the_desk<R>(
             signing: &signing,
         },
         scratch_dir: site.scratch_dir.clone(),
+        scratch: site.scratch.clone(),
     };
     call(&desk, &site.errand)
 }

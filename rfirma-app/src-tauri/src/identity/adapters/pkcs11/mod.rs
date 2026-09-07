@@ -23,7 +23,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::Token;
-pub use nss::RealNssHost;
+pub use nss::{NssHost, RealNssHost};
 
 /// Mecanismo de firma digital utilizado en las operaciones PKCS#11.
 const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;

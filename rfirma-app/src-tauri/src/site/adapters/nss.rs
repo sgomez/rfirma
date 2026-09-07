@@ -5,7 +5,7 @@ use std::path::Path;
 
 use libloading::Library;
 
-use crate::identity::ports::NssHost;
+use crate::identity::adapters::pkcs11::NssHost;
 use crate::site::domain::trust_error::{Situation, TrustError};
 use crate::site::ports::TrustStores;
 

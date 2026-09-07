@@ -35,10 +35,12 @@ fn a_state(directory: &Path) -> State {
         }),
         ..State::default()
     };
-    state.recents.record(
-        RecentDocument::seen(&document, Badge::Unsigned, SystemTime::now())
-            .expect("deberia anotarse"),
-    );
+    state.recents.record(RecentDocument::seen(
+        document.clone(),
+        None,
+        Badge::Unsigned,
+        SystemTime::now(),
+    ));
     state.recents.place(
         &fs::canonicalize(&document).expect("deberia canonicalizarse"),
         Some(Spot {

@@ -37,9 +37,9 @@ impl DestinationError {
         Self::new(situation, path.display().to_string())
     }
 
-    /// Construye un fallo asociando una ruta y un error de E/S del sistema.
-    pub fn caused_by(situation: Situation, path: &Path, error: &std::io::Error) -> Self {
-        Self::new(situation, format!("{}: {error}", path.display()))
+    /// Construye un fallo asociando una ruta y el detalle que dio el sistema.
+    pub fn detailed(situation: Situation, path: &Path, detail: impl fmt::Display) -> Self {
+        Self::new(situation, format!("{}: {detail}", path.display()))
     }
 
     /// Situación clasificada para la interfaz.

@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
 use rfirma_lib::identity::application::certificates::ListedCertificates;
@@ -13,7 +14,6 @@ use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;
 use rsa::RsaPublicKey;
 use sha2::Sha256;
-use tauri_plugin_dialog::FilePath;
 use x509_cert::der::{Decode, Encode};
 
 /// Contraseña de `active-rsa.p12` del kit de pruebas.
@@ -97,10 +97,12 @@ fn install(
     p12: &Path,
     password: &str,
 ) -> Result<(), rfirma_lib::crossing::Failure> {
+    let bytes = std::fs::read(p12).expect("el .p12 de pruebas deberia leerse");
     Ok(certificates::install_pkcs12(
         &pkcs11::RealToken,
+        &RealInstalledFolder,
         installed,
-        FilePath::from(p12),
+        &bytes,
         password,
     )?)
 }
@@ -274,7 +276,7 @@ fn removing_an_installed_certificate_deletes_its_store() {
             .map(|certificate| certificate.reference().clone()),
     );
 
-    certificates::remove_installed(installed.path(), &handles[0], &listed)
+    certificates::remove_installed(&RealInstalledFolder, installed.path(), &handles[0], &listed)
         .expect("deberia poder quitarse");
 
     assert!(installed_stores(installed.path()).is_empty());
@@ -294,8 +296,13 @@ fn a_certificate_from_somewhere_else_is_not_removed() {
             .map(|certificate| certificate.reference().clone()),
     );
 
-    let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
-        .expect_err("no viene de este directorio");
+    let failure = certificates::remove_installed(
+        &RealInstalledFolder,
+        installed.path(),
+        &handles[0],
+        &listed,
+    )
+    .expect_err("no viene de este directorio");
 
     assert_eq!(
         rfirma_lib::crossing::Failure::from(failure).situation,

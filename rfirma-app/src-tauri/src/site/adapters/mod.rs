@@ -5,6 +5,7 @@ pub mod codec;
 pub mod desk;
 pub mod frontier;
 pub mod nss;
+pub mod scratch;
 pub mod tauri;
 pub mod tls;
 pub mod transport;

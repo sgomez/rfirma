@@ -26,6 +26,8 @@ pub struct SigningRoot {
     pub isolate: Isolate,
     /// La sesión de firma a medias.
     pub session: SigningSession,
+    /// De dónde salen los bytes del documento que se firma.
+    pub files: Arc<dyn ports::DocumentBytes + Send + Sync>,
 }
 
 impl SigningRoot {
@@ -60,13 +62,16 @@ impl SigningRoot {
         signer: &dyn Signer,
     ) -> Result<StoreSecret, CycleFailure> {
         application::session::begin_for_the_site(
+            self.files.as_ref(),
             DocumentToSign {
                 handle: handle.to_owned(),
                 document,
             },
             chosen,
-            from_the_site,
-            allow_unregistered_signatures,
+            application::session::DeclaredByTheSite {
+                parameters: from_the_site,
+                allow_unregistered_signatures,
+            },
             signer,
             &self.isolate,
             &self.session,

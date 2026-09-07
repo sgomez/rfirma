@@ -1,6 +1,7 @@
 //! Mesa del trámite: dependencias de ejecución y evaluación del consentimiento.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::documents::domain::handles;
 use crate::identity::domain::certificate::TokenCertificate;
@@ -16,7 +17,9 @@ use super::state::LiveErrand;
 use crate::site::application::filtering;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
-use crate::site::ports::{Certificates, FilterEngine, PolicyEngine, ScratchDocuments, SiteSigning};
+use crate::site::ports::{
+    Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments, SiteSigning,
+};
 
 /// Lo que el trámite pide a los vecinos, junto: los certificados, el documento de paso y la firma.
 pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning {}
@@ -33,6 +36,8 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
     pub neighbours: N,
     /// Directorio temporal para ficheros de paso.
     pub scratch_dir: PathBuf,
+    /// Quien escribe y borra el fichero de paso.
+    pub scratch: Arc<dyn Scratch + Send + Sync>,
 }
 
 /// Atiende la operación recibida por el canal local evaluando los certificados disponibles.
@@ -156,12 +161,14 @@ fn keep_the_document<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     live: &LiveErrand,
     bytes: &[u8],
 ) -> Result<String, SiteRefusal> {
-    std::fs::create_dir_all(&desk.scratch_dir)
-        .map_err(|error| SiteRefusal::ScratchFolderMissing(error.to_string()))?;
+    desk.scratch
+        .make_the_folder(&desk.scratch_dir)
+        .map_err(SiteRefusal::ScratchFolderMissing)?;
     let path = desk.scratch_dir.join(format!("{}.pdf", handles::mint()));
-    std::fs::write(&path, bytes)
-        .map_err(|error| SiteRefusal::ScratchUnwritable(error.to_string()))?;
-    live.keep_the_scratch(path.clone());
+    desk.scratch
+        .write(&path, bytes)
+        .map_err(SiteRefusal::ScratchUnwritable)?;
+    live.keep_the_scratch(path.clone(), desk.scratch.clone());
     Ok(desk.neighbours.open_unrecorded(path))
 }
 

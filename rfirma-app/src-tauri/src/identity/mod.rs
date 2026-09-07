@@ -26,6 +26,8 @@ pub struct IdentityRoot {
     pub listed: ListedCertificates,
     /// Donde se recuerda el certificado con el que se firmó.
     pub memory: Arc<dyn CertificateMemory + Send + Sync>,
+    /// La carpeta donde vive cada `.p12` instalado.
+    pub folder: Arc<dyn ports::InstalledFolder + Send + Sync>,
 }
 
 impl IdentityRoot {

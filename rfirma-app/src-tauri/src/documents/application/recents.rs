@@ -8,7 +8,7 @@ use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::recents::Badge;
 use crate::documents::domain::recents::RecentDocument;
-use crate::documents::ports::DocumentsMemory;
+use crate::documents::ports::{DocumentFiles, DocumentsMemory};
 use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::BoxSize;
 use crate::signing::domain::CompletedCycle;
@@ -56,38 +56,48 @@ impl From<MemoryError> for RecentsError {
 }
 
 /// Devuelve la lista de documentos recientes ordenados por fecha de uso.
-pub fn listed_rows(memory: &dyn DocumentsMemory, opened: &OpenedDocuments) -> Vec<RecentRow> {
+pub fn listed_rows(
+    memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
+    opened: &OpenedDocuments,
+) -> Vec<RecentRow> {
     let size = memory.box_size();
     memory
         .recents()
         .entries()
         .iter()
-        .map(|entry| told_as_row(entry, size, opened))
+        .map(|entry| told_as_row(files, entry, size, opened))
         .collect()
 }
 
 /// Pone delante el documento abierto y lo anota en la bandeja solo si de él queda rastro.
 pub fn take(
     memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
     opened: &OpenedDocuments,
     id: &str,
     placement: Option<VisibleBox>,
 ) -> Result<RecentRow, RecentsError> {
     let document = documents::opened_document(opened, id)?;
     if document.is_remembered() {
-        return record(memory, opened, id, placement);
+        return record(memory, files, opened, id, placement);
     }
-    Ok(told_without_a_row(id, &document, placement))
+    Ok(told_without_a_row(files, id, &document, placement))
 }
 
-fn told_without_a_row(id: &str, document: &Document, placement: Option<VisibleBox>) -> RecentRow {
+fn told_without_a_row(
+    files: &dyn DocumentFiles,
+    id: &str,
+    document: &Document,
+    placement: Option<VisibleBox>,
+) -> RecentRow {
     RecentRow {
         id: id.to_owned(),
         name: document.name().to_owned(),
         badge: Badge::Unsigned,
-        modified: documents::modified_seconds(document),
+        modified: documents::modified_seconds(files, document),
         last_used: now_in_seconds(),
-        available: document.reading_path().exists(),
+        available: files.exists(document.reading_path()),
         placement,
     }
 }
@@ -101,6 +111,7 @@ fn now_in_seconds() -> u64 {
 /// Anota un documento abierto en la bandeja de recientes y devuelve su fila para la interfaz.
 pub fn record(
     memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
     opened: &OpenedDocuments,
     id: &str,
     placement: Option<VisibleBox>,
@@ -111,8 +122,8 @@ pub fn record(
     let badge = recents
         .entry(&path)
         .map_or(Badge::Unsigned, RecentDocument::<Spot>::badge);
-    let noted = RecentDocument::seen(&path, badge, SystemTime::now())
-        .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
+    let noted = noted_now(files, &path, badge)
+        .ok_or_else(|| DocumentError::Unreadable(format!("no se resuelve «{}»", path.display())))?;
     let canonical = noted.path().to_path_buf();
     recents.record(noted);
     let mut size = None;
@@ -128,19 +139,20 @@ pub fn record(
         .expect("la fila acaba de anotarse");
     Ok(RecentRow {
         id: id.to_owned(),
-        ..told_as_row(entry, size, opened)
+        ..told_as_row(files, entry, size, opened)
     })
 }
 
 /// Elimina un documento de la bandeja de recientes.
 pub fn forget(
     memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
     opened: &OpenedDocuments,
     id: &str,
 ) -> Result<(), RecentsError> {
     let document = opened.get(id).ok_or_else(|| no_document(id))?;
     let mut recents = memory.recents();
-    recents.forget(&canonical_or_raw(document.reading_path()));
+    recents.forget(&canonical_or_raw(files, document.reading_path()));
     memory.remember_recents(&recents, None)?;
     Ok(())
 }
@@ -150,13 +162,29 @@ fn no_document(id: &str) -> DocumentError {
 }
 
 /// Devuelve la ruta canónica o la ruta original si no puede canonicalizarse.
-fn canonical_or_raw(path: &Path) -> std::path::PathBuf {
-    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+fn canonical_or_raw(files: &dyn DocumentFiles, path: &Path) -> std::path::PathBuf {
+    files.canonical(path).unwrap_or_else(|| path.to_path_buf())
+}
+
+fn noted_now(files: &dyn DocumentFiles, path: &Path, badge: Badge) -> Option<RecentDocument<Spot>> {
+    let canonical = files.canonical(path)?;
+    let modified = files.modified_seconds(&canonical);
+    Some(RecentDocument::seen(
+        canonical,
+        modified,
+        badge,
+        SystemTime::now(),
+    ))
 }
 
 /// Anota un documento recién firmado en la bandeja con la insignia de firmado.
-pub fn note_signed(memory: &dyn DocumentsMemory, landing: &Path, _proof: &CompletedCycle) {
-    let Ok(noted) = RecentDocument::seen(landing, Badge::Signed, SystemTime::now()) else {
+pub fn note_signed(
+    memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
+    landing: &Path,
+    _proof: &CompletedCycle,
+) {
+    let Some(noted) = noted_now(files, landing, Badge::Signed) else {
         return;
     };
     let mut recents = memory.recents();
@@ -165,14 +193,19 @@ pub fn note_signed(memory: &dyn DocumentsMemory, landing: &Path, _proof: &Comple
 }
 
 /// Convierte una entrada de recientes en su fila.
-fn told_as_row(entry: &RecentDocument<Spot>, size: BoxSize, opened: &OpenedDocuments) -> RecentRow {
+fn told_as_row(
+    files: &dyn DocumentFiles,
+    entry: &RecentDocument<Spot>,
+    size: BoxSize,
+    opened: &OpenedDocuments,
+) -> RecentRow {
     RecentRow {
         id: identifier_for(entry.path(), opened),
         name: entry.name().to_owned(),
         badge: entry.badge(),
         modified: entry.modified(),
         last_used: entry.last_used(),
-        available: entry.is_available(),
+        available: files.exists(entry.path()),
         placement: entry.placement().map(|spot| joined(spot, size)),
     }
 }
