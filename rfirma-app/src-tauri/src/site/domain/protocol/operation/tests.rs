@@ -291,7 +291,7 @@ fn the_filter_travels_inside_the_properties_and_comes_out_untouched() {
     ));
 
     let SiteOperation::SelectCertificate(request) =
-        read_operation(&url).expect("el criterio esta en la lista blanca")
+        read_operation(&url).expect("es una operacion que se atiende")
     else {
         panic!("es una seleccion de certificado");
     };
@@ -303,15 +303,23 @@ fn the_filter_travels_inside_the_properties_and_comes_out_untouched() {
 }
 
 #[test]
-fn a_criterion_outside_the_whitelist_refuses_the_whole_call() {
+fn a_criterion_outside_the_whitelist_reaches_the_engine_instead_of_refusing() {
     let url = an_operation(&format!(
         "op=selectcert&properties={}",
-        properties("filters=inventado:loquesea\n")
+        properties("filters=inventado:loquesea
+")
     ));
 
-    let refusal = read_operation(&url).expect_err("el criterio no esta en la lista blanca");
+    let SiteOperation::SelectCertificate(request) =
+        read_operation(&url).expect("un criterio desconocido lo juzga el motor")
+    else {
+        panic!("es una seleccion de certificado");
+    };
 
-    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(
+        request.filter().declared(),
+        [("filters".to_owned(), "inventado:loquesea".to_owned())]
+    );
 }
 
 #[test]

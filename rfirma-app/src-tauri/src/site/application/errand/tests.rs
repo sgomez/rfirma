@@ -31,7 +31,7 @@ use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, SafCode,
+    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter, SafCode,
     SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
     SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
@@ -1825,9 +1825,6 @@ fn a_refusal_of_the_protocol_never_reaches_the_token() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let live = a_live();
-    let properties =
-        base64::engine::general_purpose::URL_SAFE.encode(b"filters=inventado:loquesea\n");
-
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let listed = ListedCertificates::new();
@@ -1843,17 +1840,17 @@ fn a_refusal_of_the_protocol_never_reaches_the_token() {
             &memory,
             home.path(),
         ),
-        &an_operation(&format!("&properties={properties}")),
-        decoded(&an_operation(&format!("&properties={properties}"))),
+        &an_operation("&dat=file:///etc/shadow"),
+        decoded(&an_operation("&dat=file:///etc/shadow")),
         &live,
     );
 
     let ErrandStep::Answering(reply) = step else {
-        panic!("el criterio no esta en la lista blanca: {step:?}");
+        panic!("el protocolo rechaza la lectura de un fichero local: {step:?}");
     };
     assert_eq!(
         on_the_wire(&reply),
-        WireAnswer::refused(SafCode::Params).on_the_wire()
+        WireAnswer::refused_because_of(SafCode::Params, Parameter::Data).on_the_wire()
     );
 }
 #[test]

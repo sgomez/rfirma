@@ -203,7 +203,7 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 
     match verb_of(url).as_str() {
         SELECT_CERTIFICATE => Ok(SiteOperation::SelectCertificate(SelectCertificate {
-            filter: site_filter(&declared_properties(url)?)?,
+            filter: site_filter(&declared_properties(url)?),
         })),
         SIGN => sign_request(url, SignatureRound::First),
         COSIGN => sign_request(url, SignatureRound::Again),
@@ -263,7 +263,7 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
         round,
         algorithm: algorithm.trim().to_owned(),
         document,
-        filter: site_filter(&declared)?,
+        filter: site_filter(&declared),
         declared,
     }))
 }

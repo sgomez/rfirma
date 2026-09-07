@@ -34,7 +34,7 @@ impl FilterEngine for AnEngine {
 }
 
 fn a_filter(expression: &str) -> SiteFilter {
-    site_filter(&[("filters".to_owned(), expression.to_owned())]).expect("es aceptable")
+    site_filter(&[("filters".to_owned(), expression.to_owned())])
 }
 
 #[test]

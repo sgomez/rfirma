@@ -1,5 +1,4 @@
 use super::*;
-use crate::site::domain::protocol::SafCode;
 
 fn properties(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
     pairs
@@ -11,7 +10,7 @@ fn properties(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
 #[test]
 fn the_expression_crosses_to_the_engine_literally() {
     let expression = "subject.contains:PEREZ;issuer.contains:FNMT";
-    let filter = site_filter(&properties(&[("filters", expression)])).expect("es aceptable");
+    let filter = site_filter(&properties(&[("filters", expression)]));
 
     assert_eq!(
         filter.declared(),
@@ -32,15 +31,13 @@ fn the_first_of_the_three_spellings_wins() {
     ]);
 
     assert_eq!(
-        site_filter(&all_three).expect("es aceptable").declared(),
+        site_filter(&all_three).declared(),
         [("filter".to_owned(), "dnie:true".to_owned())]
     );
 
     let without_the_first = properties(&[("filters", "ssl:true"), ("filters.1", "sscd:true")]);
     assert_eq!(
-        site_filter(&without_the_first)
-            .expect("es aceptable")
-            .declared(),
+        site_filter(&without_the_first).declared(),
         [("filters".to_owned(), "ssl:true".to_owned())]
     );
 }
@@ -53,7 +50,7 @@ fn the_numbered_ones_are_collected_in_order_and_stop_at_the_first_gap() {
         ("filters.4", "subject.contains:CUATRO"),
     ]);
 
-    let filter = site_filter(&with_a_gap).expect("es aceptable");
+    let filter = site_filter(&with_a_gap);
 
     assert_eq!(
         filter.declared(),
@@ -66,74 +63,74 @@ fn the_numbered_ones_are_collected_in_order_and_stop_at_the_first_gap() {
 
 #[test]
 fn a_site_that_declares_nothing_still_gets_the_engine_called() {
-    let filter = site_filter(&properties(&[("format", "PAdES")])).expect("es aceptable");
+    let filter = site_filter(&properties(&[("format", "PAdES")]));
 
     assert!(filter.declares_nothing());
     assert_eq!(filter.as_java_properties(), "");
 }
 
 #[test]
-fn a_criterion_outside_the_whitelist_is_refused_instead_of_ignored() {
-    let refusal = site_filter(&properties(&[(
-        "filters",
-        "subject.contains:PEREZ;inventado:loquesea",
-    )]))
-    .expect_err("'inventado:' no existe");
+fn a_criterion_outside_the_whitelist_crosses_to_the_engine_all_the_same() {
+    let expression = "subject.contains:PEREZ;inventado:loquesea";
+    let filter = site_filter(&properties(&[("filters", expression)]));
 
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert!(refusal.detail().contains("inventado:loquesea"));
+    assert_eq!(
+        filter.declared(),
+        [("filters".to_owned(), expression.to_owned())]
+    );
+    assert_eq!(
+        filter.as_java_properties(),
+        format!("filters={expression}
+")
+    );
 }
 
 #[test]
-fn every_criterion_the_original_understands_is_accepted() {
+fn every_criterion_the_original_understands_crosses_untouched() {
     for criterion in ACCEPTED_CRITERIA {
         let expression = format!("{criterion}loquesea");
-        assert!(
-            site_filter(&properties(&[("filters", &expression)])).is_ok(),
-            "«{expression}» tendria que cruzar al motor"
+        assert_eq!(
+            site_filter(&properties(&[("filters", &expression)])).as_java_properties(),
+            format!("filters={expression}
+")
         );
     }
 
-    assert!(site_filter(&properties(&[(
-        "filters",
-        "keyusage.digitalsignature:true"
-    )]))
-    .is_ok());
-    assert!(site_filter(&properties(&[("filters", SATISFIED_BY_CONSTRUCTION)])).is_ok());
+    assert_eq!(
+        site_filter(&properties(&[("filters", SATISFIED_BY_CONSTRUCTION)])).as_java_properties(),
+        format!("filters={SATISFIED_BY_CONSTRUCTION}
+")
+    );
 }
 
 #[test]
-fn the_criteria_are_recognised_regardless_of_case() {
-    assert!(site_filter(&properties(&[("filters", "Subject.Contains:PEREZ")])).is_ok());
-    assert!(site_filter(&properties(&[("filters", "NONEXPIRED:true")])).is_ok());
-}
-
-#[test]
-fn the_four_unmeasured_criteria_are_accepted_all_the_same() {
+fn the_four_unmeasured_criteria_are_still_in_the_measured_catalogue() {
     for criterion in UNMEASURED_CRITERIA {
         assert!(
             ACCEPTED_CRITERIA.contains(criterion),
-            "«{criterion}» esta anotado como sin medir pero no cruza"
+            "«{criterion}» esta anotado como sin medir pero no esta en el catalogo"
         );
-        assert!(site_filter(&properties(&[("filters", &format!("{criterion}true"))])).is_ok());
     }
 }
 
 #[test]
-fn the_sibling_keys_are_not_criteria_and_do_not_trip_the_whitelist() {
+fn the_sibling_keys_are_not_criteria_and_do_not_reach_the_engine() {
     let with_siblings = properties(&[
         ("headless", "true"),
         ("mandatoryCertSelection", "false"),
         ("filters", "subject.contains:PEREZ"),
     ]);
 
-    assert!(site_filter(&with_siblings).is_ok());
+    assert_eq!(
+        site_filter(&with_siblings).declared(),
+        [("filters".to_owned(), "subject.contains:PEREZ".to_owned())]
+    );
 }
 
 #[test]
 fn a_value_with_backslashes_survives_the_properties_block() {
     let expression = r"subject.rfc2254:(cn=PEREZ\, JUAN)";
-    let filter = site_filter(&properties(&[("filters", expression)])).expect("es aceptable");
+    let filter = site_filter(&properties(&[("filters", expression)]));
 
     assert_eq!(
         filter.as_java_properties(),
@@ -144,7 +141,7 @@ fn a_value_with_backslashes_survives_the_properties_block() {
 #[test]
 fn a_value_with_accents_reaches_the_engine_unchanged() {
     let expression = "subject.contains:MUÑOZ PÉREZ";
-    let filter = site_filter(&properties(&[("filters", expression)])).expect("es aceptable");
+    let filter = site_filter(&properties(&[("filters", expression)]));
 
     let block = filter.as_java_properties();
 
@@ -155,8 +152,7 @@ fn a_value_with_accents_reaches_the_engine_unchanged() {
 
 #[test]
 fn a_newline_inside_a_value_cannot_split_the_block() {
-    let filter =
-        site_filter(&properties(&[("filters", "subject.contains:A\nB")])).expect("es aceptable");
+    let filter = site_filter(&properties(&[("filters", "subject.contains:A\nB")]));
 
     assert_eq!(
         filter.as_java_properties(),

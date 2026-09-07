@@ -1,11 +1,9 @@
-//! La expresión de filtro que manda la sede: qué se deja pasar al motor.
-
-use super::refusal::{Refusal, RefusalSituation};
+//! La expresión de filtro que manda la sede, que cruza entera al motor.
 
 const FILTER: &str = "filter";
 const FILTERS: &str = "filters";
 
-/// Los criterios que rFirma deja cruzar al motor.
+/// Los criterios medidos contra el original.
 pub const ACCEPTED_CRITERIA: &[&str] = &[
     "authcert:",
     "dnie:",
@@ -26,10 +24,10 @@ pub const ACCEPTED_CRITERIA: &[&str] = &[
     "thumbprint:",
 ];
 
-/// Criterio sin argumento aceptado por compatibilidad.
+/// Criterio sin argumento satisfecho por construcción.
 pub const SATISFIED_BY_CONSTRUCTION: &str = "disableopeningexternalstores";
 
-/// Criterios aceptados sin cobertura de su veredicto.
+/// Criterios medidos sin cobertura de su veredicto.
 pub const UNMEASURED_CRITERIA: &[&str] = &["dnie:", "pseudonym:", "qualified:", "ssl:"];
 
 /// Lo que la sede pide del listado, listo para cruzar al motor.
@@ -69,17 +67,11 @@ impl SiteFilter {
     }
 }
 
-/// Lo que la sede pide del listado, o por qué no se le sirve.
-pub fn site_filter(properties: &[(String, String)]) -> Result<SiteFilter, Refusal> {
-    let declared = declared_keys(properties);
-
-    for (key, expression) in &declared {
-        for criterion in expression.split(';') {
-            check_is_accepted(key, criterion)?;
-        }
+/// Lo que la sede pide del listado.
+pub fn site_filter(properties: &[(String, String)]) -> SiteFilter {
+    SiteFilter {
+        declared: declared_keys(properties),
     }
-
-    Ok(SiteFilter { declared })
 }
 
 /// Las claves de filtro que la sede declaró, con la precedencia del original.
@@ -109,28 +101,6 @@ fn value_of<'a>(properties: &'a [(String, String)], key: &str) -> Option<&'a str
         .map(|(_, value)| value.as_str())
 }
 
-fn check_is_accepted(key: &str, criterion: &str) -> Result<(), Refusal> {
-    let trimmed = criterion.trim();
-    if trimmed.is_empty() {
-        return Ok(());
-    }
-    let lowercase = trimmed.to_ascii_lowercase();
-
-    if lowercase == SATISFIED_BY_CONSTRUCTION {
-        return Ok(());
-    }
-    if ACCEPTED_CRITERIA
-        .iter()
-        .any(|accepted| lowercase.starts_with(accepted))
-    {
-        return Ok(());
-    }
-
-    Err(Refusal::params(format!(
-        "el criterio de filtro '{trimmed}' de '{key}' no esta en la lista blanca"
-    ))
-    .because(RefusalSituation::UnsupportedFilter))
-}
 
 #[cfg(test)]
 mod tests;

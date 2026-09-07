@@ -53,7 +53,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
-| `domain/protocol/filters.rs` | La expresión de filtro de la sede: la **lista blanca** que decide si se llama al motor. Pruebas en `domain/protocol/filters/tests.rs`. |
+| `domain/protocol/filters.rs` | La expresión de filtro de la sede, que cruza entera al motor, y el catálogo de criterios medidos contra el original. Pruebas en `domain/protocol/filters/tests.rs`. |
 | `domain/protocol/framing.rs` | **El framing artesanal del transporte `service`**, sin socket: lector y escritor puros. Pruebas en `domain/protocol/framing/tests.rs`. |
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
