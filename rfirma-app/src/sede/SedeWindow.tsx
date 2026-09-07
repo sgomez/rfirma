@@ -7,6 +7,7 @@ import { useWaitingClock } from "./SedeFrame";
 import { SedeNoCertificate } from "./SedeNoCertificate";
 import { SedeOutcome } from "./SedeOutcome";
 import { SedeSigning } from "./SedeSigning";
+import { SedeTransfer } from "./SedeTransfer";
 import { SedeWaiting } from "./SedeWaiting";
 import "./SedeWindow.css";
 
@@ -18,8 +19,8 @@ interface SedeWindowProps {
  * La ventana que abre rFirma cuando una sede electrónica lo invoca por
  * `afirma://` (docs/design/ventana-de-sede.md).
  *
- * **Una ventana con una secuencia, no cinco pantallas**: los cinco momentos
- * comparten las dos regiones fijas —cuerpo y pie— y lo único que cambia es lo
+ * **Una ventana con una secuencia, no una pantalla por momento**: todos los
+ * momentos comparten las dos regiones fijas —cuerpo y pie— y lo único que cambia es lo
  * que va dentro. Sin cabecera de aplicación, sin menú, sin bandeja y sin pie de
  * destino: sugerir que hay más dentro invita a buscar cosas que no están.
  *
@@ -123,6 +124,10 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             onCancel={cancel}
           />
         )}
+        {/* Guardar y cargar **no preguntan en esta ventana**: la orden abre el
+            diálogo del portal en cuanto el momento llega, y aquí sólo se
+            nombra el fichero (ADR-0011). */}
+        {(stage.kind === "saving" || stage.kind === "loading") && <SedeTransfer transfer={stage} />}
         {stage.kind === "outcome" && (
           <SedeOutcome origin={errand.origin} outcome={stage.outcome} onClose={close} />
         )}

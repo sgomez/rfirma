@@ -449,6 +449,41 @@ describe("SedeWindow", () => {
     });
   });
 
+  describe("the file the portal is asking about", () => {
+    it("names the file the site proposed, and never a path", () => {
+      const { port } = scriptedErrand({ kind: "saving", filename: "firma.pdf" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Guardando firma.pdf")).toBeInTheDocument();
+      expect(screen.queryByText(/\//)).not.toBeInTheDocument();
+    });
+
+    it("names the file as what it is when the site proposed none", () => {
+      const { port } = scriptedErrand({ kind: "saving", filename: null });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Guardando el fichero")).toBeInTheDocument();
+    });
+
+    it("says whether the site asked for one file or several", () => {
+      const { port } = scriptedErrand({ kind: "loading", multiple: true });
+      const { rerender } = renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Cargando varios ficheros")).toBeInTheDocument();
+
+      rerender(<SedeWindow errands={scriptedErrand({ kind: "loading", multiple: false }).port} />);
+
+      expect(screen.getByText("Cargando un fichero")).toBeInTheDocument();
+    });
+
+    it("offers no action of its own: the person answers inside the portal dialog", () => {
+      const { port } = scriptedErrand({ kind: "loading", multiple: false });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    });
+  });
+
   describe("4 · outcome", () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());

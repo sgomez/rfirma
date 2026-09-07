@@ -30,7 +30,7 @@ function certificate(overrides: Partial<Certificate> = {}): Certificate {
 
 const described: DescribedDocument = { title: "Solicitud", pages: 3, sizeBytes: 4096 };
 
-/** Las once órdenes, dobladas, y el asa para empujar momentos por el evento. */
+/** Las órdenes, dobladas, y el asa para empujar momentos por el evento. */
 function doubled(overrides: Partial<SiteCommands> = {}) {
   const stop = vi.fn();
   let emit: ((view: SiteErrandView) => void) | null = null;
@@ -42,6 +42,8 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     beginSigning: vi.fn(),
     signWithPin: vi.fn(),
     finishSigning: vi.fn(),
+    saveFile: vi.fn(),
+    loadFiles: vi.fn(),
     installCertificate: vi.fn(),
     lookAgain: vi.fn(),
     installLocalCa: vi.fn(),
@@ -73,6 +75,14 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     },
     finishSigning: async () => {
       calls.finishSigning();
+      return { ok: true, value: undefined };
+    },
+    saveFile: async () => {
+      calls.saveFile();
+      return { ok: true, value: undefined };
+    },
+    loadFiles: async () => {
+      calls.loadFiles();
       return { ok: true, value: undefined };
     },
     installCertificate: async () => {
@@ -261,6 +271,35 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     expect(errandOf(view).stage).toEqual({ kind: "noCertificate", reason: "excluded", owned: 2 });
   });
 
+  it("turns a save request into the name the site proposed and never a path", () => {
+    const view: SiteErrandView = {
+      origin: "sede.ejemplo.gob.es",
+      stage: { kind: "saving", filename: "firma.pdf" },
+    };
+
+    expect(errandOf(view).stage).toEqual({ kind: "saving", filename: "firma.pdf" });
+  });
+
+  it("turns a save request without a proposed name into one with no name", () => {
+    const view: SiteErrandView = {
+      origin: "sede.ejemplo.gob.es",
+      stage: { kind: "saving", filename: null },
+    };
+
+    expect(errandOf(view).stage).toEqual({ kind: "saving", filename: null });
+  });
+
+  it("turns a load request into one file or several", () => {
+    const one: SiteErrandView = {
+      origin: "sede.ejemplo.gob.es",
+      stage: { kind: "loading", multiple: false },
+    };
+    const many: SiteErrandView = { ...one, stage: { kind: "loading", multiple: true } };
+
+    expect(errandOf(one).stage).toEqual({ kind: "loading", multiple: false });
+    expect(errandOf(many).stage).toEqual({ kind: "loading", multiple: true });
+  });
+
   it("reads the document of a signature request by its opaque handle", async () => {
     const { push, calls, last } = watched();
 
@@ -293,6 +332,55 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     push(ASKING_TO_SIGN);
 
     await vi.waitFor(() => expect(last()?.stage).toMatchObject({ document: null }));
+  });
+});
+
+describe("el diálogo del portal sale solo", () => {
+  const SAVING: SiteErrandView = {
+    origin: "sede.ejemplo.gob.es",
+    stage: { kind: "saving", filename: "firma.pdf" },
+  };
+  const LOADING: SiteErrandView = {
+    origin: "sede.ejemplo.gob.es",
+    stage: { kind: "loading", multiple: true },
+  };
+
+  it("opens the save dialog as soon as the saving moment arrives", async () => {
+    const { push, calls, last } = watched();
+
+    push(SAVING);
+
+    expect(last()?.stage).toEqual({ kind: "saving", filename: "firma.pdf" });
+    await vi.waitFor(() => expect(calls.saveFile).toHaveBeenCalledTimes(1));
+    expect(calls.loadFiles).not.toHaveBeenCalled();
+  });
+
+  it("opens the load dialog as soon as the loading moment arrives", async () => {
+    const { push, calls, last } = watched();
+
+    push(LOADING);
+
+    expect(last()?.stage).toEqual({ kind: "loading", multiple: true });
+    await vi.waitFor(() => expect(calls.loadFiles).toHaveBeenCalledTimes(1));
+    expect(calls.saveFile).not.toHaveBeenCalled();
+  });
+
+  it("ends the errand when the portal order fails", async () => {
+    const { push, last } = watched({
+      saveFile: async () => ({
+        ok: false,
+        failure: { situation: "unknown", detail: "el portal no contesta", attemptsLeft: null },
+      }),
+    });
+
+    push(SAVING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({
+        kind: "outcome",
+        outcome: { kind: "refused", situation: "unknown", detail: "el portal no contesta" },
+      }),
+    );
   });
 });
 

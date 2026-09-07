@@ -1032,6 +1032,27 @@ msgstr ""
 msgid "sede.returning.body"
 msgstr ""
 
+msgid "sede.saving.title"
+msgstr ""
+
+msgid "sede.saving.titleUnnamed"
+msgstr ""
+
+msgid "sede.saving.lead"
+msgstr ""
+
+msgid "sede.loading.title"
+msgstr ""
+
+msgid "sede.loading.titleMany"
+msgstr ""
+
+msgid "sede.loading.lead"
+msgstr ""
+
+msgid "sede.loading.leadMany"
+msgstr ""
+
 msgid "sede.outcome.signedTitle"
 msgstr ""
 

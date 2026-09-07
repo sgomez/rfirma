@@ -2027,7 +2027,7 @@ fn the_loading_moment_never_carries_the_starting_folder() {
         &live,
     )
     .expect("hay codec negociado");
-    assert_eq!(step.moment(), Some(Moment::Loading));
+    assert_eq!(step.moment(), Some(Moment::Loading { multiple: false }));
     assert_eq!(
         live.the_loading_pending()
             .expect("hay carga pendiente")

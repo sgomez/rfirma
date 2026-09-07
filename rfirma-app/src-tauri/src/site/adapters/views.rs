@@ -82,10 +82,10 @@ impl SiteErrandView {
     }
 
     /// Estado de carga.
-    pub fn loading() -> Self {
+    pub fn loading(multiple: bool) -> Self {
         Self {
             origin: None,
-            stage: SiteStageView::Loading,
+            stage: SiteStageView::Loading { multiple },
         }
     }
 
@@ -131,7 +131,7 @@ impl From<&Moment> for SiteErrandView {
                 Self::without_certificates((*reason).into(), *owned)
             }
             Moment::Saving { filename } => Self::saving(filename.as_deref()),
-            Moment::Loading => Self::loading(),
+            Moment::Loading { multiple } => Self::loading(*multiple),
             Moment::NoChannel(NoChannel::ChannelNotOpened) => {
                 Self::no_channel(NoChannelView::ChannelNotOpened)
             }
@@ -212,7 +212,10 @@ crossing! {
             filename: Option<String>,
         },
         /// Cargando uno o varios ficheros.
-        Loading,
+        Loading {
+            /// Si la sede pide varios ficheros o uno solo.
+            multiple: bool,
+        },
     }
 }
 

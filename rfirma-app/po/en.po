@@ -1125,6 +1125,27 @@ msgstr "Sending the signature"
 msgid "sede.returning.body"
 msgstr "Do not close the window."
 
+msgid "sede.saving.title"
+msgstr "Saving {{filename}}"
+
+msgid "sede.saving.titleUnnamed"
+msgstr "Saving the file"
+
+msgid "sede.saving.lead"
+msgstr "Choose where to save it in the system dialog."
+
+msgid "sede.loading.title"
+msgstr "Loading a file"
+
+msgid "sede.loading.titleMany"
+msgstr "Loading several files"
+
+msgid "sede.loading.lead"
+msgstr "Choose the file you want to send in the system dialog."
+
+msgid "sede.loading.leadMany"
+msgstr "Choose the files you want to send in the system dialog."
+
 msgid "sede.outcome.signedTitle"
 msgstr "Signed and sent"
 

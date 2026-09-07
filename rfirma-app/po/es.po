@@ -1137,6 +1137,27 @@ msgstr "Enviando la firma"
 msgid "sede.returning.body"
 msgstr "No cierres la ventana."
 
+msgid "sede.saving.title"
+msgstr "Guardando {{filename}}"
+
+msgid "sede.saving.titleUnnamed"
+msgstr "Guardando el fichero"
+
+msgid "sede.saving.lead"
+msgstr "Elige en el diálogo del sistema dónde quieres guardarlo."
+
+msgid "sede.loading.title"
+msgstr "Cargando un fichero"
+
+msgid "sede.loading.titleMany"
+msgstr "Cargando varios ficheros"
+
+msgid "sede.loading.lead"
+msgstr "Elige en el diálogo del sistema el fichero que quieres enviar."
+
+msgid "sede.loading.leadMany"
+msgstr "Elige en el diálogo del sistema los ficheros que quieres enviar."
+
 msgid "sede.outcome.signedTitle"
 msgstr "Firmado y enviado"
 

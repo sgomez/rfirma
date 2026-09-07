@@ -48,10 +48,11 @@ fn saving_and_loading_cross_with_the_name_and_never_a_path() {
         })
     );
     assert_eq!(
-        serde_json::to_value(SiteErrandView::from(&Moment::Loading)).expect("cruza"),
+        serde_json::to_value(SiteErrandView::from(&Moment::Loading { multiple: true }))
+            .expect("cruza"),
         serde_json::json!({
             "origin": null,
-            "stage": { "kind": "loading" },
+            "stage": { "kind": "loading", "multiple": true },
         })
     );
 }

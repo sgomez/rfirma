@@ -638,6 +638,8 @@ export function tauriSiteErrands(): SiteErrandPort {
       stage(() => invoke<StoreSecret>("site_begin_signing", { certificate })),
     signWithPin: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
     finishSigning: () => stage(() => invoke<void>("site_finish_signing")),
+    saveFile: () => stage(() => invoke<void>("site_save_file")),
+    loadFiles: () => stage(() => invoke<void>("site_load_files")),
     // Un `.p12` con contraseña —el caso normal— rechaza aquí, y desde esta
     // pantalla no hay contraseña que mandar: lo que le queda a la persona es la
     // misma pantalla, no una promesa sin recoger.

@@ -58,7 +58,9 @@ impl ErrandStep {
             Self::Saving(consent) => Some(Moment::Saving {
                 filename: consent.filename.clone().or_else(|| consent.title.clone()),
             }),
-            Self::Loading(_) => Some(Moment::Loading),
+            Self::Loading(consent) => Some(Moment::Loading {
+                multiple: consent.multiple,
+            }),
             Self::NoCertificate { reason, owned, .. } => Some(Moment::NoCertificate {
                 reason: *reason,
                 owned: *owned,
@@ -239,7 +241,10 @@ pub enum Moment {
         filename: Option<String>,
     },
     /// La sede pide cargar uno o varios ficheros.
-    Loading,
+    Loading {
+        /// Si la sede pide varios ficheros (`multiload=true`) o uno solo.
+        multiple: bool,
+    },
     /// Canal con la sede no disponible.
     NoChannel(NoChannel),
     /// Rechazo del protocolo sin canal por el que responder.

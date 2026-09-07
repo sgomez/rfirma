@@ -24,8 +24,8 @@ import type {
  *
  * # Los momentos no vienen todos del backend
  *
- * El backend empuja seis momentos por el evento (`SiteStageView`) y la ventana
- * conoce siete (`ErrandStage`). Los dos que faltan —el secreto del almacén y
+ * El backend empuja sus momentos por el evento (`SiteStageView`) y la ventana
+ * conoce alguno más (`ErrandStage`). Los que faltan —el secreto del almacén y
  * los dos tramos de la firma— **son de este adaptador**, porque nacen y mueren
  * dentro de una llamada suya: `site_begin_signing` contesta cómo hay que pedir
  * el secreto, `sign_with_pin` lo consume y `site_finish_signing` entrega. El
@@ -58,6 +58,8 @@ export type SiteStageView =
       certificates: readonly Certificate[];
       unregisteredSignatures: boolean;
     }
+  | { kind: "saving"; filename: string | null }
+  | { kind: "loading"; multiple: boolean }
   | { kind: "noChannel"; reason: "channelNotOpened" | "localCaMissing" }
   | { kind: "outcome"; outcome: { kind: "refused"; situation: string; detail: string } }
   | { kind: "noCertificate"; reason: "none" | "excluded"; owned: number };
@@ -109,6 +111,10 @@ export interface SiteCommands {
   signWithPin(secret: string): Promise<StageResult<void>>;
   /** `site_finish_signing`: postfirma, y la sede recibe la firma. */
   finishSigning(): Promise<StageResult<void>>;
+  /** `site_save_file`: abre el diálogo del portal y escribe donde la persona eligió. */
+  saveFile(): Promise<StageResult<void>>;
+  /** `site_load_files`: abre el selector del portal y sigue con lo que la persona eligió. */
+  loadFiles(): Promise<StageResult<void>>;
   /** `site_install_certificate`. `false` es que se cerró el diálogo sin elegir. */
   installCertificate(): Promise<boolean>;
   /** `site_look_again`: continúa el trámite, no lo reinicia. */
@@ -173,6 +179,10 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
       return { kind: "noChannel", reason: stage.reason };
     case "noCertificate":
       return { kind: "noCertificate", reason: stage.reason, owned: stage.owned };
+    case "saving":
+      return { kind: "saving", filename: stage.filename };
+    case "loading":
+      return { kind: "loading", multiple: stage.multiple };
     case "outcome":
       return {
         kind: "outcome",
@@ -255,6 +265,22 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     move({ kind: "outcome", outcome });
   };
 
+  /**
+   * El diálogo del portal, que es quien pregunta en los momentos de guardar y
+   * de cargar.
+   *
+   * Sale **solo**, en cuanto el momento llega: la ventana no tiene ahí ningún
+   * botón porque quien confirma es la persona dentro del diálogo, y la ruta
+   * que elija no vuelve nunca hasta aquí (ADR-0011). Lo que sigue lo publica el
+   * backend, salvo que la orden falle: eso es un desenlace.
+   */
+  const openPortal = async (stage: SiteStageView, arrival: number) => {
+    if (stage.kind !== "saving" && stage.kind !== "loading") return;
+    const done = stage.kind === "saving" ? await commands.saveFile() : await commands.loadFiles();
+    if (arrival !== arrivals || done.ok) return;
+    finish(refusedBy(done.failure));
+  };
+
   const receive = async (view: SiteErrandView) => {
     const arrival = ++arrivals;
     // Un momento del backend manda sobre cualquier momento local: la sede ya
@@ -262,6 +288,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     signing = null;
     if (view.stage.kind !== "askingToSign") {
       publish(errandOf(view));
+      void openPortal(view.stage, arrival);
       return;
     }
     const described = await commands.describeDocument(view.stage.document);
