@@ -1,5 +1,6 @@
 //! Lo que pide la sede, leído de una URL `afirma://` y sin efectos.
 
+pub mod cipher;
 pub mod codes;
 pub mod filters;
 pub mod launch;
@@ -11,6 +12,7 @@ pub mod url;
 pub mod version;
 pub mod visible;
 
+pub use cipher::{cipher as encrypt, decipher as decrypt, CipherKey};
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use launch::{

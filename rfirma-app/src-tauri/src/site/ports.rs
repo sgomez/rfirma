@@ -1,4 +1,4 @@
-//! Puertos del contexto de sede: transporte, confianza, CA local, los dos motores del puente y lo que el trámite pide a los vecinos (ADR-0017).
+//! Puertos del contexto de sede: transporte, confianza, CA local, servlets del servidor intermedio, los dos motores del puente y lo que el trámite pide a los vecinos (ADR-0017).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -11,6 +11,7 @@ use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::AfirmaUrl;
+use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::tls_error::TlsError;
 use crate::site::domain::trust_error::TrustError;
@@ -78,6 +79,18 @@ pub trait TrustStores {
 
     /// Obtiene los bits de confianza TLS configurados para el certificado en el almacén.
     fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError>;
+}
+
+/// Puerto de salida hacia los servlets del servidor intermedio: recuperar, almacenar y esperar.
+pub trait Servlets {
+    /// Recupera los datos guardados bajo el identificador dado.
+    fn retrieve(&self, service_url: &str, id: &str) -> Result<String, RelayError>;
+
+    /// Almacena datos bajo el identificador dado.
+    fn store(&self, service_url: &str, id: &str, data: &str) -> Result<(), RelayError>;
+
+    /// Envía una señal de espera activa bajo el identificador dado (`requestWait` del original).
+    fn wait(&self, service_url: &str, id: &str) -> Result<(), RelayError>;
 }
 
 /// Las dos ranuras de la CA local: la que sirve y la siguiente del solape (ADR-0005).
