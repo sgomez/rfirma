@@ -28,15 +28,7 @@ impl ProtocolCodec for V4Codec {
             Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
             Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
             Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
-            Ok(SiteOperation::SignAndSave(request)) => match request.document() {
-                Some(_) => SiteRequest::SignAndSave(request),
-                // Sin `dat` queda por elegir documento (#494); aquí se rechaza como `sign`
-                // con `dat` vacío (`operation.rs::read_document`).
-                None => SiteRequest::NotAttended(Refusal::new(
-                    SafCode::SignWithoutData,
-                    "el parametro 'dat' no vino en 'signandsave': no hay nada que firmar",
-                )),
-            },
+            Ok(SiteOperation::SignAndSave(request)) => SiteRequest::SignAndSave(request),
             // El lote remoto se compone en el ticket del caso de uso (#481 solo
             // lo lee): hasta entonces, un lote leído sin componer es "no atendido".
             Ok(SiteOperation::Batch(_)) => SiteRequest::NotAttended(Refusal::new(

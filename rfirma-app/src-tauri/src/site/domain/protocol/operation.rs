@@ -65,6 +65,16 @@ const FILENAME_SAVE_DESCRIPTION: &str = "filenameSaveDescription";
 /// `properties`: carpeta inicial sugerida al diálogo de guardado.
 const FILENAME_SAVE_CURRENT_DIR: &str = "filenameSaveCurrentDir";
 
+/// `properties`: extensiones admitidas por el selector que elige el documento a firmar
+/// (`AfirmaExtraParams.LOAD_FILE_EXTS`).
+const FILENAME_EXTS: &str = "filenameExts";
+
+/// `properties`: descripción del filtro de extensiones del selector (`LOAD_FILE_DESCRIPTION`).
+const FILENAME_DESCRIPTION: &str = "filenameDescription";
+
+/// `properties`: carpeta inicial sugerida al selector (`LOAD_FILE_CURRENT_DIR`).
+const FILENAME_CURRENT_DIR: &str = "filenameCurrentDir";
+
 /// `ProtocolLauncher.30`: el nombre por defecto cuando la sede no propone ninguno.
 const DEFAULT_SIGNED_NAME: &str = "Firma";
 
@@ -207,12 +217,16 @@ pub struct SignAndSaveRequest {
     round: SignatureRound,
     algorithm: String,
     document: Option<Vec<u8>>,
+    format_auto: bool,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     filename: Option<String>,
     extensions: Vec<String>,
     description: Option<String>,
     starting_folder: Option<String>,
+    load_extensions: Vec<String>,
+    load_description: Option<String>,
+    load_starting_folder: Option<String>,
 }
 
 impl SignAndSaveRequest {
@@ -266,6 +280,33 @@ impl SignAndSaveRequest {
         self.filename
             .clone()
             .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.pdf"))
+    }
+
+    /// Extensiones admitidas por el selector que elige el documento (`filenameExts`).
+    pub fn load_extensions(&self) -> &[String] {
+        &self.load_extensions
+    }
+
+    /// Descripción del filtro de extensiones del selector (`filenameDescription`), si la sede la declaró.
+    pub fn load_description(&self) -> Option<&str> {
+        self.load_description.as_deref()
+    }
+
+    /// Carpeta inicial sugerida al selector (`filenameCurrentDir`), nunca la única fuente de lectura.
+    pub fn load_starting_folder(&self) -> Option<&str> {
+        self.load_starting_folder.as_deref()
+    }
+
+    /// El documento que la persona acaba de elegir, con el mismo veredicto de formato que si
+    /// hubiera llegado en `dat`: solo se comprueba cuando la sede pidió `format=auto`.
+    pub fn with_chosen_document(&self, document: Vec<u8>) -> Result<Self, Refusal> {
+        if self.format_auto {
+            reject_unless_pdf(shape_of(&document))?;
+        }
+        Ok(Self {
+            document: Some(document),
+            ..self.clone()
+        })
     }
 }
 
@@ -480,7 +521,8 @@ fn countersign_refusal() -> Refusal {
 fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     let round = round_of_cop(url)?;
 
-    let document = if format_verdict(url)? {
+    let format_auto = format_verdict(url)?;
+    let document = if format_auto {
         match optional_document(url)? {
             Some(document) => {
                 reject_unless_pdf(shape_of(&document))?;
@@ -504,11 +546,15 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         round,
         algorithm,
         document,
+        format_auto,
         filter: site_filter(&declared),
         filename: optional(url, "filename"),
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),
         description: property_value(&declared, FILENAME_SAVE_DESCRIPTION),
         starting_folder: property_value(&declared, FILENAME_SAVE_CURRENT_DIR),
+        load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
+        load_description: property_value(&declared, FILENAME_DESCRIPTION),
+        load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
         declared,
     }))
 }

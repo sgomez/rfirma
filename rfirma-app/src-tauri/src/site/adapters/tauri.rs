@@ -216,37 +216,44 @@ fn pick<R: tauri::Runtime>(
     }
 }
 
-/// Lee lo que la persona eligió y se lo entrega a la sede, o cancela si no eligió nada.
-fn load_chosen(
+/// Lee lo que la persona eligió y continúa el trámite, o cancela si no eligió nada: si el
+/// selector esperaba documento para `signandsave`, el paso que sigue no es una entrega a la
+/// sede, sino el consentimiento de firma (#494).
+fn load_chosen<
+    E: crate::site::ports::FilterEngine,
+    P: crate::site::ports::PolicyEngine,
+    N: crate::site::application::errand::Neighbours,
+>(
     chosen: Vec<tauri_plugin_dialog::FilePath>,
-    scratch: &dyn crate::site::ports::Scratch,
+    desk: &crate::site::application::errand::ErrandDesk<'_, E, P, N>,
     live: &crate::site::application::errand::LiveErrand,
-) -> Result<(), Failure> {
+) -> Result<Option<crate::site::application::errand::ErrandStep>, Failure> {
     if chosen.is_empty() {
         crate::site::application::errand::decline(live);
-        return Ok(());
+        return Ok(None);
     }
     let named = named_paths(chosen)?;
-    crate::site::application::errand::loaded(scratch, &named, live);
-    Ok(())
+    Ok(crate::site::application::errand::document_chosen(
+        desk, &named, live,
+    ))
 }
 
-/// Abre el selector de carga del portal y entrega a la sede lo que la persona eligió (ADR-0011).
+/// Abre el selector de carga del portal y continúa el trámite con lo que la persona eligió
+/// (ADR-0011).
 #[tauri::command(async)]
-pub fn site_load_files(
-    app_handle: tauri::AppHandle,
-    site: State<'_, SiteRoot>,
-) -> Result<(), Failure> {
+pub fn site_load_files(app_handle: tauri::AppHandle) -> Result<(), Failure> {
     use tauri_plugin_dialog::DialogExt;
 
-    let Some(consent) = site.errand.the_loading_pending() else {
-        return Err(nothing_pending("ninguna carga"));
-    };
+    let moved = site_window::with_the_desk(&app_handle, |desk, live| {
+        let Some(consent) = live.the_loading_pending() else {
+            return Err(nothing_pending("ninguna carga"));
+        };
 
-    let dialog = load_dialog(app_handle.dialog().file(), &consent);
-    let chosen = pick(dialog, consent.multiple);
-    load_chosen(chosen, site.scratch.as_ref(), &site.errand)?;
-    site_window::publish_the_moment(&app_handle);
+        let dialog = load_dialog(app_handle.dialog().file(), &consent);
+        let chosen = pick(dialog, consent.multiple);
+        load_chosen(chosen, desk, live)
+    })?;
+    site_window::publish_what_moved(&app_handle, moved);
     Ok(())
 }
 

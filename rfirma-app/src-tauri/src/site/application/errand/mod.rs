@@ -9,6 +9,8 @@ pub mod state;
 #[cfg(test)]
 mod tests;
 
+use std::path::PathBuf;
+
 use crate::identity::domain::secret::StoreSecret;
 use crate::site::domain::protocol::AfirmaUrl;
 
@@ -18,8 +20,8 @@ use crate::site::ports::{FilterEngine, PolicyEngine};
 pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
 pub use desk::{
-    attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save, ErrandDesk,
-    Neighbours,
+    attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
+    consent_to_sign_and_save_with_chosen_document, ErrandDesk, Neighbours,
 };
 pub use outcome::{
     ErrandStep, LoadingConsent, Moment, NoCertificate, NoChannel, ProtocolCodec, SavingConsent,
@@ -168,6 +170,48 @@ pub fn finish<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             ErrandStep::Saving(Box::new((*hints).into_consent(&signed))),
         )),
     })
+}
+
+/// Completa el selector abierto por la orden de Tauri con lo que la persona eligió: si el
+/// selector esperaba un documento para `signandsave`, lo lee y continúa el trámite; si era un
+/// `load` corriente, entrega lo elegido a la sede.
+pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    chosen: &[(String, PathBuf)],
+    live: &LiveErrand,
+) -> Option<ErrandStep> {
+    let to_sign = live
+        .the_loading_pending()
+        .and_then(|pending| pending.to_sign);
+    let Some(request) = to_sign else {
+        loaded(desk.scratch.as_ref(), chosen, live);
+        return None;
+    };
+
+    let (_, path) = chosen.first()?;
+    let document = match desk.scratch.read(path) {
+        Ok(document) => document,
+        Err(detail) => {
+            replies::over(
+                live,
+                SiteOutcome::Refused(SiteRefusal::CannotLoadData(detail)),
+            );
+            return None;
+        }
+    };
+
+    let ours = match desk.neighbours.listed() {
+        Ok(ours) => ours,
+        Err(error) => {
+            replies::over(live, SiteOutcome::Refused(SiteRefusal::Token(error)));
+            return None;
+        }
+    };
+
+    Some(remembered(
+        live,
+        desk::consent_to_sign_and_save_with_chosen_document(desk, *request, document, ours, live),
+    ))
 }
 
 fn told_to_the_site(live: &LiveErrand, refusal: SiteRefusal) -> SiteRefusal {

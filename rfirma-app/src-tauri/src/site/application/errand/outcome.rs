@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::protocol::{
-    AfirmaUrl, Refusal, SignatureRound, SiteFilter, SiteVisibleSignature,
+    AfirmaUrl, Refusal, SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
 
@@ -158,6 +158,9 @@ pub struct LoadingConsent {
     pub starting_folder: Option<String>,
     /// Si la sede pide varios ficheros (`multiload=true`) o uno solo.
     pub multiple: bool,
+    /// Si este selector viene de `signandsave` sin `dat`, la petición que continúa con el
+    /// documento elegido; `None` cuando es un `load` corriente que contesta a la sede.
+    pub to_sign: Option<Box<SignAndSaveRequest>>,
 }
 
 /// Desenlace del trámite para la sede y para la ventana.

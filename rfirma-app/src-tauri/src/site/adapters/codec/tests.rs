@@ -67,15 +67,15 @@ fn a_sign_and_save_with_dat_is_what_the_site_wants() {
 }
 
 #[test]
-fn a_sign_and_save_without_dat_is_refused_like_a_sign_with_an_empty_document() {
+fn a_sign_and_save_without_dat_is_what_the_site_wants_too() {
     let request = V4Codec.decode(&an_operation(&format!(
         "afirma://signandsave?op=signandsave&cop=sign&idsession={CREDENTIAL}&format=PAdES&\
          algorithm=SHA256withRSA"
     )));
-    let SiteRequest::NotAttended(refusal) = request else {
-        panic!("sin 'dat' no hay nada que firmar: {request:?}");
+    let SiteRequest::SignAndSave(request) = request else {
+        panic!("sin 'dat' el documento queda por elegir, no se rechaza: {request:?}");
     };
-    assert!(refusal.answer().on_the_wire().starts_with("SAF_44"));
+    assert_eq!(request.document(), None);
 }
 
 #[test]

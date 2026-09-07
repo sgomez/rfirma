@@ -59,8 +59,15 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     live.keep_the_request(url.clone());
 
-    // `save` y `load` no miran certificados: se despachan antes de pedirlos, o un equipo sin
-    // certificados se lleva un rechazo de token en una operación que no los necesita.
+    // `save`, `load` y un `signandsave` sin documento no miran certificados: se despachan
+    // antes de pedirlos, o un equipo sin certificados se lleva un rechazo de token en una
+    // operación que todavía no los necesita.
+    if let SiteRequest::SignAndSave(request) = &operation {
+        if request.document().is_none() {
+            return consent_to_load_for_sign_and_save(request.clone());
+        }
+    }
+
     match operation {
         SiteRequest::Save(request) => return consent_to_save(request),
         SiteRequest::Load(request) => return consent_to_load(request),
@@ -108,7 +115,43 @@ fn consent_to_load(request: LoadRequest) -> ErrandStep {
         description: request.description().map(str::to_owned),
         starting_folder: request.starting_folder().map(str::to_owned),
         multiple: request.multiple(),
+        to_sign: None,
     })
+}
+
+/// Prepara el paso de carga cuando `signandsave` llega sin `dat`: el mismo selector que `load`,
+/// de un solo fichero, con las pistas propias de `signandsave` y la petición pendiente de
+/// documento (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
+fn consent_to_load_for_sign_and_save(request: SignAndSaveRequest) -> ErrandStep {
+    ErrandStep::Loading(LoadingConsent {
+        title: None,
+        extensions: request.load_extensions().to_vec(),
+        description: request.load_description().map(str::to_owned),
+        starting_folder: request.load_starting_folder().map(str::to_owned),
+        multiple: false,
+        to_sign: Some(Box::new(request)),
+    })
+}
+
+/// Continúa `signandsave` con el documento que la persona acaba de elegir en el selector: mismo
+/// veredicto de formato y mismas comprobaciones que si hubiera llegado en `dat`.
+pub fn consent_to_sign_and_save_with_chosen_document<
+    E: FilterEngine,
+    P: PolicyEngine,
+    N: Neighbours,
+>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    request: SignAndSaveRequest,
+    document: Vec<u8>,
+    ours: Vec<TokenCertificate>,
+    live: &LiveErrand,
+) -> ErrandStep {
+    let request = match request.with_chosen_document(document) {
+        Ok(request) => request,
+        Err(refusal) => return answering(live, SiteOutcome::RefusedByTheProtocol(refusal)),
+    };
+
+    consent_to_sign_and_save(desk, &request, ours, live)
 }
 
 /// Prepara el paso de consentimiento para una firma o cofirma de sede.

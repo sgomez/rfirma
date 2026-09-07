@@ -128,6 +128,56 @@ fn signing_and_saving_without_dat_leaves_the_document_to_be_chosen() {
 }
 
 #[test]
+fn signing_and_saving_without_dat_reads_the_selector_hints_from_properties() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA256withRSA&properties={}",
+        properties("filenameExts=pdf\nfilenameDescription=PDF\nfilenameCurrentDir=/home/persona\n")
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("dat es opcional") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.load_extensions(), ["pdf"]);
+    assert_eq!(request.load_description(), Some("PDF"));
+    assert_eq!(request.load_starting_folder(), Some("/home/persona"));
+}
+
+#[test]
+fn a_chosen_document_under_format_auto_must_still_be_a_pdf() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=auto&algorithm=SHA256withRSA"
+    ));
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("dat es opcional") else {
+        panic!("es un firmar y guardar");
+    };
+
+    let refusal = request
+        .with_chosen_document(b"<?xml version=\"1.0\"?><Facturae/>".to_vec())
+        .expect_err("un XML no es PAdES");
+    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+
+    let completed = request
+        .with_chosen_document(b"%PDF-1.7\n".to_vec())
+        .expect("un PDF si se admite");
+    assert_eq!(completed.document(), Some(b"%PDF-1.7\n".as_slice()));
+}
+
+#[test]
+fn a_chosen_document_with_pades_explicit_skips_the_format_check() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA256withRSA"
+    ));
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("dat es opcional") else {
+        panic!("es un firmar y guardar");
+    };
+
+    let completed = request
+        .with_chosen_document(b"lo que sea".to_vec())
+        .expect("con PAdES explicito el veredicto de formato no se vuelve a mirar aqui");
+    assert_eq!(completed.document(), Some(b"lo que sea".as_slice()));
+}
+
+#[test]
 fn signing_and_saving_reads_its_three_filename_save_properties() {
     let url = a_sign_and_save(
         SIGN,
