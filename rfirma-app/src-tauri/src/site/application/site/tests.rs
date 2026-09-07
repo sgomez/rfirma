@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 
 use super::*;
-use crate::site::domain::channel::{Shutdown, Situation};
-use crate::site::domain::protocol::{ChannelCredential, Parameter, SafCode};
+use crate::site::domain::channel::{ChannelLocation, Shutdown, Situation};
+use crate::site::domain::protocol::{ChannelCredential, NegotiatedCredential, Parameter, SafCode};
 use std::sync::Arc;
 
 fn a_codec() -> NegotiatedCodec {
@@ -12,7 +12,7 @@ fn a_codec() -> NegotiatedCodec {
 /// Transporte simulado con un cierre para pruebas.
 #[derive(Default)]
 struct ATransport {
-    asked: RefCell<Vec<(Vec<u16>, ChannelDuty)>>,
+    asked: RefCell<Vec<(ChannelLocation, ChannelDuty)>>,
     refuses: bool,
 }
 
@@ -24,21 +24,28 @@ impl ATransport {
         }
     }
 
-    fn open(&self, ports: &[u16], duty: ChannelDuty) -> Result<OpenChannel, ChannelError> {
-        self.asked.borrow_mut().push((ports.to_vec(), duty));
+    fn open(
+        &self,
+        location: &ChannelLocation,
+        duty: ChannelDuty,
+    ) -> Result<OpenChannel, ChannelError> {
+        self.asked.borrow_mut().push((location.clone(), duty));
         if self.refuses {
             return Err(ChannelError::new(
                 Situation::NoDrawnPortIsFree,
                 "todos ocupados",
             ));
         }
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba solo sortea puertos");
+        };
         Ok(OpenChannel::new(
             *ports.first().expect("se ata uno de los sorteados"),
             Shutdown::of(|| {}),
         ))
     }
 
-    fn asked_once(&self) -> (Vec<u16>, ChannelDuty) {
+    fn asked_once(&self) -> (ChannelLocation, ChannelDuty) {
         let asked = self.asked.borrow();
         assert_eq!(asked.len(), 1, "el transporte se usa una sola vez");
         asked[0].clone()
@@ -67,7 +74,7 @@ fn a_good_launch_opens_the_channel_on_one_of_the_drawn_ports() {
             "ports=54001,54002,54003&v=4&idsession={CREDENTIAL}"
         )),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -78,10 +85,10 @@ fn a_good_launch_opens_the_channel_on_one_of_the_drawn_ports() {
     assert_eq!(
         transport.asked_once(),
         (
-            vec![54001, 54002, 54003],
-            ChannelDuty::Serve(
+            ChannelLocation::Drawn(vec![54001, 54002, 54003]),
+            ChannelDuty::Serve(NegotiatedCredential::Required(
                 ChannelCredential::parse(CREDENTIAL).expect("la credencial es buena")
-            )
+            ))
         ),
         "el canal se cierra con la credencial que trajo la URL"
     );
@@ -94,7 +101,7 @@ fn a_refusal_is_answered_over_the_socket_when_the_site_drew_ports() {
     let attendance = attend_launch(
         &a_launch(&format!("ports=54001,54002&v=3&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -106,7 +113,7 @@ fn a_refusal_is_answered_over_the_socket_when_the_site_drew_ports() {
     assert_eq!(
         transport.asked_once(),
         (
-            vec![54001, 54002],
+            ChannelLocation::Drawn(vec![54001, 54002]),
             ChannelDuty::Refuse(WireAnswer::refused(SafCode::UnsupportedProcedure))
         ),
         "ese canal no sirve la conversacion: sólo contesta el codigo"
@@ -120,7 +127,7 @@ fn without_drawn_ports_the_refusal_is_only_shown_in_the_window() {
     let attendance = attend_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -138,7 +145,7 @@ fn a_malformed_credential_is_refused_over_the_socket() {
     let attendance = attend_launch(
         &a_launch("ports=54001&v=4&idsession=no-vale-esta"),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -158,7 +165,7 @@ fn something_that_is_not_a_protocol_url_never_reaches_the_transport() {
     let attendance = attend_launch(
         "https://sede.example/firmar",
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -173,7 +180,7 @@ fn a_good_launch_with_every_port_taken_has_no_channel_to_speak_through() {
     let attendance = attend_launch(
         &a_launch(&format!("ports=54001&v=4&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -190,7 +197,7 @@ fn a_refusal_that_cannot_be_answered_over_a_socket_falls_back_to_the_window() {
     let attendance = attend_launch(
         &a_launch(&format!("ports=54001&v=3&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
@@ -207,11 +214,14 @@ fn the_ports_that_reach_the_transport_are_the_ones_the_url_carried() {
     let _ = attend_launch(
         &a_launch(&format!("ports=54001,54002&v=3&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| transport.open(ports, duty),
+        &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
     );
 
-    let (ports, _) = transport.asked_once();
+    let (location, _) = transport.asked_once();
+    let ChannelLocation::Drawn(ports) = location else {
+        panic!("esta prueba sortea puertos: {location:?}");
+    };
     assert_eq!(ports, vec![54001, 54002]);
     assert!(
         !ports.contains(&crate::site::adapters::channel::THE_PORT_OF_THE_THIRD_PROTOCOL),

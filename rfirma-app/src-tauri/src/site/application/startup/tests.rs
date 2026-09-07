@@ -1,7 +1,9 @@
 use super::*;
 use crate::site::application::tests::InMemoryCaSlots;
 
-use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown, Situation};
+use crate::site::domain::channel::{
+    ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown, Situation,
+};
 use crate::site::domain::trust_error::TrustError;
 use std::path::Path;
 use std::sync::Mutex;
@@ -31,7 +33,11 @@ impl World {
             .clone()
     }
 
-    fn transport(&self, ports: &[u16], _duty: ChannelDuty) -> Result<OpenChannel, ChannelError> {
+    fn transport(
+        &self,
+        location: &ChannelLocation,
+        _duty: ChannelDuty,
+    ) -> Result<OpenChannel, ChannelError> {
         self.note("canal");
         if self.every_port_taken {
             return Err(ChannelError::new(
@@ -39,6 +45,9 @@ impl World {
                 "los tres puertos sorteados estan ocupados",
             ));
         }
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba sortea puertos: {location:?}");
+        };
         let port = *ports.first().expect("la sede sorteó puertos");
         Ok(OpenChannel::new(port, Shutdown::of(|| {})))
     }
@@ -120,7 +129,7 @@ fn starting_with(world: &World, store: &InMemoryCaSlots, invocation: &Invocation
             stores: world,
         },
         &a_codec(),
-        &|ports, duty| world.transport(ports, duty),
+        &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
     )
@@ -250,7 +259,7 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| world.transport(ports, duty),
+        &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
         LocalCaReach::NotAnObstacle,
@@ -275,7 +284,7 @@ fn a_second_invocation_never_touches_the_trust_stores() {
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
         &a_codec(),
-        &|ports, duty| world.transport(ports, duty),
+        &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
         LocalCaReach::NotAnObstacle,
@@ -353,7 +362,7 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
             stores: &world,
         },
         &a_codec(),
-        &|ports, duty| world.transport(ports, duty),
+        &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
     );

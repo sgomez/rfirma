@@ -13,7 +13,9 @@ pub mod visible;
 
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
-pub use launch::{drawn_ports, ChannelCredential, LaunchRequest, PROTOCOL_VERSION};
+pub use launch::{
+    drawn_ports, ChannelCredential, LaunchRequest, NegotiatedCredential, PROTOCOL_VERSION,
+};
 pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, SelectCertificate, SignRequest, SignatureRound, SiteOperation,

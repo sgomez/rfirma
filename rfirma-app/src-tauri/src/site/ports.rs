@@ -8,7 +8,7 @@ use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::BridgeError;
-use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::AfirmaUrl;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -41,22 +41,30 @@ pub type Inbox = Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>;
 
 /// Puerto de transporte para abrir canales de comunicación.
 pub trait Transport {
-    /// Abre un canal en los puertos indicados para el cometido especificado.
-    fn open(&self, ports: &[u16], duty: ChannelDuty) -> Result<OpenChannel, ChannelError>;
+    /// Abre un canal en la ubicación indicada para el cometido especificado.
+    fn open(
+        &self,
+        location: &ChannelLocation,
+        duty: ChannelDuty,
+    ) -> Result<OpenChannel, ChannelError>;
 }
 
 impl<F> Transport for F
 where
-    F: Fn(&[u16], ChannelDuty) -> Result<OpenChannel, ChannelError>,
+    F: Fn(&ChannelLocation, ChannelDuty) -> Result<OpenChannel, ChannelError>,
 {
-    fn open(&self, ports: &[u16], duty: ChannelDuty) -> Result<OpenChannel, ChannelError> {
-        self(ports, duty)
+    fn open(
+        &self,
+        location: &ChannelLocation,
+        duty: ChannelDuty,
+    ) -> Result<OpenChannel, ChannelError> {
+        self(location, duty)
     }
 }
 
 /// Referencia al transporte para los casos de uso.
 pub type ChannelTransport<'a> =
-    &'a dyn Fn(&[u16], ChannelDuty) -> Result<OpenChannel, ChannelError>;
+    &'a dyn Fn(&ChannelLocation, ChannelDuty) -> Result<OpenChannel, ChannelError>;
 
 /// Puerto de interacción con los almacenes NSS (ADR-0005).
 pub trait TrustStores {

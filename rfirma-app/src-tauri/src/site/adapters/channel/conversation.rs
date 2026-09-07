@@ -1,6 +1,8 @@
 //! Evaluación y respuesta a los mensajes del canal local (ADR-0005).
 
-use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, Parameter, SafCode, WireAnswer};
+use crate::site::domain::protocol::{
+    AfirmaUrl, ChannelMessage, NegotiatedCredential, Parameter, SafCode, WireAnswer,
+};
 
 use crate::site::domain::channel::ChannelDuty;
 
@@ -42,11 +44,13 @@ pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer 
     };
 
     let message = ChannelMessage::read(message);
-    if message.credential() != Some(credential.as_str()) {
-        return Answer::ReplyAndClose(
-            WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
-                .on_the_wire(),
-        );
+    if let NegotiatedCredential::Required(credential) = credential {
+        if message.credential() != Some(credential.as_str()) {
+            return Answer::ReplyAndClose(
+                WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
+                    .on_the_wire(),
+            );
+        }
     }
 
     match message {

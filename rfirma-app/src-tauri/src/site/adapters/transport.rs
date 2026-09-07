@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::site::adapters::channel;
 use crate::site::adapters::tls::{LocalCaStore, LocalServerCertificate};
-use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 
 use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
 
@@ -22,7 +22,11 @@ impl LoopbackWss {
 }
 
 impl Transport for LoopbackWss {
-    fn open(&self, ports: &[u16], duty: ChannelDuty) -> Result<OpenChannel, ChannelError> {
+    fn open(
+        &self,
+        location: &ChannelLocation,
+        duty: ChannelDuty,
+    ) -> Result<OpenChannel, ChannelError> {
         let unusable = |detail: String| {
             ChannelError::new(
                 crate::site::domain::channel::Situation::MaterialNotUsable,
@@ -47,6 +51,6 @@ impl Transport for LoopbackWss {
             inbox(url, ReplyHandle::of(move |text| reply.answer(text)));
         });
 
-        channel::open(ports, &certificate, duty, operations)
+        channel::open(location, &certificate, duty, operations)
     }
 }

@@ -26,7 +26,9 @@ use rfirma_lib::site::application::errand::{
 };
 use rfirma_lib::site::application::site::{attend_launch, Attendance};
 use rfirma_lib::site::domain::channel::Situation as ChannelSituation;
-use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown};
+use rfirma_lib::site::domain::channel::{
+    ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
+};
 use rfirma_lib::site::domain::protocol::{Refusal, SafCode, WireAnswer};
 
 fn a_codec() -> NegotiatedCodec {
@@ -51,9 +53,12 @@ const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 /// Transporte de prueba que registra el cometido con el que se le llamó.
 fn a_transport(
     duties: &std::cell::RefCell<Vec<ChannelDuty>>,
-) -> impl Fn(&[u16], ChannelDuty) -> Result<OpenChannel, ChannelError> + '_ {
-    move |ports: &[u16], duty: ChannelDuty| {
+) -> impl Fn(&ChannelLocation, ChannelDuty) -> Result<OpenChannel, ChannelError> + '_ {
+    move |location: &ChannelLocation, duty: ChannelDuty| {
         duties.borrow_mut().push(duty.clone());
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba sortea puertos: {location:?}");
+        };
         Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
     }
 }
@@ -226,7 +231,7 @@ fn the_dead_ends_write_nothing_on_the_wire() {
 
     let with_every_port_taken =
         format!("afirma://websocket?ports=54001&v=4&idsession={CREDENTIAL}");
-    let refuses_everything = |_: &[u16], _: ChannelDuty| {
+    let refuses_everything = |_: &ChannelLocation, _: ChannelDuty| {
         Err(ChannelError::new(
             ChannelSituation::NoDrawnPortIsFree,
             "el puerto sorteado esta ocupado",
