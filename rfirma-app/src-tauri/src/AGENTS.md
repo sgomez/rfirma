@@ -20,23 +20,20 @@ propio contexto y `domain/` de otros; `adapters/` importa lo que quiera del
 propio contexto, y los casos de uso de otro solo por su raíz, `<contexto>/mod.rs`.
 Lo vigila `tests/module_directions.rs`; una arista roja se mueve, no se anota.
 
-Cada contexto tiene su **raíz de composición** en `<contexto>/mod.rs` —
-`IdentityRoot`, `DocumentsRoot`, `DesktopRoot`, `SigningRoot`, `SiteRoot`—: sus
-adaptadores, su estado de proceso y sus puertos instanciados, más la fachada
-que usan los vecinos. `lib.rs` las construye en ese orden sobre la misma
-`Memory` y las registra con cinco `manage()`.
+Cada contexto tiene su **raíz de composición** en `<contexto>/mod.rs`: sus
+adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos.
 
 ## Lo que cuelga de la raíz
 
 | Módulo | Qué es |
 |---|---|
-| `lib.rs` | `roots()`, que construye las cinco raíces, y `run()`: complementos, órdenes por su ruta entera en `generate_handler!`, instancia única (ADR-0010) y el arranque, que obedece a `site/application/startup/`. `the_transport` compone el `wss` y el servidor intermedio en un solo cierre, elegido por la ubicación de canal. Sin pruebas propias. |
+| `lib.rs` | El armado de la aplicación: las cinco raíces, los complementos, el registro de órdenes, la instancia única (ADR-0010) y el arranque de `site/application/startup/`. Sin pruebas propias. |
 | `main.rs` | El binario. No hay nada dentro. |
-| `crossing.rs` | `WindowCrossing`, el rasgo de lo que cruza a la ventana, y `crossing!`, el macro que lo declara y deja su forma en un registro de `inventory`. De ahí salen los tipos del contrato y la guarda de rutas. Pruebas en `crossing/tests.rs`. |
+| `crossing.rs` | El rasgo `WindowCrossing` y el macro `crossing!`, con los que se declara todo lo que cruza a la ventana. Pruebas en `crossing/tests.rs`. |
 | `crossing/failure.rs` | `Failure`, lo que cruza cuando algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`. Pruebas en `crossing/failure/tests.rs`. |
-| `crossing/guards.rs` | Las guardas que ven todas las órdenes a la vez: la lista cerrada de órdenes, la guarda de rutas del ADR-0011, que todo lo que nombra una orden esté en el registro, y que toda orden que toque el portal sea `async`. Solo en pruebas. |
-| `memory_error.rs` | `MemoryError` y su `Situation` (ADR-0009): la memoria entre sesiones es una sola (ADR-0010) y los puertos de cuatro contextos hablan de ella, así que no es de ninguno. Pruebas en `memory_error/tests.rs`. |
-| `compile_fail.rs` | Lo que ya no compila: un doctest `compile_fail` por cada invariante que sostiene el sistema de tipos (`SealedPreSignature`, `CompletedCycle`, `SafCode`, `WindowCrossing`), y uno positivo por las mismas rutas. |
+| `crossing/guards.rs` | Las guardas que ven todas las órdenes a la vez, entre ellas la de rutas del ADR-0011. Solo en pruebas. |
+| `memory_error.rs` | `MemoryError` y su `Situation` (ADR-0009): la memoria entre sesiones es una sola (ADR-0010) y no es de ningún contexto. Pruebas en `memory_error/tests.rs`. |
+| `compile_fail.rs` | Lo que no debe compilar: un doctest `compile_fail` por invariante que sostiene el sistema de tipos, y uno positivo por la misma ruta. |
 
 `tests/agents_map_is_complete.rs` exige que todo `.rs` versionado bajo `src/`
 esté nombrado aquí o en el mapa de su contexto: **un módulo nuevo se añade en la
@@ -46,13 +43,11 @@ los andamios de grada A que comparten los contextos viven en
 
 ## Al añadir o cambiar una orden de Tauri
 
-El cuerpo va en el `adapters/tauri.rs` de su contexto y lo que decide en
-`application/`: la orden saca del `State` su raíz, resuelve las asas por las
-fachadas, llama al caso de uso con dominio o `&dyn Puerto` y traduce el
-resultado. `just contract` genera el contrato de las fuentes: no hay nada que
-actualizar, pero un `#[tauri::command]` sin `async` sale como bloqueante, y un
-tipo fuera de `crossing!` no cruza. Una prueba nueva ataca al caso de uso, no a
-la orden.
+El cuerpo va en el `adapters/tauri.rs` de su contexto y lo que decide, en
+`application/`. `just contract` genera el contrato de las fuentes, así que no
+hay nada que actualizar; pero un `#[tauri::command]` sin `async` sale como
+bloqueante, y un tipo fuera de `crossing!` no cruza. Una prueba nueva ataca al
+caso de uso, no a la orden.
 
 ## Las pruebas que se leen a sí mismas
 
