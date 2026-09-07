@@ -60,6 +60,34 @@ fn with_a_key_each_field_is_ciphered_on_its_own_and_recoverable() {
 }
 
 #[test]
+fn without_a_key_a_batch_travels_in_plain_base64_per_field() {
+    let outcome = SiteOutcome::Batch {
+        result: b"<xml/>".to_vec(),
+        signer_der: Some(vec![0xfb, 0xff, 0xbf]),
+    };
+
+    assert_eq!(RelayCodec::new(None).encode(&outcome), "PHhtbC8+|+/+/");
+}
+
+#[test]
+fn with_a_key_each_batch_field_is_ciphered_on_its_own_and_recoverable() {
+    let key = a_key();
+    let outcome = SiteOutcome::Batch {
+        result: b"<xml/>".to_vec(),
+        signer_der: Some(vec![0xfb, 0xff, 0xbf]),
+    };
+
+    let wire = RelayCodec::new(Some(key.clone())).encode(&outcome);
+    let (result, signer) = wire.split_once(RESULT_SEPARATOR).expect("dos campos");
+
+    assert_eq!(decrypt(result, Some(&key)).expect("descifra"), b"<xml/>");
+    assert_eq!(
+        decrypt(signer, Some(&key)).expect("descifra"),
+        vec![0xfb, 0xff, 0xbf]
+    );
+}
+
+#[test]
 fn a_save_goes_out_as_a_plain_ok_never_ciphered() {
     let key = a_key();
 

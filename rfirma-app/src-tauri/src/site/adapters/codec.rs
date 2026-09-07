@@ -60,6 +60,14 @@ impl ProtocolCodec for V4Codec {
                 WireAnswer::refused(frontier::code_of(refusal)).on_the_wire()
             }
             SiteOutcome::RefusedByTheProtocol(refusal) => refusal.answer().on_the_wire(),
+            SiteOutcome::Batch { result, signer_der } => match signer_der {
+                Some(signer_der) => format!(
+                    "{}{RESULT_SEPARATOR}{}",
+                    STANDARD.encode(result),
+                    STANDARD.encode(signer_der)
+                ),
+                None => STANDARD.encode(result),
+            },
         }
     }
 }

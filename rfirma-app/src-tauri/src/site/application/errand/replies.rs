@@ -73,6 +73,15 @@ pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteO
     )
 }
 
+/// Caso de uso: la persona entrega el resultado del lote remoto tal cual llegó del postsigner.
+pub fn batch_handed_over(
+    live: &LiveErrand,
+    result: Vec<u8>,
+    signer_der: Option<Vec<u8>>,
+) -> SiteOutcome {
+    over(live, SiteOutcome::Batch { result, signer_der })
+}
+
 /// Caso de uso: la firma falla y se notifica el rechazo correspondiente a la sede.
 pub fn the_signature_did_not_come_out(live: &LiveErrand, refusal: SiteRefusal) -> SiteOutcome {
     over(live, SiteOutcome::Refused(refusal))

@@ -110,6 +110,28 @@ fn a_load_goes_out_as_name_and_standard_base64_joined_by_a_bar() {
 }
 
 #[test]
+fn a_batch_without_a_certificate_goes_out_as_plain_base64_of_the_result() {
+    assert_eq!(
+        V4Codec.encode(&SiteOutcome::Batch {
+            result: b"<xml/>".to_vec(),
+            signer_der: None,
+        }),
+        "PHhtbC8+"
+    );
+}
+
+#[test]
+fn a_batch_with_a_certificate_appends_its_standard_base64_behind_a_bar() {
+    assert_eq!(
+        V4Codec.encode(&SiteOutcome::Batch {
+            result: b"<xml/>".to_vec(),
+            signer_der: Some(vec![0xfb, 0xff, 0xbf]),
+        }),
+        "PHhtbC8+|+/+/"
+    );
+}
+
+#[test]
 fn the_cancellation_and_the_refusals_go_out_as_the_catalogue_writes_them() {
     assert_eq!(V4Codec.encode(&SiteOutcome::Cancelled), "CANCEL");
     let refused = V4Codec.encode(&SiteOutcome::Refused(SiteRefusal::ScratchUnwritable(

@@ -185,6 +185,14 @@ pub enum SiteOutcome {
     Refused(SiteRefusal),
     /// Rechazo directo del protocolo.
     RefusedByTheProtocol(Refusal),
+    /// Resultado del lote remoto tal cual llegó del postsigner (JSON o XML), con el DER del
+    /// firmante cuando la sede pidió `needcert`.
+    Batch {
+        /// El resultado del postsigner, sin tocar.
+        result: Vec<u8>,
+        /// El DER del firmante, presente solo cuando la sede pidió `needcert`.
+        signer_der: Option<Vec<u8>>,
+    },
 }
 
 impl SiteOutcome {

@@ -63,6 +63,14 @@ impl ProtocolCodec for RelayCodec {
                 WireAnswer::refused(frontier::code_of(refusal)).on_the_wire()
             }
             SiteOutcome::RefusedByTheProtocol(refusal) => refusal.answer().on_the_wire(),
+            SiteOutcome::Batch { result, signer_der } => match signer_der {
+                Some(signer_der) => format!(
+                    "{}{RESULT_SEPARATOR}{}",
+                    self.on_the_wire(result),
+                    self.on_the_wire(signer_der)
+                ),
+                None => self.on_the_wire(result),
+            },
         }
     }
 }
