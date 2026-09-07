@@ -25,13 +25,25 @@ está sobre la mesa, y **ninguna CA pública puede emitir para `127.0.0.1`**: el
 Forum lo prohíbe desde el 11 de noviembre de 2015 por ser IP reservada, y los existentes
 debían revocarse antes del 1 de octubre de 2016. La CA local es obligatoria.
 
-**El puerto sí es variable, y no lo elegimos nosotros.** Una redacción anterior de este ADR
-decía `127.0.0.1:63117`, y es falso para el transporte vigente: la sede **sortea tres puertos**
-del rango efímero y los manda en `afirma://websocket?ports=…`; rfirma se queda con el primero
-que abra. El `63117` es el puerto fijo del protocolo v3, que no es el camino de este hito.
-Medido en el [#309](https://github.com/sgomez/rfirma/issues/309). Que el puerto cambie de un
-trámite a otro **no afecta al permiso de red local**: la concesión del navegador persiste por
-*(origen de la sede, espacio de direcciones)*, no por IP y puerto.
+**El puerto es variable, salvo cuando la sede habla el protocolo 3.** La sede que manda
+`afirma://websocket?ports=…&v=4` **sortea tres puertos** del rango efímero, y rfirma se queda
+con el primero que abra: nunca el `63117`. La sede que manda `afirma://websocket?v=3`, sin
+`ports`, no sortea nada: rfirma ata el `63117` fijo, tal cual. Y si una sede manda `v=3` **con**
+`ports` —una forma que el protocolo 3 no contempla, pero que la URL no impide escribir—, los
+puertos se ignoran: el `63117` fijo es del protocolo, no de la ausencia de `ports` en la
+invocación concreta. «Nunca el `63117`» era la regla completa; pasa a ser «nunca el `63117`
+**cuando la sede sorteó puertos hablando el protocolo 4**». Medido en el
+[#309](https://github.com/sgomez/rfirma/issues/309) y en el
+[#466](https://github.com/sgomez/rfirma/issues/466). Que el puerto cambie de un trámite a otro
+**no afecta al permiso de red local**: la concesión del navegador persiste por *(origen de la
+sede, espacio de direcciones)*, no por IP y puerto.
+
+**La credencial de canal es opcional, no ausente.** El protocolo 4 exige `idsession` en la
+invocación de arranque y en cada mensaje posterior; el protocolo 3 no lo exige si la sede no lo
+mandó —es lo único que el protocolo 3 relaja respecto al 4—. Un `idsession` que llega mal
+formado se rechaza en los dos protocolos: nunca se abre un canal con una credencial a medio
+leer. § *Considered Options* recoge por qué la regla anterior —exigirla siempre— dejó de ser
+cierta.
 
 **La v0.4 decide esto y no implementa nada; el código va con el servidor del protocolo, que
 es la v0.5.** Instalar una raíz de confianza en el navegador de alguien para un servidor que
@@ -347,6 +359,15 @@ loopback», que son remedios opuestos— es de la v0.5.
   empezar», no «continuar».
 - **Decir «la CA no está en ningún almacén» a mitad de un trámite.** No se ha abierto ningún
   perfil, así que nadie lo ha medido; se calla.
+- **Exigir siempre `idsession`, también en el protocolo 3.** Era la decisión anterior, y
+  coherente con «un canal sin credencial es un canal sin cerradura» mientras rfirma solo
+  hablaba el protocolo 4. Se abandona porque el original abre igualmente un canal sin
+  credencial cuando la sede habla el protocolo 3 y no la manda —es la única relajación real
+  entre los dos protocolos, medida en el
+  [#466](https://github.com/sgomez/rfirma/issues/466)—, y exigirla ahí habría rechazado
+  invocaciones que el propio `autoscript.js` construye a propósito. La cerradura no
+  desaparece: sigue estando siempre que la sede la trajo, y un valor mal formado se sigue
+  rechazando en los dos protocolos.
 
 ## Consequences
 

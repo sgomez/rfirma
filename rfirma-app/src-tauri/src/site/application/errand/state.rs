@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::site::domain::protocol::{AfirmaUrl, ChannelCredential, SiteFilter};
+use crate::site::domain::protocol::{AfirmaUrl, NegotiatedCredential, SiteFilter};
 
 use super::outcome::{Moment, ProtocolCodec, SiteOutcome};
 use crate::site::ports::{ReplyHandle, Scratch};
@@ -32,7 +32,7 @@ pub struct LiveErrand {
 /// Datos identificativos y de conexión de un trámite en curso.
 #[derive(Clone)]
 pub struct Errand {
-    credential: ChannelCredential,
+    credential: NegotiatedCredential,
     port: u16,
     codec: NegotiatedCodec,
 }
@@ -48,7 +48,7 @@ impl std::fmt::Debug for Errand {
 
 impl Errand {
     /// Construye un trámite con la credencial, puerto y códec indicados.
-    pub fn of(credential: ChannelCredential, port: u16, codec: NegotiatedCodec) -> Self {
+    pub fn of(credential: NegotiatedCredential, port: u16, codec: NegotiatedCodec) -> Self {
         Self {
             credential,
             port,
@@ -56,14 +56,19 @@ impl Errand {
         }
     }
 
-    /// Credencial con la que se cerró el canal.
-    pub fn credential(&self) -> &ChannelCredential {
+    /// Credencial con la que se cerró el canal, si la sede la exigió.
+    pub fn credential(&self) -> &NegotiatedCredential {
         &self.credential
     }
 
     /// Puerto en el que quedó escuchando el servidor.
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    /// Códec negociado para este trámite.
+    pub fn codec(&self) -> &NegotiatedCodec {
+        &self.codec
     }
 }
 

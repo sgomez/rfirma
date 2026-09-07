@@ -4,8 +4,7 @@ use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 
 use crate::site::domain::channel::{ChannelError, ChannelLocation, Situation};
 
-/// Puerto fijo del protocolo 3, nunca atado cuando la sede sorteó puertos.
-pub const THE_PORT_OF_THE_THIRD_PROTOCOL: u16 = 63117;
+pub use crate::site::domain::protocol::THE_PORT_OF_THE_THIRD_PROTOCOL;
 
 /// Ata la ubicación indicada: el primero de los puertos sorteados que esté libre, o el puerto
 /// fijo tal cual (ADR-0005).

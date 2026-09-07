@@ -1,14 +1,35 @@
-//! Invocación de sede por esquema de URL y negociación de canal (ADR-0005, ADR-0017).
+//! Invocación de sede por esquema de URL y negociación de canal y códec (ADR-0005, ADR-0017).
 
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::protocol::{
-    drawn_ports, AfirmaUrl, ChannelCredential, LaunchRequest, NegotiatedCredential, Refusal,
-    RefusalSituation, SafCode, WireAnswer,
+    location_for_a_refusal, AfirmaUrl, LaunchRequest, NegotiatedCredential, Refusal,
+    RefusalSituation, SafCode, WireAnswer, THIRD_PROTOCOL_VERSION,
 };
 
 use super::errand::{Errand, LiveErrand, NegotiatedCodec};
 
 pub use super::errand::ChannelTransport;
+
+/// La tabla de adaptadores que la raíz de composición entrega a la negociación: el códec que
+/// habla cada forma de invocación de arranque. Un verbo o un transporte nuevos son una fila más.
+#[derive(Clone)]
+pub struct CodecTable {
+    /// Códec de la versión 4: puertos sorteados por la sede.
+    pub v4: NegotiatedCodec,
+    /// Códec de la versión 3: puerto fijo, sin sorteo.
+    pub v3: NegotiatedCodec,
+}
+
+impl CodecTable {
+    /// El códec que habla la versión de protocolo que la sede declaró.
+    fn codec_for(&self, version: i64) -> NegotiatedCodec {
+        if version == THIRD_PROTOCOL_VERSION {
+            return self.v3.clone();
+        }
+
+        self.v4.clone()
+    }
+}
 
 /// Resultado de la negociación de protocolo y canal para una invocación.
 pub struct Negotiated {
@@ -16,16 +37,16 @@ pub struct Negotiated {
     pub codec: NegotiatedCodec,
     /// Dónde escuchará el canal.
     pub location: ChannelLocation,
-    /// Credencial para autenticar la sesión.
-    pub credential: ChannelCredential,
+    /// Credencial negociada para autenticar la sesión, si la sede la exige.
+    pub credential: NegotiatedCredential,
 }
 
-/// Negocia el protocolo y parámetros de canal a partir de la URL de invocación.
-pub fn negotiate(url: &AfirmaUrl, codec: &NegotiatedCodec) -> Result<Negotiated, Refusal> {
+/// Negocia el códec y los parámetros de canal a partir de la forma de la URL de invocación.
+pub fn negotiate(url: &AfirmaUrl, codecs: &CodecTable) -> Result<Negotiated, Refusal> {
     let request = LaunchRequest::from_url(url)?;
     Ok(Negotiated {
-        codec: codec.clone(),
-        location: ChannelLocation::Drawn(request.ports().to_vec()),
+        codec: codecs.codec_for(request.version()),
+        location: request.location().clone(),
         credential: request.credential().clone(),
     })
 }
@@ -56,7 +77,7 @@ pub enum Attendance {
 /// Atiende la invocación de arranque recibida por el protocolo afirma://.
 pub fn attend_launch(
     url: &str,
-    codec: &NegotiatedCodec,
+    codecs: &CodecTable,
     transport: ChannelTransport<'_>,
     live: &LiveErrand,
 ) -> Attendance {
@@ -65,11 +86,9 @@ pub fn attend_launch(
         Err(refusal) => return Attendance::RefusingInTheWindow(refusal),
     };
 
-    match negotiate(&url, codec) {
+    match negotiate(&url, codecs) {
         Ok(negotiated) => {
-            let duty = ChannelDuty::Serve(NegotiatedCredential::Required(
-                negotiated.credential.clone(),
-            ));
+            let duty = ChannelDuty::Serve(negotiated.credential.clone());
             match transport(&negotiated.location, duty) {
                 Ok(channel) => {
                     let errand =
@@ -97,12 +116,10 @@ pub fn attend_launch(
 }
 
 fn refuse(url: &AfirmaUrl, refusal: Refusal, transport: ChannelTransport<'_>) -> Attendance {
-    let ports = drawn_ports(url);
-    if ports.is_empty() {
+    let Some(location) = location_for_a_refusal(url) else {
         return Attendance::RefusingInTheWindow(refusal);
-    }
+    };
 
-    let location = ChannelLocation::Drawn(ports);
     match transport(&location, ChannelDuty::Refuse(refusal.answer())) {
         Ok(channel) => Attendance::RefusingOverTheChannel {
             channel,

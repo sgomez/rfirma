@@ -9,8 +9,8 @@ use rfirma_lib::site::adapters::channel::{
 };
 use rfirma_lib::site::adapters::codec::V4Codec;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
-use rfirma_lib::site::application::errand::{LiveErrand, NegotiatedCodec};
-use rfirma_lib::site::application::site::Attendance;
+use rfirma_lib::site::application::errand::LiveErrand;
+use rfirma_lib::site::application::site::{Attendance, CodecTable};
 use rfirma_lib::site::application::startup::{attend_site_launch, LocalCaReach};
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
@@ -218,9 +218,9 @@ async fn an_echo_with_another_credential_is_refused_and_the_channel_closes() {
 #[tokio::test]
 async fn a_launch_with_an_unsupported_version_is_refused_over_the_socket() {
     let refusal = LaunchRequest::parse(&format!(
-        "afirma://websocket?ports=0&v=3&idsession={CREDENTIAL}"
+        "afirma://websocket?ports=0&v=99&idsession={CREDENTIAL}"
     ))
-    .expect_err("la version 3 no se habla aqui");
+    .expect_err("la version 99 no se habla aqui");
     assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
 
     let canal = AChannel::serving(ChannelDuty::Refuse(refusal.answer())).await;
@@ -328,7 +328,10 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
 
     let attendance = attend_site_launch(
         &url,
-        &(std::sync::Arc::new(V4Codec) as NegotiatedCodec),
+        &CodecTable {
+            v4: std::sync::Arc::new(V4Codec),
+            v3: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v3::V3Codec),
+        },
         &|ports, duty| {
             let listener = bind_first_free(ports)?;
             tokio::task::block_in_place(|| {

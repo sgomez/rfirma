@@ -10,8 +10,8 @@ use crate::site::ports::{LocalCaSlots, TrustStores};
 
 use crate::site::domain::protocol::Refusal;
 
-use super::errand::{Errand, LiveErrand, Moment, NegotiatedCodec, NoChannel};
-use super::site::{self, Attendance, ChannelTransport};
+use super::errand::{Errand, LiveErrand, Moment, NoChannel};
+use super::site::{self, Attendance, ChannelTransport, CodecTable};
 use super::trust;
 
 pub use channel::{hold_the_channel, HeldChannel};
@@ -82,7 +82,7 @@ pub enum Opening {
 pub fn attend_startup(
     site_launch: Option<&str>,
     trust: TrustAtStartup<'_>,
-    codec: &NegotiatedCodec,
+    codecs: &CodecTable,
     transport: ChannelTransport<'_>,
     window: SiteWindowOpener<'_>,
     live: &LiveErrand,
@@ -99,7 +99,7 @@ pub fn attend_startup(
     Startup {
         said,
         opening: Opening::TheSiteErrand(attend_site_launch(
-            url, codec, transport, window, live, local_ca,
+            url, codecs, transport, window, live, local_ca,
         )),
     }
 }
@@ -107,13 +107,13 @@ pub fn attend_startup(
 /// Atiende una invocación de sede y abre la ventana asociada según el resultado.
 pub fn attend_site_launch(
     url: &str,
-    codec: &NegotiatedCodec,
+    codecs: &CodecTable,
     transport: ChannelTransport<'_>,
     window: SiteWindowOpener<'_>,
     live: &LiveErrand,
     local_ca: LocalCaReach,
 ) -> Attendance {
-    let attendance = site::attend_launch(url, codec, transport, live);
+    let attendance = site::attend_launch(url, codecs, transport, live);
 
     match &attendance {
         Attendance::Serving { errand, .. } => match local_ca {

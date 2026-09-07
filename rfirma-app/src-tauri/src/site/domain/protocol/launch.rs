@@ -1,4 +1,6 @@
-//! La invocación de arranque: puertos, versión de protocolo y credencial de canal.
+//! La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial.
+
+use crate::site::domain::channel::ChannelLocation;
 
 use super::codes::{Parameter, SafCode};
 use super::refusal::{Refusal, RefusalSituation};
@@ -7,10 +9,16 @@ use super::url::AfirmaUrl;
 /// El verbo de la invocación de arranque, y el único que abre canal.
 pub const LAUNCH_VERB: &str = "websocket";
 
-/// La versión de protocolo que se habla, y la única que se acepta.
+/// La versión de protocolo que sortea puertos, la que manda el cliente publicado.
 pub const PROTOCOL_VERSION: i64 = 4;
 
+/// La versión de protocolo sin `ports`, atendida en el puerto fijo.
+pub const THIRD_PROTOCOL_VERSION: i64 = 3;
+
 const VERSION_WHEN_ABSENT: i64 = 1;
+
+/// Puerto fijo del protocolo 3, nunca atado cuando la sede sorteó puertos (ADR-0005).
+pub const THE_PORT_OF_THE_THIRD_PROTOCOL: u16 = 63117;
 
 /// La credencial del canal.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,8 +66,9 @@ pub enum NegotiatedCredential {
 /// Lo que pide una invocación de arranque, ya leída.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchRequest {
-    ports: Vec<u16>,
-    credential: ChannelCredential,
+    version: i64,
+    location: ChannelLocation,
+    credential: NegotiatedCredential,
 }
 
 impl LaunchRequest {
@@ -78,22 +87,30 @@ impl LaunchRequest {
             )));
         }
 
-        check_protocol_version(url.parameter("v"))?;
+        let version = check_protocol_version(url.parameter("v"))?;
+        let location = location_of(version, url.parameter("ports"))?;
+        let credential = credential_of(version, url.parameter("idsession"))?;
 
-        let ports = parse_ports(url.parameter("ports"))?;
-        let credential = ChannelCredential::parse(url.parameter("idsession").unwrap_or_default())?;
-
-        Ok(Self { ports, credential })
+        Ok(Self {
+            version,
+            location,
+            credential,
+        })
     }
 
-    /// Los puertos sorteados por la sede, en el orden en que los mandó: se
-    /// prueban de uno en uno hasta que alguno abra.
-    pub fn ports(&self) -> &[u16] {
-        &self.ports
+    /// La versión de protocolo que declaró la sede, ya validada.
+    pub fn version(&self) -> i64 {
+        self.version
     }
 
-    /// La credencial que cerrará el canal.
-    pub fn credential(&self) -> &ChannelCredential {
+    /// Dónde escuchará el canal: los puertos sorteados por la sede, o el puerto fijo del
+    /// protocolo 3.
+    pub fn location(&self) -> &ChannelLocation {
+        &self.location
+    }
+
+    /// La credencial que cerrará el canal, si la sede la exige.
+    pub fn credential(&self) -> &NegotiatedCredential {
         &self.credential
     }
 }
@@ -103,18 +120,54 @@ pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
     parse_ports(url.parameter("ports")).unwrap_or_default()
 }
 
-fn check_protocol_version(declared: Option<&str>) -> Result<(), Refusal> {
-    let version = declared
-        .and_then(|value| value.trim().parse::<i64>().ok())
-        .unwrap_or(VERSION_WHEN_ABSENT);
+/// Dónde contestaría un rechazo a esta URL, si se puede determinar sin conocer si la invocación
+/// entera vale: por los puertos que trajo, o por el puerto fijo si declaró la versión 3.
+pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
+    let ports = drawn_ports(url);
+    if !ports.is_empty() {
+        return Some(ChannelLocation::Drawn(ports));
+    }
 
-    if version == PROTOCOL_VERSION {
-        return Ok(());
+    if declared_version(url.parameter("v")) == THIRD_PROTOCOL_VERSION {
+        return Some(ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL));
+    }
+
+    None
+}
+
+fn location_of(version: i64, ports: Option<&str>) -> Result<ChannelLocation, Refusal> {
+    if version == THIRD_PROTOCOL_VERSION {
+        return Ok(ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL));
+    }
+
+    Ok(ChannelLocation::Drawn(parse_ports(ports)?))
+}
+
+fn credential_of(version: i64, idsession: Option<&str>) -> Result<NegotiatedCredential, Refusal> {
+    match idsession.filter(|value| !value.is_empty()) {
+        Some(value) => ChannelCredential::parse(value).map(NegotiatedCredential::Required),
+        None if version == THIRD_PROTOCOL_VERSION => Ok(NegotiatedCredential::Absent),
+        None => ChannelCredential::parse("").map(NegotiatedCredential::Required),
+    }
+}
+
+/// La versión que la sede declaró en `v`, o la que se asume cuando no la trae.
+fn declared_version(declared: Option<&str>) -> i64 {
+    declared
+        .and_then(|value| value.trim().parse::<i64>().ok())
+        .unwrap_or(VERSION_WHEN_ABSENT)
+}
+
+fn check_protocol_version(declared: Option<&str>) -> Result<i64, Refusal> {
+    let version = declared_version(declared);
+
+    if version == PROTOCOL_VERSION || version == THIRD_PROTOCOL_VERSION {
+        return Ok(version);
     }
 
     Err(Refusal::new(
         SafCode::UnsupportedProcedure,
-        format!("la sede declara la version de protocolo {version} y aqui se habla la {PROTOCOL_VERSION}"),
+        format!("la sede declara la version de protocolo {version} y aqui se hablan la {THIRD_PROTOCOL_VERSION} y la {PROTOCOL_VERSION}"),
     )
     .because(RefusalSituation::UnsupportedProtocolVersion))
 }
@@ -123,8 +176,8 @@ fn parse_ports(declared: Option<&str>) -> Result<Vec<u16>, Refusal> {
     let Some(declared) = declared.filter(|value| !value.is_empty()) else {
         return Err(Refusal::about(
             Parameter::Ports,
-            "la invocacion no trae puertos ('ports'), y el camino sin puertos del original es el \
-             del protocolo 3",
+            "la invocacion no trae puertos ('ports'), y el camino sin puertos es el del \
+             protocolo 3",
         ));
     };
 
