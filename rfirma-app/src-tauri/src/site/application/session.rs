@@ -7,6 +7,7 @@ use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::Refusal as Inadmissible;
 use crate::site::application::filtering;
+use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::protocol::SiteFilter;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{Certificates, FilterEngine, SiteSigning, SiteSigningRequest};
@@ -36,6 +37,10 @@ pub enum SiteRefusal {
     CannotLoadData(String),
     /// La firma no ha salido, y quien la hizo ya dijo con qué código y con qué vista.
     Signing(SigningRefusal),
+    /// El lote remoto no se ha podido completar: alcance de los servlets o forma de su respuesta.
+    Batch(BatchError),
+    /// La firma del `PRE` de una firma del lote remoto ha fallado.
+    BatchSigningFailed(SigningRefusal),
 }
 
 impl From<SigningRefusal> for SiteRefusal {

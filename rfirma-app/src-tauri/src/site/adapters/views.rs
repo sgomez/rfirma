@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::crossing::crossing;
 
 use crate::site::application::errand::{Moment, NoCertificate, NoChannel};
+use crate::site::domain::batch_error::Situation as BatchSituation;
 use crate::site::domain::protocol::{Refusal, RefusalSituation, SignatureRound};
 
 use crate::identity::adapters::views::CertificateView;
@@ -257,6 +258,16 @@ crossing! {
         MissingFormat,
         /// Ya existe otro trámite en curso.
         ErrandInFlight,
+        /// El servlet de prefirma del lote remoto no respondió.
+        BatchPresignerUnreachable,
+        /// El servlet de postfirma del lote remoto no respondió.
+        BatchPostsignerUnreachable,
+        /// La respuesta de prefirma del lote remoto no tiene la forma esperada.
+        BatchInvalidPresignResponse,
+        /// La respuesta de postfirma del lote remoto no tiene la forma esperada.
+        BatchInvalidPostsignResponse,
+        /// La firma del `PRE` de una firma del lote remoto ha fallado.
+        BatchSigningFailed,
         /// Situación de rechazo no clasificada.
         Unknown,
     }
@@ -271,6 +282,17 @@ impl From<RefusalSituation> for RefusalSituationView {
             RefusalSituation::MissingFormat => Self::MissingFormat,
             RefusalSituation::ErrandInFlight => Self::ErrandInFlight,
             RefusalSituation::Unknown => Self::Unknown,
+        }
+    }
+}
+
+impl From<BatchSituation> for RefusalSituationView {
+    fn from(situation: BatchSituation) -> Self {
+        match situation {
+            BatchSituation::PresignerUnreachable => Self::BatchPresignerUnreachable,
+            BatchSituation::PostsignerUnreachable => Self::BatchPostsignerUnreachable,
+            BatchSituation::InvalidPresignResponse => Self::BatchInvalidPresignResponse,
+            BatchSituation::InvalidPostsignResponse => Self::BatchInvalidPostsignResponse,
         }
     }
 }

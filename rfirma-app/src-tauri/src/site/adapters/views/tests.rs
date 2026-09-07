@@ -1,5 +1,8 @@
 use super::{Moment, SignatureRound, SignatureRoundView};
-use super::{NoCertificateView, NoChannelView, RefusalSituation, SiteErrandView};
+use super::{
+    NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
+};
+use crate::site::domain::batch_error::Situation as BatchSituation;
 
 #[test]
 fn the_dead_ends_cross_named_and_never_written_out() {
@@ -90,4 +93,28 @@ fn the_round_crosses_named_as_the_site_asked_for_it() {
         serde_json::to_value(&view).expect("serializa")["stage"]["round"],
         serde_json::to_value(SignatureRoundView::Cosign).expect("serializa")
     );
+}
+
+#[test]
+fn each_batch_situation_crosses_as_its_own_view() {
+    for (situation, expected) in [
+        (
+            BatchSituation::PresignerUnreachable,
+            RefusalSituationView::BatchPresignerUnreachable,
+        ),
+        (
+            BatchSituation::PostsignerUnreachable,
+            RefusalSituationView::BatchPostsignerUnreachable,
+        ),
+        (
+            BatchSituation::InvalidPresignResponse,
+            RefusalSituationView::BatchInvalidPresignResponse,
+        ),
+        (
+            BatchSituation::InvalidPostsignResponse,
+            RefusalSituationView::BatchInvalidPostsignResponse,
+        ),
+    ] {
+        assert_eq!(RefusalSituationView::from(situation), expected);
+    }
 }
