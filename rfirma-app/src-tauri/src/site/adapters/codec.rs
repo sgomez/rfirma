@@ -3,7 +3,9 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use crate::site::domain::protocol::{read_operation, AfirmaUrl, SiteOperation, WireAnswer};
+use crate::site::domain::protocol::{
+    read_operation, AfirmaUrl, Refusal, SafCode, SiteOperation, WireAnswer,
+};
 
 use crate::site::adapters::frontier;
 use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
@@ -26,6 +28,12 @@ impl ProtocolCodec for V4Codec {
             Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
             Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
             Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
+            // El lote remoto se compone en el ticket del caso de uso (#481 solo
+            // lo lee): hasta entonces, un lote leído sin componer es "no atendido".
+            Ok(SiteOperation::Batch(_)) => SiteRequest::NotAttended(Refusal::new(
+                SafCode::UnsupportedOperation,
+                "el lote remoto todavia no se compone",
+            )),
             Err(refusal) => SiteRequest::NotAttended(refusal),
         }
     }

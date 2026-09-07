@@ -25,11 +25,15 @@ pub enum Parameter {
     Format,
     /// `algorithm`: el algoritmo con el que se firma.
     Algorithm,
+    /// `batchpresignerurl`: la URL del servlet de prefirma del lote remoto.
+    BatchPresignerUrl,
+    /// `batchpostsignerurl`: la URL del servlet de postfirma del lote remoto.
+    BatchPostsignerUrl,
 }
 
 impl Parameter {
     /// Todos, para las pruebas de totalidad.
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 10] = [
         Self::Ports,
         Self::ProtocolVersion,
         Self::IdSession,
@@ -38,6 +42,8 @@ impl Parameter {
         Self::Properties,
         Self::Format,
         Self::Algorithm,
+        Self::BatchPresignerUrl,
+        Self::BatchPostsignerUrl,
     ];
 
     /// El nombre con el que viaja en la URL del protocolo.
@@ -51,6 +57,8 @@ impl Parameter {
             Self::Properties => "properties",
             Self::Format => "format",
             Self::Algorithm => "algorithm",
+            Self::BatchPresignerUrl => "batchpresignerurl",
+            Self::BatchPostsignerUrl => "batchpostsignerurl",
         }
     }
 }

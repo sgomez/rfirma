@@ -8,10 +8,12 @@ use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::ports::CertificateMemory;
+use crate::site::domain::batch::{BatchFormat, TriphaseData};
+use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
-use crate::site::ports::{Certificates, LocalCaSlots, Servlets};
+use crate::site::ports::{BatchServices, Certificates, LocalCaSlots, Servlets};
 
 /// Las dos ranuras de la CA local en memoria, escribibles o no.
 #[derive(Default)]
@@ -132,6 +134,113 @@ impl Servlets for InMemoryServlets {
         self.reaching()?;
         crate::lock(&self.waited).push(id.to_owned());
         Ok(())
+    }
+}
+
+/// Una llamada recibida por los servlets del lote remoto en memoria.
+pub(crate) enum ReceivedBatchCall {
+    /// Lo que llegó a `presign`.
+    Presign {
+        url: String,
+        format: BatchFormat,
+        lote_base64: String,
+        certs: Vec<Vec<u8>>,
+    },
+    /// Lo que llegó a `postsign`.
+    Postsign {
+        url: String,
+        format: BatchFormat,
+        lote_base64: String,
+        certs: Vec<Vec<u8>>,
+        tridata: TriphaseData,
+    },
+}
+
+/// Los servlets del lote remoto en memoria: guardan lo recibido y devuelven lo configurado.
+#[derive(Default)]
+pub(crate) struct InMemoryBatchServices {
+    presign_response: Mutex<Option<Vec<u8>>>,
+    postsign_response: Mutex<Option<Vec<u8>>>,
+    received: Mutex<Vec<ReceivedBatchCall>>,
+    unreachable: bool,
+}
+
+impl InMemoryBatchServices {
+    /// Unos servlets que responden lo dado a cada verbo.
+    pub(crate) fn answering(presign: Vec<u8>, postsign: Vec<u8>) -> Self {
+        Self {
+            presign_response: Mutex::new(Some(presign)),
+            postsign_response: Mutex::new(Some(postsign)),
+            ..Self::default()
+        }
+    }
+
+    /// Unos servlets que nunca responden, como si la sede no tuviera red.
+    pub(crate) fn unreachable() -> Self {
+        Self {
+            unreachable: true,
+            ..Self::default()
+        }
+    }
+
+    /// Las llamadas recibidas, en el orden en que llegaron.
+    pub(crate) fn received(&self) -> std::sync::MutexGuard<'_, Vec<ReceivedBatchCall>> {
+        crate::lock(&self.received)
+    }
+
+    fn reaching(&self, unreachable: BatchSituation) -> Result<(), BatchError> {
+        if self.unreachable {
+            return Err(BatchError::new(unreachable, "este servlet no responde"));
+        }
+        Ok(())
+    }
+}
+
+impl BatchServices for InMemoryBatchServices {
+    fn presign(
+        &self,
+        url: &str,
+        format: BatchFormat,
+        lote_base64: &str,
+        certs: &[Vec<u8>],
+    ) -> Result<Vec<u8>, BatchError> {
+        self.reaching(BatchSituation::PresignerUnreachable)?;
+        crate::lock(&self.received).push(ReceivedBatchCall::Presign {
+            url: url.to_owned(),
+            format,
+            lote_base64: lote_base64.to_owned(),
+            certs: certs.to_vec(),
+        });
+        crate::lock(&self.presign_response).clone().ok_or_else(|| {
+            BatchError::new(
+                BatchSituation::InvalidPresignResponse,
+                "sin respuesta configurada",
+            )
+        })
+    }
+
+    fn postsign(
+        &self,
+        url: &str,
+        format: BatchFormat,
+        lote_base64: &str,
+        certs: &[Vec<u8>],
+        tridata: &TriphaseData,
+    ) -> Result<Vec<u8>, BatchError> {
+        self.reaching(BatchSituation::PostsignerUnreachable)?;
+        crate::lock(&self.received).push(ReceivedBatchCall::Postsign {
+            url: url.to_owned(),
+            format,
+            lote_base64: lote_base64.to_owned(),
+            certs: certs.to_vec(),
+            tridata: tridata.clone(),
+        });
+        crate::lock(&self.postsign_response).clone().ok_or_else(|| {
+            BatchError::new(
+                BatchSituation::InvalidPostsignResponse,
+                "sin respuesta configurada",
+            )
+        })
     }
 }
 

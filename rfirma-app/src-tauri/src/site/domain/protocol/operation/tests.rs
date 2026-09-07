@@ -42,7 +42,7 @@ fn without_the_parameter_the_domain_of_the_url_is_the_verb() {
 
 #[test]
 fn an_operation_that_is_not_attended_is_refused_with_the_code_of_the_original() {
-    let url = AfirmaUrl::parse("afirma://batch?op=batch").expect("es del protocolo");
+    let url = AfirmaUrl::parse("afirma://noexiste?op=noexiste").expect("es del protocolo");
 
     let refusal = read_operation(&url).expect_err("no se atiende");
 
@@ -392,4 +392,123 @@ fn the_two_sticky_flags_travel_inside_the_selection_of_a_certificate() {
     };
     assert!(stuck.sticky().is_sticky());
     assert!(stuck.sticky().resets());
+}
+
+fn a_batch(extra: &str) -> AfirmaUrl {
+    an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&\
+         batchpresignerurl=https%3A%2F%2Fpresigner.example%2Fpre&\
+         batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost{extra}"
+    ))
+}
+
+fn xml_lote(algorithm: &str, stop_on_error: bool) -> String {
+    format!(
+        "<signbatch algorithm=\"{algorithm}\" stoponerror=\"{stop_on_error}\">\
+         <singlesign id=\"001\"/></signbatch>"
+    )
+}
+
+fn json_lote(algorithm: &str, stop_on_error: bool) -> String {
+    format!("{{\"algorithm\":\"{algorithm}\",\"stoponerror\":{stop_on_error}}}")
+}
+
+#[test]
+fn a_batch_reads_its_two_servlets_and_the_algorithm_of_its_xml_lote() {
+    let lote = xml_lote("SHA256", true);
+    let url = a_batch(&format!("&dat={}", dat(lote.as_bytes())));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert_eq!(request.presigner_url(), "https://presigner.example/pre");
+    assert_eq!(request.postsigner_url(), "https://postsigner.example/post");
+    assert!(!request.is_json());
+    assert_eq!(request.algorithm(), "SHA256");
+    assert!(request.stops_on_error());
+}
+
+#[test]
+fn a_batch_with_jsonbatch_reads_the_algorithm_of_its_json_lote() {
+    let lote = json_lote("sha1", false);
+    let url = a_batch(&format!("&jsonbatch=true&dat={}", dat(lote.as_bytes())));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert!(request.is_json());
+    assert_eq!(request.algorithm(), "sha1");
+    assert!(!request.stops_on_error());
+}
+
+#[test]
+fn a_batch_without_the_presigner_url_names_it() {
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&\
+         batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost&dat={}",
+        dat(xml_lote("SHA256", false).as_bytes())
+    ));
+
+    let refusal = read_operation(&url).expect_err("falta la url de prefirma");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::BatchPresignerUrl));
+}
+
+#[test]
+fn a_batch_servlet_url_that_is_not_https_is_refused() {
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&\
+         batchpresignerurl=http%3A%2F%2Fpresigner.example%2Fpre&\
+         batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost&dat={}",
+        dat(xml_lote("SHA256", false).as_bytes())
+    ));
+
+    let refusal = read_operation(&url).expect_err("http no es https");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::BatchPresignerUrl));
+}
+
+#[test]
+fn a_local_batch_is_refused_until_468() {
+    let url = a_batch(&format!(
+        "&localBatchProcess=true&dat={}",
+        dat(xml_lote("SHA256", false).as_bytes())
+    ));
+
+    let refusal = read_operation(&url).expect_err("el lote local no se atiende aqui");
+
+    assert_eq!(refusal.code(), SafCode::LocalBatchSign);
+}
+
+#[test]
+fn a_batch_algorithm_rfirma_cannot_produce_names_the_algorithm_parameter() {
+    let url = a_batch(&format!("&dat={}", dat(xml_lote("MD5", false).as_bytes())));
+
+    let refusal = read_operation(&url).expect_err("MD5 no esta en el catalogo del lote");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
+}
+
+#[test]
+fn a_batch_reads_needcert_the_filter_and_the_sticky_flags() {
+    let url = a_batch(&format!(
+        "&needcert=true&sticky=true&resetsticky=true&dat={}",
+        dat(xml_lote("SHA256", false).as_bytes())
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert!(request.needcert());
+    assert!(request.filter().declares_nothing());
+    assert!(request.sticky().is_sticky());
+    assert!(request.sticky().resets());
+    assert_eq!(
+        request.lote_base64(),
+        dat(xml_lote("SHA256", false).as_bytes())
+    );
+    assert_eq!(request.lote(), xml_lote("SHA256", false).as_bytes());
 }
