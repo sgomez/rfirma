@@ -33,7 +33,7 @@ use crate::site::domain::channel::{
 use crate::site::domain::protocol::{
     read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, SafCode,
     SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
-    SiteVisibleSignature, WireAnswer,
+    SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest};
@@ -65,21 +65,27 @@ impl FilterEngine for AnEngine {
 
 const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 
-/// Un transporte que abre siempre, y apunta lo que se le pidió.
+/// Un transporte que abre siempre, en el puerto sorteado o en el fijo, y apunta lo que se le pidió.
 fn a_transport(
     asked: &RefCell<Vec<ChannelDuty>>,
 ) -> impl Fn(&ChannelLocation, ChannelDuty) -> Result<OpenChannel, ChannelError> + '_ {
     move |location: &ChannelLocation, duty: ChannelDuty| {
         asked.borrow_mut().push(duty);
-        let ChannelLocation::Drawn(ports) = location else {
-            panic!("esta prueba sortea puertos: {location:?}");
+        let port = match location {
+            ChannelLocation::Drawn(ports) => ports[0],
+            ChannelLocation::Fixed(port) => *port,
         };
-        Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
+        Ok(OpenChannel::new(port, Shutdown::of(|| {})))
     }
 }
 
 fn a_launch(ports: &str) -> String {
     format!("afirma://websocket?ports={ports}&v=4&idsession={CREDENTIAL}")
+}
+
+/// Un arranque de la version 3: sin `ports`, atendido en el puerto fijo.
+fn a_v3_launch() -> String {
+    format!("afirma://websocket?v=3&idsession={CREDENTIAL}")
 }
 
 /// Asa de respuesta simulada y su receptor para pruebas.
@@ -495,8 +501,12 @@ fn what_the_codec_does_not_attend_is_answered_with_the_codec_s_own_line() {
         "lo que no se atiende no se apunta"
     );
 }
-#[test]
-fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer() {
+/// El mismo trámite de selección de certificado, de punta a punta, sobre la forma de arranque
+/// que se le pase: puertos sorteados (protocolo 4) o puerto fijo (protocolo 3).
+fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_over(
+    launch: &str,
+    expected_port: u16,
+) {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -505,15 +515,14 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     let asked = RefCell::new(Vec::new());
     let engine = AnEngine::answering(&[&[0], &[0]]);
 
-    let attendance = attend_launch(
-        &a_launch("54001,54002,54003"),
-        &a_codec_table(),
-        &a_transport(&asked),
-        &live,
-    );
-    assert!(
-        matches!(attendance, Attendance::Serving { .. }),
-        "la invocacion es buena: {attendance:?}"
+    let attendance = attend_launch(launch, &a_codec_table(), &a_transport(&asked), &live);
+    let Attendance::Serving { channel, .. } = &attendance else {
+        panic!("la invocacion es buena: {attendance:?}");
+    };
+    assert_eq!(
+        channel.port(),
+        expected_port,
+        "el tramite escucha en el puerto que declara el protocolo"
     );
     assert!(
         live.current().is_some(),
@@ -579,6 +588,21 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
     assert!(
         live.current().is_none(),
         "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada"
+    );
+}
+#[test]
+fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer() {
+    a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_over(
+        &a_launch("54001,54002,54003"),
+        54001,
+    );
+}
+#[test]
+fn a_selection_of_a_certificate_over_the_third_protocol_goes_all_the_way_from_the_launch_to_the_answer(
+) {
+    a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_over(
+        &a_v3_launch(),
+        THE_PORT_OF_THE_THIRD_PROTOCOL,
     );
 }
 #[test]
@@ -701,8 +725,13 @@ fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
     ))
 }
 
-/// Trámite completo de firma con el canal abierto.
-fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
+/// Trámite completo de firma con el canal abierto, sobre la forma de arranque que se le pase.
+fn the_whole_signature_errand_over(
+    launch: &str,
+    expected_port: u16,
+    verb: &str,
+    round: SignatureRound,
+) {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -714,15 +743,14 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
     let policies = APolicyEngine::answering("policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9\n");
     let scratch = home.path().join("errand");
 
-    let attendance = attend_launch(
-        &a_launch("54001,54002,54003"),
-        &a_codec_table(),
-        &a_transport(&asked),
-        &live,
-    );
-    assert!(
-        matches!(attendance, Attendance::Serving { .. }),
-        "la invocacion es buena: {attendance:?}"
+    let attendance = attend_launch(launch, &a_codec_table(), &a_transport(&asked), &live);
+    let Attendance::Serving { channel, .. } = &attendance else {
+        panic!("la invocacion es buena: {attendance:?}");
+    };
+    assert_eq!(
+        channel.port(),
+        expected_port,
+        "el tramite escucha en el puerto que declara el protocolo"
     );
 
     let (handle, mut wire) = the_wire();
@@ -819,11 +847,30 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
 }
 #[test]
 fn a_signature_goes_all_the_way_from_the_launch_to_the_wire() {
-    the_whole_signature_errand("sign", SignatureRound::First);
+    the_whole_signature_errand_over(
+        &a_launch("54001,54002,54003"),
+        54001,
+        "sign",
+        SignatureRound::First,
+    );
 }
 #[test]
 fn a_cosignature_goes_all_the_way_from_the_launch_to_the_wire() {
-    the_whole_signature_errand("cosign", SignatureRound::Again);
+    the_whole_signature_errand_over(
+        &a_launch("54001,54002,54003"),
+        54001,
+        "cosign",
+        SignatureRound::Again,
+    );
+}
+#[test]
+fn a_signature_over_the_third_protocol_goes_all_the_way_from_the_launch_to_the_wire() {
+    the_whole_signature_errand_over(
+        &a_v3_launch(),
+        THE_PORT_OF_THE_THIRD_PROTOCOL,
+        "sign",
+        SignatureRound::First,
+    );
 }
 #[test]
 fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() {

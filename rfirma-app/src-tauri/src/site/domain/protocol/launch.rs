@@ -13,7 +13,7 @@ pub const LAUNCH_VERB: &str = "websocket";
 pub const PROTOCOL_VERSION: i64 = 4;
 
 /// La versión de protocolo sin `ports`, atendida en el puerto fijo.
-const THIRD_PROTOCOL_VERSION: i64 = 3;
+pub const THIRD_PROTOCOL_VERSION: i64 = 3;
 
 const VERSION_WHEN_ABSENT: i64 = 1;
 
@@ -66,6 +66,7 @@ pub enum NegotiatedCredential {
 /// Lo que pide una invocación de arranque, ya leída.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchRequest {
+    version: i64,
     location: ChannelLocation,
     credential: NegotiatedCredential,
 }
@@ -91,9 +92,15 @@ impl LaunchRequest {
         let credential = credential_of(version, url.parameter("idsession"))?;
 
         Ok(Self {
+            version,
             location,
             credential,
         })
+    }
+
+    /// La versión de protocolo que declaró la sede, ya validada.
+    pub fn version(&self) -> i64 {
+        self.version
     }
 
     /// Dónde escuchará el canal: los puertos sorteados por la sede, o el puerto fijo del
@@ -121,7 +128,7 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
         return Some(ChannelLocation::Drawn(ports));
     }
 
-    if url.parameter("v").map(str::trim) == Some(&THIRD_PROTOCOL_VERSION.to_string()) {
+    if declared_version(url.parameter("v")) == THIRD_PROTOCOL_VERSION {
         return Some(ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL));
     }
 
@@ -144,10 +151,15 @@ fn credential_of(version: i64, idsession: Option<&str>) -> Result<NegotiatedCred
     }
 }
 
-fn check_protocol_version(declared: Option<&str>) -> Result<i64, Refusal> {
-    let version = declared
+/// La versión que la sede declaró en `v`, o la que se asume cuando no la trae.
+fn declared_version(declared: Option<&str>) -> i64 {
+    declared
         .and_then(|value| value.trim().parse::<i64>().ok())
-        .unwrap_or(VERSION_WHEN_ABSENT);
+        .unwrap_or(VERSION_WHEN_ABSENT)
+}
+
+fn check_protocol_version(declared: Option<&str>) -> Result<i64, Refusal> {
+    let version = declared_version(declared);
 
     if version == PROTOCOL_VERSION || version == THIRD_PROTOCOL_VERSION {
         return Ok(version);

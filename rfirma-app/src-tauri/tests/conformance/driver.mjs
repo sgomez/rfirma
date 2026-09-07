@@ -12,6 +12,14 @@ const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
 const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
 const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
 
+/** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
+function replacingOrFailing(source, literal, replacement) {
+  if (!source.includes(literal)) {
+    throw new Error(`forcedToTheThirdProtocol: no encuentra el literal a sustituir: ${literal}`);
+  }
+  return source.replace(literal, replacement);
+}
+
 /**
  * El `autoscript.js` publicado nunca manda `v=3` por websocket (siempre habla la 4). Para medir
  * el modo `v3` se fuerza el fuente antes de ejecutarlo: la versión que declara, la URL de
@@ -19,16 +27,22 @@ const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
  * siendo el cliente publicado; solo se le obliga a hablar como uno de la versión 3.
  */
 function forcedToTheThirdProtocol(source) {
-  return source
-    .replace("var PROTOCOL_VERSION = 4;", "var PROTOCOL_VERSION = 3;")
-    .replace(
-      'var url = "afirma://websocket?ports=" + portsLine\n\t\t\t\t\t+ "&v=" + PROTOCOL_VERSION',
-      'var url = "afirma://websocket?v=" + PROTOCOL_VERSION',
-    )
-    .replace(
-      "var ports = AfirmaUtils.getRandomPorts(minPort, maxPort);",
-      `var ports = [${THE_PORT_OF_THE_THIRD_PROTOCOL}];`,
-    );
+  source = replacingOrFailing(
+    source,
+    "var PROTOCOL_VERSION = 4;",
+    "var PROTOCOL_VERSION = 3;",
+  );
+  source = replacingOrFailing(
+    source,
+    'var url = "afirma://websocket?ports=" + portsLine\n\t\t\t\t\t+ "&v=" + PROTOCOL_VERSION',
+    'var url = "afirma://websocket?v=" + PROTOCOL_VERSION',
+  );
+  source = replacingOrFailing(
+    source,
+    "var ports = AfirmaUtils.getRandomPorts(minPort, maxPort);",
+    `var ports = [${THE_PORT_OF_THE_THIRD_PROTOCOL}];`,
+  );
+  return source;
 }
 
 /** Una línea de JSON por evento, y nada más, en la salida estándar. */

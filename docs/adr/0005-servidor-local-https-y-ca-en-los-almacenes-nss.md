@@ -28,8 +28,11 @@ debían revocarse antes del 1 de octubre de 2016. La CA local es obligatoria.
 **El puerto es variable, salvo cuando la sede habla el protocolo 3.** La sede que manda
 `afirma://websocket?ports=…&v=4` **sortea tres puertos** del rango efímero, y rfirma se queda
 con el primero que abra: nunca el `63117`. La sede que manda `afirma://websocket?v=3`, sin
-`ports`, no sortea nada: rfirma ata el `63117` fijo, tal cual. «Nunca el `63117`» era la regla
-completa; pasa a ser «nunca el `63117` **cuando la sede sorteó puertos**». Medido en el
+`ports`, no sortea nada: rfirma ata el `63117` fijo, tal cual. Y si una sede manda `v=3` **con**
+`ports` —una forma que el protocolo 3 no contempla, pero que la URL no impide escribir—, los
+puertos se ignoran: el `63117` fijo es del protocolo, no de la ausencia de `ports` en la
+invocación concreta. «Nunca el `63117`» era la regla completa; pasa a ser «nunca el `63117`
+**cuando la sede sorteó puertos hablando el protocolo 4**». Medido en el
 [#309](https://github.com/sgomez/rfirma/issues/309) y en el
 [#466](https://github.com/sgomez/rfirma/issues/466). Que el puerto cambie de un trámite a otro
 **no afecta al permiso de red local**: la concesión del navegador persiste por *(origen de la

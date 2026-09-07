@@ -3,7 +3,7 @@
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::protocol::{
     location_for_a_refusal, AfirmaUrl, LaunchRequest, NegotiatedCredential, Refusal,
-    RefusalSituation, SafCode, WireAnswer,
+    RefusalSituation, SafCode, WireAnswer, THIRD_PROTOCOL_VERSION,
 };
 
 use super::errand::{Errand, LiveErrand, NegotiatedCodec};
@@ -21,11 +21,13 @@ pub struct CodecTable {
 }
 
 impl CodecTable {
-    fn codec_for(&self, location: &ChannelLocation) -> NegotiatedCodec {
-        match location {
-            ChannelLocation::Drawn(_) => self.v4.clone(),
-            ChannelLocation::Fixed(_) => self.v3.clone(),
+    /// El códec que habla la versión de protocolo que la sede declaró.
+    fn codec_for(&self, version: i64) -> NegotiatedCodec {
+        if version == THIRD_PROTOCOL_VERSION {
+            return self.v3.clone();
         }
+
+        self.v4.clone()
     }
 }
 
@@ -43,7 +45,7 @@ pub struct Negotiated {
 pub fn negotiate(url: &AfirmaUrl, codecs: &CodecTable) -> Result<Negotiated, Refusal> {
     let request = LaunchRequest::from_url(url)?;
     Ok(Negotiated {
-        codec: codecs.codec_for(request.location()),
+        codec: codecs.codec_for(request.version()),
         location: request.location().clone(),
         credential: request.credential().clone(),
     })
