@@ -192,6 +192,12 @@ only fires once the certificate has actually expired.
 
 ### Running the same thing locally
 
+**Reviewers: you are almost certainly not the audience for this section.** If
+CI is green for the change's head sha, the suite has answered and re-running
+it locally adds no verdict — that is the `review-pr` rule, and this section
+does not override it. What follows is for setting a machine up, and for the
+builder's one pre-commit run.
+
 One entry point, `just`:
 
 ```bash
@@ -199,8 +205,17 @@ apt-get install -y just maven libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
                    libayatana-appindicator3-dev libsoup-3.0-dev libxdo-dev
 cargo binstall cargo-llvm-cov cargo-crap
 just autoscript   # el accesorio del banco de conformidad; ver abajo
-just check
+just check-changed
 ```
+
+**`just check-changed`, not `just check`**, and the difference is where they
+run rather than how strict they are: CI splits the three chains across three
+runners that start at once, so it pays the slowest one, while a laptop pays
+all three added up. `check-changed` derives the lanes from what the branch
+touches against `origin/main` and runs only those; a change that touches only
+the `justfile` or `.github/` still fires all three, because those are the
+files that can break any of them. The full `just check` is what CI runs, and
+the ladder of what to run when lives in `AGENTS.md`.
 
 `just tools` names whatever is still missing, and `just --list` shows the rest.
 The fast lane's three jobs are `just check-java`, `just check-repo check-ts`
