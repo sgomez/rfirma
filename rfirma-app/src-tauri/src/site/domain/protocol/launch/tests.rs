@@ -342,3 +342,99 @@ fn a_relay_launch_reads_the_active_wait_flag() {
     };
     assert!(info.active_wait);
 }
+
+/// La invocación de `service` que manda el `autoscript.js` publicado sin WebSocket
+/// (`autoscript.js:2929`).
+const PUBLISHED_SERVICE: &str =
+    "afirma://service?ports=49152,50001,60123&v=1&jvc=3&idsession=BQXf7mJ2Kd9pLzR3tYvW";
+
+#[test]
+fn the_service_invocation_the_published_client_sends_is_read_whole() {
+    let request =
+        LaunchRequest::parse(PUBLISHED_SERVICE).expect("la invocacion publicada deberia valer");
+
+    assert_eq!(
+        request.location(),
+        &ChannelLocation::Service(vec![49152, 50001, 60123])
+    );
+    assert_eq!(
+        request.credential(),
+        &NegotiatedCredential::Required(
+            ChannelCredential::parse("BQXf7mJ2Kd9pLzR3tYvW").expect("la credencial es buena")
+        )
+    );
+}
+
+#[test]
+fn a_service_launch_without_v_defaults_to_the_first_protocol() {
+    let request = LaunchRequest::parse("afirma://service?ports=49152&idsession=abc")
+        .expect("sin 'v' la version es la 1");
+
+    assert_eq!(request.version(), 1);
+}
+
+#[test]
+fn a_service_launch_accepts_versions_one_two_and_three() {
+    for v in ["1", "2", "3"] {
+        let url = format!("afirma://service?ports=49152&v={v}&idsession=abc");
+        assert!(LaunchRequest::parse(&url).is_ok(), "con v={v}");
+    }
+}
+
+#[test]
+fn a_service_launch_rejects_versions_outside_one_two_and_three() {
+    let refusal = LaunchRequest::parse("afirma://service?ports=49152&v=4&idsession=abc")
+        .expect_err("'service' no habla la version 4");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+}
+
+#[test]
+fn a_service_launch_without_ports_is_a_parameter_error() {
+    let refusal = LaunchRequest::parse("afirma://service?v=1&idsession=abc")
+        .expect_err("'service' siempre exige 'ports'");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+}
+
+#[test]
+fn a_service_launch_without_idsession_negotiates_no_credential_regardless_of_version() {
+    for v in ["1", "2", "3"] {
+        let url = format!("afirma://service?ports=49152&v={v}");
+        let request = LaunchRequest::parse(&url).expect("sin 'idsession' vale igualmente");
+
+        assert_eq!(
+            request.credential(),
+            &NegotiatedCredential::Absent,
+            "con v={v}"
+        );
+    }
+}
+
+#[test]
+fn a_service_launch_with_idsession_requires_it() {
+    let request =
+        LaunchRequest::parse("afirma://service?ports=49152&v=1&idsession=abc").expect("vale");
+
+    assert_eq!(
+        request.credential(),
+        &NegotiatedCredential::Required(ChannelCredential::parse("abc").expect("vale"))
+    );
+}
+
+#[test]
+fn a_refusal_location_of_a_service_launch_uses_the_service_variant() {
+    let url = AfirmaUrl::parse("afirma://service?ports=49152,50001&v=1").unwrap();
+
+    assert_eq!(
+        location_for_a_refusal(&url),
+        Some(ChannelLocation::Service(vec![49152, 50001]))
+    );
+}
+
+#[test]
+fn a_refusal_location_of_a_service_launch_without_ports_is_none() {
+    let url = AfirmaUrl::parse("afirma://service?v=1").unwrap();
+
+    assert_eq!(location_for_a_refusal(&url), None);
+}

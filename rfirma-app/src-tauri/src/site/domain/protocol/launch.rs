@@ -10,6 +10,9 @@ use super::url::AfirmaUrl;
 /// El verbo de la invocación de arranque, y el único que abre canal.
 pub const LAUNCH_VERB: &str = "websocket";
 
+/// El verbo de la invocación de arranque sin WebSocket, sobre TLS crudo.
+pub const SERVICE_VERB: &str = "service";
+
 /// La versión de protocolo que sortea puertos, la que manda el cliente publicado.
 pub const PROTOCOL_VERSION: i64 = 4;
 
@@ -103,13 +106,16 @@ impl LaunchRequest {
         if url.verb() == LAUNCH_VERB {
             return Self::from_websocket_url(url);
         }
+        if url.verb() == SERVICE_VERB {
+            return Self::from_service_url(url);
+        }
         if is_a_relay_launch(url) {
             return Self::from_relay_url(url);
         }
 
         Err(Refusal::params(format!(
-            "la invocacion de arranque es 'afirma://{LAUNCH_VERB}' o una operacion con servlet \
-             de servidor intermedio, y esta es 'afirma://{}'",
+            "la invocacion de arranque es 'afirma://{LAUNCH_VERB}', 'afirma://{SERVICE_VERB}' o \
+             una operacion con servlet de servidor intermedio, y esta es 'afirma://{}'",
             url.verb()
         )))
     }
@@ -122,6 +128,18 @@ impl LaunchRequest {
         Ok(Self {
             version,
             location,
+            credential,
+        })
+    }
+
+    fn from_service_url(url: &AfirmaUrl) -> Result<Self, Refusal> {
+        let version = check_service_version(url.parameter("v"))?;
+        let ports = parse_ports(url.parameter("ports"))?;
+        let credential = service_credential_of(url.parameter("idsession"))?;
+
+        Ok(Self {
+            version,
+            location: ChannelLocation::Service(ports),
             credential,
         })
     }
@@ -215,6 +233,11 @@ pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
 /// entera vale: por los puertos que trajo, o por el puerto fijo si declaró la versión 3.
 pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     let ports = drawn_ports(url);
+
+    if url.verb() == SERVICE_VERB {
+        return (!ports.is_empty()).then(|| ChannelLocation::Service(ports));
+    }
+
     if !ports.is_empty() {
         return Some(ChannelLocation::Drawn(ports));
     }
@@ -249,6 +272,15 @@ fn credential_of(version: i64, idsession: Option<&str>) -> Result<NegotiatedCred
     }
 }
 
+/// La credencial de `service`: exigida cuando la sede la manda, ausente si no, para cualquiera
+/// de sus tres versiones (mismo estado del dominio que la v3 de `websocket`).
+fn service_credential_of(idsession: Option<&str>) -> Result<NegotiatedCredential, Refusal> {
+    match idsession.filter(|value| !value.is_empty()) {
+        Some(value) => ChannelCredential::parse(value).map(NegotiatedCredential::Required),
+        None => Ok(NegotiatedCredential::Absent),
+    }
+}
+
 /// La versión que la sede declaró en `v`, o la que se asume cuando no la trae.
 fn declared_version(declared: Option<&str>) -> i64 {
     declared
@@ -266,6 +298,25 @@ fn check_protocol_version(declared: Option<&str>) -> Result<i64, Refusal> {
     Err(Refusal::new(
         SafCode::UnsupportedProcedure,
         format!("la sede declara la version de protocolo {version} y aqui se hablan la {THIRD_PROTOCOL_VERSION} y la {PROTOCOL_VERSION}"),
+    )
+    .because(RefusalSituation::UnsupportedProtocolVersion))
+}
+
+/// Las versiones de `service` que aquí se hablan son la 1, la 2 y la `THIRD_PROTOCOL_VERSION`
+/// (`ServiceInvocationManager.java:42-45`).
+fn check_service_version(declared: Option<&str>) -> Result<i64, Refusal> {
+    let version = declared_version(declared);
+
+    if (1..=THIRD_PROTOCOL_VERSION).contains(&version) {
+        return Ok(version);
+    }
+
+    Err(Refusal::new(
+        SafCode::UnsupportedProcedure,
+        format!(
+            "la sede declara la version de protocolo {version} para '{SERVICE_VERB}' y aqui se \
+             hablan la 1, la 2 y la {THIRD_PROTOCOL_VERSION}"
+        ),
     )
     .because(RefusalSituation::UnsupportedProtocolVersion))
 }

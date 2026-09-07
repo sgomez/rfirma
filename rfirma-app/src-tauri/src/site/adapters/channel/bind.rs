@@ -36,6 +36,10 @@ pub fn bind_first_free(location: &ChannelLocation) -> Result<TcpListener, Channe
                 },
             ))
         }
+        ChannelLocation::Service(_) => Err(ChannelError::new(
+            Situation::NotListening,
+            "el transporte wss no ata los puertos del transporte 'service'",
+        )),
         ChannelLocation::Relay(_) => Err(ChannelError::new(
             Situation::NotListening,
             "el servidor intermedio no abre ningun socket al que atarse",

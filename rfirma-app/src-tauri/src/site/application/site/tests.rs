@@ -50,6 +50,7 @@ impl ATransport {
         let port = match location {
             ChannelLocation::Drawn(ports) => *ports.first().expect("se ata uno de los sorteados"),
             ChannelLocation::Fixed(port) => *port,
+            ChannelLocation::Service(ports) => ports[0],
             ChannelLocation::Relay(_) => 0,
         };
         Ok(OpenChannel::new(port, Shutdown::of(|| {})))

@@ -74,6 +74,7 @@ fn a_transport(
         let port = match location {
             ChannelLocation::Drawn(ports) => ports[0],
             ChannelLocation::Fixed(port) => *port,
+            ChannelLocation::Service(ports) => ports[0],
             ChannelLocation::Relay(_) => 0,
         };
         Ok(OpenChannel::new(port, Shutdown::of(|| {})))
