@@ -78,13 +78,8 @@ pub fn declined(live: &LiveErrand) -> SiteOutcome {
 }
 
 /// Caso de uso: se escribe en la ruta que la persona eligió el fichero que pidió la sede.
-pub fn saved(scratch: &dyn Scratch, path: &Path, live: &LiveErrand) -> SiteOutcome {
-    match scratch.write(
-        path,
-        &live
-            .the_saving_pending()
-            .map_or_else(Vec::new, |it| it.data),
-    ) {
+pub fn saved(scratch: &dyn Scratch, path: &Path, data: &[u8], live: &LiveErrand) -> SiteOutcome {
+    match scratch.write(path, data) {
         Ok(()) => over(live, SiteOutcome::Saved),
         Err(detail) => over(
             live,

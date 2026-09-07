@@ -142,6 +142,7 @@ fn save_dialog<R: tauri::Runtime>(
 /// Escribe donde la persona eligió, o cancela si cerró el diálogo sin elegir.
 fn write_where_chosen(
     chosen: Option<tauri_plugin_dialog::FilePath>,
+    data: &[u8],
     scratch: &dyn crate::site::ports::Scratch,
     live: &crate::site::application::errand::LiveErrand,
 ) -> Result<(), Failure> {
@@ -150,7 +151,7 @@ fn write_where_chosen(
         return Ok(());
     };
     let path = named_paths(vec![chosen])?.remove(0).1;
-    crate::site::application::errand::saved(scratch, &path, live);
+    crate::site::application::errand::saved(scratch, &path, data, live);
     Ok(())
 }
 
@@ -169,6 +170,7 @@ pub fn site_save_file(
     let dialog = save_dialog(app_handle.dialog().file(), &consent);
     write_where_chosen(
         dialog.blocking_save_file(),
+        &consent.data,
         site.scratch.as_ref(),
         &site.errand,
     )?;

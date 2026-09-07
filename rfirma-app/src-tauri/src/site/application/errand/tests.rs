@@ -1584,6 +1584,7 @@ fn a_file_is_written_where_the_person_chose_and_the_site_gets_save_ok() {
     let outcome = crate::site::application::errand::saved(
         &crate::site::adapters::scratch::RealScratch,
         &destination,
+        A_PDF,
         &live,
     );
 
@@ -1620,6 +1621,7 @@ fn a_save_that_cannot_be_written_is_answered_with_saf_05() {
     let outcome = crate::site::application::errand::saved(
         &crate::site::adapters::scratch::RealScratch,
         &unwritable,
+        A_PDF,
         &live,
     );
 
@@ -1634,6 +1636,28 @@ fn a_save_that_cannot_be_written_is_answered_with_saf_05() {
     assert!(
         what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_05")),
         "sale el codigo del catalogo"
+    );
+}
+
+#[test]
+fn saved_writes_the_data_it_is_given_never_a_pending_consent_it_does_not_read() {
+    let home = tempfile::tempdir().expect("hay directorio temporal");
+    let live = a_live();
+    let destination = home.path().join("firma.pdf");
+    std::fs::write(&destination, "lo que ya habia").expect("se escribe el previo");
+
+    let outcome = crate::site::application::errand::saved(
+        &crate::site::adapters::scratch::RealScratch,
+        &destination,
+        A_PDF,
+        &live,
+    );
+
+    assert!(matches!(outcome, SiteOutcome::Saved));
+    assert_eq!(
+        std::fs::read(&destination).expect("se ha escrito"),
+        A_PDF,
+        "escribe lo que se le pasa, nunca cero bytes por falta de consentimiento pendiente"
     );
 }
 
