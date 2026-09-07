@@ -11,7 +11,9 @@ use super::views::ConfigurationView;
 use crate::commands::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
+use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::session::DocumentToSign;
+use crate::signing::domain::config::SigningChoice;
 
 /// Prefirma: cruza la frontera y deja el ciclo abierto.
 #[tauri::command]
@@ -21,16 +23,11 @@ pub fn begin_signing(
     documents: State<'_, DocumentsRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<SecretView, Failure> {
-    let document = documents.opened_document(&order.document)?;
-    let found = identity.certificates()?;
-    let chosen = identity.usable(&found, &order.certificate)?;
+    let (document, chosen, choice) = what_is_ordered(&order, &identity, &documents)?;
     Ok(crate::signing::application::session::begin(
-        DocumentToSign {
-            handle: order.document.clone(),
-            document,
-        },
-        chosen,
-        &order.choice()?,
+        document,
+        &chosen,
+        &choice,
         &identity.signer(),
         &signing.isolate,
         &signing.session,
@@ -83,16 +80,31 @@ pub fn preview_signature(
     documents: State<'_, DocumentsRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<tauri::ipc::Response, Failure> {
-    let document = documents.opened_document(&order.document)?;
-    let found = identity.certificates()?;
-    let chosen = identity.usable(&found, &order.certificate)?;
+    let (document, chosen, choice) = what_is_ordered(&order, &identity, &documents)?;
     Ok(tauri::ipc::Response::new(
         crate::signing::application::preview::compose(
-            &document,
-            chosen,
-            &order.choice()?,
+            &document.document,
+            &chosen,
+            &choice,
             &signing.isolate,
         )?,
+    ))
+}
+
+fn what_is_ordered(
+    order: &SigningOrder,
+    identity: &IdentityRoot,
+    documents: &DocumentsRoot,
+) -> Result<(DocumentToSign, TokenCertificate, SigningChoice), Failure> {
+    let document = documents.opened_document(&order.document)?;
+    let chosen = identity.chosen(&order.certificate)?;
+    Ok((
+        DocumentToSign {
+            handle: order.document.clone(),
+            document,
+        },
+        chosen,
+        order.choice()?,
     ))
 }
 

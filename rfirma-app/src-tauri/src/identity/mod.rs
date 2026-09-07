@@ -65,6 +65,12 @@ impl IdentityRoot {
         application::certificates::usable_certificate(found, handle, &self.listed)
     }
 
+    /// El certificado del asa, listado de nuevo y comprobado antes de usarlo.
+    pub fn chosen(&self, handle: &str) -> Result<TokenCertificate, TokenError> {
+        let found = self.certificates()?;
+        self.usable(&found, handle).cloned()
+    }
+
     /// Apunta el certificado con el que se acaba de firmar.
     pub fn remember_the_certificate(&self, reference: &CertificateRef) {
         application::certificates::remember_the_certificate(self.memory.as_ref(), reference);
