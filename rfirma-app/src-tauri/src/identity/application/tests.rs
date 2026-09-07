@@ -87,6 +87,10 @@ impl CertificateMemory for NoMemory {
     fn remember_the_certificate(&self, _reference: &CertificateRef) -> Result<(), MemoryError> {
         Ok(())
     }
+
+    fn forget_the_certificate(&self) -> Result<(), MemoryError> {
+        Ok(())
+    }
 }
 
 /// Inicializa un registro de certificados listados y devuelve sus identificadores.

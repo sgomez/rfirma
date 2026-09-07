@@ -17,6 +17,7 @@ pub fn identify_with<E: FilterEngine>(
     engine: &E,
     certificates: &dyn Certificates,
     filter: &SiteFilter,
+    sticky: bool,
     handle: &str,
     live: &LiveErrand,
 ) -> SiteOutcome {
@@ -25,13 +26,14 @@ pub fn identify_with<E: FilterEngine>(
         Err(error) => return over(live, SiteOutcome::Refused(SiteRefusal::Token(error))),
     };
 
-    identity_handed_over(engine, filter, &found, handle, certificates, live)
+    identity_handed_over(engine, filter, sticky, &found, handle, certificates, live)
 }
 
 /// Caso de uso: la persona entrega un certificado concreto tras comprobar el filtro.
 pub fn identity_handed_over<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
+    sticky: bool,
     found: &[TokenCertificate],
     handle: &str,
     certificates: &dyn Certificates,
@@ -52,6 +54,10 @@ pub fn identity_handed_over<E: FilterEngine>(
             )
         }
     };
+
+    if sticky {
+        certificates.remember(chosen.reference());
+    }
 
     over(live, SiteOutcome::Certificate(chosen.der().to_vec()))
 }

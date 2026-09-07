@@ -5,9 +5,9 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use crate::identity::application::certificates::ListedCertificates;
-use crate::identity::application::tests::NoMemory;
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::ports::CertificateMemory;
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
@@ -139,6 +139,7 @@ impl Servlets for InMemoryServlets {
 pub(crate) struct Directory<'a> {
     pub(crate) certificates: Vec<TokenCertificate>,
     pub(crate) listed: &'a ListedCertificates,
+    pub(crate) memory: &'a dyn CertificateMemory,
 }
 
 impl Certificates for Directory<'_> {
@@ -151,7 +152,7 @@ impl Certificates for Directory<'_> {
             found,
             Path::new("/no/hay/instalados"),
             self.listed,
-            &NoMemory,
+            self.memory,
         )
     }
 
@@ -161,5 +162,17 @@ impl Certificates for Directory<'_> {
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        self.memory.remembered_certificate()
+    }
+
+    fn remember(&self, chosen: &CertificateRef) {
+        crate::identity::application::certificates::remember_the_certificate(self.memory, chosen);
+    }
+
+    fn forget_the_remembered(&self) {
+        crate::identity::application::certificates::forget_the_certificate(self.memory);
     }
 }

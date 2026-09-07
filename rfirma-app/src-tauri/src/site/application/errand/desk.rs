@@ -214,6 +214,10 @@ pub fn consent_for<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
+    if request.sticky().resets() {
+        certificates.forget_the_remembered();
+    }
+
     if ours.is_empty() {
         return no_certificate_at_all();
     }
@@ -233,8 +237,28 @@ pub fn consent_for<E: FilterEngine>(
         return no_certificate_the_site_accepts(live, owned);
     }
 
+    if request.sticky().is_sticky() {
+        if let Some(stuck) = the_remembered_one_among(&accepted, certificates) {
+            return answering(live, SiteOutcome::Certificate(stuck));
+        }
+    }
+
     ErrandStep::AskingForConsent {
         certificates: certificates.rows_of(accepted),
         filter: request.filter().clone(),
+        sticky: request.sticky().is_sticky(),
     }
+}
+
+fn the_remembered_one_among(
+    accepted: &[TokenCertificate],
+    certificates: &dyn Certificates,
+) -> Option<Vec<u8>> {
+    let remembered = certificates.remembered()?;
+    accepted
+        .iter()
+        .find(|certificate| {
+            remembered.is_the_same_as(certificate.reference()) && certificate.status().is_usable()
+        })
+        .map(|certificate| certificate.der().to_vec())
 }

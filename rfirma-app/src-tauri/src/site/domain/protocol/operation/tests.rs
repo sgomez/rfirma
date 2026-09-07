@@ -372,3 +372,22 @@ fn an_escaped_separator_does_not_split_the_line() {
 
     assert_eq!(pairs, vec![("cla=ve".to_owned(), "valor".to_owned())]);
 }
+
+#[test]
+fn the_two_sticky_flags_travel_inside_the_selection_of_a_certificate() {
+    let SiteOperation::SelectCertificate(plain) =
+        read_operation(&an_operation("op=selectcert")).expect("es una operacion que se atiende")
+    else {
+        panic!("es una seleccion de certificado");
+    };
+    assert_eq!(plain.sticky(), StickyCertificate::default());
+
+    let SiteOperation::SelectCertificate(stuck) =
+        read_operation(&an_operation("op=selectcert&sticky=true&resetsticky=true"))
+            .expect("es una operacion que se atiende")
+    else {
+        panic!("es una seleccion de certificado");
+    };
+    assert!(stuck.sticky().is_sticky());
+    assert!(stuck.sticky().resets());
+}

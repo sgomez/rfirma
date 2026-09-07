@@ -1,5 +1,10 @@
 use super::*;
 
+fn a_url(parameters: &str) -> AfirmaUrl {
+    AfirmaUrl::parse(&format!("afirma://selectcert?op=selectcert{parameters}"))
+        .expect("es del protocolo")
+}
+
 #[test]
 fn a_site_that_demands_nothing_is_served() {
     assert!(check_minimum_client_version(None).is_ok());
@@ -61,4 +66,23 @@ fn data_that_asks_for_a_local_file_is_refused() {
 fn base64_data_goes_through() {
     assert!(check_local_access_is_not_requested("JVBERi0xLjcKJeLjz9M").is_ok());
     assert!(check_local_access_is_not_requested("").is_ok());
+}
+
+#[test]
+fn the_two_sticky_flags_are_read_regardless_of_case_and_default_to_off() {
+    assert_eq!(sticky_certificate(&a_url("")), StickyCertificate::default());
+    assert!(!sticky_certificate(&a_url("")).is_sticky());
+    assert!(!sticky_certificate(&a_url("")).resets());
+
+    let asked = sticky_certificate(&a_url("&sticky=TRUE&resetsticky=True"));
+    assert!(asked.is_sticky());
+    assert!(asked.resets());
+}
+
+#[test]
+fn a_sticky_value_that_is_not_true_is_not_a_refusal() {
+    let asked = sticky_certificate(&a_url("&sticky=loquesea&resetsticky="));
+
+    assert!(!asked.is_sticky());
+    assert!(!asked.resets());
 }

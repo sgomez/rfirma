@@ -4,7 +4,10 @@ use base64::Engine as _;
 
 use super::codes::{Parameter, SafCode};
 use super::filters::{site_filter, SiteFilter};
-use super::parameters::{check_local_access_is_not_requested, check_minimum_client_version};
+use super::parameters::{
+    check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,
+    StickyCertificate,
+};
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
 
@@ -111,12 +114,18 @@ impl SignRequest {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelectCertificate {
     filter: SiteFilter,
+    sticky: StickyCertificate,
 }
 
 impl SelectCertificate {
     /// Lo que la sede pide del listado.
     pub fn filter(&self) -> &SiteFilter {
         &self.filter
+    }
+
+    /// Lo que la sede pide sobre el certificado pegado.
+    pub fn sticky(&self) -> StickyCertificate {
+        self.sticky
     }
 }
 
@@ -204,6 +213,7 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     match verb_of(url).as_str() {
         SELECT_CERTIFICATE => Ok(SiteOperation::SelectCertificate(SelectCertificate {
             filter: site_filter(&declared_properties(url)?),
+            sticky: sticky_certificate(url),
         })),
         SIGN => sign_request(url, SignatureRound::First),
         COSIGN => sign_request(url, SignatureRound::Again),

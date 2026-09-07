@@ -58,7 +58,9 @@ fn dispatch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     let step = desk::attend_operation(desk, &url, codec.decode(&url), live);
 
     match &step {
-        ErrandStep::AskingForConsent { filter, .. } => live.remember_identity(filter.clone()),
+        ErrandStep::AskingForConsent { filter, sticky, .. } => {
+            live.remember_identity(filter.clone(), *sticky)
+        }
         ErrandStep::AskingToSign(asked) => live.remember_signature(state::PendingSignature {
             document: asked.document.clone(),
             filter: asked.filter.clone(),
@@ -101,8 +103,15 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     certificate: &str,
     live: &LiveErrand,
 ) -> Result<Consented, ConsentError> {
-    if let Some(filter) = live.what_the_site_asked() {
-        let outcome = identify_with(desk.engine, &desk.neighbours, &filter, certificate, live);
+    if let Some((filter, sticky)) = live.what_the_site_asked() {
+        let outcome = identify_with(
+            desk.engine,
+            &desk.neighbours,
+            &filter,
+            sticky,
+            certificate,
+            live,
+        );
         return match outcome {
             SiteOutcome::Refused(refusal) => Err(ConsentError::Refused(refusal)),
             _ => Ok(Consented::IdentityHandedOver),

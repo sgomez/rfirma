@@ -1,6 +1,6 @@
 use super::*;
 use crate::crossing::Failure;
-use crate::identity::application::tests::{a_certificate, listed_from};
+use crate::identity::application::tests::{a_certificate, listed_from, NoMemory};
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::application::tests::Directory;
 use crate::site::domain::protocol::site_filter;
@@ -99,6 +99,7 @@ fn a_certificate_the_site_no_longer_accepts_is_refused_before_the_pin() {
         &Directory {
             certificates: certificates.to_vec(),
             listed: &listed,
+            memory: &NoMemory,
         },
     )
     .expect_err("la sede lo excluye");
@@ -122,6 +123,7 @@ fn an_unusable_certificate_never_reaches_the_engine() {
         &Directory {
             certificates: certificates.to_vec(),
             listed: &listed,
+            memory: &NoMemory,
         },
     )
     .expect_err("no es legible");

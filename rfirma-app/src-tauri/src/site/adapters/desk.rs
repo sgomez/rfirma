@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
-use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::IdentityRoot;
@@ -41,6 +41,18 @@ impl Certificates for Neighbours<'_> {
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         self.identity.usable(found, handle)
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        self.identity.remembered_certificate()
+    }
+
+    fn remember(&self, chosen: &CertificateRef) {
+        self.identity.remember_the_certificate(chosen);
+    }
+
+    fn forget_the_remembered(&self) {
+        self.identity.forget_the_certificate();
     }
 }
 
