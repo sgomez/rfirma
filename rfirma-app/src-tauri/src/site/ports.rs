@@ -8,6 +8,8 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::BridgeError;
+use crate::site::domain::batch::{BatchFormat, TriphaseData};
+use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::AfirmaUrl;
@@ -91,6 +93,30 @@ pub trait Servlets {
 
     /// Envía una señal de espera activa bajo el identificador dado (`requestWait` del original).
     fn wait(&self, service_url: &str, id: &str) -> Result<(), RelayError>;
+}
+
+/// Puerto de salida hacia los dos servlets del lote remoto: prefirma y postfirma (`BatchSigner`,
+/// 1.9.2).
+pub trait BatchServices {
+    /// Prefirma el lote: manda el lote y la cadena de certificados, y recibe la respuesta cruda.
+    fn presign(
+        &self,
+        url: &str,
+        format: BatchFormat,
+        lote_base64: &str,
+        certs: &[Vec<u8>],
+    ) -> Result<Vec<u8>, BatchError>;
+
+    /// Postfirma el lote: manda el lote, la cadena de certificados y el `TriphaseData` con los
+    /// `PK1` ya calculados, y recibe la respuesta cruda.
+    fn postsign(
+        &self,
+        url: &str,
+        format: BatchFormat,
+        lote_base64: &str,
+        certs: &[Vec<u8>],
+        tridata: &TriphaseData,
+    ) -> Result<Vec<u8>, BatchError>;
 }
 
 /// Las dos ranuras de la CA local: la que sirve y la siguiente del solape (ADR-0005).

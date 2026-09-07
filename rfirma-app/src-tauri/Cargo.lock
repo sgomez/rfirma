@@ -3348,6 +3348,7 @@ dependencies = [
  "libloading 0.8.9",
  "native-tls",
  "openssl",
+ "quick-xml",
  "reqwest",
  "rsa",
  "serde",

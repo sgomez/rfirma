@@ -1,5 +1,6 @@
 //! Adaptadores de `site`: todo lo que toca el mundo, incluidas las órdenes y las vistas de Tauri.
 
+pub mod batch_services;
 pub mod channel;
 pub mod codec;
 pub mod codec_relay;

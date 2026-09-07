@@ -61,6 +61,11 @@ base64 = "0.22"
 # contador. Ya estaba en el arbol como dependencia transitiva; aqui solo se
 # hace directa.
 getrandom = "0.3"
+# El atributo `algorithm` del elemento raiz del lote XML remoto. Ya estaba en
+# el arbol como dependencia transitiva de otros crates; aqui solo se hace
+# directa, y solo para parsear: el serializador de TriphaseData emite el
+# literal exacto del original, no XML generico.
+quick-xml = "0.41"
 # La memoria entre sesiones son dos ficheros JSON (ADR-0010), asi que serde
 # entra aqui y no con el primer #[tauri::command]: el formato de configuracion
 # y estado lo escribe este modulo, no la interfaz.

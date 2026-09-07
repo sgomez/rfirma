@@ -1,5 +1,7 @@
 //! Dominio de `site`: reglas puras, sin nada del crate fuera de esta carpeta.
 
+pub mod batch;
+pub mod batch_error;
 pub mod channel;
 pub mod local_ca;
 pub mod protocol;

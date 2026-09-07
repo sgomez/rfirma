@@ -23,6 +23,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces. |
 | `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011). |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
+| `adapters/batch_services.rs` | El cliente de los dos servlets del lote remoto, sobre `reqwest::blocking`. Pruebas en `adapters/batch_services/tests.rs`. |
 | `adapters/servlets.rs` | El cliente del servidor intermedio de producción, sobre `reqwest::blocking`. Pruebas en `adapters/servlets/tests.rs`. |
 | `adapters/nss.rs` | El registro en los almacenes NSS por la API de NSS y **no** por `certutil`, que no está en el flatpak, sobre el `NssHost` de `identity/adapters/pkcs11/nss.rs`. Pruebas en `adapters/nss/tests.rs`. |
 | `adapters/frontier.rs` | La única traducción de un rechazo del trámite al código `SAF_NN` de la sede y a la vista de la ventana (ADR-0009). Pruebas en `adapters/frontier/tests.rs`. |
@@ -49,6 +50,12 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, y con qué momento se abre la de sede. Pruebas en `application/startup/tests.rs`. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
 | `application/trust.rs` | Cuándo se instala la CA local en los almacenes y cómo se solapa con la siguiente. Pruebas en `application/trust/tests.rs`. |
+| `domain/batch/mod.rs` | El reparto del lote remoto, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
+| `domain/batch/json.rs` | Un JSON de solo lectura y escritura con el orden del documento, para el lote remoto. Pruebas en `domain/batch/json/tests.rs`. |
+| `domain/batch/triphase.rs` | `TriphaseData` calcado del original, y la regla de `PK1` que firma y borra el `PRE`. Pruebas en `domain/batch/triphase/tests.rs`. |
+| `domain/batch/presign.rs` | La prefirma JSON del lote con errores por elemento, y el lote actualizado con ellos. Pruebas en `domain/batch/presign/tests.rs`. |
+| `domain/batch/result.rs` | El resultado del lote cuando la prefirma no dio ninguna firma que postfirmar. Pruebas en `domain/batch/result/tests.rs`. |
+| `domain/batch_error.rs` | La situación del lote remoto (ADR-0009): alcance de los dos servlets y forma de su respuesta. Pruebas en `domain/batch_error/tests.rs`. |
 | `domain/local_ca.rs` | La **CA local**, pura: la genera y la lee de PEM, y no toca el disco. Pruebas en `domain/local_ca/tests.rs`. |
 | `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
@@ -58,7 +65,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cinco cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
-| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado o de carga. Pruebas en `domain/protocol/operation/tests.rs`. |
+| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado, de carga o de lote remoto. Pruebas en `domain/protocol/operation/tests.rs`. |
 | `domain/protocol/parameters.rs` | Lo común a toda operación: las dos guardias y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
 | `domain/protocol/url.rs` | Una URL `afirma://` partida en verbo y pares, con las rarezas del original. Pruebas en `domain/protocol/url/tests.rs`. |
@@ -67,7 +74,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/tls_error.rs`, `domain/trust_error.rs`, `domain/relay_error.rs` | Las situaciones (ADR-0009) del material del canal, de la confianza y del servidor intermedio. Pruebas en `domain/tls_error/tests.rs`, `domain/trust_error/tests.rs` y `domain/relay_error/tests.rs`. |
 | `domain/signing.rs` | Lo que vuelve de la firma que pidió la sede: la firma en memoria, o el rechazo ya traducido por quien firmó. |
 | `domain/trust.rs` | El reparto, y las tres reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
-| `ports.rs` | **Los diez puertos**: los propios del contexto, los dos motores que presta el puente y lo que el trámite pide a los vecinos. Pruebas en `ports/tests.rs`. |
+| `ports.rs` | **Los once puertos**: los propios del contexto (`BatchServices` incluido), los dos motores que presta el puente y lo que el trámite pide a los vecinos. Pruebas en `ports/tests.rs`. |
 
 ## Al tocar lo que sale hacia la sede
 

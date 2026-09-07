@@ -37,11 +37,20 @@ pub const LOAD: &str = "load";
 /// El verbo que firma y además guarda.
 pub const SIGN_AND_SAVE: &str = "signandsave";
 
+/// El verbo del lote remoto.
+pub const BATCH: &str = "batch";
+
 /// El formato de firma PAdES.
 pub const PADES: &str = "pades";
 
 /// El algoritmo que rFirma sabe producir.
 pub const ACCEPTED_ALGORITHMS: [&str; 2] = ["sha256", "sha256withrsa"];
+
+/// Los algoritmos del lote que el original acepta (`BatchSigner`, XSD de `signbatch`).
+pub const ACCEPTED_BATCH_ALGORITHMS: [&str; 4] = ["sha1", "sha256", "sha384", "sha512"];
+
+/// `localBatchProcess=true`: el lote local, rechazado aquí hasta #468.
+const LOCAL_BATCH_PROCESS: &str = "localBatchProcess";
 
 /// Lo que la sede pide, ya leído.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -54,6 +63,8 @@ pub enum SiteOperation {
     Save(SaveRequest),
     /// `load`: la sede pide cargar uno o varios ficheros del equipo.
     Load(LoadRequest),
+    /// `batch`: la sede pide firmar un lote remoto.
+    Batch(BatchRequest),
 }
 
 /// Cuál de las dos firmas pidió la sede.
@@ -203,6 +214,78 @@ impl LoadRequest {
     }
 }
 
+/// La petición de `batch`: firmar un lote remoto (`BatchSigner`, 1.9.2).
+///
+/// Lleva el lote **tal y como llegó**: los bytes decodificados para leer lo
+/// mínimo que hace falta aquí, y el Base64 original intacto, porque lo que
+/// viaja a los servlets es una sustitución textual sobre ese Base64 y no una
+/// recodificación de los bytes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BatchRequest {
+    lote: Vec<u8>,
+    lote_base64: String,
+    json: bool,
+    presigner_url: String,
+    postsigner_url: String,
+    needcert: bool,
+    filter: SiteFilter,
+    sticky: StickyCertificate,
+    algorithm: String,
+    stop_on_error: bool,
+}
+
+impl BatchRequest {
+    /// El lote decodificado, en bytes.
+    pub fn lote(&self) -> &[u8] {
+        &self.lote
+    }
+
+    /// El lote tal y como llegó en `dat`, todavía en Base64.
+    pub fn lote_base64(&self) -> &str {
+        &self.lote_base64
+    }
+
+    /// Si el lote viene en JSON (`jsonbatch=true`) o en el XML heredado.
+    pub fn is_json(&self) -> bool {
+        self.json
+    }
+
+    /// La URL del servlet de prefirma.
+    pub fn presigner_url(&self) -> &str {
+        &self.presigner_url
+    }
+
+    /// La URL del servlet de postfirma.
+    pub fn postsigner_url(&self) -> &str {
+        &self.postsigner_url
+    }
+
+    /// Si la sede pide el certificado usado además del resultado del lote.
+    pub fn needcert(&self) -> bool {
+        self.needcert
+    }
+
+    /// Lo que la sede pide del listado.
+    pub fn filter(&self) -> &SiteFilter {
+        &self.filter
+    }
+
+    /// Lo que la sede pide sobre el certificado pegado.
+    pub fn sticky(&self) -> StickyCertificate {
+        self.sticky
+    }
+
+    /// El algoritmo del lote, ya admitido (fija el algoritmo del PKCS#1).
+    pub fn algorithm(&self) -> &str {
+        &self.algorithm
+    }
+
+    /// Si el lote para en el primer error (aquí solo se lee y se guarda).
+    pub fn stops_on_error(&self) -> bool {
+        self.stop_on_error
+    }
+}
+
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
 pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     check_minimum_client_version(url.parameter("mcv"))?;
@@ -224,6 +307,7 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         )),
         SAVE => save_request(url),
         LOAD => load_request(url),
+        BATCH => batch_request(url),
         SIGN_AND_SAVE => Err(Refusal::new(
             SafCode::UnsupportedOperation,
             "rFirma no guarda ficheros por orden de una sede",
@@ -302,6 +386,141 @@ fn load_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
             .parameter("multiload")
             .is_some_and(|value| value.eq_ignore_ascii_case("true")),
     }))
+}
+
+/// La petición del lote remoto: dos URL de servlet, el lote y lo mínimo que se
+/// lee de dentro de él (`ProtocolInvocationLauncherBatch`, 1.9.2).
+fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+    if url
+        .parameter(LOCAL_BATCH_PROCESS)
+        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
+    {
+        return Err(Refusal::new(
+            SafCode::LocalBatchSign,
+            "el lote local no se atiende: va en #468",
+        ));
+    }
+
+    let presigner_url = required(url, "batchpresignerurl", Parameter::BatchPresignerUrl)?;
+    check_absolute_https_url(presigner_url, Parameter::BatchPresignerUrl)?;
+    let postsigner_url = required(url, "batchpostsignerurl", Parameter::BatchPostsignerUrl)?;
+    check_absolute_https_url(postsigner_url, Parameter::BatchPostsignerUrl)?;
+
+    let lote_base64 = required(url, "dat", Parameter::Data)?;
+    let lote = decode_base64(lote_base64, Parameter::Data)?;
+    let json = url
+        .parameter("jsonbatch")
+        .is_some_and(|value| value.eq_ignore_ascii_case("true"));
+    let (algorithm, stop_on_error) = batch_algorithm_and_stop_on_error(json, &lote)?;
+
+    let declared = declared_properties(url)?;
+    Ok(SiteOperation::Batch(BatchRequest {
+        lote,
+        lote_base64: lote_base64.to_owned(),
+        json,
+        presigner_url: presigner_url.to_owned(),
+        postsigner_url: postsigner_url.to_owned(),
+        needcert: url
+            .parameter("needcert")
+            .is_some_and(|value| value.eq_ignore_ascii_case("true")),
+        filter: site_filter(&declared),
+        sticky: sticky_certificate(url),
+        algorithm,
+        stop_on_error,
+    }))
+}
+
+/// La URL de un servlet del lote: absoluta y `https`, o el `SAF_03` que la nombra.
+fn check_absolute_https_url(candidate: &str, blame: Parameter) -> Result<(), Refusal> {
+    const SCHEME: &str = "https://";
+    if candidate.len() <= SCHEME.len() || !candidate.to_ascii_lowercase().starts_with(SCHEME) {
+        return Err(Refusal::about(
+            blame,
+            format!("la url '{candidate}' debe ser absoluta y 'https'"),
+        ));
+    }
+    Ok(())
+}
+
+/// El `algorithm` y el `stoponerror` del lote: atributo de `<signbatch>` en el
+/// XML heredado, o campos del objeto raíz en JSON.
+fn batch_algorithm_and_stop_on_error(json: bool, lote: &[u8]) -> Result<(String, bool), Refusal> {
+    let (algorithm, stop_on_error) = if json {
+        batch_header_from_json(lote)?
+    } else {
+        batch_header_from_xml(lote)?
+    };
+
+    if !ACCEPTED_BATCH_ALGORITHMS.contains(&algorithm.to_ascii_lowercase().as_str()) {
+        return Err(Refusal::about(
+            Parameter::Algorithm,
+            format!("el algoritmo de lote '{algorithm}' no se atiende"),
+        ));
+    }
+
+    Ok((algorithm, stop_on_error))
+}
+
+fn batch_header_from_json(lote: &[u8]) -> Result<(String, bool), Refusal> {
+    let value: serde_json::Value = serde_json::from_slice(lote).map_err(|error| {
+        Refusal::about(
+            Parameter::Data,
+            format!("el lote no es JSON valido: {error}"),
+        )
+    })?;
+
+    let algorithm = value
+        .get("algorithm")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| Refusal::about(Parameter::Algorithm, "falta el parametro 'algorithm'"))?
+        .to_owned();
+    let stop_on_error = value
+        .get("stoponerror")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+
+    Ok((algorithm, stop_on_error))
+}
+
+fn batch_header_from_xml(lote: &[u8]) -> Result<(String, bool), Refusal> {
+    let text = std::str::from_utf8(lote).map_err(|error| {
+        Refusal::about(Parameter::Data, format!("el lote no es UTF-8: {error}"))
+    })?;
+
+    let mut reader = quick_xml::Reader::from_str(text);
+    loop {
+        match reader.read_event() {
+            Ok(quick_xml::events::Event::Start(tag) | quick_xml::events::Event::Empty(tag)) => {
+                let mut algorithm = None;
+                let mut stop_on_error = false;
+                for attribute in tag.attributes().flatten() {
+                    let value = String::from_utf8_lossy(attribute.value.as_ref()).into_owned();
+                    match attribute.key.as_ref() {
+                        b"algorithm" => algorithm = Some(value),
+                        b"stoponerror" => stop_on_error = value.eq_ignore_ascii_case("true"),
+                        _ => {}
+                    }
+                }
+                let algorithm = algorithm.ok_or_else(|| {
+                    Refusal::about(Parameter::Algorithm, "falta el parametro 'algorithm'")
+                })?;
+                return Ok((algorithm, stop_on_error));
+            }
+            Ok(quick_xml::events::Event::Eof) => {
+                return Err(Refusal::about(
+                    Parameter::Data,
+                    "el lote no tiene elemento raiz",
+                ));
+            }
+            Err(error) => {
+                return Err(Refusal::about(
+                    Parameter::Data,
+                    format!("el lote no es XML valido: {error}"),
+                ));
+            }
+            _ => {}
+        }
+    }
 }
 
 /// Un parámetro opcional, o nada si no vino o vino vacío.

@@ -1,0 +1,76 @@
+use super::*;
+
+#[test]
+fn an_https_batch_url_is_accepted() {
+    assert!(
+        validated_batch_url("https://batch.example/pre", Situation::PresignerUnreachable).is_ok()
+    );
+}
+
+#[test]
+fn an_http_batch_url_is_rejected() {
+    let result = validated_batch_url("http://batch.example/pre", Situation::PresignerUnreachable);
+
+    assert!(matches!(
+        result,
+        Err(error) if error.situation() == Situation::PresignerUnreachable
+    ));
+}
+
+#[test]
+fn a_malformed_batch_url_fails_without_panicking() {
+    assert!(validated_batch_url("no es una url", Situation::PostsignerUnreachable).is_err());
+}
+
+#[test]
+fn presign_composes_the_format_the_lote_and_the_certs_without_tridata() {
+    let query = compose_query(
+        BatchFormat::Xml,
+        "bG90ZQ",
+        &[b"cert-uno".to_vec(), b"cert-dos".to_vec()],
+        None,
+    );
+
+    assert_eq!(
+        query,
+        format!(
+            "xml=bG90ZQ&certs={}",
+            [
+                URL_SAFE_NO_PAD.encode(b"cert-uno"),
+                URL_SAFE_NO_PAD.encode(b"cert-dos")
+            ]
+            .join(";")
+        )
+    );
+}
+
+#[test]
+fn postsign_appends_the_tridata_url_safe_and_in_the_lotes_own_format() {
+    let tridata = TriphaseData::new(
+        None,
+        vec![crate::site::domain::batch::TriSign::new(
+            Some("001".to_owned()),
+            None,
+            vec![("PK1".to_owned(), "AAAA".to_owned())],
+        )],
+    );
+
+    let json_query = compose_query(BatchFormat::Json, "bG90ZQ", &[], Some(&tridata));
+    assert!(json_query.ends_with(&format!(
+        "&tridata={}",
+        URL_SAFE_NO_PAD.encode(tridata.to_json())
+    )));
+
+    let xml_query = compose_query(BatchFormat::Xml, "bG90ZQ", &[], Some(&tridata));
+    assert!(xml_query.ends_with(&format!(
+        "&tridata={}",
+        URL_SAFE_NO_PAD.encode(tridata.to_xml())
+    )));
+}
+
+#[test]
+fn json_uses_the_json_parameter_name() {
+    let query = compose_query(BatchFormat::Json, "bG90ZQ", &[], None);
+
+    assert!(query.starts_with("json=bG90ZQ&certs="));
+}
