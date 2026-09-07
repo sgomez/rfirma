@@ -104,15 +104,16 @@ rojo.
 | **`desktop/`** | El escritorio de la persona, en el lado de la interfaz: quién atiende `afirma://`. |
 | `desktop/urlHandlers.ts` | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras que lo acompañan. Sin React. |
 | `desktop/UrlHandlerBanner.tsx` | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
-| **`sede/`** | **La ventana que abre una sede** por `afirma://`: una ventana con una secuencia de cinco momentos, no cinco pantallas. Ficha: `docs/design/ventana-de-sede.md`. |
+| **`sede/`** | **La ventana que abre una sede** por `afirma://`: una ventana con una secuencia de momentos, no una pantalla por momento. Ficha: `docs/design/ventana-de-sede.md`. |
 | `sede/main.tsx` | **El cableado de la ventana de sede** (`sede.html`): su propio montaje, sin nada del árbol de la principal. |
 | `sede/siteErrands.ts` | El adaptador del puerto: convierte lo que empuja el backend en lo que espera la ventana. Sin React y sin Tauri. |
 | `sede/errand.ts` | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y los relojes. Sin React. |
-| `sede/SedeWindow.tsx` | El marco de 520 × 420 px y el reparto entre los cinco momentos. |
+| `sede/SedeWindow.tsx` | El marco de 520 × 420 px y el reparto entre los momentos. |
 | `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
 | `sede/SedeWaiting.tsx` | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
 | `sede/SedeConsent.tsx` | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual. |
 | `sede/SedeSigning.tsx` | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
+| `sede/SedeTransfer.tsx` | El fichero que la sede quiere guardar o cargar, mientras el diálogo del portal está encima. No tiene acciones propias. |
 | `sede/SedeOutcome.tsx` | 4 · Los tres desenlaces, con el documento recién firmado y el detalle copiable del rechazo. |
 | `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas. |
 | **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva, y su doble. Sin React. |

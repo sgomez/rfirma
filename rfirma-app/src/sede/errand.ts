@@ -11,8 +11,7 @@ import type { TokenFailure } from "../signing/token";
  * y esta ventana no conoce a Tauri (ADR-0017). Aquí solo vive el vocabulario
  * de lo que se enseña y el momento en el que se enseña.
  *
- * Sin React a propósito: los cinco momentos se prueban desde aquí sin montar
- * nada.
+ * Sin React a propósito: los momentos se prueban desde aquí sin montar nada.
  */
 
 /** Qué le pide la sede a quien está delante. */
@@ -129,6 +128,16 @@ export type ErrandStage =
    * del motor y no se cuentan aquí.
    */
   | { kind: "signing"; certificate: Certificate; phase: SigningPhase }
+  /**
+   * La sede pide guardar un fichero y el diálogo del portal está abierto.
+   *
+   * Se enseña **el nombre que la sede propone y nunca una ruta** (ADR-0011),
+   * y quien confirma es la persona dentro del diálogo: aquí no hay botón que
+   * pulsar. `null` es que la sede no propuso ninguno.
+   */
+  | { kind: "saving"; filename: string | null }
+  /** Lo mismo para la carga: uno o varios ficheros, según lo que pida la sede. */
+  | { kind: "loading"; multiple: boolean }
   | { kind: "outcome"; outcome: SiteOutcome }
   /**
    * No hay nada que consentir ni nada que elegir, y son **dos situaciones

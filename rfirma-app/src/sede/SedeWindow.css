@@ -183,6 +183,17 @@
   background: var(--rf-primary);
 }
 
+/* El fichero que va o que viene, con el diálogo del portal encima */
+
+.sede-transfer {
+  height: 100%;
+  justify-content: center;
+}
+
+.sede-transfer__title {
+  overflow-wrap: anywhere;
+}
+
 /* 4 · Desenlace */
 
 .sede-outcome {

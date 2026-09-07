@@ -180,7 +180,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Outcome { outcome: SiteOutcomeView }
       NoCertificate { reason: NoCertificateView, owned: usize }
       Saving { filename: Option<String> }
-      Loading
+      Loading { multiple: bool }
 
   pub enum NoChannelView
       ChannelNotOpened
