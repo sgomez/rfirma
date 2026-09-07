@@ -17,6 +17,10 @@ impl Scratch for RealScratch {
         std::fs::write(path, bytes).map_err(|error| error.to_string())
     }
 
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
+        std::fs::read(path).map_err(|error| error.to_string())
+    }
+
     fn erase(&self, path: &Path) {
         let _ = std::fs::remove_file(path);
     }

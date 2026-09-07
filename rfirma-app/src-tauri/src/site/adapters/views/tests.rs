@@ -33,6 +33,27 @@ fn the_dead_ends_cross_named_and_never_written_out() {
 }
 
 #[test]
+fn saving_and_loading_cross_with_the_name_and_never_a_path() {
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::Saving {
+            filename: Some("firma.pdf".to_owned())
+        }))
+        .expect("cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": { "kind": "saving", "filename": "firma.pdf" },
+        })
+    );
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::Loading)).expect("cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": { "kind": "loading" },
+        })
+    );
+}
+
+#[test]
 fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail() {
     let refusal = crate::site::domain::protocol::Refusal::new(
         crate::site::domain::protocol::SafCode::UnsupportedProcedure,

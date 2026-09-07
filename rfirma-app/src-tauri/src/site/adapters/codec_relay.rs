@@ -3,14 +3,17 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use crate::site::domain::protocol::{
-    encrypt, read_operation, AfirmaUrl, CipherKey, SiteOperation, WireAnswer,
-};
+use crate::site::domain::protocol::{encrypt, AfirmaUrl, CipherKey, WireAnswer};
 
+use crate::site::adapters::codec::V4Codec;
 use crate::site::adapters::frontier;
 use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
 
 const RESULT_SEPARATOR: char = '|';
+
+/// El texto que sube el servidor intermedio cuando el guardado sale bien, sin cifrar
+/// (`ProtocolInvocationLauncherSave.java`: `RESULT_OK = "OK"`).
+const SAVE_OK: &str = "OK";
 
 /// Códec del servidor intermedio: lee las operaciones igual que la versión 4, pero cifra cada
 /// campo de la respuesta con la clave negociada, calcado de `NativeSignDataProcessor` (1.9.2).
@@ -35,13 +38,7 @@ impl RelayCodec {
 
 impl ProtocolCodec for RelayCodec {
     fn decode(&self, message: &AfirmaUrl) -> SiteRequest {
-        match read_operation(message) {
-            Ok(SiteOperation::SelectCertificate(request)) => {
-                SiteRequest::SelectCertificate(request)
-            }
-            Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
-            Err(refusal) => SiteRequest::NotAttended(refusal),
-        }
+        V4Codec.decode(message)
     }
 
     fn encode(&self, outcome: &SiteOutcome) -> String {
@@ -54,6 +51,12 @@ impl ProtocolCodec for RelayCodec {
                     self.on_the_wire(signed)
                 )
             }
+            SiteOutcome::Saved => SAVE_OK.to_owned(),
+            SiteOutcome::Loaded(files) => files
+                .iter()
+                .map(|(name, content)| format!("{name}:{}", self.on_the_wire(content)))
+                .collect::<Vec<_>>()
+                .join(&RESULT_SEPARATOR.to_string()),
             // El error sube en claro y sin cifrar, como el original (ProtocolInvocationLauncher.java).
             SiteOutcome::Cancelled => frontier::cancelled().on_the_wire(),
             SiteOutcome::Refused(refusal) => {

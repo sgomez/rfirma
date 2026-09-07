@@ -83,6 +83,159 @@ pub fn site_look_again(app_handle: tauri::AppHandle) {
     site_window::publish_what_moved(&app_handle, looked);
 }
 
+/// Añade el filtro de extensiones al diálogo del portal, si la sede declaró alguna.
+fn with_extensions<R: tauri::Runtime>(
+    mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
+    extensions: &[String],
+    description: Option<&str>,
+) -> tauri_plugin_dialog::FileDialogBuilder<R> {
+    if extensions.is_empty() {
+        return dialog;
+    }
+    let list: Vec<&str> = extensions.iter().map(String::as_str).collect();
+    dialog = dialog.add_filter(description.unwrap_or(""), &list);
+    dialog
+}
+
+/// El nombre base y la ruta de cada fichero que la persona eligió.
+fn named_paths(
+    chosen: Vec<tauri_plugin_dialog::FilePath>,
+) -> Result<Vec<(String, std::path::PathBuf)>, Failure> {
+    chosen
+        .into_iter()
+        .map(|file_path| {
+            let path = file_path
+                .into_path()
+                .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default()
+                .to_owned();
+            Ok((name, path))
+        })
+        .collect()
+}
+
+/// Un rechazo porque no hay ningún guardado o ninguna carga pendiente que atender.
+fn nothing_pending(what: &str) -> Failure {
+    Failure::new(
+        "siteErrandNotLive",
+        format!("no hay {what} pendiente que atender"),
+    )
+}
+
+/// El diálogo de guardado del portal con las pistas que declaró la sede.
+fn save_dialog<R: tauri::Runtime>(
+    mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
+    consent: &crate::site::application::errand::SavingConsent,
+) -> tauri_plugin_dialog::FileDialogBuilder<R> {
+    if let Some(name) = consent.filename.as_deref() {
+        dialog = dialog.set_file_name(name);
+    }
+    if let Some(title) = consent.title.as_deref() {
+        dialog = dialog.set_title(title);
+    }
+    with_extensions(dialog, &consent.extensions, consent.description.as_deref())
+}
+
+/// Escribe donde la persona eligió, o cancela si cerró el diálogo sin elegir.
+fn write_where_chosen(
+    chosen: Option<tauri_plugin_dialog::FilePath>,
+    scratch: &dyn crate::site::ports::Scratch,
+    live: &crate::site::application::errand::LiveErrand,
+) -> Result<(), Failure> {
+    let Some(chosen) = chosen else {
+        crate::site::application::errand::decline(live);
+        return Ok(());
+    };
+    let path = named_paths(vec![chosen])?.remove(0).1;
+    crate::site::application::errand::saved(scratch, &path, live);
+    Ok(())
+}
+
+/// Abre el diálogo de guardado del portal y escribe el fichero donde la persona eligió (ADR-0011).
+#[tauri::command(async)]
+pub fn site_save_file(
+    app_handle: tauri::AppHandle,
+    site: State<'_, SiteRoot>,
+) -> Result<(), Failure> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let Some(consent) = site.errand.the_saving_pending() else {
+        return Err(nothing_pending("ningun guardado"));
+    };
+
+    let dialog = save_dialog(app_handle.dialog().file(), &consent);
+    write_where_chosen(
+        dialog.blocking_save_file(),
+        site.scratch.as_ref(),
+        &site.errand,
+    )?;
+    site_window::publish_the_moment(&app_handle);
+    Ok(())
+}
+
+/// El selector de carga del portal con las pistas que declaró la sede.
+fn load_dialog<R: tauri::Runtime>(
+    mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
+    consent: &crate::site::application::errand::LoadingConsent,
+) -> tauri_plugin_dialog::FileDialogBuilder<R> {
+    if let Some(title) = consent.title.as_deref() {
+        dialog = dialog.set_title(title);
+    }
+    if let Some(folder) = consent.starting_folder.as_deref() {
+        dialog = dialog.set_directory(folder);
+    }
+    with_extensions(dialog, &consent.extensions, consent.description.as_deref())
+}
+
+/// Elige uno o varios ficheros del selector, según lo que pida la sede.
+fn pick<R: tauri::Runtime>(
+    dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
+    multiple: bool,
+) -> Vec<tauri_plugin_dialog::FilePath> {
+    if multiple {
+        dialog.blocking_pick_files().unwrap_or_default()
+    } else {
+        dialog.blocking_pick_file().into_iter().collect()
+    }
+}
+
+/// Lee lo que la persona eligió y se lo entrega a la sede, o cancela si no eligió nada.
+fn load_chosen(
+    chosen: Vec<tauri_plugin_dialog::FilePath>,
+    scratch: &dyn crate::site::ports::Scratch,
+    live: &crate::site::application::errand::LiveErrand,
+) -> Result<(), Failure> {
+    if chosen.is_empty() {
+        crate::site::application::errand::decline(live);
+        return Ok(());
+    }
+    let named = named_paths(chosen)?;
+    crate::site::application::errand::loaded(scratch, &named, live);
+    Ok(())
+}
+
+/// Abre el selector de carga del portal y entrega a la sede lo que la persona eligió (ADR-0011).
+#[tauri::command(async)]
+pub fn site_load_files(
+    app_handle: tauri::AppHandle,
+    site: State<'_, SiteRoot>,
+) -> Result<(), Failure> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let Some(consent) = site.errand.the_loading_pending() else {
+        return Err(nothing_pending("ninguna carga"));
+    };
+
+    let dialog = load_dialog(app_handle.dialog().file(), &consent);
+    let chosen = pick(dialog, consent.multiple);
+    load_chosen(chosen, site.scratch.as_ref(), &site.errand)?;
+    site_window::publish_the_moment(&app_handle);
+    Ok(())
+}
+
 /// Instala la CA local en los almacenes NSS del usuario (ADR-0005).
 #[tauri::command(async)]
 pub fn install_local_ca(app_handle: tauri::AppHandle, site: State<'_, SiteRoot>) {
@@ -99,3 +252,6 @@ pub fn install_local_ca(app_handle: tauri::AppHandle, site: State<'_, SiteRoot>)
 pub fn read_site_errand(site: State<'_, SiteRoot>) -> Option<SiteErrandView> {
     site.errand.moment().as_ref().map(SiteErrandView::from)
 }
+
+#[cfg(test)]
+mod tests;

@@ -1,5 +1,6 @@
 //! Códec del protocolo v4 para decodificar peticiones y codificar respuestas (ADR-0017).
 
+use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
 use crate::site::domain::protocol::{read_operation, AfirmaUrl, SiteOperation, WireAnswer};
@@ -8,6 +9,9 @@ use crate::site::adapters::frontier;
 use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
 
 const RESULT_SEPARATOR: char = '|';
+
+/// El texto exacto que espera `autoscript.js` cuando el guardado sale bien (`CommandProcessorThread.java:295,336`).
+const SAVE_OK: &str = "SAVE_OK";
 
 /// Códec de la versión 4 del protocolo de comunicación con la sede.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -20,6 +24,8 @@ impl ProtocolCodec for V4Codec {
                 SiteRequest::SelectCertificate(request)
             }
             Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
+            Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
+            Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
             Err(refusal) => SiteRequest::NotAttended(refusal),
         }
     }
@@ -34,6 +40,12 @@ impl ProtocolCodec for V4Codec {
                     on_the_wire(signed)
                 )
             }
+            SiteOutcome::Saved => SAVE_OK.to_owned(),
+            SiteOutcome::Loaded(files) => files
+                .iter()
+                .map(|(name, content)| format!("{name}:{}", STANDARD.encode(content)))
+                .collect::<Vec<_>>()
+                .join(&RESULT_SEPARATOR.to_string()),
             SiteOutcome::Cancelled => frontier::cancelled().on_the_wire(),
             SiteOutcome::Refused(refusal) => {
                 WireAnswer::refused(frontier::code_of(refusal)).on_the_wire()
