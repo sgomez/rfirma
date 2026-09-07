@@ -35,11 +35,7 @@ fn presign_composes_the_format_the_lote_and_the_certs_without_tridata() {
         query,
         format!(
             "xml=bG90ZQ&certs={}",
-            [
-                URL_SAFE_NO_PAD.encode(b"cert-uno"),
-                URL_SAFE_NO_PAD.encode(b"cert-dos")
-            ]
-            .join(";")
+            [URL_SAFE.encode(b"cert-uno"), URL_SAFE.encode(b"cert-dos")].join(";")
         )
     );
 }
@@ -56,16 +52,10 @@ fn postsign_appends_the_tridata_url_safe_and_in_the_lotes_own_format() {
     );
 
     let json_query = compose_query(BatchFormat::Json, "bG90ZQ", &[], Some(&tridata));
-    assert!(json_query.ends_with(&format!(
-        "&tridata={}",
-        URL_SAFE_NO_PAD.encode(tridata.to_json())
-    )));
+    assert!(json_query.ends_with(&format!("&tridata={}", URL_SAFE.encode(tridata.to_json()))));
 
     let xml_query = compose_query(BatchFormat::Xml, "bG90ZQ", &[], Some(&tridata));
-    assert!(xml_query.ends_with(&format!(
-        "&tridata={}",
-        URL_SAFE_NO_PAD.encode(tridata.to_xml())
-    )));
+    assert!(xml_query.ends_with(&format!("&tridata={}", URL_SAFE.encode(tridata.to_xml()))));
 }
 
 #[test]
@@ -73,4 +63,11 @@ fn json_uses_the_json_parameter_name() {
     let query = compose_query(BatchFormat::Json, "bG90ZQ", &[], None);
 
     assert!(query.starts_with("json=bG90ZQ&certs="));
+}
+
+#[test]
+fn the_lote_gets_the_textual_substitution_instead_of_being_reencoded() {
+    let query = compose_query(BatchFormat::Xml, "a+b/c+d/e", &[], None);
+
+    assert!(query.starts_with("xml=a-b_c-d_e&certs="));
 }

@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine as _;
 
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
@@ -96,10 +96,11 @@ fn compose_query(
 ) -> String {
     let certs_base64 = certs
         .iter()
-        .map(|cert| URL_SAFE_NO_PAD.encode(cert))
+        .map(|cert| URL_SAFE.encode(cert))
         .collect::<Vec<_>>()
         .join(";");
 
+    let lote_base64 = url_safe_batch(lote_base64);
     let mut query = format!("{}={lote_base64}&certs={certs_base64}", format.param_name());
 
     if let Some(tridata) = tridata {
@@ -108,10 +109,15 @@ fn compose_query(
             BatchFormat::Json => tridata.to_json(),
         };
         query.push_str("&tridata=");
-        query.push_str(&URL_SAFE_NO_PAD.encode(serialized.as_bytes()));
+        query.push_str(&URL_SAFE.encode(serialized.as_bytes()));
     }
 
     query
+}
+
+/// `BatchSigner` no recodifica el lote: sustituye `+`→`-` y `/`→`_` sobre el base64 que llegó en `dat`.
+fn url_safe_batch(lote_base64: &str) -> String {
+    lote_base64.replace('+', "-").replace('/', "_")
 }
 
 /// La URL de un servlet del lote: `https`, o el fallo con la situación que le corresponda.
