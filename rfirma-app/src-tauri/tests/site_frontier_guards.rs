@@ -21,18 +21,19 @@ use rfirma_lib::site::adapters::channel::{answer, Answer};
 use rfirma_lib::site::adapters::codec::V4Codec;
 use rfirma_lib::site::adapters::frontier;
 use rfirma_lib::site::adapters::views::{NoCertificateView, NoChannelView, SiteErrandView};
-use rfirma_lib::site::application::errand::{
-    LiveErrand, NegotiatedCodec, ProtocolCodec, SiteRefusal,
-};
-use rfirma_lib::site::application::site::{attend_launch, Attendance};
+use rfirma_lib::site::application::errand::{LiveErrand, ProtocolCodec, SiteRefusal};
+use rfirma_lib::site::application::site::{attend_launch, Attendance, CodecTable};
 use rfirma_lib::site::domain::channel::Situation as ChannelSituation;
 use rfirma_lib::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use rfirma_lib::site::domain::protocol::{Refusal, SafCode, WireAnswer};
 
-fn a_codec() -> NegotiatedCodec {
-    std::sync::Arc::new(V4Codec)
+fn a_codec() -> CodecTable {
+    CodecTable {
+        v4: std::sync::Arc::new(V4Codec),
+        v3: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v3::V3Codec),
+    }
 }
 
 /// Enlace del portal que no puede salir.

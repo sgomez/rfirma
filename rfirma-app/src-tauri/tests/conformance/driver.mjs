@@ -9,6 +9,27 @@ if (!autoscriptPath) {
   process.exit(2);
 }
 const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
+const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
+const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
+
+/**
+ * El `autoscript.js` publicado nunca manda `v=3` por websocket (siempre habla la 4). Para medir
+ * el modo `v3` se fuerza el fuente antes de ejecutarlo: la versión que declara, la URL de
+ * arranque sin `ports=` y los puertos con los que conecta, al puerto fijo. El oráculo sigue
+ * siendo el cliente publicado; solo se le obliga a hablar como uno de la versión 3.
+ */
+function forcedToTheThirdProtocol(source) {
+  return source
+    .replace("var PROTOCOL_VERSION = 4;", "var PROTOCOL_VERSION = 3;")
+    .replace(
+      'var url = "afirma://websocket?ports=" + portsLine\n\t\t\t\t\t+ "&v=" + PROTOCOL_VERSION',
+      'var url = "afirma://websocket?v=" + PROTOCOL_VERSION',
+    )
+    .replace(
+      "var ports = AfirmaUtils.getRandomPorts(minPort, maxPort);",
+      `var ports = [${THE_PORT_OF_THE_THIRD_PROTOCOL}];`,
+    );
+}
 
 /** Una línea de JSON por evento, y nada más, en la salida estándar. */
 function emit(event) {
@@ -100,7 +121,8 @@ globalThis.location = pageLocation;
 globalThis.screen = { width: 1920, height: 1080 };
 globalThis.XMLHttpRequest = undefined;
 
-const source = readFileSync(autoscriptPath, "utf8");
+const rawSource = readFileSync(autoscriptPath, "utf8");
+const source = mode === "v3" ? forcedToTheThirdProtocol(rawSource) : rawSource;
 runInThisContext(source, { filename: autoscriptPath });
 
 SupportDialog.enableSupportDialog(false);

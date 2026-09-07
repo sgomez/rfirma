@@ -177,11 +177,13 @@ dónde viene la petición. Lo que lo cierra es la **credencial de canal**, abajo
 _Avoid_: socket, conexión, túnel
 
 **Credencial de canal**:
-El `idsession` que la sede sortea y manda en la URL de arranque, y que repite en
-cada mensaje del canal. **No es un identificador de transacción**: es lo único
-que impide que otra página abierta en el mismo equipo use el canal. Un valor mal
-formado se rechaza; nunca se ignora, porque un canal sin credencial es un canal
-sin cerradura.
+El `idsession` que la sede manda en la URL de arranque, y que repite en cada
+mensaje del canal. **No es un identificador de transacción**: es lo único que
+impide que otra página abierta en el mismo equipo use el canal. Es **opcional,
+no ausente**: si la URL de arranque la trae, se exige en cada mensaje; si la
+sede habla el protocolo 3 y no la trae, no se exige ninguna. Un valor que
+llega y está mal formado se rechaza siempre, hable el protocolo que hable la
+sede.
 _Avoid_: id de sesión, token, identificador de transacción
 
 **Conversación**:

@@ -84,7 +84,10 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
             )),
         },
         ca_store,
-        codec: Arc::new(site::adapters::codec::V4Codec),
+        codecs: site::application::site::CodecTable {
+            v4: Arc::new(site::adapters::codec::V4Codec),
+            v3: Arc::new(site::adapters::codec_v3::V3Codec),
+        },
         scratch_dir: std::env::temp_dir(),
         scratch: Arc::new(site::adapters::scratch::RealScratch),
     };
@@ -158,7 +161,7 @@ pub fn run() {
                         let transport = the_transport(&site.ca_store, &handle);
                         let attendance = site::application::startup::attend_site_launch(
                             &url,
-                            &site.codec,
+                            &site.codecs,
                             &|location, duty| transport.open(location, duty),
                             &|_| site::adapters::window::open_the_site_window(&handle),
                             &site.errand,
@@ -249,7 +252,7 @@ pub fn run() {
                     profiles: &site.trust.profiles,
                     stores: site.trust.stores.as_ref(),
                 },
-                &site.codec,
+                &site.codecs,
                 &|location, duty| transport.open(location, duty),
                 &|_| site::adapters::window::open_the_site_window(&handle),
                 &site.errand,

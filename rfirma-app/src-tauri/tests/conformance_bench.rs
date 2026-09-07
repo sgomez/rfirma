@@ -11,14 +11,34 @@ use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
-    drawn_ports, AfirmaUrl, LaunchRequest, SafCode, PROTOCOL_VERSION,
+    drawn_ports, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode, PROTOCOL_VERSION,
+    THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 
 /// Tiempo máximo de espera para respuestas en pruebas.
 const PATIENCE: Duration = Duration::from_secs(40);
 
-/// La versión que el cliente publicado habla, y la que rfirma implementa.
+/// La versión que el cliente publicado habla por defecto, y la que rfirma implementa.
 const THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS: i64 = 4;
+
+/// Modo en el que se fuerza al `autoscript.js` publicado a hablar, porque nunca manda `v=3` por
+/// websocket por su cuenta.
+#[derive(Clone, Copy)]
+enum BenchMode {
+    /// El que el cliente publicado habla de por sí: puertos sorteados y `v=4`.
+    Fourth,
+    /// El fuente reescrito antes de ejecutarlo: sin `ports`, `v=3` y el puerto fijo.
+    Third,
+}
+
+impl BenchMode {
+    fn as_env_value(self) -> &'static str {
+        match self {
+            Self::Fourth => "v4",
+            Self::Third => "v3",
+        }
+    }
+}
 
 /// El `autoscript.js` del tag `v1.9.2`, donde lo deja `just autoscript`.
 fn the_published_client() -> PathBuf {
@@ -82,13 +102,19 @@ struct PublishedClient {
 }
 
 impl PublishedClient {
-    /// Arranca el conductor con la CA local en NODE_EXTRA_CA_CERTS.
+    /// Arranca el conductor con la CA local en NODE_EXTRA_CA_CERTS, en el modo por defecto (v4).
     fn running_against(ca_pem_path: &std::path::Path) -> Self {
+        Self::running_as(ca_pem_path, BenchMode::Fourth)
+    }
+
+    /// Arranca el conductor con la CA local en NODE_EXTRA_CA_CERTS, en el modo indicado.
+    fn running_as(ca_pem_path: &std::path::Path, mode: BenchMode) -> Self {
         let mut child = Command::new("node")
             .arg(the_driver())
             .env("RFIRMA_AUTOSCRIPT", the_published_client())
             .env("NODE_EXTRA_CA_CERTS", ca_pem_path)
             .env("RFIRMA_BENCH_TIMEOUT_MS", PATIENCE.as_millis().to_string())
+            .env("RFIRMA_BENCH_MODE", mode.as_env_value())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
@@ -174,8 +200,17 @@ async fn the_channel_on_one_of(
     material: &ChannelMaterial,
     duty: ChannelDuty,
 ) -> OpenChannel {
-    let listener = bind_first_free(&ChannelLocation::Drawn(drawn_ports(url)))
-        .expect("alguno de los tres sorteados deberia estar libre");
+    the_channel_at(&ChannelLocation::Drawn(drawn_ports(url)), material, duty).await
+}
+
+/// Abre el canal en la ubicación indicada: uno de los puertos sorteados, o el puerto fijo del
+/// protocolo 3.
+async fn the_channel_at(
+    location: &ChannelLocation,
+    material: &ChannelMaterial,
+    duty: ChannelDuty,
+) -> OpenChannel {
+    let listener = bind_first_free(location).expect("la ubicacion del canal deberia estar libre");
     serve(
         listener,
         &material.certificate,
@@ -204,14 +239,22 @@ async fn the_url_the_published_client_builds_is_the_one_rfirma_reads() {
         PROTOCOL_VERSION, THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS,
         "rfirma implementa la version que el cliente publicado envia"
     );
+    let ChannelLocation::Drawn(ports) = launch.location() else {
+        panic!(
+            "el cliente publicado sortea puertos: {:?}",
+            launch.location()
+        );
+    };
     assert_eq!(
-        launch.ports().len(),
+        ports.len(),
         3,
-        "el cliente publicado sortea tres puertos, y llegaron {:?}",
-        launch.ports()
+        "el cliente publicado sortea tres puertos, y llegaron {ports:?}"
     );
+    let NegotiatedCredential::Required(credential) = launch.credential() else {
+        panic!("el cliente publicado trae credencial de canal");
+    };
     assert_eq!(
-        launch.credential().as_str().len(),
+        credential.as_str().len(),
         20,
         "la credencial de canal son veinte alfanumericos"
     );
@@ -229,9 +272,9 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
 
     let unsupported = url.replace(
         &format!("&v={THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS}"),
-        "&v=3",
+        "&v=99",
     );
-    let refusal = LaunchRequest::parse(&unsupported).expect_err("la version 3 no se habla aqui");
+    let refusal = LaunchRequest::parse(&unsupported).expect_err("la version 99 no se habla aqui");
     assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
 
     let parsed = AfirmaUrl::parse(&url).expect("la invocacion deberia leerse");
@@ -251,5 +294,46 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
         "java.lang.InterruptedException",
         "lo medido contra el tag v1.9.2: el cierre del canal es lo que el \
          cliente publicado convierte en error, no el `SAF_21` que le contestamos"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_as(material.ca_pem_file.path(), BenchMode::Third);
+    let url = client.the_launch_url();
+
+    let parsed =
+        AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
+    let launch = LaunchRequest::from_url(&parsed).expect("la version 3 se habla aqui, sin puertos");
+
+    assert_eq!(
+        launch.location(),
+        &ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL),
+        "el modo v3 fuerza el fuente para que no mande 'ports' y hable la version 3"
+    );
+    let NegotiatedCredential::Required(credential) = launch.credential() else {
+        panic!("el cliente publicado, aunque hable la version 3, sigue mandando idsession");
+    };
+    assert_eq!(
+        credential.as_str().len(),
+        20,
+        "la credencial de canal son veinte alfanumericos, igual que en la version 4"
+    );
+
+    let channel = the_channel_at(
+        launch.location(),
+        &material,
+        ChannelDuty::Serve(launch.credential().clone()),
+    )
+    .await;
+    assert_eq!(
+        channel.port(),
+        THE_PORT_OF_THE_THIRD_PROTOCOL,
+        "el canal se abre en el puerto fijo, no en uno sorteado"
     );
 }

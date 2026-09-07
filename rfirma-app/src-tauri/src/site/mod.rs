@@ -9,10 +9,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use adapters::tls::LocalCaStore;
-use application::errand::{LiveErrand, NegotiatedCodec};
+use application::errand::LiveErrand;
+use application::site::CodecTable;
 use application::startup::{HeldChannel, LocalCaTrust};
 
-/// La raíz de `site`: el trámite vivo, el canal sostenido, la confianza de la CA local y el códec.
+/// La raíz de `site`: el trámite vivo, el canal sostenido, la confianza de la CA local y la tabla
+/// de códecs.
 pub struct SiteRoot {
     /// El trámite vivo del proceso.
     pub errand: LiveErrand,
@@ -22,8 +24,8 @@ pub struct SiteRoot {
     pub trust: LocalCaTrust,
     /// Las dos ranuras de la CA local en disco.
     pub ca_store: LocalCaStore,
-    /// El códec negociado con las sedes.
-    pub codec: NegotiatedCodec,
+    /// La tabla de códecs que la negociación elige según la forma de la invocación.
+    pub codecs: CodecTable,
     /// Directorio para los documentos de paso.
     pub scratch_dir: PathBuf,
     /// Quien escribe y borra el fichero de paso.

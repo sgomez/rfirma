@@ -98,6 +98,14 @@ fn a_codec() -> NegotiatedCodec {
     Arc::new(V4Codec)
 }
 
+/// Tabla de códecs para pruebas: la version 4 sortea, la 3 usa el puerto fijo.
+fn a_codec_table() -> crate::site::application::site::CodecTable {
+    crate::site::application::site::CodecTable {
+        v4: Arc::new(V4Codec),
+        v3: Arc::new(crate::site::adapters::codec_v3::V3Codec),
+    }
+}
+
 /// Un trámite que ya habla la versión 4, sin haber empezado todavía.
 fn a_live() -> LiveErrand {
     LiveErrand::speaking(a_codec())
@@ -363,7 +371,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
     .expect("el transporte en memoria abre");
     let codec: NegotiatedCodec = Arc::new(ACodec::answering(Vec::new()));
     assert!(live.begin(Errand::of(
-        a_credential(),
+        NegotiatedCredential::Required(a_credential()),
         channel.port(),
         Arc::clone(&codec)
     )));
@@ -414,7 +422,11 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
         "el codec negociado sobrevive al tramite: el canal sigue en pie"
     );
 
-    assert!(live.begin(Errand::of(a_credential(), channel.port(), codec)));
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        channel.port(),
+        codec
+    )));
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
 
@@ -495,7 +507,7 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
 
     let attendance = attend_launch(
         &a_launch("54001,54002,54003"),
-        &a_codec(),
+        &a_codec_table(),
         &a_transport(&asked),
         &live,
     );
@@ -581,7 +593,7 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
 
     let attendance = attend_launch(
         &a_launch("54001,54002,54003"),
-        &a_codec(),
+        &a_codec_table(),
         &a_transport(&asked),
         &live,
     );
@@ -626,7 +638,11 @@ fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_erra
     let live = a_live();
     let (handle, wire) = the_wire();
     live.answer_through(handle);
-    assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
 
     drop(wire);
 
@@ -700,7 +716,7 @@ fn the_whole_signature_errand(verb: &str, round: SignatureRound) {
 
     let attendance = attend_launch(
         &a_launch("54001,54002,54003"),
-        &a_codec(),
+        &a_codec_table(),
         &a_transport(&asked),
         &live,
     );
@@ -824,7 +840,7 @@ fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() 
 
     let attendance = attend_launch(
         &a_launch("54001,54002,54003"),
-        &a_codec(),
+        &a_codec_table(),
         &a_transport(&asked),
         &live,
     );
@@ -882,7 +898,11 @@ fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signatu
     let live = a_live();
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
-    assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
 
     let reply = the_signature_did_not_come_out(
         &live,
@@ -913,7 +933,11 @@ fn a_broken_session_seal_is_answered_with_its_own_code() {
     let live = a_live();
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
-    assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
 
     the_signature_did_not_come_out(
         &live,
@@ -1468,7 +1492,11 @@ fn a_token_that_cannot_be_listed_answers_with_the_code_of_its_own_situation() {
 #[test]
 fn the_person_saying_no_is_the_only_cancellation() {
     let live = a_live();
-    assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
 
     let reply = declined(&live);
 
@@ -1480,10 +1508,20 @@ fn a_second_launch_is_refused_while_the_first_errand_is_live() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
-    let first = attend_launch(&a_launch("54001"), &a_codec(), &a_transport(&asked), &live);
+    let first = attend_launch(
+        &a_launch("54001"),
+        &a_codec_table(),
+        &a_transport(&asked),
+        &live,
+    );
     assert!(matches!(first, Attendance::Serving { .. }), "{first:?}");
 
-    let second = attend_launch(&a_launch("55001"), &a_codec(), &a_transport(&asked), &live);
+    let second = attend_launch(
+        &a_launch("55001"),
+        &a_codec_table(),
+        &a_transport(&asked),
+        &live,
+    );
     let Attendance::RefusingOverTheChannel { answer, .. } = second else {
         panic!("el segundo se rechaza por su socket: {second:?}");
     };
@@ -1511,7 +1549,11 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
         };
         opened.set(opened.get() + 1);
         if opened.get() == 1 {
-            assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));
+            assert!(live.begin(Errand::of(
+                NegotiatedCredential::Required(a_credential()),
+                54001,
+                a_codec()
+            )));
             let closed = Arc::clone(&closed);
             return Ok(OpenChannel::new(
                 ports[0],
@@ -1521,7 +1563,12 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
         Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
     };
 
-    let attendance = attend_launch(&a_launch("55001,55002"), &a_codec(), &transport, &live);
+    let attendance = attend_launch(
+        &a_launch("55001,55002"),
+        &a_codec_table(),
+        &transport,
+        &live,
+    );
 
     let Attendance::RefusingOverTheChannel { answer, .. } = attendance else {
         panic!("la que llega tarde se rechaza por su socket: {attendance:?}");
@@ -1545,10 +1592,20 @@ fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
-    attend_launch(&a_launch("54001"), &a_codec(), &a_transport(&asked), &live);
+    attend_launch(
+        &a_launch("54001"),
+        &a_codec_table(),
+        &a_transport(&asked),
+        &live,
+    );
     declined(&live);
 
-    let next = attend_launch(&a_launch("55001"), &a_codec(), &a_transport(&asked), &live);
+    let next = attend_launch(
+        &a_launch("55001"),
+        &a_codec_table(),
+        &a_transport(&asked),
+        &live,
+    );
 
     assert!(matches!(next, Attendance::Serving { .. }), "{next:?}");
 }
@@ -1557,10 +1614,18 @@ fn the_live_errand_remembers_the_credential_and_the_port_and_nothing_else() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
-    attend_launch(&a_launch("54001"), &a_codec(), &a_transport(&asked), &live);
+    attend_launch(
+        &a_launch("54001"),
+        &a_codec_table(),
+        &a_transport(&asked),
+        &live,
+    );
 
     let errand = live.current().expect("hay tramite vivo");
-    assert_eq!(errand.credential().as_str(), CREDENTIAL);
+    assert_eq!(
+        errand.credential(),
+        &NegotiatedCredential::Required(a_credential())
+    );
     assert_eq!(errand.port(), 54001);
 }
 #[test]
@@ -1601,7 +1666,11 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
 
     let live = a_live();
     assert!(
-        live.begin(Errand::of(a_credential(), 54001, a_codec())),
+        live.begin(Errand::of(
+            NegotiatedCredential::Required(a_credential()),
+            54001,
+            a_codec()
+        )),
         "la plaza es suya"
     );
     let (handle, mut wire) = the_wire();
@@ -1657,7 +1726,11 @@ fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
 
     let live = a_live();
     assert!(
-        live.begin(Errand::of(a_credential(), 54001, a_codec())),
+        live.begin(Errand::of(
+            NegotiatedCredential::Required(a_credential()),
+            54001,
+            a_codec()
+        )),
         "la plaza es suya"
     );
     let (handle, mut wire) = the_wire();
@@ -1706,7 +1779,11 @@ fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
 
     let inadmissible = a_live();
     assert!(
-        inadmissible.begin(Errand::of(a_credential(), 54002, a_codec())),
+        inadmissible.begin(Errand::of(
+            NegotiatedCredential::Required(a_credential()),
+            54002,
+            a_codec()
+        )),
         "la plaza es suya"
     );
     let step = consent_to_sign(
@@ -1742,7 +1819,11 @@ fn leaving_the_no_certificate_screen_cancels_the_errand() {
 
     let live = a_live();
     assert!(
-        live.begin(Errand::of(a_credential(), 54001, a_codec())),
+        live.begin(Errand::of(
+            NegotiatedCredential::Required(a_credential()),
+            54001,
+            a_codec()
+        )),
         "la plaza es suya"
     );
     let (handle, mut wire) = the_wire();

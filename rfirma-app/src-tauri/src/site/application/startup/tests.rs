@@ -98,8 +98,11 @@ fn a_store() -> InMemoryCaSlots {
     InMemoryCaSlots::default()
 }
 
-fn a_codec() -> NegotiatedCodec {
-    std::sync::Arc::new(crate::site::adapters::codec::V4Codec)
+fn a_codec_table() -> crate::site::application::site::CodecTable {
+    crate::site::application::site::CodecTable {
+        v4: std::sync::Arc::new(crate::site::adapters::codec::V4Codec),
+        v3: std::sync::Arc::new(crate::site::adapters::codec_v3::V3Codec),
+    }
 }
 
 fn invoked_with(arguments: &[&str]) -> Invocation {
@@ -128,7 +131,7 @@ fn starting_with(world: &World, store: &InMemoryCaSlots, invocation: &Invocation
             profiles: &profiles,
             stores: world,
         },
-        &a_codec(),
+        &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
@@ -197,7 +200,7 @@ fn starting_with_nothing_shows_the_main_window() {
 fn a_refused_launch_opens_no_site_window() {
     let world = World::default();
     let store = a_store();
-    let invocation = invoked_with(&[&a_launch(&format!("v=3&idsession={CREDENTIAL}"))]);
+    let invocation = invoked_with(&[&a_launch(&format!("v=99&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
 
@@ -248,8 +251,10 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
     let live = LiveErrand::default();
     assert!(
         live.begin(Errand::of(
-            crate::site::domain::protocol::ChannelCredential::parse(CREDENTIAL)
-                .expect("la credencial es buena"),
+            crate::site::domain::protocol::NegotiatedCredential::Required(
+                crate::site::domain::protocol::ChannelCredential::parse(CREDENTIAL)
+                    .expect("la credencial es buena"),
+            ),
             PORTS[0],
             std::sync::Arc::new(crate::site::adapters::codec::V4Codec),
         )),
@@ -258,7 +263,7 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
 
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
-        &a_codec(),
+        &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
@@ -283,7 +288,7 @@ fn a_second_invocation_never_touches_the_trust_stores() {
 
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
-        &a_codec(),
+        &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
@@ -361,7 +366,7 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
             profiles: &[],
             stores: &world,
         },
-        &a_codec(),
+        &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         &|content| world.window(content),
         &live,
