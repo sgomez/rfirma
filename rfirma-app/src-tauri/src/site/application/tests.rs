@@ -1,5 +1,6 @@
-//! Los dobles de los puertos de `site`: las ranuras de la CA local en memoria y los certificados tal como los ve un trámite.
+//! Los dobles de los puertos de `site`: las ranuras de la CA local en memoria, los servlets del servidor intermedio y los certificados tal como los ve un trámite.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Mutex;
 
@@ -8,8 +9,9 @@ use crate::identity::application::tests::NoMemory;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
-use crate::site::ports::{Certificates, LocalCaSlots};
+use crate::site::ports::{Certificates, LocalCaSlots, Servlets};
 
 /// Las dos ranuras de la CA local en memoria, escribibles o no.
 #[derive(Default)]
@@ -72,6 +74,63 @@ impl LocalCaSlots for InMemoryCaSlots {
     fn forget_next(&self) -> Result<(), TlsError> {
         self.writing()?;
         *crate::lock(&self.next) = None;
+        Ok(())
+    }
+}
+
+/// Los servlets del servidor intermedio en memoria: lo guardado por identificador, y las esperas pedidas.
+#[derive(Default)]
+pub(crate) struct InMemoryServlets {
+    stored: Mutex<BTreeMap<String, String>>,
+    waited: Mutex<Vec<String>>,
+    unreachable: bool,
+}
+
+impl InMemoryServlets {
+    /// Unos servlets que nunca responden, como si la sede no tuviera red.
+    pub(crate) fn unreachable() -> Self {
+        Self {
+            unreachable: true,
+            ..Self::default()
+        }
+    }
+
+    /// Los identificadores por los que se pidió esperar, en el orden en que se pidieron.
+    pub(crate) fn waited_ids(&self) -> Vec<String> {
+        crate::lock(&self.waited).clone()
+    }
+
+    fn reaching(&self) -> Result<(), RelayError> {
+        if self.unreachable {
+            return Err(RelayError::new(
+                RelaySituation::ServletUnreachable,
+                "este servlet no responde",
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl Servlets for InMemoryServlets {
+    fn retrieve(&self, _service_url: &str, id: &str) -> Result<String, RelayError> {
+        self.reaching()?;
+        crate::lock(&self.stored).get(id).cloned().ok_or_else(|| {
+            RelayError::new(
+                RelaySituation::ServletUnreachable,
+                "no hay datos guardados para ese identificador",
+            )
+        })
+    }
+
+    fn store(&self, _service_url: &str, id: &str, data: &str) -> Result<(), RelayError> {
+        self.reaching()?;
+        crate::lock(&self.stored).insert(id.to_owned(), data.to_owned());
+        Ok(())
+    }
+
+    fn wait(&self, _service_url: &str, id: &str) -> Result<(), RelayError> {
+        self.reaching()?;
+        crate::lock(&self.waited).push(id.to_owned());
         Ok(())
     }
 }

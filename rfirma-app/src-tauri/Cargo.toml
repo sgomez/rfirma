@@ -122,8 +122,8 @@ tokio = { version = "1", features = ["net", "rt", "sync", "io-util", "macros"] }
 # `reqwest`. Ya estaban las dos en el arbol; aqui solo se hacen directas.
 native-tls = "0.2"
 tokio-native-tls = "0.3"
-# La comprobacion de version nueva, y el UNICO sitio del programa que abre una
-# conexion (ID-182). Entra con `default-features = false` a proposito: las de
+# La comprobacion de version nueva y el servidor intermedio (ID-182). Entra
+# con `default-features = false` a proposito: las de
 # por omision traen rustls con aws-lc-rs —que exige cmake en la construccion del
 # flatpak— y `native-tls` usa el OpenSSL que ya trae tanto el anfitrion como
 # org.gnome.Sdk. Sin `json`: quien interpreta la respuesta es el caso de uso,
@@ -131,11 +131,19 @@ tokio-native-tls = "0.3"
 reqwest = { version = "0.13", default-features = false, features = [
     "blocking",
     "native-tls",
+    "form",
 ] }
 # El registro de los tipos que cruzan a la ventana (ADR-0011): cada `crossing!`
 # deja su descripcion en una seccion del enlazador y de ahi salen el contrato y
 # la guarda de rutas, sin lista que mantener ni fuente que leer como texto.
 inventory = "0.3"
+# Cifrado DES del servidor intermedio, calcado de `CypherDataManager` de
+# 1.9.2 (decisión del dueño del proyecto: crates probados de RustCrypto en
+# vez de una implementación propia). `ecb` entra porque el modo va aparte
+# de `cipher` en RustCrypto.
+des = "0.9.0"
+cipher = "0.5.2"
+ecb = "0.2.1"
 
 [dev-dependencies]
 # El cliente de canal y las pruebas del servidor abren sockets de verdad
