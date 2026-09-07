@@ -225,5 +225,20 @@ pub trait SiteSigning {
     fn finish(&self) -> Result<SiteSignature, SigningRefusal>;
 }
 
+/// La firma de bytes con el token que pide el lote remoto: el secreto se abre una vez y sirve para todas las firmas, sin puente y sin que la clave salga del token (ADR-0001).
+pub trait TokenSigning {
+    /// Cómo se pide el secreto del certificado, una sola vez para todas las firmas.
+    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal>;
+
+    /// Firma esos bytes con el algoritmo que declaró la sede y el secreto ya abierto.
+    fn sign(
+        &self,
+        certificate: &TokenCertificate,
+        secret: &str,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal>;
+}
+
 #[cfg(test)]
 mod tests;

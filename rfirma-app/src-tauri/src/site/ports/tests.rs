@@ -171,3 +171,51 @@ fn an_unreachable_batch_service_fails_both_verbs() {
         )
         .is_err());
 }
+
+#[test]
+fn the_token_double_counts_the_secrets_asked_and_keeps_what_it_signed() {
+    use crate::identity::application::tests::a_certificate;
+    use crate::site::application::tests::InMemoryTokenSigning;
+
+    let token = InMemoryTokenSigning::default();
+    let certificate = a_certificate("FNMT-ACTIVO", b"der");
+
+    token.secret_of(&certificate).expect("el secreto sale");
+    for pre in [b"uno".as_slice(), b"dos".as_slice()] {
+        assert_eq!(
+            token
+                .sign(&certificate, "1234", "SHA256", pre)
+                .expect("firma"),
+            [b"PK1:".as_slice(), pre].concat()
+        );
+    }
+
+    assert_eq!(token.secrets_asked(), 1);
+    assert_eq!(
+        token.signed(),
+        vec![
+            ("SHA256".to_owned(), b"uno".to_vec()),
+            ("SHA256".to_owned(), b"dos".to_vec()),
+        ]
+    );
+}
+
+#[test]
+fn a_token_double_that_refuses_signs_nothing() {
+    use crate::identity::application::tests::a_certificate;
+    use crate::site::application::tests::InMemoryTokenSigning;
+    use crate::site::domain::protocol::SafCode;
+    use crate::site::domain::signing::SigningRefusal;
+
+    let token = InMemoryTokenSigning::refusing(SigningRefusal {
+        code: SafCode::CannotAccessKeystore,
+        situation: "incorrectPin".to_owned(),
+        detail: "CKR_PIN_INCORRECT".to_owned(),
+        attempts_left: None,
+    });
+    let certificate = a_certificate("FNMT-ACTIVO", b"der");
+
+    assert!(token.secret_of(&certificate).is_err());
+    assert!(token.sign(&certificate, "1234", "SHA256", b"uno").is_err());
+    assert!(token.signed().is_empty());
+}

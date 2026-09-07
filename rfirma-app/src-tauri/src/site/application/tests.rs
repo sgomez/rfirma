@@ -7,13 +7,15 @@ use std::sync::Mutex;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::secret::StoreSecret;
 use crate::identity::ports::CertificateMemory;
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
+use crate::site::domain::signing::SigningRefusal;
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
-use crate::site::ports::{BatchServices, Certificates, LocalCaSlots, Servlets};
+use crate::site::ports::{BatchServices, Certificates, LocalCaSlots, Servlets, TokenSigning};
 
 /// Las dos ranuras de la CA local en memoria, escribibles o no.
 #[derive(Default)]
@@ -241,6 +243,60 @@ impl BatchServices for InMemoryBatchServices {
                 "sin respuesta configurada",
             )
         })
+    }
+}
+
+/// El token en memoria del lote: cuenta los secretos que se le piden y guarda lo que firmó.
+#[derive(Default)]
+pub(crate) struct InMemoryTokenSigning {
+    secrets_asked: Mutex<usize>,
+    signed: Mutex<Vec<(String, Vec<u8>)>>,
+    refusing: Option<SigningRefusal>,
+}
+
+impl InMemoryTokenSigning {
+    /// Un token que niega toda firma con esa negativa ya traducida.
+    pub(crate) fn refusing(refusal: SigningRefusal) -> Self {
+        Self {
+            refusing: Some(refusal),
+            ..Self::default()
+        }
+    }
+
+    /// Cuántas veces se le ha pedido el secreto.
+    pub(crate) fn secrets_asked(&self) -> usize {
+        *crate::lock(&self.secrets_asked)
+    }
+
+    /// El algoritmo y los bytes de cada firma, en el orden en que se pidieron.
+    pub(crate) fn signed(&self) -> Vec<(String, Vec<u8>)> {
+        crate::lock(&self.signed).clone()
+    }
+}
+
+impl TokenSigning for InMemoryTokenSigning {
+    fn secret_of(&self, _certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        *crate::lock(&self.secrets_asked) += 1;
+        match &self.refusing {
+            Some(refusal) => Err(refusal.clone()),
+            None => Ok(StoreSecret::TypedOnScreen {
+                attempts_left: None,
+            }),
+        }
+    }
+
+    fn sign(
+        &self,
+        _certificate: &TokenCertificate,
+        _secret: &str,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        if let Some(refusal) = &self.refusing {
+            return Err(refusal.clone());
+        }
+        crate::lock(&self.signed).push((algorithm.to_owned(), data.to_vec()));
+        Ok([b"PK1:".as_slice(), data].concat())
     }
 }
 

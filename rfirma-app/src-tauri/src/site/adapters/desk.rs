@@ -5,15 +5,19 @@ use std::path::PathBuf;
 use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
+use crate::identity::adapters::failures::code_of_token;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
-use crate::identity::domain::error::TokenError;
+use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
+use crate::signing::ports::Signer;
 use crate::signing::SigningRoot;
-use crate::site::domain::protocol::SafCode;
+use crate::site::domain::protocol::{SafCode, ACCEPTED_ALGORITHMS};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest};
+use crate::site::ports::{
+    Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
+};
 
 /// Las tres raíces vecinas, vistas por el trámite a través de sus puertos.
 #[derive(Clone, Copy)]
@@ -94,6 +98,67 @@ impl SiteSigning for Neighbours<'_> {
     }
 }
 
+impl TokenSigning for Neighbours<'_> {
+    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        secret_for_the_batch(&self.identity.signer(), certificate)
+    }
+
+    fn sign(
+        &self,
+        certificate: &TokenCertificate,
+        secret: &str,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        signed_by_the_token(
+            &self.identity.signer(),
+            certificate,
+            secret,
+            algorithm,
+            data,
+        )
+    }
+}
+
+/// El secreto del certificado, pedido una sola vez para todas las firmas del lote.
+pub fn secret_for_the_batch(
+    signer: &dyn Signer,
+    certificate: &TokenCertificate,
+) -> Result<StoreSecret, SigningRefusal> {
+    signer
+        .secret_of(certificate.reference())
+        .map_err(refusal_of_token)
+}
+
+/// Los bytes firmados por el token con el algoritmo que declaró la sede.
+pub fn signed_by_the_token(
+    signer: &dyn Signer,
+    certificate: &TokenCertificate,
+    secret: &str,
+    algorithm: &str,
+    data: &[u8],
+) -> Result<Vec<u8>, SigningRefusal> {
+    the_token_offers(algorithm).map_err(refusal_of_token)?;
+    signer
+        .sign(certificate.reference(), secret, data)
+        .map_err(refusal_of_token)
+}
+
+fn the_token_offers(algorithm: &str) -> Result<(), TokenError> {
+    if ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
+        return Ok(());
+    }
+    Err(TokenError::new(
+        Situation::Unknown,
+        format!("el token no ofrece el mecanismo de '{algorithm}': rFirma firma con SHA256withRSA"),
+    ))
+}
+
+fn refusal_of_token(error: TokenError) -> SigningRefusal {
+    let code = code_of_token(error.situation());
+    signing_refusal_of((Failure::from(error), code))
+}
+
 /// Lo que la sede y la ventana reciben de un fallo, tal como lo decidió quien lo tradujo.
 pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
     SigningRefusal {
@@ -103,3 +168,6 @@ pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
         attempts_left: told.attempts_left,
     }
 }
+
+#[cfg(test)]
+mod tests;
