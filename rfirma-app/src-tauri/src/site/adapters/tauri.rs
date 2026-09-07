@@ -56,12 +56,15 @@ pub fn site_begin_signing(
     }
 }
 
-/// Postfirma del trámite de sede y entrega del resultado a la sede.
+/// Postfirma del trámite de sede y entrega del resultado a la sede, o el paso al guardado
+/// del portal si la firma venía de `signandsave`.
 #[tauri::command(async)]
 pub fn site_finish_signing(app_handle: tauri::AppHandle) -> Result<(), Failure> {
-    Ok(site_window::with_the_desk(&app_handle, |desk, live| {
+    let moved = site_window::with_the_desk(&app_handle, |desk, live| {
         crate::site::application::errand::finish(desk, live)
-    })?)
+    })?;
+    site_window::publish_what_moved(&app_handle, moved);
+    Ok(())
 }
 
 /// Abre el diálogo para instalar un certificado desde la ventana de sede.
@@ -136,13 +139,16 @@ fn save_dialog<R: tauri::Runtime>(
     if let Some(title) = consent.title.as_deref() {
         dialog = dialog.set_title(title);
     }
+    if let Some(folder) = consent.starting_folder.as_deref() {
+        dialog = dialog.set_directory(folder);
+    }
     with_extensions(dialog, &consent.extensions, consent.description.as_deref())
 }
 
 /// Escribe donde la persona eligió, o cancela si cerró el diálogo sin elegir.
 fn write_where_chosen(
     chosen: Option<tauri_plugin_dialog::FilePath>,
-    data: &[u8],
+    consent: &crate::site::application::errand::SavingConsent,
     scratch: &dyn crate::site::ports::Scratch,
     live: &crate::site::application::errand::LiveErrand,
 ) -> Result<(), Failure> {
@@ -151,7 +157,13 @@ fn write_where_chosen(
         return Ok(());
     };
     let path = named_paths(vec![chosen])?.remove(0).1;
-    crate::site::application::errand::saved(scratch, &path, data, live);
+    crate::site::application::errand::saved(
+        scratch,
+        &path,
+        &consent.data,
+        consent.signer_der.as_deref(),
+        live,
+    );
     Ok(())
 }
 
@@ -170,7 +182,7 @@ pub fn site_save_file(
     let dialog = save_dialog(app_handle.dialog().file(), &consent);
     write_where_chosen(
         dialog.blocking_save_file(),
-        &consent.data,
+        &consent,
         site.scratch.as_ref(),
         &site.errand,
     )?;

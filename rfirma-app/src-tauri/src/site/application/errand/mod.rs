@@ -17,7 +17,10 @@ use crate::site::ports::{FilterEngine, PolicyEngine};
 
 pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
-pub use desk::{attend_operation, consent_for, consent_to_sign, ErrandDesk, Neighbours};
+pub use desk::{
+    attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save, ErrandDesk,
+    Neighbours,
+};
 pub use outcome::{
     ErrandStep, LoadingConsent, Moment, NoCertificate, NoChannel, ProtocolCodec, SavingConsent,
     SigningConsent, SiteOutcome,
@@ -56,7 +59,11 @@ fn dispatch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 ) -> Option<ErrandStep> {
     let codec = live.codec()?;
     let step = desk::attend_operation(desk, &url, codec.decode(&url), live);
+    Some(remembered(live, step))
+}
 
+/// Registra en la memoria del trámite lo que el paso deja pendiente, y publica su momento.
+fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
     match &step {
         ErrandStep::AskingForConsent { filter, sticky, .. } => {
             live.remember_identity(filter.clone(), *sticky)
@@ -66,8 +73,9 @@ fn dispatch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             filter: asked.filter.clone(),
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
+            saving: asked.saving.clone(),
         }),
-        ErrandStep::Saving(consent) => live.remember_saving(consent.clone()),
+        ErrandStep::Saving(consent) => live.remember_saving((**consent).clone()),
         ErrandStep::Loading(consent) => live.remember_loading(consent.clone()),
         ErrandStep::NoCertificate { .. } => live.forget_the_consent(),
         ErrandStep::Answering(_) => {}
@@ -76,7 +84,7 @@ fn dispatch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     if let Some(moment) = step.moment() {
         live.note(moment);
     }
-    Some(step)
+    step
 }
 
 /// Resultado del consentimiento de la persona usuaria.
@@ -138,15 +146,28 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))
 }
 
-/// Completa la fase final de la firma para la sede y entrega el resultado.
+/// Completa la fase final de la firma para la sede y entrega el resultado, o el paso de
+/// guardado si la firma venía de `signandsave`.
 pub fn finish<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
     live: &LiveErrand,
-) -> Result<(), SiteRefusal> {
+) -> Result<Option<ErrandStep>, SiteRefusal> {
+    let saving = live
+        .the_signature_consented()
+        .and_then(|pending| pending.saving);
     let signed = signing::finish_for_the_site(&desk.neighbours)
         .map_err(|refusal| told_to_the_site(live, refusal))?;
-    signature_handed_over(live, &signed);
-    Ok(())
+
+    Ok(match saving {
+        None => {
+            signature_handed_over(live, &signed);
+            None
+        }
+        Some(hints) => Some(remembered(
+            live,
+            ErrandStep::Saving(Box::new((*hints).into_consent(&signed))),
+        )),
+    })
 }
 
 fn told_to_the_site(live: &LiveErrand, refusal: SiteRefusal) -> SiteRefusal {

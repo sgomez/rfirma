@@ -1,7 +1,7 @@
 //! Peticiones de la sede desacopladas de la versión del protocolo.
 
 use crate::site::domain::protocol::{
-    LoadRequest, Refusal, SaveRequest, SelectCertificate, SignRequest,
+    LoadRequest, Refusal, SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest,
 };
 
 /// Lo que la sede pide, ya leído y sin versión de protocolo.
@@ -11,6 +11,8 @@ pub enum SiteRequest {
     SelectCertificate(SelectCertificate),
     /// Firma de documento en formato PAdES.
     Sign(SignRequest),
+    /// Firma de documento en formato PAdES, guardada por el portal tras la postfirma.
+    SignAndSave(SignAndSaveRequest),
     /// Guardar un fichero en el equipo.
     Save(SaveRequest),
     /// Cargar uno o varios ficheros del equipo.

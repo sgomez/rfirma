@@ -261,6 +261,62 @@ impl SiteSigning for TheNeighbours<'_> {
     }
 }
 
+/// Los mismos vecinos, pero la firma ya está hecha: para probar la rama de `finish` que compone
+/// el guardado de `signandsave` sin pasar por ningún ciclo de firma real (grada A no tiene uno).
+struct ASignerThatSucceeds<'a> {
+    neighbours: TheNeighbours<'a>,
+    signature: SiteSignature,
+}
+
+impl Certificates for ASignerThatSucceeds<'_> {
+    fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        self.neighbours.listed()
+    }
+
+    fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
+        self.neighbours.rows_of(found)
+    }
+
+    fn usable<'a>(
+        &self,
+        found: &'a [TokenCertificate],
+        handle: &str,
+    ) -> Result<&'a TokenCertificate, TokenError> {
+        self.neighbours.usable(found, handle)
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        self.neighbours.remembered()
+    }
+
+    fn remember(&self, chosen: &CertificateRef) {
+        self.neighbours.remember(chosen)
+    }
+
+    fn forget_the_remembered(&self) {
+        self.neighbours.forget_the_remembered()
+    }
+}
+
+impl ScratchDocuments for ASignerThatSucceeds<'_> {
+    fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
+        self.neighbours.open_unrecorded(path)
+    }
+}
+
+impl SiteSigning for ASignerThatSucceeds<'_> {
+    fn begin(&self, _request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
+        Ok(StoreSecret::NotNeeded)
+    }
+
+    fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
+        Ok(SiteSignature {
+            signed: self.signature.signed.clone(),
+            signer_der: self.signature.signer_der.clone(),
+        })
+    }
+}
+
 /// Los vecinos de una selección de certificado, que no abre ningún documento.
 fn a_neighbourhood<'a>(
     home: &'a Path,
@@ -745,6 +801,34 @@ fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
         "afirma://{verb}?op={verb}&idsession={CREDENTIAL}&format=PAdES&\
          algorithm=SHA256withRSA&dat={document}"
     ))
+}
+
+/// La petición de `signandsave` ya leída, que es lo que recibe el caso de uso.
+fn sign_and_save_requested(url: &AfirmaUrl) -> crate::site::domain::protocol::SignAndSaveRequest {
+    let SiteOperation::SignAndSave(request) =
+        read_operation(url).expect("es una operacion que se atiende")
+    else {
+        panic!("es un firmar y guardar");
+    };
+    request
+}
+
+/// La operación de `signandsave`, con las tres pistas `filenameSave*` declaradas.
+fn a_sign_and_save(extra: &str) -> AfirmaUrl {
+    let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
+    let properties = base64::engine::general_purpose::URL_SAFE.encode(
+        "filenameSaveExts=pdf,p7s\nfilenameSaveDescription=Documentos\n\
+         filenameSaveCurrentDir=/home/persona\n"
+            .as_bytes(),
+    );
+    let text = format!(
+        "afirma://signandsave?op=signandsave&cop=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm=SHA256withRSA&filename=firma.pdf&properties={properties}&dat={document}{extra}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
 }
 
 /// Trámite completo de firma con el canal abierto, sobre la forma de arranque que se le pase.
@@ -1371,7 +1455,7 @@ fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
     );
 }
 #[test]
-fn signing_and_saving_by_order_of_a_site_is_answered_with_the_same_refusal() {
+fn signing_and_saving_without_dat_is_refused_like_a_sign_with_an_empty_document() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let listed = ListedCertificates::new();
@@ -1379,9 +1463,15 @@ fn signing_and_saving_by_order_of_a_site_is_answered_with_the_same_refusal() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-
-    let verb = "signandsave";
     let live = a_live();
+    // Sin `dat`: el códec la rechaza antes de que la mesa la mire (#494 elige documento).
+    let ChannelMessage::Operation { url: no_document } = ChannelMessage::read(&format!(
+        "afirma://signandsave?op=signandsave&cop=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm=SHA256withRSA"
+    )) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+
     let step = attend_operation(
         &a_desk(
             &engine,
@@ -1393,19 +1483,176 @@ fn signing_and_saving_by_order_of_a_site_is_answered_with_the_same_refusal() {
             &memory,
             &scratch,
         ),
-        &a_signature(verb, ""),
-        decoded(&a_signature(verb, "")),
+        &no_document,
+        decoded(&no_document),
         &live,
     );
 
     let ErrandStep::Answering(reply) = step else {
-        panic!("«{verb}» esta fuera del alcance: {step:?}");
+        panic!("sin 'dat' no hay nada que firmar: {step:?}");
     };
     assert_eq!(
         on_the_wire(&reply),
-        WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
+        WireAnswer::refused(SafCode::SignWithoutData).on_the_wire()
     );
     assert!(!scratch.exists(), "y no ha escrito nada");
+}
+
+#[test]
+fn signing_and_saving_reaches_asking_to_sign_with_the_saving_hints_the_site_declared() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let url = a_sign_and_save("");
+
+    let step = consent_to_sign_and_save(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &sign_and_save_requested(&url),
+        ours,
+        &live,
+    );
+
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("hay un certificado que la sede acepta: {step:?}");
+    };
+    assert_eq!(consent.round, SignatureRound::First);
+    let saving = consent.saving.expect("signandsave trae pistas de guardado");
+    assert_eq!(saving.filename, "firma.pdf");
+    assert_eq!(saving.extensions, ["pdf", "p7s"]);
+    assert_eq!(saving.description.as_deref(), Some("Documentos"));
+    assert_eq!(saving.starting_folder.as_deref(), Some("/home/persona"));
+}
+
+#[test]
+fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    // La firma ya esta hecha (grada A no abre ningun ciclo real): lo que se prueba es la rama
+    // de `finish` que compone el guardado, no el ciclo de firma en si.
+    let desk = ErrandDesk {
+        engine: &engine,
+        policies: &policies,
+        neighbours: ASignerThatSucceeds {
+            neighbours: TheNeighbours {
+                stores: Vec::new(),
+                home: home.path(),
+                listed: &listed,
+                opened: &opened,
+                memory: &memory,
+            },
+            signature: SiteSignature {
+                signed: b"%PDF-1.7 firmado".to_vec(),
+                signer_der: ours[0].der().to_vec(),
+            },
+        },
+        scratch_dir: scratch.clone(),
+        scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
+    };
+
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    let url = a_sign_and_save("");
+    let step = consent_to_sign_and_save(&desk, &sign_and_save_requested(&url), ours, &live);
+    let ErrandStep::AskingToSign(asked) = step else {
+        panic!("hay un certificado que la sede acepta: {step:?}");
+    };
+    // El envio a `finish` lee las pistas de la memoria del tramite, que solo `dispatch`
+    // rellena en produccion: aqui se apunta a mano, como hace `consent_to_sign` con el resto.
+    live.remember_signature(state::PendingSignature {
+        document: asked.document.clone(),
+        filter: asked.filter.clone(),
+        from_the_site: asked.from_the_site.clone(),
+        unregistered_signatures: asked.unregistered_signatures,
+        saving: asked.saving.clone(),
+    });
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "el consentimiento de firma no escribe nada en el cable"
+    );
+
+    let moved = finish(&desk, &live).expect("la postfirma no falla");
+    let Some(ErrandStep::Saving(saving)) = moved else {
+        panic!("signandsave pasa al guardado en vez de contestar: {moved:?}");
+    };
+    assert_eq!(saving.filename, Some("firma.pdf".to_owned()));
+    assert_eq!(saving.extensions, ["pdf", "p7s"]);
+    assert!(
+        saving.signer_der.is_some(),
+        "con que contestar cuando se guarde"
+    );
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "signandsave no contesta hasta que la persona guarda"
+    );
+    assert_eq!(
+        live.moment(),
+        Some(Moment::Saving {
+            filename: Some("firma.pdf".to_owned())
+        })
+    );
+    assert!(
+        live.current().is_some(),
+        "el tramite sigue vivo, a la espera del guardado"
+    );
+}
+
+#[test]
+fn saved_with_a_signer_der_answers_the_same_line_as_a_plain_signature() {
+    let home = tempfile::tempdir().expect("hay directorio temporal");
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let der = vec![0xfb, 0xff, 0xbf];
+    let destination = home.path().join("firma.pdf");
+
+    let outcome = crate::site::application::errand::saved(
+        &crate::site::adapters::scratch::RealScratch,
+        &destination,
+        A_PDF,
+        Some(&der),
+        &live,
+    );
+
+    assert!(
+        matches!(outcome, SiteOutcome::Signature { .. }),
+        "{outcome:?}"
+    );
+    assert_eq!(std::fs::read(&destination).expect("se ha escrito"), A_PDF);
+    let encode = base64::engine::general_purpose::URL_SAFE;
+    assert_eq!(
+        what_the_site_received(&mut wire).expect("la sede recibe la firma"),
+        format!("{}|{}", encode.encode(&der), encode.encode(A_PDF)),
+        "la misma linea que escribe signature_handed_over para el mismo par"
+    );
 }
 
 /// Operación de guardado tal y como llega por el canal.
@@ -1600,6 +1847,7 @@ fn a_file_is_written_where_the_person_chose_and_the_site_gets_save_ok() {
         &crate::site::adapters::scratch::RealScratch,
         &destination,
         A_PDF,
+        None,
         &live,
     );
 
@@ -1637,6 +1885,7 @@ fn a_save_that_cannot_be_written_is_answered_with_saf_05() {
         &crate::site::adapters::scratch::RealScratch,
         &unwritable,
         A_PDF,
+        None,
         &live,
     );
 
@@ -1665,6 +1914,7 @@ fn saved_writes_the_data_it_is_given_never_a_pending_consent_it_does_not_read() 
         &crate::site::adapters::scratch::RealScratch,
         &destination,
         A_PDF,
+        None,
         &live,
     );
 

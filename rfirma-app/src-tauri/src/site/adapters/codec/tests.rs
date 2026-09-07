@@ -58,6 +58,27 @@ fn a_save_the_published_client_sends_is_what_the_site_wants() {
 }
 
 #[test]
+fn a_sign_and_save_with_dat_is_what_the_site_wants() {
+    let request = V4Codec.decode(&an_operation(&format!(
+        "afirma://signandsave?op=signandsave&cop=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm=SHA256withRSA&dat=JVBERg=="
+    )));
+    assert!(matches!(request, SiteRequest::SignAndSave(_)));
+}
+
+#[test]
+fn a_sign_and_save_without_dat_is_refused_like_a_sign_with_an_empty_document() {
+    let request = V4Codec.decode(&an_operation(&format!(
+        "afirma://signandsave?op=signandsave&cop=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm=SHA256withRSA"
+    )));
+    let SiteRequest::NotAttended(refusal) = request else {
+        panic!("sin 'dat' no hay nada que firmar: {request:?}");
+    };
+    assert!(refusal.answer().on_the_wire().starts_with("SAF_44"));
+}
+
+#[test]
 fn a_load_the_published_client_sends_is_what_the_site_wants() {
     let request = V4Codec.decode(&an_operation(&format!(
         "afirma://load?op=load&idsession={CREDENTIAL}"

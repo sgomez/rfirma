@@ -84,9 +84,27 @@ pub fn declined(live: &LiveErrand) -> SiteOutcome {
 }
 
 /// Caso de uso: se escribe en la ruta que la persona eligió el fichero que pidió la sede.
-pub fn saved(scratch: &dyn Scratch, path: &Path, data: &[u8], live: &LiveErrand) -> SiteOutcome {
+///
+/// `signer_der` es con qué contestar si esto viene de `signandsave` (`None` en `save`): quien
+/// llama ya tiene el consentimiento en la mano, y no se lee de `LiveErrand`.
+pub fn saved(
+    scratch: &dyn Scratch,
+    path: &Path,
+    data: &[u8],
+    signer_der: Option<&[u8]>,
+    live: &LiveErrand,
+) -> SiteOutcome {
     match scratch.write(path, data) {
-        Ok(()) => over(live, SiteOutcome::Saved),
+        Ok(()) => over(
+            live,
+            match signer_der {
+                Some(signer_der) => SiteOutcome::Signature {
+                    signer_der: signer_der.to_vec(),
+                    signed: data.to_vec(),
+                },
+                None => SiteOutcome::Saved,
+            },
+        ),
         Err(detail) => over(
             live,
             SiteOutcome::Refused(SiteRefusal::CannotSaveData(detail)),
