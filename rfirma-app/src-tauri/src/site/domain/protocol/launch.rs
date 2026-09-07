@@ -2,6 +2,7 @@
 
 use crate::site::domain::channel::ChannelLocation;
 
+use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
@@ -63,6 +64,26 @@ pub enum NegotiatedCredential {
     Absent,
 }
 
+/// Información de canal del servidor intermedio, negociada desde la propia invocación de
+/// arranque: no hay canal que sostener, así que la operación viaja con sus servlets.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RelayChannelInfo {
+    /// El verbo de operación y sus parámetros, tal como llegaron (`dat` puede faltar).
+    pub operation: AfirmaUrl,
+    /// Servlet de recuperación (`rtservlet`), si la operación llega por `fileid`.
+    pub retrieve_servlet: Option<String>,
+    /// Servlet de almacenamiento (`stservlet`), donde se sube la respuesta.
+    pub store_servlet: String,
+    /// Identificador (`id`) con el que se sube la respuesta y, si aplica, se recupera la petición.
+    pub id: String,
+    /// La referencia (`fileid`) al contenido a recuperar, cuando la operación no lo trae inline.
+    pub fileid: Option<String>,
+    /// La clave de cifrado (`key`), si la operación la trae.
+    pub key: Option<CipherKey>,
+    /// Si la sede pide espera activa (`aw`) antes de operar.
+    pub active_wait: bool,
+}
+
 /// Lo que pide una invocación de arranque, ya leída.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchRequest {
@@ -79,14 +100,21 @@ impl LaunchRequest {
 
     /// Lo mismo, sobre una URL ya partida.
     pub fn from_url(url: &AfirmaUrl) -> Result<Self, Refusal> {
-        if url.verb() != LAUNCH_VERB {
-            return Err(Refusal::params(format!(
-                "la invocacion de arranque es 'afirma://{LAUNCH_VERB}', y esta es \
-                 'afirma://{}'",
-                url.verb()
-            )));
+        if url.verb() == LAUNCH_VERB {
+            return Self::from_websocket_url(url);
+        }
+        if is_a_relay_launch(url) {
+            return Self::from_relay_url(url);
         }
 
+        Err(Refusal::params(format!(
+            "la invocacion de arranque es 'afirma://{LAUNCH_VERB}' o una operacion con servlet \
+             de servidor intermedio, y esta es 'afirma://{}'",
+            url.verb()
+        )))
+    }
+
+    fn from_websocket_url(url: &AfirmaUrl) -> Result<Self, Refusal> {
         let version = check_protocol_version(url.parameter("v"))?;
         let location = location_of(version, url.parameter("ports"))?;
         let credential = credential_of(version, url.parameter("idsession"))?;
@@ -95,6 +123,69 @@ impl LaunchRequest {
             version,
             location,
             credential,
+        })
+    }
+
+    fn from_relay_url(url: &AfirmaUrl) -> Result<Self, Refusal> {
+        let store_servlet = url
+            .parameter("stservlet")
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                Refusal::params(
+                "la operacion con servidor intermedio no trae 'stservlet', y sin el no se puede \
+                 subir la respuesta",
+            )
+            })?
+            .to_owned();
+        let id = url
+            .parameter("id")
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))?
+            .to_owned();
+        let fileid = url
+            .parameter("fileid")
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned);
+        let retrieve_servlet = url
+            .parameter("rtservlet")
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned);
+
+        if url.parameter("dat").is_none() && fileid.is_none() {
+            return Err(Refusal::params(
+                "la operacion con servidor intermedio no trae ni 'dat' ni 'fileid': no hay datos \
+                 que operar",
+            ));
+        }
+        if fileid.is_some() && url.parameter("dat").is_none() && retrieve_servlet.is_none() {
+            return Err(Refusal::params(
+                "la operacion trae 'fileid' pero no 'rtservlet', y sin el no se puede recuperar \
+                 el contenido",
+            ));
+        }
+
+        let key = match url.parameter("key").filter(|value| !value.is_empty()) {
+            Some(value) => CipherKey::from_url_parameter(value)
+                .map_err(|error| Refusal::params(error.detail().to_owned()))?,
+            None => None,
+        };
+
+        let active_wait = url
+            .parameter("aw")
+            .is_some_and(|value| !value.is_empty() && value != "false");
+
+        Ok(Self {
+            version: PROTOCOL_VERSION,
+            location: ChannelLocation::Relay(RelayChannelInfo {
+                operation: url.clone(),
+                retrieve_servlet,
+                store_servlet,
+                id,
+                fileid,
+                key,
+                active_wait,
+            }),
+            credential: NegotiatedCredential::Absent,
         })
     }
 
@@ -133,6 +224,12 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     }
 
     None
+}
+
+/// Si la invocación tiene la forma de una operación con servidor intermedio: un verbo de
+/// operación (no `websocket`) que trae al menos uno de los dos servlets.
+fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
+    url.parameter("rtservlet").is_some() || url.parameter("stservlet").is_some()
 }
 
 fn location_of(version: i64, ports: Option<&str>) -> Result<ChannelLocation, Refusal> {

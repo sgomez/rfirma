@@ -1,14 +1,19 @@
 //! Invocación de sede por esquema de URL y negociación de canal y códec (ADR-0005, ADR-0017).
 
+use std::sync::Arc;
+
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::protocol::{
-    location_for_a_refusal, AfirmaUrl, LaunchRequest, NegotiatedCredential, Refusal,
+    location_for_a_refusal, AfirmaUrl, CipherKey, LaunchRequest, NegotiatedCredential, Refusal,
     RefusalSituation, SafCode, WireAnswer, THIRD_PROTOCOL_VERSION,
 };
 
 use super::errand::{Errand, LiveErrand, NegotiatedCodec};
 
 pub use super::errand::ChannelTransport;
+
+/// Construye el códec del servidor intermedio con la clave que trajo esta invocación.
+pub type RelayCodecFactory = Arc<dyn Fn(Option<CipherKey>) -> NegotiatedCodec + Send + Sync>;
 
 /// La tabla de adaptadores que la raíz de composición entrega a la negociación: el códec que
 /// habla cada forma de invocación de arranque. Un verbo o un transporte nuevos son una fila más.
@@ -18,6 +23,8 @@ pub struct CodecTable {
     pub v4: NegotiatedCodec,
     /// Códec de la versión 3: puerto fijo, sin sorteo.
     pub v3: NegotiatedCodec,
+    /// Códec del servidor intermedio, construido con la clave de cada invocación.
+    pub relay: RelayCodecFactory,
 }
 
 impl CodecTable {
@@ -44,8 +51,12 @@ pub struct Negotiated {
 /// Negocia el códec y los parámetros de canal a partir de la forma de la URL de invocación.
 pub fn negotiate(url: &AfirmaUrl, codecs: &CodecTable) -> Result<Negotiated, Refusal> {
     let request = LaunchRequest::from_url(url)?;
+    let codec = match request.location() {
+        ChannelLocation::Relay(info) => (codecs.relay)(info.key.clone()),
+        _ => codecs.codec_for(request.version()),
+    };
     Ok(Negotiated {
-        codec: codecs.codec_for(request.version()),
+        codec,
         location: request.location().clone(),
         credential: request.credential().clone(),
     })

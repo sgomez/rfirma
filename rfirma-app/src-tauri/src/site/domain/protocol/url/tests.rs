@@ -104,3 +104,16 @@ fn an_empty_value_is_not_an_absent_parameter() {
 
     assert_eq!(url.parameter("idsession"), Some(""));
 }
+
+#[test]
+fn with_parameter_adds_or_replaces_without_touching_the_rest() {
+    let url = AfirmaUrl::parse("afirma://sign?algorithm=SHA256withRSA")
+        .expect("parsea")
+        .with_parameter("dat", "recuperado-y-descifrado".to_owned());
+
+    assert_eq!(url.parameter("dat"), Some("recuperado-y-descifrado"));
+    assert_eq!(url.parameter("algorithm"), Some("SHA256withRSA"));
+
+    let replaced = url.with_parameter("dat", "otro".to_owned());
+    assert_eq!(replaced.parameter("dat"), Some("otro"));
+}

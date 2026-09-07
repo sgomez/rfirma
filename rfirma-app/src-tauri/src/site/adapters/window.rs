@@ -7,7 +7,7 @@ use crate::identity::IdentityRoot;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::SigningRoot;
 use crate::site::application::errand::{self, ErrandDesk, ErrandStep, LiveErrand, ReplyHandle};
-use crate::site::domain::protocol::AfirmaUrl;
+use crate::site::domain::protocol::{AfirmaUrl, Refusal};
 use crate::site::SiteRoot;
 
 use super::desk::Neighbours;
@@ -42,6 +42,14 @@ pub fn publish_the_moment(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window(SITE_WINDOW) {
         let _ = window.emit(SITE_ERRAND, SiteErrandView::from(&moment));
     }
+}
+
+/// Publica el rechazo de un servidor intermedio que no pudo entregar la respuesta a la sede.
+pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
+    app.state::<SiteRoot>()
+        .errand
+        .note(errand::Moment::RefusedWithoutChannel(refusal));
+    publish_the_moment(app);
 }
 
 /// Atiende una operación de sede armando la mesa desde el estado de la aplicación.

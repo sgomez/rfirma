@@ -13,6 +13,7 @@ use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::Refusal as Inadmissible;
 use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::application::filtering::FilteringError;
+use crate::site::domain::relay_error::Situation as RelaySituation;
 
 fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
     vec![
@@ -81,8 +82,17 @@ fn every_code_of_ours() -> Vec<SafCode> {
             ChannelSituation::NoDrawnPortIsFree,
             ChannelSituation::MaterialNotUsable,
             ChannelSituation::NotListening,
+            ChannelSituation::Relay,
         ]
         .map(code_of_channel),
+    );
+    codes.extend(
+        [
+            RelaySituation::ServletUnreachable,
+            RelaySituation::DecryptionFailed,
+            RelaySituation::UploadRejected,
+        ]
+        .map(code_of_relay),
     );
     codes.extend(
         [
@@ -187,5 +197,21 @@ fn nothing_pending_is_a_situation_of_the_window_alone() {
     assert_eq!(
         Failure::from(ConsentError::NothingPending).situation,
         "siteErrandNotLive"
+    );
+}
+
+#[test]
+fn the_relay_codes_match_the_original_catalogue() {
+    assert_eq!(
+        code_of_relay(RelaySituation::ServletUnreachable),
+        SafCode::RecoveringData
+    );
+    assert_eq!(
+        code_of_relay(RelaySituation::DecryptionFailed),
+        SafCode::DecryptingData
+    );
+    assert_eq!(
+        code_of_relay(RelaySituation::UploadRejected),
+        SafCode::SendingResult
     );
 }

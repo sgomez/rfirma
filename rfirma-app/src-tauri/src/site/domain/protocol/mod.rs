@@ -17,7 +17,7 @@ pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMOR
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use launch::{
     drawn_ports, location_for_a_refusal, ChannelCredential, LaunchRequest, NegotiatedCredential,
-    PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL, THIRD_PROTOCOL_VERSION,
+    RelayChannelInfo, PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL, THIRD_PROTOCOL_VERSION,
 };
 pub use message::ChannelMessage;
 pub use operation::{

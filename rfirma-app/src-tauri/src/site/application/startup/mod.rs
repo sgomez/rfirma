@@ -124,12 +124,12 @@ pub fn attend_site_launch(
             ),
             LocalCaReach::NotAnObstacle => open(live, window, SiteWindowContent::TheErrand(errand)),
         },
-        Attendance::ChannelNotOpened(_) => {
-            open(
-                live,
-                window,
-                SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened),
-            );
+        Attendance::ChannelNotOpened(error) => {
+            let dead_end = match error.refusal() {
+                Some(refusal) => DeadEnd::RefusedWithoutChannel(refusal.clone()),
+                None => DeadEnd::ChannelNotOpened,
+            };
+            open(live, window, SiteWindowContent::ADeadEnd(dead_end));
         }
         Attendance::RefusingInTheWindow(refusal) => {
             open(

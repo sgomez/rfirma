@@ -36,6 +36,10 @@ pub fn bind_first_free(location: &ChannelLocation) -> Result<TcpListener, Channe
                 },
             ))
         }
+        ChannelLocation::Relay(_) => Err(ChannelError::new(
+            Situation::NotListening,
+            "el servidor intermedio no abre ningun socket al que atarse",
+        )),
     }
 }
 
