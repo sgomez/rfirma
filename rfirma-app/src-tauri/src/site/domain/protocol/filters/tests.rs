@@ -80,8 +80,10 @@ fn a_criterion_outside_the_whitelist_crosses_to_the_engine_all_the_same() {
     );
     assert_eq!(
         filter.as_java_properties(),
-        format!("filters={expression}
-")
+        format!(
+            "filters={expression}
+"
+        )
     );
 }
 
@@ -91,15 +93,19 @@ fn every_criterion_the_original_understands_crosses_untouched() {
         let expression = format!("{criterion}loquesea");
         assert_eq!(
             site_filter(&properties(&[("filters", &expression)])).as_java_properties(),
-            format!("filters={expression}
-")
+            format!(
+                "filters={expression}
+"
+            )
         );
     }
 
     assert_eq!(
         site_filter(&properties(&[("filters", SATISFIED_BY_CONSTRUCTION)])).as_java_properties(),
-        format!("filters={SATISFIED_BY_CONSTRUCTION}
-")
+        format!(
+            "filters={SATISFIED_BY_CONSTRUCTION}
+"
+        )
     );
 }
 

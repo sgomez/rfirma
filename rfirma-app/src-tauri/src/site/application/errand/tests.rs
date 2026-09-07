@@ -11,10 +11,10 @@ use crate::documents::domain::document::Document;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from, NoMemory, NoToken};
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
-use crate::identity::ports::CertificateMemory;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
+use crate::identity::ports::CertificateMemory;
 use crate::identity::ports::Token as _;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::memory::Memory;
@@ -32,8 +32,8 @@ use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter, SafCode,
-    SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
+    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter,
+    SafCode, SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
     SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};

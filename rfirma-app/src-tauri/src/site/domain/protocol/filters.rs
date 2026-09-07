@@ -101,6 +101,5 @@ fn value_of<'a>(properties: &'a [(String, String)], key: &str) -> Option<&'a str
         .map(|(_, value)| value.as_str())
 }
 
-
 #[cfg(test)]
 mod tests;

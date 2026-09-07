@@ -306,8 +306,10 @@ fn the_filter_travels_inside_the_properties_and_comes_out_untouched() {
 fn a_criterion_outside_the_whitelist_reaches_the_engine_instead_of_refusing() {
     let url = an_operation(&format!(
         "op=selectcert&properties={}",
-        properties("filters=inventado:loquesea
-")
+        properties(
+            "filters=inventado:loquesea
+"
+        )
     ));
 
     let SiteOperation::SelectCertificate(request) =
