@@ -21,12 +21,12 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs de las versiones 1 y 3, que delegan en el de la 4 en vez de repetirlo. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces. |
-| `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite. |
+| `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011). |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
 | `adapters/servlets.rs` | El cliente del servidor intermedio de producción, sobre `reqwest::blocking`. Pruebas en `adapters/servlets/tests.rs`. |
 | `adapters/nss.rs` | El registro en los almacenes NSS por la API de NSS y **no** por `certutil`, que no está en el flatpak, sobre el `NssHost` de `identity/adapters/pkcs11/nss.rs`. Pruebas en `adapters/nss/tests.rs`. |
 | `adapters/frontier.rs` | La única traducción de un rechazo del trámite al código `SAF_NN` de la sede y a la vista de la ventana (ADR-0009). Pruebas en `adapters/frontier/tests.rs`. |
-| `adapters/tauri.rs` | Las órdenes de Tauri del trámite de sede. Ninguna decide ni guarda estado propio. |
+| `adapters/tauri.rs` | Las órdenes de Tauri del trámite de sede, dos de ellas por el diálogo del portal para guardar y cargar. Ninguna decide ni guarda estado propio. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |
 | `adapters/tls/server.rs` | El certificado del servidor local, en memoria. Pruebas en `adapters/tls/server/tests.rs`. |
 | `adapters/tls/store.rs` | Las dos ranuras de la CA local en disco, detrás del puerto `LocalCaSlots`. Pruebas en `adapters/tls/store/tests.rs`. |
@@ -58,7 +58,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cinco cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
-| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y la petición de firma. Pruebas en `domain/protocol/operation/tests.rs`. |
+| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado o de carga. Pruebas en `domain/protocol/operation/tests.rs`. |
 | `domain/protocol/parameters.rs` | Las dos guardias comunes a toda operación. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
 | `domain/protocol/url.rs` | Una URL `afirma://` partida en verbo y pares, con las rarezas del original. Pruebas en `domain/protocol/url/tests.rs`. |

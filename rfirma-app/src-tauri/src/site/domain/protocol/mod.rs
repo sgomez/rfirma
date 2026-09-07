@@ -26,8 +26,9 @@ pub use launch::{
 };
 pub use message::ChannelMessage;
 pub use operation::{
-    pairs_of, read_operation, SelectCertificate, SignRequest, SignatureRound, SiteOperation,
-    ACCEPTED_ALGORITHMS, COSIGN, COUNTERSIGN, PADES, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
+    pairs_of, read_operation, LoadRequest, SaveRequest, SelectCertificate, SignRequest,
+    SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS, COSIGN, COUNTERSIGN, LOAD, PADES, SAVE,
+    SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{check_local_access_is_not_requested, check_minimum_client_version};
 pub use refusal::{Refusal, RefusalSituation};

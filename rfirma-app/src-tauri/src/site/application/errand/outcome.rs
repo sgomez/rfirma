@@ -22,6 +22,10 @@ pub enum ErrandStep {
     },
     /// Momento de consentimiento de firma de documento para la ventana.
     AskingToSign(SigningConsent),
+    /// Paso de guardado: la orden de Tauri abre el diálogo del portal y escribe.
+    Saving(SavingConsent),
+    /// Paso de carga: la orden de Tauri abre el selector del portal y lee.
+    Loading(LoadingConsent),
     /// Trámite sin ningún certificado con el que continuar.
     NoCertificate {
         /// Razón por la que no hay certificado.
@@ -48,6 +52,10 @@ impl ErrandStep {
                 certificates: consent.certificates.clone(),
                 unregistered_signatures: consent.unregistered_signatures,
             }),
+            Self::Saving(consent) => Some(Moment::Saving {
+                filename: consent.filename.clone().or_else(|| consent.title.clone()),
+            }),
+            Self::Loading(_) => Some(Moment::Loading),
             Self::NoCertificate { reason, owned, .. } => Some(Moment::NoCertificate {
                 reason: *reason,
                 owned: *owned,
@@ -85,6 +93,36 @@ pub struct SigningConsent {
     pub unregistered_signatures: bool,
 }
 
+/// Datos para el diálogo de guardado del portal: el nombre cruza, la ruta nunca (ADR-0011).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SavingConsent {
+    /// El fichero que la sede pide guardar, en bytes.
+    pub data: Vec<u8>,
+    /// Título del diálogo declarado por la sede.
+    pub title: Option<String>,
+    /// Nombre de fichero propuesto por la sede.
+    pub filename: Option<String>,
+    /// Extensiones admitidas por el filtro del diálogo.
+    pub extensions: Vec<String>,
+    /// Descripción del filtro de extensiones declarada por la sede.
+    pub description: Option<String>,
+}
+
+/// Datos para el selector de carga del portal: el nombre cruza, la ruta nunca (ADR-0011).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LoadingConsent {
+    /// Título del selector declarado por la sede.
+    pub title: Option<String>,
+    /// Extensiones admitidas por el filtro del selector.
+    pub extensions: Vec<String>,
+    /// Descripción del filtro de extensiones declarada por la sede.
+    pub description: Option<String>,
+    /// Carpeta inicial sugerida por la sede, nunca la fuente de la lectura.
+    pub starting_folder: Option<String>,
+    /// Si la sede pide varios ficheros (`multiload=true`) o uno solo.
+    pub multiple: bool,
+}
+
 /// Desenlace del trámite para la sede y para la ventana.
 #[derive(Debug)]
 pub enum SiteOutcome {
@@ -97,6 +135,10 @@ pub enum SiteOutcome {
         /// El PDF firmado.
         signed: Vec<u8>,
     },
+    /// El fichero pedido por la sede queda escrito donde la persona eligió.
+    Saved,
+    /// Los ficheros que la persona eligió, con su nombre y su contenido.
+    Loaded(Vec<(String, Vec<u8>)>),
     /// Trámite cancelado por la persona.
     Cancelled,
     /// Rechazo con su situación, que el adaptador traduce al cable y a la ventana.
@@ -143,6 +185,13 @@ pub enum Moment {
         /// Cuántos certificados tiene la persona.
         owned: usize,
     },
+    /// La sede pide guardar un fichero: el nombre que se muestra, nunca la ruta.
+    Saving {
+        /// Nombre de fichero propuesto por la sede, si lo hay.
+        filename: Option<String>,
+    },
+    /// La sede pide cargar uno o varios ficheros.
+    Loading,
     /// Canal con la sede no disponible.
     NoChannel(NoChannel),
     /// Rechazo del protocolo sin canal por el que responder.

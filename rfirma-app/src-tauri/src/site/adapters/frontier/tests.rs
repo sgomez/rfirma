@@ -28,6 +28,8 @@ fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
         SiteRefusal::NotUsableForTheSite(FilteringError::ExcludedByTheSite("X".to_owned())),
         SiteRefusal::ScratchFolderMissing("no such directory".to_owned()),
         SiteRefusal::ScratchUnwritable("read-only".to_owned()),
+        SiteRefusal::CannotSaveData("read-only".to_owned()),
+        SiteRefusal::CannotLoadData("no such file".to_owned()),
         SiteRefusal::Signing(signing_refusal_of(told_of_cycle(&CycleFailure::Document(
             DocumentError::Unreadable("ya no esta".to_owned()),
         )))),

@@ -19,10 +19,11 @@ pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
 pub use desk::{attend_operation, consent_for, consent_to_sign, ErrandDesk, Neighbours};
 pub use outcome::{
-    ErrandStep, Moment, NoCertificate, NoChannel, ProtocolCodec, SigningConsent, SiteOutcome,
+    ErrandStep, LoadingConsent, Moment, NoCertificate, NoChannel, ProtocolCodec, SavingConsent,
+    SigningConsent, SiteOutcome,
 };
 pub use replies::{
-    declined, identify_with, identity_handed_over, signature_handed_over,
+    declined, identify_with, identity_handed_over, loaded, saved, signature_handed_over,
     the_signature_did_not_come_out,
 };
 pub use request::SiteRequest;
@@ -64,6 +65,8 @@ fn dispatch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
         }),
+        ErrandStep::Saving(consent) => live.remember_saving(consent.clone()),
+        ErrandStep::Loading(consent) => live.remember_loading(consent.clone()),
         ErrandStep::NoCertificate { .. } => live.forget_the_consent(),
         ErrandStep::Answering(_) => {}
     }

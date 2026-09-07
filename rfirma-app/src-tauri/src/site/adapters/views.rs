@@ -70,6 +70,24 @@ impl SiteErrandView {
         }
     }
 
+    /// Estado de guardado: el nombre que se muestra, nunca la ruta (ADR-0011).
+    pub fn saving(filename: Option<&str>) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::Saving {
+                filename: filename.map(str::to_owned),
+            },
+        }
+    }
+
+    /// Estado de carga.
+    pub fn loading() -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::Loading,
+        }
+    }
+
     /// Estado de solicitud de consentimiento para firma de documento.
     pub fn asking_to_sign(
         document: &str,
@@ -111,6 +129,8 @@ impl From<&Moment> for SiteErrandView {
             Moment::NoCertificate { reason, owned } => {
                 Self::without_certificates((*reason).into(), *owned)
             }
+            Moment::Saving { filename } => Self::saving(filename.as_deref()),
+            Moment::Loading => Self::loading(),
             Moment::NoChannel(NoChannel::ChannelNotOpened) => {
                 Self::no_channel(NoChannelView::ChannelNotOpened)
             }
@@ -185,6 +205,13 @@ crossing! {
             /// Número de certificados en el almacén.
             owned: usize,
         },
+        /// Guardando un fichero: el nombre que se muestra, nunca la ruta.
+        Saving {
+            /// Nombre de fichero propuesto por la sede, si lo hay.
+            filename: Option<String>,
+        },
+        /// Cargando uno o varios ficheros.
+        Loading,
     }
 }
 

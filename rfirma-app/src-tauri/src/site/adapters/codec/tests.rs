@@ -50,6 +50,45 @@ fn a_signature_goes_out_behind_its_certificate_separated_by_a_bar() {
 }
 
 #[test]
+fn a_save_the_published_client_sends_is_what_the_site_wants() {
+    let request = V4Codec.decode(&an_operation(&format!(
+        "afirma://save?op=save&idsession={CREDENTIAL}&dat=JVBERg=="
+    )));
+    assert!(matches!(request, SiteRequest::Save(_)));
+}
+
+#[test]
+fn a_load_the_published_client_sends_is_what_the_site_wants() {
+    let request = V4Codec.decode(&an_operation(&format!(
+        "afirma://load?op=load&idsession={CREDENTIAL}"
+    )));
+    assert!(matches!(request, SiteRequest::Load(_)));
+}
+
+#[test]
+fn a_save_goes_out_as_the_literal_the_client_expects() {
+    assert_eq!(V4Codec.encode(&SiteOutcome::Saved), "SAVE_OK");
+}
+
+#[test]
+fn a_load_goes_out_as_name_and_standard_base64_joined_by_a_bar() {
+    assert_eq!(
+        V4Codec.encode(&SiteOutcome::Loaded(vec![(
+            "firma.pdf".to_owned(),
+            b"%PDF".to_vec()
+        )])),
+        "firma.pdf:JVBERg=="
+    );
+    assert_eq!(
+        V4Codec.encode(&SiteOutcome::Loaded(vec![
+            ("uno.pdf".to_owned(), b"%PDF".to_vec()),
+            ("dos.pdf".to_owned(), b"%PDF".to_vec()),
+        ])),
+        "uno.pdf:JVBERg==|dos.pdf:JVBERg=="
+    );
+}
+
+#[test]
 fn the_cancellation_and_the_refusals_go_out_as_the_catalogue_writes_them() {
     assert_eq!(V4Codec.encode(&SiteOutcome::Cancelled), "CANCEL");
     let refused = V4Codec.encode(&SiteOutcome::Refused(SiteRefusal::ScratchUnwritable(

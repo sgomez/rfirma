@@ -39,6 +39,14 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             Failure::new("unwritable", detail.clone()),
             SafCode::CannotSaveData,
         ),
+        SiteRefusal::CannotSaveData(detail) => (
+            Failure::new("unwritable", detail.clone()),
+            SafCode::CannotSaveData,
+        ),
+        SiteRefusal::CannotLoadData(detail) => (
+            Failure::new("unreadable", detail.clone()),
+            SafCode::CannotLoadData,
+        ),
         SiteRefusal::Signing(refusal) => (
             Failure {
                 situation: refusal.situation.clone(),

@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::site::domain::protocol::{AfirmaUrl, NegotiatedCredential, SiteFilter};
 
-use super::outcome::{Moment, ProtocolCodec, SiteOutcome};
+use super::outcome::{LoadingConsent, Moment, ProtocolCodec, SavingConsent, SiteOutcome};
 use crate::site::ports::{ReplyHandle, Scratch};
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
@@ -76,6 +76,8 @@ impl Errand {
 enum PendingConsent {
     Identity(SiteFilter),
     Signature(PendingSignature),
+    Saving(SavingConsent),
+    Loading(LoadingConsent),
 }
 
 /// Datos necesarios para ejecutar la firma tras el consentimiento.
@@ -179,6 +181,32 @@ impl LiveErrand {
     /// Registra los datos de consentimiento de firma.
     pub(super) fn remember_signature(&self, pending: PendingSignature) {
         *crate::lock(&self.consent) = Some(PendingConsent::Signature(pending));
+    }
+
+    /// Registra los datos del diálogo de guardado pendiente.
+    pub(super) fn remember_saving(&self, consent: SavingConsent) {
+        *crate::lock(&self.consent) = Some(PendingConsent::Saving(consent));
+    }
+
+    /// Registra los datos del selector de carga pendiente.
+    pub(super) fn remember_loading(&self, consent: LoadingConsent) {
+        *crate::lock(&self.consent) = Some(PendingConsent::Loading(consent));
+    }
+
+    /// Datos del diálogo de guardado pendiente, si el trámite está esperando uno.
+    pub fn the_saving_pending(&self) -> Option<SavingConsent> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Saving(consent)) => Some(consent.clone()),
+            _ => None,
+        }
+    }
+
+    /// Datos del selector de carga pendiente, si el trámite está esperando uno.
+    pub fn the_loading_pending(&self) -> Option<LoadingConsent> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Loading(consent)) => Some(consent.clone()),
+            _ => None,
+        }
     }
 
     /// Filtro de identidad pendiente, si lo hay.
