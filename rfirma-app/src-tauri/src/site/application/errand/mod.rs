@@ -188,7 +188,11 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return None;
     };
 
-    let (_, path) = chosen.first()?;
+    let Some((name, path)) = chosen.first() else {
+        replies::declined(live);
+        return None;
+    };
+    let chosen_name = Some(name.clone());
     let document = match desk.scratch.read(path) {
         Ok(document) => document,
         Err(detail) => {
@@ -210,7 +214,14 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     Some(remembered(
         live,
-        desk::consent_to_sign_and_save_with_chosen_document(desk, *request, document, ours, live),
+        desk::consent_to_sign_and_save_with_chosen_document(
+            desk,
+            *request,
+            document,
+            chosen_name,
+            ours,
+            live,
+        ),
     ))
 }
 

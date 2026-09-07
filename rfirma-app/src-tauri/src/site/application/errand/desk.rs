@@ -143,10 +143,11 @@ pub fn consent_to_sign_and_save_with_chosen_document<
     desk: &ErrandDesk<'_, E, P, N>,
     request: SignAndSaveRequest,
     document: Vec<u8>,
+    chosen_name: Option<String>,
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let request = match request.with_chosen_document(document) {
+    let request = match request.with_chosen_document(document, chosen_name) {
         Ok(request) => request,
         Err(refusal) => return answering(live, SiteOutcome::RefusedByTheProtocol(refusal)),
     };

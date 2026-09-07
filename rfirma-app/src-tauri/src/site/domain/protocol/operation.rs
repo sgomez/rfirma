@@ -227,6 +227,7 @@ pub struct SignAndSaveRequest {
     load_extensions: Vec<String>,
     load_description: Option<String>,
     load_starting_folder: Option<String>,
+    chosen_name: Option<String>,
 }
 
 impl SignAndSaveRequest {
@@ -275,11 +276,16 @@ impl SignAndSaveRequest {
         self.starting_folder.as_deref()
     }
 
-    /// El nombre propuesto al diálogo de guardado (`AOPDFSigner.getSignedName`, 1.9.2).
+    /// El nombre propuesto al diálogo de guardado (`AOPDFSigner.getSignedName`, 1.9.2): el
+    /// `filename` de la sede si vino; si no, el nombre base del fichero elegido más `.pdf`; y
+    /// solo sin ninguno de los dos, `Firma.pdf`.
     pub fn proposed_name(&self) -> String {
-        self.filename
-            .clone()
-            .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.pdf"))
+        self.filename.clone().unwrap_or_else(|| {
+            self.chosen_name
+                .as_deref()
+                .map(|name| format!("{}.pdf", base_name(name)))
+                .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.pdf"))
+        })
     }
 
     /// Extensiones admitidas por el selector que elige el documento (`filenameExts`).
@@ -298,13 +304,19 @@ impl SignAndSaveRequest {
     }
 
     /// El documento que la persona acaba de elegir, con el mismo veredicto de formato que si
-    /// hubiera llegado en `dat`: solo se comprueba cuando la sede pidió `format=auto`.
-    pub fn with_chosen_document(&self, document: Vec<u8>) -> Result<Self, Refusal> {
+    /// hubiera llegado en `dat`: solo se comprueba cuando la sede pidió `format=auto`. El nombre
+    /// del fichero elegido (con su extensión) alimenta el segundo escalón de `proposed_name`.
+    pub fn with_chosen_document(
+        &self,
+        document: Vec<u8>,
+        chosen_name: Option<String>,
+    ) -> Result<Self, Refusal> {
         if self.format_auto {
             reject_unless_pdf(shape_of(&document))?;
         }
         Ok(Self {
             document: Some(document),
+            chosen_name,
             ..self.clone()
         })
     }
@@ -555,6 +567,7 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
         load_description: property_value(&declared, FILENAME_DESCRIPTION),
         load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
+        chosen_name: None,
         declared,
     }))
 }
@@ -596,6 +609,14 @@ fn read_document(url: &AfirmaUrl) -> Result<Vec<u8>, Refusal> {
         ));
     }
     Ok(document)
+}
+
+/// El nombre de fichero elegido sin su extensión (`AOPDFSigner.getSignedName`, 1.9.2), o el
+/// nombre entero si no tiene punto.
+fn base_name(chosen_name: &str) -> &str {
+    chosen_name
+        .rsplit_once('.')
+        .map_or(chosen_name, |(base, _)| base)
 }
 
 /// La única traducción de «PDF / XML / binario» a formato efectivo: hasta que

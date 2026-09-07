@@ -152,12 +152,12 @@ fn a_chosen_document_under_format_auto_must_still_be_a_pdf() {
     };
 
     let refusal = request
-        .with_chosen_document(b"<?xml version=\"1.0\"?><Facturae/>".to_vec())
+        .with_chosen_document(b"<?xml version=\"1.0\"?><Facturae/>".to_vec(), None)
         .expect_err("un XML no es PAdES");
     assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
 
     let completed = request
-        .with_chosen_document(b"%PDF-1.7\n".to_vec())
+        .with_chosen_document(b"%PDF-1.7\n".to_vec(), None)
         .expect("un PDF si se admite");
     assert_eq!(completed.document(), Some(b"%PDF-1.7\n".as_slice()));
 }
@@ -172,7 +172,7 @@ fn a_chosen_document_with_pades_explicit_skips_the_format_check() {
     };
 
     let completed = request
-        .with_chosen_document(b"lo que sea".to_vec())
+        .with_chosen_document(b"lo que sea".to_vec(), None)
         .expect("con PAdES explicito el veredicto de formato no se vuelve a mirar aqui");
     assert_eq!(completed.document(), Some(b"lo que sea".as_slice()));
 }
@@ -283,6 +283,34 @@ fn the_proposed_name_without_a_filename_is_the_default_of_the_original() {
         panic!("es un firmar y guardar");
     };
     assert_eq!(request.proposed_name(), "Firma.pdf");
+}
+
+#[test]
+fn the_proposed_name_without_a_filename_falls_back_to_the_chosen_document() {
+    let SiteOperation::SignAndSave(request) =
+        read_operation(&a_sign_and_save(SIGN, "")).expect("se atiende")
+    else {
+        panic!("es un firmar y guardar");
+    };
+
+    let with_chosen = request
+        .with_chosen_document(b"lo que sea".to_vec(), Some("contrato.docx".to_owned()))
+        .expect("PAdES explicito no vuelve a mirar el formato");
+    assert_eq!(with_chosen.proposed_name(), "contrato.pdf");
+}
+
+#[test]
+fn the_proposed_name_of_the_site_wins_over_the_chosen_document() {
+    let SiteOperation::SignAndSave(request) =
+        read_operation(&a_sign_and_save(SIGN, "&filename=contrato.pdf")).expect("se atiende")
+    else {
+        panic!("es un firmar y guardar");
+    };
+
+    let with_chosen = request
+        .with_chosen_document(b"lo que sea".to_vec(), Some("otro.docx".to_owned()))
+        .expect("PAdES explicito no vuelve a mirar el formato");
+    assert_eq!(with_chosen.proposed_name(), "contrato.pdf");
 }
 
 #[test]

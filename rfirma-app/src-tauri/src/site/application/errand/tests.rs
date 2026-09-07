@@ -1618,6 +1618,7 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
         &desk,
         request,
         A_PDF.to_vec(),
+        None,
         ours,
         &live,
     );
@@ -1660,6 +1661,7 @@ fn a_chosen_document_that_is_not_a_pdf_under_format_auto_is_refused_by_the_proto
         &desk,
         request,
         b"<?xml version=\"1.0\"?><Facturae/>".to_vec(),
+        None,
         Vec::new(),
         &live,
     );
