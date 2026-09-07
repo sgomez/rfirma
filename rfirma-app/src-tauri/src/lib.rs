@@ -4,6 +4,7 @@ pub mod crossing;
 pub mod desktop;
 pub mod documents;
 pub mod identity;
+pub mod memory_error;
 pub mod signing;
 pub mod site;
 

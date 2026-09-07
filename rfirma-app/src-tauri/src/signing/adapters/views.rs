@@ -6,48 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::crossing::crossing;
 
-use crate::identity::domain::certificate::CertificateStatus;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{PageSet, VisibleBox};
-
-crossing! {
-    /// Estado de un certificado tal como cruza a la ventana.
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-    #[serde(tag = "kind", rename_all = "camelCase")]
-    pub enum StatusView {
-        #[serde(rename_all = "camelCase")]
-        Valid {
-            not_after: u64,
-        },
-        #[serde(rename_all = "camelCase")]
-        Expired {
-            not_after: u64,
-        },
-        #[serde(rename_all = "camelCase")]
-        NotYetValid {
-            not_before: u64,
-        },
-        Revoked {
-            reason: String,
-        },
-        Unreadable {
-            detail: String,
-        },
-    }
-}
-
-impl From<CertificateStatus> for StatusView {
-    fn from(status: CertificateStatus) -> Self {
-        match status {
-            CertificateStatus::Valid { not_after } => Self::Valid { not_after },
-            CertificateStatus::Expired { not_after } => Self::Expired { not_after },
-            CertificateStatus::NotYetValid { not_before } => Self::NotYetValid { not_before },
-            CertificateStatus::Revoked { reason } => Self::Revoked { reason },
-            CertificateStatus::Unreadable { detail } => Self::Unreadable { detail },
-        }
-    }
-}
 
 crossing! {
     /// Posición y páginas del recuadro de firma visible.
@@ -154,6 +115,3 @@ crossing! {
         Dark,
     }
 }
-
-#[cfg(test)]
-mod tests;

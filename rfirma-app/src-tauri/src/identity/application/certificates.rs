@@ -8,7 +8,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{holder_of, issuer_of};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
-use crate::signing::domain::memory_error::{MemoryError, Situation as StoreSituation};
+use crate::memory_error::{MemoryError, Situation as StoreSituation};
 
 /// Los certificados del último listado, cada uno tras su asa.
 pub type ListedCertificates = Handles<CertificateRef>;

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::documents::domain::destination::{DestinationFolder, FolderFact};
 use crate::documents::domain::recents::Recents;
-use crate::signing::domain::memory_error::MemoryError;
+use crate::memory_error::MemoryError;
 use crate::signing::domain::{BoxSize, Spot};
 
 /// La memoria vista desde los documentos: el destino elegido, la última carpeta abierta y la bandeja.

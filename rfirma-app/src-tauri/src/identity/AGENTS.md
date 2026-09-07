@@ -29,7 +29,7 @@ hermano `tests.rs` y se leen solo para tocarlas.
 | `adapters/pkcs11/stores.rs` | 171 | Dónde se buscan los certificados, incluidos los `.p12` instalados (ID-192). Pruebas en `adapters/pkcs11/stores/tests.rs` (239). |
 | `adapters/failures.rs` | 62 | La única traducción de las situaciones del token, del secreto en el lector y del `.p12` a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs` (54). |
 | `adapters/tauri.rs` | 63 | Las tres órdenes de identidad: listar certificados, instalar y quitar un `.p12`. |
-| `adapters/views.rs` | 78 | `CertificateView` —desde `ListedCertificate`—, `SecretView` y el nombre en inglés de cada clase de almacén. Pruebas en `adapters/views/tests.rs`. |
+| `adapters/views.rs` | 120 | `CertificateView` —desde `ListedCertificate`—, `StatusView` —desde `CertificateStatus`—, `SecretView` y el nombre en inglés de cada clase de almacén. Pruebas en `adapters/views/tests.rs` (82). |
 | `application/certificates.rs` | 222 | Qué certificados hay, cuál eligió la ventana, cuál se recordó —por `CertificateMemory`— e instalar o quitar un `.p12` (ID-192, ID-197). `ListedCertificates` es `Handles<CertificateRef>` (de `documents/domain/handles.rs`): el último listado tras sus asas. Devuelve `TokenError` o `InstallError`, nunca una vista. Pruebas en `application/certificates/tests.rs` (154). |
 | `domain/certificate.rs` | 199 | El certificado tal y como sale del token, y `ListedCertificate`: la fila con su asa. Pruebas en `domain/certificate/tests.rs` (140). |
 | `domain/error.rs` | 148 | Situaciones del token (ID-29, ADR-0009) y el aviso de que `libnss3.so` no está. Pruebas en `domain/error/tests.rs` (78). |

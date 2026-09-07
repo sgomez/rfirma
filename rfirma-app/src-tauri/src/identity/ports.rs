@@ -6,7 +6,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
-use crate::signing::domain::memory_error::MemoryError;
+use crate::memory_error::MemoryError;
 
 /// El token visto desde los casos de uso: lista, dice cómo pide el secreto, firma e importa un `.p12` (ADR-0001).
 pub trait Token {

@@ -38,7 +38,7 @@ hermano `tests.rs` y se leen solo para tocarlas.
 | `adapters/state.rs` | 69 | `State`, el fichero de estado tal como se guarda (ID-31): la bandeja, lo **global** de la firma visible (ID-74), el certificado, la última carpeta y la comprobación de versión. Pruebas en `adapters/state/tests.rs` (255). |
 | `adapters/store.rs` | 210 | El fichero JSON versionado que soporta las dos memorias. Pruebas en `adapters/store/tests.rs` (181). |
 | `adapters/tauri.rs` | 146 | Las diez órdenes de firma local: el ciclo (prefirma, PIN, postfirma, cancelar), la previsualización, la esquina PAdES, la configuración y las firmas no registradas. Resuelven las asas por `DocumentsRoot` e `IdentityRoot`, y `finish_signing` **orquesta la postfirma**: entrega, recuerda el certificado y anota la fila si el documento se recuerda. Pruebas en `adapters/tauri/tests.rs` (37). |
-| `adapters/views.rs` | 132 | `StatusView`, `PlacementView` y `ConfigurationView`, con sus conversiones desde `VisibleBox` y `Preferences` y de vuelta. Pruebas en `adapters/views/tests.rs`. |
+| `adapters/views.rs` | 117 | `PlacementView` y `ConfigurationView`, con sus conversiones desde `VisibleBox` y `Preferences` y de vuelta. Sin pruebas propias. |
 | `application/configuration.rs` | 91 | Los ajustes como `Preferences`, puros: cómo se enseñan, cómo se combinan con lo que la ventana devuelve y con la carpeta concedida. Quien los guarda es la orden, sobre `adapters/memory.rs`. Pruebas en `application/configuration/tests.rs` (230). |
 | `application/configuration_memory.rs` | 59 | Lo que el usuario elige y la aplicación obedece. Pruebas en `application/configuration_memory/tests.rs` (87). |
 | `application/cycle.rs` | 192 | El ciclo trifásico sobre los puertos `Bridge` y `Token`: prefirma Java, firma Rust, postfirma Java, que sella la prefirma con la firma del token y devuelve un `CompletedCycle`. El único caso de uso que cruza la FFI **para firmar** (ID-82); el otro que la cruza es `application/filtering.rs`, y no firma. Pruebas en `application/cycle/tests.rs` (64). |
@@ -50,7 +50,6 @@ hermano `tests.rs` y se leen solo para tocarlas.
 | `domain/isolate_gone.rs` | 13 | El marcador de que el hilo del isolate murió, sin el hilo. |
 | `domain/language.rs` | 48 | Los cinco idiomas (ADR-0009 enmendado; el valencià salió en el ID-124). Pruebas en `domain/language/tests.rs` (34). |
 | `domain/layer2_text.rs` | 245 | El texto del recuadro visible: un párrafo, y la máscara sobre el `CN`. Pruebas en `domain/layer2_text/tests.rs` (193). |
-| `domain/memory_error.rs` | 56 | Situaciones de la memoria (ADR-0009). Pruebas en `domain/memory_error/tests.rs` (16). |
 | `domain/mod.rs` | 25 | El reparto. Qué se le pide al puente y qué se le exige de vuelta. |
 | `domain/placement.rs` | 464 | Del recuadro arrastrado en el visor al `/Rect` del PDF (ID-21), `PageSet`: en qué páginas se estampa y si el documento las tiene (ID-91, ID-94), `VisibleBox` —el recuadro que recuerda la bandeja—, `Spot` y `BoxSize` —cómo lo guarda: la esquina de cada documento y el tamaño global— y `PlacementError`. Pruebas en `domain/placement/tests.rs` (375). |
 | `domain/properties.rs` | 55 | Los `extraParams` en el formato del puente, y `merged_with`: quién manda cuando la sede y rFirma tocan la misma clave (ID-266). Pruebas en `domain/properties/tests.rs` (92). |

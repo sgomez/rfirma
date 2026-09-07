@@ -44,8 +44,11 @@ una carpeta con su propio mapa:
 
 Fuera de los cinco solo cuelgan de la raíz `lib.rs` (la composición), `main.rs`,
 `crossing.rs` (el rasgo y el registro de lo que cruza a la ventana, con `Failure`, que todos
-los contextos producen y ninguno posee) y `compile_fail.rs` (los cebos de compilación
-negativa). Nada más: un fichero nuevo en la raíz es un contexto que no se ha decidido.
+los contextos producen y ninguno posee), `memory_error.rs` (`MemoryError` y su `Situation`:
+la memoria entre sesiones es una sola, ADR-0010, y los puertos de cuatro contextos hablan de
+ella) y `compile_fail.rs` (los cebos de compilación negativa). Nada más: un fichero nuevo en
+la raíz es un contexto que no se ha decidido, y solo entra ahí lo que **todos** los contextos
+nombran y ninguno posee.
 
 ## Las cuatro capas, por nombre de carpeta
 
@@ -152,6 +155,16 @@ situación **dos veces**, en dos tablas que nadie mantenía a la par —la de la
 cable de sede—, y porque una excepción a tres caminos es la puerta por la que entra la cuarta.
 Con la traducción en el `adapters/failures.rs` de cada contexto, la regla se lee de la ruta y
 no necesita excepción.
+
+### Un error de memoria por contexto
+
+`MemoryError` nació en `signing/domain/` y lo importaban los puertos de `documents/`,
+`identity/` y `desktop/`. La salida que dictaba la regla era darle a cada contexto su propio
+error de memoria y traducir en el adaptador que implementa cada puerto. Se descartó porque el
+soporte de persistencia es **uno solo** (ADR-0010): cuatro tipos idénticos y tres traducciones
+que no deciden nada solo para que la ruta lo tape. La noción sube a la raíz, donde ya vive lo
+que todos producen y ninguno posee, y `signing/adapters/memory.rs` sigue siendo el único que
+la fabrica.
 
 ### Una lista de deuda mientras el árbol se movía
 

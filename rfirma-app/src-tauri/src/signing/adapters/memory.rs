@@ -10,10 +10,10 @@ use crate::documents::domain::destination::DestinationFolder;
 use crate::documents::domain::recents::Recents;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::lock;
+use crate::memory_error::MemoryError;
 use crate::signing::adapters::state::State;
 use crate::signing::adapters::store::{JsonFile, Loaded};
 use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::{BoxSize, Spot};
 
 /// Las dos memorias y sus dos soportes (ADR-0010).
