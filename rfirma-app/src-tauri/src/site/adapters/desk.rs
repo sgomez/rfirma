@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};

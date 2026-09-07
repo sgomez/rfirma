@@ -3,12 +3,12 @@ use super::{
     note_opened, note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder,
     starting_folder, told_as, where_it_lands, OpenedDocuments,
 };
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::domain::destination::CheckedFolder;
 use crate::documents::domain::destination::DestinationFolder;
 use crate::documents::domain::document::Document;
-use crate::fixtures::a_memory;
 use crate::signing::application::configuration_memory::Configuration;
+use crate::signing::application::tests::a_memory;
 
 fn with_destination(folder: &std::path::Path) -> DestinationFolder {
     DestinationFolder::at(folder)

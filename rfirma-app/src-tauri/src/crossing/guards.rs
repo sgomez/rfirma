@@ -9,15 +9,11 @@ use crate::crossing::{all_crossings, type_names_in, Crossing};
 /// Fichero excluido de las comprobaciones de tipos.
 const THIS_FILE: &str = "guards.rs";
 
-/// Comprueba si la ruta, relativa a `src/`, es del adaptador de Tauri: `commands/` o, en el `adapters/` de un contexto, un `tauri*`, `views*` u `orders*` (RD-02).
+/// Comprueba si la ruta, relativa a `src/`, es del adaptador de Tauri: en el `adapters/` de un contexto, un `tauri*`, `views*` u `orders*` (RD-02).
 fn is_an_adapter(relative: &str) -> bool {
     let mut segments = relative.split('/');
-    let first = segments.next().unwrap_or_default();
-    if first == "commands" {
-        return true;
-    }
     let name = relative.rsplit('/').next().unwrap_or_default();
-    segments.next() == Some("adapters")
+    segments.nth(1) == Some("adapters")
         && ["tauri", "views", "orders"]
             .iter()
             .any(|stem| name.starts_with(stem))
@@ -176,7 +172,7 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Serialised> {
-    use crate::commands::Failure;
+    use crate::crossing::Failure;
     use crate::documents::adapters::views::{
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
         SignedDocumentView,
@@ -187,11 +183,11 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::documents::domain::document::Document;
     use crate::documents::domain::recents::Badge;
     use crate::documents::domain::recents::RecentDocument;
-    use crate::fixtures::a_memory;
     use crate::signing::adapters::state::State;
     use crate::signing::adapters::views::ConfigurationView;
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;
+    use crate::signing::application::tests::a_memory;
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -472,9 +468,8 @@ fn rust_files_under(directory: &Path, prefix: &str) -> Vec<String> {
 fn an_adapter_in_a_new_context_is_discovered_without_editing_any_list() {
     let tree = tempfile::tempdir().expect("deberia crearse un directorio temporal");
     for (relative, source) in [
-        ("commands/mod.rs", "#[tauri::command]\npub fn one() {}\n"),
-        ("commands/guards.rs", "pub struct NotThis;\n"),
-        ("commands/tests.rs", "pub struct NotThisEither;\n"),
+        ("crossing/guards.rs", "pub struct NotThis;\n"),
+        ("crossing/tests.rs", "pub struct NotThisEither;\n"),
         (
             "site/adapters/tauri.rs",
             "#[tauri::command]\npub fn two() {}\n",
@@ -499,14 +494,7 @@ fn an_adapter_in_a_new_context_is_discovered_without_editing_any_list() {
         .map(|(relative, _)| relative)
         .collect();
 
-    assert_eq!(
-        found,
-        [
-            "commands/mod.rs",
-            "site/adapters/tauri.rs",
-            "site/adapters/views.rs"
-        ]
-    );
+    assert_eq!(found, ["site/adapters/tauri.rs", "site/adapters/views.rs"]);
 }
 
 #[test]

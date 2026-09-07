@@ -1,6 +1,6 @@
 //! La única traducción de las situaciones de documentos: a la vista de la ventana y al código de la sede (ADR-0009, ADR-0011, ADR-0012).
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::application::recents::RecentsError;
 use crate::documents::domain::destination::{DestinationError, Situation as DestinationSituation};
 use crate::documents::domain::error::DocumentError;

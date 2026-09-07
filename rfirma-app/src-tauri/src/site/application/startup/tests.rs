@@ -1,5 +1,5 @@
 use super::*;
-use crate::fixtures::InMemoryCaSlots;
+use crate::site::application::tests::InMemoryCaSlots;
 
 use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown, Situation};
 use crate::site::domain::trust_error::TrustError;

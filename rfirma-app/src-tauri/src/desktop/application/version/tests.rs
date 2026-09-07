@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use super::{new_version, Version, CACHE_TTL};
 use crate::desktop::domain::version_check::VersionCheck;
-use crate::fixtures::a_memory;
+use crate::signing::application::tests::a_memory;
 
 fn a_release(tag: &str) -> String {
     format!(r#"{{"tag_name":"{tag}","name":"rFirma {tag}"}}"#)

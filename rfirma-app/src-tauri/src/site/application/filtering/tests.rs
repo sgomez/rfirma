@@ -1,7 +1,8 @@
 use super::*;
-use crate::commands::Failure;
-use crate::fixtures::{a_certificate, listed_from, Directory};
+use crate::crossing::Failure;
+use crate::identity::application::tests::{a_certificate, listed_from};
 use crate::signing::domain::bridge::BridgeError;
+use crate::site::application::tests::Directory;
 use crate::site::domain::protocol::site_filter;
 use std::cell::RefCell;
 

@@ -67,7 +67,7 @@ pub struct NoSafCodeIsMadeFromAString;
 pub struct NoSafCodeIsParsedFromAString;
 
 /// ```
-/// use rfirma_lib::commands::Failure;
+/// use rfirma_lib::crossing::Failure;
 /// use rfirma_lib::crossing::WindowCrossing;
 ///
 /// fn crosses<T: WindowCrossing>() -> &'static str {

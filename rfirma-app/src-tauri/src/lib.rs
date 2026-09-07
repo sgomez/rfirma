@@ -7,18 +7,6 @@ pub mod identity;
 pub mod signing;
 pub mod site;
 
-pub mod commands {
-    pub mod failure;
-
-    #[cfg(test)]
-    mod guards;
-
-    pub use failure::Failure;
-}
-
-#[cfg(test)]
-pub(crate) mod fixtures;
-
 #[cfg(doctest)]
 mod compile_fail;
 

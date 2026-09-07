@@ -1,6 +1,6 @@
 //! La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009).
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
 
 /// Clave del catálogo de cada situación del escritorio; ninguna llega a la sede.

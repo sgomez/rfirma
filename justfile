@@ -373,7 +373,7 @@ autoscript:
 # publico, cada prueba y cada atributo que decide algo, con su numero de linea
 # y la PRIMERA linea de su documentacion. Nada mas.
 #
-# PARA QUE SIRVE: `commands/guards.rs` son 14 KB, y leerlo entero cuesta ~4 k
+# PARA QUE SIRVE: `crossing/guards.rs` son 14 KB, y leerlo entero cuesta ~4 k
 # tokens que un agente arrastra en su contexto durante el resto de la sesion,
 # reenviados en cada peticion. Su esqueleto son 2 KB y dice lo mismo para
 # situarse. Medido: en la construccion del issue #126, tres `cat` de ficheros
@@ -382,8 +382,8 @@ autoscript:
 #
 # COMO SE USA, en dos pasos:
 #
-#   just outline rfirma-app/src-tauri/src/commands/guards.rs   # el esqueleto
-#   sed -n '244,270p' rfirma-app/src-tauri/src/commands/guards.rs  # el tramo
+#   just outline rfirma-app/src-tauri/src/crossing/guards.rs   # el esqueleto
+#   sed -n '244,270p' rfirma-app/src-tauri/src/crossing/guards.rs  # el tramo
 #
 # El primer paso te da el numero de linea del elemento que buscas; el segundo
 # abre solo ese tramo. NO sustituye a leer el codigo que vas a EDITAR: te lleva
@@ -503,11 +503,11 @@ outline path:
 # pedirle al backend y los tipos que cruzan la frontera, con los nombres de
 # campo que ve TypeScript.
 #
-# PARA QUE SIRVE: para saber esto mismo hay que leer hoy los cinco ficheros de
-# ordenes de `commands/` y los cuatro de `commands/views/`. El contrato son ~3665, y
-# es MAS correcto que las fuentes: de los cinco parametros de `begin_signing`,
+# PARA QUE SIRVE: para saber esto mismo hay que leer hoy el `adapters/tauri.rs`
+# y el `adapters/views.rs` de cada uno de los cinco contextos. El contrato es
+# MAS correcto que las fuentes: de los cinco parametros de `begin_signing`,
 # cuatro son estado que Tauri inyecta y NO cruzan; aqui no aparecen. Quien va a
-# tocar la interfaz empieza por aqui y no abre `commands/` jamas.
+# tocar la interfaz empieza por aqui y no abre ningun `adapters/` jamas.
 #
 # SE GENERA DE LAS FUENTES, y por eso no puede quedarse obsoleto. Un contrato
 # escrito a mano se desincroniza en el primer PR que anade una orden, y uno
@@ -519,21 +519,20 @@ outline path:
 #
 #   - La ORDEN se invoca por su nombre de Rust tal cual —`invoke(
 #     "list_certificates")`, ver `src/tauri.ts`—, asi que va sin tocar.
-#   - Los CAMPOS los renombra serde a camelCase (hay catorce `rename_all` en
-#     `commands/`), asi que se renombran: `holder_name` sale `holderName`, que
+#   - Los CAMPOS los renombra serde a camelCase (`rename_all` en cada
+#     `crossing!`), asi que se renombran: `holder_name` sale `holderName`, que
 #     es lo que el adaptador escribe de verdad.
 #
-# Los tipos se descubren por su derive de `Serialize`/`Deserialize`, igual que
-# la guarda del ADR-0011 en `guards.rs`: un tipo nuevo aparece aqui por existir,
-# sin lista que mantener. Los atributos se aplanan antes de mirarlos porque
-# rustfmt parte un derive largo en varias lineas, que es el mismo motivo por el
-# que esa guarda tiene `attributes_on_one_line`.
+# Los tipos salen del registro de `crossing.rs`, que el enlazador completa con
+# cada `crossing!`: un tipo nuevo aparece aqui por declararse, sin lista que
+# mantener, y uno que derive `Serialize` a mano no es un `WindowCrossing` y no
+# cruza.
 #
-# Las FUENTES se descubren por ruta, igual que en esa guarda: todo `.rs` de
-# `commands/` y, en el `adapters/` de cualquier contexto bajo `src/`, los
+# Las FUENTES de las ordenes se descubren por ruta, igual que en la guarda de
+# `crossing/guards.rs`: en el `adapters/` de cualquier contexto bajo `src/`, los
 # `tauri*.rs`, `views*.rs` y `orders*.rs` (RD-02): el adaptador de Tauri y nada
-# mas, porque un adaptador de persistencia tambien deriva Serialize y no cruza.
-# Sin lista de ficheros. `src` se puede apuntar a otro arbol para probar la receta.
+# mas. Sin lista de ficheros. `src` se puede apuntar a otro arbol para probar la
+# receta.
 #
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 contract src=(tauri / "src"):

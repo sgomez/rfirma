@@ -1,6 +1,6 @@
 use super::{language_of, merged, shown, with_destination, Preferences};
-use crate::fixtures::a_memory;
 use crate::signing::application::configuration_memory::{Configuration, Theme};
+use crate::signing::application::tests::a_memory;
 use crate::signing::domain::Language;
 
 #[test]

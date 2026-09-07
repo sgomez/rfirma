@@ -63,11 +63,7 @@ fn is_an_adapter(relative: &str) -> bool {
     if name == "tests.rs" || name == "guards.rs" {
         return false;
     }
-    let mut segments = relative.split('/');
-    if segments.next() == Some("commands") {
-        return true;
-    }
-    segments.next() == Some("adapters")
+    relative.split('/').nth(1) == Some("adapters")
         && ["tauri", "views", "orders"]
             .iter()
             .any(|stem| name.starts_with(stem))

@@ -1,8 +1,10 @@
 use super::{begin_for_the_site, finish_for_the_site, SiteTerms};
-use crate::fixtures::{a_certificate, an_order, Directory, NoIsolate, NoToken};
 use crate::identity::application::certificates::ListedCertificates;
+use crate::identity::application::tests::{a_certificate, NoToken};
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::application::session::{config_for, SigningSession};
+use crate::signing::application::tests::{an_order, NoIsolate};
+use crate::site::application::tests::Directory;
 use crate::site::domain::protocol::{SafCode, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{FilterEngine, SiteSigning, SiteSigningRequest};
@@ -75,7 +77,9 @@ fn a_signature_the_site_placed_carries_no_geometry_of_our_own() {
 #[test]
 fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
     let order = an_order();
-    let certificates = vec![crate::fixtures::a_usable_certificate("FIRMA")];
+    let certificates = vec![crate::identity::application::tests::a_usable_certificate(
+        "FIRMA",
+    )];
     let listed = ListedCertificates::new();
     let handles = listed.replace(
         certificates

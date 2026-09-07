@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::*;
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::application::documents::told_as_dropped;
 use crate::documents::application::documents::OpenedDocuments;
 

@@ -2,8 +2,6 @@
 
 use serde::Serialize;
 
-use crate::crossing::crossing;
-
 crossing! {
     /// Representación de un fallo devuelto a la ventana (ADR-0009).
     #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

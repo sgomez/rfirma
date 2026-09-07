@@ -18,10 +18,9 @@ raíz), y los puntos de entrada de Java los vigila `application/cycle/tests.rs`.
 Rutas relativas a `src/signing/`. La capa es la carpeta: `domain/` no nombra nada
 del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 `adapters/` lo que quiera, y los casos de uso de otro contexto solo por su raíz
-(`<contexto>/mod.rs`). No hay deuda: `tests/module_directions_debt.txt` está
-vacío. Para situarte en un fichero,
-`just outline <ruta>`; las pruebas de cada módulo viven en su hermano
-`tests.rs` y se leen solo para tocarlas.
+(`<contexto>/mod.rs`); lo vigila `tests/module_directions.rs`. Para situarte
+en un fichero, `just outline <ruta>`; las pruebas de cada módulo viven en su
+hermano `tests.rs` y se leen solo para tocarlas.
 
 ## Dónde vive qué
 
@@ -29,6 +28,7 @@ vacío. Para situarte en un fichero,
 |---|---|---|
 | `mod.rs` | 80 | La raíz: `SigningRoot`, con la memoria, el hilo del aislado y la sesión; y la fachada que usan los vecinos: `configuration`, `is_live`, `signed_document`, `signed_folder`, `begin_for_the_site`, `finish`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | | Solo `pub mod`: el reparto de cada capa. |
+| `application/tests.rs` | 75 | Los andamios de la grada A que comparten todos los contextos: `NoIsolate`, `a_memory()` (la memoria real en un temporal), `an_order()` y `a_completed_cycle()`, la prueba de que hubo un ciclo. Solo en pruebas. |
 | `adapters/engines.rs` | 76 | Los adaptadores de `Bridge` y de los dos puertos de sede, `FilterEngine` y `PolicyEngine`, sobre el puente, y de los dos motores sobre el hilo del aislado, donde se resuelve la doble `Result` (RD-06). Pruebas en `adapters/engines/tests.rs` (12). |
 | `adapters/ffi.rs` | 421 | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. **Cinco entradas**, y ninguna firma. Un solo fallo del puente tiene nombre propio: el PDF con firmas no registradas (ID-296). Pruebas en `adapters/ffi/tests.rs` (358). |
 | `adapters/isolate.rs` | 85 | El hilo dueño del isolate de GraalVM, y el adaptador de `IsolateHost`. Pruebas en `adapters/isolate/tests.rs` (44). |

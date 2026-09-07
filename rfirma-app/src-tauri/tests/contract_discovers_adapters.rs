@@ -11,9 +11,6 @@ fn repository_root() -> PathBuf {
         .to_path_buf()
 }
 
-const A_LEGACY_ORDER: &str =
-    "#[tauri::command]\npub fn legacy_order(name: String) -> String {\n    name\n}\n";
-
 const AN_ADAPTER_IN_A_NEW_CONTEXT: &str = "\
 #[tauri::command(async)]
 pub fn synthetic_order(
@@ -33,10 +30,9 @@ fn write(root: &Path, relative: &str, source: &str) {
 #[test]
 fn an_order_in_a_new_context_appears_in_the_contract_and_the_types_come_from_the_registry() {
     let tree = tempfile::tempdir().expect("deberia crearse un directorio temporal");
-    write(tree.path(), "commands/mod.rs", A_LEGACY_ORDER);
     write(
         tree.path(),
-        "commands/guards.rs",
+        "crossing/guards.rs",
         "#[tauri::command]\npub fn not_this() {}\n",
     );
     write(
@@ -67,10 +63,6 @@ fn an_order_in_a_new_context_appears_in_the_contract_and_the_types_come_from_the
         output.status.success(),
         "{}",
         String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        contract.contains("legacy_order(name: String)"),
-        "{contract}"
     );
     assert!(
         contract.contains("async synthetic_order() -> Result<(), Failure>"),

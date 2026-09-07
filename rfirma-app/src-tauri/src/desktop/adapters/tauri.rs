@@ -7,7 +7,7 @@ use crate::documents::DocumentsRoot;
 
 use super::registry::DesktopRegistry;
 use super::views::{NewVersionView, UrlHandlersView};
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
 use crate::documents::adapters::views::DroppedDocumentView;
 

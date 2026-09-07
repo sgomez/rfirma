@@ -7,3 +7,6 @@ pub mod session;
 pub mod site;
 pub mod startup;
 pub mod trust;
+
+#[cfg(test)]
+pub(crate) mod tests;

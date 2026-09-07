@@ -2,10 +2,11 @@ use super::{
     admitted_bytes, begin, cancel, config_for, finish, is_live, note_delivered, sign_on_token,
     signed_document, signed_folder, take_signed_cycle, DocumentToSign, SigningSession,
 };
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
-use crate::fixtures::{a_certificate, an_order, NoIsolate, NoToken};
+use crate::identity::application::tests::{a_certificate, NoToken};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
+use crate::signing::application::tests::{an_order, NoIsolate};
 use crate::signing::domain::{PageSet, SigningChoice};
 
 fn chosen(order: &SigningOrder) -> SigningChoice {
