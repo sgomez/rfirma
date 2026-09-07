@@ -172,6 +172,8 @@ async fn attend(
     let _ = encrypted.shutdown().await;
 }
 
+const THE_EOF_MARK: &[u8] = b"@EOF";
+
 /// Lee del socket hasta encontrar `@EOF`, o `None` si el par cierra antes de completarla.
 async fn the_framed_request(stream: &mut (impl tokio::io::AsyncRead + Unpin)) -> Option<String> {
     let mut buffer = Vec::new();
@@ -181,8 +183,12 @@ async fn the_framed_request(stream: &mut (impl tokio::io::AsyncRead + Unpin)) ->
         match stream.read(&mut chunk).await {
             Ok(0) | Err(_) => return None,
             Ok(read) => {
+                let unscanned = buffer.len().saturating_sub(THE_EOF_MARK.len() - 1);
                 buffer.extend_from_slice(&chunk[..read]);
-                if buffer.windows(4).any(|window| window == b"@EOF") {
+                if buffer[unscanned..]
+                    .windows(THE_EOF_MARK.len())
+                    .any(|window| window == THE_EOF_MARK)
+                {
                     return Some(String::from_utf8_lossy(&buffer).into_owned());
                 }
             }
@@ -246,12 +252,8 @@ async fn respond(
             if !credential_matches(credential, candidate.as_deref()) {
                 return the_invalid_session_response();
             }
-            let already_computed = {
-                let state = lock(state);
-                (!state.parts.is_empty()).then(|| state.parts.len())
-            };
-            if let Some(parts) = already_computed {
-                return http_response(&parts.to_string());
+            if let Some(response) = the_response_already_computed(state) {
+                return response;
             }
             let combined = lock(state).fragments.combined();
             let Some(url) = combined.and_then(|message| AfirmaUrl::parse(&message).ok()) else {
@@ -280,6 +282,13 @@ async fn respond(
     }
 }
 
+/// El número de partes de una respuesta ya calculada, para que un reintento de `cmd=` o de
+/// `firm=` no relance la operación (`if (toSend.isEmpty())`, líneas 271 y 330).
+fn the_response_already_computed(state: &Arc<Mutex<ServiceState>>) -> Option<Vec<u8>> {
+    let parts = lock(state).parts.len();
+    (parts > 0).then(|| http_response(&parts.to_string()))
+}
+
 fn the_invalid_session_response() -> Vec<u8> {
     http_response(
         &WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
@@ -296,7 +305,10 @@ async fn handle_operation(
 ) -> Vec<u8> {
     match answer(duty, from_loopback, message) {
         Answer::Reply(text) | Answer::ReplyAndClose(text) => http_response(&text),
-        Answer::Pending(url) => launch_operation(url, inbox, state).await,
+        Answer::Pending(url) => match the_response_already_computed(state) {
+            Some(response) => response,
+            None => launch_operation(url, inbox, state).await,
+        },
     }
 }
 

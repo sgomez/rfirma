@@ -153,9 +153,10 @@ pub fn split_response(text: &str) -> Vec<String> {
         return Vec::new();
     }
 
-    text.as_bytes()
+    text.chars()
+        .collect::<Vec<char>>()
         .chunks(RESPONSE_MAX_SIZE)
-        .map(|chunk| String::from_utf8_lossy(chunk).into_owned())
+        .map(|chunk| chunk.iter().collect())
         .collect()
 }
 

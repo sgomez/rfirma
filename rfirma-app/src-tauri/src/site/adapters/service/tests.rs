@@ -226,3 +226,74 @@ async fn a_refusing_duty_answers_the_same_refusal_regardless_of_the_command() {
 
     assert_eq!(body_of(&response), refusal.answer().on_the_wire());
 }
+
+/// Un buzón que cuenta cuántas operaciones se le entregan, para distinguir un relanzamiento de
+/// una respuesta ya calculada.
+fn counting_answers_with(text: &'static str, launches: &Arc<Mutex<usize>>) -> Inbox {
+    let launches = Arc::clone(launches);
+    Arc::new(move |_url: AfirmaUrl, reply: ReplyHandle| {
+        *launches.lock().expect("el contador no esta envenenado") += 1;
+        reply.answer(text.to_owned());
+    })
+}
+
+fn a_command(operation: &str) -> String {
+    let encoded = URL_SAFE.encode(operation);
+    format!("cmd={encoded}idsession={CREDENTIAL}@EOF")
+}
+
+#[tokio::test]
+async fn a_repeated_command_answers_the_number_of_parts_without_relaunching_the_operation() {
+    let state = no_state();
+    let launches = Arc::new(Mutex::new(0));
+    let inbox = counting_answers_with("resultado", &launches);
+    let raw = a_command("afirma://selectcert?op=selectcert");
+
+    let first = respond(&raw, true, &serving(), &inbox, &state).await;
+    let second = respond(&raw, true, &serving(), &inbox, &state).await;
+
+    assert_eq!(body_of(&first), "1");
+    assert_eq!(body_of(&second), "1");
+    assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 1);
+}
+
+#[tokio::test]
+async fn a_command_with_the_wrong_credential_is_refused() {
+    let encoded = URL_SAFE.encode("afirma://selectcert?op=selectcert");
+    let response = respond(
+        &format!("cmd={encoded}idsession=0000000000000000000O@EOF"),
+        true,
+        &serving(),
+        &answering_with("no se llama"),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(
+        body_of(&response),
+        WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
+            .on_the_wire()
+    );
+}
+
+#[tokio::test]
+async fn an_echo_that_resets_discards_the_response_already_computed() {
+    let state = no_state();
+    let launches = Arc::new(Mutex::new(0));
+    let inbox = counting_answers_with("resultado", &launches);
+    let raw = a_command("afirma://selectcert?op=selectcert");
+    respond(&raw, true, &serving(), &inbox, &state).await;
+
+    respond(
+        &format!("echo=-idsession={CREDENTIAL}@EOF"),
+        true,
+        &serving(),
+        &inbox,
+        &state,
+    )
+    .await;
+    let after_the_reset = respond(&raw, true, &serving(), &inbox, &state).await;
+
+    assert_eq!(body_of(&after_the_reset), "1");
+    assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 2);
+}

@@ -48,13 +48,10 @@ impl ATransport {
                 "todos ocupados",
             ));
         }
-        let port = match location {
-            ChannelLocation::Drawn(ports) => *ports.first().expect("se ata uno de los sorteados"),
-            ChannelLocation::Fixed(port) => *port,
-            ChannelLocation::Service(ports) => ports[0],
-            ChannelLocation::Relay(_) => 0,
-        };
-        Ok(OpenChannel::new(port, Shutdown::of(|| {})))
+        Ok(OpenChannel::new(
+            the_port_bound_at(location),
+            Shutdown::of(|| {}),
+        ))
     }
 
     fn asked_once(&self) -> (ChannelLocation, ChannelDuty) {
@@ -65,6 +62,16 @@ impl ATransport {
 
     fn was_never_asked(&self) {
         assert!(self.asked.borrow().is_empty(), "no habia donde abrir nada");
+    }
+}
+
+fn the_port_bound_at(location: &ChannelLocation) -> u16 {
+    match location {
+        ChannelLocation::Fixed(port) => *port,
+        ChannelLocation::Drawn(ports) | ChannelLocation::Service(ports) => {
+            *ports.first().expect("se ata uno de los sorteados")
+        }
+        ChannelLocation::Relay(_) => 0,
     }
 }
 
