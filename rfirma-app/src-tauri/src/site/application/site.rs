@@ -1,9 +1,9 @@
 //! Invocación de sede por esquema de URL y negociación de canal (ADR-0005, ADR-0017).
 
-use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::protocol::{
-    drawn_ports, AfirmaUrl, ChannelCredential, LaunchRequest, Refusal, RefusalSituation, SafCode,
-    WireAnswer,
+    drawn_ports, AfirmaUrl, ChannelCredential, LaunchRequest, NegotiatedCredential, Refusal,
+    RefusalSituation, SafCode, WireAnswer,
 };
 
 use super::errand::{Errand, LiveErrand, NegotiatedCodec};
@@ -14,8 +14,8 @@ pub use super::errand::ChannelTransport;
 pub struct Negotiated {
     /// Códec acordado para leer operaciones y escribir respuestas.
     pub codec: NegotiatedCodec,
-    /// Puertos sorteados por la sede.
-    pub ports: Vec<u16>,
+    /// Dónde escuchará el canal.
+    pub location: ChannelLocation,
     /// Credencial para autenticar la sesión.
     pub credential: ChannelCredential,
 }
@@ -25,7 +25,7 @@ pub fn negotiate(url: &AfirmaUrl, codec: &NegotiatedCodec) -> Result<Negotiated,
     let request = LaunchRequest::from_url(url)?;
     Ok(Negotiated {
         codec: codec.clone(),
-        ports: request.ports().to_vec(),
+        location: ChannelLocation::Drawn(request.ports().to_vec()),
         credential: request.credential().clone(),
     })
 }
@@ -67,8 +67,10 @@ pub fn attend_launch(
 
     match negotiate(&url, codec) {
         Ok(negotiated) => {
-            let duty = ChannelDuty::Serve(negotiated.credential.clone());
-            match transport(&negotiated.ports, duty) {
+            let duty = ChannelDuty::Serve(NegotiatedCredential::Required(
+                negotiated.credential.clone(),
+            ));
+            match transport(&negotiated.location, duty) {
                 Ok(channel) => {
                     let errand =
                         Errand::of(negotiated.credential, channel.port(), negotiated.codec);
@@ -100,7 +102,8 @@ fn refuse(url: &AfirmaUrl, refusal: Refusal, transport: ChannelTransport<'_>) ->
         return Attendance::RefusingInTheWindow(refusal);
     }
 
-    match transport(&ports, ChannelDuty::Refuse(refusal.answer())) {
+    let location = ChannelLocation::Drawn(ports);
+    match transport(&location, ChannelDuty::Refuse(refusal.answer())) {
         Ok(channel) => Attendance::RefusingOverTheChannel {
             channel,
             answer: refusal.answer(),

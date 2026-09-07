@@ -46,6 +46,15 @@ impl ChannelCredential {
     }
 }
 
+/// La credencial negociada para el canal: exigida, o ausente si la sede no la trajo.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NegotiatedCredential {
+    /// El canal exige esta credencial en cada mensaje.
+    Required(ChannelCredential),
+    /// El canal no exige ninguna credencial.
+    Absent,
+}
+
 /// Lo que pide una invocación de arranque, ya leída.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaunchRequest {

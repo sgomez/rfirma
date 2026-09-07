@@ -159,7 +159,7 @@ pub fn run() {
                         let attendance = site::application::startup::attend_site_launch(
                             &url,
                             &site.codec,
-                            &|ports, duty| transport.open(ports, duty),
+                            &|location, duty| transport.open(location, duty),
                             &|_| site::adapters::window::open_the_site_window(&handle),
                             &site.errand,
                             // A mitad de un trámite no se toca la CA local (ADR-0005).
@@ -250,7 +250,7 @@ pub fn run() {
                     stores: site.trust.stores.as_ref(),
                 },
                 &site.codec,
-                &|ports, duty| transport.open(ports, duty),
+                &|location, duty| transport.open(location, duty),
                 &|_| site::adapters::window::open_the_site_window(&handle),
                 &site.errand,
             );

@@ -14,7 +14,7 @@ use crate::site::adapters::channel::reply::ReplyHandle;
 use crate::site::adapters::tls::LocalServerCertificate;
 use crate::site::domain::channel::ChannelDuty;
 use crate::site::domain::channel::{ChannelError, Situation};
-use crate::site::domain::channel::{OpenChannel, Shutdown};
+use crate::site::domain::channel::{ChannelLocation, OpenChannel, Shutdown};
 use crate::site::domain::protocol::AfirmaUrl;
 
 /// Manejador que atiende la operación recibida por el canal.
@@ -52,14 +52,14 @@ pub async fn serve(
     ))
 }
 
-/// Enlaza el primer puerto disponible y arranca el servidor del canal.
+/// Enlaza la ubicación indicada y arranca el servidor del canal.
 pub fn open(
-    ports: &[u16],
+    location: &ChannelLocation,
     certificate: &LocalServerCertificate,
     duty: ChannelDuty,
     operations: SiteOperations,
 ) -> Result<OpenChannel, ChannelError> {
-    let listener = crate::site::adapters::channel::bind::bind_first_free(ports)?;
+    let listener = crate::site::adapters::channel::bind::bind_first_free(location)?;
     tauri::async_runtime::block_on(serve(listener, certificate, duty, operations))
 }
 

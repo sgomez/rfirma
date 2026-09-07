@@ -27,10 +27,13 @@ use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::adapters::frontier;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
-use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown};
+use crate::site::domain::channel::{
+    ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
+};
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, SafCode, SelectCertificate,
-    SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
+    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, SafCode,
+    SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
+    SiteVisibleSignature, WireAnswer,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest};
@@ -65,9 +68,12 @@ const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 /// Un transporte que abre siempre, y apunta lo que se le pidió.
 fn a_transport(
     asked: &RefCell<Vec<ChannelDuty>>,
-) -> impl Fn(&[u16], ChannelDuty) -> Result<OpenChannel, ChannelError> + '_ {
-    move |ports: &[u16], duty: ChannelDuty| {
+) -> impl Fn(&ChannelLocation, ChannelDuty) -> Result<OpenChannel, ChannelError> + '_ {
+    move |location: &ChannelLocation, duty: ChannelDuty| {
         asked.borrow_mut().push(duty);
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba sortea puertos: {location:?}");
+        };
         Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
     }
 }
@@ -118,7 +124,11 @@ fn what_the_site_received(wire: &mut tokio::sync::oneshot::Receiver<String>) -> 
 
 /// Petición tal y como llega por el canal.
 fn arriving_over_the_channel(message: &str) -> AfirmaUrl {
-    let answered = what_the_channel_answers(&ChannelDuty::Serve(a_credential()), true, message);
+    let answered = what_the_channel_answers(
+        &ChannelDuty::Serve(NegotiatedCredential::Required(a_credential())),
+        true,
+        message,
+    );
     let Answer::Pending(url) = answered else {
         panic!("una operacion legitima queda pendiente: {answered:?}");
     };
@@ -336,14 +346,21 @@ impl ProtocolCodec for ACodec {
 #[test]
 fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memory() {
     let opened = RefCell::new(Vec::new());
-    let transport = |ports: &[u16], duty: ChannelDuty| {
+    let transport = |location: &ChannelLocation, duty: ChannelDuty| {
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba sortea puertos: {location:?}");
+        };
         opened.borrow_mut().push((ports[0], duty));
         Ok(OpenChannel::new(ports[0], Shutdown::of(|| {})))
     };
     let live = LiveErrand::default();
 
-    let channel = Transport::open(&transport, &[54001], ChannelDuty::Serve(a_credential()))
-        .expect("el transporte en memoria abre");
+    let channel = Transport::open(
+        &transport,
+        &ChannelLocation::Drawn(vec![54001]),
+        ChannelDuty::Serve(NegotiatedCredential::Required(a_credential())),
+    )
+    .expect("el transporte en memoria abre");
     let codec: NegotiatedCodec = Arc::new(ACodec::answering(Vec::new()));
     assert!(live.begin(Errand::of(
         a_credential(),
@@ -1488,7 +1505,10 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
     let closed = Arc::new(AtomicBool::new(false));
     let opened = Cell::new(0_u8);
 
-    let transport = |ports: &[u16], _duty: ChannelDuty| {
+    let transport = |location: &ChannelLocation, _duty: ChannelDuty| {
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba sortea puertos: {location:?}");
+        };
         opened.set(opened.get() + 1);
         if opened.get() == 1 {
             assert!(live.begin(Errand::of(a_credential(), 54001, a_codec())));

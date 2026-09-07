@@ -12,9 +12,11 @@ use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 use rfirma_lib::site::application::errand::{LiveErrand, NegotiatedCodec};
 use rfirma_lib::site::application::site::Attendance;
 use rfirma_lib::site::application::startup::{attend_site_launch, LocalCaReach};
-use rfirma_lib::site::domain::channel::{ChannelDuty, OpenChannel};
+use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
-use rfirma_lib::site::domain::protocol::{ChannelCredential, LaunchRequest, SafCode};
+use rfirma_lib::site::domain::protocol::{
+    ChannelCredential, LaunchRequest, NegotiatedCredential, SafCode,
+};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::Connector;
@@ -57,9 +59,9 @@ impl AChannel {
 
     /// El canal que sirve la conversación con la credencial de siempre.
     async fn serving_the_echo() -> Self {
-        Self::serving(ChannelDuty::Serve(
+        Self::serving(ChannelDuty::Serve(NegotiatedCredential::Required(
             ChannelCredential::parse(CREDENTIAL).expect("veinte alfanumericos son credencial"),
-        ))
+        )))
         .await
     }
 
@@ -250,12 +252,15 @@ async fn the_channel_ends_up_on_one_of_the_ports_the_site_drew() {
     let ca = LocalCa::generate().expect("la CA local deberia generarse");
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
-    let listener = bind_first_free(&drawn).expect("alguno de los tres deberia estar libre");
+    let listener = bind_first_free(&ChannelLocation::Drawn(drawn.clone()))
+        .expect("alguno de los tres deberia estar libre");
 
     let channel = serve(
         listener,
         &certificate,
-        ChannelDuty::Serve(ChannelCredential::parse(CREDENTIAL).expect("credencial")),
+        ChannelDuty::Serve(NegotiatedCredential::Required(
+            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
+        )),
         no_operations(),
     )
     .await
@@ -373,7 +378,9 @@ async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
     let keeping = std::sync::Arc::clone(&held);
 
     let channel = AChannel::serving_with(
-        ChannelDuty::Serve(ChannelCredential::parse(CREDENTIAL).expect("credencial")),
+        ChannelDuty::Serve(NegotiatedCredential::Required(
+            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
+        )),
         std::sync::Arc::new(move |url, reply| {
             assert_eq!(url.verb(), "selectcert");
             *keeping.lock().expect("el candado") = Some(reply);

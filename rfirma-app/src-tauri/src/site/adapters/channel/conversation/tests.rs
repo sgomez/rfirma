@@ -1,12 +1,16 @@
 use super::*;
-use crate::site::domain::protocol::ChannelCredential;
+use crate::site::domain::protocol::{ChannelCredential, NegotiatedCredential};
 
 const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 
 fn serving() -> ChannelDuty {
-    ChannelDuty::Serve(
+    ChannelDuty::Serve(NegotiatedCredential::Required(
         ChannelCredential::parse(CREDENTIAL).expect("veinte alfanumericos son credencial"),
-    )
+    ))
+}
+
+fn serving_without_credential() -> ChannelDuty {
+    ChannelDuty::Serve(NegotiatedCredential::Absent)
 }
 
 fn written(answer: &Answer) -> &str {
@@ -41,6 +45,25 @@ fn an_echo_without_credential_gets_the_invalid_session_code_too() {
     let answer = answer(&serving(), true, "echo=@EOF");
 
     assert!(written(&answer).starts_with("SAF_46"));
+}
+
+#[test]
+fn an_echo_without_credential_is_answered_when_no_credential_was_negotiated() {
+    let answer = answer(&serving_without_credential(), true, "echo=@EOF");
+
+    assert_eq!(answer, Answer::Reply("OK".to_owned()));
+}
+
+#[test]
+fn an_operation_without_credential_is_left_pending_when_no_credential_was_negotiated() {
+    let message = "afirma://selectcert?op=selectcert";
+
+    let answer = answer(&serving_without_credential(), true, message);
+
+    let Answer::Pending(url) = answer else {
+        panic!("la operacion va al tramite: {answer:?}");
+    };
+    assert_eq!(url.verb(), "selectcert");
 }
 
 #[test]

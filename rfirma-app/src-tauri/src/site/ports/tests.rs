@@ -15,7 +15,10 @@ fn what_is_answered_is_what_the_other_end_receives() {
 
 #[test]
 fn a_closure_with_the_right_shape_is_a_transport() {
-    let transport = |ports: &[u16], _duty: ChannelDuty| {
+    let transport = |location: &ChannelLocation, _duty: ChannelDuty| {
+        let ChannelLocation::Drawn(ports) = location else {
+            panic!("esta prueba solo sortea puertos");
+        };
         Ok(OpenChannel::new(
             ports[0],
             crate::site::domain::channel::Shutdown::of(|| {}),
@@ -23,7 +26,7 @@ fn a_closure_with_the_right_shape_is_a_transport() {
     };
     let opened = Transport::open(
         &transport,
-        &[51001],
+        &ChannelLocation::Drawn(vec![51001]),
         ChannelDuty::Refuse(crate::site::domain::protocol::WireAnswer::refused(
             crate::site::domain::protocol::SafCode::CannotOpenSocket,
         )),

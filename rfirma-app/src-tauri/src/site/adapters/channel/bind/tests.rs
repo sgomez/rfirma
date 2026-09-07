@@ -1,4 +1,5 @@
 use super::*;
+use crate::site::domain::channel::ChannelLocation;
 
 fn an_occupied_port() -> (TcpListener, u16) {
     let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0)))
@@ -16,7 +17,8 @@ fn the_first_free_of_the_drawn_ports_is_the_one_that_is_bound() {
     let (free, available) = an_occupied_port();
     drop(free);
 
-    let listener = bind_first_free(&[taken, available]).expect("el segundo estaba libre");
+    let listener = bind_first_free(&ChannelLocation::Drawn(vec![taken, available]))
+        .expect("el segundo estaba libre");
 
     assert_eq!(
         listener.local_addr().expect("atado").port(),
@@ -31,7 +33,7 @@ fn the_channel_only_listens_on_the_loopback() {
     let (free, available) = an_occupied_port();
     drop(free);
 
-    let listener = bind_first_free(&[available]).expect("estaba libre");
+    let listener = bind_first_free(&ChannelLocation::Drawn(vec![available])).expect("estaba libre");
 
     assert_eq!(
         listener.local_addr().expect("atado").ip(),
@@ -44,7 +46,8 @@ fn the_channel_only_listens_on_the_loopback() {
 fn with_every_drawn_port_taken_there_is_no_channel() {
     let (occupied, taken) = an_occupied_port();
 
-    let error = bind_first_free(&[taken]).expect_err("el unico puerto estaba ocupado");
+    let error = bind_first_free(&ChannelLocation::Drawn(vec![taken]))
+        .expect_err("el unico puerto estaba ocupado");
 
     assert_eq!(error.situation(), Situation::NoDrawnPortIsFree);
     assert!(error.detail().contains(&taken.to_string()));
@@ -52,9 +55,11 @@ fn with_every_drawn_port_taken_there_is_no_channel() {
 }
 
 #[test]
-fn the_port_of_the_third_protocol_is_never_bound() {
-    let error =
-        bind_first_free(&[THE_PORT_OF_THE_THIRD_PROTOCOL]).expect_err("ese puerto no se ata jamas");
+fn the_port_of_the_third_protocol_is_never_bound_when_drawn() {
+    let error = bind_first_free(&ChannelLocation::Drawn(vec![
+        THE_PORT_OF_THE_THIRD_PROTOCOL,
+    ]))
+    .expect_err("ese puerto no se ata jamas cuando se sorteo");
 
     assert_eq!(error.situation(), Situation::NoDrawnPortIsFree);
     assert!(
@@ -65,7 +70,31 @@ fn the_port_of_the_third_protocol_is_never_bound() {
 
 #[test]
 fn a_launch_without_drawn_ports_binds_nothing() {
-    let error = bind_first_free(&[]).expect_err("sin puertos no hay canal");
+    let error =
+        bind_first_free(&ChannelLocation::Drawn(vec![])).expect_err("sin puertos no hay canal");
 
     assert_eq!(error.situation(), Situation::NoDrawnPortIsFree);
+}
+
+#[test]
+fn a_fixed_port_is_bound_even_if_it_is_the_port_of_the_third_protocol() {
+    let listener = bind_first_free(&ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL))
+        .expect("un puerto fijo se ata tal cual, aunque sea el 63117");
+
+    assert_eq!(
+        listener.local_addr().expect("atado").port(),
+        THE_PORT_OF_THE_THIRD_PROTOCOL
+    );
+}
+
+#[test]
+fn a_fixed_port_already_taken_is_a_bind_failure() {
+    let (occupied, taken) = an_occupied_port();
+
+    let error =
+        bind_first_free(&ChannelLocation::Fixed(taken)).expect_err("el puerto fijo estaba ocupado");
+
+    assert_eq!(error.situation(), Situation::NoDrawnPortIsFree);
+    assert!(error.detail().contains(&taken.to_string()));
+    drop(occupied);
 }

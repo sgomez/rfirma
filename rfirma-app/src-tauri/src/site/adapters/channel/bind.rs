@@ -2,34 +2,46 @@
 
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 
-use crate::site::domain::channel::{ChannelError, Situation};
+use crate::site::domain::channel::{ChannelError, ChannelLocation, Situation};
 
-/// Puerto fijo del protocolo 3 que nunca se enlaza.
+/// Puerto fijo del protocolo 3, nunca atado cuando la sede sorteó puertos.
 pub const THE_PORT_OF_THE_THIRD_PROTOCOL: u16 = 63117;
 
-/// Ata el primero de los puertos sorteados que esté libre.
-pub fn bind_first_free(ports: &[u16]) -> Result<TcpListener, ChannelError> {
-    let mut refused = Vec::new();
+/// Ata la ubicación indicada: el primero de los puertos sorteados que esté libre, o el puerto
+/// fijo tal cual (ADR-0005).
+pub fn bind_first_free(location: &ChannelLocation) -> Result<TcpListener, ChannelError> {
+    match location {
+        ChannelLocation::Fixed(port) => bind(*port).map_err(|error| {
+            ChannelError::new(Situation::NoDrawnPortIsFree, format!("{port}: {error}"))
+        }),
+        ChannelLocation::Drawn(ports) => {
+            let mut refused = Vec::new();
 
-    for port in ports
-        .iter()
-        .copied()
-        .filter(|port| *port != THE_PORT_OF_THE_THIRD_PROTOCOL)
-    {
-        match TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, port))) {
-            Ok(listener) => return Ok(listener),
-            Err(error) => refused.push(format!("{port}: {error}")),
+            for port in ports
+                .iter()
+                .copied()
+                .filter(|port| *port != THE_PORT_OF_THE_THIRD_PROTOCOL)
+            {
+                match bind(port) {
+                    Ok(listener) => return Ok(listener),
+                    Err(error) => refused.push(format!("{port}: {error}")),
+                }
+            }
+
+            Err(ChannelError::new(
+                Situation::NoDrawnPortIsFree,
+                if refused.is_empty() {
+                    "no quedaba ningun puerto al que atarse".to_owned()
+                } else {
+                    refused.join("; ")
+                },
+            ))
         }
     }
+}
 
-    Err(ChannelError::new(
-        Situation::NoDrawnPortIsFree,
-        if refused.is_empty() {
-            "no quedaba ningun puerto al que atarse".to_owned()
-        } else {
-            refused.join("; ")
-        },
-    ))
+fn bind(port: u16) -> std::io::Result<TcpListener> {
+    TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))
 }
 
 #[cfg(test)]

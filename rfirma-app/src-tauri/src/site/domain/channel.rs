@@ -2,15 +2,25 @@
 
 use std::fmt;
 
-use super::protocol::{ChannelCredential, WireAnswer};
+use super::protocol::{NegotiatedCredential, WireAnswer};
 
 /// Cometido con el que se abrió el canal local.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ChannelDuty {
-    /// Servir la conversación con la credencial acordada.
-    Serve(ChannelCredential),
+    /// Servir la conversación con la credencial negociada, si la hay.
+    Serve(NegotiatedCredential),
     /// Contestar un rechazo al primer mensaje y cerrar.
     Refuse(WireAnswer),
+}
+
+/// Dónde escucha el canal: los puertos que sorteó la sede, probados en el orden en que los
+/// mandó, o un puerto fijo.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ChannelLocation {
+    /// Puertos sorteados por la sede.
+    Drawn(Vec<u16>),
+    /// Puerto fijo, atado tal cual.
+    Fixed(u16),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
