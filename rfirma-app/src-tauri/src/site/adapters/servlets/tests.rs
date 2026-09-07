@@ -36,3 +36,29 @@ fn a_url_carrying_its_own_query_parameters_is_rejected() {
 fn a_malformed_url_fails_without_panicking() {
     assert!(validated_servlet_url("no es una url").is_err());
 }
+
+#[test]
+fn a_retrieve_composes_op_v_id_in_that_order() {
+    assert_eq!(
+        operation_params("get", "abc123", None),
+        vec![("op", "get"), ("v", "1_0"), ("id", "abc123")]
+    );
+}
+
+#[test]
+fn a_store_appends_dat_last() {
+    assert_eq!(
+        operation_params("put", "abc123", Some("firma-en-base64")),
+        vec![
+            ("op", "put"),
+            ("v", "1_0"),
+            ("id", "abc123"),
+            ("dat", "firma-en-base64")
+        ]
+    );
+}
+
+#[test]
+fn the_wait_marker_matches_the_original_byte_for_byte() {
+    assert_eq!(WAIT_MARKER, "#WAIT");
+}

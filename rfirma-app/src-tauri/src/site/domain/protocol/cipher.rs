@@ -71,9 +71,8 @@ pub fn decipher(ciphered: &str, key: Option<&CipherKey>) -> Result<Vec<u8>, Rela
     };
 
     let (padding, body) = split_padding_prefix(&recovered)?;
-    let body = body.replace('-', "+").replace('_', "/");
     let ciphertext = STANDARD
-        .decode(&body)
+        .decode(body)
         .map_err(|error| RelayError::new(Situation::DecryptionFailed, error.to_string()))?;
 
     let mut plain = vec![0u8; ciphertext.len()];

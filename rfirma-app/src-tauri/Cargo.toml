@@ -122,8 +122,8 @@ tokio = { version = "1", features = ["net", "rt", "sync", "io-util", "macros"] }
 # `reqwest`. Ya estaban las dos en el arbol; aqui solo se hacen directas.
 native-tls = "0.2"
 tokio-native-tls = "0.3"
-# La comprobacion de version nueva, y el UNICO sitio del programa que abre una
-# conexion (ID-182). Entra con `default-features = false` a proposito: las de
+# La comprobacion de version nueva y el servidor intermedio (ID-182). Entra
+# con `default-features = false` a proposito: las de
 # por omision traen rustls con aws-lc-rs —que exige cmake en la construccion del
 # flatpak— y `native-tls` usa el OpenSSL que ya trae tanto el anfitrion como
 # org.gnome.Sdk. Sin `json`: quien interpreta la respuesta es el caso de uso,
@@ -131,6 +131,7 @@ tokio-native-tls = "0.3"
 reqwest = { version = "0.13", default-features = false, features = [
     "blocking",
     "native-tls",
+    "form",
 ] }
 # El registro de los tipos que cruzan a la ventana (ADR-0011): cada `crossing!`
 # deja su descripcion en una seccion del enlazador y de ahi salen el contrato y

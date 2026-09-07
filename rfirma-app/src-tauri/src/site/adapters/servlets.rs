@@ -8,6 +8,9 @@ use crate::site::ports::Servlets;
 const OPERATION_VERSION: &str = "1_0";
 const TIMEOUT: Duration = Duration::from_secs(30);
 
+/// Literal de espera activa, byte a byte con el original (1.9.2, `ActiveWaitingThread.java:14`).
+const WAIT_MARKER: &str = "#WAIT";
+
 /// El servidor intermedio de producción, sobre `reqwest::blocking` con la validación TLS del sistema.
 pub struct RelayServlets {
     client: reqwest::blocking::Client,
@@ -26,9 +29,11 @@ impl Default for RelayServlets {
 
 impl Servlets for RelayServlets {
     fn retrieve(&self, service_url: &str, id: &str) -> Result<String, RelayError> {
-        let url = url_with_operation(service_url, "get", id, None)?;
+        let url = validated_servlet_url(service_url)?;
+        let params = operation_params("get", id, None);
         self.client
             .post(url)
+            .form(&params)
             .send()
             .map_err(unreachable)?
             .error_for_status()
@@ -38,9 +43,11 @@ impl Servlets for RelayServlets {
     }
 
     fn store(&self, service_url: &str, id: &str, data: &str) -> Result<(), RelayError> {
-        let url = url_with_operation(service_url, "put", id, Some(data))?;
+        let url = validated_servlet_url(service_url)?;
+        let params = operation_params("put", id, Some(data));
         self.client
             .post(url)
+            .form(&params)
             .send()
             .map_err(unreachable)?
             .error_for_status()
@@ -49,29 +56,25 @@ impl Servlets for RelayServlets {
     }
 
     fn wait(&self, service_url: &str, id: &str) -> Result<(), RelayError> {
-        self.store(service_url, id, "#WAIT")
+        self.store(service_url, id, WAIT_MARKER)
     }
 }
 
-/// Compone la URL del servlet como `IntermediateServerUtil`: `op`, `v` y `id`, con `dat` cuando lo hay.
-fn url_with_operation(
-    service_url: &str,
-    operation: &str,
-    id: &str,
-    data: Option<&str>,
-) -> Result<reqwest::Url, RelayError> {
-    let mut url = validated_servlet_url(service_url)?;
-    {
-        let mut pairs = url.query_pairs_mut();
-        pairs
-            .append_pair("op", operation)
-            .append_pair("v", OPERATION_VERSION)
-            .append_pair("id", id);
-        if let Some(data) = data {
-            pairs.append_pair("dat", data);
-        }
+/// Compone el cuerpo del servlet como `IntermediateServerUtil`: `op`, `v` y `id`, con `dat` cuando lo hay.
+///
+/// Va en el cuerpo `application/x-www-form-urlencoded` de un POST, nunca en la *query string*
+/// (1.9.2, `UrlHttpManagerImpl.java:188-277`): `dat` lleva datos de decenas o cientos de KB y
+/// cualquier contenedor de servlets corta antes la URL.
+fn operation_params<'a>(
+    operation: &'a str,
+    id: &'a str,
+    data: Option<&'a str>,
+) -> Vec<(&'a str, &'a str)> {
+    let mut params = vec![("op", operation), ("v", OPERATION_VERSION), ("id", id)];
+    if let Some(data) = data {
+        params.push(("dat", data));
     }
-    Ok(url)
+    params
 }
 
 fn unreachable(error: reqwest::Error) -> RelayError {
