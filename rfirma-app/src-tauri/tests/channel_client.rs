@@ -375,9 +375,30 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
     assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
 }
 
+/// Más que el máximo de 240s que el original le daba a un lote (`setConnectionLostTimeout`).
+const LONGER_THAN_THE_ORIGINAL_BATCH_ALLOWANCE: Duration = Duration::from_secs(245);
+
 /// Trámite que no contesta las operaciones recibidas.
 fn no_operations() -> SiteOperations {
     std::sync::Arc::new(|_, _| {})
+}
+
+/// Mide si el canal `wss` sigue vivo tras una conexión callada larga (issue #499). Ignorada por
+/// defecto: duerme de verdad más de 240s. Se ejecuta a mano con
+/// `cargo test --test channel_client a_silent_wss_connection -- --ignored --nocapture`.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "duerme 245s de verdad: mide el timeout real del canal wss (issue #499)"]
+async fn a_silent_wss_connection_survives_longer_than_the_original_batch_allowance() {
+    let canal = AChannel::serving_the_echo().await;
+    let mut client = canal.a_client().await;
+
+    tokio::time::sleep(LONGER_THAN_THE_ORIGINAL_BATCH_ALLOWANCE).await;
+
+    assert_eq!(
+        client.echo(CREDENTIAL).await,
+        Some("OK".to_owned()),
+        "el eco deberia contestarse tras el silencio, sin timeout propio de por medio"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]

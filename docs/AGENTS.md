@@ -44,7 +44,7 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `opensc-del-sistema` · `p12-en-almacen-nss` · `pades-triphase-contract` ·
 `pkcs11-mecanismo-firma` · `prefirma-en-seco-pdfjs` ·
 `recuadro-replicado-pdfsig` · `rutas-reales-con-filesystem-home` ·
-`token-flags-login` · `token-pkcs11-pruebas`
+`timeout-lote-remoto` · `token-flags-login` · `token-pkcs11-pruebas`
 
 ## Sueltos en `docs/`
 
