@@ -7,11 +7,13 @@ use crate::documents::domain::handles;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    visible_signature_of, AfirmaUrl, LoadRequest, SaveRequest, SelectCertificate, SignRequest,
-    SiteFilter,
+    visible_signature_of, AfirmaUrl, LoadRequest, SaveRequest, SelectCertificate,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
 };
 
-use super::outcome::{ErrandStep, LoadingConsent, SavingConsent, SigningConsent, SiteOutcome};
+use super::outcome::{
+    ErrandStep, LoadingConsent, SavingConsent, SavingHints, SigningConsent, SiteOutcome,
+};
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::SiteRequest;
 use super::state::LiveErrand;
@@ -62,7 +64,7 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     match operation {
         SiteRequest::Save(request) => return consent_to_save(request),
         SiteRequest::Load(request) => return consent_to_load(request),
-        SiteRequest::SelectCertificate(_) | SiteRequest::Sign(_) => {}
+        SiteRequest::SelectCertificate(_) | SiteRequest::Sign(_) | SiteRequest::SignAndSave(_) => {}
         SiteRequest::NotAttended(_) => unreachable!("se ha despachado arriba"),
     }
 
@@ -78,6 +80,7 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             consent_for(desk.engine, &request, ours, &desk.neighbours, live)
         }
         SiteRequest::Sign(request) => consent_to_sign(desk, &request, ours, live),
+        SiteRequest::SignAndSave(request) => consent_to_sign_and_save(desk, &request, ours, live),
         SiteRequest::Save(_) | SiteRequest::Load(_) | SiteRequest::NotAttended(_) => {
             unreachable!("se ha despachado arriba")
         }
@@ -86,13 +89,15 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
 /// Prepara el paso de guardado: la orden de Tauri abrirá el diálogo del portal.
 fn consent_to_save(request: SaveRequest) -> ErrandStep {
-    ErrandStep::Saving(SavingConsent {
+    ErrandStep::Saving(Box::new(SavingConsent {
         data: request.data().to_vec(),
         title: request.title().map(str::to_owned),
         filename: request.filename().map(str::to_owned),
         extensions: request.extensions().to_vec(),
         description: request.description().map(str::to_owned),
-    })
+        starting_folder: None,
+        signer_der: None,
+    }))
 }
 
 /// Prepara el paso de carga: la orden de Tauri abrirá el selector del portal.
@@ -113,7 +118,65 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let admitted = match AdmissibleDocument::check(request.document()) {
+    consent_to_a_signature(
+        desk,
+        SignatureAsk {
+            document: request.document(),
+            round: request.round(),
+            declared_params: request.declared_params(),
+            filter: request.filter(),
+        },
+        None,
+        ours,
+        live,
+    )
+}
+
+/// Prepara el paso de consentimiento para `signandsave`: lo de `sign`, con las pistas de
+/// guardado que se contestarán tras la postfirma en vez de en el acto.
+pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    request: &SignAndSaveRequest,
+    ours: Vec<TokenCertificate>,
+    live: &LiveErrand,
+) -> ErrandStep {
+    let saving = SavingHints {
+        filename: request.proposed_name(),
+        extensions: request.extensions().to_vec(),
+        description: request.description().map(str::to_owned),
+        starting_folder: request.starting_folder().map(str::to_owned),
+    };
+    consent_to_a_signature(
+        desk,
+        SignatureAsk {
+            document: request.document().unwrap_or_default(),
+            round: request.round(),
+            declared_params: request.declared_params(),
+            filter: request.filter(),
+        },
+        Some(Box::new(saving)),
+        ours,
+        live,
+    )
+}
+
+/// Lo que se firma, desacoplado de si vino de `sign` o de `signandsave`.
+struct SignatureAsk<'a> {
+    document: &'a [u8],
+    round: SignatureRound,
+    declared_params: &'a [(String, String)],
+    filter: &'a SiteFilter,
+}
+
+/// El cuerpo compartido de `consent_to_sign` y `consent_to_sign_and_save`.
+fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    ask: SignatureAsk<'_>,
+    saving: Option<Box<SavingHints>>,
+    ours: Vec<TokenCertificate>,
+    live: &LiveErrand,
+) -> ErrandStep {
+    let admitted = match AdmissibleDocument::check(ask.document) {
         Ok(admitted) => admitted,
         Err(inadmissible) => {
             return answering(
@@ -124,7 +187,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     };
 
     let mut from_the_site =
-        match policies::expanded_for_the_site(desk.policies, request.declared_params()) {
+        match policies::expanded_for_the_site(desk.policies, ask.declared_params) {
             Ok(expanded) => expanded,
             Err(error) => {
                 return answering(live, SiteOutcome::Refused(SiteRefusal::Policies(error)))
@@ -144,24 +207,25 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         Err(refusal) => return answering(live, SiteOutcome::RefusedByTheProtocol(refusal)),
     };
 
-    let accepted = match accepted_listing(desk, request.filter(), ours, live) {
+    let accepted = match accepted_listing(desk, ask.filter, ours, live) {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };
 
-    let document = match keep_the_document(desk, live, request.document()) {
+    let document = match keep_the_document(desk, live, ask.document) {
         Ok(document) => document,
         Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
     };
 
     ErrandStep::AskingToSign(SigningConsent {
         document,
-        round: request.round(),
+        round: ask.round,
         certificates: desk.neighbours.rows_of(accepted),
         from_the_site,
         visible,
-        filter: request.filter().clone(),
+        filter: ask.filter.clone(),
         unregistered_signatures,
+        saving,
     })
 }
 

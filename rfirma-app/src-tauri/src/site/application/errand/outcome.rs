@@ -7,6 +7,7 @@ use crate::site::application::session::SiteRefusal;
 use crate::site::domain::protocol::{
     AfirmaUrl, Refusal, SignatureRound, SiteFilter, SiteVisibleSignature,
 };
+use crate::site::domain::signing::SiteSignature;
 
 use super::request::SiteRequest;
 
@@ -25,7 +26,7 @@ pub enum ErrandStep {
     /// Momento de consentimiento de firma de documento para la ventana.
     AskingToSign(SigningConsent),
     /// Paso de guardado: la orden de Tauri abre el diálogo del portal y escribe.
-    Saving(SavingConsent),
+    Saving(Box<SavingConsent>),
     /// Paso de carga: la orden de Tauri abre el selector del portal y lee.
     Loading(LoadingConsent),
     /// Trámite sin ningún certificado con el que continuar.
@@ -93,6 +94,36 @@ pub struct SigningConsent {
     pub filter: SiteFilter,
     /// Si el documento contiene firmas que no se pueden interpretar.
     pub unregistered_signatures: bool,
+    /// Pistas de guardado, si esta firma viene de `signandsave`.
+    pub saving: Option<Box<SavingHints>>,
+}
+
+/// Pistas de guardado de `signandsave`, calculadas antes de firmar y usadas tras la postfirma.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SavingHints {
+    /// Nombre de fichero propuesto (`signandsave` no declara `title`; siempre hay uno).
+    pub filename: String,
+    /// Extensiones admitidas por el filtro del diálogo de guardado.
+    pub extensions: Vec<String>,
+    /// Descripción del filtro de extensiones, si la sede la declaró.
+    pub description: Option<String>,
+    /// Carpeta inicial sugerida por la sede, nunca la fuente de la escritura.
+    pub starting_folder: Option<String>,
+}
+
+impl SavingHints {
+    /// El paso de guardado tras la postfirma, contestando con el mismo par que `sign`.
+    pub fn into_consent(self, signed: &SiteSignature) -> SavingConsent {
+        SavingConsent {
+            data: signed.signed.clone(),
+            title: None,
+            filename: Some(self.filename),
+            extensions: self.extensions,
+            description: self.description,
+            starting_folder: self.starting_folder,
+            signer_der: Some(signed.signer_der.clone()),
+        }
+    }
 }
 
 /// Datos para el diálogo de guardado del portal: el nombre cruza, la ruta nunca (ADR-0011).
@@ -108,6 +139,10 @@ pub struct SavingConsent {
     pub extensions: Vec<String>,
     /// Descripción del filtro de extensiones declarada por la sede.
     pub description: Option<String>,
+    /// Carpeta inicial sugerida por la sede, si la declaró (`signandsave`; `save` no la tiene).
+    pub starting_folder: Option<String>,
+    /// El DER del firmante con el que contestar si esto viene de `signandsave`, `None` en `save`.
+    pub signer_der: Option<Vec<u8>>,
 }
 
 /// Datos para el selector de carga del portal: el nombre cruza, la ruta nunca (ADR-0011).

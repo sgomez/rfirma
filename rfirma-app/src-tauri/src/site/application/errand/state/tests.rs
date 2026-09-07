@@ -23,6 +23,7 @@ fn a_pending_signature() -> PendingSignature {
         filter: SiteFilter::default(),
         from_the_site: BTreeMap::new(),
         unregistered_signatures: false,
+        saving: None,
     }
 }
 

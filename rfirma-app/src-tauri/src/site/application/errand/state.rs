@@ -6,7 +6,9 @@ use std::sync::{Arc, Mutex};
 
 use crate::site::domain::protocol::{AfirmaUrl, NegotiatedCredential, SiteFilter};
 
-use super::outcome::{LoadingConsent, Moment, ProtocolCodec, SavingConsent, SiteOutcome};
+use super::outcome::{
+    LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints, SiteOutcome,
+};
 use crate::site::ports::{ReplyHandle, Scratch};
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
@@ -91,6 +93,8 @@ pub(super) struct PendingSignature {
     pub(super) from_the_site: BTreeMap<String, String>,
     /// Si el documento contiene firmas no reconocidas.
     pub(super) unregistered_signatures: bool,
+    /// Pistas de guardado, si esta firma viene de `signandsave`.
+    pub(super) saving: Option<Box<SavingHints>>,
 }
 
 impl LiveErrand {
