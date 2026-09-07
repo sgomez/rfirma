@@ -5,6 +5,7 @@ use crate::identity::adapters::failures::code_of_token;
 use crate::signing::adapters::failures::{code_of_bridge, code_of_inadmissible};
 use crate::site::application::errand::{ConsentError, SiteRefusal};
 use crate::site::application::filtering::FilteringError;
+use crate::site::domain::batch_error::Situation as BatchSituation;
 use crate::site::domain::channel::Situation as ChannelSituation;
 use crate::site::domain::protocol::{SafCode, WireAnswer};
 use crate::site::domain::relay_error::Situation as RelaySituation;
@@ -55,6 +56,40 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             },
             refusal.code,
         ),
+        SiteRefusal::Batch(error) => (
+            Failure::new(label_of_batch(error.situation()), error.detail().to_owned()),
+            code_of_batch(error.situation()),
+        ),
+        SiteRefusal::BatchSigningFailed(refusal) => (
+            Failure {
+                situation: refusal.situation.clone(),
+                detail: refusal.detail.clone(),
+                attempts_left: refusal.attempts_left,
+            },
+            SafCode::BatchSignature,
+        ),
+    }
+}
+
+/// Etiqueta de ventana de una situación del lote remoto, tal y como la ve `told`.
+fn label_of_batch(situation: BatchSituation) -> &'static str {
+    match situation {
+        BatchSituation::PresignerUnreachable => "presignerUnreachable",
+        BatchSituation::PostsignerUnreachable => "postsignerUnreachable",
+        BatchSituation::InvalidPresignResponse => "invalidPresignResponse",
+        BatchSituation::InvalidPostsignResponse => "invalidPostsignResponse",
+    }
+}
+
+/// Código de protocolo de una situación del lote remoto (`ProtocolInvocationLauncherBatch`, 1.9.2).
+pub fn code_of_batch(situation: BatchSituation) -> SafCode {
+    match situation {
+        BatchSituation::PresignerUnreachable | BatchSituation::PostsignerUnreachable => {
+            SafCode::ContactBatchService
+        }
+        BatchSituation::InvalidPresignResponse | BatchSituation::InvalidPostsignResponse => {
+            SafCode::BatchSignature
+        }
     }
 }
 

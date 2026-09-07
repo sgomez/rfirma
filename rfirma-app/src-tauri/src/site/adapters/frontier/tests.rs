@@ -13,6 +13,7 @@ use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::Refusal as Inadmissible;
 use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::application::filtering::FilteringError;
+use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::relay_error::Situation as RelaySituation;
 
 fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
@@ -37,6 +38,25 @@ fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
             CycleError::Seal(crate::signing::domain::SealMismatch),
         )))),
         SiteRefusal::Signing(signing_refusal_of(told_of_cycle(
+            &CycleFailure::NoOpenCycle,
+        ))),
+        SiteRefusal::Batch(BatchError::new(
+            BatchSituation::PresignerUnreachable,
+            "connection refused",
+        )),
+        SiteRefusal::Batch(BatchError::new(
+            BatchSituation::PostsignerUnreachable,
+            "connection refused",
+        )),
+        SiteRefusal::Batch(BatchError::new(
+            BatchSituation::InvalidPresignResponse,
+            "no es JSON",
+        )),
+        SiteRefusal::Batch(BatchError::new(
+            BatchSituation::InvalidPostsignResponse,
+            "no es JSON",
+        )),
+        SiteRefusal::BatchSigningFailed(signing_refusal_of(told_of_cycle(
             &CycleFailure::NoOpenCycle,
         ))),
     ]
@@ -187,6 +207,45 @@ fn the_window_and_the_site_hear_about_each_refusal_from_the_same_match() {
             "unknown",
             SafCode::SignatureFailed,
         ),
+        (
+            SiteRefusal::Batch(BatchError::new(
+                BatchSituation::PresignerUnreachable,
+                "connection refused",
+            )),
+            "presignerUnreachable",
+            SafCode::ContactBatchService,
+        ),
+        (
+            SiteRefusal::Batch(BatchError::new(
+                BatchSituation::PostsignerUnreachable,
+                "connection refused",
+            )),
+            "postsignerUnreachable",
+            SafCode::ContactBatchService,
+        ),
+        (
+            SiteRefusal::Batch(BatchError::new(
+                BatchSituation::InvalidPresignResponse,
+                "no es JSON",
+            )),
+            "invalidPresignResponse",
+            SafCode::BatchSignature,
+        ),
+        (
+            SiteRefusal::Batch(BatchError::new(
+                BatchSituation::InvalidPostsignResponse,
+                "no es JSON",
+            )),
+            "invalidPostsignResponse",
+            SafCode::BatchSignature,
+        ),
+        (
+            SiteRefusal::BatchSigningFailed(signing_refusal_of(told_of_cycle(
+                &CycleFailure::NoOpenCycle,
+            ))),
+            "unknown",
+            SafCode::BatchSignature,
+        ),
     ] {
         let (failure, told_code) = told(&refusal);
         assert_eq!(failure.situation, name, "{refusal:?}");
@@ -215,5 +274,25 @@ fn the_relay_codes_match_the_original_catalogue() {
     assert_eq!(
         code_of_relay(RelaySituation::UploadRejected),
         SafCode::SendingResult
+    );
+}
+
+#[test]
+fn the_batch_codes_match_the_original_catalogue() {
+    assert_eq!(
+        code_of_batch(BatchSituation::PresignerUnreachable),
+        SafCode::ContactBatchService
+    );
+    assert_eq!(
+        code_of_batch(BatchSituation::PostsignerUnreachable),
+        SafCode::ContactBatchService
+    );
+    assert_eq!(
+        code_of_batch(BatchSituation::InvalidPresignResponse),
+        SafCode::BatchSignature
+    );
+    assert_eq!(
+        code_of_batch(BatchSituation::InvalidPostsignResponse),
+        SafCode::BatchSignature
     );
 }

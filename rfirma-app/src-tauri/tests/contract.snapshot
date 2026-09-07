@@ -195,6 +195,11 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       UnsupportedProtocolVersion
       MissingFormat
       ErrandInFlight
+      BatchPresignerUnreachable
+      BatchPostsignerUnreachable
+      BatchInvalidPresignResponse
+      BatchInvalidPostsignResponse
+      BatchSigningFailed
       Unknown
 
   pub enum NoCertificateView
