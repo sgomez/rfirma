@@ -8,7 +8,7 @@ pub mod ports;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use application::listed::ListedCertificates;
+use application::certificates::ListedCertificates;
 use domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use domain::error::TokenError;
 use domain::store::Store;

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rfirma_lib::identity::adapters::pkcs11;
-use rfirma_lib::identity::application::listed::ListedCertificates;
+use rfirma_lib::identity::application::certificates::ListedCertificates;
 use rfirma_lib::identity::domain::certificate::{
     CertificateRef, CertificateStatus, TokenCertificate,
 };

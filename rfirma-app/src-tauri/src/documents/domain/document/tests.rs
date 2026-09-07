@@ -9,19 +9,42 @@ const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/original.pdf";
 
 #[test]
 fn a_document_from_the_portal_yields_its_name_and_its_identifier() {
-    let document = PortalDocument::opened(A_PORTAL_HANDLE);
+    let document = Document::opened(A_PORTAL_HANDLE);
 
     assert_eq!(document.name(), "original.pdf");
     assert_eq!(document.portal_id(), Some("1e8b83b9"));
+    assert_eq!(document.origin(), &Origin::Portal("1e8b83b9".to_owned()));
     assert!(document.came_through_the_portal());
+    assert!(document.is_remembered());
+}
+
+#[test]
+fn a_document_passing_through_leaves_no_trace_whatever_its_origin() {
+    let from_the_portal = Document::passing_through(A_PORTAL_HANDLE);
+    let from_the_host = Document::passing_through("/tmp/rfirma/de-paso.pdf");
+
+    assert!(!from_the_portal.is_remembered());
+    assert!(!from_the_host.is_remembered());
+    assert!(from_the_portal.came_through_the_portal());
+    assert_eq!(from_the_host.origin(), &Origin::Host);
+}
+
+#[test]
+fn remembrance_belongs_to_the_document_and_not_to_the_path() {
+    let remembered = Document::opened(A_PORTAL_HANDLE);
+    let passing = Document::passing_through(A_PORTAL_HANDLE);
+
+    assert_eq!(remembered.reading_path(), passing.reading_path());
+    assert_ne!(remembered, passing);
 }
 
 #[test]
 fn a_path_outside_the_portal_has_no_identifier_and_is_still_readable() {
-    let document = PortalDocument::opened("/home/quien/Documentos/original.pdf");
+    let document = Document::opened("/home/quien/Documentos/original.pdf");
 
     assert_eq!(document.name(), "original.pdf");
     assert_eq!(document.portal_id(), None);
+    assert_eq!(document.origin(), &Origin::Host);
     assert!(!document.came_through_the_portal());
     assert_eq!(
         document.reading_path(),
@@ -31,7 +54,7 @@ fn a_path_outside_the_portal_has_no_identifier_and_is_still_readable() {
 
 #[test]
 fn a_folder_named_doc_elsewhere_is_not_the_portal() {
-    let document = PortalDocument::opened("/home/quien/doc/1e8b83b9/original.pdf");
+    let document = Document::opened("/home/quien/doc/1e8b83b9/original.pdf");
 
     assert_eq!(document.portal_id(), None);
 }
@@ -63,7 +86,7 @@ fn the_question_asked_to_the_environment_is_the_marker_of_the_sandbox() {
 
 #[test]
 fn the_document_that_came_in_never_offers_a_folder_to_write_into() {
-    let document = PortalDocument::opened(A_PORTAL_HANDLE);
+    let document = Document::opened(A_PORTAL_HANDLE);
 
     assert_eq!(document.name(), "original.pdf");
     assert_eq!(document.portal_id(), Some("1e8b83b9"));

@@ -52,7 +52,7 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
         notify_new_version: configuration.notify_new_version,
         theme: configuration.theme,
         offers_the_original_folder:
-            crate::documents::domain::portal::the_original_folder_can_be_offered(),
+            crate::documents::domain::document::the_original_folder_can_be_offered(),
         trust_notice_seen: configuration.trust_notice_seen,
         ask_about_url_handler: configuration.ask_about_url_handler,
     }

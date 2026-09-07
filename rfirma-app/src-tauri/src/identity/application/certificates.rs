@@ -4,13 +4,16 @@ use std::path::Path;
 
 use tauri_plugin_dialog::FilePath;
 
-use crate::identity::application::listed::ListedCertificates;
+use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{holder_of, issuer_of};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::{CertificateMemory, Token};
 use crate::signing::domain::memory_error::{MemoryError, Situation as StoreSituation};
+
+/// Los certificados del último listado, cada uno tras su asa.
+pub type ListedCertificates = Handles<CertificateRef>;
 
 /// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -3,7 +3,7 @@ use super::{
     signed_document, signed_folder, take_signed_cycle, DocumentToSign, SigningSession,
 };
 use crate::commands::Failure;
-use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::document::Document;
 use crate::fixtures::{a_certificate, an_order, NoIsolate, NoToken};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::domain::{PageSet, SigningChoice};
@@ -205,8 +205,7 @@ fn what_is_not_a_pdf_is_refused_before_the_pin() {
     let other = home.path().join("hoja.ods");
     std::fs::write(&other, b"PK\x03\x04").expect("deberia escribirse el temporal");
 
-    let failure =
-        admitted_bytes(&PortalDocument::opened(other)).expect_err("no es un PDF que firmar");
+    let failure = admitted_bytes(&Document::opened(other)).expect_err("no es un PDF que firmar");
 
     assert_eq!(Failure::from(failure).situation, "notAPdf");
 }
@@ -215,8 +214,8 @@ fn what_is_not_a_pdf_is_refused_before_the_pin() {
 fn a_document_that_is_gone_is_told_apart_from_one_that_is_not_a_pdf() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
 
-    let failure = admitted_bytes(&PortalDocument::opened(home.path().join("no-esta.pdf")))
-        .expect_err("no esta");
+    let failure =
+        admitted_bytes(&Document::opened(home.path().join("no-esta.pdf"))).expect_err("no esta");
 
     assert_eq!(Failure::from(failure).situation, "documentUnreadable");
 }
@@ -228,7 +227,7 @@ fn a_signature_cannot_begin_on_a_document_that_is_not_open() {
     let failure = begin(
         DocumentToSign {
             handle: order.document.clone(),
-            document: PortalDocument::opened("/run/user/1000/doc/1e8b83b9/no-esta.pdf"),
+            document: Document::opened("/run/user/1000/doc/1e8b83b9/no-esta.pdf"),
         },
         &a_certificate("FIRMA", &[]),
         &chosen(&order),

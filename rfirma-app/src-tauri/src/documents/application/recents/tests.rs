@@ -14,7 +14,7 @@ fn a_pdf(directory: &Path, name: &str, bytes: &[u8]) -> PathBuf {
 
 fn an_opened_pdf(directory: &Path, name: &str, opened: &OpenedDocuments) -> (PathBuf, String) {
     let path = a_pdf(directory, name, b"%PDF-1.7 de prueba");
-    let id = opened.remember(PortalDocument::opened(path.clone()));
+    let id = opened.mint(Document::opened(path.clone()));
     (path, id)
 }
 
@@ -112,7 +112,7 @@ fn a_row_opened_through_a_symlink_is_still_the_row_that_forget_takes_out() {
     a_pdf(&real, "contrato.pdf", b"%PDF-1.7 de prueba");
     let memory = a_memory(directory.path());
     let opened = OpenedDocuments::new();
-    let id = opened.remember(PortalDocument::opened(linked.join("contrato.pdf")));
+    let id = opened.mint(Document::opened(linked.join("contrato.pdf")));
     record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     forget(&memory, &opened, &id).expect("deberia olvidarse");
@@ -128,7 +128,7 @@ fn a_document_that_was_open_before_gets_its_page_and_position_back() {
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
     record(&memory, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
 
-    let again = opened.remember(PortalDocument::opened(path));
+    let again = opened.mint(Document::opened(path));
     let row = record(&memory, &opened, &again, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, Some(a_placement(3)));
@@ -162,7 +162,7 @@ fn with_the_visible_signature_switch_off_the_box_starts_at_its_default_every_tim
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
     record(&memory, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
 
-    let again = opened.remember(PortalDocument::opened(path));
+    let again = opened.mint(Document::opened(path));
     let row = record(&memory, &opened, &again, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, None);
@@ -183,7 +183,7 @@ fn a_pdf_that_already_carries_signatures_still_enters_as_unsigned() {
         "ya-firmado.pdf",
         b"%PDF-1.7\n/ByteRange [0 1000 2000 3000]\n/SubFilter /ETSI.CAdES.detached\n",
     );
-    let id = opened.remember(PortalDocument::opened(path));
+    let id = opened.mint(Document::opened(path));
 
     let row = record(&memory, &opened, &id, None).expect("deberia anotarse");
 
@@ -227,7 +227,7 @@ fn reopening_a_document_that_rfirma_signed_does_not_take_its_badge_away() {
     );
     note_signed(&memory, &landing, &a_completed_cycle());
 
-    let id = opened.remember(PortalDocument::opened(landing));
+    let id = opened.mint(Document::opened(landing));
     let row = record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     assert_eq!(row.badge, Badge::Signed);
@@ -319,8 +319,88 @@ fn a_document_gets_its_whole_page_set_back_and_not_just_a_page() {
     let placed = placed_on(PageSet::All);
     record(&memory, &opened, &id, Some(placed.clone())).expect("deberia anotarse");
 
-    let again = opened.remember(PortalDocument::opened(path));
+    let again = opened.mint(Document::opened(path));
     let row = record(&memory, &opened, &again, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, Some(placed));
+}
+
+#[test]
+fn a_document_that_is_remembered_still_leaves_its_row_when_taken() {
+    let home = tempfile::tempdir().expect("deberia crearse");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let (_, id) = an_opened_pdf(home.path(), "contrato.pdf", &opened);
+
+    let row = take(&memory, &opened, &id, Some(a_placement(3))).expect("deberia ponerse delante");
+
+    assert_eq!(row.name, "contrato.pdf");
+    assert_eq!(row.placement, Some(a_placement(3)));
+    assert_eq!(listed_rows(&memory, &opened).len(), 1);
+}
+
+#[test]
+fn a_document_passing_through_leaves_neither_row_nor_placement_when_taken() {
+    let home = tempfile::tempdir().expect("deberia crearse");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let path = home.path().join("de-la-sede.pdf");
+    std::fs::write(&path, b"%PDF-1.7\n").expect("deberia escribirse");
+    let id = opened.mint(Document::passing_through(path));
+
+    let row = take(&memory, &opened, &id, Some(a_placement(3))).expect("deberia ponerse delante");
+
+    assert_eq!(row.id, id);
+    assert_eq!(row.name, "de-la-sede.pdf");
+    assert!(row.available);
+    assert!(listed_rows(&memory, &opened).is_empty());
+    let remembered = memory
+        .state()
+        .map(Loaded::into_value)
+        .ok()
+        .and_then(|state| state.visible_signature);
+    assert_eq!(
+        remembered, None,
+        "el tamano del recuadro tampoco se recuerda"
+    );
+}
+
+#[test]
+fn remembrance_decides_the_row_and_belongs_to_the_document_not_to_the_file() {
+    let home = tempfile::tempdir().expect("deberia crearse");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let path = home.path().join("contrato.pdf");
+    std::fs::write(&path, b"%PDF-1.7\n").expect("deberia escribirse");
+    let passing = opened.mint(Document::passing_through(path.clone()));
+    let remembered = opened.mint(Document::opened(path));
+
+    take(&memory, &opened, &passing, None).expect("deberia ponerse delante");
+    assert!(listed_rows(&memory, &opened).is_empty());
+
+    take(&memory, &opened, &remembered, None).expect("deberia ponerse delante");
+    assert_eq!(listed_rows(&memory, &opened).len(), 1);
+}
+
+#[test]
+fn the_tray_never_borrows_the_identifier_of_a_document_passing_through() {
+    let home = tempfile::tempdir().expect("deberia crearse");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let (path, remembered) = an_opened_pdf(home.path(), "contrato.pdf", &opened);
+    opened.mint(Document::passing_through(path.clone()));
+    take(&memory, &opened, &remembered, None).expect("deberia anotarse");
+
+    assert_eq!(identifier_for(&path, &opened), remembered);
+}
+
+#[test]
+fn an_identifier_of_no_session_puts_nothing_in_hand() {
+    let home = tempfile::tempdir().expect("deberia crearse");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+
+    let taken = take(&memory, &opened, "00000000000000000000000000000000", None);
+
+    assert!(taken.is_err());
 }

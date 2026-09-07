@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rfirma_lib::identity::adapters::pkcs11;
-use rfirma_lib::identity::application::listed::ListedCertificates;
+use rfirma_lib::identity::application::certificates::ListedCertificates;
 use rfirma_lib::identity::domain::certificate::{CertificateStatus, TokenCertificate};
 use rfirma_lib::identity::domain::error::Situation;
 use rfirma_lib::identity::domain::store::{Store, StoreClass};

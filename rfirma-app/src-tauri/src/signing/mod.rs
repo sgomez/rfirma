@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::documents::domain::portal::PortalDocument;
+use crate::documents::domain::document::Document;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::secret::StoreSecret;
 use adapters::isolate::Isolate;
@@ -53,7 +53,7 @@ impl SigningRoot {
     pub fn begin_for_the_site(
         &self,
         handle: &str,
-        document: PortalDocument,
+        document: Document,
         chosen: &TokenCertificate,
         from_the_site: &BTreeMap<String, String>,
         allow_unregistered_signatures: bool,
