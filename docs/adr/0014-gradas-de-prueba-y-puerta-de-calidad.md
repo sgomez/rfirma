@@ -217,6 +217,61 @@ que es otra cosa. La puerta local es aquí más estricta a propósito, acotada p
 CI, que no se esquiva, y adelantarse a un fallo barato no exige ser infranqueable—; lo segundo lo
 cierran el aviso y el mensaje de arriba.
 
+## Dónde corre cada puerta: el agente no es el CI
+
+`just check` es la puerta entera, y **su sitio es el CI**, que la reparte en tres runners
+simultáneos y por tanto paga el carril más lento. En un portátil se pagan los tres sumados, y
+un agente que la repite tras cada arreglo convierte el gasto dominante de una ronda en algo que
+ya iba a correr solo. Medido en el equipo de desarrollo, con cachés calientes: `check-repo` 4 s,
+`check-java` 4 s, `check-ts` 15 s, `check-rust` 46 s.
+
+La escalera es de tres peldaños y la escribe `AGENTS.md`, que es donde un agente la lee:
+
+1. **Cada rojo → verde**: sólo la prueba que se está tocando. Nunca una receta de `check`.
+2. **Antes de commitear**: `just fmt` y **`just check-changed`**, una vez.
+3. **Al revisar**: nada, si el CI está verde para ese head sha.
+
+`check-changed` deduce los carriles de lo que la rama toca respecto a `origin/main`. `check-repo`
+entra siempre —son cuatro segundos—, y el `justfile`, `.github/` y `bootstrap.sh` disparan las
+tres cadenas, porque son justo los ficheros que pueden romper cualquiera. `docs/adr/` y los
+`AGENTS.md` entran por el carril de Rust y no por descuido: sus guardas son pruebas de la grada A
+y viven ahí, aunque lo que las rompe sea prosa.
+
+**Esto no relaja nada.** La puerta que decide sigue siendo `just check` entera, corriendo en el
+CI sobre el head sha; lo que cambia es que deje de correrse tres veces en el sitio donde más
+cuesta y menos decide.
+
+### El árbol de compilación se comparte entre worktrees, y el CI no se toca
+
+Cada agente constructor trabaja en un worktree propio, así que cada uno recompilaba el árbol de
+dependencias de Tauri desde cero: medidos, **73 s y entre 6,8 y 13 GB por worktree**. El
+`justfile` apunta `CARGO_TARGET_DIR` a `.claude/worktrees/target` **cuando corre desde un
+worktree**: el primer agente paga la compilación entera una vez y los demás entran en **11 s**.
+
+**El checkout principal se queda fuera.** Cargo toma un cerrojo sobre el `target/` mientras
+compila, y meterlo dentro haría que un `cargo` a mano esperase a que terminara el agente de
+turno. Los agentes sí se serializan entre sí, y con `execution: sequential` eso no cuesta nada;
+si algún día se vuelve a `parallel`, esta es la línea que hay que volver a mirar.
+
+### Considered Options
+
+**`sccache`**, que era la opción obvia y resultó no serlo: entre dos `target/` distintos
+acierta el **0 %**. Medido en dos compilaciones seguidas del mismo código en árboles vírgenes:
+74 s la primera, **73 s la segunda**, con la caché escrita (826 compilaciones, 759 MiB de un
+máximo de 10 GiB, así que no era desalojo). Su clave depende de las rutas de los `--extern`,
+que es justo lo que cambia entre worktrees. Cachea de verdad cuando la ruta se repite —el caso
+del CI—, no el nuestro.
+
+**`sccache` también en el CI** (`mozilla-actions/sccache-action`): descartado por lo mismo que
+lo anterior no aplica allí, y con la medición delante. El job «Cadena Rust» de una PR tarda
+148 s, de los cuales 71 s son `just check-rust` y 77 s la preparación —28 s de restaurar la
+caché de `Swatinem/rust-cache`, 24 s de apt, 12 s de la toolchain—. Es decir: `target/` **ya
+llega construido**, y lo que queda no es compilar sino ejecutar la suite y medir cobertura. Una
+segunda capa de caché no tiene ahí casi nada que ahorrar, añade sus propios pasos de restaurar y
+guardar, y sobre todo **compite por los 10 GB de cuota de cachés de Actions con la que sí está
+funcionando**: el efecto neto más probable es que `rust-cache` empiece a desalojarse y falle más
+a menudo, que es exactamente el caso caro. Se reconsidera si `rust-cache` deja de acertar.
+
 ## La bomba de relojería del kit FNMT
 
 `testdata/fnmt/` con los tres `.p12`, sus contraseñas publicadas y sus huellas al lado, más la
