@@ -380,6 +380,33 @@ fn no_operations() -> SiteOperations {
     std::sync::Arc::new(|_, _| {})
 }
 
+/// Más que el máximo de 240s que el original le daba a un lote (`setConnectionLostTimeout`).
+const LONGER_THAN_THE_ORIGINAL_BATCH_ALLOWANCE: Duration = Duration::from_secs(245);
+
+/// Mide si el canal `wss` sigue vivo tras una conexión callada larga (issue #499).
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "duerme 245s de verdad: mide el timeout real del canal wss (issue #499)"]
+async fn a_silent_wss_connection_survives_longer_than_the_original_batch_allowance() {
+    if std::env::var_os("RFIRMA_MEASURE_IDLE_TIMEOUT").is_none() {
+        eprintln!(
+            "omitida sin RFIRMA_MEASURE_IDLE_TIMEOUT=1: just test-native la compila y la \
+             ejecuta con --include-ignored, pero no le añade los 245s de esta prueba"
+        );
+        return;
+    }
+
+    let canal = AChannel::serving_the_echo().await;
+    let mut client = canal.a_client().await;
+
+    tokio::time::sleep(LONGER_THAN_THE_ORIGINAL_BATCH_ALLOWANCE).await;
+
+    assert_eq!(
+        client.echo(CREDENTIAL).await,
+        Some("OK".to_owned()),
+        "el eco deberia contestarse tras el silencio, sin timeout propio de por medio"
+    );
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
     let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
