@@ -173,13 +173,14 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::crossing::Failure;
+    use crate::documents::adapters::files::RealFiles;
     use crate::documents::adapters::views::{
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
         SignedDocumentView,
     };
     use crate::documents::application::documents::OpenedDocuments;
     use crate::documents::application::{documents, recents};
-    use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+    use crate::documents::domain::destination::DestinationFolder;
     use crate::documents::domain::document::Document;
     use crate::documents::domain::recents::Badge;
     use crate::documents::domain::recents::RecentDocument;
@@ -191,6 +192,7 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
+    let files = RealFiles;
     let opened = OpenedDocuments::new();
     let document = Document::opened(A_PORTAL_HANDLE);
     let chosen = DestinationFolder::at(
@@ -209,15 +211,17 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
 
     let opened_view = OpenedDocumentView::from(documents::note_opened(
         &memory,
+        &files,
         &opened,
         std::path::PathBuf::from(A_PORTAL_HANDLE),
     ));
     let failure = Failure::from(
-        documents::bytes_of(&opened, &opened_view.id)
+        documents::bytes_of(&files, &opened, &opened_view.id)
             .expect_err("el enlace del portal no existe fuera del sandbox"),
     );
     let dropped = DroppedDocumentView::from(
         documents::dropped_document(
+            &files,
             &[
                 std::path::PathBuf::from(A_PORTAL_HANDLE),
                 std::path::PathBuf::from(ANOTHER_PORTAL_HANDLE),
@@ -226,7 +230,8 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
         )
         .expect("se ha soltado un fichero"),
     );
-    let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
+    let folder = documents::checked(&files, &DestinationFolder::at(home.path()))
+        .expect("el temporal esta ahi");
     let refused_rubric =
         crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg"))
             .adopt(Path::new(A_PORTAL_HANDLE))
@@ -238,7 +243,7 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
         Serialised::of("DroppedDocumentView", &dropped),
         Serialised::of(
             "DestinationView",
-            &DestinationView::from(documents::where_it_lands(&chosen, &document)),
+            &DestinationView::from(documents::where_it_lands(&files, &chosen, &document)),
         ),
         Serialised::of(
             "SignedDocumentView",
@@ -268,7 +273,7 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
     memory
         .remember_state(&configuration, &state)
         .expect("deberia guardarse el estado");
-    for row in recents::listed_rows(&memory, &opened) {
+    for row in recents::listed_rows(&memory, &files, &opened) {
         crossings.push(Serialised::of(
             "RecentDocumentView",
             &RecentDocumentView::from(row),

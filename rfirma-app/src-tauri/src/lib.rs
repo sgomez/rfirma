@@ -50,16 +50,18 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         installed_certificates: paths.installed_certificates_dir(),
         listed: identity::application::certificates::ListedCertificates::new(),
         memory: memory.clone(),
+        folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
     };
     let documents = DocumentsRoot {
         documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),
         rubric: documents::adapters::rubric::RubricStore::at(paths.rubric_path()),
         opened: documents::application::documents::OpenedDocuments::new(),
         memory: memory.clone(),
+        files: Arc::new(documents::adapters::files::RealFiles),
     };
     let desktop = DesktopRoot {
         pending_invocation: desktop::application::invocation::PendingInvocation::of(
-            desktop::application::invocation::Invocation::of_this_process(),
+            desktop::adapters::process::this_invocation(),
         ),
         memory: memory.clone(),
         paths,
@@ -68,6 +70,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         memory,
         isolate: signing::adapters::isolate::Isolate::start(),
         session: signing::application::session::SigningSession::default(),
+        files: Arc::new(signing::adapters::files::RealDocumentBytes),
     };
     let site = SiteRoot {
         errand: site::application::errand::LiveErrand::default(),
@@ -82,6 +85,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         ca_store,
         codec: Arc::new(site::adapters::codec::V4Codec),
         scratch_dir: std::env::temp_dir(),
+        scratch: Arc::new(site::adapters::scratch::RealScratch),
     };
     Roots {
         identity,
@@ -98,13 +102,13 @@ pub fn run() {
     use tauri::{Emitter, Manager};
 
     if desktop::application::invocation::help_was_asked_for(
-        std::env::args_os().map(|argument| argument.to_string_lossy().into_owned()),
+        desktop::adapters::process::these_arguments(),
     ) {
         println!("{}", desktop::application::invocation::HELP);
         return;
     }
 
-    desktop::application::invocation::make_the_command_line_readable();
+    desktop::adapters::process::make_the_command_line_readable();
 
     let paths = desktop::adapters::paths::Paths::from_environment()
         .expect("debería saberse cuál es el HOME");
@@ -115,7 +119,7 @@ pub fn run() {
         signing,
         site,
     } = roots(paths);
-    let invocation = desktop::application::invocation::Invocation::of_this_process();
+    let invocation = desktop::adapters::process::this_invocation();
 
     tauri::Builder::default()
         // Instancia única (ADR-0010).
@@ -132,13 +136,13 @@ pub fn run() {
                 );
                 match substitution {
                     desktop::application::invocation::SecondInvocation::ReplacesWhatWasThere(
-                        dropped,
+                        paths,
                     ) => {
                         let Some(window) = app.get_webview_window("main") else {
                             return;
                         };
                         let _ = window.set_focus();
-                        let Some(told) = app.state::<DocumentsRoot>().told_as_dropped(dropped)
+                        let Some(told) = app.state::<DocumentsRoot>().what_was_dropped(&paths)
                         else {
                             return;
                         };
@@ -186,9 +190,7 @@ pub fn run() {
                 return;
             };
             let documents = window.state::<DocumentsRoot>();
-            let Some(dropped) =
-                documents::application::documents::dropped_document(paths, &documents.opened)
-            else {
+            let Some(dropped) = documents.what_was_dropped(paths) else {
                 return;
             };
             let _ = window.emit(

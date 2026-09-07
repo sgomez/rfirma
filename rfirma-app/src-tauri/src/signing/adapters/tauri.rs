@@ -25,6 +25,7 @@ pub fn begin_signing(
 ) -> Result<SecretView, Failure> {
     let (document, chosen, choice) = what_is_ordered(&order, &identity, &documents)?;
     Ok(crate::signing::application::session::begin(
+        signing.files.as_ref(),
         document,
         &chosen,
         &choice,
@@ -83,6 +84,7 @@ pub fn preview_signature(
     let (document, chosen, choice) = what_is_ordered(&order, &identity, &documents)?;
     Ok(tauri::ipc::Response::new(
         crate::signing::application::preview::compose(
+            signing.files.as_ref(),
             &document.document,
             &chosen,
             &choice,
@@ -152,7 +154,13 @@ pub fn forget_activity(signing: State<'_, SigningRoot>) -> Result<(), Failure> {
 pub fn unregistered_signatures(
     document: String,
     documents: State<'_, DocumentsRoot>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<bool, Failure> {
     let document = documents.opened_document(&document)?;
-    Ok(crate::signing::application::session::unregistered_signatures_in(&document)?)
+    Ok(
+        crate::signing::application::session::unregistered_signatures_in(
+            signing.files.as_ref(),
+            &document,
+        )?,
+    )
 }

@@ -8,16 +8,17 @@ use crate::signing::application::session::{
 };
 use crate::signing::domain::TokenSignature;
 use crate::signing::domain::{AdmissibleDocument, SigningChoice};
-use crate::signing::ports::IsolateHost;
+use crate::signing::ports::{DocumentBytes, IsolateHost};
 
 /// Compone el PDF con el sello visible sin ejecutar la fase de firma.
 pub fn compose(
+    files: &dyn DocumentBytes,
     document: &Document,
     chosen: &TokenCertificate,
     choice: &SigningChoice,
     isolate: &impl IsolateHost,
 ) -> Result<Vec<u8>, CycleFailure> {
-    let bytes = admitted_bytes(document)?;
+    let bytes = admitted_bytes(files, document)?;
     let config = config_for(choice, chosen)?;
     let reference = chosen.reference().clone();
     let chain = vec![chosen.der().to_vec()];

@@ -2,14 +2,15 @@ use std::path::Path;
 
 use super::*;
 use crate::crossing::Failure;
-use crate::documents::application::documents::told_as_dropped;
+use crate::documents::adapters::files::RealFiles;
+use crate::documents::application::documents::dropped_document;
 use crate::documents::application::documents::OpenedDocuments;
 
 fn told(
     invocation: &Invocation,
     opened: &OpenedDocuments,
 ) -> Option<crate::documents::domain::told::DroppedDocument> {
-    told_as_dropped(invoked_document(invocation)?, opened)
+    dropped_document(&RealFiles, &invoked_documents(invocation)?, opened)
 }
 
 /// **Grada A**: una línea de órdenes y un fichero temporal. Ni token, ni
@@ -70,10 +71,10 @@ fn a_second_invocation_with_a_document_replaces_the_one_that_was_there() {
 
     let second = second_invocation(&invoked_with(&pdf), false);
 
-    let SecondInvocation::ReplacesWhatWasThere(dropped) = second else {
+    let SecondInvocation::ReplacesWhatWasThere(paths) = second else {
         panic!("sustituye: {second:?}");
     };
-    let view = told_as_dropped(dropped, &opened).expect("algo trae");
+    let view = dropped_document(&RealFiles, &paths, &opened).expect("algo trae");
     assert!(
         view.document.is_some(),
         "el documento nuevo es el que queda"

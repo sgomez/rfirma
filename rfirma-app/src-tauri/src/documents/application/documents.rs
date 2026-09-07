@@ -9,7 +9,7 @@ use crate::documents::domain::handles::Handles;
 use crate::documents::domain::told::{
     Destination, DropRefusal, DroppedDocument, OpenedDocument, SignedDocument,
 };
-use crate::documents::ports::DocumentsMemory;
+use crate::documents::ports::{DocumentFiles, DocumentsMemory};
 
 /// Los documentos abiertos en esta sesión, cada uno tras su asa.
 pub type OpenedDocuments = Handles<Document>;
@@ -17,33 +17,75 @@ pub type OpenedDocuments = Handles<Document>;
 /// Registra el documento abierto por el usuario y actualiza la última carpeta usada.
 pub fn note_opened(
     memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
     opened: &OpenedDocuments,
     handle: PathBuf,
 ) -> OpenedDocument {
     let document = Document::opened(handle);
     remember_the_folder(memory, &document);
-    told_as_opened(document, opened)
+    told_as_opened(files, document, opened)
 }
 
 /// Registra un documento en curso sin guardar rastro en el historial ni recordar carpeta.
-pub fn note_opened_unrecorded(opened: &OpenedDocuments, handle: PathBuf) -> OpenedDocument {
-    told_as_opened(Document::passing_through(handle), opened)
+pub fn note_opened_unrecorded(
+    files: &dyn DocumentFiles,
+    opened: &OpenedDocuments,
+    handle: PathBuf,
+) -> OpenedDocument {
+    told_as_opened(files, Document::passing_through(handle), opened)
 }
 
 /// Devuelve el contenido en bytes del documento abierto por su identificador.
-pub fn bytes_of(opened: &OpenedDocuments, id: &str) -> Result<Vec<u8>, DocumentError> {
+pub fn bytes_of(
+    files: &dyn DocumentFiles,
+    opened: &OpenedDocuments,
+    id: &str,
+) -> Result<Vec<u8>, DocumentError> {
     let document = opened_document(opened, id)?;
-    std::fs::read(document.reading_path())
-        .map_err(|error| DocumentError::Unreadable(error.to_string()))
+    files
+        .read(document.reading_path())
+        .map_err(DocumentError::Unreadable)
 }
 
 /// Procesa los ficheros soltados en la ventana y registra el primer PDF válido.
-pub fn dropped_document(paths: &[PathBuf], opened: &OpenedDocuments) -> Option<DroppedDocument> {
-    told_as_dropped(crate::documents::domain::dropped::first_pdf(paths), opened)
+pub fn dropped_document(
+    files: &dyn DocumentFiles,
+    paths: &[PathBuf],
+    opened: &OpenedDocuments,
+) -> Option<DroppedDocument> {
+    told_as_dropped(files, decide_what_was_dropped(files, paths), opened)
+}
+
+/// Expande las carpetas soltadas, elige el primer PDF y pregunta al disco si se deja leer.
+pub fn decide_what_was_dropped(
+    files: &dyn DocumentFiles,
+    paths: &[PathBuf],
+) -> crate::documents::domain::dropped::Dropped {
+    use crate::documents::domain::dropped::{first_pdf, resolved, Choice};
+    let choice = first_pdf(&expanded(files, paths));
+    let readable = match &choice {
+        Choice::Pdf { path, .. } => files.readable(path),
+        _ => Ok(()),
+    };
+    resolved(choice, readable)
+}
+
+fn expanded(files: &dyn DocumentFiles, paths: &[PathBuf]) -> Vec<PathBuf> {
+    let mut expanded = Vec::with_capacity(paths.len());
+    for path in paths {
+        match files.folder_fact(path) {
+            crate::documents::domain::destination::FolderFact::Folder => {
+                expanded.extend(files.files_within(path));
+            }
+            _ => expanded.push(path.clone()),
+        }
+    }
+    expanded
 }
 
 /// Convierte el resultado de procesamiento de arrastre en lo que se cuenta a la ventana.
 pub fn told_as_dropped(
+    files: &dyn DocumentFiles,
     decided: crate::documents::domain::dropped::Dropped,
     opened: &OpenedDocuments,
 ) -> Option<DroppedDocument> {
@@ -54,10 +96,10 @@ pub fn told_as_dropped(
             also_entering,
             discarded,
         } => Some(DroppedDocument {
-            document: Some(told_as_opened(Document::opened(path), opened)),
+            document: Some(told_as_opened(files, Document::opened(path), opened)),
             also_entering: also_entering
                 .into_iter()
-                .map(|path| told_as_opened(Document::opened(path), opened))
+                .map(|path| told_as_opened(files, Document::opened(path), opened))
                 .collect(),
             refused: None,
             discarded,
@@ -83,29 +125,54 @@ pub fn told_as_dropped(
 
 /// Guarda el documento firmado en la carpeta de destino resolviendo homónimos (ADR-0011).
 pub fn deliver(
+    files: &dyn DocumentFiles,
     chosen: &DestinationFolder,
     document: &Document,
     signed: &[u8],
 ) -> Result<(PathBuf, SignedDocument), DocumentError> {
-    let folder = CheckedFolder::check(chosen)?;
-    let landing = folder.landing_for(document)?;
-    std::fs::write(&landing, signed)
-        .map_err(|error| DocumentError::FolderUnwritable(error.to_string()))?;
+    let folder = checked(files, chosen)?;
+    let landing = landing_for(files, &folder, document)?;
+    files
+        .write(&landing, signed)
+        .map_err(DocumentError::FolderUnwritable)?;
     let told = told_as(&landing, &folder, signed.len() as u64);
     Ok((landing, told))
 }
 
+/// Comprueba la carpeta de destino preguntando al disco qué hay en su ruta (ADR-0011).
+pub fn checked(
+    files: &dyn DocumentFiles,
+    chosen: &DestinationFolder,
+) -> Result<CheckedFolder, crate::documents::domain::destination::DestinationError> {
+    CheckedFolder::confirmed(chosen.path(), files.folder_fact(chosen.path()))
+}
+
+/// Recorre los nombres homónimos hasta dar con uno libre (ADR-0011).
+pub fn landing_for(
+    files: &dyn DocumentFiles,
+    folder: &CheckedFolder,
+    document: &Document,
+) -> Result<PathBuf, crate::documents::domain::destination::DestinationError> {
+    folder
+        .landing_candidates(document)
+        .find(|candidate| !files.exists(candidate))
+        .ok_or_else(|| folder.no_free_name(document))
+}
+
 /// Calcula la ruta prevista de destino antes de firmar sin escribir en disco (ADR-0011).
-pub fn where_it_lands(chosen: &DestinationFolder, document: &Document) -> Destination {
-    let Ok(folder) = CheckedFolder::check(chosen) else {
+pub fn where_it_lands(
+    files: &dyn DocumentFiles,
+    chosen: &DestinationFolder,
+    document: &Document,
+) -> Destination {
+    let Ok(folder) = checked(files, chosen) else {
         return Destination {
             folder: chosen.name().to_owned(),
             name: None,
             writable: false,
         };
     };
-    let name = folder
-        .landing_for(document)
+    let name = landing_for(files, &folder, document)
         .ok()
         .and_then(|landing| file_name_of(&landing));
     Destination {
@@ -131,9 +198,13 @@ fn file_name_of(landing: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
-fn told_as_opened(document: Document, opened: &OpenedDocuments) -> OpenedDocument {
+fn told_as_opened(
+    files: &dyn DocumentFiles,
+    document: Document,
+    opened: &OpenedDocuments,
+) -> OpenedDocument {
     let name = document.name().to_owned();
-    let modified = modified_seconds(&document);
+    let modified = modified_seconds(files, &document);
     let path = real_path_of(&document).and_then(|path| path.to_str().map(str::to_owned));
     OpenedDocument {
         id: opened.mint(document),
@@ -146,19 +217,25 @@ fn told_as_opened(document: Document, opened: &OpenedDocuments) -> OpenedDocumen
 /// Determina la carpeta inicial para el diálogo de apertura de documentos.
 pub fn starting_folder(
     memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
     chosen: &DestinationFolder,
 ) -> Option<PathBuf> {
-    if let Some(remembered) = remembered_folder(memory) {
+    if let Some(remembered) = remembered_folder(memory, files) {
         return Some(remembered);
     }
-    CheckedFolder::check(chosen)
+    checked(files, chosen)
         .ok()
         .map(|checked| checked.path().to_path_buf())
 }
 
 /// Devuelve la última carpeta de apertura recordada si continúa existiendo.
-pub fn remembered_folder(memory: &dyn DocumentsMemory) -> Option<PathBuf> {
-    memory.last_open_folder().filter(|folder| folder.is_dir())
+pub fn remembered_folder(
+    memory: &dyn DocumentsMemory,
+    files: &dyn DocumentFiles,
+) -> Option<PathBuf> {
+    memory.last_open_folder().filter(|folder| {
+        files.folder_fact(folder) == crate::documents::domain::destination::FolderFact::Folder
+    })
 }
 
 /// La carpeta de destino elegida, o la de documentos por omisión.
@@ -208,13 +285,8 @@ pub fn opened_document(opened: &OpenedDocuments, id: &str) -> Result<Document, D
     opened.get(id).ok_or_else(DocumentError::no_longer_open)
 }
 
-pub(crate) fn modified_seconds(document: &Document) -> Option<u64> {
-    std::fs::metadata(document.reading_path())
-        .and_then(|metadata| metadata.modified())
-        .ok()?
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .map(|elapsed| elapsed.as_secs())
+pub(crate) fn modified_seconds(files: &dyn DocumentFiles, document: &Document) -> Option<u64> {
+    files.modified_seconds(document.reading_path())
 }
 
 #[cfg(test)]

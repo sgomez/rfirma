@@ -12,10 +12,9 @@ use adapters::rubric::RubricStore;
 use application::documents::OpenedDocuments;
 use domain::destination::DestinationFolder;
 use domain::document::Document;
-use domain::dropped::Dropped;
 use domain::error::DocumentError;
 use domain::told::{DroppedDocument, SignedDocument};
-use ports::DocumentsMemory;
+use ports::{DocumentFiles, DocumentsMemory};
 
 /// La raíz de `documents`: la carpeta por omisión, la rúbrica, lo abierto en esta sesión y la memoria.
 pub struct DocumentsRoot {
@@ -27,6 +26,8 @@ pub struct DocumentsRoot {
     pub opened: OpenedDocuments,
     /// Lo que la memoria entre sesiones guarda de los documentos.
     pub memory: Arc<dyn DocumentsMemory + Send + Sync>,
+    /// El disco donde viven los documentos.
+    pub files: Arc<dyn DocumentFiles + Send + Sync>,
 }
 
 impl DocumentsRoot {
@@ -57,16 +58,26 @@ impl DocumentsRoot {
         document: &Document,
         signed: &[u8],
     ) -> Result<(PathBuf, SignedDocument), DocumentError> {
-        application::documents::deliver(&self.chosen_folder(), document, signed)
+        application::documents::deliver(
+            self.files.as_ref(),
+            &self.chosen_folder(),
+            document,
+            signed,
+        )
     }
 
     /// Anota el firmado en la bandeja con la prueba de que hubo un ciclo.
     pub fn note_signed(&self, landing: &Path, proof: &crate::signing::domain::CompletedCycle) {
-        application::recents::note_signed(self.memory.as_ref(), landing, proof);
+        application::recents::note_signed(
+            self.memory.as_ref(),
+            self.files.as_ref(),
+            landing,
+            proof,
+        );
     }
 
-    /// Lo que se le cuenta a la ventana de lo que llegó de fuera.
-    pub fn told_as_dropped(&self, dropped: Dropped) -> Option<DroppedDocument> {
-        application::documents::told_as_dropped(dropped, &self.opened)
+    /// Lo que se le cuenta a la ventana de las rutas que llegaron de fuera.
+    pub fn what_was_dropped(&self, paths: &[PathBuf]) -> Option<DroppedDocument> {
+        application::documents::dropped_document(self.files.as_ref(), paths, &self.opened)
     }
 }

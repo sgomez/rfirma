@@ -7,17 +7,22 @@ use std::sync::{Arc, Mutex};
 use crate::site::domain::protocol::{AfirmaUrl, ChannelCredential, SiteFilter};
 
 use super::outcome::{Moment, ProtocolCodec, SiteOutcome};
-use crate::site::ports::ReplyHandle;
+use crate::site::ports::{ReplyHandle, Scratch};
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
 pub type NegotiatedCodec = Arc<dyn ProtocolCodec + Send + Sync>;
+
+struct KeptScratch {
+    path: PathBuf,
+    files: Arc<dyn Scratch + Send + Sync>,
+}
 
 /// Trámite vivo del proceso y su memoria durante la ejecución.
 #[derive(Default)]
 pub struct LiveErrand {
     errand: Mutex<Option<Errand>>,
     codec: Mutex<Option<NegotiatedCodec>>,
-    scratch: Mutex<Option<PathBuf>>,
+    scratch: Mutex<Option<KeptScratch>>,
     reply: Mutex<Option<ReplyHandle>>,
     asked: Mutex<Option<AfirmaUrl>>,
     consent: Mutex<Option<PendingConsent>>,
@@ -91,8 +96,8 @@ impl LiveErrand {
     }
 
     /// Registra la ruta temporal del documento de paso.
-    pub(super) fn keep_the_scratch(&self, path: PathBuf) {
-        *crate::lock(&self.scratch) = Some(path);
+    pub(super) fn keep_the_scratch(&self, path: PathBuf, files: Arc<dyn Scratch + Send + Sync>) {
+        *crate::lock(&self.scratch) = Some(KeptScratch { path, files });
     }
 
     /// Registra la petición original de la sede.
@@ -147,7 +152,7 @@ impl LiveErrand {
         *crate::lock(&self.errand) = None;
         drop(crate::lock(&self.reply).take());
         if let Some(scratch) = crate::lock(&self.scratch).take() {
-            let _ = std::fs::remove_file(scratch);
+            scratch.files.erase(&scratch.path);
         }
         *crate::lock(&self.asked) = None;
         self.forget_the_consent();
@@ -156,7 +161,9 @@ impl LiveErrand {
     /// Ruta al fichero temporal para pruebas.
     #[cfg(test)]
     pub fn scratch_path(&self) -> Option<PathBuf> {
-        crate::lock(&self.scratch).clone()
+        crate::lock(&self.scratch)
+            .as_ref()
+            .map(|scratch| scratch.path.clone())
     }
 
     /// Registra el filtro de consentimiento de identidad.

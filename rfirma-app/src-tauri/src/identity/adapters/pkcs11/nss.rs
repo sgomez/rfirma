@@ -6,8 +6,6 @@ use std::sync::OnceLock;
 
 use libloading::Library;
 
-use crate::identity::ports::NssHost;
-
 use super::stores::present_among;
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
 
@@ -85,6 +83,15 @@ extern "C" fn keep_the_nickname(
         unsafe { *cancel = 0 };
     }
     std::ptr::null_mut()
+}
+
+/// La biblioteca NSS y el turno global del token, tal como los ve quien resuelve símbolos sobre ella.
+pub trait NssHost {
+    /// Biblioteca `libnss3.so` del sistema cargada en memoria.
+    fn library(&self) -> Result<&'static Library, NssUnavailable>;
+
+    /// Ejecuta una operación bajo el turno global del token.
+    fn with_token_turn<T>(&self, work: impl FnOnce() -> T) -> T;
 }
 
 /// Adaptador de [`NssHost`] sobre la biblioteca `libnss3.so` del sistema y el turno del token.

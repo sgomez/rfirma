@@ -131,6 +131,18 @@ pub trait ScratchDocuments {
     fn open_unrecorded(&self, path: PathBuf) -> String;
 }
 
+/// La carpeta de paso del trámite: donde cae el documento de la sede y de donde se borra (ADR-0016).
+pub trait Scratch {
+    /// Se asegura de que la carpeta de paso existe.
+    fn make_the_folder(&self, folder: &Path) -> Result<(), String>;
+
+    /// Deja los bytes del documento en esa ruta.
+    fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String>;
+
+    /// Borra el fichero de paso, y calla si ya no estaba.
+    fn erase(&self, path: &Path);
+}
+
 /// Lo que el trámite pide firmar: el documento por su asa, el certificado ya cribado y lo que declaró la sede.
 #[derive(Clone, Copy, Debug)]
 pub struct SiteSigningRequest<'a> {

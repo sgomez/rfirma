@@ -40,11 +40,13 @@ pub fn install_certificate(
     let Some(chosen) = dialog.blocking_pick_file() else {
         return Ok(false);
     };
+    let pkcs12 = read_the_file(chosen)?;
 
     crate::identity::application::certificates::install_pkcs12(
         identity.token.as_ref(),
+        identity.folder.as_ref(),
         identity.installed_certificates(),
-        chosen,
+        &pkcs12,
         &password,
     )?;
     Ok(true)
@@ -55,9 +57,23 @@ pub fn install_certificate(
 pub fn remove_certificate(id: String, identity: State<'_, IdentityRoot>) -> Result<(), Failure> {
     Ok(
         crate::identity::application::certificates::remove_installed(
+            identity.folder.as_ref(),
             identity.installed_certificates(),
             &id,
             &identity.listed,
         )?,
     )
+}
+
+fn read_the_file(chosen: tauri_plugin_dialog::FilePath) -> Result<Vec<u8>, Failure> {
+    let unreadable = |detail: String| {
+        Failure::from(crate::identity::domain::error::TokenError::new(
+            crate::identity::domain::error::Situation::Pkcs12Unreadable,
+            detail,
+        ))
+    };
+    let source = chosen
+        .into_path()
+        .map_err(|error| unreadable(error.to_string()))?;
+    std::fs::read(&source).map_err(|error| unreadable(error.to_string()))
 }

@@ -72,6 +72,16 @@ Dentro de cada contexto la capa **es la carpeta**, y por eso la regla se lee sin
   vista que recibe la ventana (`Failure`) y el código de cable que recibe la sede
   (`SafCode`), así que una variante nueva sin decidir vista y código no compila.
 
+**El mundo entra solo por puertos.** `domain/`, `ports.rs` y `application/` no nombran
+`std::fs`, `std::env`, `std::process`, `libloading`, `tauri` ni `tauri_plugin_*`: el disco, el
+entorno del proceso y los tipos de la ventana llegan como hechos ya resueltos o tras un
+`&dyn Puerto` cuyo adaptador vive en `adapters/`. El dominio no llega ni a eso: recibe el
+hecho —una ruta ya canónica, un `FolderFact`, el instante de modificación— y decide sobre él;
+quien pregunta al disco es el caso de uso. Un puerto tampoco habla en infraestructura: si su
+firma necesitaba una `libloading::Library`, es que su comprador era otro adaptador y el rasgo
+pertenece a `adapters/`. Esto lo vigila la misma guarda de dirección, con una regla textual,
+porque un `std::fs::read` no se ve en el grafo de `use crate::`.
+
 Cada contexto tiene su **raíz de composición** en `<contexto>/mod.rs`: el `struct` que
 junta sus adaptadores, su estado de proceso y sus puertos ya instanciados, y la fachada con
 la que los adaptadores de otro contexto le piden lo que necesitan. La raíz global es `lib.rs`:
@@ -94,7 +104,8 @@ Lo que cuelga de la raíz del crate no pertenece a ningún contexto y cualquiera
 No hay excepciones escritas ni lista de deuda. Lo vigila `src-tauri/tests/module_directions.rs`,
 una guarda de **grada A** (ADR-0014) que lee las líneas `use crate::` de los ficheros
 versionados de `src/`, deduce contexto y capa de la ruta de cada uno, y falla ante cualquier
-arista que apunte contra la tabla. Cuando falla nombra la arista y dice **adónde mover la
+arista que apunte contra la tabla, y ante cualquier línea de `domain/`, `ports.rs` o
+`application/` que nombre el mundo. Cuando falla nombra la arista y dice **adónde mover la
 decisión** —casi siempre a `application/`, o a un puerto—, y se prueba a sí misma con árboles
 sintéticos: cada combinación prohibida de capa y contexto la pone en rojo. Mira solo los
 ficheros de producción —un `use` en un `tests.rs` no participa en el grafo que se compila— y

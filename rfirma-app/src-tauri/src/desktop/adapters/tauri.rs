@@ -18,9 +18,9 @@ pub fn read_invocation(
     documents: State<'_, DocumentsRoot>,
 ) -> Option<DroppedDocumentView> {
     let invocation = desktop.pending_invocation.take()?;
-    let dropped = crate::desktop::application::invocation::invoked_document(&invocation)?;
+    let paths = crate::desktop::application::invocation::invoked_documents(&invocation)?;
     documents
-        .told_as_dropped(dropped)
+        .what_was_dropped(&paths)
         .map(DroppedDocumentView::from)
 }
 

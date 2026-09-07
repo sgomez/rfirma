@@ -9,7 +9,7 @@ use std::time::SystemTime;
 fn a_document(directory: &Path) -> RecentDocument<Spot> {
     let path = directory.join("contrato.pdf");
     fs::write(&path, b"%PDF-1.7 de prueba").expect("deberia escribirse");
-    RecentDocument::seen(&path, Badge::Unsigned, SystemTime::now()).expect("deberia anotarse")
+    RecentDocument::seen(path, None, Badge::Unsigned, SystemTime::now())
 }
 
 #[test]

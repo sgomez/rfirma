@@ -20,7 +20,7 @@ use crate::signing::domain::{
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
 use crate::signing::domain::{Refusal, TokenSignature};
-use crate::signing::ports::{IsolateHost, Signer};
+use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]
@@ -50,6 +50,7 @@ pub struct DocumentToSign {
 
 /// Prefirma local: valida admisibilidad, prepara la configuración y abre el ciclo.
 pub fn begin(
+    files: &dyn DocumentBytes,
     document: DocumentToSign,
     chosen: &TokenCertificate,
     choice: &SigningChoice,
@@ -57,7 +58,7 @@ pub fn begin(
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let bytes = admitted_bytes(&document.document)?;
+    let bytes = admitted_bytes(files, &document.document)?;
     let config = config_for(choice, chosen)?;
     open_the_cycle(
         signer,
@@ -71,19 +72,28 @@ pub fn begin(
     )
 }
 
+/// Lo que la sede declaró para esta firma: sus parámetros y si consintió cofirmar sobre lo que no se reconoce.
+#[derive(Clone, Copy, Debug)]
+pub struct DeclaredByTheSite<'a> {
+    /// Los parámetros de la sede, ya expandidos.
+    pub parameters: &'a BTreeMap<String, String>,
+    /// Si la sede consintió cofirmar sobre firmas que no se reconocen.
+    pub allow_unregistered_signatures: bool,
+}
+
 /// Prefirma de un trámite de sede: invisible, con la geometría y la política que la sede declaró.
 pub fn begin_for_the_site(
+    files: &dyn DocumentBytes,
     document: DocumentToSign,
     chosen: &TokenCertificate,
-    from_the_site: &BTreeMap<String, String>,
-    allow_unregistered_signatures: bool,
+    declared: DeclaredByTheSite<'_>,
     signer: &dyn Signer,
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let bytes = admitted_bytes(&document.document)?;
+    let bytes = admitted_bytes(files, &document.document)?;
     let config = config_for(
-        &SigningChoice::for_the_site(allow_unregistered_signatures),
+        &SigningChoice::for_the_site(declared.allow_unregistered_signatures),
         chosen,
     )?;
     open_the_cycle(
@@ -92,7 +102,7 @@ pub fn begin_for_the_site(
         bytes,
         config,
         chosen,
-        from_the_site,
+        declared.parameters,
         isolate,
         session,
     )
@@ -335,16 +345,23 @@ pub fn config_for(
 }
 
 /// Obtiene y valida los bytes de un documento para firmar.
-pub fn admitted_bytes(document: &Document) -> Result<Vec<u8>, CycleFailure> {
-    let bytes = std::fs::read(document.reading_path())
-        .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
+pub fn admitted_bytes(
+    files: &dyn DocumentBytes,
+    document: &Document,
+) -> Result<Vec<u8>, CycleFailure> {
+    let bytes = files
+        .read(document.reading_path())
+        .map_err(DocumentError::Unreadable)?;
     AdmissibleDocument::check(&bytes).map_err(CycleError::from)?;
     Ok(bytes)
 }
 
 /// Comprueba si el documento contiene firmas previas no reconocibles.
-pub fn unregistered_signatures_in(document: &Document) -> Result<bool, CycleFailure> {
-    let bytes = admitted_bytes(document)?;
+pub fn unregistered_signatures_in(
+    files: &dyn DocumentBytes,
+    document: &Document,
+) -> Result<bool, CycleFailure> {
+    let bytes = admitted_bytes(files, document)?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 

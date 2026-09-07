@@ -6,6 +6,7 @@ pub mod domain;
 pub mod ports;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use adapters::tls::LocalCaStore;
 use application::errand::{LiveErrand, NegotiatedCodec};
@@ -25,4 +26,6 @@ pub struct SiteRoot {
     pub codec: NegotiatedCodec,
     /// Directorio para los documentos de paso.
     pub scratch_dir: PathBuf,
+    /// Quien escribe y borra el fichero de paso.
+    pub scratch: Arc<dyn ports::Scratch + Send + Sync>,
 }

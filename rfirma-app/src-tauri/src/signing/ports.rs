@@ -1,5 +1,7 @@
 //! Puertos del contexto de firma: el puente, el hilo que lo aloja y lo que el ciclo le pide al token.
 
+use std::path::Path;
+
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
@@ -36,4 +38,10 @@ pub trait Signer {
         pin: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
+}
+
+/// El documento que se va a firmar, leído de donde esté.
+pub trait DocumentBytes {
+    /// El contenido del documento en la ruta indicada.
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String>;
 }

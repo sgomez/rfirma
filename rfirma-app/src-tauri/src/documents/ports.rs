@@ -1,8 +1,8 @@
-//! Puertos del contexto de documentos: lo que la memoria entre sesiones guarda de ellos (ADR-0010).
+//! Puertos del contexto de documentos: la memoria entre sesiones (ADR-0010) y el disco donde viven.
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::domain::destination::DestinationFolder;
+use crate::documents::domain::destination::{DestinationFolder, FolderFact};
 use crate::documents::domain::recents::Recents;
 use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::{BoxSize, Spot};
@@ -30,4 +30,31 @@ pub trait DocumentsMemory {
         recents: &Recents<Spot>,
         size: Option<BoxSize>,
     ) -> Result<(), MemoryError>;
+}
+
+/// El disco visto desde los documentos: lo que hace falta para abrirlos, entregarlos y recordarlos.
+pub trait DocumentFiles {
+    /// Qué es la ruta para el sistema de ficheros.
+    fn folder_fact(&self, path: &Path) -> FolderFact;
+
+    /// Si ya hay algo en esa ruta.
+    fn exists(&self, path: &Path) -> bool;
+
+    /// Si el fichero se deja abrir para lectura.
+    fn readable(&self, path: &Path) -> Result<(), String>;
+
+    /// El contenido del fichero.
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String>;
+
+    /// Escribe el contenido en la ruta indicada.
+    fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String>;
+
+    /// Instante de última modificación en segundos desde la época UNIX.
+    fn modified_seconds(&self, path: &Path) -> Option<u64>;
+
+    /// La ruta canónica, o nada si no se puede resolver.
+    fn canonical(&self, path: &Path) -> Option<PathBuf>;
+
+    /// Los ficheros dentro de la carpeta, ordenados; vacío si no es una carpeta legible.
+    fn files_within(&self, folder: &Path) -> Vec<PathBuf>;
 }

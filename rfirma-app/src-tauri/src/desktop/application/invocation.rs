@@ -4,7 +4,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use crate::documents::domain::dropped::{invoked_pdf, Dropped};
+use crate::documents::domain::dropped::invoked_paths;
 use crate::site::domain::protocol::AfirmaUrl;
 
 /// Invocación recibida con sus argumentos y carpeta de trabajo.
@@ -17,16 +17,6 @@ pub struct Invocation {
 }
 
 impl Invocation {
-    /// Obtiene la invocación correspondiente al proceso actual.
-    pub fn of_this_process() -> Self {
-        Self {
-            command_line: std::env::args_os()
-                .map(|argument| argument.to_string_lossy().into_owned())
-                .collect(),
-            folder: std::env::current_dir().unwrap_or_default(),
-        }
-    }
-
     /// Extrae la URL con esquema afirma:// si la invocación la incluye.
     pub fn site_launch(&self) -> Option<&str> {
         self.command_line
@@ -61,34 +51,6 @@ where
             .map(|argument| argument.to_string_lossy().into_owned())
             .collect(),
     )
-}
-
-/// Asegura que los argumentos de la línea de órdenes tengan codificación UTF-8 válida.
-pub fn make_the_command_line_readable() {
-    let Arguments::RerunWith(arguments) = arguments_before_the_single_instance(std::env::args_os())
-    else {
-        return;
-    };
-    let executable = match std::env::current_exe() {
-        Ok(executable) => executable,
-        Err(error) => {
-            eprintln!(
-                "rfirma: no se puede releer la línea de órdenes ilegible \
-                 ({error}); el arranque sigue con ella tal cual"
-            );
-            return;
-        }
-    };
-    match std::process::Command::new(executable)
-        .args(arguments.iter().skip(1))
-        .spawn()
-    {
-        Ok(_) => std::process::exit(0),
-        Err(error) => eprintln!(
-            "rfirma: no se puede volver a arrancar con la línea de órdenes ya \
-             legible ({error}); el arranque sigue con ella tal cual"
-        ),
-    }
 }
 
 /// Formas aceptadas del parámetro de ayuda.
@@ -148,15 +110,13 @@ where
         .any(|argument| HELP_FLAGS.contains(&argument.as_ref()))
 }
 
-/// Lo que la invocación trae para la ventana principal: nada si es una llamada de sede.
-pub fn invoked_document(invocation: &Invocation) -> Option<Dropped> {
+/// Las rutas que la invocación trae para la ventana principal: nada si es una llamada de sede.
+pub fn invoked_documents(invocation: &Invocation) -> Option<Vec<PathBuf>> {
     if invocation.site_launch().is_some() {
         return None;
     }
-    match invoked_pdf(&invocation.command_line, &invocation.folder) {
-        Dropped::Nothing => None,
-        dropped => Some(dropped),
-    }
+    let paths = invoked_paths(&invocation.command_line, &invocation.folder);
+    (!paths.is_empty()).then_some(paths)
 }
 
 /// Destino de una segunda invocación recibida con la aplicación ya en marcha.
@@ -164,8 +124,8 @@ pub fn invoked_document(invocation: &Invocation) -> Option<Dropped> {
 pub enum SecondInvocation {
     /// Se ignora la segunda invocación.
     NothingHappens,
-    /// Sustituye el documento activo por el nuevo.
-    ReplacesWhatWasThere(Dropped),
+    /// Sustituye el documento activo por lo que traen estas rutas.
+    ReplacesWhatWasThere(Vec<PathBuf>),
     /// Abre una ventana dedicada para atender el trámite de sede.
     OpensItsOwnWindow(String),
 }
@@ -178,8 +138,8 @@ pub fn second_invocation(invocation: &Invocation, signing_is_live: bool) -> Seco
     if signing_is_live {
         return SecondInvocation::NothingHappens;
     }
-    match invoked_document(invocation) {
-        Some(dropped) => SecondInvocation::ReplacesWhatWasThere(dropped),
+    match invoked_documents(invocation) {
+        Some(paths) => SecondInvocation::ReplacesWhatWasThere(paths),
         None => SecondInvocation::NothingHappens,
     }
 }

@@ -98,8 +98,8 @@ fn a_new_file_at_the_same_path_keeps_the_row_available() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let path = directory.path().join("contrato.pdf");
     fs::write(&path, b"%PDF-1.7 primero").expect("deberia escribirse");
-    let entry = RecentDocument::<Spot>::seen(&path, Badge::Unsigned, SystemTime::now())
-        .expect("deberia anotarse");
+    let entry =
+        RecentDocument::<Spot>::seen(path.clone(), None, Badge::Unsigned, SystemTime::now());
 
     fs::remove_file(&path).expect("deberia borrarse");
     fs::write(&path, b"%PDF-1.7 otro inodo").expect("deberia escribirse");
@@ -113,8 +113,7 @@ fn moving_the_file_away_shows_the_unavailable_badge_though_the_inode_lives_on() 
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let path = directory.path().join("contrato.pdf");
     fs::write(&path, b"%PDF-1.7 de prueba").expect("deberia escribirse");
-    let entry = RecentDocument::<Spot>::seen(&path, Badge::Signed, SystemTime::now())
-        .expect("deberia anotarse");
+    let entry = RecentDocument::<Spot>::seen(path.clone(), None, Badge::Signed, SystemTime::now());
 
     let elsewhere = directory.path().join("archivado.pdf");
     fs::rename(&path, &elsewhere).expect("deberia moverse");
