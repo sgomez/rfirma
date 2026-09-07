@@ -1,6 +1,6 @@
 //! La única traducción de las situaciones de la firma local: a la vista de la ventana y al código de la sede (ADR-0009).
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::identity::adapters::failures::{code_of_secret_on_the_reader_keypad, code_of_token};
 use crate::signing::application::cycle::CycleError;

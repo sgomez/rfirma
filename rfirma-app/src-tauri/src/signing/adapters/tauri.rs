@@ -8,7 +8,7 @@ use crate::signing::SigningRoot;
 
 use super::orders::{PlacementOrder, SigningOrder};
 use super::views::ConfigurationView;
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
 use crate::identity::domain::certificate::TokenCertificate;

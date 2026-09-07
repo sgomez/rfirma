@@ -7,7 +7,7 @@ use crate::signing::SigningRoot;
 
 use super::tauri_rubric::{RubricChoiceView, RubricView};
 use super::views::{DestinationView, OpenedDocumentView, RecentDocumentView};
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::domain::rubric::{RubricError, Situation};
 use crate::signing::adapters::views::PlacementView;
 use crate::signing::domain::VisibleBox;

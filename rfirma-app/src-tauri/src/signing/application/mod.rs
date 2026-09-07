@@ -5,3 +5,6 @@ pub mod configuration_memory;
 pub mod cycle;
 pub mod preview;
 pub mod session;
+
+#[cfg(test)]
+pub(crate) mod tests;

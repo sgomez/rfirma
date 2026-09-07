@@ -1,6 +1,6 @@
 //! La única traducción de las situaciones de identidad: a la vista de la ventana y al código de la sede (ADR-0009).
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::identity::application::certificates::InstallError;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::SecretOnTheReaderKeypad;

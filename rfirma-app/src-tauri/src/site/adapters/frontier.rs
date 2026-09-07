@@ -1,6 +1,6 @@
 //! La única traducción de los rechazos del trámite: a la vista de la ventana y al código de la sede (ADR-0009).
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::identity::adapters::failures::code_of_token;
 use crate::signing::adapters::failures::{code_of_bridge, code_of_inadmissible};
 use crate::site::application::errand::{ConsentError, SiteRefusal};

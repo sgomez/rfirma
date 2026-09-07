@@ -1,7 +1,7 @@
 use super::*;
-use crate::fixtures::{a_completed_cycle, a_memory};
 use crate::signing::adapters::store::Loaded;
 use crate::signing::application::configuration_memory::Configuration;
+use crate::signing::application::tests::{a_completed_cycle, a_memory};
 use crate::signing::domain::PageSet;
 use std::fs;
 use std::path::PathBuf;

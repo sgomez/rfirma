@@ -7,7 +7,7 @@ use crate::site::SiteRoot;
 
 use super::views::SiteErrandView;
 use super::window::{self as site_window, SITE_WINDOW};
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::identity::adapters::tauri::install_certificate;
 use crate::identity::adapters::views::SecretView;
 

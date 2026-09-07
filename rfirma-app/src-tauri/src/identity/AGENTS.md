@@ -13,10 +13,9 @@ presta con `signer()`.
 Rutas relativas a `src/identity/`. La capa es la carpeta: `domain/` no nombra nada
 del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 `adapters/` lo que quiera, y los casos de uso de otro contexto solo por su raíz
-(`<contexto>/mod.rs`). No hay deuda: `tests/module_directions_debt.txt` está
-vacío. Para situarte en un fichero,
-`just outline <ruta>`; las pruebas de cada módulo viven en su hermano
-`tests.rs` y se leen solo para tocarlas.
+(`<contexto>/mod.rs`); lo vigila `tests/module_directions.rs`. Para situarte
+en un fichero, `just outline <ruta>`; las pruebas de cada módulo viven en su
+hermano `tests.rs` y se leen solo para tocarlas.
 
 ## Dónde vive qué
 
@@ -24,6 +23,7 @@ vacío. Para situarte en un fichero,
 |---|---|---|
 | `mod.rs` | 126 | La raíz: `IdentityRoot`, con el token, los almacenes, el listado vivo y la memoria; la fachada que usan los vecinos —`certificates`, `rows_of`, `usable`, `remember_the_certificate`, `signer`— y el `Signer` sobre cualquier `Token`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | | Solo `pub mod`: el reparto de cada capa. |
+| `application/tests.rs` | 105 | Los andamios de la grada A que comparten todos los contextos: `NoToken`, `NoMemory`, los certificados de prueba (`a_certificate`, `a_usable_certificate`) y `listed_from`. Solo en pruebas. |
 | `adapters/pkcs11/mod.rs` | 447 | La capa PKCS#11, y `RealToken`, el único adaptador de producción del puerto `Token`. |
 | `adapters/pkcs11/nss.rs` | 308 | Cómo entra un `.p12` en un almacén NSS propio: el descodificador de PKCS#12 de `libsmime3` por FFI, sin criptografía propia y dentro del turno del token (ID-192, ID-193, ID-194). Su adaptador `RealNssHost` del puerto `NssHost` de `ports.rs` para la carga compartida de `libnss3.so`. Pruebas en `adapters/pkcs11/nss/tests.rs` (28). |
 | `adapters/pkcs11/stores.rs` | 171 | Dónde se buscan los certificados, incluidos los `.p12` instalados (ID-192). Pruebas en `adapters/pkcs11/stores/tests.rs` (239). |

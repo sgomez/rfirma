@@ -115,17 +115,12 @@ fn context_offence(from: &Place, path: &str, contexts: &BTreeSet<String>) -> Opt
         Tier::Ports if to_tier == Some(Tier::Domain) || (same && to_tier == Some(Tier::Ports)) => {
             None
         }
-        Tier::Ports if target.is_none() && !path.starts_with("commands") => None,
+        Tier::Ports if target.is_none() => None,
         Tier::Ports => Some(format!(
             "un puerto de `{context}` solo habla en tipos de dominio: mueve lo que \
              necesitaba de `crate::{path}` a un `domain/` o hazlo entrar por el puerto ya decidido"
         )),
-        Tier::Application if target.is_none() && !path.starts_with("commands") => None,
-        Tier::Application if target.is_none() => Some(
-            "el cuerpo de la orden llama al caso de uso, no al contrario: lo que \
-             necesitaba de `commands/` se lo tiene que dar quien le llama"
-                .to_owned(),
-        ),
+        Tier::Application if target.is_none() => None,
         Tier::Application
             if same
                 && matches!(
@@ -341,36 +336,6 @@ fn offences_in(modules: &[Module]) -> Vec<Offence> {
     offences
 }
 
-/// La lista de deuda: aristas `application -> adapters` (y hermanas) que la ola 2 vacía, una por línea.
-const DEBT_FILE: &str = "tests/module_directions_debt.txt";
-
-/// Las aristas de la lista, ya sin comentarios ni líneas vacías.
-fn debt_in(text: &str) -> Vec<String> {
-    text.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(str::to_owned)
-        .collect()
-}
-
-/// Lo que queda por explicar entre un árbol y su lista de deuda: aristas nuevas y líneas fósiles.
-fn what_the_debt_does_not_explain(
-    offences: &[Offence],
-    debt: &[String],
-) -> (Vec<Offence>, Vec<String>) {
-    let unlisted = offences
-        .iter()
-        .filter(|offence| !debt.contains(&offence.edge))
-        .cloned()
-        .collect();
-    let fossils = debt
-        .iter()
-        .filter(|edge| !offences.iter().any(|offence| offence.edge == **edge))
-        .cloned()
-        .collect();
-    (unlisted, fossils)
-}
-
 #[test]
 fn no_module_imports_against_the_direction_of_the_layers() {
     let offences = offences_in(&tracked_modules());
@@ -379,74 +344,19 @@ fn no_module_imports_against_the_direction_of_the_layers() {
             println!("{}", offence.edge);
         }
     }
-    let debt = fs::read_to_string(manifest_dir().join(DEBT_FILE))
-        .map(|text| debt_in(&text))
-        .unwrap_or_default();
-
-    let (unlisted, fossils) = what_the_debt_does_not_explain(&offences, &debt);
 
     assert!(
-        unlisted.is_empty(),
-        "{} arista(s) apuntan contra la direccion del ADR-0017 y no estan en {DEBT_FILE}:\n\n{}\n\n\
-         No relajes la regla ni anadas la arista a la lista: mueve la decision. Lo que \
-         necesitaba ese `use` pertenece al otro lado de la flecha —casi siempre a \
-         los casos de uso—, y este modulo debe recibirlo ya decidido como argumento. \
-         La lista de deuda solo mengua.",
-        unlisted.len(),
-        unlisted
+        offences.is_empty(),
+        "{} arista(s) apuntan contra la direccion del ADR-0017:\n\n{}\n\n\
+         No relajes la regla: mueve la decision. Lo que necesitaba ese `use` pertenece \
+         al otro lado de la flecha —casi siempre a los casos de uso—, y este modulo \
+         debe recibirlo ya decidido como argumento.",
+        offences.len(),
+        offences
             .iter()
             .map(|offence| offence.message.clone())
             .collect::<Vec<_>>()
             .join("\n\n")
-    );
-    assert!(
-        fossils.is_empty(),
-        "{} linea(s) de {DEBT_FILE} ya no son una infraccion; borralas en esta misma PR:\n  {}",
-        fossils.len(),
-        fossils.join("\n  ")
-    );
-}
-
-#[test]
-fn an_edge_that_is_not_in_the_debt_list_turns_it_red() {
-    let offences = offences_in(&synthetic_tree(
-        "site/application/thing.rs",
-        "use crate::site::adapters::channel::OpenChannel;\n",
-    ));
-    let listed =
-        vec!["site/application/thing.rs -> site::adapters::channel::OpenChannel".to_owned()];
-
-    let (unlisted, fossils) = what_the_debt_does_not_explain(&offences, &listed);
-    assert!(
-        unlisted.is_empty() && fossils.is_empty(),
-        "{unlisted:?} {fossils:?}"
-    );
-
-    let (unlisted, _) = what_the_debt_does_not_explain(&offences, &[]);
-    assert_eq!(
-        unlisted, offences,
-        "sin la linea en la lista, la arista sigue siendo roja"
-    );
-}
-
-#[test]
-fn a_debt_line_that_is_no_longer_an_offence_turns_it_red() {
-    let offences = offences_in(&synthetic_tree(
-        "site/application/thing.rs",
-        "use crate::site::ports::Transport;\n",
-    ));
-    assert!(offences.is_empty(), "el puerto ya esta puesto");
-
-    let fossil = "site/application/thing.rs -> site::adapters::channel::OpenChannel".to_owned();
-    let (_, fossils) = what_the_debt_does_not_explain(&offences, std::slice::from_ref(&fossil));
-    assert_eq!(fossils, [fossil]);
-}
-
-#[test]
-fn the_debt_list_reads_past_comments_and_blank_lines() {
-    assert_eq!(
-        debt_in("# la ola 2 vacia esto\n\n  a/application/x.rs -> a::adapters::y  \n"),
-        ["a/application/x.rs -> a::adapters::y"]
     );
 }
 
@@ -463,8 +373,8 @@ const THE_FORMS_IT_READS: [(&str, &[&str]); 7] = [
     ),
     ("use crate::{app, memory};", &["app", "memory"]),
     (
-        "use crate::commands::{views, Failure};",
-        &["commands::views", "commands::Failure"],
+        "use crate::crossing::{failure, Failure};",
+        &["crossing::failure", "crossing::Failure"],
     ),
     (
         "    use crate::memory::Memory as Store;",
@@ -498,7 +408,7 @@ const WHAT_MUST_NOT_TRIP_IT: [&str; 5] = [
     "//! `signing/mod.rs` **no importa** `crate::ffi` (ID-82).",
     "/// Ver `crate::app::cycle` para el recorrido entero.",
     "// use crate::app::Environment;",
-    "    let path = \"crate::commands::views\";",
+    "    let path = \"crate::crossing::Failure\";",
     "mod app;",
 ];
 
@@ -580,7 +490,7 @@ fn a_context_is_recognised_by_a_layer_in_its_path() {
         "site/mod.rs".to_owned(),
         "signing/mod.rs".to_owned(),
         "identity/ports.rs".to_owned(),
-        "commands/mod.rs".to_owned(),
+        "crossing.rs".to_owned(),
     ]);
     assert_eq!(
         contexts,
@@ -602,7 +512,7 @@ fn a_context_is_recognised_by_a_layer_in_its_path() {
         None,
         "una carpeta sin capas dentro sigue siendo del arbol antiguo"
     );
-    assert_eq!(place("commands/mod.rs"), None);
+    assert_eq!(place("crossing.rs"), None);
     assert_eq!(place("lib.rs"), None);
 }
 
@@ -612,20 +522,19 @@ fn a_module_outside_every_context_is_left_alone() {
 
     assert!(
         offences(
-            "commands/failure.rs",
+            "crossing/guards.rs",
             "use crate::site::application::errand::Errand;\n"
         )
         .is_empty(),
-        "`commands/` es raiz y la guarda lo tolera"
+        "lo que cuelga de la raiz junta contextos, y la guarda lo tolera"
     );
-    assert_eq!(
+    assert!(
         offences(
             "site/application/thing.rs",
-            "use crate::commands::Failure;\n"
+            "use crate::crossing::Failure;\n"
         )
-        .len(),
-        1,
-        "pero un caso de uso sigue sin poder nombrarlo"
+        .is_empty(),
+        "lo que cruza a la ventana no es de ningun contexto: un caso de uso puede nombrarlo"
     );
 }
 

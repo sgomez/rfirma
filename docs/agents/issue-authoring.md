@@ -35,7 +35,7 @@ twice two sessions of 75. Sub-issue #126 touched 23 files across both sides and
 ran to 148 requests; the same work as two children would have cost roughly half.
 
 The ordering is what makes the split pay. Run in parallel, the frontend half
-has to read `src-tauri/src/commands/` to discover the signatures of commands
+has to read the `adapters/tauri.rs` of every context to discover the signatures of commands
 that do not exist yet, and both halves explore the same ground. Run after the
 backend half lands, it asks `just contract` and gets the whole surface —
 commands and crossing types, with the field names TypeScript sees — generated

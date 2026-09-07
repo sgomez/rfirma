@@ -17,10 +17,9 @@ no nombran ningún adaptador ni ningún caso de uso de otro contexto (#453,
 Rutas relativas a `src/site/`. La capa es la carpeta: `domain/` no nombra nada
 del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 `adapters/` lo que quiera, y los casos de uso de otro contexto solo por su raíz
-(`<contexto>/mod.rs`). No hay deuda: `tests/module_directions_debt.txt` está
-vacío. Para situarte en un fichero,
-`just outline <ruta>`; las pruebas de cada módulo viven en su hermano
-`tests.rs` y se leen solo para tocarlas.
+(`<contexto>/mod.rs`); lo vigila `tests/module_directions.rs`. Para situarte
+en un fichero, `just outline <ruta>`; las pruebas de cada módulo viven en su
+hermano `tests.rs` y se leen solo para tocarlas.
 
 ## Dónde vive qué
 
@@ -28,6 +27,7 @@ vacío. Para situarte en un fichero,
 |---|---|---|
 | `mod.rs` | 28 | La raíz: `SiteRoot`, con el trámite vivo, el canal sostenido, la confianza de la CA local, sus ranuras en disco, el códec y la carpeta de paso. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | | Solo `pub mod`: el reparto de cada capa. |
+| `application/tests.rs` | 105 | Los dobles de `LocalCaSlots` (`InMemoryCaSlots`) y de `Certificates` (`Directory`, los certificados que ve un trámite), con los que la grada A no toca disco ni token. Solo en pruebas. |
 | `adapters/channel/bind.rs` | 36 | Ata uno de los puertos que sorteó la sede, siempre en `127.0.0.1` y **nunca el 63117** (ID-215). Pruebas en `adapters/channel/bind/tests.rs` (71). |
 | `adapters/channel/conversation.rs` | 62 | Qué se contesta a cada mensaje, sin socket delante: las tres guardias del original, el `OK` del eco y la operación que **queda pendiente** (ID-320). Pruebas en `adapters/channel/conversation/tests.rs` (148). |
 | `adapters/channel/mod.rs` | 12 | El reparto, y la tabla de las cuatro piezas. Léelo antes que sus hermanos. |

@@ -96,7 +96,7 @@ fn install(
     installed: &Path,
     p12: &Path,
     password: &str,
-) -> Result<(), rfirma_lib::commands::Failure> {
+) -> Result<(), rfirma_lib::crossing::Failure> {
     Ok(certificates::install_pkcs12(
         &pkcs11::RealToken,
         installed,
@@ -298,7 +298,7 @@ fn a_certificate_from_somewhere_else_is_not_removed() {
         .expect_err("no viene de este directorio");
 
     assert_eq!(
-        rfirma_lib::commands::Failure::from(failure).situation,
+        rfirma_lib::crossing::Failure::from(failure).situation,
         "certificateNotFound"
     );
     assert_eq!(

@@ -1,4 +1,0 @@
-# Deuda de dirección (RD-03, #449): aristas que la guarda de tests/module_directions.rs
-# tolera mientras la ola 2 las vacía. Solo mengua: una línea que deje de ser
-# infracción pone la guarda en rojo, y una arista nueva fuera de la lista también.
-# Vaciada en #443: no queda ninguna. #438 borra este fichero.

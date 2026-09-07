@@ -356,5 +356,10 @@ macro_rules! wild {
 
 pub(crate) use {crossing, payload, register, wild};
 
+pub mod failure;
+#[cfg(test)]
+mod guards;
 #[cfg(test)]
 mod tests;
+
+pub use failure::Failure;

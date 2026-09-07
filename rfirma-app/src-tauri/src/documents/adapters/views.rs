@@ -10,7 +10,7 @@ use crate::documents::domain::told::{
     Destination, DroppedDocument, OpenedDocument, SignedDocument,
 };
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::signing::adapters::views::PlacementView;
 
 crossing! {

@@ -10,7 +10,7 @@ use crate::crossing::crossing;
 
 use crate::documents::domain::rubric::NormalizedRubric;
 
-use crate::commands::Failure;
+use crate::crossing::Failure;
 
 crossing! {
     /// Rúbrica normalizada con imagen en Base64 y dimensiones (ADR-0011, ADR-0012).

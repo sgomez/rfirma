@@ -11,10 +11,9 @@ versión publicada (`VersionMemory`, que sirve `signing/adapters/memory.rs`).
 Rutas relativas a `src/desktop/`. La capa es la carpeta: `domain/` no nombra nada
 del crate fuera de sí mismo, `application/` solo `domain/` y `ports.rs`,
 `adapters/` lo que quiera, y los casos de uso de otro contexto solo por su raíz
-(`<contexto>/mod.rs`). No hay deuda: `tests/module_directions_debt.txt` está
-vacío. Para situarte en un fichero,
-`just outline <ruta>`; las pruebas de cada módulo viven en su hermano
-`tests.rs` y se leen solo para tocarlas.
+(`<contexto>/mod.rs`); lo vigila `tests/module_directions.rs`. Para situarte
+en un fichero, `just outline <ruta>`; las pruebas de cada módulo viven en su
+hermano `tests.rs` y se leen solo para tocarlas.
 
 ## Dónde vive qué
 

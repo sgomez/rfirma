@@ -5,11 +5,11 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::*;
-use crate::commands::Failure;
+use crate::crossing::Failure;
 use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::documents::domain::document::Document;
-use crate::fixtures::{a_memory, a_usable_certificate, listed_from, NoIsolate, NoToken};
 use crate::identity::application::certificates::ListedCertificates;
+use crate::identity::application::tests::{a_usable_certificate, listed_from, NoToken};
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
@@ -19,6 +19,7 @@ use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
+use crate::signing::application::tests::{a_memory, NoIsolate};
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
 use crate::site::adapters::codec::V4Codec;
@@ -521,7 +522,7 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
         request.filter(),
         &ours,
         &rows[0].id,
-        &crate::fixtures::Directory {
+        &crate::site::application::tests::Directory {
             certificates: ours.clone(),
             listed: &listed,
         },
@@ -1544,7 +1545,7 @@ fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
         &SiteFilter::default(),
         &ours,
         &handles[0],
-        &crate::fixtures::Directory {
+        &crate::site::application::tests::Directory {
             certificates: ours.clone(),
             listed: &listed,
         },

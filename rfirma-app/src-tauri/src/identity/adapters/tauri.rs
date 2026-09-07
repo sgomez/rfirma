@@ -5,7 +5,7 @@ use tauri::State;
 use crate::identity::IdentityRoot;
 
 use super::views::CertificateView;
-use crate::commands::Failure;
+use crate::crossing::Failure;
 
 /// Certificados de los tokens conectados.
 #[tauri::command]

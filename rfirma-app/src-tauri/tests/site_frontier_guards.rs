@@ -2,7 +2,7 @@
 
 use serde_json::Value;
 
-use rfirma_lib::commands::failure::Failure;
+use rfirma_lib::crossing::Failure;
 use rfirma_lib::documents::adapters::failures::{code_of_destination, code_of_rubric};
 use rfirma_lib::documents::domain::destination::{
     DestinationError, Situation as DestinationSituation,
