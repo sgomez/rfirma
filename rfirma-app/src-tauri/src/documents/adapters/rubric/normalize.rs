@@ -5,7 +5,7 @@ use image::imageops::FilterType;
 use image::{ExtendedColorType, ImageDecoder as _, ImageEncoder, ImageFormat, ImageReader};
 use std::io::Cursor;
 
-pub use crate::documents::domain::rubric::{NormalizedRubric, RubricError, Situation};
+use crate::documents::domain::rubric::{NormalizedRubric, RubricError, Situation};
 
 /// Calidad de compresión del JPEG de salida (ADR-0012).
 pub const JPEG_QUALITY: u8 = 90;

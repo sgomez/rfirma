@@ -8,9 +8,8 @@ use crate::documents::application::{documents, recents};
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
-use crate::signing::application::configuration_memory::Configuration;
+use crate::documents::ports::DocumentsMemory;
 use crate::signing::domain::VisibleBox;
-use crate::Memory;
 
 /// Representa el documento en curso durante la sesión.
 #[derive(Clone, Debug, PartialEq)]
@@ -55,15 +54,14 @@ impl DocumentInHand {
 
 /// Pone delante el documento abierto y lo registra en la bandeja si corresponde.
 pub fn take(
-    memory: &Memory,
-    configuration: &Configuration,
+    memory: &dyn DocumentsMemory,
     opened: &OpenedDocuments,
     id: &str,
     placement: Option<VisibleBox>,
 ) -> Result<RecentRow, RecentsError> {
     let in_hand = DocumentInHand::taken(opened, id)?;
     if in_hand.is_remembered() {
-        return recents::record(memory, configuration, opened, id, placement);
+        return recents::record(memory, opened, id, placement);
     }
     Ok(told_without_a_row(&in_hand, placement))
 }

@@ -5,9 +5,6 @@ use std::path::Path;
 /// Fichero testigo que indica ejecución dentro de un contenedor flatpak.
 const SANDBOX_MARKER: &str = "/.flatpak-info";
 
-/// Fichero .desktop con el que rFirma queda registrada en paquetes nativos.
-pub const OUR_DESKTOP_FILE: &str = "rfirma.desktop";
-
 /// Canal de distribución en el que corre el proceso (ADR-0015).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Channel {

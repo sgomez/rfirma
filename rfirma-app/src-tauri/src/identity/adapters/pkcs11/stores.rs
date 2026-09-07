@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-pub use crate::identity::domain::store::{Store, StoreClass};
+use crate::identity::domain::store::Store;
 
 /// Rutas candidatas para módulos PKCS#11 estándar.
 pub const CANDIDATE_MODULES: &[&str] = &[

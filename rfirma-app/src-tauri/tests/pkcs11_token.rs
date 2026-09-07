@@ -3,10 +3,13 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use rfirma_lib::identity::adapters::pkcs11::{
-    self, CertificateRef, CertificateStatus, Situation, StoreClass, TokenCertificate, TokenError,
-};
+use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::listed::ListedCertificates;
+use rfirma_lib::identity::domain::certificate::{
+    CertificateRef, CertificateStatus, TokenCertificate,
+};
+use rfirma_lib::identity::domain::error::{Situation, TokenError};
+use rfirma_lib::identity::domain::store::StoreClass;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;
@@ -396,8 +399,8 @@ fn a_module_that_is_not_there_is_not_a_token_error() {
 #[test]
 fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
     let stores = vec![
-        pkcs11::Store::module("/usr/lib/no-hay-ningun-modulo-aqui.so"),
-        pkcs11::Store::module(module()),
+        rfirma_lib::identity::domain::store::Store::module("/usr/lib/no-hay-ningun-modulo-aqui.so"),
+        rfirma_lib::identity::domain::store::Store::module(module()),
     ];
 
     let found = pkcs11::list_certificates_across(&stores)
@@ -414,8 +417,8 @@ fn a_store_that_cannot_be_loaded_does_not_hide_the_ones_that_can() {
 #[test]
 fn tells_the_failure_apart_from_an_empty_list_when_no_store_loads() {
     let stores = vec![
-        pkcs11::Store::module("/usr/lib/no-hay-ningun-modulo-aqui.so"),
-        pkcs11::Store::module("/usr/lib/tampoco-hay-este-otro.so"),
+        rfirma_lib::identity::domain::store::Store::module("/usr/lib/no-hay-ningun-modulo-aqui.so"),
+        rfirma_lib::identity::domain::store::Store::module("/usr/lib/tampoco-hay-este-otro.so"),
     ];
 
     let error = pkcs11::list_certificates_across(&stores)

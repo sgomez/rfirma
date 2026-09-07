@@ -3,9 +3,11 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rfirma_lib::identity::adapters::pkcs11::{self, Store, TokenCertificate};
+use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
 use rfirma_lib::identity::application::listed::ListedCertificates;
+use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::store::Store;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;
@@ -253,7 +255,10 @@ fn an_installed_p12_asks_for_no_secret() {
 
     let secret = pkcs11::store_secret(certificate.reference()).expect("deberia poder preguntarse");
 
-    assert_eq!(secret, pkcs11::StoreSecret::NotNeeded);
+    assert_eq!(
+        secret,
+        rfirma_lib::identity::domain::secret::StoreSecret::NotNeeded
+    );
 }
 
 #[test]

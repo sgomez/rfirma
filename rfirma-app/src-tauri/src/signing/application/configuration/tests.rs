@@ -1,6 +1,4 @@
-use std::sync::Mutex;
-
-use super::{choose_destination, forget_activity, language_of, merged, shown, write, Preferences};
+use super::{language_of, merged, shown, with_destination, Preferences};
 use crate::fixtures::a_memory;
 use crate::signing::application::configuration_memory::{Configuration, Theme};
 use crate::signing::domain::Language;
@@ -21,7 +19,6 @@ fn the_configuration_carries_whether_the_original_folder_can_be_offered() {
 fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
-    let live = Mutex::new(Configuration::default());
     let chosen = Preferences {
         language: "en".to_owned(),
         destination: "Documentos".to_owned(),
@@ -34,15 +31,14 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
         ask_about_url_handler: true,
     };
 
-    write(&memory, &live, &chosen).expect("deberia guardarse");
+    memory
+        .remember_configuration(&merged(&memory.configuration(), &chosen))
+        .expect("deberia guardarse");
 
-    assert_eq!(
-        live.lock().expect("sin envenenar").language,
-        Language::English
-    );
+    assert_eq!(memory.configuration().language, Language::English);
     assert_eq!(
         memory
-            .configuration()
+            .stored_configuration()
             .expect("deberia leerse lo guardado")
             .value()
             .theme,
@@ -64,8 +60,8 @@ fn forgetting_the_activity_keeps_the_settings() {
     memory
         .remember_state(
             &settings,
-            &crate::signing::application::state::State {
-                certificate: Some(crate::identity::adapters::pkcs11::CertificateRef::new(
+            &crate::signing::adapters::state::State {
+                certificate: Some(crate::identity::domain::certificate::CertificateRef::new(
                     "/usr/lib/softhsm/libsofthsm2.so",
                     "rfirma-test",
                     "Certificado de pruebas",
@@ -76,7 +72,7 @@ fn forgetting_the_activity_keeps_the_settings() {
         )
         .expect("deberia guardarse");
 
-    forget_activity(&memory).expect("deberia olvidarse");
+    memory.forget_activity().expect("deberia olvidarse");
 
     assert!(
         memory
@@ -89,7 +85,7 @@ fn forgetting_the_activity_keeps_the_settings() {
     );
     assert_eq!(
         memory
-            .configuration()
+            .stored_configuration()
             .expect("deberia leerse")
             .value()
             .theme,
@@ -182,21 +178,21 @@ fn the_language_of_the_window_picks_the_labels_of_the_box() {
 fn the_chosen_folder_is_remembered_and_comes_back_by_its_name() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
-    let live = Mutex::new(Configuration::default());
 
-    let name = choose_destination(
-        &memory,
-        &live,
+    let (next, name) = with_destination(
+        &memory.configuration(),
         crate::documents::domain::destination::DestinationFolder::at(
             "/run/user/1000/doc/1e8b/Firmados",
         ),
-    )
-    .expect("deberia guardarse");
+    );
+    memory
+        .remember_configuration(&next)
+        .expect("deberia guardarse");
 
     assert_eq!(name, "Firmados");
     assert!(!name.contains('/'), "la ruta no cruza");
     assert_eq!(
-        crate::lock(&live).destination,
+        memory.configuration().destination,
         Some(
             crate::documents::domain::destination::DestinationFolder::at(
                 "/run/user/1000/doc/1e8b/Firmados"
@@ -210,21 +206,24 @@ fn the_chosen_folder_is_remembered_and_comes_back_by_its_name() {
 fn choosing_a_folder_leaves_the_other_settings_alone() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
-    let live = Mutex::new(Configuration {
-        language: Language::English,
-        theme: Theme::Dark,
-        remember_activity: false,
-        ..Configuration::default()
-    });
+    memory
+        .remember_configuration(&Configuration {
+            language: Language::English,
+            theme: Theme::Dark,
+            remember_activity: false,
+            ..Configuration::default()
+        })
+        .expect("deberia guardarse");
 
-    choose_destination(
-        &memory,
-        &live,
+    let (next, _) = with_destination(
+        &memory.configuration(),
         crate::documents::domain::destination::DestinationFolder::at("/tmp/Firmados"),
-    )
-    .expect("deberia guardarse");
+    );
+    memory
+        .remember_configuration(&next)
+        .expect("deberia guardarse");
 
-    let after = crate::lock(&live);
+    let after = memory.configuration();
     assert_eq!(after.language, Language::English);
     assert_eq!(after.theme, Theme::Dark);
     assert!(!after.remember_activity);

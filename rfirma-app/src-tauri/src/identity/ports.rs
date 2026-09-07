@@ -1,4 +1,4 @@
-//! Puertos del contexto de identidad: el token y la carga compartida de NSS.
+//! Puertos del contexto de identidad: el token, la carga compartida de NSS y el certificado recordado.
 
 use std::path::Path;
 
@@ -8,6 +8,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
+use crate::signing::domain::memory_error::MemoryError;
 
 /// El token visto desde los casos de uso: lista, dice cómo pide el secreto, firma e importa un `.p12` (ADR-0001).
 pub trait Token {
@@ -70,4 +71,13 @@ pub trait NssHost {
 
     /// Ejecuta una operación bajo el turno global del token.
     fn with_token_turn<T>(&self, work: impl FnOnce() -> T) -> T;
+}
+
+/// El certificado con el que se firmó la última vez, recordado entre sesiones (ADR-0010).
+pub trait CertificateMemory {
+    /// El certificado recordado, si lo hay.
+    fn remembered_certificate(&self) -> Option<CertificateRef>;
+
+    /// Apunta el certificado con el que se acaba de firmar, según permitan los interruptores.
+    fn remember_the_certificate(&self, reference: &CertificateRef) -> Result<(), MemoryError>;
 }

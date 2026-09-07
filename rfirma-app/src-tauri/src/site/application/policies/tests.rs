@@ -1,4 +1,5 @@
 use super::*;
+use crate::signing::domain::merged_with;
 use crate::signing::domain::SignatureConfig;
 use std::cell::RefCell;
 

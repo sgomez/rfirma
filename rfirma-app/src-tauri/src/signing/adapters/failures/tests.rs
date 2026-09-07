@@ -72,7 +72,7 @@ fn what_breaks_after_the_consent_keeps_its_own_code_and_its_own_name() {
             "unknown",
         ),
     ] {
-        let told = cycle_told(&failure);
+        let told = told_of_cycle(&failure);
         assert_eq!(told.1, code, "{failure:?}");
         assert_eq!(told.0.situation, name, "{failure:?}");
     }

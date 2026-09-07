@@ -1,12 +1,12 @@
 use super::*;
-use crate::documents::adapters::recents_store::{Badge, Placement, RecentDocument};
+use crate::documents::domain::recents::{Badge, RecentDocument};
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::domain::PageSet;
+use crate::signing::domain::{PageSet, Spot};
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
 
-fn a_document(directory: &Path) -> RecentDocument {
+fn a_document(directory: &Path) -> RecentDocument<Spot> {
     let path = directory.join("contrato.pdf");
     fs::write(&path, b"%PDF-1.7 de prueba").expect("deberia escribirse");
     RecentDocument::seen(&path, Badge::Unsigned, SystemTime::now()).expect("deberia anotarse")
@@ -130,7 +130,7 @@ fn what_is_global_and_what_is_of_each_document_are_two_different_places() {
     state.recents.record(document);
     state.recents.place(
         &path,
-        Some(Placement {
+        Some(Spot {
             lower_left_x: 48.0,
             lower_left_y: 179.0,
             pages: PageSet::only_page(3),
@@ -164,7 +164,7 @@ fn recording_a_document_again_keeps_where_its_box_had_fallen() {
     state.recents.record(document);
     state.recents.place(
         &path,
-        Some(Placement {
+        Some(Spot {
             lower_left_x: 10.0,
             lower_left_y: 20.0,
             pages: PageSet::only_page(2),

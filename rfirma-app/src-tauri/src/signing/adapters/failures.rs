@@ -4,7 +4,6 @@ use crate::commands::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::identity::adapters::failures::{code_of_secret_on_the_reader_keypad, code_of_token};
 use crate::signing::application::cycle::CycleError;
-use crate::signing::application::filtering::FilteringError;
 use crate::signing::application::session::CycleFailure;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -137,7 +136,8 @@ impl From<CycleError> for Failure {
     }
 }
 
-fn cycle_told(failure: &CycleFailure) -> (Failure, SafCode) {
+/// La vista para la ventana y el código para la sede de un fallo del ciclo, decididos juntos.
+pub fn told_of_cycle(failure: &CycleFailure) -> (Failure, SafCode) {
     match failure {
         CycleFailure::Document(error) => (Failure::from(error.clone()), code_of_document(error)),
         CycleFailure::Placement(error) => (Failure::from(error.clone()), placement_told(error).1),
@@ -164,41 +164,18 @@ fn cycle_told(failure: &CycleFailure) -> (Failure, SafCode) {
 
 /// Código de protocolo de un fallo del ciclo trifásico.
 pub fn code_of_cycle(failure: &CycleFailure) -> SafCode {
-    cycle_told(failure).1
+    told_of_cycle(failure).1
 }
 
 impl From<&CycleFailure> for Failure {
     fn from(failure: &CycleFailure) -> Self {
-        cycle_told(failure).0
+        told_of_cycle(failure).0
     }
 }
 
 impl From<CycleFailure> for Failure {
     fn from(failure: CycleFailure) -> Self {
         Self::from(&failure)
-    }
-}
-
-impl From<&FilteringError> for Failure {
-    fn from(error: &FilteringError) -> Self {
-        match error {
-            FilteringError::Token(error) => error.clone().into(),
-            FilteringError::Engine(error) => error.into(),
-            FilteringError::EngineOutOfRange(index) => Self::new(
-                "bridgeFailed",
-                format!("el motor de filtros ha devuelto el indice {index}"),
-            ),
-            FilteringError::ExcludedByTheSite(label) => Self::new(
-                "certificateNotFound",
-                format!("la sede excluye {label}: su filtro ya no lo acepta"),
-            ),
-        }
-    }
-}
-
-impl From<FilteringError> for Failure {
-    fn from(error: FilteringError) -> Self {
-        Self::from(&error)
     }
 }
 

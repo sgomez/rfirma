@@ -1,5 +1,5 @@
 use super::Isolate;
-use crate::signing::adapters::ffi::BridgeError;
+use crate::signing::domain::bridge::BridgeError;
 
 fn a_failing_isolate() -> Isolate {
     Isolate::start_with(|| Err(BridgeError::Failed("no hay librería".to_owned())))

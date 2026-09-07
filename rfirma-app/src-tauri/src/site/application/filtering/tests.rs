@@ -1,7 +1,7 @@
 use super::*;
 use crate::commands::Failure;
-use crate::fixtures::{a_certificate, listed_from};
-use crate::signing::adapters::ffi::BridgeError;
+use crate::fixtures::{a_certificate, listed_from, Directory};
+use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::protocol::site_filter;
 use std::cell::RefCell;
 
@@ -95,7 +95,10 @@ fn a_certificate_the_site_no_longer_accepts_is_refused_before_the_pin() {
         &a_filter("subject.contains:OTRO"),
         &certificates,
         &handles[0],
-        &listed,
+        &Directory {
+            certificates: certificates.to_vec(),
+            listed: &listed,
+        },
     )
     .expect_err("la sede lo excluye");
 
@@ -115,7 +118,10 @@ fn an_unusable_certificate_never_reaches_the_engine() {
         &a_filter("ssl:true"),
         &certificates,
         &handles[0],
-        &listed,
+        &Directory {
+            certificates: certificates.to_vec(),
+            listed: &listed,
+        },
     )
     .expect_err("no es legible");
 
@@ -147,7 +153,7 @@ fn the_rfirma_criteria_run_before_the_expression_of_the_site() {
         .expect("el caso de uso sigue aqui")
         .1;
     let ours = body
-        .find("token.list_across")
+        .find("certificates.listed()")
         .expect("los criterios de rFirma");
     let theirs = body
         .find("keep_what_the_site_accepts")

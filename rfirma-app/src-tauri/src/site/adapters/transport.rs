@@ -23,8 +23,12 @@ impl LoopbackWss {
 
 impl Transport for LoopbackWss {
     fn open(&self, ports: &[u16], duty: ChannelDuty) -> Result<OpenChannel, ChannelError> {
-        let unusable =
-            |detail: String| ChannelError::new(channel::Situation::MaterialNotUsable, detail);
+        let unusable = |detail: String| {
+            ChannelError::new(
+                crate::site::domain::channel::Situation::MaterialNotUsable,
+                detail,
+            )
+        };
         let ca = self
             .store
             .read()

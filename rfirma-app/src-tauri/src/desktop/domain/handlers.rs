@@ -1,5 +1,8 @@
 //! Quién atiende `afirma://` en el escritorio, tal como lo decide el caso de uso.
 
+/// Fichero .desktop con el que rFirma queda registrada en paquetes nativos.
+pub const OUR_DESKTOP_FILE: &str = "rfirma.desktop";
+
 /// Estado del manejador de enlaces `afirma://` en el sistema.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UrlHandlers {

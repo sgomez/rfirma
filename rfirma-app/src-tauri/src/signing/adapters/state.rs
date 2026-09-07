@@ -4,16 +4,17 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::desktop::domain::version_check::VersionCheck;
+use crate::documents::domain::recents::Recents;
 use crate::identity::domain::certificate::CertificateRef;
-
-use crate::documents::adapters::recents_store::Recents;
+use crate::signing::domain::{BoxSize, Spot};
 
 /// Estado acumulado por la aplicación entre ejecuciones (ADR-0010).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct State {
     /// Bandeja de documentos recientes.
-    pub recents: Recents,
+    pub recents: Recents<Spot>,
     /// Configuración global de firma visible recordada.
     pub visible_signature: Option<VisibleSignatureMemory>,
     /// Referencia al último certificado utilizado.
@@ -22,15 +23,6 @@ pub struct State {
     pub last_open_folder: Option<PathBuf>,
     /// Última comprobación de versión realizada.
     pub version_check: Option<VersionCheck>,
-}
-
-/// Registro de la última comprobación de actualización de versión.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct VersionCheck {
-    /// Cuándo se preguntó, en segundos desde el epoch.
-    pub checked_at: u64,
-    /// La versión que anunció GitHub, tal y como se leyó.
-    pub announced: String,
 }
 
 /// Configuración global recordada para firma visible.
@@ -57,14 +49,6 @@ pub struct RememberedFields {
     pub issuer: bool,
     pub signed_at: bool,
     pub reason: bool,
-}
-
-/// Dimensiones del recuadro de firma en puntos de espacio de usuario.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct BoxSize {
-    pub width: f64,
-    pub height: f64,
 }
 
 impl State {

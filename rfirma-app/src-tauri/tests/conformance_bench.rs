@@ -6,8 +6,10 @@ use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
 use std::time::Duration;
 
-use rfirma_lib::site::adapters::channel::{bind_first_free, serve, ChannelDuty, OpenChannel};
-use rfirma_lib::site::adapters::tls::{LocalCa, LocalServerCertificate};
+use rfirma_lib::site::adapters::channel::{bind_first_free, serve};
+use rfirma_lib::site::adapters::tls::LocalServerCertificate;
+use rfirma_lib::site::domain::channel::{ChannelDuty, OpenChannel};
+use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
     drawn_ports, AfirmaUrl, LaunchRequest, SafCode, PROTOCOL_VERSION,
 };

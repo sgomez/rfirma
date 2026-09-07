@@ -1,34 +1,29 @@
 //! Respuestas finales del trámite para la sede y la ventana (ADR-0009).
 
-use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::identity::domain::store::Store;
-use crate::identity::ports::Token;
 use crate::site::domain::protocol::SiteFilter;
+use crate::site::domain::signing::SiteSignature;
 
 use super::outcome::{ErrandStep, NoCertificate, SiteOutcome};
 use super::state::LiveErrand;
-use crate::signing::application::filtering;
-use crate::signing::ports::FilterEngine;
+use crate::site::application::filtering;
 use crate::site::application::session::SiteRefusal;
-use crate::site::application::session::SiteSignature;
+use crate::site::ports::{Certificates, FilterEngine};
 
 /// Caso de uso: la persona consiente identificarse y entrega el certificado.
 pub fn identify_with<E: FilterEngine>(
     engine: &E,
-    token: &dyn Token,
-    stores: &[Store],
+    certificates: &dyn Certificates,
     filter: &SiteFilter,
     handle: &str,
-    listed: &ListedCertificates,
     live: &LiveErrand,
 ) -> SiteOutcome {
-    let found = match token.list_across(stores) {
+    let found = match certificates.listed() {
         Ok(found) => found,
         Err(error) => return over(live, SiteOutcome::Refused(SiteRefusal::Token(error))),
     };
 
-    identity_handed_over(engine, filter, &found, handle, listed, live)
+    identity_handed_over(engine, filter, &found, handle, certificates, live)
 }
 
 /// Caso de uso: la persona entrega un certificado concreto tras comprobar el filtro.
@@ -37,19 +32,24 @@ pub fn identity_handed_over<E: FilterEngine>(
     filter: &SiteFilter,
     found: &[TokenCertificate],
     handle: &str,
-    listed: &ListedCertificates,
+    certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> SiteOutcome {
-    let chosen =
-        match filtering::usable_certificate_for_the_site(engine, filter, found, handle, listed) {
-            Ok(chosen) => chosen,
-            Err(error) => {
-                return over(
-                    live,
-                    SiteOutcome::Refused(SiteRefusal::NotUsableForTheSite(error)),
-                )
-            }
-        };
+    let chosen = match filtering::usable_certificate_for_the_site(
+        engine,
+        filter,
+        found,
+        handle,
+        certificates,
+    ) {
+        Ok(chosen) => chosen,
+        Err(error) => {
+            return over(
+                live,
+                SiteOutcome::Refused(SiteRefusal::NotUsableForTheSite(error)),
+            )
+        }
+    };
 
     over(live, SiteOutcome::Certificate(chosen.der().to_vec()))
 }

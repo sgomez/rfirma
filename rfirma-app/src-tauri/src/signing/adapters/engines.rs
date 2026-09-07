@@ -8,8 +8,7 @@ use crate::signing::domain::bridge::{
 use crate::signing::domain::isolate_gone::IsolateGone;
 
 use crate::signing::ports::Bridge;
-use crate::signing::ports::FilterEngine;
-use crate::signing::ports::PolicyEngine;
+use crate::site::ports::{FilterEngine, PolicyEngine};
 
 impl Bridge for NativeBridge {
     fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {

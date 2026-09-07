@@ -2,6 +2,7 @@
 
 pub mod channel;
 pub mod codec;
+pub mod desk;
 pub mod frontier;
 pub mod nss;
 pub mod tauri;

@@ -2,7 +2,7 @@
 
 use tauri::State;
 
-use crate::Environment;
+use crate::identity::IdentityRoot;
 
 use super::views::CertificateView;
 use crate::commands::Failure;
@@ -10,14 +10,14 @@ use crate::commands::Failure;
 /// Certificados de los tokens conectados.
 #[tauri::command]
 pub fn list_certificates(
-    environment: State<'_, Environment>,
+    identity: State<'_, IdentityRoot>,
 ) -> Result<Vec<CertificateView>, Failure> {
     Ok(crate::identity::application::certificates::listed_rows(
-        environment.token.as_ref(),
-        &environment.all_stores(),
-        &environment.installed_certificates,
-        &environment.listed,
-        &environment.memory,
+        identity.token.as_ref(),
+        &identity.all_stores(),
+        identity.installed_certificates(),
+        &identity.listed,
+        identity.memory.as_ref(),
     )?
     .into_iter()
     .map(CertificateView::from)
@@ -28,7 +28,7 @@ pub fn list_certificates(
 #[tauri::command(async)]
 pub fn install_certificate(
     app_handle: tauri::AppHandle,
-    environment: State<'_, Environment>,
+    identity: State<'_, IdentityRoot>,
     password: String,
 ) -> Result<bool, Failure> {
     use tauri_plugin_dialog::DialogExt;
@@ -42,8 +42,8 @@ pub fn install_certificate(
     };
 
     crate::identity::application::certificates::install_pkcs12(
-        environment.token.as_ref(),
-        &environment.installed_certificates,
+        identity.token.as_ref(),
+        identity.installed_certificates(),
         chosen,
         &password,
     )?;
@@ -52,12 +52,12 @@ pub fn install_certificate(
 
 /// Desinstala un certificado PKCS#12 previamente instalado.
 #[tauri::command(async)]
-pub fn remove_certificate(id: String, environment: State<'_, Environment>) -> Result<(), Failure> {
+pub fn remove_certificate(id: String, identity: State<'_, IdentityRoot>) -> Result<(), Failure> {
     Ok(
         crate::identity::application::certificates::remove_installed(
-            &environment.installed_certificates,
+            identity.installed_certificates(),
             &id,
-            &environment.listed,
+            &identity.listed,
         )?,
     )
 }

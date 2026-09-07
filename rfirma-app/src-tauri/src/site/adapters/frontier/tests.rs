@@ -4,13 +4,15 @@ use crate::documents::domain::destination::Situation as DestinationSituation;
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::rubric::Situation as RubricSituation;
 use crate::identity::domain::error::{Situation as TokenSituation, TokenError};
+use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::failures::{code_of_broken_seal, code_of_memory};
 use crate::signing::application::cycle::CycleError;
-use crate::signing::application::filtering::FilteringError;
 use crate::signing::application::session::CycleFailure;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::memory_error::Situation as MemorySituation;
 use crate::signing::domain::Refusal as Inadmissible;
+use crate::site::adapters::desk::signing_refusal_of;
+use crate::site::application::filtering::FilteringError;
 
 fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
     vec![
@@ -25,13 +27,15 @@ fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
         SiteRefusal::NotUsableForTheSite(FilteringError::ExcludedByTheSite("X".to_owned())),
         SiteRefusal::ScratchFolderMissing("no such directory".to_owned()),
         SiteRefusal::ScratchUnwritable("read-only".to_owned()),
-        SiteRefusal::Cycle(CycleFailure::Document(DocumentError::Unreadable(
-            "ya no esta".to_owned(),
+        SiteRefusal::Signing(signing_refusal_of(told_of_cycle(&CycleFailure::Document(
+            DocumentError::Unreadable("ya no esta".to_owned()),
+        )))),
+        SiteRefusal::Signing(signing_refusal_of(told_of_cycle(&CycleFailure::Cycle(
+            CycleError::Seal(crate::signing::domain::SealMismatch),
+        )))),
+        SiteRefusal::Signing(signing_refusal_of(told_of_cycle(
+            &CycleFailure::NoOpenCycle,
         ))),
-        SiteRefusal::Cycle(CycleFailure::Cycle(CycleError::Seal(
-            crate::signing::domain::SealMismatch,
-        ))),
-        SiteRefusal::Cycle(CycleFailure::NoOpenCycle),
     ]
 }
 
@@ -158,12 +162,16 @@ fn the_window_and_the_site_hear_about_each_refusal_from_the_same_match() {
             SafCode::CannotSaveData,
         ),
         (
-            SiteRefusal::Cycle(CycleFailure::Document(DocumentError::no_longer_open())),
+            SiteRefusal::Signing(signing_refusal_of(told_of_cycle(&CycleFailure::Document(
+                DocumentError::no_longer_open(),
+            )))),
             "documentUnreadable",
             SafCode::CannotReadData,
         ),
         (
-            SiteRefusal::Cycle(CycleFailure::NoOpenCycle),
+            SiteRefusal::Signing(signing_refusal_of(told_of_cycle(
+                &CycleFailure::NoOpenCycle,
+            ))),
             "unknown",
             SafCode::SignatureFailed,
         ),

@@ -7,7 +7,7 @@ use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::ports::{Bridge, IsolateHost};
 
-pub use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::isolate_gone::IsolateGone;
 
 type Job = Box<dyn FnOnce(&Result<NativeBridge, BridgeError>) + Send>;
 

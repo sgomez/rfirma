@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use super::language::Language;
 use super::placement::PageSet;
 
 /// Subfiltro de la firma.
@@ -162,6 +163,49 @@ impl SignatureConfig {
             params.insert(ALLOW_UNREGISTERED_KEY.to_owned(), "true".to_owned());
         }
         params
+    }
+}
+
+/// Las cuatro casillas de texto del recuadro que la persona marcó.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ChosenFields {
+    pub signer_name: bool,
+    pub issuer: bool,
+    pub signed_at: bool,
+    pub reason: bool,
+}
+
+/// Lo que la persona decidió de esta firma, ya validado y sin asas: el documento y el certificado se resuelven antes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SigningChoice {
+    /// Dónde cae el recuadro, o ninguno si la firma es invisible.
+    pub placement: Option<Placement>,
+    /// Las casillas de texto marcadas.
+    pub fields: ChosenFields,
+    /// El motivo, o vacío si no se especifica.
+    pub reason: String,
+    /// La fecha y hora, ya formateadas.
+    pub signed_at: String,
+    /// La rúbrica en JPEG y Base64, ya normalizada.
+    pub rubric: Option<String>,
+    /// El idioma en el que se componen las etiquetas del recuadro.
+    pub language: Language,
+    /// Si la persona ha consentido cofirmar un PDF con firmas no reconocidas.
+    pub allow_unregistered_signatures: bool,
+}
+
+impl SigningChoice {
+    /// La firma que pide una sede: invisible, sin texto ni rúbrica, con la geometría que declare ella.
+    pub fn for_the_site(allow_unregistered_signatures: bool) -> Self {
+        Self {
+            placement: None,
+            fields: ChosenFields::default(),
+            reason: String::new(),
+            signed_at: String::new(),
+            rubric: None,
+            language: Language::Spanish,
+            allow_unregistered_signatures,
+        }
     }
 }
 

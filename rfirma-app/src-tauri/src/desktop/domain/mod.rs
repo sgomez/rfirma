@@ -2,3 +2,4 @@
 
 pub mod error;
 pub mod handlers;
+pub mod version_check;

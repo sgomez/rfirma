@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::site::domain::protocol::{AfirmaUrl, ChannelCredential, SiteFilter};
 
-use super::outcome::{Moment, SiteOutcome};
-use crate::site::ports::{ProtocolCodec, ReplyHandle};
+use super::outcome::{Moment, ProtocolCodec, SiteOutcome};
+use crate::site::ports::ReplyHandle;
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
 pub type NegotiatedCodec = Arc<dyn ProtocolCodec + Send + Sync>;

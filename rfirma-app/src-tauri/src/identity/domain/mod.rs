@@ -2,5 +2,6 @@
 
 pub mod certificate;
 pub mod error;
+pub mod holder;
 pub mod secret;
 pub mod store;

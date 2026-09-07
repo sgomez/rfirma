@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use super::*;
-use crate::site::adapters::channel::Shutdown;
+use crate::site::domain::channel::Shutdown;
 
 const PORTS: [u16; 3] = [51001, 51002, 51003];
 

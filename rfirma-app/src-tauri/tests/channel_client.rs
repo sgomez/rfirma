@@ -5,14 +5,15 @@ use std::time::Duration;
 use futures_util::{SinkExt, StreamExt};
 use native_tls::{Certificate, TlsConnector};
 use rfirma_lib::site::adapters::channel::{
-    bind_first_free, serve, ChannelDuty, OpenChannel, ReplyHandle, SiteOperations,
-    THE_PORT_OF_THE_THIRD_PROTOCOL,
+    bind_first_free, serve, ReplyHandle, SiteOperations, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use rfirma_lib::site::adapters::codec::V4Codec;
-use rfirma_lib::site::adapters::tls::{LocalCa, LocalServerCertificate};
+use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 use rfirma_lib::site::application::errand::{LiveErrand, NegotiatedCodec};
 use rfirma_lib::site::application::site::Attendance;
 use rfirma_lib::site::application::startup::{attend_site_launch, LocalCaReach};
+use rfirma_lib::site::domain::channel::{ChannelDuty, OpenChannel};
+use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{ChannelCredential, LaunchRequest, SafCode};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;

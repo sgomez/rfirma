@@ -213,7 +213,6 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 /// Genera todas las salidas producidas a partir de un documento del portal.
 fn crossings_from_a_portal_document() -> Vec<Crossing> {
     use crate::commands::Failure;
-    use crate::documents::adapters::recents_store::RecentDocument;
     use crate::documents::adapters::views::{
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
         SignedDocumentView,
@@ -223,29 +222,33 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
     use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
     use crate::documents::domain::portal::PortalDocument;
     use crate::documents::domain::recents::Badge;
+    use crate::documents::domain::recents::RecentDocument;
     use crate::fixtures::a_memory;
+    use crate::signing::adapters::state::State;
     use crate::signing::adapters::views::ConfigurationView;
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;
-    use crate::signing::application::state::State;
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let opened = OpenedDocuments::new();
     let document = PortalDocument::opened(A_PORTAL_HANDLE);
+    let chosen = DestinationFolder::at(
+        Path::new(A_PORTAL_HANDLE)
+            .parent()
+            .expect("la concesion tiene directorio"),
+    );
     let configuration = Configuration {
-        destination: Some(DestinationFolder::at(
-            Path::new(A_PORTAL_HANDLE)
-                .parent()
-                .expect("la concesion tiene directorio"),
-        )),
+        destination: Some(chosen.clone()),
         remember_activity: true,
         ..Configuration::default()
     };
+    memory
+        .remember_configuration(&configuration)
+        .expect("deberia guardarse");
 
     let opened_view = OpenedDocumentView::from(documents::note_opened(
         &memory,
-        &configuration,
         &opened,
         std::path::PathBuf::from(A_PORTAL_HANDLE),
     ));
@@ -264,11 +267,10 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         .expect("se ha soltado un fichero"),
     );
     let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
-    let refused_rubric = crate::documents::application::rubric::choose(
-        &crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg")),
-        tauri_plugin_dialog::FilePath::Path(std::path::PathBuf::from(A_PORTAL_HANDLE)),
-    )
-    .expect_err("el enlace del portal no existe fuera del sandbox");
+    let refused_rubric =
+        crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg"))
+            .adopt(Path::new(A_PORTAL_HANDLE))
+            .expect_err("el enlace del portal no existe fuera del sandbox");
 
     let mut crossings = vec![
         Crossing::of("OpenedDocumentView", &opened_view),
@@ -276,11 +278,7 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         Crossing::of("DroppedDocumentView", &dropped),
         Crossing::of(
             "DestinationView",
-            &DestinationView::from(documents::where_it_lands(
-                &configuration,
-                home.path(),
-                &document,
-            )),
+            &DestinationView::from(documents::where_it_lands(&chosen, &document)),
         ),
         Crossing::of(
             "SignedDocumentView",
@@ -296,14 +294,15 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         ),
     ];
 
-    let entry: RecentDocument = serde_json::from_value(serde_json::json!({
-        "path": A_PORTAL_HANDLE,
-        "name": "contrato.pdf",
-        "badge": serde_json::to_value(Badge::Unsigned).expect("la insignia serializa"),
-        "modified": 1_700_000_000_u64,
-        "last_used": 1_700_000_100_u64,
-    }))
-    .expect("la fila del fichero de estado deberia leerse");
+    let entry: RecentDocument<crate::signing::domain::Spot> =
+        serde_json::from_value(serde_json::json!({
+            "path": A_PORTAL_HANDLE,
+            "name": "contrato.pdf",
+            "badge": serde_json::to_value(Badge::Unsigned).expect("la insignia serializa"),
+            "modified": 1_700_000_000_u64,
+            "last_used": 1_700_000_100_u64,
+        }))
+        .expect("la fila del fichero de estado deberia leerse");
     let mut state = State::default();
     state.recents.record(entry);
     memory

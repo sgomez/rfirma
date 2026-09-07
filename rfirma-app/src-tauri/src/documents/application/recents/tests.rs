@@ -1,6 +1,7 @@
 use super::*;
 use crate::fixtures::{a_completed_cycle, a_memory};
 use crate::signing::adapters::store::Loaded;
+use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::domain::PageSet;
 use std::fs;
 use std::path::PathBuf;
@@ -32,13 +33,12 @@ fn placed_on(pages: PageSet) -> VisibleBox {
 fn the_tray_survives_being_read_again_with_its_names_badges_and_order() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (_, first) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
     let (_, second) = an_opened_pdf(directory.path(), "nomina.pdf", &opened);
 
-    record(&memory, &configuration, &opened, &first, None).expect("deberia anotarse");
-    record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
+    record(&memory, &opened, &first, None).expect("deberia anotarse");
+    record(&memory, &opened, &second, None).expect("deberia anotarse");
 
     let next_session = OpenedDocuments::new();
     let rows = listed_rows(&memory, &next_session);
@@ -53,10 +53,9 @@ fn the_tray_survives_being_read_again_with_its_names_badges_and_order() {
 fn a_path_that_no_longer_answers_is_unavailable_and_revives_when_it_comes_back() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &configuration, &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     fs::remove_file(&path).expect("deberia borrarse");
     let gone = listed_rows(&memory, &opened);
@@ -75,7 +74,7 @@ fn availability_is_never_written_to_the_disk() {
     let opened = OpenedDocuments::new();
     let (_, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
 
-    record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     let written = fs::read_to_string(memory.state_file().path()).expect("deberia leerse");
     assert!(
@@ -88,14 +87,13 @@ fn availability_is_never_written_to_the_disk() {
 fn only_forget_takes_a_row_out() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (_, first) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
     let (_, second) = an_opened_pdf(directory.path(), "nomina.pdf", &opened);
-    record(&memory, &configuration, &opened, &first, None).expect("deberia anotarse");
-    record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
+    record(&memory, &opened, &first, None).expect("deberia anotarse");
+    record(&memory, &opened, &second, None).expect("deberia anotarse");
 
-    forget(&memory, &configuration, &opened, &first).expect("deberia olvidarse");
+    forget(&memory, &opened, &first).expect("deberia olvidarse");
 
     let names: Vec<String> = listed_rows(&memory, &opened)
         .into_iter()
@@ -113,12 +111,11 @@ fn a_row_opened_through_a_symlink_is_still_the_row_that_forget_takes_out() {
     std::os::unix::fs::symlink(&real, &linked).expect("deberia enlazarse");
     a_pdf(&real, "contrato.pdf", b"%PDF-1.7 de prueba");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let id = opened.remember(PortalDocument::opened(linked.join("contrato.pdf")));
-    record(&memory, &configuration, &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
 
-    forget(&memory, &configuration, &opened, &id).expect("deberia olvidarse");
+    forget(&memory, &opened, &id).expect("deberia olvidarse");
 
     assert!(listed_rows(&memory, &opened).is_empty());
 }
@@ -127,13 +124,12 @@ fn a_row_opened_through_a_symlink_is_still_the_row_that_forget_takes_out() {
 fn a_document_that_was_open_before_gets_its_page_and_position_back() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &configuration, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
+    record(&memory, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
 
     let again = opened.remember(PortalDocument::opened(path));
-    let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
+    let row = record(&memory, &opened, &again, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, Some(a_placement(3)));
 }
@@ -142,20 +138,12 @@ fn a_document_that_was_open_before_gets_its_page_and_position_back() {
 fn a_brand_new_document_does_not_inherit_the_position_of_another_one() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (_, first) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(
-        &memory,
-        &configuration,
-        &opened,
-        &first,
-        Some(a_placement(3)),
-    )
-    .expect("deberia anotarse");
+    record(&memory, &opened, &first, Some(a_placement(3))).expect("deberia anotarse");
 
     let (_, second) = an_opened_pdf(directory.path(), "nomina.pdf", &opened);
-    let row = record(&memory, &configuration, &opened, &second, None).expect("deberia anotarse");
+    let row = record(&memory, &opened, &second, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, None);
 }
@@ -164,16 +152,18 @@ fn a_brand_new_document_does_not_inherit_the_position_of_another_one() {
 fn with_the_visible_signature_switch_off_the_box_starts_at_its_default_every_time() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration {
-        remember_visible_signature: false,
-        ..Configuration::default()
-    };
+    memory
+        .remember_configuration(&Configuration {
+            remember_visible_signature: false,
+            ..Configuration::default()
+        })
+        .expect("deberia guardarse");
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &configuration, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
+    record(&memory, &opened, &id, Some(a_placement(3))).expect("deberia anotarse");
 
     let again = opened.remember(PortalDocument::opened(path));
-    let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
+    let row = record(&memory, &opened, &again, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, None);
     let state = memory
@@ -195,8 +185,7 @@ fn a_pdf_that_already_carries_signatures_still_enters_as_unsigned() {
     );
     let id = opened.remember(PortalDocument::opened(path));
 
-    let row =
-        record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
+    let row = record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     assert_eq!(row.badge, Badge::Unsigned);
 }
@@ -205,17 +194,16 @@ fn a_pdf_that_already_carries_signatures_still_enters_as_unsigned() {
 fn the_signed_document_is_the_only_row_that_gets_the_signed_badge() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (_, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &configuration, &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
     let landing = a_pdf(
         directory.path(),
         "contrato_firmado.pdf",
         b"%PDF-1.7 firmado",
     );
 
-    note_signed(&memory, &configuration, &landing, &a_completed_cycle());
+    note_signed(&memory, &landing, &a_completed_cycle());
 
     let rows = listed_rows(&memory, &opened);
     let signed: Vec<&str> = rows
@@ -231,17 +219,16 @@ fn the_signed_document_is_the_only_row_that_gets_the_signed_badge() {
 fn reopening_a_document_that_rfirma_signed_does_not_take_its_badge_away() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let landing = a_pdf(
         directory.path(),
         "contrato_firmado.pdf",
         b"%PDF-1.7 firmado",
     );
-    note_signed(&memory, &configuration, &landing, &a_completed_cycle());
+    note_signed(&memory, &landing, &a_completed_cycle());
 
     let id = opened.remember(PortalDocument::opened(landing));
-    let row = record(&memory, &configuration, &opened, &id, None).expect("deberia anotarse");
+    let row = record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     assert_eq!(row.badge, Badge::Signed);
 }
@@ -252,7 +239,7 @@ fn no_row_carries_the_path_the_backend_dedupes_by() {
     let memory = a_memory(directory.path());
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     let rows = listed_rows(&memory, &opened);
 
@@ -276,7 +263,7 @@ fn a_listed_row_can_be_read_because_it_carries_a_usable_identifier() {
     let memory = a_memory(directory.path());
     let opened = OpenedDocuments::new();
     let (_, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     let next_session = OpenedDocuments::new();
     let rows = listed_rows(&memory, &next_session);
@@ -292,7 +279,7 @@ fn the_row_of_the_document_in_front_keeps_the_identifier_the_window_already_has(
     let memory = a_memory(directory.path());
     let opened = OpenedDocuments::new();
     let (_, id) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(&memory, &Configuration::default(), &opened, &id, None).expect("deberia anotarse");
+    record(&memory, &opened, &id, None).expect("deberia anotarse");
 
     let rows = listed_rows(&memory, &opened);
 
@@ -303,17 +290,9 @@ fn the_row_of_the_document_in_front_keeps_the_identifier_the_window_already_has(
 fn the_size_is_global_and_the_position_is_of_each_document() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (_, first) = an_opened_pdf(directory.path(), "contrato.pdf", &opened);
-    record(
-        &memory,
-        &configuration,
-        &opened,
-        &first,
-        Some(a_placement(1)),
-    )
-    .expect("deberia anotarse");
+    record(&memory, &opened, &first, Some(a_placement(1))).expect("deberia anotarse");
 
     let state = memory
         .state()
@@ -335,14 +314,13 @@ fn the_size_is_global_and_the_position_is_of_each_document() {
 fn a_document_gets_its_whole_page_set_back_and_not_just_a_page() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(directory.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(directory.path(), "expediente.pdf", &opened);
     let placed = placed_on(PageSet::All);
-    record(&memory, &configuration, &opened, &id, Some(placed.clone())).expect("deberia anotarse");
+    record(&memory, &opened, &id, Some(placed.clone())).expect("deberia anotarse");
 
     let again = opened.remember(PortalDocument::opened(path));
-    let row = record(&memory, &configuration, &opened, &again, None).expect("deberia anotarse");
+    let row = record(&memory, &opened, &again, None).expect("deberia anotarse");
 
     assert_eq!(row.placement, Some(placed));
 }

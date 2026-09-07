@@ -3,17 +3,17 @@
 use std::path::Path;
 use std::time::SystemTime;
 
-use crate::documents::adapters::recents_store::{Placement, RecentDocument};
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
-use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::application::state::{BoxSize, State};
+use crate::documents::domain::recents::RecentDocument;
+use crate::documents::ports::DocumentsMemory;
 use crate::signing::domain::memory_error::MemoryError;
+use crate::signing::domain::BoxSize;
 use crate::signing::domain::CompletedCycle;
+use crate::signing::domain::Spot;
 use crate::signing::domain::VisibleBox;
-use crate::Memory;
 
 /// Fila de la bandeja de documentos recientes (ADR-0011).
 #[derive(Clone, Debug, PartialEq)]
@@ -56,15 +56,10 @@ impl From<MemoryError> for RecentsError {
 }
 
 /// Devuelve la lista de documentos recientes ordenados por fecha de uso.
-pub fn listed_rows(memory: &Memory, opened: &OpenedDocuments) -> Vec<RecentRow> {
-    let state = loaded_state(memory);
-    let size = state
-        .visible_signature
-        .as_ref()
-        .map(|remembered| remembered.size)
-        .unwrap_or_default();
-    state
-        .recents
+pub fn listed_rows(memory: &dyn DocumentsMemory, opened: &OpenedDocuments) -> Vec<RecentRow> {
+    let size = memory.box_size();
+    memory
+        .recents()
         .entries()
         .iter()
         .map(|entry| told_as_row(entry, size, opened))
@@ -73,36 +68,30 @@ pub fn listed_rows(memory: &Memory, opened: &OpenedDocuments) -> Vec<RecentRow> 
 
 /// Anota un documento abierto en la bandeja de recientes y devuelve su fila para la interfaz.
 pub fn record(
-    memory: &Memory,
-    configuration: &Configuration,
+    memory: &dyn DocumentsMemory,
     opened: &OpenedDocuments,
     id: &str,
     placement: Option<VisibleBox>,
 ) -> Result<RecentRow, RecentsError> {
     let document = opened.get(id).ok_or_else(|| no_document(id))?;
     let path = document.reading_path().to_path_buf();
-    let mut state = loaded_state(memory);
-    let badge = state
-        .recents
+    let mut recents = memory.recents();
+    let badge = recents
         .entry(&path)
-        .map_or(Badge::Unsigned, RecentDocument::badge);
+        .map_or(Badge::Unsigned, RecentDocument::<Spot>::badge);
     let noted = RecentDocument::seen(&path, badge, SystemTime::now())
         .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
     let canonical = noted.path().to_path_buf();
-    state.recents.record(noted);
+    recents.record(noted);
+    let mut size = None;
     if let Some(placement) = placement {
-        let (spot, size) = split(placement);
-        state.recents.place(&canonical, Some(spot));
-        remember_the_size(&mut state, size);
+        let (spot, chosen) = split(placement);
+        recents.place(&canonical, Some(spot));
+        size = Some(chosen);
     }
-    memory.remember_state(configuration, &state)?;
-    let size = state
-        .visible_signature
-        .as_ref()
-        .map(|remembered| remembered.size)
-        .unwrap_or_default();
-    let entry = state
-        .recents
+    memory.remember_recents(&recents, size)?;
+    let size = memory.box_size();
+    let entry = recents
         .entry(&canonical)
         .expect("la fila acaba de anotarse");
     Ok(RecentRow {
@@ -113,17 +102,14 @@ pub fn record(
 
 /// Elimina un documento de la bandeja de recientes.
 pub fn forget(
-    memory: &Memory,
-    configuration: &Configuration,
+    memory: &dyn DocumentsMemory,
     opened: &OpenedDocuments,
     id: &str,
 ) -> Result<(), RecentsError> {
     let document = opened.get(id).ok_or_else(|| no_document(id))?;
-    let mut state = loaded_state(memory);
-    state
-        .recents
-        .forget(&canonical_or_raw(document.reading_path()));
-    memory.remember_state(configuration, &state)?;
+    let mut recents = memory.recents();
+    recents.forget(&canonical_or_raw(document.reading_path()));
+    memory.remember_recents(&recents, None)?;
     Ok(())
 }
 
@@ -137,30 +123,17 @@ fn canonical_or_raw(path: &Path) -> std::path::PathBuf {
 }
 
 /// Anota un documento recién firmado en la bandeja con la insignia de firmado.
-pub fn note_signed(
-    memory: &Memory,
-    configuration: &Configuration,
-    landing: &Path,
-    _proof: &CompletedCycle,
-) {
+pub fn note_signed(memory: &dyn DocumentsMemory, landing: &Path, _proof: &CompletedCycle) {
     let Ok(noted) = RecentDocument::seen(landing, Badge::Signed, SystemTime::now()) else {
         return;
     };
-    let mut state = loaded_state(memory);
-    state.recents.record(noted);
-    let _ = memory.remember_state(configuration, &state);
-}
-
-/// Obtiene el estado persistido o uno por defecto si no pudo cargarse.
-fn loaded_state(memory: &Memory) -> State {
-    memory
-        .state()
-        .map(crate::signing::adapters::store::Loaded::into_value)
-        .unwrap_or_default()
+    let mut recents = memory.recents();
+    recents.record(noted);
+    let _ = memory.remember_recents(&recents, None);
 }
 
 /// Convierte una entrada de recientes en su fila.
-fn told_as_row(entry: &RecentDocument, size: BoxSize, opened: &OpenedDocuments) -> RecentRow {
+fn told_as_row(entry: &RecentDocument<Spot>, size: BoxSize, opened: &OpenedDocuments) -> RecentRow {
     RecentRow {
         id: identifier_for(entry.path(), opened),
         name: entry.name().to_owned(),
@@ -179,7 +152,7 @@ fn identifier_for(path: &Path, opened: &OpenedDocuments) -> String {
         .unwrap_or_else(|| opened.remember(PortalDocument::opened(path.to_path_buf())))
 }
 
-fn joined(spot: &Placement, size: BoxSize) -> VisibleBox {
+fn joined(spot: &Spot, size: BoxSize) -> VisibleBox {
     VisibleBox {
         pages: spot.pages.clone(),
         rect: [
@@ -191,10 +164,10 @@ fn joined(spot: &Placement, size: BoxSize) -> VisibleBox {
     }
 }
 
-fn split(placement: VisibleBox) -> (Placement, BoxSize) {
+fn split(placement: VisibleBox) -> (Spot, BoxSize) {
     let [x0, y0, x1, y1] = placement.rect;
     (
-        Placement {
+        Spot {
             lower_left_x: x0,
             lower_left_y: y0,
             pages: placement.pages,
@@ -204,10 +177,6 @@ fn split(placement: VisibleBox) -> (Placement, BoxSize) {
             height: y1 - y0,
         },
     )
-}
-
-fn remember_the_size(state: &mut State, size: BoxSize) {
-    state.visible_signature.get_or_insert_default().size = size;
 }
 
 #[cfg(test)]

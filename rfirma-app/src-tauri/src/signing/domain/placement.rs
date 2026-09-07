@@ -106,6 +106,48 @@ pub struct ViewerRect {
     pub y1: f64,
 }
 
+/// Dónde cae el recuadro en un reciente: la esquina inferior izquierda y las páginas; el tamaño es global (ADR-0006).
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+pub struct Spot {
+    /// Esquina inferior izquierda, eje X, en espacio de usuario PDF.
+    pub lower_left_x: f64,
+    /// Esquina inferior izquierda, eje Y, en espacio de usuario PDF.
+    pub lower_left_y: f64,
+    /// Páginas en las que estampar la firma visible.
+    pub pages: PageSet,
+}
+
+impl<'de> serde::Deserialize<'de> for Spot {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(serde::Deserialize)]
+        struct Stored {
+            lower_left_x: f64,
+            lower_left_y: f64,
+            pages: Option<PageSet>,
+            page: Option<u32>,
+        }
+
+        let stored = Stored::deserialize(deserializer)?;
+        let pages = stored
+            .pages
+            .or_else(|| stored.page.map(PageSet::only_page))
+            .ok_or_else(|| serde::de::Error::missing_field("pages"))?;
+        Ok(Self {
+            lower_left_x: stored.lower_left_x,
+            lower_left_y: stored.lower_left_y,
+            pages,
+        })
+    }
+}
+
+/// Dimensiones del recuadro de firma en puntos de espacio de usuario.
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct BoxSize {
+    pub width: f64,
+    pub height: f64,
+}
+
 /// El recuadro de firma visible tal como lo recuerda la bandeja: rectángulo y páginas.
 #[derive(Clone, Debug, PartialEq)]
 pub struct VisibleBox {

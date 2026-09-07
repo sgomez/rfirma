@@ -1,15 +1,16 @@
 use super::{
-    admitted_bytes, begin, cancel, config_for, finish, is_live, sign_on_token, signed_document,
-    signed_folder, take_signed_cycle, SigningSession,
+    admitted_bytes, begin, cancel, config_for, finish, is_live, note_delivered, sign_on_token,
+    signed_document, signed_folder, take_signed_cycle, DocumentToSign, SigningSession,
 };
 use crate::commands::Failure;
-use crate::documents::adapters::portal::PortalDocument;
-use crate::documents::application::opened::OpenedDocuments;
-use crate::fixtures::{a_certificate, a_memory, an_order, NoIsolate, NoToken};
-use crate::identity::application::listed::ListedCertificates;
+use crate::documents::domain::portal::PortalDocument;
+use crate::fixtures::{a_certificate, an_order, NoIsolate, NoToken};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
-use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::domain::PageSet;
+use crate::signing::domain::{PageSet, SigningChoice};
+
+fn chosen(order: &SigningOrder) -> SigningChoice {
+    order.choice().expect("el recuadro cabe")
+}
 
 const SOURCE: &str = include_str!("../session.rs");
 
@@ -48,40 +49,39 @@ fn the_seal_travels_apart_from_the_cycle_that_issued_it() {
     assert!(session.contains("seal: SessionSeal"));
 }
 
+/// La orden que entrega el firmado: la postfirma compone, y es aquí donde se decide qué se anota.
+const THE_ORDERS: &str = include_str!("../../adapters/tauri.rs");
+
 #[test]
 fn a_document_that_is_not_remembered_gets_no_row_when_it_is_signed() {
-    let postsign = production_half()
-        .split_once("pub fn finish(")
+    let postsign = THE_ORDERS
+        .split_once("pub fn finish_signing(")
         .expect("la postfirma sigue aqui")
         .1;
     let before_the_row = postsign
-        .split_once("recents::note_signed(")
+        .split_once("documents.note_signed(")
         .expect("la postfirma anota la fila")
         .0;
 
     assert!(
-        before_the_row.contains("if document.is_remembered() {"),
+        before_the_row.contains("if documents.is_remembered(&signed.handle) {"),
         "la fila del firmado se escribe sin preguntar si el documento se recuerda"
     );
 }
 
 #[test]
 fn only_the_postsign_remembers_the_certificate() {
-    let source = production_half();
-
     assert_eq!(
-        source
-            .matches("certificates::remember_the_certificate(")
-            .count(),
+        THE_ORDERS.matches("remember_the_certificate(").count(),
         1,
         "se recuerda desde un solo sitio"
     );
-    let postsign = source
-        .split_once("pub fn finish(")
+    let postsign = THE_ORDERS
+        .split_once("pub fn finish_signing(")
         .expect("la postfirma sigue aqui")
         .1;
     assert!(
-        postsign.contains("certificates::remember_the_certificate("),
+        postsign.contains("remember_the_certificate("),
         "y ese sitio es la postfirma"
     );
 }
@@ -90,7 +90,7 @@ fn only_the_postsign_remembers_the_certificate() {
 fn the_geometry_of_the_order_becomes_pades_points() {
     let certificate = a_certificate("FIRMA", &[]);
 
-    let config = config_for(&an_order(), &certificate).expect("el recuadro cabe");
+    let config = config_for(&chosen(&an_order()), &certificate).expect("el recuadro cabe");
 
     let placement = config.placement.expect("la ventana coloco el recuadro");
     assert_eq!(placement.pages, PageSet::only_page(1));
@@ -108,14 +108,14 @@ fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
         ..an_order()
     };
 
-    let failure = config_for(&order, &a_certificate("FIRMA", &[])).expect_err("se sale");
+    let failure = order.choice().expect_err("se sale");
 
     assert_eq!(Failure::from(failure).situation, "boxOutOfPage");
 }
 
 #[test]
 fn an_empty_reason_is_not_sent_at_all() {
-    let config = config_for(&an_order(), &a_certificate("FIRMA", &[])).expect("cabe");
+    let config = config_for(&chosen(&an_order()), &a_certificate("FIRMA", &[])).expect("cabe");
 
     assert_eq!(config.sign_reason, None);
 }
@@ -127,7 +127,7 @@ fn a_reason_that_was_written_does_travel() {
         ..an_order()
     };
 
-    let config = config_for(&order, &a_certificate("FIRMA", &[])).expect("cabe");
+    let config = config_for(&chosen(&order), &a_certificate("FIRMA", &[])).expect("cabe");
 
     assert_eq!(config.sign_reason.as_deref(), Some("Conforme"));
 }
@@ -159,7 +159,7 @@ fn the_two_openers_read_the_landing_the_postsign_left_behind() {
     let session = SigningSession::default();
     let folder = tempfile::tempdir().expect("deberia haber temporal");
     let landing = folder.path().join("contrato-firmado.pdf");
-    *crate::lock(&session.delivered) = Some(landing.clone());
+    note_delivered(&session, landing.clone());
 
     assert_eq!(signed_document(&session).expect("hay firmado"), landing);
     assert_eq!(signed_folder(&session).expect("y carpeta"), folder.path());
@@ -223,37 +223,29 @@ fn a_document_that_is_gone_is_told_apart_from_one_that_is_not_a_pdf() {
 
 #[test]
 fn a_signature_cannot_begin_on_a_document_that_is_not_open() {
-    let order = SigningOrder {
-        document: "00000000000000000000000000000000".to_owned(),
-        ..an_order()
-    };
+    let order = an_order();
 
     let failure = begin(
-        &order,
+        DocumentToSign {
+            handle: order.document.clone(),
+            document: PortalDocument::opened("/run/user/1000/doc/1e8b83b9/no-esta.pdf"),
+        },
+        &a_certificate("FIRMA", &[]),
+        &chosen(&order),
         &NoToken,
-        &[],
-        &ListedCertificates::new(),
-        &OpenedDocuments::new(),
         &NoIsolate,
         &SigningSession::default(),
     )
-    .expect_err("ese documento no esta abierto");
+    .expect_err("ese documento no se puede leer");
 
     assert_eq!(Failure::from(failure).situation, "documentUnreadable");
 }
 
 #[test]
 fn the_postsign_stops_before_the_bridge_when_no_cycle_was_started() {
-    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-
-    let failure = finish(
-        &NoIsolate,
-        &SigningSession::default(),
-        &a_memory(home.path()),
-        &Configuration::default(),
-        home.path(),
-    )
-    .expect_err("no hay ciclo abierto");
+    let failure = finish(&NoIsolate, &SigningSession::default())
+        .err()
+        .expect("no hay ciclo abierto");
 
     assert_eq!(Failure::from(failure).situation, "unknown");
 }

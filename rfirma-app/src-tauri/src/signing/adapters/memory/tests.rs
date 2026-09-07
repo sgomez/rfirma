@@ -1,9 +1,11 @@
-use crate::documents::adapters::recents_store::{Placement, RecentDocument};
+use super::*;
+use crate::desktop::adapters::paths::Paths;
 use crate::documents::domain::recents::Badge;
+use crate::documents::domain::recents::RecentDocument;
 use crate::identity::domain::certificate::CertificateRef;
-use crate::signing::application::state::{BoxSize, VisibleSignatureMemory};
+use crate::signing::adapters::state::{State, VisibleSignatureMemory};
 use crate::signing::domain::Language;
-use crate::*;
+use crate::signing::domain::{BoxSize, Spot};
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
@@ -39,7 +41,7 @@ fn a_state(directory: &Path) -> State {
     );
     state.recents.place(
         &fs::canonicalize(&document).expect("deberia canonicalizarse"),
-        Some(Placement {
+        Some(Spot {
             lower_left_x: 48.0,
             lower_left_y: 179.0,
             pages: crate::signing::domain::PageSet::only_page(1),
@@ -88,7 +90,10 @@ fn what_the_user_chose_comes_back_in_the_next_session() {
         .expect("deberia guardarse");
 
     assert_eq!(
-        memory.configuration().expect("deberia leerse").into_value(),
+        memory
+            .stored_configuration()
+            .expect("deberia leerse")
+            .into_value(),
         configuration
     );
 }
@@ -278,7 +283,9 @@ fn a_corrupt_configuration_does_not_stop_the_application_from_starting() {
         .expect("deberia crearse");
     fs::write(paths.config_file(), b"{ roto").expect("deberia escribirse");
 
-    let loaded = memory.configuration().expect("no puede impedir firmar");
+    let loaded = memory
+        .stored_configuration()
+        .expect("no puede impedir firmar");
 
     assert_eq!(loaded.value(), &Configuration::default());
     assert!(loaded.recovery().is_some(), "se avisa una vez");
@@ -330,7 +337,7 @@ fn a_first_run_remembers_nothing_and_complains_about_nothing() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let (memory, _) = a_memory(directory.path());
 
-    let configuration = memory.configuration().expect("deberia leerse");
+    let configuration = memory.stored_configuration().expect("deberia leerse");
     let state = memory.state().expect("deberia leerse");
 
     assert!(configuration.recovery().is_none());

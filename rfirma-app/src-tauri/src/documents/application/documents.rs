@@ -9,18 +9,16 @@ use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::told::{
     Destination, DropRefusal, DroppedDocument, OpenedDocument, SignedDocument,
 };
-use crate::signing::application::configuration_memory::Configuration;
-use crate::Memory;
+use crate::documents::ports::DocumentsMemory;
 
 /// Registra el documento abierto por el usuario y actualiza la última carpeta usada.
 pub fn note_opened(
-    memory: &Memory,
-    configuration: &Configuration,
+    memory: &dyn DocumentsMemory,
     opened: &OpenedDocuments,
     handle: PathBuf,
 ) -> OpenedDocument {
     let document = PortalDocument::opened(handle);
-    remember_the_folder(memory, configuration, &document);
+    remember_the_folder(memory, &document);
     told_as_opened(document, opened)
 }
 
@@ -51,7 +49,7 @@ pub fn dropped_document(paths: &[PathBuf], opened: &OpenedDocuments) -> Option<D
 }
 
 /// Convierte el resultado de procesamiento de arrastre en lo que se cuenta a la ventana.
-pub(crate) fn told_as_dropped(
+pub fn told_as_dropped(
     decided: crate::documents::domain::dropped::Dropped,
     opened: &OpenedDocuments,
 ) -> Option<DroppedDocument> {
@@ -91,13 +89,11 @@ pub(crate) fn told_as_dropped(
 
 /// Guarda el documento firmado en la carpeta de destino resolviendo homónimos (ADR-0011).
 pub fn deliver(
-    configuration: &Configuration,
-    documents_folder: &Path,
+    chosen: &DestinationFolder,
     document: &PortalDocument,
     signed: &[u8],
 ) -> Result<(PathBuf, SignedDocument), DocumentError> {
-    let chosen = crate::chosen_folder(configuration, documents_folder.to_path_buf());
-    let folder = CheckedFolder::check(&chosen)?;
+    let folder = CheckedFolder::check(chosen)?;
     let landing = folder.landing_for(document)?;
     std::fs::write(&landing, signed)
         .map_err(|error| DocumentError::FolderUnwritable(error.to_string()))?;
@@ -106,13 +102,8 @@ pub fn deliver(
 }
 
 /// Calcula la ruta prevista de destino antes de firmar sin escribir en disco (ADR-0011).
-pub fn where_it_lands(
-    configuration: &Configuration,
-    documents_folder: &Path,
-    document: &PortalDocument,
-) -> Destination {
-    let chosen = crate::chosen_folder(configuration, documents_folder.to_path_buf());
-    let Ok(folder) = CheckedFolder::check(&chosen) else {
+pub fn where_it_lands(chosen: &DestinationFolder, document: &PortalDocument) -> Destination {
+    let Ok(folder) = CheckedFolder::check(chosen) else {
         return Destination {
             folder: chosen.name().to_owned(),
             name: None,
@@ -160,47 +151,41 @@ fn told_as_opened(document: PortalDocument, opened: &OpenedDocuments) -> OpenedD
 
 /// Determina la carpeta inicial para el diálogo de apertura de documentos.
 pub fn starting_folder(
-    memory: &Memory,
-    configuration: &Configuration,
-    documents_folder: &Path,
+    memory: &dyn DocumentsMemory,
+    chosen: &DestinationFolder,
 ) -> Option<PathBuf> {
     if let Some(remembered) = remembered_folder(memory) {
         return Some(remembered);
     }
-    let folder = crate::chosen_folder(configuration, documents_folder.to_path_buf());
-    CheckedFolder::check(&folder)
+    CheckedFolder::check(chosen)
         .ok()
         .map(|checked| checked.path().to_path_buf())
 }
 
 /// Devuelve la última carpeta de apertura recordada si continúa existiendo.
-pub fn remembered_folder(memory: &Memory) -> Option<PathBuf> {
+pub fn remembered_folder(memory: &dyn DocumentsMemory) -> Option<PathBuf> {
+    memory.last_open_folder().filter(|folder| folder.is_dir())
+}
+
+/// La carpeta de destino elegida, o la de documentos por omisión.
+pub fn chosen_folder(
+    memory: &dyn DocumentsMemory,
+    documents_folder: impl Into<PathBuf>,
+) -> DestinationFolder {
     memory
-        .state()
-        .ok()?
-        .into_value()
-        .last_open_folder
-        .filter(|folder| folder.is_dir())
+        .chosen_destination()
+        .unwrap_or_else(|| DestinationFolder::at(documents_folder))
 }
 
 /// Registra la carpeta de procedencia de un documento si es conocida.
-pub fn remember_the_folder(
-    memory: &Memory,
-    configuration: &Configuration,
-    document: &PortalDocument,
-) {
+pub fn remember_the_folder(memory: &dyn DocumentsMemory, document: &PortalDocument) {
     let Some(folder) = folder_it_came_from(document) else {
         return;
     };
-    let Ok(loaded) = memory.state() else {
-        return;
-    };
-    let mut state = loaded.into_value();
-    if state.last_open_folder.as_deref() == Some(folder) {
+    if memory.last_open_folder().as_deref() == Some(folder) {
         return;
     }
-    state.last_open_folder = Some(folder.to_path_buf());
-    let _ = memory.remember_state(configuration, &state);
+    let _ = memory.remember_last_open_folder(folder);
 }
 
 /// Devuelve la carpeta de procedencia del documento o `None` si proviene del portal (ADR-0011).

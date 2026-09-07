@@ -2,8 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use rfirma_lib::signing::adapters::ffi::{
-    locate, parse_presign, BridgeError, NativeBridge, PostSignRequest, PreSignRequest, LIBRARY_FILE,
+use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
+use rfirma_lib::signing::domain::bridge::{
+    BridgeError, PostSignRequest, PreSignRequest, LIBRARY_FILE,
 };
 use rfirma_lib::signing::domain::TokenSignature;
 
@@ -139,15 +140,16 @@ mod full_cycle {
 
     use base64::Engine;
     use rfirma_lib::documents::adapters::rubric;
-    use rfirma_lib::identity::adapters::pkcs11::{self, CertificateRef, TokenCertificate};
-    use rfirma_lib::signing::adapters::ffi::{
-        BridgeError, ExpandRequest, FilterRequest, NativeBridge,
-    };
+    use rfirma_lib::identity::adapters::pkcs11;
+    use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
+    use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
-    use rfirma_lib::signing::application::filtering;
+    use rfirma_lib::signing::domain::bridge::{BridgeError, ExpandRequest, FilterRequest};
     use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
+        TokenSignature,
     };
+    use rfirma_lib::site::application::filtering;
     use rfirma_lib::site::domain::protocol::site_filter;
 
     use super::bridge;
@@ -523,7 +525,7 @@ mod full_cycle {
         cycle
             .postsign(
                 &bridge,
-                &cycle::TokenSignature::invented(),
+                &TokenSignature::invented(),
                 &cycle.seal_in_transit(),
             )
             .expect("la postfirma deberia componer el PDF con el PK1 inventado")
@@ -741,7 +743,7 @@ mod full_cycle {
     }
 
     /// Prepara un ciclo firmado en token listo para postfirma.
-    fn a_cycle_ready_to_postsign() -> (NativeBridge, cycle::OpenCycle, cycle::TokenSignature) {
+    fn a_cycle_ready_to_postsign() -> (NativeBridge, cycle::OpenCycle, TokenSignature) {
         let bridge = bridge();
         let pdf = a_one_page_pdf();
         let certificate = signing_certificate();

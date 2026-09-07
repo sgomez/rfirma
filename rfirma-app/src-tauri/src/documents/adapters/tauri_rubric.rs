@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::documents::domain::rubric::NormalizedRubric;
 
-pub use crate::commands::Failure;
+use crate::commands::Failure;
 
 /// Rúbrica normalizada con imagen en Base64 y dimensiones (ADR-0011, ADR-0012).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -61,7 +61,7 @@ impl RubricChoiceView {
     }
 
     /// Construye la respuesta de rúbrica rechazada con el error correspondiente.
-    pub fn refused(error: &crate::documents::adapters::rubric::RubricError) -> Self {
+    pub fn refused(error: &crate::documents::domain::rubric::RubricError) -> Self {
         Self {
             rubric: None,
             failure: Some(Failure::from(error)),

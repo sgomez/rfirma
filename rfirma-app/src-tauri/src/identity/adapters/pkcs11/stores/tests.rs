@@ -1,4 +1,5 @@
 use super::*;
+use crate::identity::domain::store::StoreClass;
 
 #[test]
 fn keeps_only_the_candidates_that_are_there() {

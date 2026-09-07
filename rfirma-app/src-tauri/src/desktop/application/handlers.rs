@@ -1,44 +1,33 @@
 //! Casos de uso para consultar y registrar manejadores de afirma:// en el escritorio (ADR-0015).
 
-use crate::desktop::adapters::channel::{
-    registered_handlers_for_scheme, Channel, RegisteredHandlers, OUR_DESKTOP_FILE,
-};
-use crate::desktop::adapters::choice::{choose_handler_for_scheme, current_default_for_scheme};
 use crate::desktop::domain::error::DesktopError;
-use crate::desktop::domain::handlers::{UrlHandler, UrlHandlers};
-use std::path::Path;
+use crate::desktop::domain::handlers::{UrlHandlers, OUR_DESKTOP_FILE};
+use crate::desktop::ports::HandlerRegistry;
 
 /// Esquema de URL gestionado por la aplicación.
 pub const SCHEME: &str = "afirma";
 
 /// Consulta el estado y manejadores disponibles para el esquema afirma://.
-pub fn who_handles(channel: Channel, list: &Path) -> UrlHandlers {
-    match registered_handlers_for_scheme(channel, SCHEME) {
-        RegisteredHandlers::NotAvailableInsideTheSandbox => UrlHandlers {
+pub fn who_handles(registry: &dyn HandlerRegistry) -> UrlHandlers {
+    match registry.registered_for(SCHEME) {
+        None => UrlHandlers {
             available: false,
             handlers: Vec::new(),
             current: None,
             ours: OUR_DESKTOP_FILE.to_owned(),
         },
-        RegisteredHandlers::Known(handlers) => UrlHandlers {
+        Some(handlers) => UrlHandlers {
             available: true,
-            handlers: handlers
-                .iter()
-                .map(|handler| UrlHandler {
-                    id: handler.id().to_owned(),
-                    name: handler.name().to_owned(),
-                })
-                .collect(),
-            current: current_default_for_scheme(channel, list, SCHEME),
+            handlers,
+            current: registry.current_default_for(SCHEME),
             ours: OUR_DESKTOP_FILE.to_owned(),
         },
     }
 }
 
 /// Registra un manejador como predeterminado para afirma:// en mimeapps.list.
-pub fn chosen(channel: Channel, list: &Path, handler: &str) -> Result<(), DesktopError> {
-    choose_handler_for_scheme(channel, list, SCHEME, handler)?;
-    Ok(())
+pub fn chosen(registry: &dyn HandlerRegistry, handler: &str) -> Result<(), DesktopError> {
+    registry.choose_for(SCHEME, handler)
 }
 
 #[cfg(test)]

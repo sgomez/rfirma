@@ -1,10 +1,14 @@
-//! Vocabulario de salida del trámite con la sede y la ventana.
+//! Vocabulario de salida del trámite con la sede y la ventana, y el códec que lo pone en el cable.
 
 use std::collections::BTreeMap;
 
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::site::application::session::SiteRefusal;
-use crate::site::domain::protocol::{Refusal, SignatureRound, SiteFilter, SiteVisibleSignature};
+use crate::site::domain::protocol::{
+    AfirmaUrl, Refusal, SignatureRound, SiteFilter, SiteVisibleSignature,
+};
+
+use super::request::SiteRequest;
 
 /// En qué queda la operación que llegó por el canal.
 #[derive(Debug)]
@@ -152,4 +156,13 @@ pub enum NoChannel {
     ChannelNotOpened,
     /// La CA local no está registrada en ningún almacén NSS (ADR-0005).
     LocalCaMissing,
+}
+
+/// El códec del protocolo: lee la petición y escribe el desenlace; habla este vocabulario y no el del dominio porque un rechazo lleva dentro lo que dijeron los vecinos.
+pub trait ProtocolCodec {
+    /// Lee la operación que llegó por el canal abierto.
+    fn decode(&self, message: &AfirmaUrl) -> SiteRequest;
+
+    /// Línea exacta que se escribe en el canal para el desenlace dado.
+    fn encode(&self, outcome: &SiteOutcome) -> String;
 }
