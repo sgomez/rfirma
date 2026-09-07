@@ -1,20 +1,18 @@
 use super::{
-    bytes_of, deliver, dropped_document, folder_it_came_from, next_to_the_original, note_opened,
-    note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder, starting_folder,
-    told_as, where_it_lands,
+    bytes_of, chosen_folder, deliver, dropped_document, folder_it_came_from, next_to_the_original,
+    note_opened, note_opened_unrecorded, real_path_of, remember_the_folder, remembered_folder,
+    starting_folder, told_as, where_it_lands,
 };
 use crate::commands::Failure;
-use crate::documents::adapters::portal::PortalDocument;
 use crate::documents::application::opened::OpenedDocuments;
 use crate::documents::domain::destination::CheckedFolder;
+use crate::documents::domain::destination::DestinationFolder;
+use crate::documents::domain::portal::PortalDocument;
 use crate::fixtures::a_memory;
 use crate::signing::application::configuration_memory::Configuration;
 
-fn with_destination(folder: &std::path::Path) -> Configuration {
-    Configuration {
-        destination: Some(crate::documents::domain::destination::DestinationFolder::at(folder)),
-        ..Configuration::default()
-    }
+fn with_destination(folder: &std::path::Path) -> DestinationFolder {
+    DestinationFolder::at(folder)
 }
 
 #[test]
@@ -24,12 +22,7 @@ fn what_the_dialog_granted_is_noted_and_read_back_by_its_identifier() {
     std::fs::write(&pdf, b"%PDF-1.4\n").expect("deberia escribirse el temporal");
     let opened = OpenedDocuments::new();
 
-    let view = note_opened(
-        &a_memory(home.path()),
-        &Configuration::default(),
-        &opened,
-        pdf,
-    );
+    let view = note_opened(&a_memory(home.path()), &opened, pdf);
 
     assert_eq!(view.name, "contrato.pdf");
     assert_eq!(view.id.len(), 32);
@@ -160,11 +153,7 @@ fn the_open_dialog_starts_in_the_destination_folder() {
     std::fs::create_dir(&chosen).expect("deberia crearse la carpeta de prueba");
 
     assert_eq!(
-        starting_folder(
-            &a_memory(documents.path()),
-            &with_destination(&chosen),
-            documents.path()
-        ),
+        starting_folder(&a_memory(documents.path()), &with_destination(&chosen)),
         Some(chosen)
     );
 }
@@ -176,8 +165,7 @@ fn without_a_chosen_destination_it_starts_in_the_documents_folder() {
     assert_eq!(
         starting_folder(
             &a_memory(documents.path()),
-            &Configuration::default(),
-            documents.path()
+            &with_destination(documents.path())
         ),
         Some(documents.path().to_path_buf())
     );
@@ -189,11 +177,7 @@ fn a_missing_folder_neither_gets_created_nor_stops_the_dialog() {
     let absent = documents.path().join("Firmados");
 
     assert_eq!(
-        starting_folder(
-            &a_memory(documents.path()),
-            &with_destination(&absent),
-            documents.path()
-        ),
+        starting_folder(&a_memory(documents.path()), &with_destination(&absent)),
         None
     );
     assert!(!absent.exists(), "la carpeta no se puede haber creado");
@@ -258,10 +242,9 @@ fn the_opened_document_crosses_with_the_real_path_only_when_there_is_one() {
     let memory = a_memory(home.path());
     let opened = OpenedDocuments::new();
 
-    let direct = note_opened(&memory, &Configuration::default(), &opened, pdf.clone());
+    let direct = note_opened(&memory, &opened, pdf.clone());
     let through_the_portal = note_opened(
         &memory,
-        &Configuration::default(),
         &opened,
         std::path::PathBuf::from("/run/user/1000/doc/1e8b83b9/contrato.pdf"),
     );
@@ -297,7 +280,7 @@ fn the_same_file_opened_by_the_dialog_does_remember_the_folder() {
     let memory = a_memory(home.path());
     let opened = OpenedDocuments::new();
 
-    note_opened(&memory, &Configuration::default(), &opened, pdf);
+    note_opened(&memory, &opened, pdf);
 
     assert_eq!(remembered_folder(&memory), Some(contracts));
 }
@@ -310,12 +293,11 @@ fn the_last_folder_used_wins_over_the_destination_folder() {
     let memory = a_memory(documents.path());
     remember_the_folder(
         &memory,
-        &Configuration::default(),
         &PortalDocument::opened(contracts.join("contrato.pdf")),
     );
 
     assert_eq!(
-        starting_folder(&memory, &Configuration::default(), documents.path()),
+        starting_folder(&memory, &with_destination(documents.path())),
         Some(contracts)
     );
 }
@@ -328,13 +310,12 @@ fn a_remembered_folder_that_is_gone_falls_back_to_the_destination() {
     let memory = a_memory(documents.path());
     remember_the_folder(
         &memory,
-        &Configuration::default(),
         &PortalDocument::opened(contracts.join("contrato.pdf")),
     );
     std::fs::remove_dir(&contracts).expect("deberia borrarse");
 
     assert_eq!(
-        starting_folder(&memory, &Configuration::default(), documents.path()),
+        starting_folder(&memory, &with_destination(documents.path())),
         Some(documents.path().to_path_buf())
     );
 }
@@ -346,7 +327,6 @@ fn opening_through_the_portal_never_writes_a_folder_into_the_state() {
 
     remember_the_folder(
         &memory,
-        &Configuration::default(),
         &PortalDocument::opened("/run/user/1000/doc/1e8b83b9/contrato.pdf"),
     );
 
@@ -359,7 +339,7 @@ fn opening_through_the_portal_never_writes_a_folder_into_the_state() {
         None
     );
     assert_eq!(
-        starting_folder(&memory, &Configuration::default(), documents.path()),
+        starting_folder(&memory, &with_destination(documents.path())),
         Some(documents.path().to_path_buf())
     );
 }
@@ -370,19 +350,20 @@ fn the_folder_is_not_remembered_with_the_activity_switch_off() {
     let contracts = documents.path().join("Contratos");
     std::fs::create_dir(&contracts).expect("deberia crearse la carpeta de prueba");
     let memory = a_memory(documents.path());
-    let switched_off = Configuration {
-        remember_activity: false,
-        ..Configuration::default()
-    };
+    memory
+        .remember_configuration(&Configuration {
+            remember_activity: false,
+            ..Configuration::default()
+        })
+        .expect("deberia guardarse");
 
     remember_the_folder(
         &memory,
-        &switched_off,
         &PortalDocument::opened(contracts.join("contrato.pdf")),
     );
 
     assert_eq!(
-        starting_folder(&memory, &switched_off, documents.path()),
+        starting_folder(&memory, &with_destination(documents.path())),
         Some(documents.path().to_path_buf())
     );
 }
@@ -392,13 +373,7 @@ fn the_signed_document_falls_into_the_destination_folder_without_a_dialog() {
     let folder = tempfile::tempdir().expect("deberia haber temporal");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    let view = deliver(
-        &Configuration::default(),
-        folder.path(),
-        &document,
-        b"%PDF-firmado",
-    )
-    .expect("cae");
+    let view = deliver(&with_destination(folder.path()), &document, b"%PDF-firmado").expect("cae");
 
     assert_eq!(view.1.name, "contrato-firmado.pdf");
     assert_eq!(view.1.size_bytes, b"%PDF-firmado".len() as u64);
@@ -413,20 +388,9 @@ fn a_second_signature_is_numbered_instead_of_overwriting_the_first() {
     let folder = tempfile::tempdir().expect("deberia haber temporal");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    deliver(
-        &Configuration::default(),
-        folder.path(),
-        &document,
-        b"la primera",
-    )
-    .expect("cae");
-    let second = deliver(
-        &Configuration::default(),
-        folder.path(),
-        &document,
-        b"la segunda",
-    )
-    .expect("cae tambien");
+    deliver(&with_destination(folder.path()), &document, b"la primera").expect("cae");
+    let second =
+        deliver(&with_destination(folder.path()), &document, b"la segunda").expect("cae tambien");
 
     assert_ne!(second.1.name, "contrato-firmado.pdf");
     assert_eq!(
@@ -443,8 +407,7 @@ fn a_destination_folder_that_is_not_there_is_told_and_never_created() {
         .join("no-esta");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    let failure =
-        deliver(&Configuration::default(), &missing, &document, b"x").expect_err("no esta");
+    let failure = deliver(&with_destination(&missing), &document, b"x").expect_err("no esta");
 
     assert_eq!(Failure::from(failure).situation, "folderMissing");
     assert!(!missing.exists(), "la carpeta se ha creado, y no debía");
@@ -455,11 +418,7 @@ fn the_landing_is_told_by_its_folder_and_its_name_before_signing() {
     let folder = tempfile::tempdir().expect("deberia haber directorio temporal");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    let view = where_it_lands(
-        &with_destination(folder.path()),
-        std::path::Path::new("/no/se/usa"),
-        &document,
-    );
+    let view = where_it_lands(&with_destination(folder.path()), &document);
 
     assert!(view.writable, "la carpeta esta y se puede escribir");
     assert_eq!(view.name.as_deref(), Some("contrato-firmado.pdf"));
@@ -480,11 +439,7 @@ fn a_namesake_already_there_is_numbered_in_what_the_footer_shows() {
         .expect("deberia escribirse el homonimo");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    let view = where_it_lands(
-        &with_destination(folder.path()),
-        std::path::Path::new("/no/se/usa"),
-        &document,
-    );
+    let view = where_it_lands(&with_destination(folder.path()), &document);
 
     assert_eq!(view.name.as_deref(), Some("contrato-firmado-2.pdf"));
 }
@@ -495,11 +450,7 @@ fn a_folder_that_is_not_there_is_told_as_unwritable_and_stays_uncreated() {
     let missing = home.path().join("Firmados");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    let view = where_it_lands(
-        &with_destination(&missing),
-        std::path::Path::new("/no/se/usa"),
-        &document,
-    );
+    let view = where_it_lands(&with_destination(&missing), &document);
 
     assert!(!view.writable);
     assert_eq!(view.folder, "Firmados", "la carpeta se sigue nombrando");
@@ -512,11 +463,7 @@ fn telling_the_landing_writes_nothing() {
     let folder = tempfile::tempdir().expect("deberia haber directorio temporal");
     let document = PortalDocument::opened("/run/user/1000/doc/1e8b/contrato.pdf");
 
-    let view = where_it_lands(
-        &with_destination(folder.path()),
-        std::path::Path::new("/no/se/usa"),
-        &document,
-    );
+    let view = where_it_lands(&with_destination(folder.path()), &document);
 
     assert!(view.name.is_some());
     assert_eq!(
@@ -525,5 +472,38 @@ fn telling_the_landing_writes_nothing() {
             .count(),
         0,
         "decidir el destino ha dejado ficheros"
+    );
+}
+
+#[test]
+fn the_remembered_folder_is_reused_and_nobody_is_asked_again() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    memory
+        .remember_configuration(&Configuration {
+            destination: Some(DestinationFolder::at("/home/quien/Documentos/Firmados")),
+            ..Configuration::default()
+        })
+        .expect("deberia guardarse");
+
+    let folder = chosen_folder(&memory, "/home/quien/Documentos");
+
+    assert_eq!(
+        folder.path(),
+        std::path::Path::new("/home/quien/Documentos/Firmados"),
+        "elegida una vez, se reutiliza"
+    );
+    assert_eq!(folder.name(), "Firmados");
+}
+
+#[test]
+fn without_a_remembered_folder_the_destination_is_the_documents_folder() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let folder = chosen_folder(&a_memory(home.path()), "/home/quien/Documentos");
+
+    assert_eq!(
+        folder.path(),
+        std::path::Path::new("/home/quien/Documentos")
     );
 }

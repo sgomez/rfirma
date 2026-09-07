@@ -1,11 +1,7 @@
 //! Paso de configuración entre la interfaz y el almacenamiento en disco (ADR-0010, ADR-0011).
 
-use std::sync::Mutex;
-
 use crate::documents::domain::destination::DestinationFolder;
-use crate::signing::adapters::memory::Memory;
 use crate::signing::application::configuration_memory::{Configuration, Theme};
-use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::Language;
 
 /// La configuración tal como la enseña y la devuelve la ventana de preferencias (ADR-0011).
@@ -44,7 +40,10 @@ pub fn language_of(tag: &str) -> Language {
 
 /// Proyecta la configuración guardada como preferencias para la ventana.
 pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) -> Preferences {
-    let folder = crate::chosen_folder(configuration, documents_folder.to_path_buf());
+    let folder = configuration
+        .destination
+        .clone()
+        .unwrap_or_else(|| DestinationFolder::at(documents_folder));
     Preferences {
         language: configuration.language.tag().to_owned(),
         destination: folder.name().to_owned(),
@@ -53,49 +52,25 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
         notify_new_version: configuration.notify_new_version,
         theme: configuration.theme,
         offers_the_original_folder:
-            crate::documents::adapters::portal::the_original_folder_can_be_offered(),
+            crate::documents::domain::portal::the_original_folder_can_be_offered(),
         trust_notice_seen: configuration.trust_notice_seen,
         ask_about_url_handler: configuration.ask_about_url_handler,
     }
 }
 
-/// Guarda la configuración elegida en disco y actualiza la copia en memoria viva (ADR-0010).
-pub fn write(
-    memory: &Memory,
-    live: &Mutex<Configuration>,
-    chosen: &Preferences,
-) -> Result<(), MemoryError> {
-    let mut live = crate::lock(live);
-    let next = merged(&live, chosen);
-    memory.remember_configuration(&next)?;
-    *live = next;
-    Ok(())
-}
-
-/// Guarda la carpeta destino concedida y devuelve su nombre visible (ADR-0011).
-pub fn choose_destination(
-    memory: &Memory,
-    live: &Mutex<Configuration>,
+/// La configuración viva con la carpeta destino recién concedida, y el nombre visible de esta (ADR-0011).
+pub fn with_destination(
+    live: &Configuration,
     folder: DestinationFolder,
-) -> Result<String, MemoryError> {
-    let mut live = crate::lock(live);
-    let next = Configuration {
-        destination: Some(folder),
-        ..live.clone()
-    };
-    memory.remember_configuration(&next)?;
-    let name = next
-        .destination
-        .as_ref()
-        .map(|folder| folder.name().to_owned())
-        .unwrap_or_default();
-    *live = next;
-    Ok(name)
-}
-
-/// Borra la actividad acumulada conservando las preferencias (ADR-0010).
-pub fn forget_activity(memory: &Memory) -> Result<(), MemoryError> {
-    memory.forget_activity()
+) -> (Configuration, String) {
+    let name = folder.name().to_owned();
+    (
+        Configuration {
+            destination: Some(folder),
+            ..live.clone()
+        },
+        name,
+    )
 }
 
 /// Combina la configuración viva con los campos modificables desde la ventana.

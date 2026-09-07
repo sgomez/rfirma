@@ -1,7 +1,8 @@
 use super::RubricChoiceView;
-use crate::documents::adapters::rubric::{normalize, RubricError, Situation};
+use crate::documents::adapters::rubric::normalize;
+use crate::documents::domain::rubric::{RubricError, Situation};
 
-fn a_normalized_rubric() -> crate::documents::adapters::rubric::NormalizedRubric {
+fn a_normalized_rubric() -> crate::documents::domain::rubric::NormalizedRubric {
     let mut png = Vec::new();
     image::RgbaImage::from_pixel(4, 4, image::Rgba([1, 2, 3, 255]))
         .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)

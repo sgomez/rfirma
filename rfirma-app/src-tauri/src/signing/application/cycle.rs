@@ -4,15 +4,14 @@ use base64::Engine;
 
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
-use crate::identity::ports::Token;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Refusal, SealMismatch, SessionSeal,
     SignatureConfig,
 };
-use crate::signing::ports::Bridge;
+use crate::signing::ports::{Bridge, Signer};
 
-pub use crate::signing::domain::TokenSignature;
+use crate::signing::domain::TokenSignature;
 
 /// Conjunto vacío de parámetros adicionales para firmas locales.
 pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
@@ -158,10 +157,10 @@ impl OpenCycle {
     /// Fase 2: firma los bytes en el token PKCS#11 (ADR-0001).
     pub fn sign_on_token(
         &self,
-        token: &dyn Token,
+        signer: &dyn Signer,
         pin: &str,
     ) -> Result<TokenSignature, CycleError> {
-        let signature = token.sign(&self.certificate, pin, self.presigned.pre_sign())?;
+        let signature = signer.sign(&self.certificate, pin, self.presigned.pre_sign())?;
         Ok(TokenSignature::from_token(signature))
     }
 

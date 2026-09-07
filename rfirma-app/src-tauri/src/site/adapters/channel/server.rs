@@ -9,11 +9,12 @@ use tokio_native_tls::native_tls::{Identity, TlsAcceptor as NativeTlsAcceptor};
 use tokio_native_tls::TlsAcceptor;
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::site::adapters::channel::conversation::{answer, Answer, ChannelDuty};
+use crate::site::adapters::channel::conversation::{answer, Answer};
 use crate::site::adapters::channel::reply::ReplyHandle;
 use crate::site::adapters::tls::LocalServerCertificate;
+use crate::site::domain::channel::ChannelDuty;
 use crate::site::domain::channel::{ChannelError, Situation};
-pub use crate::site::domain::channel::{OpenChannel, Shutdown};
+use crate::site::domain::channel::{OpenChannel, Shutdown};
 use crate::site::domain::protocol::AfirmaUrl;
 
 /// Manejador que atiende la operación recibida por el canal.

@@ -2,14 +2,11 @@
 
 use base64::Engine as _;
 
-use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
-use crate::identity::domain::store::Store;
-use crate::identity::ports::Token;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::protocol::SiteFilter;
-use crate::site::ports::FilterEngine;
+use crate::site::ports::{Certificates, FilterEngine};
 
 /// Por qué el filtro de la sede no ha dejado un certificado.
 #[derive(Debug)]
@@ -39,11 +36,10 @@ impl From<BridgeError> for FilteringError {
 /// Caso de uso: obtiene los certificados de los almacenes aceptados por la sede.
 pub fn listing_the_site_accepts<E: FilterEngine>(
     engine: &E,
-    token: &dyn Token,
-    stores: &[Store],
+    certificates: &dyn Certificates,
     filter: &SiteFilter,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
-    let ours = token.list_across(stores)?;
+    let ours = certificates.listed()?;
     keep_what_the_site_accepts(engine, filter, ours)
 }
 
@@ -69,13 +65,9 @@ pub fn usable_certificate_for_the_site<'a, E: FilterEngine>(
     filter: &SiteFilter,
     certificates: &'a [TokenCertificate],
     handle: &str,
-    listed: &ListedCertificates,
+    directory: &dyn Certificates,
 ) -> Result<&'a TokenCertificate, FilteringError> {
-    let chosen = crate::identity::application::certificates::usable_certificate(
-        certificates,
-        handle,
-        listed,
-    )?;
+    let chosen = directory.usable(certificates, handle)?;
 
     let only_this_one = std::slice::from_ref(chosen).to_vec();
     if accepted_indexes(engine, filter, &only_this_one)?.is_empty() {

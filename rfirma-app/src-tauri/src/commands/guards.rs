@@ -233,19 +233,22 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
     let memory = a_memory(home.path());
     let opened = OpenedDocuments::new();
     let document = PortalDocument::opened(A_PORTAL_HANDLE);
+    let chosen = DestinationFolder::at(
+        Path::new(A_PORTAL_HANDLE)
+            .parent()
+            .expect("la concesion tiene directorio"),
+    );
     let configuration = Configuration {
-        destination: Some(DestinationFolder::at(
-            Path::new(A_PORTAL_HANDLE)
-                .parent()
-                .expect("la concesion tiene directorio"),
-        )),
+        destination: Some(chosen.clone()),
         remember_activity: true,
         ..Configuration::default()
     };
+    memory
+        .remember_configuration(&configuration)
+        .expect("deberia guardarse");
 
     let opened_view = OpenedDocumentView::from(documents::note_opened(
         &memory,
-        &configuration,
         &opened,
         std::path::PathBuf::from(A_PORTAL_HANDLE),
     ));
@@ -264,11 +267,10 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         .expect("se ha soltado un fichero"),
     );
     let folder = CheckedFolder::at(home.path()).expect("el temporal esta ahi");
-    let refused_rubric = crate::documents::application::rubric::choose(
-        &crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg")),
-        tauri_plugin_dialog::FilePath::Path(std::path::PathBuf::from(A_PORTAL_HANDLE)),
-    )
-    .expect_err("el enlace del portal no existe fuera del sandbox");
+    let refused_rubric =
+        crate::documents::adapters::rubric::RubricStore::at(home.path().join("rubric.jpg"))
+            .adopt(Path::new(A_PORTAL_HANDLE))
+            .expect_err("el enlace del portal no existe fuera del sandbox");
 
     let mut crossings = vec![
         Crossing::of("OpenedDocumentView", &opened_view),
@@ -276,11 +278,7 @@ fn crossings_from_a_portal_document() -> Vec<Crossing> {
         Crossing::of("DroppedDocumentView", &dropped),
         Crossing::of(
             "DestinationView",
-            &DestinationView::from(documents::where_it_lands(
-                &configuration,
-                home.path(),
-                &document,
-            )),
+            &DestinationView::from(documents::where_it_lands(&chosen, &document)),
         ),
         Crossing::of(
             "SignedDocumentView",

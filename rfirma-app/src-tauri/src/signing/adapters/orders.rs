@@ -2,8 +2,10 @@
 
 use serde::Deserialize;
 
+use crate::signing::application::configuration::language_of;
 use crate::signing::domain::{
-    MediaBox, Page, PageSet, Placement, PlacementError, Rotation, UserSpaceRect,
+    ChosenFields, MediaBox, Page, PageSet, Placement, PlacementError, Rotation, SigningChoice,
+    UserSpaceRect,
 };
 
 /// Lo que la ventana ha marcado en las casillas del recuadro.
@@ -79,6 +81,30 @@ pub struct SigningOrder {
     /// Si la persona ha consentido cofirmar un PDF con firmas no reconocidas.
     #[serde(default)]
     pub allow_unregistered_signatures: bool,
+}
+
+impl SigningOrder {
+    /// Lo decidido en la orden, con el recuadro ya validado; las asas se resuelven aparte.
+    pub fn choice(&self) -> Result<SigningChoice, PlacementError> {
+        Ok(SigningChoice {
+            placement: self
+                .placement
+                .as_ref()
+                .map(|placement| placement.placement())
+                .transpose()?,
+            fields: ChosenFields {
+                signer_name: self.fields.signer_name,
+                issuer: self.fields.issuer,
+                signed_at: self.fields.signed_at,
+                reason: self.fields.reason,
+            },
+            reason: self.reason.clone(),
+            signed_at: self.signed_at.clone(),
+            rubric: self.rubric.clone(),
+            language: language_of(&self.language),
+            allow_unregistered_signatures: self.allow_unregistered_signatures,
+        })
+    }
 }
 
 #[cfg(test)]

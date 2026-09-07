@@ -2,7 +2,7 @@
 
 use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, Parameter, SafCode, WireAnswer};
 
-pub use crate::site::domain::channel::ChannelDuty;
+use crate::site::domain::channel::ChannelDuty;
 
 /// Respuesta exacta al mensaje de eco del protocolo.
 pub const ECHO_OK: &str = "OK";

@@ -1,7 +1,7 @@
 use super::*;
 use crate::fixtures::InMemoryCaSlots;
 
-use crate::site::adapters::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown, Situation};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown, Situation};
 use crate::site::domain::trust_error::TrustError;
 use std::path::Path;
 use std::sync::Mutex;
@@ -102,6 +102,9 @@ fn invoked_with(arguments: &[&str]) -> Invocation {
     }
 }
 
+/// La invocación con la que arranca el proceso; aquí solo importa si trae una llamada de sede.
+use crate::desktop::application::invocation::Invocation;
+
 fn a_launch(parameters: &str) -> String {
     format!("afirma://websocket?ports=51001,51002,51003&{parameters}")
 }
@@ -110,7 +113,7 @@ fn starting_with(world: &World, store: &InMemoryCaSlots, invocation: &Invocation
     let profiles = [PathBuf::from("/perfiles/firefox")];
     let live = LiveErrand::default();
     attend_startup(
-        invocation,
+        invocation.site_launch(),
         TrustAtStartup {
             store,
             profiles: &profiles,
@@ -343,7 +346,7 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
 
     let live = LiveErrand::default();
     let startup = attend_startup(
-        &invocation,
+        invocation.site_launch(),
         TrustAtStartup {
             store: &store,
             profiles: &[],

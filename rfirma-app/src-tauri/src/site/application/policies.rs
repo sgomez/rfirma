@@ -17,7 +17,5 @@ pub fn expanded_for_the_site<E: PolicyEngine>(
     Ok(pairs_of(&expanded).into_iter().collect())
 }
 
-pub use crate::signing::domain::merged_with;
-
 #[cfg(test)]
 mod tests;

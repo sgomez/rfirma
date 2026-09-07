@@ -2,8 +2,9 @@
 
 use crate::commands::Failure;
 use crate::identity::adapters::failures::code_of_token;
-use crate::signing::adapters::failures::{code_of_bridge, code_of_cycle, code_of_inadmissible};
+use crate::signing::adapters::failures::{code_of_bridge, code_of_inadmissible};
 use crate::site::application::errand::{ConsentError, SiteRefusal};
+use crate::site::application::filtering::FilteringError;
 use crate::site::domain::channel::Situation as ChannelSituation;
 use crate::site::domain::protocol::{SafCode, WireAnswer};
 
@@ -37,7 +38,14 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             Failure::new("unwritable", detail.clone()),
             SafCode::CannotSaveData,
         ),
-        SiteRefusal::Cycle(failure) => (Failure::from(failure), code_of_cycle(failure)),
+        SiteRefusal::Signing(refusal) => (
+            Failure {
+                situation: refusal.situation.clone(),
+                detail: refusal.detail.clone(),
+                attempts_left: refusal.attempts_left,
+            },
+            refusal.code,
+        ),
     }
 }
 
@@ -83,6 +91,29 @@ pub fn code_of_channel(situation: ChannelSituation) -> SafCode {
 /// Construye la respuesta de cancelación voluntaria por parte del usuario.
 pub fn cancelled() -> WireAnswer {
     WireAnswer::Cancelled
+}
+
+impl From<&FilteringError> for Failure {
+    fn from(error: &FilteringError) -> Self {
+        match error {
+            FilteringError::Token(error) => error.clone().into(),
+            FilteringError::Engine(error) => error.into(),
+            FilteringError::EngineOutOfRange(index) => Self::new(
+                "bridgeFailed",
+                format!("el motor de filtros ha devuelto el indice {index}"),
+            ),
+            FilteringError::ExcludedByTheSite(label) => Self::new(
+                "certificateNotFound",
+                format!("la sede excluye {label}: su filtro ya no lo acepta"),
+            ),
+        }
+    }
+}
+
+impl From<FilteringError> for Failure {
+    fn from(error: FilteringError) -> Self {
+        Self::from(&error)
+    }
 }
 
 #[cfg(test)]

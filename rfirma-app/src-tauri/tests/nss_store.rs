@@ -3,10 +3,11 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rfirma_lib::identity::adapters::pkcs11::{
-    self, CertificateStatus, Situation, Store, StoreClass, TokenCertificate,
-};
+use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::listed::ListedCertificates;
+use rfirma_lib::identity::domain::certificate::{CertificateStatus, TokenCertificate};
+use rfirma_lib::identity::domain::error::Situation;
+use rfirma_lib::identity::domain::store::{Store, StoreClass};
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::signature::Verifier;
@@ -365,7 +366,7 @@ fn a_remembered_nss_certificate_still_signs_after_a_round_trip_through_the_state
     let certificate = the_valid_one(&store);
 
     let written = serde_json::to_string(certificate.reference()).expect("deberia serializarse");
-    let remembered: pkcs11::CertificateRef =
+    let remembered: rfirma_lib::identity::domain::certificate::CertificateRef =
         serde_json::from_str(&written).expect("deberia leerse");
 
     let raw = pkcs11::sign(&remembered, NO_MASTER_PASSWORD, PRESIGN)

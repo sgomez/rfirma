@@ -1,4 +1,4 @@
-//! Composición y arranque de la aplicación Tauri: junta las raíces de los cinco contextos.
+//! Composición y arranque de la aplicación Tauri: construye las raíces de los cinco contextos y las registra.
 
 pub mod desktop;
 pub mod documents;
@@ -17,18 +17,17 @@ pub mod commands {
 
 #[cfg(test)]
 pub(crate) mod fixtures;
-#[cfg(test)]
-mod tests;
 
 #[cfg(doctest)]
 mod compile_fail;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
-use documents::domain::destination::DestinationFolder;
-use identity::application::listed::ListedCertificates;
-use signing::adapters::memory::Memory;
-use signing::application::configuration_memory::Configuration;
+use desktop::DesktopRoot;
+use documents::DocumentsRoot;
+use identity::IdentityRoot;
+use signing::SigningRoot;
+use site::SiteRoot;
 
 /// Variable de entorno para sobreescribir el módulo PKCS#11.
 pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
@@ -36,61 +35,72 @@ pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
 /// Nombre del evento emitido cuando se suelta un documento en la ventana.
 pub const DOCUMENT_DROPPED: &str = "document-dropped";
 
-/// Entorno de composición que agrupa almacenes, configuración y persistencia.
-pub struct Environment {
-    /// El token por el que se lista y se firma.
-    pub token: Box<dyn identity::ports::Token + Send + Sync>,
-    /// Almacenes de certificados configurados.
-    pub stores: Vec<crate::identity::adapters::pkcs11::Store>,
-    /// Certificados del último listado.
-    pub listed: ListedCertificates,
-    /// Carpeta de documentos del usuario por omisión.
-    pub documents_folder: std::path::PathBuf,
-    /// Configuración en memoria viva compartida.
-    pub configuration: Mutex<Configuration>,
-    /// Acceso a la persistencia en disco (ADR-0010).
-    pub memory: Memory,
-    /// Almacén de la rúbrica (ADR-0012).
-    pub rubric: crate::documents::adapters::rubric::RubricStore,
-    /// Directorio de certificados de software instalados.
-    pub installed_certificates: std::path::PathBuf,
-}
-
-impl Environment {
-    /// Devuelve una instantánea de la configuración viva.
-    pub fn configuration(&self) -> Configuration {
-        lock(&self.configuration).clone()
-    }
-
-    /// Devuelve todos los almacenes disponibles incluyendo certificados instalados.
-    pub fn all_stores(&self) -> Vec<crate::identity::adapters::pkcs11::Store> {
-        let mut stores = self.stores.clone();
-        if let Some(softoken) = crate::identity::adapters::pkcs11::stores::softoken() {
-            stores.extend(crate::identity::adapters::pkcs11::stores::installed_stores(
-                &softoken,
-                &self.installed_certificates,
-            ));
-        }
-        stores
-    }
-}
-
-/// Resuelve la carpeta destino elegida o la carpeta de documentos por omisión.
-pub fn chosen_folder(
-    configuration: &Configuration,
-    documents_folder: impl Into<std::path::PathBuf>,
-) -> DestinationFolder {
-    configuration
-        .destination
-        .clone()
-        .unwrap_or_else(|| DestinationFolder::at(documents_folder))
-}
-
 /// Adquiere el cerrojo recuperando el valor si el mutex estaba envenenado.
 pub fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Las cinco raíces, construidas en orden de dependencia sobre las mismas rutas y la misma memoria.
+pub struct Roots {
+    pub identity: IdentityRoot,
+    pub documents: DocumentsRoot,
+    pub desktop: DesktopRoot,
+    pub signing: SigningRoot,
+    pub site: SiteRoot,
+}
+
+/// Compone las cinco raíces de producción sobre las rutas de esta máquina.
+pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
+    let memory = Arc::new(signing::adapters::memory::Memory::at(&paths));
+    let ca_store = site::adapters::tls::LocalCaStore::of(&paths);
+    let identity = IdentityRoot {
+        token: Box::new(identity::adapters::pkcs11::RealToken),
+        stores: identity::adapters::pkcs11::stores::from_environment(),
+        installed_certificates: paths.installed_certificates_dir(),
+        listed: identity::application::listed::ListedCertificates::new(),
+        memory: memory.clone(),
+    };
+    let documents = DocumentsRoot {
+        documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),
+        rubric: documents::adapters::rubric::RubricStore::at(paths.rubric_path()),
+        opened: documents::application::opened::OpenedDocuments::new(),
+        memory: memory.clone(),
+    };
+    let desktop = DesktopRoot {
+        pending_invocation: desktop::application::invocation::PendingInvocation::of(
+            desktop::application::invocation::Invocation::of_this_process(),
+        ),
+        memory: memory.clone(),
+        paths,
+    };
+    let signing = SigningRoot {
+        memory,
+        isolate: signing::adapters::isolate::Isolate::start(),
+        session: signing::application::session::SigningSession::default(),
+    };
+    let site = SiteRoot {
+        errand: site::application::errand::LiveErrand::default(),
+        held_channel: site::application::startup::HeldChannel::default(),
+        trust: site::application::startup::LocalCaTrust {
+            store: Box::new(ca_store.clone()),
+            profiles: nss_profiles_of_this_home(),
+            stores: Box::new(site::adapters::nss::NssTrustStores::new(
+                identity::adapters::pkcs11::RealNssHost,
+            )),
+        },
+        ca_store,
+        codec: Arc::new(site::adapters::codec::V4Codec),
+        scratch_dir: std::env::temp_dir(),
+    };
+    Roots {
+        identity,
+        documents,
+        desktop,
+        signing,
+        site,
+    }
 }
 
 /// Punto de entrada compartido por el binario y por las pruebas.
@@ -109,36 +119,14 @@ pub fn run() {
 
     let paths = desktop::adapters::paths::Paths::from_environment()
         .expect("debería saberse cuál es el HOME");
-
-    let ca_store = site::adapters::tls::LocalCaStore::of(&paths);
-    let nss_profiles = nss_profiles_of_this_home();
-
+    let Roots {
+        identity,
+        documents,
+        desktop,
+        signing,
+        site,
+    } = roots(paths);
     let invocation = desktop::application::invocation::Invocation::of_this_process();
-    let second_store = ca_store.clone();
-
-    let local_ca_trust = site::application::startup::LocalCaTrust {
-        store: Box::new(ca_store.clone()),
-        profiles: nss_profiles.clone(),
-        stores: Box::new(site::adapters::nss::NssTrustStores::new(
-            identity::adapters::pkcs11::RealNssHost,
-        )),
-    };
-    let codec: site::application::errand::NegotiatedCodec =
-        std::sync::Arc::new(site::adapters::codec::V4Codec);
-    let second_codec = codec.clone();
-
-    let memory = Memory::at(&paths);
-    let configuration = memory.configuration();
-    let environment = Environment {
-        token: Box::new(identity::adapters::pkcs11::RealToken),
-        stores: identity::adapters::pkcs11::stores::from_environment(),
-        listed: identity::application::listed::ListedCertificates::new(),
-        documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),
-        configuration: std::sync::Mutex::new(configuration),
-        memory,
-        rubric: documents::adapters::rubric::RubricStore::at(paths.rubric_path()),
-        installed_certificates: paths.installed_certificates_dir(),
-    };
 
     tauri::Builder::default()
         // Instancia única (ADR-0010).
@@ -149,40 +137,42 @@ pub fn run() {
                     command_line,
                     folder: std::path::PathBuf::from(folder),
                 };
-                let session = app.state::<signing::application::session::SigningSession>();
-                let opened = app.state::<documents::application::opened::OpenedDocuments>();
                 let substitution = desktop::application::invocation::second_invocation(
                     &invocation,
-                    &opened,
-                    signing::application::session::is_live(&session),
+                    app.state::<SigningRoot>().is_live(),
                 );
                 match substitution {
                     desktop::application::invocation::SecondInvocation::ReplacesWhatWasThere(
-                        view,
+                        dropped,
                     ) => {
                         let Some(window) = app.get_webview_window("main") else {
                             return;
                         };
                         let _ = window.set_focus();
+                        let Some(told) = app.state::<DocumentsRoot>().told_as_dropped(dropped)
+                        else {
+                            return;
+                        };
                         let _ = window.emit(
                             DOCUMENT_DROPPED,
-                            documents::adapters::views::DroppedDocumentView::from(*view),
+                            documents::adapters::views::DroppedDocumentView::from(told),
                         );
                     }
                     desktop::application::invocation::SecondInvocation::OpensItsOwnWindow(url) => {
                         let handle = app.clone();
-                        let transport = the_transport(&second_store, app);
+                        let site = app.state::<SiteRoot>();
+                        let transport = the_transport(&site.ca_store, &handle);
                         let attendance = site::application::startup::attend_site_launch(
                             &url,
-                            &second_codec,
+                            &site.codec,
                             &|ports, duty| transport.open(ports, duty),
                             &|_| site::adapters::window::open_the_site_window(&handle),
-                            app.state::<site::application::errand::LiveErrand>().inner(),
+                            &site.errand,
                             // A mitad de un trámite no se toca la CA local (ADR-0005).
                             site::application::startup::LocalCaReach::NotAnObstacle,
                         );
                         say(site::application::startup::hold_the_channel(
-                            &app.state::<site::application::startup::HeldChannel>(),
+                            &site.held_channel,
                             attendance,
                         ));
                     }
@@ -195,35 +185,20 @@ pub fn run() {
             },
         ))
         .plugin(tauri_plugin_dialog::init())
-        // El PDF firmado y su carpeta se abren a través del portal (ADR-0011).
         .plugin(tauri_plugin_opener::init())
-        .manage(environment)
-        .manage(signing::adapters::isolate::Isolate::start())
-        .manage(signing::application::session::SigningSession::default())
-        .manage(desktop::application::invocation::PendingInvocation::of(
-            invocation.clone(),
-        ))
-        .manage(site::application::errand::LiveErrand::default())
-        .manage(site::application::startup::HeldChannel::default())
-        .manage(local_ca_trust)
-        .manage(documents::application::opened::OpenedDocuments::new())
-        // En Tauri el arrastre se gestiona por evento de ventana (ADR-0011).
+        .manage(identity)
+        .manage(documents)
+        .manage(desktop)
+        .manage(signing)
+        .manage(site)
         .on_window_event(|window, event| {
-            if window.label() == site::adapters::window::SITE_WINDOW
-                && matches!(event, tauri::WindowEvent::CloseRequested { .. })
-            {
-                site::application::errand::decline(
-                    &window.state::<site::application::errand::LiveErrand>(),
-                );
-                return;
-            }
-
             let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event
             else {
                 return;
             };
-            let opened = window.state::<documents::application::opened::OpenedDocuments>();
-            let Some(dropped) = documents::application::documents::dropped_document(paths, &opened)
+            let documents = window.state::<DocumentsRoot>();
+            let Some(dropped) =
+                documents::application::documents::dropped_document(paths, &documents.opened)
             else {
                 return;
             };
@@ -273,20 +248,19 @@ pub fn run() {
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
-            let transport = the_transport(&ca_store, &handle);
-            let nss_stores =
-                site::adapters::nss::NssTrustStores::new(identity::adapters::pkcs11::RealNssHost);
+            let site = app.state::<SiteRoot>();
+            let transport = the_transport(&site.ca_store, &handle);
             let startup = site::application::startup::attend_startup(
-                &invocation,
+                invocation.site_launch(),
                 site::application::startup::TrustAtStartup {
-                    store: &ca_store,
-                    profiles: &nss_profiles,
-                    stores: &nss_stores,
+                    store: site.trust.store.as_ref(),
+                    profiles: &site.trust.profiles,
+                    stores: site.trust.stores.as_ref(),
                 },
-                &codec,
+                &site.codec,
                 &|ports, duty| transport.open(ports, duty),
                 &|_| site::adapters::window::open_the_site_window(&handle),
-                app.state::<site::application::errand::LiveErrand>().inner(),
+                &site.errand,
             );
 
             say(startup.said);
@@ -299,7 +273,7 @@ pub fn run() {
                 }
                 site::application::startup::Opening::TheSiteErrand(attendance) => {
                     say(site::application::startup::hold_the_channel(
-                        &app.state::<site::application::startup::HeldChannel>(),
+                        &site.held_channel,
                         attendance,
                     ));
                 }

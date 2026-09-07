@@ -4,34 +4,23 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use crate::documents::application::in_hand::DocumentInHand;
-use crate::documents::application::opened::OpenedDocuments;
-use crate::documents::application::{documents, recents};
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
-use crate::documents::domain::told::SignedDocument;
-use crate::identity::application::certificates;
-use crate::identity::application::certificates::StampedHolder;
-use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::holder::{stamped_holder_of, StampedHolder};
 use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
-use crate::identity::domain::store::Store;
-use crate::identity::ports::Token;
 use crate::lock;
-use crate::signing::adapters::memory::Memory;
-use crate::signing::adapters::orders::SigningOrder;
-use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::cycle::{
-    self, CycleError, OpenCycle, SigningRequest, TokenSignature, NOTHING_FROM_A_SITE,
+    self, CycleError, OpenCycle, SigningRequest, NOTHING_FROM_A_SITE,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::Refusal;
 use crate::signing::domain::{
-    compose_layer2_text, AdmissibleDocument, PlacementError, SessionSeal, SignatureConfig,
-    VisibleTextFields,
+    compose_layer2_text, AdmissibleDocument, CompletedCycle, PlacementError, SessionSeal,
+    SignatureConfig, SigningChoice, VisibleTextFields,
 };
-use crate::signing::ports::IsolateHost;
+use crate::signing::domain::{Refusal, TokenSignature};
+use crate::signing::ports::{IsolateHost, Signer};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]
@@ -42,34 +31,68 @@ pub struct SigningSession {
 
 struct InFlight {
     cycle: OpenCycle,
-    document: DocumentInHand,
+    handle: String,
+    document: PortalDocument,
     signature: Option<TokenSignature>,
     certificate: CertificateRef,
     signer_der: Vec<u8>,
     seal: SessionSeal,
 }
 
+/// El documento a firmar: el asa con la que lo nombra la ventana y lo que hay detrás.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DocumentToSign {
+    /// El asa que dio el portal al abrirlo.
+    pub handle: String,
+    /// El documento tal como entró por el portal.
+    pub document: PortalDocument,
+}
+
 /// Prefirma local: valida admisibilidad, prepara la configuración y abre el ciclo.
 pub fn begin(
-    order: &SigningOrder,
-    token: &dyn Token,
-    stores: &[Store],
-    listed: &ListedCertificates,
-    opened: &OpenedDocuments,
+    document: DocumentToSign,
+    chosen: &TokenCertificate,
+    choice: &SigningChoice,
+    signer: &dyn Signer,
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let document = DocumentInHand::taken(opened, &order.document)?;
-    let bytes = admitted_bytes(document.document())?;
-    let (config, reference, chain) = plan_signature(token, stores, listed, order)?;
+    let bytes = admitted_bytes(&document.document)?;
+    let config = config_for(choice, chosen)?;
     open_the_cycle(
-        token,
+        signer,
         document,
         bytes,
         config,
-        reference,
-        chain,
+        chosen,
         &NOTHING_FROM_A_SITE,
+        isolate,
+        session,
+    )
+}
+
+/// Prefirma de un trámite de sede: invisible, con la geometría y la política que la sede declaró.
+pub fn begin_for_the_site(
+    document: DocumentToSign,
+    chosen: &TokenCertificate,
+    from_the_site: &BTreeMap<String, String>,
+    allow_unregistered_signatures: bool,
+    signer: &dyn Signer,
+    isolate: &impl IsolateHost,
+    session: &SigningSession,
+) -> Result<StoreSecret, CycleFailure> {
+    let bytes = admitted_bytes(&document.document)?;
+    let config = config_for(
+        &SigningChoice::for_the_site(allow_unregistered_signatures),
+        chosen,
+    )?;
+    open_the_cycle(
+        signer,
+        document,
+        bytes,
+        config,
+        chosen,
+        from_the_site,
         isolate,
         session,
     )
@@ -142,20 +165,21 @@ impl From<IsolateGone> for CycleFailure {
     clippy::too_many_arguments,
     reason = "es el cuerpo compartido de dos casos de uso, no una interfaz"
 )]
-pub(crate) fn open_the_cycle(
-    token: &dyn Token,
-    document: DocumentInHand,
+fn open_the_cycle(
+    signer: &dyn Signer,
+    document: DocumentToSign,
     bytes: Vec<u8>,
-    config: crate::signing::domain::SignatureConfig,
-    reference: CertificateRef,
-    chain: Vec<Vec<u8>>,
+    config: SignatureConfig,
+    chosen: &TokenCertificate,
     from_the_site: &BTreeMap<String, String>,
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let secret = token.secret_of(&reference)?.admitted()?;
+    let reference = chosen.reference().clone();
+    let secret = signer.secret_of(&reference)?.admitted()?;
     let certificate = reference.clone();
-    let signer_der = chain.first().cloned().unwrap_or_default();
+    let signer_der = chosen.der().to_vec();
+    let chain = vec![signer_der.clone()];
     let from_the_site = from_the_site.clone();
 
     let cycle = on_the_bridge(isolate, move |bridge| {
@@ -175,7 +199,8 @@ pub(crate) fn open_the_cycle(
     let seal = cycle.seal_in_transit();
     *lock(&session.open) = Some(InFlight {
         cycle,
-        document,
+        handle: document.handle,
+        document: document.document,
         signature: None,
         certificate,
         signer_der,
@@ -186,49 +211,61 @@ pub(crate) fn open_the_cycle(
 
 /// Fase de firma en el token PKCS#11 con el PIN proporcionado (ADR-0001).
 pub fn sign_on_token(
-    token: &dyn Token,
+    signer: &dyn Signer,
     session: &SigningSession,
     pin: &str,
 ) -> Result<(), CycleFailure> {
     let mut open = lock(&session.open);
     let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
-    in_flight.signature = Some(in_flight.cycle.sign_on_token(token, pin)?);
+    in_flight.signature = Some(in_flight.cycle.sign_on_token(signer, pin)?);
     Ok(())
 }
 
-/// Postfirma: verifica el sello, compone el PDF y lo entrega en destino (ADR-0011, ADR-0016).
+/// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.
+pub struct Signed {
+    /// El asa con la que la ventana nombra el documento firmado.
+    pub handle: String,
+    /// El documento que se firmó.
+    pub document: PortalDocument,
+    /// El ciclo completado, con el PDF firmado dentro.
+    pub completed: CompletedCycle,
+    /// El certificado con el que se firmó.
+    pub certificate: CertificateRef,
+    /// El DER del firmante.
+    pub signer_der: Vec<u8>,
+}
+
+/// Postfirma: verifica el sello y compone el PDF; entregarlo o no es de quien llama (ADR-0011, ADR-0016).
 pub fn finish(
     isolate: &impl IsolateHost,
     session: &SigningSession,
-    memory: &Memory,
-    configuration: &Configuration,
-    documents_folder: &Path,
-) -> Result<SignedDocument, CycleFailure> {
+) -> Result<Signed, CycleFailure> {
     let SignedCycle {
         cycle,
+        handle,
         document,
         signature,
         seal,
         certificate,
-        ..
+        signer_der,
     } = take_signed_cycle(session)?;
 
     let completed = on_the_bridge(isolate, move |bridge| {
         cycle.postsign(bridge, &signature, &seal)
     })?;
 
-    let (landing, delivered) = documents::deliver(
-        configuration,
-        documents_folder,
-        document.document(),
-        completed.pdf(),
-    )?;
-    certificates::remember_the_certificate(memory, configuration, &certificate);
-    if document.is_remembered() {
-        recents::note_signed(memory, configuration, &landing, &completed);
-    }
+    Ok(Signed {
+        handle,
+        document,
+        completed,
+        certificate,
+        signer_der,
+    })
+}
+
+/// Apunta dónde quedó el último documento firmado de esta sesión (ADR-0011).
+pub fn note_delivered(session: &SigningSession, landing: PathBuf) {
     *lock(&session.delivered) = Some(landing);
-    Ok(delivered)
 }
 
 /// Ruta del último documento firmado entregado en esta sesión (ADR-0011).
@@ -257,63 +294,44 @@ pub fn cancel(session: &SigningSession) {
     *lock(&session.open) = None;
 }
 
-fn layer2_text_of(order: &SigningOrder, holder: &StampedHolder) -> String {
+fn layer2_text_of(choice: &SigningChoice, holder: &StampedHolder) -> String {
     compose_layer2_text(
         &VisibleTextFields {
-            signer_name: order
+            signer_name: choice
                 .fields
                 .signer_name
                 .then_some(holder.common_name.as_str())
                 .filter(|name| !name.is_empty()),
-            issuer: order
+            issuer: choice
                 .fields
                 .issuer
                 .then_some(holder.issuer.as_str())
                 .filter(|issuer| !issuer.is_empty()),
-            signed_at: order.fields.signed_at.then_some(order.signed_at.as_str()),
-            reason: order
+            signed_at: choice.fields.signed_at.then_some(choice.signed_at.as_str()),
+            reason: choice
                 .fields
                 .reason
-                .then_some(order.reason.as_str())
+                .then_some(choice.reason.as_str())
                 .filter(|reason| !reason.is_empty()),
             pseudonym: holder.pseudonym,
         },
-        super::configuration::language_of(&order.language),
+        choice.language,
     )
 }
 
-/// Configuración de firma construida a partir de la orden y del certificado seleccionado.
+/// Configuración de firma construida a partir de lo elegido y del certificado seleccionado.
 pub fn config_for(
-    order: &SigningOrder,
+    choice: &SigningChoice,
     chosen: &TokenCertificate,
 ) -> Result<SignatureConfig, PlacementError> {
-    let holder = certificates::stamped_holder_of(chosen);
+    let holder = stamped_holder_of(chosen);
     Ok(SignatureConfig {
-        placement: order
-            .placement
-            .as_ref()
-            .map(|placement| placement.placement())
-            .transpose()?,
-        layer2_text: layer2_text_of(order, &holder),
-        rubric_image: order.rubric.clone(),
-        sign_reason: (!order.reason.is_empty()).then(|| order.reason.clone()),
-        allow_unregistered_signatures: order.allow_unregistered_signatures,
+        placement: choice.placement.clone(),
+        layer2_text: layer2_text_of(choice, &holder),
+        rubric_image: choice.rubric.clone(),
+        sign_reason: (!choice.reason.is_empty()).then(|| choice.reason.clone()),
+        allow_unregistered_signatures: choice.allow_unregistered_signatures,
     })
-}
-
-pub(crate) fn plan_signature(
-    token: &dyn Token,
-    stores: &[Store],
-    listed: &ListedCertificates,
-    order: &SigningOrder,
-) -> Result<(SignatureConfig, CertificateRef, Vec<Vec<u8>>), CycleFailure> {
-    let found = token.list_across(stores)?;
-    let chosen = certificates::usable_certificate(&found, &order.certificate, listed)?;
-    Ok((
-        config_for(order, chosen)?,
-        chosen.reference().clone(),
-        vec![chosen.der().to_vec()],
-    ))
 }
 
 /// Obtiene y valida los bytes de un documento para firmar.
@@ -325,12 +343,8 @@ pub fn admitted_bytes(document: &PortalDocument) -> Result<Vec<u8>, CycleFailure
 }
 
 /// Comprueba si el documento contiene firmas previas no reconocibles.
-pub fn unregistered_signatures_in(
-    opened: &OpenedDocuments,
-    document: &str,
-) -> Result<bool, CycleFailure> {
-    let in_hand = DocumentInHand::taken(opened, document)?;
-    let bytes = admitted_bytes(in_hand.document())?;
+pub fn unregistered_signatures_in(document: &PortalDocument) -> Result<bool, CycleFailure> {
+    let bytes = admitted_bytes(document)?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 
@@ -341,6 +355,7 @@ pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, CycleF
     let signature = in_flight.signature.ok_or(CycleFailure::NotSignedYet)?;
     Ok(SignedCycle {
         cycle: in_flight.cycle,
+        handle: in_flight.handle,
         document: in_flight.document,
         signature,
         seal: in_flight.seal,
@@ -352,7 +367,8 @@ pub fn take_signed_cycle(session: &SigningSession) -> Result<SignedCycle, CycleF
 /// Ciclo firmado en el token preparado para la postfirma.
 pub struct SignedCycle {
     pub cycle: OpenCycle,
-    pub document: DocumentInHand,
+    pub handle: String,
+    pub document: PortalDocument,
     pub signature: TokenSignature,
     pub seal: SessionSeal,
     pub certificate: CertificateRef,

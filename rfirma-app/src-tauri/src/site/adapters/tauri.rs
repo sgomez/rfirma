@@ -2,7 +2,8 @@
 
 use tauri::State;
 
-use crate::Environment;
+use crate::identity::IdentityRoot;
+use crate::site::SiteRoot;
 
 use super::views::SiteErrandView;
 use super::window::{self as site_window, SITE_WINDOW};
@@ -31,8 +32,8 @@ pub fn site_identify(certificate: String, app_handle: tauri::AppHandle) -> Resul
 
 /// Cancela el trámite ante la sede.
 #[tauri::command(async)]
-pub fn site_decline(live: State<'_, crate::site::application::errand::LiveErrand>) {
-    crate::site::application::errand::decline(&live);
+pub fn site_decline(site: State<'_, SiteRoot>) {
+    crate::site::application::errand::decline(&site.errand);
 }
 
 /// Inicia la firma del trámite de sede con el certificado elegido (ADR-0001).
@@ -58,20 +59,19 @@ pub fn site_begin_signing(
 /// Postfirma del trámite de sede y entrega del resultado a la sede.
 #[tauri::command(async)]
 pub fn site_finish_signing(app_handle: tauri::AppHandle) -> Result<(), Failure> {
-    Ok(site_window::with_the_desk(
-        &app_handle,
-        crate::site::application::errand::finish,
-    )?)
+    Ok(site_window::with_the_desk(&app_handle, |desk, live| {
+        crate::site::application::errand::finish(desk, live)
+    })?)
 }
 
 /// Abre el diálogo para instalar un certificado desde la ventana de sede.
 #[tauri::command(async)]
 pub fn site_install_certificate(
     app_handle: tauri::AppHandle,
-    environment: State<'_, Environment>,
+    identity: State<'_, IdentityRoot>,
     password: String,
 ) -> Result<bool, Failure> {
-    install_certificate(app_handle, environment, password)
+    install_certificate(app_handle, identity, password)
 }
 
 /// Vuelve a consultar los certificados disponibles en el trámite de sede.
@@ -85,20 +85,17 @@ pub fn site_look_again(app_handle: tauri::AppHandle) {
 
 /// Instala la CA local en los almacenes NSS del usuario (ADR-0005).
 #[tauri::command(async)]
-pub fn install_local_ca(
-    app_handle: tauri::AppHandle,
-    trust: State<'_, crate::site::application::startup::LocalCaTrust>,
-    held: State<'_, crate::site::application::startup::HeldChannel>,
-    live: State<'_, crate::site::application::errand::LiveErrand>,
-) {
-    crate::site::application::startup::repair_the_local_ca(&trust, &held, &live);
+pub fn install_local_ca(app_handle: tauri::AppHandle, site: State<'_, SiteRoot>) {
+    crate::site::application::startup::repair_the_local_ca(
+        &site.trust,
+        &site.held_channel,
+        &site.errand,
+    );
     site_window::publish_the_moment(&app_handle);
 }
 
 /// Consulta el momento actual del trámite de sede.
 #[tauri::command]
-pub fn read_site_errand(
-    live: State<'_, crate::site::application::errand::LiveErrand>,
-) -> Option<SiteErrandView> {
-    live.moment().as_ref().map(SiteErrandView::from)
+pub fn read_site_errand(site: State<'_, SiteRoot>) -> Option<SiteErrandView> {
+    site.errand.moment().as_ref().map(SiteErrandView::from)
 }

@@ -8,9 +8,7 @@ use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::portal::PortalDocument;
 use crate::documents::domain::recents::Badge;
 use crate::documents::domain::recents::RecentDocument;
-use crate::signing::adapters::memory::Memory;
-use crate::signing::adapters::state::State;
-use crate::signing::application::configuration_memory::Configuration;
+use crate::documents::ports::DocumentsMemory;
 use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::BoxSize;
 use crate::signing::domain::CompletedCycle;
@@ -58,15 +56,10 @@ impl From<MemoryError> for RecentsError {
 }
 
 /// Devuelve la lista de documentos recientes ordenados por fecha de uso.
-pub fn listed_rows(memory: &Memory, opened: &OpenedDocuments) -> Vec<RecentRow> {
-    let state = loaded_state(memory);
-    let size = state
-        .visible_signature
-        .as_ref()
-        .map(|remembered| remembered.size)
-        .unwrap_or_default();
-    state
-        .recents
+pub fn listed_rows(memory: &dyn DocumentsMemory, opened: &OpenedDocuments) -> Vec<RecentRow> {
+    let size = memory.box_size();
+    memory
+        .recents()
         .entries()
         .iter()
         .map(|entry| told_as_row(entry, size, opened))
@@ -75,36 +68,30 @@ pub fn listed_rows(memory: &Memory, opened: &OpenedDocuments) -> Vec<RecentRow> 
 
 /// Anota un documento abierto en la bandeja de recientes y devuelve su fila para la interfaz.
 pub fn record(
-    memory: &Memory,
-    configuration: &Configuration,
+    memory: &dyn DocumentsMemory,
     opened: &OpenedDocuments,
     id: &str,
     placement: Option<VisibleBox>,
 ) -> Result<RecentRow, RecentsError> {
     let document = opened.get(id).ok_or_else(|| no_document(id))?;
     let path = document.reading_path().to_path_buf();
-    let mut state = loaded_state(memory);
-    let badge = state
-        .recents
+    let mut recents = memory.recents();
+    let badge = recents
         .entry(&path)
         .map_or(Badge::Unsigned, RecentDocument::<Spot>::badge);
     let noted = RecentDocument::seen(&path, badge, SystemTime::now())
         .map_err(|error| DocumentError::Unreadable(error.to_string()))?;
     let canonical = noted.path().to_path_buf();
-    state.recents.record(noted);
+    recents.record(noted);
+    let mut size = None;
     if let Some(placement) = placement {
-        let (spot, size) = split(placement);
-        state.recents.place(&canonical, Some(spot));
-        remember_the_size(&mut state, size);
+        let (spot, chosen) = split(placement);
+        recents.place(&canonical, Some(spot));
+        size = Some(chosen);
     }
-    memory.remember_state(configuration, &state)?;
-    let size = state
-        .visible_signature
-        .as_ref()
-        .map(|remembered| remembered.size)
-        .unwrap_or_default();
-    let entry = state
-        .recents
+    memory.remember_recents(&recents, size)?;
+    let size = memory.box_size();
+    let entry = recents
         .entry(&canonical)
         .expect("la fila acaba de anotarse");
     Ok(RecentRow {
@@ -115,17 +102,14 @@ pub fn record(
 
 /// Elimina un documento de la bandeja de recientes.
 pub fn forget(
-    memory: &Memory,
-    configuration: &Configuration,
+    memory: &dyn DocumentsMemory,
     opened: &OpenedDocuments,
     id: &str,
 ) -> Result<(), RecentsError> {
     let document = opened.get(id).ok_or_else(|| no_document(id))?;
-    let mut state = loaded_state(memory);
-    state
-        .recents
-        .forget(&canonical_or_raw(document.reading_path()));
-    memory.remember_state(configuration, &state)?;
+    let mut recents = memory.recents();
+    recents.forget(&canonical_or_raw(document.reading_path()));
+    memory.remember_recents(&recents, None)?;
     Ok(())
 }
 
@@ -139,26 +123,13 @@ fn canonical_or_raw(path: &Path) -> std::path::PathBuf {
 }
 
 /// Anota un documento recién firmado en la bandeja con la insignia de firmado.
-pub fn note_signed(
-    memory: &Memory,
-    configuration: &Configuration,
-    landing: &Path,
-    _proof: &CompletedCycle,
-) {
+pub fn note_signed(memory: &dyn DocumentsMemory, landing: &Path, _proof: &CompletedCycle) {
     let Ok(noted) = RecentDocument::seen(landing, Badge::Signed, SystemTime::now()) else {
         return;
     };
-    let mut state = loaded_state(memory);
-    state.recents.record(noted);
-    let _ = memory.remember_state(configuration, &state);
-}
-
-/// Obtiene el estado persistido o uno por defecto si no pudo cargarse.
-fn loaded_state(memory: &Memory) -> State {
-    memory
-        .state()
-        .map(crate::signing::adapters::store::Loaded::into_value)
-        .unwrap_or_default()
+    let mut recents = memory.recents();
+    recents.record(noted);
+    let _ = memory.remember_recents(&recents, None);
 }
 
 /// Convierte una entrada de recientes en su fila.
@@ -206,10 +177,6 @@ fn split(placement: VisibleBox) -> (Spot, BoxSize) {
             height: y1 - y0,
         },
     )
-}
-
-fn remember_the_size(state: &mut State, size: BoxSize) {
-    state.visible_signature.get_or_insert_default().size = size;
 }
 
 #[cfg(test)]

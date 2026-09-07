@@ -2,14 +2,16 @@
 
 use tauri::{Emitter as _, Manager as _};
 
-use crate::documents::application::opened::OpenedDocuments;
+use crate::documents::DocumentsRoot;
+use crate::identity::IdentityRoot;
 use crate::signing::adapters::isolate::Isolate;
+use crate::signing::SigningRoot;
 use crate::site::application::errand::{self, ErrandDesk, ErrandStep, LiveErrand, ReplyHandle};
 use crate::site::domain::protocol::AfirmaUrl;
-use crate::Environment;
+use crate::site::SiteRoot;
 
+use super::desk::Neighbours;
 use super::views::SiteErrandView;
-use crate::signing::application::session::SigningSession;
 
 /// Etiqueta de la ventana de sede.
 pub const SITE_WINDOW: &str = "site";
@@ -34,7 +36,7 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
 
 /// Publica a la ventana de sede el momento actual del trámite.
 pub fn publish_the_moment(app: &tauri::AppHandle) {
-    let Some(moment) = app.state::<LiveErrand>().moment() else {
+    let Some(moment) = app.state::<SiteRoot>().errand.moment() else {
         return;
     };
     if let Some(window) = app.get_webview_window(SITE_WINDOW) {
@@ -58,13 +60,21 @@ pub(super) fn publish_what_moved(app: &tauri::AppHandle, step: Option<ErrandStep
 /// Desempaqueta del estado de Tauri los componentes de la mesa del trámite.
 pub(super) fn with_the_desk<R>(
     app: &tauri::AppHandle,
-    call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate, Isolate>, &LiveErrand) -> R,
+    call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>>, &LiveErrand) -> R,
 ) -> R {
-    let environment = app.state::<Environment>();
-    let opened = app.state::<OpenedDocuments>();
-    let isolate = app.state::<Isolate>();
-    let session = app.state::<SigningSession>();
-    let live = app.state::<LiveErrand>();
-    let desk = ErrandDesk::at(&environment, &opened, &isolate, &session);
-    call(&desk, &live)
+    let identity = app.state::<IdentityRoot>();
+    let documents = app.state::<DocumentsRoot>();
+    let signing = app.state::<SigningRoot>();
+    let site = app.state::<SiteRoot>();
+    let desk = ErrandDesk {
+        engine: &signing.isolate,
+        policies: &signing.isolate,
+        neighbours: Neighbours {
+            identity: &identity,
+            documents: &documents,
+            signing: &signing,
+        },
+        scratch_dir: site.scratch_dir.clone(),
+    };
+    call(&desk, &site.errand)
 }

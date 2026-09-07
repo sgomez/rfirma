@@ -2,6 +2,15 @@ use std::path::Path;
 
 use super::*;
 use crate::commands::Failure;
+use crate::documents::application::documents::told_as_dropped;
+use crate::documents::application::opened::OpenedDocuments;
+
+fn told(
+    invocation: &Invocation,
+    opened: &OpenedDocuments,
+) -> Option<crate::documents::domain::told::DroppedDocument> {
+    told_as_dropped(invoked_document(invocation)?, opened)
+}
 
 /// **Grada A**: una línea de órdenes y un fichero temporal. Ni token, ni
 /// puente, ni ventana.
@@ -23,7 +32,7 @@ fn a_pdf_named_in_the_command_line_opens_like_a_dropped_one() {
     let pdf = a_temporary_pdf("contrato.pdf");
     let opened = OpenedDocuments::new();
 
-    let view = invoked_document(&invoked_with(&pdf), &opened).expect("algo trae");
+    let view = told(&invoked_with(&pdf), &opened).expect("algo trae");
 
     assert!(view.refused.is_none(), "un PDF legible se abre y no avisa");
     assert_eq!(view.discarded, 0);
@@ -35,7 +44,7 @@ fn a_pdf_named_in_the_command_line_opens_like_a_dropped_one() {
 fn an_argument_that_is_not_a_pdf_opens_the_normal_window_and_says_so() {
     let other = a_temporary_pdf("hoja.ods");
 
-    let view = invoked_document(&invoked_with(&other), &OpenedDocuments::new()).expect("algo trae");
+    let view = told(&invoked_with(&other), &OpenedDocuments::new()).expect("algo trae");
 
     assert!(view.document.is_none(), "no se abre ningun documento");
     assert_eq!(
@@ -51,7 +60,7 @@ fn invoking_without_a_document_is_just_opening_the_application() {
         folder: PathBuf::from("/"),
     };
 
-    assert_eq!(invoked_document(&invocation, &OpenedDocuments::new()), None);
+    assert_eq!(told(&invocation, &OpenedDocuments::new()), None);
 }
 
 #[test]
@@ -59,11 +68,12 @@ fn a_second_invocation_with_a_document_replaces_the_one_that_was_there() {
     let pdf = a_temporary_pdf("segundo.pdf");
     let opened = OpenedDocuments::new();
 
-    let second = second_invocation(&invoked_with(&pdf), &opened, false);
+    let second = second_invocation(&invoked_with(&pdf), false);
 
-    let SecondInvocation::ReplacesWhatWasThere(view) = second else {
+    let SecondInvocation::ReplacesWhatWasThere(dropped) = second else {
         panic!("sustituye: {second:?}");
     };
+    let view = told_as_dropped(dropped, &opened).expect("algo trae");
     assert!(
         view.document.is_some(),
         "el documento nuevo es el que queda"
@@ -75,7 +85,7 @@ fn a_second_invocation_replaces_nothing_while_a_signing_session_is_live() {
     let pdf = a_temporary_pdf("mientras-firmo.pdf");
 
     assert_eq!(
-        second_invocation(&invoked_with(&pdf), &OpenedDocuments::new(), true),
+        second_invocation(&invoked_with(&pdf), true),
         SecondInvocation::NothingHappens
     );
 }
@@ -85,7 +95,7 @@ fn not_even_a_notice_reaches_the_window_while_a_signing_session_is_live() {
     let other = a_temporary_pdf("hoja-mientras-firmo.ods");
 
     assert_eq!(
-        second_invocation(&invoked_with(&other), &OpenedDocuments::new(), true),
+        second_invocation(&invoked_with(&other), true),
         SecondInvocation::NothingHappens
     );
 }
@@ -93,11 +103,7 @@ fn not_even_a_notice_reaches_the_window_while_a_signing_session_is_live() {
 #[test]
 fn a_site_launch_opens_its_own_window_and_replaces_nothing() {
     assert_eq!(
-        second_invocation(
-            &invoked_with_the_url(A_LAUNCH),
-            &OpenedDocuments::new(),
-            false
-        ),
+        second_invocation(&invoked_with_the_url(A_LAUNCH), false),
         SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
     );
 }
@@ -105,11 +111,7 @@ fn a_site_launch_opens_its_own_window_and_replaces_nothing() {
 #[test]
 fn a_live_signing_session_does_not_stop_a_site_launch() {
     assert_eq!(
-        second_invocation(
-            &invoked_with_the_url(A_LAUNCH),
-            &OpenedDocuments::new(),
-            true
-        ),
+        second_invocation(&invoked_with_the_url(A_LAUNCH), true),
         SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
     );
 }
@@ -208,7 +210,7 @@ fn a_site_url_is_not_treated_as_a_file_path() {
     let invocation = invoked_with_the_url(A_LAUNCH);
 
     assert_eq!(invocation.site_launch(), Some(A_LAUNCH));
-    assert_eq!(invoked_document(&invocation, &OpenedDocuments::new()), None);
+    assert_eq!(told(&invocation, &OpenedDocuments::new()), None);
 }
 
 #[test]
@@ -220,7 +222,7 @@ fn the_whole_url_survives_the_single_instance_path() {
 
     assert_eq!(invocation.site_launch(), Some(A_LAUNCH));
     assert_eq!(
-        second_invocation(&invocation, &OpenedDocuments::new(), false),
+        second_invocation(&invocation, false),
         SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned()),
         "una invocación de sede no sustituye ningún documento: abre lo suyo"
     );

@@ -3,7 +3,7 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::desktop::domain::version_check::VersionCheck;
-use crate::signing::adapters::memory::Memory;
+use crate::desktop::ports::VersionMemory;
 
 /// Puerto de red que obtiene el cuerpo de la última publicación.
 pub type ReleaseFeed<'a> = &'a dyn Fn() -> Option<String>;
@@ -52,7 +52,7 @@ impl std::fmt::Display for Version {
 /// Comprueba si existe una versión publicada posterior a la en ejecución.
 pub fn new_version(
     running: Version,
-    memory: &Memory,
+    memory: &dyn VersionMemory,
     feed: ReleaseFeed<'_>,
     now: SystemTime,
 ) -> Option<Version> {
@@ -65,21 +65,20 @@ pub fn new_version(
 }
 
 /// Lee la comprobación previa de la memoria si no ha caducado.
-fn fresh_answer(memory: &Memory, now: SystemTime) -> Option<Version> {
-    let check = memory
-        .state()
-        .ok()?
-        .into_value()
-        .version_check
-        .filter(|check| {
-            seconds_since_epoch(now).saturating_sub(check.checked_at) < CACHE_TTL.as_secs()
-        })?;
+fn fresh_answer(memory: &dyn VersionMemory, now: SystemTime) -> Option<Version> {
+    let check = memory.last_version_check().filter(|check| {
+        seconds_since_epoch(now).saturating_sub(check.checked_at) < CACHE_TTL.as_secs()
+    })?;
 
     Version::parse(&check.announced)
 }
 
 /// Consulta el puerto de red y persiste la comprobación si es válida.
-fn ask_and_remember(memory: &Memory, feed: ReleaseFeed<'_>, now: SystemTime) -> Option<Version> {
+fn ask_and_remember(
+    memory: &dyn VersionMemory,
+    feed: ReleaseFeed<'_>,
+    now: SystemTime,
+) -> Option<Version> {
     let announced = announced_version(&feed()?)?;
 
     let _ = memory.remember_version_check(VersionCheck {

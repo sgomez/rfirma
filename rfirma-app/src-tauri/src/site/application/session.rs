@@ -2,25 +2,14 @@
 
 use std::collections::BTreeMap;
 
-use crate::documents::application::in_hand::DocumentInHand;
-use crate::documents::application::opened::OpenedDocuments;
-use crate::identity::application::listed::ListedCertificates;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::identity::domain::store::Store;
-use crate::identity::ports::Token;
-use crate::signing::adapters::orders::SigningOrder;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::Refusal as Inadmissible;
-use crate::signing::ports::IsolateHost;
 use crate::site::application::filtering;
 use crate::site::domain::protocol::SiteFilter;
-use crate::site::ports::FilterEngine;
-
-use crate::signing::application::session::{
-    admitted_bytes, config_for, on_the_bridge, open_the_cycle, take_signed_cycle, CycleFailure,
-    SignedCycle, SigningSession,
-};
+use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::ports::{Certificates, FilterEngine, SiteSigning, SiteSigningRequest};
 
 /// Por qué el trámite no sigue, antes de traducirlo a la ventana y al cable.
 #[derive(Debug)]
@@ -41,94 +30,56 @@ pub enum SiteRefusal {
     ScratchFolderMissing(String),
     /// El documento de paso no se ha podido escribir.
     ScratchUnwritable(String),
-    /// El ciclo de firma ha fallado.
-    Cycle(CycleFailure),
+    /// La firma no ha salido, y quien la hizo ya dijo con qué código y con qué vista.
+    Signing(SigningRefusal),
 }
 
-impl From<CycleFailure> for SiteRefusal {
-    fn from(failure: CycleFailure) -> Self {
-        Self::Cycle(failure)
+impl From<SigningRefusal> for SiteRefusal {
+    fn from(refusal: SigningRefusal) -> Self {
+        Self::Signing(refusal)
     }
 }
 
-/// Prefirma de un trámite de sede aplicando los filtros solicitados.
-pub fn begin_for_the_site<E: FilterEngine>(
-    site: &SiteSigning<'_, E>,
-    order: &SigningOrder,
-    stores: &[Store],
-    listed: &ListedCertificates,
-    opened: &OpenedDocuments,
-    isolate: &impl IsolateHost,
-    session: &SigningSession,
-) -> Result<StoreSecret, SiteRefusal> {
-    let document = DocumentInHand::taken(opened, &order.document).map_err(CycleFailure::from)?;
-    let bytes = admitted_bytes(document.document())?;
-    let found = site.token.list_across(stores).map_err(CycleFailure::from)?;
-    let chosen = filtering::usable_certificate_for_the_site(
-        site.engine,
-        site.filter,
-        &found,
-        &order.certificate,
-        listed,
-    )
-    .map_err(SiteRefusal::NotUsableForTheSite)?;
-    let config = config_for(order, chosen).map_err(CycleFailure::from)?;
-    let reference = chosen.reference().clone();
-    let chain = vec![chosen.der().to_vec()];
-    Ok(open_the_cycle(
-        site.token,
-        document,
-        bytes,
-        config,
-        reference,
-        chain,
-        site.from_the_site,
-        isolate,
-        session,
-    )?)
-}
-
-/// Contexto de firma requerido por un trámite de sede.
-pub struct SiteSigning<'a, E: FilterEngine> {
+/// Lo que la sede declaró para esta firma: su filtro y sus parámetros ya expandidos.
+pub struct SiteTerms<'a, E: FilterEngine> {
     /// Motor de filtros sobre certificados.
     pub engine: &'a E,
-    /// El token que lista y firma.
-    pub token: &'a dyn Token,
     /// Filtro de certificados declarado por la sede.
     pub filter: &'a SiteFilter,
     /// Parámetros adicionales declarados por la sede.
     pub from_the_site: &'a BTreeMap<String, String>,
+    /// Si la sede consintió cofirmar sobre firmas que no se reconocen.
+    pub allow_unregistered_signatures: bool,
 }
 
-/// Firma de un trámite de sede lista para transmitir.
-pub struct SiteSignature {
-    /// Bytes del PDF firmado.
-    pub signed: Vec<u8>,
-    /// Certificado firmante en formato DER.
-    pub signer_der: Vec<u8>,
+/// Prefirma de un trámite de sede: vuelve a pasar el filtro de la sede antes de pedir el secreto.
+pub fn begin_for_the_site<E: FilterEngine>(
+    terms: &SiteTerms<'_, E>,
+    document: &str,
+    certificate: &str,
+    certificates: &dyn Certificates,
+    signing: &dyn SiteSigning,
+) -> Result<StoreSecret, SiteRefusal> {
+    let found = certificates.listed().map_err(SiteRefusal::Token)?;
+    let chosen = filtering::usable_certificate_for_the_site(
+        terms.engine,
+        terms.filter,
+        &found,
+        certificate,
+        certificates,
+    )
+    .map_err(SiteRefusal::NotUsableForTheSite)?;
+    Ok(signing.begin(SiteSigningRequest {
+        document,
+        certificate: chosen,
+        from_the_site: terms.from_the_site,
+        allow_unregistered_signatures: terms.allow_unregistered_signatures,
+    })?)
 }
 
-/// Postfirma de un trámite de sede que devuelve el resultado sin persistir en disco (ADR-0011).
-pub fn finish_for_the_site(
-    isolate: &impl IsolateHost,
-    session: &SigningSession,
-) -> Result<SiteSignature, SiteRefusal> {
-    let SignedCycle {
-        cycle,
-        signature,
-        seal,
-        signer_der,
-        ..
-    } = take_signed_cycle(session)?;
-
-    let completed = on_the_bridge(isolate, move |bridge| {
-        cycle.postsign(bridge, &signature, &seal)
-    })?;
-
-    Ok(SiteSignature {
-        signed: completed.into_pdf(),
-        signer_der,
-    })
+/// Postfirma de un trámite de sede: la firma vuelve en memoria y no se escribe nada (ADR-0011).
+pub fn finish_for_the_site(signing: &dyn SiteSigning) -> Result<SiteSignature, SiteRefusal> {
+    Ok(signing.finish()?)
 }
 
 #[cfg(test)]

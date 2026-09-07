@@ -2,34 +2,38 @@
 
 use tauri::State;
 
-use crate::documents::application::opened::OpenedDocuments;
-use crate::signing::adapters::isolate::Isolate;
-use crate::Environment;
+use crate::documents::DocumentsRoot;
+use crate::identity::IdentityRoot;
+use crate::signing::SigningRoot;
 
 use super::orders::{PlacementOrder, SigningOrder};
 use super::views::ConfigurationView;
 use crate::commands::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
-use crate::signing::application::session::SigningSession;
+use crate::signing::application::session::DocumentToSign;
 
 /// Prefirma: cruza la frontera y deja el ciclo abierto.
 #[tauri::command]
 pub fn begin_signing(
     order: SigningOrder,
-    environment: State<'_, Environment>,
-    isolate: State<'_, Isolate>,
-    session: State<'_, SigningSession>,
-    opened: State<'_, OpenedDocuments>,
+    identity: State<'_, IdentityRoot>,
+    documents: State<'_, DocumentsRoot>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<SecretView, Failure> {
+    let document = documents.opened_document(&order.document)?;
+    let found = identity.certificates()?;
+    let chosen = identity.usable(&found, &order.certificate)?;
     Ok(crate::signing::application::session::begin(
-        &order,
-        environment.token.as_ref(),
-        &environment.all_stores(),
-        &environment.listed,
-        &opened,
-        &*isolate,
-        &session,
+        DocumentToSign {
+            handle: order.document.clone(),
+            document,
+        },
+        chosen,
+        &order.choice()?,
+        &identity.signer(),
+        &signing.isolate,
+        &signing.session,
     )?
     .into())
 }
@@ -38,12 +42,12 @@ pub fn begin_signing(
 #[tauri::command]
 pub fn sign_with_pin(
     pin: String,
-    environment: State<'_, Environment>,
-    session: State<'_, SigningSession>,
+    identity: State<'_, IdentityRoot>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<(), Failure> {
     Ok(crate::signing::application::session::sign_on_token(
-        environment.token.as_ref(),
-        &session,
+        &identity.signer(),
+        &signing.session,
         &pin,
     )?)
 }
@@ -51,42 +55,43 @@ pub fn sign_with_pin(
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
 #[tauri::command]
 pub fn finish_signing(
-    environment: State<'_, Environment>,
-    isolate: State<'_, Isolate>,
-    session: State<'_, SigningSession>,
+    identity: State<'_, IdentityRoot>,
+    documents: State<'_, DocumentsRoot>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<SignedDocumentView, Failure> {
-    Ok(crate::signing::application::session::finish(
-        &*isolate,
-        &session,
-        &environment.memory,
-        &environment.configuration(),
-        &environment.documents_folder,
-    )?
-    .into())
+    let signed = crate::signing::application::session::finish(&signing.isolate, &signing.session)?;
+    let (landing, delivered) = documents.deliver(&signed.document, signed.completed.pdf())?;
+    identity.remember_the_certificate(&signed.certificate);
+    if documents.is_remembered(&signed.handle) {
+        documents.note_signed(&landing, &signed.completed);
+    }
+    crate::signing::application::session::note_delivered(&signing.session, landing);
+    Ok(delivered.into())
 }
 
 /// Cancela el ciclo de firma a medias.
 #[tauri::command]
-pub fn cancel_signing(session: State<'_, SigningSession>) {
-    crate::signing::application::session::cancel(&session);
+pub fn cancel_signing(signing: State<'_, SigningRoot>) {
+    crate::signing::application::session::cancel(&signing.session);
 }
 
 /// Previsualización de la firma sobre el PDF sin firmar ni pedir PIN.
 #[tauri::command(async)]
 pub fn preview_signature(
     order: SigningOrder,
-    environment: State<'_, Environment>,
-    isolate: State<'_, Isolate>,
-    opened: State<'_, OpenedDocuments>,
+    identity: State<'_, IdentityRoot>,
+    documents: State<'_, DocumentsRoot>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<tauri::ipc::Response, Failure> {
+    let document = documents.opened_document(&order.document)?;
+    let found = identity.certificates()?;
+    let chosen = identity.usable(&found, &order.certificate)?;
     Ok(tauri::ipc::Response::new(
         crate::signing::application::preview::compose(
-            &order,
-            environment.token.as_ref(),
-            &environment.all_stores(),
-            &environment.listed,
-            &opened,
-            &*isolate,
+            &document,
+            chosen,
+            &order.choice()?,
+            &signing.isolate,
         )?,
     ))
 }
@@ -100,10 +105,13 @@ pub fn pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure> 
 
 /// Configuración guardada para la ventana de preferencias.
 #[tauri::command]
-pub fn read_configuration(environment: State<'_, Environment>) -> ConfigurationView {
+pub fn read_configuration(
+    documents: State<'_, DocumentsRoot>,
+    signing: State<'_, SigningRoot>,
+) -> ConfigurationView {
     crate::signing::application::configuration::shown(
-        &environment.configuration(),
-        &environment.documents_folder,
+        &signing.configuration(),
+        &documents.documents_folder,
     )
     .into()
 }
@@ -112,28 +120,27 @@ pub fn read_configuration(environment: State<'_, Environment>) -> ConfigurationV
 #[tauri::command(async)]
 pub fn write_configuration(
     configuration: ConfigurationView,
-    environment: State<'_, Environment>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<(), Failure> {
-    Ok(crate::signing::application::configuration::write(
-        &environment.memory,
-        &environment.configuration,
+    let next = crate::signing::application::configuration::merged(
+        &signing.configuration(),
         &configuration.into(),
-    )?)
+    );
+    Ok(signing.memory.remember_configuration(&next)?)
 }
 
 /// Olvida los documentos recientes y el certificado usado.
 #[tauri::command(async)]
-pub fn forget_activity(environment: State<'_, Environment>) -> Result<(), Failure> {
-    Ok(crate::signing::application::configuration::forget_activity(
-        &environment.memory,
-    )?)
+pub fn forget_activity(signing: State<'_, SigningRoot>) -> Result<(), Failure> {
+    Ok(signing.memory.forget_activity()?)
 }
 
 /// Comprueba si el documento contiene firmas previas no registradas.
 #[tauri::command(async)]
 pub fn unregistered_signatures(
     document: String,
-    opened: State<'_, OpenedDocuments>,
+    documents: State<'_, DocumentsRoot>,
 ) -> Result<bool, Failure> {
-    Ok(crate::signing::application::session::unregistered_signatures_in(&opened, &document)?)
+    let document = documents.opened_document(&document)?;
+    Ok(crate::signing::application::session::unregistered_signatures_in(&document)?)
 }

@@ -1,4 +1,4 @@
-//! Puertos del contexto de sede: códec, transporte, confianza, CA local, los dos motores del puente y lo que el trámite pide a los vecinos (ADR-0017).
+//! Puertos del contexto de sede: transporte, confianza, CA local, los dos motores del puente y lo que el trámite pide a los vecinos (ADR-0017).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -14,18 +14,6 @@ use crate::site::domain::protocol::AfirmaUrl;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::tls_error::TlsError;
 use crate::site::domain::trust_error::TrustError;
-
-use crate::site::application::errand::outcome::SiteOutcome;
-use crate::site::application::errand::request::SiteRequest;
-
-/// Códec del protocolo para decodificar peticiones y codificar desenlaces.
-pub trait ProtocolCodec {
-    /// Lee la operación que llegó por el canal abierto.
-    fn decode(&self, message: &AfirmaUrl) -> SiteRequest;
-
-    /// Línea exacta que se escribe en el canal para el desenlace dado.
-    fn encode(&self, outcome: &SiteOutcome) -> String;
-}
 
 /// Asa de respuesta única para contestar a la sede y cerrar el canal.
 pub struct ReplyHandle(Box<dyn FnOnce(String) + Send>);

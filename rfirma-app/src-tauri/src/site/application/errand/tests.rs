@@ -8,25 +8,32 @@ use super::*;
 use crate::commands::Failure;
 use crate::documents::application::in_hand::DocumentInHand;
 use crate::documents::application::opened::OpenedDocuments;
+use crate::documents::domain::portal::PortalDocument;
 use crate::fixtures::{a_memory, a_usable_certificate, listed_from, NoIsolate, NoToken};
-use crate::identity::adapters::pkcs11::Store;
 use crate::identity::application::listed::ListedCertificates;
-use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::adapters::ffi::BridgeError;
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::identity::domain::error::TokenError;
+use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::store::Store;
+use crate::identity::ports::Token as _;
+use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
-use crate::signing::application::session::{CycleFailure, SigningSession};
-use crate::site::adapters::channel::{
-    answer as what_the_channel_answers, Answer, ChannelDuty, ChannelError, OpenChannel, Shutdown,
-};
+use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
+use crate::signing::domain::bridge::BridgeError;
+use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
 use crate::site::adapters::codec::V4Codec;
+use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::adapters::frontier;
-use crate::site::application::session::{SiteRefusal, SiteSignature};
+use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
+use crate::site::domain::channel::{ChannelDuty, ChannelError, OpenChannel, Shutdown};
 use crate::site::domain::protocol::{
     read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, SafCode, SelectCertificate,
     SignRequest, SignatureRound, SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer,
 };
+use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::ports::{Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest};
 use base64::Engine as _;
 
 /// Motor de filtrado simulado para pruebas.
@@ -136,6 +143,101 @@ fn requested(url: &AfirmaUrl) -> SelectCertificate {
     request
 }
 
+/// Los vecinos del trámite en grada A: el token vacío, lo listado, lo abierto, la memoria y una sesión sin ciclo.
+struct TheNeighbours<'a> {
+    stores: Vec<Store>,
+    home: &'a Path,
+    listed: &'a ListedCertificates,
+    opened: &'a OpenedDocuments,
+    memory: &'a Memory,
+}
+
+impl Certificates for TheNeighbours<'_> {
+    fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        NoToken.list_across(&self.stores)
+    }
+
+    fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
+        crate::identity::application::certificates::rows_of(
+            found,
+            self.home,
+            self.listed,
+            self.memory,
+        )
+    }
+
+    fn usable<'a>(
+        &self,
+        found: &'a [TokenCertificate],
+        handle: &str,
+    ) -> Result<&'a TokenCertificate, TokenError> {
+        crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
+    }
+}
+
+impl ScratchDocuments for TheNeighbours<'_> {
+    fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
+        self.opened
+            .remember_unrecorded(PortalDocument::opened(path))
+    }
+}
+
+impl SiteSigning for TheNeighbours<'_> {
+    fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
+        let document = crate::documents::application::documents::opened_document(
+            self.opened,
+            request.document,
+        )
+        .map_err(CycleFailure::from)
+        .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
+        session::begin_for_the_site(
+            DocumentToSign {
+                handle: request.document.to_owned(),
+                document,
+            },
+            request.certificate,
+            request.from_the_site,
+            request.allow_unregistered_signatures,
+            &NoToken,
+            &NoIsolate,
+            &A_SESSION,
+        )
+        .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
+    }
+
+    fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
+        let signed = session::finish(&NoIsolate, &A_SESSION)
+            .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
+        Ok(SiteSignature {
+            signed: signed.completed.into_pdf(),
+            signer_der: signed.signer_der,
+        })
+    }
+}
+
+/// Los vecinos de una selección de certificado, que no abre ningún documento.
+fn a_neighbourhood<'a>(
+    home: &'a Path,
+    listed: &'a ListedCertificates,
+    opened: &'a OpenedDocuments,
+    memory: &'a Memory,
+) -> TheNeighbours<'a> {
+    TheNeighbours {
+        stores: Vec::new(),
+        home,
+        listed,
+        opened,
+        memory,
+    }
+}
+
+/// Nadie abre nada en una selección de certificado.
+fn opened_for_nobody() -> &'static OpenedDocuments {
+    static NOBODY: std::sync::LazyLock<OpenedDocuments> =
+        std::sync::LazyLock::new(OpenedDocuments::new);
+    &NOBODY
+}
+
 /// Mesa de trabajo del trámite configurada para pruebas.
 #[expect(
     clippy::too_many_arguments,
@@ -150,19 +252,18 @@ fn a_desk<'a>(
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
     scratch: &'a Path,
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, NoIsolate> {
+) -> ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>> {
     ErrandDesk {
         engine,
         policies,
-        token: &NoToken,
-        stores: stores.to_vec(),
-        installed_dir: home,
-        listed,
-        opened,
-        memory,
+        neighbours: TheNeighbours {
+            stores: stores.to_vec(),
+            home,
+            listed,
+            opened,
+            memory,
+        },
         scratch_dir: scratch.to_path_buf(),
-        isolate: &NoIsolate,
-        session: &A_SESSION,
     }
 }
 
@@ -193,10 +294,10 @@ impl PolicyEngine for APolicyEngine {
         &self,
         extra_params: &str,
         _format: &str,
-    ) -> Result<String, crate::signing::adapters::ffi::BridgeError> {
+    ) -> Result<String, crate::signing::domain::bridge::BridgeError> {
         self.asked.borrow_mut().push(extra_params.to_owned());
         self.answer.clone().map_err(|()| {
-            crate::signing::adapters::ffi::BridgeError::IncompatiblePolicy(
+            crate::signing::domain::bridge::BridgeError::IncompatiblePolicy(
                 "no se puede aplicar".to_owned(),
             )
         })
@@ -397,9 +498,7 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
         &engine,
         &request,
         ours.clone(),
-        home.path(),
-        &listed,
-        &memory,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
     let ErrandStep::AskingForConsent {
@@ -424,7 +523,10 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer()
         request.filter(),
         &ours,
         &rows[0].id,
-        &listed,
+        &crate::fixtures::Directory {
+            certificates: ours.clone(),
+            listed: &listed,
+        },
         &live,
     );
     let SiteOutcome::Certificate(der) = &reply else {
@@ -477,9 +579,7 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
         &engine,
         &requested(&url),
         ours,
-        home.path(),
-        &listed,
-        &memory,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
     assert!(
@@ -766,9 +866,9 @@ fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signatu
 
     let reply = the_signature_did_not_come_out(
         &live,
-        SiteRefusal::Cycle(CycleFailure::Cycle(CycleError::Bridge(
-            BridgeError::Failed("la prefirma no ha salido".to_owned()),
-        ))),
+        SiteRefusal::Signing(signing_refusal_of(told_of_cycle(&CycleFailure::Cycle(
+            CycleError::Bridge(BridgeError::Failed("la prefirma no ha salido".to_owned())),
+        )))),
     );
 
     assert_eq!(
@@ -797,9 +897,9 @@ fn a_broken_session_seal_is_answered_with_its_own_code() {
 
     the_signature_did_not_come_out(
         &live,
-        SiteRefusal::Cycle(CycleFailure::Cycle(CycleError::Seal(
-            crate::signing::domain::SealMismatch,
-        ))),
+        SiteRefusal::Signing(signing_refusal_of(told_of_cycle(&CycleFailure::Cycle(
+            CycleError::Seal(crate::signing::domain::SealMismatch),
+        )))),
     );
 
     assert_eq!(
@@ -1203,9 +1303,7 @@ fn neither_headless_nor_the_mandatory_selection_skips_the_consent() {
         &AnEngine::answering(&[&[0]]),
         &requested(&url),
         ours,
-        home.path(),
-        &listed,
-        &memory,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
 
@@ -1246,9 +1344,7 @@ fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
         &AnEngine::answering(&[&[]]),
         &requested(&url),
         ours,
-        home.path(),
-        &listed,
-        &memory,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
 
@@ -1339,7 +1435,7 @@ fn a_token_that_cannot_be_listed_answers_with_the_code_of_its_own_situation() {
     assert_eq!(
         on_the_wire(&reply),
         WireAnswer::refused(crate::identity::adapters::failures::code_of_token(
-            crate::identity::adapters::pkcs11::Situation::ModuleNotFound
+            crate::identity::domain::error::Situation::ModuleNotFound
         ))
         .on_the_wire()
     );
@@ -1450,7 +1546,10 @@ fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
         &SiteFilter::default(),
         &ours,
         &handles[0],
-        &listed,
+        &crate::fixtures::Directory {
+            certificates: ours.clone(),
+            listed: &listed,
+        },
         &live,
     );
 
@@ -1488,9 +1587,7 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
         &engine,
         &requested(&url),
         Vec::new(),
-        home.path(),
-        &listed,
-        &memory,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
 
@@ -1630,9 +1727,7 @@ fn leaving_the_no_certificate_screen_cancels_the_errand() {
         &engine,
         &requested(&url),
         Vec::new(),
-        home.path(),
-        &listed,
-        &memory,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
         &live,
     );
 

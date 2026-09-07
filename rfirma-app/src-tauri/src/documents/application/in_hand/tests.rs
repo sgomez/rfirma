@@ -19,13 +19,11 @@ fn a_placement() -> VisibleBox {
 fn a_document_that_is_remembered_still_leaves_its_row() {
     let home = tempfile::tempdir().expect("deberia crearse");
     let memory = a_memory(home.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let path = a_pdf(home.path(), "contrato.pdf");
     let id = opened.remember(PortalDocument::opened(path));
 
-    let row = take(&memory, &configuration, &opened, &id, Some(a_placement()))
-        .expect("deberia ponerse delante");
+    let row = take(&memory, &opened, &id, Some(a_placement())).expect("deberia ponerse delante");
 
     assert_eq!(row.name, "contrato.pdf");
     assert_eq!(row.placement, Some(a_placement()));
@@ -36,13 +34,11 @@ fn a_document_that_is_remembered_still_leaves_its_row() {
 fn a_document_that_is_not_remembered_leaves_neither_row_nor_placement() {
     let home = tempfile::tempdir().expect("deberia crearse");
     let memory = a_memory(home.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let path = a_pdf(home.path(), "de-la-sede.pdf");
     let id = opened.remember_unrecorded(PortalDocument::opened(path));
 
-    let row = take(&memory, &configuration, &opened, &id, Some(a_placement()))
-        .expect("deberia ponerse delante");
+    let row = take(&memory, &opened, &id, Some(a_placement())).expect("deberia ponerse delante");
 
     assert_eq!(row.id, id);
     assert_eq!(row.name, "de-la-sede.pdf");
@@ -62,16 +58,15 @@ fn a_document_that_is_not_remembered_leaves_neither_row_nor_placement() {
 fn remembrance_belongs_to_the_grant_and_not_to_the_file() {
     let home = tempfile::tempdir().expect("deberia crearse");
     let memory = a_memory(home.path());
-    let configuration = Configuration::default();
     let opened = OpenedDocuments::new();
     let path = a_pdf(home.path(), "contrato.pdf");
     let unrecorded = opened.remember_unrecorded(PortalDocument::opened(path.clone()));
     let remembered = opened.remember(PortalDocument::opened(path));
 
-    take(&memory, &configuration, &opened, &unrecorded, None).expect("deberia ponerse delante");
+    take(&memory, &opened, &unrecorded, None).expect("deberia ponerse delante");
     assert!(recents::listed_rows(&memory, &opened).is_empty());
 
-    take(&memory, &configuration, &opened, &remembered, None).expect("deberia ponerse delante");
+    take(&memory, &opened, &remembered, None).expect("deberia ponerse delante");
     assert_eq!(recents::listed_rows(&memory, &opened).len(), 1);
 }
 

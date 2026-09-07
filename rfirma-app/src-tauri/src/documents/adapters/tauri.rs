@@ -2,31 +2,28 @@
 
 use tauri::State;
 
-use crate::documents::application::opened::OpenedDocuments;
-use crate::Environment;
+use crate::documents::DocumentsRoot;
+use crate::signing::SigningRoot;
 
 use super::tauri_rubric::{RubricChoiceView, RubricView};
 use super::views::{DestinationView, OpenedDocumentView, RecentDocumentView};
 use crate::commands::Failure;
+use crate::documents::domain::rubric::{RubricError, Situation};
 use crate::signing::adapters::views::PlacementView;
-use crate::signing::application::session::SigningSession;
 use crate::signing::domain::VisibleBox;
 
 /// Abre el diálogo del sistema y apunta lo que el portal conceda.
 #[tauri::command(async)]
 pub fn open_document(
     app_handle: tauri::AppHandle,
-    environment: State<'_, Environment>,
-    opened: State<'_, OpenedDocuments>,
+    documents: State<'_, DocumentsRoot>,
 ) -> Result<Option<OpenedDocumentView>, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
-    let configuration = environment.configuration();
     let mut dialog = app_handle.dialog().file().add_filter("PDF", &["pdf"]);
     if let Some(folder) = crate::documents::application::documents::starting_folder(
-        &environment.memory,
-        &configuration,
-        &environment.documents_folder,
+        documents.memory.as_ref(),
+        &documents.chosen_folder(),
     ) {
         dialog = dialog.set_directory(folder);
     }
@@ -38,9 +35,8 @@ pub fn open_document(
         .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
     Ok(Some(
         crate::documents::application::documents::note_opened(
-            &environment.memory,
-            &configuration,
-            &opened,
+            documents.memory.as_ref(),
+            &documents.opened,
             handle,
         )
         .into(),
@@ -51,10 +47,10 @@ pub fn open_document(
 #[tauri::command(async)]
 pub fn read_document(
     id: String,
-    opened: State<'_, OpenedDocuments>,
+    documents: State<'_, DocumentsRoot>,
 ) -> Result<tauri::ipc::Response, Failure> {
     Ok(tauri::ipc::Response::new(
-        crate::documents::application::documents::bytes_of(&opened, &id)?,
+        crate::documents::application::documents::bytes_of(&documents.opened, &id)?,
     ))
 }
 
@@ -62,14 +58,14 @@ pub fn read_document(
 ///
 /// Bandeja de documentos recientes (ADR-0010).
 #[tauri::command(async)]
-pub fn list_recents(
-    environment: State<'_, Environment>,
-    opened: State<'_, OpenedDocuments>,
-) -> Vec<RecentDocumentView> {
-    crate::documents::application::recents::listed_rows(&environment.memory, &opened)
-        .into_iter()
-        .map(RecentDocumentView::from)
-        .collect()
+pub fn list_recents(documents: State<'_, DocumentsRoot>) -> Vec<RecentDocumentView> {
+    crate::documents::application::recents::listed_rows(
+        documents.memory.as_ref(),
+        &documents.opened,
+    )
+    .into_iter()
+    .map(RecentDocumentView::from)
+    .collect()
 }
 
 /// Anota en la bandeja el documento abierto y su recuadro.
@@ -77,13 +73,11 @@ pub fn list_recents(
 pub fn record_recent(
     id: String,
     placement: Option<PlacementView>,
-    environment: State<'_, Environment>,
-    opened: State<'_, OpenedDocuments>,
+    documents: State<'_, DocumentsRoot>,
 ) -> Result<RecentDocumentView, Failure> {
     Ok(crate::documents::application::in_hand::take(
-        &environment.memory,
-        &environment.configuration(),
-        &opened,
+        documents.memory.as_ref(),
+        &documents.opened,
         &id,
         placement.map(VisibleBox::from),
     )?
@@ -92,15 +86,10 @@ pub fn record_recent(
 
 /// Quita una fila de la bandeja de recientes.
 #[tauri::command(async)]
-pub fn forget_recent(
-    id: String,
-    environment: State<'_, Environment>,
-    opened: State<'_, OpenedDocuments>,
-) -> Result<(), Failure> {
+pub fn forget_recent(id: String, documents: State<'_, DocumentsRoot>) -> Result<(), Failure> {
     Ok(crate::documents::application::recents::forget(
-        &environment.memory,
-        &environment.configuration(),
-        &opened,
+        documents.memory.as_ref(),
+        &documents.opened,
         &id,
     )?)
 }
@@ -109,7 +98,7 @@ pub fn forget_recent(
 #[tauri::command(async)]
 pub fn choose_rubric(
     app_handle: tauri::AppHandle,
-    environment: State<'_, Environment>,
+    documents: State<'_, DocumentsRoot>,
 ) -> Option<RubricChoiceView> {
     use tauri_plugin_dialog::DialogExt;
 
@@ -118,18 +107,20 @@ pub fn choose_rubric(
         .file()
         .add_filter("Imagen", &["png", "jpg", "jpeg"]);
     let chosen = dialog.blocking_pick_file()?;
-    Some(
-        match crate::documents::application::rubric::choose(&environment.rubric, chosen) {
-            Ok(normalized) => RubricChoiceView::adopted(&normalized),
-            Err(error) => RubricChoiceView::refused(&error),
-        },
-    )
+    let adopted = chosen
+        .into_path()
+        .map_err(|error| RubricError::new(Situation::SourceUnreadable, error.to_string()))
+        .and_then(|source| documents.rubric.adopt(&source));
+    Some(match adopted {
+        Ok(normalized) => RubricChoiceView::adopted(&normalized),
+        Err(error) => RubricChoiceView::refused(&error),
+    })
 }
 
 /// La rúbrica adoptada si la hay (ADR-0012).
 #[tauri::command(async)]
-pub fn read_rubric(environment: State<'_, Environment>) -> Result<Option<RubricView>, Failure> {
-    let stored = crate::documents::application::rubric::stored(&environment.rubric)?;
+pub fn read_rubric(documents: State<'_, DocumentsRoot>) -> Result<Option<RubricView>, Failure> {
+    let stored = documents.rubric.stored()?;
     Ok(stored.map(|bytes| RubricView::from_bytes(&bytes)))
 }
 
@@ -137,13 +128,11 @@ pub fn read_rubric(environment: State<'_, Environment>) -> Result<Option<RubricV
 #[tauri::command(async)]
 pub fn preview_destination(
     id: String,
-    environment: State<'_, Environment>,
-    opened: State<'_, OpenedDocuments>,
+    documents: State<'_, DocumentsRoot>,
 ) -> Result<DestinationView, Failure> {
-    let document = crate::documents::application::documents::opened_document(&opened, &id)?;
+    let document = documents.opened_document(&id)?;
     Ok(crate::documents::application::documents::where_it_lands(
-        &environment.configuration(),
-        &environment.documents_folder,
+        &documents.chosen_folder(),
         &document,
     )
     .into())
@@ -153,7 +142,7 @@ pub fn preview_destination(
 #[tauri::command(async)]
 pub fn choose_destination(
     app_handle: tauri::AppHandle,
-    environment: State<'_, Environment>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<Option<String>, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
@@ -163,24 +152,23 @@ pub fn choose_destination(
     let folder = chosen
         .into_path()
         .map_err(|error| Failure::new("folderMissing", error.to_string()))?;
-    Ok(Some(
-        crate::signing::application::configuration::choose_destination(
-            &environment.memory,
-            &environment.configuration,
-            crate::documents::domain::destination::DestinationFolder::at(folder),
-        )?,
-    ))
+    let (next, name) = crate::signing::application::configuration::with_destination(
+        &signing.configuration(),
+        crate::documents::domain::destination::DestinationFolder::at(folder),
+    );
+    signing.memory.remember_configuration(&next)?;
+    Ok(Some(name))
 }
 
 /// Abre el PDF firmado con el visor del sistema (ADR-0011).
 #[tauri::command(async)]
 pub fn open_signed_document(
     app_handle: tauri::AppHandle,
-    session: State<'_, SigningSession>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<(), Failure> {
     use tauri_plugin_opener::OpenerExt;
 
-    let landing = crate::signing::application::session::signed_document(&session)?;
+    let landing = signing.signed_document()?;
     app_handle
         .opener()
         .open_path(landing.to_string_lossy(), None::<&str>)
@@ -191,11 +179,11 @@ pub fn open_signed_document(
 #[tauri::command(async)]
 pub fn open_signed_folder(
     app_handle: tauri::AppHandle,
-    session: State<'_, SigningSession>,
+    signing: State<'_, SigningRoot>,
 ) -> Result<(), Failure> {
     use tauri_plugin_opener::OpenerExt;
 
-    let folder = crate::signing::application::session::signed_folder(&session)?;
+    let folder = signing.signed_folder()?;
     app_handle
         .opener()
         .open_path(folder.to_string_lossy(), None::<&str>)

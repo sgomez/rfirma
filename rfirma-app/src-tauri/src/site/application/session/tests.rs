@@ -1,14 +1,17 @@
-use super::{begin_for_the_site, SiteSigning};
-use crate::documents::application::opened::OpenedDocuments;
-use crate::fixtures::{a_certificate, an_order, NoIsolate, NoToken};
+use super::{begin_for_the_site, finish_for_the_site, SiteTerms};
+use crate::fixtures::{a_certificate, an_order, Directory, NoIsolate, NoToken};
 use crate::identity::application::listed::ListedCertificates;
-use crate::signing::adapters::orders::SigningOrder;
+use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::application::session::{config_for, SigningSession};
 use crate::site::domain::protocol::{SafCode, SiteFilter};
-use crate::site::ports::FilterEngine;
+use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::ports::{FilterEngine, SiteSigning, SiteSigningRequest};
 use std::collections::BTreeMap;
 
 const SOURCE: &str = include_str!("../session.rs");
+
+/// Quien firma para la sede en producción: el adaptador sobre las raíces vecinas.
+const THE_SIGNER: &str = include_str!("../../adapters/desk.rs");
 
 fn production_half() -> &'static str {
     SOURCE
@@ -16,15 +19,15 @@ fn production_half() -> &'static str {
 
 #[test]
 fn the_postsign_of_a_site_errand_writes_nothing_anywhere() {
-    let site_postsign = production_half()
-        .split_once("pub fn finish_for_the_site(")
+    let site_postsign = THE_SIGNER
+        .split_once("fn finish(&self)")
         .expect("la postfirma de la sede sigue aqui")
         .1;
 
     for forbidden in [
-        "documents::deliver",
-        "recents::",
-        "session.delivered",
+        "deliver",
+        "note_signed",
+        "note_delivered",
         "remember_the_certificate",
     ] {
         assert!(
@@ -45,24 +48,23 @@ fn the_presign_of_a_site_errand_checks_the_filter_again_before_the_pin() {
         .expect("y termina donde empieza la siguiente")
         .0;
 
+    let (before, after) = site_presign
+        .split_once("filtering::usable_certificate_for_the_site(")
+        .expect("el filtro de la sede se vuelve a comprobar antes de pedir el secreto");
     assert!(
-        site_presign.contains("filtering::usable_certificate_for_the_site("),
-        "el filtro de la sede se vuelve a comprobar antes de pedir el secreto"
+        !before.contains("signing.begin("),
+        "y se comprueba antes de abrir el ciclo"
     );
-    assert!(
-        !site_presign.contains("plan_signature("),
-        "y no por el camino local, que no sabe nada de la sede"
-    );
+    assert!(after.contains("signing.begin("), "que se abre después");
 }
 
 #[test]
 fn a_signature_the_site_placed_carries_no_geometry_of_our_own() {
-    let order = SigningOrder {
-        placement: None,
-        ..an_order()
-    };
-
-    let config = config_for(&order, &a_certificate("FIRMA", &[])).expect("no hay que colocar");
+    let config = config_for(
+        &crate::signing::domain::SigningChoice::for_the_site(false),
+        &a_certificate("FIRMA", &[]),
+    )
+    .expect("no hay que colocar");
 
     assert_eq!(config.placement, None);
     for key in crate::signing::domain::Setting::Geometry.keys() {
@@ -72,25 +74,30 @@ fn a_signature_the_site_placed_carries_no_geometry_of_our_own() {
 
 #[test]
 fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
-    let order = SigningOrder {
-        document: "00000000000000000000000000000000".to_owned(),
-        ..an_order()
-    };
-    let engine = NoEngine;
+    let order = an_order();
+    let certificates = vec![crate::fixtures::a_usable_certificate("FIRMA")];
+    let listed = ListedCertificates::new();
+    let handles = listed.replace(
+        certificates
+            .iter()
+            .map(|certificate| certificate.reference().clone()),
+    );
+    let engine = AcceptingEngine;
 
     let failure = begin_for_the_site(
-        &SiteSigning {
+        &SiteTerms {
             engine: &engine,
-            token: &NoToken,
             filter: &SiteFilter::default(),
             from_the_site: &BTreeMap::new(),
+            allow_unregistered_signatures: false,
         },
-        &order,
-        &[],
-        &ListedCertificates::new(),
-        &OpenedDocuments::new(),
-        &NoIsolate,
-        &SigningSession::default(),
+        &order.document,
+        &handles[0],
+        &Directory {
+            certificates,
+            listed: &listed,
+        },
+        &NobodyHasItOpen,
     )
     .expect_err("ese documento no esta abierto");
 
@@ -103,14 +110,49 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
     );
 }
 
-struct NoEngine;
+#[test]
+fn a_postsign_without_an_open_cycle_is_refused_with_what_the_signer_said() {
+    let failure = finish_for_the_site(&NobodyHasItOpen).expect_err("no hay ciclo");
 
-impl FilterEngine for NoEngine {
+    let (told, code) = crate::site::adapters::frontier::told(&failure);
+    assert_eq!(told.situation, "unknown");
+    assert_eq!(code, SafCode::SignatureFailed);
+}
+
+/// Un motor que acepta todo lo que le pasan.
+struct AcceptingEngine;
+
+impl FilterEngine for AcceptingEngine {
     fn select(
         &self,
         _properties: &str,
-        _certificates: &str,
-    ) -> Result<Vec<usize>, crate::signing::adapters::ffi::BridgeError> {
-        unreachable!("no se llega a filtrar nada")
+        certificates: &str,
+    ) -> Result<Vec<usize>, crate::signing::domain::bridge::BridgeError> {
+        Ok((0..certificates.split(';').count()).collect())
     }
 }
+
+/// Quien firma cuando ningún documento está abierto: la sesión vacía sobre el token y el hilo de la grada A.
+struct NobodyHasItOpen;
+
+impl SiteSigning for NobodyHasItOpen {
+    fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
+        let failure = crate::signing::application::session::CycleFailure::from(
+            crate::documents::domain::error::DocumentError::no_longer_open(),
+        );
+        let _ = (request, &NoToken, &NoIsolate);
+        Err(crate::site::adapters::desk::signing_refusal_of(
+            told_of_cycle(&failure),
+        ))
+    }
+
+    fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
+        crate::signing::application::session::finish(&NoIsolate, &SigningSession::default())
+            .map(|_| unreachable!("no hay ciclo que cerrar"))
+            .map_err(|failure| {
+                crate::site::adapters::desk::signing_refusal_of(told_of_cycle(&failure))
+            })
+    }
+}
+
+use crate::identity::domain::secret::StoreSecret;

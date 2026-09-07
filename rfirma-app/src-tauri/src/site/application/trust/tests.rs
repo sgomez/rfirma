@@ -1,6 +1,6 @@
 use super::*;
 use crate::fixtures::InMemoryCaSlots;
-use crate::site::adapters::nss::TRUSTED_SSL_CA;
+use crate::site::domain::trust::TRUSTED_SSL_CA;
 use crate::site::domain::trust::{Notice, Situation};
 use std::collections::HashMap;
 use std::sync::Mutex;

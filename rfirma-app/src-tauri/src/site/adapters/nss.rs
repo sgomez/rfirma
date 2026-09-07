@@ -9,7 +9,7 @@ use crate::identity::ports::NssHost;
 use crate::site::domain::trust_error::{Situation, TrustError};
 use crate::site::ports::TrustStores;
 
-pub use crate::site::domain::trust::{is_trusted_ssl_ca, TRUSTED_SSL_CA};
+use crate::site::domain::trust::TRUSTED_SSL_CA;
 
 const SEC_SUCCESS: c_int = 0;
 const PR_FALSE: c_int = 0;

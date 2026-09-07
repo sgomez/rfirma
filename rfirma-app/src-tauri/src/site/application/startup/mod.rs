@@ -13,7 +13,6 @@ use crate::site::domain::protocol::Refusal;
 use super::errand::{Errand, LiveErrand, Moment, NegotiatedCodec, NoChannel};
 use super::site::{self, Attendance, ChannelTransport};
 use super::trust;
-use crate::desktop::application::invocation::Invocation;
 
 pub use channel::{hold_the_channel, HeldChannel};
 pub use repair::{repair_the_local_ca, LocalCaTrust};
@@ -81,7 +80,7 @@ pub enum Opening {
 
 /// Atiende la invocación inicial gestionando la CA local y la ventana correspondiente.
 pub fn attend_startup(
-    invocation: &Invocation,
+    site_launch: Option<&str>,
     trust: TrustAtStartup<'_>,
     codec: &NegotiatedCodec,
     transport: ChannelTransport<'_>,
@@ -90,7 +89,7 @@ pub fn attend_startup(
 ) -> Startup {
     let (said, local_ca) = refresh_the_local_ca(trust);
 
-    let Some(url) = invocation.site_launch() else {
+    let Some(url) = site_launch else {
         return Startup {
             said,
             opening: Opening::TheMainWindow,

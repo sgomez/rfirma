@@ -5,20 +5,22 @@ use std::sync::Mutex;
 
 use crate::desktop::adapters::paths::Paths;
 use crate::identity::application::listed::ListedCertificates;
+use crate::identity::domain::certificate::ListedCertificate;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
-use crate::identity::ports::Token;
+use crate::identity::ports::{CertificateMemory, Token};
 use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
 use crate::signing::domain::bridge::{BridgeError, PreSignature};
 use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::memory_error::MemoryError;
 use crate::signing::domain::{CompletedCycle, SessionSeal, TokenSignature};
 use crate::signing::ports::{Bridge, IsolateHost};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
-use crate::site::ports::LocalCaSlots;
+use crate::site::ports::{Certificates, LocalCaSlots};
 
 /// Un token sin certificados que no sabe firmar: cada almacén está vacío.
 pub(crate) struct NoToken;
@@ -162,6 +164,48 @@ pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
         .to_der()
         .expect("el certificado deberia poder salir en DER");
     a_certificate(label, &der)
+}
+
+/// Una memoria que no recuerda ningún certificado y no escribe en ningún sitio.
+pub(crate) struct NoMemory;
+
+impl CertificateMemory for NoMemory {
+    fn remembered_certificate(&self) -> Option<CertificateRef> {
+        None
+    }
+
+    fn remember_the_certificate(&self, _reference: &CertificateRef) -> Result<(), MemoryError> {
+        Ok(())
+    }
+}
+
+/// Los certificados de la persona tal como los ve un trámite: los dados, con sus asas ya acuñadas.
+pub(crate) struct Directory<'a> {
+    pub(crate) certificates: Vec<TokenCertificate>,
+    pub(crate) listed: &'a ListedCertificates,
+}
+
+impl Certificates for Directory<'_> {
+    fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(self.certificates.clone())
+    }
+
+    fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
+        crate::identity::application::certificates::rows_of(
+            found,
+            Path::new("/no/hay/instalados"),
+            self.listed,
+            &NoMemory,
+        )
+    }
+
+    fn usable<'a>(
+        &self,
+        found: &'a [TokenCertificate],
+        handle: &str,
+    ) -> Result<&'a TokenCertificate, TokenError> {
+        crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
+    }
 }
 
 /// Inicializa un registro de certificados listados y devuelve sus identificadores.

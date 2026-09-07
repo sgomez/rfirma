@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use super::*;
-use crate::site::adapters::channel::{Shutdown, Situation};
+use crate::site::domain::channel::{Shutdown, Situation};
 use crate::site::domain::protocol::{ChannelCredential, Parameter, SafCode};
 use std::sync::Arc;
 

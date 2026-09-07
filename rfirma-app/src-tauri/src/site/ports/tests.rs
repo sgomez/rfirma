@@ -18,7 +18,7 @@ fn a_closure_with_the_right_shape_is_a_transport() {
     let transport = |ports: &[u16], _duty: ChannelDuty| {
         Ok(OpenChannel::new(
             ports[0],
-            crate::site::adapters::channel::Shutdown::of(|| {}),
+            crate::site::domain::channel::Shutdown::of(|| {}),
         ))
     };
     let opened = Transport::open(

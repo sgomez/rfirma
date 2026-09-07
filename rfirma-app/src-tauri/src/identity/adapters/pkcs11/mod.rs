@@ -18,15 +18,12 @@ use cryptoki::session::{Session, UserType};
 use cryptoki::slot::Slot;
 use cryptoki::types::AuthPin;
 
-pub use crate::identity::domain::certificate::{
-    CertificateRef, CertificateStatus, TokenCertificate,
-};
-pub use crate::identity::domain::error::NssUnavailable;
-pub use crate::identity::domain::error::{Situation, TokenError};
-pub use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::Token;
 pub use nss::RealNssHost;
-pub use stores::{Store, StoreClass};
 
 /// Mecanismo de firma digital utilizado en las operaciones PKCS#11.
 const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;

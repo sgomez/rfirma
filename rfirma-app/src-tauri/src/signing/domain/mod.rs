@@ -14,7 +14,8 @@ pub mod session_seal;
 pub use admissibility::{AdmissibleDocument, Refusal};
 pub use bridge::{CompletedCycle, SealedPreSignature, TokenSignature};
 pub use config::{
-    PadesRect, Placement, Setting, SignatureConfig, ALLOW_UNREGISTERED_KEY, SUB_FILTER,
+    ChosenFields, PadesRect, Placement, Setting, SignatureConfig, SigningChoice,
+    ALLOW_UNREGISTERED_KEY, SUB_FILTER,
 };
 pub use language::Language;
 pub use layer2_text::{compose_layer2_text, mask_id_number, VisibleTextFields};

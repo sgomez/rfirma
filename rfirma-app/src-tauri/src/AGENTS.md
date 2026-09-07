@@ -27,27 +27,33 @@ quiera del propio contexto, y los casos de uso de otro solo a través de
 `lib.rs`, la única raíz que junta contextos. Lo vigila
 `tests/module_directions.rs`.
 
-Lo que hoy va contra eso está declarado, arista por arista, en
-`tests/module_directions_debt.txt`. **La lista solo mengua**: una arista nueva
-fuera de ella pone la guarda en rojo, y una línea que deje de ser infracción
-también. Quién la vacía: #439 (el ciclo habla al puente por el puerto `Bridge`
-de `signing/ports.rs`; **hecho**), #440 (los casos de uso devuelven dominio y cada contexto traduce en `adapters/failures.rs`; **hecho**), #453 (el token, el hilo del puente, el códec y las ranuras de la CA local entran por un puerto; **hecho**: lo que queda son las aristas `-> <otro>::ports::…`) y #443
-(las raíces de composición por contexto, que reparten `Environment`, `Memory`
-y los puertos entre contextos, y sacan de `lib.rs` lo que no es cableado). Lo que no caiga en ninguno se anota
-en #443. Para regenerarla, `MODULE_DIRECTIONS_DUMP=1 cargo test --test
-module_directions -- --nocapture` la vuelca línea a línea.
+**No queda deuda** (#443): `tests/module_directions_debt.txt` está vacío y
+`#438` lo borra. Una arista nueva contra la regla pone la guarda en rojo, y no
+se apunta en la lista: se mueve la decisión. Para ver lo que la guarda ve,
+`MODULE_DIRECTIONS_DUMP=1 cargo test --test module_directions -- --nocapture`.
+
+Cada contexto tiene su **raíz de composición** en `<contexto>/mod.rs` —
+`IdentityRoot`, `DocumentsRoot`, `DesktopRoot`, `SigningRoot`, `SiteRoot`—: el
+`struct` que junta sus adaptadores, su estado de proceso y sus puertos ya
+instanciados, y la fachada con la que los adaptadores de otro contexto le piden
+lo que necesitan (`documents.deliver(…)`, `identity.usable(…)`,
+`signing.begin_for_the_site(…)`). `lib.rs` las construye en orden de
+dependencia —identity, documents, desktop, signing, site— sobre la misma
+`Memory`, y las registra con cinco `manage()`. Lo que cruza de un contexto a
+otro por dentro de `application/` entra por un puerto de `ports.rs` del que lo
+pide, y lo sirve un adaptador sobre la raíz del que lo tiene (por ejemplo
+`site/adapters/desk.rs`).
 
 ## Lo que cuelga de la raíz
 
 | Módulo | Líneas | Qué es |
 |---|---|---|
 | `commands/failure.rs` | 29 | `Failure`, lo que cruza a la ventana cuando algo salió mal (ADR-0009). No importa nada de ningún contexto: cada uno traduce lo suyo en su `adapters/failures.rs` (#440). Pruebas en `commands/failure/tests.rs` (11). |
-| `commands/guards.rs` | 581 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`. Solo en pruebas. |
+| `commands/guards.rs` | 608 | Las cuatro guardas que ven todas las órdenes a la vez (ID-85), y las pruebas del descubrimiento de tipos. Descubren sus fuentes por ruta: `commands/` y, en cada `<contexto>/adapters/`, los `tauri*`, `views*` y `orders*`. Solo en pruebas. |
 | `compile_fail.rs` | 67 | **Lo que ya no compila**: un doctest `compile_fail` por cada tipo que sustituyó a una guarda textual (#439), y uno positivo que recorre las mismas rutas para que un error de ruta no los deje vacíos. Solo con `cargo test --doc`, que `cargo test` ya incluye; en estable rustdoc no comprueba el código de error, solo que no compila. |
-| `fixtures.rs` | 211 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos: `a_completed_cycle()`, la prueba de que hubo un ciclo, y los dobles de los puertos —`NoToken`, `NoIsolate` e `InMemoryCaSlots`— con los que la grada A no toca token, hilo ni disco. Solo en pruebas. |
-| `lib.rs` | 437 | Registro de comandos, complementos y estados de Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los tres puertos y obedece lo que devuelve (ID-324…ID-334). Absorbe hasta el #443 los dos repartos que desaparecieron: `Environment` —la raíz de composición— con la carpeta de destino elegida, y `Memory`, las dos memorias y sus dos soportes (ADR-0010). Empieza aquí para ver el cableado. Pruebas en `tests.rs` (59). |
+| `fixtures.rs` | 265 | Los andamios que comparten las pruebas de los casos de uso de todos los contextos: `a_completed_cycle()`, la prueba de que hubo un ciclo; `a_memory()`, la memoria real en un temporal; y los dobles de los puertos —`NoToken`, `NoIsolate`, `NoMemory`, `InMemoryCaSlots` y `Directory`, los certificados que ve un trámite— con los que la grada A no toca token, hilo ni disco. Solo en pruebas. |
+| `lib.rs` | 315 | `roots()`, que construye las cinco raíces sobre las rutas y la memoria de esta máquina, y `run()`: registro de comandos, complementos y las cinco raíces en Tauri, la instancia única (ID-160) y el arranque, que **obedece a `site/application/startup/` y no decide nada**: compone el transporte de producción (`site/adapters/transport.rs`), le pasa los puertos y obedece lo que devuelve (ID-324…ID-334). Empieza aquí para ver el cableado. Sin pruebas propias: cada raíz se prueba desde su contexto. |
 | `main.rs` | 6 | El binario. No hay nada dentro. |
-| `tests/memory.rs` | 336 | Las pruebas de `Memory`: los dos interruptores y lo exento. Las declara `tests.rs`. |
 
 ## Presupuesto de lectura
 
@@ -65,9 +71,12 @@ module_directions -- --nocapture` la vuelca línea a línea.
 
 El cuerpo de la orden va en el `adapters/tauri.rs` de su contexto, `lib.rs` la
 registra por su ruta entera en `generate_handler!`, y **lo que decide, en
-`application/`**: si lo que estás escribiendo dentro de la orden no es
-desempaquetar el `State` ni traducir el resultado, está en el fichero
-equivocado.
+`application/`**: la orden saca del `State` su raíz —y la de otro contexto si
+la necesita—, resuelve las asas por las fachadas de las raíces, llama a su caso
+de uso con tipos de dominio o `&dyn Puerto`, y traduce el resultado. Si dentro
+hay algo más que eso, está en el fichero equivocado. La orquestación entre
+contextos —entregar el firmado, anotarlo en la bandeja, recordar el
+certificado— es de la orden, no del caso de uso: `finish_signing` es el ejemplo.
 
 `just contract` genera el contrato de las dos partes leyendo `commands/` y, en
 cada `adapters/`, los `tauri*.rs`, `views*.rs` y `orders*.rs` —el adaptador de
@@ -96,8 +105,11 @@ Vigilan invariantes leyendo el código **como texto**:
 `signing/application/cycle/tests.rs` (los cinco puntos de entrada de Java y el
 mecanismo del token, leyendo `adapters/ffi.rs` y `pkcs11/mod.rs`),
 `signing/application/session/tests.rs` (el PIN no se guarda en el ciclo a
-medias), `site/application/session/tests.rs` (la postfirma de sede no
-escribe nada), `tests/site_frontier_guards.rs`, `commands/guards.rs`,
+medias, y `signing/adapters/tauri.rs` anota la fila y el certificado solo en
+la postfirma), `site/application/session/tests.rs` (el filtro se comprueba
+antes del secreto, y la postfirma de sede en `site/adapters/desk.rs` no
+escribe nada), `site/application/filtering/tests.rs` (los criterios de rFirma
+antes que la expresión de la sede), `tests/site_frontier_guards.rs`, `commands/guards.rs`,
 `tests/module_directions.rs`, `tests/single_cfg_os_site.rs` y
 `tests/adr_citations_resolve.rs`. Abren el `.rs` con `include_str!` o lo leen
 del disco: mover un fichero que una de ellas lee obliga a reapuntarla, y a

@@ -4,9 +4,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use crate::documents::application::documents;
-use crate::documents::application::opened::OpenedDocuments;
-use crate::documents::domain::told::DroppedDocument;
+use crate::documents::domain::dropped::{invoked_pdf, Dropped};
 use crate::site::domain::protocol::AfirmaUrl;
 
 /// Invocación recibida con sus argumentos y carpeta de trabajo.
@@ -150,21 +148,15 @@ where
         .any(|argument| HELP_FLAGS.contains(&argument.as_ref()))
 }
 
-/// Procesa la invocación como apertura de documento para la ventana principal.
-pub fn invoked_document(
-    invocation: &Invocation,
-    opened: &OpenedDocuments,
-) -> Option<DroppedDocument> {
+/// Lo que la invocación trae para la ventana principal: nada si es una llamada de sede.
+pub fn invoked_document(invocation: &Invocation) -> Option<Dropped> {
     if invocation.site_launch().is_some() {
         return None;
     }
-    documents::told_as_dropped(
-        crate::documents::domain::dropped::invoked_pdf(
-            &invocation.command_line,
-            &invocation.folder,
-        ),
-        opened,
-    )
+    match invoked_pdf(&invocation.command_line, &invocation.folder) {
+        Dropped::Nothing => None,
+        dropped => Some(dropped),
+    }
 }
 
 /// Destino de una segunda invocación recibida con la aplicación ya en marcha.
@@ -173,25 +165,21 @@ pub enum SecondInvocation {
     /// Se ignora la segunda invocación.
     NothingHappens,
     /// Sustituye el documento activo por el nuevo.
-    ReplacesWhatWasThere(Box<DroppedDocument>),
+    ReplacesWhatWasThere(Dropped),
     /// Abre una ventana dedicada para atender el trámite de sede.
     OpensItsOwnWindow(String),
 }
 
 /// Determina la acción a tomar ante una segunda invocación del proceso.
-pub fn second_invocation(
-    invocation: &Invocation,
-    opened: &OpenedDocuments,
-    signing_is_live: bool,
-) -> SecondInvocation {
+pub fn second_invocation(invocation: &Invocation, signing_is_live: bool) -> SecondInvocation {
     if let Some(url) = invocation.site_launch() {
         return SecondInvocation::OpensItsOwnWindow(url.to_owned());
     }
     if signing_is_live {
         return SecondInvocation::NothingHappens;
     }
-    match invoked_document(invocation, opened) {
-        Some(view) => SecondInvocation::ReplacesWhatWasThere(Box::new(view)),
+    match invoked_document(invocation) {
+        Some(dropped) => SecondInvocation::ReplacesWhatWasThere(dropped),
         None => SecondInvocation::NothingHappens,
     }
 }

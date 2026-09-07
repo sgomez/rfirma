@@ -8,9 +8,9 @@ use base64::Engine;
 
 use crate::signing::domain::SessionSeal;
 
-pub use crate::signing::domain::bridge::{
+use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, LibraryNotFound, Origin, PostSignRequest,
-    PreSignRequest, PreSignature, LIBRARY_DIRECTORY_VARIABLE, LIBRARY_FILE,
+    PreSignRequest, PreSignature, LIBRARY_DIRECTORY_VARIABLE,
 };
 
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";

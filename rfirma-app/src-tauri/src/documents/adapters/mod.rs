@@ -5,5 +5,3 @@ pub mod rubric;
 pub mod tauri;
 pub mod tauri_rubric;
 pub mod views;
-
-pub use crate::documents::domain::portal;
