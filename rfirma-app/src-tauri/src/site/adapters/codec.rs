@@ -28,6 +28,12 @@ impl ProtocolCodec for V4Codec {
             Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
             Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
             Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
+            // El guardado se compone en el ticket del caso de uso (#493 lo atiende):
+            // hasta entonces, una firma leída sin guardar es "no atendida".
+            Ok(SiteOperation::SignAndSave(_)) => SiteRequest::NotAttended(Refusal::new(
+                SafCode::UnsupportedOperation,
+                "rFirma no guarda ficheros por orden de una sede",
+            )),
             // El lote remoto se compone en el ticket del caso de uso (#481 solo
             // lo lee): hasta entonces, un lote leído sin componer es "no atendido".
             Ok(SiteOperation::Batch(_)) => SiteRequest::NotAttended(Refusal::new(

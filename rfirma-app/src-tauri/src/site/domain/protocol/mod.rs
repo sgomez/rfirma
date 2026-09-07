@@ -29,8 +29,9 @@ pub use launch::{
 pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
-    SignRequest, SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS, ACCEPTED_BATCH_ALGORITHMS,
-    BATCH, COSIGN, COUNTERSIGN, LOAD, PADES, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS,
+    ACCEPTED_BATCH_ALGORITHMS, BATCH, COSIGN, COUNTERSIGN, LOAD, PADES, SAVE, SELECT_CERTIFICATE,
+    SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,

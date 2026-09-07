@@ -56,6 +56,18 @@ pub const ACCEPTED_BATCH_ALGORITHMS: [&str; 4] = ["sha1", "sha256", "sha384", "s
 /// `localBatchProcess=true`: el lote local, rechazado aquí hasta #468.
 const LOCAL_BATCH_PROCESS: &str = "localBatchProcess";
 
+/// `properties`: extensiones admitidas por el diálogo de guardado de `signandsave`.
+const FILENAME_SAVE_EXTS: &str = "filenameSaveExts";
+
+/// `properties`: descripción del filtro de extensiones del diálogo de guardado.
+const FILENAME_SAVE_DESCRIPTION: &str = "filenameSaveDescription";
+
+/// `properties`: carpeta inicial sugerida al diálogo de guardado.
+const FILENAME_SAVE_CURRENT_DIR: &str = "filenameSaveCurrentDir";
+
+/// `ProtocolLauncher.30`: el nombre por defecto cuando la sede no propone ninguno.
+const DEFAULT_SIGNED_NAME: &str = "Firma";
+
 /// Lo que la sede pide, ya leído.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SiteOperation {
@@ -67,6 +79,8 @@ pub enum SiteOperation {
     Save(SaveRequest),
     /// `load`: la sede pide cargar uno o varios ficheros del equipo.
     Load(LoadRequest),
+    /// `signandsave`: la sede pide firmar y guardar el resultado.
+    SignAndSave(SignAndSaveRequest),
     /// `batch`: la sede pide firmar un lote remoto.
     Batch(BatchRequest),
 }
@@ -178,6 +192,80 @@ impl SaveRequest {
     /// Descripción del filtro de extensiones, si la sede la declaró.
     pub fn description(&self) -> Option<&str> {
         self.description.as_deref()
+    }
+}
+
+/// La petición de `signandsave`: firmar y guardar el resultado
+/// (`UrlParametersToSignAndSave`, 1.9.2).
+///
+/// No envuelve un [`SignRequest`]: un `SignRequest` sin documento sería un
+/// estado inválido representable, y aquí `dat` es opcional (la sede puede
+/// dejar el documento por elegir). La lectura de formato, algoritmo y
+/// documento se comparte con `sign_request`, no se copia.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignAndSaveRequest {
+    round: SignatureRound,
+    algorithm: String,
+    document: Option<Vec<u8>>,
+    declared: Vec<(String, String)>,
+    filter: SiteFilter,
+    filename: Option<String>,
+    extensions: Vec<String>,
+    description: Option<String>,
+    starting_folder: Option<String>,
+}
+
+impl SignAndSaveRequest {
+    /// `sign` o `cosign`, según pida `cop`.
+    pub fn round(&self) -> SignatureRound {
+        self.round
+    }
+
+    /// El algoritmo tal y como lo pidió la sede, ya admitido.
+    pub fn algorithm(&self) -> &str {
+        &self.algorithm
+    }
+
+    /// El documento que la sede manda, si vino: sin `dat` queda por elegir.
+    pub fn document(&self) -> Option<&[u8]> {
+        self.document.as_deref()
+    }
+
+    /// Los `extraParams` tal y como vinieron, sin expandir.
+    pub fn declared_params(&self) -> &[(String, String)] {
+        &self.declared
+    }
+
+    /// Lo que la sede pide del listado.
+    pub fn filter(&self) -> &SiteFilter {
+        &self.filter
+    }
+
+    /// Nombre de fichero que propone la sede.
+    pub fn filename(&self) -> Option<&str> {
+        self.filename.as_deref()
+    }
+
+    /// Extensiones admitidas por el filtro de guardado (`filenameSaveExts`).
+    pub fn extensions(&self) -> &[String] {
+        &self.extensions
+    }
+
+    /// Descripción del filtro de extensiones (`filenameSaveDescription`), si la sede la declaró.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    /// Carpeta inicial sugerida (`filenameSaveCurrentDir`), nunca la única fuente de lectura.
+    pub fn starting_folder(&self) -> Option<&str> {
+        self.starting_folder.as_deref()
+    }
+
+    /// El nombre propuesto al diálogo de guardado (`AOPDFSigner.getSignedName`, 1.9.2).
+    pub fn proposed_name(&self) -> String {
+        self.filename
+            .clone()
+            .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.pdf"))
     }
 }
 
@@ -304,18 +392,11 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         })),
         SIGN => sign_request(url, SignatureRound::First),
         COSIGN => sign_request(url, SignatureRound::Again),
-        COUNTERSIGN => Err(Refusal::new(
-            SafCode::UnsupportedOperation,
-            "'countersign' no existe en PAdES: AOPDFSigner.countersign lanza una \
-             UnsupportedOperationException",
-        )),
+        COUNTERSIGN => Err(countersign_refusal()),
         SAVE => save_request(url),
         LOAD => load_request(url),
         BATCH => batch_request(url),
-        SIGN_AND_SAVE => Err(Refusal::new(
-            SafCode::UnsupportedOperation,
-            "rFirma no guarda ficheros por orden de una sede",
-        )),
+        SIGN_AND_SAVE => sign_and_save_request(url),
         other => Err(Refusal::new(
             SafCode::UnsupportedOperation,
             format!("la operacion '{other}' no se atiende"),
@@ -330,30 +411,15 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// nada de lo demás, porque una sede que pide XAdES no se merece un `SAF_03`
 /// sobre el algoritmo cuando lo que pasa es que ese formato no se atiende.
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
-    let format = required(url, "format", Parameter::Format)
-        .map_err(|refusal| refusal.because(RefusalSituation::MissingFormat))?;
-
-    let document = if format.trim().eq_ignore_ascii_case(AUTO) {
+    let document = if format_verdict(url)? {
         let document = read_document(url)?;
         reject_unless_pdf(shape_of(&document))?;
         Some(document)
     } else {
-        if !format.trim().eq_ignore_ascii_case(PADES) {
-            return Err(Refusal::new(
-                SafCode::UnsupportedFormat,
-                format!("el formato '{format}' no se atiende: rFirma solo firma PAdES"),
-            ));
-        }
         None
     };
 
-    let algorithm = required(url, "algorithm", Parameter::Algorithm)?;
-    if !ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
-        return Err(Refusal::about(
-            Parameter::Algorithm,
-            format!("el algoritmo '{algorithm}' no se atiende: rFirma firma con SHA256withRSA"),
-        ));
-    }
+    let algorithm = check_algorithm(url)?;
 
     let document = match document {
         Some(document) => document,
@@ -363,11 +429,114 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
     let declared = declared_properties(url)?;
     Ok(SiteOperation::Sign(SignRequest {
         round,
-        algorithm: algorithm.trim().to_owned(),
+        algorithm,
         document,
         filter: site_filter(&declared),
         declared,
     }))
+}
+
+/// `true` si `format=auto` (hay que detectar el documento), `false` si es `PAdES` explícito,
+/// o el `SAF_04` que nombra el formato que no se atiende.
+fn format_verdict(url: &AfirmaUrl) -> Result<bool, Refusal> {
+    let format = required(url, "format", Parameter::Format)
+        .map_err(|refusal| refusal.because(RefusalSituation::MissingFormat))?;
+
+    if format.trim().eq_ignore_ascii_case(AUTO) {
+        return Ok(true);
+    }
+    if !format.trim().eq_ignore_ascii_case(PADES) {
+        return Err(Refusal::new(
+            SafCode::UnsupportedFormat,
+            format!("el formato '{format}' no se atiende: rFirma solo firma PAdES"),
+        ));
+    }
+    Ok(false)
+}
+
+/// El `algorithm` ya admitido, o el `SAF_03` que lo nombra.
+fn check_algorithm(url: &AfirmaUrl) -> Result<String, Refusal> {
+    let algorithm = required(url, "algorithm", Parameter::Algorithm)?;
+    if !ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
+        return Err(Refusal::about(
+            Parameter::Algorithm,
+            format!("el algoritmo '{algorithm}' no se atiende: rFirma firma con SHA256withRSA"),
+        ));
+    }
+    Ok(algorithm.trim().to_owned())
+}
+
+/// `'countersign' no existe en PAdES`, compartido por `read_operation` y por el `cop` de `signandsave`.
+fn countersign_refusal() -> Refusal {
+    Refusal::new(
+        SafCode::UnsupportedOperation,
+        "'countersign' no existe en PAdES: AOPDFSigner.countersign lanza una \
+         UnsupportedOperationException",
+    )
+}
+
+/// La petición de `signandsave`: misma lectura y mismos rechazos que `sign`,
+/// con `dat` opcional y lo del guardado (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
+fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+    let round = round_of_cop(url)?;
+
+    let document = if format_verdict(url)? {
+        match optional_document(url)? {
+            Some(document) => {
+                reject_unless_pdf(shape_of(&document))?;
+                Some(document)
+            }
+            None => None,
+        }
+    } else {
+        None
+    };
+
+    let algorithm = check_algorithm(url)?;
+
+    let document = match document {
+        Some(document) => Some(document),
+        None => optional_document(url)?,
+    };
+
+    let declared = declared_properties(url)?;
+    Ok(SiteOperation::SignAndSave(SignAndSaveRequest {
+        round,
+        algorithm,
+        document,
+        filter: site_filter(&declared),
+        filename: optional(url, "filename"),
+        extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),
+        description: property_value(&declared, FILENAME_SAVE_DESCRIPTION),
+        starting_folder: property_value(&declared, FILENAME_SAVE_CURRENT_DIR),
+        declared,
+    }))
+}
+
+/// La ronda que pide `cop` (`sign`→`First`, `cosign`→`Again`), o el `SAF_04` que la nombra.
+fn round_of_cop(url: &AfirmaUrl) -> Result<SignatureRound, Refusal> {
+    let cop = url
+        .parameter("cop")
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    match cop.as_str() {
+        SIGN => Ok(SignatureRound::First),
+        COSIGN => Ok(SignatureRound::Again),
+        COUNTERSIGN => Err(countersign_refusal()),
+        other => Err(Refusal::new(
+            SafCode::UnsupportedOperation,
+            format!("el 'cop' de 'signandsave' no admite '{other}': solo 'sign' o 'cosign'"),
+        )),
+    }
+}
+
+/// El `dat` de `signandsave`, si vino: ausente no es rechazo, vacío sí lo es.
+fn optional_document(url: &AfirmaUrl) -> Result<Option<Vec<u8>>, Refusal> {
+    if url.parameter("dat").is_none() {
+        return Ok(None);
+    }
+    Ok(Some(read_document(url)?))
 }
 
 /// El documento de `dat`, decodificado: se lee una sola vez, la pida quien lo pida.
@@ -565,7 +734,12 @@ fn optional(url: &AfirmaUrl, name: &str) -> Option<String> {
 
 /// Una lista separada por comas, o vacía si el parámetro no vino.
 fn comma_list(url: &AfirmaUrl, name: &str) -> Vec<String> {
-    url.parameter(name)
+    comma_list_value(url.parameter(name).map(str::to_owned))
+}
+
+/// Una lista separada por comas a partir de un valor ya leído, o vacía si no vino.
+fn comma_list_value(value: Option<String>) -> Vec<String> {
+    value
         .filter(|value| !value.is_empty())
         .map(|value| {
             value
@@ -576,6 +750,15 @@ fn comma_list(url: &AfirmaUrl, name: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// El valor de una clave del `properties` ya decodificado, o nada si no vino o vino vacío.
+fn property_value(declared: &[(String, String)], key: &str) -> Option<String> {
+    declared
+        .iter()
+        .find(|(name, _)| name == key)
+        .map(|(_, value)| value.clone())
+        .filter(|value| !value.is_empty())
 }
 
 /// Un parámetro que la operación exige, o el `SAF_03` que lo nombra.

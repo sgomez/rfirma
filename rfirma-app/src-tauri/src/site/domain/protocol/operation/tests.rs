@@ -90,16 +90,149 @@ fn a_countersignature_in_pades_is_refused_with_the_code_of_the_original() {
     assert!(refusal.detail().contains("countersign"));
 }
 
+fn a_sign_and_save(cop: &str, extra: &str) -> AfirmaUrl {
+    an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={cop}&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&\
+         algorithm=SHA256withRSA&dat={}{extra}",
+        dat(b"%PDF-1.7\n")
+    ))
+}
+
 #[test]
-fn signing_and_saving_by_order_of_a_site_is_refused_on_purpose() {
-    let refusal = read_operation(&a_signature(SIGN_AND_SAVE, "")).expect_err("esta fuera");
+fn signing_and_saving_carries_its_document_and_the_round_that_cop_asks_for() {
+    for (cop, round) in [
+        (SIGN, SignatureRound::First),
+        (COSIGN, SignatureRound::Again),
+    ] {
+        let SiteOperation::SignAndSave(request) =
+            read_operation(&a_sign_and_save(cop, "")).expect("se atiende")
+        else {
+            panic!("es un firmar y guardar");
+        };
+        assert_eq!(request.round(), round, "con cop={cop}");
+        assert_eq!(request.algorithm(), "SHA256withRSA");
+        assert_eq!(request.document(), Some(b"%PDF-1.7\n".as_slice()));
+    }
+}
+
+#[test]
+fn signing_and_saving_without_dat_leaves_the_document_to_be_chosen() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA256withRSA"
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("dat es opcional") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.document(), None);
+}
+
+#[test]
+fn signing_and_saving_reads_its_three_filename_save_properties() {
+    let url = a_sign_and_save(
+        SIGN,
+        &format!(
+            "&filename=firma.pdf&properties={}",
+            properties(
+                "filenameSaveExts=pdf,p7s\nfilenameSaveDescription=Documentos\n\
+                 filenameSaveCurrentDir=/home/persona\n"
+            )
+        ),
+    );
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.filename(), Some("firma.pdf"));
+    assert_eq!(request.extensions(), ["pdf", "p7s"]);
+    assert_eq!(request.description(), Some("Documentos"));
+    assert_eq!(request.starting_folder(), Some("/home/persona"));
+}
+
+#[test]
+fn signing_and_saving_rejects_an_algorithm_it_cannot_produce_like_sign_does() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA512withRSA&dat={}",
+        dat(b"%PDF-1.7\n")
+    ));
+
+    let refusal = read_operation(&url).expect_err("solo SHA256withRSA");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
+}
+
+#[test]
+fn signing_and_saving_rejects_a_format_that_is_not_pades_like_sign_does() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=XAdES&algorithm=SHA256withRSA&dat={}",
+        dat(b"%PDF-1.7\n")
+    ));
+
+    let refusal = read_operation(&url).expect_err("solo PAdES");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+}
+
+#[test]
+fn signing_and_saving_with_format_auto_reads_the_effective_format_over_a_pdf_or_an_xml() {
+    let over_pdf = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(b"%PDF-1.7\n")
+    ));
+    let SiteOperation::SignAndSave(request) = read_operation(&over_pdf).expect("es un PDF") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.document(), Some(b"%PDF-1.7\n".as_slice()));
+
+    let over_xml = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(b"<?xml version=\"1.0\"?><Facturae/>")
+    ));
+    let refusal = read_operation(&over_xml).expect_err("un XML no es PAdES");
+    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+}
+
+#[test]
+fn signing_and_saving_with_an_unknown_cop_names_it() {
+    let url = an_operation(&format!("op={SIGN_AND_SAVE}&cop=resign&format=PAdES"));
+
+    let refusal = read_operation(&url).expect_err("'resign' no es 'sign' ni 'cosign'");
 
     assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
-    assert!(
-        refusal.detail().contains("no guarda ficheros"),
-        "«{SIGN_AND_SAVE}» se rechaza por lo que es, no por desconocido: {}",
-        refusal.detail()
-    );
+    assert!(refusal.detail().contains("resign"));
+}
+
+#[test]
+fn signing_and_saving_with_countersign_is_refused_with_the_code_of_the_original() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={COUNTERSIGN}&format=PAdES"
+    ));
+
+    let refusal = read_operation(&url).expect_err("no existe en PAdES");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+    assert!(refusal.detail().contains("countersign"));
+}
+
+#[test]
+fn the_proposed_name_is_the_filename_of_the_site_when_it_came() {
+    let SiteOperation::SignAndSave(request) =
+        read_operation(&a_sign_and_save(SIGN, "&filename=contrato.pdf")).expect("se atiende")
+    else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.proposed_name(), "contrato.pdf");
+}
+
+#[test]
+fn the_proposed_name_without_a_filename_is_the_default_of_the_original() {
+    let SiteOperation::SignAndSave(request) =
+        read_operation(&a_sign_and_save(SIGN, "")).expect("se atiende")
+    else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.proposed_name(), "Firma.pdf");
 }
 
 #[test]
