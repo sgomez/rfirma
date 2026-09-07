@@ -3,6 +3,7 @@
 use base64::Engine as _;
 
 use super::codes::{Parameter, SafCode};
+use super::detection::{shape_of, DetectedShape};
 use super::filters::{site_filter, SiteFilter};
 use super::parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,
@@ -42,6 +43,9 @@ pub const BATCH: &str = "batch";
 
 /// El formato de firma PAdES.
 pub const PADES: &str = "pades";
+
+/// `format=auto`: la sede no fija formato y pide que se deduzca del documento.
+pub const AUTO: &str = "auto";
 
 /// El algoritmo que rFirma sabe producir.
 pub const ACCEPTED_ALGORITHMS: [&str; 2] = ["sha256", "sha256withrsa"];
@@ -328,12 +332,20 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
     let format = required(url, "format", Parameter::Format)
         .map_err(|refusal| refusal.because(RefusalSituation::MissingFormat))?;
-    if !format.trim().eq_ignore_ascii_case(PADES) {
-        return Err(Refusal::new(
-            SafCode::UnsupportedFormat,
-            format!("el formato '{format}' no se atiende: rFirma solo firma PAdES"),
-        ));
-    }
+
+    let document = if format.trim().eq_ignore_ascii_case(AUTO) {
+        let document = read_document(url)?;
+        reject_unless_pdf(shape_of(&document))?;
+        Some(document)
+    } else {
+        if !format.trim().eq_ignore_ascii_case(PADES) {
+            return Err(Refusal::new(
+                SafCode::UnsupportedFormat,
+                format!("el formato '{format}' no se atiende: rFirma solo firma PAdES"),
+            ));
+        }
+        None
+    };
 
     let algorithm = required(url, "algorithm", Parameter::Algorithm)?;
     if !ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
@@ -343,14 +355,10 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
         ));
     }
 
-    let data = required(url, "dat", Parameter::Data)?;
-    let document = decode_base64(data, Parameter::Data)?;
-    if document.is_empty() {
-        return Err(Refusal::new(
-            SafCode::SignWithoutData,
-            "el parametro 'dat' viene vacio: no hay nada que firmar",
-        ));
-    }
+    let document = match document {
+        Some(document) => document,
+        None => read_document(url)?,
+    };
 
     let declared = declared_properties(url)?;
     Ok(SiteOperation::Sign(SignRequest {
@@ -360,6 +368,31 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
         filter: site_filter(&declared),
         declared,
     }))
+}
+
+/// El documento de `dat`, decodificado: se lee una sola vez, la pida quien lo pida.
+fn read_document(url: &AfirmaUrl) -> Result<Vec<u8>, Refusal> {
+    let data = required(url, "dat", Parameter::Data)?;
+    let document = decode_base64(data, Parameter::Data)?;
+    if document.is_empty() {
+        return Err(Refusal::new(
+            SafCode::SignWithoutData,
+            "el parametro 'dat' viene vacio: no hay nada que firmar",
+        ));
+    }
+    Ok(document)
+}
+
+/// La única traducción de «PDF / XML / binario» a formato efectivo: hasta que
+/// el #468 traiga CAdES y XAdES, solo PDF se atiende.
+fn reject_unless_pdf(shape: DetectedShape) -> Result<(), Refusal> {
+    match shape {
+        DetectedShape::Pdf => Ok(()),
+        DetectedShape::Xml | DetectedShape::Binary => Err(Refusal::new(
+            SafCode::UnsupportedFormat,
+            "el documento de 'format=auto' no es PDF: rFirma solo firma PAdES",
+        )),
+    }
 }
 
 /// La petición de guardado: solo `dat` es obligatorio (`ProtocolInvocationLauncherSave`, 1.9.2).

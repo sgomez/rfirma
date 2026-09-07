@@ -195,6 +195,50 @@ fn the_format_is_looked_at_before_anything_else_of_the_signature() {
 }
 
 #[test]
+fn format_auto_over_a_pdf_reads_as_pades_would_for_sign_and_cosign() {
+    for verb in [SIGN, COSIGN] {
+        let auto = an_operation(&format!(
+            "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+            dat(b"%PDF-1.7\n")
+        ));
+        let explicit = a_signature(verb, "");
+
+        assert_eq!(
+            read_operation(&auto).expect("un PDF con 'auto' se atiende"),
+            read_operation(&explicit).expect("se atiende"),
+            "'{verb}' con format=auto sobre un PDF"
+        );
+    }
+}
+
+#[test]
+fn format_auto_over_xml_or_binary_is_refused_as_an_unsupported_format() {
+    for document in [
+        b"<?xml version=\"1.0\"?><Facturae/>".as_slice(),
+        &[0x00, 0x01, 0x02],
+    ] {
+        let url = an_operation(&format!(
+            "op=sign&format=auto&algorithm=SHA256withRSA&dat={}",
+            dat(document)
+        ));
+
+        let refusal = read_operation(&url).expect_err("ni XML ni binario se atienden con auto");
+
+        assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    }
+}
+
+#[test]
+fn format_auto_without_data_names_the_parameter_instead_of_the_format() {
+    let url = an_operation("op=sign&format=auto&algorithm=SHA256withRSA");
+
+    let refusal = read_operation(&url).expect_err("sin 'dat' no hay nada que detectar");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Data));
+}
+
+#[test]
 fn an_algorithm_rfirma_cannot_produce_names_its_parameter() {
     let url = an_operation(&format!(
         "op=sign&format=PAdES&algorithm=SHA512withRSA&dat={}",

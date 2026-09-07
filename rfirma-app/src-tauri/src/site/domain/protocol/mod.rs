@@ -2,6 +2,7 @@
 
 pub mod cipher;
 pub mod codes;
+pub mod detection;
 pub mod filters;
 pub mod framing;
 pub mod launch;
@@ -15,6 +16,7 @@ pub mod visible;
 
 pub use cipher::{cipher as encrypt, decipher as decrypt, CipherKey};
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
+pub use detection::{shape_of, DetectedShape};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use framing::{
     credential_matches, http_response, read_request, split_response, FragmentBuffer, FramedRequest,
