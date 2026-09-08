@@ -35,6 +35,8 @@ public final class PadesBridge {
     private static final String PROPERTY_PRESIGN = "PRE";
     /** Donde deposita Rust el PKCS#1. */
     private static final String PROPERTY_PKCS1 = "PK1";
+    /** La unica que PAdES atiende: cofirma y contrafirma las rechaza el original. */
+    private static final String OPERATION_SIGN = "sign";
 
     /**
      * Cerrojo de <b>las dos fases</b>. Lo que protege no es un campo del puente
@@ -107,7 +109,8 @@ public final class PadesBridge {
 
         // extraParams EFECTIVOS: el objeto que acaba de mutar la prefirma.
         final SessionStamp stamp =
-                SessionStamp.of(algorithm, time, timeZone, extraParams, pdf, chain);
+                SessionStamp.of(algorithm, time, timeZone, extraParams, pdf, chain,
+                        OPERATION_SIGN, null);
 
         return new PreSignResult(session.toString(), preSign, stamp.encode());
     }
