@@ -416,9 +416,9 @@ reference-signatures:
 # El oraculo de la grada C para CAdES/XAdES/FacturaE: SignValiderFactory del
 # original, consumido igual desde Maven local.
 #
-# Valida <fichero> con el validador del original. Imprime VALID o INVALID.
-validate-signature fichero:
-    ./rfirma-native-bridge/testbench/validate.sh {{ fichero }}
+# Valida <file> con el validador del original. Imprime VALID o INVALID.
+validate-signature file:
+    ./rfirma-native-bridge/testbench/validate.sh {{ file }}
 
 # El accesorio del BANCO DE CONFORMIDAD (TD-55): el `autoscript.js` que sirve
 # una sede de verdad, corriendo bajo Node contra nuestro canal en

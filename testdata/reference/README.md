@@ -39,8 +39,9 @@ just reference-signatures
 
 Llama a `rfirma-native-bridge/testbench/make-reference-signatures.sh`, que
 resuelve el clasepath desde Maven local (ADR-0002,
-`rfirma-native-bridge/testbench/reference-signer/pom.xml`) y firma con
-`ReferenceSigner.java` (JEP 330, sin `javac` aparte). Determinista salvo la
+`rfirma-native-bridge/testbench/reference-signer/pom.xml`), compila
+`ReferenceSigner.java` con `javac` y firma ejecutando la clase resultante.
+Determinista salvo la
 fecha de firma: `challenge.bin`, `document.xml` e `invoice.xml` son fijos,
 pero CAdES y XAdES incrustan el instante de firma en cada regeneración, así
 que la huella de las firmas cambia aunque el contenido firmado no lo haga. Al

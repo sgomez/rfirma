@@ -12,8 +12,8 @@
   <name>rfirma-testbench-reference-signer</name>
   <description>
     Solo resuelve el classpath de make-reference-signatures.sh y validate.sh
-    (ADR-0002). No produce jar: java ejecuta ReferenceSigner.java y
-    SignatureValidator.java en modo fichero unico (JEP 330).
+    (ADR-0002). No produce jar: los guiones compilan ReferenceSigner.java y
+    SignatureValidator.java con javac y ejecutan las clases resultantes.
   </description>
 
   <properties>
