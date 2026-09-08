@@ -176,6 +176,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Waiting
       AskingForConsent { certificates: Vec<CertificateView> }
       AskingToSign { document: String, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool }
+      AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String> }
       NoChannel { reason: NoChannelView }
       Outcome { outcome: SiteOutcomeView }
       NoCertificate { reason: NoCertificateView, owned: usize }

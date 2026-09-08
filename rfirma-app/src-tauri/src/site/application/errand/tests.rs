@@ -28,6 +28,7 @@ use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::adapters::frontier;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
+use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
@@ -37,7 +38,9 @@ use crate::site::domain::protocol::{
     SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest};
+use crate::site::ports::{
+    Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
+};
 use base64::Engine as _;
 
 /// Motor de filtrado simulado para pruebas.
@@ -182,6 +185,7 @@ struct TheNeighbours<'a> {
     listed: &'a ListedCertificates,
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
+    token: InMemoryTokenSigning,
 }
 
 impl Certificates for TheNeighbours<'_> {
@@ -216,6 +220,22 @@ impl Certificates for TheNeighbours<'_> {
 
     fn forget_the_remembered(&self) {
         crate::identity::application::certificates::forget_the_certificate(self.memory);
+    }
+}
+
+impl TokenSigning for TheNeighbours<'_> {
+    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        self.token.secret_of(certificate)
+    }
+
+    fn sign(
+        &self,
+        certificate: &TokenCertificate,
+        secret: &str,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        self.token.sign(certificate, secret, algorithm, data)
     }
 }
 
@@ -299,6 +319,22 @@ impl Certificates for ASignerThatSucceeds<'_> {
     }
 }
 
+impl TokenSigning for ASignerThatSucceeds<'_> {
+    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        self.neighbours.secret_of(certificate)
+    }
+
+    fn sign(
+        &self,
+        certificate: &TokenCertificate,
+        secret: &str,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        self.neighbours.sign(certificate, secret, algorithm, data)
+    }
+}
+
 impl ScratchDocuments for ASignerThatSucceeds<'_> {
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
         self.neighbours.open_unrecorded(path)
@@ -331,6 +367,7 @@ fn a_neighbourhood<'a>(
         listed,
         opened,
         memory,
+        token: InMemoryTokenSigning::default(),
     }
 }
 
@@ -365,9 +402,11 @@ fn a_desk<'a>(
             listed,
             opened,
             memory,
+            token: InMemoryTokenSigning::default(),
         },
         scratch_dir: scratch.to_path_buf(),
         scratch: std::sync::Arc::new(crate::site::adapters::scratch::RealScratch),
+        batch: std::sync::Arc::new(InMemoryBatchServices::default()),
     }
 }
 
@@ -1783,6 +1822,7 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
                 listed: &listed,
                 opened: &opened,
                 memory: &memory,
+                token: InMemoryTokenSigning::default(),
             },
             listed: ours.clone(),
             signature: SiteSignature {
@@ -1792,6 +1832,7 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
         },
         scratch_dir: scratch.clone(),
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
+        batch: Arc::new(InMemoryBatchServices::default()),
     };
 
     assert!(live.begin(Errand::of(
@@ -2892,4 +2933,304 @@ fn without_sticky_the_remembered_certificate_changes_nothing() {
         &live,
     );
     assert!(matches!(reply, SiteOutcome::Certificate(_)));
+}
+
+const A_JSON_LOTE: &str = "{\"algorithm\":\"SHA256\",\"stoponerror\":false,\"singlesigns\":[{\"id\":\"001\",\"datareference\":\"AAAA\"},{\"id\":\"002\",\"datareference\":\"BBBB\"}]}";
+
+const A_PRESIGN_WITH_TWO_SIGNS: &[u8] = b"{\"td\":{\"format\":\"PAdES\",\"signinfo\":[{\"id\":\"001\",\"params\":{\"PRE\":\"QUJD\"}},{\"id\":\"002\",\"params\":{\"PRE\":\"REVG\"}}]}}";
+
+fn a_batch(extra: &str) -> AfirmaUrl {
+    let text = format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
+         batchpresignerurl=https%3A%2F%2Fpresigner.example%2Fpre&\
+         batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost&dat={}{extra}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(A_JSON_LOTE)
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+/// El asa del único certificado que la sede acepta en ese paso.
+fn the_only_row_of(step: ErrandStep) -> String {
+    let ErrandStep::AskingToSignTheBatch(asked) = step else {
+        panic!("un lote pide consentimiento: {step:?}");
+    };
+    asked.certificates[0].id.clone()
+}
+
+/// Una mesa que lista los certificados dados y habla con los servlets del lote dados.
+fn a_desk_for_the_batch<'a>(
+    engine: &'a AnEngine,
+    policies: &'a APolicyEngine,
+    home: &'a Path,
+    listed: &'a ListedCertificates,
+    memory: &'a Memory,
+    ours: &[TokenCertificate],
+    services: Arc<InMemoryBatchServices>,
+) -> ErrandDesk<'a, AnEngine, APolicyEngine, ASignerThatSucceeds<'a>> {
+    ErrandDesk {
+        engine,
+        policies,
+        neighbours: ASignerThatSucceeds {
+            neighbours: TheNeighbours {
+                stores: Vec::new(),
+                home,
+                listed,
+                opened: opened_for_nobody(),
+                memory,
+                token: InMemoryTokenSigning::default(),
+            },
+            listed: ours.to_vec(),
+            signature: SiteSignature {
+                signed: Vec::new(),
+                signer_der: Vec::new(),
+            },
+        },
+        scratch_dir: home.join("errand"),
+        scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
+        batch: services,
+    }
+}
+
+#[test]
+fn a_batch_goes_from_the_operation_to_the_wire_asking_the_secret_only_once() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let services = Arc::new(InMemoryBatchServices::answering(
+        A_PRESIGN_WITH_TWO_SIGNS.to_vec(),
+        b"RESULTADO".to_vec(),
+    ));
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::clone(&services),
+    );
+
+    let url = a_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheBatch(asked) = remembered(&live, step) else {
+        panic!("un lote pide consentimiento");
+    };
+    assert_eq!(asked.signs, 2, "el momento dice cuantas firmas lleva");
+    assert_eq!(asked.certificates.len(), 1);
+    assert_eq!(asked.already_chosen, None, "sin 'sticky' no hay elegido");
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "el consentimiento del lote no escribe nada en el cable"
+    );
+
+    let consented = consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+    assert!(matches!(consented, Consented::SigningWith(_)));
+
+    finish_the_batch(&desk, "1234", &live).expect("el lote sale entero");
+
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(base64::engine::general_purpose::STANDARD.encode(b"RESULTADO")),
+        "la sede recibe el resultado del postsigner tal cual"
+    );
+    assert_eq!(
+        desk.neighbours.neighbours.token.secrets_asked(),
+        1,
+        "el secreto se pide una sola vez para las dos firmas"
+    );
+    assert_eq!(desk.neighbours.neighbours.token.signed().len(), 2);
+    assert_eq!(services.received().len(), 2);
+    assert!(live.current().is_none());
+}
+
+#[test]
+fn a_batch_with_needcert_answers_the_result_and_the_signer() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let services = Arc::new(InMemoryBatchServices::answering(
+        A_PRESIGN_WITH_TWO_SIGNS.to_vec(),
+        b"RESULTADO".to_vec(),
+    ));
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        services,
+    );
+
+    let url = a_batch("&needcert=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+    finish_the_batch(&desk, "1234", &live).expect("el lote sale entero");
+
+    let encode = base64::engine::general_purpose::STANDARD;
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(format!(
+            "{}|{}",
+            encode.encode(b"RESULTADO"),
+            encode.encode(ours[0].der())
+        ))
+    );
+}
+
+#[test]
+fn a_sticky_batch_with_a_valid_remembered_certificate_does_not_ask_for_consent() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[0].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_batch("&sticky=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheBatch(asked) = step else {
+        panic!("un lote pega el certificado, no lo contesta");
+    };
+
+    assert_eq!(
+        asked.already_chosen.as_deref(),
+        Some(asked.certificates[0].id.as_str()),
+        "'sticky' resuelve el certificado sin preguntar"
+    );
+    assert!(asked.certificates[0].remembered);
+}
+
+#[test]
+fn a_batch_whose_presigner_is_unreachable_is_answered_with_the_code_of_the_batch_service() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::unreachable()),
+    );
+
+    let url = a_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+
+    let refused = finish_the_batch(&desk, "1234", &live).expect_err("sin servlet no hay lote");
+
+    assert!(matches!(refused, ConsentError::Refused(_)));
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(WireAnswer::refused(SafCode::ContactBatchService).on_the_wire())
+    );
+}
+
+#[test]
+fn a_batch_whose_postsigner_answers_nothing_is_answered_with_the_code_of_a_failed_batch() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::only_presigning(
+            A_PRESIGN_WITH_TWO_SIGNS.to_vec(),
+        )),
+    );
+
+    let url = a_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+
+    finish_the_batch(&desk, "1234", &live).expect_err("una postfirma invalida no sale");
+
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(WireAnswer::refused(SafCode::BatchSignature).on_the_wire())
+    );
+}
+
+#[test]
+fn a_batch_that_is_declined_ends_in_a_cancel() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    remembered(&live, step);
+
+    decline(&live);
+
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(frontier::cancelled().on_the_wire())
+    );
 }

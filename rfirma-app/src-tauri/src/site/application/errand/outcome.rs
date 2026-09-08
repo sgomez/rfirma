@@ -5,7 +5,8 @@ use std::collections::BTreeMap;
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::protocol::{
-    AfirmaUrl, Refusal, SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
+    AfirmaUrl, BatchRequest, Refusal, SignAndSaveRequest, SignatureRound, SiteFilter,
+    SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
 
@@ -25,6 +26,8 @@ pub enum ErrandStep {
     },
     /// Momento de consentimiento de firma de documento para la ventana.
     AskingToSign(SigningConsent),
+    /// Momento de consentimiento del lote remoto para la ventana.
+    AskingToSignTheBatch(Box<BatchConsent>),
     /// Paso de guardado: la orden de Tauri abre el diálogo del portal y escribe.
     Saving(Box<SavingConsent>),
     /// Paso de carga: la orden de Tauri abre el selector del portal y lee.
@@ -54,6 +57,11 @@ impl ErrandStep {
                 round: consent.round,
                 certificates: consent.certificates.clone(),
                 unregistered_signatures: consent.unregistered_signatures,
+            }),
+            Self::AskingToSignTheBatch(consent) => Some(Moment::AskingToSignTheBatch {
+                signs: consent.signs,
+                certificates: consent.certificates.clone(),
+                already_chosen: consent.already_chosen.clone(),
             }),
             Self::Saving(consent) => Some(Moment::Saving {
                 filename: consent.filename.clone().or_else(|| consent.title.clone()),
@@ -98,6 +106,19 @@ pub struct SigningConsent {
     pub unregistered_signatures: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub saving: Option<Box<SavingHints>>,
+}
+
+/// Datos del consentimiento del lote remoto, que se firma sin documento delante.
+#[derive(Clone, Debug)]
+pub struct BatchConsent {
+    /// El lote tal y como lo pidió la sede.
+    pub request: BatchRequest,
+    /// Cuántas firmas lleva el lote.
+    pub signs: usize,
+    /// Certificados aceptados por la sede, ya cribados.
+    pub certificates: Vec<ListedCertificate>,
+    /// El asa del certificado recordado cuando `sticky` lo resolvió sin preguntar.
+    pub already_chosen: Option<String>,
 }
 
 /// Pistas de guardado de `signandsave`, calculadas antes de firmar y usadas tras la postfirma.
@@ -227,6 +248,15 @@ pub enum Moment {
         certificates: Vec<ListedCertificate>,
         /// Si el documento contiene firmas que no se pueden interpretar.
         unregistered_signatures: bool,
+    },
+    /// Consentimiento del lote remoto, sin documento y con cuántas firmas lleva.
+    AskingToSignTheBatch {
+        /// Cuántas firmas lleva el lote.
+        signs: usize,
+        /// Filas ya cribadas en orden de presentación.
+        certificates: Vec<ListedCertificate>,
+        /// El asa del certificado que `sticky` ya resolvió, si lo resolvió.
+        already_chosen: Option<String>,
     },
     /// Trámite sin certificados disponibles.
     NoCertificate {

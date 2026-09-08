@@ -95,6 +95,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         },
         scratch_dir: std::env::temp_dir(),
         scratch: Arc::new(site::adapters::scratch::RealScratch),
+        batch: Arc::new(site::adapters::batch_services::RelayBatchServices::default()),
     };
     Roots {
         identity,

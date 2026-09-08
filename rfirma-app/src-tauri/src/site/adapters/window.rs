@@ -66,7 +66,7 @@ pub(super) fn publish_what_moved(app: &tauri::AppHandle, step: Option<ErrandStep
 }
 
 /// Desempaqueta del estado de Tauri los componentes de la mesa del trámite.
-pub(super) fn with_the_desk<R>(
+pub(crate) fn with_the_desk<R>(
     app: &tauri::AppHandle,
     call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>>, &LiveErrand) -> R,
 ) -> R {
@@ -84,6 +84,7 @@ pub(super) fn with_the_desk<R>(
         },
         scratch_dir: site.scratch_dir.clone(),
         scratch: site.scratch.clone(),
+        batch: site.batch.clone(),
     };
     call(&desk, &site.errand)
 }

@@ -1,7 +1,8 @@
 //! Peticiones de la sede desacopladas de la versión del protocolo.
 
 use crate::site::domain::protocol::{
-    LoadRequest, Refusal, SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest,
+    BatchRequest, LoadRequest, Refusal, SaveRequest, SelectCertificate, SignAndSaveRequest,
+    SignRequest,
 };
 
 /// Lo que la sede pide, ya leído y sin versión de protocolo.
@@ -17,6 +18,8 @@ pub enum SiteRequest {
     Save(SaveRequest),
     /// Cargar uno o varios ficheros del equipo.
     Load(LoadRequest),
+    /// Firmar un lote remoto contra los dos servlets que declara la sede.
+    Batch(BatchRequest),
     /// Operación no atendida con el rechazo correspondiente.
     NotAttended(Refusal),
 }

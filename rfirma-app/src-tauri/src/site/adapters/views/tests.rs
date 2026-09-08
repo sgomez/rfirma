@@ -119,3 +119,41 @@ fn each_batch_situation_crosses_as_its_own_view() {
         assert_eq!(RefusalSituationView::from(situation), expected);
     }
 }
+
+#[test]
+fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chosen() {
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::AskingToSignTheBatch {
+            signs: 3,
+            certificates: Vec::new(),
+            already_chosen: Some("una-asa".to_owned()),
+        }))
+        .expect("el consentimiento del lote cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": {
+                "kind": "askingToSignTheBatch",
+                "signs": 3,
+                "certificates": [],
+                "alreadyChosen": "una-asa",
+            },
+        })
+    );
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::AskingToSignTheBatch {
+            signs: 1,
+            certificates: Vec::new(),
+            already_chosen: None,
+        }))
+        .expect("el consentimiento del lote cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": {
+                "kind": "askingToSignTheBatch",
+                "signs": 1,
+                "certificates": [],
+                "alreadyChosen": null,
+            },
+        })
+    );
+}

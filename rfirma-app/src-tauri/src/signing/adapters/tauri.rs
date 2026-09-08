@@ -40,9 +40,13 @@ pub fn begin_signing(
 #[tauri::command]
 pub fn sign_with_pin(
     pin: String,
+    app_handle: tauri::AppHandle,
     identity: State<'_, IdentityRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<(), Failure> {
+    if let Some(batch) = crate::site::the_pending_batch_signed(&app_handle, &pin) {
+        return batch;
+    }
     Ok(crate::signing::application::session::sign_on_token(
         &identity.signer(),
         &signing.session,

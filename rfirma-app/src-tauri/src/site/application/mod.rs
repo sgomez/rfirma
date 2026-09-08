@@ -1,5 +1,6 @@
 //! Casos de uso de `site`.
 
+pub mod batch;
 pub mod errand;
 pub mod filtering;
 pub mod policies;

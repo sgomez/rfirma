@@ -177,6 +177,14 @@ impl InMemoryBatchServices {
         }
     }
 
+    /// Unos servlets que prefirman y luego no devuelven postfirma ninguna.
+    pub(crate) fn only_presigning(presign: Vec<u8>) -> Self {
+        Self {
+            presign_response: Mutex::new(Some(presign)),
+            ..Self::default()
+        }
+    }
+
     /// Unos servlets que nunca responden, como si la sede no tuviera red.
     pub(crate) fn unreachable() -> Self {
         Self {
