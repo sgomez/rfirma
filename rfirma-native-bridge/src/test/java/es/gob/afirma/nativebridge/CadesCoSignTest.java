@@ -23,6 +23,8 @@ class CadesCoSignTest {
 
     private static final Path REFERENCE =
             Path.of("..", "testdata", "reference", "cades-implicit.p7s");
+    private static final Path EXPLICIT_REFERENCE =
+            Path.of("..", "testdata", "reference", "cades-explicit.p7s");
 
     private static byte[] reference() throws Exception {
         return Files.readAllBytes(REFERENCE);
@@ -37,6 +39,18 @@ class CadesCoSignTest {
         final List<SignValidity> verdicts = CadesCycle.validate(cosigned);
         assertTrue(CadesCycle.isValid(verdicts),
                 "el validador del original no da la cofirma por valida: " + verdicts);
+    }
+
+    @Test
+    void cosigns_an_explicit_signature_taking_the_digest_from_the_previous_one() throws Exception {
+        final byte[] cosigned = CadesCycle.sign(
+                Files.readAllBytes(EXPLICIT_REFERENCE), new Properties(), "cosign");
+
+        assertEquals(2, new CMSSignedData(cosigned).getSignerInfos().size(),
+                "la cofirma de una firma explicita tambien deja dos SignerInfo");
+        final List<SignValidity> verdicts = CadesCycle.validate(cosigned);
+        assertTrue(CadesCycle.isValid(verdicts),
+                "el validador del original no da la cofirma explicita por valida: " + verdicts);
     }
 
     @Test

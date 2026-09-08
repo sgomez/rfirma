@@ -90,7 +90,14 @@
 
     <!-- El validador del original: el oraculo con el que las pruebas dan por
          valida una firma, y ademas la rama checkSignatures del preprocesador
-         trifasico. Explicita por la misma trampa de ${clienteafirma.version}. -->
+         trifasico. Explicita por la misma trampa de ${clienteafirma.version}.
+         COMPILE y no test, aunque el puente pase siempre checkSignatures=false:
+         la rama no se ejecuta pero se enlaza, y es afirma-server-triphase-signer-core
+         quien la trae —bajarla a test aqui la dejaria sin resolver en la imagen.
+         La exclusion de afirma-ui-utils NO es una precaucion: medido con
+         `mvn dependency:tree`, este modulo SI la pide, a ${clienteafirma.version}
+         —o sea 1.9—, y sin la exclusion la resolucion suelta un WARNING por el POM
+         1.9 que no esta en la cache y la deja fuera por accidente. -->
     <dependency>
       <groupId>es.gob.afirma</groupId>
       <artifactId>afirma-crypto-validation</artifactId>

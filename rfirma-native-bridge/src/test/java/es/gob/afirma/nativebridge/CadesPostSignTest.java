@@ -8,6 +8,7 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.TimeZone;
 
 import org.junit.jupiter.api.Test;
 
@@ -122,9 +123,35 @@ class CadesPostSignTest {
     }
 
     @Test
+    void refuses_a_stamp_whose_operation_is_not_one_of_the_three() throws Exception {
+        final SignedSession s = sign(new Properties());
+        final SessionStamp sealed = SessionStamp.decode(s.pre().stamp());
+        final SessionStamp invented = SessionStamp.of(sealed.algorithm(), sealed.time(),
+                TimeZone.getDefault(), sealed.extraParams(), s.document(), s.chain(),
+                "loQueSea", null);
+        final String tampered = s.pre().session().replace(
+                "<param n=\"OP\">sign</param>", "<param n=\"OP\">loQueSea</param>");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> CadesBridge.postSign(s.document(), s.chain(), invented.encode(), tampered,
+                        s.pkcs1()));
+    }
+
+    @Test
+    void refuses_two_pkcs1_for_the_same_presign() throws Exception {
+        final SignedSession s = sign(new Properties());
+        final CadesBridge.SignatureValue only = s.pkcs1().get(0);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> CadesBridge.postSign(s.document(), s.chain(), s.pre().stamp(),
+                        s.pre().session(),
+                        List.of(only, new CadesBridge.SignatureValue(only.id(), "MTIz"))));
+    }
+
+    @Test
     void reads_the_pkcs1_list_that_rust_sends() {
         final List<CadesBridge.SignatureValue> values =
-                CadesBridge.parsePkcs1List("[{\"id\":\"a==\",\"pk1\":\"MTIz\"},"
+                NativeBridge.parsePkcs1List("[{\"id\":\"a==\",\"pk1\":\"MTIz\"},"
                         + " {\"id\":\"b/c+d\",\"pk1\":\"NDU2\"}]");
 
         assertEquals(2, values.size());
@@ -134,10 +161,35 @@ class CadesPostSignTest {
     }
 
     @Test
+    void reads_the_pkcs1_list_whatever_the_order_of_its_two_fields() {
+        final List<CadesBridge.SignatureValue> values =
+                NativeBridge.parsePkcs1List("[{\"pk1\":\"MTIz\",\"id\":\"a==\"}]");
+
+        assertEquals("a==", values.get(0).id());
+        assertEquals("MTIz", values.get(0).pkcs1B64());
+    }
+
+    @Test
     void refuses_a_pkcs1_list_without_a_single_entry() {
-        assertThrows(IllegalArgumentException.class, () -> CadesBridge.parsePkcs1List("[]"));
-        assertThrows(IllegalArgumentException.class, () -> CadesBridge.parsePkcs1List(null));
-        assertThrows(IllegalArgumentException.class, () -> CadesBridge.parsePkcs1List("MTIz"));
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List("[]"));
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List(null));
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List("MTIz"));
+    }
+
+    @Test
+    void refuses_a_pkcs1_list_that_is_only_buried_in_the_middle_of_something_else() {
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List(
+                "basura [{\"id\":\"a==\",\"pk1\":\"MTIz\"}] mas basura"));
+    }
+
+    @Test
+    void refuses_a_pkcs1_entry_that_is_not_the_two_expected_fields() {
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List(
+                "[{\"id\":\"a==\",\"pk1\":\"MTIz\"},{\"id\":\"b==\"}]"));
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List(
+                "[{\"id\":\"a==\",\"id\":\"b==\"}]"));
+        assertThrows(IllegalArgumentException.class, () -> NativeBridge.parsePkcs1List(
+                "[{\"id\":\"a\\\\==\",\"pk1\":\"MTIz\"}]"));
     }
 
     @Test

@@ -3,13 +3,12 @@ package es.gob.afirma.nativebridge;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import es.gob.afirma.core.signers.CounterSignTarget;
 import es.gob.afirma.core.signers.TriphaseData;
@@ -62,9 +61,6 @@ public final class CadesBridge {
     private static final String PARAM_TARGET = "target";
     private static final String TARGET_TREE = "tree";
     private static final String TARGET_LEAFS = "leafs";
-
-    private static final Pattern PKCS1_ENTRY = Pattern.compile(
-            "\\{\\s*\"id\"\\s*:\\s*\"([^\"]*)\"\\s*,\\s*\"pk1\"\\s*:\\s*\"([^\"]*)\"\\s*\\}");
 
     private CadesBridge() { }
 
@@ -207,7 +203,7 @@ public final class CadesBridge {
         attachPkcs1(session, pkcs1s);
 
         final CAdESTriPhasePreProcessor processor = new CAdESTriPhasePreProcessor();
-        return switch (stamp.operation()) {
+        return switch (requireKnownOperation(stamp.operation())) {
             case OPERATION_COSIGN -> processor.preProcessPostCoSign(
                     document, stamp.algorithm(), chain, stamp.extraParams(), session);
             case OPERATION_COUNTERSIGN -> processor.preProcessPostCounterSign(
@@ -218,35 +214,22 @@ public final class CadesBridge {
         };
     }
 
-    /** Los PKCS#1 de la fase 2 tal y como los envia Rust: {@code [{"id":"..","pk1":".."}]}. */
-    public static List<SignatureValue> parsePkcs1List(final String json) {
-        final List<SignatureValue> values = new ArrayList<>();
-        if (json != null) {
-            final Matcher entry = PKCS1_ENTRY.matcher(json);
-            while (entry.find()) {
-                values.add(new SignatureValue(entry.group(1), entry.group(2)));
-            }
-        }
-        if (values.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "falta el PKCS#1 de la fase 2: se esperaba [{\"id\":\"..\",\"pk1\":\"..\"}]");
-        }
-        return values;
-    }
-
     private static void attachPkcs1(final TriphaseData session,
             final List<SignatureValue> pkcs1s) {
         if (pkcs1s == null || pkcs1s.isEmpty()) {
             throw new IllegalArgumentException("falta el PKCS#1 de la fase 2");
         }
+        final Set<String> seen = new HashSet<>();
         for (final SignatureValue value : pkcs1s) {
             if (value.pkcs1B64() == null || value.pkcs1B64().isBlank()) {
                 throw new IllegalArgumentException(
                         "falta el PKCS#1 de la prefirma «" + value.id() + "»");
             }
-            // Por la lista viva y no por getTriSigns(id), que devuelve COPIAS: el
-            // PKCS#1 se escribiria en un objeto que se tira y la firma saldria
-            // incompleta sin que nadie lo dijera.
+            if (!seen.add(value.id())) {
+                throw new IllegalArgumentException("el PKCS#1 «" + value.id()
+                        + "» llega dos veces: el segundo pisaria al primero sin decirlo");
+            }
+            // Por la lista viva, no por getTriSigns(id): devuelve copias.
             boolean attached = false;
             for (final TriphaseData.TriSign signConfig : session.getTriSigns()) {
                 if (signConfig.getId().equals(value.id())) {

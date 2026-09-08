@@ -1,8 +1,11 @@
 package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.UnmanagedMemory;
@@ -229,7 +232,7 @@ public final class NativeBridge {
                     PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
                     CTypeConversion.toJavaString(stampB64),
                     CTypeConversion.toJavaString(sessionXml),
-                    CadesBridge.parsePkcs1List(CTypeConversion.toJavaString(pkcs1Json)));
+                    parsePkcs1List(CTypeConversion.toJavaString(pkcs1Json)));
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "signature", Base64.getEncoder().encodeToString(signature));
@@ -385,6 +388,56 @@ public final class NativeBridge {
             cause = cause.getCause() == cause ? null : cause.getCause();
         }
         return GENERIC_FAILURE_KIND;
+    }
+
+    private static final Pattern PKCS1_LIST = Pattern.compile(
+            "\\s*\\[\\s*(\\{[^\\[\\]{}]*\\}(\\s*,\\s*\\{[^\\[\\]{}]*\\})*)?\\s*\\]\\s*");
+    private static final Pattern PKCS1_ENTRY = Pattern.compile(
+            "\\{\\s*\"(id|pk1)\"\\s*:\\s*\"([^\"\\\\]*)\"\\s*,"
+                    + "\\s*\"(id|pk1)\"\\s*:\\s*\"([^\"\\\\]*)\"\\s*\\}");
+
+    /**
+     * Los PKCS#1 de la fase 2 tal y como los envia Rust:
+     * {@code [{"id":"..","pk1":".."}]}, en cualquiera de los dos ordenes.
+     *
+     * <p>Vive junto a {@link #member}, que escribe el otro lado del mismo JSON.
+     * Valida la cadena entera —no busca dentro de ella— y rechaza los escapes:
+     * identificadores y PKCS#1 son Base64.
+     */
+    static List<CadesBridge.SignatureValue> parsePkcs1List(final String json) {
+        if (json == null || !PKCS1_LIST.matcher(json).matches()) {
+            throw new IllegalArgumentException(
+                    "el PKCS#1 de la fase 2 no llega como lista: se esperaba"
+                            + " [{\"id\":\"..\",\"pk1\":\"..\"}] y nada mas");
+        }
+        final List<CadesBridge.SignatureValue> values = new ArrayList<>();
+        final Matcher entry = PKCS1_ENTRY.matcher(json);
+        while (entry.find()) {
+            if (entry.group(1).equals(entry.group(3))) {
+                throw new IllegalArgumentException(
+                        "el PKCS#1 de la fase 2 repite el campo \u00ab" + entry.group(1)
+                                + "\u00bb");
+            }
+            values.add(new CadesBridge.SignatureValue(
+                    "id".equals(entry.group(1)) ? entry.group(2) : entry.group(4),
+                    "pk1".equals(entry.group(1)) ? entry.group(2) : entry.group(4)));
+        }
+        if (values.isEmpty() || values.size() != countEntries(json)) {
+            throw new IllegalArgumentException(
+                    "falta el PKCS#1 de la fase 2: se esperaba"
+                            + " [{\"id\":\"..\",\"pk1\":\"..\"}] en Base64, sin escapes");
+        }
+        return values;
+    }
+
+    private static int countEntries(final String json) {
+        int entries = 0;
+        for (int i = 0; i < json.length(); i++) {
+            if (json.charAt(i) == '{') {
+                entries++;
+            }
+        }
+        return entries;
     }
 
     private static void field(final StringBuilder json, final String name, final String value) {
