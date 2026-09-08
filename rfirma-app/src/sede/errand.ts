@@ -118,12 +118,7 @@ export type ErrandStage =
       kind: "consent";
       /** `null` cuando el documento no viaja, que es el caso de `selectcert`. */
       document: SiteDocument | null;
-      /**
-       * Cuántas firmas lleva el lote, y `null` cuando lo que se consiente no es
-       * un lote. Los documentos del lote se quedan en la sede —rFirma firma sus
-       * resúmenes—, así que aquí no hay documento que enseñar y el número es
-       * todo lo que se sabe.
-       */
+      /** Cuántas firmas lleva el lote, y `null` cuando lo que se consiente no es un lote. */
       signs: number | null;
       /** Los que la sede acepta, ya filtrados por el backend. */
       certificates: readonly Certificate[];

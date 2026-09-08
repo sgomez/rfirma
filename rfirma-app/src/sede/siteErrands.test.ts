@@ -723,6 +723,47 @@ describe("el lote remoto", () => {
       },
     });
   });
+
+  it("ends the errand on a wrong pin instead of asking for it again", async () => {
+    const { push, port, last } = watched({
+      signWithPin: async () => ({
+        ok: false,
+        failure: { situation: "incorrectPin", detail: "el PIN no es correcto", attemptsLeft: 2 },
+      }),
+    });
+    push(ASKING_TO_SIGN_THE_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+    await port.submitSecret("0000");
+
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: {
+        kind: "refused",
+        situation: "batchSigningFailed",
+        detail: "el PIN no es correcto",
+      },
+    });
+  });
+
+  it("names a failed batch signature as such when the secret cannot even be asked for", async () => {
+    const { push, port, last } = watched({
+      beginSigning: async () => ({
+        ok: false,
+        failure: { situation: "tokenAbsent", detail: "no hay token", attemptsLeft: null },
+      }),
+    });
+    push(ASKING_TO_SIGN_THE_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "batchSigningFailed", detail: "no hay token" },
+    });
+  });
 });
 
 describe("las salidas de la pantalla sin certificado", () => {

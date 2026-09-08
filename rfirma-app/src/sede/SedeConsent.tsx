@@ -136,11 +136,7 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
   );
 }
 
-/**
- * Del lote sólo se sabe **cuántas firmas lleva**: sus documentos se quedan en
- * la sede, así que no hay ni título ni tamaño que enseñar y el número es toda
- * la tarjeta.
- */
+/** Del lote sólo se sabe cuántas firmas lleva: sus documentos se quedan en la sede. */
 function BatchCard({ signs }: { signs: number }) {
   const { t } = useTranslation();
 

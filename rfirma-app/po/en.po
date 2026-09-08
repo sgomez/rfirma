@@ -1101,8 +1101,8 @@ msgstr ""
 #. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
 msgid "sede.consent.unrecognizedSignatures"
 msgstr ""
-"rFirma does not recognize some of the signatures already on this document, "
-"and adding yours could make them stop showing as valid"
+"rFirma does not recognize some of the signatures already on this "
+"document, and adding yours could make them stop showing as valid"
 
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"

@@ -103,11 +103,7 @@ interface UnclassifiedFailure {
   attemptsLeft: number | null;
 }
 
-/**
- * Cómo acaba la orden del secreto, que en el lote firma y entrega de una vez:
- * su rechazo puede ser del token —y entonces el diálogo lo reintenta— o del
- * lote, que nombra situaciones que el token no conoce.
- */
+/** Cómo acaba la orden del secreto, que en el lote firma y entrega de una vez. */
 export type SecretResult<T> = { ok: true; value: T } | { ok: false; failure: UnclassifiedFailure };
 
 /**
@@ -192,12 +188,7 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   unknown: true,
 };
 
-/**
- * Cómo nombra el lote sus fallos cuando salen por una orden fallida.
- *
- * El lote no publica ningún momento de desenlace: sus fallos vuelven como el
- * fallo de `sign_with_pin`, y ahí van sin el prefijo con el que cruzarían.
- */
+/** Cómo nombra el lote sus fallos, que vuelven por la orden y sin el prefijo con el que cruzarían. */
 const BATCH_LABELS: Record<string, RefusalSituation> = {
   presignerUnreachable: "batchPresignerUnreachable",
   postsignerUnreachable: "batchPostsignerUnreachable",
@@ -221,6 +212,20 @@ function retriedInThePinDialog(failure: UnclassifiedFailure): TokenFailure | nul
 /** Un fallo de una etapa, contado como el desenlace que la ventana enseña. */
 function refusedBy(failure: { situation: string; detail: string }): SiteOutcome {
   return { kind: "refused", situation: refusalOf(failure.situation), detail: failure.detail };
+}
+
+/**
+ * Lo mismo, sabiendo que lo que falló era un lote: sus fallos de firma llegan
+ * con la situación del token (`incorrectPin`, `tokenAbsent`…), que aquí no
+ * nombra nada, y el lote los llama «lote fallido».
+ */
+function refusedByTheBatch(failure: { situation: string; detail: string }): SiteOutcome {
+  const named = refusalOf(failure.situation);
+  return {
+    kind: "refused",
+    situation: named === "unknown" ? "batchSigningFailed" : named,
+    detail: failure.detail,
+  };
 }
 
 /**
@@ -420,14 +425,17 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     move({ kind: "signing", certificate: held.certificate, phase: "signing" });
     const signed = await commands.signWithPin(secret);
     if (!signed.ok) {
+      const batch = held.signs !== null;
       // Un PIN incorrecto se reintenta dentro del diálogo, sin reiniciar nada;
-      // lo demás sale del diálogo, y aquí salir es el desenlace.
-      const retried = retriedInThePinDialog(signed.failure);
+      // lo demás sale del diálogo, y aquí salir es el desenlace. En el lote no
+      // hay reintento: la orden cierra el trámite y la sede ya tiene su
+      // rechazo, así que el segundo PIN no tendría dónde firmar.
+      const retried = batch ? null : retriedInThePinDialog(signed.failure);
       if (retried !== null) {
         move({ kind: "secret", certificate: held.certificate, failure: retried });
         return;
       }
-      finish(refusedBy(signed.failure));
+      finish(batch ? refusedByTheBatch(signed.failure) : refusedBy(signed.failure));
       return;
     }
 
@@ -490,7 +498,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       const begun = await commands.beginSigning(certificateId);
       if (arrival !== arrivals) return;
       if (!begun.ok) {
-        finish(refusedBy(begun.failure));
+        finish(stage.signs !== null ? refusedByTheBatch(begun.failure) : refusedBy(begun.failure));
         return;
       }
       // Sin sesión no hay diálogo y no se inventa ningún PIN: se manda la
