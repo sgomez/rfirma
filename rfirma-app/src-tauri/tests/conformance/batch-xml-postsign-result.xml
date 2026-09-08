@@ -1,6 +1,5 @@
-<xml>
- <lote>
-  <firma Id="uno" resultado="DONE_AND_SAVED"/>
-  <firma Id="dos" resultado="DONE_AND_SAVED"/>
- </lote>
-</xml>
+<?xml version="1.0" encoding="UTF-8" ?>
+<signs>
+ <signresult id="uno" result="DONE_AND_SAVED" description=""/>
+ <signresult id="dos" result="DONE_AND_SAVED" description=""/>
+</signs>
