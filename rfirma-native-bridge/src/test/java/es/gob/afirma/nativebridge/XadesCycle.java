@@ -88,7 +88,15 @@ final class XadesCycle {
      */
     static boolean xmlsecVerifies(final byte[] signature) throws Exception {
         org.apache.xml.security.Init.init();
-        final Element root = parse(signature).getDocumentElement();
+        final org.apache.xml.security.signature.XMLSignature xmlSignature =
+                new org.apache.xml.security.signature.XMLSignature(signatureElementOf(signature),
+                        "");
+        return xmlSignature.checkSignatureValue(TestFixtures.activeCertificate());
+    }
+
+    /** La unica {@code ds:Signature} del XML, con sus atributos {@code Id} ya marcados. */
+    static Element signatureElementOf(final byte[] xml) throws Exception {
+        final Element root = parse(xml).getDocumentElement();
         markIdAttributes(root);
         final NodeList signatures = root.getOwnerDocument().getElementsByTagNameNS(
                 javax.xml.crypto.dsig.XMLSignature.XMLNS, "Signature");
@@ -96,10 +104,7 @@ final class XadesCycle {
             throw new IllegalStateException(
                     "el XML firmado tiene " + signatures.getLength() + " ds:Signature");
         }
-        final org.apache.xml.security.signature.XMLSignature xmlSignature =
-                new org.apache.xml.security.signature.XMLSignature(
-                        (Element) signatures.item(0), "");
-        return xmlSignature.checkSignatureValue(TestFixtures.activeCertificate());
+        return (Element) signatures.item(0);
     }
 
     static Document parse(final byte[] xml) throws Exception {

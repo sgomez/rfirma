@@ -250,7 +250,7 @@ public final class NativeBridge {
     }
 
     /**
-     * Prefirma XAdES Enveloping.
+     * Prefirma XAdES en la variante que pida {@code extraParams.format}.
      *
      * @param xmlB64       XML de entrada en Base64.
      * @param algorithm    p.ej. {@code SHA256withRSA}.
