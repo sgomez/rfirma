@@ -1116,6 +1116,15 @@ msgstr ""
 "rFirma no reconoce alguna de las firmas que ya tiene este documento, y al "
 "añadir la tuya podrían dejar de verse como válidas"
 
+msgid "sede.consent.batchTitle"
+msgid_plural "sede.consent.batchTitle"
+msgstr[0] "Lote de 1 firma"
+msgstr[1] "Lote de {{count}} firmas"
+msgstr[2] "Lote de {{count}} firmas"
+
+msgid "sede.consent.batchNote"
+msgstr "Los documentos se quedan en la sede: rFirma firma sin descargarlos."
+
 msgid "sede.consent.sign"
 msgstr "Firmar"
 
@@ -1195,6 +1204,21 @@ msgstr[0] "Se ha enviado 1 fichero."
 msgstr[1] "Se han enviado {{count}} ficheros."
 msgstr[2] "Se han enviado {{count}} ficheros."
 
+msgid "sede.outcome.batchTitle"
+msgstr "Lote firmado y enviado"
+
+msgid "sede.outcome.batchBody"
+msgid_plural "sede.outcome.batchBody"
+msgstr[0] "La firma del lote ya está en {{origin}}."
+msgstr[1] "Las {{count}} firmas del lote ya están en {{origin}}."
+msgstr[2] "Las {{count}} firmas del lote ya están en {{origin}}."
+
+msgid "sede.outcome.batchBodyUnknownOrigin"
+msgid_plural "sede.outcome.batchBodyUnknownOrigin"
+msgstr[0] "La firma del lote ya se ha enviado."
+msgstr[1] "Las {{count}} firmas del lote ya se han enviado."
+msgstr[2] "Las {{count}} firmas del lote ya se han enviado."
+
 msgid "sede.outcome.cancelledTitle"
 msgstr "Has cancelado la firma"
 
@@ -1249,6 +1273,21 @@ msgstr ""
 
 msgid "sede.refusals.cannotLoadData"
 msgstr "Uno de los ficheros elegidos para {{origin}} no se ha podido leer."
+
+msgid "sede.refusals.batchPresignerUnreachable"
+msgstr "El servicio de {{origin}} que prepara el lote no ha contestado."
+
+msgid "sede.refusals.batchPostsignerUnreachable"
+msgstr "El servicio de {{origin}} que cierra el lote no ha contestado."
+
+msgid "sede.refusals.batchInvalidPresignResponse"
+msgstr "El servicio de {{origin}} que prepara el lote ha contestado algo que rFirma no sabe leer."
+
+msgid "sede.refusals.batchInvalidPostsignResponse"
+msgstr "El servicio de {{origin}} que cierra el lote ha contestado algo que rFirma no sabe leer."
+
+msgid "sede.refusals.batchSigningFailed"
+msgstr "La firma del lote que pedía {{origin}} no ha llegado a completarse."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tienes ningún certificado"

@@ -1104,6 +1104,15 @@ msgstr ""
 "rFirma does not recognize some of the signatures already on this "
 "document, and adding yours could make them stop showing as valid"
 
+msgid "sede.consent.batchTitle"
+msgid_plural "sede.consent.batchTitle"
+msgstr[0] "Batch of 1 signature"
+msgstr[1] "Batch of {{count}} signatures"
+msgstr[2] "Batch of {{count}} signatures"
+
+msgid "sede.consent.batchNote"
+msgstr "The documents stay at the site: rFirma signs them without downloading them."
+
 msgid "sede.consent.sign"
 msgstr "Sign"
 
@@ -1183,6 +1192,21 @@ msgstr[0] "1 file has been sent."
 msgstr[1] "{{count}} files have been sent."
 msgstr[2] "{{count}} files have been sent."
 
+msgid "sede.outcome.batchTitle"
+msgstr "Batch signed and sent"
+
+msgid "sede.outcome.batchBody"
+msgid_plural "sede.outcome.batchBody"
+msgstr[0] "The batch signature is now at {{origin}}."
+msgstr[1] "The batch's {{count}} signatures are now at {{origin}}."
+msgstr[2] "The batch's {{count}} signatures are now at {{origin}}."
+
+msgid "sede.outcome.batchBodyUnknownOrigin"
+msgid_plural "sede.outcome.batchBodyUnknownOrigin"
+msgstr[0] "The batch signature has been sent."
+msgstr[1] "The batch's {{count}} signatures have been sent."
+msgstr[2] "The batch's {{count}} signatures have been sent."
+
 msgid "sede.outcome.cancelledTitle"
 msgstr "You cancelled the signature"
 
@@ -1236,6 +1260,21 @@ msgstr "The file {{origin}} asked for could not be written where you chose."
 
 msgid "sede.refusals.cannotLoadData"
 msgstr "One of the files chosen for {{origin}} could not be read."
+
+msgid "sede.refusals.batchPresignerUnreachable"
+msgstr "The {{origin}} service that prepares the batch did not answer."
+
+msgid "sede.refusals.batchPostsignerUnreachable"
+msgstr "The {{origin}} service that closes the batch did not answer."
+
+msgid "sede.refusals.batchInvalidPresignResponse"
+msgstr "The {{origin}} service that prepares the batch answered something rFirma cannot read."
+
+msgid "sede.refusals.batchInvalidPostsignResponse"
+msgstr "The {{origin}} service that closes the batch answered something rFirma cannot read."
+
+msgid "sede.refusals.batchSigningFailed"
+msgstr "The batch signature {{origin}} asked for did not complete."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "You have no certificate"

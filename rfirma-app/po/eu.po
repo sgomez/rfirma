@@ -1010,6 +1010,15 @@ msgstr ""
 msgid "sede.consent.unrecognizedSignatures"
 msgstr ""
 
+msgid "sede.consent.batchTitle"
+msgid_plural "sede.consent.batchTitle"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "sede.consent.batchNote"
+msgstr ""
+
 msgid "sede.consent.sign"
 msgstr ""
 
@@ -1089,6 +1098,21 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
+msgid "sede.outcome.batchTitle"
+msgstr ""
+
+msgid "sede.outcome.batchBody"
+msgid_plural "sede.outcome.batchBody"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "sede.outcome.batchBodyUnknownOrigin"
+msgid_plural "sede.outcome.batchBodyUnknownOrigin"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
 msgid "sede.outcome.cancelledTitle"
 msgstr ""
 
@@ -1132,6 +1156,21 @@ msgid "sede.refusals.cannotSaveData"
 msgstr ""
 
 msgid "sede.refusals.cannotLoadData"
+msgstr ""
+
+msgid "sede.refusals.batchPresignerUnreachable"
+msgstr ""
+
+msgid "sede.refusals.batchPostsignerUnreachable"
+msgstr ""
+
+msgid "sede.refusals.batchInvalidPresignResponse"
+msgstr ""
+
+msgid "sede.refusals.batchInvalidPostsignResponse"
+msgstr ""
+
+msgid "sede.refusals.batchSigningFailed"
 msgstr ""
 
 msgid "sede.noCertificate.noneTitle"

@@ -23,8 +23,8 @@ interface SedeOutcomeProps {
 }
 
 /**
- * **4 · Desenlace.** Tres desenlaces, y en los tres **la sede ya ha recibido su
- * respuesta**: los dos canales van desacompasados a propósito (#316).
+ * **4 · Desenlace.** En todos ellos **la sede ya ha recibido su respuesta**: los
+ * dos canales van desacompasados a propósito (#316).
  *
  * El **rechazo** cubre los del transporte, que ocurren antes de que haya nada
  * que consentir. El argumento para enseñarlo no es que la persona pueda
@@ -82,6 +82,18 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
             <p className="rf-hint">{t("sede.outcome.signedNote")}</p>
           </>
         )}
+        {outcome.kind === "batchSigned" && (
+          <>
+            <p className="rf-prose">
+              {origin === null
+                ? t("sede.outcome.batchBodyUnknownOrigin", { count: outcome.signs })
+                : t("sede.outcome.batchBody", { count: outcome.signs, origin })}
+            </p>
+            {/* La misma tranquilidad que tras firmar un documento, y aquí con
+                más motivo: los ficheros del lote nunca salieron de la sede. */}
+            <p className="rf-hint">{t("sede.outcome.signedNote")}</p>
+          </>
+        )}
         {outcome.kind === "saved" && (
           <p className="rf-prose">
             {origin === null
@@ -125,6 +137,7 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
 function OutcomeIcon({ kind }: { kind: SiteOutcome["kind"] }) {
   switch (kind) {
     case "signed":
+    case "batchSigned":
     case "saved":
     case "loaded":
       return <CheckCircleIcon size={24} />;
@@ -202,6 +215,16 @@ function RefusalSentence({
       return <>{t("sede.refusals.cannotSaveData", subject)}</>;
     case "cannotLoadData":
       return <>{t("sede.refusals.cannotLoadData", subject)}</>;
+    case "batchPresignerUnreachable":
+      return <>{t("sede.refusals.batchPresignerUnreachable", subject)}</>;
+    case "batchPostsignerUnreachable":
+      return <>{t("sede.refusals.batchPostsignerUnreachable", subject)}</>;
+    case "batchInvalidPresignResponse":
+      return <>{t("sede.refusals.batchInvalidPresignResponse", subject)}</>;
+    case "batchInvalidPostsignResponse":
+      return <>{t("sede.refusals.batchInvalidPostsignResponse", subject)}</>;
+    case "batchSigningFailed":
+      return <>{t("sede.refusals.batchSigningFailed", subject)}</>;
     default:
       // Una situación nueva en el catálogo cae aquí hasta que se le escriba su
       // rama: `unknown` dice lo que pasa sin fingir que se sabe cuál era.
@@ -214,6 +237,8 @@ function title(outcome: SiteOutcome, t: TFunction): string {
   switch (outcome.kind) {
     case "signed":
       return t("sede.outcome.signedTitle");
+    case "batchSigned":
+      return t("sede.outcome.batchTitle");
     case "saved":
       return t("sede.outcome.savedTitle");
     case "loaded":

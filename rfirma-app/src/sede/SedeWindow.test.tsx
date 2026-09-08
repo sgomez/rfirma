@@ -204,6 +204,7 @@ describe("SedeWindow", () => {
           signatures: 0,
           hasUnregisteredSignatures: false,
         },
+        signs: null,
         certificates: [certificate()],
         narrowed: false,
         ...overrides,
@@ -334,6 +335,25 @@ describe("SedeWindow", () => {
       renderWithCatalog(<SedeWindow errands={port} />);
 
       await user.click(screen.getByRole("button", { name: "Firmar" }));
+
+      expect(calls.consent).toHaveBeenCalledWith("handle-1");
+    });
+
+    it("says it is a batch and how many signatures it carries, with no document to show", () => {
+      const { port } = scriptedErrand(consenting({ document: null, signs: 3 }));
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Lote de 3 firmas")).toBeInTheDocument();
+      expect(
+        screen.getByText("Los documentos se quedan en la sede: rFirma firma sin descargarlos."),
+      ).toBeInTheDocument();
+    });
+
+    it("consents to a batch through the same dropdown and the same button as a signature", async () => {
+      const { port, calls } = scriptedErrand(consenting({ document: null, signs: 3 }));
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await userEvent.click(screen.getByRole("button", { name: "Firmar" }));
 
       expect(calls.consent).toHaveBeenCalledWith("handle-1");
     });
@@ -542,6 +562,38 @@ describe("SedeWindow", () => {
       expect(
         screen.getByText("Se han enviado 2 ficheros a sede.ejemplo.gob.es."),
       ).toBeInTheDocument();
+    });
+
+    it("confirms the batch is at the site, with how many signatures it carried", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "batchSigned", signs: 3 },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Lote firmado y enviado")).toBeInTheDocument();
+      expect(
+        screen.getByText("Las 3 firmas del lote ya están en sede.ejemplo.gob.es."),
+      ).toBeInTheDocument();
+    });
+
+    it("gives a batch refusal its own phrase and leaves the raw detail copiable", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "batchPresignerUnreachable",
+          detail: "presigner: connection refused",
+        },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(
+        screen.getByText(
+          "El servicio de sede.ejemplo.gob.es que prepara el lote no ha contestado.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText("presigner: connection refused")).toBeInTheDocument();
     });
 
     it("classifies a cancelled save as its own refusal, with its own phrase", () => {
