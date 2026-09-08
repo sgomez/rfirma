@@ -22,7 +22,7 @@ use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
 use crate::signing::application::tests::{
-    a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE,
+    a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE, A_XADES_SIGNATURE,
 };
 use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation, XadesVariant};
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -988,6 +988,20 @@ fn a_signature_asking_for(format: &str, document: &[u8]) -> AfirmaUrl {
     url
 }
 
+/// La misma operación, con `mode=explicit` declarado entre las propiedades.
+fn an_explicit_mode_signature(format: &str, document: &[u8]) -> AfirmaUrl {
+    let encoded = base64::engine::general_purpose::URL_SAFE.encode(document);
+    let properties = base64::engine::general_purpose::URL_SAFE.encode("mode=explicit\n");
+    let text = format!(
+        "afirma://sign?op=sign&idsession={CREDENTIAL}&format={format}&\
+         algorithm=SHA256withRSA&dat={encoded}&properties={properties}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
 /// Operación de firma entrando por el canal.
 fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
     let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
@@ -1870,6 +1884,44 @@ fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
     }
 }
 
+/// `mode=explicit` con XAdES no se reproduce: `SAF_06` antes de pedir consentimiento.
+#[test]
+fn explicit_mode_with_xades_is_refused_before_asking_for_consent() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &signature_requested(&an_explicit_mode_signature(
+            "XAdES",
+            b"<?xml version=\"1.0\"?><documento/>",
+        )),
+        ours.clone(),
+        &live,
+    );
+
+    let ErrandStep::Answering(SiteOutcome::RefusedByTheProtocol(refusal)) = step else {
+        panic!("'mode=explicit' con XAdES no se reproduce: {step:?}");
+    };
+    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+}
+
 /// Y los formatos que el puente sí atiende siguen su curso hasta el consentimiento.
 #[test]
 fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
@@ -2079,6 +2131,16 @@ fn a_signature_with_the_algorithm(algorithm: &str) -> AfirmaUrl {
 
 /// El trámite entero de una firma de sede sobre un binario, del canal al cable, con el puente doblado.
 fn the_whole_errand_asking_for(asked: &str, expected: Format) {
+    the_whole_errand_asking_for_over(asked, A_CHALLENGE, expected, A_CADES_SIGNATURE);
+}
+
+/// Lo mismo, sobre el documento y con la firma de referencia que se le digan.
+fn the_whole_errand_asking_for_over(
+    asked: &str,
+    document: &[u8],
+    expected: Format,
+    expected_signature: &[u8],
+) {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -2110,7 +2172,7 @@ fn the_whole_errand_asking_for(asked: &str, expected: Format) {
 
     let step = attend(
         &desk,
-        a_signature_asking_for(asked, A_CHALLENGE),
+        a_signature_asking_for(asked, document),
         handle,
         &live,
     )
@@ -2143,9 +2205,9 @@ fn the_whole_errand_asking_for(asked: &str, expected: Format) {
         Some(format!(
             "{}|{}",
             encode.encode(ours[0].der()),
-            encode.encode(A_CADES_SIGNATURE)
+            encode.encode(expected_signature)
         )),
-        "la misma linea que lleva un PDF firmado, con el CMS dentro"
+        "la misma linea que lleva un PDF firmado, con el CMS o el XML dentro"
     );
     assert!(live.current().is_none(), "contestada la sede, se acabo");
 
@@ -2184,6 +2246,37 @@ fn a_cms_signature_goes_all_the_way_from_the_operation_to_the_wire() {
 #[test]
 fn a_binary_under_format_auto_goes_out_as_a_cades_signature() {
     the_whole_errand_asking_for("auto", Format::Cades);
+}
+
+/// El documento sobre el que se piden las firmas XAdES del cable: cualquier XML vale.
+const AN_XML_CHALLENGE: &[u8] = b"<?xml version=\"1.0\"?><documento/>";
+
+#[test]
+fn a_xades_signature_goes_all_the_way_from_the_operation_to_the_wire() {
+    for (format, expected) in [
+        ("XAdES", XadesVariant::Enveloping),
+        ("XAdES Detached", XadesVariant::Detached),
+        ("XAdES Enveloped", XadesVariant::Enveloped),
+        ("XAdES Enveloping", XadesVariant::Enveloping),
+        ("XAdES-ASiC-S", XadesVariant::AsicS),
+    ] {
+        the_whole_errand_asking_for_over(
+            format,
+            AN_XML_CHALLENGE,
+            Format::Xades(expected),
+            A_XADES_SIGNATURE,
+        );
+    }
+}
+
+#[test]
+fn an_xml_under_format_auto_goes_out_as_a_xades_signature() {
+    the_whole_errand_asking_for_over(
+        "auto",
+        AN_XML_CHALLENGE,
+        Format::Xades(XadesVariant::Enveloping),
+        A_XADES_SIGNATURE,
+    );
 }
 
 #[test]
