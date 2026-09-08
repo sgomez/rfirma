@@ -39,14 +39,10 @@ pub fn signed_batch(run: &BatchRun<'_>, request: &BatchRequest) -> Result<Vec<u8
     let format = format_of(request);
     let certs = vec![run.certificate.der().to_vec()];
 
+    let (presigner_url, postsigner_url) = servlets_of(request)?;
     let response = run
         .services
-        .presign(
-            request.presigner_url(),
-            format,
-            request.lote_base64(),
-            &certs,
-        )
+        .presign(presigner_url, format, request.lote_base64(), &certs)
         .map_err(SiteRefusal::Batch)?;
 
     let (triphase_data, errors) = presigned(format, &response)?;
@@ -66,14 +62,19 @@ pub fn signed_batch(run: &BatchRun<'_>, request: &BatchRequest) -> Result<Vec<u8
     let with_pk1 = every_pre_signed(run, request, triphase_data)?;
 
     run.services
-        .postsign(
-            request.postsigner_url(),
-            format,
-            &lote_base64,
-            &certs,
-            &with_pk1,
-        )
+        .postsign(postsigner_url, format, &lote_base64, &certs, &with_pk1)
         .map_err(SiteRefusal::Batch)
+}
+
+/// Los dos servlets del lote remoto, que el lote local no trae y por eso no llega aquí.
+fn servlets_of(request: &BatchRequest) -> Result<(&str, &str), SiteRefusal> {
+    match (request.presigner_url(), request.postsigner_url()) {
+        (Some(presigner_url), Some(postsigner_url)) => Ok((presigner_url, postsigner_url)),
+        _ => Err(SiteRefusal::Batch(BatchError::new(
+            Situation::PresignerUnreachable,
+            "el lote local no se firma contra los servlets",
+        ))),
+    }
 }
 
 fn format_of(request: &BatchRequest) -> BatchFormat {

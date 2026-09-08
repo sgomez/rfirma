@@ -1,4 +1,10 @@
 //! Lo que pide la sede, leído de una URL `afirma://` y sin efectos.
+//!
+//! Donde rFirma se aparta del original a propósito: **el lote local solo
+//! existe en JSON**. El original admite `localBatchProcess=true` con el XML
+//! heredado y lo manda de todos modos a los dos servlets
+//! (`ProtocolInvocationLauncherBatch.signBatch`, 1.9.2); aquí ese lote es un
+//! `SAF_03` que nombra `dat`.
 
 pub mod cipher;
 pub mod codes;
@@ -32,8 +38,8 @@ pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
     SignAndSaveRequest, SignRequest, SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS,
-    ACCEPTED_BATCH_ALGORITHMS, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE, SIGN,
-    SIGN_AND_SAVE,
+    ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE,
+    SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,
