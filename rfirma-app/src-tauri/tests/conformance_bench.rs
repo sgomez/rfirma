@@ -61,6 +61,12 @@ const THE_SIGN_CADES_EXPLICIT: &str = "signcades";
 /// El guion de `sign` con `format=auto` sobre el mismo reto binario.
 const THE_SIGN_AUTO: &str = "signauto";
 
+/// El guion de `sign` con `format=XAdES` sobre el XML de referencia.
+const THE_SIGN_XADES: &str = "signxades";
+
+/// El guion de `sign` con `format=auto` sobre el mismo XML de referencia.
+const THE_SIGN_XADES_AUTO: &str = "signxadesauto";
+
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
 
@@ -287,6 +293,11 @@ fn a_pem_file(pem: &[u8]) -> tempfile::NamedTempFile {
 /// Un fichero temporal con el DER ya en disco, que es como lo lee OpenSSL.
 fn a_der_file(der: &[u8]) -> tempfile::NamedTempFile {
     a_temp_file(".der", der)
+}
+
+/// Un fichero temporal con el XML ya en disco, que es como lo leen `xmllint` y el oráculo.
+fn an_xml_file(xml: &[u8]) -> tempfile::NamedTempFile {
+    a_temp_file(".xml", xml)
 }
 
 /// Ruta del reto de 64 bytes del banco de referencia, el que firma el guion `sign`.
@@ -1125,18 +1136,38 @@ fn verified_by_openssl(cms: &[u8], content: &Path) {
     );
 }
 
-/// Comprueba el CMS con el oráculo de la grada C (`just validate-signature`, #526).
-fn validated_by_the_reference_tool(cms: &[u8]) {
-    let cms_file = a_der_file(cms);
+/// Comprueba `path` con el oráculo de la grada C (`just validate-signature`, #526).
+fn validated_by_the_reference_tool_at(path: &Path) {
     let output = Command::new("just")
         .arg("validate-signature")
-        .arg(cms_file.path())
+        .arg(path)
         .output()
         .expect("falta just para el banco de conformidad");
     assert!(
         output.status.success(),
         "just validate-signature ha fallado:\n{}{}",
         String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Comprueba el CMS con el oráculo de la grada C (`just validate-signature`, #526).
+fn validated_by_the_reference_tool(cms: &[u8]) {
+    let cms_file = a_der_file(cms);
+    validated_by_the_reference_tool_at(cms_file.path());
+}
+
+/// Comprueba que `xml` está bien formado con `xmllint --noout`.
+fn well_formed_according_to_xmllint(xml: &[u8]) {
+    let xml_file = an_xml_file(xml);
+    let output = Command::new("xmllint")
+        .args(["--noout"])
+        .arg(xml_file.path())
+        .output()
+        .expect("falta xmllint para el banco de conformidad");
+    assert!(
+        output.status.success(),
+        "xmllint ha rechazado el XML:\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
 }
@@ -1220,4 +1251,85 @@ async fn the_published_client_signs_a_binary_challenge_with_format_auto() {
 async fn the_published_client_signs_a_binary_challenge_with_format_auto_also_over_the_third_protocol(
 ) {
     the_sign_of(BenchMode::Third, THE_SIGN_AUTO).await;
+}
+
+/// Un `sign()` del cliente publicado del XML de referencia, con `ds:Signature` bien formado
+/// (`xmllint`) y aceptado por el oráculo de la grada C. `format=XAdES` y `format=auto` sobre XML
+/// resuelven la misma variante Enveloping, así que comparten guion de verificación.
+async fn the_xades_sign_of(mode: BenchMode, script: &str) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, mode, script);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "'{script}' tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let xml = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el XML de sign llega en base64");
+    well_formed_according_to_xmllint(&xml);
+    let xml_file = an_xml_file(&xml);
+    validated_by_the_reference_tool_at(xml_file.path());
+
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "el successCallback recibe tambien el DER del firmante"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_an_xml_document_with_xades() {
+    the_xades_sign_of(BenchMode::Fourth, THE_SIGN_XADES).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_an_xml_document_with_xades_also_over_the_third_protocol() {
+    the_xades_sign_of(BenchMode::Third, THE_SIGN_XADES).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_an_xml_document_with_format_auto() {
+    the_xades_sign_of(BenchMode::Fourth, THE_SIGN_XADES_AUTO).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_an_xml_document_with_format_auto_also_over_the_third_protocol()
+{
+    the_xades_sign_of(BenchMode::Third, THE_SIGN_XADES_AUTO).await;
 }
