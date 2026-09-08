@@ -9,9 +9,11 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `pom.xml` | Las dependencias de AutoFirma, consumidas desde `~/.m2` (ADR-0002), y la exclusión de `afirma-ui-utils` (ADR-0012). |
 | `src/main/java/.../NativeBridge.java` | Los `@CEntryPoint`: la frontera con Rust y la reserva manual de las cadenas devueltas (ADR-0003). |
 | `src/main/java/.../PadesBridge.java` | Preproceso y postproceso PAdES, incluida la firma visible. |
+| `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES; hoy solo la operación de firma. |
 | `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |
 | `src/main/java/.../SessionStamp.java` | El sello de sesión (ADR-0016). |
+| `src/main/java/.../SessionStampMismatchException.java` | El fallo con el que una postfirma rechaza un sello que no es el de su prefirma. |
 | `testbench/` | El banco de la grada C y los guiones de medición de los `research/`. Se abre por su `README.md`. |
 
 ## Trampas al construir

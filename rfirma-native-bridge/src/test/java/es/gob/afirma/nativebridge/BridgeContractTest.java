@@ -10,6 +10,8 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyStore.PrivateKeyEntry;
+import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -48,11 +50,36 @@ class BridgeContractTest {
         }
 
         assertEquals(
-                Set.of("autofirma_expand_extra_params", "autofirma_filter_certificates",
+                Set.of("autofirma_cades_postsign", "autofirma_cades_presign",
+                        "autofirma_expand_extra_params", "autofirma_filter_certificates",
                         "autofirma_free_string", "autofirma_pades_postsign",
                         "autofirma_pades_presign"),
                 names,
                 "cambiar un nombre aqui rompe el enlace de Rust en tiempo de ejecucion, no de compilacion");
+    }
+
+    @Test
+    void never_takes_a_private_key_or_a_pin_in_any_signature() {
+        // ADR-0001: la clave privada no entra al isolate. La invariante no la
+        // sostiene ningun comportamiento observable —un puente que aceptase la
+        // clave firmaria igual de bien—, asi que se comprueba sobre las firmas de
+        // los metodos, que es donde entraria.
+        final List<String> offenders = new ArrayList<>();
+        for (final Class<?> bridge : List.of(NativeBridge.class, PadesBridge.class,
+                CadesBridge.class, FilterBridge.class, ExtraParamsBridge.class)) {
+            for (final Method method : bridge.getDeclaredMethods()) {
+                for (final Class<?> parameter : method.getParameterTypes()) {
+                    if (parameter == PrivateKey.class || parameter == PrivateKeyEntry.class
+                            || parameter == char[].class) {
+                        offenders.add(bridge.getSimpleName() + "." + method.getName()
+                                + " recibe " + parameter.getSimpleName());
+                    }
+                }
+            }
+        }
+
+        assertTrue(offenders.isEmpty(),
+                "ninguna entrada del puente puede recibir clave privada ni PIN: " + offenders);
     }
 
     @Test

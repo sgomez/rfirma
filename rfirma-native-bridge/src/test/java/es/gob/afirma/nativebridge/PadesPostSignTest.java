@@ -70,8 +70,8 @@ class PadesPostSignTest {
                 "<param n=\"TIME\">" + (Long.parseLong(stamp.time()) + 60000L) + "</param>");
         assertTrue(!tampered.equals(s.pre().session()), "la sesion no se ha llegado a alterar");
 
-        final PadesBridge.SessionStampMismatchException failure = assertThrows(
-                PadesBridge.SessionStampMismatchException.class,
+        final SessionStampMismatchException failure = assertThrows(
+                SessionStampMismatchException.class,
                 () -> PadesBridge.postSign(s.pdf(), s.chain(), s.pre().stamp(), tampered, s.pkcs1()));
 
         assertTrue(failure.getMessage().contains("Digest Mismatch"),
@@ -85,7 +85,7 @@ class PadesPostSignTest {
 
         // Dos prefirmas del mismo PDF solo se distinguen en el instante, que es
         // justo lo que el sello ata.
-        assertThrows(PadesBridge.SessionStampMismatchException.class,
+        assertThrows(SessionStampMismatchException.class,
                 () -> PadesBridge.postSign(first.pdf(), first.chain(),
                         second.pre().stamp(), first.pre().session(), first.pkcs1()));
     }
@@ -100,8 +100,8 @@ class PadesPostSignTest {
         // Un byte de la zona de metadatos: sigue siendo un PDF, ya no es EL PDF.
         other[other.length - 1] ^= 0x01;
 
-        final PadesBridge.SessionStampMismatchException failure = assertThrows(
-                PadesBridge.SessionStampMismatchException.class,
+        final SessionStampMismatchException failure = assertThrows(
+                SessionStampMismatchException.class,
                 () -> PadesBridge.postSign(other, s.chain(),
                         s.pre().stamp(), s.pre().session(), s.pkcs1()));
 
@@ -118,8 +118,8 @@ class PadesPostSignTest {
         final SignedSession s = sign(new Properties());
         final X509Certificate[] other = TestFixtures.otherCertificateChain();
 
-        final PadesBridge.SessionStampMismatchException failure = assertThrows(
-                PadesBridge.SessionStampMismatchException.class,
+        final SessionStampMismatchException failure = assertThrows(
+                SessionStampMismatchException.class,
                 () -> PadesBridge.postSign(s.pdf(), other,
                         s.pre().stamp(), s.pre().session(), s.pkcs1()));
 

@@ -51,6 +51,15 @@ final class TestFixtures {
         return out.toByteArray();
     }
 
+    /** Los 64 bytes que firman las pruebas de CAdES, donde el documento da igual. */
+    static byte[] challenge() {
+        final byte[] challenge = new byte[64];
+        for (int i = 0; i < challenge.length; i++) {
+            challenge[i] = (byte) i;
+        }
+        return challenge;
+    }
+
     static KeyStore keyStore() throws Exception {
         return keyStore(ACTIVE_P12);
     }
