@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,12 +20,14 @@ import org.graalvm.word.PointerBase;
  * La frontera FFI del puente: las prefirmas y postfirmas vistas desde Rust.
  *
  * <p>Aqui no se decide nada. Esta clase convierte cadenas C a Java, delega en
- * {@link PadesBridge} o en {@link CadesBridge} y devuelve JSON; lo que hace la
- * firma vive alli, donde se puede probar sin construir la imagen nativa.
+ * {@link PadesBridge}, en {@link CadesBridge} o en {@link XadesBridge} y devuelve
+ * JSON; lo que hace la firma vive alli, donde se puede probar sin construir la
+ * imagen nativa.
  *
- * <p><b>Siete entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * <p><b>Nueve entradas y ni una mas</b>: {@code autofirma_pades_presign},
  * {@code autofirma_pades_postsign}, {@code autofirma_cades_presign},
- * {@code autofirma_cades_postsign}, {@code autofirma_filter_certificates},
+ * {@code autofirma_cades_postsign}, {@code autofirma_xades_presign},
+ * {@code autofirma_xades_postsign}, {@code autofirma_filter_certificates},
  * {@code autofirma_expand_extra_params} y {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
  * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
@@ -182,7 +186,8 @@ public final class NativeBridge {
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "session", result.session());
-            pres(json, result.pres());
+            pres(json, result.pres(), CadesBridge.PreSign::id,
+                    CadesBridge.PreSign::pre);
             field(json, "stamp", result.stamp());
             return toUnmanagedCString(json.append('}').toString());
         }
@@ -191,15 +196,16 @@ public final class NativeBridge {
         }
     }
 
-    private static void pres(final StringBuilder json, final List<CadesBridge.PreSign> pres) {
+    private static <T> void pres(final StringBuilder json, final List<T> pres,
+            final Function<T, String> id, final Function<T, String> value) {
         json.append(",\"pres\":[");
         for (int i = 0; i < pres.size(); i++) {
             if (i > 0) {
                 json.append(',');
             }
             json.append('{');
-            member(json, "id", pres.get(i).id());
-            field(json, "pre", pres.get(i).pre());
+            member(json, "id", id.apply(pres.get(i)));
+            field(json, "pre", value.apply(pres.get(i)));
             json.append('}');
         }
         json.append(']');
@@ -233,6 +239,82 @@ public final class NativeBridge {
                     CTypeConversion.toJavaString(stampB64),
                     CTypeConversion.toJavaString(sessionXml),
                     parsePkcs1List(CTypeConversion.toJavaString(pkcs1Json)));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "signature", Base64.getEncoder().encodeToString(signature));
+            return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Prefirma XAdES Enveloping.
+     *
+     * @param xmlB64       XML de entrada en Base64.
+     * @param algorithm    p.ej. {@code SHA256withRSA}.
+     * @param certChainB64 cadena de certificados en Base64, separados por {@code ';'}.
+     * @param extraParams  extraParams en formato {@code java.util.Properties}
+     *                     (lineas {@code clave=valor}).
+     * @param operation    {@code sign}: ninguna otra esta implementada todavia.
+     * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_xades_presign")
+    public static CCharPointer xadesPreSign(
+            final IsolateThread thread,
+            final CCharPointer xmlB64,
+            final CCharPointer algorithm,
+            final CCharPointer certChainB64,
+            final CCharPointer extraParams,
+            final CCharPointer operation) {
+        try {
+            final XadesBridge.PreSignResult result = XadesBridge.preSign(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(xmlB64)),
+                    CTypeConversion.toJavaString(algorithm),
+                    PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
+                    SessionStamp.parseParams(CTypeConversion.toJavaString(extraParams)),
+                    CTypeConversion.toJavaString(operation));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "session", result.session());
+            pres(json, result.pres(), XadesBridge.PreSign::id, XadesBridge.PreSign::pre);
+            field(json, "stamp", result.stamp());
+            return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Postfirma XAdES: devuelve el XML firmado.
+     *
+     * <p>No recibe ni algoritmo ni extraParams: los toma del sello (ADR-0016).
+     *
+     * @param xmlB64       el MISMO XML que recibio la prefirma, en Base64.
+     * @param certChainB64 la MISMA cadena de certificados, Base64 separado por {@code ';'}.
+     * @param stampB64     el sello de sesion que devolvio la prefirma, tal cual.
+     * @param sessionXml   el {@code TriphaseData} de la prefirma, tal cual.
+     * @param pkcs1Json    el PKCS#1 calculado por Rust: {@code [{"id":"..","pk1":".."}]}.
+     * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_xades_postsign")
+    public static CCharPointer xadesPostSign(
+            final IsolateThread thread,
+            final CCharPointer xmlB64,
+            final CCharPointer certChainB64,
+            final CCharPointer stampB64,
+            final CCharPointer sessionXml,
+            final CCharPointer pkcs1Json) {
+        try {
+            final byte[] signature = XadesBridge.postSign(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(xmlB64)),
+                    PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
+                    CTypeConversion.toJavaString(stampB64),
+                    CTypeConversion.toJavaString(sessionXml),
+                    parsePkcs1List(CTypeConversion.toJavaString(pkcs1Json),
+                            XadesBridge.SignatureValue::new));
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "signature", Base64.getEncoder().encodeToString(signature));
@@ -405,12 +487,18 @@ public final class NativeBridge {
      * identificadores y PKCS#1 son Base64.
      */
     static List<CadesBridge.SignatureValue> parsePkcs1List(final String json) {
+        return parsePkcs1List(json, CadesBridge.SignatureValue::new);
+    }
+
+    /** El mismo JSON, para el formato que lo pida: cada uno tiene su propio par. */
+    static <T> List<T> parsePkcs1List(final String json,
+            final BiFunction<String, String, T> value) {
         if (json == null || !PKCS1_LIST.matcher(json).matches()) {
             throw new IllegalArgumentException(
                     "el PKCS#1 de la fase 2 no llega como lista: se esperaba"
                             + " [{\"id\":\"..\",\"pk1\":\"..\"}] y nada mas");
         }
-        final List<CadesBridge.SignatureValue> values = new ArrayList<>();
+        final List<T> values = new ArrayList<>();
         final Matcher entry = PKCS1_ENTRY.matcher(json);
         while (entry.find()) {
             if (entry.group(1).equals(entry.group(3))) {
@@ -418,7 +506,7 @@ public final class NativeBridge {
                         "el PKCS#1 de la fase 2 repite el campo \u00ab" + entry.group(1)
                                 + "\u00bb");
             }
-            values.add(new CadesBridge.SignatureValue(
+            values.add(value.apply(
                     "id".equals(entry.group(1)) ? entry.group(2) : entry.group(4),
                     "pk1".equals(entry.group(1)) ? entry.group(2) : entry.group(4)));
         }
