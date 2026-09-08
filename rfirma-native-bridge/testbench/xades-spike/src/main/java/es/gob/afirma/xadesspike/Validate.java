@@ -71,5 +71,6 @@ public final class Validate {
                 System.out.println("REF[" + i++ + "]=" + ((Reference) ref).validate(valContext));
             }
         }
+        System.exit(coreValidity ? 0 : 1);
     }
 }

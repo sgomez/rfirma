@@ -5,7 +5,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BRIDGE="$ROOT/../.."
-GRAALVM_HOME=/home/sergio/.sdkman/candidates/java/25.3.4+1.r25-graalce
+GRAALVM_HOME="${GRAALVM_HOME:-$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce}"
 OUT="${1:-$ROOT/target/native-combined}"
 mkdir -p "$OUT"
 cd "$OUT"

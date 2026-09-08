@@ -4,7 +4,7 @@
 # (asi la traza cubre las dos ramas de KeyHelperFactory).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GRAALVM_HOME=/home/sergio/.sdkman/candidates/java/25.3.4+1.r25-graalce
+GRAALVM_HOME="${GRAALVM_HOME:-$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce}"
 CP="$ROOT/target/classes:$ROOT/target/xades-spike-0.1.0.jar:$(cat "$ROOT/target/cp.txt")"
 CONFIG_DIR="$ROOT/target/agent-config"
 rm -rf "$CONFIG_DIR"

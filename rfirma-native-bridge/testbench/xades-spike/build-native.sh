@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Compila el spike a un ejecutable nativo (no --shared: no hay @CEntryPoint
-# aqui, solo se mide si XAdES compila con native-image y cuanto pesa).
+# Compila el spike a un ejecutable nativo (no --shared: en este modo no se
+# usa el @CEntryPoint de EntryPoint.java, solo se mide si XAdES compila con
+# native-image y cuanto pesa).
 # Uso: build-native.sh <dir-salida>
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GRAALVM_HOME=/home/sergio/.sdkman/candidates/java/25.3.4+1.r25-graalce
+GRAALVM_HOME="${GRAALVM_HOME:-$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce}"
 OUT="${1:-$ROOT/target/native}"
 mkdir -p "$OUT"
 

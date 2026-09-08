@@ -112,7 +112,7 @@ ausencia de banderas de arquitectura, y comparando dos compilaciones desde limpi
 | Imagen | Classpath | Ficheros | `.so` principal |
 |---|---|---|---|
 | **Hoy** (`rfirma-native-bridge/testbench/build-native.sh`) | `pom.xml` actual: CAdES + PAdES | 6 (los 5 auxiliares de AWT de siempre, ADR-0004) | **28.772.448 B** (27,44 MiB) |
-| **+ XAdES** (mismo classpath, más `afirma-server-triphase-signer-core` ya lo trae, más `xmlsec:3.0.5` explícito, y los dos `@CEntryPoint`: los siete de `NativeBridge` más uno del spike) | CAdES + PAdES + XAdES | 6 (los mismos 5 auxiliares; XAdES no añade ninguno) | **44.304.480 B** (42,25 MiB) |
+| **+ XAdES** (mismo classpath, más `afirma-server-triphase-signer-core` ya lo trae xmlsec transitivamente, más `xmlsec:3.0.5` declarado explícito, y los ocho `@CEntryPoint`: los siete de `NativeBridge` más uno del spike) | CAdES + PAdES + XAdES | 6 (los mismos 5 auxiliares; XAdES no añade ninguno) | **44.304.480 B** (42,25 MiB) |
 
 Crecimiento: **+15.532.032 B, +54,0 %**. Los 5 auxiliares de AWT (`libawt.so`,
 `libawt_headless.so`, `libawt_xawt.so`, `libjava.so`, `libjvm.so`) no cambian de tamaño ni de
@@ -127,7 +127,9 @@ es XAdES en sí, es traer xmlsec y su árbol de proveedores JCE al analizador de
 Residente al primer uso (ejecutable, ciclo prefirma+postfirma completo, `/usr/bin/time -v`):
 **50.972 KiB** (49,8 MiB) de *maximum resident set size*. No hay una cifra equivalente publicada
 para el `.so` de hoy con la que compararla directamente: quien la necesite, que mida con el mismo
-`/usr/bin/time -v` sobre `run-native.sh`.
+`/usr/bin/time -v` sobre el `run-native.sh` de PAdES en `rfirma-native-bridge/testbench/` (no hay
+uno equivalente para el spike; su ejecutable es `xades-spike/target/native/xades-spike`, producido
+por `build-native.sh`).
 
 ## 4. La exclusión de `afirma-ui-utils` no está amenazada, y `xalan` tampoco aparece
 
