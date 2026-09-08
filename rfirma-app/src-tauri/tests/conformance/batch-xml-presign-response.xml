@@ -1,0 +1,12 @@
+<xml>
+ <firmas format="CAdES">
+  <firma Id="uno">
+   <param n="PRE">MzEgNWYgMzAgMTggU2lnbmVkQXR0cmlidXRlcyBkZWwgcHJpbWVyIGRvY3VtZW50byBkZWwgbG90ZQ==</param>
+   <param n="NEED_PRE">false</param>
+  </firma>
+  <firma Id="dos">
+   <param n="PRE">MzEgNWYgMzAgMTggU2lnbmVkQXR0cmlidXRlcyBkZWwgc2VndW5kbyBkb2N1bWVudG8gZGVsIGxvdGU=</param>
+   <param n="NEED_PRE">true</param>
+  </firma>
+ </firmas>
+</xml>
