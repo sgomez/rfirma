@@ -586,6 +586,37 @@ mod full_cycle {
         }
     }
 
+    /// La factura de referencia del kit, la que valida el original.
+    const A_REFERENCE_INVOICE: &[u8] = include_bytes!("../../../testdata/reference/invoice.xml");
+
+    /// La política que el firmador de facturas impone, la pida la sede o no.
+    const FACTURAE_POLICY: &str = "politica_de_firma_formato_facturae_v3_1.pdf";
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_facturae_signature_keeps_the_invoice_as_its_root_and_validates() {
+        let signed = a_cycle_of(
+            Format::FacturaE,
+            cycle::ALGORITHM,
+            A_REFERENCE_INVOICE,
+            SignatureOperation::Sign,
+            &[],
+        );
+        let path = write_to_target("facturae.xsig", &signed);
+
+        the_original_validator_accepts(&path);
+
+        let text = String::from_utf8(signed).expect("una factura firmada es XML en UTF-8");
+        assert!(
+            text.contains("Facturae") && text.contains("Signature"),
+            "la firma cuelga de la factura y la raíz sigue siendo la suya: {text}"
+        );
+        assert!(
+            text.contains(FACTURAE_POLICY),
+            "la firma de una factura declara la política de FacturaE 3.1: {text}"
+        );
+    }
+
     /// JAXP y xmlsec arrancan perezosos dentro de la imagen: la primera firma
     /// XAdES es la que los levanta, y aquí se mide cuánto cuesta.
     #[test]

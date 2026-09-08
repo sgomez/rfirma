@@ -35,6 +35,10 @@ pub(crate) const A_CADES_SIGNATURE: &[u8] =
 pub(crate) const A_XADES_SIGNATURE: &[u8] =
     include_bytes!("../../../../../testdata/reference/xades-enveloping.xml");
 
+/// La firma de la factura de referencia, la que el puente doblado devuelve en FacturaE.
+pub(crate) const A_FACTURAE_SIGNATURE: &[u8] =
+    include_bytes!("../../../../../testdata/reference/facturae.xsig");
+
 /// Una fase del ciclo tal y como le llegó al puente.
 pub(crate) struct BridgeCall {
     /// El formato con el que se le pidió.
@@ -78,11 +82,17 @@ impl Bridge for ABridgeThatSigns {
 
     fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError> {
         request.format.bridged()?;
-        Ok(match request.format {
-            Format::Pades => b"%PDF-1.7 firmado".to_vec(),
-            Format::Xades(_) => A_XADES_SIGNATURE.to_vec(),
-            _ => A_CADES_SIGNATURE.to_vec(),
-        })
+        Ok(a_signature_in(request.format))
+    }
+}
+
+/// La firma de referencia que el doble devuelve para cada familia de formatos.
+fn a_signature_in(format: Format) -> Vec<u8> {
+    match format {
+        Format::Pades => b"%PDF-1.7 firmado".to_vec(),
+        Format::Xades(_) => A_XADES_SIGNATURE.to_vec(),
+        Format::FacturaE => A_FACTURAE_SIGNATURE.to_vec(),
+        _ => A_CADES_SIGNATURE.to_vec(),
     }
 }
 
