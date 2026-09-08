@@ -30,22 +30,6 @@ fn every_name_of_the_original_reads_as_the_format_it_names() {
             RequestedFormat::Xades(XadesEnvelope::Enveloped),
         ),
         ("XAdES-ASiC-S", RequestedFormat::Xades(XadesEnvelope::AsicS)),
-        (
-            "XMLDSig",
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping),
-        ),
-        (
-            "XMLDSig Enveloping",
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping),
-        ),
-        (
-            "XMLDSig Detached",
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Detached),
-        ),
-        (
-            "XMLDSig Enveloped",
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloped),
-        ),
         ("FacturaE", RequestedFormat::FacturaE),
         ("FacturaEtri", RequestedFormat::FacturaE),
         ("Factura-e", RequestedFormat::FacturaE),
@@ -70,7 +54,18 @@ fn a_name_is_read_without_telling_capitals_apart_and_without_its_spaces_around()
 
 #[test]
 fn what_the_original_does_not_sign_in_three_phases_names_no_format() {
-    for name in ["OOXML", "ODF", "SOAP", "NONE", "PKCS1", ""] {
+    for name in [
+        "OOXML",
+        "ODF",
+        "SOAP",
+        "NONE",
+        "PKCS1",
+        "XMLDSig",
+        "XMLDSig Enveloping",
+        "XMLDSig Detached",
+        "XMLDSig Enveloped",
+        "",
+    ] {
         assert_eq!(
             RequestedFormat::named(name),
             None,

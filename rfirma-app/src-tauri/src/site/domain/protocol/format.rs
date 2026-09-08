@@ -15,17 +15,6 @@ pub enum XadesEnvelope {
     AsicS,
 }
 
-/// Cómo envuelve la sede una firma XMLDSig.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum XmlDsigEnvelope {
-    /// `XMLDSig Detached`.
-    Detached,
-    /// `XMLDSig Enveloping`.
-    Enveloping,
-    /// `XMLDSig Enveloped`.
-    Enveloped,
-}
-
 /// El formato de firma que pide la sede.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RequestedFormat {
@@ -39,14 +28,12 @@ pub enum RequestedFormat {
     Cms,
     /// Firma XAdES en una de sus envolturas.
     Xades(XadesEnvelope),
-    /// Firma XMLDSig en una de sus envolturas.
-    XmlDsig(XmlDsigEnvelope),
     /// Firma de una factura electrónica.
     FacturaE,
 }
 
 /// Cada nombre de `AOSignConstants` que rFirma lee, con el formato que nombra.
-const NAMED: [(&str, RequestedFormat); 20] = [
+const NAMED: [(&str, RequestedFormat); 16] = [
     ("pades", RequestedFormat::Pades),
     ("padestri", RequestedFormat::Pades),
     ("adobe pdf", RequestedFormat::Pades),
@@ -72,22 +59,6 @@ const NAMED: [(&str, RequestedFormat); 20] = [
         RequestedFormat::Xades(XadesEnvelope::Enveloped),
     ),
     ("xades-asic-s", RequestedFormat::Xades(XadesEnvelope::AsicS)),
-    (
-        "xmldsig",
-        RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping),
-    ),
-    (
-        "xmldsig enveloping",
-        RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping),
-    ),
-    (
-        "xmldsig detached",
-        RequestedFormat::XmlDsig(XmlDsigEnvelope::Detached),
-    ),
-    (
-        "xmldsig enveloped",
-        RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloped),
-    ),
     ("facturae", RequestedFormat::FacturaE),
     ("facturaetri", RequestedFormat::FacturaE),
     ("factura-e", RequestedFormat::FacturaE),

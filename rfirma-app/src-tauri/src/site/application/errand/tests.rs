@@ -1865,7 +1865,7 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
 /// mismo `SAF_06` que antes daba la comprobación de texto de `sign`.
 #[test]
 fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
-    for (format, document) in [("XMLDSig", A_PDF), ("CAdES-ASiC-S", A_PDF)] {
+    for (format, document) in [("CAdES-ASiC-S", A_PDF), ("FacturaE", A_PDF)] {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
         let memory = a_memory(home.path());
         let ours = vec![a_usable_certificate("FIRMA")];
@@ -3910,12 +3910,12 @@ fn a_local_batch(extra: &str) -> AfirmaUrl {
 }
 
 /// Un lote local de tres elementos donde el segundo pide un formato que el puente no atiende
-/// (`xmldsig`), para ejercitar el fallo de un elemento sin depender del puente doblado.
+/// (`cades-asic-s`), para ejercitar el fallo de un elemento sin depender del puente doblado.
 fn a_local_batch_with_a_failing_second_item(stop_on_error: bool) -> AfirmaUrl {
     let lote = format!(
         "{{\"algorithm\":\"SHA256\",\"format\":\"auto\",\"stoponerror\":{},\"singlesigns\":[\
          {{\"id\":\"001\",\"datareference\":\"{}\"}},\
-         {{\"id\":\"002\",\"datareference\":\"{}\",\"format\":\"xmldsig\"}},\
+         {{\"id\":\"002\",\"datareference\":\"{}\",\"format\":\"cades-asic-s\"}},\
          {{\"id\":\"003\",\"datareference\":\"{}\"}}]}}",
         stop_on_error,
         in_the_batch(A_LOCAL_PDF),

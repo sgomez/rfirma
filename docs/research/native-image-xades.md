@@ -163,6 +163,30 @@ tocar. El bridge que implemente XAdES no necesita ninguna rama nueva para ECDSA 
 por esta causa; Rust sigue devolviendo el PKCS#1 tal cual lo da PKCS#11/CNG/Keychain (ASN.1 DER),
 igual que hoy hace para CAdES y PAdES.
 
+## 6. XMLDSig no tiene camino trifásico en el original, y queda fuera de rFirma
+
+Leído en `~/…/clienteafirma`, tag `v1.9.2`; sin medición, porque la lectura ya cierra la pregunta:
+
+- `PreProcessorFactory.getPreProcessor` (`afirma-server-triphase-signer-core/.../processors/`)
+  solo devuelve preprocesador para PAdES, CAdES, XAdES, sus dos ASiC-S, FacturaE y PKCS#1. Un
+  `format=XMLDSig*` cae en el `throw new IllegalArgumentException("Formato de firma no
+  soportado")`.
+- `AOXMLDSigSigner.sign` (`afirma-crypto-xmlsignature`) es monofásico: recibe la `PrivateKey` y
+  firma dentro de Java, que es justo lo que prohíbe el ADR-0001.
+- `XAdESTriPhaseSignerServerSide.preSign` no sirve de sustituto con otros `extraParams`:
+  delega en `XAdESSigner.sign`, cuyas ramas de `format` solo reconocen los cuatro nombres
+  `SIGN_FORMAT_XADES_*` y que construye siempre la firma con `AOXMLAdvancedSignature`, es decir
+  con `xades:QualifyingProperties`. No hay `extraParam` que produzca un `ds:Signature` pelado.
+- El truco que hace posible la prefirma XAdES —firmar con una clave falsa
+  (`KeyHelperFactory.getPrivateKey`) y sustituir después el `SignatureValue`— vive en clases
+  **de paquete privado** de `es.gob.afirma.triphase.signer.xades`. Reutilizarlo para XMLDSig
+  significaría reimplementarlo en el puente, no consumirlo del original.
+
+**Consecuencia:** XMLDSig sale del alcance. El vocabulario del puente ya no tiene
+`Format::XmlDsig`, y `format=XMLDSig`, `XMLDSig Enveloping`, `XMLDSig Detached` y
+`XMLDSig Enveloped` se rechazan con `SAF_06` desde el protocolo. La desviación está escrita en
+`rfirma-app/src-tauri/src/site/domain/protocol/mod.rs`.
+
 ## Recomendación
 
 - **Añadir `org.apache.santuario:xmlsec:3.0.5` explícito** al `pom.xml` que implemente XAdES: no

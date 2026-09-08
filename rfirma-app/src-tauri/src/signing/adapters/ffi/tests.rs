@@ -1,5 +1,5 @@
 use super::*;
-use crate::signing::domain::bridge::{XadesVariant, XmlDsigVariant, LIBRARY_FILE};
+use crate::signing::domain::bridge::{XadesVariant, LIBRARY_FILE};
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -316,10 +316,7 @@ fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
             EntryPoints::Xades
         ));
     }
-    for format in [
-        Format::FacturaE,
-        Format::XmlDsig(XmlDsigVariant::Enveloping),
-    ] {
+    for format in [Format::FacturaE, Format::CadesAsicS] {
         assert!(matches!(
             entry_points_for(format).expect_err("no cruza"),
             BridgeError::FormatNotBridged(refused) if refused == format

@@ -24,18 +24,6 @@ fn every_format_the_site_can_name_crosses_to_the_one_the_bridge_knows() {
             RequestedFormat::Xades(XadesEnvelope::AsicS),
             Format::Xades(XadesVariant::AsicS),
         ),
-        (
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Detached),
-            Format::XmlDsig(XmlDsigVariant::Detached),
-        ),
-        (
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping),
-            Format::XmlDsig(XmlDsigVariant::Enveloping),
-        ),
-        (
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloped),
-            Format::XmlDsig(XmlDsigVariant::Enveloped),
-        ),
         (RequestedFormat::FacturaE, Format::FacturaE),
     ];
 

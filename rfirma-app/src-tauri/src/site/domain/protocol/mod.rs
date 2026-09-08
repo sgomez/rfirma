@@ -10,6 +10,11 @@
 //!   `mode=explicit` está obsoleto y hashea el dato con SHA1 antes de firmar
 //!   (`ProtocolInvocationLauncherSign.java:390-405`); aquí `mode=explicit`
 //!   con XAdES sale con `SAF_06`.
+//! - **XMLDSig no se atiende**. El original lo firma monofásico con la clave
+//!   privada dentro de Java (`AOXMLDSigSigner`, `afirma-crypto-xmlsignature`)
+//!   y su `PreProcessorFactory` no tiene preprocesador trifásico para él
+//!   (1.9.2); atenderlo exigiría la clave dentro de Java, que prohíbe el
+//!   ADR-0001, así que `format=XMLDSig*` sale con `SAF_06`.
 
 pub mod algorithm;
 pub mod cipher;
@@ -32,7 +37,7 @@ pub use cipher::{cipher as encrypt, decipher as decrypt, CipherKey};
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use detection::{shape_of, DetectedShape};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
-pub use format::{format_of, RequestedFormat, XadesEnvelope, XmlDsigEnvelope};
+pub use format::{format_of, RequestedFormat, XadesEnvelope};
 pub use framing::{
     credential_matches, http_response, read_request, split_response, FragmentBuffer, FramedRequest,
     NotOfTheFraming, MORE_DATA_NEED, RESPONSE_MAX_SIZE,

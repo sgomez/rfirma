@@ -80,9 +80,6 @@ fn every_format_says_the_name_the_original_expects() {
             "XAdES Enveloping",
             "XAdES Enveloped",
             "XAdES-ASiC-S",
-            "XMLDSig Detached",
-            "XMLDSig Enveloping",
-            "XMLDSig Enveloped",
             "FacturaE",
         ]
     );

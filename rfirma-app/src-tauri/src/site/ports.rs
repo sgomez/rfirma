@@ -7,15 +7,13 @@ use std::sync::Arc;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{
-    BridgeError, Format, SignatureOperation, XadesVariant, XmlDsigVariant,
-};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation, XadesVariant};
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, RequestedFormat, SignatureRound, XadesEnvelope, XmlDsigEnvelope,
+    AfirmaUrl, AskedAlgorithm, RequestedFormat, SignatureRound, XadesEnvelope,
 };
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -47,15 +45,6 @@ impl From<RequestedFormat> for Format {
                 Self::Xades(XadesVariant::Enveloped)
             }
             RequestedFormat::Xades(XadesEnvelope::AsicS) => Self::Xades(XadesVariant::AsicS),
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Detached) => {
-                Self::XmlDsig(XmlDsigVariant::Detached)
-            }
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping) => {
-                Self::XmlDsig(XmlDsigVariant::Enveloping)
-            }
-            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloped) => {
-                Self::XmlDsig(XmlDsigVariant::Enveloped)
-            }
             RequestedFormat::FacturaE => Self::FacturaE,
         }
     }

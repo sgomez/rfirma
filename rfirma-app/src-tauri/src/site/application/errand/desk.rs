@@ -387,7 +387,7 @@ pub(in crate::site::application) fn write_the_document<
 fn what_arrives_in(format: Format) -> &'static str {
     match format {
         Format::Pades => "pdf",
-        Format::Xades(_) | Format::XmlDsig(_) | Format::FacturaE => "xml",
+        Format::Xades(_) | Format::FacturaE => "xml",
         Format::Cades | Format::CadesAsicS | Format::Cms => "bin",
     }
 }
