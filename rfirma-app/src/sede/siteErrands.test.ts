@@ -116,6 +116,7 @@ const ASKING_TO_SIGN: SiteErrandView = {
   stage: {
     kind: "askingToSign",
     document: "asa-opaca-1",
+    signing: "pdf",
     round: "cosign",
     certificates: [certificate()],
     unregisteredSignatures: true,
@@ -219,6 +220,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         kind: "consent",
         document: null,
         signs: null,
+        signing: null,
         certificates: [certificate()],
         narrowed: false,
       },
@@ -243,6 +245,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         kind: "consent",
         document: null,
         signs: 3,
+        signing: null,
         certificates: [certificate()],
         narrowed: false,
       },
@@ -344,6 +347,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
             hasUnregisteredSignatures: true,
           },
           signs: null,
+          signing: "pdf",
           certificates: [certificate()],
           narrowed: false,
         },
@@ -351,6 +355,28 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     );
     expect(calls.describeDocument).toHaveBeenCalledWith("asa-opaca-1");
   });
+
+  it.each(["pdf", "challenge", "xml", "invoice"] as const)(
+    "carries the %s signing kind through to the consent stage",
+    async (signing) => {
+      const view: SiteErrandView = {
+        ...ASKING_TO_SIGN,
+        stage: {
+          kind: "askingToSign",
+          document: "asa-opaca-1",
+          signing,
+          round: "cosign",
+          certificates: [certificate()],
+          unregisteredSignatures: true,
+        },
+      };
+      const { push, last } = watched();
+
+      push(view);
+
+      await vi.waitFor(() => expect(last()?.stage).toMatchObject({ signing }));
+    },
+  );
 
   it("consents without a card when the document cannot be read", async () => {
     const { push, last } = watched({ describeDocument: async () => null });

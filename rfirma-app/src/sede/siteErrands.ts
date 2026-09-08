@@ -7,6 +7,7 @@ import type {
   Errand,
   ErrandStage,
   RefusalSituation,
+  SigningKind,
   SiteDocument,
   SiteErrandPort,
   SiteOutcome,
@@ -54,6 +55,8 @@ export type SiteStageView =
       kind: "askingToSign";
       /** El asa opaca con la que se lee el documento, nunca su ruta (ID-286). */
       document: string;
+      /** Qué es lo que se pide firmar, según el formato de la petición (#530). */
+      signing: SigningKind;
       round: "sign" | "cosign";
       certificates: readonly Certificate[];
       unregisteredSignatures: boolean;
@@ -276,6 +279,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         kind: "consent",
         document: null,
         signs: null,
+        signing: null,
         certificates: stage.certificates,
         narrowed: false,
       };
@@ -284,6 +288,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         kind: "consent",
         document,
         signs: null,
+        signing: stage.signing,
         certificates: stage.certificates,
         narrowed: false,
       };
@@ -294,6 +299,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         kind: "consent",
         document: null,
         signs: stage.signs,
+        signing: null,
         certificates: stage.certificates,
         narrowed: false,
       };

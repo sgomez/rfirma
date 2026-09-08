@@ -982,10 +982,31 @@ msgstr ""
 msgid "sede.consent.asksIdentity"
 msgstr ""
 
+#. La misma frase que "asksSignature", con el formato del #530 nombrado.
+msgid "sede.consent.asksSignatureOf"
+msgstr ""
+
+#. Qué es lo que la sede pide firmar, según el formato de la petición (#530).
+msgid "sede.consent.signingKind.pdf"
+msgstr ""
+
+msgid "sede.consent.signingKind.challenge"
+msgstr ""
+
+msgid "sede.consent.signingKind.xml"
+msgstr ""
+
+msgid "sede.consent.signingKind.invoice"
+msgstr ""
+
 msgid "sede.consent.unknownOriginTitle"
 msgstr ""
 
 msgid "sede.consent.unknownOriginSignature"
+msgstr ""
+
+#. La misma frase que "unknownOriginSignature", con el formato nombrado.
+msgid "sede.consent.unknownOriginSignatureOf"
 msgstr ""
 
 msgid "sede.consent.unknownOriginIdentity"

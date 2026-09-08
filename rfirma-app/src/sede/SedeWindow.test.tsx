@@ -205,6 +205,7 @@ describe("SedeWindow", () => {
           hasUnregisteredSignatures: false,
         },
         signs: null,
+        signing: "pdf",
         certificates: [certificate()],
         narrowed: false,
         ...overrides,
@@ -214,7 +215,20 @@ describe("SedeWindow", () => {
       const { port } = scriptedErrand(consenting());
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      expect(screen.getByText("sede.ejemplo.gob.es pide tu firma.")).toBeInTheDocument();
+      expect(
+        screen.getByText("sede.ejemplo.gob.es pide tu firma de un documento PDF."),
+      ).toBeInTheDocument();
+    });
+
+    it.each([
+      ["challenge", "un reto de autenticación"],
+      ["xml", "un documento XML"],
+      ["invoice", "una factura electrónica"],
+    ] as const)("says it asks to sign %s", (signing, what) => {
+      const { port } = scriptedErrand(consenting({ signing }));
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText(`sede.ejemplo.gob.es pide tu firma de ${what}.`)).toBeInTheDocument();
     });
 
     it("shows the PDF metadata title, pages, size — never a file name", () => {
@@ -308,6 +322,19 @@ describe("SedeWindow", () => {
 
       expect(screen.getByText("Origen sin identificar")).toBeInTheDocument();
       expect(
+        screen.getByText(
+          "La petición pide firmar un documento PDF y no indica de qué página viene.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("leaves a calm label with no format when the moment does not carry one", () => {
+      const { port } = scriptedErrand(consenting({ document: null, signs: 3, signing: null }), {
+        origin: null,
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(
         screen.getByText("La petición pide una firma y no indica de qué página viene."),
       ).toBeInTheDocument();
     });
@@ -340,7 +367,7 @@ describe("SedeWindow", () => {
     });
 
     it("says it is a batch and how many signatures it carries, with no document to show", () => {
-      const { port } = scriptedErrand(consenting({ document: null, signs: 3 }));
+      const { port } = scriptedErrand(consenting({ document: null, signs: 3, signing: null }));
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText("Lote de 3 firmas")).toBeInTheDocument();
@@ -350,7 +377,9 @@ describe("SedeWindow", () => {
     });
 
     it("consents to a batch through the same dropdown and the same button as a signature", async () => {
-      const { port, calls } = scriptedErrand(consenting({ document: null, signs: 3 }));
+      const { port, calls } = scriptedErrand(
+        consenting({ document: null, signs: 3, signing: null }),
+      );
       renderWithCatalog(<SedeWindow errands={port} />);
 
       await userEvent.click(screen.getByRole("button", { name: "Firmar" }));
@@ -359,7 +388,7 @@ describe("SedeWindow", () => {
     });
 
     it("says «Identificarse», not «Firmar», for selectcert", () => {
-      const { port } = scriptedErrand(consenting({ document: null }), {
+      const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
         operation: "selectcert",
       });
       renderWithCatalog(<SedeWindow errands={port} />);
@@ -370,7 +399,7 @@ describe("SedeWindow", () => {
     });
 
     it("spells out what selectcert sends", () => {
-      const { port } = scriptedErrand(consenting({ document: null }), {
+      const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
         operation: "selectcert",
       });
       renderWithCatalog(<SedeWindow errands={port} />);

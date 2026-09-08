@@ -1083,11 +1083,32 @@ msgstr "{{origin}} pide tu firma."
 msgid "sede.consent.asksIdentity"
 msgstr "{{origin}} pide que te identifiques."
 
+#. La misma frase que "asksSignature", con el formato del #530 nombrado.
+msgid "sede.consent.asksSignatureOf"
+msgstr "{{origin}} pide tu firma de {{what}}."
+
+#. Qué es lo que la sede pide firmar, según el formato de la petición (#530).
+msgid "sede.consent.signingKind.pdf"
+msgstr "un documento PDF"
+
+msgid "sede.consent.signingKind.challenge"
+msgstr "un reto de autenticación"
+
+msgid "sede.consent.signingKind.xml"
+msgstr "un documento XML"
+
+msgid "sede.consent.signingKind.invoice"
+msgstr "una factura electrónica"
+
 msgid "sede.consent.unknownOriginTitle"
 msgstr "Origen sin identificar"
 
 msgid "sede.consent.unknownOriginSignature"
 msgstr "La petición pide una firma y no indica de qué página viene."
+
+#. La misma frase que "unknownOriginSignature", con el formato nombrado.
+msgid "sede.consent.unknownOriginSignatureOf"
+msgstr "La petición pide firmar {{what}} y no indica de qué página viene."
 
 msgid "sede.consent.unknownOriginIdentity"
 msgstr "La petición pide que te identifiques y no indica de qué página viene."
@@ -1287,10 +1308,14 @@ msgid "sede.refusals.batchPostsignerUnreachable"
 msgstr "El servicio de {{origin}} que cierra el lote no ha contestado."
 
 msgid "sede.refusals.batchInvalidPresignResponse"
-msgstr "El servicio de {{origin}} que prepara el lote ha contestado algo que rFirma no sabe leer."
+msgstr ""
+"El servicio de {{origin}} que prepara el lote ha contestado algo que rFirma "
+"no sabe leer."
 
 msgid "sede.refusals.batchInvalidPostsignResponse"
-msgstr "El servicio de {{origin}} que cierra el lote ha contestado algo que rFirma no sabe leer."
+msgstr ""
+"El servicio de {{origin}} que cierra el lote ha contestado algo que rFirma "
+"no sabe leer."
 
 msgid "sede.refusals.batchSigningFailed"
 msgstr "La firma del lote que pedía {{origin}} no ha llegado a completarse."
