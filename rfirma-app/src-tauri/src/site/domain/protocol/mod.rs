@@ -6,6 +6,11 @@
 //!   `localBatchProcess=true` con el XML heredado y lo manda de todos modos a
 //!   los dos servlets (`ProtocolInvocationLauncherBatch.signBatch`, 1.9.2);
 //!   aquí ese lote es un `SAF_03` que nombra `dat`.
+//! - **`format=auto` sobre una factura elige FacturaE**, no XAdES: es lo que
+//!   hace el original (`PreProcessorFactory.getSignFormat`, 1.9.2), y firmarla
+//!   como un XML cualquiera dejaría una factura que su propia política invalida.
+//!   Quien lo decide es `detection.rs`, con la misma comprobación de raíz y
+//!   tres hijos que `AOFacturaESigner.isValidDataFile`.
 //! - **La XAdES explícita no se reproduce**. El original avisa de que
 //!   `mode=explicit` está obsoleto y hashea el dato con SHA1 antes de firmar
 //!   (`ProtocolInvocationLauncherSign.java:390-405`); aquí `mode=explicit`
@@ -49,10 +54,10 @@ pub use launch::{
 pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, refuse_a_countersignature_outside_cades_and_xades,
-    refuse_explicit_xades, BatchRequest, CounterTarget, LoadRequest, SaveRequest,
-    SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteOperation,
-    ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE,
-    SIGN, SIGN_AND_SAVE,
+    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, BatchRequest, CounterTarget,
+    LoadRequest, SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound,
+    SiteOperation, ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE,
+    SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,

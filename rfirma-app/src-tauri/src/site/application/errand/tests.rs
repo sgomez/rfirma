@@ -22,7 +22,8 @@ use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
 use crate::signing::application::tests::{
-    a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE, A_XADES_SIGNATURE,
+    a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE, A_FACTURAE_SIGNATURE,
+    A_XADES_SIGNATURE,
 };
 use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation, XadesVariant};
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -1865,40 +1866,39 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
 /// mismo `SAF_06` que antes daba la comprobación de texto de `sign`.
 #[test]
 fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
-    for (format, document) in [("CAdES-ASiC-S", A_PDF), ("FacturaE", A_PDF)] {
-        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-        let memory = a_memory(home.path());
-        let ours = vec![a_usable_certificate("FIRMA")];
-        let (listed, _) = listed_from(&ours);
-        let opened = OpenedDocuments::new();
-        let live = a_live();
-        let engine = AnEngine::answering(&[&[0]]);
-        let policies = APolicyEngine::answering("");
-        let scratch = home.path().join("errand");
+    let format = "CAdES-ASiC-S";
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
 
-        let step = consent_to_sign(
-            &a_desk(
-                &engine,
-                &policies,
-                &[],
-                home.path(),
-                &listed,
-                &opened,
-                &memory,
-                &scratch,
-            ),
-            &signature_requested(&a_signature_asking_for(format, document)),
-            ours.clone(),
-            &live,
-        );
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &signature_requested(&a_signature_asking_for(format, A_PDF)),
+        ours.clone(),
+        &live,
+    );
 
-        let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = step else {
-            panic!("el puente no atiende '{format}': {step:?}");
-        };
-        let (told, code) = crate::site::adapters::frontier::told(&refusal);
-        assert_eq!(code, SafCode::UnsupportedFormat, "format={format}");
-        assert_eq!(told.situation, "bridgeFailed", "format={format}");
-    }
+    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = step else {
+        panic!("el puente no atiende '{format}': {step:?}");
+    };
+    let (told, code) = crate::site::adapters::frontier::told(&refusal);
+    assert_eq!(code, SafCode::UnsupportedFormat, "format={format}");
+    assert_eq!(told.situation, "bridgeFailed", "format={format}");
 }
 
 /// `mode=explicit` con XAdES no se reproduce: `SAF_06` antes de pedir consentimiento.
@@ -2293,6 +2293,31 @@ fn an_xml_under_format_auto_goes_out_as_a_xades_signature() {
         AN_XML_CHALLENGE,
         Format::Xades(XadesVariant::Enveloping),
         A_XADES_SIGNATURE,
+    );
+}
+
+/// La factura sobre la que se pide la firma FacturaE del cable.
+const AN_INVOICE_CHALLENGE: &[u8] = b"<Facturae><FileHeader/><Parties/><Invoices/></Facturae>";
+
+#[test]
+fn an_invoice_signature_goes_all_the_way_from_the_operation_to_the_wire() {
+    for asked in ["FacturaE", "Factura-e"] {
+        the_whole_errand_asking_for_over(
+            asked,
+            AN_INVOICE_CHALLENGE,
+            Format::FacturaE,
+            A_FACTURAE_SIGNATURE,
+        );
+    }
+}
+
+#[test]
+fn an_invoice_under_format_auto_goes_out_as_a_facturae_signature() {
+    the_whole_errand_asking_for_over(
+        "auto",
+        AN_INVOICE_CHALLENGE,
+        Format::FacturaE,
+        A_FACTURAE_SIGNATURE,
     );
 }
 

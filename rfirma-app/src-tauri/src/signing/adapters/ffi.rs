@@ -414,7 +414,7 @@ fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
     match format.bridged()? {
         Format::Pades => Ok(EntryPoints::Pades),
         Format::Cades | Format::Cms => Ok(EntryPoints::Cades),
-        Format::Xades(_) => Ok(EntryPoints::Xades),
+        Format::Xades(_) | Format::FacturaE => Ok(EntryPoints::Xades),
         other => Err(BridgeError::FormatNotBridged(other)),
     }
 }

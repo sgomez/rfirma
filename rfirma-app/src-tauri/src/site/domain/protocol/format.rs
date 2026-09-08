@@ -79,6 +79,7 @@ impl RequestedFormat {
 pub fn format_of(document: &[u8]) -> RequestedFormat {
     match shape_of(document) {
         DetectedShape::Pdf => RequestedFormat::Pades,
+        DetectedShape::Invoice => RequestedFormat::FacturaE,
         DetectedShape::Xml => RequestedFormat::Xades(XadesEnvelope::Enveloping),
         DetectedShape::Binary => RequestedFormat::Cades,
     }

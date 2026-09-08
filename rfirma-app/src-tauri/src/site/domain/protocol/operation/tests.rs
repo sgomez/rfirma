@@ -1070,3 +1070,70 @@ fn implicit_mode_with_xades_is_not_refused() {
     )
     .expect("solo se rechaza el modo explicito");
 }
+
+/// Una factura mínima con la raíz y los tres hijos que el original le exige.
+const AN_INVOICE: &[u8] = b"<Facturae><FileHeader/><Parties/><Invoices/></Facturae>";
+
+fn an_invoice_signature(verb: &str, format: &str) -> AfirmaUrl {
+    an_operation(&format!(
+        "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&algorithm=SHA256withRSA&dat={}",
+        dat(AN_INVOICE)
+    ))
+}
+
+#[test]
+fn signing_an_invoice_is_attended_under_both_of_the_names_the_site_uses() {
+    for format in ["FacturaE", "Factura-e"] {
+        let SiteOperation::Sign(request) =
+            read_operation(&an_invoice_signature(SIGN, format)).expect("se atiende")
+        else {
+            panic!("es una firma");
+        };
+
+        assert_eq!(request.format(), RequestedFormat::FacturaE);
+        assert_eq!(request.round(), SignatureRound::First);
+    }
+}
+
+#[test]
+fn cosigning_or_countersigning_an_invoice_is_refused_with_the_code_of_the_original() {
+    for verb in [COSIGN, COUNTERSIGN] {
+        let refusal =
+            read_operation(&an_invoice_signature(verb, "FacturaE")).expect_err("no se multifirma");
+
+        assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+        assert!(refusal.detail().contains("factura"), "{}", refusal.detail());
+    }
+}
+
+#[test]
+fn cosigning_an_invoice_under_format_auto_is_refused_too() {
+    let refusal = read_operation(&an_invoice_signature(COSIGN, AUTO))
+        .expect_err("una factura detectada tampoco se cofirma");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+}
+
+#[test]
+fn signing_and_saving_a_cosignature_of_an_invoice_is_refused_as_well() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=FacturaE&\
+         algorithm=SHA256withRSA&dat={}",
+        dat(AN_INVOICE)
+    ));
+
+    let refusal = read_operation(&url).expect_err("no se multifirma");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+}
+
+#[test]
+fn the_guard_lets_a_first_signature_of_an_invoice_and_any_round_of_the_rest_through() {
+    refuse_a_multisignature_of_an_invoice(SignatureRound::First, RequestedFormat::FacturaE)
+        .expect("una factura se firma una vez");
+    refuse_a_multisignature_of_an_invoice(
+        SignatureRound::Again,
+        RequestedFormat::Xades(XadesEnvelope::Enveloping),
+    )
+    .expect("la guarda es solo de facturas");
+}

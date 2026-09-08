@@ -305,23 +305,22 @@ fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
             EntryPoints::Cades
         ));
     }
-    for variant in [
-        XadesVariant::Detached,
-        XadesVariant::Enveloping,
-        XadesVariant::Enveloped,
-        XadesVariant::AsicS,
+    for format in [
+        Format::Xades(XadesVariant::Detached),
+        Format::Xades(XadesVariant::Enveloping),
+        Format::Xades(XadesVariant::Enveloped),
+        Format::Xades(XadesVariant::AsicS),
+        Format::FacturaE,
     ] {
         assert!(matches!(
-            entry_points_for(Format::Xades(variant)).expect("cruza por XAdES"),
+            entry_points_for(format).expect("cruza por XAdES"),
             EntryPoints::Xades
         ));
     }
-    for format in [Format::FacturaE, Format::CadesAsicS] {
-        assert!(matches!(
-            entry_points_for(format).expect_err("no cruza"),
-            BridgeError::FormatNotBridged(refused) if refused == format
-        ));
-    }
+    assert!(matches!(
+        entry_points_for(Format::CadesAsicS).expect_err("no cruza"),
+        BridgeError::FormatNotBridged(Format::CadesAsicS)
+    ));
 }
 
 #[test]

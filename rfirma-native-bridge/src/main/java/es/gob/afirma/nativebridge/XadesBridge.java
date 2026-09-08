@@ -17,6 +17,7 @@ import es.gob.afirma.core.signers.TriphaseData;
 import es.gob.afirma.core.signers.asic.ASiCUtil;
 import es.gob.afirma.signers.xades.XAdESConstants;
 import es.gob.afirma.signers.xades.asic.AOXAdESASiCSSigner;
+import es.gob.afirma.triphase.signer.processors.FacturaETriPhasePreProcessor;
 import es.gob.afirma.triphase.signer.processors.XAdESTriPhasePreProcessor;
 
 /**
@@ -32,8 +33,12 @@ import es.gob.afirma.triphase.signer.processors.XAdESTriPhasePreProcessor;
  *
  * <p>Las tres operaciones —{@code sign}, {@code cosign} y {@code countersign}—
  * entran por los mismos dos metodos. Solo {@code sign} elige variante
- * —Enveloping, Detached, Enveloped o ASiC-S—: cofirmar y contrafirmar operan
- * sobre la estructura del XML que reciben, sin volver a elegirla.
+ * —Enveloping, Detached, Enveloped, ASiC-S o FacturaE—: cofirmar y contrafirmar
+ * operan sobre la estructura del XML que reciben, sin volver a elegirla.
+ *
+ * <p>{@code FacturaE} no es una envoltura mas sino otro procesador, el del
+ * original, que impone la politica de la factura y rechaza cofirmar y
+ * contrafirmar.
  *
  * <p>A diferencia de CAdES, la prefirma XAdES es una <b>firma completa hecha con
  * una clave temporal</b>: la sesion se lleva ese XML en {@code BASE} —sin las
@@ -78,6 +83,7 @@ public final class XadesBridge {
     private static final String FORMAT_ENVELOPED = "XAdES Enveloped";
     private static final String FORMAT_ASIC_S = "XAdES-ASiC-S";
     private static final String FORMAT_EXTERNALLY_DETACHED = "XAdES Externally Detached";
+    private static final String FORMAT_FACTURAE = "FacturaE";
 
     private static final String PARAM_KEEP_KEYINFO_UNSIGNED = "keepKeyInfoUnsigned";
     private static final String PARAM_PRECALCULATED_HASH = "precalculatedHashAlgorithm";
@@ -129,7 +135,7 @@ public final class XadesBridge {
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
-        final XAdESTriPhasePreProcessor processor = new XAdESTriPhasePreProcessor();
+        final XAdESTriPhasePreProcessor processor = processorFor(effectiveParams);
         final TriphaseData session = switch (requested) {
             case OPERATION_COSIGN -> processor.preProcessPreCoSign(
                     document, algorithm, chain, effectiveParams, false);
@@ -250,7 +256,7 @@ public final class XadesBridge {
         attachPkcs1(session, pkcs1s);
 
         final Properties effectiveParams = stamp.extraParams();
-        final XAdESTriPhasePreProcessor processor = new XAdESTriPhasePreProcessor();
+        final XAdESTriPhasePreProcessor processor = processorFor(effectiveParams);
         final byte[] signature = switch (requireKnownOperation(stamp.operation())) {
             case OPERATION_COSIGN -> processor.preProcessPostCoSign(
                     document, stamp.algorithm(), chain, effectiveParams, session);
@@ -369,9 +375,12 @@ public final class XadesBridge {
         if (FORMAT_ASIC_S.equalsIgnoreCase(name)) {
             return FORMAT_ASIC_S;
         }
+        if (FORMAT_FACTURAE.equalsIgnoreCase(name)) {
+            return FORMAT_FACTURAE;
+        }
         throw new IllegalArgumentException("la variante XAdES «" + name + "» no la"
                 + " atiende el puente: solo " + FORMAT_ENVELOPING + ", " + FORMAT_DETACHED + ", "
-                + FORMAT_ENVELOPED + " y " + FORMAT_ASIC_S);
+                + FORMAT_ENVELOPED + ", " + FORMAT_ASIC_S + " y " + FORMAT_FACTURAE);
     }
 
     /**
@@ -418,6 +427,19 @@ public final class XadesBridge {
     private static String externalReferencesHashAlgorithm(final Properties variantParams) {
         return variantParams.getProperty(PARAM_PRECALCULATED_HASH, variantParams
                 .getProperty(PARAM_REFERENCES_DIGEST, XAdESConstants.DEFAULT_DIGEST_METHOD));
+    }
+
+    /**
+     * El procesador de la factura impone la envoltura, la politica de FacturaE y
+     * el rechazo de la multifirma; ninguna de las tres las decide el puente.
+     */
+    private static XAdESTriPhasePreProcessor processorFor(final Properties effectiveParams) {
+        return isFacturaE(effectiveParams) ? new FacturaETriPhasePreProcessor()
+                : new XAdESTriPhasePreProcessor();
+    }
+
+    private static boolean isFacturaE(final Properties effectiveParams) {
+        return FORMAT_FACTURAE.equalsIgnoreCase(effectiveParams.getProperty(PARAM_FORMAT));
     }
 
     private static boolean isAsicS(final Properties variantParams) {

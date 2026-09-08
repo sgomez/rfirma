@@ -78,8 +78,15 @@ fn what_the_original_does_not_sign_in_three_phases_names_no_format() {
 fn the_effective_format_of_auto_comes_from_the_header_of_the_document() {
     assert_eq!(format_of(b"%PDF-1.7\n"), RequestedFormat::Pades);
     assert_eq!(
-        format_of(b"<?xml version=\"1.0\"?><Facturae/>"),
+        format_of(b"<?xml version=\"1.0\"?><documento/>"),
         RequestedFormat::Xades(XadesEnvelope::Enveloping)
     );
     assert_eq!(format_of(&[0x00, 0x01, 0x02]), RequestedFormat::Cades);
+}
+
+#[test]
+fn an_invoice_under_auto_is_signed_as_facturae_and_not_as_plain_xades() {
+    let invoice = b"<Facturae><FileHeader/><Parties/><Invoices/></Facturae>";
+
+    assert_eq!(format_of(invoice), RequestedFormat::FacturaE);
 }
