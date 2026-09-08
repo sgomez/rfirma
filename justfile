@@ -404,6 +404,22 @@ lint-i18n: po-import
 token:
     ./testdata/softhsm/provision-token.sh
 
+# El banco de referencia CAdES/XAdES/FacturaE (ver testdata/reference/README.md):
+# lo que produce el original 1.9.2 con sus firmadores monofasicos, para que
+# cada ticket de formato compare su salida y la valide. Determinista salvo la
+# fecha de firma.
+#
+# Regenera testdata/reference/.
+reference-signatures:
+    ./rfirma-native-bridge/testbench/make-reference-signatures.sh
+
+# El oraculo de la grada C para CAdES/XAdES/FacturaE: SignValiderFactory del
+# original, consumido igual desde Maven local.
+#
+# Valida <file> con el validador del original. Imprime VALID o INVALID.
+validate-signature file:
+    ./rfirma-native-bridge/testbench/validate.sh {{ file }}
+
 # El accesorio del BANCO DE CONFORMIDAD (TD-55): el `autoscript.js` que sirve
 # una sede de verdad, corriendo bajo Node contra nuestro canal en
 # tests/conformance_bench.rs.
