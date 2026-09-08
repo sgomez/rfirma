@@ -10,7 +10,7 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `src/main/java/.../NativeBridge.java` | Los `@CEntryPoint`: la frontera con Rust y la reserva manual de las cadenas devueltas (ADR-0003). |
 | `src/main/java/.../PadesBridge.java` | Preproceso y postproceso PAdES, incluida la firma visible. |
 | `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES: firma, cofirma y contrafirma. |
-| `src/main/java/.../XadesBridge.java` | Preproceso y postproceso XAdES Enveloping: solo firma, ni cofirma ni contrafirma. |
+| `src/main/java/.../XadesBridge.java` | Preproceso y postproceso XAdES en las variantes Enveloping, Detached, Enveloped y ASiC-S: solo firma, ni cofirma ni contrafirma. |
 | `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |
 | `src/main/java/.../SessionStamp.java` | El sello de sesión (ADR-0016). |

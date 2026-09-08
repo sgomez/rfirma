@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +9,11 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.TimeZone;
 
+import es.gob.afirma.core.signers.AOSignConstants;
 import es.gob.afirma.core.signers.TriphaseData;
+import es.gob.afirma.core.signers.asic.ASiCUtil;
+import es.gob.afirma.signers.xades.XAdESConstants;
+import es.gob.afirma.signers.xades.asic.AOXAdESASiCSSigner;
 import es.gob.afirma.triphase.signer.processors.XAdESTriPhasePreProcessor;
 
 /**
@@ -22,9 +27,10 @@ import es.gob.afirma.triphase.signer.processors.XAdESTriPhasePreProcessor;
  * <p><b>La fase 2 no esta aqui, y no va a estarlo (ADR-0001).</b> La clave
  * privada no entra nunca en el isolate de Java.
  *
- * <p>Atiende <b>solo {@code sign}</b> y solo la variante <b>Enveloping</b>, que
- * es la que el original toma por defecto. La cofirma, la contrafirma y las demas
- * variantes se rechazan nombrando lo que falta.
+ * <p>Atiende <b>solo {@code sign}</b>, en las variantes <b>Enveloping</b>
+ * —la que el original toma por defecto—, <b>Detached</b>, <b>Enveloped</b> y
+ * <b>XAdES-ASiC-S</b>. La cofirma, la contrafirma y cualquier otra variante se
+ * rechazan nombrando lo que falta.
  *
  * <p>A diferencia de CAdES, la prefirma XAdES es una <b>firma completa hecha con
  * una clave temporal</b>: la sesion se lleva ese XML en {@code BASE} —sin las
@@ -54,6 +60,15 @@ public final class XadesBridge {
     private static final String PARAM_FORMAT = "format";
     private static final String FORMAT_XADES = "XAdES";
     private static final String FORMAT_ENVELOPING = "XAdES Enveloping";
+    private static final String FORMAT_DETACHED = "XAdES Detached";
+    private static final String FORMAT_ENVELOPED = "XAdES Enveloped";
+    private static final String FORMAT_ASIC_S = "XAdES-ASiC-S";
+    private static final String FORMAT_EXTERNALLY_DETACHED = "XAdES Externally Detached";
+
+    private static final String PARAM_KEEP_KEYINFO_UNSIGNED = "keepKeyInfoUnsigned";
+    private static final String PARAM_PRECALCULATED_HASH = "precalculatedHashAlgorithm";
+    private static final String PARAM_REFERENCES_DIGEST = "referencesDigestMethod";
+    private static final String PARAM_ASICS_FILENAME = "asicsFilename";
 
     private XadesBridge() { }
 
@@ -67,7 +82,7 @@ public final class XadesBridge {
     public record SignatureValue(String id, String pkcs1B64) { }
 
     /**
-     * Prefirma XAdES Enveloping.
+     * Prefirma XAdES en la variante que pida {@code extraParams.format}.
      *
      * <p>Cada {@code pre} es el <b>{@code SignedInfo} canonicalizado</b>: Rust lo
      * hashea y lo firma igual que el bloque de CAdES, sin tratarlo distinto.
@@ -84,12 +99,13 @@ public final class XadesBridge {
             throws Exception {
 
         requireSignOperation(operation);
-        final Properties effectiveParams = envelopingParams(extraParams);
+        final Properties effectiveParams = variantParams(extraParams);
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
-        final TriphaseData session = new XAdESTriPhasePreProcessor()
-                .preProcessPreSign(document, algorithm, chain, effectiveParams, false);
+        final TriphaseData session = new XAdESTriPhasePreProcessor().preProcessPreSign(
+                signerDocument(effectiveParams, document), algorithm, chain,
+                signerParams(effectiveParams, document), false);
 
         if (session.getSignsCount() != 1) {
             throw new IllegalStateException("una firma XAdES prefirma una sola vez, y la prefirma"
@@ -195,8 +211,13 @@ public final class XadesBridge {
 
         attachPkcs1(first, pkcs1s);
 
-        return new XAdESTriPhasePreProcessor().preProcessPostSign(
-                document, stamp.algorithm(), chain, stamp.extraParams(), session);
+        final Properties effectiveParams = stamp.extraParams();
+        final byte[] signature = new XAdESTriPhasePreProcessor().preProcessPostSign(
+                signerDocument(effectiveParams, document), stamp.algorithm(), chain,
+                signerParams(effectiveParams, document), session);
+
+        return isAsicS(effectiveParams) ? asicSContainer(signature, document, effectiveParams)
+                : signature;
     }
 
     private static void attachPkcs1(final TriphaseData.TriSign signConfig,
@@ -231,28 +252,95 @@ public final class XadesBridge {
     }
 
     /**
-     * Los {@code extraParams} con la variante fijada a Enveloping.
+     * Los {@code extraParams} con la variante resuelta a su nombre canonico.
      *
      * <p>Se copian antes de tocarlos porque el {@code Properties} es del llamante,
      * y se fija {@code format} en vez de dejarlo al defecto del builder para que
      * el sello diga cual se firmo y no haya que deducirlo.
      */
-    private static Properties envelopingParams(final Properties extraParams) {
+    private static Properties variantParams(final Properties extraParams) {
+        final Properties copy = copyOf(extraParams);
+        copy.setProperty(PARAM_FORMAT, variantOf(copy.getProperty(PARAM_FORMAT)));
+        return copy;
+    }
+
+    private static String variantOf(final String requested) {
+        final String name = requested == null ? "" : requested.trim();
+        if (name.isEmpty() || FORMAT_XADES.equalsIgnoreCase(name)
+                || FORMAT_ENVELOPING.equalsIgnoreCase(name)) {
+            return FORMAT_ENVELOPING;
+        }
+        if (FORMAT_DETACHED.equalsIgnoreCase(name)) {
+            return FORMAT_DETACHED;
+        }
+        if (FORMAT_ENVELOPED.equalsIgnoreCase(name)) {
+            return FORMAT_ENVELOPED;
+        }
+        if (FORMAT_ASIC_S.equalsIgnoreCase(name)) {
+            return FORMAT_ASIC_S;
+        }
+        throw new IllegalArgumentException("la variante XAdES \u00ab" + name + "\u00bb no la"
+                + " atiende el puente: solo " + FORMAT_ENVELOPING + ", " + FORMAT_DETACHED + ", "
+                + FORMAT_ENVELOPED + " y " + FORMAT_ASIC_S);
+    }
+
+    /**
+     * Lo que se le da a firmar al firmador XAdES.
+     *
+     * <p>Un ASiC-S firma una referencia externa al fichero que va dentro del ZIP,
+     * asi que lo que cruza es la huella y no el documento; en las demas variantes
+     * es el documento mismo.
+     */
+    private static byte[] signerDocument(final Properties variantParams, final byte[] document)
+            throws Exception {
+        if (!isAsicS(variantParams)) {
+            return document;
+        }
+        return MessageDigest.getInstance(AOSignConstants
+                .getDigestAlgorithmName(externalReferencesHashAlgorithm(variantParams)))
+                .digest(document);
+    }
+
+    /**
+     * Los {@code extraParams} tal como los espera el firmador XAdES de dentro.
+     *
+     * <p>{@code XAdES-ASiC-S} nombra el contenedor, no una variante que el firmador
+     * conozca: la firma que va dentro del ZIP es Externally Detached contra el
+     * nombre del fichero empaquetado, como en el firmador ASiC del original.
+     */
+    private static Properties signerParams(final Properties variantParams, final byte[] document) {
+        if (!isAsicS(variantParams)) {
+            return variantParams;
+        }
+        final Properties copy =
+                AOXAdESASiCSSigner.setASiCProperties(copyOf(variantParams), document);
+        copy.setProperty(PARAM_KEEP_KEYINFO_UNSIGNED, Boolean.TRUE.toString());
+        copy.setProperty(PARAM_FORMAT, FORMAT_EXTERNALLY_DETACHED);
+        return copy;
+    }
+
+    private static byte[] asicSContainer(final byte[] signature, final byte[] document,
+            final Properties variantParams) throws Exception {
+        return ASiCUtil.createSContainer(signature, document, ASiCUtil.ENTRY_NAME_XML_SIGNATURE,
+                variantParams.getProperty(PARAM_ASICS_FILENAME));
+    }
+
+    private static String externalReferencesHashAlgorithm(final Properties variantParams) {
+        return variantParams.getProperty(PARAM_PRECALCULATED_HASH, variantParams
+                .getProperty(PARAM_REFERENCES_DIGEST, XAdESConstants.DEFAULT_DIGEST_METHOD));
+    }
+
+    private static boolean isAsicS(final Properties variantParams) {
+        return FORMAT_ASIC_S.equals(variantParams.getProperty(PARAM_FORMAT));
+    }
+
+    private static Properties copyOf(final Properties extraParams) {
         final Properties copy = new Properties();
         if (extraParams != null) {
             for (final String name : extraParams.stringPropertyNames()) {
                 copy.setProperty(name, extraParams.getProperty(name));
             }
         }
-        final String requested = copy.getProperty(PARAM_FORMAT);
-        if (requested != null && !requested.isBlank()
-                && !FORMAT_XADES.equalsIgnoreCase(requested.trim())
-                && !FORMAT_ENVELOPING.equalsIgnoreCase(requested.trim())) {
-            throw new IllegalArgumentException("la variante XAdES «" + requested.trim() + "»"
-                    + " todavia no esta implementada en el puente: solo lo esta "
-                    + FORMAT_ENVELOPING);
-        }
-        copy.setProperty(PARAM_FORMAT, FORMAT_ENVELOPING);
         return copy;
     }
 }
