@@ -6,6 +6,7 @@
 //! (`ProtocolInvocationLauncherBatch.signBatch`, 1.9.2); aquí ese lote es un
 //! `SAF_03` que nombra `dat`.
 
+pub mod algorithm;
 pub mod cipher;
 pub mod codes;
 pub mod detection;
@@ -21,6 +22,7 @@ pub mod url;
 pub mod version;
 pub mod visible;
 
+pub use algorithm::{AskedAlgorithm, ACCEPTED_ALGORITHMS};
 pub use cipher::{cipher as encrypt, decipher as decrypt, CipherKey};
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use detection::{shape_of, DetectedShape};
@@ -38,8 +40,8 @@ pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, refuse_a_countersignature_outside_cades, BatchRequest, CounterTarget,
     LoadRequest, SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound,
-    SiteOperation, ACCEPTED_ALGORITHMS, ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN,
-    COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
+    SiteOperation, ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE,
+    SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,

@@ -37,6 +37,8 @@ pub(crate) struct BridgeCall {
     pub(crate) format: Format,
     /// Qué se le pidió hacer con el documento.
     pub(crate) operation: SignatureOperation,
+    /// El algoritmo con el que se le pidió la prefirma.
+    pub(crate) algorithm: String,
     /// El bloque `java.util.Properties` que cruzó.
     pub(crate) extra_params: String,
 }
@@ -60,6 +62,7 @@ impl Bridge for ABridgeThatSigns {
         crate::lock(&self.calls).push(BridgeCall {
             format: request.format,
             operation: request.operation,
+            algorithm: request.algorithm.to_owned(),
             extra_params: request.extra_params.to_owned(),
         });
         Ok(PreSignature {

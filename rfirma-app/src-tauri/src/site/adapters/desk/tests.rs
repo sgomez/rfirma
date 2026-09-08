@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use super::*;
 use crate::identity::application::tests::a_certificate;
-use crate::identity::domain::algorithm::SignatureAlgorithm;
+use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
 
 /// Un token que apunta con qué secreto y sobre qué bytes se le pidió cada firma.
@@ -16,6 +16,14 @@ impl Signer for RecordingSigner {
         Ok(StoreSecret::TypedOnScreen {
             attempts_left: None,
         })
+    }
+
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        _algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        Ok(())
     }
 
     fn sign(
@@ -51,16 +59,16 @@ fn one_secret_serves_every_signature_of_the_batch() {
 }
 
 #[test]
-fn an_algorithm_the_token_does_not_offer_comes_back_as_a_situation() {
+fn an_algorithm_rfirma_does_not_compose_comes_back_with_the_code_of_the_original() {
     let signer = RecordingSigner::default();
     let certificate = a_certificate("FNMT-ACTIVO", b"der");
 
-    let refusal = signed_by_the_token(&signer, &certificate, "1234", "SHA512", b"uno")
-        .expect_err("SHA512 no lo firma este token");
+    let refusal = signed_by_the_token(&signer, &certificate, "1234", "SHA1", b"uno")
+        .expect_err("SHA1 no lo compone rFirma");
 
-    assert_eq!(refusal.code, SafCode::CannotAccessKeystore);
-    assert_eq!(refusal.situation, "unknown");
-    assert!(refusal.detail.contains("SHA512"));
+    assert_eq!(refusal.code, SafCode::SignatureFailed);
+    assert_eq!(refusal.situation, "mechanismNotOffered");
+    assert!(refusal.detail.contains("SHA1"));
     assert!(crate::lock(&signer.signed).is_empty());
 }
 
@@ -69,9 +77,43 @@ fn the_algorithm_is_read_as_the_site_writes_it() {
     let signer = RecordingSigner::default();
     let certificate = a_certificate("FNMT-ACTIVO", b"der");
 
-    for algorithm in [" SHA256 ", "sha256withrsa", "SHA256withRSA"] {
+    for algorithm in [
+        " SHA256 ",
+        "sha256withrsa",
+        "SHA256withRSA",
+        "SHA512withRSA",
+    ] {
         signed_by_the_token(&signer, &certificate, "1234", algorithm, b"uno")
             .expect("el algoritmo de la sede se lee sin distinguir caja ni espacios");
+    }
+}
+
+#[test]
+fn the_digest_the_site_asks_for_is_composed_with_the_key_of_the_certificate() {
+    for (asked, rsa, ec) in [
+        (
+            AskedAlgorithm::Sha256,
+            SignatureAlgorithm::Sha256Rsa,
+            SignatureAlgorithm::Sha256Ecdsa,
+        ),
+        (
+            AskedAlgorithm::Sha384,
+            SignatureAlgorithm::Sha384Rsa,
+            SignatureAlgorithm::Sha384Ecdsa,
+        ),
+        (
+            AskedAlgorithm::Sha512,
+            SignatureAlgorithm::Sha512Rsa,
+            SignatureAlgorithm::Sha512Ecdsa,
+        ),
+    ] {
+        assert_eq!(composed_for(asked, Some(KeyKind::Rsa)), rsa);
+        assert_eq!(composed_for(asked, Some(KeyKind::Ec)), ec);
+        assert_eq!(
+            composed_for(asked, None),
+            rsa,
+            "sin clave legible se compone con RSA y el token dira que no"
+        );
     }
 }
 
@@ -80,6 +122,14 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
     struct AbsentToken;
     impl Signer for AbsentToken {
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+            Err(TokenError::new(Situation::TokenAbsent, "no hay token"))
+        }
+
+        fn offers(
+            &self,
+            _reference: &CertificateRef,
+            _algorithm: SignatureAlgorithm,
+        ) -> Result<(), TokenError> {
             Err(TokenError::new(Situation::TokenAbsent, "no hay token"))
         }
 

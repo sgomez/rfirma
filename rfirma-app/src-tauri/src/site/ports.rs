@@ -15,7 +15,7 @@ use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::{
-    AfirmaUrl, RequestedFormat, SignatureRound, XadesEnvelope, XmlDsigEnvelope,
+    AfirmaUrl, AskedAlgorithm, RequestedFormat, SignatureRound, XadesEnvelope, XmlDsigEnvelope,
 };
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -255,6 +255,8 @@ pub struct SiteSigningRequest<'a> {
     pub certificate: &'a TokenCertificate,
     /// El formato de firma que pidió la sede.
     pub format: Format,
+    /// La huella que pidió la sede, todavía sin componer con la clave del certificado.
+    pub algorithm: AskedAlgorithm,
     /// Qué pidió hacer la sede con el documento.
     pub operation: SignatureOperation,
     /// Los parámetros de la sede, ya expandidos.

@@ -7,7 +7,11 @@ use serde::{Deserialize, Serialize};
 use x509_cert::der::Decode;
 use x509_cert::Certificate;
 
+use crate::identity::domain::algorithm::KeyKind;
 use crate::identity::domain::store::Store;
+
+const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
+const EC_PUBLIC_KEY: &str = "1.2.840.10045.2.1";
 
 /// Coordenadas de persistencia para reencontrar un certificado en el almacén (ADR-0010).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -140,6 +144,22 @@ impl TokenCertificate {
         Certificate::from_der(&self.der)
             .ok()
             .map(|certificate| certificate.tbs_certificate().issuer().to_string())
+    }
+
+    /// La clase de clave pública que lleva dentro, si se sabe leer.
+    pub fn key_kind(&self) -> Option<KeyKind> {
+        let certificate = Certificate::from_der(&self.der).ok()?;
+        let oid = certificate
+            .tbs_certificate()
+            .subject_public_key_info()
+            .algorithm
+            .oid
+            .to_string();
+        match oid.as_str() {
+            RSA_ENCRYPTION => Some(KeyKind::Rsa),
+            EC_PUBLIC_KEY => Some(KeyKind::Ec),
+            _ => None,
+        }
     }
 
     /// Estado del certificado en el instante actual.

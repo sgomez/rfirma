@@ -2,6 +2,7 @@
 
 use base64::Engine as _;
 
+use super::algorithm::AskedAlgorithm;
 use super::codes::{Parameter, SafCode};
 use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat};
@@ -49,9 +50,6 @@ const TARGET: &str = "target";
 
 const TARGET_TREE: &str = "tree";
 const TARGET_LEAFS: &str = "leafs";
-
-/// El algoritmo que rFirma sabe producir.
-pub const ACCEPTED_ALGORITHMS: [&str; 2] = ["sha256", "sha256withrsa"];
 
 /// Los algoritmos del lote que el original acepta (`BatchSigner`, XSD de `signbatch`).
 pub const ACCEPTED_BATCH_ALGORITHMS: [&str; 4] = ["sha1", "sha256", "sha384", "sha512"];
@@ -144,7 +142,7 @@ pub enum SignatureRound {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignRequest {
     round: SignatureRound,
-    algorithm: String,
+    algorithm: AskedAlgorithm,
     format: RequestedFormat,
     document: Vec<u8>,
     declared: Vec<(String, String)>,
@@ -157,9 +155,9 @@ impl SignRequest {
         self.round
     }
 
-    /// El algoritmo tal y como lo pidió la sede, ya admitido.
-    pub fn algorithm(&self) -> &str {
-        &self.algorithm
+    /// La huella que pidió la sede, ya admitida.
+    pub fn algorithm(&self) -> AskedAlgorithm {
+        self.algorithm
     }
 
     /// El formato efectivo: el que nombró la sede, o el del documento si pidió `auto`.
@@ -249,7 +247,7 @@ impl SaveRequest {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignAndSaveRequest {
     round: SignatureRound,
-    algorithm: String,
+    algorithm: AskedAlgorithm,
     document: Option<Vec<u8>>,
     requested: Option<RequestedFormat>,
     declared: Vec<(String, String)>,
@@ -270,9 +268,9 @@ impl SignAndSaveRequest {
         self.round
     }
 
-    /// El algoritmo tal y como lo pidió la sede, ya admitido.
-    pub fn algorithm(&self) -> &str {
-        &self.algorithm
+    /// La huella que pidió la sede, ya admitida.
+    pub fn algorithm(&self) -> AskedAlgorithm {
+        self.algorithm
     }
 
     /// El documento que la sede manda, si vino: sin `dat` queda por elegir.
@@ -584,16 +582,15 @@ fn requested_format(url: &AfirmaUrl) -> Result<Option<RequestedFormat>, Refusal>
     })
 }
 
-/// El `algorithm` ya admitido, o el `SAF_03` que lo nombra.
-fn check_algorithm(url: &AfirmaUrl) -> Result<String, Refusal> {
+/// La huella del `algorithm` que pide la sede, o el `SAF_03` que lo nombra.
+fn check_algorithm(url: &AfirmaUrl) -> Result<AskedAlgorithm, Refusal> {
     let algorithm = required(url, "algorithm", Parameter::Algorithm)?;
-    if !ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
-        return Err(Refusal::about(
+    AskedAlgorithm::named(algorithm).ok_or_else(|| {
+        Refusal::about(
             Parameter::Algorithm,
-            format!("el algoritmo '{algorithm}' no se atiende: rFirma firma con SHA256withRSA"),
-        ));
-    }
-    Ok(algorithm.trim().to_owned())
+            format!("el algoritmo '{algorithm}' no se atiende: rFirma firma con SHA-2"),
+        )
+    })
 }
 
 /// `'countersign' solo existe en CAdES`, compartido por `read_operation` y por el `cop` de `signandsave`.

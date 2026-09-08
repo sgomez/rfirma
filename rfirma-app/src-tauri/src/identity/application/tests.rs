@@ -24,6 +24,14 @@ impl Token for NoToken {
         Ok(StoreSecret::NotNeeded)
     }
 
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        _algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        Ok(())
+    }
+
     fn sign(
         &self,
         _reference: &CertificateRef,

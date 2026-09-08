@@ -55,13 +55,13 @@ fn the_window_and_the_site_hear_about_a_missing_token_from_the_same_line() {
 }
 
 #[test]
-fn a_mechanism_the_token_does_not_offer_has_its_own_name_and_the_key_type_code() {
+fn a_mechanism_the_token_does_not_offer_fails_the_signature_as_in_the_original() {
     assert_eq!(
         situation_name(Situation::MechanismNotOffered),
         "mechanismNotOffered"
     );
     assert_eq!(
         code_of_token(Situation::MechanismNotOffered),
-        SafCode::IncompatibleKeyType
+        SafCode::SignatureFailed
     );
 }

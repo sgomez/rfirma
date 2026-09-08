@@ -20,7 +20,7 @@ use crate::signing::domain::TokenSignatures;
 pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
     std::collections::BTreeMap::new();
 
-/// El algoritmo que rFirma pide hoy, el mismo para el puente y para el token (ADR-0001).
+/// El algoritmo con el que firma la ventana principal, el mismo para el puente y para el token (ADR-0001).
 pub const ALGORITHM: SignatureAlgorithm = SignatureAlgorithm::Sha256Rsa;
 
 const CHAIN_SEPARATOR: &str = ";";
@@ -40,6 +40,8 @@ pub struct SigningRequest<'a> {
     pub document: AdmissibleDocument<'a>,
     /// Cadena de certificados en DER con el del firmante primero.
     pub chain: &'a [Vec<u8>],
+    /// El algoritmo con el que firman el puente y el token.
+    pub algorithm: SignatureAlgorithm,
     /// Configuración de la firma visible y parámetros.
     pub config: &'a SignatureConfig,
     /// Parámetros adicionales declarados por la sede.
@@ -101,6 +103,7 @@ impl From<SealMismatch> for CycleError {
 /// Ciclo de firma iniciado a la espera de la firma del token (ADR-0016).
 pub struct OpenCycle {
     format: Format,
+    algorithm: SignatureAlgorithm,
     document_b64: String,
     chain_b64: String,
     presigned: PreSignature,
@@ -140,13 +143,14 @@ pub fn presign<B: Bridge + ?Sized>(
         format: request.format,
         operation: request.operation,
         document_b64: &document_b64,
-        algorithm: ALGORITHM.name(),
+        algorithm: request.algorithm.name(),
         certificate_chain_b64: &chain_b64,
         extra_params: &extra_params,
     })?;
 
     Ok(OpenCycle {
         format: request.format,
+        algorithm: request.algorithm,
         document_b64,
         chain_b64,
         presigned,
@@ -179,7 +183,7 @@ impl OpenCycle {
     ) -> Result<TokenSignatures, CycleError> {
         Ok(self
             .presigned
-            .signed_one_by_one(|pre| signer.sign(&self.certificate, pin, ALGORITHM, pre))?)
+            .signed_one_by_one(|pre| signer.sign(&self.certificate, pin, self.algorithm, pre))?)
     }
 
     /// Las firmas sintéticas de la prefirma en seco, una por bloque.
@@ -209,6 +213,7 @@ impl std::fmt::Debug for OpenCycle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OpenCycle")
             .field("format", &self.format)
+            .field("algorithm", &self.algorithm)
             .field("certificate", &self.certificate)
             .field("blocks_to_be_signed", &self.presigned.blocks().len())
             .field("cosigning", &self.already_signed_before)

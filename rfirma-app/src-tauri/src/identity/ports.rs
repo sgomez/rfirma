@@ -17,6 +17,13 @@ pub trait Token {
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
 
+    /// Comprueba que la ranura del certificado ofrece el mecanismo del algoritmo, sin pedir el secreto.
+    fn offers(
+        &self,
+        reference: &CertificateRef,
+        algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError>;
+
     /// Firma `data` con la clave privada que acompaña al certificado, con el algoritmo pedido.
     fn sign(
         &self,

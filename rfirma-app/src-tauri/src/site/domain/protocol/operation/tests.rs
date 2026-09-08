@@ -69,7 +69,7 @@ fn a_signature_carries_its_format_its_algorithm_and_the_document() {
         panic!("es una firma");
     };
     assert_eq!(request.round(), SignatureRound::First);
-    assert_eq!(request.algorithm(), "SHA256withRSA");
+    assert_eq!(request.algorithm(), AskedAlgorithm::Sha256);
     assert_eq!(request.document(), b"%PDF-1.7\n");
 }
 
@@ -111,7 +111,7 @@ fn signing_and_saving_carries_its_document_and_the_round_that_cop_asks_for() {
             panic!("es un firmar y guardar");
         };
         assert_eq!(request.round(), round, "con cop={cop}");
-        assert_eq!(request.algorithm(), "SHA256withRSA");
+        assert_eq!(request.algorithm(), AskedAlgorithm::Sha256);
         assert_eq!(request.document(), Some(b"%PDF-1.7\n".as_slice()));
     }
 }
@@ -203,11 +203,11 @@ fn signing_and_saving_reads_its_three_filename_save_properties() {
 #[test]
 fn signing_and_saving_rejects_an_algorithm_it_cannot_produce_like_sign_does() {
     let url = an_operation(&format!(
-        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA512withRSA&dat={}",
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA1withRSA&dat={}",
         dat(b"%PDF-1.7\n")
     ));
 
-    let refusal = read_operation(&url).expect_err("solo SHA256withRSA");
+    let refusal = read_operation(&url).expect_err("rFirma no firma con SHA1");
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
@@ -484,13 +484,48 @@ fn format_auto_without_data_names_the_parameter_instead_of_the_format() {
 }
 
 #[test]
+fn every_algorithm_the_published_client_sends_is_typed_or_refused_with_the_code_of_the_original() {
+    for (name, expected) in [
+        ("SHA256", Some(AskedAlgorithm::Sha256)),
+        ("SHA384", Some(AskedAlgorithm::Sha384)),
+        ("SHA512", Some(AskedAlgorithm::Sha512)),
+        ("SHA256withRSA", Some(AskedAlgorithm::Sha256)),
+        ("SHA384withRSA", Some(AskedAlgorithm::Sha384)),
+        ("SHA512withRSA", Some(AskedAlgorithm::Sha512)),
+        ("SHA256withECDSA", Some(AskedAlgorithm::Sha256)),
+        ("SHA384withECDSA", Some(AskedAlgorithm::Sha384)),
+        ("SHA512withECDSA", Some(AskedAlgorithm::Sha512)),
+        ("SHA1", None),
+        ("SHA1withRSA", None),
+        ("SHA1withECDSA", None),
+        ("SHA256withDSA", None),
+    ] {
+        let url = an_operation(&format!(
+            "op=sign&format=PAdES&algorithm={name}&dat={}",
+            dat(b"%PDF-1.7\n")
+        ));
+
+        match (read_operation(&url), expected) {
+            (Ok(SiteOperation::Sign(request)), Some(asked)) => {
+                assert_eq!(request.algorithm(), asked, "{name}");
+            }
+            (Err(refusal), None) => {
+                assert_eq!(refusal.code(), SafCode::Params, "{name}");
+                assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+            }
+            (other, _) => panic!("{name} no se atiende como toca: {other:?}"),
+        }
+    }
+}
+
+#[test]
 fn an_algorithm_rfirma_cannot_produce_names_its_parameter() {
     let url = an_operation(&format!(
-        "op=sign&format=PAdES&algorithm=SHA512withRSA&dat={}",
+        "op=sign&format=PAdES&algorithm=SHA1withRSA&dat={}",
         dat(b"%PDF-1.7\n")
     ));
 
-    let refusal = read_operation(&url).expect_err("solo SHA256withRSA");
+    let refusal = read_operation(&url).expect_err("rFirma no firma con SHA1");
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Algorithm));

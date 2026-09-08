@@ -6,8 +6,8 @@ use crate::identity::domain::certificate::ListedCertificate;
 use crate::signing::domain::bridge::Format;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::protocol::{
-    AfirmaUrl, BatchRequest, Refusal, SignAndSaveRequest, SignatureRound, SiteFilter,
-    SiteVisibleSignature,
+    AfirmaUrl, AskedAlgorithm, BatchRequest, Refusal, SignAndSaveRequest, SignatureRound,
+    SiteFilter, SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
 
@@ -106,6 +106,8 @@ pub struct SigningConsent {
     pub document: String,
     /// Formato de firma que la sede pidió, ya atendido por el puente.
     pub format: Format,
+    /// Huella que la sede pidió para esta firma.
+    pub algorithm: AskedAlgorithm,
     /// Modalidad de firma solicitada.
     pub round: SignatureRound,
     /// Certificados aceptados por la sede, ya cribados.

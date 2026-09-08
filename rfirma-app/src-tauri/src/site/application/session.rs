@@ -8,7 +8,7 @@ use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::signing::domain::Refusal as Inadmissible;
 use crate::site::application::filtering;
 use crate::site::domain::batch_error::BatchError;
-use crate::site::domain::protocol::SiteFilter;
+use crate::site::domain::protocol::{AskedAlgorithm, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{Certificates, FilterEngine, SiteSigning, SiteSigningRequest};
 
@@ -59,6 +59,8 @@ pub struct SiteTerms<'a, E: FilterEngine> {
     pub filter: &'a SiteFilter,
     /// Formato de firma que pidió la sede, ya atendido por el puente.
     pub format: Format,
+    /// Huella que pidió la sede para esta firma.
+    pub algorithm: AskedAlgorithm,
     /// Qué pidió hacer la sede con el documento.
     pub operation: SignatureOperation,
     /// Parámetros adicionales declarados por la sede.
@@ -88,6 +90,7 @@ pub fn begin_for_the_site<E: FilterEngine>(
         document,
         certificate: chosen,
         format: terms.format,
+        algorithm: terms.algorithm,
         operation: terms.operation,
         from_the_site: terms.from_the_site,
         allow_unregistered_signatures: terms.allow_unregistered_signatures,
