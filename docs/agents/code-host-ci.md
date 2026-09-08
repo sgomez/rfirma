@@ -180,6 +180,21 @@ formality: without the label the slow lane **reports green having never run**,
 so a bug at the FFI boundary merges unseen and nothing short of the next
 tagged release or the weekly cron catches it.
 
+**A job's conclusion does not distinguish "passed" from "skipped every step".**
+Read the steps, not the conclusion, whenever a green job is the evidence for
+something having run:
+
+```bash
+gh api "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" \
+  --jq '.jobs[] | {name, conclusion, steps: (.steps | length)}'
+```
+
+This is the same `steps > 0` test that tells a code-red from an infra-red
+above, applied to a *green* job. It is what catches the label arriving too
+late as well as never: `labeled` and `synchronize` compete for the same
+`concurrency` group in `ci.yml`, so labelling in the same breath as a push can
+lose the race and leave the unlabelled run as the survivor.
+
 The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of
 AutoFirma), it is the safety net for the slow lane, and it is the **watchman

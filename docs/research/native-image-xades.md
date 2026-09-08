@@ -176,11 +176,19 @@ igual que hoy hace para CAdES y PAdES.
   sin tocar la exclusión de `afirma-ui-utils`, y sin ninguna rama nueva en la frontera FFI para
   ECDSA. El único coste es tamaño (+54 %, sección 3), que es una decisión de empaquetado
   (`packaging/flatpak/`), no de esta medición.
-- **No determinado, fuera del alcance de esta nota**: XAdES Detached/Enveloped/Externally
-  Detached (solo se midió Enveloping, que es el que cita el issue), cofirma/contrafirma,
-  validación de esquema XSD explícita (que ampliaría la sección 2), y el mismo ciclo cruzando la
-  frontera FFI real con Rust firmando fuera del isolate — esto último es del ticket de
-  implementación, no de un spike.
+- **Las cuatro variantes, medidas**: Detached, Enveloping y ASiC-S firman en la imagen nativa
+  sin metadatos adicionales. **Enveloped no**: falla con `Couldn't find Canonicalizer for:
+  http://www.w3.org/TR/2001/REC-xml-c14n-20010315`, que no es un recurso ausente sino un fallo
+  reflexivo de `JavaUtils.newInstanceWithEmptyConstructor` disfrazado de uno. Necesita en
+  `reachability-metadata.json` los dos `Canonicalizer20010315*` y la tabla de funciones XPath de
+  Xalan del JDK (`com.sun.org.apache.xpath.internal.functions.Func*`, que `FunctionTable`
+  instancia por nombre); con solo los canonicalizadores el siguiente fallo es `FuncNot.<init>()`.
+  Añadir `-H:IncludeResources` para `.../security/resource/config.xml` **no arregla nada**: el
+  registro de canonicalizadores ya ocurre, lo que falla es instanciarlos.
+- **No determinado, fuera del alcance de esta nota**: XAdES Externally Detached,
+  cofirma/contrafirma, validación de esquema XSD explícita (que ampliaría la sección 2), y el
+  mismo ciclo cruzando la frontera FFI real con Rust firmando fuera del isolate — esto último es
+  del ticket de implementación, no de un spike.
 
 ## Cómo reproducir
 
