@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
 use rfirma_lib::signing::domain::bridge::{
-    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, LIBRARY_FILE,
+    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, XadesVariant,
+    LIBRARY_FILE,
 };
 
 /// Un PDF mínimo en Base64 no válido para firmar.
@@ -152,6 +153,12 @@ fn a_hundred_thousand_cades_round_trips_do_not_leak_the_json_of_the_bridge() {
     a_hundred_thousand_round_trips_do_not_leak(Format::Cades);
 }
 
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn a_hundred_thousand_xades_round_trips_do_not_leak_the_json_of_the_bridge() {
+    a_hundred_thousand_round_trips_do_not_leak(Format::Xades(XadesVariant::Enveloping));
+}
+
 /// Ciclo trifásico completo contra el token y validación con pdfsig (ADR-0001, ADR-0014).
 mod full_cycle {
     use std::collections::BTreeMap;
@@ -166,7 +173,7 @@ mod full_cycle {
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
     use rfirma_lib::signing::domain::bridge::{
-        BridgeError, ExpandRequest, FilterRequest, Format, SignatureOperation,
+        BridgeError, ExpandRequest, FilterRequest, Format, SignatureOperation, XadesVariant,
     };
     use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
@@ -322,11 +329,12 @@ mod full_cycle {
         operation: SignatureOperation,
         declared: &[(&str, &str)],
     ) -> Vec<u8> {
-        cades_cycle_with(cycle::ALGORITHM, data, operation, declared)
+        a_cycle_of(Format::Cades, cycle::ALGORITHM, data, operation, declared)
     }
 
-    /// El mismo ciclo, con el algoritmo que la sede haya pedido.
-    fn cades_cycle_with(
+    /// El mismo ciclo, para el formato y el algoritmo que la sede haya pedido.
+    fn a_cycle_of(
+        format: Format,
         algorithm: SignatureAlgorithm,
         data: &[u8],
         operation: SignatureOperation,
@@ -351,18 +359,18 @@ mod full_cycle {
         let cycle = cycle::presign(
             &bridge,
             SigningRequest {
-                format: Format::Cades,
+                format,
                 algorithm,
                 operation,
-                document: AdmissibleDocument::check_for(Format::Cades, data)
-                    .expect("CAdES firma cualquier byte"),
+                document: AdmissibleDocument::check_for(format, data)
+                    .expect("el puente firma cualquier byte fuera de PAdES"),
                 chain: &chain,
                 config: &config,
                 from_the_site: &from_the_site,
                 certificate: &reference,
             },
         )
-        .expect("la prefirma CAdES debería salir");
+        .unwrap_or_else(|error| panic!("la prefirma en {format} debería salir: {error}"));
 
         let signature = cycle
             .sign_on_token(&pkcs11::RealToken, PIN)
@@ -370,7 +378,7 @@ mod full_cycle {
 
         cycle
             .postsign(&bridge, signature, &cycle.seal_in_transit())
-            .expect("la postfirma debería ensamblar el CMS")
+            .unwrap_or_else(|error| panic!("la postfirma en {format} debería ensamblar: {error}"))
             .into_signed_document()
     }
 
@@ -464,7 +472,8 @@ mod full_cycle {
         let algorithm = composed_for(AskedAlgorithm::Sha512, signing_certificate().key_kind());
         assert_eq!(algorithm, SignatureAlgorithm::Sha512Rsa);
 
-        let signed = cades_cycle_with(
+        let signed = a_cycle_of(
+            Format::Cades,
             algorithm,
             CHALLENGE,
             SignatureOperation::Sign,
@@ -484,6 +493,114 @@ mod full_cycle {
 
         openssl_cms_finds_no_content_in(&signature);
         assert_eq!(openssl_cms_verify(&signature, Some(&challenge)), CHALLENGE);
+    }
+
+    /// El XML que firman las cuatro variantes XAdES.
+    const A_REFERENCE_XML: &[u8] = include_bytes!("../../../testdata/reference/document.xml");
+
+    fn sign_xades(variant: XadesVariant) -> Vec<u8> {
+        a_cycle_of(
+            Format::Xades(variant),
+            cycle::ALGORITHM,
+            A_REFERENCE_XML,
+            SignatureOperation::Sign,
+            &[],
+        )
+    }
+
+    fn signed_xml(variant: XadesVariant, name: &str) -> String {
+        let signed = sign_xades(variant);
+        let path = write_to_target(name, &signed);
+
+        the_original_validator_accepts(&path);
+        String::from_utf8(signed).expect("una firma XAdES es XML en UTF-8")
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_enveloping_xades_signature_carries_the_document_inside_and_validates() {
+        let signed = signed_xml(XadesVariant::Enveloping, "xades-enveloping.xml");
+
+        assert!(
+            signed.contains("Signature"),
+            "el XML firmado lleva la firma: {signed}"
+        );
+        assert!(
+            !signed.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<documento"),
+            "en Enveloping la raíz es la firma y no el documento: {signed}"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_detached_xades_signature_leaves_the_data_beside_it_and_validates() {
+        let signed = signed_xml(XadesVariant::Detached, "xades-detached.xml");
+
+        assert!(
+            signed.contains("Documento de prueba"),
+            "en Detached los datos viajan al lado de la firma: {signed}"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_enveloped_xades_signature_keeps_the_root_of_the_document_and_validates() {
+        let signed = signed_xml(XadesVariant::Enveloped, "xades-enveloped.xml");
+
+        assert!(
+            signed.contains("<documento") && signed.contains("Signature"),
+            "en Enveloped la firma cuelga del documento y la raíz sigue siendo la suya: {signed}"
+        );
+    }
+
+    /// Las entradas que el ASiC-S del original mete en el ZIP.
+    const ASIC_SIGNATURE_ENTRY: &[u8] = b"META-INF/signatures.xml";
+    const ASIC_DATA_ENTRY: &[u8] = b"dataobject.xml";
+    const ASIC_MIME_TYPE: &[u8] = b"application/vnd.etsi.asic-s+zip";
+
+    fn contains(container: &[u8], needle: &[u8]) -> bool {
+        container
+            .windows(needle.len())
+            .any(|window| window == needle)
+    }
+
+    /// El ASiC-S no lo valida `afirma-crypto-validation`: su firma es externally
+    /// detached y la referencia se resuelve con el fichero que viaja en el ZIP,
+    /// que es lo que comprueba `XadesVariantsTest` del puente.
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_asic_s_xades_signature_comes_back_as_a_container_with_the_document_and_its_signature() {
+        let container = sign_xades(XadesVariant::AsicS);
+
+        assert_eq!(
+            &container[..4],
+            b"PK\x03\x04",
+            "un ASiC-S es un ZIP y empieza por su firma de fichero local"
+        );
+        for entry in [ASIC_MIME_TYPE, ASIC_DATA_ENTRY, ASIC_SIGNATURE_ENTRY] {
+            assert!(
+                contains(&container, entry),
+                "al contenedor le falta {}",
+                String::from_utf8_lossy(entry)
+            );
+        }
+    }
+
+    /// JAXP y xmlsec arrancan perezosos dentro de la imagen: la primera firma
+    /// XAdES es la que los levanta, y aquí se mide cuánto cuesta.
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn the_first_xades_signature_does_not_blow_the_resident_memory_up() {
+        const CEILING: u64 = 64 * 1024 * 1024;
+
+        let before = super::resident_bytes();
+        let _ = sign_xades(XadesVariant::Enveloping);
+        let growth = super::resident_bytes().saturating_sub(before);
+
+        assert!(
+            growth < CEILING,
+            "la primera firma XAdES ha añadido {growth} bytes de residente"
+        );
     }
 
     /// La firma CAdES implícita del banco de referencia, la entrada de una cofirma o una contrafirma.

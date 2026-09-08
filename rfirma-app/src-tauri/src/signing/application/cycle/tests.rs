@@ -10,7 +10,7 @@ use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
-    SignatureOperation, XadesVariant,
+    SignatureOperation, XmlDsigVariant,
 };
 use crate::signing::domain::{AdmissibleDocument, SessionSeal, SignatureConfig};
 use crate::signing::ports::{Bridge, Signer};
@@ -46,6 +46,8 @@ fn java_has_no_entry_point_for_the_signing_phase() {
         "autofirma_free_string",
         "autofirma_pades_postsign",
         "autofirma_pades_presign",
+        "autofirma_xades_postsign",
+        "autofirma_xades_presign",
     ]
     .into_iter()
     .map(str::to_owned)
@@ -239,7 +241,7 @@ fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
 
     for format in [
         Format::CadesAsicS,
-        Format::Xades(XadesVariant::Enveloped),
+        Format::XmlDsig(XmlDsigVariant::Enveloped),
         Format::FacturaE,
     ] {
         let document =

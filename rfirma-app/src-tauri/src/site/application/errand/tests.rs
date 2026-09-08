@@ -24,7 +24,7 @@ use crate::signing::application::session::{self, CycleFailure, DocumentToSign, S
 use crate::signing::application::tests::{
     a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE,
 };
-use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation, XadesVariant};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::ports::{Bridge, IsolateHost, Signer};
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
@@ -1830,51 +1830,11 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
     assert_eq!(saving.starting_folder.as_deref(), Some("/home/persona"));
 }
 
-#[test]
-fn a_chosen_document_that_is_not_a_pdf_under_format_auto_is_refused_by_the_bridge() {
-    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let memory = a_memory(home.path());
-    let listed = ListedCertificates::new();
-    let opened = OpenedDocuments::new();
-    let live = a_live();
-    let engine = AnEngine::answering(&[]);
-    let policies = APolicyEngine::answering("");
-    let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    let url = a_sign_and_save_without_dat("&format=auto");
-    let request = sign_and_save_requested(&url);
-
-    let step = crate::site::application::errand::consent_to_sign_and_save_with_chosen_document(
-        &desk,
-        request,
-        b"<?xml version=\"1.0\"?><Facturae/>".to_vec(),
-        None,
-        Vec::new(),
-        &live,
-    );
-
-    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = step else {
-        panic!("el XML elegido sale con el formato que el puente no atiende: {step:?}");
-    };
-    let (told, code) = crate::site::adapters::frontier::told(&refusal);
-    assert_eq!(code, SafCode::UnsupportedFormat);
-    assert_eq!(told.situation, "bridgeFailed");
-}
-
 /// El rechazo por formato lo da el puente, no el protocolo: la sede recibe el
 /// mismo `SAF_06` que antes daba la comprobación de texto de `sign`.
 #[test]
 fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
-    for (format, document) in [("XAdES", A_PDF), ("CAdES-ASiC-S", A_PDF)] {
+    for (format, document) in [("XMLDSig", A_PDF), ("CAdES-ASiC-S", A_PDF)] {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
         let memory = a_memory(home.path());
         let ours = vec![a_usable_certificate("FIRMA")];
@@ -1916,6 +1876,11 @@ fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
     for (format, document, expected) in [
         ("PAdES", A_PDF, Format::Pades),
         ("auto", &[0x00, 0x01, 0x02][..], Format::Cades),
+        (
+            "auto",
+            b"<?xml version=\"1.0\"?><documento/>".as_slice(),
+            Format::Xades(XadesVariant::Enveloping),
+        ),
     ] {
         let home = tempfile::tempdir().expect("debería haber directorio temporal");
         let memory = a_memory(home.path());
