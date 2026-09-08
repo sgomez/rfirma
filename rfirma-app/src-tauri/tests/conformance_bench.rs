@@ -1,19 +1,30 @@
 //! Banco de conformidad contra autoscript.js oficial ejecutado en Node (ADR-0014).
 
 use std::io::{BufRead, BufReader};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
+use std::sync::Arc;
 use std::time::Duration;
 
-use rfirma_lib::site::adapters::channel::{bind_first_free, serve};
+use rfirma_lib::desktop::adapters::paths::Paths;
+use rfirma_lib::identity::domain::store::Store;
+use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
+use rfirma_lib::site::adapters::desk::Neighbours;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
+use rfirma_lib::site::application::errand::{
+    self, Errand, ErrandDesk, ErrandStep, NegotiatedCodec,
+};
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
     drawn_ports, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode, PROTOCOL_VERSION,
     THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
+use rfirma_lib::site::ports::ReplyHandle as ErrandReply;
+use rfirma_lib::Roots;
 
 /// La versión de `service` que habla el cliente publicado cuando no hay WebSocket.
 const THE_SERVICE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS: i64 = 1;
@@ -23,6 +34,18 @@ const PATIENCE: Duration = Duration::from_secs(40);
 
 /// La versión que el cliente publicado habla por defecto, y la que rfirma implementa.
 const THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS: i64 = 4;
+
+/// El guion de una sola selección, el de los casos que solo miran la invocación de arranque.
+const THE_SINGLE_SELECTION: &str = "selectcert";
+
+/// El guion de tres selecciones con el certificado fijado y soltado.
+const THE_STICKY_SELECTIONS: &str = "sticky";
+
+/// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
+const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
+
+/// Intentos de atar la ubicación del canal antes de darla por ocupada.
+const PORT_ATTEMPTS: usize = 60;
 
 /// Modo en el que se fuerza al `autoscript.js` publicado a hablar, porque nunca manda `v=3` por
 /// websocket por su cuenta.
@@ -115,12 +138,18 @@ impl PublishedClient {
 
     /// Arranca el conductor con la CA local en NODE_EXTRA_CA_CERTS, en el modo indicado.
     fn running_as(ca_pem_path: &std::path::Path, mode: BenchMode) -> Self {
+        Self::running_the_script(ca_pem_path, mode, THE_SINGLE_SELECTION)
+    }
+
+    /// Arranca el conductor con uno de los guiones del banco.
+    fn running_the_script(ca_pem_path: &std::path::Path, mode: BenchMode, script: &str) -> Self {
         let mut child = Command::new("node")
             .arg(the_driver())
             .env("RFIRMA_AUTOSCRIPT", the_published_client())
             .env("NODE_EXTRA_CA_CERTS", ca_pem_path)
             .env("RFIRMA_BENCH_TIMEOUT_MS", PATIENCE.as_millis().to_string())
             .env("RFIRMA_BENCH_MODE", mode.as_env_value())
+            .env("RFIRMA_BENCH_SCRIPT", script)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
@@ -158,7 +187,8 @@ impl PublishedClient {
         assert_eq!(
             event.name(),
             "launch",
-            "el primer evento del banco es la invocacion"
+            "el primer evento del banco es la invocacion, y llego {}",
+            event.0
         );
         event.field("url").to_owned()
     }
@@ -206,7 +236,18 @@ async fn the_channel_on_one_of(
     material: &ChannelMaterial,
     duty: ChannelDuty,
 ) -> OpenChannel {
-    the_channel_at(&ChannelLocation::Drawn(drawn_ports(url)), material, duty).await
+    the_channel_at(
+        &ChannelLocation::Drawn(drawn_ports(url)),
+        material,
+        duty,
+        no_operations(),
+    )
+    .await
+}
+
+/// Canal que no atiende ninguna operación: el caso se acaba antes de que llegue.
+fn no_operations() -> SiteOperations {
+    Arc::new(|_, _| {})
 }
 
 /// Abre el canal en la ubicación indicada: uno de los puertos sorteados, o el puerto fijo del
@@ -215,16 +256,32 @@ async fn the_channel_at(
     location: &ChannelLocation,
     material: &ChannelMaterial,
     duty: ChannelDuty,
+    operations: SiteOperations,
 ) -> OpenChannel {
-    let listener = bind_first_free(location).expect("la ubicacion del canal deberia estar libre");
     serve(
-        listener,
+        bound_once_free(location).await,
         &material.certificate,
         duty,
-        std::sync::Arc::new(|_, _| {}),
+        operations,
     )
     .await
     .expect("el canal deberia levantarse")
+}
+
+/// Ata la ubicación esperando a que se libere: el puerto fijo del protocolo 3 es el mismo en cada
+/// invocación del guion, y la anterior tarda en soltarlo.
+async fn bound_once_free(location: &ChannelLocation) -> TcpListener {
+    let mut refusal = String::new();
+    for _ in 0..PORT_ATTEMPTS {
+        match bind_first_free(location) {
+            Ok(listener) => return listener,
+            Err(error) => {
+                refusal = error.to_string();
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+        }
+    }
+    panic!("la ubicacion del canal no se libero: {refusal}")
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -335,6 +392,7 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
         launch.location(),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
+        no_operations(),
     )
     .await;
     assert_eq!(
@@ -381,4 +439,189 @@ async fn without_websocket_the_published_client_falls_back_to_service_v1() {
         20,
         "la credencial de canal son veinte alfanumericos, igual que en 'websocket'"
     );
+}
+
+/// El módulo PKCS#11 del token de pruebas.
+fn the_test_module() -> PathBuf {
+    let module = PathBuf::from(
+        std::env::var("RFIRMA_PKCS11_MODULE")
+            .unwrap_or_else(|_| "/usr/lib/softhsm/libsofthsm2.so".to_owned()),
+    );
+    assert!(
+        module.is_file(),
+        "falta el modulo PKCS#11 en {}. La grada C necesita SoftHSM:\n  \
+         sudo apt install -y softhsm2 opensc\n  just token",
+        module.display()
+    );
+    module
+}
+
+/// Las cinco raíces de un rFirma en marcha que solo ve el token de pruebas y recuerda bajo esa
+/// carpeta, para que el caso arranque siempre sin certificado recordado.
+fn a_running_rfirma(home: &std::path::Path) -> Roots {
+    let mut roots = rfirma_lib::roots(Paths::under(home));
+    roots.identity.stores = vec![Store::module(the_test_module())];
+    roots
+}
+
+/// El trámite atendiendo la operación del canal, consintiendo con el certificado de pruebas cuando
+/// se lo pide, y llevando la cuenta de las veces que lo ha pedido.
+fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+    let consents = Arc::clone(consents);
+
+    Arc::new(move |url, reply| {
+        let desk = ErrandDesk {
+            engine: &roots.signing.isolate,
+            policies: &roots.signing.isolate,
+            neighbours: Neighbours {
+                identity: &roots.identity,
+                documents: &roots.documents,
+                signing: &roots.signing,
+            },
+            scratch_dir: roots.site.scratch_dir.clone(),
+            scratch: roots.site.scratch.clone(),
+            batch: roots.site.batch.clone(),
+        };
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingForConsent { certificates, .. }) =
+            errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+
+        consents.fetch_add(1, Ordering::SeqCst);
+        let chosen = certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| {
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+            });
+        errand::consent(&desk, &chosen.id, live).expect("el consentimiento deberia entregarse");
+    })
+}
+
+/// El códec con el que rFirma contesta a una invocación de esa versión.
+fn the_codec_of(roots: &Roots, launch: &LaunchRequest) -> NegotiatedCodec {
+    match launch.version() {
+        THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS => Arc::clone(&roots.site.codecs.v4),
+        3 => Arc::clone(&roots.site.codecs.v3),
+        other => panic!("el guion no habla la version {other}"),
+    }
+}
+
+/// Atiende la siguiente selección del guion: abre el canal donde la sede lo invocó, deja que el
+/// trámite la conteste y devuelve el evento del `successCallback` del cliente publicado.
+async fn the_next_selection(
+    client: &PublishedClient,
+    material: &ChannelMaterial,
+    roots: &Arc<Roots>,
+    consents: &Arc<AtomicUsize>,
+) -> Event {
+    let url = client.the_launch_url();
+    let parsed =
+        AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
+    let launch = LaunchRequest::from_url(&parsed).expect("la invocacion deberia atenderse");
+
+    let channel = the_channel_at(
+        launch.location(),
+        material,
+        ChannelDuty::Serve(launch.credential().clone()),
+        the_errand_of(roots, consents),
+    )
+    .await;
+    assert!(
+        roots.site.errand.begin(Errand::of(
+            launch.credential().clone(),
+            channel.port(),
+            the_codec_of(roots, &launch),
+        )),
+        "la seleccion anterior deberia haber cerrado su tramite"
+    );
+
+    let event = client.next_event();
+    channel.close();
+    event
+}
+
+/// El certificado que el `successCallback` del cliente publicado recibió.
+fn the_certificate_of(event: &Event, step: &str) -> String {
+    assert_eq!(
+        event.name(),
+        "success",
+        "la seleccion '{step}' tenia que acabar en el successCallback, y acabo en {}: {}",
+        event.name(),
+        event.field("message")
+    );
+    assert_eq!(event.field("step"), step, "las selecciones llegan en orden");
+    event.field("data").to_owned()
+}
+
+/// Tres selecciones seguidas del cliente publicado: `sticky` contesta la segunda sin volver a
+/// preguntar, y `resetsticky` hace que la tercera se vuelva a preguntar.
+async fn the_sticky_selections_of(mode: BenchMode) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let consents = Arc::new(AtomicUsize::new(0));
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_the_script(
+        material.ca_pem_file.path(),
+        mode,
+        THE_STICKY_SELECTIONS,
+    );
+
+    let stuck = the_next_selection(&client, &material, &roots, &consents).await;
+    let first = the_certificate_of(&stuck, "stuck");
+    assert_eq!(
+        consents.load(Ordering::SeqCst),
+        1,
+        "la primera seleccion siempre pregunta"
+    );
+
+    let again = the_next_selection(&client, &material, &roots, &consents).await;
+    assert_eq!(
+        the_certificate_of(&again, "stuck-again"),
+        first,
+        "sticky devuelve el mismo certificado que quedo fijado"
+    );
+    assert_eq!(
+        consents.load(Ordering::SeqCst),
+        1,
+        "con sticky la segunda seleccion se contesta sin momento de consentimiento"
+    );
+
+    let released = the_next_selection(&client, &material, &roots, &consents).await;
+    assert_eq!(
+        the_certificate_of(&released, "released"),
+        first,
+        "tras resetsticky se vuelve a entregar el certificado, ya consentido de nuevo"
+    );
+    assert_eq!(
+        consents.load(Ordering::SeqCst),
+        2,
+        "resetsticky olvida el fijado y la seleccion vuelve a preguntar"
+    );
+
+    let done = client.next_event();
+    assert_eq!(done.name(), "done", "el guion tenia que acabar entero");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn sticky_spares_the_second_selection_of_the_published_client_from_asking_again() {
+    the_sticky_selections_of(BenchMode::Fourth).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn sticky_spares_the_second_selection_also_over_the_third_protocol() {
+    the_sticky_selections_of(BenchMode::Third).await;
 }
