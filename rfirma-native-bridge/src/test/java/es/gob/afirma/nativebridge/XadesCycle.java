@@ -50,9 +50,14 @@ final class XadesCycle {
     }
 
     static byte[] sign(final byte[] document, final Properties extraParams) throws Exception {
+        return sign(document, extraParams, "sign");
+    }
+
+    static byte[] sign(final byte[] document, final Properties extraParams, final String operation)
+            throws Exception {
         final X509Certificate[] chain = TestFixtures.certificateChain();
         final XadesBridge.PreSignResult pre =
-                XadesBridge.preSign(document, ALGORITHM, chain, extraParams, "sign");
+                XadesBridge.preSign(document, ALGORITHM, chain, extraParams, operation);
         return XadesBridge.postSign(document, chain, pre.stamp(), pre.session(), pkcs1For(pre));
     }
 

@@ -105,25 +105,6 @@ class XadesPreSignTest {
     }
 
     @Test
-    void refuses_a_cosign_naming_what_is_missing() throws Exception {
-        final Exception failure = assertThrows(IllegalArgumentException.class,
-                () -> preSign(new Properties(), "cosign"));
-
-        assertTrue(failure.getMessage().contains("cosign"), failure.getMessage());
-        final String json = NativeBridge.errorJson(failure);
-        assertTrue(json.startsWith("{\"ok\":false"), json);
-        assertTrue(json.contains("cosign"), json);
-    }
-
-    @Test
-    void refuses_a_countersign_naming_what_is_missing() throws Exception {
-        final Exception failure = assertThrows(IllegalArgumentException.class,
-                () -> preSign(new Properties(), "countersign"));
-
-        assertTrue(failure.getMessage().contains("countersign"), failure.getMessage());
-    }
-
-    @Test
     void refuses_an_operation_it_does_not_know() throws Exception {
         final Exception failure = assertThrows(IllegalArgumentException.class,
                 () -> preSign(new Properties(), "encrypt"));

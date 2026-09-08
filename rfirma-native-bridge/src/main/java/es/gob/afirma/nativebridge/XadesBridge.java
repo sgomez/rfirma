@@ -4,12 +4,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TimeZone;
 
 import es.gob.afirma.core.signers.AOSignConstants;
+import es.gob.afirma.core.signers.CounterSignTarget;
 import es.gob.afirma.core.signers.TriphaseData;
 import es.gob.afirma.core.signers.asic.ASiCUtil;
 import es.gob.afirma.signers.xades.XAdESConstants;
@@ -27,16 +30,23 @@ import es.gob.afirma.triphase.signer.processors.XAdESTriPhasePreProcessor;
  * <p><b>La fase 2 no esta aqui, y no va a estarlo (ADR-0001).</b> La clave
  * privada no entra nunca en el isolate de Java.
  *
- * <p>Atiende <b>solo {@code sign}</b>, en las variantes <b>Enveloping</b>
- * —la que el original toma por defecto—, <b>Detached</b>, <b>Enveloped</b> y
- * <b>XAdES-ASiC-S</b>. La cofirma, la contrafirma y cualquier otra variante se
- * rechazan nombrando lo que falta.
+ * <p>Las tres operaciones —{@code sign}, {@code cosign} y {@code countersign}—
+ * entran por los mismos dos metodos. Solo {@code sign} elige variante
+ * —Enveloping, Detached, Enveloped o ASiC-S—: cofirmar y contrafirmar operan
+ * sobre la estructura del XML que reciben, sin volver a elegirla.
  *
  * <p>A diferencia de CAdES, la prefirma XAdES es una <b>firma completa hecha con
  * una clave temporal</b>: la sesion se lleva ese XML en {@code BASE} —sin las
  * partes comunes— y la postfirma lo reinyecta cambiando el {@code SignatureValue}
  * de mentira por el PKCS#1 real. El {@code BASE} es, entonces, el documento que
- * de verdad se firma, y por eso el sello lo cubre.
+ * de verdad se firma, y por eso el sello lo cubre. Una contrafirma prefirma
+ * <b>una hoja o mas</b>, pero el {@code BASE} solo viaja en la primera prefirma
+ * de la sesion (una sola sustitucion basta para todas).
+ *
+ * <p>El identificador de cada {@link PreSign} es su <b>posicion</b> en la sesion,
+ * no el {@code Id} que trae el {@code TriSign}: en una contrafirma de varias
+ * hojas el original puede repetir el mismo {@code Id} en mas de una, porque solo
+ * lo usa para localizar el hueco a sustituir por indice.
  */
 public final class XadesBridge {
 
@@ -48,6 +58,8 @@ public final class XadesBridge {
     private static final String PROPERTY_PKCS1 = "PK1";
     /** La operacion que abrio la sesion, para que la postfirma no pueda cambiarla. */
     private static final String PROPERTY_OPERATION = "OP";
+    /** El objetivo de la contrafirma, por lo mismo. */
+    private static final String PROPERTY_TARGET = "TARGET";
     /** El XML firmado con la clave temporal y sin las partes comunes. */
     private static final String PROPERTY_XML_BASE = "BASE";
     /** La codificacion con la que la postfirma descodifica el {@code BASE}. */
@@ -56,6 +68,8 @@ public final class XadesBridge {
     private static final String OPERATION_SIGN = "sign";
     private static final String OPERATION_COSIGN = "cosign";
     private static final String OPERATION_COUNTERSIGN = "countersign";
+    private static final Set<String> OPERATIONS =
+            Set.of(OPERATION_SIGN, OPERATION_COSIGN, OPERATION_COUNTERSIGN);
 
     private static final String PARAM_FORMAT = "format";
     private static final String FORMAT_XADES = "XAdES";
@@ -70,9 +84,13 @@ public final class XadesBridge {
     private static final String PARAM_REFERENCES_DIGEST = "referencesDigestMethod";
     private static final String PARAM_ASICS_FILENAME = "asicsFilename";
 
+    private static final String PARAM_TARGET = "target";
+    private static final String TARGET_TREE = "tree";
+    private static final String TARGET_LEAFS = "leafs";
+
     private XadesBridge() { }
 
-    /** El {@code SignedInfo} de una de las firmas de la sesion, con su identificador. */
+    /** El {@code SignedInfo} de una de las firmas de la sesion, con su posicion. */
     public record PreSign(String id, String pre) { }
 
     /** Lo que la prefirma entrega a Rust. */
@@ -82,42 +100,58 @@ public final class XadesBridge {
     public record SignatureValue(String id, String pkcs1B64) { }
 
     /**
-     * Prefirma XAdES en la variante que pida {@code extraParams.format}.
+     * Prefirma XAdES: {@code sign} en la variante que pida {@code extraParams.format},
+     * {@code cosign} o {@code countersign} —con {@code extraParams.target}— sobre un
+     * XML ya firmado.
      *
      * <p>Cada {@code pre} es el <b>{@code SignedInfo} canonicalizado</b>: Rust lo
      * hashea y lo firma igual que el bloque de CAdES, sin tratarlo distinto.
      *
-     * @param document    XML a firmar.
+     * @param document    XML a firmar, o la firma XAdES a cofirmar o contrafirmar.
      * @param algorithm   algoritmo de firma, p.ej. {@code SHA256withRSA}.
      * @param chain       cadena de certificados del firmante.
-     * @param extraParams los extraParams enviados; la politica y {@code format} viajan
-     *                    aqui sin traducir.
-     * @param operation   {@code sign}: ninguna otra esta implementada todavia.
+     * @param extraParams los extraParams enviados; la politica, {@code format} y
+     *                    {@code target} viajan aqui sin traducir.
+     * @param operation   {@code sign}, {@code cosign} o {@code countersign}.
      */
     public static PreSignResult preSign(final byte[] document, final String algorithm,
             final X509Certificate[] chain, final Properties extraParams, final String operation)
             throws Exception {
 
-        requireSignOperation(operation);
-        final Properties effectiveParams = variantParams(extraParams);
+        final String requested = requireKnownOperation(operation);
+        final String target =
+                OPERATION_COUNTERSIGN.equals(requested) ? counterSignTarget(extraParams) : null;
+        final Properties effectiveParams =
+                OPERATION_SIGN.equals(requested) ? variantParams(extraParams) : copyOf(extraParams);
+        if (target != null) {
+            effectiveParams.setProperty(PARAM_TARGET, target);
+        }
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
-        final TriphaseData session = new XAdESTriPhasePreProcessor().preProcessPreSign(
-                signerDocument(effectiveParams, document), algorithm, chain,
-                signerParams(effectiveParams, document), false);
+        final XAdESTriPhasePreProcessor processor = new XAdESTriPhasePreProcessor();
+        final TriphaseData session = switch (requested) {
+            case OPERATION_COSIGN -> processor.preProcessPreCoSign(
+                    document, algorithm, chain, effectiveParams, false);
+            case OPERATION_COUNTERSIGN -> processor.preProcessPreCounterSign(
+                    document, algorithm, chain, effectiveParams,
+                    CounterSignTarget.getTarget(target), false);
+            default -> processor.preProcessPreSign(
+                    signerDocument(effectiveParams, document), algorithm, chain,
+                    signerParams(effectiveParams, document), false);
+        };
 
-        if (session.getSignsCount() != 1) {
-            throw new IllegalStateException("una firma XAdES prefirma una sola vez, y la prefirma"
-                    + " ha devuelto " + session.getSignsCount() + " firmas");
+        if (session.getSignsCount() < 1) {
+            throw new IllegalStateException("la prefirma XAdES no ha devuelto ninguna firma");
         }
+        final List<TriphaseData.TriSign> signs = session.getTriSigns();
         final List<PreSign> pres = new ArrayList<>();
-        for (final TriphaseData.TriSign signConfig : session.getTriSigns()) {
-            final String pre = signConfig.getProperty(PROPERTY_PRESIGN);
+        for (int i = 0; i < signs.size(); i++) {
+            final String pre = signs.get(i).getProperty(PROPERTY_PRESIGN);
             if (pre == null) {
                 throw new IllegalStateException("la prefirma XAdES no ha devuelto PRE");
             }
-            pres.add(new PreSign(signConfig.getId(), pre));
+            pres.add(new PreSign(String.valueOf(i), pre));
         }
 
         final TriphaseData.TriSign first = session.getSign(0);
@@ -129,11 +163,13 @@ public final class XadesBridge {
         // Igual que en CAdES, la sesion no trae TIME: lo anade el puente, y con el
         // la operacion, para que la postfirma tenga contra que comparar el sello.
         first.addProperty(PROPERTY_SIGN_TIME, time);
-        first.addProperty(PROPERTY_OPERATION, OPERATION_SIGN);
+        first.addProperty(PROPERTY_OPERATION, requested);
+        if (target != null) {
+            first.addProperty(PROPERTY_TARGET, target);
+        }
 
         final SessionStamp stamp = SessionStamp
-                .of(algorithm, time, timeZone, effectiveParams, document, chain, OPERATION_SIGN,
-                        null)
+                .of(algorithm, time, timeZone, effectiveParams, document, chain, requested, target)
                 .withXmlBase(xmlBase, first.getProperty(PROPERTY_XML_ENCODING));
 
         return new PreSignResult(session.toString(), List.copyOf(pres), stamp.encode());
@@ -143,16 +179,16 @@ public final class XadesBridge {
      * Postfirma XAdES: sustituye el {@code SignatureValue} temporal por el PKCS#1
      * real y devuelve el XML firmado.
      *
-     * <p>Los {@code extraParams}, el algoritmo y la operacion salen del <b>sello</b>,
-     * no del llamante (ADR-0016). Lo que viaja aparte —la sesion trifasica, el
-     * documento y la cadena de certificados— se compara contra el sello antes de
-     * firmar, y en XAdES eso incluye el {@code BASE}.
+     * <p>Los {@code extraParams}, el algoritmo, la operacion y el objetivo de la
+     * contrafirma salen del <b>sello</b>, no del llamante (ADR-0016). Lo que viaja
+     * aparte —la sesion trifasica, el documento y la cadena de certificados— se
+     * compara contra el sello antes de firmar, y en XAdES eso incluye el {@code BASE}.
      *
      * @param document   el MISMO XML que recibio la prefirma.
      * @param chain      la MISMA cadena de certificados.
      * @param stampB64   el sello que devolvio la prefirma, tal cual.
      * @param sessionXml el {@code TriphaseData} de la prefirma, tal cual.
-     * @param pkcs1s     el PKCS#1 de la prefirma de la sesion, con su identificador.
+     * @param pkcs1s     un PKCS#1 por cada prefirma de la sesion, con su posicion.
      */
     public static byte[] postSign(final byte[] document, final X509Certificate[] chain,
             final String stampB64, final String sessionXml, final List<SignatureValue> pkcs1s)
@@ -161,9 +197,8 @@ public final class XadesBridge {
         final SessionStamp stamp = SessionStamp.decode(stampB64);
         final TriphaseData session =
                 TriphaseData.parser(sessionXml.getBytes(StandardCharsets.UTF_8));
-        if (session.getSignsCount() != 1) {
-            throw new IllegalStateException("una sesion trifasica de firma XAdES contiene una sola"
-                    + " firma, y esta contiene " + session.getSignsCount());
+        if (session.getSignsCount() < 1) {
+            throw new IllegalStateException("la sesion trifasica no contiene ninguna firma");
         }
         final TriphaseData.TriSign first = session.getSign(0);
 
@@ -177,11 +212,14 @@ public final class XadesBridge {
         }
 
         final String sessionOperation = first.getProperty(PROPERTY_OPERATION);
-        if (!stamp.matchesOperation(sessionOperation, null)) {
+        final String sessionTarget = first.getProperty(PROPERTY_TARGET);
+        if (!stamp.matchesOperation(sessionOperation, sessionTarget)) {
             throw new SessionStampMismatchException(
                     "la operacion de la sesion trifasica no es la que se sello: "
-                            + stamp.operation() + " en el sello frente a " + sessionOperation
-                            + " en la sesion.");
+                            + describe(stamp.operation(), stamp.target()) + " en el sello frente a "
+                            + describe(sessionOperation, sessionTarget) + " en la sesion. Firmar"
+                            + " asi produciria una firma de otra operacion distinta de la que se"
+                            + " prefirmo, y sin dar ningun error.");
         }
 
         if (!stamp.matchesDocument(document)) {
@@ -209,46 +247,98 @@ public final class XadesBridge {
                             + " ningun error.");
         }
 
-        attachPkcs1(first, pkcs1s);
+        attachPkcs1(session, pkcs1s);
 
         final Properties effectiveParams = stamp.extraParams();
-        final byte[] signature = new XAdESTriPhasePreProcessor().preProcessPostSign(
-                signerDocument(effectiveParams, document), stamp.algorithm(), chain,
-                signerParams(effectiveParams, document), session);
+        final XAdESTriPhasePreProcessor processor = new XAdESTriPhasePreProcessor();
+        final byte[] signature = switch (requireKnownOperation(stamp.operation())) {
+            case OPERATION_COSIGN -> processor.preProcessPostCoSign(
+                    document, stamp.algorithm(), chain, effectiveParams, session);
+            case OPERATION_COUNTERSIGN -> processor.preProcessPostCounterSign(
+                    document, stamp.algorithm(), chain, effectiveParams, session,
+                    CounterSignTarget.getTarget(stamp.target()));
+            default -> processor.preProcessPostSign(
+                    signerDocument(effectiveParams, document), stamp.algorithm(), chain,
+                    signerParams(effectiveParams, document), session);
+        };
 
         return isAsicS(effectiveParams) ? asicSContainer(signature, document, effectiveParams)
                 : signature;
     }
 
-    private static void attachPkcs1(final TriphaseData.TriSign signConfig,
+    /**
+     * Cada PKCS#1 se identifica por su <b>posicion</b> en la sesion, no por el
+     * {@code Id} del {@code TriSign}: en una contrafirma de varias hojas el
+     * original puede repetirlo, y la postfirma lo usa solo para localizar el
+     * hueco a sustituir por indice.
+     */
+    private static void attachPkcs1(final TriphaseData session,
             final List<SignatureValue> pkcs1s) {
-        if (pkcs1s == null || pkcs1s.size() != 1) {
-            throw new IllegalArgumentException("una firma XAdES necesita exactamente un PKCS#1, y"
-                    + " han llegado " + (pkcs1s == null ? 0 : pkcs1s.size()));
+        final List<TriphaseData.TriSign> signs = session.getTriSigns();
+        if (pkcs1s == null || pkcs1s.size() != signs.size()) {
+            throw new IllegalArgumentException("la sesion XAdES tiene " + signs.size()
+                    + " prefirma(s), y han llegado " + (pkcs1s == null ? 0 : pkcs1s.size())
+                    + " PKCS#1");
         }
-        final SignatureValue value = pkcs1s.get(0);
-        if (value.pkcs1B64() == null || value.pkcs1B64().isBlank()) {
-            throw new IllegalArgumentException(
-                    "falta el PKCS#1 de la prefirma «" + value.id() + "»");
+        final Set<String> seen = new HashSet<>();
+        for (final SignatureValue value : pkcs1s) {
+            if (value.pkcs1B64() == null || value.pkcs1B64().isBlank()) {
+                throw new IllegalArgumentException(
+                        "falta el PKCS#1 de la prefirma «" + value.id() + "»");
+            }
+            if (!seen.add(value.id())) {
+                throw new IllegalArgumentException("el PKCS#1 «" + value.id()
+                        + "» llega dos veces: el segundo pisaria al primero sin decirlo");
+            }
+            signs.get(indexOf(value.id(), signs.size())).addProperty(PROPERTY_PKCS1,
+                    value.pkcs1B64().trim());
         }
-        if (!signConfig.getId().equals(value.id())) {
-            throw new IllegalArgumentException("el PKCS#1 «" + value.id() + "» no corresponde a la"
-                    + " prefirma «" + signConfig.getId() + "» de esta sesion trifasica");
-        }
-        signConfig.addProperty(PROPERTY_PKCS1, value.pkcs1B64().trim());
     }
 
-    private static void requireSignOperation(final String operation) {
-        final String requested = operation == null ? "" : operation.trim().toLowerCase(Locale.ROOT);
-        if (OPERATION_SIGN.equals(requested)) {
-            return;
+    private static int indexOf(final String id, final int count) {
+        try {
+            final int index = Integer.parseInt(id);
+            if (index >= 0 && index < count) {
+                return index;
+            }
         }
-        if (OPERATION_COSIGN.equals(requested) || OPERATION_COUNTERSIGN.equals(requested)) {
-            throw new IllegalArgumentException("la operacion XAdES «" + requested + "» todavia no"
-                    + " esta implementada en el puente: solo lo esta sign");
+        catch (final NumberFormatException ignored) {
+            // Cae al mismo fallo que un indice fuera de rango.
+        }
+        throw new IllegalArgumentException("el PKCS#1 «" + id + "» no corresponde a ninguna"
+                + " prefirma de esta sesion trifasica");
+    }
+
+    private static String requireKnownOperation(final String operation) {
+        final String requested = operation == null ? "" : operation.trim().toLowerCase(Locale.ROOT);
+        if (OPERATIONS.contains(requested)) {
+            return requested;
         }
         throw new IllegalArgumentException(
-                "operacion XAdES desconocida: «" + operation + "»; se esperaba sign");
+                "operacion XAdES desconocida: «" + operation + "»; se esperaba sign, cosign"
+                        + " o countersign");
+    }
+
+    /**
+     * El objetivo de la contrafirma. El defecto del original en XAdES es
+     * {@code tree}, al reves que en CAdES: {@code XAdESTriPhaseSignerServerSide}
+     * solo elige {@code leafs} cuando el llamante lo pide expresamente.
+     */
+    private static String counterSignTarget(final Properties extraParams) {
+        final String sent = extraParams == null ? null : extraParams.getProperty(PARAM_TARGET);
+        if (sent == null || sent.isBlank()) {
+            return TARGET_TREE;
+        }
+        final String requested = sent.trim().toLowerCase(Locale.ROOT);
+        if (TARGET_TREE.equals(requested) || TARGET_LEAFS.equals(requested)) {
+            return requested;
+        }
+        throw new IllegalArgumentException("objetivo de contrafirma XAdES desconocido: «" + sent
+                + "»; se esperaba tree o leafs");
+    }
+
+    private static String describe(final String operation, final String target) {
+        return target == null ? String.valueOf(operation) : operation + " sobre " + target;
     }
 
     /**
@@ -279,7 +369,7 @@ public final class XadesBridge {
         if (FORMAT_ASIC_S.equalsIgnoreCase(name)) {
             return FORMAT_ASIC_S;
         }
-        throw new IllegalArgumentException("la variante XAdES \u00ab" + name + "\u00bb no la"
+        throw new IllegalArgumentException("la variante XAdES «" + name + "» no la"
                 + " atiende el puente: solo " + FORMAT_ENVELOPING + ", " + FORMAT_DETACHED + ", "
                 + FORMAT_ENVELOPED + " y " + FORMAT_ASIC_S);
     }
