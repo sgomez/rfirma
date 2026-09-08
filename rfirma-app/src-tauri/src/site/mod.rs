@@ -53,8 +53,8 @@ pub fn the_pending_batch_signed(
     }
     if root.errand.a_local_batch_is_pending() {
         return Some(
-            adapters::window::with_the_desk(app, |_desk, live| {
-                application::errand::finish_the_local_batch(secret, live)
+            adapters::window::with_the_desk(app, |desk, live| {
+                application::errand::finish_the_local_batch(desk, secret, live)
             })
             .map_err(Failure::from),
         );

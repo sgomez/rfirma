@@ -13,10 +13,11 @@ use std::path::PathBuf;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::secret::StoreSecret;
-use crate::site::domain::batch::{build_local_result, LocalBatchResult};
+use crate::site::domain::batch::build_local_result;
 use crate::site::domain::protocol::{AfirmaUrl, SiteFilter};
 
 use crate::site::application::batch;
+use crate::site::application::local_batch;
 use crate::site::application::session::{self as signing, SiteTerms};
 use crate::site::ports::{FilterEngine, PolicyEngine};
 
@@ -285,22 +286,23 @@ pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     Ok(())
 }
 
-/// Cierra el lote local con el secreto que se tecleó una sola vez para todas sus firmas; hasta
-/// que exista el bucle por elemento, ninguna se intenta y todas salen saltadas.
-pub fn finish_the_local_batch(_secret: &str, live: &LiveErrand) -> Result<(), ConsentError> {
+/// Cierra el lote local con el secreto que se tecleó una sola vez: firma cada elemento por el
+/// ciclo de sede, aplicando `stoponerror`.
+pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    secret: &str,
+    live: &LiveErrand,
+) -> Result<(), ConsentError> {
     let pending = live
         .the_local_batch_pending()
         .ok_or(ConsentError::NothingPending)?;
     let chosen = pending.chosen.clone().ok_or(ConsentError::NothingPending)?;
 
-    let skipped: Vec<LocalBatchResult> = pending
-        .batch
-        .signs()
-        .iter()
-        .map(|sign| LocalBatchResult::skipped(sign.id()))
-        .collect();
+    let results = local_batch::signed_local_batch(desk, &chosen, secret, &pending.batch)
+        .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))?;
+
     let signer_der = pending.request.needcert().then(|| chosen.der().to_vec());
-    batch_handed_over(live, build_local_result(&skipped), signer_der);
+    batch_handed_over(live, build_local_result(&results), signer_der);
     Ok(())
 }
 
