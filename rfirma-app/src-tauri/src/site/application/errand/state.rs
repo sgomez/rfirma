@@ -205,7 +205,10 @@ impl LiveErrand {
 
     /// Si el trámite tiene un lote consentido esperando el secreto.
     pub fn a_batch_is_pending(&self) -> bool {
-        matches!(&*crate::lock(&self.consent), Some(PendingConsent::Batch(_)))
+        matches!(
+            &*crate::lock(&self.consent),
+            Some(PendingConsent::Batch(pending)) if pending.chosen.is_some()
+        )
     }
 
     /// Lote pendiente, si el trámite está atendiendo uno.

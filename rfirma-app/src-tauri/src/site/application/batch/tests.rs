@@ -124,6 +124,23 @@ fn an_xml_batch_travels_as_xml_with_the_triphase_data_of_the_legacy_presigner() 
 }
 
 #[test]
+fn an_xml_presign_without_signs_still_reaches_the_postsigner() {
+    let empty = "<xml>\n <firmas format=\"PAdES\">\n </firmas>\n</xml>";
+    let services =
+        InMemoryBatchServices::answering(empty.as_bytes().to_vec(), b"<resultado/>".to_vec());
+    let token = InMemoryTokenSigning::default();
+    let certificate = a_usable_certificate("un certificado");
+    let request = a_batch_request(XML_LOTE, false);
+
+    let result = signed_batch(&a_run(&services, &token, &certificate), &request)
+        .expect("el lote XML sale entero");
+
+    assert_eq!(result, b"<resultado/>");
+    assert_eq!(services.received().len(), 2);
+    assert!(token.signed().is_empty());
+}
+
+#[test]
 fn a_presign_with_errors_sends_the_updated_batch_to_the_postsigner() {
     let services =
         InMemoryBatchServices::answering(PRESIGN_WITH_ONE_ERROR.to_vec(), b"RESULTADO".to_vec());
@@ -233,6 +250,11 @@ fn a_token_that_refuses_to_sign_stops_the_batch_before_the_postsigner() {
 
     assert!(matches!(refusal, SiteRefusal::BatchSigningFailed(_)));
     assert_eq!(services.received().len(), 1);
+    assert_eq!(
+        token.signing_attempts(),
+        1,
+        "un secreto rechazado no gasta un intento por cada firma del lote"
+    );
 }
 
 #[test]

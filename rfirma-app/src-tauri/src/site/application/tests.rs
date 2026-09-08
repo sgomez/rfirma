@@ -254,10 +254,11 @@ impl BatchServices for InMemoryBatchServices {
     }
 }
 
-/// El token en memoria del lote: cuenta los secretos que se le piden y guarda lo que firmó.
+/// El token en memoria del lote: cuenta los secretos y los intentos de firma, y guarda lo que firmó.
 #[derive(Default)]
 pub(crate) struct InMemoryTokenSigning {
     secrets_asked: Mutex<usize>,
+    attempts: Mutex<usize>,
     signed: Mutex<Vec<(String, Vec<u8>)>>,
     refusing: Option<SigningRefusal>,
 }
@@ -274,6 +275,11 @@ impl InMemoryTokenSigning {
     /// Cuántas veces se le ha pedido el secreto.
     pub(crate) fn secrets_asked(&self) -> usize {
         *crate::lock(&self.secrets_asked)
+    }
+
+    /// Cuántas veces se le ha pedido firmar, con o sin éxito.
+    pub(crate) fn signing_attempts(&self) -> usize {
+        *crate::lock(&self.attempts)
     }
 
     /// El algoritmo y los bytes de cada firma, en el orden en que se pidieron.
@@ -300,6 +306,7 @@ impl TokenSigning for InMemoryTokenSigning {
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
+        *crate::lock(&self.attempts) += 1;
         if let Some(refusal) = &self.refusing {
             return Err(refusal.clone());
         }

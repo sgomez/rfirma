@@ -3096,7 +3096,7 @@ fn a_batch_with_needcert_answers_the_result_and_the_signer() {
 }
 
 #[test]
-fn a_sticky_batch_with_a_valid_remembered_certificate_does_not_ask_for_consent() {
+fn a_sticky_batch_leaves_the_remembered_certificate_already_chosen_in_the_step() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];

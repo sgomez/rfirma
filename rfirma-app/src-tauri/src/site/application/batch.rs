@@ -94,8 +94,7 @@ fn presigned(
         }
         BatchFormat::Xml => {
             let data = TriphaseData::parse_xml(response).map_err(invalid_presign)?;
-            let signed_something = !data.signs().is_empty();
-            Ok((signed_something.then_some(data), Vec::new()))
+            Ok((Some(data), Vec::new()))
         }
     }
 }
@@ -107,13 +106,16 @@ fn every_pre_signed(
 ) -> Result<TriphaseData, SiteRefusal> {
     let mut refused: Option<SigningRefusal> = None;
     let with_pk1 = apply_pk1(triphase_data, |pre| {
+        if refused.is_some() {
+            return Vec::new();
+        }
         match run
             .token
             .sign(run.certificate, run.secret, request.algorithm(), pre)
         {
             Ok(pk1) => pk1,
             Err(refusal) => {
-                refused.get_or_insert(refusal);
+                refused = Some(refusal);
                 Vec::new()
             }
         }

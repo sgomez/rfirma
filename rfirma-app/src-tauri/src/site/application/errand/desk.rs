@@ -8,7 +8,7 @@ use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
     visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, StickyCertificate,
 };
 
 use super::outcome::{
@@ -333,28 +333,17 @@ pub fn consent_for<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    if request.sticky().resets() {
-        certificates.forget_the_remembered();
-    }
-
-    if ours.is_empty() {
-        return no_certificate_at_all();
-    }
-
-    let owned = ours.len();
-    let accepted = match filtering::keep_what_the_site_accepts(engine, request.filter(), ours) {
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
         Ok(accepted) => accepted,
-        Err(error) => {
-            return answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
-            )
-        }
+        Err(step) => return step,
     };
-
-    if accepted.is_empty() {
-        return no_certificate_the_site_accepts(live, owned);
-    }
 
     if request.sticky().is_sticky() {
         if let Some(stuck) = the_remembered_one_among(&accepted, certificates) {
@@ -379,28 +368,17 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    if request.sticky().resets() {
-        certificates.forget_the_remembered();
-    }
-
-    if ours.is_empty() {
-        return no_certificate_at_all();
-    }
-
-    let owned = ours.len();
-    let accepted = match filtering::keep_what_the_site_accepts(engine, request.filter(), ours) {
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
         Ok(accepted) => accepted,
-        Err(error) => {
-            return answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
-            )
-        }
+        Err(step) => return step,
     };
-
-    if accepted.is_empty() {
-        return no_certificate_the_site_accepts(live, owned);
-    }
 
     let rows = certificates.rows_of(accepted);
     let already_chosen = request
@@ -415,6 +393,38 @@ pub fn consent_to_the_batch<E: FilterEngine>(
         certificates: rows,
         already_chosen,
     }))
+}
+
+fn what_the_site_accepts<E: FilterEngine>(
+    engine: &E,
+    filter: &SiteFilter,
+    sticky: StickyCertificate,
+    ours: Vec<TokenCertificate>,
+    certificates: &dyn Certificates,
+    live: &LiveErrand,
+) -> Result<Vec<TokenCertificate>, ErrandStep> {
+    if sticky.resets() {
+        certificates.forget_the_remembered();
+    }
+
+    if ours.is_empty() {
+        return Err(no_certificate_at_all());
+    }
+
+    let owned = ours.len();
+    let accepted =
+        filtering::keep_what_the_site_accepts(engine, filter, ours).map_err(|error| {
+            answering(
+                live,
+                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
+            )
+        })?;
+
+    if accepted.is_empty() {
+        return Err(no_certificate_the_site_accepts(live, owned));
+    }
+
+    Ok(accepted)
 }
 
 fn the_remembered_row_among(rows: &[ListedCertificate]) -> Option<String> {

@@ -37,7 +37,7 @@ pub fn begin_signing(
 }
 
 /// Firma en el token con la clave privada (ADR-0001).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn sign_with_pin(
     pin: String,
     app_handle: tauri::AppHandle,
