@@ -7,6 +7,7 @@ use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
 use rfirma_lib::identity::application::certificates::ListedCertificates;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::store::Store;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
@@ -235,8 +236,13 @@ fn a_certificate_that_came_from_a_p12_signs() {
         .next()
         .expect("tenia que haber un certificado");
 
-    let raw = pkcs11::sign(certificate.reference(), "", PRESIGN)
-        .expect("un .p12 instalado tiene que poder firmar sin secreto que teclear");
+    let raw = pkcs11::sign(
+        certificate.reference(),
+        "",
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("un .p12 instalado tiene que poder firmar sin secreto que teclear");
 
     assert_eq!(raw.len(), 256, "RSA 2048: la firma cruda mide el modulo");
     let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");

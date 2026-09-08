@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use crate::identity::application::certificates::ListedCertificates;
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
@@ -27,6 +28,7 @@ impl Token for NoToken {
         &self,
         _reference: &CertificateRef,
         _pin: &str,
+        _algorithm: SignatureAlgorithm,
         _data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
         Err(TokenError::new(

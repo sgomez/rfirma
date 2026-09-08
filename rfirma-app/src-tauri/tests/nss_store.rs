@@ -5,6 +5,7 @@ use std::process::Command;
 
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates::ListedCertificates;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{CertificateStatus, TokenCertificate};
 use rfirma_lib::identity::domain::error::Situation;
 use rfirma_lib::identity::domain::store::{Store, StoreClass};
@@ -350,8 +351,13 @@ fn signing_with_an_nss_certificate_verifies_against_its_public_key() {
     let (_profile, store) = a_disposable_profile();
     let certificate = the_valid_one(&store);
 
-    let raw = pkcs11::sign(certificate.reference(), NO_MASTER_PASSWORD, PRESIGN)
-        .expect("un perfil sin contrasena maestra tiene que poder firmar con la cadena vacia");
+    let raw = pkcs11::sign(
+        certificate.reference(),
+        NO_MASTER_PASSWORD,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("un perfil sin contrasena maestra tiene que poder firmar con la cadena vacia");
 
     assert_eq!(raw.len(), 256);
     let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
@@ -369,8 +375,13 @@ fn a_remembered_nss_certificate_still_signs_after_a_round_trip_through_the_state
     let remembered: rfirma_lib::identity::domain::certificate::CertificateRef =
         serde_json::from_str(&written).expect("deberia leerse");
 
-    let raw = pkcs11::sign(&remembered, NO_MASTER_PASSWORD, PRESIGN)
-        .expect("la referencia recordada tenia que volver a encontrar su perfil");
+    let raw = pkcs11::sign(
+        &remembered,
+        NO_MASTER_PASSWORD,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("la referencia recordada tenia que volver a encontrar su perfil");
 
     let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
     verifying_key(&certificate)
@@ -387,8 +398,13 @@ fn a_certificate_without_a_private_key_says_so_instead_of_failing_generically() 
         .find(|certificate| certificate.reference().label().contains("AC "))
         .expect("el perfil tenia que traer alguna CA suelta");
 
-    let error = pkcs11::sign(authority.reference(), NO_MASTER_PASSWORD, PRESIGN)
-        .expect_err("una CA no tiene con que firmar");
+    let error = pkcs11::sign(
+        authority.reference(),
+        NO_MASTER_PASSWORD,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect_err("una CA no tiene con que firmar");
 
     assert_eq!(error.situation(), Situation::CertificateNotFound);
 }

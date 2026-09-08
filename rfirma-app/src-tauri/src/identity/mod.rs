@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use application::certificates::ListedCertificates;
+use domain::algorithm::SignatureAlgorithm;
 use domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use domain::error::TokenError;
 use domain::store::Store;
@@ -113,9 +114,10 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         &self,
         reference: &CertificateRef,
         pin: &str,
+        algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
-        self.0.sign(reference, pin, data)
+        self.0.sign(reference, pin, algorithm, data)
     }
 }
 
@@ -131,8 +133,9 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         &self,
         reference: &domain::certificate::CertificateRef,
         pin: &str,
+        algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, domain::error::TokenError> {
-        ports::Token::sign(self, reference, pin, data)
+        ports::Token::sign(self, reference, pin, algorithm, data)
     }
 }

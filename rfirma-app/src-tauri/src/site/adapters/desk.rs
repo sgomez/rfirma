@@ -6,6 +6,7 @@ use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
 use crate::identity::adapters::failures::code_of_token;
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
@@ -141,15 +142,15 @@ pub fn signed_by_the_token(
     algorithm: &str,
     data: &[u8],
 ) -> Result<Vec<u8>, SigningRefusal> {
-    the_token_offers(algorithm).map_err(refusal_of_token)?;
+    let asked = the_token_offers(algorithm).map_err(refusal_of_token)?;
     signer
-        .sign(certificate.reference(), secret, data)
+        .sign(certificate.reference(), secret, asked, data)
         .map_err(refusal_of_token)
 }
 
-fn the_token_offers(algorithm: &str) -> Result<(), TokenError> {
+fn the_token_offers(algorithm: &str) -> Result<SignatureAlgorithm, TokenError> {
     if ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
-        return Ok(());
+        return Ok(SignatureAlgorithm::Sha256Rsa);
     }
     Err(TokenError::new(
         Situation::Unknown,

@@ -229,8 +229,9 @@ fn a_pades_cycle_sends_the_bridge_the_very_same_call_as_before_the_format() {
 
 #[test]
 fn the_algorithm_matches_the_pkcs11_mechanism() {
-    let token_side = include_str!("../../../identity/adapters/pkcs11/mod.rs");
-
-    assert_eq!(ALGORITHM, "SHA256withRSA");
-    assert!(token_side.contains("Mechanism::Sha256RsaPkcs"));
+    assert_eq!(ALGORITHM.name(), "SHA256withRSA");
+    assert_eq!(
+        ALGORITHM.mechanism().mechanism_type(),
+        cryptoki::mechanism::MechanismType::SHA256_RSA_PKCS
+    );
 }

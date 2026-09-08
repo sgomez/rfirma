@@ -2,6 +2,7 @@
 
 use base64::Engine;
 
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
@@ -17,8 +18,8 @@ use crate::signing::domain::TokenSignature;
 pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
     std::collections::BTreeMap::new();
 
-/// Algoritmo de firma compatible con el mecanismo del token PKCS#11 (ADR-0001).
-pub const ALGORITHM: &str = "SHA256withRSA";
+/// El algoritmo que rFirma pide hoy, el mismo para el puente y para el token (ADR-0001).
+pub const ALGORITHM: SignatureAlgorithm = SignatureAlgorithm::Sha256Rsa;
 
 const CHAIN_SEPARATOR: &str = ";";
 
@@ -134,7 +135,7 @@ pub fn presign<B: Bridge + ?Sized>(
     let presigned = bridge.presign(PreSignRequest {
         format: request.format,
         document_b64: &document_b64,
-        algorithm: ALGORITHM,
+        algorithm: ALGORITHM.name(),
         certificate_chain_b64: &chain_b64,
         extra_params: &extra_params,
     })?;
@@ -176,7 +177,8 @@ impl OpenCycle {
         signer: &dyn Signer,
         pin: &str,
     ) -> Result<TokenSignature, CycleError> {
-        let signature = signer.sign(&self.certificate, pin, self.presigned.pre_sign())?;
+        let signature =
+            signer.sign(&self.certificate, pin, ALGORITHM, self.presigned.pre_sign())?;
         Ok(TokenSignature::from_token(signature))
     }
 

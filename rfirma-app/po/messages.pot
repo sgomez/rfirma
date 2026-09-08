@@ -180,6 +180,12 @@ msgstr ""
 msgid "errors.situations.keyNotRsa.title"
 msgstr ""
 
+msgid "errors.situations.mechanismNotOffered.title"
+msgstr ""
+
+msgid "errors.situations.mechanismNotOffered.body"
+msgstr ""
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr ""
 

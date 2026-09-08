@@ -3,8 +3,13 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use openssl::hash::MessageDigest;
+use openssl::rsa::Padding;
+use openssl::sign::{RsaPssSaltlen, Verifier as OpensslVerifier};
+use openssl::x509::X509;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates::ListedCertificates;
+use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{
     CertificateRef, CertificateStatus, TokenCertificate,
 };
@@ -196,7 +201,13 @@ fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
 #[test]
 fn signing_produces_a_signature_that_the_certificate_public_key_verifies() {
     let certificate = certificate_labelled(ACTIVE);
-    let raw = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("la firma deberia salir");
+    let raw = pkcs11::sign(
+        &reference(ACTIVE),
+        PIN,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("la firma deberia salir");
 
     assert_eq!(raw.len(), 256);
 
@@ -211,7 +222,13 @@ fn signing_a_hash_with_the_bare_rsa_mechanism_would_not_verify() {
     let certificate = certificate_labelled(ACTIVE);
     let key = verifying_key(&certificate);
 
-    let ours = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("la firma deberia salir");
+    let ours = pkcs11::sign(
+        &reference(ACTIVE),
+        PIN,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("la firma deberia salir");
     let over_a_hash = sign_with_bare_rsa_pkcs(&Sha256::digest(PRESIGN));
 
     assert!(
@@ -281,10 +298,119 @@ fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
     signature
 }
 
+/// Verifica con OpenSSL, el mismo contraste que hara despues un validador CAdES.
+fn openssl_verifies(digest: MessageDigest, padding: Padding, signature: &[u8]) -> bool {
+    let certificate = certificate_labelled(ACTIVE);
+    let parsed = X509::from_der(certificate.der()).expect("el DER deberia parsearse");
+    let public_key = parsed.public_key().expect("clave publica del certificado");
+
+    let mut verifier = OpensslVerifier::new(digest, &public_key).expect("verificador de OpenSSL");
+    if padding == Padding::PKCS1_PSS {
+        verifier.set_rsa_padding(padding).expect("relleno PSS");
+        verifier
+            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+            .expect("sal del tamano del resumen");
+        verifier
+            .set_rsa_mgf1_md(digest)
+            .expect("MGF1 con el resumen");
+    }
+    verifier.update(PRESIGN).expect("los bytes sin hashear");
+
+    verifier.verify(signature).expect("la verificacion corre")
+}
+
+#[test]
+fn each_rsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
+    for (algorithm, digest) in [
+        (SignatureAlgorithm::Sha256Rsa, MessageDigest::sha256()),
+        (SignatureAlgorithm::Sha384Rsa, MessageDigest::sha384()),
+        (SignatureAlgorithm::Sha512Rsa, MessageDigest::sha512()),
+    ] {
+        let signature = pkcs11::sign(&reference(ACTIVE), PIN, algorithm, PRESIGN)
+            .unwrap_or_else(|error| panic!("{} deberia firmar: {error}", algorithm.name()));
+
+        assert!(
+            openssl_verifies(digest, Padding::PKCS1, &signature),
+            "{} no verifica con su propio resumen",
+            algorithm.name()
+        );
+    }
+}
+
+#[test]
+fn a_signature_does_not_verify_under_a_digest_that_is_not_the_one_it_was_made_with() {
+    let signature = pkcs11::sign(
+        &reference(ACTIVE),
+        PIN,
+        SignatureAlgorithm::Sha384Rsa,
+        PRESIGN,
+    )
+    .expect("SHA384withRSA deberia firmar");
+
+    assert!(!openssl_verifies(
+        MessageDigest::sha512(),
+        Padding::PKCS1,
+        &signature
+    ));
+}
+
+#[test]
+fn the_pss_form_signs_and_openssl_verifies_it_as_pss_and_not_as_pkcs1() {
+    let signature = pkcs11::sign(
+        &reference(ACTIVE),
+        PIN,
+        SignatureAlgorithm::Sha256RsaPss,
+        PRESIGN,
+    )
+    .expect("SoftHSM ofrece CKM_SHA256_RSA_PKCS_PSS");
+
+    assert!(openssl_verifies(
+        MessageDigest::sha256(),
+        Padding::PKCS1_PSS,
+        &signature
+    ));
+    assert!(!openssl_verifies(
+        MessageDigest::sha256(),
+        Padding::PKCS1,
+        &signature
+    ));
+}
+
+#[test]
+fn a_mechanism_the_token_does_not_offer_is_told_before_the_pin_is_checked() {
+    let error = pkcs11::sign(
+        &reference(ACTIVE),
+        "0000",
+        SignatureAlgorithm::Sha256Ecdsa,
+        PRESIGN,
+    )
+    .expect_err("SoftHSM no ofrece CKM_ECDSA_SHA256");
+
+    assert_eq!(error.situation(), Situation::MechanismNotOffered);
+    assert_eq!(error.ckr(), None, "esto no viene de ningun CKR_*");
+    assert!(
+        error.detail().contains("SHA256withECDSA"),
+        "{}",
+        error.detail()
+    );
+}
+
 #[test]
 fn signing_the_same_bytes_twice_gives_the_same_signature() {
-    let once = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("firma");
-    let twice = pkcs11::sign(&reference(ACTIVE), PIN, PRESIGN).expect("firma");
+    let once = pkcs11::sign(
+        &reference(ACTIVE),
+        PIN,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("firma");
+    let twice = pkcs11::sign(
+        &reference(ACTIVE),
+        PIN,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("firma");
 
     assert_eq!(once, twice);
 }
@@ -298,8 +424,15 @@ fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
     assert_eq!(other.reference().label(), TWIN);
     assert_ne!(one.reference().cka_id(), other.reference().cka_id());
 
-    let signed_by_one = pkcs11::sign(one.reference(), PIN, PRESIGN).expect("firma del primero");
-    let signed_by_other = pkcs11::sign(other.reference(), PIN, PRESIGN).expect("firma del segundo");
+    let signed_by_one = pkcs11::sign(one.reference(), PIN, SignatureAlgorithm::Sha256Rsa, PRESIGN)
+        .expect("firma del primero");
+    let signed_by_other = pkcs11::sign(
+        other.reference(),
+        PIN,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("firma del segundo");
 
     for (certificate, signature, twin) in [
         (&one, &signed_by_one, &other),
@@ -365,7 +498,8 @@ fn a_plain_pkcs11_module_is_a_card_store() {
 }
 
 fn signing_error(reference: &CertificateRef, pin: &str) -> TokenError {
-    pkcs11::sign(reference, pin, PRESIGN).expect_err("esto tenia que fallar")
+    pkcs11::sign(reference, pin, SignatureAlgorithm::Sha256Rsa, PRESIGN)
+        .expect_err("esto tenia que fallar")
 }
 
 #[test]

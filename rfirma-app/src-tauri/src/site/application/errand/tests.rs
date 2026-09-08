@@ -10,6 +10,7 @@ use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::documents::domain::document::Document;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from, NoMemory, NoToken};
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
@@ -233,6 +234,7 @@ impl Signer for ATokenThatSigns {
         &self,
         _reference: &CertificateRef,
         _pin: &str,
+        _algorithm: SignatureAlgorithm,
         _data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
         Ok(vec![0x01; 256])
