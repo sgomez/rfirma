@@ -109,6 +109,48 @@ fn a_load_goes_out_as_name_and_standard_base64_joined_by_a_bar() {
     );
 }
 
+/// Un lote local de un elemento, con el JSON que la sede mete en `dat`.
+fn a_local_batch(lote: &str) -> AfirmaUrl {
+    an_operation(&format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
+         localBatchProcess=true&dat={}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(lote)
+    ))
+}
+
+#[test]
+fn a_local_batch_arrives_already_read_and_the_remote_one_does_not() {
+    let request = V4Codec.decode(&a_local_batch(
+        "{\"algorithm\":\"SHA256\",\"format\":\"CAdES\",\
+         \"singlesigns\":[{\"id\":\"001\",\"datareference\":\"AAAA\"}]}",
+    ));
+    let SiteRequest::LocalBatch(ask) = request else {
+        panic!("el lote local llega leido: {request:?}");
+    };
+    assert_eq!(ask.batch.signs().len(), 1);
+    assert_eq!(ask.batch.signs()[0].id(), "001");
+
+    let remote = V4Codec.decode(&an_operation(&format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
+         batchpresignerurl=https%3A%2F%2Fpresigner.example%2Fpre&\
+         batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost&dat={}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .encode("{\"algorithm\":\"SHA256\",\"singlesigns\":[]}")
+    )));
+    assert!(matches!(remote, SiteRequest::Batch(_)));
+}
+
+#[test]
+fn a_local_batch_the_site_wrote_wrong_is_not_attended() {
+    let request = V4Codec.decode(&a_local_batch(
+        "{\"algorithm\":\"SHA256\",\"singlesigns\":[]}",
+    ));
+    let SiteRequest::NotAttended(refusal) = request else {
+        panic!("un lote local sin formato no se atiende: {request:?}");
+    };
+    assert!(refusal.answer().on_the_wire().starts_with("SAF_"));
+}
+
 #[test]
 fn a_batch_without_a_certificate_goes_out_as_plain_base64_of_the_result() {
     assert_eq!(

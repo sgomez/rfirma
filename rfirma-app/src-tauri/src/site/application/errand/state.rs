@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::{Format, SignatureOperation};
+use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, SiteFilter,
 };
@@ -83,6 +84,7 @@ enum PendingConsent {
     Identity(SiteFilter, bool),
     Signature(PendingSignature),
     Batch(PendingBatch),
+    LocalBatch(PendingLocalBatch),
     Saving(SavingConsent),
     Loading(LoadingConsent),
 }
@@ -92,6 +94,17 @@ enum PendingConsent {
 pub(super) struct PendingBatch {
     /// El lote tal y como lo pidió la sede.
     pub(super) request: BatchRequest,
+    /// El certificado que la persona consintió, una vez consentido.
+    pub(super) chosen: Option<TokenCertificate>,
+}
+
+/// Lo que el lote local necesita entre el consentimiento y el bucle de firma.
+#[derive(Clone, Debug)]
+pub(super) struct PendingLocalBatch {
+    /// El lote tal y como lo pidió la sede.
+    pub(super) request: BatchRequest,
+    /// Las firmas del lote, ya leídas.
+    pub(super) batch: LocalBatch,
     /// El certificado que la persona consintió, una vez consentido.
     pub(super) chosen: Option<TokenCertificate>,
 }
@@ -224,6 +237,27 @@ impl LiveErrand {
     pub(super) fn the_batch_pending(&self) -> Option<PendingBatch> {
         match &*crate::lock(&self.consent) {
             Some(PendingConsent::Batch(pending)) => Some(pending.clone()),
+            _ => None,
+        }
+    }
+
+    /// Registra el lote local pendiente de consentimiento o de firma.
+    pub(super) fn remember_the_local_batch(&self, pending: PendingLocalBatch) {
+        *crate::lock(&self.consent) = Some(PendingConsent::LocalBatch(pending));
+    }
+
+    /// Si el trámite tiene un lote local consentido esperando el secreto.
+    pub fn a_local_batch_is_pending(&self) -> bool {
+        matches!(
+            &*crate::lock(&self.consent),
+            Some(PendingConsent::LocalBatch(pending)) if pending.chosen.is_some()
+        )
+    }
+
+    /// Lote local pendiente, si el trámite está atendiendo uno.
+    pub(super) fn the_local_batch_pending(&self) -> Option<PendingLocalBatch> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::LocalBatch(pending)) => Some(pending.clone()),
             _ => None,
         }
     }

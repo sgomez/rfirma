@@ -1,4 +1,4 @@
-use super::{Format, Moment, SignatureRound, SignatureRoundView};
+use super::{Format, LocalBatchItem, Moment, SignatureRound, SignatureRoundView};
 use super::{
     NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
 };
@@ -153,6 +153,41 @@ fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chose
             "stage": {
                 "kind": "askingToSignTheBatch",
                 "signs": 1,
+                "certificates": [],
+                "alreadyChosen": null,
+            },
+        })
+    );
+}
+
+#[test]
+fn the_local_batch_consent_crosses_with_what_each_item_is_and_never_its_content() {
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::AskingToSignTheLocalBatch {
+            items: vec![
+                LocalBatchItem {
+                    id: "001".to_owned(),
+                    format: Format::Pades,
+                    round: SignatureRound::First,
+                },
+                LocalBatchItem {
+                    id: "002".to_owned(),
+                    format: Format::Cades,
+                    round: SignatureRound::Again,
+                },
+            ],
+            certificates: Vec::new(),
+            already_chosen: None,
+        }))
+        .expect("el consentimiento del lote local cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": {
+                "kind": "askingToSignTheLocalBatch",
+                "items": [
+                    { "id": "001", "signing": "pdf", "round": "sign" },
+                    { "id": "002", "signing": "challenge", "round": "cosign" },
+                ],
                 "certificates": [],
                 "alreadyChosen": null,
             },

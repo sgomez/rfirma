@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::signing::domain::bridge::Format;
 use crate::site::application::session::SiteRefusal;
+use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, BatchRequest, Refusal, SignAndSaveRequest, SignatureRound,
     SiteFilter, SiteVisibleSignature,
@@ -29,6 +30,8 @@ pub enum ErrandStep {
     AskingToSign(SigningConsent),
     /// Momento de consentimiento del lote remoto para la ventana.
     AskingToSignTheBatch(Box<BatchConsent>),
+    /// Momento de consentimiento del lote local para la ventana.
+    AskingToSignTheLocalBatch(Box<LocalBatchConsent>),
     /// Paso de guardado: la orden de Tauri abre el diálogo del portal y escribe.
     Saving(Box<SavingConsent>),
     /// Paso de carga: la orden de Tauri abre el selector del portal y lee.
@@ -62,6 +65,11 @@ impl ErrandStep {
             }),
             Self::AskingToSignTheBatch(consent) => Some(Moment::AskingToSignTheBatch {
                 signs: consent.signs,
+                certificates: consent.certificates.clone(),
+                already_chosen: consent.already_chosen.clone(),
+            }),
+            Self::AskingToSignTheLocalBatch(consent) => Some(Moment::AskingToSignTheLocalBatch {
+                items: consent.items.clone(),
                 certificates: consent.certificates.clone(),
                 already_chosen: consent.already_chosen.clone(),
             }),
@@ -131,6 +139,32 @@ pub struct BatchConsent {
     pub request: BatchRequest,
     /// Cuántas firmas lleva el lote.
     pub signs: usize,
+    /// Certificados aceptados por la sede, ya cribados.
+    pub certificates: Vec<ListedCertificate>,
+    /// El asa del certificado recordado cuando `sticky` lo resolvió sin preguntar.
+    pub already_chosen: Option<String>,
+}
+
+/// El resumen de un elemento del lote local: ni su ruta ni su contenido cruzan.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LocalBatchItem {
+    /// El identificador con el que la sede nombra el elemento.
+    pub id: String,
+    /// El formato con el que se firma, con `auto` ya resuelto por la cabecera.
+    pub format: Format,
+    /// La operación que el lote pide sobre el elemento.
+    pub round: SignatureRound,
+}
+
+/// Datos del consentimiento del lote local, que enseña qué es cada elemento antes de firmar.
+#[derive(Clone, Debug)]
+pub struct LocalBatchConsent {
+    /// El lote tal y como lo pidió la sede.
+    pub request: BatchRequest,
+    /// Las firmas del lote, ya leídas.
+    pub batch: LocalBatch,
+    /// Un resumen por elemento, en el orden en que la sede los declaró.
+    pub items: Vec<LocalBatchItem>,
     /// Certificados aceptados por la sede, ya cribados.
     pub certificates: Vec<ListedCertificate>,
     /// El asa del certificado recordado cuando `sticky` lo resolvió sin preguntar.
@@ -271,6 +305,15 @@ pub enum Moment {
     AskingToSignTheBatch {
         /// Cuántas firmas lleva el lote.
         signs: usize,
+        /// Filas ya cribadas en orden de presentación.
+        certificates: Vec<ListedCertificate>,
+        /// El asa del certificado que `sticky` ya resolvió, si lo resolvió.
+        already_chosen: Option<String>,
+    },
+    /// Consentimiento del lote local, con el resumen de cada uno de sus elementos.
+    AskingToSignTheLocalBatch {
+        /// Un resumen por elemento, en el orden en que la sede los declaró.
+        items: Vec<LocalBatchItem>,
         /// Filas ya cribadas en orden de presentación.
         certificates: Vec<ListedCertificate>,
         /// El asa del certificado que `sticky` ya resolvió, si lo resolvió.

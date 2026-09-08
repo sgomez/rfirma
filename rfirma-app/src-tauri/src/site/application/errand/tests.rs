@@ -3803,6 +3803,188 @@ fn a_batch_that_is_declined_ends_in_a_cancel() {
     );
 }
 
+const A_LOCAL_PDF: &[u8] = b"%PDF-1.4\n";
+const A_LOCAL_BINARY: &[u8] = b"\x00\x01\x02\x03";
+const A_LOCAL_XML: &[u8] = b"<?xml version=\"1.0\"?><a/>";
+
+/// El Base64 con el que la sede mete un documento dentro del JSON del lote.
+fn in_the_batch(document: &[u8]) -> String {
+    base64::engine::general_purpose::STANDARD.encode(document)
+}
+
+/// Un lote local de tres elementos con `format=auto`: un PDF, un binario que se cofirma y un XML.
+fn a_local_batch(extra: &str) -> AfirmaUrl {
+    let lote = format!(
+        "{{\"algorithm\":\"SHA256\",\"format\":\"auto\",\"stoponerror\":false,\"singlesigns\":[\
+         {{\"id\":\"001\",\"datareference\":\"{}\"}},\
+         {{\"id\":\"002\",\"datareference\":\"{}\",\"suboperation\":\"cosign\"}},\
+         {{\"id\":\"003\",\"datareference\":\"{}\"}}]}}",
+        in_the_batch(A_LOCAL_PDF),
+        in_the_batch(A_LOCAL_BINARY),
+        in_the_batch(A_LOCAL_XML),
+    );
+    let text = format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
+         localBatchProcess=true&dat={}{extra}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&lote)
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+const A_BATCH_ALL_SKIPPED: &str = "{\"signs\":[{\"id\":\"001\",\"result\":\"SKIPPED\"},\
+                                   {\"id\":\"002\",\"result\":\"SKIPPED\"},\
+                                   {\"id\":\"003\",\"result\":\"SKIPPED\"}]}";
+
+#[test]
+fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_local_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
+        panic!("un lote local pide consentimiento");
+    };
+
+    assert_eq!(
+        asked.items.len(),
+        3,
+        "el momento dice que el lote lleva tres"
+    );
+    assert_eq!(asked.items[0].id, "001");
+    assert_eq!(
+        asked.items[0].format,
+        Format::Pades,
+        "la cabecera es un PDF"
+    );
+    assert_eq!(asked.items[0].round, SignatureRound::First);
+    assert_eq!(asked.items[1].id, "002");
+    assert_eq!(asked.items[1].format, Format::Cades, "ni PDF ni XML");
+    assert_eq!(asked.items[1].round, SignatureRound::Again);
+    assert_eq!(asked.items[2].id, "003");
+    assert!(matches!(asked.items[2].format, Format::Xades(_)));
+    assert_eq!(asked.already_chosen, None, "sin 'sticky' no hay elegido");
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "el consentimiento del lote local no escribe nada en el cable"
+    );
+
+    let consented = consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+    assert!(matches!(consented, Consented::SigningWith(_)));
+
+    finish_the_local_batch("1234", &live).expect("el lote local contesta");
+
+    assert_eq!(
+        desk.neighbours.neighbours.token.secrets_asked(),
+        1,
+        "el secreto se pide una sola vez para las tres firmas"
+    );
+    assert_eq!(
+        the_batch_result(&mut wire),
+        A_BATCH_ALL_SKIPPED,
+        "hasta que exista el bucle, el lote contesta con todo saltado"
+    );
+    assert!(live.current().is_none());
+}
+
+/// El resultado del lote que la sede acaba de recibir, ya descodificado.
+fn the_batch_result(wire: &mut tokio::sync::oneshot::Receiver<String>) -> String {
+    let answered = what_the_site_received(wire).expect("la sede recibe el resultado del lote");
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(answered)
+        .expect("el resultado del lote viaja en Base64");
+    String::from_utf8(decoded).expect("el resultado del lote es JSON")
+}
+
+#[test]
+fn a_sticky_local_batch_leaves_the_remembered_certificate_already_chosen_in_the_step() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[0].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_local_batch("&sticky=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = step else {
+        panic!("un lote local pega el certificado, no lo contesta");
+    };
+
+    assert_eq!(
+        asked.already_chosen.as_deref(),
+        Some(asked.certificates[0].id.as_str()),
+        "'sticky' resuelve el certificado sin preguntar"
+    );
+    assert!(asked.certificates[0].remembered);
+}
+
+#[test]
+fn a_local_batch_that_is_declined_ends_in_a_cancel() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_local_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    remembered(&live, step);
+
+    decline(&live);
+
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(frontier::cancelled().on_the_wire())
+    );
+}
+
 /// La contrafirma que pide una sede, con el formato y el `target` que se le digan.
 fn a_countersignature_asking_for(format: &str, target: &str) -> AfirmaUrl {
     let document = base64::engine::general_purpose::URL_SAFE.encode(A_CADES_SIGNATURE);

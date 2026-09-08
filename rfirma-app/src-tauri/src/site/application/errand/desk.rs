@@ -7,6 +7,7 @@ use crate::documents::domain::handles;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
+use crate::site::domain::batch::LocalSingleSign;
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades, visible_signature_of, AfirmaUrl,
     AskedAlgorithm, BatchRequest, LoadRequest, RequestedFormat, SaveRequest, SelectCertificate,
@@ -15,11 +16,11 @@ use crate::site::domain::protocol::{
 };
 
 use super::outcome::{
-    BatchConsent, ErrandStep, LoadingConsent, SavingConsent, SavingHints, SigningConsent,
-    SiteOutcome,
+    BatchConsent, ErrandStep, LoadingConsent, LocalBatchConsent, LocalBatchItem, SavingConsent,
+    SavingHints, SigningConsent, SiteOutcome,
 };
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
-use super::request::SiteRequest;
+use super::request::{LocalBatchAsk, SiteRequest};
 use super::state::LiveErrand;
 use crate::site::application::batch;
 use crate::site::application::filtering;
@@ -82,7 +83,8 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         SiteRequest::SelectCertificate(_)
         | SiteRequest::Sign(_)
         | SiteRequest::SignAndSave(_)
-        | SiteRequest::Batch(_) => {}
+        | SiteRequest::Batch(_)
+        | SiteRequest::LocalBatch(_) => {}
         SiteRequest::NotAttended(_) => unreachable!("se ha despachado arriba"),
     }
 
@@ -101,6 +103,9 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         SiteRequest::SignAndSave(request) => consent_to_sign_and_save(desk, &request, ours, live),
         SiteRequest::Batch(request) => {
             consent_to_the_batch(desk.engine, request, ours, &desk.neighbours, live)
+        }
+        SiteRequest::LocalBatch(ask) => {
+            consent_to_the_local_batch(desk.engine, *ask, ours, &desk.neighbours, live)
         }
         SiteRequest::Save(_) | SiteRequest::Load(_) | SiteRequest::NotAttended(_) => {
             unreachable!("se ha despachado arriba")
@@ -432,6 +437,53 @@ pub fn consent_to_the_batch<E: FilterEngine>(
         certificates: rows,
         already_chosen,
     }))
+}
+
+/// Prepara el consentimiento del lote local: los certificados cribados del lote remoto, y el
+/// resumen de qué es y qué se le hace a cada elemento (`LocalBatchSigner`, 1.9.2).
+pub fn consent_to_the_local_batch<E: FilterEngine>(
+    engine: &E,
+    ask: LocalBatchAsk,
+    ours: Vec<TokenCertificate>,
+    certificates: &dyn Certificates,
+    live: &LiveErrand,
+) -> ErrandStep {
+    let LocalBatchAsk { request, batch } = ask;
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
+        Ok(accepted) => accepted,
+        Err(step) => return step,
+    };
+
+    let rows = certificates.rows_of(accepted);
+    let already_chosen = request
+        .sticky()
+        .is_sticky()
+        .then(|| the_remembered_row_among(&rows))
+        .flatten();
+
+    ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
+        items: batch.signs().iter().map(summary_of).collect(),
+        request,
+        batch,
+        certificates: rows,
+        already_chosen,
+    }))
+}
+
+/// Qué es y qué se le hace a un elemento del lote, sin su ruta ni su contenido.
+fn summary_of(sign: &LocalSingleSign) -> LocalBatchItem {
+    LocalBatchItem {
+        id: sign.id().to_owned(),
+        format: Format::from(sign.effective_format()),
+        round: sign.round(),
+    }
 }
 
 fn what_the_site_accepts<E: FilterEngine>(
