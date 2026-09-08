@@ -5,10 +5,12 @@ use std::sync::Arc;
 
 use crate::documents::domain::handles;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, StickyCertificate,
+    visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, RequestedFormat, SaveRequest,
+    SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    StickyCertificate,
 };
 
 use super::outcome::{
@@ -158,10 +160,7 @@ pub fn consent_to_sign_and_save_with_chosen_document<
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let request = match request.with_chosen_document(document, chosen_name) {
-        Ok(request) => request,
-        Err(refusal) => return answering(live, SiteOutcome::RefusedByTheProtocol(refusal)),
-    };
+    let request = request.with_chosen_document(document, chosen_name);
 
     consent_to_sign_and_save(desk, &request, ours, live)
 }
@@ -177,6 +176,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         desk,
         SignatureAsk {
             document: request.document(),
+            format: request.format(),
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
@@ -205,6 +205,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
         desk,
         SignatureAsk {
             document: request.document().unwrap_or_default(),
+            format: request.format(),
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
@@ -218,6 +219,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
 /// Lo que se firma, desacoplado de si vino de `sign` o de `signandsave`.
 struct SignatureAsk<'a> {
     document: &'a [u8],
+    format: RequestedFormat,
     round: SignatureRound,
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
@@ -231,7 +233,17 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let admitted = match AdmissibleDocument::check(ask.document) {
+    let format = match Format::from(ask.format).bridged() {
+        Ok(format) => format,
+        Err(error) => {
+            return answering(
+                live,
+                SiteOutcome::Refused(SiteRefusal::FormatNotBridged(error)),
+            )
+        }
+    };
+
+    let admitted = match AdmissibleDocument::check_for(format, ask.document) {
         Ok(admitted) => admitted,
         Err(inadmissible) => {
             return answering(
@@ -242,7 +254,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     };
 
     let mut from_the_site =
-        match policies::expanded_for_the_site(desk.policies, ask.declared_params) {
+        match policies::expanded_for_the_site(desk.policies, ask.declared_params, format) {
             Ok(expanded) => expanded,
             Err(error) => {
                 return answering(live, SiteOutcome::Refused(SiteRefusal::Policies(error)))
@@ -274,6 +286,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     ErrandStep::AskingToSign(SigningConsent {
         document,
+        format,
         round: ask.round,
         certificates: desk.neighbours.rows_of(accepted),
         from_the_site,

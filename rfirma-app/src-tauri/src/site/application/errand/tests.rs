@@ -21,7 +21,7 @@ use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
 use crate::signing::application::tests::{a_memory, NoIsolate};
-use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::bridge::{BridgeError, Format};
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
 use crate::site::adapters::codec::V4Codec;
 use crate::site::adapters::desk::signing_refusal_of;
@@ -828,6 +828,19 @@ fn a_signature_over(pdf: &[u8], verb: &str, extra: &str) -> AfirmaUrl {
     let text = format!(
         "afirma://{verb}?op={verb}&idsession={CREDENTIAL}&format=PAdES&\
          algorithm=SHA256withRSA&dat={document}{extra}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+/// La misma operación, con el formato y el documento que se le digan.
+fn a_signature_asking_for(format: &str, document: &[u8]) -> AfirmaUrl {
+    let encoded = base64::engine::general_purpose::URL_SAFE.encode(document);
+    let text = format!(
+        "afirma://sign?op=sign&idsession={CREDENTIAL}&format={format}&\
+         algorithm=SHA256withRSA&dat={encoded}"
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
         panic!("una URL del protocolo es una operacion");
@@ -1678,7 +1691,7 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
 }
 
 #[test]
-fn a_chosen_document_that_is_not_a_pdf_under_format_auto_is_refused_by_the_protocol() {
+fn a_chosen_document_that_is_not_a_pdf_under_format_auto_is_refused_by_the_bridge() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let listed = ListedCertificates::new();
@@ -1709,10 +1722,87 @@ fn a_chosen_document_that_is_not_a_pdf_under_format_auto_is_refused_by_the_proto
         &live,
     );
 
-    let ErrandStep::Answering(SiteOutcome::RefusedByTheProtocol(refusal)) = step else {
-        panic!("format=auto exige PDF tambien para el documento elegido: {step:?}");
+    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = step else {
+        panic!("el XML elegido sale con el formato que el puente no atiende: {step:?}");
     };
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    let (told, code) = crate::site::adapters::frontier::told(&refusal);
+    assert_eq!(code, SafCode::UnsupportedFormat);
+    assert_eq!(told.situation, "bridgeFailed");
+}
+
+/// El rechazo por formato lo da el puente, no el protocolo: la sede recibe el
+/// mismo `SAF_06` que antes daba la comprobación de texto de `sign`.
+#[test]
+fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
+    for (format, document) in [("CAdES", A_PDF), ("auto", &[0x00, 0x01, 0x02][..])] {
+        let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = a_live();
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
+
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature_asking_for(format, document)),
+            ours.clone(),
+            &live,
+        );
+
+        let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = step else {
+            panic!("el puente no atiende '{format}': {step:?}");
+        };
+        let (told, code) = crate::site::adapters::frontier::told(&refusal);
+        assert_eq!(code, SafCode::UnsupportedFormat, "format={format}");
+        assert_eq!(told.situation, "bridgeFailed", "format={format}");
+    }
+}
+
+/// Y con `format=PAdES` la firma sigue su curso como antes.
+#[test]
+fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &signature_requested(&a_signature_asking_for("PAdES", A_PDF)),
+        ours.clone(),
+        &live,
+    );
+
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("PAdES se firma igual que antes: {step:?}");
+    };
+    assert_eq!(consent.format, Format::Pades);
 }
 
 #[test]

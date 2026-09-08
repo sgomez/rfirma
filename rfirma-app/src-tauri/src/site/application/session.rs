@@ -21,6 +21,8 @@ pub enum SiteRefusal {
     Inadmissible(Inadmissible),
     /// Las políticas de la sede no se han podido expandir.
     Policies(BridgeError),
+    /// El puente no atiende el formato que pide la sede.
+    FormatNotBridged(BridgeError),
     /// El filtro de la sede no se ha podido aplicar al listado.
     CouldNotFilter(filtering::FilteringError),
     /// La sede excluye todos los certificados que hay.
@@ -55,6 +57,8 @@ pub struct SiteTerms<'a, E: FilterEngine> {
     pub engine: &'a E,
     /// Filtro de certificados declarado por la sede.
     pub filter: &'a SiteFilter,
+    /// Formato de firma que pidió la sede, ya atendido por el puente.
+    pub format: Format,
     /// Parámetros adicionales declarados por la sede.
     pub from_the_site: &'a BTreeMap<String, String>,
     /// Si la sede consintió cofirmar sobre firmas que no se reconocen.
@@ -81,7 +85,7 @@ pub fn begin_for_the_site<E: FilterEngine>(
     Ok(signing.begin(SiteSigningRequest {
         document,
         certificate: chosen,
-        format: Format::Pades,
+        format: terms.format,
         from_the_site: terms.from_the_site,
         allow_unregistered_signatures: terms.allow_unregistered_signatures,
     })?)

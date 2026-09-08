@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use crate::identity::domain::certificate::ListedCertificate;
+use crate::signing::domain::bridge::Format;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::protocol::{
     AfirmaUrl, BatchRequest, Refusal, SignAndSaveRequest, SignatureRound, SiteFilter,
@@ -102,6 +103,8 @@ pub enum NoCertificate {
 pub struct SigningConsent {
     /// Identificador del documento para la ventana (ADR-0011).
     pub document: String,
+    /// Formato de firma que la sede pidió, ya atendido por el puente.
+    pub format: Format,
     /// Modalidad de firma solicitada.
     pub round: SignatureRound,
     /// Certificados aceptados por la sede, ya cribados.

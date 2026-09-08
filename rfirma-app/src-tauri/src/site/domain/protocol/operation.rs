@@ -3,8 +3,8 @@
 use base64::Engine as _;
 
 use super::codes::{Parameter, SafCode};
-use super::detection::{shape_of, DetectedShape};
 use super::filters::{site_filter, SiteFilter};
+use super::format::{format_of, RequestedFormat};
 use super::parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,
     StickyCertificate,
@@ -40,9 +40,6 @@ pub const SIGN_AND_SAVE: &str = "signandsave";
 
 /// El verbo del lote remoto.
 pub const BATCH: &str = "batch";
-
-/// El formato de firma PAdES.
-pub const PADES: &str = "pades";
 
 /// `format=auto`: la sede no fija formato y pide que se deduzca del documento.
 pub const AUTO: &str = "auto";
@@ -117,6 +114,7 @@ pub enum SignatureRound {
 pub struct SignRequest {
     round: SignatureRound,
     algorithm: String,
+    format: RequestedFormat,
     document: Vec<u8>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
@@ -131,6 +129,11 @@ impl SignRequest {
     /// El algoritmo tal y como lo pidió la sede, ya admitido.
     pub fn algorithm(&self) -> &str {
         &self.algorithm
+    }
+
+    /// El formato efectivo: el que nombró la sede, o el del documento si pidió `auto`.
+    pub fn format(&self) -> RequestedFormat {
+        self.format
     }
 
     /// El documento que la sede manda, en bytes.
@@ -217,7 +220,7 @@ pub struct SignAndSaveRequest {
     round: SignatureRound,
     algorithm: String,
     document: Option<Vec<u8>>,
-    format_auto: bool,
+    requested: Option<RequestedFormat>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     filename: Option<String>,
@@ -244,6 +247,12 @@ impl SignAndSaveRequest {
     /// El documento que la sede manda, si vino: sin `dat` queda por elegir.
     pub fn document(&self) -> Option<&[u8]> {
         self.document.as_deref()
+    }
+
+    /// El formato efectivo: el que nombró la sede, o el del documento que ya tenga.
+    pub fn format(&self) -> RequestedFormat {
+        self.requested
+            .unwrap_or_else(|| format_of(self.document.as_deref().unwrap_or_default()))
     }
 
     /// Los `extraParams` tal y como vinieron, sin expandir.
@@ -303,22 +312,15 @@ impl SignAndSaveRequest {
         self.load_starting_folder.as_deref()
     }
 
-    /// El documento que la persona acaba de elegir, con el mismo veredicto de formato que si
-    /// hubiera llegado en `dat`: solo se comprueba cuando la sede pidió `format=auto`. El nombre
-    /// del fichero elegido (con su extensión) alimenta el segundo escalón de `proposed_name`.
-    pub fn with_chosen_document(
-        &self,
-        document: Vec<u8>,
-        chosen_name: Option<String>,
-    ) -> Result<Self, Refusal> {
-        if self.format_auto {
-            reject_unless_pdf(shape_of(&document))?;
-        }
-        Ok(Self {
+    /// El documento que la persona acaba de elegir, que con `format=auto` fija el formato
+    /// efectivo igual que si hubiera llegado en `dat`. El nombre del fichero elegido (con su
+    /// extensión) alimenta el segundo escalón de `proposed_name`.
+    pub fn with_chosen_document(&self, document: Vec<u8>, chosen_name: Option<String>) -> Self {
+        Self {
             document: Some(document),
             chosen_name,
             ..self.clone()
-        })
+        }
     }
 }
 
@@ -461,15 +463,13 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// `UrlParametersToSign` que rFirma hereda.
 ///
 /// El orden importa poco salvo en una cosa: el **formato** se mira antes que
-/// nada de lo demás, porque una sede que pide XAdES no se merece un `SAF_03`
-/// sobre el algoritmo cuando lo que pasa es que ese formato no se atiende.
+/// nada de lo demás, porque una sede que nombra un formato que el original no
+/// firma no se merece un `SAF_03` sobre el algoritmo.
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
-    let document = if format_verdict(url)? {
-        let document = read_document(url)?;
-        reject_unless_pdf(shape_of(&document))?;
-        Some(document)
-    } else {
-        None
+    let requested = requested_format(url)?;
+    let document = match requested {
+        Some(_) => None,
+        None => Some(read_document(url)?),
     };
 
     let algorithm = check_algorithm(url)?;
@@ -483,28 +483,28 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
     Ok(SiteOperation::Sign(SignRequest {
         round,
         algorithm,
+        format: requested.unwrap_or_else(|| format_of(&document)),
         document,
         filter: site_filter(&declared),
         declared,
     }))
 }
 
-/// `true` si `format=auto` (hay que detectar el documento), `false` si es `PAdES` explícito,
-/// o el `SAF_04` que nombra el formato que no se atiende.
-fn format_verdict(url: &AfirmaUrl) -> Result<bool, Refusal> {
+/// El formato que nombra la sede, nada si pide `auto`, o el `SAF_06` que nombra
+/// el que el original no firma en tres fases.
+fn requested_format(url: &AfirmaUrl) -> Result<Option<RequestedFormat>, Refusal> {
     let format = required(url, "format", Parameter::Format)
         .map_err(|refusal| refusal.because(RefusalSituation::MissingFormat))?;
 
     if format.trim().eq_ignore_ascii_case(AUTO) {
-        return Ok(true);
+        return Ok(None);
     }
-    if !format.trim().eq_ignore_ascii_case(PADES) {
-        return Err(Refusal::new(
+    RequestedFormat::named(format).map(Some).ok_or_else(|| {
+        Refusal::new(
             SafCode::UnsupportedFormat,
-            format!("el formato '{format}' no se atiende: rFirma solo firma PAdES"),
-        ));
-    }
-    Ok(false)
+            format!("el formato '{format}' no se atiende: no lo firma AutoFirma en tres fases"),
+        )
+    })
 }
 
 /// El `algorithm` ya admitido, o el `SAF_03` que lo nombra.
@@ -533,17 +533,10 @@ fn countersign_refusal() -> Refusal {
 fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     let round = round_of_cop(url)?;
 
-    let format_auto = format_verdict(url)?;
-    let document = if format_auto {
-        match optional_document(url)? {
-            Some(document) => {
-                reject_unless_pdf(shape_of(&document))?;
-                Some(document)
-            }
-            None => None,
-        }
-    } else {
-        None
+    let requested = requested_format(url)?;
+    let document = match requested {
+        Some(_) => None,
+        None => optional_document(url)?,
     };
 
     let algorithm = check_algorithm(url)?;
@@ -558,7 +551,7 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         round,
         algorithm,
         document,
-        format_auto,
+        requested,
         filter: site_filter(&declared),
         filename: optional(url, "filename"),
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),
@@ -617,18 +610,6 @@ fn base_name(chosen_name: &str) -> &str {
     chosen_name
         .rsplit_once('.')
         .map_or(chosen_name, |(base, _)| base)
-}
-
-/// La única traducción de «PDF / XML / binario» a formato efectivo: hasta que
-/// el #468 traiga CAdES y XAdES, solo PDF se atiende.
-fn reject_unless_pdf(shape: DetectedShape) -> Result<(), Refusal> {
-    match shape {
-        DetectedShape::Pdf => Ok(()),
-        DetectedShape::Xml | DetectedShape::Binary => Err(Refusal::new(
-            SafCode::UnsupportedFormat,
-            "el documento de 'format=auto' no es PDF: rFirma solo firma PAdES",
-        )),
-    }
 }
 
 /// La petición de guardado: solo `dat` es obligatorio (`ProtocolInvocationLauncherSave`, 1.9.2).

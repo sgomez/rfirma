@@ -1,6 +1,7 @@
 use super::*;
 use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
 use crate::identity::domain::store::StoreClass;
+use crate::signing::domain::bridge::Format;
 
 fn asking_with(label: &str) -> Moment {
     Moment::AskingForConsent {
@@ -21,6 +22,7 @@ fn a_pending_signature() -> PendingSignature {
     PendingSignature {
         document: "doc-1".to_owned(),
         filter: SiteFilter::default(),
+        format: Format::Pades,
         from_the_site: BTreeMap::new(),
         unregistered_signatures: false,
         saving: None,
