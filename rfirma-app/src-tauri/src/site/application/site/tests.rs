@@ -252,7 +252,7 @@ fn the_negotiation_table_picks_the_relay_codec_for_an_operation_with_servlet() {
 
     let outcome = SiteOutcome::Signature {
         signer_der: vec![0xfb, 0xff, 0xbf],
-        signed: b"%PDF".to_vec(),
+        signature: b"%PDF".to_vec(),
     };
     let key = crate::site::domain::protocol::CipherKey::from_url_parameter("12345678")
         .expect("longitud correcta")
