@@ -953,3 +953,33 @@ fn signing_and_saving_with_countersign_in_cades_is_attended() {
         }
     );
 }
+
+#[test]
+fn explicit_mode_with_xades_is_refused_with_saf_06() {
+    let refusal = refuse_explicit_xades(
+        RequestedFormat::Xades(XadesEnvelope::Enveloping),
+        &[("mode".to_owned(), "explicit".to_owned())],
+    )
+    .expect_err("la XAdES explicita no se reproduce");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    assert!(refusal.detail().contains("mode=explicit"));
+}
+
+#[test]
+fn explicit_mode_with_pades_is_not_refused_here() {
+    refuse_explicit_xades(
+        RequestedFormat::Pades,
+        &[("mode".to_owned(), "explicit".to_owned())],
+    )
+    .expect("PAdES no tiene esta desviacion");
+}
+
+#[test]
+fn implicit_mode_with_xades_is_not_refused() {
+    refuse_explicit_xades(
+        RequestedFormat::Xades(XadesEnvelope::Detached),
+        &[("mode".to_owned(), "implicit".to_owned())],
+    )
+    .expect("solo se rechaza el modo explicito");
+}

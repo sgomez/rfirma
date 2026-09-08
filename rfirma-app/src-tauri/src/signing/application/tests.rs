@@ -27,9 +27,13 @@ impl IsolateHost for NoIsolate {
     }
 }
 
-/// La firma CAdES del banco de referencia, la que el puente doblado devuelve cuando no se le pide un PDF.
+/// La firma CAdES del banco de referencia, la que el puente doblado devuelve cuando no se le pide un PDF ni XML.
 pub(crate) const A_CADES_SIGNATURE: &[u8] =
     include_bytes!("../../../../../testdata/reference/cades-implicit.p7s");
+
+/// La firma XAdES del banco de referencia, la que el puente doblado devuelve para cualquier variante.
+pub(crate) const A_XADES_SIGNATURE: &[u8] =
+    include_bytes!("../../../../../testdata/reference/xades-enveloping.xml");
 
 /// Una fase del ciclo tal y como le llegó al puente.
 pub(crate) struct BridgeCall {
@@ -76,6 +80,7 @@ impl Bridge for ABridgeThatSigns {
         request.format.bridged()?;
         Ok(match request.format {
             Format::Pades => b"%PDF-1.7 firmado".to_vec(),
+            Format::Xades(_) => A_XADES_SIGNATURE.to_vec(),
             _ => A_CADES_SIGNATURE.to_vec(),
         })
     }

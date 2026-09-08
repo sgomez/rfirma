@@ -565,6 +565,23 @@ pub fn refuse_a_countersignature_outside_cades(
     Ok(())
 }
 
+/// `mode=explicit` con XAdES: `SAF_06`, la desviación que documenta `domain/protocol/mod.rs`.
+pub fn refuse_explicit_xades(
+    format: RequestedFormat,
+    declared_params: &[(String, String)],
+) -> Result<(), Refusal> {
+    let explicit = declared_params.iter().any(|(key, value)| {
+        key.eq_ignore_ascii_case("mode") && value.eq_ignore_ascii_case("explicit")
+    });
+    if explicit && matches!(format, RequestedFormat::Xades(_)) {
+        return Err(Refusal::new(
+            SafCode::UnsupportedFormat,
+            "'mode=explicit' con XAdES no se reproduce: ver domain/protocol/mod.rs",
+        ));
+    }
+    Ok(())
+}
+
 /// El formato que nombra la sede, nada si pide `auto`, o el `SAF_06` que nombra
 /// el que el original no firma en tres fases.
 fn requested_format(url: &AfirmaUrl) -> Result<Option<RequestedFormat>, Refusal> {

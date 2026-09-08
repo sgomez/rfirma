@@ -9,10 +9,10 @@ use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::batch::LocalSingleSign;
 use crate::site::domain::protocol::{
-    forget_the_box, refuse_a_countersignature_outside_cades, visible_signature_of, AfirmaUrl,
-    AskedAlgorithm, BatchRequest, LoadRequest, RequestedFormat, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
-    StickyCertificate,
+    forget_the_box, refuse_a_countersignature_outside_cades, refuse_explicit_xades,
+    visible_signature_of, AfirmaUrl, AskedAlgorithm, BatchRequest, LoadRequest, RequestedFormat,
+    SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    SiteVisibleSignature, StickyCertificate,
 };
 
 use super::outcome::{
@@ -243,6 +243,10 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     live: &LiveErrand,
 ) -> ErrandStep {
     if let Err(refusal) = refuse_a_countersignature_outside_cades(ask.round, ask.format) {
+        return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
+    }
+
+    if let Err(refusal) = refuse_explicit_xades(ask.format, ask.declared_params) {
         return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
     }
 
