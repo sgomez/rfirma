@@ -5,7 +5,9 @@ use std::path::Path;
 use crate::desktop::adapters::paths::Paths;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
-use crate::signing::domain::bridge::{BridgeError, PreSignature};
+use crate::signing::domain::bridge::{
+    BridgeError, Format, PostSignRequest, PreSignRequest, PreSignature,
+};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{CompletedCycle, SessionSeal, TokenSignature};
 use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost};
@@ -21,6 +23,66 @@ impl IsolateHost for NoIsolate {
         Ok(Err(BridgeError::Failed(
             "no hay libreria en grada A".to_owned(),
         )))
+    }
+}
+
+/// La firma CAdES del banco de referencia, la que el puente doblado devuelve cuando no se le pide un PDF.
+pub(crate) const A_CADES_SIGNATURE: &[u8] =
+    include_bytes!("../../../../../testdata/reference/cades-implicit.p7s");
+
+/// Una fase del ciclo tal y como le llegó al puente.
+pub(crate) struct BridgeCall {
+    /// El formato con el que se le pidió.
+    pub(crate) format: Format,
+    /// El bloque `java.util.Properties` que cruzó.
+    pub(crate) extra_params: String,
+}
+
+/// Un puente que resuelve las dos fases con firmas del banco de referencia y apunta lo que le llega.
+#[derive(Default)]
+pub(crate) struct ABridgeThatSigns {
+    calls: std::sync::Mutex<Vec<BridgeCall>>,
+}
+
+impl ABridgeThatSigns {
+    /// Las fases que cruzaron, en orden.
+    pub(crate) fn calls(&self) -> std::sync::MutexGuard<'_, Vec<BridgeCall>> {
+        crate::lock(&self.calls)
+    }
+}
+
+impl Bridge for ABridgeThatSigns {
+    fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
+        request.format.bridged()?;
+        crate::lock(&self.calls).push(BridgeCall {
+            format: request.format,
+            extra_params: request.extra_params.to_owned(),
+        });
+        Ok(PreSignature {
+            session: "<xml/>".to_owned(),
+            pre_sign: b"123".to_vec(),
+            stamp: SessionSeal::from_bridge("el sello de la prefirma"),
+        })
+    }
+
+    fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError> {
+        request.format.bridged()?;
+        Ok(match request.format {
+            Format::Pades => b"%PDF-1.7 firmado".to_vec(),
+            _ => A_CADES_SIGNATURE.to_vec(),
+        })
+    }
+}
+
+/// El hilo del puente con el doble detrás: corre la tarea en el sitio, que en grada A no hay isolate.
+pub(crate) struct AnIsolateWith<'a>(pub(crate) &'a ABridgeThatSigns);
+
+impl IsolateHost for AnIsolateWith<'_> {
+    fn run<T: Send + 'static>(
+        &self,
+        task: impl FnOnce(&dyn Bridge) -> T + Send + 'static,
+    ) -> Result<Result<T, BridgeError>, IsolateGone> {
+        Ok(Ok(task(self.0)))
     }
 }
 

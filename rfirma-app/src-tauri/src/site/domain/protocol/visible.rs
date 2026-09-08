@@ -15,6 +15,7 @@ const CORNERS: [&str; 4] = [
 const PAGE: &str = "signaturePage";
 const PAGES: &str = "signaturePages";
 const VISIBLE_SIGNATURE: &str = "visibleSignature";
+const RUBRIC_IMAGE: &str = "signatureRubricImage";
 const WANT: &str = "want";
 const APPEND: &str = "append";
 
@@ -47,6 +48,16 @@ pub fn visible_signature_of(
     }
 
     Ok(SiteVisibleSignature::Declined)
+}
+
+/// Olvida el recuadro y la rúbrica que declaró la sede: solo los lee un firmador PDF.
+pub fn forget_the_box(params: &mut BTreeMap<String, String>) {
+    for key in CORNERS
+        .iter()
+        .chain(&[PAGE, PAGES, VISIBLE_SIGNATURE, RUBRIC_IMAGE])
+    {
+        params.remove(*key);
+    }
 }
 
 fn the_site_placed_the_box(params: &BTreeMap<String, String>) -> bool {

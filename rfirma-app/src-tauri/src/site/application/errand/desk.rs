@@ -8,9 +8,9 @@ use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, RequestedFormat, SaveRequest,
-    SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
-    StickyCertificate,
+    forget_the_box, visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, RequestedFormat,
+    SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    SiteVisibleSignature, StickyCertificate,
 };
 
 use super::outcome::{
@@ -269,9 +269,14 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return answering(live, SiteOutcome::Cancelled);
     }
 
-    let visible = match visible_signature_of(&from_the_site) {
-        Ok(visible) => visible,
-        Err(refusal) => return answering(live, SiteOutcome::RefusedByTheProtocol(refusal)),
+    let visible = if format == Format::Pades {
+        match visible_signature_of(&from_the_site) {
+            Ok(visible) => visible,
+            Err(refusal) => return answering(live, SiteOutcome::RefusedByTheProtocol(refusal)),
+        }
+    } else {
+        forget_the_box(&mut from_the_site);
+        SiteVisibleSignature::Declined
     };
 
     let accepted = match accepted_listing(desk, ask.filter, ours, live) {
@@ -279,7 +284,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         Err(step) => return step,
     };
 
-    let document = match keep_the_document(desk, live, ask.document) {
+    let document = match keep_the_document(desk, live, format, ask.document) {
         Ok(document) => document,
         Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
     };
@@ -325,17 +330,29 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 fn keep_the_document<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
     live: &LiveErrand,
+    format: Format,
     bytes: &[u8],
 ) -> Result<String, SiteRefusal> {
     desk.scratch
         .make_the_folder(&desk.scratch_dir)
         .map_err(SiteRefusal::ScratchFolderMissing)?;
-    let path = desk.scratch_dir.join(format!("{}.pdf", handles::mint()));
+    let path = desk
+        .scratch_dir
+        .join(format!("{}.{}", handles::mint(), what_arrives_in(format)));
     desk.scratch
         .write(&path, bytes)
         .map_err(SiteRefusal::ScratchUnwritable)?;
     live.keep_the_scratch(path.clone(), desk.scratch.clone());
     Ok(desk.neighbours.open_unrecorded(path))
+}
+
+/// La extensión del documento que se firma en ese formato, no la de la firma que sale.
+fn what_arrives_in(format: Format) -> &'static str {
+    match format {
+        Format::Pades => "pdf",
+        Format::Xades(_) | Format::XmlDsig(_) | Format::FacturaE => "xml",
+        Format::Cades | Format::CadesAsicS | Format::Cms => "bin",
+    }
 }
 
 /// Prepara el paso de consentimiento para una selección de certificados de sede.

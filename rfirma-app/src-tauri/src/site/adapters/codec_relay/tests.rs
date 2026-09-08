@@ -35,7 +35,7 @@ fn it_decodes_exactly_like_the_fourth_protocol() {
 fn without_a_key_the_response_travels_in_plain_base64() {
     let outcome = SiteOutcome::Signature {
         signer_der: vec![0xfb, 0xff, 0xbf],
-        signed: b"%PDF".to_vec(),
+        signature: b"%PDF".to_vec(),
     };
 
     assert_eq!(RelayCodec::new(None).encode(&outcome), "+/+/|JVBERg==");
@@ -46,7 +46,7 @@ fn with_a_key_each_field_is_ciphered_on_its_own_and_recoverable() {
     let key = a_key();
     let outcome = SiteOutcome::Signature {
         signer_der: vec![0xfb, 0xff, 0xbf],
-        signed: b"%PDF".to_vec(),
+        signature: b"%PDF".to_vec(),
     };
 
     let wire = RelayCodec::new(Some(key.clone())).encode(&outcome);
