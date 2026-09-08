@@ -55,7 +55,8 @@ class SessionStampTest {
     @Test
     void round_trips_algorithm_time_zone_and_effective_params() {
         final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "1788186680218", MADRID,
-                params("signatureSubFilter", "ETSI.CAdES.detached", "profile", "baseline"), PDF, CHAIN);
+                params("signatureSubFilter", "ETSI.CAdES.detached", "profile", "baseline"),
+                        PDF, CHAIN, "sign", null);
 
         final SessionStamp decoded = SessionStamp.decode(stamp.encode());
 
@@ -72,9 +73,9 @@ class SessionStampTest {
         // sellos del mismo contenido saldrian distintos y la comparacion de
         // bytes del ADR-0016 daria falsos negativos.
         final SessionStamp first = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                params("a", "1", "b", "2", "c", "3"), PDF, CHAIN);
+                params("a", "1", "b", "2", "c", "3"), PDF, CHAIN, "sign", null);
         final SessionStamp second = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                params("c", "3", "b", "2", "a", "1"), PDF, CHAIN);
+                params("c", "3", "b", "2", "a", "1"), PDF, CHAIN, "sign", null);
 
         assertEquals(first.encode(), second.encode());
     }
@@ -85,7 +86,7 @@ class SessionStampTest {
         // partirian el bloque en campos inventados.
         final String layer2Text = "Firmado por\nEIDAS CERTIFICADO PRUEBAS\r\nel 2026-08-31";
         final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                params("layer2Text", layer2Text), PDF, CHAIN);
+                params("layer2Text", layer2Text), PDF, CHAIN, "sign", null);
 
         assertEquals(layer2Text,
                 SessionStamp.decode(stamp.encode()).extraParams().getProperty("layer2Text"));
@@ -94,7 +95,7 @@ class SessionStampTest {
     @Test
     void detects_a_time_that_does_not_match_the_session() {
         final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "1788186680218", MADRID,
-                new Properties(), PDF, CHAIN);
+                new Properties(), PDF, CHAIN, "sign", null);
 
         assertTrue(stamp.matchesSessionTime("1788186680218"));
         assertFalse(stamp.matchesSessionTime("1788186740218"));
@@ -107,7 +108,7 @@ class SessionStampTest {
         // PAdES lo regenera entero: si no es el mismo, completa sin error y el PDF
         // sale con "Digest Mismatch".
         final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                new Properties(), PDF, CHAIN);
+                new Properties(), PDF, CHAIN, "sign", null);
 
         assertTrue(stamp.matchesDocument(PDF));
         assertTrue(stamp.matchesDocument("%PDF-1.7 un documento".getBytes(StandardCharsets.UTF_8)),
@@ -120,9 +121,10 @@ class SessionStampTest {
     @Test
     void a_different_pdf_produces_a_different_stamp() {
         final SessionStamp one = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                new Properties(), PDF, CHAIN);
+                new Properties(), PDF, CHAIN, "sign", null);
         final SessionStamp other = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                new Properties(), "%PDF-1.7 otro".getBytes(StandardCharsets.UTF_8), CHAIN);
+                new Properties(), "%PDF-1.7 otro".getBytes(StandardCharsets.UTF_8), CHAIN,
+                "sign", null);
 
         assertNotEquals(one.encode(), other.encode());
     }
@@ -133,7 +135,7 @@ class SessionStampTest {
         // Postfirmar con otro certificado tampoco falla: sale un PDF que dice estar
         // firmado por quien no lo firmo, con la firma invalida.
         final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                new Properties(), PDF, CHAIN);
+                new Properties(), PDF, CHAIN, "sign", null);
 
         assertTrue(stamp.matchesChain(CHAIN));
         assertTrue(stamp.matchesChain(chain()),
@@ -146,9 +148,9 @@ class SessionStampTest {
     @Test
     void a_different_chain_produces_a_different_stamp() {
         final SessionStamp one = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                new Properties(), PDF, CHAIN);
+                new Properties(), PDF, CHAIN, "sign", null);
         final SessionStamp other = SessionStamp.of("SHA256withRSA", "42", MADRID,
-                new Properties(), PDF, OTHER_CHAIN);
+                new Properties(), PDF, OTHER_CHAIN, "sign", null);
 
         assertNotEquals(one.encode(), other.encode());
     }
@@ -156,18 +158,19 @@ class SessionStampTest {
     @Test
     void refuses_to_seal_without_a_chain() {
         assertThrows(IllegalArgumentException.class, () -> SessionStamp.of("SHA256withRSA", "42",
-                MADRID, new Properties(), PDF, null));
+                MADRID, new Properties(), PDF, null, "sign", null));
         assertThrows(IllegalArgumentException.class, () -> SessionStamp.of("SHA256withRSA", "42",
-                MADRID, new Properties(), PDF, new X509Certificate[0]));
+                MADRID, new Properties(), PDF, new X509Certificate[0], "sign", null));
     }
 
     @Test
     void a_different_time_zone_produces_a_different_stamp() {
         // El desfase horario entra dentro del rango firmado (#23): dos sellos que
         // solo se diferencian en la zona TIENEN que ser distintos.
-        final SessionStamp madrid = SessionStamp.of("SHA256withRSA", "42", MADRID, new Properties(), PDF, CHAIN);
+        final SessionStamp madrid = SessionStamp.of("SHA256withRSA", "42", MADRID, new Properties(),
+                PDF, CHAIN, "sign", null);
         final SessionStamp utc = SessionStamp.of("SHA256withRSA", "42",
-                TimeZone.getTimeZone("UTC"), new Properties(), PDF, CHAIN);
+                TimeZone.getTimeZone("UTC"), new Properties(), PDF, CHAIN, "sign", null);
 
         assertNotEquals(madrid.encode(), utc.encode());
     }
@@ -175,7 +178,8 @@ class SessionStampTest {
     @Test
     void does_not_let_the_caller_mutate_what_was_sealed() {
         final Properties sent = params("profile", "baseline");
-        final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "42", MADRID, sent, PDF, CHAIN);
+        final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "42", MADRID, sent,
+                PDF, CHAIN, "sign", null);
 
         sent.setProperty("profile", "otro");
         stamp.extraParams().setProperty("profile", "otro-mas");
@@ -207,6 +211,36 @@ class SessionStampTest {
         // Un sello sin PDF es exactamente el de antes de esta comprobacion: se
         // rechaza en vez de dejar pasar la postfirma sin atar el documento.
         final String block = "rfirma-session-stamp/1\nALG=SHA256withRSA\nTIME=42\nTZ=UTC\n";
+        assertThrows(IllegalArgumentException.class, () -> SessionStamp.decode(
+                java.util.Base64.getEncoder().encodeToString(
+                        block.getBytes(StandardCharsets.UTF_8))));
+    }
+
+    @Test
+    void detects_an_operation_that_is_not_the_one_that_was_presigned() {
+        final SessionStamp cosign = SessionStamp.of("SHA256withRSA", "42", MADRID,
+                new Properties(), PDF, CHAIN, "cosign", null);
+
+        assertTrue(cosign.matchesOperation("cosign", null));
+        assertFalse(cosign.matchesOperation("sign", null));
+    }
+
+    @Test
+    void detects_a_countersign_target_that_is_not_the_one_that_was_presigned() {
+        final SessionStamp tree = SessionStamp.of("SHA256withRSA", "42", MADRID,
+                new Properties(), PDF, CHAIN, "countersign", "tree");
+
+        assertTrue(tree.matchesOperation("countersign", "tree"));
+        assertFalse(tree.matchesOperation("countersign", "leafs"));
+        assertFalse(tree.matchesOperation("countersign", null));
+    }
+
+    @Test
+    void rejects_a_stamp_that_does_not_seal_the_operation() {
+        // Mismo argumento que con el PDF y la cadena: un sello sin OP dejaria a la
+        // postfirma ensamblando una operacion distinta de la que se prefirmo.
+        final String block = "rfirma-session-stamp/1\nALG=SHA256withRSA\nTIME=42\nTZ=UTC\n"
+                + "PDF=00\nCHAIN=00\n";
         assertThrows(IllegalArgumentException.class, () -> SessionStamp.decode(
                 java.util.Base64.getEncoder().encodeToString(
                         block.getBytes(StandardCharsets.UTF_8))));

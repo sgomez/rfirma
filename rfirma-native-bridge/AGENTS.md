@@ -9,7 +9,7 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `pom.xml` | Las dependencias de AutoFirma, consumidas desde `~/.m2` (ADR-0002), y la exclusión de `afirma-ui-utils` (ADR-0012). |
 | `src/main/java/.../NativeBridge.java` | Los `@CEntryPoint`: la frontera con Rust y la reserva manual de las cadenas devueltas (ADR-0003). |
 | `src/main/java/.../PadesBridge.java` | Preproceso y postproceso PAdES, incluida la firma visible. |
-| `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES; hoy solo la operación de firma. |
+| `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES: firma, cofirma y contrafirma. |
 | `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |
 | `src/main/java/.../SessionStamp.java` | El sello de sesión (ADR-0016). |
@@ -41,6 +41,10 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 * **FacturaE no tiene módulo propio**: `AOFacturaESigner` vive en
   `afirma-crypto-xades`. No añadas `afirma-crypto-facturae` al `pom.xml`: no
   existe en la 1.9.2.
+* **`TriphaseData.getTriSigns(id)` devuelve COPIAS** (`new TriSign(ts)`), así que
+  escribir el `PK1` en lo que devuelve no toca la sesión: la firma sale
+  incompleta sin que nadie lo diga. Para mutar, la lista viva de
+  `getTriSigns()`.
 * **El puente exige un JPEG ya normalizado y sin perfil ICC**: la
   normalización es de Rust (ADR-0012). Un PNG que llegue aquí falla con «no
   está codificada en JPEG», y eso es lo correcto.

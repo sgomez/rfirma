@@ -74,6 +74,35 @@
       </exclusions>
     </dependency>
 
+    <!-- La cofirma y la contrafirma CAdES: AOCAdESTriPhaseCoSigner y
+         CAdESMultiUtil viven aqui, y sin el modulo el preprocesador trifasico no
+         tiene con que cofirmar. Llega como transitiva, pero el pom de
+         afirma-server-triphase-signer-core la pide a ${clienteafirma.version} —que
+         vale 1.9 en el POM padre del tag v1.9.2— asi que se declara EXPLICITA,
+         igual que afirma-core-keystores y por la misma trampa. No lleva exclusion
+         de afirma-ui-utils porque no la arrastra: sus dependencias son afirma-core,
+         afirma-crypto-cades, afirma-crypto-core-pkcs7 y BouncyCastle. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-cades-multi</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+
+    <!-- El validador del original: el oraculo con el que las pruebas dan por
+         valida una firma, y ademas la rama checkSignatures del preprocesador
+         trifasico. Explicita por la misma trampa de ${clienteafirma.version}. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-validation</artifactId>
+      <version>${autofirma.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>es.gob.afirma</groupId>
+          <artifactId>afirma-ui-utils</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <!-- El motor de filtros de certificado del original (ID-252). NO lleva
          exclusion de afirma-ui-utils, y no es un olvido: medido en el #350, este
          modulo no la arrastra —su unica dependencia es afirma-core-keystores—,

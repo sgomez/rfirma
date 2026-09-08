@@ -3,6 +3,7 @@ package es.gob.afirma.nativebridge;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,6 +46,12 @@ class CadesPreSignTest {
                 TestFixtures.certificateChain(), params, "sign");
     }
 
+    /** Los atributos firmados de la unica prefirma que devuelve una firma. */
+    private static String soleValueOf(final CadesBridge.PreSignResult result) {
+        assertEquals(1, result.pres().size(), "una firma prefirma una sola vez");
+        return result.pres().get(0).pre();
+    }
+
     /** El {@code SET OF Attribute} de la prefirma, indexado por OID. */
     private static Map<String, ASN1Encodable> signedAttributes(final byte[] der) {
         final ASN1Set attributes = ASN1Set.getInstance(der);
@@ -61,7 +68,7 @@ class CadesPreSignTest {
 
     @Test
     void returns_the_cades_signed_attributes_in_asn1_der() throws Exception {
-        final byte[] der = Base64.getDecoder().decode(preSign(new Properties()).preSignB64());
+        final byte[] der = Base64.getDecoder().decode(soleValueOf(preSign(new Properties())));
 
         final ASN1Set attributes = ASN1Set.getInstance(der);
         assertArrayEquals(der, attributes.getEncoded(ASN1Encoding.DER));
@@ -82,7 +89,7 @@ class CadesPreSignTest {
         // Al reves que PAdES, que lo deja fuera y lo reconstruye en la postfirma:
         // en CAdES el instante va DENTRO de lo que se firma, y por eso la postfirma
         // no tiene ninguna fecha que rehacer ni ninguna zona horaria que imponer.
-        final byte[] der = Base64.getDecoder().decode(preSign(new Properties()).preSignB64());
+        final byte[] der = Base64.getDecoder().decode(soleValueOf(preSign(new Properties())));
 
         assertNotNull(signedAttributes(der).get(OID_SIGNING_TIME),
                 "los atributos firmados de CAdES llevan signing-time");
@@ -119,23 +126,14 @@ class CadesPreSignTest {
     }
 
     @Test
-    void refuses_the_cosign_operation_naming_it() {
-        final Exception failure = assertThrows(UnsupportedOperationException.class,
-                () -> CadesBridge.preSign(TestFixtures.challenge(), ALGORITHM,
-                        TestFixtures.certificateChain(), new Properties(), "cosign"));
+    void seals_the_operation_that_the_session_carries() throws Exception {
+        final CadesBridge.PreSignResult result = preSign(new Properties());
 
-        assertTrue(failure.getMessage().contains("cosign"),
-                "el mensaje tiene que nombrar la operacion: " + failure.getMessage());
-    }
-
-    @Test
-    void refuses_the_countersign_operation_naming_it() {
-        final Exception failure = assertThrows(UnsupportedOperationException.class,
-                () -> CadesBridge.preSign(TestFixtures.challenge(), ALGORITHM,
-                        TestFixtures.certificateChain(), new Properties(), "countersign"));
-
-        assertTrue(failure.getMessage().contains("countersign"),
-                "el mensaje tiene que nombrar la operacion: " + failure.getMessage());
+        final SessionStamp stamp = SessionStamp.decode(result.stamp());
+        assertEquals("sign", stamp.operation());
+        assertNull(stamp.target(), "una firma no tiene objetivo de contrafirma");
+        assertTrue(result.session().contains("<param n=\"OP\">sign</param>"),
+                "la operacion sellada tiene que viajar tambien en la sesion");
     }
 
     @Test

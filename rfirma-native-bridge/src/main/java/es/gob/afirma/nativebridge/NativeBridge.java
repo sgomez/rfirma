@@ -2,6 +2,7 @@ package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.UnmanagedMemory;
@@ -41,6 +42,7 @@ import org.graalvm.word.PointerBase;
  *
  * <pre>
  * presign  ok  {"ok":true,"session":"&lt;xml&gt;","pre":"&lt;b64 DER&gt;","stamp":"&lt;b64&gt;"}
+ *              y en CAdES "pres":[{"id":"..","pre":"&lt;b64 DER&gt;"}] en vez de "pre"
  * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}   y en CAdES {"ok":true,"signature":"&lt;b64&gt;"}
  * filter   ok  {"ok":true,"selected":[0,2]}
  * expand   ok  {"ok":true,"params":"&lt;bloque properties&gt;"}
@@ -177,13 +179,27 @@ public final class NativeBridge {
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "session", result.session());
-            field(json, "pre", result.preSignB64());
+            pres(json, result.pres());
             field(json, "stamp", result.stamp());
             return toUnmanagedCString(json.append('}').toString());
         }
         catch (final Throwable e) {
             return toUnmanagedCString(errorJson(e));
         }
+    }
+
+    private static void pres(final StringBuilder json, final List<CadesBridge.PreSign> pres) {
+        json.append(",\"pres\":[");
+        for (int i = 0; i < pres.size(); i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append('{');
+            member(json, "id", pres.get(i).id());
+            field(json, "pre", pres.get(i).pre());
+            json.append('}');
+        }
+        json.append(']');
     }
 
     /**
@@ -195,7 +211,8 @@ public final class NativeBridge {
      * @param certChainB64 la MISMA cadena de certificados, Base64 separado por {@code ';'}.
      * @param stampB64     el sello de sesion que devolvio la prefirma, tal cual.
      * @param sessionXml   el {@code TriphaseData} de la prefirma, tal cual.
-     * @param pkcs1B64     el PKCS#1 calculado por Rust sobre los atributos firmados.
+     * @param pkcs1Json    los PKCS#1 calculados por Rust, uno por prefirma:
+     *                     {@code [{"id":"..","pk1":".."}]}.
      * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
      */
     @CEntryPoint(name = "autofirma_cades_postsign")
@@ -205,14 +222,14 @@ public final class NativeBridge {
             final CCharPointer certChainB64,
             final CCharPointer stampB64,
             final CCharPointer sessionXml,
-            final CCharPointer pkcs1B64) {
+            final CCharPointer pkcs1Json) {
         try {
             final byte[] signature = CadesBridge.postSign(
                     Base64.getDecoder().decode(CTypeConversion.toJavaString(dataB64)),
                     PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
                     CTypeConversion.toJavaString(stampB64),
                     CTypeConversion.toJavaString(sessionXml),
-                    CTypeConversion.toJavaString(pkcs1B64));
+                    CadesBridge.parsePkcs1List(CTypeConversion.toJavaString(pkcs1Json)));
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "signature", Base64.getEncoder().encodeToString(signature));
@@ -371,7 +388,12 @@ public final class NativeBridge {
     }
 
     private static void field(final StringBuilder json, final String name, final String value) {
-        json.append(",\"").append(name).append("\":");
+        json.append(',');
+        member(json, name, value);
+    }
+
+    private static void member(final StringBuilder json, final String name, final String value) {
+        json.append('"').append(name).append("\":");
         if (value == null) {
             json.append("null");
             return;

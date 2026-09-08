@@ -4,10 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.Base64;
+import java.util.List;
 import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
@@ -18,25 +17,17 @@ import org.junit.jupiter.api.Test;
  */
 class CadesPostSignTest {
 
-    private static final String ALGORITHM = "SHA256withRSA";
-
     /** Prefirma + fase 2 con la clave del kit, que es lo que hara Rust por PKCS#11. */
     private static SignedSession sign(final Properties extraParams) throws Exception {
         final byte[] document = TestFixtures.challenge();
-        final X509Certificate[] chain = TestFixtures.certificateChain();
-        final CadesBridge.PreSignResult pre =
-                CadesBridge.preSign(document, ALGORITHM, chain, extraParams, "sign");
+        final CadesBridge.PreSignResult pre = CadesCycle.preSign(document, extraParams, "sign");
 
-        final Signature signature = Signature.getInstance(ALGORITHM);
-        signature.initSign(TestFixtures.privateKey());
-        signature.update(Base64.getDecoder().decode(pre.preSignB64()));
-
-        return new SignedSession(document, chain, pre,
-                Base64.getEncoder().encodeToString(signature.sign()));
+        return new SignedSession(document, TestFixtures.certificateChain(), pre,
+                CadesCycle.pkcs1For(pre));
     }
 
     private record SignedSession(byte[] document, X509Certificate[] chain,
-            CadesBridge.PreSignResult pre, String pkcs1) { }
+            CadesBridge.PreSignResult pre, List<CadesBridge.SignatureValue> pkcs1) { }
 
     /**
      * Dos prefirmas seguidas solo se distinguen en el instante, asi que la
@@ -127,7 +118,26 @@ class CadesPostSignTest {
 
         assertThrows(IllegalArgumentException.class,
                 () -> CadesBridge.postSign(s.document(), s.chain(),
-                        s.pre().stamp(), s.pre().session(), ""));
+                        s.pre().stamp(), s.pre().session(), List.of()));
+    }
+
+    @Test
+    void reads_the_pkcs1_list_that_rust_sends() {
+        final List<CadesBridge.SignatureValue> values =
+                CadesBridge.parsePkcs1List("[{\"id\":\"a==\",\"pk1\":\"MTIz\"},"
+                        + " {\"id\":\"b/c+d\",\"pk1\":\"NDU2\"}]");
+
+        assertEquals(2, values.size());
+        assertEquals("a==", values.get(0).id());
+        assertEquals("MTIz", values.get(0).pkcs1B64());
+        assertEquals("b/c+d", values.get(1).id());
+    }
+
+    @Test
+    void refuses_a_pkcs1_list_without_a_single_entry() {
+        assertThrows(IllegalArgumentException.class, () -> CadesBridge.parsePkcs1List("[]"));
+        assertThrows(IllegalArgumentException.class, () -> CadesBridge.parsePkcs1List(null));
+        assertThrows(IllegalArgumentException.class, () -> CadesBridge.parsePkcs1List("MTIz"));
     }
 
     @Test

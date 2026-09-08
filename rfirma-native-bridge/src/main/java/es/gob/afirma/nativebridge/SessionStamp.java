@@ -34,9 +34,9 @@ import java.util.TimeZone;
  * {@link #matchesChain(X509Certificate[])}, tres comparaciones de bytes.
  *
  * <p>Dentro van el algoritmo, el {@code TIME}, la zona horaria, el
- * <b>SHA-256 del PDF prefirmado</b> y el <b>SHA-256 de la cadena de
- * certificados</b>. Fuera quedan {@code PRE} y {@code PID}, que son salida de la
- * prefirma y no configuracion.
+ * <b>SHA-256 del PDF prefirmado</b>, el <b>SHA-256 de la cadena de
+ * certificados</b> y la operacion pedida con su objetivo. Fuera quedan
+ * {@code PRE} y {@code PID}, que son salida de la prefirma y no configuracion.
  *
  * <p>El sello es <b>opaco para Rust por convencion</b>, no por construccion: el
  * bloque es texto plano en Base64 y no lleva ninguna marca de integridad, asi
@@ -58,6 +58,10 @@ public final class SessionStamp {
     private static final String KEY_PDF_DIGEST = "PDF";
     /** SHA-256 en hexadecimal de los DER de la cadena, concatenados en orden. */
     private static final String KEY_CHAIN_DIGEST = "CHAIN";
+    /** La operacion pedida: {@code sign}, {@code cosign} o {@code countersign}. */
+    private static final String KEY_OPERATION = "OP";
+    /** El objetivo de una contrafirma. Solo lo llevan los sellos que la sellan. */
+    private static final String KEY_TARGET = "TARGET";
     /** Prefijo de cada extraParam efectivo. */
     private static final String PARAM_PREFIX = "P.";
 
@@ -66,16 +70,20 @@ public final class SessionStamp {
     private final String timeZoneId;
     private final String documentDigest;
     private final String chainDigest;
+    private final String operation;
+    private final String target;
     private final Properties extraParams;
 
     private SessionStamp(final String algorithm, final String time,
             final String timeZoneId, final String documentDigest, final String chainDigest,
-            final Properties extraParams) {
+            final String operation, final String target, final Properties extraParams) {
         this.algorithm = algorithm;
         this.time = time;
         this.timeZoneId = timeZoneId;
         this.documentDigest = documentDigest;
         this.chainDigest = chainDigest;
+        this.operation = operation;
+        this.target = target;
         this.extraParams = extraParams;
     }
 
@@ -102,16 +110,23 @@ public final class SessionStamp {
      *                     orden. Es lo tercero que viaja aparte, y postfirmar con otro
      *                     certificado tambien completa sin error —sale un PDF que dice
      *                     estar firmado por quien no lo firmo, con la firma invalida.
+     * @param operation    la operacion pedida. Sin sellarla, una postfirma podria
+     *                     ensamblar una operacion distinta de la que se prefirmo.
+     * @param target       el objetivo de la contrafirma, o {@code null} en las demas
+     *                     operaciones.
      */
     public static SessionStamp of(final String algorithm, final String time,
             final TimeZone timeZone, final Properties effectiveParams, final byte[] document,
-            final X509Certificate[] chain) {
+            final X509Certificate[] chain, final String operation, final String target) {
         final Properties copy = new Properties();
         for (final String name : effectiveParams.stringPropertyNames()) {
             copy.setProperty(name, effectiveParams.getProperty(name));
         }
+        if (operation == null || operation.isBlank()) {
+            throw new IllegalArgumentException("no hay operacion que sellar");
+        }
         return new SessionStamp(algorithm, time, timeZone.getID(), digestOf(document),
-                digestOfChain(chain), copy);
+                digestOfChain(chain), operation, target, copy);
     }
 
     /** SHA-256 en hexadecimal minusculas, que es lo que se guarda del documento. */
@@ -171,6 +186,10 @@ public final class SessionStamp {
         append(sb, KEY_TIME_ZONE, this.timeZoneId);
         append(sb, KEY_PDF_DIGEST, this.documentDigest);
         append(sb, KEY_CHAIN_DIGEST, this.chainDigest);
+        append(sb, KEY_OPERATION, this.operation);
+        if (this.target != null) {
+            append(sb, KEY_TARGET, this.target);
+        }
         final List<String> names = new ArrayList<>(this.extraParams.stringPropertyNames());
         // Orden fijo: un Properties no lo tiene, y sin esto dos sellos del mismo
         // contenido saldrian distintos segun el orden de iteracion.
@@ -204,6 +223,8 @@ public final class SessionStamp {
         String timeZoneId = null;
         String documentDigest = null;
         String chainDigest = null;
+        String operation = null;
+        String target = null;
         final Properties params = new Properties();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) {
@@ -221,6 +242,8 @@ public final class SessionStamp {
                 case KEY_TIME_ZONE -> timeZoneId = value;
                 case KEY_PDF_DIGEST -> documentDigest = value;
                 case KEY_CHAIN_DIGEST -> chainDigest = value;
+                case KEY_OPERATION -> operation = value;
+                case KEY_TARGET -> target = value;
                 default -> {
                     if (!key.startsWith(PARAM_PREFIX)) {
                         throw new IllegalArgumentException(
@@ -231,11 +254,12 @@ public final class SessionStamp {
             }
         }
         if (algorithm == null || time == null || timeZoneId == null || documentDigest == null
-                || chainDigest == null) {
+                || chainDigest == null || operation == null) {
             throw new IllegalArgumentException(
-                    "al sello de sesion le falta ALG, TIME, TZ, PDF o CHAIN");
+                    "al sello de sesion le falta ALG, TIME, TZ, PDF, CHAIN u OP");
         }
-        return new SessionStamp(algorithm, time, timeZoneId, documentDigest, chainDigest, params);
+        return new SessionStamp(algorithm, time, timeZoneId, documentDigest, chainDigest,
+                operation, target, params);
     }
 
     /**
@@ -279,6 +303,20 @@ public final class SessionStamp {
         return this.chainDigest.equals(digestOfChain(chain));
     }
 
+    /**
+     * La cuarta comprobacion: la sesion que llega a la postfirma se abrio para la
+     * misma operacion, y con el mismo objetivo, que se sello.
+     *
+     * <p>Sin esto, postfirmar una sesion de cofirma como si fuera una firma
+     * <b>no falla</b>: devuelve un CMS completo que ha perdido las firmas que
+     * decia cofirmar.
+     */
+    public boolean matchesOperation(final String sessionOperation, final String sessionTarget) {
+        final boolean sameTarget = this.target == null
+                ? sessionTarget == null : this.target.equals(sessionTarget);
+        return this.operation.equals(sessionOperation) && sameTarget;
+    }
+
     /** SHA-256 del documento prefirmado, en hexadecimal. Para el mensaje de error. */
     public String documentDigest() {
         return this.documentDigest;
@@ -295,6 +333,16 @@ public final class SessionStamp {
 
     public String time() {
         return this.time;
+    }
+
+    /** La operacion que se prefirmo: la postfirma ensambla esta y no la que le digan. */
+    public String operation() {
+        return this.operation;
+    }
+
+    /** El objetivo de la contrafirma sellada, o {@code null} si no lo es. */
+    public String target() {
+        return this.target;
     }
 
     public TimeZone timeZone() {
