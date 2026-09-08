@@ -710,8 +710,15 @@ fn a_batch_reads_its_two_servlets_and_the_algorithm_of_its_xml_lote() {
     let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
         panic!("es un lote");
     };
-    assert_eq!(request.presigner_url(), "https://presigner.example/pre");
-    assert_eq!(request.postsigner_url(), "https://postsigner.example/post");
+    assert_eq!(
+        request.presigner_url(),
+        Some("https://presigner.example/pre")
+    );
+    assert_eq!(
+        request.postsigner_url(),
+        Some("https://postsigner.example/post")
+    );
+    assert!(!request.is_local());
     assert!(!request.is_json());
     assert_eq!(request.algorithm(), "SHA256");
     assert!(request.stops_on_error());
@@ -760,15 +767,35 @@ fn a_batch_servlet_url_that_is_not_https_is_refused() {
 }
 
 #[test]
-fn a_local_batch_is_refused_until_468() {
-    let url = a_batch(&format!(
-        "&localBatchProcess=true&dat={}",
+fn a_local_batch_needs_no_servlet_urls() {
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
+        dat(json_lote("SHA256", true).as_bytes())
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert!(request.is_local());
+    assert!(request.is_json());
+    assert_eq!(request.presigner_url(), None);
+    assert_eq!(request.postsigner_url(), None);
+    assert!(request.stops_on_error());
+}
+
+/// El original manda el XML heredado a los servlets aunque la sede pida el lote
+/// local; rFirma no lo atiende (ver el encabezado del módulo `protocol`).
+#[test]
+fn a_local_batch_in_the_legacy_xml_is_refused() {
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&dat={}",
         dat(xml_lote("SHA256", false).as_bytes())
     ));
 
-    let refusal = read_operation(&url).expect_err("el lote local no se atiende aqui");
+    let refusal = read_operation(&url).expect_err("el lote local solo existe en JSON");
 
-    assert_eq!(refusal.code(), SafCode::LocalBatchSign);
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Data));
 }
 
 #[test]

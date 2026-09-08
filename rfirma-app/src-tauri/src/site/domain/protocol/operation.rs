@@ -50,7 +50,7 @@ pub const ACCEPTED_ALGORITHMS: [&str; 2] = ["sha256", "sha256withrsa"];
 /// Los algoritmos del lote que el original acepta (`BatchSigner`, XSD de `signbatch`).
 pub const ACCEPTED_BATCH_ALGORITHMS: [&str; 4] = ["sha1", "sha256", "sha384", "sha512"];
 
-/// `localBatchProcess=true`: el lote local, rechazado aquí hasta #468.
+/// `localBatchProcess=true`: el lote se firma aquí y no contra los dos servlets.
 const LOCAL_BATCH_PROCESS: &str = "localBatchProcess";
 
 /// `properties`: extensiones admitidas por el diálogo de guardado de `signandsave`.
@@ -88,7 +88,7 @@ pub enum SiteOperation {
     Load(LoadRequest),
     /// `signandsave`: la sede pide firmar y guardar el resultado.
     SignAndSave(SignAndSaveRequest),
-    /// `batch`: la sede pide firmar un lote remoto.
+    /// `batch`: la sede pide firmar un lote, remoto o local.
     Batch(BatchRequest),
 }
 
@@ -361,7 +361,9 @@ impl LoadRequest {
     }
 }
 
-/// La petición de `batch`: firmar un lote remoto (`BatchSigner`, 1.9.2).
+/// La petición de `batch`: firmar un lote contra los dos servlets, o aquí
+/// mismo cuando la sede pide `localBatchProcess=true` (`BatchSigner`,
+/// `LocalBatchSigner`, 1.9.2).
 ///
 /// Lleva el lote **tal y como llegó**: los bytes decodificados para leer lo
 /// mínimo que hace falta aquí, y el Base64 original intacto, porque lo que
@@ -372,8 +374,9 @@ pub struct BatchRequest {
     lote: Vec<u8>,
     lote_base64: String,
     json: bool,
-    presigner_url: String,
-    postsigner_url: String,
+    local: bool,
+    presigner_url: Option<String>,
+    postsigner_url: Option<String>,
     needcert: bool,
     filter: SiteFilter,
     sticky: StickyCertificate,
@@ -397,14 +400,19 @@ impl BatchRequest {
         self.json
     }
 
-    /// La URL del servlet de prefirma.
-    pub fn presigner_url(&self) -> &str {
-        &self.presigner_url
+    /// Si el lote se firma aquí (`localBatchProcess=true`) o contra los dos servlets.
+    pub fn is_local(&self) -> bool {
+        self.local
     }
 
-    /// La URL del servlet de postfirma.
-    pub fn postsigner_url(&self) -> &str {
-        &self.postsigner_url
+    /// La URL del servlet de prefirma, que el lote local no lleva.
+    pub fn presigner_url(&self) -> Option<&str> {
+        self.presigner_url.as_deref()
+    }
+
+    /// La URL del servlet de postfirma, que el lote local no lleva.
+    pub fn postsigner_url(&self) -> Option<&str> {
+        self.postsigner_url.as_deref()
     }
 
     /// Si la sede pide el certificado usado además del resultado del lote.
@@ -641,35 +649,40 @@ fn load_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// La petición del lote remoto: dos URL de servlet, el lote y lo mínimo que se
 /// lee de dentro de él (`ProtocolInvocationLauncherBatch`, 1.9.2).
 fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
-    if url
+    let local = url
         .parameter(LOCAL_BATCH_PROCESS)
-        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
-    {
-        return Err(Refusal::new(
-            SafCode::LocalBatchSign,
-            "el lote local no se atiende: va en #468",
-        ));
-    }
-
-    let presigner_url = required(url, "batchpresignerurl", Parameter::BatchPresignerUrl)?;
-    check_absolute_https_url(presigner_url, Parameter::BatchPresignerUrl)?;
-    let postsigner_url = required(url, "batchpostsignerurl", Parameter::BatchPostsignerUrl)?;
-    check_absolute_https_url(postsigner_url, Parameter::BatchPostsignerUrl)?;
-
-    let lote_base64 = required(url, "dat", Parameter::Data)?;
-    let lote = decode_base64(lote_base64, Parameter::Data)?;
+        .is_some_and(|value| value.eq_ignore_ascii_case("true"));
     let json = url
         .parameter("jsonbatch")
         .is_some_and(|value| value.eq_ignore_ascii_case("true"));
+    if local && !json {
+        return Err(Refusal::about(
+            Parameter::Data,
+            "el lote local solo existe en JSON: el XML heredado va a los dos servlets",
+        ));
+    }
+
+    let servlets = match local {
+        true => None,
+        false => Some(batch_servlets(url)?),
+    };
+
+    let lote_base64 = required(url, "dat", Parameter::Data)?;
+    let lote = decode_base64(lote_base64, Parameter::Data)?;
     let (algorithm, stop_on_error) = batch_algorithm_and_stop_on_error(json, &lote)?;
 
+    let (presigner_url, postsigner_url) = match servlets {
+        Some((presigner_url, postsigner_url)) => (Some(presigner_url), Some(postsigner_url)),
+        None => (None, None),
+    };
     let declared = declared_properties(url)?;
     Ok(SiteOperation::Batch(BatchRequest {
         lote,
         lote_base64: lote_base64.to_owned(),
         json,
-        presigner_url: presigner_url.to_owned(),
-        postsigner_url: postsigner_url.to_owned(),
+        local,
+        presigner_url,
+        postsigner_url,
         needcert: url
             .parameter("needcert")
             .is_some_and(|value| value.eq_ignore_ascii_case("true")),
@@ -678,6 +691,16 @@ fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         algorithm,
         stop_on_error,
     }))
+}
+
+/// Las dos URL de servlet que el lote remoto exige, ya comprobadas.
+fn batch_servlets(url: &AfirmaUrl) -> Result<(String, String), Refusal> {
+    let presigner_url = required(url, "batchpresignerurl", Parameter::BatchPresignerUrl)?;
+    check_absolute_https_url(presigner_url, Parameter::BatchPresignerUrl)?;
+    let postsigner_url = required(url, "batchpostsignerurl", Parameter::BatchPostsignerUrl)?;
+    check_absolute_https_url(postsigner_url, Parameter::BatchPostsignerUrl)?;
+
+    Ok((presigner_url.to_owned(), postsigner_url.to_owned()))
 }
 
 /// La URL de un servlet del lote: absoluta y `https`, o el `SAF_03` que la nombra.

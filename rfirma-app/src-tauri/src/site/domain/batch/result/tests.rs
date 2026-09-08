@@ -35,3 +35,31 @@ const EMPTY_RESULT: &[u8] = b"{\"signs\":[]}";
 fn build_empty_result_matches_the_original_byte_for_byte() {
     assert_eq!(build_empty_result(), EMPTY_RESULT);
 }
+
+/// Transcrito de `JSONBatchManager.buildBatchResultJson` de 1.9.2: un elemento
+/// por firma, con las claves en el orden en el que el original las pone.
+const LOCAL_RESULT_OF_THREE: &[u8] = b"{\"signs\":[\
+{\"id\":\"001\",\"result\":\"DONE_AND_SAVED\",\"signature\":\"bGEgZmlybWE=\"},\
+{\"id\":\"002\",\"result\":\"SKIPPED\"},\
+{\"id\":\"003\",\"result\":\"ERROR_PRE\",\"description\":\"fallo\"}]}";
+
+#[test]
+fn build_local_result_writes_the_three_outcomes_of_the_original() {
+    let results = vec![
+        LocalBatchResult::signed("001", b"la firma".to_vec()),
+        LocalBatchResult::skipped("002"),
+        LocalBatchResult::failed("003", "fallo"),
+    ];
+
+    assert_eq!(build_local_result(&results), LOCAL_RESULT_OF_THREE);
+}
+
+#[test]
+fn a_result_that_is_skipped_afterwards_loses_its_signature() {
+    let mut result = LocalBatchResult::signed("001", b"la firma".to_vec());
+
+    result.skip();
+
+    assert_eq!(result.result(), PresignResult::Skipped);
+    assert_eq!(result.signature(), None);
+}

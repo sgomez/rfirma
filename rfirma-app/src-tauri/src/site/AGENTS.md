@@ -51,11 +51,12 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, y con qué momento se abre la de sede. Pruebas en `application/startup/tests.rs`. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
 | `application/trust.rs` | Cuándo se instala la CA local en los almacenes y cómo se solapa con la siguiente. Pruebas en `application/trust/tests.rs`. |
-| `domain/batch/mod.rs` | El reparto del lote remoto, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
+| `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
+| `domain/batch/local.rs` | El lote local leído del JSON de la sede, con lo que cada firma hereda del lote. **No** es el lote remoto. Pruebas en `domain/batch/local/tests.rs`. |
 | `domain/batch/json.rs` | Un JSON de solo lectura y escritura con el orden del documento, para el lote remoto. Pruebas en `domain/batch/json/tests.rs`. |
 | `domain/batch/triphase.rs` | `TriphaseData` calcado del original, y la regla de `PK1` que firma y borra el `PRE`. Pruebas en `domain/batch/triphase/tests.rs`. |
 | `domain/batch/presign.rs` | La prefirma JSON del lote con errores por elemento, y el lote actualizado con ellos. Pruebas en `domain/batch/presign/tests.rs`. |
-| `domain/batch/result.rs` | El resultado del lote cuando la prefirma no dio ninguna firma que postfirmar. Pruebas en `domain/batch/result/tests.rs`. |
+| `domain/batch/result.rs` | El resultado del lote: el del remoto que no pudo prefirmar nada, y el del local con una firma por elemento. Pruebas en `domain/batch/result/tests.rs`. |
 | `domain/batch_error.rs` | La situación del lote remoto (ADR-0009): alcance de los dos servlets y forma de su respuesta. Pruebas en `domain/batch_error/tests.rs`. |
 | `domain/local_ca.rs` | La **CA local**, pura: la genera y la lee de PEM, y no toca el disco. Pruebas en `domain/local_ca/tests.rs`. |
 | `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
@@ -67,8 +68,8 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/framing.rs` | **El framing artesanal del transporte `service`**, sin socket: lector y escritor puros. Pruebas en `domain/protocol/framing/tests.rs`. |
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
-| `domain/protocol/mod.rs` | El reparto, y las cinco cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
-| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado, de carga o de lote remoto. Pruebas en `domain/protocol/operation/tests.rs`. |
+| `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
+| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado, de carga o de lote. Pruebas en `domain/protocol/operation/tests.rs`. |
 | `domain/protocol/parameters.rs` | Lo común a toda operación: las dos guardias y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
 | `domain/protocol/url.rs` | Una URL `afirma://` partida en verbo y pares, con las rarezas del original. Pruebas en `domain/protocol/url/tests.rs`. |
