@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,6 +43,8 @@ class XadesPreSignTest {
 
         assertTrue(session.contains("<param n=\"BASE\">"),
                 "la postfirma reinyecta el BASE, asi que la sesion tiene que llevarlo");
+        assertEquals("UTF-8", encodingOf(session),
+                "la postfirma descodifica el BASE con el ENCODING de la sesion");
         assertTrue(session.contains("<param n=\"NEED_PRE\">"),
                 "la sesion XAdES lleva NEED_PRE");
     }
@@ -54,6 +57,20 @@ class XadesPreSignTest {
         assertNotNull(stamp.xmlBaseDigest(), "el sello de una prefirma XAdES cubre el BASE");
         assertTrue(stamp.matchesXmlBase(baseOf(result.session()), encodingOf(result.session())),
                 "el BASE sellado tiene que ser el que viaja en la sesion");
+    }
+
+    @Test
+    void seals_the_encoding_that_the_session_carries() throws Exception {
+        final XadesBridge.PreSignResult result = preSign(new Properties());
+        final String base = baseOf(result.session());
+
+        final SessionStamp stamp = SessionStamp.decode(result.stamp());
+        assertTrue(stamp.matchesXmlBase(base, encodingOf(result.session())),
+                "el ENCODING sellado tiene que ser el que viaja en la sesion");
+        assertFalse(stamp.matchesXmlBase(base, "ISO-8859-1"),
+                "un ENCODING distinto no casa con el sellado");
+        assertFalse(stamp.matchesXmlBase(base, null),
+                "una sesion sin ENCODING no casa con un sello que lo lleva");
     }
 
     @Test

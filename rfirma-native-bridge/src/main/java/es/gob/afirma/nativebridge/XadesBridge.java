@@ -186,13 +186,11 @@ public final class XadesBridge {
 
         final String xmlBase = first.getProperty(PROPERTY_XML_BASE);
         if (!stamp.matchesXmlBase(xmlBase, first.getProperty(PROPERTY_XML_ENCODING))) {
-            // El BASE es lo que la postfirma reinyecta, asi que es el documento que de
-            // verdad se firma: con otro sale un XML completo cuya firma cubre algo que
-            // nadie ha visto, y no falla nada.
             throw new SessionStampMismatchException(
-                    "el BASE de la sesion trifasica no es el que se prefirmo: el sello lleva el"
-                            + " SHA-256 " + stamp.xmlBaseDigest() + ". Firmar asi produciria una"
-                            + " firma sobre otro documento, sin dar ningun error.");
+                    "el BASE de la sesion trifasica, o su ENCODING, no es el que se prefirmo:"
+                            + " el sello lleva del BASE el SHA-256 " + stamp.xmlBaseDigest()
+                            + ". Firmar asi produciria una firma sobre otro documento, sin dar"
+                            + " ningun error.");
         }
 
         attachPkcs1(first, pkcs1s);

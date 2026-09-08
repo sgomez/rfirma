@@ -104,6 +104,7 @@ final class XadesCycle {
 
     static Document parse(final byte[] xml) throws Exception {
         final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
         factory.setNamespaceAware(true);
         return factory.newDocumentBuilder().parse(new ByteArrayInputStream(xml));
     }

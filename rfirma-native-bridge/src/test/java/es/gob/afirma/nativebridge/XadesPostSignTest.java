@@ -45,6 +45,19 @@ class XadesPostSignTest {
     }
 
     @Test
+    void refuses_an_encoding_changed_between_the_two_phases() throws Exception {
+        final XadesBridge.PreSignResult pre = preSign();
+        final String encoding = XadesPreSignTest.encodingOf(pre.session());
+
+        final Exception failure = assertThrows(SessionStampMismatchException.class,
+                () -> postSign(pre, XadesCycle.referenceXml(),
+                        pre.session().replace("<param n=\"ENCODING\">" + encoding,
+                                "<param n=\"ENCODING\">ISO-8859-1")));
+
+        assertTrue(failure.getMessage().contains("ENCODING"), failure.getMessage());
+    }
+
+    @Test
     void refuses_a_document_that_is_not_the_one_that_was_presigned() throws Exception {
         final XadesBridge.PreSignResult pre = preSign();
         final byte[] other = new String(XadesCycle.referenceXml(), StandardCharsets.UTF_8)
