@@ -218,6 +218,31 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
       stage: {
         kind: "consent",
         document: null,
+        signs: null,
+        certificates: [certificate()],
+        narrowed: false,
+      },
+    });
+  });
+
+  it("turns a batch request into a consent with no document and its count of signatures", () => {
+    const view: SiteErrandView = {
+      origin: "sede.ejemplo.gob.es",
+      stage: {
+        kind: "askingToSignTheBatch",
+        signs: 3,
+        certificates: [certificate()],
+        alreadyChosen: null,
+      },
+    };
+
+    expect(errandOf(view)).toEqual<Errand>({
+      origin: "sede.ejemplo.gob.es",
+      operation: "sign",
+      stage: {
+        kind: "consent",
+        document: null,
+        signs: 3,
         certificates: [certificate()],
         narrowed: false,
       },
@@ -318,6 +343,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
             signatures: 1,
             hasUnregisteredSignatures: true,
           },
+          signs: null,
           certificates: [certificate()],
           narrowed: false,
         },
@@ -634,6 +660,68 @@ describe("los momentos que pone el adaptador", () => {
 
     expect(calls.decline).toHaveBeenCalledOnce();
     expect(calls.closeWindow).toHaveBeenCalledOnce();
+  });
+});
+
+describe("el lote remoto", () => {
+  const ASKING_TO_SIGN_THE_BATCH: SiteErrandView = {
+    origin: "sede.ejemplo.gob.es",
+    stage: {
+      kind: "askingToSignTheBatch",
+      signs: 3,
+      certificates: [certificate()],
+      alreadyChosen: null,
+    },
+  };
+
+  it("closes the batch with the secret alone, without a postsign of its own", async () => {
+    const { push, port, seen, calls, last } = watched();
+    push(ASKING_TO_SIGN_THE_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+    await port.submitSecret("1234");
+
+    expect(calls.signWithPin).toHaveBeenCalledWith("1234");
+    expect(calls.finishSigning).not.toHaveBeenCalled();
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: { kind: "batchSigned", signs: 3 },
+    });
+    expect(seen.map((errand) => errand?.stage.kind)).toEqual([
+      "consent",
+      "signing",
+      "secret",
+      "signing",
+      "outcome",
+    ]);
+  });
+
+  it("names the batch's own refusals as the catalogue knows them", async () => {
+    const { push, port, last } = watched({
+      signWithPin: async () => ({
+        ok: false,
+        failure: {
+          situation: "presignerUnreachable",
+          detail: "no se ha podido contactar con el presigner",
+          attemptsLeft: null,
+        },
+      }),
+    });
+    push(ASKING_TO_SIGN_THE_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+    await port.submitSecret("1234");
+
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: {
+        kind: "refused",
+        situation: "batchPresignerUnreachable",
+        detail: "no se ha podido contactar con el presigner",
+      },
+    });
   });
 });
 

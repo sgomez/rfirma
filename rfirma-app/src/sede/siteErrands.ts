@@ -2,7 +2,7 @@ import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { StoreSecret } from "../signing/secret";
-import { belongsToPinDialog } from "../signing/token";
+import { belongsToPinDialog, type TokenFailure } from "../signing/token";
 import type {
   Errand,
   ErrandStage,
@@ -58,6 +58,14 @@ export type SiteStageView =
       certificates: readonly Certificate[];
       unregisteredSignatures: boolean;
     }
+  | {
+      kind: "askingToSignTheBatch";
+      /** Cuántas firmas lleva el lote. */
+      signs: number;
+      certificates: readonly Certificate[];
+      /** El asa que `sticky` ya resolvió: es la fila recordada, la que el desplegable elige sola. */
+      alreadyChosen: string | null;
+    }
   | { kind: "saving"; filename: string | null }
   | { kind: "loading"; multiple: boolean }
   | { kind: "noChannel"; reason: "channelNotOpened" | "localCaMissing" }
@@ -87,6 +95,20 @@ export interface DescribedDocument {
 export type PortalResult<T> =
   | { ok: true; value: T }
   | { ok: false; failure: { situation: string; detail: string } };
+
+/** El rechazo de una orden tal como cruza: la situación sin clasificar y el detalle crudo. */
+interface UnclassifiedFailure {
+  situation: string;
+  detail: string;
+  attemptsLeft: number | null;
+}
+
+/**
+ * Cómo acaba la orden del secreto, que en el lote firma y entrega de una vez:
+ * su rechazo puede ser del token —y entonces el diálogo lo reintenta— o del
+ * lote, que nombra situaciones que el token no conoce.
+ */
+export type SecretResult<T> = { ok: true; value: T } | { ok: false; failure: UnclassifiedFailure };
 
 /**
  * **Las órdenes del trámite, una función por orden.**
@@ -118,7 +140,7 @@ export interface SiteCommands {
   /** `site_begin_signing`: prefirma, y dice cómo pedir el secreto. */
   beginSigning(certificate: string): Promise<StageResult<StoreSecret>>;
   /** `sign_with_pin`: la misma orden que el recorrido local (ADR-0001). */
-  signWithPin(secret: string): Promise<StageResult<void>>;
+  signWithPin(secret: string): Promise<SecretResult<void>>;
   /** `site_finish_signing`: postfirma, y la sede recibe la firma. */
   finishSigning(): Promise<StageResult<void>>;
   /**
@@ -162,12 +184,38 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   loadCancelled: true,
   cannotSaveData: true,
   cannotLoadData: true,
+  batchPresignerUnreachable: true,
+  batchPostsignerUnreachable: true,
+  batchInvalidPresignResponse: true,
+  batchInvalidPostsignResponse: true,
+  batchSigningFailed: true,
   unknown: true,
+};
+
+/**
+ * Cómo nombra el lote sus fallos cuando salen por una orden fallida.
+ *
+ * El lote no publica ningún momento de desenlace: sus fallos vuelven como el
+ * fallo de `sign_with_pin`, y ahí van sin el prefijo con el que cruzarían.
+ */
+const BATCH_LABELS: Record<string, RefusalSituation> = {
+  presignerUnreachable: "batchPresignerUnreachable",
+  postsignerUnreachable: "batchPostsignerUnreachable",
+  invalidPresignResponse: "batchInvalidPresignResponse",
+  invalidPostsignResponse: "batchInvalidPostsignResponse",
 };
 
 /** La situación tal como la sabe nombrar el catálogo, o `unknown`. */
 function refusalOf(situation: string): RefusalSituation {
+  const batch = BATCH_LABELS[situation];
+  if (batch !== undefined) return batch;
   return situation in REFUSALS ? (situation as RefusalSituation) : "unknown";
+}
+
+/** El fallo, sólo si es de los que el diálogo del secreto sabe reintentar. */
+function retriedInThePinDialog(failure: UnclassifiedFailure): TokenFailure | null {
+  const token = { ...failure, situation: failure.situation as TokenFailure["situation"] };
+  return belongsToPinDialog(token) ? token : null;
 }
 
 /** Un fallo de una etapa, contado como el desenlace que la ventana enseña. */
@@ -219,9 +267,31 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
       // `narrowed` es `false` porque el backend no dice si la sede acotó la
       // lista: lo que cruza son las filas ya cribadas y nunca el criterio
       // (ID-277).
-      return { kind: "consent", document: null, certificates: stage.certificates, narrowed: false };
+      return {
+        kind: "consent",
+        document: null,
+        signs: null,
+        certificates: stage.certificates,
+        narrowed: false,
+      };
     case "askingToSign":
-      return { kind: "consent", document, certificates: stage.certificates, narrowed: false };
+      return {
+        kind: "consent",
+        document,
+        signs: null,
+        certificates: stage.certificates,
+        narrowed: false,
+      };
+    case "askingToSignTheBatch":
+      // Sin documento porque el lote no manda ninguno: sus ficheros se quedan
+      // en la sede y lo que se consiente es cuántas firmas van a salir.
+      return {
+        kind: "consent",
+        document: null,
+        signs: stage.signs,
+        certificates: stage.certificates,
+        narrowed: false,
+      };
   }
 }
 
@@ -263,8 +333,12 @@ function documentInPlay(errand: Errand | null): SiteDocument | null {
 export function siteErrands(commands: SiteCommands): SiteErrandPort {
   let listener: ((errand: Errand | null) => void) | null = null;
   let errand: Errand | null = null;
-  /** Con qué certificado y sobre qué documento se está firmando. */
-  let signing: { certificate: Certificate; document: SiteDocument | null } | null = null;
+  /** Con qué certificado y sobre qué se está firmando: un documento o un lote. */
+  let signing: {
+    certificate: Certificate;
+    document: SiteDocument | null;
+    signs: number | null;
+  } | null = null;
   /**
    * Cuántos momentos han llegado. Leer el documento es asíncrono, así que uno
    * que llegue mientras se lee tiene que ganar: sin este contador, una lectura
@@ -348,11 +422,19 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     if (!signed.ok) {
       // Un PIN incorrecto se reintenta dentro del diálogo, sin reiniciar nada;
       // lo demás sale del diálogo, y aquí salir es el desenlace.
-      if (belongsToPinDialog(signed.failure)) {
-        move({ kind: "secret", certificate: held.certificate, failure: signed.failure });
+      const retried = retriedInThePinDialog(signed.failure);
+      if (retried !== null) {
+        move({ kind: "secret", certificate: held.certificate, failure: retried });
         return;
       }
       finish(refusedBy(signed.failure));
+      return;
+    }
+
+    // El lote no tiene postfirma que pedir desde aquí: la orden del secreto lo
+    // hace entero —prefirma, `PK1` y postfirma— y vuelve con la sede ya servida.
+    if (held.signs !== null) {
+      finish({ kind: "batchSigned", signs: held.signs });
       return;
     }
 
@@ -403,7 +485,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
         return;
       }
 
-      signing = { certificate, document: stage.document };
+      signing = { certificate, document: stage.document, signs: stage.signs };
       move({ kind: "signing", certificate, phase: "signing" });
       const begun = await commands.beginSigning(certificateId);
       if (arrival !== arrivals) return;

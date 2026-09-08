@@ -75,6 +75,11 @@ export type SiteOutcome =
    */
   | { kind: "signed"; document: SiteDocument | null }
   | { kind: "cancelled"; document: SiteDocument | null }
+  /**
+   * El lote entero ya está en la sede. No lleva documento porque nunca hubo
+   * ninguno delante: del lote sólo se sabe cuántas firmas llevaba.
+   */
+  | { kind: "batchSigned"; signs: number }
   /** El fichero que pedía la sede queda escrito donde la persona eligió. */
   | { kind: "saved" }
   /** Los ficheros que la persona eligió ya se han entregado a la sede. */
@@ -113,6 +118,13 @@ export type ErrandStage =
       kind: "consent";
       /** `null` cuando el documento no viaja, que es el caso de `selectcert`. */
       document: SiteDocument | null;
+      /**
+       * Cuántas firmas lleva el lote, y `null` cuando lo que se consiente no es
+       * un lote. Los documentos del lote se quedan en la sede —rFirma firma sus
+       * resúmenes—, así que aquí no hay documento que enseñar y el número es
+       * todo lo que se sabe.
+       */
+      signs: number | null;
       /** Los que la sede acepta, ya filtrados por el backend. */
       certificates: readonly Certificate[];
       /**

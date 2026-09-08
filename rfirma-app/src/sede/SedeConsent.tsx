@@ -89,6 +89,8 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
 
         {stage.document !== null && <DocumentCard document={stage.document} />}
 
+        {stage.signs !== null && <BatchCard signs={stage.signs} />}
+
         {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
             y mismo borde de 1 px que el origen sin identificar. No hay un
             sexto momento (ID-298): se pregunta aquí, dentro del mismo
@@ -131,6 +133,29 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
         )}
       </div>
     </SedeBody>
+  );
+}
+
+/**
+ * Del lote sólo se sabe **cuántas firmas lleva**: sus documentos se quedan en
+ * la sede, así que no hay ni título ni tamaño que enseñar y el número es toda
+ * la tarjeta.
+ */
+function BatchCard({ signs }: { signs: number }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rf-stack sede-consent__document">
+      <div className="rf-row rf-gap-xs sede-consent__document-head">
+        <span className="sede-consent__icon">
+          <FileIcon size={20} />
+        </span>
+        <div className="rf-stack sede-consent__document-text">
+          <p className="rf-title">{t("sede.consent.batchTitle", { count: signs })}</p>
+          <p className="rf-body rf-text-muted">{t("sede.consent.batchNote")}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
