@@ -51,9 +51,10 @@
 - La vía de publicación de revisiones produjo dos revisiones con cuerpo vacío (en la PR #294 y la PR #303). En la #303 el re-revisor leyó la revisión vacía como una verificación e informó `blocked`; hubo que relanzarlo con instrucción explícita de comprobar que el cuerpo no estuviera vacío. Un revisor no debe tratar una revisión sin cuerpo en HEAD como evidencia de nada.
 - #504 puntuó `oversized` (infraestructura TLS de servlet nueva + fixtures de parser + cableado de banco de pruebas, sin precedente) pero, construido igualmente a opus bajo `oversized: build`, volvió CLEAN a la primera revisión con cero ciclos de arreglo. Mecanismo: un ticket de banco de conformidad en este repositorio lee como «varios entregables» para la rúbrica porque cada uno nombra un cambio de driver más un caso de banco, pero es una sola rebanada vertical de código de pruebas; no es genuinamente `oversized`.
 - El paso de re-revisión se bloqueó dos veces (#519, PR de #502, y #522, PR de #505) con `reason=no new commits since the last review`, porque las respuestas del trabajador de arreglo a los hilos de revisión quedan registradas por GitHub como envíos de revisión `COMMENTED` en el sha de HEAD actual. Un re-revisor que ancla en «el commit_id de la última revisión no-PENDING» acaba viendo su propio ancla en HEAD y se niega a re-revisar. Mecanismo, no estadística: se repetirá en cualquier PR donde el trabajador de arreglo responda a los hilos. El orquestador lo sorteó pasando el sha de la revisión genuina de forma explícita en el prompt de re-revisión.
+- Tercera confirmación del mismo mecanismo en la PR #566 (#533, spec #468): el re-revisor volvió a bloquear con `reason=no new commits since the last review` pese a haber commits nuevos. No es señal de dificultad del ticket — #533 se tarificó bien salvo por este artefacto de canalización — sino del mismo defecto estructural de anclaje en HEAD. Resuelto de nuevo pasando el sha de la revisión genuina de forma explícita.
+- Único conflicto de fusión de la tanda del spec #468 (PR #566, sub #533, 1 merge-fix): dos miembros de la misma tanda paralela tocaron a la vez `operation.rs` y `cycle.rs`, la capa de sitio/firma en Rust que casi todo ticket de firma toca. No es señal de tarificación — el resto de la tanda (sonnet y opus) convergió sin escalada — pero sí un candidato a serializar cuando dos tickets de la misma tanda anuncian tocar esa capa.
 
 ## Run log
-
 2026-08-31 spec=#46 sub=#47 model=opus effort=medium pr=#64 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=ready-to-merge
 2026-08-31 spec=#46 sub=#48 model=opus effort=medium pr=#65 verdict=CLEAN cycles=2 mergefix=0 wave=— outcome=ready-to-merge
 2026-08-31 spec=#46 sub=#49 model=opus effort=medium pr=#66 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=ready-to-merge
@@ -170,3 +171,18 @@
 2026-09-08 spec=#468 sub=#527 model=opus effort=medium pr=#556 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-08 spec=#468 sub=#525 model=opus effort=medium pr=#557 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-08 spec=#468 sub=#528 model=opus effort=medium pr=#558 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#468 sub=#529 model=opus effort=medium pr=#559 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#530 model=opus effort=medium pr=#561 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#534 model=sonnet effort=medium pr=#560 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#543 model=opus effort=medium pr=#563 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#532 model=opus effort=medium pr=#562 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#531 model=sonnet effort=medium pr=#564 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#550 model=sonnet effort=medium pr=#565 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#535 model=opus effort=medium pr=#568 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#546 model=opus effort=medium pr=#569 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#533 model=opus effort=medium pr=#566 verdict=CLEAN cycles=2 mergefix=1 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#536 model=opus effort=medium pr=#570 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-09-08 spec=#468 sub=#544 model=opus effort=medium pr=#571 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-09-08 spec=#468 sub=#539 model=sonnet effort=medium pr=#572 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-08 spec=#468 sub=#547 model=opus effort=medium pr=#573 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
+2026-09-08 spec=#468 sub=#537 model=opus effort=medium pr=#574 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
