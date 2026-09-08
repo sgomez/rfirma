@@ -74,6 +74,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
         ErrandStep::AskingToSign(asked) => live.remember_signature(state::PendingSignature {
             document: asked.document.clone(),
             filter: asked.filter.clone(),
+            format: asked.format,
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
             saving: asked.saving.clone(),
@@ -145,6 +146,7 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         &SiteTerms {
             engine: desk.engine,
             filter: &pending.filter,
+            format: pending.format,
             from_the_site: &pending.from_the_site,
             allow_unregistered_signatures: pending.unregistered_signatures,
         },

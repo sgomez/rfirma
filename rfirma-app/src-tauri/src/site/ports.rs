@@ -7,16 +7,45 @@ use std::sync::Arc;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::bridge::{BridgeError, Format, XadesVariant, XmlDsigVariant};
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
-use crate::site::domain::protocol::AfirmaUrl;
+use crate::site::domain::protocol::{AfirmaUrl, RequestedFormat, XadesEnvelope, XmlDsigEnvelope};
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::tls_error::TlsError;
 use crate::site::domain::trust_error::TrustError;
+
+impl From<RequestedFormat> for Format {
+    fn from(requested: RequestedFormat) -> Self {
+        match requested {
+            RequestedFormat::Pades => Self::Pades,
+            RequestedFormat::Cades => Self::Cades,
+            RequestedFormat::CadesAsicS => Self::CadesAsicS,
+            RequestedFormat::Cms => Self::Cms,
+            RequestedFormat::Xades(XadesEnvelope::Detached) => Self::Xades(XadesVariant::Detached),
+            RequestedFormat::Xades(XadesEnvelope::Enveloping) => {
+                Self::Xades(XadesVariant::Enveloping)
+            }
+            RequestedFormat::Xades(XadesEnvelope::Enveloped) => {
+                Self::Xades(XadesVariant::Enveloped)
+            }
+            RequestedFormat::Xades(XadesEnvelope::AsicS) => Self::Xades(XadesVariant::AsicS),
+            RequestedFormat::XmlDsig(XmlDsigEnvelope::Detached) => {
+                Self::XmlDsig(XmlDsigVariant::Detached)
+            }
+            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping) => {
+                Self::XmlDsig(XmlDsigVariant::Enveloping)
+            }
+            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloped) => {
+                Self::XmlDsig(XmlDsigVariant::Enveloped)
+            }
+            RequestedFormat::FacturaE => Self::FacturaE,
+        }
+    }
+}
 
 /// Asa de respuesta única para contestar a la sede y cerrar el canal.
 pub struct ReplyHandle(Box<dyn FnOnce(String) + Send>);

@@ -1,5 +1,50 @@
 use super::*;
 
+/// **Grada A**: la traducción del vocabulario del protocolo al del puente, entera.
+#[test]
+fn every_format_the_site_can_name_crosses_to_the_one_the_bridge_knows() {
+    let table = [
+        (RequestedFormat::Pades, Format::Pades),
+        (RequestedFormat::Cades, Format::Cades),
+        (RequestedFormat::CadesAsicS, Format::CadesAsicS),
+        (RequestedFormat::Cms, Format::Cms),
+        (
+            RequestedFormat::Xades(XadesEnvelope::Detached),
+            Format::Xades(XadesVariant::Detached),
+        ),
+        (
+            RequestedFormat::Xades(XadesEnvelope::Enveloping),
+            Format::Xades(XadesVariant::Enveloping),
+        ),
+        (
+            RequestedFormat::Xades(XadesEnvelope::Enveloped),
+            Format::Xades(XadesVariant::Enveloped),
+        ),
+        (
+            RequestedFormat::Xades(XadesEnvelope::AsicS),
+            Format::Xades(XadesVariant::AsicS),
+        ),
+        (
+            RequestedFormat::XmlDsig(XmlDsigEnvelope::Detached),
+            Format::XmlDsig(XmlDsigVariant::Detached),
+        ),
+        (
+            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloping),
+            Format::XmlDsig(XmlDsigVariant::Enveloping),
+        ),
+        (
+            RequestedFormat::XmlDsig(XmlDsigEnvelope::Enveloped),
+            Format::XmlDsig(XmlDsigVariant::Enveloped),
+        ),
+        (RequestedFormat::FacturaE, Format::FacturaE),
+    ];
+
+    assert_eq!(table.len(), Format::ALL.len(), "sin formato sin traducir");
+    for (requested, expected) in table {
+        assert_eq!(Format::from(requested), expected, "{requested:?}");
+    }
+}
+
 #[test]
 fn what_is_answered_is_what_the_other_end_receives() {
     let received = std::sync::Arc::new(std::sync::Mutex::new(None));

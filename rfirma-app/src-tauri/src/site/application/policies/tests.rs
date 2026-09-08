@@ -1,4 +1,5 @@
 use super::*;
+use crate::signing::domain::bridge::Format;
 use crate::signing::domain::merged_with;
 use crate::signing::domain::SignatureConfig;
 use std::cell::RefCell;
@@ -53,12 +54,16 @@ fn declared(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
 fn the_declared_block_reaches_the_engine_as_a_pades_expansion() {
     let engine = AnEngine::answering("policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9\n");
 
-    let expanded =
-        expanded_for_the_site(&engine, &declared(&[("expPolicy", "FirmaAGE")])).expect("ok");
+    let expanded = expanded_for_the_site(
+        &engine,
+        &declared(&[("expPolicy", "FirmaAGE")]),
+        Format::Pades,
+    )
+    .expect("ok");
 
     assert_eq!(
         engine.asked.borrow().as_slice(),
-        [("expPolicy=FirmaAGE\n".to_owned(), "pades".to_owned())]
+        [("expPolicy=FirmaAGE\n".to_owned(), "PAdES".to_owned())]
     );
     assert_eq!(
         expanded,
@@ -67,10 +72,31 @@ fn the_declared_block_reaches_the_engine_as_a_pades_expansion() {
 }
 
 #[test]
+fn the_engine_is_asked_to_expand_for_the_format_of_the_request() {
+    let engine = AnEngine::answering("");
+
+    expanded_for_the_site(
+        &engine,
+        &declared(&[("expPolicy", "FirmaAGE")]),
+        Format::Cades,
+    )
+    .expect("ok");
+
+    assert_eq!(
+        engine.asked.borrow().as_slice(),
+        [("expPolicy=FirmaAGE\n".to_owned(), "CAdES".to_owned())]
+    );
+}
+
+#[test]
 fn a_policy_that_cannot_be_applied_is_not_signed_around() {
     let engine = AnEngine::that_refuses_the_policy();
 
-    let refused = expanded_for_the_site(&engine, &declared(&[("expPolicy", "Inventada")]));
+    let refused = expanded_for_the_site(
+        &engine,
+        &declared(&[("expPolicy", "Inventada")]),
+        Format::Pades,
+    );
 
     assert!(refused.is_err());
 }

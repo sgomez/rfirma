@@ -1,4 +1,5 @@
 use super::*;
+use crate::site::domain::protocol::XadesEnvelope;
 
 /// **Grada A**: se lee una cadena y sale una petición. No hay socket, ni
 /// token, ni puente.
@@ -143,7 +144,7 @@ fn signing_and_saving_without_dat_reads_the_selector_hints_from_properties() {
 }
 
 #[test]
-fn a_chosen_document_under_format_auto_must_still_be_a_pdf() {
+fn a_chosen_document_under_format_auto_fixes_the_effective_format() {
     let url = an_operation(&format!(
         "op={SIGN_AND_SAVE}&cop={SIGN}&format=auto&algorithm=SHA256withRSA"
     ));
@@ -151,19 +152,20 @@ fn a_chosen_document_under_format_auto_must_still_be_a_pdf() {
         panic!("es un firmar y guardar");
     };
 
-    let refusal = request
-        .with_chosen_document(b"<?xml version=\"1.0\"?><Facturae/>".to_vec(), None)
-        .expect_err("un XML no es PAdES");
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    let over_xml =
+        request.with_chosen_document(b"<?xml version=\"1.0\"?><Facturae/>".to_vec(), None);
+    assert_eq!(
+        over_xml.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
 
-    let completed = request
-        .with_chosen_document(b"%PDF-1.7\n".to_vec(), None)
-        .expect("un PDF si se admite");
-    assert_eq!(completed.document(), Some(b"%PDF-1.7\n".as_slice()));
+    let over_pdf = request.with_chosen_document(b"%PDF-1.7\n".to_vec(), None);
+    assert_eq!(over_pdf.document(), Some(b"%PDF-1.7\n".as_slice()));
+    assert_eq!(over_pdf.format(), RequestedFormat::Pades);
 }
 
 #[test]
-fn a_chosen_document_with_pades_explicit_skips_the_format_check() {
+fn a_chosen_document_with_pades_explicit_keeps_the_format_the_site_named() {
     let url = an_operation(&format!(
         "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA256withRSA"
     ));
@@ -171,10 +173,9 @@ fn a_chosen_document_with_pades_explicit_skips_the_format_check() {
         panic!("es un firmar y guardar");
     };
 
-    let completed = request
-        .with_chosen_document(b"lo que sea".to_vec(), None)
-        .expect("con PAdES explicito el veredicto de formato no se vuelve a mirar aqui");
+    let completed = request.with_chosen_document(b"lo que sea".to_vec(), None);
     assert_eq!(completed.document(), Some(b"lo que sea".as_slice()));
+    assert_eq!(completed.format(), RequestedFormat::Pades);
 }
 
 #[test]
@@ -213,13 +214,13 @@ fn signing_and_saving_rejects_an_algorithm_it_cannot_produce_like_sign_does() {
 }
 
 #[test]
-fn signing_and_saving_rejects_a_format_that_is_not_pades_like_sign_does() {
+fn signing_and_saving_rejects_a_format_out_of_the_original_like_sign_does() {
     let url = an_operation(&format!(
-        "op={SIGN_AND_SAVE}&cop={SIGN}&format=XAdES&algorithm=SHA256withRSA&dat={}",
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=OOXML&algorithm=SHA256withRSA&dat={}",
         dat(b"%PDF-1.7\n")
     ));
 
-    let refusal = read_operation(&url).expect_err("solo PAdES");
+    let refusal = read_operation(&url).expect_err("OOXML no se atiende");
 
     assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
 }
@@ -234,13 +235,19 @@ fn signing_and_saving_with_format_auto_reads_the_effective_format_over_a_pdf_or_
         panic!("es un firmar y guardar");
     };
     assert_eq!(request.document(), Some(b"%PDF-1.7\n".as_slice()));
+    assert_eq!(request.format(), RequestedFormat::Pades);
 
     let over_xml = an_operation(&format!(
         "op={SIGN_AND_SAVE}&cop={SIGN}&format=auto&algorithm=SHA256withRSA&dat={}",
         dat(b"<?xml version=\"1.0\"?><Facturae/>")
     ));
-    let refusal = read_operation(&over_xml).expect_err("un XML no es PAdES");
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+    let SiteOperation::SignAndSave(request) = read_operation(&over_xml).expect("es un XML") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
 }
 
 #[test]
@@ -293,9 +300,8 @@ fn the_proposed_name_without_a_filename_falls_back_to_the_chosen_document() {
         panic!("es un firmar y guardar");
     };
 
-    let with_chosen = request
-        .with_chosen_document(b"lo que sea".to_vec(), Some("contrato.docx".to_owned()))
-        .expect("PAdES explicito no vuelve a mirar el formato");
+    let with_chosen =
+        request.with_chosen_document(b"lo que sea".to_vec(), Some("contrato.docx".to_owned()));
     assert_eq!(with_chosen.proposed_name(), "contrato.pdf");
 }
 
@@ -307,9 +313,8 @@ fn the_proposed_name_of_the_site_wins_over_the_chosen_document() {
         panic!("es un firmar y guardar");
     };
 
-    let with_chosen = request
-        .with_chosen_document(b"lo que sea".to_vec(), Some("otro.docx".to_owned()))
-        .expect("PAdES explicito no vuelve a mirar el formato");
+    let with_chosen =
+        request.with_chosen_document(b"lo que sea".to_vec(), Some("otro.docx".to_owned()));
     assert_eq!(with_chosen.proposed_name(), "contrato.pdf");
 }
 
@@ -385,22 +390,47 @@ fn multiload_follows_java_boolean_parse_boolean() {
 }
 
 #[test]
-fn a_format_that_is_not_pades_is_refused_as_an_unsupported_format() {
-    let url = an_operation(&format!(
-        "op=sign&format=XAdES&algorithm=SHA256withRSA&dat={}",
-        dat(b"%PDF-1.7\n")
-    ));
+fn a_format_the_original_does_not_sign_in_three_phases_is_refused_by_the_protocol() {
+    for name in ["OOXML", "ODF", "SOAP", "NONE"] {
+        let url = an_operation(&format!(
+            "op=sign&format={name}&algorithm=SHA256withRSA&dat={}",
+            dat(b"%PDF-1.7\n")
+        ));
 
-    let refusal = read_operation(&url).expect_err("solo PAdES");
+        let refusal = read_operation(&url).expect_err("no lo firma el original en tres fases");
 
-    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+        assert_eq!(refusal.code(), SafCode::UnsupportedFormat, "format={name}");
+    }
+}
+
+#[test]
+fn every_format_of_the_original_travels_as_the_closed_format_it_names() {
+    for (name, expected) in [
+        ("CAdES", RequestedFormat::Cades),
+        (
+            "XAdES Detached",
+            RequestedFormat::Xades(XadesEnvelope::Detached),
+        ),
+        ("Factura-e", RequestedFormat::FacturaE),
+        ("Adobe PDF", RequestedFormat::Pades),
+    ] {
+        let url = an_operation(&format!(
+            "op=sign&format={name}&algorithm=SHA256withRSA&dat={}",
+            dat(b"%PDF-1.7\n")
+        ));
+
+        let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es una firma");
+        };
+        assert_eq!(request.format(), expected, "format={name}");
+    }
 }
 
 #[test]
 fn the_format_is_looked_at_before_anything_else_of_the_signature() {
-    let url = an_operation("op=sign&format=CAdES&algorithm=loquesea");
+    let url = an_operation("op=sign&format=OOXML&algorithm=loquesea");
 
-    let refusal = read_operation(&url).expect_err("solo PAdES");
+    let refusal = read_operation(&url).expect_err("OOXML no se atiende");
 
     assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
 }
@@ -423,19 +453,23 @@ fn format_auto_over_a_pdf_reads_as_pades_would_for_sign_and_cosign() {
 }
 
 #[test]
-fn format_auto_over_xml_or_binary_is_refused_as_an_unsupported_format() {
-    for document in [
-        b"<?xml version=\"1.0\"?><Facturae/>".as_slice(),
-        &[0x00, 0x01, 0x02],
+fn format_auto_over_xml_or_binary_reads_the_format_of_the_document() {
+    for (document, expected) in [
+        (
+            b"<?xml version=\"1.0\"?><Facturae/>".as_slice(),
+            RequestedFormat::Xades(XadesEnvelope::Enveloping),
+        ),
+        (&[0x00, 0x01, 0x02], RequestedFormat::Cades),
     ] {
         let url = an_operation(&format!(
             "op=sign&format=auto&algorithm=SHA256withRSA&dat={}",
             dat(document)
         ));
 
-        let refusal = read_operation(&url).expect_err("ni XML ni binario se atienden con auto");
-
-        assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+        let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es una firma");
+        };
+        assert_eq!(request.format(), expected);
     }
 }
 

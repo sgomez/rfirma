@@ -4,6 +4,7 @@ pub mod cipher;
 pub mod codes;
 pub mod detection;
 pub mod filters;
+pub mod format;
 pub mod framing;
 pub mod launch;
 pub mod message;
@@ -18,6 +19,7 @@ pub use cipher::{cipher as encrypt, decipher as decrypt, CipherKey};
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use detection::{shape_of, DetectedShape};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
+pub use format::{format_of, RequestedFormat, XadesEnvelope, XmlDsigEnvelope};
 pub use framing::{
     credential_matches, http_response, read_request, split_response, FragmentBuffer, FramedRequest,
     NotOfTheFraming, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
@@ -30,8 +32,8 @@ pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
     SignAndSaveRequest, SignRequest, SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS,
-    ACCEPTED_BATCH_ALGORITHMS, BATCH, COSIGN, COUNTERSIGN, LOAD, PADES, SAVE, SELECT_CERTIFICATE,
-    SIGN, SIGN_AND_SAVE,
+    ACCEPTED_BATCH_ALGORITHMS, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE, SIGN,
+    SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,

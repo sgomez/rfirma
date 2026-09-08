@@ -4,6 +4,7 @@ use crate::identity::application::tests::{a_certificate, NoMemory, NoToken};
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::application::session::{config_for, SigningSession};
 use crate::signing::application::tests::{an_order, NoIsolate};
+use crate::signing::domain::bridge::Format;
 use crate::site::application::tests::Directory;
 use crate::site::domain::protocol::{SafCode, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -92,6 +93,7 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
         &SiteTerms {
             engine: &engine,
             filter: &SiteFilter::default(),
+            format: Format::Pades,
             from_the_site: &BTreeMap::new(),
             allow_unregistered_signatures: false,
         },
