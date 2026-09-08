@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::crossing::crossing;
 
 use crate::signing::domain::bridge::Format;
-use crate::site::application::errand::{Moment, NoCertificate, NoChannel};
+use crate::site::application::errand::{LocalBatchItem, Moment, NoCertificate, NoChannel};
 use crate::site::domain::batch_error::Situation as BatchSituation;
 use crate::site::domain::protocol::{Refusal, RefusalSituation, SignatureRound};
 
@@ -106,6 +106,22 @@ impl SiteErrandView {
         }
     }
 
+    /// Estado de solicitud de consentimiento para el lote local, con el resumen de cada elemento.
+    pub fn asking_to_sign_the_local_batch(
+        items: &[LocalBatchItem],
+        certificates: &[ListedCertificate],
+        already_chosen: Option<&str>,
+    ) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::AskingToSignTheLocalBatch {
+                items: items.iter().map(LocalBatchItemView::from).collect(),
+                certificates: rows_of(certificates),
+                already_chosen: already_chosen.map(str::to_owned),
+            },
+        }
+    }
+
     /// Estado de solicitud de consentimiento para firma de documento.
     pub fn asking_to_sign(
         document: &str,
@@ -158,6 +174,13 @@ impl From<&Moment> for SiteErrandView {
                 certificates,
                 already_chosen,
             } => Self::asking_to_sign_the_batch(*signs, certificates, already_chosen.as_deref()),
+            Moment::AskingToSignTheLocalBatch {
+                items,
+                certificates,
+                already_chosen,
+            } => {
+                Self::asking_to_sign_the_local_batch(items, certificates, already_chosen.as_deref())
+            }
             Moment::NoCertificate { reason, owned } => {
                 Self::without_certificates((*reason).into(), *owned)
             }
@@ -223,6 +246,30 @@ impl From<SignatureRound> for SignatureRoundView {
 }
 
 crossing! {
+    /// Un elemento del lote local tal como lo ve la ventana: ni su ruta ni su contenido cruzan.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct LocalBatchItemView {
+        /// Identificador con el que la sede nombra el elemento.
+        pub id: String,
+        /// Qué es lo que se va a firmar.
+        pub signing: SigningKindView,
+        /// Tipo de firma solicitada sobre el elemento.
+        pub round: SignatureRoundView,
+    }
+}
+
+impl From<&LocalBatchItem> for LocalBatchItemView {
+    fn from(item: &LocalBatchItem) -> Self {
+        Self {
+            id: item.id.clone(),
+            signing: item.format.into(),
+            round: item.round.into(),
+        }
+    }
+}
+
+crossing! {
     /// Etapa del trámite mostrada en la ventana de sede.
     #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
     #[serde(tag = "kind", rename_all = "camelCase")]
@@ -253,6 +300,16 @@ crossing! {
         AskingToSignTheBatch {
             /// Cuántas firmas lleva el lote.
             signs: usize,
+            /// Certificados disponibles para la selección.
+            certificates: Vec<CertificateView>,
+            /// Asa del certificado que `sticky` ya resolvió, si lo resolvió.
+            already_chosen: Option<String>,
+        },
+        /// Solicitud de consentimiento del lote local, con el resumen de cada elemento.
+        #[serde(rename_all = "camelCase")]
+        AskingToSignTheLocalBatch {
+            /// Los elementos del lote, en el orden en que la sede los declaró.
+            items: Vec<LocalBatchItemView>,
             /// Certificados disponibles para la selección.
             certificates: Vec<CertificateView>,
             /// Asa del certificado que `sticky` ya resolvió, si lo resolvió.

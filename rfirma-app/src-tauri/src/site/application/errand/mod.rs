@@ -11,8 +11,10 @@ mod tests;
 
 use std::path::PathBuf;
 
+use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::secret::StoreSecret;
-use crate::site::domain::protocol::AfirmaUrl;
+use crate::site::domain::batch::{build_local_result, LocalBatchResult};
+use crate::site::domain::protocol::{AfirmaUrl, SiteFilter};
 
 use crate::site::application::batch;
 use crate::site::application::session::{self as signing, SiteTerms};
@@ -22,17 +24,18 @@ pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
 pub use desk::{
     attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
-    consent_to_sign_and_save_with_chosen_document, consent_to_the_batch, ErrandDesk, Neighbours,
+    consent_to_sign_and_save_with_chosen_document, consent_to_the_batch,
+    consent_to_the_local_batch, ErrandDesk, Neighbours,
 };
 pub use outcome::{
-    BatchConsent, ErrandStep, LoadCompletion, LoadingConsent, Moment, NoCertificate, NoChannel,
-    ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
+    BatchConsent, ErrandStep, LoadCompletion, LoadingConsent, LocalBatchConsent, LocalBatchItem,
+    Moment, NoCertificate, NoChannel, ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
 };
 pub use replies::{
     batch_handed_over, declined, identify_with, identity_handed_over, loaded, saved,
     signature_handed_over, the_signature_did_not_come_out,
 };
-pub use request::SiteRequest;
+pub use request::{LocalBatchAsk, SiteRequest};
 pub use state::{Errand, LiveErrand, NegotiatedCodec};
 
 /// Atiende la operación recibida por el canal local.
@@ -85,6 +88,13 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             request: consent.request.clone(),
             chosen: None,
         }),
+        ErrandStep::AskingToSignTheLocalBatch(consent) => {
+            live.remember_the_local_batch(state::PendingLocalBatch {
+                request: consent.request.clone(),
+                batch: consent.batch.clone(),
+                chosen: None,
+            })
+        }
         ErrandStep::Saving(consent) => live.remember_saving((**consent).clone()),
         ErrandStep::Loading(consent) => live.remember_loading(consent.clone()),
         ErrandStep::NoCertificate { .. } => live.forget_the_consent(),
@@ -140,6 +150,10 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return the_batch_consented(desk, &pending.request, certificate, live);
     }
 
+    if let Some(pending) = live.the_local_batch_pending() {
+        return the_local_batch_consented(desk, pending, certificate, live);
+    }
+
     let Some(pending) = live.the_signature_consented() else {
         return Err(ConsentError::NothingPending);
     };
@@ -163,13 +177,14 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))
 }
 
-/// Abre el secreto una sola vez para todas las firmas del lote y apunta el certificado consentido.
-fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+/// El certificado que la persona eligió y el secreto de su almacén, abierto una sola vez.
+fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    request: &crate::site::domain::protocol::BatchRequest,
+    filter: &SiteFilter,
+    sticky: bool,
     certificate: &str,
     live: &LiveErrand,
-) -> Result<Consented, ConsentError> {
+) -> Result<(TokenCertificate, StoreSecret), ConsentError> {
     let refused =
         |live: &LiveErrand, refusal| ConsentError::Refused(told_to_the_site(live, refusal));
 
@@ -179,7 +194,7 @@ fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         .map_err(|error| refused(live, SiteRefusal::Token(error)))?;
     let chosen = crate::site::application::filtering::usable_certificate_for_the_site(
         desk.engine,
-        request.filter(),
+        filter,
         &found,
         certificate,
         &desk.neighbours,
@@ -191,13 +206,53 @@ fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         .secret_of(chosen)
         .map_err(|refusal| refused(live, SiteRefusal::BatchSigningFailed(refusal)))?;
 
-    if request.sticky().is_sticky() {
+    if sticky {
         desk.neighbours.remember(chosen.reference());
     }
 
+    Ok((chosen.clone(), secret))
+}
+
+/// Abre el secreto una sola vez para todas las firmas del lote remoto y apunta el consentido.
+fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    request: &crate::site::domain::protocol::BatchRequest,
+    certificate: &str,
+    live: &LiveErrand,
+) -> Result<Consented, ConsentError> {
+    let (chosen, secret) = the_chosen_and_its_secret(
+        desk,
+        request.filter(),
+        request.sticky().is_sticky(),
+        certificate,
+        live,
+    )?;
+
     live.remember_the_batch(state::PendingBatch {
         request: request.clone(),
-        chosen: Some(chosen.clone()),
+        chosen: Some(chosen),
+    });
+    Ok(Consented::SigningWith(secret))
+}
+
+/// Abre el secreto una sola vez para todas las firmas del lote local y apunta el consentido.
+fn the_local_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    pending: state::PendingLocalBatch,
+    certificate: &str,
+    live: &LiveErrand,
+) -> Result<Consented, ConsentError> {
+    let (chosen, secret) = the_chosen_and_its_secret(
+        desk,
+        pending.request.filter(),
+        pending.request.sticky().is_sticky(),
+        certificate,
+        live,
+    )?;
+
+    live.remember_the_local_batch(state::PendingLocalBatch {
+        chosen: Some(chosen),
+        ..pending
     });
     Ok(Consented::SigningWith(secret))
 }
@@ -227,6 +282,25 @@ pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     let signer_der = request.needcert().then(|| chosen.der().to_vec());
     batch_handed_over(live, result, signer_der);
+    Ok(())
+}
+
+/// Cierra el lote local con el secreto que se tecleó una sola vez para todas sus firmas; hasta
+/// que exista el bucle por elemento, ninguna se intenta y todas salen saltadas.
+pub fn finish_the_local_batch(_secret: &str, live: &LiveErrand) -> Result<(), ConsentError> {
+    let pending = live
+        .the_local_batch_pending()
+        .ok_or(ConsentError::NothingPending)?;
+    let chosen = pending.chosen.clone().ok_or(ConsentError::NothingPending)?;
+
+    let skipped: Vec<LocalBatchResult> = pending
+        .batch
+        .signs()
+        .iter()
+        .map(|sign| LocalBatchResult::skipped(sign.id()))
+        .collect();
+    let signer_der = pending.request.needcert().then(|| chosen.der().to_vec());
+    batch_handed_over(live, build_local_result(&skipped), signer_der);
     Ok(())
 }
 

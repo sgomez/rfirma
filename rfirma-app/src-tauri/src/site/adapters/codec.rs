@@ -3,10 +3,13 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use crate::site::domain::protocol::{read_operation, AfirmaUrl, SiteOperation, WireAnswer};
+use crate::site::domain::batch::parse_local_batch;
+use crate::site::domain::protocol::{
+    read_operation, AfirmaUrl, BatchRequest, SiteOperation, WireAnswer,
+};
 
 use crate::site::adapters::frontier;
-use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
+use crate::site::application::errand::{LocalBatchAsk, ProtocolCodec, SiteOutcome, SiteRequest};
 
 const RESULT_SEPARATOR: char = '|';
 
@@ -27,7 +30,7 @@ impl ProtocolCodec for V4Codec {
             Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
             Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
             Ok(SiteOperation::SignAndSave(request)) => SiteRequest::SignAndSave(request),
-            Ok(SiteOperation::Batch(request)) => SiteRequest::Batch(request),
+            Ok(SiteOperation::Batch(request)) => batch_asked(request),
             Err(refusal) => SiteRequest::NotAttended(refusal),
         }
     }
@@ -65,6 +68,17 @@ impl ProtocolCodec for V4Codec {
                 None => STANDARD.encode(result),
             },
         }
+    }
+}
+
+/// El lote local se lee aquí mismo; el remoto viaja entero a los dos servlets.
+fn batch_asked(request: BatchRequest) -> SiteRequest {
+    if !request.is_local() {
+        return SiteRequest::Batch(request);
+    }
+    match parse_local_batch(request.lote()) {
+        Ok(batch) => SiteRequest::LocalBatch(Box::new(LocalBatchAsk { request, batch })),
+        Err(refusal) => SiteRequest::NotAttended(refusal),
     }
 }
 

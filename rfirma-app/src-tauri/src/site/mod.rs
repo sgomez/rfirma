@@ -35,20 +35,29 @@ pub struct SiteRoot {
     pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
 }
 
-/// Cierra el lote remoto pendiente con el secreto que entró por la única puerta del PIN.
+/// Cierra el lote pendiente, remoto o local, con el secreto que entró por la única puerta del PIN.
 pub fn the_pending_batch_signed(
     app: &tauri::AppHandle,
     secret: &str,
 ) -> Option<Result<(), Failure>> {
     use tauri::Manager as _;
 
-    app.state::<SiteRoot>()
-        .errand
-        .a_batch_is_pending()
-        .then(|| {
+    let root = app.state::<SiteRoot>();
+    if root.errand.a_batch_is_pending() {
+        return Some(
             adapters::window::with_the_desk(app, |desk, live| {
                 application::errand::finish_the_batch(desk, secret, live)
             })
-            .map_err(Failure::from)
-        })
+            .map_err(Failure::from),
+        );
+    }
+    if root.errand.a_local_batch_is_pending() {
+        return Some(
+            adapters::window::with_the_desk(app, |_desk, live| {
+                application::errand::finish_the_local_batch(secret, live)
+            })
+            .map_err(Failure::from),
+        );
+    }
+    None
 }

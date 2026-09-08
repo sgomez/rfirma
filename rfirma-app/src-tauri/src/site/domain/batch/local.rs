@@ -5,7 +5,8 @@ use base64::Engine as _;
 
 use super::json::Json;
 use crate::site::domain::protocol::{
-    pairs_of, Parameter, Refusal, RequestedFormat, SafCode, SignatureRound, AUTO, COSIGN, SIGN,
+    format_of, pairs_of, Parameter, Refusal, RequestedFormat, SafCode, SignatureRound, AUTO,
+    COSIGN, SIGN,
 };
 
 /// Una firma del lote local, con lo que heredó del lote (`SingleSignOperation`, 1.9.2).
@@ -32,6 +33,11 @@ impl LocalSingleSign {
     /// `sign` o `cosign`, propio o heredado del lote.
     pub fn round(&self) -> SignatureRound {
         self.round
+    }
+
+    /// El formato con el que se firma de verdad, con `auto` resuelto por la cabecera.
+    pub fn effective_format(&self) -> RequestedFormat {
+        self.format.unwrap_or_else(|| format_of(&self.document))
     }
 
     /// El formato, propio o heredado del lote; nada si el lote pide `auto`.
