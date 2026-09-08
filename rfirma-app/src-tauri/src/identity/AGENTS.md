@@ -19,6 +19,7 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `adapters/tauri.rs` | Las tres órdenes de identidad: listar certificados, instalar y quitar un `.p12`. |
 | `adapters/views.rs` | Lo que cruza a la ventana: `CertificateView`, `StatusView` y `SecretView`. Pruebas en `adapters/views/tests.rs`. |
 | `application/certificates.rs` | Qué certificados hay, cuál se recordó e instalar o quitar un `.p12`; `ListedCertificates` es el último listado, con las asas de `documents/domain/handles.rs`. Pruebas en `application/certificates/tests.rs`. |
+| `domain/algorithm.rs` | El algoritmo de firma que se pide por su nombre, la clase de clave que exige y el mecanismo PKCS#11 con el que se cumple. Pruebas en `domain/algorithm/tests.rs`. |
 | `domain/certificate.rs` | El certificado tal y como sale del token, y `ListedCertificate`, la fila con su asa. Pruebas en `domain/certificate/tests.rs`. |
 | `domain/error.rs` | Las situaciones del token (ADR-0009) y el aviso de que falta `libnss3.so`. Pruebas en `domain/error/tests.rs`. |
 | `domain/holder.rs` | Quién es el titular, leído del nombre distinguido (RFC 4514), y `StampedHolder`, lo que estampa el recuadro. Pruebas en `domain/holder/tests.rs`. |

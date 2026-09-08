@@ -2,6 +2,7 @@ use std::sync::Mutex;
 
 use super::*;
 use crate::identity::application::tests::a_certificate;
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 
 /// Un token que apunta con qué secreto y sobre qué bytes se le pidió cada firma.
@@ -21,6 +22,7 @@ impl Signer for RecordingSigner {
         &self,
         _reference: &CertificateRef,
         pin: &str,
+        _algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
         crate::lock(&self.signed).push((pin.to_owned(), data.to_vec()));
@@ -85,6 +87,7 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
             &self,
             _reference: &CertificateRef,
             _pin: &str,
+            _algorithm: SignatureAlgorithm,
             _data: &[u8],
         ) -> Result<Vec<u8>, TokenError> {
             Err(TokenError::new(Situation::TokenAbsent, "no hay token"))
