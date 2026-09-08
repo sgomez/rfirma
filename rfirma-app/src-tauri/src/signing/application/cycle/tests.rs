@@ -10,7 +10,7 @@ use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
-    SignatureOperation, XmlDsigVariant,
+    SignatureOperation,
 };
 use crate::signing::domain::{AdmissibleDocument, SessionSeal, SignatureConfig};
 use crate::signing::ports::{Bridge, Signer};
@@ -239,11 +239,7 @@ fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
 
-    for format in [
-        Format::CadesAsicS,
-        Format::XmlDsig(XmlDsigVariant::Enveloped),
-        Format::FacturaE,
-    ] {
+    for format in [Format::CadesAsicS, Format::FacturaE] {
         let document =
             AdmissibleDocument::check_for(format, b"lo que sea").expect("no se mira el PDF");
 

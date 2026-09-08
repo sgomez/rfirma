@@ -100,17 +100,6 @@ pub enum XadesVariant {
     AsicS,
 }
 
-/// Cómo se envuelve una firma XMLDSig.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum XmlDsigVariant {
-    /// `XMLDSig Detached`.
-    Detached,
-    /// `XMLDSig Enveloping`.
-    Enveloping,
-    /// `XMLDSig Enveloped`.
-    Enveloped,
-}
-
 /// Qué se hace con lo que entra: firmar, cofirmar la firma que llega o contrafirmarla.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SignatureOperation {
@@ -147,15 +136,13 @@ pub enum Format {
     Cms,
     /// Firma XAdES en una de sus envolturas.
     Xades(XadesVariant),
-    /// Firma XMLDSig en una de sus envolturas.
-    XmlDsig(XmlDsigVariant),
     /// Firma de una factura electrónica.
     FacturaE,
 }
 
 impl Format {
     /// Todos los formatos del vocabulario, para recorrerlos.
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 9] = [
         Self::Pades,
         Self::Cades,
         Self::CadesAsicS,
@@ -164,9 +151,6 @@ impl Format {
         Self::Xades(XadesVariant::Enveloping),
         Self::Xades(XadesVariant::Enveloped),
         Self::Xades(XadesVariant::AsicS),
-        Self::XmlDsig(XmlDsigVariant::Detached),
-        Self::XmlDsig(XmlDsigVariant::Enveloping),
-        Self::XmlDsig(XmlDsigVariant::Enveloped),
         Self::FacturaE,
     ];
 
@@ -181,9 +165,6 @@ impl Format {
             Self::Xades(XadesVariant::Enveloping) => "XAdES Enveloping",
             Self::Xades(XadesVariant::Enveloped) => "XAdES Enveloped",
             Self::Xades(XadesVariant::AsicS) => "XAdES-ASiC-S",
-            Self::XmlDsig(XmlDsigVariant::Detached) => "XMLDSig Detached",
-            Self::XmlDsig(XmlDsigVariant::Enveloping) => "XMLDSig Enveloping",
-            Self::XmlDsig(XmlDsigVariant::Enveloped) => "XMLDSig Enveloped",
             Self::FacturaE => "FacturaE",
         }
     }

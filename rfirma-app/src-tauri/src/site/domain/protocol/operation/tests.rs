@@ -403,6 +403,27 @@ fn a_format_the_original_does_not_sign_in_three_phases_is_refused_by_the_protoco
     }
 }
 
+/// **Grada A**: XMLDSig se queda fuera del alcance, y la razon esta en
+/// `domain/protocol/mod.rs`.
+#[test]
+fn xmldsig_is_refused_by_the_protocol_because_the_original_has_no_triphase_for_it() {
+    for name in [
+        "XMLDSig",
+        "XMLDSig Enveloping",
+        "XMLDSig Detached",
+        "XMLDSig Enveloped",
+    ] {
+        let url = an_operation(&format!(
+            "op=sign&format={name}&algorithm=SHA256withRSA&dat={}",
+            dat(b"<?xml version=\"1.0\"?><a/>")
+        ));
+
+        let refusal = read_operation(&url).expect_err("XMLDSig no se atiende");
+
+        assert_eq!(refusal.code(), SafCode::UnsupportedFormat, "format={name}");
+    }
+}
+
 #[test]
 fn every_format_of_the_original_travels_as_the_closed_format_it_names() {
     for (name, expected) in [

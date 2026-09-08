@@ -2,7 +2,7 @@ use super::{Format, LocalBatchItem, Moment, SignatureRound, SignatureRoundView};
 use super::{
     NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
 };
-use crate::signing::domain::bridge::{XadesVariant, XmlDsigVariant};
+use crate::signing::domain::bridge::XadesVariant;
 use crate::site::domain::batch_error::Situation as BatchSituation;
 
 #[test]
@@ -206,9 +206,6 @@ fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
         (Format::Xades(XadesVariant::Enveloping), "xml"),
         (Format::Xades(XadesVariant::Enveloped), "xml"),
         (Format::Xades(XadesVariant::AsicS), "xml"),
-        (Format::XmlDsig(XmlDsigVariant::Detached), "xml"),
-        (Format::XmlDsig(XmlDsigVariant::Enveloping), "xml"),
-        (Format::XmlDsig(XmlDsigVariant::Enveloped), "xml"),
         (Format::FacturaE, "invoice"),
     ] {
         let view = SiteErrandView::from(&Moment::AskingToSign {

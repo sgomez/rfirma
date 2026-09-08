@@ -218,7 +218,7 @@ impl From<Format> for SigningKindView {
         match format {
             Format::Pades => Self::Pdf,
             Format::Cades | Format::CadesAsicS | Format::Cms => Self::Challenge,
-            Format::Xades(_) | Format::XmlDsig(_) => Self::Xml,
+            Format::Xades(_) => Self::Xml,
             Format::FacturaE => Self::Invoice,
         }
     }
