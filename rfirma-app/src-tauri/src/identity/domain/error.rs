@@ -22,6 +22,8 @@ pub enum Situation {
     Pkcs12Unreadable,
     /// El certificado no contiene una clave RSA compatible.
     KeyNotRsa,
+    /// El token no ofrece el mecanismo que pide el algoritmo de firma.
+    MechanismNotOffered,
     /// Error no clasificado con código crudo.
     Unknown,
 }

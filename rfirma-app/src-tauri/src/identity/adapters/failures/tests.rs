@@ -1,6 +1,6 @@
 use super::*;
 
-const EVERY_SITUATION: [Situation; 9] = [
+const EVERY_SITUATION: [Situation; 10] = [
     Situation::IncorrectPin,
     Situation::PinLocked,
     Situation::TokenAbsent,
@@ -9,6 +9,7 @@ const EVERY_SITUATION: [Situation; 9] = [
     Situation::CertificateNotFound,
     Situation::Pkcs12Unreadable,
     Situation::KeyNotRsa,
+    Situation::MechanismNotOffered,
     Situation::Unknown,
 ];
 
@@ -49,6 +50,18 @@ fn the_window_and_the_site_hear_about_a_missing_token_from_the_same_line() {
     assert_eq!(code_of_token(Situation::PinLocked), SafCode::LockedKeystore);
     assert_eq!(
         code_of_token(Situation::KeyNotRsa),
+        SafCode::IncompatibleKeyType
+    );
+}
+
+#[test]
+fn a_mechanism_the_token_does_not_offer_has_its_own_name_and_the_key_type_code() {
+    assert_eq!(
+        situation_name(Situation::MechanismNotOffered),
+        "mechanismNotOffered"
+    );
+    assert_eq!(
+        code_of_token(Situation::MechanismNotOffered),
         SafCode::IncompatibleKeyType
     );
 }

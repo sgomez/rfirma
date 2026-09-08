@@ -12,21 +12,18 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error, RvError};
-use cryptoki::mechanism::Mechanism;
-use cryptoki::object::{Attribute, AttributeType, ObjectClass};
+use cryptoki::object::{Attribute, AttributeType, KeyType, ObjectClass};
 use cryptoki::session::{Session, UserType};
 use cryptoki::slot::Slot;
 use cryptoki::types::AuthPin;
 
+use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::Token;
 pub use nss::{NssHost, RealNssHost};
-
-/// Mecanismo de firma digital utilizado en las operaciones PKCS#11.
-const SIGNING_MECHANISM: Mechanism<'static> = Mechanism::Sha256RsaPkcs;
 
 /// El adaptador del puerto [`Token`] sobre los módulos PKCS#11 del sistema.
 #[derive(Clone, Copy, Debug, Default)]
@@ -45,9 +42,10 @@ impl Token for RealToken {
         &self,
         reference: &CertificateRef,
         pin: &str,
+        algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
-        sign(reference, pin, data)
+        sign(reference, pin, algorithm, data)
     }
 
     fn import_pkcs12(
@@ -279,8 +277,13 @@ pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenErro
 }
 
 /// Firma `data` con la clave privada que acompaña al certificado referenciado.
-pub fn sign(reference: &CertificateRef, pin: &str, data: &[u8]) -> Result<Vec<u8>, TokenError> {
-    with_token_turn(|| sign_holding_the_turn(reference, pin, data))
+pub fn sign(
+    reference: &CertificateRef,
+    pin: &str,
+    algorithm: SignatureAlgorithm,
+    data: &[u8],
+) -> Result<Vec<u8>, TokenError> {
+    with_token_turn(|| sign_holding_the_turn(reference, pin, algorithm, data))
 }
 
 /// Serializa operaciones contra el token en el proceso para evitar colisiones de sesión.
@@ -294,12 +297,14 @@ pub fn with_token_turn<T>(operation: impl FnOnce() -> T) -> T {
 fn sign_holding_the_turn(
     reference: &CertificateRef,
     pin: &str,
+    algorithm: SignatureAlgorithm,
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
     let store = reference.store();
     the_store_is_really_there(&store)?;
     let context = context(&store)?;
     let slot = slot_of(&context, reference.token_label())?;
+    the_slot_offers(&context, slot, algorithm)?;
     let session = context.open_ro_session(slot)?;
 
     match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
@@ -309,15 +314,89 @@ fn sign_holding_the_turn(
         Err(other) => return Err(other.into()),
     }
 
-    let signature = private_key(&session, reference).and_then(|key| {
-        session
-            .sign(&SIGNING_MECHANISM, key, data)
-            .map_err(TokenError::from)
-    });
+    let signature = private_key(&session, reference)
+        .and_then(|key| {
+            the_key_is_of_the_kind(&session, key, algorithm)?;
+            Ok(key)
+        })
+        .and_then(|key| {
+            session
+                .sign(&algorithm.mechanism(), key, data)
+                .map_err(TokenError::from)
+        });
 
     let _ = session.logout();
 
     signature
+}
+
+/// El mecanismo del algoritmo, buscado en el listado de la ranura antes de pedir el PIN.
+fn the_slot_offers(
+    context: &Pkcs11,
+    slot: Slot,
+    algorithm: SignatureAlgorithm,
+) -> Result<(), TokenError> {
+    let wanted = algorithm.mechanism_type();
+
+    if !context.get_mechanism_list(slot)?.contains(&wanted) {
+        return Err(mechanism_not_offered(
+            algorithm,
+            "no esta entre los mecanismos de la ranura",
+        ));
+    }
+
+    if !context.get_mechanism_info(slot, wanted)?.sign() {
+        return Err(mechanism_not_offered(
+            algorithm,
+            "la ranura lo ofrece sin la bandera CKF_SIGN",
+        ));
+    }
+
+    Ok(())
+}
+
+fn the_key_is_of_the_kind(
+    session: &Session,
+    key: cryptoki::object::ObjectHandle,
+    algorithm: SignatureAlgorithm,
+) -> Result<(), TokenError> {
+    let declared = session
+        .get_attributes(key, &[AttributeType::KeyType])?
+        .into_iter()
+        .find_map(|attribute| match attribute {
+            Attribute::KeyType(key_type) => Some(key_type),
+            _ => None,
+        });
+
+    match declared {
+        Some(key_type) if kind_of(key_type) == Some(algorithm.key_kind()) => Ok(()),
+        Some(key_type) => Err(mechanism_not_offered(
+            algorithm,
+            &format!("la clave privada del certificado es {key_type}"),
+        )),
+        None => Ok(()),
+    }
+}
+
+fn kind_of(key_type: KeyType) -> Option<KeyKind> {
+    if key_type == KeyType::RSA {
+        return Some(KeyKind::Rsa);
+    }
+    if key_type == KeyType::EC {
+        return Some(KeyKind::Ec);
+    }
+    None
+}
+
+fn mechanism_not_offered(algorithm: SignatureAlgorithm, why: &str) -> TokenError {
+    TokenError::new(
+        Situation::MechanismNotOffered,
+        format!(
+            "el token no firma {} con {}: {why}",
+            algorithm.name(),
+            algorithm.mechanism_type()
+        ),
+    )
 }
 
 /// Las ranuras con un token ya inicializado.

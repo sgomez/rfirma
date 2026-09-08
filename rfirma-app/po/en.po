@@ -197,6 +197,12 @@ msgstr "Check the file's password."
 msgid "errors.situations.keyNotRsa.title"
 msgstr "That certificate does not work with rFirma"
 
+msgid "errors.situations.mechanismNotOffered.title"
+msgstr "The token does not support that signature algorithm"
+
+msgid "errors.situations.mechanismNotOffered.body"
+msgstr "Try another certificate, or ask the site to use SHA-256 with RSA."
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "The certificate could not be read"
 

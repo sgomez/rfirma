@@ -200,6 +200,12 @@ msgstr "Comprueba la contraseña del fichero."
 msgid "errors.situations.keyNotRsa.title"
 msgstr "Ese certificado no es compatible con rFirma"
 
+msgid "errors.situations.mechanismNotOffered.title"
+msgstr "El token no admite ese algoritmo de firma"
+
+msgid "errors.situations.mechanismNotOffered.body"
+msgstr "Prueba con otro certificado o pide a la sede que use SHA-256 con RSA."
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "No hemos podido leer el certificado"
 

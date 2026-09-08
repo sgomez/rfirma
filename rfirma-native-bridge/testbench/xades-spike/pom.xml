@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>es.gob.afirma</groupId>
+  <artifactId>xades-spike</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+
+  <name>xades-spike</name>
+  <description>
+    Banco de un solo uso para el issue #534: mide si native-image compila una
+    prefirma y una postfirma XAdES Enveloping. No es parte del reactor de
+    rfirma-native-bridge y no se referencia desde su pom.xml.
+  </description>
+
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <autofirma.version>1.9.2</autofirma.version>
+  </properties>
+
+  <dependencies>
+    <!-- Igual que en rfirma-native-bridge/pom.xml: la exclusion de
+         afirma-ui-utils no es opcional (ADR-0012). -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-server-triphase-signer-core</artifactId>
+      <version>${autofirma.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>es.gob.afirma</groupId>
+          <artifactId>afirma-ui-utils</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- afirma-server-triphase-signer-core EXCLUYE xmlsec de su dependencia
+         transitiva en afirma-crypto-xades (visto en su pom.xml de ~/.m2): sin
+         esta linea explicita, XAdESTriPhasePreProcessor falla en tiempo de
+         ejecucion con NoClassDefFoundError, no en compilacion. -->
+    <dependency>
+      <groupId>org.apache.santuario</groupId>
+      <artifactId>xmlsec</artifactId>
+      <version>3.0.5</version>
+    </dependency>
+
+    <!-- Solo para comparar el tamano del modo compartido con el de
+         rfirma-native-bridge/pom.xml (misma version, ADR-0004). -->
+    <dependency>
+      <groupId>org.graalvm.sdk</groupId>
+      <artifactId>graal-sdk</artifactId>
+      <version>23.1.0</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <id>build-classpath</id>
+            <phase>package</phase>
+            <goals><goal>build-classpath</goal></goals>
+            <configuration>
+              <outputFile>${project.build.directory}/cp.txt</outputFile>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

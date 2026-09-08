@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
@@ -31,11 +32,12 @@ pub trait Signer {
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
 
-    /// Firma `data` con la clave privada que acompaña al certificado.
+    /// Firma `data` con la clave privada que acompaña al certificado, con el algoritmo pedido.
     fn sign(
         &self,
         reference: &CertificateRef,
         pin: &str,
+        algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
 }
