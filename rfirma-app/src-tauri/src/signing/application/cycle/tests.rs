@@ -239,24 +239,22 @@ fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
 
-    for format in [Format::CadesAsicS, Format::FacturaE] {
-        let document =
-            AdmissibleDocument::check_for(format, b"lo que sea").expect("no se mira el PDF");
+    let format = Format::CadesAsicS;
+    let document = AdmissibleDocument::check_for(format, b"lo que sea").expect("no se mira el PDF");
 
-        let failed = presign(
-            &bridge,
-            a_request(
-                format,
-                document,
-                std::slice::from_ref(&b"der".to_vec()),
-                &config,
-                chosen.reference(),
-            ),
-        )
-        .expect_err("el puente no atiende ese formato");
+    let failed = presign(
+        &bridge,
+        a_request(
+            format,
+            document,
+            std::slice::from_ref(&b"der".to_vec()),
+            &config,
+            chosen.reference(),
+        ),
+    )
+    .expect_err("el puente no atiende ese formato");
 
-        assert!(failed.to_string().contains(format.name()));
-    }
+    assert!(failed.to_string().contains(format.name()));
 }
 
 #[test]

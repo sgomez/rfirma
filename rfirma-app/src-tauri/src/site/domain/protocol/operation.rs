@@ -506,6 +506,7 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
     let requested = requested_format(url)?;
     if let Some(format) = requested {
+        refuse_a_multisignature_of_an_invoice(round, format)?;
         refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     }
     let document = match requested {
@@ -522,6 +523,7 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
 
     let declared = declared_properties(url)?;
     let format = requested.unwrap_or_else(|| format_of(&document));
+    refuse_a_multisignature_of_an_invoice(round, format)?;
     refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     Ok(SiteOperation::Sign(SignRequest {
         round,
@@ -550,6 +552,23 @@ fn counter_round(declared: &[(String, String)]) -> Result<SignatureRound, Refusa
                 ),
             )
         })
+}
+
+/// Una factura ni se cofirma ni se contrafirma: `AOFacturaESigner` lanza una
+/// `UnsupportedOperationException` en las dos, y aquí es un `SAF_04`.
+pub fn refuse_a_multisignature_of_an_invoice(
+    round: SignatureRound,
+    format: RequestedFormat,
+) -> Result<(), Refusal> {
+    let first = matches!(round, SignatureRound::First);
+    if !first && matches!(format, RequestedFormat::FacturaE) {
+        return Err(Refusal::new(
+            SafCode::UnsupportedOperation,
+            "una factura ni se cofirma ni se contrafirma: AOFacturaESigner lanza una \
+             UnsupportedOperationException en las dos",
+        ));
+    }
+    Ok(())
 }
 
 /// CAdES y XAdES contrafirman: el resto sale con el rechazo del original.
@@ -631,6 +650,7 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 
     let requested = requested_format(url)?;
     if let Some(format) = requested {
+        refuse_a_multisignature_of_an_invoice(round, format)?;
         refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     }
     let document = match requested {

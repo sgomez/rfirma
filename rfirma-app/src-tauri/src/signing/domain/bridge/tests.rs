@@ -86,7 +86,7 @@ fn every_format_says_the_name_the_original_expects() {
 }
 
 /// Los formatos que tienen pareja de entradas en el puente.
-const BRIDGED: [Format; 7] = [
+const BRIDGED: [Format; 8] = [
     Format::Pades,
     Format::Cades,
     Format::Cms,
@@ -94,10 +94,11 @@ const BRIDGED: [Format; 7] = [
     Format::Xades(XadesVariant::Enveloping),
     Format::Xades(XadesVariant::Enveloped),
     Format::Xades(XadesVariant::AsicS),
+    Format::FacturaE,
 ];
 
 #[test]
-fn the_bridge_resolves_pades_cades_cms_and_every_xades_variant_for_now() {
+fn the_bridge_resolves_pades_cades_cms_every_xades_variant_and_facturae_for_now() {
     for format in BRIDGED {
         assert_eq!(format.bridged().expect("tiene entradas"), format);
     }
