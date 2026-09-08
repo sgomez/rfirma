@@ -92,6 +92,15 @@ impl SiteSigning for Neighbours<'_> {
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
     }
 
+    fn sign_on_token(&self, secret: &str) -> Result<(), SigningRefusal> {
+        crate::signing::application::session::sign_on_token(
+            &self.identity.signer(),
+            &self.signing.session,
+            secret,
+        )
+        .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
+    }
+
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
         let signed = self
             .signing

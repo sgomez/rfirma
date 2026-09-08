@@ -345,7 +345,11 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     Ok(accepted)
 }
 
-fn keep_the_document<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+pub(in crate::site::application) fn keep_the_document<
+    E: FilterEngine,
+    P: PolicyEngine,
+    N: Neighbours,
+>(
     desk: &ErrandDesk<'_, E, P, N>,
     live: &LiveErrand,
     format: Format,

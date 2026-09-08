@@ -44,6 +44,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
 | `application/errand/tests.rs` | Las pruebas del trámite entero, en grada A, con los vecinos doblados y el hilo de `fixtures.rs`. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
+| `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |
 | `application/policies.rs` | **La política de firma que declara la sede.** Pruebas en `application/policies/tests.rs`. |
 | `application/session.rs` | La sesión de firma **de sede**, y `SiteRefusal`, la situación de cada negativa sin traducir. Pruebas en `application/session/tests.rs`. |
 | `application/site.rs` | **La invocación de una sede**: la negociación de arranque, que elige códec y decide si un rechazo sale por el socket o por la ventana. Pruebas en `application/site/tests.rs`. |

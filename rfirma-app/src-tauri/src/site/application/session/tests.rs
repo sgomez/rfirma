@@ -155,6 +155,10 @@ impl SiteSigning for NobodyHasItOpen {
         ))
     }
 
+    fn sign_on_token(&self, _secret: &str) -> Result<(), SigningRefusal> {
+        unreachable!("ninguna prueba de esta sesion llega a firmar en el token")
+    }
+
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
         crate::signing::application::session::finish(&NoIsolate, &SigningSession::default())
             .map(|_| unreachable!("no hay ciclo que cerrar"))

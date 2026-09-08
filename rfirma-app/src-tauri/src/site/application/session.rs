@@ -43,11 +43,36 @@ pub enum SiteRefusal {
     Batch(BatchError),
     /// La firma del `PRE` de una firma del lote remoto ha fallado.
     BatchSigningFailed(SigningRefusal),
+    /// El lote local no ha podido ni empezar: sin firmas que intentar, o con el secreto rechazado.
+    LocalBatch(String),
 }
 
 impl From<SigningRefusal> for SiteRefusal {
     fn from(refusal: SigningRefusal) -> Self {
         Self::Signing(refusal)
+    }
+}
+
+impl SiteRefusal {
+    /// El texto de este rechazo, sin el código con el que la sede lo recibe.
+    pub fn description(&self) -> String {
+        match self {
+            Self::Token(error) => error.to_string(),
+            Self::Inadmissible(refusal) => refusal.to_string(),
+            Self::Policies(error) | Self::FormatNotBridged(error) => error.to_string(),
+            Self::CouldNotFilter(_) => "el filtro de la sede no se ha podido aplicar".to_owned(),
+            Self::NoCertificateTheSiteAccepts => {
+                "la sede excluye todos los certificados que hay".to_owned()
+            }
+            Self::NotUsableForTheSite(_) => "el certificado elegido ya no vale".to_owned(),
+            Self::ScratchFolderMissing(detail)
+            | Self::ScratchUnwritable(detail)
+            | Self::CannotSaveData(detail)
+            | Self::CannotLoadData(detail)
+            | Self::LocalBatch(detail) => detail.clone(),
+            Self::Signing(refusal) | Self::BatchSigningFailed(refusal) => refusal.detail.clone(),
+            Self::Batch(error) => error.detail().to_owned(),
+        }
     }
 }
 
