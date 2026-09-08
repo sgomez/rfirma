@@ -141,7 +141,8 @@ plugins— aquí no cobra: no hay router, ni tabla de datos, ni biblioteca de co
 
 ## La métrica CRAP: solo en Rust
 
-`cargo crap --lcov lcov.info --fail-above` (umbral **30**, el de Savoia), alimentado por
+`cargo crap --lcov lcov.info --fail-above --threshold 30` (el umbral de Savoia; `--fail-above`
+es un interruptor sin valor), alimentado por
 `cargo llvm-cov --lcov`. En **Java no entra** —lo único en Maven Central es un plugin de Hudson
 de 2010— y el puente es código que reenvía. En **TypeScript tampoco**: `crap4ts` existe pero
 lleva desde junio parado en `2.0.0-rc.5`, y sobre todo la complejidad ciclomática de un

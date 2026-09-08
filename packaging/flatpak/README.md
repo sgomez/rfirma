@@ -130,6 +130,28 @@ check`), que compara esos `sha256` y falla nombrando el fichero que se ha
 movido. Un fichero generado dentro del CI es un fichero que nadie ha mirado
 ([ID-07](https://github.com/sgomez/rfirma/issues/46)).
 
+### Cuando `just flatpak-sources` no corre
+
+En un entorno sin red `flatpak-cargo-generator.py` no está y `pip install
+aiohttp` no resuelve contra PyPI. Entonces `cargo-sources.json` se reproduce a
+mano: dos entradas por crate de `registry+…crates.io-index`, ordenadas por
+nombre y por **versión semver** (`0.9.6` antes que `0.10.2`, no orden
+lexicográfico). El `sha256` de cada crate **no se calcula**: ya está en
+`Cargo.lock`, en el campo `checksum` de ese paquete, y es el mismo valor que va
+en la entrada `archive` y dentro de la `inline`. Lo único que sí se sella con
+`sha256sum` es `sources.lock`, con el hash de los dos ficheros de bloqueo.
+
+Si el cambio es solo **hacer directa una dependencia que ya estaba en el árbol
+transitivo**, `Cargo.lock` cambia en una sola línea y `cargo-sources.json` no
+se toca: basta con regenerar el sha de `sources.lock`.
+
+### Medir el sandbox sin GUI
+
+`flatpak run --command=python3 me.sgomez.rfirma -` mete un script por la
+entrada estándar dentro del bundle ya instalado, con sus permisos reales.
+`org.gnome.Platform` trae `python3` con PyGObject y `gdbus`, pero **no**
+`strings` ni `busctl`.
+
 `node-sources.json` se genera y se versiona, pero **el manifiesto todavía no lo
 usa**: el frontend se construye en el anfitrión y entra hecho, porque
 `org.gnome.Sdk//50` no trae `node`. Consumirlo pide añadir la extensión de SDK

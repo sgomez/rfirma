@@ -49,6 +49,41 @@ hay nada que actualizar; pero un `#[tauri::command]` sin `async` sale como
 bloqueante, y un tipo fuera de `crossing!` no cruza. Una prueba nueva ataca al
 caso de uso, no a la orden.
 
+**Bloqueante quiere decir el hilo del bucle de eventos.** Una orden sobre una
+`fn` no `async` corre en `ExecutionContext::Blocking`; si dentro llama a un
+`blocking_*` de un plugin (el de diálogo, por ejemplo), se cuelga para siempre
+y sin error visible. La forma correcta es `#[tauri::command(async)]`, y
+conviene fijarla con una prueba porque ninguna guarda la vigila.
+
+**Un tipo nuevo en `crossing!` tiene que entrar en la guarda del ADR-0011.**
+`the_portal_path_never_crosses_to_the_window` (`crossing/guards.rs`) construye
+cada salida desde su caso de uso con un enlace del portal y recorre el JSON
+campo a campo. Descubre sola el tipo, pero dónde entra se decide a mano: o se
+construye en `crossings_from_a_portal_document`, o se declara en
+`OUTPUTS_WITH_NO_DOCUMENT_BEHIND`, solo si detrás no puede haber ningún
+documento. Las guardas hermanas se ponen rojas si se olvida cualquiera de las
+dos cosas.
+
+## La librería nativa en desarrollo
+
+`adapters/ffi.rs` de `signing/` la carga por una ruta relativa al ejecutable,
+`../lib/rfirma`, y es la misma en los tres canales (ADR-0004): **no añadas
+rutas ahí.** `RFIRMA_LIB_DIR` la sobreescribe, y eso es lo que ahorra
+reconstruir la imagen desde un worktree: para la grada C,
+`RFIRMA_LIB_DIR=<checkout principal>/rfirma-native-bridge/target/lib/rfirma`
+reutiliza el `.so` ya compilado allí, unos tres minutos menos que `just native`.
+El `.so` de `packaging/flatpak/build-dir/files/lib/rfirma/` **no sirve como
+origen**: es el residuo de una compilación anterior del flatpak y envejece en
+cuanto el puente añade un símbolo. El `MissingSymbol` que provoca llega al
+trámite disfrazado de `SAF_08` («no se ha podido acceder al almacén de
+claves»), que manda a investigar el almacén de certificados. Si la
+reutilización falla así, reconstruye con `just native` desde el propio worktree.
+
+Cualquier `cargo` necesita `rfirma-app/dist` ya construido, también
+`cargo test --lib` y `cargo clippy --lib`: `lib.rs` llama a
+`tauri::generate_context!()` y revienta con «The `frontendDist` configuration
+is set to `"../dist"` but this path doesn't exist».
+
 ## Las pruebas que se leen a sí mismas
 
 Leen el código **como texto**: `signing/application/cycle/tests.rs`,

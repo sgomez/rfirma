@@ -19,7 +19,9 @@ frontera entre "nuestro código" y "el suyo" dejaría de estar clara.
 ## Consequences
 
 - Compilar este repositorio requiere haber compilado antes el repositorio
-  original. Es un paso manual asumido, no un defecto que haya que "arreglar"
-  copiando código.
+  original, en el tag `v1.9.2` y con `-Dclienteafirma.version=1.9.2`: esa
+  versión no está en Maven Central, y sin la propiedad el reactor resuelve
+  `afirma-core:1.9` en silencio. Es un paso manual asumido (lo automatiza
+  `bootstrap.sh`), no un defecto que haya que "arreglar" copiando código.
 - Un agente que encuentre a faltar una clase Java debe añadir la dependencia al
   `pom.xml`, nunca traerse el fuente.
