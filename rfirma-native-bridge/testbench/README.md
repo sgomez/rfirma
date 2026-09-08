@@ -31,3 +31,14 @@ camino, y se ejecutan con `just test-java` (grada A) y `just test-native`
 
 Quien necesite volver a medir algo de aquí, que adapte el guión a la frontera
 nueva en el mismo commit en que lo use.
+
+## `xades-spike/`
+
+Módulo Maven **independiente** del reactor (no lo referencia
+`rfirma-native-bridge/pom.xml`), del issue
+[#534](https://github.com/sgomez/rfirma/issues/534): mide si `native-image`
+compila y ejecuta una prefirma/postfirma XAdES Enveloping antes de que exista
+ningún ticket de implementación. Su nota es
+`docs/research/native-image-xades.md`, que trae el cómo reproducir. No firma
+con la clave privada fuera del isolate ni cruza la frontera FFI (ADR-0001):
+solo comprueba compilación, alcanzabilidad y tamaño.
