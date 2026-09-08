@@ -119,6 +119,9 @@ situación. Dos cosas que salen mal si se olvidan:
   deja de ser el contraejemplo que era: revisa `application/errand/tests.rs`,
   que lo usaba como formato que el puente no atiende, y la resolución de `auto`
   sobre bytes que no son un PDF.
+- **El recuadro y la rúbrica son de PAdES**: con cualquier otro formato el
+  trámite ni los lee ni los rechaza, y los olvida antes del consentimiento
+  (`forget_the_box`), de modo que ninguna de sus claves llega al puente.
 - El trámite escribe sus importaciones con `crate::…` y no con `super::super::…`:
   la guarda de dirección (`tests/module_directions.rs`) solo lee `use crate::`, y
   las aristas que hoy tolera por la lista de deuda se le escaparían si fueran

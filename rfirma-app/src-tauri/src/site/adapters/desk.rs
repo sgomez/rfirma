@@ -95,7 +95,7 @@ impl SiteSigning for Neighbours<'_> {
             .finish()
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
         Ok(SiteSignature {
-            signed: signed.completed.into_signed_document(),
+            signature: signed.completed.into_signed_document(),
             signer_der: signed.signer_der,
         })
     }

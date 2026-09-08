@@ -20,8 +20,12 @@ use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
-use crate::signing::application::tests::{a_memory, NoIsolate};
+use crate::signing::application::tests::{
+    a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE,
+};
 use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::ports::{Bridge, IsolateHost, Signer};
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
 use crate::site::adapters::codec::V4Codec;
 use crate::site::adapters::desk::signing_refusal_of;
@@ -138,10 +142,6 @@ fn on_the_wire(outcome: &SiteOutcome) -> String {
     V4Codec.encode(outcome)
 }
 
-/// Una sesión de firma vacía, compartida: nadie de aquí abre un ciclo.
-static A_SESSION: std::sync::LazyLock<SigningSession> =
-    std::sync::LazyLock::new(SigningSession::default);
-
 /// Lo que sale al cable, si ha salido algo.
 fn what_the_site_received(wire: &mut tokio::sync::oneshot::Receiver<String>) -> Option<String> {
     wire.try_recv().ok()
@@ -178,6 +178,67 @@ fn requested(url: &AfirmaUrl) -> SelectCertificate {
     request
 }
 
+/// El hilo del puente en grada A: sin librería detrás, o con el doble que contesta las dos fases.
+#[derive(Default)]
+enum TheBridge {
+    #[default]
+    Missing,
+    Answering(ABridgeThatSigns),
+}
+
+impl TheBridge {
+    fn answering() -> Self {
+        Self::Answering(ABridgeThatSigns::default())
+    }
+
+    fn extra_params_of_the_presign(&self) -> String {
+        let Self::Answering(bridge) = self else {
+            panic!("este puente no atiende nada");
+        };
+        let calls = bridge.calls();
+        let call = calls.first().expect("la prefirma cruzo");
+        call.extra_params.clone()
+    }
+
+    fn format_of_the_presign(&self) -> Format {
+        let Self::Answering(bridge) = self else {
+            panic!("este puente no atiende nada");
+        };
+        let calls = bridge.calls();
+        calls.first().expect("la prefirma cruzo").format
+    }
+}
+
+impl IsolateHost for TheBridge {
+    fn run<T: Send + 'static>(
+        &self,
+        task: impl FnOnce(&dyn Bridge) -> T + Send + 'static,
+    ) -> Result<Result<T, BridgeError>, IsolateGone> {
+        match self {
+            Self::Missing => NoIsolate.run(task),
+            Self::Answering(bridge) => AnIsolateWith(bridge).run(task),
+        }
+    }
+}
+
+/// Un token que firma cualquier cosa, para llegar de la prefirma a la postfirma sin PKCS#11.
+struct ATokenThatSigns;
+
+impl Signer for ATokenThatSigns {
+    fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+        Ok(StoreSecret::NotNeeded)
+    }
+
+    fn sign(
+        &self,
+        _reference: &CertificateRef,
+        _pin: &str,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, TokenError> {
+        Ok(vec![0x01; 256])
+    }
+}
+
 /// Los vecinos del trámite en grada A: el token vacío, lo listado, lo abierto, la memoria y una sesión sin ciclo.
 struct TheNeighbours<'a> {
     stores: Vec<Store>,
@@ -186,11 +247,17 @@ struct TheNeighbours<'a> {
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
     token: InMemoryTokenSigning,
+    ours: Vec<TokenCertificate>,
+    bridge: TheBridge,
+    session: SigningSession,
 }
 
 impl Certificates for TheNeighbours<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
-        NoToken.list_across(&self.stores)
+        if self.ours.is_empty() {
+            return NoToken.list_across(&self.stores);
+        }
+        Ok(self.ours.clone())
     }
 
     fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
@@ -265,18 +332,18 @@ impl SiteSigning for TheNeighbours<'_> {
                 parameters: request.from_the_site,
                 allow_unregistered_signatures: request.allow_unregistered_signatures,
             },
-            &NoToken,
-            &NoIsolate,
-            &A_SESSION,
+            &ATokenThatSigns,
+            &self.bridge,
+            &self.session,
         )
         .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
     }
 
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
-        let signed = session::finish(&NoIsolate, &A_SESSION)
+        let signed = session::finish(&self.bridge, &self.session)
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
         Ok(SiteSignature {
-            signed: signed.completed.into_signed_document(),
+            signature: signed.completed.into_signed_document(),
             signer_der: signed.signer_der,
         })
     }
@@ -349,7 +416,7 @@ impl SiteSigning for ASignerThatSucceeds<'_> {
 
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
         Ok(SiteSignature {
-            signed: self.signature.signed.clone(),
+            signature: self.signature.signature.clone(),
             signer_der: self.signature.signer_der.clone(),
         })
     }
@@ -369,6 +436,9 @@ fn a_neighbourhood<'a>(
         opened,
         memory,
         token: InMemoryTokenSigning::default(),
+        ours: Vec::new(),
+        bridge: TheBridge::default(),
+        session: SigningSession::default(),
     }
 }
 
@@ -404,6 +474,9 @@ fn a_desk<'a>(
             opened,
             memory,
             token: InMemoryTokenSigning::default(),
+            ours: Vec::new(),
+            bridge: TheBridge::default(),
+            session: SigningSession::default(),
         },
         scratch_dir: scratch.to_path_buf(),
         scratch: std::sync::Arc::new(crate::site::adapters::scratch::RealScratch),
@@ -970,7 +1043,7 @@ fn the_whole_signature_errand_over(
     let reply = signature_handed_over(
         &live,
         &SiteSignature {
-            signed: b"%PDF-1.7 firmado".to_vec(),
+            signature: b"%PDF-1.7 firmado".to_vec(),
             signer_der: ours[0].der().to_vec(),
         },
     );
@@ -1810,6 +1883,187 @@ fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
     }
 }
 
+/// El reto de 64 bytes del banco de referencia, lo que una sede manda en `dat` para un CAdES.
+const A_CHALLENGE: &[u8] = include_bytes!("../../../../../../testdata/reference/challenge.bin");
+
+/// Las claves de recuadro y rúbrica que una sede puede declarar y que solo lee un firmador PDF.
+const THE_BOX_A_SITE_DECLARES: [&str; 7] = [
+    "signaturePositionOnPageLowerLeftX",
+    "signaturePositionOnPageLowerLeftY",
+    "signaturePositionOnPageUpperRightX",
+    "signaturePositionOnPageUpperRightY",
+    "signaturePage",
+    "visibleSignature",
+    "signatureRubricImage",
+];
+
+/// Lo que expande el motor de políticas de una petición con política, modo y recuadro.
+const EXPANDED_WITH_A_BOX: &str = "mode=explicit\n\
+     policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9\n\
+     signaturePositionOnPageLowerLeftX=100\n\
+     signaturePositionOnPageLowerLeftY=100\n\
+     signaturePositionOnPageUpperRightX=200\n\
+     signaturePositionOnPageUpperRightY=200\n\
+     signaturePage=1\n\
+     visibleSignature=want\n\
+     signatureRubricImage=cnVicmljYQ==\n";
+
+/// El trámite entero de una firma de sede sobre un binario, del canal al cable, con el puente doblado.
+fn the_whole_errand_asking_for(asked: &str, expected: Format) {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering(EXPANDED_WITH_A_BOX);
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    let (handle, mut wire) = the_wire();
+
+    let step = attend(
+        &desk,
+        a_signature_asking_for(asked, A_CHALLENGE),
+        handle,
+        &live,
+    )
+    .expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("'{asked}' llega al consentimiento como PAdES: {step:?}");
+    };
+    assert_eq!(asking.format, expected, "format={asked}");
+    assert_eq!(
+        asking.visible,
+        SiteVisibleSignature::Declined,
+        "el recuadro que la sede coloco no se lee fuera de PAdES"
+    );
+
+    let chosen = asking.certificates[0].id.clone();
+    let Consented::SigningWith(_) = consent(&desk, &chosen, &live).expect("el certificado vale")
+    else {
+        panic!("una firma se consiente firmando");
+    };
+    session::sign_on_token(&ATokenThatSigns, &desk.neighbours.session, "1234")
+        .expect("el token de pruebas firma el PRE");
+    assert!(
+        finish(&desk, &live).expect("la postfirma sale").is_none(),
+        "un `sign` contesta en el acto, sin momento de guardado"
+    );
+
+    let encode = base64::engine::general_purpose::URL_SAFE;
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(format!(
+            "{}|{}",
+            encode.encode(ours[0].der()),
+            encode.encode(A_CADES_SIGNATURE)
+        )),
+        "la misma linea que lleva un PDF firmado, con el CMS dentro"
+    );
+    assert!(live.current().is_none(), "contestada la sede, se acabo");
+
+    let extra_params = desk.neighbours.bridge.extra_params_of_the_presign();
+    assert_eq!(desk.neighbours.bridge.format_of_the_presign(), expected);
+    assert!(
+        extra_params.contains("mode=explicit"),
+        "el modo llega al puente como propiedad: {extra_params}"
+    );
+    assert!(
+        extra_params.contains("policyIdentifier=urn:oid:2.16.724.1.3.1.1.2.1.9"),
+        "y la politica expandida tambien: {extra_params}"
+    );
+    for key in THE_BOX_A_SITE_DECLARES {
+        assert!(
+            !extra_params.contains(key),
+            "'{key}' es del recuadro y solo lo lee un firmador PDF: {extra_params}"
+        );
+    }
+    assert!(
+        !extra_params.contains("layer2") && !extra_params.contains("signatureSubFilter"),
+        "ni lo que rFirma anade de su cosecha para el recuadro: {extra_params}"
+    );
+}
+
+#[test]
+fn a_cades_signature_goes_all_the_way_from_the_operation_to_the_wire() {
+    the_whole_errand_asking_for("CAdES", Format::Cades);
+}
+
+#[test]
+fn a_cms_signature_goes_all_the_way_from_the_operation_to_the_wire() {
+    the_whole_errand_asking_for("CMS/PKCS#7", Format::Cms);
+}
+
+#[test]
+fn a_binary_under_format_auto_goes_out_as_a_cades_signature() {
+    the_whole_errand_asking_for("auto", Format::Cades);
+}
+
+#[test]
+fn the_document_of_a_cades_errand_never_passes_through_as_a_pdf() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &signature_requested(&a_signature_asking_for("CAdES", A_CHALLENGE)),
+        ours.clone(),
+        &live,
+    );
+
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("hay un certificado que la sede acepta: {step:?}");
+    };
+    let path = documents::opened_document(&opened, &asking.document)
+        .expect("el documento esta en la mano")
+        .reading_path()
+        .to_path_buf();
+    assert_eq!(
+        path.extension().and_then(std::ffi::OsStr::to_str),
+        Some("bin"),
+        "el reto de la sede no es un PDF y el fichero de paso no lo aparenta"
+    );
+    assert_eq!(
+        std::fs::read(&path).expect("el fichero de paso existe"),
+        A_CHALLENGE,
+        "lo que se firma es lo que la sede mando"
+    );
+}
+
 #[test]
 fn document_chosen_reads_the_scratch_path_lists_certificates_and_continues_the_errand() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1925,10 +2179,13 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
                 opened: &opened,
                 memory: &memory,
                 token: InMemoryTokenSigning::default(),
+                ours: Vec::new(),
+                bridge: TheBridge::default(),
+                session: SigningSession::default(),
             },
             listed: ours.clone(),
             signature: SiteSignature {
-                signed: b"%PDF-1.7 firmado".to_vec(),
+                signature: b"%PDF-1.7 firmado".to_vec(),
                 signer_der: ours[0].der().to_vec(),
             },
         },
@@ -3083,10 +3340,13 @@ fn a_desk_for_the_batch<'a>(
                 opened: opened_for_nobody(),
                 memory,
                 token: InMemoryTokenSigning::default(),
+                ours: Vec::new(),
+                bridge: TheBridge::default(),
+                session: SigningSession::default(),
             },
             listed: ours.to_vec(),
             signature: SiteSignature {
-                signed: Vec::new(),
+                signature: Vec::new(),
                 signer_der: Vec::new(),
             },
         },

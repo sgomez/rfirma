@@ -151,7 +151,7 @@ impl SavingHints {
     /// El paso de guardado tras la postfirma, contestando con el mismo par que `sign`.
     pub fn into_consent(self, signed: &SiteSignature) -> SavingConsent {
         SavingConsent {
-            data: signed.signed.clone(),
+            data: signed.signature.clone(),
             title: None,
             filename: Some(self.filename),
             extensions: self.extensions,
@@ -208,8 +208,8 @@ pub enum SiteOutcome {
     Signature {
         /// El DER del firmante.
         signer_der: Vec<u8>,
-        /// El PDF firmado.
-        signed: Vec<u8>,
+        /// La firma, en el formato que pidió la sede.
+        signature: Vec<u8>,
     },
     /// El fichero pedido por la sede queda escrito donde la persona eligió.
     Saved,

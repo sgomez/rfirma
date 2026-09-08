@@ -42,4 +42,4 @@ pub use parameters::{
 pub use refusal::{Refusal, RefusalSituation};
 pub use url::AfirmaUrl;
 pub use version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
-pub use visible::{visible_signature_of, SiteVisibleSignature};
+pub use visible::{forget_the_box, visible_signature_of, SiteVisibleSignature};

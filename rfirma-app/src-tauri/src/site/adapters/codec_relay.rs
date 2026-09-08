@@ -44,11 +44,14 @@ impl ProtocolCodec for RelayCodec {
     fn encode(&self, outcome: &SiteOutcome) -> String {
         match outcome {
             SiteOutcome::Certificate(der) => self.on_the_wire(der),
-            SiteOutcome::Signature { signer_der, signed } => {
+            SiteOutcome::Signature {
+                signer_der,
+                signature,
+            } => {
                 format!(
                     "{}{RESULT_SEPARATOR}{}",
                     self.on_the_wire(signer_der),
-                    self.on_the_wire(signed)
+                    self.on_the_wire(signature)
                 )
             }
             SiteOutcome::Saved => SAVE_OK.to_owned(),

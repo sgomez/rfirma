@@ -103,6 +103,17 @@ pub struct OpenCycle {
     already_signed_before: bool,
 }
 
+/// Lo que rFirma añade de su cosecha: recuadro y rúbrica, que solo lee un firmador PDF.
+fn added_by_rfirma(
+    format: Format,
+    config: &SignatureConfig,
+) -> std::collections::BTreeMap<String, String> {
+    match format {
+        Format::Pades => config.extra_params(),
+        _ => std::collections::BTreeMap::new(),
+    }
+}
+
 /// Fase 1: ejecuta la prefirma enviando formato, documento y parámetros al puente.
 pub fn presign<B: Bridge + ?Sized>(
     bridge: &B,
@@ -117,7 +128,7 @@ pub fn presign<B: Bridge + ?Sized>(
         .join(CHAIN_SEPARATOR);
     let extra_params = to_java_properties(&crate::signing::domain::merged_with(
         request.from_the_site.clone(),
-        request.config.extra_params(),
+        added_by_rfirma(request.format, request.config),
     ));
 
     let presigned = bridge.presign(PreSignRequest {

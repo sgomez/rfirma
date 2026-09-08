@@ -5,8 +5,8 @@ use crate::site::domain::protocol::SafCode;
 /// Firma de un trámite de sede lista para transmitir.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SiteSignature {
-    /// Bytes del PDF firmado.
-    pub signed: Vec<u8>,
+    /// Bytes de la firma, en el formato que pidió la sede.
+    pub signature: Vec<u8>,
     /// Certificado firmante en formato DER.
     pub signer_der: Vec<u8>,
 }

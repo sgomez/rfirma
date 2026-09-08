@@ -43,7 +43,7 @@ fn a_signature_goes_out_behind_its_certificate_separated_by_a_bar() {
     assert_eq!(
         V4Codec.encode(&SiteOutcome::Signature {
             signer_der: vec![0xfb, 0xff, 0xbf],
-            signed: b"%PDF".to_vec(),
+            signature: b"%PDF".to_vec(),
         }),
         "-_-_|JVBERg=="
     );
