@@ -694,6 +694,97 @@ mod full_cycle {
         );
     }
 
+    /// La firma XAdES Enveloping del banco de referencia, la entrada de una cofirma o una contrafirma.
+    const A_REFERENCE_XADES: &[u8] =
+        include_bytes!("../../../testdata/reference/xades-enveloping.xml");
+
+    /// Cofirma o contrafirma un XAdES Enveloping (`Format::Xades` comparte el ciclo con CAdES desde #533).
+    fn xades_cycle(
+        data: &[u8],
+        operation: SignatureOperation,
+        declared: &[(&str, &str)],
+    ) -> Vec<u8> {
+        a_cycle_of(
+            Format::Xades(XadesVariant::Enveloping),
+            cycle::ALGORITHM,
+            data,
+            operation,
+            declared,
+        )
+    }
+
+    /// Cuántas firmas de nivel superior lleva un XAdES, una por cofirma o contrafirma que recibió.
+    fn xades_signers_in(signature: &[u8]) -> usize {
+        signature
+            .windows(b"<ds:Signature ".len())
+            .filter(|window| *window == b"<ds:Signature ")
+            .count()
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_xades_cosignature_over_the_reference_signature_validates() {
+        let cosigned = xades_cycle(A_REFERENCE_XADES, SignatureOperation::Cosign, &[]);
+        let path = write_to_target("xades-cofirma.xml", &cosigned);
+
+        assert_eq!(
+            xades_signers_in(&cosigned),
+            xades_signers_in(A_REFERENCE_XADES) + 1,
+            "la cofirma añade una firma de nivel superior junto a la que cofirmó"
+        );
+        the_original_validator_accepts(&path);
+    }
+
+    /// Contrafirma un XAdES Enveloping con el objetivo pedido, lo valida y devuelve el resultado.
+    fn xades_countersign(signature: &[u8], target: &str, name: &str) -> Vec<u8> {
+        let countersigned = xades_cycle(
+            signature,
+            SignatureOperation::Countersign,
+            &[("target", target)],
+        );
+        let written = write_to_target(name, &countersigned);
+
+        assert_ne!(
+            countersigned, signature,
+            "la contrafirma tiene que haber añadido algo"
+        );
+        the_original_validator_accepts(&written);
+        countersigned
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_xades_countersignature_over_the_leafs_adds_the_signer_that_the_reference_adds() {
+        let countersigned =
+            xades_countersign(A_REFERENCE_XADES, "leafs", "xades-contrafirma-leafs.xml");
+
+        assert_eq!(
+            xades_signers_in(&countersigned),
+            xades_signers_in(A_REFERENCE_XADES) + 1,
+            "la contrafirma sobre las hojas añade un firmante, como la del original"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_xades_countersignature_over_the_whole_tree_reaches_more_signers_than_over_the_leafs() {
+        let once = xades_countersign(A_REFERENCE_XADES, "leafs", "xades-contrafirma-una-vez.xml");
+        let leafs = xades_countersign(&once, "leafs", "xades-contrafirma-leafs-otra-vez.xml");
+        let tree = xades_countersign(&once, "tree", "xades-contrafirma-tree.xml");
+
+        assert_eq!(
+            xades_signers_in(&leafs),
+            xades_signers_in(&once) + 1,
+            "sobre las hojas se contrafirma solo el firmante mas profundo"
+        );
+        assert!(
+            xades_signers_in(&tree) > xades_signers_in(&leafs),
+            "sobre el arbol se contrafirma tambien el firmante de arriba: {} frente a {}",
+            xades_signers_in(&tree),
+            xades_signers_in(&leafs)
+        );
+    }
+
     /// Genera un PDF sintético de una página.
     fn a_one_page_pdf() -> Vec<u8> {
         let content = format!(

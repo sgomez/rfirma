@@ -955,6 +955,50 @@ fn signing_and_saving_with_countersign_in_cades_is_attended() {
 }
 
 #[test]
+fn a_countersignature_in_xades_carries_the_target_the_site_declared() {
+    let url = a_countersignature(
+        "XAdES",
+        &format!("&properties={}", properties("target=tree\n")),
+    );
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("XAdES contrafirma") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Tree
+        }
+    );
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
+}
+
+#[test]
+fn signing_and_saving_with_countersign_in_xades_is_attended() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=XAdES&\
+         algorithm=SHA256withRSA&dat={}",
+        dat(b"<xml/>")
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("XAdES contrafirma")
+    else {
+        panic!("es un firmar y guardar");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+}
+
+#[test]
 fn explicit_mode_with_xades_is_refused_with_saf_06() {
     let refusal = refuse_explicit_xades(
         RequestedFormat::Xades(XadesEnvelope::Enveloping),
