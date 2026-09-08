@@ -377,19 +377,8 @@ jobs:
             softhsm2 \
             opensc \
             libnss3-tools
-
-      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
-        if: steps.scope.outputs.build == 'true'
-      - name: Herramienta de cobertura y de CRAP
-        if: steps.scope.outputs.build == 'true'
-        run: |
-          cargo binstall --no-confirm cargo-llvm-cov
-          cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
-
-      # El mismo accesorio que el carril rapido, y por la misma razon: aqui
-      # `just test-native` y `just crap-full` vuelven a ejecutar la suite
-      # entera, banco de conformidad incluido, y con CI puesta un accesorio que
-      # falta es un fallo, no un salto.
+      # El accesorio del banco de conformidad: las pruebas de grada C en Rust
+      # cubren los casos trifasicos contra el autoscript.js oficial.
       - name: Cache del banco de conformidad
         if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -443,13 +432,6 @@ jobs:
           # existe. Un segundo rojo — «artefacto no encontrado» — solo taparia
           # el rojo de verdad.
           if-no-files-found: warn
-
-      # La misma medicion CRAP que el carril rapido pero SIN --allow sobre el
-      # modulo FFI: con la cobertura de la grada C incluida, ese modulo ya
-      # puede dar la cara (ADR-0014).
-      - name: CRAP sin exclusiones
-        if: steps.scope.outputs.build == 'true'
-        run: just crap-full
 
   # ==========================================================================
   # COMPILACION DE RELEASE

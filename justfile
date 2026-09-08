@@ -1007,8 +1007,8 @@ test-native: token check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
     # Las de grada C del puente Java: el ciclo trifasico entero validado con
     # `pdfsig` de poppler, que es la puerta automatica de validez del ADR-0014.
-    # -DexcludedGroups= levanta la exclusion que el pom pone por omision.
-    cd {{ bridge }} && mvn -B test -DexcludedGroups=
+    # -DexcludedGroups= y -Dgroups=gradaC ejecutan unicamente la grada C sin repetir unitarios.
+    cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
