@@ -262,7 +262,7 @@ impl NativeBridge {
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let extra = c_string(request.extra_params, "los extraParams")?;
-        let operation = c_string(SIGN_OPERATION, "la operacion")?;
+        let operation = c_string(SIGN_OPERATION, "la operación")?;
         let json = self.call(|thread| unsafe {
             match entry {
                 EntryPoints::Pades => (self.presign)(
@@ -366,7 +366,7 @@ impl Drop for NativeBridge {
     }
 }
 
-/// La unica operacion CAdES que este puente atiende.
+/// La única operación CAdES que este puente atiende.
 const SIGN_OPERATION: &str = "sign";
 const PADES_DOCUMENT_KEY: &str = "pdf";
 const CADES_DOCUMENT_KEY: &str = "signature";
@@ -390,7 +390,8 @@ impl EntryPoints {
 fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
     match format.bridged()? {
         Format::Pades => Ok(EntryPoints::Pades),
-        _ => Ok(EntryPoints::Cades),
+        Format::Cades | Format::Cms => Ok(EntryPoints::Cades),
+        other => Err(BridgeError::FormatNotBridged(other)),
     }
 }
 
@@ -416,11 +417,6 @@ pub fn parse_presign(json: &str) -> Result<PreSignature, BridgeError> {
 /// Parsea la respuesta JSON de postfirma PAdES.
 pub fn parse_postsign(json: &str) -> Result<Vec<u8>, BridgeError> {
     parse_signed_document(json, PADES_DOCUMENT_KEY)
-}
-
-/// Parsea la respuesta JSON de postfirma CAdES.
-pub fn parse_cades_postsign(json: &str) -> Result<Vec<u8>, BridgeError> {
-    parse_signed_document(json, CADES_DOCUMENT_KEY)
 }
 
 fn parse_signed_document(json: &str, key: &str) -> Result<Vec<u8>, BridgeError> {

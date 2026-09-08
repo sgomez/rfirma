@@ -334,20 +334,48 @@ mod full_cycle {
                 certificate: &reference,
             },
         )
-        .expect("la prefirma CAdES deberia salir");
+        .expect("la prefirma CAdES debería salir");
 
         let signature = cycle
             .sign_on_token(&pkcs11::RealToken, PIN)
-            .expect("el token deberia firmar los atributos");
+            .expect("el token debería firmar los atributos");
 
         cycle
             .postsign(&bridge, &signature, &cycle.seal_in_transit())
-            .expect("la postfirma deberia ensamblar el CMS")
+            .expect("la postfirma debería ensamblar el CMS")
             .into_signed_document()
     }
 
-    /// Valida un CMS con openssl; `content` solo lo lleva la firma explicita (ADR-0014).
-    fn openssl_cms_verify(signature: &Path, content: Option<&Path>) {
+    /// Valida un CMS con openssl; `content` solo lo lleva la firma explícita (ADR-0014).
+    fn openssl_cms_verify(signature: &Path, content: Option<&Path>) -> Vec<u8> {
+        let recovered = signature.with_extension("recuperado.bin");
+        let output = run_openssl_cms_verify(signature, content, &recovered);
+        assert!(
+            output.status.success(),
+            "openssl no acepta la firma {}: {}",
+            signature.display(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        std::fs::read(&recovered).expect("openssl deja el contenido recuperado")
+    }
+
+    /// Sin `-content` una firma detached no tiene contenido que verificar.
+    fn openssl_cms_finds_no_content_in(signature: &Path) {
+        let discarded = signature.with_extension("descartado.bin");
+        let output = run_openssl_cms_verify(signature, None, &discarded);
+        assert!(
+            !output.status.success(),
+            "openssl verifica {} sin -content: la firma lleva el contenido dentro \
+             y no es explícita",
+            signature.display()
+        );
+    }
+
+    fn run_openssl_cms_verify(
+        signature: &Path,
+        content: Option<&Path>,
+        recovered: &Path,
+    ) -> std::process::Output {
         let mut command = Command::new("openssl");
         command
             .arg("cms")
@@ -356,30 +384,24 @@ mod full_cycle {
             .arg("DER")
             .arg("-noverify")
             // Sin esto openssl canoniza los saltos del contenido y el reto deja
-            // de casar con el messageDigest que sello la prefirma.
+            // de casar con el messageDigest que selló la prefirma.
             .arg("-binary")
             .arg("-in")
             .arg(signature)
             .arg("-out")
-            .arg("/dev/null");
+            .arg(recovered);
         if let Some(content) = content {
             command.arg("-content").arg(content);
         }
-        let output = command.output().unwrap_or_else(|error| {
+        command.output().unwrap_or_else(|error| {
             panic!(
                 "falta openssl: es la puerta de validez de CAdES en la grada C (ADR-0014).\n  \
                  sudo apt install -y openssl\n  {error}"
             )
-        });
-        assert!(
-            output.status.success(),
-            "openssl no acepta la firma {}: {}",
-            signature.display(),
-            String::from_utf8_lossy(&output.stderr)
-        );
+        })
     }
 
-    /// El oraculo del original: `just validate-signature` (ADR-0014).
+    /// El oráculo del original: `just validate-signature` (ADR-0014).
     fn the_original_validator_accepts(signature: &Path) {
         let script = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../rfirma-native-bridge/testbench/validate.sh");
@@ -404,7 +426,7 @@ mod full_cycle {
     fn an_implicit_cades_signature_carries_the_challenge_and_openssl_verifies_it() {
         let signature = write_to_target("cades-implicito.p7s", &sign_cades(CHALLENGE, "implicit"));
 
-        openssl_cms_verify(&signature, None);
+        assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
         the_original_validator_accepts(&signature);
     }
 
@@ -414,7 +436,8 @@ mod full_cycle {
         let signature = write_to_target("cades-explicito.p7s", &sign_cades(CHALLENGE, "explicit"));
         let challenge = write_to_target("cades-reto.bin", CHALLENGE);
 
-        openssl_cms_verify(&signature, Some(&challenge));
+        openssl_cms_finds_no_content_in(&signature);
+        assert_eq!(openssl_cms_verify(&signature, Some(&challenge)), CHALLENGE);
     }
 
     /// Genera un PDF sintético de una página.
@@ -517,7 +540,7 @@ mod full_cycle {
 
         let signature = cycle
             .sign_on_token(&pkcs11::RealToken, PIN)
-            .expect("el token deberia firmar los atributos");
+            .expect("el token debería firmar los atributos");
 
         cycle
             .postsign(&bridge, &signature, &cycle.seal_in_transit())

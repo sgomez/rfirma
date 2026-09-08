@@ -1734,7 +1734,7 @@ fn a_chosen_document_that_is_not_a_pdf_under_format_auto_is_refused_by_the_bridg
 /// mismo `SAF_06` que antes daba la comprobación de texto de `sign`.
 #[test]
 fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
-    for (format, document) in [("CAdES", A_PDF), ("auto", &[0x00, 0x01, 0x02][..])] {
+    for (format, document) in [("XAdES", A_PDF), ("CAdES-ASiC-S", A_PDF)] {
         let home = tempfile::tempdir().expect("deberia haber directorio temporal");
         let memory = a_memory(home.path());
         let ours = vec![a_usable_certificate("FIRMA")];
@@ -1770,39 +1770,44 @@ fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
     }
 }
 
-/// Y con `format=PAdES` la firma sigue su curso como antes.
+/// Y los formatos que el puente sí atiende siguen su curso hasta el consentimiento.
 #[test]
 fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
-    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let memory = a_memory(home.path());
-    let ours = vec![a_usable_certificate("FIRMA")];
-    let (listed, _) = listed_from(&ours);
-    let opened = OpenedDocuments::new();
-    let live = a_live();
-    let engine = AnEngine::answering(&[&[0]]);
-    let policies = APolicyEngine::answering("");
-    let scratch = home.path().join("errand");
+    for (format, document, expected) in [
+        ("PAdES", A_PDF, Format::Pades),
+        ("auto", &[0x00, 0x01, 0x02][..], Format::Cades),
+    ] {
+        let home = tempfile::tempdir().expect("debería haber directorio temporal");
+        let memory = a_memory(home.path());
+        let ours = vec![a_usable_certificate("FIRMA")];
+        let (listed, _) = listed_from(&ours);
+        let opened = OpenedDocuments::new();
+        let live = a_live();
+        let engine = AnEngine::answering(&[&[0]]);
+        let policies = APolicyEngine::answering("");
+        let scratch = home.path().join("errand");
 
-    let step = consent_to_sign(
-        &a_desk(
-            &engine,
-            &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
-            &scratch,
-        ),
-        &signature_requested(&a_signature_asking_for("PAdES", A_PDF)),
-        ours.clone(),
-        &live,
-    );
+        let step = consent_to_sign(
+            &a_desk(
+                &engine,
+                &policies,
+                &[],
+                home.path(),
+                &listed,
+                &opened,
+                &memory,
+                &scratch,
+            ),
+            &signature_requested(&a_signature_asking_for(format, document)),
+            ours.clone(),
+            &live,
+        );
 
-    let ErrandStep::AskingToSign(consent) = step else {
-        panic!("PAdES se firma igual que antes: {step:?}");
-    };
-    assert_eq!(consent.format, Format::Pades);
+        let ErrandStep::AskingToSign(consent) = step else {
+            panic!("'{format}' se firma igual que antes: {step:?}");
+        };
+        assert_eq!(consent.format, expected, "format={format}");
+    }
 }
 
 #[test]

@@ -213,8 +213,8 @@ fn a_postsign_answer_comes_back_as_the_bytes_of_the_pdf() {
 
 #[test]
 fn a_cades_postsign_answer_comes_back_under_its_own_key() {
-    let signature =
-        parse_cades_postsign(r#"{"ok":true,"signature":"MTIz"}"#).expect("es el JSON del contrato");
+    let signature = parse_signed_document(r#"{"ok":true,"signature":"MTIz"}"#, CADES_DOCUMENT_KEY)
+        .expect("es el JSON del contrato");
 
     assert_eq!(signature, b"123");
     assert!(
