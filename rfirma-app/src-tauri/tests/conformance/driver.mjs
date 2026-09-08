@@ -10,6 +10,7 @@ if (!autoscriptPath) {
 }
 const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
 const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
+const script = process.env.RFIRMA_BENCH_SCRIPT ?? "selectcert";
 const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
 
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
@@ -156,9 +157,55 @@ process.on("uncaughtException", (error) => {
   settle({ event: "error", type: "uncaught", message: String(error?.message) });
 });
 
+/** Una selección de certificado del cliente publicado, resuelta cuando conteste el trámite. */
+function selecting(step) {
+  return new Promise((resolve) => {
+    AutoScript.selectCertificate(
+      "",
+      (data) => {
+        emit({ event: "success", step, data: String(data) });
+        resolve();
+      },
+      (type, message) =>
+        settle({ event: "error", step, type: String(type), message: String(message) }),
+    );
+  });
+}
+
+/**
+ * El canal se cierra detrás de cada respuesta, y el cliente publicado no se entera hasta que
+ * procesa el cierre: sin esta espera reutilizaría un socket ya cerrado para la siguiente llamada.
+ */
+function theChannelClosing() {
+  return new Promise((resolve) => setTimeout(resolve, 750));
+}
+
+/**
+ * Tres selecciones seguidas: dos con el certificado fijado y una tercera tras soltarlo. El cliente
+ * publicado no lleva `sticky` en el `extraParams`: lo pone `setStickySignatory`, y `resetsticky`
+ * solo sale cuando estaba fijado y se suelta (`autoscript.js`, `setStickySignatory`).
+ */
+function theStickyScript() {
+  AutoScript.setStickySignatory(true);
+  return selecting("stuck")
+    .then(theChannelClosing)
+    .then(() => selecting("stuck-again"))
+    .then(theChannelClosing)
+    .then(() => {
+      AutoScript.setStickySignatory(false);
+      return selecting("released");
+    })
+    .then(() => settle({ event: "done" }));
+}
+
 AutoScript.cargarAppAfirma();
-AutoScript.selectCertificate(
-  "",
-  (data) => settle({ event: "success", data: String(data) }),
-  (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
-);
+
+if (script === "sticky") {
+  theStickyScript();
+} else {
+  AutoScript.selectCertificate(
+    "",
+    (data) => settle({ event: "success", data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
