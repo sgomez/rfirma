@@ -10,18 +10,7 @@
     "beforeBuildCommand": ""
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "rFirma",
-        "visible": false,
-        "width": 1280,
-        "height": 720,
-        "minWidth": 1100,
-        "minHeight": 560,
-        "dragDropEnabled": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'"
     }

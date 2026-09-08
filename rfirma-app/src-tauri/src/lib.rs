@@ -181,6 +181,8 @@ pub fn run() {
                     desktop::application::invocation::SecondInvocation::NothingHappens => {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.set_focus();
+                        } else {
+                            open_the_main_window(app);
                         }
                     }
                 }
@@ -269,9 +271,7 @@ pub fn run() {
 
             match startup.opening {
                 site::application::startup::Opening::TheMainWindow => {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.show();
-                    }
+                    open_the_main_window(&handle);
                 }
                 site::application::startup::Opening::TheSiteErrand(attendance) => {
                     say(site::application::startup::hold_the_channel(
@@ -285,6 +285,27 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error arrancando la ventana de rfirma");
+}
+
+/// Abre la ventana principal de la aplicación.
+fn open_the_main_window(app: &tauri::AppHandle) {
+    use tauri::{Manager as _, WebviewUrl, WebviewWindowBuilder};
+
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+        return;
+    }
+
+    let built = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+        .title("rFirma")
+        .inner_size(1280.0, 720.0)
+        .min_inner_size(1100.0, 560.0)
+        .build();
+
+    if let Err(error) = built {
+        eprintln!("rfirma: no se puede abrir la ventana principal ({error})");
+    }
 }
 
 /// Los perfiles NSS de esta persona, o ninguno si no se sabe cuál es su `HOME`.
