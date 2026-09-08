@@ -165,3 +165,8 @@
 2026-09-08 spec=#467 sub=#503 model=opus effort=medium pr=#520 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-08 spec=#467 sub=#504 model=opus effort=medium pr=#521 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-08 spec=#467 sub=#505 model=sonnet effort=medium pr=#522 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#468 sub=#524 model=opus effort=medium pr=#554 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#468 sub=#526 model=sonnet effort=medium pr=#555 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#468 sub=#527 model=opus effort=medium pr=#556 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#468 sub=#525 model=opus effort=medium pr=#557 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#468 sub=#528 model=opus effort=medium pr=#558 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
