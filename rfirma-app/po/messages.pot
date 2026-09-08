@@ -1066,6 +1066,30 @@ msgstr ""
 msgid "sede.outcome.signedNote"
 msgstr ""
 
+msgid "sede.outcome.savedTitle"
+msgstr ""
+
+msgid "sede.outcome.savedBody"
+msgstr ""
+
+msgid "sede.outcome.savedBodyUnknownOrigin"
+msgstr ""
+
+msgid "sede.outcome.loadedTitle"
+msgstr ""
+
+msgid "sede.outcome.loadedBody"
+msgid_plural "sede.outcome.loadedBody"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "sede.outcome.loadedBodyUnknownOrigin"
+msgid_plural "sede.outcome.loadedBodyUnknownOrigin"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
 msgid "sede.outcome.cancelledTitle"
 msgstr ""
 
@@ -1097,6 +1121,18 @@ msgid "sede.refusals.errandInFlight"
 msgstr ""
 
 msgid "sede.refusals.unknown"
+msgstr ""
+
+msgid "sede.refusals.saveCancelled"
+msgstr ""
+
+msgid "sede.refusals.loadCancelled"
+msgstr ""
+
+msgid "sede.refusals.cannotSaveData"
+msgstr ""
+
+msgid "sede.refusals.cannotLoadData"
 msgstr ""
 
 msgid "sede.noCertificate.noneTitle"

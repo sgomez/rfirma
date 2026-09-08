@@ -1617,7 +1617,10 @@ fn a_document_chosen_for_sign_and_save_that_disappears_is_answered_with_saf_25()
         &live,
     );
 
-    assert!(moved.is_none(), "el rechazo ya contesta a la sede");
+    assert!(
+        matches!(moved, LoadCompletion::Delivered(_)),
+        "el rechazo ya contesta a la sede"
+    );
     let _ = what_the_site_received(&mut wire);
     assert!(
         what_the_site_received(&mut wire2).is_some_and(|line| line.starts_with("SAF_25")),
@@ -1748,7 +1751,10 @@ fn document_chosen_reads_the_scratch_path_lists_certificates_and_continues_the_e
     // Sin almacen, la mesa contesta en el acto: prueba que el documento se ha leido (si no,
     // hubiera salido SAF_25 antes de llegar a mirar certificados) y que se ha llegado a
     // mirarlos, no que se firme.
-    assert!(moved.is_none(), "ya ha contestado a la sede");
+    assert!(
+        matches!(moved, LoadCompletion::Delivered(_)),
+        "ya ha contestado a la sede"
+    );
     assert_eq!(
         what_the_site_received(&mut wire).as_deref(),
         Some(

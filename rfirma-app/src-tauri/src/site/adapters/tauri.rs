@@ -145,34 +145,67 @@ fn save_dialog<R: tauri::Runtime>(
     with_extensions(dialog, &consent.extensions, consent.description.as_deref())
 }
 
+/// El diálogo de guardado se cerró sin elegir ningún destino.
+fn save_cancelled() -> Failure {
+    Failure::new(
+        "saveCancelled",
+        "el dialogo de guardado se cerro sin elegir nada",
+    )
+}
+
+/// El diálogo de carga se cerró sin elegir ningún fichero.
+fn load_cancelled() -> Failure {
+    Failure::new(
+        "loadCancelled",
+        "el dialogo de carga se cerro sin elegir nada",
+    )
+}
+
+/// Traduce el desenlace de un guardado a lo que espera la ventana: `true` si hay que enseñar el
+/// desenlace de guardado, `false` si el guardado era el cierre de un `signandsave` que ya se
+/// enseñó como firmado.
+fn told_of_saving(
+    outcome: &crate::site::application::errand::SiteOutcome,
+) -> Result<bool, Failure> {
+    use crate::site::application::errand::{SiteOutcome, SiteRefusal};
+    match outcome {
+        SiteOutcome::Refused(SiteRefusal::CannotSaveData(detail)) => {
+            Err(Failure::new("cannotSaveData", detail.clone()))
+        }
+        SiteOutcome::Saved => Ok(true),
+        _ => Ok(false),
+    }
+}
+
 /// Escribe donde la persona eligió, o cancela si cerró el diálogo sin elegir.
 fn write_where_chosen(
     chosen: Option<tauri_plugin_dialog::FilePath>,
     consent: &crate::site::application::errand::SavingConsent,
     scratch: &dyn crate::site::ports::Scratch,
     live: &crate::site::application::errand::LiveErrand,
-) -> Result<(), Failure> {
+) -> Result<bool, Failure> {
     let Some(chosen) = chosen else {
         crate::site::application::errand::decline(live);
-        return Ok(());
+        return Err(save_cancelled());
     };
     let path = named_paths(vec![chosen])?.remove(0).1;
-    crate::site::application::errand::saved(
+    let outcome = crate::site::application::errand::saved(
         scratch,
         &path,
         &consent.data,
         consent.signer_der.as_deref(),
         live,
     );
-    Ok(())
+    told_of_saving(&outcome)
 }
 
-/// Abre el diálogo de guardado del portal y escribe el fichero donde la persona eligió (ADR-0011).
+/// Abre el diálogo de guardado del portal y escribe el fichero donde la persona eligió
+/// (ADR-0011). `true` cuando hay que enseñar el desenlace de guardado a la ventana.
 #[tauri::command(async)]
 pub fn site_save_file(
     app_handle: tauri::AppHandle,
     site: State<'_, SiteRoot>,
-) -> Result<(), Failure> {
+) -> Result<bool, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
     let Some(consent) = site.errand.the_saving_pending() else {
@@ -185,9 +218,7 @@ pub fn site_save_file(
         &consent,
         site.scratch.as_ref(),
         &site.errand,
-    )?;
-    site_window::publish_the_moment(&app_handle);
-    Ok(())
+    )
 }
 
 /// El selector de carga del portal con las pistas que declaró la sede.
@@ -216,6 +247,35 @@ fn pick<R: tauri::Runtime>(
     }
 }
 
+/// Traduce en qué quedó la carga a lo que espera la ventana: el paso que sigue si el trámite
+/// continúa (`signandsave` con el documento ya elegido), o cuántos ficheros entregó si terminó
+/// ahí mismo.
+fn told_of_loading(
+    completion: crate::site::application::errand::LoadCompletion,
+) -> Result<
+    (
+        Option<crate::site::application::errand::ErrandStep>,
+        Option<u32>,
+    ),
+    Failure,
+> {
+    use crate::site::application::errand::{LoadCompletion, SiteOutcome, SiteRefusal};
+    match completion {
+        LoadCompletion::Continues(step) => Ok((Some(step), None)),
+        LoadCompletion::Delivered(SiteOutcome::Refused(SiteRefusal::CannotLoadData(detail))) => {
+            Err(Failure::new("cannotLoadData", detail))
+        }
+        // Cualquier otro rechazo ya entregado a la sede: traducción única (ADR-0009).
+        LoadCompletion::Delivered(SiteOutcome::Refused(refusal)) => {
+            Err(super::frontier::told(&refusal).0)
+        }
+        LoadCompletion::Delivered(SiteOutcome::Loaded(files)) => {
+            Ok((None, Some(files.len() as u32)))
+        }
+        LoadCompletion::Delivered(_) => Ok((None, None)),
+    }
+}
+
 /// Lee lo que la persona eligió y continúa el trámite, o cancela si no eligió nada: si el
 /// selector esperaba documento para `signandsave`, el paso que sigue no es una entrega a la
 /// sede, sino el consentimiento de firma (#494).
@@ -227,24 +287,31 @@ fn load_chosen<
     chosen: Vec<tauri_plugin_dialog::FilePath>,
     desk: &crate::site::application::errand::ErrandDesk<'_, E, P, N>,
     live: &crate::site::application::errand::LiveErrand,
-) -> Result<Option<crate::site::application::errand::ErrandStep>, Failure> {
+) -> Result<
+    (
+        Option<crate::site::application::errand::ErrandStep>,
+        Option<u32>,
+    ),
+    Failure,
+> {
     if chosen.is_empty() {
         crate::site::application::errand::decline(live);
-        return Ok(None);
+        return Err(load_cancelled());
     }
     let named = named_paths(chosen)?;
-    Ok(crate::site::application::errand::document_chosen(
+    told_of_loading(crate::site::application::errand::document_chosen(
         desk, &named, live,
     ))
 }
 
 /// Abre el selector de carga del portal y continúa el trámite con lo que la persona eligió
-/// (ADR-0011).
+/// (ADR-0011). El valor devuelto es cuántos ficheros entregó a la sede, o `None` si el trámite
+/// sigue con un paso más.
 #[tauri::command(async)]
-pub fn site_load_files(app_handle: tauri::AppHandle) -> Result<(), Failure> {
+pub fn site_load_files(app_handle: tauri::AppHandle) -> Result<Option<u32>, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
-    let moved = site_window::with_the_desk(&app_handle, |desk, live| {
+    let (moved, delivered) = site_window::with_the_desk(&app_handle, |desk, live| {
         let Some(consent) = live.the_loading_pending() else {
             return Err(nothing_pending("ninguna carga"));
         };
@@ -254,7 +321,7 @@ pub fn site_load_files(app_handle: tauri::AppHandle) -> Result<(), Failure> {
         load_chosen(chosen, desk, live)
     })?;
     site_window::publish_what_moved(&app_handle, moved);
-    Ok(())
+    Ok(delivered)
 }
 
 /// Instala la CA local en los almacenes NSS del usuario (ADR-0005).

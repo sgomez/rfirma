@@ -114,7 +114,7 @@ rojo.
 | `sede/SedeConsent.tsx` | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual. |
 | `sede/SedeSigning.tsx` | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
 | `sede/SedeTransfer.tsx` | El fichero que la sede quiere guardar o cargar, mientras el diálogo del portal está encima. No tiene acciones propias. |
-| `sede/SedeOutcome.tsx` | 4 · Los tres desenlaces, con el documento recién firmado y el detalle copiable del rechazo. |
+| `sede/SedeOutcome.tsx` | 4 · Firmado, cancelado, guardado, cargado y rechazado, con el documento recién firmado y el detalle copiable del rechazo. |
 | `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas. |
 | **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | `about/AboutDialog.tsx`. |

@@ -1171,6 +1171,30 @@ msgstr "La firma ya se ha enviado."
 msgid "sede.outcome.signedNote"
 msgstr "rFirma no guarda copia."
 
+msgid "sede.outcome.savedTitle"
+msgstr "Guardado"
+
+msgid "sede.outcome.savedBody"
+msgstr "El fichero que pedía {{origin}} ya está guardado donde lo has elegido."
+
+msgid "sede.outcome.savedBodyUnknownOrigin"
+msgstr "El fichero ya está guardado donde lo has elegido."
+
+msgid "sede.outcome.loadedTitle"
+msgstr "Cargado"
+
+msgid "sede.outcome.loadedBody"
+msgid_plural "sede.outcome.loadedBody"
+msgstr[0] "Se ha enviado 1 fichero a {{origin}}."
+msgstr[1] "Se han enviado {{count}} ficheros a {{origin}}."
+msgstr[2] "Se han enviado {{count}} ficheros a {{origin}}."
+
+msgid "sede.outcome.loadedBodyUnknownOrigin"
+msgid_plural "sede.outcome.loadedBodyUnknownOrigin"
+msgstr[0] "Se ha enviado 1 fichero."
+msgstr[1] "Se han enviado {{count}} ficheros."
+msgstr[2] "Se han enviado {{count}} ficheros."
+
 msgid "sede.outcome.cancelledTitle"
 msgstr "Has cancelado la firma"
 
@@ -1209,6 +1233,22 @@ msgstr ""
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} ha enviado algo que rFirma no puede atender."
+
+msgid "sede.refusals.saveCancelled"
+msgstr ""
+"Has cerrado el diálogo de guardado sin elegir dónde guardar el fichero que "
+"pedía {{origin}}."
+
+msgid "sede.refusals.loadCancelled"
+msgstr ""
+"Has cerrado el diálogo de carga sin elegir ningún fichero para {{origin}}."
+
+msgid "sede.refusals.cannotSaveData"
+msgstr ""
+"El fichero que pedía {{origin}} no se ha podido escribir donde has elegido."
+
+msgid "sede.refusals.cannotLoadData"
+msgstr "Uno de los ficheros elegidos para {{origin}} no se ha podido leer."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tienes ningún certificado"

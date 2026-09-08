@@ -1159,6 +1159,30 @@ msgstr "The signature has already been sent."
 msgid "sede.outcome.signedNote"
 msgstr "rFirma keeps no copy."
 
+msgid "sede.outcome.savedTitle"
+msgstr "Saved"
+
+msgid "sede.outcome.savedBody"
+msgstr "The file {{origin}} asked for is now saved where you chose."
+
+msgid "sede.outcome.savedBodyUnknownOrigin"
+msgstr "The file is now saved where you chose."
+
+msgid "sede.outcome.loadedTitle"
+msgstr "Loaded"
+
+msgid "sede.outcome.loadedBody"
+msgid_plural "sede.outcome.loadedBody"
+msgstr[0] "1 file has been sent to {{origin}}."
+msgstr[1] "{{count}} files have been sent to {{origin}}."
+msgstr[2] "{{count}} files have been sent to {{origin}}."
+
+msgid "sede.outcome.loadedBodyUnknownOrigin"
+msgid_plural "sede.outcome.loadedBodyUnknownOrigin"
+msgstr[0] "1 file has been sent."
+msgstr[1] "{{count}} files have been sent."
+msgstr[2] "{{count}} files have been sent."
+
 msgid "sede.outcome.cancelledTitle"
 msgstr "You cancelled the signature"
 
@@ -1198,6 +1222,20 @@ msgstr ""
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} sent something rFirma cannot handle."
+
+msgid "sede.refusals.saveCancelled"
+msgstr ""
+"You closed the save dialog without choosing where to save the file "
+"{{origin}} asked for."
+
+msgid "sede.refusals.loadCancelled"
+msgstr "You closed the load dialog without choosing any file for {{origin}}."
+
+msgid "sede.refusals.cannotSaveData"
+msgstr "The file {{origin}} asked for could not be written where you chose."
+
+msgid "sede.refusals.cannotLoadData"
+msgstr "One of the files chosen for {{origin}} could not be read."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "You have no certificate"

@@ -62,12 +62,13 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
           </span>
           <p className="rf-title sede-outcome__title">{title(outcome, t)}</p>
         </div>
-        {outcome.kind !== "refused" && outcome.document !== null && (
-          /* Lo único que dice **qué** se acaba de firmar —o dejar sin firmar—
+        {(outcome.kind === "signed" || outcome.kind === "cancelled") &&
+          outcome.document !== null && (
+            /* Lo único que dice **qué** se acaba de firmar —o dejar sin firmar—
              en la pantalla que confirma que rFirma no guarda copia. En el
              rechazo no se enseña porque ahí nunca llegó a haber documento. */
-          <DocumentRow document={outcome.document} />
-        )}
+            <DocumentRow document={outcome.document} />
+          )}
         {outcome.kind === "signed" && (
           <>
             <p className="rf-prose">
@@ -80,6 +81,20 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
                 nada. */}
             <p className="rf-hint">{t("sede.outcome.signedNote")}</p>
           </>
+        )}
+        {outcome.kind === "saved" && (
+          <p className="rf-prose">
+            {origin === null
+              ? t("sede.outcome.savedBodyUnknownOrigin")
+              : t("sede.outcome.savedBody", { origin })}
+          </p>
+        )}
+        {outcome.kind === "loaded" && (
+          <p className="rf-prose">
+            {origin === null
+              ? t("sede.outcome.loadedBodyUnknownOrigin", { count: outcome.fileCount })
+              : t("sede.outcome.loadedBody", { count: outcome.fileCount, origin })}
+          </p>
         )}
         {outcome.kind === "refused" && (
           <>
@@ -110,6 +125,8 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
 function OutcomeIcon({ kind }: { kind: SiteOutcome["kind"] }) {
   switch (kind) {
     case "signed":
+    case "saved":
+    case "loaded":
       return <CheckCircleIcon size={24} />;
     case "cancelled":
       return <CrossCircleIcon size={24} />;
@@ -177,6 +194,14 @@ function RefusalSentence({
       return <>{t("sede.refusals.missingFormat", subject)}</>;
     case "errandInFlight":
       return <>{t("sede.refusals.errandInFlight", subject)}</>;
+    case "saveCancelled":
+      return <>{t("sede.refusals.saveCancelled", subject)}</>;
+    case "loadCancelled":
+      return <>{t("sede.refusals.loadCancelled", subject)}</>;
+    case "cannotSaveData":
+      return <>{t("sede.refusals.cannotSaveData", subject)}</>;
+    case "cannotLoadData":
+      return <>{t("sede.refusals.cannotLoadData", subject)}</>;
     default:
       // Una situación nueva en el catálogo cae aquí hasta que se le escriba su
       // rama: `unknown` dice lo que pasa sin fingir que se sabe cuál era.
@@ -189,6 +214,10 @@ function title(outcome: SiteOutcome, t: TFunction): string {
   switch (outcome.kind) {
     case "signed":
       return t("sede.outcome.signedTitle");
+    case "saved":
+      return t("sede.outcome.savedTitle");
+    case "loaded":
+      return t("sede.outcome.loadedTitle");
     case "cancelled":
       return t("sede.outcome.cancelledTitle");
     default:
