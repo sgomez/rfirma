@@ -21,6 +21,7 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             (Failure::from(*refusal), code_of_inadmissible(*refusal))
         }
         SiteRefusal::Policies(error) => (Failure::from(error), code_of_bridge(error)),
+        SiteRefusal::FormatNotBridged(error) => (Failure::from(error), code_of_bridge(error)),
         SiteRefusal::CouldNotFilter(error) => (Failure::from(error), SafCode::CannotAccessKeystore),
         SiteRefusal::NoCertificateTheSiteAccepts => (
             Failure::new(
