@@ -163,6 +163,25 @@
   text-transform: uppercase;
 }
 
+/*
+ * La lista del lote local: cabe en el marco fijo de la ventana, así que se
+ * desplaza ella sola en vez de estirarlo. El selector de certificado y el pie
+ * siguen debajo, siempre visibles.
+ */
+.sede-consent__batch-items {
+  max-height: 140px;
+  overflow-y: auto;
+  gap: 4px;
+  padding: 8px var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+.sede-consent__batch-item {
+  list-style: none;
+}
+
 /* 3 · Firmando */
 
 .sede-signing {

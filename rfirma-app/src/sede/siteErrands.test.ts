@@ -221,6 +221,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         document: null,
         signs: null,
         signing: null,
+        items: null,
         certificates: [certificate()],
         narrowed: false,
       },
@@ -246,6 +247,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         document: null,
         signs: 3,
         signing: null,
+        items: null,
         certificates: [certificate()],
         narrowed: false,
       },
@@ -348,6 +350,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           },
           signs: null,
           signing: "pdf",
+          items: null,
           certificates: [certificate()],
           narrowed: false,
         },
@@ -788,6 +791,81 @@ describe("el lote remoto", () => {
     expect(last()?.stage).toEqual({
       kind: "outcome",
       outcome: { kind: "refused", situation: "batchSigningFailed", detail: "no hay token" },
+    });
+  });
+});
+
+describe("el lote local", () => {
+  const ASKING_TO_SIGN_THE_LOCAL_BATCH: SiteErrandView = {
+    origin: "sede.ejemplo.gob.es",
+    stage: {
+      kind: "askingToSignTheLocalBatch",
+      items: [
+        { id: "001", signing: "pdf", round: "sign" },
+        { id: "002", signing: "challenge", round: "cosign" },
+        { id: "003", signing: "xml", round: "sign" },
+      ],
+      certificates: [certificate()],
+      alreadyChosen: null,
+    },
+  };
+
+  it("turns the local batch moment into a consent with the summary of each element", () => {
+    expect(errandOf(ASKING_TO_SIGN_THE_LOCAL_BATCH)).toEqual<Errand>({
+      origin: "sede.ejemplo.gob.es",
+      operation: "sign",
+      stage: {
+        kind: "consent",
+        document: null,
+        signs: 3,
+        signing: null,
+        items: [
+          { id: "001", signing: "pdf", round: "sign" },
+          { id: "002", signing: "challenge", round: "cosign" },
+          { id: "003", signing: "xml", round: "sign" },
+        ],
+        certificates: [certificate()],
+        narrowed: false,
+      },
+    });
+  });
+
+  it("closes the local batch with the secret alone, without a postsign of its own", async () => {
+    const { push, port, calls, last } = watched();
+    push(ASKING_TO_SIGN_THE_LOCAL_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+    await port.submitSecret("1234");
+
+    expect(calls.signWithPin).toHaveBeenCalledWith("1234");
+    expect(calls.finishSigning).not.toHaveBeenCalled();
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: { kind: "batchSigned", signs: 3 },
+    });
+  });
+
+  it("names the local batch's own refusals as the catalogue knows them", async () => {
+    const { push, port, last } = watched({
+      signWithPin: async () => ({
+        ok: false,
+        failure: { situation: "signingFailed", detail: "fallo al firmar", attemptsLeft: null },
+      }),
+    });
+    push(ASKING_TO_SIGN_THE_LOCAL_BATCH);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.consent("handle-1");
+    await port.submitSecret("1234");
+
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: {
+        kind: "refused",
+        situation: "batchSigningFailed",
+        detail: "fallo al firmar",
+      },
     });
   });
 });

@@ -1152,6 +1152,16 @@ msgstr[2] "Lote de {{count}} firmas"
 msgid "sede.consent.batchNote"
 msgstr "Los documentos se quedan en la sede: rFirma firma sin descargarlos."
 
+#. Una fila del lote local: qué es el elemento y qué se le pide.
+msgid "sede.consent.batchItemLabel"
+msgstr "{{what}} ({{round}})"
+
+msgid "sede.consent.localBatchRoundSign"
+msgstr "firma"
+
+msgid "sede.consent.localBatchRoundCosign"
+msgstr "cofirma"
+
 msgid "sede.consent.sign"
 msgstr "Firmar"
 

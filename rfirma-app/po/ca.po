@@ -1046,6 +1046,15 @@ msgstr[2] ""
 msgid "sede.consent.batchNote"
 msgstr ""
 
+msgid "sede.consent.batchItemLabel"
+msgstr ""
+
+msgid "sede.consent.localBatchRoundSign"
+msgstr ""
+
+msgid "sede.consent.localBatchRoundCosign"
+msgstr ""
+
 msgid "sede.consent.sign"
 msgstr ""
 
