@@ -213,14 +213,12 @@ pub fn site_save_file(
     };
 
     let dialog = save_dialog(app_handle.dialog().file(), &consent);
-    let shown = write_where_chosen(
+    write_where_chosen(
         dialog.blocking_save_file(),
         &consent,
         site.scratch.as_ref(),
         &site.errand,
-    )?;
-    site_window::publish_the_moment(&app_handle);
-    Ok(shown)
+    )
 }
 
 /// El selector de carga del portal con las pistas que declaró la sede.
@@ -266,6 +264,10 @@ fn told_of_loading(
         LoadCompletion::Continues(step) => Ok((Some(step), None)),
         LoadCompletion::Delivered(SiteOutcome::Refused(SiteRefusal::CannotLoadData(detail))) => {
             Err(Failure::new("cannotLoadData", detail))
+        }
+        // Cualquier otro rechazo ya entregado a la sede: traducción única (ADR-0009).
+        LoadCompletion::Delivered(SiteOutcome::Refused(refusal)) => {
+            Err(super::frontier::told(&refusal).0)
         }
         LoadCompletion::Delivered(SiteOutcome::Loaded(files)) => {
             Ok((None, Some(files.len() as u32)))
