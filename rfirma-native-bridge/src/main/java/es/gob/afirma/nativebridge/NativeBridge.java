@@ -11,14 +11,15 @@ import org.graalvm.nativeimage.c.type.CTypeConversion;
 import org.graalvm.word.PointerBase;
 
 /**
- * La frontera FFI del puente: prefirma y postfirma PAdES vistas desde Rust.
+ * La frontera FFI del puente: las prefirmas y postfirmas vistas desde Rust.
  *
  * <p>Aqui no se decide nada. Esta clase convierte cadenas C a Java, delega en
- * {@link PadesBridge} y devuelve JSON; lo que hace la firma vive alli, donde se
- * puede probar sin construir la imagen nativa.
+ * {@link PadesBridge} o en {@link CadesBridge} y devuelve JSON; lo que hace la
+ * firma vive alli, donde se puede probar sin construir la imagen nativa.
  *
- * <p><b>Cinco entradas y ni una mas</b>: {@code autofirma_pades_presign},
- * {@code autofirma_pades_postsign}, {@code autofirma_filter_certificates},
+ * <p><b>Siete entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * {@code autofirma_pades_postsign}, {@code autofirma_cades_presign},
+ * {@code autofirma_cades_postsign}, {@code autofirma_filter_certificates},
  * {@code autofirma_expand_extra_params} y {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
  * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
@@ -40,7 +41,7 @@ import org.graalvm.word.PointerBase;
  *
  * <pre>
  * presign  ok  {"ok":true,"session":"&lt;xml&gt;","pre":"&lt;b64 DER&gt;","stamp":"&lt;b64&gt;"}
- * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}
+ * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}   y en CAdES {"ok":true,"signature":"&lt;b64&gt;"}
  * filter   ok  {"ok":true,"selected":[0,2]}
  * expand   ok  {"ok":true,"params":"&lt;bloque properties&gt;"}
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
@@ -140,6 +141,81 @@ public final class NativeBridge {
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "pdf", Base64.getEncoder().encodeToString(signed));
+            return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Prefirma CAdES.
+     *
+     * @param dataB64      datos a firmar en Base64.
+     * @param algorithm    p.ej. {@code SHA256withRSA}.
+     * @param certChainB64 cadena de certificados en Base64, separados por {@code ';'}.
+     * @param extraParams  extraParams en formato {@code java.util.Properties}
+     *                     (lineas {@code clave=valor}).
+     * @param operation    {@code sign}, {@code cosign} o {@code countersign}.
+     * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_cades_presign")
+    public static CCharPointer cadesPreSign(
+            final IsolateThread thread,
+            final CCharPointer dataB64,
+            final CCharPointer algorithm,
+            final CCharPointer certChainB64,
+            final CCharPointer extraParams,
+            final CCharPointer operation) {
+        try {
+            final CadesBridge.PreSignResult result = CadesBridge.preSign(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(dataB64)),
+                    CTypeConversion.toJavaString(algorithm),
+                    PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
+                    SessionStamp.parseParams(CTypeConversion.toJavaString(extraParams)),
+                    CTypeConversion.toJavaString(operation));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "session", result.session());
+            field(json, "pre", result.preSignB64());
+            field(json, "stamp", result.stamp());
+            return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Postfirma CAdES: ensambla el CMS firmado.
+     *
+     * <p>No recibe ni algoritmo ni extraParams: los toma del sello (ADR-0016).
+     *
+     * @param dataB64      los MISMOS datos que recibio la prefirma, en Base64.
+     * @param certChainB64 la MISMA cadena de certificados, Base64 separado por {@code ';'}.
+     * @param stampB64     el sello de sesion que devolvio la prefirma, tal cual.
+     * @param sessionXml   el {@code TriphaseData} de la prefirma, tal cual.
+     * @param pkcs1B64     el PKCS#1 calculado por Rust sobre los atributos firmados.
+     * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_cades_postsign")
+    public static CCharPointer cadesPostSign(
+            final IsolateThread thread,
+            final CCharPointer dataB64,
+            final CCharPointer certChainB64,
+            final CCharPointer stampB64,
+            final CCharPointer sessionXml,
+            final CCharPointer pkcs1B64) {
+        try {
+            final byte[] signature = CadesBridge.postSign(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(dataB64)),
+                    PadesBridge.parseCertificates(CTypeConversion.toJavaString(certChainB64)),
+                    CTypeConversion.toJavaString(stampB64),
+                    CTypeConversion.toJavaString(sessionXml),
+                    CTypeConversion.toJavaString(pkcs1B64));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "signature", Base64.getEncoder().encodeToString(signature));
             return toUnmanagedCString(json.append('}').toString());
         }
         catch (final Throwable e) {

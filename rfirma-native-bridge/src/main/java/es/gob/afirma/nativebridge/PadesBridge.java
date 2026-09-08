@@ -151,14 +151,14 @@ public final class PadesBridge {
                             + " Mismatch» sin dar ningun error.");
         }
 
-        if (!stamp.matchesPdf(pdf)) {
+        if (!stamp.matchesDocument(pdf)) {
             // El PDF tambien viaja aparte, y la postfirma PAdES lo regenera
             // entero: si no es byte a byte el prefirmado, completa igualmente y
             // devuelve un PDF cuya firma da "Digest Mismatch". Mismo fallo
             // silencioso que el TIME desparejado, por la otra puerta.
             throw new SessionStampMismatchException(
                     "el PDF que recibe la postfirma no es el que se prefirmo: el sello"
-                            + " lleva el SHA-256 " + stamp.pdfDigest() + ". Firmar asi"
+                            + " lleva el SHA-256 " + stamp.documentDigest() + ". Firmar asi"
                             + " produciria un PDF con «Digest Mismatch» sin dar ningun error.");
         }
 
@@ -218,15 +218,5 @@ public final class PadesBridge {
             throw new IllegalArgumentException("la cadena de certificados esta vacia");
         }
         return certs.toArray(new X509Certificate[0]);
-    }
-
-    /** El sello recibido no es el de esta sesion trifasica. */
-    public static final class SessionStampMismatchException extends IllegalStateException {
-
-        private static final long serialVersionUID = 1L;
-
-        SessionStampMismatchException(final String message) {
-            super(message);
-        }
     }
 }

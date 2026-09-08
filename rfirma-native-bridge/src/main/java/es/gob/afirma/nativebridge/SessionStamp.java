@@ -30,7 +30,7 @@ import java.util.TimeZone;
  * campos que recordar porque no hay campos que pasar. Lo que queda por comprobar
  * es lo que sigue viajando aparte hasta la postfirma —la sesion trifasica, el
  * propio PDF y la cadena de certificados—, y eso son
- * {@link #matchesSessionTime(String)}, {@link #matchesPdf(byte[])} y
+ * {@link #matchesSessionTime(String)}, {@link #matchesDocument(byte[])} y
  * {@link #matchesChain(X509Certificate[])}, tres comparaciones de bytes.
  *
  * <p>Dentro van el algoritmo, el {@code TIME}, la zona horaria, el
@@ -64,17 +64,17 @@ public final class SessionStamp {
     private final String algorithm;
     private final String time;
     private final String timeZoneId;
-    private final String pdfDigest;
+    private final String documentDigest;
     private final String chainDigest;
     private final Properties extraParams;
 
     private SessionStamp(final String algorithm, final String time,
-            final String timeZoneId, final String pdfDigest, final String chainDigest,
+            final String timeZoneId, final String documentDigest, final String chainDigest,
             final Properties extraParams) {
         this.algorithm = algorithm;
         this.time = time;
         this.timeZoneId = timeZoneId;
-        this.pdfDigest = pdfDigest;
+        this.documentDigest = documentDigest;
         this.chainDigest = chainDigest;
         this.extraParams = extraParams;
     }
@@ -92,8 +92,8 @@ public final class SessionStamp {
      *                     {@code PAdESTriPhaseSigner:174} no lo clona, asi que el puente relee
      *                     el objeto justo despues de la prefirma. Guardar lo enviado
      *                     reintroduciria el fallo por otra puerta.
-     * @param pdf          el PDF que acaba de prefirmarse. No se guarda: se guarda
-     *                     su SHA-256, porque el PDF tambien viaja aparte hasta la
+     * @param document     el documento que acaba de prefirmarse. No se guarda: se
+     *                     guarda su SHA-256, porque tambien viaja aparte hasta la
      *                     postfirma y sin sellarlo se puede postfirmar uno distinto
      *                     del prefirmado —el resultado completa sin error y sale con
      *                     {@code Digest Mismatch}, el mismo fallo por otra puerta.
@@ -104,22 +104,22 @@ public final class SessionStamp {
      *                     estar firmado por quien no lo firmo, con la firma invalida.
      */
     public static SessionStamp of(final String algorithm, final String time,
-            final TimeZone timeZone, final Properties effectiveParams, final byte[] pdf,
+            final TimeZone timeZone, final Properties effectiveParams, final byte[] document,
             final X509Certificate[] chain) {
         final Properties copy = new Properties();
         for (final String name : effectiveParams.stringPropertyNames()) {
             copy.setProperty(name, effectiveParams.getProperty(name));
         }
-        return new SessionStamp(algorithm, time, timeZone.getID(), digestOf(pdf),
+        return new SessionStamp(algorithm, time, timeZone.getID(), digestOf(document),
                 digestOfChain(chain), copy);
     }
 
-    /** SHA-256 en hexadecimal minusculas, que es lo que se guarda del PDF. */
-    private static String digestOf(final byte[] pdf) {
-        if (pdf == null) {
-            throw new IllegalArgumentException("no hay PDF que sellar");
+    /** SHA-256 en hexadecimal minusculas, que es lo que se guarda del documento. */
+    private static String digestOf(final byte[] document) {
+        if (document == null) {
+            throw new IllegalArgumentException("no hay documento que sellar");
         }
-        return hex(sha256().digest(pdf));
+        return hex(sha256().digest(document));
     }
 
     /**
@@ -169,7 +169,7 @@ public final class SessionStamp {
         append(sb, KEY_ALGORITHM, this.algorithm);
         append(sb, KEY_TIME, this.time);
         append(sb, KEY_TIME_ZONE, this.timeZoneId);
-        append(sb, KEY_PDF_DIGEST, this.pdfDigest);
+        append(sb, KEY_PDF_DIGEST, this.documentDigest);
         append(sb, KEY_CHAIN_DIGEST, this.chainDigest);
         final List<String> names = new ArrayList<>(this.extraParams.stringPropertyNames());
         // Orden fijo: un Properties no lo tiene, y sin esto dos sellos del mismo
@@ -202,7 +202,7 @@ public final class SessionStamp {
         String algorithm = null;
         String time = null;
         String timeZoneId = null;
-        String pdfDigest = null;
+        String documentDigest = null;
         String chainDigest = null;
         final Properties params = new Properties();
         for (int i = 1; i < lines.length; i++) {
@@ -219,7 +219,7 @@ public final class SessionStamp {
                 case KEY_ALGORITHM -> algorithm = value;
                 case KEY_TIME -> time = value;
                 case KEY_TIME_ZONE -> timeZoneId = value;
-                case KEY_PDF_DIGEST -> pdfDigest = value;
+                case KEY_PDF_DIGEST -> documentDigest = value;
                 case KEY_CHAIN_DIGEST -> chainDigest = value;
                 default -> {
                     if (!key.startsWith(PARAM_PREFIX)) {
@@ -230,12 +230,12 @@ public final class SessionStamp {
                 }
             }
         }
-        if (algorithm == null || time == null || timeZoneId == null || pdfDigest == null
+        if (algorithm == null || time == null || timeZoneId == null || documentDigest == null
                 || chainDigest == null) {
             throw new IllegalArgumentException(
                     "al sello de sesion le falta ALG, TIME, TZ, PDF o CHAIN");
         }
-        return new SessionStamp(algorithm, time, timeZoneId, pdfDigest, chainDigest, params);
+        return new SessionStamp(algorithm, time, timeZoneId, documentDigest, chainDigest, params);
     }
 
     /**
@@ -246,7 +246,7 @@ public final class SessionStamp {
      * toma del sello, no del llamante, asi que no pueden desviarse. Lo que si
      * viaja aparte es el {@code TIME} —dentro del {@code TriphaseData}, junto al
      * {@code PK1} que Rust anade—, el propio PDF y la cadena de certificados; de
-     * ahi que haya tres comprobaciones y no una: esta, {@link #matchesPdf(byte[])}
+     * ahi que haya tres comprobaciones y no una: esta, {@link #matchesDocument(byte[])}
      * y {@link #matchesChain(X509Certificate[])}.
      */
     public boolean matchesSessionTime(final String sessionTime) {
@@ -254,14 +254,14 @@ public final class SessionStamp {
     }
 
     /**
-     * La otra mitad de la comprobacion del ADR-0016: el PDF que llega a la
+     * La otra mitad de la comprobacion del ADR-0016: el documento que llega a la
      * postfirma es byte a byte el que recibio la prefirma.
      *
-     * <p>Sin esto, postfirmar un PDF distinto del prefirmado <b>no falla</b>:
-     * devuelve un PDF completo cuya firma da {@code Digest Mismatch}.
+     * <p>Sin esto, postfirmar uno distinto del prefirmado <b>no falla</b>: devuelve
+     * un documento completo cuya firma da {@code Digest Mismatch}.
      */
-    public boolean matchesPdf(final byte[] pdf) {
-        return pdf != null && this.pdfDigest.equals(digestOf(pdf));
+    public boolean matchesDocument(final byte[] document) {
+        return document != null && this.documentDigest.equals(digestOf(document));
     }
 
     /**
@@ -279,9 +279,9 @@ public final class SessionStamp {
         return this.chainDigest.equals(digestOfChain(chain));
     }
 
-    /** SHA-256 del PDF prefirmado, en hexadecimal. Para el mensaje de error. */
-    public String pdfDigest() {
-        return this.pdfDigest;
+    /** SHA-256 del documento prefirmado, en hexadecimal. Para el mensaje de error. */
+    public String documentDigest() {
+        return this.documentDigest;
     }
 
     /** SHA-256 de la cadena prefirmada, en hexadecimal. Para el mensaje de error. */

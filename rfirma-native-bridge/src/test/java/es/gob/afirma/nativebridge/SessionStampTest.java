@@ -109,12 +109,12 @@ class SessionStampTest {
         final SessionStamp stamp = SessionStamp.of("SHA256withRSA", "42", MADRID,
                 new Properties(), PDF, CHAIN);
 
-        assertTrue(stamp.matchesPdf(PDF));
-        assertTrue(stamp.matchesPdf("%PDF-1.7 un documento".getBytes(StandardCharsets.UTF_8)),
+        assertTrue(stamp.matchesDocument(PDF));
+        assertTrue(stamp.matchesDocument("%PDF-1.7 un documento".getBytes(StandardCharsets.UTF_8)),
                 "el sello guarda el contenido, no la identidad del array");
-        assertFalse(stamp.matchesPdf("%PDF-1.7 otro documento".getBytes(StandardCharsets.UTF_8)));
-        assertFalse(stamp.matchesPdf(new byte[0]));
-        assertFalse(stamp.matchesPdf(null));
+        assertFalse(stamp.matchesDocument("%PDF-1.7 otro documento".getBytes(StandardCharsets.UTF_8)));
+        assertFalse(stamp.matchesDocument(new byte[0]));
+        assertFalse(stamp.matchesDocument(null));
     }
 
     @Test
