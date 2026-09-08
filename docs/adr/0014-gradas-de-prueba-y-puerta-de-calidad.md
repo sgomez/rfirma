@@ -79,7 +79,8 @@ verdad: ofrecer tres puertos y quedarse con el que abra.
 ### Las pruebas de la grada C se compilan siempre y se ejecutan solo en el lento
 
 Se marcan con **`#[ignore]`**, en un fichero que lo dice por su nombre (`tests/native_cycle.rs`),
-y el carril lento las ejecuta con `--include-ignored`. Descartada una *feature* de cargo, que
+y el carril lento las ejecuta con `--ignored` en `test-native` (y con `--include-ignored` en
+`crap-full` para la cobertura global). Descartada una *feature* de cargo, que
 además las sacaría de la compilación.
 
 `#[ignore]` tiene un punto ciego —una prueba que deja de compilar contra la frontera FFI se
