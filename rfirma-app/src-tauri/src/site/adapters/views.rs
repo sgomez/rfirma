@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::crossing::crossing;
 
+use crate::signing::domain::bridge::Format;
 use crate::site::application::errand::{Moment, NoCertificate, NoChannel};
 use crate::site::domain::batch_error::Situation as BatchSituation;
 use crate::site::domain::protocol::{Refusal, RefusalSituation, SignatureRound};
@@ -108,6 +109,7 @@ impl SiteErrandView {
     /// Estado de solicitud de consentimiento para firma de documento.
     pub fn asking_to_sign(
         document: &str,
+        format: Format,
         round: SignatureRound,
         certificates: &[ListedCertificate],
         unregistered_signatures: bool,
@@ -116,6 +118,7 @@ impl SiteErrandView {
             origin: None,
             stage: SiteStageView::AskingToSign {
                 document: document.to_owned(),
+                signing: format.into(),
                 round: round.into(),
                 certificates: rows_of(certificates),
                 unregistered_signatures,
@@ -139,10 +142,17 @@ impl From<&Moment> for SiteErrandView {
             Moment::AskingForConsent { certificates } => Self::asking_for_consent(certificates),
             Moment::AskingToSign {
                 document,
+                format,
                 round,
                 certificates,
                 unregistered_signatures,
-            } => Self::asking_to_sign(document, *round, certificates, *unregistered_signatures),
+            } => Self::asking_to_sign(
+                document,
+                *format,
+                *round,
+                certificates,
+                *unregistered_signatures,
+            ),
             Moment::AskingToSignTheBatch {
                 signs,
                 certificates,
@@ -160,6 +170,33 @@ impl From<&Moment> for SiteErrandView {
                 Self::no_channel(NoChannelView::LocalCaMissing)
             }
             Moment::RefusedWithoutChannel(refusal) => Self::refused(refusal),
+        }
+    }
+}
+
+crossing! {
+    /// Qué es lo que la sede pide firmar, según el formato de su petición.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum SigningKindView {
+        /// Un documento PDF.
+        Pdf,
+        /// Un binario que no es un PDF.
+        Challenge,
+        /// Un documento XML.
+        Xml,
+        /// Una factura electrónica.
+        Invoice,
+    }
+}
+
+impl From<Format> for SigningKindView {
+    fn from(format: Format) -> Self {
+        match format {
+            Format::Pades => Self::Pdf,
+            Format::Cades | Format::CadesAsicS | Format::Cms => Self::Challenge,
+            Format::Xades(_) | Format::XmlDsig(_) => Self::Xml,
+            Format::FacturaE => Self::Invoice,
         }
     }
 }
@@ -202,6 +239,8 @@ crossing! {
         AskingToSign {
             /// Asa del documento que manda la sede.
             document: String,
+            /// Qué es lo que se va a firmar.
+            signing: SigningKindView,
             /// Tipo de firma solicitada.
             round: SignatureRoundView,
             /// Certificados disponibles para la selección.
