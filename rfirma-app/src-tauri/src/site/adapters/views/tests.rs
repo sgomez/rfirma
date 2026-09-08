@@ -1,7 +1,8 @@
-use super::{Moment, SignatureRound, SignatureRoundView};
+use super::{Format, Moment, SignatureRound, SignatureRoundView};
 use super::{
     NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
 };
+use crate::signing::domain::bridge::{XadesVariant, XmlDsigVariant};
 use crate::site::domain::batch_error::Situation as BatchSituation;
 
 #[test]
@@ -85,6 +86,7 @@ fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail() {
 fn the_round_crosses_named_as_the_site_asked_for_it() {
     let view = SiteErrandView::from(&Moment::AskingToSign {
         document: "doc-1".to_owned(),
+        format: Format::Pades,
         round: SignatureRound::Again,
         certificates: Vec::new(),
         unregistered_signatures: false,
@@ -156,4 +158,36 @@ fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chose
             },
         })
     );
+}
+
+#[test]
+fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
+    for (format, expected) in [
+        (Format::Pades, "pdf"),
+        (Format::Cades, "challenge"),
+        (Format::CadesAsicS, "challenge"),
+        (Format::Cms, "challenge"),
+        (Format::Xades(XadesVariant::Detached), "xml"),
+        (Format::Xades(XadesVariant::Enveloping), "xml"),
+        (Format::Xades(XadesVariant::Enveloped), "xml"),
+        (Format::Xades(XadesVariant::AsicS), "xml"),
+        (Format::XmlDsig(XmlDsigVariant::Detached), "xml"),
+        (Format::XmlDsig(XmlDsigVariant::Enveloping), "xml"),
+        (Format::XmlDsig(XmlDsigVariant::Enveloped), "xml"),
+        (Format::FacturaE, "invoice"),
+    ] {
+        let view = SiteErrandView::from(&Moment::AskingToSign {
+            document: "doc-1".to_owned(),
+            format,
+            round: SignatureRound::First,
+            certificates: Vec::new(),
+            unregistered_signatures: false,
+        });
+
+        assert_eq!(
+            serde_json::to_value(&view).expect("serializa")["stage"]["signing"],
+            serde_json::json!(expected),
+            "format={format}"
+        );
+    }
 }

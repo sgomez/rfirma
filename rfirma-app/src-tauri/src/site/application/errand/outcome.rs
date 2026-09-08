@@ -55,6 +55,7 @@ impl ErrandStep {
             }),
             Self::AskingToSign(consent) => Some(Moment::AskingToSign {
                 document: consent.document.clone(),
+                format: consent.format,
                 round: consent.round,
                 certificates: consent.certificates.clone(),
                 unregistered_signatures: consent.unregistered_signatures,
@@ -255,6 +256,8 @@ pub enum Moment {
     AskingToSign {
         /// Identificador del documento para la ventana.
         document: String,
+        /// Formato de firma que la sede pidió.
+        format: Format,
         /// Modalidad de firma solicitada.
         round: SignatureRound,
         /// Filas ya cribadas en orden de presentación.

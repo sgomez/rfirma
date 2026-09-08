@@ -1883,6 +1883,16 @@ fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
     }
 }
 
+#[test]
+fn the_moment_of_a_consent_carries_the_format_the_site_asked_for() {
+    let step = a_consent_to_sign("");
+
+    let Some(Moment::AskingToSign { format, .. }) = step.moment() else {
+        panic!("hay un certificado que la sede acepta: {step:?}");
+    };
+    assert_eq!(format, Format::Pades);
+}
+
 /// El reto de 64 bytes del banco de referencia, lo que una sede manda en `dat` para un CAdES.
 const A_CHALLENGE: &[u8] = include_bytes!("../../../../../../testdata/reference/challenge.bin");
 
