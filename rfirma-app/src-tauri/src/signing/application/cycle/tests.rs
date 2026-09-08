@@ -9,8 +9,6 @@ use crate::signing::domain::bridge::{
 use crate::signing::domain::{AdmissibleDocument, SessionSeal, SignatureConfig, TokenSignature};
 use crate::signing::ports::Bridge;
 
-use super::CycleError;
-
 const BORDER: &str = include_str!("../../adapters/ffi.rs");
 
 fn identifiers(source: &str) -> BTreeSet<&str> {
@@ -35,6 +33,8 @@ fn entry_points() -> BTreeSet<String> {
 #[test]
 fn java_has_no_entry_point_for_the_signing_phase() {
     let expected: BTreeSet<String> = [
+        "autofirma_cades_postsign",
+        "autofirma_cades_presign",
         "autofirma_expand_extra_params",
         "autofirma_filter_certificates",
         "autofirma_free_string",
@@ -65,13 +65,13 @@ fn the_pin_has_no_way_across_the_border() {
     }
 }
 
-/// Un puente que solo resuelve PAdES, como el de `adapters/ffi.rs`, y apunta lo que le llega.
+/// Un puente que resuelve lo mismo que el de `adapters/ffi.rs`, y apunta lo que le llega.
 #[derive(Default)]
-struct APadesOnlyBridge {
+struct ABridgeLikeTheRealOne {
     calls: RefCell<Vec<String>>,
 }
 
-impl Bridge for APadesOnlyBridge {
+impl Bridge for ABridgeLikeTheRealOne {
     fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
         request.format.bridged()?;
         self.calls.borrow_mut().push(format!(
@@ -130,14 +130,14 @@ fn an_invisible_signature() -> SignatureConfig {
 }
 
 #[test]
-fn a_cades_cycle_stops_at_the_bridge_before_asking_the_token_for_anything() {
-    let bridge = APadesOnlyBridge::default();
+fn a_cades_cycle_reaches_the_bridge_instead_of_stopping_at_the_format() {
+    let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
     let document = AdmissibleDocument::check_for(Format::Cades, b"no soy un PDF")
         .expect("CAdES no mira el /SubFilter");
 
-    let failed = presign(
+    let cycle = presign(
         &bridge,
         a_request(
             Format::Cades,
@@ -147,26 +147,27 @@ fn a_cades_cycle_stops_at_the_bridge_before_asking_the_token_for_anything() {
             chosen.reference(),
         ),
     )
-    .expect_err("el puente no atiende CAdES");
+    .expect("el puente ya atiende CAdES");
+    let seal = cycle.seal_in_transit();
+    cycle
+        .postsign(&bridge, &TokenSignature::from_token(vec![0x01]), &seal)
+        .expect("el sello volvio intacto");
 
-    assert!(matches!(
-        failed,
-        CycleError::Bridge(BridgeError::FormatNotBridged(Format::Cades))
-    ));
-    assert!(
-        bridge.calls.borrow().is_empty(),
-        "la fase 1 ni siquiera compuso la llamada, asi que no hubo que pedir el secreto"
+    assert_eq!(
+        bridge.calls.borrow().len(),
+        2,
+        "la prefirma y la postfirma cruzaron"
     );
 }
 
 #[test]
 fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
-    let bridge = APadesOnlyBridge::default();
+    let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
 
     for format in [
-        Format::Cms,
+        Format::CadesAsicS,
         Format::Xades(XadesVariant::Enveloped),
         Format::FacturaE,
     ] {
@@ -183,7 +184,7 @@ fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
                 chosen.reference(),
             ),
         )
-        .expect_err("el puente solo atiende PAdES");
+        .expect_err("el puente no atiende ese formato");
 
         assert!(failed.to_string().contains(format.name()));
     }
@@ -191,7 +192,7 @@ fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
 
 #[test]
 fn a_pades_cycle_sends_the_bridge_the_very_same_call_as_before_the_format() {
-    let bridge = APadesOnlyBridge::default();
+    let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
     let document = AdmissibleDocument::check_for(Format::Pades, b"%PDF-1.7")

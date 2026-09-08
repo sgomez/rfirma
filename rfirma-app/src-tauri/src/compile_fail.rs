@@ -46,6 +46,32 @@ pub struct TheSealedPreSignatureIsOnlyMadeFromAPreSignatureAndItsSeal;
 /// ```
 pub struct ThePostsignTakesNoSignatureInTheClear;
 
+/// ```compile_fail,E0560
+/// use rfirma_lib::signing::domain::bridge::{Format, PreSignRequest};
+///
+/// let _ = PreSignRequest {
+///     format: Format::Cades,
+///     document_b64: "",
+///     algorithm: "SHA256withRSA",
+///     certificate_chain_b64: "",
+///     extra_params: "",
+///     pin: "1234",
+/// };
+/// ```
+pub struct TheCadesPresignTakesNoPin;
+
+/// ```compile_fail,E0560
+/// use rfirma_lib::signing::domain::bridge::{Format, PostSignRequest};
+///
+/// let _ = PostSignRequest {
+///     format: Format::Cades,
+///     document_b64: "",
+///     certificate_chain_b64: "",
+///     private_key_b64: "la clave del token",
+/// };
+/// ```
+pub struct TheCadesPostsignTakesNoPrivateKey;
+
 /// ```compile_fail,E0451
 /// use rfirma_lib::signing::domain::CompletedCycle;
 ///

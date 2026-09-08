@@ -212,6 +212,36 @@ fn a_postsign_answer_comes_back_as_the_bytes_of_the_pdf() {
 }
 
 #[test]
+fn a_cades_postsign_answer_comes_back_under_its_own_key() {
+    let signature =
+        parse_cades_postsign(r#"{"ok":true,"signature":"MTIz"}"#).expect("es el JSON del contrato");
+
+    assert_eq!(signature, b"123");
+    assert!(
+        parse_postsign(r#"{"ok":true,"signature":"MTIz"}"#).is_err(),
+        "la clave de PAdES no vale para CAdES"
+    );
+}
+
+#[test]
+fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
+    assert!(matches!(
+        entry_points_for(Format::Pades).expect("PAdES cruza"),
+        EntryPoints::Pades
+    ));
+    for format in [Format::Cades, Format::Cms] {
+        assert!(matches!(
+            entry_points_for(format).expect("cruza por CAdES"),
+            EntryPoints::Cades
+        ));
+    }
+    assert!(matches!(
+        entry_points_for(Format::FacturaE).expect_err("no cruza"),
+        BridgeError::FormatNotBridged(Format::FacturaE)
+    ));
+}
+
+#[test]
 fn a_filter_answer_comes_back_as_the_rows_that_survived() {
     let selected = parse_filter_selection(r#"{"ok":true,"selected":[0,2]}"#).expect("es valida");
 

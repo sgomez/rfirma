@@ -79,15 +79,20 @@ fn every_format_says_the_name_the_original_expects() {
     );
 }
 
+/// Los formatos que tienen pareja de entradas en el puente.
+const BRIDGED: [Format; 3] = [Format::Pades, Format::Cades, Format::Cms];
+
 #[test]
-fn the_bridge_only_resolves_pades_for_now() {
-    assert_eq!(Format::Pades.bridged().expect("PAdES cruza"), Format::Pades);
+fn the_bridge_resolves_pades_cades_and_cms_for_now() {
+    for format in BRIDGED {
+        assert_eq!(format.bridged().expect("tiene entradas"), format);
+    }
 
     for format in Format::ALL
         .iter()
-        .filter(|format| **format != Format::Pades)
+        .filter(|format| !BRIDGED.contains(format))
     {
-        let refused = format.bridged().expect_err("solo cruza PAdES");
+        let refused = format.bridged().expect_err("no tiene entradas");
 
         assert!(matches!(refused, BridgeError::FormatNotBridged(named) if named == *format));
         assert!(refused.to_string().contains(format.name()));
