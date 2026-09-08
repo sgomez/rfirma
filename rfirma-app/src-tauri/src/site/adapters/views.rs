@@ -89,6 +89,22 @@ impl SiteErrandView {
         }
     }
 
+    /// Estado de solicitud de consentimiento para el lote remoto.
+    pub fn asking_to_sign_the_batch(
+        signs: usize,
+        certificates: &[ListedCertificate],
+        already_chosen: Option<&str>,
+    ) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::AskingToSignTheBatch {
+                signs,
+                certificates: rows_of(certificates),
+                already_chosen: already_chosen.map(str::to_owned),
+            },
+        }
+    }
+
     /// Estado de solicitud de consentimiento para firma de documento.
     pub fn asking_to_sign(
         document: &str,
@@ -127,6 +143,11 @@ impl From<&Moment> for SiteErrandView {
                 certificates,
                 unregistered_signatures,
             } => Self::asking_to_sign(document, *round, certificates, *unregistered_signatures),
+            Moment::AskingToSignTheBatch {
+                signs,
+                certificates,
+                already_chosen,
+            } => Self::asking_to_sign_the_batch(*signs, certificates, already_chosen.as_deref()),
             Moment::NoCertificate { reason, owned } => {
                 Self::without_certificates((*reason).into(), *owned)
             }
@@ -187,6 +208,16 @@ crossing! {
             certificates: Vec<CertificateView>,
             /// Si el documento incluye firmas no reconocidas.
             unregistered_signatures: bool,
+        },
+        /// Solicitud de consentimiento del lote remoto.
+        #[serde(rename_all = "camelCase")]
+        AskingToSignTheBatch {
+            /// Cuántas firmas lleva el lote.
+            signs: usize,
+            /// Certificados disponibles para la selección.
+            certificates: Vec<CertificateView>,
+            /// Asa del certificado que `sticky` ya resolvió, si lo resolvió.
+            already_chosen: Option<String>,
         },
         /// Canal no disponible.
         NoChannel {

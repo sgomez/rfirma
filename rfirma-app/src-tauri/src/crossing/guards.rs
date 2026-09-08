@@ -605,6 +605,20 @@ fn every_command_of_the_site_errand_runs_off_the_main_thread() {
 }
 
 #[test]
+fn the_command_that_takes_the_pin_runs_off_the_main_thread() {
+    let source = production_half(source_of("signing/adapters/tauri.rs"));
+    let declaration = source
+        .find("pub fn sign_with_pin(")
+        .expect("no esta la orden «sign_with_pin»");
+
+    assert!(
+        source[..declaration].ends_with("#[tauri::command(async)]\n"),
+        "«sign_with_pin» firma el lote remoto —dos viajes HTTPS bloqueantes y N firmas de \
+         token—: tiene que ser #[tauri::command(async)] o la ventana se clava sin error"
+    );
+}
+
+#[test]
 fn the_pin_is_taken_by_a_single_command() {
     let takers: usize = sources()
         .iter()

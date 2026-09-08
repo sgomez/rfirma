@@ -8,6 +8,7 @@ pub mod ports;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::crossing::Failure;
 use adapters::tls::LocalCaStore;
 use application::errand::LiveErrand;
 use application::site::CodecTable;
@@ -30,4 +31,24 @@ pub struct SiteRoot {
     pub scratch_dir: PathBuf,
     /// Quien escribe y borra el fichero de paso.
     pub scratch: Arc<dyn ports::Scratch + Send + Sync>,
+    /// Los dos servlets del lote remoto.
+    pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
+}
+
+/// Cierra el lote remoto pendiente con el secreto que entró por la única puerta del PIN.
+pub fn the_pending_batch_signed(
+    app: &tauri::AppHandle,
+    secret: &str,
+) -> Option<Result<(), Failure>> {
+    use tauri::Manager as _;
+
+    app.state::<SiteRoot>()
+        .errand
+        .a_batch_is_pending()
+        .then(|| {
+            adapters::window::with_the_desk(app, |desk, live| {
+                application::errand::finish_the_batch(desk, secret, live)
+            })
+            .map_err(Failure::from)
+        })
 }

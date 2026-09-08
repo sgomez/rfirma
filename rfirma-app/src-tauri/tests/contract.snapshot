@@ -20,7 +20,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async install_certificate(password: String) -> Result<bool, Failure>
   async remove_certificate(id: String) -> Result<(), Failure>
         begin_signing(order: SigningOrder) -> Result<SecretView, Failure>
-        sign_with_pin(pin: String) -> Result<(), Failure>
+  async sign_with_pin(pin: String) -> Result<(), Failure>
         finish_signing() -> Result<SignedDocumentView, Failure>
         cancel_signing()
   async preview_signature(order: SigningOrder) -> Result<tauri::ipc::Response, Failure>
@@ -176,6 +176,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Waiting
       AskingForConsent { certificates: Vec<CertificateView> }
       AskingToSign { document: String, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool }
+      AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String> }
       NoChannel { reason: NoChannelView }
       Outcome { outcome: SiteOutcomeView }
       NoCertificate { reason: NoCertificateView, owned: usize }

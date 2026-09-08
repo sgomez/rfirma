@@ -37,12 +37,16 @@ pub fn begin_signing(
 }
 
 /// Firma en el token con la clave privada (ADR-0001).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn sign_with_pin(
     pin: String,
+    app_handle: tauri::AppHandle,
     identity: State<'_, IdentityRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<(), Failure> {
+    if let Some(batch) = crate::site::the_pending_batch_signed(&app_handle, &pin) {
+        return batch;
+    }
     Ok(crate::signing::application::session::sign_on_token(
         &identity.signer(),
         &signing.session,

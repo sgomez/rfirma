@@ -4,30 +4,33 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::documents::domain::handles;
-use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    visible_signature_of, AfirmaUrl, LoadRequest, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, StickyCertificate,
 };
 
 use super::outcome::{
-    ErrandStep, LoadingConsent, SavingConsent, SavingHints, SigningConsent, SiteOutcome,
+    BatchConsent, ErrandStep, LoadingConsent, SavingConsent, SavingHints, SigningConsent,
+    SiteOutcome,
 };
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::SiteRequest;
 use super::state::LiveErrand;
+use crate::site::application::batch;
 use crate::site::application::filtering;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
 use crate::site::ports::{
-    Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments, SiteSigning,
+    BatchServices, Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments,
+    SiteSigning, TokenSigning,
 };
 
 /// Lo que el trámite pide a los vecinos, junto: los certificados, el documento de paso y la firma.
-pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning {}
+pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning + TokenSigning {}
 
-impl<N: Certificates + ScratchDocuments + SiteSigning> Neighbours for N {}
+impl<N: Certificates + ScratchDocuments + SiteSigning + TokenSigning> Neighbours for N {}
 
 /// Dependencias agrupadas necesarias para la ejecución de un trámite de sede.
 pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
@@ -41,6 +44,8 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
     pub scratch_dir: PathBuf,
     /// Quien escribe y borra el fichero de paso.
     pub scratch: Arc<dyn Scratch + Send + Sync>,
+    /// Los dos servlets del lote remoto.
+    pub batch: Arc<dyn BatchServices + Send + Sync>,
 }
 
 /// Atiende la operación recibida por el canal local evaluando los certificados disponibles.
@@ -71,7 +76,10 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     match operation {
         SiteRequest::Save(request) => return consent_to_save(request),
         SiteRequest::Load(request) => return consent_to_load(request),
-        SiteRequest::SelectCertificate(_) | SiteRequest::Sign(_) | SiteRequest::SignAndSave(_) => {}
+        SiteRequest::SelectCertificate(_)
+        | SiteRequest::Sign(_)
+        | SiteRequest::SignAndSave(_)
+        | SiteRequest::Batch(_) => {}
         SiteRequest::NotAttended(_) => unreachable!("se ha despachado arriba"),
     }
 
@@ -88,6 +96,9 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         }
         SiteRequest::Sign(request) => consent_to_sign(desk, &request, ours, live),
         SiteRequest::SignAndSave(request) => consent_to_sign_and_save(desk, &request, ours, live),
+        SiteRequest::Batch(request) => {
+            consent_to_the_batch(desk.engine, request, ours, &desk.neighbours, live)
+        }
         SiteRequest::Save(_) | SiteRequest::Load(_) | SiteRequest::NotAttended(_) => {
             unreachable!("se ha despachado arriba")
         }
@@ -322,28 +333,17 @@ pub fn consent_for<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    if request.sticky().resets() {
-        certificates.forget_the_remembered();
-    }
-
-    if ours.is_empty() {
-        return no_certificate_at_all();
-    }
-
-    let owned = ours.len();
-    let accepted = match filtering::keep_what_the_site_accepts(engine, request.filter(), ours) {
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
         Ok(accepted) => accepted,
-        Err(error) => {
-            return answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
-            )
-        }
+        Err(step) => return step,
     };
-
-    if accepted.is_empty() {
-        return no_certificate_the_site_accepts(live, owned);
-    }
 
     if request.sticky().is_sticky() {
         if let Some(stuck) = the_remembered_one_among(&accepted, certificates) {
@@ -356,6 +356,81 @@ pub fn consent_for<E: FilterEngine>(
         filter: request.filter().clone(),
         sticky: request.sticky().is_sticky(),
     }
+}
+
+/// Prepara el consentimiento del lote remoto: los mismos certificados cribados que una firma, con
+/// cuántas firmas lleva el lote, y sin preguntar cuando `sticky` ya lo resolvió
+/// (`ProtocolInvocationLauncherBatch`, 1.9.2).
+pub fn consent_to_the_batch<E: FilterEngine>(
+    engine: &E,
+    request: BatchRequest,
+    ours: Vec<TokenCertificate>,
+    certificates: &dyn Certificates,
+    live: &LiveErrand,
+) -> ErrandStep {
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
+        Ok(accepted) => accepted,
+        Err(step) => return step,
+    };
+
+    let rows = certificates.rows_of(accepted);
+    let already_chosen = request
+        .sticky()
+        .is_sticky()
+        .then(|| the_remembered_row_among(&rows))
+        .flatten();
+
+    ErrandStep::AskingToSignTheBatch(Box::new(BatchConsent {
+        signs: batch::how_many(&request),
+        request,
+        certificates: rows,
+        already_chosen,
+    }))
+}
+
+fn what_the_site_accepts<E: FilterEngine>(
+    engine: &E,
+    filter: &SiteFilter,
+    sticky: StickyCertificate,
+    ours: Vec<TokenCertificate>,
+    certificates: &dyn Certificates,
+    live: &LiveErrand,
+) -> Result<Vec<TokenCertificate>, ErrandStep> {
+    if sticky.resets() {
+        certificates.forget_the_remembered();
+    }
+
+    if ours.is_empty() {
+        return Err(no_certificate_at_all());
+    }
+
+    let owned = ours.len();
+    let accepted =
+        filtering::keep_what_the_site_accepts(engine, filter, ours).map_err(|error| {
+            answering(
+                live,
+                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
+            )
+        })?;
+
+    if accepted.is_empty() {
+        return Err(no_certificate_the_site_accepts(live, owned));
+    }
+
+    Ok(accepted)
+}
+
+fn the_remembered_row_among(rows: &[ListedCertificate]) -> Option<String> {
+    rows.iter()
+        .find(|row| row.remembered && row.status.is_usable())
+        .map(|row| row.id.clone())
 }
 
 fn the_remembered_one_among(

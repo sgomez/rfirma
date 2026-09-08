@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::site::domain::protocol::{AfirmaUrl, NegotiatedCredential, SiteFilter};
+use crate::identity::domain::certificate::TokenCertificate;
+use crate::site::domain::protocol::{AfirmaUrl, BatchRequest, NegotiatedCredential, SiteFilter};
 
 use super::outcome::{
     LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints, SiteOutcome,
@@ -78,8 +79,18 @@ impl Errand {
 enum PendingConsent {
     Identity(SiteFilter, bool),
     Signature(PendingSignature),
+    Batch(PendingBatch),
     Saving(SavingConsent),
     Loading(LoadingConsent),
+}
+
+/// Lo que el lote remoto necesita entre el consentimiento y la postfirma.
+#[derive(Clone, Debug)]
+pub(super) struct PendingBatch {
+    /// El lote tal y como lo pidió la sede.
+    pub(super) request: BatchRequest,
+    /// El certificado que la persona consintió, una vez consentido.
+    pub(super) chosen: Option<TokenCertificate>,
 }
 
 /// Datos necesarios para ejecutar la firma tras el consentimiento.
@@ -185,6 +196,27 @@ impl LiveErrand {
     /// Registra los datos de consentimiento de firma.
     pub(super) fn remember_signature(&self, pending: PendingSignature) {
         *crate::lock(&self.consent) = Some(PendingConsent::Signature(pending));
+    }
+
+    /// Registra el lote pendiente de consentimiento o de postfirma.
+    pub(super) fn remember_the_batch(&self, pending: PendingBatch) {
+        *crate::lock(&self.consent) = Some(PendingConsent::Batch(pending));
+    }
+
+    /// Si el trámite tiene un lote consentido esperando el secreto.
+    pub fn a_batch_is_pending(&self) -> bool {
+        matches!(
+            &*crate::lock(&self.consent),
+            Some(PendingConsent::Batch(pending)) if pending.chosen.is_some()
+        )
+    }
+
+    /// Lote pendiente, si el trámite está atendiendo uno.
+    pub(super) fn the_batch_pending(&self) -> Option<PendingBatch> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Batch(pending)) => Some(pending.clone()),
+            _ => None,
+        }
     }
 
     /// Registra los datos del diálogo de guardado pendiente.
