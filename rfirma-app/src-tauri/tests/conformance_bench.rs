@@ -1157,18 +1157,27 @@ fn validated_by_the_reference_tool(cms: &[u8]) {
     validated_by_the_reference_tool_at(cms_file.path());
 }
 
-/// Comprueba que `xml` está bien formado con `xmllint --noout`.
-fn well_formed_according_to_xmllint(xml: &[u8]) {
-    let xml_file = an_xml_file(xml);
+/// Comprueba que el fichero en `path` está bien formado con `xmllint --noout`.
+fn well_formed_according_to_xmllint(path: &Path) {
     let output = Command::new("xmllint")
-        .args(["--noout"])
-        .arg(xml_file.path())
+        .arg("--noout")
+        .arg(path)
         .output()
         .expect("falta xmllint para el banco de conformidad");
     assert!(
         output.status.success(),
         "xmllint ha rechazado el XML:\n{}",
         String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Comprueba que `xml` trae un `ds:Signature` del espacio de nombres XMLDSig, en vez de dejar
+/// que un XML simplemente bien formado pase el banco sin firma.
+fn carries_a_xmldsig_signature(xml: &[u8]) {
+    let xml = String::from_utf8_lossy(xml);
+    assert!(
+        xml.contains("http://www.w3.org/2000/09/xmldsig#") && xml.contains(":Signature"),
+        "el XML no trae un elemento Signature del espacio de nombres XMLDSig:\n{xml}"
     );
 }
 
@@ -1290,8 +1299,9 @@ async fn the_xades_sign_of(mode: BenchMode, script: &str) {
     let xml = STANDARD
         .decode(verdict.field("result"))
         .expect("el XML de sign llega en base64");
-    well_formed_according_to_xmllint(&xml);
+    carries_a_xmldsig_signature(&xml);
     let xml_file = an_xml_file(&xml);
+    well_formed_according_to_xmllint(xml_file.path());
     validated_by_the_reference_tool_at(xml_file.path());
 
     assert_eq!(

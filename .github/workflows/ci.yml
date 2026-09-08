@@ -355,6 +355,8 @@ jobs:
         with:
           workspaces: rfirma-app/src-tauri
 
+      # libxml2-utils trae xmllint, que el banco de conformidad usa para
+      # comprobar el XAdES que entrega la grada C.
       - name: Dependencias de sistema
         if: steps.scope.outputs.build == 'true'
         run: |
@@ -371,6 +373,7 @@ jobs:
             file \
             gettext \
             poppler-utils \
+            libxml2-utils \
             softhsm2 \
             opensc \
             libnss3-tools
