@@ -121,9 +121,16 @@ ruta por el candado, que es justo lo que hay que enseñar.
 
 El corazón del ticket: la pantalla que hoy no existe.
 
-- **Origen**: `sede.ejemplo.gob.es pide tu firma.` (o `pide que te
-  identifiques.`). Nombrar el origen a secas **atribuye sin afirmar**, que es lo
-  que pedía el [#312](https://github.com/sgomez/rfirma/issues/312).
+- **Origen**: `sede.ejemplo.gob.es pide tu firma de un documento PDF.` (o `de
+  un reto de autenticación`, `de un documento XML`, `de una factura
+  electrónica`, según el formato de la petición; o `pide que te
+  identifiques.` para `selectcert`). Nombrar el origen a secas **atribuye sin
+  afirmar**, que es lo que pedía el
+  [#312](https://github.com/sgomez/rfirma/issues/312); decir el formato es lo
+  que pedía el [#531](https://github.com/sgomez/rfirma/issues/531) — nadie
+  firma a ciegas un reto de autenticación pensando que es un documento. El
+  lote no lo dice, porque el momento no trae formato: sigue diciendo «lote de
+  N».
 - **Documento**: sólo lo que el PDF dice de sí mismo —título de sus metadatos si
   lo trae, páginas, tamaño, y si ya viene firmado, con el aviso de **cofirma**—.
   **No hay nombre de fichero ni ruta**, porque el protocolo no los trae: el

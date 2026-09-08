@@ -1,10 +1,11 @@
+import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileIcon, InfoIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
 import { formatSize } from "../signing/SigningPanel";
-import type { ErrandStage, SiteDocument, SiteOperation } from "./errand";
+import type { ErrandStage, SigningKind, SiteDocument, SiteOperation } from "./errand";
 import { consentActionKey } from "./errand";
 import { SedeBody } from "./SedeFrame";
 
@@ -75,7 +76,11 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
               <p className="rf-hint">
                 {identity
                   ? t("sede.consent.unknownOriginIdentity")
-                  : t("sede.consent.unknownOriginSignature")}
+                  : stage.signing !== null
+                    ? t("sede.consent.unknownOriginSignatureOf", {
+                        what: signingKindLabel(t, stage.signing),
+                      })
+                    : t("sede.consent.unknownOriginSignature")}
               </p>
             </div>
           </div>
@@ -83,7 +88,12 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
           <p className="rf-title sede-consent__asks">
             {identity
               ? t("sede.consent.asksIdentity", { origin })
-              : t("sede.consent.asksSignature", { origin })}
+              : stage.signing !== null
+                ? t("sede.consent.asksSignatureOf", {
+                    origin,
+                    what: signingKindLabel(t, stage.signing),
+                  })
+                : t("sede.consent.asksSignature", { origin })}
           </p>
         )}
 
@@ -134,6 +144,20 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
       </div>
     </SedeBody>
   );
+}
+
+/** Qué se pide firmar, ya traducido: `t()` no admite una clave armada. */
+function signingKindLabel(t: TFunction, signing: SigningKind): string {
+  switch (signing) {
+    case "pdf":
+      return t("sede.consent.signingKind.pdf");
+    case "challenge":
+      return t("sede.consent.signingKind.challenge");
+    case "xml":
+      return t("sede.consent.signingKind.xml");
+    case "invoice":
+      return t("sede.consent.signingKind.invoice");
+  }
 }
 
 /** Del lote sólo se sabe cuántas firmas lleva: sus documentos se quedan en la sede. */

@@ -94,6 +94,13 @@ export type SiteOutcome =
       detail: string;
     };
 
+/**
+ * Qué es lo que la sede pide firmar, según el formato de su petición (#530).
+ * `null` es que el momento no lo dice: `selectcert` no firma nada y el lote
+ * sólo sabe cuántas firmas lleva.
+ */
+export type SigningKind = "pdf" | "challenge" | "xml" | "invoice";
+
 /** En qué momento de la secuencia está la ventana. */
 export type ErrandStage =
   /**
@@ -120,6 +127,8 @@ export type ErrandStage =
       document: SiteDocument | null;
       /** Cuántas firmas lleva el lote, y `null` cuando lo que se consiente no es un lote. */
       signs: number | null;
+      /** Qué se pide firmar, o `null` cuando el momento no lo dice. */
+      signing: SigningKind | null;
       /** Los que la sede acepta, ya filtrados por el backend. */
       certificates: readonly Certificate[];
       /**

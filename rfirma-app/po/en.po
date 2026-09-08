@@ -1068,12 +1068,33 @@ msgstr "{{origin}} asks for your signature."
 msgid "sede.consent.asksIdentity"
 msgstr "{{origin}} asks you to identify yourself."
 
+#. La misma frase que "asksSignature", con el formato del #530 nombrado.
+msgid "sede.consent.asksSignatureOf"
+msgstr "{{origin}} asks for your signature on {{what}}."
+
+#. Qué es lo que la sede pide firmar, según el formato de la petición (#530).
+msgid "sede.consent.signingKind.pdf"
+msgstr "a PDF document"
+
+msgid "sede.consent.signingKind.challenge"
+msgstr "an authentication challenge"
+
+msgid "sede.consent.signingKind.xml"
+msgstr "an XML document"
+
+msgid "sede.consent.signingKind.invoice"
+msgstr "an electronic invoice"
+
 msgid "sede.consent.unknownOriginTitle"
 msgstr "Unidentified origin"
 
 msgid "sede.consent.unknownOriginSignature"
 msgstr ""
 "The request asks for a signature and does not say which page it comes from."
+
+#. La misma frase que "unknownOriginSignature", con el formato nombrado.
+msgid "sede.consent.unknownOriginSignatureOf"
+msgstr "The request asks to sign {{what}} and does not say which page it comes from."
 
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
@@ -1107,8 +1128,8 @@ msgstr ""
 #. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
 msgid "sede.consent.unrecognizedSignatures"
 msgstr ""
-"rFirma does not recognize some of the signatures already on this "
-"document, and adding yours could make them stop showing as valid"
+"rFirma does not recognize some of the signatures already on this document, "
+"and adding yours could make them stop showing as valid"
 
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
@@ -1117,7 +1138,8 @@ msgstr[1] "Batch of {{count}} signatures"
 msgstr[2] "Batch of {{count}} signatures"
 
 msgid "sede.consent.batchNote"
-msgstr "The documents stay at the site: rFirma signs them without downloading them."
+msgstr ""
+"The documents stay at the site: rFirma signs them without downloading them."
 
 msgid "sede.consent.sign"
 msgstr "Sign"
@@ -1274,10 +1296,14 @@ msgid "sede.refusals.batchPostsignerUnreachable"
 msgstr "The {{origin}} service that closes the batch did not answer."
 
 msgid "sede.refusals.batchInvalidPresignResponse"
-msgstr "The {{origin}} service that prepares the batch answered something rFirma cannot read."
+msgstr ""
+"The {{origin}} service that prepares the batch answered something rFirma "
+"cannot read."
 
 msgid "sede.refusals.batchInvalidPostsignResponse"
-msgstr "The {{origin}} service that closes the batch answered something rFirma cannot read."
+msgstr ""
+"The {{origin}} service that closes the batch answered something rFirma "
+"cannot read."
 
 msgid "sede.refusals.batchSigningFailed"
 msgstr "The batch signature {{origin}} asked for did not complete."
