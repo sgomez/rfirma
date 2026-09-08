@@ -5,7 +5,13 @@ import { FileIcon, InfoIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
 import { formatSize } from "../signing/SigningPanel";
-import type { ErrandStage, SigningKind, SiteDocument, SiteOperation } from "./errand";
+import type {
+  ErrandStage,
+  LocalBatchItem,
+  SigningKind,
+  SiteDocument,
+  SiteOperation,
+} from "./errand";
 import { consentActionKey } from "./errand";
 import { SedeBody } from "./SedeFrame";
 
@@ -101,6 +107,8 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
 
         {stage.signs !== null && <BatchCard signs={stage.signs} />}
 
+        {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
+
         {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
             y mismo borde de 1 px que el origen sin identificar. No hay un
             sexto momento (ID-298): se pregunta aquí, dentro del mismo
@@ -177,6 +185,34 @@ function BatchCard({ signs }: { signs: number }) {
       </div>
     </div>
   );
+}
+
+/**
+ * El resumen de cada elemento del lote local: su identificador, qué es y si
+ * se pide una firma o una cofirma sobre él. Desplazable dentro del marco fijo
+ * de la ventana en vez de estirarlo.
+ */
+function LocalBatchItemsList({ items }: { items: readonly LocalBatchItem[] }) {
+  const { t } = useTranslation();
+
+  return (
+    <ul className="rf-stack sede-consent__batch-items">
+      {items.map((item) => (
+        <li key={item.id} className="rf-body sede-consent__batch-item">
+          {[item.id, batchItemLabel(t, item)].join(" — ")}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Qué es el elemento y qué se le pide, ya traducido: `t()` no admite una clave armada. */
+function batchItemLabel(t: TFunction, item: LocalBatchItem): string {
+  const round =
+    item.round === "sign"
+      ? t("sede.consent.localBatchRoundSign")
+      : t("sede.consent.localBatchRoundCosign");
+  return t("sede.consent.batchItemLabel", { what: signingKindLabel(t, item.signing), round });
 }
 
 /**

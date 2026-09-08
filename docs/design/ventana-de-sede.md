@@ -135,6 +135,12 @@ El corazón del ticket: la pantalla que hoy no existe.
   lo trae, páginas, tamaño, y si ya viene firmado, con el aviso de **cofirma**—.
   **No hay nombre de fichero ni ruta**, porque el protocolo no los trae: el
   `extraData` con el nombre va en la **respuesta**, no en la petición.
+- **Lote local**: además de «lote de N», una lista desplazable con una fila
+  por elemento —su identificador y qué se le pide, «un documento PDF (firma)»,
+  «un reto de autenticación (cofirma)»…—, dentro del marco fijo de la ventana
+  y sin tapar el desplegable ni el pie. El lote remoto sigue sin lista: sólo
+  el local trae, aparte de la cuenta, el resumen de cada elemento
+  ([#549](https://github.com/sgomez/rfirma/issues/549)).
 - **Certificado**: **el mismo desplegable de `panel-de-firma.md`**, sin
   reinventarlo — mismas clases, mismo relleno de fila, misma agrupación
   `Disponibles` / `No utilizables` y el mismo alto máximo de lista de **232 px**.
@@ -323,8 +329,10 @@ guardan cada medida.
 - **Un artboard propio para el PIN** con una palanca de contexto. La pantalla es
   idéntica a la del recorrido local; dos sitios donde mirarla serían dos
   verdades.
-- **Un lote de documentos** (palanca `lote`), que está fuera del hito. La palanca
-  se conserva porque su respuesta —un recuento, nunca una lista— ya está medida.
+- **Un lote de documentos** (palanca `lote`), que estaba fuera del hito cuando se
+  validó el canvas. Para el lote **remoto** la palanca sigue vigente —su
+  respuesta es un recuento, nunca una lista—; el lote **local**, añadido
+  después, sí trae la lista por lo que impide colar un documento inesperado.
 - **Toda la prosa que ponía en guardia sin dar información.** El detalle está en
   la regla de redacción de [design-system.md](design-system.md), con los ejemplos
   de esta tanda.
