@@ -4033,6 +4033,12 @@ fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
     assert!(result.contains("\"id\":\"002\""));
     assert!(result.contains("\"id\":\"003\""));
     assert!(live.current().is_none());
+    assert!(
+        std::fs::read_dir(&scratch)
+            .map(|mut entries| entries.next().is_none())
+            .unwrap_or(true),
+        "cada elemento borra su documento de paso al firmarlo"
+    );
 }
 
 #[test]

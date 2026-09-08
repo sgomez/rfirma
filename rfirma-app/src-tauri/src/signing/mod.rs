@@ -75,6 +75,11 @@ impl SigningRoot {
         )
     }
 
+    /// Fase de firma en el token con el secreto ya conocido (ADR-0001).
+    pub fn sign_on_token(&self, signer: &dyn Signer, secret: &str) -> Result<(), CycleFailure> {
+        application::session::sign_on_token(signer, &self.session, secret)
+    }
+
     /// Postfirma: el ciclo completado, sin entregar nada.
     pub fn finish(&self) -> Result<Signed, CycleFailure> {
         application::session::finish(&self.isolate, &self.session)

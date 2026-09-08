@@ -43,7 +43,7 @@ pub enum SiteRefusal {
     Batch(BatchError),
     /// La firma del `PRE` de una firma del lote remoto ha fallado.
     BatchSigningFailed(SigningRefusal),
-    /// El lote local no ha podido ni empezar: sin firmas que intentar, o con el secreto rechazado.
+    /// El lote local no ha podido ni empezar: sin firmas que intentar.
     LocalBatch(String),
 }
 

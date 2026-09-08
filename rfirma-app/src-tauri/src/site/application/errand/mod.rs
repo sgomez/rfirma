@@ -298,7 +298,7 @@ pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         .ok_or(ConsentError::NothingPending)?;
     let chosen = pending.chosen.clone().ok_or(ConsentError::NothingPending)?;
 
-    let results = local_batch::signed_local_batch(desk, live, &chosen, secret, &pending.batch)
+    let results = local_batch::signed_local_batch(desk, &chosen, secret, &pending.batch)
         .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))?;
 
     let signer_der = pending.request.needcert().then(|| chosen.der().to_vec());

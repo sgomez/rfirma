@@ -164,13 +164,12 @@ fn a_local_batch(json: &str) -> LocalBatch {
 fn an_empty_batch_cannot_even_start() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let desk = a_desk_that_is_never_touched(home.path());
-    let live = LiveErrand::default();
     let certificate = a_usable_certificate("FIRMA");
     let batch = a_local_batch(
         r#"{"algorithm":"SHA256","format":"auto","stoponerror":false,"singlesigns":[]}"#,
     );
 
-    let refusal = signed_local_batch(&desk, &live, &certificate, "1234", &batch)
+    let refusal = signed_local_batch(&desk, &certificate, "1234", &batch)
         .expect_err("un lote sin firmas no puede empezar");
 
     assert!(matches!(refusal, SiteRefusal::LocalBatch(_)));

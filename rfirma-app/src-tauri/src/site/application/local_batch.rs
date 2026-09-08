@@ -4,8 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::Format;
-use crate::site::application::errand::desk::{keep_the_document, ErrandDesk, Neighbours};
-use crate::site::application::errand::state::LiveErrand;
+use crate::site::application::errand::desk::{write_the_document, ErrandDesk, Neighbours};
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{LocalBatch, LocalBatchResult, LocalSingleSign};
 use crate::site::domain::protocol::AskedAlgorithm;
@@ -14,7 +13,6 @@ use crate::site::ports::{FilterEngine, PolicyEngine, SiteSigningRequest};
 /// Caso de uso: firma cada elemento del lote local con el ciclo de sede, aplicando `stoponerror`.
 pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    live: &LiveErrand,
     certificate: &TokenCertificate,
     secret: &str,
     batch: &LocalBatch,
@@ -41,7 +39,7 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             continue;
         }
 
-        match sign_one(desk, live, certificate, algorithm, secret, sign) {
+        match sign_one(desk, certificate, algorithm, secret, sign) {
             Ok(signature) => results.push(LocalBatchResult::signed(sign.id(), signature)),
             Err(refusal) => {
                 results.push(LocalBatchResult::failed(sign.id(), refusal.description()));
@@ -59,10 +57,9 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     Ok(results)
 }
 
-/// El ciclo de una firma para un elemento: abre, firma con el secreto ya conocido y cierra.
+/// El ciclo de una firma para un elemento: abre, firma con el secreto ya conocido y cierra, borrando su documento de paso al terminar, salga bien o mal.
 fn sign_one<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    live: &LiveErrand,
     certificate: &TokenCertificate,
     algorithm: AskedAlgorithm,
     secret: &str,
@@ -72,23 +69,29 @@ fn sign_one<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         .bridged()
         .map_err(SiteRefusal::FormatNotBridged)?;
 
-    let document = keep_the_document(desk, live, format, sign.document())?;
+    let path = write_the_document(desk, format, sign.document())?;
+    let document = desk.neighbours.open_unrecorded(path.clone());
     let from_the_site: BTreeMap<String, String> = sign.extra_params().iter().cloned().collect();
 
-    desk.neighbours.begin(SiteSigningRequest {
-        document: &document,
-        certificate,
-        format,
-        algorithm,
-        operation: sign.round().into(),
-        from_the_site: &from_the_site,
-        allow_unregistered_signatures: false,
-    })?;
+    let result = (|| {
+        desk.neighbours.begin(SiteSigningRequest {
+            document: &document,
+            certificate,
+            format,
+            algorithm,
+            operation: sign.round().into(),
+            from_the_site: &from_the_site,
+            allow_unregistered_signatures: false,
+        })?;
 
-    desk.neighbours.sign_on_token(secret)?;
+        desk.neighbours.sign_on_token(secret)?;
 
-    let signed = desk.neighbours.finish()?;
-    Ok(signed.signature)
+        let signed = desk.neighbours.finish()?;
+        Ok(signed.signature)
+    })();
+
+    desk.scratch.erase(&path);
+    result
 }
 
 #[cfg(test)]
