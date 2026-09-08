@@ -11,7 +11,7 @@ pub mod properties;
 pub mod session_seal;
 
 pub use admissibility::{AdmissibleDocument, Refusal};
-pub use bridge::{CompletedCycle, SealedPreSignature, TokenSignature};
+pub use bridge::{CompletedCycle, Format, SealedPreSignature, TokenSignature};
 pub use config::{
     ChosenFields, PadesRect, Placement, Setting, SignatureConfig, SigningChoice,
     ALLOW_UNREGISTERED_KEY, SUB_FILTER,

@@ -16,7 +16,7 @@ use crate::signing::application::cycle::{
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{
-    compose_layer2_text, AdmissibleDocument, CompletedCycle, PlacementError, SessionSeal,
+    compose_layer2_text, AdmissibleDocument, CompletedCycle, Format, PlacementError, SessionSeal,
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
 use crate::signing::domain::{Refusal, TokenSignature};
@@ -58,10 +58,11 @@ pub fn begin(
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let bytes = admitted_bytes(files, &document.document)?;
+    let bytes = admitted_bytes(files, &document.document, Format::Pades)?;
     let config = config_for(choice, chosen)?;
     open_the_cycle(
         signer,
+        Format::Pades,
         document,
         bytes,
         config,
@@ -75,6 +76,8 @@ pub fn begin(
 /// Lo que la sede declaró para esta firma: sus parámetros y si consintió cofirmar sobre lo que no se reconoce.
 #[derive(Clone, Copy, Debug)]
 pub struct DeclaredByTheSite<'a> {
+    /// El formato de firma que pidió la sede.
+    pub format: Format,
     /// Los parámetros de la sede, ya expandidos.
     pub parameters: &'a BTreeMap<String, String>,
     /// Si la sede consintió cofirmar sobre firmas que no se reconocen.
@@ -91,13 +94,14 @@ pub fn begin_for_the_site(
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let bytes = admitted_bytes(files, &document.document)?;
+    let bytes = admitted_bytes(files, &document.document, declared.format)?;
     let config = config_for(
         &SigningChoice::for_the_site(declared.allow_unregistered_signatures),
         chosen,
     )?;
     open_the_cycle(
         signer,
+        declared.format,
         document,
         bytes,
         config,
@@ -177,6 +181,7 @@ impl From<IsolateGone> for CycleFailure {
 )]
 fn open_the_cycle(
     signer: &dyn Signer,
+    format: Format,
     document: DocumentToSign,
     bytes: Vec<u8>,
     config: SignatureConfig,
@@ -193,10 +198,11 @@ fn open_the_cycle(
     let from_the_site = from_the_site.clone();
 
     let cycle = on_the_bridge(isolate, move |bridge| {
-        let document = AdmissibleDocument::check(&bytes)?;
+        let document = AdmissibleDocument::check_for(format, &bytes)?;
         cycle::presign(
             bridge,
             SigningRequest {
+                format,
                 document,
                 chain: &chain,
                 config: &config,
@@ -348,11 +354,12 @@ pub fn config_for(
 pub fn admitted_bytes(
     files: &dyn DocumentBytes,
     document: &Document,
+    format: Format,
 ) -> Result<Vec<u8>, CycleFailure> {
     let bytes = files
         .read(document.reading_path())
         .map_err(DocumentError::Unreadable)?;
-    AdmissibleDocument::check(&bytes).map_err(CycleError::from)?;
+    AdmissibleDocument::check_for(format, &bytes).map_err(CycleError::from)?;
     Ok(bytes)
 }
 
@@ -361,7 +368,7 @@ pub fn unregistered_signatures_in(
     files: &dyn DocumentBytes,
     document: &Document,
 ) -> Result<bool, CycleFailure> {
-    let bytes = admitted_bytes(files, document)?;
+    let bytes = admitted_bytes(files, document, Format::Pades)?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 

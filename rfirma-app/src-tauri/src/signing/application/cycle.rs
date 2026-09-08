@@ -1,4 +1,4 @@
-//! Ciclo trifásico de firma PAdES: prefirma en Java, firma en Rust y postfirma en Java (ADR-0001, ADR-0016).
+//! Ciclo trifásico de firma, parametrizado por formato: prefirma en Java, firma en Rust y postfirma en Java (ADR-0001, ADR-0016).
 
 use base64::Engine;
 
@@ -6,8 +6,8 @@ use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::{
-    to_java_properties, AdmissibleDocument, CompletedCycle, Refusal, SealMismatch, SessionSeal,
-    SignatureConfig,
+    to_java_properties, AdmissibleDocument, CompletedCycle, Format, Refusal, SealMismatch,
+    SessionSeal, SignatureConfig,
 };
 use crate::signing::ports::{Bridge, Signer};
 
@@ -29,6 +29,8 @@ fn base64(bytes: &[u8]) -> String {
 /// Lo que hace falta para abrir un ciclo de firma.
 #[derive(Clone, Copy, Debug)]
 pub struct SigningRequest<'a> {
+    /// Formato de la firma que se pide.
+    pub format: Format,
     /// Documento admitido para firmar.
     pub document: AdmissibleDocument<'a>,
     /// Cadena de certificados en DER con el del firmante primero.
@@ -93,19 +95,20 @@ impl From<SealMismatch> for CycleError {
 
 /// Ciclo de firma iniciado a la espera de la firma del token (ADR-0016).
 pub struct OpenCycle {
-    pdf_b64: String,
+    format: Format,
+    document_b64: String,
     chain_b64: String,
     presigned: PreSignature,
     certificate: CertificateRef,
     already_signed_before: bool,
 }
 
-/// Fase 1: ejecuta la prefirma PAdES enviando documento y parámetros al puente.
+/// Fase 1: ejecuta la prefirma enviando formato, documento y parámetros al puente.
 pub fn presign<B: Bridge + ?Sized>(
     bridge: &B,
     request: SigningRequest<'_>,
 ) -> Result<OpenCycle, CycleError> {
-    let pdf_b64 = base64(request.document.bytes());
+    let document_b64 = base64(request.document.bytes());
     let chain_b64 = request
         .chain
         .iter()
@@ -118,14 +121,16 @@ pub fn presign<B: Bridge + ?Sized>(
     ));
 
     let presigned = bridge.presign(PreSignRequest {
-        pdf_b64: &pdf_b64,
+        format: request.format,
+        document_b64: &document_b64,
         algorithm: ALGORITHM,
         certificate_chain_b64: &chain_b64,
         extra_params: &extra_params,
     })?;
 
     Ok(OpenCycle {
-        pdf_b64,
+        format: request.format,
+        document_b64,
         chain_b64,
         presigned,
         certificate: request.certificate.clone(),
@@ -164,7 +169,7 @@ impl OpenCycle {
         Ok(TokenSignature::from_token(signature))
     }
 
-    /// Fase 3: sella la prefirma con la firma del token y ensambla el PDF firmado (ADR-0016).
+    /// Fase 3: sella la prefirma con la firma del token y ensambla el documento firmado (ADR-0016).
     pub fn postsign<B: Bridge + ?Sized>(
         &self,
         bridge: &B,
@@ -172,18 +177,20 @@ impl OpenCycle {
         returned: &SessionSeal,
     ) -> Result<CompletedCycle, CycleError> {
         let sealed = self.presigned.sealed_with(signature, returned)?;
-        let pdf = bridge.postsign(PostSignRequest {
-            pdf_b64: &self.pdf_b64,
+        let signed_document = bridge.postsign(PostSignRequest {
+            format: self.format,
+            document_b64: &self.document_b64,
             certificate_chain_b64: &self.chain_b64,
             sealed: &sealed,
         })?;
-        Ok(sealed.completed_with(pdf))
+        Ok(sealed.completed_with(signed_document))
     }
 }
 
 impl std::fmt::Debug for OpenCycle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OpenCycle")
+            .field("format", &self.format)
             .field("certificate", &self.certificate)
             .field("to_be_signed_bytes", &self.presigned.pre_sign().len())
             .field("cosigning", &self.already_signed_before)

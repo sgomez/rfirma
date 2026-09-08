@@ -87,6 +87,99 @@ impl fmt::Display for LibraryNotFound {
 
 impl std::error::Error for LibraryNotFound {}
 
+/// Cómo se envuelve una firma XAdES.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum XadesVariant {
+    /// `XAdES Detached`.
+    Detached,
+    /// `XAdES Enveloping`.
+    Enveloping,
+    /// `XAdES Enveloped`.
+    Enveloped,
+    /// `XAdES-ASiC-S`.
+    AsicS,
+}
+
+/// Cómo se envuelve una firma XMLDSig.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum XmlDsigVariant {
+    /// `XMLDSig Detached`.
+    Detached,
+    /// `XMLDSig Enveloping`.
+    Enveloping,
+    /// `XMLDSig Enveloped`.
+    Enveloped,
+}
+
+/// El formato de una firma, con los nombres de `AOSignConstants` del original.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Format {
+    /// Firma PAdES sobre un PDF.
+    Pades,
+    /// Firma CAdES.
+    Cades,
+    /// Firma CAdES en un contenedor ASiC-S.
+    CadesAsicS,
+    /// Firma CMS / PKCS#7.
+    Cms,
+    /// Firma XAdES en una de sus envolturas.
+    Xades(XadesVariant),
+    /// Firma XMLDSig en una de sus envolturas.
+    XmlDsig(XmlDsigVariant),
+    /// Firma de una factura electrónica.
+    FacturaE,
+}
+
+impl Format {
+    /// Todos los formatos del vocabulario, para recorrerlos.
+    pub const ALL: [Self; 12] = [
+        Self::Pades,
+        Self::Cades,
+        Self::CadesAsicS,
+        Self::Cms,
+        Self::Xades(XadesVariant::Detached),
+        Self::Xades(XadesVariant::Enveloping),
+        Self::Xades(XadesVariant::Enveloped),
+        Self::Xades(XadesVariant::AsicS),
+        Self::XmlDsig(XmlDsigVariant::Detached),
+        Self::XmlDsig(XmlDsigVariant::Enveloping),
+        Self::XmlDsig(XmlDsigVariant::Enveloped),
+        Self::FacturaE,
+    ];
+
+    /// El nombre con el que el original lo espera (`AOSignConstants.SIGN_FORMAT_*`).
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Pades => "PAdES",
+            Self::Cades => "CAdES",
+            Self::CadesAsicS => "CAdES-ASiC-S",
+            Self::Cms => "CMS/PKCS#7",
+            Self::Xades(XadesVariant::Detached) => "XAdES Detached",
+            Self::Xades(XadesVariant::Enveloping) => "XAdES Enveloping",
+            Self::Xades(XadesVariant::Enveloped) => "XAdES Enveloped",
+            Self::Xades(XadesVariant::AsicS) => "XAdES-ASiC-S",
+            Self::XmlDsig(XmlDsigVariant::Detached) => "XMLDSig Detached",
+            Self::XmlDsig(XmlDsigVariant::Enveloping) => "XMLDSig Enveloping",
+            Self::XmlDsig(XmlDsigVariant::Enveloped) => "XMLDSig Enveloped",
+            Self::FacturaE => "FacturaE",
+        }
+    }
+
+    /// El formato si el puente lo resuelve, y si no la situación que lo niega.
+    pub fn bridged(self) -> Result<Self, BridgeError> {
+        match self {
+            Self::Pades => Ok(self),
+            other => Err(BridgeError::FormatNotBridged(other)),
+        }
+    }
+}
+
+impl fmt::Display for Format {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
 /// Resultado de la prefirma descompuesto en sus partes (ADR-0016).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreSignature {
@@ -179,35 +272,37 @@ impl SealedPreSignature {
         &self.stamp
     }
 
-    /// Cierra el ciclo con el PDF que devolvió la postfirma.
-    pub fn completed_with(self, pdf: Vec<u8>) -> CompletedCycle {
-        CompletedCycle { pdf }
+    /// Cierra el ciclo con el documento que devolvió la postfirma.
+    pub fn completed_with(self, signed_document: Vec<u8>) -> CompletedCycle {
+        CompletedCycle { signed_document }
     }
 }
 
 /// Ciclo trifásico terminado: solo existe si hubo prefirma, firma y postfirma con el sello intacto.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompletedCycle {
-    pdf: Vec<u8>,
+    signed_document: Vec<u8>,
 }
 
 impl CompletedCycle {
-    /// Bytes del PDF firmado.
-    pub fn pdf(&self) -> &[u8] {
-        &self.pdf
+    /// Bytes del documento firmado.
+    pub fn signed_document(&self) -> &[u8] {
+        &self.signed_document
     }
 
-    /// Bytes del PDF firmado, en propiedad.
-    pub fn into_pdf(self) -> Vec<u8> {
-        self.pdf
+    /// Bytes del documento firmado, en propiedad.
+    pub fn into_signed_document(self) -> Vec<u8> {
+        self.signed_document
     }
 }
 
-/// Parámetros para la llamada de prefirma PAdES.
+/// Parámetros para la llamada de prefirma.
 #[derive(Clone, Copy, Debug)]
 pub struct PreSignRequest<'a> {
-    /// PDF de entrada en Base64.
-    pub pdf_b64: &'a str,
+    /// Formato de la firma que se pide.
+    pub format: Format,
+    /// Documento de entrada en Base64.
+    pub document_b64: &'a str,
     /// Algoritmo de firma.
     pub algorithm: &'a str,
     /// Cadena de certificados en Base64 separada por punto y coma.
@@ -216,11 +311,13 @@ pub struct PreSignRequest<'a> {
     pub extra_params: &'a str,
 }
 
-/// Parámetros para la llamada de postfirma PAdES (ADR-0016).
+/// Parámetros para la llamada de postfirma (ADR-0016).
 #[derive(Clone, Copy, Debug)]
 pub struct PostSignRequest<'a> {
-    /// Mismo PDF de entrada que recibió la prefirma, en Base64.
-    pub pdf_b64: &'a str,
+    /// Mismo formato que recibió la prefirma.
+    pub format: Format,
+    /// Mismo documento de entrada que recibió la prefirma, en Base64.
+    pub document_b64: &'a str,
     /// Misma cadena de certificados.
     pub certificate_chain_b64: &'a str,
     /// Prefirma firmada por el token con el sello ya comprobado.
@@ -280,6 +377,8 @@ pub enum BridgeError {
     IncompatiblePolicy(String),
     /// El PDF contiene firmas no registradas en su diccionario.
     PdfHasUnregisteredSignatures(String),
+    /// El puente no resuelve todavía ese formato de firma.
+    FormatNotBridged(Format),
 }
 
 impl fmt::Display for BridgeError {
@@ -305,6 +404,9 @@ impl fmt::Display for BridgeError {
             }
             Self::PdfHasUnregisteredSignatures(detail) => {
                 write!(f, "el PDF trae firmas no registradas: {detail}")
+            }
+            Self::FormatNotBridged(format) => {
+                write!(f, "el puente no atiende el formato {format}")
             }
         }
     }

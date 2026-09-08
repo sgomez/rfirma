@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::bridge::{BridgeError, Format};
 use crate::signing::domain::Refusal as Inadmissible;
 use crate::site::application::filtering;
 use crate::site::domain::batch_error::BatchError;
@@ -81,6 +81,7 @@ pub fn begin_for_the_site<E: FilterEngine>(
     Ok(signing.begin(SiteSigningRequest {
         document,
         certificate: chosen,
+        format: Format::Pades,
         from_the_site: terms.from_the_site,
         allow_unregistered_signatures: terms.allow_unregistered_signatures,
     })?)

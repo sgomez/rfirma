@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
 use rfirma_lib::signing::domain::bridge::{
-    BridgeError, PostSignRequest, PreSignRequest, LIBRARY_FILE,
+    BridgeError, Format, PostSignRequest, PreSignRequest, LIBRARY_FILE,
 };
 use rfirma_lib::signing::domain::TokenSignature;
 
@@ -33,7 +33,8 @@ fn bridge() -> NativeBridge {
 fn presign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError> {
     bridge
         .presign(PreSignRequest {
-            pdf_b64: NOT_A_PDF_B64,
+            format: Format::Pades,
+            document_b64: NOT_A_PDF_B64,
             algorithm: "SHA256withRSA",
             certificate_chain_b64: NOT_A_CERTIFICATE_B64,
             extra_params: "signaturePage=1\n",
@@ -48,7 +49,8 @@ fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeErro
         .expect("el sello es el mismo");
     bridge
         .postsign(PostSignRequest {
-            pdf_b64: NOT_A_PDF_B64,
+            format: Format::Pades,
+            document_b64: NOT_A_PDF_B64,
             certificate_chain_b64: NOT_A_CERTIFICATE_B64,
             sealed: &sealed,
         })
@@ -144,7 +146,7 @@ mod full_cycle {
     use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
-    use rfirma_lib::signing::domain::bridge::{BridgeError, ExpandRequest, FilterRequest};
+    use rfirma_lib::signing::domain::bridge::{BridgeError, ExpandRequest, FilterRequest, Format};
     use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
         TokenSignature,
@@ -372,6 +374,7 @@ mod full_cycle {
         let cycle = cycle::presign(
             &bridge,
             SigningRequest {
+                format: Format::Pades,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
                 config,
@@ -388,7 +391,7 @@ mod full_cycle {
         cycle
             .postsign(&bridge, &signature, &cycle.seal_in_transit())
             .expect("la postfirma deberia ensamblar el PDF")
-            .into_pdf()
+            .into_signed_document()
     }
 
     fn write_to_target(name: &str, bytes: &[u8]) -> PathBuf {
@@ -512,6 +515,7 @@ mod full_cycle {
         let cycle = cycle::presign(
             &bridge,
             SigningRequest {
+                format: Format::Pades,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
                 config,
@@ -528,7 +532,7 @@ mod full_cycle {
                 &cycle.seal_in_transit(),
             )
             .expect("la postfirma deberia componer el PDF con el PK1 inventado")
-            .into_pdf()
+            .into_signed_document()
     }
 
     /// Área del recuadro en píxeles.
@@ -753,6 +757,7 @@ mod full_cycle {
         let cycle = cycle::presign(
             &bridge,
             SigningRequest {
+                format: Format::Pades,
                 document: AdmissibleDocument::check(&pdf).expect("es admisible"),
                 chain: &chain,
                 config: &config,
@@ -776,7 +781,7 @@ mod full_cycle {
 
         let outcome = cycle
             .postsign(&bridge, &signature, &tampered)
-            .map(|completed| format!("un PDF de {} bytes", completed.pdf().len()));
+            .map(|completed| format!("un PDF de {} bytes", completed.signed_document().len()));
 
         assert!(
             matches!(outcome, Err(cycle::CycleError::Seal(_))),

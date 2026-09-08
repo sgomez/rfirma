@@ -5,7 +5,6 @@ pub mod application;
 pub mod domain;
 pub mod ports;
 
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,6 +15,8 @@ use adapters::isolate::Isolate;
 use adapters::memory::Memory;
 use application::configuration_memory::Configuration;
 use application::session::{CycleFailure, DocumentToSign, Signed, SigningSession};
+
+pub use application::session::DeclaredByTheSite;
 use ports::Signer;
 
 /// La raíz de `signing`: la memoria entre sesiones, el hilo del aislado y la sesión de firma.
@@ -57,8 +58,7 @@ impl SigningRoot {
         handle: &str,
         document: Document,
         chosen: &TokenCertificate,
-        from_the_site: &BTreeMap<String, String>,
-        allow_unregistered_signatures: bool,
+        declared: DeclaredByTheSite<'_>,
         signer: &dyn Signer,
     ) -> Result<StoreSecret, CycleFailure> {
         application::session::begin_for_the_site(
@@ -68,10 +68,7 @@ impl SigningRoot {
                 document,
             },
             chosen,
-            application::session::DeclaredByTheSite {
-                parameters: from_the_site,
-                allow_unregistered_signatures,
-            },
+            declared,
             signer,
             &self.isolate,
             &self.session,

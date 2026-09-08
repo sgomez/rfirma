@@ -7,7 +7,7 @@ use crate::documents::domain::document::Document;
 use crate::identity::application::tests::{a_certificate, NoToken};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::application::tests::{an_order, DocumentsInMemory, NoIsolate};
-use crate::signing::domain::{PageSet, SigningChoice};
+use crate::signing::domain::{Format, PageSet, SigningChoice};
 
 fn chosen(order: &SigningOrder) -> SigningChoice {
     order.choice().expect("el recuadro cabe")
@@ -205,8 +205,8 @@ fn what_is_not_a_pdf_is_refused_before_the_pin() {
     let other = "/home/quien/Contratos/hoja.ods";
     let files = DocumentsInMemory::default().with(other, b"PK\x03\x04");
 
-    let failure =
-        admitted_bytes(&files, &Document::opened(other)).expect_err("no es un PDF que firmar");
+    let failure = admitted_bytes(&files, &Document::opened(other), Format::Pades)
+        .expect_err("no es un PDF que firmar");
 
     assert_eq!(Failure::from(failure).situation, "notAPdf");
 }
@@ -216,6 +216,7 @@ fn a_document_that_is_gone_is_told_apart_from_one_that_is_not_a_pdf() {
     let failure = admitted_bytes(
         &DocumentsInMemory::default(),
         &Document::opened("/home/quien/Contratos/no-esta.pdf"),
+        Format::Pades,
     )
     .expect_err("no esta");
 
