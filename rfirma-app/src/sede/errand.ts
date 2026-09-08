@@ -75,6 +75,10 @@ export type SiteOutcome =
    */
   | { kind: "signed"; document: SiteDocument | null }
   | { kind: "cancelled"; document: SiteDocument | null }
+  /** El fichero que pedía la sede queda escrito donde la persona eligió. */
+  | { kind: "saved" }
+  /** Los ficheros que la persona eligió ya se han entregado a la sede. */
+  | { kind: "loaded"; fileCount: number }
   | {
       kind: "refused";
       situation: RefusalSituation;

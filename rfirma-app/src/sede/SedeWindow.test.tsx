@@ -520,6 +520,48 @@ describe("SedeWindow", () => {
       expect(screen.getByText("rFirma no guarda copia.")).toBeInTheDocument();
     });
 
+    it("confirms a plain save with no document row: the person just chose where", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "saved" },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Guardado")).toBeInTheDocument();
+      expect(screen.queryByText("Solicitud de subvención 2026")).not.toBeInTheDocument();
+    });
+
+    it("says how many files were delivered when the load ends there", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "loaded", fileCount: 2 },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Cargado")).toBeInTheDocument();
+      expect(
+        screen.getByText("Se han enviado 2 ficheros a sede.ejemplo.gob.es."),
+      ).toBeInTheDocument();
+    });
+
+    it("classifies a cancelled save as its own refusal, with its own phrase", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "saveCancelled",
+          detail: "el dialogo de guardado se cerro sin elegir nada",
+        },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(
+        screen.getByText(
+          "Has cerrado el diálogo de guardado sin elegir dónde guardar el fichero que pedía sede.ejemplo.gob.es.",
+        ),
+      ).toBeInTheDocument();
+    });
+
     it("adds nothing to a cancellation: the title already says it", () => {
       const { port } = scriptedErrand({
         kind: "outcome",

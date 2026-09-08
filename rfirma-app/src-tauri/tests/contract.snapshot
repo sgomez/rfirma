@@ -36,8 +36,8 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async site_finish_signing() -> Result<(), Failure>
   async site_install_certificate(password: String) -> Result<bool, Failure>
   async site_look_again()
-  async site_save_file() -> Result<(), Failure>
-  async site_load_files() -> Result<(), Failure>
+  async site_save_file() -> Result<bool, Failure>
+  async site_load_files() -> Result<Option<u32>, Failure>
   async install_local_ca()
         read_site_errand() -> Option<SiteErrandView>
 

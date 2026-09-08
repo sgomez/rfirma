@@ -25,8 +25,8 @@ pub use desk::{
     consent_to_sign_and_save_with_chosen_document, consent_to_the_batch, ErrandDesk, Neighbours,
 };
 pub use outcome::{
-    BatchConsent, ErrandStep, LoadingConsent, Moment, NoCertificate, NoChannel, ProtocolCodec,
-    SavingConsent, SigningConsent, SiteOutcome,
+    BatchConsent, ErrandStep, LoadCompletion, LoadingConsent, Moment, NoCertificate, NoChannel,
+    ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
 };
 pub use replies::{
     batch_handed_over, declined, identify_with, identity_handed_over, loaded, saved,
@@ -255,40 +255,39 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
     chosen: &[(String, PathBuf)],
     live: &LiveErrand,
-) -> Option<ErrandStep> {
+) -> LoadCompletion {
     let to_sign = live
         .the_loading_pending()
         .and_then(|pending| pending.to_sign);
     let Some(request) = to_sign else {
-        loaded(desk.scratch.as_ref(), chosen, live);
-        return None;
+        return LoadCompletion::Delivered(loaded(desk.scratch.as_ref(), chosen, live));
     };
 
     let Some((name, path)) = chosen.first() else {
-        replies::declined(live);
-        return None;
+        return LoadCompletion::Delivered(replies::declined(live));
     };
     let chosen_name = Some(name.clone());
     let document = match desk.scratch.read(path) {
         Ok(document) => document,
         Err(detail) => {
-            replies::over(
+            return LoadCompletion::Delivered(replies::over(
                 live,
                 SiteOutcome::Refused(SiteRefusal::CannotLoadData(detail)),
-            );
-            return None;
+            ))
         }
     };
 
     let ours = match desk.neighbours.listed() {
         Ok(ours) => ours,
         Err(error) => {
-            replies::over(live, SiteOutcome::Refused(SiteRefusal::Token(error)));
-            return None;
+            return LoadCompletion::Delivered(replies::over(
+                live,
+                SiteOutcome::Refused(SiteRefusal::Token(error)),
+            ))
         }
     };
 
-    Some(remembered(
+    LoadCompletion::Continues(remembered(
         live,
         desk::consent_to_sign_and_save_with_chosen_document(
             desk,

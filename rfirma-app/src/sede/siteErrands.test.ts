@@ -79,11 +79,11 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     },
     saveFile: async () => {
       calls.saveFile();
-      return { ok: true, value: undefined };
+      return { ok: true, value: true };
     },
     loadFiles: async () => {
       calls.loadFiles();
-      return { ok: true, value: undefined };
+      return { ok: true, value: 1 };
     },
     installCertificate: async () => {
       calls.installCertificate();
@@ -379,6 +379,88 @@ describe("el diálogo del portal sale solo", () => {
       expect(last()?.stage).toEqual({
         kind: "outcome",
         outcome: { kind: "refused", situation: "unknown", detail: "el portal no contesta" },
+      }),
+    );
+  });
+
+  it("shows the saved outcome once the file is written", async () => {
+    const { push, last } = watched({ saveFile: async () => ({ ok: true, value: true }) });
+
+    push(SAVING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({ kind: "outcome", outcome: { kind: "saved" } }),
+    );
+  });
+
+  it("shows nothing locally when the save was the tail of a signandsave already shown as signed", async () => {
+    const { push, last } = watched({ saveFile: async () => ({ ok: true, value: false }) });
+
+    push(SAVING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({ kind: "saving", filename: "firma.pdf" }),
+    );
+  });
+
+  it("shows the loaded outcome with how many files were delivered", async () => {
+    const { push, last } = watched({ loadFiles: async () => ({ ok: true, value: 2 }) });
+
+    push(LOADING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({ kind: "outcome", outcome: { kind: "loaded", fileCount: 2 } }),
+    );
+  });
+
+  it("shows nothing locally when the load continues the errand with one more step", async () => {
+    const { push, last } = watched({ loadFiles: async () => ({ ok: true, value: null }) });
+
+    push(LOADING);
+
+    await vi.waitFor(() => expect(last()?.stage).toEqual({ kind: "loading", multiple: true }));
+  });
+
+  it("classifies a cancelled save as its own refusal situation", async () => {
+    const { push, last } = watched({
+      saveFile: async () => ({
+        ok: false,
+        failure: {
+          situation: "saveCancelled",
+          detail: "el dialogo de guardado se cerro sin elegir nada",
+          attemptsLeft: null,
+        },
+      }),
+    });
+
+    push(SAVING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "saveCancelled",
+          detail: "el dialogo de guardado se cerro sin elegir nada",
+        },
+      }),
+    );
+  });
+
+  it("classifies a cannotLoadData failure as its own refusal situation", async () => {
+    const { push, last } = watched({
+      loadFiles: async () => ({
+        ok: false,
+        failure: { situation: "cannotLoadData", detail: "no such file", attemptsLeft: null },
+      }),
+    });
+
+    push(LOADING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({
+        kind: "outcome",
+        outcome: { kind: "refused", situation: "cannotLoadData", detail: "no such file" },
       }),
     );
   });

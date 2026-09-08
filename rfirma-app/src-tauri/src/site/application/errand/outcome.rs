@@ -78,6 +78,16 @@ impl ErrandStep {
     }
 }
 
+/// En qué queda el selector de carga tras elegir: el trámite sigue con un paso nuevo, o ya se ha
+/// contestado a la sede con este desenlace.
+#[derive(Debug)]
+pub enum LoadCompletion {
+    /// La sede sigue esperando: `signandsave` continúa con el documento ya elegido.
+    Continues(ErrandStep),
+    /// Ya se ha contestado a la sede.
+    Delivered(SiteOutcome),
+}
+
 /// Motivo por el que no queda ningún certificado con el que seguir.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NoCertificate {

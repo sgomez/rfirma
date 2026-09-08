@@ -2,7 +2,7 @@ import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { StoreSecret } from "../signing/secret";
-import { belongsToPinDialog, type TokenFailure } from "../signing/token";
+import { belongsToPinDialog } from "../signing/token";
 import type {
   Errand,
   ErrandStage,
@@ -79,6 +79,16 @@ export interface DescribedDocument {
 }
 
 /**
+ * Cómo acaba una orden del portal: `TokenFailure` clasifica situaciones de
+ * PKCS#11 y no le sirve al diálogo del portal, que rechaza con las suyas
+ * propias (`saveCancelled`, `cannotLoadData`…), así que aquí el rechazo va sin
+ * clasificar y `refusalOf` lo traduce al mismo catálogo que el resto.
+ */
+export type PortalResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; failure: { situation: string; detail: string } };
+
+/**
  * **Las órdenes del trámite, una función por orden.**
  *
  * Es la costura que hace probable a este adaptador sin Tauri (TD-78): las
@@ -111,10 +121,18 @@ export interface SiteCommands {
   signWithPin(secret: string): Promise<StageResult<void>>;
   /** `site_finish_signing`: postfirma, y la sede recibe la firma. */
   finishSigning(): Promise<StageResult<void>>;
-  /** `site_save_file`: abre el diálogo del portal y escribe donde la persona eligió. */
-  saveFile(): Promise<StageResult<void>>;
-  /** `site_load_files`: abre el selector del portal y sigue con lo que la persona eligió. */
-  loadFiles(): Promise<StageResult<void>>;
+  /**
+   * `site_save_file`: abre el diálogo del portal y escribe donde la persona eligió. `true` si
+   * hay que enseñar el desenlace de guardado; `false` si era el cierre de un `signandsave` que
+   * ya se enseñó como firmado.
+   */
+  saveFile(): Promise<PortalResult<boolean>>;
+  /**
+   * `site_load_files`: abre el selector del portal y sigue con lo que la persona eligió.
+   * Cuántos ficheros se han entregado a la sede, o `null` si el trámite sigue con un paso más
+   * (`signandsave` con el documento ya elegido).
+   */
+  loadFiles(): Promise<PortalResult<number | null>>;
   /** `site_install_certificate`. `false` es que se cerró el diálogo sin elegir. */
   installCertificate(): Promise<boolean>;
   /** `site_look_again`: continúa el trámite, no lo reinicia. */
@@ -140,6 +158,10 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   unsupportedProtocolVersion: true,
   missingFormat: true,
   errandInFlight: true,
+  saveCancelled: true,
+  loadCancelled: true,
+  cannotSaveData: true,
+  cannotLoadData: true,
   unknown: true,
 };
 
@@ -149,7 +171,7 @@ function refusalOf(situation: string): RefusalSituation {
 }
 
 /** Un fallo de una etapa, contado como el desenlace que la ventana enseña. */
-function refusedBy(failure: TokenFailure): SiteOutcome {
+function refusedBy(failure: { situation: string; detail: string }): SiteOutcome {
   return { kind: "refused", situation: refusalOf(failure.situation), detail: failure.detail };
 }
 
@@ -276,9 +298,27 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
    */
   const openPortal = async (stage: SiteStageView, arrival: number) => {
     if (stage.kind !== "saving" && stage.kind !== "loading") return;
-    const done = stage.kind === "saving" ? await commands.saveFile() : await commands.loadFiles();
-    if (arrival !== arrivals || done.ok) return;
-    finish(refusedBy(done.failure));
+    if (stage.kind === "saving") {
+      const done = await commands.saveFile();
+      if (arrival !== arrivals) return;
+      if (!done.ok) {
+        finish(refusedBy(done.failure));
+        return;
+      }
+      // `false` es el cierre de un `signandsave`, ya enseñado como firmado:
+      // aquí no hay nada más que enseñar.
+      if (done.value) finish({ kind: "saved" });
+      return;
+    }
+    const done = await commands.loadFiles();
+    if (arrival !== arrivals) return;
+    if (!done.ok) {
+      finish(refusedBy(done.failure));
+      return;
+    }
+    // `null` es que el trámite sigue: `signandsave` continúa con el
+    // documento ya elegido, y el momento que sigue lo publica el backend.
+    if (done.value !== null) finish({ kind: "loaded", fileCount: done.value });
   };
 
   const receive = async (view: SiteErrandView) => {
