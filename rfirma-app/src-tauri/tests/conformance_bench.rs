@@ -6,11 +6,15 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine as _;
 
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::identity::domain::store::Store;
+use rfirma_lib::signing::adapters::isolate::Isolate;
 use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
 use rfirma_lib::site::adapters::desk::Neighbours;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
@@ -41,11 +45,21 @@ const THE_SINGLE_SELECTION: &str = "selectcert";
 /// El guion de tres selecciones con el certificado fijado y soltado.
 const THE_STICKY_SELECTIONS: &str = "sticky";
 
+/// El guion del lote remoto: dos documentos firmados con `signBatchJSON`.
+const THE_REMOTE_BATCH: &str = "batch";
+
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
 
+/// El secreto del token de pruebas `rfirma-test`.
+const THE_TOKEN_SECRET: &str = "1234";
+
 /// Intentos de atar la ubicación del canal antes de darla por ocupada.
 const PORT_ATTEMPTS: usize = 60;
+
+/// Los casos que se turnan: el puerto fijo del protocolo 3 es el mismo en todos, y la confianza de
+/// la CA local con la que sirven los servlets es del proceso entero.
+static ONE_AT_A_TIME: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Modo en el que se fuerza al `autoscript.js` publicado a hablar, porque nunca manda `v=3` por
 /// websocket por su cuenta.
@@ -132,24 +146,30 @@ struct PublishedClient {
 
 impl PublishedClient {
     /// Arranca el conductor con la CA local en NODE_EXTRA_CA_CERTS, en el modo por defecto (v4).
-    fn running_against(ca_pem_path: &std::path::Path) -> Self {
-        Self::running_as(ca_pem_path, BenchMode::Fourth)
+    fn running_against(material: &ChannelMaterial) -> Self {
+        Self::running_as(material, BenchMode::Fourth)
     }
 
     /// Arranca el conductor con la CA local en NODE_EXTRA_CA_CERTS, en el modo indicado.
-    fn running_as(ca_pem_path: &std::path::Path, mode: BenchMode) -> Self {
-        Self::running_the_script(ca_pem_path, mode, THE_SINGLE_SELECTION)
+    fn running_as(material: &ChannelMaterial, mode: BenchMode) -> Self {
+        Self::running_the_script(material, mode, THE_SINGLE_SELECTION)
     }
 
-    /// Arranca el conductor con uno de los guiones del banco.
-    fn running_the_script(ca_pem_path: &std::path::Path, mode: BenchMode, script: &str) -> Self {
+    /// Arranca el conductor con uno de los guiones del banco, y con el material con el que sus
+    /// servlets sirven TLS.
+    fn running_the_script(material: &ChannelMaterial, mode: BenchMode, script: &str) -> Self {
         let mut child = Command::new("node")
             .arg(the_driver())
             .env("RFIRMA_AUTOSCRIPT", the_published_client())
-            .env("NODE_EXTRA_CA_CERTS", ca_pem_path)
+            .env("NODE_EXTRA_CA_CERTS", material.ca_pem_file.path())
             .env("RFIRMA_BENCH_TIMEOUT_MS", PATIENCE.as_millis().to_string())
             .env("RFIRMA_BENCH_MODE", mode.as_env_value())
             .env("RFIRMA_BENCH_SCRIPT", script)
+            .env(
+                "RFIRMA_BENCH_SERVLET_CERT",
+                material.certificate_pem_file.path(),
+            )
+            .env("RFIRMA_BENCH_SERVLET_KEY", material.key_pem_file.path())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
@@ -201,33 +221,48 @@ impl Drop for PublishedClient {
     }
 }
 
-/// Material criptográfico temporal para el canal.
+/// Material criptográfico temporal para el canal y para los dos servlets del lote.
 struct ChannelMaterial {
     certificate: LocalServerCertificate,
     ca_pem_file: tempfile::NamedTempFile,
+    certificate_pem_file: tempfile::NamedTempFile,
+    key_pem_file: tempfile::NamedTempFile,
 }
 
 impl ChannelMaterial {
     fn fresh() -> Self {
-        use std::io::Write;
-
         let ca = LocalCa::generate().expect("la CA local deberia generarse");
         let certificate =
             LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
-        let mut ca_pem_file = tempfile::Builder::new()
-            .suffix(".pem")
-            .tempfile()
-            .expect("un fichero temporal para la CA");
-        ca_pem_file
-            .write_all(&ca.certificate_pem().expect("la CA local en PEM"))
-            .expect("la CA deberia escribirse");
-        ca_pem_file.flush().expect("la CA deberia quedar en disco");
 
         Self {
+            ca_pem_file: a_pem_file(&ca.certificate_pem().expect("la CA local en PEM")),
+            certificate_pem_file: a_pem_file(
+                &certificate
+                    .certificate_pem()
+                    .expect("el certificado del servidor local en PEM"),
+            ),
+            key_pem_file: a_pem_file(
+                &certificate
+                    .private_key_pem()
+                    .expect("la clave del servidor local en PEM"),
+            ),
             certificate,
-            ca_pem_file,
         }
     }
+}
+
+/// Un fichero temporal con el PEM ya en disco, que es como lo leen Node y OpenSSL.
+fn a_pem_file(pem: &[u8]) -> tempfile::NamedTempFile {
+    use std::io::Write;
+
+    let mut file = tempfile::Builder::new()
+        .suffix(".pem")
+        .tempfile()
+        .expect("un fichero temporal para el PEM");
+    file.write_all(pem).expect("el PEM deberia escribirse");
+    file.flush().expect("el PEM deberia quedar en disco");
+    file
 }
 
 /// Abre el canal en uno de los puertos sorteados por la URL.
@@ -291,7 +326,7 @@ async fn the_url_the_published_client_builds_is_the_one_rfirma_reads() {
     }
 
     let material = ChannelMaterial::fresh();
-    let client = PublishedClient::running_against(material.ca_pem_file.path());
+    let client = PublishedClient::running_against(&material);
     let url = client.the_launch_url();
 
     let parsed =
@@ -330,7 +365,7 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
     }
 
     let material = ChannelMaterial::fresh();
-    let client = PublishedClient::running_against(material.ca_pem_file.path());
+    let client = PublishedClient::running_against(&material);
     let url = client.the_launch_url();
 
     let unsupported = url.replace(
@@ -366,8 +401,9 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
         return;
     }
 
+    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
-    let client = PublishedClient::running_as(material.ca_pem_file.path(), BenchMode::Third);
+    let client = PublishedClient::running_as(&material, BenchMode::Third);
     let url = client.the_launch_url();
 
     let parsed =
@@ -409,7 +445,7 @@ async fn without_websocket_the_published_client_falls_back_to_service_v1() {
     }
 
     let material = ChannelMaterial::fresh();
-    let client = PublishedClient::running_as(material.ca_pem_file.path(), BenchMode::Service);
+    let client = PublishedClient::running_as(&material, BenchMode::Service);
     let url = client.the_launch_url();
 
     let parsed =
@@ -464,6 +500,22 @@ fn a_running_rfirma(home: &std::path::Path) -> Roots {
     roots
 }
 
+/// La mesa del trámite montada sobre las raíces de un rFirma en marcha.
+fn the_desk_of(roots: &Roots) -> ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>> {
+    ErrandDesk {
+        engine: &roots.signing.isolate,
+        policies: &roots.signing.isolate,
+        neighbours: Neighbours {
+            identity: &roots.identity,
+            documents: &roots.documents,
+            signing: &roots.signing,
+        },
+        scratch_dir: roots.site.scratch_dir.clone(),
+        scratch: roots.site.scratch.clone(),
+        batch: roots.site.batch.clone(),
+    }
+}
+
 /// El trámite atendiendo la operación del canal, consintiendo con el certificado de pruebas cuando
 /// se lo pide, y llevando la cuenta de las veces que lo ha pedido.
 fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOperations {
@@ -471,18 +523,7 @@ fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOperati
     let consents = Arc::clone(consents);
 
     Arc::new(move |url, reply| {
-        let desk = ErrandDesk {
-            engine: &roots.signing.isolate,
-            policies: &roots.signing.isolate,
-            neighbours: Neighbours {
-                identity: &roots.identity,
-                documents: &roots.documents,
-                signing: &roots.signing,
-            },
-            scratch_dir: roots.site.scratch_dir.clone(),
-            scratch: roots.site.scratch.clone(),
-            batch: roots.site.batch.clone(),
-        };
+        let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -512,14 +553,13 @@ fn the_codec_of(roots: &Roots, launch: &LaunchRequest) -> NegotiatedCodec {
     }
 }
 
-/// Atiende la siguiente selección del guion: abre el canal donde la sede lo invocó, deja que el
-/// trámite la conteste y devuelve el evento del `successCallback` del cliente publicado.
-async fn the_next_selection(
+/// Abre el canal donde la sede invocó y arranca el trámite que atenderá su operación.
+async fn the_errand_channel(
     client: &PublishedClient,
     material: &ChannelMaterial,
     roots: &Arc<Roots>,
-    consents: &Arc<AtomicUsize>,
-) -> Event {
+    operations: SiteOperations,
+) -> OpenChannel {
     let url = client.the_launch_url();
     let parsed =
         AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
@@ -529,7 +569,7 @@ async fn the_next_selection(
         launch.location(),
         material,
         ChannelDuty::Serve(launch.credential().clone()),
-        the_errand_of(roots, consents),
+        operations,
     )
     .await;
     assert!(
@@ -538,9 +578,20 @@ async fn the_next_selection(
             channel.port(),
             the_codec_of(roots, &launch),
         )),
-        "la seleccion anterior deberia haber cerrado su tramite"
+        "la invocacion anterior deberia haber cerrado su tramite"
     );
+    channel
+}
 
+/// Atiende la siguiente selección del guion: abre el canal donde la sede lo invocó, deja que el
+/// trámite la conteste y devuelve el evento del `successCallback` del cliente publicado.
+async fn the_next_selection(
+    client: &PublishedClient,
+    material: &ChannelMaterial,
+    roots: &Arc<Roots>,
+    consents: &Arc<AtomicUsize>,
+) -> Event {
+    let channel = the_errand_channel(client, material, roots, the_errand_of(roots, consents)).await;
     let event = client.next_event();
     channel.close();
     event
@@ -566,17 +617,14 @@ async fn the_sticky_selections_of(mode: BenchMode) {
         return;
     }
 
+    let _turn = ONE_AT_A_TIME.lock().await;
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
         a_running_rfirma(home.path())
     }));
     let consents = Arc::new(AtomicUsize::new(0));
     let material = ChannelMaterial::fresh();
-    let client = PublishedClient::running_the_script(
-        material.ca_pem_file.path(),
-        mode,
-        THE_STICKY_SELECTIONS,
-    );
+    let client = PublishedClient::running_the_script(&material, mode, THE_STICKY_SELECTIONS);
 
     let stuck = the_next_selection(&client, &material, &roots, &consents).await;
     let first = the_certificate_of(&stuck, "stuck");
@@ -624,4 +672,174 @@ async fn sticky_spares_the_second_selection_of_the_published_client_from_asking_
 #[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
 async fn sticky_spares_the_second_selection_also_over_the_third_protocol() {
     the_sticky_selections_of(BenchMode::Third).await;
+}
+
+/// El fichero congelado con el que contesta uno de los servlets del lote, sin espacios: la sangría
+/// la pone el formateador del repositorio y el cliente publicado lo reserializa compacto.
+fn the_frozen(fixture: &str) -> String {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/conformance")
+        .join(fixture);
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("falta la fixture {}: {error}", path.display()));
+    without_spaces(&text)
+}
+
+fn without_spaces(text: &str) -> String {
+    text.split_whitespace().collect()
+}
+
+/// La CA local, en el fichero que OpenSSL lee como almacén de confianza: el cliente de los dos
+/// servlets es el de producción y valida TLS con el almacén del sistema, así que sin esto un
+/// servlet del banco seria un «servlet inalcanzable».
+fn the_local_ca_trusted_by_the_batch_client(ca_pem_path: &std::path::Path) {
+    std::env::set_var("SSL_CERT_FILE", ca_pem_path);
+}
+
+/// El trámite atendiendo el lote remoto: consiente con el certificado de pruebas, lo cierra con el
+/// secreto del token y apunta el DER del firmante para contrastarlo con el que recibe la sede.
+fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+    let signer = Arc::clone(signer);
+
+    Arc::new(move |url, reply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSignTheBatch(consent)) =
+            errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+        assert_eq!(consent.signs, 2, "el lote del guion lleva dos documentos");
+
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| {
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+            });
+        let signing_certificate = roots
+            .identity
+            .chosen(&chosen.id)
+            .expect("el certificado consentido deberia seguir en el token");
+        *signer
+            .lock()
+            .expect("nadie envenena el apunte del firmante") =
+            Some(signing_certificate.der().to_vec());
+
+        errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
+        tokio::task::block_in_place(|| {
+            errand::finish_the_batch(&desk, THE_TOKEN_SECRET, live)
+                .expect("el lote deberia cerrarse con el secreto del token")
+        });
+    })
+}
+
+/// El lote remoto de dos documentos, del `signBatchJSON` del cliente publicado al resultado
+/// congelado del postsigner, pasando por los dos servlets que levanta el conductor.
+async fn the_remote_batch_of(mode: BenchMode) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    the_local_ca_trusted_by_the_batch_client(material.ca_pem_file.path());
+
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, mode, THE_REMOTE_BATCH);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_batch_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let presign = client.next_event();
+    assert_eq!(
+        presign.name(),
+        "presign",
+        "el presigner tenia que recibir el lote antes que nada, y llego {}",
+        presign.0
+    );
+    assert_eq!(presign.field("signs"), "2", "el lote lleva dos documentos");
+    assert_eq!(
+        presign.field("certs"),
+        "1",
+        "el lote viaja con la cadena del unico firmante"
+    );
+    assert_eq!(
+        presign.field("algorithm"),
+        "SHA256",
+        "el algoritmo que declara el lote es el que llega al servlet"
+    );
+
+    let postsign = client.next_event();
+    assert_eq!(
+        postsign.name(),
+        "postsign",
+        "el postsigner tenia que recibir el tridata firmado, y llego {}",
+        postsign.0
+    );
+    assert_eq!(
+        postsign.field("signs"),
+        "2",
+        "las dos firmas del lote llegan con su PK1"
+    );
+    assert_eq!(
+        postsign.field("pre"),
+        "1",
+        "solo la firma con NEED_PRE=true conserva su PRE"
+    );
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "el lote tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    let result = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el resultado del lote llega en base64");
+    assert_eq!(
+        without_spaces(&String::from_utf8(result).expect("el resultado del lote es texto")),
+        the_frozen("batch-postsign-result.json"),
+        "el cliente publicado recibe el resultado del postsigner tal cual"
+    );
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "con needcert el successCallback recibe tambien el DER del firmante"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_remote_batch_in_json() {
+    the_remote_batch_of(BenchMode::Fourth).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_remote_batch_also_over_the_third_protocol() {
+    the_remote_batch_of(BenchMode::Third).await;
 }

@@ -1,0 +1,21 @@
+{
+  "td": {
+    "format": "CAdES",
+    "signinfo": [
+      {
+        "id": "uno",
+        "params": {
+          "PRE": "MzEgNWYgMzAgMTggU2lnbmVkQXR0cmlidXRlcyBkZWwgcHJpbWVyIGRvY3VtZW50byBkZWwgbG90ZQ==",
+          "NEED_PRE": "false"
+        }
+      },
+      {
+        "id": "dos",
+        "params": {
+          "PRE": "MzEgNWYgMzAgMTggU2lnbmVkQXR0cmlidXRlcyBkZWwgc2VndW5kbyBkb2N1bWVudG8gZGVsIGxvdGU=",
+          "NEED_PRE": "true"
+        }
+      }
+    ]
+  }
+}

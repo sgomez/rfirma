@@ -1,6 +1,9 @@
 // Conductor del banco de conformidad con autoscript.js.
 
 import { readFileSync } from "node:fs";
+import { createServer } from "node:https";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runInThisContext } from "node:vm";
 
 const autoscriptPath = process.env.RFIRMA_AUTOSCRIPT;
@@ -12,6 +15,7 @@ const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
 const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
 const script = process.env.RFIRMA_BENCH_SCRIPT ?? "selectcert";
 const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
+const here = dirname(fileURLToPath(import.meta.url));
 
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
 function replacingOrFailing(source, literal, replacement) {
@@ -198,9 +202,121 @@ function theStickyScript() {
     .then(() => settle({ event: "done" }));
 }
 
+/** El material TLS de los dos servlets: el certificado del servidor local y su clave. */
+function theServletMaterial() {
+  const certificate = process.env.RFIRMA_BENCH_SERVLET_CERT;
+  const key = process.env.RFIRMA_BENCH_SERVLET_KEY;
+  if (!certificate || !key) {
+    throw new Error("faltan RFIRMA_BENCH_SERVLET_CERT y RFIRMA_BENCH_SERVLET_KEY");
+  }
+  return { cert: readFileSync(certificate), key: readFileSync(key) };
+}
+
+/** Un servlet del lote sirviendo TLS en un puerto libre del loopback, y su URL absoluta. */
+function servletServing(answering) {
+  return new Promise((resolve) => {
+    const server = createServer(theServletMaterial(), (request, response) => {
+      const { status, body } = answering(new URL(request.url, "https://127.0.0.1").searchParams);
+      response.writeHead(status, { "content-type": "application/json" });
+      response.end(body);
+    });
+    server.listen(0, "127.0.0.1", () =>
+      resolve(`https://127.0.0.1:${server.address().port}/batch`),
+    );
+  });
+}
+
+function decodedFromBase64(value) {
+  return Buffer.from(value, "base64url").toString("utf8");
+}
+
+function theFrozen(fixture) {
+  return readFileSync(join(here, fixture), "utf8").trim();
+}
+
+/** Lo que ambos servlets exigen del original: el lote en `json` y la cadena en `certs`. */
+function missingBatchFields(query) {
+  if (!query.get("json")) return "json";
+  if (!query.get("certs")) return "certs";
+  return null;
+}
+
+/**
+ * El presigner: comprueba el lote y los `certs`, y devuelve el `TriphaseData` congelado
+ * (`BatchSigner`/`afirma-server-triphase-signer`, 1.9.2).
+ */
+function thePresigner(query) {
+  const missing = missingBatchFields(query);
+  if (missing) {
+    emit({ event: "presign", missing });
+    return { status: 400, body: `falta '${missing}'` };
+  }
+
+  const lote = JSON.parse(decodedFromBase64(query.get("json")));
+  emit({
+    event: "presign",
+    signs: String(lote.singlesigns.length),
+    certs: String(query.get("certs").split(";").length),
+    algorithm: String(lote.algorithm),
+  });
+  return { status: 200, body: theFrozen("batch-presign-response.json") };
+}
+
+/**
+ * El postsigner: exige `tridata` con `PK1` en cada firma, y devuelve el resultado congelado del
+ * lote.
+ */
+function thePostsigner(query) {
+  const missing = missingBatchFields(query) ?? (query.get("tridata") ? null : "tridata");
+  if (missing) {
+    emit({ event: "postsign", missing });
+    return { status: 400, body: `falta '${missing}'` };
+  }
+
+  const tridata = JSON.parse(decodedFromBase64(query.get("tridata")));
+  const signs = tridata.signinfo;
+  const signed = signs.filter((sign) => !!sign.params.PK1);
+  if (signed.length !== signs.length) {
+    emit({ event: "postsign", missing: "PK1" });
+    return { status: 400, body: "falta 'PK1' en alguna firma del 'tridata'" };
+  }
+
+  emit({
+    event: "postsign",
+    signs: String(signs.length),
+    pre: String(signs.filter((sign) => !!sign.params.PRE).length),
+  });
+  return { status: 200, body: theFrozen("batch-postsign-result.json") };
+}
+
+/** Un lote de dos documentos firmado con `signBatchJSON` contra los dos servlets del banco. */
+async function theBatchScript() {
+  const presigner = await servletServing(thePresigner);
+  const postsigner = await servletServing(thePostsigner);
+
+  AutoScript.createBatch("SHA256", "CAdES", "sign");
+  AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
+  AutoScript.addDocumentToBatch("dos", Buffer.from("segundo documento").toString("base64"));
+  AutoScript.signBatchProcess(
+    true,
+    presigner,
+    postsigner,
+    null,
+    (result, certificate) =>
+      settle({
+        event: "success",
+        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
+        certificate: String(certificate),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 AutoScript.cargarAppAfirma();
 
-if (script === "sticky") {
+if (script === "batch") {
+  theBatchScript();
+} else if (script === "sticky") {
   theStickyScript();
 } else {
   AutoScript.selectCertificate(
