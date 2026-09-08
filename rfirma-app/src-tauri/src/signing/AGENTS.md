@@ -14,7 +14,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `ports.rs` | Los cuatro puertos: `Bridge`, `IsolateHost`, `Signer` y `DocumentBytes`. El puente no tiene entrada que firme (ADR-0001). |
 | `application/tests.rs` | Los andamios de grada A que comparten todos los contextos: `NoIsolate`, `a_memory()`, `an_order()`, `a_completed_cycle()` y `DocumentsInMemory`. Solo en pruebas. |
 | `adapters/engines.rs` | Los adaptadores de `Bridge` y de los dos motores que la sede declara en `site/ports.rs`, `FilterEngine` y `PolicyEngine`. Pruebas en `adapters/engines/tests.rs`. |
-| `adapters/ffi.rs` | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. Cinco entradas, y ninguna firma. Pruebas en `adapters/ffi/tests.rs`. |
+| `adapters/ffi.rs` | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. Siete entradas, y ninguna firma. Pruebas en `adapters/ffi/tests.rs`. |
 | `adapters/isolate.rs` | El hilo dueño del isolate de GraalVM, y el adaptador de `IsolateHost`. Pruebas en `adapters/isolate/tests.rs`. |
 | `adapters/memory.rs` | `Memory`, la memoria entre sesiones (ADR-0010), y las rebanadas que cada vecino pide por su puerto: `DocumentsMemory`, `CertificateMemory` y `VersionMemory`. Pruebas en `adapters/memory/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones de la firma local a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |

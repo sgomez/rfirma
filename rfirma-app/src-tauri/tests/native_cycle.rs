@@ -31,9 +31,16 @@ fn bridge() -> NativeBridge {
 }
 
 fn presign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError> {
+    presign_of_something_invalid_in(bridge, Format::Pades)
+}
+
+fn presign_of_something_invalid_in(
+    bridge: &NativeBridge,
+    format: Format,
+) -> Result<(), BridgeError> {
     bridge
         .presign(PreSignRequest {
-            format: Format::Pades,
+            format,
             document_b64: NOT_A_PDF_B64,
             algorithm: "SHA256withRSA",
             certificate_chain_b64: NOT_A_CERTIFICATE_B64,
@@ -110,33 +117,44 @@ fn the_postsign_crosses_the_border_and_comes_back_as_json_too() {
     }
 }
 
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
+fn a_hundred_thousand_round_trips_do_not_leak(format: Format) {
     const BATCH: usize = 100_000;
     const TOLERANCE: u64 = 1024 * 1024;
 
     let bridge = bridge();
 
     for _ in 0..BATCH {
-        let _ = presign_of_something_invalid(&bridge);
+        let _ = presign_of_something_invalid_in(&bridge, format);
     }
     let after_first_batch = resident_bytes();
     for _ in 0..BATCH {
-        let _ = presign_of_something_invalid(&bridge);
+        let _ = presign_of_something_invalid_in(&bridge, format);
     }
     let after_second_batch = resident_bytes();
 
     let growth = after_second_batch.saturating_sub(after_first_batch);
     assert!(
         growth < TOLERANCE,
-        "la segunda tanda de {BATCH} vueltas ha crecido {growth} bytes: \
+        "la segunda tanda de {BATCH} vueltas en {format} ha crecido {growth} bytes: \
          alguien ha dejado de llamar a autofirma_free_string"
     );
 }
 
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn a_hundred_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
+    a_hundred_thousand_round_trips_do_not_leak(Format::Pades);
+}
+
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn a_hundred_thousand_cades_round_trips_do_not_leak_the_json_of_the_bridge() {
+    a_hundred_thousand_round_trips_do_not_leak(Format::Cades);
+}
+
 /// Ciclo trifásico completo contra el token y validación con pdfsig (ADR-0001, ADR-0014).
 mod full_cycle {
+    use std::collections::BTreeMap;
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
@@ -286,6 +304,142 @@ mod full_cycle {
         assert_eq!(kept[0].reference().label(), ACTIVE);
     }
 
+    /// El reto que una sede manda firmar en CAdES: bytes, y ninguno de un PDF.
+    const CHALLENGE: &[u8] = b"un reto binario de la sede\x00\x01\x02";
+
+    /// Ciclo trifásico CAdES completo contra el token (ADR-0001).
+    fn sign_cades(data: &[u8], mode: &str) -> Vec<u8> {
+        let bridge = bridge();
+        let certificate = signing_certificate();
+        let chain = vec![certificate.der().to_vec()];
+        let reference = reference();
+        let config = SignatureConfig {
+            placement: None,
+            layer2_text: String::new(),
+            rubric_image: None,
+            sign_reason: None,
+            allow_unregistered_signatures: false,
+        };
+        let from_the_site = BTreeMap::from([("mode".to_owned(), mode.to_owned())]);
+
+        let cycle = cycle::presign(
+            &bridge,
+            SigningRequest {
+                format: Format::Cades,
+                document: AdmissibleDocument::check_for(Format::Cades, data)
+                    .expect("CAdES firma cualquier byte"),
+                chain: &chain,
+                config: &config,
+                from_the_site: &from_the_site,
+                certificate: &reference,
+            },
+        )
+        .expect("la prefirma CAdES debería salir");
+
+        let signature = cycle
+            .sign_on_token(&pkcs11::RealToken, PIN)
+            .expect("el token debería firmar los atributos");
+
+        cycle
+            .postsign(&bridge, &signature, &cycle.seal_in_transit())
+            .expect("la postfirma debería ensamblar el CMS")
+            .into_signed_document()
+    }
+
+    /// Valida un CMS con openssl; `content` solo lo lleva la firma explícita (ADR-0014).
+    fn openssl_cms_verify(signature: &Path, content: Option<&Path>) -> Vec<u8> {
+        let recovered = signature.with_extension("recuperado.bin");
+        let output = run_openssl_cms_verify(signature, content, &recovered);
+        assert!(
+            output.status.success(),
+            "openssl no acepta la firma {}: {}",
+            signature.display(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        std::fs::read(&recovered).expect("openssl deja el contenido recuperado")
+    }
+
+    /// Sin `-content` una firma detached no tiene contenido que verificar.
+    fn openssl_cms_finds_no_content_in(signature: &Path) {
+        let discarded = signature.with_extension("descartado.bin");
+        let output = run_openssl_cms_verify(signature, None, &discarded);
+        assert!(
+            !output.status.success(),
+            "openssl verifica {} sin -content: la firma lleva el contenido dentro \
+             y no es explícita",
+            signature.display()
+        );
+    }
+
+    fn run_openssl_cms_verify(
+        signature: &Path,
+        content: Option<&Path>,
+        recovered: &Path,
+    ) -> std::process::Output {
+        let mut command = Command::new("openssl");
+        command
+            .arg("cms")
+            .arg("-verify")
+            .arg("-inform")
+            .arg("DER")
+            .arg("-noverify")
+            // Sin esto openssl canoniza los saltos del contenido y el reto deja
+            // de casar con el messageDigest que selló la prefirma.
+            .arg("-binary")
+            .arg("-in")
+            .arg(signature)
+            .arg("-out")
+            .arg(recovered);
+        if let Some(content) = content {
+            command.arg("-content").arg(content);
+        }
+        command.output().unwrap_or_else(|error| {
+            panic!(
+                "falta openssl: es la puerta de validez de CAdES en la grada C (ADR-0014).\n  \
+                 sudo apt install -y openssl\n  {error}"
+            )
+        })
+    }
+
+    /// El oráculo del original: `just validate-signature` (ADR-0014).
+    fn the_original_validator_accepts(signature: &Path) {
+        let script = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../rfirma-native-bridge/testbench/validate.sh");
+        let output = Command::new(&script)
+            .arg(signature)
+            .output()
+            .unwrap_or_else(|error| {
+                panic!("no se ha podido ejecutar {}: {error}", script.display())
+            });
+        let verdict = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success(),
+            "el validador del original rechaza {}: {verdict}{}",
+            signature.display(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(verdict.contains("VALID"), "{verdict}");
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_implicit_cades_signature_carries_the_challenge_and_openssl_verifies_it() {
+        let signature = write_to_target("cades-implicito.p7s", &sign_cades(CHALLENGE, "implicit"));
+
+        assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
+        the_original_validator_accepts(&signature);
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_explicit_cades_signature_is_detached_and_openssl_verifies_it_against_the_challenge() {
+        let signature = write_to_target("cades-explicito.p7s", &sign_cades(CHALLENGE, "explicit"));
+        let challenge = write_to_target("cades-reto.bin", CHALLENGE);
+
+        openssl_cms_finds_no_content_in(&signature);
+        assert_eq!(openssl_cms_verify(&signature, Some(&challenge)), CHALLENGE);
+    }
+
     /// Genera un PDF sintético de una página.
     fn a_one_page_pdf() -> Vec<u8> {
         let content = format!(
@@ -386,7 +540,7 @@ mod full_cycle {
 
         let signature = cycle
             .sign_on_token(&pkcs11::RealToken, PIN)
-            .expect("el token deberia firmar los atributos");
+            .expect("el token debería firmar los atributos");
 
         cycle
             .postsign(&bridge, &signature, &cycle.seal_in_transit())

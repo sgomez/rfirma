@@ -9,8 +9,8 @@ use base64::Engine;
 use crate::signing::domain::SessionSeal;
 
 use crate::signing::domain::bridge::{
-    BridgeError, Candidate, ExpandRequest, FilterRequest, LibraryNotFound, Origin, PostSignRequest,
-    PreSignRequest, PreSignature, LIBRARY_DIRECTORY_VARIABLE,
+    BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
+    PostSignRequest, PreSignRequest, PreSignature, LIBRARY_DIRECTORY_VARIABLE,
 };
 
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
@@ -111,6 +111,14 @@ type PreSignSymbol = unsafe extern "C" fn(
     *const c_char,
     *const c_char,
 ) -> *mut c_char;
+type PreSignWithOperationSymbol = unsafe extern "C" fn(
+    *mut c_void,
+    *const c_char,
+    *const c_char,
+    *const c_char,
+    *const c_char,
+    *const c_char,
+) -> *mut c_char;
 type PostSignSymbol = unsafe extern "C" fn(
     *mut c_void,
     *const c_char,
@@ -131,9 +139,8 @@ type ExpandSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_ch
 /// silencioso de esta frontera, así que el tipo no deja.
 pub struct NativeBridge {
     /// Nadie la lee, y aun así tiene que estar: es lo que mantiene cargada la
-    /// librería —y por tanto válidos los seis punteros a función de abajo—
-    /// mientras el puente viva. Soltarla antes sería un `dlclose` con el
-    /// isolate dentro.
+    /// librería —y por tanto válidos los punteros a función de abajo— mientras
+    /// el puente viva. Soltarla antes sería un `dlclose` con el isolate dentro.
     #[expect(dead_code, reason = "mantiene viva la librería de los punteros")]
     library: libloading::Library,
     isolate: *mut c_void,
@@ -141,6 +148,8 @@ pub struct NativeBridge {
     path: PathBuf,
     presign: PreSignSymbol,
     postsign: PostSignSymbol,
+    cades_presign: PreSignWithOperationSymbol,
+    cades_postsign: PostSignSymbol,
     filter: FilterSymbol,
     expand: ExpandSymbol,
     free_string: FreeStringSymbol,
@@ -190,15 +199,27 @@ impl NativeBridge {
         // `Drop`, y además soltaría `library` —un `dlclose` con un isolate
         // dentro—. Resolviendo primero, ese camino no existe.
         //
-        // SAFETY: las cuatro firmas son las que declaran `NativeBridge.java` y
-        // el contrato de GraalVM para esas entradas, y los punteros a función
+        // SAFETY: las firmas son las que declaran `NativeBridge.java` y el
+        // contrato de GraalVM para esas entradas, y los punteros a función
         // valen mientras `library` siga cargada, que es lo que garantiza
         // guardarla en el mismo valor.
-        let (create, presign, postsign, filter, expand, free_string, tear_down) = unsafe {
+        let (
+            create,
+            presign,
+            postsign,
+            cades_presign,
+            cades_postsign,
+            filter,
+            expand,
+            free_string,
+            tear_down,
+        ) = unsafe {
             (
                 resolve::<CreateIsolate>(&library, b"graal_create_isolate\0")?,
                 resolve::<PreSignSymbol>(&library, b"autofirma_pades_presign\0")?,
                 resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
+                resolve::<PreSignWithOperationSymbol>(&library, b"autofirma_cades_presign\0")?,
+                resolve::<PostSignSymbol>(&library, b"autofirma_cades_postsign\0")?,
                 resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
                 resolve::<ExpandSymbol>(&library, b"autofirma_expand_extra_params\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
@@ -220,6 +241,8 @@ impl NativeBridge {
             path: path.to_path_buf(),
             presign,
             postsign,
+            cades_presign,
+            cades_postsign,
             filter,
             expand,
             free_string,
@@ -234,42 +257,57 @@ impl NativeBridge {
 
     /// Prefirma: devuelve el `TriphaseData`, los bytes a firmar y el sello de sesión.
     pub fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
-        request.format.bridged()?;
-        let pdf = c_string(request.document_b64, "el PDF")?;
+        let entry = entry_points_for(request.format)?;
+        let document = c_string(request.document_b64, "el documento")?;
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let extra = c_string(request.extra_params, "los extraParams")?;
+        let operation = c_string(SIGN_OPERATION, "la operación")?;
         let json = self.call(|thread| unsafe {
-            (self.presign)(
-                thread,
-                pdf.as_ptr(),
-                algorithm.as_ptr(),
-                chain.as_ptr(),
-                extra.as_ptr(),
-            )
+            match entry {
+                EntryPoints::Pades => (self.presign)(
+                    thread,
+                    document.as_ptr(),
+                    algorithm.as_ptr(),
+                    chain.as_ptr(),
+                    extra.as_ptr(),
+                ),
+                EntryPoints::Cades => (self.cades_presign)(
+                    thread,
+                    document.as_ptr(),
+                    algorithm.as_ptr(),
+                    chain.as_ptr(),
+                    extra.as_ptr(),
+                    operation.as_ptr(),
+                ),
+            }
         })?;
         parse_presign(&json)
     }
 
     /// Postfirma: devuelve los bytes del documento firmado.
     pub fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError> {
-        request.format.bridged()?;
-        let pdf = c_string(request.document_b64, "el PDF")?;
+        let entry = entry_points_for(request.format)?;
+        let document = c_string(request.document_b64, "el documento")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let stamp = c_string(request.sealed.stamp().as_bridge_payload(), "el sello")?;
         let session = c_string(request.sealed.session(), "la sesión")?;
         let pkcs1 = c_string(request.sealed.pkcs1_b64(), "el PKCS#1")?;
         let json = self.call(|thread| unsafe {
-            (self.postsign)(
+            let symbol = match entry {
+                EntryPoints::Pades => self.postsign,
+                EntryPoints::Cades => self.cades_postsign,
+            };
+            symbol(
                 thread,
-                pdf.as_ptr(),
+                document.as_ptr(),
                 chain.as_ptr(),
                 stamp.as_ptr(),
                 session.as_ptr(),
                 pkcs1.as_ptr(),
             )
         })?;
-        parse_postsign(&json)
+        parse_signed_document(&json, entry.signed_document_key())
     }
 
     /// Acota un listado de certificados con la expresión de filtro de la sede.
@@ -328,6 +366,35 @@ impl Drop for NativeBridge {
     }
 }
 
+/// La única operación CAdES que este puente atiende.
+const SIGN_OPERATION: &str = "sign";
+const PADES_DOCUMENT_KEY: &str = "pdf";
+const CADES_DOCUMENT_KEY: &str = "signature";
+
+/// La pareja de entradas de Java que atiende a un formato.
+#[derive(Clone, Copy, Debug)]
+enum EntryPoints {
+    Pades,
+    Cades,
+}
+
+impl EntryPoints {
+    fn signed_document_key(self) -> &'static str {
+        match self {
+            Self::Pades => PADES_DOCUMENT_KEY,
+            Self::Cades => CADES_DOCUMENT_KEY,
+        }
+    }
+}
+
+fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
+    match format.bridged()? {
+        Format::Pades => Ok(EntryPoints::Pades),
+        Format::Cades | Format::Cms => Ok(EntryPoints::Cades),
+        other => Err(BridgeError::FormatNotBridged(other)),
+    }
+}
+
 fn c_string(value: &str, name: &'static str) -> Result<CString, BridgeError> {
     CString::new(value).map_err(|_| BridgeError::InvalidArgument(name))
 }
@@ -347,12 +414,16 @@ pub fn parse_presign(json: &str) -> Result<PreSignature, BridgeError> {
     })
 }
 
-/// Parsea la respuesta JSON de postfirma.
+/// Parsea la respuesta JSON de postfirma PAdES.
 pub fn parse_postsign(json: &str) -> Result<Vec<u8>, BridgeError> {
+    parse_signed_document(json, PADES_DOCUMENT_KEY)
+}
+
+fn parse_signed_document(json: &str, key: &str) -> Result<Vec<u8>, BridgeError> {
     let response = parse_response(json)?;
     base64::engine::general_purpose::STANDARD
-        .decode(field(&response, "pdf")?)
-        .map_err(|error| BridgeError::MalformedResponse(format!("pdf no es Base64: {error}")))
+        .decode(field(&response, key)?)
+        .map_err(|error| BridgeError::MalformedResponse(format!("{key} no es Base64: {error}")))
 }
 
 /// Parsea la respuesta JSON del filtrado de certificados.
