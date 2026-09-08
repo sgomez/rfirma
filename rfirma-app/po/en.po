@@ -1141,6 +1141,15 @@ msgid "sede.consent.batchNote"
 msgstr ""
 "The documents stay at the site: rFirma signs them without downloading them."
 
+msgid "sede.consent.batchItemLabel"
+msgstr "{{what}} ({{round}})"
+
+msgid "sede.consent.localBatchRoundSign"
+msgstr "signature"
+
+msgid "sede.consent.localBatchRoundCosign"
+msgstr "countersignature"
+
 msgid "sede.consent.sign"
 msgstr "Sign"
 

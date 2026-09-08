@@ -101,6 +101,16 @@ export type SiteOutcome =
  */
 export type SigningKind = "pdf" | "challenge" | "xml" | "invoice";
 
+/** Un elemento del lote local, tal como lo resume el backend: sin ruta ni contenido. */
+export interface LocalBatchItem {
+  /** El identificador con el que la sede nombra el elemento. */
+  id: string;
+  /** Qué es lo que se va a firmar. */
+  signing: SigningKind;
+  /** Si sobre el elemento se pide una firma inicial o una cofirma. */
+  round: "sign" | "cosign";
+}
+
 /** En qué momento de la secuencia está la ventana. */
 export type ErrandStage =
   /**
@@ -129,6 +139,8 @@ export type ErrandStage =
       signs: number | null;
       /** Qué se pide firmar, o `null` cuando el momento no lo dice. */
       signing: SigningKind | null;
+      /** Los elementos del lote local, o `null` cuando no lo es. */
+      items: readonly LocalBatchItem[] | null;
       /** Los que la sede acepta, ya filtrados por el backend. */
       certificates: readonly Certificate[];
       /**

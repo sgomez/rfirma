@@ -6,6 +6,7 @@ import { belongsToPinDialog, type TokenFailure } from "../signing/token";
 import type {
   Errand,
   ErrandStage,
+  LocalBatchItem,
   RefusalSituation,
   SigningKind,
   SiteDocument,
@@ -65,6 +66,14 @@ export type SiteStageView =
       kind: "askingToSignTheBatch";
       /** Cuántas firmas lleva el lote. */
       signs: number;
+      certificates: readonly Certificate[];
+      /** El asa que `sticky` ya resolvió: es la fila recordada, la que el desplegable elige sola. */
+      alreadyChosen: string | null;
+    }
+  | {
+      kind: "askingToSignTheLocalBatch";
+      /** Los elementos del lote, en el orden en que la sede los declaró. */
+      items: readonly LocalBatchItem[];
       certificates: readonly Certificate[];
       /** El asa que `sticky` ya resolvió: es la fila recordada, la que el desplegable elige sola. */
       alreadyChosen: string | null;
@@ -280,6 +289,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         document: null,
         signs: null,
         signing: null,
+        items: null,
         certificates: stage.certificates,
         narrowed: false,
       };
@@ -289,6 +299,7 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         document,
         signs: null,
         signing: stage.signing,
+        items: null,
         certificates: stage.certificates,
         narrowed: false,
       };
@@ -300,6 +311,19 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         document: null,
         signs: stage.signs,
         signing: null,
+        items: null,
+        certificates: stage.certificates,
+        narrowed: false,
+      };
+    case "askingToSignTheLocalBatch":
+      // Igual que el lote remoto, y además con el resumen de cada elemento:
+      // sin él, un lote podría colar un documento que nadie consintió.
+      return {
+        kind: "consent",
+        document: null,
+        signs: stage.items.length,
+        signing: null,
+        items: stage.items,
         certificates: stage.certificates,
         narrowed: false,
       };

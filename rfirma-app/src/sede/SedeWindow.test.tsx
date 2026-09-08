@@ -206,6 +206,7 @@ describe("SedeWindow", () => {
         },
         signs: null,
         signing: "pdf",
+        items: null,
         certificates: [certificate()],
         narrowed: false,
         ...overrides,
@@ -374,6 +375,27 @@ describe("SedeWindow", () => {
       expect(
         screen.getByText("Los documentos se quedan en la sede: rFirma firma sin descargarlos."),
       ).toBeInTheDocument();
+    });
+
+    it("shows the batch count and a row per element for a local batch", () => {
+      const { port } = scriptedErrand(
+        consenting({
+          document: null,
+          signs: 3,
+          signing: null,
+          items: [
+            { id: "001", signing: "pdf", round: "sign" },
+            { id: "002", signing: "challenge", round: "cosign" },
+            { id: "003", signing: "xml", round: "sign" },
+          ],
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Lote de 3 firmas")).toBeInTheDocument();
+      expect(screen.getByText("001 — un documento PDF (firma)")).toBeInTheDocument();
+      expect(screen.getByText("002 — un reto de autenticación (cofirma)")).toBeInTheDocument();
+      expect(screen.getByText("003 — un documento XML (firma)")).toBeInTheDocument();
     });
 
     it("consents to a batch through the same dropdown and the same button as a signature", async () => {
