@@ -698,7 +698,7 @@ mod full_cycle {
     const A_REFERENCE_XADES: &[u8] =
         include_bytes!("../../../testdata/reference/xades-enveloping.xml");
 
-    /// Cofirma o contrafirma un XAdES Enveloping (`Format::Xades` comparte el ciclo con CAdES desde #533).
+    /// Cofirma o contrafirma un XAdES Enveloping.
     fn xades_cycle(
         data: &[u8],
         operation: SignatureOperation,
@@ -713,12 +713,17 @@ mod full_cycle {
         )
     }
 
-    /// Cuántas firmas de nivel superior lleva un XAdES, una por cofirma o contrafirma que recibió.
+    /// Cuántas firmas lleva un XAdES, anidadas incluidas: la contrafirma lo está.
     fn xades_signers_in(signature: &[u8]) -> usize {
-        signature
+        let count = signature
             .windows(b"<ds:Signature ".len())
             .filter(|window| *window == b"<ds:Signature ")
-            .count()
+            .count();
+        assert!(
+            count > 0,
+            "el documento no trae ninguna firma: ¿ha cambiado el serializador el prefijo `ds:`?"
+        );
+        count
     }
 
     #[test]
@@ -734,6 +739,10 @@ mod full_cycle {
         );
         the_original_validator_accepts(&path);
     }
+
+    /// La contrafirma de referencia sobre las hojas, la medida de cuántos firmantes añade una.
+    const A_REFERENCE_XADES_COUNTERSIGN: &[u8] =
+        include_bytes!("../../../testdata/reference/xades-enveloping.countersign-leafs.xml");
 
     /// Contrafirma un XAdES Enveloping con el objetivo pedido, lo valida y devuelve el resultado.
     fn xades_countersign(signature: &[u8], target: &str, name: &str) -> Vec<u8> {
@@ -760,8 +769,8 @@ mod full_cycle {
 
         assert_eq!(
             xades_signers_in(&countersigned),
-            xades_signers_in(A_REFERENCE_XADES) + 1,
-            "la contrafirma sobre las hojas añade un firmante, como la del original"
+            xades_signers_in(A_REFERENCE_XADES_COUNTERSIGN),
+            "la contrafirma sobre las hojas deja los mismos firmantes que la del original"
         );
     }
 

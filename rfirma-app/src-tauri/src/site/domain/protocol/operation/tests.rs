@@ -869,7 +869,7 @@ fn a_countersignature(format: &str, extra: &str) -> AfirmaUrl {
     an_operation(&format!(
         "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&\
          algorithm=SHA256withRSA&dat={}{extra}",
-        dat(b"una firma CAdES")
+        dat(b"una firma")
     ))
 }
 
@@ -995,6 +995,28 @@ fn signing_and_saving_with_countersign_in_xades_is_attended() {
         SignatureRound::Counter {
             target: CounterTarget::Leafs
         }
+    );
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
+}
+
+#[test]
+fn a_countersignature_under_format_auto_over_an_xml_is_a_xades_one() {
+    let url = an_operation(&format!(
+        "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={AUTO}&\
+         algorithm=SHA256withRSA&dat={}",
+        dat(b"<xml/>")
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("un XML es XAdES") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
     );
 }
 
