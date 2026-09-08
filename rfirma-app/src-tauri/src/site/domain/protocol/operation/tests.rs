@@ -828,3 +828,93 @@ fn a_batch_reads_needcert_the_filter_and_the_sticky_flags() {
     );
     assert_eq!(request.lote(), xml_lote("SHA256", false).as_bytes());
 }
+
+/// La contrafirma que pide una sede, con el formato y los `extraParams` que se le digan.
+fn a_countersignature(format: &str, extra: &str) -> AfirmaUrl {
+    an_operation(&format!(
+        "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&\
+         algorithm=SHA256withRSA&dat={}{extra}",
+        dat(b"una firma CAdES")
+    ))
+}
+
+#[test]
+fn a_countersignature_in_cades_carries_the_target_the_site_declared() {
+    let url = a_countersignature(
+        "CAdES",
+        &format!("&properties={}", properties("target=tree\n")),
+    );
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("CAdES contrafirma") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Tree
+        }
+    );
+    assert_eq!(request.format(), RequestedFormat::Cades);
+}
+
+#[test]
+fn a_countersignature_without_a_target_counters_the_leafs_like_the_original() {
+    let url = a_countersignature("CAdES", "");
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("CAdES contrafirma") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+}
+
+#[test]
+fn a_countersignature_under_format_auto_over_a_binary_is_a_cades_one() {
+    let url = a_countersignature(AUTO, "");
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("un binario es CAdES") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(request.format(), RequestedFormat::Cades);
+}
+
+#[test]
+fn a_countersignature_with_a_target_that_is_neither_tree_nor_leafs_is_refused() {
+    let url = a_countersignature(
+        "CAdES",
+        &format!("&properties={}", properties("target=roots\n")),
+    );
+
+    let refusal = read_operation(&url).expect_err("solo hay dos objetivos");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert!(refusal.detail().contains("roots"));
+}
+
+#[test]
+fn signing_and_saving_with_countersign_in_cades_is_attended() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=CAdES&\
+         algorithm=SHA256withRSA&dat={}",
+        dat(b"una firma CAdES")
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("CAdES contrafirma")
+    else {
+        panic!("es un firmar y guardar");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+}

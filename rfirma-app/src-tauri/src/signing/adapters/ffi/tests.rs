@@ -196,7 +196,8 @@ fn a_presign_answer_comes_back_split_into_its_three_pieces() {
             .expect("es el JSON del contrato");
 
     assert_eq!(signature.session(), "<xml/>");
-    assert_eq!(signature.pre_sign(), b"123");
+    assert_eq!(signature.blocks().len(), 1);
+    assert_eq!(signature.blocks()[0].pre_sign(), b"123");
     assert_eq!(
         signature.stamp(),
         &SessionSeal::from_bridge("c2VsbG8="),
@@ -205,21 +206,32 @@ fn a_presign_answer_comes_back_split_into_its_three_pieces() {
 }
 
 #[test]
-fn a_cades_presign_answer_brings_its_block_inside_the_list() {
+fn a_cades_presign_answer_brings_its_blocks_inside_the_list() {
     let signature = parse_presign(
         r#"{"ok":true,"session":"<xml/>","pres":[{"id":"001","pre":"MTIz"}],"stamp":"c2VsbG8="}"#,
     )
     .expect("es el JSON del contrato CAdES");
 
-    assert_eq!(signature.pre_sign(), b"123");
+    assert_eq!(signature.blocks()[0].id(), "001");
+    assert_eq!(signature.blocks()[0].pre_sign(), b"123");
 }
 
 #[test]
-fn a_cades_presign_with_more_than_one_block_is_not_this_cycle() {
-    let error = parse_presign(
+fn a_countersign_presign_brings_one_block_per_signature_it_counters() {
+    let signature = parse_presign(
         r#"{"ok":true,"session":"<xml/>","pres":[{"id":"1","pre":"MTIz"},{"id":"2","pre":"NDU2"}],"stamp":"c2VsbG8="}"#,
     )
-    .expect_err("dos bloques a firmar no caben en este ciclo");
+    .expect("una contrafirma prefirma mas de una hoja");
+
+    let identifiers: Vec<&str> = signature.blocks().iter().map(|block| block.id()).collect();
+    assert_eq!(identifiers, ["1", "2"]);
+    assert_eq!(signature.blocks()[1].pre_sign(), b"456");
+}
+
+#[test]
+fn a_presign_without_a_single_block_to_sign_is_malformed() {
+    let error = parse_presign(r#"{"ok":true,"session":"<xml/>","pres":[],"stamp":"c2VsbG8="}"#)
+        .expect_err("sin bloques no hay nada que firmar");
 
     assert!(
         matches!(error, BridgeError::MalformedResponse(_)),
@@ -227,21 +239,34 @@ fn a_cades_presign_with_more_than_one_block_is_not_this_cycle() {
     );
 }
 
-#[test]
-fn the_cades_pkcs1_travels_as_a_list_carrying_the_id_of_the_session() {
-    let session = "<xml>\n <firmas format=\"CAdES\">\n  <firma Id=\"001\">\n   <param n=\"PRE\">QUJD</param>\n  </firma>\n </firmas>\n</xml>";
-
-    assert_eq!(
-        pkcs1_list(session, "MTIz").expect("la sesion trae una sola firma"),
-        r#"[{"id":"001","pk1":"MTIz"}]"#
-    );
+/// Una prefirma sellada con las firmas sintéticas de sus bloques.
+fn a_sealed_presignature(json: &str) -> SealedPreSignature {
+    let presigned = parse_presign(json).expect("es el JSON del contrato");
+    presigned
+        .sealed_with(presigned.invented_signatures(), presigned.stamp())
+        .expect("el sello es el mismo")
 }
 
 #[test]
-fn a_session_with_two_signatures_is_not_this_cycle_either() {
-    let session = "<xml><firmas><firma Id=\"001\"/><firma Id=\"002\"/></firmas></xml>";
+fn the_cades_pkcs1_travels_as_a_list_carrying_the_id_of_every_block() {
+    let sealed = a_sealed_presignature(
+        r#"{"ok":true,"session":"<xml/>","pres":[{"id":"001","pre":"MTIz"},{"id":"002","pre":"NDU2"}],"stamp":"c2VsbG8="}"#,
+    );
 
-    let error = pkcs1_list(session, "MTIz").expect_err("dos firmas no caben en este ciclo");
+    let list = pkcs1_list(&sealed);
+
+    assert!(list.starts_with(r#"[{"id":"001","pk1":"#), "{list}");
+    assert!(list.contains(r#"{"id":"002","pk1":"#), "{list}");
+}
+
+#[test]
+fn a_pades_postsign_only_assembles_one_signature() {
+    let sealed = a_sealed_presignature(
+        r#"{"ok":true,"session":"<xml/>","pres":[{"id":"1","pre":"MTIz"},{"id":"2","pre":"NDU2"}],"stamp":"c2VsbG8="}"#,
+    );
+
+    let error = only_pkcs1(&sealed).expect_err("PAdES no ensambla dos firmas");
+
     assert!(
         matches!(error, BridgeError::MalformedResponse(_)),
         "{error}"

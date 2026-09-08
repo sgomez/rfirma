@@ -22,7 +22,7 @@ fn the_selection_the_published_client_sends_is_what_the_site_wants() {
 #[test]
 fn an_operation_that_is_not_attended_is_a_request_with_its_refusal() {
     let request = V4Codec.decode(&an_operation(&format!(
-        "afirma://countersign?op=countersign&idsession={CREDENTIAL}"
+        "afirma://countersign?op=countersign&idsession={CREDENTIAL}&format=PAdES"
     )));
     let SiteRequest::NotAttended(refusal) = request else {
         panic!("la contrafirma no se atiende: {request:?}");

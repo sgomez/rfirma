@@ -19,7 +19,7 @@ use crate::signing::domain::{
     compose_layer2_text, AdmissibleDocument, CompletedCycle, Format, PlacementError, SessionSeal,
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
-use crate::signing::domain::{Refusal, TokenSignature};
+use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures};
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
@@ -33,7 +33,7 @@ struct InFlight {
     cycle: OpenCycle,
     handle: String,
     document: Document,
-    signature: Option<TokenSignature>,
+    signature: Option<TokenSignatures>,
     certificate: CertificateRef,
     signer_der: Vec<u8>,
     seal: SessionSeal,
@@ -63,6 +63,7 @@ pub fn begin(
     open_the_cycle(
         signer,
         Format::Pades,
+        SignatureOperation::Sign,
         document,
         bytes,
         config,
@@ -78,6 +79,8 @@ pub fn begin(
 pub struct DeclaredByTheSite<'a> {
     /// El formato de firma que pidió la sede.
     pub format: Format,
+    /// Qué pidió hacer la sede con el documento: firmarlo, cofirmarlo o contrafirmarlo.
+    pub operation: SignatureOperation,
     /// Los parámetros de la sede, ya expandidos.
     pub parameters: &'a BTreeMap<String, String>,
     /// Si la sede consintió cofirmar sobre firmas que no se reconocen.
@@ -102,6 +105,7 @@ pub fn begin_for_the_site(
     open_the_cycle(
         signer,
         declared.format,
+        declared.operation,
         document,
         bytes,
         config,
@@ -182,6 +186,7 @@ impl From<IsolateGone> for CycleFailure {
 fn open_the_cycle(
     signer: &dyn Signer,
     format: Format,
+    operation: SignatureOperation,
     document: DocumentToSign,
     bytes: Vec<u8>,
     config: SignatureConfig,
@@ -203,6 +208,7 @@ fn open_the_cycle(
             bridge,
             SigningRequest {
                 format,
+                operation,
                 document,
                 chain: &chain,
                 config: &config,
@@ -267,7 +273,7 @@ pub fn finish(
     } = take_signed_cycle(session)?;
 
     let completed = on_the_bridge(isolate, move |bridge| {
-        cycle.postsign(bridge, &signature, &seal)
+        cycle.postsign(bridge, signature, &seal)
     })?;
 
     Ok(Signed {
@@ -393,7 +399,7 @@ pub struct SignedCycle {
     pub cycle: OpenCycle,
     pub handle: String,
     pub document: Document,
-    pub signature: TokenSignature,
+    pub signature: TokenSignatures,
     pub seal: SessionSeal,
     pub certificate: CertificateRef,
     pub signer_der: Vec<u8>,

@@ -10,7 +10,8 @@ use crate::signing::domain::SessionSeal;
 
 use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
-    PostSignRequest, PreSignRequest, PreSignature, LIBRARY_DIRECTORY_VARIABLE,
+    PostSignRequest, PreSignBlock, PreSignRequest, PreSignature, SealedPreSignature,
+    LIBRARY_DIRECTORY_VARIABLE,
 };
 
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
@@ -262,7 +263,7 @@ impl NativeBridge {
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let extra = c_string(request.extra_params, "los extraParams")?;
-        let operation = c_string(SIGN_OPERATION, "la operación")?;
+        let operation = c_string(request.operation.name(), "la operación")?;
         let json = self.call(|thread| unsafe {
             match entry {
                 EntryPoints::Pades => (self.presign)(
@@ -293,11 +294,8 @@ impl NativeBridge {
         let stamp = c_string(request.sealed.stamp().as_bridge_payload(), "el sello")?;
         let session = c_string(request.sealed.session(), "la sesión")?;
         let pkcs1 = match entry {
-            EntryPoints::Pades => c_string(request.sealed.pkcs1_b64(), "el PKCS#1")?,
-            EntryPoints::Cades => c_string(
-                &pkcs1_list(request.sealed.session(), request.sealed.pkcs1_b64())?,
-                "el PKCS#1",
-            )?,
+            EntryPoints::Pades => c_string(only_pkcs1(request.sealed)?, "el PKCS#1")?,
+            EntryPoints::Cades => c_string(&pkcs1_list(request.sealed), "el PKCS#1")?,
         };
         let json = self.call(|thread| unsafe {
             let symbol = match entry {
@@ -372,10 +370,7 @@ impl Drop for NativeBridge {
     }
 }
 
-/// La única operación CAdES que este puente atiende.
-const SIGN_OPERATION: &str = "sign";
 const PRESIGN_LIST_KEY: &str = "pres";
-const SESSION_ID_ATTRIBUTE: &str = "Id=\"";
 const PADES_DOCUMENT_KEY: &str = "pdf";
 const CADES_DOCUMENT_KEY: &str = "signature";
 
@@ -410,63 +405,64 @@ fn c_string(value: &str, name: &'static str) -> Result<CString, BridgeError> {
 /// Parsea la respuesta JSON de prefirma, venga como `pre` (PAdES) o como `pres` (CAdES).
 pub fn parse_presign(json: &str) -> Result<PreSignature, BridgeError> {
     let response = parse_response(json)?;
-    let session = field(&response, "session")?.to_owned();
-    let stamp = SessionSeal::from_bridge(field(&response, "stamp")?);
-    let pre_sign = base64::engine::general_purpose::STANDARD
-        .decode(single_presign(&response)?)
-        .map_err(|error| BridgeError::MalformedResponse(format!("pre no es Base64: {error}")))?;
     Ok(PreSignature {
-        session,
-        pre_sign,
-        stamp,
+        session: field(&response, "session")?.to_owned(),
+        blocks: blocks_of(&response)?,
+        stamp: SessionSeal::from_bridge(field(&response, "stamp")?),
     })
 }
 
-/// El único bloque a firmar del ciclo: la lista de CAdES con más de uno la cierra el #533.
-fn single_presign(response: &serde_json::Value) -> Result<&str, BridgeError> {
+/// Los bloques a firmar: la lista identificada de CAdES, o el único `pre` de PAdES.
+fn blocks_of(response: &serde_json::Value) -> Result<Vec<PreSignBlock>, BridgeError> {
     let Some(list) = response
         .get(PRESIGN_LIST_KEY)
         .and_then(serde_json::Value::as_array)
     else {
-        return field(response, "pre");
+        return Ok(vec![PreSignBlock {
+            id: String::new(),
+            pre: decoded_pre(field(response, "pre")?)?,
+        }]);
     };
-    match list.as_slice() {
-        [only] => field(only, "pre"),
-        [] => Err(BridgeError::MalformedResponse(
+    if list.is_empty() {
+        return Err(BridgeError::MalformedResponse(
             "la prefirma no trae ninguna entrada en \"pres\"".to_owned(),
-        )),
+        ));
+    }
+    list.iter()
+        .map(|entry| {
+            Ok(PreSignBlock {
+                id: field(entry, "id")?.to_owned(),
+                pre: decoded_pre(field(entry, "pre")?)?,
+            })
+        })
+        .collect()
+}
+
+fn decoded_pre(encoded: &str) -> Result<Vec<u8>, BridgeError> {
+    base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .map_err(|error| BridgeError::MalformedResponse(format!("pre no es Base64: {error}")))
+}
+
+/// El PKCS#1 de una postfirma PAdES, que solo sabe ensamblar una firma.
+fn only_pkcs1(sealed: &SealedPreSignature) -> Result<&str, BridgeError> {
+    match sealed.signed() {
+        [only] => Ok(only.pkcs1_b64()),
         several => Err(BridgeError::MalformedResponse(format!(
-            "la prefirma trae {} bloques a firmar y este ciclo solo sabe firmar uno",
+            "la prefirma trae {} bloques a firmar y PAdES solo ensambla uno",
             several.len()
         ))),
     }
 }
 
-/// El identificador de la prefirma dentro del `TriphaseData`, que Java exige de vuelta.
-fn single_session_id(session_xml: &str) -> Result<&str, BridgeError> {
-    let mut found = session_xml.match_indices(SESSION_ID_ATTRIBUTE);
-    let (start, marker) = found.next().ok_or_else(|| {
-        BridgeError::MalformedResponse("la sesion trifasica no trae ningun Id".to_owned())
-    })?;
-    if found.next().is_some() {
-        return Err(BridgeError::MalformedResponse(
-            "la sesion trifasica trae mas de una firma y este ciclo solo sabe firmar una"
-                .to_owned(),
-        ));
-    }
-    let rest = &session_xml[start + marker.len()..];
-    rest.find('"').map(|end| &rest[..end]).ok_or_else(|| {
-        BridgeError::MalformedResponse("el Id de la sesion trifasica no cierra".to_owned())
-    })
-}
-
-/// El PKCS#1 tal y como lo espera CAdES: la lista de un elemento con su identificador.
-fn pkcs1_list(session_xml: &str, pkcs1_b64: &str) -> Result<String, BridgeError> {
-    Ok(format!(
-        "[{{\"id\":\"{}\",\"pk1\":\"{}\"}}]",
-        single_session_id(session_xml)?,
-        pkcs1_b64
-    ))
+/// El PKCS#1 tal y como lo espera CAdES: la lista de firmas con su identificador.
+fn pkcs1_list(sealed: &SealedPreSignature) -> String {
+    let entries: Vec<serde_json::Value> = sealed
+        .signed()
+        .iter()
+        .map(|block| serde_json::json!({"id": block.id(), "pk1": block.pkcs1_b64()}))
+        .collect();
+    serde_json::Value::Array(entries).to_string()
 }
 
 /// Parsea la respuesta JSON de postfirma PAdES.
