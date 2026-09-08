@@ -3,6 +3,7 @@
 pub mod batch;
 pub mod errand;
 pub mod filtering;
+pub mod local_batch;
 pub mod policies;
 pub mod session;
 pub mod site;

@@ -270,6 +270,9 @@ pub trait SiteSigning {
     /// Abre el ciclo y dice cómo se pide el secreto.
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal>;
 
+    /// Firma el `PRE` abierto por `begin` con un secreto ya conocido, sin volver a pedirlo.
+    fn sign_on_token(&self, secret: &str) -> Result<(), SigningRefusal>;
+
     /// Cierra el ciclo en memoria: el PDF firmado y el DER del firmante, sin escribir nada.
     fn finish(&self) -> Result<SiteSignature, SigningRefusal>;
 }

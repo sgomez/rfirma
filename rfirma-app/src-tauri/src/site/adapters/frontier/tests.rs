@@ -59,6 +59,7 @@ fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
         SiteRefusal::BatchSigningFailed(signing_refusal_of(told_of_cycle(
             &CycleFailure::NoOpenCycle,
         ))),
+        SiteRefusal::LocalBatch("el lote local no declara ninguna firma".to_owned()),
     ]
 }
 
@@ -135,6 +136,16 @@ fn every_code_of_ours() -> Vec<SafCode> {
     );
     codes.push(code_of_broken_seal());
     codes
+}
+
+#[test]
+fn every_refusal_describes_itself_without_its_code() {
+    for refusal in every_refusal_of_the_errand() {
+        assert!(
+            !refusal.description().is_empty(),
+            "{refusal:?} no deberia describirse vacio"
+        );
+    }
 }
 
 #[test]

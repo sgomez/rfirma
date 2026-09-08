@@ -224,6 +224,14 @@ impl TheBridge {
         let calls = bridge.calls();
         calls.first().expect("la prefirma cruzo").format
     }
+
+    /// El formato con el que llegó cada prefirma que cruzó, en orden.
+    fn formats_of_the_presigns(&self) -> Vec<Format> {
+        let Self::Answering(bridge) = self else {
+            panic!("este puente no atiende nada");
+        };
+        bridge.calls().iter().map(|call| call.format).collect()
+    }
 }
 
 impl IsolateHost for TheBridge {
@@ -404,6 +412,11 @@ impl SiteSigning for TheNeighbours<'_> {
         .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
     }
 
+    fn sign_on_token(&self, secret: &str) -> Result<(), SigningRefusal> {
+        session::sign_on_token(&self.signer, &self.session, secret)
+            .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
+    }
+
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
         let signed = session::finish(&self.bridge, &self.session)
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
@@ -477,6 +490,10 @@ impl ScratchDocuments for ASignerThatSucceeds<'_> {
 impl SiteSigning for ASignerThatSucceeds<'_> {
     fn begin(&self, _request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         Ok(StoreSecret::NotNeeded)
+    }
+
+    fn sign_on_token(&self, _secret: &str) -> Result<(), SigningRefusal> {
+        Ok(())
     }
 
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
@@ -3892,9 +3909,50 @@ fn a_local_batch(extra: &str) -> AfirmaUrl {
     url
 }
 
-const A_BATCH_ALL_SKIPPED: &str = "{\"signs\":[{\"id\":\"001\",\"result\":\"SKIPPED\"},\
-                                   {\"id\":\"002\",\"result\":\"SKIPPED\"},\
-                                   {\"id\":\"003\",\"result\":\"SKIPPED\"}]}";
+/// Un lote local de tres elementos donde el segundo pide un formato que el puente no atiende
+/// (`xmldsig`), para ejercitar el fallo de un elemento sin depender del puente doblado.
+fn a_local_batch_with_a_failing_second_item(stop_on_error: bool) -> AfirmaUrl {
+    let lote = format!(
+        "{{\"algorithm\":\"SHA256\",\"format\":\"auto\",\"stoponerror\":{},\"singlesigns\":[\
+         {{\"id\":\"001\",\"datareference\":\"{}\"}},\
+         {{\"id\":\"002\",\"datareference\":\"{}\",\"format\":\"xmldsig\"}},\
+         {{\"id\":\"003\",\"datareference\":\"{}\"}}]}}",
+        stop_on_error,
+        in_the_batch(A_LOCAL_PDF),
+        in_the_batch(A_LOCAL_BINARY),
+        in_the_batch(A_LOCAL_XML),
+    );
+    let text = format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
+         localBatchProcess=true&dat={}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&lote)
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+/// Una mesa que firma de verdad por el ciclo de sede, con el puente doblado atendiendo.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "es el constructor de un tipo de ocho campos, no una interfaz"
+)]
+fn a_desk_for_the_local_batch<'a>(
+    engine: &'a AnEngine,
+    policies: &'a APolicyEngine,
+    home: &'a Path,
+    listed: &'a ListedCertificates,
+    opened: &'a OpenedDocuments,
+    memory: &'a Memory,
+    scratch: &'a Path,
+    ours: &[TokenCertificate],
+) -> ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>> {
+    let mut desk = a_desk(engine, policies, &[], home, listed, opened, memory, scratch);
+    desk.neighbours.ours = ours.to_vec();
+    desk.neighbours.bridge = TheBridge::answering();
+    desk
+}
 
 #[test]
 fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
@@ -3902,19 +3960,22 @@ fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
     let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
     let live = a_live();
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
-    let desk = a_desk_for_the_batch(
+    let scratch = home.path().join("errand");
+    let desk = a_desk_for_the_local_batch(
         &engine,
         &policies,
         home.path(),
         &listed,
+        &opened,
         &memory,
+        &scratch,
         &ours,
-        Arc::new(InMemoryBatchServices::default()),
     );
 
     let url = a_local_batch("");
@@ -3950,19 +4011,174 @@ fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
     let consented = consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
     assert!(matches!(consented, Consented::SigningWith(_)));
 
-    finish_the_local_batch("1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
 
     assert_eq!(
-        desk.neighbours.neighbours.token.secrets_asked(),
+        desk.neighbours.token.secrets_asked(),
         1,
         "el secreto se pide una sola vez para las tres firmas"
     );
     assert_eq!(
-        the_batch_result(&mut wire),
-        A_BATCH_ALL_SKIPPED,
-        "hasta que exista el bucle, el lote contesta con todo saltado"
+        desk.neighbours.bridge.formats_of_the_presigns(),
+        vec![
+            Format::Pades,
+            Format::Cades,
+            Format::Xades(XadesVariant::Enveloping)
+        ],
+        "cada elemento cruza al puente con su propio formato"
     );
+    let result = the_batch_result(&mut wire);
+    assert_eq!(result.matches("\"result\":\"DONE_AND_SAVED\"").count(), 3);
+    assert!(result.contains("\"id\":\"001\""));
+    assert!(result.contains("\"id\":\"002\""));
+    assert!(result.contains("\"id\":\"003\""));
     assert!(live.current().is_none());
+    assert!(
+        std::fs::read_dir(&scratch)
+            .map(|mut entries| entries.next().is_none())
+            .unwrap_or(true),
+        "cada elemento borra su documento de paso al firmarlo"
+    );
+}
+
+#[test]
+fn a_local_batch_that_stops_on_error_skips_what_came_before_and_after() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk_for_the_local_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+        &ours,
+    );
+
+    let url = a_local_batch_with_a_failing_second_item(true);
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
+        panic!("un lote local pide consentimiento");
+    };
+    consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+
+    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+
+    let result = the_batch_result(&mut wire);
+    assert!(
+        result.contains("\"id\":\"001\",\"result\":\"SKIPPED\""),
+        "{result}"
+    );
+    assert!(
+        result.contains("\"id\":\"002\",\"result\":\"ERROR_PRE\""),
+        "{result}"
+    );
+    assert!(
+        result.contains("\"id\":\"003\",\"result\":\"SKIPPED\""),
+        "{result}"
+    );
+}
+
+#[test]
+fn a_local_batch_without_stoponerror_signs_around_the_failure() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk_for_the_local_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+        &ours,
+    );
+
+    let url = a_local_batch_with_a_failing_second_item(false);
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
+        panic!("un lote local pide consentimiento");
+    };
+    consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+
+    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+
+    let result = the_batch_result(&mut wire);
+    assert!(
+        result.contains("\"id\":\"001\",\"result\":\"DONE_AND_SAVED\""),
+        "{result}"
+    );
+    assert!(
+        result.contains("\"id\":\"002\",\"result\":\"ERROR_PRE\""),
+        "{result}"
+    );
+    assert!(
+        result.contains("\"id\":\"003\",\"result\":\"DONE_AND_SAVED\""),
+        "{result}"
+    );
+}
+
+#[test]
+fn a_local_batch_with_needcert_answers_the_signer() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk_for_the_local_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+        &ours,
+    );
+
+    let url = a_local_batch("&needcert=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
+        panic!("un lote local pide consentimiento");
+    };
+    consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+
+    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+
+    let answered = what_the_site_received(&mut wire).expect("la sede recibe el resultado del lote");
+    let (result, signer) = answered
+        .split_once('|')
+        .expect("needcert añade el DER tras el resultado, separado por '|'");
+    assert_eq!(
+        signer,
+        base64::engine::general_purpose::STANDARD.encode(ours[0].der())
+    );
+    assert!(!result.is_empty());
 }
 
 /// El resultado del lote que la sede acaba de recibir, ya descodificado.

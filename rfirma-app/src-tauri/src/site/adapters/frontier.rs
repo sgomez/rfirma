@@ -69,6 +69,10 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             },
             SafCode::BatchSignature,
         ),
+        SiteRefusal::LocalBatch(detail) => (
+            Failure::new("localBatchSign", detail.clone()),
+            SafCode::LocalBatchSign,
+        ),
     }
 }
 
