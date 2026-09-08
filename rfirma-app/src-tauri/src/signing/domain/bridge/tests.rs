@@ -1,4 +1,4 @@
-use super::{PreSignature, TokenSignature};
+use super::{BridgeError, Format, PreSignature, TokenSignature};
 use crate::signing::domain::{SealMismatch, SessionSeal};
 
 fn a_presignature() -> PreSignature {
@@ -52,6 +52,44 @@ fn a_completed_cycle_carries_the_pdf_the_postsign_returned() {
 
     let completed = sealed.completed_with(b"%PDF-".to_vec());
 
-    assert_eq!(completed.pdf(), b"%PDF-");
-    assert_eq!(completed.into_pdf(), b"%PDF-".to_vec());
+    assert_eq!(completed.signed_document(), b"%PDF-");
+    assert_eq!(completed.into_signed_document(), b"%PDF-".to_vec());
+}
+
+#[test]
+fn every_format_says_the_name_the_original_expects() {
+    let names: Vec<&str> = Format::ALL.iter().map(|format| format.name()).collect();
+
+    assert_eq!(
+        names,
+        [
+            "PAdES",
+            "CAdES",
+            "CAdES-ASiC-S",
+            "CMS/PKCS#7",
+            "XAdES Detached",
+            "XAdES Enveloping",
+            "XAdES Enveloped",
+            "XAdES-ASiC-S",
+            "XMLDSig Detached",
+            "XMLDSig Enveloping",
+            "XMLDSig Enveloped",
+            "FacturaE",
+        ]
+    );
+}
+
+#[test]
+fn the_bridge_only_resolves_pades_for_now() {
+    assert_eq!(Format::Pades.bridged().expect("PAdES cruza"), Format::Pades);
+
+    for format in Format::ALL
+        .iter()
+        .filter(|format| **format != Format::Pades)
+    {
+        let refused = format.bridged().expect_err("solo cruza PAdES");
+
+        assert!(matches!(refused, BridgeError::FormatNotBridged(named) if named == *format));
+        assert!(refused.to_string().contains(format.name()));
+    }
 }

@@ -30,6 +30,15 @@ fn a_pdf_with_unregistered_signatures_asks_for_confirmation() {
 }
 
 #[test]
+fn a_format_the_bridge_does_not_resolve_leaves_for_the_site_as_saf_06() {
+    let error = BridgeError::FormatNotBridged(crate::signing::domain::Format::Cades);
+
+    assert_eq!(code_of_bridge(&error), SafCode::UnsupportedFormat);
+    assert_eq!(SafCode::UnsupportedFormat.as_str(), "SAF_06");
+    assert_eq!(Failure::from(error).situation, "bridgeFailed");
+}
+
+#[test]
 fn what_breaks_after_the_consent_keeps_its_own_code_and_its_own_name() {
     for (failure, code, name) in [
         (

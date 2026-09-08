@@ -261,6 +261,7 @@ impl SiteSigning for TheNeighbours<'_> {
             },
             request.certificate,
             session::DeclaredByTheSite {
+                format: request.format,
                 parameters: request.from_the_site,
                 allow_unregistered_signatures: request.allow_unregistered_signatures,
             },
@@ -275,7 +276,7 @@ impl SiteSigning for TheNeighbours<'_> {
         let signed = session::finish(&NoIsolate, &A_SESSION)
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
         Ok(SiteSignature {
-            signed: signed.completed.into_pdf(),
+            signed: signed.completed.into_signed_document(),
             signer_der: signed.signer_der,
         })
     }

@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use super::bridge::Format;
+
 /// La cabecera de cualquier PDF. La versión va detrás y no la miramos: firmar
 /// un 1.4 y firmar un 2.0 es el mismo recorrido.
 const HEADER: &[u8] = b"%PDF-";
@@ -124,6 +126,18 @@ impl<'a> AdmissibleDocument<'a> {
             already_signed: contains(pdf, BYTE_RANGE),
             unregistered_signatures: has_unregistered_signatures(pdf),
         })
+    }
+
+    /// Las tres marcas son del PDF, así que solo se miran cuando la firma es PAdES.
+    pub fn check_for(format: Format, document: &'a [u8]) -> Result<Self, Refusal> {
+        match format {
+            Format::Pades => Self::check(document),
+            _ => Ok(Self {
+                pdf: document,
+                already_signed: false,
+                unregistered_signatures: false,
+            }),
+        }
     }
 
     /// Los bytes, ya admitidos.

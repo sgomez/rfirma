@@ -61,6 +61,7 @@ fn bridge_told(error: &BridgeError) -> (&'static str, SafCode) {
             ("pdfHasUnregisteredSignatures", SafCode::ConfirmationNeeded)
         }
         BridgeError::IncompatiblePolicy(_) => ("bridgeFailed", SafCode::InvalidPolicy),
+        BridgeError::FormatNotBridged(_) => ("bridgeFailed", SafCode::UnsupportedFormat),
         BridgeError::ExecutablePathUnknown(_)
         | BridgeError::NotFound(_)
         | BridgeError::Load { .. }

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::bridge::{BridgeError, Format};
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
@@ -210,6 +210,8 @@ pub struct SiteSigningRequest<'a> {
     pub document: &'a str,
     /// El certificado que la persona eligió y la sede acepta.
     pub certificate: &'a TokenCertificate,
+    /// El formato de firma que pidió la sede.
+    pub format: Format,
     /// Los parámetros de la sede, ya expandidos.
     pub from_the_site: &'a BTreeMap<String, String>,
     /// Si la sede consintió cofirmar sobre firmas que no se reconocen.

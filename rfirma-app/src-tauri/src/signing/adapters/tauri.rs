@@ -62,7 +62,8 @@ pub fn finish_signing(
     signing: State<'_, SigningRoot>,
 ) -> Result<SignedDocumentView, Failure> {
     let signed = crate::signing::application::session::finish(&signing.isolate, &signing.session)?;
-    let (landing, delivered) = documents.deliver(&signed.document, signed.completed.pdf())?;
+    let (landing, delivered) =
+        documents.deliver(&signed.document, signed.completed.signed_document())?;
     identity.remember_the_certificate(&signed.certificate);
     if documents.is_remembered(&signed.handle) {
         documents.note_signed(&landing, &signed.completed);

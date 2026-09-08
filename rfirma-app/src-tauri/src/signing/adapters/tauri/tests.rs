@@ -35,3 +35,17 @@ fn diverges_from_user_space_when_the_page_is_rotated() {
         [50, 145]
     );
 }
+
+#[test]
+fn no_order_of_the_window_can_ask_for_a_format() {
+    for source in [
+        include_str!("../tauri.rs"),
+        include_str!("../orders.rs"),
+        include_str!("../views.rs"),
+    ] {
+        assert!(
+            !source.contains("Format"),
+            "la ventana principal solo firma PAdES: el formato lo fija la raiz, no la orden"
+        );
+    }
+}

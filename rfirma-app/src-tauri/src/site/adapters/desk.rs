@@ -12,7 +12,7 @@ use crate::identity::domain::secret::StoreSecret;
 use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::ports::Signer;
-use crate::signing::SigningRoot;
+use crate::signing::{DeclaredByTheSite, SigningRoot};
 use crate::site::domain::protocol::{SafCode, ACCEPTED_ALGORITHMS};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{
@@ -79,8 +79,11 @@ impl SiteSigning for Neighbours<'_> {
                 request.document,
                 document,
                 request.certificate,
-                request.from_the_site,
-                request.allow_unregistered_signatures,
+                DeclaredByTheSite {
+                    format: request.format,
+                    parameters: request.from_the_site,
+                    allow_unregistered_signatures: request.allow_unregistered_signatures,
+                },
                 &self.identity.signer(),
             )
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
@@ -92,7 +95,7 @@ impl SiteSigning for Neighbours<'_> {
             .finish()
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))?;
         Ok(SiteSignature {
-            signed: signed.completed.into_pdf(),
+            signed: signed.completed.into_signed_document(),
             signer_der: signed.signer_der,
         })
     }

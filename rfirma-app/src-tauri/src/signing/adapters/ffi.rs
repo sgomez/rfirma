@@ -232,9 +232,10 @@ impl NativeBridge {
         &self.path
     }
 
-    /// Prefirma PAdES: devuelve el `TriphaseData`, los bytes a firmar y el sello de sesión.
+    /// Prefirma: devuelve el `TriphaseData`, los bytes a firmar y el sello de sesión.
     pub fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
-        let pdf = c_string(request.pdf_b64, "el PDF")?;
+        request.format.bridged()?;
+        let pdf = c_string(request.document_b64, "el PDF")?;
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let extra = c_string(request.extra_params, "los extraParams")?;
@@ -250,9 +251,10 @@ impl NativeBridge {
         parse_presign(&json)
     }
 
-    /// Postfirma PAdES: devuelve los bytes del PDF firmado.
+    /// Postfirma: devuelve los bytes del documento firmado.
     pub fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError> {
-        let pdf = c_string(request.pdf_b64, "el PDF")?;
+        request.format.bridged()?;
+        let pdf = c_string(request.document_b64, "el PDF")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
         let stamp = c_string(request.sealed.stamp().as_bridge_payload(), "el sello")?;
         let session = c_string(request.sealed.session(), "la sesión")?;
