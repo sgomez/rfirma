@@ -5,14 +5,16 @@ use base64::Engine;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
-use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
+use crate::signing::domain::bridge::{
+    BridgeError, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature, SignatureOperation,
+};
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Format, Refusal, SealMismatch,
     SessionSeal, SignatureConfig,
 };
 use crate::signing::ports::{Bridge, Signer};
 
-use crate::signing::domain::TokenSignature;
+use crate::signing::domain::TokenSignatures;
 
 /// Conjunto vacío de parámetros adicionales para firmas locales.
 pub static NOTHING_FROM_A_SITE: std::collections::BTreeMap<String, String> =
@@ -32,6 +34,8 @@ fn base64(bytes: &[u8]) -> String {
 pub struct SigningRequest<'a> {
     /// Formato de la firma que se pide.
     pub format: Format,
+    /// Qué se hace con el documento: firmarlo, cofirmarlo o contrafirmarlo.
+    pub operation: SignatureOperation,
     /// Documento admitido para firmar.
     pub document: AdmissibleDocument<'a>,
     /// Cadena de certificados en DER con el del firmante primero.
@@ -134,6 +138,7 @@ pub fn presign<B: Bridge + ?Sized>(
 
     let presigned = bridge.presign(PreSignRequest {
         format: request.format,
+        operation: request.operation,
         document_b64: &document_b64,
         algorithm: ALGORITHM.name(),
         certificate_chain_b64: &chain_b64,
@@ -151,9 +156,9 @@ pub fn presign<B: Bridge + ?Sized>(
 }
 
 impl OpenCycle {
-    /// Bytes que el token debe firmar, sin hashear.
-    pub fn to_be_signed(&self) -> &[u8] {
-        self.presigned.pre_sign()
+    /// Bloques que el token debe firmar, sin hashear; una contrafirma trae más de uno.
+    pub fn to_be_signed(&self) -> &[PreSignBlock] {
+        self.presigned.blocks()
     }
 
     /// Certificado con el que se abrió el ciclo.
@@ -171,25 +176,30 @@ impl OpenCycle {
         self.presigned.stamp().clone()
     }
 
-    /// Fase 2: firma los bytes en el token PKCS#11 (ADR-0001).
+    /// Fase 2: firma cada bloque en el token PKCS#11, con el secreto pedido una sola vez (ADR-0001).
     pub fn sign_on_token(
         &self,
         signer: &dyn Signer,
         pin: &str,
-    ) -> Result<TokenSignature, CycleError> {
-        let signature =
-            signer.sign(&self.certificate, pin, ALGORITHM, self.presigned.pre_sign())?;
-        Ok(TokenSignature::from_token(signature))
+    ) -> Result<TokenSignatures, CycleError> {
+        Ok(self
+            .presigned
+            .signed_one_by_one(|pre| signer.sign(&self.certificate, pin, ALGORITHM, pre))?)
     }
 
-    /// Fase 3: sella la prefirma con la firma del token y ensambla el documento firmado (ADR-0016).
+    /// Las firmas sintéticas de la prefirma en seco, una por bloque.
+    pub fn invented_signatures(&self) -> TokenSignatures {
+        self.presigned.invented_signatures()
+    }
+
+    /// Fase 3: sella la prefirma con las firmas del token y ensambla el documento firmado (ADR-0016).
     pub fn postsign<B: Bridge + ?Sized>(
         &self,
         bridge: &B,
-        signature: &TokenSignature,
+        signatures: TokenSignatures,
         returned: &SessionSeal,
     ) -> Result<CompletedCycle, CycleError> {
-        let sealed = self.presigned.sealed_with(signature, returned)?;
+        let sealed = self.presigned.sealed_with(signatures, returned)?;
         let signed_document = bridge.postsign(PostSignRequest {
             format: self.format,
             document_b64: &self.document_b64,
@@ -205,7 +215,7 @@ impl std::fmt::Debug for OpenCycle {
         f.debug_struct("OpenCycle")
             .field("format", &self.format)
             .field("certificate", &self.certificate)
-            .field("to_be_signed_bytes", &self.presigned.pre_sign().len())
+            .field("blocks_to_be_signed", &self.presigned.blocks().len())
             .field("cosigning", &self.already_signed_before)
             .finish_non_exhaustive()
     }

@@ -6,8 +6,7 @@ use crate::signing::application::cycle::{self, SigningRequest};
 use crate::signing::application::session::{
     admitted_bytes, config_for, on_the_bridge, CycleFailure,
 };
-use crate::signing::domain::TokenSignature;
-use crate::signing::domain::{AdmissibleDocument, Format, SigningChoice};
+use crate::signing::domain::{AdmissibleDocument, Format, SignatureOperation, SigningChoice};
 use crate::signing::ports::{DocumentBytes, IsolateHost};
 
 /// Compone el PDF con el sello visible sin ejecutar la fase de firma.
@@ -29,6 +28,7 @@ pub fn compose(
             bridge,
             SigningRequest {
                 format: Format::Pades,
+                operation: SignatureOperation::Sign,
                 document,
                 chain: &chain,
                 config: &config,
@@ -37,7 +37,7 @@ pub fn compose(
             },
         )?;
         let seal = cycle.seal_in_transit();
-        let completed = cycle.postsign(bridge, &TokenSignature::invented(), &seal)?;
+        let completed = cycle.postsign(bridge, cycle.invented_signatures(), &seal)?;
         Ok(completed.into_signed_document())
     })
 }

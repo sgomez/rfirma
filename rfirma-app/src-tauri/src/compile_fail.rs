@@ -3,13 +3,12 @@
 /// ```
 /// use rfirma_lib::signing::adapters::ffi::parse_presign;
 /// use rfirma_lib::signing::domain::bridge::{Format, PostSignRequest};
-/// use rfirma_lib::signing::domain::TokenSignature;
 /// use rfirma_lib::site::domain::protocol::SafCode;
 ///
 /// let presigned = parse_presign(r#"{"ok":true,"session":"<xml/>","pre":"MTIz","stamp":"c2VsbG8="}"#)
 ///     .expect("es el JSON del contrato");
 /// let sealed = presigned
-///     .sealed_with(&TokenSignature::invented(), presigned.stamp())
+///     .sealed_with(presigned.invented_signatures(), presigned.stamp())
 ///     .expect("el sello es el mismo");
 /// let request = PostSignRequest {
 ///     format: Format::Pades,
@@ -28,7 +27,7 @@ pub struct TheDoorThatIsOpenSoTheClosedOnesBelowAreNotATypo;
 ///
 /// let _ = SealedPreSignature {
 ///     session: String::new(),
-///     pkcs1_b64: String::new(),
+///     signed: Vec::new(),
 ///     stamp: SessionSeal::from_bridge(""),
 /// };
 /// ```
@@ -51,6 +50,7 @@ pub struct ThePostsignTakesNoSignatureInTheClear;
 ///
 /// let _ = PreSignRequest {
 ///     format: Format::Cades,
+///     operation: rfirma_lib::signing::domain::bridge::SignatureOperation::Sign,
 ///     document_b64: "",
 ///     algorithm: "SHA256withRSA",
 ///     certificate_chain_b64: "",

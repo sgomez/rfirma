@@ -4,9 +4,8 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
 use rfirma_lib::signing::domain::bridge::{
-    BridgeError, Format, PostSignRequest, PreSignRequest, LIBRARY_FILE,
+    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, LIBRARY_FILE,
 };
-use rfirma_lib::signing::domain::TokenSignature;
 
 /// Un PDF mínimo en Base64 no válido para firmar.
 const NOT_A_PDF_B64: &str = "bm8gc295IHVuIFBERg==";
@@ -41,6 +40,7 @@ fn presign_of_something_invalid_in(
     bridge
         .presign(PreSignRequest {
             format,
+            operation: SignatureOperation::Sign,
             document_b64: NOT_A_PDF_B64,
             algorithm: "SHA256withRSA",
             certificate_chain_b64: NOT_A_CERTIFICATE_B64,
@@ -52,7 +52,7 @@ fn presign_of_something_invalid_in(
 fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeError> {
     let presigned = parse_presign(NOT_A_PRESIGN_JSON)?;
     let sealed = presigned
-        .sealed_with(&TokenSignature::invented(), presigned.stamp())
+        .sealed_with(presigned.invented_signatures(), presigned.stamp())
         .expect("el sello es el mismo");
     bridge
         .postsign(PostSignRequest {
@@ -164,10 +164,12 @@ mod full_cycle {
     use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
-    use rfirma_lib::signing::domain::bridge::{BridgeError, ExpandRequest, FilterRequest, Format};
+    use rfirma_lib::signing::domain::bridge::{
+        BridgeError, ExpandRequest, FilterRequest, Format, SignatureOperation,
+    };
     use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
-        TokenSignature,
+        TokenSignatures,
     };
     use rfirma_lib::site::application::filtering;
     use rfirma_lib::site::domain::protocol::site_filter;
@@ -309,6 +311,15 @@ mod full_cycle {
 
     /// Ciclo trifásico CAdES completo contra el token (ADR-0001).
     fn sign_cades(data: &[u8], mode: &str) -> Vec<u8> {
+        cades_cycle(data, SignatureOperation::Sign, &[("mode", mode)])
+    }
+
+    /// El mismo ciclo, con la operación y los `extraParams` que se le digan.
+    fn cades_cycle(
+        data: &[u8],
+        operation: SignatureOperation,
+        declared: &[(&str, &str)],
+    ) -> Vec<u8> {
         let bridge = bridge();
         let certificate = signing_certificate();
         let chain = vec![certificate.der().to_vec()];
@@ -320,12 +331,16 @@ mod full_cycle {
             sign_reason: None,
             allow_unregistered_signatures: false,
         };
-        let from_the_site = BTreeMap::from([("mode".to_owned(), mode.to_owned())]);
+        let from_the_site: BTreeMap<String, String> = declared
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+            .collect();
 
         let cycle = cycle::presign(
             &bridge,
             SigningRequest {
                 format: Format::Cades,
+                operation,
                 document: AdmissibleDocument::check_for(Format::Cades, data)
                     .expect("CAdES firma cualquier byte"),
                 chain: &chain,
@@ -341,7 +356,7 @@ mod full_cycle {
             .expect("el token debería firmar los atributos");
 
         cycle
-            .postsign(&bridge, &signature, &cycle.seal_in_transit())
+            .postsign(&bridge, signature, &cycle.seal_in_transit())
             .expect("la postfirma debería ensamblar el CMS")
             .into_signed_document()
     }
@@ -440,6 +455,60 @@ mod full_cycle {
         assert_eq!(openssl_cms_verify(&signature, Some(&challenge)), CHALLENGE);
     }
 
+    /// La firma CAdES implícita del banco de referencia, la entrada de una cofirma o una contrafirma.
+    const A_REFERENCE_CADES: &[u8] =
+        include_bytes!("../../../testdata/reference/cades-implicit.p7s");
+
+    /// El reto que firma `cades-implicit.p7s`, para verificar la cofirma con openssl.
+    const A_REFERENCE_CHALLENGE: &[u8] =
+        include_bytes!("../../../testdata/reference/challenge.bin");
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_cades_cosignature_over_the_reference_signature_validates() {
+        let cosigned = cades_cycle(
+            A_REFERENCE_CADES,
+            SignatureOperation::Cosign,
+            &[("mode", "implicit")],
+        );
+        let signature = write_to_target("cades-cofirma.p7s", &cosigned);
+
+        assert_eq!(
+            openssl_cms_verify(&signature, None),
+            A_REFERENCE_CHALLENGE,
+            "la cofirma conserva el contenido de la firma que cofirmó"
+        );
+        the_original_validator_accepts(&signature);
+    }
+
+    /// Contrafirma la firma de referencia con el objetivo pedido y la valida.
+    fn countersign_the_reference(target: &str, name: &str) {
+        let countersigned = cades_cycle(
+            A_REFERENCE_CADES,
+            SignatureOperation::Countersign,
+            &[("target", target)],
+        );
+        let signature = write_to_target(name, &countersigned);
+
+        assert_ne!(
+            countersigned, A_REFERENCE_CADES,
+            "la contrafirma tiene que haber añadido algo"
+        );
+        the_original_validator_accepts(&signature);
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_cades_countersignature_over_the_whole_tree_validates() {
+        countersign_the_reference("tree", "cades-contrafirma-tree.p7s");
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_cades_countersignature_over_the_leafs_validates() {
+        countersign_the_reference("leafs", "cades-contrafirma-leafs.p7s");
+    }
+
     /// Genera un PDF sintético de una página.
     fn a_one_page_pdf() -> Vec<u8> {
         let content = format!(
@@ -529,6 +598,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
+                operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
                 config,
@@ -543,7 +613,7 @@ mod full_cycle {
             .expect("el token debería firmar los atributos");
 
         cycle
-            .postsign(&bridge, &signature, &cycle.seal_in_transit())
+            .postsign(&bridge, signature, &cycle.seal_in_transit())
             .expect("la postfirma deberia ensamblar el PDF")
             .into_signed_document()
     }
@@ -670,6 +740,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
+                operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
                 config,
@@ -682,7 +753,7 @@ mod full_cycle {
         cycle
             .postsign(
                 &bridge,
-                &TokenSignature::invented(),
+                cycle.invented_signatures(),
                 &cycle.seal_in_transit(),
             )
             .expect("la postfirma deberia componer el PDF con el PK1 inventado")
@@ -900,7 +971,7 @@ mod full_cycle {
     }
 
     /// Prepara un ciclo firmado en token listo para postfirma.
-    fn a_cycle_ready_to_postsign() -> (NativeBridge, cycle::OpenCycle, TokenSignature) {
+    fn a_cycle_ready_to_postsign() -> (NativeBridge, cycle::OpenCycle, TokenSignatures) {
         let bridge = bridge();
         let pdf = a_one_page_pdf();
         let certificate = signing_certificate();
@@ -912,6 +983,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
+                operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(&pdf).expect("es admisible"),
                 chain: &chain,
                 config: &config,
@@ -934,7 +1006,7 @@ mod full_cycle {
         let tampered = seal_with_field_altered(&cycle.seal_in_transit(), prefix);
 
         let outcome = cycle
-            .postsign(&bridge, &signature, &tampered)
+            .postsign(&bridge, signature, &tampered)
             .map(|completed| format!("un PDF de {} bytes", completed.signed_document().len()));
 
         assert!(

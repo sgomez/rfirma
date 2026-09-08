@@ -36,10 +36,10 @@ pub use launch::{
 };
 pub use message::ChannelMessage;
 pub use operation::{
-    pairs_of, read_operation, BatchRequest, LoadRequest, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteOperation, ACCEPTED_ALGORITHMS,
-    ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE,
-    SIGN, SIGN_AND_SAVE,
+    pairs_of, read_operation, refuse_a_countersignature_outside_cades, BatchRequest, CounterTarget,
+    LoadRequest, SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound,
+    SiteOperation, ACCEPTED_ALGORITHMS, ACCEPTED_BATCH_ALGORITHMS, AUTO, BATCH, COSIGN, COUNTERSIGN,
+    LOAD, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,

@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::signing::domain::Refusal as Inadmissible;
 use crate::site::application::filtering;
 use crate::site::domain::batch_error::BatchError;
@@ -59,6 +59,8 @@ pub struct SiteTerms<'a, E: FilterEngine> {
     pub filter: &'a SiteFilter,
     /// Formato de firma que pidió la sede, ya atendido por el puente.
     pub format: Format,
+    /// Qué pidió hacer la sede con el documento.
+    pub operation: SignatureOperation,
     /// Parámetros adicionales declarados por la sede.
     pub from_the_site: &'a BTreeMap<String, String>,
     /// Si la sede consintió cofirmar sobre firmas que no se reconocen.
@@ -86,6 +88,7 @@ pub fn begin_for_the_site<E: FilterEngine>(
         document,
         certificate: chosen,
         format: terms.format,
+        operation: terms.operation,
         from_the_site: terms.from_the_site,
         allow_unregistered_signatures: terms.allow_unregistered_signatures,
     })?)

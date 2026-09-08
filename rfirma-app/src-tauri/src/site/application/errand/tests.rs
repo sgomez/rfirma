@@ -24,7 +24,7 @@ use crate::signing::application::session::{self, CycleFailure, DocumentToSign, S
 use crate::signing::application::tests::{
     a_memory, ABridgeThatSigns, AnIsolateWith, NoIsolate, A_CADES_SIGNATURE,
 };
-use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::ports::{Bridge, IsolateHost, Signer};
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
@@ -201,6 +201,14 @@ impl TheBridge {
         call.extra_params.clone()
     }
 
+    fn operation_of_the_presign(&self) -> SignatureOperation {
+        let Self::Answering(bridge) = self else {
+            panic!("este puente no atiende nada");
+        };
+        let calls = bridge.calls();
+        calls.first().expect("la prefirma cruzo").operation
+    }
+
     fn format_of_the_presign(&self) -> Format {
         let Self::Answering(bridge) = self else {
             panic!("este puente no atiende nada");
@@ -331,6 +339,7 @@ impl SiteSigning for TheNeighbours<'_> {
             request.certificate,
             session::DeclaredByTheSite {
                 format: request.format,
+                operation: request.operation,
                 parameters: request.from_the_site,
                 allow_unregistered_signatures: request.allow_unregistered_signatures,
             },
@@ -3606,5 +3615,84 @@ fn a_batch_that_is_declined_ends_in_a_cancel() {
     assert_eq!(
         what_the_site_received(&mut wire),
         Some(frontier::cancelled().on_the_wire())
+    );
+}
+
+/// La contrafirma que pide una sede, con el formato y el `target` que se le digan.
+fn a_countersignature_asking_for(format: &str, target: &str) -> AfirmaUrl {
+    let document = base64::engine::general_purpose::URL_SAFE.encode(A_CADES_SIGNATURE);
+    let properties = base64::engine::general_purpose::URL_SAFE.encode(format!("target={target}\n"));
+    let text = format!(
+        "afirma://countersign?op=countersign&idsession={CREDENTIAL}&format={format}&\
+         algorithm=SHA256withRSA&dat={document}&properties={properties}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+#[test]
+fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_target() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("target=tree\n");
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    let (handle, _wire) = the_wire();
+
+    let step = attend(
+        &desk,
+        a_countersignature_asking_for("CAdES", "tree"),
+        handle,
+        &live,
+    )
+    .expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("una contrafirma CAdES llega al consentimiento: {step:?}");
+    };
+
+    let chosen = asking.certificates[0].id.clone();
+    let Consented::SigningWith(_) = consent(&desk, &chosen, &live).expect("el certificado vale")
+    else {
+        panic!("una firma se consiente firmando");
+    };
+
+    assert_eq!(
+        desk.neighbours.bridge.operation_of_the_presign(),
+        SignatureOperation::Countersign
+    );
+    assert_eq!(
+        desk.neighbours.bridge.format_of_the_presign(),
+        Format::Cades
+    );
+    assert!(
+        desk.neighbours
+            .bridge
+            .extra_params_of_the_presign()
+            .contains("target=tree"),
+        "el objetivo de la contrafirma cruza al puente sin traducir"
     );
 }

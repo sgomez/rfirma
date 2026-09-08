@@ -217,7 +217,7 @@ impl From<SignatureRound> for SignatureRoundView {
     fn from(round: SignatureRound) -> Self {
         match round {
             SignatureRound::First => Self::Sign,
-            SignatureRound::Again => Self::Cosign,
+            SignatureRound::Again | SignatureRound::Counter { .. } => Self::Cosign,
         }
     }
 }

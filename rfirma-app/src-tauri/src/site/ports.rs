@@ -7,16 +7,30 @@ use std::sync::Arc;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{BridgeError, Format, XadesVariant, XmlDsigVariant};
+use crate::signing::domain::bridge::{
+    BridgeError, Format, SignatureOperation, XadesVariant, XmlDsigVariant,
+};
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
-use crate::site::domain::protocol::{AfirmaUrl, RequestedFormat, XadesEnvelope, XmlDsigEnvelope};
+use crate::site::domain::protocol::{
+    AfirmaUrl, RequestedFormat, SignatureRound, XadesEnvelope, XmlDsigEnvelope,
+};
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::tls_error::TlsError;
 use crate::site::domain::trust_error::TrustError;
+
+impl From<SignatureRound> for SignatureOperation {
+    fn from(round: SignatureRound) -> Self {
+        match round {
+            SignatureRound::First => Self::Sign,
+            SignatureRound::Again => Self::Cosign,
+            SignatureRound::Counter { .. } => Self::Countersign,
+        }
+    }
+}
 
 impl From<RequestedFormat> for Format {
     fn from(requested: RequestedFormat) -> Self {
@@ -241,6 +255,8 @@ pub struct SiteSigningRequest<'a> {
     pub certificate: &'a TokenCertificate,
     /// El formato de firma que pidió la sede.
     pub format: Format,
+    /// Qué pidió hacer la sede con el documento.
+    pub operation: SignatureOperation,
     /// Los parámetros de la sede, ya expandidos.
     pub from_the_site: &'a BTreeMap<String, String>,
     /// Si la sede consintió cofirmar sobre firmas que no se reconocen.

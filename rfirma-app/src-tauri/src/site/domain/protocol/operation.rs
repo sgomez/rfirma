@@ -44,6 +44,12 @@ pub const BATCH: &str = "batch";
 /// `format=auto`: la sede no fija formato y pide que se deduzca del documento.
 pub const AUTO: &str = "auto";
 
+/// `extraParams`: a qué firmas alcanza la contrafirma.
+const TARGET: &str = "target";
+
+const TARGET_TREE: &str = "tree";
+const TARGET_LEAFS: &str = "leafs";
+
 /// El algoritmo que rFirma sabe producir.
 pub const ACCEPTED_ALGORITHMS: [&str; 2] = ["sha256", "sha256withrsa"];
 
@@ -92,17 +98,42 @@ pub enum SiteOperation {
     Batch(BatchRequest),
 }
 
-/// Cuál de las dos firmas pidió la sede.
+/// A qué firmas de la que llega alcanza una contrafirma (`CounterSignTarget`, 1.9.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CounterTarget {
+    /// `tree`: se contrafirma el árbol entero.
+    Tree,
+    /// `leafs`: se contrafirman solo las hojas.
+    Leafs,
+}
+
+impl CounterTarget {
+    /// El objetivo que nombra ese `target=`, o nada si no es ninguno de los dos.
+    pub fn named(text: &str) -> Option<Self> {
+        match text.trim().to_ascii_lowercase().as_str() {
+            TARGET_TREE => Some(Self::Tree),
+            TARGET_LEAFS => Some(Self::Leafs),
+            _ => None,
+        }
+    }
+}
+
+/// Cuál de las tres firmas pidió la sede.
 ///
-/// En PAdES las dos recorren el mismo camino —cofirmar es volver a firmar—, y
-/// la distinción se guarda porque es lo que la sede pidió y lo que la ventana
-/// tiene que contarle a la persona antes de que consienta.
+/// En PAdES las dos primeras recorren el mismo camino —cofirmar es volver a
+/// firmar—, y la distinción se guarda porque es lo que la sede pidió y lo que
+/// la ventana tiene que contarle a la persona antes de que consienta.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SignatureRound {
     /// `sign`: se firma lo que llega.
     First,
-    /// `cosign`: se vuelve a firmar sobre las firmas que el PDF ya trae.
+    /// `cosign`: se vuelve a firmar sobre las firmas que el documento ya trae.
     Again,
+    /// `countersign`: se firman las firmas que trae el documento.
+    Counter {
+        /// A cuáles de ellas alcanza.
+        target: CounterTarget,
+    },
 }
 
 /// La petición de `sign` o de `cosign`.
@@ -455,7 +486,7 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         })),
         SIGN => sign_request(url, SignatureRound::First),
         COSIGN => sign_request(url, SignatureRound::Again),
-        COUNTERSIGN => Err(countersign_refusal()),
+        COUNTERSIGN => sign_request(url, counter_round(&declared_properties(url)?)?),
         SAVE => save_request(url),
         LOAD => load_request(url),
         BATCH => batch_request(url),
@@ -475,6 +506,9 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// firma no se merece un `SAF_03` sobre el algoritmo.
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
     let requested = requested_format(url)?;
+    if let Some(format) = requested {
+        refuse_a_countersignature_outside_cades(round, format)?;
+    }
     let document = match requested {
         Some(_) => None,
         None => Some(read_document(url)?),
@@ -488,14 +522,48 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
     };
 
     let declared = declared_properties(url)?;
+    let format = requested.unwrap_or_else(|| format_of(&document));
+    refuse_a_countersignature_outside_cades(round, format)?;
     Ok(SiteOperation::Sign(SignRequest {
         round,
         algorithm,
-        format: requested.unwrap_or_else(|| format_of(&document)),
+        format,
         document,
         filter: site_filter(&declared),
         declared,
     }))
+}
+
+/// La ronda de `countersign`, con el objetivo que declaró la sede o el `leafs` del original.
+fn counter_round(declared: &[(String, String)]) -> Result<SignatureRound, Refusal> {
+    let Some(declared) = property_value(declared, TARGET) else {
+        return Ok(SignatureRound::Counter {
+            target: CounterTarget::Leafs,
+        });
+    };
+    CounterTarget::named(&declared)
+        .map(|target| SignatureRound::Counter { target })
+        .ok_or_else(|| {
+            Refusal::about(
+                Parameter::Properties,
+                format!(
+                    "el objetivo de contrafirma '{declared}' no se atiende: solo 'tree' o 'leafs'"
+                ),
+            )
+        })
+}
+
+/// Solo la familia CAdES contrafirma: el resto sale con el rechazo del original.
+pub fn refuse_a_countersignature_outside_cades(
+    round: SignatureRound,
+    format: RequestedFormat,
+) -> Result<(), Refusal> {
+    let counters = matches!(round, SignatureRound::Counter { .. });
+    let cades = matches!(format, RequestedFormat::Cades | RequestedFormat::Cms);
+    if counters && !cades {
+        return Err(countersign_refusal());
+    }
+    Ok(())
 }
 
 /// El formato que nombra la sede, nada si pide `auto`, o el `SAF_06` que nombra
@@ -527,11 +595,11 @@ fn check_algorithm(url: &AfirmaUrl) -> Result<String, Refusal> {
     Ok(algorithm.trim().to_owned())
 }
 
-/// `'countersign' no existe en PAdES`, compartido por `read_operation` y por el `cop` de `signandsave`.
+/// `'countersign' solo existe en CAdES`, compartido por `read_operation` y por el `cop` de `signandsave`.
 fn countersign_refusal() -> Refusal {
     Refusal::new(
         SafCode::UnsupportedOperation,
-        "'countersign' no existe en PAdES: AOPDFSigner.countersign lanza una \
+        "'countersign' no existe fuera de CAdES: AOPDFSigner.countersign lanza una \
          UnsupportedOperationException",
     )
 }
@@ -539,9 +607,13 @@ fn countersign_refusal() -> Refusal {
 /// La petición de `signandsave`: misma lectura y mismos rechazos que `sign`,
 /// con `dat` opcional y lo del guardado (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
 fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
-    let round = round_of_cop(url)?;
+    let declared = declared_properties(url)?;
+    let round = round_of_cop(url, &declared)?;
 
     let requested = requested_format(url)?;
+    if let Some(format) = requested {
+        refuse_a_countersignature_outside_cades(round, format)?;
+    }
     let document = match requested {
         Some(_) => None,
         None => optional_document(url)?,
@@ -554,7 +626,6 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         None => optional_document(url)?,
     };
 
-    let declared = declared_properties(url)?;
     Ok(SiteOperation::SignAndSave(SignAndSaveRequest {
         round,
         algorithm,
@@ -573,8 +644,8 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     }))
 }
 
-/// La ronda que pide `cop` (`sign`→`First`, `cosign`→`Again`), o el `SAF_04` que la nombra.
-fn round_of_cop(url: &AfirmaUrl) -> Result<SignatureRound, Refusal> {
+/// La ronda que pide `cop`, o el `SAF_04` que la nombra.
+fn round_of_cop(url: &AfirmaUrl, declared: &[(String, String)]) -> Result<SignatureRound, Refusal> {
     let cop = url
         .parameter("cop")
         .unwrap_or_default()
@@ -583,10 +654,13 @@ fn round_of_cop(url: &AfirmaUrl) -> Result<SignatureRound, Refusal> {
     match cop.as_str() {
         SIGN => Ok(SignatureRound::First),
         COSIGN => Ok(SignatureRound::Again),
-        COUNTERSIGN => Err(countersign_refusal()),
+        COUNTERSIGN => counter_round(declared),
         other => Err(Refusal::new(
             SafCode::UnsupportedOperation,
-            format!("el 'cop' de 'signandsave' no admite '{other}': solo 'sign' o 'cosign'"),
+            format!(
+                "el 'cop' de 'signandsave' no admite '{other}': solo 'sign', 'cosign' o \
+                 'countersign'"
+            ),
         )),
     }
 }

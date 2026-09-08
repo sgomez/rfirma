@@ -8,9 +8,9 @@ use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
-    forget_the_box, visible_signature_of, AfirmaUrl, BatchRequest, LoadRequest, RequestedFormat,
-    SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
-    SiteVisibleSignature, StickyCertificate,
+    forget_the_box, refuse_a_countersignature_outside_cades, visible_signature_of, AfirmaUrl,
+    BatchRequest, LoadRequest, RequestedFormat, SaveRequest, SelectCertificate, SignAndSaveRequest,
+    SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature, StickyCertificate,
 };
 
 use super::outcome::{
@@ -233,6 +233,10 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
+    if let Err(refusal) = refuse_a_countersignature_outside_cades(ask.round, ask.format) {
+        return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
+    }
+
     let format = match Format::from(ask.format).bridged() {
         Ok(format) => format,
         Err(error) => {

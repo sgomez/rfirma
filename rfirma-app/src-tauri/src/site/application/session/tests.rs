@@ -94,6 +94,7 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
             engine: &engine,
             filter: &SiteFilter::default(),
             format: Format::Pades,
+            operation: crate::signing::domain::bridge::SignatureOperation::Sign,
             from_the_site: &BTreeMap::new(),
             allow_unregistered_signatures: false,
         },
