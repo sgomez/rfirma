@@ -1,5 +1,14 @@
 # El banco de medición
 
+`make-reference-signatures.sh` y `validate.sh` (con `reference-signer/`, que
+solo resuelve su clasepath desde Maven local, ADR-0002) son la excepción a
+todo lo de abajo: **sí son herramientas de trabajo**, vivas. No tocan el
+puente ni la frontera FFI; llaman a los firmadores monofásicos del original
+1.9.2 (`AOCAdESSigner`, `AOXAdESSigner`, `AOFacturaESigner`) para producir y
+validar `testdata/reference/`, el banco que usa cada ticket de formato
+(CAdES, XAdES, FacturaE) para comparar su salida con la del original. Ver
+`testdata/reference/README.md`.
+
 Estos guiones son el banco con el que se midieron los issues
 [#2](https://github.com/sgomez/rfirma/issues/2),
 [#12](https://github.com/sgomez/rfirma/issues/12),

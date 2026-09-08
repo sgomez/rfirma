@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>es.gob.afirma</groupId>
+  <artifactId>rfirma-testbench-reference-signer</artifactId>
+  <version>0.1.0</version>
+  <packaging>pom</packaging>
+
+  <name>rfirma-testbench-reference-signer</name>
+  <description>
+    Solo resuelve el classpath de make-reference-signatures.sh y validate.sh
+    (ADR-0002). No produce jar: java ejecuta ReferenceSigner.java y
+    SignatureValidator.java en modo fichero unico (JEP 330).
+  </description>
+
+  <properties>
+    <autofirma.version>1.9.2</autofirma.version>
+  </properties>
+
+  <dependencies>
+    <!-- CAdES implicito/explicito, cofirma y contrafirma. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-cades</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <!-- CAdESCoSigner/CAdESCounterSigner, a los que AOCAdESSigner delega. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-cades-multi</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <!-- XAdES Detached/Enveloping/Enveloped, cofirma, contrafirma y FacturaE
+         (AOFacturaESigner vive en este modulo, no en uno propio: no existe
+         "afirma-crypto-facturae" en la 1.9.2). -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-xades</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-core-xml</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <!-- El oraculo de validate.sh. SignValiderFactory.getSignValider prueba
+         PDF, OOXML y ODF antes de caer en binario/XML aunque los datos sean
+         CAdES o XAdES (DataAnalizerUtil.isPDF/isOOXML/isODF instancian
+         AOPDFSigner/AOOOXMLSigner/AOODFSigner y solo atrapan Exception, no
+         Error), asi que esos tres modulos hacen falta en el classpath aunque
+         este banco no produzca esos formatos. Solo se excluye afirma-ui-utils
+         (ADR-0012: no hace falta AWT aqui, y es el que exige GraalVM 25 para
+         cargar sin abortar). -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-validation</artifactId>
+      <version>${autofirma.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>es.gob.afirma</groupId>
+          <artifactId>afirma-ui-utils</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- SIN ESTOS, "nearest wins" (ADR-0002): el pom publicado de cada modulo
+         de arriba pide a sus hermanos ${clienteafirma.version}, que en su
+         propio padre vale "1.9" y no "1.9.2" salvo que quien lo construyo
+         pasara -Dclienteafirma.version=1.9.2 (bootstrap.sh lo hace). Declarar
+         aqui la version exacta, a la misma profundidad que los de arriba, es
+         lo que gana la mediacion y evita bajar en silencio la rama 1.9 que
+         tambien vive en ~/.m2. La misma trampa que documenta
+         rfirma-native-bridge/pom.xml, repetida porque este es un reactor
+         Maven distinto y no hereda su mediacion. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-core</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-core-keystores</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-core-prefs</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-cms</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-core-pkcs7</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-core-pkcs7-tsp</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-xmlsignature</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-keystores-jmulticard-ui</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-pdf</artifactId>
+      <version>${autofirma.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>es.gob.afirma</groupId>
+          <artifactId>afirma-ui-utils</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-pdf-common</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-ooxml</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-odf</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+  </dependencies>
+
+  <!-- SIN <build>: los guiones invocan el goal mvn dependency:build-classpath
+       directamente (mdep.outputFile), sin pasar por ninguna fase del ciclo de
+       vida. Este pom.xml no compila ni empaqueta nada. -->
+</project>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<documento xmlns="urn:rfirma:testbench:document">
+  <titulo>Documento de prueba rfirma</titulo>
+  <cuerpo>Contenido determinista para el banco de referencia XAdES.</cuerpo>
+</documento>
