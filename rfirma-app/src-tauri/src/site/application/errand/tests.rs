@@ -3689,10 +3689,11 @@ fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
         Format::Cades
     );
     assert!(
-        desk.neighbours
-            .bridge
-            .extra_params_of_the_presign()
-            .contains("target=tree"),
+        policies
+            .asked
+            .borrow()
+            .iter()
+            .any(|asked| asked.contains("target=tree")),
         "el objetivo de la contrafirma cruza al puente sin traducir"
     );
 }

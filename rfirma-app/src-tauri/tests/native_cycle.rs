@@ -481,32 +481,69 @@ mod full_cycle {
         the_original_validator_accepts(&signature);
     }
 
-    /// Contrafirma la firma de referencia con el objetivo pedido y la valida.
-    fn countersign_the_reference(target: &str, name: &str) {
+    /// La contrafirma de referencia sobre las hojas, la medida de cuántos firmantes añade una.
+    const A_REFERENCE_COUNTERSIGN: &[u8] =
+        include_bytes!("../../../testdata/reference/cades-implicit.countersign-leafs.p7s");
+
+    /// El atributo `messageDigest` (1.2.840.113549.1.9.4), uno por `SignerInfo` del CMS.
+    const MESSAGE_DIGEST_OID: &[u8] = &[
+        0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x04,
+    ];
+
+    fn signers_in(signature: &[u8]) -> usize {
+        signature
+            .windows(MESSAGE_DIGEST_OID.len())
+            .filter(|window| *window == MESSAGE_DIGEST_OID)
+            .count()
+    }
+
+    /// Contrafirma un CAdES con el objetivo pedido, lo valida y devuelve el resultado.
+    fn countersign(signature: &[u8], target: &str, name: &str) -> Vec<u8> {
         let countersigned = cades_cycle(
-            A_REFERENCE_CADES,
+            signature,
             SignatureOperation::Countersign,
             &[("target", target)],
         );
-        let signature = write_to_target(name, &countersigned);
+        let written = write_to_target(name, &countersigned);
 
         assert_ne!(
-            countersigned, A_REFERENCE_CADES,
+            countersigned, signature,
             "la contrafirma tiene que haber añadido algo"
         );
-        the_original_validator_accepts(&signature);
+        the_original_validator_accepts(&written);
+        countersigned
     }
 
     #[test]
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
-    fn a_cades_countersignature_over_the_whole_tree_validates() {
-        countersign_the_reference("tree", "cades-contrafirma-tree.p7s");
+    fn a_cades_countersignature_over_the_leafs_adds_the_signer_that_the_reference_adds() {
+        let countersigned = countersign(A_REFERENCE_CADES, "leafs", "cades-contrafirma-leafs.p7s");
+
+        assert_eq!(
+            signers_in(&countersigned),
+            signers_in(A_REFERENCE_COUNTERSIGN),
+            "la contrafirma sobre las hojas deja los mismos firmantes que la del original"
+        );
     }
 
     #[test]
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
-    fn a_cades_countersignature_over_the_leafs_validates() {
-        countersign_the_reference("leafs", "cades-contrafirma-leafs.p7s");
+    fn a_cades_countersignature_over_the_whole_tree_reaches_more_signers_than_over_the_leafs() {
+        let once = countersign(A_REFERENCE_CADES, "leafs", "cades-contrafirma-una-vez.p7s");
+        let leafs = countersign(&once, "leafs", "cades-contrafirma-leafs-otra-vez.p7s");
+        let tree = countersign(&once, "tree", "cades-contrafirma-tree.p7s");
+
+        assert_eq!(
+            signers_in(&leafs),
+            signers_in(&once) + 1,
+            "sobre las hojas se contrafirma solo el firmante mas profundo"
+        );
+        assert!(
+            signers_in(&tree) > signers_in(&leafs),
+            "sobre el arbol se contrafirma tambien el firmante de arriba: {} frente a {}",
+            signers_in(&tree),
+            signers_in(&leafs)
+        );
     }
 
     /// Genera un PDF sintético de una página.

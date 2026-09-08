@@ -332,7 +332,6 @@ fn a_countersignature_asks_the_secret_once_and_signs_every_block_it_got() {
         .postsign(&bridge, signatures, &seal)
         .expect("el sello volvio intacto");
 
-    assert_eq!(cycle.to_be_signed().len(), 3);
     assert_eq!(token.signatures.get(), 3, "una firma por bloque");
     assert_eq!(token.secrets.get(), 1, "el secreto se pide una sola vez");
     assert!(matches!(secret, StoreSecret::NotNeeded));

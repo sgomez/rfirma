@@ -501,9 +501,10 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// La petición de firma, con las cuatro comprobaciones de
 /// `UrlParametersToSign` que rFirma hereda.
 ///
-/// El orden importa poco salvo en una cosa: el **formato** se mira antes que
-/// nada de lo demás, porque una sede que nombra un formato que el original no
-/// firma no se merece un `SAF_03` sobre el algoritmo.
+/// El **formato** se mira antes que el algoritmo —de ahí la guarda de
+/// contrafirma repetida sobre `requested`, que es lo único que compra—, y el
+/// **objetivo** de la contrafirma antes que ambos, en `read_operation`, porque
+/// sin ronda no hay petición que construir.
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
     let requested = requested_format(url)?;
     if let Some(format) = requested {

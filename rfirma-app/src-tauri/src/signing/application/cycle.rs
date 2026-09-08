@@ -6,7 +6,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::{
-    BridgeError, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature, SignatureOperation,
+    BridgeError, PostSignRequest, PreSignRequest, PreSignature, SignatureOperation,
 };
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Format, Refusal, SealMismatch,
@@ -156,11 +156,6 @@ pub fn presign<B: Bridge + ?Sized>(
 }
 
 impl OpenCycle {
-    /// Bloques que el token debe firmar, sin hashear; una contrafirma trae más de uno.
-    pub fn to_be_signed(&self) -> &[PreSignBlock] {
-        self.presigned.blocks()
-    }
-
     /// Certificado con el que se abrió el ciclo.
     pub fn certificate(&self) -> &CertificateRef {
         &self.certificate
