@@ -35,8 +35,10 @@ import java.util.TimeZone;
  *
  * <p>Dentro van el algoritmo, el {@code TIME}, la zona horaria, el
  * <b>SHA-256 del PDF prefirmado</b>, el <b>SHA-256 de la cadena de
- * certificados</b> y la operacion pedida con su objetivo. Fuera quedan
- * {@code PRE} y {@code PID}, que son salida de la prefirma y no configuracion.
+ * certificados</b> y la operacion pedida con su objetivo. En XAdES lleva ademas
+ * el <b>SHA-256 del {@code BASE}</b> y el {@code ENCODING} de la sesion. Fuera
+ * quedan {@code PRE} y {@code PID}, que son salida de la prefirma y no
+ * configuracion.
  *
  * <p>El sello es <b>opaco para Rust por convencion</b>, no por construccion: el
  * bloque es texto plano en Base64 y no lleva ninguna marca de integridad, asi
@@ -62,6 +64,10 @@ public final class SessionStamp {
     private static final String KEY_OPERATION = "OP";
     /** El objetivo de una contrafirma. Solo lo llevan los sellos que la sellan. */
     private static final String KEY_TARGET = "TARGET";
+    /** SHA-256 en hexadecimal del {@code BASE} de una sesion XAdES. */
+    private static final String KEY_XML_BASE = "BASE";
+    /** La codificacion del XML prefirmado. Solo la llevan los sellos XAdES. */
+    private static final String KEY_XML_ENCODING = "ENC";
     /** Prefijo de cada extraParam efectivo. */
     private static final String PARAM_PREFIX = "P.";
 
@@ -72,11 +78,14 @@ public final class SessionStamp {
     private final String chainDigest;
     private final String operation;
     private final String target;
+    private final String xmlBaseDigest;
+    private final String xmlEncoding;
     private final Properties extraParams;
 
     private SessionStamp(final String algorithm, final String time,
             final String timeZoneId, final String documentDigest, final String chainDigest,
-            final String operation, final String target, final Properties extraParams) {
+            final String operation, final String target, final String xmlBaseDigest,
+            final String xmlEncoding, final Properties extraParams) {
         this.algorithm = algorithm;
         this.time = time;
         this.timeZoneId = timeZoneId;
@@ -84,6 +93,8 @@ public final class SessionStamp {
         this.chainDigest = chainDigest;
         this.operation = operation;
         this.target = target;
+        this.xmlBaseDigest = xmlBaseDigest;
+        this.xmlEncoding = xmlEncoding;
         this.extraParams = extraParams;
     }
 
@@ -126,7 +137,35 @@ public final class SessionStamp {
             throw new IllegalArgumentException("no hay operacion que sellar");
         }
         return new SessionStamp(algorithm, time, timeZone.getID(), digestOf(document),
-                digestOfChain(chain), operation, target, copy);
+                digestOfChain(chain), operation, target, null, null, copy);
+    }
+
+    /**
+     * Anade al sello el XML base que la prefirma XAdES deja en la sesion.
+     *
+     * <p>El {@code BASE} es el XML ya firmado con una clave temporal y sin las
+     * partes comunes, y la postfirma lo <b>reinyecta</b> sustituyendo el
+     * {@code SignatureValue} de mentira por el PKCS#1 real. Es, por tanto, el
+     * documento que de verdad se firma: si alguien lo cambia entre las dos fases
+     * la firma final cubre otra cosa, y el resultado <b>no falla</b>. Se guarda
+     * su SHA-256, no el bloque, porque el bloque es el XML entero.
+     *
+     * @param xmlBaseB64 el {@code BASE} de la sesion, tal cual viaja en ella.
+     * @param encoding   el {@code ENCODING} de la sesion, o {@code null} si no lo trae:
+     *                   es con lo que la postfirma descodifica el {@code BASE}, asi que
+     *                   cambiarlo cambia el documento igual que cambiar el {@code BASE}.
+     */
+    public SessionStamp withXmlBase(final String xmlBaseB64, final String encoding) {
+        if (xmlBaseB64 == null || xmlBaseB64.isBlank()) {
+            throw new IllegalArgumentException("no hay BASE que sellar");
+        }
+        return new SessionStamp(this.algorithm, this.time, this.timeZoneId, this.documentDigest,
+                this.chainDigest, this.operation, this.target, digestOfText(xmlBaseB64), encoding,
+                this.extraParams);
+    }
+
+    private static String digestOfText(final String text) {
+        return hex(sha256().digest(text.getBytes(StandardCharsets.UTF_8)));
     }
 
     /** SHA-256 en hexadecimal minusculas, que es lo que se guarda del documento. */
@@ -190,6 +229,12 @@ public final class SessionStamp {
         if (this.target != null) {
             append(sb, KEY_TARGET, this.target);
         }
+        if (this.xmlBaseDigest != null) {
+            append(sb, KEY_XML_BASE, this.xmlBaseDigest);
+        }
+        if (this.xmlEncoding != null) {
+            append(sb, KEY_XML_ENCODING, this.xmlEncoding);
+        }
         final List<String> names = new ArrayList<>(this.extraParams.stringPropertyNames());
         // Orden fijo: un Properties no lo tiene, y sin esto dos sellos del mismo
         // contenido saldrian distintos segun el orden de iteracion.
@@ -225,6 +270,8 @@ public final class SessionStamp {
         String chainDigest = null;
         String operation = null;
         String target = null;
+        String xmlBaseDigest = null;
+        String xmlEncoding = null;
         final Properties params = new Properties();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) {
@@ -244,6 +291,8 @@ public final class SessionStamp {
                 case KEY_CHAIN_DIGEST -> chainDigest = value;
                 case KEY_OPERATION -> operation = value;
                 case KEY_TARGET -> target = value;
+                case KEY_XML_BASE -> xmlBaseDigest = value;
+                case KEY_XML_ENCODING -> xmlEncoding = value;
                 default -> {
                     if (!key.startsWith(PARAM_PREFIX)) {
                         throw new IllegalArgumentException(
@@ -259,7 +308,7 @@ public final class SessionStamp {
                     "al sello de sesion le falta ALG, TIME, TZ, PDF, CHAIN u OP");
         }
         return new SessionStamp(algorithm, time, timeZoneId, documentDigest, chainDigest,
-                operation, target, params);
+                operation, target, xmlBaseDigest, xmlEncoding, params);
     }
 
     /**
@@ -315,6 +364,27 @@ public final class SessionStamp {
         final boolean sameTarget = this.target == null
                 ? sessionTarget == null : this.target.equals(sessionTarget);
         return this.operation.equals(sessionOperation) && sameTarget;
+    }
+
+    /**
+     * La comprobacion propia de XAdES: el {@code BASE} y el {@code ENCODING} que
+     * llegan a la postfirma son los que dejo la prefirma.
+     *
+     * <p>Un sello que no sella ningun {@code BASE} —los de PAdES y CAdES— no
+     * casa con ninguno: no es la sesion de una firma XAdES.
+     */
+    public boolean matchesXmlBase(final String xmlBaseB64, final String encoding) {
+        if (this.xmlBaseDigest == null || xmlBaseB64 == null || xmlBaseB64.isBlank()) {
+            return false;
+        }
+        final boolean sameEncoding = this.xmlEncoding == null
+                ? encoding == null : this.xmlEncoding.equals(encoding);
+        return sameEncoding && this.xmlBaseDigest.equals(digestOfText(xmlBaseB64));
+    }
+
+    /** SHA-256 del {@code BASE} sellado, o {@code null} si el sello no es XAdES. */
+    public String xmlBaseDigest() {
+        return this.xmlBaseDigest;
     }
 
     /** SHA-256 del documento prefirmado, en hexadecimal. Para el mensaje de error. */

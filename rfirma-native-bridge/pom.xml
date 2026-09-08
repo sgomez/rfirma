@@ -88,6 +88,42 @@
       <version>${autofirma.version}</version>
     </dependency>
 
+    <!-- XAdES trifasico: XAdESTriPhaseSignerServerSide vive en
+         afirma-server-triphase-signer-core, pero el firmador que construye la
+         firma con la clave temporal (XAdESSigner) vive aqui. EXPLICITA por la
+         trampa de ${clienteafirma.version}, igual que afirma-crypto-cades-multi:
+         el pom publicado la pide a esa propiedad, que vale 1.9 en el POM padre
+         del tag v1.9.2, y sin esta linea el puente compilaria contra la 1.9 en
+         silencio. Sin exclusion de afirma-ui-utils porque no la arrastra: la
+         trae afirma-crypto-pdf y solo en tiempo de ejecucion (ADR-0012),
+         verificado en docs/research/native-image-xades.md. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-xades</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+
+    <!-- El nucleo XML del original: la canonicalizacion, los espacios de
+         nombres y el manejo de la codificacion que usan tanto el firmador XAdES
+         como XAdESTriPhaseSignerUtil al quitar y reinsertar las partes comunes.
+         Llega como transitiva, y se declara explicita por la misma trampa. -->
+    <dependency>
+      <groupId>es.gob.afirma</groupId>
+      <artifactId>afirma-crypto-core-xml</artifactId>
+      <version>${autofirma.version}</version>
+    </dependency>
+
+    <!-- Apache Santuario, y NO es opcional: afirma-server-triphase-signer-core
+         EXCLUYE xmlsec de su dependencia transitiva en afirma-crypto-xades
+         (visto en su pom de ~/.m2), asi que sin esta linea la prefirma XAdES
+         falla con un NoClassDefFoundError en tiempo de ejecucion y no al
+         compilar. Medido en docs/research/native-image-xades.md. -->
+    <dependency>
+      <groupId>org.apache.santuario</groupId>
+      <artifactId>xmlsec</artifactId>
+      <version>3.0.5</version>
+    </dependency>
+
     <!-- El validador del original: el oraculo con el que las pruebas dan por
          valida una firma, y ademas la rama checkSignatures del preprocesador
          trifasico. Explicita por la misma trampa de ${clienteafirma.version}.
