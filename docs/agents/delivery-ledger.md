@@ -49,6 +49,8 @@
 - Los dos tickets sobredimensionados de esta tanda (#275, #277) se construyeron igualmente bajo `shape: build` a opus, y los dos llegaron con sus entregables completos y coherentes, un ciclo de arreglo cada uno. Para la forma de ticket de este repositorio, `oversized` desde el despachador ha significado hasta ahora «cuatro entregables relacionados en una sola rebanada de empaquetado», que opus entrega entero — no «demasiado grande para terminar».
 - #262 se retuvo deliberadamente fuera de su tanda por el orquestador por tocar el mismo fichero que el #272 en vuelo; construido después de fusionarse #272, volvió CLEAN con cero ciclos de arreglo y sin merge-fix. El solape de fichero entre miembros de una tanda merece el coste de reloj de serializarlos.
 - La vía de publicación de revisiones produjo dos revisiones con cuerpo vacío (en la PR #294 y la PR #303). En la #303 el re-revisor leyó la revisión vacía como una verificación e informó `blocked`; hubo que relanzarlo con instrucción explícita de comprobar que el cuerpo no estuviera vacío. Un revisor no debe tratar una revisión sin cuerpo en HEAD como evidencia de nada.
+- #504 puntuó `oversized` (infraestructura TLS de servlet nueva + fixtures de parser + cableado de banco de pruebas, sin precedente) pero, construido igualmente a opus bajo `oversized: build`, volvió CLEAN a la primera revisión con cero ciclos de arreglo. Mecanismo: un ticket de banco de conformidad en este repositorio lee como «varios entregables» para la rúbrica porque cada uno nombra un cambio de driver más un caso de banco, pero es una sola rebanada vertical de código de pruebas; no es genuinamente `oversized`.
+- El paso de re-revisión se bloqueó dos veces (#519, PR de #502, y #522, PR de #505) con `reason=no new commits since the last review`, porque las respuestas del trabajador de arreglo a los hilos de revisión quedan registradas por GitHub como envíos de revisión `COMMENTED` en el sha de HEAD actual. Un re-revisor que ancla en «el commit_id de la última revisión no-PENDING» acaba viendo su propio ancla en HEAD y se niega a re-revisar. Mecanismo, no estadística: se repetirá en cualquier PR donde el trabajador de arreglo responda a los hilos. El orquestador lo sorteó pasando el sha de la revisión genuina de forma explícita en el prompt de re-revisión.
 
 ## Run log
 
@@ -157,3 +159,9 @@
 2026-09-08 spec=#467 sub=#497 model=sonnet effort=medium pr=#514 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-08 spec=#467 sub=#499 model=sonnet effort=medium pr=#515 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-08 spec=#467 sub=#500 model=opus effort=medium pr=#516 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#467 sub=#498 model=opus effort=medium pr=#517 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#467 sub=#501 model=sonnet effort=medium pr=#518 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#467 sub=#502 model=opus effort=medium pr=#519 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#467 sub=#503 model=opus effort=medium pr=#520 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#467 sub=#504 model=opus effort=medium pr=#521 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-08 spec=#467 sub=#505 model=sonnet effort=medium pr=#522 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
