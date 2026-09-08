@@ -6,7 +6,7 @@ use crate::signing::application::session::{config_for, SigningSession};
 use crate::signing::application::tests::{an_order, NoIsolate};
 use crate::signing::domain::bridge::Format;
 use crate::site::application::tests::Directory;
-use crate::site::domain::protocol::{SafCode, SiteFilter};
+use crate::site::domain::protocol::{AskedAlgorithm, SafCode, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{FilterEngine, SiteSigning, SiteSigningRequest};
 use std::collections::BTreeMap;
@@ -94,6 +94,7 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
             engine: &engine,
             filter: &SiteFilter::default(),
             format: Format::Pades,
+            algorithm: AskedAlgorithm::Sha256,
             operation: crate::signing::domain::bridge::SignatureOperation::Sign,
             from_the_site: &BTreeMap::new(),
             allow_unregistered_signatures: false,

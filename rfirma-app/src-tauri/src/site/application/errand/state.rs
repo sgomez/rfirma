@@ -6,7 +6,9 @@ use std::sync::{Arc, Mutex};
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::{Format, SignatureOperation};
-use crate::site::domain::protocol::{AfirmaUrl, BatchRequest, NegotiatedCredential, SiteFilter};
+use crate::site::domain::protocol::{
+    AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, SiteFilter,
+};
 
 use super::outcome::{
     LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints, SiteOutcome,
@@ -103,6 +105,8 @@ pub(super) struct PendingSignature {
     pub(super) filter: SiteFilter,
     /// Formato de firma que pidió la sede, ya atendido por el puente.
     pub(super) format: Format,
+    /// Huella que pidió la sede para esta firma.
+    pub(super) algorithm: AskedAlgorithm,
     /// Qué pidió hacer la sede con el documento.
     pub(super) operation: SignatureOperation,
     /// Parámetros adicionales expandidos.

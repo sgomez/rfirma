@@ -110,6 +110,14 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         self.0.secret_of(reference)
     }
 
+    fn offers(
+        &self,
+        reference: &CertificateRef,
+        algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        self.0.offers(reference, algorithm)
+    }
+
     fn sign(
         &self,
         reference: &CertificateRef,
@@ -127,6 +135,14 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         reference: &domain::certificate::CertificateRef,
     ) -> Result<domain::secret::StoreSecret, domain::error::TokenError> {
         ports::Token::secret_of(self, reference)
+    }
+
+    fn offers(
+        &self,
+        reference: &domain::certificate::CertificateRef,
+        algorithm: SignatureAlgorithm,
+    ) -> Result<(), domain::error::TokenError> {
+        ports::Token::offers(self, reference, algorithm)
     }
 
     fn sign(

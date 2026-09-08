@@ -28,6 +28,7 @@ pub fn compose(
             bridge,
             SigningRequest {
                 format: Format::Pades,
+                algorithm: cycle::ALGORITHM,
                 operation: SignatureOperation::Sign,
                 document,
                 chain: &chain,

@@ -20,7 +20,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec.rs` | El códec de la versión 4 del protocolo. Pruebas en `adapters/codec/tests.rs`. |
 | `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs de las versiones 1 y 3, que delegan en el de la 4 en vez de repetirlo. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
-| `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces. Pruebas en `adapters/desk/tests.rs`. |
+| `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
 | `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011). |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
 | `adapters/batch_services.rs` | El cliente de los dos servlets del lote remoto, sobre `reqwest::blocking`. Pruebas en `adapters/batch_services/tests.rs`. |
@@ -60,6 +60,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/batch_error.rs` | La situación del lote remoto (ADR-0009): alcance de los dos servlets y forma de su respuesta. Pruebas en `domain/batch_error/tests.rs`. |
 | `domain/local_ca.rs` | La **CA local**, pura: la genera y la lee de PEM, y no toca el disco. Pruebas en `domain/local_ca/tests.rs`. |
 | `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
+| `domain/protocol/algorithm.rs` | El algoritmo que nombra la sede reducido a su huella; **no compone con la clave**, eso es de `adapters/desk.rs`. Pruebas en `domain/protocol/algorithm/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
 | `domain/protocol/detection.rs` | El detector puro por cabecera: «PDF / XML / binario», sin nombrar ningún formato de firma. Pruebas en `domain/protocol/detection/tests.rs`. |

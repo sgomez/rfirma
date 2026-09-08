@@ -161,6 +161,7 @@ mod full_cycle {
     use base64::Engine;
     use rfirma_lib::documents::adapters::rubric;
     use rfirma_lib::identity::adapters::pkcs11;
+    use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
@@ -171,8 +172,9 @@ mod full_cycle {
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
         TokenSignatures,
     };
+    use rfirma_lib::site::adapters::desk::composed_for;
     use rfirma_lib::site::application::filtering;
-    use rfirma_lib::site::domain::protocol::site_filter;
+    use rfirma_lib::site::domain::protocol::{site_filter, AskedAlgorithm};
 
     use super::bridge;
 
@@ -320,6 +322,16 @@ mod full_cycle {
         operation: SignatureOperation,
         declared: &[(&str, &str)],
     ) -> Vec<u8> {
+        cades_cycle_with(cycle::ALGORITHM, data, operation, declared)
+    }
+
+    /// El mismo ciclo, con el algoritmo que la sede haya pedido.
+    fn cades_cycle_with(
+        algorithm: SignatureAlgorithm,
+        data: &[u8],
+        operation: SignatureOperation,
+        declared: &[(&str, &str)],
+    ) -> Vec<u8> {
         let bridge = bridge();
         let certificate = signing_certificate();
         let chain = vec![certificate.der().to_vec()];
@@ -340,6 +352,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Cades,
+                algorithm,
                 operation,
                 document: AdmissibleDocument::check_for(Format::Cades, data)
                     .expect("CAdES firma cualquier byte"),
@@ -440,6 +453,24 @@ mod full_cycle {
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
     fn an_implicit_cades_signature_carries_the_challenge_and_openssl_verifies_it() {
         let signature = write_to_target("cades-implicito.p7s", &sign_cades(CHALLENGE, "implicit"));
+
+        assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
+        the_original_validator_accepts(&signature);
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_cades_signature_with_the_sha512_the_site_asked_for_validates() {
+        let algorithm = composed_for(AskedAlgorithm::Sha512, signing_certificate().key_kind());
+        assert_eq!(algorithm, SignatureAlgorithm::Sha512Rsa);
+
+        let signed = cades_cycle_with(
+            algorithm,
+            CHALLENGE,
+            SignatureOperation::Sign,
+            &[("mode", "implicit")],
+        );
+        let signature = write_to_target("cades-sha512.p7s", &signed);
 
         assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
         the_original_validator_accepts(&signature);
@@ -635,6 +666,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
+                algorithm: cycle::ALGORITHM,
                 operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
@@ -777,6 +809,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
+                algorithm: cycle::ALGORITHM,
                 operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(pdf).expect("el PDF generado es admisible"),
                 chain: &chain,
@@ -1020,6 +1053,7 @@ mod full_cycle {
             &bridge,
             SigningRequest {
                 format: Format::Pades,
+                algorithm: cycle::ALGORITHM,
                 operation: SignatureOperation::Sign,
                 document: AdmissibleDocument::check(&pdf).expect("es admisible"),
                 chain: &chain,

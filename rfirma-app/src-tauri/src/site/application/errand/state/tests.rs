@@ -23,6 +23,7 @@ fn a_pending_signature() -> PendingSignature {
         document: "doc-1".to_owned(),
         filter: SiteFilter::default(),
         format: Format::Pades,
+        algorithm: AskedAlgorithm::Sha256,
         operation: crate::signing::domain::bridge::SignatureOperation::Sign,
         from_the_site: BTreeMap::new(),
         unregistered_signatures: false,

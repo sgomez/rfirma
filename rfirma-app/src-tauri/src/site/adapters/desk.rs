@@ -6,7 +6,7 @@ use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
 use crate::identity::adapters::failures::code_of_token;
-use crate::identity::domain::algorithm::SignatureAlgorithm;
+use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
@@ -14,7 +14,7 @@ use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
-use crate::site::domain::protocol::{SafCode, ACCEPTED_ALGORITHMS};
+use crate::site::domain::protocol::{AskedAlgorithm, SafCode};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{
     Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
@@ -82,6 +82,7 @@ impl SiteSigning for Neighbours<'_> {
                 request.certificate,
                 DeclaredByTheSite {
                     format: request.format,
+                    algorithm: composed_for(request.algorithm, request.certificate.key_kind()),
                     operation: request.operation,
                     parameters: request.from_the_site,
                     allow_unregistered_signatures: request.allow_unregistered_signatures,
@@ -143,20 +144,32 @@ pub fn signed_by_the_token(
     algorithm: &str,
     data: &[u8],
 ) -> Result<Vec<u8>, SigningRefusal> {
-    let asked = the_token_offers(algorithm).map_err(refusal_of_token)?;
+    let asked = AskedAlgorithm::named(algorithm)
+        .map(|asked| composed_for(asked, certificate.key_kind()))
+        .ok_or_else(|| no_mechanism_for(algorithm))
+        .map_err(refusal_of_token)?;
     signer
         .sign(certificate.reference(), secret, asked, data)
         .map_err(refusal_of_token)
 }
 
-fn the_token_offers(algorithm: &str) -> Result<SignatureAlgorithm, TokenError> {
-    if ACCEPTED_ALGORITHMS.contains(&algorithm.trim().to_ascii_lowercase().as_str()) {
-        return Ok(SignatureAlgorithm::Sha256Rsa);
+/// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
+pub fn composed_for(asked: AskedAlgorithm, key: Option<KeyKind>) -> SignatureAlgorithm {
+    match (asked, key.unwrap_or(KeyKind::Rsa)) {
+        (AskedAlgorithm::Sha256, KeyKind::Rsa) => SignatureAlgorithm::Sha256Rsa,
+        (AskedAlgorithm::Sha384, KeyKind::Rsa) => SignatureAlgorithm::Sha384Rsa,
+        (AskedAlgorithm::Sha512, KeyKind::Rsa) => SignatureAlgorithm::Sha512Rsa,
+        (AskedAlgorithm::Sha256, KeyKind::Ec) => SignatureAlgorithm::Sha256Ecdsa,
+        (AskedAlgorithm::Sha384, KeyKind::Ec) => SignatureAlgorithm::Sha384Ecdsa,
+        (AskedAlgorithm::Sha512, KeyKind::Ec) => SignatureAlgorithm::Sha512Ecdsa,
     }
-    Err(TokenError::new(
-        Situation::Unknown,
-        format!("el token no ofrece el mecanismo de '{algorithm}': rFirma firma con SHA256withRSA"),
-    ))
+}
+
+fn no_mechanism_for(algorithm: &str) -> TokenError {
+    TokenError::new(
+        Situation::MechanismNotOffered,
+        format!("el token no firma con '{algorithm}': rFirma solo compone SHA-2"),
+    )
 }
 
 fn refusal_of_token(error: TokenError) -> SigningRefusal {

@@ -6,6 +6,7 @@ use std::sync::Mutex;
 
 use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
+use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::holder::{stamped_holder_of, StampedHolder};
@@ -63,6 +64,7 @@ pub fn begin(
     open_the_cycle(
         signer,
         Format::Pades,
+        cycle::ALGORITHM,
         SignatureOperation::Sign,
         document,
         bytes,
@@ -79,6 +81,8 @@ pub fn begin(
 pub struct DeclaredByTheSite<'a> {
     /// El formato de firma que pidió la sede.
     pub format: Format,
+    /// El algoritmo que pidió la sede, ya compuesto con la clave del certificado.
+    pub algorithm: SignatureAlgorithm,
     /// Qué pidió hacer la sede con el documento: firmarlo, cofirmarlo o contrafirmarlo.
     pub operation: SignatureOperation,
     /// Los parámetros de la sede, ya expandidos.
@@ -105,6 +109,7 @@ pub fn begin_for_the_site(
     open_the_cycle(
         signer,
         declared.format,
+        declared.algorithm,
         declared.operation,
         document,
         bytes,
@@ -186,6 +191,7 @@ impl From<IsolateGone> for CycleFailure {
 fn open_the_cycle(
     signer: &dyn Signer,
     format: Format,
+    algorithm: SignatureAlgorithm,
     operation: SignatureOperation,
     document: DocumentToSign,
     bytes: Vec<u8>,
@@ -196,6 +202,7 @@ fn open_the_cycle(
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
     let reference = chosen.reference().clone();
+    signer.offers(&reference, algorithm)?;
     let secret = signer.secret_of(&reference)?.admitted()?;
     let certificate = reference.clone();
     let signer_der = chosen.der().to_vec();
@@ -208,6 +215,7 @@ fn open_the_cycle(
             bridge,
             SigningRequest {
                 format,
+                algorithm,
                 operation,
                 document,
                 chain: &chain,

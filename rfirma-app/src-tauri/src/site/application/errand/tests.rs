@@ -12,7 +12,7 @@ use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from, NoMemory, NoToken};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
-use crate::identity::domain::error::TokenError;
+use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::CertificateMemory;
@@ -38,9 +38,9 @@ use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter,
-    SafCode, SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
-    SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    read_operation, AfirmaUrl, AskedAlgorithm, ChannelCredential, ChannelMessage,
+    NegotiatedCredential, Parameter, SafCode, SelectCertificate, SignRequest, SignatureRound,
+    SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{
@@ -209,6 +209,14 @@ impl TheBridge {
         calls.first().expect("la prefirma cruzo").operation
     }
 
+    fn algorithm_of_the_presign(&self) -> String {
+        let Self::Answering(bridge) = self else {
+            panic!("este puente no atiende nada");
+        };
+        let calls = bridge.calls();
+        calls.first().expect("la prefirma cruzo").algorithm.clone()
+    }
+
     fn format_of_the_presign(&self) -> Format {
         let Self::Answering(bridge) = self else {
             panic!("este puente no atiende nada");
@@ -230,12 +238,53 @@ impl IsolateHost for TheBridge {
     }
 }
 
-/// Un token que firma cualquier cosa, para llegar de la prefirma a la postfirma sin PKCS#11.
-struct ATokenThatSigns;
+/// Un token que firma cualquier cosa con los mecanismos que declara, sin PKCS#11 delante.
+struct ATokenThatSigns {
+    offered: Vec<SignatureAlgorithm>,
+    secrets_asked: std::sync::Mutex<usize>,
+}
+
+impl Default for ATokenThatSigns {
+    fn default() -> Self {
+        Self::offering(&SignatureAlgorithm::ALL)
+    }
+}
+
+impl ATokenThatSigns {
+    fn offering(offered: &[SignatureAlgorithm]) -> Self {
+        Self {
+            offered: offered.to_vec(),
+            secrets_asked: std::sync::Mutex::new(0),
+        }
+    }
+
+    fn secrets_asked(&self) -> usize {
+        *crate::lock(&self.secrets_asked)
+    }
+}
 
 impl Signer for ATokenThatSigns {
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+        *crate::lock(&self.secrets_asked) += 1;
         Ok(StoreSecret::NotNeeded)
+    }
+
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        if self.offered.contains(&algorithm) {
+            return Ok(());
+        }
+        Err(TokenError::new(
+            Situation::MechanismNotOffered,
+            format!(
+                "el token no firma {} con {}: no esta entre los mecanismos de la ranura",
+                algorithm.name(),
+                algorithm.mechanism_type()
+            ),
+        ))
     }
 
     fn sign(
@@ -257,6 +306,7 @@ struct TheNeighbours<'a> {
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
     token: InMemoryTokenSigning,
+    signer: ATokenThatSigns,
     ours: Vec<TokenCertificate>,
     bridge: TheBridge,
     session: SigningSession,
@@ -339,11 +389,15 @@ impl SiteSigning for TheNeighbours<'_> {
             request.certificate,
             session::DeclaredByTheSite {
                 format: request.format,
+                algorithm: crate::site::adapters::desk::composed_for(
+                    request.algorithm,
+                    request.certificate.key_kind(),
+                ),
                 operation: request.operation,
                 parameters: request.from_the_site,
                 allow_unregistered_signatures: request.allow_unregistered_signatures,
             },
-            &ATokenThatSigns,
+            &self.signer,
             &self.bridge,
             &self.session,
         )
@@ -447,6 +501,7 @@ fn a_neighbourhood<'a>(
         opened,
         memory,
         token: InMemoryTokenSigning::default(),
+        signer: ATokenThatSigns::default(),
         ours: Vec::new(),
         bridge: TheBridge::default(),
         session: SigningSession::default(),
@@ -485,6 +540,7 @@ fn a_desk<'a>(
             opened,
             memory,
             token: InMemoryTokenSigning::default(),
+            signer: ATokenThatSigns::default(),
             ours: Vec::new(),
             bridge: TheBridge::default(),
             session: SigningSession::default(),
@@ -1929,6 +1985,133 @@ const EXPANDED_WITH_A_BOX: &str = "mode=explicit\n\
      visibleSignature=want\n\
      signatureRubricImage=cnVicmljYQ==\n";
 
+#[test]
+fn an_algorithm_the_token_does_not_offer_is_refused_without_asking_for_the_secret() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+    desk.neighbours.signer = ATokenThatSigns::offering(&[SignatureAlgorithm::Sha256Ecdsa]);
+
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    let (handle, _wire) = the_wire();
+
+    let step = attend(
+        &desk,
+        a_signature_with_the_algorithm("SHA512withRSA"),
+        handle,
+        &live,
+    )
+    .expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("el algoritmo se casa con el token tras el consentimiento: {step:?}");
+    };
+
+    let chosen = asking.certificates[0].id.clone();
+    let ConsentError::Refused(refusal) =
+        consent(&desk, &chosen, &live).expect_err("el token no ofrece Sha512RsaPkcs")
+    else {
+        panic!("el trámite se rechaza, no se queda sin nada pendiente");
+    };
+
+    let (told, code) = crate::site::adapters::frontier::told(&refusal);
+    assert_eq!(code, SafCode::SignatureFailed);
+    assert_eq!(told.situation, "mechanismNotOffered");
+    assert!(told.detail.contains("SHA512withECDSA"), "{}", told.detail);
+    assert_eq!(
+        desk.neighbours.signer.secrets_asked(),
+        0,
+        "el listado de mecanismos ya lo sabia: el PIN no se pide"
+    );
+}
+
+#[test]
+fn the_digest_the_site_asks_for_reaches_the_bridge_composed_with_the_key() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    let (handle, _wire) = the_wire();
+
+    let step = attend(
+        &desk,
+        a_signature_with_the_algorithm("SHA384"),
+        handle,
+        &live,
+    )
+    .expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("una firma llega al consentimiento: {step:?}");
+    };
+    assert_eq!(asking.algorithm, AskedAlgorithm::Sha384);
+
+    let chosen = asking.certificates[0].id.clone();
+    consent(&desk, &chosen, &live).expect("el token ofrece Sha384RsaPkcs");
+
+    assert_eq!(
+        desk.neighbours.bridge.algorithm_of_the_presign(),
+        "SHA384withECDSA",
+        "el certificado de pruebas lleva clave EC: la sede pidio SHA384 y sale compuesto con ella"
+    );
+}
+
+/// La misma firma de sede, con el `algorithm` que se le diga.
+fn a_signature_with_the_algorithm(algorithm: &str) -> AfirmaUrl {
+    let document = base64::engine::general_purpose::URL_SAFE.encode(A_PDF);
+    let text = format!(
+        "afirma://sign?op=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm={algorithm}&dat={document}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
 /// El trámite entero de una firma de sede sobre un binario, del canal al cable, con el puente doblado.
 fn the_whole_errand_asking_for(asked: &str, expected: Format) {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -1982,7 +2165,7 @@ fn the_whole_errand_asking_for(asked: &str, expected: Format) {
     else {
         panic!("una firma se consiente firmando");
     };
-    session::sign_on_token(&ATokenThatSigns, &desk.neighbours.session, "1234")
+    session::sign_on_token(&desk.neighbours.signer, &desk.neighbours.session, "1234")
         .expect("el token de pruebas firma el PRE");
     assert!(
         finish(&desk, &live).expect("la postfirma sale").is_none(),
@@ -2200,6 +2383,7 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
                 opened: &opened,
                 memory: &memory,
                 token: InMemoryTokenSigning::default(),
+                signer: ATokenThatSigns::default(),
                 ours: Vec::new(),
                 bridge: TheBridge::default(),
                 session: SigningSession::default(),
@@ -3361,6 +3545,7 @@ fn a_desk_for_the_batch<'a>(
                 opened: opened_for_nobody(),
                 memory,
                 token: InMemoryTokenSigning::default(),
+                signer: ATokenThatSigns::default(),
                 ours: Vec::new(),
                 bridge: TheBridge::default(),
                 session: SigningSession::default(),

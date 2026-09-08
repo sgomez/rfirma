@@ -9,8 +9,9 @@ use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades, visible_signature_of, AfirmaUrl,
-    BatchRequest, LoadRequest, RequestedFormat, SaveRequest, SelectCertificate, SignAndSaveRequest,
-    SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature, StickyCertificate,
+    AskedAlgorithm, BatchRequest, LoadRequest, RequestedFormat, SaveRequest, SelectCertificate,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
+    StickyCertificate,
 };
 
 use super::outcome::{
@@ -177,6 +178,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         SignatureAsk {
             document: request.document(),
             format: request.format(),
+            algorithm: request.algorithm(),
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
@@ -206,6 +208,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
         SignatureAsk {
             document: request.document().unwrap_or_default(),
             format: request.format(),
+            algorithm: request.algorithm(),
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
@@ -220,6 +223,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
 struct SignatureAsk<'a> {
     document: &'a [u8],
     format: RequestedFormat,
+    algorithm: AskedAlgorithm,
     round: SignatureRound,
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
@@ -296,6 +300,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     ErrandStep::AskingToSign(SigningConsent {
         document,
         format,
+        algorithm: ask.algorithm,
         round: ask.round,
         certificates: desk.neighbours.rows_of(accepted),
         from_the_site,

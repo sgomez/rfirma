@@ -151,6 +151,14 @@ impl Signer for ATokenThatCounts {
         Ok(StoreSecret::NotNeeded)
     }
 
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        _algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        Ok(())
+    }
+
     fn sign(
         &self,
         _reference: &CertificateRef,
@@ -172,6 +180,7 @@ fn a_request<'a>(
 ) -> SigningRequest<'a> {
     SigningRequest {
         format,
+        algorithm: ALGORITHM,
         operation: SignatureOperation::Sign,
         document,
         chain,
@@ -314,6 +323,7 @@ fn a_countersignature_asks_the_secret_once_and_signs_every_block_it_got() {
         &bridge,
         SigningRequest {
             format: Format::Cades,
+            algorithm: ALGORITHM,
             operation: SignatureOperation::Countersign,
             document,
             chain: std::slice::from_ref(&b"der".to_vec()),
@@ -354,6 +364,7 @@ fn a_cosignature_names_its_operation_at_the_border() {
         &bridge,
         SigningRequest {
             format: Format::Cades,
+            algorithm: ALGORITHM,
             operation: SignatureOperation::Cosign,
             document,
             chain: std::slice::from_ref(&b"der".to_vec()),

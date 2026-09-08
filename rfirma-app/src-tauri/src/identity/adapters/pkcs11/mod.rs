@@ -38,6 +38,14 @@ impl Token for RealToken {
         store_secret(reference)
     }
 
+    fn offers(
+        &self,
+        reference: &CertificateRef,
+        algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        offers(reference, algorithm)
+    }
+
     fn sign(
         &self,
         reference: &CertificateRef,
@@ -273,6 +281,17 @@ pub fn store_secret(reference: &CertificateRef) -> Result<StoreSecret, TokenErro
             info.login_required(),
             info.protected_authentication_path(),
         ))
+    })
+}
+
+/// Comprueba en el listado de mecanismos de la ranura que el algoritmo se puede cumplir.
+pub fn offers(reference: &CertificateRef, algorithm: SignatureAlgorithm) -> Result<(), TokenError> {
+    with_token_turn(|| {
+        let store = reference.store();
+        the_store_is_really_there(&store)?;
+        let context = context(&store)?;
+        let slot = slot_of(&context, reference.token_label())?;
+        the_slot_offers(&context, slot, algorithm)
     })
 }
 
