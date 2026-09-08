@@ -168,6 +168,12 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       origin: Option<String>
       stage: SiteStageView
 
+  pub enum SigningKindView
+      Pdf
+      Challenge
+      Xml
+      Invoice
+
   pub enum SignatureRoundView
       Sign
       Cosign
@@ -175,7 +181,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub enum SiteStageView   (serde: etiqueta "kind")
       Waiting
       AskingForConsent { certificates: Vec<CertificateView> }
-      AskingToSign { document: String, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool }
+      AskingToSign { document: String, signing: SigningKindView, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool }
       AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String> }
       NoChannel { reason: NoChannelView }
       Outcome { outcome: SiteOutcomeView }
