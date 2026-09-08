@@ -191,7 +191,7 @@ impl Format {
     /// El formato si el puente lo resuelve, y si no la situación que lo niega.
     pub fn bridged(self) -> Result<Self, BridgeError> {
         match self {
-            Self::Pades | Self::Cades | Self::Cms => Ok(self),
+            Self::Pades | Self::Cades | Self::Cms | Self::Xades(_) => Ok(self),
             other => Err(BridgeError::FormatNotBridged(other)),
         }
     }

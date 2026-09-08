@@ -1,5 +1,5 @@
 use super::*;
-use crate::signing::domain::bridge::LIBRARY_FILE;
+use crate::signing::domain::bridge::{XadesVariant, XmlDsigVariant, LIBRARY_FILE};
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -282,8 +282,9 @@ fn a_postsign_answer_comes_back_as_the_bytes_of_the_pdf() {
 
 #[test]
 fn a_cades_postsign_answer_comes_back_under_its_own_key() {
-    let signature = parse_signed_document(r#"{"ok":true,"signature":"MTIz"}"#, CADES_DOCUMENT_KEY)
-        .expect("es el JSON del contrato");
+    let signature =
+        parse_signed_document(r#"{"ok":true,"signature":"MTIz"}"#, SIGNATURE_DOCUMENT_KEY)
+            .expect("es el JSON del contrato");
 
     assert_eq!(signature, b"123");
     assert!(
@@ -304,10 +305,56 @@ fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
             EntryPoints::Cades
         ));
     }
-    assert!(matches!(
-        entry_points_for(Format::FacturaE).expect_err("no cruza"),
-        BridgeError::FormatNotBridged(Format::FacturaE)
-    ));
+    for variant in [
+        XadesVariant::Detached,
+        XadesVariant::Enveloping,
+        XadesVariant::Enveloped,
+        XadesVariant::AsicS,
+    ] {
+        assert!(matches!(
+            entry_points_for(Format::Xades(variant)).expect("cruza por XAdES"),
+            EntryPoints::Xades
+        ));
+    }
+    for format in [
+        Format::FacturaE,
+        Format::XmlDsig(XmlDsigVariant::Enveloping),
+    ] {
+        assert!(matches!(
+            entry_points_for(format).expect_err("no cruza"),
+            BridgeError::FormatNotBridged(refused) if refused == format
+        ));
+    }
+}
+
+#[test]
+fn the_variant_of_the_format_wins_over_the_one_the_site_declared() {
+    let sent = "format=XAdES Enveloping\nsignaturePage=1\n";
+
+    let block = with_the_xades_variant(
+        sent,
+        EntryPoints::Xades,
+        Format::Xades(XadesVariant::Detached),
+    );
+
+    assert!(
+        block.starts_with(sent),
+        "lo de la sede sigue entero: {block}"
+    );
+    assert!(
+        block.ends_with("format=XAdES Detached\n"),
+        "la variante del formato se escribe la ultima: {block}"
+    );
+}
+
+#[test]
+fn a_format_without_variants_keeps_the_extra_params_untouched() {
+    let sent = "mode=implicit\n";
+
+    assert_eq!(
+        with_the_xades_variant(sent, EntryPoints::Cades, Format::Cades),
+        sent
+    );
 }
 
 #[test]

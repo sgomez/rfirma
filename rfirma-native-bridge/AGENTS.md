@@ -15,6 +15,7 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |
 | `src/main/java/.../SessionStamp.java` | El sello de sesión (ADR-0016). |
 | `src/main/java/.../SessionStampMismatchException.java` | El fallo con el que una postfirma rechaza un sello que no es el de su prefirma. |
+| `src/main/resources/META-INF/native-image/` | Los metadatos con los que se construye la imagen: las banderas de `native-image.properties` y los tipos que solo se alcanzan por reflexión, en `reachability-metadata.json`. No es un `resource-config.json` generado dentro del build. |
 | `testbench/` | El banco de la grada C y los guiones de medición de los `research/`. Se abre por su `README.md`. |
 
 ## Trampas al construir

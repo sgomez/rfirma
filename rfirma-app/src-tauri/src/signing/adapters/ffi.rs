@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use base64::Engine;
 
-use crate::signing::domain::SessionSeal;
+use crate::signing::domain::{to_java_properties, SessionSeal};
 
 use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
@@ -151,6 +151,8 @@ pub struct NativeBridge {
     postsign: PostSignSymbol,
     cades_presign: PreSignWithOperationSymbol,
     cades_postsign: PostSignSymbol,
+    xades_presign: PreSignWithOperationSymbol,
+    xades_postsign: PostSignSymbol,
     filter: FilterSymbol,
     expand: ExpandSymbol,
     free_string: FreeStringSymbol,
@@ -210,6 +212,8 @@ impl NativeBridge {
             postsign,
             cades_presign,
             cades_postsign,
+            xades_presign,
+            xades_postsign,
             filter,
             expand,
             free_string,
@@ -221,6 +225,8 @@ impl NativeBridge {
                 resolve::<PostSignSymbol>(&library, b"autofirma_pades_postsign\0")?,
                 resolve::<PreSignWithOperationSymbol>(&library, b"autofirma_cades_presign\0")?,
                 resolve::<PostSignSymbol>(&library, b"autofirma_cades_postsign\0")?,
+                resolve::<PreSignWithOperationSymbol>(&library, b"autofirma_xades_presign\0")?,
+                resolve::<PostSignSymbol>(&library, b"autofirma_xades_postsign\0")?,
                 resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
                 resolve::<ExpandSymbol>(&library, b"autofirma_expand_extra_params\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
@@ -244,6 +250,8 @@ impl NativeBridge {
             postsign,
             cades_presign,
             cades_postsign,
+            xades_presign,
+            xades_postsign,
             filter,
             expand,
             free_string,
@@ -262,7 +270,8 @@ impl NativeBridge {
         let document = c_string(request.document_b64, "el documento")?;
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
-        let extra = c_string(request.extra_params, "los extraParams")?;
+        let variant = with_the_xades_variant(request.extra_params, entry, request.format);
+        let extra = c_string(&variant, "los extraParams")?;
         let operation = c_string(request.operation.name(), "la operación")?;
         let json = self.call(|thread| unsafe {
             match entry {
@@ -273,14 +282,20 @@ impl NativeBridge {
                     chain.as_ptr(),
                     extra.as_ptr(),
                 ),
-                EntryPoints::Cades => (self.cades_presign)(
-                    thread,
-                    document.as_ptr(),
-                    algorithm.as_ptr(),
-                    chain.as_ptr(),
-                    extra.as_ptr(),
-                    operation.as_ptr(),
-                ),
+                EntryPoints::Cades | EntryPoints::Xades => {
+                    let symbol = match entry {
+                        EntryPoints::Xades => self.xades_presign,
+                        _ => self.cades_presign,
+                    };
+                    symbol(
+                        thread,
+                        document.as_ptr(),
+                        algorithm.as_ptr(),
+                        chain.as_ptr(),
+                        extra.as_ptr(),
+                        operation.as_ptr(),
+                    )
+                }
             }
         })?;
         parse_presign(&json)
@@ -295,12 +310,15 @@ impl NativeBridge {
         let session = c_string(request.sealed.session(), "la sesión")?;
         let pkcs1 = match entry {
             EntryPoints::Pades => c_string(only_pkcs1(request.sealed)?, "el PKCS#1")?,
-            EntryPoints::Cades => c_string(&pkcs1_list(request.sealed), "el PKCS#1")?,
+            EntryPoints::Cades | EntryPoints::Xades => {
+                c_string(&pkcs1_list(request.sealed), "el PKCS#1")?
+            }
         };
         let json = self.call(|thread| unsafe {
             let symbol = match entry {
                 EntryPoints::Pades => self.postsign,
                 EntryPoints::Cades => self.cades_postsign,
+                EntryPoints::Xades => self.xades_postsign,
             };
             symbol(
                 thread,
@@ -372,20 +390,22 @@ impl Drop for NativeBridge {
 
 const PRESIGN_LIST_KEY: &str = "pres";
 const PADES_DOCUMENT_KEY: &str = "pdf";
-const CADES_DOCUMENT_KEY: &str = "signature";
+const SIGNATURE_DOCUMENT_KEY: &str = "signature";
+const VARIANT_KEY: &str = "format";
 
 /// La pareja de entradas de Java que atiende a un formato.
 #[derive(Clone, Copy, Debug)]
 enum EntryPoints {
     Pades,
     Cades,
+    Xades,
 }
 
 impl EntryPoints {
     fn signed_document_key(self) -> &'static str {
         match self {
             Self::Pades => PADES_DOCUMENT_KEY,
-            Self::Cades => CADES_DOCUMENT_KEY,
+            Self::Cades | Self::Xades => SIGNATURE_DOCUMENT_KEY,
         }
     }
 }
@@ -394,8 +414,25 @@ fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
     match format.bridged()? {
         Format::Pades => Ok(EntryPoints::Pades),
         Format::Cades | Format::Cms => Ok(EntryPoints::Cades),
+        Format::Xades(_) => Ok(EntryPoints::Xades),
         other => Err(BridgeError::FormatNotBridged(other)),
     }
+}
+
+/// La envoltura la manda el formato pedido, no la sede: por eso se escribe la última.
+fn with_the_xades_variant(extra_params: &str, entry: EntryPoints, format: Format) -> String {
+    if !matches!(entry, EntryPoints::Xades) {
+        return extra_params.to_owned();
+    }
+    let mut block = extra_params.to_owned();
+    if !block.is_empty() && !block.ends_with('\n') {
+        block.push('\n');
+    }
+    block.push_str(&to_java_properties(&std::collections::BTreeMap::from([(
+        VARIANT_KEY.to_owned(),
+        format.name().to_owned(),
+    )])));
+    block
 }
 
 fn c_string(value: &str, name: &'static str) -> Result<CString, BridgeError> {

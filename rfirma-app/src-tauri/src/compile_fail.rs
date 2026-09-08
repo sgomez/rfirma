@@ -72,6 +72,33 @@ pub struct TheCadesPresignTakesNoPin;
 /// ```
 pub struct TheCadesPostsignTakesNoPrivateKey;
 
+/// ```compile_fail,E0560
+/// use rfirma_lib::signing::domain::bridge::{Format, PreSignRequest, XadesVariant};
+///
+/// let _ = PreSignRequest {
+///     format: Format::Xades(XadesVariant::Enveloping),
+///     operation: rfirma_lib::signing::domain::bridge::SignatureOperation::Sign,
+///     document_b64: "",
+///     algorithm: "SHA256withRSA",
+///     certificate_chain_b64: "",
+///     extra_params: "",
+///     pin: "1234",
+/// };
+/// ```
+pub struct TheXadesPresignTakesNoPin;
+
+/// ```compile_fail,E0560
+/// use rfirma_lib::signing::domain::bridge::{Format, PostSignRequest, XadesVariant};
+///
+/// let _ = PostSignRequest {
+///     format: Format::Xades(XadesVariant::Enveloping),
+///     document_b64: "",
+///     certificate_chain_b64: "",
+///     private_key_b64: "la clave del token",
+/// };
+/// ```
+pub struct TheXadesPostsignTakesNoPrivateKey;
+
 /// ```compile_fail,E0451
 /// use rfirma_lib::signing::domain::CompletedCycle;
 ///
