@@ -257,7 +257,7 @@ public final class NativeBridge {
      * @param certChainB64 cadena de certificados en Base64, separados por {@code ';'}.
      * @param extraParams  extraParams en formato {@code java.util.Properties}
      *                     (lineas {@code clave=valor}).
-     * @param operation    {@code sign}: ninguna otra esta implementada todavia.
+     * @param operation    {@code sign}, {@code cosign} o {@code countersign}.
      * @return JSON. Propiedad del llamante: se libera con {@code autofirma_free_string}.
      */
     @CEntryPoint(name = "autofirma_xades_presign")
