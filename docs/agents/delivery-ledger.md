@@ -45,6 +45,15 @@ CI, en `code-host-ci.md`; ninguno de los dos se repite aquí.
   fusionado). Hacer `fetch origin/main` antes de concluir que no hay patrón que
   imitar, y cuando los bloqueantes de un ticket están cerrados, asumir que sus
   artefactos SÍ están en `main`.
+- **Un ticket que añade pruebas de grada C sin la etiqueta `native` en su PR
+  cuece un verde falso, no una complicación.** Ocurrió dos veces por la misma
+  causa estructural en la misma tanda del #468, ambos `standard`/sonnet: #540
+  (PR #577, 2 ciclos) y #551 (PR #580, 1 ciclo). Sin la etiqueta, «Imagen
+  nativa» informa SUCCESS con todos sus pasos en skipped, y la revisión tiene
+  que atrapar ese verde falso a mano. No es una señal para subir la grada del
+  modelo — es una instrucción que falta en el prompt del constructor o en los
+  docs de agentes: cualquier ticket que toque conformance/native_cycle debe
+  añadir la etiqueta `native` a su propia PR.
 
 ## Run log
 
@@ -90,3 +99,10 @@ en `.scratch/archive/`.
 2026-09-08 spec=#468 sub=#539 model=sonnet effort=medium pr=#572 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
 2026-09-08 spec=#468 sub=#547 model=opus effort=medium pr=#573 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
 2026-09-08 spec=#468 sub=#537 model=opus effort=medium pr=#574 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
+2026-09-08 spec=#468 sub=#538 model=sonnet effort=medium pr=#575 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#548 model=sonnet effort=medium pr=#576 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-08 spec=#468 sub=#549 model=sonnet effort=medium pr=#578 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-09-08 spec=#468 sub=#540 model=sonnet effort=medium pr=#577 verdict=CLEAN cycles=2 mergefix=0 wave=2 outcome=merged
+2026-09-08 spec=#468 sub=#541 model=opus effort=medium pr=#579 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-09-08 spec=#468 sub=#542 model=opus effort=medium pr=#581 verdict=CLEAN cycles=1 mergefix=1 wave=3 outcome=merged
+2026-09-08 spec=#468 sub=#551 model=sonnet effort=medium pr=#580 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=ready-to-merge
