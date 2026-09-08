@@ -869,7 +869,7 @@ fn a_countersignature(format: &str, extra: &str) -> AfirmaUrl {
     an_operation(&format!(
         "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&\
          algorithm=SHA256withRSA&dat={}{extra}",
-        dat(b"una firma CAdES")
+        dat(b"una firma")
     ))
 }
 
@@ -951,6 +951,72 @@ fn signing_and_saving_with_countersign_in_cades_is_attended() {
         SignatureRound::Counter {
             target: CounterTarget::Leafs
         }
+    );
+}
+
+#[test]
+fn a_countersignature_in_xades_carries_the_target_the_site_declared() {
+    let url = a_countersignature(
+        "XAdES",
+        &format!("&properties={}", properties("target=tree\n")),
+    );
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("XAdES contrafirma") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Tree
+        }
+    );
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
+}
+
+#[test]
+fn signing_and_saving_with_countersign_in_xades_is_attended() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=XAdES&\
+         algorithm=SHA256withRSA&dat={}",
+        dat(b"<xml/>")
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("XAdES contrafirma")
+    else {
+        panic!("es un firmar y guardar");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
+}
+
+#[test]
+fn a_countersignature_under_format_auto_over_an_xml_is_a_xades_one() {
+    let url = an_operation(&format!(
+        "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={AUTO}&\
+         algorithm=SHA256withRSA&dat={}",
+        dat(b"<xml/>")
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("un XML es XAdES") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
     );
 }
 

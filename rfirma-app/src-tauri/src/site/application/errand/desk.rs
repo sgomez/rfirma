@@ -9,7 +9,7 @@ use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::batch::LocalSingleSign;
 use crate::site::domain::protocol::{
-    forget_the_box, refuse_a_countersignature_outside_cades, refuse_explicit_xades,
+    forget_the_box, refuse_a_countersignature_outside_cades_and_xades, refuse_explicit_xades,
     visible_signature_of, AfirmaUrl, AskedAlgorithm, BatchRequest, LoadRequest, RequestedFormat,
     SaveRequest, SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
     SiteVisibleSignature, StickyCertificate,
@@ -242,7 +242,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    if let Err(refusal) = refuse_a_countersignature_outside_cades(ask.round, ask.format) {
+    if let Err(refusal) = refuse_a_countersignature_outside_cades_and_xades(ask.round, ask.format) {
         return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
     }
 

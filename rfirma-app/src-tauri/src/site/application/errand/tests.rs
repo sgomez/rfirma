@@ -4260,8 +4260,8 @@ fn a_local_batch_that_is_declined_ends_in_a_cancel() {
 }
 
 /// La contrafirma que pide una sede, con el formato y el `target` que se le digan.
-fn a_countersignature_asking_for(format: &str, target: &str) -> AfirmaUrl {
-    let document = base64::engine::general_purpose::URL_SAFE.encode(A_CADES_SIGNATURE);
+fn a_countersignature_asking_for(format: &str, target: &str, document: &[u8]) -> AfirmaUrl {
+    let document = base64::engine::general_purpose::URL_SAFE.encode(document);
     let properties = base64::engine::general_purpose::URL_SAFE.encode(format!("target={target}\n"));
     let text = format!(
         "afirma://countersign?op=countersign&idsession={CREDENTIAL}&format={format}&\
@@ -4306,7 +4306,7 @@ fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
 
     let step = attend(
         &desk,
-        a_countersignature_asking_for("CAdES", "tree"),
+        a_countersignature_asking_for("CAdES", "tree", A_CADES_SIGNATURE),
         handle,
         &live,
     )
@@ -4335,6 +4335,72 @@ fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
             .borrow()
             .iter()
             .any(|asked| asked.contains("target=tree")),
+        "el objetivo de la contrafirma cruza al puente sin traducir"
+    );
+}
+
+#[test]
+fn a_xades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_target() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("target=leafs\n");
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    let (handle, _wire) = the_wire();
+
+    let step = attend(
+        &desk,
+        a_countersignature_asking_for("XAdES", "leafs", AN_XML_CHALLENGE),
+        handle,
+        &live,
+    )
+    .expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("una contrafirma XAdES llega al consentimiento: {step:?}");
+    };
+
+    let chosen = asking.certificates[0].id.clone();
+    let Consented::SigningWith(_) = consent(&desk, &chosen, &live).expect("el certificado vale")
+    else {
+        panic!("una firma se consiente firmando");
+    };
+
+    assert_eq!(
+        desk.neighbours.bridge.operation_of_the_presign(),
+        SignatureOperation::Countersign
+    );
+    assert_eq!(
+        desk.neighbours.bridge.format_of_the_presign(),
+        Format::Xades(XadesVariant::Enveloping)
+    );
+    assert!(
+        policies
+            .asked
+            .borrow()
+            .iter()
+            .any(|asked| asked.contains("target=leafs")),
         "el objetivo de la contrafirma cruza al puente sin traducir"
     );
 }

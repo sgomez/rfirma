@@ -506,7 +506,7 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
     let requested = requested_format(url)?;
     if let Some(format) = requested {
-        refuse_a_countersignature_outside_cades(round, format)?;
+        refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     }
     let document = match requested {
         Some(_) => None,
@@ -522,7 +522,7 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
 
     let declared = declared_properties(url)?;
     let format = requested.unwrap_or_else(|| format_of(&document));
-    refuse_a_countersignature_outside_cades(round, format)?;
+    refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     Ok(SiteOperation::Sign(SignRequest {
         round,
         algorithm,
@@ -552,14 +552,17 @@ fn counter_round(declared: &[(String, String)]) -> Result<SignatureRound, Refusa
         })
 }
 
-/// Solo la familia CAdES contrafirma: el resto sale con el rechazo del original.
-pub fn refuse_a_countersignature_outside_cades(
+/// CAdES y XAdES contrafirman: el resto sale con el rechazo del original.
+pub fn refuse_a_countersignature_outside_cades_and_xades(
     round: SignatureRound,
     format: RequestedFormat,
 ) -> Result<(), Refusal> {
     let counters = matches!(round, SignatureRound::Counter { .. });
-    let cades = matches!(format, RequestedFormat::Cades | RequestedFormat::Cms);
-    if counters && !cades {
+    let supported = matches!(
+        format,
+        RequestedFormat::Cades | RequestedFormat::Cms | RequestedFormat::Xades(_)
+    );
+    if counters && !supported {
         return Err(countersign_refusal());
     }
     Ok(())
@@ -610,11 +613,12 @@ fn check_algorithm(url: &AfirmaUrl) -> Result<AskedAlgorithm, Refusal> {
     })
 }
 
-/// `'countersign' solo existe en CAdES`, compartido por `read_operation` y por el `cop` de `signandsave`.
+/// `'countersign' solo existe en CAdES y XAdES`, compartido por `read_operation`
+/// y por el `cop` de `signandsave`.
 fn countersign_refusal() -> Refusal {
     Refusal::new(
         SafCode::UnsupportedOperation,
-        "'countersign' no existe fuera de CAdES: AOPDFSigner.countersign lanza una \
+        "'countersign' no existe fuera de CAdES y XAdES: AOPDFSigner.countersign lanza una \
          UnsupportedOperationException",
     )
 }
@@ -627,7 +631,7 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 
     let requested = requested_format(url)?;
     if let Some(format) = requested {
-        refuse_a_countersignature_outside_cades(round, format)?;
+        refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     }
     let document = match requested {
         Some(_) => None,
