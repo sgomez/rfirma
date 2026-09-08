@@ -111,6 +111,29 @@ pub enum XmlDsigVariant {
     Enveloped,
 }
 
+/// Qué se hace con lo que entra: firmar, cofirmar la firma que llega o contrafirmarla.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SignatureOperation {
+    /// Firma de lo que llega.
+    #[default]
+    Sign,
+    /// Cofirma de la firma que llega.
+    Cosign,
+    /// Contrafirma de la firma que llega; el objetivo viaja en los `extraParams`.
+    Countersign,
+}
+
+impl SignatureOperation {
+    /// El nombre con el que el puente la espera.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Sign => "sign",
+            Self::Cosign => "cosign",
+            Self::Countersign => "countersign",
+        }
+    }
+}
+
 /// El formato de una firma, con los nombres de `AOSignConstants` del original.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
@@ -180,11 +203,33 @@ impl fmt::Display for Format {
     }
 }
 
+/// Uno de los bloques que el token tiene que firmar, con el identificador que Java exige de vuelta.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreSignBlock {
+    pub(crate) id: String,
+    pub(crate) pre: Vec<u8>,
+}
+
+impl PreSignBlock {
+    /// Identificador del bloque dentro de la sesión trifásica.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    /// Bytes DER de los atributos firmados.
+    pub fn pre_sign(&self) -> &[u8] {
+        &self.pre
+    }
+}
+
 /// Resultado de la prefirma descompuesto en sus partes (ADR-0016).
+///
+/// Una contrafirma prefirma una hoja o más, así que los bloques a firmar son
+/// una lista; PAdES y la firma CAdES son el caso de uno.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreSignature {
     pub(crate) session: String,
-    pub(crate) pre_sign: Vec<u8>,
+    pub(crate) blocks: Vec<PreSignBlock>,
     pub(crate) stamp: SessionSeal,
 }
 
@@ -194,9 +239,9 @@ impl PreSignature {
         &self.session
     }
 
-    /// Bytes DER de los atributos firmados.
-    pub fn pre_sign(&self) -> &[u8] {
-        &self.pre_sign
+    /// Los bloques que el token tiene que firmar, en el orden en que llegaron.
+    pub fn blocks(&self) -> &[PreSignBlock] {
+        &self.blocks
     }
 
     /// Sello de sesión emitido por la prefirma.
@@ -204,16 +249,48 @@ impl PreSignature {
         &self.stamp
     }
 
-    /// Junta la prefirma con la firma del token, solo si el sello volvió intacto (ADR-0016).
+    /// Firma cada bloque con el mismo secreto ya abierto (ADR-0001).
+    pub fn signed_one_by_one<E>(
+        &self,
+        mut sign: impl FnMut(&[u8]) -> Result<Vec<u8>, E>,
+    ) -> Result<TokenSignatures, E> {
+        let mut signed = Vec::with_capacity(self.blocks.len());
+        for block in &self.blocks {
+            signed.push((
+                block.id.clone(),
+                TokenSignature::from_token(sign(&block.pre)?),
+            ));
+        }
+        Ok(TokenSignatures(signed))
+    }
+
+    /// Una firma sintética por bloque, para la prefirma en seco.
+    pub fn invented_signatures(&self) -> TokenSignatures {
+        TokenSignatures(
+            self.blocks
+                .iter()
+                .map(|block| (block.id.clone(), TokenSignature::invented()))
+                .collect(),
+        )
+    }
+
+    /// Junta la prefirma con las firmas del token, solo si el sello volvió intacto (ADR-0016).
     pub fn sealed_with(
         &self,
-        signature: &TokenSignature,
+        signatures: TokenSignatures,
         returned: &SessionSeal,
     ) -> Result<SealedPreSignature, SealMismatch> {
         self.stamp.verify_unchanged(returned)?;
         Ok(SealedPreSignature {
             session: self.session.clone(),
-            pkcs1_b64: signature.to_pkcs1_base64(),
+            signed: signatures
+                .0
+                .into_iter()
+                .map(|(id, signature)| SignedBlock {
+                    id,
+                    pkcs1_b64: signature.to_pkcs1_base64(),
+                })
+                .collect(),
             stamp: returned.clone(),
         })
     }
@@ -248,11 +325,34 @@ impl TokenSignature {
     }
 }
 
+/// Las firmas del token de una prefirma: una por bloque, todas con el mismo secreto (ADR-0001).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TokenSignatures(Vec<(String, TokenSignature)>);
+
+/// El PKCS#1 de uno de los bloques, con el identificador que la postfirma exige.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignedBlock {
+    id: String,
+    pkcs1_b64: String,
+}
+
+impl SignedBlock {
+    /// Identificador del bloque dentro de la sesión trifásica.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    /// Firma PKCS#1 en Base64 sobre los atributos firmados de ese bloque.
+    pub fn pkcs1_b64(&self) -> &str {
+        &self.pkcs1_b64
+    }
+}
+
 /// Prefirma ya firmada por el token con su sello comprobado: lo único que acepta la postfirma.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SealedPreSignature {
     session: String,
-    pkcs1_b64: String,
+    signed: Vec<SignedBlock>,
     stamp: SessionSeal,
 }
 
@@ -262,9 +362,9 @@ impl SealedPreSignature {
         &self.session
     }
 
-    /// Firma PKCS#1 en Base64 sobre los atributos firmados.
-    pub fn pkcs1_b64(&self) -> &str {
-        &self.pkcs1_b64
+    /// Los PKCS#1 de la sesión, uno por bloque prefirmado.
+    pub fn signed(&self) -> &[SignedBlock] {
+        &self.signed
     }
 
     /// Sello que la prefirma emitió y la postfirma exige idéntico.
@@ -301,6 +401,8 @@ impl CompletedCycle {
 pub struct PreSignRequest<'a> {
     /// Formato de la firma que se pide.
     pub format: Format,
+    /// Qué se hace con el documento que entra.
+    pub operation: SignatureOperation,
     /// Documento de entrada en Base64.
     pub document_b64: &'a str,
     /// Algoritmo de firma.

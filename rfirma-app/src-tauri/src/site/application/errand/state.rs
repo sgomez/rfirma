@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::domain::bridge::Format;
+use crate::signing::domain::bridge::{Format, SignatureOperation};
 use crate::site::domain::protocol::{AfirmaUrl, BatchRequest, NegotiatedCredential, SiteFilter};
 
 use super::outcome::{
@@ -103,6 +103,8 @@ pub(super) struct PendingSignature {
     pub(super) filter: SiteFilter,
     /// Formato de firma que pidió la sede, ya atendido por el puente.
     pub(super) format: Format,
+    /// Qué pidió hacer la sede con el documento.
+    pub(super) operation: SignatureOperation,
     /// Parámetros adicionales expandidos.
     pub(super) from_the_site: BTreeMap<String, String>,
     /// Si el documento contiene firmas no reconocidas.

@@ -82,6 +82,7 @@ impl SiteSigning for Neighbours<'_> {
                 request.certificate,
                 DeclaredByTheSite {
                     format: request.format,
+                    operation: request.operation,
                     parameters: request.from_the_site,
                     allow_unregistered_signatures: request.allow_unregistered_signatures,
                 },

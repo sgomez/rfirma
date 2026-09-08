@@ -6,10 +6,11 @@ use crate::desktop::adapters::paths::Paths;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
 use crate::signing::domain::bridge::{
-    BridgeError, Format, PostSignRequest, PreSignRequest, PreSignature,
+    BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
+    SignatureOperation,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::{CompletedCycle, SessionSeal, TokenSignature};
+use crate::signing::domain::{CompletedCycle, SessionSeal};
 use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost};
 
 /// Un hilo del puente cuya librería no abre: lo que la grada A tiene en vez del isolate.
@@ -34,6 +35,8 @@ pub(crate) const A_CADES_SIGNATURE: &[u8] =
 pub(crate) struct BridgeCall {
     /// El formato con el que se le pidió.
     pub(crate) format: Format,
+    /// Qué se le pidió hacer con el documento.
+    pub(crate) operation: SignatureOperation,
     /// El bloque `java.util.Properties` que cruzó.
     pub(crate) extra_params: String,
 }
@@ -56,11 +59,12 @@ impl Bridge for ABridgeThatSigns {
         request.format.bridged()?;
         crate::lock(&self.calls).push(BridgeCall {
             format: request.format,
+            operation: request.operation,
             extra_params: request.extra_params.to_owned(),
         });
         Ok(PreSignature {
             session: "<xml/>".to_owned(),
-            pre_sign: b"123".to_vec(),
+            blocks: vec![a_block()],
             stamp: SessionSeal::from_bridge("el sello de la prefirma"),
         })
     }
@@ -139,15 +143,24 @@ pub(crate) fn an_order() -> SigningOrder {
     }
 }
 
+/// El único bloque a firmar del ciclo doblado.
+fn a_block() -> PreSignBlock {
+    PreSignBlock {
+        id: "001".to_owned(),
+        pre: b"123".to_vec(),
+    }
+}
+
 /// Un ciclo trifásico terminado con una firma inventada, para quien necesite la prueba de que hubo uno.
 pub(crate) fn a_completed_cycle() -> CompletedCycle {
     let stamp = SessionSeal::from_bridge("el sello de la prefirma");
-    PreSignature {
+    let presigned = PreSignature {
         session: "<xml/>".to_owned(),
-        pre_sign: b"123".to_vec(),
+        blocks: vec![a_block()],
         stamp: stamp.clone(),
-    }
-    .sealed_with(&TokenSignature::invented(), &stamp)
-    .expect("el sello es el mismo")
-    .completed_with(b"%PDF-1.7 firmado".to_vec())
+    };
+    presigned
+        .sealed_with(presigned.invented_signatures(), &stamp)
+        .expect("el sello es el mismo")
+        .completed_with(b"%PDF-1.7 firmado".to_vec())
 }

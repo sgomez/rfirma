@@ -74,9 +74,9 @@ fn the_dry_run_neither_asks_for_the_pin_nor_writes_anything() {
 
 #[test]
 fn the_pkcs1_of_the_dry_run_is_the_invented_one() {
-    assert!(production_half().contains("TokenSignature::invented()"));
+    assert!(production_half().contains("invented_signatures()"));
 
-    let invented = super::TokenSignature::invented();
+    let invented = crate::signing::domain::TokenSignature::invented();
     assert_eq!(invented.raw().len(), 256, "una firma RSA de 2048 bits");
     assert!(
         invented.raw().iter().all(|byte| *byte == 0),
@@ -89,7 +89,7 @@ fn only_the_dry_run_invents_a_pkcs1() {
     let signing = include_str!("../session.rs");
 
     assert!(
-        !signing.contains("TokenSignature::invented"),
+        !signing.contains("invented_signatures"),
         "el recorrido de la firma se esta inventando el PK1"
     );
 }
