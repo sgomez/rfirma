@@ -2,7 +2,7 @@
 
 use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
@@ -15,6 +15,7 @@ use base64::Engine as _;
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::identity::domain::store::Store;
 use rfirma_lib::signing::adapters::isolate::Isolate;
+use rfirma_lib::signing::application::session::sign_on_token;
 use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
 use rfirma_lib::site::adapters::desk::Neighbours;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
@@ -53,6 +54,12 @@ const THE_LEGACY_XML_BATCH: &str = "batchxml";
 
 /// El guion del lote remoto sin presigner escuchando.
 const THE_REMOTE_BATCH_WITH_THE_DOWN_PRESIGNER: &str = "batchdown";
+
+/// El guion de `sign` con `format=CAdES` y `mode=explicit` sobre el reto binario.
+const THE_SIGN_CADES_EXPLICIT: &str = "signcades";
+
+/// El guion de `sign` con `format=auto` sobre el mismo reto binario.
+const THE_SIGN_AUTO: &str = "signauto";
 
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
@@ -258,17 +265,33 @@ impl ChannelMaterial {
     }
 }
 
-/// Un fichero temporal con el PEM ya en disco, que es como lo leen Node y OpenSSL.
-fn a_pem_file(pem: &[u8]) -> tempfile::NamedTempFile {
+/// Un fichero temporal con `bytes` ya en disco, con el `suffix` indicado.
+fn a_temp_file(suffix: &str, bytes: &[u8]) -> tempfile::NamedTempFile {
     use std::io::Write;
 
     let mut file = tempfile::Builder::new()
-        .suffix(".pem")
+        .suffix(suffix)
         .tempfile()
-        .expect("un fichero temporal para el PEM");
-    file.write_all(pem).expect("el PEM deberia escribirse");
-    file.flush().expect("el PEM deberia quedar en disco");
+        .expect("un fichero temporal");
+    file.write_all(bytes)
+        .expect("el fichero deberia escribirse");
+    file.flush().expect("el fichero deberia quedar en disco");
     file
+}
+
+/// Un fichero temporal con el PEM ya en disco, que es como lo leen Node y OpenSSL.
+fn a_pem_file(pem: &[u8]) -> tempfile::NamedTempFile {
+    a_temp_file(".pem", pem)
+}
+
+/// Un fichero temporal con el DER ya en disco, que es como lo lee OpenSSL.
+fn a_der_file(der: &[u8]) -> tempfile::NamedTempFile {
+    a_temp_file(".der", der)
+}
+
+/// Ruta del reto de 64 bytes del banco de referencia, el que firma el guion `sign`.
+fn the_challenge_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/reference/challenge.bin")
 }
 
 /// Abre el canal en uno de los puertos sorteados por la URL.
@@ -1036,4 +1059,165 @@ async fn the_remote_batch_fails_when_the_presigner_is_down() {
     );
 
     channel.close();
+}
+
+/// El trámite atendiendo `sign`: consiente con el certificado de pruebas, firma en el token con
+/// el secreto y apunta el DER del firmante para contrastarlo con el que recibe la sede.
+fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+    let signer = Arc::clone(signer);
+
+    Arc::new(move |url, reply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSign(consent)) = errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| {
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+            });
+        let signing_certificate = roots
+            .identity
+            .chosen(&chosen.id)
+            .expect("el certificado consentido deberia seguir en el token");
+        *signer
+            .lock()
+            .expect("nadie envenena el apunte del firmante") =
+            Some(signing_certificate.der().to_vec());
+
+        errand::consent(&desk, &chosen.id, live).expect("la prefirma deberia consentirse");
+        tokio::task::block_in_place(|| {
+            sign_on_token(
+                &roots.identity.signer(),
+                &roots.signing.session,
+                THE_TOKEN_SECRET,
+            )
+            .expect("la firma en el token deberia completarse");
+            errand::finish(&desk, live).expect("la postfirma deberia completarse");
+        });
+    })
+}
+
+/// Comprueba el CMS detached con `openssl cms -verify`, contra el `content` que firmó.
+fn verified_by_openssl(cms: &[u8], content: &Path) {
+    let cms_file = a_der_file(cms);
+    let output = Command::new("openssl")
+        .args(["cms", "-verify", "-noverify", "-inform", "DER", "-in"])
+        .arg(cms_file.path())
+        .arg("-binary")
+        .arg("-content")
+        .arg(content)
+        .args(["-out", "/dev/null"])
+        .output()
+        .expect("falta openssl para el banco de conformidad");
+    assert!(
+        output.status.success(),
+        "openssl cms -verify ha fallado:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Comprueba el CMS con el oráculo de la grada C (`just validate-signature`, #526).
+fn validated_by_the_reference_tool(cms: &[u8]) {
+    let cms_file = a_der_file(cms);
+    let output = Command::new("just")
+        .arg("validate-signature")
+        .arg(cms_file.path())
+        .output()
+        .expect("falta just para el banco de conformidad");
+    assert!(
+        output.status.success(),
+        "just validate-signature ha fallado:\n{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Un `sign()` del cliente publicado del reto binario del banco de referencia, verificado con
+/// `openssl cms -verify` y con el oráculo de la grada C. El puente entrega el CAdES detached en
+/// ambos guiones, con y sin `mode=explicit`, así que el reto original hace falta en los dos.
+async fn the_sign_of(mode: BenchMode, script: &str) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, mode, script);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "'{script}' tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let cms = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el CMS de sign llega en base64");
+    verified_by_openssl(&cms, &the_challenge_path());
+    validated_by_the_reference_tool(&cms);
+
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "el successCallback recibe tambien el DER del firmante"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_binary_challenge_with_cades_explicit() {
+    the_sign_of(BenchMode::Fourth, THE_SIGN_CADES_EXPLICIT).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_binary_challenge_with_cades_explicit_also_over_the_third_protocol(
+) {
+    the_sign_of(BenchMode::Third, THE_SIGN_CADES_EXPLICIT).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_binary_challenge_with_format_auto() {
+    the_sign_of(BenchMode::Fourth, THE_SIGN_AUTO).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_binary_challenge_with_format_auto_also_over_the_third_protocol(
+) {
+    the_sign_of(BenchMode::Third, THE_SIGN_AUTO).await;
 }

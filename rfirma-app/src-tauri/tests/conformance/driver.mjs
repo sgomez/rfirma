@@ -398,6 +398,24 @@ async function theBatchXmlScript() {
   );
 }
 
+/** El reto de 64 bytes del banco de referencia, el mismo que firman los CAdES. */
+function theChallenge() {
+  return readFileSync(join(here, "../../../../testdata/reference/challenge.bin"));
+}
+
+/** Un `sign()` sobre el reto binario, con el formato y `extraParams` del guion. */
+function theSignScript(format, extraParams) {
+  AutoScript.sign(
+    theChallenge().toString("base64"),
+    "SHA256withRSA",
+    format,
+    extraParams,
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -445,6 +463,10 @@ if (script === "batch") {
   theBatchWithTheDownPresignerScript();
 } else if (script === "sticky") {
   theStickyScript();
+} else if (script === "signcades") {
+  theSignScript("CAdES", "mode=explicit");
+} else if (script === "signauto") {
+  theSignScript("auto", "");
 } else {
   AutoScript.selectCertificate(
     "",
