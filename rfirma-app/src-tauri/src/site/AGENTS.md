@@ -115,6 +115,10 @@ situación. Dos cosas que salen mal si se olvidan:
   congelados: `just check-contract` compara `just contract` con
   `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad no
   se tocan.
+- **Un formato que entra en `Format::bridged()`** (`signing/domain/bridge.rs`)
+  deja de ser el contraejemplo que era: revisa `application/errand/tests.rs`,
+  que lo usaba como formato que el puente no atiende, y la resolución de `auto`
+  sobre bytes que no son un PDF.
 - El trámite escribe sus importaciones con `crate::…` y no con `super::super::…`:
   la guarda de dirección (`tests/module_directions.rs`) solo lee `use crate::`, y
   las aristas que hoy tolera por la lista de deuda se le escaparían si fueran

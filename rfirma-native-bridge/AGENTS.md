@@ -38,6 +38,9 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
   `javax.imageio` sin métodos alcanzables: no la quites.
 * **El `WARNING` de `ClassNotFoundException: es.gob.afirma.ui.utils.ImageUtils`**
   en una firma visible con rúbrica es la exclusión haciendo su trabajo.
+* **FacturaE no tiene módulo propio**: `AOFacturaESigner` vive en
+  `afirma-crypto-xades`. No añadas `afirma-crypto-facturae` al `pom.xml`: no
+  existe en la 1.9.2.
 * **El puente exige un JPEG ya normalizado y sin perfil ICC**: la
   normalización es de Rust (ADR-0012). Un PNG que llegue aquí falla con «no
   está codificada en JPEG», y eso es lo correcto.
