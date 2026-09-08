@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { createServer } from "node:https";
+import { createServer as createTcpServer } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInThisContext } from "node:vm";
@@ -312,10 +313,136 @@ async function theBatchScript() {
   );
 }
 
+/** Lo que exige el XML heredado del original: el lote en `xml` y la cadena en `certs`. */
+function missingXmlBatchFields(query) {
+  if (!query.get("xml")) return "xml";
+  if (!query.get("certs")) return "certs";
+  return null;
+}
+
+/**
+ * El presigner del lote XML heredado: comprueba el lote y los `certs`, y devuelve el
+ * `TriphaseData` XML congelado (`BatchSigner`/`afirma-server-triphase-signer`, 1.9.2).
+ */
+function theXmlPresigner(query) {
+  const missing = missingXmlBatchFields(query);
+  if (missing) {
+    emit({ event: "presign", missing });
+    return { status: 400, body: `falta '${missing}'` };
+  }
+
+  const lote = decodedFromBase64(query.get("xml"));
+  const signs = lote.match(/<singlesign\b/g) ?? [];
+  const algorithm = /\balgorithm="([^"]+)"/.exec(lote)?.[1];
+  emit({
+    event: "presign",
+    signs: String(signs.length),
+    certs: String(query.get("certs").split(";").length),
+    algorithm: String(algorithm),
+  });
+  return { status: 200, body: theFrozen("batch-xml-presign-response.xml") };
+}
+
+/**
+ * El postsigner del lote XML heredado: exige `tridata` con `PK1` en cada firma, y devuelve el
+ * resultado congelado del lote.
+ */
+function theXmlPostsigner(query) {
+  const missing = missingXmlBatchFields(query) ?? (query.get("tridata") ? null : "tridata");
+  if (missing) {
+    emit({ event: "postsign", missing });
+    return { status: 400, body: `falta '${missing}'` };
+  }
+
+  const tridata = decodedFromBase64(query.get("tridata"));
+  const signs = tridata.match(/<firma\b/g) ?? [];
+  const withPk1 = tridata.match(/<param n="PK1">/g) ?? [];
+  if (withPk1.length !== signs.length) {
+    emit({ event: "postsign", missing: "PK1" });
+    return { status: 400, body: "falta 'PK1' en alguna firma del 'tridata'" };
+  }
+
+  const withPre = tridata.match(/<param n="PRE">/g) ?? [];
+  emit({
+    event: "postsign",
+    signs: String(signs.length),
+    pre: String(withPre.length),
+  });
+  return { status: 200, body: theFrozen("batch-xml-postsign-result.xml") };
+}
+
+/** Un lote de dos documentos firmado con el `signBatch` heredado contra los dos servlets del banco. */
+async function theBatchXmlScript() {
+  const presigner = await servletServing(theXmlPresigner);
+  const postsigner = await servletServing(theXmlPostsigner);
+
+  const lote =
+    '<signbatch algorithm="SHA256" stoponerror="false">' +
+    '<singlesign id="uno"/><singlesign id="dos"/></signbatch>';
+  const batchB64 = Buffer.from(lote, "utf8").toString("base64");
+
+  AutoScript.signBatch(
+    batchB64,
+    presigner,
+    postsigner,
+    null,
+    (result, certificate) =>
+      settle({
+        // El `signBatch` heredado nunca decodifica `result`: el original hace pasar el
+        // resultado por `AfirmaUtils.parseJSONData`, que revienta con XML y lo deja en base64.
+        event: "success",
+        result: String(result),
+        certificate: String(certificate),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
+function anUnattendedPort() {
+  return new Promise((resolve) => {
+    const server = createTcpServer();
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Un lote sin presigner escuchando: el `errorCallback` del cliente publicado tiene que recibir
+ * `SAF_26` (`ERROR_CONTACT_BATCH_SERVICE`).
+ */
+async function theBatchWithTheDownPresignerScript() {
+  const downPort = await anUnattendedPort();
+  const presigner = `https://127.0.0.1:${downPort}/batch`;
+
+  AutoScript.createBatch("SHA256", "CAdES", "sign");
+  AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
+  AutoScript.addDocumentToBatch("dos", Buffer.from("segundo documento").toString("base64"));
+  AutoScript.signBatchProcess(
+    true,
+    presigner,
+    presigner,
+    null,
+    (result, certificate) =>
+      settle({
+        event: "success",
+        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
+        certificate: String(certificate),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 AutoScript.cargarAppAfirma();
 
 if (script === "batch") {
   theBatchScript();
+} else if (script === "batchxml") {
+  theBatchXmlScript();
+} else if (script === "batchdown") {
+  theBatchWithTheDownPresignerScript();
 } else if (script === "sticky") {
   theStickyScript();
 } else {

@@ -24,8 +24,8 @@ use rfirma_lib::site::application::errand::{
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
-    drawn_ports, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode, PROTOCOL_VERSION,
-    THE_PORT_OF_THE_THIRD_PROTOCOL,
+    drawn_ports, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode, WireAnswer,
+    PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use rfirma_lib::site::ports::ReplyHandle as ErrandReply;
 use rfirma_lib::Roots;
@@ -47,6 +47,12 @@ const THE_STICKY_SELECTIONS: &str = "sticky";
 
 /// El guion del lote remoto: dos documentos firmados con `signBatchJSON`.
 const THE_REMOTE_BATCH: &str = "batch";
+
+/// El guion del lote remoto heredado: dos documentos firmados con `signBatch` en XML.
+const THE_LEGACY_XML_BATCH: &str = "batchxml";
+
+/// El guion del lote remoto sin presigner escuchando.
+const THE_REMOTE_BATCH_WITH_THE_DOWN_PRESIGNER: &str = "batchdown";
 
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
@@ -842,4 +848,192 @@ async fn the_published_client_signs_a_remote_batch_in_json() {
 #[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
 async fn the_published_client_signs_a_remote_batch_also_over_the_third_protocol() {
     the_remote_batch_of(BenchMode::Third).await;
+}
+
+/// El lote remoto heredado en XML, del `signBatch` del cliente publicado al resultado congelado
+/// del postsigner, pasando por los dos servlets que levanta el conductor.
+async fn the_remote_xml_batch_of(mode: BenchMode) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    the_local_ca_trusted_by_the_batch_client(material.ca_pem_file.path());
+
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, mode, THE_LEGACY_XML_BATCH);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_batch_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let presign = client.next_event();
+    assert_eq!(
+        presign.name(),
+        "presign",
+        "el presigner tenia que recibir el lote antes que nada, y llego {}",
+        presign.0
+    );
+    assert_eq!(presign.field("signs"), "2", "el lote lleva dos documentos");
+    assert_eq!(
+        presign.field("certs"),
+        "1",
+        "el lote viaja con la cadena del unico firmante"
+    );
+    assert_eq!(
+        presign.field("algorithm"),
+        "SHA256",
+        "el algoritmo que declara el lote es el que llega al servlet"
+    );
+
+    let postsign = client.next_event();
+    assert_eq!(
+        postsign.name(),
+        "postsign",
+        "el postsigner tenia que recibir el tridata firmado, y llego {}",
+        postsign.0
+    );
+    assert_eq!(
+        postsign.field("signs"),
+        "2",
+        "las dos firmas del lote llegan con su PK1"
+    );
+    assert_eq!(
+        postsign.field("pre"),
+        "1",
+        "solo la firma con NEED_PRE=true conserva su PRE"
+    );
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "el lote tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    let result = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el resultado del lote llega en base64");
+    assert_eq!(
+        without_spaces(&String::from_utf8(result).expect("el resultado del lote es texto")),
+        the_frozen("batch-xml-postsign-result.xml"),
+        "el cliente publicado recibe el resultado del postsigner tal cual"
+    );
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "con needcert el successCallback recibe tambien el DER del firmante"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_remote_batch_in_legacy_xml() {
+    the_remote_xml_batch_of(BenchMode::Fourth).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_remote_batch_in_legacy_xml_also_over_the_third_protocol() {
+    the_remote_xml_batch_of(BenchMode::Third).await;
+}
+
+/// El trámite atendiendo el lote remoto cuyo presigner esta caido: consiente y cierra con el
+/// secreto del token, y comprueba que el lote se rechaza antes de llegar al postsigner.
+fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    Arc::new(move |url, reply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSignTheBatch(consent)) =
+            errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| {
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+            });
+
+        errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
+        tokio::task::block_in_place(|| {
+            let outcome = errand::finish_the_batch(&desk, THE_TOKEN_SECRET, live);
+            assert!(
+                outcome.is_err(),
+                "el lote deberia rechazarse con el presigner caido"
+            );
+        });
+    })
+}
+
+/// Sin presigner escuchando, el `errorCallback` del cliente publicado tiene que recibir `SAF_26`
+/// (`ERROR_CONTACT_BATCH_SERVICE`).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_remote_batch_fails_when_the_presigner_is_down() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    the_local_ca_trusted_by_the_batch_client(material.ca_pem_file.path());
+
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let client = PublishedClient::running_the_script(
+        &material,
+        BenchMode::Fourth,
+        THE_REMOTE_BATCH_WITH_THE_DOWN_PRESIGNER,
+    );
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_down_presigner_batch_errand_of(&roots),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "el lote tenia que acabar en el errorCallback, y acabo en {}",
+        verdict.name()
+    );
+    assert_eq!(
+        verdict.field("message"),
+        WireAnswer::refused(SafCode::ContactBatchService).on_the_wire(),
+        "el presigner caido tenia que contestar ERROR_CONTACT_BATCH_SERVICE"
+    );
+
+    channel.close();
 }
