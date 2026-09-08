@@ -403,10 +403,15 @@ function theChallenge() {
   return readFileSync(join(here, "../../../../testdata/reference/challenge.bin"));
 }
 
-/** Un `sign()` sobre el reto binario, con el formato y `extraParams` del guion. */
-function theSignScript(format, extraParams) {
+/** El XML del banco de referencia, el que firman los guiones XAdES de `sign`. */
+function theXmlDocument() {
+  return readFileSync(join(here, "../../../../testdata/reference/document.xml"));
+}
+
+/** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
+function theSignScript(format, extraParams, content) {
   AutoScript.sign(
-    theChallenge().toString("base64"),
+    content.toString("base64"),
     "SHA256withRSA",
     format,
     extraParams,
@@ -464,9 +469,13 @@ if (script === "batch") {
 } else if (script === "sticky") {
   theStickyScript();
 } else if (script === "signcades") {
-  theSignScript("CAdES", "mode=explicit");
+  theSignScript("CAdES", "mode=explicit", theChallenge());
 } else if (script === "signauto") {
-  theSignScript("auto", "");
+  theSignScript("auto", "", theChallenge());
+} else if (script === "signxades") {
+  theSignScript("XAdES", "", theXmlDocument());
+} else if (script === "signxadesauto") {
+  theSignScript("auto", "", theXmlDocument());
 } else {
   AutoScript.selectCertificate(
     "",
