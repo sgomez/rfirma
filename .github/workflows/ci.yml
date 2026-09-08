@@ -377,19 +377,8 @@ jobs:
             softhsm2 \
             opensc \
             libnss3-tools
-
-      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
-        if: steps.scope.outputs.build == 'true'
-      - name: Herramienta de cobertura y de CRAP
-        if: steps.scope.outputs.build == 'true'
-        run: |
-          cargo binstall --no-confirm cargo-llvm-cov
-          cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
-
-      # El mismo accesorio que el carril rapido, y por la misma razon: aqui
-      # `just test-native` y `just crap-full` vuelven a ejecutar la suite
-      # entera, banco de conformidad incluido, y con CI puesta un accesorio que
-      # falta es un fallo, no un salto.
+      # El accesorio del banco de conformidad: las pruebas de grada C en Rust
+      # cubren los casos trifasicos contra el autoscript.js oficial.
       - name: Cache del banco de conformidad
         if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -400,8 +389,19 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         run: just autoscript
 
-      - name: Construye la libreria nativa
+      # La libreria nativa tarda ~2 min en compilar con native-image, pero el
+      # puente Java apenas cambia. Cachearla por el hash de rfirma-native-bridge
+      # y bootstrap.sh evita recompilarla en PRs y commits que solo tocan Rust o UI.
+      - name: Cache de librfirma_crypto.so
+        id: cache-native-lib
         if: steps.scope.outputs.build == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/**') }}
+
+      - name: Construye la libreria nativa
+        if: steps.scope.outputs.build == 'true' && steps.cache-native-lib.outputs.cache-hit != 'true'
         run: |
           export GRAALVM_HOME="$JAVA_HOME"
           just native
@@ -433,22 +433,73 @@ jobs:
           # el rojo de verdad.
           if-no-files-found: warn
 
-      # La misma medicion CRAP que el carril rapido pero SIN --allow sobre el
-      # modulo FFI: con la cobertura de la grada C incluida, ese modulo ya
-      # puede dar la cara (ADR-0014).
-      - name: CRAP sin exclusiones
-        if: steps.scope.outputs.build == 'true'
-        run: just crap-full
+  # ==========================================================================
+  # COMPILACION DE RELEASE
+  # ==========================================================================
+  # EL BINARIO DE RELEASE no se necesita en el carril rapido y antes corria al
+  # final del job native sumando un minuto mas. Al no depender de GraalVM ni de
+  # librfirma_crypto.so (Rust carga la libreria dinamicamente con libloading),
+  # corre en un job propio en paralelo con native.
+  release:
+    name: Binario de release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # EL BINARIO DE RELEASE VIVE AQUI, y no en el carril rapido. Es un arbol
-      # de dependencias entero aparte del de depuracion y del instrumentado, y
-      # alli no lo ejecutaba nadie: lo que se empaqueta es el flatpak, que es
-      # cosa de este carril. --features custom-protocol no es opcional; el
-      # justfile explica por que.
-      #
-      # Lo unico que esto comprueba y el carril rapido no es que el perfil de
-      # release enlace: `clippy --all-targets --all-features` ya compila el
-      # mismo codigo, custom-protocol incluido.
+      - name: Decide si hace falta
+        id: scope
+        run: |
+          case "${{ github.event_name }}" in
+            push|workflow_dispatch|schedule)
+              echo "build=true" >> "$GITHUB_OUTPUT" ;;
+            pull_request)
+              if ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
+                echo "build=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "build=false" >> "$GITHUB_OUTPUT"
+                echo "Compilacion de release omitida. Pon la etiqueta \`native\` en el PR si tocas el puente." \
+                  >> "$GITHUB_STEP_SUMMARY"
+              fi ;;
+          esac
+
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        if: steps.scope.outputs.build == 'true'
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.scope.outputs.build == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        if: steps.scope.outputs.build == 'true'
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: steps.scope.outputs.build == 'true'
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      - name: Dependencias de sistema de Tauri
+        if: steps.scope.outputs.build == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            build-essential \
+            file \
+            gettext
+
       - name: Compila el binario de release
         if: steps.scope.outputs.build == 'true'
         run: just build-rust

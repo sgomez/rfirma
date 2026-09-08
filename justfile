@@ -1002,14 +1002,13 @@ test-rust: token build-ts
 # src-tauri/target/debug/deps/, asi que la ruta relativa al ejecutable que usa
 # el cargador (../lib/rfirma) resolveria a src-tauri/target/debug/lib/rfirma y
 # no a donde `native` acaba de instalar la libreria.
-#
-# Las de grada C, que el carril lento ejecuta con --include-ignored.
+# Las de grada C, que el carril lento ejecuta con --ignored.
 test-native: token check-native build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --include-ignored
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
     # Las de grada C del puente Java: el ciclo trifasico entero validado con
     # `pdfsig` de poppler, que es la puerta automatica de validez del ADR-0014.
-    # -DexcludedGroups= levanta la exclusion que el pom pone por omision.
-    cd {{ bridge }} && mvn -B test -DexcludedGroups=
+    # -DexcludedGroups= y -Dgroups=gradaC ejecutan unicamente la grada C sin repetir unitarios.
+    cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)

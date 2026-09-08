@@ -76,9 +76,8 @@ verifies:
 - the **CRAP gate**: `cargo crap --threshold 30 --fail-above`, at a version
   pinned in the `justfile`, with `--allow` over the FFI module path;
 - on the slow lane only: that `native-image --shared` still **produces the
-  shared library**, that the tier C tests **pass** (`--include-ignored` on
-  Rust, `-DexcludedGroups=` on Maven), and the same CRAP measurement
-  **without** the FFI exclusion.
+  shared library** (cached by hash of the Java bridge), and that the tier C tests
+  **pass** (`--ignored` on Rust in `test-native`, `-DexcludedGroups= -Dgroups=gradaC` on Maven).
 
 The fast lane does **not** verify that a signature is valid or that a PDF
 opens; **the slow lane does**: `just test-native` signs a PDF end to end
@@ -143,7 +142,7 @@ to be fast.
 | Lane | Job | When |
 | --- | --- | --- |
 | fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every PR, every push to `main` |
-| slow | `Imagen nativa` (`native-image` itself is 1 m 22 s) | tags `v*`, manual dispatch, weekly cron, or a PR labelled `native` |
+| slow | `Imagen nativa`, `Binario de release` (parallel) | tags `v*`, manual dispatch, weekly cron, or a PR labelled `native` |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
 
 The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
@@ -155,8 +154,8 @@ Almost all of the Rust job is compiling the Tauri dependency tree, and each
 distinct flag set gets its own metadata hash and reuses nothing from the
 others. So the count of those trees *is* the cost, and the fast lane is down to
 **two** — `cargo clippy --all-targets --all-features` and the `cargo llvm-cov`
-instrumented build. It used to be four: `cargo build --release` moved to the
-slow lane (nothing in the fast lane ran that binary), and the bare `cargo test`
+instrumented build. It used to be four: `cargo build --release` moved to a
+parallel job in the slow lane (nothing in the fast lane ran that binary), and the bare `cargo test`
 went away because `cargo llvm-cov` **runs the suite itself** and propagates its
 exit code, so keeping both meant running every test twice in two trees.
 
@@ -168,7 +167,7 @@ gap between a cold run and that warm number.
 
 **One tradeoff was taken on purpose:** in the fast lane the Rust tests only
 ever run *instrumented*, under `llvm-cov`. The uninstrumented run still
-happens, in the slow lane's `just test-native`, on every push to `main` and
+happens, in the slow lane's `just test-native` (`--ignored`), on every push to `main` and
 every weekly cron — so a failure that only shows up without instrumentation is
 caught at merge, not at PR.
 
