@@ -10,6 +10,8 @@ enlace simbólico.
 |---|---|
 | `index.html` | La landing, escrita a mano, sin generador y sin paso de construcción |
 | `rfirma-main-window.png` | Captura real de la interfaz principal de rFirma |
+| `landing-prompt.md` | El encargo con el que se dibujó la landing nueva en Claude Design |
+| `landing-prototype.dc.html` | Copia 1-1 del artboard `Landing.dc.html` del lienzo; no es lo que se sirve, es lo que hay que portar |
 | `Caddyfile` | Configuración de Caddy (no-root, puerto 3000, cabeceras, healthcheck y las rutas de los tres repositorios) |
 | `Dockerfile` | `caddy:alpine` no-root más la landing y Caddyfile |
 | `download-series.sh` | Baja y verifica **toda** la serie menor vigente desde las Releases |

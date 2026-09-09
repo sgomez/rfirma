@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/fonts/fonts.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/color.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/radius.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/shadow.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/tokens/breakpoint.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/_ds_bundle.css">
+  <link rel="stylesheet" href="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/styles.css">
+  <script src="_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/_ds_bundle.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: #ffffff; }
+    a { color: #0f766e; text-underline-offset: 3px; }
+    a:hover { color: #067781; }
+    [data-navlinks] { display: flex; }
+    @media (max-width: 1060px) { [data-navlinks] { display: none; } }
+    @media (max-width: 820px) { [data-hide-sm] { display: none !important; } }
+    @media (max-width: 940px) {
+      [data-demo-grid] { grid-template-columns: minmax(0, 1fr) !important; }
+      [data-demo-mock] { order: -1; }
+      [data-demo-step] { min-height: 46vh !important; }
+      [data-tilt] { transform: none !important; }
+    }
+
+    /* Formas orgánicas de fondo */
+    [data-blob] { position: absolute; pointer-events: none; z-index: 0; aspect-ratio: 1; }
+    [data-blob="hero"] {
+      right: -14%; top: -34%; width: min(64vw, 860px);
+      border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%;
+      background: linear-gradient(135deg, #067781 0%, #14b8a6 58%, #99f6e4 100%);
+      animation: rf-morph 18s ease-in-out infinite alternate;
+    }
+    [data-blob="hero-soft"] {
+      left: -18%; bottom: -30%; width: min(44vw, 520px);
+      border-radius: 60% 40% 50% 50% / 50% 60% 40% 50%;
+      background: linear-gradient(160deg, #ccfbf1, #f0fdfa);
+      animation: rf-morph 24s ease-in-out infinite alternate-reverse;
+    }
+    [data-blob="cmp"] {
+      left: -10%; bottom: -22%; width: min(36vw, 460px);
+      border-radius: 55% 45% 40% 60% / 45% 55% 45% 55%;
+      background: linear-gradient(150deg, #ccfbf1, #ffffff 80%);
+      animation: rf-morph 26s ease-in-out infinite alternate;
+    }
+    [data-blob="foot"] {
+      right: -8%; top: -50%; width: min(40vw, 520px);
+      border-radius: 50% 50% 42% 58% / 58% 42% 58% 42%;
+      background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+      animation: rf-morph 20s ease-in-out infinite alternate;
+    }
+    [data-band] {
+      position: absolute; inset: 10% -12% 8% -12%; z-index: 0; pointer-events: none;
+      background: linear-gradient(180deg, #f0fdfa 0%, #ecfeff 100%);
+      border-radius: 96px; transform: rotate(-3deg);
+    }
+
+    /* Órbitas y satélites del hero */
+    [data-orbit] { position: absolute; left: -300px; top: 50%; translate: 0 -50%; border: 1px dashed #99f6e4; border-radius: 50%; pointer-events: none; }
+    [data-orbit="1"] { width: 560px; height: 560px; }
+    [data-orbit="2"] { width: 820px; height: 820px; }
+    [data-orbit="3"] { width: 1080px; height: 1080px; }
+    [data-satellite] {
+      position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: #ffffff; box-shadow: 0 10px 24px -8px rgba(6,119,129,.55);
+      animation: rf-float 6s ease-in-out infinite;
+    }
+    [data-satellite="1"] { left: 1.5%; top: 22%; background: linear-gradient(135deg, #067781, #14b8a6); }
+    [data-satellite="2"] { left: 3%; top: 60%; background: linear-gradient(135deg, #0f766e, #2dd4bf); animation-delay: -2s; }
+    [data-satellite="3"] { left: 1%; top: 90%; background: linear-gradient(135deg, #f59e0b, #fbbf24); animation-delay: -4s; }
+
+    /* Tarjetas flotantes y maqueta inclinada */
+    [data-tilt] { transform: perspective(1800px) rotateY(-9deg) rotateX(3deg); transform-origin: 60% 50%; }
+    [data-float] { animation: rf-float 7s ease-in-out infinite; }
+    [data-float="2"] { animation-delay: -2.5s; }
+    [data-float="3"] { animation-delay: -4.5s; }
+    [data-float="4"] { animation-delay: -1.2s; }
+    [data-icon-round] {
+      width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: #ffffff; background: linear-gradient(135deg, #067781, #2dd4bf);
+      box-shadow: 0 8px 18px -8px rgba(6,119,129,.6);
+    }
+    [data-icon-round="soft"] { background: #f0fdfa; color: #0f766e; box-shadow: none; }
+    [data-icon-round="amber"] { background: linear-gradient(135deg, #f59e0b, #fbbf24); box-shadow: 0 8px 18px -8px rgba(245,158,11,.6); }
+
+    /* Pilares */
+    [data-pillar] {
+      position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px;
+      padding: 36px 26px; border-radius: 20px; background: #ffffff; border: 1px solid transparent;
+      transition: transform 300ms cubic-bezier(.4,0,.2,1), box-shadow 300ms cubic-bezier(.4,0,.2,1), border-color 300ms;
+    }
+    [data-pillar]:hover, [data-pillar="lead"] { border-color: #e5e5e5; box-shadow: 0 30px 60px -30px rgba(6,119,129,.35), 0 10px 25px -15px rgba(0,0,0,.12); transform: translateY(-6px); }
+    [data-pillar-icon] {
+      width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+      background: #f0fdfa; color: #067781;
+    }
+    [data-pillar-icon="dark"] { background: linear-gradient(135deg, #067781, #14b8a6); color: #ffffff; box-shadow: 0 14px 28px -12px rgba(6,119,129,.6); }
+    [data-pillar-icon="amber"] { background: #fffbeb; color: #b45309; }
+
+    /* Botón de marca */
+    [data-btn-brand] {
+      background: linear-gradient(135deg, #067781 0%, #0d9488 100%); color: #ffffff; border: 0;
+      box-shadow: 0 14px 30px -10px rgba(6,119,129,.6);
+      transition: transform 150ms cubic-bezier(.4,0,.2,1), box-shadow 150ms cubic-bezier(.4,0,.2,1);
+    }
+    [data-btn-brand]:hover { color: #ffffff; transform: translateY(-2px); box-shadow: 0 18px 34px -10px rgba(6,119,129,.7); }
+
+    /* Comparativa: la columna de rFirma resalta */
+    #comparativa tbody td:last-child, #comparativa thead th:last-child { background: rgba(240,253,250,.7); }
+
+    /* Transparencia */
+    #transparencia .rf-card { border-top: 3px solid #067781; }
+
+    /* Aparición al hacer scroll */
+    [data-reveal] { opacity: 0; transform: translateY(22px); transition: opacity 650ms cubic-bezier(.4,0,.2,1), transform 650ms cubic-bezier(.4,0,.2,1); }
+    [data-reveal].is-in { opacity: 1; transform: none; }
+    [data-reveal="2"] { transition-delay: 120ms; }
+    [data-reveal="3"] { transition-delay: 240ms; }
+    [data-reveal="4"] { transition-delay: 360ms; }
+
+    @keyframes rf-pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+    @keyframes rf-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes rf-morph {
+      0%   { border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%; }
+      50%  { border-radius: 55% 45% 40% 60% / 40% 55% 45% 60%; }
+      100% { border-radius: 48% 52% 60% 40% / 55% 48% 52% 45%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      [data-anim], [data-blob], [data-float], [data-satellite] { animation: none !important; transition: none !important; }
+      [data-anim] { transform: none !important; opacity: 1 !important; }
+      [data-reveal] { opacity: 1; transform: none; transition: none; }
+    }
+  </style>
+</helmet>
+<div class="rf-root" data-theme="light" style="--rf-brand:#067781;--rf-brand-surface:#f0fdfa;--rf-brand-border:#99f6e4;--rf-brand-text:#0f766e;--rf-warning-bg:#fffbeb;--rf-warning-border:#fde68a;--rf-warning-text:#92400e;--rf-code-bg:#f8fafc;background:#ffffff;color:var(--rf-text);font-size:16px;line-height:1.6;overflow-x:clip">
+
+<!-- section: notice-top -->
+<div data-notice role="note" aria-label="Aviso sobre titularidad oficial" style="position:sticky;top:0;z-index:200;background:#ffffff;border-bottom:1px solid var(--rf-border-subtle);padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center">
+  <span class="rf-badge" data-hide-sm style="flex:none;border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)">Aviso</span>
+  <p data-i18n="notice.official" style="margin:0;font-size:.8125rem;line-height:1.4;max-width:64rem"><strong>rFirma no es un producto oficial de la Administración Pública.</strong> Es un proyecto independiente de código abierto bajo licencia EUPL 1.2.</p>
+</div>
+
+<!-- section: nav -->
+<header data-header style="position:sticky;top:44px;z-index:150;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--rf-border-subtle)">
+  <nav aria-label="Navegación principal" style="max-width:76rem;margin:0 auto;padding:0 clamp(16px,4vw,32px);min-height:72px;display:flex;align-items:center;gap:clamp(12px,3vw,32px)">
+    <a href="#" aria-label="rFirma — inicio" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;flex:none">
+      <svg width="34" height="34" viewBox="0 0 512 512" aria-hidden="true"><circle cx="256" cy="256" r="225.28" fill="#067781"></circle><path fill="#ffffff" d="M 206.05,134.63 C 190.87,133.9 173.56,140.04 167.17,154.88 C 158.7,176.24 154.89,199.17 151.45,221.81 C 145.7,263.83 143.8,306.64 149.91,348.74 C 151.38,361.75 156.08,376.98 169.49,382.09 C 177.29,385.11 186.29,384.78 194.18,382.33 C 207.23,377.91 212.67,363.77 214.74,351.28 C 222.24,313.74 232,276.05 250.11,242.08 C 256.76,230.86 263.77,218.29 275.94,212.37 C 280.92,209.61 286.92,213.33 287.02,218.92 C 287.91,230 283.38,240.72 283.95,251.85 C 283.15,268.89 293.47,286.55 310.21,291.69 C 328.34,297.24 347.41,288.8 360.99,276.85 C 370.03,268.96 378.6,260.32 385.92,250.85 C 392.37,240.92 390.7,225.22 380.31,218.7 C 372.5,214.41 364.05,220.03 358.73,225.73 C 355.75,229.11 350.02,233.87 346.1,229.11 C 341.84,222.32 345.26,213.79 345.8,206.36 C 347.75,189.47 354.63,171.95 348.22,155.23 C 344.64,144.32 334.53,136.52 323.21,135.13 C 310.69,133.6 297.68,135.46 286.51,141.56 C 260.76,154.56 243.03,178.9 229.51,203.68 C 220.32,220.35 213.2,238.04 206.64,255.88 C 208.25,232.1 212.36,208.07 217.24,184.58 C 219.14,173.51 223.39,162.86 224.4,151.68 C 225.56,144.04 220.12,136.59 212.43,135.56 C 210.37,134.92 208.17,134.95 206.05,134.63 Z"></path></svg>
+      <span style="font-size:1.3rem;font-weight:800;letter-spacing:-.02em">rFirma</span>
+      <span class="rf-badge" style="border-color:var(--rf-brand-border);background:var(--rf-brand-surface);color:var(--rf-brand-text)">Alfa</span>
+    </a>
+
+    <ul data-navlinks style="list-style:none;margin:0;padding:0;align-items:center;gap:clamp(14px,2.2vw,28px);white-space:nowrap">
+      <li><a href="#firmar" data-i18n="nav.how" style="text-decoration:none;font-size:.9375rem;font-weight:500;color:var(--rf-text-muted)">Así se firma</a></li>
+      <li><a href="#caracteristicas" data-i18n="nav.features" style="text-decoration:none;font-size:.9375rem;font-weight:500;color:var(--rf-text-muted)">Características</a></li>
+      <li><a href="#comparativa" data-i18n="nav.comparison" style="text-decoration:none;font-size:.9375rem;font-weight:500;color:var(--rf-text-muted)">Comparativa</a></li>
+      <li><a href="#instalacion" data-i18n="nav.install" style="text-decoration:none;font-size:.9375rem;font-weight:500;color:var(--rf-text-muted)">Instalación</a></li>
+      <li><a href="#transparencia" data-i18n="nav.transparency" style="text-decoration:none;font-size:.9375rem;font-weight:500;color:var(--rf-text-muted)">Transparencia</a></li>
+    </ul>
+
+    <div style="flex:1"></div>
+
+    <div style="position:relative;flex:none">
+      <button type="button" class="rf-btn rf-btn--ghost" aria-haspopup="listbox" aria-expanded="{{ langExpanded }}" onClick="{{ toggleLang }}" style="color:var(--rf-text);padding:0 10px;gap:6px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"></path></svg>
+        <span data-i18n="lang.current">Español</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ langOpen }}" hint-placeholder-val="{{ false }}">
+        <ul role="listbox" aria-label="Idioma" style="position:absolute;top:calc(100% + 8px);right:0;z-index:10;min-width:200px;list-style:none;margin:0;padding:6px;background:#ffffff;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated)">
+          <li role="option" aria-selected="true" style="display:flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;font-size:.9375rem;font-weight:600;border-radius:var(--rf-radius-sm);background:var(--rf-brand-surface);color:var(--rf-brand-text)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6"></path></svg>
+            <span data-i18n="lang.es">Español</span>
+          </li>
+          <li role="option" aria-selected="false" aria-disabled="true" style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 10px;font-size:.9375rem;color:var(--rf-text-muted)"><span data-i18n="lang.ca">Català</span><span style="font-size:.75rem">pendiente</span></li>
+          <li role="option" aria-selected="false" aria-disabled="true" style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 10px;font-size:.9375rem;color:var(--rf-text-muted)"><span data-i18n="lang.eu">Euskara</span><span style="font-size:.75rem">pendiente</span></li>
+          <li role="option" aria-selected="false" aria-disabled="true" style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 10px;font-size:.9375rem;color:var(--rf-text-muted)"><span data-i18n="lang.gl">Galego</span><span style="font-size:.75rem">pendiente</span></li>
+          <li role="option" aria-selected="false" aria-disabled="true" style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 10px;font-size:.9375rem;color:var(--rf-text-muted)"><span data-i18n="lang.en">English</span><span style="font-size:.75rem">pendiente</span></li>
+        </ul>
+      </sc-if>
+    </div>
+
+    <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer" class="rf-btn rf-btn--secondary" style="flex:none;text-decoration:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"></path></svg>
+      <span data-i18n="nav.github">GitHub</span>
+    </a>
+  </nav>
+</header>
+
+<!-- section: hero -->
+<section data-hero style="position:relative;overflow:clip">
+  <div data-blob="hero" aria-hidden="true"></div>
+  <div data-blob="hero-soft" aria-hidden="true"></div>
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:clip">
+    <span data-orbit="1"></span><span data-orbit="2"></span><span data-orbit="3"></span>
+    <span data-satellite="1" data-hide-sm><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></span>
+    <span data-satellite="2" data-hide-sm><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18c3-9 6-11 7-7s-2 9-3 7 3-7 7-8 2 4 4 4 4-3 5-5"></path></svg></span>
+    <span data-satellite="3" data-hide-sm><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path><path d="M9 15.5l2 2 4-4"></path></svg></span>
+  </div>
+
+  <div style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(48px,8vw,112px) clamp(16px,4vw,32px) clamp(64px,9vw,128px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(400px,100%),1fr));gap:clamp(40px,6vw,80px);align-items:center">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:22px;max-width:34rem">
+      <span data-i18n="hero.kicker" style="font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)">Alternativa independiente a AutoFirma</span>
+      <h1 data-i18n="hero.title" style="margin:0;font-size:clamp(2.5rem,5.6vw,4.5rem);font-weight:800;line-height:1.02;letter-spacing:-.045em;text-wrap:balance">Firma electrónica nativa.<br><span style="background:linear-gradient(90deg,#067781,#14b8a6 70%,#2dd4bf);-webkit-background-clip:text;background-clip:text;color:transparent">Sin Java, sin esperas.</span></h1>
+      <p data-i18n="hero.body" style="margin:0;font-size:clamp(1.0625rem,1.6vw,1.25rem);line-height:1.6;color:var(--rf-text-muted);text-wrap:pretty">Aplicación de escritorio en Rust y React que sustituye la interfaz Swing y los servidores locales de AutoFirma, con la criptografía oficial de la Administración.</p>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin-top:6px">
+        <a href="#instalacion" class="rf-btn rf-btn--pill" data-btn-brand style="text-decoration:none;padding:0 28px;min-height:50px;font-size:1rem" data-i18n="hero.cta.primary">Instalar rFirma</a>
+        <a href="#firmar" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;color:var(--rf-text)">
+          <span data-icon-round style="width:44px;height:44px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span>
+          <span data-i18n="hero.cta.secondary">Ver cómo se firma</span>
+        </a>
+      </div>
+      <ul style="list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 22px;font-size:.875rem;color:var(--rf-text-muted)">
+        <li style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--rf-brand)"></span><span data-i18n="hero.trust.oss">Código abierto, EUPL 1.2</span></li>
+        <li style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--rf-brand)"></span><span data-i18n="hero.trust.keys">La clave privada no sale de tu equipo</span></li>
+        <li style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--rf-brand)"></span><span data-i18n="hero.trust.formats">CAdES, PAdES, XAdES y FacturaE</span></li>
+        <li style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--rf-brand)"></span><span data-i18n="hero.trust.langs">En cinco idiomas</span></li>
+      </ul>
+    </div>
+
+    <div style="position:relative;min-width:0;padding:24px 0 36px">
+      <div data-tilt style="position:relative;border-radius:18px;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 50px 90px -30px rgba(6,119,129,.45),0 20px 40px -20px rgba(0,0,0,.25);overflow:hidden">
+        <div style="height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;background:#fafbfc;border-bottom:1px solid var(--rf-border-subtle)">
+          <span style="width:11px;height:11px;border-radius:50%;background:#e5e5e5"></span><span style="width:11px;height:11px;border-radius:50%;background:#e5e5e5"></span><span style="width:11px;height:11px;border-radius:50%;background:#e5e5e5"></span>
+          <span style="margin-left:10px;font-size:.75rem;font-weight:600;color:var(--rf-text-muted)">rFirma — Solicitud-subvencion.pdf</span>
+        </div>
+        <img src="rfirma-main-window.png" alt="Ventana principal de rFirma: visor del documento, colocación de la firma visible y panel lateral de firma" width="1663" height="1115" loading="eager" style="width:100%;height:auto;display:block">
+      </div>
+
+      <div data-float="1" data-hide-sm style="position:absolute;left:-36px;top:14%;display:flex;align-items:center;gap:12px;padding:12px 16px;background:#ffffff;border-radius:14px;box-shadow:0 24px 48px -16px rgba(6,119,129,.35),0 6px 16px -8px rgba(0,0,0,.15);max-width:250px">
+        <span data-icon-round><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="5"></circle><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"></path></svg></span>
+        <span style="min-width:0">
+          <span data-i18n="hero.card.cert.label" style="display:block;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rf-text-muted)">Certificado</span>
+          <span data-i18n="hero.card.cert.value" style="display:block;font-size:.8125rem;font-weight:700;line-height:1.3">ADA LOVELACE BYRON</span>
+          <span style="display:block;font-size:.75rem;color:var(--rf-text-muted)">AC FNMT Usuarios</span>
+        </span>
+      </div>
+
+      <div data-float="2" data-hide-sm style="position:absolute;right:-30px;top:8%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;background:#ffffff;border-radius:14px;box-shadow:0 24px 48px -16px rgba(6,119,129,.35),0 6px 16px -8px rgba(0,0,0,.15);width:132px">
+        <svg width="64" height="64" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="#e5e5e5" stroke-width="4"></circle><circle cx="18" cy="18" r="15" fill="none" stroke="url(#rfHeroRing)" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="23.5" transform="rotate(-90 18 18)"></circle><defs><linearGradient id="rfHeroRing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#067781"></stop><stop offset="1" stop-color="#2dd4bf"></stop></linearGradient></defs><text x="18" y="21" text-anchor="middle" font-size="9" font-weight="800" fill="#000">3/4</text></svg>
+        <span data-i18n="hero.card.phase.label" style="font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rf-text-muted)">Fase</span>
+        <span data-i18n="hero.card.phase.value" style="font-size:.8125rem;font-weight:700">Ensamblando</span>
+      </div>
+
+      <div data-float="3" data-hide-sm style="position:absolute;right:-18px;bottom:6%;display:flex;align-items:center;gap:12px;padding:12px 16px;background:#ffffff;border-radius:14px;box-shadow:0 24px 48px -16px rgba(6,119,129,.35),0 6px 16px -8px rgba(0,0,0,.15);max-width:230px">
+        <span data-icon-round="amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18c3-9 6-11 7-7s-2 9-3 7 3-7 7-8 2 4 4 4 4-3 5-5"></path></svg></span>
+        <span style="min-width:0">
+          <span data-i18n="hero.card.stamp.label" style="display:block;font-size:.6875rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rf-text-muted)">Firma visible</span>
+          <span data-i18n="hero.card.stamp.value" style="display:block;font-size:.8125rem;font-weight:700;line-height:1.3">Colocada en la página 3</span>
+        </span>
+      </div>
+
+      <div data-float="4" data-hide-sm style="position:absolute;left:6%;bottom:-6px;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#ffffff;border-radius:999px;box-shadow:0 18px 40px -16px rgba(6,119,129,.35),0 6px 16px -8px rgba(0,0,0,.15)">
+        <span data-icon-round="soft" style="width:32px;height:32px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6"></path></svg></span>
+        <span data-i18n="hero.card.format.value" style="font-size:.8125rem;font-weight:700">PAdES · 2 firmas</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- section: formats -->
+<section aria-label="Formatos y almacenes compatibles" style="background:#ffffff">
+  <div style="max-width:76rem;margin:0 auto;padding:clamp(28px,4vw,44px) clamp(16px,4vw,32px);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:clamp(20px,4vw,56px)">
+    <span data-reveal style="font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:#94a3b8">CAdES</span>
+    <span data-reveal="2" style="font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:#94a3b8">PAdES</span>
+    <span data-reveal="3" style="font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:#94a3b8">XAdES</span>
+    <span data-reveal="4" style="font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:#94a3b8">FacturaE</span>
+    <span data-reveal="2" style="font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:#94a3b8">PKCS#11</span>
+  </div>
+  <div aria-hidden="true" style="width:56px;height:4px;margin:0 auto;border-radius:999px;background:linear-gradient(90deg,#067781,#2dd4bf)"></div>
+</section>
+
+<!-- section: how-to-sign -->
+<section id="firmar" style="position:relative;background:#ffffff;overflow:clip">
+  <div data-band aria-hidden="true"></div>
+  <div style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto clamp(24px,4vw,48px);text-align:center">
+      <span data-i18n="how.kicker" style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)">Cinco pantallas reales</span>
+      <h2 data-i18n="how.title" style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em">Así se firma un documento</h2>
+    </div>
+    <div data-demo-grid style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(24px,4vw,56px);align-items:start">
+      <div style="min-width:0">
+        <div data-demo-step="0" style="min-height:64vh;display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <span style="{{ stepNum0 }}">01</span>
+          <h3 data-i18n="how.step1.title" style="{{ stepTitle0 }}">Documento cargado</h3>
+          <p data-i18n="how.step1.body" style="{{ stepBody0 }}">rFirma abre el PDF y muestra lo que contiene: páginas, tamaño y las firmas que ya lleva. Si hay una previa, la tuya será una cofirma.</p>
+        </div>
+        <div data-demo-step="1" style="min-height:64vh;display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <span style="{{ stepNum1 }}">02</span>
+          <h3 data-i18n="how.step2.title" style="{{ stepTitle1 }}">Elegir certificado</h3>
+          <p data-i18n="how.step2.body" style="{{ stepBody1 }}">La lista se compone con los almacenes del sistema, los perfiles del navegador y los módulos PKCS#11. Los caducados y revocados se muestran, pero no se pueden usar.</p>
+        </div>
+        <div data-demo-step="2" style="min-height:64vh;display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <span style="{{ stepNum2 }}">03</span>
+          <h3 data-i18n="how.step3.title" style="{{ stepTitle2 }}">Introducir el PIN</h3>
+          <p data-i18n="how.step3.body" style="{{ stepBody2 }}">El PIN lo pide el almacén de certificados, no rFirma. La clave privada permanece dentro de él durante toda la operación.</p>
+        </div>
+        <div data-demo-step="3" style="min-height:64vh;display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <span style="{{ stepNum3 }}">04</span>
+          <h3 data-i18n="how.step4.title" style="{{ stepTitle3 }}">Firmando</h3>
+          <p data-i18n="how.step4.body" style="{{ stepBody3 }}">Prefirma, firma y ensamblado del PDF. Cada fase queda a la vista mientras se completa.</p>
+        </div>
+        <div data-demo-step="4" style="min-height:64vh;display:flex;flex-direction:column;justify-content:center;gap:10px">
+          <span style="{{ stepNum4 }}">05</span>
+          <h3 data-i18n="how.step5.title" style="{{ stepTitle4 }}">Firma completada</h3>
+          <p data-i18n="how.step5.body" style="{{ stepBody4 }}">El PDF firmado se guarda junto al original. El resumen indica el formato PAdES y todas las firmas del documento.</p>
+        </div>
+      </div>
+
+      <div data-demo-mock style="position:sticky;top:132px;min-width:0">
+        <div data-mock-frame style="width:100%;min-width:0;overflow:hidden">
+          <div data-mock-stage style="width:1000px;height:620px;transform-origin:top left">
+            <div data-theme="light" style="width:1000px;height:620px;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);box-shadow:var(--rf-shadow-elevated)">
+
+              <header style="height:48px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+                <span style="font-size:15px;font-weight:700;letter-spacing:.4px">rFirma</span>
+                <span style="flex:1"></span>
+                <span class="rf-badge">{{ mockBadge }}</span>
+                <span style="display:flex;color:var(--rf-text)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></span>
+              </header>
+
+              <div style="flex:1;min-height:0;display:flex;align-items:stretch">
+                <aside style="width:196px;flex:none;padding:16px;display:flex;flex-direction:column;gap:12px;border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;border:1px dashed var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+                    <span style="color:var(--rf-text-muted);display:flex"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M8 8l4-4 4 4"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg></span>
+                    <span style="font-size:12px;line-height:1.4;text-align:center;color:var(--rf-text)">Arrastra un PDF o pulsa para abrirlo</span>
+                  </div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)">Recientes</span>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg)">
+                    <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Solicitud-subvencion.pdf</span>
+                    <span style="display:flex;align-items:center;gap:6px"><span class="rf-badge">{{ mockBadge }}</span><span style="font-size:11px;color:var(--rf-text-muted)">hoy, 10:58</span></span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px">
+                    <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--rf-text-muted)">Anexo-II-memoria.pdf</span>
+                    <span style="font-size:11px;color:var(--rf-text-muted)">hoy, 09:40</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px">
+                    <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--rf-text-muted)">Contrato-alquiler.pdf</span>
+                    <span style="font-size:11px;color:var(--rf-text-muted)">ayer, 17:20</span>
+                  </div>
+                </aside>
+
+                <div style="flex:1;min-width:0;position:relative;background:var(--rf-surface);display:flex;align-items:center;justify-content:center;padding:20px 20px 68px">
+                  <div style="width:296px;aspect-ratio:1/1.414;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);box-shadow:var(--rf-shadow-card);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:26px">
+                    <span style="height:10px;width:46%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></span>
+                    <span style="height:6px"></span>
+                    <span style="height:5px;width:68%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:65%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:74%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:70%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:10px"></span>
+                    <span style="height:5px;width:92%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:88%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:94%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:76%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <div data-anim style="{{ stampStyle }}">
+                      <span style="flex:none;color:var(--rf-text);opacity:.85;display:flex"><svg width="52" height="26" viewBox="0 0 84 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg></span>
+                      <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                        <span style="font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ADA LOVELACE BYRON</span>
+                        <span style="font-size:7px;color:var(--rf-text-muted)">DNI 99999999R</span>
+                        <span style="font-size:7px;color:var(--rf-text-muted)">31/08/2026 11:04</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-pill);background:var(--rf-surface);box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
+                    <span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></span>
+                    <span style="display:flex;align-items:center;gap:6px;padding:0 4px"><span style="min-width:30px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);font-size:12px;font-weight:700">3</span><span style="font-size:11px;color:var(--rf-text-muted)">de 27</span></span>
+                    <span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--rf-text)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span>
+                    <span style="width:1px;height:20px;margin:0 4px;background:var(--rf-border-subtle)"></span>
+                    <span style="font-size:11px;font-weight:700;min-width:42px;text-align:center">100 %</span>
+                  </div>
+                </div>
+
+                <aside style="width:296px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--rf-border-subtle);background:var(--rf-surface);position:relative">
+                  <div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;align-items:flex-start;gap:8px">
+                      <span style="flex:none;margin-top:2px;color:var(--rf-text-muted);display:flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span>
+                      <span style="min-width:0;display:flex;flex-direction:column;gap:3px">
+                        <span style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ mockFileName }}</span>
+                        <span style="font-size:11px;color:var(--rf-text-muted)">27 páginas · 2,4 MB</span>
+                      </span>
+                    </div>
+                    <hr style="border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%">
+                    <span style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)">{{ mockPanelLabel }}</span>
+
+                    <sc-if value="{{ panelChoose }}" hint-placeholder-val="{{ true }}">
+                      <button type="button" class="rf-btn rf-btn--secondary" style="width:100%">Elegir certificado</button>
+                    </sc-if>
+
+                    <sc-if value="{{ panelChosen }}" hint-placeholder-val="{{ false }}">
+                      <div class="rf-card" style="padding:12px;gap:5px;border-color:var(--rf-border-strong)">
+                        <span style="font-size:13px;font-weight:700">ADA LOVELACE BYRON</span>
+                        <span style="font-size:11px;color:var(--rf-text-muted)">99999999R · AC FNMT Usuarios · Firefox</span>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ panelDone }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;flex-direction:column;gap:10px">
+                        <span style="display:flex;gap:6px"><span class="rf-badge">PAdES</span><span class="rf-badge">2 firmas</span></span>
+                        <div class="rf-card" style="padding:12px;gap:5px">
+                          <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:13px;font-weight:700">ADA LOVELACE BYRON</span><span class="rf-badge rf-badge--primary">La tuya</span></span>
+                          <span style="font-size:11px;color:var(--rf-text-muted)">99999999R · hoy, 11:04</span>
+                        </div>
+                        <div class="rf-card" style="padding:12px;gap:5px">
+                          <span style="font-size:13px;font-weight:700">SERVICIO DE GESTION TRIBUTARIA</span>
+                          <span style="font-size:11px;color:var(--rf-text-muted)">Q2800001A · 26/08/2026 09:12</span>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ showVisibleBlock }}" hint-placeholder-val="{{ true }}">
+                      <div style="{{ visibleBlockStyle }}">
+                        <hr style="border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%">
+                        <span style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)">Firma visible</span>
+                        <span style="display:flex;align-items:center;gap:8px">
+                          <span style="{{ toggleStyle }}"><span style="{{ knobStyle }}"></span></span>
+                          <span style="flex:1;font-size:13px;line-height:1.4">Estampar un recuadro de firma en el documento</span>
+                        </span>
+                        <span style="font-size:11px;color:var(--rf-text-muted)">{{ mockStampHint }}</span>
+                      </div>
+                    </sc-if>
+                  </div>
+
+                  <div style="flex:none;padding:16px;border-top:1px solid var(--rf-border-subtle);display:flex;flex-direction:column;gap:10px">
+                    <span style="font-size:11px;font-weight:600;color:var(--rf-text-muted)">Se guardará en</span>
+                    <span style="font-size:12px;line-height:1.4;overflow-wrap:anywhere"><span style="color:var(--rf-text-muted)">…/Documentos/</span>Solicitud-subvencion-firmado.pdf</span>
+                    <button type="button" class="rf-btn rf-btn--primary" style="width:100%">{{ mockAction }}</button>
+                  </div>
+
+                  <sc-if value="{{ showCertList }}" hint-placeholder-val="{{ false }}">
+                    <div data-anim style="position:absolute;top:150px;left:16px;right:16px;z-index:6;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated);overflow:hidden">
+                      <span style="display:block;padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted);border-bottom:1px solid var(--rf-border-subtle)">Disponibles</span>
+                      <span style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)"><span style="font-size:13px;font-weight:700">ADA LOVELACE BYRON</span><span style="font-size:11px;color:var(--rf-text-muted)">99999999R · AC FNMT Usuarios · Firefox</span></span>
+                      <span style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-bottom:1px solid var(--rf-border-subtle)"><span style="font-size:13px;font-weight:700">GRACE HOPPER MURRAY</span><span style="font-size:11px;color:var(--rf-text-muted)">88888888T · AC Representación · Instalado en rFirma</span></span>
+                      <span style="display:block;padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted);border-bottom:1px solid var(--rf-border-subtle)">No utilizables</span>
+                      <span style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;opacity:.55"><span style="font-size:13px;font-weight:700">ALAN TURING MATHISON</span><span style="font-size:11px;color:var(--rf-text-muted)">77777777P · AC FNMT Usuarios · Chrome</span><span style="font-size:11px;font-weight:600">Revocado el 12 de enero de 2026</span></span>
+                    </div>
+                  </sc-if>
+                </aside>
+              </div>
+
+              <sc-if value="{{ showPin }}" hint-placeholder-val="{{ false }}">
+                <div class="rf-scrim" data-anim style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+                  <div class="rf-dialog" style="width:380px">
+                    <div style="display:flex;flex-direction:column;gap:4px">
+                      <span style="font-size:19px;font-weight:700">Introduce el PIN</span>
+                      <span style="font-size:13px;color:var(--rf-text-muted)">ADA LOVELACE BYRON · 99999999R</span>
+                    </div>
+                    <div class="rf-field">
+                      <span class="rf-label">PIN</span>
+                      <div class="rf-input" style="display:flex;align-items:center;font-size:18px;letter-spacing:6px;border-color:var(--rf-focus-ring);outline:2px solid var(--rf-focus-ring);outline-offset:2px">••••</div>
+                    </div>
+                    <hr class="rf-divider">
+                    <div style="display:flex;justify-content:flex-end;gap:12px">
+                      <span class="rf-btn rf-btn--ghost">Cancelar</span>
+                      <span class="rf-btn rf-btn--primary">Firmar</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ showSigning }}" hint-placeholder-val="{{ false }}">
+                <div class="rf-scrim" data-anim style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+                  <div class="rf-dialog" style="width:380px">
+                    <span style="font-size:19px;font-weight:700">Firmando el documento…</span>
+                    <div style="display:flex;flex-direction:column;gap:14px">
+                      <span style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6"></path></svg></span><span style="font-size:14px">Preparando la firma <span style="color:var(--rf-text-muted)">(prefirma)</span></span></span>
+                      <span style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:50%;background:var(--rf-primary);animation:rf-pulse 1.2s ease-in-out infinite"></span></span><span style="font-size:14px;font-weight:700">Firmando</span></span>
+                      <span style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:50%;border:1px solid var(--rf-border-strong)"></span></span><span style="font-size:14px;color:var(--rf-text-muted)">Ensamblando el PDF <span style="color:var(--rf-text-muted)">(postfirma)</span></span></span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <div role="tablist" aria-label="Pasos de la firma" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px">
+          <button type="button" role="tab" aria-selected="{{ selStep0 }}" onClick="{{ goStep0 }}" style="{{ dot0 }}">1</button>
+          <button type="button" role="tab" aria-selected="{{ selStep1 }}" onClick="{{ goStep1 }}" style="{{ dot1 }}">2</button>
+          <button type="button" role="tab" aria-selected="{{ selStep2 }}" onClick="{{ goStep2 }}" style="{{ dot2 }}">3</button>
+          <button type="button" role="tab" aria-selected="{{ selStep3 }}" onClick="{{ goStep3 }}" style="{{ dot3 }}">4</button>
+          <button type="button" role="tab" aria-selected="{{ selStep4 }}" onClick="{{ goStep4 }}" style="{{ dot4 }}">5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- section: pillars -->
+<section id="caracteristicas" style="position:relative;background:#ffffff">
+  <div style="max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span data-i18n="pillars.kicker" style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)">Por qué rFirma</span>
+      <h2 data-i18n="pillars.title" style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em">Cuatro decisiones de fondo</h2>
+      <p data-i18n="pillars.body" style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">No es una capa de pintura sobre AutoFirma: es otra arquitectura, con el mismo motor criptográfico.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:clamp(16px,2.5vw,28px);margin-top:clamp(32px,5vw,64px)">
+      <div data-pillar data-reveal="1">
+        <span data-pillar-icon><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"></rect><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.5 5.5l2 2M16.5 16.5l2 2M18.5 5.5l-2 2M7.5 16.5l-2 2"></path></svg></span>
+        <h3 data-i18n="pillars.native.title" style="margin:0;font-size:1.125rem;font-weight:700;line-height:1.3">Rendimiento nativo</h3>
+        <p data-i18n="pillars.native.body" style="margin:0;font-size:.9375rem;line-height:1.65;color:var(--rf-text-muted)">Escritorio en Tauri v2, Rust y React. Sin JVM y sin servidores locales a la escucha.</p>
+      </div>
+      <div data-pillar="lead" data-reveal="2">
+        <span data-pillar-icon="dark"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg></span>
+        <h3 data-i18n="pillars.keys.title" style="margin:0;font-size:1.125rem;font-weight:700;line-height:1.3">La clave privada no sale del sistema</h3>
+        <p data-i18n="pillars.keys.body" style="margin:0;font-size:.9375rem;line-height:1.65;color:var(--rf-text-muted)">La firma se hace en tu equipo, a través de los almacenes del sistema y de los módulos PKCS#11. Java nunca la ve.</p>
+      </div>
+      <div data-pillar data-reveal="3">
+        <span data-pillar-icon><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16M6 20V10M18 20V10M10 20V10M14 20V10M3 10h18L12 4z"></path></svg></span>
+        <h3 data-i18n="pillars.crypto.title" style="margin:0;font-size:1.125rem;font-weight:700;line-height:1.3">Criptografía oficial</h3>
+        <p data-i18n="pillars.crypto.body" style="margin:0;font-size:.9375rem;line-height:1.65;color:var(--rf-text-muted)">CAdES, PAdES, XAdES y FacturaE salen del código de <code>clienteafirma</code>, compilado a binario nativo con GraalVM.</p>
+      </div>
+      <div data-pillar data-reveal="4">
+        <span data-pillar-icon="amber"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19c3-8 6-10 7-6.5S9 20 8 18s3-6.5 7-7.5 2 3.5 4 3.5 3.5-2.5 4.5-4.5"></path></svg></span>
+        <h3 data-i18n="pillars.stamp.title" style="margin:0;font-size:1.125rem;font-weight:700;line-height:1.3">Firma visible arrastrable</h3>
+        <p data-i18n="pillars.stamp.body" style="margin:0;font-size:.9375rem;line-height:1.65;color:var(--rf-text-muted)">Coloca y dimensiona la rúbrica sobre la página, con previsualización fiel. Sin coordenadas a ciegas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- section: comparison -->
+<section id="comparativa" style="position:relative;background:#ffffff;overflow:clip">
+  <div data-blob="cmp" aria-hidden="true"></div>
+  <div style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span data-i18n="comparison.kicker" style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)">Comparativa</span>
+      <h2 data-i18n="comparison.title" style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em">AutoFirma y rFirma, hecho por hecho</h2>
+      <p data-i18n="comparison.body" style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">Solo diferencias comprobables en el código, en la interfaz y en la distribución de cada proyecto. Sin cifras que nadie ha medido.</p>
+    </div>
+    <div data-reveal style="margin-top:clamp(28px,4vw,48px);border:1px solid var(--rf-border-subtle);border-radius:20px;background:#ffffff;box-shadow:0 30px 60px -30px rgba(6,119,129,.25),0 10px 25px -15px rgba(0,0,0,.1);overflow-x:auto">
+      <table style="width:100%;min-width:640px;border-collapse:collapse;text-align:left;font-size:.9375rem">
+        <thead>
+          <tr>
+            <th scope="col" data-i18n="comparison.head.aspect" style="width:26%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700">Aspecto</th>
+            <th scope="col" data-i18n="comparison.head.autofirma" style="width:37%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700">AutoFirma (oficial)</th>
+            <th scope="col" data-i18n="comparison.head.rfirma" style="width:37%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700;color:var(--rf-brand-text)">rFirma</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row" data-i18n="comparison.arch.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Arquitectura</th>
+            <td data-i18n="comparison.arch.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Java Swing sobre JVM</td>
+            <td data-i18n="comparison.arch.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Tauri v2 (Rust + React) con el motor de clienteafirma en GraalVM Native Image</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.keys.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Dónde se procesa la clave privada</th>
+            <td data-i18n="comparison.keys.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">En el proceso Java</td>
+            <td data-i18n="comparison.keys.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">En el almacén del sistema o el módulo PKCS#11; no sale de él</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.store.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Certificados en fichero (<code>.p12</code>)</th>
+            <td data-i18n="comparison.store.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Se registra la ruta del fichero en un diálogo de almacenes con seis opciones</td>
+            <td data-i18n="comparison.store.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Almacén propio: «Añadir…» copia el certificado y del fichero no se guarda nada, ni la ruta</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.stores.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Búsqueda de certificados</th>
+            <td data-i18n="comparison.stores.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Hay que elegir un almacén y solo enseña ese</td>
+            <td data-i18n="comparison.stores.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Barre el sistema, los perfiles del navegador, los módulos PKCS#11 y el almacén propio, y lo junta en una lista</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.stamp.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Colocación de la firma visible</th>
+            <td data-i18n="comparison.stamp.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Coordenadas o recuadro sin contexto</td>
+            <td data-i18n="comparison.stamp.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Arrastre sobre la página con previsualización fiel</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.sede.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Firma desde una sede electrónica</th>
+            <td data-i18n="comparison.sede.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Diálogo de selección de certificado</td>
+            <td data-i18n="comparison.sede.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Ventana de consentimiento: quién pide, qué se firma y con qué certificado, antes de firmar</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.ca.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Confianza del navegador en el servidor local</th>
+            <td data-i18n="comparison.ca.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">El instalador registra la CA en el sistema, con privilegios</td>
+            <td data-i18n="comparison.ca.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">La aplicación registra su CA en los almacenes NSS de la persona, sin root</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.lang.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Idiomas</th>
+            <td data-i18n="comparison.lang.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Castellano y cooficiales, con las cadenas de los diálogos Swing</td>
+            <td data-i18n="comparison.lang.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Castellano, català, euskara, galego e inglés, con catálogo propio y cambio desde Preferencias</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.privacy.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Privacidad</th>
+            <td data-i18n="comparison.privacy.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Sin control sobre lo que se recuerda</td>
+            <td data-i18n="comparison.privacy.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Recientes y último certificado se pueden apagar y vaciar; la única conexión saliente es la comprobación de versión, y se puede apagar</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.updates.label" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600;text-align:left">Canal de actualización</th>
+            <td data-i18n="comparison.updates.autofirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);color:var(--rf-text-muted)">Descarga manual de <code>.deb</code> o <code>.rpm</code></td>
+            <td data-i18n="comparison.updates.rfirma" style="padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);font-weight:600">Repositorios nativos: Flatpak, APT y DNF</td>
+          </tr>
+          <tr>
+            <th scope="row" data-i18n="comparison.desktop.label" style="padding:14px 20px;font-weight:600;text-align:left">Integración con el escritorio</th>
+            <td data-i18n="comparison.desktop.autofirma" style="padding:14px 20px;color:var(--rf-text-muted)">Apariencia propia de Swing</td>
+            <td data-i18n="comparison.desktop.rfirma" style="padding:14px 20px;font-weight:600">Interfaz que sigue las convenciones del escritorio, tema claro y oscuro, contraste AA</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- section: install -->
+<section id="instalacion" style="position:relative;background:linear-gradient(180deg,#f0fdfa 0%,#fafbfc 45%);border-radius:clamp(32px,6vw,72px) clamp(32px,6vw,72px) 0 0">
+  <div style="max-width:60rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span data-i18n="install.kicker" style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)">Instalación</span>
+      <h2 data-i18n="install.title" style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em">Un repositorio, y las actualizaciones llegan solas</h2>
+      <p data-i18n="install.body" style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">Los canales de rFirma son repositorios nativos. Una vez añadido el de tu sistema, los parches de seguridad se instalan con el gestor de paquetes.</p>
+    </div>
+
+    <div role="alert" style="margin-top:clamp(20px,3vw,32px);display:flex;gap:14px;align-items:flex-start;padding:16px 18px;background:var(--rf-warning-bg);border:1px solid var(--rf-warning-border);border-radius:var(--rf-radius-md)">
+      <span style="flex:none;margin-top:2px;color:var(--rf-warning-text);display:flex"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 4 2.5 20h19z"></path><path d="M12 10v5M12 17.5v.5"></path></svg></span>
+      <span>
+        <span data-i18n="install.alert.title" style="display:block;font-size:.9375rem;font-weight:700;color:var(--rf-warning-text)">Los paquetes todavía no están publicados</span>
+        <p data-i18n="install.alert.body" style="margin:4px 0 0;font-size:.875rem;line-height:1.55;color:#78350f">Los repositorios están en fase de preparación. Las órdenes de abajo no funcionarán hasta que se publique la primera versión (v0.4). El desarrollo se sigue en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer" style="color:#78350f">GitHub</a>.</p>
+      </span>
+    </div>
+
+    <div style="text-align:center"><div role="tablist" aria-label="Canales de distribución" style="display:inline-flex;flex-wrap:wrap;gap:4px;margin:clamp(24px,4vw,40px) auto 0;padding:5px;border-radius:999px;background:#eef2f6;justify-content:center">
+      <button type="button" role="tab" id="tab-flatpak" aria-selected="{{ selFlatpak }}" aria-controls="panel-flatpak" onClick="{{ goFlatpak }}" style="{{ tabFlatpak }}">Flatpak</button>
+      <button type="button" role="tab" id="tab-apt" aria-selected="{{ selApt }}" aria-controls="panel-apt" onClick="{{ goApt }}" style="{{ tabApt }}">APT</button>
+      <button type="button" role="tab" id="tab-dnf" aria-selected="{{ selDnf }}" aria-controls="panel-dnf" onClick="{{ goDnf }}" style="{{ tabDnf }}">DNF</button>
+      <button type="button" role="tab" id="tab-windows" aria-selected="{{ selWindows }}" aria-controls="panel-windows" onClick="{{ goWindows }}" style="{{ tabWindows }}">Windows</button>
+      <button type="button" role="tab" id="tab-macos" aria-selected="{{ selMacos }}" aria-controls="panel-macos" onClick="{{ goMacos }}" style="{{ tabMacos }}">macOS</button>
+    </div></div>
+
+    <sc-if value="{{ isFlatpak }}" hint-placeholder-val="{{ true }}">
+      <div id="panel-flatpak" role="tabpanel" aria-labelledby="tab-flatpak" style="padding-top:24px">
+        <p data-i18n="install.flatpak.body" style="margin:0;line-height:1.65">Instalación recomendada para cualquier distribución de Linux. Se resuelve desde el remoto ostree propio de rFirma. Requiere el runtime <code>org.gnome.Platform</code> de Flathub.</p>
+        <div style="position:relative;margin-top:16px">
+          <button type="button" onClick="{{ copyFlatpak }}" aria-label="Copiar orden de Flatpak" style="position:absolute;top:10px;right:10px;min-height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;font-family:inherit;font-size:.8125rem;font-weight:600;color:var(--rf-text);background:#ffffff;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);cursor:pointer">{{ copyLabelFlatpak }}</button>
+          <pre id="code-flatpak" style="margin:0;padding:18px 20px;background:var(--rf-code-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.875rem;line-height:1.6">flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</pre>
+        </div>
+        <p data-i18n="install.flatpak.tip" style="margin:10px 0 0;font-size:.875rem;color:var(--rf-text-muted)">También puedes descargar e instalar con doble clic el fichero <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> si tu escritorio lo soporta.</p>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isApt }}" hint-placeholder-val="{{ false }}">
+      <div id="panel-apt" role="tabpanel" aria-labelledby="tab-apt" style="padding-top:24px">
+        <p data-i18n="install.apt.body" style="margin:0;line-height:1.65">Para Debian, Ubuntu y distribuciones derivadas. Configura el repositorio mediante el formato moderno <code>deb822</code> con la clave GPG verificada en <code>/usr/share/keyrings/</code>.</p>
+        <div style="position:relative;margin-top:16px">
+          <button type="button" onClick="{{ copyApt }}" aria-label="Copiar órdenes para APT" style="position:absolute;top:10px;right:10px;min-height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;font-family:inherit;font-size:.8125rem;font-weight:600;color:var(--rf-text);background:#ffffff;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);cursor:pointer">{{ copyLabelApt }}</button>
+          <pre id="code-apt" style="margin:0;padding:18px 20px;background:var(--rf-code-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.875rem;line-height:1.6">curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc &gt;/dev/null
+sudo tee /etc/apt/sources.list.d/rfirma.sources &lt;&lt;'EOF'
+Types: deb
+URIs: https://rfirma.sgomez.me/apt/
+Suites: stable
+Components: main
+Signed-By: /usr/share/keyrings/rfirma.asc
+EOF
+sudo apt update &amp;&amp; sudo apt install rfirma</pre>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDnf }}" hint-placeholder-val="{{ false }}">
+      <div id="panel-dnf" role="tabpanel" aria-labelledby="tab-dnf" style="padding-top:24px">
+        <p data-i18n="install.dnf.body" style="margin:0;line-height:1.65">Para Fedora y derivadas basadas en paquetes RPM. Configura el repositorio con comprobación criptográfica estricta de metadatos y paquetes (<code>gpgcheck=1</code> y <code>repo_gpgcheck=1</code>).</p>
+        <div style="position:relative;margin-top:16px">
+          <button type="button" onClick="{{ copyDnf }}" aria-label="Copiar órdenes para DNF" style="position:absolute;top:10px;right:10px;min-height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;font-family:inherit;font-size:.8125rem;font-weight:600;color:var(--rf-text);background:#ffffff;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);cursor:pointer">{{ copyLabelDnf }}</button>
+          <pre id="code-dnf" style="margin:0;padding:18px 20px;background:var(--rf-code-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.875rem;line-height:1.6">sudo tee /etc/yum.repos.d/rfirma.repo &lt;&lt;'EOF'
+[rfirma]
+name=rfirma
+baseurl=https://rfirma.sgomez.me/rpm/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://rfirma.sgomez.me/rfirma.asc
+EOF
+sudo dnf install rfirma</pre>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isWindows }}" hint-placeholder-val="{{ false }}">
+      <div id="panel-windows" role="tabpanel" aria-labelledby="tab-windows" style="padding-top:24px">
+        <div class="rf-card" style="background:#ffffff;border-color:var(--rf-border-strong);gap:12px">
+          <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="rf-badge" style="border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)">En desarrollo</span>
+            <strong data-i18n="install.windows.title" style="font-size:1rem">Soporte para Windows en preparación</strong>
+          </span>
+          <p data-i18n="install.windows.body" style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">La integración nativa para Windows se encuentra actualmente en desarrollo. Utilizará directamente el almacén de certificados de Windows (MS-CAPI / CNG) para firmar con tu certificado personal o DNIe sin necesidad de software intermedio.</p>
+          <p data-i18n="install.windows.note" style="margin:0;font-size:.875rem;line-height:1.6;color:var(--rf-text-muted)">Estará disponible como instalador <code>.msi</code> y a través de <code>winget</code>. Puedes seguir el avance del proyecto en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMacos }}" hint-placeholder-val="{{ false }}">
+      <div id="panel-macos" role="tabpanel" aria-labelledby="tab-macos" style="padding-top:24px">
+        <div class="rf-card" style="background:#ffffff;border-color:var(--rf-border-strong);gap:12px">
+          <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="rf-badge" style="border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)">En desarrollo</span>
+            <strong data-i18n="install.macos.title" style="font-size:1rem">Soporte para macOS en preparación</strong>
+          </span>
+          <p data-i18n="install.macos.body" style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">La versión nativa para macOS está en fase de desarrollo activo. Se integrará con el Keychain de Apple y CryptoTokenKit para un acceso fluido y seguro a las identidades digitales del sistema.</p>
+          <p data-i18n="install.macos.note" style="margin:0;font-size:.875rem;line-height:1.6;color:var(--rf-text-muted)">Se distribuirá como imagen de disco <code>.dmg</code> y mediante fórmula de <code>Homebrew</code>. Puedes seguir el avance del proyecto en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</section>
+
+<!-- section: transparency -->
+<section id="transparencia" style="background:#fafbfc">
+  <div style="max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span data-i18n="transparency.kicker" style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)">Transparencia</span>
+      <h2 data-i18n="transparency.title" style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em">Todo el código, a la vista</h2>
+      <p data-i18n="transparency.body" style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">rFirma es software libre y auditable bajo licencia <strong>EUPL 1.2</strong>. El código y el motor criptográfico viven en dos repositorios públicos.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:clamp(16px,2.5vw,24px);margin-top:clamp(24px,4vw,40px)">
+      <div class="rf-card" style="gap:10px">
+        <h3 data-i18n="transparency.repo1.title" style="margin:0;font-size:1.125rem;font-weight:700">Aplicación y puente FFI</h3>
+        <p data-i18n="transparency.repo1.body" style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">En <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">sgomez/rfirma</a> están la interfaz en Tauri (Rust + React), el puente FFI (<code>rfirma-native-bridge</code>) y el empaquetado.</p>
+      </div>
+      <div class="rf-card" style="gap:10px">
+        <h3 data-i18n="transparency.repo2.title" style="margin:0;font-size:1.125rem;font-weight:700">Motor criptográfico original</h3>
+        <p data-i18n="transparency.repo2.body" style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">La lógica de firma consume los artefactos de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilados en una biblioteca nativa con GraalVM Native Image.</p>
+      </div>
+      <div class="rf-card" style="gap:10px">
+        <h3 data-i18n="transparency.key.title" style="margin:0;font-size:1.125rem;font-weight:700">Clave de firma de paquetes</h3>
+        <p data-i18n="transparency.key.body" style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">Clave pública en <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Comprueba su huella tras descargarla con <code>gpg --show-keys rfirma.asc</code>:</p>
+        <code style="display:block;padding:10px 12px;background:var(--rf-code-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere">C8D6 A81C 1ED4 3A28 D426&nbsp; 8112 A6E0 EE02 2344 6A16</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- section: footer -->
+<footer style="position:relative;overflow:clip;background:linear-gradient(135deg,#053e44 0%,#067781 100%);color:#ffffff">
+  <div data-blob="foot" aria-hidden="true"></div>
+  <div style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(40px,6vw,72px) clamp(16px,4vw,32px) clamp(28px,4vw,40px);display:flex;flex-direction:column;gap:32px">
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:26rem">
+        <span style="display:flex;align-items:center;gap:10px">
+          <svg width="30" height="30" viewBox="0 0 512 512" aria-hidden="true"><circle cx="256" cy="256" r="225.28" fill="#ffffff"></circle><path fill="#067781" d="M 206.05,134.63 C 190.87,133.9 173.56,140.04 167.17,154.88 C 158.7,176.24 154.89,199.17 151.45,221.81 C 145.7,263.83 143.8,306.64 149.91,348.74 C 151.38,361.75 156.08,376.98 169.49,382.09 C 177.29,385.11 186.29,384.78 194.18,382.33 C 207.23,377.91 212.67,363.77 214.74,351.28 C 222.24,313.74 232,276.05 250.11,242.08 C 256.76,230.86 263.77,218.29 275.94,212.37 C 280.92,209.61 286.92,213.33 287.02,218.92 C 287.91,230 283.38,240.72 283.95,251.85 C 283.15,268.89 293.47,286.55 310.21,291.69 C 328.34,297.24 347.41,288.8 360.99,276.85 C 370.03,268.96 378.6,260.32 385.92,250.85 C 392.37,240.92 390.7,225.22 380.31,218.7 C 372.5,214.41 364.05,220.03 358.73,225.73 C 355.75,229.11 350.02,233.87 346.1,229.11 C 341.84,222.32 345.26,213.79 345.8,206.36 C 347.75,189.47 354.63,171.95 348.22,155.23 C 344.64,144.32 334.53,136.52 323.21,135.13 C 310.69,133.6 297.68,135.46 286.51,141.56 C 260.76,154.56 243.03,178.9 229.51,203.68 C 220.32,220.35 213.2,238.04 206.64,255.88 C 208.25,232.1 212.36,208.07 217.24,184.58 C 219.14,173.51 223.39,162.86 224.4,151.68 C 225.56,144.04 220.12,136.59 212.43,135.56 C 210.37,134.92 208.17,134.95 206.05,134.63 Z"></path></svg>
+          <span style="font-size:1.25rem;font-weight:800;letter-spacing:-.02em">rFirma</span>
+        </span>
+        <p data-i18n="footer.tagline" style="margin:0;font-size:.9375rem;line-height:1.6;color:rgba(255,255,255,.8)">Firma electrónica nativa para el escritorio, con el motor criptográfico oficial y sin Java en tu equipo.</p>
+        <span data-i18n="footer.license" style="font-size:.8125rem;color:rgba(255,255,255,.65)">Licencia EUPL 1.2</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:clamp(32px,5vw,72px)">
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px">
+          <li data-i18n="footer.col.project" style="font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Proyecto</li>
+          <li><a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo" style="font-size:.9375rem;text-decoration:none;color:#ffffff">Repositorio en GitHub</a></li>
+          <li><a href="https://github.com/sgomez/rfirma/releases" target="_blank" rel="noopener noreferrer" data-i18n="footer.releases" style="font-size:.9375rem;text-decoration:none;color:#ffffff">Releases</a></li>
+          <li><a href="https://rfirma.sgomez.me/rfirma.asc" data-i18n="footer.gpg" style="font-size:.9375rem;text-decoration:none;color:#ffffff">Clave GPG pública</a></li>
+        </ul>
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px">
+          <li data-i18n="footer.col.origin" style="font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)">Origen</li>
+          <li><a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer" data-i18n="footer.clienteafirma" style="font-size:.9375rem;text-decoration:none;color:#ffffff">clienteafirma</a></li>
+          <li><a href="#comparativa" data-i18n="footer.comparison" style="font-size:.9375rem;text-decoration:none;color:#ffffff">Diferencias con AutoFirma</a></li>
+        </ul>
+      </div>
+    </div>
+    <p data-i18n="notice.official" style="margin:0;padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:.8125rem;line-height:1.5;color:rgba(255,255,255,.9)"><strong>rFirma no es un producto oficial de la Administración Pública.</strong> Es un proyecto independiente de código abierto bajo licencia EUPL 1.2.</p>
+  </div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;canalPorDefecto&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Flatpak&quot;,&quot;APT&quot;,&quot;DNF&quot;,&quot;Windows&quot;,&quot;macOS&quot;],&quot;default&quot;:&quot;Flatpak&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Instalación&quot;},&quot;demoAutomatica&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Así se firma&quot;}}">
+class Component extends DCLogic {
+  state = { step: 0, tab: "flatpak", copied: "", langOpen: false };
+
+  componentDidMount() {
+    const canal = (this.props.canalPorDefecto || "Flatpak").toLowerCase();
+    if (canal !== this.state.tab) { this.setState({ tab: canal }); }
+    this.mountHeaderOffset();
+    this.mountScaler();
+    this.mountDemo();
+    this.mountReveal();
+  }
+
+  componentWillUnmount() {
+    if (this._ro) { this._ro.disconnect(); }
+    if (this._roHeader) { this._roHeader.disconnect(); }
+    if (this._io) { this._io.disconnect(); }
+    if (this._onDemoScroll) {
+      document.removeEventListener("scroll", this._onDemoScroll, { capture: true });
+      window.removeEventListener("resize", this._onDemoScroll);
+    }
+    if (this._raf) { cancelAnimationFrame(this._raf); }
+    if (this._ioReveal) { this._ioReveal.disconnect(); }
+    if (this._timer) { clearInterval(this._timer); }
+  }
+
+  /* La franja de aviso es sticky: la navegación se ancla justo debajo, sea
+     cual sea su altura real (una, dos o tres líneas). */
+  mountHeaderOffset() {
+    const aviso = document.querySelector("[data-notice]");
+    const cabecera = document.querySelector("[data-header]");
+    if (!aviso || !cabecera || typeof ResizeObserver === "undefined") { return; }
+    const ajusta = () => { cabecera.style.top = aviso.offsetHeight + "px"; };
+    this._roHeader = new ResizeObserver(ajusta);
+    this._roHeader.observe(aviso);
+    ajusta();
+  }
+
+  /* La maqueta se dibuja a 1000x620 y se escala al ancho disponible. */
+  mountScaler() {
+    const marco = document.querySelector("[data-mock-frame]");
+    const lienzo = document.querySelector("[data-mock-stage]");
+    if (!marco || !lienzo || typeof ResizeObserver === "undefined") { return; }
+    const ajusta = () => {
+      const ancho = marco.clientWidth;
+      if (!ancho) { return; }
+      const k = Math.min(1, ancho / 1000);
+      lienzo.style.transform = "scale(" + k + ")";
+      marco.style.height = Math.round(620 * k) + "px";
+    };
+    this._ro = new ResizeObserver(ajusta);
+    this._ro.observe(marco);
+    ajusta();
+  }
+
+  /* Demo guiada por scroll; con demoAutomatica pasa sola. */
+  mountDemo() {
+    if (this.props.demoAutomatica) {
+      this._timer = setInterval(() => {
+        this.setState(s => ({ step: (s.step + 1) % 5 }));
+      }, 2600);
+      return;
+    }
+    const pasos = Array.prototype.slice.call(document.querySelectorAll("[data-demo-step]"));
+    if (!pasos.length) { return; }
+    /* El paso activo es aquel cuyo texto esta mas cerca del centro de la ventana:
+       la maqueta cambia justo cuando cambia el texto, sin adelantarse ni acumular desfase. */
+    const sincronizar = () => {
+      this._raf = 0;
+      const centro = window.innerHeight / 2;
+      let mejor = 0, dist = Infinity;
+      pasos.forEach(p => {
+        const r = p.getBoundingClientRect();
+        const d = Math.abs(r.top + r.height / 2 - centro);
+        if (d < dist) { dist = d; mejor = Number(p.getAttribute("data-demo-step")); }
+      });
+      if (mejor !== this.state.step) { this.setState({ step: mejor }); }
+    };
+    this._onDemoScroll = () => {
+      if (!this._raf) { this._raf = requestAnimationFrame(sincronizar); }
+    };
+    document.addEventListener("scroll", this._onDemoScroll, { capture: true, passive: true });
+    window.addEventListener("resize", this._onDemoScroll);
+    if (typeof IntersectionObserver !== "undefined") {
+      const umbrales = [];
+      for (let u = 0; u <= 1; u += 0.05) { umbrales.push(u); }
+      this._io = new IntersectionObserver(this._onDemoScroll, { threshold: umbrales });
+      pasos.forEach(p => this._io.observe(p));
+    }
+    sincronizar();
+  }
+
+  /* Los pasos se eligen sin mover la página: la maqueta no se pierde de vista. */
+  irAPaso(i) {
+    this.setState({ step: i });
+  }
+
+  mountReveal() {
+    const nodos = Array.prototype.slice.call(document.querySelectorAll("[data-reveal]"));
+    if (!nodos.length || typeof IntersectionObserver === "undefined") { nodos.forEach(n => n.classList.add("is-in")); return; }
+    this._ioReveal = new IntersectionObserver(entradas => {
+      entradas.forEach(e => { if (e.isIntersecting) { e.target.classList.add("is-in"); this._ioReveal.unobserve(e.target); } });
+    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.1 });
+    nodos.forEach(n => this._ioReveal.observe(n));
+  }
+
+  copiar(id, clave) {
+    const el = document.getElementById(id);
+    if (!el || !navigator.clipboard) { return; }
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      this.setState({ copied: clave });
+      setTimeout(() => { this.setState({ copied: "" }); }, 2000);
+    }).catch(() => {});
+  }
+
+  estiloPestana(activa) {
+    return "appearance:none;border:0;border-radius:999px;min-height:44px;padding:0 20px;font-family:inherit;font-size:.9375rem;font-weight:600;cursor:pointer;" +
+      "transition:background-color 150ms,color 150ms,box-shadow 150ms;" +
+      (activa
+        ? "background:#ffffff;color:var(--rf-brand-text);box-shadow:0 10px 24px -12px rgba(6,119,129,.5),0 1px 3px rgba(0,0,0,.08)"
+        : "background:transparent;color:var(--rf-text-muted)");
+  }
+
+  estiloPaso(activo, papel) {
+    const base = "margin:0;transition:opacity 320ms var(--rf-easing,cubic-bezier(.4,0,.2,1)),transform 320ms var(--rf-easing,cubic-bezier(.4,0,.2,1));";
+    const mov = activo ? "translateY(0)" : "translateY(6px)";
+    if (papel === "num") {
+      return base + "width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:.8125rem;font-weight:800;" +
+        (activo
+          ? "background:linear-gradient(135deg,#067781,#2dd4bf);color:#ffffff;box-shadow:0 10px 22px -10px rgba(6,119,129,.7)"
+          : "background:#f0fdfa;color:var(--rf-brand-text)") +
+        ";opacity:" + (activo ? "1" : ".55") + ";transform:" + mov;
+    }
+    if (papel === "title") {
+      return base + "font-size:clamp(1.25rem,2.4vw,1.75rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;opacity:" +
+        (activo ? "1" : ".38") + ";transform:" + mov;
+    }
+    return base + "font-size:1rem;line-height:1.65;color:var(--rf-text-muted);max-width:30rem;text-wrap:pretty;opacity:" +
+      (activo ? "1" : ".32") + ";transform:" + mov;
+  }
+
+  estiloPunto(activo) {
+    return "width:44px;height:44px;padding:0;border:0;border-radius:50%;cursor:pointer;font-family:inherit;font-size:.875rem;font-weight:800;" +
+      "transition:background-color 200ms,color 200ms,box-shadow 200ms;" +
+      (activo
+        ? "background:linear-gradient(135deg,#067781,#2dd4bf);color:#ffffff;box-shadow:0 10px 22px -10px rgba(6,119,129,.7)"
+        : "background:#ffffff;color:var(--rf-text-muted);box-shadow:0 1px 3px rgba(0,0,0,.1)");
+  }
+
+  renderVals() {
+    const p = this.state.step;
+    const copiado = this.state.copied;
+    const tab = this.state.tab;
+    const pasos = [0, 1, 2, 3, 4];
+    const vals = {
+      langOpen: this.state.langOpen,
+      langExpanded: this.state.langOpen ? "true" : "false",
+      toggleLang: () => this.setState(s => ({ langOpen: !s.langOpen })),
+
+      mockBadge: p === 4 ? "Firmado" : "Sin firmar",
+      mockFileName: p === 4 ? "Solicitud-subvencion-firmado.pdf" : "Solicitud-subvencion.pdf",
+      mockPanelLabel: p === 4 ? "Resumen" : "Certificado",
+      mockAction: p === 4 ? "Abrir el PDF" : "Firmar documento",
+      mockStampHint: p === 0 ? "Se activa al elegir certificado" : "Página 3 · arrástralo para colocarlo",
+      panelChoose: p === 0,
+      panelChosen: p === 1 || p === 2 || p === 3,
+      panelDone: p === 4,
+      showVisibleBlock: p !== 4,
+      showCertList: p === 1,
+      showPin: p === 2,
+      showSigning: p === 3,
+      visibleBlockStyle: "display:flex;flex-direction:column;gap:10px;transition:opacity 300ms var(--rf-easing,ease);opacity:" + (p === 0 ? ".45" : "1"),
+      toggleStyle: "width:36px;height:22px;flex:none;border-radius:var(--rf-radius-pill);position:relative;transition:background-color 300ms var(--rf-easing,ease);background:" + (p === 0 ? "var(--rf-border-strong)" : "var(--rf-primary)"),
+      knobStyle: "position:absolute;top:3px;width:16px;height:16px;border-radius:var(--rf-radius-pill);background:var(--rf-on-primary);transition:left 300ms var(--rf-easing,ease);left:" + (p === 0 ? "3px" : "17px"),
+      stampStyle: "position:absolute;left:78px;bottom:34px;width:150px;display:flex;gap:8px;align-items:center;padding:6px 8px;" +
+        "border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);background:var(--rf-surface);" +
+        "transition:opacity 320ms var(--rf-easing,ease),transform 320ms var(--rf-easing,ease);" +
+        (p === 0 ? "opacity:0;transform:scale(.96);" : "opacity:1;transform:scale(1);"),
+
+      selFlatpak: tab === "flatpak" ? "true" : "false",
+      selApt: tab === "apt" ? "true" : "false",
+      selDnf: tab === "dnf" ? "true" : "false",
+      selWindows: tab === "windows" ? "true" : "false",
+      selMacos: tab === "macos" ? "true" : "false",
+      isFlatpak: tab === "flatpak",
+      isApt: tab === "apt",
+      isDnf: tab === "dnf",
+      isWindows: tab === "windows",
+      isMacos: tab === "macos",
+      tabFlatpak: this.estiloPestana(tab === "flatpak"),
+      tabApt: this.estiloPestana(tab === "apt"),
+      tabDnf: this.estiloPestana(tab === "dnf"),
+      tabWindows: this.estiloPestana(tab === "windows"),
+      tabMacos: this.estiloPestana(tab === "macos"),
+      goFlatpak: () => this.setState({ tab: "flatpak" }),
+      goApt: () => this.setState({ tab: "apt" }),
+      goDnf: () => this.setState({ tab: "dnf" }),
+      goWindows: () => this.setState({ tab: "windows" }),
+      goMacos: () => this.setState({ tab: "macos" }),
+
+      copyFlatpak: () => this.copiar("code-flatpak", "flatpak"),
+      copyApt: () => this.copiar("code-apt", "apt"),
+      copyDnf: () => this.copiar("code-dnf", "dnf"),
+      copyLabelFlatpak: copiado === "flatpak" ? "Copiado" : "Copiar",
+      copyLabelApt: copiado === "apt" ? "Copiado" : "Copiar",
+      copyLabelDnf: copiado === "dnf" ? "Copiado" : "Copiar"
+    };
+    pasos.forEach(i => {
+      vals["stepNum" + i] = this.estiloPaso(i === p, "num");
+      vals["stepTitle" + i] = this.estiloPaso(i === p, "title");
+      vals["stepBody" + i] = this.estiloPaso(i === p, "body");
+      vals["dot" + i] = this.estiloPunto(i === p);
+      vals["selStep" + i] = i === p ? "true" : "false";
+      vals["goStep" + i] = () => this.irAPaso(i);
+    });
+    return vals;
+  }
+}
+</script>
+</body>
+</html>
