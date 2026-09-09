@@ -39,7 +39,7 @@ describe("el aviso de error", () => {
   it("traduce la situación al idioma de la aplicación", () => {
     renderIn("en", <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("The operation could not be completed");
+    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't complete the operation");
   });
 
   it("enseña el texto original crudo: ni traducido ni recortado", () => {

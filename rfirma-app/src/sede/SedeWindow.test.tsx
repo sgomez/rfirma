@@ -443,16 +443,14 @@ describe("SedeWindow", () => {
   });
 
   describe("2b · confirming what the validator flags", () => {
-    it("asks with the original's own words, and offers exactly two ways out", () => {
+    it("asks in rFirma's own words, and offers exactly two ways out", () => {
       const { port } = scriptedErrand({
         kind: "confirming",
         messageCode: "pdfShadowAttackSuspect",
       });
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      expect(
-        screen.getByText(/sospechoso de haber sido modificado tras la última firma/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/se ha modificado después de la última firma/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
     });
@@ -465,7 +463,7 @@ describe("SedeWindow", () => {
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(
-        screen.getByText(/formulario del cual se han modificado los campos/i),
+        screen.getByText(/formulario cuyos campos se han cambiado después de firmarlo/i),
       ).toBeInTheDocument();
     });
 
