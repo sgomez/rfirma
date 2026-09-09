@@ -294,25 +294,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # El carril lento no corre por omision. Medido en este mismo
-      # repositorio: native-image son 1 m 22 s y el job entero 3 m 14 s,
-      # frente a los segundos del carril rapido. Cabe de sobra en un runner
-      # estandar --la duda que dejo abierta el issue #11 queda resuelta--,
-      # pero eso no es razon para pagarlo en cada PR.
+      # La libreria nativa y sus dependencias estan cacheadas: en un PR tipico
+      # no se recompila native-image y el job tarda ~2 min en paralelo con Rust.
+      # Corre en cada PR y push para que las pruebas de grada C (#[ignore]) no
+      # escapen al carril rapido.
       - name: Decide si hace falta
         id: scope
         run: |
           case "${{ github.event_name }}" in
-            push|workflow_dispatch|schedule)
+            push|workflow_dispatch|schedule|pull_request)
               echo "build=true" >> "$GITHUB_OUTPUT" ;;
-            pull_request)
-              if ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
-                echo "build=true" >> "$GITHUB_OUTPUT"
-              else
-                echo "build=false" >> "$GITHUB_OUTPUT"
-                echo "Carril lento omitido. Pon la etiqueta \`native\` en el PR si tocas el puente." \
-                  >> "$GITHUB_STEP_SUMMARY"
-              fi ;;
           esac
 
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
@@ -466,11 +457,11 @@ jobs:
             push|workflow_dispatch|schedule)
               echo "build=true" >> "$GITHUB_OUTPUT" ;;
             pull_request)
-              if ${{ contains(github.event.pull_request.labels.*.name, 'native') }}; then
+              if ${{ contains(github.event.pull_request.labels.*.name, 'release') || contains(github.event.pull_request.labels.*.name, 'native') }}; then
                 echo "build=true" >> "$GITHUB_OUTPUT"
               else
                 echo "build=false" >> "$GITHUB_OUTPUT"
-                echo "Compilacion de release omitida. Pon la etiqueta \`native\` en el PR si tocas el puente." \
+                echo "Compilacion de release omitida. Pon la etiqueta \`release\` o \`native\` en el PR si hace falta compilar el binario de release." \
                   >> "$GITHUB_STEP_SUMMARY"
               fi ;;
           esac

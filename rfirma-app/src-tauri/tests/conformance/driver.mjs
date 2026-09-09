@@ -1,7 +1,7 @@
 // Conductor del banco de conformidad con autoscript.js.
 
 import { readFileSync } from "node:fs";
-import { createServer } from "node:https";
+import { createServer } from "node:http";
 import { createServer as createTcpServer } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -270,17 +270,15 @@ function theServletMaterial() {
   return { cert: readFileSync(certificate), key: readFileSync(key) };
 }
 
-/** Un servlet del lote sirviendo TLS en un puerto libre del loopback, y su URL absoluta. */
+/** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
 function servletServing(answering) {
   return new Promise((resolve) => {
-    const server = createServer(theServletMaterial(), (request, response) => {
-      const { status, body } = answering(new URL(request.url, "https://127.0.0.1").searchParams);
+    const server = createServer((request, response) => {
+      const { status, body } = answering(new URL(request.url, "http://127.0.0.2").searchParams);
       response.writeHead(status, { "content-type": "application/json" });
       response.end(body);
     });
-    server.listen(0, "127.0.0.1", () =>
-      resolve(`https://127.0.0.1:${server.address().port}/batch`),
-    );
+    server.listen(0, "127.0.0.2", () => resolve(`http://127.0.0.2:${server.address().port}/batch`));
   });
 }
 
@@ -586,7 +584,7 @@ function theCosignScript(format, extraParams, content) {
 function anUnattendedPort() {
   return new Promise((resolve) => {
     const server = createTcpServer();
-    server.listen(0, "127.0.0.1", () => {
+    server.listen(0, "127.0.0.2", () => {
       const { port } = server.address();
       server.close(() => resolve(port));
     });
@@ -599,7 +597,7 @@ function anUnattendedPort() {
  */
 async function theBatchWithTheDownPresignerScript() {
   const downPort = await anUnattendedPort();
-  const presigner = `https://127.0.0.1:${downPort}/batch`;
+  const presigner = `http://127.0.0.2:${downPort}/batch`;
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
