@@ -17,6 +17,7 @@ use rfirma_lib::identity::domain::store::Store;
 use rfirma_lib::signing::adapters::isolate::Isolate;
 use rfirma_lib::signing::application::session::sign_on_token;
 use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
+use rfirma_lib::site::adapters::data_download::HttpDataSource;
 use rfirma_lib::site::adapters::desk::Neighbours;
 use rfirma_lib::site::adapters::relay::Relay;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
@@ -2074,7 +2075,9 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
         .parameter("id")
         .expect("el XML de parametros trae el 'id'")
         .to_owned();
-    let SiteOperation::Sign(signing) = read_operation(&operation).expect("lee la operacion") else {
+    let SiteOperation::Sign(signing) =
+        read_operation(&operation, &HttpDataSource).expect("lee la operacion")
+    else {
         panic!("el guion del banco pide una firma");
     };
     assert_eq!(signing.document(), the_document_too_long_for_the_url());

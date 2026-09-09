@@ -494,14 +494,15 @@ fn format_auto_over_xml_or_binary_reads_the_format_of_the_document() {
     }
 }
 
+/// Sin `dat` no hay nada sobre lo que detectar el formato, y el original no lo rechaza: espera
+/// al documento que elija la persona (`ProtocolInvocationLauncherSign`, 1.9.2).
 #[test]
-fn format_auto_without_data_names_the_parameter_instead_of_the_format() {
+fn format_auto_without_data_waits_for_the_document_instead_of_refusing() {
     let url = an_operation("op=sign&format=auto&algorithm=SHA256withRSA");
 
-    let refusal = read_operation(&url).expect_err("sin 'dat' no hay nada que detectar");
+    let operation = read_operation(&url).expect("sin 'dat' se pide el documento");
 
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Data));
+    assert!(matches!(operation, SiteOperation::SignWithoutDocument(_)));
 }
 
 #[test]
@@ -569,7 +570,6 @@ fn each_missing_parameter_of_a_signature_names_itself() {
     for (parameters, blamed) in [
         ("op=sign", Parameter::Format),
         ("op=sign&format=PAdES", Parameter::Algorithm),
-        ("op=sign&format=PAdES&algorithm=SHA256", Parameter::Data),
     ] {
         let refusal = read_operation(&an_operation(parameters)).expect_err("falta uno");
 
@@ -1413,4 +1413,268 @@ fn gzip_false_or_absent_leaves_the_document_untouched() {
     };
     assert_eq!(first.document(), compressed.as_slice());
     assert_eq!(second.document(), compressed.as_slice());
+}
+
+/// El origen de datos que nunca baja nada: el `dat` de casi todas estas pruebas viene en la URL.
+struct NoDownloads;
+
+impl DataSource for NoDownloads {
+    fn download(&self, _url: &str) -> Result<Vec<u8>, String> {
+        panic!("ninguna prueba de la grada A baja nada de la red")
+    }
+}
+
+/// Lo que hay en esa URL, comprobando de paso que se pide la que mandó la sede.
+struct ADownload {
+    from: &'static str,
+    content: Vec<u8>,
+}
+
+impl DataSource for ADownload {
+    fn download(&self, url: &str) -> Result<Vec<u8>, String> {
+        assert_eq!(url, self.from, "se baja la URL que mando la sede");
+        Ok(self.content.clone())
+    }
+}
+
+/// La descarga que no llega a ninguna parte.
+struct ADownloadThatFails;
+
+impl DataSource for ADownloadThatFails {
+    fn download(&self, _url: &str) -> Result<Vec<u8>, String> {
+        Err("la sede no responde".to_owned())
+    }
+}
+
+fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+    super::read_operation(url, &NoDownloads)
+}
+
+fn read_downloading(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
+    super::read_operation(url, data)
+}
+
+const A_REMOTE_DOCUMENT: &str = "https://sede.example/documentos/4711.pdf";
+
+fn a_signature_of_a_url(verb: &str, url_of_the_data: &str, extra: &str) -> AfirmaUrl {
+    an_operation(&format!(
+        "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&dat={url_of_the_data}{extra}"
+    ))
+}
+
+#[test]
+fn a_dat_that_is_an_https_url_is_downloaded_and_signed() {
+    let downloaded = b"%PDF-1.7\ndownloaded".to_vec();
+    let url = a_signature_of_a_url(SIGN, A_REMOTE_DOCUMENT, "");
+
+    let operation = read_downloading(
+        &url,
+        &ADownload {
+            from: A_REMOTE_DOCUMENT,
+            content: downloaded.clone(),
+        },
+    )
+    .expect("se atiende");
+
+    let SiteOperation::Sign(request) = operation else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.document(), downloaded);
+}
+
+#[test]
+fn a_dat_that_is_an_http_url_is_downloaded_like_the_original() {
+    let plain = "http://sede.example/documentos/4711.pdf";
+    let url = a_signature_of_a_url(COSIGN, plain, "");
+
+    let operation = read_downloading(
+        &url,
+        &ADownload {
+            from: plain,
+            content: b"%PDF-1.7\nplain".to_vec(),
+        },
+    )
+    .expect("el original no distingue los dos esquemas");
+
+    assert!(matches!(operation, SiteOperation::Sign(_)));
+}
+
+#[test]
+fn a_download_that_fails_names_the_data_parameter() {
+    let url = a_signature_of_a_url(SIGN, A_REMOTE_DOCUMENT, "");
+
+    let refusal =
+        read_downloading(&url, &ADownloadThatFails).expect_err("la descarga no ha salido");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Data));
+}
+
+#[test]
+fn a_scheme_that_is_not_http_is_still_read_as_base64() {
+    let url = a_signature_of_a_url(SIGN, "ftp://sede.example/4711.pdf", "");
+
+    let refusal = read_operation(&url).expect_err("ni se baja ni es Base64");
+
+    assert_eq!(refusal.blame(), Some(Parameter::Data));
+}
+
+/// El original solo descomprime cuando el valor es Base64, así que lo que baja de una URL no
+/// pasa nunca por el gunzip (`DataDownloader.downloadData`, 1.9.2).
+#[test]
+fn a_gzip_flag_never_reaches_what_was_downloaded() {
+    let downloaded = b"%PDF-1.7\nsin comprimir".to_vec();
+    let url = a_signature_of_a_url(SIGN, A_REMOTE_DOCUMENT, "&gzip=true");
+
+    let operation = read_downloading(
+        &url,
+        &ADownload {
+            from: A_REMOTE_DOCUMENT,
+            content: downloaded.clone(),
+        },
+    )
+    .expect("se atiende");
+
+    let SiteOperation::Sign(request) = operation else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.document(), downloaded);
+}
+
+#[test]
+fn the_format_auto_is_resolved_over_the_downloaded_document() {
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={A_REMOTE_DOCUMENT}"
+    ));
+
+    let operation = read_downloading(
+        &url,
+        &ADownload {
+            from: A_REMOTE_DOCUMENT,
+            content: b"%PDF-1.7\ndownloaded".to_vec(),
+        },
+    )
+    .expect("se atiende");
+
+    let SiteOperation::Sign(request) = operation else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.format(), RequestedFormat::Pades);
+}
+
+#[test]
+fn a_save_of_a_url_downloads_what_it_has_to_write() {
+    let url = an_operation(&format!("op=save&dat={A_REMOTE_DOCUMENT}"));
+
+    let operation = read_downloading(
+        &url,
+        &ADownload {
+            from: A_REMOTE_DOCUMENT,
+            content: b"%PDF-1.7\nguardame".to_vec(),
+        },
+    )
+    .expect("se atiende");
+
+    let SiteOperation::Save(request) = operation else {
+        panic!("es un guardado");
+    };
+    assert_eq!(request.data(), b"%PDF-1.7\nguardame");
+}
+
+#[test]
+fn a_batch_of_a_url_downloads_the_batch() {
+    let lote =
+        br#"{"algorithm":"SHA256withRSA","stoponerror":true,"format":"PAdES","singlesigns":[]}"#;
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&jsonbatch=true&localBatchProcess=true&dat={A_REMOTE_DOCUMENT}"
+    ));
+
+    let operation = read_downloading(
+        &url,
+        &ADownload {
+            from: A_REMOTE_DOCUMENT,
+            content: lote.to_vec(),
+        },
+    )
+    .expect("se atiende");
+
+    let SiteOperation::Batch(request) = operation else {
+        panic!("es un lote");
+    };
+    assert_eq!(request.algorithm(), "SHA256withRSA");
+}
+
+#[test]
+fn a_signature_without_data_asks_the_person_for_the_document() {
+    let url =
+        an_operation("op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA");
+
+    let operation = read_operation(&url).expect("el original lo atiende");
+
+    assert!(
+        matches!(operation, SiteOperation::SignWithoutDocument(_)),
+        "sin 'dat' el documento lo elige la persona"
+    );
+}
+
+#[test]
+fn a_cosignature_and_a_countersignature_without_data_ask_for_it_too() {
+    for verb in [COSIGN, COUNTERSIGN] {
+        let url = an_operation(&format!(
+            "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format=CAdES&algorithm=SHA256withRSA"
+        ));
+
+        let operation = read_operation(&url).expect("el original lo atiende");
+
+        assert!(
+            matches!(operation, SiteOperation::SignWithoutDocument(_)),
+            "'{verb}' sin 'dat' tampoco es un rechazo"
+        );
+    }
+}
+
+#[test]
+fn an_empty_dat_is_still_nothing_to_sign_and_not_a_document_to_choose() {
+    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=%3D");
+
+    let refusal = read_operation(&url).expect_err("no hay nada que firmar");
+
+    assert_eq!(refusal.code(), SafCode::SignWithoutData);
+}
+
+#[test]
+fn the_loading_keys_of_the_properties_govern_the_chooser_of_a_signature() {
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&properties={}",
+        properties(
+            "filenameExts=pdf,p7s\nfilenameDescription=Documentos\nfilenameCurrentDir=/tmp/sede\n"
+        )
+    ));
+
+    let SiteOperation::SignWithoutDocument(request) = read_operation(&url).expect("se atiende")
+    else {
+        panic!("sin 'dat' se pide el documento");
+    };
+    assert_eq!(
+        request.load_extensions(),
+        ["pdf".to_owned(), "p7s".to_owned()]
+    );
+    assert_eq!(request.load_description(), Some("Documentos"));
+    assert_eq!(request.load_starting_folder(), Some("/tmp/sede"));
+}
+
+#[test]
+fn the_chosen_document_resolves_the_format_auto_of_a_signature_without_data() {
+    let url =
+        an_operation("op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA");
+
+    let SiteOperation::SignWithoutDocument(pending) = read_operation(&url).expect("se atiende")
+    else {
+        panic!("sin 'dat' se pide el documento");
+    };
+    let request = pending.with_chosen_document(b"%PDF-1.7\nelegido".to_vec());
+
+    assert_eq!(request.format(), RequestedFormat::Pades);
+    assert_eq!(request.document(), b"%PDF-1.7\nelegido");
+    assert_eq!(request.round(), SignatureRound::First);
 }

@@ -25,12 +25,13 @@ pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
 pub use desk::{
     attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
-    consent_to_sign_and_save_with_chosen_document, consent_to_the_batch,
-    consent_to_the_local_batch, ErrandDesk, Neighbours,
+    consent_to_sign_with_chosen_document, consent_to_the_batch, consent_to_the_local_batch,
+    ErrandDesk, Neighbours,
 };
 pub use outcome::{
     BatchConsent, ErrandStep, LoadCompletion, LoadingConsent, LocalBatchConsent, LocalBatchItem,
-    Moment, NoCertificate, NoChannel, ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
+    Moment, NoCertificate, NoChannel, PendingSignature, ProtocolCodec, SavingConsent,
+    SigningConsent, SiteOutcome,
 };
 pub use replies::{
     batch_handed_over, declined, identify_with, identity_handed_over, loaded, saved,
@@ -371,7 +372,7 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     LoadCompletion::Continues(remembered(
         live,
-        desk::consent_to_sign_and_save_with_chosen_document(
+        desk::consent_to_sign_with_chosen_document(
             desk,
             *request,
             document,

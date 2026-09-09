@@ -6,6 +6,7 @@ pub mod codec;
 pub mod codec_relay;
 pub mod codec_v1;
 pub mod codec_v3;
+pub mod data_download;
 pub mod desk;
 pub mod frontier;
 pub mod nss;
