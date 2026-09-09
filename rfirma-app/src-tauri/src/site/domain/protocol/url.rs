@@ -63,6 +63,15 @@ impl AfirmaUrl {
         &self.verb
     }
 
+    /// Una operación armada desde pares ya descodificados, la forma en la que llega el XML de
+    /// parámetros del servidor intermedio.
+    pub fn of(verb: &str, pairs: impl IntoIterator<Item = (String, String)>) -> Self {
+        Self {
+            verb: verb.to_owned(),
+            parameters: pairs.into_iter().collect(),
+        }
+    }
+
     /// El valor de un parámetro, ya descodificado, si vino.
     pub fn parameter(&self, name: &str) -> Option<&str> {
         self.parameters.get(name).map(String::as_str)
@@ -104,7 +113,7 @@ fn strip_scheme(url: &str) -> Option<&str> {
         .then(|| &url[SCHEME.len()..])
 }
 
-fn url_decode(value: &str) -> String {
+pub(super) fn url_decode(value: &str) -> String {
     let bytes = value.as_bytes();
     let mut decoded: Vec<u8> = Vec::with_capacity(bytes.len());
     let mut index = 0;

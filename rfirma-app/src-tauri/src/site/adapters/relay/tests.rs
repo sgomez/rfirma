@@ -5,7 +5,8 @@ use base64::Engine as _;
 use super::*;
 use crate::site::application::tests::InMemoryServlets;
 use crate::site::domain::protocol::{
-    encrypt, read_operation, AfirmaUrl, CipherKey, NegotiatedCredential, SafCode, SiteOperation,
+    encrypt, read_operation, AfirmaUrl, CipherKey, NegotiatedCredential, RelayRequest, SafCode,
+    SiteOperation,
 };
 use crate::site::domain::relay_error::Situation as RelaySituation;
 
@@ -142,19 +143,44 @@ fn opened_and_delivered(relay: &Relay, info: &ChannelLocation) -> OpenChannel {
 }
 
 fn a_fileid_info(
-    retrieve_servlet: Option<&str>,
+    retrieve_servlet: &str,
     key: Option<CipherKey>,
     active_wait: bool,
 ) -> RelayChannelInfo {
     RelayChannelInfo {
         operation: an_operation("afirma://sign?algorithm=SHA256withRSA"),
-        retrieve_servlet: retrieve_servlet.map(str::to_owned),
-        store_servlet: STORE_SERVLET.to_owned(),
-        id: "tx-1".to_owned(),
-        fileid: Some("fileid-1".to_owned()),
+        request: RelayRequest::DataByFileId {
+            store_servlet: STORE_SERVLET.to_owned(),
+            id: "tx-1".to_owned(),
+            fileid: "fileid-1".to_owned(),
+            retrieve_servlet: retrieve_servlet.to_owned(),
+        },
         key,
         active_wait,
     }
+}
+
+/// El arranque que solo trae `fileid`: lo recuperado es el XML de parámetros de la operación.
+fn a_parameters_info(fileid: &str, key: Option<CipherKey>) -> RelayChannelInfo {
+    RelayChannelInfo {
+        operation: an_operation("afirma://sign?jvc=3"),
+        request: RelayRequest::ParametersByFileId {
+            fileid: fileid.to_owned(),
+            retrieve_servlet: RETRIEVE_SERVLET.to_owned(),
+        },
+        key,
+        active_wait: false,
+    }
+}
+
+/// El XML de parámetros que sube la sede: `<op><e k="…" v="…"/>…</op>` (`autoscript.js:4392`).
+fn a_parameters_xml(pairs: &[(&str, &str)]) -> Vec<u8> {
+    let mut xml = String::from("<sign>");
+    for (key, value) in pairs {
+        xml.push_str(&format!("<e k=\"{key}\" v=\"{value}\"/>"));
+    }
+    xml.push_str("</sign>");
+    xml.into_bytes()
 }
 
 #[test]
@@ -171,7 +197,7 @@ fn the_fileid_variant_downloads_and_deciphers_before_delivering() {
     servlets.log.lock().expect("el candado").clear();
 
     let (relay, spy) = a_relay(Arc::clone(&servlets));
-    let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), false));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), false));
 
     opened_and_delivered(&relay, &info);
 
@@ -187,10 +213,10 @@ fn the_inline_dat_variant_never_calls_get() {
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
         operation: an_operation("afirma://sign?dat=ya-viene-dentro&algorithm=SHA256withRSA"),
-        retrieve_servlet: None,
-        store_servlet: STORE_SERVLET.to_owned(),
-        id: "tx-2".to_owned(),
-        fileid: None,
+        request: RelayRequest::Inline {
+            store_servlet: STORE_SERVLET.to_owned(),
+            id: "tx-2".to_owned(),
+        },
         key: None,
         active_wait: false,
     });
@@ -212,7 +238,7 @@ fn wait_is_called_before_get_when_the_site_asks_for_it() {
     servlets.log.lock().expect("el candado").clear();
 
     let (relay, _spy) = a_relay(Arc::clone(&servlets));
-    let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), true));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
 
     opened_and_delivered(&relay, &info);
 
@@ -225,10 +251,10 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
         operation: an_operation("afirma://sign?dat=algo&algorithm=SHA256withRSA"),
-        retrieve_servlet: None,
-        store_servlet: STORE_SERVLET.to_owned(),
-        id: "tx-3".to_owned(),
-        fileid: None,
+        request: RelayRequest::Inline {
+            store_servlet: STORE_SERVLET.to_owned(),
+            id: "tx-3".to_owned(),
+        },
         key: None,
         active_wait: false,
     });
@@ -251,10 +277,10 @@ fn a_rejected_upload_notifies_without_closing_the_process() {
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
         operation: an_operation("afirma://sign?dat=algo&algorithm=SHA256withRSA"),
-        retrieve_servlet: None,
-        store_servlet: STORE_SERVLET.to_owned(),
-        id: "tx-4".to_owned(),
-        fileid: None,
+        request: RelayRequest::Inline {
+            store_servlet: STORE_SERVLET.to_owned(),
+            id: "tx-4".to_owned(),
+        },
         key: None,
         active_wait: false,
     });
@@ -276,7 +302,7 @@ fn an_unreachable_servlet_refuses_with_saf_16_without_delivering_anything() {
         ..OrderedSpy::default()
     });
     let (relay, spy) = a_relay(Arc::clone(&servlets));
-    let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(a_key()), false));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(a_key()), false));
 
     let error = relay
         .open(&info, duty())
@@ -296,7 +322,7 @@ fn undecipherable_content_refuses_with_saf_15() {
         .expect("guarda basura");
 
     let (relay, _spy) = a_relay(Arc::clone(&servlets));
-    let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), false));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), false));
 
     let error = relay
         .open(&info, duty())
@@ -310,7 +336,7 @@ fn undecipherable_content_refuses_with_saf_15() {
 fn a_refuse_duty_uploads_the_given_answer_without_waiting_resolving_or_delivering() {
     let servlets = Arc::new(OrderedSpy::default());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
-    let info = ChannelLocation::Relay(a_fileid_info(Some(RETRIEVE_SERVLET), Some(a_key()), true));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(a_key()), true));
     let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
 
     relay
@@ -349,8 +375,13 @@ fn the_fileid_variant_with_gzip_deciphers_then_delivers_for_decompression() {
     servlets.log.lock().expect("el candado").clear();
 
     let (relay, spy) = a_relay(Arc::clone(&servlets));
-    let mut info_data = a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), false);
-    info_data.fileid = Some("fileid-gzip-1".to_owned());
+    let mut info_data = a_fileid_info(RETRIEVE_SERVLET, Some(key), false);
+    info_data.request = RelayRequest::DataByFileId {
+        store_servlet: STORE_SERVLET.to_owned(),
+        id: "tx-1".to_owned(),
+        fileid: "fileid-gzip-1".to_owned(),
+        retrieve_servlet: RETRIEVE_SERVLET.to_owned(),
+    };
     info_data.operation =
         an_operation("afirma://sign?op=sign&format=PAdES&algorithm=SHA256withRSA&gzip=true");
     let info = ChannelLocation::Relay(info_data);
@@ -364,4 +395,240 @@ fn the_fileid_variant_with_gzip_deciphers_then_delivers_for_decompression() {
     };
     assert_eq!(request.document(), b"%PDF-1.7\nrelay-gzip");
     assert_eq!(servlets.log(), vec!["get"]);
+}
+
+#[test]
+fn the_parameters_variant_reads_the_operation_and_its_servlets_from_the_recovered_xml() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-1",
+            &encrypt(
+                &a_parameters_xml(&[
+                    ("op", "sign"),
+                    ("format", "PAdES"),
+                    ("algorithm", "SHA256withRSA"),
+                    ("stservlet", "https://sede.example/store"),
+                    ("id", "tx-del-xml"),
+                    ("dat", "JVBERi0xLjc"),
+                ]),
+                &key,
+            ),
+        )
+        .expect("guarda el XML de parametros cifrado");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-1", Some(key)));
+
+    opened_and_delivered(&relay, &info);
+
+    let (operation, reply) = spy.take_reply();
+    assert_eq!(operation.verb(), "sign");
+    assert_eq!(operation.parameter("format"), Some("PAdES"));
+    assert_eq!(operation.parameter("dat"), Some("JVBERi0xLjc"));
+
+    reply.answer("la-respuesta-cifrada".to_owned());
+    assert_eq!(
+        servlets
+            .body
+            .retrieve("https://sede.example/store", "tx-del-xml"),
+        Ok("la-respuesta-cifrada".to_owned()),
+        "la respuesta sube al 'stservlet' y con el 'id' que venian dentro del XML"
+    );
+}
+
+#[test]
+fn the_parameters_variant_applies_gzip_after_deciphering() {
+    let key = a_key();
+    let compressed = {
+        use std::io::Write;
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder
+            .write_all(b"%PDF-1.7\nparametros-gzip")
+            .expect("comprime");
+        encoder.finish().expect("termina")
+    };
+    let document = base64::engine::general_purpose::URL_SAFE.encode(&compressed);
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-gzip",
+            &encrypt(
+                &a_parameters_xml(&[
+                    ("op", "sign"),
+                    ("format", "PAdES"),
+                    ("algorithm", "SHA256withRSA"),
+                    ("gzip", "true"),
+                    ("stservlet", STORE_SERVLET),
+                    ("id", "tx-gzip"),
+                    ("dat", &document),
+                ]),
+                &key,
+            ),
+        )
+        .expect("guarda el XML de parametros cifrado");
+
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-gzip", Some(key)));
+
+    opened_and_delivered(&relay, &info);
+
+    let (operation, _reply) = spy.take_reply();
+    let SiteOperation::Sign(request) = read_operation(&operation).expect("lee operacion") else {
+        panic!("esperaba sign");
+    };
+    assert_eq!(request.document(), b"%PDF-1.7\nparametros-gzip");
+}
+
+#[test]
+fn an_unrecoverable_parameters_xml_refuses_with_the_same_code_as_a_document() {
+    let servlets = Arc::new(OrderedSpy {
+        body: InMemoryServlets::unreachable(),
+        ..OrderedSpy::default()
+    });
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-2", Some(a_key())));
+
+    let error = relay
+        .open(&info, duty())
+        .expect_err("un servlet inalcanzable no abre");
+
+    let refusal = error.refusal().expect("trae su propio rechazo clasificado");
+    assert_eq!(refusal.code(), SafCode::RecoveringData);
+    assert!(spy.delivered.lock().expect("el candado").is_none());
+}
+
+#[test]
+fn an_undecipherable_parameters_xml_refuses_with_saf_15() {
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-params-3", "no-son-bytes-cifrados")
+        .expect("guarda basura");
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-3", Some(a_key())));
+
+    let error = relay
+        .open(&info, duty())
+        .expect_err("un contenido indescifrable no abre");
+
+    assert_eq!(
+        error
+            .refusal()
+            .expect("trae su propio rechazo clasificado")
+            .code(),
+        SafCode::DecryptingData
+    );
+}
+
+#[test]
+fn an_illegible_parameters_xml_refuses_as_a_parameters_problem() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-4",
+            &encrypt(b"esto no es el XML de parametros", &key),
+        )
+        .expect("guarda algo que no es el XML");
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-4", Some(key)));
+
+    let error = relay
+        .open(&info, duty())
+        .expect_err("un XML de parametros ilegible no abre");
+
+    assert_eq!(
+        error
+            .refusal()
+            .expect("trae su propio rechazo clasificado")
+            .code(),
+        SafCode::Params
+    );
+}
+
+#[test]
+fn a_parameters_xml_without_stservlet_refuses_as_a_parameters_problem() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-5",
+            &encrypt(
+                &a_parameters_xml(&[("op", "sign"), ("id", "tx-sin-servlet")]),
+                &key,
+            ),
+        )
+        .expect("guarda el XML sin 'stservlet'");
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-5", Some(key)));
+
+    let error = relay
+        .open(&info, duty())
+        .expect_err("sin 'stservlet' no hay adonde contestar");
+
+    assert_eq!(
+        error
+            .refusal()
+            .expect("trae su propio rechazo clasificado")
+            .code(),
+        SafCode::Params
+    );
+}
+
+#[test]
+fn the_parameters_variant_waits_when_the_recovered_xml_asks_for_it() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-6",
+            &encrypt(
+                &a_parameters_xml(&[
+                    ("op", "selectcert"),
+                    ("aw", "true"),
+                    ("stservlet", STORE_SERVLET),
+                    ("id", "tx-espera"),
+                ]),
+                &key,
+            ),
+        )
+        .expect("guarda el XML de parametros cifrado");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-6", Some(key)));
+
+    opened_and_delivered(&relay, &info);
+
+    assert_eq!(
+        servlets.log(),
+        vec!["get", "wait"],
+        "la espera activa la pide el XML, y por eso llega despues de recuperarlo"
+    );
+}
+
+#[test]
+fn a_refuse_duty_without_a_store_target_does_not_open_the_channel() {
+    let servlets = Arc::new(OrderedSpy::default());
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-7", Some(a_key())));
+    let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
+
+    let error = relay
+        .open(&info, ChannelDuty::Refuse(answer))
+        .expect_err("todavia no se sabe adonde subir la respuesta");
+
+    assert_eq!(error.situation(), Situation::Relay);
+    assert!(servlets.log().is_empty());
+    assert_eq!(spy.exits(), 0);
 }

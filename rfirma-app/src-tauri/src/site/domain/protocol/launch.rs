@@ -67,20 +67,58 @@ pub enum NegotiatedCredential {
     Absent,
 }
 
+/// De dónde salen la operación y el destino de la respuesta en un arranque de servidor intermedio.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RelayRequest {
+    /// La URL trae la operación entera, `dat` incluido.
+    Inline {
+        /// Servlet de almacenamiento (`stservlet`), donde se sube la respuesta.
+        store_servlet: String,
+        /// Identificador (`id`) con el que se sube la respuesta.
+        id: String,
+    },
+    /// La URL trae la operación, y por `fileid` se recupera el documento que va en `dat`.
+    DataByFileId {
+        /// Servlet de almacenamiento (`stservlet`), donde se sube la respuesta.
+        store_servlet: String,
+        /// Identificador (`id`) con el que se sube la respuesta.
+        id: String,
+        /// La referencia (`fileid`) al documento a recuperar.
+        fileid: String,
+        /// Servlet de recuperación (`rtservlet`) del que se baja el documento.
+        retrieve_servlet: String,
+    },
+    /// La URL solo trae `fileid`: lo recuperado es el XML de parámetros, de donde salen la
+    /// operación entera, `stservlet` e `id`.
+    ParametersByFileId {
+        /// La referencia (`fileid`) al XML de parámetros a recuperar.
+        fileid: String,
+        /// Servlet de recuperación (`rtservlet`) del que se baja el XML de parámetros.
+        retrieve_servlet: String,
+    },
+}
+
+impl RelayRequest {
+    /// Dónde y con qué identificador se sube la respuesta, cuando la URL ya lo dijo.
+    pub fn store_target(&self) -> Option<(&str, &str)> {
+        match self {
+            Self::Inline { store_servlet, id }
+            | Self::DataByFileId {
+                store_servlet, id, ..
+            } => Some((store_servlet, id)),
+            Self::ParametersByFileId { .. } => None,
+        }
+    }
+}
+
 /// Información de canal del servidor intermedio, negociada desde la propia invocación de
 /// arranque: no hay canal que sostener, así que la operación viaja con sus servlets.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RelayChannelInfo {
     /// El verbo de operación y sus parámetros, tal como llegaron (`dat` puede faltar).
     pub operation: AfirmaUrl,
-    /// Servlet de recuperación (`rtservlet`), si la operación llega por `fileid`.
-    pub retrieve_servlet: Option<String>,
-    /// Servlet de almacenamiento (`stservlet`), donde se sube la respuesta.
-    pub store_servlet: String,
-    /// Identificador (`id`) con el que se sube la respuesta y, si aplica, se recupera la petición.
-    pub id: String,
-    /// La referencia (`fileid`) al contenido a recuperar, cuando la operación no lo trae inline.
-    pub fileid: Option<String>,
+    /// De dónde salen la operación y el destino de la respuesta.
+    pub request: RelayRequest,
     /// La clave de cifrado (`key`), si la operación la trae.
     pub key: Option<CipherKey>,
     /// Si la sede pide espera activa (`aw`) antes de operar.
@@ -145,42 +183,7 @@ impl LaunchRequest {
     }
 
     fn from_relay_url(url: &AfirmaUrl) -> Result<Self, Refusal> {
-        let store_servlet = url
-            .parameter("stservlet")
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| {
-                Refusal::params(
-                "la operacion con servidor intermedio no trae 'stservlet', y sin el no se puede \
-                 subir la respuesta",
-            )
-            })?
-            .to_owned();
-        let id = url
-            .parameter("id")
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))?
-            .to_owned();
-        let fileid = url
-            .parameter("fileid")
-            .filter(|value| !value.is_empty())
-            .map(str::to_owned);
-        let retrieve_servlet = url
-            .parameter("rtservlet")
-            .filter(|value| !value.is_empty())
-            .map(str::to_owned);
-
-        if url.parameter("dat").is_none() && fileid.is_none() {
-            return Err(Refusal::params(
-                "la operacion con servidor intermedio no trae ni 'dat' ni 'fileid': no hay datos \
-                 que operar",
-            ));
-        }
-        if fileid.is_some() && url.parameter("dat").is_none() && retrieve_servlet.is_none() {
-            return Err(Refusal::params(
-                "la operacion trae 'fileid' pero no 'rtservlet', y sin el no se puede recuperar \
-                 el contenido",
-            ));
-        }
+        let request = relay_request_of(url)?;
 
         let key = match url.parameter("key").filter(|value| !value.is_empty()) {
             Some(value) => CipherKey::from_url_parameter(value)
@@ -188,20 +191,13 @@ impl LaunchRequest {
             None => None,
         };
 
-        let active_wait = url
-            .parameter("aw")
-            .is_some_and(|value| !value.is_empty() && value != "false");
-
         Ok(Self {
             version: PROTOCOL_VERSION,
             location: ChannelLocation::Relay(RelayChannelInfo {
                 operation: url.clone(),
-                retrieve_servlet,
-                store_servlet,
-                id,
-                fileid,
+                request,
                 key,
-                active_wait,
+                active_wait: asks_for_active_wait(url),
             }),
             credential: NegotiatedCredential::Absent,
         })
@@ -250,10 +246,70 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
 }
 
 /// Si la invocación tiene la forma de una operación con servidor intermedio: un verbo de
-/// operación (no `websocket`) que trae `stservlet`, el único parámetro que exige siempre
-/// `from_relay_url` (la variante `fileid` sin `stservlet` queda fuera a propósito: ver `site/AGENTS.md`).
+/// operación (no `websocket`) que trae `stservlet`, o que trae `fileid` y `rtservlet` y por tanto
+/// recupera su XML de parámetros.
 fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
     url.parameter("stservlet").is_some()
+        || (url.parameter("fileid").is_some() && url.parameter("rtservlet").is_some())
+}
+
+/// Si la sede pide espera activa (`aw`) antes de operar.
+pub fn asks_for_active_wait(url: &AfirmaUrl) -> bool {
+    url.parameter("aw")
+        .is_some_and(|value| !value.is_empty() && value != "false")
+}
+
+fn relay_request_of(url: &AfirmaUrl) -> Result<RelayRequest, Refusal> {
+    let store_servlet = given(url, "stservlet");
+    let fileid = given(url, "fileid");
+    let retrieve_servlet = given(url, "rtservlet");
+
+    let Some(store_servlet) = store_servlet else {
+        return match (fileid, retrieve_servlet) {
+            (Some(fileid), Some(retrieve_servlet)) => Ok(RelayRequest::ParametersByFileId {
+                fileid,
+                retrieve_servlet,
+            }),
+            _ => Err(Refusal::params(
+                "la operacion con servidor intermedio no trae 'stservlet' ni 'fileid' con \
+                 'rtservlet', y sin eso no se puede subir la respuesta",
+            )),
+        };
+    };
+
+    let id = given(url, "id")
+        .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))?;
+
+    if url.parameter("dat").is_some() {
+        return Ok(RelayRequest::Inline { store_servlet, id });
+    }
+
+    let Some(fileid) = fileid else {
+        return Err(Refusal::params(
+            "la operacion con servidor intermedio no trae ni 'dat' ni 'fileid': no hay datos \
+             que operar",
+        ));
+    };
+    let Some(retrieve_servlet) = retrieve_servlet else {
+        return Err(Refusal::params(
+            "la operacion trae 'fileid' pero no 'rtservlet', y sin el no se puede recuperar \
+             el contenido",
+        ));
+    };
+
+    Ok(RelayRequest::DataByFileId {
+        store_servlet,
+        id,
+        fileid,
+        retrieve_servlet,
+    })
+}
+
+/// El valor de un parámetro que vino y no vino vacío.
+fn given(url: &AfirmaUrl, name: &str) -> Option<String> {
+    url.parameter(name)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
 }
 
 fn location_of(version: i64, ports: Option<&str>) -> Result<ChannelLocation, Refusal> {

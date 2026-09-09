@@ -248,15 +248,39 @@ fn a_refusal_location_is_none_without_ports_nor_the_third_protocol() {
     assert_eq!(location_for_a_refusal(&url), None);
 }
 
-#[test]
-fn a_launch_with_only_rtservlet_is_refused_as_an_unrecognized_verb() {
-    let refusal = LaunchRequest::parse(
-        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&rtservlet=https://relay.example/retrieve\
-         &key=12345678",
-    )
-    .expect_err("sin stservlet la forma fileid-only queda fuera de alcance");
+/// La invocación que manda la sede que fuerza servidor intermedio con un dato de tamaño real:
+/// `buildUrlWithoutData` solo añade `fileid`, `rtservlet` y `key` (`autoscript.js:4489`).
+const PUBLISHED_PARAMETERS_BY_FILEID: &str =
+    "afirma://sign?jvc=3&fileid=KDpNbXwqTFY5N0F0djJZeQ&rtservlet=https://sede.example/afirma-signature-retriever/RetrieveService&key=12345678";
 
-    assert_eq!(refusal.code(), SafCode::Params);
+#[test]
+fn the_fileid_only_invocation_the_published_client_sends_is_read_as_a_relay_launch() {
+    let request = LaunchRequest::parse(PUBLISHED_PARAMETERS_BY_FILEID)
+        .expect("la forma fileid-only es un arranque de servidor intermedio");
+
+    let ChannelLocation::Relay(info) = request.location() else {
+        panic!("una operacion que recupera sus parametros negocia canal de servidor intermedio");
+    };
+    assert_eq!(
+        info.request,
+        RelayRequest::ParametersByFileId {
+            fileid: "KDpNbXwqTFY5N0F0djJZeQ".to_owned(),
+            retrieve_servlet: "https://sede.example/afirma-signature-retriever/RetrieveService"
+                .to_owned(),
+        }
+    );
+    assert!(info.key.is_some());
+}
+
+#[test]
+fn the_fileid_only_invocation_does_not_declare_where_to_upload_the_answer_yet() {
+    let request =
+        LaunchRequest::parse(PUBLISHED_PARAMETERS_BY_FILEID).expect("la forma fileid-only vale");
+
+    let ChannelLocation::Relay(info) = request.location() else {
+        panic!("una operacion que recupera sus parametros negocia canal de servidor intermedio");
+    };
+    assert_eq!(info.request.store_target(), None);
 }
 
 #[test]
@@ -271,13 +295,15 @@ fn a_relay_launch_with_fileid_needs_rtservlet_and_stores_the_channel_info() {
         panic!("una operacion con servlet negocia canal de servidor intermedio");
     };
     assert_eq!(info.operation.verb(), "sign");
-    assert_eq!(info.fileid.as_deref(), Some("abc123"));
     assert_eq!(
-        info.retrieve_servlet.as_deref(),
-        Some("https://relay.example/retrieve")
+        info.request,
+        RelayRequest::DataByFileId {
+            store_servlet: "https://relay.example/store".to_owned(),
+            id: "tx-1".to_owned(),
+            fileid: "abc123".to_owned(),
+            retrieve_servlet: "https://relay.example/retrieve".to_owned(),
+        }
     );
-    assert_eq!(info.store_servlet, "https://relay.example/store");
-    assert_eq!(info.id, "tx-1");
     assert!(info.key.is_some());
     assert!(!info.active_wait);
 }
@@ -293,18 +319,22 @@ fn a_relay_launch_with_inline_dat_does_not_need_rtservlet_nor_key() {
     let ChannelLocation::Relay(info) = request.location() else {
         panic!("una operacion con servlet negocia canal de servidor intermedio");
     };
-    assert!(info.retrieve_servlet.is_none());
-    assert!(info.fileid.is_none());
+    assert_eq!(
+        info.request,
+        RelayRequest::Inline {
+            store_servlet: "https://relay.example/store".to_owned(),
+            id: "tx-2".to_owned(),
+        }
+    );
     assert!(info.key.is_none());
 }
 
 #[test]
-fn a_relay_launch_without_stservlet_is_refused() {
+fn a_relay_launch_without_stservlet_and_without_rtservlet_is_refused() {
     let refusal = LaunchRequest::parse(
-        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&rtservlet=https://relay.example/retrieve\
-         &id=tx-3",
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&id=tx-3&key=12345678&aw=true",
     )
-    .expect_err("sin stservlet no se puede subir la respuesta");
+    .expect_err("sin stservlet ni rtservlet no hay ni respuesta que subir ni parametros que leer");
 
     assert_eq!(refusal.code(), SafCode::Params);
 }

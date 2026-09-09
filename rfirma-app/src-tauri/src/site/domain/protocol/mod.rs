@@ -33,6 +33,7 @@ pub mod message;
 pub mod operation;
 pub mod parameters;
 pub mod refusal;
+pub mod relay_parameters;
 pub mod url;
 pub mod version;
 pub mod visible;
@@ -48,8 +49,9 @@ pub use framing::{
     NotOfTheFraming, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
 };
 pub use launch::{
-    drawn_ports, location_for_a_refusal, ChannelCredential, LaunchRequest, NegotiatedCredential,
-    RelayChannelInfo, PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL, THIRD_PROTOCOL_VERSION,
+    asks_for_active_wait, drawn_ports, location_for_a_refusal, ChannelCredential, LaunchRequest,
+    NegotiatedCredential, RelayChannelInfo, RelayRequest, PROTOCOL_VERSION,
+    THE_PORT_OF_THE_THIRD_PROTOCOL, THIRD_PROTOCOL_VERSION,
 };
 pub use message::ChannelMessage;
 pub use operation::{
@@ -64,6 +66,7 @@ pub use parameters::{
     StickyCertificate,
 };
 pub use refusal::{Refusal, RefusalSituation};
+pub use relay_parameters::operation_of_the_parameters_xml;
 pub use url::AfirmaUrl;
 pub use version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
 pub use visible::{forget_the_box, visible_signature_of, SiteVisibleSignature};

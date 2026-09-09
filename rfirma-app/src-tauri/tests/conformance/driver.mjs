@@ -157,6 +157,43 @@ globalThis.screen = { width: 1920, height: 1080 };
 globalThis.XMLHttpRequest = undefined;
 
 /**
+ * El servidor intermedio del banco, montado como `XMLHttpRequest`: guarda lo que el cliente
+ * publicado sube con `op=put` y lo devuelve con `op=get`, sin red por medio. El cliente publicado
+ * solo llega aquí en el modo `relay`, donde `setForceWSMode(true)` le impide abrir canal.
+ */
+function theIntermediateServerAsXmlHttpRequest() {
+  const stored = new Map();
+
+  return class {
+    open(method, url) {
+      this.method = method;
+      this.url = url;
+      this.readyState = 1;
+    }
+    setRequestHeader() {}
+    send(body) {
+      const query = new URLSearchParams(
+        this.method === "POST" ? String(body ?? "") : (String(this.url).split("?")[1] ?? ""),
+      );
+      this.status = 200;
+      this.responseText = "OK";
+      if (query.get("op") === "put") {
+        stored.set(query.get("id"), query.get("dat"));
+        emit({ event: "stored", id: String(query.get("id")), dat: String(query.get("dat")) });
+      } else if (query.get("op") === "get") {
+        this.responseText = stored.get(query.get("id")) ?? "ERR-06: no existe el fichero";
+      }
+      this.readyState = 4;
+      setTimeout(() => this.onreadystatechange?.(), 0);
+    }
+  };
+}
+
+if (mode === "relay") {
+  globalThis.XMLHttpRequest = theIntermediateServerAsXmlHttpRequest();
+}
+
+/**
  * Sin `WebSocket` en el entorno (`isWebSocketsSupported()`, autoscript.js:197-199), el cliente
  * publicado cae al transporte sin WebSocket (`AppAfirmaJSSocket`) y lanza `afirma://service?…`
  * en vez de `afirma://websocket?…`. Node trae `WebSocket` como global desde la 22, así que hay
@@ -493,6 +530,32 @@ async function theLocalBatchWithAnIllegibleItemScript() {
   );
 }
 
+/**
+ * El documento que dispara el preproceso de URL larga: en base 64 pasa de los 2000 caracteres de
+ * `MAX_LONG_GENERAL_URL`, así que el cliente publicado sube los parámetros al servlet y lanza la
+ * aplicación con `fileid`, `rtservlet` y `key` solamente.
+ */
+function aDocumentTooLongForTheUrl() {
+  return Buffer.from("%PDF-1.7\n".concat("d".repeat(3000)), "utf8");
+}
+
+/** Una firma en modo servidor intermedio: los servlets son el `XMLHttpRequest` del banco. */
+function theRelayScript() {
+  AutoScript.setServlets(
+    "https://sede.example/afirma-signature-storage/StorageService",
+    "https://sede.example/afirma-signature-retriever/RetrieveService",
+  );
+  AutoScript.sign(
+    aDocumentTooLongForTheUrl().toString("base64"),
+    "SHA256withRSA",
+    "CAdES",
+    "mode=explicit",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
 function theSignScript(format, extraParams, content) {
   AutoScript.sign(
@@ -556,9 +619,15 @@ async function theBatchWithTheDownPresignerScript() {
   );
 }
 
+if (mode === "relay") {
+  AutoScript.setForceWSMode(true);
+}
+
 AutoScript.cargarAppAfirma();
 
-if (script === "batch") {
+if (mode === "relay") {
+  theRelayScript();
+} else if (script === "batch") {
   theBatchScript();
 } else if (script === "batchxml") {
   theBatchXmlScript();

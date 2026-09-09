@@ -18,17 +18,19 @@ use rfirma_lib::signing::adapters::isolate::Isolate;
 use rfirma_lib::signing::application::session::sign_on_token;
 use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
 use rfirma_lib::site::adapters::desk::Neighbours;
+use rfirma_lib::site::adapters::relay::Relay;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 use rfirma_lib::site::application::errand::{
-    self, Errand, ErrandDesk, ErrandStep, NegotiatedCodec,
+    self, Errand, ErrandDesk, ErrandStep, NegotiatedCodec, Transport,
 };
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
-    drawn_ports, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode, WireAnswer,
-    PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    drawn_ports, read_operation, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode,
+    SiteOperation, WireAnswer, PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
-use rfirma_lib::site::ports::ReplyHandle as ErrandReply;
+use rfirma_lib::site::domain::relay_error::{RelayError, Situation as RelaySituation};
+use rfirma_lib::site::ports::{Inbox, ReplyHandle as ErrandReply, Servlets};
 use rfirma_lib::Roots;
 
 /// La versión de `service` que habla el cliente publicado cuando no hay WebSocket.
@@ -105,6 +107,8 @@ enum BenchMode {
     Third,
     /// Sin `WebSocket` en el entorno: el cliente publicado cae a `afirma://service?v=1`.
     Service,
+    /// Con `setForceWSMode(true)`: el cliente publicado no abre canal y va por servidor intermedio.
+    Relay,
 }
 
 impl BenchMode {
@@ -113,6 +117,7 @@ impl BenchMode {
             Self::Fourth => "v4",
             Self::Third => "v3",
             Self::Service => "service",
+            Self::Relay => "relay",
         }
     }
 }
@@ -1881,4 +1886,130 @@ async fn cosigning_an_invoice_with_facturae_is_refused() {
     );
 
     channel.close();
+}
+
+/// El servidor intermedio del banco visto desde rFirma: sirve lo que el cliente publicado subió y
+/// guarda la respuesta, sin mirar la dirección del servlet, que en el banco es siempre el mismo.
+#[derive(Default)]
+struct BenchServlets {
+    files: Mutex<std::collections::HashMap<String, String>>,
+}
+
+impl BenchServlets {
+    fn put(&self, id: &str, data: &str) {
+        self.files
+            .lock()
+            .expect("el candado")
+            .insert(id.to_owned(), data.to_owned());
+    }
+
+    fn get(&self, id: &str) -> Option<String> {
+        self.files.lock().expect("el candado").get(id).cloned()
+    }
+}
+
+impl Servlets for BenchServlets {
+    fn retrieve(&self, _service_url: &str, id: &str) -> Result<String, RelayError> {
+        self.get(id).ok_or_else(|| {
+            RelayError::new(
+                RelaySituation::ServletUnreachable,
+                format!("el banco no tiene guardado {id}"),
+            )
+        })
+    }
+
+    fn store(&self, _service_url: &str, id: &str, data: &str) -> Result<(), RelayError> {
+        self.put(id, data);
+        Ok(())
+    }
+
+    fn wait(&self, _service_url: &str, _id: &str) -> Result<(), RelayError> {
+        Ok(())
+    }
+}
+
+/// El documento que el guion `relay` firma, el mismo que arma el conductor.
+fn the_document_too_long_for_the_url() -> Vec<u8> {
+    let mut document = b"%PDF-1.7\n".to_vec();
+    document.extend(std::iter::repeat_n(b'd', 3000));
+    document
+}
+
+/// La invocación y lo que el cliente publicado subió al servlet, en el orden en el que los emite.
+fn the_relay_launch_of(client: &PublishedClient, servlets: &BenchServlets) -> String {
+    let mut launch = None;
+    for _ in 0..2 {
+        let event = client.next_event();
+        match event.name() {
+            "stored" => servlets.put(event.field("id"), event.field("dat")),
+            "launch" => launch = Some(event.field("url").to_owned()),
+            _ => panic!("el banco no esperaba este evento: {}", event.0),
+        }
+    }
+    launch.expect("el cliente publicado tiene que lanzar la aplicacion")
+}
+
+#[test]
+fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirma_reads_it() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_as(&material, BenchMode::Relay);
+    let servlets = Arc::new(BenchServlets::default());
+
+    let launch = the_relay_launch_of(&client, &servlets);
+    assert!(
+        launch.contains("fileid=") && launch.contains("rtservlet=") && launch.contains("key="),
+        "el preproceso de URL larga lanza con 'fileid', 'rtservlet' y 'key': {launch}"
+    );
+    assert!(
+        !launch.contains("stservlet=") && !launch.contains("&id="),
+        "la sede en modo servidor intermedio no manda 'stservlet' ni 'id' en la URL: {launch}"
+    );
+
+    let request = LaunchRequest::parse(&launch).expect("rfirma deberia leer la invocacion");
+    let location = request.location().clone();
+
+    let delivered: Arc<Mutex<Option<(AfirmaUrl, ErrandReply)>>> = Arc::new(Mutex::new(None));
+    let inbox_delivered = Arc::clone(&delivered);
+    let inbox = Inbox::for_operations(move |url, reply| {
+        *inbox_delivered.lock().expect("el candado") = Some((url, reply));
+    });
+    let relay = Relay::new(
+        Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
+        inbox,
+        Arc::new(|| {}),
+        Arc::new(|_| {}),
+    );
+
+    let mut channel = relay
+        .open(&location, ChannelDuty::Serve(NegotiatedCredential::Absent))
+        .expect("el arranque por servidor intermedio deberia abrirse");
+    channel
+        .take_delivery()
+        .expect("una operacion Serve siempre trae entrega")
+        .now();
+
+    let (operation, reply) = delivered
+        .lock()
+        .expect("el candado")
+        .take()
+        .expect("la operacion deberia haberse entregado");
+    let stored_at = operation
+        .parameter("id")
+        .expect("el XML de parametros trae el 'id'")
+        .to_owned();
+    let SiteOperation::Sign(signing) = read_operation(&operation).expect("lee la operacion") else {
+        panic!("el guion del banco pide una firma");
+    };
+    assert_eq!(signing.document(), the_document_too_long_for_the_url());
+
+    reply.answer("la-respuesta-del-tramite".to_owned());
+    assert_eq!(
+        servlets.get(&stored_at).as_deref(),
+        Some("la-respuesta-del-tramite"),
+        "la respuesta sube con el 'id' que venia dentro del XML de parametros"
+    );
 }
