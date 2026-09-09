@@ -5,9 +5,11 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use libloading::Library;
+use x509_cert::der::Decode;
 
 use super::stores::present_among;
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
+use crate::identity::domain::holder::common_name_of;
 
 /// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
@@ -178,6 +180,97 @@ fn failed(step: &str) -> TokenError {
     )
 }
 
+#[repr(C)]
+struct PrCList {
+    next: *mut PrCList,
+    prev: *mut PrCList,
+}
+
+#[repr(C)]
+struct CertList {
+    links: PrCList,
+    arena: *mut c_void,
+}
+
+#[repr(C)]
+struct CertListNode {
+    links: PrCList,
+    certificate: *mut c_void,
+    application_data: *mut c_void,
+}
+
+type CertificateDer = extern "C" fn(*mut c_void, *mut SecItem) -> c_int;
+
+fn certificates_in(list: *mut CertList, certificate_der: CertificateDer) -> Vec<Vec<u8>> {
+    let mut carried = Vec::new();
+    if list.is_null() {
+        return carried;
+    }
+
+    // SAFETY: NSS devuelve una lista circular viva hasta que se destruye.
+    unsafe {
+        let head: *mut PrCList = &raw mut (*list).links;
+        let mut link = (*head).next;
+        while !link.is_null() && !std::ptr::eq(link, head) {
+            let certificate = (*link.cast::<CertListNode>()).certificate;
+            let mut der = SecItem {
+                kind: SI_BUFFER,
+                data: std::ptr::null_mut(),
+                len: 0,
+            };
+            if !certificate.is_null()
+                && certificate_der(certificate, &mut der) == SEC_SUCCESS
+                && !der.data.is_null()
+            {
+                carried.push(std::slice::from_raw_parts(der.data, der.len as usize).to_vec());
+            }
+            link = (*link).next;
+        }
+    }
+
+    carried
+}
+
+fn authorities_among(carried: &[Vec<u8>]) -> Vec<(Vec<u8>, CString)> {
+    let named: Vec<(String, String)> = carried.iter().map(|der| names_of(der)).collect();
+
+    carried
+        .iter()
+        .zip(&named)
+        .filter(|(_, (subject, _))| {
+            named
+                .iter()
+                .any(|(other, issuer)| issuer == subject && other != subject)
+        })
+        .filter_map(|(der, (subject, _))| {
+            CString::new(named_as_an_authority(subject))
+                .ok()
+                .map(|nickname| (der.clone(), nickname))
+        })
+        .collect()
+}
+
+fn named_as_an_authority(subject: &str) -> String {
+    let name = common_name_of(Some(subject));
+    if name.is_empty() {
+        subject.to_owned()
+    } else {
+        name
+    }
+}
+
+fn names_of(der: &[u8]) -> (String, String) {
+    x509_cert::Certificate::from_der(der).map_or_else(
+        |_| (String::new(), String::new()),
+        |certificate| {
+            (
+                certificate.tbs_certificate().subject().to_string(),
+                certificate.tbs_certificate().issuer().to_string(),
+            )
+        },
+    )
+}
+
 /// Importa un fichero PKCS#12 en el almacén NSS indicado.
 pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<(), TokenError> {
     let nss = nss_library()
@@ -211,6 +304,10 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
         extern "C" fn(*mut SecItem, *mut c_int, *mut c_void) -> *mut SecItem,
     ) -> c_int;
     type DecoderFinish = extern "C" fn(*mut c_void);
+    type DecoderGetCerts = extern "C" fn(*mut c_void) -> *mut CertList;
+    type DestroyCertList = extern "C" fn(*mut CertList);
+    type ImportDerCert =
+        extern "C" fn(*mut c_void, *mut SecItem, c_ulong, *const c_char, c_int) -> c_int;
 
     let nss_no_db_init: NoDbInit = symbol(nss, b"NSS_NoDB_Init\0")?;
     let nss_shutdown: Shutdown = symbol(nss, b"NSS_Shutdown\0")?;
@@ -227,6 +324,10 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     let decoder_validate: DecoderValidate = symbol(smime, b"SEC_PKCS12DecoderValidateBags\0")?;
     let decoder_import: DecoderStep = symbol(smime, b"SEC_PKCS12DecoderImportBags\0")?;
     let decoder_finish: DecoderFinish = symbol(smime, b"SEC_PKCS12DecoderFinish\0")?;
+    let decoder_get_certs: DecoderGetCerts = symbol(smime, b"SEC_PKCS12DecoderGetCerts\0")?;
+    let destroy_cert_list: DestroyCertList = symbol(nss, b"CERT_DestroyCertList\0")?;
+    let certificate_der: CertificateDer = symbol(nss, b"CERT_GetCertificateDer\0")?;
+    let import_der_cert: ImportDerCert = symbol(nss, b"PK11_ImportDERCert\0")?;
 
     let spec = CString::new(module_spec(directory)).map_err(|_| {
         TokenError::new(
@@ -294,6 +395,22 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
                 }
                 if decoder_import(decoder) != SEC_SUCCESS {
                     return Err(failed("SEC_PKCS12DecoderImportBags"));
+                }
+
+                let carried = decoder_get_certs(decoder);
+                let authorities = authorities_among(&certificates_in(carried, certificate_der));
+                if !carried.is_null() {
+                    destroy_cert_list(carried);
+                }
+                for (mut der, nickname) in authorities {
+                    let mut item = SecItem {
+                        kind: SI_BUFFER,
+                        data: der.as_mut_ptr(),
+                        len: der.len() as c_uint,
+                    };
+                    // Una autoridad que no entra deja el almacen como si el `.p12`
+                    // no la trajera, y el firmante instalado sigue sirviendo.
+                    let _ = import_der_cert(slot, &mut item, 0, nickname.as_ptr(), 0);
                 }
                 Ok(())
             })();

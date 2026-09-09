@@ -167,7 +167,9 @@ mod full_cycle {
 
     use base64::Engine;
     use rfirma_lib::documents::adapters::rubric;
+    use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
     use rfirma_lib::identity::adapters::pkcs11;
+    use rfirma_lib::identity::application::certificates;
     use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
@@ -187,6 +189,10 @@ mod full_cycle {
 
     const TOKEN: &str = "rfirma-test";
     const PIN: &str = "1234";
+    /// Contraseña del `.p12` del kit de pruebas.
+    const KIT_PASSWORD: &str = "1234";
+    /// El almacén NSS de un `.p12` instalado no pide secreto (ADR-0011).
+    const NO_SECRET: &str = "";
     /// Certificado activo del kit de pruebas.
     const ACTIVE: &str = "FNMT-ACTIVO-99999999R";
     /// El certificado de curva elíptica, en su propio token.
@@ -346,6 +352,7 @@ mod full_cycle {
     ) -> Vec<u8> {
         a_cycle_signed_by(
             &signing_certificate(),
+            PIN,
             format,
             algorithm,
             data,
@@ -357,6 +364,7 @@ mod full_cycle {
     /// El mismo ciclo, con el certificado que se le diga: el de RSA o el de curva elíptica.
     fn a_cycle_signed_by(
         certificate: &TokenCertificate,
+        secret: &str,
         format: Format,
         algorithm: SignatureAlgorithm,
         data: &[u8],
@@ -364,7 +372,7 @@ mod full_cycle {
         declared: &[(&str, &str)],
     ) -> Vec<u8> {
         let bridge = bridge();
-        let chain = vec![certificate.der().to_vec()];
+        let chain = certificate.chain();
         let reference = certificate.reference().clone();
         let config = SignatureConfig {
             placement: None,
@@ -395,7 +403,7 @@ mod full_cycle {
         .unwrap_or_else(|error| panic!("la prefirma en {format} debería salir: {error}"));
 
         let signature = cycle
-            .sign_on_token(&pkcs11::RealToken, PIN)
+            .sign_on_token(&pkcs11::RealToken, secret)
             .expect("el token debería firmar los atributos");
 
         cycle
@@ -477,6 +485,148 @@ mod full_cycle {
             String::from_utf8_lossy(&output.stderr)
         );
         assert!(verdict.contains("VALID"), "{verdict}");
+    }
+
+    /// El `.p12` del kit, instalado en su propio almacén NSS con la cadena que traía dentro.
+    fn an_installed_certificate(installed: &Path) -> TokenCertificate {
+        let p12 = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../testdata/fnmt/active-rsa.p12");
+        let bytes = std::fs::read(&p12).expect("el .p12 del kit deberia leerse");
+        certificates::install_pkcs12(
+            &pkcs11::RealToken,
+            &RealInstalledFolder,
+            installed,
+            &bytes,
+            KIT_PASSWORD,
+        )
+        .expect("el .p12 del kit deberia instalarse");
+
+        let softoken = pkcs11::stores::softoken().expect(
+            "falta libsoftokn3.so. El almacen del .p12 lo necesita:\n  \
+             sudo apt install -y libnss3",
+        );
+        certificates::certificates_with_their_chains(
+            &pkcs11::RealToken,
+            &pkcs11::stores::installed_stores(&softoken, installed),
+        )
+        .expect("el almacen del .p12 deberia listarse")
+        .into_iter()
+        .next()
+        .expect("el .p12 trae el certificado de persona")
+    }
+
+    /// Los certificados que lleva dentro un CMS, tal y como los enumera openssl (ADR-0014).
+    fn openssl_prints_the_certificates_of(signature: &Path) -> String {
+        let output = Command::new("openssl")
+            .arg("pkcs7")
+            .arg("-inform")
+            .arg("DER")
+            .arg("-in")
+            .arg(signature)
+            .arg("-print_certs")
+            .arg("-noout")
+            .output()
+            .unwrap_or_else(|error| {
+                panic!(
+                    "falta openssl: es la puerta de validez de CAdES en la grada C \
+                     (ADR-0014).\n  sudo apt install -y openssl\n  {error}"
+                )
+            });
+        assert!(
+            output.status.success(),
+            "openssl no ha podido leer los certificados de {}: {}",
+            signature.display(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn the_cms_carries_the_signer_and_the_authority_that_issued_it() {
+        let installed = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let certificate = an_installed_certificate(installed.path());
+
+        let signed = a_cycle_signed_by(
+            &certificate,
+            NO_SECRET,
+            Format::Cades,
+            cycle::ALGORITHM,
+            CHALLENGE,
+            SignatureOperation::Sign,
+            &[("mode", "implicit")],
+        );
+        let signature = write_to_target("cades-con-cadena.p7s", &signed);
+
+        let carried = openssl_prints_the_certificates_of(&signature);
+        assert_eq!(
+            carried.matches("subject=").count(),
+            2,
+            "el firmante y la intermedia de la FNMT, y nada mas:\n{carried}"
+        );
+        assert!(
+            carried.contains("AC FNMT Usuarios"),
+            "la intermedia que emitio al firmante va dentro del CMS:\n{carried}"
+        );
+    }
+
+    /// El CMS que un PDF firmado lleva dentro, tal y como lo vuelca pdfsig (ADR-0014).
+    fn the_cms_inside(pdf: &Path) -> PathBuf {
+        let dumped = Path::new(env!("CARGO_TARGET_TMPDIR")).join("pades-con-cadena.volcado");
+        let _ = std::fs::remove_dir_all(&dumped);
+        std::fs::create_dir_all(&dumped).expect("deberia poder crearse el directorio del volcado");
+
+        let output = Command::new("pdfsig")
+            .arg("-dump")
+            .arg(pdf)
+            .current_dir(&dumped)
+            .output()
+            .unwrap_or_else(|error| {
+                panic!(
+                    "falta pdfsig: es la puerta de validez de la grada C (ADR-0014).\n  \
+                     sudo apt install -y poppler-utils\n{error}"
+                )
+            });
+        let report = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        std::fs::read_dir(&dumped)
+            .expect("el directorio del volcado deberia leerse")
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .next()
+            .unwrap_or_else(|| panic!("pdfsig -dump no ha dejado ningun CMS:\n{report}"))
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn the_cms_of_a_signed_pdf_carries_the_signer_and_the_authority_that_issued_it() {
+        let installed = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let certificate = an_installed_certificate(installed.path());
+
+        let signed = a_cycle_signed_by(
+            &certificate,
+            NO_SECRET,
+            Format::Pades,
+            cycle::ALGORITHM,
+            &a_one_page_pdf(),
+            SignatureOperation::Sign,
+            &[],
+        );
+        let pdf = write_to_target("pades-con-cadena.pdf", &signed);
+
+        let carried = openssl_prints_the_certificates_of(&the_cms_inside(&pdf));
+        assert_eq!(
+            carried.matches("subject=").count(),
+            2,
+            "el CMS del PDF lleva al firmante y a la intermedia de la FNMT, y nada mas:\n{carried}"
+        );
+        assert!(
+            carried.contains("AC FNMT Usuarios"),
+            "la intermedia que emitio al firmante viaja dentro del PDF:\n{carried}"
+        );
     }
 
     #[test]
@@ -590,6 +740,7 @@ mod full_cycle {
 
         let signed = a_cycle_signed_by(
             &certificate,
+            PIN,
             Format::Cades,
             algorithm,
             CHALLENGE,
@@ -610,6 +761,7 @@ mod full_cycle {
 
         let signed = a_cycle_signed_by(
             &certificate,
+            PIN,
             Format::Xades(XadesVariant::Enveloping),
             algorithm,
             A_REFERENCE_XML,

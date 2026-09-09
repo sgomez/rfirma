@@ -114,12 +114,30 @@ impl CertificateStatus {
 pub struct TokenCertificate {
     reference: CertificateRef,
     der: Vec<u8>,
+    issuers: Vec<Vec<u8>>,
 }
 
 impl TokenCertificate {
     /// Construye una instancia a partir de la referencia y el contenido DER.
     pub fn new(reference: CertificateRef, der: Vec<u8>) -> Self {
-        Self { reference, der }
+        Self {
+            reference,
+            der,
+            issuers: Vec::new(),
+        }
+    }
+
+    /// El mismo certificado acompañado de los emisores que completan su cadena.
+    pub fn with_its_issuers(mut self, issuers: Vec<Vec<u8>>) -> Self {
+        self.issuers = issuers;
+        self
+    }
+
+    /// La cadena de certificación que viaja al puente: el firmante y detrás sus emisores.
+    pub fn chain(&self) -> Vec<Vec<u8>> {
+        std::iter::once(self.der.clone())
+            .chain(self.issuers.iter().cloned())
+            .collect()
     }
 
     /// Coordenadas persistibles del certificado.

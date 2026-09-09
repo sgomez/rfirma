@@ -36,6 +36,10 @@ impl Token for RealToken {
         list_certificates(store)
     }
 
+    fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        list_every_certificate(store.clone())
+    }
+
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         store_secret(reference)
     }
@@ -222,9 +226,8 @@ fn all_certificates_in_session(
     Ok(found)
 }
 
-/// Listado de certificados sin filtrar por clave privada para pruebas.
-#[doc(hidden)]
-pub fn list_certificates_unfiltered_for_test(
+/// Los certificados de un almacén sin filtrar por clave privada: también las autoridades que lo emitieron.
+pub fn list_every_certificate(
     store: impl Into<Store>,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();
@@ -234,9 +237,15 @@ pub fn list_certificates_unfiltered_for_test(
         let mut found = Vec::new();
 
         for slot in usable_slots(&context)? {
-            let token_label = context.get_token_info(slot)?.label().trim().to_owned();
+            let info = context.get_token_info(slot)?;
+            let token_label = info.label().trim().to_owned();
             let session = context.open_ro_session(slot)?;
+
+            let logged_in = log_in_before_listing(&session, &info);
             found.extend(all_certificates_in_session(&session, &store, &token_label)?);
+            if logged_in {
+                let _ = session.logout();
+            }
         }
 
         Ok(found)

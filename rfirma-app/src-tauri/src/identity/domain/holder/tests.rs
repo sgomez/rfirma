@@ -1,4 +1,4 @@
-use super::{attribute, holder_of, is_pseudonym, issuer_of};
+use super::{attribute, common_name_of, holder_of, is_pseudonym};
 
 #[test]
 fn reads_the_holder_and_the_id_out_of_the_subject() {
@@ -39,7 +39,7 @@ fn the_issuer_is_the_authority_and_not_the_organisation_of_the_holder() {
     let subject = "CN=EIDAS CERTIFICADO PRUEBAS - 99999999R, serialNumber=IDCES-99999999R, C=ES";
     let issuer = "CN=AC FNMT Usuarios, OU=Ceres, O=FNMT-RCM, C=ES";
 
-    assert_eq!(issuer_of(Some(issuer)), "AC FNMT Usuarios");
+    assert_eq!(common_name_of(Some(issuer)), "AC FNMT Usuarios");
     assert_eq!(attribute("O=", subject), "");
 }
 
@@ -52,7 +52,7 @@ fn the_organisation_of_a_public_employee_is_never_read_as_the_issuer() {
 
     assert_eq!(name, "LOVELACE BYRON ADA");
     assert_eq!(id, "");
-    assert_eq!(issuer_of(Some(issuer)), "AC Administracion Publica");
+    assert_eq!(common_name_of(Some(issuer)), "AC Administracion Publica");
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn a_literal_backslash_before_the_comma_does_not_escape_it() {
 
 #[test]
 fn an_issuer_without_a_common_name_falls_back_instead_of_going_blank() {
-    assert_eq!(issuer_of(Some("O=FNMT-RCM, C=ES")), "FNMT-RCM");
-    assert_eq!(issuer_of(Some("OU=Ceres, C=ES")), "OU=Ceres, C=ES");
-    assert_eq!(issuer_of(None), "");
+    assert_eq!(common_name_of(Some("O=FNMT-RCM, C=ES")), "FNMT-RCM");
+    assert_eq!(common_name_of(Some("OU=Ceres, C=ES")), "OU=Ceres, C=ES");
+    assert_eq!(common_name_of(None), "");
 }

@@ -10,13 +10,22 @@ use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::{CertificateMemory, Token};
 use crate::memory_error::MemoryError;
-use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::local_ca::{generate_key, random_serial, LocalCa};
+use openssl::asn1::Asn1Time;
+use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
+use openssl::pkey::{PKey, Private};
+use openssl::x509::{X509Name, X509NameRef, X509};
 
 /// Un token sin certificados que no sabe firmar: cada almacén está vacío.
 pub(crate) struct NoToken;
 
 impl Token for NoToken {
     fn list(&self, _store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(Vec::new())
+    }
+
+    fn every_certificate(&self, _store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(Vec::new())
     }
 
@@ -112,4 +121,76 @@ pub(crate) fn listed_from(certificates: &[TokenCertificate]) -> (ListedCertifica
             .map(|certificate| certificate.reference().clone()),
     );
     (listed, handles)
+}
+
+/// Una autoridad de pruebas: un certificado de verdad y la clave con la que emite los que cuelgan de él.
+pub(crate) struct TestAuthority {
+    certificate: X509,
+    key: PKey<Private>,
+}
+
+impl TestAuthority {
+    /// Una raíz autofirmada con ese nombre común.
+    pub(crate) fn root(common_name: &str) -> Self {
+        Self::built(common_name, None)
+    }
+
+    /// Otra autoridad emitida por esta, con ese nombre común.
+    pub(crate) fn issues(&self, common_name: &str) -> Self {
+        Self::built(common_name, Some(self))
+    }
+
+    /// El certificado en DER.
+    pub(crate) fn der(&self) -> Vec<u8> {
+        self.certificate
+            .to_der()
+            .expect("el certificado de pruebas deberia salir en DER")
+    }
+
+    /// El certificado como certificado del token, con esa etiqueta.
+    pub(crate) fn as_certificate(&self, label: &str) -> TokenCertificate {
+        a_certificate(label, &self.der())
+    }
+
+    fn built(common_name: &str, issuer: Option<&Self>) -> Self {
+        let key = generate_key().expect("la clave de pruebas deberia generarse");
+        let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+        name.append_entry_by_nid(Nid::COMMONNAME, common_name)
+            .expect("el nombre comun deberia entrar");
+        let name = name.build();
+        let issuer_name: &X509NameRef = match issuer {
+            Some(authority) => authority.certificate.subject_name(),
+            None => &name,
+        };
+
+        let mut builder = X509::builder().expect("deberia poder construirse un certificado");
+        builder.set_version(2).expect("la version deberia ponerse");
+        builder
+            .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+            .expect("el serie deberia ponerse");
+        builder
+            .set_subject_name(&name)
+            .expect("el titular deberia ponerse");
+        builder
+            .set_issuer_name(issuer_name)
+            .expect("el emisor deberia ponerse");
+        builder.set_pubkey(&key).expect("la clave deberia ponerse");
+        builder
+            .set_not_before(&Asn1Time::days_from_now(0).expect("deberia haber fecha"))
+            .expect("el inicio deberia ponerse");
+        builder
+            .set_not_after(&Asn1Time::days_from_now(30).expect("deberia haber fecha"))
+            .expect("el fin deberia ponerse");
+        builder
+            .sign(
+                issuer.map_or(&key, |authority| &authority.key),
+                MessageDigest::sha256(),
+            )
+            .expect("el certificado de pruebas deberia firmarse");
+
+        Self {
+            certificate: builder.build(),
+            key,
+        }
+    }
 }

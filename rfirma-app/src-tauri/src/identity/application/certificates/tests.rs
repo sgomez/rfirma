@@ -1,10 +1,18 @@
 use super::ListedCertificates;
-use super::{certificate_behind, listed_rows, remember_the_certificate, usable_certificate};
-use crate::identity::application::tests::{
-    a_certificate, a_certificate_with_id, listed_from, NoToken,
+use super::{
+    certificate_behind, certificates_with_their_chains, listed_rows, remember_the_certificate,
+    usable_certificate,
 };
-use crate::identity::domain::error::Situation;
+use crate::identity::application::tests::{
+    a_certificate, a_certificate_with_id, listed_from, NoToken, TestAuthority,
+};
+use crate::identity::domain::algorithm::SignatureAlgorithm;
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::store::Store;
 use crate::identity::ports::CertificateMemory as _;
+use crate::identity::ports::Token;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::tests::a_memory;
 
@@ -154,4 +162,188 @@ fn a_first_run_has_no_remembered_certificate() {
     let documents = tempfile::tempdir().expect("deberia haber directorio temporal");
 
     assert_eq!(a_memory(documents.path()).remembered_certificate(), None);
+}
+
+/// El módulo de un token con la clave dentro.
+const CARD: &str = "/usr/lib/softhsm/libsofthsm2.so";
+/// El módulo del almacén NSS donde aterriza un `.p12` instalado.
+const INSTALLED: &str = "/usr/lib/libsoftokn3.so";
+
+/// Un token cuyos almacenes tienen lo que se le diga, firmable o no.
+struct StoresWith {
+    signable: Vec<TokenCertificate>,
+    everything: Result<Vec<TokenCertificate>, TokenError>,
+}
+
+impl StoresWith {
+    /// Todo lo que hay en los almacenes y, de entre ello, lo que es firmable.
+    fn holding(everything: Vec<TokenCertificate>, signable: Vec<TokenCertificate>) -> Self {
+        Self {
+            signable,
+            everything: Ok(everything),
+        }
+    }
+
+    fn a_store_that_cannot_be_opened(signable: Vec<TokenCertificate>) -> Self {
+        Self {
+            signable,
+            everything: Err(TokenError::new(
+                Situation::ModuleNotFound,
+                "el almacen no se deja abrir",
+            )),
+        }
+    }
+
+    fn only(&self, store: &Store, certificates: &[TokenCertificate]) -> Vec<TokenCertificate> {
+        certificates
+            .iter()
+            .filter(|certificate| certificate.reference().store() == *store)
+            .cloned()
+            .collect()
+    }
+}
+
+impl Token for StoresWith {
+    fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(self.only(store, &self.signable))
+    }
+
+    fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        let everything = self.everything.as_ref().map_err(Clone::clone)?;
+        Ok(self.only(store, everything))
+    }
+
+    fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+        Ok(StoreSecret::NotNeeded)
+    }
+
+    fn offers(
+        &self,
+        _reference: &CertificateRef,
+        _algorithm: SignatureAlgorithm,
+    ) -> Result<(), TokenError> {
+        Ok(())
+    }
+
+    fn sign(
+        &self,
+        _reference: &CertificateRef,
+        _pin: &str,
+        _algorithm: SignatureAlgorithm,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "este token no firma",
+        ))
+    }
+
+    fn import_pkcs12(
+        &self,
+        _directory: &std::path::Path,
+        _pkcs12: &[u8],
+        _password: &str,
+    ) -> Result<Store, TokenError> {
+        Err(TokenError::new(
+            Situation::Pkcs12Unreadable,
+            "este token no importa nada",
+        ))
+    }
+}
+
+fn a_certificate_in(module: &str, label: &str, der: &[u8]) -> TokenCertificate {
+    TokenCertificate::new(
+        CertificateRef::new(module, "rfirma-test", label, vec![0x01]),
+        der.to_vec(),
+    )
+}
+
+#[test]
+fn a_certificate_carries_the_issuer_that_its_own_store_has() {
+    let root = TestAuthority::root("Raiz de pruebas");
+    let authority = root.issues("AC de pruebas");
+    let signer = authority.issues("Firmante de pruebas");
+    let signable = vec![a_certificate_in(CARD, "FIRMA", &signer.der())];
+    let token = StoresWith::holding(
+        vec![
+            signable[0].clone(),
+            a_certificate_in(CARD, "AC", &authority.der()),
+        ],
+        signable,
+    );
+
+    let found = certificates_with_their_chains(&token, &[Store::module(CARD)])
+        .expect("el almacen deberia listarse");
+
+    assert_eq!(found[0].chain(), vec![signer.der(), authority.der()]);
+}
+
+#[test]
+fn a_certificate_alone_in_its_store_goes_with_nothing_behind() {
+    let root = TestAuthority::root("Raiz de pruebas");
+    let authority = root.issues("AC de pruebas");
+    let signer = authority.issues("Firmante de pruebas");
+    let signable = vec![a_certificate_in(CARD, "FIRMA", &signer.der())];
+    let token = StoresWith::holding(signable.clone(), signable);
+
+    let found = certificates_with_their_chains(&token, &[Store::module(CARD)])
+        .expect("el almacen deberia listarse");
+
+    assert_eq!(found[0].chain(), vec![signer.der()]);
+}
+
+#[test]
+fn the_issuer_of_another_store_does_not_complete_the_chain() {
+    let root = TestAuthority::root("Raiz de pruebas");
+    let authority = root.issues("AC de pruebas");
+    let signer = authority.issues("Firmante de pruebas");
+    let signable = vec![a_certificate_in(CARD, "FIRMA", &signer.der())];
+    let token = StoresWith::holding(
+        vec![
+            signable[0].clone(),
+            a_certificate_in(INSTALLED, "AC", &authority.der()),
+        ],
+        signable,
+    );
+
+    let found =
+        certificates_with_their_chains(&token, &[Store::module(CARD), Store::module(INSTALLED)])
+            .expect("los almacenes deberian listarse");
+
+    assert_eq!(found[0].chain(), vec![signer.der()]);
+}
+
+#[test]
+fn an_installed_p12_signs_with_the_chain_that_came_inside_it() {
+    let root = TestAuthority::root("Raiz de pruebas");
+    let authority = root.issues("AC de pruebas");
+    let signer = authority.issues("Firmante de pruebas");
+    let signable = vec![a_certificate_in(INSTALLED, "FIRMA", &signer.der())];
+    let token = StoresWith::holding(
+        vec![
+            signable[0].clone(),
+            a_certificate_in(INSTALLED, "AC", &authority.der()),
+            a_certificate_in(INSTALLED, "RAIZ", &root.der()),
+        ],
+        signable,
+    );
+
+    let found = certificates_with_their_chains(&token, &[Store::module(INSTALLED)])
+        .expect("el almacen instalado deberia listarse");
+
+    assert_eq!(found[0].chain(), vec![signer.der(), authority.der()]);
+}
+
+#[test]
+fn a_store_that_cannot_be_opened_leaves_the_signer_alone_instead_of_stopping_the_listing() {
+    let root = TestAuthority::root("Raiz de pruebas");
+    let authority = root.issues("AC de pruebas");
+    let signer = authority.issues("Firmante de pruebas");
+    let signable = vec![a_certificate_in(CARD, "FIRMA", &signer.der())];
+    let token = StoresWith::a_store_that_cannot_be_opened(signable);
+
+    let found = certificates_with_their_chains(&token, &[Store::module(CARD)])
+        .expect("el listado sigue aunque no se puedan mirar las autoridades");
+
+    assert_eq!(found[0].chain(), vec![signer.der()]);
 }

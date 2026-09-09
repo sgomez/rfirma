@@ -14,6 +14,9 @@ pub trait Token {
     /// Los certificados firmables de un almacén.
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError>;
 
+    /// Todos los certificados de un almacén, también los que no firman: con ellos se completa una cadena.
+    fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError>;
+
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
 

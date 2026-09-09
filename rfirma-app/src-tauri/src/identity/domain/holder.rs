@@ -75,7 +75,7 @@ pub fn stamped_holder_of(certificate: &TokenCertificate) -> StampedHolder {
     let subject = certificate.subject();
     StampedHolder {
         common_name: attribute("CN=", subject.as_deref().unwrap_or_default()),
-        issuer: issuer_of(certificate.issuer().as_deref()),
+        issuer: common_name_of(certificate.issuer().as_deref()),
         pseudonym: is_pseudonym(subject.as_deref()),
     }
 }
@@ -91,18 +91,18 @@ pub fn is_pseudonym(subject: Option<&str>) -> bool {
         })
 }
 
-/// Extrae el nombre de la autoridad emisora a partir del emisor del certificado.
-pub fn issuer_of(issuer: Option<&str>) -> String {
-    let issuer = issuer.unwrap_or_default().trim();
-    let common_name = attribute("CN=", issuer);
+/// Extrae el nombre común de un nombre distinguido, sea de emisor o de titular.
+pub fn common_name_of(name: Option<&str>) -> String {
+    let name = name.unwrap_or_default().trim();
+    let common_name = attribute("CN=", name);
     if !common_name.is_empty() {
         return common_name;
     }
-    let organisation = attribute("O=", issuer);
+    let organisation = attribute("O=", name);
     if !organisation.is_empty() {
         return organisation;
     }
-    issuer.to_owned()
+    name.to_owned()
 }
 
 #[cfg(test)]

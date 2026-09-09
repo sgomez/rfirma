@@ -20,7 +20,7 @@ pub fn compose(
     let bytes = admitted_bytes(files, document, Format::Pades)?;
     let config = config_for(choice, chosen)?;
     let reference = chosen.reference().clone();
-    let chain = vec![chosen.der().to_vec()];
+    let chain = chosen.chain();
 
     on_the_bridge(isolate, move |bridge| {
         let document = AdmissibleDocument::check_for(Format::Pades, &bytes)?;
