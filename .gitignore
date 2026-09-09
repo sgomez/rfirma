@@ -62,3 +62,8 @@ testdata/conformance/
 # necesite saltarse un trabajo en su equipo lo hace aqui y no en el fichero
 # versionado.
 lefthook-local.yml
+
+# La landing en Astro (packaging/repo/site): dependencias y salida del build.
+packaging/repo/site/node_modules/
+packaging/repo/site/dist/
+packaging/repo/site/.astro/

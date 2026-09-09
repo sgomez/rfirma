@@ -46,12 +46,17 @@
         file_server
     }
 
-    # La landing, que sí va dentro de la imagen: control de caché para que un
-    # redespliegue se vea de inmediato.
+    # La landing, que sí va dentro de la imagen: la construye `astro build` en
+    # cinco idiomas —`/` en castellano y `/ca/`, `/eu/`, `/gl/` y `/en/`— y sus
+    # hojas, tipografías e imágenes salen con el hash en el nombre bajo
+    # `/_astro/`. De ahí las dos caducidades: lo que lleva hash no cambia nunca
+    # y lo demás se revalida, para que un redespliegue se vea de inmediato.
     handle {
         root * /srv
         file_server
-        @landing path / /index.html
-        header @landing Cache-Control "no-cache, must-revalidate"
+        @sellado path /_astro/*
+        header @sellado Cache-Control "public, max-age=31536000, immutable"
+        @paginas not path /_astro/*
+        header @paginas Cache-Control "no-cache, must-revalidate"
     }
 }

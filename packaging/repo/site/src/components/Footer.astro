@@ -1,0 +1,82 @@
+---
+import Logo from "./Logo.astro";
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+---
+
+<footer style="position:relative;overflow:clip;background:linear-gradient(135deg,#053e44 0%,#067781 100%);color:#ffffff">
+  <div data-blob="foot" aria-hidden="true"></div>
+  <div
+    style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(40px,6vw,72px) clamp(16px,4vw,32px) clamp(28px,4vw,40px);display:flex;flex-direction:column;gap:32px"
+  >
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:26rem">
+        <span style="display:flex;align-items:center;gap:10px">
+          <Logo size={30} disc="#ffffff" stroke="#067781" />
+          <span style="font-size:1.25rem;font-weight:800;letter-spacing:-.02em">rFirma</span>
+        </span>
+        <p style="margin:0;font-size:.9375rem;line-height:1.6;color:rgba(255,255,255,.8)">{t("footer.tagline")}</p>
+        <span style="font-size:.8125rem;color:rgba(255,255,255,.65)">{t("footer.license")}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:clamp(32px,5vw,72px)">
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px">
+          <li
+            style="font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)"
+            >{t("footer.col.project")}</li
+          >
+          <li>
+            <a
+              href="https://github.com/sgomez/rfirma"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="font-size:.9375rem;text-decoration:none;color:#ffffff">{t("footer.repo")}</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://github.com/sgomez/rfirma/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="font-size:.9375rem;text-decoration:none;color:#ffffff">{t("footer.releases")}</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://rfirma.sgomez.me/rfirma.asc"
+              style="font-size:.9375rem;text-decoration:none;color:#ffffff">{t("footer.gpg")}</a
+            >
+          </li>
+        </ul>
+        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px">
+          <li
+            style="font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6)"
+            >{t("footer.col.origin")}</li
+          >
+          <li>
+            <a
+              href="https://github.com/ctt-gob-es/clienteafirma"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="font-size:.9375rem;text-decoration:none;color:#ffffff">{t("footer.clienteafirma")}</a
+            >
+          </li>
+          <li>
+            <a href="#comparativa" style="font-size:.9375rem;text-decoration:none;color:#ffffff"
+              >{t("footer.comparison")}</a
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p
+      style="margin:0;padding:16px 20px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:.8125rem;line-height:1.5;color:rgba(255,255,255,.9)"
+      set:html={t("notice.official")}
+    />
+  </div>
+</footer>

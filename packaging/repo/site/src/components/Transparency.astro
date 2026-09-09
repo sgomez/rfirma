@@ -1,0 +1,59 @@
+---
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+---
+
+<section id="transparencia" style="background:#fafbfc">
+  <div style="max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span
+        style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)"
+        >{t("transparency.kicker")}</span
+      >
+      <h2
+        style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em"
+      >
+        {t("transparency.title")}
+      </h2>
+      <p
+        style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty"
+        set:html={t("transparency.body")}
+      />
+    </div>
+    <div
+      style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:clamp(16px,2.5vw,24px);margin-top:clamp(24px,4vw,40px)"
+    >
+      <div class="rf-card" style="gap:10px">
+        <h3 style="margin:0;font-size:1.125rem;font-weight:700">{t("transparency.repo1.title")}</h3>
+        <p
+          style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)"
+          set:html={t("transparency.repo1.body")}
+        />
+      </div>
+      <div class="rf-card" style="gap:10px">
+        <h3 style="margin:0;font-size:1.125rem;font-weight:700">{t("transparency.repo2.title")}</h3>
+        <p
+          style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)"
+          set:html={t("transparency.repo2.body")}
+        />
+      </div>
+      <div class="rf-card" style="gap:10px">
+        <h3 style="margin:0;font-size:1.125rem;font-weight:700">{t("transparency.key.title")}</h3>
+        <p
+          style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)"
+          set:html={t("transparency.key.body")}
+        />
+        <code
+          style="display:block;padding:10px 12px;background:var(--rf-code-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8125rem;line-height:1.5;overflow-wrap:anywhere"
+          >C8D6 A81C 1ED4 3A28 D426&nbsp; 8112 A6E0 EE02 2344 6A16</code
+        >
+      </div>
+    </div>
+  </div>
+</section>

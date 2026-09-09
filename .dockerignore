@@ -1,0 +1,10 @@
+# El contexto de la imagen de rfirma.sgomez.me es la raíz del repositorio
+# (packaging/repo/Dockerfile), y de aquí solo necesita la landing y el sistema
+# de diseño que consume. Todo lo demás se queda fuera.
+*
+!packaging/repo/site
+!packaging/repo/Caddyfile
+!rfirma-app/src/design-system/bundle
+packaging/repo/site/node_modules
+packaging/repo/site/dist
+packaging/repo/site/.astro

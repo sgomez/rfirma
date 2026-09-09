@@ -8,8 +8,8 @@
 # La otra mitad es que las ordenes de alta que enseña la landing sigan
 # describiendo lo que hay servido: `Suites: stable` no funciona sobre un
 # repositorio plano y la URL literal de dnf no funciona si el arbol la escribe
-# con `$basearch`. Las dos cosas se comprueban contra `index.html`, que es
-# donde la gente las copia.
+# con `$basearch`. Las dos cosas se comprueban contra el componente de la
+# landing que las publica, que es de donde la gente las copia.
 #
 # LAS FIRMAS NO SE PRUEBAN AQUI, y no es un olvido: firmar necesita una clave
 # privada, las claves de rFirma las crea una persona con
@@ -28,7 +28,7 @@ set -euo pipefail
 
 raiz="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 construye="$raiz/packaging/repo/build-tree.sh"
-landing="$raiz/packaging/repo/index.html"
+landing="$raiz/packaging/repo/site/src/components/Install.astro"
 SIN_FIRMA="SIN-FIRMA-SOLO-PRUEBAS"
 
 tmp="$(mktemp -d)"

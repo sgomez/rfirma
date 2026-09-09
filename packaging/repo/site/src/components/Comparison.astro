@@ -1,0 +1,82 @@
+---
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+const rows = ["arch", "keys", "store", "stores", "stamp", "sede", "ca", "lang", "privacy", "updates", "desktop"] as const;
+const cell = "padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle)";
+const lastCell = "padding:14px 20px";
+---
+
+<section id="comparativa" style="position:relative;background:#ffffff;overflow:clip">
+  <div data-blob="cmp" aria-hidden="true"></div>
+  <div
+    style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)"
+  >
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span
+        style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)"
+        >{t("comparison.kicker")}</span
+      >
+      <h2
+        style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em"
+      >
+        {t("comparison.title")}
+      </h2>
+      <p style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">
+        {t("comparison.body")}
+      </p>
+    </div>
+    <div
+      data-reveal
+      style="margin-top:clamp(28px,4vw,48px);border:1px solid var(--rf-border-subtle);border-radius:20px;background:#ffffff;box-shadow:0 30px 60px -30px rgba(6,119,129,.25),0 10px 25px -15px rgba(0,0,0,.1);overflow-x:auto"
+    >
+      <table style="width:100%;min-width:640px;border-collapse:collapse;text-align:left;font-size:.9375rem">
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              style="width:26%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700"
+              >{t("comparison.head.aspect")}</th
+            >
+            <th
+              scope="col"
+              style="width:37%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700"
+              >{t("comparison.head.autofirma")}</th
+            >
+            <th
+              scope="col"
+              style="width:37%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700;color:var(--rf-brand-text)"
+              >{t("comparison.head.rfirma")}</th
+            >
+          </tr>
+        </thead>
+        <tbody>
+          {
+            rows.map((row, index) => {
+              const box = index === rows.length - 1 ? lastCell : cell;
+              return (
+                <tr>
+                  <th
+                    scope="row"
+                    style={`${box};font-weight:600;text-align:left`}
+                    set:html={t(`comparison.${row}.label` as const)}
+                  />
+                  <td
+                    style={`${box};color:var(--rf-text-muted)`}
+                    set:html={t(`comparison.${row}.autofirma` as const)}
+                  />
+                  <td style={`${box};font-weight:600`} set:html={t(`comparison.${row}.rfirma` as const)} />
+                </tr>
+              );
+            })
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

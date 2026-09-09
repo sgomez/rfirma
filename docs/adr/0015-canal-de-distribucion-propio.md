@@ -92,10 +92,19 @@ de la imagen**: cada publicación produciría una capa nueva con la historia ent
 Con los datos fuera, el CI de publicación no toca Docker en ningún momento.
 
 **La landing es un entregable propio y sale antes que la tubería**, porque hoy el dominio
-resuelve al VPS y no sirve nada. Es un `index.html` escrito a mano, sin generador y sin paso
-de construcción: qué es rfirma, que está en alfa, las órdenes de alta de los tres canales, la
-huella GPG y el párrafo de migración. Mientras no exista la v0.4, la sección de instalación
-dice que todavía no hay versión publicada, en vez de esconderse.
+resuelve al VPS y no sirve nada. Dice qué es rFirma, que está en alfa, las órdenes de alta de
+los tres canales, la huella GPG y el párrafo de migración; mientras no exista la v0.4, la
+sección de instalación dice que todavía no hay versión publicada, en vez de esconderse.
+
+**Se construye con Astro, en `packaging/repo/site/`**, y lo que se sirve sigue siendo HTML
+estático. El generador entra por dos cosas que un fichero suelto no da: **los cinco idiomas
+de la aplicación** —`/` en castellano y `/ca/`, `/eu/`, `/gl/` y `/en/`, con un diccionario
+por idioma y una prueba que exige los cinco al 100 %— y **una sección, un componente**, que es
+lo que permite tocar la comparativa sin releer la página entera. El precio es un paso de
+construcción: la imagen se arma en dos etapas —`node` ejecuta `astro build`, `caddy:alpine`
+se queda con el `dist/`— y su contexto pasa a ser la raíz del repositorio, porque la página
+consume el sistema de diseño de `rfirma-app/src/design-system/bundle/` en vez de repetir sus
+tokens.
 
 ## La tubería: tres ficheros, cada uno con un motivo para cambiar
 
@@ -188,6 +197,11 @@ son cientos de megas para ahorrar un comando.
   firma: o la clave GPG baja al servidor —peor secreto en peor sitio—, o el CI publica además
   los índices ya firmados como assets y el contenedor queda de espejo tonto. Lo segundo
   funciona y es mucha maquinaria para lo que resuelve.
+- **Seguir con la landing a mano**, un `index.html` sin generador ni paso de construcción,
+  como fue hasta que hubo que publicarla en cinco idiomas. Cinco copias del mismo fichero se
+  desincronizan en el primer cambio de una frase, y no hay forma de que una prueba diga que a
+  una le falta un párrafo. Con el diccionario por idioma, eso es exactamente lo que se
+  comprueba.
 - **Copiar `nightly.yml` de tabularis.** El [#222](https://github.com/sgomez/rfirma/issues/222)
   dejó a tabularis medido como **contraejemplo, no modelo**. Lo que sobrevive de él es el
   hecho desnudo: un remoto propio es un canal normal, no una rareza.

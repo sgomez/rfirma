@@ -8,10 +8,10 @@ enlace simbólico.
 
 | Fichero | Qué es |
 |---|---|
-| `index.html` | La landing, escrita a mano, sin generador y sin paso de construcción |
-| `rfirma-main-window.png` | Captura real de la interfaz principal de rFirma |
-| `landing-prompt.md` | El encargo con el que se dibujó la landing nueva en Claude Design |
-| `landing-prototype.dc.html` | Copia 1-1 del artboard `Landing.dc.html` del lienzo; no es lo que se sirve, es lo que hay que portar |
+| `site/` | La landing: un proyecto Astro estático en cinco idiomas, con su propio `package.json` |
+| `site/src/i18n/` | Un diccionario por idioma con las claves en inglés, y las pruebas que exigen los cinco al 100 % |
+| `site/src/components/` | Un componente por sección de la página |
+| `site/src/scripts/` | Las cuatro funciones de la página: pestañas, copiar, demo guiada y aparición al bajar |
 | `Caddyfile` | Configuración de Caddy (no-root, puerto 3000, cabeceras, healthcheck y las rutas de los tres repositorios) |
 | `Dockerfile` | `caddy:alpine` no-root más la landing y Caddyfile |
 | `download-series.sh` | Baja y verifica **toda** la serie menor vigente desde las Releases |
@@ -91,11 +91,16 @@ entrega. Si `rrsync` no está instalado, esa pata avisa y se salta; el resto cor
 
 ## Coolify
 
-Coolify construye esta imagen **desde `main`**, con este `Dockerfile` como raíz de
-construcción (*Build Pack*: Dockerfile; *Base Directory*: `packaging/repo/`). No hace falta
-ningún paso de construcción adicional: no hay `package.json`, ni `pnpm`, ni assets que
-compilar. Un cambio en `index.html` o en `Dockerfile` en `main` es lo único que dispara un
-redespliegue.
+Coolify construye esta imagen **desde `main`**, y desde que la landing es un proyecto Astro
+el contexto de construcción es **la raíz del repositorio**: la página toma el sistema de
+diseño de `rfirma-app/src/design-system/bundle/`, que está fuera de este directorio. En la
+aplicación de Coolify eso son dos campos (*Build Pack*: Dockerfile; *Base Directory*: `/`;
+*Dockerfile Location*: `packaging/repo/Dockerfile`), y **hay que cambiarlos a mano una vez**:
+con el `Base Directory` viejo la construcción falla al no encontrar el bundle.
+
+La imagen se construye en dos etapas: `node:24-alpine` instala las dependencias del sitio y
+ejecuta `astro build`, y `caddy:alpine` se queda solo con el `dist/`. Un cambio en `site/`,
+en el `Dockerfile` o en el sistema de diseño en `main` dispara un redespliegue.
 
 **El montaje**: la aplicación de Coolify necesita `/srv/rfirma-repo` del anfitrión montado en
 `/srv/rfirma-repo` del contenedor, **de sólo lectura**. Sin él, las rutas de los tres
@@ -143,6 +148,9 @@ Ni el CI ni ningún agente pueden hacer esto: hay que hacerlo a mano una vez.
    | `PUBLISH_SSH_KNOWN_HOSTS` | variable | la línea de `ssh-keyscan <host>`, para que `StrictHostKeyChecking=yes` tenga con qué comparar |
 
 4. **El montaje de la aplicación de Coolify**, el del apartado anterior.
+
+5. **El contexto de construcción de la aplicación de Coolify**: `Base Directory` a `/` y
+   `Dockerfile Location` a `packaging/repo/Dockerfile`, como explica el apartado anterior.
 
 El resto de la infraestructura —dominio y certificado TLS— también es aprovisionamiento
 humano.

@@ -137,7 +137,7 @@ jobs:
           FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
         run: |
           set -euo pipefail
-          for fichero in SECURITY.md packaging/repo/index.html; do
+          for fichero in SECURITY.md packaging/repo/site/src/components/Transparency.astro; do
             # La huella se publica agrupada de cuatro en cuatro, como la
             # imprime gpg: con espacios en el Markdown y con `&nbsp;` en el
             # HTML. Se quitan los dos antes de comparar, no la huella.

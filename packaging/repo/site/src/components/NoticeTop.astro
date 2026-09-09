@@ -1,0 +1,28 @@
+---
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+---
+
+<div
+  data-notice
+  role="note"
+  aria-label={t("notice.aria")}
+  style="position:sticky;top:0;z-index:200;background:#ffffff;border-bottom:1px solid var(--rf-border-subtle);padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center"
+>
+  <span
+    class="rf-badge"
+    data-hide-sm
+    style="flex:none;border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)"
+    >{t("notice.badge")}</span
+  >
+  <p
+    style="margin:0;font-size:.8125rem;line-height:1.4;max-width:64rem"
+    set:html={t("notice.official")}
+  />
+</div>

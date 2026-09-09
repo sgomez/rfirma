@@ -1,0 +1,16 @@
+{
+  "name": "rfirma-landing",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "astro": "7.3.2",
+    "vitest": "5.0.0"
+  }
+}
