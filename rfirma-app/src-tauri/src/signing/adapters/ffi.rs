@@ -418,11 +418,13 @@ fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
     }
 }
 
-/// Los formatos que comparten entradas con otro y que Java discrimina por `format`.
+/// Los formatos cuya entrada de Java elige procesador leyendo `format`.
 fn declares_its_variant(format: Format) -> bool {
     match format {
-        Format::CadesAsicS | Format::Xades(_) | Format::FacturaE => true,
-        Format::Pades | Format::Cades | Format::Cms => false,
+        Format::Cades | Format::CadesAsicS | Format::Cms | Format::Xades(_) | Format::FacturaE => {
+            true
+        }
+        Format::Pades => false,
     }
 }
 

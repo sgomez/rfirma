@@ -73,6 +73,15 @@ class CadesVariantsTest {
     }
 
     @Test
+    void reads_the_container_format_ignoring_the_blanks_around_it() throws Exception {
+        final byte[] container =
+                CadesCycle.sign(TestFixtures.challenge(), variant("  CAdES-ASiC-S  "), "sign");
+
+        assertArrayEquals(ZIP_LOCAL_FILE_HEADER, Arrays.copyOf(container, 4),
+                "un format con espacios alrededor sigue pidiendo el contenedor");
+    }
+
+    @Test
     void refuses_to_cosign_an_asic_s_container_with_the_code_of_the_original() {
         assertThrows(UnsupportedOperationException.class,
                 () -> CadesCycle.preSign(TestFixtures.challenge(), asicS(), "cosign"));

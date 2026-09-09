@@ -288,19 +288,15 @@ public final class CadesBridge {
         return target == null ? String.valueOf(operation) : operation + " sobre " + target;
     }
 
-    /**
-     * El procesador ASiC-S impone {@code mode=explicit}, envuelve la firma en el
-     * ZIP y rechaza cofirmar y contrafirmar; ninguna de las tres las decide el
-     * puente, que se limita a copiar los {@code extraParams} antes de que el
-     * procesador les escriba encima.
-     */
+    /** El procesador ASiC-S impone sus propias reglas; el puente no decide ninguna. */
     private static CAdESTriPhasePreProcessor processorFor(final Properties effectiveParams) {
         return isAsicS(effectiveParams) ? new CAdESASiCSTriPhasePreProcessor()
                 : new CAdESTriPhasePreProcessor();
     }
 
     private static boolean isAsicS(final Properties effectiveParams) {
-        return FORMAT_ASIC_S.equalsIgnoreCase(effectiveParams.getProperty(PARAM_FORMAT));
+        final String format = effectiveParams.getProperty(PARAM_FORMAT);
+        return format != null && FORMAT_ASIC_S.equalsIgnoreCase(format.trim());
     }
 
     private static Properties copyOf(final Properties extraParams) {
