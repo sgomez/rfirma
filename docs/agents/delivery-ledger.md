@@ -38,7 +38,26 @@ CI, en `code-host-ci.md`; ninguno de los dos se repite aquí.
   cimientos, sino en `operation.rs`/`cycle.rs`, la capa de sitio/firma en Rust
   que casi todo ticket de firma toca. Cuando dos tickets de la misma tanda
   anuncian tocar esa capa, serializarlos: el solape de fichero merece el coste
-  de reloj (#262 se retuvo así y volvió CLEAN sin merge-fix).
+  de reloj (#262 se retuvo así y volvió CLEAN sin merge-fix). Confirmado de
+  nuevo el 2026-09-09 en el #588: casi todo ese spec toca
+  `site/domain/protocol/operation.rs` y `docs/mapa-protocolo.md`, y los dos PR
+  de protocolo entregados en la misma tanda pagaron cada uno un merge-fix
+  (#629, y #631 dos veces). Los tickets de protocolo de este repo se entregan
+  en secuencia o en tandas de dos como mucho, nunca en paralelo abierto.
+- **Falta de prueba de grada C del extracto o `docs/mapa-protocolo.md`
+  desincronizado: el fallo de revisión más repetido, no la lógica.** En el
+  #588, la revisión tuvo que pedir un ciclo por la prueba de grada C que pide
+  el `## Spec extract` y que el constructor no había añadido (#192, #592,
+  #595), o porque el cambio dejaba `docs/mapa-protocolo.md` contradiciendo el
+  código (#617, #618). El constructor debe cerrar ambas cosas —prueba de
+  grada C del extracto y coherencia de `docs/mapa-protocolo.md`— antes de
+  publicar, no dejarlas para que las atrape la revisión.
+- **Un ticket que cambia la forma del cable entre Rust y la ventana de sede
+  no es `standard` aunque el diff parezca una variante de enum más.** El
+  único ticket triado `standard`/sonnet del #588 (#567, PR #623) también
+  necesitó un ciclo de arreglo, y el hallazgo fue un contrato `serde` que
+  rompía en silencio el frontend TypeScript. Subir la grada de triaje cuando
+  el ticket toca la forma serializada que cruza la frontera Rust↔TypeScript.
 - **En paralelo, la foto de `main` que lee un trabajador queda obsoleta antes
   de que arranque el siguiente.** En la tanda de #250 costó dos correcciones a
   mano del prompt (#269 y #276, ambos dando por ausente un patrón que ya estaba
@@ -109,3 +128,15 @@ en `.scratch/archive/`.
 2026-09-09 spec=#468 sub=#552 model=sonnet effort=medium pr=#583 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
 2026-09-09 spec=#468 sub=#545 model=opus effort=medium pr=#584 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
 2026-09-09 spec=#468 sub=#553 model=sonnet effort=medium pr=#586 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-09 spec=#588 sub=#567 model=sonnet effort=medium pr=#623 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-09 spec=#588 sub=#192 model=opus effort=medium pr=#624 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-09 spec=#588 sub=#591 model=opus effort=medium pr=#625 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-09 spec=#588 sub=#612 model=opus effort=medium pr=#627 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-09-09 spec=#588 sub=#592 model=opus effort=medium pr=#626 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-09 spec=#588 sub=#614 model=opus effort=medium pr=#628 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=merged
+2026-09-09 spec=#588 sub=#615 model=opus effort=medium pr=#629 verdict=CLEAN cycles=0 mergefix=1 wave=3 outcome=merged
+2026-09-09 spec=#588 sub=#618 model=opus effort=medium pr=#630 verdict=CLEAN cycles=1 mergefix=0 wave=4 outcome=merged
+2026-09-09 spec=#588 sub=#617 model=opus effort=medium pr=#631 verdict=CLEAN cycles=1 mergefix=1 wave=4 outcome=merged
+2026-09-09 spec=#588 sub=#593 model=opus effort=medium pr=#632 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-09-09 spec=#588 sub=#595 model=opus effort=medium pr=#633 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=merged
+2026-09-09 spec=#588 sub=#596 model=opus effort=medium pr=#635 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=escalated
