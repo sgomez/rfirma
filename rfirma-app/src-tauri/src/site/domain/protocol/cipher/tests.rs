@@ -168,3 +168,44 @@ fn nothing_prints_the_key_itself() {
 
     assert!(!formatted.contains(KEY));
 }
+
+#[test]
+fn deciphers_a_body_that_ends_with_a_line_break() {
+    let key = key_of(KEY);
+
+    let deciphered =
+        decipher("7.ltACiHjVjInHM_oGzgChKw==\r\n", Some(&key)).expect("descifra con salto final");
+
+    assert_eq!(deciphered, plain_of("313233343536373839"));
+}
+
+#[test]
+fn deciphers_plain_base_64_that_ends_with_a_line_break() {
+    let ciphered = format!("{}\n", URL_SAFE.encode(b"sin cifrar"));
+
+    let deciphered = decipher(&ciphered, None).expect("descifra sin clave y con salto final");
+
+    assert_eq!(deciphered, b"sin cifrar");
+}
+
+#[test]
+fn deciphers_ignoring_whatever_follows_the_padding() {
+    let key = key_of(KEY);
+
+    let deciphered =
+        decipher("7.ltACiHjVjInHM_oGzgChKw==basura", Some(&key)).expect("descifra con cola");
+
+    assert_eq!(deciphered, plain_of("313233343536373839"));
+}
+
+#[test]
+fn a_character_outside_the_alphabet_fails_without_panicking() {
+    let key = key_of(KEY);
+
+    let result = decipher("7.ltACiHjVjInHM_oGz*ChKw==", Some(&key));
+
+    assert!(matches!(
+        result,
+        Err(error) if error.situation() == Situation::DecryptionFailed
+    ));
+}

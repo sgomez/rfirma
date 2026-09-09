@@ -15,6 +15,13 @@
 //!   `mode=explicit` está obsoleto y hashea el dato con SHA1 antes de firmar
 //!   (`ProtocolInvocationLauncherSign.java:390-405`); aquí `mode=explicit`
 //!   con XAdES sale con `SAF_06`.
+//! - **El Base64 del servidor intermedio rechaza un carácter fuera del
+//!   alfabeto**. El original nunca lanza su «Bad Base64 input character»:
+//!   ningún valor de su tabla queda por debajo del umbral que lo dispara
+//!   (`Base64.decode`, 1.9.2), así que ignora cualquier byte extraño y ante
+//!   una página de error del servlet devolvería basura. Aquí se ignoran los
+//!   espacios en blanco y lo que siga al relleno, como el original, pero
+//!   cualquier otro carácter sale con `SAF_15`.
 //! - **XMLDSig no se atiende**. El original lo firma monofásico con la clave
 //!   privada dentro de Java (`AOXMLDSigSigner`, `afirma-crypto-xmlsignature`)
 //!   y su `PreProcessorFactory` no tiene preprocesador trifásico para él

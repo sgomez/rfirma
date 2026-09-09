@@ -11,6 +11,8 @@ use crate::site::domain::relay_error::{RelayError, Situation};
 const BLOCK_SIZE: usize = 8;
 const REQUIRED_KEY_LENGTH: usize = 8;
 const PADDING_SEPARATOR: char = '.';
+const GROUP_LENGTH: usize = 4;
+const WHITESPACE: [char; 4] = [' ', '\t', '\r', '\n'];
 
 /// Clave de cifrado DES derivada del parámetro `key` de la URL; nunca se imprime ni se registra.
 #[derive(Clone, PartialEq, Eq)]
@@ -66,15 +68,11 @@ pub fn decipher(ciphered: &str, key: Option<&CipherKey>) -> Result<Vec<u8>, Rela
     let recovered = ciphered.replace('_', "/").replace('-', "+");
 
     let Some(key) = key else {
-        return STANDARD
-            .decode(&recovered)
-            .map_err(|error| RelayError::new(Situation::DecryptionFailed, error.to_string()));
+        return decode_base_64(&recovered);
     };
 
     let (padding, body) = split_padding_prefix(&recovered)?;
-    let ciphertext = STANDARD
-        .decode(body)
-        .map_err(|error| RelayError::new(Situation::DecryptionFailed, error.to_string()))?;
+    let ciphertext = decode_base_64(body)?;
 
     let mut plain = vec![0u8; ciphertext.len()];
     let plain = ecb::Decryptor::<Des>::new(&key.0.into())
@@ -93,6 +91,45 @@ pub fn decipher(ciphered: &str, key: Option<&CipherKey>) -> Result<Vec<u8>, Rela
         ));
     }
     Ok(plain[..plain.len() - padding].to_vec())
+}
+
+fn decode_base_64(text: &str) -> Result<Vec<u8>, RelayError> {
+    STANDARD
+        .decode(groups_up_to_the_padding(text)?)
+        .map_err(|error| RelayError::new(Situation::DecryptionFailed, error.to_string()))
+}
+
+fn groups_up_to_the_padding(text: &str) -> Result<String, RelayError> {
+    let mut decodable = String::with_capacity(text.len());
+    let mut group = String::with_capacity(GROUP_LENGTH);
+
+    for character in text.chars() {
+        if WHITESPACE.contains(&character) {
+            continue;
+        }
+        if !is_of_the_alphabet(character) {
+            return Err(RelayError::new(
+                Situation::DecryptionFailed,
+                "la respuesta trae un caracter que no es Base64",
+            ));
+        }
+        group.push(character);
+        if group.len() < GROUP_LENGTH {
+            continue;
+        }
+        let closes_the_data = group.ends_with('=');
+        decodable.push_str(&group);
+        group.clear();
+        if closes_the_data {
+            break;
+        }
+    }
+
+    Ok(decodable)
+}
+
+fn is_of_the_alphabet(character: char) -> bool {
+    character.is_ascii_alphanumeric() || matches!(character, '+' | '/' | '=')
 }
 
 fn split_padding_prefix(text: &str) -> Result<(usize, &str), RelayError> {
