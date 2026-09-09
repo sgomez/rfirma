@@ -159,13 +159,14 @@ así se desactiva en una semana, o enseña a los agentes a no escribir código a
 
 La puerta vive en el **carril rápido**, que es donde un agente la lee, con
 **`--allow` sobre la ruta del módulo FFI**: `--allow` analiza el fichero y oculta sus funciones,
-que es exactamente el matiz que hace falta. El **carril lento repite la medición sin esa
-exclusión**, y ahí ese módulo da la cara con la cobertura de la grada C incluida.
+que es exactamente el matiz que hace falta. El **carril lento mide ese módulo de forma dirigida**
+(`just crap-ffi`), ejecutando el ciclo de grada C bajo `llvm-cov` y comprobando con `cargo crap --path`
+que ninguna función del adaptador FFI supera el umbral de 30 sin repetir la medición de toda la suite.
 
 **`--allow` corrige una cobertura que se mide en otro carril; no perdona a un módulo por ser
 difícil de probar.** La distinción es la que sostiene la puerta entera: el módulo FFI se oculta
 en el carril rápido porque **sí está probado**, sólo que en la grada C, y el carril lento lo
-vuelve a medir sin la exclusión. Un `--allow` concedido a un módulo que nadie mide en ningún
+vuelve a medir con `crap-ffi`. Un `--allow` concedido a un módulo que nadie mide en ningún
 carril —«es entrada/salida», «es fontanería»— desactiva la puerta por precedente, y el segundo
 entra solo. Si un módulo de entrada/salida no baja de 30, la conversación es **sobre el corte
 del módulo**, no sobre el umbral: que la parte con lógica sea una capa aparte y probable es

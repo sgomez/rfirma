@@ -413,6 +413,19 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         run: just test-native
 
+      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
+        if: steps.scope.outputs.build == 'true'
+      - name: Herramientas de cobertura y de CRAP
+        if: steps.scope.outputs.build == 'true'
+        run: |
+          cargo binstall --no-confirm cargo-llvm-cov
+          cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+
+      # Medicion CRAP dirigida al adaptador FFI con las pruebas de grada C (ADR-0014).
+      - name: Puerta CRAP del adaptador FFI
+        if: steps.scope.outputs.build == 'true'
+        run: just crap-ffi
+
       # EL PDF DE LA PUERTA MANUAL (TD-04). `pdfsig` es la puerta automatica,
       # pero el criterio de terminado del hito promete que un VALIDADOR OFICIAL
       # acepta la firma, y VALIDe es red, web y sin API estable: esa puerta la

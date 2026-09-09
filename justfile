@@ -92,8 +92,8 @@ ruff_version := "0.16.6"
 # puntua con `--missing pessimistic`, o sea que una funcion SIN datos de
 # cobertura vale 0 %, y la cobertura del carril rapido no incluye la grada C.
 # Sin esta exclusion los peores CRAP del repositorio serian justo el codigo que
-# SI esta probado, solo que en el otro carril. El carril lento repite la
-# medicion sin ella (`just crap-full`).
+# SI esta probado, solo que en el otro carril. El carril lento mide este
+# modulo de forma dirigida con `just crap-ffi`.
 ffi_allow := "src/signing/adapters/ffi.rs"
 
 # El accesorio del banco de conformidad, FIJADO POR ETIQUETA Y POR SHA256. La
@@ -1038,12 +1038,12 @@ crap: coverage
     cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
 
-# La misma medicion SIN la exclusion, con la cobertura de la grada C incluida.
-# Aqui el modulo FFI da la cara. Carril lento.
-crap-full: token check-native build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --all-features --lcov --output-path lcov.info \
-        -- --include-ignored
-    cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above
+# Puerta CRAP del modulo FFI contra la libreria nativa (ADR-0014).
+# Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
+crap-ffi: token check-native build-ts
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path lcov.info \
+        -- --ignored
+    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov lcov.info --threshold 30 --fail-above
 
 # ---------------------------------------------------------------------------
 # Imagen nativa, empaquetado y desarrollo
