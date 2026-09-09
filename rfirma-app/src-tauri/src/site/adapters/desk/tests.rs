@@ -152,3 +152,24 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
     assert_eq!(refusal.code, SafCode::CannotFindKeystore);
     assert_eq!(refusal.situation, "tokenAbsent");
 }
+
+#[test]
+fn the_suffix_declared_by_the_site_is_ignored_and_the_certificate_key_class_rules() {
+    let asked = AskedAlgorithm::named("SHA256withRSA").expect("es SHA256");
+    assert_eq!(
+        composed_for(asked, Some(KeyKind::Ec)),
+        SignatureAlgorithm::Sha256Ecdsa
+    );
+
+    let asked_ecdsa = AskedAlgorithm::named("SHA384withECDSA").expect("es SHA384");
+    assert_eq!(
+        composed_for(asked_ecdsa, Some(KeyKind::Rsa)),
+        SignatureAlgorithm::Sha384Rsa
+    );
+
+    let asked_hyphen = AskedAlgorithm::named("SHA-512withRSA").expect("es SHA512");
+    assert_eq!(
+        composed_for(asked_hyphen, Some(KeyKind::Ec)),
+        SignatureAlgorithm::Sha512Ecdsa
+    );
+}

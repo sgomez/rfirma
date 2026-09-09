@@ -510,16 +510,28 @@ fn every_algorithm_the_published_client_sends_is_typed_or_refused_with_the_code_
         ("SHA256", Some(AskedAlgorithm::Sha256)),
         ("SHA384", Some(AskedAlgorithm::Sha384)),
         ("SHA512", Some(AskedAlgorithm::Sha512)),
+        ("SHA-256", Some(AskedAlgorithm::Sha256)),
+        ("SHA-384", Some(AskedAlgorithm::Sha384)),
+        ("SHA-512", Some(AskedAlgorithm::Sha512)),
         ("SHA256withRSA", Some(AskedAlgorithm::Sha256)),
+        ("SHA-256withRSA", Some(AskedAlgorithm::Sha256)),
         ("SHA384withRSA", Some(AskedAlgorithm::Sha384)),
+        ("SHA-384withRSA", Some(AskedAlgorithm::Sha384)),
         ("SHA512withRSA", Some(AskedAlgorithm::Sha512)),
+        ("SHA-512withRSA", Some(AskedAlgorithm::Sha512)),
         ("SHA256withECDSA", Some(AskedAlgorithm::Sha256)),
+        ("SHA-256withECDSA", Some(AskedAlgorithm::Sha256)),
         ("SHA384withECDSA", Some(AskedAlgorithm::Sha384)),
+        ("SHA-384withECDSA", Some(AskedAlgorithm::Sha384)),
         ("SHA512withECDSA", Some(AskedAlgorithm::Sha512)),
+        ("SHA-512withECDSA", Some(AskedAlgorithm::Sha512)),
+        ("SHA256withDSA", Some(AskedAlgorithm::Sha256)),
         ("SHA1", None),
+        ("SHA-1", None),
         ("SHA1withRSA", None),
+        ("SHA-1withRSA", None),
         ("SHA1withECDSA", None),
-        ("SHA256withDSA", None),
+        ("MD5withRSA", None),
     ] {
         let url = an_operation(&format!(
             "op=sign&format=PAdES&algorithm={name}&dat={}",
@@ -782,15 +794,153 @@ fn a_batch_reads_its_two_servlets_and_the_algorithm_of_its_xml_lote() {
 
 #[test]
 fn a_batch_with_jsonbatch_reads_the_algorithm_of_its_json_lote() {
-    let lote = json_lote("sha1", false);
+    let lote = json_lote("SHA512", false);
     let url = a_batch(&format!("&jsonbatch=true&dat={}", dat(lote.as_bytes())));
 
     let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
         panic!("es un lote");
     };
     assert!(request.is_json());
-    assert_eq!(request.algorithm(), "sha1");
+    assert_eq!(request.algorithm(), "SHA512");
     assert!(!request.stops_on_error());
+}
+
+#[test]
+fn a_batch_in_legacy_xml_reads_compound_and_hyphenated_algorithm_names() {
+    for algorithm in [
+        "SHA256withRSA",
+        "SHA384withRSA",
+        "SHA512withRSA",
+        "SHA256withECDSA",
+        "SHA384withECDSA",
+        "SHA512withECDSA",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512",
+    ] {
+        let lote = xml_lote(algorithm, true);
+        let url = a_batch(&format!("&dat={}", dat(lote.as_bytes())));
+
+        let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un lote: {algorithm}");
+        };
+        assert!(!request.is_json());
+        assert!(!request.is_local());
+        assert_eq!(request.algorithm(), algorithm);
+    }
+}
+
+#[test]
+fn a_batch_in_json_reads_compound_and_hyphenated_algorithm_names() {
+    for algorithm in [
+        "SHA256withRSA",
+        "SHA384withRSA",
+        "SHA512withRSA",
+        "SHA256withECDSA",
+        "SHA384withECDSA",
+        "SHA512withECDSA",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512",
+    ] {
+        let lote = json_lote(algorithm, false);
+        let url = a_batch(&format!("&jsonbatch=true&dat={}", dat(lote.as_bytes())));
+
+        let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un lote: {algorithm}");
+        };
+        assert!(request.is_json());
+        assert!(!request.is_local());
+        assert_eq!(request.algorithm(), algorithm);
+    }
+}
+
+#[test]
+fn a_local_batch_in_json_reads_compound_and_hyphenated_algorithm_names() {
+    for algorithm in [
+        "SHA256withRSA",
+        "SHA384withRSA",
+        "SHA512withRSA",
+        "SHA256withECDSA",
+        "SHA384withECDSA",
+        "SHA512withECDSA",
+        "SHA-256",
+        "SHA-384",
+        "SHA-512",
+    ] {
+        let url = an_operation(&format!(
+            "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
+            dat(json_lote(algorithm, true).as_bytes())
+        ));
+
+        let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un lote: {algorithm}");
+        };
+        assert!(request.is_local());
+        assert!(request.is_json());
+        assert_eq!(request.algorithm(), algorithm);
+    }
+}
+
+#[test]
+fn a_batch_with_sha1_or_unsupported_algorithm_is_refused_naming_the_parameter() {
+    for (name, lote_xml) in [
+        ("sha1 en XML", xml_lote("sha1", false)),
+        ("SHA1 en XML", xml_lote("SHA1", false)),
+        ("SHA1withRSA en XML", xml_lote("SHA1withRSA", false)),
+        ("SHA-1 en XML", xml_lote("SHA-1", false)),
+    ] {
+        let url = a_batch(&format!("&dat={}", dat(lote_xml.as_bytes())));
+        let refusal = read_operation(&url).expect_err(name);
+        assert_eq!(refusal.code(), SafCode::Params, "{name}");
+        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+    }
+
+    for (name, lote_json) in [
+        ("sha1 en JSON", json_lote("sha1", false)),
+        ("SHA1 en JSON", json_lote("SHA1", false)),
+        ("SHA1withRSA en JSON", json_lote("SHA1withRSA", false)),
+        ("SHA-1 en JSON", json_lote("SHA-1", false)),
+    ] {
+        let url = a_batch(&format!(
+            "&jsonbatch=true&dat={}",
+            dat(lote_json.as_bytes())
+        ));
+        let refusal = read_operation(&url).expect_err(name);
+        assert_eq!(refusal.code(), SafCode::Params, "{name}");
+        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+    }
+
+    for (name, lote_local) in [
+        ("sha1 en lote local", json_lote("sha1", false)),
+        ("SHA1withRSA en lote local", json_lote("SHA1withRSA", false)),
+    ] {
+        let url = an_operation(&format!(
+            "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
+            dat(lote_local.as_bytes())
+        ));
+        let refusal = read_operation(&url).expect_err(name);
+        assert_eq!(refusal.code(), SafCode::Params, "{name}");
+        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+    }
+}
+
+#[test]
+fn a_batch_header_without_algorithm_is_refused_naming_the_parameter() {
+    let xml_without_algo = "<signbatch stoponerror=\"true\"><singlesign id=\"001\"/></signbatch>";
+    let url = a_batch(&format!("&dat={}", dat(xml_without_algo.as_bytes())));
+    let refusal = read_operation(&url).expect_err("falta algorithm en XML");
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
+
+    let json_without_algo = "{\"stoponerror\":true}";
+    let url = a_batch(&format!(
+        "&jsonbatch=true&dat={}",
+        dat(json_without_algo.as_bytes())
+    ));
+    let refusal = read_operation(&url).expect_err("falta algorithm en JSON");
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
 }
 
 #[test]

@@ -52,9 +52,6 @@ const TARGET: &str = "target";
 const TARGET_TREE: &str = "tree";
 const TARGET_LEAFS: &str = "leafs";
 
-/// Los algoritmos del lote que el original acepta (`BatchSigner`, XSD de `signbatch`).
-pub const ACCEPTED_BATCH_ALGORITHMS: [&str; 4] = ["sha1", "sha256", "sha384", "sha512"];
-
 /// `localBatchProcess=true`: el lote se firma aquí y no contra los dos servlets.
 const LOCAL_BATCH_PROCESS: &str = "localBatchProcess";
 
@@ -873,7 +870,7 @@ fn batch_algorithm_and_stop_on_error(json: bool, lote: &[u8]) -> Result<(String,
         batch_header_from_xml(lote)?
     };
 
-    if !ACCEPTED_BATCH_ALGORITHMS.contains(&algorithm.to_ascii_lowercase().as_str()) {
+    if AskedAlgorithm::named(&algorithm).is_none() {
         return Err(Refusal::about(
             Parameter::Algorithm,
             format!("el algoritmo de lote '{algorithm}' no se atiende"),
