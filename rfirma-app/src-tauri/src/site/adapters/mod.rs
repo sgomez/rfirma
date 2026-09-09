@@ -15,6 +15,7 @@ pub mod service;
 pub mod servlets;
 pub mod tauri;
 pub mod tls;
+pub mod trace;
 pub mod transport;
 pub mod views;
 pub mod window;

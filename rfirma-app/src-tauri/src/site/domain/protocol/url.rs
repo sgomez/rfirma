@@ -6,6 +6,8 @@ use super::refusal::Refusal;
 
 const SCHEME: &str = "afirma://";
 
+const LONGEST_TRACED_VALUE: usize = 80;
+
 /// Una URL `afirma://` ya partida.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AfirmaUrl {
@@ -66,11 +68,33 @@ impl AfirmaUrl {
         self.parameters.get(name).map(String::as_str)
     }
 
+    /// La misma URL en una línea, con los valores largos reducidos a su tamaño.
+    pub fn abridged(&self) -> String {
+        let mut line = format!("{SCHEME}{}", self.verb);
+        let mut separator = '?';
+        for (name, value) in &self.parameters {
+            line.push(separator);
+            separator = '&';
+            line.push_str(name);
+            line.push('=');
+            line.push_str(&abridged_value(value));
+        }
+        line
+    }
+
     /// La misma URL con un parámetro añadido o sustituido (servidor intermedio: `dat` resuelto).
     pub fn with_parameter(mut self, name: &str, value: String) -> Self {
         self.parameters.insert(name.to_owned(), value);
         self
     }
+}
+
+fn abridged_value(value: &str) -> String {
+    let size = value.chars().count();
+    if size <= LONGEST_TRACED_VALUE {
+        return value.to_owned();
+    }
+    format!("<{size} caracteres>")
 }
 
 /// Quita `afirma://` sin distinguir mayúsculas, o dice que no estaba.

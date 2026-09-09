@@ -117,3 +117,33 @@ fn with_parameter_adds_or_replaces_without_touching_the_rest() {
     let replaced = url.with_parameter("dat", "otro".to_owned());
     assert_eq!(replaced.parameter("dat"), Some("otro"));
 }
+
+#[test]
+fn an_abridged_url_keeps_the_verb_and_the_short_parameters() {
+    let url = AfirmaUrl::parse("afirma://sign?op=sign&format=PAdES&algorithm=SHA256withRSA")
+        .expect("la operacion deberia parsearse");
+
+    assert_eq!(
+        url.abridged(),
+        "afirma://sign?algorithm=SHA256withRSA&format=PAdES&op=sign"
+    );
+}
+
+#[test]
+fn an_abridged_url_replaces_a_long_value_with_its_size() {
+    let document = "R".repeat(4096);
+    let url = AfirmaUrl::parse(&format!("afirma://sign?op=sign&dat={document}"))
+        .expect("la operacion deberia parsearse");
+
+    assert_eq!(
+        url.abridged(),
+        "afirma://sign?dat=<4096 caracteres>&op=sign"
+    );
+}
+
+#[test]
+fn an_abridged_url_without_parameters_is_only_the_verb() {
+    let url = AfirmaUrl::parse("afirma://websocket").expect("un verbo suelto es valido");
+
+    assert_eq!(url.abridged(), "afirma://websocket");
+}

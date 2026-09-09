@@ -161,6 +161,7 @@ pub fn run() {
                         );
                     }
                     desktop::application::invocation::SecondInvocation::OpensItsOwnWindow(url) => {
+                        site::adapters::trace::note_the_launch(&url);
                         let handle = app.clone();
                         let site = app.state::<SiteRoot>();
                         let transport = the_transport(&site.ca_store, &handle);
@@ -257,8 +258,12 @@ pub fn run() {
             let site = app.state::<SiteRoot>();
             let transport = the_transport(&site.ca_store, &handle);
             let window = Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));
+            let launch = invocation.site_launch();
+            if let Some(url) = launch {
+                site::adapters::trace::note_the_launch(url);
+            }
             let startup = site::application::startup::attend_startup(
-                invocation.site_launch(),
+                launch,
                 site::application::startup::TrustAtStartup {
                     store: site.trust.store.as_ref(),
                     profiles: &site.trust.profiles,

@@ -87,6 +87,7 @@ pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
 
 /// Atiende una operación de sede armando la mesa desde el estado de la aplicación.
 pub fn attend_site_operation(app: &tauri::AppHandle, url: AfirmaUrl, reply: ReplyHandle) {
+    super::trace::note_the_operation(&url);
     let attended = with_the_desk(app, |desk, live| errand::attend(desk, url, reply, live));
     publish_what_moved(app, attended);
 }
