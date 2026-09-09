@@ -344,6 +344,17 @@ pub enum Moment {
     Unreachable,
 }
 
+impl Moment {
+    /// Indica si este momento es posterior a otro en la progresión del trámite (ADR-0020).
+    pub fn is_posterior_to(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Waiting, _) => false,
+            (_, Self::Waiting) => true,
+            _ => false,
+        }
+    }
+}
+
 /// Motivo por el que no hay canal abierto con la sede.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NoChannel {
