@@ -1200,18 +1200,18 @@ msgstr "Sinatu aurretik berretsi behar da"
 
 msgid "sede.confirm.messages.pdfShadowAttackSuspect"
 msgstr ""
-"PDFa azken sinaduraren ondoren aldatu izanaren susmoa dago. Jarraitu nahi "
+"Badirudi PDFa azken sinaduraren ondoren aldatu dela. Hala ere sinatu nahi "
 "duzu?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
 "PDF dokumentuak inprimaki bat du, eta haren eremuak sinatu ondoren aldatu "
-"dira. Jarraitu nahi duzu?"
+"dira. Hala ere sinatu nahi duzu?"
 
 msgid "sede.confirm.messages.unknown"
 msgstr ""
 "Sinadura-balidatzaileak jarraitu aurretik berretsi beharreko zerbait "
-"adierazi du ({{code}}). Jarraitu nahi duzu?"
+"adierazi du ({{code}}). Hala ere sinatu nahi duzu?"
 
 msgid "sede.confirm.continue"
 msgstr "Jarraitu"
