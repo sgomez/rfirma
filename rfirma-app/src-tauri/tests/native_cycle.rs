@@ -175,7 +175,8 @@ mod full_cycle {
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
     use rfirma_lib::signing::domain::bridge::{
-        BridgeError, ExpandRequest, FilterRequest, Format, SignatureOperation, XadesVariant,
+        BridgeError, ExpandRequest, FilterRequest, Format, SignatureOperation, SignatureVerdict,
+        ValidationRequest, XadesVariant,
     };
     use rfirma_lib::signing::domain::{
         AdmissibleDocument, PadesRect, PageSet, Placement, SessionSeal, SignatureConfig,
@@ -1186,6 +1187,77 @@ mod full_cycle {
             .postsign(&bridge, signature, &cycle.seal_in_transit())
             .expect("la postfirma deberia ensamblar el PDF")
             .into_signed_document()
+    }
+
+    fn verdict_of(bridge: &NativeBridge, document: &[u8]) -> SignatureVerdict {
+        bridge
+            .validate_signatures(ValidationRequest {
+                document_b64: &base64::engine::general_purpose::STANDARD.encode(document),
+                format: Format::Pades,
+            })
+            .expect("el validador tiene que contestar desde dentro de la imagen")
+    }
+
+    /// La version del encabezado entra en el `/ByteRange`: el resumen deja de cuadrar.
+    fn with_the_signed_bytes_altered(pdf: &[u8]) -> Vec<u8> {
+        const HEADER: &[u8] = b"%PDF-1.";
+        let at = pdf
+            .windows(HEADER.len())
+            .position(|window| window == HEADER)
+            .expect("el encabezado tiene que estar")
+            + HEADER.len();
+        let mut altered = pdf.to_vec();
+        altered[at] = if altered[at] == b'7' { b'4' } else { b'7' };
+        altered
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn the_validator_of_the_original_survives_inside_the_native_image() {
+        let bridge = bridge();
+        let pdf = a_one_page_pdf();
+
+        assert_eq!(
+            verdict_of(&bridge, &pdf),
+            SignatureVerdict::Valid,
+            "un documento sin firmas es valido"
+        );
+
+        let signed = sign(&pdf, &a_config_of("", None));
+        assert_eq!(
+            verdict_of(&bridge, &signed),
+            SignatureVerdict::Valid,
+            "y el que acaba de firmar el ciclo trifasico, tambien"
+        );
+
+        let altered = with_the_signed_bytes_altered(&signed);
+        assert!(
+            matches!(
+                verdict_of(&bridge, &altered),
+                SignatureVerdict::Invalid { .. }
+            ),
+            "una firma que ya no cuadra con el documento cruza como invalida"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+    fn a_format_without_a_validator_in_the_original_is_not_validated_either() {
+        let bridge = bridge();
+
+        for format in [Format::CadesAsicS, Format::Xades(XadesVariant::AsicS)] {
+            let refused = bridge
+                .validate_signatures(ValidationRequest {
+                    document_b64: "",
+                    format,
+                })
+                .expect_err("el contenedor ASiC-S no tiene validador propio en el original");
+
+            assert!(
+                matches!(refused, BridgeError::FormatNotBridged(_)),
+                "{refused}"
+            );
+        }
     }
 
     fn write_to_target(name: &str, bytes: &[u8]) -> PathBuf {

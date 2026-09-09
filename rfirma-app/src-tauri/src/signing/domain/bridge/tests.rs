@@ -1,4 +1,4 @@
-use super::{Format, PreSignBlock, PreSignature, TokenSignature};
+use super::{BridgeError, Format, PreSignBlock, PreSignature, TokenSignature, XadesVariant};
 use crate::signing::domain::{SealMismatch, SessionSeal};
 
 fn a_block(id: &str, pre: &[u8]) -> PreSignBlock {
@@ -89,6 +89,29 @@ fn every_format_says_the_name_the_original_expects() {
 fn the_bridge_resolves_every_format_of_the_vocabulary() {
     for format in Format::ALL {
         assert_eq!(format.bridged().expect("tiene entradas"), format);
+    }
+}
+
+#[test]
+fn the_containers_have_no_validator_of_their_own_in_the_original() {
+    for format in [Format::CadesAsicS, Format::Xades(XadesVariant::AsicS)] {
+        assert!(
+            matches!(
+                format.validated(),
+                Err(BridgeError::FormatNotBridged(refused)) if refused == format
+            ),
+            "{format} no puede llegar al validador"
+        );
+    }
+
+    for format in Format::ALL {
+        if matches!(
+            format,
+            Format::CadesAsicS | Format::Xades(XadesVariant::AsicS)
+        ) {
+            continue;
+        }
+        assert_eq!(format.validated().expect("tiene validador"), format);
     }
 }
 
