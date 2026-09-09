@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { PinDialog } from "../signing/PinDialog";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConsent } from "./SedeConsent";
-import { useWaitingClock } from "./SedeFrame";
 import { SedeNoCertificate } from "./SedeNoCertificate";
 import { SedeOutcome } from "./SedeOutcome";
 import { SedeSigning } from "./SedeSigning";
@@ -30,14 +29,9 @@ interface SedeWindowProps {
  * el arrastre; y cerrar por la cruz llega igual al backend, que ya trata
  * `CloseRequested` sobre esta ventana como abandonar el trámite (ID-340).
  *
- * Los tres relojes del trámite viven aquí y no en el backend, porque son
- * conducta de la ventana:
- *
- * - **el retardo de `WAITING_GRACE_MS`** antes de pintar la espera, para
- *   que el camino feliz no dé un fogonazo;
- * - **el umbral de `UNREACHABLE_AFTER_MS`**, el único que hay, para pasar
- *   de «Conectando» a «La petición no ha llegado» — y que **no cierra nada**;
- * - **el cierre a los `OUTCOME_CLOSE_MS`** tras el desenlace (ID-274).
+ * El desenlace se cierra solo a los `OUTCOME_CLOSE_MS` (ID-274). El momento
+ * de «no ha llegado» lo decide el backend con su reloj de respaldo y lo publica
+ * como un momento más.
  */
 export function SedeWindow({ errands }: SedeWindowProps) {
   const [errand, setErrand] = useState<Errand | null>(null);
@@ -57,14 +51,9 @@ export function SedeWindow({ errands }: SedeWindowProps) {
 function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPort }) {
   const { t } = useTranslation();
   const stage = errand.stage;
-  const waiting = useWaitingClock();
 
   const close = () => void errands.close();
   const cancel = () => void errands.cancel();
-
-  // El retardo tapa la ventana entera, no sólo su cuerpo: el camino feliz abre
-  // el canal en ~44 ms, y un marco vacío parpadeando es peor que nada.
-  if (stage.kind === "waiting" && waiting === "hidden") return null;
 
   return (
     /* En el momento del secreto el velo lo pinta `PinDialog`, que trae el suyo:
@@ -80,19 +69,12 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
       >
         {stage.kind === "waiting" && (
           <SedeWaiting
-            moment={waiting === "unreachable" ? "unreachable" : "connecting"}
+            moment="connecting"
             onInstallLocalCa={() => void errands.installLocalCa()}
             onCancel={cancel}
           />
         )}
-        {/* **El callejón sin salida es la misma pantalla, sin el reloj**
-            (ID-341): cuando el backend ya sabe que no hay canal —ni un puerto
-            libre, o la CA local en ninguna parte— esperar treinta segundos a
-            un umbral sería enseñar «Conectando» sabiendo que no conecta. La
-            reparación no cambia porque tampoco cambia lo que la persona puede
-            hacer, y ahí es donde vive la dirección del ajuste de Chrome, que
-            se copia y no se pulsa. */}
-        {stage.kind === "noChannel" && (
+        {(stage.kind === "unreachable" || stage.kind === "noChannel") && (
           <SedeWaiting
             moment="unreachable"
             onInstallLocalCa={() => void errands.installLocalCa()}

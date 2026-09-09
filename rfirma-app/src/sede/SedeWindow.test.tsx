@@ -4,13 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
 import type { Errand, ErrandStage, SiteErrandPort } from "./errand";
-import {
-  CHROME_LOCAL_NETWORK_SETTINGS,
-  noErrand,
-  OUTCOME_CLOSE_MS,
-  UNREACHABLE_AFTER_MS,
-  WAITING_GRACE_MS,
-} from "./errand";
+import { CHROME_LOCAL_NETWORK_SETTINGS, noErrand, OUTCOME_CLOSE_MS } from "./errand";
 import { SedeWindow } from "./SedeWindow";
 
 /**
@@ -85,36 +79,25 @@ describe("SedeWindow", () => {
   });
 
   describe("1 · waiting for the channel", () => {
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
-
-    it("paints nothing during the grace delay: the happy path must not flash", async () => {
+    it("shows connecting when waiting for the browser", () => {
       const { port } = scriptedErrand({ kind: "waiting" });
       renderWithCatalog(<SedeWindow errands={port} />);
-
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-      await elapse(WAITING_GRACE_MS);
 
       expect(screen.getByText("Conectando con la sede")).toBeInTheDocument();
     });
 
-    it("crosses its single threshold into «the request has not arrived», and never closes", async () => {
-      const { port, calls } = scriptedErrand({ kind: "waiting" });
+    it("crosses into «the request has not arrived» when published by the backend, and never closes", () => {
+      const { port, calls } = scriptedErrand({ kind: "unreachable" });
       renderWithCatalog(<SedeWindow errands={port} />);
-
-      await elapse(UNREACHABLE_AFTER_MS);
 
       expect(screen.getByText("La petición no ha llegado")).toBeInTheDocument();
       expect(calls.close).not.toHaveBeenCalled();
       expect(calls.cancel).not.toHaveBeenCalled();
     });
 
-    it("offers two recipes and never diagnoses which one is the problem", async () => {
-      const { port } = scriptedErrand({ kind: "waiting" });
+    it("offers two recipes and never diagnoses which one is the problem", () => {
+      const { port } = scriptedErrand({ kind: "unreachable" });
       renderWithCatalog(<SedeWindow errands={port} />);
-
-      await elapse(UNREACHABLE_AFTER_MS);
 
       expect(screen.getByRole("button", { name: "Chrome" })).toHaveAttribute(
         "aria-pressed",
@@ -127,11 +110,9 @@ describe("SedeWindow", () => {
       expect(screen.getByText(/franja bajo la barra de direcciones/)).toBeInTheDocument();
     });
 
-    it("gives the local CA the screen's only main action, because nothing works without it", async () => {
-      const { port, calls } = scriptedErrand({ kind: "waiting" });
+    it("gives the local CA the screen's only main action, because nothing works without it", () => {
+      const { port, calls } = scriptedErrand({ kind: "unreachable" });
       renderWithCatalog(<SedeWindow errands={port} />);
-
-      await elapse(UNREACHABLE_AFTER_MS);
 
       const install = screen.getByRole("button", { name: "Instalar…" });
       expect(install).toHaveClass("rf-btn--primary");
@@ -139,22 +120,17 @@ describe("SedeWindow", () => {
       expect(calls.installLocalCa).toHaveBeenCalledOnce();
     });
 
-    it("puts the mandatory sentence in the footer, and has no Retry button of its own", async () => {
-      const { port } = scriptedErrand({ kind: "waiting" });
+    it("puts the mandatory sentence in the footer, and has no Retry button of its own", () => {
+      const { port } = scriptedErrand({ kind: "unreachable" });
       renderWithCatalog(<SedeWindow errands={port} />);
-
-      await elapse(UNREACHABLE_AFTER_MS);
 
       expect(screen.getByText(/vuelve a la sede y pulsa Reintentar/)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
     });
 
-    it("abandons the errand when closed while waiting, with no confirmation", async () => {
-      // `fireEvent` y no `userEvent`: con relojes falsos, `userEvent` espera a
-      // temporizadores reales que nadie va a adelantar y la prueba se cuelga.
+    it("abandons the errand when closed while waiting, with no confirmation", () => {
       const { port, calls } = scriptedErrand({ kind: "waiting" });
       renderWithCatalog(<SedeWindow errands={port} />);
-      await elapse(WAITING_GRACE_MS);
 
       fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
 

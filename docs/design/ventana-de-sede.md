@@ -93,10 +93,20 @@ recuento** —«12 documentos»— y nada más: ni lista, ni nombres, ni desplaz
 
 Qué se ve mientras el canal no se abre, y qué se ve cuando ya no va a abrirse.
 
-- **Retardo de ~400 ms antes de pintar nada.** El camino feliz abre el canal en
-  ~44 ms, así que quien llega a ver esta pantalla es quien espera de verdad.
-- Un solo umbral de **~30 s** para pasar de «Conectando con la sede» a «La
-  petición no ha llegado». **Nunca se cierra sola.**
+- **Cuándo se hace visible la ventana**: en lanzamientos con canal, la ventana
+  se crea inicialmente oculta (`.visible(false)`). Se hace visible (`show()`):
+  1. Con el primer mensaje válido del navegador (eco u operación), revelándose
+     directamente en el momento de consentimiento.
+  2. Si expira el plazo del reloj de respaldo del backend (~30 s) sin que el
+     navegador conecte, revelándose con «La petición no ha llegado».
+  3. De inmediato en lanzamientos sin canal (servidor intermedio, callejón sin
+     puertos o sin CA local, rechazos directos).
+  El retardo de gracia antes de pintar desaparece: la ventana nunca es visible
+  antes de que haya algo que enseñar.
+- **Quién decide «no ha llegado»**: lo decide el backend mediante su reloj de
+  respaldo, no la ventana con un temporizador propio. El backend publica el
+  momento `unreachable` por el mismo puerto que los demás momentos y la ventana
+  lo obedece. **Nunca se cierra sola.**
 - El camino de reparación **no diagnostica**: rFirma no puede saber si el
   permiso se denegó, así que es un **conmutador de dos recetas** —Chrome y
   Firefox— y la persona elige la suya. Sólo texto, sin capturas: el aviso del
@@ -336,3 +346,9 @@ guardan cada medida.
 - **Toda la prosa que ponía en guardia sin dar información.** El detalle está en
   la regla de redacción de [design-system.md](design-system.md), con los ejemplos
   de esta tanda.
+- **Temporizadores en la ventana para decidir «no ha llegado» y retardo de gracia**
+  ([#587](https://github.com/sgomez/rfirma/issues/587),
+  [#589](https://github.com/sgomez/rfirma/issues/589)). La ventana se crea oculta
+  y se revela cuando hay algo que enseñar (primer mensaje o expiración del plazo de
+  respaldo en el backend); la ventana obedece el momento publicado y no lleva
+  relojes propios de espera.

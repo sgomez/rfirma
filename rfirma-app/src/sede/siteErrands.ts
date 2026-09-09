@@ -82,7 +82,8 @@ export type SiteStageView =
   | { kind: "loading"; multiple: boolean }
   | { kind: "noChannel"; reason: "channelNotOpened" | "localCaMissing" }
   | { kind: "outcome"; outcome: { kind: "refused"; situation: string; detail: string } }
-  | { kind: "noCertificate"; reason: "none" | "excluded"; owned: number };
+  | { kind: "noCertificate"; reason: "none" | "excluded"; owned: number }
+  | { kind: "unreachable" };
 
 /**
  * Lo que el PDF de la sede dice de sí mismo, leído por su asa.
@@ -262,6 +263,8 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
   switch (stage.kind) {
     case "waiting":
       return { kind: "waiting" };
+    case "unreachable":
+      return { kind: "unreachable" };
     case "noChannel":
       return { kind: "noChannel", reason: stage.reason };
     case "noCertificate":

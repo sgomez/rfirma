@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { OUTCOME_CLOSE_MS, UNREACHABLE_AFTER_MS, WAITING_GRACE_MS } from "./errand";
+import { type ReactNode, useEffect, useRef } from "react";
+import { OUTCOME_CLOSE_MS } from "./errand";
 
 /**
  * El cuerpo y el pie, que son iguales en los cinco momentos.
@@ -29,26 +29,6 @@ export function SedeBody({
       </footer>
     </>
   );
-}
-
-/**
- * Los dos relojes de la espera: el retardo antes de pintar y el único umbral
- * que hay. Vive aquí y no en `SedeWaiting` para que la pantalla siga siendo
- * una función de su entrada.
- */
-export function useWaitingClock(): "hidden" | "connecting" | "unreachable" {
-  const [elapsed, setElapsed] = useState<"hidden" | "connecting" | "unreachable">("hidden");
-
-  useEffect(() => {
-    const grace = setTimeout(() => setElapsed("connecting"), WAITING_GRACE_MS);
-    const threshold = setTimeout(() => setElapsed("unreachable"), UNREACHABLE_AFTER_MS);
-    return () => {
-      clearTimeout(grace);
-      clearTimeout(threshold);
-    };
-  }, []);
-
-  return elapsed;
 }
 
 /**
