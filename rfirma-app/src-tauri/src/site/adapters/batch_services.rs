@@ -136,22 +136,9 @@ fn url_safe_batch(lote_base64: &str) -> String {
     lote_base64.replace('+', "-").replace('/', "_")
 }
 
-/// La URL de un servlet del lote: `https`, o el fallo con la situación que le corresponda.
+/// La URL del servlet del lote ya leída; su forma la comprobó el dominio al leer la operación.
 fn validated_batch_url(url: &str, unreachable: Situation) -> Result<reqwest::Url, BatchError> {
-    let parsed = reqwest::Url::parse(url)
-        .map_err(|error| BatchError::new(unreachable, error.to_string()))?;
-
-    if parsed.scheme() != "https" {
-        return Err(BatchError::new(
-            unreachable,
-            format!(
-                "protocolo no soportado para el servlet de lote: {}",
-                parsed.scheme()
-            ),
-        ));
-    }
-
-    Ok(parsed)
+    reqwest::Url::parse(url).map_err(|error| BatchError::new(unreachable, error.to_string()))
 }
 
 #[cfg(test)]

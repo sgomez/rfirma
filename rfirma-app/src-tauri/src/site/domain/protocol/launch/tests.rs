@@ -251,7 +251,7 @@ fn a_refusal_location_is_none_without_ports_nor_the_third_protocol() {
 /// La invocación que manda la sede que fuerza servidor intermedio con un dato de tamaño real:
 /// `buildUrlWithoutData` solo añade `fileid`, `rtservlet` y `key` (`autoscript.js:4489`).
 const PUBLISHED_PARAMETERS_BY_FILEID: &str =
-    "afirma://sign?jvc=3&fileid=KDpNbXwqTFY5N0F0djJZeQ&rtservlet=https://sede.example/afirma-signature-retriever/RetrieveService&key=12345678";
+    "afirma://sign?jvc=3&fileid=KDpNbXwqTFY5N0F0djJZ&rtservlet=https://sede.example/afirma-signature-retriever/RetrieveService&key=12345678";
 
 #[test]
 fn the_fileid_only_invocation_the_published_client_sends_is_read_as_a_relay_launch() {
@@ -264,7 +264,7 @@ fn the_fileid_only_invocation_the_published_client_sends_is_read_as_a_relay_laun
     assert_eq!(
         info.request,
         RelayRequest::ParametersByFileId {
-            fileid: "KDpNbXwqTFY5N0F0djJZeQ".to_owned(),
+            fileid: "KDpNbXwqTFY5N0F0djJZ".to_owned(),
             retrieve_servlet: "https://sede.example/afirma-signature-retriever/RetrieveService"
                 .to_owned(),
         }
@@ -287,7 +287,7 @@ fn the_fileid_only_invocation_does_not_declare_where_to_upload_the_answer_yet() 
 fn a_relay_launch_with_fileid_needs_rtservlet_and_stores_the_channel_info() {
     let request = LaunchRequest::parse(
         "afirma://sign?algorithm=SHA256withRSA&fileid=abc123&rtservlet=https://relay.example/retrieve\
-         &stservlet=https://relay.example/store&key=12345678&id=tx-1",
+         &stservlet=https://relay.example/store&key=12345678&id=tx1",
     )
     .expect("la variante fileid deberia valer");
 
@@ -299,7 +299,7 @@ fn a_relay_launch_with_fileid_needs_rtservlet_and_stores_the_channel_info() {
         info.request,
         RelayRequest::DataByFileId {
             store_servlet: "https://relay.example/store".to_owned(),
-            id: "tx-1".to_owned(),
+            id: "tx1".to_owned(),
             fileid: "abc123".to_owned(),
             retrieve_servlet: "https://relay.example/retrieve".to_owned(),
         }
@@ -312,7 +312,7 @@ fn a_relay_launch_with_fileid_needs_rtservlet_and_stores_the_channel_info() {
 fn a_relay_launch_with_inline_dat_does_not_need_rtservlet_nor_key() {
     let request = LaunchRequest::parse(
         "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.example/store\
-         &id=tx-2",
+         &id=tx2",
     )
     .expect("la variante dat inline deberia valer");
 
@@ -323,7 +323,7 @@ fn a_relay_launch_with_inline_dat_does_not_need_rtservlet_nor_key() {
         info.request,
         RelayRequest::Inline {
             store_servlet: "https://relay.example/store".to_owned(),
-            id: "tx-2".to_owned(),
+            id: "tx2".to_owned(),
         }
     );
     assert!(info.key.is_none());
@@ -332,7 +332,7 @@ fn a_relay_launch_with_inline_dat_does_not_need_rtservlet_nor_key() {
 #[test]
 fn a_relay_launch_without_stservlet_and_without_rtservlet_is_refused() {
     let refusal = LaunchRequest::parse(
-        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&id=tx-3&key=12345678&aw=true",
+        "afirma://sign?algorithm=SHA256withRSA&fileid=abc&id=tx3&key=12345678&aw=true",
     )
     .expect_err("sin stservlet ni rtservlet no hay ni respuesta que subir ni parametros que leer");
 
@@ -343,7 +343,7 @@ fn a_relay_launch_without_stservlet_and_without_rtservlet_is_refused() {
 fn a_relay_launch_with_fileid_but_no_rtservlet_is_refused() {
     let refusal = LaunchRequest::parse(
         "afirma://sign?algorithm=SHA256withRSA&fileid=abc&stservlet=https://relay.example/store\
-         &id=tx-4",
+         &id=tx4",
     )
     .expect_err("sin rtservlet no se puede recuperar el fileid");
 
@@ -353,7 +353,7 @@ fn a_relay_launch_with_fileid_but_no_rtservlet_is_refused() {
 #[test]
 fn a_relay_launch_with_neither_dat_nor_fileid_is_refused() {
     let refusal = LaunchRequest::parse(
-        "afirma://sign?algorithm=SHA256withRSA&stservlet=https://relay.example/store&id=tx-5",
+        "afirma://sign?algorithm=SHA256withRSA&stservlet=https://relay.example/store&id=tx5",
     )
     .expect_err("sin datos que operar no hay nada que hacer");
 
@@ -363,7 +363,7 @@ fn a_relay_launch_with_neither_dat_nor_fileid_is_refused() {
 #[test]
 fn a_relay_launch_reads_the_active_wait_flag() {
     let request = LaunchRequest::parse(
-        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx-6&aw=true",
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx6&aw=true",
     )
     .expect("la operacion deberia valer");
 
@@ -467,4 +467,114 @@ fn a_refusal_location_of_a_service_launch_without_ports_is_none() {
     let url = AfirmaUrl::parse("afirma://service?v=1").unwrap();
 
     assert_eq!(location_for_a_refusal(&url), None);
+}
+
+#[test]
+fn an_identifier_longer_than_twenty_characters_is_refused_naming_it() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=abcdefghij0123456789X",
+    )
+    .expect_err("el original exige veinte caracteres como mucho");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Identifier));
+}
+
+#[test]
+fn an_identifier_that_is_not_alphanumeric_is_refused() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx%5F1",
+    )
+    .expect_err("el identificador acaba siendo un nombre de fichero");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Identifier));
+}
+
+#[test]
+fn a_fileid_carries_the_same_two_guards_as_an_identifier() {
+    let refusal =
+        LaunchRequest::parse("afirma://sign?fileid=ab*c&rtservlet=https://relay.example/retrieve")
+            .expect_err("el 'fileid' hace de identificador en las cinco clases del original");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::FileId));
+}
+
+#[test]
+fn a_store_servlet_on_a_local_address_is_refused_as_a_local_access() {
+    for host in ["localhost", "127.0.0.1"] {
+        let refusal = LaunchRequest::parse(&format!(
+            "afirma://sign?dat=ZmlybWFkbw&stservlet=https://{host}/store&id=tx1"
+        ))
+        .expect_err("un host local sale con su propio codigo");
+
+        assert_eq!(refusal.code(), SafCode::LocalAccessBlocked, "con {host}");
+    }
+}
+
+#[test]
+fn a_retrieve_servlet_on_a_local_address_is_refused_as_a_local_access() {
+    let refusal =
+        LaunchRequest::parse("afirma://sign?fileid=abc123&rtservlet=http://127.0.0.1/retrieve")
+            .expect_err("un host local sale con su propio codigo");
+
+    assert_eq!(refusal.code(), SafCode::LocalAccessBlocked);
+}
+
+#[test]
+fn a_servlet_url_with_its_own_parameters_is_refused_naming_it() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store%3Fop%3Dput&id=tx1",
+    )
+    .expect_err("el original prohibe '?' y '=' en la url del servlet");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::StoreServlet));
+}
+
+#[test]
+fn a_servlet_url_with_an_unsupported_scheme_is_refused_naming_it() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=ftp://relay.example/store&id=tx1",
+    )
+    .expect_err("solo se admiten 'http' y 'https'");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::StoreServlet));
+}
+
+#[test]
+fn an_http_servlet_url_is_read_like_the_original_reads_it() {
+    assert!(LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=http://relay.example/store&id=tx1"
+    )
+    .is_ok());
+}
+
+#[test]
+fn a_cipher_key_of_the_wrong_length_is_refused_naming_the_key() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx1&key=1234567",
+    )
+    .expect_err("el original exige ocho caracteres");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::CipherKey));
+}
+
+#[test]
+fn the_active_wait_flag_is_read_like_boolean_parse_boolean() {
+    let asked = |value: &str| {
+        asks_for_active_wait(
+            &AfirmaUrl::parse(&format!("afirma://sign?aw={value}")).expect("es una url"),
+        )
+    };
+
+    assert!(asked("true"));
+    assert!(asked("TRUE"));
+    assert!(!asked("1"));
+    assert!(!asked("yes"));
+    assert!(!asked("false"));
+    assert!(!asked(""));
 }

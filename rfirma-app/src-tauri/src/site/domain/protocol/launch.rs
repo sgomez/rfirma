@@ -4,6 +4,7 @@ use crate::site::domain::channel::ChannelLocation;
 
 use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
+use super::parameters::{check_servlet_url, reads_as_true};
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
 
@@ -20,6 +21,9 @@ pub const PROTOCOL_VERSION: i64 = 4;
 pub const THIRD_PROTOCOL_VERSION: i64 = 3;
 
 const VERSION_WHEN_ABSENT: i64 = 1;
+
+/// El original lo exige porque el identificador acaba siendo un nombre de fichero.
+const LONGEST_IDENTIFIER: usize = 20;
 
 /// Puerto fijo del protocolo 3, nunca atado cuando la sede sorteó puertos (ADR-0005).
 pub const THE_PORT_OF_THE_THIRD_PROTOCOL: u16 = 63117;
@@ -187,7 +191,7 @@ impl LaunchRequest {
 
         let key = match url.parameter("key").filter(|value| !value.is_empty()) {
             Some(value) => CipherKey::from_url_parameter(value)
-                .map_err(|error| Refusal::params(error.detail().to_owned()))?,
+                .map_err(|error| Refusal::about(Parameter::CipherKey, error.detail().to_owned()))?,
             None => None,
         };
 
@@ -255,14 +259,42 @@ fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
 
 /// Si la sede pide espera activa (`aw`) antes de operar.
 pub fn asks_for_active_wait(url: &AfirmaUrl) -> bool {
-    url.parameter("aw")
-        .is_some_and(|value| !value.is_empty() && value != "false")
+    url.parameter("aw").is_some_and(reads_as_true)
+}
+
+/// El identificador de sesión del servidor intermedio, que el original usa como nombre de fichero.
+fn checked_identifier(value: String, blame: Parameter) -> Result<String, Refusal> {
+    if value.chars().count() > LONGEST_IDENTIFIER {
+        return Err(Refusal::about(
+            blame,
+            format!("el identificador '{value}' pasa de {LONGEST_IDENTIFIER} caracteres"),
+        ));
+    }
+    if !value.chars().all(|it| it.is_ascii_alphanumeric()) {
+        return Err(Refusal::about(
+            blame,
+            format!("el identificador '{value}' tiene caracteres que no son letras ni digitos"),
+        ));
+    }
+
+    Ok(value)
+}
+
+fn checked_servlet(value: String, blame: Parameter) -> Result<String, Refusal> {
+    check_servlet_url(&value, blame)?;
+    Ok(value)
 }
 
 fn relay_request_of(url: &AfirmaUrl) -> Result<RelayRequest, Refusal> {
-    let store_servlet = given(url, "stservlet");
-    let fileid = given(url, "fileid");
-    let retrieve_servlet = given(url, "rtservlet");
+    let store_servlet = given(url, "stservlet")
+        .map(|it| checked_servlet(it, Parameter::StoreServlet))
+        .transpose()?;
+    let fileid = given(url, "fileid")
+        .map(|it| checked_identifier(it, Parameter::FileId))
+        .transpose()?;
+    let retrieve_servlet = given(url, "rtservlet")
+        .map(|it| checked_servlet(it, Parameter::RetrieveServlet))
+        .transpose()?;
 
     let Some(store_servlet) = store_servlet else {
         return match (fileid, retrieve_servlet) {
@@ -278,7 +310,8 @@ fn relay_request_of(url: &AfirmaUrl) -> Result<RelayRequest, Refusal> {
     };
 
     let id = given(url, "id")
-        .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))?;
+        .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))
+        .and_then(|it| checked_identifier(it, Parameter::Identifier))?;
 
     if url.parameter("dat").is_some() {
         return Ok(RelayRequest::Inline { store_servlet, id });

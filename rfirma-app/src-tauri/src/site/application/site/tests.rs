@@ -235,7 +235,7 @@ fn the_negotiation_table_decides_codec_and_location_by_the_shape_of_the_launch()
 fn the_negotiation_table_picks_the_relay_codec_for_an_operation_with_servlet() {
     let transport = ATransport::default();
     let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
-               example/store&id=tx-1&key=12345678";
+               example/store&id=tx1&key=12345678";
 
     let attendance = attend_launch(
         url,
@@ -290,7 +290,7 @@ fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
     );
 
     let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
-               example/store&id=tx-order&key=12345678";
+               example/store&id=txorder&key=12345678";
 
     let attendance = attend_launch(
         url,

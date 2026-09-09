@@ -9,11 +9,16 @@ use super::data_source::{download_url, DataSource};
 use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat};
 use super::parameters::{
-    check_local_access_is_not_requested, check_minimum_client_version, sticky_certificate,
-    StickyCertificate,
+    check_local_access_is_not_requested, check_minimum_client_version, check_servlet_url,
+    sticky_certificate, StickyCertificate,
 };
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
+
+const FORBIDDEN_IN_A_FILENAME: [char; 9] = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+
+const FORBIDDEN_IN_AN_EXTENSION: [char; 11] =
+    ['\\', '/', ':', '*', '?', '"', '<', '>', '|', ';', ' '];
 
 /// El verbo de la selección de certificado, tal y como viaja por el cable.
 ///
@@ -716,6 +721,10 @@ fn countersign_refusal() -> Refusal {
 /// La petición de `signandsave`: misma lectura y mismos rechazos que `sign`,
 /// con `dat` opcional y lo del guardado (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
 fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
+    let filename = optional(url, "filename");
+    if let Some(filename) = &filename {
+        check_filename(filename)?;
+    }
     let declared = declared_properties(url)?;
     let round = round_of_cop(url, &declared)?;
 
@@ -742,7 +751,7 @@ fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteO
         document,
         requested,
         filter: site_filter(&declared),
-        filename: optional(url, "filename"),
+        filename,
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),
         description: property_value(&declared, FILENAME_SAVE_DESCRIPTION),
         starting_folder: property_value(&declared, FILENAME_SAVE_CURRENT_DIR),
@@ -846,10 +855,18 @@ fn base_name(chosen_name: &str) -> &str {
 
 /// La petición de guardado: solo `dat` es obligatorio (`ProtocolInvocationLauncherSave`, 1.9.2).
 fn save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
+    let filename = optional(url, "filename");
+    if let Some(filename) = &filename {
+        check_filename(filename)?;
+    }
+    if let Some(extensions) = optional(url, "exts") {
+        check_extensions(&extensions)?;
+    }
+
     Ok(SiteOperation::Save(SaveRequest {
         data: data_of(url, data)?,
         title: optional(url, "title"),
-        filename: optional(url, "filename"),
+        filename,
         extensions: comma_list(url, "exts"),
         description: optional(url, "desc"),
     }))
@@ -922,23 +939,31 @@ fn batch_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation
 /// Las dos URL de servlet que el lote remoto exige, ya comprobadas.
 fn batch_servlets(url: &AfirmaUrl) -> Result<(String, String), Refusal> {
     let presigner_url = required(url, "batchpresignerurl", Parameter::BatchPresignerUrl)?;
-    check_absolute_https_url(presigner_url, Parameter::BatchPresignerUrl)?;
+    check_servlet_url(presigner_url, Parameter::BatchPresignerUrl)?;
     let postsigner_url = required(url, "batchpostsignerurl", Parameter::BatchPostsignerUrl)?;
-    check_absolute_https_url(postsigner_url, Parameter::BatchPostsignerUrl)?;
+    check_servlet_url(postsigner_url, Parameter::BatchPostsignerUrl)?;
 
     Ok((presigner_url.to_owned(), postsigner_url.to_owned()))
 }
 
-/// La URL de un servlet del lote: absoluta y `https`, o el `SAF_03` que la nombra.
-fn check_absolute_https_url(candidate: &str, blame: Parameter) -> Result<(), Refusal> {
-    const SCHEME: &str = "https://";
-    if candidate.len() <= SCHEME.len() || !candidate.to_ascii_lowercase().starts_with(SCHEME) {
-        return Err(Refusal::about(
+/// Un nombre de fichero sin los caracteres que el original prohíbe, o el `SAF_03` que lo nombra.
+fn check_filename(candidate: &str) -> Result<(), Refusal> {
+    check_free_of(candidate, &FORBIDDEN_IN_A_FILENAME, Parameter::Filename)
+}
+
+/// Las extensiones sin los caracteres que el original prohíbe, el `;` y el espacio incluidos.
+fn check_extensions(candidate: &str) -> Result<(), Refusal> {
+    check_free_of(candidate, &FORBIDDEN_IN_AN_EXTENSION, Parameter::Extensions)
+}
+
+fn check_free_of(candidate: &str, forbidden: &[char], blame: Parameter) -> Result<(), Refusal> {
+    match candidate.chars().find(|it| forbidden.contains(it)) {
+        Some(character) => Err(Refusal::about(
             blame,
-            format!("la url '{candidate}' debe ser absoluta y 'https'"),
-        ));
+            format!("el parametro '{blame}' trae un caracter que no se admite: {character}"),
+        )),
+        None => Ok(()),
     }
-    Ok(())
 }
 
 /// El `algorithm` y el `stoponerror` del lote: atributo de `<signbatch>` en el
@@ -1071,8 +1096,7 @@ fn verb_of(url: &AfirmaUrl) -> String {
     url.parameter("op")
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| url.verb())
-        .trim()
-        .to_ascii_lowercase()
+        .to_owned()
 }
 
 /// Los pares del `.properties` que la sede mandó dentro de `properties`.

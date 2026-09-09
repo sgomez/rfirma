@@ -86,3 +86,44 @@ fn a_sticky_value_that_is_not_true_is_not_a_refusal() {
     assert!(!asked.is_sticky());
     assert!(!asked.resets());
 }
+
+#[test]
+fn the_sticky_flags_are_not_trimmed_like_boolean_parse_boolean_does_not_trim() {
+    let sticky = sticky_certificate(&a_url("&sticky=%20true&resetsticky=true%20"));
+
+    assert!(!sticky.is_sticky());
+    assert!(!sticky.resets());
+}
+
+#[test]
+fn a_servlet_url_over_http_is_accepted_like_the_original_accepts_it() {
+    assert!(check_servlet_url("http://relay.example/store", Parameter::StoreServlet).is_ok());
+    assert!(check_servlet_url("https://relay.example/store", Parameter::StoreServlet).is_ok());
+}
+
+#[test]
+fn a_servlet_url_on_a_local_host_is_a_local_access_attempt() {
+    for candidate in [
+        "https://localhost/store",
+        "http://127.0.0.1:8080/store",
+        "https://LOCALHOST/store",
+    ] {
+        let refusal = check_servlet_url(candidate, Parameter::RetrieveServlet)
+            .expect_err("el original lo rechaza con su propio codigo");
+
+        assert_eq!(
+            refusal.code(),
+            SafCode::LocalAccessBlocked,
+            "con {candidate}"
+        );
+    }
+}
+
+#[test]
+fn a_servlet_url_that_is_not_absolute_is_a_parameter_error() {
+    let refusal =
+        check_servlet_url("/store", Parameter::StoreServlet).expect_err("una url relativa no vale");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::StoreServlet));
+}

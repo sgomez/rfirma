@@ -1,4 +1,4 @@
-//! Lo común a toda operación: las dos guardias y los dos indicadores del certificado pegado.
+//! Lo común a toda operación: las guardias de forma y los dos indicadores del certificado pegado.
 
 use super::codes::{Parameter, SafCode};
 use super::refusal::Refusal;
@@ -6,6 +6,7 @@ use super::url::AfirmaUrl;
 use super::version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
 
 const LOCAL_FILE_PREFIX: &str = "file:/";
+const LOCAL_HOSTS: [&str; 2] = ["localhost", "127.0.0.1"];
 const STICKY: &str = "sticky";
 const RESET_STICKY: &str = "resetsticky";
 
@@ -37,8 +38,62 @@ pub fn sticky_certificate(url: &AfirmaUrl) -> StickyCertificate {
 }
 
 fn flag_of(url: &AfirmaUrl, name: &str) -> bool {
-    url.parameter(name)
-        .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"))
+    url.parameter(name).is_some_and(reads_as_true)
+}
+
+/// Lo que `Boolean.parseBoolean` acepta: `true` sin distinguir mayúsculas y sin recortar espacios.
+pub fn reads_as_true(value: &str) -> bool {
+    value.eq_ignore_ascii_case("true")
+}
+
+/// Comprueba una URL de servlet como `UrlParameters.validateURL`: `http` o `https`, host no
+/// local y sin parámetros propios.
+pub fn check_servlet_url(candidate: &str, blame: Parameter) -> Result<(), Refusal> {
+    let Some((scheme, rest)) = candidate.split_once("://") else {
+        return Err(Refusal::about(
+            blame,
+            format!("la url '{candidate}' no tiene forma de url absoluta"),
+        ));
+    };
+
+    if !scheme.eq_ignore_ascii_case("http") && !scheme.eq_ignore_ascii_case("https") {
+        return Err(Refusal::about(
+            blame,
+            format!("el esquema '{scheme}' no se admite en una url de servlet"),
+        ));
+    }
+
+    let host = host_of(rest);
+    if host.is_empty() {
+        return Err(Refusal::about(
+            blame,
+            format!("la url '{candidate}' no trae host"),
+        ));
+    }
+    if LOCAL_HOSTS
+        .iter()
+        .any(|local| host.eq_ignore_ascii_case(local))
+    {
+        return Err(Refusal::new(
+            SafCode::LocalAccessBlocked,
+            format!("el parametro '{blame}' pide acceso a una direccion local: {candidate}"),
+        ));
+    }
+
+    if candidate.contains('?') || candidate.contains('=') {
+        return Err(Refusal::about(
+            blame,
+            format!("la url de servlet no admite parametros propios: {candidate}"),
+        ));
+    }
+
+    Ok(())
+}
+
+fn host_of(rest: &str) -> &str {
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or_default();
+    let authority = authority.rsplit_once('@').map_or(authority, |(_, it)| it);
+    authority.split_once(':').map_or(authority, |(it, _)| it)
 }
 
 /// Comprueba la versión mínima de cliente que exige la sede.

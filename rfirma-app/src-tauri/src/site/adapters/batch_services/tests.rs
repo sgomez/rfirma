@@ -8,13 +8,10 @@ fn an_https_batch_url_is_accepted() {
 }
 
 #[test]
-fn an_http_batch_url_is_rejected() {
-    let result = validated_batch_url("http://batch.example/pre", Situation::PresignerUnreachable);
-
-    assert!(matches!(
-        result,
-        Err(error) if error.situation() == Situation::PresignerUnreachable
-    ));
+fn an_http_batch_url_is_accepted_because_the_domain_already_judged_its_shape() {
+    assert!(
+        validated_batch_url("http://batch.example/pre", Situation::PresignerUnreachable).is_ok()
+    );
 }
 
 #[test]
