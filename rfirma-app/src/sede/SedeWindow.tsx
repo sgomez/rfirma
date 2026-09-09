@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PinDialog } from "../signing/PinDialog";
 import type { Errand, SiteErrandPort } from "./errand";
+import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
 import { SedeNoCertificate } from "./SedeNoCertificate";
 import { SedeOutcome } from "./SedeOutcome";
@@ -87,6 +88,13 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             operation={errand.operation}
             stage={stage}
             onConsent={(certificateId) => void errands.consent(certificateId)}
+            onCancel={cancel}
+          />
+        )}
+        {stage.kind === "confirming" && (
+          <SedeConfirm
+            messageCode={stage.messageCode}
+            onConfirm={() => errands.confirmSignatures()}
             onCancel={cancel}
           />
         )}

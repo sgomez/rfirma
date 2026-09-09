@@ -31,6 +31,7 @@ function certificate(overrides: Partial<Certificate> = {}): Certificate {
 function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
   const calls = {
     consent: vi.fn(),
+    confirmSignatures: vi.fn(),
     submitSecret: vi.fn(),
     cancel: vi.fn(),
     close: vi.fn(),
@@ -45,6 +46,7 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
       return () => {};
     },
     consent: async (id) => calls.consent(id),
+    confirmSignatures: async () => calls.confirmSignatures(),
     submitSecret: async (secret) => calls.submitSecret(secret),
     cancel: async () => calls.cancel(),
     close: async () => calls.close(),
@@ -437,6 +439,86 @@ describe("SedeWindow", () => {
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText(/Se enviarán tu nombre, tu NIF/)).toBeInTheDocument();
+    });
+  });
+
+  describe("2b · confirming what the validator flags", () => {
+    it("asks with the original's own words, and offers exactly two ways out", () => {
+      const { port } = scriptedErrand({
+        kind: "confirming",
+        messageCode: "pdfShadowAttackSuspect",
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(
+        screen.getByText(/sospechoso de haber sido modificado tras la última firma/i),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+    });
+
+    it("says what a modified form is, which is another thing entirely", () => {
+      const { port } = scriptedErrand({
+        kind: "confirming",
+        messageCode: "signingModifiedPdfForm",
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(
+        screen.getByText(/formulario del cual se han modificado los campos/i),
+      ).toBeInTheDocument();
+    });
+
+    it("names the code when the message is one rFirma has no words for", () => {
+      const { port } = scriptedErrand({ kind: "confirming", messageCode: "somethingNewer" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText(/somethingNewer/)).toBeInTheDocument();
+    });
+
+    it("goes on with the signature when the person confirms", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand({
+        kind: "confirming",
+        messageCode: "pdfShadowAttackSuspect",
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+      expect(calls.confirmSignatures).toHaveBeenCalled();
+      expect(calls.cancel).not.toHaveBeenCalled();
+    });
+
+    it("hands the confirmation on only once, however many times the button is pressed", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand({
+        kind: "confirming",
+        messageCode: "pdfShadowAttackSuspect",
+      });
+      calls.confirmSignatures.mockReturnValue(new Promise(() => {}));
+      renderWithCatalog(<SedeWindow errands={port} />);
+      const going = screen.getByRole("button", { name: "Continuar" });
+
+      await user.click(going);
+      await user.click(going);
+
+      expect(calls.confirmSignatures).toHaveBeenCalledOnce();
+      expect(going).toBeDisabled();
+    });
+
+    it("abandons the errand when the person refuses, which is what the site gets", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand({
+        kind: "confirming",
+        messageCode: "pdfShadowAttackSuspect",
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+      expect(calls.cancel).toHaveBeenCalled();
+      expect(calls.confirmSignatures).not.toHaveBeenCalled();
     });
   });
 

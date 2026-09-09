@@ -1171,6 +1171,21 @@ msgstr "Sign"
 msgid "sede.consent.identify"
 msgstr "Identify"
 
+msgid "sede.confirm.title"
+msgstr "Something to confirm before signing"
+
+msgid "sede.confirm.messages.pdfShadowAttackSuspect"
+msgstr "The PDF is suspected of having been modified after the last signature. Do you want to continue?"
+
+msgid "sede.confirm.messages.signingModifiedPdfForm"
+msgstr "The PDF document contains a form from which the fields have been modified after they have been signed. Do you want to continue?"
+
+msgid "sede.confirm.messages.unknown"
+msgstr "The signature validator reports something to confirm before continuing ({{code}}). Do you want to continue?"
+
+msgid "sede.confirm.continue"
+msgstr "Continue"
+
 msgid "sede.signing.title"
 msgstr "Signing"
 

@@ -1076,6 +1076,21 @@ msgstr ""
 msgid "sede.consent.identify"
 msgstr ""
 
+msgid "sede.confirm.title"
+msgstr ""
+
+msgid "sede.confirm.messages.pdfShadowAttackSuspect"
+msgstr ""
+
+msgid "sede.confirm.messages.signingModifiedPdfForm"
+msgstr ""
+
+msgid "sede.confirm.messages.unknown"
+msgstr ""
+
+msgid "sede.confirm.continue"
+msgstr ""
+
 msgid "sede.signing.title"
 msgstr ""
 

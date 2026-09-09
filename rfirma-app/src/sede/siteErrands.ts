@@ -152,6 +152,8 @@ export interface SiteCommands {
   readErrand(): Promise<SiteErrandView | null>;
   /** `site_identify`: la persona se identifica ante la sede. */
   identify(certificate: string): Promise<StageResult<void>>;
+  /** `site_confirm_signatures`: fija la clave confirmada y vuelve a validar. */
+  confirmSignatures(): Promise<StageResult<void>>;
   /** `site_decline`: la sede recibe `CANCEL` en el acto. */
   decline(): Promise<void>;
   /** `site_begin_signing`: prefirma, y dice cómo pedir el secreto. */
@@ -549,6 +551,18 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       move({ kind: "secret", certificate, failure: null });
     },
 
+    async confirmSignatures() {
+      if (errand?.stage.kind !== "confirming") return;
+      // El momento que sigue lo publica el backend, que vuelve a validar con la
+      // clave ya fijada: aquí no se adelanta ninguno. Y como la pantalla no
+      // cambia mientras tanto, el contador es lo único que separa una segunda
+      // pulsación del rechazo local que mataría el trámite vivo.
+      const arrival = arrivals;
+      const confirmed = await commands.confirmSignatures();
+      if (arrival !== arrivals) return;
+      if (!confirmed.ok) finish(refusedBy(confirmed.failure));
+    },
+
     submitSecret: (secret) => sign(secret),
 
     async cancel() {
@@ -556,6 +570,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       const wasAnswering =
         errand !== null &&
         (errand.stage.kind === "consent" ||
+          errand.stage.kind === "confirming" ||
           errand.stage.kind === "secret" ||
           errand.stage.kind === "signing");
       signing = null;
