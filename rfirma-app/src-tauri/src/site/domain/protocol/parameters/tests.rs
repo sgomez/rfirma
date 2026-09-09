@@ -127,3 +127,45 @@ fn a_servlet_url_that_is_not_absolute_is_a_parameter_error() {
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::StoreServlet));
 }
+
+#[test]
+fn an_operation_that_does_not_declare_ver_demands_the_version_zero() {
+    assert_eq!(minimum_protocol_version(&a_url("")), 0);
+}
+
+#[test]
+fn a_ver_that_is_not_an_integer_demands_the_version_one() {
+    for declared in ["", "cuatro", "4.0", " 4"] {
+        assert_eq!(
+            minimum_protocol_version(&a_url(&format!("&ver={declared}"))),
+            1,
+            "con ver={declared}"
+        );
+    }
+}
+
+#[test]
+fn the_versions_of_the_protocol_that_are_spoken_here_are_served() {
+    for declared in ["0", "1", "2", "3", "4"] {
+        let required = minimum_protocol_version(&a_url(&format!("&ver={declared}")));
+
+        assert_eq!(required, declared.parse::<i64>().expect("es un entero"));
+        assert!(
+            check_minimum_protocol_version(required).is_ok(),
+            "con ver={declared}"
+        );
+    }
+}
+
+#[test]
+fn a_protocol_version_newer_than_the_one_spoken_here_is_refused_with_its_own_code() {
+    let refusal = check_minimum_protocol_version(minimum_protocol_version(&a_url("&ver=5")))
+        .expect_err("aqui no se habla la version 5 del protocolo");
+
+    assert_eq!(refusal.code(), SafCode::MinimumVersionNonSatisfied);
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedProtocolVersion,
+        "la ventana tiene que poder nombrar lo que pasa"
+    );
+}

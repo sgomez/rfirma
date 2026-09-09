@@ -1955,3 +1955,17 @@ mod url_shape_guards {
         assert_eq!(refusal.blame(), Some(Parameter::BatchPresignerUrl));
     }
 }
+
+#[test]
+fn an_operation_that_demands_a_protocol_version_not_spoken_here_is_refused_before_anything_else() {
+    for verb in ["selectcert", "sign", "signandsave", "save", "load", "batch"] {
+        let refusal = read_operation(&an_operation(&format!("op={verb}&ver=5")))
+            .expect_err("la sede exige la version 5 del protocolo");
+
+        assert_eq!(
+            refusal.code(),
+            SafCode::MinimumVersionNonSatisfied,
+            "con op={verb}"
+        );
+    }
+}

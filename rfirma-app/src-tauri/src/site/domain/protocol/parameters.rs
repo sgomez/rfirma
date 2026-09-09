@@ -1,7 +1,8 @@
 //! Lo común a toda operación: las guardias de forma y los dos indicadores del certificado pegado.
 
 use super::codes::{Parameter, SafCode};
-use super::refusal::Refusal;
+use super::launch::PROTOCOL_VERSION;
+use super::refusal::{Refusal, RefusalSituation};
 use super::url::{abridged_value, AfirmaUrl};
 use super::version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
 
@@ -10,6 +11,9 @@ const LOCAL_HOSTS: [&str; 2] = ["localhost", "127.0.0.1"];
 const STICKY: &str = "sticky";
 const LONGEST_IDENTIFIER: usize = 20;
 const RESET_STICKY: &str = "resetsticky";
+const MINIMUM_PROTOCOL_VERSION: &str = "ver";
+const VERSION_WHEN_ABSENT: i64 = 0;
+const VERSION_WHEN_MALFORMED: i64 = 1;
 
 /// Lo que la sede pide sobre el certificado pegado del proceso.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -147,6 +151,30 @@ pub fn check_minimum_client_version(requested: Option<&str>) -> Result<(), Refus
     }
 
     Ok(())
+}
+
+/// La versión mínima de protocolo que la operación exige en `ver`.
+pub fn minimum_protocol_version(url: &AfirmaUrl) -> i64 {
+    url.parameter(MINIMUM_PROTOCOL_VERSION)
+        .map_or(VERSION_WHEN_ABSENT, |declared| {
+            declared.parse().unwrap_or(VERSION_WHEN_MALFORMED)
+        })
+}
+
+/// Comprueba la versión mínima de protocolo que exige la operación.
+pub fn check_minimum_protocol_version(required: i64) -> Result<(), Refusal> {
+    if required <= PROTOCOL_VERSION {
+        return Ok(());
+    }
+
+    Err(Refusal::new(
+        SafCode::MinimumVersionNonSatisfied,
+        format!(
+            "la operacion exige la version de protocolo {required} y aqui se habla como maximo \
+             la {PROTOCOL_VERSION}"
+        ),
+    )
+    .because(RefusalSituation::UnsupportedProtocolVersion))
 }
 
 /// Comprueba que los datos a firmar no pidan un fichero local.
