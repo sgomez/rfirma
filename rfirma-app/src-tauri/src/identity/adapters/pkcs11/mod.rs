@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::error::{Error, RvError};
+use cryptoki::mechanism::{Mechanism, MechanismType};
 use cryptoki::object::{Attribute, AttributeType, KeyType, ObjectClass};
 use cryptoki::session::{Session, UserType};
 use cryptoki::slot::Slot;
@@ -19,6 +20,7 @@ use cryptoki::types::AuthPin;
 
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::{Store, StoreClass};
@@ -291,7 +293,7 @@ pub fn offers(reference: &CertificateRef, algorithm: SignatureAlgorithm) -> Resu
         the_store_is_really_there(&store)?;
         let context = context(&store)?;
         let slot = slot_of(&context, reference.token_label())?;
-        the_slot_offers(&context, slot, algorithm)
+        the_slot_offers(&context, slot, algorithm).map(|_| ())
     })
 }
 
@@ -323,7 +325,7 @@ fn sign_holding_the_turn(
     the_store_is_really_there(&store)?;
     let context = context(&store)?;
     let slot = slot_of(&context, reference.token_label())?;
-    the_slot_offers(&context, slot, algorithm)?;
+    let offered = the_slot_offers(&context, slot, algorithm)?;
     let session = context.open_ro_session(slot)?;
 
     match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
@@ -338,10 +340,17 @@ fn sign_holding_the_turn(
             the_key_is_of_the_kind(&session, key, algorithm)?;
             Ok(key)
         })
-        .and_then(|key| {
-            session
+        .and_then(|key| match offered {
+            Offered::Composed => session
                 .sign(&algorithm.mechanism(), key, data)
-                .map_err(TokenError::from)
+                .map_err(TokenError::from),
+            Offered::EcdsaOverTheDigest => session
+                .sign(&Mechanism::Ecdsa, key, &ecdsa::digest(algorithm, data)?)
+                .map_err(TokenError::from),
+        })
+        .and_then(|signature| match algorithm.key_kind() {
+            KeyKind::Ec => ecdsa::der_encoded(&signature),
+            KeyKind::Rsa => Ok(signature),
         });
 
     let _ = session.logout();
@@ -349,29 +358,50 @@ fn sign_holding_the_turn(
     signature
 }
 
+/// Con qué mecanismo de la ranura se cumple el algoritmo, y sobre qué bytes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Offered {
+    /// El mecanismo compuesto, que resume y firma los bytes tal cual.
+    Composed,
+    /// El mecanismo crudo de curva elíptica, que firma el resumen calculado aquí.
+    EcdsaOverTheDigest,
+}
+
 /// El mecanismo del algoritmo, buscado en el listado de la ranura antes de pedir el PIN.
 fn the_slot_offers(
     context: &Pkcs11,
     slot: Slot,
     algorithm: SignatureAlgorithm,
-) -> Result<(), TokenError> {
-    let wanted = algorithm.mechanism_type();
+) -> Result<Offered, TokenError> {
+    let objection = match objection_to(context, slot, algorithm.mechanism_type())? {
+        None => return Ok(Offered::Composed),
+        Some(why) => why,
+    };
 
+    if algorithm.key_kind() == KeyKind::Ec
+        && objection_to(context, slot, ecdsa::OVER_A_DIGEST)?.is_none()
+    {
+        return Ok(Offered::EcdsaOverTheDigest);
+    }
+
+    Err(mechanism_not_offered(algorithm, objection))
+}
+
+/// Por qué la ranura no firma con el mecanismo, o nada si firma.
+fn objection_to(
+    context: &Pkcs11,
+    slot: Slot,
+    wanted: MechanismType,
+) -> Result<Option<&'static str>, TokenError> {
     if !context.get_mechanism_list(slot)?.contains(&wanted) {
-        return Err(mechanism_not_offered(
-            algorithm,
-            "no esta entre los mecanismos de la ranura",
-        ));
+        return Ok(Some("no esta entre los mecanismos de la ranura"));
     }
 
     if !context.get_mechanism_info(slot, wanted)?.sign() {
-        return Err(mechanism_not_offered(
-            algorithm,
-            "la ranura lo ofrece sin la bandera CKF_SIGN",
-        ));
+        return Ok(Some("la ranura lo ofrece sin la bandera CKF_SIGN"));
     }
 
-    Ok(())
+    Ok(None)
 }
 
 fn the_key_is_of_the_kind(

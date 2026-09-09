@@ -2,6 +2,7 @@
 
 pub mod algorithm;
 pub mod certificate;
+pub mod ecdsa;
 pub mod error;
 pub mod holder;
 pub mod secret;

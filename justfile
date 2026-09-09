@@ -400,7 +400,8 @@ lint-i18n: po-import
 # definicion, y una prueba que se salta en silencio porque falta el token no es
 # una prueba.
 #
-# Provisiona el token SoftHSM `rfirma-test` desde testdata/fnmt/.
+# Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` desde
+# testdata/fnmt/.
 token:
     ./testdata/softhsm/provision-token.sh
 

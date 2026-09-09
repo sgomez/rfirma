@@ -195,6 +195,21 @@ no filtrarla, en vez de asumir que una ranura sin resultados está vacía de
 verdad: si un lector real se comportase como SoftHSM, la asunción contraria
 vaciaría el listado sin ningún error que lo explicara.
 
+## Ampliación: un segundo token para la curva elíptica (#545)
+
+El mismo guion monta además `rfirma-test-ecc`, con un solo objeto: la clave y el
+certificado P-256 de `testdata/fnmt/active-ecc.p12`, etiquetados
+`FNMT-ACTIVO-ECC-99949991H` y con `CKA_ID` `01`. Van en un token aparte y no
+junto a los cinco de RSA porque la clase de clave la decide el certificado: en
+el mismo token, cualquier prueba que busque «el certificado activo» encontraría
+dos y firmaría con el que no toca.
+
+SoftHSM 2 ofrece `CKM_ECDSA` y **ninguna** de las variantes compuestas
+`CKM_ECDSA_SHAxxx`, así que la firma EC pasa por el mecanismo crudo sobre el
+resumen; lo que devuelve es `r||s` en crudo, 64 bytes, y no el DER que espera
+CMS. Los dos hechos, medidos, están en
+[`pkcs11-mecanismo-firma.md`](pkcs11-mecanismo-firma.md).
+
 ## Fuera
 
 El certificado FNMT personal del titular. No se importa, no se exporta, no se

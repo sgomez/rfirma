@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
 #
-# Provisiona el token SoftHSM `rfirma-test` que necesitan las pruebas de
-# **grada B** (ADR-0014). Es idempotente: se puede ejecutar tantas veces como
-# haga falta y solo escribe lo que falte, asi que `just check` lo llama siempre.
+# Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` que necesitan
+# las pruebas de **grada B** (ADR-0014). Es idempotente: se puede ejecutar tantas
+# veces como haga falta y solo escribe lo que falte, asi que `just check` lo llama
+# siempre.
 #
 # El material sale de testdata/fnmt/, que es publico por diseno: lo publica la
 # FNMT con la contrasena incluida. El certificado personal del titular no
 # interviene aqui ni en ningun otro punto del proyecto.
 #
-# Se importan CINCO certificados y CINCO claves privadas:
+# En `rfirma-test` se importan CINCO certificados y CINCO claves privadas, todos
+# de clave RSA:
 #
 #   id 01  FNMT-ACTIVO-99999999R     clave + certificado  (camino feliz)
 #   id 02  FNMT-CADUCADO-99999999R   clave + certificado  (caduco en 2020)
 #   id 03  FNMT-REVOCADO-99999999R   clave + certificado  (revocado en 2024)
 #   id 04  FNMT-GEMELO-99999999R     clave + certificado  (par de claves activo)
 #   id 05  FNMT-GEMELO-99999999R     clave + certificado  (par de claves caducado)
+#
+# En `rfirma-test-ecc`, uno solo, de curva eliptica P-256:
+#
+#   id 01  FNMT-ACTIVO-ECC-99949991H clave + certificado  (camino feliz EC)
+#
+# Van en tokens separados porque la clase de clave se elige por el certificado y
+# no por la ranura: con los dos en el mismo token, cualquier prueba que busque
+# «el certificado activo» encontraria dos y firmaria con el que no toca.
 #
 # El caducado y el revocado llevan su clave (#100) para que el filtro de
 # certificados firmables (ID-07) no los haga desaparecer del listado: sin
@@ -36,7 +46,6 @@
 set -euo pipefail
 
 module="${RFIRMA_PKCS11_MODULE:-/usr/lib/softhsm/libsofthsm2.so}"
-token_label="rfirma-test"
 pin="1234"
 so_pin="3737"
 
@@ -74,20 +83,24 @@ CONF
 fi
 export SOFTHSM2_CONF="$conf"
 
-if ! softhsm2-util --show-slots | grep -q "$token_label"; then
-    softhsm2-util --init-token --free --label "$token_label" \
-        --so-pin "$so_pin" --pin "$pin" >/dev/null
-    echo "token $token_label inicializado"
-fi
-
 # Se listan por tipo para no tener que adivinar a que objeto pertenece cada
 # linea «label:» de la salida de pkcs11-tool.
 list_objects() {
     pkcs11-tool --module "$module" --token-label "$token_label" \
         --login --pin "$pin" --list-objects --type "$1" 2>/dev/null || true
 }
-certificates="$(list_objects cert)"
-private_keys="$(list_objects privkey)"
+
+# Deja inicializado el token indicado y apunta a el las importaciones que sigan.
+use_token() {
+    token_label="$1"
+    if ! softhsm2-util --show-slots | grep -q "$token_label"; then
+        softhsm2-util --init-token --free --label "$token_label" \
+            --so-pin "$so_pin" --pin "$pin" >/dev/null
+        echo "token $token_label inicializado"
+    fi
+    certificates="$(list_objects cert)"
+    private_keys="$(list_objects privkey)"
+}
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -123,6 +136,8 @@ import_private_key() {
     echo "importada la clave privada $label (id $id)"
 }
 
+use_token "rfirma-test"
+
 import_private_key "$kit/active-rsa.p12"  "1234"         "01" "FNMT-ACTIVO-99999999R"
 import_certificate "$kit/active-rsa.p12"  "1234"         "01" "FNMT-ACTIVO-99999999R"
 import_private_key "$kit/expired-rsa.p12" "G5cp,fYC9gje" "02" "FNMT-CADUCADO-99999999R"
@@ -135,5 +150,12 @@ import_private_key "$kit/active-rsa.p12"  "1234"         "04" "FNMT-GEMELO-99999
 import_certificate "$kit/active-rsa.p12"  "1234"         "04" "FNMT-GEMELO-99999999R"
 import_private_key "$kit/expired-rsa.p12" "G5cp,fYC9gje" "05" "FNMT-GEMELO-99999999R"
 import_certificate "$kit/expired-rsa.p12" "G5cp,fYC9gje" "05" "FNMT-GEMELO-99999999R"
+
+echo "token $token_label listo en $module"
+
+use_token "rfirma-test-ecc"
+
+import_private_key "$kit/active-ecc.p12"  "1234"         "01" "FNMT-ACTIVO-ECC-99949991H"
+import_certificate "$kit/active-ecc.p12"  "1234"         "01" "FNMT-ACTIVO-ECC-99949991H"
 
 echo "token $token_label listo en $module"
