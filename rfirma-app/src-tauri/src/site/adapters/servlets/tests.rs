@@ -62,3 +62,30 @@ fn a_store_appends_dat_last() {
 fn the_wait_marker_matches_the_original_byte_for_byte() {
     assert_eq!(WAIT_MARKER, "#WAIT");
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn store_from_within_an_async_tokio_context_does_not_panic() {
+    let servlets = RelayServlets::default();
+    let result = servlets.store(
+        "https://unreachable.invalid/afirma/StorageService",
+        "id-123",
+        "data-abc",
+    );
+    assert!(matches!(
+        result,
+        Err(error) if error.situation() == Situation::ServletUnreachable
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn retrieve_from_within_an_async_tokio_context_does_not_panic() {
+    let servlets = RelayServlets::default();
+    let result = servlets.retrieve(
+        "https://unreachable.invalid/afirma/RetrieveService",
+        "id-123",
+    );
+    assert!(matches!(
+        result,
+        Err(error) if error.situation() == Situation::ServletUnreachable
+    ));
+}
