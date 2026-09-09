@@ -189,6 +189,8 @@ mod full_cycle {
     const PIN: &str = "1234";
     /// Certificado activo del kit de pruebas.
     const ACTIVE: &str = "FNMT-ACTIVO-99999999R";
+    /// El certificado de curva elíptica, en su propio token.
+    const ACTIVE_EC: &str = "FNMT-ACTIVO-ECC-99949991H";
 
     /// Dimensiones de página en puntos (72 ppp).
     const PAGE_WIDTH: u32 = 595;
@@ -214,13 +216,15 @@ mod full_cycle {
     }
 
     fn signing_certificate() -> TokenCertificate {
+        certificate_labelled(ACTIVE)
+    }
+
+    fn certificate_labelled(label: &str) -> TokenCertificate {
         pkcs11::list_certificates(module())
             .expect("no se ha podido listar el token")
             .into_iter()
-            .find(|certificate| certificate.reference().label() == ACTIVE)
-            .unwrap_or_else(|| {
-                panic!("el token {TOKEN} no tiene {ACTIVE}. Montalo con: just token")
-            })
+            .find(|certificate| certificate.reference().label() == label)
+            .unwrap_or_else(|| panic!("el token {TOKEN} no tiene {label}. Montalo con: just token"))
     }
 
     fn reference() -> CertificateRef {
@@ -340,10 +344,28 @@ mod full_cycle {
         operation: SignatureOperation,
         declared: &[(&str, &str)],
     ) -> Vec<u8> {
+        a_cycle_signed_by(
+            &signing_certificate(),
+            format,
+            algorithm,
+            data,
+            operation,
+            declared,
+        )
+    }
+
+    /// El mismo ciclo, con el certificado que se le diga: el de RSA o el de curva elíptica.
+    fn a_cycle_signed_by(
+        certificate: &TokenCertificate,
+        format: Format,
+        algorithm: SignatureAlgorithm,
+        data: &[u8],
+        operation: SignatureOperation,
+        declared: &[(&str, &str)],
+    ) -> Vec<u8> {
         let bridge = bridge();
-        let certificate = signing_certificate();
         let chain = vec![certificate.der().to_vec()];
-        let reference = reference();
+        let reference = certificate.reference().clone();
         let config = SignatureConfig {
             placement: None,
             layer2_text: String::new(),
@@ -550,6 +572,56 @@ mod full_cycle {
         assert!(
             signed.contains("<documento") && signed.contains("Signature"),
             "en Enveloped la firma cuelga del documento y la raíz sigue siendo la suya: {signed}"
+        );
+    }
+
+    /// El algoritmo que sale de casar SHA-256 con la clave del certificado de curva elíptica.
+    fn ecdsa_composed_for_the_ec_certificate(certificate: &TokenCertificate) -> SignatureAlgorithm {
+        let algorithm = composed_for(AskedAlgorithm::Sha256, certificate.key_kind());
+        assert_eq!(algorithm, SignatureAlgorithm::Sha256Ecdsa);
+        algorithm
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_cades_signature_made_with_the_ec_certificate_validates() {
+        let certificate = certificate_labelled(ACTIVE_EC);
+        let algorithm = ecdsa_composed_for_the_ec_certificate(&certificate);
+
+        let signed = a_cycle_signed_by(
+            &certificate,
+            Format::Cades,
+            algorithm,
+            CHALLENGE,
+            SignatureOperation::Sign,
+            &[("mode", "implicit")],
+        );
+        let signature = write_to_target("cades-ecdsa.p7s", &signed);
+
+        assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
+        the_original_validator_accepts(&signature);
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_enveloping_xades_signature_made_with_the_ec_certificate_validates() {
+        let certificate = certificate_labelled(ACTIVE_EC);
+        let algorithm = ecdsa_composed_for_the_ec_certificate(&certificate);
+
+        let signed = a_cycle_signed_by(
+            &certificate,
+            Format::Xades(XadesVariant::Enveloping),
+            algorithm,
+            A_REFERENCE_XML,
+            SignatureOperation::Sign,
+            &[],
+        );
+        let path = write_to_target("xades-ecdsa.xml", &signed);
+
+        the_original_validator_accepts(&path);
+        assert!(
+            String::from_utf8_lossy(&signed).contains("ecdsa-sha256"),
+            "el XML declara el algoritmo de firma de curva elíptica"
         );
     }
 

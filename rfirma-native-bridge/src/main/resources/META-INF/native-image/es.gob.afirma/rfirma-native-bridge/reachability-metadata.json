@@ -395,6 +395,78 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.EC$Mappings",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.KeyFactorySpi$EC",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.KeyFactorySpi$ECDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.KeyPairGeneratorSpi$ECDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.SignatureSpi$ecDSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.SignatureSpi$ecDSA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.SignatureSpi$ecDSA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.ec.SignatureSpi$ecDSA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     }
   ]
 }

@@ -25,6 +25,8 @@ use x509_cert::der::{Decode, Encode};
 const TOKEN: &str = "rfirma-test";
 const PIN: &str = "1234";
 const ACTIVE: &str = "FNMT-ACTIVO-99999999R";
+/// El único certificado del token de curva elíptica.
+const ACTIVE_EC: &str = "FNMT-ACTIVO-ECC-99949991H";
 const EXPIRED: &str = "FNMT-CADUCADO-99999999R";
 const REVOKED: &str = "FNMT-REVOCADO-99999999R";
 /// Dos certificados que comparten etiqueta y no comparten clave.
@@ -144,8 +146,8 @@ fn listing_without_a_session_still_lists_them() {
     );
     assert_eq!(
         found.len(),
-        5,
-        "el token de pruebas tiene cinco certificados, todos con clave"
+        6,
+        "los tokens de pruebas tienen seis certificados con clave: cinco de RSA y uno de curva eliptica"
     );
 }
 
@@ -300,23 +302,7 @@ fn sign_with_bare_rsa_pkcs_holding_the_turn(data: &[u8]) -> Vec<u8> {
 
 /// Verifica con OpenSSL, el mismo contraste que hara despues un validador CAdES.
 fn openssl_verifies(digest: MessageDigest, padding: Padding, signature: &[u8]) -> bool {
-    let certificate = certificate_labelled(ACTIVE);
-    let parsed = X509::from_der(certificate.der()).expect("el DER deberia parsearse");
-    let public_key = parsed.public_key().expect("clave publica del certificado");
-
-    let mut verifier = OpensslVerifier::new(digest, &public_key).expect("verificador de OpenSSL");
-    if padding == Padding::PKCS1_PSS {
-        verifier.set_rsa_padding(padding).expect("relleno PSS");
-        verifier
-            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
-            .expect("sal del tamano del resumen");
-        verifier
-            .set_rsa_mgf1_md(digest)
-            .expect("MGF1 con el resumen");
-    }
-    verifier.update(PRESIGN).expect("los bytes sin hashear");
-
-    verifier.verify(signature).expect("la verificacion corre")
+    openssl_verifies_for(ACTIVE, digest, Some(padding), signature)
 }
 
 #[test]
@@ -377,22 +363,125 @@ fn the_pss_form_signs_and_openssl_verifies_it_as_pss_and_not_as_pkcs1() {
 }
 
 #[test]
-fn a_mechanism_the_token_does_not_offer_is_told_before_the_pin_is_checked() {
+fn an_ec_algorithm_over_an_rsa_key_is_refused_naming_the_key_and_not_a_ckr() {
     let error = pkcs11::sign(
         &reference(ACTIVE),
-        "0000",
+        PIN,
         SignatureAlgorithm::Sha256Ecdsa,
         PRESIGN,
     )
-    .expect_err("SoftHSM no ofrece CKM_ECDSA_SHA256");
+    .expect_err("la clave del certificado activo es RSA");
 
     assert_eq!(error.situation(), Situation::MechanismNotOffered);
     assert_eq!(error.ckr(), None, "esto no viene de ningun CKR_*");
     assert!(
-        error.detail().contains("SHA256withECDSA"),
+        error.detail().contains("SHA256withECDSA") && error.detail().contains("RSA"),
         "{}",
         error.detail()
     );
+}
+
+#[test]
+fn an_rsa_algorithm_over_an_ec_key_is_refused_the_same_way() {
+    let error = pkcs11::sign(
+        &reference(ACTIVE_EC),
+        PIN,
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect_err("la clave del certificado de curva eliptica no es RSA");
+
+    assert_eq!(error.situation(), Situation::MechanismNotOffered);
+    assert!(
+        error.detail().contains("SHA256withRSA") && error.detail().contains("EC"),
+        "{}",
+        error.detail()
+    );
+}
+
+/// Verifica con OpenSSL contra la clave pública del certificado que se le diga.
+fn openssl_verifies_for(
+    label: &str,
+    digest: MessageDigest,
+    padding: Option<Padding>,
+    signature: &[u8],
+) -> bool {
+    let certificate = certificate_labelled(label);
+    let parsed = X509::from_der(certificate.der()).expect("el DER deberia parsearse");
+    let public_key = parsed.public_key().expect("clave publica del certificado");
+
+    let mut verifier = OpensslVerifier::new(digest, &public_key).expect("verificador de OpenSSL");
+    if padding == Some(Padding::PKCS1_PSS) {
+        verifier
+            .set_rsa_padding(Padding::PKCS1_PSS)
+            .expect("relleno PSS");
+        verifier
+            .set_rsa_pss_saltlen(RsaPssSaltlen::DIGEST_LENGTH)
+            .expect("sal del tamano del resumen");
+        verifier
+            .set_rsa_mgf1_md(digest)
+            .expect("MGF1 con el resumen");
+    }
+    verifier.update(PRESIGN).expect("los bytes sin hashear");
+
+    verifier.verify(signature).expect("la verificacion corre")
+}
+
+#[test]
+fn each_ecdsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
+    for (algorithm, digest) in [
+        (SignatureAlgorithm::Sha256Ecdsa, MessageDigest::sha256()),
+        (SignatureAlgorithm::Sha384Ecdsa, MessageDigest::sha384()),
+        (SignatureAlgorithm::Sha512Ecdsa, MessageDigest::sha512()),
+    ] {
+        let signature = pkcs11::sign(&reference(ACTIVE_EC), PIN, algorithm, PRESIGN)
+            .unwrap_or_else(|error| panic!("{} deberia firmar: {error}", algorithm.name()));
+
+        assert!(
+            openssl_verifies_for(ACTIVE_EC, digest, None, &signature),
+            "{} no verifica con su propio resumen",
+            algorithm.name()
+        );
+    }
+}
+
+#[test]
+fn an_ecdsa_signature_comes_back_in_der_and_not_as_the_raw_r_and_s_of_pkcs11() {
+    let signature = pkcs11::sign(
+        &reference(ACTIVE_EC),
+        PIN,
+        SignatureAlgorithm::Sha256Ecdsa,
+        PRESIGN,
+    )
+    .expect("SHA256withECDSA deberia firmar");
+
+    assert_eq!(
+        signature[0], 0x30,
+        "una firma ECDSA para CMS empieza por el SEQUENCE de r y s"
+    );
+    assert_ne!(
+        signature.len(),
+        64,
+        "el r||s crudo de una curva P-256 ocupa 64 bytes y no vale como SignatureValue"
+    );
+}
+
+#[test]
+fn an_ecdsa_signature_does_not_verify_under_a_digest_that_is_not_its_own() {
+    let signature = pkcs11::sign(
+        &reference(ACTIVE_EC),
+        PIN,
+        SignatureAlgorithm::Sha384Ecdsa,
+        PRESIGN,
+    )
+    .expect("SHA384withECDSA deberia firmar");
+
+    assert!(!openssl_verifies_for(
+        ACTIVE_EC,
+        MessageDigest::sha512(),
+        None,
+        &signature
+    ));
 }
 
 #[test]

@@ -51,6 +51,13 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
   `javax.imageio` sin métodos alcanzables: no la quites.
 * **El `WARNING` de `ClassNotFoundException: es.gob.afirma.ui.utils.ImageUtils`**
   en una firma visible con rúbrica es la exclusión haciendo su trabajo.
+* **La prefirma XAdES con ECDSA necesita a SpongyCastle dentro de la imagen.**
+  El original genera una clave de curva elíptica de mentira con
+  `KeyPairGenerator.getInstance("ECDSA")`, que solo sirve ese proveedor, y sus
+  clases se alcanzan por nombre: sin las entradas
+  `org.spongycastle.jcajce.provider.asymmetric...` del `reachability-metadata.json`
+  la prefirma muere con `NoSuchAlgorithmException: ECDSA KeyPairGenerator not
+  available`. En RSA no pasa porque la clave falsa la da el proveedor del JDK.
 * **FacturaE no tiene módulo propio**: `AOFacturaESigner` vive en
   `afirma-crypto-xades`. No añadas `afirma-crypto-facturae` al `pom.xml`: no
   existe en la 1.9.2.

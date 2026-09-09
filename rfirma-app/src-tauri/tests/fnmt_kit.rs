@@ -10,12 +10,14 @@ use sha2::{Digest, Sha256};
 const STCERES: &str =
     "https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar";
 
-/// `notAfter` de `active-rsa.p12` en segundos desde la época UNIX.
-const ACTIVE_EXPIRY_EPOCH: u64 = 1_856_513_219;
-const ACTIVE_EXPIRY_ISO: &str = "2028-10-30";
+/// `notAfter` de cada certificado del camino feliz, en segundos desde la época UNIX.
+const EXPIRIES: [(&str, u64, &str); 2] = [
+    ("active-rsa.p12", 1_856_513_219, "2028-10-30"),
+    ("active-ecc.p12", 1_883_203_134, "2029-09-04"),
+];
 
 /// Huellas SHA-256 de los ficheros `.p12` versionados.
-const FINGERPRINTS: [(&str, &str); 3] = [
+const FINGERPRINTS: [(&str, &str); 4] = [
     (
         "active-rsa.p12",
         "6e0cad97b78be2918ed54a64a0dd4f3f6e4c16e01b405ef0836fb91b77a3ffb4",
@@ -27,6 +29,10 @@ const FINGERPRINTS: [(&str, &str); 3] = [
     (
         "expired-rsa.p12",
         "901df49ac10cceb0524c8cb50833d1407d0974f42f9d45a5b4b71c0eefa4e91f",
+    ),
+    (
+        "active-ecc.p12",
+        "d4d2638c332b314675ce4f541ff1ca6e0ce0802463430db69033e955645e9f71",
     ),
 ];
 
@@ -46,7 +52,7 @@ fn fingerprint(path: &Path) -> String {
 }
 
 #[test]
-fn all_three_kit_p12_files_are_the_expected_ones() {
+fn every_kit_p12_file_is_the_expected_one() {
     let dir = kit_dir();
     for (name, expected) in FINGERPRINTS {
         let path = dir.join(name);
@@ -60,23 +66,25 @@ fn all_three_kit_p12_files_are_the_expected_ones() {
             expected,
             "testdata/fnmt/{name} no es el fichero que documenta \
              testdata/fnmt/README.md. Si lo has renovado, actualiza la huella \
-             y, en active-rsa.p12, tambien ACTIVE_EXPIRY_EPOCH."
+             y, en los activos, tambien su entrada de EXPIRIES."
         );
     }
 }
 
 #[test]
-fn active_rsa_has_not_expired_yet() {
+fn neither_active_certificate_has_expired_yet() {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("el reloj del sistema esta antes de 1970")
         .as_secs();
 
-    assert!(
-        now < ACTIVE_EXPIRY_EPOCH,
-        "testdata/fnmt/active-rsa.p12 CADUCO el {ACTIVE_EXPIRY_ISO}. Ya no sirve \
-         como camino feliz y todas las pruebas que dependan de el mienten. \
-         Descarga el kit nuevo de {STCERES}, sustituye los .p12, y actualiza las \
-         huellas y las fechas de testdata/fnmt/README.md y de este fichero."
-    );
+    for (name, expiry, iso) in EXPIRIES {
+        assert!(
+            now < expiry,
+            "testdata/fnmt/{name} CADUCO el {iso}. Ya no sirve como camino feliz \
+             y todas las pruebas que dependan de el mienten. Descarga el kit \
+             nuevo de {STCERES}, sustituye los .p12, y actualiza las huellas y \
+             las fechas de testdata/fnmt/README.md y de este fichero."
+        );
+    }
 }
