@@ -5,11 +5,12 @@ use super::*;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 
 use crate::identity::application::tests::a_usable_certificate;
+use crate::site::application::tests::read_operation;
 use crate::site::application::tests::{
     InMemoryBatchServices, InMemoryTokenSigning, ReceivedBatchCall,
 };
 use crate::site::domain::batch_error::Situation;
-use crate::site::domain::protocol::{read_operation, AfirmaUrl, SiteOperation};
+use crate::site::domain::protocol::{AfirmaUrl, SiteOperation};
 
 /// Capturado del `afirma-server-triphase-signer` de pruebas: un `td` con una firma y un error.
 const PRESIGN_WITH_ONE_ERROR: &[u8] = b"{\"td\":{\"format\":\"PAdES\",\"signinfo\":[{\"id\":\"001\",\"params\":{\"PRE\":\"QUJD\"}}]},\"results\":[{\"id\":\"002\",\"result\":\"ERROR_PRE\",\"description\":\"fallo\"}]}";

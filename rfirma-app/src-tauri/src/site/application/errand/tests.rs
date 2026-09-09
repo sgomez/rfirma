@@ -34,14 +34,15 @@ use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::adapters::frontier;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
+use crate::site::application::tests::read_operation;
 use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, AskedAlgorithm, ChannelCredential, ChannelMessage,
-    NegotiatedCredential, Parameter, SafCode, SelectCertificate, SignRequest, SignatureRound,
-    SiteFilter, SiteOperation, SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    AfirmaUrl, AskedAlgorithm, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter,
+    SafCode, SelectCertificate, SignRequest, SignatureRound, SiteFilter, SiteOperation,
+    SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{
@@ -1842,9 +1843,9 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
         "es la sin 'dat' que se firma aqui"
     );
 
-    let step = crate::site::application::errand::consent_to_sign_and_save_with_chosen_document(
+    let step = crate::site::application::errand::consent_to_sign_with_chosen_document(
         &desk,
-        request,
+        crate::site::application::errand::PendingSignature::SigningAndSaving(request),
         A_PDF.to_vec(),
         None,
         ours,
@@ -4614,4 +4615,136 @@ fn gzip_with_value_other_than_true_leaves_dat_uncompressed() {
     let url = a_signature_over(&compressed, "sign", "&gzip=false");
     let request = signature_requested(&url);
     assert_eq!(request.document(), compressed.as_slice());
+}
+
+fn a_signature_without_dat(extra: &str) -> AfirmaUrl {
+    let properties = base64::engine::general_purpose::URL_SAFE.encode(
+        "filenameExts=pdf\nfilenameDescription=PDF\nfilenameCurrentDir=/home/persona\n".as_bytes(),
+    );
+    let text = format!(
+        "afirma://sign?op=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm=SHA256withRSA&properties={properties}{extra}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+#[test]
+fn signing_without_dat_opens_the_loading_moment_with_the_sites_hints() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let listed = ListedCertificates::new();
+    let opened = OpenedDocuments::new();
+    let engine = AnEngine::answering(&[]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let live = a_live();
+    let url = a_signature_without_dat("");
+
+    let step = attend_operation(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &url,
+        decoded(&url),
+        &live,
+    );
+
+    let ErrandStep::Loading(consent) = step else {
+        panic!("sin 'dat' se abre el selector de un solo fichero: {step:?}");
+    };
+    assert!(!consent.multiple, "una firma pide un documento, no varios");
+    assert_eq!(consent.extensions, ["pdf"]);
+    assert_eq!(consent.description.as_deref(), Some("PDF"));
+    assert_eq!(consent.starting_folder.as_deref(), Some("/home/persona"));
+    assert!(
+        consent.to_sign.is_some(),
+        "lo elegido continua el tramite, no vuelve a la sede"
+    );
+}
+
+#[test]
+fn a_selector_declined_for_a_signature_without_dat_answers_cancel() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let listed = ListedCertificates::new();
+    let opened = OpenedDocuments::new();
+    let engine = AnEngine::answering(&[]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk_without_any_store(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+
+    let step = attend(&desk, a_signature_without_dat(""), handle, &live).expect("hay codec");
+    assert!(matches!(step, ErrandStep::Loading(_)));
+
+    let outcome = crate::site::application::errand::decline(&live);
+
+    assert!(matches!(outcome, SiteOutcome::Cancelled));
+    assert_eq!(what_the_site_received(&mut wire).as_deref(), Some("CANCEL"));
+}
+
+#[test]
+fn a_document_chosen_for_a_signature_without_dat_continues_the_errand() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let listed = ListedCertificates::new();
+    let opened = OpenedDocuments::new();
+    let engine = AnEngine::answering(&[]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk_without_any_store(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    let live = a_live();
+
+    let step = attend(&desk, a_signature_without_dat(""), the_wire().0, &live).expect("hay codec");
+    assert!(matches!(step, ErrandStep::Loading(_)));
+
+    let chosen_path = home.path().join("elegido.pdf");
+    std::fs::write(&chosen_path, A_PDF).expect("se escribe el fichero elegido");
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let moved = crate::site::application::errand::document_chosen(
+        &desk,
+        &[("elegido.pdf".to_owned(), chosen_path)],
+        &live,
+    );
+
+    assert!(
+        matches!(moved, LoadCompletion::Delivered(_)),
+        "sin almacen la mesa contesta en el acto, ya con el documento leido"
+    );
+    assert_eq!(
+        what_the_site_received(&mut wire).as_deref(),
+        Some(
+            WireAnswer::refused(SafCode::CannotFindKeystore)
+                .on_the_wire()
+                .as_str()
+        )
+    );
 }

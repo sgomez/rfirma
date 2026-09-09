@@ -11,14 +11,14 @@ use crate::site::domain::batch::LocalSingleSign;
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades_and_xades,
     refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, visible_signature_of, AfirmaUrl,
-    AskedAlgorithm, BatchRequest, LoadRequest, RequestedFormat, SaveRequest, SelectCertificate,
-    SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
-    StickyCertificate,
+    AskedAlgorithm, BatchRequest, LoadRequest, PendingSignRequest, RequestedFormat, SaveRequest,
+    SelectCertificate, SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter,
+    SiteVisibleSignature, StickyCertificate,
 };
 
 use super::outcome::{
-    BatchConsent, ErrandStep, LoadingConsent, LocalBatchConsent, LocalBatchItem, SavingConsent,
-    SavingHints, SigningConsent, SiteOutcome,
+    BatchConsent, ErrandStep, LoadingConsent, LocalBatchConsent, LocalBatchItem, PendingSignature,
+    SavingConsent, SavingHints, SigningConsent, SiteOutcome,
 };
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::{LocalBatchAsk, SiteRequest};
@@ -81,6 +81,9 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     match operation {
         SiteRequest::Save(request) => return consent_to_save(request),
         SiteRequest::Load(request) => return consent_to_load(request),
+        SiteRequest::SignWithoutDocument(request) => {
+            return consent_to_load_for_a_signature(request)
+        }
         SiteRequest::SelectCertificate(_)
         | SiteRequest::Sign(_)
         | SiteRequest::SignAndSave(_)
@@ -108,7 +111,10 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         SiteRequest::LocalBatch(ask) => {
             consent_to_the_local_batch(desk.engine, *ask, ours, &desk.neighbours, live)
         }
-        SiteRequest::Save(_) | SiteRequest::Load(_) | SiteRequest::NotAttended(_) => {
+        SiteRequest::Save(_)
+        | SiteRequest::Load(_)
+        | SiteRequest::SignWithoutDocument(_)
+        | SiteRequest::NotAttended(_) => {
             unreachable!("se ha despachado arriba")
         }
     }
@@ -139,6 +145,20 @@ fn consent_to_load(request: LoadRequest) -> ErrandStep {
     })
 }
 
+/// Prepara el paso de carga cuando `sign`, `cosign` o `countersign` llegan sin `dat`: el mismo
+/// selector que `load`, de un solo fichero, con las pistas de carga que declaró la sede
+/// (`ProtocolInvocationLauncherSign`, 1.9.2).
+fn consent_to_load_for_a_signature(request: PendingSignRequest) -> ErrandStep {
+    ErrandStep::Loading(LoadingConsent {
+        title: None,
+        extensions: request.load_extensions().to_vec(),
+        description: request.load_description().map(str::to_owned),
+        starting_folder: request.load_starting_folder().map(str::to_owned),
+        multiple: false,
+        to_sign: Some(Box::new(PendingSignature::Signing(request))),
+    })
+}
+
 /// Prepara el paso de carga cuando `signandsave` llega sin `dat`: el mismo selector que `load`,
 /// de un solo fichero, con las pistas propias de `signandsave` y la petición pendiente de
 /// documento (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
@@ -149,27 +169,31 @@ fn consent_to_load_for_sign_and_save(request: SignAndSaveRequest) -> ErrandStep 
         description: request.load_description().map(str::to_owned),
         starting_folder: request.load_starting_folder().map(str::to_owned),
         multiple: false,
-        to_sign: Some(Box::new(request)),
+        to_sign: Some(Box::new(PendingSignature::SigningAndSaving(request))),
     })
 }
 
 /// Continúa `signandsave` con el documento que la persona acaba de elegir en el selector: mismo
 /// veredicto de formato y mismas comprobaciones que si hubiera llegado en `dat`.
-pub fn consent_to_sign_and_save_with_chosen_document<
-    E: FilterEngine,
-    P: PolicyEngine,
-    N: Neighbours,
->(
+pub fn consent_to_sign_with_chosen_document<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    request: SignAndSaveRequest,
+    pending: PendingSignature,
     document: Vec<u8>,
     chosen_name: Option<String>,
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let request = request.with_chosen_document(document, chosen_name);
-
-    consent_to_sign_and_save(desk, &request, ours, live)
+    match pending {
+        PendingSignature::Signing(request) => {
+            consent_to_sign(desk, &request.with_chosen_document(document), ours, live)
+        }
+        PendingSignature::SigningAndSaving(request) => consent_to_sign_and_save(
+            desk,
+            &request.with_chosen_document(document, chosen_name),
+            ours,
+            live,
+        ),
+    }
 }
 
 /// Prepara el paso de consentimiento para una firma o cofirma de sede.
