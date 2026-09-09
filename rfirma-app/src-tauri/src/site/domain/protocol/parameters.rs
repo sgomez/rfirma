@@ -2,12 +2,13 @@
 
 use super::codes::{Parameter, SafCode};
 use super::refusal::Refusal;
-use super::url::AfirmaUrl;
+use super::url::{abridged_value, AfirmaUrl};
 use super::version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
 
 const LOCAL_FILE_PREFIX: &str = "file:/";
 const LOCAL_HOSTS: [&str; 2] = ["localhost", "127.0.0.1"];
 const STICKY: &str = "sticky";
+const LONGEST_IDENTIFIER: usize = 20;
 const RESET_STICKY: &str = "resetsticky";
 
 /// Lo que la sede pide sobre el certificado pegado del proceso.
@@ -44,6 +45,30 @@ fn flag_of(url: &AfirmaUrl, name: &str) -> bool {
 /// Lo que `Boolean.parseBoolean` acepta: `true` sin distinguir mayúsculas y sin recortar espacios.
 pub fn reads_as_true(value: &str) -> bool {
     value.eq_ignore_ascii_case("true")
+}
+
+/// El identificador de sesión del servidor intermedio, que el original usa como nombre de fichero.
+pub fn checked_identifier(value: String, blame: Parameter) -> Result<String, Refusal> {
+    if value.chars().count() > LONGEST_IDENTIFIER {
+        return Err(Refusal::about(
+            blame,
+            format!(
+                "el identificador '{}' pasa de {LONGEST_IDENTIFIER} caracteres",
+                abridged_value(&value)
+            ),
+        ));
+    }
+    if !value.chars().all(|it| it.is_ascii_alphanumeric()) {
+        return Err(Refusal::about(
+            blame,
+            format!(
+                "el identificador '{}' tiene caracteres que no son letras ni digitos",
+                abridged_value(&value)
+            ),
+        ));
+    }
+
+    Ok(value)
 }
 
 /// Comprueba una URL de servlet como `UrlParameters.validateURL`: `http` o `https`, host no

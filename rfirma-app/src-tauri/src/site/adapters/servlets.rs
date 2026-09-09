@@ -29,7 +29,7 @@ impl Default for RelayServlets {
 
 impl Servlets for RelayServlets {
     fn retrieve(&self, service_url: &str, id: &str) -> Result<String, RelayError> {
-        let url = validated_servlet_url(service_url)?;
+        let url = parsed_servlet_url(service_url)?;
         let id = id.to_owned();
         let client = self.client.clone();
         execute_outside_tokio(move || {
@@ -47,7 +47,7 @@ impl Servlets for RelayServlets {
     }
 
     fn store(&self, service_url: &str, id: &str, data: &str) -> Result<(), RelayError> {
-        let url = validated_servlet_url(service_url)?;
+        let url = parsed_servlet_url(service_url)?;
         let id = id.to_owned();
         let data = data.to_owned();
         let client = self.client.clone();
@@ -108,7 +108,7 @@ fn rejected(error: reqwest::Error) -> RelayError {
 }
 
 /// La URL del servlet ya leída; su forma la comprobó el dominio al leer la invocación.
-fn validated_servlet_url(service_url: &str) -> Result<reqwest::Url, RelayError> {
+fn parsed_servlet_url(service_url: &str) -> Result<reqwest::Url, RelayError> {
     reqwest::Url::parse(service_url)
         .map_err(|error| RelayError::new(Situation::ServletUnreachable, error.to_string()))
 }

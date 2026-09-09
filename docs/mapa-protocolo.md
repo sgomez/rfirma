@@ -508,8 +508,8 @@ Treinta y cinco parámetros de URL, trece claves de `properties` con
 comportamiento propio y ocho campos de la definición del lote. Veredictos:
 **Igual** en la mayoría, **desviación declarada** en nueve casos —las cinco de
 `CONTEXT.md`, la del algoritmo (#602), la del `idsession` (ADR-0016) y las del
-recuadro (ADR-0019, ADR-0006)— y **hueco** en los ocho casos que abre esta
-auditoría, repartidos en cinco sub-issues: #612, #614, #615, #617 y #618. El
-#614 ya está cerrado: sus filas —`aw`, `exts`, `fileid`, `filename`, `id`,
-`key`, `op`, `rtservlet`, `stservlet`, `sticky`, `resetsticky` y las dos URL de
-servlet del lote— vuelven a **Igual**.
+recuadro (ADR-0019, ADR-0006)— y **hueco** en lo que abre esta auditoría,
+repartido en las sub-issues #612, #615, #617 y #618. El #614 ya está cerrado:
+sus filas —`aw`, `exts`, `fileid`, `filename`, `id`, `key`, `op`, `rtservlet`,
+`stservlet`, `sticky`, `resetsticky` y las dos URL de servlet del lote— vuelven
+a **Igual**.

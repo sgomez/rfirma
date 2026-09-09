@@ -7,8 +7,9 @@ use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown, Situation,
 };
 use crate::site::domain::protocol::{
-    asks_for_active_wait, check_servlet_url, decrypt, operation_of_the_parameters_xml, AfirmaUrl,
-    CipherKey, Parameter, Refusal, RelayChannelInfo, RelayRequest,
+    asks_for_active_wait, check_servlet_url, checked_identifier, decrypt,
+    operation_of_the_parameters_xml, AfirmaUrl, CipherKey, Parameter, Refusal, RelayChannelInfo,
+    RelayRequest,
 };
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::ports::Servlets;
@@ -150,7 +151,7 @@ fn resolve(
             let operation = operation_of_the_parameters_xml(&xml)?;
             let store_servlet = declared(&operation, "stservlet")?;
             check_servlet_url(&store_servlet, Parameter::StoreServlet)?;
-            let id = declared(&operation, "id")?;
+            let id = checked_identifier(declared(&operation, "id")?, Parameter::Identifier)?;
             wait_if_asked(
                 asks_for_active_wait(&operation),
                 servlets,

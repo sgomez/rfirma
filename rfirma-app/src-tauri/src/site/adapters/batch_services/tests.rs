@@ -1,22 +1,8 @@
 use super::*;
 
 #[test]
-fn an_https_batch_url_is_accepted() {
-    assert!(
-        validated_batch_url("https://batch.example/pre", Situation::PresignerUnreachable).is_ok()
-    );
-}
-
-#[test]
-fn an_http_batch_url_is_accepted_because_the_domain_already_judged_its_shape() {
-    assert!(
-        validated_batch_url("http://batch.example/pre", Situation::PresignerUnreachable).is_ok()
-    );
-}
-
-#[test]
 fn a_malformed_batch_url_fails_without_panicking() {
-    assert!(validated_batch_url("no es una url", Situation::PostsignerUnreachable).is_err());
+    assert!(parsed_batch_url("no es una url", Situation::PostsignerUnreachable).is_err());
 }
 
 #[test]

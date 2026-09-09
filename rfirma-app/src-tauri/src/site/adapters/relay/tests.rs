@@ -410,7 +410,7 @@ fn the_parameters_variant_reads_the_operation_and_its_servlets_from_the_recovere
                     ("format", "PAdES"),
                     ("algorithm", "SHA256withRSA"),
                     ("stservlet", "https://sede.example/store"),
-                    ("id", "tx-del-xml"),
+                    ("id", "txdelxml"),
                     ("dat", "JVBERi0xLjc"),
                 ]),
                 &key,
@@ -433,7 +433,7 @@ fn the_parameters_variant_reads_the_operation_and_its_servlets_from_the_recovere
     assert_eq!(
         servlets
             .body
-            .retrieve("https://sede.example/store", "tx-del-xml"),
+            .retrieve("https://sede.example/store", "txdelxml"),
         Ok("la-respuesta-cifrada".to_owned()),
         "la respuesta sube al 'stservlet' y con el 'id' que venian dentro del XML"
     );
@@ -463,7 +463,7 @@ fn the_parameters_variant_applies_gzip_after_deciphering() {
                     ("algorithm", "SHA256withRSA"),
                     ("gzip", "true"),
                     ("stservlet", STORE_SERVLET),
-                    ("id", "tx-gzip"),
+                    ("id", "txgzip"),
                     ("dat", &document),
                 ]),
                 &key,
@@ -561,7 +561,7 @@ fn a_parameters_xml_without_stservlet_refuses_as_a_parameters_problem() {
             STORE_SERVLET,
             "fileid-params-5",
             &encrypt(
-                &a_parameters_xml(&[("op", "sign"), ("id", "tx-sin-servlet")]),
+                &a_parameters_xml(&[("op", "sign"), ("id", "txsinservlet")]),
                 &key,
             ),
         )
@@ -573,6 +573,41 @@ fn a_parameters_xml_without_stservlet_refuses_as_a_parameters_problem() {
     let error = relay
         .open(&info, duty())
         .expect_err("sin 'stservlet' no hay adonde contestar");
+
+    assert_eq!(
+        error
+            .refusal()
+            .expect("trae su propio rechazo clasificado")
+            .code(),
+        SafCode::Params
+    );
+}
+
+#[test]
+fn a_parameters_xml_with_a_too_long_id_refuses_as_a_parameters_problem() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-7",
+            &encrypt(
+                &a_parameters_xml(&[
+                    ("op", "sign"),
+                    ("stservlet", STORE_SERVLET),
+                    ("id", "abcdefghijklmnopqrstu"),
+                ]),
+                &key,
+            ),
+        )
+        .expect("guarda el XML con un 'id' de veintiun caracteres");
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-7", Some(key)));
+
+    let error = relay
+        .open(&info, duty())
+        .expect_err("el 'id' del XML pasa por la misma guarda que el de la URL");
 
     assert_eq!(
         error
@@ -596,7 +631,7 @@ fn the_parameters_variant_waits_when_the_recovered_xml_asks_for_it() {
                     ("op", "selectcert"),
                     ("aw", "true"),
                     ("stservlet", STORE_SERVLET),
-                    ("id", "tx-espera"),
+                    ("id", "txespera"),
                 ]),
                 &key,
             ),

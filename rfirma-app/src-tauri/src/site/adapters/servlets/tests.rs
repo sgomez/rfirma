@@ -1,18 +1,8 @@
 use super::*;
 
 #[test]
-fn an_https_servlet_url_is_accepted() {
-    assert!(validated_servlet_url("https://servlet.example/afirma/StorageService").is_ok());
-}
-
-#[test]
-fn an_http_servlet_url_is_accepted_like_the_original() {
-    assert!(validated_servlet_url("http://servlet.example/afirma/StorageService").is_ok());
-}
-
-#[test]
 fn a_malformed_url_fails_without_panicking() {
-    assert!(validated_servlet_url("no es una url").is_err());
+    assert!(parsed_servlet_url("no es una url").is_err());
 }
 
 #[test]
