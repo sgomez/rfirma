@@ -1,0 +1,9 @@
+# Lo poco que pnpm 11 exige declarar para este proyecto, igual que en rfirma-app.
+#
+# esbuild y sharp traen scripts de instalación que colocan el binario de la
+# plataforma; sin ellos `astro build` no arranca. pnpm 11 se niega a instalar en
+# silencio si no se le dice qué hacer con ellos (ERR_PNPM_IGNORED_BUILDS, que
+# rompe el `pnpm install --frozen-lockfile` del CI y del Dockerfile).
+allowBuilds:
+  esbuild: true
+  sharp: true

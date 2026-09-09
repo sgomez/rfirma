@@ -1,0 +1,102 @@
+---
+import Comparison from "../components/Comparison.astro";
+import Footer from "../components/Footer.astro";
+import Formats from "../components/Formats.astro";
+import Hero from "../components/Hero.astro";
+import HowToSign from "../components/HowToSign.astro";
+import Install from "../components/Install.astro";
+import Nav from "../components/Nav.astro";
+import NoticeTop from "../components/NoticeTop.astro";
+import Pillars from "../components/Pillars.astro";
+import Transparency from "../components/Transparency.astro";
+import { defaultLocale, localePath, locales, translator, type Locale } from "../i18n";
+import "../styles/landing.css";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+const canonical = new URL(localePath(locale), Astro.site);
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{t("meta.title")}</title>
+    <meta name="description" content={t("meta.description")} />
+    <link rel="canonical" href={canonical.href} />
+    {
+      locales.map((other) => (
+        <link rel="alternate" hreflang={other} href={new URL(localePath(other), Astro.site).href} />
+      ))
+    }
+    <link rel="alternate" hreflang="x-default" href={new URL(localePath(defaultLocale), Astro.site).href} />
+    <meta property="og:title" content={t("meta.title")} />
+    <meta property="og:description" content={t("meta.description")} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical.href} />
+  </head>
+  <body>
+    <div class="rf-root landing" data-theme="light">
+      <NoticeTop locale={locale} />
+      <Nav locale={locale} />
+      <main>
+        <Hero locale={locale} />
+        <Formats locale={locale} />
+        <HowToSign locale={locale} />
+        <Pillars locale={locale} />
+        <Comparison locale={locale} />
+        <Install locale={locale} />
+        <Transparency locale={locale} />
+      </main>
+      <Footer locale={locale} />
+    </div>
+
+    <script>
+      import { mountCopyButton } from "../scripts/copy-to-clipboard";
+      import { mountGuidedDemo } from "../scripts/guided-demo";
+      import { mountHeaderOffset } from "../scripts/header-offset";
+      import { mountInstallTabs } from "../scripts/install-tabs";
+      import { mountMockScale } from "../scripts/mock-scale";
+      import { mountReveal } from "../scripts/reveal";
+
+      const MOCK_WIDTH = 1000;
+      const MOCK_HEIGHT = 620;
+
+      const notice = document.querySelector<HTMLElement>("[data-notice]");
+      const header = document.querySelector<HTMLElement>("[data-header]");
+      if (notice && header) {
+        mountHeaderOffset(notice, header);
+      }
+
+      const frame = document.querySelector<HTMLElement>("[data-mock-frame]");
+      const stage = document.querySelector<HTMLElement>("[data-mock-stage]");
+      if (frame && stage) {
+        mountMockScale(frame, stage, MOCK_WIDTH, MOCK_HEIGHT);
+      }
+
+      const demo = document.querySelector<HTMLElement>(".demo");
+      if (demo) {
+        mountGuidedDemo(demo);
+      }
+
+      const tablist = document.querySelector<HTMLElement>("[data-install-tablist]");
+      if (tablist) {
+        mountInstallTabs(tablist, Array.from(document.querySelectorAll<HTMLElement>("[role='tabpanel']")));
+      }
+
+      for (const button of document.querySelectorAll<HTMLElement>("[data-copy-for]")) {
+        const code = document.getElementById(button.dataset.copyFor ?? "");
+        if (code) {
+          mountCopyButton(button, code);
+        }
+      }
+
+      mountReveal(Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]")));
+    </script>
+  </body>
+</html>

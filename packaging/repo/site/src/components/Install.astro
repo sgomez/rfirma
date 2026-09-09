@@ -1,0 +1,189 @@
+---
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+const tabs = [
+  { id: "flatpak", label: "Flatpak" },
+  { id: "apt", label: "APT" },
+  { id: "dnf", label: "DNF" },
+  { id: "windows", label: "Windows" },
+  { id: "macos", label: "macOS" },
+] as const;
+---
+
+<section
+  id="instalacion"
+  style="position:relative;background:linear-gradient(180deg,#f0fdfa 0%,#fafbfc 45%);border-radius:clamp(32px,6vw,72px) clamp(32px,6vw,72px) 0 0"
+>
+  <div style="max-width:60rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)">
+    <div data-reveal style="max-width:40rem;margin:0 auto;text-align:center">
+      <span
+        style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)"
+        >{t("install.kicker")}</span
+      >
+      <h2
+        style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em"
+      >
+        {t("install.title")}
+      </h2>
+      <p style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">
+        {t("install.body")}
+      </p>
+    </div>
+
+    <div
+      role="alert"
+      style="margin-top:clamp(20px,3vw,32px);display:flex;gap:14px;align-items:flex-start;padding:16px 18px;background:var(--rf-warning-bg);border:1px solid var(--rf-warning-border);border-radius:var(--rf-radius-md)"
+    >
+      <span style="flex:none;margin-top:2px;color:var(--rf-warning-text);display:flex"
+        ><svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          aria-hidden="true"><path d="M12 4 2.5 20h19z"></path><path d="M12 10v5M12 17.5v.5"></path></svg
+        ></span
+      >
+      <span>
+        <span style="display:block;font-size:.9375rem;font-weight:700;color:var(--rf-warning-text)"
+          >{t("install.alert.title")}</span
+        >
+        <p
+          style="margin:4px 0 0;font-size:.875rem;line-height:1.55;color:#78350f"
+          set:html={t("install.alert.body")}
+        />
+      </span>
+    </div>
+
+    <div style="text-align:center">
+      <div
+        data-install-tablist
+        role="tablist"
+        aria-label={t("install.tablist.aria")}
+        style="display:inline-flex;flex-wrap:wrap;gap:4px;margin:clamp(24px,4vw,40px) auto 0;padding:5px;border-radius:999px;background:#eef2f6;justify-content:center"
+      >
+        {
+          tabs.map((tab) => (
+            <button
+              type="button"
+              role="tab"
+              class="install-tab"
+              id={`tab-${tab.id}`}
+              aria-controls={`panel-${tab.id}`}
+              aria-selected={tab.id === "flatpak" ? "true" : "false"}
+            >
+              {tab.label}
+            </button>
+          ))
+        }
+      </div>
+    </div>
+
+    <div id="panel-flatpak" role="tabpanel" aria-labelledby="tab-flatpak" style="padding-top:24px">
+      <p style="margin:0;line-height:1.65" set:html={t("install.flatpak.body")} />
+      <div style="position:relative;margin-top:16px">
+        <button
+          type="button"
+          class="install-copy"
+          data-copy-for="code-flatpak"
+          aria-label={t("install.copy.flatpak.aria")}
+        >
+          <span class="install-copy__idle">{t("install.copy")}</span>
+          <span class="install-copy__done">{t("install.copied")}</span>
+        </button>
+        <pre id="code-flatpak" class="install-code">flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</pre>
+      </div>
+      <p
+        style="margin:10px 0 0;font-size:.875rem;color:var(--rf-text-muted)"
+        set:html={t("install.flatpak.tip")}
+      />
+    </div>
+
+    <div id="panel-apt" role="tabpanel" aria-labelledby="tab-apt" style="padding-top:24px" hidden>
+      <p style="margin:0;line-height:1.65" set:html={t("install.apt.body")} />
+      <div style="position:relative;margin-top:16px">
+        <button type="button" class="install-copy" data-copy-for="code-apt" aria-label={t("install.copy.apt.aria")}>
+          <span class="install-copy__idle">{t("install.copy")}</span>
+          <span class="install-copy__done">{t("install.copied")}</span>
+        </button>
+        <pre id="code-apt" class="install-code">curl -fsSL https://rfirma.sgomez.me/rfirma.asc | sudo tee /usr/share/keyrings/rfirma.asc &gt;/dev/null
+sudo tee /etc/apt/sources.list.d/rfirma.sources &lt;&lt;'EOF'
+Types: deb
+URIs: https://rfirma.sgomez.me/apt/
+Suites: stable
+Components: main
+Signed-By: /usr/share/keyrings/rfirma.asc
+EOF
+sudo apt update &amp;&amp; sudo apt install rfirma</pre>
+      </div>
+    </div>
+
+    <div id="panel-dnf" role="tabpanel" aria-labelledby="tab-dnf" style="padding-top:24px" hidden>
+      <p style="margin:0;line-height:1.65" set:html={t("install.dnf.body")} />
+      <div style="position:relative;margin-top:16px">
+        <button type="button" class="install-copy" data-copy-for="code-dnf" aria-label={t("install.copy.dnf.aria")}>
+          <span class="install-copy__idle">{t("install.copy")}</span>
+          <span class="install-copy__done">{t("install.copied")}</span>
+        </button>
+        <pre id="code-dnf" class="install-code">sudo tee /etc/yum.repos.d/rfirma.repo &lt;&lt;'EOF'
+[rfirma]
+name=rfirma
+baseurl=https://rfirma.sgomez.me/rpm/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://rfirma.sgomez.me/rfirma.asc
+EOF
+sudo dnf install rfirma</pre>
+      </div>
+    </div>
+
+    <div id="panel-windows" role="tabpanel" aria-labelledby="tab-windows" style="padding-top:24px" hidden>
+      <div class="rf-card" style="background:#ffffff;border-color:var(--rf-border-strong);gap:12px">
+        <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span
+            class="rf-badge"
+            style="border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)"
+            >{t("install.soon")}</span
+          >
+          <strong style="font-size:1rem">{t("install.windows.title")}</strong>
+        </span>
+        <p style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">
+          {t("install.windows.body")}
+        </p>
+        <p
+          style="margin:0;font-size:.875rem;line-height:1.6;color:var(--rf-text-muted)"
+          set:html={t("install.windows.note")}
+        />
+      </div>
+    </div>
+
+    <div id="panel-macos" role="tabpanel" aria-labelledby="tab-macos" style="padding-top:24px" hidden>
+      <div class="rf-card" style="background:#ffffff;border-color:var(--rf-border-strong);gap:12px">
+        <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span
+            class="rf-badge"
+            style="border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)"
+            >{t("install.soon")}</span
+          >
+          <strong style="font-size:1rem">{t("install.macos.title")}</strong>
+        </span>
+        <p style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">
+          {t("install.macos.body")}
+        </p>
+        <p
+          style="margin:0;font-size:.875rem;line-height:1.6;color:var(--rf-text-muted)"
+          set:html={t("install.macos.note")}
+        />
+      </div>
+    </div>
+  </div>
+</section>

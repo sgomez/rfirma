@@ -145,7 +145,7 @@ check-repo: check-flatpak-sources check-ds-bundle check-version check-actions ch
 # —`clean compile`, `package -DskipTests` y `test`— recompilando lo mismo.
 check-java: test-java
 
-check-ts: check-po lint-ts lint-i18n build-ts test-ts
+check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
 
 # SIN `cargo build --release`: ese binario no lo ejecuta nadie en el carril
 # rapido —el bundle lo produce el flatpak— y era un arbol de dependencias
@@ -189,6 +189,10 @@ check-changed:
         touched '^rfirma-native-bridge/' && lanes="$lanes check-java" || true
         touched '^rfirma-app/(src/|po/|package\.json|pnpm-lock|tsconfig|vite|biome)' \
             && lanes="$lanes check-ts" || true
+        # La landing tiene su propio proyecto y su propio lockfile: tocarla no
+        # obliga a compilar la aplicacion entera, solo a construirla a ella.
+        touched '^packaging/repo/(site/|Dockerfile|Caddyfile)' \
+            && lanes="$lanes check-landing" || true
         # docs/adr y los AGENTS.md entran por Rust y no por despiste: sus
         # guardas —adr_citations_resolve y agents_map_is_complete— son pruebas
         # de la grada A, y viven en el carril de Rust aunque el fichero que las
@@ -1282,6 +1286,21 @@ check-actions:
 # etiqueta `-rc.N`.
 #
 # Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
+# LA LANDING ES UN PROYECTO APARTE, con su `package.json`, su lockfile y sus
+# dependencias: `pnpm install` de la raiz no la instala y `build-ts` no la
+# construye. Aqui se instala en frio, se corren sus pruebas —las que exigen los
+# cinco diccionarios al 100 %— y se construye, que es lo que de verdad dice si
+# la pagina sigue saliendo en los cinco idiomas.
+#
+# Instala, prueba y construye la landing de rfirma.sgomez.me.
+check-landing:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{ justfile_directory() }}/packaging/repo/site
+    pnpm install --frozen-lockfile --reporter=silent
+    pnpm exec vitest run --reporter=dot
+    pnpm exec astro build
+
 check-publish:
     {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
     {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh

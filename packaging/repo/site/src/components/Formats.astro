@@ -1,0 +1,39 @@
+---
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+const formats = [
+  { name: "CAdES", reveal: "" },
+  { name: "PAdES", reveal: "2" },
+  { name: "XAdES", reveal: "3" },
+  { name: "FacturaE", reveal: "4" },
+  { name: "PKCS#11", reveal: "2" },
+];
+---
+
+<section aria-label={t("formats.aria")} style="background:#ffffff">
+  <div
+    style="max-width:76rem;margin:0 auto;padding:clamp(28px,4vw,44px) clamp(16px,4vw,32px);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:clamp(20px,4vw,56px)"
+  >
+    {
+      formats.map((format) => (
+        <span
+          data-reveal={format.reveal}
+          style="font-size:1.05rem;font-weight:800;letter-spacing:-.02em;color:#94a3b8"
+        >
+          {format.name}
+        </span>
+      ))
+    }
+  </div>
+  <div
+    aria-hidden="true"
+    style="width:56px;height:4px;margin:0 auto;border-radius:999px;background:linear-gradient(90deg,#067781,#2dd4bf)"
+  >
+  </div>
+</section>

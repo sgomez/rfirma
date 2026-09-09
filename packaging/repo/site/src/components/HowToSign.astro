@@ -1,0 +1,488 @@
+---
+import { translator, type Locale } from "../i18n";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = translator(locale);
+const steps = [
+  { title: "how.step1.title", body: "how.step1.body" },
+  { title: "how.step2.title", body: "how.step2.body" },
+  { title: "how.step3.title", body: "how.step3.body" },
+  { title: "how.step4.title", body: "how.step4.body" },
+  { title: "how.step5.title", body: "how.step5.body" },
+] as const;
+const beforeSigned = "0 1 2 3";
+---
+
+<section id="firmar" class="demo" data-step="0" style="position:relative;background:#ffffff;overflow:clip">
+  <div data-band aria-hidden="true"></div>
+  <div
+    style="position:relative;z-index:1;max-width:76rem;margin:0 auto;padding:clamp(56px,8vw,112px) clamp(16px,4vw,32px)"
+  >
+    <div data-reveal style="max-width:40rem;margin:0 auto clamp(24px,4vw,48px);text-align:center">
+      <span
+        style="display:block;margin-bottom:12px;font-size:.8125rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rf-brand-text)"
+        >{t("how.kicker")}</span
+      >
+      <h2
+        style="margin:0;font-size:clamp(1.85rem,3.8vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-.03em"
+      >
+        {t("how.title")}
+      </h2>
+    </div>
+    <div
+      data-demo-grid
+      style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(24px,4vw,56px);align-items:start"
+    >
+      <div style="min-width:0">
+        {
+          steps.map((step, index) => (
+            <div class="demo-step" data-index={String(index)}>
+              <span class="demo-step__number">{`0${index + 1}`}</span>
+              <h3 class="demo-step__title">{t(step.title)}</h3>
+              <p class="demo-step__body">{t(step.body)}</p>
+            </div>
+          ))
+        }
+      </div>
+
+      <div data-demo-mock style="position:sticky;top:132px;min-width:0">
+        <div data-mock-frame role="img" aria-label={t("mock.aria")} style="width:100%;min-width:0;overflow:hidden">
+          <div data-mock-stage style="width:1000px;height:620px;transform-origin:top left">
+            <div
+              data-theme="light"
+              aria-hidden="true"
+              style="width:1000px;height:620px;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);box-shadow:var(--rf-shadow-elevated)"
+            >
+              <header
+                style="height:48px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)"
+              >
+                <span style="font-size:15px;font-weight:700;letter-spacing:.4px">rFirma</span>
+                <span style="flex:1"></span>
+                <span class="rf-badge" data-steps={beforeSigned}>{t("mock.badge.unsigned")}</span>
+                <span class="rf-badge" data-steps="4" hidden>{t("mock.badge.signed")}</span>
+                <span style="display:flex;color:var(--rf-text)"
+                  ><svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg
+                  ></span
+                >
+              </header>
+
+              <div style="flex:1;min-height:0;display:flex;align-items:stretch">
+                <aside
+                  style="width:196px;flex:none;padding:16px;display:flex;flex-direction:column;gap:12px;border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)"
+                >
+                  <div
+                    style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;border:1px dashed var(--rf-border-strong);border-radius:var(--rf-radius-md)"
+                  >
+                    <span style="color:var(--rf-text-muted);display:flex"
+                      ><svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                        ><path d="M12 16V4M8 8l4-4 4 4"></path><path
+                          d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg
+                      ></span
+                    >
+                    <span style="font-size:12px;line-height:1.4;text-align:center;color:var(--rf-text)"
+                      >{t("mock.dropzone")}</span
+                    >
+                  </div>
+                  <span
+                    style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)"
+                    >{t("mock.recents")}</span
+                  >
+                  <div
+                    style="display:flex;flex-direction:column;gap:5px;padding:10px 12px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg)"
+                  >
+                    <span
+                      style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                      data-steps={beforeSigned}>{t("mock.file.unsigned")}</span
+                    >
+                    <span
+                      style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                      data-steps="4"
+                      hidden>{t("mock.file.signed")}</span
+                    >
+                    <span style="display:flex;align-items:center;gap:6px"
+                      ><span class="rf-badge" data-steps={beforeSigned}>{t("mock.badge.unsigned")}</span
+                      ><span class="rf-badge" data-steps="4" hidden>{t("mock.badge.signed")}</span><span
+                        style="font-size:11px;color:var(--rf-text-muted)">{t("mock.recent1.time")}</span
+                      ></span
+                    >
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px">
+                    <span
+                      style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--rf-text-muted)"
+                      >{t("mock.recent2.name")}</span
+                    >
+                    <span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.recent2.time")}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;padding:10px 12px">
+                    <span
+                      style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--rf-text-muted)"
+                      >{t("mock.recent3.name")}</span
+                    >
+                    <span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.recent3.time")}</span>
+                  </div>
+                </aside>
+
+                <div
+                  style="flex:1;min-width:0;position:relative;background:var(--rf-surface);display:flex;align-items:center;justify-content:center;padding:20px 20px 68px"
+                >
+                  <div
+                    style="width:296px;aspect-ratio:1/1.414;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);box-shadow:var(--rf-shadow-card);position:relative;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:26px"
+                  >
+                    <span style="height:10px;width:46%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"
+                    ></span>
+                    <span style="height:6px"></span>
+                    <span style="height:5px;width:68%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:65%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:74%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:70%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:10px"></span>
+                    <span style="height:5px;width:92%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:88%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:94%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <span style="height:5px;width:76%;border-radius:2px;background:var(--rf-border-subtle)"></span>
+                    <div class="mock-stamp" data-anim>
+                      <span style="flex:none;color:var(--rf-text);opacity:.85;display:flex"
+                        ><svg
+                          width="52"
+                          height="26"
+                          viewBox="0 0 84 40"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                          ><path
+                            d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"
+                          ></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg
+                        ></span
+                      >
+                      <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                        <span
+                          style="font-size:8px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                          >{t("mock.stamp.name")}</span
+                        >
+                        <span style="font-size:7px;color:var(--rf-text-muted)">{t("mock.stamp.id")}</span>
+                        <span style="font-size:7px;color:var(--rf-text-muted)">{t("mock.stamp.date")}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-pill);background:var(--rf-surface);box-shadow:var(--rf-shadow-elevated);white-space:nowrap"
+                  >
+                    <span
+                      style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)"
+                      ><svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg
+                      ></span
+                    >
+                    <span style="display:flex;align-items:center;gap:6px;padding:0 4px"
+                      ><span
+                        style="min-width:30px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);font-size:12px;font-weight:700"
+                        >3</span
+                      ><span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.pageOf")}</span></span
+                    >
+                    <span
+                      style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--rf-text)"
+                      ><svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg
+                      ></span
+                    >
+                    <span style="width:1px;height:20px;margin:0 4px;background:var(--rf-border-subtle)"></span>
+                    <span style="font-size:11px;font-weight:700;min-width:42px;text-align:center"
+                      >{t("mock.zoom")}</span
+                    >
+                  </div>
+                </div>
+
+                <aside
+                  style="width:296px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--rf-border-subtle);background:var(--rf-surface);position:relative"
+                >
+                  <div style="flex:1;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;align-items:flex-start;gap:8px">
+                      <span style="flex:none;margin-top:2px;color:var(--rf-text-muted);display:flex"
+                        ><svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                          ><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path
+                            d="M14 3v5h5"></path></svg
+                        ></span
+                      >
+                      <span style="min-width:0;display:flex;flex-direction:column;gap:3px">
+                        <span
+                          style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                          data-steps={beforeSigned}>{t("mock.file.unsigned")}</span
+                        >
+                        <span
+                          style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                          data-steps="4"
+                          hidden>{t("mock.file.signed")}</span
+                        >
+                        <span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.file.meta")}</span>
+                      </span>
+                    </div>
+                    <hr style="border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%" />
+                    <span
+                      style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)"
+                      data-steps={beforeSigned}>{t("mock.panel.certificate")}</span
+                    >
+                    <span
+                      style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)"
+                      data-steps="4"
+                      hidden>{t("mock.panel.summary")}</span
+                    >
+
+                    <span class="rf-btn rf-btn--secondary" style="width:100%" data-steps="0"
+                      >{t("mock.chooseCert")}</span
+                    >
+
+                    <div
+                      class="rf-card"
+                      style="padding:12px;gap:5px;border-color:var(--rf-border-strong)"
+                      data-steps="1 2 3"
+                      hidden
+                    >
+                      <span style="font-size:13px;font-weight:700">{t("mock.stamp.name")}</span>
+                      <span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.cert.chosen.detail")}</span>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:10px" data-steps="4" hidden>
+                      <span style="display:flex;gap:6px"
+                        ><span class="rf-badge">{t("mock.summary.format")}</span><span class="rf-badge"
+                          >{t("mock.summary.count")}</span
+                        ></span
+                      >
+                      <div class="rf-card" style="padding:12px;gap:5px">
+                        <span style="display:flex;align-items:center;gap:8px"
+                          ><span style="flex:1;font-size:13px;font-weight:700">{t("mock.stamp.name")}</span><span
+                            class="rf-badge rf-badge--primary">{t("mock.summary.mine")}</span
+                          ></span
+                        >
+                        <span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.summary.sig1.detail")}</span>
+                      </div>
+                      <div class="rf-card" style="padding:12px;gap:5px">
+                        <span style="font-size:13px;font-weight:700">{t("mock.summary.sig2.name")}</span>
+                        <span style="font-size:11px;color:var(--rf-text-muted)">{t("mock.summary.sig2.detail")}</span>
+                      </div>
+                    </div>
+
+                    <div class="mock-visible" data-steps={beforeSigned}>
+                      <hr style="border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%" />
+                      <span
+                        style="font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted)"
+                        >{t("mock.visible.title")}</span
+                      >
+                      <span style="display:flex;align-items:center;gap:8px">
+                        <span class="mock-toggle"><span class="mock-toggle__knob"></span></span>
+                        <span style="flex:1;font-size:13px;line-height:1.4">{t("mock.visible.toggle")}</span>
+                      </span>
+                      <span style="font-size:11px;color:var(--rf-text-muted)" data-steps="0"
+                        >{t("mock.visible.hint.off")}</span
+                      >
+                      <span style="font-size:11px;color:var(--rf-text-muted)" data-steps="1 2 3" hidden
+                        >{t("mock.visible.hint.on")}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div
+                    style="flex:none;padding:16px;border-top:1px solid var(--rf-border-subtle);display:flex;flex-direction:column;gap:10px"
+                  >
+                    <span style="font-size:11px;font-weight:600;color:var(--rf-text-muted)">{t("mock.saveIn")}</span>
+                    <span style="font-size:12px;line-height:1.4;overflow-wrap:anywhere"
+                      ><span style="color:var(--rf-text-muted)">{t("mock.saveIn.dir")}</span>{
+                        t("mock.file.signed")
+                      }</span
+                    >
+                    <span class="rf-btn rf-btn--primary" style="width:100%" data-steps={beforeSigned}
+                      >{t("mock.action.sign")}</span
+                    >
+                    <span class="rf-btn rf-btn--primary" style="width:100%" data-steps="4" hidden
+                      >{t("mock.action.open")}</span
+                    >
+                  </div>
+
+                  <div
+                    data-anim
+                    data-steps="1"
+                    hidden
+                    style="position:absolute;top:150px;left:16px;right:16px;z-index:6;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated);overflow:hidden"
+                  >
+                    <span
+                      style="display:block;padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted);border-bottom:1px solid var(--rf-border-subtle)"
+                      >{t("mock.certlist.available")}</span
+                    >
+                    <span
+                      style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)"
+                      ><span style="font-size:13px;font-weight:700">{t("mock.stamp.name")}</span><span
+                        style="font-size:11px;color:var(--rf-text-muted)">{t("mock.cert.chosen.detail")}</span
+                      ></span
+                    >
+                    <span
+                      style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-bottom:1px solid var(--rf-border-subtle)"
+                      ><span style="font-size:13px;font-weight:700">{t("mock.certlist.cert2.name")}</span><span
+                        style="font-size:11px;color:var(--rf-text-muted)">{t("mock.certlist.cert2.detail")}</span
+                      ></span
+                    >
+                    <span
+                      style="display:block;padding:8px 12px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--rf-text-muted);border-bottom:1px solid var(--rf-border-subtle)"
+                      >{t("mock.certlist.unusable")}</span
+                    >
+                    <span style="display:flex;flex-direction:column;gap:3px;padding:10px 12px;opacity:.55"
+                      ><span style="font-size:13px;font-weight:700">{t("mock.certlist.cert3.name")}</span><span
+                        style="font-size:11px;color:var(--rf-text-muted)">{t("mock.certlist.cert3.detail")}</span
+                      ><span style="font-size:11px;font-weight:600">{t("mock.certlist.cert3.state")}</span></span
+                    >
+                  </div>
+                </aside>
+              </div>
+
+              <div
+                class="rf-scrim"
+                data-anim
+                data-steps="2"
+                hidden
+                style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"
+              >
+                <div class="rf-dialog" style="width:380px">
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <span style="font-size:19px;font-weight:700">{t("mock.pin.title")}</span>
+                    <span style="font-size:13px;color:var(--rf-text-muted)">{t("mock.pin.subject")}</span>
+                  </div>
+                  <div class="rf-field">
+                    <span class="rf-label">{t("mock.pin.label")}</span>
+                    <div
+                      class="rf-input"
+                      style="display:flex;align-items:center;font-size:18px;letter-spacing:6px;border-color:var(--rf-focus-ring);outline:2px solid var(--rf-focus-ring);outline-offset:2px"
+                    >
+                      ••••
+                    </div>
+                  </div>
+                  <hr class="rf-divider" />
+                  <div style="display:flex;justify-content:flex-end;gap:12px">
+                    <span class="rf-btn rf-btn--ghost">{t("mock.pin.cancel")}</span>
+                    <span class="rf-btn rf-btn--primary">{t("mock.pin.sign")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="rf-scrim"
+                data-anim
+                data-steps="3"
+                hidden
+                style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"
+              >
+                <div class="rf-dialog" style="width:380px">
+                  <span style="font-size:19px;font-weight:700">{t("mock.signing.title")}</span>
+                  <div style="display:flex;flex-direction:column;gap:14px">
+                    <span style="display:flex;align-items:center;gap:10px"
+                      ><span
+                        style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text)"
+                        ><svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.2"
+                          stroke-linecap="round"
+                          aria-hidden="true"><path d="M4 12.5 9.5 18 20 6"></path></svg
+                        ></span
+                      ><span style="font-size:14px"
+                        >{t("mock.signing.presign")}
+                        <span style="color:var(--rf-text-muted)">{t("mock.signing.presign.note")}</span></span
+                      ></span
+                    >
+                    <span style="display:flex;align-items:center;gap:10px"
+                      ><span
+                        style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center"
+                        ><span
+                          style="width:10px;height:10px;border-radius:50%;background:var(--rf-primary);animation:rf-pulse 1.2s ease-in-out infinite"
+                        ></span></span
+                      ><span style="font-size:14px;font-weight:700">{t("mock.signing.sign")}</span></span
+                    >
+                    <span style="display:flex;align-items:center;gap:10px"
+                      ><span
+                        style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center"
+                        ><span
+                          style="width:10px;height:10px;border-radius:50%;border:1px solid var(--rf-border-strong)"
+                        ></span></span
+                      ><span style="font-size:14px;color:var(--rf-text-muted)"
+                        >{t("mock.signing.assemble")}
+                        <span style="color:var(--rf-text-muted)">{t("mock.signing.assemble.note")}</span></span
+                      ></span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          role="tablist"
+          aria-label={t("how.tablist.aria")}
+          style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px"
+        >
+          {
+            steps.map((_step, index) => (
+              <button
+                type="button"
+                role="tab"
+                class="demo-dot"
+                data-demo-dot
+                aria-selected={index === 0 ? "true" : "false"}
+              >
+                {index + 1}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

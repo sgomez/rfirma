@@ -385,7 +385,7 @@ note "  ramas protegidas de antes ya no existe: hoy todo son rulesets."
 note "  Y ANADETE a 'Bypass list' como 'Repository admin': sin nadie ahi, la"
 note "  regla 'Restrict creations' NO exceptua a los administradores, asi que la"
 note "  etiqueta no la podria crear nadie, tampoco tu, y no habria Release."
-step "Comprueba que la huella escrita en SECURITY.md y en packaging/repo/index.html"
+step "Comprueba que la huella escrita en SECURITY.md y en la landing"
 note "  es esta: $HUELLA"
 step "Borra $ANILLO de este equipo cuando la copia fuera de linea este hecha."
 printf '\n'
