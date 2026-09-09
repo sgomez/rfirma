@@ -66,6 +66,8 @@ getrandom = "0.3"
 # directa, y solo para parsear: el serializador de TriphaseData emite el
 # literal exacto del original, no XML generico.
 quick-xml = "0.41"
+# Descompresión de dat cuando la sede envía gzip=true.
+flate2 = "1"
 # La memoria entre sesiones son dos ficheros JSON (ADR-0010), asi que serde
 # entra aqui y no con el primer #[tauri::command]: el formato de configuracion
 # y estado lo escribe este modulo, no la interfaz.

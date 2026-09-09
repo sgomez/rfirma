@@ -1137,3 +1137,130 @@ fn the_guard_lets_a_first_signature_of_an_invoice_and_any_round_of_the_rest_thro
     )
     .expect("la guarda es solo de facturas");
 }
+
+fn gzipped(bytes: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    encoder.write_all(bytes).expect("comprime en memoria");
+    encoder.finish().expect("termina el gzip")
+}
+
+#[test]
+fn gzip_true_decompresses_the_document_of_sign() {
+    let plain = b"%PDF-1.7\nplain-pdf-content";
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&gzip=true&dat={}",
+        dat(&gzipped(plain))
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.document(), plain);
+}
+
+#[test]
+fn gzip_true_decompresses_the_document_of_cosign() {
+    let plain = b"%PDF-1.7\nplain-pdf-content";
+    let url = an_operation(&format!(
+        "op=cosign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&gzip=true&dat={}",
+        dat(&gzipped(plain))
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.document(), plain);
+}
+
+#[test]
+fn gzip_true_decompresses_the_document_of_countersign() {
+    let plain = b"cades-signature-bytes";
+    let url = an_operation(&format!(
+        "op=countersign&idsession=8jAkPZfRw2mQxN4TbYuL&format=CAdES&algorithm=SHA256withRSA&gzip=true&dat={}",
+        dat(&gzipped(plain))
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una contrafirma");
+    };
+    assert_eq!(request.document(), plain);
+}
+
+#[test]
+fn gzip_true_decompresses_the_document_of_sign_and_save() {
+    let plain = b"%PDF-1.7\nplain-pdf-content";
+    let url = an_operation(&format!(
+        "op=signandsave&cop=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&gzip=true&dat={}",
+        dat(&gzipped(plain))
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es signandsave");
+    };
+    assert_eq!(request.document(), Some(plain.as_slice()));
+}
+
+#[test]
+fn gzip_true_decompresses_the_document_of_local_batch() {
+    let plain = json_lote("SHA256", true);
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&gzip=true&dat={}",
+        dat(&gzipped(plain.as_bytes()))
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert_eq!(request.lote(), plain.as_bytes());
+}
+
+#[test]
+fn gzip_true_decompresses_the_document_of_remote_batch() {
+    let plain = xml_lote("SHA256", false);
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&jsonbatch=false&gzip=true&\
+         batchpresignerurl=https://batch.example/pre&batchpostsignerurl=https://batch.example/post&dat={}",
+        dat(&gzipped(plain.as_bytes()))
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert_eq!(request.lote(), plain.as_bytes());
+}
+
+#[test]
+fn gzip_true_with_invalid_gzip_is_refused_as_data_parameter() {
+    let not_gzipped = b"not-a-gzip-stream";
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&gzip=true&dat={}",
+        dat(not_gzipped)
+    ));
+
+    let refusal = read_operation(&url).expect_err("no es gzip");
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Data));
+}
+
+#[test]
+fn gzip_false_or_absent_leaves_the_document_untouched() {
+    let compressed = gzipped(b"%PDF-1.7\ncontent");
+    let without_gzip = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&dat={}",
+        dat(&compressed)
+    ));
+    let with_false = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&gzip=false&dat={}",
+        dat(&compressed)
+    ));
+
+    let SiteOperation::Sign(first) = read_operation(&without_gzip).expect("se atiende") else {
+        panic!("es sign");
+    };
+    let SiteOperation::Sign(second) = read_operation(&with_false).expect("se atiende") else {
+        panic!("es sign");
+    };
+    assert_eq!(first.document(), compressed.as_slice());
+    assert_eq!(second.document(), compressed.as_slice());
+}

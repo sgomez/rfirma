@@ -64,6 +64,9 @@ const THE_LOCAL_BATCH_WITH_AN_ILLEGIBLE_ITEM: &str = "batchlocalillegible";
 /// El guion de `sign` con `format=CAdES` y `mode=explicit` sobre el reto binario.
 const THE_SIGN_CADES_EXPLICIT: &str = "signcades";
 
+/// El guion de `sign` con `format=CAdES`, `mode=explicit` y `gzip=true` sobre el reto comprimido.
+const THE_SIGN_GZIP: &str = "signgzip";
+
 /// El guion de `sign` con `format=auto` sobre el mismo reto binario.
 const THE_SIGN_AUTO: &str = "signauto";
 
@@ -1726,6 +1729,12 @@ async fn the_sign_of(mode: BenchMode, script: &str) {
 #[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
 async fn the_published_client_signs_a_binary_challenge_with_cades_explicit() {
     the_sign_of(BenchMode::Fourth, THE_SIGN_CADES_EXPLICIT).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_gzipped_binary_challenge() {
+    the_sign_of(BenchMode::Fourth, THE_SIGN_GZIP).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
