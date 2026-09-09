@@ -1862,10 +1862,10 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
     assert_eq!(saving.starting_folder.as_deref(), Some("/home/persona"));
 }
 
-/// El rechazo por formato lo da el puente, no el protocolo: la sede recibe el
-/// mismo `SAF_06` que antes daba la comprobación de texto de `sign`.
+/// El contenedor ASiC-S de CAdES era el contraejemplo del formato sin puente, y
+/// ya no lo es: el trámite lo lleva al consentimiento como a cualquier otro.
 #[test]
-fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
+fn the_asic_s_container_of_cades_reaches_the_consent_like_any_other_format() {
     let format = "CAdES-ASiC-S";
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -1893,12 +1893,10 @@ fn a_format_the_bridge_does_not_attend_is_refused_before_asking_for_consent() {
         &live,
     );
 
-    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = step else {
-        panic!("el puente no atiende '{format}': {step:?}");
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("el puente ya atiende '{format}': {step:?}");
     };
-    let (told, code) = crate::site::adapters::frontier::told(&refusal);
-    assert_eq!(code, SafCode::UnsupportedFormat, "format={format}");
-    assert_eq!(told.situation, "bridgeFailed", "format={format}");
+    assert_eq!(consent.round, SignatureRound::First);
 }
 
 /// `mode=explicit` con XAdES no se reproduce: `SAF_06` antes de pedir consentimiento.
@@ -3940,7 +3938,7 @@ fn a_local_batch_with_a_failing_second_item(stop_on_error: bool) -> AfirmaUrl {
     let lote = format!(
         "{{\"algorithm\":\"SHA256\",\"format\":\"auto\",\"stoponerror\":{},\"singlesigns\":[\
          {{\"id\":\"001\",\"datareference\":\"{}\"}},\
-         {{\"id\":\"002\",\"datareference\":\"{}\",\"format\":\"cades-asic-s\"}},\
+         {{\"id\":\"002\",\"datareference\":\"{}\",\"format\":\"pades\"}},\
          {{\"id\":\"003\",\"datareference\":\"{}\"}}]}}",
         stop_on_error,
         in_the_batch(A_LOCAL_PDF),

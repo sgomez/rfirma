@@ -1,4 +1,4 @@
-use super::{BridgeError, Format, PreSignBlock, PreSignature, TokenSignature, XadesVariant};
+use super::{Format, PreSignBlock, PreSignature, TokenSignature};
 use crate::signing::domain::{SealMismatch, SessionSeal};
 
 fn a_block(id: &str, pre: &[u8]) -> PreSignBlock {
@@ -85,32 +85,10 @@ fn every_format_says_the_name_the_original_expects() {
     );
 }
 
-/// Los formatos que tienen pareja de entradas en el puente.
-const BRIDGED: [Format; 8] = [
-    Format::Pades,
-    Format::Cades,
-    Format::Cms,
-    Format::Xades(XadesVariant::Detached),
-    Format::Xades(XadesVariant::Enveloping),
-    Format::Xades(XadesVariant::Enveloped),
-    Format::Xades(XadesVariant::AsicS),
-    Format::FacturaE,
-];
-
 #[test]
-fn the_bridge_resolves_pades_cades_cms_every_xades_variant_and_facturae_for_now() {
-    for format in BRIDGED {
+fn the_bridge_resolves_every_format_of_the_vocabulary() {
+    for format in Format::ALL {
         assert_eq!(format.bridged().expect("tiene entradas"), format);
-    }
-
-    for format in Format::ALL
-        .iter()
-        .filter(|format| !BRIDGED.contains(format))
-    {
-        let refused = format.bridged().expect_err("no tiene entradas");
-
-        assert!(matches!(refused, BridgeError::FormatNotBridged(named) if named == *format));
-        assert!(refused.to_string().contains(format.name()));
     }
 }
 
