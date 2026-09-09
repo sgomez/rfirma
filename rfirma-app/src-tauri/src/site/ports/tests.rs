@@ -34,6 +34,47 @@ fn every_format_the_site_can_name_crosses_to_the_one_the_bridge_knows() {
 }
 
 #[test]
+fn what_arrives_at_the_inbox_notifies_arrival_and_delivers_operations() {
+    let arrived = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let delivered = std::sync::Arc::new(std::sync::Mutex::new(None));
+
+    let arrived_clone = std::sync::Arc::clone(&arrived);
+    let delivered_clone = std::sync::Arc::clone(&delivered);
+    let inbox = Inbox::of(
+        move || {
+            arrived_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+        },
+        move |url, _reply| {
+            *delivered_clone.lock().expect("el candado") = Some(url);
+        },
+    );
+
+    assert!(!arrived.load(std::sync::atomic::Ordering::SeqCst));
+    inbox.arrived();
+    assert!(arrived.load(std::sync::atomic::Ordering::SeqCst));
+
+    let url = AfirmaUrl::parse("afirma://websocket?ports=51001,51002,51003&v=4").expect("url");
+    inbox.deliver(url.clone(), ReplyHandle::of(|_| {}));
+    assert_eq!(delivered.lock().expect("el candado").as_ref(), Some(&url));
+}
+
+#[test]
+fn arrival_is_notified_only_once() {
+    let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let count_clone = std::sync::Arc::clone(&count);
+    let inbox = Inbox::of(
+        move || {
+            count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        },
+        move |_url, _reply| {},
+    );
+
+    inbox.arrived();
+    inbox.arrived();
+    assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
+#[test]
 fn what_is_answered_is_what_the_other_end_receives() {
     let received = std::sync::Arc::new(std::sync::Mutex::new(None));
     let keeping = std::sync::Arc::clone(&received);

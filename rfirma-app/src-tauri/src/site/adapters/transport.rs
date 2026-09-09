@@ -1,12 +1,10 @@
 //! Transporte de producción para el servidor local HTTPS y WebSockets (ADR-0005, ADR-0017).
 
-use std::sync::Arc;
-
 use crate::site::adapters::channel;
 use crate::site::adapters::tls::{LocalCaStore, LocalServerCertificate};
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 
-use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
+use crate::site::application::errand::{Inbox, Transport};
 
 /// Transporte WSS sobre la interfaz local con puerto sorteado.
 pub struct LoopbackWss {
@@ -46,11 +44,6 @@ impl Transport for LoopbackWss {
         let certificate =
             LocalServerCertificate::issued_by(&ca).map_err(|error| unusable(error.to_string()))?;
 
-        let inbox = Arc::clone(&self.inbox);
-        let operations: channel::SiteOperations = Arc::new(move |url, reply| {
-            inbox(url, ReplyHandle::of(move |text| reply.answer(text)));
-        });
-
-        channel::open(location, &certificate, duty, operations)
+        channel::open(location, &certificate, duty, self.inbox.clone())
     }
 }

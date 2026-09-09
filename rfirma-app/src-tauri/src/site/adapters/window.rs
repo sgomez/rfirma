@@ -19,7 +19,7 @@ pub const SITE_WINDOW: &str = "site";
 /// Nombre del evento con el que la ventana de sede recibe el trámite.
 pub const SITE_ERRAND: &str = "site-errand";
 
-/// Abre la ventana de diálogo de sede.
+/// Abre la ventana de diálogo de sede (inicialmente oculta).
 pub fn open_the_site_window(app: &tauri::AppHandle) {
     use tauri::{WebviewUrl, WebviewWindowBuilder};
 
@@ -27,10 +27,43 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
         .title("rFirma")
         .inner_size(520.0, 420.0)
         .resizable(false)
+        .visible(false)
         .build();
 
     if let Err(error) = built {
         eprintln!("rfirma: no se puede abrir la ventana de sede ({error})");
+    }
+}
+
+/// Muestra y da foco a la ventana de diálogo de sede.
+pub fn show_the_site_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window(SITE_WINDOW) {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+/// Puerto de ventana para la aplicación Tauri.
+#[derive(Clone)]
+pub struct TauriSiteWindow {
+    app: tauri::AppHandle,
+}
+
+impl TauriSiteWindow {
+    /// Crea un puerto de ventana vinculado al manejador de Tauri.
+    pub fn new(app: tauri::AppHandle) -> Self {
+        Self { app }
+    }
+}
+
+impl crate::site::application::startup::SiteWindow for TauriSiteWindow {
+    fn open(&self, _content: crate::site::application::startup::SiteWindowContent<'_>) {
+        open_the_site_window(&self.app);
+    }
+
+    fn show(&self) {
+        publish_the_moment(&self.app);
+        show_the_site_window(&self.app);
     }
 }
 

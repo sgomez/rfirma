@@ -340,6 +340,8 @@ pub enum Moment {
     NoChannel(NoChannel),
     /// Rechazo del protocolo sin canal por el que responder.
     RefusedWithoutChannel(Refusal),
+    /// Canal abierto pero el navegador nunca envió el mensaje inicial tras expirar el tiempo de espera.
+    Unreachable,
 }
 
 /// Motivo por el que no hay canal abierto con la sede.

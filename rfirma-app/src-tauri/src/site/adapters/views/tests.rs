@@ -223,3 +223,14 @@ fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
         );
     }
 }
+
+#[test]
+fn unreachable_crosses_named() {
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::Unreachable)).expect("cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": { "kind": "unreachable" },
+        })
+    );
+}

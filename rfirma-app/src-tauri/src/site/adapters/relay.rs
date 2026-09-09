@@ -80,9 +80,9 @@ impl Transport for Relay {
         let operation = resolve_operation(info, self.servlets.as_ref())
             .map_err(|error| ChannelError::refused(refusal_of(error)))?;
 
-        let inbox = Arc::clone(&self.inbox);
+        let inbox = self.inbox.clone();
         let reply = ReplyHandle::of(upload);
-        let delivery = Delivery::of(move || (inbox)(operation, reply));
+        let delivery = Delivery::of(move || inbox.deliver(operation, reply));
 
         Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery))
     }

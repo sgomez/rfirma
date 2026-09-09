@@ -10,15 +10,15 @@ use tokio_native_tls::TlsAcceptor;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::site::adapters::channel::conversation::{answer, Answer};
-use crate::site::adapters::channel::reply::ReplyHandle;
 use crate::site::adapters::tls::LocalServerCertificate;
 use crate::site::domain::channel::ChannelDuty;
 use crate::site::domain::channel::{ChannelError, Situation};
 use crate::site::domain::channel::{ChannelLocation, OpenChannel, Shutdown};
-use crate::site::domain::protocol::AfirmaUrl;
+
+use crate::site::ports::Inbox;
 
 /// Manejador que atiende la operación recibida por el canal.
-pub type SiteOperations = Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>;
+pub type SiteOperations = Inbox;
 
 /// Inicia la escucha del canal sobre un listener ya enlazado.
 pub async fn serve(
@@ -100,7 +100,7 @@ async fn accept_until_stopped(
                 let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
-                let operations = Arc::clone(&operations);
+                let operations = operations.clone();
                 tokio::spawn(async move {
                     let _ = attend(stream, peer, &acceptor, &duty, &operations).await;
                 });
@@ -129,15 +129,24 @@ async fn attend(
         };
 
         match answer(duty, from_loopback, &text) {
-            Answer::Reply(reply) => socket.send(Message::text(reply)).await?,
+            Answer::Reply(reply) => {
+                operations.arrived();
+                socket.send(Message::text(reply)).await?;
+            }
             Answer::ReplyAndClose(reply) => {
                 socket.send(Message::text(reply)).await?;
                 socket.close(None).await?;
                 break;
             }
             Answer::Pending(url) => {
+                operations.arrived();
                 let (sender, receiver) = oneshot::channel();
-                operations(url, ReplyHandle::of(sender));
+                operations.deliver(
+                    url,
+                    crate::site::ports::ReplyHandle::of(move |text| {
+                        let _ = sender.send(text);
+                    }),
+                );
                 if let Ok(reply) = receiver.await {
                     socket.send(Message::text(reply)).await?;
                 }

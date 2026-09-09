@@ -1,8 +1,10 @@
 //! Estado del trámite con la sede y gestión de su ciclo de vida (ADR-0016).
 
+use crate::site::application::startup::SiteWindow;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::{Format, SignatureOperation};
@@ -15,6 +17,17 @@ use super::outcome::{
     LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints, SiteOutcome,
 };
 use crate::site::ports::{ReplyHandle, Scratch};
+
+struct RevelationInner {
+    revealed: bool,
+    cancelled: bool,
+}
+
+#[derive(Clone)]
+struct RevelationHandle {
+    state: Arc<(Mutex<RevelationInner>, Condvar)>,
+    window: Arc<dyn SiteWindow>,
+}
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
 pub type NegotiatedCodec = Arc<dyn ProtocolCodec + Send + Sync>;
@@ -33,7 +46,8 @@ pub struct LiveErrand {
     reply: Mutex<Option<ReplyHandle>>,
     asked: Mutex<Option<AfirmaUrl>>,
     consent: Mutex<Option<PendingConsent>>,
-    moment: Mutex<Option<Moment>>,
+    moment: Arc<Mutex<Option<Moment>>>,
+    revelation: Mutex<Option<RevelationHandle>>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -76,6 +90,11 @@ impl Errand {
     /// Códec negociado para este trámite.
     pub fn codec(&self) -> &NegotiatedCodec {
         &self.codec
+    }
+
+    /// Indica si el trámite mantiene un canal abierto esperando conexiones.
+    pub fn opens_channel(&self) -> bool {
+        self.port > 0
     }
 }
 
@@ -156,6 +175,7 @@ impl LiveErrand {
         if live.is_some() {
             return false;
         }
+        self.cancel_backing_timeout();
         *crate::lock(&self.codec) = Some(Arc::clone(&errand.codec));
         *live = Some(errand);
         true
@@ -193,6 +213,7 @@ impl LiveErrand {
 
     /// Finaliza el trámite y limpia sus recursos asociados.
     pub fn end(&self) {
+        self.cancel_backing_timeout();
         *crate::lock(&self.errand) = None;
         drop(crate::lock(&self.reply).take());
         if let Some(scratch) = crate::lock(&self.scratch).take() {
@@ -307,6 +328,78 @@ impl LiveErrand {
     /// Limpia los datos de consentimiento registrados.
     pub(super) fn forget_the_consent(&self) {
         *crate::lock(&self.consent) = None;
+    }
+
+    /// Arma el temporizador de respaldo para revelar la ventana si el navegador no llega.
+    pub fn arm_backing_timeout(&self, window: Arc<dyn SiteWindow>, threshold: Duration) {
+        self.cancel_backing_timeout();
+        let state = Arc::new((
+            Mutex::new(RevelationInner {
+                revealed: false,
+                cancelled: false,
+            }),
+            Condvar::new(),
+        ));
+        let handle = RevelationHandle {
+            state: Arc::clone(&state),
+            window: Arc::clone(&window),
+        };
+        *crate::lock(&self.revelation) = Some(handle);
+
+        let timer_state = Arc::clone(&state);
+        let timer_window = Arc::clone(&window);
+        let timer_moment = Arc::clone(&self.moment);
+
+        std::thread::spawn(move || {
+            let (lock, cvar) = &*timer_state;
+            let mut inner = lock.lock().unwrap();
+            while !inner.cancelled && !inner.revealed {
+                let result = cvar.wait_timeout(inner, threshold).unwrap();
+                inner = result.0;
+                if result.1.timed_out() {
+                    break;
+                }
+            }
+            if !inner.cancelled && !inner.revealed {
+                inner.revealed = true;
+                drop(inner);
+                *timer_moment.lock().unwrap() = Some(Moment::Unreachable);
+                timer_window.show();
+            }
+        });
+    }
+
+    /// Cancela el temporizador de respaldo si estaba activo.
+    pub fn cancel_backing_timeout(&self) {
+        if let Some(handle) = crate::lock(&self.revelation).take() {
+            let (lock, cvar) = &*handle.state;
+            let mut inner = lock.lock().unwrap();
+            inner.cancelled = true;
+            cvar.notify_all();
+        }
+    }
+
+    /// Notifica que el navegador ha llegado al canal, revelando la ventana si estaba oculta.
+    pub fn browser_arrived(&self) {
+        let handle = crate::lock(&self.revelation).as_ref().cloned();
+        if let Some(handle) = handle {
+            let (lock, cvar) = &*handle.state;
+            let mut inner = lock.lock().unwrap();
+            if !inner.revealed && !inner.cancelled {
+                inner.revealed = true;
+                cvar.notify_all();
+                drop(inner);
+                handle.window.show();
+            }
+        }
+    }
+
+    /// Comprueba si la ventana del trámite ha sido revelada.
+    pub fn is_revealed(&self) -> bool {
+        crate::lock(&self.revelation)
+            .as_ref()
+            .map(|r| r.state.0.lock().unwrap().revealed)
+            .unwrap_or(false)
     }
 
     /// Registra el momento actual del trámite.

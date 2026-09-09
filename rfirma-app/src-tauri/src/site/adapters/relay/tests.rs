@@ -94,7 +94,7 @@ fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
     let failures = Arc::new(Mutex::new(Vec::new()));
 
     let inbox_delivered = Arc::clone(&delivered);
-    let inbox: Inbox = Arc::new(move |url, reply| {
+    let inbox = Inbox::for_operations(move |url, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
     });
 

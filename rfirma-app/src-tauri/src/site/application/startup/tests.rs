@@ -45,16 +45,21 @@ impl World {
                 "los tres puertos sorteados estan ocupados",
             ));
         }
-        let ChannelLocation::Drawn(ports) = location else {
-            panic!("esta prueba sortea puertos: {location:?}");
+        let port = match location {
+            ChannelLocation::Drawn(ports) | ChannelLocation::Service(ports) => {
+                *ports.first().expect("puertos")
+            }
+            ChannelLocation::Fixed(port) => *port,
+            ChannelLocation::Relay(_) => 0,
         };
-        let port = *ports.first().expect("la sede sorteó puertos");
         Ok(OpenChannel::new(port, Shutdown::of(|| {})))
     }
+}
 
-    fn window(&self, content: SiteWindowContent<'_>) {
+impl SiteWindow for World {
+    fn open(&self, content: SiteWindowContent<'_>) {
         self.note(&match content {
-            SiteWindowContent::TheErrand(errand) => format!("ventana:{}", errand.port()),
+            SiteWindowContent::TheErrand(errand) => format!("ventana:creada:{}", errand.port()),
             SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
                 "ventana:sin-puertos".to_owned()
             }
@@ -63,6 +68,10 @@ impl World {
                 format!("ventana:rechazo:{}", refusal.code())
             }
         });
+    }
+
+    fn show(&self) {
+        self.note("ventana:enseñada");
     }
 }
 
@@ -126,7 +135,7 @@ fn a_launch(parameters: &str) -> String {
     format!("afirma://websocket?ports=51001,51002,51003&{parameters}")
 }
 
-fn starting_with(world: &World, store: &InMemoryCaSlots, invocation: &Invocation) -> Startup {
+fn starting_with(world: &Arc<World>, store: &InMemoryCaSlots, invocation: &Invocation) -> Startup {
     let profiles = [PathBuf::from("/perfiles/firefox")];
     let live = LiveErrand::default();
     attend_startup(
@@ -134,18 +143,18 @@ fn starting_with(world: &World, store: &InMemoryCaSlots, invocation: &Invocation
         TrustAtStartup {
             store,
             profiles: &profiles,
-            stores: world,
+            stores: &**world,
         },
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
-        &|content| world.window(content),
+        Arc::clone(world) as Arc<dyn SiteWindow>,
         &live,
     )
 }
 
 #[test]
 fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
@@ -164,7 +173,7 @@ fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
         [
             "confianza".to_owned(),
             "canal".to_owned(),
-            format!("ventana:{}", PORTS[0])
+            format!("ventana:creada:{}", PORTS[0])
         ],
         "primero la CA local, luego el canal y sólo entonces la ventana de sede"
     );
@@ -172,7 +181,7 @@ fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
 
 #[test]
 fn a_pdf_shows_the_main_window_and_never_reaches_the_transport() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = a_store();
     let invocation = invoked_with(&["/tmp/contrato.pdf"]);
 
@@ -192,7 +201,7 @@ fn a_pdf_shows_the_main_window_and_never_reaches_the_transport() {
 
 #[test]
 fn starting_with_nothing_shows_the_main_window() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = a_store();
 
     let startup = starting_with(&world, &store, &invoked_with(&[]));
@@ -203,7 +212,7 @@ fn starting_with_nothing_shows_the_main_window() {
 
 #[test]
 fn a_refused_launch_opens_no_site_window() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=99&idsession={CREDENTIAL}"))]);
 
@@ -226,7 +235,7 @@ fn a_refused_launch_opens_no_site_window() {
 
 #[test]
 fn unwritable_local_ca_material_is_said_but_does_not_stop_the_errand() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = InMemoryCaSlots::unwritable();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
@@ -252,7 +261,7 @@ fn unwritable_local_ca_material_is_said_but_does_not_stop_the_errand() {
 
 #[test]
 fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let live = LiveErrand::default();
     assert!(
         live.begin(Errand::of(
@@ -270,7 +279,7 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
-        &|content| world.window(content),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
         &live,
         LocalCaReach::NotAnObstacle,
     );
@@ -288,14 +297,14 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
 
 #[test]
 fn a_second_invocation_never_touches_the_trust_stores() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
     let attendance = attend_site_launch(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
-        &|content| world.window(content),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
         &live,
         LocalCaReach::NotAnObstacle,
     );
@@ -303,17 +312,17 @@ fn a_second_invocation_never_touches_the_trust_stores() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal".to_owned(), format!("ventana:{}", PORTS[0])],
+        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])],
         "ni un almacén se abre en la segunda invocación"
     );
 }
 
 #[test]
 fn every_port_taken_shows_the_dead_end_in_the_site_window() {
-    let world = World {
+    let world = Arc::new(World {
         every_port_taken: true,
         ..World::default()
-    };
+    });
     let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
@@ -329,14 +338,19 @@ fn every_port_taken_shows_the_dead_end_in_the_site_window() {
     );
     assert_eq!(
         world.steps(),
-        ["confianza", "canal", "ventana:sin-puertos"],
+        [
+            "confianza",
+            "canal",
+            "ventana:sin-puertos",
+            "ventana:enseñada"
+        ],
         "el desenlace no se pierde: se enseña en la ventana"
     );
 }
 
 #[test]
 fn a_launch_without_ports_shows_its_refusal_in_the_window() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = a_store();
     let invocation = invoked_with(&[&format!("afirma://websocket?v=4&idsession={CREDENTIAL}")]);
 
@@ -352,14 +366,14 @@ fn a_launch_without_ports_shows_its_refusal_in_the_window() {
     );
     assert_eq!(
         world.steps(),
-        ["confianza", "ventana:rechazo:SAF_03"],
+        ["confianza", "ventana:rechazo:SAF_03", "ventana:enseñada"],
         "sin puertos no se intenta abrir ningun socket"
     );
 }
 
 #[test]
 fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
-    let world = World::default();
+    let world = Arc::new(World::default());
     let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
@@ -369,11 +383,11 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
         TrustAtStartup {
             store: &store,
             profiles: &[],
-            stores: &world,
+            stores: &*world,
         },
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
-        &|content| world.window(content),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
         &live,
     );
 
@@ -387,7 +401,7 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
     );
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:sin-ca"],
+        ["canal", "ventana:sin-ca", "ventana:enseñada"],
         "lo que se enseña es el callejon, no la espera"
     );
     assert!(
@@ -395,4 +409,173 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
         "y se dice por stderr: {:?}",
         startup.said
     );
+}
+
+#[test]
+fn a_websocket_v3_launch_creates_the_window_hidden_and_does_not_show_it() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let attendance = attend_site_launch(
+        &a_launch(&format!("v=3&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        world.steps(),
+        ["canal", "ventana:creada:63117"],
+        "crea la ventana oculta y no la muestra al arrancar"
+    );
+}
+
+#[test]
+fn a_service_launch_creates_the_window_hidden_and_does_not_show_it() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+    let service_url =
+        format!("afirma://service?ports=51001,51002,51003&v=1&idsession={CREDENTIAL}");
+
+    let attendance = attend_site_launch(
+        &service_url,
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        world.steps(),
+        ["canal", &format!("ventana:creada:{}", PORTS[0])],
+        "service crea la ventana oculta y no la muestra al arrancar"
+    );
+}
+
+#[test]
+fn a_relay_launch_creates_the_window_and_shows_it_immediately() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+    let relay_url = "afirma://open?id=123456&stservlet=https://example.com/store&dat=dGVzdA==";
+
+    let attendance = attend_site_launch(
+        relay_url,
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        world.steps(),
+        ["canal", "ventana:creada:0", "ventana:enseñada"],
+        "relay no tiene canal que esperar: se enseña de inmediato"
+    );
+}
+
+#[test]
+fn the_backing_timeout_expires_and_reveals_the_unreachable_window() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch_with_threshold(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(40),
+    );
+
+    assert_eq!(
+        world.steps(),
+        ["canal", &format!("ventana:creada:{}", PORTS[0])],
+        "recién arrancado no está enseñada"
+    );
+
+    // Esperamos a que venza el timeout
+    for _ in 0..20 {
+        if live.is_revealed() {
+            break;
+        }
+        std::thread::yield_now();
+        std::thread::sleep(Duration::from_millis(10));
+    }
+
+    assert!(
+        live.is_revealed(),
+        "el temporizador de respaldo debió revelar la ventana"
+    );
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            &format!("ventana:creada:{}", PORTS[0]),
+            "ventana:enseñada"
+        ],
+        "el timeout de respaldo enseña la ventana"
+    );
+    assert_eq!(
+        live.moment(),
+        Some(Moment::Unreachable),
+        "el momento anotado es Unreachable"
+    );
+}
+
+#[test]
+fn browser_arrival_before_timeout_reveals_and_disarms_the_backup_timer() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch_with_threshold(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(100),
+    );
+
+    assert_eq!(
+        world.steps(),
+        ["canal", &format!("ventana:creada:{}", PORTS[0])]
+    );
+
+    // Llega el navegador
+    live.browser_arrived();
+
+    assert!(live.is_revealed());
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            &format!("ventana:creada:{}", PORTS[0]),
+            "ventana:enseñada"
+        ]
+    );
+    assert_eq!(live.moment(), Some(Moment::Waiting));
+
+    // Esperamos a que pase el tiempo del timeout original
+    std::thread::sleep(Duration::from_millis(150));
+
+    // Comprobamos que no se volvió a enseñar ni cambió a Unreachable
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            &format!("ventana:creada:{}", PORTS[0]),
+            "ventana:enseñada"
+        ],
+        "no hay segunda llamada a show"
+    );
+    assert_eq!(live.moment(), Some(Moment::Waiting));
 }
