@@ -37,10 +37,11 @@ export interface SiteDocument {
   /** Cuántos bytes ocupa. */
   sizeBytes: number;
   /**
-   * Cuántas firmas trae ya. Con una o más, la de la persona será una
-   * **cofirma**, y eso se dice antes de consentir.
+   * Qué firma pide la sede sobre las que el documento ya trae: ninguna, una
+   * **cofirma**, o una **contrafirma** sobre todas o sobre las últimas. Se
+   * dice antes de consentir.
    */
-  signatures: number;
+  round: SignatureRound;
   /**
    * Si alguna de las firmas que ya trae el PDF es de un `/SubFilter` que
    * rFirma no sabe leer (#355). No es un rechazo — el PDF certificado sí
@@ -104,9 +105,6 @@ export type SigningKind = "pdf" | "challenge" | "xml" | "invoice";
 /**
  * Tipo de operación de firma solicitada por la sede, tal como lo emite el
  * backend: `commands::SignatureRoundView`, etiquetado por `kind` (ADR-0011).
- *
- * `counter` todavía no tiene ficha propia en esta ventana (#567): hasta que
- * la tenga, quien lea `kind` la trata como `cosign`.
  */
 export type SignatureRound =
   | { kind: "sign" }

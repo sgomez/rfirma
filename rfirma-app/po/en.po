@@ -488,11 +488,11 @@ msgstr[2] "{{count}} pages"
 
 msgid "panel.coSignature"
 msgid_plural "panel.coSignature"
-msgstr[0] "It already carries 1 signature: yours will be a countersignature."
+msgstr[0] "It already carries 1 signature: yours will be a co-signature."
 msgstr[1] ""
-"It already carries {{count}} signatures: yours will be a countersignature."
+"It already carries {{count}} signatures: yours will be a co-signature."
 msgstr[2] ""
-"It already carries {{count}} signatures: yours will be a countersignature."
+"It already carries {{count}} signatures: yours will be a co-signature."
 
 #. Rótulo del bloque con las tres opciones de en qué páginas se sella.
 msgid "panel.placement.title"
@@ -951,7 +951,7 @@ msgid "about.version"
 msgstr "Version {{version}}"
 
 msgid "about.whatItDoes"
-msgstr "Signs and countersigns PDF documents with your certificate."
+msgstr "Signs and co-signs PDF documents with your certificate."
 
 msgid "about.update.newVersion"
 msgstr "There is a new version: {{version}}"
@@ -1094,7 +1094,8 @@ msgstr ""
 
 #. La misma frase que "unknownOriginSignature", con el formato nombrado.
 msgid "sede.consent.unknownOriginSignatureOf"
-msgstr "The request asks to sign {{what}} and does not say which page it comes from."
+msgstr ""
+"The request asks to sign {{what}} and does not say which page it comes from."
 
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
@@ -1131,6 +1132,14 @@ msgstr ""
 "rFirma does not recognize some of the signatures already on this document, "
 "and adding yours could make them stop showing as valid"
 
+#. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
+#. objetivo dice sobre cuáles.
+msgid "sede.consent.counterSignatureTree"
+msgstr "It is already signed: yours will countersign every signature it carries."
+
+msgid "sede.consent.counterSignatureLeafs"
+msgstr "It is already signed: yours will countersign its latest signatures."
+
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
 msgstr[0] "Batch of 1 signature"
@@ -1148,7 +1157,13 @@ msgid "sede.consent.localBatchRoundSign"
 msgstr "signature"
 
 msgid "sede.consent.localBatchRoundCosign"
-msgstr "countersignature"
+msgstr "co-signature"
+
+msgid "sede.consent.localBatchRoundCounterTree"
+msgstr "countersignature of every signature"
+
+msgid "sede.consent.localBatchRoundCounterLeafs"
+msgstr "countersignature of the latest signatures"
 
 msgid "sede.consent.sign"
 msgstr "Sign"

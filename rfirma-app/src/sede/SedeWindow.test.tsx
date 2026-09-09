@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
-import type { Errand, ErrandStage, SiteErrandPort } from "./errand";
+import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
 import { CHROME_LOCAL_NETWORK_SETTINGS, noErrand, OUTCOME_CLOSE_MS } from "./errand";
 import { SedeWindow } from "./SedeWindow";
 
@@ -56,11 +56,11 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
 }
 
 /** El documento del artboard, el mismo que se enseña al consentir. */
-const signedDocument = {
+const signedDocument: SiteDocument = {
   title: "Solicitud de subvención 2026",
   pages: 27,
   sizeBytes: 2_400_000,
-  signatures: 0,
+  round: { kind: "sign" },
   hasUnregisteredSignatures: false,
 };
 
@@ -177,7 +177,7 @@ describe("SedeWindow", () => {
           title: "Solicitud de subvención 2026",
           pages: 27,
           sizeBytes: 2_400_000,
-          signatures: 0,
+          round: { kind: "sign" },
           hasUnregisteredSignatures: false,
         },
         signs: null,
@@ -223,7 +223,7 @@ describe("SedeWindow", () => {
             title: null,
             pages: 8,
             sizeBytes: 310_000,
-            signatures: 0,
+            round: { kind: "sign" },
             hasUnregisteredSignatures: false,
           },
         }),
@@ -240,7 +240,7 @@ describe("SedeWindow", () => {
             title: "Convenio",
             pages: 12,
             sizeBytes: 860_000,
-            signatures: 1,
+            round: { kind: "cosign" },
             hasUnregisteredSignatures: false,
           },
         }),
@@ -250,6 +250,32 @@ describe("SedeWindow", () => {
       expect(screen.getByText(/la tuya será una cofirma/)).toBeInTheDocument();
     });
 
+    it.each([
+      ["tree", "todas las firmas que ya tiene"],
+      ["leafs", "las últimas firmas que tiene"],
+    ] as const)(
+      "says a %s countersignature signs over the signatures already there",
+      (target, over) => {
+        const { port } = scriptedErrand(
+          consenting({
+            document: {
+              title: "Convenio",
+              pages: 12,
+              sizeBytes: 860_000,
+              round: { kind: "counter", target },
+              hasUnregisteredSignatures: false,
+            },
+          }),
+        );
+        renderWithCatalog(<SedeWindow errands={port} />);
+
+        expect(
+          screen.getByText(`Ya viene firmado: la tuya será una contrafirma sobre ${over}.`),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
+      },
+    );
+
     it("warns with an information note, not an alert, when the PDF carries a signature rFirma cannot read", () => {
       const { port } = scriptedErrand(
         consenting({
@@ -257,7 +283,7 @@ describe("SedeWindow", () => {
             title: "Convenio",
             pages: 12,
             sizeBytes: 860_000,
-            signatures: 1,
+            round: { kind: "cosign" },
             hasUnregisteredSignatures: true,
           },
         }),
@@ -281,7 +307,7 @@ describe("SedeWindow", () => {
             title: "Convenio",
             pages: 12,
             sizeBytes: 860_000,
-            signatures: 1,
+            round: { kind: "cosign" },
             hasUnregisteredSignatures: true,
           },
         }),
@@ -363,6 +389,8 @@ describe("SedeWindow", () => {
             { id: "001", signing: "pdf", round: { kind: "sign" } },
             { id: "002", signing: "challenge", round: { kind: "cosign" } },
             { id: "003", signing: "xml", round: { kind: "sign" } },
+            { id: "004", signing: "invoice", round: { kind: "counter", target: "tree" } },
+            { id: "005", signing: "pdf", round: { kind: "counter", target: "leafs" } },
           ],
         }),
       );
@@ -372,6 +400,12 @@ describe("SedeWindow", () => {
       expect(screen.getByText("001 — un documento PDF (firma)")).toBeInTheDocument();
       expect(screen.getByText("002 — un reto de autenticación (cofirma)")).toBeInTheDocument();
       expect(screen.getByText("003 — un documento XML (firma)")).toBeInTheDocument();
+      expect(
+        screen.getByText("004 — una factura electrónica (contrafirma de todas las firmas)"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("005 — un documento PDF (contrafirma de las últimas firmas)"),
+      ).toBeInTheDocument();
     });
 
     it("consents to a batch through the same dropdown and the same button as a signature", async () => {

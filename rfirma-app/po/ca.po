@@ -1037,6 +1037,14 @@ msgstr ""
 msgid "sede.consent.unrecognizedSignatures"
 msgstr ""
 
+#. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
+#. objetivo dice sobre cuáles.
+msgid "sede.consent.counterSignatureTree"
+msgstr ""
+
+msgid "sede.consent.counterSignatureLeafs"
+msgstr ""
+
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
 msgstr[0] ""
@@ -1053,6 +1061,12 @@ msgid "sede.consent.localBatchRoundSign"
 msgstr ""
 
 msgid "sede.consent.localBatchRoundCosign"
+msgstr ""
+
+msgid "sede.consent.localBatchRoundCounterTree"
+msgstr ""
+
+msgid "sede.consent.localBatchRoundCounterLeafs"
 msgstr ""
 
 msgid "sede.consent.sign"

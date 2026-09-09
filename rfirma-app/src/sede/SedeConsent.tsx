@@ -8,6 +8,7 @@ import { formatSize } from "../signing/SigningPanel";
 import type {
   ErrandStage,
   LocalBatchItem,
+  SignatureRound,
   SigningKind,
   SiteDocument,
   SiteOperation,
@@ -206,17 +207,26 @@ function LocalBatchItemsList({ items }: { items: readonly LocalBatchItem[] }) {
   );
 }
 
-/**
- * Qué es el elemento y qué se le pide, ya traducido: `t()` no admite una clave
- * armada. `counter` cae de momento en la etiqueta de cofirma: no tiene ficha
- * propia hasta que se resuelva #567.
- */
+/** Qué es el elemento y qué se le pide, ya traducido: `t()` no admite una clave armada. */
 function batchItemLabel(t: TFunction, item: LocalBatchItem): string {
-  const round =
-    item.round.kind === "sign"
-      ? t("sede.consent.localBatchRoundSign")
-      : t("sede.consent.localBatchRoundCosign");
-  return t("sede.consent.batchItemLabel", { what: signingKindLabel(t, item.signing), round });
+  return t("sede.consent.batchItemLabel", {
+    what: signingKindLabel(t, item.signing),
+    round: batchRoundLabel(t, item.round),
+  });
+}
+
+/** Qué firma se pide sobre el elemento, ya traducido: `t()` no admite una clave armada. */
+function batchRoundLabel(t: TFunction, round: SignatureRound): string {
+  switch (round.kind) {
+    case "sign":
+      return t("sede.consent.localBatchRoundSign");
+    case "cosign":
+      return t("sede.consent.localBatchRoundCosign");
+    case "counter":
+      return round.target === "tree"
+        ? t("sede.consent.localBatchRoundCounterTree")
+        : t("sede.consent.localBatchRoundCounterLeafs");
+  }
 }
 
 /**
@@ -229,6 +239,7 @@ function batchItemLabel(t: TFunction, item: LocalBatchItem): string {
 function DocumentCard({ document }: { document: SiteDocument }) {
   const { t, i18n } = useTranslation();
   const untitled = document.title === null || document.title.trim() === "";
+  const roundNote = signatureRoundNote(t, document.round);
 
   return (
     <div className="rf-stack sede-consent__document">
@@ -248,11 +259,25 @@ function DocumentCard({ document }: { document: SiteDocument }) {
           </p>
         </div>
       </div>
-      {document.signatures > 0 && (
-        <p className="rf-body sede-consent__cosignature">
-          {t("panel.coSignature", { count: document.signatures })}
-        </p>
-      )}
+      {roundNote !== null && <p className="rf-body sede-consent__round">{roundNote}</p>}
     </div>
   );
+}
+
+/**
+ * Qué será la firma de la persona sobre las que el documento ya trae, o `null`
+ * cuando no trae ninguna. La contrafirma dice **sobre cuáles** se firma, que es
+ * lo que la distingue de la cofirma.
+ */
+function signatureRoundNote(t: TFunction, round: SignatureRound): string | null {
+  switch (round.kind) {
+    case "sign":
+      return null;
+    case "cosign":
+      return t("panel.coSignature", { count: 1 });
+    case "counter":
+      return round.target === "tree"
+        ? t("sede.consent.counterSignatureTree")
+        : t("sede.consent.counterSignatureLeafs");
+  }
 }
