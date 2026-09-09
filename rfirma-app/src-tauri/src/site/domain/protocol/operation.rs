@@ -5,6 +5,7 @@ use base64::Engine as _;
 
 use super::algorithm::AskedAlgorithm;
 use super::codes::{Parameter, SafCode};
+use super::data_source::{download_url, DataSource};
 use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat};
 use super::parameters::{
@@ -92,6 +93,8 @@ pub enum SiteOperation {
     SignAndSave(SignAndSaveRequest),
     /// `batch`: la sede pide firmar un lote, remoto o local.
     Batch(BatchRequest),
+    /// `sign`, `cosign` o `countersign` sin `dat`: el documento lo elige la persona.
+    SignWithoutDocument(PendingSignRequest),
 }
 
 /// A qué firmas de la que llega alcanza una contrafirma (`CounterSignTarget`, 1.9.2).
@@ -195,6 +198,59 @@ impl SelectCertificate {
     /// Lo que la sede pide sobre el certificado pegado.
     pub fn sticky(&self) -> StickyCertificate {
         self.sticky
+    }
+}
+
+/// La firma que la sede pidió sin `dat`: todo lo suyo menos el documento, que elige la persona
+/// (`ProtocolInvocationLauncherSign.java:301-360`, 1.9.2).
+///
+/// No es un [`SignRequest`] con el documento vacío: sin documento no hay formato efectivo que
+/// nombrar, y `format=auto` se resuelve sobre lo que la persona elija.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingSignRequest {
+    round: SignatureRound,
+    algorithm: AskedAlgorithm,
+    requested: Option<RequestedFormat>,
+    declared: Vec<(String, String)>,
+    filter: SiteFilter,
+    load_extensions: Vec<String>,
+    load_description: Option<String>,
+    load_starting_folder: Option<String>,
+}
+
+impl PendingSignRequest {
+    /// Lo que la sede pide del listado.
+    pub fn filter(&self) -> &SiteFilter {
+        &self.filter
+    }
+
+    /// Extensiones admitidas por el selector que elige el documento (`filenameExts`).
+    pub fn load_extensions(&self) -> &[String] {
+        &self.load_extensions
+    }
+
+    /// Descripción del filtro de extensiones del selector (`filenameDescription`), si la sede la declaró.
+    pub fn load_description(&self) -> Option<&str> {
+        self.load_description.as_deref()
+    }
+
+    /// Carpeta inicial sugerida al selector (`filenameCurrentDir`), nunca la única fuente de lectura.
+    pub fn load_starting_folder(&self) -> Option<&str> {
+        self.load_starting_folder.as_deref()
+    }
+
+    /// La petición ya completa con el documento que la persona eligió, que con `format=auto` fija
+    /// el formato efectivo igual que si hubiera llegado en `dat`.
+    pub fn with_chosen_document(self, document: Vec<u8>) -> SignRequest {
+        let format = self.requested.unwrap_or_else(|| format_of(&document));
+        SignRequest {
+            round: self.round,
+            algorithm: self.algorithm,
+            format,
+            document,
+            declared: self.declared,
+            filter: self.filter,
+        }
     }
 }
 
@@ -469,7 +525,7 @@ impl BatchRequest {
 }
 
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
-pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
     check_minimum_client_version(url.parameter("mcv"))?;
     if let Some(data) = url.parameter("dat") {
         check_local_access_is_not_requested(data)?;
@@ -480,13 +536,13 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
             filter: site_filter(&declared_properties(url)?),
             sticky: sticky_certificate(url),
         })),
-        SIGN => sign_request(url, SignatureRound::First),
-        COSIGN => sign_request(url, SignatureRound::Again),
-        COUNTERSIGN => sign_request(url, counter_round(&declared_properties(url)?)?),
-        SAVE => save_request(url),
+        SIGN => sign_request(url, SignatureRound::First, data),
+        COSIGN => sign_request(url, SignatureRound::Again, data),
+        COUNTERSIGN => sign_request(url, counter_round(&declared_properties(url)?)?, data),
+        SAVE => save_request(url, data),
         LOAD => load_request(url),
-        BATCH => batch_request(url),
-        SIGN_AND_SAVE => sign_and_save_request(url),
+        BATCH => batch_request(url, data),
+        SIGN_AND_SAVE => sign_and_save_request(url, data),
         other => Err(Refusal::new(
             SafCode::UnsupportedOperation,
             format!("la operacion '{other}' no se atiende"),
@@ -501,7 +557,11 @@ pub fn read_operation(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 /// contrafirma repetida sobre `requested`, que es lo único que compra—, y el
 /// **objetivo** de la contrafirma antes que ambos, en `read_operation`, porque
 /// sin ronda no hay petición que construir.
-fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation, Refusal> {
+fn sign_request(
+    url: &AfirmaUrl,
+    round: SignatureRound,
+    data: &dyn DataSource,
+) -> Result<SiteOperation, Refusal> {
     let requested = requested_format(url)?;
     if let Some(format) = requested {
         refuse_a_multisignature_of_an_invoice(round, format)?;
@@ -509,17 +569,30 @@ fn sign_request(url: &AfirmaUrl, round: SignatureRound) -> Result<SiteOperation,
     }
     let document = match requested {
         Some(_) => None,
-        None => Some(read_document(url)?),
+        None => optional_document(url, data)?,
     };
 
     let algorithm = check_algorithm(url)?;
 
+    let declared = declared_properties(url)?;
+    if url.parameter("dat").is_none() {
+        return Ok(SiteOperation::SignWithoutDocument(PendingSignRequest {
+            round,
+            algorithm,
+            requested,
+            filter: site_filter(&declared),
+            load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
+            load_description: property_value(&declared, FILENAME_DESCRIPTION),
+            load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
+            declared,
+        }));
+    }
+
     let document = match document {
         Some(document) => document,
-        None => read_document(url)?,
+        None => read_document(url, data)?,
     };
 
-    let declared = declared_properties(url)?;
     let format = requested.unwrap_or_else(|| format_of(&document));
     refuse_a_multisignature_of_an_invoice(round, format)?;
     refuse_a_countersignature_outside_cades_and_xades(round, format)?;
@@ -642,7 +715,7 @@ fn countersign_refusal() -> Refusal {
 
 /// La petición de `signandsave`: misma lectura y mismos rechazos que `sign`,
 /// con `dat` opcional y lo del guardado (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
-fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
     let declared = declared_properties(url)?;
     let round = round_of_cop(url, &declared)?;
 
@@ -653,14 +726,14 @@ fn sign_and_save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     }
     let document = match requested {
         Some(_) => None,
-        None => optional_document(url)?,
+        None => optional_document(url, data)?,
     };
 
     let algorithm = check_algorithm(url)?;
 
     let document = match document {
         Some(document) => Some(document),
-        None => optional_document(url)?,
+        None => optional_document(url, data)?,
     };
 
     Ok(SiteOperation::SignAndSave(SignAndSaveRequest {
@@ -702,35 +775,47 @@ fn round_of_cop(url: &AfirmaUrl, declared: &[(String, String)]) -> Result<Signat
     }
 }
 
-/// El `dat` de `signandsave`, si vino: ausente no es rechazo, vacío sí lo es.
-fn optional_document(url: &AfirmaUrl) -> Result<Option<Vec<u8>>, Refusal> {
+/// El `dat` de una firma, si vino: ausente no es rechazo, vacío sí lo es.
+fn optional_document(url: &AfirmaUrl, data: &dyn DataSource) -> Result<Option<Vec<u8>>, Refusal> {
     if url.parameter("dat").is_none() {
         return Ok(None);
     }
-    Ok(Some(read_document(url)?))
+    Ok(Some(read_document(url, data)?))
 }
 
-/// El documento de `dat`, decodificado: se lee una sola vez, la pida quien lo pida.
-fn read_document(url: &AfirmaUrl) -> Result<Vec<u8>, Refusal> {
-    let data = required(url, "dat", Parameter::Data)?;
-    let document = decode_base64(data, Parameter::Data)?;
+/// El documento de `dat`, ya obtenido: se lee una sola vez, la pida quien lo pida.
+fn read_document(url: &AfirmaUrl, data: &dyn DataSource) -> Result<Vec<u8>, Refusal> {
+    let document = data_of(url, data)?;
     if document.is_empty() {
         return Err(Refusal::new(
             SafCode::SignWithoutData,
             "el parametro 'dat' viene vacio: no hay nada que firmar",
         ));
     }
-    if is_gzip(url) {
-        let decompressed = decompress_gzip(&document)?;
-        if decompressed.is_empty() {
-            return Err(Refusal::new(
-                SafCode::SignWithoutData,
-                "el parametro 'dat' viene vacio: no hay nada que firmar",
-            ));
-        }
-        return Ok(decompressed);
-    }
     Ok(document)
+}
+
+/// Los bytes de `dat`, bajados de su URL o descodificados del Base64
+/// (`DataDownloader.downloadData`, 1.9.2).
+///
+/// El `gzip=true` se resuelve antes de mirar si el valor era una URL, igual que el original: lo
+/// que se baja de una URL no se descomprime nunca, porque una URL no es Base64.
+fn data_of(url: &AfirmaUrl, data: &dyn DataSource) -> Result<Vec<u8>, Refusal> {
+    let value = required(url, "dat", Parameter::Data)?;
+    if let Some(remote) = download_url(value) {
+        return data.download(remote).map_err(|detail| {
+            Refusal::about(
+                Parameter::Data,
+                format!("no se han podido obtener los datos de '{remote}': {detail}"),
+            )
+        });
+    }
+
+    let decoded = decode_base64(value, Parameter::Data)?;
+    if is_gzip(url) && !decoded.is_empty() {
+        return decompress_gzip(&decoded);
+    }
+    Ok(decoded)
 }
 
 fn is_gzip(url: &AfirmaUrl) -> bool {
@@ -760,11 +845,9 @@ fn base_name(chosen_name: &str) -> &str {
 }
 
 /// La petición de guardado: solo `dat` es obligatorio (`ProtocolInvocationLauncherSave`, 1.9.2).
-fn save_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
-    let data = required(url, "dat", Parameter::Data)?;
-    let document = decode_base64(data, Parameter::Data)?;
+fn save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
     Ok(SiteOperation::Save(SaveRequest {
-        data: document,
+        data: data_of(url, data)?,
         title: optional(url, "title"),
         filename: optional(url, "filename"),
         extensions: comma_list(url, "exts"),
@@ -787,7 +870,7 @@ fn load_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 
 /// La petición del lote remoto: dos URL de servlet, el lote y lo mínimo que se
 /// lee de dentro de él (`ProtocolInvocationLauncherBatch`, 1.9.2).
-fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
+fn batch_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
     let local = url
         .parameter(LOCAL_BATCH_PROCESS)
         .is_some_and(|value| value.eq_ignore_ascii_case("true"));
@@ -806,14 +889,11 @@ fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
         false => Some(batch_servlets(url)?),
     };
 
-    let lote_base64 = required(url, "dat", Parameter::Data)?;
-    let lote = decode_base64(lote_base64, Parameter::Data)?;
-    let (lote, lote_base64) = if is_gzip(url) {
-        let decompressed = decompress_gzip(&lote)?;
-        let encoded = STANDARD.encode(&decompressed);
-        (decompressed, encoded)
-    } else {
-        (lote, lote_base64.to_owned())
+    let value = required(url, "dat", Parameter::Data)?;
+    let lote = data_of(url, data)?;
+    let lote_base64 = match is_gzip(url) || download_url(value).is_some() {
+        true => STANDARD.encode(&lote),
+        false => value.to_owned(),
     };
     let (algorithm, stop_on_error) = batch_algorithm_and_stop_on_error(json, &lote)?;
 

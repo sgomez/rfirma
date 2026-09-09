@@ -20,6 +20,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec.rs` | El códec de la versión 4 del protocolo. Pruebas en `adapters/codec/tests.rs`. |
 | `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs de las versiones 1 y 3, que delegan en el de la 4 en vez de repetirlo. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
+| `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
 | `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011). |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
@@ -65,6 +66,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/algorithm.rs` | El algoritmo que nombra la sede reducido a su huella; **no compone con la clave**, eso es de `adapters/desk.rs`. Pruebas en `domain/protocol/algorithm/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
+| `domain/protocol/data_source.rs` | El puerto que baja el `dat` que viaja como URL, y qué valor es una descarga y no unos datos. Pruebas en `domain/protocol/data_source/tests.rs`. |
 | `domain/protocol/detection.rs` | El detector puro del documento: «PDF / factura / XML / binario», sin nombrar ningún formato de firma. Pruebas en `domain/protocol/detection/tests.rs`. |
 | `domain/protocol/filters.rs` | La expresión de filtro de la sede, que cruza entera al motor, y el catálogo de criterios medidos contra el original. Pruebas en `domain/protocol/filters/tests.rs`. |
 | `domain/protocol/format.rs` | El formato que la sede nombra en `format=`, cerrado y con los alias del original; **no es el `Format` del puente**, al que lo traduce `ports.rs`. Pruebas en `domain/protocol/format/tests.rs`. |

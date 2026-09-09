@@ -2,8 +2,8 @@
 
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
-    BatchRequest, LoadRequest, Refusal, SaveRequest, SelectCertificate, SignAndSaveRequest,
-    SignRequest,
+    BatchRequest, LoadRequest, PendingSignRequest, Refusal, SaveRequest, SelectCertificate,
+    SignAndSaveRequest, SignRequest,
 };
 
 /// Lo que la sede pide, ya leído y sin versión de protocolo.
@@ -13,6 +13,8 @@ pub enum SiteRequest {
     SelectCertificate(SelectCertificate),
     /// Firma de documento en formato PAdES.
     Sign(SignRequest),
+    /// Firma de un documento que la sede no mandó: lo elige la persona.
+    SignWithoutDocument(PendingSignRequest),
     /// Firma de documento en formato PAdES, guardada por el portal tras la postfirma.
     SignAndSave(SignAndSaveRequest),
     /// Guardar un fichero en el equipo.
