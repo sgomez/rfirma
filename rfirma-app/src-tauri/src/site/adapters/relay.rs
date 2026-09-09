@@ -6,7 +6,10 @@ use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown, Situation,
 };
-use crate::site::domain::protocol::{decrypt, AfirmaUrl, Refusal, RelayChannelInfo};
+use crate::site::domain::protocol::{
+    asks_for_active_wait, decrypt, operation_of_the_parameters_xml, AfirmaUrl, CipherKey, Refusal,
+    RelayChannelInfo, RelayRequest,
+};
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::ports::Servlets;
 
@@ -52,66 +55,160 @@ impl Transport for Relay {
             ));
         };
 
-        let servlets = Arc::clone(&self.servlets);
-        let store_servlet = info.store_servlet.clone();
-        let id = info.id.clone();
-        let exit = Arc::clone(&self.exit);
-        let on_upload_failure = Arc::clone(&self.on_upload_failure);
-        let upload = move |text: String| match servlets.store(&store_servlet, &id, &text) {
-            Ok(()) => exit(),
-            Err(error) => on_upload_failure(refusal_of(error)),
-        };
-
         // Un rechazo se sube tal cual, sin esperar ni resolver operación: no hay trámite que registrar.
         match duty {
             ChannelDuty::Refuse(answer) => {
-                upload(answer.on_the_wire());
+                let Some((store_servlet, id)) = info.request.store_target() else {
+                    return Err(ChannelError::new(
+                        Situation::Relay,
+                        "la invocacion aun no dice donde subir la respuesta: 'stservlet' viene \
+                         dentro del XML de parametros",
+                    ));
+                };
+                self.upload(store_servlet, id, answer.on_the_wire());
                 return Ok(OpenChannel::new(0, Shutdown::of(|| {})));
             }
             ChannelDuty::Serve(_) => {}
         }
 
-        if info.active_wait {
-            self.servlets
-                .wait(&info.store_servlet, &info.id)
-                .map_err(|error| ChannelError::refused(refusal_of(error)))?;
-        }
+        let resolved = resolve(info, self.servlets.as_ref()).map_err(ChannelError::refused)?;
 
-        let operation = resolve_operation(info, self.servlets.as_ref())
-            .map_err(|error| ChannelError::refused(refusal_of(error)))?;
+        let servlets = Arc::clone(&self.servlets);
+        let exit = Arc::clone(&self.exit);
+        let on_upload_failure = Arc::clone(&self.on_upload_failure);
+        let store_servlet = resolved.store_servlet;
+        let id = resolved.id;
+        let reply =
+            ReplyHandle::of(
+                move |text: String| match servlets.store(&store_servlet, &id, &text) {
+                    Ok(()) => exit(),
+                    Err(error) => on_upload_failure(refusal_of(error)),
+                },
+            );
 
         let inbox = self.inbox.clone();
-        let reply = ReplyHandle::of(upload);
+        let operation = resolved.operation;
         let delivery = Delivery::of(move || inbox.deliver(operation, reply));
 
         Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery))
     }
 }
 
-/// Resuelve el `dat` de la operación: inline, o descargado y descifrado por `fileid` (ID-267).
-fn resolve_operation(
+impl Relay {
+    fn upload(&self, store_servlet: &str, id: &str, text: String) {
+        match self.servlets.store(store_servlet, id, &text) {
+            Ok(()) => (self.exit)(),
+            Err(error) => (self.on_upload_failure)(refusal_of(error)),
+        }
+    }
+}
+
+/// La operación que hay que atender y adónde va su respuesta, ya sin nada que recuperar.
+struct ResolvedRelay {
+    operation: AfirmaUrl,
+    store_servlet: String,
+    id: String,
+}
+
+/// Resuelve la operación según de dónde venga: inline, con el documento por `fileid`, o con el
+/// XML de parámetros entero por `fileid` (`ProtocolInvocationLauncher`, 1.9.2).
+fn resolve(
     info: &RelayChannelInfo,
     servlets: &(dyn Servlets + Send + Sync),
-) -> Result<AfirmaUrl, RelayError> {
-    if info.operation.parameter("dat").is_some() {
-        return Ok(info.operation.clone());
+) -> Result<ResolvedRelay, Refusal> {
+    match &info.request {
+        RelayRequest::Inline { store_servlet, id } => {
+            wait_if_asked(info.active_wait, servlets, store_servlet, id)?;
+            Ok(ResolvedRelay {
+                operation: info.operation.clone(),
+                store_servlet: store_servlet.clone(),
+                id: id.clone(),
+            })
+        }
+        RelayRequest::DataByFileId {
+            store_servlet,
+            id,
+            fileid,
+            retrieve_servlet,
+        } => {
+            wait_if_asked(info.active_wait, servlets, store_servlet, id)?;
+            let document = recovered(servlets, retrieve_servlet, fileid, info.key.as_ref())?;
+            Ok(ResolvedRelay {
+                operation: info
+                    .operation
+                    .clone()
+                    .with_parameter("dat", text_of(document)?),
+                store_servlet: store_servlet.clone(),
+                id: id.clone(),
+            })
+        }
+        RelayRequest::ParametersByFileId {
+            fileid,
+            retrieve_servlet,
+        } => {
+            let xml = recovered(servlets, retrieve_servlet, fileid, info.key.as_ref())?;
+            let operation = operation_of_the_parameters_xml(&xml)?;
+            let store_servlet = declared(&operation, "stservlet")?;
+            let id = declared(&operation, "id")?;
+            wait_if_asked(
+                asks_for_active_wait(&operation),
+                servlets,
+                &store_servlet,
+                &id,
+            )?;
+            Ok(ResolvedRelay {
+                operation,
+                store_servlet,
+                id,
+            })
+        }
     }
+}
 
-    let fileid = info
-        .fileid
-        .as_deref()
-        .expect("el arranque exige 'dat' o 'fileid'");
-    let retrieve_servlet = info
-        .retrieve_servlet
-        .as_deref()
-        .expect("el arranque exige 'rtservlet' cuando trae 'fileid'");
+fn wait_if_asked(
+    asked: bool,
+    servlets: &(dyn Servlets + Send + Sync),
+    store_servlet: &str,
+    id: &str,
+) -> Result<(), Refusal> {
+    if !asked {
+        return Ok(());
+    }
+    servlets.wait(store_servlet, id).map_err(refusal_of)
+}
 
-    let downloaded = servlets.retrieve(retrieve_servlet, fileid)?;
-    let plain = decrypt(&downloaded, info.key.as_ref())?;
-    let data = String::from_utf8(plain)
-        .map_err(|error| RelayError::new(RelaySituation::DecryptionFailed, error.to_string()))?;
+fn recovered(
+    servlets: &(dyn Servlets + Send + Sync),
+    retrieve_servlet: &str,
+    fileid: &str,
+    key: Option<&CipherKey>,
+) -> Result<Vec<u8>, Refusal> {
+    let downloaded = servlets
+        .retrieve(retrieve_servlet, fileid)
+        .map_err(refusal_of)?;
+    decrypt(&downloaded, key).map_err(refusal_of)
+}
 
-    Ok(info.operation.clone().with_parameter("dat", data))
+fn text_of(bytes: Vec<u8>) -> Result<String, Refusal> {
+    String::from_utf8(bytes).map_err(|error| {
+        refusal_of(RelayError::new(
+            RelaySituation::DecryptionFailed,
+            error.to_string(),
+        ))
+    })
+}
+
+/// Un parámetro que el XML de parámetros tiene que traer para que haya adónde contestar.
+fn declared(operation: &AfirmaUrl, name: &str) -> Result<String, Refusal> {
+    operation
+        .parameter(name)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            Refusal::params(format!(
+                "el XML de parametros del servidor intermedio no trae '{name}'"
+            ))
+        })
 }
 
 fn refusal_of(error: RelayError) -> Refusal {

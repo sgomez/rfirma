@@ -40,10 +40,10 @@ fn the_relay_cipher_key_never_shows_up_in_a_debug_of_the_channel_location() {
             "afirma://sign?algorithm=SHA256withRSA",
         )
         .expect("la URL de operacion deberia parsear"),
-        retrieve_servlet: None,
-        store_servlet: "https://relay.example/store".to_owned(),
-        id: "tx-1".to_owned(),
-        fileid: None,
+        request: super::super::protocol::RelayRequest::Inline {
+            store_servlet: "https://relay.example/store".to_owned(),
+            id: "tx-1".to_owned(),
+        },
         key: Some(key),
         active_wait: false,
     };
