@@ -130,6 +130,16 @@ impl SiteErrandView {
         }
     }
 
+    /// Estado en el que la firma espera a que la persona confirme lo que el original señala.
+    pub fn asking_to_confirm(message_code: &str) -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::AskingToConfirm {
+                message_code: message_code.to_owned(),
+            },
+        }
+    }
+
     /// Estado de solicitud de consentimiento para firma de documento.
     pub fn asking_to_sign(
         document: &str,
@@ -181,6 +191,7 @@ impl From<&Moment> for SiteErrandView {
                 *unregistered_signatures,
                 already_chosen.as_deref(),
             ),
+            Moment::AskingToConfirm { message_code } => Self::asking_to_confirm(message_code),
             Moment::AskingToSignTheBatch {
                 signs,
                 certificates,
@@ -338,6 +349,12 @@ crossing! {
             unregistered_signatures: bool,
             /// Asa del certificado que ya está resuelto, si lo está.
             already_chosen: Option<String>,
+        },
+        /// La firma espera a que la persona confirme lo que el validador del original señala.
+        #[serde(rename_all = "camelCase")]
+        AskingToConfirm {
+            /// Código del mensaje con el que pregunta el original.
+            message_code: String,
         },
         /// Solicitud de consentimiento del lote remoto.
         #[serde(rename_all = "camelCase")]

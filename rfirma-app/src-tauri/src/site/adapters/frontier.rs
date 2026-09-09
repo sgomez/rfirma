@@ -73,6 +73,15 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             Failure::new("localBatchSign", detail.clone()),
             SafCode::LocalBatchSign,
         ),
+        SiteRefusal::InvalidSignature(reason) => (
+            Failure::new("invalidSignature", reason.clone()),
+            SafCode::InvalidSignature,
+        ),
+        SiteRefusal::ConfirmationNeeded(message) => (
+            Failure::new("confirmationNeeded", message.clone()),
+            SafCode::ConfirmationNeeded,
+        ),
+        SiteRefusal::CouldNotValidate(error) => (Failure::from(error), code_of_bridge(error)),
     }
 }
 

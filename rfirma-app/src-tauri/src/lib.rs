@@ -245,6 +245,7 @@ pub fn run() {
             site::adapters::tauri::site_identify,
             site::adapters::tauri::site_decline,
             site::adapters::tauri::site_begin_signing,
+            site::adapters::tauri::site_confirm_signatures,
             site::adapters::tauri::site_finish_signing,
             site::adapters::tauri::site_install_certificate,
             site::adapters::tauri::site_look_again,

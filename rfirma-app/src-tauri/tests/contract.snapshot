@@ -33,6 +33,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async site_identify(certificate: String) -> Result<(), Failure>
   async site_decline()
   async site_begin_signing(certificate: String) -> Result<SecretView, Failure>
+  async site_confirm_signatures() -> Result<(), Failure>
   async site_finish_signing() -> Result<(), Failure>
   async site_install_certificate(password: String) -> Result<bool, Failure>
   async site_look_again()
@@ -192,6 +193,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Waiting
       AskingForConsent { certificates: Vec<CertificateView> }
       AskingToSign { document: String, signing: SigningKindView, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool, alreadyChosen: Option<String> }
+      AskingToConfirm { messageCode: String }
       AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String> }
       AskingToSignTheLocalBatch { items: Vec<LocalBatchItemView>, certificates: Vec<CertificateView>, alreadyChosen: Option<String> }
       NoChannel { reason: NoChannelView }

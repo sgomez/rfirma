@@ -255,3 +255,18 @@ fn unreachable_crosses_named() {
         })
     );
 }
+
+#[test]
+fn the_confirming_moment_crosses_with_the_message_code_of_the_original() {
+    let view = SiteErrandView::from(&Moment::AskingToConfirm {
+        message_code: "ProtocolLauncher.65".to_owned(),
+    });
+
+    assert_eq!(
+        serde_json::to_value(view).expect("el momento cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": { "kind": "askingToConfirm", "messageCode": "ProtocolLauncher.65" },
+        })
+    );
+}

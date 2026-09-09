@@ -7,8 +7,8 @@ use crate::signing::domain::bridge::Format;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, BatchRequest, PendingSignRequest, Refusal, SignAndSaveRequest,
-    SignatureRound, SiteFilter, SiteVisibleSignature,
+    AfirmaUrl, AskedAlgorithm, BatchRequest, PendingSignRequest, Refusal, RequestedFormat,
+    SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
 
@@ -28,6 +28,8 @@ pub enum ErrandStep {
     },
     /// Momento de consentimiento de firma de documento para la ventana.
     AskingToSign(Box<SigningConsent>),
+    /// Momento en el que la firma no sigue sin que la persona confirme (`checkSignatures`).
+    AskingToConfirm(Box<ConfirmationConsent>),
     /// Momento de consentimiento del lote remoto para la ventana.
     AskingToSignTheBatch(Box<BatchConsent>),
     /// Momento de consentimiento del lote local para la ventana.
@@ -63,6 +65,9 @@ impl ErrandStep {
                 certificates: consent.certificates.clone(),
                 unregistered_signatures: consent.unregistered_signatures,
                 already_chosen: consent.already_chosen.clone(),
+            }),
+            Self::AskingToConfirm(consent) => Some(Moment::AskingToConfirm {
+                message_code: consent.message_code.clone(),
             }),
             Self::AskingToSignTheBatch(consent) => Some(Moment::AskingToSignTheBatch {
                 signs: consent.signs,
@@ -133,6 +138,34 @@ pub struct SigningConsent {
     pub saving: Option<Box<SavingHints>>,
     /// Asa del certificado que ya está resuelto y el desplegable elige solo.
     pub already_chosen: Option<String>,
+}
+
+/// Lo que hace falta para repetir la firma cuando la persona confirma lo que el validador
+/// del original no da por bueno por sí solo.
+#[derive(Clone, Debug)]
+pub struct ConfirmationConsent {
+    /// El documento que se firma, tal y como llegó.
+    pub document: Vec<u8>,
+    /// Formato que la sede pidió, sin resolver todavía.
+    pub requested: RequestedFormat,
+    /// Huella que la sede pidió para esta firma.
+    pub algorithm: AskedAlgorithm,
+    /// Modalidad de firma solicitada.
+    pub round: SignatureRound,
+    /// Parámetros que la sede declaró, sin expandir.
+    pub declared: Vec<(String, String)>,
+    /// Filtro de certificados solicitado por la sede.
+    pub filter: SiteFilter,
+    /// Si la sede se conforma con el único certificado que pase el filtro.
+    pub headless: bool,
+    /// Pistas de guardado, si esta firma viene de `signandsave`.
+    pub saving: Option<Box<SavingHints>>,
+    /// Las claves ya confirmadas en confirmaciones anteriores.
+    pub confirmed: BTreeMap<String, String>,
+    /// Clave de `extraParams` que fija el «seguir».
+    pub parameter: String,
+    /// Código del mensaje con el que pregunta el original.
+    pub message_code: String,
 }
 
 /// Datos del consentimiento del lote remoto, que se firma sin documento delante.
@@ -316,6 +349,11 @@ pub enum Moment {
         unregistered_signatures: bool,
         /// El asa del certificado que ya está resuelto, si lo está.
         already_chosen: Option<String>,
+    },
+    /// La firma no sigue sin que la persona confirme lo que el validador del original señala.
+    AskingToConfirm {
+        /// Código del mensaje con el que pregunta el original.
+        message_code: String,
     },
     /// Consentimiento del lote remoto, sin documento y con cuántas firmas lleva.
     AskingToSignTheBatch {

@@ -56,6 +56,16 @@ pub fn site_begin_signing(
     }
 }
 
+/// Sigue con la firma tras confirmar lo que el validador del original señaló (`checkSignatures`).
+#[tauri::command(async)]
+pub fn site_confirm_signatures(app_handle: tauri::AppHandle) -> Result<(), Failure> {
+    let moved = site_window::with_the_desk(&app_handle, |desk, live| {
+        crate::site::application::errand::confirm(desk, live)
+    })?;
+    site_window::publish_what_moved(&app_handle, Some(moved));
+    Ok(())
+}
+
 /// Postfirma del trámite de sede y entrega del resultado a la sede, o el paso al guardado
 /// del portal si la firma venía de `signandsave`.
 #[tauri::command(async)]

@@ -66,6 +66,11 @@ export type SiteStageView =
       alreadyChosen: string | null;
     }
   | {
+      kind: "askingToConfirm";
+      /** El mensaje con el que pregunta el original, por su código. */
+      messageCode: string;
+    }
+  | {
       kind: "askingToSignTheBatch";
       /** Cuántas firmas lleva el lote. */
       signs: number;
@@ -310,6 +315,8 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
         certificates: stage.certificates,
         narrowed: false,
       };
+    case "askingToConfirm":
+      return { kind: "confirming", messageCode: stage.messageCode };
     case "askingToSignTheBatch":
       // Sin documento porque el lote no manda ninguno: sus ficheros se quedan
       // en la sede y lo que se consiente es cuántas firmas van a salir.

@@ -111,6 +111,7 @@ pub(crate) fn with_the_desk<R>(
     let desk = ErrandDesk {
         engine: &signing.isolate,
         policies: &signing.isolate,
+        validation: &signing.isolate,
         neighbours: Neighbours {
             identity: &identity,
             documents: &documents,

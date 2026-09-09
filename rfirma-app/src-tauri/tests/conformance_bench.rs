@@ -783,6 +783,7 @@ fn the_desk_of(roots: &Roots) -> ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>
     ErrandDesk {
         engine: &roots.signing.isolate,
         policies: &roots.signing.isolate,
+        validation: &roots.signing.isolate,
         neighbours: Neighbours {
             identity: &roots.identity,
             documents: &roots.documents,

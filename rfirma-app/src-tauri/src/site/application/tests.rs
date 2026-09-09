@@ -9,6 +9,7 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::ports::CertificateMemory;
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureVerdict};
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::local_ca::LocalCa;
@@ -16,7 +17,9 @@ use crate::site::domain::protocol::{DataSource, Refusal, SiteOperation};
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::signing::SigningRefusal;
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
-use crate::site::ports::{BatchServices, Certificates, LocalCaSlots, Servlets, TokenSigning};
+use crate::site::ports::{
+    BatchServices, Certificates, LocalCaSlots, Servlets, TokenSigning, ValidationEngine,
+};
 
 /// Las dos ranuras de la CA local en memoria, escribibles o no.
 #[derive(Default)]
@@ -372,4 +375,62 @@ pub fn read_operation(
     url: &crate::site::domain::protocol::AfirmaUrl,
 ) -> Result<SiteOperation, Refusal> {
     crate::site::domain::protocol::read_operation(url, &NoDownloads)
+}
+
+/// El validador al que no se llega a preguntar porque la sede no pidió `checkSignatures`.
+pub struct NotAsked;
+
+impl ValidationEngine for NotAsked {
+    fn verdict_of(
+        &self,
+        _document_b64: &str,
+        _format: Format,
+    ) -> Result<SignatureVerdict, BridgeError> {
+        panic!("sin checkSignatures el tramite no pregunta por las firmas previas")
+    }
+}
+
+/// El validador de firmas doblado: contesta lo que se le diga y apunta lo que le preguntaron.
+pub struct AValidator {
+    asked: Mutex<Vec<String>>,
+    verdict: Result<SignatureVerdict, ()>,
+}
+
+impl AValidator {
+    /// El validador que siempre contesta el mismo veredicto.
+    pub fn saying(verdict: SignatureVerdict) -> Self {
+        Self {
+            asked: Mutex::new(Vec::new()),
+            verdict: Ok(verdict),
+        }
+    }
+
+    /// El validador que no llega a dar veredicto porque el puente falla.
+    pub fn that_breaks() -> Self {
+        Self {
+            asked: Mutex::new(Vec::new()),
+            verdict: Err(()),
+        }
+    }
+
+    /// Los documentos en Base64 por los que se preguntó, en orden.
+    pub fn asked(&self) -> Vec<String> {
+        self.asked.lock().expect("el candado").clone()
+    }
+}
+
+impl ValidationEngine for AValidator {
+    fn verdict_of(
+        &self,
+        document_b64: &str,
+        _format: Format,
+    ) -> Result<SignatureVerdict, BridgeError> {
+        self.asked
+            .lock()
+            .expect("el candado")
+            .push(document_b64.to_owned());
+        self.verdict
+            .clone()
+            .map_err(|()| BridgeError::Failed("el validador no arranca".to_owned()))
+    }
 }
