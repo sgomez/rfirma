@@ -206,7 +206,7 @@ fn open_the_cycle(
     let secret = signer.secret_of(&reference)?.admitted()?;
     let certificate = reference.clone();
     let signer_der = chosen.der().to_vec();
-    let chain = vec![signer_der.clone()];
+    let chain = chosen.chain();
     let from_the_site = from_the_site.clone();
 
     let cycle = on_the_bridge(isolate, move |bridge| {

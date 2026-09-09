@@ -46,7 +46,10 @@ impl IdentityRoot {
 
     /// Los certificados de todos los almacenes, o por qué ninguno se ha podido abrir.
     pub fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError> {
-        self.token.list_across(&self.all_stores())
+        application::certificates::certificates_with_their_chains(
+            self.token.as_ref(),
+            &self.all_stores(),
+        )
     }
 
     /// Las filas con su asa acuñada y el recordado marcado.

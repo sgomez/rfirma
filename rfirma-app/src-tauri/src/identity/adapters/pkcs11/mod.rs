@@ -36,6 +36,10 @@ impl Token for RealToken {
         list_certificates(store)
     }
 
+    fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
+        list_every_certificate(store.clone())
+    }
+
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         store_secret(reference)
     }
@@ -222,9 +226,8 @@ fn all_certificates_in_session(
     Ok(found)
 }
 
-/// Listado de certificados sin filtrar por clave privada para pruebas.
-#[doc(hidden)]
-pub fn list_certificates_unfiltered_for_test(
+/// Los certificados de un almacén sin filtrar por clave privada: también las autoridades que lo emitieron.
+pub fn list_every_certificate(
     store: impl Into<Store>,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
     let store = store.into();

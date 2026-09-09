@@ -122,6 +122,14 @@ fn certificates(installed: &Path) -> Vec<TokenCertificate> {
         .expect("el almacen del .p12 deberia listarse")
 }
 
+fn subject_of(der: &[u8]) -> String {
+    x509_cert::Certificate::from_der(der)
+        .expect("el DER deberia parsearse")
+        .tbs_certificate()
+        .subject()
+        .to_string()
+}
+
 fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
     let parsed =
         x509_cert::Certificate::from_der(certificate.der()).expect("el DER deberia parsearse");
@@ -318,5 +326,27 @@ fn a_certificate_from_somewhere_else_is_not_removed() {
         installed_stores(elsewhere.path()).len(),
         1,
         "el almacen de al lado sigue donde estaba"
+    );
+}
+
+#[test]
+fn a_certificate_from_a_p12_carries_the_authority_that_came_inside_it() {
+    let installed = an_empty_installation();
+    install(installed.path(), &kit_p12(), KIT_PASSWORD)
+        .expect("el .p12 del kit deberia instalarse");
+
+    let found = certificates::certificates_with_their_chains(
+        &pkcs11::RealToken,
+        &installed_stores(installed.path()),
+    )
+    .expect("el almacen del .p12 deberia listarse");
+
+    let chain = found[0].chain();
+    assert_eq!(chain.len(), 2, "el firmante y la intermedia de la FNMT");
+    assert_eq!(chain[0], found[0].der(), "el firmante va delante");
+    assert_eq!(
+        subject_of(&chain[1]),
+        found[0].issuer().expect("el firmante tiene emisor"),
+        "detras va quien lo emitio"
     );
 }

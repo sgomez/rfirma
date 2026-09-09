@@ -392,7 +392,7 @@ fn a_remembered_nss_certificate_still_signs_after_a_round_trip_through_the_state
 #[test]
 fn a_certificate_without_a_private_key_says_so_instead_of_failing_generically() {
     let (_profile, store) = a_disposable_profile();
-    let authority = pkcs11::list_certificates_unfiltered_for_test(&store)
+    let authority = pkcs11::list_every_certificate(&store)
         .expect("el perfil deberia listarse sin filtrar")
         .into_iter()
         .find(|certificate| certificate.reference().label().contains("AC "))

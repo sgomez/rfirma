@@ -1,9 +1,11 @@
 //! Listado, inspección y selección de certificados en tokens sin pedir PIN.
 
+use std::collections::HashMap;
 use std::path::Path;
 
 use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
+use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{holder_of, issuer_of};
 use crate::identity::domain::store::Store;
@@ -38,6 +40,27 @@ pub fn listed_rows(
 ) -> Result<Vec<ListedCertificate>, TokenError> {
     let found = token.list_across(stores)?;
     Ok(rows_of(found, installed_dir, listed, memory))
+}
+
+/// Los certificados de los almacenes, cada uno con los emisores que su propio almacén aporta.
+pub fn certificates_with_their_chains(
+    token: &dyn Token,
+    stores: &[Store],
+) -> Result<Vec<TokenCertificate>, TokenError> {
+    let found = token.list_across(stores)?;
+    let mut neighbours: HashMap<Store, Vec<TokenCertificate>> = HashMap::new();
+
+    Ok(found
+        .into_iter()
+        .map(|certificate| {
+            let store = certificate.reference().store();
+            let in_the_store = neighbours
+                .entry(store.clone())
+                .or_insert_with(|| token.every_certificate(&store).unwrap_or_default());
+            let issuers = issuers_of(&certificate, in_the_store);
+            certificate.with_its_issuers(issuers)
+        })
+        .collect())
 }
 
 /// Filas de un listado con asas acuñadas y estado de selección.
