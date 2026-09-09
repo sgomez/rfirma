@@ -52,13 +52,16 @@ function emit(event) {
   process.stdout.write(`${JSON.stringify(event)}\n`);
 }
 
-/** El veredicto: se emite una sola vez y el proceso se acaba. */
+/**
+ * El veredicto: se emite una sola vez y el proceso se acaba. `process.exit` no espera a que el
+ * `write` a un pipe se vacie del todo, y un veredicto grande (un PDF PAdES real, por ejemplo)
+ * queda cortado si se sale antes de que el propio `write` avise de que ya salio.
+ */
 let settled = false;
 function settle(event) {
   if (settled) return;
   settled = true;
-  emit(event);
-  setImmediate(() => process.exit(0));
+  process.stdout.write(`${JSON.stringify(event)}\n`, () => process.exit(0));
 }
 
 const toStderr = (...args) => process.stderr.write(`[autoscript] ${args.join(" ")}\n`);
@@ -413,6 +416,66 @@ function theInvoice() {
   return readFileSync(join(here, "../../../../testdata/reference/invoice.xml"));
 }
 
+/** El PDF de una página que la prueba Rust genera y firma con `format=PAdES`. */
+function theLocalPdf() {
+  return readFileSync(process.env.RFIRMA_BENCH_LOCAL_PDF);
+}
+
+/** El binario del lote local: nunca es un PDF, así que declararlo `PAdES` lo vuelve ilegible. */
+function theLocalBatchBinary() {
+  return Buffer.from("contenido binario del lote local, sin PDF ni XML dentro", "utf8");
+}
+
+/**
+ * El lote local de `setLocalBatchProcess(true)`: un PDF (`PAdES`), un binario que hereda
+ * `CAdES` del lote y un XML (`XAdES`), sin presigner ni postsigner.
+ */
+async function theLocalBatchScript() {
+  AutoScript.setLocalBatchProcess(true);
+  AutoScript.createBatch("SHA256", "CAdES", "sign", null);
+  AutoScript.addDocumentToBatch("pdf", theLocalPdf().toString("base64"), "PAdES");
+  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"));
+  AutoScript.addDocumentToBatch("xml", theXmlDocument().toString("base64"), "XAdES");
+  AutoScript.signBatchProcess(
+    false,
+    null,
+    null,
+    null,
+    (result, certificate) =>
+      settle({
+        event: "success",
+        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
+        certificate: String(certificate),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/**
+ * El mismo lote local, con el binario declarado `format=PAdES` —ilegible, al no ser un PDF— y
+ * `stoponerror=true`.
+ */
+async function theLocalBatchWithAnIllegibleItemScript() {
+  AutoScript.setLocalBatchProcess(true);
+  AutoScript.createBatch("SHA256", "CAdES", "sign", null);
+  AutoScript.addDocumentToBatch("pdf", theLocalPdf().toString("base64"), "PAdES");
+  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"), "PAdES");
+  AutoScript.addDocumentToBatch("xml", theXmlDocument().toString("base64"), "XAdES");
+  AutoScript.signBatchProcess(
+    true,
+    null,
+    null,
+    null,
+    (result, certificate) =>
+      settle({
+        event: "success",
+        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
+        certificate: String(certificate),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
 function theSignScript(format, extraParams, content) {
   AutoScript.sign(
@@ -484,6 +547,10 @@ if (script === "batch") {
   theBatchXmlScript();
 } else if (script === "batchdown") {
   theBatchWithTheDownPresignerScript();
+} else if (script === "batchlocal") {
+  theLocalBatchScript();
+} else if (script === "batchlocalillegible") {
+  theLocalBatchWithAnIllegibleItemScript();
 } else if (script === "sticky") {
   theStickyScript();
 } else if (script === "signcades") {
