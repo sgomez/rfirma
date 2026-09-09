@@ -7,7 +7,7 @@ use crate::crossing::crossing;
 use crate::signing::domain::bridge::Format;
 use crate::site::application::errand::{LocalBatchItem, Moment, NoCertificate, NoChannel};
 use crate::site::domain::batch_error::Situation as BatchSituation;
-use crate::site::domain::protocol::{Refusal, RefusalSituation, SignatureRound};
+use crate::site::domain::protocol::{CounterTarget, Refusal, RefusalSituation, SignatureRound};
 
 use crate::identity::adapters::views::CertificateView;
 use crate::identity::domain::certificate::ListedCertificate;
@@ -236,12 +236,17 @@ impl From<Format> for SigningKindView {
 crossing! {
     /// Tipo de operación de firma solicitada por la sede.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-    #[serde(rename_all = "camelCase")]
+    #[serde(tag = "kind", rename_all = "camelCase")]
     pub enum SignatureRoundView {
         /// Firma inicial de un documento.
         Sign,
         /// Cofirma de un documento previamente firmado.
         Cosign,
+        /// Contrafirma de las firmas que ya trae el documento.
+        Counter {
+            /// A cuáles de ellas alcanza.
+            target: CounterTargetView,
+        },
     }
 }
 
@@ -249,7 +254,31 @@ impl From<SignatureRound> for SignatureRoundView {
     fn from(round: SignatureRound) -> Self {
         match round {
             SignatureRound::First => Self::Sign,
-            SignatureRound::Again | SignatureRound::Counter { .. } => Self::Cosign,
+            SignatureRound::Again => Self::Cosign,
+            SignatureRound::Counter { target } => Self::Counter {
+                target: target.into(),
+            },
+        }
+    }
+}
+
+crossing! {
+    /// A cuáles de las firmas que trae el documento alcanza una contrafirma.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum CounterTargetView {
+        /// Se contrafirma el árbol entero.
+        Tree,
+        /// Se contrafirman solo las hojas.
+        Leafs,
+    }
+}
+
+impl From<CounterTarget> for CounterTargetView {
+    fn from(target: CounterTarget) -> Self {
+        match target {
+            CounterTarget::Tree => Self::Tree,
+            CounterTarget::Leafs => Self::Leafs,
         }
     }
 }

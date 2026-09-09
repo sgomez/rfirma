@@ -1,4 +1,7 @@
-use super::{Format, LocalBatchItem, Moment, SignatureRound, SignatureRoundView};
+use super::{
+    CounterTarget, CounterTargetView, Format, LocalBatchItem, Moment, SignatureRound,
+    SignatureRoundView,
+};
 use super::{
     NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
 };
@@ -99,6 +102,27 @@ fn the_round_crosses_named_as_the_site_asked_for_it() {
 }
 
 #[test]
+fn a_countersignature_crosses_with_its_own_label_and_target() {
+    let view = SiteErrandView::from(&Moment::AskingToSign {
+        document: "doc-1".to_owned(),
+        format: Format::Cades,
+        round: SignatureRound::Counter {
+            target: CounterTarget::Leafs,
+        },
+        certificates: Vec::new(),
+        unregistered_signatures: false,
+    });
+
+    assert_eq!(
+        serde_json::to_value(&view).expect("serializa")["stage"]["round"],
+        serde_json::to_value(SignatureRoundView::Counter {
+            target: CounterTargetView::Leafs
+        })
+        .expect("serializa")
+    );
+}
+
+#[test]
 fn each_batch_situation_crosses_as_its_own_view() {
     for (situation, expected) in [
         (
@@ -185,8 +209,8 @@ fn the_local_batch_consent_crosses_with_what_each_item_is_and_never_its_content(
             "stage": {
                 "kind": "askingToSignTheLocalBatch",
                 "items": [
-                    { "id": "001", "signing": "pdf", "round": "sign" },
-                    { "id": "002", "signing": "challenge", "round": "cosign" },
+                    { "id": "001", "signing": "pdf", "round": { "kind": "sign" } },
+                    { "id": "002", "signing": "challenge", "round": { "kind": "cosign" } },
                 ],
                 "certificates": [],
                 "alreadyChosen": null,
