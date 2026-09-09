@@ -263,6 +263,15 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     expect(errandOf(view).stage).toEqual({ kind: "noChannel", reason: "localCaMissing" });
   });
 
+  it("turns unreachable into the unreachable moment", () => {
+    const view: SiteErrandView = {
+      origin: null,
+      stage: { kind: "unreachable" },
+    };
+
+    expect(errandOf(view).stage).toEqual({ kind: "unreachable" });
+  });
+
   it("names a refusal the catalogue does not know as unknown", () => {
     const view: SiteErrandView = {
       origin: null,

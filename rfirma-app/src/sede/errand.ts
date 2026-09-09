@@ -114,11 +114,14 @@ export interface LocalBatchItem {
 /** En qué momento de la secuencia está la ventana. */
 export type ErrandStage =
   /**
-   * El canal todavía no se ha abierto. Que se enseñe «Conectando» o «La
-   * petición no ha llegado» lo decide el reloj de la ventana, no el backend:
-   * un solo umbral, y **nunca se cierra sola**.
+   * El canal todavía no se ha abierto.
    */
   | { kind: "waiting" }
+  /**
+   * El navegador no ha conectado en el plazo previsto. El backend decide y
+   * publica este momento a través del puerto.
+   */
+  | { kind: "unreachable" }
   /**
    * **El canal no se ha abierto y ya no va a abrirse** (ID-341). No es el
    * umbral del reloj: aquí rFirma ya lo sabe —no le queda ni un puerto que
@@ -269,23 +272,6 @@ export function noErrand(): SiteErrandPort {
     installLocalCa: async () => {},
   };
 }
-
-/**
- * Cuánto se espera antes de pintar nada (ms).
- *
- * El camino feliz abre el canal en ~44 ms, así que por debajo de este retardo
- * no se enseña ningún fogonazo: quien llega a ver «Conectando» es quien espera
- * de verdad.
- */
-export const WAITING_GRACE_MS = 400;
-
-/**
- * Cuándo «Conectando con la sede» pasa a «La petición no ha llegado» (ms).
- *
- * Un solo umbral, y **nunca un cierre**: la ventana no se va sola mientras
- * espera.
- */
-export const UNREACHABLE_AFTER_MS = 30_000;
 
 /**
  * Cuánto se queda el desenlace antes de cerrarse solo (ms).
