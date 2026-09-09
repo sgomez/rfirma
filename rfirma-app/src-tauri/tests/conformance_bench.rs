@@ -67,6 +67,12 @@ const THE_SIGN_XADES: &str = "signxades";
 /// El guion de `sign` con `format=auto` sobre el mismo XML de referencia.
 const THE_SIGN_XADES_AUTO: &str = "signxadesauto";
 
+/// El guion de `sign` con `format=FacturaE` sobre la factura de referencia.
+const THE_SIGN_FACTURAE: &str = "signfacturae";
+
+/// El guion de `cosign` con `format=FacturaE` sobre la misma factura.
+const THE_COSIGN_FACTURAE: &str = "cosignfacturae";
+
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
 
@@ -1117,6 +1123,19 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
     })
 }
 
+/// El trámite atendiendo una operación que el protocolo rechaza sin pedir consentimiento: la
+/// URL se decodifica y la respuesta sale por el canal en el mismo `attend`.
+fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    Arc::new(move |url, reply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        errand::attend(&desk, url, answering, live);
+    })
+}
+
 /// Comprueba el CMS detached con `openssl cms -verify`, contra el `content` que firmó.
 fn verified_by_openssl(cms: &[u8], content: &Path) {
     let cms_file = a_der_file(cms);
@@ -1342,4 +1361,48 @@ async fn the_published_client_signs_an_xml_document_with_format_auto() {
 async fn the_published_client_signs_an_xml_document_with_format_auto_also_over_the_third_protocol()
 {
     the_xades_sign_of(BenchMode::Third, THE_SIGN_XADES_AUTO).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_an_invoice_with_facturae() {
+    the_xades_sign_of(BenchMode::Fourth, THE_SIGN_FACTURAE).await;
+}
+
+/// Cofirmar una factura no se admite: el `errorCallback` del cliente publicado tiene que
+/// recibir `SAF_04` (`ERROR_UNSUPPORTED_OPERATION`), sin que el trámite llegue a pedir
+/// consentimiento.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn cosigning_an_invoice_with_facturae_is_refused() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let client =
+        PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_COSIGN_FACTURAE);
+
+    let channel =
+        the_errand_channel(&client, &material, &roots, the_refusing_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cofirma de una factura tenia que acabar en el errorCallback, y acabo en {}",
+        verdict.name()
+    );
+    assert_eq!(
+        verdict.field("message"),
+        WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
+        "la cofirma de una factura tenia que contestar ERROR_UNSUPPORTED_OPERATION"
+    );
+
+    channel.close();
 }
