@@ -206,10 +206,14 @@ function LocalBatchItemsList({ items }: { items: readonly LocalBatchItem[] }) {
   );
 }
 
-/** Qué es el elemento y qué se le pide, ya traducido: `t()` no admite una clave armada. */
+/**
+ * Qué es el elemento y qué se le pide, ya traducido: `t()` no admite una clave
+ * armada. `counter` cae de momento en la etiqueta de cofirma: no tiene ficha
+ * propia hasta que se resuelva #567.
+ */
 function batchItemLabel(t: TFunction, item: LocalBatchItem): string {
   const round =
-    item.round === "sign"
+    item.round.kind === "sign"
       ? t("sede.consent.localBatchRoundSign")
       : t("sede.consent.localBatchRoundCosign");
   return t("sede.consent.batchItemLabel", { what: signingKindLabel(t, item.signing), round });

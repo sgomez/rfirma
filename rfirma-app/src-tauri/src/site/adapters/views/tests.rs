@@ -1,7 +1,4 @@
-use super::{
-    CounterTarget, CounterTargetView, Format, LocalBatchItem, Moment, SignatureRound,
-    SignatureRoundView,
-};
+use super::{CounterTarget, Format, LocalBatchItem, Moment, SignatureRound, SignatureRoundView};
 use super::{
     NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
 };
@@ -115,10 +112,7 @@ fn a_countersignature_crosses_with_its_own_label_and_target() {
 
     assert_eq!(
         serde_json::to_value(&view).expect("serializa")["stage"]["round"],
-        serde_json::to_value(SignatureRoundView::Counter {
-            target: CounterTargetView::Leafs
-        })
-        .expect("serializa")
+        serde_json::json!({ "kind": "counter", "target": "leafs" })
     );
 }
 

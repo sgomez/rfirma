@@ -360,9 +360,9 @@ describe("SedeWindow", () => {
           signs: 3,
           signing: null,
           items: [
-            { id: "001", signing: "pdf", round: "sign" },
-            { id: "002", signing: "challenge", round: "cosign" },
-            { id: "003", signing: "xml", round: "sign" },
+            { id: "001", signing: "pdf", round: { kind: "sign" } },
+            { id: "002", signing: "challenge", round: { kind: "cosign" } },
+            { id: "003", signing: "xml", round: { kind: "sign" } },
           ],
         }),
       );

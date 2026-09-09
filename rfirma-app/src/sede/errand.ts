@@ -101,6 +101,18 @@ export type SiteOutcome =
  */
 export type SigningKind = "pdf" | "challenge" | "xml" | "invoice";
 
+/**
+ * Tipo de operación de firma solicitada por la sede, tal como lo emite el
+ * backend: `commands::SignatureRoundView`, etiquetado por `kind` (ADR-0011).
+ *
+ * `counter` todavía no tiene ficha propia en esta ventana (#567): hasta que
+ * la tenga, quien lea `kind` la trata como `cosign`.
+ */
+export type SignatureRound =
+  | { kind: "sign" }
+  | { kind: "cosign" }
+  | { kind: "counter"; target: "tree" | "leafs" };
+
 /** Un elemento del lote local, tal como lo resume el backend: sin ruta ni contenido. */
 export interface LocalBatchItem {
   /** El identificador con el que la sede nombra el elemento. */
@@ -108,7 +120,7 @@ export interface LocalBatchItem {
   /** Qué es lo que se va a firmar. */
   signing: SigningKind;
   /** Si sobre el elemento se pide una firma inicial o una cofirma. */
-  round: "sign" | "cosign";
+  round: SignatureRound;
 }
 
 /** En qué momento de la secuencia está la ventana. */
