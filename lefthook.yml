@@ -15,7 +15,9 @@
 # hook de git es una shell no interactiva, donde cargo y ruff no estan.
 #
 # Se instala sola: el `prepare` de rfirma-app/package.json corre
-# `lefthook install` en cada `pnpm install`, y `just deps` con el.
+# `tools/install-git-hooks.sh` en cada `pnpm install`, y `just deps` con el. Ese
+# script se salta la instalacion desde un worktree, porque .git/hooks es uno
+# solo para todos y la ruta que escribiria un agente muere con su worktree.
 
 pre-push:
   parallel: true
