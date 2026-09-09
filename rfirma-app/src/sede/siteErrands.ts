@@ -8,6 +8,7 @@ import type {
   ErrandStage,
   LocalBatchItem,
   RefusalSituation,
+  SignatureRound,
   SigningKind,
   SiteDocument,
   SiteErrandPort,
@@ -58,7 +59,7 @@ export type SiteStageView =
       document: string;
       /** Qué es lo que se pide firmar, según el formato de la petición (#530). */
       signing: SigningKind;
-      round: "sign" | "cosign";
+      round: SignatureRound;
       certificates: readonly Certificate[];
       unregisteredSignatures: boolean;
     }
@@ -341,16 +342,18 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
  * cuando el PDF ya viene firmado, y cuántas firmas trae exactamente no lo
  * cuenta nadie —tampoco el recorrido local, que pasa `signatures: null`—. Lo
  * que la ficha pide enseñar es **el aviso de cofirma**, y eso es lo que hay.
+ * `counter` cae de momento en ese mismo aviso: no tiene ficha propia hasta
+ * que se resuelva #567.
  */
 function documentOf(
   described: DescribedDocument | null,
-  round: "sign" | "cosign",
+  round: SignatureRound,
   unregisteredSignatures: boolean,
 ): SiteDocument | null {
   if (described === null) return null;
   return {
     ...described,
-    signatures: round === "cosign" ? 1 : 0,
+    signatures: round.kind === "cosign" || round.kind === "counter" ? 1 : 0,
     hasUnregisteredSignatures: unregisteredSignatures,
   };
 }
