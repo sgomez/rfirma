@@ -958,7 +958,7 @@ fn a_batch_without_the_presigner_url_names_it() {
 }
 
 #[test]
-fn a_batch_servlet_url_that_is_not_https_is_refused() {
+fn a_batch_servlet_url_over_http_is_attended_like_the_original_attends_it() {
     let url = an_operation(&format!(
         "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&\
          batchpresignerurl=http%3A%2F%2Fpresigner.example%2Fpre&\
@@ -966,10 +966,7 @@ fn a_batch_servlet_url_that_is_not_https_is_refused() {
         dat(xml_lote("SHA256", false).as_bytes())
     ));
 
-    let refusal = read_operation(&url).expect_err("http no es https");
-
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::BatchPresignerUrl));
+    read_operation(&url).expect("'validateURL' del original admite 'http'");
 }
 
 #[test]
@@ -1677,4 +1674,111 @@ fn the_chosen_document_resolves_the_format_auto_of_a_signature_without_data() {
     assert_eq!(request.format(), RequestedFormat::Pades);
     assert_eq!(request.document(), b"%PDF-1.7\nelegido");
     assert_eq!(request.round(), SignatureRound::First);
+}
+
+/// La grada A de las guardas de forma que el original aplica al leer la URL.
+mod url_shape_guards {
+    use super::*;
+
+    fn refusal_of(url: &str) -> Refusal {
+        read_operation(&AfirmaUrl::parse(url).expect("es del protocolo"))
+            .expect_err("la guarda deberia rechazarlo")
+    }
+
+    #[test]
+    fn a_filename_with_a_forbidden_character_is_refused_when_saving() {
+        for forbidden in ["%5C", "%2F", "%3A", "*", "%3F", "%22", "<", ">", "%7C"] {
+            let refusal = refusal_of(&format!(
+                "afirma://save?dat=ZmlybWFkbw&filename=doc{forbidden}pdf"
+            ));
+
+            assert_eq!(refusal.code(), SafCode::Params, "con {forbidden}");
+            assert_eq!(
+                refusal.blame(),
+                Some(Parameter::Filename),
+                "con {forbidden}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_filename_with_a_forbidden_character_is_refused_when_signing_and_saving() {
+        let refusal = refusal_of("afirma://signandsave?dat=ZmlybWFkbw&format=pades&algorithm=SHA256withRSA&filename=a%2Fb.pdf");
+
+        assert_eq!(refusal.code(), SafCode::Params);
+        assert_eq!(refusal.blame(), Some(Parameter::Filename));
+    }
+
+    #[test]
+    fn a_plain_filename_goes_through() {
+        assert!(read_operation(
+            &AfirmaUrl::parse("afirma://save?dat=ZmlybWFkbw&filename=documento.pdf")
+                .expect("es del protocolo")
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn extensions_with_a_forbidden_character_are_refused() {
+        for forbidden in ["%3B", "+", "%2F", "%3A", "*"] {
+            let refusal = refusal_of(&format!(
+                "afirma://save?dat=ZmlybWFkbw&exts=pdf{forbidden}xml"
+            ));
+
+            assert_eq!(refusal.code(), SafCode::Params, "con {forbidden}");
+            assert_eq!(
+                refusal.blame(),
+                Some(Parameter::Extensions),
+                "con {forbidden}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_comma_separated_list_of_extensions_goes_through() {
+        assert!(read_operation(
+            &AfirmaUrl::parse("afirma://save?dat=ZmlybWFkbw&exts=pdf,xml")
+                .expect("es del protocolo")
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn a_verb_in_capitals_is_not_the_verb_of_the_original() {
+        let refusal = refusal_of("afirma://SIGN?dat=ZmlybWFkbw");
+
+        assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+    }
+
+    #[test]
+    fn a_batch_servlet_on_a_local_address_is_refused_as_a_local_access() {
+        let refusal = refusal_of(
+            "afirma://batch?dat=ZmlybWFkbw&batchpresignerurl=https://localhost/presign\
+             &batchpostsignerurl=https://lote.example/postsign",
+        );
+
+        assert_eq!(refusal.code(), SafCode::LocalAccessBlocked);
+    }
+
+    #[test]
+    fn a_batch_servlet_carrying_its_own_parameters_is_refused_naming_it() {
+        let refusal = refusal_of(
+            "afirma://batch?dat=ZmlybWFkbw&batchpresignerurl=https://lote.example/presign\
+             &batchpostsignerurl=https://lote.example/postsign%3Fop%3Dput",
+        );
+
+        assert_eq!(refusal.code(), SafCode::Params);
+        assert_eq!(refusal.blame(), Some(Parameter::BatchPostsignerUrl));
+    }
+
+    #[test]
+    fn a_batch_servlet_with_an_unsupported_scheme_is_refused_naming_it() {
+        let refusal = refusal_of(
+            "afirma://batch?dat=ZmlybWFkbw&batchpresignerurl=ftp://lote.example/presign\
+             &batchpostsignerurl=https://lote.example/postsign",
+        );
+
+        assert_eq!(refusal.code(), SafCode::Params);
+        assert_eq!(refusal.blame(), Some(Parameter::BatchPresignerUrl));
+    }
 }

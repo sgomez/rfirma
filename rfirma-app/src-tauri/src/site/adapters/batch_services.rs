@@ -73,7 +73,7 @@ impl BatchServices for RelayBatchServices {
         lote_base64: &str,
         certs: &[Vec<u8>],
     ) -> Result<Vec<u8>, BatchError> {
-        let url = validated_batch_url(url, Situation::PresignerUnreachable)?;
+        let url = parsed_batch_url(url, Situation::PresignerUnreachable)?;
         let full_url = format!("{url}?{}", compose_query(format, lote_base64, certs, None));
         self.post(
             &full_url,
@@ -90,7 +90,7 @@ impl BatchServices for RelayBatchServices {
         certs: &[Vec<u8>],
         tridata: &TriphaseData,
     ) -> Result<Vec<u8>, BatchError> {
-        let url = validated_batch_url(url, Situation::PostsignerUnreachable)?;
+        let url = parsed_batch_url(url, Situation::PostsignerUnreachable)?;
         let full_url = format!(
             "{url}?{}",
             compose_query(format, lote_base64, certs, Some(tridata))
@@ -136,22 +136,9 @@ fn url_safe_batch(lote_base64: &str) -> String {
     lote_base64.replace('+', "-").replace('/', "_")
 }
 
-/// La URL de un servlet del lote: `https`, o el fallo con la situación que le corresponda.
-fn validated_batch_url(url: &str, unreachable: Situation) -> Result<reqwest::Url, BatchError> {
-    let parsed = reqwest::Url::parse(url)
-        .map_err(|error| BatchError::new(unreachable, error.to_string()))?;
-
-    if parsed.scheme() != "https" {
-        return Err(BatchError::new(
-            unreachable,
-            format!(
-                "protocolo no soportado para el servlet de lote: {}",
-                parsed.scheme()
-            ),
-        ));
-    }
-
-    Ok(parsed)
+/// La URL del servlet del lote ya leída; su forma la comprobó el dominio al leer la operación.
+fn parsed_batch_url(url: &str, unreachable: Situation) -> Result<reqwest::Url, BatchError> {
+    reqwest::Url::parse(url).map_err(|error| BatchError::new(unreachable, error.to_string()))
 }
 
 #[cfg(test)]

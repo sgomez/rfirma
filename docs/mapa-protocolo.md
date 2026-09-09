@@ -411,36 +411,36 @@ del ADR-0016—, y no lee ni `jvc` ni `ver`.
 |---|---|---|---|---|
 | `algorithm` | `UrlParametersToSign`, `UrlParametersToSignAndSave`, `autoscript`: `sign`, `cosign`, `countersign`, `signandsave` | Obligatorio; se reconoce por prefijo, OID y URI de XMLDSig; SHA1 y RIPEMD160 salen con `SAF_03` nombrando `algorithm` | `UrlParametersToSign.java:207` compara contra doce literales exactos (ocho en `signandsave`, sin `withECDSA`); quien firma, `AOSignConstants.composeSignatureAlgorithmName`, reconoce por prefijo e **ignora el sufijo** que escribió la sede | **Desviación declarada** (#602 y SHA1). Más laxa que la lista declarativa —atiende `SHA-256`, los OID y las URI—, igual que el código que firma; más estricta con SHA1 |
 | `appname` | `UrlParameters`, `autoscript`: `batch`, `sign`, `cosign`, `countersign`, `signandsave` | No se lee | Se guarda en `UrlParametersToSign` y `UrlParametersForBatch`, y **ningún código lo lee**: `getAppName()` no tiene usos en el árbol | **Igual** |
-| `aw` | `UrlParameters` | Espera activa si el valor no es vacío ni `false` (`asks_for_active_wait`, `launch.rs`) | `Boolean.parseBoolean` en `UrlParameters.java:253`: solo `true` sin distinguir mayúsculas; la espera solo ocurre fuera del socket (`ProtocolInvocationLauncher.java:337`) | **Hueco** (#614). Más laxa: `aw=1` pide espera aquí y no allí |
-| `batchpostsignerurl` | `UrlParametersForBatch`, `autoscript:batch` | Obligatoria salvo lote local; absoluta y **`https`** | `UrlParametersForBatch.java:193` la exige salvo `localBatchProcess`, y `validateURL` (`UrlParameters.java:351`) admite **`http` y `https`**, prohíbe host local y prohíbe `?` y `=` | **Hueco** (#614). Más estricta con `http`, más laxa con el host local y con los parámetros en la URL |
-| `batchpresignerurl` | `UrlParametersForBatch`, `autoscript:batch` | Igual que la anterior | Igual que la anterior | **Hueco** (#614) |
+| `aw` | `UrlParameters` | Espera activa solo con `true` sin distinguir mayúsculas y sin recortar (`asks_for_active_wait`, `launch.rs`) | `Boolean.parseBoolean` en `UrlParameters.java:253`: solo `true` sin distinguir mayúsculas; la espera solo ocurre fuera del socket (`ProtocolInvocationLauncher.java:337`) | **Igual** |
+| `batchpostsignerurl` | `UrlParametersForBatch`, `autoscript:batch` | Obligatoria salvo lote local; `http` o `https`, host no local y sin `?` ni `=`, al leer la operación | `UrlParametersForBatch.java:193` la exige salvo `localBatchProcess`, y `validateURL` (`UrlParameters.java:351`) admite **`http` y `https`**, prohíbe host local y prohíbe `?` y `=` | **Igual** |
+| `batchpresignerurl` | `UrlParametersForBatch`, `autoscript:batch` | Igual que la anterior | Igual que la anterior | **Igual** |
 | `cop` | `UrlParametersToSignAndSave`, `autoscript:signandsave` | Obligatorio: `sign`, `cosign` o `countersign`; cualquier otra cosa, `SAF_04` | `UrlParametersToSignAndSave.java:202` lo guarda sin validar; `SingleSignOperation.Operation.getOperation` devuelve `null` para cualquier otro valor y la operación no llega a firmar | **Igual** en el desenlace; rFirma lo rechaza antes y con un código que lo nombra |
 | `dat` | `UrlParameters`, `autoscript`: `batch`, `sign`, `cosign`, `countersign`, `save`, `signandsave` | Base64 URL-safe; obligatorio en `sign`, `cosign`, `countersign`, `save` y `batch`; opcional en `signandsave`; `file:/` es `SAF_03`; vacío es `SAF_44` | `UrlParameters.java:253` solo prohíbe `file:/`; el resto lo resuelve `DataDownloader.downloadData` (`DataDownloader.java:153`), que **descarga el contenido si el valor empieza por `http://` o `https://`** y si no lo trata como Base64. Ausente **no es error** | **Hueco doble** (#612): la URL y el `dat` ausente en `sign`. Más estricta en las dos |
 | `desc` | `UrlParametersToLoad`, `UrlParametersToSave`, `autoscript`: `load`, `save` | Descripción del tipo de fichero, tal cual | `UrlParametersToSave.verifyFileTypeDescription:242` le añade `(*.ext)` con las extensiones de `exts` si no acaba en `)` | **Igual** (la diferencia es el rótulo de un diálogo, no lo que sale al cable) |
-| `exts` | `UrlParametersToLoad`, `UrlParametersToSave`, `autoscript`: `load`, `save` | Lista separada por comas, sin validar | `UrlParametersToSave.verifyExtensions:221` rechaza con `SAF_03` cualquiera de `\ / : * ? " < > \| ;` y el espacio | **Hueco** (#614). Más laxa |
+| `exts` | `UrlParametersToLoad`, `UrlParametersToSave`, `autoscript`: `load`, `save` | Lista separada por comas, con la misma guarda de caracteres al leer `save` | `UrlParametersToSave.verifyExtensions:221` rechaza con `SAF_03` cualquiera de `\ / : * ? " < > \| ;` y el espacio | **Igual** |
 | `filePath` | `UrlParametersToLoad`, `autoscript:load` | Carpeta inicial del diálogo de carga; vacío es como ausente | `UrlParametersToLoad.java:153`: idéntico, vacío se trata como ausente | **Igual** |
-| `fileid` | `UrlParameters` | Referencia del documento o del XML de parámetros en el camino del servidor intermedio; sin validar | `UrlParameters.java:253` exige que lo acompañe `rtservlet`, y en las cinco clases hace además de `id` de sesión, con las guardas de ≤ 20 y alfanumérico | **Hueco** (#614). Más laxa |
-| `filename` | `UrlParametersToSave`, `UrlParametersToSignAndSave`, `autoscript`: `save`, `signandsave` | Nombre propuesto al guardar, sin validar | `verifyFilename` (`UrlParametersToSave.java:207`) y `UrlParametersToSignAndSave.java:202` rechazan con `SAF_03` cualquiera de `\ / : * ? " < > \|` | **Hueco** (#614). Más laxa |
+| `fileid` | `UrlParameters` | Referencia del documento o del XML de parámetros en el camino del servidor intermedio, con las mismas dos guardas de identificador | `UrlParameters.java:253` exige que lo acompañe `rtservlet`, y en las cinco clases hace además de `id` de sesión, con las guardas de ≤ 20 y alfanumérico | **Igual** |
+| `filename` | `UrlParametersToSave`, `UrlParametersToSignAndSave`, `autoscript`: `save`, `signandsave` | Nombre propuesto al guardar, con la misma guarda de caracteres en `save` y en `signandsave` | `verifyFilename` (`UrlParametersToSave.java:207`) y `UrlParametersToSignAndSave.java:202` rechazan con `SAF_03` cualquiera de `\ / : * ? " < > \|` | **Igual** |
 | `format` | `UrlParametersToSign`, `UrlParametersToSignAndSave`, `autoscript`: `sign`, `cosign`, `countersign`, `signandsave` | Obligatorio; catálogo cerrado con los alias de `AOSignConstants`; `auto` se resuelve por la cabecera del documento; XMLDSig sale con `SAF_06` | Obligatorio (`SAF_03` si falta); el **valor** no se valida al leer la URL, lo resuelve más tarde `AOSignerFactory`, y un formato que no existe acaba en `SAF_06` | **Desviación declarada** (XMLDSig, XAdES explícita y el resto de lo que el original no firma en tres fases). Mismo código, más temprano |
 | `gzip` | `UrlParameters` | `true` sin distinguir mayúsculas; descomprime lo que traía `dat` | `Boolean.parseBoolean`; `DataDownloader` descomprime **antes** de mirar si el valor era una URL | **Igual** |
-| `id` | `UrlParametersForBatch`, `UrlParametersToSave`, `UrlParametersToSelectCert`, `UrlParametersToSign`, `UrlParametersToSignAndSave` | Obligatorio en el camino del servidor intermedio con `stservlet`; sin validar | ≤ 20 caracteres y alfanumérico en las cinco clases, porque se usa como nombre de fichero | **Hueco** (#614). Más laxa |
+| `id` | `UrlParametersForBatch`, `UrlParametersToSave`, `UrlParametersToSelectCert`, `UrlParametersToSign`, `UrlParametersToSignAndSave` | Obligatorio en el camino del servidor intermedio con `stservlet`; ≤ 20 caracteres y alfanumérico | ≤ 20 caracteres y alfanumérico en las cinco clases, porque se usa como nombre de fichero | **Igual** |
 | `idsession` | `autoscript`: todas las operaciones y los dos arranques | Credencial del canal; alfanumérica ASCII; obligatoria en el `websocket` de la versión 4, opcional en la 3 y en `service` | `ProtocolInvocationLauncher.getChannelInfo`: si tiene algún carácter que no sea letra o dígito **la descarta y sigue sin credencial** | **Desviación declarada** (ADR-0016). Más estricta a propósito |
 | `jsonbatch` | `UrlParametersForBatch`, `autoscript:batch` | `true` sin distinguir mayúsculas; `false` por defecto | `Boolean.parseBoolean`, `false` por defecto | **Igual** |
 | `jvc` | `autoscript`: `service`, `websocket` | No se lee | Solo enciende un aviso visual si es menor que el mínimo (`ProtocolInvocationLauncher.java:194-215`); no cambia ninguna respuesta | **Igual** |
-| `key` | `UrlParameters` | Ocho caracteres exactos; si no, `SAF_15` | `verifyCipherKey` (`UrlParameters.java:327`) exige ocho y falla con `SAF_03`; ausente o vacío significa «sin cifrado» | **Hueco** (#614). Mismo rechazo, código equivocado |
+| `key` | `UrlParameters` | Ocho caracteres exactos; si no, `SAF_03` nombrando `key` | `verifyCipherKey` (`UrlParameters.java:327`) exige ocho y falla con `SAF_03`; ausente o vacío significa «sin cifrado» | **Igual** |
 | `keystore` | `UrlParameters`, `autoscript`: `batch`, `sign`, `cosign`, `countersign`, `selectcert`, `signandsave` | No se lee | `getKeyStoreName` (`UrlParameters.java:382`) elige el almacén; los cuatro lanzadores lo construyen con él | **Hueco** (#617). Más laxa: la sede cree haber acotado el origen del certificado |
 | `ksb64` | Igual que `keystore` | No se lee | Igual que `keystore`, con el valor en Base64, y `getDefaultKeyStoreLib` (`UrlParameters.java:415`) saca de él la ruta de la biblioteca PKCS#11 | **Hueco** (#617) |
 | `localBatchProcess` | `UrlParametersForBatch`, `autoscript:batch` | `true` sin `jsonbatch` sale con `SAF_03` nombrando `dat` | `UrlParametersForBatch.java:193`: con `true` no exige las URL de servlet, y el lote en XML heredado también se procesa | **Desviación declarada** (lote local solo en JSON) |
 | `mcv` | `UrlParameters`, `autoscript`: todas las operaciones | Se comprueba en toda operación con el comparador del original; una cadena sin forma de versión sale con `SAF_03` | Se comprueba en los seis lanzadores (`ProtocolInvocationLauncherSign.java:143` y equivalentes) con `SAF_41`; una cadena sin forma de versión revienta con `NumberFormatException` | **Igual** en el caso que importa; rFirma nombra el parámetro en vez de reventar |
 | `multiload` | `UrlParametersToLoad`, `autoscript:load` | `true` sin distinguir mayúsculas; `false` por defecto | `Boolean.parseBoolean`, `false` por defecto | **Igual** |
 | `needcert` | `UrlParametersForBatch`, `autoscript:batch` | `true` sin distinguir mayúsculas; `false` por defecto | `Boolean.parseBoolean`, `false` por defecto | **Igual** |
-| `op` | `autoscript`: todas las operaciones | El parámetro `op` si vino y no está vacío, y si no el dominio de la URL; **sin distinguir mayúsculas** | `ProtocolInvocationUriParser.parserUri` mete el dominio en `op`, y `launch` compara con `startsWith("afirma://sign?")`, **sensible a mayúsculas** | **Hueco** (#614). Más laxa |
+| `op` | `autoscript`: todas las operaciones | El parámetro `op` si vino y no está vacío, y si no el dominio de la URL, **distinguiendo mayúsculas** | `ProtocolInvocationUriParser.parserUri` mete el dominio en `op`, y `launch` compara con `startsWith("afirma://sign?")`, **sensible a mayúsculas** | **Igual** |
 | `ports` | `autoscript`: `service`, `websocket` | Obligatorio en la versión 4 y en `service`; enteros de 1 a 65535 | `Math.abs` de cada valor, `IllegalArgumentException` si alguno no es numérico; sin `ports`, el `websocket` cae al puerto por defecto y `service` falla con `SAF_03` | **Igual** |
 | `properties` | `UrlParameters`, `autoscript`: `batch`, `sign`, `cosign`, `countersign`, `selectcert`, `signandsave` | Base64 URL-safe; si no se puede leer, `SAF_03` nombrando `properties` | Si `AOUtil.base642Properties` falla, **registra y sigue con propiedades vacías** (`UrlParametersToSign.java:207` y las tres clases hermanas) | **Hueco** (#615). Más estricta: tumba una firma que el original hace |
-| `resetsticky` | Cuatro clases y seis operaciones de `autoscript` | `true` sin distinguir mayúsculas, **recortando espacios**; `false` por defecto | `Boolean.parseBoolean`, **sin recortar**: `" true"` es `false` | **Hueco** (#614). Más laxa |
-| `rtservlet` | `UrlParameters` | Se valida en el adaptador, cuando se va a llamar; un host local sale con `SAF_16` | `validateURL` al leer la URL (`UrlParameters.java:351`): host local es `SAF_13`, y `?` o `=` en la URL es `SAF_03` | **Hueco** (#614). Mismo rechazo, otro momento y otro código |
-| `sticky` | Cuatro clases y seis operaciones de `autoscript` | Como `resetsticky` | Como `resetsticky` | **Hueco** (#614) |
-| `stservlet` | `UrlParameters` | Destino de la respuesta en el camino del servidor intermedio; se valida en el adaptador | `validateURL` al leer la URL, y es obligatorio cuando hay `id` y servicios | **Hueco** (#614) |
+| `resetsticky` | Cuatro clases y seis operaciones de `autoscript` | `true` sin distinguir mayúsculas y **sin recortar espacios**; `false` por defecto | `Boolean.parseBoolean`, **sin recortar**: `" true"` es `false` | **Igual** |
+| `rtservlet` | `UrlParameters` | Se valida al leer la invocación; un host local sale con `SAF_13` | `validateURL` al leer la URL (`UrlParameters.java:351`): host local es `SAF_13`, y `?` o `=` en la URL es `SAF_03` | **Igual** |
+| `sticky` | Cuatro clases y seis operaciones de `autoscript` | Como `resetsticky` | Como `resetsticky` | **Igual** |
+| `stservlet` | `UrlParameters` | Destino de la respuesta en el camino del servidor intermedio; se valida al leer la invocación | `validateURL` al leer la URL, y es obligatorio cuando hay `id` y servicios | **Igual** |
 | `title` | `UrlParametersToLoad`, `UrlParametersToSave`, `autoscript`: `load`, `save` | Título del diálogo; ausente es ausente | `verifyTitle` (`UrlParametersToSave.java:235`) pone un título por defecto si falta | **Igual** (el rótulo de un diálogo local) |
 | `v` | `autoscript`: `service`, `websocket` | `service`: 1, 2 o 3; `websocket`: 3 o 4; cualquier otra, `SAF_21`. Ausente vale 1 | Cualquier entero se acepta al leer, y el lanzador contesta `SAF_21` si supera la versión 4. Ausente vale 1 | **Igual** en el desenlace |
 | `ver` | `UrlParametersForBatch`, `UrlParametersToLoad`, `UrlParametersToSave`, `UrlParametersToSelectCert`, `UrlParametersToSign`, `UrlParametersToSignAndSave` | **No se lee** | Versión mínima de protocolo de la operación (`0` por defecto); en el camino sin arranque manda ella, y si supera la versión 4 sale `SAF_21` (`ProtocolInvocationLauncher.java:301` y las cinco líneas hermanas) | **Hueco** (#618). Más laxa: rFirma atiende un trámite que el original declara no poder atender |
@@ -492,22 +492,15 @@ La lista que pide el criterio de aceptación, junta y sin diluir. En todas
 ellas rFirma **acepta lo que el original rechaza**, o le da otro significado, y
 por tanto una sede que funcione aquí puede no funcionar contra AutoFirma:
 
-1. **`id` y `fileid` sin las dos guardas** (≤ 20 caracteres, alfanumérico) → #614.
-2. **`filename` sin la guarda de caracteres inválidos**, en `save` y en `signandsave` → #614.
-3. **`exts` sin su guarda**, que en el original incluye el `;` y el espacio → #614.
-4. **`aw` con cualquier valor que no sea vacío ni `false`** pide espera activa → #614.
-5. **`sticky` y `resetsticky` recortando espacios**: `" true"` es sí aquí y no allí → #614.
-6. **El verbo sin distinguir mayúsculas**: `afirma://SIGN?…` se atiende aquí y no allí → #614.
-7. **`keystore` y `ksb64` ignorados**: la sede cree haber acotado el almacén y no lo ha hecho → #617.
-8. **`ver` ignorado**: un trámite que exige una versión de protocolo que rFirma no habla se atiende igual → #618.
-9. **`profile` cruzado al puente**, cuando el original lo borra antes de firmar → #615.
-10. **Las URL de los servlets del lote sin la guarda de host local ni la de parámetros en la URL** → #614.
-11. **El `algorithm` reconocido por prefijo** en vez de contra la lista de doce literales: aquí es deliberado y está decidido en el #602, porque es lo que hace el código que firma, y solo la puerta declarativa del original es más cerrada.
+1. **`keystore` y `ksb64` ignorados**: la sede cree haber acotado el almacén y no lo ha hecho → #617.
+2. **`ver` ignorado**: un trámite que exige una versión de protocolo que rFirma no habla se atiende igual → #618.
+3. **`profile` cruzado al puente**, cuando el original lo borra antes de firmar → #615.
+4. **El `algorithm` reconocido por prefijo** en vez de contra la lista de doce literales: aquí es deliberado y está decidido en el #602, porque es lo que hace el código que firma, y solo la puerta declarativa del original es más cerrada.
 
 Y donde rFirma es **más estricta** —que también rompe trámites, pero de forma
 visible—: `dat` que es una URL y `sign` sin `dat` (ambos #612), `properties`
-ilegible (#615), `http` en las URL del lote (#614), y las tres desviaciones
-declaradas que rechazan formatos y algoritmos.
+ilegible (#615), y las tres desviaciones declaradas que rechazan formatos y
+algoritmos.
 
 ### 5.6 Ninguna fila queda sin veredicto
 
@@ -515,5 +508,8 @@ Treinta y cinco parámetros de URL, trece claves de `properties` con
 comportamiento propio y ocho campos de la definición del lote. Veredictos:
 **Igual** en la mayoría, **desviación declarada** en nueve casos —las cinco de
 `CONTEXT.md`, la del algoritmo (#602), la del `idsession` (ADR-0016) y las del
-recuadro (ADR-0019, ADR-0006)— y **hueco** en los ocho casos que abre esta
-auditoría, repartidos en cinco sub-issues: #612, #614, #615, #617 y #618.
+recuadro (ADR-0019, ADR-0006)— y **hueco** en lo que abre esta auditoría,
+repartido en las sub-issues #612, #615, #617 y #618. El #614 ya está cerrado:
+sus filas —`aw`, `exts`, `fileid`, `filename`, `id`, `key`, `op`, `rtservlet`,
+`stservlet`, `sticky`, `resetsticky` y las dos URL de servlet del lote— vuelven
+a **Igual**.

@@ -75,7 +75,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado, de carga o de lote. Pruebas en `domain/protocol/operation/tests.rs`. |
-| `domain/protocol/parameters.rs` | Lo común a toda operación: las dos guardias y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
+| `domain/protocol/parameters.rs` | Lo común a toda operación: las guardias de forma —versión mínima, fichero local, identificador de sesión y URL de servlet— y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/relay_parameters.rs` | El XML de parámetros que la sede sube al servlet cuando la operación no cabe en la URL; **no** es el documento a firmar. Pruebas en `domain/protocol/relay_parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
 | `domain/protocol/url.rs` | Una URL `afirma://` partida en verbo y pares, con las rarezas del original. Pruebas en `domain/protocol/url/tests.rs`. |

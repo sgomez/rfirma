@@ -4,6 +4,7 @@ use crate::site::domain::channel::ChannelLocation;
 
 use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
+use super::parameters::{check_servlet_url, checked_identifier, reads_as_true};
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
 
@@ -187,7 +188,7 @@ impl LaunchRequest {
 
         let key = match url.parameter("key").filter(|value| !value.is_empty()) {
             Some(value) => CipherKey::from_url_parameter(value)
-                .map_err(|error| Refusal::params(error.detail().to_owned()))?,
+                .map_err(|error| Refusal::about(Parameter::CipherKey, error.detail().to_owned()))?,
             None => None,
         };
 
@@ -255,14 +256,24 @@ fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
 
 /// Si la sede pide espera activa (`aw`) antes de operar.
 pub fn asks_for_active_wait(url: &AfirmaUrl) -> bool {
-    url.parameter("aw")
-        .is_some_and(|value| !value.is_empty() && value != "false")
+    url.parameter("aw").is_some_and(reads_as_true)
+}
+
+fn checked_servlet(value: String, blame: Parameter) -> Result<String, Refusal> {
+    check_servlet_url(&value, blame)?;
+    Ok(value)
 }
 
 fn relay_request_of(url: &AfirmaUrl) -> Result<RelayRequest, Refusal> {
-    let store_servlet = given(url, "stservlet");
-    let fileid = given(url, "fileid");
-    let retrieve_servlet = given(url, "rtservlet");
+    let store_servlet = given(url, "stservlet")
+        .map(|it| checked_servlet(it, Parameter::StoreServlet))
+        .transpose()?;
+    let fileid = given(url, "fileid")
+        .map(|it| checked_identifier(it, Parameter::FileId))
+        .transpose()?;
+    let retrieve_servlet = given(url, "rtservlet")
+        .map(|it| checked_servlet(it, Parameter::RetrieveServlet))
+        .transpose()?;
 
     let Some(store_servlet) = store_servlet else {
         return match (fileid, retrieve_servlet) {
@@ -278,7 +289,8 @@ fn relay_request_of(url: &AfirmaUrl) -> Result<RelayRequest, Refusal> {
     };
 
     let id = given(url, "id")
-        .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))?;
+        .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))
+        .and_then(|it| checked_identifier(it, Parameter::Identifier))?;
 
     if url.parameter("dat").is_some() {
         return Ok(RelayRequest::Inline { store_servlet, id });

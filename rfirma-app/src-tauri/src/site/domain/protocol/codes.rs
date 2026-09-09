@@ -29,11 +29,25 @@ pub enum Parameter {
     BatchPresignerUrl,
     /// `batchpostsignerurl`: la URL del servlet de postfirma del lote remoto.
     BatchPostsignerUrl,
+    /// `key`: la clave de cifrado del servidor intermedio.
+    CipherKey,
+    /// `id`: el identificador con el que se sube la respuesta al servidor intermedio.
+    Identifier,
+    /// `fileid`: la referencia del documento o del XML de parámetros a recuperar.
+    FileId,
+    /// `filename`: el nombre de fichero que la sede propone al guardar.
+    Filename,
+    /// `exts`: las extensiones que la sede propone al guardar o al cargar.
+    Extensions,
+    /// `rtservlet`: el servlet de recuperación del servidor intermedio.
+    RetrieveServlet,
+    /// `stservlet`: el servlet de almacenamiento del servidor intermedio.
+    StoreServlet,
 }
 
 impl Parameter {
     /// Todos, para las pruebas de totalidad.
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 17] = [
         Self::Ports,
         Self::ProtocolVersion,
         Self::IdSession,
@@ -44,6 +58,13 @@ impl Parameter {
         Self::Algorithm,
         Self::BatchPresignerUrl,
         Self::BatchPostsignerUrl,
+        Self::CipherKey,
+        Self::Identifier,
+        Self::FileId,
+        Self::Filename,
+        Self::Extensions,
+        Self::RetrieveServlet,
+        Self::StoreServlet,
     ];
 
     /// El nombre con el que viaja en la URL del protocolo.
@@ -59,6 +80,13 @@ impl Parameter {
             Self::Algorithm => "algorithm",
             Self::BatchPresignerUrl => "batchpresignerurl",
             Self::BatchPostsignerUrl => "batchpostsignerurl",
+            Self::CipherKey => "key",
+            Self::Identifier => "id",
+            Self::FileId => "fileid",
+            Self::Filename => "filename",
+            Self::Extensions => "exts",
+            Self::RetrieveServlet => "rtservlet",
+            Self::StoreServlet => "stservlet",
         }
     }
 }

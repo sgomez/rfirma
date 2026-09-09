@@ -98,7 +98,7 @@ impl AfirmaUrl {
     }
 }
 
-fn abridged_value(value: &str) -> String {
+pub(super) fn abridged_value(value: &str) -> String {
     let size = value.chars().count();
     if size <= LONGEST_TRACED_VALUE {
         return value.to_owned();

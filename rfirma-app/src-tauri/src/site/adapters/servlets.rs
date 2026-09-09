@@ -1,4 +1,4 @@
-//! Adaptador `reqwest` sobre los servlets del servidor intermedio (1.9.2, `UrlParameters.java:351-379`).
+//! Adaptador `reqwest` sobre los servlets del servidor intermedio; la forma de la URL no se comprueba aquí.
 
 use std::time::Duration;
 
@@ -29,7 +29,7 @@ impl Default for RelayServlets {
 
 impl Servlets for RelayServlets {
     fn retrieve(&self, service_url: &str, id: &str) -> Result<String, RelayError> {
-        let url = validated_servlet_url(service_url)?;
+        let url = parsed_servlet_url(service_url)?;
         let id = id.to_owned();
         let client = self.client.clone();
         execute_outside_tokio(move || {
@@ -47,7 +47,7 @@ impl Servlets for RelayServlets {
     }
 
     fn store(&self, service_url: &str, id: &str, data: &str) -> Result<(), RelayError> {
-        let url = validated_servlet_url(service_url)?;
+        let url = parsed_servlet_url(service_url)?;
         let id = id.to_owned();
         let data = data.to_owned();
         let client = self.client.clone();
@@ -107,33 +107,10 @@ fn rejected(error: reqwest::Error) -> RelayError {
     RelayError::new(Situation::UploadRejected, error.to_string())
 }
 
-/// Valida la URL del servlet como el original: `http`/`https`, host no local y sin parámetros.
-fn validated_servlet_url(service_url: &str) -> Result<reqwest::Url, RelayError> {
-    let url = reqwest::Url::parse(service_url)
-        .map_err(|error| RelayError::new(Situation::ServletUnreachable, error.to_string()))?;
-
-    if url.scheme() != "http" && url.scheme() != "https" {
-        return Err(RelayError::new(
-            Situation::ServletUnreachable,
-            format!("protocolo no soportado para el servlet: {}", url.scheme()),
-        ));
-    }
-
-    if matches!(url.host_str(), Some("localhost") | Some("127.0.0.1")) {
-        return Err(RelayError::new(
-            Situation::ServletUnreachable,
-            "el host de la URL del servlet es local",
-        ));
-    }
-
-    if service_url.contains('?') || service_url.contains('=') {
-        return Err(RelayError::new(
-            Situation::ServletUnreachable,
-            "la URL del servlet no admite parametros propios",
-        ));
-    }
-
-    Ok(url)
+/// La URL del servlet ya leída; su forma la comprobó el dominio al leer la invocación.
+fn parsed_servlet_url(service_url: &str) -> Result<reqwest::Url, RelayError> {
+    reqwest::Url::parse(service_url)
+        .map_err(|error| RelayError::new(Situation::ServletUnreachable, error.to_string()))
 }
 
 #[cfg(test)]
