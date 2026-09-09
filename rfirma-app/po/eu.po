@@ -9,1263 +9,1415 @@ msgstr ""
 
 #. No se traduce: es el nombre de la aplicación.
 msgid "app.name"
-msgstr ""
+msgstr "rFirma"
 
 msgid "actions.sign"
-msgstr ""
+msgstr "Sinatu dokumentua"
 
 msgid "actions.cancel"
-msgstr ""
+msgstr "Utzi"
 
 msgid "actions.close"
-msgstr ""
+msgstr "Itxi"
 
 msgid "actions.change"
-msgstr ""
+msgstr "Aldatu"
 
 msgid "actions.remove"
-msgstr ""
+msgstr "Kendu"
 
 msgid "actions.dismiss"
-msgstr ""
+msgstr "Baztertu"
 
 msgid "actions.copy"
-msgstr ""
+msgstr "Kopiatu"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
-msgstr ""
+msgstr "Español"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.ca"
-msgstr ""
+msgstr "Català"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.eu"
-msgstr ""
+msgstr "Euskara"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.gl"
-msgstr ""
+msgstr "Galego"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.en"
-msgstr ""
+msgstr "English"
 
 msgid "errors.technicalDetail"
-msgstr ""
+msgstr "Xehetasun teknikoa"
 
 msgid "errors.situations.unknown.title"
-msgstr ""
+msgstr "Ezin izan da eragiketa osatu"
 
 msgid "errors.situations.unknown.body"
 msgstr ""
+"Saiatu berriro. Gertatzen jarraitzen badu, erantsi xehetasun teknikoa "
+"akatsaren txostenari."
 
 msgid "errors.situations.handlerNotAvailable.title"
-msgstr ""
+msgstr "Ezin da aldatu estekak nork artatzen dituen"
 
 msgid "errors.situations.handlerNotAvailable.body"
 msgstr ""
+"rFirmaren bertsio honek ezin du aukera hori idatzi: mahaigainaren "
+"ezarpenetan aldatzen da."
 
 msgid "errors.situations.handlerListUnreadable.title"
-msgstr ""
+msgstr "Ezin izan da mahaigainaren aukera irakurri"
 
 msgid "errors.situations.handlerListUnreadable.body"
 msgstr ""
+"Mahaigainak aukera hori gordetzen duen fitxategia ezin izan da irakurri; "
+"beraz, zegoen bezala utzi da."
 
 msgid "errors.situations.handlerListUnwritable.title"
-msgstr ""
+msgstr "Ezin izan da gorde estekak nork artatzen dituen"
 
 msgid "errors.situations.handlerListUnwritable.body"
-msgstr ""
+msgstr "Mahaigainak aukera hori gordetzen duen fitxategia ezin izan da idatzi."
 
 msgid "errors.situations.notAnAcceptedImage.title"
-msgstr ""
+msgstr "Irudi horrek ez du errubrikarako balio"
 
 msgid "errors.situations.notAnAcceptedImage.body"
-msgstr ""
+msgstr "Errubrikak PNG edo JPEG izan behar du."
 
 msgid "errors.situations.damagedImage.title"
-msgstr ""
+msgstr "Ezin izan dugu irudia ireki"
 
 msgid "errors.situations.damagedImage.body"
 msgstr ""
+"Fitxategia PNG edo JPEG bat da, baina hondatuta dago. Probatu beste kopia "
+"batekin."
 
 msgid "errors.situations.imageTooLarge.title"
-msgstr ""
+msgstr "Irudia handiegia da"
 
 msgid "errors.situations.imageTooLarge.body"
-msgstr ""
+msgstr "Aukeratu irudi txikiago bat edo gorde ezazu bereizmen txikiagoarekin."
 
 msgid "errors.situations.sourceUnreadable.title"
-msgstr ""
+msgstr "Ezin izan dugu aukeratu duzun fitxategia irakurri"
 
 msgid "errors.situations.sourceUnreadable.body"
-msgstr ""
+msgstr "Egiaztatu zegoen lekuan jarraitzen duela eta aukeratu berriro."
 
 msgid "errors.situations.storeUnwritable.title"
-msgstr ""
+msgstr "Ezin izan dugu zure errubrika gorde"
 
 msgid "errors.situations.storeUnwritable.body"
 msgstr ""
+"Aukeratu irudia berriro. Gertatzen jarraitzen badu, erantsi xehetasun "
+"teknikoa akatsaren txostenari."
 
 msgid "errors.situations.storeUnreadable.title"
-msgstr ""
+msgstr "Ezin izan dugu gordetako zure errubrika irakurri"
 
 msgid "errors.situations.storeUnreadable.body"
-msgstr ""
+msgstr "Aukeratu irudia berriro, ordezteko."
 
 msgid "errors.situations.incorrectPin.title"
-msgstr ""
+msgstr "PINa ez da zuzena"
 
 msgid "errors.situations.incorrectPin.body"
 msgstr ""
+"Sartu berriro. Txartela blokeatu egiten da hainbat saiakera huts eginda."
 
 msgid "errors.situations.pinLocked.title"
-msgstr ""
+msgstr "Txartela blokeatuta dago"
 
 msgid "errors.situations.pinLocked.body"
 msgstr ""
+"PINarekin saiakera huts gehiegi egin ondoren blokeatu da. Desblokeatu ezazu "
+"bere PUKarekin, berriro sinatu aurretik."
 
 msgid "errors.situations.tokenAbsent.title"
-msgstr ""
+msgstr "Ez dugu txartela aurkitzen"
 
 msgid "errors.situations.tokenAbsent.body"
 msgstr ""
+"Egiaztatu sartuta jarraitzen duela eta irakurgailua konektatuta dagoela, eta "
+"saiatu berriro."
 
 msgid "errors.situations.expiredSession.title"
-msgstr ""
+msgstr "Txartelarekiko saioa iraungi da"
 
 msgid "errors.situations.expiredSession.body"
 msgstr ""
+"Saiatu berriro: saio berri bat irekiko da eta PINa berriro eskatuko dizugu."
 
 msgid "errors.situations.moduleNotFound.title"
-msgstr ""
+msgstr "Ezin izan dugu txartelaren modulua kargatu"
 
 msgid "errors.situations.moduleNotFound.body"
 msgstr ""
+"Egiaztatu PKCS#11 modulua esan duzun lekuan dagoela, edo aukeratu beste bat."
 
 msgid "errors.situations.certificateNotFound.title"
-msgstr ""
+msgstr "Ziurtagiria jada ez dago txartelean"
 
 msgid "errors.situations.certificateNotFound.body"
-msgstr ""
+msgstr "Bilatu ziurtagiriak berriro eta aukeratu dauden horietako bat."
 
 msgid "errors.situations.certificateExpired.title"
-msgstr ""
+msgstr "Ziurtagiria iraungi da"
 
 msgid "errors.situations.certificateExpired.body"
 msgstr ""
+"Iraungitako ziurtagiri batek ez du sinatzeko balio. Berritu ezazu "
+"jaulkitzailearekin eta saiatu berriro."
 
 msgid "errors.situations.certificateNotYetValid.title"
-msgstr ""
+msgstr "Ziurtagiria oraindik ez dago indarrean"
 
 msgid "errors.situations.certificateNotYetValid.body"
 msgstr ""
+"Oraindik ez da hasi bere baliozkotasun-aldia; beraz, ez du sinatzeko balio."
 
 msgid "errors.situations.certificateRevoked.title"
-msgstr ""
+msgstr "Ziurtagiria errebokatuta dago"
 
 msgid "errors.situations.certificateRevoked.body"
 msgstr ""
+"Jaulkitzaileak errebokatu du; beraz, ez du sinatzeko balio. Berri bat behar "
+"duzu."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr ""
+msgstr "Ezin izan da ziurtagiria ireki"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr ""
+msgstr "Egiaztatu fitxategiaren pasahitza."
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".
 msgid "errors.situations.keyNotRsa.title"
-msgstr ""
+msgstr "Ziurtagiri hori ez da rFirmarekin bateragarria"
 
 msgid "errors.situations.mechanismNotOffered.title"
-msgstr ""
+msgstr "Tokenak ez du sinadura-algoritmo hori onartzen"
 
 msgid "errors.situations.mechanismNotOffered.body"
 msgstr ""
+"Probatu beste ziurtagiri batekin edo eskatu egoitzari SHA-256 RSArekin "
+"erabil dezala."
 
 msgid "errors.situations.certificateUnreadable.title"
-msgstr ""
+msgstr "Ezin izan dugu ziurtagiria irakurri"
 
 msgid "errors.situations.certificateUnreadable.body"
 msgstr ""
+"Txartelean dagoena ez da irakurtzen dakigun ziurtagiri bat. Probatu beste "
+"batekin."
 
 msgid "errors.situations.notAPdf.title"
-msgstr ""
+msgstr "Fitxategi hori ez da PDF bat"
 
 msgid "errors.situations.notAPdf.body"
 msgstr ""
+"rFirmak PDFak sinatzen ditu. Aukeratu PDF dokumentu bat eta saiatu berriro."
 
 msgid "errors.situations.documentEncrypted.title"
-msgstr ""
+msgstr "PDFa babestuta dago"
 
 msgid "errors.situations.documentEncrypted.body"
 msgstr ""
+"Zifratuta dago edo baimenak murriztuta ditu; beraz, ezin da sinatu. Ireki "
+"ezazu bere pasahitzarekin, gorde babesik gabe eta saiatu berriro."
 
 msgid "errors.situations.documentCertified.title"
-msgstr ""
+msgstr "PDFa ziurtatuta dago"
 
 msgid "errors.situations.documentCertified.body"
 msgstr ""
+"Egileak aldaketak debekatuz sinatu zuen; beraz, sinadura bat gehitzeak berea "
+"baliogabetuko luke. Eskatu iezaiozu ziurtatu gabeko kopia bat."
 
 msgid "errors.situations.documentUnreadable.title"
-msgstr ""
+msgstr "Ezin izan dugu dokumentua irakurri"
 
 msgid "errors.situations.documentUnreadable.body"
-msgstr ""
+msgstr "Egiaztatu zegoen lekuan jarraitzen duela eta ireki berriro."
 
 msgid "errors.situations.droppedFileUnreadable.title"
-msgstr ""
+msgstr "Ezin izan dugu askatu duzun fitxategia irakurri"
 
 msgid "errors.situations.droppedFileUnreadable.body"
 msgstr ""
+"Arrastatzeak ez digu edozein karpetatatik irakurtzeko baimenik ematen. Ireki "
+"ezazu irekitzeko botoiarekin; horrek bai ematen digu."
 
 msgid "errors.situations.droppedSomeDiscarded.title"
-msgstr ""
+msgstr "Fitxategi batzuk ez dira gehitu"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
+"Askatu dituzun gainerako PDFak Azkenak zerrendan daude jada. PDF ez zirenak "
+"ez dira gehitu."
 
 msgid "errors.situations.boxOutOfPage.title"
-msgstr ""
+msgstr "Laukia orrialdetik kanpo geratzen da"
 
 msgid "errors.situations.boxOutOfPage.body"
 msgstr ""
+"Arrastatu orrialdearen barrura eta sinatu berriro. Horrela utziko bagenu, "
+"PDFan moztuta geratuko litzateke abisatu gabe."
 
 msgid "errors.situations.pageOutOfDocument.title"
-msgstr ""
+msgstr "Dokumentuak ez du orrialde horretaraino iristen"
 
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
+"Aukeratu dokumentuan dagoen orrialde bat eta sinatu berriro. Horrela utziko "
+"bagenu, zigilua azken orrialdean amaituko luke abisatu gabe."
 
 msgid "errors.situations.sealMismatch.title"
-msgstr ""
+msgstr "Sinadura erdibidean eten da"
 
 msgid "errors.situations.sealMismatch.body"
 msgstr ""
+"Hasieran prestatu genuena eta amaitzean jaso duguna ez datoz bat; beraz, "
+"ezer idatzi aurretik gelditu gara. Sinatu dokumentua berriro."
 
 msgid "errors.situations.bridgeFailed.title"
-msgstr ""
+msgstr "Ezin izan dugu sinadura prestatu"
 
 msgid "errors.situations.bridgeFailed.body"
 msgstr ""
+"Sinatutako PDFa osatzen duen osagaiak huts egin du. Saiatu berriro eta, "
+"gertatzen jarraitzen badu, erantsi xehetasun teknikoa akatsaren txostenari."
 
 msgid "errors.situations.folderMissing.title"
-msgstr ""
+msgstr "Helburuko karpeta jada ez dago"
 
 msgid "errors.situations.folderMissing.body"
 msgstr ""
+"Ez dugu zuretzat sortzen: sortuko bagenu, dokumentuak gordeta dagoela emango "
+"luke eta ez legoke. Sortu berriro edo aukeratu beste bat Hobespenetan."
 
 msgid "errors.situations.notAFolder.title"
-msgstr ""
+msgstr "Helburua ez da karpeta bat"
 
 msgid "errors.situations.notAFolder.body"
 msgstr ""
+"Karpeta bat espero genuen lekuan izen hori duen fitxategi bat dago. Aukeratu "
+"beste helburu bat Hobespenetan."
 
 msgid "errors.situations.folderUnreadable.title"
-msgstr ""
+msgstr "Ezin izan dugu helburuko karpeta kontsultatu"
 
 msgid "errors.situations.folderUnreadable.body"
 msgstr ""
+"Baimenen kontua izan daiteke, edo erantzuten ez duen unitate batena. "
+"Aukeratu beste helburu bat Hobespenetan."
 
 msgid "errors.situations.folderUnwritable.title"
-msgstr ""
+msgstr "Ezin izan dugu sinatutako dokumentua gorde"
 
 msgid "errors.situations.folderUnwritable.body"
 msgstr ""
+"Sinadura ondo atera da, baina fitxategia ezin izan da helburuko karpetan "
+"idatzi. Aukeratu beste bat Hobespenetan eta sinatu berriro."
 
 msgid "errors.situations.noFreeName.title"
-msgstr ""
+msgstr "Izen hori duten dokumentu gehiegi daude jada"
 
 msgid "errors.situations.noFreeName.body"
 msgstr ""
+"Bat ere ez zapaltzeko, gelditu egin gara. Mugitu edo berrizendatu aurrekoak "
+"eta sinatu berriro."
 
 msgid "errors.situations.settingNotSaved.title"
-msgstr ""
+msgstr "Ezin izan dugu ezarpena gorde"
 
 msgid "errors.situations.settingNotSaved.body"
 msgstr ""
+"Aurreko baliora itzuli gara; hori da gordeta jarraitzen duena. Saiatu "
+"berriro eta, gertatzen jarraitzen badu, erantsi xehetasun teknikoa akatsaren "
+"txostenari."
 
 msgid "errors.situations.activityNotForgotten.title"
-msgstr ""
+msgstr "Ezin izan dugu zerrenda hustu"
 
 msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
+"Azken dokumentuek eta ziurtagiriak gordeta jarraitzen dute. Saiatu berriro "
+"eta, gertatzen jarraitzen badu, erantsi xehetasun teknikoa akatsaren "
+"txostenari."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
-msgstr ""
+msgstr "Dokumentuen erretilua"
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
-msgstr ""
+msgstr "Dokumentuaren ikustailea"
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
-msgstr ""
+msgstr "Sinatzeko panela"
 
 #. {{version}} es la versión publicada, p. ej. 0.4.1.
 msgid "notifications.newVersion.message"
-msgstr ""
+msgstr "rFirmaren bertsio berri bat dago: {{version}}"
 
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
 msgid "notifications.newVersion.action"
-msgstr ""
+msgstr "Nola eguneratu"
 
 msgid "urlHandler.banner.message"
-msgstr ""
+msgstr "Nahi duzu rFirmak egoitzen estekak artatzea?"
 
 msgid "urlHandler.banner.accept"
-msgstr ""
+msgstr "Bai"
 
 msgid "urlHandler.banner.later"
-msgstr ""
+msgstr "Orain ez"
 
 msgid "urlHandler.banner.never"
-msgstr ""
+msgstr "Ez galdetu berriro"
 
 msgid "header.menu"
-msgstr ""
+msgstr "Menua"
 
 msgid "header.preferences"
-msgstr ""
+msgstr "Hobespenak…"
 
 msgid "header.about"
-msgstr ""
+msgstr "rFirmari buruz"
 
 msgid "badges.signed"
-msgstr ""
+msgstr "Sinatuta"
 
 msgid "badges.unsigned"
-msgstr ""
+msgstr "Sinatu gabe"
 
 msgid "badges.unavailable"
-msgstr ""
+msgstr "Ez dago erabilgarri"
 
 msgid "tray.dropZone"
-msgstr ""
+msgstr "Arrastatu PDF bat edo sakatu irekitzeko"
 
 msgid "tray.empty"
-msgstr ""
+msgstr "Hemen agertuko dira sinatzen dituzun dokumentuak"
 
 msgid "tray.recents"
-msgstr ""
+msgstr "Azkenak"
 
 msgid "tray.remove"
-msgstr ""
+msgstr "Kendu zerrendatik"
 
 msgid "viewer.dropZone"
-msgstr ""
+msgstr "Arrastatu PDF bat edo sakatu irekitzeko"
 
 msgid "viewer.dropZoneHint"
-msgstr ""
+msgstr "Fitxategi-arakatzailea irekiko da"
 
 msgid "viewer.privacy"
-msgstr ""
+msgstr "PDFak soilik. Dokumentua ez da inoiz zure ordenagailutik ateratzen."
 
 msgid "viewer.pageNumber"
-msgstr ""
+msgstr "Orrialde-zenbakia"
 
 #. {{total}} es el número de páginas del documento.
 msgid "viewer.pageOf"
-msgstr ""
+msgstr "{{total}}(e)tik"
 
 msgid "viewer.firstPage"
-msgstr ""
+msgstr "Lehen orrialdea"
 
 msgid "viewer.previousPage"
-msgstr ""
+msgstr "Aurreko orrialdea"
 
 msgid "viewer.nextPage"
-msgstr ""
+msgstr "Hurrengo orrialdea"
 
 msgid "viewer.lastPage"
-msgstr ""
+msgstr "Azken orrialdea"
 
 msgid "viewer.zoomOut"
-msgstr ""
+msgstr "Urrundu"
 
 msgid "viewer.zoomIn"
-msgstr ""
+msgstr "Hurbildu"
 
 #. Rótulo del campo donde se teclea el porcentaje de zoom.
 msgid "viewer.zoomLevel"
-msgstr ""
+msgstr "Zoom-maila"
 
 #. Botón: la hoja ocupa todo el ancho disponible.
 msgid "viewer.fitWidth"
-msgstr ""
+msgstr "Doitu zabalerara"
 
 #. Botón: la página entera cabe en el visor.
 msgid "viewer.fitPage"
-msgstr ""
+msgstr "Doitu orrialdera"
 
 #. Nombre accesible de la hoja del documento, que se enfoca para pasar de página.
 msgid "viewer.sheet"
-msgstr ""
+msgstr "Dokumentuaren orria"
 
 msgid "viewer.signatureBox"
-msgstr ""
+msgstr "Sinadura ikusgaiaren laukia"
 
 msgid "viewer.dragHandle"
-msgstr ""
+msgstr "Arrastatu kokatzeko"
 
 msgid "viewer.outOfPage"
 msgstr ""
+"Laukia orrialdetik kanpo geratu da; beraz, zegoen lekuan jarraitzen du."
 
 msgid "viewer.stamp.frozen"
-msgstr ""
+msgstr "Zigilua izoztuta, laukia mugitzen duzun bitartean"
 
 msgid "viewer.stamp.onDemand"
-msgstr ""
+msgstr "Dokumentu handia: zigilua ez da bere kabuz birkalkulatzen"
 
 msgid "viewer.stamp.show"
-msgstr ""
+msgstr "Ikusi nola geratzen den"
 
 msgid "viewer.stamp.composing"
-msgstr ""
+msgstr "Zigilua osatzen, aukeratutako ziurtagiriarekin"
 
 msgid "viewer.stamp.failed"
-msgstr ""
+msgstr "Ezin izan da zigilua marraztu"
 
 msgid "viewer.stamp.retry"
-msgstr ""
+msgstr "Saiatu berriro"
 
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "1 orrialde"
+msgstr[1] "{{count}} orrialde"
+msgstr[2] "{{count}} orrialde"
 
 msgid "panel.coSignature"
 msgid_plural "panel.coSignature"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "1 sinadura du jada: zurea kosinadura izango da."
+msgstr[1] "{{count}} sinadura ditu jada: zurea kosinadura izango da."
+msgstr[2] "{{count}} sinadura ditu jada: zurea kosinadura izango da."
 
 #. Rótulo del bloque con las tres opciones de en qué páginas se sella.
 msgid "panel.placement.title"
-msgstr ""
+msgstr "Kokapena"
 
 msgid "panel.placement.single"
-msgstr ""
+msgstr "1 orrialde soilik"
 
 #. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
 msgid "panel.placement.singlePage"
-msgstr ""
+msgstr "{{page}}. orrialdea"
 
 #. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
 msgid "panel.placement.singleUnplaced"
-msgstr ""
+msgstr "oraindik kokatu gabe"
 
 msgid "panel.placement.these"
-msgstr ""
+msgstr "Orrialde hauek"
 
 #. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
 msgid "panel.placement.field"
-msgstr ""
+msgstr "Zigilua zein orrialdetan jartzen den"
 
 #. {{pages}} es el número de páginas del documento.
 msgid "panel.placement.all"
-msgstr ""
+msgstr "Orrialde guztiak ({{pages}})"
 
 #. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
 msgid "panel.placement.seal"
-msgstr ""
+msgstr "Zigilatu orrialde hau"
 
 #. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
 msgid "panel.placement.sealAll"
-msgstr ""
+msgstr "Jarri zigilua hemen"
 
 #. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
 msgid "panel.placement.unseal"
-msgstr ""
+msgstr "Kendu zigilua"
 
 #. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
 msgid "panel.placement.echo"
-msgstr ""
+msgstr "{{pages}} orrialdeetan zigilatuko da."
 
 #. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
 msgid "panel.placement.echoMore"
 msgid_plural "panel.placement.echoMore"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{{pages}} orrialdeetan eta beste batean zigilatuko da."
+msgstr[1] "{{pages}} orrialdeetan eta beste {{count}}etan zigilatuko da."
+msgstr[2] "{{pages}} orrialdeetan eta beste {{count}}etan zigilatuko da."
 
 #. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
 msgid "panel.placement.replicated"
 msgid_plural "panel.placement.replicated"
-msgstr[0] ""
+msgstr[0] "Lauki bera, leku berean eta tamaina berean, orrialde 1ean."
 msgstr[1] ""
+"Lauki bera, leku berean eta tamaina berean, {{count}} orrialdeetan: "
+"errepikatutako sinadura-eremu bakarra da, ez {{count}} sinadura."
 msgstr[2] ""
+"Lauki bera, leku berean eta tamaina berean, {{count}} orrialdeetan: "
+"errepikatutako sinadura-eremu bakarra da, ez {{count}} sinadura."
 
 #. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
 msgid "panel.placement.errors.beyond"
 msgstr ""
+"Dokumentuak {{pageCount}} orrialde ditu eta {{page}}. orrialderaino idatzi "
+"duzu."
 
 #. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
 msgid "panel.placement.errors.reversed"
-msgstr ""
+msgstr "«{{entry}}» alderantziz dago: lehen zenbakiak txikiena izan behar du."
 
 msgid "panel.placement.errors.zero"
-msgstr ""
+msgstr "Ez dago 0 orrialderik: lehena 1 da."
 
 #. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
 msgid "panel.placement.errors.malformed"
 msgstr ""
+"«{{entry}}» ez da ulertzen. Zenbakiak eta barrutiak komaz bereizita: "
+"1,2-3,10-20."
 
 #. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
 msgid "panel.placement.errors.empty"
-msgstr ""
+msgstr "Idatzi zein orrialdetan zigilatzen den: 1,2-3,10-20."
 
 msgid "panel.certificate.title"
-msgstr ""
+msgstr "Ziurtagiria"
 
 msgid "panel.certificate.loading"
-msgstr ""
+msgstr "Ziurtagiriak bilatzen…"
 
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
-msgstr ""
+msgstr "Jaulkitzailea: {{issuer}}"
 
 msgid "panel.certificate.choose"
-msgstr ""
+msgstr "Aukeratu ziurtagiria"
 
 msgid "panel.certificate.list"
-msgstr ""
+msgstr "Ziurtagiri erabilgarriak"
 
 msgid "panel.certificate.groups.available"
-msgstr ""
+msgstr "Erabilgarriak"
 
 msgid "panel.certificate.groups.unusable"
-msgstr ""
+msgstr "Erabili ezinak"
 
 msgid "panel.certificate.stores.card"
-msgstr ""
+msgstr "Txartela"
 
 msgid "panel.certificate.stores.firefox"
-msgstr ""
+msgstr "Firefox"
 
 msgid "panel.certificate.stores.chrome"
-msgstr ""
+msgstr "Chrome"
 
 #. Término del dominio: NSS es el almacén de certificados de Firefox y Chrome; no se traduce la sigla.
 msgid "panel.certificate.stores.nssdb"
-msgstr ""
+msgstr "NSS biltegia"
 
 msgid "panel.certificate.stores.installed"
-msgstr ""
+msgstr "rFirman instalatuta"
 
 msgid "panel.certificate.retry"
-msgstr ""
+msgstr "Bilatu berriro"
 
 msgid "panel.certificate.otherModule"
-msgstr ""
+msgstr "Beste modulu bat…"
 
 msgid "panel.certificate.empty.title"
-msgstr ""
+msgstr "Ez dugu ziurtagiririk aurkitu"
 
 msgid "panel.certificate.empty.body"
 msgstr ""
+"Txartel bat erabiltzen baduzu, egiaztatu sartuta dagoela eta irakurgailua "
+"konektatuta dagoela."
 
 msgid "panel.certificate.failed.title"
-msgstr ""
+msgstr "Ezin izan ditugu ziurtagiriak bilatu"
 
 msgid "panel.certificate.failed.body"
 msgstr ""
+"Bilaketak amaitu aurretik huts egin du; beraz, ez dakigu bat ere badagoen."
 
 #. {{date}} es la fecha de caducidad, ya formateada según el idioma.
 msgid "panel.certificate.expired"
-msgstr ""
+msgstr "Ziurtagiria {{date}}(e)an iraungi zen; beraz, ezin da harekin sinatu."
 
 msgid "panel.certificate.notYetValid"
 msgstr ""
+"Ziurtagiria oraindik ez da indarrean sartu; beraz, ezin da harekin sinatu."
 
 #. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
 msgid "panel.certificate.revoked"
 msgstr ""
+"Ziurtagiria errebokatuta dago ({{reason}}); beraz, ezin da harekin sinatu."
 
 msgid "panel.certificate.unreadable"
-msgstr ""
+msgstr "Ezin izan dugu ziurtagiri hau irakurri; beraz, ezin da harekin sinatu."
 
 msgid "panel.visibleSignature.title"
-msgstr ""
+msgstr "Sinadura ikusgaia"
 
 msgid "panel.visibleSignature.toggle"
-msgstr ""
+msgstr "Estanpatu sinadura-lauki bat dokumentuan"
 
 msgid "panel.visibleSignature.content"
-msgstr ""
+msgstr "Edukia"
 
 msgid "panel.visibleSignature.fields.rubric"
-msgstr ""
+msgstr "Errubrika"
 
 msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr ""
+msgstr "Aukeratu lehenik irudi bat"
 
 msgid "panel.visibleSignature.fields.signerName"
-msgstr ""
+msgstr "Sinatzailea"
 
 msgid "panel.visibleSignature.fields.issuer"
-msgstr ""
+msgstr "Jaulkitzailea"
 
 msgid "panel.visibleSignature.fields.signedAt"
-msgstr ""
+msgstr "Data"
 
 msgid "panel.visibleSignature.fields.reason"
-msgstr ""
+msgstr "Arrazoia"
 
 msgid "panel.visibleSignature.reason.label"
-msgstr ""
+msgstr "Arrazoia"
 
 msgid "panel.visibleSignature.reason.placeholder"
-msgstr ""
+msgstr "Ados"
 
 msgid "panel.visibleSignature.rubric.title"
-msgstr ""
+msgstr "Errubrikaren irudia"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr ""
+msgstr "Aukeratu irudia"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr ""
+msgstr "Aldatu irudia"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
-msgstr ""
+msgstr "Zure errubrika, estanpatuko den bezala"
 
 msgid "panel.visibleSignature.rubric.flattened"
 msgstr ""
+"Zuriaren gainean estanpatzen da: laukia JPEG gisa doa PDFra, eta JPEG batek "
+"ez du gardentasunik."
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
-msgstr ""
+msgstr "Aukeratu ziurtagiri bat sinadura ikusgaia kokatzeko"
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"
 msgstr ""
+"Kokatu sinadura dokumentuaren gainean: arrastatu lauki bat edo sakatu "
+"zigilatzeko botoia."
 
 msgid "panel.footer.savedIn"
-msgstr ""
+msgstr "Hemen gordeko da"
 
 #. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"
-msgstr ""
+msgstr "Ezin da {{folder}}(e)n idatzi"
 
 msgid "panel.footer.retry"
-msgstr ""
+msgstr "Saiatu berriro"
 
 msgid "panel.signed.summary"
-msgstr ""
+msgstr "Laburpena"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
-msgstr ""
+msgstr "PAdES"
 
 msgid "panel.signed.openDocument"
-msgstr ""
+msgstr "Ireki PDFa"
 
 msgid "panel.signed.openFolder"
-msgstr ""
+msgstr "Ireki karpeta"
 
 msgid "panel.signed.signAgain"
-msgstr ""
+msgstr "Sinatu berriro"
 
 msgid "pin.title"
-msgstr ""
+msgstr "Sartu PINa"
 
 msgid "pin.titlePassword"
-msgstr ""
+msgstr "Sartu pasahitza"
 
 #. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
 msgid "pin.signingAs"
-msgstr ""
+msgstr "{{holder}} · {{idNumber}}"
 
 #. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
 msgid "pin.subjectBrowser"
-msgstr ""
+msgstr "{{browser}}(e)ko zure ziurtagiriak"
 
 msgid "pin.label"
-msgstr ""
+msgstr "PINa"
 
 msgid "pin.labelPassword"
-msgstr ""
+msgstr "Pasahitza"
 
 msgid "pin.incorrect"
-msgstr ""
+msgstr "PIN okerra"
 
 msgid "pin.incorrectPassword"
-msgstr ""
+msgstr "Pasahitz okerra"
 
 msgid "pin.submit"
-msgstr ""
+msgstr "Sinatu"
 
 msgid "progress.title"
-msgstr ""
+msgstr "Dokumentua sinatzen…"
 
 msgid "progress.stages.presign"
-msgstr ""
+msgstr "Sinadura prestatzen"
 
 #. Término del dominio: la etapa de la firma trifásica en la que se generan los hashes a firmar.
 msgid "progress.stages.presignTerm"
-msgstr ""
+msgstr "aurresinadura"
 
 msgid "progress.stages.sign"
-msgstr ""
+msgstr "Txartelean sinatzen"
 
 msgid "progress.stages.postsign"
-msgstr ""
+msgstr "PDFa muntatzen"
 
 #. Término del dominio: la etapa en la que se ensambla el PDF ya firmado.
 msgid "progress.stages.postsignTerm"
-msgstr ""
+msgstr "postsinadura"
 
 msgid "progress.states.done"
-msgstr ""
+msgstr "Eginda"
 
 msgid "progress.states.running"
-msgstr ""
+msgstr "Abian"
 
 msgid "progress.states.pending"
-msgstr ""
+msgstr "Zain"
 
 msgid "progress.keepTheCard"
-msgstr ""
+msgstr "Ez atera txartela amaitu arte."
 
 #. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Orrialde bat zigilurik gabe geratuko da"
+msgstr[1] "{{count}} orrialde zigilurik gabe geratuko dira"
+msgstr[2] "{{count}} orrialde zigilurik gabe geratuko dira"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
 msgstr ""
+"Laukia ez da sartzen aukeratu dituzun {{chosen}} orrialdeetatik {{fallen}}"
+"etan, laukia jarri zenuen orrialdea baino txikiagoak baitira. Dokumentua "
+"berdin sinatuko da eta sinadura baliozkoa izango da osorik, baina orrialde "
+"horietan ez da zigilua agertuko."
 
 #. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
 msgid "sealLoss.remaining"
 msgstr ""
+"Zigilua aukeratutako {{chosen}} orrialdeetatik {{sealed}}etan agertuko da."
 
 msgid "sealLoss.confirm"
-msgstr ""
+msgstr "Sinatu hala ere"
 
 #. El titular del aviso de firmas que rFirma no sabe leer, antes de firmar.
 msgid "unregisteredSignatures.title"
-msgstr ""
+msgstr "PDF honek ulertzen ez ditugun sinadurak dakartza"
 
 #. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
 msgid "unregisteredSignatures.body"
 msgstr ""
+"Dagoeneko dituen sinaduretako bat ez dago rFirmak irakurtzen dakien formatu "
+"batean; beraz, ezin dizugu haren gainean ezer esan. Berdin sina dezakezu: "
+"zure sinadura baliozkoa izango da, eta lehendik zeudenak dauden bezala "
+"geratuko dira."
 
 msgid "unregisteredSignatures.confirm"
-msgstr ""
+msgstr "Sinatu hala ere"
 
 msgid "preferences.title"
-msgstr ""
+msgstr "Hobespenak"
 
 msgid "preferences.sections.label"
-msgstr ""
+msgstr "Atalak"
 
 msgid "preferences.sections.signing"
-msgstr ""
+msgstr "Sinadura"
 
 msgid "preferences.sections.certificates"
-msgstr ""
+msgstr "Ziurtagiriak"
 
 msgid "preferences.sections.privacy"
-msgstr ""
+msgstr "Pribatutasuna"
 
 msgid "preferences.sections.appearance"
-msgstr ""
+msgstr "Itxura"
 
 msgid "preferences.sections.sites"
-msgstr ""
+msgstr "Egoitzak"
 
 msgid "preferences.urlHandler.label"
-msgstr ""
+msgstr "Nork artatzen dituen egoitzen estekak"
 
 msgid "preferences.urlHandler.unchosen"
-msgstr ""
+msgstr "Mahaigainak erabakitzen duena"
 
 #. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
 msgid "preferences.urlHandler.firefoxKeepsItsOwn"
-msgstr ""
+msgstr "Firefoxek bere hobespenetan gordetzen duen aukera erabiltzen du."
 
 #. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
 msgid "preferences.urlHandler.inTheSandbox"
-msgstr ""
+msgstr "Bertsio honek ezin du aldatu: mahaigainaren ezarpenetan aukeratzen da."
 
 msgid "preferences.askAboutUrlHandler.label"
-msgstr ""
+msgstr "Galdetu abiaraztean"
 
 msgid "preferences.rememberVisibleSignature.label"
-msgstr ""
+msgstr "Gogoratu sinadura ikusgaiaren azken konfigurazioa"
 
 msgid "preferences.rememberVisibleSignature.hint"
 msgstr ""
+"Laukiaren orrialdea, kokapena eta edukia hurrengo dokumentuan berrerabiltzen "
+"dira."
 
 msgid "preferences.rememberActivity.label"
-msgstr ""
+msgstr "Gogoratu nire jarduera"
 
 msgid "preferences.rememberActivity.hint"
-msgstr ""
+msgstr "Azken dokumentuak eta azkenekoz erabilitako ziurtagiria hartzen ditu."
 
 msgid "preferences.rememberActivity.clear"
-msgstr ""
+msgstr "Hustu zerrenda"
 
 msgid "preferences.rememberActivity.confirm.body"
 msgstr ""
+"Itzaltzean, gogoratuta dagoena ezabatu egiten da: azken dokumentuak eta "
+"azkenekoz erabilitako ziurtagiria."
 
 msgid "preferences.rememberActivity.confirm.accept"
-msgstr ""
+msgstr "Ezabatu eta itzali"
 
 msgid "preferences.notifyNewVersion.label"
-msgstr ""
+msgstr "Abisatu bertsio berri bat dagoenean"
 
 msgid "preferences.destination.label"
-msgstr ""
+msgstr "Non gordetzen den sinatutako dokumentua"
 
 msgid "preferences.destination.change"
-msgstr ""
+msgstr "Aldatu karpeta…"
 
 msgid "preferences.destination.nextToOriginal"
-msgstr ""
+msgstr "Jatorrizko dokumentuaren ondoan"
 
 msgid "preferences.destination.inThisFolder"
-msgstr ""
+msgstr "Karpeta honetan"
 
 msgid "preferences.certificates.add"
-msgstr ""
+msgstr "Gehitu…"
 
 #. Nombre accesible del boton de cada fila: lleva el titular para distinguirlo
 #. de los demas, que es lo unico que cambia entre una fila y otra.
 msgid "preferences.certificates.remove"
-msgstr ""
+msgstr "Kendu {{holder}}(r)en ziurtagiria"
 
 msgid "preferences.certificates.empty"
-msgstr ""
+msgstr "Oraindik ez duzu bat ere instalatu"
 
 msgid "preferences.certificates.expires"
-msgstr ""
+msgstr "{{date}}(e)an iraungitzen da"
 
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
-msgstr ""
+msgstr "Iraungita"
 
 msgid "preferences.certificates.password.submit"
-msgstr ""
+msgstr "Jarraitu"
 
 msgid "preferences.theme.label"
-msgstr ""
+msgstr "Gaia"
 
 #. Nombra al sistema operativo, no un color: no se traduce como un tono.
 msgid "preferences.theme.system"
-msgstr ""
+msgstr "Sistemarena"
 
 msgid "preferences.theme.light"
-msgstr ""
+msgstr "Argia"
 
 msgid "preferences.theme.dark"
-msgstr ""
+msgstr "Iluna"
 
 msgid "preferences.language.label"
-msgstr ""
+msgstr "Hizkuntza"
 
 #. {{version}} es el número de versión de la aplicación.
 msgid "about.version"
-msgstr ""
+msgstr "{{version}} bertsioa"
 
 msgid "about.whatItDoes"
-msgstr ""
+msgstr "PDF dokumentuak sinatzen eta kosinatzen ditu zure ziurtagiriarekin."
 
 msgid "about.update.newVersion"
-msgstr ""
+msgstr "Bertsio berri bat dago: {{version}}"
 
 msgid "about.update.upToDate"
-msgstr ""
+msgstr "Azken bertsioan zaude"
 
 msgid "about.update.channel.flatpak"
-msgstr ""
+msgstr "Flatpak"
 
 msgid "about.update.channel.deb"
-msgstr ""
+msgstr "Debian eta Ubuntu"
 
 msgid "about.update.channel.rpm"
-msgstr ""
+msgstr "Fedora eta openSUSE"
 
 msgid "about.independence"
 msgstr ""
+"Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta "
+"bezero ofiziala argitaratzen duen Estatuko Administrazio Orokorrarekin ere, "
+"eta ez du haien babesik. Aplikazio ofiziala behar baduzu, deskargatu ezazu "
+"haien webgunetik."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
-msgstr ""
+msgstr "github.com/sgomez/rfirma"
 
 msgid "about.licenses.view"
-msgstr ""
+msgstr "Ikusi lizentziak"
 
 msgid "about.licenses.rfirma"
-msgstr ""
+msgstr "rFirma: EUPL-1.2."
 
 msgid "about.licenses.afirma"
-msgstr ""
+msgstr "Cliente @firma liburutegiak: GPL-2.0+ / EUPL-1.1."
 
 msgid "trust.notice.title"
-msgstr ""
+msgstr "Egoitza batek sinadura eskatzen dizunean"
 
 msgid "trust.notice.localCa"
 msgstr ""
+"rFirmak konfiantzazko tokiko erakunde bat instalatu du zure ordenagailuan. "
+"Hori behar da nabigatzaileak rFirmarekiko konexioa onar dezan, egoitza "
+"elektroniko batek sinatzeko eskatzen dizunean."
 
 msgid "trust.notice.localNetwork"
 msgstr ""
+"Lehen aldian, nabigatzaileak tokiko sarera sartzeko baimena eskatuko dizu. "
+"Egoitzaren izenean eskatzen du, ez rFirmaren izenean; beraz, baliteke ez "
+"ezagutzea. Eman baimena agertzen denean: baimen bakarra nahikoa da, egoitzak "
+"hiru konexiotaraino probatzen baditu ere."
 
 msgid "trust.notice.cannotTellIfDenied"
 msgstr ""
+"Ukatzen baduzu, rFirmak ezin izango du jakin, ez eta esan ere: abisu hori "
+"osorik nabigatzailearen barruan gertatzen da."
 
 msgid "trust.notice.acknowledge"
-msgstr ""
+msgstr "Ulertuta"
 
 msgid "sede.waiting.title"
-msgstr ""
+msgstr "Egoitzarekin konektatzen"
 
 msgid "sede.waiting.lead"
-msgstr ""
+msgstr "Orrialde batek dokumentu bat sina dezazun nahi du."
 
 msgid "sede.unreachable.title"
-msgstr ""
+msgstr "Eskaera ez da iritsi"
 
 msgid "sede.unreachable.lead"
-msgstr ""
+msgstr "Normalean nabigatzailearen baimena falta izaten da."
 
 msgid "sede.repair.caMissing"
-msgstr ""
+msgstr "rFirmaren tokiko CA falta da."
 
 msgid "sede.repair.installCa"
-msgstr ""
+msgstr "Instalatu…"
 
 #. Nombre propio del navegador: no se traduce.
 msgid "sede.repair.chrome"
-msgstr ""
+msgstr "Chrome"
 
 #. Nombre propio del navegador: no se traduce.
 msgid "sede.repair.firefox"
-msgstr ""
+msgstr "Firefox"
 
 msgid "sede.repair.chromeAllow"
-msgstr ""
+msgstr "Sakatu Baimendu helbide-barraren azpiko zerrendan."
 
 msgid "sede.repair.chromeGone"
-msgstr ""
+msgstr "Jada ez badago:"
 
 msgid "sede.repair.chromePadlock"
-msgstr ""
+msgstr "Edo: giltzarrapoa › Guneen konfigurazioa › Tokiko sarerako sarbidea."
 
 msgid "sede.repair.firefoxAllow"
-msgstr ""
+msgstr "Sakatu Baimendu helbide-barraren ondoko panelean."
 
 msgid "sede.repair.firefoxGone"
 msgstr ""
+"Jada ez badago: giltzarrapoa › Konexio segurua › Informazio gehiago › "
+"Baimenak › Tokiko sarerako sarbidea."
 
 #. `Reintentar` es un botón de la sede, no de esta ventana.
 msgid "sede.repair.retry"
-msgstr ""
+msgstr "Baimendu ondoren, itzuli egoitzara eta sakatu Berriro saiatu."
 
 #. El sujeto de las frases cuando la petición no trae un origen válido.
 msgid "sede.origin.unknown"
-msgstr ""
+msgstr "Eskaera"
 
 msgid "sede.consent.asksSignature"
-msgstr ""
+msgstr "{{origin}}(e)k zure sinadura eskatzen du."
 
 msgid "sede.consent.asksIdentity"
-msgstr ""
+msgstr "{{origin}}(e)k identifika zaitezen eskatzen du."
 
 #. La misma frase que "asksSignature", con el formato del #530 nombrado.
 msgid "sede.consent.asksSignatureOf"
-msgstr ""
+msgstr "{{origin}}(e)k {{what}} sinatzeko eskatzen dizu."
 
 #. Qué es lo que la sede pide firmar, según el formato de la petición (#530).
 msgid "sede.consent.signingKind.pdf"
-msgstr ""
+msgstr "PDF dokumentu bat"
 
 msgid "sede.consent.signingKind.challenge"
-msgstr ""
+msgstr "autentifikazio-erronka bat"
 
 msgid "sede.consent.signingKind.xml"
-msgstr ""
+msgstr "XML dokumentu bat"
 
 msgid "sede.consent.signingKind.invoice"
-msgstr ""
+msgstr "faktura elektroniko bat"
 
 msgid "sede.consent.unknownOriginTitle"
-msgstr ""
+msgstr "Jatorri identifikatu gabea"
 
 msgid "sede.consent.unknownOriginSignature"
 msgstr ""
+"Eskaerak sinadura bat eskatzen du eta ez du adierazten zein orrialdetatik "
+"datorren."
 
 #. La misma frase que "unknownOriginSignature", con el formato nombrado.
 msgid "sede.consent.unknownOriginSignatureOf"
 msgstr ""
+"Eskaerak {{what}} sinatzeko eskatzen du eta ez du adierazten zein "
+"orrialdetatik datorren."
 
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
+"Eskaerak identifika zaitezen eskatzen du eta ez du adierazten zein "
+"orrialdetatik datorren."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.
 msgid "sede.consent.untitled"
-msgstr ""
+msgstr "Izenbururik gabeko PDF bat"
 
 msgid "sede.consent.signWith"
-msgstr ""
+msgstr "Honekin sinatuko duzu"
 
 msgid "sede.consent.identifyWith"
-msgstr ""
+msgstr "Honekin identifikatuko zara"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"
-msgstr ""
+msgstr "{{origin}}(e)k baliozko ziurtagiriak mugatu ditu."
 
 msgid "sede.consent.narrowedUnknownOrigin"
-msgstr ""
+msgstr "Egoitzak baliozko ziurtagiriak mugatu ditu."
 
 msgid "sede.consent.willSend"
 msgstr ""
+"Zure izena, zure IFZa, ziurtagiriaren jaulkitzailea eta serie-zenbakia "
+"bidaliko dira."
 
 #. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
 #. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
 msgid "sede.consent.unrecognizedSignatures"
 msgstr ""
+"rFirmak ez du ezagutzen dokumentu honek dagoeneko dituen sinaduretako bat, "
+"eta zurea gehitzean baliozkotzat ez hartzea gerta liteke"
 
 #. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
 #. objetivo dice sobre cuáles.
 msgid "sede.consent.counterSignatureTree"
 msgstr ""
+"Sinatuta dator jada: zurea dituen sinadura guztien gaineko kontrasinadura "
+"izango da."
 
 msgid "sede.consent.counterSignatureLeafs"
 msgstr ""
+"Sinatuta dator jada: zurea dituen azken sinaduren gaineko kontrasinadura "
+"izango da."
 
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "1 sinadurako sorta"
+msgstr[1] "{{count}} sinadurako sorta"
+msgstr[2] "{{count}} sinadurako sorta"
 
 msgid "sede.consent.batchNote"
 msgstr ""
+"Dokumentuak egoitzan geratzen dira: rFirmak deskargatu gabe sinatzen ditu."
 
 msgid "sede.consent.batchItemLabel"
-msgstr ""
+msgstr "{{what}} ({{round}})"
 
 msgid "sede.consent.localBatchRoundSign"
-msgstr ""
+msgstr "sinadura"
 
 msgid "sede.consent.localBatchRoundCosign"
-msgstr ""
+msgstr "kosinadura"
 
 msgid "sede.consent.localBatchRoundCounterTree"
-msgstr ""
+msgstr "sinadura guztien kontrasinadura"
 
 msgid "sede.consent.localBatchRoundCounterLeafs"
-msgstr ""
+msgstr "azken sinaduren kontrasinadura"
 
 msgid "sede.consent.sign"
-msgstr ""
+msgstr "Sinatu"
 
 msgid "sede.consent.identify"
-msgstr ""
+msgstr "Identifikatu"
 
 msgid "sede.confirm.title"
 msgstr "Sinatu aurretik berretsi behar da"
 
 msgid "sede.confirm.messages.pdfShadowAttackSuspect"
-msgstr "PDFa azken sinaduraren ondoren aldatu izanaren susmagarria da. Jarraitu nahi duzu?"
+msgstr ""
+"PDFa azken sinaduraren ondoren aldatu izanaren susmoa dago. Jarraitu nahi "
+"duzu?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
-msgstr "PDF dokumentuak formulario bat du, eta formulario horren eremuak aldatu egin dira sinatu ondoren. Jarraitu nahi duzu?"
+msgstr ""
+"PDF dokumentuak inprimaki bat du, eta haren eremuak sinatu ondoren aldatu "
+"dira. Jarraitu nahi duzu?"
 
 msgid "sede.confirm.messages.unknown"
-msgstr "Sinadura-balidatzaileak jarraitu aurretik berretsi behar den zerbait adierazi du ({{code}}). Jarraitu nahi duzu?"
+msgstr ""
+"Sinadura-balidatzaileak jarraitu aurretik berretsi beharreko zerbait "
+"adierazi du ({{code}}). Jarraitu nahi duzu?"
 
 msgid "sede.confirm.continue"
 msgstr "Jarraitu"
 
 msgid "sede.signing.title"
-msgstr ""
+msgstr "Sinatzen"
 
 msgid "sede.signing.with"
-msgstr ""
+msgstr "{{holder}} · {{idNumber}} erabiliz."
 
 msgid "sede.returning.title"
-msgstr ""
+msgstr "Sinadura {{origin}}(e)ra bidaltzen"
 
 msgid "sede.returning.titleUnknownOrigin"
-msgstr ""
+msgstr "Sinadura bidaltzen"
 
 msgid "sede.returning.body"
-msgstr ""
+msgstr "Ez itxi leihoa."
 
 msgid "sede.saving.title"
-msgstr ""
+msgstr "{{filename}} gordetzen"
 
 msgid "sede.saving.titleUnnamed"
-msgstr ""
+msgstr "Fitxategia gordetzen"
 
 msgid "sede.saving.lead"
-msgstr ""
+msgstr "Aukeratu sistemaren elkarrizketa-koadroan non gorde nahi duzun."
 
 msgid "sede.loading.title"
-msgstr ""
+msgstr "Fitxategi bat kargatzen"
 
 msgid "sede.loading.titleMany"
-msgstr ""
+msgstr "Hainbat fitxategi kargatzen"
 
 msgid "sede.loading.lead"
 msgstr ""
+"Aukeratu sistemaren elkarrizketa-koadroan bidali nahi duzun fitxategia."
 
 msgid "sede.loading.leadMany"
 msgstr ""
+"Aukeratu sistemaren elkarrizketa-koadroan bidali nahi dituzun fitxategiak."
 
 msgid "sede.outcome.signedTitle"
-msgstr ""
+msgstr "Sinatuta eta bidalita"
 
 msgid "sede.outcome.signedBody"
-msgstr ""
+msgstr "Sinadura {{origin}}(e)n dago jada."
 
 msgid "sede.outcome.signedBodyUnknownOrigin"
-msgstr ""
+msgstr "Sinadura bidali da jada."
 
 #. No se deduce mirando: la aplicación sí tiene bandeja de recientes.
 msgid "sede.outcome.signedNote"
-msgstr ""
+msgstr "rFirmak ez du kopiarik gordetzen."
 
 msgid "sede.outcome.savedTitle"
-msgstr ""
+msgstr "Gordeta"
 
 msgid "sede.outcome.savedBody"
 msgstr ""
+"{{origin}}(e)k eskatzen zuen fitxategia aukeratu duzun lekuan gordeta dago "
+"jada."
 
 msgid "sede.outcome.savedBodyUnknownOrigin"
-msgstr ""
+msgstr "Fitxategia aukeratu duzun lekuan gordeta dago jada."
 
 msgid "sede.outcome.loadedTitle"
-msgstr ""
+msgstr "Kargatuta"
 
 msgid "sede.outcome.loadedBody"
 msgid_plural "sede.outcome.loadedBody"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Fitxategi 1 bidali da {{origin}}(e)ra."
+msgstr[1] "{{count}} fitxategi bidali dira {{origin}}(e)ra."
+msgstr[2] "{{count}} fitxategi bidali dira {{origin}}(e)ra."
 
 msgid "sede.outcome.loadedBodyUnknownOrigin"
 msgid_plural "sede.outcome.loadedBodyUnknownOrigin"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Fitxategi 1 bidali da."
+msgstr[1] "{{count}} fitxategi bidali dira."
+msgstr[2] "{{count}} fitxategi bidali dira."
 
 msgid "sede.outcome.batchTitle"
-msgstr ""
+msgstr "Sorta sinatuta eta bidalita"
 
 msgid "sede.outcome.batchBody"
 msgid_plural "sede.outcome.batchBody"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Sortaren sinadura {{origin}}(e)n dago jada."
+msgstr[1] "Sortaren {{count}} sinadurak {{origin}}(e)n daude jada."
+msgstr[2] "Sortaren {{count}} sinadurak {{origin}}(e)n daude jada."
 
 msgid "sede.outcome.batchBodyUnknownOrigin"
 msgid_plural "sede.outcome.batchBodyUnknownOrigin"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Sortaren sinadura bidali da jada."
+msgstr[1] "Sortaren {{count}} sinadurak bidali dira jada."
+msgstr[2] "Sortaren {{count}} sinadurak bidali dira jada."
 
 msgid "sede.outcome.cancelledTitle"
-msgstr ""
+msgstr "Sinadura bertan behera utzi duzu"
 
 msgid "sede.outcome.refusedTitle"
-msgstr ""
+msgstr "rFirmak eskaera baztertu du"
 
 msgid "sede.outcome.refusedNote"
-msgstr ""
+msgstr "Egoitza mantentzen duenarentzat:"
 
 msgid "sede.outcome.detail"
-msgstr ""
+msgstr "Xehetasuna"
 
 msgid "sede.outcome.autoClose"
-msgstr ""
+msgstr "Bere kabuz itxiko da {{seconds}} s barru."
 
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
+"{{origin}}(e)k sinadura amaieran gehitutako orrialde batean jartzeko "
+"eskatzen du, eta rFirmak ez du hori egiten."
 
 msgid "sede.refusals.unsupportedFilter"
 msgstr ""
+"{{origin}}(e)k ziurtagiriak rFirmak ezagutzen ez duen irizpide batekin "
+"iragazteko eskatzen du."
 
 msgid "sede.refusals.unsupportedProtocolVersion"
 msgstr ""
+"{{origin}}(e)k rFirmak ulertzen ez duen protokolo-bertsio bat hitz egiten du."
 
 msgid "sede.refusals.missingFormat"
-msgstr ""
+msgstr "{{origin}}(e)k ez du esaten zein formatutan sinatu behar den."
 
 msgid "sede.refusals.unsupportedKeyStore"
 msgstr ""
+"{{origin}}(e)k rFirmak ireki ezin duen ziurtagiri-biltegi batekin sinatzeko "
+"eskatzen du."
 
 msgid "sede.refusals.errandInFlight"
 msgstr ""
+"{{origin}}(e)k sinadura bat eskatzen du beste izapide bat irekita dagoela, "
+"eta rFirmak banaka artatzen ditu."
 
 msgid "sede.refusals.unknown"
-msgstr ""
+msgstr "{{origin}}(e)k rFirmak artatu ezin duen zerbait bidali du."
 
 msgid "sede.refusals.saveCancelled"
 msgstr ""
+"Gordetzeko elkarrizketa-koadroa itxi duzu, {{origin}}(e)k eskatzen zuen "
+"fitxategia non gorde aukeratu gabe."
 
 msgid "sede.refusals.loadCancelled"
 msgstr ""
+"Kargatzeko elkarrizketa-koadroa itxi duzu, {{origin}}(e)rentzat fitxategirik "
+"aukeratu gabe."
 
 msgid "sede.refusals.cannotSaveData"
 msgstr ""
+"{{origin}}(e)k eskatzen zuen fitxategia ezin izan da aukeratu duzun lekuan "
+"idatzi."
 
 msgid "sede.refusals.cannotLoadData"
 msgstr ""
+"{{origin}}(e)rentzat aukeratutako fitxategietako bat ezin izan da irakurri."
 
 msgid "sede.refusals.batchPresignerUnreachable"
-msgstr ""
+msgstr "Sorta prestatzen duen {{origin}}(e)ko zerbitzuak ez du erantzun."
 
 msgid "sede.refusals.batchPostsignerUnreachable"
-msgstr ""
+msgstr "Sorta ixten duen {{origin}}(e)ko zerbitzuak ez du erantzun."
 
 msgid "sede.refusals.batchInvalidPresignResponse"
 msgstr ""
+"Sorta prestatzen duen {{origin}}(e)ko zerbitzuak rFirmak irakurtzen ez "
+"dakien zerbait erantzun du."
 
 msgid "sede.refusals.batchInvalidPostsignResponse"
 msgstr ""
+"Sorta ixten duen {{origin}}(e)ko zerbitzuak rFirmak irakurtzen ez dakien "
+"zerbait erantzun du."
 
 msgid "sede.refusals.batchSigningFailed"
-msgstr ""
+msgstr "{{origin}}(e)k eskatzen zuen sortaren sinadura ez da osatzera iritsi."
 
 msgid "sede.noCertificate.noneTitle"
-msgstr ""
+msgstr "Ez duzu ziurtagiririk"
 
 msgid "sede.noCertificate.noneBody"
-msgstr ""
+msgstr "Bat instalatuta izan behar duzu {{origin}}(e)n sinatzeko."
 
 msgid "sede.noCertificate.noneBodyUnknownOrigin"
-msgstr ""
+msgstr "Bat instalatuta izan behar duzu sinatzeko."
 
 msgid "sede.noCertificate.noneHint"
-msgstr ""
+msgstr "Lor ezazu FNMTn edo zure autonomia-erkidegoan."
 
 msgid "sede.noCertificate.install"
-msgstr ""
+msgstr "Instalatu ziurtagiri bat…"
 
 msgid "sede.noCertificate.lookAgain"
-msgstr ""
+msgstr "Bilatu berriro"
 
 #. La sede excluyó todos los certificados de la persona. Se dice cuántos tiene
 #. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.
 msgid "sede.noCertificate.excludedTitle"
 msgid_plural "sede.noCertificate.excludedTitle"
-msgstr[0] ""
+msgstr[0] "{{origin}}(e)k ez du zure ziurtagiria onartzen"
 msgstr[1] ""
+"{{origin}}(e)k ez du zure {{count}} ziurtagirietako bat ere onartzen"
 msgstr[2] ""
+"{{origin}}(e)k ez du zure {{count}} ziurtagirietako bat ere onartzen"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr ""
+msgstr "Egoitzatik jarraitu beharko duzu."
