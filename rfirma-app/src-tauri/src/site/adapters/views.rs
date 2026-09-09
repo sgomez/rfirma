@@ -41,6 +41,14 @@ impl SiteErrandView {
         }
     }
 
+    /// Estado cuando el navegador no llega a comunicarse con el canal en el tiempo previsto.
+    pub fn unreachable() -> Self {
+        Self {
+            origin: None,
+            stage: SiteStageView::Unreachable,
+        }
+    }
+
     /// Estado de rechazo de la petición sin canal disponible.
     pub fn refused(refusal: &Refusal) -> Self {
         Self {
@@ -193,6 +201,7 @@ impl From<&Moment> for SiteErrandView {
                 Self::no_channel(NoChannelView::LocalCaMissing)
             }
             Moment::RefusedWithoutChannel(refusal) => Self::refused(refusal),
+            Moment::Unreachable => Self::unreachable(),
         }
     }
 }
@@ -343,6 +352,8 @@ crossing! {
             /// Si la sede pide varios ficheros o uno solo.
             multiple: bool,
         },
+        /// Canal abierto pero el navegador nunca conectó o envió mensaje inicial.
+        Unreachable,
     }
 }
 

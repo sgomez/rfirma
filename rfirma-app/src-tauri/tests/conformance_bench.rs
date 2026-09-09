@@ -437,7 +437,7 @@ async fn the_channel_on_one_of(
 
 /// Canal que no atiende ninguna operación: el caso se acaba antes de que llegue.
 fn no_operations() -> SiteOperations {
-    Arc::new(|_, _| {})
+    SiteOperations::for_operations(|_, _| {})
 }
 
 /// Abre el canal en la ubicación indicada: uno de los puertos sorteados, o el puerto fijo del
@@ -594,6 +594,112 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_first_message_reveals_the_window_before_the_operation() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_against(&material);
+    let url = client.the_launch_url();
+    let parsed = AfirmaUrl::parse(&url).expect("la invocacion deberia leerse");
+    let launch = LaunchRequest::from_url(&parsed).expect("version 4");
+
+    let sequence = Arc::new(Mutex::new(Vec::new()));
+    let seq_arr = Arc::clone(&sequence);
+    let seq_del = Arc::clone(&sequence);
+
+    let (delivered, waited) = tokio::sync::oneshot::channel();
+    let delivered = Arc::new(Mutex::new(Some(delivered)));
+
+    let inbox = SiteOperations::of(
+        move || {
+            seq_arr.lock().unwrap().push("ventana".to_owned());
+        },
+        move |_url, reply| {
+            seq_del.lock().unwrap().push("operacion".to_owned());
+            if let Some(delivered) = delivered.lock().unwrap().take() {
+                let _ = delivered.send(());
+            }
+            reply.answer(r#"{"state":"ok"}"#.to_owned());
+        },
+    );
+
+    let channel = the_channel_at(
+        launch.location(),
+        &material,
+        ChannelDuty::Serve(launch.credential().clone()),
+        inbox,
+    )
+    .await;
+
+    let _ = tokio::time::timeout(Duration::from_secs(10), waited).await;
+
+    let steps = sequence.lock().unwrap().clone();
+    assert_eq!(
+        steps,
+        vec!["ventana".to_owned(), "operacion".to_owned()],
+        "el eco o mensaje inicial revela la ventana antes de la operacion"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_first_message_over_the_third_protocol_reveals_the_window_before_the_operation() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_as(&material, BenchMode::Third);
+    let url = client.the_launch_url();
+    let parsed = AfirmaUrl::parse(&url).expect("la invocacion deberia leerse");
+    let launch = LaunchRequest::from_url(&parsed).expect("version 3");
+
+    let sequence = Arc::new(Mutex::new(Vec::new()));
+    let seq_arr = Arc::clone(&sequence);
+    let seq_del = Arc::clone(&sequence);
+
+    let (delivered, waited) = tokio::sync::oneshot::channel();
+    let delivered = Arc::new(Mutex::new(Some(delivered)));
+
+    let inbox = SiteOperations::of(
+        move || {
+            seq_arr.lock().unwrap().push("ventana".to_owned());
+        },
+        move |_url, reply| {
+            seq_del.lock().unwrap().push("operacion".to_owned());
+            if let Some(delivered) = delivered.lock().unwrap().take() {
+                let _ = delivered.send(());
+            }
+            reply.answer(r#"{"state":"ok"}"#.to_owned());
+        },
+    );
+
+    let channel = the_channel_at(
+        launch.location(),
+        &material,
+        ChannelDuty::Serve(launch.credential().clone()),
+        inbox,
+    )
+    .await;
+
+    let _ = tokio::time::timeout(Duration::from_secs(10), waited).await;
+
+    let steps = sequence.lock().unwrap().clone();
+    assert_eq!(
+        steps,
+        vec!["ventana".to_owned(), "operacion".to_owned()],
+        "el primer mensaje en v3 revela la ventana antes de la operacion"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn without_websocket_the_published_client_falls_back_to_service_v1() {
     if !the_bench_can_be_mounted() {
         return;
@@ -677,7 +783,7 @@ fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOperati
     let roots = Arc::clone(roots);
     let consents = Arc::clone(consents);
 
-    Arc::new(move |url, reply| {
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
 
@@ -857,7 +963,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
     let roots = Arc::clone(roots);
     let signer = Arc::clone(signer);
 
-    Arc::new(move |url, reply| {
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
 
@@ -902,7 +1008,7 @@ fn the_local_batch_errand_of(
     let roots = Arc::clone(roots);
     let signer = Arc::clone(signer);
 
-    Arc::new(move |url, reply| {
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
 
@@ -1159,7 +1265,7 @@ async fn the_published_client_signs_a_remote_batch_in_legacy_xml_also_over_the_t
 fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
-    Arc::new(move |url, reply| {
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
 
@@ -1445,7 +1551,7 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
     let roots = Arc::clone(roots);
     let signer = Arc::clone(signer);
 
-    Arc::new(move |url, reply| {
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
 
@@ -1489,7 +1595,7 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
 fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
-    Arc::new(move |url, reply| {
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
         let answering = ErrandReply::of(move |text| reply.answer(text));

@@ -17,8 +17,27 @@ use super::trust;
 pub use channel::{hold_the_channel, HeldChannel};
 pub use repair::{repair_the_local_ca, LocalCaTrust};
 
-/// Función para abrir y notificar el contenido de la ventana de sede.
-pub type SiteWindowOpener<'a> = &'a dyn Fn(SiteWindowContent<'_>);
+use std::sync::Arc;
+use std::time::Duration;
+
+pub const WAITING_THRESHOLD: Duration = Duration::from_secs(30);
+
+/// Puerto para gestionar la ventana de diálogo de sede (ADR-0005).
+pub trait SiteWindow: Send + Sync + 'static {
+    /// Abre la ventana con el contenido inicial (oculta si el trámite abre canal).
+    fn open(&self, content: SiteWindowContent<'_>);
+    /// Muestra y da foco a la ventana.
+    fn show(&self);
+}
+
+impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
+    fn open(&self, content: SiteWindowContent<'_>) {
+        (**self).open(content);
+    }
+    fn show(&self) {
+        (**self).show();
+    }
+}
 
 /// Contenido inicial que debe mostrar la ventana de sede.
 #[derive(Debug)]
@@ -84,8 +103,29 @@ pub fn attend_startup(
     trust: TrustAtStartup<'_>,
     codecs: &CodecTable,
     transport: ChannelTransport<'_>,
-    window: SiteWindowOpener<'_>,
+    window: Arc<dyn SiteWindow>,
     live: &LiveErrand,
+) -> Startup {
+    attend_startup_with_threshold(
+        site_launch,
+        trust,
+        codecs,
+        transport,
+        window,
+        live,
+        WAITING_THRESHOLD,
+    )
+}
+
+/// Atiende la invocación inicial permitiendo configurar el umbral de espera del navegador.
+pub fn attend_startup_with_threshold(
+    site_launch: Option<&str>,
+    trust: TrustAtStartup<'_>,
+    codecs: &CodecTable,
+    transport: ChannelTransport<'_>,
+    window: Arc<dyn SiteWindow>,
+    live: &LiveErrand,
+    threshold: Duration,
 ) -> Startup {
     let (said, local_ca) = refresh_the_local_ca(trust);
 
@@ -98,45 +138,82 @@ pub fn attend_startup(
 
     Startup {
         said,
-        opening: Opening::TheSiteErrand(attend_site_launch(
-            url, codecs, transport, window, live, local_ca,
+        opening: Opening::TheSiteErrand(attend_site_launch_with_threshold(
+            url, codecs, transport, window, live, local_ca, threshold,
         )),
     }
 }
 
-/// Atiende una invocación de sede y abre la ventana asociada según el resultado.
+/// Atiende una invocación de sede y gestiona la ventana asociada según el resultado.
 pub fn attend_site_launch(
     url: &str,
     codecs: &CodecTable,
     transport: ChannelTransport<'_>,
-    window: SiteWindowOpener<'_>,
+    window: Arc<dyn SiteWindow>,
     live: &LiveErrand,
     local_ca: LocalCaReach,
+) -> Attendance {
+    attend_site_launch_with_threshold(
+        url,
+        codecs,
+        transport,
+        window,
+        live,
+        local_ca,
+        WAITING_THRESHOLD,
+    )
+}
+
+/// Atiende una invocación de sede permitiendo configurar el umbral de espera del navegador.
+pub fn attend_site_launch_with_threshold(
+    url: &str,
+    codecs: &CodecTable,
+    transport: ChannelTransport<'_>,
+    window: Arc<dyn SiteWindow>,
+    live: &LiveErrand,
+    local_ca: LocalCaReach,
+    threshold: Duration,
 ) -> Attendance {
     let attendance = site::attend_launch(url, codecs, transport, live);
 
     match &attendance {
         Attendance::Serving { errand, .. } => match local_ca {
-            LocalCaReach::Nowhere => open(
-                live,
-                window,
-                SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
-            ),
-            LocalCaReach::NotAnObstacle => open(live, window, SiteWindowContent::TheErrand(errand)),
+            LocalCaReach::Nowhere => {
+                open(
+                    live,
+                    &*window,
+                    SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
+                );
+                window.show();
+            }
+            LocalCaReach::NotAnObstacle => {
+                open(live, &*window, SiteWindowContent::TheErrand(errand));
+                if errand.opens_channel() {
+                    live.arm_backing_timeout(Arc::clone(&window), threshold);
+                } else {
+                    window.show();
+                }
+            }
         },
         Attendance::ChannelNotOpened(error) => {
-            let dead_end = match error.refusal() {
-                Some(refusal) => DeadEnd::RefusedWithoutChannel(refusal.clone()),
-                None => DeadEnd::ChannelNotOpened,
-            };
-            open(live, window, SiteWindowContent::ADeadEnd(dead_end));
+            if live.current().is_none() {
+                let dead_end = match error.refusal() {
+                    Some(refusal) => DeadEnd::RefusedWithoutChannel(refusal.clone()),
+                    None => DeadEnd::ChannelNotOpened,
+                };
+                open(live, &*window, SiteWindowContent::ADeadEnd(dead_end));
+                window.show();
+            }
         }
         Attendance::RefusingInTheWindow(refusal) => {
-            open(
-                live,
-                window,
-                SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
-            );
+            if live.current().is_none() {
+                open(
+                    live,
+                    &*window,
+                    SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
+                );
+                window.show();
+            }
         }
         Attendance::RefusingOverTheChannel { .. } => {}
     }
@@ -144,9 +221,9 @@ pub fn attend_site_launch(
     attendance
 }
 
-fn open(live: &LiveErrand, window: SiteWindowOpener<'_>, content: SiteWindowContent<'_>) {
+fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
     live.note(content.moment());
-    window(content);
+    window.open(content);
 }
 
 impl SiteWindowContent<'_> {

@@ -164,11 +164,13 @@ pub fn run() {
                         let handle = app.clone();
                         let site = app.state::<SiteRoot>();
                         let transport = the_transport(&site.ca_store, &handle);
+                        let window =
+                            Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));
                         let attendance = site::application::startup::attend_site_launch(
                             &url,
                             &site.codecs,
                             &transport,
-                            &|_| site::adapters::window::open_the_site_window(&handle),
+                            window,
                             &site.errand,
                             // A mitad de un trámite no se toca la CA local (ADR-0005).
                             site::application::startup::LocalCaReach::NotAnObstacle,
@@ -254,6 +256,7 @@ pub fn run() {
             let handle = app.handle().clone();
             let site = app.state::<SiteRoot>();
             let transport = the_transport(&site.ca_store, &handle);
+            let window = Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));
             let startup = site::application::startup::attend_startup(
                 invocation.site_launch(),
                 site::application::startup::TrustAtStartup {
@@ -263,7 +266,7 @@ pub fn run() {
                 },
                 &site.codecs,
                 &transport,
-                &|_| site::adapters::window::open_the_site_window(&handle),
+                window,
                 &site.errand,
             );
 
@@ -326,12 +329,22 @@ fn the_transport(
 ) -> Result<site::domain::channel::OpenChannel, site::domain::channel::ChannelError>
        + 'static {
     use site::application::errand::Transport as _;
+    use tauri::Manager as _;
 
-    let inbox: site::application::errand::Inbox = {
+    let inbox = {
         let handle = app.clone();
-        Arc::new(move |url, reply| {
-            site::adapters::window::attend_site_operation(&handle, url, reply);
-        })
+        let arrived_handle = app.clone();
+        site::ports::Inbox::of(
+            move || {
+                arrived_handle
+                    .state::<site::SiteRoot>()
+                    .errand
+                    .browser_arrived();
+            },
+            move |url, reply| {
+                site::adapters::window::attend_site_operation(&handle, url, reply);
+            },
+        )
     };
 
     let wss = site::adapters::transport::LoopbackWss::new(store.clone(), inbox.clone());

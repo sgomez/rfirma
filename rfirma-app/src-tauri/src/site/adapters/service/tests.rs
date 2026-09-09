@@ -24,7 +24,7 @@ fn no_state() -> Arc<Mutex<ServiceState>> {
 
 /// Un buzón que contesta cada operación con el mismo texto, sin atender de verdad.
 fn answering_with(text: &'static str) -> Inbox {
-    Arc::new(move |_url: AfirmaUrl, reply: ReplyHandle| reply.answer(text.to_owned()))
+    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| reply.answer(text.to_owned()))
 }
 
 fn body_of(response: &[u8]) -> String {
@@ -231,7 +231,7 @@ async fn a_refusing_duty_answers_the_same_refusal_regardless_of_the_command() {
 /// una respuesta ya calculada.
 fn counting_answers_with(text: &'static str, launches: &Arc<Mutex<usize>>) -> Inbox {
     let launches = Arc::clone(launches);
-    Arc::new(move |_url: AfirmaUrl, reply: ReplyHandle| {
+    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
         *launches.lock().expect("el contador no esta envenenado") += 1;
         reply.answer(text.to_owned());
     })

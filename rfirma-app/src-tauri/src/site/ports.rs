@@ -71,8 +71,42 @@ impl std::fmt::Debug for ReplyHandle {
     }
 }
 
-/// Receptor de operaciones entrantes y sus asas de respuesta.
-pub type Inbox = Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>;
+/// Receptor de operaciones entrantes y notificación de llegada del navegador.
+#[derive(Clone)]
+pub struct Inbox {
+    arrived: Arc<dyn Fn() + Send + Sync>,
+    operations: Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>,
+}
+
+impl Inbox {
+    /// Crea un buzón con los manejadores de llegada y de operaciones.
+    pub fn of(
+        arrived: impl Fn() + Send + Sync + 'static,
+        operations: impl Fn(AfirmaUrl, ReplyHandle) + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            arrived: Arc::new(arrived),
+            operations: Arc::new(operations),
+        }
+    }
+
+    /// Crea un buzón que solo atiende operaciones (para pruebas y servidor intermedio).
+    pub fn for_operations(
+        operations: impl Fn(AfirmaUrl, ReplyHandle) + Send + Sync + 'static,
+    ) -> Self {
+        Self::of(|| {}, operations)
+    }
+
+    /// Notifica que el navegador ha llegado al canal.
+    pub fn arrived(&self) {
+        (self.arrived)();
+    }
+
+    /// Entrega una operación recibida por el canal.
+    pub fn deliver(&self, url: AfirmaUrl, reply: ReplyHandle) {
+        (self.operations)(url, reply);
+    }
+}
 
 /// Puerto de transporte para abrir canales de comunicación.
 pub trait Transport {

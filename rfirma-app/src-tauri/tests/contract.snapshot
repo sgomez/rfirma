@@ -194,6 +194,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       NoCertificate { reason: NoCertificateView, owned: usize }
       Saving { filename: Option<String> }
       Loading { multiple: bool }
+      Unreachable
 
   pub enum NoChannelView
       ChannelNotOpened

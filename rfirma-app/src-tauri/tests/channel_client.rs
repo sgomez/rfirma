@@ -5,7 +5,7 @@ use std::time::Duration;
 use futures_util::{SinkExt, StreamExt};
 use native_tls::{Certificate, TlsConnector};
 use rfirma_lib::site::adapters::channel::{
-    bind_first_free, serve, ReplyHandle, SiteOperations, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    bind_first_free, serve, SiteOperations, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use rfirma_lib::site::adapters::codec::V4Codec;
 use rfirma_lib::site::adapters::tls::LocalServerCertificate;
@@ -15,8 +15,9 @@ use rfirma_lib::site::application::startup::{attend_site_launch, LocalCaReach};
 use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
-    ChannelCredential, LaunchRequest, NegotiatedCredential, SafCode,
+    AfirmaUrl, ChannelCredential, LaunchRequest, NegotiatedCredential, SafCode,
 };
+use rfirma_lib::site::ports::ReplyHandle;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::Connector;
@@ -319,12 +320,20 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
 
-    let windows = std::sync::atomic::AtomicUsize::new(0);
+    let windows = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let live = LiveErrand::default();
     let url = format!(
         "afirma://websocket?ports={},{},{}&v=4&idsession={CREDENTIAL}",
         drawn[0], drawn[1], drawn[2]
     );
+
+    struct WindowCounter(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+    impl rfirma_lib::site::application::startup::SiteWindow for WindowCounter {
+        fn open(&self, _content: rfirma_lib::site::application::startup::SiteWindowContent<'_>) {
+            self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+        fn show(&self) {}
+    }
 
     let attendance = attend_site_launch(
         &url,
@@ -349,9 +358,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
                 ))
             })
         },
-        &|_| {
-            windows.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        },
+        std::sync::Arc::new(WindowCounter(std::sync::Arc::clone(&windows))),
         &live,
         LocalCaReach::NotAnObstacle,
     );
@@ -377,7 +384,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
 
 /// Trámite que no contesta las operaciones recibidas.
 fn no_operations() -> SiteOperations {
-    std::sync::Arc::new(|_, _| {})
+    SiteOperations::for_operations(|_, _| {})
 }
 
 /// Más que el máximo de 240s que el original le daba a un lote (`setConnectionLostTimeout`).
@@ -417,7 +424,7 @@ async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
         ChannelDuty::Serve(NegotiatedCredential::Required(
             ChannelCredential::parse(CREDENTIAL).expect("credencial"),
         )),
-        std::sync::Arc::new(move |url, reply| {
+        SiteOperations::for_operations(move |url: AfirmaUrl, reply: ReplyHandle| {
             assert_eq!(url.verb(), "selectcert");
             *keeping.lock().expect("el candado") = Some(reply);
         }),

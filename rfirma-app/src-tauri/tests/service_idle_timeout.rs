@@ -44,7 +44,7 @@ async fn a_silent_service_connection_survives_longer_than_the_original_batch_all
     );
     store.write(&ca).expect("la CA deberia guardarse");
 
-    let inbox = std::sync::Arc::new(
+    let inbox = rfirma_lib::site::ports::Inbox::for_operations(
         |_url, reply: rfirma_lib::site::application::errand::ReplyHandle| {
             reply.answer("no se llama".to_owned());
         },

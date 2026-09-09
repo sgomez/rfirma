@@ -60,7 +60,7 @@ impl Transport for RawTlsService {
         let certificate =
             LocalServerCertificate::issued_by(&ca).map_err(|error| unusable(error.to_string()))?;
 
-        open(location, &certificate, duty, Arc::clone(&self.inbox))
+        open(location, &certificate, duty, self.inbox.clone())
     }
 }
 
@@ -140,7 +140,7 @@ async fn accept_until_stopped(
                 let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
-                let inbox = Arc::clone(&inbox);
+                let inbox = inbox.clone();
                 let state = Arc::clone(&state);
                 tokio::spawn(async move {
                     attend(stream, peer, &acceptor, &duty, &inbox, &state).await;
@@ -252,6 +252,7 @@ async fn respond(
             if !credential_matches(credential, candidate.as_deref()) {
                 return the_invalid_session_response();
             }
+            inbox.arrived();
             if let Some(response) = the_response_already_computed(state) {
                 return response;
             }
@@ -304,11 +305,18 @@ async fn handle_operation(
     state: &Arc<Mutex<ServiceState>>,
 ) -> Vec<u8> {
     match answer(duty, from_loopback, message) {
-        Answer::Reply(text) | Answer::ReplyAndClose(text) => http_response(&text),
-        Answer::Pending(url) => match the_response_already_computed(state) {
-            Some(response) => response,
-            None => launch_operation(url, inbox, state).await,
-        },
+        Answer::Reply(text) => {
+            inbox.arrived();
+            http_response(&text)
+        }
+        Answer::ReplyAndClose(text) => http_response(&text),
+        Answer::Pending(url) => {
+            inbox.arrived();
+            match the_response_already_computed(state) {
+                Some(response) => response,
+                None => launch_operation(url, inbox, state).await,
+            }
+        }
     }
 }
 
@@ -321,7 +329,7 @@ async fn launch_operation(
     state: &Arc<Mutex<ServiceState>>,
 ) -> Vec<u8> {
     let (sender, receiver) = oneshot::channel();
-    inbox(
+    inbox.deliver(
         url,
         ReplyHandle::of(move |text| {
             let _ = sender.send(text);

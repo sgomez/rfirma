@@ -274,10 +274,10 @@ fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
     let live = Arc::new(LiveErrand::default());
     let codec_was_already_registered = Arc::new(Mutex::new(None));
 
-    let inbox: Inbox = {
+    let inbox = {
         let live = Arc::clone(&live);
         let seen = Arc::clone(&codec_was_already_registered);
-        Arc::new(move |_url, reply: ReplyHandle| {
+        Inbox::for_operations(move |_url, reply: ReplyHandle| {
             *seen.lock().expect("el candado") = Some(live.codec().is_some());
             reply.answer("respuesta".to_owned());
         })
