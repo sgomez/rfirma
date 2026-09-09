@@ -69,6 +69,9 @@ const THE_SIGN_CADES_EXPLICIT: &str = "signcades";
 /// El guion de `sign` con `format=CAdES`, `mode=explicit` y `gzip=true` sobre el reto comprimido.
 const THE_SIGN_GZIP: &str = "signgzip";
 
+/// El guion de `sign` con `format=CAdES-ASiC-S` sobre el mismo reto binario.
+const THE_SIGN_CADES_ASIC_S: &str = "signcadesasics";
+
 /// El guion de `sign` con `format=auto` sobre el mismo reto binario.
 const THE_SIGN_AUTO: &str = "signauto";
 
@@ -348,6 +351,11 @@ fn a_der_file(der: &[u8]) -> tempfile::NamedTempFile {
 /// Un fichero temporal con el XML ya en disco, que es como lo leen `xmllint` y el oráculo.
 fn an_xml_file(xml: &[u8]) -> tempfile::NamedTempFile {
     a_temp_file(".xml", xml)
+}
+
+/// Un fichero temporal con el contenedor ASiC-S ya en disco, que es como lo lee el oráculo.
+fn an_asic_s_file(container: &[u8]) -> tempfile::NamedTempFile {
+    a_temp_file(".asics", container)
 }
 
 /// Ruta del reto de 64 bytes del banco de referencia, el que firma el guion `sign`.
@@ -1665,6 +1673,18 @@ fn well_formed_according_to_xmllint(path: &Path) {
     );
 }
 
+/// Comprueba que el contenedor nombra la firma CAdES que lleva dentro, en vez de dejar que un
+/// ZIP cualquiera pase el banco.
+fn carries_the_asic_s_binary_signature(container: &[u8]) {
+    const ENTRY: &[u8] = b"META-INF/signature.p7s";
+
+    assert!(
+        container.windows(ENTRY.len()).any(|window| window == ENTRY),
+        "al contenedor le falta {}",
+        String::from_utf8_lossy(ENTRY)
+    );
+}
+
 /// Comprueba que `xml` trae un `ds:Signature` del espacio de nombres XMLDSig, en vez de dejar
 /// que un XML simplemente bien formado pase el banco sin firma.
 fn carries_a_xmldsig_signature(xml: &[u8]) {
@@ -1747,6 +1767,59 @@ async fn the_published_client_signs_a_gzipped_binary_challenge() {
 async fn the_published_client_signs_a_binary_challenge_with_cades_explicit_also_over_the_third_protocol(
 ) {
     the_sign_of(BenchMode::Third, THE_SIGN_CADES_EXPLICIT).await;
+}
+
+/// Un `sign()` del cliente publicado con `format=CAdES-ASiC-S`: lo que vuelve no es un CMS sino
+/// el contenedor ZIP, con la firma CAdES dentro, y el oráculo de la grada C lo valida.
+async fn the_asic_s_sign_of(mode: BenchMode, script: &str) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, mode, script);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "'{script}' tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let container = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el contenedor de sign llega en base64");
+    assert_eq!(
+        &container[..4],
+        b"PK\x03\x04",
+        "un ASiC-S es un ZIP y empieza por su firma de fichero local"
+    );
+    carries_the_asic_s_binary_signature(&container);
+    validated_by_the_reference_tool_at(an_asic_s_file(&container).path());
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_binary_challenge_into_an_asic_s_container() {
+    the_asic_s_sign_of(BenchMode::Fourth, THE_SIGN_CADES_ASIC_S).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

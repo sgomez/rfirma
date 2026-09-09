@@ -299,7 +299,7 @@ fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
         entry_points_for(Format::Pades).expect("PAdES cruza"),
         EntryPoints::Pades
     ));
-    for format in [Format::Cades, Format::Cms] {
+    for format in [Format::Cades, Format::CadesAsicS, Format::Cms] {
         assert!(matches!(
             entry_points_for(format).expect("cruza por CAdES"),
             EntryPoints::Cades
@@ -317,21 +317,13 @@ fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
             EntryPoints::Xades
         ));
     }
-    assert!(matches!(
-        entry_points_for(Format::CadesAsicS).expect_err("no cruza"),
-        BridgeError::FormatNotBridged(Format::CadesAsicS)
-    ));
 }
 
 #[test]
 fn the_variant_of_the_format_wins_over_the_one_the_site_declared() {
     let sent = "format=XAdES Enveloping\nsignaturePage=1\n";
 
-    let block = with_the_xades_variant(
-        sent,
-        EntryPoints::Xades,
-        Format::Xades(XadesVariant::Detached),
-    );
+    let block = with_the_variant_of_the_format(sent, Format::Xades(XadesVariant::Detached));
 
     assert!(
         block.starts_with(sent),
@@ -347,9 +339,36 @@ fn the_variant_of_the_format_wins_over_the_one_the_site_declared() {
 fn a_format_without_variants_keeps_the_extra_params_untouched() {
     let sent = "mode=implicit\n";
 
-    assert_eq!(
-        with_the_xades_variant(sent, EntryPoints::Cades, Format::Cades),
-        sent
+    assert_eq!(with_the_variant_of_the_format(sent, Format::Pades), sent);
+}
+
+#[test]
+fn plain_cades_names_itself_so_the_site_cannot_ask_for_the_asic_s_processor() {
+    let sent = "format=CAdES-ASiC-S\nmode=implicit\n";
+
+    for format in [Format::Cades, Format::Cms] {
+        let block = with_the_variant_of_the_format(sent, format);
+
+        assert!(
+            block.ends_with(&format!("format={}\n", format.name())),
+            "el formato pedido se escribe el ultimo: {block}"
+        );
+    }
+}
+
+#[test]
+fn the_asic_s_container_names_itself_in_the_extra_params_of_the_cades_entry() {
+    let sent = "mode=implicit\n";
+
+    let block = with_the_variant_of_the_format(sent, Format::CadesAsicS);
+
+    assert!(
+        block.starts_with(sent),
+        "lo de la sede sigue entero: {block}"
+    );
+    assert!(
+        block.ends_with("format=CAdES-ASiC-S\n"),
+        "el contenedor se nombra el ultimo, como la variante XAdES: {block}"
     );
 }
 

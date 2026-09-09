@@ -235,27 +235,34 @@ fn a_cades_cycle_reaches_the_bridge_instead_of_stopping_at_the_format() {
 }
 
 #[test]
-fn every_format_the_bridge_does_not_resolve_is_refused_by_its_name() {
+fn an_asic_s_cades_cycle_reaches_the_bridge_by_the_cades_entries() {
     let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
+    let document = AdmissibleDocument::check_for(Format::CadesAsicS, b"no soy un PDF")
+        .expect("el contenedor no mira el /SubFilter");
 
-    let format = Format::CadesAsicS;
-    let document = AdmissibleDocument::check_for(format, b"lo que sea").expect("no se mira el PDF");
-
-    let failed = presign(
+    let cycle = presign(
         &bridge,
         a_request(
-            format,
+            Format::CadesAsicS,
             document,
             std::slice::from_ref(&b"der".to_vec()),
             &config,
             chosen.reference(),
         ),
     )
-    .expect_err("el puente no atiende ese formato");
+    .expect("el puente ya atiende el contenedor ASiC-S");
+    let seal = cycle.seal_in_transit();
+    cycle
+        .postsign(&bridge, cycle.invented_signatures(), &seal)
+        .expect("el sello volvio intacto");
 
-    assert!(failed.to_string().contains(format.name()));
+    assert_eq!(
+        bridge.calls.borrow().len(),
+        2,
+        "la prefirma y la postfirma cruzaron"
+    );
 }
 
 #[test]

@@ -643,6 +643,8 @@ if (mode === "relay") {
   theSignScript("CAdES", "mode=explicit", theChallenge());
 } else if (script === "signgzip") {
   theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
+} else if (script === "signcadesasics") {
+  theSignScript("CAdES-ASiC-S", "", theChallenge());
 } else if (script === "signauto") {
   theSignScript("auto", "", theChallenge());
 } else if (script === "signxades") {
