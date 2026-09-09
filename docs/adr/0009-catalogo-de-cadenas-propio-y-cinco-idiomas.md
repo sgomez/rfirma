@@ -42,6 +42,22 @@ abajo. Hoy se publican `es` y `en`; `ca`, `eu` y `gl` existen al 0 % y **no se
 prometen a nadie**, porque una traducción generada que nadie revisa es, en una
 aplicación de firma, peor que la ausencia.
 
+## El registro es el tuteo, cercano y directo, en los cinco idiomas
+
+Las cadenas hablan a la persona de **tú**, en frases cortas que dicen qué ha
+pasado y qué puede hacer: «No hemos podido leer el documento», «Vuelve a
+intentarlo», «¿Quieres firmarlo de todos modos?». Esto aplica a cada idioma con
+su forma propia: `ca` tutea con «tu», `gl` con «ti», `en` con el imperativo
+directo, y `eu` no distingue trato.
+
+Se descarta el usted y el impersonal de GNOME, KDE y del propio AutoFirma
+(«¿Desea continuar?», «Seleccione un fichero»), que son la norma en el
+escritorio Linux en castellano. rFirma no la traduce ningún equipo de
+escritorio y no está obligada por sus guías; el registro formal alarga las
+frases y enfría una interfaz cuyo valor es explicar situaciones. Un texto que
+llegue del cliente oficial se reescribe en este registro antes de entrar al
+catálogo, no se copia.
+
 ## La completitud es una puerta de construcción, no un filtro en ejecución
 
 La promesa es **nunca media pantalla en otro idioma**, y se sostiene así: **el
