@@ -55,6 +55,12 @@ const THE_LEGACY_XML_BATCH: &str = "batchxml";
 /// El guion del lote remoto sin presigner escuchando.
 const THE_REMOTE_BATCH_WITH_THE_DOWN_PRESIGNER: &str = "batchdown";
 
+/// El guion del lote local: `setLocalBatchProcess(true)` con un PDF, un binario y un XML.
+const THE_LOCAL_BATCH: &str = "batchlocal";
+
+/// El guion del lote local con el binario declarado `PAdES`, ilegible, y `stoponerror=true`.
+const THE_LOCAL_BATCH_WITH_AN_ILLEGIBLE_ITEM: &str = "batchlocalillegible";
+
 /// El guion de `sign` con `format=CAdES` y `mode=explicit` sobre el reto binario.
 const THE_SIGN_CADES_EXPLICIT: &str = "signcades";
 
@@ -183,7 +189,33 @@ impl PublishedClient {
     /// Arranca el conductor con uno de los guiones del banco, y con el material con el que sus
     /// servlets sirven TLS.
     fn running_the_script(material: &ChannelMaterial, mode: BenchMode, script: &str) -> Self {
-        let mut child = Command::new("node")
+        Self::spawn(material, mode, script, &[])
+    }
+
+    /// Arranca el conductor con uno de los guiones del lote local, que además necesita el PDF
+    /// que firma `format=PAdES`.
+    fn running_the_local_batch_script(
+        material: &ChannelMaterial,
+        mode: BenchMode,
+        script: &str,
+        pdf_path: &Path,
+    ) -> Self {
+        Self::spawn(
+            material,
+            mode,
+            script,
+            &[("RFIRMA_BENCH_LOCAL_PDF", pdf_path.as_os_str())],
+        )
+    }
+
+    fn spawn(
+        material: &ChannelMaterial,
+        mode: BenchMode,
+        script: &str,
+        extra_env: &[(&str, &std::ffi::OsStr)],
+    ) -> Self {
+        let mut command = Command::new("node");
+        command
             .arg(the_driver())
             .env("RFIRMA_AUTOSCRIPT", the_published_client())
             .env("NODE_EXTRA_CA_CERTS", material.ca_pem_file.path())
@@ -196,7 +228,11 @@ impl PublishedClient {
             )
             .env("RFIRMA_BENCH_SERVLET_KEY", material.key_pem_file.path())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::null());
+        for (key, value) in extra_env {
+            command.env(key, value);
+        }
+        let mut child = command
             .spawn()
             .expect("Node deberia arrancar el conductor del banco");
 
@@ -309,6 +345,72 @@ fn an_xml_file(xml: &[u8]) -> tempfile::NamedTempFile {
 /// Ruta del reto de 64 bytes del banco de referencia, el que firma el guion `sign`.
 fn the_challenge_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/reference/challenge.bin")
+}
+
+/// El binario del lote local: nunca empieza por `%PDF-`, así que declararlo `format=PAdES` es lo
+/// que lo vuelve ilegible en el guion de `stoponerror`.
+const THE_LOCAL_BATCH_BINARY: &[u8] = b"contenido binario del lote local, sin PDF ni XML dentro";
+
+/// Genera un PDF sintético de una página, admisible para `format=PAdES` (ADR-0014).
+fn a_one_page_pdf() -> Vec<u8> {
+    const PAGE_WIDTH: u32 = 595;
+    const PAGE_HEIGHT: u32 = 842;
+
+    let content = "BT /F1 24 Tf 72 750 Td (rfirma: lote local) Tj ET\n".to_owned();
+    let objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>".to_owned(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_owned(),
+        format!(
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {PAGE_WIDTH} {PAGE_HEIGHT}] \
+             /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>"
+        ),
+        format!(
+            "<< /Length {} >>\nstream\n{content}endstream",
+            content.len()
+        ),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_owned(),
+    ];
+
+    let mut pdf = b"%PDF-1.4\n".to_vec();
+    let mut offsets = Vec::with_capacity(objects.len());
+    for (index, body) in objects.iter().enumerate() {
+        offsets.push(pdf.len());
+        pdf.extend_from_slice(format!("{} 0 obj\n{body}\nendobj\n", index + 1).as_bytes());
+    }
+
+    let xref_at = pdf.len();
+    pdf.extend_from_slice(format!("xref\n0 {}\n", objects.len() + 1).as_bytes());
+    pdf.extend_from_slice(b"0000000000 65535 f \n");
+    for offset in &offsets {
+        pdf.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
+    }
+    pdf.extend_from_slice(
+        format!(
+            "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref_at}\n%%EOF\n",
+            objects.len() + 1
+        )
+        .as_bytes(),
+    );
+    pdf
+}
+
+/// Valida la firma PAdES con `pdfsig` (ADR-0014).
+fn validated_by_pdfsig(pdf: &Path) {
+    let output = Command::new("pdfsig")
+        .arg(pdf)
+        .output()
+        .unwrap_or_else(|error| {
+            panic!(
+                "falta pdfsig: es la puerta de validez de la grada C (ADR-0014).\n  \
+                 sudo apt install -y poppler-utils\n{error}"
+            )
+        });
+    assert!(
+        output.status.success(),
+        "pdfsig ha fallado:\n{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 /// Abre el canal en uno de los puertos sorteados por la URL.
@@ -784,6 +886,55 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
     })
 }
 
+/// El trámite atendiendo el lote local: consiente con el certificado de pruebas y lo cierra con
+/// el secreto del token, firmando cada elemento por el ciclo de sede sin servlets (ADR-0014).
+fn the_local_batch_errand_of(
+    roots: &Arc<Roots>,
+    signer: &Arc<Mutex<Option<Vec<u8>>>>,
+) -> SiteOperations {
+    let roots = Arc::clone(roots);
+    let signer = Arc::clone(signer);
+
+    Arc::new(move |url, reply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSignTheLocalBatch(consent)) =
+            errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+        assert_eq!(
+            consent.items.len(),
+            3,
+            "el lote local del guion lleva tres elementos"
+        );
+
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| {
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+            });
+        let signing_certificate = roots
+            .identity
+            .chosen(&chosen.id)
+            .expect("el certificado consentido deberia seguir en el token");
+        *signer
+            .lock()
+            .expect("nadie envenena el apunte del firmante") =
+            Some(signing_certificate.der().to_vec());
+
+        errand::consent(&desk, &chosen.id, live).expect("el lote local deberia quedar consentido");
+        tokio::task::block_in_place(|| {
+            errand::finish_the_local_batch(&desk, THE_TOKEN_SECRET, live)
+                .expect("el lote local deberia cerrarse con el secreto del token")
+        });
+    })
+}
+
 /// El lote remoto de dos documentos, del `signBatchJSON` del cliente publicado al resultado
 /// congelado del postsigner, pasando por los dos servlets que levanta el conductor.
 async fn the_remote_batch_of(mode: BenchMode) {
@@ -1076,6 +1227,209 @@ async fn the_remote_batch_fails_when_the_presigner_is_down() {
     );
 
     channel.close();
+}
+
+/// Un elemento del resultado del lote local, por su `id`.
+fn local_batch_item<'a>(result: &'a serde_json::Value, id: &str) -> &'a serde_json::Value {
+    result["signs"]
+        .as_array()
+        .expect("el resultado del lote local trae 'signs'")
+        .iter()
+        .find(|item| item["id"] == id)
+        .unwrap_or_else(|| panic!("el lote local no trae el elemento '{id}': {result}"))
+}
+
+/// El lote local de tres elementos (PDF/`PAdES`, binario/`CAdES`, XML/`XAdES`) firmado con
+/// `setLocalBatchProcess(true)` y sin presigner ni postsigner: las tres firmas validan con la
+/// herramienta de su formato.
+async fn the_local_batch_of(mode: BenchMode) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let pdf_file = a_temp_file(".pdf", &a_one_page_pdf());
+    let client = PublishedClient::running_the_local_batch_script(
+        &material,
+        mode,
+        THE_LOCAL_BATCH,
+        pdf_file.path(),
+    );
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_local_batch_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "el lote local tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let result: serde_json::Value = serde_json::from_slice(
+        &STANDARD
+            .decode(verdict.field("result"))
+            .expect("el resultado del lote local llega en base64"),
+    )
+    .expect("el resultado del lote local es JSON");
+
+    for id in ["pdf", "bin", "xml"] {
+        assert_eq!(
+            local_batch_item(&result, id)["result"],
+            "DONE_AND_SAVED",
+            "el elemento '{id}' tenia que firmarse: {result}"
+        );
+    }
+
+    let pdf_signed = STANDARD
+        .decode(
+            local_batch_item(&result, "pdf")["signature"]
+                .as_str()
+                .expect("el PDF firmado llega en base64"),
+        )
+        .expect("el PDF firmado es base64 valido");
+    let pdf_signed_file = a_temp_file(".pdf", &pdf_signed);
+    validated_by_pdfsig(pdf_signed_file.path());
+
+    let cms = STANDARD
+        .decode(
+            local_batch_item(&result, "bin")["signature"]
+                .as_str()
+                .expect("el CAdES del binario llega en base64"),
+        )
+        .expect("el CAdES del binario es base64 valido");
+    let binary_file = a_temp_file(".bin", THE_LOCAL_BATCH_BINARY);
+    verified_by_openssl(&cms, binary_file.path());
+    validated_by_the_reference_tool(&cms);
+
+    let xml = STANDARD
+        .decode(
+            local_batch_item(&result, "xml")["signature"]
+                .as_str()
+                .expect("el XAdES del XML llega en base64"),
+        )
+        .expect("el XAdES del XML es base64 valido");
+    let xml_file = an_xml_file(&xml);
+    well_formed_according_to_xmllint(xml_file.path());
+    carries_a_xmldsig_signature(&xml);
+
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "con needcert el successCallback recibe tambien el DER del firmante"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_local_batch() {
+    the_local_batch_of(BenchMode::Fourth).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_local_batch_also_over_the_third_protocol() {
+    the_local_batch_of(BenchMode::Third).await;
+}
+
+/// El mismo lote local, con el binario declarado `format=PAdES` —y por tanto ilegible, al no ser
+/// un PDF— y `stoponerror=true`: el PDF que iba antes se salta también, como el original.
+async fn the_local_batch_with_an_illegible_item_of(mode: BenchMode) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let _turn = ONE_AT_A_TIME.lock().await;
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let pdf_file = a_temp_file(".pdf", &a_one_page_pdf());
+    let client = PublishedClient::running_the_local_batch_script(
+        &material,
+        mode,
+        THE_LOCAL_BATCH_WITH_AN_ILLEGIBLE_ITEM,
+        pdf_file.path(),
+    );
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_local_batch_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "el lote local tenia que acabar en el successCallback aunque un elemento fallase, y \
+         acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let result: serde_json::Value = serde_json::from_slice(
+        &STANDARD
+            .decode(verdict.field("result"))
+            .expect("el resultado del lote local llega en base64"),
+    )
+    .expect("el resultado del lote local es JSON");
+
+    assert_eq!(
+        local_batch_item(&result, "pdf")["result"],
+        "SKIPPED",
+        "el elemento anterior al que falla tambien se salta: {result}"
+    );
+    assert_eq!(
+        local_batch_item(&result, "bin")["result"],
+        "ERROR_PRE",
+        "el binario declarado PAdES es ilegible: {result}"
+    );
+    assert_eq!(
+        local_batch_item(&result, "xml")["result"],
+        "SKIPPED",
+        "el elemento posterior al que falla se salta: {result}"
+    );
+
+    channel.close();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_stops_a_local_batch_on_an_illegible_item() {
+    the_local_batch_with_an_illegible_item_of(BenchMode::Fourth).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_stops_a_local_batch_on_an_illegible_item_also_over_the_third_protocol(
+) {
+    the_local_batch_with_an_illegible_item_of(BenchMode::Third).await;
 }
 
 /// El trámite atendiendo `sign`: consiente con el certificado de pruebas, firma en el token con
