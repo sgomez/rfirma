@@ -87,3 +87,21 @@ fn ending_leaves_nothing_to_answer_with() {
     live.end();
     assert!(live.what_the_site_asked().is_none());
 }
+
+#[test]
+fn operation_moments_are_posterior_to_waiting() {
+    let waiting = Moment::Waiting;
+    let asking = asking_with("FIRMA");
+    let no_cert = Moment::NoCertificate {
+        reason: crate::site::application::errand::NoCertificate::NotOne,
+        owned: 0,
+    };
+    let dead_end = Moment::NoChannel(crate::site::application::errand::NoChannel::LocalCaMissing);
+
+    assert!(asking.is_posterior_to(&waiting));
+    assert!(no_cert.is_posterior_to(&waiting));
+    assert!(dead_end.is_posterior_to(&waiting));
+    assert!(!waiting.is_posterior_to(&waiting));
+    assert!(!waiting.is_posterior_to(&asking));
+    assert!(!asking.is_posterior_to(&dead_end));
+}

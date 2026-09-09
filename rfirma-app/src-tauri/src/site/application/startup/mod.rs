@@ -222,7 +222,14 @@ pub fn attend_site_launch_with_threshold(
 }
 
 fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
-    live.note(content.moment());
+    let opening = content.moment();
+    if !live
+        .moment()
+        .as_ref()
+        .is_some_and(|current| current.is_posterior_to(&opening))
+    {
+        live.note(opening);
+    }
     window.open(content);
 }
 
