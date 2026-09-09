@@ -62,6 +62,8 @@ export type SiteStageView =
       round: SignatureRound;
       certificates: readonly Certificate[];
       unregisteredSignatures: boolean;
+      /** El asa que `headless` ya resolvió: la única fila que pasó el filtro. */
+      alreadyChosen: string | null;
     }
   | {
       kind: "askingToSignTheBatch";

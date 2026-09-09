@@ -90,6 +90,7 @@ fn the_round_crosses_named_as_the_site_asked_for_it() {
         round: SignatureRound::Again,
         certificates: Vec::new(),
         unregistered_signatures: false,
+        already_chosen: None,
     });
 
     assert_eq!(
@@ -108,6 +109,7 @@ fn a_countersignature_crosses_with_its_own_label_and_target() {
         },
         certificates: Vec::new(),
         unregistered_signatures: false,
+        already_chosen: None,
     });
 
     assert_eq!(
@@ -232,6 +234,7 @@ fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
             round: SignatureRound::First,
             certificates: Vec::new(),
             unregistered_signatures: false,
+            already_chosen: None,
         });
 
         assert_eq!(

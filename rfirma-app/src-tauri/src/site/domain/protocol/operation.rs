@@ -80,6 +80,28 @@ const FILENAME_DESCRIPTION: &str = "filenameDescription";
 /// `properties`: carpeta inicial sugerida al selector (`LOAD_FILE_CURRENT_DIR`).
 const FILENAME_CURRENT_DIR: &str = "filenameCurrentDir";
 
+/// `properties`: el nombre que la sede propone para el fichero que se va a elegir.
+const FILENAME_ACTUAL_NAME: &str = "filenameActualName";
+
+/// `properties`: la sede se conforma con el único certificado que pase el filtro.
+const HEADLESS: &str = "headless";
+
+/// `properties`: puesto a `false` dice lo mismo que `headless=true`
+/// (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
+const MANDATORY_CERT_SELECTION: &str = "mandatoryCertSelection";
+
+/// `properties`: el perfil *baseline*, que el original borra antes de firmar.
+const PROFILE: &str = "profile";
+
+/// Las claves de `properties` que el lanzador interpreta él mismo y nunca entrega al firmador
+/// (`ProtocolInvocationLauncherSign.java:153`, `CertFilterManager.java:145`, 1.9.2).
+const INTERPRETED_BY_THE_LAUNCHER: [&str; 4] = [
+    HEADLESS,
+    MANDATORY_CERT_SELECTION,
+    PROFILE,
+    FILENAME_ACTUAL_NAME,
+];
+
 /// `ProtocolLauncher.30`: el nombre por defecto cuando la sede no propone ninguno.
 const DEFAULT_SIGNED_NAME: &str = "Firma";
 
@@ -153,6 +175,7 @@ pub struct SignRequest {
     document: Vec<u8>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
+    headless: bool,
 }
 
 impl SignRequest {
@@ -185,6 +208,11 @@ impl SignRequest {
     pub fn filter(&self) -> &SiteFilter {
         &self.filter
     }
+
+    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    pub fn is_headless(&self) -> bool {
+        self.headless
+    }
 }
 
 /// La petición de `selectcert`.
@@ -192,6 +220,7 @@ impl SignRequest {
 pub struct SelectCertificate {
     filter: SiteFilter,
     sticky: StickyCertificate,
+    headless: bool,
 }
 
 impl SelectCertificate {
@@ -203,6 +232,11 @@ impl SelectCertificate {
     /// Lo que la sede pide sobre el certificado pegado.
     pub fn sticky(&self) -> StickyCertificate {
         self.sticky
+    }
+
+    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    pub fn is_headless(&self) -> bool {
+        self.headless
     }
 }
 
@@ -218,15 +252,27 @@ pub struct PendingSignRequest {
     requested: Option<RequestedFormat>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
+    headless: bool,
     load_extensions: Vec<String>,
     load_description: Option<String>,
     load_starting_folder: Option<String>,
+    load_filename: Option<String>,
 }
 
 impl PendingSignRequest {
     /// Lo que la sede pide del listado.
     pub fn filter(&self) -> &SiteFilter {
         &self.filter
+    }
+
+    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    pub fn is_headless(&self) -> bool {
+        self.headless
+    }
+
+    /// El nombre que la sede propone al selector (`filenameActualName`), si lo declaró.
+    pub fn load_filename(&self) -> Option<&str> {
+        self.load_filename.as_deref()
     }
 
     /// Extensiones admitidas por el selector que elige el documento (`filenameExts`).
@@ -255,6 +301,7 @@ impl PendingSignRequest {
             document,
             declared: self.declared,
             filter: self.filter,
+            headless: self.headless,
         }
     }
 }
@@ -311,6 +358,7 @@ pub struct SignAndSaveRequest {
     requested: Option<RequestedFormat>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
+    headless: bool,
     filename: Option<String>,
     extensions: Vec<String>,
     description: Option<String>,
@@ -318,6 +366,7 @@ pub struct SignAndSaveRequest {
     load_extensions: Vec<String>,
     load_description: Option<String>,
     load_starting_folder: Option<String>,
+    load_filename: Option<String>,
     chosen_name: Option<String>,
 }
 
@@ -400,6 +449,16 @@ impl SignAndSaveRequest {
         self.load_starting_folder.as_deref()
     }
 
+    /// El nombre que la sede propone al selector (`filenameActualName`), si lo declaró.
+    pub fn load_filename(&self) -> Option<&str> {
+        self.load_filename.as_deref()
+    }
+
+    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    pub fn is_headless(&self) -> bool {
+        self.headless
+    }
+
     /// El documento que la persona acaba de elegir, que con `format=auto` fija el formato
     /// efectivo igual que si hubiera llegado en `dat`. El nombre del fichero elegido (con su
     /// extensión) alimenta el segundo escalón de `proposed_name`.
@@ -468,6 +527,7 @@ pub struct BatchRequest {
     needcert: bool,
     filter: SiteFilter,
     sticky: StickyCertificate,
+    headless: bool,
     algorithm: String,
     stop_on_error: bool,
 }
@@ -518,6 +578,11 @@ impl BatchRequest {
         self.sticky
     }
 
+    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    pub fn is_headless(&self) -> bool {
+        self.headless
+    }
+
     /// El algoritmo del lote, ya admitido (fija el algoritmo del PKCS#1).
     pub fn algorithm(&self) -> &str {
         &self.algorithm
@@ -537,13 +602,21 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
     }
 
     match verb_of(url).as_str() {
-        SELECT_CERTIFICATE => Ok(SiteOperation::SelectCertificate(SelectCertificate {
-            filter: site_filter(&declared_properties(url)?),
-            sticky: sticky_certificate(url),
-        })),
+        SELECT_CERTIFICATE => {
+            let declared = declared_properties(url);
+            Ok(SiteOperation::SelectCertificate(SelectCertificate {
+                filter: site_filter(declared.crossing()),
+                sticky: sticky_certificate(url),
+                headless: declared.is_headless(),
+            }))
+        }
         SIGN => sign_request(url, SignatureRound::First, data),
         COSIGN => sign_request(url, SignatureRound::Again, data),
-        COUNTERSIGN => sign_request(url, counter_round(&declared_properties(url)?)?, data),
+        COUNTERSIGN => sign_request(
+            url,
+            counter_round(declared_properties(url).crossing())?,
+            data,
+        ),
         SAVE => save_request(url, data),
         LOAD => load_request(url),
         BATCH => batch_request(url, data),
@@ -579,16 +652,19 @@ fn sign_request(
 
     let algorithm = check_algorithm(url)?;
 
-    let declared = declared_properties(url)?;
+    let properties = declared_properties(url);
+    let declared = properties.crossing().to_vec();
     if url.parameter("dat").is_none() {
         return Ok(SiteOperation::SignWithoutDocument(PendingSignRequest {
             round,
             algorithm,
             requested,
             filter: site_filter(&declared),
+            headless: properties.is_headless(),
             load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
             load_description: property_value(&declared, FILENAME_DESCRIPTION),
             load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
+            load_filename: properties.actual_name().map(str::to_owned),
             declared,
         }));
     }
@@ -607,6 +683,7 @@ fn sign_request(
         format,
         document,
         filter: site_filter(&declared),
+        headless: properties.is_headless(),
         declared,
     }))
 }
@@ -725,7 +802,8 @@ fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteO
     if let Some(filename) = &filename {
         check_filename(filename)?;
     }
-    let declared = declared_properties(url)?;
+    let properties = declared_properties(url);
+    let declared = properties.crossing().to_vec();
     let round = round_of_cop(url, &declared)?;
 
     let requested = requested_format(url)?;
@@ -751,6 +829,7 @@ fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteO
         document,
         requested,
         filter: site_filter(&declared),
+        headless: properties.is_headless(),
         filename,
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),
         description: property_value(&declared, FILENAME_SAVE_DESCRIPTION),
@@ -758,6 +837,7 @@ fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteO
         load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
         load_description: property_value(&declared, FILENAME_DESCRIPTION),
         load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
+        load_filename: properties.actual_name().map(str::to_owned),
         chosen_name: None,
         declared,
     }))
@@ -918,7 +998,7 @@ fn batch_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation
         Some((presigner_url, postsigner_url)) => (Some(presigner_url), Some(postsigner_url)),
         None => (None, None),
     };
-    let declared = declared_properties(url)?;
+    let declared = declared_properties(url);
     Ok(SiteOperation::Batch(BatchRequest {
         lote,
         lote_base64,
@@ -929,8 +1009,9 @@ fn batch_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation
         needcert: url
             .parameter("needcert")
             .is_some_and(|value| value.eq_ignore_ascii_case("true")),
-        filter: site_filter(&declared),
+        filter: site_filter(declared.crossing()),
         sticky: sticky_certificate(url),
+        headless: declared.is_headless(),
         algorithm,
         stop_on_error,
     }))
@@ -1099,36 +1180,93 @@ fn verb_of(url: &AfirmaUrl) -> String {
         .to_owned()
 }
 
+/// El `properties` que mandó la sede, partido en lo que cruza al firmador y lo que el
+/// lanzador interpreta él mismo.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DeclaredProperties {
+    crossing: Vec<(String, String)>,
+    headless: bool,
+    actual_name: Option<String>,
+}
+
+impl DeclaredProperties {
+    /// Los pares que sí se le entregan al firmador.
+    pub fn crossing(&self) -> &[(String, String)] {
+        &self.crossing
+    }
+
+    /// Si la sede se conforma con el único certificado que pase el filtro.
+    pub fn is_headless(&self) -> bool {
+        self.headless
+    }
+
+    /// El nombre que la sede propone al selector de documento.
+    pub fn actual_name(&self) -> Option<&str> {
+        self.actual_name.as_deref()
+    }
+}
+
 /// Los pares del `.properties` que la sede mandó dentro de `properties`.
 ///
 /// Viaja en Base64 **URL-safe** (`Base64.encode(bytes, true)` del original), y
 /// el descodificador es tolerante a propósito con lo que sí puede llegar: la
-/// `/` del alfabeto normal y el relleno ausente. Un cliente que mande `/` no
-/// está atacando nada, y rechazarle la llamada entera por eso sería inventarse
-/// una incompatibilidad que el original no tiene.
+/// `/` del alfabeto normal y el relleno ausente.
 ///
-/// El `+` del alfabeto normal, en cambio, **nunca llega hasta aquí**:
-/// [`AfirmaUrl`] ya lo ha convertido en un espacio, porque el original pasa
-/// cada valor por `URLDecoder` (ver el encabezado de [`crate::site::domain::protocol::url`]).
-/// Así que una sede que mande Base64 estándar con `+` se lleva el `SAF_03` —
-/// igual que en el original, que decodifica igual—, y aquí no hay ningún brazo
-/// que lo intente: sería código muerto que promete una tolerancia que no
-/// existe.
-fn declared_properties(url: &AfirmaUrl) -> Result<Vec<(String, String)>, Refusal> {
+/// Un valor que aun así no se pueda leer **no tumba la operación**: se descarta
+/// con traza y el trámite sigue sin parámetros adicionales, que es lo que hace
+/// `UrlParametersToSign.setSignParameters` (`UrlParametersToSign.java:207`, 1.9.2).
+/// El precio de rechazarlo sería una firma que habría salido.
+fn declared_properties(url: &AfirmaUrl) -> DeclaredProperties {
+    let all = readable_properties(url);
+    DeclaredProperties {
+        headless: asks_to_skip_the_dialog(&all),
+        actual_name: property_value(&all, FILENAME_ACTUAL_NAME),
+        crossing: without_the_launcher_keys(all),
+    }
+}
+
+/// Los pares que se hayan podido leer de `properties`, vacío si no se pudo leer ninguno.
+fn readable_properties(url: &AfirmaUrl) -> Vec<(String, String)> {
     let Some(encoded) = url.parameter("properties").filter(|it| !it.is_empty()) else {
-        return Ok(Vec::new());
+        return Vec::new();
     };
 
-    let decoded = decode_base64(encoded, Parameter::Properties)?;
+    let Ok(decoded) = decode_base64(encoded, Parameter::Properties) else {
+        return discarded(encoded.len(), "no es Base64");
+    };
 
-    let text = String::from_utf8(decoded).map_err(|error| {
-        Refusal::about(
-            Parameter::Properties,
-            format!("el parametro 'properties' no es texto: {error}"),
-        )
-    })?;
+    match String::from_utf8(decoded) {
+        Ok(text) => pairs_of(&text),
+        Err(_) => discarded(encoded.len(), "no es texto UTF-8"),
+    }
+}
 
-    Ok(pairs_of(&text))
+fn discarded(length: usize, reason: &str) -> Vec<(String, String)> {
+    eprintln!("rfirma: se descarta 'properties' ({length} caracteres): {reason}");
+    Vec::new()
+}
+
+/// `headless=true`, o su sinónimo `mandatoryCertSelection=false`
+/// (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
+fn asks_to_skip_the_dialog(declared: &[(String, String)]) -> bool {
+    let headless = property_value(declared, HEADLESS)
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"));
+    let mandatory = property_value(declared, MANDATORY_CERT_SELECTION)
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("false"));
+    headless || mandatory
+}
+
+/// Los pares sin las cuatro claves que el lanzador interpreta él mismo, compartido con los
+/// `extraparams` de un elemento de lote.
+pub fn without_the_launcher_keys(declared: Vec<(String, String)>) -> Vec<(String, String)> {
+    declared
+        .into_iter()
+        .filter(|(key, _)| {
+            !INTERPRETED_BY_THE_LAUNCHER
+                .iter()
+                .any(|interpreted| key.eq_ignore_ascii_case(interpreted))
+        })
+        .collect()
 }
 
 /// El Base64 **URL-safe** del protocolo, con la misma tolerancia en todos los

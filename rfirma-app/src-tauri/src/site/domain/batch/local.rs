@@ -5,8 +5,8 @@ use base64::Engine as _;
 
 use super::json::Json;
 use crate::site::domain::protocol::{
-    format_of, pairs_of, Parameter, Refusal, RequestedFormat, SafCode, SignatureRound, AUTO,
-    COSIGN, SIGN,
+    format_of, pairs_of, without_the_launcher_keys, Parameter, Refusal, RequestedFormat, SafCode,
+    SignatureRound, AUTO, COSIGN, SIGN,
 };
 
 /// Una firma del lote local, con lo que heredó del lote (`SingleSignOperation`, 1.9.2).
@@ -222,7 +222,9 @@ fn expand_extra_params(encoded: &str) -> Result<Vec<(String, String)>, Refusal> 
         )
     })?;
 
-    Ok(pairs_of(&text.trim().replace("\\n", "\n")))
+    Ok(without_the_launcher_keys(pairs_of(
+        &text.trim().replace("\\n", "\n"),
+    )))
 }
 
 /// El Base64 de dentro del lote, que es el del alfabeto normal y no el del protocolo.

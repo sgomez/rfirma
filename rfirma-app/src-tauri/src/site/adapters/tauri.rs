@@ -226,6 +226,9 @@ fn load_dialog<R: tauri::Runtime>(
     mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
     consent: &crate::site::application::errand::LoadingConsent,
 ) -> tauri_plugin_dialog::FileDialogBuilder<R> {
+    if let Some(name) = consent.filename.as_deref() {
+        dialog = dialog.set_file_name(name);
+    }
     if let Some(title) = consent.title.as_deref() {
         dialog = dialog.set_title(title);
     }

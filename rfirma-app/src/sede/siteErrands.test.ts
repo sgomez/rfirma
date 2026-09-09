@@ -120,6 +120,7 @@ const ASKING_TO_SIGN: SiteErrandView = {
     round: { kind: "cosign" },
     certificates: [certificate()],
     unregisteredSignatures: true,
+    alreadyChosen: null,
   },
 };
 
@@ -380,6 +381,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           round: { kind: "cosign" },
           certificates: [certificate()],
           unregisteredSignatures: true,
+          alreadyChosen: null,
         },
       };
       const { push, last } = watched();

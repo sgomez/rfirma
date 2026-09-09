@@ -65,10 +65,10 @@ pub use launch::{
 pub use message::ChannelMessage;
 pub use operation::{
     pairs_of, read_operation, refuse_a_countersignature_outside_cades_and_xades,
-    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, BatchRequest, CounterTarget,
-    LoadRequest, PendingSignRequest, SaveRequest, SelectCertificate, SignAndSaveRequest,
-    SignRequest, SignatureRound, SiteOperation, AUTO, BATCH, COSIGN, COUNTERSIGN, LOAD, SAVE,
-    SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
+    refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, without_the_launcher_keys,
+    BatchRequest, CounterTarget, LoadRequest, PendingSignRequest, SaveRequest, SelectCertificate,
+    SignAndSaveRequest, SignRequest, SignatureRound, SiteOperation, AUTO, BATCH, COSIGN,
+    COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version, check_servlet_url,
