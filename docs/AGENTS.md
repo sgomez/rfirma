@@ -30,6 +30,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0019 | El recuadro que pide la sede cruza crudo al puente, sin la conversión del local |
 | 0020 | La apertura de la ventana de sede no pisa un momento posterior del trámite |
 | 0021 | La versión mínima que exige la operación (`ver`) se comprueba siempre |
+| 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
 
 ## `research/` — mediciones (por qué algo es como es)
 

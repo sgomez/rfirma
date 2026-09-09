@@ -8,6 +8,7 @@ use super::codes::{Parameter, SafCode};
 use super::data_source::{download_url, DataSource};
 use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat};
+use super::key_store::refuse_a_key_store_rfirma_does_not_open;
 use super::parameters::{
     check_local_access_is_not_requested, check_minimum_client_version,
     check_minimum_protocol_version, check_servlet_url, minimum_protocol_version,
@@ -123,6 +124,13 @@ pub enum SiteOperation {
     Batch(BatchRequest),
     /// `sign`, `cosign` o `countersign` sin `dat`: el documento lo elige la persona.
     SignWithoutDocument(PendingSignRequest),
+}
+
+impl SiteOperation {
+    /// Si la operación acaba en un certificado, que es lo que le da sentido a nombrar un almacén.
+    pub fn chooses_a_certificate(&self) -> bool {
+        !matches!(self, Self::Save(_) | Self::Load(_))
+    }
 }
 
 /// A qué firmas de la que llega alcanza una contrafirma (`CounterSignTarget`, 1.9.2).
@@ -603,7 +611,7 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
         check_local_access_is_not_requested(data)?;
     }
 
-    match verb_of(url).as_str() {
+    let asked = match verb_of(url).as_str() {
         SELECT_CERTIFICATE => {
             let declared = declared_properties(url);
             Ok(SiteOperation::SelectCertificate(SelectCertificate {
@@ -627,7 +635,12 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
             SafCode::UnsupportedOperation,
             format!("la operacion '{other}' no se atiende"),
         )),
+    }?;
+
+    if asked.chooses_a_certificate() {
+        refuse_a_key_store_rfirma_does_not_open(url)?;
     }
+    Ok(asked)
 }
 
 /// La petición de firma, con las cuatro comprobaciones de

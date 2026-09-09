@@ -213,6 +213,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       UnsupportedFilter
       UnsupportedProtocolVersion
       MissingFormat
+      UnsupportedKeyStore
       ErrandInFlight
       BatchPresignerUnreachable
       BatchPostsignerUnreachable

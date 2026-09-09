@@ -15,6 +15,8 @@ pub enum RefusalSituation {
     UnsupportedProtocolVersion,
     /// La petición de firma no trae formato.
     MissingFormat,
+    /// La sede nombra un almacén de certificados que rFirma no abre.
+    UnsupportedKeyStore,
     /// Ya hay un trámite de sede en curso.
     ErrandInFlight,
     /// Cualquier otra situación no clasificada individualmente.
@@ -55,6 +57,13 @@ impl Refusal {
             situation: RefusalSituation::Unknown,
             detail: detail.into(),
         }
+    }
+
+    /// El mismo rechazo, señalando al parámetro que lo provocó.
+    #[must_use = "devuelve el rechazo con su parámetro, no lo modifica en su sitio"]
+    pub fn blaming(mut self, blame: Parameter) -> Self {
+        self.blame = Some(blame);
+        self
     }
 
     /// Clasifica el rechazo con su situación para la interfaz.

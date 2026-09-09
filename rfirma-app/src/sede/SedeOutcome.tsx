@@ -205,6 +205,8 @@ function RefusalSentence({
       return <>{t("sede.refusals.unsupportedProtocolVersion", subject)}</>;
     case "missingFormat":
       return <>{t("sede.refusals.missingFormat", subject)}</>;
+    case "unsupportedKeyStore":
+      return <>{t("sede.refusals.unsupportedKeyStore", subject)}</>;
     case "errandInFlight":
       return <>{t("sede.refusals.errandInFlight", subject)}</>;
     case "saveCancelled":

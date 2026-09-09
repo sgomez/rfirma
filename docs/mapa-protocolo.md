@@ -266,8 +266,6 @@ Total de nombres únicos identificados en el original: **35**.
 > Los siguientes parámetros existen en el original pero no aparecen referenciados en ningún fichero de `src/site/`:
 
 - `appname`
-- `keystore`
-- `ksb64`
 - `ver`
 
 ### Nombres del original mencionados en rFirma
@@ -292,6 +290,8 @@ Total de nombres únicos identificados en el original: **35**.
 | `jsonbatch` | `domain/protocol/operation.rs` |
 | `jvc` | `domain/protocol/url/tests.rs` |
 | `key` | `domain/protocol/launch.rs`, `domain/protocol/operation/tests.rs` |
+| `keystore` | `domain/protocol/codes.rs`, `domain/protocol/key_store.rs` |
+| `ksb64` | `domain/protocol/codes.rs`, `domain/protocol/key_store.rs`, `domain/protocol/operation/tests.rs` |
 | `localBatchProcess` | `domain/protocol/operation.rs` |
 | `mcv` | `domain/protocol/codes.rs`, `domain/protocol/operation.rs`, `domain/protocol/url/tests.rs` |
 | `multiload` | `domain/protocol/operation.rs` |
@@ -429,8 +429,8 @@ de la operación sale de `ver`, como en el original.
 | `jsonbatch` | `UrlParametersForBatch`, `autoscript:batch` | `true` sin distinguir mayúsculas; `false` por defecto | `Boolean.parseBoolean`, `false` por defecto | **Igual** |
 | `jvc` | `autoscript`: `service`, `websocket` | No se lee | Solo enciende un aviso visual si es menor que el mínimo (`ProtocolInvocationLauncher.java:194-215`); no cambia ninguna respuesta | **Igual** |
 | `key` | `UrlParameters` | Ocho caracteres exactos; si no, `SAF_03` nombrando `key` | `verifyCipherKey` (`UrlParameters.java:327`) exige ocho y falla con `SAF_03`; ausente o vacío significa «sin cifrado» | **Igual** |
-| `keystore` | `UrlParameters`, `autoscript`: `batch`, `sign`, `cosign`, `countersign`, `selectcert`, `signandsave` | No se lee | `getKeyStoreName` (`UrlParameters.java:382`) elige el almacén; los cuatro lanzadores lo construyen con él | **Hueco** (#617). Más laxa: la sede cree haber acotado el origen del certificado |
-| `ksb64` | Igual que `keystore` | No se lee | Igual que `keystore`, con el valor en Base64, y `getDefaultKeyStoreLib` (`UrlParameters.java:415`) saca de él la ruta de la biblioteca PKCS#11 | **Hueco** (#617) |
+| `keystore` | `UrlParameters`, `autoscript`: `batch`, `sign`, `cosign`, `countersign`, `selectcert`, `signandsave` | Gana al `ksb64` y se lee con su misma regla: la familia NSS se obedece y el resto del catálogo de `AOKeyStore` sale con `SAF_07` | `getKeyStoreName` (`UrlParameters.java:382`) elige el almacén; los cuatro lanzadores lo construyen con él | **Desviación declarada** (ADR-0022). Más estricta: rFirma no abre más almacén que el suyo |
+| `ksb64` | Igual que `keystore`, con el valor en Base64, que se ignora entero si no lo es | Igual que `keystore`, con el valor en Base64, y `getDefaultKeyStoreLib` (`UrlParameters.java:415`) saca de él la ruta de la biblioteca PKCS#11 | **Desviación declarada** (ADR-0022). La biblioteca que nombre la sede no se carga |
 | `localBatchProcess` | `UrlParametersForBatch`, `autoscript:batch` | `true` sin `jsonbatch` sale con `SAF_03` nombrando `dat` | `UrlParametersForBatch.java:193`: con `true` no exige las URL de servlet, y el lote en XML heredado también se procesa | **Desviación declarada** (lote local solo en JSON) |
 | `mcv` | `UrlParameters`, `autoscript`: todas las operaciones | Se comprueba en toda operación con el comparador del original; una cadena sin forma de versión sale con `SAF_03` | Se comprueba en los seis lanzadores (`ProtocolInvocationLauncherSign.java:143` y equivalentes) con `SAF_41`; una cadena sin forma de versión revienta con `NumberFormatException` | **Igual** en el caso que importa; rFirma nombra el parámetro en vez de reventar |
 | `multiload` | `UrlParametersToLoad`, `autoscript:load` | `true` sin distinguir mayúsculas; `false` por defecto | `Boolean.parseBoolean`, `false` por defecto | **Igual** |
@@ -493,9 +493,8 @@ La lista que pide el criterio de aceptación, junta y sin diluir. En todas
 ellas rFirma **acepta lo que el original rechaza**, o le da otro significado, y
 por tanto una sede que funcione aquí puede no funcionar contra AutoFirma:
 
-1. **`keystore` y `ksb64` ignorados**: la sede cree haber acotado el almacén y no lo ha hecho → #617.
-2. **`profile` cruzado al puente**, cuando el original lo borra antes de firmar → #615.
-3. **El `algorithm` reconocido por prefijo** en vez de contra la lista de doce literales: aquí es deliberado y está decidido en el #602, porque es lo que hace el código que firma, y solo la puerta declarativa del original es más cerrada.
+1. **`profile` cruzado al puente**, cuando el original lo borra antes de firmar → #615.
+2. **El `algorithm` reconocido por prefijo** en vez de contra la lista de doce literales: aquí es deliberado y está decidido en el #602, porque es lo que hace el código que firma, y solo la puerta declarativa del original es más cerrada.
 
 Y donde rFirma es **más estricta** —que también rompe trámites, pero de forma
 visible—: `dat` que es una URL y `sign` sin `dat` (ambos #612), `properties`

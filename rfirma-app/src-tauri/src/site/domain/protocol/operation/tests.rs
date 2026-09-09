@@ -1969,3 +1969,48 @@ fn an_operation_that_demands_a_protocol_version_not_spoken_here_is_refused_befor
         );
     }
 }
+
+/// El almacén se lee al final de la operación, como en el original (ADR-0022).
+#[test]
+fn a_signature_that_names_a_store_rfirma_does_not_open_is_refused() {
+    let named = base64::engine::general_purpose::URL_SAFE.encode(b"PKCS12:/ruta/almacen.p12");
+
+    let refusal = read_operation(&a_signature(SIGN, &format!("&ksb64={named}")))
+        .expect_err("rFirma no abre ese almacen");
+
+    assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    assert_eq!(refusal.blame(), Some(Parameter::KeyStore));
+}
+
+#[test]
+fn a_selection_that_names_the_store_rfirma_opens_goes_on() {
+    let named = base64::engine::general_purpose::URL_SAFE.encode(b"SHARED_NSS");
+
+    read_operation(&an_operation(&format!(
+        "op=selectcert&idsession=8jAkPZfRw2mQxN4TbYuL&ksb64={named}"
+    )))
+    .expect("es el almacen que rFirma abre");
+}
+
+/// Guardar y cargar no eligen certificado, y allí el original ni mira el almacén.
+#[test]
+fn a_save_that_names_a_store_is_not_refused_for_naming_it() {
+    let named = base64::engine::general_purpose::URL_SAFE.encode(b"PKCS12:/ruta/almacen.p12");
+    let url = an_operation(&format!("op=save&dat={}&ksb64={named}", dat(b"%PDF-1.7\n")));
+
+    read_operation(&url).expect("un guardado no elige certificado");
+}
+
+/// El original mira antes el resto de parámetros: un `format` ausente gana al almacén.
+#[test]
+fn the_store_is_read_after_the_rest_of_the_parameters() {
+    let named = base64::engine::general_purpose::URL_SAFE.encode(b"PKCS12");
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&ksb64={named}"
+    ));
+
+    let refusal = read_operation(&url).expect_err("falta el formato");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Format));
+}

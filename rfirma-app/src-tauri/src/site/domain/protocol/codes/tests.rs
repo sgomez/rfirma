@@ -68,7 +68,8 @@ fn every_parameter_is_named_as_the_protocol_names_it() {
         let name = parameter.name();
         assert!(!name.is_empty());
         assert!(
-            name.chars().all(|letter| letter.is_ascii_lowercase()),
+            name.chars()
+                .all(|letter| letter.is_ascii_lowercase() || letter.is_ascii_digit()),
             "«{name}» no es un nombre de parametro del protocolo"
         );
     }

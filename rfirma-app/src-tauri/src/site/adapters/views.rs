@@ -432,6 +432,8 @@ crossing! {
         UnsupportedProtocolVersion,
         /// Falta el formato de firma en la petición.
         MissingFormat,
+        /// La sede nombra un almacén de certificados que rFirma no abre.
+        UnsupportedKeyStore,
         /// Ya existe otro trámite en curso.
         ErrandInFlight,
         /// El servlet de prefirma del lote remoto no respondió.
@@ -456,6 +458,7 @@ impl From<RefusalSituation> for RefusalSituationView {
             RefusalSituation::UnsupportedFilter => Self::UnsupportedFilter,
             RefusalSituation::UnsupportedProtocolVersion => Self::UnsupportedProtocolVersion,
             RefusalSituation::MissingFormat => Self::MissingFormat,
+            RefusalSituation::UnsupportedKeyStore => Self::UnsupportedKeyStore,
             RefusalSituation::ErrandInFlight => Self::ErrandInFlight,
             RefusalSituation::Unknown => Self::Unknown,
         }
