@@ -414,9 +414,9 @@ fn a_signature_that_does_not_hold_brings_the_reason_of_the_original() {
 }
 
 #[test]
-fn asking_for_confirmation_brings_the_key_to_set_and_the_text_to_ask_with() {
+fn asking_for_confirmation_brings_the_key_to_set_and_the_message_code_to_ask_with() {
     let verdict = parse_verdict(
-        r#"{"ok":true,"verdict":"confirmationNeeded","param":"allowShadowAttack","text":"sospechoso"}"#,
+        r#"{"ok":true,"verdict":"confirmationNeeded","param":"allowShadowAttack","messageCode":"pdfShadowAttackSuspect"}"#,
     )
     .expect("es valida");
 
@@ -424,7 +424,7 @@ fn asking_for_confirmation_brings_the_key_to_set_and_the_text_to_ask_with() {
         verdict,
         SignatureVerdict::ConfirmationNeeded {
             parameter: "allowShadowAttack".to_owned(),
-            text: "sospechoso".to_owned()
+            message_code: "pdfShadowAttackSuspect".to_owned()
         }
     );
 }

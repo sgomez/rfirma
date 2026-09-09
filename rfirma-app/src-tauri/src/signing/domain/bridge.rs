@@ -180,6 +180,16 @@ impl Format {
             | Self::FacturaE => Ok(self),
         }
     }
+
+    /// El formato si el original tiene validador de firmas para él, y si no la situación que lo niega.
+    pub fn validated(self) -> Result<Self, BridgeError> {
+        match self {
+            Self::CadesAsicS | Self::Xades(XadesVariant::AsicS) => {
+                Err(BridgeError::FormatNotBridged(self))
+            }
+            Self::Pades | Self::Cades | Self::Cms | Self::Xades(_) | Self::FacturaE => Ok(self),
+        }
+    }
 }
 
 impl fmt::Display for Format {
@@ -452,8 +462,8 @@ pub enum SignatureVerdict {
     ConfirmationNeeded {
         /// Clave de `extraParams` que hay que fijar para repetir sin preguntar.
         parameter: String,
-        /// Texto con el que pregunta el original.
-        text: String,
+        /// Código del mensaje con el que pregunta el original.
+        message_code: String,
     },
 }
 

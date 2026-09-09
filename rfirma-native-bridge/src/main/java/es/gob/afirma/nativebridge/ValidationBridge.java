@@ -37,14 +37,14 @@ final class ValidationBridge {
 
     static final String CONFIRMATION_NEEDED = "confirmationNeeded";
 
-    /** El veredicto, con la clave a fijar y el texto del original solo en el tercero. */
-    record Verdict(String outcome, String reason, String param, String text) { }
+    /** El veredicto, con la clave a fijar y el codigo de mensaje del original solo en el tercero. */
+    record Verdict(String outcome, String reason, String param, String messageCode) { }
 
     static Verdict validate(final byte[] document, final String format) throws IOException {
         final SignValider valider = validerFor(format);
         valider.setRelaxed(true);
         try {
-            return verdictOf(valider.validate(document, options()));
+            return verdictOf(withoutCheckingCertificates(valider, document));
         }
         catch (final RuntimeConfigNeededException e) {
             if (RequestType.CONFIRM != e.getRequestType()) {
@@ -65,7 +65,20 @@ final class ValidationBridge {
         };
     }
 
-    private static Properties options() {
+    /** Solo PAdES lee las {@code Properties}; los otros dos solo obedecen a la sobrecarga booleana. */
+    private static List<SignValidity> withoutCheckingCertificates(
+            final SignValider valider, final byte[] document)
+            throws IOException, RuntimeConfigNeededException {
+        return switch (valider) {
+            case ValidatePdfSignature pdf -> pdf.validate(document, headlessWithoutCertificates());
+            case ValidateBinarySignature binary -> binary.validate(document, false);
+            case ValidateXMLSignature xml -> xml.validate(document, false);
+            default -> throw new IllegalStateException(
+                    "validador sin trato propio: " + valider.getClass().getName());
+        };
+    }
+
+    private static Properties headlessWithoutCertificates() {
         final Properties options = new Properties();
         options.setProperty("headless", Boolean.TRUE.toString());
         options.setProperty("checkCertificates", Boolean.FALSE.toString());
@@ -74,7 +87,7 @@ final class ValidationBridge {
 
     private static Verdict verdictOf(final List<SignValidity> validities) {
         for (final SignValidity validity : validities) {
-            if (isFine(validity.getValidity()) || withoutSignatures(validity.getError())) {
+            if (isFine(validity) || withoutSignatures(validity.getError())) {
                 continue;
             }
             return new Verdict(INVALID, nameOf(validity.getError()), null, null);
@@ -82,15 +95,16 @@ final class ValidationBridge {
         return new Verdict(VALID, null, null, null);
     }
 
-    private static boolean isFine(final SIGN_DETAIL_TYPE detail) {
-        return SIGN_DETAIL_TYPE.OK == detail
-                || SIGN_DETAIL_TYPE.GENERATED == detail
-                || SIGN_DETAIL_TYPE.UNKNOWN == detail;
+    /** {@code UNKNOWN} es «no he podido comprobarlo», y solo vale si lo no comprobado es el perfil. */
+    private static boolean isFine(final SignValidity validity) {
+        return SIGN_DETAIL_TYPE.OK == validity.getValidity()
+                || SIGN_DETAIL_TYPE.GENERATED == validity.getValidity()
+                || VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED == validity.getError();
     }
 
     /** Un documento sin firmas es valido, y el original lo cuenta como un {@code KO}. */
     private static boolean withoutSignatures(final VALIDITY_ERROR error) {
-        return VALIDITY_ERROR.NO_SIGN == error || VALIDITY_ERROR.NO_DATA == error;
+        return VALIDITY_ERROR.NO_SIGN == error;
     }
 
     private static String nameOf(final VALIDITY_ERROR error) {

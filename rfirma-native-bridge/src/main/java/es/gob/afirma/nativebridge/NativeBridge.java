@@ -56,7 +56,8 @@ import org.graalvm.word.PointerBase;
  * expand   ok  {"ok":true,"params":"&lt;bloque properties&gt;"}
  * validate ok  {"ok":true,"verdict":"valid"}
  *              {"ok":true,"verdict":"invalid","reason":"&lt;VALIDITY_ERROR&gt;"}
- *              {"ok":true,"verdict":"confirmationNeeded","param":"&lt;clave&gt;","text":"&lt;codigo&gt;"}
+ *              {"ok":true,"verdict":"confirmationNeeded","param":"&lt;clave&gt;",
+ *               "messageCode":"&lt;codigo de mensaje&gt;"}
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -430,7 +431,7 @@ public final class NativeBridge {
             }
             if (verdict.param() != null) {
                 field(json, "param", verdict.param());
-                field(json, "text", verdict.text());
+                field(json, "messageCode", verdict.messageCode());
             }
             return toUnmanagedCString(json.append('}').toString());
         }

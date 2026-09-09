@@ -1,7 +1,6 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,7 +17,7 @@ import com.aowagie.text.pdf.PdfReader;
 
 import org.junit.jupiter.api.Test;
 
-/** Las tres salidas del veredicto, sobre PDF firmados aqui mismo. */
+/** Las tres salidas del veredicto, sobre firmas hechas aqui mismo. */
 class ValidationBridgeTest {
 
     private static final String ALGORITHM = "SHA256withRSA";
@@ -60,7 +59,55 @@ class ValidationBridgeTest {
         assertEquals(ValidationBridge.CONFIRMATION_NEEDED, verdict.outcome());
         assertEquals("allowShadowAttack", verdict.param(),
                 "la clave de extraParams con la que se repite sin volver a preguntar");
-        assertNotNull(verdict.text(), "y el texto con el que pregunta el original");
+        assertEquals("pdfShadowAttackSuspect", verdict.messageCode(),
+                "y el codigo del mensaje con el que pregunta el original");
+    }
+
+    @Test
+    void a_freshly_signed_cades_is_valid() throws Exception {
+        final Properties implicitMode = new Properties();
+        implicitMode.setProperty("mode", "implicit");
+        final byte[] signature =
+                CadesCycle.sign(TestFixtures.challenge(), implicitMode, "sign");
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(signature, "CAdES");
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    @Test
+    void a_freshly_signed_xades_is_valid() throws Exception {
+        final byte[] signed = XadesCycle.sign(XadesCycle.referenceXml(), new Properties());
+
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(signed, "XAdES Enveloping");
+
+        assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
+    }
+
+    /** El validador que no ha podido comprobar la firma no la da por buena. */
+    @Test
+    void a_signature_the_original_could_not_check_is_not_valid() throws Exception {
+        final byte[] unreadable = ("<r><ds:Signature xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
+                + "/></r>").getBytes(StandardCharsets.UTF_8);
+
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(unreadable, "XAdES Enveloped");
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome());
+        assertEquals("UNKOWN_ERROR", verdict.reason());
+    }
+
+    @Test
+    void an_explicit_cades_cannot_be_checked_without_its_content() throws Exception {
+        final byte[] signature =
+                CadesCycle.sign(TestFixtures.challenge(), new Properties(), "sign");
+
+        final ValidationBridge.Verdict verdict = ValidationBridge.validate(signature, "CAdES");
+
+        assertEquals(ValidationBridge.INVALID, verdict.outcome(),
+                "sin los datos firmados el original no puede comprobar nada");
+        assertEquals("NO_DATA", verdict.reason());
     }
 
     @Test

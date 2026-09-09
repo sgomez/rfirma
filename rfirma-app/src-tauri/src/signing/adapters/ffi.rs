@@ -367,7 +367,7 @@ impl NativeBridge {
         request: ValidationRequest<'_>,
     ) -> Result<SignatureVerdict, BridgeError> {
         let document = c_string(request.document_b64, "el documento")?;
-        let format = c_string(request.format.bridged()?.name(), "el formato")?;
+        let format = c_string(request.format.validated()?.name(), "el formato")?;
         let json = self.call(|thread| unsafe {
             (self.validate)(thread, document.as_ptr(), format.as_ptr())
         })?;
@@ -580,7 +580,7 @@ pub fn parse_verdict(json: &str) -> Result<SignatureVerdict, BridgeError> {
         }),
         "confirmationNeeded" => Ok(SignatureVerdict::ConfirmationNeeded {
             parameter: field(&response, "param")?.to_owned(),
-            text: field(&response, "text")?.to_owned(),
+            message_code: field(&response, "messageCode")?.to_owned(),
         }),
         other => Err(BridgeError::MalformedResponse(format!(
             "veredicto desconocido «{other}»"

@@ -1242,18 +1242,22 @@ mod full_cycle {
 
     #[test]
     #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-    fn a_format_that_the_bridge_does_not_resolve_is_not_validated_either() {
-        let refused = bridge()
-            .validate_signatures(ValidationRequest {
-                document_b64: "",
-                format: Format::CadesAsicS,
-            })
-            .expect_err("el contenedor ASiC-S no tiene validador propio en el original");
+    fn a_format_without_a_validator_in_the_original_is_not_validated_either() {
+        let bridge = bridge();
 
-        assert!(
-            matches!(refused, BridgeError::FormatNotBridged(_)),
-            "{refused}"
-        );
+        for format in [Format::CadesAsicS, Format::Xades(XadesVariant::AsicS)] {
+            let refused = bridge
+                .validate_signatures(ValidationRequest {
+                    document_b64: "",
+                    format,
+                })
+                .expect_err("el contenedor ASiC-S no tiene validador propio en el original");
+
+            assert!(
+                matches!(refused, BridgeError::FormatNotBridged(_)),
+                "{refused}"
+            );
+        }
     }
 
     fn write_to_target(name: &str, bytes: &[u8]) -> PathBuf {
