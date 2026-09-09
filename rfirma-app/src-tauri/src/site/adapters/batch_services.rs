@@ -34,18 +34,34 @@ impl RelayBatchServices {
         unreachable: Situation,
         invalid: Situation,
     ) -> Result<Vec<u8>, BatchError> {
-        let response = self
-            .client
-            .post(full_url)
-            .send()
-            .map_err(|error| BatchError::new(unreachable, error.to_string()))?
-            .error_for_status()
-            .map_err(|error| BatchError::new(invalid, error.to_string()))?;
+        let url = full_url.to_owned();
+        let client = self.client.clone();
+        execute_outside_tokio(move || {
+            let response = client
+                .post(&url)
+                .send()
+                .map_err(|error| BatchError::new(unreachable, error.to_string()))?
+                .error_for_status()
+                .map_err(|error| BatchError::new(invalid, error.to_string()))?;
 
-        response
-            .bytes()
-            .map(|bytes| bytes.to_vec())
-            .map_err(|error| BatchError::new(invalid, error.to_string()))
+            response
+                .bytes()
+                .map(|bytes| bytes.to_vec())
+                .map_err(|error| BatchError::new(invalid, error.to_string()))
+        })
+    }
+}
+
+fn execute_outside_tokio<T: Send + 'static>(action: impl FnOnce() -> T + Send + 'static) -> T {
+    if tokio::runtime::Handle::try_current().is_ok() {
+        std::thread::Builder::new()
+            .name("batch-service-io".into())
+            .spawn(action)
+            .expect("el hilo para la llamada HTTP del lote remoto se crea")
+            .join()
+            .unwrap_or_else(|payload| std::panic::resume_unwind(payload))
+    } else {
+        action()
     }
 }
 

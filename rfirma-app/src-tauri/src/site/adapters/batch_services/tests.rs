@@ -71,3 +71,13 @@ fn the_lote_gets_the_textual_substitution_instead_of_being_reencoded() {
 
     assert!(query.starts_with("xml=a-b_c-d_e&certs="));
 }
+
+#[tokio::test]
+async fn presign_does_not_panic_inside_tokio_context() {
+    let services = std::thread::spawn(RelayBatchServices::default)
+        .join()
+        .unwrap();
+    let result = services.presign("https://example.com/pre", BatchFormat::Json, "bG90ZQ", &[]);
+    assert!(result.is_err());
+    std::thread::spawn(move || drop(services)).join().unwrap();
+}

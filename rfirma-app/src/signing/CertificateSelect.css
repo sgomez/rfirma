@@ -82,9 +82,10 @@
    la cabecera de la ventana principal (`shell/Header.css`), no uno propio. */
 .certificate-select__layer {
   position: fixed;
-  z-index: 5;
+  z-index: 200;
   border-radius: var(--rf-radius-md);
   box-shadow: var(--rf-shadow-elevated);
+  background: var(--rf-surface);
 }
 
 /* 232 px son tres filas y media: el borde cortado es lo que dice que hay
