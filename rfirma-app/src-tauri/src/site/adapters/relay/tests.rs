@@ -3,10 +3,9 @@ use std::sync::{Arc, Mutex};
 use base64::Engine as _;
 
 use super::*;
-use crate::site::application::tests::InMemoryServlets;
+use crate::site::application::tests::{read_operation, InMemoryServlets};
 use crate::site::domain::protocol::{
-    encrypt, read_operation, AfirmaUrl, CipherKey, NegotiatedCredential, RelayRequest, SafCode,
-    SiteOperation,
+    encrypt, AfirmaUrl, CipherKey, NegotiatedCredential, RelayRequest, SafCode, SiteOperation,
 };
 use crate::site::domain::relay_error::Situation as RelaySituation;
 

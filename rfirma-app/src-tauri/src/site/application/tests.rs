@@ -12,6 +12,7 @@ use crate::identity::ports::CertificateMemory;
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::protocol::{DataSource, Refusal, SiteOperation};
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::signing::SigningRefusal;
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
@@ -355,4 +356,20 @@ impl Certificates for Directory<'_> {
     fn forget_the_remembered(&self) {
         crate::identity::application::certificates::forget_the_certificate(self.memory);
     }
+}
+
+/// El origen de datos que nunca baja nada: el `dat` de la grada A viene siempre en la URL.
+struct NoDownloads;
+
+impl DataSource for NoDownloads {
+    fn download(&self, _url: &str) -> Result<Vec<u8>, String> {
+        panic!("ninguna prueba de la grada A baja nada de la red")
+    }
+}
+
+/// La lectura de la operación sin descargas.
+pub fn read_operation(
+    url: &crate::site::domain::protocol::AfirmaUrl,
+) -> Result<SiteOperation, Refusal> {
+    crate::site::domain::protocol::read_operation(url, &NoDownloads)
 }

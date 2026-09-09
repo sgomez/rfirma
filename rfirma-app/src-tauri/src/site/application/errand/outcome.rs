@@ -7,8 +7,8 @@ use crate::signing::domain::bridge::Format;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, BatchRequest, Refusal, SignAndSaveRequest, SignatureRound,
-    SiteFilter, SiteVisibleSignature,
+    AfirmaUrl, AskedAlgorithm, BatchRequest, PendingSignRequest, Refusal, SignAndSaveRequest,
+    SignatureRound, SiteFilter, SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
 
@@ -231,9 +231,18 @@ pub struct LoadingConsent {
     pub starting_folder: Option<String>,
     /// Si la sede pide varios ficheros (`multiload=true`) o uno solo.
     pub multiple: bool,
-    /// Si este selector viene de `signandsave` sin `dat`, la petición que continúa con el
-    /// documento elegido; `None` cuando es un `load` corriente que contesta a la sede.
-    pub to_sign: Option<Box<SignAndSaveRequest>>,
+    /// Si este selector viene de una firma sin `dat`, la petición que continúa con el documento
+    /// elegido; `None` cuando es un `load` corriente que contesta a la sede.
+    pub to_sign: Option<Box<PendingSignature>>,
+}
+
+/// La firma que espera al documento que la persona elija en el selector.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PendingSignature {
+    /// Un `sign`, `cosign` o `countersign` que llegó sin `dat`.
+    Signing(PendingSignRequest),
+    /// Un `signandsave` que llegó sin `dat`.
+    SigningAndSaving(SignAndSaveRequest),
 }
 
 /// Desenlace del trámite para la sede y para la ventana.
