@@ -29,3 +29,10 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `domain/store.rs` | Un almacén: la ruta de su módulo, cómo se abre y de qué clase es, sin abrirlo. Sus pruebas siguen en `adapters/pkcs11/stores/tests.rs`. |
 | `ports.rs` | **Los tres puertos**, que no importa ningún otro contexto: `Token`, `InstalledFolder` y `CertificateMemory`, que sirve `signing/adapters/memory.rs`. |
 | `adapters/folder.rs` | `RealInstalledFolder`: la carpeta de cada `.p12` instalado. |
+
+## Trampas
+
+* **`CERTCertificate` no empieza por `derCert`**: sus primeros campos son el
+  arena y dos punteros a cadena, así que leer el DER por el principio de la
+  estructura revienta con SIGSEGV. El acceso soportado es
+  `CERT_GetCertificateDer(cert, &item)`, que `libnss3` exporta desde NSS 3.44.
