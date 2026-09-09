@@ -1,11 +1,12 @@
 import type { TFunction } from "i18next";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";
 import { SedeBody } from "./SedeFrame";
 
 interface SedeConfirmProps {
   messageCode: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -20,6 +21,16 @@ interface SedeConfirmProps {
  */
 export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmProps) {
   const { t } = useTranslation();
+  const [handing, setHanding] = useState(false);
+
+  const confirm = async () => {
+    setHanding(true);
+    try {
+      await onConfirm();
+    } finally {
+      setHanding(false);
+    }
+  };
 
   return (
     <SedeBody
@@ -29,7 +40,12 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
           <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
             {t("actions.cancel")}
           </button>
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onConfirm}>
+          <button
+            type="button"
+            className="rf-btn rf-btn--primary"
+            disabled={handing}
+            onClick={() => void confirm()}
+          >
             {t("sede.confirm.continue")}
           </button>
         </>

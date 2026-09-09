@@ -490,6 +490,23 @@ describe("SedeWindow", () => {
       expect(calls.cancel).not.toHaveBeenCalled();
     });
 
+    it("hands the confirmation on only once, however many times the button is pressed", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand({
+        kind: "confirming",
+        messageCode: "pdfShadowAttackSuspect",
+      });
+      calls.confirmSignatures.mockReturnValue(new Promise(() => {}));
+      renderWithCatalog(<SedeWindow errands={port} />);
+      const going = screen.getByRole("button", { name: "Continuar" });
+
+      await user.click(going);
+      await user.click(going);
+
+      expect(calls.confirmSignatures).toHaveBeenCalledOnce();
+      expect(going).toBeDisabled();
+    });
+
     it("abandons the errand when the person refuses, which is what the site gets", async () => {
       const user = userEvent.setup();
       const { port, calls } = scriptedErrand({

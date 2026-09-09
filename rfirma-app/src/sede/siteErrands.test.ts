@@ -757,6 +757,32 @@ describe("los momentos que pone el adaptador", () => {
     expect(last()?.stage.kind).toBe("confirming");
   });
 
+  it("drops a second confirmation that lost the race to the moment the backend published", async () => {
+    let attempt = 0;
+    let publish: (view: SiteErrandView) => void = () => {};
+    const world = watched({
+      confirmSignatures: async () => {
+        attempt += 1;
+        if (attempt === 1) {
+          await Promise.resolve();
+          publish(ASKING_TO_SIGN);
+          return { ok: true, value: undefined };
+        }
+        return {
+          ok: false,
+          failure: { situation: "unknown", detail: "no hay tramite vivo", attemptsLeft: null },
+        };
+      },
+    });
+    publish = world.push;
+    world.push(ASKING_TO_CONFIRM);
+    await vi.waitFor(() => expect(world.last()?.stage.kind).toBe("confirming"));
+
+    await Promise.all([world.port.confirmSignatures(), world.port.confirmSignatures()]);
+
+    await vi.waitFor(() => expect(world.last()?.stage.kind).toBe("consent"));
+  });
+
   it("refuses the errand when the repeated validation cannot be asked for", async () => {
     const { push, port, last } = watched({
       confirmSignatures: async () => ({

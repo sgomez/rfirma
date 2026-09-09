@@ -554,8 +554,12 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     async confirmSignatures() {
       if (errand?.stage.kind !== "confirming") return;
       // El momento que sigue lo publica el backend, que vuelve a validar con la
-      // clave ya fijada: aquí no se adelanta ninguno.
+      // clave ya fijada: aquí no se adelanta ninguno. Y como la pantalla no
+      // cambia mientras tanto, el contador es lo único que separa una segunda
+      // pulsación del rechazo local que mataría el trámite vivo.
+      const arrival = arrivals;
       const confirmed = await commands.confirmSignatures();
+      if (arrival !== arrivals) return;
       if (!confirmed.ok) finish(refusedBy(confirmed.failure));
     },
 

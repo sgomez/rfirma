@@ -94,7 +94,7 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
         {stage.kind === "confirming" && (
           <SedeConfirm
             messageCode={stage.messageCode}
-            onConfirm={() => void errands.confirmSignatures()}
+            onConfirm={() => errands.confirmSignatures()}
             onCancel={cancel}
           />
         )}
