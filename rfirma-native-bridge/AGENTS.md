@@ -69,3 +69,12 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 * **El puente exige un JPEG ya normalizado y sin perfil ICC**: la
   normalización es de Rust (ADR-0012). Un PNG que llegue aquí falla con «no
   está codificada en JPEG», y eso es lo correcto.
+
+## Trampas al validar
+
+* **`AcroFields.getSignatureNames()` de iText devuelve las firmas de la
+  revisión más nueva a la más vieja.** La comprobación de PDF Shadow Attack de
+  `ValidatePdfSignature` mira la primera de esa lista, así que cofirmar nunca
+  la dispara: solo salta cuando alguien añade una revisión incremental que no
+  es una firma. Leerla al revés da una guarda que parece correcta y deja pasar
+  justo el ataque que persigue.
