@@ -14,11 +14,21 @@ fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SIGNER="$ROOT/rfirma-native-bridge/testbench/reference-signer"
 
-mvn -q -B -f "$SIGNER/pom.xml" dependency:build-classpath \
-    -Dmdep.outputFile="$SIGNER/target/cp.txt" -Dmdep.includeScope=compile
-mkdir -p "$SIGNER/target/classes"
-javac -cp "$(cat "$SIGNER/target/cp.txt")" -d "$SIGNER/target/classes" \
-    "$SIGNER/SignatureValidator.java"
+if [ ! -f "$SIGNER/target/classes/SignatureValidator.class" ] || \
+   [ "$SIGNER/SignatureValidator.java" -nt "$SIGNER/target/classes/SignatureValidator.class" ]; then
+    mkdir -p "$SIGNER/target"
+    (
+        flock 200
+        if [ ! -f "$SIGNER/target/classes/SignatureValidator.class" ] || \
+           [ "$SIGNER/SignatureValidator.java" -nt "$SIGNER/target/classes/SignatureValidator.class" ]; then
+            mvn -q -B -f "$SIGNER/pom.xml" dependency:build-classpath \
+                -Dmdep.outputFile="$SIGNER/target/cp.txt" -Dmdep.includeScope=compile
+            mkdir -p "$SIGNER/target/classes"
+            javac -cp "$(cat "$SIGNER/target/cp.txt")" -d "$SIGNER/target/classes" \
+                "$SIGNER/SignatureValidator.java"
+        fi
+    ) 200>"$SIGNER/target/.build.lock"
+fi
 
 java -cp "$SIGNER/target/classes:$(cat "$SIGNER/target/cp.txt")" \
     SignatureValidator "$1"
