@@ -470,9 +470,9 @@ function theInvoice() {
   return readFileSync(join(here, "../../../../testdata/reference/invoice.xml"));
 }
 
-/** El PDF de una página que la prueba Rust genera y firma con `format=PAdES`. */
-function theLocalPdf() {
-  return readFileSync(process.env.RFIRMA_BENCH_LOCAL_PDF);
+/** El PDF que la prueba Rust deja en disco para que lo firme `format=PAdES`. */
+function thePdfOfTheTest() {
+  return readFileSync(process.env.RFIRMA_BENCH_PDF);
 }
 
 /** El binario del lote local: nunca es un PDF, así que declararlo `PAdES` lo vuelve ilegible. */
@@ -487,7 +487,7 @@ function theLocalBatchBinary() {
 async function theLocalBatchScript() {
   AutoScript.setLocalBatchProcess(true);
   AutoScript.createBatch("SHA256", "CAdES", "sign", null);
-  AutoScript.addDocumentToBatch("pdf", theLocalPdf().toString("base64"), "PAdES");
+  AutoScript.addDocumentToBatch("pdf", thePdfOfTheTest().toString("base64"), "PAdES");
   AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"));
   AutoScript.addDocumentToBatch("xml", theXmlDocument().toString("base64"), "XAdES");
   AutoScript.signBatchProcess(
@@ -512,7 +512,7 @@ async function theLocalBatchScript() {
 async function theLocalBatchWithAnIllegibleItemScript() {
   AutoScript.setLocalBatchProcess(true);
   AutoScript.createBatch("SHA256", "CAdES", "sign", null);
-  AutoScript.addDocumentToBatch("pdf", theLocalPdf().toString("base64"), "PAdES");
+  AutoScript.addDocumentToBatch("pdf", thePdfOfTheTest().toString("base64"), "PAdES");
   AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"), "PAdES");
   AutoScript.addDocumentToBatch("xml", theXmlDocument().toString("base64"), "XAdES");
   AutoScript.signBatchProcess(
@@ -651,6 +651,10 @@ if (mode === "relay") {
   theSignScript("XAdES", "", theXmlDocument());
 } else if (script === "signxadesauto") {
   theSignScript("auto", "", theXmlDocument());
+} else if (script === "signpades") {
+  theSignScript("PAdES", "", thePdfOfTheTest());
+} else if (script === "signpadeschecking") {
+  theSignScript("PAdES", "checkSignatures=true", thePdfOfTheTest());
 } else if (script === "signfacturae") {
   theSignScript("FacturaE", "", theInvoice());
 } else if (script === "cosignfacturae") {
