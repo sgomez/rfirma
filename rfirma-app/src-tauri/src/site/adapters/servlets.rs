@@ -18,45 +18,67 @@ pub struct RelayServlets {
 
 impl Default for RelayServlets {
     fn default() -> Self {
-        Self {
+        execute_outside_tokio(|| Self {
             client: reqwest::blocking::Client::builder()
                 .timeout(TIMEOUT)
                 .build()
                 .expect("el cliente HTTP se construye con parametros validos"),
-        }
+        })
     }
 }
 
 impl Servlets for RelayServlets {
     fn retrieve(&self, service_url: &str, id: &str) -> Result<String, RelayError> {
         let url = validated_servlet_url(service_url)?;
-        let params = operation_params("get", id, None);
-        self.client
-            .post(url)
-            .form(&params)
-            .send()
-            .map_err(unreachable)?
-            .error_for_status()
-            .map_err(unreachable)?
-            .text()
-            .map_err(unreachable)
+        let id = id.to_owned();
+        let client = self.client.clone();
+        execute_outside_tokio(move || {
+            let params = operation_params("get", &id, None);
+            client
+                .post(url)
+                .form(&params)
+                .send()
+                .map_err(unreachable)?
+                .error_for_status()
+                .map_err(unreachable)?
+                .text()
+                .map_err(unreachable)
+        })
     }
 
     fn store(&self, service_url: &str, id: &str, data: &str) -> Result<(), RelayError> {
         let url = validated_servlet_url(service_url)?;
-        let params = operation_params("put", id, Some(data));
-        self.client
-            .post(url)
-            .form(&params)
-            .send()
-            .map_err(unreachable)?
-            .error_for_status()
-            .map_err(rejected)?;
-        Ok(())
+        let id = id.to_owned();
+        let data = data.to_owned();
+        let client = self.client.clone();
+        execute_outside_tokio(move || {
+            let params = operation_params("put", &id, Some(&data));
+            client
+                .post(url)
+                .form(&params)
+                .send()
+                .map_err(unreachable)?
+                .error_for_status()
+                .map_err(rejected)?;
+            Ok(())
+        })
     }
 
     fn wait(&self, service_url: &str, id: &str) -> Result<(), RelayError> {
         self.store(service_url, id, WAIT_MARKER)
+    }
+}
+
+fn execute_outside_tokio<T: Send + 'static>(action: impl FnOnce() -> T + Send + 'static) -> T {
+    if tokio::runtime::Handle::try_current().is_ok() {
+        std::thread::Builder::new()
+            .name("relay-servlet-io".into())
+            .spawn(action)
+            .expect("el hilo para la llamada HTTP del servidor intermedio se crea")
+            .join()
+            .unwrap_or_else(|payload| std::panic::resume_unwind(payload))
+    } else {
+        action()
     }
 }
 
