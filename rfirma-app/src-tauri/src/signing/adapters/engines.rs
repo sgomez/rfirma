@@ -3,12 +3,13 @@
 use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::domain::bridge::{
-    BridgeError, ExpandRequest, FilterRequest, PostSignRequest, PreSignRequest, PreSignature,
+    BridgeError, ExpandRequest, FilterRequest, Format, PostSignRequest, PreSignRequest,
+    PreSignature, SignatureVerdict, ValidationRequest,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
 
 use crate::signing::ports::Bridge;
-use crate::site::ports::{FilterEngine, PolicyEngine};
+use crate::site::ports::{FilterEngine, PolicyEngine, ValidationEngine};
 
 impl Bridge for NativeBridge {
     fn presign(&self, request: PreSignRequest<'_>) -> Result<PreSignature, BridgeError> {
@@ -42,6 +43,19 @@ impl PolicyEngine for NativeBridge {
     }
 }
 
+impl ValidationEngine for NativeBridge {
+    fn verdict_of(
+        &self,
+        document_b64: &str,
+        format: Format,
+    ) -> Result<SignatureVerdict, BridgeError> {
+        self.validate_signatures(ValidationRequest {
+            document_b64,
+            format,
+        })
+    }
+}
+
 fn ran<T: Send + 'static>(
     outcome: Result<Result<T, BridgeError>, IsolateGone>,
 ) -> Result<T, BridgeError> {
@@ -69,6 +83,17 @@ impl PolicyEngine for Isolate {
         let declared = extra_params.to_owned();
         let format = format.to_owned();
         ran(self.run(move |bridge| PolicyEngine::expand(bridge, &declared, &format)))?
+    }
+}
+
+impl ValidationEngine for Isolate {
+    fn verdict_of(
+        &self,
+        document_b64: &str,
+        format: Format,
+    ) -> Result<SignatureVerdict, BridgeError> {
+        let document = document_b64.to_owned();
+        ran(self.run(move |bridge| ValidationEngine::verdict_of(bridge, &document, format)))?
     }
 }
 

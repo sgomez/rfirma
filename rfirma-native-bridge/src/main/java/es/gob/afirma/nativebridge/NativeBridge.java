@@ -24,11 +24,12 @@ import org.graalvm.word.PointerBase;
  * JSON; lo que hace la firma vive alli, donde se puede probar sin construir la
  * imagen nativa.
  *
- * <p><b>Nueve entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * <p><b>Diez entradas y ni una mas</b>: {@code autofirma_pades_presign},
  * {@code autofirma_pades_postsign}, {@code autofirma_cades_presign},
  * {@code autofirma_cades_postsign}, {@code autofirma_xades_presign},
  * {@code autofirma_xades_postsign}, {@code autofirma_filter_certificates},
- * {@code autofirma_expand_extra_params} y {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
+ * {@code autofirma_expand_extra_params}, {@code autofirma_validate_signatures} y
+ * {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
  * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
  * que referencia los preprocesadores XAdES, FacturaE, ASiC y PKCS1 y haria
@@ -53,6 +54,9 @@ import org.graalvm.word.PointerBase;
  * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}   y en CAdES {"ok":true,"signature":"&lt;b64&gt;"}
  * filter   ok  {"ok":true,"selected":[0,2]}
  * expand   ok  {"ok":true,"params":"&lt;bloque properties&gt;"}
+ * validate ok  {"ok":true,"verdict":"valid"}
+ *              {"ok":true,"verdict":"invalid","reason":"&lt;VALIDITY_ERROR&gt;"}
+ *              {"ok":true,"verdict":"confirmationNeeded","param":"&lt;clave&gt;","text":"&lt;codigo&gt;"}
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -393,6 +397,41 @@ public final class NativeBridge {
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "params", expanded);
+            return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Valida con el validador del original las firmas que ya trae un documento.
+     *
+     * @param documentB64 documento de entrada en Base64.
+     * @param format      formato de firma, {@code PAdES}, {@code CAdES},
+     *                    {@code XAdES *} o {@code FacturaE}.
+     * @return JSON con el veredicto. Propiedad del llamante: se libera con
+     *         {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_validate_signatures")
+    public static CCharPointer validateSignatures(
+            final IsolateThread thread,
+            final CCharPointer documentB64,
+            final CCharPointer format) {
+        try {
+            final ValidationBridge.Verdict verdict = ValidationBridge.validate(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(documentB64)),
+                    CTypeConversion.toJavaString(format));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true");
+            field(json, "verdict", verdict.outcome());
+            if (verdict.reason() != null) {
+                field(json, "reason", verdict.reason());
+            }
+            if (verdict.param() != null) {
+                field(json, "param", verdict.param());
+                field(json, "text", verdict.text());
+            }
             return toUnmanagedCString(json.append('}').toString());
         }
         catch (final Throwable e) {

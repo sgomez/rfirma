@@ -425,6 +425,34 @@ pub struct ExpandRequest<'a> {
     pub format: &'a str,
 }
 
+/// Parámetros para validar las firmas que ya trae un documento.
+#[derive(Clone, Copy, Debug)]
+pub struct ValidationRequest<'a> {
+    /// Documento de entrada en Base64.
+    pub document_b64: &'a str,
+    /// Formato con cuyo validador del original se examina.
+    pub format: Format,
+}
+
+/// Lo que el validador del original dice de las firmas de un documento.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SignatureVerdict {
+    /// Las firmas valen, y un documento sin ninguna también.
+    Valid,
+    /// Alguna firma no vale, con el motivo tal como lo nombra el original.
+    Invalid {
+        /// Motivo del original.
+        reason: String,
+    },
+    /// Hace falta que la persona confirme para poder seguir.
+    ConfirmationNeeded {
+        /// Clave de `extraParams` que hay que fijar para repetir sin preguntar.
+        parameter: String,
+        /// Texto con el que pregunta el original.
+        text: String,
+    },
+}
+
 /// Errores posibles al cruzar la frontera FFI con el puente nativo.
 #[derive(Debug)]
 pub enum BridgeError {

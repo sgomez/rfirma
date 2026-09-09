@@ -46,6 +46,7 @@ fn java_has_no_entry_point_for_the_signing_phase() {
         "autofirma_free_string",
         "autofirma_pades_postsign",
         "autofirma_pades_presign",
+        "autofirma_validate_signatures",
         "autofirma_xades_postsign",
         "autofirma_xades_presign",
     ]
