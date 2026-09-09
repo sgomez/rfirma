@@ -47,7 +47,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `native-image-xades` ·
 `opensc-del-sistema` · `p12-en-almacen-nss` · `pades-triphase-contract` ·
 `pkcs11-mecanismo-firma` · `prefirma-en-seco-pdfjs` ·
-`recuadro-replicado-pdfsig` · `rutas-reales-con-filesystem-home` ·
+`recuadro-replicado-pdfsig` · `rutas-de-firefox-y-nss` ·
+`rutas-reales-con-filesystem-home` ·
 `timeout-lote-remoto` · `token-flags-login` · `token-pkcs11-pruebas`
 
 ## Sueltos en `docs/`
