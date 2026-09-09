@@ -1,5 +1,11 @@
 # El contrato del protocolo `afirma://` en la versión publicada, la 1.9.2
 
+**Esto es la investigación previa a implementar el protocolo, no el estado de rFirma.** Aquí se
+mide qué hace el cliente publicado y qué esperan las sedes, que es lo que había que saber antes de
+escribir la primera línea de `site/`. Lo que rFirma atiende hoy —qué operaciones acepta, cuáles
+rechaza y con qué código— lo dice el mapa `rfirma-app/src-tauri/src/site/AGENTS.md`, que es el
+estado vigente; si alguna vez los dos parecen discrepar, manda el mapa.
+
 **Medido contra el tag `v1.9.2` de [`ctt-gob-es/clienteafirma`](https://github.com/ctt-gob-es/clienteafirma),
 commit `b4fe147c322932ebdd11e25db3134af934e0e832`**, que es lo que las sedes ejecutan hoy. En las
 citas se abrevia la raíz de ese clon como **`<clienteafirma>`** y la de este repositorio como
@@ -670,34 +676,13 @@ excepción Java, texto), y el nombre lo elige el propio `autoscript.js`.
 
 ---
 
-## 6. Qué queda fuera del mínimo
+## 6. El alcance de rFirma no se lee aquí
 
-Todo esto es de la **ficha 18b**, y ninguna sede que use el transporte websocket v4 con las cuatro
-operaciones del mínimo lo necesita:
-
-- **Los servlets del servidor intermedio.** El transporte que arranca en `autoscript.js:3715`
-  (`PROTOCOL_VERSION = 3`) sube los datos a un servidor de la sede y AutoFirma se los descarga con
-  `fileid`, `rtservlet` y `stservlet` (`ProtocolInvocationLauncher.java:660`-`679` para la firma).
-  Arrastra consigo la espera activa (`ActiveWaitingThread`, `requestWait` en `:855`-`868`) y el
-  `#wait` de `:4452`. Es el camino de los navegadores viejos; ninguno actual lo toma.
-- **El cifrado extremo a extremo.** El parámetro `key` y el `NativeDataCipher`
-  (`NativeSignDataProcessor.java:32`-`37`, `68`-`85`; `UrlParameters.java:342`). Sólo tiene sentido
-  si hay servidor intermedio: la respuesta viaja por él y no por `wss://127.0.0.1`. Sin servlets,
-  sobra.
-- **`batch`** (`afirma://batch?`, `ProtocolInvocationLauncher.java:293`), con sus URL de prefirma y
-  posfirma y el modo local. Respuesta con formato propio (`processBatchResponse`,
-  `autoscript.js:2476`). Es además la única operación que sube el *keepalive* a 240 s
-  (`AfirmaWebSocketServerV4.java:88`-`89`).
-- **`save`** (`afirma://save?`, `:443`) y **`signandsave`** (`:532`).
-- **`load` y `multiload`** (`afirma://load?`, `:753`), con su respuesta `nombre:datos|nombre:datos`
-  (`processLoadResponse`, `autoscript.js:2377`).
-- **`countersign`.** Está en el mismo `if` que `sign` y `cosign`
-  (`ProtocolInvocationLauncher.java:643`-`645`) y es trivial de enrutar, pero en PAdES es «operación
-  no soportada» por definición (`AOPDFSigner.java:327`-`336`), así que en el alcance PAdES de rfirma
-  su implementación correcta es devolver **`SAF_04`**.
-- **El transporte `afirma://service`** (sockets HTTP locales, `autoscript.js:2621`-`2626`;
-  `ProtocolInvocationLauncher.java:264`). Es el predecesor del websocket y `autoscript.js` sólo lo
-  elige en navegadores que ya no importan.
+Este informe midió el cliente publicado, no lo que rFirma acabó atendiendo. Qué operaciones se
+atienden, cuáles se rechazan y con qué código lo dice el mapa
+`rfirma-app/src-tauri/src/site/AGENTS.md`, y las desviaciones a propósito respecto a AutoFirma
+1.9.2 están enumeradas en `CONTEXT.md`. Cualquier lista de alcance escrita aquí envejecería sin
+que nadie la vigilase.
 
 ---
 
