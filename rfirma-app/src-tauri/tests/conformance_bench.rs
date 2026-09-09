@@ -394,6 +394,9 @@ fn a_one_page_pdf() -> Vec<u8> {
     pdf
 }
 
+/// Salida esperada de `pdfsig` para una firma válida.
+const PDFSIG_VALID: &str = "Signature Validation: Signature is Valid.";
+
 /// Valida la firma PAdES con `pdfsig` (ADR-0014).
 fn validated_by_pdfsig(pdf: &Path) {
     let output = Command::new("pdfsig")
@@ -405,11 +408,15 @@ fn validated_by_pdfsig(pdf: &Path) {
                  sudo apt install -y poppler-utils\n{error}"
             )
         });
-    assert!(
-        output.status.success(),
-        "pdfsig ha fallado:\n{}{}",
+    let report = format!(
+        "{}{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(output.status.success(), "pdfsig ha fallado:\n{report}");
+    assert!(
+        report.contains(PDFSIG_VALID),
+        "pdfsig no da la firma por valida:\n{report}"
     );
 }
 
