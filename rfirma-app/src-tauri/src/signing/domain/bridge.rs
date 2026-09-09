@@ -180,6 +180,16 @@ impl Format {
             | Self::FacturaE => Ok(self),
         }
     }
+
+    /// El formato si el original tiene validador de firmas para él, y si no la situación que lo niega.
+    pub fn validated(self) -> Result<Self, BridgeError> {
+        match self {
+            Self::CadesAsicS | Self::Xades(XadesVariant::AsicS) => {
+                Err(BridgeError::FormatNotBridged(self))
+            }
+            Self::Pades | Self::Cades | Self::Cms | Self::Xades(_) | Self::FacturaE => Ok(self),
+        }
+    }
 }
 
 impl fmt::Display for Format {
@@ -427,6 +437,34 @@ pub struct ExpandRequest<'a> {
     pub extra_params: &'a str,
     /// Formato de firma.
     pub format: &'a str,
+}
+
+/// Parámetros para validar las firmas que ya trae un documento.
+#[derive(Clone, Copy, Debug)]
+pub struct ValidationRequest<'a> {
+    /// Documento de entrada en Base64.
+    pub document_b64: &'a str,
+    /// Formato con cuyo validador del original se examina.
+    pub format: Format,
+}
+
+/// Lo que el validador del original dice de las firmas de un documento.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SignatureVerdict {
+    /// Las firmas valen, y un documento sin ninguna también.
+    Valid,
+    /// Alguna firma no vale, con el motivo tal como lo nombra el original.
+    Invalid {
+        /// Motivo del original.
+        reason: String,
+    },
+    /// Hace falta que la persona confirme para poder seguir.
+    ConfirmationNeeded {
+        /// Clave de `extraParams` que hay que fijar para repetir sin preguntar.
+        parameter: String,
+        /// Código del mensaje con el que pregunta el original.
+        message_code: String,
+    },
 }
 
 /// Errores posibles al cruzar la frontera FFI con el puente nativo.

@@ -7,7 +7,9 @@ use std::sync::Arc;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation, XadesVariant};
+use crate::signing::domain::bridge::{
+    BridgeError, Format, SignatureOperation, SignatureVerdict, XadesVariant,
+};
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
@@ -227,6 +229,16 @@ pub trait FilterEngine {
 pub trait PolicyEngine {
     /// Expande las propiedades de política de firma en formato Java Properties.
     fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError>;
+}
+
+/// El validador de firmas del original, que también presta el puente.
+pub trait ValidationEngine {
+    /// Veredicto sobre las firmas que ya trae el documento.
+    fn verdict_of(
+        &self,
+        document_b64: &str,
+        format: Format,
+    ) -> Result<SignatureVerdict, BridgeError>;
 }
 
 /// Los certificados de la persona vistos desde el trámite: los que hay, sus filas con asa y el que está tras un asa.

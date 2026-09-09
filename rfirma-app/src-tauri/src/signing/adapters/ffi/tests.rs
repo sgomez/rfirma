@@ -1,5 +1,5 @@
 use super::*;
-use crate::signing::domain::bridge::{XadesVariant, LIBRARY_FILE};
+use crate::signing::domain::bridge::{SignatureVerdict, XadesVariant, LIBRARY_FILE};
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -392,6 +392,57 @@ fn a_selection_that_is_not_a_list_of_rows_is_a_malformed_answer() {
     assert!(parse_filter_selection(r#"{"ok":true}"#).is_err());
     assert!(parse_filter_selection(r#"{"ok":true,"selected":"0,2"}"#).is_err());
     assert!(parse_filter_selection(r#"{"ok":true,"selected":[-1]}"#).is_err());
+}
+
+#[test]
+fn a_document_whose_signatures_hold_comes_back_valid() {
+    assert_eq!(
+        parse_verdict(r#"{"ok":true,"verdict":"valid"}"#).expect("es valida"),
+        SignatureVerdict::Valid
+    );
+}
+
+#[test]
+fn a_signature_that_does_not_hold_brings_the_reason_of_the_original() {
+    assert_eq!(
+        parse_verdict(r#"{"ok":true,"verdict":"invalid","reason":"NO_MATCH_DATA"}"#)
+            .expect("es valida"),
+        SignatureVerdict::Invalid {
+            reason: "NO_MATCH_DATA".to_owned()
+        }
+    );
+}
+
+#[test]
+fn asking_for_confirmation_brings_the_key_to_set_and_the_message_code_to_ask_with() {
+    let verdict = parse_verdict(
+        r#"{"ok":true,"verdict":"confirmationNeeded","param":"allowShadowAttack","messageCode":"pdfShadowAttackSuspect"}"#,
+    )
+    .expect("es valida");
+
+    assert_eq!(
+        verdict,
+        SignatureVerdict::ConfirmationNeeded {
+            parameter: "allowShadowAttack".to_owned(),
+            message_code: "pdfShadowAttackSuspect".to_owned()
+        }
+    );
+}
+
+#[test]
+fn a_verdict_this_binary_does_not_know_is_a_malformed_answer() {
+    assert!(parse_verdict(r#"{"ok":true,"verdict":"quiza"}"#).is_err());
+    assert!(parse_verdict(r#"{"ok":true}"#).is_err());
+    assert!(parse_verdict(r#"{"ok":true,"verdict":"invalid"}"#).is_err());
+    assert!(parse_verdict(r#"{"ok":true,"verdict":"confirmationNeeded","param":"x"}"#).is_err());
+}
+
+#[test]
+fn a_failure_of_the_validator_travels_like_any_other() {
+    let error = parse_verdict(r#"{"ok":false,"error":"java.io.IOException: no es un PDF"}"#)
+        .expect_err("el validador ha fallado");
+
+    assert!(matches!(error, BridgeError::Failed(_)), "{error}");
 }
 
 #[test]

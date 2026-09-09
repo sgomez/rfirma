@@ -11,7 +11,7 @@ use crate::signing::domain::{to_java_properties, SessionSeal};
 use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
     PostSignRequest, PreSignBlock, PreSignRequest, PreSignature, SealedPreSignature,
-    LIBRARY_DIRECTORY_VARIABLE,
+    SignatureVerdict, ValidationRequest, LIBRARY_DIRECTORY_VARIABLE,
 };
 
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
@@ -133,6 +133,9 @@ type FilterSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_ch
 
 type ExpandSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
 
+type ValidateSymbol =
+    unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
+
 /// La librería nativa cargada, con su isolate de GraalVM ya creado.
 ///
 /// **No es `Sync`, y es a propósito**: el `IsolateThread` de GraalVM pertenece
@@ -155,6 +158,7 @@ pub struct NativeBridge {
     xades_postsign: PostSignSymbol,
     filter: FilterSymbol,
     expand: ExpandSymbol,
+    validate: ValidateSymbol,
     free_string: FreeStringSymbol,
     tear_down: TearDownIsolate,
 }
@@ -216,6 +220,7 @@ impl NativeBridge {
             xades_postsign,
             filter,
             expand,
+            validate,
             free_string,
             tear_down,
         ) = unsafe {
@@ -229,6 +234,7 @@ impl NativeBridge {
                 resolve::<PostSignSymbol>(&library, b"autofirma_xades_postsign\0")?,
                 resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
                 resolve::<ExpandSymbol>(&library, b"autofirma_expand_extra_params\0")?,
+                resolve::<ValidateSymbol>(&library, b"autofirma_validate_signatures\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
                 resolve::<TearDownIsolate>(&library, b"graal_tear_down_isolate\0")?,
             )
@@ -254,6 +260,7 @@ impl NativeBridge {
             xades_postsign,
             filter,
             expand,
+            validate,
             free_string,
             tear_down,
         })
@@ -352,6 +359,19 @@ impl NativeBridge {
         let json =
             self.call(|thread| unsafe { (self.expand)(thread, params.as_ptr(), format.as_ptr()) })?;
         parse_expanded_params(&json)
+    }
+
+    /// Veredicto del validador del original sobre las firmas que ya trae el documento.
+    pub fn validate_signatures(
+        &self,
+        request: ValidationRequest<'_>,
+    ) -> Result<SignatureVerdict, BridgeError> {
+        let document = c_string(request.document_b64, "el documento")?;
+        let format = c_string(request.format.validated()?.name(), "el formato")?;
+        let json = self.call(|thread| unsafe {
+            (self.validate)(thread, document.as_ptr(), format.as_ptr())
+        })?;
+        parse_verdict(&json)
     }
 
     fn call<F>(&self, invoke: F) -> Result<String, BridgeError>
@@ -548,6 +568,24 @@ pub fn parse_filter_selection(json: &str) -> Result<Vec<usize>, BridgeError> {
 pub fn parse_expanded_params(json: &str) -> Result<String, BridgeError> {
     let response = parse_response(json)?;
     Ok(field(&response, "params")?.to_owned())
+}
+
+/// Parsea el veredicto que devuelve la validación de firmas.
+pub fn parse_verdict(json: &str) -> Result<SignatureVerdict, BridgeError> {
+    let response = parse_response(json)?;
+    match field(&response, "verdict")? {
+        "valid" => Ok(SignatureVerdict::Valid),
+        "invalid" => Ok(SignatureVerdict::Invalid {
+            reason: field(&response, "reason")?.to_owned(),
+        }),
+        "confirmationNeeded" => Ok(SignatureVerdict::ConfirmationNeeded {
+            parameter: field(&response, "param")?.to_owned(),
+            message_code: field(&response, "messageCode")?.to_owned(),
+        }),
+        other => Err(BridgeError::MalformedResponse(format!(
+            "veredicto desconocido «{other}»"
+        ))),
+    }
 }
 
 const UNREGISTERED_SIGNATURES_KIND: &str = "pdfHasUnregisteredSignatures";
