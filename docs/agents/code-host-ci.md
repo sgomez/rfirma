@@ -143,7 +143,8 @@ to be fast.
 | Lane | Job | When |
 | --- | --- | --- |
 | fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every PR, every push to `main` |
-| slow | `Imagen nativa`, `Binario de release` (parallel) | tags `v*`, manual dispatch, weekly cron, or a PR labelled `native` |
+| native | `Imagen nativa` (parallel) | every PR, every push to `main`, tags `v*`, manual dispatch, weekly cron |
+| slow | `Binario de release` | tags `v*`, manual dispatch, weekly cron, or a PR labelled `release` or `native` |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
 
 The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
@@ -166,19 +167,16 @@ Rust tests at all. What the caching buys (`~/.m2`, the pnpm store,
 `Swatinem/rust-cache`, prebuilt binaries instead of `cargo install`) is the
 gap between a cold run and that warm number.
 
-**One tradeoff was taken on purpose:** in the fast lane the Rust tests only
-ever run *instrumented*, under `llvm-cov`. The uninstrumented run still
-happens, in the slow lane's `just test-native` (`--ignored`), on every push to `main` and
-every weekly cron — so a failure that only shows up without instrumentation is
-caught at merge, not at PR.
+The `native` lane runs `just test-native` (`--ignored`, tier C) and `just crap-ffi`
+on **every PR and push to `main`**. The native library `librfirma_crypto.so` is
+cached by hash of the Java bridge and `bootstrap.sh`, so PRs that do not touch Java
+restore it in seconds and run tier C tests without rebuilding the GraalVM image.
+This ensures regressions in tier C tests or FFI compatibility are caught at PR time
+instead of escaping to `main`. Rebuilding `native-image` only happens when the Java
+bridge actually changes.
 
-`native-image` fits comfortably on a standard runner, but the Java bridge is
-barely touched once written, so rebuilding the image on every PR would cost
-several times the fast lane to learn nothing new. **If your PR touches the
-bridge or the signing path, add the `native` label.** This is not a
-formality: without the label the slow lane **reports green having never run**,
-so a bug at the FFI boundary merges unseen and nothing short of the next
-tagged release or the weekly cron catches it.
+The **release binary** is built in its own job and remains scoped to releases,
+manual runs, cron, or PRs explicitly labelled `release` or `native`.
 
 **A job's conclusion does not distinguish "passed" from "skipped every step".**
 Read the steps, not the conclusion, whenever a green job is the evidence for
