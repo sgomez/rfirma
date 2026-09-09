@@ -106,3 +106,6 @@ en `.scratch/archive/`.
 2026-09-08 spec=#468 sub=#541 model=opus effort=medium pr=#579 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
 2026-09-08 spec=#468 sub=#542 model=opus effort=medium pr=#581 verdict=CLEAN cycles=1 mergefix=1 wave=3 outcome=merged
 2026-09-08 spec=#468 sub=#551 model=sonnet effort=medium pr=#580 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=ready-to-merge
+2026-09-09 spec=#468 sub=#552 model=sonnet effort=medium pr=#583 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-09 spec=#468 sub=#545 model=opus effort=medium pr=#584 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-09 spec=#468 sub=#553 model=sonnet effort=medium pr=#586 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
