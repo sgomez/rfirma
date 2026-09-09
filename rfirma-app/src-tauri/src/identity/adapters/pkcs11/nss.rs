@@ -9,7 +9,7 @@ use x509_cert::der::Decode;
 
 use super::stores::present_among;
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
-use crate::identity::domain::holder::issuer_of;
+use crate::identity::domain::holder::common_name_of;
 
 /// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
@@ -251,7 +251,7 @@ fn authorities_among(carried: &[Vec<u8>]) -> Vec<(Vec<u8>, CString)> {
 }
 
 fn named_as_an_authority(subject: &str) -> String {
-    let name = issuer_of(Some(subject));
+    let name = common_name_of(Some(subject));
     if name.is_empty() {
         subject.to_owned()
     } else {
@@ -408,9 +408,9 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
                         data: der.as_mut_ptr(),
                         len: der.len() as c_uint,
                     };
-                    if import_der_cert(slot, &mut item, 0, nickname.as_ptr(), 0) != SEC_SUCCESS {
-                        return Err(failed("PK11_ImportDERCert"));
-                    }
+                    // Una autoridad que no entra deja el almacen como si el `.p12`
+                    // no la trajera, y el firmante instalado sigue sirviendo.
+                    let _ = import_der_cert(slot, &mut item, 0, nickname.as_ptr(), 0);
                 }
                 Ok(())
             })();

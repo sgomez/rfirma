@@ -569,6 +569,66 @@ mod full_cycle {
         );
     }
 
+    /// El CMS que un PDF firmado lleva dentro, tal y como lo vuelca pdfsig (ADR-0014).
+    fn the_cms_inside(pdf: &Path) -> PathBuf {
+        let dumped = Path::new(env!("CARGO_TARGET_TMPDIR")).join("pades-con-cadena.volcado");
+        let _ = std::fs::remove_dir_all(&dumped);
+        std::fs::create_dir_all(&dumped).expect("deberia poder crearse el directorio del volcado");
+
+        let output = Command::new("pdfsig")
+            .arg("-dump")
+            .arg(pdf)
+            .current_dir(&dumped)
+            .output()
+            .unwrap_or_else(|error| {
+                panic!(
+                    "falta pdfsig: es la puerta de validez de la grada C (ADR-0014).\n  \
+                     sudo apt install -y poppler-utils\n{error}"
+                )
+            });
+        let report = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        std::fs::read_dir(&dumped)
+            .expect("el directorio del volcado deberia leerse")
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .next()
+            .unwrap_or_else(|| panic!("pdfsig -dump no ha dejado ningun CMS:\n{report}"))
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn the_cms_of_a_signed_pdf_carries_the_signer_and_the_authority_that_issued_it() {
+        let installed = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let certificate = an_installed_certificate(installed.path());
+
+        let signed = a_cycle_signed_by(
+            &certificate,
+            NO_SECRET,
+            Format::Pades,
+            cycle::ALGORITHM,
+            &a_one_page_pdf(),
+            SignatureOperation::Sign,
+            &[],
+        );
+        let pdf = write_to_target("pades-con-cadena.pdf", &signed);
+
+        let carried = openssl_prints_the_certificates_of(&the_cms_inside(&pdf));
+        assert_eq!(
+            carried.matches("subject=").count(),
+            2,
+            "el CMS del PDF lleva al firmante y a la intermedia de la FNMT, y nada mas:\n{carried}"
+        );
+        assert!(
+            carried.contains("AC FNMT Usuarios"),
+            "la intermedia que emitio al firmante viaja dentro del PDF:\n{carried}"
+        );
+    }
+
     #[test]
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
     fn an_implicit_cades_signature_carries_the_challenge_and_openssl_verifies_it() {

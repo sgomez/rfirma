@@ -7,7 +7,7 @@ use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
-use crate::identity::domain::holder::{holder_of, issuer_of};
+use crate::identity::domain::holder::{common_name_of, holder_of};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
@@ -86,7 +86,7 @@ pub fn rows_of(
                 label: certificate.reference().label().to_owned(),
                 holder_name,
                 id_number,
-                issuer: issuer_of(certificate.issuer().as_deref()),
+                issuer: common_name_of(certificate.issuer().as_deref()),
                 store: certificate.reference().store().class_under(installed_dir),
                 status: certificate.status(),
                 remembered: remembered

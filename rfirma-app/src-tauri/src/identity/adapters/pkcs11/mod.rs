@@ -237,9 +237,15 @@ pub fn list_every_certificate(
         let mut found = Vec::new();
 
         for slot in usable_slots(&context)? {
-            let token_label = context.get_token_info(slot)?.label().trim().to_owned();
+            let info = context.get_token_info(slot)?;
+            let token_label = info.label().trim().to_owned();
             let session = context.open_ro_session(slot)?;
+
+            let logged_in = log_in_before_listing(&session, &info);
             found.extend(all_certificates_in_session(&session, &store, &token_label)?);
+            if logged_in {
+                let _ = session.logout();
+            }
         }
 
         Ok(found)
