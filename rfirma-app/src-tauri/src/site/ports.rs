@@ -76,6 +76,7 @@ impl std::fmt::Debug for ReplyHandle {
 pub struct Inbox {
     arrived: Arc<dyn Fn() + Send + Sync>,
     operations: Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>,
+    already_arrived: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Inbox {
@@ -87,6 +88,7 @@ impl Inbox {
         Self {
             arrived: Arc::new(arrived),
             operations: Arc::new(operations),
+            already_arrived: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 
@@ -99,7 +101,12 @@ impl Inbox {
 
     /// Notifica que el navegador ha llegado al canal.
     pub fn arrived(&self) {
-        (self.arrived)();
+        if !self
+            .already_arrived
+            .swap(true, std::sync::atomic::Ordering::SeqCst)
+        {
+            (self.arrived)();
+        }
     }
 
     /// Entrega una operación recibida por el canal.

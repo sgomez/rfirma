@@ -59,6 +59,22 @@ fn what_arrives_at_the_inbox_notifies_arrival_and_delivers_operations() {
 }
 
 #[test]
+fn arrival_is_notified_only_once() {
+    let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let count_clone = std::sync::Arc::clone(&count);
+    let inbox = Inbox::of(
+        move || {
+            count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        },
+        move |_url, _reply| {},
+    );
+
+    inbox.arrived();
+    inbox.arrived();
+    assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
+#[test]
 fn what_is_answered_is_what_the_other_end_receives() {
     let received = std::sync::Arc::new(std::sync::Mutex::new(None));
     let keeping = std::sync::Arc::clone(&received);
