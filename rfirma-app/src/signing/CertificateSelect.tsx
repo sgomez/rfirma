@@ -49,7 +49,13 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
   // La posición del panel, calculada al abrir a partir del disparador: el
   // panel vive en un portal, fuera de la columna que recorta, así que ya no
   // puede colgar de su disparador con `position: absolute` normal.
-  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [anchor, setAnchor] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -74,7 +80,26 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
   const show = () => {
     setActive(at === -1 ? 0 : at);
     const rect = button.current?.getBoundingClientRect();
-    if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    if (rect) {
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const openUpwards = spaceBelow < 240 && spaceAbove > spaceBelow;
+      if (openUpwards) {
+        setAnchor({
+          bottom: window.innerHeight - rect.top + 4,
+          left: rect.left,
+          width: rect.width,
+          maxHeight: Math.max(100, Math.min(232, spaceAbove - 8)),
+        });
+      } else {
+        setAnchor({
+          top: rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+          maxHeight: Math.max(100, Math.min(232, spaceBelow - 8)),
+        });
+      }
+    }
     setOpen(true);
   };
 
@@ -251,7 +276,12 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
         createPortal(
           <div
             className="certificate-select__layer"
-            style={{ top: anchor.top, left: anchor.left, width: anchor.width }}
+            style={{
+              top: anchor.top,
+              bottom: anchor.bottom,
+              left: anchor.left,
+              width: anchor.width,
+            }}
           >
             <div
               className="certificate-select__list"
@@ -259,6 +289,7 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
               id={listId}
               role="listbox"
               tabIndex={-1}
+              style={{ maxHeight: anchor.maxHeight }}
               aria-label={t("panel.certificate.list")}
               aria-activedescendant={`${optionId}-${active}`}
               onKeyDown={onKeyDown}

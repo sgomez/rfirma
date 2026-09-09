@@ -253,4 +253,33 @@ describe("CertificateSelect", () => {
     await userEvent.click(disabledRow);
     expect(onChoose).not.toHaveBeenCalled();
   });
+
+  it("opens upwards when there is not enough space below the trigger", async () => {
+    renderSelect();
+    const btn = trigger();
+    vi.spyOn(btn, "getBoundingClientRect").mockReturnValue({
+      top: 300,
+      bottom: 366,
+      left: 20,
+      right: 500,
+      width: 480,
+      height: 66,
+      x: 20,
+      y: 300,
+      toJSON: () => {},
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      writable: true,
+      configurable: true,
+      value: 420,
+    });
+
+    await userEvent.click(btn);
+
+    const layer = document.querySelector(".certificate-select__layer") as HTMLElement;
+    expect(layer).toBeInTheDocument();
+    expect(layer.style.bottom).toBe("124px");
+    expect(layer.style.top).toBe("");
+  });
 });
