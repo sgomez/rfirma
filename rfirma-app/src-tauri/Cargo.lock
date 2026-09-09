@@ -3340,6 +3340,7 @@ dependencies = [
  "cryptoki",
  "des",
  "ecb",
+ "flate2",
  "futures-util",
  "getrandom 0.3.4",
  "gio",

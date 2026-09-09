@@ -1,8 +1,12 @@
 use std::sync::{Arc, Mutex};
 
+use base64::Engine as _;
+
 use super::*;
 use crate::site::application::tests::InMemoryServlets;
-use crate::site::domain::protocol::{encrypt, AfirmaUrl, CipherKey, NegotiatedCredential, SafCode};
+use crate::site::domain::protocol::{
+    encrypt, read_operation, AfirmaUrl, CipherKey, NegotiatedCredential, SafCode, SiteOperation,
+};
 use crate::site::domain::relay_error::Situation as RelaySituation;
 
 const KEY: &str = "12345678";
@@ -316,4 +320,48 @@ fn a_refuse_duty_uploads_the_given_answer_without_waiting_resolving_or_deliverin
     assert_eq!(servlets.log(), vec!["put"]);
     assert!(spy.delivered.lock().expect("el candado").is_none());
     assert_eq!(spy.exits(), 1);
+}
+
+#[test]
+fn the_fileid_variant_with_gzip_deciphers_then_delivers_for_decompression() {
+    let key = a_key();
+    let compressed = {
+        use std::io::Write;
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder
+            .write_all(b"%PDF-1.7\nrelay-gzip")
+            .expect("comprime");
+        encoder.finish().expect("termina")
+    };
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-gzip-1",
+            &encrypt(
+                base64::engine::general_purpose::URL_SAFE
+                    .encode(&compressed)
+                    .as_bytes(),
+                &key,
+            ),
+        )
+        .expect("guarda el contenido cifrado");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let mut info_data = a_fileid_info(Some(RETRIEVE_SERVLET), Some(key), false);
+    info_data.fileid = Some("fileid-gzip-1".to_owned());
+    info_data.operation =
+        an_operation("afirma://sign?op=sign&format=PAdES&algorithm=SHA256withRSA&gzip=true");
+    let info = ChannelLocation::Relay(info_data);
+
+    opened_and_delivered(&relay, &info);
+
+    let (operation, _reply) = spy.take_reply();
+    assert_eq!(operation.parameter("gzip"), Some("true"));
+    let SiteOperation::Sign(request) = read_operation(&operation).expect("lee operacion") else {
+        panic!("esperaba sign");
+    };
+    assert_eq!(request.document(), b"%PDF-1.7\nrelay-gzip");
+    assert_eq!(servlets.log(), vec!["get"]);
 }

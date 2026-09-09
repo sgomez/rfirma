@@ -1,5 +1,6 @@
 //! Lo que la sede pide por el canal ya abierto, leído de la URL.
 
+use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
 use super::algorithm::AskedAlgorithm;
@@ -722,7 +723,35 @@ fn read_document(url: &AfirmaUrl) -> Result<Vec<u8>, Refusal> {
             "el parametro 'dat' viene vacio: no hay nada que firmar",
         ));
     }
+    if is_gzip(url) {
+        let decompressed = decompress_gzip(&document)?;
+        if decompressed.is_empty() {
+            return Err(Refusal::new(
+                SafCode::SignWithoutData,
+                "el parametro 'dat' viene vacio: no hay nada que firmar",
+            ));
+        }
+        return Ok(decompressed);
+    }
     Ok(document)
+}
+
+fn is_gzip(url: &AfirmaUrl) -> bool {
+    url.parameter("gzip")
+        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
+}
+
+fn decompress_gzip(compressed: &[u8]) -> Result<Vec<u8>, Refusal> {
+    use std::io::Read;
+    let mut decoder = flate2::read::GzDecoder::new(compressed);
+    let mut decompressed = Vec::new();
+    decoder.read_to_end(&mut decompressed).map_err(|error| {
+        Refusal::about(
+            Parameter::Data,
+            format!("el parametro 'dat' no es un gzip valido: {error}"),
+        )
+    })?;
+    Ok(decompressed)
 }
 
 /// El nombre de fichero elegido sin su extensión (`AOPDFSigner.getSignedName`, 1.9.2), o el
@@ -782,6 +811,13 @@ fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
 
     let lote_base64 = required(url, "dat", Parameter::Data)?;
     let lote = decode_base64(lote_base64, Parameter::Data)?;
+    let (lote, lote_base64) = if is_gzip(url) {
+        let decompressed = decompress_gzip(&lote)?;
+        let encoded = STANDARD.encode(&decompressed);
+        (decompressed, encoded)
+    } else {
+        (lote, lote_base64.to_owned())
+    };
     let (algorithm, stop_on_error) = batch_algorithm_and_stop_on_error(json, &lote)?;
 
     let (presigner_url, postsigner_url) = match servlets {
@@ -791,7 +827,7 @@ fn batch_request(url: &AfirmaUrl) -> Result<SiteOperation, Refusal> {
     let declared = declared_properties(url)?;
     Ok(SiteOperation::Batch(BatchRequest {
         lote,
-        lote_base64: lote_base64.to_owned(),
+        lote_base64,
         json,
         local,
         presigner_url,

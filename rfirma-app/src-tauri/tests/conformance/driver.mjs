@@ -6,6 +6,7 @@ import { createServer as createTcpServer } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInThisContext } from "node:vm";
+import { gzipSync } from "node:zlib";
 
 const autoscriptPath = process.env.RFIRMA_AUTOSCRIPT;
 if (!autoscriptPath) {
@@ -502,6 +503,16 @@ function theCosignScript(format, extraParams, content) {
   );
 }
 
+/** Un `sign()` con datos comprimidos con gzip y el parámetro `gzip=true`. */
+function theSignGzipScript() {
+  const originalExecAppIntent = execAppIntent;
+  execAppIntent = function (url, successCB, errorCB) {
+    execAppIntent = originalExecAppIntent;
+    return originalExecAppIntent(`${url}&gzip=true`, successCB, errorCB);
+  };
+  theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
+}
+
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -555,6 +566,8 @@ if (script === "batch") {
   theStickyScript();
 } else if (script === "signcades") {
   theSignScript("CAdES", "mode=explicit", theChallenge());
+} else if (script === "signgzip") {
+  theSignGzipScript();
 } else if (script === "signauto") {
   theSignScript("auto", "", theChallenge());
 } else if (script === "signxades") {
