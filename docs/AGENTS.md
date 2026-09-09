@@ -49,6 +49,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 
 ## Sueltos en `docs/`
 
+`mapa-protocolo.md` — El mapa del protocolo de AutoFirma generado a tag fijado del original y cruzado con el trámite de sede de rFirma, con el esqueleto de auditoría.
+
 `pruebas-manuales-protocolo.md` (2 KB) — la **segunda puerta manual** del
 ADR-0014: lo del protocolo `afirma://` que necesita un navegador o una sede de
 verdad y por eso no lo tiene el CI. Se ejecuta una vez por etiqueta `v*`. Se

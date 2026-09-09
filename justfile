@@ -458,6 +458,16 @@ autoscript:
     mv "$destino.parcial" "$destino"
     echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
 
+# Genera el mapa del protocolo de AutoFirma a tag fijado y lo cruza con el de rFirma.
+# Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
+protocol-map *args:
+    python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
+
+# Comprueba que el mapa del protocolo esta al dia con el tag v1.9.2 fijado.
+# Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
+check-protocol-map:
+    python3 {{ justfile_directory() }}/scripts/protocol-map.py --check
+
 
 # ---------------------------------------------------------------------------
 # Navegacion
@@ -885,9 +895,9 @@ fmt-ts:
 # NO es lo que comprueba el CI, que corre `ruff check`: son dos cosas distintas,
 # y `ruff format` solo lo vigila la puerta local.
 #
-# `ruff format` sobre packaging.
+# `ruff format` sobre packaging y scripts.
 fmt-python:
-    ruff format {{ justfile_directory() }}/packaging
+    ruff format {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
 # Depende de build-ts porque tauri-build lee frontendDist (../dist) ya en
 # build.rs: sin el, clippy se cae antes de mirar una sola linea de Rust.
@@ -1302,7 +1312,7 @@ check-version:
 #
 # Lintea el Python del repositorio.
 lint-python:
-    ruff check {{ justfile_directory() }}/packaging
+    ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
 # A mano, cuando el bundle se reexporte desde el proyecto de sistema de diseno.
 # No lo ejecuta el CI: un sello regenerado dentro del CI sella lo que nadie ha
