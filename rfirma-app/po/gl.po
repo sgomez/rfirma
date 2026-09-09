@@ -9,1263 +9,1375 @@ msgstr ""
 
 #. No se traduce: es el nombre de la aplicación.
 msgid "app.name"
-msgstr ""
+msgstr "rFirma"
 
 msgid "actions.sign"
-msgstr ""
+msgstr "Asinar o documento"
 
 msgid "actions.cancel"
-msgstr ""
+msgstr "Cancelar"
 
 msgid "actions.close"
-msgstr ""
+msgstr "Pechar"
 
 msgid "actions.change"
-msgstr ""
+msgstr "Cambiar"
 
 msgid "actions.remove"
-msgstr ""
+msgstr "Quitar"
 
 msgid "actions.dismiss"
-msgstr ""
+msgstr "Descartar"
 
 msgid "actions.copy"
-msgstr ""
+msgstr "Copiar"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
-msgstr ""
+msgstr "Español"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.ca"
-msgstr ""
+msgstr "Català"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.eu"
-msgstr ""
+msgstr "Euskara"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.gl"
-msgstr ""
+msgstr "Galego"
 
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.en"
-msgstr ""
+msgstr "English"
 
 msgid "errors.technicalDetail"
-msgstr ""
+msgstr "Detalle técnico"
 
 msgid "errors.situations.unknown.title"
-msgstr ""
+msgstr "Non se puido completar a operación"
 
 msgid "errors.situations.unknown.body"
 msgstr ""
+"Téntao de novo. Se segue a ocorrer, achega o detalle técnico ao informe do "
+"fallo."
 
 msgid "errors.situations.handlerNotAvailable.title"
-msgstr ""
+msgstr "Non se pode cambiar quen atende as ligazóns"
 
 msgid "errors.situations.handlerNotAvailable.body"
 msgstr ""
+"Esta versión de rFirma non pode escribir esa escolla: cámbiase nos axustes "
+"do escritorio."
 
 msgid "errors.situations.handlerListUnreadable.title"
-msgstr ""
+msgstr "Non se puido ler a escolla do escritorio"
 
 msgid "errors.situations.handlerListUnreadable.body"
 msgstr ""
+"O ficheiro onde o escritorio a garda non se puido ler, así que se deixou "
+"como estaba."
 
 msgid "errors.situations.handlerListUnwritable.title"
-msgstr ""
+msgstr "Non se puido gardar quen atende as ligazóns"
 
 msgid "errors.situations.handlerListUnwritable.body"
-msgstr ""
+msgstr "O ficheiro onde o escritorio a garda non se puido escribir."
 
 msgid "errors.situations.notAnAcceptedImage.title"
-msgstr ""
+msgstr "Esa imaxe non vale como rúbrica"
 
 msgid "errors.situations.notAnAcceptedImage.body"
-msgstr ""
+msgstr "A rúbrica ten que ser un PNG ou un JPEG."
 
 msgid "errors.situations.damagedImage.title"
-msgstr ""
+msgstr "Non puidemos abrir a imaxe"
 
 msgid "errors.situations.damagedImage.body"
-msgstr ""
+msgstr "O ficheiro é un PNG ou un JPEG, pero está danado. Proba con outra copia."
 
 msgid "errors.situations.imageTooLarge.title"
-msgstr ""
+msgstr "A imaxe é demasiado grande"
 
 msgid "errors.situations.imageTooLarge.body"
-msgstr ""
+msgstr "Escolle unha imaxe máis pequena ou gárdaa con menos resolución."
 
 msgid "errors.situations.sourceUnreadable.title"
-msgstr ""
+msgstr "Non puidemos ler o ficheiro que escolliches"
 
 msgid "errors.situations.sourceUnreadable.body"
-msgstr ""
+msgstr "Comproba que segue onde estaba e volve escollelo."
 
 msgid "errors.situations.storeUnwritable.title"
-msgstr ""
+msgstr "Non puidemos gardar a túa rúbrica"
 
 msgid "errors.situations.storeUnwritable.body"
 msgstr ""
+"Volve escoller a imaxe. Se segue a ocorrer, achega o detalle técnico ao "
+"informe do fallo."
 
 msgid "errors.situations.storeUnreadable.title"
-msgstr ""
+msgstr "Non puidemos ler a túa rúbrica gardada"
 
 msgid "errors.situations.storeUnreadable.body"
-msgstr ""
+msgstr "Volve escoller a imaxe para substituíla."
 
 msgid "errors.situations.incorrectPin.title"
-msgstr ""
+msgstr "O PIN non é correcto"
 
 msgid "errors.situations.incorrectPin.body"
 msgstr ""
+"Volve introducilo. A tarxeta bloquéase tras varios intentos fallidos."
 
 msgid "errors.situations.pinLocked.title"
-msgstr ""
+msgstr "A tarxeta está bloqueada"
 
 msgid "errors.situations.pinLocked.body"
 msgstr ""
+"Bloqueouse tras demasiados intentos fallidos co PIN. Desbloquéaa co seu PUK "
+"antes de volver asinar."
 
 msgid "errors.situations.tokenAbsent.title"
-msgstr ""
+msgstr "Non atopamos a tarxeta"
 
 msgid "errors.situations.tokenAbsent.body"
 msgstr ""
+"Comproba que segue inserida e que o lector está conectado, e téntao de novo."
 
 msgid "errors.situations.expiredSession.title"
-msgstr ""
+msgstr "A sesión coa tarxeta caducou"
 
 msgid "errors.situations.expiredSession.body"
 msgstr ""
+"Téntao de novo: abrirase unha sesión nova e pedirémosche o PIN outra vez."
 
 msgid "errors.situations.moduleNotFound.title"
-msgstr ""
+msgstr "Non puidemos cargar o módulo da tarxeta"
 
 msgid "errors.situations.moduleNotFound.body"
-msgstr ""
+msgstr "Comproba que o módulo PKCS#11 está onde dixeches, ou escolle outro."
 
 msgid "errors.situations.certificateNotFound.title"
-msgstr ""
+msgstr "O certificado xa non está na tarxeta"
 
 msgid "errors.situations.certificateNotFound.body"
-msgstr ""
+msgstr "Volve buscar os certificados e escolle un dos que haxa."
 
 msgid "errors.situations.certificateExpired.title"
-msgstr ""
+msgstr "O certificado caducou"
 
 msgid "errors.situations.certificateExpired.body"
 msgstr ""
+"Un certificado caducado non serve para asinar. Renóvao coa súa emisora e "
+"téntao de novo."
 
 msgid "errors.situations.certificateNotYetValid.title"
-msgstr ""
+msgstr "O certificado aínda non está en vigor"
 
 msgid "errors.situations.certificateNotYetValid.body"
 msgstr ""
+"Aínda non comezou o seu período de validez, así que non serve para asinar."
 
 msgid "errors.situations.certificateRevoked.title"
-msgstr ""
+msgstr "O certificado está revogado"
 
 msgid "errors.situations.certificateRevoked.body"
 msgstr ""
+"A súa emisora revogouno, así que non serve para asinar. Necesitas un novo."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr ""
+msgstr "Non se puido abrir o certificado"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr ""
+msgstr "Comproba o contrasinal do ficheiro."
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".
 msgid "errors.situations.keyNotRsa.title"
-msgstr ""
+msgstr "Ese certificado non é compatible con rFirma"
 
 msgid "errors.situations.mechanismNotOffered.title"
-msgstr ""
+msgstr "O token non admite ese algoritmo de sinatura"
 
 msgid "errors.situations.mechanismNotOffered.body"
-msgstr ""
+msgstr "Proba con outro certificado ou pídelle á sede que use SHA-256 con RSA."
 
 msgid "errors.situations.certificateUnreadable.title"
-msgstr ""
+msgstr "Non puidemos ler o certificado"
 
 msgid "errors.situations.certificateUnreadable.body"
 msgstr ""
+"O que hai na tarxeta non é un certificado que saibamos ler. Proba con outro."
 
 msgid "errors.situations.notAPdf.title"
-msgstr ""
+msgstr "Ese ficheiro non é un PDF"
 
 msgid "errors.situations.notAPdf.body"
-msgstr ""
+msgstr "rFirma asina PDF. Escolle un documento PDF e téntao de novo."
 
 msgid "errors.situations.documentEncrypted.title"
-msgstr ""
+msgstr "O PDF está protexido"
 
 msgid "errors.situations.documentEncrypted.body"
 msgstr ""
+"Está cifrado ou ten os permisos restrinxidos, así que non se pode asinar. "
+"Ábreo co seu contrasinal, gárdao sen protección e téntao de novo."
 
 msgid "errors.situations.documentCertified.title"
-msgstr ""
+msgstr "O PDF está certificado"
 
 msgid "errors.situations.documentCertified.body"
 msgstr ""
+"O seu autor asinouno prohibindo os cambios, así que engadir unha sinatura "
+"invalidaría a súa. Pídelle unha copia sen certificar."
 
 msgid "errors.situations.documentUnreadable.title"
-msgstr ""
+msgstr "Non puidemos ler o documento"
 
 msgid "errors.situations.documentUnreadable.body"
-msgstr ""
+msgstr "Comproba que segue onde estaba e volve abrilo."
 
 msgid "errors.situations.droppedFileUnreadable.title"
-msgstr ""
+msgstr "Non puidemos ler o ficheiro que soltaches"
 
 msgid "errors.situations.droppedFileUnreadable.body"
 msgstr ""
+"Arrastrar non nos dá permiso para ler de calquera cartafol. Ábreo co botón "
+"de abrir, que si nolo dá."
 
 msgid "errors.situations.droppedSomeDiscarded.title"
-msgstr ""
+msgstr "Algúns ficheiros non se engadiron"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
+"Os demais PDF que soltaches xa están en Recentes. Os que non eran PDF non se "
+"engadiron."
 
 msgid "errors.situations.boxOutOfPage.title"
-msgstr ""
+msgstr "O cadro sae da páxina"
 
 msgid "errors.situations.boxOutOfPage.body"
 msgstr ""
+"Arrástrao dentro da páxina e volve asinar. Se o deixásemos así, quedaría "
+"recortado no PDF sen avisar."
 
 msgid "errors.situations.pageOutOfDocument.title"
-msgstr ""
+msgstr "O documento non chega a esa páxina"
 
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
+"Escolle unha páxina que exista no documento e volve asinar. Se o deixásemos "
+"así, o selo acabaría na última páxina sen avisar."
 
 msgid "errors.situations.sealMismatch.title"
-msgstr ""
+msgstr "A sinatura interrompeuse a medias"
 
 msgid "errors.situations.sealMismatch.body"
 msgstr ""
+"O que preparamos ao comezar e o que recibimos ao rematar non coinciden, así "
+"que paramos antes de escribir nada. Volve asinar o documento."
 
 msgid "errors.situations.bridgeFailed.title"
-msgstr ""
+msgstr "Non puidemos preparar a sinatura"
 
 msgid "errors.situations.bridgeFailed.body"
 msgstr ""
+"Fallou o compoñente que arma o PDF asinado. Téntao de novo e, se segue a "
+"ocorrer, achega o detalle técnico ao informe do fallo."
 
 msgid "errors.situations.folderMissing.title"
-msgstr ""
+msgstr "O cartafol de destino xa non está"
 
 msgid "errors.situations.folderMissing.body"
 msgstr ""
+"Non o creamos por ti: se o creásemos, o documento parecería gardado e non o "
+"estaría. Volve crealo ou escolle outro en Preferencias."
 
 msgid "errors.situations.notAFolder.title"
-msgstr ""
+msgstr "O destino non é un cartafol"
 
 msgid "errors.situations.notAFolder.body"
 msgstr ""
+"Hai un ficheiro con ese nome onde esperabamos un cartafol. Escolle outro "
+"destino en Preferencias."
 
 msgid "errors.situations.folderUnreadable.title"
-msgstr ""
+msgstr "Non puidemos consultar o cartafol de destino"
 
 msgid "errors.situations.folderUnreadable.body"
 msgstr ""
+"Pode ser cousa dos permisos ou dunha unidade que non responde. Escolle outro "
+"destino en Preferencias."
 
 msgid "errors.situations.folderUnwritable.title"
-msgstr ""
+msgstr "Non puidemos gardar o documento asinado"
 
 msgid "errors.situations.folderUnwritable.body"
 msgstr ""
+"A sinatura saíu ben, pero o ficheiro non se puido escribir no cartafol de "
+"destino. Escolle outro en Preferencias e volve asinar."
 
 msgid "errors.situations.noFreeName.title"
-msgstr ""
+msgstr "Xa hai demasiados documentos con ese nome"
 
 msgid "errors.situations.noFreeName.body"
 msgstr ""
+"Para non machacar ningún, paramos. Move ou renomea os anteriores e volve "
+"asinar."
 
 msgid "errors.situations.settingNotSaved.title"
-msgstr ""
+msgstr "Non puidemos gardar o axuste"
 
 msgid "errors.situations.settingNotSaved.body"
 msgstr ""
+"Volvemos ao valor anterior, que é o que segue gardado. Téntao de novo e, se "
+"segue a ocorrer, achega o detalle técnico ao informe do fallo."
 
 msgid "errors.situations.activityNotForgotten.title"
-msgstr ""
+msgstr "Non puidemos baleirar a lista"
 
 msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
+"Os documentos recentes e o certificado seguen gardados. Téntao de novo e, se "
+"segue a ocorrer, achega o detalle técnico ao informe do fallo."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
-msgstr ""
+msgstr "Bandexa de documentos"
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
-msgstr ""
+msgstr "Visor do documento"
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.panel"
-msgstr ""
+msgstr "Panel de sinatura"
 
 #. {{version}} es la versión publicada, p. ej. 0.4.1.
 msgid "notifications.newVersion.message"
-msgstr ""
+msgstr "Hai unha versión nova de rFirma: {{version}}"
 
 #. Lleva a «Acerca de», donde están las órdenes de alta del repositorio.
 msgid "notifications.newVersion.action"
-msgstr ""
+msgstr "Como actualizar"
 
 msgid "urlHandler.banner.message"
-msgstr ""
+msgstr "Queres que rFirma atenda as ligazóns das sedes?"
 
 msgid "urlHandler.banner.accept"
-msgstr ""
+msgstr "Si"
 
 msgid "urlHandler.banner.later"
-msgstr ""
+msgstr "Agora non"
 
 msgid "urlHandler.banner.never"
-msgstr ""
+msgstr "Non volver preguntar"
 
 msgid "header.menu"
-msgstr ""
+msgstr "Menú"
 
 msgid "header.preferences"
-msgstr ""
+msgstr "Preferencias…"
 
 msgid "header.about"
-msgstr ""
+msgstr "Acerca de rFirma"
 
 msgid "badges.signed"
-msgstr ""
+msgstr "Asinado"
 
 msgid "badges.unsigned"
-msgstr ""
+msgstr "Sen asinar"
 
 msgid "badges.unavailable"
-msgstr ""
+msgstr "Non dispoñible"
 
 msgid "tray.dropZone"
-msgstr ""
+msgstr "Arrastra un PDF ou preme para abrilo"
 
 msgid "tray.empty"
-msgstr ""
+msgstr "Aquí aparecerán os documentos que vaias asinando"
 
 msgid "tray.recents"
-msgstr ""
+msgstr "Recentes"
 
 msgid "tray.remove"
-msgstr ""
+msgstr "Quitar da lista"
 
 msgid "viewer.dropZone"
-msgstr ""
+msgstr "Arrastra un PDF ou preme para abrilo"
 
 msgid "viewer.dropZoneHint"
-msgstr ""
+msgstr "Abrirase o explorador de ficheiros"
 
 msgid "viewer.privacy"
-msgstr ""
+msgstr "Só PDF. O documento non sae do teu ordenador en ningún momento."
 
 msgid "viewer.pageNumber"
-msgstr ""
+msgstr "Número de páxina"
 
 #. {{total}} es el número de páginas del documento.
 msgid "viewer.pageOf"
-msgstr ""
+msgstr "de {{total}}"
 
 msgid "viewer.firstPage"
-msgstr ""
+msgstr "Primeira páxina"
 
 msgid "viewer.previousPage"
-msgstr ""
+msgstr "Páxina anterior"
 
 msgid "viewer.nextPage"
-msgstr ""
+msgstr "Páxina seguinte"
 
 msgid "viewer.lastPage"
-msgstr ""
+msgstr "Última páxina"
 
 msgid "viewer.zoomOut"
-msgstr ""
+msgstr "Afastar"
 
 msgid "viewer.zoomIn"
-msgstr ""
+msgstr "Achegar"
 
 #. Rótulo del campo donde se teclea el porcentaje de zoom.
 msgid "viewer.zoomLevel"
-msgstr ""
+msgstr "Nivel de zoom"
 
 #. Botón: la hoja ocupa todo el ancho disponible.
 msgid "viewer.fitWidth"
-msgstr ""
+msgstr "Axustar ao ancho"
 
 #. Botón: la página entera cabe en el visor.
 msgid "viewer.fitPage"
-msgstr ""
+msgstr "Axustar á páxina"
 
 #. Nombre accesible de la hoja del documento, que se enfoca para pasar de página.
 msgid "viewer.sheet"
-msgstr ""
+msgstr "Folla do documento"
 
 msgid "viewer.signatureBox"
-msgstr ""
+msgstr "Cadro da sinatura visible"
 
 msgid "viewer.dragHandle"
-msgstr ""
+msgstr "Arrastra para colocar"
 
 msgid "viewer.outOfPage"
-msgstr ""
+msgstr "O cadro quedou fóra da páxina, así que segue onde estaba."
 
 msgid "viewer.stamp.frozen"
-msgstr ""
+msgstr "Selo conxelado mentres moves o cadro"
 
 msgid "viewer.stamp.onDemand"
-msgstr ""
+msgstr "Documento grande: o selo non se recalcula só"
 
 msgid "viewer.stamp.show"
-msgstr ""
+msgstr "Ver como queda"
 
 msgid "viewer.stamp.composing"
-msgstr ""
+msgstr "Compoñendo o selo co certificado escollido"
 
 msgid "viewer.stamp.failed"
-msgstr ""
+msgstr "Non se puido debuxar o selo"
 
 msgid "viewer.stamp.retry"
-msgstr ""
+msgstr "Tentar de novo"
 
 msgid "panel.document.pages"
 msgid_plural "panel.document.pages"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "1 páxina"
+msgstr[1] "{{count}} páxinas"
+msgstr[2] "{{count}} páxinas"
 
 msgid "panel.coSignature"
 msgid_plural "panel.coSignature"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Xa leva 1 sinatura: a túa será unha cosinatura."
+msgstr[1] "Xa leva {{count}} sinaturas: a túa será unha cosinatura."
+msgstr[2] "Xa leva {{count}} sinaturas: a túa será unha cosinatura."
 
 #. Rótulo del bloque con las tres opciones de en qué páginas se sella.
 msgid "panel.placement.title"
-msgstr ""
+msgstr "Colocación"
 
 msgid "panel.placement.single"
-msgstr ""
+msgstr "Só 1 páxina"
 
 #. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
 msgid "panel.placement.singlePage"
-msgstr ""
+msgstr "Páxina {{page}}"
 
 #. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
 msgid "panel.placement.singleUnplaced"
-msgstr ""
+msgstr "aínda sen colocar"
 
 msgid "panel.placement.these"
-msgstr ""
+msgstr "Estas páxinas"
 
 #. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
 msgid "panel.placement.field"
-msgstr ""
+msgstr "Páxinas onde se sela"
 
 #. {{pages}} es el número de páginas del documento.
 msgid "panel.placement.all"
-msgstr ""
+msgstr "Todas as páxinas ({{pages}})"
 
 #. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
 msgid "panel.placement.seal"
-msgstr ""
+msgstr "Selar esta páxina"
 
 #. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
 msgid "panel.placement.sealAll"
-msgstr ""
+msgstr "Colocar o selo aquí"
 
 #. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
 msgid "panel.placement.unseal"
-msgstr ""
+msgstr "Quitar o selo"
 
 #. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
 msgid "panel.placement.echo"
-msgstr ""
+msgstr "Selarase nas páxinas {{pages}}."
 
 #. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
 msgid "panel.placement.echoMore"
 msgid_plural "panel.placement.echoMore"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Selarase nas páxinas {{pages}} e 1 máis."
+msgstr[1] "Selarase nas páxinas {{pages}} e {{count}} máis."
+msgstr[2] "Selarase nas páxinas {{pages}} e {{count}} máis."
 
 #. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
 msgid "panel.placement.replicated"
 msgid_plural "panel.placement.replicated"
-msgstr[0] ""
+msgstr[0] "O mesmo cadro, no mesmo sitio e do mesmo tamaño, en 1 páxina."
 msgstr[1] ""
+"O mesmo cadro, no mesmo sitio e do mesmo tamaño, nas {{count}} páxinas: é un "
+"só campo de sinatura repetido, non {{count}} sinaturas."
 msgstr[2] ""
+"O mesmo cadro, no mesmo sitio e do mesmo tamaño, nas {{count}} páxinas: é un "
+"só campo de sinatura repetido, non {{count}} sinaturas."
 
 #. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
 msgid "panel.placement.errors.beyond"
-msgstr ""
+msgstr "O documento ten {{pageCount}} páxinas e escribiches ata a {{page}}."
 
 #. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
 msgid "panel.placement.errors.reversed"
-msgstr ""
+msgstr "«{{entry}}» vai ao revés: o primeiro número ten que ser o menor."
 
 msgid "panel.placement.errors.zero"
-msgstr ""
+msgstr "Non hai páxina 0: a primeira é a 1."
 
 #. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
 msgid "panel.placement.errors.malformed"
 msgstr ""
+"«{{entry}}» non se entende. Números e rangos separados por comas: "
+"1,2-3,10-20."
 
 #. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
 msgid "panel.placement.errors.empty"
-msgstr ""
+msgstr "Escribe en que páxinas se sela: 1,2-3,10-20."
 
 msgid "panel.certificate.title"
-msgstr ""
+msgstr "Certificado"
 
 msgid "panel.certificate.loading"
-msgstr ""
+msgstr "Buscando certificados…"
 
 #. {{issuer}} es el nombre de la entidad emisora del certificado.
 msgid "panel.certificate.issuer"
-msgstr ""
+msgstr "Emitido por {{issuer}}"
 
 msgid "panel.certificate.choose"
-msgstr ""
+msgstr "Escoller certificado"
 
 msgid "panel.certificate.list"
-msgstr ""
+msgstr "Certificados dispoñibles"
 
 msgid "panel.certificate.groups.available"
-msgstr ""
+msgstr "Dispoñibles"
 
 msgid "panel.certificate.groups.unusable"
-msgstr ""
+msgstr "Non utilizables"
 
 msgid "panel.certificate.stores.card"
-msgstr ""
+msgstr "Tarxeta"
 
 msgid "panel.certificate.stores.firefox"
-msgstr ""
+msgstr "Firefox"
 
 msgid "panel.certificate.stores.chrome"
-msgstr ""
+msgstr "Chrome"
 
 #. Término del dominio: NSS es el almacén de certificados de Firefox y Chrome; no se traduce la sigla.
 msgid "panel.certificate.stores.nssdb"
-msgstr ""
+msgstr "Almacén NSS"
 
 msgid "panel.certificate.stores.installed"
-msgstr ""
+msgstr "Instalado en rFirma"
 
 msgid "panel.certificate.retry"
-msgstr ""
+msgstr "Volver buscar"
 
 msgid "panel.certificate.otherModule"
-msgstr ""
+msgstr "Outro módulo…"
 
 msgid "panel.certificate.empty.title"
-msgstr ""
+msgstr "Non atopamos ningún certificado"
 
 msgid "panel.certificate.empty.body"
 msgstr ""
+"Se usas unha tarxeta, comproba que está inserida e que o lector está "
+"conectado."
 
 msgid "panel.certificate.failed.title"
-msgstr ""
+msgstr "Non puidemos buscar os certificados"
 
 msgid "panel.certificate.failed.body"
-msgstr ""
+msgstr "A busca fallou antes de rematar, así que non sabemos se hai algún."
 
 #. {{date}} es la fecha de caducidad, ya formateada según el idioma.
 msgid "panel.certificate.expired"
-msgstr ""
+msgstr "O certificado caducou o {{date}}, así que non se pode asinar con el."
 
 msgid "panel.certificate.notYetValid"
 msgstr ""
+"O certificado aínda non entrou en vigor, así que non se pode asinar con el."
 
 #. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
 msgid "panel.certificate.revoked"
 msgstr ""
+"O certificado está revogado ({{reason}}), así que non se pode asinar con el."
 
 msgid "panel.certificate.unreadable"
-msgstr ""
+msgstr "Non puidemos ler este certificado, así que non se pode asinar con el."
 
 msgid "panel.visibleSignature.title"
-msgstr ""
+msgstr "Sinatura visible"
 
 msgid "panel.visibleSignature.toggle"
-msgstr ""
+msgstr "Estampar un cadro de sinatura no documento"
 
 msgid "panel.visibleSignature.content"
-msgstr ""
+msgstr "Contido"
 
 msgid "panel.visibleSignature.fields.rubric"
-msgstr ""
+msgstr "Rúbrica"
 
 msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr ""
+msgstr "Escolle antes unha imaxe"
 
 msgid "panel.visibleSignature.fields.signerName"
-msgstr ""
+msgstr "Asinante"
 
 msgid "panel.visibleSignature.fields.issuer"
-msgstr ""
+msgstr "Emisor"
 
 msgid "panel.visibleSignature.fields.signedAt"
-msgstr ""
+msgstr "Data"
 
 msgid "panel.visibleSignature.fields.reason"
-msgstr ""
+msgstr "Motivo"
 
 msgid "panel.visibleSignature.reason.label"
-msgstr ""
+msgstr "Motivo"
 
 msgid "panel.visibleSignature.reason.placeholder"
-msgstr ""
+msgstr "Conforme"
 
 msgid "panel.visibleSignature.rubric.title"
-msgstr ""
+msgstr "Imaxe da rúbrica"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr ""
+msgstr "Escoller imaxe"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr ""
+msgstr "Cambiar imaxe"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
-msgstr ""
+msgstr "A túa rúbrica, tal como se estampará"
 
 msgid "panel.visibleSignature.rubric.flattened"
 msgstr ""
+"Estámpase sobre branco: o cadro vai ao PDF como JPEG e un JPEG non ten "
+"transparencia."
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
-msgstr ""
+msgstr "Escolle un certificado para colocar a sinatura visible"
 
 #. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
 msgid "panel.footer.placeFirst"
 msgstr ""
+"Coloca a sinatura sobre o documento: arrastra un cadro ou preme o botón de "
+"selar."
 
 msgid "panel.footer.savedIn"
-msgstr ""
+msgstr "Gardarase en"
 
 #. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"
-msgstr ""
+msgstr "Non se pode escribir en {{folder}}"
 
 msgid "panel.footer.retry"
-msgstr ""
+msgstr "Tentar de novo"
 
 msgid "panel.signed.summary"
-msgstr ""
+msgstr "Resumo"
 
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
-msgstr ""
+msgstr "PAdES"
 
 msgid "panel.signed.openDocument"
-msgstr ""
+msgstr "Abrir o PDF"
 
 msgid "panel.signed.openFolder"
-msgstr ""
+msgstr "Abrir o cartafol"
 
 msgid "panel.signed.signAgain"
-msgstr ""
+msgstr "Volver asinar"
 
 msgid "pin.title"
-msgstr ""
+msgstr "Introduce o PIN"
 
 msgid "pin.titlePassword"
-msgstr ""
+msgstr "Introduce o contrasinal"
 
 #. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
 msgid "pin.signingAs"
-msgstr ""
+msgstr "{{holder}} · {{idNumber}}"
 
 #. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
 msgid "pin.subjectBrowser"
-msgstr ""
+msgstr "Os teus certificados de {{browser}}"
 
 msgid "pin.label"
-msgstr ""
+msgstr "PIN"
 
 msgid "pin.labelPassword"
-msgstr ""
+msgstr "Contrasinal"
 
 msgid "pin.incorrect"
-msgstr ""
+msgstr "PIN incorrecto"
 
 msgid "pin.incorrectPassword"
-msgstr ""
+msgstr "Contrasinal incorrecto"
 
 msgid "pin.submit"
-msgstr ""
+msgstr "Asinar"
 
 msgid "progress.title"
-msgstr ""
+msgstr "Asinando o documento…"
 
 msgid "progress.stages.presign"
-msgstr ""
+msgstr "Preparando a sinatura"
 
 #. Término del dominio: la etapa de la firma trifásica en la que se generan los hashes a firmar.
 msgid "progress.stages.presignTerm"
-msgstr ""
+msgstr "presinatura"
 
 msgid "progress.stages.sign"
-msgstr ""
+msgstr "Asinando na tarxeta"
 
 msgid "progress.stages.postsign"
-msgstr ""
+msgstr "Ensamblando o PDF"
 
 #. Término del dominio: la etapa en la que se ensambla el PDF ya firmado.
 msgid "progress.stages.postsignTerm"
-msgstr ""
+msgstr "postsinatura"
 
 msgid "progress.states.done"
-msgstr ""
+msgstr "Feita"
 
 msgid "progress.states.running"
-msgstr ""
+msgstr "En curso"
 
 msgid "progress.states.pending"
-msgstr ""
+msgstr "Pendente"
 
 msgid "progress.keepTheCard"
-msgstr ""
+msgstr "Non retires a tarxeta ata que remate."
 
 #. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Unha páxina quedará sen selo"
+msgstr[1] "{{count}} páxinas quedarán sen selo"
+msgstr[2] "{{count}} páxinas quedarán sen selo"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
 msgstr ""
+"O cadro non cabe en {{fallen}} das {{chosen}} páxinas que escolliches, máis "
+"pequenas ca aquela sobre a que o colocaches. O documento asinarase igual e a "
+"sinatura será válida en todo el, pero nesas páxinas non aparecerá o selo."
 
 #. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
 msgid "sealLoss.remaining"
-msgstr ""
+msgstr "O selo aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
 
 msgid "sealLoss.confirm"
-msgstr ""
+msgstr "Asinar de todos os xeitos"
 
 #. El titular del aviso de firmas que rFirma no sabe leer, antes de firmar.
 msgid "unregisteredSignatures.title"
-msgstr ""
+msgstr "Este PDF trae sinaturas que non entendemos"
 
 #. Que no se validan ni se cuentan las firmas previas: solo se avisa de que no se entienden.
 msgid "unregisteredSignatures.body"
 msgstr ""
+"Algunha das sinaturas que xa ten non está nun formato que rFirma saiba ler, "
+"así que non podemos dicirche nada dela. Podes asinar igual: a túa sinatura "
+"será válida, e as que xa estaban quedan como están."
 
 msgid "unregisteredSignatures.confirm"
-msgstr ""
+msgstr "Asinar de todos os xeitos"
 
 msgid "preferences.title"
-msgstr ""
+msgstr "Preferencias"
 
 msgid "preferences.sections.label"
-msgstr ""
+msgstr "Seccións"
 
 msgid "preferences.sections.signing"
-msgstr ""
+msgstr "Sinatura"
 
 msgid "preferences.sections.certificates"
-msgstr ""
+msgstr "Certificados"
 
 msgid "preferences.sections.privacy"
-msgstr ""
+msgstr "Privacidade"
 
 msgid "preferences.sections.appearance"
-msgstr ""
+msgstr "Aparencia"
 
 msgid "preferences.sections.sites"
-msgstr ""
+msgstr "Sedes"
 
 msgid "preferences.urlHandler.label"
-msgstr ""
+msgstr "Quen atende as ligazóns das sedes"
 
 msgid "preferences.urlHandler.unchosen"
-msgstr ""
+msgstr "O que decida o escritorio"
 
 #. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
 msgid "preferences.urlHandler.firefoxKeepsItsOwn"
-msgstr ""
+msgstr "Firefox usa a escolla que garda nas súas propias preferencias."
 
 #. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
 msgid "preferences.urlHandler.inTheSandbox"
-msgstr ""
+msgstr "Esta versión non pode cambialo: escóllese nos axustes do escritorio."
 
 msgid "preferences.askAboutUrlHandler.label"
-msgstr ""
+msgstr "Preguntarme ao arrancar"
 
 msgid "preferences.rememberVisibleSignature.label"
-msgstr ""
+msgstr "Lembrar a última configuración de sinatura visible"
 
 msgid "preferences.rememberVisibleSignature.hint"
 msgstr ""
+"A páxina, a posición e o contido do cadro reutilízanse no seguinte "
+"documento."
 
 msgid "preferences.rememberActivity.label"
-msgstr ""
+msgstr "Lembrar a miña actividade"
 
 msgid "preferences.rememberActivity.hint"
-msgstr ""
+msgstr "Cobre os documentos recentes e o certificado usado a última vez."
 
 msgid "preferences.rememberActivity.clear"
-msgstr ""
+msgstr "Baleirar a lista"
 
 msgid "preferences.rememberActivity.confirm.body"
 msgstr ""
+"Ao apagalo bórrase o xa lembrado: os documentos recentes e o certificado "
+"usado a última vez."
 
 msgid "preferences.rememberActivity.confirm.accept"
-msgstr ""
+msgstr "Borrar e apagar"
 
 msgid "preferences.notifyNewVersion.label"
-msgstr ""
+msgstr "Avisarme cando haxa unha versión nova"
 
 msgid "preferences.destination.label"
-msgstr ""
+msgstr "Onde se garda o documento asinado"
 
 msgid "preferences.destination.change"
-msgstr ""
+msgstr "Cambiar cartafol…"
 
 msgid "preferences.destination.nextToOriginal"
-msgstr ""
+msgstr "Xunto ao documento orixinal"
 
 msgid "preferences.destination.inThisFolder"
-msgstr ""
+msgstr "Neste cartafol"
 
 msgid "preferences.certificates.add"
-msgstr ""
+msgstr "Engadir…"
 
 #. Nombre accesible del boton de cada fila: lleva el titular para distinguirlo
 #. de los demas, que es lo unico que cambia entre una fila y otra.
 msgid "preferences.certificates.remove"
-msgstr ""
+msgstr "Quitar o certificado de {{holder}}"
 
 msgid "preferences.certificates.empty"
-msgstr ""
+msgstr "Aínda non instalaches ningún"
 
 msgid "preferences.certificates.expires"
-msgstr ""
+msgstr "caduca o {{date}}"
 
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
-msgstr ""
+msgstr "Caducado"
 
 msgid "preferences.certificates.password.submit"
-msgstr ""
+msgstr "Continuar"
 
 msgid "preferences.theme.label"
-msgstr ""
+msgstr "Tema"
 
 #. Nombra al sistema operativo, no un color: no se traduce como un tono.
 msgid "preferences.theme.system"
-msgstr ""
+msgstr "O do sistema"
 
 msgid "preferences.theme.light"
-msgstr ""
+msgstr "Claro"
 
 msgid "preferences.theme.dark"
-msgstr ""
+msgstr "Escuro"
 
 msgid "preferences.language.label"
-msgstr ""
+msgstr "Idioma"
 
 #. {{version}} es el número de versión de la aplicación.
 msgid "about.version"
-msgstr ""
+msgstr "Versión {{version}}"
 
 msgid "about.whatItDoes"
-msgstr ""
+msgstr "Asina e cosina documentos PDF co teu certificado."
 
 msgid "about.update.newVersion"
-msgstr ""
+msgstr "Hai unha versión nova: {{version}}"
 
 msgid "about.update.upToDate"
-msgstr ""
+msgstr "Estás na última versión"
 
 msgid "about.update.channel.flatpak"
-msgstr ""
+msgstr "Flatpak"
 
 msgid "about.update.channel.deb"
-msgstr ""
+msgstr "Debian e Ubuntu"
 
 msgid "about.update.channel.rpm"
-msgstr ""
+msgstr "Fedora e openSUSE"
 
 msgid "about.independence"
 msgstr ""
+"Proxecto independente. rFirma non está relacionada con AutoFirma nin coa "
+"Administración Xeral do Estado, que publican o cliente oficial, nin conta co "
+"seu apoio. Se necesitas a aplicación oficial, descárgaa da súa web."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
-msgstr ""
+msgstr "github.com/sgomez/rfirma"
 
 msgid "about.licenses.view"
-msgstr ""
+msgstr "Ver as licenzas"
 
 msgid "about.licenses.rfirma"
-msgstr ""
+msgstr "rFirma: EUPL-1.2."
 
 msgid "about.licenses.afirma"
-msgstr ""
+msgstr "Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1."
 
 msgid "trust.notice.title"
-msgstr ""
+msgstr "Cando unha sede che pida a sinatura"
 
 msgid "trust.notice.localCa"
 msgstr ""
+"rFirma instalou no teu ordenador unha entidade de confianza local. É o que "
+"fai falta para que o navegador acepte a conexión con rFirma cando unha sede "
+"electrónica che pida asinar."
 
 msgid "trust.notice.localNetwork"
 msgstr ""
+"A primeira vez, o navegador pedirache permiso para acceder á rede local. "
+"Pídeo en nome da sede, non de rFirma, así que pode que non o recoñezas. "
+"Permíteo cando apareza: cun só permiso abonda, aínda que a sede probe ata "
+"tres conexións."
 
 msgid "trust.notice.cannotTellIfDenied"
 msgstr ""
+"Se o denegas, rFirma non poderá sabelo nin dicircho: ese aviso ocorre por "
+"completo dentro do navegador."
 
 msgid "trust.notice.acknowledge"
-msgstr ""
+msgstr "Entendido"
 
 msgid "sede.waiting.title"
-msgstr ""
+msgstr "Conectando coa sede"
 
 msgid "sede.waiting.lead"
-msgstr ""
+msgstr "Unha páxina quere que asines un documento."
 
 msgid "sede.unreachable.title"
-msgstr ""
+msgstr "A petición non chegou"
 
 msgid "sede.unreachable.lead"
-msgstr ""
+msgstr "Adoita faltar o permiso do navegador."
 
 msgid "sede.repair.caMissing"
-msgstr ""
+msgstr "Falta a CA local de rFirma."
 
 msgid "sede.repair.installCa"
-msgstr ""
+msgstr "Instalar…"
 
 #. Nombre propio del navegador: no se traduce.
 msgid "sede.repair.chrome"
-msgstr ""
+msgstr "Chrome"
 
 #. Nombre propio del navegador: no se traduce.
 msgid "sede.repair.firefox"
-msgstr ""
+msgstr "Firefox"
 
 msgid "sede.repair.chromeAllow"
-msgstr ""
+msgstr "Preme Permitir na franxa baixo a barra de enderezos."
 
 msgid "sede.repair.chromeGone"
-msgstr ""
+msgstr "Se xa non está:"
 
 msgid "sede.repair.chromePadlock"
-msgstr ""
+msgstr "Ou: cadeado › Configuración de sitios › Acceso á rede local."
 
 msgid "sede.repair.firefoxAllow"
-msgstr ""
+msgstr "Preme Permitir no panel xunto á barra de enderezos."
 
 msgid "sede.repair.firefoxGone"
 msgstr ""
+"Se xa non está: cadeado › Conexión segura › Máis información › Permisos › "
+"Acceso á rede local."
 
 #. `Reintentar` es un botón de la sede, no de esta ventana.
 msgid "sede.repair.retry"
-msgstr ""
+msgstr "Tras permitir, volve á sede e preme Reintentar."
 
 #. El sujeto de las frases cuando la petición no trae un origen válido.
 msgid "sede.origin.unknown"
-msgstr ""
+msgstr "A petición"
 
 msgid "sede.consent.asksSignature"
-msgstr ""
+msgstr "{{origin}} pide a túa sinatura."
 
 msgid "sede.consent.asksIdentity"
-msgstr ""
+msgstr "{{origin}} pide que te identifiques."
 
 #. La misma frase que "asksSignature", con el formato del #530 nombrado.
 msgid "sede.consent.asksSignatureOf"
-msgstr ""
+msgstr "{{origin}} pide a túa sinatura de {{what}}."
 
 #. Qué es lo que la sede pide firmar, según el formato de la petición (#530).
 msgid "sede.consent.signingKind.pdf"
-msgstr ""
+msgstr "un documento PDF"
 
 msgid "sede.consent.signingKind.challenge"
-msgstr ""
+msgstr "un reto de autenticación"
 
 msgid "sede.consent.signingKind.xml"
-msgstr ""
+msgstr "un documento XML"
 
 msgid "sede.consent.signingKind.invoice"
-msgstr ""
+msgstr "unha factura electrónica"
 
 msgid "sede.consent.unknownOriginTitle"
-msgstr ""
+msgstr "Orixe sen identificar"
 
 msgid "sede.consent.unknownOriginSignature"
-msgstr ""
+msgstr "A petición pide unha sinatura e non indica de que páxina vén."
 
 #. La misma frase que "unknownOriginSignature", con el formato nombrado.
 msgid "sede.consent.unknownOriginSignatureOf"
-msgstr ""
+msgstr "A petición pide asinar {{what}} e non indica de que páxina vén."
 
 msgid "sede.consent.unknownOriginIdentity"
-msgstr ""
+msgstr "A petición pide que te identifiques e non indica de que páxina vén."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.
 msgid "sede.consent.untitled"
-msgstr ""
+msgstr "Un PDF sen título"
 
 msgid "sede.consent.signWith"
-msgstr ""
+msgstr "Asinarás con"
 
 msgid "sede.consent.identifyWith"
-msgstr ""
+msgstr "Identificaraste con"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"
-msgstr ""
+msgstr "{{origin}} limitou os certificados válidos."
 
 msgid "sede.consent.narrowedUnknownOrigin"
-msgstr ""
+msgstr "A sede limitou os certificados válidos."
 
 msgid "sede.consent.willSend"
 msgstr ""
+"Enviaranse o teu nome, o teu NIF, o emisor do certificado e o seu número de "
+"serie."
 
 #. Situación 5 (ID-302): información y no alarma. «Firmas sin registrar» no
 #. aparece en la interfaz, y no se dice cuántas hay ni si son válidas.
 msgid "sede.consent.unrecognizedSignatures"
 msgstr ""
+"rFirma non recoñece algunha das sinaturas que xa ten este documento, e ao "
+"engadir a túa poderían deixar de verse como válidas"
 
 #. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
 #. objetivo dice sobre cuáles.
 msgid "sede.consent.counterSignatureTree"
 msgstr ""
+"Xa vén asinado: a túa será unha contrasinatura sobre todas as sinaturas que "
+"xa ten."
 
 msgid "sede.consent.counterSignatureLeafs"
 msgstr ""
+"Xa vén asinado: a túa será unha contrasinatura sobre as últimas sinaturas "
+"que ten."
 
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Lote de 1 sinatura"
+msgstr[1] "Lote de {{count}} sinaturas"
+msgstr[2] "Lote de {{count}} sinaturas"
 
 msgid "sede.consent.batchNote"
-msgstr ""
+msgstr "Os documentos quedan na sede: rFirma asina sen descargalos."
 
 msgid "sede.consent.batchItemLabel"
-msgstr ""
+msgstr "{{what}} ({{round}})"
 
 msgid "sede.consent.localBatchRoundSign"
-msgstr ""
+msgstr "sinatura"
 
 msgid "sede.consent.localBatchRoundCosign"
-msgstr ""
+msgstr "cosinatura"
 
 msgid "sede.consent.localBatchRoundCounterTree"
-msgstr ""
+msgstr "contrasinatura de todas as sinaturas"
 
 msgid "sede.consent.localBatchRoundCounterLeafs"
-msgstr ""
+msgstr "contrasinatura das últimas sinaturas"
 
 msgid "sede.consent.sign"
-msgstr ""
+msgstr "Asinar"
 
 msgid "sede.consent.identify"
-msgstr ""
+msgstr "Identificarse"
 
 msgid "sede.confirm.title"
 msgstr "Hai que confirmar antes de asinar"
 
 msgid "sede.confirm.messages.pdfShadowAttackSuspect"
-msgstr "O PDF é sospeitoso de ser modificado tras a última firma. Queres continuar?"
+msgstr ""
+"Parece que o PDF se modificou despois da última sinatura. Queres asinalo de "
+"todos os xeitos?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
-msgstr "O documento PDF contén un formulario do cal se modificaron os campos despois de asinarse. Queres continuar?"
+msgstr ""
+"O PDF ten un formulario cuxos campos se cambiaron despois de asinalo. Queres "
+"asinalo de todos os xeitos?"
 
 msgid "sede.confirm.messages.unknown"
-msgstr "O validador de sinaturas sinala algo que hai que confirmar antes de seguir ({{code}}). Queres continuar?"
+msgstr ""
+"O validador de sinaturas atopou algo que debes confirmar antes de seguir "
+"({{code}}). Queres asinalo de todos os xeitos?"
 
 msgid "sede.confirm.continue"
 msgstr "Continuar"
 
 msgid "sede.signing.title"
-msgstr ""
+msgstr "Asinando"
 
 msgid "sede.signing.with"
-msgstr ""
+msgstr "Con {{holder}} · {{idNumber}}."
 
 msgid "sede.returning.title"
-msgstr ""
+msgstr "Enviando a sinatura a {{origin}}"
 
 msgid "sede.returning.titleUnknownOrigin"
-msgstr ""
+msgstr "Enviando a sinatura"
 
 msgid "sede.returning.body"
-msgstr ""
+msgstr "Non peches a xanela."
 
 msgid "sede.saving.title"
-msgstr ""
+msgstr "Gardando {{filename}}"
 
 msgid "sede.saving.titleUnnamed"
-msgstr ""
+msgstr "Gardando o ficheiro"
 
 msgid "sede.saving.lead"
-msgstr ""
+msgstr "Escolle no diálogo do sistema onde queres gardalo."
 
 msgid "sede.loading.title"
-msgstr ""
+msgstr "Cargando un ficheiro"
 
 msgid "sede.loading.titleMany"
-msgstr ""
+msgstr "Cargando varios ficheiros"
 
 msgid "sede.loading.lead"
-msgstr ""
+msgstr "Escolle no diálogo do sistema o ficheiro que queres enviar."
 
 msgid "sede.loading.leadMany"
-msgstr ""
+msgstr "Escolle no diálogo do sistema os ficheiros que queres enviar."
 
 msgid "sede.outcome.signedTitle"
-msgstr ""
+msgstr "Asinado e enviado"
 
 msgid "sede.outcome.signedBody"
-msgstr ""
+msgstr "A sinatura xa está en {{origin}}."
 
 msgid "sede.outcome.signedBodyUnknownOrigin"
-msgstr ""
+msgstr "A sinatura xa se enviou."
 
 #. No se deduce mirando: la aplicación sí tiene bandeja de recientes.
 msgid "sede.outcome.signedNote"
-msgstr ""
+msgstr "rFirma non garda copia."
 
 msgid "sede.outcome.savedTitle"
-msgstr ""
+msgstr "Gardado"
 
 msgid "sede.outcome.savedBody"
-msgstr ""
+msgstr "O ficheiro que pedía {{origin}} xa está gardado onde o escolliches."
 
 msgid "sede.outcome.savedBodyUnknownOrigin"
-msgstr ""
+msgstr "O ficheiro xa está gardado onde o escolliches."
 
 msgid "sede.outcome.loadedTitle"
-msgstr ""
+msgstr "Cargado"
 
 msgid "sede.outcome.loadedBody"
 msgid_plural "sede.outcome.loadedBody"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Enviouse 1 ficheiro a {{origin}}."
+msgstr[1] "Enviáronse {{count}} ficheiros a {{origin}}."
+msgstr[2] "Enviáronse {{count}} ficheiros a {{origin}}."
 
 msgid "sede.outcome.loadedBodyUnknownOrigin"
 msgid_plural "sede.outcome.loadedBodyUnknownOrigin"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Enviouse 1 ficheiro."
+msgstr[1] "Enviáronse {{count}} ficheiros."
+msgstr[2] "Enviáronse {{count}} ficheiros."
 
 msgid "sede.outcome.batchTitle"
-msgstr ""
+msgstr "Lote asinado e enviado"
 
 msgid "sede.outcome.batchBody"
 msgid_plural "sede.outcome.batchBody"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "A sinatura do lote xa está en {{origin}}."
+msgstr[1] "As {{count}} sinaturas do lote xa están en {{origin}}."
+msgstr[2] "As {{count}} sinaturas do lote xa están en {{origin}}."
 
 msgid "sede.outcome.batchBodyUnknownOrigin"
 msgid_plural "sede.outcome.batchBodyUnknownOrigin"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "A sinatura do lote xa se enviou."
+msgstr[1] "As {{count}} sinaturas do lote xa se enviaron."
+msgstr[2] "As {{count}} sinaturas do lote xa se enviaron."
 
 msgid "sede.outcome.cancelledTitle"
-msgstr ""
+msgstr "Cancelaches a sinatura"
 
 msgid "sede.outcome.refusedTitle"
-msgstr ""
+msgstr "rFirma rexeitou a petición"
 
 msgid "sede.outcome.refusedNote"
-msgstr ""
+msgstr "Para quen mantén a sede:"
 
 msgid "sede.outcome.detail"
-msgstr ""
+msgstr "Detalle"
 
 msgid "sede.outcome.autoClose"
-msgstr ""
+msgstr "Pecharase soa dentro de {{seconds}} s."
 
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
+"{{origin}} pide colocar a sinatura nunha páxina engadida ao final, e rFirma "
+"non fai iso."
 
 msgid "sede.refusals.unsupportedFilter"
 msgstr ""
+"{{origin}} pide filtrar os certificados cun criterio que rFirma non recoñece."
 
 msgid "sede.refusals.unsupportedProtocolVersion"
-msgstr ""
+msgstr "{{origin}} fala unha versión do protocolo que rFirma non entende."
 
 msgid "sede.refusals.missingFormat"
-msgstr ""
+msgstr "{{origin}} non di en que formato hai que asinar."
 
 msgid "sede.refusals.unsupportedKeyStore"
 msgstr ""
+"{{origin}} pide asinar cun almacén de certificados que rFirma non pode abrir."
 
 msgid "sede.refusals.errandInFlight"
 msgstr ""
+"{{origin}} pide unha sinatura con outro trámite aberto, e rFirma atende un "
+"de cada vez."
 
 msgid "sede.refusals.unknown"
-msgstr ""
+msgstr "{{origin}} enviou algo que rFirma non pode atender."
 
 msgid "sede.refusals.saveCancelled"
 msgstr ""
+"Pechaches o diálogo de gardado sen escoller onde gardar o ficheiro que pedía "
+"{{origin}}."
 
 msgid "sede.refusals.loadCancelled"
-msgstr ""
+msgstr "Pechaches o diálogo de carga sen escoller ningún ficheiro para {{origin}}."
 
 msgid "sede.refusals.cannotSaveData"
-msgstr ""
+msgstr "O ficheiro que pedía {{origin}} non se puido escribir onde escolliches."
 
 msgid "sede.refusals.cannotLoadData"
-msgstr ""
+msgstr "Un dos ficheiros escollidos para {{origin}} non se puido ler."
 
 msgid "sede.refusals.batchPresignerUnreachable"
-msgstr ""
+msgstr "O servizo de {{origin}} que prepara o lote non contestou."
 
 msgid "sede.refusals.batchPostsignerUnreachable"
-msgstr ""
+msgstr "O servizo de {{origin}} que pecha o lote non contestou."
 
 msgid "sede.refusals.batchInvalidPresignResponse"
 msgstr ""
+"O servizo de {{origin}} que prepara o lote contestou algo que rFirma non "
+"sabe ler."
 
 msgid "sede.refusals.batchInvalidPostsignResponse"
 msgstr ""
+"O servizo de {{origin}} que pecha o lote contestou algo que rFirma non sabe "
+"ler."
 
 msgid "sede.refusals.batchSigningFailed"
-msgstr ""
+msgstr "A sinatura do lote que pedía {{origin}} non chegou a completarse."
 
 msgid "sede.noCertificate.noneTitle"
-msgstr ""
+msgstr "Non tes ningún certificado"
 
 msgid "sede.noCertificate.noneBody"
-msgstr ""
+msgstr "Necesitas un instalado para asinar en {{origin}}."
 
 msgid "sede.noCertificate.noneBodyUnknownOrigin"
-msgstr ""
+msgstr "Necesitas un instalado para asinar."
 
 msgid "sede.noCertificate.noneHint"
-msgstr ""
+msgstr "Consígueo na FNMT ou na túa comunidade autónoma."
 
 msgid "sede.noCertificate.install"
-msgstr ""
+msgstr "Instalar un certificado…"
 
 msgid "sede.noCertificate.lookAgain"
-msgstr ""
+msgstr "Volver buscar"
 
 #. La sede excluyó todos los certificados de la persona. Se dice cuántos tiene
 #. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.
 msgid "sede.noCertificate.excludedTitle"
 msgid_plural "sede.noCertificate.excludedTitle"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{{origin}} non acepta o teu certificado"
+msgstr[1] "{{origin}} non acepta ningún dos teus {{count}} certificados"
+msgstr[2] "{{origin}} non acepta ningún dos teus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr ""
+msgstr "Terás que continuar desde a sede."

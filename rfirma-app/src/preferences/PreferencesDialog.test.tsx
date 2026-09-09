@@ -159,7 +159,7 @@ describe("PreferencesDialog", () => {
     expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
   });
 
-  it("offers only the languages whose catalog is complete", async () => {
+  it("offers every language whose catalog is complete", async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -168,7 +168,7 @@ describe("PreferencesDialog", () => {
     await user.click(language);
 
     const offered = screen.getAllByRole("option").map((option) => option.textContent);
-    expect(offered).toEqual(["Español", "English"]);
+    expect(offered).toEqual(["Español", "Català", "Euskara", "Galego", "English"]);
   });
 
   it("changes the language in place", async () => {
