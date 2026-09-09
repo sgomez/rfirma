@@ -145,9 +145,17 @@ El corazón del ticket: la pantalla que hoy no existe.
   lo trae, páginas, tamaño, y si ya viene firmado, con el aviso de **cofirma**—.
   **No hay nombre de fichero ni ruta**, porque el protocolo no los trae: el
   `extraData` con el nombre va en la **respuesta**, no en la petición.
+- **Contrafirma**: cuando la sede pide `countersign`, el aviso no es el de la
+  cofirma —firmar *junto a* las firmas que hay— sino el de firmar **sobre**
+  ellas, y dice sobre cuáles: «Ya viene firmado: la tuya será una contrafirma
+  sobre todas las firmas que ya tiene» para el objetivo `tree`, y «sobre las
+  últimas firmas que tiene» para `leafs`. Es la única diferencia que la persona
+  puede juzgar antes de consentir, y sin ella las dos peticiones se leerían
+  igual.
 - **Lote local**: además de «lote de N», una lista desplazable con una fila
   por elemento —su identificador y qué se le pide, «un documento PDF (firma)»,
-  «un reto de autenticación (cofirma)»…—, dentro del marco fijo de la ventana
+  «un reto de autenticación (cofirma)», «una factura electrónica (contrafirma
+  de todas las firmas)»…—, dentro del marco fijo de la ventana
   y sin tapar el desplegable ni el pie. El lote remoto sigue sin lista: sólo
   el local trae, aparte de la cuenta, el resumen de cada elemento
   ([#549](https://github.com/sgomez/rfirma/issues/549)).

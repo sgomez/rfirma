@@ -337,15 +337,12 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
 }
 
 /**
- * El documento del consentimiento, con lo que dice de sí mismo y lo que dijo el
- * backend de sus firmas.
+ * El documento del consentimiento, con lo que dice de sí mismo y lo que la
+ * sede pide firmar sobre lo que ya trae.
  *
- * `signatures` sale de `round` y no de un recuento: la sede pide `cosign`
- * cuando el PDF ya viene firmado, y cuántas firmas trae exactamente no lo
- * cuenta nadie —tampoco el recorrido local, que pasa `signatures: null`—. Lo
- * que la ficha pide enseñar es **el aviso de cofirma**, y eso es lo que hay.
- * `counter` cae de momento en ese mismo aviso: no tiene ficha propia hasta
- * que se resuelva #567.
+ * La ronda cruza entera y sin recuento: cuántas firmas lleva el PDF no lo
+ * cuenta nadie, y lo que la ficha pide enseñar es qué será la firma de la
+ * persona —cofirma, o contrafirma sobre todas o sobre las últimas—.
  */
 function documentOf(
   described: DescribedDocument | null,
@@ -353,11 +350,7 @@ function documentOf(
   unregisteredSignatures: boolean,
 ): SiteDocument | null {
   if (described === null) return null;
-  return {
-    ...described,
-    signatures: round.kind === "cosign" || round.kind === "counter" ? 1 : 0,
-    hasUnregisteredSignatures: unregisteredSignatures,
-  };
+  return { ...described, round, hasUnregisteredSignatures: unregisteredSignatures };
 }
 
 /** Qué documento se estaba consintiendo, para poder nombrarlo en el desenlace. */

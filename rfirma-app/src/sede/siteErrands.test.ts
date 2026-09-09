@@ -355,7 +355,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
             title: "Solicitud",
             pages: 3,
             sizeBytes: 4096,
-            signatures: 1,
+            round: { kind: "cosign" },
             hasUnregisteredSignatures: true,
           },
           signs: null,
@@ -389,6 +389,33 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
       push(view);
 
       await vi.waitFor(() => expect(last()?.stage).toMatchObject({ signing }));
+    },
+  );
+
+  it.each(["tree", "leafs"] as const)(
+    "carries the %s target of a countersignature through to the consent document",
+    async (target) => {
+      const view: SiteErrandView = {
+        ...ASKING_TO_SIGN,
+        stage: {
+          kind: "askingToSign",
+          document: "asa-opaca-1",
+          signing: "pdf",
+          round: { kind: "counter", target },
+          certificates: [certificate()],
+          unregisteredSignatures: false,
+          alreadyChosen: null,
+        },
+      };
+      const { push, last } = watched();
+
+      push(view);
+
+      await vi.waitFor(() =>
+        expect(last()?.stage).toMatchObject({
+          document: { round: { kind: "counter", target } },
+        }),
+      );
     },
   );
 
@@ -598,7 +625,7 @@ describe("los momentos que pone el adaptador", () => {
           title: "Solicitud",
           pages: 3,
           sizeBytes: 4096,
-          signatures: 1,
+          round: { kind: "cosign" },
           hasUnregisteredSignatures: true,
         },
       },

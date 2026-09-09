@@ -1143,6 +1143,14 @@ msgstr ""
 "rFirma no reconoce alguna de las firmas que ya tiene este documento, y al "
 "añadir la tuya podrían dejar de verse como válidas"
 
+#. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
+#. objetivo dice sobre cuáles.
+msgid "sede.consent.counterSignatureTree"
+msgstr "Ya viene firmado: la tuya será una contrafirma sobre todas las firmas que ya tiene."
+
+msgid "sede.consent.counterSignatureLeafs"
+msgstr "Ya viene firmado: la tuya será una contrafirma sobre las últimas firmas que tiene."
+
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
 msgstr[0] "Lote de 1 firma"
@@ -1152,7 +1160,6 @@ msgstr[2] "Lote de {{count}} firmas"
 msgid "sede.consent.batchNote"
 msgstr "Los documentos se quedan en la sede: rFirma firma sin descargarlos."
 
-#. Una fila del lote local: qué es el elemento y qué se le pide.
 msgid "sede.consent.batchItemLabel"
 msgstr "{{what}} ({{round}})"
 
@@ -1161,6 +1168,12 @@ msgstr "firma"
 
 msgid "sede.consent.localBatchRoundCosign"
 msgstr "cofirma"
+
+msgid "sede.consent.localBatchRoundCounterTree"
+msgstr "contrafirma de todas las firmas"
+
+msgid "sede.consent.localBatchRoundCounterLeafs"
+msgstr "contrafirma de las últimas firmas"
 
 msgid "sede.consent.sign"
 msgstr "Firmar"
