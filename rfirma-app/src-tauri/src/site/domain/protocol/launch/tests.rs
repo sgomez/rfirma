@@ -578,3 +578,42 @@ fn the_active_wait_flag_is_read_like_boolean_parse_boolean() {
     assert!(!asked("false"));
     assert!(!asked(""));
 }
+
+#[test]
+fn the_version_of_a_relay_launch_comes_from_ver_and_not_from_a_constant() {
+    let declared = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx1&ver=3",
+    )
+    .expect("la invocacion por servidor intermedio deberia valer");
+
+    assert_eq!(declared.version(), 3);
+
+    let silent = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx1",
+    )
+    .expect("la invocacion por servidor intermedio deberia valer");
+
+    assert_eq!(silent.version(), 0, "sin 'ver' la operacion no exige nada");
+}
+
+#[test]
+fn a_relay_launch_that_demands_a_protocol_version_not_spoken_here_is_refused() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx1&ver=5",
+    )
+    .expect_err("aqui no se habla la version 5 del protocolo");
+
+    assert_eq!(refusal.code(), SafCode::MinimumVersionNonSatisfied);
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedProtocolVersion
+    );
+}
+
+#[test]
+fn the_launch_version_still_rules_the_channel_that_is_already_open() {
+    let request = LaunchRequest::parse(&format!("{PUBLISHED}&ver=5"))
+        .expect("el arranque declara su version en 'v' y es la que manda");
+
+    assert_eq!(request.version(), PROTOCOL_VERSION);
+}

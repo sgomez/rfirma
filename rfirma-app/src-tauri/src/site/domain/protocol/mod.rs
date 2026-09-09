@@ -71,8 +71,9 @@ pub use operation::{
     COUNTERSIGN, LOAD, SAVE, SELECT_CERTIFICATE, SIGN, SIGN_AND_SAVE,
 };
 pub use parameters::{
-    check_local_access_is_not_requested, check_minimum_client_version, check_servlet_url,
-    checked_identifier, sticky_certificate, StickyCertificate,
+    check_local_access_is_not_requested, check_minimum_client_version,
+    check_minimum_protocol_version, check_servlet_url, checked_identifier,
+    minimum_protocol_version, sticky_certificate, StickyCertificate,
 };
 pub use refusal::{Refusal, RefusalSituation};
 pub use relay_parameters::operation_of_the_parameters_xml;

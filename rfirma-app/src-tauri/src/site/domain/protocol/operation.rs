@@ -9,7 +9,8 @@ use super::data_source::{download_url, DataSource};
 use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat};
 use super::parameters::{
-    check_local_access_is_not_requested, check_minimum_client_version, check_servlet_url,
+    check_local_access_is_not_requested, check_minimum_client_version,
+    check_minimum_protocol_version, check_servlet_url, minimum_protocol_version,
     sticky_certificate, StickyCertificate,
 };
 use super::refusal::{Refusal, RefusalSituation};
@@ -597,6 +598,7 @@ impl BatchRequest {
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
 pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
     check_minimum_client_version(url.parameter("mcv"))?;
+    check_minimum_protocol_version(minimum_protocol_version(url))?;
     if let Some(data) = url.parameter("dat") {
         check_local_access_is_not_requested(data)?;
     }

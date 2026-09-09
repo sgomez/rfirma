@@ -4,7 +4,10 @@ use crate::site::domain::channel::ChannelLocation;
 
 use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
-use super::parameters::{check_servlet_url, checked_identifier, reads_as_true};
+use super::parameters::{
+    check_minimum_protocol_version, check_servlet_url, checked_identifier,
+    minimum_protocol_version, reads_as_true,
+};
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::AfirmaUrl;
 
@@ -184,6 +187,8 @@ impl LaunchRequest {
     }
 
     fn from_relay_url(url: &AfirmaUrl) -> Result<Self, Refusal> {
+        let version = minimum_protocol_version(url);
+        check_minimum_protocol_version(version)?;
         let request = relay_request_of(url)?;
 
         let key = match url.parameter("key").filter(|value| !value.is_empty()) {
@@ -193,7 +198,7 @@ impl LaunchRequest {
         };
 
         Ok(Self {
-            version: PROTOCOL_VERSION,
+            version,
             location: ChannelLocation::Relay(RelayChannelInfo {
                 operation: url.clone(),
                 request,

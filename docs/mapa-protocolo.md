@@ -403,7 +403,8 @@ la operación viaja en la propia URL y la versión sale de `ver`.
 
 rFirma exige `ports` en la versión 4 y en `service`, rechaza el `idsession` mal
 formado en vez de descartarlo —**más estricta a propósito**, es la invariante
-del ADR-0016—, y no lee ni `jvc` ni `ver`.
+del ADR-0016—, y no lee `jvc`. En el camino del servidor intermedio la versión
+de la operación sale de `ver`, como en el original.
 
 ### 5.2 Un parámetro por fila
 
@@ -443,7 +444,7 @@ del ADR-0016—, y no lee ni `jvc` ni `ver`.
 | `stservlet` | `UrlParameters` | Destino de la respuesta en el camino del servidor intermedio; se valida al leer la invocación | `validateURL` al leer la URL, y es obligatorio cuando hay `id` y servicios | **Igual** |
 | `title` | `UrlParametersToLoad`, `UrlParametersToSave`, `autoscript`: `load`, `save` | Título del diálogo; ausente es ausente | `verifyTitle` (`UrlParametersToSave.java:235`) pone un título por defecto si falta | **Igual** (el rótulo de un diálogo local) |
 | `v` | `autoscript`: `service`, `websocket` | `service`: 1, 2 o 3; `websocket`: 3 o 4; cualquier otra, `SAF_21`. Ausente vale 1 | Cualquier entero se acepta al leer, y el lanzador contesta `SAF_21` si supera la versión 4. Ausente vale 1 | **Igual** en el desenlace |
-| `ver` | `UrlParametersForBatch`, `UrlParametersToLoad`, `UrlParametersToSave`, `UrlParametersToSelectCert`, `UrlParametersToSign`, `UrlParametersToSignAndSave` | **No se lee** | Versión mínima de protocolo de la operación (`0` por defecto); en el camino sin arranque manda ella, y si supera la versión 4 sale `SAF_21` (`ProtocolInvocationLauncher.java:301` y las cinco líneas hermanas) | **Hueco** (#618). Más laxa: rFirma atiende un trámite que el original declara no poder atender |
+| `ver` | `UrlParametersForBatch`, `UrlParametersToLoad`, `UrlParametersToSave`, `UrlParametersToSelectCert`, `UrlParametersToSign`, `UrlParametersToSignAndSave` | Se lee en toda operación: ausente vale `0` y un valor que no es entero vale `1`; por encima de la versión 4 sale `SAF_21` antes de firmar, y en el camino del servidor intermedio es además la versión de la operación | Versión mínima de protocolo de la operación (`0` por defecto); en el camino sin arranque manda ella, y si supera la versión 4 sale `SAF_21` (`ProtocolInvocationLauncher.java:301` y las cinco líneas hermanas) | **Desviación declarada (ADR-0021)**: igual en el camino del servidor intermedio y **más estricta a propósito** por el canal ya abierto, donde el original deja mandar a `v` y no mira `ver` |
 
 ### 5.3 Lo que viaja dentro de `properties`
 
@@ -493,23 +494,24 @@ ellas rFirma **acepta lo que el original rechaza**, o le da otro significado, y
 por tanto una sede que funcione aquí puede no funcionar contra AutoFirma:
 
 1. **`keystore` y `ksb64` ignorados**: la sede cree haber acotado el almacén y no lo ha hecho → #617.
-2. **`ver` ignorado**: un trámite que exige una versión de protocolo que rFirma no habla se atiende igual → #618.
-3. **`profile` cruzado al puente**, cuando el original lo borra antes de firmar → #615.
-4. **El `algorithm` reconocido por prefijo** en vez de contra la lista de doce literales: aquí es deliberado y está decidido en el #602, porque es lo que hace el código que firma, y solo la puerta declarativa del original es más cerrada.
+2. **`profile` cruzado al puente**, cuando el original lo borra antes de firmar → #615.
+3. **El `algorithm` reconocido por prefijo** en vez de contra la lista de doce literales: aquí es deliberado y está decidido en el #602, porque es lo que hace el código que firma, y solo la puerta declarativa del original es más cerrada.
 
 Y donde rFirma es **más estricta** —que también rompe trámites, pero de forma
 visible—: `dat` que es una URL y `sign` sin `dat` (ambos #612), `properties`
-ilegible (#615), y las tres desviaciones declaradas que rechazan formatos y
+ilegible (#615), el `ver` de la operación comprobado también por el canal ya
+abierto (ADR-0021), y las tres desviaciones declaradas que rechazan formatos y
 algoritmos.
 
 ### 5.6 Ninguna fila queda sin veredicto
 
 Treinta y cinco parámetros de URL, trece claves de `properties` con
 comportamiento propio y ocho campos de la definición del lote. Veredictos:
-**Igual** en la mayoría, **desviación declarada** en nueve casos —las cinco de
-`CONTEXT.md`, la del algoritmo (#602), la del `idsession` (ADR-0016) y las del
-recuadro (ADR-0019, ADR-0006)— y **hueco** en lo que abre esta auditoría,
-repartido en las sub-issues #612, #615, #617 y #618. El #614 ya está cerrado:
-sus filas —`aw`, `exts`, `fileid`, `filename`, `id`, `key`, `op`, `rtservlet`,
-`stservlet`, `sticky`, `resetsticky` y las dos URL de servlet del lote— vuelven
-a **Igual**.
+**Igual** en la mayoría, **desviación declarada** en diez casos —las cinco de
+`CONTEXT.md`, la del algoritmo (#602), la del `idsession` (ADR-0016), las del
+recuadro (ADR-0019, ADR-0006) y la del `ver` de la operación (ADR-0021)— y
+**hueco** en lo que abre esta auditoría, repartido en las sub-issues #612, #615
+y #617. Dos sub-issues ya están cerradas: el #614 devuelve a **Igual** sus
+filas —`aw`, `exts`, `fileid`, `filename`, `id`, `key`, `op`, `rtservlet`,
+`stservlet`, `sticky`, `resetsticky` y las dos URL de servlet del lote—, y el
+#618 deja la de `ver` en **desviación declarada**.
