@@ -135,42 +135,45 @@ fn consent_to_save(request: SaveRequest) -> ErrandStep {
 
 /// Prepara el paso de carga: la orden de Tauri abrirá el selector del portal.
 fn consent_to_load(request: LoadRequest) -> ErrandStep {
-    ErrandStep::Loading(LoadingConsent {
+    ErrandStep::Loading(Box::new(LoadingConsent {
         title: request.title().map(str::to_owned),
+        filename: None,
         extensions: request.extensions().to_vec(),
         description: request.description().map(str::to_owned),
         starting_folder: request.starting_folder().map(str::to_owned),
         multiple: request.multiple(),
         to_sign: None,
-    })
+    }))
 }
 
 /// Prepara el paso de carga cuando `sign`, `cosign` o `countersign` llegan sin `dat`: el mismo
 /// selector que `load`, de un solo fichero, con las pistas de carga que declaró la sede
 /// (`ProtocolInvocationLauncherSign`, 1.9.2).
 fn consent_to_load_for_a_signature(request: PendingSignRequest) -> ErrandStep {
-    ErrandStep::Loading(LoadingConsent {
+    ErrandStep::Loading(Box::new(LoadingConsent {
         title: None,
+        filename: request.load_filename().map(str::to_owned),
         extensions: request.load_extensions().to_vec(),
         description: request.load_description().map(str::to_owned),
         starting_folder: request.load_starting_folder().map(str::to_owned),
         multiple: false,
         to_sign: Some(Box::new(PendingSignature::Signing(request))),
-    })
+    }))
 }
 
 /// Prepara el paso de carga cuando `signandsave` llega sin `dat`: el mismo selector que `load`,
 /// de un solo fichero, con las pistas propias de `signandsave` y la petición pendiente de
 /// documento (`ProtocolInvocationLauncherSignAndSave`, 1.9.2).
 fn consent_to_load_for_sign_and_save(request: SignAndSaveRequest) -> ErrandStep {
-    ErrandStep::Loading(LoadingConsent {
+    ErrandStep::Loading(Box::new(LoadingConsent {
         title: None,
+        filename: request.load_filename().map(str::to_owned),
         extensions: request.load_extensions().to_vec(),
         description: request.load_description().map(str::to_owned),
         starting_folder: request.load_starting_folder().map(str::to_owned),
         multiple: false,
         to_sign: Some(Box::new(PendingSignature::SigningAndSaving(request))),
-    })
+    }))
 }
 
 /// Continúa `signandsave` con el documento que la persona acaba de elegir en el selector: mismo
@@ -212,6 +215,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
+            headless: request.is_headless(),
         },
         None,
         ours,
@@ -242,6 +246,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
+            headless: request.is_headless(),
         },
         Some(Box::new(saving)),
         ours,
@@ -257,6 +262,7 @@ struct SignatureAsk<'a> {
     round: SignatureRound,
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
+    headless: bool,
 }
 
 /// El cuerpo compartido de `consent_to_sign` y `consent_to_sign_and_save`.
@@ -335,18 +341,24 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
     };
 
-    ErrandStep::AskingToSign(SigningConsent {
+    let certificates = desk.neighbours.rows_of(accepted);
+    let already_chosen = ask
+        .headless
+        .then(|| the_only_row_among(&certificates))
+        .flatten();
+    ErrandStep::AskingToSign(Box::new(SigningConsent {
         document,
         format,
         algorithm: ask.algorithm,
         round: ask.round,
-        certificates: desk.neighbours.rows_of(accepted),
+        certificates,
         from_the_site,
         visible,
         filter: ask.filter.clone(),
         unregistered_signatures,
         saving,
-    })
+        already_chosen,
+    }))
 }
 
 fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
@@ -447,6 +459,12 @@ pub fn consent_for<E: FilterEngine>(
         }
     }
 
+    if request.is_headless() {
+        if let Some(only) = the_only_one_among(&accepted) {
+            return answering(live, SiteOutcome::Certificate(only));
+        }
+    }
+
     ErrandStep::AskingForConsent {
         certificates: certificates.rows_of(accepted),
         filter: request.filter().clone(),
@@ -481,7 +499,13 @@ pub fn consent_to_the_batch<E: FilterEngine>(
         .sticky()
         .is_sticky()
         .then(|| the_remembered_row_among(&rows))
-        .flatten();
+        .flatten()
+        .or_else(|| {
+            request
+                .is_headless()
+                .then(|| the_only_row_among(&rows))
+                .flatten()
+        });
 
     ErrandStep::AskingToSignTheBatch(Box::new(BatchConsent {
         signs: batch::how_many(&request),
@@ -518,7 +542,13 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
         .sticky()
         .is_sticky()
         .then(|| the_remembered_row_among(&rows))
-        .flatten();
+        .flatten()
+        .or_else(|| {
+            request
+                .is_headless()
+                .then(|| the_only_row_among(&rows))
+                .flatten()
+        });
 
     ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
         items: batch.signs().iter().map(summary_of).collect(),
@@ -568,6 +598,22 @@ fn what_the_site_accepts<E: FilterEngine>(
     }
 
     Ok(accepted)
+}
+
+/// El único certificado utilizable de la lista, que `headless` acepta sin preguntar
+/// (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
+fn the_only_row_among(rows: &[ListedCertificate]) -> Option<String> {
+    let mut usable = rows.iter().filter(|row| row.status.is_usable());
+    let only = usable.next()?;
+    usable.next().is_none().then(|| only.id.clone())
+}
+
+fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<Vec<u8>> {
+    let mut usable = accepted
+        .iter()
+        .filter(|certificate| certificate.status().is_usable());
+    let only = usable.next()?;
+    usable.next().is_none().then(|| only.der().to_vec())
 }
 
 fn the_remembered_row_among(rows: &[ListedCertificate]) -> Option<String> {

@@ -98,7 +98,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             })
         }
         ErrandStep::Saving(consent) => live.remember_saving((**consent).clone()),
-        ErrandStep::Loading(consent) => live.remember_loading(consent.clone()),
+        ErrandStep::Loading(consent) => live.remember_loading((**consent).clone()),
         ErrandStep::NoCertificate { .. } => live.forget_the_consent(),
         ErrandStep::Answering(_) => {}
     }

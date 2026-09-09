@@ -27,7 +27,7 @@ pub enum ErrandStep {
         sticky: bool,
     },
     /// Momento de consentimiento de firma de documento para la ventana.
-    AskingToSign(SigningConsent),
+    AskingToSign(Box<SigningConsent>),
     /// Momento de consentimiento del lote remoto para la ventana.
     AskingToSignTheBatch(Box<BatchConsent>),
     /// Momento de consentimiento del lote local para la ventana.
@@ -35,7 +35,7 @@ pub enum ErrandStep {
     /// Paso de guardado: la orden de Tauri abre el diálogo del portal y escribe.
     Saving(Box<SavingConsent>),
     /// Paso de carga: la orden de Tauri abre el selector del portal y lee.
-    Loading(LoadingConsent),
+    Loading(Box<LoadingConsent>),
     /// Trámite sin ningún certificado con el que continuar.
     NoCertificate {
         /// Razón por la que no hay certificado.
@@ -62,6 +62,7 @@ impl ErrandStep {
                 round: consent.round,
                 certificates: consent.certificates.clone(),
                 unregistered_signatures: consent.unregistered_signatures,
+                already_chosen: consent.already_chosen.clone(),
             }),
             Self::AskingToSignTheBatch(consent) => Some(Moment::AskingToSignTheBatch {
                 signs: consent.signs,
@@ -130,6 +131,8 @@ pub struct SigningConsent {
     pub unregistered_signatures: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub saving: Option<Box<SavingHints>>,
+    /// Asa del certificado que ya está resuelto y el desplegable elige solo.
+    pub already_chosen: Option<String>,
 }
 
 /// Datos del consentimiento del lote remoto, que se firma sin documento delante.
@@ -223,6 +226,8 @@ pub struct SavingConsent {
 pub struct LoadingConsent {
     /// Título del selector declarado por la sede.
     pub title: Option<String>,
+    /// Nombre que la sede propone al selector (`filenameActualName`), si lo declaró.
+    pub filename: Option<String>,
     /// Extensiones admitidas por el filtro del selector.
     pub extensions: Vec<String>,
     /// Descripción del filtro de extensiones declarada por la sede.
@@ -309,6 +314,8 @@ pub enum Moment {
         certificates: Vec<ListedCertificate>,
         /// Si el documento contiene firmas que no se pueden interpretar.
         unregistered_signatures: bool,
+        /// El asa del certificado que ya está resuelto, si lo está.
+        already_chosen: Option<String>,
     },
     /// Consentimiento del lote remoto, sin documento y con cuántas firmas lleva.
     AskingToSignTheBatch {

@@ -690,26 +690,199 @@ fn the_slash_of_the_plain_base64_alphabet_is_accepted_too() {
     read_operation(&url).expect("se lee igual");
 }
 
+/// El `+` del alfabeto normal llega aquí convertido en espacio, y el bloque ya no se lee: no
+/// tumba la operación, la deja sin parámetros adicionales.
 #[test]
 fn a_plus_of_the_plain_base64_alphabet_never_makes_it_this_far() {
     let plain = base64::engine::general_purpose::STANDARD.encode("filters=subject.contains:þ\n");
     assert!(plain.contains('+'), "la carga util trae un mas: {plain}");
     let url = an_operation(&format!("op=selectcert&properties={plain}"));
 
-    let refusal = read_operation(&url).expect_err("el mas ya es un espacio");
+    let SiteOperation::SelectCertificate(request) =
+        read_operation(&url).expect("el mas ya es un espacio, y aun asi se firma")
+    else {
+        panic!("es una seleccion de certificado");
+    };
 
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Properties));
+    assert!(request.filter().declares_nothing());
 }
 
 #[test]
-fn properties_that_are_not_base64_name_the_parameter_that_came_wrong() {
+fn properties_that_are_not_base64_do_not_refuse_the_operation() {
     let url = an_operation("op=selectcert&properties=!!!!");
 
-    let refusal = read_operation(&url).expect_err("no es Base64");
+    let SiteOperation::SelectCertificate(request) =
+        read_operation(&url).expect("un 'properties' ilegible se descarta, no rechaza")
+    else {
+        panic!("es una seleccion de certificado");
+    };
 
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Properties));
+    assert!(
+        request.filter().declares_nothing(),
+        "sin 'properties' legible no hay filtro"
+    );
+}
+
+#[test]
+fn properties_that_are_base64_but_not_utf8_do_not_refuse_the_operation_either() {
+    let encoded = base64::engine::general_purpose::URL_SAFE.encode([0xff, 0xfe, 0xfd]);
+    let url = an_operation(&format!("op=selectcert&properties={encoded}"));
+
+    let SiteOperation::SelectCertificate(request) =
+        read_operation(&url).expect("un 'properties' que no es texto se descarta")
+    else {
+        panic!("es una seleccion de certificado");
+    };
+
+    assert!(request.filter().declares_nothing());
+}
+
+#[test]
+fn a_signature_with_unreadable_properties_keeps_no_filter_and_no_extra_params() {
+    let url = a_signature(SIGN, "&properties=!!!!");
+
+    let SiteOperation::Sign(request) =
+        read_operation(&url).expect("un 'properties' ilegible se descarta, no rechaza")
+    else {
+        panic!("es una firma");
+    };
+
+    assert!(request.filter().declares_nothing());
+    assert!(request.declared_params().is_empty());
+}
+
+#[test]
+fn a_countersignature_with_unreadable_properties_falls_back_to_the_leafs_of_the_original() {
+    let url = a_countersignature("CAdES", "&properties=!!!!");
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se contrafirma igual") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+}
+
+#[test]
+fn the_profile_of_the_site_never_reaches_the_signer() {
+    let url = a_signature(
+        SIGN,
+        &format!(
+            "&properties={}",
+            properties(
+                "profile=baseline
+mode=implicit
+"
+            )
+        ),
+    );
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se firma") else {
+        panic!("es una firma");
+    };
+
+    assert_eq!(
+        request.declared_params(),
+        [("mode".to_owned(), "implicit".to_owned())]
+    );
+}
+
+#[test]
+fn the_four_keys_the_launcher_reads_itself_never_reach_the_signer() {
+    let url = a_signature(
+        SIGN,
+        &format!(
+            "&properties={}",
+            properties(
+                "headless=true\nmandatoryCertSelection=false\nprofile=baseline\nfilenameActualName=contrato.pdf\n"
+            )
+        ),
+    );
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se firma") else {
+        panic!("es una firma");
+    };
+
+    assert!(
+        request.declared_params().is_empty(),
+        "ninguna de las cuatro cruza: {:?}",
+        request.declared_params()
+    );
+}
+
+#[test]
+fn headless_says_the_site_settles_for_the_only_certificate() {
+    let url = an_operation(&format!(
+        "op=selectcert&properties={}",
+        properties("headless=true\n")
+    ));
+
+    let SiteOperation::SelectCertificate(request) = read_operation(&url).expect("se lee") else {
+        panic!("es una seleccion de certificado");
+    };
+
+    assert!(request.is_headless());
+}
+
+#[test]
+fn a_mandatory_certificate_selection_set_to_false_says_the_same_as_headless() {
+    let url = an_operation(&format!(
+        "op=selectcert&properties={}",
+        properties("mandatoryCertSelection=false\n")
+    ));
+
+    let SiteOperation::SelectCertificate(request) = read_operation(&url).expect("se lee") else {
+        panic!("es una seleccion de certificado");
+    };
+
+    assert!(request.is_headless());
+}
+
+#[test]
+fn a_mandatory_certificate_selection_set_to_true_keeps_the_dialog() {
+    let url = an_operation(&format!(
+        "op=selectcert&properties={}",
+        properties("mandatoryCertSelection=true\n")
+    ));
+
+    let SiteOperation::SelectCertificate(request) = read_operation(&url).expect("se lee") else {
+        panic!("es una seleccion de certificado");
+    };
+
+    assert!(!request.is_headless());
+}
+
+#[test]
+fn the_batch_reads_headless_from_its_properties_too() {
+    let url = a_batch(&format!(
+        "&properties={}&dat={}",
+        properties("headless=true\n"),
+        dat(xml_lote("SHA256", false).as_bytes())
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se lee el lote") else {
+        panic!("es un lote");
+    };
+
+    assert!(request.is_headless());
+}
+
+#[test]
+fn signing_and_saving_proposes_the_actual_name_to_the_chooser() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA256withRSA&properties={}",
+        properties("filenameActualName=contrato.pdf\n")
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se lee") else {
+        panic!("es un signandsave");
+    };
+
+    assert_eq!(request.load_filename(), Some("contrato.pdf"));
 }
 
 #[test]

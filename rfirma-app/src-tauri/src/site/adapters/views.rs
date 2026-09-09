@@ -137,6 +137,7 @@ impl SiteErrandView {
         round: SignatureRound,
         certificates: &[ListedCertificate],
         unregistered_signatures: bool,
+        already_chosen: Option<&str>,
     ) -> Self {
         Self {
             origin: None,
@@ -146,6 +147,7 @@ impl SiteErrandView {
                 round: round.into(),
                 certificates: rows_of(certificates),
                 unregistered_signatures,
+                already_chosen: already_chosen.map(str::to_owned),
             },
         }
     }
@@ -170,12 +172,14 @@ impl From<&Moment> for SiteErrandView {
                 round,
                 certificates,
                 unregistered_signatures,
+                already_chosen,
             } => Self::asking_to_sign(
                 document,
                 *format,
                 *round,
                 certificates,
                 *unregistered_signatures,
+                already_chosen.as_deref(),
             ),
             Moment::AskingToSignTheBatch {
                 signs,
@@ -332,6 +336,8 @@ crossing! {
             certificates: Vec<CertificateView>,
             /// Si el documento incluye firmas no reconocidas.
             unregistered_signatures: bool,
+            /// Asa del certificado que ya está resuelto, si lo está.
+            already_chosen: Option<String>,
         },
         /// Solicitud de consentimiento del lote remoto.
         #[serde(rename_all = "camelCase")]

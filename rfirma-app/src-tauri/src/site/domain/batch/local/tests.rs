@@ -198,3 +198,26 @@ fn a_batch_that_is_not_json_is_refused() {
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Data));
 }
+
+/// El original borra `profile` antes de firmar, y aquí tampoco cruza cuando viaja dentro de los
+/// `extraparams` de un lote (`ProtocolInvocationLauncherSign.java:153`, 1.9.2).
+#[test]
+fn the_profile_of_the_batch_never_reaches_the_signer() {
+    let json = a_batch(
+        &format!(
+            "\"algorithm\":\"SHA256\",\"format\":\"PAdES\",\"extraparams\":\"{}\"",
+            base64("profile=baseline\\nsignaturePage=1")
+        ),
+        &format!(
+            "{{\"id\":\"001\",\"datareference\":\"{}\"}}",
+            base64("dato")
+        ),
+    );
+
+    let batch = parse_local_batch(json.as_bytes()).expect("es un lote que se atiende");
+
+    assert_eq!(
+        batch.signs()[0].extra_params(),
+        [("signaturePage".to_owned(), "1".to_owned())]
+    );
+}
