@@ -191,6 +191,29 @@ No se enseña recuento ni titulares de las firmas que sí se entienden: rFirma n
 tiene validador y no lo va a tener en esta versión, y enseñar «válida» sin
 poder sostenerlo es peor que el silencio (ID-305).
 
+### 2b · Hay que confirmar — sin artboard
+
+Sólo cuando la sede pide `checkSignatures=true` y el validador del original no
+da por buenas las firmas que el documento ya trae **sin que la persona lo
+confirme** (hoy: PDF sospechoso de haber sido modificado tras la última firma, y
+formulario cuyos campos cambiaron después de firmarse). Con `headless=true` no
+hay pregunta: la sede recibe `SAF_50` y aquí no se enseña nada.
+
+Llega **antes** del consentimiento, así que no hay documento que resumir ni
+certificado que elegir: sólo la pregunta y dos salidas. La pregunta se enseña
+**con las palabras del original**, traducidas a los cinco idiomas y elegidas por
+el código del mensaje que cruza la frontera; un código que rFirma todavía no
+sepa redactar sale con una frase genérica que lo nombra, porque es lo único que
+permite reportarlo. rFirma no reinterpreta ni gradúa el aviso: quien sabe lo que
+ha visto es el validador.
+
+- `Continuar` —acción principal— fija la clave que el validador pidió y **repite
+  la validación**; el momento que sigue lo publica el backend, y con las firmas
+  ya confirmadas es el consentimiento.
+- `Cancelar` es contestar `CANCEL` a la sede, y por eso deja el desenlace
+  «cancelado» en pantalla como cualquier otra negativa: no es marcharse de una
+  espera, es haber dicho que no a lo que se tenía delante.
+
 ### 3 · Firmando — `SedeFirmando`
 
 Qué enseña la ventana entre que la persona acepta y que la firma vuelve a la
@@ -286,6 +309,7 @@ cancela— se borró por explicar lo evidente.
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
 | Consentimiento de identidad | `SedeConsentimiento` · `situacion = entregar identidad` | `Identificarse` |
+| Hay que confirmar | sin artboard | `Continuar` |
 | Firmando | `SedeFirmando` · `firmando · se puede cancelar` | ninguna; `Cancelar` en `--ghost` |
 | Devolviendo a la sede | `SedeFirmando` · `devolviendo a la sede` | ninguna; el pie queda vacío |
 | Firmado / cancelado / rechazado | `SedeDesenlace` | `Cerrar` |

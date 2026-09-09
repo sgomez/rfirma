@@ -38,6 +38,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     watch: vi.fn(),
     readErrand: vi.fn(),
     identify: vi.fn(),
+    confirmSignatures: vi.fn(),
     decline: vi.fn(),
     beginSigning: vi.fn(),
     signWithPin: vi.fn(),
@@ -62,6 +63,10 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     },
     identify: async (id) => {
       calls.identify(id);
+      return { ok: true, value: undefined };
+    },
+    confirmSignatures: async () => {
+      calls.confirmSignatures();
       return { ok: true, value: undefined };
     },
     decline: async () => calls.decline(),
@@ -122,6 +127,11 @@ const ASKING_TO_SIGN: SiteErrandView = {
     unregisteredSignatures: true,
     alreadyChosen: null,
   },
+};
+
+const ASKING_TO_CONFIRM: SiteErrandView = {
+  origin: "sede.ejemplo.gob.es",
+  stage: { kind: "askingToConfirm", messageCode: "pdfShadowAttackSuspect" },
 };
 
 describe("la suscripción al trámite", () => {
@@ -728,6 +738,44 @@ describe("los momentos que pone el adaptador", () => {
     const { push, port, calls, last } = watched();
     push(ASKING_TO_SIGN);
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+
+    await port.cancel();
+
+    expect(calls.decline).toHaveBeenCalledOnce();
+    expect(calls.closeWindow).not.toHaveBeenCalled();
+    expect(last()?.stage).toMatchObject({ outcome: { kind: "cancelled" } });
+  });
+
+  it("hands the confirmation on and waits for the backend to publish what follows", async () => {
+    const { push, port, calls, last } = watched();
+    push(ASKING_TO_CONFIRM);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("confirming"));
+
+    await port.confirmSignatures();
+
+    expect(calls.confirmSignatures).toHaveBeenCalledOnce();
+    expect(last()?.stage.kind).toBe("confirming");
+  });
+
+  it("refuses the errand when the repeated validation cannot be asked for", async () => {
+    const { push, port, last } = watched({
+      confirmSignatures: async () => ({
+        ok: false,
+        failure: { situation: "unknown", detail: "no hay tramite vivo", attemptsLeft: null },
+      }),
+    });
+    push(ASKING_TO_CONFIRM);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("confirming"));
+
+    await port.confirmSignatures();
+
+    expect(last()?.stage).toMatchObject({ kind: "outcome", outcome: { kind: "refused" } });
+  });
+
+  it("declines and shows the cancelled outcome when the confirmation is refused", async () => {
+    const { push, port, calls, last } = watched();
+    push(ASKING_TO_CONFIRM);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("confirming"));
 
     await port.cancel();
 

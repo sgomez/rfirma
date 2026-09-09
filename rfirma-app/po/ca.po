@@ -1075,6 +1075,21 @@ msgstr ""
 msgid "sede.consent.identify"
 msgstr ""
 
+msgid "sede.confirm.title"
+msgstr "Cal confirmar abans de signar"
+
+msgid "sede.confirm.messages.pdfShadowAttackSuspect"
+msgstr "El PDF és sospitós d'haver estat modificat després de l'última signatura. Voleu continuar?"
+
+msgid "sede.confirm.messages.signingModifiedPdfForm"
+msgstr "El document PDF conté un formulari del qual s'han modificat els camps després d'haver-se signat. Voleu continuar?"
+
+msgid "sede.confirm.messages.unknown"
+msgstr "El validador de signatures assenyala alguna cosa que cal confirmar abans de continuar ({{code}}). Voleu continuar?"
+
+msgid "sede.confirm.continue"
+msgstr "Continuar"
+
 msgid "sede.signing.title"
 msgstr ""
 

@@ -1075,6 +1075,21 @@ msgstr ""
 msgid "sede.consent.identify"
 msgstr ""
 
+msgid "sede.confirm.title"
+msgstr "Sinatu aurretik berretsi behar da"
+
+msgid "sede.confirm.messages.pdfShadowAttackSuspect"
+msgstr "PDFa azken sinaduraren ondoren aldatu izanaren susmagarria da. Jarraitu nahi duzu?"
+
+msgid "sede.confirm.messages.signingModifiedPdfForm"
+msgstr "PDF dokumentuak formulario bat du, eta formulario horren eremuak aldatu egin dira sinatu ondoren. Jarraitu nahi duzu?"
+
+msgid "sede.confirm.messages.unknown"
+msgstr "Sinadura-balidatzaileak jarraitu aurretik berretsi behar den zerbait adierazi du ({{code}}). Jarraitu nahi duzu?"
+
+msgid "sede.confirm.continue"
+msgstr "Jarraitu"
+
 msgid "sede.signing.title"
 msgstr ""
 

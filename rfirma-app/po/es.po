@@ -1181,6 +1181,21 @@ msgstr "Firmar"
 msgid "sede.consent.identify"
 msgstr "Identificarse"
 
+msgid "sede.confirm.title"
+msgstr "Hay que confirmar antes de firmar"
+
+msgid "sede.confirm.messages.pdfShadowAttackSuspect"
+msgstr "El PDF es sospechoso de haber sido modificado tras la última firma. ¿Desea continuar?"
+
+msgid "sede.confirm.messages.signingModifiedPdfForm"
+msgstr "El documento PDF contiene un formulario del cual se han modificado los campos después de haberse firmado. ¿Desea continuar?"
+
+msgid "sede.confirm.messages.unknown"
+msgstr "El validador de firmas señala algo que hay que confirmar antes de seguir ({{code}}). ¿Desea continuar?"
+
+msgid "sede.confirm.continue"
+msgstr "Continuar"
+
 msgid "sede.signing.title"
 msgstr "Firmando"
 

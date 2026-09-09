@@ -297,3 +297,21 @@
 .sede-no-certificate__look-again {
   flex: none;
 }
+
+/* 2b · Hay que confirmar */
+
+.sede-confirm {
+  height: 100%;
+  justify-content: center;
+}
+
+.sede-confirm__heading {
+  align-items: flex-start;
+}
+
+.sede-confirm__icon {
+  display: flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--rf-text-muted);
+}

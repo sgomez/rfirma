@@ -112,6 +112,7 @@ rojo.
 | `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
 | `sede/SedeWaiting.tsx` | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
 | `sede/SedeConsent.tsx` | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual. |
+| `sede/SedeConfirm.tsx` | 2b · La pregunta que el validador del original obliga a hacer, con las palabras del original y sus dos salidas. |
 | `sede/SedeSigning.tsx` | 3 · Los dos tramos de la firma, sin nombrar ninguna fase del motor. |
 | `sede/SedeTransfer.tsx` | El fichero que la sede quiere guardar o cargar, mientras el diálogo del portal está encima. No tiene acciones propias. |
 | `sede/SedeOutcome.tsx` | 4 · Firmado, lote entregado, cancelado, guardado, cargado y rechazado, con el documento recién firmado y el detalle copiable del rechazo. |

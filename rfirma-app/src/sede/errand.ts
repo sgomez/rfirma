@@ -253,6 +253,8 @@ export interface SiteErrandPort {
   watch(onChange: (errand: Errand | null) => void): () => void;
   /** La persona consiente, con el asa del certificado que ha elegido. */
   consent(certificateId: string): Promise<void>;
+  /** Sigue con lo que el validador del original señaló: se vuelve a comprobar sin preguntar. */
+  confirmSignatures(): Promise<void>;
   /** El secreto tecleado en el diálogo del almacén. */
   submitSecret(secret: string): Promise<void>;
   /**
@@ -280,6 +282,7 @@ export function noErrand(): SiteErrandPort {
   return {
     watch: () => () => {},
     consent: async () => {},
+    confirmSignatures: async () => {},
     submitSecret: async () => {},
     cancel: async () => {},
     close: async () => {},
