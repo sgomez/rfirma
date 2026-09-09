@@ -188,6 +188,12 @@ fn recovered(
     let downloaded = servlets
         .retrieve(retrieve_servlet, fileid)
         .map_err(refusal_of)?;
+    if downloaded.len() > 8 && downloaded.to_ascii_lowercase().starts_with("err-") {
+        return Err(refusal_of(RelayError::new(
+            RelaySituation::ServletUnreachable,
+            downloaded.trim().to_owned(),
+        )));
+    }
     decrypt(&downloaded, key).map_err(refusal_of)
 }
 

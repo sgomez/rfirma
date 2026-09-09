@@ -525,6 +525,32 @@ fn an_undecipherable_parameters_xml_refuses_with_saf_15() {
 }
 
 #[test]
+fn a_servlet_error_response_refuses_with_saf_16_not_decryption_failure() {
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-err",
+            "ERR-06:=El identificador para los datos es inválido ('fileid-params-err')\n",
+        )
+        .expect("guarda error");
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-err", Some(a_key())));
+
+    let error = relay
+        .open(&info, duty())
+        .expect_err("una respuesta con error de servlet no abre");
+
+    let refusal = error.refusal().expect("trae su propio rechazo clasificado");
+    assert_eq!(
+        error.detail(),
+        "ERR-06:=El identificador para los datos es inválido ('fileid-params-err')"
+    );
+    assert_eq!(refusal.code(), SafCode::RecoveringData);
+}
+
+#[test]
 fn an_illegible_parameters_xml_refuses_as_a_parameters_problem() {
     let key = a_key();
     let servlets = Arc::new(OrderedSpy::default());
