@@ -2,6 +2,9 @@
 
 use std::collections::BTreeMap;
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::{DecodeError, Engine as _};
+
 use super::refusal::Refusal;
 
 const SCHEME: &str = "afirma://";
@@ -104,6 +107,23 @@ pub(super) fn abridged_value(value: &str) -> String {
         return value.to_owned();
     }
     format!("<{size} caracteres>")
+}
+
+/// El Base64 **URL-safe** del protocolo, con la misma tolerancia en todos los
+/// parámetros que lo llevan.
+///
+/// Tolerante a propósito con lo que sí puede llegar: la `/` del alfabeto normal
+/// y el relleno ausente o de más. El `+` del alfabeto normal, en cambio, nunca
+/// llega hasta aquí: [`AfirmaUrl`] ya lo ha convertido en un espacio, porque el
+/// original pasa cada valor por `URLDecoder`.
+pub(super) fn decode_protocol_base64(encoded: &str) -> Result<Vec<u8>, DecodeError> {
+    let normalized: String = encoded
+        .chars()
+        .filter(|character| *character != '=')
+        .map(|character| if character == '/' { '_' } else { character })
+        .collect();
+
+    URL_SAFE_NO_PAD.decode(normalized.as_bytes())
 }
 
 /// Quita `afirma://` sin distinguir mayúsculas, o dice que no estaba.

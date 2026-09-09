@@ -1300,6 +1300,9 @@ msgstr "{{origin}} habla una versión del protocolo que rFirma no entiende."
 msgid "sede.refusals.missingFormat"
 msgstr "{{origin}} no dice en qué formato hay que firmar."
 
+msgid "sede.refusals.unsupportedKeyStore"
+msgstr "{{origin}} pide firmar con un almacén de certificados que rFirma no puede abrir."
+
 msgid "sede.refusals.errandInFlight"
 msgstr ""
 "{{origin}} pide una firma con otro trámite abierto, y rFirma atiende uno "

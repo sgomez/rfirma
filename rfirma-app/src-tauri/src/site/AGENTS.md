@@ -71,6 +71,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/filters.rs` | La expresión de filtro de la sede, que cruza entera al motor, y el catálogo de criterios medidos contra el original. Pruebas en `domain/protocol/filters/tests.rs`. |
 | `domain/protocol/format.rs` | El formato que la sede nombra en `format=`, cerrado y con los alias del original; **no es el `Format` del puente**, al que lo traduce `ports.rs`. Pruebas en `domain/protocol/format/tests.rs`. |
 | `domain/protocol/framing.rs` | **El framing artesanal del transporte `service`**, sin socket: lector y escritor puros. Pruebas en `domain/protocol/framing/tests.rs`. |
+| `domain/protocol/key_store.rs` | **El almacén que la sede nombra en `keystore` o `ksb64`**, y cuál de ellos abre rFirma (ADR-0022). Pruebas en `domain/protocol/key_store/tests.rs`. |
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |

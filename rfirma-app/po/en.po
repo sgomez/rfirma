@@ -1291,6 +1291,9 @@ msgstr ""
 msgid "sede.refusals.missingFormat"
 msgstr "{{origin}} does not say in which format to sign."
 
+msgid "sede.refusals.unsupportedKeyStore"
+msgstr "{{origin}} asks to sign with a certificate store that rFirma cannot open."
+
 msgid "sede.refusals.errandInFlight"
 msgstr ""
 "{{origin}} asks for a signature with another errand open, and rFirma handles "

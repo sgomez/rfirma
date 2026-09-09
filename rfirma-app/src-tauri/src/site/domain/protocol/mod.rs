@@ -36,6 +36,7 @@ pub mod detection;
 pub mod filters;
 pub mod format;
 pub mod framing;
+pub mod key_store;
 pub mod launch;
 pub mod message;
 pub mod operation;
@@ -57,6 +58,7 @@ pub use framing::{
     credential_matches, http_response, read_request, split_response, FragmentBuffer, FramedRequest,
     NotOfTheFraming, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
 };
+pub use key_store::refuse_a_key_store_rfirma_does_not_open;
 pub use launch::{
     asks_for_active_wait, drawn_ports, location_for_a_refusal, ChannelCredential, LaunchRequest,
     NegotiatedCredential, RelayChannelInfo, RelayRequest, PROTOCOL_VERSION,
