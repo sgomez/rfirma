@@ -20,28 +20,36 @@ uno cualquiera.
    Base64 **se ignora** —también como allí— y no rechaza la operación. Un valor
    sin `:` es todo nombre; con `:`, lo de la izquierda es el nombre y lo de la
    derecha la biblioteca.
-2. **Se obedece un solo nombre: el de la familia NSS** (`SHARED_NSS` y
+2. **El almacén se reconoce por sus dos nombres**, como el original: primero el
+   visible (`"PKCS#12 / PFX"`, `"Llavero de Mac"`, `"Mozilla / Firefox
+   (unificado)"`…), sin distinguir mayúsculas y recortado, y solo si no, el de
+   la constante (`PKCS12`, `APPLE`, `MOZ_UNI`…). Son las dos puertas de
+   `SimpleKeyStoreManager.getKeyStore` (1.9.2), y sin la primera la mitad del
+   catálogo entraba por la puerta de atrás y se ignoraba en silencio. La
+   comparación por el nombre de la constante tampoco distingue mayúsculas,
+   donde el original usa un `AOKeyStore.valueOf` que sí lo hace: es más laxa a
+   propósito, y en la dirección segura —rechaza de más, nunca de menos—.
+3. **Se obedece un solo almacén: el de la familia NSS** (`SHARED_NSS` y
    `MOZ_UNI`). Es el almacén que rFirma ya abre, y es además el que el propio
    original elige en Linux cuando nadie nombra ninguno
    (`AOKeyStore.getDefaultKeyStoreTypeByOs`). Obedecerlo no cambia de dónde
    sale el certificado: solo confirma que la sede pidió lo que va a ocurrir.
-3. **Cualquier otro nombre de `AOKeyStore` sale con `SAF_07`**, nombrando el
+4. **Cualquier otro nombre de `AOKeyStore` sale con `SAF_07`**, nombrando el
    parámetro por el que vino, y la ventana lo cuenta como
    `unsupportedKeyStore`. Ahí están el `PKCS12`, que necesitaría una contraseña
    que la orden de instalación no lleva; el `WINDOWS` y el `APPLE`, que no
    existen en Linux; y las tarjetas, que quedan fuera de rFirma por desviación
    declarada.
-4. **Nombrar biblioteca es rechazo, aunque el almacén sea el de la familia
+5. **Nombrar biblioteca es rechazo, aunque el almacén sea el de la familia
    NSS.** rFirma no carga un módulo PKCS#11 porque se lo diga una sede: los
    suyos los descubre él.
-5. **Un nombre que el original no reconoce se ignora**, como allí, donde acaba
+6. **Un nombre que el original no reconoce se ignora**, como allí, donde acaba
    en el almacén por omisión del sistema. Rechazarlo endurecería una negativa
    que el original no hace, y la sede no habría acotado nada de todos modos.
-6. **Solo se mira donde hay certificado que elegir.** `save` y `load` no lo
+7. **Solo se mira donde hay certificado que elegir.** `save` y `load` no lo
    leen, igual que en el original.
 
-El nombre se compara sin distinguir mayúsculas y sin los espacios de alrededor;
-la ruta de la biblioteca se queda como vino, sin comillas: rFirma no la abre, y
+La ruta de la biblioteca se queda como vino, sin comillas: rFirma no la abre, y
 canonizarla sería tocar el disco desde una regla pura.
 
 ## Consequences

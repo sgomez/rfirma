@@ -1,39 +1,50 @@
 //! El almacén que la sede nombra en `keystore` o en `ksb64`, y cuál de ellos abre rFirma (ADR-0022).
 
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine as _;
-
 use super::codes::{Parameter, SafCode};
 use super::refusal::{Refusal, RefusalSituation};
-use super::url::AfirmaUrl;
+use super::url::{decode_protocol_base64, AfirmaUrl};
 
 const LEGACY_KEY_STORE: &str = "keystore";
 
 const ENCODED_KEY_STORE: &str = "ksb64";
 
-/// Los nombres de `AOKeyStore` (1.9.2) que nombran el almacén NSS que rFirma ya abre.
-const THE_NSS_STORES: [&str; 2] = ["SHARED_NSS", "MOZ_UNI"];
+/// Los dos nombres —el visible y el de la constante— del almacén NSS que rFirma ya abre.
+const THE_NSS_STORES: [KeyStoreOfTheOriginal; 2] = [
+    ("NSS", "SHARED_NSS"),
+    ("Mozilla / Firefox (unificado)", "MOZ_UNI"),
+];
 
-/// Los nombres de `AOKeyStore` (1.9.2): lo único que el original reconoce como almacén.
-const THE_STORES_OF_THE_ORIGINAL: [&str; 18] = [
-    "WINDOWS",
-    "APPLE",
-    "SHARED_NSS",
-    "PKCS12",
-    "JAVA",
-    "PKCS11",
-    "SINGLE",
-    "MOZ_UNI",
-    "JCEKS",
-    "JAVACE",
-    "TEMD",
-    "WINADDRESSBOOK",
-    "WINCA",
-    "CERES",
-    "DNIEJAVA",
-    "KNOWN_SMARTCARDS",
-    "SMARTCAFE",
-    "CERES_430",
+/// El nombre visible de un `AOKeyStore` y el de su constante, que son las dos puertas por las
+/// que el original resuelve el almacén (`SimpleKeyStoreManager.getKeyStore`, 1.9.2).
+type KeyStoreOfTheOriginal = (&'static str, &'static str);
+
+/// Los almacenes de `AOKeyStore` (1.9.2): lo único que el original reconoce como almacén.
+const THE_STORES_OF_THE_ORIGINAL: [KeyStoreOfTheOriginal; 19] = [
+    ("Windows", "WINDOWS"),
+    ("Llavero de Mac", "APPLE"),
+    ("NSS", "SHARED_NSS"),
+    ("PKCS#12 / PFX", "PKCS12"),
+    ("Java KeyStore / JKS", "JAVA"),
+    ("PKCS#11", "PKCS11"),
+    ("PKCS#7 / X.509", "SINGLE"),
+    ("Mozilla / Firefox (unificado)", "MOZ_UNI"),
+    ("Java Cryptography Extension KeyStore (JCEKS)", "JCEKS"),
+    ("Java KeyStore / JKS (Case Exact)", "JAVACE"),
+    ("TEMD (Tarjeta del Ministerio de Defensa)", "TEMD"),
+    (
+        "Windows / Internet Explorer (otras personas / libreta de direcciones)",
+        "WINADDRESSBOOK",
+    ),
+    ("Windows / Internet Explorer (CA intermedias)", "WINCA"),
+    ("Tarjeta FNMT-RCM CERES", "CERES"),
+    ("DNIe y tarjetas FNMT-TIF", "DNIEJAVA"),
+    (
+        "Tarjetas inteligentes conocidas mediante PKCS#11",
+        "KNOWN_SMARTCARDS",
+    ),
+    ("G&D SmartCafe con Applet PKCS#15", "SMARTCAFE"),
+    ("Tarjeta FNMT-RCM CERES 4.30 o superior", "CERES_430"),
+    ("Tipo desconocido", "OTHER"),
 ];
 
 /// El almacén que nombra la sede: cómo lo llama y qué biblioteca PKCS#11 le pone detrás.
@@ -111,8 +122,11 @@ fn is_a_store_rfirma_does_not_open(name: &str) -> bool {
     named_among(name, &THE_STORES_OF_THE_ORIGINAL) && !named_among(name, &THE_NSS_STORES)
 }
 
-fn named_among(name: &str, stores: &[&str]) -> bool {
-    stores.iter().any(|store| store.eq_ignore_ascii_case(name))
+/// El original mira antes el nombre visible, y ya recortado (ADR-0022).
+fn named_among(name: &str, stores: &[KeyStoreOfTheOriginal]) -> bool {
+    stores.iter().any(|(visible, constant)| {
+        visible.eq_ignore_ascii_case(name.trim()) || constant.eq_ignore_ascii_case(name)
+    })
 }
 
 /// El `keystore` heredado si vino, y solo si no, el `ksb64`, que se ignora entero cuando no es Base64.
@@ -125,14 +139,7 @@ fn declared_key_store(url: &AfirmaUrl) -> Option<(Parameter, String)> {
 }
 
 fn decoded(encoded: &str) -> Option<String> {
-    let normalized: String = encoded
-        .chars()
-        .filter(|character| *character != '=')
-        .map(|character| if character == '/' { '_' } else { character })
-        .collect();
-
-    let bytes = URL_SAFE_NO_PAD.decode(normalized.as_bytes()).ok()?;
-    String::from_utf8(bytes).ok()
+    String::from_utf8(decode_protocol_base64(encoded).ok()?).ok()
 }
 
 /// El nombre a la izquierda del primer `:` y la biblioteca a su derecha, sin las comillas que

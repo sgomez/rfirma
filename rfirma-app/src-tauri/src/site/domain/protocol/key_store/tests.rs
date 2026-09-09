@@ -66,7 +66,13 @@ fn without_the_two_parameters_there_is_no_store_named() {
 
 #[test]
 fn the_nss_stores_of_the_original_are_the_ones_rfirma_opens() {
-    for store in ["SHARED_NSS", "MOZ_UNI", "moz_uni", " SHARED_NSS :"] {
+    for store in [
+        "SHARED_NSS",
+        "MOZ_UNI",
+        "NSS",
+        "Mozilla / Firefox (unificado)",
+        " SHARED_NSS :",
+    ] {
         refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
             .expect("es el almacen que rFirma abre");
     }
@@ -108,6 +114,7 @@ fn the_stores_of_the_original_that_rfirma_does_not_open_are_refused_one_by_one()
         "KNOWN_SMARTCARDS",
         "SMARTCAFE",
         "CERES_430",
+        "OTHER",
     ] {
         let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
             .expect_err("es un almacen que rFirma no abre");
@@ -130,4 +137,20 @@ fn a_library_is_refused_even_when_the_store_is_the_one_rfirma_opens() {
         .expect_err("rFirma no carga la biblioteca que le nombren");
 
     assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+}
+
+#[test]
+fn the_visible_name_of_a_store_names_it_as_the_constant_does() {
+    for store in [
+        "PKCS#12 / PFX",
+        "pkcs#12 / pfx",
+        "Llavero de Mac",
+        "DNIe y tarjetas FNMT-TIF",
+        "Tipo desconocido",
+    ] {
+        let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
+            .expect_err("el original lo resuelve por el nombre visible");
+
+        assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    }
 }
