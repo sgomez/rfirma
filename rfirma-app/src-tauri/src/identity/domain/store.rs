@@ -76,7 +76,11 @@ impl Store {
         let Some(profile) = self.profile() else {
             return StoreClass::Card;
         };
-        if profile.contains("/.mozilla/firefox/") || profile.contains("/mozilla/firefox/") {
+        if profile.contains("/.mozilla/firefox/")
+            || profile.contains("/mozilla/firefox/")
+            || profile.contains("/.librewolf/")
+            || profile.contains("/librewolf/")
+        {
             StoreClass::Firefox
         } else if profile.ends_with("/.pki/nssdb") || profile.ends_with("/pki/nssdb") {
             StoreClass::Chrome

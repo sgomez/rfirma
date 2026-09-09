@@ -3,7 +3,7 @@ use crate::identity::domain::store::StoreClass;
 
 #[test]
 fn keeps_only_the_candidates_that_are_there() {
-    let stores = present_among(&["/hay/uno.so", "/no/hay.so", "/hay/otro.so"], |path| {
+    let stores = present_among(["/hay/uno.so", "/no/hay.so", "/hay/otro.so"], |path| {
         path.starts_with("/hay")
     });
 
@@ -50,7 +50,7 @@ fn lists_the_same_module_once_even_under_two_names() {
         module.to_str().expect("ruta valida"),
         link.to_str().expect("ruta valida"),
     ];
-    let stores = present_among(&candidates, |path| path.is_file());
+    let stores = present_among(candidates, |path| path.is_file());
 
     assert_eq!(stores, vec![module]);
 }
@@ -71,9 +71,19 @@ fn an_nss_store_is_classified_by_whose_profile_it_opens() {
         "/usr/lib/libsoftokn3.so",
         Path::new("/casa/ada/.mozilla/firefox/aaaaaaaa.default-release"),
     );
+    let librewolf_legacy = Store::nss(
+        "/usr/lib/libsoftokn3.so",
+        Path::new("/casa/ada/.librewolf/aaaaaaaa.default-release"),
+    );
+    let librewolf_xdg = Store::nss(
+        "/usr/lib/libsoftokn3.so",
+        Path::new("/casa/ada/.config/librewolf/librewolf/aaaaaaaa.default-release"),
+    );
     let chrome = Store::nss("/usr/lib/libsoftokn3.so", Path::new("/casa/ada/.pki/nssdb"));
 
     assert_eq!(firefox.class(), StoreClass::Firefox);
+    assert_eq!(librewolf_legacy.class(), StoreClass::Firefox);
+    assert_eq!(librewolf_xdg.class(), StoreClass::Firefox);
     assert_eq!(chrome.class(), StoreClass::Chrome);
 }
 
@@ -327,4 +337,99 @@ fn reads_the_snap_chromium_legacy_nssdb() {
         nss_profiles(home.path()),
         vec![home.path().join("snap/chromium/current/.pki/nssdb")]
     );
+}
+
+#[test]
+fn reads_a_librewolf_profile_from_its_legacy_layout() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let librewolf = home.path().join(".librewolf");
+    let profile = librewolf.join("eeeeeeee.default-release");
+    std::fs::create_dir_all(&profile).expect("deberia poder crearse el perfil");
+    std::fs::write(profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+    std::fs::write(
+        librewolf.join("profiles.ini"),
+        "[Profile0]\nPath=eeeeeeee.default-release\n",
+    )
+    .expect("deberia poder escribirse");
+
+    assert_eq!(nss_profiles(home.path()), vec![profile]);
+}
+
+#[test]
+fn reads_a_librewolf_profile_from_its_xdg_layout() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let librewolf = home.path().join(".config/librewolf/librewolf");
+    let profile = librewolf.join("ffffffff.default-release");
+    std::fs::create_dir_all(&profile).expect("deberia poder crearse el perfil");
+    std::fs::write(profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+    std::fs::write(
+        librewolf.join("profiles.ini"),
+        "[Profile0]\nPath=ffffffff.default-release\n",
+    )
+    .expect("deberia poder escribirse");
+
+    assert_eq!(nss_profiles(home.path()), vec![profile]);
+}
+
+#[test]
+fn enumerates_multiarch_subdirectories_containing_linux() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let usr_lib = temp.path().join("usr/lib");
+    std::fs::create_dir_all(usr_lib.join("aarch64-linux-gnu")).expect("deberia poder crearse");
+    std::fs::create_dir_all(usr_lib.join("x86_64-linux-gnu")).expect("deberia poder crearse");
+    std::fs::create_dir_all(usr_lib.join("arm-none-eabi")).expect("deberia poder crearse");
+    std::fs::create_dir_all(usr_lib.join("not-a-triplet")).expect("deberia poder crearse");
+    std::fs::write(usr_lib.join("file-with-linux-in-name"), b"").expect("deberia poder escribirse");
+
+    let subdirs = multiarch_subdirectories(&usr_lib);
+    assert_eq!(
+        subdirs,
+        vec![
+            usr_lib.join("aarch64-linux-gnu"),
+            usr_lib.join("x86_64-linux-gnu"),
+        ]
+    );
+}
+
+#[test]
+fn finds_softoken_in_multiarch_subdirectories() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let usr_lib = temp.path().join("usr/lib");
+    let aarch64 = usr_lib.join("aarch64-linux-gnu");
+    let non_linux = usr_lib.join("arm-none-eabi");
+    std::fs::create_dir_all(&aarch64).expect("deberia poder crearse aarch64-linux-gnu");
+    std::fs::create_dir_all(&non_linux).expect("deberia poder crearse arm-none-eabi");
+    let softoken_path = aarch64.join("libsoftokn3.so");
+    std::fs::write(&softoken_path, b"").expect("deberia poder escribirse libsoftokn3.so");
+    std::fs::write(non_linux.join("libsoftokn3.so"), b"").expect("deberia poder escribirse");
+
+    assert_eq!(softoken_under(&usr_lib), Some(softoken_path));
+}
+
+#[test]
+fn finds_softoken_in_multiarch_nss_subdirectory() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let usr_lib = temp.path().join("usr/lib");
+    let riscv = usr_lib.join("riscv64-linux-gnu/nss");
+    std::fs::create_dir_all(&riscv).expect("deberia poder crearse riscv64-linux-gnu/nss");
+    let softoken_path = riscv.join("libsoftokn3.so");
+    std::fs::write(&softoken_path, b"").expect("deberia poder escribirse libsoftokn3.so");
+
+    assert_eq!(softoken_under(&usr_lib), Some(softoken_path));
+}
+
+#[test]
+fn finds_softhsm_in_multiarch_subdirectory() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let usr_lib = temp.path().join("usr/lib");
+    let aarch64 = usr_lib.join("aarch64-linux-gnu/softhsm");
+    std::fs::create_dir_all(&aarch64).expect("deberia poder crearse aarch64-linux-gnu/softhsm");
+    let module_path = aarch64.join("libsofthsm2.so");
+    std::fs::write(&module_path, b"").expect("deberia poder escribirse libsofthsm2.so");
+
+    let candidates = candidate_modules_under(&usr_lib);
+    let present = present_among(candidates, |path| {
+        path.starts_with(temp.path()) && path.is_file()
+    });
+    assert_eq!(present, vec![module_path]);
 }

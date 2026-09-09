@@ -102,6 +102,8 @@ finish-args:
   - --filesystem=~/.local/share/pki/nssdb
   - --filesystem=~/snap/firefox/common/.mozilla/firefox
   - --filesystem=~/snap/chromium/current
+  - --filesystem=~/.librewolf
+  - --filesystem=~/.config/librewolf
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin

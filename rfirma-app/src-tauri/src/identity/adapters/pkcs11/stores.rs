@@ -4,21 +4,68 @@ use std::path::{Path, PathBuf};
 
 use crate::identity::domain::store::Store;
 
-/// Rutas candidatas para módulos PKCS#11 estándar.
-pub const CANDIDATE_MODULES: &[&str] = &[
-    "/usr/lib/softhsm/libsofthsm2.so",
-    "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so",
-];
+/// Rutas candidatas fijas para módulos PKCS#11 estándar.
+pub const CANDIDATE_MODULES: &[&str] = &["/usr/lib/softhsm/libsofthsm2.so"];
 
-/// Rutas candidatas para bibliotecas softoken de NSS.
+/// Rutas candidatas fijas para bibliotecas softoken de NSS.
 pub const CANDIDATE_SOFTOKENS: &[&str] = &[
-    "/usr/lib/x86_64-linux-gnu/libsoftokn3.so",
-    "/usr/lib/x86_64-linux-gnu/nss/libsoftokn3.so",
     "/usr/lib64/libsoftokn3.so",
     "/usr/lib64/nss/libsoftokn3.so",
     "/usr/lib/libsoftokn3.so",
     "/usr/lib/nss/libsoftokn3.so",
 ];
+
+/// Subdirectorios multiarch bajo el directorio de librerías indicado.
+pub fn multiarch_subdirectories(usr_lib: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(usr_lib) else {
+        return Vec::new();
+    };
+    let mut dirs: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_dir()
+                && path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .map(|name| name.contains("-linux-"))
+                    .unwrap_or(false)
+        })
+        .collect();
+    dirs.sort();
+    dirs
+}
+
+/// Rutas candidatas para bibliotecas softoken de NSS bajo el directorio de librerías indicado.
+pub fn candidate_softokens_under(usr_lib: &Path) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    for dir in multiarch_subdirectories(usr_lib) {
+        candidates.push(dir.join("libsoftokn3.so"));
+        candidates.push(dir.join("nss/libsoftokn3.so"));
+    }
+    candidates.extend(CANDIDATE_SOFTOKENS.iter().map(PathBuf::from));
+    candidates
+}
+
+/// Rutas candidatas para bibliotecas softoken de NSS en el sistema.
+pub fn candidate_softokens() -> Vec<PathBuf> {
+    candidate_softokens_under(Path::new("/usr/lib"))
+}
+
+/// Rutas candidatas para módulos PKCS#11 estándar bajo el directorio de librerías indicado.
+pub fn candidate_modules_under(usr_lib: &Path) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    for dir in multiarch_subdirectories(usr_lib) {
+        candidates.push(dir.join("softhsm/libsofthsm2.so"));
+    }
+    candidates.extend(CANDIDATE_MODULES.iter().map(PathBuf::from));
+    candidates
+}
+
+/// Rutas candidatas para módulos PKCS#11 estándar en el sistema.
+pub fn candidate_modules() -> Vec<PathBuf> {
+    candidate_modules_under(Path::new("/usr/lib"))
+}
 
 /// Descubre los almacenes disponibles en el entorno actual.
 pub fn from_environment() -> Vec<Store> {
@@ -27,7 +74,7 @@ pub fn from_environment() -> Vec<Store> {
     }
 
     let home = std::env::var_os("HOME").map(PathBuf::from);
-    let mut stores: Vec<Store> = present_among(CANDIDATE_MODULES, |path| path.is_file())
+    let mut stores: Vec<Store> = present_among(candidate_modules(), |path| path.is_file())
         .into_iter()
         .map(Store::module)
         .collect();
@@ -45,7 +92,12 @@ pub fn from_environment() -> Vec<Store> {
 
 /// Localiza la biblioteca softoken de NSS en el sistema.
 pub fn softoken() -> Option<PathBuf> {
-    present_among(CANDIDATE_SOFTOKENS, |path| path.is_file())
+    softoken_under(Path::new("/usr/lib"))
+}
+
+/// Localiza la biblioteca softoken de NSS bajo el directorio de librerías indicado.
+pub fn softoken_under(usr_lib: &Path) -> Option<PathBuf> {
+    present_among(candidate_softokens_under(usr_lib), |path| path.is_file())
         .into_iter()
         .next()
 }
@@ -68,7 +120,7 @@ pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.
-fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 3] {
+fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 5] {
     [
         (home.join(".mozilla/firefox"), home.join(".mozilla/firefox")),
         (
@@ -78,6 +130,11 @@ fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 3] {
         (
             home.join("snap/firefox/common/.mozilla/firefox"),
             home.join("snap/firefox/common/.mozilla/firefox"),
+        ),
+        (home.join(".librewolf"), home.join(".librewolf")),
+        (
+            home.join(".config/librewolf/librewolf"),
+            home.join(".config/librewolf/librewolf"),
         ),
     ]
 }
@@ -153,11 +210,14 @@ fn resolve_under(firefox: &Path, path: &str) -> PathBuf {
 }
 
 /// Filtra y deduplica rutas existentes entre las candidatas indicadas.
-pub fn present_among(candidates: &[&str], present: impl Fn(&Path) -> bool) -> Vec<PathBuf> {
+pub fn present_among<P: AsRef<Path>>(
+    candidates: impl IntoIterator<Item = P>,
+    present: impl Fn(&Path) -> bool,
+) -> Vec<PathBuf> {
     let mut stores: Vec<PathBuf> = Vec::new();
 
     for candidate in candidates {
-        let path = Path::new(candidate);
+        let path = candidate.as_ref();
         if !present(path) {
             continue;
         }

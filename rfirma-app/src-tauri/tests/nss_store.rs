@@ -27,13 +27,10 @@ const NO_MASTER_PASSWORD: &str = "";
 const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
 
 fn softoken() -> PathBuf {
-    pkcs11::stores::present_among(pkcs11::stores::CANDIDATE_SOFTOKENS, |path| path.is_file())
-        .into_iter()
-        .next()
-        .expect(
-            "falta libsoftokn3.so. Las pruebas de grada B del almacen NSS lo necesitan:\n  \
+    pkcs11::stores::softoken().expect(
+        "falta libsoftokn3.so. Las pruebas de grada B del almacen NSS lo necesitan:\n  \
              sudo apt install -y libnss3 libnss3-tools",
-        )
+    )
 }
 
 fn repository_root() -> PathBuf {
