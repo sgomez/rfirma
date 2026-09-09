@@ -408,9 +408,27 @@ function theXmlDocument() {
   return readFileSync(join(here, "../../../../testdata/reference/document.xml"));
 }
 
+/** La factura de referencia, la que firma el guion FacturaE de `sign`. */
+function theInvoice() {
+  return readFileSync(join(here, "../../../../testdata/reference/invoice.xml"));
+}
+
 /** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
 function theSignScript(format, extraParams, content) {
   AutoScript.sign(
+    content.toString("base64"),
+    "SHA256withRSA",
+    format,
+    extraParams,
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `cosign()` sobre `content`, con el formato y `extraParams` del guion. */
+function theCosignScript(format, extraParams, content) {
+  AutoScript.cosign(
     content.toString("base64"),
     "SHA256withRSA",
     format,
@@ -476,6 +494,10 @@ if (script === "batch") {
   theSignScript("XAdES", "", theXmlDocument());
 } else if (script === "signxadesauto") {
   theSignScript("auto", "", theXmlDocument());
+} else if (script === "signfacturae") {
+  theSignScript("FacturaE", "", theInvoice());
+} else if (script === "cosignfacturae") {
+  theCosignScript("FacturaE", "", theInvoice());
 } else {
   AutoScript.selectCertificate(
     "",
