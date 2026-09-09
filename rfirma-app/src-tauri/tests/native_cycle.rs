@@ -517,6 +517,35 @@ mod full_cycle {
         assert_eq!(openssl_cms_verify(&signature, Some(&challenge)), CHALLENGE);
     }
 
+    /// La entrada con la que el ASiC-S de CAdES nombra su firma dentro del ZIP.
+    const ASIC_BINARY_SIGNATURE_ENTRY: &[u8] = b"META-INF/signature.p7s";
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn an_asic_s_cades_signature_comes_back_as_a_container_with_its_signature_inside() {
+        let container = a_cycle_of(
+            Format::CadesAsicS,
+            cycle::ALGORITHM,
+            CHALLENGE,
+            SignatureOperation::Sign,
+            &[],
+        );
+
+        assert_eq!(
+            &container[..4],
+            b"PK\x03\x04",
+            "un ASiC-S es un ZIP y empieza por su firma de fichero local"
+        );
+        for entry in [ASIC_MIME_TYPE, ASIC_BINARY_SIGNATURE_ENTRY] {
+            assert!(
+                contains(&container, entry),
+                "al contenedor le falta {}",
+                String::from_utf8_lossy(entry)
+            );
+        }
+        the_original_validator_accepts(&write_to_target("cades-asic-s.asics", &container));
+    }
+
     /// El XML que firman las cuatro variantes XAdES.
     const A_REFERENCE_XML: &[u8] = include_bytes!("../../../testdata/reference/document.xml");
 

@@ -12,6 +12,7 @@ import java.util.TimeZone;
 
 import es.gob.afirma.core.signers.CounterSignTarget;
 import es.gob.afirma.core.signers.TriphaseData;
+import es.gob.afirma.triphase.signer.processors.CAdESASiCSTriPhasePreProcessor;
 import es.gob.afirma.triphase.signer.processors.CAdESTriPhasePreProcessor;
 
 /**
@@ -28,6 +29,10 @@ import es.gob.afirma.triphase.signer.processors.CAdESTriPhasePreProcessor;
  * <p>Las tres operaciones —{@code sign}, {@code cosign} y {@code countersign}—
  * entran por los mismos dos metodos. La entrada de una cofirma o de una
  * contrafirma es la <b>firma existente</b>, no el dato original.
+ *
+ * <p>{@code extraParams.format} elige entre la firma CAdES suelta y el
+ * contenedor {@code CAdES-ASiC-S}, que es otro procesador del original; el
+ * contenedor no admite ni cofirma ni contrafirma, y quien lo rechaza es el.
  *
  * <p>Una contrafirma prefirma <b>una hoja o mas</b>, asi que la prefirma
  * devuelve una <b>lista</b> de prefirmas identificadas y la postfirma recibe un
@@ -58,6 +63,9 @@ public final class CadesBridge {
     private static final Set<String> OPERATIONS =
             Set.of(OPERATION_SIGN, OPERATION_COSIGN, OPERATION_COUNTERSIGN);
 
+    private static final String PARAM_FORMAT = "format";
+    private static final String FORMAT_ASIC_S = "CAdES-ASiC-S";
+
     private static final String PARAM_TARGET = "target";
     private static final String TARGET_TREE = "tree";
     private static final String TARGET_LEAFS = "leafs";
@@ -83,8 +91,8 @@ public final class CadesBridge {
      * @param document    datos a firmar, o la firma CAdES a cofirmar o contrafirmar.
      * @param algorithm   algoritmo de firma, p.ej. {@code SHA256withRSA}.
      * @param chain       cadena de certificados del firmante.
-     * @param extraParams los extraParams enviados; {@code mode}, {@code target} y la
-     *                    politica viajan aqui sin traducir.
+     * @param extraParams los extraParams enviados; {@code format}, {@code mode},
+     *                    {@code target} y la politica viajan aqui sin traducir.
      * @param operation   {@code sign}, {@code cosign} o {@code countersign}.
      */
     public static PreSignResult preSign(final byte[] document, final String algorithm,
@@ -94,17 +102,19 @@ public final class CadesBridge {
         final String requested = requireKnownOperation(operation);
         final String target =
                 OPERATION_COUNTERSIGN.equals(requested) ? counterSignTarget(extraParams) : null;
+        final Properties effectiveParams = copyOf(extraParams);
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
-        final CAdESTriPhasePreProcessor processor = new CAdESTriPhasePreProcessor();
+        final CAdESTriPhasePreProcessor processor = processorFor(effectiveParams);
         final TriphaseData session = switch (requested) {
             case OPERATION_COSIGN -> processor.preProcessPreCoSign(
-                    document, algorithm, chain, extraParams, false);
+                    document, algorithm, chain, effectiveParams, false);
             case OPERATION_COUNTERSIGN -> processor.preProcessPreCounterSign(
-                    document, algorithm, chain, extraParams,
+                    document, algorithm, chain, effectiveParams,
                     CounterSignTarget.getTarget(target), false);
-            default -> processor.preProcessPreSign(document, algorithm, chain, extraParams, false);
+            default -> processor.preProcessPreSign(
+                    document, algorithm, chain, effectiveParams, false);
         };
 
         if (session.getSignsCount() < 1) {
@@ -129,7 +139,7 @@ public final class CadesBridge {
             first.addProperty(PROPERTY_TARGET, target);
         }
 
-        final SessionStamp stamp = SessionStamp.of(algorithm, time, timeZone, extraParams,
+        final SessionStamp stamp = SessionStamp.of(algorithm, time, timeZone, effectiveParams,
                 document, chain, requested, target);
 
         return new PreSignResult(session.toString(), List.copyOf(pres), stamp.encode());
@@ -202,15 +212,16 @@ public final class CadesBridge {
 
         attachPkcs1(session, pkcs1s);
 
-        final CAdESTriPhasePreProcessor processor = new CAdESTriPhasePreProcessor();
+        final Properties effectiveParams = stamp.extraParams();
+        final CAdESTriPhasePreProcessor processor = processorFor(effectiveParams);
         return switch (requireKnownOperation(stamp.operation())) {
             case OPERATION_COSIGN -> processor.preProcessPostCoSign(
-                    document, stamp.algorithm(), chain, stamp.extraParams(), session);
+                    document, stamp.algorithm(), chain, effectiveParams, session);
             case OPERATION_COUNTERSIGN -> processor.preProcessPostCounterSign(
-                    document, stamp.algorithm(), chain, stamp.extraParams(), session,
+                    document, stamp.algorithm(), chain, effectiveParams, session,
                     CounterSignTarget.getTarget(stamp.target()));
             default -> processor.preProcessPostSign(
-                    document, stamp.algorithm(), chain, stamp.extraParams(), session);
+                    document, stamp.algorithm(), chain, effectiveParams, session);
         };
     }
 
@@ -275,5 +286,30 @@ public final class CadesBridge {
 
     private static String describe(final String operation, final String target) {
         return target == null ? String.valueOf(operation) : operation + " sobre " + target;
+    }
+
+    /**
+     * El procesador ASiC-S impone {@code mode=explicit}, envuelve la firma en el
+     * ZIP y rechaza cofirmar y contrafirmar; ninguna de las tres las decide el
+     * puente, que se limita a copiar los {@code extraParams} antes de que el
+     * procesador les escriba encima.
+     */
+    private static CAdESTriPhasePreProcessor processorFor(final Properties effectiveParams) {
+        return isAsicS(effectiveParams) ? new CAdESASiCSTriPhasePreProcessor()
+                : new CAdESTriPhasePreProcessor();
+    }
+
+    private static boolean isAsicS(final Properties effectiveParams) {
+        return FORMAT_ASIC_S.equalsIgnoreCase(effectiveParams.getProperty(PARAM_FORMAT));
+    }
+
+    private static Properties copyOf(final Properties extraParams) {
+        final Properties copy = new Properties();
+        if (extraParams != null) {
+            for (final String name : extraParams.stringPropertyNames()) {
+                copy.setProperty(name, extraParams.getProperty(name));
+            }
+        }
+        return copy;
     }
 }

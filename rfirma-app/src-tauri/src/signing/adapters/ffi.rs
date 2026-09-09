@@ -270,7 +270,7 @@ impl NativeBridge {
         let document = c_string(request.document_b64, "el documento")?;
         let algorithm = c_string(request.algorithm, "el algoritmo")?;
         let chain = c_string(request.certificate_chain_b64, "la cadena de certificados")?;
-        let variant = with_the_xades_variant(request.extra_params, entry, request.format);
+        let variant = with_the_variant_of_the_format(request.extra_params, request.format);
         let extra = c_string(&variant, "los extraParams")?;
         let operation = c_string(request.operation.name(), "la operación")?;
         let json = self.call(|thread| unsafe {
@@ -413,15 +413,22 @@ impl EntryPoints {
 fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
     match format.bridged()? {
         Format::Pades => Ok(EntryPoints::Pades),
-        Format::Cades | Format::Cms => Ok(EntryPoints::Cades),
+        Format::Cades | Format::CadesAsicS | Format::Cms => Ok(EntryPoints::Cades),
         Format::Xades(_) | Format::FacturaE => Ok(EntryPoints::Xades),
-        other => Err(BridgeError::FormatNotBridged(other)),
+    }
+}
+
+/// Los formatos que comparten entradas con otro y que Java discrimina por `format`.
+fn declares_its_variant(format: Format) -> bool {
+    match format {
+        Format::CadesAsicS | Format::Xades(_) | Format::FacturaE => true,
+        Format::Pades | Format::Cades | Format::Cms => false,
     }
 }
 
 /// La envoltura la manda el formato pedido, no la sede: por eso se escribe la última.
-fn with_the_xades_variant(extra_params: &str, entry: EntryPoints, format: Format) -> String {
-    if !matches!(entry, EntryPoints::Xades) {
+fn with_the_variant_of_the_format(extra_params: &str, format: Format) -> String {
+    if !declares_its_variant(format) {
         return extra_params.to_owned();
     }
     let mut block = extra_params.to_owned();
