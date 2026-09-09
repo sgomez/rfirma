@@ -1176,6 +1176,9 @@ msgstr ""
 msgid "sede.refusals.missingFormat"
 msgstr ""
 
+msgid "sede.refusals.unsupportedKeyStore"
+msgstr ""
+
 msgid "sede.refusals.errandInFlight"
 msgstr ""
 

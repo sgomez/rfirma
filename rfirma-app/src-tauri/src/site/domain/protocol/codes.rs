@@ -43,11 +43,15 @@ pub enum Parameter {
     RetrieveServlet,
     /// `stservlet`: el servlet de almacenamiento del servidor intermedio.
     StoreServlet,
+    /// `ksb64`: el almacén de certificados que nombra la sede, en Base64.
+    KeyStore,
+    /// `keystore`: el mismo almacén, sin Base64 y con prioridad sobre `ksb64`.
+    LegacyKeyStore,
 }
 
 impl Parameter {
     /// Todos, para las pruebas de totalidad.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 19] = [
         Self::Ports,
         Self::ProtocolVersion,
         Self::IdSession,
@@ -65,6 +69,8 @@ impl Parameter {
         Self::Extensions,
         Self::RetrieveServlet,
         Self::StoreServlet,
+        Self::KeyStore,
+        Self::LegacyKeyStore,
     ];
 
     /// El nombre con el que viaja en la URL del protocolo.
@@ -87,6 +93,8 @@ impl Parameter {
             Self::Extensions => "exts",
             Self::RetrieveServlet => "rtservlet",
             Self::StoreServlet => "stservlet",
+            Self::KeyStore => "ksb64",
+            Self::LegacyKeyStore => "keystore",
         }
     }
 }
