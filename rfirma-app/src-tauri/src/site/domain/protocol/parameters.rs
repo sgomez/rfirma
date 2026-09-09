@@ -157,7 +157,10 @@ pub fn check_minimum_client_version(requested: Option<&str>) -> Result<(), Refus
 pub fn minimum_protocol_version(url: &AfirmaUrl) -> i64 {
     url.parameter(MINIMUM_PROTOCOL_VERSION)
         .map_or(VERSION_WHEN_ABSENT, |declared| {
-            declared.parse().unwrap_or(VERSION_WHEN_MALFORMED)
+            // Los 32 bits son los de `Integer.parseInt` del original (ADR-0021).
+            declared
+                .parse::<i32>()
+                .map_or(VERSION_WHEN_MALFORMED, i64::from)
         })
 }
 

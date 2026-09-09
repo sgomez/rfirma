@@ -28,6 +28,8 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0017 | La arquitectura de los dos lados: puertos en la ventana, contextos con capas en el backend |
 | 0018 | rFirma no es un lector de PDF: la firma empieza por un verbo |
 | 0019 | El recuadro que pide la sede cruza crudo al puente, sin la conversión del local |
+| 0020 | La apertura de la ventana de sede no pisa un momento posterior del trámite |
+| 0021 | La versión mínima que exige la operación (`ver`) se comprueba siempre |
 
 ## `research/` — mediciones (por qué algo es como es)
 

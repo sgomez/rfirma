@@ -134,8 +134,8 @@ fn an_operation_that_does_not_declare_ver_demands_the_version_zero() {
 }
 
 #[test]
-fn a_ver_that_is_not_an_integer_demands_the_version_one() {
-    for declared in ["", "cuatro", "4.0", " 4"] {
+fn a_ver_that_java_would_not_parse_as_an_int_demands_the_version_one() {
+    for declared in ["", "cuatro", "4.0", " 4", "3000000000"] {
         assert_eq!(
             minimum_protocol_version(&a_url(&format!("&ver={declared}"))),
             1,
