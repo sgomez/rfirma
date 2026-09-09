@@ -110,7 +110,7 @@ fn types_named_by(signature: &str) -> Vec<&str> {
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 17] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 18] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -123,6 +123,7 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 17] = [
     "SiteStageView",
     "LocalBatchItemView",
     "SignatureRoundView",
+    "CounterTargetView",
     "SigningKindView",
     "NoChannelView",
     "SiteOutcomeView",

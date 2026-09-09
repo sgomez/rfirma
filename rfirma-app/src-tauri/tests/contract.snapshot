@@ -174,9 +174,14 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Xml
       Invoice
 
-  pub enum SignatureRoundView
+  pub enum SignatureRoundView   (serde: etiqueta "kind")
       Sign
       Cosign
+      Counter { target: CounterTargetView }
+
+  pub enum CounterTargetView
+      Tree
+      Leafs
 
   pub struct LocalBatchItemView
       id: String
