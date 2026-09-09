@@ -25,13 +25,13 @@ pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
 pub use desk::{
     attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
-    consent_to_sign_with_chosen_document, consent_to_the_batch, consent_to_the_local_batch,
-    ErrandDesk, Neighbours,
+    consent_to_sign_with_chosen_document, consent_to_the_batch, consent_to_the_confirmed_signature,
+    consent_to_the_local_batch, ErrandDesk, Neighbours,
 };
 pub use outcome::{
-    BatchConsent, ErrandStep, LoadCompletion, LoadingConsent, LocalBatchConsent, LocalBatchItem,
-    Moment, NoCertificate, NoChannel, PendingSignature, ProtocolCodec, SavingConsent,
-    SigningConsent, SiteOutcome,
+    BatchConsent, ConfirmationConsent, ErrandStep, LoadCompletion, LoadingConsent,
+    LocalBatchConsent, LocalBatchItem, Moment, NoCertificate, NoChannel, PendingSignature,
+    ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
 };
 pub use replies::{
     batch_handed_over, declined, identify_with, identity_handed_over, loaded, saved,
@@ -86,6 +86,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             unregistered_signatures: asked.unregistered_signatures,
             saving: asked.saving.clone(),
         }),
+        ErrandStep::AskingToConfirm(consent) => live.remember_the_confirmation((**consent).clone()),
         ErrandStep::AskingToSignTheBatch(consent) => live.remember_the_batch(state::PendingBatch {
             request: consent.request.clone(),
             chosen: None,
@@ -380,6 +381,26 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             ours,
             live,
         ),
+    ))
+}
+
+/// Sigue con la firma que la persona acaba de confirmar: fija la clave y repite la validación.
+pub fn confirm<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    live: &LiveErrand,
+) -> Result<ErrandStep, ConsentError> {
+    let Some(pending) = live.the_confirmation_pending() else {
+        return Err(ConsentError::NothingPending);
+    };
+
+    let ours = desk
+        .neighbours
+        .listed()
+        .map_err(|error| ConsentError::Refused(SiteRefusal::Token(error)))?;
+
+    Ok(remembered(
+        live,
+        desk::consent_to_the_confirmed_signature(desk, pending, ours, live),
     ))
 }
 

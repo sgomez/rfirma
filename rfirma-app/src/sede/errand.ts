@@ -183,6 +183,12 @@ export type ErrandStage =
   | { kind: "saving"; filename: string | null }
   /** Lo mismo para la carga: uno o varios ficheros, según lo que pida la sede. */
   | { kind: "loading"; multiple: boolean }
+  /**
+   * La sede pidió comprobar las firmas que ya trae el documento y el validador
+   * del original no las da por buenas sin que la persona lo confirme. Dos
+   * salidas: seguir, que fija la clave y vuelve a comprobar, o cancelar.
+   */
+  | { kind: "confirming"; messageCode: string }
   | { kind: "outcome"; outcome: SiteOutcome }
   /**
    * No hay nada que consentir ni nada que elegir, y son **dos situaciones

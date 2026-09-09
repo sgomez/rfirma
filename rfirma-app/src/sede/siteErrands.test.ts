@@ -369,6 +369,23 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     expect(calls.describeDocument).toHaveBeenCalledWith("asa-opaca-1");
   });
 
+  it("turns the confirmation the original asks for into the confirming stage", async () => {
+    const view: SiteErrandView = {
+      origin: "https://sede.example",
+      stage: { kind: "askingToConfirm", messageCode: "ProtocolLauncher.65" },
+    };
+    const { push, last } = watched();
+
+    push(view);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({
+        kind: "confirming",
+        messageCode: "ProtocolLauncher.65",
+      }),
+    );
+  });
+
   it.each(["pdf", "challenge", "xml", "invoice"] as const)(
     "carries the %s signing kind through to the consent stage",
     async (signing) => {

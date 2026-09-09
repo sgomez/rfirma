@@ -149,6 +149,7 @@ fn a_desk_that_is_never_touched(
     ErrandDesk {
         engine: Box::leak(Box::new(Untouched)),
         policies: Box::leak(Box::new(Untouched)),
+        validation: &crate::site::application::tests::NotAsked,
         neighbours: Untouched,
         scratch_dir: home.join("errand"),
         scratch: Arc::new(Untouched),

@@ -14,7 +14,8 @@ use crate::site::domain::protocol::{
 };
 
 use super::outcome::{
-    LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints, SiteOutcome,
+    ConfirmationConsent, LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints,
+    SiteOutcome,
 };
 use crate::site::ports::{ReplyHandle, Scratch};
 
@@ -102,6 +103,7 @@ impl Errand {
 enum PendingConsent {
     Identity(SiteFilter, bool),
     Signature(PendingSignature),
+    Confirmation(ConfirmationConsent),
     Batch(PendingBatch),
     LocalBatch(PendingLocalBatch),
     Saving(SavingConsent),
@@ -239,6 +241,19 @@ impl LiveErrand {
     /// Registra los datos de consentimiento de firma.
     pub(super) fn remember_signature(&self, pending: PendingSignature) {
         *crate::lock(&self.consent) = Some(PendingConsent::Signature(pending));
+    }
+
+    /// Registra la confirmación pendiente de una firma que el validador no da por buena sola.
+    pub(super) fn remember_the_confirmation(&self, consent: ConfirmationConsent) {
+        *crate::lock(&self.consent) = Some(PendingConsent::Confirmation(consent));
+    }
+
+    /// Confirmación pendiente, si el trámite está esperando una.
+    pub(super) fn the_confirmation_pending(&self) -> Option<ConfirmationConsent> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Confirmation(consent)) => Some(consent.clone()),
+            _ => None,
+        }
     }
 
     /// Registra el lote pendiente de consentimiento o de postfirma.

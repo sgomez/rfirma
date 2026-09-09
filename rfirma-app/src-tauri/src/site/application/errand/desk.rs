@@ -1,7 +1,11 @@
 //! Mesa del trámite: dependencias de ejecución y evaluación del consentimiento.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine as _;
 
 use crate::documents::domain::handles;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
@@ -17,20 +21,24 @@ use crate::site::domain::protocol::{
 };
 
 use super::outcome::{
-    BatchConsent, ErrandStep, LoadingConsent, LocalBatchConsent, LocalBatchItem, PendingSignature,
-    SavingConsent, SavingHints, SigningConsent, SiteOutcome,
+    BatchConsent, ConfirmationConsent, ErrandStep, LoadingConsent, LocalBatchConsent,
+    LocalBatchItem, PendingSignature, SavingConsent, SavingHints, SigningConsent, SiteOutcome,
 };
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::{LocalBatchAsk, SiteRequest};
 use super::state::LiveErrand;
+use crate::signing::domain::bridge::SignatureVerdict;
 use crate::site::application::batch;
 use crate::site::application::filtering;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
 use crate::site::ports::{
     BatchServices, Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments,
-    SiteSigning, TokenSigning,
+    SiteSigning, TokenSigning, ValidationEngine,
 };
+
+/// `properties`: la sede pide validar las firmas que ya trae el documento antes de seguir.
+const CHECK_SIGNATURES: &str = "checkSignatures";
 
 /// Lo que el trámite pide a los vecinos, junto: los certificados, el documento de paso y la firma.
 pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning + TokenSigning {}
@@ -43,6 +51,8 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
     pub engine: &'a E,
     /// Expansor de políticas de firma.
     pub policies: &'a P,
+    /// Validador de las firmas que ya trae el documento.
+    pub validation: &'a dyn ValidationEngine,
     /// Los vecinos: certificados, documento de paso y firma.
     pub neighbours: N,
     /// Directorio temporal para ficheros de paso.
@@ -216,6 +226,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
+            confirmed: BTreeMap::new(),
         },
         None,
         ours,
@@ -247,6 +258,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
+            confirmed: BTreeMap::new(),
         },
         Some(Box::new(saving)),
         ours,
@@ -263,6 +275,7 @@ struct SignatureAsk<'a> {
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
     headless: bool,
+    confirmed: BTreeMap<String, String>,
 }
 
 /// El cuerpo compartido de `consent_to_sign` y `consent_to_sign_and_save`.
@@ -313,6 +326,14 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             }
         };
 
+    from_the_site.extend(ask.confirmed.clone());
+
+    if asks_to_check_signatures(&mut from_the_site) {
+        if let Err(step) = the_previous_signatures_hold(desk, &ask, saving.clone(), format, live) {
+            return step;
+        }
+    }
+
     let allowed_by_the_site = from_the_site
         .remove(ALLOW_UNREGISTERED_KEY)
         .map(|declared| declared.trim().eq_ignore_ascii_case("true"));
@@ -359,6 +380,86 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         saving,
         already_chosen,
     }))
+}
+
+/// Si la sede pidió validar las firmas previas; la clave la interpreta el trámite y no cruza al puente.
+fn asks_to_check_signatures(from_the_site: &mut BTreeMap<String, String>) -> bool {
+    from_the_site
+        .remove(CHECK_SIGNATURES)
+        .is_some_and(|declared| declared.trim().eq_ignore_ascii_case("true"))
+}
+
+/// El veredicto del validador del original sobre lo que el documento ya traía firmado.
+fn the_previous_signatures_hold<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    ask: &SignatureAsk<'_>,
+    saving: Option<Box<SavingHints>>,
+    format: Format,
+    live: &LiveErrand,
+) -> Result<(), ErrandStep> {
+    match desk
+        .validation
+        .verdict_of(&STANDARD.encode(ask.document), format)
+    {
+        Ok(SignatureVerdict::Valid) => Ok(()),
+        Ok(SignatureVerdict::Invalid { reason }) => Err(answering(
+            live,
+            SiteOutcome::Refused(SiteRefusal::InvalidSignature(reason)),
+        )),
+        Ok(SignatureVerdict::ConfirmationNeeded { message_code, .. }) if ask.headless => {
+            Err(answering(
+                live,
+                SiteOutcome::Refused(SiteRefusal::ConfirmationNeeded(message_code)),
+            ))
+        }
+        Ok(SignatureVerdict::ConfirmationNeeded {
+            parameter,
+            message_code,
+        }) => Err(ErrandStep::AskingToConfirm(Box::new(ConfirmationConsent {
+            document: ask.document.to_vec(),
+            requested: ask.format,
+            algorithm: ask.algorithm,
+            round: ask.round,
+            declared: ask.declared_params.to_vec(),
+            filter: ask.filter.clone(),
+            headless: ask.headless,
+            saving,
+            confirmed: ask.confirmed.clone(),
+            parameter,
+            message_code,
+        }))),
+        Err(error) => Err(answering(
+            live,
+            SiteOutcome::Refused(SiteRefusal::CouldNotValidate(error)),
+        )),
+    }
+}
+
+/// Repite la firma con la clave que la persona acaba de confirmar, y vuelve a validar.
+pub fn consent_to_the_confirmed_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
+    desk: &ErrandDesk<'_, E, P, N>,
+    pending: ConfirmationConsent,
+    ours: Vec<TokenCertificate>,
+    live: &LiveErrand,
+) -> ErrandStep {
+    let mut confirmed = pending.confirmed;
+    confirmed.insert(pending.parameter, "true".to_owned());
+    consent_to_a_signature(
+        desk,
+        SignatureAsk {
+            document: &pending.document,
+            format: pending.requested,
+            algorithm: pending.algorithm,
+            round: pending.round,
+            declared_params: &pending.declared,
+            filter: &pending.filter,
+            headless: pending.headless,
+            confirmed,
+        },
+        pending.saving,
+        ours,
+        live,
+    )
 }
 
 fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(

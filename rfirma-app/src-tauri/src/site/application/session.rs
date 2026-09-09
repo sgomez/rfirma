@@ -45,6 +45,12 @@ pub enum SiteRefusal {
     BatchSigningFailed(SigningRefusal),
     /// El lote local no ha podido ni empezar: sin firmas que intentar.
     LocalBatch(String),
+    /// El documento trae una firma que el validador del original no da por buena.
+    InvalidSignature(String),
+    /// Seguir necesita que la persona confirme, y la sede pidió `headless`.
+    ConfirmationNeeded(String),
+    /// Las firmas del documento no se han podido examinar.
+    CouldNotValidate(BridgeError),
 }
 
 impl From<SigningRefusal> for SiteRefusal {
@@ -59,7 +65,9 @@ impl SiteRefusal {
         match self {
             Self::Token(error) => error.to_string(),
             Self::Inadmissible(refusal) => refusal.to_string(),
-            Self::Policies(error) | Self::FormatNotBridged(error) => error.to_string(),
+            Self::Policies(error)
+            | Self::FormatNotBridged(error)
+            | Self::CouldNotValidate(error) => error.to_string(),
             Self::CouldNotFilter(_) => "el filtro de la sede no se ha podido aplicar".to_owned(),
             Self::NoCertificateTheSiteAccepts => {
                 "la sede excluye todos los certificados que hay".to_owned()
@@ -69,7 +77,9 @@ impl SiteRefusal {
             | Self::ScratchUnwritable(detail)
             | Self::CannotSaveData(detail)
             | Self::CannotLoadData(detail)
-            | Self::LocalBatch(detail) => detail.clone(),
+            | Self::LocalBatch(detail)
+            | Self::InvalidSignature(detail)
+            | Self::ConfirmationNeeded(detail) => detail.clone(),
             Self::Signing(refusal) | Self::BatchSigningFailed(refusal) => refusal.detail.clone(),
             Self::Batch(error) => error.detail().to_owned(),
         }

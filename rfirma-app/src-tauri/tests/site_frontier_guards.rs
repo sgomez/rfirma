@@ -197,6 +197,12 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     ] {
         lines.push(WireAnswer::refused(code).on_the_wire());
     }
+    for refusal in [
+        SiteRefusal::InvalidSignature("la huella no cuadra".to_owned()),
+        SiteRefusal::ConfirmationNeeded("ProtocolLauncher.65".to_owned()),
+    ] {
+        lines.push(WireAnswer::refused(frontier::code_of(&refusal)).on_the_wire());
+    }
     lines.push(frontier::cancelled().on_the_wire());
     let codec = V4Codec;
     lines.push(
