@@ -76,8 +76,9 @@ verifies:
 - the **CRAP gate**: `cargo crap --threshold 30 --fail-above`, at a version
   pinned in the `justfile`, with `--allow` over the FFI module path;
 - on the slow lane only: that `native-image --shared` still **produces the
-  shared library** (cached by hash of the Java bridge), and that the tier C tests
-  **pass** (`--ignored` on Rust in `test-native`, `-DexcludedGroups= -Dgroups=gradaC` on Maven).
+  shared library** (cached by hash of the Java bridge), that the tier C tests
+  **pass** (`--ignored` on Rust in `test-native`, `-DexcludedGroups= -Dgroups=gradaC` on Maven),
+  and that the targeted FFI CRAP measurement **passes** (`just crap-ffi` under `cargo-crap`).
 
 The fast lane does **not** verify that a signature is valid or that a PDF
 opens; **the slow lane does**: `just test-native` signs a PDF end to end
