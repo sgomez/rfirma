@@ -48,6 +48,21 @@ function forcedToTheThirdProtocol(source) {
   return source;
 }
 
+/**
+ * El `autoscript.js` publicado nunca pone `gzip=true` —lo pone la sede— y su `execAppIntent` vive
+ * en un cierre, fuera de alcance. Se fuerza el fuente en el `buildUrl` del transporte por
+ * websocket, que es el que arma la URL de la operación.
+ */
+function withTheDataDeclaredGzipped(source) {
+  return replacingOrFailing(
+    source,
+    "\t\t\t/** Construye una URL que configura la operacion a realizar. */\n\t\t\tfunction buildUrl (paramsObject) {",
+    "\t\t\tfunction buildUrl (paramsObject) {\n" +
+      '\t\t\t\treturn buildUrlWithoutGzip(paramsObject) + "&gzip=true";\n' +
+      "\t\t\t}\n\t\t\tfunction buildUrlWithoutGzip (paramsObject) {",
+  );
+}
+
 /** Una línea de JSON por evento, y nada más, en la salida estándar. */
 function emit(event) {
   process.stdout.write(`${JSON.stringify(event)}\n`);
@@ -152,7 +167,8 @@ if (mode === "service") {
 }
 
 const rawSource = readFileSync(autoscriptPath, "utf8");
-const source = mode === "v3" ? forcedToTheThirdProtocol(rawSource) : rawSource;
+const forcedSource = mode === "v3" ? forcedToTheThirdProtocol(rawSource) : rawSource;
+const source = script === "signgzip" ? withTheDataDeclaredGzipped(forcedSource) : forcedSource;
 runInThisContext(source, { filename: autoscriptPath });
 
 SupportDialog.enableSupportDialog(false);
@@ -503,16 +519,6 @@ function theCosignScript(format, extraParams, content) {
   );
 }
 
-/** Un `sign()` con datos comprimidos con gzip y el parámetro `gzip=true`. */
-function theSignGzipScript() {
-  const originalExecAppIntent = execAppIntent;
-  execAppIntent = function (url, successCB, errorCB) {
-    execAppIntent = originalExecAppIntent;
-    return originalExecAppIntent(`${url}&gzip=true`, successCB, errorCB);
-  };
-  theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
-}
-
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -567,7 +573,7 @@ if (script === "batch") {
 } else if (script === "signcades") {
   theSignScript("CAdES", "mode=explicit", theChallenge());
 } else if (script === "signgzip") {
-  theSignGzipScript();
+  theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
 } else if (script === "signauto") {
   theSignScript("auto", "", theChallenge());
 } else if (script === "signxades") {
