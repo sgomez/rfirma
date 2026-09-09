@@ -159,6 +159,19 @@ _Avoid_: hoja, certificado de servidor, certificado TLS
 
 ### Invocación
 
+**Compatible con AutoFirma**:
+Que una sede que hoy habla con AutoFirma 1.9.2 hable con rFirma sin cambiar nada,
+con **cinco desviaciones a propósito**, y ninguna más: rFirma **no firma con
+SHA1**, ni suelto ni en lote, porque no produce firmas con una huella rota;
+**no atiende XMLDSig**, porque el original lo firma en una sola fase con la
+clave privada dentro de Java y eso lo prohíbe el ADR-0001; **no reproduce la
+XAdES explícita** (`mode=explicit`), que el propio original da por obsoleta y
+resuelve hasheando el dato con SHA1; **solo admite el lote local en JSON**, no
+el XML heredado que el original todavía acepta; y **no soporta tarjetas
+criptográficas ni el DNIe**, cuya fontanería PC/SC y PKCS#11 no se distribuye en
+ningún paquete (ADR-0004).
+_Avoid_: equivalente, clon de AutoFirma, drop-in replacement
+
 **Petición de firma**:
 Solicitud, originada normalmente en una sede electrónica abierta en el
 navegador, que pide firmar unos datos concretos con un certificado que el
