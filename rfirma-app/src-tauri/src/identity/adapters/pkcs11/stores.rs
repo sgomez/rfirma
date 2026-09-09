@@ -68,12 +68,16 @@ pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.
-fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 2] {
+fn firefox_layouts(home: &Path) -> [(PathBuf, PathBuf); 3] {
     [
         (home.join(".mozilla/firefox"), home.join(".mozilla/firefox")),
         (
             home.join(".config/mozilla/firefox"),
             home.join(".local/share/mozilla/firefox"),
+        ),
+        (
+            home.join("snap/firefox/common/.mozilla/firefox"),
+            home.join("snap/firefox/common/.mozilla/firefox"),
         ),
     ]
 }
@@ -90,6 +94,8 @@ pub fn nss_profiles(home: &Path) -> Vec<PathBuf> {
     }
     profiles.push(home.join(".pki/nssdb"));
     profiles.push(home.join(".local/share/pki/nssdb"));
+    profiles.push(home.join("snap/chromium/current/.local/share/pki/nssdb"));
+    profiles.push(home.join("snap/chromium/current/.pki/nssdb"));
 
     let mut found: Vec<PathBuf> = Vec::new();
     for profile in profiles {

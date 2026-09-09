@@ -100,6 +100,8 @@ finish-args:
   - --filesystem=~/.config/mozilla
   - --filesystem=~/.local/share/mozilla/firefox
   - --filesystem=~/.local/share/pki/nssdb
+  - --filesystem=~/snap/firefox/common/.mozilla/firefox
+  - --filesystem=~/snap/chromium/current
 
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin

@@ -93,6 +93,26 @@ fn an_nss_store_is_classified_the_same_under_the_xdg_paths() {
 }
 
 #[test]
+fn an_nss_store_is_classified_the_same_under_the_snap_paths() {
+    let firefox = Store::nss(
+        "/usr/lib/libsoftokn3.so",
+        Path::new("/casa/ada/snap/firefox/common/.mozilla/firefox/dddddddd.default"),
+    );
+    let chromium_xdg = Store::nss(
+        "/usr/lib/libsoftokn3.so",
+        Path::new("/casa/ada/snap/chromium/current/.local/share/pki/nssdb"),
+    );
+    let chromium_legacy = Store::nss(
+        "/usr/lib/libsoftokn3.so",
+        Path::new("/casa/ada/snap/chromium/current/.pki/nssdb"),
+    );
+
+    assert_eq!(firefox.class(), StoreClass::Firefox);
+    assert_eq!(chromium_xdg.class(), StoreClass::Chrome);
+    assert_eq!(chromium_legacy.class(), StoreClass::Chrome);
+}
+
+#[test]
 fn an_nss_store_somewhere_else_claims_no_owner() {
     let store = Store::nss(
         "/usr/lib/libsoftokn3.so",
@@ -237,4 +257,74 @@ fn resolves_an_absolute_profile_path_as_it_comes() {
     .expect("deberia poder escribirse");
 
     assert_eq!(nss_profiles(home.path()), vec![elsewhere]);
+}
+
+#[test]
+fn reads_a_firefox_profile_from_the_snap_layout() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let firefox = home.path().join("snap/firefox/common/.mozilla/firefox");
+    let profile = firefox.join("dddddddd.default");
+    std::fs::create_dir_all(&profile).expect("deberia poder crearse el perfil");
+    std::fs::write(profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+    std::fs::write(
+        firefox.join("profiles.ini"),
+        "[Profile0]\nPath=dddddddd.default\n",
+    )
+    .expect("deberia poder escribirse");
+
+    assert_eq!(nss_profiles(home.path()), vec![profile]);
+}
+
+#[test]
+fn reads_firefox_profiles_from_both_snap_and_classic_layouts_simultaneously() {
+    let home = tempfile::tempdir().expect("deberia poder crearse un HOME de mentira");
+    let classic_firefox = home.path().join(".mozilla/firefox");
+    let classic_profile = classic_firefox.join("aaaaaaaa.classic");
+    std::fs::create_dir_all(&classic_profile).expect("deberia poder crearse el perfil clasico");
+    std::fs::write(classic_profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+    std::fs::write(
+        classic_firefox.join("profiles.ini"),
+        "[Profile0]\nPath=aaaaaaaa.classic\n",
+    )
+    .expect("deberia poder escribirse");
+
+    let snap_firefox = home.path().join("snap/firefox/common/.mozilla/firefox");
+    let snap_profile = snap_firefox.join("bbbbbbbb.snap");
+    std::fs::create_dir_all(&snap_profile).expect("deberia poder crearse el perfil snap");
+    std::fs::write(snap_profile.join("cert9.db"), b"").expect("deberia poder escribirse");
+    std::fs::write(
+        snap_firefox.join("profiles.ini"),
+        "[Profile0]\nPath=bbbbbbbb.snap\n",
+    )
+    .expect("deberia poder escribirse");
+
+    assert_eq!(
+        nss_profiles(home.path()),
+        vec![classic_profile, snap_profile]
+    );
+}
+
+#[test]
+fn reads_the_snap_chromium_xdg_nssdb() {
+    let home = a_home_with(
+        &[("snap/chromium/current/.local/share/pki/nssdb", true)],
+        None,
+    );
+
+    assert_eq!(
+        nss_profiles(home.path()),
+        vec![home
+            .path()
+            .join("snap/chromium/current/.local/share/pki/nssdb")]
+    );
+}
+
+#[test]
+fn reads_the_snap_chromium_legacy_nssdb() {
+    let home = a_home_with(&[("snap/chromium/current/.pki/nssdb", true)], None);
+
+    assert_eq!(
+        nss_profiles(home.path()),
+        vec![home.path().join("snap/chromium/current/.pki/nssdb")]
+    );
 }
