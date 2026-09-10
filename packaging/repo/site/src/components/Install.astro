@@ -36,33 +36,6 @@ const tabs = [
       </p>
     </div>
 
-    <div
-      role="alert"
-      style="margin-top:clamp(20px,3vw,32px);display:flex;gap:14px;align-items:flex-start;padding:16px 18px;background:var(--rf-warning-bg);border:1px solid var(--rf-warning-border);border-radius:var(--rf-radius-md)"
-    >
-      <span style="flex:none;margin-top:2px;color:var(--rf-warning-text);display:flex"
-        ><svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.7"
-          stroke-linecap="round"
-          aria-hidden="true"><path d="M12 4 2.5 20h19z"></path><path d="M12 10v5M12 17.5v.5"></path></svg
-        ></span
-      >
-      <span>
-        <span style="display:block;font-size:.9375rem;font-weight:700;color:var(--rf-warning-text)"
-          >{t("install.alert.title")}</span
-        >
-        <p
-          style="margin:4px 0 0;font-size:.875rem;line-height:1.55;color:#78350f"
-          set:html={t("install.alert.body")}
-        />
-      </span>
-    </div>
-
     <div style="text-align:center">
       <div
         data-install-tablist

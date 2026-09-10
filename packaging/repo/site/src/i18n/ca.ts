@@ -197,9 +197,6 @@ export const ca: Dictionary = {
   "install.title": "Un repositori, i les actualitzacions arriben soles",
   "install.body":
     "Els canals de rFirma són repositoris natius. Un cop afegit el del teu sistema, els pedaços de seguretat s'instal·len amb el gestor de paquets.",
-  "install.alert.title": "Els paquets encara no estan publicats",
-  "install.alert.body":
-    "Els repositoris estan en fase de preparació. Les ordres d'aquí sota no funcionaran fins que es publiqui la primera versió (v0.4). El desenvolupament es segueix a <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
   "install.tablist.aria": "Canals de distribució",
   "install.copy": "Copiar",
   "install.copied": "Copiat",

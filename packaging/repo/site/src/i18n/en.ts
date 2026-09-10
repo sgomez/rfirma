@@ -197,9 +197,6 @@ export const en: Dictionary = {
   "install.title": "One repository, and updates arrive on their own",
   "install.body":
     "rFirma's channels are native repositories. Once your system's is added, security patches install through the package manager.",
-  "install.alert.title": "The packages aren't published yet",
-  "install.alert.body":
-    "The repositories are still being prepared. The commands below won't work until the first version (v0.4) is published. Development is tracked on <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
   "install.tablist.aria": "Distribution channels",
   "install.copy": "Copy",
   "install.copied": "Copied",

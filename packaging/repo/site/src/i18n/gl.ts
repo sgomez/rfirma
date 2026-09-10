@@ -197,9 +197,6 @@ export const gl: Dictionary = {
   "install.title": "Un repositorio, e as actualizacións chegan soas",
   "install.body":
     "As canles de rFirma son repositorios nativos. Unha vez engadido o do teu sistema, os parches de seguridade instálanse co xestor de paquetes.",
-  "install.alert.title": "Os paquetes aínda non están publicados",
-  "install.alert.body":
-    "Os repositorios están en fase de preparación. As ordes de abaixo non funcionarán ata que se publique a primeira versión (v0.4). O desenvolvemento séguese en <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
   "install.tablist.aria": "Canles de distribución",
   "install.copy": "Copiar",
   "install.copied": "Copiado",

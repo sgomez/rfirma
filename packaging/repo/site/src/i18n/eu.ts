@@ -197,9 +197,6 @@ export const eu: Dictionary = {
   "install.title": "Biltegi bat, eta eguneraketak bakarrik iristen dira",
   "install.body":
     "rFirmaren bideak jatorrizko biltegiak dira. Zure sistemarena gehitu ondoren, segurtasun-adabakiak paketeen kudeatzailearekin instalatzen dira.",
-  "install.alert.title": "Paketeak oraindik ez daude argitaratuta",
-  "install.alert.body":
-    "Biltegiak prestatze-fasean daude. Beheko aginduek ez dute funtzionatuko lehen bertsioa (v0.4) argitaratu arte. Garapena <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>en jarraitzen da.",
   "install.tablist.aria": "Banaketa-bideak",
   "install.copy": "Kopiatu",
   "install.copied": "Kopiatuta",

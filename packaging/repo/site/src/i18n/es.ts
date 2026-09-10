@@ -195,9 +195,6 @@ export const es = {
   "install.title": "Un repositorio, y las actualizaciones llegan solas",
   "install.body":
     "Los canales de rFirma son repositorios nativos. Una vez añadido el de tu sistema, los parches de seguridad se instalan con el gestor de paquetes.",
-  "install.alert.title": "Los paquetes todavía no están publicados",
-  "install.alert.body":
-    "Los repositorios están en fase de preparación. Las órdenes de abajo no funcionarán hasta que se publique la primera versión (v0.4). El desarrollo se sigue en <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
   "install.tablist.aria": "Canales de distribución",
   "install.copy": "Copiar",
   "install.copied": "Copiado",
