@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Preguntas, ideas y comentarios
+    url: https://github.com/sgomez/rfirma/discussions
+    about: Si no es un fallo concreto, empieza aquí. Es el sitio preferido para dudas, sugerencias de usabilidad, correcciones de las traducciones y cualquier cosa que no sepas dónde encaja.
