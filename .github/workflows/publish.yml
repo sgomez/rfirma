@@ -102,6 +102,12 @@ jobs:
       # ID-144). `build.yml` ya la paso sobre lo que construyo; esta la pasa
       # sobre lo que la gente se va a descargar, que es lo unico que importa
       # cuando lo que viene detras es servirlo en un repositorio.
+      - name: Herramientas para verificar el contenido
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ostree flatpak libarchive-tools
+
       - name: Puerta del contenido
         run: |
           set -euo pipefail
