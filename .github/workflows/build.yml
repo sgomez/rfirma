@@ -244,6 +244,17 @@ jobs:
       - name: Suelo de glibc
         run: just check-glibc
 
+      # El accesorio del banco de conformidad: las pruebas de grada C en Rust
+      # cubren los casos trifasicos contra el autoscript.js oficial (TD-55).
+      - name: Cache del banco de conformidad
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: testdata/conformance
+          key: autoscript-567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439
+
+      - name: Banco de conformidad (autoscript.js v1.9.2)
+        run: just autoscript
+
       # EL CARRIL LENTO. Aqui si existe librfirma_crypto.so, asi que las pruebas
       # de grada C —las que firman de verdad— se ejecutan en vez de quedarse
       # ignoradas. Y de aqui sale el PDF de la puerta manual (TD-04, ID-168),
