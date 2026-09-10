@@ -1,3 +1,15 @@
+> [!IMPORTANT]
+> **rFirma no tiene ninguna relación con la Administración pública española.**
+>
+> No es un proyecto oficial, no está respaldado, autorizado ni supervisado por ningún
+> organismo público, y no lo desarrolla ni lo mantiene el equipo de AutoFirma. Es un
+> proyecto personal e independiente, sin ningún vínculo con el Gobierno de España, con
+> el Ministerio para la Transformación Digital y de la Función Pública ni con la
+> FNMT-RCM. Los nombres AutoFirma y FNMT se citan solo para describir con qué es
+> compatible.
+>
+> Para el programa oficial, acude a la web de la Administración.
+
 # rFirma: Firma Electrónica Nativa
 
 **rFirma** —`rfirma` como identificador: binario, paquete y `.desktop`— es una reimplementación moderna y nativa de la herramienta de firma de la administración española **AutoFirma**. Combina el rendimiento y la ligereza de **Tauri v2 (Rust + React)** para la interfaz, con la madurez del motor criptográfico original de Java compilado a código nativo mediante **GraalVM Native Image**.
