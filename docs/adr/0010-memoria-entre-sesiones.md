@@ -210,3 +210,11 @@ Cuesta acoplar la ficha 3 a la 2 —sin fila de recientes no hay dónde guardar 
 posición—, y se acepta: es el mismo sitio donde ya viven los metadatos de ese
 documento, y desaparece con él cuando se olvida o se vacía la lista, sin ninguna
 regla de caducidad nueva.
+
+## Enmienda: quién escribe la memoria
+
+La instancia única que `lib.rs` registra citando este ADR es del **proceso de
+escritorio** y solo de él (ADR-0024). El proceso de sede lee la memoria entera
+y escribe una sola rebanada, el último certificado usado, releyendo el fichero
+antes; el escritorio relee esa rebanada al listar certificados. Todo lo demás
+lo escribe el escritorio.

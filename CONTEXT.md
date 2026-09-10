@@ -183,6 +183,23 @@ Sitio web de la Administración que origina la petición de firma y recibe el
 documento firmado.
 _Avoid_: portal, cliente web, tercero
 
+**Trámite de sede**:
+Lo que rFirma atiende desde que llega una URL `afirma://` hasta que la sede
+tiene su respuesta: la negociación de arranque, el consentimiento de la
+persona, la firma y la entrega. Uno por **proceso de sede**.
+_Avoid_: errand en prosa, sesión, operación (que es cada verbo del protocolo)
+
+**Rol del proceso**:
+Lo que un proceso de rFirma es desde que arranca, decidido por su línea de
+órdenes y sin cambiar después. El **proceso de escritorio** es la aplicación
+que abre la persona, único en el equipo, con la ventana principal y la
+colocación de la firma; el **proceso de sede** es el que arranca una URL
+`afirma://`, uno por invocación, con su ventana de sede y sin ventana
+principal, y termina con su trámite. Dos procesos de sede conviven, cada uno
+en el puerto que sorteó su navegador; ninguno se une al de escritorio ni lo
+cierra.
+_Avoid_: modo, instancia, app de navegador, dos aplicaciones
+
 **Canal**:
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
 falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
