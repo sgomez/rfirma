@@ -1153,7 +1153,7 @@ check-glibc lib=native_lib:
 # por tanto requisito de instalacion. Ver el README.
 #
 # Construye el flatpak, el unico canal soportado (ADR-0015).
-flatpak: native build-ts
+flatpak: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}/packaging/flatpak"
@@ -1171,9 +1171,9 @@ flatpak: native build-ts
 # `tauri build` y NO `cargo build --release`: la bandera --features
 # custom-protocol la pasa el solo (ver el comentario de `build-rust`, donde no
 # usarla es justo lo que obliga a escribirla a mano), y es el unico que sabe
-# empaquetar. Encadena `native` porque la libreria entra en los dos paquetes por
-# `bundle.linux.<formato>.files` desde la ruta canonica, y `build-ts` porque
-# tauri-build lee frontendDist.
+# empaquetar. Comprueba `check-native` (ADR-0013) porque la libreria entra en los
+# dos paquetes por `bundle.linux.<formato>.files` desde la ruta canonica, y
+# `build-ts` porque tauri-build lee frontendDist.
 #
 # LA REGLA DE LAS CANDIDATAS NO SE REIMPLEMENTA AQUI (ID-154): se consulta
 # packaging/native-packages-allowed.sh con la version de tauri.conf.json, que es
@@ -1184,7 +1184,7 @@ flatpak: native build-ts
 # packaging/verifica-contenido.sh sobre el paquete construido, uno por formato.
 #
 # Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004).
-bundle: native build-ts
+bundle: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}"

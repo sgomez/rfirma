@@ -109,8 +109,7 @@ tokens.
 ## La tubería: tres ficheros, cada uno con un motivo para cambiar
 
 | fichero | disparador | permisos | qué hace |
-|---|---|---|---|
-| `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | una sola construcción para el objetivo único `x86_64` (ID-147) —sin matriz: no hay nada que multiplicar, y repartir el empaquetado en jobs paralelos haría que los tres canales dejasen de llevar los mismos bytes—, la guardia de versión, el carril lento, `just check-glibc`, artefactos y digests como salidas |
+| `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | compilación única de `librfirma_crypto.so` distribuida a jobs paralelos de empaquetado y pruebas de grada C para el objetivo único `x86_64` (ID-147) —garantizando los mismos bytes en los tres canales (ADR-0004)—, guardia de versión, `just check-glibc`, artefactos y digests como salidas |
 | `release.yml` | `push: tags v*` | `environment: release` | descarga los artefactos, firma, atesta la procedencia y crea la Release **en borrador** con el `pdf-puerta-manual` adjunto |
 | `publish.yml` | `release published`, si no es prerelease | `environment: release` | reconstruye los tres repositorios y los despliega |
 

@@ -21,17 +21,12 @@
 #   `secrets: inherit`. Eso se vigila al revisar `release.yml`, y esa es la
 #   razon de que sean tres ficheros y no uno.
 #
-# UN SOLO JOB, Y ES A PROPOSITO (ID-140). Los tres canales tienen que llevar
-# LOS MISMOS BYTES de `librfirma_crypto.so`, y native-image no promete dos
-# construcciones identicas: repartir el empaquetado en tres jobs paralelos
-# significaria tres librerias distintas, o pasar 28 MB por un artefacto para
-# volver a juntarlas. Un job que construye una vez y empaqueta tres veces es
-# mas corto de escribir y mas facil de creer.
-#
-# Y por eso `just flatpak bundle` es UNA SOLA INVOCACION: `just` ejecuta cada
-# dependencia una vez por invocacion, asi que `native` y `build-ts` corren una
-# vez y los dos empaquetadores consumen su resultado. Partirlo en dos ordenes
-# reconstruiria la libreria entre medias.
+# LOS TRES CANALES LLEVAN LOS MISMOS BYTES de `librfirma_crypto.so` (ADR-0004).
+# Se compila una sola vez con GraalVM CE 25 en el primer job (`native-bridge`),
+# se sube como artefacto interno y los tres empaquetadores y la grada C descargan
+# y consumen ese mismo binario. Los empaquetadores y las pruebas de grada C
+# corren en paralelo, reduciendo el tiempo de pared a la mitad sin romper la
+# identidad binaria.
 #
 # NO HAY MATRIZ porque no hay nada que multiplicar: `x86_64` es el unico
 # objetivo de la v0.4 (ID-147).
@@ -44,9 +39,8 @@ name: Construccion
 
 on:
   # El disparador de verdad: `release.yml` lo llama con la version de la
-  # etiqueta. No hay `push` ni `pull_request` — esto tarda mas de veinte
-  # minutos y no es el bucle de realimentacion de nadie; el que corre en cada
-  # PR es `ci.yml`.
+  # etiqueta. No hay `push` ni `pull_request` — esto no es el bucle de
+  # realimentacion de nadie; el que corre en cada PR es `ci.yml`.
   workflow_call:
     inputs:
       expected-version:
@@ -59,18 +53,18 @@ on:
     outputs:
       version:
         description: La version construida, leida de tauri.conf.json (ID-150).
-        value: ${{ jobs.build.outputs.version }}
+        value: ${{ jobs.collect-packages.outputs.version }}
       native-packages:
         description: >-
           `true` si la version produce .deb y .rpm; `false` si es una
           candidata y solo hay flatpak (ID-154).
-        value: ${{ jobs.build.outputs.native-packages }}
+        value: ${{ jobs.collect-packages.outputs.native-packages }}
       packages-artifact:
         description: Nombre del artefacto con los paquetes y su SHA256SUMS.
-        value: ${{ jobs.build.outputs.packages-artifact }}
+        value: ${{ jobs.collect-packages.outputs.packages-artifact }}
       digests:
         description: El contenido de SHA256SUMS, tal cual, en una sola cadena.
-        value: ${{ jobs.build.outputs.digests }}
+        value: ${{ jobs.collect-packages.outputs.digests }}
 
   # A mano, para ensayar la construccion sin etiquetar nada. Sigue sin ver un
   # secreto y sigue sin publicar nada: lo unico que produce son artefactos.
@@ -89,15 +83,19 @@ env:
   FLATPAK_BUNDLE: packaging/flatpak/me.sgomez.rfirma.flatpak
 
 jobs:
-  build:
-    name: Construye los tres canales
+  # ==========================================================================
+  # 1. BIBLIOTECA NATIVA (GraalVM)
+  # ==========================================================================
+  # Se compila una sola vez: native-image no promete construcciones bit a bit
+  # reproducibles, asi que compilarla aqui y pasarla como artefacto garantiza que
+  # los tres canales lleven exactamente los mismos bytes (ADR-0004).
+  native-bridge:
+    name: Biblioteca nativa (GraalVM)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 25
     outputs:
       version: ${{ steps.version.outputs.version }}
       native-packages: ${{ steps.version.outputs.native-packages }}
-      packages-artifact: paquetes
-      digests: ${{ steps.digests.outputs.sha256sums }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -121,94 +119,16 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
-        with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          # Fijada por SHA (ID-170), asi que la accion ya no puede leer el canal
-          # de la etiqueta con la que se invoca: hay que nombrarlo aqui.
-          toolchain: stable
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-
-      # Cuatro grupos, y ninguno esta de adorno:
-      #   - la cadena de Tauri (WebKitGTK 4.1 y companiia), sin la cual el
-      #     build.rs de javascriptcore-rs-sys se cae sin decir de que va;
-      #   - flatpak, flatpak-builder y ostree, que son el primer canal y ademas
-      #     lo que necesita verifica-contenido.sh para mirar dentro del bundle;
-      #   - libarchive-tools (bsdtar), que es como verifica-contenido.sh abre un
-      #     .rpm sin instalar `rpm`;
-      #   - softhsm2, opensc, libnss3-tools, poppler-utils y libxml2-utils, que son
-      #     la grada C del ADR-0014: sin ellos no hay PDF de la puerta manual ni
-      #     comprobacion del XAdES.
-      - name: Dependencias de sistema
+      - name: just
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            just \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libsoup-3.0-dev \
-            libxdo-dev \
-            build-essential \
-            file \
-            gettext \
-            flatpak \
-            flatpak-builder \
-            ostree \
-            libarchive-tools \
-            poppler-utils \
-            libxml2-utils \
-            softhsm2 \
-            opensc \
-            libnss3-tools
-
-      # El runtime NO viaja dentro del bundle (ADR-0015): se consume del remoto
-      # de Flathub, aqui y en el equipo de quien instale.
-      #
-      # `--install-deps-only` y no una lista de `flatpak install` escrita a
-      # mano: el runtime, el SDK y la extension de Rust los nombra ya el
-      # manifiesto, y la rama de la extension depende de la base freedesktop
-      # del runtime de GNOME. Copiarla aqui seria un segundo sitio donde
-      # equivocarse cada vez que suba el runtime.
-      - name: Runtime y SDK de Flathub
-        working-directory: packaging/flatpak
-        run: |
-          flatpak remote-add --user --if-not-exists flathub \
-            https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak-builder --user --install-deps-from=flathub --install-deps-only \
-            build-dir me.sgomez.rfirma.yml
+          sudo apt-get install -y --no-install-recommends just
 
       # LA GUARDIA DE VERSION, en dos mitades.
-      #
       # `just check-version` es el candado del ID-150: la version vive en cinco
       # sitios y cuatro tienen que decir lo mismo que tauri.conf.json.
-      #
-      # La segunda mitad solo existe cuando llama otro workflow: comprueba que
-      # la version del arbol es la que el llamador cree estar construyendo. Sin
-      # esto, empujar `v0.4.0` sobre un arbol que dice `0.3.9` produciria una
-      # Release `v0.4.0` con paquetes `0.3.9` dentro, y nadie se enteraria
-      # hasta que alguien mirase un `dpkg -I`.
       - name: Guardia de version
         id: version
-        # La entrada del llamador entra por `env:`, NO interpolada dentro del
-        # `run:`. Una expresion `${{ }}` se sustituye antes de que exista la
-        # shell, asi que un nombre de etiqueta valido como `v0.4.0$(curl ...)`
-        # se convertiria en texto del script. Este job no ve secretos, pero si
-        # produce los paquetes que `release.yml` firma: ejecutar codigo aqui es
-        # poder cambiar los bytes que luego se firman.
         env:
           EXPECTED_VERSION: ${{ inputs.expected-version }}
         run: |
@@ -232,9 +152,6 @@ jobs:
           fi
           echo "Construyendo **$version**." >> "$GITHUB_STEP_SUMMARY"
 
-      # ----------------------------------------------------------------------
-      # EL ARTEFACTO DEL QUE SALEN LOS TRES CANALES
-      # ----------------------------------------------------------------------
       - name: Libreria nativa
         run: |
           export GRAALVM_HOME="$JAVA_HOME"
@@ -246,8 +163,87 @@ jobs:
       - name: Suelo de glibc
         run: just check-glibc
 
-      # El accesorio del banco de conformidad: las pruebas de grada C en Rust
-      # cubren los casos trifasicos contra el autoscript.js oficial (TD-55).
+      - name: Sube artefacto librfirma_crypto.so
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: librfirma-crypto
+          path: rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so
+          retention-days: 1
+
+  # ==========================================================================
+  # 2. PRUEBAS DE GRADA C (en paralelo con el empaquetado)
+  # ==========================================================================
+  # Aqui si existe librfirma_crypto.so, asi que las pruebas de grada C —las
+  # que firman de verdad— se ejecutan en vez de quedarse ignoradas. Y de aqui
+  # sale el PDF de la puerta manual (TD-04, ID-168), que `release.yml` adjunta
+  # al borrador para que quien publique tenga delante lo que tiene que llevar a
+  # un validador oficial.
+  test-native:
+    name: Pruebas de grada C
+    needs: native-bridge
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Descarga librfirma_crypto.so
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: librfirma-crypto
+          path: rfirma-native-bridge/target/lib/rfirma
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ github.token }}
+
+      - name: Cache de ~/.m2
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      - name: Dependencias de sistema de pruebas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            build-essential \
+            file \
+            gettext \
+            poppler-utils \
+            libxml2-utils \
+            softhsm2 \
+            opensc \
+            libnss3-tools
+
       - name: Cache del banco de conformidad
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -257,11 +253,6 @@ jobs:
       - name: Banco de conformidad (autoscript.js v1.9.2)
         run: just autoscript
 
-      # EL CARRIL LENTO. Aqui si existe librfirma_crypto.so, asi que las pruebas
-      # de grada C —las que firman de verdad— se ejecutan en vez de quedarse
-      # ignoradas. Y de aqui sale el PDF de la puerta manual (TD-04, ID-168),
-      # que `release.yml` adjunta al borrador para que quien publique tenga
-      # delante lo que tiene que llevar a un validador oficial.
       - name: Pruebas de grada C
         run: just test-native
 
@@ -273,55 +264,192 @@ jobs:
           path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
           if-no-files-found: warn
 
-      # ----------------------------------------------------------------------
-      # LOS TRES CANALES, DE UNA SOLA CONSTRUCCION
-      # ----------------------------------------------------------------------
-      # Una invocacion y no dos: ver la cabecera. `bundle` ya pasa
-      # verifica-contenido.sh sobre el .deb y sobre el .rpm; al flatpak se la
-      # pasa el paso siguiente, porque la receta `flatpak` no la lleva dentro.
-      - name: Empaqueta los tres canales
-        if: steps.version.outputs.native-packages == 'true'
-        run: just flatpak bundle
+  # ==========================================================================
+  # 3. EMPAQUETADO FLATPAK (en paralelo con bundle y grada C)
+  # ==========================================================================
+  flatpak:
+    name: Empaqueta Flatpak
+    needs: native-bridge
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Una candidata (`-rc.N`) no tiene representacion valida en el campo
-      # Version de un RPM, asi que produce flatpak y nada mas (ID-154). El
-      # ensayo de la tuberia es real, pero mas estrecho que la entrega.
-      - name: Empaqueta solo el flatpak (candidata)
-        if: steps.version.outputs.native-packages != 'true'
+      - name: Descarga librfirma_crypto.so
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: librfirma-crypto
+          path: rfirma-native-bridge/target/lib/rfirma
+
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - name: Dependencias de Flatpak
         run: |
-          just flatpak
-          echo "Version candidata: sin .deb ni .rpm (ID-154)." >> "$GITHUB_STEP_SUMMARY"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            gettext \
+            flatpak \
+            flatpak-builder \
+            ostree \
+            libarchive-tools
 
-      # ----------------------------------------------------------------------
-      # LO QUE SE ENTREGA AL SIGUIENTE WORKFLOW
-      # ----------------------------------------------------------------------
+      - name: Runtime y SDK de Flathub
+        working-directory: packaging/flatpak
+        run: |
+          flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --install-deps-from=flathub --install-deps-only \
+            build-dir me.sgomez.rfirma.yml
+
+      - name: Construye frontend
+        run: just build-ts
+
+      - name: Empaqueta flatpak
+        run: just flatpak
+
+      - name: Sube artefacto flatpak
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bundle-flatpak
+          path: ${{ env.FLATPAK_BUNDLE }}
+          retention-days: 1
+
+  # ==========================================================================
+  # 4. EMPAQUETADO .DEB Y .RPM (en paralelo con flatpak y grada C)
+  # ==========================================================================
+  bundle:
+    name: Empaqueta .deb y .rpm
+    needs: native-bridge
+    if: needs.native-bridge.outputs.native-packages == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Descarga librfirma_crypto.so
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: librfirma-crypto
+          path: rfirma-native-bridge/target/lib/rfirma
+
+      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      - name: Dependencias de sistema de Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libayatana-appindicator3-dev \
+            libsoup-3.0-dev \
+            libxdo-dev \
+            build-essential \
+            file \
+            gettext \
+            libarchive-tools
+
+      - name: Construye frontend
+        run: just build-ts
+
+      - name: Empaqueta .deb y .rpm
+        run: just bundle
+
+      - name: Sube artefactos .deb y .rpm
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bundles-native
+          path: |
+            rfirma-app/src-tauri/target/release/bundle/deb/*.deb
+            rfirma-app/src-tauri/target/release/bundle/rpm/*.rpm
+          retention-days: 1
+
+  # ==========================================================================
+  # 5. REUNE, VERIFICA Y EXPONE LOS PAQUETES
+  # ==========================================================================
+  collect-packages:
+    name: Reune y verifica paquetes
+    needs: [native-bridge, test-native, flatpak, bundle]
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.native-bridge.result == 'success' &&
+      needs.test-native.result == 'success' &&
+      needs.flatpak.result == 'success' &&
+      (needs.bundle.result == 'success' || needs.bundle.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ needs.native-bridge.outputs.version }}
+      native-packages: ${{ needs.native-bridge.outputs.native-packages }}
+      packages-artifact: paquetes
+      digests: ${{ steps.digests.outputs.sha256sums }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Herramientas de verificacion
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            flatpak \
+            ostree \
+            libarchive-tools
+
+      - name: Prepara directorio de destino
+        run: mkdir -p "${{ runner.temp }}/paquetes"
+
+      - name: Descarga bundle flatpak
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bundle-flatpak
+          path: ${{ runner.temp }}/paquetes
+
+      - name: Descarga bundles nativos (.deb y .rpm)
+        if: needs.native-bridge.outputs.native-packages == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bundles-native
+          path: ${{ runner.temp }}/paquetes-nativos
+
       - name: Reune los paquetes
         run: |
           set -euo pipefail
-          # Fuera del arbol de trabajo: lo que se sube no tiene por que dejar
-          # un directorio sin versionar dentro del repositorio.
           destino="${{ runner.temp }}/paquetes"
-          mkdir -p "$destino"
-          cp "$FLATPAK_BUNDLE" "$destino/"
-          if [ "${{ steps.version.outputs.native-packages }}" = "true" ]; then
-            find rfirma-app/src-tauri/target/release/bundle \
+          if [ "${{ needs.native-bridge.outputs.native-packages }}" = "true" ]; then
+            find "${{ runner.temp }}/paquetes-nativos" \
               -maxdepth 2 -type f \( -name '*.deb' -o -name '*.rpm' \) \
               -exec cp {} "$destino/" \;
           fi
-          ls -l "$destino"
+          ls -la "$destino"
 
       # LA PUERTA DEL CONTENIDO (ADR-0012, ID-144), Y SOBRE LOS TRES FORMATOS:
-      # exactamente un librfirma_crypto.so y libawt.so en ninguna parte. Si
-      # libawt.so entra, un JPEG con perfil ICC deja de dar un error recuperable
-      # y aborta el proceso entero.
-      #
-      # Corre sobre los ficheros YA REUNIDOS y no sobre el arbol de
-      # construccion: lo que importa es lo que va a llegar a quien instale, que
-      # es exactamente lo que se sube en el paso siguiente. `just bundle` ya
-      # pasa la misma puerta sobre el .deb y el .rpm mientras los produce —esa
-      # es la que ve quien construye en su equipo—; esta es la del workflow, y
-      # ademas es la unica que cubre el flatpak, porque la receta `flatpak` no
-      # la lleva dentro.
+      # exactamente un librfirma_crypto.so y libawt.so en ninguna parte.
       - name: Puerta del contenido
         run: |
           set -euo pipefail

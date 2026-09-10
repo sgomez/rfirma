@@ -43,7 +43,6 @@ on:
     types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
   schedule:
     # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
