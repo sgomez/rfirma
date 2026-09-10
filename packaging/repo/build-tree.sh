@@ -299,16 +299,17 @@ EOF
 # ---------------------------------------------------------------- 3. el dnf --
 for version in "${versiones[@]}"; do
     for paquete in "$serie/$version"/*.rpm; do
-        # `%{SIGPGP}`/`%{SIGGPG}` son las dos cabeceras donde puede estar la
-        # firma segun el algoritmo; sin ninguna de las dos, el paquete NO esta
+        # `RSAHEADER`, `DSAHEADER`, `SIGGPG` y `SIGPGP` son las cabeceras donde
+        # reside la firma segun el algoritmo y la version de RPM (claves RSA
+        # modernas van en `RSAHEADER`). Sin ninguna de ellas, el paquete NO esta
         # firmado y `gpgcheck=1` lo rechazaria en la maquina de quien instala.
         # Se mira aqui —y no solo en `release.yml`— porque este es el ultimo
         # sitio donde el fichero se toca antes de servirse. En el modo sin
         # firma no se mira: ahi no hay ninguna clave delante y el arbol entero
         # es inservible para publicar, que es justo lo que dice su nombre.
         if [ "$firmar" -eq 1 ]; then
-            sig="$(rpm -qp --nosignature --qf '%{SIGPGP}%{SIGGPG}' "$paquete" 2> /dev/null || true)"
-            if [ -z "$sig" ] || [ "$sig" = "(none)(none)" ]; then
+            sig="$(rpm -qp --nosignature --qf '%|RSAHEADER?{%{RSAHEADER:pgpsig}}|%|DSAHEADER?{%{DSAHEADER:pgpsig}}|%|SIGGPG?{%{SIGGPG:pgpsig}}|%|SIGPGP?{%{SIGPGP:pgpsig}}|' "$paquete" 2> /dev/null || true)"
+            if [ -z "$sig" ]; then
                 echo "el paquete $(basename "$paquete") no lleva firma dentro" >&2
                 echo "se firma en release.yml, ANTES del SHA256SUMS y de la" >&2
                 echo "atestacion: firmarlo despues cambia sus bytes (ID-144)." >&2

@@ -323,6 +323,14 @@ else
     fail "el repositorio dnf no trae toda la serie: $en_indice en el indice, $servidos servidos"
 fi
 
+# unsigned_rpm_is_detected_as_having_no_signature
+rpm_fmt='%|RSAHEADER?{%{RSAHEADER:pgpsig}}|%|DSAHEADER?{%{DSAHEADER:pgpsig}}|%|SIGGPG?{%{SIGGPG:pgpsig}}|%|SIGPGP?{%{SIGPGP:pgpsig}}|'
+if [ -z "$(rpm -qp --nosignature --qf "$rpm_fmt" "$serie/v0.4.0/rfirma-0.4.0.x86_64.rpm" 2>/dev/null || true)" ]; then
+    ok "un rpm sin firmar se detecta correctamente como vacio"
+else
+    fail "un rpm sin firmar parece firmado ante la consulta de rpm"
+fi
+
 # ---------------------------------------------------------------------------
 # Lo demas
 # ---------------------------------------------------------------------------

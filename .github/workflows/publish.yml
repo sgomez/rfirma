@@ -36,6 +36,12 @@ name: Publicacion
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Etiqueta de la Release a publicar (ej. v0.9.0)'
+        required: true
+        type: string
 
 permissions: {}
 
@@ -51,7 +57,7 @@ jobs:
     # LA GUARDA DE LA CANDIDATA. `github.event.release.prerelease` lo pone
     # `release.yml` a partir de la unica sede de esa regla
     # (packaging/native-packages-allowed.sh, ID-154).
-    if: ${{ !github.event.release.prerelease }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # El mismo entorno que `release.yml`: mismo revisor humano y misma
@@ -66,7 +72,7 @@ jobs:
       - name: Assets de la Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
           mkdir -p paquetes
@@ -118,7 +124,7 @@ jobs:
 
       - name: Resumen
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           {
             echo "### $TAG verificada"
@@ -130,7 +136,7 @@ jobs:
     # DETRAS DE LA PUERTA. `needs` es lo que hace que verificar y servir sean
     # dos cosas en ese orden y no dos cosas a la vez.
     needs: verify
-    if: ${{ !github.event.release.prerelease }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # La misma sede del secreto que los otros dos workflows (ID-169): aqui
@@ -156,7 +162,7 @@ jobs:
       - name: La serie vigente
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: packaging/repo/download-series.sh "$TAG" serie
 
       # Las herramientas de los tres repositorios (ID-173, ID-175). No vienen
@@ -166,7 +172,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ostree flatpak dpkg-dev apt-utils createrepo-c rpm gnupg
+            ostree flatpak dpkg-dev apt-utils createrepo-c rpm gnupg rsync openssh-client
 
       # El arbol se firma SIEMPRE, y por eso la huella es un argumento y no una
       # opcion: apt y dnf rechazan un indice sin firma, y el ostree recien
@@ -202,14 +208,14 @@ jobs:
 
       - name: Publica
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
           DESTINO: "${{ vars.PUBLISH_SSH_USER }}@${{ vars.PUBLISH_SSH_HOST }}:"
           RSYNC_RSH: "ssh -i ~/.ssh/publish -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
         run: packaging/repo/publish-tree.sh arbol "$TAG" "$DESTINO"
 
       - name: Resumen
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           {
             echo "### $TAG en servicio"
