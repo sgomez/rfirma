@@ -202,7 +202,7 @@ modules:
       # lo caza al construir, que es donde sale barato.
       - |
         set -eu
-        bundle=$(sed -n 's|.*src="\(/assets/index-[^"]*\.js\)".*|\1|p' \
+        bundle=$(sed -n 's|.*src="\(/assets/[^"]*\.js\)".*|\1|p' \
             dist/index.html | head -1)
         if [ -z "$bundle" ]; then
             echo "ERROR: dist/index.html no nombra ningun bundle de vite." >&2
