@@ -57,6 +57,10 @@ bateria() {
     echo "== $etiqueta_destino =="
 
     # a_fresh_tree_enters_service_through_the_symlink
+    # Si `actual` existia como directorio previo no vacio, `--force` lo
+    # reemplaza por el enlace sin fallar.
+    mkdir -p "$raiz_remota/actual"
+    echo "contenido previo" > "$raiz_remota/actual/sobra.txt"
     crea_arbol "$tmp/v1" "0.4.0"
     "$publica" "$tmp/v1" "v0.4.0" "$destino" > "$tmp/salida" 2>&1 \
         || { cat "$tmp/salida" >&2; fail "$etiqueta_destino: la primera publicacion falla"; return; }

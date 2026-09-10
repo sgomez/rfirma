@@ -103,7 +103,7 @@ rsync --archive --delete --mkpath --human-readable \
 echo "  intercambiando el enlace: actual -> arboles/$etiqueta"
 mkdir "$tmp/enlace"
 ln -s "arboles/$etiqueta" "$tmp/enlace/actual"
-rsync --archive --links --delay-updates "$tmp/enlace/" "$destino/"
+rsync --archive --links --delay-updates --force "$tmp/enlace/" "$destino/"
 
 # El enlace es TODO el servicio: si no ha quedado donde se cree, el despliegue
 # no ha ocurrido y no se poda nada.
