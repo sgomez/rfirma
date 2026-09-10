@@ -187,7 +187,8 @@ _Avoid_: portal, cliente web, tercero
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
 falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
 dónde viene la petición. Lo que lo cierra es la **credencial de canal**, abajo.
-_Avoid_: socket, conexión, túnel
+_Avoid_: socket, conexión, túnel, canal a secas para flatpak, `.deb` o `.rpm` —eso es el
+**canal de distribución**
 
 **Credencial de canal**:
 El `idsession` que la sede manda en la URL de arranque, y que repite en cada
@@ -254,9 +255,16 @@ _Avoid_: configuración, opción, setting
 Lo que la aplicación recuerda por su cuenta, sin que nadie se lo pida: los
 documentos recientes, la última configuración de firma visible y el certificado
 usado la última vez. Borrarlo no reconfigura nada.
-_Avoid_: caché, historial, sesión
+_Avoid_: caché, historial, sesión, estado como lo que la aplicación informa de su instalación
+—eso es el **diagnóstico**
 
 ### Distribución
+
+**Canal de distribución**:
+La forma en la que la aplicación llegó a la máquina: flatpak, `.deb`, `.rpm` o una compilación de
+desarrollo. Decide si corre dentro del **sandbox** y qué puede ver del sistema, así que es lo
+primero que hay que saber para interpretar todo lo demás.
+_Avoid_: canal a secas —es la conexión con la sede—, paquete, formato de instalación
 
 **Sandbox**:
 Confinamiento del sistema operativo en el que corre la aplicación cuando se
@@ -265,6 +273,21 @@ y salida de documentos pasa por los portales, así que no conoce la ruta origina
 de un documento que entre por ahí (ADR-0004, ADR-0011). Los canales nativos
 —`.deb`, `.rpm`— corren fuera de él.
 _Avoid_: arenero, caja de arena, jaula, contenedor
+
+**Señal**:
+Una comprobación de la instalación, con su lectura y su veredicto. La **lectura** es qué se midió y
+cuándo; el **veredicto** es el juicio que se pinta, y es una lista cerrada: correcto, atención,
+incorrecto, no aplica y comprobando. «No aplica» —el sujeto no existe en esta máquina— y
+«comprobando» no son medias tintas de «correcto». Que la lectura esté fresca o rancia es propiedad
+de la lectura, no un veredicto más.
+_Avoid_: check, chequeo, casilla, indicador, estado de la instalación
+
+**Diagnóstico**:
+El conjunto de señales: lo que la aplicación informa por su cuenta sobre cómo ha quedado instalada.
+Es lo contrario de una **preferencia** —lo que la persona decide— y no es el **estado** —lo que la
+aplicación recuerda—. De una señal puede colgar una **reparación**, que la arregla ahí mismo y
+vuelve a medirla; eso no es un ajuste, es la respuesta al diagnóstico.
+_Avoid_: estado de la aplicación, salud, healthcheck, autodiagnóstico
 
 ### Identidad del producto
 
