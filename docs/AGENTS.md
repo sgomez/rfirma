@@ -31,6 +31,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0020 | La apertura de la ventana de sede no pisa un momento posterior del trámite |
 | 0021 | La versión mínima que exige la operación (`ver`) se comprueba siempre |
 | 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
+| 0023 | El catálogo de algoritmos es el del original, SHA-1 incluido |
 
 ## `research/` — mediciones (por qué algo es como es)
 

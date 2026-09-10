@@ -162,9 +162,11 @@ pub fn signed_by_the_token(
 /// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
 pub fn composed_for(asked: AskedAlgorithm, key: Option<KeyKind>) -> SignatureAlgorithm {
     match (asked, key.unwrap_or(KeyKind::Rsa)) {
+        (AskedAlgorithm::Sha1, KeyKind::Rsa) => SignatureAlgorithm::Sha1Rsa,
         (AskedAlgorithm::Sha256, KeyKind::Rsa) => SignatureAlgorithm::Sha256Rsa,
         (AskedAlgorithm::Sha384, KeyKind::Rsa) => SignatureAlgorithm::Sha384Rsa,
         (AskedAlgorithm::Sha512, KeyKind::Rsa) => SignatureAlgorithm::Sha512Rsa,
+        (AskedAlgorithm::Sha1, KeyKind::Ec) => SignatureAlgorithm::Sha1Ecdsa,
         (AskedAlgorithm::Sha256, KeyKind::Ec) => SignatureAlgorithm::Sha256Ecdsa,
         (AskedAlgorithm::Sha384, KeyKind::Ec) => SignatureAlgorithm::Sha384Ecdsa,
         (AskedAlgorithm::Sha512, KeyKind::Ec) => SignatureAlgorithm::Sha512Ecdsa,
@@ -174,7 +176,7 @@ pub fn composed_for(asked: AskedAlgorithm, key: Option<KeyKind>) -> SignatureAlg
 fn no_mechanism_for(algorithm: &str) -> TokenError {
     TokenError::new(
         Situation::MechanismNotOffered,
-        format!("el token no firma con '{algorithm}': rFirma solo compone SHA-2"),
+        format!("el token no firma con '{algorithm}': no esta en el catalogo del original"),
     )
 }
 

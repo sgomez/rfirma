@@ -3,7 +3,8 @@ use cryptoki::mechanism::MechanismType;
 use super::{KeyKind, SignatureAlgorithm};
 
 /// Nombre del original, mecanismo `cryptoki` y clase de clave, para todos los que acepta.
-const TABLE: [(&str, MechanismType, KeyKind); 9] = [
+const TABLE: [(&str, MechanismType, KeyKind); 11] = [
+    ("SHA1withRSA", MechanismType::SHA1_RSA_PKCS, KeyKind::Rsa),
     (
         "SHA256withRSA",
         MechanismType::SHA256_RSA_PKCS,
@@ -34,6 +35,7 @@ const TABLE: [(&str, MechanismType, KeyKind); 9] = [
         MechanismType::SHA512_RSA_PKCS_PSS,
         KeyKind::Rsa,
     ),
+    ("SHA1withECDSA", MechanismType::ECDSA_SHA1, KeyKind::Ec),
     ("SHA256withECDSA", MechanismType::ECDSA_SHA256, KeyKind::Ec),
     ("SHA384withECDSA", MechanismType::ECDSA_SHA384, KeyKind::Ec),
     ("SHA512withECDSA", MechanismType::ECDSA_SHA512, KeyKind::Ec),
@@ -86,6 +88,6 @@ fn a_name_in_any_case_and_with_spaces_around_is_the_same_algorithm() {
 
 #[test]
 fn a_name_the_original_does_not_accept_is_no_algorithm() {
-    assert_eq!(SignatureAlgorithm::from_name("SHA1withRSA"), None);
+    assert_eq!(SignatureAlgorithm::from_name("RIPEMD160withRSA"), None);
     assert_eq!(SignatureAlgorithm::from_name("SHA256"), None);
 }

@@ -203,14 +203,27 @@ fn signing_and_saving_reads_its_three_filename_save_properties() {
 #[test]
 fn signing_and_saving_rejects_an_algorithm_it_cannot_produce_like_sign_does() {
     let url = an_operation(&format!(
-        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=SHA1withRSA&dat={}",
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=PAdES&algorithm=RIPEMD160withRSA&dat={}",
         dat(b"%PDF-1.7\n")
     ));
 
-    let refusal = read_operation(&url).expect_err("rFirma no firma con SHA1");
+    let refusal = read_operation(&url).expect_err("rFirma no firma con RIPEMD160");
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
+}
+
+#[test]
+fn signing_with_sha1_is_attended_like_the_original_attends_it() {
+    let url = an_operation(&format!(
+        "op={SIGN}&format=PAdES&algorithm=SHA1withRSA&dat={}",
+        dat(b"%PDF-1.7\n")
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.algorithm(), AskedAlgorithm::Sha1);
 }
 
 #[test]
@@ -527,11 +540,11 @@ fn every_algorithm_the_published_client_sends_is_typed_or_refused_with_the_code_
         ("SHA512withECDSA", Some(AskedAlgorithm::Sha512)),
         ("SHA-512withECDSA", Some(AskedAlgorithm::Sha512)),
         ("SHA256withDSA", Some(AskedAlgorithm::Sha256)),
-        ("SHA1", None),
-        ("SHA-1", None),
-        ("SHA1withRSA", None),
-        ("SHA-1withRSA", None),
-        ("SHA1withECDSA", None),
+        ("SHA1", Some(AskedAlgorithm::Sha1)),
+        ("SHA-1", Some(AskedAlgorithm::Sha1)),
+        ("SHA1withRSA", Some(AskedAlgorithm::Sha1)),
+        ("SHA-1withRSA", Some(AskedAlgorithm::Sha1)),
+        ("SHA1withECDSA", Some(AskedAlgorithm::Sha1)),
         ("MD5withRSA", None),
     ] {
         let url = an_operation(&format!(
@@ -555,11 +568,11 @@ fn every_algorithm_the_published_client_sends_is_typed_or_refused_with_the_code_
 #[test]
 fn an_algorithm_rfirma_cannot_produce_names_its_parameter() {
     let url = an_operation(&format!(
-        "op=sign&format=PAdES&algorithm=SHA1withRSA&dat={}",
+        "op=sign&format=PAdES&algorithm=RIPEMD160withRSA&dat={}",
         dat(b"%PDF-1.7\n")
     ));
 
-    let refusal = read_operation(&url).expect_err("rFirma no firma con SHA1");
+    let refusal = read_operation(&url).expect_err("rFirma no firma con RIPEMD160");
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
@@ -1055,8 +1068,9 @@ fn a_local_batch_in_json_reads_compound_and_hyphenated_algorithm_names() {
     }
 }
 
+/// Hay sedes en producción que declaran así su lote (ADR-0023).
 #[test]
-fn a_batch_with_sha1_or_unsupported_algorithm_is_refused_naming_the_parameter() {
+fn a_batch_with_sha1_is_attended_like_the_original_attends_it() {
     for (name, lote_xml) in [
         ("sha1 en XML", xml_lote("sha1", false)),
         ("SHA1 en XML", xml_lote("SHA1", false)),
@@ -1064,9 +1078,10 @@ fn a_batch_with_sha1_or_unsupported_algorithm_is_refused_naming_the_parameter() 
         ("SHA-1 en XML", xml_lote("SHA-1", false)),
     ] {
         let url = a_batch(&format!("&dat={}", dat(lote_xml.as_bytes())));
-        let refusal = read_operation(&url).expect_err(name);
-        assert_eq!(refusal.code(), SafCode::Params, "{name}");
-        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+        let SiteOperation::Batch(request) = read_operation(&url).expect(name) else {
+            panic!("es un lote: {name}");
+        };
+        assert!(!request.is_json(), "{name}");
     }
 
     for (name, lote_json) in [
@@ -1079,9 +1094,10 @@ fn a_batch_with_sha1_or_unsupported_algorithm_is_refused_naming_the_parameter() 
             "&jsonbatch=true&dat={}",
             dat(lote_json.as_bytes())
         ));
-        let refusal = read_operation(&url).expect_err(name);
-        assert_eq!(refusal.code(), SafCode::Params, "{name}");
-        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+        let SiteOperation::Batch(request) = read_operation(&url).expect(name) else {
+            panic!("es un lote: {name}");
+        };
+        assert!(request.is_json(), "{name}");
     }
 
     for (name, lote_local) in [
@@ -1092,10 +1108,24 @@ fn a_batch_with_sha1_or_unsupported_algorithm_is_refused_naming_the_parameter() 
             "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
             dat(lote_local.as_bytes())
         ));
-        let refusal = read_operation(&url).expect_err(name);
-        assert_eq!(refusal.code(), SafCode::Params, "{name}");
-        assert_eq!(refusal.blame(), Some(Parameter::Algorithm), "{name}");
+        let SiteOperation::Batch(request) = read_operation(&url).expect(name) else {
+            panic!("es un lote: {name}");
+        };
+        assert!(request.is_local(), "{name}");
     }
+}
+
+#[test]
+fn a_batch_with_ripemd160_is_still_refused_naming_the_parameter() {
+    let url = a_batch(&format!(
+        "&dat={}",
+        dat(xml_lote("RIPEMD160withRSA", false).as_bytes())
+    ));
+
+    let refusal = read_operation(&url).expect_err("RIPEMD160 no esta en el catalogo del lote");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
 }
 
 #[test]
