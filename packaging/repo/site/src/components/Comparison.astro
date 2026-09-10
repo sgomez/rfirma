@@ -8,8 +8,6 @@ interface Props {
 const { locale } = Astro.props;
 const t = translator(locale);
 const rows = ["arch", "keys", "store", "stores", "stamp", "sede", "ca", "lang", "privacy", "updates", "desktop"] as const;
-const cell = "padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle)";
-const lastCell = "padding:14px 20px";
 ---
 
 <section id="comparativa" style="position:relative;background:#ffffff;overflow:clip">
@@ -31,49 +29,32 @@ const lastCell = "padding:14px 20px";
         {t("comparison.body")}
       </p>
     </div>
-    <div
-      data-reveal
-      style="margin-top:clamp(28px,4vw,48px);border:1px solid var(--rf-border-subtle);border-radius:20px;background:#ffffff;box-shadow:0 30px 60px -30px rgba(6,119,129,.25),0 10px 25px -15px rgba(0,0,0,.1);overflow-x:auto"
-    >
-      <table style="width:100%;min-width:640px;border-collapse:collapse;text-align:left;font-size:.9375rem">
+    <div data-reveal class="cmp-shell" style="margin-top:clamp(28px,4vw,48px)">
+      <table class="cmp-table">
         <thead>
           <tr>
-            <th
-              scope="col"
-              style="width:26%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700"
-              >{t("comparison.head.aspect")}</th
-            >
-            <th
-              scope="col"
-              style="width:37%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700"
-              >{t("comparison.head.autofirma")}</th
-            >
-            <th
-              scope="col"
-              style="width:37%;padding:14px 20px;border-bottom:1px solid var(--rf-border-subtle);background:#ffffff;font-weight:700;color:var(--rf-brand-text)"
-              >{t("comparison.head.rfirma")}</th
-            >
+            <th scope="col" class="cmp-head cmp-head--aspect">{t("comparison.head.aspect")}</th>
+            <th scope="col" class="cmp-head">{t("comparison.head.autofirma")}</th>
+            <th scope="col" class="cmp-head cmp-head--rfirma">{t("comparison.head.rfirma")}</th>
           </tr>
         </thead>
         <tbody>
           {
-            rows.map((row, index) => {
-              const box = index === rows.length - 1 ? lastCell : cell;
-              return (
-                <tr>
-                  <th
-                    scope="row"
-                    style={`${box};font-weight:600;text-align:left`}
-                    set:html={t(`comparison.${row}.label` as const)}
-                  />
-                  <td
-                    style={`${box};color:var(--rf-text-muted)`}
-                    set:html={t(`comparison.${row}.autofirma` as const)}
-                  />
-                  <td style={`${box};font-weight:600`} set:html={t(`comparison.${row}.rfirma` as const)} />
-                </tr>
-              );
-            })
+            rows.map((row) => (
+              <tr class="cmp-row">
+                <th scope="row" class="cmp-label" set:html={t(`comparison.${row}.label` as const)} />
+                <td
+                  class="cmp-value"
+                  data-head={t("comparison.head.autofirma")}
+                  set:html={t(`comparison.${row}.autofirma` as const)}
+                />
+                <td
+                  class="cmp-value cmp-value--rfirma"
+                  data-head={t("comparison.head.rfirma")}
+                  set:html={t(`comparison.${row}.rfirma` as const)}
+                />
+              </tr>
+            ))
           }
         </tbody>
       </table>

@@ -69,13 +69,41 @@ a:hover {
   }
 }
 
+/* En una columna la ilustracion encabeza el hero y el texto queda debajo */
+@media (max-width: 900px) {
+  [data-hero-art] {
+    order: -1;
+  }
+}
+
 @media (max-width: 940px) {
+  /* Flex y no grid: en grid la maqueta solo puede fijarse dentro de su fila. */
   [data-demo-grid] {
-    grid-template-columns: minmax(0, 1fr) !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch !important;
   }
 
   [data-demo-mock] {
     order: -1;
+    z-index: 2;
+    background: #ffffff;
+    padding-bottom: 10px;
+  }
+
+  [data-demo-mock]::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 72px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0));
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%);
   }
 
   .demo-step {
@@ -312,10 +340,127 @@ a:hover {
   box-shadow: 0 18px 34px -10px rgba(6, 119, 129, 0.7);
 }
 
-/* La columna de rFirma resalta */
-#comparativa tbody td:last-child,
-#comparativa thead th:last-child {
+/* Comparativa: tabla en escritorio, fichas apiladas en pantalla estrecha */
+.cmp-shell {
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow:
+    0 30px 60px -30px rgba(6, 119, 129, 0.25),
+    0 10px 25px -15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9375rem;
+}
+
+.cmp-head,
+.cmp-label,
+.cmp-value {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--rf-border-subtle);
+}
+
+.cmp-table tbody tr:last-child .cmp-label,
+.cmp-table tbody tr:last-child .cmp-value {
+  border-bottom: 0;
+}
+
+.cmp-head {
+  width: 37%;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.cmp-head--aspect {
+  width: 26%;
+}
+
+.cmp-head--rfirma {
+  color: var(--rf-brand-text);
   background: rgba(240, 253, 250, 0.7);
+}
+
+.cmp-label {
+  font-weight: 600;
+  text-align: left;
+}
+
+.cmp-value {
+  color: var(--rf-text-muted);
+}
+
+.cmp-value--rfirma {
+  color: var(--rf-text);
+  font-weight: 600;
+  background: rgba(240, 253, 250, 0.7);
+}
+
+@media (max-width: 720px) {
+  .cmp-table,
+  .cmp-table tbody,
+  .cmp-row,
+  .cmp-label,
+  .cmp-value {
+    display: block;
+  }
+
+  .cmp-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .cmp-row {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rf-border-subtle);
+  }
+
+  .cmp-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .cmp-label,
+  .cmp-value {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .cmp-label {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  .cmp-value {
+    padding: 8px 12px;
+    border-radius: var(--rf-radius-md, 10px);
+  }
+
+  .cmp-value + .cmp-value {
+    margin-top: 6px;
+  }
+
+  .cmp-value::before {
+    content: attr(data-head);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rf-text-muted);
+  }
+
+  .cmp-value--rfirma::before {
+    color: var(--rf-brand-text);
+  }
 }
 
 #transparencia .rf-card {

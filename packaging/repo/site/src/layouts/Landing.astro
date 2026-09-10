@@ -59,19 +59,12 @@ const canonical = new URL(localePath(locale), Astro.site);
     <script>
       import { mountCopyButton } from "../scripts/copy-to-clipboard";
       import { mountGuidedDemo } from "../scripts/guided-demo";
-      import { mountHeaderOffset } from "../scripts/header-offset";
       import { mountInstallTabs } from "../scripts/install-tabs";
       import { mountMockScale } from "../scripts/mock-scale";
       import { mountReveal } from "../scripts/reveal";
 
       const MOCK_WIDTH = 1000;
       const MOCK_HEIGHT = 620;
-
-      const notice = document.querySelector<HTMLElement>("[data-notice]");
-      const header = document.querySelector<HTMLElement>("[data-header]");
-      if (notice && header) {
-        mountHeaderOffset(notice, header);
-      }
 
       const frame = document.querySelector<HTMLElement>("[data-mock-frame]");
       const stage = document.querySelector<HTMLElement>("[data-mock-stage]");
