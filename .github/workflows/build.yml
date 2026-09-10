@@ -148,8 +148,9 @@ jobs:
       #     lo que necesita verifica-contenido.sh para mirar dentro del bundle;
       #   - libarchive-tools (bsdtar), que es como verifica-contenido.sh abre un
       #     .rpm sin instalar `rpm`;
-      #   - softhsm2, opensc, libnss3-tools y poppler-utils, que son la grada C
-      #     del ADR-0014: sin ellos no hay PDF de la puerta manual.
+      #   - softhsm2, opensc, libnss3-tools, poppler-utils y libxml2-utils, que son
+      #     la grada C del ADR-0014: sin ellos no hay PDF de la puerta manual ni
+      #     comprobacion del XAdES.
       - name: Dependencias de sistema
         run: |
           sudo apt-get update
@@ -169,6 +170,7 @@ jobs:
             ostree \
             libarchive-tools \
             poppler-utils \
+            libxml2-utils \
             softhsm2 \
             opensc \
             libnss3-tools
