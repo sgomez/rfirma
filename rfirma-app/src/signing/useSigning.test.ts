@@ -62,7 +62,7 @@ const ok = <T>(value: T): StageResult<T> => ({ ok: true, value });
 const failed = (failure: TokenFailure): StageResult<never> => ({ ok: false, failure });
 
 // El caso corriente: el almacén pide el secreto por pantalla (ID-190).
-const typedOnScreen: StoreSecret = { kind: "typedOnScreen", attemptsLeft: null };
+const typedOnScreen: StoreSecret = { kind: "typedOnScreen" };
 
 /** Un backend de mentira: cada etapa devuelve lo que se le diga, en orden. */
 function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
@@ -79,17 +79,6 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
 
 // Grada A: las tres etapas son un puerto, y aquí se conducen con un doble.
 describe("useSigning", () => {
-  it("asks for the PIN after the presignature, never before", async () => {
-    const presign = vi.fn(async () => ok(typedOnScreen));
-    const { result } = renderHook(() => useSigning(backendOf({ presign })));
-
-    const started = act(() => result.current.start(certificate, anOrder()));
-    expect(presign).toHaveBeenCalled();
-    await started;
-
-    expect(result.current.state).toEqual({ kind: "pin", failure: null });
-  });
-
   it("runs the three stages in order and ends with the signed document", async () => {
     const calls: string[] = [];
     const { result } = renderHook(() =>
@@ -99,8 +88,9 @@ describe("useSigning", () => {
             calls.push("presign");
             return ok(typedOnScreen);
           },
-          sign: async () => {
+          sign: async (pin) => {
             calls.push("sign");
+            expect(pin).toBe("");
             return ok(undefined);
           },
           postsign: async () => {
@@ -112,7 +102,6 @@ describe("useSigning", () => {
     );
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("1234"));
 
     expect(calls).toEqual(["presign", "sign", "postsign"]);
     // El asa del documento de partida viaja con el estado: es lo que ata el
@@ -133,7 +122,6 @@ describe("useSigning", () => {
     const { result } = renderHook(() => useSigning(backendOf({ discard })));
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("1234"));
     act(() => result.current.signAnother());
 
     expect(result.current.state).toEqual({ kind: "idle" });
@@ -142,36 +130,22 @@ describe("useSigning", () => {
     expect(discard).not.toHaveBeenCalled();
   });
 
-  it("retries a wrong PIN without repeating the presignature", async () => {
-    const presign = vi.fn(async () => ok(typedOnScreen));
-    const sign = vi
-      .fn<SigningBackend["sign"]>()
-      .mockResolvedValueOnce(failed(wrongPin))
-      .mockResolvedValueOnce(ok(undefined));
-    const { result } = renderHook(() => useSigning(backendOf({ presign, sign })));
+  it("ends in failure when signing on token fails", async () => {
+    const { result } = renderHook(() =>
+      useSigning(backendOf({ sign: async () => failed(wrongPin) })),
+    );
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("0000"));
 
-    expect(result.current.state).toEqual({ kind: "pin", failure: wrongPin });
-
-    await act(() => result.current.submitPin("1234"));
-
-    expect(presign).toHaveBeenCalledTimes(1);
-    expect(result.current.state).toEqual({
-      kind: "signed",
-      document: signed,
-      origin: anOrder().document,
-    });
+    expect(result.current.state).toEqual({ kind: "failed", failure: wrongPin });
   });
 
-  it("takes a token failure that is not about the PIN out of the dialog", async () => {
+  it("transitions to failed state when the token is removed", async () => {
     const { result } = renderHook(() =>
       useSigning(backendOf({ sign: async () => failed(cardGone) })),
     );
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("1234"));
 
     expect(result.current.state).toEqual({ kind: "failed", failure: cardGone });
   });
@@ -187,7 +161,6 @@ describe("useSigning", () => {
     );
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("1234"));
 
     expect(result.current.state).toEqual({ kind: "failed", failure: assembling });
   });
@@ -234,11 +207,7 @@ describe("useSigning", () => {
     });
   });
 
-  /**
-   * ID-190: sin necesidad de sesión no hay diálogo. La ventana firma directo,
-   * con la cadena vacía, y nunca pasa por el estado «pin».
-   */
-  it("signs directly, with the empty string, when the store needs no session", async () => {
+  it("signs with the empty string, delegating secret prompt to native prompter", async () => {
     const sign = vi.fn(async () => ok(undefined));
     const { result } = renderHook(() =>
       useSigning(
@@ -259,12 +228,7 @@ describe("useSigning", () => {
     });
   });
 
-  /**
-   * Una tarjeta bloqueada ya no vive en el diálogo del secreto: la v0.4 retira
-   * tarjetas y DNIe del alcance, y con ellos el único estado que se resolvía
-   * ahí aparte de un secreto incorrecto (docs/design/dialogo-pin.md).
-   */
-  it("takes a locked pin out of the dialog too, unlike a wrong one", async () => {
+  it("records a locked pin as a failed state", async () => {
     const locked: TokenFailure = {
       situation: "pinLocked",
       detail: "CKR_PIN_LOCKED (C_Login)",
@@ -275,30 +239,22 @@ describe("useSigning", () => {
     );
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("0000"));
 
     expect(result.current.state).toEqual({ kind: "failed", failure: locked });
   });
 
-  it("goes back to the panel when the PIN dialog is cancelled", async () => {
+  it("goes back to the panel when cancelled", () => {
     const { result } = renderHook(() => useSigning(backendOf()));
 
-    await act(() => result.current.start(certificate, anOrder()));
     act(() => result.current.cancel());
 
     expect(result.current.state).toEqual({ kind: "idle" });
   });
 
-  /**
-   * Volver al panel no basta: el ciclo a medias lo guarda el backend, así que
-   * cancelar tiene que decírselo o el PDF, los atributos a firmar y el sello se
-   * quedan vivos hasta que se cierre la ventana.
-   */
-  it("tells the backend to forget the half-open cycle when the PIN dialog is cancelled", async () => {
+  it("tells the backend to forget the half-open cycle when cancelled", () => {
     const discard = vi.fn(async () => {});
     const { result } = renderHook(() => useSigning(backendOf({ discard })));
 
-    await act(() => result.current.start(certificate, anOrder()));
     act(() => result.current.cancel());
 
     expect(discard).toHaveBeenCalledTimes(1);
@@ -312,7 +268,6 @@ describe("useSigning", () => {
     );
 
     await act(() => result.current.start(certificate, anOrder()));
-    await act(() => result.current.submitPin("1234"));
     expect(result.current.state).toEqual({ kind: "failed", failure: cardGone });
 
     act(() => result.current.cancel());
@@ -325,11 +280,10 @@ describe("useSigning", () => {
    * nada que contarle a nadie, y una promesa rechazada sin dueño tumbaría el
    * proceso.
    */
-  it("goes back to the panel even if the backend cannot forget the cycle", async () => {
+  it("goes back to the panel even if the backend cannot forget the cycle", () => {
     const discard = vi.fn(() => Promise.reject(new Error("no hay isolate")));
     const { result } = renderHook(() => useSigning(backendOf({ discard })));
 
-    await act(() => result.current.start(certificate, anOrder()));
     act(() => result.current.cancel());
 
     expect(result.current.state).toEqual({ kind: "idle" });
@@ -368,6 +322,5 @@ describe("acknowledgementFor", () => {
   it("has nothing to show in the states that are not the signed one", () => {
     expect(acknowledgementFor({ kind: "idle" }, "/a.pdf")).toBeNull();
     expect(acknowledgementFor({ kind: "running", stage: "sign" }, "/a.pdf")).toBeNull();
-    expect(acknowledgementFor({ kind: "pin", failure: null }, "/a.pdf")).toBeNull();
   });
 });

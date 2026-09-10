@@ -76,8 +76,8 @@ msgstr "No s'ha pogut llegir l'elecció de l'escriptori"
 
 msgid "errors.situations.handlerListUnreadable.body"
 msgstr ""
-"El fitxer on l'escriptori la desa no s'ha pogut llegir, així que s'ha "
-"deixat com estava."
+"El fitxer on l'escriptori la desa no s'ha pogut llegir, així que s'ha deixat "
+"com estava."
 
 msgid "errors.situations.handlerListUnwritable.title"
 msgstr "No s'ha pogut desar qui atén els enllaços"
@@ -567,8 +567,7 @@ msgstr[2] ""
 
 #. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
 msgid "panel.placement.errors.beyond"
-msgstr ""
-"El document té {{pageCount}} pàgines i has escrit fins a la {{page}}."
+msgstr "El document té {{pageCount}} pàgines i has escrit fins a la {{page}}."
 
 #. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
 msgid "panel.placement.errors.reversed"
@@ -580,8 +579,7 @@ msgstr "No hi ha pàgina 0: la primera és la 1."
 #. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
 msgid "panel.placement.errors.malformed"
 msgstr ""
-"«{{entry}}» no s'entén. Números i intervals separats per comes: "
-"1,2-3,10-20."
+"«{{entry}}» no s'entén. Números i intervals separats per comes: 1,2-3,10-20."
 
 #. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
 msgid "panel.placement.errors.empty"
@@ -643,8 +641,7 @@ msgid "panel.certificate.failed.title"
 msgstr "No hem pogut cercar els certificats"
 
 msgid "panel.certificate.failed.body"
-msgstr ""
-"La cerca ha fallat abans d'acabar, així que no sabem si n'hi ha cap."
+msgstr "La cerca ha fallat abans d'acabar, així que no sabem si n'hi ha cap."
 
 #. {{date}} es la fecha de caducidad, ya formateada según el idioma.
 msgid "panel.certificate.expired"
@@ -746,34 +743,11 @@ msgstr "Obrir la carpeta"
 msgid "panel.signed.signAgain"
 msgstr "Tornar a signar"
 
-msgid "pin.title"
-msgstr "Introdueix el PIN"
-
 msgid "pin.titlePassword"
 msgstr "Introdueix la contrasenya"
 
-#. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
-msgid "pin.signingAs"
-msgstr "{{holder}} · {{idNumber}}"
-
-#. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
-msgid "pin.subjectBrowser"
-msgstr "Els teus certificats de {{browser}}"
-
-msgid "pin.label"
-msgstr "PIN"
-
 msgid "pin.labelPassword"
 msgstr "Contrasenya"
-
-msgid "pin.incorrect"
-msgstr "PIN incorrecte"
-
-msgid "pin.incorrectPassword"
-msgstr "Contrasenya incorrecta"
-
-msgid "pin.submit"
-msgstr "Signar"
 
 msgid "progress.title"
 msgstr "Signant el document…"
@@ -876,8 +850,7 @@ msgstr "Firefox fa servir l'elecció que desa a les seves pròpies preferències
 
 #. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
 msgid "preferences.urlHandler.inTheSandbox"
-msgstr ""
-"Aquesta versió no ho pot canviar: es tria als ajustos de l'escriptori."
+msgstr "Aquesta versió no ho pot canviar: es tria als ajustos de l'escriptori."
 
 msgid "preferences.askAboutUrlHandler.label"
 msgstr "Preguntar-m'ho en arrencar"
@@ -894,7 +867,8 @@ msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
 
 msgid "preferences.rememberActivity.hint"
-msgstr "Inclou els documents recents i el certificat fet servir l'última vegada."
+msgstr ""
+"Inclou els documents recents i el certificat fet servir l'última vegada."
 
 msgid "preferences.rememberActivity.clear"
 msgstr "Buidar la llista"
@@ -1189,8 +1163,8 @@ msgstr "Cal confirmar abans de signar"
 
 msgid "sede.confirm.messages.pdfShadowAttackSuspect"
 msgstr ""
-"Sembla que el PDF s'ha modificat després de l'última signatura. Vols "
-"signar-lo de totes maneres?"
+"Sembla que el PDF s'ha modificat després de l'última signatura. Vols signar-"
+"lo de totes maneres?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
@@ -1347,8 +1321,7 @@ msgstr ""
 "Has tancat el diàleg de càrrega sense triar cap fitxer per a {{origin}}."
 
 msgid "sede.refusals.cannotSaveData"
-msgstr ""
-"El fitxer que demanava {{origin}} no s'ha pogut escriure on has triat."
+msgstr "El fitxer que demanava {{origin}} no s'ha pogut escriure on has triat."
 
 msgid "sede.refusals.cannotLoadData"
 msgstr "Un dels fitxers triats per a {{origin}} no s'ha pogut llegir."
@@ -1370,7 +1343,8 @@ msgstr ""
 "no sap llegir."
 
 msgid "sede.refusals.batchSigningFailed"
-msgstr "La signatura del lot que demanava {{origin}} no s'ha arribat a completar."
+msgstr ""
+"La signatura del lot que demanava {{origin}} no s'ha arribat a completar."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tens cap certificat"
@@ -1400,3 +1374,24 @@ msgstr[2] "{{origin}} no accepta cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Hauràs de continuar des de la seu."
+
+#~ msgid "pin.title"
+#~ msgstr "Introdueix el PIN"
+
+#~ msgid "pin.signingAs"
+#~ msgstr "{{holder}} · {{idNumber}}"
+
+#~ msgid "pin.subjectBrowser"
+#~ msgstr "Els teus certificats de {{browser}}"
+
+#~ msgid "pin.label"
+#~ msgstr "PIN"
+
+#~ msgid "pin.incorrect"
+#~ msgstr "PIN incorrecte"
+
+#~ msgid "pin.incorrectPassword"
+#~ msgstr "Contrasenya incorrecta"
+
+#~ msgid "pin.submit"
+#~ msgstr "Signar"

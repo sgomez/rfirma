@@ -32,7 +32,6 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
   const calls = {
     consent: vi.fn(),
     confirmSignatures: vi.fn(),
-    submitSecret: vi.fn(),
     cancel: vi.fn(),
     close: vi.fn(),
     lookAgain: vi.fn(),
@@ -47,7 +46,6 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
     },
     consent: async (id) => calls.consent(id),
     confirmSignatures: async () => calls.confirmSignatures(),
-    submitSecret: async (secret) => calls.submitSecret(secret),
     cancel: async () => calls.cancel(),
     close: async () => calls.close(),
     lookAgain: async () => calls.lookAgain(),
@@ -517,36 +515,6 @@ describe("SedeWindow", () => {
 
       expect(calls.cancel).toHaveBeenCalled();
       expect(calls.confirmSignatures).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("the store's secret", () => {
-    it("has no screen of its own: it is the same dialog as the local route", () => {
-      const { port } = scriptedErrand({
-        kind: "secret",
-        certificate: certificate({ store: "card" }),
-        failure: null,
-      });
-      renderWithCatalog(<SedeWindow errands={port} />);
-
-      expect(screen.getByLabelText("PIN")).toBeInTheDocument();
-      // Y debajo sigue el momento de firma, que es donde el trámite está.
-      expect(screen.getByText("Firmando")).toBeInTheDocument();
-    });
-
-    it("hands the typed secret back through the port", async () => {
-      const user = userEvent.setup();
-      const { port, calls } = scriptedErrand({
-        kind: "secret",
-        certificate: certificate({ store: "card" }),
-        failure: null,
-      });
-      renderWithCatalog(<SedeWindow errands={port} />);
-
-      await user.type(screen.getByLabelText("PIN"), "1234");
-      await user.click(screen.getByRole("button", { name: "Firmar" }));
-
-      expect(calls.submitSecret).toHaveBeenCalledWith("1234");
     });
   });
 

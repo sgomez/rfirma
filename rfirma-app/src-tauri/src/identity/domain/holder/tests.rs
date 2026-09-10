@@ -92,3 +92,12 @@ fn an_issuer_without_a_common_name_falls_back_instead_of_going_blank() {
     assert_eq!(common_name_of(Some("OU=Ceres, C=ES")), "OU=Ceres, C=ES");
     assert_eq!(common_name_of(None), "");
 }
+
+#[test]
+fn a_der_that_does_not_parse_gives_no_holder_to_prompt_with() {
+    assert_eq!(
+        super::prompted_holder_of(b"esto no es un certificado"),
+        None
+    );
+    assert_eq!(super::prompted_holder_of(&[]), None);
+}

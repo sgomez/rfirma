@@ -57,7 +57,6 @@ rojo.
 | `signing/useSigning.ts` | El estado de la firma. |
 | `signing/SigningPanel.tsx` | El panel, con el botón de sellar. |
 | `signing/CertificateSelect.tsx` | La elección de certificado. |
-| `signing/PinDialog.tsx` | El diálogo del secreto del almacén. |
 | `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | El progreso. |
 | `signing/UnsealedPagesDialog.tsx` | El diálogo de páginas sin sello, justo antes de firmar. |

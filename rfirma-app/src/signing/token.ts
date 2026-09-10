@@ -11,11 +11,9 @@
 /**
  * Las siete situaciones de `pkcs11::error::Situation`, con los mismos nombres.
  *
- * Solo `incorrectPin` vive en el diálogo del secreto y no en un aviso de
- * error: se reintenta sin salir. `pinLocked` ya no está ahí (docs/design/
- * dialogo-pin.md): la v0.4 retira tarjetas y DNIe del alcance, y con ellos la
- * única situación de PKCS#11 que llegaba a bloquearse dentro de esa
- * conversación; se cuenta como cualquier otro fallo, al pie del panel.
+ * El diálogo modal nativo del sistema operativo gestiona la solicitud
+ * interactiva del secreto y los reintentos; los fallos definitivos se cuentan
+ * al pie del panel o en el desenlace del trámite.
  */
 export type TokenSituation =
   | "incorrectPin"
@@ -41,17 +39,4 @@ export interface TokenFailure {
    * dialogo-pin.md). No se enseña en ninguna parte.
    */
   attemptsLeft: number | null;
-}
-
-/**
- * Si el fallo se resuelve **dentro** del diálogo del secreto.
- *
- * Solo un PIN o una contraseña incorrectos: se reintentan ahí mismo, sin
- * reiniciar el recorrido, porque son la respuesta a lo que se acaba de
- * teclear. Todo lo demás —incluida una tarjeta bloqueada— sale del diálogo y
- * se cuenta en el pie del panel, que es donde vive el estado de «error de
- * firma» (docs/design/dialogo-pin.md).
- */
-export function belongsToPinDialog(failure: TokenFailure): boolean {
-  return failure.situation === "incorrectPin";
 }

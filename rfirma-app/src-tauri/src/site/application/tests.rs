@@ -297,9 +297,7 @@ impl TokenSigning for InMemoryTokenSigning {
         *crate::lock(&self.secrets_asked) += 1;
         match &self.refusing {
             Some(refusal) => Err(refusal.clone()),
-            None => Ok(StoreSecret::TypedOnScreen {
-                attempts_left: None,
-            }),
+            None => Ok(StoreSecret::TypedOnScreen),
         }
     }
 

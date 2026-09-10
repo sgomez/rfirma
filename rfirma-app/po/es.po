@@ -747,34 +747,11 @@ msgstr "Abrir la carpeta"
 msgid "panel.signed.signAgain"
 msgstr "Volver a firmar"
 
-msgid "pin.title"
-msgstr "Introduce el PIN"
-
 msgid "pin.titlePassword"
 msgstr "Introduce la contraseña"
 
-#. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
-msgid "pin.signingAs"
-msgstr "{{holder}} · {{idNumber}}"
-
-#. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
-msgid "pin.subjectBrowser"
-msgstr "Tus certificados de {{browser}}"
-
-msgid "pin.label"
-msgstr "PIN"
-
 msgid "pin.labelPassword"
 msgstr "Contraseña"
-
-msgid "pin.incorrect"
-msgstr "PIN incorrecto"
-
-msgid "pin.incorrectPassword"
-msgstr "Contraseña incorrecta"
-
-msgid "pin.submit"
-msgstr "Firmar"
 
 msgid "progress.title"
 msgstr "Firmando el documento…"
@@ -1146,10 +1123,14 @@ msgstr ""
 #. Contrafirma: se firma sobre las firmas que el documento ya trae, y el
 #. objetivo dice sobre cuáles.
 msgid "sede.consent.counterSignatureTree"
-msgstr "Ya viene firmado: la tuya será una contrafirma sobre todas las firmas que ya tiene."
+msgstr ""
+"Ya viene firmado: la tuya será una contrafirma sobre todas las firmas que ya "
+"tiene."
 
 msgid "sede.consent.counterSignatureLeafs"
-msgstr "Ya viene firmado: la tuya será una contrafirma sobre las últimas firmas que tiene."
+msgstr ""
+"Ya viene firmado: la tuya será una contrafirma sobre las últimas firmas que "
+"tiene."
 
 msgid "sede.consent.batchTitle"
 msgid_plural "sede.consent.batchTitle"
@@ -1191,8 +1172,8 @@ msgstr ""
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
-"El PDF tiene un formulario cuyos campos se han cambiado después de "
-"firmarlo. ¿Quieres firmarlo de todos modos?"
+"El PDF tiene un formulario cuyos campos se han cambiado después de firmarlo. "
+"¿Quieres firmarlo de todos modos?"
 
 msgid "sede.confirm.messages.unknown"
 msgstr ""
@@ -1322,7 +1303,9 @@ msgid "sede.refusals.missingFormat"
 msgstr "{{origin}} no dice en qué formato hay que firmar."
 
 msgid "sede.refusals.unsupportedKeyStore"
-msgstr "{{origin}} pide firmar con un almacén de certificados que rFirma no puede abrir."
+msgstr ""
+"{{origin}} pide firmar con un almacén de certificados que rFirma no puede "
+"abrir."
 
 msgid "sede.refusals.errandInFlight"
 msgstr ""
@@ -1395,3 +1378,24 @@ msgstr[2] "{{origin}} no acepta ninguno de tus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Tendrás que continuar desde la sede."
+
+#~ msgid "pin.title"
+#~ msgstr "Introduce el PIN"
+
+#~ msgid "pin.signingAs"
+#~ msgstr "{{holder}} · {{idNumber}}"
+
+#~ msgid "pin.subjectBrowser"
+#~ msgstr "Tus certificados de {{browser}}"
+
+#~ msgid "pin.label"
+#~ msgstr "PIN"
+
+#~ msgid "pin.incorrect"
+#~ msgstr "PIN incorrecto"
+
+#~ msgid "pin.incorrectPassword"
+#~ msgstr "Contraseña incorrecta"
+
+#~ msgid "pin.submit"
+#~ msgstr "Firmar"

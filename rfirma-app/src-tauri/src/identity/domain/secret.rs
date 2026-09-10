@@ -2,16 +2,37 @@
 
 use std::fmt;
 
+use crate::identity::domain::store::StoreClass;
+
+/// Cómo se llama el secreto en los términos de quien firma: el PIN de un módulo o la contraseña de un fichero.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecretName {
+    /// El PIN de un módulo PKCS#11.
+    Pin,
+    /// La contraseña de un almacén que es un fichero.
+    Password,
+}
+
+impl SecretName {
+    /// La palabra que le toca a la clase de almacén.
+    pub fn of(store: StoreClass) -> Self {
+        match store {
+            StoreClass::Card => Self::Pin,
+            StoreClass::Firefox
+            | StoreClass::Chrome
+            | StoreClass::Nssdb
+            | StoreClass::Installed => Self::Password,
+        }
+    }
+}
+
 /// Modalidad de solicitud del secreto que desbloquea la clave privada de un almacén.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StoreSecret {
     /// El almacén no exige autenticación previa.
     NotNeeded,
     /// El secreto se introduce interactivamente por pantalla.
-    TypedOnScreen {
-        /// Intentos restantes si el módulo los proporciona.
-        attempts_left: Option<u32>,
-    },
+    TypedOnScreen,
     /// El secreto se introduce en el teclado físico del lector.
     TypedOnTheReaderKeypad,
 }
@@ -22,9 +43,7 @@ impl StoreSecret {
         match (login_required, protected_authentication_path) {
             (false, _) => Self::NotNeeded,
             (true, true) => Self::TypedOnTheReaderKeypad,
-            (true, false) => Self::TypedOnScreen {
-                attempts_left: None,
-            },
+            (true, false) => Self::TypedOnScreen,
         }
     }
 

@@ -13,9 +13,7 @@ struct RecordingSigner {
 
 impl Signer for RecordingSigner {
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-        Ok(StoreSecret::TypedOnScreen {
-            attempts_left: None,
-        })
+        Ok(StoreSecret::TypedOnScreen)
     }
 
     fn offers(
@@ -48,7 +46,7 @@ fn one_secret_serves_every_signature_of_the_batch() {
         signed_by_the_token(&signer, &certificate, "1234", "SHA256", pre).expect("firma");
     }
 
-    assert!(matches!(secret, StoreSecret::TypedOnScreen { .. }));
+    assert!(matches!(secret, StoreSecret::TypedOnScreen));
     assert_eq!(
         *crate::lock(&signer.signed),
         vec![

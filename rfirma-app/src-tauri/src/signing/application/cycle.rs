@@ -5,6 +5,7 @@ use base64::Engine;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::holder::{prompted_holder_of, PromptedHolder};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
@@ -16,7 +17,7 @@ use crate::signing::domain::{
     SessionSeal, SignatureConfig,
 };
 use crate::signing::ports::{Bridge, Signer};
-use crate::signing::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
+use crate::signing::ports::{SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter};
 
 use crate::signing::domain::TokenSignatures;
 
@@ -121,6 +122,7 @@ pub struct OpenCycle {
     chain_b64: String,
     presigned: PreSignature,
     certificate: CertificateRef,
+    holder: Option<PromptedHolder>,
     already_signed_before: bool,
 }
 
@@ -168,6 +170,10 @@ pub fn presign<B: Bridge + ?Sized>(
         chain_b64,
         presigned,
         certificate: request.certificate.clone(),
+        holder: request
+            .chain
+            .first()
+            .and_then(|der| prompted_holder_of(der)),
         already_signed_before: request.document.already_signed(),
     })
 }
@@ -190,7 +196,7 @@ impl OpenCycle {
 
     /// Fase 2: firma cada bloque en el token PKCS#11 solicitando el secreto interactivamente
     /// mediante el prompter cuando el almacén lo requiere (`StoreSecret::TypedOnScreen`),
-    /// gestionando reintentos en caso de PIN incorrecto (ADR-0001, ADR-0014).
+    /// gestionando reintentos en caso de secreto incorrecto (ADR-0001, ADR-0014).
     pub fn sign_with_prompter(
         &self,
         signer: &dyn Signer,
@@ -207,18 +213,15 @@ impl OpenCycle {
                     })
                     .map_err(CycleError::Token)
             }
-            StoreSecret::TypedOnScreen { attempts_left } => {
+            StoreSecret::TypedOnScreen => {
                 let mut request = SecretPromptRequest {
-                    token_label: self.certificate.token_label().to_string(),
-                    subject: Some(self.certificate.label().to_string()),
+                    secret: SecretName::of(self.certificate.store().class()),
+                    holder: self.holder.clone(),
                     language,
-                    incorrect_pin: false,
-                    attempts_left,
+                    incorrect_secret: false,
                 };
-                let mut current_attempts = attempts_left;
 
                 loop {
-                    request.attempts_left = current_attempts;
                     let secret = prompter.prompt_secret(&request)?;
 
                     let outcome = self.presigned.signed_one_by_one(|pre| {
@@ -228,13 +231,7 @@ impl OpenCycle {
                     match outcome {
                         Ok(signatures) => return Ok(signatures),
                         Err(token_err) if token_err.situation() == Situation::IncorrectPin => {
-                            request.incorrect_pin = true;
-                            if let Some(left) = current_attempts {
-                                if left <= 1 {
-                                    return Err(CycleError::Token(token_err));
-                                }
-                                current_attempts = Some(left - 1);
-                            }
+                            request.incorrect_secret = true;
                         }
                         Err(other) => return Err(CycleError::Token(other)),
                     }

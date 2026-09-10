@@ -1,5 +1,8 @@
 //! Quién es el titular de un certificado, leído de su nombre distinguido (RFC 4514).
 
+use x509_cert::der::Decode;
+use x509_cert::Certificate;
+
 use crate::identity::domain::certificate::TokenCertificate;
 
 /// Pares atributo=valor de un nombre distinguido respetando comas escapadas (RFC 4514).
@@ -89,6 +92,29 @@ pub fn is_pseudonym(subject: Option<&str>) -> bool {
             let pair = pair.trim().to_ascii_uppercase();
             PSEUDONYM.iter().any(|name| pair.starts_with(name))
         })
+}
+
+/// El titular tal y como lo nombra el diálogo del secreto: quién es y con qué número.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PromptedHolder {
+    /// El `CN` del subject, entero.
+    pub name: String,
+    /// El `SERIALNUMBER` del subject, vacío si el certificado no lo lleva.
+    pub id_number: String,
+}
+
+/// El titular leído del DER del firmante, o nada si el DER no se deja leer o no da nombre.
+pub fn prompted_holder_of(der: &[u8]) -> Option<PromptedHolder> {
+    let subject = Certificate::from_der(der)
+        .ok()?
+        .tbs_certificate()
+        .subject()
+        .to_string();
+    let (name, id_number) = holder_of(Some(&subject));
+    if name.is_empty() {
+        return None;
+    }
+    Some(PromptedHolder { name, id_number })
 }
 
 /// Extrae el nombre común de un nombre distinguido, sea de emisor o de titular.

@@ -23,7 +23,6 @@ import type { Certificate, CertificateStore } from "./signing/certificate";
 import { installedCertificates, isUsable } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
-import { PinDialog } from "./signing/PinDialog";
 import { base64Of, type Rubric, type RubricFailure, type RubricPicker } from "./signing/rubric";
 import { SignedPanel } from "./signing/SignedPanel";
 import { type CertificateState, SigningPanel } from "./signing/SigningPanel";
@@ -1069,7 +1068,7 @@ export function App({
               }
               onChangeDestination={() => setDialog("preferences")}
               onSign={() => void sign()}
-              signing={signing.state.kind === "running" || signing.state.kind === "pin"}
+              signing={signing.state.kind === "running"}
               failure={
                 signing.state.kind === "failed"
                   ? {
@@ -1118,14 +1117,6 @@ export function App({
         />
       )}
       {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}
-      {signing.state.kind === "pin" && certificate.kind === "chosen" && (
-        <PinDialog
-          certificate={certificate.certificate}
-          failure={signing.state.failure}
-          onSubmit={(pin) => void signing.submitPin(pin)}
-          onCancel={signing.cancel}
-        />
-      )}
     </>
   );
 }

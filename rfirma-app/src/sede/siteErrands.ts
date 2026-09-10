@@ -2,7 +2,6 @@ import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { StoreSecret } from "../signing/secret";
-import { belongsToPinDialog, type TokenFailure } from "../signing/token";
 import type {
   Errand,
   ErrandStage,
@@ -28,10 +27,10 @@ import type {
  * # Los momentos no vienen todos del backend
  *
  * El backend empuja sus momentos por el evento (`SiteStageView`) y la ventana
- * conoce alguno más (`ErrandStage`). Los que faltan —el secreto del almacén y
- * los dos tramos de la firma— **son de este adaptador**, porque nacen y mueren
- * dentro de una llamada suya: `site_begin_signing` contesta cómo hay que pedir
- * el secreto, `sign_with_pin` lo consume y `site_finish_signing` entrega. El
+ * conoce alguno más (`ErrandStage`). Los que faltan —los dos tramos de la
+ * firma— **son de este adaptador**, porque nacen y mueren dentro de una llamada
+ * suya: `site_begin_signing` arranca la firma, `sign_with_pin` ejecuta la
+ * firma y `site_finish_signing` entrega. El
  * backend no tiene nada que publicar entremedias, y sondearle por ello sería
  * inventar un ir y venir que no existe.
  */
@@ -225,12 +224,6 @@ function refusalOf(situation: string): RefusalSituation {
   const batch = BATCH_LABELS[situation];
   if (batch !== undefined) return batch;
   return situation in REFUSALS ? (situation as RefusalSituation) : "unknown";
-}
-
-/** El fallo, sólo si es de los que el diálogo del secreto sabe reintentar. */
-function retriedInThePinDialog(failure: UnclassifiedFailure): TokenFailure | null {
-  const token = { ...failure, situation: failure.situation as TokenFailure["situation"] };
-  return belongsToPinDialog(token) ? token : null;
 }
 
 /** Un fallo de una etapa, contado como el desenlace que la ventana enseña. */
@@ -458,29 +451,19 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     );
   };
 
-  /** El tramo que va del secreto a la sede: firmar y entregar. */
-  const sign = async (secret: string) => {
+  /** El tramo de la firma a la sede: firmar y entregar. */
+  const sign = async (secret = "") => {
     const held = signing;
     if (held === null) return;
 
-    move({ kind: "signing", certificate: held.certificate, phase: "signing" });
     const signed = await commands.signWithPin(secret);
     if (!signed.ok) {
       const batch = held.signs !== null;
-      // Un PIN incorrecto se reintenta dentro del diálogo, sin reiniciar nada;
-      // lo demás sale del diálogo, y aquí salir es el desenlace. En el lote no
-      // hay reintento: la orden cierra el trámite y la sede ya tiene su
-      // rechazo, así que el segundo PIN no tendría dónde firmar.
-      const retried = batch ? null : retriedInThePinDialog(signed.failure);
-      if (retried !== null) {
-        move({ kind: "secret", certificate: held.certificate, failure: retried });
-        return;
-      }
       finish(batch ? refusedByTheBatch(signed.failure) : refusedBy(signed.failure));
       return;
     }
 
-    // El lote no tiene postfirma que pedir desde aquí: la orden del secreto lo
+    // El lote no tiene postfirma que pedir desde aquí: la orden de firma lo
     // hace entero —prefirma, `PK1` y postfirma— y vuelve con la sede ya servida.
     if (held.signs !== null) {
       finish({ kind: "batchSigned", signs: held.signs });
@@ -542,13 +525,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
         finish(stage.signs !== null ? refusedByTheBatch(begun.failure) : refusedBy(begun.failure));
         return;
       }
-      // Sin sesión no hay diálogo y no se inventa ningún PIN: se manda la
-      // cadena vacía, igual que en el recorrido local.
-      if (begun.value.kind === "notNeeded") {
-        await sign("");
-        return;
-      }
-      move({ kind: "secret", certificate, failure: null });
+      await sign("");
     },
 
     async confirmSignatures() {
@@ -563,15 +540,12 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       if (!confirmed.ok) finish(refusedBy(confirmed.failure));
     },
 
-    submitSecret: (secret) => sign(secret),
-
     async cancel() {
       const abandoned = documentInPlay(errand);
       const wasAnswering =
         errand !== null &&
         (errand.stage.kind === "consent" ||
           errand.stage.kind === "confirming" ||
-          errand.stage.kind === "secret" ||
           errand.stage.kind === "signing");
       signing = null;
       await commands.decline();

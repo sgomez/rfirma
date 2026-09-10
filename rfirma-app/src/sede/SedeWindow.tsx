@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PinDialog } from "../signing/PinDialog";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
@@ -57,10 +56,7 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
   const cancel = () => void errands.cancel();
 
   return (
-    /* En el momento del secreto el velo lo pinta `PinDialog`, que trae el suyo:
-       dos `.rf-scrim` superpuestos oscurecerían el doble, y la ficha dice que
-       ese diálogo no cambia en nada respecto al recorrido local. */
-    <div className={`rf-scrim${stage.kind === "secret" ? " sede-window__scrim--clear" : ""}`}>
+    <div className="rf-scrim">
       <section
         className="sede-window"
         role="dialog"
@@ -98,14 +94,6 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             onCancel={cancel}
           />
         )}
-        {stage.kind === "secret" && (
-          <SedeSigning
-            origin={errand.origin}
-            certificate={stage.certificate}
-            phase="signing"
-            onCancel={cancel}
-          />
-        )}
         {stage.kind === "signing" && (
           <SedeSigning
             origin={errand.origin}
@@ -132,18 +120,6 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
           />
         )}
       </section>
-
-      {/* El PIN **no tiene pantalla propia** (ID-273): es el mismo diálogo del
-          recorrido local, montado encima de la ventana de sede sin una sola
-          diferencia. Debajo sigue «Firmando», que es donde el trámite está. */}
-      {stage.kind === "secret" && (
-        <PinDialog
-          certificate={stage.certificate}
-          failure={stage.failure}
-          onSubmit={(secret) => void errands.submitSecret(secret)}
-          onCancel={cancel}
-        />
-      )}
     </div>
   );
 }

@@ -10,11 +10,8 @@ fn the_secret_crosses_as_one_of_three_kinds_and_never_as_a_string() {
         r#"{"kind":"notNeeded"}"#
     );
     assert_eq!(
-        serde_json::to_string(&SecretView::from(StoreSecret::TypedOnScreen {
-            attempts_left: None
-        }))
-        .expect("serializa"),
-        r#"{"kind":"typedOnScreen","attemptsLeft":null}"#
+        serde_json::to_string(&SecretView::from(StoreSecret::TypedOnScreen)).expect("serializa"),
+        r#"{"kind":"typedOnScreen"}"#
     );
     assert_eq!(
         serde_json::to_string(&SecretView::from(StoreSecret::TypedOnTheReaderKeypad))
