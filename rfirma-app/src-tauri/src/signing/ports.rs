@@ -7,6 +7,7 @@ use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
 pub use crate::identity::domain::holder::PromptedHolder;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
+pub use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::isolate_gone::IsolateGone;
@@ -33,16 +34,14 @@ pub trait IsolateHost {
 /// Solicitud interactiva de credenciales (PIN o contraseña de almacén).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SecretPromptRequest {
-    /// Etiqueta o nombre descriptivo del token o almacén.
-    pub token_label: String,
+    /// Cómo se llama el secreto que se pide.
+    pub secret: SecretName,
     /// Titular del certificado para el que se pide el secreto, si el DER lo dice.
     pub holder: Option<PromptedHolder>,
     /// Idioma preferido para los textos del diálogo.
     pub language: Language,
-    /// Indica si se trata de un reintento tras un PIN erróneo.
-    pub incorrect_pin: bool,
-    /// Intentos restantes si el token o módulo los comunica.
-    pub attempts_left: Option<u32>,
+    /// Indica si se trata de un reintento tras un secreto erróneo.
+    pub incorrect_secret: bool,
 }
 
 /// Fallo o interrupción en la solicitud interactiva de credenciales.

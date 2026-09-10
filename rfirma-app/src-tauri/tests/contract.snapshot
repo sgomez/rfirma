@@ -112,7 +112,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
 
   pub enum SecretView   (serde: etiqueta "kind")
       NotNeeded
-      TypedOnScreen { attemptsLeft: Option<u32> }
+      TypedOnScreen
       TypedOnTheReaderKeypad
 
   pub struct CertificateView

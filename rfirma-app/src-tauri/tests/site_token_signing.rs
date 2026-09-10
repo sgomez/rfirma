@@ -80,7 +80,7 @@ fn one_secret_signs_the_whole_batch_and_every_signature_verifies() {
     let signer = RealToken;
 
     let secret = secret_for_the_batch(&signer, &certificate).expect("el secreto deberia salir");
-    assert!(matches!(secret, StoreSecret::TypedOnScreen { .. }));
+    assert!(matches!(secret, StoreSecret::TypedOnScreen));
 
     let key = VerifyingKey::<Sha256>::new(public_key(&certificate));
     for pre in [FIRST, SECOND] {

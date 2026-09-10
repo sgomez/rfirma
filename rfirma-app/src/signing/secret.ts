@@ -20,6 +20,6 @@ export type StoreSecret =
    * El secreto se teclea en pantalla: un módulo PKCS#11 con PIN, o un perfil
    * NSS con contraseña maestra.
    */
-  | { kind: "typedOnScreen"; attemptsLeft: number | null }
+  | { kind: "typedOnScreen" }
   /** El teclado del propio lector, que rfirma no sabe pedir. */
   | { kind: "typedOnTheReaderKeypad" };

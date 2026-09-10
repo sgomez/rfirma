@@ -391,6 +391,7 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
     use crate::identity::domain::error::Situation;
     use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
     use crate::signing::domain::Language;
+    use crate::signing::ports::SecretName;
 
     struct TokenAskingPin {
         attempts: RefCell<usize>,
@@ -398,9 +399,7 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
 
     impl Signer for TokenAskingPin {
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-            Ok(StoreSecret::TypedOnScreen {
-                attempts_left: Some(3),
-            })
+            Ok(StoreSecret::TypedOnScreen)
         }
         fn offers(
             &self,
@@ -452,12 +451,74 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
 
     let recorded = mock.recorded_requests();
     assert_eq!(recorded.len(), 2);
-    assert!(!recorded[0].incorrect_pin);
-    assert!(recorded[1].incorrect_pin);
+    assert!(!recorded[0].incorrect_secret);
+    assert!(recorded[1].incorrect_secret);
     assert_eq!(
         recorded[0].holder, None,
         "sin un DER legible el dialogo se queda sin linea de titular, y no cae en la etiqueta del objeto"
     );
+    assert_eq!(recorded[0].secret, SecretName::Pin);
+}
+
+#[test]
+fn the_secret_of_a_store_that_is_a_file_is_asked_for_as_a_password() {
+    use crate::identity::domain::store::Store;
+    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
+    use crate::signing::domain::Language;
+    use crate::signing::ports::SecretName;
+
+    struct TokenAskingForTheStorePassword;
+    impl Signer for TokenAskingForTheStorePassword {
+        fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+            Ok(StoreSecret::TypedOnScreen)
+        }
+        fn offers(
+            &self,
+            _reference: &CertificateRef,
+            _algorithm: SignatureAlgorithm,
+        ) -> Result<(), TokenError> {
+            Ok(())
+        }
+        fn sign(
+            &self,
+            _reference: &CertificateRef,
+            _pin: &str,
+            _algorithm: SignatureAlgorithm,
+            data: &[u8],
+        ) -> Result<Vec<u8>, TokenError> {
+            Ok(data.to_vec())
+        }
+    }
+
+    let in_a_firefox_profile = CertificateRef::new(
+        Store::nss(
+            "/usr/lib/libsoftokn3.so",
+            std::path::Path::new("/home/quien/.mozilla/firefox/perfil"),
+        ),
+        "NSS Certificate DB",
+        "FIRMA",
+        vec![0x01],
+    );
+    let bridge = ABridgeLikeTheRealOne::default();
+    let cycle = presign(
+        &bridge,
+        a_request(
+            Format::Cades,
+            AdmissibleDocument::check_for(Format::Cades, b"documento").expect("admisible"),
+            &[b"der".to_vec()],
+            &an_invisible_signature(),
+            &in_a_firefox_profile,
+        ),
+    )
+    .expect("prefirma");
+
+    let mock = MockSecretPrompter::with_secrets(&["la contrasena del perfil"]);
+    cycle
+        .sign_with_prompter(&TokenAskingForTheStorePassword, &mock, Language::Spanish)
+        .expect("deberia firmar");
+
+    let recorded = mock.recorded_requests();
+    assert_eq!(recorded[0].secret, SecretName::Password);
 }
 
 #[test]
@@ -469,9 +530,7 @@ fn prompter_cancellation_aborts_signing_cycle() {
     struct TokenAskingPin;
     impl Signer for TokenAskingPin {
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-            Ok(StoreSecret::TypedOnScreen {
-                attempts_left: Some(3),
-            })
+            Ok(StoreSecret::TypedOnScreen)
         }
         fn offers(
             &self,

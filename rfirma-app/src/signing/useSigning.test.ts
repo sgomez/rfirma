@@ -62,7 +62,7 @@ const ok = <T>(value: T): StageResult<T> => ({ ok: true, value });
 const failed = (failure: TokenFailure): StageResult<never> => ({ ok: false, failure });
 
 // El caso corriente: el almacén pide el secreto por pantalla (ID-190).
-const typedOnScreen: StoreSecret = { kind: "typedOnScreen", attemptsLeft: null };
+const typedOnScreen: StoreSecret = { kind: "typedOnScreen" };
 
 /** Un backend de mentira: cada etapa devuelve lo que se le diga, en orden. */
 function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {

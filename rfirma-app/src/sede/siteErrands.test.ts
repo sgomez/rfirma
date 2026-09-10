@@ -72,7 +72,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     decline: async () => calls.decline(),
     beginSigning: async (id) => {
       calls.beginSigning(id);
-      return { ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } };
+      return { ok: true, value: { kind: "typedOnScreen" } };
     },
     signWithPin: async (secret) => {
       calls.signWithPin(secret);
@@ -613,7 +613,7 @@ describe("un momento del backend gana a lo que estuviera en vuelo", () => {
   });
 
   it("drops the local moment of a consent overtaken while the backend answered", async () => {
-    const slow = deferred<{ ok: true; value: { kind: "typedOnScreen"; attemptsLeft: null } }>();
+    const slow = deferred<{ ok: true; value: { kind: "typedOnScreen" } }>();
     const { push, port, last, seen } = watched({ beginSigning: async () => slow.promise });
 
     push(ASKING_TO_SIGN);
@@ -621,7 +621,7 @@ describe("un momento del backend gana a lo que estuviera en vuelo", () => {
 
     const consenting = port.consent("handle-1");
     push({ origin: null, stage: { kind: "waiting" } });
-    slow.release({ ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } });
+    slow.release({ ok: true, value: { kind: "typedOnScreen" } });
     await consenting;
 
     expect(last()?.stage.kind).toBe("waiting");

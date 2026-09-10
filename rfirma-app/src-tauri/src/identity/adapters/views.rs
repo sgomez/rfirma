@@ -52,11 +52,7 @@ crossing! {
     #[serde(tag = "kind", rename_all = "camelCase")]
     pub enum SecretView {
         NotNeeded,
-        #[serde(rename_all = "camelCase")]
-        TypedOnScreen {
-            /// Intentos restantes.
-            attempts_left: Option<u32>,
-        },
+        TypedOnScreen,
         TypedOnTheReaderKeypad,
     }
 }
@@ -65,7 +61,7 @@ impl From<StoreSecret> for SecretView {
     fn from(secret: StoreSecret) -> Self {
         match secret {
             StoreSecret::NotNeeded => Self::NotNeeded,
-            StoreSecret::TypedOnScreen { attempts_left } => Self::TypedOnScreen { attempts_left },
+            StoreSecret::TypedOnScreen => Self::TypedOnScreen,
             StoreSecret::TypedOnTheReaderKeypad => Self::TypedOnTheReaderKeypad,
         }
     }

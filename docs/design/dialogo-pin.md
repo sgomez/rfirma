@@ -93,7 +93,10 @@ que rFirma no tendrá.
 
 **No se discrimina por hardware**, y está medido: los indicadores de ranura
 extraíble de PKCS#11 valen `false` tanto en SoftHSM como en NSS, así que
-preguntarle al módulo si es una tarjeta no responde nada.
+preguntarle al módulo si es una tarjeta no responde nada. La palabra la decide
+la **clase de almacén**, que sí se sabe: un módulo sin perfil NSS detrás es un
+módulo y pide PIN; un perfil de Firefox o de Chromium, un `nssdb` suelto o un
+`.p12` instalado son ficheros y piden contraseña.
 
 ### Lo que el diálogo no nombra
 
@@ -118,12 +121,16 @@ intento, así que no hay salto que evitar.
   incorrecto» o «Contraseña incorrecta». Nada más.
 
 **No hay contador de reintentos, y no es un hueco por rellenar: es estructural**
-(ID-191). La información de token de PKCS#11 **no trae** intentos restantes, ni
-con una tarjeta real. Hasta la v0.3 esta ficha prometía «te quedan **2 intentos**
+(ID-191). Los intentos restantes los cuenta el DNIe, que está fuera del alcance
+de la v0.4; un almacén local no los tiene, y la información de token de PKCS#11
+tampoco los trae. Hasta la v0.3 esta ficha prometía «te quedan **2 intentos**
 antes de que la tarjeta se bloquee» y además argumentaba que había que
 enseñarlos; el argumento era bueno y el dato no existe, así que se retiran los
 dos. No se sustituye por ninguna promesa parecida —«puede que se bloquee», «ten
 cuidado»— porque avisar de un límite que no se sabe contar es peor que callar.
+
+Tampoco cruza: `SecretView` no lleva contador, y el ciclo reintenta hasta que se
+acierta o se cancela.
 
 **Tampoco hay pistas.** La que había —«El PIN se usa solo para esta firma y no
 se guarda en ningún sitio»— tranquilizaba sobre lo evidente; la que se llegó a

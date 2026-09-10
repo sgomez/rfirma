@@ -963,7 +963,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const user = userEvent.setup();
     const presign = vi.fn(async () => ({
       ok: true as const,
-      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+      value: { kind: "typedOnScreen" as const },
     }));
     const signer: SigningBackend = {
       presign,
@@ -1019,7 +1019,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const user = userEvent.setup();
     const presign = vi.fn(async (_order: SigningOrder) => ({
       ok: true as const,
-      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+      value: { kind: "typedOnScreen" as const },
     }));
     const signer: SigningBackend = {
       presign,
@@ -1061,7 +1061,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const user = userEvent.setup();
     const presign = vi.fn(async () => ({
       ok: true as const,
-      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+      value: { kind: "typedOnScreen" as const },
     }));
     const signer: SigningBackend = {
       presign,
@@ -1160,7 +1160,7 @@ describe("App, con un documento que no se recuerda", () => {
     const recents = inMemoryRecents();
     const presign = vi.fn(async () => ({
       ok: true as const,
-      value: { kind: "typedOnScreen" as const, attemptsLeft: null },
+      value: { kind: "typedOnScreen" as const },
     }));
     const signer: SigningBackend = {
       presign,
@@ -1249,7 +1249,7 @@ describe("App · firmas sin registrar", () => {
     const { user, sign } = await readyToSign(
       signerOverAnUnreadableSignature(async (order) => {
         presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } };
+        return { ok: true, value: { kind: "typedOnScreen" } };
       }),
     );
 
@@ -1270,7 +1270,7 @@ describe("App · firmas sin registrar", () => {
     const { user, sign } = await readyToSign(
       signerOverAnUnreadableSignature(async (order) => {
         presigned.push(order);
-        return { ok: true, value: { kind: "typedOnScreen", attemptsLeft: null } };
+        return { ok: true, value: { kind: "typedOnScreen" } };
       }),
     );
 

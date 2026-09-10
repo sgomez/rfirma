@@ -4,71 +4,80 @@ use std::sync::Mutex;
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::Language;
-use crate::signing::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
+use crate::signing::ports::{SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter};
 
-/// Estructura interna con los textos localizados para el diálogo modal de PIN.
+/// Estructura interna con los textos localizados para el diálogo modal del secreto.
 #[derive(Debug, PartialEq, Eq)]
 pub struct DialogI18n {
     pub title: &'static str,
     pub holder_name: Option<String>,
     pub id_number: Option<String>,
-    pub incorrect_pin: String,
+    pub incorrect_secret: &'static str,
     pub accept: &'static str,
     pub cancel: &'static str,
 }
 
-fn button_texts(lang: Language) -> (&'static str, &'static str, &'static str) {
-    match lang {
-        Language::Spanish => ("Introduce el PIN", "Aceptar", "Cancelar"),
-        Language::Catalan => ("Introdueix el PIN", "Acceptar", "Cancel·lar"),
-        Language::Basque => ("Sartu PINa", "Onartu", "Utzi"),
-        Language::Galician => ("Introduce o PIN", "Aceptar", "Cancelar"),
-        Language::English => ("Enter PIN", "OK", "Cancel"),
+fn title_text(lang: Language, secret: SecretName) -> &'static str {
+    match (lang, secret) {
+        (Language::Spanish, SecretName::Pin) => "Introduce el PIN",
+        (Language::Spanish, SecretName::Password) => "Introduce la contraseña",
+
+        (Language::Catalan, SecretName::Pin) => "Introdueix el PIN",
+        (Language::Catalan, SecretName::Password) => "Introdueix la contrasenya",
+
+        (Language::Basque, SecretName::Pin) => "Sartu PINa",
+        (Language::Basque, SecretName::Password) => "Sartu pasahitza",
+
+        (Language::Galician, SecretName::Pin) => "Introduce o PIN",
+        (Language::Galician, SecretName::Password) => "Introduce o contrasinal",
+
+        (Language::English, SecretName::Pin) => "Enter PIN",
+        (Language::English, SecretName::Password) => "Enter password",
     }
 }
 
-fn incorrect_pin_text(lang: Language, attempts_left: Option<u32>) -> String {
-    match (lang, attempts_left) {
-        (Language::Spanish, Some(left)) => {
-            format!("PIN incorrecto. Te quedan {left} intentos.")
-        }
-        (Language::Spanish, None) => "PIN incorrecto. Vuelve a intentarlo.".to_string(),
+fn button_texts(lang: Language) -> (&'static str, &'static str) {
+    match lang {
+        Language::Spanish => ("Aceptar", "Cancelar"),
+        Language::Catalan => ("Acceptar", "Cancel·lar"),
+        Language::Basque => ("Onartu", "Utzi"),
+        Language::Galician => ("Aceptar", "Cancelar"),
+        Language::English => ("OK", "Cancel"),
+    }
+}
 
-        (Language::Catalan, Some(left)) => {
-            format!("PIN incorrecte. Et queden {left} intents.")
-        }
-        (Language::Catalan, None) => "PIN incorrecte. Torna-ho a provar.".to_string(),
+fn incorrect_secret_text(lang: Language, secret: SecretName) -> &'static str {
+    match (lang, secret) {
+        (Language::Spanish, SecretName::Pin) => "PIN incorrecto. Vuelve a intentarlo.",
+        (Language::Spanish, SecretName::Password) => "Contraseña incorrecta. Vuelve a intentarlo.",
 
-        (Language::Basque, Some(left)) => {
-            format!("PIN okerra. {left} saiakera geratzen zaizkizu.")
-        }
-        (Language::Basque, None) => "PIN okerra. Saiatu berriro.".to_string(),
+        (Language::Catalan, SecretName::Pin) => "PIN incorrecte. Torna-ho a provar.",
+        (Language::Catalan, SecretName::Password) => "Contrasenya incorrecta. Torna-ho a provar.",
 
-        (Language::Galician, Some(left)) => {
-            format!("PIN incorrecto. Quedanche {left} intentos.")
-        }
-        (Language::Galician, None) => "PIN incorrecto. Tenta de novo.".to_string(),
+        (Language::Basque, SecretName::Pin) => "PIN okerra. Saiatu berriro.",
+        (Language::Basque, SecretName::Password) => "Pasahitza okerra. Saiatu berriro.",
 
-        (Language::English, Some(left)) => {
-            format!("Incorrect PIN. {left} attempts remaining.")
-        }
-        (Language::English, None) => "Incorrect PIN. Try again.".to_string(),
+        (Language::Galician, SecretName::Pin) => "PIN incorrecto. Tenta de novo.",
+        (Language::Galician, SecretName::Password) => "Contrasinal incorrecto. Tenta de novo.",
+
+        (Language::English, SecretName::Pin) => "Incorrect PIN. Try again.",
+        (Language::English, SecretName::Password) => "Incorrect password. Try again.",
     }
 }
 
 /// Traduce los textos del diálogo a uno de los 5 idiomas oficiales de rFirma (ADR-0009).
 pub fn localize(request: &SecretPromptRequest) -> DialogI18n {
-    let (title, accept, cancel) = button_texts(request.language);
+    let (accept, cancel) = button_texts(request.language);
 
     DialogI18n {
-        title,
+        title: title_text(request.language, request.secret),
         holder_name: request.holder.as_ref().map(|holder| holder.name.clone()),
         id_number: request
             .holder
             .as_ref()
             .map(|holder| holder.id_number.clone())
             .filter(|id_number| !id_number.is_empty()),
-        incorrect_pin: incorrect_pin_text(request.language, request.attempts_left),
+        incorrect_secret: incorrect_secret_text(request.language, request.secret),
         accept,
         cancel,
     }
@@ -179,7 +188,7 @@ fn say_the_previous_attempt_was_wrong(content_area: &gtk::Box, entry: &gtk::Entr
     content_area.pack_start(&failure_label(text), false, false, 0);
 }
 
-fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_pin: bool) -> gtk::Entry {
+fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_secret: bool) -> gtk::Entry {
     use gtk::prelude::*;
 
     let content_area = dialog.content_area();
@@ -193,8 +202,8 @@ fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_pin: bool) -> gtk:
     let entry = masked_entry();
     content_area.pack_start(&entry, false, false, 0);
 
-    if incorrect_pin {
-        say_the_previous_attempt_was_wrong(&content_area, &entry, &i18n.incorrect_pin);
+    if incorrect_secret {
+        say_the_previous_attempt_was_wrong(&content_area, &entry, i18n.incorrect_secret);
     }
 
     entry
@@ -239,7 +248,7 @@ fn show_gtk_dialog(request: &SecretPromptRequest) -> Result<ProtectedSecret, Sec
 
     let i18n = localize(request);
     let dialog = dialog_for(&i18n);
-    let entry = body_of(&dialog, &i18n, request.incorrect_pin);
+    let entry = body_of(&dialog, &i18n, request.incorrect_secret);
 
     dialog.show_all();
     entry.grab_focus();
