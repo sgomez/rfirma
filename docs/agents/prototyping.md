@@ -180,6 +180,13 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 | ----------- | ------ | ------ | ------ |
 | _(ninguno en vuelo)_ | | | |
 
+El caso de uso **Preferencias como visor de pestañas**
+([#657](https://github.com/sgomez/rfirma/issues/657)) se validó el **10/09/2026**
+y salió de esta tabla. Se dibujó entero dentro de `PreferenciasPantalla`, con la
+palanca «Sección visible», sin artboard de trabajo que fundir ni que borrar, y
+toca una sola ficha, [`preferencias`](../design/preferencias.md), que enlaza el
+canvas desde su sección «Decisiones».
+
 El caso de uso **v0.5 · la ventana de sede** ([#317](https://github.com/sgomez/rfirma/issues/317))
 se validó el **05/09/2026** y salió de esta tabla. Es la excepción declarada a la
 regla de «una ficha por pantalla»: sus cinco artboards —`SedeEspera`,
