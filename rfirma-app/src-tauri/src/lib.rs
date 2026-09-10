@@ -72,6 +72,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         isolate: signing::adapters::isolate::Isolate::start(),
         session: signing::application::session::SigningSession::default(),
         files: Arc::new(signing::adapters::files::RealDocumentBytes),
+        prompter: Arc::new(signing::adapters::gtk_prompter::GtkSecretPrompter),
     };
     let site = SiteRoot {
         errand: site::application::errand::LiveErrand::default(),

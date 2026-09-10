@@ -25,6 +25,7 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `domain/ecdsa.rs` | Lo que la curva elíptica exige y RSA no: el resumen que firma el mecanismo crudo y el `r`/`s` del token reempaquetado en DER. Pruebas en `domain/ecdsa/tests.rs`. |
 | `domain/error.rs` | Las situaciones del token (ADR-0009) y el aviso de que falta `libnss3.so`. Pruebas en `domain/error/tests.rs`. |
 | `domain/holder.rs` | Quién es el titular, leído del nombre distinguido (RFC 4514), y `StampedHolder`, lo que estampa el recuadro. Pruebas en `domain/holder/tests.rs`. |
+| `domain/protected_secret.rs` | Secreto protegido en memoria con bloqueo físico y borrado seguro en drop. Pruebas en `domain/protected_secret/tests.rs`. |
 | `domain/secret.rs` | Cómo se le pide el secreto a cada almacén: sin sesión, por pantalla o en el teclado del lector. Pruebas en `domain/secret/tests.rs`. |
 | `domain/store.rs` | Un almacén: la ruta de su módulo, cómo se abre y de qué clase es, sin abrirlo. Sus pruebas siguen en `adapters/pkcs11/stores/tests.rs`. |
 | `ports.rs` | **Los tres puertos**, que no importa ningún otro contexto: `Token`, `InstalledFolder` y `CertificateMemory`, que sirve `signing/adapters/memory.rs`. |

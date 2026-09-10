@@ -3344,8 +3344,11 @@ dependencies = [
  "futures-util",
  "getrandom 0.3.4",
  "gio",
+ "glib",
+ "gtk",
  "image",
  "inventory",
+ "libc",
  "libloading 0.8.9",
  "native-tls",
  "openssl",
@@ -3365,6 +3368,7 @@ dependencies = [
  "tokio-native-tls",
  "tokio-tungstenite",
  "x509-cert",
+ "zeroize",
 ]
 
 [[package]]

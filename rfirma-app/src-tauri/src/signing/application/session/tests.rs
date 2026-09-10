@@ -272,3 +272,16 @@ fn cancelling_leaves_no_cycle_behind() {
         "no queda ciclo que llevarse"
     );
 }
+
+#[test]
+fn sign_on_token_with_prompter_requires_an_open_cycle() {
+    use super::sign_on_token_with_prompter;
+    use crate::signing::adapters::gtk_prompter::PreconfiguredSecretPrompter;
+    use crate::signing::domain::Language;
+
+    let session = SigningSession::default();
+    let prompter = PreconfiguredSecretPrompter::new("1234");
+    let error = sign_on_token_with_prompter(&NoToken, &session, &prompter, Language::Spanish)
+        .expect_err("no hay ciclo abierto");
+    assert!(matches!(error, super::CycleFailure::NoOpenCycle));
+}

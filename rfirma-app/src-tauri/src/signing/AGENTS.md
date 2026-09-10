@@ -15,6 +15,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `application/tests.rs` | Los andamios de grada A que comparten todos los contextos: `NoIsolate`, `a_memory()`, `an_order()`, `a_completed_cycle()` y `DocumentsInMemory`. Solo en pruebas. |
 | `adapters/engines.rs` | Los adaptadores de `Bridge` y de los tres motores que la sede declara en `site/ports.rs`, `FilterEngine`, `PolicyEngine` y `ValidationEngine`. Pruebas en `adapters/engines/tests.rs`. |
 | `adapters/ffi.rs` | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. Diez entradas, y ninguna firma. Pruebas en `adapters/ffi/tests.rs`. |
+| `adapters/gtk_prompter.rs` | Diálogo modal nativo GTK3 para la solicitud de PIN interactiva y adaptadores de pruebas (MockSecretPrompter, PreconfiguredSecretPrompter). Pruebas en `adapters/gtk_prompter/tests.rs`. |
 | `adapters/isolate.rs` | El hilo dueño del isolate de GraalVM, y el adaptador de `IsolateHost`. Pruebas en `adapters/isolate/tests.rs`. |
 | `adapters/memory.rs` | `Memory`, la memoria entre sesiones (ADR-0010), y las rebanadas que cada vecino pide por su puerto: `DocumentsMemory`, `CertificateMemory` y `VersionMemory`. Pruebas en `adapters/memory/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones de la firma local a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |

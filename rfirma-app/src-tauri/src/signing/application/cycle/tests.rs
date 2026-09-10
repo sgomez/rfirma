@@ -385,3 +385,153 @@ fn a_cosignature_names_its_operation_at_the_border() {
         bridge.calls.borrow()
     );
 }
+
+#[test]
+fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
+    use crate::identity::domain::error::Situation;
+    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
+    use crate::signing::domain::Language;
+
+    struct TokenAskingPin {
+        attempts: RefCell<usize>,
+    }
+
+    impl Signer for TokenAskingPin {
+        fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+            Ok(StoreSecret::TypedOnScreen {
+                attempts_left: Some(3),
+            })
+        }
+        fn offers(
+            &self,
+            _reference: &CertificateRef,
+            _algorithm: SignatureAlgorithm,
+        ) -> Result<(), TokenError> {
+            Ok(())
+        }
+        fn sign(
+            &self,
+            _reference: &CertificateRef,
+            pin: &str,
+            _algorithm: SignatureAlgorithm,
+            data: &[u8],
+        ) -> Result<Vec<u8>, TokenError> {
+            *self.attempts.borrow_mut() += 1;
+            if pin == "correct_pin" {
+                Ok(data.to_vec())
+            } else {
+                Err(TokenError::new(Situation::IncorrectPin, "PIN incorrecto"))
+            }
+        }
+    }
+
+    let certificate = a_certificate("FIRMA", b"der");
+    let bridge = ABridgeLikeTheRealOne::default();
+    let cycle = presign(
+        &bridge,
+        a_request(
+            Format::Cades,
+            AdmissibleDocument::check_for(Format::Cades, b"documento").expect("admisible"),
+            &[certificate.der().to_vec()],
+            &an_invisible_signature(),
+            certificate.reference(),
+        ),
+    )
+    .expect("prefirma");
+
+    let signer = TokenAskingPin {
+        attempts: RefCell::new(0),
+    };
+    let mock = MockSecretPrompter::with_secrets(&["wrong_pin", "correct_pin"]);
+
+    let _signatures = cycle
+        .sign_with_prompter(&signer, &mock, Language::Spanish)
+        .expect("deberia firmar tras corregir el PIN");
+
+    assert_eq!(*signer.attempts.borrow(), 2);
+
+    let recorded = mock.recorded_requests();
+    assert_eq!(recorded.len(), 2);
+    assert!(!recorded[0].incorrect_pin);
+    assert!(recorded[1].incorrect_pin);
+}
+
+#[test]
+fn prompter_cancellation_aborts_signing_cycle() {
+    use crate::signing::adapters::gtk_prompter::PreconfiguredSecretPrompter;
+    use crate::signing::domain::Language;
+    use crate::signing::ports::SecretPromptError;
+
+    struct TokenAskingPin;
+    impl Signer for TokenAskingPin {
+        fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
+            Ok(StoreSecret::TypedOnScreen {
+                attempts_left: Some(3),
+            })
+        }
+        fn offers(
+            &self,
+            _reference: &CertificateRef,
+            _algorithm: SignatureAlgorithm,
+        ) -> Result<(), TokenError> {
+            Ok(())
+        }
+        fn sign(
+            &self,
+            _reference: &CertificateRef,
+            _pin: &str,
+            _algorithm: SignatureAlgorithm,
+            data: &[u8],
+        ) -> Result<Vec<u8>, TokenError> {
+            Ok(data.to_vec())
+        }
+    }
+
+    let certificate = a_certificate("FIRMA", b"der");
+    let bridge = ABridgeLikeTheRealOne::default();
+    let cycle = presign(
+        &bridge,
+        a_request(
+            Format::Cades,
+            AdmissibleDocument::check_for(Format::Cades, b"documento").expect("admisible"),
+            &[certificate.der().to_vec()],
+            &an_invisible_signature(),
+            certificate.reference(),
+        ),
+    )
+    .expect("prefirma");
+
+    let signer = TokenAskingPin;
+    let prompter = PreconfiguredSecretPrompter::cancelling();
+
+    let err = cycle
+        .sign_with_prompter(&signer, &prompter, Language::Catalan)
+        .expect_err("deberia cancelar");
+    assert!(matches!(
+        err,
+        super::CycleError::Prompt(SecretPromptError::Cancelled)
+    ));
+}
+
+#[test]
+fn cycle_error_display_formats_all_variants() {
+    use crate::identity::domain::error::{Situation, TokenError};
+    use crate::signing::application::cycle::CycleError;
+    use crate::signing::domain::bridge::BridgeError;
+    use crate::signing::domain::{Refusal, SealMismatch};
+
+    let e1 = CycleError::Inadmissible(Refusal::NotAPdf);
+    assert!(!format!("{e1}").is_empty());
+
+    let e2 = CycleError::Bridge(BridgeError::Failed("test".to_string()));
+    assert!(!format!("{e2}").is_empty());
+
+    let e3 = CycleError::Token(TokenError::new(Situation::TokenAbsent, "test"));
+    assert!(!format!("{e3}").is_empty());
+
+    let e4 = CycleError::Seal(SealMismatch);
+    assert!(!format!("{e4}").is_empty());
+
+    let e5 = CycleError::Prompt(crate::signing::ports::SecretPromptError::Cancelled);
+    assert!(!format!("{e5}").is_empty());
+}
