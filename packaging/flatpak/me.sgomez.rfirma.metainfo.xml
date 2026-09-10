@@ -24,7 +24,7 @@
          de AppStream en cada entrega, y a mantener dos textos que dicen lo
          mismo. La version la vigila packaging/check-version.py contra
          tauri.conf.json, que es la fuente (ID-150). -->
-    <release version="0.1.0" date="2026-01-01">
+    <release version="0.9.0" date="2026-09-10">
       <url type="details">https://github.com/sgomez/rfirma/blob/main/CHANGELOG.md</url>
     </release>
   </releases>
