@@ -20,7 +20,10 @@ ver «Lo que cambió en v0.3». Los cambios de la v0.4 —el
 no crean ninguno; ver «Lo que cambió en v0.4». La v0.5 —el
 [#317](https://github.com/sgomez/rfirma/issues/317)— es la primera que **crea
 artboards nuevos** desde la v0.3: cinco, en una página propia, más dos de la
-ventana principal tocados de rebote; ver «Lo que cambió en v0.5».
+ventana principal tocados de rebote; ver «Lo que cambió en v0.5». Después de la
+v0.5, `PreferenciasPantalla` se rehizo con el
+[#657](https://github.com/sgomez/rfirma/issues/657); ver «Lo que cambió en
+Preferencias».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -50,7 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | 9 | `EstadoExito` | Firmado — el resumen, sin la ficha 14 |
 | 10 | `EstadoErrorFirma` | Error de firma, en el pie del panel |
 | 5b | `EstadoPaginasSinSello` | Antes de firmar: las páginas donde el recuadro no cabe |
-| — | `PreferenciasPantalla` | Preferencias, a pantalla completa, con los certificados en fichero de la v0.4 |
+| — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4 |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
 | S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma y con qué certificado |
@@ -443,3 +446,41 @@ ejemplos —antes → después— en el [sistema de diseño](../design-system.md
 que **no** se recorta: la distinción entre «no tienes ninguno» y «la sede excluyó
 los tuyos», la instrucción accionable del pie de `SedeEspera`, y la regla dura de
 no enumerar jamás lo que la sede descartó.
+
+## Lo que cambió en Preferencias
+
+Decidido en el [#657](https://github.com/sgomez/rfirma/issues/657) y dibujado el
+10/09/2026. **Un solo artboard tocado, `PreferenciasPantalla`, y ninguna página
+de trabajo**: la pantalla ya existía, así que la exploración se hizo con una
+palanca dentro de ella. Los diecinueve conservan el mismo `<helmet>`.
+
+**Preferencias deja de ser una columna con las secciones apiladas y pasa a ser
+un visor de pestañas en vertical.** El índice de la izquierda era el remedio al
+desplazamiento continuo y ahora es la pestaña: a la derecha se pinta **una sola
+sección**, la activa. El desplazamiento pasa a ser del panel —previsiblemente
+solo el de `Certificados en fichero` lo necesita—, y el índice y el pie con
+`Cerrar` no se mueven nunca. Se descartó la navegación de dos niveles al estilo
+`AdwNavigationView`: obliga a diseñar una vuelta atrás y a partir `Escape` en dos
+significados, y aquí `Escape` cierra Preferencias entera desde cualquier panel.
+
+**El índice pasa de cinco filas a cuatro: `General · Firma · Certificados ·
+Apariencia`.** «Sedes» y «Privacidad» desaparecen como filas y su contenido se
+funde dentro de `General`, que es la entrada, en dos grupos con encabezado —
+«Sedes» primero, «Privacidad» al final, para que sus dos interruptores se lean
+como un par—. **Ningún ajuste se ha añadido ni quitado**: los siete son los
+mismos. El rótulo de sección se queda como **título de la página**, que es lo que
+permite que «Certificados» recupere ahí su nombre completo, `Certificados en
+fichero`.
+
+**El encabezado de grupo se resuelve sin componente nuevo y sin estilo nuevo.**
+Título de página, encabezado de grupo y etiqueta de control se separan por
+tamaño, peso y color a la vez: `.rf-label` a 12 px en versalitas con divisoria,
+`.rf-title` a 14 px en caja baja y sin divisoria, y `.rf-label` a 12 px apagada.
+Solo `General` lleva grupos.
+
+**La palanca `Sección visible` es la pestaña activa**, con cuatro posiciones y
+`General` por omisión. Las demás son de contenido y solo se ven dentro de su
+sección, salvo el diálogo de apagar «Recordar mi actividad», que es un velo sobre
+la ventana entera. El caso del flatpak en «Sedes» —ni desplegable ni interruptor,
+sino una frase fija— **no se dibuja**: sería otra palanca, y esta tanda pregunta
+por el reparto, no por el entorno.

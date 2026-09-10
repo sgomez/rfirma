@@ -242,17 +242,13 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
     border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
     <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;padding:var(--rf-space-xs) var(--rf-space-xs) var(--rf-space-sm)">Preferencias</p>
     <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
-      border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-subtle);
-      background:var(--rf-bg);font-size:14px;font-weight:600">Firma</span>
+      border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;{{filaGeneral}}">General</span>
     <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
-      border-radius:var(--rf-radius-md);border:1px solid transparent;
-      font-size:14px;font-weight:600;color:var(--rf-text-muted)">Certificados</span>
+      border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;{{filaFirma}}">Firma</span>
     <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
-      border-radius:var(--rf-radius-md);border:1px solid transparent;
-      font-size:14px;font-weight:600;color:var(--rf-text-muted)">Privacidad</span>
+      border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;{{filaCertificados}}">Certificados</span>
     <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);cursor:pointer;
-      border-radius:var(--rf-radius-md);border:1px solid transparent;
-      font-size:14px;font-weight:600;color:var(--rf-text-muted)">Apariencia</span>
+      border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;{{filaApariencia}}">Apariencia</span>
   </nav>
 
   <div class="rf-stack" style="flex:1;min-width:0">
@@ -260,6 +256,74 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   <div class="rf-stack rf-gap-md" style="width:100%;max-width:{{ancho}}px;
     padding:var(--rf-space-md) var(--rf-space-md) var(--rf-space-lg)">
 
+    <sc-if value="{{seccionGeneral}}" hint-placeholder-val="{{true}}">
+    <div class="rf-stack rf-gap-md">
+      <div class="rf-stack rf-gap-sm">
+        <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">General</p>
+        <hr class="rf-divider">
+      </div>
+      <div class="rf-stack rf-gap-sm">
+        <p class="rf-title" style="font-size:14px">Sedes</p>
+        <div class="rf-field" style="padding-top:var(--rf-space-xs)">
+          <label class="rf-label">Quién atiende los enlaces de las sedes</label>
+          <div class="rf-input rf-row" style="justify-content:space-between">
+            <span>Lo que decida el escritorio</span>
+            <span class="rf-text-muted" style="display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          </div>
+          <p class="rf-hint">Firefox usa la elección que guarda en sus propias preferencias.</p>
+        </div>
+        <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+          <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+            background:var(--rf-primary);margin-top:2px">
+            <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+              border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+          </span>
+          <div class="rf-stack" style="gap:4px;flex:1">
+            <p class="rf-prose">Preguntarme al arrancar</p>
+          </div>
+        </div>
+      </div>
+      <div class="rf-stack rf-gap-sm" style="padding-top:var(--rf-space-xs)">
+        <p class="rf-title" style="font-size:14px">Privacidad</p>
+        <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+          <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+            background:var(--rf-primary);margin-top:2px">
+            <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+              border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+          </span>
+          <div class="rf-stack" style="gap:4px;flex:1">
+            <p class="rf-prose">Recordar mi actividad</p>
+            <p class="rf-hint">Los documentos recientes y el certificado que usaste la última vez.</p>
+          </div>
+        </div>
+        <div style="padding-left:56px">
+          <button class="rf-btn rf-btn--secondary" style="min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Vaciar la lista</button>
+        </div>
+        <sc-if value="{{avisoVaciar}}" hint-placeholder-val="{{true}}">
+          <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
+            border-radius:var(--rf-radius-md);margin-top:var(--rf-space-xs)">
+            <div class="rf-row rf-gap-xs">
+              <span style="display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+              <p class="rf-title" style="font-size:14px">No se ha podido vaciar la lista</p>
+            </div>
+            <p class="rf-hint">Los documentos recientes siguen guardados. Vuelve a intentarlo.</p>
+          </div>
+        </sc-if>
+        <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+          <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+            background:var(--rf-primary);margin-top:2px">
+            <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+              border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+          </span>
+          <div class="rf-stack" style="gap:4px;flex:1">
+            <p class="rf-prose">Avisarme cuando haya una versión nueva</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{seccionFirma}}" hint-placeholder-val="{{false}}">
     <div class="rf-stack rf-gap-sm">
       <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Firma</p>
       <hr class="rf-divider">
@@ -322,7 +386,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
       </sc-if>
     </div>
+    </sc-if>
 
+    <sc-if value="{{seccionCertificados}}" hint-placeholder-val="{{false}}">
     <div class="rf-stack rf-gap-sm">
       <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Certificados en fichero</p>
       <hr class="rf-divider">
@@ -384,46 +450,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
       </sc-if>
     </div>
+    </sc-if>
 
-    <div class="rf-stack rf-gap-sm">
-      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Privacidad</p>
-      <hr class="rf-divider">
-      <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
-        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
-          background:var(--rf-primary);margin-top:2px">
-          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
-            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
-        </span>
-        <div class="rf-stack" style="gap:4px;flex:1">
-          <p class="rf-prose">Recordar mi actividad</p>
-          <p class="rf-hint">Los documentos recientes y el certificado que usaste la última vez.</p>
-        </div>
-      </div>
-      <div style="padding-left:56px">
-        <button class="rf-btn rf-btn--secondary" style="min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Vaciar la lista</button>
-      </div>
-      <sc-if value="{{avisoVaciar}}" hint-placeholder-val="{{true}}">
-        <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
-          border-radius:var(--rf-radius-md);margin-top:var(--rf-space-xs)">
-          <div class="rf-row rf-gap-xs">
-            <span style="display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
-            <p class="rf-title" style="font-size:14px">No se ha podido vaciar la lista</p>
-          </div>
-          <p class="rf-hint">Los documentos recientes siguen guardados. Vuelve a intentarlo.</p>
-        </div>
-      </sc-if>
-        <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
-          <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
-            background:var(--rf-primary);margin-top:2px">
-            <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
-              border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
-          </span>
-          <div class="rf-stack" style="gap:4px;flex:1">
-            <p class="rf-prose">Avisarme cuando haya una versión nueva</p>
-          </div>
-        </div>
-    </div>
-
+    <sc-if value="{{seccionApariencia}}" hint-placeholder-val="{{false}}">
     <div class="rf-stack rf-gap-sm">
       <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Apariencia</p>
       <hr class="rf-divider">
@@ -442,6 +471,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
       </div>
     </div>
+    </sc-if>
 
   </div>
     </div>
@@ -469,7 +499,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b"},"ruta":{"editor":"enum","options":["el entorno sabe la ruta del documento","sandbox · no la sabe"],"default":"el entorno sabe la ruta del documento","section":"Destino"},"p12":{"editor":"enum","options":["cuatro instalados","ninguno todavia","error · clave eliptica"],"default":"cuatro instalados","section":"Certificados en fichero"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"seccion":{"editor":"enum","options":["General","Firma","Certificados","Apariencia"],"default":"General","section":"Sección visible"},"ancho":{"editor":"range","min":600,"max":1000,"step":20,"default":720,"unit":"px","section":"Maquetación"},"aviso":{"editor":"enum","options":["ninguno","al guardar","al vaciar"],"default":"ninguno","section":"Ficha 5b · secciones Firma y General"},"ruta":{"editor":"enum","options":["el entorno sabe la ruta del documento","sandbox · no la sabe"],"default":"el entorno sabe la ruta del documento","section":"Destino · sección Firma"},"p12":{"editor":"enum","options":["cuatro instalados","ninguno todavia","error · clave eliptica"],"default":"cuatro instalados","section":"Sección Certificados"},"dialogo":{"editor":"boolean","default":false,"section":"Apagar Recordar mi actividad"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   renderVals() {
     const aviso = this.props.aviso ?? "ninguno";
@@ -482,7 +512,23 @@ class Component extends DCLogic {
     // que las secciones de debajo no salten.
     const sabeRuta = (this.props.ruta ?? "el entorno sabe la ruta del documento") !== "sandbox · no la sabe";
     const p12 = this.props.p12 ?? "cuatro instalados";
+    // El indice es permanente y a la derecha se pinta una sola seccion: la
+    // palanca «seccion» es la pestana activa, y cada palanca de contenido solo
+    // se ve dentro de la suya, que es lo que dice el nombre de su grupo.
+    const seccion = this.props.seccion ?? "General";
+    const filaActiva = "border:1px solid var(--rf-border-subtle);background:var(--rf-bg);color:var(--rf-text)";
+    const filaInactiva = "border:1px solid transparent;background:transparent;color:var(--rf-text-muted)";
+    const fila = (nombre) => seccion === nombre ? filaActiva : filaInactiva;
     return {
+      seccion: seccion,
+      seccionGeneral: seccion === "General",
+      seccionFirma: seccion === "Firma",
+      seccionCertificados: seccion === "Certificados",
+      seccionApariencia: seccion === "Apariencia",
+      filaGeneral: fila("General"),
+      filaFirma: fila("Firma"),
+      filaCertificados: fila("Certificados"),
+      filaApariencia: fila("Apariencia"),
       hayJuntoAlOriginal: sabeRuta,
       soloCarpeta: !sabeRuta,
       hayInstalados: p12 !== "ninguno todavia",
