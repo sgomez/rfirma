@@ -300,7 +300,9 @@ jobs:
             flatpak \
             flatpak-builder \
             ostree \
-            libarchive-tools
+            libarchive-tools \
+            librsvg2-common \
+            appstream
 
       - name: Runtime y SDK de Flathub
         working-directory: packaging/flatpak
