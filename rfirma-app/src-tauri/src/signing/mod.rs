@@ -29,6 +29,8 @@ pub struct SigningRoot {
     pub session: SigningSession,
     /// De dónde salen los bytes del documento que se firma.
     pub files: Arc<dyn ports::DocumentBytes + Send + Sync>,
+    /// El prompter que solicita el secreto interactivo (PIN).
+    pub prompter: Arc<dyn ports::SecretPrompter + Send + Sync>,
 }
 
 impl SigningRoot {

@@ -4,6 +4,7 @@ pub mod engines;
 pub mod failures;
 pub mod ffi;
 pub mod files;
+pub mod gtk_prompter;
 pub mod isolate;
 pub mod memory;
 pub mod orders;

@@ -16,11 +16,13 @@ use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, NOTHING_FROM_A_SITE,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::Language;
 use crate::signing::domain::{
     compose_layer2_text, AdmissibleDocument, CompletedCycle, Format, PlacementError, SessionSeal,
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures};
+use crate::signing::ports::SecretPrompter;
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
@@ -248,6 +250,23 @@ pub fn sign_on_token(
     let mut open = lock(&session.open);
     let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
     in_flight.signature = Some(in_flight.cycle.sign_on_token(signer, pin)?);
+    Ok(())
+}
+
+/// Fase de firma en el token PKCS#11 solicitando el secreto mediante el puerto interactivo (ADR-0001, ADR-0014).
+pub fn sign_on_token_with_prompter(
+    signer: &dyn Signer,
+    session: &SigningSession,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+) -> Result<(), CycleFailure> {
+    let mut open = lock(&session.open);
+    let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
+    in_flight.signature = Some(
+        in_flight
+            .cycle
+            .sign_with_prompter(signer, prompter, language)?,
+    );
     Ok(())
 }
 

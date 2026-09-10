@@ -4,15 +4,19 @@ use base64::Engine;
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
-use crate::identity::domain::error::TokenError;
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
     BridgeError, PostSignRequest, PreSignRequest, PreSignature, SignatureOperation,
 };
+use crate::signing::domain::Language;
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Format, Refusal, SealMismatch,
     SessionSeal, SignatureConfig,
 };
 use crate::signing::ports::{Bridge, Signer};
+use crate::signing::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 
 use crate::signing::domain::TokenSignatures;
 
@@ -61,6 +65,8 @@ pub enum CycleError {
     Token(TokenError),
     /// El sello devuelto no coincide con el emitido por la prefirma.
     Seal(SealMismatch),
+    /// La solicitud interactiva del secreto fue cancelada o falló.
+    Prompt(SecretPromptError),
 }
 
 impl std::fmt::Display for CycleError {
@@ -70,6 +76,7 @@ impl std::fmt::Display for CycleError {
             Self::Bridge(error) => write!(f, "{error}"),
             Self::Token(error) => write!(f, "{error}"),
             Self::Seal(error) => write!(f, "{error}"),
+            Self::Prompt(error) => write!(f, "{error}"),
         }
     }
 }
@@ -97,6 +104,12 @@ impl From<TokenError> for CycleError {
 impl From<SealMismatch> for CycleError {
     fn from(error: SealMismatch) -> Self {
         Self::Seal(error)
+    }
+}
+
+impl From<SecretPromptError> for CycleError {
+    fn from(error: SecretPromptError) -> Self {
+        Self::Prompt(error)
     }
 }
 
@@ -173,6 +186,61 @@ impl OpenCycle {
     /// Copia del sello de sesión para transportarlo a la postfirma (ADR-0016).
     pub fn seal_in_transit(&self) -> SessionSeal {
         self.presigned.stamp().clone()
+    }
+
+    /// Fase 2: firma cada bloque en el token PKCS#11 solicitando el secreto interactivamente
+    /// mediante el prompter cuando el almacén lo requiere (`StoreSecret::TypedOnScreen`),
+    /// gestionando reintentos en caso de PIN incorrecto (ADR-0001, ADR-0014).
+    pub fn sign_with_prompter(
+        &self,
+        signer: &dyn Signer,
+        prompter: &dyn SecretPrompter,
+        language: Language,
+    ) -> Result<TokenSignatures, CycleError> {
+        let secret_mode = signer.secret_of(&self.certificate)?;
+        match secret_mode {
+            StoreSecret::NotNeeded | StoreSecret::TypedOnTheReaderKeypad => {
+                let empty = ProtectedSecret::new(b"");
+                self.presigned
+                    .signed_one_by_one(|pre| {
+                        signer.sign_with_secret(&self.certificate, &empty, self.algorithm, pre)
+                    })
+                    .map_err(CycleError::Token)
+            }
+            StoreSecret::TypedOnScreen { attempts_left } => {
+                let mut request = SecretPromptRequest {
+                    token_label: self.certificate.token_label().to_string(),
+                    subject: Some(self.certificate.label().to_string()),
+                    language,
+                    incorrect_pin: false,
+                    attempts_left,
+                };
+                let mut current_attempts = attempts_left;
+
+                loop {
+                    request.attempts_left = current_attempts;
+                    let secret = prompter.prompt_secret(&request)?;
+
+                    let outcome = self.presigned.signed_one_by_one(|pre| {
+                        signer.sign_with_secret(&self.certificate, &secret, self.algorithm, pre)
+                    });
+
+                    match outcome {
+                        Ok(signatures) => return Ok(signatures),
+                        Err(token_err) if token_err.situation() == Situation::IncorrectPin => {
+                            request.incorrect_pin = true;
+                            if let Some(left) = current_attempts {
+                                if left <= 1 {
+                                    return Err(CycleError::Token(token_err));
+                                }
+                                current_attempts = Some(left - 1);
+                            }
+                        }
+                        Err(other) => return Err(CycleError::Token(other)),
+                    }
+                }
+            }
+        }
     }
 
     /// Fase 2: firma cada bloque en el token PKCS#11, con el secreto pedido una sola vez (ADR-0001).
