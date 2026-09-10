@@ -63,12 +63,12 @@ fn an_algorithm_rfirma_does_not_compose_comes_back_with_the_code_of_the_original
     let signer = RecordingSigner::default();
     let certificate = a_certificate("FNMT-ACTIVO", b"der");
 
-    let refusal = signed_by_the_token(&signer, &certificate, "1234", "SHA1", b"uno")
-        .expect_err("SHA1 no lo compone rFirma");
+    let refusal = signed_by_the_token(&signer, &certificate, "1234", "RIPEMD160", b"uno")
+        .expect_err("RIPEMD160 no lo compone rFirma");
 
     assert_eq!(refusal.code, SafCode::SignatureFailed);
     assert_eq!(refusal.situation, "mechanismNotOffered");
-    assert!(refusal.detail.contains("SHA1"));
+    assert!(refusal.detail.contains("RIPEMD160"));
     assert!(crate::lock(&signer.signed).is_empty());
 }
 

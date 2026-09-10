@@ -41,6 +41,7 @@ pub fn der_encoded(concatenated: &[u8]) -> Result<Vec<u8>, TokenError> {
 
 fn named_by(algorithm: SignatureAlgorithm) -> MessageDigest {
     match algorithm {
+        SignatureAlgorithm::Sha1Rsa | SignatureAlgorithm::Sha1Ecdsa => MessageDigest::sha1(),
         SignatureAlgorithm::Sha384Rsa
         | SignatureAlgorithm::Sha384RsaPss
         | SignatureAlgorithm::Sha384Ecdsa => MessageDigest::sha384(),

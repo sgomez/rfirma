@@ -182,11 +182,11 @@ fn a_batch_with_an_algorithm_rfirma_does_not_sign_is_refused() {
     let desk = a_desk_that_is_never_touched(home.path());
     let certificate = a_usable_certificate("FIRMA");
     let batch = a_local_batch(
-        r#"{"algorithm":"SHA1","format":"auto","stoponerror":false,"singlesigns":[{"id":"1","datareference":"ZGF0bw=="}]}"#,
+        r#"{"algorithm":"RIPEMD160","format":"auto","stoponerror":false,"singlesigns":[{"id":"1","datareference":"ZGF0bw=="}]}"#,
     );
 
-    let refusal =
-        signed_local_batch(&desk, &certificate, "1234", &batch).expect_err("SHA1 no se atiende");
+    let refusal = signed_local_batch(&desk, &certificate, "1234", &batch)
+        .expect_err("RIPEMD160 no se atiende");
 
     assert!(matches!(refusal, SiteRefusal::LocalBatch(_)));
 }
