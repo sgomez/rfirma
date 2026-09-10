@@ -37,26 +37,46 @@ entonces. La secuencia criptográfica no cambia —ver
 [ventana-principal.md](ventana-principal.md)—; lo que cambia es que abrir la
 sesión no forma parte de ella y cae donde el almacén lo pida.
 
+## El diálogo es una ventana nativa, no una capa de la aplicación
+
+**No lo dibuja la ventana: lo dibuja el sistema.** El secreto no cruza a
+WebKit ni al canal IPC de Tauri (ADR-0001), así que el diálogo es una ventana
+modal GTK del backend, transitoria de la ventana principal. Lo que sigue
+describe esa ventana; los nombres de clase de la versión web —`.rf-dialog`,
+`.rf-scrim`, `.rf-field`— ya no aplican, y el componente que los usaba se
+retiró.
+
+Hereda el tema del escritorio, y **no puede parecerse al diálogo de
+`pinentry-gnome3`**: ese lo pinta GNOME Shell desde el compositor y ningún
+cliente GTK lo replica (`docs/research/pinentry-gtk-temas-empaquetado.md`).
+
 ## Estructura
 
-`.rf-dialog` de 420 px sobre `.rf-scrim`, con la ventana atenuada detrás:
-
-1. Título: «Introduce el PIN» o «Introduce la contraseña».
-2. Debajo, y sólo si se sabe, **qué se está abriendo**, en los términos de quien
-   firma: «Tus certificados de Firefox», o el titular y el DNI del certificado
-   del `.p12`. Con un módulo PKCS#11 no hay ninguna de las dos cosas todavía y
-   la línea **no se pone**.
-3. Campo enmascarado, con tracking amplio.
+1. Título en la barra del gestor de ventanas: «Introduce el PIN» o «Introduce
+   la contraseña».
+2. Icono de credencial del tema y, a su lado, **qué se está abriendo**, en los
+   términos de quien firma: el titular en negrita y, debajo y atenuado, su
+   número de documento. **Es el mismo dato que enseña el desplegable**, leído
+   del DER del firmante y nunca de la etiqueta del objeto en el token. Si el DER
+   no da titular, la línea **no se pone** y en su lugar va el título.
+3. Campo enmascarado, que nace con el foco.
 4. **Nada debajo del campo** salvo el mensaje de fallo, cuando lo hay.
-5. Divisor y, abajo a la derecha, «Cancelar» (`--ghost`) y `Continuar` o
-   `Firmar` (`--primary`).
+5. Abajo a la derecha, «Cancelar» y el primario, marcado como acción sugerida
+   del tema.
 
-### El campo del secreto lleva `autofocus`
+### La botonera va al pie, no a una barra de cabecera
 
-**Al abrirse el diálogo se puede teclear sin tocar nada**, y el foco se dibuja:
-el campo sale con el anillo de `--rf-focus-ring` y el cursor dentro. **Hoy no
-está soportado**, así que esto no es sólo dibujo: es una decisión que va al
-spec.
+GNOME pone los botones de sus diálogos en la barra de cabecera, y se probó así.
+**No se hace**, por dos razones: fuera de GNOME —KDE, XFCE— una barra de
+cabecera CSD se lee como una ventana ajena al escritorio, y el aspecto que se
+ganaría a cambio tampoco es el del diálogo de sistema, que lo pinta GNOME Shell
+y ningún cliente GTK replica. Al pie es lo que menos desentona en los cuatro
+escritorios, y es además lo que esta ficha pedía desde la v0.3.
+
+### El campo del secreto nace con el foco
+
+**Al abrirse el diálogo se puede teclear sin tocar nada**, y el foco se dibuja
+con el anillo del tema.
 
 El argumento es que el diálogo tiene **una sola entrada** y en los tres almacenes
 —PIN de módulo PKCS#11, contraseña de perfil de Firefox, contraseña de `.p12`—
@@ -84,25 +104,18 @@ nada.
 
 ### Geometría
 
-- Diálogo de 420 px, `.rf-dialog` sobre `.rf-scrim`.
-- Título en `.rf-title` y, 4 px debajo, la línea de sujeto en
-  `.rf-prose rf-text-muted` —no en `.rf-hint`: es qué se está abriendo, y se lee
-  antes de teclear nada—. **El bloque de cabecera reserva 48 px** tenga esa
-  línea o no, y **el hueco bajo el campo reserva 17 px** tenga mensaje o no: las
-  tres situaciones y los dos estados miden lo mismo, así que el diálogo no pega
-  saltos al cambiar de almacén ni al fallar.
-- El campo va a **18 px**, con 6 px de tracking cuando es un PIN de cuatro
-  dígitos y 4 px cuando es una contraseña.
-- Acciones abajo a la derecha, `Cancelar` fantasma a la izquierda del primario.
-- El campo **nace con el foco**, dibujado con `--rf-focus-ring`.
+Ancho de 400 px y alto el que pida el contenido; los márgenes y el espaciado
+son los del tema, no los de rFirma. **No se reservan huecos** para la línea de
+titular ni para el mensaje de fallo: la ventana se levanta de nuevo en cada
+intento, así que no hay salto que evitar.
 
 ## Estados
 
 - **Pidiendo el secreto**: campo vacío y **nada bajo él**. Ni pista, ni promesa,
   ni instrucciones de uso.
-- **Secreto incorrecto**: `.rf-field--error` en el campo —borde de 2 px y el
-  texto de ayuda en negrita, sin glifo— y bajo el campo, «PIN incorrecto» o
-  «Contraseña incorrecta». Nada más.
+- **Secreto incorrecto**: el campo toma la clase `error` del tema —el borde que
+  el escritorio use para eso, sin glifo— y bajo el campo, en negrita, «PIN
+  incorrecto» o «Contraseña incorrecta». Nada más.
 
 **No hay contador de reintentos, y no es un hueco por rellenar: es estructural**
 (ID-191). La información de token de PKCS#11 **no trae** intentos restantes, ni
@@ -118,14 +131,15 @@ escribir para el `.p12` —que la contraseña se teclea en cada firma— narraba
 mecanismo. Ninguna de las dos cambia lo que la persona puede hacer en esta
 pantalla, así que ninguna se queda.
 
-## Componentes y tokens
+## Componentes
 
-`.rf-dialog`, `.rf-scrim`, `.rf-field`, `.rf-field--error`, `.rf-label`,
-`.rf-input`, `.rf-hint`, `.rf-divider`, `.rf-btn--ghost|--primary`.
+`gtk::Dialog` con su área de acciones al pie, `gtk::Image` con
+`dialog-password`, `gtk::Entry` enmascarado y las clases del tema `dim-label`,
+`suggested-action` y `error`.
 
-Sin color de error: el sistema no lo tiene. El fallo se señala con **borde y
-peso**, como manda [design-system.md](design-system.md) —y sin glifo antepuesto,
-que se retiró en la v0.4—.
+**Ningún color en duro.** El fallo se señala con **borde y peso** —como manda
+[design-system.md](design-system.md), y sin glifo antepuesto, que se retiró en
+la v0.4—, y quien pone el borde es el tema del escritorio.
 
 ## Lo que este diálogo deja abierto
 

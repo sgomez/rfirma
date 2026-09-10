@@ -5,6 +5,7 @@ use base64::Engine;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::holder::{prompted_holder_of, PromptedHolder};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
@@ -121,6 +122,7 @@ pub struct OpenCycle {
     chain_b64: String,
     presigned: PreSignature,
     certificate: CertificateRef,
+    holder: Option<PromptedHolder>,
     already_signed_before: bool,
 }
 
@@ -168,6 +170,10 @@ pub fn presign<B: Bridge + ?Sized>(
         chain_b64,
         presigned,
         certificate: request.certificate.clone(),
+        holder: request
+            .chain
+            .first()
+            .and_then(|der| prompted_holder_of(der)),
         already_signed_before: request.document.already_signed(),
     })
 }
@@ -210,7 +216,7 @@ impl OpenCycle {
             StoreSecret::TypedOnScreen { attempts_left } => {
                 let mut request = SecretPromptRequest {
                     token_label: self.certificate.token_label().to_string(),
-                    subject: Some(self.certificate.label().to_string()),
+                    holder: self.holder.clone(),
                     language,
                     incorrect_pin: false,
                     attempts_left,

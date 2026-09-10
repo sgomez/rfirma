@@ -5,6 +5,7 @@ use std::path::Path;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
+pub use crate::identity::domain::holder::PromptedHolder;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
@@ -34,8 +35,8 @@ pub trait IsolateHost {
 pub struct SecretPromptRequest {
     /// Etiqueta o nombre descriptivo del token o almacén.
     pub token_label: String,
-    /// Titular o sujeto del certificado para el que se pide el secreto.
-    pub subject: Option<String>,
+    /// Titular del certificado para el que se pide el secreto, si el DER lo dice.
+    pub holder: Option<PromptedHolder>,
     /// Idioma preferido para los textos del diálogo.
     pub language: Language,
     /// Indica si se trata de un reintento tras un PIN erróneo.

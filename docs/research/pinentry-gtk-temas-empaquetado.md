@@ -18,13 +18,17 @@ o internas en rFirma.
    funciona en Wayland; en distribuciones modernas, `pinentry-gnome3` delega en
    `GcrPrompt` / `org.gnome.keyring.SystemPrompter` sobre D-Bus, donde GNOME
    Shell dibuja el diálogo modal directamente desde el compositor.
-2. **Integración visual y tema del sistema:** el tema del sistema es válido y
-   se ve bien sin necesidad de tematización personalizada. `pinentry-gnome3` se
-   integra con el aspecto del escritorio GNOME (diálogo modal de sistema). Frente
-   a esto, un diálogo GTK propio en Rust con `gtk-rs` adoptaría el tema GTK
-   activo sin intermediarios de proceso, permitiendo memoria segura con
-   `libc::mlock` y el crate `zeroize`, eliminando la transmisión en claro del
-   PIN a través de tuberías IPC.
+2. **Integración visual: heredar el tema no es parecerse a `pinentry-gnome3`.**
+   Son dos cosas distintas y conviene no confundirlas. `pinentry-gnome3` **no
+   dibuja nada**: abre `gcr_system_prompt_open` sobre D-Bus y la ventana la
+   pinta **GNOME Shell** con sus propios widgets, el mismo modal que sale con
+   Polkit. Ningún cliente GTK puede replicar ese aspecto, ni el de rFirma ni
+   ningún otro. Un diálogo GTK propio en Rust con `gtk-rs` hereda el **tema**
+   GTK activo —colores, tipografía, botones— y permite memoria segura con
+   `libc::mlock` y el crate `zeroize` eliminando la transmisión en claro del PIN
+   por tuberías IPC; lo que **no** hereda es el **diseño** del diálogo de
+   sistema, que hay que construir a mano (barra de cabecera, icono, jerarquía
+   primaria/secundaria, `suggested-action`, ventana transitoria de la principal).
 3. **Empaquetado y nombres de paquetes:**
    * En **Debian/Ubuntu (`.deb`)**: el paquete GTK moderno es `pinentry-gnome3`
      (en *main*). `pinentry-gtk2` está confinado a *universe* en Ubuntu y arrastra
@@ -163,11 +167,12 @@ pinentry respecto a la exclusividad de la entrada del usuario:
 
 ## 2. Integración visual con el tema del sistema y comparativa técnica
 
-### El tema del sistema es válido
+### El tema del sistema es válido; el diseño hay que ponerlo
 
-El requisito confirma que la apariencia predeterminada del sistema operativo y
-del entorno de escritorio es aceptable. No es necesario aplicar estilos CSS a
-medida:
+La apariencia predeterminada del sistema operativo y del entorno de escritorio
+es aceptable y no hace falta aplicar estilos CSS a medida. Lo que sí hace falta
+es dar al diálogo la **estructura** de un diálogo de credenciales del sistema:
+heredar el tema no la trae puesta.
 
 * **`pinentry-gnome3`:** hereda directamente la estética del sistema en GNOME.
   El diálogo es visualmente idéntico a las solicitudes de autenticación de

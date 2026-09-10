@@ -119,6 +119,24 @@ fn the_holder_is_readable_for_display_but_is_not_part_of_the_reference() {
 }
 
 #[test]
+fn the_pin_dialog_names_the_holder_and_never_the_label_of_the_object() {
+    let certificate = certificate_labelled(ACTIVE);
+
+    let holder = rfirma_lib::identity::domain::holder::prompted_holder_of(certificate.der())
+        .expect("el DER de pruebas deberia dar titular");
+
+    let (name, id_number) =
+        rfirma_lib::identity::domain::holder::holder_of(certificate.subject().as_deref());
+    assert_eq!(holder.name, name);
+    assert_eq!(holder.id_number, id_number);
+    assert_ne!(
+        holder.name,
+        certificate.reference().label(),
+        "el dialogo estaria enseñando el CKA_LABEL en lugar del titular"
+    );
+}
+
+#[test]
 fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it_with() {
     let certificate = certificate_labelled(ACTIVE);
 

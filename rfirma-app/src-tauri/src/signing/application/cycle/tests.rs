@@ -454,6 +454,10 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
     assert_eq!(recorded.len(), 2);
     assert!(!recorded[0].incorrect_pin);
     assert!(recorded[1].incorrect_pin);
+    assert_eq!(
+        recorded[0].holder, None,
+        "sin un DER legible el dialogo se queda sin linea de titular, y no cae en la etiqueta del objeto"
+    );
 }
 
 #[test]
