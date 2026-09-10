@@ -732,34 +732,11 @@ msgstr "Open the folder"
 msgid "panel.signed.signAgain"
 msgstr "Sign it again"
 
-msgid "pin.title"
-msgstr "Enter the PIN"
-
 msgid "pin.titlePassword"
 msgstr "Enter the password"
 
-#. {{holder}} es el nombre del titular del certificado; {{idNumber}} su DNI o NIE.
-msgid "pin.signingAs"
-msgstr "{{holder}} · {{idNumber}}"
-
-#. {{browser}} es "Firefox" o "Chrome", sin traducir: es el nombre del programa.
-msgid "pin.subjectBrowser"
-msgstr "Your {{browser}} certificates"
-
-msgid "pin.label"
-msgstr "PIN"
-
 msgid "pin.labelPassword"
 msgstr "Password"
-
-msgid "pin.incorrect"
-msgstr "Wrong PIN"
-
-msgid "pin.incorrectPassword"
-msgstr "Wrong password"
-
-msgid "pin.submit"
-msgstr "Sign"
 
 msgid "progress.title"
 msgstr "Signing the document…"
@@ -1382,3 +1359,24 @@ msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "You'll have to carry on from the site."
+
+#~ msgid "pin.title"
+#~ msgstr "Enter the PIN"
+
+#~ msgid "pin.signingAs"
+#~ msgstr "{{holder}} · {{idNumber}}"
+
+#~ msgid "pin.subjectBrowser"
+#~ msgstr "Your {{browser}} certificates"
+
+#~ msgid "pin.label"
+#~ msgstr "PIN"
+
+#~ msgid "pin.incorrect"
+#~ msgstr "Wrong PIN"
+
+#~ msgid "pin.incorrectPassword"
+#~ msgstr "Wrong password"
+
+#~ msgid "pin.submit"
+#~ msgstr "Sign"

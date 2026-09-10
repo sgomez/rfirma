@@ -630,7 +630,7 @@ describe("un momento del backend gana a lo que estuviera en vuelo", () => {
 });
 
 describe("los momentos que pone el adaptador", () => {
-  it("walks from consent to the secret, the two signing legs and the outcome", async () => {
+  it("walks from consent to the two signing legs and the outcome", async () => {
     const { push, port, seen, calls, last } = watched();
     push(ASKING_TO_SIGN);
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
@@ -638,11 +638,7 @@ describe("los momentos que pone el adaptador", () => {
     await port.consent("handle-1");
 
     expect(calls.beginSigning).toHaveBeenCalledWith("handle-1");
-    expect(last()?.stage).toEqual({ kind: "secret", certificate: certificate(), failure: null });
-
-    await port.submitSecret("1234");
-
-    expect(calls.signWithPin).toHaveBeenCalledWith("1234");
+    expect(calls.signWithPin).toHaveBeenCalledWith("");
     expect(calls.finishSigning).toHaveBeenCalledOnce();
     expect(last()?.stage).toEqual({
       kind: "outcome",
@@ -659,8 +655,6 @@ describe("los momentos que pone el adaptador", () => {
     });
     expect(seen.map((errand) => errand?.stage.kind)).toEqual([
       "consent",
-      "signing",
-      "secret",
       "signing",
       "signing",
       "outcome",
@@ -680,7 +674,7 @@ describe("los momentos que pone el adaptador", () => {
     expect(last()?.stage).toMatchObject({ outcome: { kind: "signed" } });
   });
 
-  it("keeps an incorrect pin inside the dialog", async () => {
+  it("ends the errand when signing fails", async () => {
     const failure: TokenFailure = {
       situation: "incorrectPin",
       detail: "CKR_PIN_INCORRECT",
@@ -693,9 +687,10 @@ describe("los momentos que pone el adaptador", () => {
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
     await port.consent("handle-1");
 
-    await port.submitSecret("0000");
-
-    expect(last()?.stage).toEqual({ kind: "secret", certificate: certificate(), failure });
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "unknown", detail: "CKR_PIN_INCORRECT" },
+    });
   });
 
   it("ends the errand when a signing stage fails for anything else", async () => {
@@ -708,8 +703,6 @@ describe("los momentos que pone el adaptador", () => {
     push(ASKING_TO_SIGN);
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
     await port.consent("handle-1");
-
-    await port.submitSecret("1234");
 
     expect(last()?.stage).toEqual({
       kind: "outcome",
@@ -838,21 +831,14 @@ describe("el lote remoto", () => {
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
 
     await port.consent("handle-1");
-    await port.submitSecret("1234");
 
-    expect(calls.signWithPin).toHaveBeenCalledWith("1234");
+    expect(calls.signWithPin).toHaveBeenCalledWith("");
     expect(calls.finishSigning).not.toHaveBeenCalled();
     expect(last()?.stage).toEqual({
       kind: "outcome",
       outcome: { kind: "batchSigned", signs: 3 },
     });
-    expect(seen.map((errand) => errand?.stage.kind)).toEqual([
-      "consent",
-      "signing",
-      "secret",
-      "signing",
-      "outcome",
-    ]);
+    expect(seen.map((errand) => errand?.stage.kind)).toEqual(["consent", "signing", "outcome"]);
   });
 
   it("names the batch's own refusals as the catalogue knows them", async () => {
@@ -870,7 +856,6 @@ describe("el lote remoto", () => {
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
 
     await port.consent("handle-1");
-    await port.submitSecret("1234");
 
     expect(last()?.stage).toEqual({
       kind: "outcome",
@@ -893,7 +878,6 @@ describe("el lote remoto", () => {
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
 
     await port.consent("handle-1");
-    await port.submitSecret("0000");
 
     expect(last()?.stage).toEqual({
       kind: "outcome",
@@ -965,9 +949,8 @@ describe("el lote local", () => {
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
 
     await port.consent("handle-1");
-    await port.submitSecret("1234");
 
-    expect(calls.signWithPin).toHaveBeenCalledWith("1234");
+    expect(calls.signWithPin).toHaveBeenCalledWith("");
     expect(calls.finishSigning).not.toHaveBeenCalled();
     expect(last()?.stage).toEqual({
       kind: "outcome",
@@ -986,7 +969,6 @@ describe("el lote local", () => {
     await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
 
     await port.consent("handle-1");
-    await port.submitSecret("1234");
 
     expect(last()?.stage).toEqual({
       kind: "outcome",

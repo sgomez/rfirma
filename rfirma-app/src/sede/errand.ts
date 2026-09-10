@@ -1,6 +1,5 @@
 import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
-import type { TokenFailure } from "../signing/token";
 
 /**
  * El trámite que abre una sede electrónica por `afirma://`, en el lado de la
@@ -163,11 +162,6 @@ export type ErrandStage =
       narrowed: boolean;
     }
   /**
-   * El almacén pide PIN o contraseña. **No tiene pantalla propia** (ID-273): se
-   * monta el `PinDialog` del recorrido local, sin una sola diferencia.
-   */
-  | { kind: "secret"; certificate: Certificate; failure: TokenFailure | null }
-  /**
    * Entre que la persona acepta y que la firma vuelve a la sede. Dos momentos,
    * y ninguno es criptográfico: las fases de la trifásica son estado interno
    * del motor y no se cuentan aquí.
@@ -255,8 +249,6 @@ export interface SiteErrandPort {
   consent(certificateId: string): Promise<void>;
   /** Sigue con lo que el validador del original señaló: se vuelve a comprobar sin preguntar. */
   confirmSignatures(): Promise<void>;
-  /** El secreto tecleado en el diálogo del almacén. */
-  submitSecret(secret: string): Promise<void>;
   /**
    * Abandona el trámite. Libera el `idsession` y la sede recibe `CANCEL` de
    * inmediato, sin esperar a que nadie cierre nada.
@@ -283,7 +275,6 @@ export function noErrand(): SiteErrandPort {
     watch: () => () => {},
     consent: async () => {},
     confirmSignatures: async () => {},
-    submitSecret: async () => {},
     cancel: async () => {},
     close: async () => {},
     lookAgain: async () => {},

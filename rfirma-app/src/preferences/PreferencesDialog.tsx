@@ -702,7 +702,7 @@ interface PasswordPromptProps {
  * estado que sobreviva al envío — de un `.p12` instalado no se recuerda nada,
  * ni la ruta ni la contraseña (ID-195, ID-196).
  *
- * Es un `.rf-dialog` propio y no [`PinDialog`] porque aquí **todavía no hay
+ * Es un `.rf-dialog` propio porque aquí **todavía no hay
  * certificado**: ese diálogo se identifica por el titular con el que se va a
  * firmar, y aquí no se sabe ni cuál es ni cuántos trae el fichero.
  */

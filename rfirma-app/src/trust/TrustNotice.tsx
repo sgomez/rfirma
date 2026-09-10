@@ -41,7 +41,7 @@ export function TrustNotice({ seen, onAcknowledge }: TrustNoticeProps) {
   const descriptionId = useId();
   const button = useRef<HTMLButtonElement>(null);
 
-  // El foco entra en el botón al montarse, igual que `PinDialog`: es el único
+  // El foco entra en el botón al montarse: es el único
   // control del diálogo, y quien navegue por teclado no debería tener que
   // buscarlo.
   useEffect(() => {

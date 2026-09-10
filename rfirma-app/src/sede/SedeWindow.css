@@ -220,15 +220,6 @@
   justify-content: center;
 }
 
-/*
- * El velo de la ventana se apaga mientras está el diálogo del secreto: el suyo
- * es el que se ve, y la colocación del `.rf-scrim` se mantiene para que la
- * ventana siga centrada debajo.
- */
-.sede-window__scrim--clear {
-  background: transparent;
-}
-
 .sede-outcome__head {
   align-items: flex-start;
 }
