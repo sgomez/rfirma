@@ -295,6 +295,9 @@ publicarla. Ver `changelog.d/README.md`.
   operación: si pide más de la que rFirma habla, el trámite sale con `SAF_21`
   antes de firmar nada, y en el camino del servidor intermedio es ella la que
   fija la versión de la operación (#618).
+- Se firman los lotes y las peticiones de sede que declaran SHA-1, que es lo
+  que acepta AutoFirma: rechazarlos dejaba sin atender a sedes en producción
+  (#647).
 
 ### Security
 - Un `.p12` con clave elíptica se rechaza al instalarlo, y no al firmar, porque
