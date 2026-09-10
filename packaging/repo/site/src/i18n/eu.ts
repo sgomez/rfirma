@@ -4,6 +4,8 @@ export const eu: Dictionary = {
   "meta.title": "rFirma — Mahaigainerako jatorrizko sinadura elektronikoa",
   "meta.description":
     "AutoFirmaren Swing interfazea eta tokiko zerbitzariak ordezten dituen Rust eta React aplikazioa, Administrazioaren kriptografia ofizialarekin.",
+  "meta.image.alt":
+    "rFirmaren logotipoa hondo berdearen gainean, rfirma.sgomez.me domeinuarekin",
 
   "notice.aria": "Titulartasun ofizialari buruzko oharra",
   "notice.badge": "Oharra",

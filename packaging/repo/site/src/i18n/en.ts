@@ -4,6 +4,8 @@ export const en: Dictionary = {
   "meta.title": "rFirma — Native electronic signature for the desktop",
   "meta.description":
     "Desktop application in Rust and React that replaces AutoFirma's Swing interface and local servers, with the Administration's official cryptography.",
+  "meta.image.alt":
+    "The rFirma logo on a green background with the domain rfirma.sgomez.me",
 
   "notice.aria": "Notice about official ownership",
   "notice.badge": "Notice",

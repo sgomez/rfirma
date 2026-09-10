@@ -4,6 +4,8 @@ export const ca: Dictionary = {
   "meta.title": "rFirma — Signatura electrònica nativa per a l'escriptori",
   "meta.description":
     "Aplicació d'escriptori en Rust i React que substitueix la interfície Swing i els servidors locals d'AutoFirma, amb la criptografia oficial de l'Administració.",
+  "meta.image.alt":
+    "Logotip de rFirma sobre fons verd amb el domini rfirma.sgomez.me",
 
   "notice.aria": "Avís sobre titularitat oficial",
   "notice.badge": "Avís",

@@ -12,6 +12,15 @@ export type Locale = (typeof locales)[number];
 
 export const defaultLocale: Locale = "es";
 
+/** El codigo de idioma y region que espera Open Graph, que no es el de la ruta. */
+export const openGraphLocales: Record<Locale, string> = {
+  es: "es_ES",
+  ca: "ca_ES",
+  eu: "eu_ES",
+  gl: "gl_ES",
+  en: "en_GB",
+};
+
 export const dictionaries: Record<Locale, Dictionary> = { es, ca, eu, gl, en };
 
 /** Claves cuyo texto es el mismo en los cinco idiomas: nombres propios, formatos, cifras y guiones. */

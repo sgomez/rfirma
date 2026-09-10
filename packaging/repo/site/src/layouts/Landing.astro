@@ -9,7 +9,7 @@ import Nav from "../components/Nav.astro";
 import NoticeTop from "../components/NoticeTop.astro";
 import Pillars from "../components/Pillars.astro";
 import Transparency from "../components/Transparency.astro";
-import { defaultLocale, localePath, locales, translator, type Locale } from "../i18n";
+import { defaultLocale, localePath, locales, openGraphLocales, translator, type Locale } from "../i18n";
 import "../styles/landing.css";
 
 interface Props {
@@ -19,6 +19,7 @@ interface Props {
 const { locale } = Astro.props;
 const t = translator(locale);
 const canonical = new URL(localePath(locale), Astro.site);
+const image = new URL("/og.png", Astro.site);
 ---
 
 <!doctype html>
@@ -35,10 +36,28 @@ const canonical = new URL(localePath(locale), Astro.site);
       ))
     }
     <link rel="alternate" hreflang="x-default" href={new URL(localePath(defaultLocale), Astro.site).href} />
+    <meta property="og:site_name" content="rFirma" />
     <meta property="og:title" content={t("meta.title")} />
-    <meta property="og:description" content={t("meta.description")} />
+    <meta property="og:description" content={t("footer.tagline")} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical.href} />
+    <meta property="og:locale" content={openGraphLocales[locale]} />
+    {
+      locales
+        .filter((other) => other !== locale)
+        .map((other) => <meta property="og:locale:alternate" content={openGraphLocales[other]} />)
+    }
+    <meta property="og:image" content={image.href} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={t("meta.image.alt")} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={t("meta.title")} />
+    <meta name="twitter:description" content={t("footer.tagline")} />
+    <meta name="twitter:image" content={image.href} />
+    <meta name="twitter:image:alt" content={t("meta.image.alt")} />
+    <meta name="theme-color" content="#067781" />
   </head>
   <body>
     <div class="rf-root landing" data-theme="light">

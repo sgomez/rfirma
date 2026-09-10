@@ -4,6 +4,8 @@ export const gl: Dictionary = {
   "meta.title": "rFirma — Sinatura electrónica nativa para o escritorio",
   "meta.description":
     "Aplicación de escritorio en Rust e React que substitúe a interface Swing e os servidores locais de AutoFirma, coa criptografía oficial da Administración.",
+  "meta.image.alt":
+    "Logotipo de rFirma sobre fondo verde co dominio rfirma.sgomez.me",
 
   "notice.aria": "Aviso sobre titularidade oficial",
   "notice.badge": "Aviso",

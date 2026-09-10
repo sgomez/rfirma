@@ -1292,6 +1292,24 @@ check-actions:
 # cinco diccionarios al 100 %— y se construye, que es lo que de verdad dice si
 # la pagina sigue saliendo en los cinco idiomas.
 #
+# La miniatura de Open Graph se versiona ya rasterizada porque el Dockerfile que
+# construye la landing no lleva navegador ni tipografias: generarla en cada
+# compilacion pediria las dos cosas para una imagen que cambia una vez al ano.
+#
+# Rasteriza packaging/repo/site/public/og.png desde su plantilla.
+og-image:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    site="{{ justfile_directory() }}/packaging/repo/site"
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
+    cp "$site/tools/og.html" "$work/"
+    cp {{ justfile_directory() }}/rfirma-app/src/design-system/bundle/fonts/inter-latin.woff2 "$work/"
+    google-chrome --headless --disable-gpu --hide-scrollbars --allow-file-access-from-files \
+        --force-device-scale-factor=1 --window-size=1200,630 \
+        --screenshot="$work/og.png" "file://$work/og.html"
+    cp "$work/og.png" "$site/public/og.png"
+
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
 check-landing:
     #!/usr/bin/env bash

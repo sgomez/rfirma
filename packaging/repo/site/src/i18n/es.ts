@@ -2,6 +2,8 @@ export const es = {
   "meta.title": "rFirma — Firma electrónica nativa para el escritorio",
   "meta.description":
     "Aplicación de escritorio en Rust y React que sustituye la interfaz Swing y los servidores locales de AutoFirma, con la criptografía oficial de la Administración.",
+  "meta.image.alt":
+    "Logotipo de rFirma sobre fondo verde con el dominio rfirma.sgomez.me",
 
   "notice.aria": "Aviso sobre titularidad oficial",
   "notice.badge": "Aviso",
