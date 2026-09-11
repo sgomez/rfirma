@@ -25,7 +25,9 @@ use crate::site::domain::protocol::{
     FramedRequest, NotOfTheFraming, Parameter, SafCode, WireAnswer, MORE_DATA_NEED,
 };
 
-use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
+use crate::site::application::errand::{
+    Acknowledged, Acknowledgement, Inbox, ReplyHandle, Transport,
+};
 
 /// Transporte de producción del protocolo `service`: TLS crudo sobre el *loopback*.
 pub struct RawTlsService {
@@ -167,9 +169,14 @@ async fn attend(
         return;
     };
 
-    let response = respond(&raw, from_loopback, duty, inbox, state).await;
-    let _ = encrypted.write_all(&response).await;
+    let (response, acknowledged) = respond(&raw, from_loopback, duty, inbox, state).await;
+    let delivered = encrypted.write_all(&response).await.is_ok();
     let _ = encrypted.shutdown().await;
+    if delivered {
+        if let Some(acknowledged) = acknowledged {
+            acknowledged.fulfil();
+        }
+    }
 }
 
 const THE_EOF_MARK: &[u8] = b"@EOF";
@@ -202,20 +209,26 @@ async fn respond(
     duty: &ChannelDuty,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
-) -> Vec<u8> {
+) -> (Vec<u8>, Option<Acknowledged>) {
     if !from_loopback {
-        return http_response(&WireAnswer::refused(SafCode::ExternalRequestToSocket).on_the_wire());
+        return (
+            http_response(&WireAnswer::refused(SafCode::ExternalRequestToSocket).on_the_wire()),
+            None,
+        );
     }
 
     let credential = match duty {
-        ChannelDuty::Refuse(answer) => return http_response(&answer.on_the_wire()),
+        ChannelDuty::Refuse(answer) => return (http_response(&answer.on_the_wire()), None),
         ChannelDuty::Serve(credential) => credential,
     };
 
     let request = match read_request(raw) {
         Ok(request) => request,
         Err(NotOfTheFraming) => {
-            return http_response(&WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire())
+            return (
+                http_response(&WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
+                None,
+            )
         }
     };
 
@@ -236,30 +249,36 @@ async fn respond(
             credential: candidate,
         } => {
             if !credential_matches(credential, candidate.as_deref()) {
-                return the_invalid_session_response();
+                return (the_invalid_session_response(), None);
             }
             let mut state = lock(state);
             state.fragments.insert(part, chunk);
-            http_response(if part == total {
-                ECHO_OK
-            } else {
-                MORE_DATA_NEED
-            })
+            (
+                http_response(if part == total {
+                    ECHO_OK
+                } else {
+                    MORE_DATA_NEED
+                }),
+                None,
+            )
         }
         FramedRequest::Firm {
             credential: candidate,
         } => {
             if !credential_matches(credential, candidate.as_deref()) {
-                return the_invalid_session_response();
+                return (the_invalid_session_response(), None);
             }
             inbox.arrived();
             if let Some(response) = the_response_already_computed(state) {
-                return response;
+                return (response, None);
             }
             let combined = lock(state).fragments.combined();
             let Some(url) = combined.and_then(|message| AfirmaUrl::parse(&message).ok()) else {
-                return http_response(
-                    &WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
+                return (
+                    http_response(
+                        &WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
+                    ),
+                    None,
                 );
             };
             launch_operation(url, inbox, state).await
@@ -270,15 +289,18 @@ async fn respond(
             credential: candidate,
         } => {
             if !credential_matches(credential, candidate.as_deref()) {
-                return the_invalid_session_response();
+                return (the_invalid_session_response(), None);
             }
             let state = lock(state);
             if part < 1 || part > total || part > state.parts.len() {
-                return http_response(
-                    &WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
+                return (
+                    http_response(
+                        &WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
+                    ),
+                    None,
                 );
             }
-            http_response(&state.parts[part - 1])
+            (http_response(&state.parts[part - 1]), None)
         }
     }
 }
@@ -303,17 +325,17 @@ async fn handle_operation(
     from_loopback: bool,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
-) -> Vec<u8> {
+) -> (Vec<u8>, Option<Acknowledged>) {
     match answer(duty, from_loopback, message) {
         Answer::Reply(text) => {
             inbox.arrived();
-            http_response(&text)
+            (http_response(&text), None)
         }
-        Answer::ReplyAndClose(text) => http_response(&text),
+        Answer::ReplyAndClose(text) => (http_response(&text), None),
         Answer::Pending(url) => {
             inbox.arrived();
             match the_response_already_computed(state) {
-                Some(response) => response,
+                Some(response) => (response, None),
                 None => launch_operation(url, inbox, state).await,
             }
         }
@@ -322,25 +344,34 @@ async fn handle_operation(
 
 /// Entrega la operación al trámite y espera su resultado, ya troceado en partes (`toSend`,
 /// `calculateNumberPartsResponse` en el original): la respuesta a `cmd=`/`firm=` es el número de
-/// partes, que `send=` reparte luego.
+/// partes, que `send=` reparte luego. El acuse acompaña esta respuesta porque es la única que
+/// nace de la entrega al trámite: las de `send=` solo reparten lo ya calculado.
 async fn launch_operation(
     url: AfirmaUrl,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
-) -> Vec<u8> {
+) -> (Vec<u8>, Option<Acknowledged>) {
     let (sender, receiver) = oneshot::channel();
+    let (acknowledged, acknowledgement) = Acknowledgement::pair();
     inbox.deliver(
         url,
         ReplyHandle::of(move |text| {
             let _ = sender.send(text);
+            acknowledgement
         }),
     );
     let Ok(result) = receiver.await else {
-        return http_response(&WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire());
+        return (
+            http_response(&WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
+            None,
+        );
     };
     let mut state = lock(state);
     state.parts = split_response(&result);
-    http_response(&state.parts.len().to_string())
+    (
+        http_response(&state.parts.len().to_string()),
+        Some(acknowledged),
+    )
 }
 
 #[cfg(test)]

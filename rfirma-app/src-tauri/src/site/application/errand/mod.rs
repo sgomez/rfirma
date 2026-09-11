@@ -22,7 +22,9 @@ use crate::site::application::session::{self as signing, SiteTerms};
 use crate::site::ports::{FilterEngine, PolicyEngine};
 
 pub use crate::site::application::session::SiteRefusal;
-pub use crate::site::ports::{ChannelTransport, Inbox, ReplyHandle, Transport};
+pub use crate::site::ports::{
+    Acknowledged, Acknowledgement, ChannelTransport, Inbox, ReplyHandle, Transport,
+};
 pub use desk::{
     attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
     consent_to_sign_with_chosen_document, consent_to_the_batch, consent_to_the_confirmed_signature,

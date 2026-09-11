@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::site::application::errand::{Inbox, ReplyHandle, Transport};
+use crate::site::application::errand::{Acknowledgement, Inbox, ReplyHandle, Transport};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown, Situation,
 };
@@ -82,8 +82,14 @@ impl Transport for Relay {
         let reply =
             ReplyHandle::of(
                 move |text: String| match servlets.store(&store_servlet, &id, &text) {
-                    Ok(()) => exit(),
-                    Err(error) => on_upload_failure(refusal_of(error)),
+                    Ok(()) => {
+                        exit();
+                        Acknowledgement::immediate()
+                    }
+                    Err(error) => {
+                        on_upload_failure(refusal_of(error));
+                        Acknowledgement::never()
+                    }
                 },
             );
 

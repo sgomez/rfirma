@@ -141,14 +141,20 @@ async fn attend(
             Answer::Pending(url) => {
                 operations.arrived();
                 let (sender, receiver) = oneshot::channel();
+                let (acknowledged, acknowledgement) = crate::site::ports::Acknowledgement::pair();
                 operations.deliver(
                     url,
                     crate::site::ports::ReplyHandle::of(move |text| {
                         let _ = sender.send(text);
+                        acknowledgement
                     }),
                 );
                 if let Ok(reply) = receiver.await {
-                    socket.send(Message::text(reply)).await?;
+                    let sent = socket.send(Message::text(reply)).await;
+                    if sent.is_ok() {
+                        acknowledged.fulfil();
+                    }
+                    sent?;
                 }
                 socket.close(None).await?;
                 break;

@@ -24,7 +24,9 @@ fn no_state() -> Arc<Mutex<ServiceState>> {
 
 /// Un buzón que contesta cada operación con el mismo texto, sin atender de verdad.
 fn answering_with(text: &'static str) -> Inbox {
-    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| reply.answer(text.to_owned()))
+    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+        reply.answer(text.to_owned());
+    })
 }
 
 fn body_of(response: &[u8]) -> String {
@@ -45,7 +47,7 @@ async fn an_echo_is_answered_with_ok() {
     )
     .await;
 
-    assert_eq!(body_of(&response), ECHO_OK);
+    assert_eq!(body_of(&response.0), ECHO_OK);
 }
 
 #[tokio::test]
@@ -59,7 +61,7 @@ async fn a_request_from_outside_the_loopback_is_refused() {
     )
     .await;
 
-    assert!(body_of(&response).starts_with("SAF_"));
+    assert!(body_of(&response.0).starts_with("SAF_"));
 }
 
 #[tokio::test]
@@ -76,7 +78,7 @@ async fn a_command_is_delivered_and_the_response_is_the_number_of_parts() {
     )
     .await;
 
-    assert_eq!(body_of(&response), "1");
+    assert_eq!(body_of(&response.0), "1");
 }
 
 #[tokio::test]
@@ -86,7 +88,7 @@ async fn a_fragment_that_is_not_the_last_asks_for_more_data() {
 
     let response = respond(&raw, true, &serving(), &answering_with("x"), &no_state()).await;
 
-    assert_eq!(body_of(&response), MORE_DATA_NEED);
+    assert_eq!(body_of(&response.0), MORE_DATA_NEED);
 }
 
 #[tokio::test]
@@ -96,7 +98,7 @@ async fn the_last_fragment_is_answered_with_ok() {
 
     let response = respond(&raw, true, &serving(), &answering_with("x"), &no_state()).await;
 
-    assert_eq!(body_of(&response), ECHO_OK);
+    assert_eq!(body_of(&response.0), ECHO_OK);
 }
 
 #[tokio::test]
@@ -106,7 +108,7 @@ async fn a_fragment_with_the_wrong_credential_is_refused() {
 
     let response = respond(&raw, true, &serving(), &answering_with("x"), &no_state()).await;
 
-    assert!(body_of(&response).starts_with("SAF_46"));
+    assert!(body_of(&response.0).starts_with("SAF_46"));
 }
 
 #[tokio::test]
@@ -140,7 +142,7 @@ async fn a_firm_combines_the_fragments_and_answers_with_the_number_of_parts() {
     )
     .await;
 
-    assert_eq!(body_of(&response), "1");
+    assert_eq!(body_of(&response.0), "1");
 }
 
 #[tokio::test]
@@ -173,7 +175,7 @@ async fn a_send_returns_the_part_that_firm_already_computed() {
     )
     .await;
 
-    assert_eq!(body_of(&response), "resultado");
+    assert_eq!(body_of(&response.0), "resultado");
 }
 
 #[tokio::test]
@@ -187,7 +189,7 @@ async fn a_send_with_the_wrong_credential_is_refused() {
     )
     .await;
 
-    assert!(body_of(&response).starts_with("SAF_46"));
+    assert!(body_of(&response.0).starts_with("SAF_46"));
 }
 
 #[tokio::test]
@@ -204,7 +206,7 @@ async fn without_a_negotiated_credential_a_fragment_without_one_is_accepted() {
     )
     .await;
 
-    assert_eq!(body_of(&response), ECHO_OK);
+    assert_eq!(body_of(&response.0), ECHO_OK);
 }
 
 #[tokio::test]
@@ -224,7 +226,7 @@ async fn a_refusing_duty_answers_the_same_refusal_regardless_of_the_command() {
     )
     .await;
 
-    assert_eq!(body_of(&response), refusal.answer().on_the_wire());
+    assert_eq!(body_of(&response.0), refusal.answer().on_the_wire());
 }
 
 /// Un buzón que cuenta cuántas operaciones se le entregan, para distinguir un relanzamiento de
@@ -252,8 +254,8 @@ async fn a_repeated_command_answers_the_number_of_parts_without_relaunching_the_
     let first = respond(&raw, true, &serving(), &inbox, &state).await;
     let second = respond(&raw, true, &serving(), &inbox, &state).await;
 
-    assert_eq!(body_of(&first), "1");
-    assert_eq!(body_of(&second), "1");
+    assert_eq!(body_of(&first.0), "1");
+    assert_eq!(body_of(&second.0), "1");
     assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 1);
 }
 
@@ -270,7 +272,7 @@ async fn a_command_with_the_wrong_credential_is_refused() {
     .await;
 
     assert_eq!(
-        body_of(&response),
+        body_of(&response.0),
         WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
             .on_the_wire()
     );
@@ -294,6 +296,36 @@ async fn an_echo_that_resets_discards_the_response_already_computed() {
     .await;
     let after_the_reset = respond(&raw, true, &serving(), &inbox, &state).await;
 
-    assert_eq!(body_of(&after_the_reset), "1");
+    assert_eq!(body_of(&after_the_reset.0), "1");
     assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 2);
+}
+
+#[tokio::test]
+async fn the_firm_response_carries_an_acknowledgement_fulfilled_once_the_write_is_confirmed() {
+    let state = no_state();
+    let delivered: Arc<Mutex<Vec<Acknowledgement>>> = Arc::new(Mutex::new(Vec::new()));
+    let keeping = Arc::clone(&delivered);
+    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+        keeping
+            .lock()
+            .expect("el candado")
+            .push(reply.answer("resultado".to_owned()));
+    });
+    let raw = a_command("afirma://selectcert?op=selectcert");
+
+    let (response, acknowledged) = respond(&raw, true, &serving(), &inbox, &state).await;
+
+    assert_eq!(body_of(&response), "1");
+    let acknowledged = acknowledged.expect("la respuesta a firm= trae el acuse de la entrega");
+    assert!(
+        !delivered.lock().expect("el candado")[0].wait(std::time::Duration::from_millis(0)),
+        "el acuse no deberia cumplirse antes de que el escritor del socket lo confirme"
+    );
+
+    acknowledged.fulfil();
+
+    assert!(
+        delivered.lock().expect("el candado")[0].wait(std::time::Duration::from_millis(0)),
+        "el acuse deberia cumplirse en cuanto quien escribe en el socket lo confirma"
+    );
 }

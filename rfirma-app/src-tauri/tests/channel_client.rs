@@ -452,7 +452,7 @@ async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
         .expect("el candado")
         .take()
         .expect("el tramite recibio el asa");
-    reply.answer("CANCEL".to_owned());
+    let acknowledgement = reply.answer("CANCEL".to_owned());
 
     let answered = tokio::time::timeout(PATIENCE, client.socket.next())
         .await
@@ -460,4 +460,60 @@ async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
         .expect("hay mensaje")
         .expect("y se lee");
     assert_eq!(answered.into_text().expect("es texto").as_str(), "CANCEL");
+    assert!(
+        acknowledgement.wait(Duration::from_millis(0)),
+        "el cliente ya ha recibido la respuesta: el acuse deberia estar cumplido"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_acknowledgement_is_not_fulfilled_for_a_client_already_gone() {
+    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(None));
+    let keeping = std::sync::Arc::clone(&held);
+
+    let channel = AChannel::serving_with(
+        ChannelDuty::Serve(NegotiatedCredential::Required(
+            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
+        )),
+        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+            *keeping.lock().expect("el candado") = Some(reply);
+        }),
+    )
+    .await;
+    let mut client = channel.a_client().await;
+
+    // No se lee la respuesta del eco: queda sin leer en el búfer de recepción del cliente, así
+    // que al cerrarlo en caliente el sistema manda un RST en vez de un cierre ordenado.
+    client
+        .socket
+        .send(Message::text(format!("echo=-idsession={CREDENTIAL}@EOF")))
+        .await
+        .expect("el eco deberia salir");
+
+    let operation = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}");
+    client
+        .socket
+        .send(Message::text(operation))
+        .await
+        .expect("la operacion deberia salir");
+
+    while held.lock().expect("el candado").is_none() {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let reply = held
+        .lock()
+        .expect("el candado")
+        .take()
+        .expect("el tramite recibio el asa");
+
+    drop(client);
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let acknowledgement = reply.answer("CANCEL".to_owned());
+
+    assert!(
+        !acknowledgement.wait(Duration::from_millis(300)),
+        "el cliente ya se ha ido: el acuse no deberia cumplirse"
+    );
 }

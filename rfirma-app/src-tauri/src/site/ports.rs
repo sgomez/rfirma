@@ -53,17 +53,55 @@ impl From<RequestedFormat> for Format {
 }
 
 /// Asa de respuesta única para contestar a la sede y cerrar el canal.
-pub struct ReplyHandle(Box<dyn FnOnce(String) + Send>);
+pub struct ReplyHandle(Box<dyn FnOnce(String) -> Acknowledgement + Send>);
 
 impl ReplyHandle {
     /// Crea un asa con la función de entrega dada.
-    pub fn of(deliver: impl FnOnce(String) + Send + 'static) -> Self {
+    pub fn of(deliver: impl FnOnce(String) -> Acknowledgement + Send + 'static) -> Self {
         Self(Box::new(deliver))
     }
 
-    /// Contesta a la sede y consume el asa.
-    pub fn answer(self, text: String) {
-        (self.0)(text);
+    /// Contesta a la sede, consume el asa y devuelve el acuse de que ha salido por el canal.
+    pub fn answer(self, text: String) -> Acknowledgement {
+        (self.0)(text)
+    }
+}
+
+/// Acuse de que una respuesta ha salido de verdad por el canal, cumplido por quien la entrega.
+pub struct Acknowledgement(std::sync::mpsc::Receiver<()>);
+
+impl Acknowledgement {
+    /// Un acuse y quien lo cumple, para el transporte que entrega la respuesta más tarde.
+    pub fn pair() -> (Acknowledged, Self) {
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        (Acknowledged(sender), Self(receiver))
+    }
+
+    /// Un acuse ya cumplido, para el transporte cuya entrega es síncrona.
+    pub fn immediate() -> Self {
+        let (fulfilled, acknowledgement) = Self::pair();
+        fulfilled.fulfil();
+        acknowledgement
+    }
+
+    /// Un acuse que no se cumplirá nunca, para la entrega que ya se sabe fallida.
+    pub fn never() -> Self {
+        Self::pair().1
+    }
+
+    /// Espera el acuse hasta el tope dado; `true` si se cumplió a tiempo.
+    pub fn wait(&self, timeout: std::time::Duration) -> bool {
+        self.0.recv_timeout(timeout).is_ok()
+    }
+}
+
+/// La otra mitad del acuse: quien lo cumple cuando la respuesta ha salido de verdad.
+pub struct Acknowledged(std::sync::mpsc::SyncSender<()>);
+
+impl Acknowledged {
+    /// Cumple el acuse.
+    pub fn fulfil(self) {
+        let _ = self.0.send(());
     }
 }
 

@@ -194,7 +194,7 @@ impl LiveErrand {
             return;
         };
         if let Some(codec) = self.codec() {
-            reply.answer(codec.encode(outcome));
+            let _acknowledgement = reply.answer(codec.encode(outcome));
         }
     }
 

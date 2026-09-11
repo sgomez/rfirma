@@ -111,6 +111,7 @@ fn the_wire() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
     (
         ReplyHandle::of(move |text| {
             let _ = sender.send(text);
+            Acknowledgement::immediate()
         }),
         receiver,
     )
