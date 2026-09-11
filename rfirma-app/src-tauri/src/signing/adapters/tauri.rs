@@ -12,7 +12,7 @@ use crate::crossing::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::application::session::DocumentToSign;
+use crate::signing::application::session::{self, DocumentToSign};
 use crate::signing::domain::config::SigningChoice;
 
 /// Prefirma: cruza la frontera y deja el ciclo abierto.
@@ -38,32 +38,56 @@ pub fn begin_signing(
 
 /// Firma en el token con la clave privada (ADR-0001).
 #[tauri::command(async)]
-pub fn sign_with_pin(
-    pin: String,
-    app_handle: tauri::AppHandle,
-    identity: State<'_, IdentityRoot>,
-    signing: State<'_, SigningRoot>,
+pub fn sign_with_pin(pin: String, app_handle: tauri::AppHandle) -> Result<(), Failure> {
+    crate::site::adapters::window::with_the_desk(&app_handle, |desk, live| {
+        signed_with_the_secret(desk, live, &pin)
+    })
+}
+
+/// La única puerta del PIN: cierra el lote consentido o firma el ciclo abierto.
+pub fn signed_with_the_secret(
+    desk: &crate::site::SiteDesk<'_>,
+    live: &crate::site::LiveErrand,
+    pin: &str,
 ) -> Result<(), Failure> {
-    if !pin.is_empty() {
-        if let Some(batch) = crate::site::the_pending_batch_signed(&app_handle, &pin) {
+    let identity = desk.neighbours.identity;
+    let signing = desk.neighbours.signing;
+    let language = signing.configuration().language;
+
+    if let Some(certificate) = live.the_batch_certificate() {
+        let prompted = match pin {
+            "" => session::prompted_for_the_batch(
+                &identity.signer(),
+                &certificate,
+                signing.prompter.as_ref(),
+                language,
+            )?,
+            _ => None,
+        };
+        let secret = match &prompted {
+            Some(prompted) => prompted
+                .expose_secret()
+                .map_err(|_| Failure::new("unknown", "el secreto tecleado no es texto válido"))?,
+            None => pin,
+        };
+        if let Some(batch) = crate::site::the_pending_batch_signed(desk, live, secret) {
             return batch;
         }
-        return Ok(crate::signing::application::session::sign_on_token(
-            &identity.signer(),
-            &signing.session,
-            &pin,
-        )?);
     }
 
-    let language = signing.configuration().language;
-    Ok(
-        crate::signing::application::session::sign_on_token_with_prompter(
+    if !pin.is_empty() {
+        return Ok(session::sign_on_token(
             &identity.signer(),
             &signing.session,
-            signing.prompter.as_ref(),
-            language,
-        )?,
-    )
+            pin,
+        )?);
+    }
+    Ok(session::sign_on_token_with_prompter(
+        &identity.signer(),
+        &signing.session,
+        signing.prompter.as_ref(),
+        language,
+    )?)
 }
 
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.

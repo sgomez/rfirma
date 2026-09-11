@@ -301,6 +301,15 @@ impl LiveErrand {
         )
     }
 
+    /// El certificado consentido del lote, remoto o local, que espera el secreto.
+    pub fn the_batch_certificate(&self) -> Option<TokenCertificate> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Batch(pending)) => pending.chosen.clone(),
+            Some(PendingConsent::LocalBatch(pending)) => pending.chosen.clone(),
+            _ => None,
+        }
+    }
+
     /// Lote pendiente, si el trámite está atendiendo uno.
     pub(super) fn the_batch_pending(&self) -> Option<PendingBatch> {
         match &*crate::lock(&self.consent) {

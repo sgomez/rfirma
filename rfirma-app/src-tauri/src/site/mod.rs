@@ -9,8 +9,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::crossing::Failure;
+use crate::signing::adapters::isolate::Isolate;
 use adapters::tls::LocalCaStore;
-use application::errand::LiveErrand;
+use application::errand::ErrandDesk;
+pub use application::errand::LiveErrand;
 use application::site::CodecTable;
 use application::startup::{HeldChannel, LocalCaTrust};
 
@@ -35,28 +37,23 @@ pub struct SiteRoot {
     pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
 }
 
+/// La mesa del trámite sobre las raíces de producción.
+pub type SiteDesk<'a> = ErrandDesk<'a, Isolate, Isolate, adapters::desk::Neighbours<'a>>;
+
 /// Cierra el lote pendiente, remoto o local, con el secreto que entró por la única puerta del PIN.
 pub fn the_pending_batch_signed(
-    app: &tauri::AppHandle,
+    desk: &SiteDesk<'_>,
+    live: &LiveErrand,
     secret: &str,
 ) -> Option<Result<(), Failure>> {
-    use tauri::Manager as _;
-
-    let root = app.state::<SiteRoot>();
-    if root.errand.a_batch_is_pending() {
+    if live.a_batch_is_pending() {
         return Some(
-            adapters::window::with_the_desk(app, |desk, live| {
-                application::errand::finish_the_batch(desk, secret, live)
-            })
-            .map_err(Failure::from),
+            application::errand::finish_the_batch(desk, secret, live).map_err(Failure::from),
         );
     }
-    if root.errand.a_local_batch_is_pending() {
+    if live.a_local_batch_is_pending() {
         return Some(
-            adapters::window::with_the_desk(app, |desk, live| {
-                application::errand::finish_the_local_batch(desk, secret, live)
-            })
-            .map_err(Failure::from),
+            application::errand::finish_the_local_batch(desk, secret, live).map_err(Failure::from),
         );
     }
     None

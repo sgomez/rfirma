@@ -9,7 +9,7 @@ use crate::documents::domain::error::DocumentError;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
-use crate::identity::domain::holder::{stamped_holder_of, StampedHolder};
+use crate::identity::domain::holder::{prompted_holder_of, stamped_holder_of, StampedHolder};
 use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
 use crate::lock;
 use crate::signing::application::cycle::{
@@ -22,8 +22,8 @@ use crate::signing::domain::{
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures};
-use crate::signing::ports::SecretPrompter;
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
+use crate::signing::ports::{ProtectedSecret, SecretName, SecretPromptRequest, SecretPrompter};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]
@@ -268,6 +268,30 @@ pub fn sign_on_token_with_prompter(
             .sign_with_prompter(signer, prompter, language)?,
     );
     Ok(())
+}
+
+/// El secreto de un lote pedido al diálogo, o `None` si el certificado no lo pide en pantalla.
+pub fn prompted_for_the_batch(
+    signer: &dyn Signer,
+    certificate: &TokenCertificate,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+) -> Result<Option<ProtectedSecret>, CycleFailure> {
+    let mode = signer
+        .secret_of(certificate.reference())
+        .map_err(CycleError::Token)?;
+    if mode != StoreSecret::TypedOnScreen {
+        return Ok(None);
+    }
+    let request = SecretPromptRequest {
+        secret: SecretName::of(certificate.reference().store().class()),
+        holder: prompted_holder_of(certificate.der()),
+        language,
+        incorrect_secret: false,
+    };
+    Ok(Some(
+        prompter.prompt_secret(&request).map_err(CycleError::from)?,
+    ))
 }
 
 /// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.
