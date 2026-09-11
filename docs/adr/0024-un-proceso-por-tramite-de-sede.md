@@ -25,20 +25,26 @@ un límite del proceso, no de la sede.
   que sorteó su navegador; no hay cerrojo de exclusión. Dentro de un proceso
   sigue habiendo un solo trámite.
 - **El proceso de sede termina cuando el trámite ha terminado y no hay
-  ventana visible**; si la hay, al cerrarla. La aplicación avisa de que el
-  trámite terminó por el puerto de ventana; el adaptador cierra la ventana solo
-  si sigue oculta; Tauri sale al quedarse sin ventanas. Nadie llama a `exit`.
-  La persona conserva la pantalla de resultado hasta que la cierra.
+  ventana visible**; si la hay, al cerrarse, a mano o por el cierre automático
+  del desenlace. La aplicación avisa de que el trámite terminó por el puerto de
+  ventana; el adaptador espera el acuse de entrega de la respuesta y cierra la
+  ventana solo si sigue oculta; Tauri sale al quedarse sin ventanas. Un rechazo
+  que viaja por el canal también abre la ventana oculta, que se cierra al
+  servirse el rechazo o al vencer la espera. Nadie llama a `exit`.
+- **La respuesta a la sede tiene acuse de entrega.** El asa de respuesta dice
+  cuándo la respuesta ha salido por el canal, en los tres transportes; sin él,
+  cerrar el proceso podría cortar una respuesta a medio escribir.
 - **Cerrar la ventana por el gestor de ventanas es cancelar.** En
   consentimiento, confirmación o firma, la X manda `CANCEL` a la sede, retiene
-  el cierre hasta que el envío se confirma con un tope de un segundo, y sale.
+  el cierre hasta el acuse de entrega con un tope de un segundo, y sale.
   Con el desenlace en pantalla o en un callejón sin salida, sale sin más.
 - **La biblioteca nativa se abre en el primer trabajo**, no al arrancar: un
   rechazo de protocolo solo paga el hilo del aislado, que nace ocioso.
 - **Carpeta de paso propia por proceso, en los dos roles**, nombrada por rol
-  y PID bajo la temporal del sistema y borrada entera al salir. Cada arranque
-  barre las de procesos que ya no existen; se acepta que un PID reutilizado
-  retrase una barrida.
+  y un sufijo aleatorio bajo la temporal del sistema y borrada entera al
+  salir. El proceso mantiene un cerrojo sobre un fichero de su carpeta mientras
+  vive, y cada arranque barre solo las carpetas cuyo cerrojo consigue tomar.
+  No se barre por PID: flatpak da a cada instancia su propio espacio de PID.
 - **La memoria entre sesiones (ADR-0010) se escribe releyendo.** Toda
   mutación, en los dos roles, relee el fichero y toca un solo campo; el
   proceso de sede solo muta el último certificado usado. El fichero de estado
