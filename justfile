@@ -79,7 +79,16 @@ worktree_target := ```
     fi
 ```
 
-export CARGO_TARGET_DIR := if worktree_target == "" { tauri / "target" } else { worktree_target }
+cargo_target := if worktree_target == "" { tauri / "target" } else { worktree_target }
+
+# Una prueba que llama a `just` bajo `cargo llvm-cov` hereda su compilador
+# instrumentado: si compilara en el arbol normal lo dejaria instrumentado, y sus
+# binarios soltarian `default_*.profraw` en el de fuentes al ejecutarse despues.
+export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } else { cargo_target / "llvm-cov-target" }
+
+# Los informes de cobertura, por worktree (el directorio de compilacion de los
+# worktrees es uno solo) y, dentro, un subdirectorio por receta.
+coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
 
 # La misma razon que crap_version: sin ruff.toml ni pyproject.toml en el
 # repositorio, el conjunto de reglas que aplica `ruff check` es el que traiga
@@ -1043,21 +1052,38 @@ test-native: token check-native build-ts
 # ademas un `cargo test`, y por eso tampoco hace falta el `--no-run` de las de
 # grada C: llvm-cov compila todos los objetivos de prueba (TD-02).
 #
-# Genera lcov.info con cargo llvm-cov.
+# Genera el lcov de toda la suite con cargo llvm-cov.
 coverage: token build-ts
-    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path lcov.info
+    mkdir -p "{{ coverage_out }}/coverage"
+    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info"
 
 # La puerta del carril rapido, con el modulo FFI oculto.
 crap: coverage
-    cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above \
+    cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
 
 # Puerta CRAP del modulo FFI contra la libreria nativa (ADR-0014).
 # Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
 crap-ffi: token check-native build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path lcov.info \
+    mkdir -p "{{ coverage_out }}/crap-ffi"
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
         -- --ignored
-    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov lcov.info --threshold 30 --fail-above
+    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
+
+# `IO failure on output stream` o `No space left on device` al compilar con
+# cobertura es el disco lleno, no un fallo de LLVM, y esta es la salida: sin la
+# recompilacion entera de `clean`. Desde un worktree libera el arbol
+# instrumentado de todos, que es uno solo.
+#
+# Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
+clean-coverage:
+    #!/usr/bin/env bash
+    set -eu
+    instrumented="{{ cargo_target }}/llvm-cov-target"
+    echo "instrumentado, recuperable: $(du -sh "$instrumented" 2>/dev/null | cut -f1 || echo 0)"
+    rm -rf "$instrumented" "{{ coverage_out }}"
+    rm -f "{{ cargo_target }}"/*.profraw "{{ tauri }}"/*.profraw
+    echo "queda en {{ cargo_target }}: $(du -sh "{{ cargo_target }}" 2>/dev/null | cut -f1)"
 
 # ---------------------------------------------------------------------------
 # Imagen nativa, empaquetado y desarrollo
@@ -1472,11 +1498,23 @@ bundle-quick: check-native build-ts
         echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
     done
 
-# Borra lo construido.
+# DESDE UN WORKTREE NO TOCA EL ARBOL DE RUST: es el de todos los worktrees
+# (ADR-0014), y vaciarlo le cuesta la recompilacion entera al agente de al
+# lado. Ahi solo borra sus informes de cobertura; para el disco, `clean-coverage`.
+#
+# Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 clean:
-    cd {{ bridge }} && mvn -B clean
-    cd {{ tauri }} && cargo clean
-    rm -rf {{ app }}/dist
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{ bridge }}" && mvn -B clean
+    if [ -z "{{ worktree_target }}" ]; then
+        cd "{{ tauri }}" && cargo clean
+    else
+        rm -rf "{{ coverage_out }}"
+        echo "worktree: el arbol compartido {{ cargo_target }} se queda"
+    fi
+    rm -f "{{ tauri }}"/*.profraw
+    rm -rf "{{ app }}/dist"
 
 # ID-153: los fragmentos de changelog.d/ (uno por issue, README.md aparte) se
 # reunen aqui, no antes, porque escribir cada uno en su propio fichero es lo
