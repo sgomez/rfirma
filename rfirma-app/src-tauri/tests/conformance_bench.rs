@@ -28,7 +28,7 @@ use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChanne
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
     drawn_ports, read_operation, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode,
-    SiteOperation, WireAnswer, PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    SiteOperation, WireAnswer, PROTOCOL_VERSION,
 };
 use rfirma_lib::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use rfirma_lib::site::ports::{Inbox, ReplyHandle as ErrandReply, Servlets};
@@ -103,8 +103,8 @@ const THE_TOKEN_SECRET: &str = "1234";
 /// Intentos de atar la ubicación del canal antes de darla por ocupada.
 const PORT_ATTEMPTS: usize = 60;
 
-/// Los casos que se turnan: el puerto fijo del protocolo 3 es el mismo en todos, y la confianza de
-/// la CA local con la que sirven los servlets es del proceso entero.
+/// Los casos que se turnan: la confianza de la CA local con la que sirven los servlets del lote es
+/// del proceso entero.
 static ONE_AT_A_TIME: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Modo en el que se fuerza al `autoscript.js` publicado a hablar, porque nunca manda `v=3` por
@@ -191,6 +191,7 @@ impl Event {
 struct PublishedClient {
     child: Child,
     events: Receiver<Event>,
+    third_port: Option<u16>,
 }
 
 impl PublishedClient {
@@ -207,7 +208,7 @@ impl PublishedClient {
     /// Arranca el conductor con uno de los guiones del banco, y con el material con el que sus
     /// servlets sirven TLS.
     fn running_the_script(material: &ChannelMaterial, mode: BenchMode, script: &str) -> Self {
-        Self::spawn(material, mode, script, &[])
+        Self::spawn(material, mode, script, &[], a_free_port())
     }
 
     /// Arranca el conductor con uno de los guiones que necesitan el PDF que la prueba deja en
@@ -223,6 +224,7 @@ impl PublishedClient {
             mode,
             script,
             &[("RFIRMA_BENCH_PDF", pdf_path.as_os_str())],
+            a_free_port(),
         )
     }
 
@@ -231,6 +233,7 @@ impl PublishedClient {
         mode: BenchMode,
         script: &str,
         extra_env: &[(&str, &std::ffi::OsStr)],
+        third_port: u16,
     ) -> Self {
         let mut command = Command::new("node");
         command
@@ -240,6 +243,7 @@ impl PublishedClient {
             .env("RFIRMA_BENCH_TIMEOUT_MS", PATIENCE.as_millis().to_string())
             .env("RFIRMA_BENCH_MODE", mode.as_env_value())
             .env("RFIRMA_BENCH_SCRIPT", script)
+            .env("RFIRMA_BENCH_PORT", third_port.to_string())
             .env(
                 "RFIRMA_BENCH_SERVLET_CERT",
                 material.certificate_pem_file.path(),
@@ -264,7 +268,21 @@ impl PublishedClient {
             }
         });
 
-        Self { child, events }
+        let third_port = matches!(mode, BenchMode::Third).then_some(third_port);
+        Self {
+            child,
+            events,
+            third_port,
+        }
+    }
+
+    /// Dónde abrir el canal: en v3 el puerto que se le dio al conductor, en el resto lo que dijo
+    /// la invocación.
+    fn the_channel_location(&self, launch: &LaunchRequest) -> ChannelLocation {
+        match self.third_port {
+            Some(port) => ChannelLocation::Fixed(port),
+            None => launch.location().clone(),
+        }
     }
 
     /// Siguiente evento emitido por el cliente publicado.
@@ -329,6 +347,14 @@ impl ChannelMaterial {
             certificate,
         }
     }
+}
+
+/// Un puerto de loopback libre ahora mismo, para que cada caso v3 escuche en el suyo.
+fn a_free_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("deberia haber un puerto de loopback libre")
+        .port()
 }
 
 /// Un fichero temporal con `bytes` ya en disco, con el `suffix` indicado.
@@ -574,12 +600,11 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
+async fn the_third_protocol_connects_to_the_port_rfirma_was_told_to_open() {
     if !the_bench_can_be_mounted() {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_as(&material, BenchMode::Third);
     let url = client.the_launch_url();
@@ -588,11 +613,6 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
         AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
     let launch = LaunchRequest::from_url(&parsed).expect("la version 3 se habla aqui, sin puertos");
 
-    assert_eq!(
-        launch.location(),
-        &ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL),
-        "el modo v3 fuerza el fuente para que no mande 'ports' y hable la version 3"
-    );
     let NegotiatedCredential::Required(credential) = launch.credential() else {
         panic!("el cliente publicado, aunque hable la version 3, sigue mandando idsession");
     };
@@ -603,16 +623,16 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
     );
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
         no_operations(),
     )
     .await;
     assert_eq!(
-        channel.port(),
-        THE_PORT_OF_THE_THIRD_PROTOCOL,
-        "el canal se abre en el puerto fijo, no en uno sorteado"
+        Some(channel.port()),
+        client.third_port,
+        "el canal se abre en el puerto que se le dio al cliente publicado"
     );
 }
 
@@ -622,7 +642,6 @@ async fn the_first_message_reveals_the_window_before_the_operation() {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_against(&material);
     let url = client.the_launch_url();
@@ -650,7 +669,7 @@ async fn the_first_message_reveals_the_window_before_the_operation() {
     );
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
         inbox,
@@ -675,7 +694,6 @@ async fn the_first_message_over_the_third_protocol_reveals_the_window_before_the
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_as(&material, BenchMode::Third);
     let url = client.the_launch_url();
@@ -703,7 +721,7 @@ async fn the_first_message_over_the_third_protocol_reveals_the_window_before_the
     );
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
         inbox,
@@ -851,7 +869,7 @@ async fn the_errand_channel(
     let launch = LaunchRequest::from_url(&parsed).expect("la invocacion deberia atenderse");
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         material,
         ChannelDuty::Serve(launch.credential().clone()),
         operations,
@@ -902,7 +920,6 @@ async fn the_sticky_selections_of(mode: BenchMode) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
         a_running_rfirma(home.path())
@@ -1384,7 +1401,6 @@ async fn the_local_batch_of(mode: BenchMode) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1497,7 +1513,6 @@ async fn the_local_batch_with_an_illegible_item_of(mode: BenchMode) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1712,7 +1727,6 @@ async fn the_sign_of(mode: BenchMode, script: &str) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1785,7 +1799,6 @@ async fn the_asic_s_sign_of(mode: BenchMode, script: &str) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1852,7 +1865,6 @@ async fn the_xades_sign_of(mode: BenchMode, script: &str) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1942,7 +1954,6 @@ async fn cosigning_an_invoice_with_facturae_is_refused() {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -2063,7 +2074,6 @@ async fn the_published_client_is_refused_a_document_whose_previous_signature_doe
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let pdf = a_temp_file(".pdf", &a_one_page_pdf());
     let signed = the_pdf_signed_by_the_bench(pdf.path()).await;
 

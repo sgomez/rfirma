@@ -16,7 +16,7 @@ if (!autoscriptPath) {
 const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
 const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
 const script = process.env.RFIRMA_BENCH_SCRIPT ?? "selectcert";
-const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
+const THE_PORT_OF_THE_THIRD_PROTOCOL = Number(process.env.RFIRMA_BENCH_PORT ?? "63117");
 const here = dirname(fileURLToPath(import.meta.url));
 
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
