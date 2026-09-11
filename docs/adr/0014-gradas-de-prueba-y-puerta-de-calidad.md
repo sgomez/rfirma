@@ -222,26 +222,31 @@ cierran el aviso y el mensaje de arriba.
 ## Dónde corre cada puerta: el agente no es el CI
 
 `just check` es la puerta entera, y **su sitio es el CI**, que la reparte en tres runners
-simultáneos y por tanto paga el carril más lento. En un portátil se pagan los tres sumados, y
-un agente que la repite tras cada arreglo convierte el gasto dominante de una ronda en algo que
-ya iba a correr solo. Medido en el equipo de desarrollo, con cachés calientes: `check-repo` 4 s,
-`check-java` 4 s, `check-ts` 15 s, `check-rust` 46 s.
+simultáneos y por tanto paga el carril más lento. En un portátil se pagan los tres sumados, así
+que **no hay puerta local que la sustituya**: en local solo corren el formato (lefthook, en el
+pre-push) y la prueba concreta que se está tocando. Medido en el equipo de desarrollo, con
+cachés calientes: `check-repo` 4 s, `check-java` 4 s, `check-ts` 15 s, `check-rust` 46 s.
 
 La escalera es de tres peldaños y la escribe `AGENTS.md`, que es donde un agente la lee:
 
 1. **Cada rojo → verde**: sólo la prueba que se está tocando. Nunca una receta de `check`.
-2. **Antes de commitear**: `just fmt` y **`just check-changed`**, una vez.
+2. **Antes de commitear**: `just fmt`, y nada más.
 3. **Al revisar**: nada, si el CI está verde para ese head sha.
 
-`check-changed` deduce los carriles de lo que la rama toca respecto a `origin/main`. `check-repo`
-entra siempre —son cuatro segundos—, y el `justfile`, `.github/` y `bootstrap.sh` disparan las
-tres cadenas, porque son justo los ficheros que pueden romper cualquiera. `docs/adr/` y los
-`AGENTS.md` entran por el carril de Rust y no por descuido: sus guardas son pruebas de la grada A
-y viven ahí, aunque lo que las rompe sea prosa.
-
 **Esto no relaja nada.** La puerta que decide sigue siendo `just check` entera, corriendo en el
-CI sobre el head sha; lo que cambia es que deje de correrse tres veces en el sitio donde más
-cuesta y menos decide.
+CI sobre el head sha; lo que cambia es que deje de correrse en el sitio donde más cuesta y menos
+decide.
+
+### Considered Options
+
+**`check-changed`**, una receta que deducía de lo que la rama tocaba respecto a `origin/main`
+qué carriles hacían falta y los corría en local antes de commitear. Nació de un rojo de formato
+descubierto ya en una PR; ese caso concreto lo evita el hook de pre-push de más arriba, y el
+resto de lo que atrapaba —lint, tipos, pruebas— lo atrapa igual el CI, en paralelo y sin ocupar
+el portátil. Medido tocando solo el `justfile`, que dispara sus tres cadenas: **3 min 35 s de
+reloj y 542 s de CPU de usuario** por ejecución, porque arrastra `crap` (el árbol instrumentado
+de `cargo llvm-cov`), `check-landing` (construye la landing) y la cadena de Maven. Se retira: el
+coste por ejecución superaba con creces lo que adelantaba.
 
 ### El árbol de compilación se comparte entre worktrees, y el CI no se toca
 

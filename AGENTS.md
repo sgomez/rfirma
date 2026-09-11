@@ -46,18 +46,19 @@ mapa con sus trampas. Las cuatro que hay que conocer antes de tocar nada:
 ## 🚦 Qué ejecutar y cuándo
 
 La puerta del repositorio es `just check`, y **no es tuya: es del CI**, que la
-reparte en tres runners simultáneos y por eso paga el carril más lento. En un
-portátil se pagan los tres sumados, y repetirla tras cada arreglo es el gasto
-más grande de una ronda de entrega. La escalera es esta y no tiene más
-peldaños:
+reparte en tres runners simultáneos y por eso paga solo el carril más lento.
+No hay puerta local que la adelante: correrla en un portátil paga los tres
+carriles sumados para anticipar un rojo que el CI da solo y en paralelo. La
+escalera es esta y no tiene más peldaños:
 
 | Cuándo | Qué |
 | --- | --- |
 | En cada rojo → verde | Solo la prueba que estás tocando: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
-| Antes de commitear | `just fmt` y **`just check-changed`**, una vez y no por arreglo: deduce de lo que cambia respecto a `origin/main` qué carriles hacen falta |
-| Si `check-changed` sale en rojo | Vuelve al primer peldaño con la prueba o el fichero que falló, arréglalo y repite `check-changed` una sola vez; nunca escales a `just check`. Si el rojo es `IO failure on output stream` o `No space left on device`, es el disco, no LLVM: `just clean-coverage` |
+| Antes de commitear | `just fmt`. Nada más: el formato ya lo comprueba lefthook en el pre-push |
+| Al abrir la PR | Push, y el CI ejecuta `just check` repartida en tres runners: el veredicto es suyo, no se corre `just check` en local |
+| Si el CI sale en rojo | Vuelve al primer peldaño con la prueba o el fichero que falló. Si el rojo local es `IO failure on output stream` o `No space left on device`, es el disco: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |
-| `just check` entero | Solo si tocas el `justfile` o `.github/` — y entonces `check-changed` ya dispara las tres cadenas sin que tengas que decidirlo |
+| `just check` entero en local | Nunca, ni siquiera al tocar el `justfile` o `.github/`: eso lo comprueba el CI igual |
 
 Tres avisos que ahorran una ronda:
 

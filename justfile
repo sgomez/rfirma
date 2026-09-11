@@ -168,51 +168,6 @@ check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
 # main.
 check-rust: lint-rust crap check-contract
 
-# LA PUERTA QUE SE CORRE EN LOCAL, y `check` entero la que corre el CI. La
-# diferencia no es de rigor sino de sitio: el CI reparte las tres cadenas en
-# tres runners que arrancan a la vez, asi que le cuesta la mas lenta; en un
-# portatil cuestan la suma, y un cambio que solo toca `rfirma-app/src/` paga
-# ademas Maven y un arbol instrumentado de cargo que no miran una linea suya.
-#
-# EL CARRIL SE DEDUCE DE LO QUE CAMBIA respecto a origin/main, contando lo
-# committeado, lo del indice, lo del arbol y lo sin seguir. `check-repo` corre
-# siempre porque son cuatro segundos, y lo que no se sabe leer —el justfile,
-# los workflows, bootstrap.sh— dispara las tres cadenas: son justo los ficheros
-# que pueden romper cualquiera de ellas.
-#
-# La puerta antes de commitear: solo los carriles que toca el cambio.
-check-changed:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    base=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD)
-    changed=$({ git diff --name-only "$base"; git ls-files -o --exclude-standard; } | sort -u)
-    if [ -z "$changed" ]; then
-        echo "check-changed: nada que comprobar respecto a origin/main"
-        exit 0
-    fi
-    lanes="check-repo"
-    touched() { printf '%s\n' "$changed" | grep -qE "$1"; }
-    if touched '^(justfile|\.github/|bootstrap\.sh)'; then
-        lanes="$lanes check-java check-ts check-rust"
-    else
-        touched '^rfirma-native-bridge/' && lanes="$lanes check-java" || true
-        touched '^rfirma-app/(src/|po/|package\.json|pnpm-lock|tsconfig|vite|biome)' \
-            && lanes="$lanes check-ts" || true
-        # La landing tiene su propio proyecto y su propio lockfile: tocarla no
-        # obliga a compilar la aplicacion entera, solo a construirla a ella.
-        touched '^packaging/repo/(site/|Dockerfile|Caddyfile)' \
-            && lanes="$lanes check-landing" || true
-        # docs/adr y los AGENTS.md entran por Rust y no por despiste: sus
-        # guardas —adr_citations_resolve y agents_map_is_complete— son pruebas
-        # de la grada A, y viven en el carril de Rust aunque el fichero que las
-        # rompe sea prosa.
-        touched '^rfirma-app/src-tauri/|^docs/adr/|AGENTS\.md$' \
-            && lanes="$lanes check-rust" || true
-    fi
-    lanes=$(printf '%s\n' $lanes | awk '!seen[$0]++' | tr '\n' ' ')
-    echo "check-changed: $lanes"
-    exec {{ just_executable() }} $lanes
-
 # El bucle corto de quien quiera pasar el linting entero antes de commitear. No
 # es la puerta de pre-push de lefthook.yml, que es otra cosa y mucho mas corta
 # (ADR-0014): esa corre sola, solo mira el formato y se mide en segundos.
