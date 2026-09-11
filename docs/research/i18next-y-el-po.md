@@ -605,7 +605,7 @@ hecho que lo está.
 bytes**. Lo genera `flatpak-node-generator` desde `pnpm-lock.yaml`
 (`justfile:947`), **incluye las dependencias de desarrollo** (ahí están Biome y
 sus nueve binarios por plataforma, y TypeScript), y lo vigila
-`check-flatpak-sources`, que es la **primera** dependencia de `just lint` y por
+`check-flatpak-sources`, que es la **primera** dependencia de `just check-repo` y por
 tanto de `just check` y del CI.
 
 Lo que costaría cada opción:

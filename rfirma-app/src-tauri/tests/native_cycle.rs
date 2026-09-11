@@ -468,7 +468,7 @@ mod full_cycle {
         })
     }
 
-    /// El oráculo del original: `just validate-signature` (ADR-0014).
+    /// El oráculo del original: `rfirma-native-bridge/testbench/validate.sh` (ADR-0014).
     fn the_original_validator_accepts(signature: &Path) {
         let script = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../rfirma-native-bridge/testbench/validate.sh");

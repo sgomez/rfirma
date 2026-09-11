@@ -62,8 +62,8 @@ escalera es esta y no tiene más peldaños:
 
 Tres avisos que ahorran una ronda:
 
-* **`just check-rust`, `just test`, `just coverage` y `just crap` no son un
-  bucle de realimentación: las cuatro arrastran el árbol instrumentado.**
+* **`just check-rust`, `just coverage` y `just crap` no son un
+  bucle de realimentación: las tres arrastran el árbol instrumentado.**
   `cargo llvm-cov` compila un árbol instrumentado **aparte** del de `cargo
   test` y de `clippy`, así que iterar con ellas paga dos compilaciones completas
   para responder a lo que `cargo test <filtro>` responde en segundos.

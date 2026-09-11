@@ -34,11 +34,10 @@ el certificado personal del titular no se usa en ningún punto del proyecto.
 ## Cómo se regenera
 
 ```
-just reference-signatures
+./rfirma-native-bridge/testbench/make-reference-signatures.sh
 ```
 
-Llama a `rfirma-native-bridge/testbench/make-reference-signatures.sh`, que
-resuelve el clasepath desde Maven local (ADR-0002,
+Resuelve el clasepath desde Maven local (ADR-0002,
 `rfirma-native-bridge/testbench/reference-signer/pom.xml`), compila
 `ReferenceSigner.java` con `javac` y firma ejecutando la clase resultante.
 Determinista salvo la
@@ -51,10 +50,10 @@ regenerar, actualiza también las huellas de
 ## Cómo se valida
 
 ```
-just validate-signature testdata/reference/<fichero>
+./rfirma-native-bridge/testbench/validate.sh testdata/reference/<fichero>
 ```
 
-Llama a `rfirma-native-bridge/testbench/validate.sh`, el oráculo de la grada C
+Es el oráculo de la grada C
 (`SignValiderFactory` de `afirma-crypto-validation`, consumido igual desde
 Maven local): imprime `VALID` o `INVALID <motivo>` y sale con 0 o 1. Las
 CAdES también las acepta `openssl cms -verify -noverify` (con `-binary

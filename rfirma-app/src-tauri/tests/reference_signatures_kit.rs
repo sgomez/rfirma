@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 /// Huellas SHA-256 de las fixtures versionadas, producidas por
-/// `just reference-signatures` (`rfirma-native-bridge/testbench/make-reference-signatures.sh`).
+/// `rfirma-native-bridge/testbench/make-reference-signatures.sh`.
 const FINGERPRINTS: [(&str, &str); 15] = [
     (
         "challenge.bin",
@@ -93,7 +93,7 @@ fn all_reference_signature_fixtures_are_the_expected_ones() {
         assert!(
             path.is_file(),
             "falta testdata/reference/{name}. Regeneralo con \
-             'just reference-signatures' (rfirma-native-bridge/testbench/make-reference-signatures.sh)."
+             './rfirma-native-bridge/testbench/make-reference-signatures.sh'."
         );
         assert_eq!(
             fingerprint(&path),
