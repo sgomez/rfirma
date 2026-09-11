@@ -70,14 +70,14 @@ impl Transport for Relay {
                 let store_servlet = store_servlet.to_owned();
                 let id = id.to_owned();
                 let text = answer.on_the_wire();
-                let delivery = Delivery::of(move || {
+                let delivery = Delivery::fallible(move || {
                     upload_answer(
                         servlets.as_ref(),
                         on_upload_failure.as_ref(),
                         &store_servlet,
                         &id,
                         &text,
-                    );
+                    )
                 });
                 return Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery));
             }
@@ -115,16 +115,20 @@ impl Transport for Relay {
     }
 }
 
-/// Sube el rechazo o la respuesta ya codificada, avisando del fallo si el servlet la rechaza.
+/// Sube el rechazo o la respuesta ya codificada; `false`, tras avisar del fallo, si el servlet la rechaza.
 fn upload_answer(
     servlets: &(dyn Servlets + Send + Sync),
     on_upload_failure: &(dyn Fn(Refusal) + Send + Sync),
     store_servlet: &str,
     id: &str,
     text: &str,
-) {
-    if let Err(error) = servlets.store(store_servlet, id, text) {
-        on_upload_failure(refusal_of(error));
+) -> bool {
+    match servlets.store(store_servlet, id, text) {
+        Ok(()) => true,
+        Err(error) => {
+            on_upload_failure(refusal_of(error));
+            false
+        }
     }
 }
 

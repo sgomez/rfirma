@@ -350,11 +350,12 @@ fn a_refuse_duty_leaves_the_upload_as_a_pending_delivery_instead_of_running_it_i
         "abrir el canal no sube nada: la entrega queda pendiente de que la dispare quien atiende"
     );
 
-    channel
+    let handed_out = channel
         .take_delivery()
         .expect("una llegada inmediata siempre trae entrega")
         .now();
 
+    assert!(handed_out, "el servlet acepto la subida");
     assert_eq!(servlets.log(), vec!["put"]);
     assert!(spy.delivered.lock().expect("el candado").is_none());
     assert!(spy.failures().is_empty());
@@ -371,11 +372,12 @@ fn a_refuse_duty_delivery_that_fails_to_upload_notifies_the_failure() {
         .open(&info, ChannelDuty::Refuse(answer))
         .expect("abre con la entrega pendiente");
 
-    channel
+    let handed_out = channel
         .take_delivery()
         .expect("una llegada inmediata siempre trae entrega")
         .now();
 
+    assert!(!handed_out, "el servlet rechazo la subida");
     let failures = spy.failures();
     assert_eq!(failures.len(), 1);
     assert_eq!(failures[0].code(), SafCode::SendingResult);

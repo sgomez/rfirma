@@ -116,16 +116,12 @@ pub fn publish_the_moment(app: &tauri::AppHandle) {
     }
 }
 
-/// Publica el rechazo de un servidor intermedio que no pudo entregar la respuesta a la sede. Sin
-/// trámite vivo, la subida era la de un rechazo con llegada inmediata: se enseña la ventana con
-/// el callejón sin salida que ya tenía cargado.
+/// Publica el rechazo de un servidor intermedio que no pudo entregar la respuesta a la sede.
 pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
-    let live = &app.state::<SiteRoot>().errand;
-    live.note(errand::Moment::RefusedWithoutChannel(refusal));
+    app.state::<SiteRoot>()
+        .errand
+        .note(errand::Moment::RefusedWithoutChannel(refusal));
     publish_the_moment(app);
-    if live.current().is_none() {
-        show_the_site_window(app);
-    }
 }
 
 /// Atiende una operación de sede armando la mesa desde el estado de la aplicación.
