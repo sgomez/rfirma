@@ -69,6 +69,10 @@ realimentación que este repositorio decidió proteger en el
 | `flatpak-sources` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
 
+`just --list` agrupa las recetas en `checklist` (la escalera), `ci`, `dev` y
+`release`; la columna «carril» de arriba es previa a esa agrupación y no se
+corresponde con ella receta a receta.
+
 > La casilla de linting decía `eslint`, escrito sin razonarlo y sin decir nada del formateador.
 > El [ADR-0014](0014-gradas-de-prueba-y-puerta-de-calidad.md) lo sustituye por **Biome**, y es
 > también quien decide **qué** se ejecuta dentro de cada carril y en qué grada cae cada

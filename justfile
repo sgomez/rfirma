@@ -55,24 +55,29 @@ system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libja
 
 # Lista las recetas.
 default:
-    @just --list --unsorted
+    @just --list
 
 # ---------------------------------------------------------------------------
 # Contrato
 # ---------------------------------------------------------------------------
 
 # La puerta del repositorio: un carril por cadena, en paralelo en el CI.
+[group('checklist')]
 check: tools check-repo check-java check-ts check-rust
 
 # Lo que no pertenece a ninguna cadena: comprobaciones rapidas que ninguna compilacion ve.
+[group('ci')]
 check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python test-scripts
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
+[group('ci')]
 check-java: test-java
 
+[group('ci')]
 check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
 
 # lint-rust + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
+[group('ci')]
 check-rust: lint-rust crap check-contract
 
 # ---------------------------------------------------------------------------
@@ -80,21 +85,25 @@ check-rust: lint-rust crap check-contract
 # ---------------------------------------------------------------------------
 
 # Comprueba que estan las herramientas, y falla nombrando la que falte.
+[group('dev')]
 tools:
     RUFF_VERSION="{{ ruff_version }}" CRAP_VERSION="{{ crap_version }}" \
         DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
         {{ justfile_directory() }}/scripts/tools.sh
 
 # Instala las dependencias de AutoFirma en ~/.m2 si no estan (ADR-0002).
+[group('dev')]
 bootstrap:
     {{ justfile_directory() }}/scripts/bootstrap.sh
 
 # Instala las dependencias de node de rfirma-app.
+[group('ci')]
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
 
 # --all rellena tambien los idiomas incompletos, con castellano; nunca en el CI.
 # Fusiona el .pot con los cinco .po y regenera los catalogos.
+[group('dev')]
 po *args: deps
     #!/usr/bin/env bash
     set -euo pipefail
@@ -107,11 +116,13 @@ po *args: deps
     pnpm exec i18next-cli types -q
 
 # Genera src/i18n/locales/*.ts desde los .po. Node puro: sin gettext.
+[group('dev')]
 po-import: deps
     cd {{ app }} && node tools/po-import.mjs
     cd {{ app }} && pnpm exec i18next-cli types -q
 
 # Comprueba los cinco .po contra la plantilla.
+[group('dev')]
 check-po:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -125,15 +136,18 @@ check-po:
     echo "los .po cuadran con messages.pot"
 
 # i18next-cli sobre el codigo: una clave sin catalogo o un catalogo sin uso.
+[group('dev')]
 lint-i18n: po-import
     cd {{ app }} && pnpm exec i18next-cli extract --ci
     cd {{ app }} && pnpm exec i18next-cli status --unused
 
 # Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` desde testdata/fnmt/.
+[group('dev')]
 token:
     ./testdata/softhsm/provision-token.sh
 
 # Descarga (a etiqueta y sha fijados) el autoscript.js del banco de conformidad.
+[group('ci')]
 autoscript:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -157,6 +171,7 @@ autoscript:
     echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
 
 # Genera el mapa del protocolo de AutoFirma a tag fijado y lo cruza con el de rFirma.
+[group('dev')]
 protocol-map *args:
     python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
 
@@ -165,14 +180,17 @@ protocol-map *args:
 # ---------------------------------------------------------------------------
 
 # Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
+[group('checklist')]
 outline path:
     {{ justfile_directory() }}/scripts/outline.sh {{ path }}
 
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
+[group('dev')]
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
 # Comprueba que `just contract` sigue siendo el de la instantanea.
+[group('dev')]
 check-contract: build-ts
     #!/usr/bin/env bash
     set -eu
@@ -184,29 +202,36 @@ check-contract: build-ts
     echo "check-contract: el contrato es el de la instantanea"
 
 # Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
+[group('dev')]
 lint-java: bootstrap
     cd {{ bridge }} && mvn -B compile
 
 # Biome sobre rfirma-app.
+[private]
 lint-ts: po-import
     cd {{ app }} && pnpm exec biome ci .
 
 # Formatea las tres cadenas escribiendo.
+[group('checklist')]
 fmt: fmt-rust fmt-ts fmt-python
 
 # rustfmt sobre rfirma-app/src-tauri.
+[group('dev')]
 fmt-rust:
     cd {{ tauri }} && cargo fmt --all
 
 # Formateador de biome sobre rfirma-app.
+[group('dev')]
 fmt-ts:
     cd {{ app }} && pnpm exec biome format --write .
 
 # `ruff format` sobre packaging y scripts.
+[group('dev')]
 fmt-python:
     ruff format {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
 # clippy y rustfmt sobre rfirma-app/src-tauri.
+[private]
 lint-rust: build-ts
     cd {{ tauri }} && cargo fmt --all -- --check
     cd {{ tauri }} && cargo clippy --all-targets --all-features -- -D warnings
@@ -216,19 +241,23 @@ lint-rust: build-ts
 # ---------------------------------------------------------------------------
 
 # Compila el puente Java.
+[private]
 build-java: bootstrap
     cd {{ bridge }} && mvn -B package -DskipTests
 
 # tsc -b y vite build.
+[group('ci')]
 build-ts: po-import
     cd {{ app }} && pnpm exec tsc -b
     cd {{ app }} && pnpm exec vite build
 
 # Compila el binario de la aplicacion.
+[group('ci')]
 build-rust: build-ts
     cd {{ tauri }} && cargo build --release --features custom-protocol
 
 # Falla nombrando `just native` si la libreria nativa no esta; RFIRMA_SKIP_NATIVE=1 la salta (ADR-0013).
+[private]
 check-native:
     {{ justfile_directory() }}/scripts/check-native.sh {{ native_lib }}
 
@@ -237,19 +266,23 @@ check-native:
 # ---------------------------------------------------------------------------
 
 # Pruebas del puente Java (`verify`: compila, prueba y empaqueta en una JVM).
+[group('dev')]
 test-java: bootstrap
     cd {{ bridge }} && mvn -B verify
 
 # vitest.
+[group('dev')]
 test-ts: po-import
     cd {{ app }} && pnpm exec vitest run --reporter=dot
 
 # cargo test, mas la compilacion de las pruebas de grada C.
+[group('dev')]
 test-rust: token build-ts
     cd {{ tauri }} && cargo test --all-features
     cd {{ tauri }} && cargo test --all-features --no-run
 
 # Las de grada C, que el carril lento ejecuta con --ignored.
+[group('ci')]
 test-native: token check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
@@ -259,16 +292,19 @@ test-native: token check-native build-ts
 # ---------------------------------------------------------------------------
 
 # Genera el lcov de toda la suite con cargo llvm-cov.
+[group('dev')]
 coverage: token build-ts
     mkdir -p "{{ coverage_out }}/coverage"
     cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info"
 
 # La puerta del carril rapido, con el modulo FFI oculto.
+[group('dev')]
 crap: coverage
     cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
 
 # Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
+[group('ci')]
 crap-ffi: token check-native build-ts
     mkdir -p "{{ coverage_out }}/crap-ffi"
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
@@ -276,6 +312,7 @@ crap-ffi: token check-native build-ts
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
 
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
+[group('checklist')]
 clean-coverage:
     {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }}
 
@@ -284,6 +321,7 @@ clean-coverage:
 # ---------------------------------------------------------------------------
 
 # Construye la libreria nativa compartida con GraalVM CE 25 (ADR-0013).
+[group('ci')]
 native: build-java
     #!/usr/bin/env bash
     set -euo pipefail
@@ -305,10 +343,12 @@ native: build-java
     ls -la "$dest"
 
 # Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
+[group('ci')]
 check-glibc lib=native_lib:
     {{ justfile_directory() }}/scripts/check-glibc.sh {{ lib }}
 
 # Construye el flatpak, el unico canal soportado (ADR-0015).
+[group('ci')]
 flatpak: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
@@ -321,6 +361,7 @@ flatpak: check-native build-ts
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
 # Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004).
+[group('ci')]
 bundle: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
@@ -343,31 +384,38 @@ bundle: check-native build-ts
     done
 
 # Regenera cargo-sources.json y node-sources.json.
+[group('release')]
 flatpak-sources:
     {{ justfile_directory() }}/scripts/flatpak-sources.sh
 
 # Comprueba que las fuentes vendorizadas del flatpak estan al dia.
+[group('dev')]
 check-flatpak-sources:
     {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
 
 # Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
+[group('dev')]
 check-ds-bundle:
     {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
 
 # Comprueba que las acciones de los workflows estan fijadas por SHA.
+[group('dev')]
 check-actions:
     {{ justfile_directory() }}/.github/check-workflows.sh
 
 # Las pruebas de scripts/, hoy solo el esqueleto de outline.sh.
+[private]
 test-scripts:
     {{ justfile_directory() }}/scripts/tests/outline_test.sh
 
 # Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
+[group('ci')]
 check-publish:
     {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
     {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
 
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
+[private]
 check-landing:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -377,14 +425,17 @@ check-landing:
     pnpm exec astro build
 
 # Comprueba el candado de la version y el nombre del producto.
+[group('ci')]
 check-version:
     {{ justfile_directory() }}/packaging/check-version.py
 
 # Lintea el Python del repositorio.
+[group('ci')]
 lint-python:
     ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
 # Resella el bundle del sistema de diseno.
+[group('release')]
 seal-ds-bundle:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -397,18 +448,22 @@ seal-ds-bundle:
     echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
 # Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
+[group('dev')]
 dev *args: check-native po-import
     cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
 
 # Registra el binario de desarrollo como manejador de afirma://; deshacer con `just dev-handler-off`.
+[group('dev')]
 dev-handler:
     {{ justfile_directory() }}/scripts/dev-handler.sh on
 
 # Quita el manejador de desarrollo de afirma://.
+[group('dev')]
 dev-handler-off:
     {{ justfile_directory() }}/scripts/dev-handler.sh off
 
 # El .deb y el .rpm sin reconstruir la libreria nativa.
+[group('dev')]
 bundle-quick: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
@@ -422,6 +477,7 @@ bundle-quick: check-native build-ts
     done
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
+[group('dev')]
 clean:
     #!/usr/bin/env bash
     set -eu
@@ -436,5 +492,6 @@ clean:
     rm -rf "{{ app }}/dist"
 
 # Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
+[group('release')]
 changelog-release version:
     {{ justfile_directory() }}/scripts/changelog-release.sh {{ version }}
