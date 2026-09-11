@@ -2,8 +2,8 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-tauri="$root/rfirma-app/src-tauri"
 cargo_target="$1"
+tauri="$2"
 coverage_out="$cargo_target/coverage/$(basename "$root")"
 
 instrumented="$cargo_target/llvm-cov-target"

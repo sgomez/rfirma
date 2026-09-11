@@ -323,7 +323,7 @@ crap-ffi: token check-native build-ts
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 [group('checklist')]
 clean-coverage:
-    {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }}
+    {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }} {{ tauri }}
 
 # ---------------------------------------------------------------------------
 # Imagen nativa, empaquetado y desarrollo
