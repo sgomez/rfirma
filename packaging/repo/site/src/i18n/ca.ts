@@ -30,7 +30,7 @@ export const ca: Dictionary = {
   "lang.gl": "Galego",
   "lang.en": "English",
 
-  "hero.kicker": "Alternativa independent a AutoFirma",
+  "hero.kicker": "Una alternativa a AutoFirma",
   "hero.title.line1": "Signatura electrònica nativa.",
   "hero.title.line2": "Sense Java, sense espera.",
   "hero.body":
@@ -55,7 +55,7 @@ export const ca: Dictionary = {
 
   "formats.aria": "Formats i magatzems compatibles",
 
-  "how.kicker": "Cinc pantalles reals",
+  "how.kicker": "Pas a pas",
   "how.title": "Així es signa un document",
   "how.tablist.aria": "Passos de la signatura",
   "how.step1.title": "Document carregat",
@@ -66,7 +66,7 @@ export const ca: Dictionary = {
     "La llista es compon amb els magatzems del sistema, els perfils del navegador i els mòduls PKCS#11. Els caducats i revocats es mostren, però no es poden fer servir.",
   "how.step3.title": "Introduir el PIN",
   "how.step3.body":
-    "El PIN el demana el magatzem de certificats, no rFirma. La clau privada roman dins d'ell durant tota l'operació.",
+    "El PIN es demana en un diàleg natiu, no en una finestra web, i s'esborra de la memòria en acabar la signatura.",
   "how.step4.title": "Signant",
   "how.step4.body":
     "Presignatura, signatura i muntatge del PDF. Cada fase queda a la vista mentre es completa.",
@@ -130,9 +130,9 @@ export const ca: Dictionary = {
   "mock.signing.assemble.note": "(postsignatura)",
 
   "pillars.kicker": "Per què rFirma",
-  "pillars.title": "Quatre decisions de fons",
+  "pillars.title": "Quatre decisions de disseny",
   "pillars.body":
-    "No és una capa de pintura sobre AutoFirma: és una altra arquitectura, amb el mateix motor criptogràfic.",
+    "Substitueix la interfície Swing i els servidors locals d'AutoFirma; el motor criptogràfic és el mateix, el de clienteafirma.",
   "pillars.native.title": "Rendiment natiu",
   "pillars.native.body":
     "Escriptori en Tauri v2, Rust i React. Sense JVM i sense servidors locals a l'escolta.",
@@ -147,9 +147,7 @@ export const ca: Dictionary = {
     "Col·loca i dimensiona la rúbrica sobre la pàgina, amb previsualització fidel. Sense coordenades a cegues.",
 
   "comparison.kicker": "Comparativa",
-  "comparison.title": "AutoFirma i rFirma, fet a fet",
-  "comparison.body":
-    "Només diferències comprovables al codi, a la interfície i a la distribució de cada projecte. Sense xifres que ningú ha mesurat.",
+  "comparison.title": "AutoFirma versus rFirma",
   "comparison.head.aspect": "Aspecte",
   "comparison.head.autofirma": "AutoFirma (oficial)",
   "comparison.head.rfirma": "rFirma",
@@ -160,15 +158,23 @@ export const ca: Dictionary = {
   "comparison.keys.label": "On es processa la clau privada",
   "comparison.keys.autofirma": "Al procés Java",
   "comparison.keys.rfirma": "Al magatzem del sistema o al mòdul PKCS#11; no en surt",
+  "comparison.pin.label": "Protecció del PIN en memòria",
+  "comparison.pin.autofirma":
+    "Esborrat parcial del <code>char[]</code> amb <code>Arrays.fill</code>, sense fixar-lo a la RAM",
+  "comparison.pin.rfirma":
+    "Búfer fixat amb <code>mlock</code>, exclòs dels bolcats amb <code>MADV_DONTDUMP</code> i esborrat de manera segura",
+  "comparison.dnie.label": "Signatura amb DNIe",
+  "comparison.dnie.autofirma": "Sí, amb jMulticard",
+  "comparison.dnie.rfirma": "En desenvolupament",
   "comparison.store.label": "Certificats en fitxer (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Es registra la ruta del fitxer en un diàleg de magatzems amb sis opcions",
   "comparison.store.rfirma":
     "Magatzem propi: «Afegir…» copia el certificat i del fitxer no es desa res, ni la ruta",
   "comparison.stores.label": "Cerca de certificats",
-  "comparison.stores.autofirma": "Cal triar un magatzem i només ensenya aquest",
+  "comparison.stores.autofirma": "Només cerca al magatzem que triïs",
   "comparison.stores.rfirma":
-    "Escorcolla el sistema, els perfils del navegador, els mòduls PKCS#11 i el magatzem propi, i ho ajunta en una llista",
+    "Cerca a tots els llocs on hi pot haver un certificat i ho ajunta en una sola llista",
   "comparison.stamp.label": "Col·locació de la signatura visible",
   "comparison.stamp.autofirma": "Coordenades o requadre sense context",
   "comparison.stamp.rfirma": "Arrossegament sobre la pàgina amb previsualització fidel",
@@ -180,23 +186,25 @@ export const ca: Dictionary = {
   "comparison.ca.autofirma": "L'instal·lador registra la CA al sistema, amb privilegis",
   "comparison.ca.rfirma": "L'aplicació registra la seva CA als magatzems NSS de la persona, sense root",
   "comparison.lang.label": "Idiomes",
-  "comparison.lang.autofirma": "Castellà i cooficials, amb les cadenes dels diàlegs Swing",
+  "comparison.lang.autofirma": "Només castellà, amb les cadenes dels diàlegs Swing",
   "comparison.lang.rfirma":
     "Castellà, català, euskara, gallec i anglès, amb catàleg propi i canvi des de Preferències",
-  "comparison.privacy.label": "Privadesa",
+  "comparison.privacy.label": "Gestor de documents",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Recents i últim certificat es poden apagar i buidar; l'única connexió sortint és la comprovació de versió, i es pot apagar",
+    "Guarda els recents i l'últim certificat utilitzat; es poden apagar i buidar quan vulguis",
+  "comparison.os.label": "Sistemes operatius",
+  "comparison.os.autofirma": "Windows, macOS, Linux, Android i iOS",
+  "comparison.os.rfirma": "Linux; Windows i macOS, en desenvolupament",
   "comparison.updates.label": "Canal d'actualització",
   "comparison.updates.autofirma": "Descàrrega manual de <code>.deb</code> o <code>.rpm</code>",
   "comparison.updates.rfirma": "Repositoris natius: Flatpak, APT i DNF",
   "comparison.desktop.label": "Integració amb l'escriptori",
   "comparison.desktop.autofirma": "Aparença pròpia de Swing",
-  "comparison.desktop.rfirma":
-    "Interfície que segueix les convencions de l'escriptori, tema clar i fosc, contrast AA",
+  "comparison.desktop.rfirma": "Segueix l'estil de l'escriptori, amb tema clar i fosc",
 
   "install.kicker": "Instal·lació",
-  "install.title": "Un repositori, i les actualitzacions arriben soles",
+  "install.title": "Un repositori per al teu sistema operatiu",
   "install.body":
     "Els canals de rFirma són repositoris natius. Un cop afegit el del teu sistema, els pedaços de seguretat s'instal·len amb el gestor de paquets.",
   "install.tablist.aria": "Canals de distribució",
