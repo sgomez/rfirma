@@ -214,7 +214,7 @@ regla de caducidad nueva.
 ## Enmienda: quién escribe la memoria
 
 La instancia única que `lib.rs` registra citando este ADR es del **proceso de
-escritorio** y solo de él (ADR-0024). El proceso de sede lee la memoria entera
-y escribe una sola rebanada, el último certificado usado, releyendo el fichero
-antes; el escritorio relee esa rebanada al listar certificados. Todo lo demás
-lo escribe el escritorio.
+escritorio** y solo de él (ADR-0024). Toda mutación, en los dos roles, relee
+el fichero y toca un solo campo, y el fichero de estado se lee del disco en
+cada acceso. El proceso de sede solo muta el último certificado usado; todo lo
+demás lo escribe el escritorio.

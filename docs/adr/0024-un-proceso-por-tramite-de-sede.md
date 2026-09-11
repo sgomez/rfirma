@@ -4,8 +4,7 @@ rFirma es un solo binario con dos **roles de proceso**, decididos por la línea
 de órdenes antes de montar nada y sin cambiar después: el **proceso de
 escritorio**, único en el equipo, con la ventana principal y la colocación de
 la firma; y el **proceso de sede**, uno por invocación `afirma://`, con su
-ventana de sede, sin ventana principal, que termina cuando se cierra esa
-ventana. Ninguno se une al otro ni lo cierra. Es el modelo del original:
+ventana de sede, sin ventana principal, que termina con su trámite. Ninguno se une al otro ni lo cierra. Es el modelo del original:
 `SimpleAfirma.main` atiende la URL con `launch()` y sale, y solo la herramienta
 de escritorio comprueba si ya está abierta.
 
@@ -25,20 +24,31 @@ un límite del proceso, no de la sede.
 - **Dos trámites conviven en dos procesos**, cada uno en la terna de `ports=`
   que sorteó su navegador; no hay cerrojo de exclusión. Dentro de un proceso
   sigue habiendo un solo trámite.
-- **El proceso de sede termina cuando se cierra su ventana**, que es la única.
-  Cerrarla a medias sigue cancelando ante la sede, y la persona conserva la
-  pantalla de resultado hasta que la cierra. Nadie llama a `exit` desde un
-  adaptador.
-- **El aislado se crea al consentir**, no al arrancar: un rechazo de protocolo
-  no lo paga.
-- **Carpeta de paso propia por proceso**, borrada al salir.
-- **La memoria entre sesiones (ADR-0010) la escribe el escritorio.** El proceso
-  de sede la lee entera y escribe solo el último certificado usado, releyendo
-  el fichero antes de escribir; el escritorio relee esa rebanada al listar
-  certificados.
+- **El proceso de sede termina cuando el trámite ha terminado y no hay
+  ventana visible**; si la hay, al cerrarla. La aplicación avisa de que el
+  trámite terminó por el puerto de ventana; el adaptador cierra la ventana solo
+  si sigue oculta; Tauri sale al quedarse sin ventanas. Nadie llama a `exit`.
+  La persona conserva la pantalla de resultado hasta que la cierra.
+- **Cerrar la ventana por el gestor de ventanas es cancelar.** En
+  consentimiento, confirmación o firma, la X manda `CANCEL` a la sede, retiene
+  el cierre hasta que el envío se confirma con un tope de un segundo, y sale.
+  Con el desenlace en pantalla o en un callejón sin salida, sale sin más.
+- **La biblioteca nativa se abre en el primer trabajo**, no al arrancar: un
+  rechazo de protocolo solo paga el hilo del aislado, que nace ocioso.
+- **Carpeta de paso propia por proceso, en los dos roles**, nombrada por rol
+  y PID bajo la temporal del sistema y borrada entera al salir. Cada arranque
+  barre las de procesos que ya no existen; se acepta que un PID reutilizado
+  retrase una barrida.
+- **La memoria entre sesiones (ADR-0010) se escribe releyendo.** Toda
+  mutación, en los dos roles, relee el fichero y toca un solo campo; el
+  proceso de sede solo muta el último certificado usado. El fichero de estado
+  se lee del disco en cada acceso; la configuración, que la sede nunca
+  escribe, conserva su copia viva.
 - **La CA local (ADR-0005) la refresca el escritorio.** El proceso de sede no
-  toca las ranuras ni los almacenes: si la CA falta o caduca pronto, enseña el
-  callejón sin salida con el botón de instalar, que ya existía para «falta».
+  toca las ranuras ni los almacenes: mira solo el fichero de la CA, y si falta
+  o le quedan menos de siete días enseña el callejón sin salida con el botón
+  de instalar, que ya existía para «falta». Que la hoja esté en el almacén del
+  navegador lo detecta la espera de treinta segundos, que ya ofrece reparar.
 
 ## Considered Options
 
