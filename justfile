@@ -145,7 +145,7 @@ check: tools check-repo check-java check-ts check-rust
 # Lo que no pertenece a ninguna cadena (ID-01): cinco comprobaciones que tardan
 # milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
 # el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python
+check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python test-scripts
 
 # UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
 # cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
@@ -173,102 +173,9 @@ check-rust: lint-rust crap check-contract
 
 # Comprueba que estan las herramientas, y falla nombrando la que falte.
 tools:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    failures=0
-    for t in mvn git java pnpm cargo; do
-        command -v "$t" >/dev/null || { echo "falta: $t"; failures=1; }
-    done
-    # Un cargo instalado pero fuera del PATH es el falso negativo mas caro de
-    # esta receta: "falta: cargo" manda a reinstalar rustup a quien solo tiene
-    # que cargar el env. rustup lo deja en ~/.cargo/env, que ~/.profile carga
-    # y zsh NO lee en shells interactivas.
-    if ! command -v cargo >/dev/null && [ -x "$HOME/.cargo/bin/cargo" ]; then
-        echo "  cargo esta en ~/.cargo/bin pero no en el PATH:"
-        echo "    anade '. \"$HOME/.cargo/env\"' a tu ~/.zshrc (o ~/.bashrc)"
-    fi
-    # gettext es DEPENDENCIA REQUERIDA desde v0.3 (ID-128): las cadenas viven
-    # en rfirma-app/po/ y msgmerge es la bisagra entre la plantilla y los cinco
-    # .po. El importador NO lo necesita —es Node puro— asi que un clon limpio
-    # compila sin esto; lo necesita quien DESARROLLA y lo necesita el CI.
-    gettext_apt=""
-    for t in msgfmt msgmerge msgcmp msgattrib; do
-        command -v "$t" >/dev/null || { echo "falta: $t"; gettext_apt="gettext"; failures=1; }
-    done
-    if [ -n "$gettext_apt" ]; then
-        echo
-        echo "Instalalo con:"
-        echo "  sudo apt install -y $gettext_apt"
-        echo
-    fi
-    # El token de la grada B (ADR-0014). No es opcional: sus pruebas corren en
-    # el carril rapido, asi que sin estas tres ordenes `test-rust` falla.
-    softhsm_apt=""
-    command -v softhsm2-util >/dev/null || { echo "falta: softhsm2-util"; softhsm_apt="$softhsm_apt softhsm2"; failures=1; }
-    command -v pkcs11-tool  >/dev/null || { echo "falta: pkcs11-tool";  softhsm_apt="$softhsm_apt opensc";   failures=1; }
-    command -v openssl      >/dev/null || { echo "falta: openssl";      softhsm_apt="$softhsm_apt openssl";  failures=1; }
-    # El almacen NSS es la otra mitad de la grada B (#99): certutil y pk12util
-    # montan el perfil desechable de cada prueba, y libsoftokn3.so es el modulo
-    # que lo abre. El perfil real de Firefox de nadie interviene.
-    command -v certutil     >/dev/null || { echo "falta: certutil";     softhsm_apt="$softhsm_apt libnss3-tools"; failures=1; }
-    command -v pk12util     >/dev/null || { echo "falta: pk12util";     softhsm_apt="$softhsm_apt libnss3-tools"; failures=1; }
-    if [ -n "$softhsm_apt" ]; then
-        echo
-        echo "Instalalos con:"
-        echo "  sudo apt install -y$softhsm_apt"
-        echo "y monta el token con: just token"
-        echo
-    fi
-    # ruff es la puerta del unico Python del repositorio (ID-164) y va dentro de
-    # `check-repo`, asi que sin el la cadena de TypeScript falla entera. No esta
-    # en apt: se instala desde PyPI. La version va clavada, igual que
-    # CRAP_VERSION mas abajo: sin ruff.toml ni pyproject.toml en el repositorio,
-    # el conjunto de reglas por defecto es el que traiga la version instalada,
-    # y una version distinta a la del CI (ver .github/workflows/ci.yml) puede
-    # poner esta puerta en rojo sin que nadie haya tocado una linea de Python.
-    if ! command -v ruff >/dev/null; then
-        echo "falta: ruff"
-        echo "  Instalalo con: pipx install ruff=={{ ruff_version }}  (o: uv tool install ruff=={{ ruff_version }})"
-        failures=1
-    fi
-    # Las librerias de sistema del WebView. pkg-config es quien decide, porque
-    # es quien consulta el build script que falla: el paquete de runtime puede
-    # estar instalado y faltar solo el -dev, que es el que trae el .pc.
-    if command -v pkg-config >/dev/null; then
-        missing_apt=""
-        for pair in {{ system_libs }}; do
-            module="${pair%%:*}"
-            package="${pair#*:}"
-            pkg-config --exists "$module" || {
-                echo "falta la libreria de sistema: $module"
-                missing_apt="$missing_apt $package"
-                failures=1
-            }
-        done
-        if [ -n "$missing_apt" ]; then
-            echo
-            echo "Instalalas con:"
-            echo "  sudo apt install -y$missing_apt"
-            echo
-        fi
-    else
-        echo "falta: pkg-config"
-        failures=1
-    fi
-    # Opcionales: no rompen `check`, pero si la receta que los usa.
-    graal="${GRAALVM_HOME:-{{ default_graalvm }}}"
-    if [ ! -x "$graal/bin/native-image" ]; then
-        echo "aviso: falta native-image en $graal"
-        echo "  (solo hace falta para 'just native'; instala GraalVM CE 25)"
-    fi
-    command -v flatpak-builder >/dev/null || \
-        echo "aviso: falta flatpak-builder (solo hace falta para 'just flatpak')"
-    cargo llvm-cov --version >/dev/null 2>&1 || \
-        echo "aviso: falta cargo-llvm-cov (cargo binstall cargo-llvm-cov)"
-    cargo crap --version >/dev/null 2>&1 || \
-        echo "aviso: falta cargo-crap (cargo binstall cargo-crap@{{ crap_version }})"
-    [ "$failures" = 0 ] || exit 1
-    echo "herramientas: correcto"
+    RUFF_VERSION="{{ ruff_version }}" CRAP_VERSION="{{ crap_version }}" \
+        DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
+        {{ justfile_directory() }}/scripts/tools.sh
 
 # No estan en Maven Central: hay que compilarlas desde el repositorio oficial.
 # La etiqueta v1.9.1 es inmutable, asi que esto se ejecuta una vez y la cache
@@ -280,7 +187,7 @@ tools:
 #
 # Instala las dependencias de AutoFirma en ~/.m2 si no estan.
 bootstrap:
-    ./bootstrap.sh
+    {{ justfile_directory() }}/scripts/bootstrap.sh
 
 # El `prepare` de package.json instala de paso la puerta de pre-push
 # (lefthook.yml). No hay una receta que la instale aparte a proposito: una
@@ -437,108 +344,7 @@ protocol-map *args:
 #
 # Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
 outline path:
-    #!/usr/bin/env bash
-    # Sin `set -e`: la salida es corta a proposito, pero si alguien la pasa por
-    # `head` el SIGPIPE mataria a awk y la receta fallaria con un 141 que no
-    # significa nada.
-    set -u
-    file="{{ path }}"
-    [ -f "$file" ] || file="{{ justfile_directory() }}/{{ path }}"
-    if [ ! -f "$file" ]; then
-        echo "outline: no existe {{ path }}" >&2
-        exit 1
-    fi
-    case "$file" in
-        *.rs)        lang=rust ;;
-        *.ts|*.tsx)  lang=ts ;;
-        *)
-            echo "outline: solo .rs, .ts y .tsx. Para el resto, grep -n" >&2
-            exit 1 ;;
-    esac
-    awk -v lang="$lang" '
-    # Una linea de esqueleto: sin la sangria, sin la llave suelta del final.
-    function emit(n, s) {
-        sub(/^[ \t]+/, "", s)
-        sub(/[ \t]+$/, "", s)
-        sub(/[ \t]+\{[ \t]*$/, " {", s)
-        if (length(s) > 160) s = substr(s, 1, 157) "..."
-        printf "%5d  %s\n", n, s
-    }
-    # La documentacion se acumula hasta el final de la PRIMERA FRASE y se
-    # imprime entera: cortarla por donde cayo el salto de linea entrega media
-    # frase, que cuesta lo mismo y no dice nada.
-    function adddoc(n, marker, text) {
-        if (docbuf == "") { docbuf = marker " " text; docline = n; docdone = 0; return }
-        if (docdone) return
-        if (text == "") { docdone = 1; return }
-        docbuf = docbuf " " text
-    }
-    function flushdoc(   t) {
-        if (docbuf == "") return
-        t = docbuf
-        if (match(t, /\.[ ]/)) t = substr(t, 1, RSTART)
-        emit(docline, t)
-        docbuf = ""; docdone = 0
-    }
-    { if (docbuf != "" && length(docbuf) > 200) docdone = 1 }
-
-    lang == "rust" && /^[ \t]*(\/\/\/|\/\/!)/ {
-        line = $0; sub(/^[ \t]*/, "", line)
-        text = line; sub(/^(\/\/\/|\/\/!)[ \t]?/, "", text)
-        adddoc(FNR, substr(line, 1, 3), text)
-        next
-    }
-    lang == "rust" && /^[ \t]*(pub |impl |fn |mod |const |static |type |struct |enum |macro_rules!)/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "rust" && /^[ \t]*#\[(test|tauri::command|derive|cfg\(test\))/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "rust" { flushdoc(); next }
-
-    lang == "ts" && /^[ \t]*\/\*\*/ {
-        # Un bloque de UNA linea (`/** ... */`) se cierra aqui mismo: si se
-        # entrara en modo bloque nunca se saldria y el codigo de debajo pasaria
-        # por documentacion.
-        if (/\*\//) {
-            line = $0
-            sub(/^[ \t]*\/\*\*[ \t]*/, "", line)
-            sub(/[ \t]*\*\/.*$/, "", line)
-            adddoc(FNR, "//", line)
-            next
-        }
-        inblock = 1; next
-    }
-    lang == "ts" && inblock {
-        if (/\*\//) { inblock = 0; next }
-        line = $0; sub(/^[ \t]*\*[ \t]?/, "", line); sub(/[ \t]+$/, "", line)
-        adddoc(FNR, "//", line)
-        next
-    }
-    lang == "ts" && /^(export |function |class |interface |type |const |async |declare )/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "ts" && /^[ \t]*(it|test|describe)\(/ { flushdoc(); emit(FNR, $0); next }
-    lang == "ts" && /^[ \t]+const [A-Za-z_$]+ = (async )?(\(|useCallback|function)/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "ts" && /^[ \t]*$/ { flushdoc(); next }
-    END { flushdoc() }
-    ' "$file"
-    wc -lc < "$file" | awk -v name="{{ path }}" '{
-        printf "\n-- %s: %d lineas, %d caracteres (~%.1fk tokens si lo lees entero).\n", \
-            name, $1, $2, $2 / 3500
-        if ($1 < 120)
-            printf "   Es corto: leelo entero si vas a tocarlo. --\n"
-        else {
-            printf "   Abre los tramos que necesites, TODOS EN UNA SOLA LLAMADA:\n"
-            printf "     sed -n %cA,Bp;C,Dp%c %s\n", 39, 39, name
-            printf "   Un turno por tramo sale mas caro que leer el fichero entero. --\n"
-        }
-    }'
-    # Los dos caminos de error de arriba ya han salido con 1. Aqui solo queda el
-    # 141 de un SIGPIPE si alguien encadena un `head`, y eso no es un fallo.
-    exit 0
+    {{ justfile_directory() }}/scripts/outline.sh {{ path }}
 
 
 # Imprime EL CONTRATO ENTRE LOS DOS LADOS: las ordenes que la ventana puede
@@ -694,20 +500,7 @@ build-rust: build-ts
 #
 # Falla nombrando `just native` si la libreria nativa no esta.
 check-native:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ "${RFIRMA_SKIP_NATIVE:-0}" = "1" ]; then
-        echo "check-native: omitida (RFIRMA_SKIP_NATIVE=1)"
-        exit 0
-    fi
-    if [ ! -f "{{ native_lib }}" ]; then
-        echo "falta la libreria nativa:" >&2
-        echo "  {{ native_lib }}" >&2
-        echo >&2
-        echo "Ejecuta 'just native' (tarda unos tres minutos y necesita" >&2
-        echo "GraalVM CE 25). No se construye sola a proposito: ver ADR-0013." >&2
-        exit 1
-    fi
+    {{ justfile_directory() }}/scripts/check-native.sh {{ native_lib }}
 
 # ---------------------------------------------------------------------------
 # Test
@@ -794,13 +587,7 @@ crap-ffi: token check-native build-ts
 #
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 clean-coverage:
-    #!/usr/bin/env bash
-    set -eu
-    instrumented="{{ cargo_target }}/llvm-cov-target"
-    echo "instrumentado, recuperable: $(du -sh "$instrumented" 2>/dev/null | cut -f1 || echo 0)"
-    rm -rf "$instrumented" "{{ coverage_out }}"
-    rm -f "{{ cargo_target }}"/*.profraw "{{ tauri }}"/*.profraw
-    echo "queda en {{ cargo_target }}: $(du -sh "{{ cargo_target }}" 2>/dev/null | cut -f1)"
+    {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }}
 
 # ---------------------------------------------------------------------------
 # Imagen nativa, empaquetado y desarrollo
@@ -858,29 +645,7 @@ native: build-java
 #
 # Comprueba el suelo de glibc de la libreria nativa.
 check-glibc lib=native_lib:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    suelo="2.34"
-    lib="{{ lib }}"
-    if [ ! -f "$lib" ]; then
-        echo "no existe $lib; ejecuta 'just native'" >&2
-        exit 1
-    fi
-    maximo="$(objdump -T "$lib" | grep -oE 'GLIBC_[0-9]+\.[0-9]+(\.[0-9]+)?' \
-        | sed 's/^GLIBC_//' | sort -V | tail -1 || true)"
-    if [ -z "$maximo" ]; then
-        echo "objdump no encontro ningun simbolo GLIBC_* en $lib" >&2
-        exit 1
-    fi
-    echo "GLIBC_* maximo en $lib: $maximo (suelo prometido: $suelo)"
-    mayor="$(printf '%s\n%s\n' "$suelo" "$maximo" | sort -V | tail -1)"
-    if [ "$mayor" != "$suelo" ]; then
-        echo "SUBE el suelo de glibc: $maximo > $suelo" >&2
-        echo "revisa docs/research/glibc-libreria-nativa.md; si el suelo ha" >&2
-        echo "subido de verdad, sube el pin de esta receta a la vez" >&2
-        exit 1
-    fi
-    echo "OK  dentro del suelo prometido"
+    {{ justfile_directory() }}/scripts/check-glibc.sh {{ lib }}
 
 # El manifiesto lee la ruta canonica que produce `native` y el frontend ya
 # construido de rfirma-app/dist, porque tauri-build lee `frontendDist` dentro de
@@ -955,35 +720,7 @@ bundle: check-native build-ts
 #
 # Regenera cargo-sources.json y node-sources.json.
 flatpak-sources:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd "{{ justfile_directory() }}/packaging/flatpak"
-    # Los dos generadores viven fuera de este repositorio: son de
-    # flatpak/flatpak-builder-tools. No se versionan aqui ni los instala
-    # bootstrap.sh (ID-04); se traen a mano la primera vez.
-    if [ ! -f flatpak-cargo-generator.py ]; then
-        echo "falta packaging/flatpak/flatpak-cargo-generator.py" >&2
-        echo "  https://github.com/flatpak/flatpak-builder-tools/tree/master/cargo" >&2
-        exit 1
-    fi
-    command -v flatpak-node-generator >/dev/null || {
-        echo "falta flatpak-node-generator" >&2
-        echo "  https://github.com/flatpak/flatpak-builder-tools/tree/master/node" >&2
-        exit 1
-    }
-    python3 flatpak-cargo-generator.py \
-        ../../rfirma-app/src-tauri/Cargo.lock -o cargo-sources.json
-    flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
-    # El sello que lee `check-flatpak-sources`: el sha256 de cada fichero de
-    # bloqueo TAL Y COMO estaba al generar los JSON de arriba. Se escribe en el
-    # formato de sha256sum para que comprobarlo sea `sha256sum -c` y no un
-    # analizador nuestro. Las rutas van relativas a la raiz del repositorio,
-    # que es desde donde comprueba el script.
-    cd "{{ justfile_directory() }}"
-    sha256sum rfirma-app/src-tauri/Cargo.lock rfirma-app/pnpm-lock.yaml \
-        > packaging/flatpak/sources.lock
-    echo
-    echo "regeneradas. Versiona cargo-sources.json, node-sources.json y sources.lock."
+    {{ justfile_directory() }}/scripts/flatpak-sources.sh
 
 # La comprobacion de ID-07, sin regenerar nada. Va dentro de `lint` (y por
 # tanto de `check`) en vez de ser un paso suelto del workflow, porque
@@ -1010,6 +747,10 @@ check-ds-bundle:
 # Comprueba que las acciones de los workflows estan fijadas por SHA.
 check-actions:
     {{ justfile_directory() }}/.github/check-workflows.sh
+
+# Las pruebas de scripts/, hoy solo el esqueleto de outline.sh.
+test-scripts:
+    {{ justfile_directory() }}/scripts/tests/outline_test.sh
 
 # El mecanismo de publicacion (ID-172, ID-174), y la unica parte de la tuberia
 # de entrega que NO se puede ensayar con una etiqueta `-rc.N`: el ensayo se
@@ -1131,58 +872,14 @@ dev *args: check-native po-import
 #
 # Registra el binario de desarrollo como manejador de afirma://.
 dev-handler:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    binario="{{ tauri }}/target/debug/rfirma"
-    destino="$HOME/.local/share/applications"
-    fichero="$destino/rfirma-dev.desktop"
-    mkdir -p "$destino"
-    # Quien atendia el esquema antes se guarda, para que dev-handler-off
-    # pueda devolverselo: en un equipo con AutoFirma al lado es SU lanzador,
-    # y dejarlo sin manejador seria romper lo que ya funcionaba.
-    previo="$destino/.rfirma-dev-handler-previo"
-    if [ ! -f "$previo" ]; then
-        xdg-mime query default x-scheme-handler/afirma > "$previo" || true
-    fi
-    {
-        echo "[Desktop Entry]"
-        echo "Type=Application"
-        echo "Name=rFirma (desarrollo)"
-        echo "Comment=NO INSTALADO: apunta al arbol de desarrollo. just dev-handler-off lo quita."
-        echo "Exec=env RFIRMA_LIB_DIR=$(dirname "{{ native_lib }}") $binario %u"
-        echo "Terminal=false"
-        echo "NoDisplay=true"
-        echo "Categories=Utility;"
-        echo "MimeType=x-scheme-handler/afirma;"
-    } > "$fichero"
-    command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
-    xdg-mime default rfirma-dev.desktop x-scheme-handler/afirma
-    echo
-    echo "manejador de afirma://: $(xdg-mime query default x-scheme-handler/afirma)"
-    echo "  -> $fichero"
-    if [ ! -x "$binario" ]; then
-        echo
-        echo "AVISO: todavia no existe $binario." >&2
-        echo "Arranca 'just dev' antes de pulsar el enlace de la sede." >&2
-    fi
+    {{ justfile_directory() }}/scripts/dev-handler.sh on
 
 # Deshace lo anterior: borra el .desktop de desarrollo y dice quien queda
 # atendiendo el esquema.
 #
 # Quita el manejador de desarrollo de afirma://.
 dev-handler-off:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    destino="$HOME/.local/share/applications"
-    previo="$destino/.rfirma-dev-handler-previo"
-    rm -f "$destino/rfirma-dev.desktop"
-    command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
-    # Se le devuelve el esquema a quien lo tenia, si lo tenia alguien.
-    if [ -s "$previo" ] && [ "$(cat "$previo")" != "rfirma-dev.desktop" ]; then
-        xdg-mime default "$(cat "$previo")" x-scheme-handler/afirma || true
-    fi
-    rm -f "$previo"
-    echo "manejador de afirma://: $(xdg-mime query default x-scheme-handler/afirma || echo 'ninguno')"
+    {{ justfile_directory() }}/scripts/dev-handler.sh off
 
 # El .deb y el .rpm REUTILIZANDO la libreria nativa que ya esta construida.
 # Es `bundle` sin `native` delante: mismo resultado mientras no hayas tocado
@@ -1230,78 +927,4 @@ clean:
 #
 # Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
 changelog-release version:
-    #!/usr/bin/env python3
-    import datetime, glob, os, re, sys
-
-    os.chdir("{{ justfile_directory() }}")
-    version = "{{ version }}"
-
-    def numero_issue(p):
-        nombre = os.path.splitext(os.path.basename(p))[0]
-        try:
-            return int(nombre)
-        except ValueError:
-            sys.exit(
-                f"{p}: el nombre debe ser el numero de issue (ej. 252.md), "
-                f"segun changelog.d/README.md."
-            )
-
-    fragments = sorted(
-        (p for p in glob.glob("changelog.d/*.md") if os.path.basename(p) != "README.md"),
-        key=numero_issue,
-    )
-    if not fragments:
-        sys.exit("changelog.d/ no tiene fragmentos que reunir.")
-
-    # Orden canonico de Keep a Changelog. Cada fragmento agrupa sus lineas
-    # bajo uno o varios encabezados "### <categoria>"; aqui se acumulan por
-    # categoria (conservando el orden por numero de issue dentro de cada una)
-    # para que la seccion publicada no repita encabezados sueltos.
-    categorias_canonicas = [
-        "Added", "Changed", "Deprecated", "Removed", "Fixed", "Security",
-    ]
-    lineas_por_categoria = {c: [] for c in categorias_canonicas}
-    encabezado = re.compile(r"^### (\w+)\s*$", re.MULTILINE)
-
-    for f in fragments:
-        contenido = open(f, encoding="utf-8").read().strip()
-        coincidencias = list(encabezado.finditer(contenido))
-        if not coincidencias:
-            sys.exit(f"{f}: no tiene ningun encabezado '### <categoria>'.")
-        for i, m in enumerate(coincidencias):
-            categoria = m.group(1)
-            if categoria not in lineas_por_categoria:
-                sys.exit(f"{f}: categoria desconocida '### {categoria}'.")
-            inicio = m.end()
-            fin = coincidencias[i + 1].start() if i + 1 < len(coincidencias) else len(contenido)
-            lineas_por_categoria[categoria].append(contenido[inicio:fin].strip())
-
-    body = "\n\n".join(
-        f"### {categoria}\n{chr(10).join(lineas_por_categoria[categoria])}"
-        for categoria in categorias_canonicas
-        if lineas_por_categoria[categoria]
-    )
-    today = datetime.date.today().isoformat()
-
-    changelog = open("CHANGELOG.md", encoding="utf-8").read()
-    placeholder = re.compile(
-        r"^## \[" + re.escape(version) + r"\] - sin publicar$", re.MULTILINE
-    )
-    if placeholder.search(changelog):
-        seccion = f"## [{version}] - {today}\n\n{body}"
-        changelog = placeholder.sub(lambda _m: seccion, changelog, count=1)
-    else:
-        first_heading = re.search(r"^## \[", changelog, re.MULTILINE)
-        section = f"## [{version}] - {today}\n\n{body}\n\n"
-        if first_heading:
-            pos = first_heading.start()
-            changelog = changelog[:pos] + section + changelog[pos:]
-        else:
-            changelog = changelog.rstrip("\n") + "\n\n" + section
-
-    open("CHANGELOG.md", "w", encoding="utf-8").write(changelog)
-
-    for f in fragments:
-        os.remove(f)
-
-    print(f"CHANGELOG.md: version {version} publicada con {len(fragments)} fragmento(s).")
+    {{ justfile_directory() }}/scripts/changelog-release.sh {{ version }}
