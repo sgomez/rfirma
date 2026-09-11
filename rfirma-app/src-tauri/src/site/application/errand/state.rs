@@ -231,6 +231,13 @@ impl LiveErrand {
         crate::lock(&self.errand).clone()
     }
 
+    /// Espera hasta el tope al acuse de entrega ya registrado por `answer_the_site`, si lo hay.
+    pub(super) fn wait_for_delivery(&self, timeout: Duration) {
+        if let Some(delivered) = crate::lock(&self.delivered).take() {
+            delivered.wait(timeout);
+        }
+    }
+
     /// Finaliza el trámite y limpia sus recursos asociados; si había una ventana, se le avisa.
     pub fn end(&self) {
         self.cancel_backing_timeout();
