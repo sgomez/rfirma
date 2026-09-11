@@ -260,7 +260,7 @@ fn unwritable_local_ca_material_is_said_but_does_not_stop_the_errand() {
 }
 
 #[test]
-fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
+fn attending_a_site_launch_with_a_live_errand_gets_no_window_of_its_own() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
     assert!(
@@ -296,7 +296,7 @@ fn a_second_launch_with_a_live_errand_gets_no_window_of_its_own() {
 }
 
 #[test]
-fn a_second_invocation_never_touches_the_trust_stores() {
+fn attending_a_site_launch_directly_never_touches_the_trust_stores() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
