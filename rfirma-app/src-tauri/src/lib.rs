@@ -410,10 +410,6 @@ fn the_transport(
         inbox,
         {
             let handle = app.clone();
-            Arc::new(move || handle.exit(0))
-        },
-        {
-            let handle = app.clone();
             Arc::new(move |refusal| {
                 site::adapters::window::note_a_relay_failure(&handle, refusal);
             })

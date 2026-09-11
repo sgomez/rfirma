@@ -2211,7 +2211,6 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
     let relay = Relay::new(
         Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
         inbox,
-        Arc::new(|| {}),
         Arc::new(|_| {}),
     );
 

@@ -6,7 +6,9 @@ use crate::documents::DocumentsRoot;
 use crate::identity::IdentityRoot;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::SigningRoot;
-use crate::site::application::errand::{self, ErrandDesk, ErrandStep, LiveErrand, ReplyHandle};
+use crate::site::application::errand::{
+    self, Acknowledgement, ErrandDesk, ErrandStep, LiveErrand, ReplyHandle,
+};
 use crate::site::domain::protocol::{AfirmaUrl, Refusal};
 use crate::site::SiteRoot;
 
@@ -18,6 +20,9 @@ pub const SITE_WINDOW: &str = "site";
 
 /// Nombre del evento con el que la ventana de sede recibe el trámite.
 pub const SITE_ERRAND: &str = "site-errand";
+
+/// Tope razonable para esperar a que la respuesta salga por el canal antes de cerrar.
+const ERRAND_ENDED_ACKNOWLEDGEMENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// Abre la ventana de diálogo de sede (inicialmente oculta).
 pub fn open_the_site_window(app: &tauri::AppHandle) {
@@ -64,6 +69,16 @@ impl crate::site::application::startup::SiteWindow for TauriSiteWindow {
     fn show(&self) {
         publish_the_moment(&self.app);
         show_the_site_window(&self.app);
+    }
+
+    fn errand_ended(&self, delivered: Acknowledgement) {
+        delivered.wait(ERRAND_ENDED_ACKNOWLEDGEMENT_TIMEOUT);
+        let Some(window) = self.app.get_webview_window(SITE_WINDOW) else {
+            return;
+        };
+        if !window.is_visible().unwrap_or(true) {
+            let _ = window.close();
+        }
     }
 }
 
