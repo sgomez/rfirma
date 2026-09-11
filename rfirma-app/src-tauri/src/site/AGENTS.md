@@ -36,7 +36,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
-| `adapters/window.rs` | El adaptador de la ventana de sede: la crea, le publica lo que va pasando y, al terminar el trámite, decide si la cierra según siga oculta. |
+| `adapters/window.rs` | El adaptador de la ventana de sede: la crea, le publica lo que va pasando, cancela el trámite si el gestor de ventanas la cierra con uno vivo y, al terminar el trámite, decide si la cierra según siga oculta. |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`) y los consentimientos que se deciden sobre ella. |
 | `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests.rs`. |

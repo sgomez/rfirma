@@ -26,8 +26,8 @@ interface SedeWindowProps {
  * **La barra de título es la del sistema operativo**, no una pintada aquí: una
  * de mentira no la mueve el gestor de ventanas, así que la ventana no se podía
  * ni arrastrar. Con ella vienen gratis el título, la cruz, el menú del gestor y
- * el arrastre; y cerrar por la cruz llega igual al backend, que ya trata
- * `CloseRequested` sobre esta ventana como abandonar el trámite (ID-340).
+ * el arrastre; y cerrar por la cruz llega igual al backend, que trata
+ * `CloseRequested` sobre esta ventana como abandonar el trámite.
  *
  * El desenlace se cierra solo a los `OUTCOME_CLOSE_MS` (ID-274). El momento
  * de «no ha llegado» lo decide el backend con su reloj de respaldo y lo publica

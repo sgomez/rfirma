@@ -10,6 +10,7 @@ pub mod state;
 mod tests;
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::secret::StoreSecret;
@@ -416,4 +417,23 @@ fn told_to_the_site(live: &LiveErrand, refusal: SiteRefusal) -> SiteRefusal {
 /// Cancela el trámite de sede notificando cancelación a la sede.
 pub fn decline(live: &LiveErrand) -> SiteOutcome {
     declined(live)
+}
+
+/// Tope de espera al acuse de entrega antes de cerrar la ventana de sede por el gestor de ventanas.
+pub const WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT: Duration = Duration::from_secs(1);
+
+/// Decide qué hacer con el trámite cuando el gestor de ventanas pide cerrar la ventana de sede:
+/// con trámite vivo, cancela como el botón de cancelar y espera su acuse de entrega hasta el
+/// tope; sin trámite vivo, no hace nada, porque no hay nada que cancelar.
+pub fn decline_before_closing(live: &LiveErrand) {
+    decline_before_closing_within(live, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT);
+}
+
+fn decline_before_closing_within(live: &LiveErrand, timeout: Duration) {
+    if live.current().is_none() {
+        return;
+    }
+    live.answer_the_site(&SiteOutcome::Cancelled);
+    live.wait_for_delivery(timeout);
+    live.end();
 }

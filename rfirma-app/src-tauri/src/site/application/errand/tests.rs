@@ -117,6 +117,18 @@ fn the_wire() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
     )
 }
 
+/// Asa de respuesta simulada cuyo acuse de entrega nunca llega.
+fn a_wire_that_never_confirms() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    (
+        ReplyHandle::of(move |text| {
+            let _ = sender.send(text);
+            Acknowledgement::never()
+        }),
+        receiver,
+    )
+}
+
 /// Códec negociado para pruebas.
 fn a_codec() -> NegotiatedCodec {
     Arc::new(V4Codec)
@@ -940,6 +952,60 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
 
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), None);
+}
+#[test]
+fn closing_the_window_with_an_errand_still_alive_cancels_it_on_the_wire() {
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+
+    decline_before_closing_within(&live, Duration::from_secs(1));
+
+    assert_eq!(what_the_site_received(&mut wire), Some("CANCEL".to_owned()));
+    assert!(live.current().is_none());
+}
+#[test]
+fn closing_the_window_with_the_outcome_already_on_screen_sends_nothing() {
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+    declined(&live);
+    assert_eq!(what_the_site_received(&mut wire), Some("CANCEL".to_owned()));
+
+    decline_before_closing_within(&live, Duration::from_secs(1));
+
+    assert_eq!(what_the_site_received(&mut wire), None);
+}
+#[test]
+fn closing_the_window_gives_up_waiting_for_the_acknowledgement_past_its_threshold() {
+    let live = a_live();
+    let (handle, mut wire) = a_wire_that_never_confirms();
+    live.answer_through(handle);
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        54001,
+        a_codec()
+    )));
+
+    let started = std::time::Instant::now();
+    decline_before_closing_within(&live, Duration::from_millis(20));
+    let elapsed = started.elapsed();
+
+    assert_eq!(what_the_site_received(&mut wire), Some("CANCEL".to_owned()));
+    assert!(
+        elapsed < Duration::from_secs(1),
+        "no debe esperar mas alla de su tope: {elapsed:?}"
+    );
 }
 #[test]
 fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_errand_down() {

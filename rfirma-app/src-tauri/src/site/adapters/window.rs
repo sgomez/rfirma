@@ -35,9 +35,33 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
         .visible(false)
         .build();
 
-    if let Err(error) = built {
-        eprintln!("rfirma: no se puede abrir la ventana de sede ({error})");
+    match built {
+        Ok(window) => {
+            let app = app.clone();
+            window.on_window_event(move |event| handle_close_requested(&app, event));
+        }
+        Err(error) => eprintln!("rfirma: no se puede abrir la ventana de sede ({error})"),
     }
+}
+
+/// Cancela el trámite vivo, si lo hay, antes de dejar cerrar la ventana de sede por el gestor de
+/// ventanas: retiene el cierre, cancela como el botón de cancelar y reintenta cerrar cuando
+/// termina, momento en el que este mismo evento vuelve a llegar con el trámite ya terminado.
+fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
+    let tauri::WindowEvent::CloseRequested { api, .. } = event else {
+        return;
+    };
+    if app.state::<SiteRoot>().errand.current().is_none() {
+        return;
+    }
+    api.prevent_close();
+    let app = app.clone();
+    std::thread::spawn(move || {
+        errand::decline_before_closing(&app.state::<SiteRoot>().errand);
+        if let Some(window) = app.get_webview_window(SITE_WINDOW) {
+            let _ = window.close();
+        }
+    });
 }
 
 /// Muestra y da foco a la ventana de diálogo de sede.
