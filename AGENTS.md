@@ -60,6 +60,10 @@ escalera es esta y no tiene más peldaños:
 | Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |
 | `just check` entero en local | Nunca, ni siquiera al tocar el `justfile` o `.github/`: eso lo comprueba el CI igual |
 
+`just --list` agrupa las recetas: el grupo `checklist` (la escalera) es esta
+tabla, `ci` lo que llaman los workflows por nombre, `dev` y `release` lo que se
+usa a mano.
+
 Tres avisos que ahorran una ronda:
 
 * **`just check-rust`, `just coverage` y `just crap` no son un
