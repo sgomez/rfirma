@@ -220,9 +220,31 @@ fn with_the_five_roots(
         ])
 }
 
+/// Barre las carpetas de paso abandonadas y crea la de este proceso, con el prefijo del rol
+/// dado (ADR-0024).
+fn own_scratch(role: &str) -> site::adapters::scratch::ProcessFolder {
+    let temp = std::env::temp_dir();
+    site::adapters::scratch::sweep(&temp, &["site", "desktop"]);
+    site::adapters::scratch::own_folder(&temp, role)
+        .expect("debería poder crearse la carpeta de paso del proceso")
+}
+
+/// Borra la carpeta de paso de este proceso al salir del bucle de eventos; un `Drop` no es
+/// fiable porque Tauri puede salir sin soltarlo.
+fn erase_the_scratch_folder_on_exit(app: &tauri::AppHandle, event: tauri::RunEvent) {
+    use tauri::Manager;
+
+    if let tauri::RunEvent::Exit = event {
+        let folder = app.state::<site::adapters::scratch::ProcessFolder>();
+        let _ = std::fs::remove_dir_all(folder.path());
+    }
+}
+
 /// Rol escritorio: instancia única (ADR-0010) y ventana principal. No construye transporte.
 fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
-    let roots = composed_roots(paths, Some(invocation));
+    let scratch = own_scratch("desktop");
+    let mut roots = composed_roots(paths, Some(invocation));
+    roots.site.scratch_dir = scratch.path().to_path_buf();
 
     let builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init(
         move |app, command_line, folder| {
@@ -261,12 +283,14 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
     ));
 
     with_the_five_roots(builder, roots)
+        .manage(scratch)
         .setup(move |app| {
             open_the_main_window(app.handle());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error arrancando la ventana de rfirma");
+        .build(tauri::generate_context!())
+        .expect("error arrancando la ventana de rfirma")
+        .run(erase_the_scratch_folder_on_exit);
 }
 
 /// Rol sede: sin instancia única. Atiende el trámite y sostiene el único transporte del
@@ -274,9 +298,12 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
 fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_role: Vec<String>) {
     use tauri::Manager;
 
-    let roots = composed_roots(paths, None);
+    let scratch = own_scratch("site");
+    let mut roots = composed_roots(paths, None);
+    roots.site.scratch_dir = scratch.path().to_path_buf();
 
     with_the_five_roots(tauri::Builder::default(), roots)
+        .manage(scratch)
         .setup(move |app| {
             say(said_by_the_role);
 
@@ -312,8 +339,9 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error arrancando la sede de rfirma");
+        .build(tauri::generate_context!())
+        .expect("error arrancando la sede de rfirma")
+        .run(erase_the_scratch_folder_on_exit);
 }
 
 /// Abre la ventana principal de la aplicación.
