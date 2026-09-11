@@ -46,7 +46,7 @@ fn module() -> PathBuf {
     assert!(
         module.is_file(),
         "falta el modulo PKCS#11 en {}. Las pruebas de grada B necesitan SoftHSM:\n  \
-         sudo apt install -y softhsm2 opensc\n  just token",
+         sudo apt install -y softhsm2 opensc\n  just certs install",
         module.display()
     );
     module
@@ -56,7 +56,7 @@ fn certificates() -> Vec<TokenCertificate> {
     let found = pkcs11::list_certificates(module()).expect("no se ha podido listar el token");
     assert!(
         !found.is_empty(),
-        "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just token"
+        "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just certs install"
     );
     found
 }
@@ -66,7 +66,7 @@ fn certificate_labelled(label: &str) -> TokenCertificate {
         .into_iter()
         .find(|certificate| certificate.reference().label() == label)
         .unwrap_or_else(|| {
-            panic!("el token {TOKEN} no tiene ningun certificado {label}. Montalo con: just token")
+            panic!("el token {TOKEN} no tiene ningun certificado {label}. Montalo con: just certs install")
         })
 }
 
@@ -82,7 +82,7 @@ fn certificate_with_cka_id(cka_id: u8) -> TokenCertificate {
         .unwrap_or_else(|| {
             panic!(
                 "el token {TOKEN} no tiene ningun certificado con CKA_ID {cka_id:02x}. \
-                 Montalo con: just token"
+                 Montalo con: just certs install"
             )
         })
 }

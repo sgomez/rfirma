@@ -16,6 +16,7 @@ no interviene en ningún punto del proyecto.**
 | Configuración SoftHSM | `~/.config/softhsm2/softhsm2.conf` (ruta por defecto: **no hace falta `SOFTHSM2_CONF`**) |
 | Almacén de tokens | `~/.local/share/softhsm/tokens` |
 | Etiqueta del token | `rfirma-test` |
+| Token de desarrollo | `rfirma-kit`: los dos casos del kit que no traen los tokens de las pruebas, un seudónimo y un representante con CN largo, para verlos en la ventana. Lo instala `just certs install` si el kit está en el equipo y lo quita `just certs uninstall`, junto con los de las pruebas; ninguna prueba lo usa |
 | PIN de usuario | `1234` |
 | PIN de SO | `3737` |
 | `CKA_LABEL` de clave y certificado | `FNMT-ACTIVO-99999999R` (ambos con `CKA_ID = 01`) |
@@ -113,7 +114,7 @@ añadir la G2 a mano, y ese paso pertenece al caso de prueba, no al producto.
 Las órdenes de arriba se ejecutaron a mano una vez. Desde el
 [issue #49](https://github.com/sgomez/rfirma/issues/49) las hace
 `testdata/softhsm/provision-token.sh`, que es idempotente y al que llama
-`just token` —y, a través de `test-rust`, el propio `just check`—. Parte de
+`just certs install` —y, a través de `test-rust`, el propio `just check`—. Parte de
 `testdata/fnmt/`, que es el subconjunto del kit versionado en el repositorio, no
 de `~/.local/share/rfirma-test-certs`.
 

@@ -150,10 +150,10 @@ lint-i18n: po-import
     cd {{ app }} && pnpm exec i18next-cli extract --ci
     cd {{ app }} && pnpm exec i18next-cli status --unused
 
-# Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` desde testdata/fnmt/.
+# Instala o quita los certificados de pruebas en SoftHSM: `just certs install|uninstall`.
 [group('dev')]
-token:
-    ./testdata/softhsm/provision-token.sh
+certs action:
+    ./testdata/softhsm/certs.sh {{ action }}
 
 # Descarga (a etiqueta y sha fijados) el autoscript.js del banco de conformidad.
 [group('ci')]
@@ -286,13 +286,13 @@ test-ts: po-import
 
 # cargo test, mas la compilacion de las pruebas de grada C.
 [private]
-test-rust: token build-ts
+test-rust: (certs "install") build-ts
     cd {{ tauri }} && cargo test --all-features
     cd {{ tauri }} && cargo test --all-features --no-run
 
 # Las de grada C, que el carril lento ejecuta con --ignored.
 [group('ci')]
-test-native: token check-native build-ts
+test-native: (certs "install") check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
@@ -302,7 +302,7 @@ test-native: token check-native build-ts
 
 # Genera el lcov de toda la suite con cargo llvm-cov.
 [private]
-coverage: token build-ts
+coverage: (certs "install") build-ts
     mkdir -p "{{ coverage_out }}/coverage"
     cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info"
 
@@ -314,7 +314,7 @@ crap: coverage
 
 # Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
 [group('ci')]
-crap-ffi: token check-native build-ts
+crap-ffi: (certs "install") check-native build-ts
     mkdir -p "{{ coverage_out }}/crap-ffi"
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
         -- --ignored

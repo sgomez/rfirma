@@ -21,7 +21,7 @@ fn module() -> PathBuf {
     assert!(
         module.is_file(),
         "falta el modulo PKCS#11 en {}. Las pruebas de grada B necesitan SoftHSM:\n  \
-         sudo apt install -y softhsm2 opensc\n  just token",
+         sudo apt install -y softhsm2 opensc\n  just certs install",
         module.display()
     );
     module
@@ -31,7 +31,7 @@ fn certificates() -> Vec<TokenCertificate> {
     let found = pkcs11::list_certificates(module()).expect("no se ha podido listar el token");
     assert!(
         !found.is_empty(),
-        "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just token"
+        "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just certs install"
     );
     found
 }
@@ -45,7 +45,7 @@ fn references_labelled(label: &str) -> Vec<CertificateRef> {
         .collect();
     assert!(
         !found.is_empty(),
-        "el token {TOKEN} no tiene ningun certificado {label}. Montalo con: just token"
+        "el token {TOKEN} no tiene ningun certificado {label}. Montalo con: just certs install"
     );
     found
 }

@@ -219,7 +219,7 @@ jobs:
       # softhsm2 y opensc son la GRADA B del ADR-0014: son segundos de apt y a
       # cambio las pruebas del modulo PKCS#11 corren en cada PR, contra un token
       # de verdad, en vez de quedarse ignoradas. `just check-rust` provisiona el
-      # token solo (receta `token`), asi que aqui basta con instalarlos.
+      # token solo (receta `certs`), asi que aqui basta con instalarlos.
       #
       # libnss3-tools es la otra mitad de esa grada desde el #99: trae certutil y
       # pk12util, con los que cada prueba del almacen NSS se monta su propio

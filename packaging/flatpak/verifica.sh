@@ -57,7 +57,7 @@
 #             (GRAALVM_HOME=CE 25; `just native`) y el frontend construido
 #             (`just build-ts`, que tauri-build lee de rfirma-app/dist).
 #             Para el paso 3, ademas: el token SoftHSM de la grada B
-#             (`just token`) y poppler-utils (`pdfsig`, `pdftoppm`).
+#             (`just certs install`) y poppler-utils (`pdfsig`, `pdftoppm`).
 set -uo pipefail
 
 AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

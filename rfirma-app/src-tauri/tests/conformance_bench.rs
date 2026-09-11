@@ -792,7 +792,7 @@ fn the_test_module() -> PathBuf {
     assert!(
         module.is_file(),
         "falta el modulo PKCS#11 en {}. La grada C necesita SoftHSM:\n  \
-         sudo apt install -y softhsm2 opensc\n  just token",
+         sudo apt install -y softhsm2 opensc\n  just certs install",
         module.display()
     );
     module
@@ -861,7 +861,7 @@ fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOperati
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         errand::consent(&desk, &chosen.id, live).expect("el consentimiento deberia entregarse");
     })
@@ -1041,7 +1041,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         let signing_certificate = roots
             .identity
@@ -1090,7 +1090,7 @@ fn the_local_batch_errand_of(
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         let signing_certificate = roots
             .identity
@@ -1342,7 +1342,7 @@ fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
 
         errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
@@ -1625,7 +1625,7 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         let signing_certificate = roots
             .identity
