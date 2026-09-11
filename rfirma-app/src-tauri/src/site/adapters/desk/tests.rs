@@ -12,6 +12,14 @@ struct RecordingSigner {
 }
 
 impl Signer for RecordingSigner {
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         Ok(StoreSecret::TypedOnScreen)
     }
@@ -119,6 +127,14 @@ fn the_digest_the_site_asks_for_is_composed_with_the_key_of_the_certificate() {
 fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
     struct AbsentToken;
     impl Signer for AbsentToken {
+        fn accepts_the_secret(
+            &self,
+            _reference: &crate::identity::domain::certificate::CertificateRef,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        ) -> Result<(), crate::identity::domain::error::TokenError> {
+            Ok(())
+        }
+
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
             Err(TokenError::new(Situation::TokenAbsent, "no hay token"))
         }

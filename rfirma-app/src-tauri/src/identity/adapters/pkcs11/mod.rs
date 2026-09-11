@@ -62,6 +62,14 @@ impl Token for RealToken {
         sign(reference, pin, algorithm, data)
     }
 
+    fn accepts_the_secret(
+        &self,
+        reference: &CertificateRef,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        accepts_the_secret(reference, secret)
+    }
+
     fn import_pkcs12(
         &self,
         directory: &Path,
@@ -314,6 +322,31 @@ pub fn sign(
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
     with_token_turn(|| sign_holding_the_turn(reference, pin, algorithm, data))
+}
+
+/// Comprueba el PIN abriendo y cerrando la sesión de la ranura del certificado.
+pub fn accepts_the_secret(
+    reference: &CertificateRef,
+    secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+) -> Result<(), TokenError> {
+    let pin = secret
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
+    with_token_turn(|| {
+        let store = reference.store();
+        the_store_is_really_there(&store)?;
+        let context = context(&store)?;
+        let slot = slot_of(&context, reference.token_label())?;
+        let session = context.open_ro_session(slot)?;
+        match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
+            Ok(()) => {
+                let _ = session.logout();
+                Ok(())
+            }
+            Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => Ok(()),
+            Err(other) => Err(other.into()),
+        }
+    })
 }
 
 /// Serializa operaciones contra el token en el proceso para evitar colisiones de sesión.

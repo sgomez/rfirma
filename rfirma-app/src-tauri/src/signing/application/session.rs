@@ -9,7 +9,7 @@ use crate::documents::domain::error::DocumentError;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
-use crate::identity::domain::holder::{stamped_holder_of, StampedHolder};
+use crate::identity::domain::holder::{prompted_holder_of, stamped_holder_of, StampedHolder};
 use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
 use crate::lock;
 use crate::signing::application::cycle::{
@@ -22,8 +22,8 @@ use crate::signing::domain::{
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures};
-use crate::signing::ports::SecretPrompter;
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
+use crate::signing::ports::{ProtectedSecret, SecretName, SecretPromptRequest, SecretPrompter};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]
@@ -268,6 +268,49 @@ pub fn sign_on_token_with_prompter(
             .sign_with_prompter(signer, prompter, language)?,
     );
     Ok(())
+}
+
+/// Firma el ciclo abierto con el PIN tecleado, o pidiéndolo al diálogo si llega vacío.
+pub fn signed_on_the_token(
+    signer: &dyn Signer,
+    session: &SigningSession,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+    pin: &str,
+) -> Result<(), CycleFailure> {
+    if pin.is_empty() {
+        return sign_on_token_with_prompter(signer, session, prompter, language);
+    }
+    sign_on_token(signer, session, pin)
+}
+
+/// El secreto del lote: el tecleado, el que el token acepta tras el diálogo, o vacío si no lo pide.
+pub fn secret_for_the_batch(
+    signer: &dyn Signer,
+    certificate: &TokenCertificate,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+    typed: &str,
+) -> Result<ProtectedSecret, CycleFailure> {
+    if !typed.is_empty() {
+        return Ok(ProtectedSecret::from_str(typed));
+    }
+    let mode = signer
+        .secret_of(certificate.reference())
+        .map_err(CycleError::Token)?;
+    if mode != StoreSecret::TypedOnScreen {
+        return Ok(ProtectedSecret::new(b""));
+    }
+    let request = SecretPromptRequest {
+        secret: SecretName::of(certificate.reference().store().class()),
+        holder: prompted_holder_of(certificate.der()),
+        language,
+        incorrect_secret: false,
+    };
+    let (secret, ()) = cycle::prompted_until_accepted(prompter, request, |secret| {
+        signer.accepts_the_secret(certificate.reference(), secret)
+    })?;
+    Ok(secret)
 }
 
 /// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.

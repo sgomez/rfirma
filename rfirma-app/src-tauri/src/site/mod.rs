@@ -9,8 +9,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::crossing::Failure;
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::signing::adapters::isolate::Isolate;
 use adapters::tls::LocalCaStore;
-use application::errand::LiveErrand;
+use application::errand::ErrandDesk;
+pub use application::errand::LiveErrand;
 use application::site::CodecTable;
 use application::startup::{HeldChannel, LocalCaTrust};
 
@@ -35,29 +38,20 @@ pub struct SiteRoot {
     pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
 }
 
-/// Cierra el lote pendiente, remoto o local, con el secreto que entró por la única puerta del PIN.
-pub fn the_pending_batch_signed(
-    app: &tauri::AppHandle,
-    secret: &str,
-) -> Option<Result<(), Failure>> {
-    use tauri::Manager as _;
+/// La mesa del trámite sobre las raíces de producción.
+pub type SiteDesk<'a> = ErrandDesk<'a, Isolate, Isolate, adapters::desk::Neighbours<'a>>;
 
-    let root = app.state::<SiteRoot>();
-    if root.errand.a_batch_is_pending() {
-        return Some(
-            adapters::window::with_the_desk(app, |desk, live| {
-                application::errand::finish_the_batch(desk, secret, live)
-            })
-            .map_err(Failure::from),
-        );
+/// Cierra el lote consentido, remoto o local, con el secreto que entró por la única puerta del PIN.
+pub fn the_pending_batch_signed(
+    desk: &SiteDesk<'_>,
+    live: &LiveErrand,
+    secret: &ProtectedSecret,
+) -> Result<(), Failure> {
+    let secret = secret
+        .expose_secret()
+        .map_err(|_| Failure::new("unknown", "el secreto tecleado no es texto válido"))?;
+    if live.a_batch_is_pending() {
+        return application::errand::finish_the_batch(desk, secret, live).map_err(Failure::from);
     }
-    if root.errand.a_local_batch_is_pending() {
-        return Some(
-            adapters::window::with_the_desk(app, |desk, live| {
-                application::errand::finish_the_local_batch(desk, secret, live)
-            })
-            .map_err(Failure::from),
-        );
-    }
-    None
+    application::errand::finish_the_local_batch(desk, secret, live).map_err(Failure::from)
 }

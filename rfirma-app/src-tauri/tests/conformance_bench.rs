@@ -15,7 +15,11 @@ use base64::Engine as _;
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::identity::domain::store::Store;
 use rfirma_lib::signing::adapters::isolate::Isolate;
+use rfirma_lib::signing::adapters::tauri::signed_with_the_secret;
 use rfirma_lib::signing::application::session::sign_on_token;
+use rfirma_lib::signing::ports::{
+    ProtectedSecret, SecretPromptError, SecretPromptRequest, SecretPrompter,
+};
 use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
 use rfirma_lib::site::adapters::data_download::HttpDataSource;
 use rfirma_lib::site::adapters::desk::Neighbours;
@@ -799,7 +803,23 @@ fn the_test_module() -> PathBuf {
 fn a_running_rfirma(home: &std::path::Path) -> Roots {
     let mut roots = rfirma_lib::roots(Paths::under(home));
     roots.identity.stores = vec![Store::module(the_test_module())];
+    roots.signing.prompter = Arc::new(MistypesTheTokenSecretOnce);
     roots
+}
+
+/// El diálogo del PIN: la primera vez se equivoca y, al avisarle, teclea el del token de pruebas.
+struct MistypesTheTokenSecretOnce;
+
+impl SecretPrompter for MistypesTheTokenSecretOnce {
+    fn prompt_secret(
+        &self,
+        request: &SecretPromptRequest,
+    ) -> Result<ProtectedSecret, SecretPromptError> {
+        match request.incorrect_secret {
+            false => Ok(ProtectedSecret::from_str("0000")),
+            true => Ok(ProtectedSecret::from_str(THE_TOKEN_SECRET)),
+        }
+    }
 }
 
 /// La mesa del trámite montada sobre las raíces de un rFirma en marcha.
@@ -1034,7 +1054,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
 
         errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
         tokio::task::block_in_place(|| {
-            errand::finish_the_batch(&desk, THE_TOKEN_SECRET, live)
+            signed_with_the_secret(&desk, live, "")
                 .expect("el lote deberia cerrarse con el secreto del token")
         });
     })
@@ -1083,7 +1103,7 @@ fn the_local_batch_errand_of(
 
         errand::consent(&desk, &chosen.id, live).expect("el lote local deberia quedar consentido");
         tokio::task::block_in_place(|| {
-            errand::finish_the_local_batch(&desk, THE_TOKEN_SECRET, live)
+            signed_with_the_secret(&desk, live, "")
                 .expect("el lote local deberia cerrarse con el secreto del token")
         });
     })

@@ -291,6 +291,14 @@ impl ATokenThatSigns {
 }
 
 impl Signer for ATokenThatSigns {
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         *crate::lock(&self.secrets_asked) += 1;
         Ok(StoreSecret::NotNeeded)

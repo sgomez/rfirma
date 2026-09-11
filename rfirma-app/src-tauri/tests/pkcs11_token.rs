@@ -14,6 +14,7 @@ use rfirma_lib::identity::domain::certificate::{
     CertificateRef, CertificateStatus, TokenCertificate,
 };
 use rfirma_lib::identity::domain::error::{Situation, TokenError};
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::StoreClass;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
@@ -616,6 +617,26 @@ fn a_wrong_pin_is_a_situation_and_carries_its_raw_ckr_apart() {
     assert_eq!(error.situation(), Situation::IncorrectPin);
     assert_eq!(error.ckr(), Some("CKR_PIN_INCORRECT"));
     assert!(error.detail().contains("CKR_PIN_INCORRECT"));
+}
+
+#[test]
+fn the_token_accepts_its_pin_without_signing_anything() {
+    let secret = ProtectedSecret::from_str(PIN);
+
+    assert_eq!(
+        pkcs11::accepts_the_secret(&reference(ACTIVE), &secret),
+        Ok(())
+    );
+}
+
+#[test]
+fn a_wrong_pin_is_refused_by_the_token_as_an_incorrect_pin() {
+    let secret = ProtectedSecret::from_str("0000");
+
+    let error = pkcs11::accepts_the_secret(&reference(ACTIVE), &secret)
+        .expect_err("el token no acepta un PIN que no es el suyo");
+
+    assert_eq!(error.situation(), Situation::IncorrectPin);
 }
 
 #[test]
