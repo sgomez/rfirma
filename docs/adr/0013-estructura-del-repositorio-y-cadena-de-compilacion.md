@@ -61,9 +61,6 @@ realimentación que este repositorio decidió proteger en el
 | `tools` | comprueba herramientas y nombra la que falte | rápido |
 | `bootstrap` | `~/.m2` contra la etiqueta `v1.9.1` | rápido |
 | `autoscript` | el accesorio del banco de conformidad, a etiqueta y `sha256` fijados | preparación |
-| `lint` | `-Xlint:all` + `biome` + `cargo clippy` + `cargo fmt --check` | rápido |
-| `test` | `mvn test` + `vitest` + `cargo test` | rápido |
-| `build` | puente Java + `tsc -b && vite build` + `cargo build` | rápido |
 | `check` | `tools check-repo check-java check-ts check-rust` | rápido |
 | `native` | `librfirma_crypto.so` con GraalVM CE 25 | lento |
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
@@ -72,10 +69,10 @@ realimentación que este repositorio decidió proteger en el
 | `flatpak-sources` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
 
-> La casilla de `lint` decía `eslint`, escrito sin razonarlo y sin decir nada del formateador.
+> La casilla de linting decía `eslint`, escrito sin razonarlo y sin decir nada del formateador.
 > El [ADR-0014](0014-gradas-de-prueba-y-puerta-de-calidad.md) lo sustituye por **Biome**, y es
-> también quien decide **qué** se ejecuta dentro de `lint` y `test` y en qué carril cae cada
-> prueba. Añade además la receta voluntaria `rapido` (solo `lint`).
+> también quien decide **qué** se ejecuta dentro de cada carril y en qué grada cae cada
+> prueba.
 
 > **Enmienda: `check` es un carril por cadena, no `tools lint build test`.** La forma
 > original encadenaba las tres cadenas en una sola cola, y en el CI eso es una pared:
@@ -86,7 +83,7 @@ realimentación que este repositorio decidió proteger en el
 > `cargo build --release` se muda al carril lento —nadie ejecutaba ese binario en el
 > rápido y era un árbol de dependencias entero— y el `cargo test` suelto desaparece
 > porque `cargo llvm-cov`, que la puerta CRAP ya arrastra, **ejecuta la suite él
-> mismo**. `lint`, `build` y `test` siguen existiendo como atajos locales.
+> mismo**.
 >
 > `just check` bajó de ~45 s a ~31 s en el equipo de desarrollo, y el carril rápido
 > del CI de 4 min 18 s a la duración de su cadena más lenta.
@@ -94,8 +91,8 @@ realimentación que este repositorio decidió proteger en el
 **`check` es un contrato**: `docs/agents/code-host.md` promete que el CI ejecuta
 exactamente lo que `just check` ejecuta —hoy repartido en un job por carril— y que un
 pase local significa lo mismo. Crece por dentro, y puede repartirse; su nombre y su
-papel no cambian. `tsc -b` va **dentro** de `build`, no en una receta aparte: un
-`build` que compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
+papel no cambian. `tsc -b` va **dentro** de `build-ts`, no en una receta aparte: un
+`build-ts` que compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
 
 ### Hay dos recetas de preparación, y ninguna corre dentro de `check`
 
@@ -135,8 +132,8 @@ Ruta canónica única: **`rfirma-native-bridge/target/lib/rfirma/`**. Hoy hay do
 manifiesto flatpak—, o sea que **la receta no construye lo que se distribuye**. La receta
 `native` pasa a producir la imagen buena, en la ruta canónica, y el manifiesto apunta ahí.
 
-`dev` y `build` **comprueban** que la librería está y, si falta, **fallan nombrando
-`just native`**; no lo encadenan. La comprobación de arranque que exige el ADR-0004 nombra
+`dev`, `bundle` y `flatpak` **comprueban** que la librería está y, si falta, **fallan
+nombrando `just native`**; no lo encadenan. La comprobación de arranque que exige el ADR-0004 nombra
 **las dos** rutas que miró: la relativa al ejecutable y `RFIRMA_LIB_DIR`.
 
 Y la ruta de distribución **no es** el directorio de construcción: `native-image` sigue

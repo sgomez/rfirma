@@ -127,7 +127,7 @@ que lea el spec creerá que el corte se rompió por descuido.
 
 ## Herramental
 
-**Rust**: `cargo clippy -D warnings` y `cargo fmt --check` dentro de `lint`; `cargo test`;
+**Rust**: `cargo clippy -D warnings` y `cargo fmt --check` dentro de `lint-rust`; `cargo test`;
 `cargo llvm-cov` para la cobertura.
 
 **TypeScript: Biome**, no `eslint` + `prettier`. El ADR-0013 escribió `eslint` en una casilla de
@@ -290,7 +290,7 @@ reloj: escondería fallos reales de cadena.
 
 ## Consequences
 
-- La fila `lint` del ADR-0013 decía `eslint`; queda sustituida por Biome.
+- La casilla de linting del ADR-0013 decía `eslint`; queda sustituida por Biome.
 - Nada de esto se construye en este ticket: hoy no hay una línea de Rust ni de TypeScript que
   lintear. Llega con los sub-issues de #10, y `docs/agents/code-host.md` sigue describiendo lo
   que el CI comprueba **hoy** hasta entonces.

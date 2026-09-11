@@ -27,7 +27,7 @@ rojo.
   que vayas a tocarlos; `grep -n "it(\|describe(" <fichero>.test.tsx` dice qué
   cubren en una línea por caso.
 - **`i18n/locales/` NO ESTÁ EN EL REPOSITORIO.** Los catálogos los genera
-  `tools/po-import.mjs` desde `rfirma-app/po/` en cada `just build`. La
+  `tools/po-import.mjs` desde `rfirma-app/po/` en cada `just build-ts`. La
   fuente de verdad de una cadena es `po/messages.pot` y los cinco `po/*.po`;
   para una clave concreta, `grep -n '<clave>' po/es.po`. **Una cadena nueva se
   escribe en el `.pot`, se corre `just po`, y entonces se compila.** Editar un

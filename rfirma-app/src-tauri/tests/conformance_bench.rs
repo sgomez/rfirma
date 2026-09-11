@@ -1646,22 +1646,23 @@ fn verified_by_openssl(cms: &[u8], content: &Path) {
     );
 }
 
-/// Comprueba `path` con el oráculo de la grada C (`just validate-signature`, #526).
+/// Comprueba `path` con el oráculo de la grada C (`rfirma-native-bridge/testbench/validate.sh`, #526).
 fn validated_by_the_reference_tool_at(path: &Path) {
-    let output = Command::new("just")
-        .arg("validate-signature")
+    let script = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../rfirma-native-bridge/testbench/validate.sh");
+    let output = Command::new(&script)
         .arg(path)
         .output()
-        .expect("falta just para el banco de conformidad");
+        .unwrap_or_else(|error| panic!("no se ha podido ejecutar {}: {error}", script.display()));
     assert!(
         output.status.success(),
-        "just validate-signature ha fallado:\n{}{}",
+        "validate.sh ha fallado:\n{}{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 }
 
-/// Comprueba el CMS con el oráculo de la grada C (`just validate-signature`, #526).
+/// Comprueba el CMS con el oráculo de la grada C (`rfirma-native-bridge/testbench/validate.sh`, #526).
 fn validated_by_the_reference_tool(cms: &[u8]) {
     let cms_file = a_der_file(cms);
     validated_by_the_reference_tool_at(cms_file.path());
