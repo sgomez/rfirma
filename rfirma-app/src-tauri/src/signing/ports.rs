@@ -94,6 +94,13 @@ pub trait Signer {
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
 
+    /// Si el almacén del certificado acepta el secreto, sin firmar nada.
+    fn accepts_the_secret(
+        &self,
+        reference: &CertificateRef,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), TokenError>;
+
     /// Firma `data` con la clave privada que acompaña al certificado y el secreto protegido.
     fn sign_with_secret(
         &self,

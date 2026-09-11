@@ -803,19 +803,22 @@ fn the_test_module() -> PathBuf {
 fn a_running_rfirma(home: &std::path::Path) -> Roots {
     let mut roots = rfirma_lib::roots(Paths::under(home));
     roots.identity.stores = vec![Store::module(the_test_module())];
-    roots.signing.prompter = Arc::new(TypesTheTokenSecret);
+    roots.signing.prompter = Arc::new(MistypesTheTokenSecretOnce);
     roots
 }
 
-/// El diálogo del PIN, tecleando siempre el secreto del token de pruebas.
-struct TypesTheTokenSecret;
+/// El diálogo del PIN: la primera vez se equivoca y, al avisarle, teclea el del token de pruebas.
+struct MistypesTheTokenSecretOnce;
 
-impl SecretPrompter for TypesTheTokenSecret {
+impl SecretPrompter for MistypesTheTokenSecretOnce {
     fn prompt_secret(
         &self,
-        _request: &SecretPromptRequest,
+        request: &SecretPromptRequest,
     ) -> Result<ProtectedSecret, SecretPromptError> {
-        Ok(ProtectedSecret::from_str(THE_TOKEN_SECRET))
+        match request.incorrect_secret {
+            false => Ok(ProtectedSecret::from_str("0000")),
+            true => Ok(ProtectedSecret::from_str(THE_TOKEN_SECRET)),
+        }
     }
 }
 

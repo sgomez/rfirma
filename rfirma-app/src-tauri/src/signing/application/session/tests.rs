@@ -285,3 +285,96 @@ fn sign_on_token_with_prompter_requires_an_open_cycle() {
         .expect_err("no hay ciclo abierto");
     assert!(matches!(error, super::CycleFailure::NoOpenCycle));
 }
+
+/// Un token que pide el PIN en pantalla y solo acepta `1234`.
+struct ATokenThatAcceptsOnly1234;
+
+impl crate::signing::ports::Signer for ATokenThatAcceptsOnly1234 {
+    fn secret_of(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+    ) -> Result<
+        crate::identity::domain::secret::StoreSecret,
+        crate::identity::domain::error::TokenError,
+    > {
+        Ok(crate::identity::domain::secret::StoreSecret::TypedOnScreen)
+    }
+
+    fn offers(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
+    fn sign(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _pin: &str,
+        _algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, crate::identity::domain::error::TokenError> {
+        unreachable!("pedir el secreto del lote no firma nada")
+    }
+
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        if secret.as_bytes() == b"1234" {
+            return Ok(());
+        }
+        Err(crate::identity::domain::error::TokenError::new(
+            crate::identity::domain::error::Situation::IncorrectPin,
+            "PIN incorrecto",
+        ))
+    }
+}
+
+#[test]
+fn a_wrong_pin_for_a_batch_is_asked_again_before_the_batch_runs() {
+    use super::prompted_for_the_batch;
+    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
+    use crate::signing::domain::Language;
+
+    let prompter = MockSecretPrompter::with_secrets(&["0000", "1234"]);
+
+    let secret = prompted_for_the_batch(
+        &ATokenThatAcceptsOnly1234,
+        &a_certificate("FIRMA", b"der"),
+        &prompter,
+        Language::Spanish,
+    )
+    .expect("el segundo PIN es el bueno")
+    .expect("el certificado pide el PIN en pantalla");
+
+    assert_eq!(secret.expose_secret(), Ok("1234"));
+    let asked = prompter.recorded_requests();
+    assert_eq!(asked.len(), 2, "el PIN equivocado se vuelve a pedir");
+    assert!(!asked[0].incorrect_secret);
+    assert!(asked[1].incorrect_secret, "la segunda vez avisa del error");
+}
+
+#[test]
+fn a_batch_whose_pin_dialog_is_cancelled_is_not_asked_again() {
+    use super::{prompted_for_the_batch, CycleFailure};
+    use crate::signing::adapters::gtk_prompter::PreconfiguredSecretPrompter;
+    use crate::signing::application::cycle::CycleError;
+    use crate::signing::domain::Language;
+    use crate::signing::ports::SecretPromptError;
+
+    let failure = prompted_for_the_batch(
+        &ATokenThatAcceptsOnly1234,
+        &a_certificate("FIRMA", b"der"),
+        &PreconfiguredSecretPrompter::cancelling(),
+        Language::Spanish,
+    )
+    .expect_err("cancelar el diálogo no deja secreto");
+
+    assert!(matches!(
+        failure,
+        CycleFailure::Cycle(CycleError::Prompt(SecretPromptError::Cancelled))
+    ));
+}

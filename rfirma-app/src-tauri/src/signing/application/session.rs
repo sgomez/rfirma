@@ -289,9 +289,10 @@ pub fn prompted_for_the_batch(
         language,
         incorrect_secret: false,
     };
-    Ok(Some(
-        prompter.prompt_secret(&request).map_err(CycleError::from)?,
-    ))
+    let (secret, ()) = cycle::prompted_until_accepted(prompter, request, |secret| {
+        signer.accepts_the_secret(certificate.reference(), secret)
+    })?;
+    Ok(Some(secret))
 }
 
 /// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.
