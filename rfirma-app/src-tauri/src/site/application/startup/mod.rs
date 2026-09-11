@@ -5,7 +5,7 @@ pub mod repair;
 
 use std::path::PathBuf;
 
-use crate::site::domain::trust::Moment as TrustMoment;
+use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
 use crate::site::domain::protocol::Refusal;
@@ -127,17 +127,18 @@ pub fn attend_startup_with_threshold(
     live: &LiveErrand,
     threshold: Duration,
 ) -> Startup {
-    let (said, local_ca) = refresh_the_local_ca(trust);
-
     let Some(url) = site_launch else {
+        let (said, _local_ca) = refresh_the_local_ca(trust);
         return Startup {
             said,
             opening: Opening::TheMainWindow,
         };
     };
 
+    let local_ca = local_ca_reach_for_the_site(trust.store);
+
     Startup {
-        said,
+        said: Vec::new(),
         opening: Opening::TheSiteErrand(attend_site_launch_with_threshold(
             url, codecs, transport, window, live, local_ca, threshold,
         )),
@@ -246,6 +247,21 @@ impl SiteWindowContent<'_> {
                 Moment::RefusedWithoutChannel(refusal.clone())
             }
         }
+    }
+}
+
+/// Lee la CA local que sirve sin tocar ranuras ni almacenes: un trámite de sede no las refresca (ADR-0005).
+fn local_ca_reach_for_the_site(store: &dyn LocalCaSlots) -> LocalCaReach {
+    let days_left = store
+        .serving()
+        .ok()
+        .flatten()
+        .and_then(|ca| ca.days_left().ok());
+
+    if blocks_the_site(days_left) {
+        LocalCaReach::Nowhere
+    } else {
+        LocalCaReach::NotAnObstacle
     }
 }
 

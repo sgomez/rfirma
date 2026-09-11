@@ -30,9 +30,10 @@ pub(crate) struct InMemoryCaSlots {
 }
 
 impl InMemoryCaSlots {
-    /// Unas ranuras en las que no se puede escribir, como un disco de solo lectura.
-    pub(crate) fn unwritable() -> Self {
+    /// Unas ranuras de solo lectura con la CA dada ya sirviendo.
+    pub(crate) fn unwritable_serving(ca: LocalCa) -> Self {
         Self {
+            serving: Mutex::new(Some(ca)),
             unwritable: true,
             ..Self::default()
         }

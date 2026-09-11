@@ -24,6 +24,31 @@ fn a_local_ca_that_ran_out_is_expired_and_not_overlapping() {
 }
 
 #[test]
+fn a_missing_local_ca_blocks_the_site() {
+    assert!(blocks_the_site(None));
+}
+
+#[test]
+fn six_days_left_still_blocks_the_site() {
+    assert!(blocks_the_site(Some(6)));
+}
+
+#[test]
+fn seven_days_left_no_longer_blocks_the_site() {
+    assert!(!blocks_the_site(Some(SITE_MINIMUM_DAYS)));
+}
+
+#[test]
+fn eight_days_left_does_not_block_the_site() {
+    assert!(!blocks_the_site(Some(8)));
+}
+
+#[test]
+fn a_local_ca_with_years_left_does_not_block_the_site() {
+    assert!(!blocks_the_site(Some(120)));
+}
+
+#[test]
 fn nothing_is_ever_repaired_in_the_middle_of_an_errand() {
     for stage in [
         Stage::Absent,

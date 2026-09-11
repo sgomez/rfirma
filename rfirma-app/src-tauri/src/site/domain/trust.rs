@@ -5,6 +5,17 @@ pub use super::trust_error::{Situation, TrustError};
 /// Días de solape previos a la caducidad para instalar la CA siguiente (ADR-0005).
 pub const OVERLAP_DAYS: i64 = 120;
 
+/// Días mínimos de validez de la CA local para atender un trámite de sede (ADR-0005).
+pub const SITE_MINIMUM_DAYS: i64 = 7;
+
+/// Indica si la CA local bloquea el trámite de sede: falta, o le quedan menos de siete días.
+pub fn blocks_the_site(days_left: Option<i64>) -> bool {
+    match days_left {
+        None => true,
+        Some(days) => days < SITE_MINIMUM_DAYS,
+    }
+}
+
 /// Estado del ciclo de vida de la CA local guardada (ADR-0005).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {
