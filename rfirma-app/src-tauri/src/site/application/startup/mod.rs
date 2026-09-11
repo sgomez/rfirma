@@ -230,20 +230,25 @@ pub fn attend_site_launch_with_threshold(
         Attendance::RefusingOverTheChannel {
             channel, refusal, ..
         } => {
-            if live.current().is_none() {
+            let no_errand_in_flight = live.current().is_none();
+            if no_errand_in_flight {
                 open(
                     live,
                     &*window,
                     SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
                 );
-                match channel.arrival_mode() {
-                    ArrivalMode::Awaited => {
+            }
+            match channel.arrival_mode() {
+                ArrivalMode::Awaited => {
+                    if no_errand_in_flight {
                         live.arm_channel_refusal_wait(Arc::clone(&window), threshold);
                     }
-                    ArrivalMode::Immediate => {
-                        if let Some(delivery) = channel.take_delivery() {
-                            delivery.now();
-                        }
+                }
+                ArrivalMode::Immediate => {
+                    if let Some(delivery) = channel.take_delivery() {
+                        delivery.now();
+                    }
+                    if no_errand_in_flight {
                         window.errand_ended(Acknowledgement::immediate());
                     }
                 }
