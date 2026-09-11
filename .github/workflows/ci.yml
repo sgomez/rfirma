@@ -73,8 +73,8 @@ env:
   CRAP_VERSION: '0.4.3'
   # Version FIJADA de ruff, misma razon que CRAP_VERSION: sin ruff.toml ni
   # pyproject.toml en el repositorio, el conjunto de reglas por defecto es el
-  # que traiga la version instalada, y una `ruff` nueva puede poner
-  # `lint-python` en rojo sin tocar una linea de Python. Tiene que coincidir
+  # que traiga la version instalada, y una `ruff` nueva puede poner el
+  # `ruff check` de `check-repo` en rojo sin tocar una linea de Python. Tiene que coincidir
   # con `ruff_version` del justfile.
   RUFF_VERSION: '0.16.6'
   CARGO_TERM_COLOR: always
@@ -153,7 +153,7 @@ jobs:
 
       # gettext trae msgfmt y msgcmp, que son `check-po` (ID-128).
       #
-      # Los seis de detras son los de `check-publish`: `build-tree.test.sh`
+      # Los seis de detras son los de `check-repo`: `build-tree.test.sh`
       # construye los tres repositorios de verdad —importa bundles en un ostree,
       # indexa un pool de apt y genera repodata— y sin ellos esa pata avisa y se
       # salta, que es lo que pasa en un equipo de desarrollo pero no puede pasar
@@ -170,9 +170,9 @@ jobs:
       # ruff es la puerta del unico Python del repositorio (ID-164): la
       # extension de Nautilus corre dentro del proceso del gestor de ficheros y
       # `ruff check` es lo unico que la vigila (TD-45). Se instala aqui y lo
-      # ejecuta `just lint-python`, dentro de `check-repo`, para que el CI siga
-      # ejecutando recetas del justfile y nada mas. No esta en apt; pipx viene
-      # con el runner y deja el binario en el PATH.
+      # ejecuta `check-repo`, para que el CI siga ejecutando recetas del
+      # justfile y nada mas. No esta en apt; pipx viene con el runner y deja
+      # el binario en el PATH.
       - name: ruff
         run: pipx install "ruff==${RUFF_VERSION}"
 

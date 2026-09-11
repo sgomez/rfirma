@@ -19,7 +19,7 @@ command -v flatpak-node-generator >/dev/null || {
 python3 flatpak-cargo-generator.py \
     ../../rfirma-app/src-tauri/Cargo.lock -o cargo-sources.json
 flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
-# El sello que lee `check-flatpak-sources`: el sha256 de cada fichero de
+# El sello que lee `packaging/flatpak/check-sources.sh`: el sha256 de cada fichero de
 # bloqueo TAL Y COMO estaba al generar los JSON de arriba. Se escribe en el
 # formato de sha256sum para que comprobarlo sea `sha256sum -c` y no un
 # analizador nuestro. Las rutas van relativas a la raiz del repositorio, que

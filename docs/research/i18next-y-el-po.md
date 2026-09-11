@@ -605,7 +605,7 @@ hecho que lo está.
 bytes**. Lo genera `flatpak-node-generator` desde `pnpm-lock.yaml`
 (`justfile:947`), **incluye las dependencias de desarrollo** (ahí están Biome y
 sus nueve binarios por plataforma, y TypeScript), y lo vigila
-`check-flatpak-sources`, que es la **primera** dependencia de `just check-repo` y por
+`packaging/flatpak/check-sources.sh`, dentro de `just check-repo` y por
 tanto de `just check` y del CI.
 
 Lo que costaría cada opción:
@@ -620,7 +620,7 @@ Pero el coste de verdad no son las entradas: **es que el fichero no se puede
 regenerar en este entorno.** `command -v flatpak-node-generator` falla, y
 `just flatpak-sources` aborta a propósito cuando falta. Cualquier dependencia
 nueva cambia `pnpm-lock.yaml`, y con él el sello de `sources.lock`, y
-`check-flatpak-sources` se pone rojo hasta que alguien con el generador instalado
+`just check-repo` se pone rojo hasta que alguien con el generador instalado
 lo regenere. Es exactamente la piedra que `CLAUDE.md` documenta para
 `cargo-sources.json`, con el agravante de que la de Cargo se puede reproducir a
 mano y la de npm no.

@@ -67,7 +67,16 @@ check: tools check-repo check-java check-ts check-rust
 
 # Lo que no pertenece a ninguna cadena: comprobaciones rapidas que ninguna compilacion ve.
 [group('ci')]
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python test-scripts
+check-repo: check-version
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
+    {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
+    {{ justfile_directory() }}/.github/check-workflows.sh
+    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
+    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
+    ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
+    {{ justfile_directory() }}/scripts/tests/outline_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]
@@ -92,12 +101,12 @@ tools:
         {{ justfile_directory() }}/scripts/tools.sh
 
 # Instala las dependencias de AutoFirma en ~/.m2 si no estan (ADR-0002).
-[group('dev')]
+[private]
 bootstrap:
     {{ justfile_directory() }}/scripts/bootstrap.sh
 
 # Instala las dependencias de node de rfirma-app.
-[group('ci')]
+[private]
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
 
@@ -116,13 +125,13 @@ po *args: deps
     pnpm exec i18next-cli types -q
 
 # Genera src/i18n/locales/*.ts desde los .po. Node puro: sin gettext.
-[group('dev')]
+[private]
 po-import: deps
     cd {{ app }} && node tools/po-import.mjs
     cd {{ app }} && pnpm exec i18next-cli types -q
 
 # Comprueba los cinco .po contra la plantilla.
-[group('dev')]
+[private]
 check-po:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -136,7 +145,7 @@ check-po:
     echo "los .po cuadran con messages.pot"
 
 # i18next-cli sobre el codigo: una clave sin catalogo o un catalogo sin uso.
-[group('dev')]
+[private]
 lint-i18n: po-import
     cd {{ app }} && pnpm exec i18next-cli extract --ci
     cd {{ app }} && pnpm exec i18next-cli status --unused
@@ -190,7 +199,7 @@ contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
 # Comprueba que `just contract` sigue siendo el de la instantanea.
-[group('dev')]
+[private]
 check-contract: build-ts
     #!/usr/bin/env bash
     set -eu
@@ -202,7 +211,7 @@ check-contract: build-ts
     echo "check-contract: el contrato es el de la instantanea"
 
 # Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
-[group('dev')]
+[private]
 lint-java: bootstrap
     cd {{ bridge }} && mvn -B compile
 
@@ -216,17 +225,17 @@ lint-ts: po-import
 fmt: fmt-rust fmt-ts fmt-python
 
 # rustfmt sobre rfirma-app/src-tauri.
-[group('dev')]
+[private]
 fmt-rust:
     cd {{ tauri }} && cargo fmt --all
 
 # Formateador de biome sobre rfirma-app.
-[group('dev')]
+[private]
 fmt-ts:
     cd {{ app }} && pnpm exec biome format --write .
 
 # `ruff format` sobre packaging y scripts.
-[group('dev')]
+[private]
 fmt-python:
     ruff format {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
@@ -266,17 +275,17 @@ check-native:
 # ---------------------------------------------------------------------------
 
 # Pruebas del puente Java (`verify`: compila, prueba y empaqueta en una JVM).
-[group('dev')]
+[private]
 test-java: bootstrap
     cd {{ bridge }} && mvn -B verify
 
 # vitest.
-[group('dev')]
+[private]
 test-ts: po-import
     cd {{ app }} && pnpm exec vitest run --reporter=dot
 
 # cargo test, mas la compilacion de las pruebas de grada C.
-[group('dev')]
+[private]
 test-rust: token build-ts
     cd {{ tauri }} && cargo test --all-features
     cd {{ tauri }} && cargo test --all-features --no-run
@@ -292,13 +301,13 @@ test-native: token check-native build-ts
 # ---------------------------------------------------------------------------
 
 # Genera el lcov de toda la suite con cargo llvm-cov.
-[group('dev')]
+[private]
 coverage: token build-ts
     mkdir -p "{{ coverage_out }}/coverage"
     cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info"
 
 # La puerta del carril rapido, con el modulo FFI oculto.
-[group('dev')]
+[private]
 crap: coverage
     cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
@@ -360,16 +369,18 @@ flatpak: check-native build-ts
     echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
-# Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004).
+# Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004); quick="true" salta el candado de version.
 [group('ci')]
-bundle: check-native build-ts
+bundle quick="false": check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}"
-    version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
-    if ! packaging/native-packages-allowed.sh "$version"; then
-        echo "bundle: no hay nada que construir para $version" >&2
-        exit 1
+    if [ "{{ quick }}" != "true" ]; then
+        version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
+        if ! packaging/native-packages-allowed.sh "$version"; then
+            echo "bundle: no hay nada que construir para $version" >&2
+            exit 1
+        fi
     fi
     (cd "{{ app }}" && pnpm exec tauri build)
     salida="rfirma-app/src-tauri/target/release/bundle"
@@ -388,32 +399,6 @@ bundle: check-native build-ts
 flatpak-sources:
     {{ justfile_directory() }}/scripts/flatpak-sources.sh
 
-# Comprueba que las fuentes vendorizadas del flatpak estan al dia.
-[group('dev')]
-check-flatpak-sources:
-    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
-
-# Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
-[group('dev')]
-check-ds-bundle:
-    {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
-
-# Comprueba que las acciones de los workflows estan fijadas por SHA.
-[group('dev')]
-check-actions:
-    {{ justfile_directory() }}/.github/check-workflows.sh
-
-# Las pruebas de scripts/, hoy solo el esqueleto de outline.sh.
-[private]
-test-scripts:
-    {{ justfile_directory() }}/scripts/tests/outline_test.sh
-
-# Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
-[group('ci')]
-check-publish:
-    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
-    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
-
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
 [private]
 check-landing:
@@ -428,11 +413,6 @@ check-landing:
 [group('ci')]
 check-version:
     {{ justfile_directory() }}/packaging/check-version.py
-
-# Lintea el Python del repositorio.
-[group('ci')]
-lint-python:
-    ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
 # Resella el bundle del sistema de diseno.
 [group('release')]
@@ -452,29 +432,10 @@ seal-ds-bundle:
 dev *args: check-native po-import
     cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
 
-# Registra el binario de desarrollo como manejador de afirma://; deshacer con `just dev-handler-off`.
+# Registra (`on`) o quita (`off`) el manejador de desarrollo de afirma://.
 [group('dev')]
-dev-handler:
-    {{ justfile_directory() }}/scripts/dev-handler.sh on
-
-# Quita el manejador de desarrollo de afirma://.
-[group('dev')]
-dev-handler-off:
-    {{ justfile_directory() }}/scripts/dev-handler.sh off
-
-# El .deb y el .rpm sin reconstruir la libreria nativa.
-[group('dev')]
-bundle-quick: check-native build-ts
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd "{{ justfile_directory() }}"
-    (cd "{{ app }}" && pnpm exec tauri build)
-    salida="rfirma-app/src-tauri/target/release/bundle"
-    for formato in deb rpm; do
-        paquete="$(find "$salida/$formato" -maxdepth 1 -type f -name "*.$formato" | sort | tail -1)"
-        packaging/verifica-contenido.sh "$paquete"
-        echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
-    done
+dev-handler mode="on":
+    {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]

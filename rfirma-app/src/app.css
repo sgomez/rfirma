@@ -5,7 +5,7 @@
  *
  * POR QUÉ AQUÍ Y NO EN `bundle/`: el bundle es normativo y está sellado
  * (ID-47, ID-56, #85). Solo se cambia en el proyecto de diseño y se reexporta
- * entero; editarlo aquí sale en rojo en `just check-ds-bundle`. El ID-57 dice además que
+ * entero; editarlo aquí sale en rojo en `just check-repo`. El ID-57 dice además que
  * la maquetación propia va en el CSS de la aplicación, y esto es maquetación
  * propia: son las tres reglas que cada artboard lleva en su `helmet` —el
  * preámbulo que la herramienta de diseño le pone a cada lienzo— y que por eso

@@ -17,7 +17,7 @@ enlace simbólico.
 | `download-series.sh` | Baja y verifica **toda** la serie menor vigente desde las Releases |
 | `build-tree.sh` | Reconstruye los tres repositorios enteros, desde cero, en un directorio nuevo |
 | `publish-tree.sh` | Sube el árbol al anfitrión e intercambia el enlace `actual` |
-| `*.test.sh` | Las pruebas de los dos anteriores; `just check-publish` las corre |
+| `*.test.sh` | Las pruebas de los dos anteriores; `just check-repo` las corre |
 
 ## Cómo entra en servicio una versión
 
@@ -71,16 +71,17 @@ Tres cosas que no son de estilo:
   la clave vaya en `Signed-By` sin `apt-key`, retirado.
 - **Los `.rpm` llegan aquí ya firmados.** Firmar un `.rpm` lo modifica, así que se firma en
   `release.yml` —antes del `SHA256SUMS` y antes de la atestación—; aquí sólo se rechaza el
-  que venga sin firma. El orden de esos pasos lo vigila `just check-actions`.
+  que venga sin firma. El orden de esos pasos lo vigila `.github/check-workflows.sh`,
+  dentro de `just check-repo`.
 
 **Las firmas del árbol no las prueba nadie automáticamente**, y no puede ser de otra manera:
 firmar necesita una clave privada, las de rFirma las crea una persona con
 `packaging/setup-signing-key.sh` y ninguna prueba puede fabricarse una que valga. Por eso
 `build-tree.sh` tiene un modo `SIN-FIRMA-SOLO-PRUEBAS` que es el que usa su test, y por eso
-`just check-actions` prohíbe que esa cadena aparezca en un workflow. El camino con clave se
-ensaya con una etiqueta `v*-rc.N`.
+`.github/check-workflows.sh` prohíbe que esa cadena aparezca en un workflow. El camino con
+clave se ensaya con una etiqueta `v*-rc.N`.
 
-## Las pruebas: `just check-publish`
+## Las pruebas: `just check-repo`
 
 `publish-tree.sh` es la única parte de la tubería que **no** puede ensayarse con una etiqueta
 `v*-rc.N` —el ensayo se detiene justo antes de tocar el anfitrión—, así que se prueba aquí.

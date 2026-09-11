@@ -124,10 +124,10 @@ just flatpak-sources   # cuando cambie Cargo.lock o pnpm-lock.yaml
 ```
 
 Esa receta regenera los dos JSON **y** reescribe `sources.lock` con el `sha256`
-de cada fichero de bloqueo. El CI no los regenera: ejecuta
-`just check-flatpak-sources` (dentro de `just check-repo`, y por tanto de `just
-check`), que compara esos `sha256` y falla nombrando el fichero que se ha
-movido. Un fichero generado dentro del CI es un fichero que nadie ha mirado
+de cada fichero de bloqueo. El CI no los regenera: `just check-repo` ejecuta
+`packaging/flatpak/check-sources.sh`, que compara esos `sha256` y falla
+nombrando el fichero que se ha movido. Un fichero generado dentro del CI es un
+fichero que nadie ha mirado
 ([ID-07](https://github.com/sgomez/rfirma/issues/46)).
 
 ### Cuando `just flatpak-sources` no corre

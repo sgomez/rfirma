@@ -178,8 +178,8 @@ modules:
   #    SE CONSTRUYE SIN RED (ID-07): NO hay --share=network en ningun modulo.
   #    Las dependencias de cargo entran vendorizadas por cargo-sources.json, que
   #    genera `just flatpak-sources` a partir del Cargo.lock y esta VERSIONADO
-  #    aqui al lado. `just check-flatpak-sources` —dentro de `just check-repo`, y por
-  #    tanto del CI— falla si el Cargo.lock cambia y nadie lo regenera.
+  #    aqui al lado. `just check-repo` —y por tanto el CI— falla si el
+  #    Cargo.lock cambia y nadie lo regenera.
   #
   #    cargo-sources.json deja el vendor en cargo/vendor y su configuracion en
   #    cargo/config, ambos RELATIVOS al directorio de construccion del modulo

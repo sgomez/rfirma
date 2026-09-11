@@ -21,7 +21,7 @@ on() {
         echo "[Desktop Entry]"
         echo "Type=Application"
         echo "Name=rFirma (desarrollo)"
-        echo "Comment=NO INSTALADO: apunta al arbol de desarrollo. just dev-handler-off lo quita."
+        echo "Comment=NO INSTALADO: apunta al arbol de desarrollo. just dev-handler off lo quita."
         echo "Exec=env RFIRMA_LIB_DIR=$(dirname "$native_lib") $binario %u"
         echo "Terminal=false"
         echo "NoDisplay=true"
