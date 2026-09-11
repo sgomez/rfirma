@@ -4,6 +4,7 @@ use crate::site::application::tests::InMemoryCaSlots;
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown, Situation,
 };
+use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::trust_error::TrustError;
 use std::path::Path;
 use std::sync::Mutex;
@@ -156,6 +157,9 @@ fn starting_with(world: &Arc<World>, store: &InMemoryCaSlots, invocation: &Invoc
 fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
     let world = Arc::new(World::default());
     let store = a_store();
+    store
+        .write_serving(&LocalCa::generate().expect("una CA local se genera sin depender de nada"))
+        .expect("la ranura de pruebas admite escritura");
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
@@ -170,12 +174,8 @@ fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
     );
     assert_eq!(
         world.steps(),
-        [
-            "confianza".to_owned(),
-            "canal".to_owned(),
-            format!("ventana:creada:{}", PORTS[0])
-        ],
-        "primero la CA local, luego el canal y sólo entonces la ventana de sede"
+        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])],
+        "un lanzamiento de sede abre el canal y la ventana, sin tocar la CA local"
     );
 }
 
@@ -228,34 +228,85 @@ fn a_refused_launch_opens_no_site_window() {
     );
     assert_eq!(
         world.steps(),
-        ["confianza", "canal"],
-        "un rechazo no abre ventana de sede"
+        ["canal"],
+        "un rechazo no abre ventana de sede ni toca la CA local"
     );
 }
 
 #[test]
-fn unwritable_local_ca_material_is_said_but_does_not_stop_the_errand() {
+fn a_site_launch_never_writes_to_the_local_ca_slots_or_trust_stores() {
     let world = Arc::new(World::default());
-    let store = InMemoryCaSlots::unwritable();
+    let store = InMemoryCaSlots::unwritable_serving(
+        LocalCa::generate().expect("una CA local se genera sin depender de ningún almacén"),
+    );
     let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
 
     let startup = starting_with(&world, &store, &invocation);
 
     assert!(
-        startup
-            .said
-            .iter()
-            .any(|line| line.contains("no se puede refrescar la CA local")),
-        "lo que no se puede escribir se dice: {:?}",
-        startup.said
+        matches!(
+            startup.opening,
+            Opening::TheSiteErrand(Attendance::Serving { .. })
+        ),
+        "una CA sana atiende el trámite aunque las ranuras no admitan escritura: {:?}",
+        startup.opening
     );
+    assert!(
+        !world.steps().contains(&"confianza".to_owned()),
+        "el lanzamiento de sede solo lee la CA local, nunca la instala: {:?}",
+        world.steps()
+    );
+}
+
+#[test]
+fn a_site_launch_with_six_days_left_shows_the_local_ca_dead_end() {
+    let world = Arc::new(World::default());
+    let store = a_store();
+    store
+        .write_serving(&LocalCa::valid_for_days_for_test(6).expect("la CA de prueba se genera"))
+        .expect("la ranura de pruebas admite escritura");
+    let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
+
+    let startup = starting_with(&world, &store, &invocation);
+
     assert!(
         matches!(
             startup.opening,
             Opening::TheSiteErrand(Attendance::Serving { .. })
         ),
-        "y el trámite se atiende igual: {:?}",
+        "el canal se abre igual: {:?}",
         startup.opening
+    );
+    assert_eq!(
+        world.steps(),
+        ["canal", "ventana:sin-ca", "ventana:enseñada"],
+        "a seis días de caducar, el callejón se enseña igual que sin CA"
+    );
+}
+
+#[test]
+fn a_site_launch_with_eight_days_left_attends_the_errand() {
+    let world = Arc::new(World::default());
+    let store = a_store();
+    store
+        .write_serving(&LocalCa::valid_for_days_for_test(8).expect("la CA de prueba se genera"))
+        .expect("la ranura de pruebas admite escritura");
+    let invocation = invoked_with(&[&a_launch(&format!("v=4&idsession={CREDENTIAL}"))]);
+
+    let startup = starting_with(&world, &store, &invocation);
+
+    assert!(
+        matches!(
+            startup.opening,
+            Opening::TheSiteErrand(Attendance::Serving { .. })
+        ),
+        "{:?}",
+        startup.opening
+    );
+    assert_eq!(
+        world.steps(),
+        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])],
+        "a ocho días de caducar, el trámite se atiende sin callejón"
     );
 }
 
@@ -338,12 +389,7 @@ fn every_port_taken_shows_the_dead_end_in_the_site_window() {
     );
     assert_eq!(
         world.steps(),
-        [
-            "confianza",
-            "canal",
-            "ventana:sin-puertos",
-            "ventana:enseñada"
-        ],
+        ["canal", "ventana:sin-puertos", "ventana:enseñada"],
         "el desenlace no se pierde: se enseña en la ventana"
     );
 }
@@ -366,8 +412,8 @@ fn a_launch_without_ports_shows_its_refusal_in_the_window() {
     );
     assert_eq!(
         world.steps(),
-        ["confianza", "ventana:rechazo:SAF_03", "ventana:enseñada"],
-        "sin puertos no se intenta abrir ningun socket"
+        ["ventana:rechazo:SAF_03", "ventana:enseñada"],
+        "sin puertos no se intenta abrir ningun socket ni tocar la CA local"
     );
 }
 
@@ -405,8 +451,8 @@ fn a_local_ca_that_reached_no_store_is_the_dead_end_the_window_shows() {
         "lo que se enseña es el callejon, no la espera"
     );
     assert!(
-        startup.said.iter().any(|line| line.contains("canal local")),
-        "y se dice por stderr: {:?}",
+        startup.said.is_empty(),
+        "un lanzamiento de sede solo lee la CA local, sin narrar nada: {:?}",
         startup.said
     );
 }
