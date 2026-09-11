@@ -114,6 +114,56 @@ fn what_the_application_accumulated_comes_back_too() {
 }
 
 #[test]
+fn two_processes_that_touch_different_fields_do_not_erase_each_other() {
+    use crate::documents::ports::DocumentsMemory;
+    use crate::identity::ports::CertificateMemory;
+
+    let certificate = CertificateRef::new(
+        "/usr/lib/softhsm/libsofthsm2.so",
+        "rfirma-test",
+        "Certificado de pruebas",
+        vec![0x01],
+    );
+
+    for reverse_order in [false, true] {
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let paths = Paths::under(directory.path());
+        let desktop = Memory::at(&paths);
+        let site = Memory::at(&paths);
+        let folder = directory.path().join("Firmados");
+
+        let remember_folder = || {
+            desktop
+                .remember_last_open_folder(&folder)
+                .expect("deberia guardarse la carpeta")
+        };
+        let remember_certificate = || {
+            site.remember_the_certificate(&certificate)
+                .expect("deberia guardarse el certificado")
+        };
+        if reverse_order {
+            remember_certificate();
+            remember_folder();
+        } else {
+            remember_folder();
+            remember_certificate();
+        }
+
+        let stored = desktop.state().expect("deberia leerse").into_value();
+        assert_eq!(
+            stored.last_open_folder,
+            Some(folder),
+            "orden invertido: {reverse_order}"
+        );
+        assert_eq!(
+            stored.certificate,
+            Some(certificate.clone()),
+            "orden invertido: {reverse_order}"
+        );
+    }
+}
+
+#[test]
 fn turning_remember_activity_off_erases_what_was_already_remembered() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let (memory, paths) = a_memory(directory.path());
