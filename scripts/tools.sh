@@ -47,7 +47,7 @@ if [ -n "$softhsm_apt" ]; then
     echo
     echo "Instalalos con:"
     echo "  sudo apt install -y$softhsm_apt"
-    echo "y monta el token con: just token"
+    echo "y monta el token con: just certs install"
     echo
 fi
 # ruff es la puerta del unico Python del repositorio y va dentro de

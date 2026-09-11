@@ -216,7 +216,7 @@ mod full_cycle {
         assert!(
             module.is_file(),
             "falta el modulo PKCS#11 en {}. La grada C necesita SoftHSM:\n  \
-             sudo apt install -y softhsm2 opensc\n  just token",
+             sudo apt install -y softhsm2 opensc\n  just certs install",
             module.display()
         );
         module
@@ -231,7 +231,9 @@ mod full_cycle {
             .expect("no se ha podido listar el token")
             .into_iter()
             .find(|certificate| certificate.reference().label() == label)
-            .unwrap_or_else(|| panic!("el token {TOKEN} no tiene {label}. Montalo con: just token"))
+            .unwrap_or_else(|| {
+                panic!("el token {TOKEN} no tiene {label}. Montalo con: just certs install")
+            })
     }
 
     fn reference() -> CertificateRef {

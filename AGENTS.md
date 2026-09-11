@@ -73,7 +73,7 @@ Tres avisos que ahorran una ronda:
   para responder a lo que `cargo test <filtro>` responde en segundos.
 * **Un `cargo test` suelto necesita `rfirma-app/dist` y el token**, que es lo
   que le añaden las recetas: desde un árbol limpio el arranque sigue siendo
-  `pnpm install` → `just po-import` → `just build-ts` → `just token`.
+  `pnpm install` → `just po-import` → `just build-ts` → `just certs install`.
 * **La salida de una suite verde es contexto tirado.** Filtra por nombre y usa
   el reportero más callado de cada cadena; en rojo, vuelve a correr solo el
   fichero o el nombre que falló, nunca la suite.

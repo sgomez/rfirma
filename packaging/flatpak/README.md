@@ -58,7 +58,7 @@ construidos, así que van primero:
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
 just native
 just build-ts
-just token       # el paso 4 firma con el token de la grada B
+just certs install       # el paso 4 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
@@ -79,7 +79,7 @@ distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
 verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
 contra la imagen de **seis** ficheros, y la rúbrica de imagen es justo el caso
 cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
-grada B (`just token`) y `poppler-utils`.
+grada B (`just certs install`) y `poppler-utils`.
 
 Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
 dentro del sandbox, por tres razones medidas: dentro **no hay token** (el
