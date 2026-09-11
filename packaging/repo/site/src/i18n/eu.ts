@@ -30,7 +30,7 @@ export const eu: Dictionary = {
   "lang.gl": "Galego",
   "lang.en": "English",
 
-  "hero.kicker": "AutoFirmaren alternatiba independentea",
+  "hero.kicker": "AutoFirmaren alternatiba",
   "hero.title.line1": "Jatorrizko sinadura elektronikoa.",
   "hero.title.line2": "Javarik gabe, itxaronaldirik gabe.",
   "hero.body":
@@ -55,7 +55,7 @@ export const eu: Dictionary = {
 
   "formats.aria": "Formatu eta biltegi bateragarriak",
 
-  "how.kicker": "Bost pantaila erreal",
+  "how.kicker": "Urratsez urrats",
   "how.title": "Horrela sinatzen da dokumentu bat",
   "how.tablist.aria": "Sinaduraren urratsak",
   "how.step1.title": "Dokumentua kargatuta",
@@ -66,7 +66,7 @@ export const eu: Dictionary = {
     "Zerrenda sistemaren biltegiekin, nabigatzailearen profilekin eta PKCS#11 moduluekin osatzen da. Iraungitakoak eta errebokatutakoak erakusten dira, baina ezin dira erabili.",
   "how.step3.title": "Sartu PINa",
   "how.step3.body":
-    "PINa ziurtagiri-biltegiak eskatzen du, ez rFirmak. Gakoa haren barruan geratzen da eragiketa osoan zehar.",
+    "PINa elkarrizketa-koadro natibo batean eskatzen da, ez web-leiho batean, eta sinadura amaitu bezain laster memoriatik ezabatzen da.",
   "how.step4.title": "Sinatzen",
   "how.step4.body":
     "PDFaren aurresinadura, sinadura eta muntaia. Fase bakoitza ikusgai geratzen da osatzen den bitartean.",
@@ -130,9 +130,9 @@ export const eu: Dictionary = {
   "mock.signing.assemble.note": "(postsinadura)",
 
   "pillars.kicker": "Zergatik rFirma",
-  "pillars.title": "Lau erabaki funtsezko",
+  "pillars.title": "Lau diseinu-erabaki",
   "pillars.body":
-    "Ez da AutoFirmaren gaineko pintura-geruza bat: beste arkitektura bat da, motor kriptografiko berarekin.",
+    "AutoFirmaren Swing interfazea eta tokiko zerbitzariak ordezten ditu; motor kriptografikoa berdina da, clienteafirmarena.",
   "pillars.native.title": "Errendimendu nagusia",
   "pillars.native.body":
     "Mahaigainerako aplikazioa Tauri v2, Rust eta React erabiliz. JVMrik gabe eta entzuten dagoen tokiko zerbitzaririk gabe.",
@@ -147,9 +147,7 @@ export const eu: Dictionary = {
     "Kokatu eta neurtu errubrika orrialdearen gainean, aurrebista fidagarriarekin. Koordenatu itsurik gabe.",
 
   "comparison.kicker": "Konparaketa",
-  "comparison.title": "AutoFirma eta rFirma, gertakariz gertakari",
-  "comparison.body":
-    "Proiektu bakoitzaren kodean, interfazean eta banaketan egiaztatu daitezkeen desberdintasunak soilik. Inork neurtu ez duen zenbakirik gabe.",
+  "comparison.title": "AutoFirma eta rFirma, aurrez aurre",
   "comparison.head.aspect": "Alderdia",
   "comparison.head.autofirma": "AutoFirma (ofiziala)",
   "comparison.head.rfirma": "rFirma",
@@ -165,15 +163,18 @@ export const eu: Dictionary = {
     "<code>char[]</code>-aren garbiketa partziala <code>Arrays.fill</code>-ekin, RAMean finkatu gabe",
   "comparison.pin.rfirma":
     "<code>mlock</code>-ekin finkatutako búferra, <code>MADV_DONTDUMP</code>-ekin iraulketetatik kanpo eta modu seguruan ezabatua",
+  "comparison.dnie.label": "DNIe-arekin sinatzea",
+  "comparison.dnie.autofirma": "Bai, jMulticard bidez",
+  "comparison.dnie.rfirma": "Garapenean",
   "comparison.store.label": "Fitxategiko ziurtagiriak (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Fitxategiaren bidea sei aukerako biltegi-elkarrizketa batean gordetzen da",
   "comparison.store.rfirma":
     "Norberaren biltegia: «Gehitu…» aukerak ziurtagiria kopiatzen du, eta fitxategitik ez da ezer gordetzen, bidea ere ez",
   "comparison.stores.label": "Ziurtagirien bilaketa",
-  "comparison.stores.autofirma": "Biltegi bat aukeratu behar da, eta hori bakarrik erakusten du",
+  "comparison.stores.autofirma": "Aukeratutako biltegian bakarrik bilatzen du",
   "comparison.stores.rfirma":
-    "Sistema, nabigatzailearen profilak, PKCS#11 moduluak eta norberaren biltegia arakatzen ditu, eta zerrenda bakarrean biltzen",
+    "Ziurtagiri bat egon daitekeen leku guztietan bilatzen du, eta zerrenda bakarrean biltzen ditu",
   "comparison.stamp.label": "Sinadura ikusgaiaren kokapena",
   "comparison.stamp.autofirma": "Koordenatuak edo laukia, testuingururik gabe",
   "comparison.stamp.rfirma": "Orrialdearen gainean arrastatuta, aurrebista fidagarriarekin",
@@ -185,23 +186,25 @@ export const eu: Dictionary = {
   "comparison.ca.autofirma": "Instalatzaileak CA sisteman erregistratzen du, pribilegioekin",
   "comparison.ca.rfirma": "Aplikazioak bere CA pertsonaren NSS biltegietan erregistratzen du, root gabe",
   "comparison.lang.label": "Hizkuntzak",
-  "comparison.lang.autofirma": "Gaztelania eta koofizialak, Swing elkarrizketen kateekin",
+  "comparison.lang.autofirma": "Gaztelania soilik, Swing elkarrizketen kateekin",
   "comparison.lang.rfirma":
     "Gaztelania, katalana, euskara, galiziera eta ingelesa, norberaren katalogoarekin eta Hobespenetatik aldatuz",
-  "comparison.privacy.label": "Pribatutasuna",
+  "comparison.privacy.label": "Dokumentu-kudeatzailea",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Azkenak eta azken ziurtagiria itzali eta hustu daitezke; irteerako konexio bakarra bertsioaren egiaztapena da, eta hura ere itzali daiteke",
+    "Azkenak eta erabilitako azken ziurtagiria gordetzen ditu; nahi duzunean itzali eta hustu ditzakezu",
+  "comparison.os.label": "Sistema eragileak",
+  "comparison.os.autofirma": "Windows, macOS, Linux, Android eta iOS",
+  "comparison.os.rfirma": "Linux; Windows eta macOS, garapenean",
   "comparison.updates.label": "Eguneratze-bidea",
   "comparison.updates.autofirma": "<code>.deb</code> edo <code>.rpm</code> eskuz deskargatuta",
   "comparison.updates.rfirma": "Jatorrizko biltegiak: Flatpak, APT eta DNF",
   "comparison.desktop.label": "Mahaigainarekiko integrazioa",
   "comparison.desktop.autofirma": "Swingen itxura propioa",
-  "comparison.desktop.rfirma":
-    "Mahaigainaren konbentzioak jarraitzen dituen interfazea, gai argi eta iluna, AA kontrastea",
+  "comparison.desktop.rfirma": "Mahaigainaren estiloa jarraitzen du, gai argi eta ilunarekin",
 
   "install.kicker": "Instalazioa",
-  "install.title": "Biltegi bat, eta eguneraketak bakarrik iristen dira",
+  "install.title": "Zure sistema eragilearentzako biltegia",
   "install.body":
     "rFirmaren bideak jatorrizko biltegiak dira. Zure sistemarena gehitu ondoren, segurtasun-adabakiak paketeen kudeatzailearekin instalatzen dira.",
   "install.tablist.aria": "Banaketa-bideak",

@@ -7,7 +7,22 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = translator(locale);
-const rows = ["arch", "keys", "pin", "store", "stores", "stamp", "sede", "ca", "lang", "privacy", "updates", "desktop"] as const;
+const rows = [
+  "arch",
+  "keys",
+  "pin",
+  "dnie",
+  "store",
+  "stores",
+  "stamp",
+  "sede",
+  "ca",
+  "lang",
+  "privacy",
+  "os",
+  "updates",
+  "desktop",
+] as const;
 ---
 
 <section id="comparativa" style="position:relative;background:#ffffff;overflow:clip">
@@ -25,9 +40,6 @@ const rows = ["arch", "keys", "pin", "store", "stores", "stamp", "sede", "ca", "
       >
         {t("comparison.title")}
       </h2>
-      <p style="margin:12px 0 0;font-size:1.0625rem;color:var(--rf-text-muted);text-wrap:pretty">
-        {t("comparison.body")}
-      </p>
     </div>
     <div data-reveal class="cmp-shell" style="margin-top:clamp(28px,4vw,48px)">
       <table class="cmp-table">

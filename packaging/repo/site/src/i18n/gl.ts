@@ -30,7 +30,7 @@ export const gl: Dictionary = {
   "lang.gl": "Galego",
   "lang.en": "English",
 
-  "hero.kicker": "Alternativa independente a AutoFirma",
+  "hero.kicker": "Unha alternativa a AutoFirma",
   "hero.title.line1": "Sinatura electrónica nativa.",
   "hero.title.line2": "Sen Java, sen esperas.",
   "hero.body":
@@ -55,7 +55,7 @@ export const gl: Dictionary = {
 
   "formats.aria": "Formatos e almacéns compatibles",
 
-  "how.kicker": "Cinco pantallas reais",
+  "how.kicker": "O proceso",
   "how.title": "Así se asina un documento",
   "how.tablist.aria": "Pasos da sinatura",
   "how.step1.title": "Documento cargado",
@@ -66,7 +66,7 @@ export const gl: Dictionary = {
     "A lista compóñese cos almacéns do sistema, os perfís do navegador e os módulos PKCS#11. Os caducados e revogados amósanse, pero non se poden usar.",
   "how.step3.title": "Introducir o PIN",
   "how.step3.body":
-    "O PIN pídeo o almacén de certificados, non rFirma. A clave privada permanece dentro del durante toda a operación.",
+    "O PIN pídese nun diálogo nativo, non nunha xanela web, e bórrase da memoria en canto remata a sinatura.",
   "how.step4.title": "Asinando",
   "how.step4.body":
     "Presinatura, sinatura e ensamblado do PDF. Cada fase queda á vista mentres se completa.",
@@ -130,9 +130,9 @@ export const gl: Dictionary = {
   "mock.signing.assemble.note": "(postsinatura)",
 
   "pillars.kicker": "Por que rFirma",
-  "pillars.title": "Catro decisións de fondo",
+  "pillars.title": "Catro decisións de deseño",
   "pillars.body":
-    "Non é unha capa de pintura sobre AutoFirma: é outra arquitectura, co mesmo motor criptográfico.",
+    "Substitúe a interface Swing e os servidores locais de AutoFirma; o motor criptográfico é o mesmo, o de clienteafirma.",
   "pillars.native.title": "Rendemento nativo",
   "pillars.native.body":
     "Escritorio en Tauri v2, Rust e React. Sen JVM e sen servidores locais á escoita.",
@@ -147,9 +147,7 @@ export const gl: Dictionary = {
     "Coloca e dimensiona a rúbrica sobre a páxina, con previsualización fiel. Sen coordenadas ás cegas.",
 
   "comparison.kicker": "Comparativa",
-  "comparison.title": "AutoFirma e rFirma, feito por feito",
-  "comparison.body":
-    "Só diferenzas comprobables no código, na interface e na distribución de cada proxecto. Sen cifras que ninguén mediu.",
+  "comparison.title": "AutoFirma fronte a rFirma",
   "comparison.head.aspect": "Aspecto",
   "comparison.head.autofirma": "AutoFirma (oficial)",
   "comparison.head.rfirma": "rFirma",
@@ -165,15 +163,18 @@ export const gl: Dictionary = {
     "Borrado parcial do <code>char[]</code> con <code>Arrays.fill</code>, sen fixalo na RAM",
   "comparison.pin.rfirma":
     "Búfer fixado con <code>mlock</code>, excluído dos volcados con <code>MADV_DONTDUMP</code> e borrado de forma segura",
+  "comparison.dnie.label": "Sinatura co DNIe",
+  "comparison.dnie.autofirma": "Si, mediante jMulticard",
+  "comparison.dnie.rfirma": "En desenvolvemento",
   "comparison.store.label": "Certificados en ficheiro (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Rexístrase a ruta do ficheiro nun diálogo de almacéns con seis opcións",
   "comparison.store.rfirma":
     "Almacén propio: «Engadir…» copia o certificado e do ficheiro non se garda nada, nin a ruta",
   "comparison.stores.label": "Busca de certificados",
-  "comparison.stores.autofirma": "Hai que escoller un almacén e só amosa ese",
+  "comparison.stores.autofirma": "Só busca no almacén que elixas",
   "comparison.stores.rfirma":
-    "Percorre o sistema, os perfís do navegador, os módulos PKCS#11 e o almacén propio, e xúntao nunha lista",
+    "Busca en todos os sitios onde pode haber un certificado e xúntaos nunha soa lista",
   "comparison.stamp.label": "Colocación da sinatura visible",
   "comparison.stamp.autofirma": "Coordenadas ou cadro sen contexto",
   "comparison.stamp.rfirma": "Arrastre sobre a páxina con previsualización fiel",
@@ -185,23 +186,25 @@ export const gl: Dictionary = {
   "comparison.ca.autofirma": "O instalador rexistra a CA no sistema, con privilexios",
   "comparison.ca.rfirma": "A aplicación rexistra a súa CA nos almacéns NSS da persoa, sen root",
   "comparison.lang.label": "Idiomas",
-  "comparison.lang.autofirma": "Castelán e cooficiais, coas cadeas dos diálogos Swing",
+  "comparison.lang.autofirma": "Só castelán, coas cadeas dos diálogos Swing",
   "comparison.lang.rfirma":
     "Castelán, català, euskara, galego e inglés, con catálogo propio e cambio desde Preferencias",
-  "comparison.privacy.label": "Privacidade",
+  "comparison.privacy.label": "Xestor de documentos",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Recentes e último certificado pódense apagar e baleirar; a única conexión saínte é a comprobación de versión, e pódese apagar",
+    "Garda os recentes e o último certificado usado; pódense apagar e baleirar cando queiras",
+  "comparison.os.label": "Compatibilidade de sistemas",
+  "comparison.os.autofirma": "Windows, macOS, Linux, Android e iOS",
+  "comparison.os.rfirma": "Linux; Windows e macOS, en desenvolvemento",
   "comparison.updates.label": "Canle de actualización",
   "comparison.updates.autofirma": "Descarga manual de <code>.deb</code> ou <code>.rpm</code>",
   "comparison.updates.rfirma": "Repositorios nativos: Flatpak, APT e DNF",
   "comparison.desktop.label": "Integración co escritorio",
   "comparison.desktop.autofirma": "Aparencia propia de Swing",
-  "comparison.desktop.rfirma":
-    "Interface que segue as convencións do escritorio, tema claro e escuro, contraste AA",
+  "comparison.desktop.rfirma": "Segue o estilo do escritorio, con tema claro e escuro",
 
   "install.kicker": "Instalación",
-  "install.title": "Un repositorio, e as actualizacións chegan soas",
+  "install.title": "Un repositorio para o teu sistema operativo",
   "install.body":
     "As canles de rFirma son repositorios nativos. Unha vez engadido o do teu sistema, os parches de seguridade instálanse co xestor de paquetes.",
   "install.tablist.aria": "Canles de distribución",

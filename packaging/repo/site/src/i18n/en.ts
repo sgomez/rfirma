@@ -30,7 +30,7 @@ export const en: Dictionary = {
   "lang.gl": "Galego",
   "lang.en": "English",
 
-  "hero.kicker": "Independent alternative to AutoFirma",
+  "hero.kicker": "Alternative to AutoFirma",
   "hero.title.line1": "Native electronic signature.",
   "hero.title.line2": "No Java, no waiting.",
   "hero.body":
@@ -55,7 +55,7 @@ export const en: Dictionary = {
 
   "formats.aria": "Supported formats and stores",
 
-  "how.kicker": "Five real screens",
+  "how.kicker": "Step by step",
   "how.title": "How a document gets signed",
   "how.tablist.aria": "Signing steps",
   "how.step1.title": "Document loaded",
@@ -66,7 +66,7 @@ export const en: Dictionary = {
     "The list is built from the system stores, the browser profiles and the PKCS#11 modules. Expired and revoked ones are shown, but can't be used.",
   "how.step3.title": "Enter the PIN",
   "how.step3.body":
-    "The PIN is asked for by the certificate store, not by rFirma. The private key stays inside it for the whole operation.",
+    "The PIN is requested in a native dialogue, not a web window, and is wiped from memory as soon as the signature is done.",
   "how.step4.title": "Signing",
   "how.step4.body":
     "Presignature, signature and assembly of the PDF. Each stage is visible while it completes.",
@@ -130,9 +130,9 @@ export const en: Dictionary = {
   "mock.signing.assemble.note": "(postsignature)",
 
   "pillars.kicker": "Why rFirma",
-  "pillars.title": "Four decisions that matter",
+  "pillars.title": "Four design decisions",
   "pillars.body":
-    "It's not a coat of paint over AutoFirma: it's a different architecture, with the same cryptographic engine.",
+    "It replaces AutoFirma's Swing interface and local servers; the cryptographic engine is the same one, from clienteafirma.",
   "pillars.native.title": "Native performance",
   "pillars.native.body":
     "Desktop app in Tauri v2, Rust and React. No JVM and no local servers listening.",
@@ -147,9 +147,7 @@ export const en: Dictionary = {
     "Place and size the rubric on the page, with a faithful preview. No blind coordinates.",
 
   "comparison.kicker": "Comparison",
-  "comparison.title": "AutoFirma and rFirma, fact by fact",
-  "comparison.body":
-    "Only differences you can check in the code, in the interface and in each project's distribution. No figures nobody measured.",
+  "comparison.title": "AutoFirma versus rFirma",
   "comparison.head.aspect": "Aspect",
   "comparison.head.autofirma": "AutoFirma (official)",
   "comparison.head.rfirma": "rFirma",
@@ -165,15 +163,18 @@ export const en: Dictionary = {
     "Partial <code>char[]</code> wipe with <code>Arrays.fill</code>, not pinned in RAM",
   "comparison.pin.rfirma":
     "Buffer pinned with <code>mlock</code>, excluded from dumps with <code>MADV_DONTDUMP</code> and wiped securely",
+  "comparison.dnie.label": "Signing with a Spanish DNIe",
+  "comparison.dnie.autofirma": "Yes, via jMulticard",
+  "comparison.dnie.rfirma": "In development",
   "comparison.store.label": "Certificates in a file (<code>.p12</code>)",
   "comparison.store.autofirma":
     "The file's path is registered in a store dialogue with six options",
   "comparison.store.rfirma":
     "Its own store: \"Add…\" copies the certificate, and nothing from the file is kept, not even the path",
   "comparison.stores.label": "Certificate lookup",
-  "comparison.stores.autofirma": "You have to pick a store, and it only shows that one",
+  "comparison.stores.autofirma": "Only searches the store you pick",
   "comparison.stores.rfirma":
-    "Sweeps the system, the browser profiles, the PKCS#11 modules and its own store, and joins them into a single list",
+    "Searches everywhere a certificate could be and merges the results into a single list",
   "comparison.stamp.label": "Visible signature placement",
   "comparison.stamp.autofirma": "Coordinates or a box with no context",
   "comparison.stamp.rfirma": "Drag on the page with a faithful preview",
@@ -185,23 +186,25 @@ export const en: Dictionary = {
   "comparison.ca.autofirma": "The installer registers the CA on the system, with privileges",
   "comparison.ca.rfirma": "The application registers its CA in the person's NSS stores, without root",
   "comparison.lang.label": "Languages",
-  "comparison.lang.autofirma": "Spanish and the co-official languages, with the Swing dialogue strings",
+  "comparison.lang.autofirma": "Spanish only, with the Swing dialogue strings",
   "comparison.lang.rfirma":
     "Spanish, Catalan, Basque, Galician and English, with its own catalogue and switching from Preferences",
-  "comparison.privacy.label": "Privacy",
+  "comparison.privacy.label": "Document manager",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Recents and the last certificate can be turned off and cleared; the only outgoing connection is the version check, and it can be turned off",
+    "Keeps recent files and the last certificate used; you can turn them off and clear them whenever you want",
+  "comparison.os.label": "Operating systems",
+  "comparison.os.autofirma": "Windows, macOS, Linux, Android and iOS",
+  "comparison.os.rfirma": "Linux; Windows and macOS, in development",
   "comparison.updates.label": "Update channel",
   "comparison.updates.autofirma": "Manual download of a <code>.deb</code> or <code>.rpm</code>",
   "comparison.updates.rfirma": "Native repositories: Flatpak, APT and DNF",
   "comparison.desktop.label": "Desktop integration",
   "comparison.desktop.autofirma": "Swing's own look",
-  "comparison.desktop.rfirma":
-    "Interface that follows the desktop's conventions, light and dark theme, AA contrast",
+  "comparison.desktop.rfirma": "Follows the desktop's style, with light and dark themes",
 
   "install.kicker": "Installation",
-  "install.title": "One repository, and updates arrive on their own",
+  "install.title": "One repository for your operating system",
   "install.body":
     "rFirma's channels are native repositories. Once your system's is added, security patches install through the package manager.",
   "install.tablist.aria": "Distribution channels",

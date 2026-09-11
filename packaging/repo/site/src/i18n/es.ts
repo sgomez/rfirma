@@ -28,7 +28,7 @@ export const es = {
   "lang.gl": "Galego",
   "lang.en": "English",
 
-  "hero.kicker": "Alternativa independiente a AutoFirma",
+  "hero.kicker": "Alternativa a AutoFirma",
   "hero.title.line1": "Firma electrónica nativa.",
   "hero.title.line2": "Sin Java, sin esperas.",
   "hero.body":
@@ -53,7 +53,7 @@ export const es = {
 
   "formats.aria": "Formatos y almacenes compatibles",
 
-  "how.kicker": "Cinco pantallas reales",
+  "how.kicker": "Paso a paso",
   "how.title": "Así se firma un documento",
   "how.tablist.aria": "Pasos de la firma",
   "how.step1.title": "Documento cargado",
@@ -64,7 +64,7 @@ export const es = {
     "La lista se compone con los almacenes del sistema, los perfiles del navegador y los módulos PKCS#11. Los caducados y revocados se muestran, pero no se pueden usar.",
   "how.step3.title": "Introducir el PIN",
   "how.step3.body":
-    "El PIN lo pide el almacén de certificados, no rFirma. La clave privada permanece dentro de él durante toda la operación.",
+    "El PIN se pide en un diálogo nativo, no en una ventana web, y se borra de la memoria en cuanto termina la firma.",
   "how.step4.title": "Firmando",
   "how.step4.body":
     "Prefirma, firma y ensamblado del PDF. Cada fase queda a la vista mientras se completa.",
@@ -128,9 +128,9 @@ export const es = {
   "mock.signing.assemble.note": "(postfirma)",
 
   "pillars.kicker": "Por qué rFirma",
-  "pillars.title": "Cuatro decisiones de fondo",
+  "pillars.title": "Cuatro decisiones de diseño",
   "pillars.body":
-    "No es una capa de pintura sobre AutoFirma: es otra arquitectura, con el mismo motor criptográfico.",
+    "Sustituye la interfaz Swing y los servidores locales de AutoFirma; el motor criptográfico es el mismo, el de clienteafirma.",
   "pillars.native.title": "Rendimiento nativo",
   "pillars.native.body":
     "Escritorio en Tauri v2, Rust y React. Sin JVM y sin servidores locales a la escucha.",
@@ -145,9 +145,7 @@ export const es = {
     "Coloca y dimensiona la rúbrica sobre la página, con previsualización fiel. Sin coordenadas a ciegas.",
 
   "comparison.kicker": "Comparativa",
-  "comparison.title": "AutoFirma y rFirma, hecho por hecho",
-  "comparison.body":
-    "Solo diferencias comprobables en el código, en la interfaz y en la distribución de cada proyecto. Sin cifras que nadie ha medido.",
+  "comparison.title": "AutoFirma frente a rFirma",
   "comparison.head.aspect": "Aspecto",
   "comparison.head.autofirma": "AutoFirma (oficial)",
   "comparison.head.rfirma": "rFirma",
@@ -163,15 +161,18 @@ export const es = {
     "Borrado parcial del <code>char[]</code> con <code>Arrays.fill</code>, sin fijarlo en RAM",
   "comparison.pin.rfirma":
     "Búfer fijado con <code>mlock</code>, excluido de volcados con <code>MADV_DONTDUMP</code> y borrado seguro",
+  "comparison.dnie.label": "Firma con DNIe",
+  "comparison.dnie.autofirma": "Sí, con jMulticard",
+  "comparison.dnie.rfirma": "En desarrollo",
   "comparison.store.label": "Certificados en fichero (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Se registra la ruta del fichero en un diálogo de almacenes con seis opciones",
   "comparison.store.rfirma":
     "Almacén propio: «Añadir…» copia el certificado y del fichero no se guarda nada, ni la ruta",
   "comparison.stores.label": "Búsqueda de certificados",
-  "comparison.stores.autofirma": "Hay que elegir un almacén y solo enseña ese",
+  "comparison.stores.autofirma": "Solo busca en el almacén que elijas",
   "comparison.stores.rfirma":
-    "Barre el sistema, los perfiles del navegador, los módulos PKCS#11 y el almacén propio, y lo junta en una lista",
+    "Busca en todos los sitios donde puede haber un certificado y los junta en una sola lista",
   "comparison.stamp.label": "Colocación de la firma visible",
   "comparison.stamp.autofirma": "Coordenadas o recuadro sin contexto",
   "comparison.stamp.rfirma": "Arrastre sobre la página con previsualización fiel",
@@ -183,23 +184,25 @@ export const es = {
   "comparison.ca.autofirma": "El instalador registra la CA en el sistema, con privilegios",
   "comparison.ca.rfirma": "La aplicación registra su CA en los almacenes NSS de la persona, sin root",
   "comparison.lang.label": "Idiomas",
-  "comparison.lang.autofirma": "Castellano y cooficiales, con las cadenas de los diálogos Swing",
+  "comparison.lang.autofirma": "Español, con las cadenas de los diálogos Swing",
   "comparison.lang.rfirma":
-    "Castellano, català, euskara, galego e inglés, con catálogo propio y cambio desde Preferencias",
-  "comparison.privacy.label": "Privacidad",
+    "Español, català, euskara, galego e inglés, con catálogo propio y cambio desde Preferencias",
+  "comparison.privacy.label": "Gestor de documentos",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Recientes y último certificado se pueden apagar y vaciar; la única conexión saliente es la comprobación de versión, y se puede apagar",
+    "Guarda los recientes y el último certificado usado; se pueden apagar y vaciar cuando quieras",
+  "comparison.os.label": "Sistemas operativos",
+  "comparison.os.autofirma": "Windows, macOS, Linux, Android e iOS",
+  "comparison.os.rfirma": "Linux; Windows y macOS, en desarrollo",
   "comparison.updates.label": "Canal de actualización",
   "comparison.updates.autofirma": "Descarga manual de <code>.deb</code> o <code>.rpm</code>",
   "comparison.updates.rfirma": "Repositorios nativos: Flatpak, APT y DNF",
   "comparison.desktop.label": "Integración con el escritorio",
   "comparison.desktop.autofirma": "Apariencia propia de Swing",
-  "comparison.desktop.rfirma":
-    "Interfaz que sigue las convenciones del escritorio, tema claro y oscuro, contraste AA",
+  "comparison.desktop.rfirma": "Sigue el estilo del escritorio, con tema claro y oscuro",
 
   "install.kicker": "Instalación",
-  "install.title": "Un repositorio, y las actualizaciones llegan solas",
+  "install.title": "Un repositorio para tu sistema operativo",
   "install.body":
     "Los canales de rFirma son repositorios nativos. Una vez añadido el de tu sistema, los parches de seguridad se instalan con el gestor de paquetes.",
   "install.tablist.aria": "Canales de distribución",
