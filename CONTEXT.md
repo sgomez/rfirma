@@ -223,6 +223,14 @@ antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del
 resultado, y un solo trámite vivo a la vez.
 _Avoid_: sesión de protocolo, diálogo, intercambio
 
+**Llegada de la operación**:
+Cuándo tiene rFirma la operación que la sede pide, y lo dice el transporte al
+abrirse, no la URL: **esperada** si la sede la mandará por un canal que queda
+escuchando (`wss`, `service`), e **inmediata** si llega ya resuelta al abrir
+(servidor intermedio). De ella depende si la ventana de sede espera o se
+enseña ya.
+_Avoid_: modo de canal, canal sin puerto, puerto cero
+
 **Cliente de canal**:
 El cliente propio, escrito en Rust, con el que se prueba el canal: saluda por
 `wss://`, manda el eco y comprueba los **caminos de rechazo que un cliente
