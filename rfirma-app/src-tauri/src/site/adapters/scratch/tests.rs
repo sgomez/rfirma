@@ -36,6 +36,7 @@ fn sweep_does_not_erase_a_folder_whose_lock_another_descriptor_holds() {
     let lock_path = folder.join(LOCK_FILE_NAME);
     let held = OpenOptions::new()
         .create(true)
+        .truncate(true)
         .write(true)
         .open(&lock_path)
         .expect("deberia poder abrirse el fichero de cerrojo");

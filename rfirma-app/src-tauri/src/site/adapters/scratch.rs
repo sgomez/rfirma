@@ -60,7 +60,11 @@ fn folder_name(role: &str) -> String {
 }
 
 fn lock_exclusively(path: &Path) -> io::Result<File> {
-    let file = OpenOptions::new().create(true).write(true).open(path)?;
+    let file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(path)?;
     let locked = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
     if locked != 0 {
         return Err(io::Error::last_os_error());
