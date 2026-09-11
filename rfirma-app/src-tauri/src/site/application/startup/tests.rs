@@ -2,7 +2,8 @@ use super::*;
 use crate::site::application::tests::InMemoryCaSlots;
 
 use crate::site::domain::channel::{
-    ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown, Situation,
+    ArrivalMode, ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown,
+    Situation,
 };
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::trust_error::TrustError;
@@ -10,7 +11,6 @@ use std::path::Path;
 use std::sync::Mutex;
 
 const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
-const PORTS: [u16; 3] = [51001, 51002, 51003];
 
 #[derive(Default)]
 struct World {
@@ -37,7 +37,7 @@ impl World {
     fn transport(
         &self,
         location: &ChannelLocation,
-        _duty: ChannelDuty,
+        duty: ChannelDuty,
     ) -> Result<OpenChannel, ChannelError> {
         self.note("canal");
         if self.every_port_taken {
@@ -53,6 +53,16 @@ impl World {
             ChannelLocation::Fixed(port) => *port,
             ChannelLocation::Relay(_) => 0,
         };
+        if matches!(
+            (location, duty),
+            (ChannelLocation::Relay(_), ChannelDuty::Serve(_))
+        ) {
+            return Ok(OpenChannel::with_delivery(
+                port,
+                Shutdown::of(|| {}),
+                Delivery::of(|| {}),
+            ));
+        }
         Ok(OpenChannel::new(port, Shutdown::of(|| {})))
     }
 }
@@ -60,7 +70,9 @@ impl World {
 impl SiteWindow for World {
     fn open(&self, content: SiteWindowContent<'_>) {
         self.note(&match content {
-            SiteWindowContent::TheErrand(errand) => format!("ventana:creada:{}", errand.port()),
+            SiteWindowContent::TheErrand(errand) => {
+                format!("ventana:creada:{:?}", errand.arrival())
+            }
             SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
                 "ventana:sin-puertos".to_owned()
             }
@@ -179,7 +191,7 @@ fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
     );
     assert_eq!(
         world.steps(),
-        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])],
+        ["canal".to_owned(), "ventana:creada:Awaited".to_owned()],
         "un lanzamiento de sede abre el canal y la ventana, sin tocar la CA local"
     );
 }
@@ -319,7 +331,7 @@ fn ending_the_errand_notifies_the_window_it_kept() {
 
     assert_eq!(
         world.steps(),
-        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])]
+        ["canal".to_owned(), "ventana:creada:Awaited".to_owned()]
     );
 
     crate::site::application::errand::replies::declined(&live);
@@ -328,7 +340,7 @@ fn ending_the_errand_notifies_the_window_it_kept() {
         world.steps(),
         [
             "canal".to_owned(),
-            format!("ventana:creada:{}", PORTS[0]),
+            "ventana:creada:Awaited".to_owned(),
             "ventana:trámite-terminado".to_owned(),
         ],
         "al terminar el trámite, la ventana que se guardó al empezar recibe el aviso"
@@ -407,7 +419,7 @@ fn a_site_launch_with_eight_days_left_attends_the_errand() {
     );
     assert_eq!(
         world.steps(),
-        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])],
+        ["canal".to_owned(), "ventana:creada:Awaited".to_owned()],
         "a ocho días de caducar, el trámite se atiende sin callejón"
     );
 }
@@ -422,7 +434,7 @@ fn attending_a_site_launch_with_a_live_errand_gets_no_window_of_its_own() {
                 crate::site::domain::protocol::ChannelCredential::parse(CREDENTIAL)
                     .expect("la credencial es buena"),
             ),
-            PORTS[0],
+            ArrivalMode::Awaited,
             std::sync::Arc::new(crate::site::adapters::codec::V4Codec),
         )),
         "el primero se queda con la plaza"
@@ -465,7 +477,7 @@ fn attending_a_site_launch_directly_never_touches_the_trust_stores() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])],
+        ["canal".to_owned(), "ventana:creada:Awaited".to_owned()],
         "ni un almacén se abre en la segunda invocación"
     );
 }
@@ -576,7 +588,7 @@ fn a_websocket_v3_launch_creates_the_window_hidden_and_does_not_show_it() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:creada:63117"],
+        ["canal", "ventana:creada:Awaited"],
         "crea la ventana oculta y no la muestra al arrancar"
     );
 }
@@ -600,7 +612,7 @@ fn a_service_launch_creates_the_window_hidden_and_does_not_show_it() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal", &format!("ventana:creada:{}", PORTS[0])],
+        ["canal", "ventana:creada:Awaited"],
         "service crea la ventana oculta y no la muestra al arrancar"
     );
 }
@@ -623,8 +635,39 @@ fn a_relay_launch_creates_the_window_and_shows_it_immediately() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:creada:0", "ventana:enseñada"],
+        ["canal", "ventana:creada:Immediate", "ventana:enseñada"],
         "relay no tiene canal que esperar: se enseña de inmediato"
+    );
+}
+
+#[test]
+fn an_immediate_arrival_shows_the_window_even_though_the_channel_has_a_port() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let transport = |_location: &ChannelLocation, _duty: ChannelDuty| {
+        world.note("canal");
+        Ok(OpenChannel::with_delivery(
+            54001,
+            Shutdown::of(|| {}),
+            Delivery::of(|| {}),
+        ))
+    };
+
+    let attendance = attend_site_launch(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &transport,
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        world.steps(),
+        ["canal", "ventana:creada:Immediate", "ventana:enseñada"],
+        "una llegada inmediata enseña la ventana aunque el canal tenga puerto"
     );
 }
 
@@ -714,7 +757,10 @@ fn a_relay_launch_with_fileid_and_stservlet_in_url_preserves_the_delivered_momen
         Some(delivered_moment),
         "el arranque con stservlet en la URL conserva el momento entregado"
     );
-    assert_eq!(world.steps(), ["ventana:creada:0", "ventana:enseñada"]);
+    assert_eq!(
+        world.steps(),
+        ["ventana:creada:Immediate", "ventana:enseñada"]
+    );
 }
 
 #[test]
@@ -765,7 +811,10 @@ fn a_relay_launch_with_fileid_and_parameters_xml_preserves_the_delivered_moment(
         Some(delivered_moment),
         "el arranque con parametros por fileid conserva el momento entregado"
     );
-    assert_eq!(world.steps(), ["ventana:creada:0", "ventana:enseñada"]);
+    assert_eq!(
+        world.steps(),
+        ["ventana:creada:Immediate", "ventana:enseñada"]
+    );
 }
 
 #[test]
@@ -824,7 +873,7 @@ fn the_backing_timeout_expires_and_reveals_the_unreachable_window() {
 
     assert_eq!(
         world.steps(),
-        ["canal", &format!("ventana:creada:{}", PORTS[0])],
+        ["canal", "ventana:creada:Awaited"],
         "recién arrancado no está enseñada"
     );
 
@@ -843,11 +892,7 @@ fn the_backing_timeout_expires_and_reveals_the_unreachable_window() {
     );
     assert_eq!(
         world.steps(),
-        [
-            "canal",
-            &format!("ventana:creada:{}", PORTS[0]),
-            "ventana:enseñada"
-        ],
+        ["canal", "ventana:creada:Awaited", "ventana:enseñada"],
         "el timeout de respaldo enseña la ventana"
     );
     assert_eq!(
@@ -872,10 +917,7 @@ fn browser_arrival_before_timeout_reveals_and_disarms_the_backup_timer() {
         Duration::from_millis(100),
     );
 
-    assert_eq!(
-        world.steps(),
-        ["canal", &format!("ventana:creada:{}", PORTS[0])]
-    );
+    assert_eq!(world.steps(), ["canal", "ventana:creada:Awaited"]);
 
     // Llega el navegador
     live.browser_arrived();
@@ -883,11 +925,7 @@ fn browser_arrival_before_timeout_reveals_and_disarms_the_backup_timer() {
     assert!(live.is_revealed());
     assert_eq!(
         world.steps(),
-        [
-            "canal",
-            &format!("ventana:creada:{}", PORTS[0]),
-            "ventana:enseñada"
-        ]
+        ["canal", "ventana:creada:Awaited", "ventana:enseñada"]
     );
     assert_eq!(live.moment(), Some(Moment::Waiting));
 
@@ -897,11 +935,7 @@ fn browser_arrival_before_timeout_reveals_and_disarms_the_backup_timer() {
     // Comprobamos que no se volvió a enseñar ni cambió a Unreachable
     assert_eq!(
         world.steps(),
-        [
-            "canal",
-            &format!("ventana:creada:{}", PORTS[0]),
-            "ventana:enseñada"
-        ],
+        ["canal", "ventana:creada:Awaited", "ventana:enseñada"],
         "no hay segunda llamada a show"
     );
     assert_eq!(live.moment(), Some(Moment::Waiting));

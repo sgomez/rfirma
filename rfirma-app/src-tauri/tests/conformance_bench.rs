@@ -898,7 +898,7 @@ async fn the_errand_channel(
     assert!(
         roots.site.errand.begin(Errand::of(
             launch.credential().clone(),
-            channel.port(),
+            channel.arrival_mode(),
             the_codec_of(roots, &launch),
         )),
         "la invocacion anterior deberia haber cerrado su tramite"

@@ -41,7 +41,7 @@ use crate::site::application::tests::{
     AValidator, InMemoryBatchServices, InMemoryTokenSigning, NotAsked,
 };
 use crate::site::domain::channel::{
-    ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
+    ArrivalMode, ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter,
@@ -671,7 +671,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
     };
     let live = LiveErrand::default();
 
-    let channel = Transport::open(
+    let _channel = Transport::open(
         &transport,
         &ChannelLocation::Drawn(vec![54001]),
         ChannelDuty::Serve(NegotiatedCredential::Required(a_credential())),
@@ -680,7 +680,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
     let codec: NegotiatedCodec = Arc::new(ACodec::answering(Vec::new()));
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        channel.port(),
+        ArrivalMode::Awaited,
         Arc::clone(&codec)
     )));
     assert_eq!(opened.borrow().len(), 1, "un canal, y por el puerto pedido");
@@ -732,7 +732,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        channel.port(),
+        ArrivalMode::Awaited,
         codec
     )));
     let (handle, mut wire) = the_wire();
@@ -968,7 +968,7 @@ fn closing_the_window_with_an_errand_still_alive_cancels_it_on_the_wire() {
     live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
 
@@ -984,7 +984,7 @@ fn closing_the_window_with_the_outcome_already_on_screen_sends_nothing() {
     live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     declined(&live);
@@ -1001,7 +1001,7 @@ fn closing_the_window_gives_up_waiting_for_the_acknowledgement_past_its_threshol
     live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
 
@@ -1022,7 +1022,7 @@ fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_erra
     live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
 
@@ -1360,7 +1360,7 @@ fn a_signature_that_never_came_out_is_answered_with_the_code_of_a_failed_signatu
     live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
 
@@ -1395,7 +1395,7 @@ fn a_broken_session_seal_is_answered_with_its_own_code() {
     live.answer_through(handle);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
 
@@ -2125,7 +2125,7 @@ fn an_algorithm_the_token_does_not_offer_is_refused_without_asking_for_the_secre
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     let (handle, _wire) = the_wire();
@@ -2185,7 +2185,7 @@ fn the_digest_the_site_asks_for_reaches_the_bridge_composed_with_the_key() {
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     let (handle, _wire) = the_wire();
@@ -2261,7 +2261,7 @@ fn the_whole_errand_asking_for_over(
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     let (handle, mut wire) = the_wire();
@@ -2581,7 +2581,7 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     let (handle, mut wire) = the_wire();
@@ -3160,7 +3160,7 @@ fn the_person_saying_no_is_the_only_cancellation() {
     let live = a_live();
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
 
@@ -3197,7 +3197,7 @@ fn a_second_launch_is_refused_while_the_first_errand_is_live() {
     );
 
     let errand = live.current().expect("el primer tramite sigue vivo");
-    assert_eq!(errand.port(), 54001);
+    assert_eq!(errand.arrival(), ArrivalMode::Awaited);
 }
 #[test]
 fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_refused() {
@@ -3217,7 +3217,7 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
         if opened.get() == 1 {
             assert!(live.begin(Errand::of(
                 NegotiatedCredential::Required(a_credential()),
-                54001,
+                ArrivalMode::Awaited,
                 a_codec()
             )));
             let closed = Arc::clone(&closed);
@@ -3251,7 +3251,7 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
     let errand = live
         .current()
         .expect("el tramite de la otra sede sigue vivo");
-    assert_eq!(errand.port(), 54001);
+    assert_eq!(errand.arrival(), ArrivalMode::Awaited);
 }
 #[test]
 fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
@@ -3276,7 +3276,7 @@ fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
     assert!(matches!(next, Attendance::Serving { .. }), "{next:?}");
 }
 #[test]
-fn the_live_errand_remembers_the_credential_and_the_port_and_nothing_else() {
+fn the_live_errand_remembers_the_credential_and_the_arrival_and_nothing_else() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
@@ -3292,7 +3292,7 @@ fn the_live_errand_remembers_the_credential_and_the_port_and_nothing_else() {
         errand.credential(),
         &NegotiatedCredential::Required(a_credential())
     );
-    assert_eq!(errand.port(), 54001);
+    assert_eq!(errand.arrival(), ArrivalMode::Awaited);
 }
 #[test]
 fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
@@ -3336,7 +3336,7 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
     assert!(
         live.begin(Errand::of(
             NegotiatedCredential::Required(a_credential()),
-            54001,
+            ArrivalMode::Awaited,
             a_codec()
         )),
         "la plaza es suya"
@@ -3396,7 +3396,7 @@ fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
     assert!(
         live.begin(Errand::of(
             NegotiatedCredential::Required(a_credential()),
-            54001,
+            ArrivalMode::Awaited,
             a_codec()
         )),
         "la plaza es suya"
@@ -3449,7 +3449,7 @@ fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
     assert!(
         inadmissible.begin(Errand::of(
             NegotiatedCredential::Required(a_credential()),
-            54002,
+            ArrivalMode::Awaited,
             a_codec()
         )),
         "la plaza es suya"
@@ -3489,7 +3489,7 @@ fn leaving_the_no_certificate_screen_cancels_the_errand() {
     assert!(
         live.begin(Errand::of(
             NegotiatedCredential::Required(a_credential()),
-            54001,
+            ArrivalMode::Awaited,
             a_codec()
         )),
         "la plaza es suya"
@@ -4405,7 +4405,7 @@ fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     let (handle, _wire) = the_wire();
@@ -4471,7 +4471,7 @@ fn a_xades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
-        54001,
+        ArrivalMode::Awaited,
         a_codec()
     )));
     let (handle, _wire) = the_wire();
