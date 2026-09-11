@@ -944,3 +944,53 @@ fn browser_arrival_before_timeout_reveals_and_disarms_the_backup_timer() {
     );
     assert_eq!(live.moment(), Some(Moment::Waiting));
 }
+
+#[test]
+fn a_relay_refusal_with_a_known_destination_fires_its_delivery_and_ends_the_errand_unseen() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+    let world_for_transport = Arc::clone(&world);
+
+    let transport =
+        move |location: &ChannelLocation, duty: ChannelDuty| -> Result<OpenChannel, ChannelError> {
+            world_for_transport.note("canal");
+            let ChannelDuty::Refuse(_) = duty else {
+                panic!("esta invocacion siempre se rechaza en negociacion: {duty:?}");
+            };
+            assert!(matches!(location, ChannelLocation::Relay(_)));
+            let uploaded = Arc::clone(&world_for_transport);
+            Ok(OpenChannel::with_delivery(
+                0,
+                Shutdown::of(|| {}),
+                Delivery::of(move || uploaded.note("subida")),
+            ))
+        };
+
+    let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
+               example/store&id=tx1&ver=99";
+
+    let attendance = attend_site_launch_with_threshold(
+        url,
+        &a_codec_table(),
+        &transport,
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(200),
+    );
+
+    assert!(
+        matches!(attendance, Attendance::RefusingOverTheChannel { .. }),
+        "el destino ya se conocia en la url: se rechaza por el canal"
+    );
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            "ventana:rechazo:SAF_41",
+            "subida",
+            "ventana:trámite-terminado"
+        ],
+        "la llegada inmediata dispara la subida y termina el tramite sin enseñar la ventana"
+    );
+}

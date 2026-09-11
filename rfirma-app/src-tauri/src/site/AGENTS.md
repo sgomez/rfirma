@@ -32,7 +32,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |
 | `adapters/tls/server.rs` | El certificado del servidor local, en memoria. Pruebas en `adapters/tls/server/tests.rs`. |
 | `adapters/tls/store.rs` | Las dos ranuras de la CA local en disco, detrás del puerto `LocalCaSlots`. Pruebas en `adapters/tls/store/tests.rs`. |
-| `adapters/relay.rs` | El transporte del servidor intermedio: sin canal que sostener, la operación se resuelve al abrir, con lo que trajo la invocación o con lo que se recupera del `rtservlet`. Pruebas en `adapters/relay/tests.rs`. |
+| `adapters/relay.rs` | El transporte del servidor intermedio: sin canal que sostener, la operación se resuelve al abrir, con lo que trajo la invocación o con lo que se recupera del `rtservlet`; un rechazo deja la subida como entrega pendiente. Pruebas en `adapters/relay/tests.rs`. |
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |

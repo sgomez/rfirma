@@ -554,6 +554,28 @@ function theRelayScript() {
   );
 }
 
+/**
+ * La misma URL larga en modo servidor intermedio, pero con una operación que rFirma rechaza sola,
+ * sin pedir consentimiento: cofirmar una factura no se admite (`AOFacturaESigner`). La factura de
+ * referencia pasa de los 2000 caracteres en base64, así que el XML de parámetros es quien trae la
+ * operación entera, y el destino solo se conoce tras leerlo.
+ */
+function theRelayRefusedScript() {
+  AutoScript.setServlets(
+    "https://sede.example/afirma-signature-storage/StorageService",
+    "https://sede.example/afirma-signature-retriever/RetrieveService",
+  );
+  AutoScript.cosign(
+    theInvoice().toString("base64"),
+    "SHA256withRSA",
+    "FacturaE",
+    "",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
 function theSignScript(format, extraParams, content) {
   AutoScript.sign(
@@ -624,7 +646,11 @@ if (mode === "relay") {
 AutoScript.cargarAppAfirma();
 
 if (mode === "relay") {
-  theRelayScript();
+  if (script === "relayrefused") {
+    theRelayRefusedScript();
+  } else {
+    theRelayScript();
+  }
 } else if (script === "batch") {
   theBatchScript();
 } else if (script === "batchxml") {

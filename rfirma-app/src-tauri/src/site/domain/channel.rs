@@ -46,6 +46,7 @@ pub struct ChannelError {
     situation: Situation,
     detail: String,
     refusal: Option<Refusal>,
+    destination: Option<(String, String)>,
 }
 
 impl ChannelError {
@@ -55,6 +56,7 @@ impl ChannelError {
             situation,
             detail: detail.into(),
             refusal: None,
+            destination: None,
         }
     }
 
@@ -64,6 +66,21 @@ impl ChannelError {
             situation: Situation::Relay,
             detail: refusal.detail().to_owned(),
             refusal: Some(refusal),
+            destination: None,
+        }
+    }
+
+    /// Un fallo del servidor intermedio cuyo destino de subida ya se conocía al fallar.
+    pub fn refused_at(
+        refusal: Refusal,
+        store_servlet: impl Into<String>,
+        id: impl Into<String>,
+    ) -> Self {
+        Self {
+            situation: Situation::Relay,
+            detail: refusal.detail().to_owned(),
+            refusal: Some(refusal),
+            destination: Some((store_servlet.into(), id.into())),
         }
     }
 
@@ -80,6 +97,13 @@ impl ChannelError {
     /// El rechazo ya clasificado, cuando este error lo trae (servidor intermedio).
     pub fn refusal(&self) -> Option<&Refusal> {
         self.refusal.as_ref()
+    }
+
+    /// El destino de subida ya conocido cuando este fallo ocurrió (servidor intermedio).
+    pub fn destination(&self) -> Option<(&str, &str)> {
+        self.destination
+            .as_ref()
+            .map(|(store_servlet, id)| (store_servlet.as_str(), id.as_str()))
     }
 }
 

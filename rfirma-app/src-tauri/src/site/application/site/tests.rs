@@ -498,3 +498,41 @@ fn the_ports_that_reach_the_transport_are_the_ones_the_url_carried() {
         "el puerto fijo del protocolo 3 no sale de ninguna parte"
     );
 }
+
+#[test]
+fn a_resolution_failure_with_a_known_destination_uploads_like_a_negotiation_refusal() {
+    use crate::site::adapters::relay::Relay;
+    use crate::site::application::tests::InMemoryServlets;
+    use crate::site::domain::channel::ArrivalMode;
+    use crate::site::ports::{Inbox, Transport as _};
+
+    let servlets = Arc::new(InMemoryServlets::unreachable());
+    let relay = Relay::new(
+        servlets,
+        Inbox::for_operations(|_url, _reply| {}),
+        Arc::new(|_refusal| {}),
+    );
+
+    let url = "afirma://sign?algorithm=SHA256withRSA&stservlet=https://relay.example/store&id=tx1\
+               &fileid=abc&rtservlet=https://relay.example/retrieve";
+
+    let attendance = attend_launch(
+        url,
+        &a_codec_table(),
+        &|location, duty| relay.open(location, duty),
+        &LiveErrand::default(),
+    );
+
+    let Attendance::RefusingOverTheChannel {
+        channel, refusal, ..
+    } = attendance
+    else {
+        panic!("el destino ya se conocia: deberia subir el rechazo por el canal: {attendance:?}");
+    };
+    assert_eq!(refusal.code(), SafCode::RecoveringData);
+    assert_eq!(
+        channel.arrival_mode(),
+        ArrivalMode::Immediate,
+        "falle donde falle, el servidor intermedio rechaza siempre con llegada inmediata"
+    );
+}

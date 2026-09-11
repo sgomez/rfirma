@@ -182,9 +182,9 @@ pub fn attend_site_launch_with_threshold(
     local_ca: LocalCaReach,
     threshold: Duration,
 ) -> Attendance {
-    let attendance = site::attend_launch(url, codecs, transport, live);
+    let mut attendance = site::attend_launch(url, codecs, transport, live);
 
-    match &attendance {
+    match &mut attendance {
         Attendance::Serving { errand, .. } => {
             live.keep_the_window(Arc::clone(&window));
             match local_ca {
@@ -197,7 +197,7 @@ pub fn attend_site_launch_with_threshold(
                     window.show();
                 }
                 LocalCaReach::NotAnObstacle => {
-                    open(live, &*window, SiteWindowContent::TheErrand(errand));
+                    open(live, &*window, SiteWindowContent::TheErrand(&*errand));
                     match errand.arrival() {
                         ArrivalMode::Awaited => {
                             live.arm_backing_timeout(Arc::clone(&window), threshold);
@@ -227,14 +227,26 @@ pub fn attend_site_launch_with_threshold(
                 window.show();
             }
         }
-        Attendance::RefusingOverTheChannel { refusal, .. } => {
+        Attendance::RefusingOverTheChannel {
+            channel, refusal, ..
+        } => {
             if live.current().is_none() {
                 open(
                     live,
                     &*window,
                     SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
                 );
-                live.arm_channel_refusal_wait(Arc::clone(&window), threshold);
+                match channel.arrival_mode() {
+                    ArrivalMode::Awaited => {
+                        live.arm_channel_refusal_wait(Arc::clone(&window), threshold);
+                    }
+                    ArrivalMode::Immediate => {
+                        if let Some(delivery) = channel.take_delivery() {
+                            delivery.now();
+                        }
+                        window.errand_ended(Acknowledgement::immediate());
+                    }
+                }
             }
         }
     }
