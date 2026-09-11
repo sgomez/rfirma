@@ -213,10 +213,12 @@ it locally adds no verdict — that is the `review-pr` rule, and this section
 does not override it. What follows is for setting a machine up, and for the
 builder's one pre-commit run.
 
-One entry point, `just`:
+One entry point, `just`, at 1.27 or newer — the justfile uses `[group]` and
+`[private]`, which Ubuntu's apt package predates; install it from
+<https://github.com/casey/just#installation> instead:
 
 ```bash
-apt-get install -y just maven libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+apt-get install -y maven libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
                    libayatana-appindicator3-dev libsoup-3.0-dev libxdo-dev
 cargo binstall cargo-llvm-cov cargo-crap
 just autoscript   # el accesorio del banco de conformidad; ver abajo

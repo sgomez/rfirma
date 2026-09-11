@@ -119,10 +119,7 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - name: just
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends just
+      - uses: ./.github/actions/setup-just
 
       # LA GUARDIA DE VERSION, en dos mitades.
       # `just check-version` es el candado del ID-150: la version vive en cinco
@@ -224,11 +221,12 @@ jobs:
         with:
           workspaces: rfirma-app/src-tauri
 
+      - uses: ./.github/actions/setup-just
+
       - name: Dependencias de sistema de pruebas
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            just \
             libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
             librsvg2-dev \
@@ -291,11 +289,12 @@ jobs:
           cache: pnpm
           cache-dependency-path: rfirma-app/pnpm-lock.yaml
 
+      - uses: ./.github/actions/setup-just
+
       - name: Dependencias de Flatpak
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            just \
             gettext \
             flatpak \
             flatpak-builder \
@@ -361,11 +360,12 @@ jobs:
         with:
           workspaces: rfirma-app/src-tauri
 
+      - uses: ./.github/actions/setup-just
+
       - name: Dependencias de sistema de Tauri
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            just \
             libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
             librsvg2-dev \
