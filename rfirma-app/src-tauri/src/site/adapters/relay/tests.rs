@@ -4,6 +4,7 @@ use base64::Engine as _;
 
 use super::*;
 use crate::site::application::tests::{read_operation, InMemoryServlets};
+use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
     encrypt, AfirmaUrl, CipherKey, NegotiatedCredential, RelayRequest, SafCode, SiteOperation,
 };
@@ -304,6 +305,11 @@ fn an_unreachable_servlet_refuses_with_saf_16_without_delivering_anything() {
 
     let refusal = error.refusal().expect("trae su propio rechazo clasificado");
     assert_eq!(refusal.code(), SafCode::RecoveringData);
+    assert_eq!(
+        error.destination(),
+        Some((STORE_SERVLET, "tx-1")),
+        "el destino ya venia en la url: el fallo al descargar el documento lo lleva consigo"
+    );
     assert!(spy.delivered.lock().expect("el candado").is_none());
 }
 
@@ -324,22 +330,55 @@ fn undecipherable_content_refuses_with_saf_15() {
 
     let refusal = error.refusal().expect("trae su propio rechazo clasificado");
     assert_eq!(refusal.code(), SafCode::DecryptingData);
+    assert_eq!(error.destination(), Some((STORE_SERVLET, "tx-1")));
 }
 
 #[test]
-fn a_refuse_duty_uploads_the_given_answer_without_waiting_resolving_or_delivering() {
+fn a_refuse_duty_leaves_the_upload_as_a_pending_delivery_instead_of_running_it_inside_open() {
     let servlets = Arc::new(OrderedSpy::default());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(a_key()), true));
     let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
 
-    relay
+    let mut channel = relay
         .open(&info, ChannelDuty::Refuse(answer))
-        .expect("sube el rechazo");
+        .expect("abre con la entrega pendiente, sin subir todavia");
+
+    assert_eq!(channel.arrival_mode(), ArrivalMode::Immediate);
+    assert!(
+        servlets.log().is_empty(),
+        "abrir el canal no sube nada: la entrega queda pendiente de que la dispare quien atiende"
+    );
+
+    channel
+        .take_delivery()
+        .expect("una llegada inmediata siempre trae entrega")
+        .now();
 
     assert_eq!(servlets.log(), vec!["put"]);
     assert!(spy.delivered.lock().expect("el candado").is_none());
     assert!(spy.failures().is_empty());
+}
+
+#[test]
+fn a_refuse_duty_delivery_that_fails_to_upload_notifies_the_failure() {
+    let servlets = Arc::new(OrderedSpy::that_rejects_the_upload());
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(a_key()), false));
+    let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
+
+    let mut channel = relay
+        .open(&info, ChannelDuty::Refuse(answer))
+        .expect("abre con la entrega pendiente");
+
+    channel
+        .take_delivery()
+        .expect("una llegada inmediata siempre trae entrega")
+        .now();
+
+    let failures = spy.failures();
+    assert_eq!(failures.len(), 1);
+    assert_eq!(failures[0].code(), SafCode::SendingResult);
 }
 
 #[test]

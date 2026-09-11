@@ -232,12 +232,17 @@ pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
 }
 
 /// Dónde contestaría un rechazo a esta URL, si se puede determinar sin conocer si la invocación
-/// entera vale: por los puertos que trajo, o por el puerto fijo si declaró la versión 3.
+/// entera vale: por los puertos que trajo, por el puerto fijo si declaró la versión 3, o por el
+/// servidor intermedio si ya trae `stservlet` e `id`.
 pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     let ports = drawn_ports(url);
 
     if url.verb() == SERVICE_VERB {
         return (!ports.is_empty()).then(|| ChannelLocation::Service(ports));
+    }
+
+    if let Some(location) = relay_location_for_a_refusal(url) {
+        return Some(location);
     }
 
     if !ports.is_empty() {
@@ -249,6 +254,24 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     }
 
     None
+}
+
+/// La ubicación de servidor intermedio de un rechazo, cuando la URL ya trae `stservlet` e `id`:
+/// solo lleva el destino, sin descargar el XML de parámetros para averiguarlo.
+fn relay_location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
+    if !is_a_relay_launch(url) {
+        return None;
+    }
+
+    let store_servlet = given(url, "stservlet")?;
+    let id = given(url, "id")?;
+
+    Some(ChannelLocation::Relay(RelayChannelInfo {
+        operation: url.clone(),
+        request: RelayRequest::Inline { store_servlet, id },
+        key: None,
+        active_wait: false,
+    }))
 }
 
 /// Si la invocación tiene la forma de una operación con servidor intermedio: un verbo de

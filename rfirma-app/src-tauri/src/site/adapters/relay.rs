@@ -53,7 +53,9 @@ impl Transport for Relay {
             ));
         };
 
-        // Un rechazo se sube tal cual, sin esperar ni resolver operación: no hay trámite que registrar.
+        // Un rechazo se sube tal cual, sin esperar ni resolver operación: no hay trámite que
+        // registrar. La subida no ocurre aquí: se deja como entrega pendiente y la dispara quien
+        // atiende la invocación, con la llegada ya inmediata.
         match duty {
             ChannelDuty::Refuse(answer) => {
                 let Some((store_servlet, id)) = info.request.store_target() else {
@@ -63,13 +65,32 @@ impl Transport for Relay {
                          dentro del XML de parametros",
                     ));
                 };
-                self.upload(store_servlet, id, answer.on_the_wire());
-                return Ok(OpenChannel::new(0, Shutdown::of(|| {})));
+                let servlets = Arc::clone(&self.servlets);
+                let on_upload_failure = Arc::clone(&self.on_upload_failure);
+                let store_servlet = store_servlet.to_owned();
+                let id = id.to_owned();
+                let text = answer.on_the_wire();
+                let delivery = Delivery::of(move || {
+                    upload_answer(
+                        servlets.as_ref(),
+                        on_upload_failure.as_ref(),
+                        &store_servlet,
+                        &id,
+                        &text,
+                    );
+                });
+                return Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery));
             }
             ChannelDuty::Serve(_) => {}
         }
 
-        let resolved = resolve(info, self.servlets.as_ref()).map_err(ChannelError::refused)?;
+        let resolved =
+            resolve(info, self.servlets.as_ref()).map_err(|failure| match failure.destination {
+                Some((store_servlet, id)) => {
+                    ChannelError::refused_at(failure.refusal, store_servlet, id)
+                }
+                None => ChannelError::refused(failure.refusal),
+            })?;
 
         let servlets = Arc::clone(&self.servlets);
         let on_upload_failure = Arc::clone(&self.on_upload_failure);
@@ -94,11 +115,16 @@ impl Transport for Relay {
     }
 }
 
-impl Relay {
-    fn upload(&self, store_servlet: &str, id: &str, text: String) {
-        if let Err(error) = self.servlets.store(store_servlet, id, &text) {
-            (self.on_upload_failure)(refusal_of(error));
-        }
+/// Sube el rechazo o la respuesta ya codificada, avisando del fallo si el servlet la rechaza.
+fn upload_answer(
+    servlets: &(dyn Servlets + Send + Sync),
+    on_upload_failure: &(dyn Fn(Refusal) + Send + Sync),
+    store_servlet: &str,
+    id: &str,
+    text: &str,
+) {
+    if let Err(error) = servlets.store(store_servlet, id, text) {
+        on_upload_failure(refusal_of(error));
     }
 }
 
@@ -109,15 +135,38 @@ struct ResolvedRelay {
     id: String,
 }
 
+/// Un fallo al resolver la operación, con el destino de subida cuando ya se conocía al fallar.
+struct ResolutionFailure {
+    refusal: Refusal,
+    destination: Option<(String, String)>,
+}
+
+impl ResolutionFailure {
+    fn without_destination(refusal: Refusal) -> Self {
+        Self {
+            refusal,
+            destination: None,
+        }
+    }
+
+    fn at(refusal: Refusal, store_servlet: &str, id: &str) -> Self {
+        Self {
+            refusal,
+            destination: Some((store_servlet.to_owned(), id.to_owned())),
+        }
+    }
+}
+
 /// Resuelve la operación según de dónde venga: inline, con el documento por `fileid`, o con el
 /// XML de parámetros entero por `fileid` (`ProtocolInvocationLauncher`, 1.9.2).
 fn resolve(
     info: &RelayChannelInfo,
     servlets: &(dyn Servlets + Send + Sync),
-) -> Result<ResolvedRelay, Refusal> {
+) -> Result<ResolvedRelay, ResolutionFailure> {
     match &info.request {
         RelayRequest::Inline { store_servlet, id } => {
-            wait_if_asked(info.active_wait, servlets, store_servlet, id)?;
+            wait_if_asked(info.active_wait, servlets, store_servlet, id)
+                .map_err(|refusal| ResolutionFailure::at(refusal, store_servlet, id))?;
             Ok(ResolvedRelay {
                 operation: info.operation.clone(),
                 store_servlet: store_servlet.clone(),
@@ -130,13 +179,14 @@ fn resolve(
             fileid,
             retrieve_servlet,
         } => {
-            wait_if_asked(info.active_wait, servlets, store_servlet, id)?;
-            let document = recovered(servlets, retrieve_servlet, fileid, info.key.as_ref())?;
+            wait_if_asked(info.active_wait, servlets, store_servlet, id)
+                .map_err(|refusal| ResolutionFailure::at(refusal, store_servlet, id))?;
+            let document = recovered(servlets, retrieve_servlet, fileid, info.key.as_ref())
+                .map_err(|refusal| ResolutionFailure::at(refusal, store_servlet, id))?;
+            let dat = text_of(document)
+                .map_err(|refusal| ResolutionFailure::at(refusal, store_servlet, id))?;
             Ok(ResolvedRelay {
-                operation: info
-                    .operation
-                    .clone()
-                    .with_parameter("dat", text_of(document)?),
+                operation: info.operation.clone().with_parameter("dat", dat),
                 store_servlet: store_servlet.clone(),
                 id: id.clone(),
             })
@@ -145,17 +195,24 @@ fn resolve(
             fileid,
             retrieve_servlet,
         } => {
-            let xml = recovered(servlets, retrieve_servlet, fileid, info.key.as_ref())?;
-            let operation = operation_of_the_parameters_xml(&xml)?;
-            let store_servlet = declared(&operation, "stservlet")?;
-            check_servlet_url(&store_servlet, Parameter::StoreServlet)?;
-            let id = checked_identifier(declared(&operation, "id")?, Parameter::Identifier)?;
+            let xml = recovered(servlets, retrieve_servlet, fileid, info.key.as_ref())
+                .map_err(ResolutionFailure::without_destination)?;
+            let operation = operation_of_the_parameters_xml(&xml)
+                .map_err(ResolutionFailure::without_destination)?;
+            let store_servlet = declared(&operation, "stservlet")
+                .map_err(ResolutionFailure::without_destination)?;
+            check_servlet_url(&store_servlet, Parameter::StoreServlet)
+                .map_err(ResolutionFailure::without_destination)?;
+            let id = declared(&operation, "id").map_err(ResolutionFailure::without_destination)?;
+            let id = checked_identifier(id, Parameter::Identifier)
+                .map_err(ResolutionFailure::without_destination)?;
             wait_if_asked(
                 asks_for_active_wait(&operation),
                 servlets,
                 &store_servlet,
                 &id,
-            )?;
+            )
+            .map_err(|refusal| ResolutionFailure::at(refusal, &store_servlet, &id))?;
             Ok(ResolvedRelay {
                 operation,
                 store_servlet,

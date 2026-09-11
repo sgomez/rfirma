@@ -248,6 +248,40 @@ fn a_refusal_location_is_none_without_ports_nor_the_third_protocol() {
     assert_eq!(location_for_a_refusal(&url), None);
 }
 
+#[test]
+fn a_refusal_location_of_a_relay_launch_with_stservlet_and_id_is_its_own_destination() {
+    let url = AfirmaUrl::parse(
+        "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.example/store\
+         &id=tx2",
+    )
+    .expect("es una URL de servidor intermedio");
+
+    assert_eq!(
+        location_for_a_refusal(&url),
+        Some(ChannelLocation::Relay(RelayChannelInfo {
+            operation: url.clone(),
+            request: RelayRequest::Inline {
+                store_servlet: "https://relay.example/store".to_owned(),
+                id: "tx2".to_owned(),
+            },
+            key: None,
+            active_wait: false,
+        }))
+    );
+}
+
+#[test]
+fn a_refusal_location_of_a_relay_launch_without_stservlet_in_the_url_is_none() {
+    let url = AfirmaUrl::parse(PUBLISHED_PARAMETERS_BY_FILEID)
+        .expect("es una URL de servidor intermedio con solo fileid");
+
+    assert_eq!(
+        location_for_a_refusal(&url),
+        None,
+        "el destino solo esta dentro del XML de parametros: no se descarga para un rechazo"
+    );
+}
+
 /// La invocación que manda la sede que fuerza servidor intermedio con un dato de tamaño real:
 /// `buildUrlWithoutData` solo añade `fileid`, `rtservlet` y `key` (`autoscript.js:4489`).
 const PUBLISHED_PARAMETERS_BY_FILEID: &str =

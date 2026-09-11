@@ -53,6 +53,10 @@ const THE_SINGLE_SELECTION: &str = "selectcert";
 /// El guion de tres selecciones con el certificado fijado y soltado.
 const THE_STICKY_SELECTIONS: &str = "sticky";
 
+/// El guion de servidor intermedio que cofirma una factura: rFirma lo rechaza solo, sin
+/// consentimiento, y el destino solo se conoce tras leer el XML de parámetros.
+const THE_RELAY_REFUSED_OPERATION: &str = "relayrefused";
+
 /// El guion del lote remoto: dos documentos firmados con `signBatchJSON`.
 const THE_REMOTE_BATCH: &str = "batch";
 
@@ -2263,5 +2267,88 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
         servlets.get(&stored_at).as_deref(),
         Some("la-respuesta-del-tramite"),
         "la respuesta sube con el 'id' que venia dentro del XML de parametros"
+    );
+}
+
+/// El cliente publicado forzado a servidor intermedio cofirma una factura, que rFirma rechaza
+/// solo, sin pedir consentimiento; el destino solo se conoce tras leer el XML de parámetros, y el
+/// servlet de guardado falso recibe el `SAF_NN` de ese rechazo.
+#[test]
+fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operation() {
+    use rfirma_lib::site::adapters::codec::V4Codec;
+    use rfirma_lib::site::adapters::codec_relay::RelayCodec;
+    use rfirma_lib::site::adapters::codec_v1::V1Codec;
+    use rfirma_lib::site::adapters::codec_v3::V3Codec;
+    use rfirma_lib::site::application::errand::LiveErrand;
+    use rfirma_lib::site::application::site::{attend_launch, Attendance, CodecTable};
+    use rfirma_lib::site::domain::protocol::Refusal;
+
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_the_script(
+        &material,
+        BenchMode::Relay,
+        THE_RELAY_REFUSED_OPERATION,
+    );
+    let servlets = Arc::new(BenchServlets::default());
+
+    let launch = the_relay_launch_of(&client, &servlets);
+    assert!(
+        launch.contains("fileid=") && launch.contains("rtservlet="),
+        "el preproceso de URL larga lanza con 'fileid' y 'rtservlet': {launch}"
+    );
+    assert!(
+        !launch.contains("stservlet=") && !launch.contains("&id="),
+        "el destino solo esta dentro del XML de parametros: {launch}"
+    );
+
+    let stored_at: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let inbox_stored_at = Arc::clone(&stored_at);
+    let inbox = Inbox::for_operations(move |url, reply: ErrandReply| {
+        *inbox_stored_at.lock().expect("el candado") =
+            Some(url.parameter("id").expect("el xml trae 'id'").to_owned());
+        let refusal = read_operation(&url, &HttpDataSource)
+            .err()
+            .unwrap_or_else(|| Refusal::params("el guion esperaba un rechazo del protocolo"));
+        reply.answer(refusal.answer().on_the_wire());
+    });
+    let relay = Relay::new(
+        Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
+        inbox,
+        Arc::new(|_| {}),
+    );
+
+    let codecs = CodecTable {
+        v4: Arc::new(V4Codec),
+        v3: Arc::new(V3Codec),
+        v1: Arc::new(V1Codec),
+        relay: Arc::new(|key| Arc::new(RelayCodec::new(key)) as NegotiatedCodec),
+    };
+
+    let attendance = attend_launch(
+        &launch,
+        &codecs,
+        &|location, duty| relay.open(location, duty),
+        &LiveErrand::default(),
+    );
+
+    assert!(
+        matches!(attendance, Attendance::Serving { .. }),
+        "el destino ya se conocia en el xml de parametros: deberia servir para contestar por el: \
+         {attendance:?}"
+    );
+
+    let stored_at = stored_at
+        .lock()
+        .expect("el candado")
+        .clone()
+        .expect("la operacion deberia haberse leido y rechazado");
+    assert_eq!(
+        servlets.get(&stored_at),
+        Some(WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
+        "el servlet de guardado deberia recibir el SAF_NN del rechazo con el 'id' del xml"
     );
 }

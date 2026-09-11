@@ -27,6 +27,11 @@
 //!   y su `PreProcessorFactory` no tiene preprocesador trifásico para él
 //!   (1.9.2); atenderlo exigiría la clave dentro de Java, que prohíbe el
 //!   ADR-0001, así que `format=XMLDSig*` sale con `SAF_06`.
+//! - **Un rechazo de arranque sin destino conocido no se sube**. El original
+//!   siempre intenta subir al servidor intermedio si la invocación lo pide;
+//!   aquí, si al fallar no se sabe todavía dónde subir la respuesta (una URL
+//!   inválida, o un XML de parámetros que no se pudo descargar), el rechazo
+//!   se queda en la ventana en vez de forzar una descarga solo para saberlo.
 
 pub mod algorithm;
 pub mod cipher;
