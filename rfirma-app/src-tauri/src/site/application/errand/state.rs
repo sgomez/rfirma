@@ -9,6 +9,7 @@ use std::time::Duration;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::{Format, SignatureOperation};
 use crate::site::domain::batch::LocalBatch;
+use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, SiteFilter,
 };
@@ -67,7 +68,7 @@ pub struct LiveErrand {
 #[derive(Clone)]
 pub struct Errand {
     credential: NegotiatedCredential,
-    port: u16,
+    arrival: ArrivalMode,
     codec: NegotiatedCodec,
 }
 
@@ -75,17 +76,21 @@ impl std::fmt::Debug for Errand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Errand")
             .field("credential", &self.credential)
-            .field("port", &self.port)
+            .field("arrival", &self.arrival)
             .finish_non_exhaustive()
     }
 }
 
 impl Errand {
-    /// Construye un trámite con la credencial, puerto y códec indicados.
-    pub fn of(credential: NegotiatedCredential, port: u16, codec: NegotiatedCodec) -> Self {
+    /// Construye un trámite con la credencial, llegada y códec indicados.
+    pub fn of(
+        credential: NegotiatedCredential,
+        arrival: ArrivalMode,
+        codec: NegotiatedCodec,
+    ) -> Self {
         Self {
             credential,
-            port,
+            arrival,
             codec,
         }
     }
@@ -95,19 +100,14 @@ impl Errand {
         &self.credential
     }
 
-    /// Puerto en el que quedó escuchando el servidor.
-    pub fn port(&self) -> u16 {
-        self.port
+    /// Modo de llegada con el que se abrió el canal del trámite.
+    pub fn arrival(&self) -> ArrivalMode {
+        self.arrival
     }
 
     /// Códec negociado para este trámite.
     pub fn codec(&self) -> &NegotiatedCodec {
         &self.codec
-    }
-
-    /// Indica si el trámite mantiene un canal abierto esperando conexiones.
-    pub fn opens_channel(&self) -> bool {
-        self.port > 0
     }
 }
 

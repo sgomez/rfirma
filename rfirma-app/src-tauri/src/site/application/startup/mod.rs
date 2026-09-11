@@ -5,6 +5,7 @@ pub mod repair;
 
 use std::path::PathBuf;
 
+use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
@@ -197,10 +198,11 @@ pub fn attend_site_launch_with_threshold(
                 }
                 LocalCaReach::NotAnObstacle => {
                     open(live, &*window, SiteWindowContent::TheErrand(errand));
-                    if errand.opens_channel() {
-                        live.arm_backing_timeout(Arc::clone(&window), threshold);
-                    } else {
-                        window.show();
+                    match errand.arrival() {
+                        ArrivalMode::Awaited => {
+                            live.arm_backing_timeout(Arc::clone(&window), threshold);
+                        }
+                        ArrivalMode::Immediate => window.show(),
                     }
                 }
             }
