@@ -213,17 +213,25 @@ impl Shutdown {
 }
 
 /// Entrega diferida de una operación o rechazo ya resuelto al abrir el canal.
-pub struct Delivery(Box<dyn FnOnce() + Send>);
+pub struct Delivery(Box<dyn FnOnce() -> bool + Send>);
 
 impl Delivery {
-    /// Construye una entrega a partir de una clausura.
+    /// Construye una entrega que no puede fallar a partir de una clausura.
     pub fn of(delivering: impl FnOnce() + Send + 'static) -> Self {
+        Self::fallible(move || {
+            delivering();
+            true
+        })
+    }
+
+    /// Construye una entrega cuya clausura dice si lo entregado salió.
+    pub fn fallible(delivering: impl FnOnce() -> bool + Send + 'static) -> Self {
         Self(Box::new(delivering))
     }
 
-    /// Dispara la entrega.
-    pub fn now(self) {
-        (self.0)();
+    /// Dispara la entrega; `true` si lo entregado salió.
+    pub fn now(self) -> bool {
+        (self.0)()
     }
 }
 

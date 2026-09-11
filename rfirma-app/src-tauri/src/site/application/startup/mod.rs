@@ -5,7 +5,7 @@ pub mod repair;
 
 use std::path::PathBuf;
 
-use crate::site::domain::channel::ArrivalMode;
+use crate::site::domain::channel::{ArrivalMode, Delivery};
 use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
@@ -245,11 +245,9 @@ pub fn attend_site_launch_with_threshold(
                     }
                 }
                 ArrivalMode::Immediate => {
-                    if let Some(delivery) = channel.take_delivery() {
-                        delivery.now();
-                    }
+                    let handed_out = channel.take_delivery().is_none_or(Delivery::now);
                     if no_errand_in_flight {
-                        window.errand_ended(Acknowledgement::immediate());
+                        end_or_show_the_refusal(&*window, handed_out);
                     }
                 }
             }
@@ -257,6 +255,14 @@ pub fn attend_site_launch_with_threshold(
     }
 
     attendance
+}
+
+fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {
+    if handed_out {
+        window.errand_ended(Acknowledgement::immediate());
+    } else {
+        window.show();
+    }
 }
 
 fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
