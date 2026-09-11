@@ -270,18 +270,36 @@ pub fn sign_on_token_with_prompter(
     Ok(())
 }
 
-/// El secreto de un lote pedido al diálogo, o `None` si el certificado no lo pide en pantalla.
-pub fn prompted_for_the_batch(
+/// Firma el ciclo abierto con el PIN tecleado, o pidiéndolo al diálogo si llega vacío.
+pub fn signed_on_the_token(
+    signer: &dyn Signer,
+    session: &SigningSession,
+    prompter: &dyn SecretPrompter,
+    language: Language,
+    pin: &str,
+) -> Result<(), CycleFailure> {
+    if pin.is_empty() {
+        return sign_on_token_with_prompter(signer, session, prompter, language);
+    }
+    sign_on_token(signer, session, pin)
+}
+
+/// El secreto del lote: el tecleado, el que el token acepta tras el diálogo, o vacío si no lo pide.
+pub fn secret_for_the_batch(
     signer: &dyn Signer,
     certificate: &TokenCertificate,
     prompter: &dyn SecretPrompter,
     language: Language,
-) -> Result<Option<ProtectedSecret>, CycleFailure> {
+    typed: &str,
+) -> Result<ProtectedSecret, CycleFailure> {
+    if !typed.is_empty() {
+        return Ok(ProtectedSecret::from_str(typed));
+    }
     let mode = signer
         .secret_of(certificate.reference())
         .map_err(CycleError::Token)?;
     if mode != StoreSecret::TypedOnScreen {
-        return Ok(None);
+        return Ok(ProtectedSecret::new(b""));
     }
     let request = SecretPromptRequest {
         secret: SecretName::of(certificate.reference().store().class()),
@@ -292,7 +310,7 @@ pub fn prompted_for_the_batch(
     let (secret, ()) = cycle::prompted_until_accepted(prompter, request, |secret| {
         signer.accepts_the_secret(certificate.reference(), secret)
     })?;
-    Ok(Some(secret))
+    Ok(secret)
 }
 
 /// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.

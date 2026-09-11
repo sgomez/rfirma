@@ -50,44 +50,22 @@ pub fn signed_with_the_secret(
     live: &crate::site::LiveErrand,
     pin: &str,
 ) -> Result<(), Failure> {
-    let identity = desk.neighbours.identity;
+    let signer = desk.neighbours.identity.signer();
     let signing = desk.neighbours.signing;
+    let prompter = signing.prompter.as_ref();
     let language = signing.configuration().language;
 
-    if let Some(certificate) = live.the_batch_certificate() {
-        let prompted = match pin {
-            "" => session::prompted_for_the_batch(
-                &identity.signer(),
-                &certificate,
-                signing.prompter.as_ref(),
-                language,
-            )?,
-            _ => None,
-        };
-        let secret = match &prompted {
-            Some(prompted) => prompted
-                .expose_secret()
-                .map_err(|_| Failure::new("unknown", "el secreto tecleado no es texto válido"))?,
-            None => pin,
-        };
-        if let Some(batch) = crate::site::the_pending_batch_signed(desk, live, secret) {
-            return batch;
-        }
-    }
-
-    if !pin.is_empty() {
-        return Ok(session::sign_on_token(
-            &identity.signer(),
+    let Some(certificate) = live.the_batch_certificate() else {
+        return Ok(session::signed_on_the_token(
+            &signer,
             &signing.session,
+            prompter,
+            language,
             pin,
         )?);
-    }
-    Ok(session::sign_on_token_with_prompter(
-        &identity.signer(),
-        &signing.session,
-        signing.prompter.as_ref(),
-        language,
-    )?)
+    };
+    let secret = session::secret_for_the_batch(&signer, &certificate, prompter, language, pin)?;
+    crate::site::the_pending_batch_signed(desk, live, &secret)
 }
 
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.

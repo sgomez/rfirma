@@ -323,14 +323,6 @@ impl LiveErrand {
         *crate::lock(&self.consent) = Some(PendingConsent::LocalBatch(pending));
     }
 
-    /// Si el trámite tiene un lote local consentido esperando el secreto.
-    pub fn a_local_batch_is_pending(&self) -> bool {
-        matches!(
-            &*crate::lock(&self.consent),
-            Some(PendingConsent::LocalBatch(pending)) if pending.chosen.is_some()
-        )
-    }
-
     /// Lote local pendiente, si el trámite está atendiendo uno.
     pub(super) fn the_local_batch_pending(&self) -> Option<PendingLocalBatch> {
         match &*crate::lock(&self.consent) {

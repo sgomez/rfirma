@@ -335,20 +335,20 @@ impl crate::signing::ports::Signer for ATokenThatAcceptsOnly1234 {
 
 #[test]
 fn a_wrong_pin_for_a_batch_is_asked_again_before_the_batch_runs() {
-    use super::prompted_for_the_batch;
+    use super::secret_for_the_batch;
     use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
     use crate::signing::domain::Language;
 
     let prompter = MockSecretPrompter::with_secrets(&["0000", "1234"]);
 
-    let secret = prompted_for_the_batch(
+    let secret = secret_for_the_batch(
         &ATokenThatAcceptsOnly1234,
         &a_certificate("FIRMA", b"der"),
         &prompter,
         Language::Spanish,
+        "",
     )
-    .expect("el segundo PIN es el bueno")
-    .expect("el certificado pide el PIN en pantalla");
+    .expect("el segundo PIN es el bueno");
 
     assert_eq!(secret.expose_secret(), Ok("1234"));
     let asked = prompter.recorded_requests();
@@ -359,17 +359,18 @@ fn a_wrong_pin_for_a_batch_is_asked_again_before_the_batch_runs() {
 
 #[test]
 fn a_batch_whose_pin_dialog_is_cancelled_is_not_asked_again() {
-    use super::{prompted_for_the_batch, CycleFailure};
+    use super::{secret_for_the_batch, CycleFailure};
     use crate::signing::adapters::gtk_prompter::PreconfiguredSecretPrompter;
     use crate::signing::application::cycle::CycleError;
     use crate::signing::domain::Language;
     use crate::signing::ports::SecretPromptError;
 
-    let failure = prompted_for_the_batch(
+    let failure = secret_for_the_batch(
         &ATokenThatAcceptsOnly1234,
         &a_certificate("FIRMA", b"der"),
         &PreconfiguredSecretPrompter::cancelling(),
         Language::Spanish,
+        "",
     )
     .expect_err("cancelar el diálogo no deja secreto");
 
@@ -377,4 +378,71 @@ fn a_batch_whose_pin_dialog_is_cancelled_is_not_asked_again() {
         failure,
         CycleFailure::Cycle(CycleError::Prompt(SecretPromptError::Cancelled))
     ));
+}
+
+#[test]
+fn a_batch_whose_certificate_needs_no_pin_is_signed_without_asking() {
+    use super::secret_for_the_batch;
+    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
+    use crate::signing::domain::Language;
+
+    let prompter = MockSecretPrompter::with_secrets(&[]);
+
+    let secret = secret_for_the_batch(
+        &NoToken,
+        &a_certificate("FIRMA", b"der"),
+        &prompter,
+        Language::Spanish,
+        "",
+    )
+    .expect("sin PIN no hay nada que pedir");
+
+    assert!(secret.is_empty());
+    assert!(
+        prompter.recorded_requests().is_empty(),
+        "no sale el diálogo"
+    );
+}
+
+#[test]
+fn a_pin_typed_in_the_window_closes_the_batch_without_the_dialog() {
+    use super::secret_for_the_batch;
+    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
+    use crate::signing::domain::Language;
+
+    let prompter = MockSecretPrompter::with_secrets(&[]);
+
+    let secret = secret_for_the_batch(
+        &ATokenThatAcceptsOnly1234,
+        &a_certificate("FIRMA", b"der"),
+        &prompter,
+        Language::Spanish,
+        "1234",
+    )
+    .expect("el PIN tecleado se usa tal cual");
+
+    assert_eq!(secret.expose_secret(), Ok("1234"));
+    assert!(
+        prompter.recorded_requests().is_empty(),
+        "no sale el diálogo"
+    );
+}
+
+#[test]
+fn the_open_cycle_is_signed_with_the_typed_pin_or_through_the_dialog() {
+    use super::{signed_on_the_token, CycleFailure};
+    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
+    use crate::signing::domain::Language;
+
+    let session = SigningSession::default();
+    let prompter = MockSecretPrompter::with_secrets(&[]);
+
+    for pin in ["1234", ""] {
+        let failure = signed_on_the_token(&NoToken, &session, &prompter, Language::Spanish, pin)
+            .expect_err("sin ciclo abierto no hay nada que firmar");
+        assert!(
+            matches!(failure, CycleFailure::NoOpenCycle),
+            "con PIN «{pin}»"
+        );
+    }
 }

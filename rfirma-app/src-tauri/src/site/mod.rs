@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::crossing::Failure;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::adapters::isolate::Isolate;
 use adapters::tls::LocalCaStore;
 use application::errand::ErrandDesk;
@@ -40,21 +41,17 @@ pub struct SiteRoot {
 /// La mesa del trámite sobre las raíces de producción.
 pub type SiteDesk<'a> = ErrandDesk<'a, Isolate, Isolate, adapters::desk::Neighbours<'a>>;
 
-/// Cierra el lote pendiente, remoto o local, con el secreto que entró por la única puerta del PIN.
+/// Cierra el lote consentido, remoto o local, con el secreto que entró por la única puerta del PIN.
 pub fn the_pending_batch_signed(
     desk: &SiteDesk<'_>,
     live: &LiveErrand,
-    secret: &str,
-) -> Option<Result<(), Failure>> {
+    secret: &ProtectedSecret,
+) -> Result<(), Failure> {
+    let secret = secret
+        .expose_secret()
+        .map_err(|_| Failure::new("unknown", "el secreto tecleado no es texto válido"))?;
     if live.a_batch_is_pending() {
-        return Some(
-            application::errand::finish_the_batch(desk, secret, live).map_err(Failure::from),
-        );
+        return application::errand::finish_the_batch(desk, secret, live).map_err(Failure::from);
     }
-    if live.a_local_batch_is_pending() {
-        return Some(
-            application::errand::finish_the_local_batch(desk, secret, live).map_err(Failure::from),
-        );
-    }
-    None
+    application::errand::finish_the_local_batch(desk, secret, live).map_err(Failure::from)
 }
