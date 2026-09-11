@@ -381,6 +381,15 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         run: just autoscript
 
+      # El validador de referencia de validate.sh se compila al vuelo en el primer test que lo
+      # llama, y esa compilacion de Maven cuesta casi un minuto en cada ejecucion.
+      - name: Cache del validador de referencia
+        if: steps.scope.outputs.build == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/testbench/reference-signer/target
+          key: reference-signer-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/testbench/reference-signer/pom.xml', 'rfirma-native-bridge/testbench/reference-signer/SignatureValidator.java') }}
+
       # La libreria nativa tarda ~2 min en compilar con native-image, pero el
       # puente Java apenas cambia. Cachearla por el hash de rfirma-native-bridge
       # y bootstrap.sh evita recompilarla en PRs y commits que solo tocan Rust o UI.
