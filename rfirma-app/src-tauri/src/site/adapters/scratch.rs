@@ -30,7 +30,7 @@ impl Scratch for RealScratch {
     }
 }
 
-/// El fichero, dentro de una carpeta de proceso, que sostiene su cerrojo (ADR-0011).
+/// El fichero, dentro de una carpeta de proceso, que sostiene su cerrojo (ADR-0024).
 const LOCK_FILE_NAME: &str = ".lock";
 
 /// La carpeta de paso de este proceso, con su cerrojo sostenido mientras el guardián vive.
@@ -69,7 +69,7 @@ fn lock_exclusively(path: &Path) -> io::Result<File> {
 }
 
 /// Barre, bajo `temp`, las carpetas de los prefijos dados cuyo cerrojo se consigue tomar, y las
-/// borra enteras. No se barre por PID (ADR-0011): flatpak da a cada instancia su propio espacio
+/// borra enteras. No se barre por PID (ADR-0024): flatpak da a cada instancia su propio espacio
 /// de PID.
 pub fn sweep(temp: &Path, prefixes: &[&str]) {
     let Ok(entries) = std::fs::read_dir(temp) else {

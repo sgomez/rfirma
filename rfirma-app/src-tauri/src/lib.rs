@@ -221,7 +221,7 @@ fn with_the_five_roots(
 }
 
 /// Barre las carpetas de paso abandonadas y crea la de este proceso, con el prefijo del rol
-/// dado (ADR-0011).
+/// dado (ADR-0024).
 fn own_scratch(role: &str) -> site::adapters::scratch::ProcessFolder {
     let temp = std::env::temp_dir();
     site::adapters::scratch::sweep(&temp, &["site", "desktop"]);
