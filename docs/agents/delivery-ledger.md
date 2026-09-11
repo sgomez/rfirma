@@ -79,6 +79,14 @@ CI, en `code-host-ci.md`; ninguno de los dos se repite aquí.
   constructor nunca vio porque no corrió clippy en local antes de publicar. El
   constructor debe correr `cargo clippy` sobre los crates que toca antes de
   publicar la PR, no dejar que lo atrape el CI.
+- **La puerta CRAP (Cadena Rust) es otra que un constructor sonnet pasa por
+  alto sin correrla.** En el #704 (spec #703), la primera revisión salió
+  CLEAN pero el CI se puso en rojo en esa puerta; un ciclo de extracción de
+  método la puso verde. Misma causa estructural que el clippy de más arriba:
+  ninguna receta del ciclo de construcción la corre por defecto (`just crap`
+  es cara, ver «Qué ejecutar y cuándo»), así que el constructor debe
+  comprobarla —o al menos el riesgo de complejidad ciclomática del método que
+  toca— antes de publicar, no dejar que la atrape el CI.
 
 ## Run log
 
@@ -155,3 +163,5 @@ en `.scratch/archive/`.
 2026-09-11 spec=#671 sub=#683 model=sonnet effort=medium pr=#695 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
 2026-09-11 spec=#671 sub=#684 model=sonnet effort=medium pr=#697 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=merged
 2026-09-11 spec=#671 sub=#676 model=sonnet effort=medium pr=#698 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-09-11 spec=#703 sub=#704 model=sonnet effort=medium pr=#706 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-11 spec=#703 sub=#705 model=sonnet effort=medium pr=#707 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
