@@ -17,7 +17,7 @@ SIGNER="$ROOT/rfirma-native-bridge/testbench/reference-signer"
 # La frescura se mide por contenido, no por mtime: un target restaurado de la cache del CI es mas
 # viejo que el checkout y con -nt se recompilaria siempre.
 STAMP="$SIGNER/target/.stamp"
-WANTED="$(cat "$SIGNER/SignatureValidator.java" "$SIGNER/pom.xml" | sha256sum | cut -d' ' -f1)"
+WANTED="$(cat "$SIGNER/SignatureValidator.java" "$SIGNER/pom.xml" "${BASH_SOURCE[0]}" | sha256sum | cut -d' ' -f1)"
 
 is_built() {
     [ -f "$SIGNER/target/classes/SignatureValidator.class" ] || return 1
@@ -35,7 +35,7 @@ if ! is_built; then
             mvn -q -B -f "$SIGNER/pom.xml" dependency:build-classpath \
                 -Dmdep.outputFile="$SIGNER/target/cp.txt" -Dmdep.includeScope=compile
             mkdir -p "$SIGNER/target/classes"
-            javac -cp "$(cat "$SIGNER/target/cp.txt")" -d "$SIGNER/target/classes" \
+            javac --release 21 -cp "$(cat "$SIGNER/target/cp.txt")" -d "$SIGNER/target/classes" \
                 "$SIGNER/SignatureValidator.java"
             echo "$WANTED" > "$STAMP"
         fi
