@@ -8,6 +8,7 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `outline.sh` | El esqueleto de un `.rs`, `.ts` o `.tsx`, para `just outline`. |
 | `tools.sh` | Comprueba las herramientas del entorno y falla nombrando la que falte. |
 | `changelog-release.sh` | Reúne los fragmentos de `changelog.d/` en la sección de una versión de `CHANGELOG.md`. |
+| `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
 | `dev-handler.sh` | Registra o quita el binario de desarrollo como manejador de `afirma://`. |
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes vendorizadas del manifiesto flatpak. |

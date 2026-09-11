@@ -454,5 +454,19 @@ clean:
 
 # Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
 [group('release')]
+[private]
 changelog-release version:
     {{ justfile_directory() }}/scripts/changelog-release.sh {{ version }}
+
+# Sube la version en los sitios del candado de check-version.py (ID-150).
+[group('release')]
+[private]
+bump-version version:
+    {{ justfile_directory() }}/scripts/bump-version.sh {{ version }}
+
+# Encadena changelog-release y bump-version; el tag y el push quedan a mano.
+[group('release')]
+release version: (changelog-release version) (bump-version version)
+    @echo
+    @echo "Revisa el diff, comitea y publica cuando quieras:"
+    @echo "  git tag v{{ version }} && git push origin v{{ version }}"
