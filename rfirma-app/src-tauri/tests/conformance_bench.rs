@@ -1792,6 +1792,22 @@ async fn the_published_client_signs_a_binary_challenge_with_cades_explicit_also_
     the_sign_of(BenchMode::Third, THE_SIGN_CADES_EXPLICIT).await;
 }
 
+/// Dos trámites de sede a la vez en el mismo proceso, cada uno con su propia terna de `ports=`
+/// (ID-06): no hay techo de trámites simultáneos ni estado global que los estorbe. No toma
+/// `ONE_AT_A_TIME`, porque eso solo lo necesitan los casos de lote con servlets.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn two_published_clients_sign_at_once_in_the_same_process() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    tokio::join!(
+        the_sign_of(BenchMode::Fourth, THE_SIGN_CADES_EXPLICIT),
+        the_sign_of(BenchMode::Fourth, THE_SIGN_CADES_EXPLICIT),
+    );
+}
+
 /// Un `sign()` del cliente publicado con `format=CAdES-ASiC-S`: lo que vuelve no es un CMS sino
 /// el contenedor ZIP, con la firma CAdES dentro, y el oráculo de la grada C lo valida.
 async fn the_asic_s_sign_of(mode: BenchMode, script: &str) {
