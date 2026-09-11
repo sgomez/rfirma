@@ -34,6 +34,16 @@ impl World {
             .clone()
     }
 
+    fn port_of(location: &ChannelLocation) -> u16 {
+        match location {
+            ChannelLocation::Drawn(ports) | ChannelLocation::Service(ports) => {
+                *ports.first().expect("puertos")
+            }
+            ChannelLocation::Fixed(port) => *port,
+            ChannelLocation::Relay(_) => 0,
+        }
+    }
+
     fn transport(
         &self,
         location: &ChannelLocation,
@@ -46,13 +56,7 @@ impl World {
                 "los tres puertos sorteados estan ocupados",
             ));
         }
-        let port = match location {
-            ChannelLocation::Drawn(ports) | ChannelLocation::Service(ports) => {
-                *ports.first().expect("puertos")
-            }
-            ChannelLocation::Fixed(port) => *port,
-            ChannelLocation::Relay(_) => 0,
-        };
+        let port = Self::port_of(location);
         if matches!(
             (location, duty),
             (ChannelLocation::Relay(_), ChannelDuty::Serve(_))
