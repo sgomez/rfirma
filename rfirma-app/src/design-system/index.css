@@ -9,7 +9,7 @@
  *
  * Para cambiar un token o una clase: se cambia en el proyecto de diseño, se
  * vuelve a exportar el bundle sobre `bundle/` y se resella con
- * `just seal-ds-bundle`. Editar `bundle/` a mano sale en rojo en `just check-ds-bundle`.
+ * `just seal-ds-bundle`. Editar `bundle/` a mano sale en rojo en `just check-repo`.
  *
  * Por eso `bundle/` está excluido de Biome en `biome.json`: el formateador y
  * el sello se contradicen —uno reescribiría los ficheros, el otro exige que

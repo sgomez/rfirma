@@ -105,7 +105,7 @@ siguiendo la variante que se esté evaluando.
   colores a mano**.
 - El bundle **no se edita en el repositorio**: se cambia en el proyecto de
   sistema de diseño, se reexporta entero sobre `bundle/` y se resella con
-  `just seal-ds-bundle`. Un retoque a mano sale en rojo en `just check-ds-bundle`.
+  `just seal-ds-bundle`. Un retoque a mano sale en rojo en `just check-repo`.
 - El proyecto lleva ya adjunto el sistema de diseño compilado en
   `_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/` (tokens,
   `styles.css`, fuentes). Los artboards consumen esos tokens. Su `<helmet>` es

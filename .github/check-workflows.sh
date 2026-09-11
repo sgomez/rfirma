@@ -195,7 +195,7 @@ if [ -f "$PUBLISH" ]; then
         printf '%s\n' "$sueltos" >&2
         echo >&2
         echo "el rsync de la publicacion va en packaging/repo/publish-tree.sh, no aqui." >&2
-        echo "Ahi esta probado (just check-publish); en el YAML no lo prueba nadie." >&2
+        echo "Ahi esta probado (just check-repo); en el YAML no lo prueba nadie." >&2
         exit 1
     fi
     echo "OK  $PUBLISH publica con el guion probado y no lleva rsync suelto"

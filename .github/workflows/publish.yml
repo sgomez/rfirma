@@ -20,7 +20,7 @@
 # seria una tuberia mas corta: seria otra cosa.
 #
 # EL MECANISMO DE LA PUBLICACION NO ESTA AQUI, esta en tres guiones de
-# `packaging/repo/` que se prueban solos (`just check-publish`): este
+# `packaging/repo/` que se prueban solos (`just check-repo`): este
 # fichero baja la serie, construye el arbol y lo publica llamandolos. Es a
 # proposito: la unica parte de la tuberia que no puede ensayarse con una
 # etiqueta `-rc.N` es justo la que toca el anfitrion, asi que tiene que poder
