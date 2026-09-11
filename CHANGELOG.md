@@ -9,6 +9,18 @@ Este fichero no se edita a mano: cada issue entrega su nota en
 fragmentos presentes bajo la sección de la versión, en el momento de
 publicarla. Ver `changelog.d/README.md`.
 
+## [0.9.1] - 2026-09-11
+
+### Changed
+- El PIN de un token PKCS#11 o la contraseña de un almacén protegido ya no se
+  piden en un diálogo web (`PinDialog`) dentro de WebKitGTK: se piden en un
+  diálogo nativo de GTK3, gestionado por el backend, cuyo buffer de memoria
+  queda fijado con `mlock` y excluido de volcados con `MADV_DONTDUMP`, y se
+  borra de forma segura al terminar (#648). AutoFirma solo hacía un borrado
+  parcial e inconsistente del `char[]` con `Arrays.fill`, sin `mlock` ni
+  exclusión de volcados, así que esto es una mejora de seguridad frente al
+  original, no paridad de funcionalidad.
+
 ## [0.9.0] - 2026-09-10
 
 ### Added
