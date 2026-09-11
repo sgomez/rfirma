@@ -124,12 +124,14 @@ dispatch, or a PR labelled `native`), download that artifact, upload it to
 VALIDe. If the maximal case validates, the other three are subsets of it.
 
 **The fast lane does not build the native library, deliberately.** It no longer
-needs `RFIRMA_SKIP_NATIVE=1` for that — `check-rust` does not go through `just
-build`, so there is no guard to skip. The guard itself still stands where
+needs `RFIRMA_SKIP_NATIVE=1` for that — `check-rust` does not go through
+`check-native`, so there is no guard to skip. The guard itself still stands
+where
 [ADR-0013](../adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md)
-put it: locally `just build` and `just dev` **fail naming `just native`**
-rather than chaining a three-minute `native-image` run onto every compile, and
-`RFIRMA_SKIP_NATIVE=1` is how you say you know what you are doing. Do not copy
+put it: locally `just dev`, `just bundle` and `just flatpak` **fail naming
+`just native`** rather than chaining a three-minute `native-image` run onto
+every compile, and `RFIRMA_SKIP_NATIVE=1` is how you say you know what you are
+doing. Do not copy
 that variable into a local shell profile.
 
 **So the reviewer still installs and runs everything itself** — a green check
@@ -244,9 +246,9 @@ CI pass differ. Run it once and they mean the same thing again. In CI the bench
 never skips: the test checks the `CI` variable and fails instead (ADR-0014).
 
 `just check` **no longer needs the native library at all**: `check-rust`
-dropped the `build` chain, so `RFIRMA_SKIP_NATIVE` is not needed to run it and
-CI no longer sets it. The variable still exists for `just build` and `just
-dev`, which do check for the library (ADR-0013).
+does not go through `check-native`, so `RFIRMA_SKIP_NATIVE` is not needed to
+run it and CI no longer sets it. The variable still exists for `just dev`,
+`just bundle` and `just flatpak`, which do check for the library (ADR-0013).
 
 It also no longer **deletes** it. `lint-java` used to run `mvn -B clean
 compile`, and that `clean` took `rfirma-native-bridge/target/` with it —

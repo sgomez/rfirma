@@ -137,8 +137,7 @@ default:
 # YA NO ES `tools lint build test`, SINO UN CARRIL POR CADENA. La forma vieja
 # encadenaba las tres cadenas en una sola cola, y eso en el CI es una pared:
 # repartidos en un job cada uno, los carriles corren en paralelo y la espera
-# pasa a ser la cadena mas lenta en vez de la suma de las tres. `lint`, `build`
-# y `test` siguen existiendo como atajos locales; el CI ya no los usa.
+# pasa a ser la cadena mas lenta en vez de la suma de las tres.
 #
 # Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
 check: tools check-repo check-java check-ts check-rust
@@ -212,13 +211,6 @@ check-changed:
     lanes=$(printf '%s\n' $lanes | awk '!seen[$0]++' | tr '\n' ' ')
     echo "check-changed: $lanes"
     exec {{ just_executable() }} $lanes
-
-# El bucle corto de quien quiera pasar el linting entero antes de commitear. No
-# es la puerta de pre-push de lefthook.yml, que es otra cosa y mucho mas corta
-# (ADR-0014): esa corre sola, solo mira el formato y se mide en segundos.
-#
-# Solo lint, sin build ni test.
-quick: lint
 
 # ---------------------------------------------------------------------------
 # Herramientas y dependencias
@@ -418,22 +410,6 @@ lint-i18n: po-import
 token:
     ./testdata/softhsm/provision-token.sh
 
-# El banco de referencia CAdES/XAdES/FacturaE (ver testdata/reference/README.md):
-# lo que produce el original 1.9.2 con sus firmadores monofasicos, para que
-# cada ticket de formato compare su salida y la valide. Determinista salvo la
-# fecha de firma.
-#
-# Regenera testdata/reference/.
-reference-signatures:
-    ./rfirma-native-bridge/testbench/make-reference-signatures.sh
-
-# El oraculo de la grada C para CAdES/XAdES/FacturaE: SignValiderFactory del
-# original, consumido igual desde Maven local.
-#
-# Valida <file> con el validador del original. Imprime VALID o INVALID.
-validate-signature file:
-    ./rfirma-native-bridge/testbench/validate.sh {{ file }}
-
 # El accesorio del BANCO DE CONFORMIDAD (TD-55): el `autoscript.js` que sirve
 # una sede de verdad, corriendo bajo Node contra nuestro canal en
 # tests/conformance_bench.rs.
@@ -475,12 +451,6 @@ autoscript:
 # Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
 protocol-map *args:
     python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
-
-# Comprueba que el mapa del protocolo esta al dia con el tag v1.9.2 fijado.
-# Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
-check-protocol-map:
-    python3 {{ justfile_directory() }}/scripts/protocol-map.py --check
-
 
 # ---------------------------------------------------------------------------
 # Navegacion
@@ -671,199 +641,6 @@ check-contract: build-ts
     fi
     echo "check-contract: el contrato es el de la instantanea"
 
-# ---------------------------------------------------------------------------
-# Medicion
-# ---------------------------------------------------------------------------
-
-# Cuanto cuesta cada tipo de agente en este repositorio, leyendo las
-# transcripciones de ~/.claude/projects (las de los arboles de trabajo
-# incluidas).
-#
-# POR QUE ESTE NUMERO Y NO EL DE TOKENS A SECAS: casi todo lo que entra en una
-# peticion es relectura de cache, que se factura a una decima parte. Sumar
-# tokens de entrada a pelo multiplica por diez el coste real y hace que
-# cualquier comparacion mienta. La columna es la entrada efectiva:
-#
-#     cache_read x 0,1  +  cache_creation x 1,25
-#
-# COMO SE LEE: el coste crece con el CUADRADO de la longitud de la sesion,
-# porque lo leido se queda en el contexto y se reenvia en cada peticion
-# posterior. Por eso la columna de peticiones importa tanto como la de coste:
-# un agente que baja de 150 a 75 peticiones no cuesta la mitad, cuesta la
-# cuarta parte. Y por eso una lectura grande temprana es cara aunque el fichero
-# sea pequeno.
-#
-# LAS COLUMNAS DE TURNO miden otra cosa, y hay que mirarlas aparte: cuanto
-# contexto tiene el agente en su peticion numero 10 y numero 20, y cuanto le
-# crece por turno entre la 5 y la 20. Ahi es donde se ve si una mejora de
-# lectura funciona, porque el efectivo total lo tapa: bajar la pendiente un
-# 15 % no salva a un ticket que dura el triple de turnos.
-#
-# El argumento opcional es una marca de tiempo ISO. Sin zona horaria se
-# entiende como HORA LOCAL y se traduce a UTC, que es como estan fechadas las
-# transcripciones; con `Z` o con desfase explicito se respeta lo que pongas.
-# Con el argumento salen las dos filas, el total historico y lo arrancado
-# desde el corte, mas el cambio entre ambas: el antes y el despues de una
-# vez.
-#
-#     just agent-cost                    # todo lo que hay
-#     just agent-cost 2026-09-02T12:15   # ademas, solo desde ese corte
-#
-# Coste por tipo de agente, de las transcripciones de este repositorio.
-agent-cost since="":
-    #!/usr/bin/env python3
-    import datetime, glob, json, os, sys
-
-    project = "{{ justfile_directory() }}"
-
-    # Las transcripciones van fechadas en UTC. Un corte escrito a mano se
-    # escribe en la hora del reloj de quien lo escribe, asi que sin zona se
-    # entiende local: comparar las dos a pelo deja fuera dos horas de agentes
-    # sin avisar de nada.
-    def to_utc(raw):
-        if not raw:
-            return ""
-        try:
-            stamp = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        except ValueError:
-            return raw
-        if stamp.tzinfo is None:
-            stamp = stamp.astimezone()
-        return stamp.astimezone(datetime.timezone.utc).isoformat().replace("+00:00", "")
-
-    since = to_utc("{{ since }}")
-
-    # Un arbol de trabajo tiene su propio directorio de proyecto, con el mismo
-    # prefijo y un sufijo: el comodin del final los recoge todos.
-    slug = "-" + project.strip("/").replace("/", "-")
-    pattern = os.path.expanduser("~/.claude/projects") + "/" + slug + "*/**/subagents/*.meta.json"
-
-    runs = []
-    for meta_path in glob.glob(pattern, recursive=True):
-        try:
-            kind = json.load(open(meta_path)).get("agentType", "?")
-        except Exception:
-            continue
-        transcript = meta_path.replace(".meta.json", ".jsonl")
-        if not os.path.exists(transcript):
-            continue
-
-        # Una peticion aparece varias veces en la transcripcion, una por trozo
-        # emitido, y todas cargan el mismo uso: se cuentan por su identificador
-        # o se cuenta de mas. El diccionario ademas las guarda en orden, que es
-        # lo que permite preguntar por la peticion numero 10.
-        requests, first = dict(), None
-        for line in open(transcript, errors="replace"):
-            try:
-                entry = json.loads(line)
-            except Exception:
-                continue
-            if first is None and entry.get("timestamp"):
-                first = entry["timestamp"]
-            usage = (entry.get("message") or dict()).get("usage")
-            if not usage:
-                continue
-            ident = entry.get("requestId") or (entry.get("message") or dict()).get("id")
-            requests[ident] = (
-                usage.get("cache_read_input_tokens", 0),
-                usage.get("cache_creation_input_tokens", 0),
-                usage.get("input_tokens", 0),
-            )
-        if requests:
-            runs.append((kind, first or "", list(requests.values())))
-
-    if not runs:
-        print("sin transcripciones de agentes en " + project)
-        sys.exit(0)
-
-    def turn(usages, n):
-        """Contexto completo que entro en la peticion numero n, si llego a haberla."""
-        if len(usages) < n:
-            return None
-        read, created, fresh = usages[n - 1]
-        return read + created + fresh
-
-    def summarize(kind, cutoff):
-        """Las cinco cifras de un tipo de agente: un None donde no haya de donde sacarlas."""
-        chosen = [u for k, f, u in runs if k == kind and (not cutoff or f >= cutoff)]
-        if not chosen:
-            return None
-
-        def average(values):
-            values = [v for v in values if v is not None]
-            return sum(values) / len(values) if values else None
-
-        return (
-            len(chosen),
-            average([len(u) for u in chosen]),
-            average([sum(r for r, _, _ in u) * 0.1 + sum(c for _, c, _ in u) * 1.25 for u in chosen]),
-            average([turn(u, 10) for u in chosen]),
-            average([turn(u, 20) for u in chosen]),
-            average([(turn(u, 20) - turn(u, 5)) / 15 for u in chosen if turn(u, 20) is not None]),
-        )
-
-    HEAD = "%-32s %5s %11s %13s %8s %8s %10s"
-
-    def thousands(value, digits=0):
-        if value is None:
-            return "-"
-        if digits:
-            return format(round(value / 1000, 1), ",.1f") + "k"
-        return format(round(value / 1000), ",d") + "k"
-
-    def emit(label, row):
-        print("%-32s %5d %11.0f %13s %8s %8s %10s" % (
-            label, row[0], row[1], format(round(row[2]), ",d"),
-            thousands(row[3]), thousands(row[4]), thousands(row[5], 1)))
-
-    def change(before, after):
-        """El cambio en tanto por ciento, o un guion si a una de las dos le falta la cifra."""
-        if before is None or after is None or not before:
-            return "-"
-        percent = (after - before) / before * 100
-        return "%+.0f%%" % percent if abs(percent) >= 1 else "="
-
-    print(HEAD % ("agente", "n", "peticiones", "efectivo", "turno10", "turno20", "pendiente"))
-    print(HEAD % ("", "", "por agente", "por agente", "", "", "por turno"))
-
-    kinds = {k for k, _, _ in runs}
-    for kind in sorted(kinds, key=lambda k: -summarize(k, "")[2]):
-        whole = summarize(kind, "")
-        if not since:
-            emit(kind, whole)
-            continue
-        recent = summarize(kind, since)
-        print(kind)
-        emit("  todo", whole)
-        if recent is None:
-            print("  ninguno desde el corte")
-            continue
-        emit("  desde el corte", recent)
-        print(HEAD % ("  cambio", "", change(whole[1], recent[1]), change(whole[2], recent[2]),
-                      change(whole[3], recent[3]), change(whole[4], recent[4]),
-                      change(whole[5], recent[5])))
-
-    print()
-    print("entrada efectiva = cache_read x 0,1 + cache_creation x 1,25")
-    print("turnoN = contexto entero que entro en la peticion N; pendiente = lo que crece entre la 5 y la 20")
-    if since:
-        print("corte en " + since + " UTC; el total incluye lo de despues, asi que el cambio va contra la media entera")
-
-# ---------------------------------------------------------------------------
-
-# Las tres cadenas, y falla si falla cualquiera.
-#
-# `check-repo` va PRIMERA a proposito: sus tres comprobaciones no necesitan ni
-# bootstrap ni deps, tardan milisegundos, y lo que detectan —un fichero de
-# bloqueo tocado sin regenerar las fuentes vendorizadas, un token del sistema de
-# diseno editado a mano, una version que dice tres cosas distintas— no lo
-# encuentra ninguna de las otras.
-#
-# ATAJO LOCAL, NO LO QUE CORRE EL CI: la puerta son los carriles `check-*` de
-# arriba. Esta receta existe para pasar todo el linting de una vez sin compilar
-# ni probar nada.
-lint: check-repo check-po lint-java lint-ts lint-i18n lint-rust
-
 # -Xlint:all, como decidio el issue #11.
 #
 # SIN `clean`, y no es un descuido: `clean` se llevaba por delante
@@ -924,18 +701,13 @@ lint-rust: build-ts
 # Build
 # ---------------------------------------------------------------------------
 
-# `tsc -b` va DENTRO de build, no en una receta aparte (ID-03): un build que
-# compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
-#
-# Compila las tres cadenas, binario de release incluido. ATAJO LOCAL Y PASO DE
-# EMPAQUETADO, no parte del carril rapido: `check-rust` no construye el
-# release (ver alli el motivo).
-build: check-native build-java build-ts build-rust
-
 # Compila el puente Java.
 build-java: bootstrap
     cd {{ bridge }} && mvn -B package -DskipTests
 
+# `tsc -b` va DENTRO de build-ts, no en una receta aparte (ID-03): un build que
+# compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
+#
 # tsc -b y vite build.
 build-ts: po-import
     cd {{ app }} && pnpm exec tsc -b
@@ -985,16 +757,6 @@ check-native:
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-
-# Las tres cadenas mas la puerta CRAP. Las gradas las fija el ADR-0014: A (nada)
-# y B (SoftHSM) corren aqui; C (la libreria nativa) se marca #[ignore] y solo la
-# ejecuta el carril lento, pero AQUI SE COMPILA.
-#
-# Ejecuta las pruebas de las tres cadenas y la puerta CRAP. ATAJO LOCAL: el
-# carril rapido no corre `test-rust`, porque `crap` ya ejecuta la suite
-# instrumentada. Aqui si esta, que sin instrumentar es cuatro veces mas rapida
-# y es el bucle corto de quien desarrolla.
-test: test-java test-ts test-rust crap
 
 # Las de grada A del puente. Las de grada C llevan @Tag("gradaC") y el pom las
 # excluye por omision, porque necesitan poppler (`pdfsig`) y el carril rapido no
@@ -1321,21 +1083,8 @@ check-actions:
 # La miniatura de Open Graph se versiona ya rasterizada porque el Dockerfile que
 # construye la landing no lleva navegador ni tipografias: generarla en cada
 # compilacion pediria las dos cosas para una imagen que cambia una vez al ano.
+# La rasteriza `packaging/repo/site/tools/og-image.sh`.
 #
-# Rasteriza packaging/repo/site/public/og.png desde su plantilla.
-og-image:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    site="{{ justfile_directory() }}/packaging/repo/site"
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-    cp "$site/tools/og.html" "$work/"
-    cp {{ justfile_directory() }}/rfirma-app/src/design-system/bundle/fonts/inter-latin.woff2 "$work/"
-    google-chrome --headless --disable-gpu --hide-scrollbars --allow-file-access-from-files \
-        --force-device-scale-factor=1 --window-size=1200,630 \
-        --screenshot="$work/og.png" "file://$work/og.html"
-    cp "$work/og.png" "$site/public/og.png"
-
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
 check-landing:
     #!/usr/bin/env bash
