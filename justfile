@@ -1,76 +1,26 @@
-# Punto de entrada del proyecto.
+# Punto de entrada del proyecto: `just` es el unico orquestador (ADR-0013).
 #
-# Es la interfaz que encuentra quien llega al repositorio sin contexto: una
-# persona nueva, o el agente revisor, que segun docs/agents/code-host.md
-# siempre instala y ejecuta las comprobaciones el mismo. `just` lista las
-# recetas disponibles.
-#
-# La rejilla la fija el ADR-0013; QUE se ejecuta dentro de `lint` y `test`, y
-# en que carril cae cada cosa, lo fija el ADR-0014.
-#
-# EL REPOSITORIO ES POLIGLOTA Y LA RAIZ NO PERTENECE A NINGUNA CADENA (ID-01):
-#
-#   rfirma-native-bridge/   Maven -> GraalVM CE 25 -> librfirma_crypto.so
-#   rfirma-app/src-tauri/   Cargo
-#   rfirma-app/             pnpm (React 19 + Vite + TypeScript)
-#   packaging/flatpak/      manifiesto y verificacion
-#
-# `just` es el UNICO orquestador. build.rs no invoca a Maven ni a
-# native-image jamas: un `cargo build` que dispare por sorpresa 1 m 22 s de
-# native-image arruina el bucle de realimentacion que protegio el issue #11.
-#
-# Requisitos: just, maven, git, pnpm, cargo y un GraalVM CE 25 para `native`,
-# mas las librerias -dev del WebView (ver `system_libs` mas abajo) y softhsm2 +
-# opensc para el token de la grada B (ver la receta `token`).
-#   apt-get install -y just maven softhsm2 opensc
-#
-# `just tools` los comprueba TODOS y falla nombrando lo que falte, con la orden
-# de apt lista para copiar. Ejecutalo antes que nada si algo no compila.
-#
-# HAY UNA PUERTA LOCAL DE FORMATO ANTES DEL PUSH, en lefthook.yml, que instala
-# `just deps` sin que nadie tenga que acordarse (ADR-0014). Solo comprueba
-# formato, se mide en segundos, y cuando bloquea nombra la receta `fmt-*` que lo
-# arregla. Se salta con `git push --no-verify`, y saltarsela solo adelanta el
-# mismo fallo al CI, que es quien manda.
+# Los requisitos los comprueba `just tools`; la puerta que manda es
+# `just check`, que ejecuta el CI (ADR-0014).
 
-# GraalVM CE 25: lo fijo el issue #6. La linea 21 aborta dentro del JNI_OnLoad
-# de libawt.so con cualquier firma visible, asi que no sirve para construir.
-# El pom sigue compilando a release 21: cambia el JDK que construye, no el
-# lenguaje de destino.
+# GraalVM CE 25 (ADR-0004): la 21 aborta native-image; el pom compila a
+# release 21 aparte.
 default_graalvm := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
 
 bridge := justfile_directory() / "rfirma-native-bridge"
 app := justfile_directory() / "rfirma-app"
 tauri := app / "src-tauri"
 
-# Ruta canonica de la libreria nativa (ADR-0013). `native` la produce aqui y el
-# manifiesto flatpak la instala desde aqui. NO es target/native ni
-# target/ce25-noui: esos eran los dos rivales que el ADR resolvio.
+# Ruta canonica de la libreria nativa (ADR-0013).
 native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 
-# cargo-crap tiene un solo mantenedor y cuatro meses de vida (ADR-0014), asi
-# que la version va FIJADA: una publicacion suya no puede poner en rojo un PR
-# que no la ha tocado. Si se abandona, la puerta se quita borrando la receta
-# `crap` de `test` y esta linea.
+# Version fijada: un cargo-crap con un solo mantenedor no debe poder poner en
+# rojo un PR que no lo ha tocado (ADR-0014).
 crap_version := "0.4.3"
 
-# UN SOLO target/ PARA TODOS LOS WORKTREES DE AGENTES, y el del checkout
-# principal intacto.
-#
-# Cada agente constructor trabaja en un worktree propio, asi que sin esto cada
-# uno recompila el arbol de dependencias de Tauri desde cero: medidos entre 6,8
-# y 13 GB por worktree, y 73 s de reloj antes de que la primera prueba diga
-# nada. Compartiendolo, el primero paga la compilacion entera una vez y los
-# demas entran en 11 s.
-#
-# EL PRINCIPAL SE QUEDA FUERA A PROPOSITO: cargo toma un cerrojo sobre el
-# target/ mientras compila, asi que meterlo dentro haria que un `cargo` a mano
-# esperase a que terminara el agente de turno. Los agentes si se serializan
-# entre si, y eso no cuesta nada con `execution: sequential`
-# (docs/agents/developer-defaults.md).
-#
-# Descartado sccache, y medido: entre dos target/ distintos acierta el 0 % de
-# las veces, porque su clave depende de las rutas de los --extern (ADR-0014).
+# target/ compartido entre worktrees de agentes; el checkout principal se
+# queda fuera porque cargo toma un cerrojo sobre el arbol mientras compila
+# (ADR-0014).
 worktree_target := ```
     own=$(git rev-parse --git-dir 2>/dev/null || true)
     common=$(git rev-parse --git-common-dir 2>/dev/null || true)
@@ -81,45 +31,26 @@ worktree_target := ```
 
 cargo_target := if worktree_target == "" { tauri / "target" } else { worktree_target }
 
-# Una prueba que llama a `just` bajo `cargo llvm-cov` hereda su compilador
-# instrumentado: si compilara en el arbol normal lo dejaria instrumentado, y sus
-# binarios soltarian `default_*.profraw` en el de fuentes al ejecutarse despues.
+# El arbol instrumentado de `cargo llvm-cov` va aparte del normal (ADR-0014).
 export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } else { cargo_target / "llvm-cov-target" }
 
-# Los informes de cobertura, por worktree (el directorio de compilacion de los
-# worktrees es uno solo) y, dentro, un subdirectorio por receta.
 coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
 
-# La misma razon que crap_version: sin ruff.toml ni pyproject.toml en el
-# repositorio, el conjunto de reglas que aplica `ruff check` es el que traiga
-# la version instalada, y una `ruff` nueva puede poner `lint-python` en rojo
-# sin que nadie haya tocado una linea de Python. Clavada aqui e igual en
-# .github/workflows/ci.yml.
+# Version fijada: sin ruff.toml, el conjunto de reglas depende de la version
+# instalada. Igual en .github/workflows/ci.yml.
 ruff_version := "0.16.6"
 
-# El modulo FFI, oculto para la puerta CRAP del carril rapido. cargo-crap
-# puntua con `--missing pessimistic`, o sea que una funcion SIN datos de
-# cobertura vale 0 %, y la cobertura del carril rapido no incluye la grada C.
-# Sin esta exclusion los peores CRAP del repositorio serian justo el codigo que
-# SI esta probado, solo que en el otro carril. El carril lento mide este
-# modulo de forma dirigida con `just crap-ffi`.
+# Modulo FFI oculto de la puerta CRAP del carril rapido (ADR-0014); el carril
+# lento lo mide con `just crap-ffi`.
 ffi_allow := "src/signing/adapters/ffi.rs"
 
-# El accesorio del banco de conformidad, FIJADO POR ETIQUETA Y POR SHA256. La
-# 1.9.2 no publica autoscript.js en npm ni en ningun artefacto: el unico origen
-# es el arbol del tag. Estas dos lineas son el pin, y estan tambien en el paso
-# "Banco de conformidad" de .github/workflows/ci.yml.
+# Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
+# no publica autoscript.js en ningun artefacto. Pin repetido en ci.yml.
 autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
 autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
 
-# Las librerias de sistema que necesita el WebView de Tauri, como pares
-# "<modulo de pkg-config>:<paquete apt>". NO son dependencias de cargo: son
-# paquetes -dev del sistema, y sin ellas `cargo build` muere dentro del
-# build script de webkit2gtk-sys con un error de pkg-config que no menciona
-# ningun paquete instalable.
-#
-# ESTA ES LA LISTA CANONICA: .github/workflows/ci.yml instala exactamente
-# estos paquetes en sus dos carriles. Si tocas una, tocas las tres.
+# Librerias -dev del WebView que necesita Tauri; lista canonica que instala
+# tambien .github/workflows/ci.yml.
 system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
 
 # Lista las recetas.
@@ -130,41 +61,18 @@ default:
 # Contrato
 # ---------------------------------------------------------------------------
 
-# `check` ES UN CONTRATO (ID-03): la puerta entera del repositorio, lo que
-# ejecuta el agente revisor, y lo que en conjunto ejecuta el CI. Crece por
-# dentro; su nombre y su papel no cambian.
-#
-# YA NO ES `tools lint build test`, SINO UN CARRIL POR CADENA. La forma vieja
-# encadenaba las tres cadenas en una sola cola, y eso en el CI es una pared:
-# repartidos en un job cada uno, los carriles corren en paralelo y la espera
-# pasa a ser la cadena mas lenta en vez de la suma de las tres.
-#
-# Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
+# La puerta del repositorio: un carril por cadena, en paralelo en el CI.
 check: tools check-repo check-java check-ts check-rust
 
-# Lo que no pertenece a ninguna cadena (ID-01): cinco comprobaciones que tardan
-# milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
-# el carril de TypeScript por ser el mas barato, no por parentesco.
+# Lo que no pertenece a ninguna cadena: comprobaciones rapidas que ninguna compilacion ve.
 check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python test-scripts
 
-# UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
-# cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
-# tiene esta cadena), ejecuta las pruebas y empaqueta. Antes eran tres JVM
-# —`clean compile`, `package -DskipTests` y `test`— recompilando lo mismo.
+# Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 check-java: test-java
 
 check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
 
-# SIN `cargo build --release`: ese binario no lo ejecuta nadie en el carril
-# rapido —el bundle lo produce el flatpak— y era un arbol de dependencias
-# entero, aparte del de depuracion y del instrumentado. Lo compila el carril
-# lento, que es donde se empaqueta.
-#
-# Y SIN `cargo test` suelto: `crap` arrastra `coverage`, y `cargo llvm-cov` YA
-# ejecuta la suite. Tenerlos los dos era correr las mismas pruebas dos veces en
-# dos arboles distintos. El peaje aceptado es que aqui las pruebas corren solo
-# instrumentadas; sin instrumentar las ejecuta `test-native` en cada empujon a
-# main.
+# lint-rust + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
 check-rust: lint-rust crap check-contract
 
 # ---------------------------------------------------------------------------
@@ -177,37 +85,15 @@ tools:
         DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
         {{ justfile_directory() }}/scripts/tools.sh
 
-# No estan en Maven Central: hay que compilarlas desde el repositorio oficial.
-# La etiqueta v1.9.1 es inmutable, asi que esto se ejecuta una vez y la cache
-# acierta siempre despues.
-#
-# bootstrap.sh NO CRECE (ID-04): resuelve ~/.m2 y nada mas. Instalar GraalVM,
-# flatpak-builder o el token de pruebas son cosas con sudo o SDKMAN que un
-# script no debe hacer a espaldas de nadie; quien las comprueba es `tools`.
-#
-# Instala las dependencias de AutoFirma en ~/.m2 si no estan.
+# Instala las dependencias de AutoFirma en ~/.m2 si no estan (ADR-0002).
 bootstrap:
     {{ justfile_directory() }}/scripts/bootstrap.sh
 
-# El `prepare` de package.json instala de paso la puerta de pre-push
-# (lefthook.yml). No hay una receta que la instale aparte a proposito: una
-# puerta que hay que acordarse de encender no la tiene nadie encendida.
-#
 # Instala las dependencias de node de rfirma-app.
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
 
-# EL CIRCUITO DE CADENAS (ADR-0009 enmendado, ID-121):
-#
-#   po/messages.pot --msgmerge--> po/{es,ca,eu,gl,en}.po --po-import--> src/i18n/locales/*.ts
-#      versionado                       versionados                  generados, NO versionados
-#
-# `po` es el bucle de quien toca una cadena: se escribe en el .pot, se fusiona
-# y se regenera. El peaje esta aceptado a conciencia (ID-128).
-#
-# --all genera TAMBIEN los idiomas incompletos, rellenando con castellano, para
-# que quien traduce vea su trabajo antes del 100 %. Nunca en el CI.
-#
+# --all rellena tambien los idiomas incompletos, con castellano; nunca en el CI.
 # Fusiona el .pot con los cinco .po y regenera los catalogos.
 po *args: deps
     #!/usr/bin/env bash
@@ -225,14 +111,6 @@ po-import: deps
     cd {{ app }} && node tools/po-import.mjs
     cd {{ app }} && pnpm exec i18next-cli types -q
 
-# LOS .po CUADRAN CON EL .pot Y ESTAN BIEN FORMADOS (ID-128). Un idioma
-# incompleto NO es un fallo: es lo normal mientras se traduce, y lo unico que
-# ocurre es que no se genera su .ts. Lo que si falla es un .po roto o con
-# claves que la plantilla no tiene.
-#
-# --use-untranslated y --use-fuzzy en msgcmp: sin ellos, msgcmp trata cada
-# cadena sin traducir como error fatal y un idioma al 0 % pondria el CI rojo.
-#
 # Comprueba los cinco .po contra la plantilla.
 check-po:
     #!/usr/bin/env bash
@@ -246,47 +124,16 @@ check-po:
     done
     echo "los .po cuadran con messages.pot"
 
-# LO QUE EL .pot NO PUEDE VER ES EL CODIGO (ID-127). i18next-cli entra como
-# vigilante y nunca como dueno del catalogo: mira src/ y contesta a las dos
-# preguntas que la cadena .pot -> .po -> .ts deja sin cubrir.
-#
-#   extract --ci     una t() cuya clave no esta en el catalogo -> sale con 1
-#   status --unused  una clave del catalogo que ya no usa nadie -> sale con 1
-#
-# Ambas leen la INSTANTANEA de node_modules/.cache/i18next-cli/, que escribe
-# po-import: `extract` reescribe el fichero que mira, y sobre los catalogos de
-# verdad se llevaria por delante el `: Catalog` que comprueba las claves.
-#
-# i18next-cli sobre el codigo.
+# i18next-cli sobre el codigo: una clave sin catalogo o un catalogo sin uso.
 lint-i18n: po-import
     cd {{ app }} && pnpm exec i18next-cli extract --ci
     cd {{ app }} && pnpm exec i18next-cli status --unused
 
-# El token de la GRADA B (ADR-0014). Es idempotente y tarda segundos, asi que
-# `test-rust` lo llama siempre: la grada B corre en el carril rapido por
-# definicion, y una prueba que se salta en silencio porque falta el token no es
-# una prueba.
-#
-# Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` desde
-# testdata/fnmt/.
+# Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` desde testdata/fnmt/.
 token:
     ./testdata/softhsm/provision-token.sh
 
-# El accesorio del BANCO DE CONFORMIDAD (TD-55): el `autoscript.js` que sirve
-# una sede de verdad, corriendo bajo Node contra nuestro canal en
-# tests/conformance_bench.rs.
-#
-# NO SE COPIA AL REPOSITORIO: es codigo ajeno (EUPL-1.1/GPL-2.0) que no
-# distribuimos. Se descarga A ETIQUETA FIJADA —el tag v1.9.2, no `master`, que
-# va 219 commits por delante y sin publicar (ID-313)— y con el sha256
-# comprobado, asi que lo que corre es un fichero identificado, no lo que
-# hubiera hoy en una rama.
-#
-# ES UNA DESCARGA DE PREPARACION, NO UNA PRUEBA DE RED (ID-312): pasa una vez,
-# queda cacheada y a partir de ahi el banco es grada B. La grada D es que el
-# SUJETO de la prueba sea un tercero vivo, y aqui el sujeto es nuestro canal.
-#
-# Idempotente: si el fichero ya esta y su sha cuadra, no toca la red.
+# Descarga (a etiqueta y sha fijados) el autoscript.js del banco de conformidad.
 autoscript:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -310,7 +157,6 @@ autoscript:
     echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
 
 # Genera el mapa del protocolo de AutoFirma a tag fijado y lo cruza con el de rFirma.
-# Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
 protocol-map *args:
     python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
 
@@ -318,141 +164,48 @@ protocol-map *args:
 # Navegacion
 # ---------------------------------------------------------------------------
 
-# Imprime el ESQUELETO de un fichero en vez de su contenido: cada elemento
-# publico, cada prueba y cada atributo que decide algo, con su numero de linea
-# y la PRIMERA linea de su documentacion. Nada mas.
-#
-# PARA QUE SIRVE: `crossing/guards.rs` son 14 KB, y leerlo entero cuesta ~4 k
-# tokens que un agente arrastra en su contexto durante el resto de la sesion,
-# reenviados en cada peticion. Su esqueleto son 2 KB y dice lo mismo para
-# situarse. Medido: en la construccion del issue #126, tres `cat` de ficheros
-# que el mapa ya marcaba como grandes se llevaron el 20 % de toda la fase de
-# exploracion.
-#
-# COMO SE USA, en dos pasos:
-#
-#   just outline rfirma-app/src-tauri/src/crossing/guards.rs   # el esqueleto
-#   sed -n '244,270p' rfirma-app/src-tauri/src/crossing/guards.rs  # el tramo
-#
-# El primer paso te da el numero de linea del elemento que buscas; el segundo
-# abre solo ese tramo. NO sustituye a leer el codigo que vas a EDITAR: te lleva
-# hasta el, para que abras diez lineas en vez de cuatrocientas.
-#
-# Es una heuristica de texto plano, no un analizador sintactico: algo con
-# macros raras se le escapara. No importa, porque el paso siguiente es leer el
-# tramo de verdad.
-#
 # Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
 outline path:
     {{ justfile_directory() }}/scripts/outline.sh {{ path }}
 
-
-# Imprime EL CONTRATO ENTRE LOS DOS LADOS: las ordenes que la ventana puede
-# pedirle al backend y los tipos que cruzan la frontera, con los nombres de
-# campo que ve TypeScript.
-#
-# PARA QUE SIRVE: para saber esto mismo hay que leer hoy el `adapters/tauri.rs`
-# y el `adapters/views.rs` de cada uno de los cinco contextos. El contrato es
-# MAS correcto que las fuentes: de los cinco parametros de `begin_signing`,
-# cuatro son estado que Tauri inyecta y NO cruzan; aqui no aparecen. Quien va a
-# tocar la interfaz empieza por aqui y no abre ningun `adapters/` jamas.
-#
-# SE GENERA DE LAS FUENTES, y por eso no puede quedarse obsoleto. Un contrato
-# escrito a mano se desincroniza en el primer PR que anade una orden, y uno
-# desincronizado es PEOR que ninguno: el agente se lo cree, escribe el
-# adaptador contra una firma que no existe y lo descubre al compilar, cuando ya
-# ha gastado el contexto.
-#
-# Las dos reglas que lo hacen fiel, y que son verificables:
-#
-#   - La ORDEN se invoca por su nombre de Rust tal cual —`invoke(
-#     "list_certificates")`, ver `src/tauri.ts`—, asi que va sin tocar.
-#   - Los CAMPOS los renombra serde a camelCase (`rename_all` en cada
-#     `crossing!`), asi que se renombran: `holder_name` sale `holderName`, que
-#     es lo que el adaptador escribe de verdad.
-#
-# Los tipos salen del registro de `crossing.rs`, que el enlazador completa con
-# cada `crossing!`: un tipo nuevo aparece aqui por declararse, sin lista que
-# mantener, y uno que derive `Serialize` a mano no es un `WindowCrossing` y no
-# cruza.
-#
-# Las FUENTES de las ordenes se descubren por ruta, igual que en la guarda de
-# `crossing/guards.rs`: en el `adapters/` de cualquier contexto bajo `src/`, los
-# `tauri*.rs`, `views*.rs` y `orders*.rs` (RD-02): el adaptador de Tauri y nada
-# mas. Sin lista de ficheros. `src` se puede apuntar a otro arbol para probar la
-# receta.
-#
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
-# EL CONTRATO VENTANA-BACKEND NO CAMBIA (RD-11 del #408): `tests/contract.snapshot`
-# es el oraculo de la ventana. Si esta receta se pone roja, un tipo de cruce o
-# una orden ha cambiado de forma, y eso se discute en el issue, no se acomoda
-# aqui. Vive en `check-rust` porque el contrato se genera desde el crate.
-#
 # Comprueba que `just contract` sigue siendo el de la instantanea.
 check-contract: build-ts
     #!/usr/bin/env bash
     set -eu
     snapshot={{ tauri }}/tests/contract.snapshot
     if ! diff -u "$snapshot" <(just contract); then
-        echo "el contrato ventana-backend ha cambiado; ver RD-11 del #408" >&2
+        echo "el contrato ventana-backend ha cambiado" >&2
         exit 1
     fi
     echo "check-contract: el contrato es el de la instantanea"
 
-# -Xlint:all, como decidio el issue #11.
-#
-# SIN `clean`, y no es un descuido: `clean` se llevaba por delante
-# target/lib/rfirma/librfirma_crypto.so, o sea que `just check` borraba la
-# libreria nativa a mitad de ejecucion y `just test-native` fallaba despues
-# senalando un fichero que existia al empezar. El aviso vivia en
-# docs/agents/code-host-ci.md; ahora no hace falta. No se pierde ninguna
-# puerta: -Xlint:all avisa pero no es -Werror, asi que esta receta comprueba
-# que compila, y de eso maven se entera igual sin borrar nada.
+# Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
 lint-java: bootstrap
     cd {{ bridge }} && mvn -B compile
 
-# Biome, no eslint + prettier (ADR-0014): un binario que formatea y lintea en
-# milisegundos, y aqui el ecosistema de plugins de eslint no cobra porque no
-# hay router, ni tabla de datos, ni biblioteca de componentes.
-#
 # Biome sobre rfirma-app.
 lint-ts: po-import
     cd {{ app }} && pnpm exec biome ci .
 
-# LAS RECETAS QUE ESCRIBEN, no las que comprueban: son las que nombra la puerta
-# de pre-push (lefthook.yml) cuando bloquea, asi que su nombre es parte del
-# mensaje de error y no cambia sin cambiarlo alli.
-#
 # Formatea las tres cadenas escribiendo.
 fmt: fmt-rust fmt-ts fmt-python
 
-# SIN build-ts, al contrario que lint-rust: rustfmt parsea, no compila, y esa
-# dependencia convertiria en minutos una receta de tres decimas.
-#
 # rustfmt sobre rfirma-app/src-tauri.
 fmt-rust:
     cd {{ tauri }} && cargo fmt --all
 
-# SIN po-import, al contrario que lint-ts: biome.json excluye src/i18n/locales,
-# que es lo unico que po-import genera, asi que aqui no pinta nada.
-#
 # Formateador de biome sobre rfirma-app.
 fmt-ts:
     cd {{ app }} && pnpm exec biome format --write .
 
-# NO es lo que comprueba el CI, que corre `ruff check`: son dos cosas distintas,
-# y `ruff format` solo lo vigila la puerta local.
-#
 # `ruff format` sobre packaging y scripts.
 fmt-python:
     ruff format {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
-# Depende de build-ts porque tauri-build lee frontendDist (../dist) ya en
-# build.rs: sin el, clippy se cae antes de mirar una sola linea de Rust.
-#
 # clippy y rustfmt sobre rfirma-app/src-tauri.
 lint-rust: build-ts
     cd {{ tauri }} && cargo fmt --all -- --check
@@ -466,39 +219,16 @@ lint-rust: build-ts
 build-java: bootstrap
     cd {{ bridge }} && mvn -B package -DskipTests
 
-# `tsc -b` va DENTRO de build-ts, no en una receta aparte (ID-03): un build que
-# compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
-#
 # tsc -b y vite build.
 build-ts: po-import
     cd {{ app }} && pnpm exec tsc -b
     cd {{ app }} && pnpm exec vite build
 
-# Sin `tauri build`: esta receta es el atajo de compilacion y el paso que
-# alimenta al flatpak, cuyo manifiesto instala el binario el mismo. Quien
-# empaqueta el .deb y el .rpm es la receta `bundle`, y esa si pasa por el
-# bundler. `vite build` tiene que haber corrido antes, porque tauri-build lee
-# frontendDist.
-#
-# --features custom-protocol NO ES OPCIONAL, y es justo lo que se pierde al no
-# usar `cargo tauri build`, que la pasa el solo. Sin ella el `dev` de Tauri
-# queda encendido y el binario apunta la ventana a devUrl en vez de servir el
-# frontal empotrado. Ver el bloque [features] de src-tauri/Cargo.toml.
-#
 # Compila el binario de la aplicacion.
 build-rust: build-ts
     cd {{ tauri }} && cargo build --release --features custom-protocol
 
-# La libreria nativa NO SE ENCADENA (ADR-0013): `dev` y `build` comprueban que
-# esta y, si falta, fallan nombrando `just native`. Encadenarla metaria 1 m 22 s
-# de native-image en cada compilacion.
-#
-# RFIRMA_SKIP_NATIVE=1 salta la comprobacion. Existe por el carril rapido del CI,
-# que corre `just check` sin construir la imagen nativa a proposito (son tres
-# minutos que el carril lento ya paga). Ponerla a mano en local es decir "se lo
-# que hago y no voy a ejecutar nada".
-#
-# Falla nombrando `just native` si la libreria nativa no esta.
+# Falla nombrando `just native` si la libreria nativa no esta; RFIRMA_SKIP_NATIVE=1 la salta (ADR-0013).
 check-native:
     {{ justfile_directory() }}/scripts/check-native.sh {{ native_lib }}
 
@@ -506,17 +236,7 @@ check-native:
 # Test
 # ---------------------------------------------------------------------------
 
-# Las de grada A del puente. Las de grada C llevan @Tag("gradaC") y el pom las
-# excluye por omision, porque necesitan poppler (`pdfsig`) y el carril rapido no
-# lo instala. Se COMPILAN igual —`mvn test` compila todas—, que es la mitad de la
-# TD-02 que le toca a esta cadena.
-#
-# `verify` Y NO `test`: recorre compile (con -Xlint:all), test y package en una
-# sola JVM, asi que es a la vez el lint, el build y las pruebas de esta cadena.
-# Por eso `check-java` es solo esto y por eso NO depende de `build-java`:
-# encadenarlo seria arrancar maven dos veces para empaquetar dos veces.
-#
-# Pruebas del puente Java.
+# Pruebas del puente Java (`verify`: compila, prueba y empaqueta en una JVM).
 test-java: bootstrap
     cd {{ bridge }} && mvn -B verify
 
@@ -527,41 +247,17 @@ test-ts: po-import
 # cargo test, mas la compilacion de las pruebas de grada C.
 test-rust: token build-ts
     cd {{ tauri }} && cargo test --all-features
-    # El punto ciego de #[ignore] es que una prueba de grada C que deja de
-    # compilar contra la FFI se salta EN SILENCIO. Esto lo cierra: el carril
-    # rapido las compila aunque no las ejecute (TD-02).
     cd {{ tauri }} && cargo test --all-features --no-run
 
-# RFIRMA_LIB_DIR por lo mismo que en `dev`: el binario de una prueba vive en
-# src-tauri/target/debug/deps/, asi que la ruta relativa al ejecutable que usa
-# el cargador (../lib/rfirma) resolveria a src-tauri/target/debug/lib/rfirma y
-# no a donde `native` acaba de instalar la libreria.
 # Las de grada C, que el carril lento ejecuta con --ignored.
 test-native: token check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
-    # Las de grada C del puente Java: el ciclo trifasico entero validado con
-    # `pdfsig` de poppler, que es la puerta automatica de validez del ADR-0014.
-    # -DexcludedGroups= y -Dgroups=gradaC ejecutan unicamente la grada C sin repetir unitarios.
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
 # ---------------------------------------------------------------------------
-#
-# En Java no entra —lo unico en Maven Central es un plugin de Hudson de 2010 y
-# el puente es codigo que reenvia— y en TypeScript tampoco: la complejidad
-# ciclomatica de un componente React es JSX condicional, que no es lo que la
-# metrica mide. El codigo de riesgo de este proyecto esta todo en Rust.
-#
-# Umbral ABSOLUTO en 30 (el de Savoia), sin --baseline ni --fail-regression: el
-# trinquete exige versionar un JSON que cambia en casi cada PR, y su unica
-# ventaja —amnistiar deuda existente— no aplica cuando no hay deuda.
 
-# EJECUTA LA SUITE, no solo la mide: `cargo llvm-cov` corre `cargo test` por
-# dentro y propaga su codigo de salida. Por eso el carril rapido no necesita
-# ademas un `cargo test`, y por eso tampoco hace falta el `--no-run` de las de
-# grada C: llvm-cov compila todos los objetivos de prueba (TD-02).
-#
 # Genera el lcov de toda la suite con cargo llvm-cov.
 coverage: token build-ts
     mkdir -p "{{ coverage_out }}/coverage"
@@ -572,7 +268,6 @@ crap: coverage
     cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
 
-# Puerta CRAP del modulo FFI contra la libreria nativa (ADR-0014).
 # Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
 crap-ffi: token check-native build-ts
     mkdir -p "{{ coverage_out }}/crap-ffi"
@@ -580,11 +275,6 @@ crap-ffi: token check-native build-ts
         -- --ignored
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
 
-# `IO failure on output stream` o `No space left on device` al compilar con
-# cobertura es el disco lleno, no un fallo de LLVM, y esta es la salida: sin la
-# recompilacion entera de `clean`. Desde un worktree libera el arbol
-# instrumentado de todos, que es uno solo.
-#
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 clean-coverage:
     {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }}
@@ -593,22 +283,7 @@ clean-coverage:
 # Imagen nativa, empaquetado y desarrollo
 # ---------------------------------------------------------------------------
 
-# Tarda minutos y consume mucha memoria; por eso el workflow no la construye
-# en cada PR (ver .github/workflows/ci.yml).
-#
-# AQUI NO HAY BANDERAS SUELTAS, y es a proposito (ID-06): el nombre de la
-# libreria, --no-fallback y los .afm de iText viven VERSIONADOS en
-# rfirma-native-bridge/src/main/resources/META-INF/native-image/, que
-# native-image recoge del classpath el solo. Asi la imagen se construye igual
-# desde un clon limpio que desde aqui. Si vuelve a hacer falta una bandera, va a
-# ese fichero, no a esta linea.
-#
-# Produce la ruta CANONICA del ADR-0013, y solo librfirma_crypto.so: si algun dia
-# el directorio de construccion vuelve a tener los auxiliares de AWT, un
-# `install *.so` reintroduciria libawt.so — y con el, el aborto del proceso ante
-# un JPEG con perfil ICC que midio el #36.
-#
-# Construye la libreria nativa compartida con GraalVM CE 25.
+# Construye la libreria nativa compartida con GraalVM CE 25 (ADR-0013).
 native: build-java
     #!/usr/bin/env bash
     set -euo pipefail
@@ -618,14 +293,9 @@ native: build-java
     mkdir -p "$build_dir" && cd "$build_dir"
     "$graal/bin/native-image" --shared \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
-    # El directorio de DISTRIBUCION se vacia antes de copiar. No es limpieza
-    # cosmetica: sin esto hereda lo que dejase una version anterior de esta
-    # receta —las que instalaban los seis .so— y el directorio que el manifiesto
-    # empaqueta acabaria con libawt.so dentro sin que nadie lo tocara.
     rm -rf "$dest"
     mkdir -p "$dest"
     install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
-    # Y se comprueba, porque la invariante es "UNO", no "el que acabo de copiar".
     sobran="$(ls -1 "$dest" | grep -v '^librfirma_crypto\.so$' || true)"
     if [ -n "$sobran" ]; then
         echo "sobra algo en $dest:" >&2
@@ -634,32 +304,10 @@ native: build-java
     fi
     ls -la "$dest"
 
-# El suelo de glibc del ADR-0004/ADR-0015: `librfirma_crypto.so` promete
-# GLIBC_2.34 y no mas alto, medido en docs/research/glibc-libreria-nativa.md.
-# La promesa la sostiene ESTA PUERTA, no un contenedor `ubuntu:22.04` (ID-149):
-# adoptar un contenedor de construccion congelaria toda la cadena solo para
-# fijar un numero que `objdump` ya puede leer sobre el resultado.
-#
-# El mismo fichero cruza los tres canales (ADR-0004), asi que basta con medir
-# UNA VEZ la libreria recien construida; no hace falta repetirlo por formato.
-#
-# Comprueba el suelo de glibc de la libreria nativa.
+# Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
 check-glibc lib=native_lib:
     {{ justfile_directory() }}/scripts/check-glibc.sh {{ lib }}
 
-# El manifiesto lee la ruta canonica que produce `native` y el frontend ya
-# construido de rfirma-app/dist, porque tauri-build lee `frontendDist` dentro de
-# su propio build.rs. Por eso esta receta encadena tambien `build-ts`.
-#
-# EL ENTREGABLE DEL v0.1 ES EL FICHERO .flatpak (ID-42), no la instalacion: se
-# construye contra un repositorio ostree local y de ahi sale el bundle de un
-# solo fichero, que se instala con `flatpak install`. No se publica en ningun
-# sitio —ni Releases, ni repositorio remoto, ni GPG—: eso es el ADR-0015 y
-# queda fuera de este hito.
-#
-# El runtime NO va dentro del bundle: se consume del remoto de Flathub, que es
-# por tanto requisito de instalacion. Ver el README.
-#
 # Construye el flatpak, el unico canal soportado (ADR-0015).
 flatpak: check-native build-ts
     #!/usr/bin/env bash
@@ -672,25 +320,6 @@ flatpak: check-native build-ts
     echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
-# Los otros dos canales del ADR-0004, los que NO son el flatpak: el bundler de
-# Tauri produce el .deb y el .rpm de una sola pasada, con `bundle.active: true`
-# y `targets: ["deb", "rpm"]` en tauri.conf.json.
-#
-# `tauri build` y NO `cargo build --release`: la bandera --features
-# custom-protocol la pasa el solo (ver el comentario de `build-rust`, donde no
-# usarla es justo lo que obliga a escribirla a mano), y es el unico que sabe
-# empaquetar. Comprueba `check-native` (ADR-0013) porque la libreria entra en los
-# dos paquetes por `bundle.linux.<formato>.files` desde la ruta canonica, y
-# `build-ts` porque tauri-build lee frontendDist.
-#
-# LA REGLA DE LAS CANDIDATAS NO SE REIMPLEMENTA AQUI (ID-154): se consulta
-# packaging/native-packages-allowed.sh con la version de tauri.conf.json, que es
-# la fuente (ID-150). Una `-rc.N` no tiene representacion valida en el campo
-# Version de un RPM, asi que ahi esta receta no construye nada y lo dice.
-#
-# La puerta del contenido (ADR-0012, ID-144) es la MISMA que la del flatpak:
-# packaging/verifica-contenido.sh sobre el paquete construido, uno por formato.
-#
 # Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004).
 bundle: check-native build-ts
     #!/usr/bin/env bash
@@ -713,37 +342,18 @@ bundle: check-native build-ts
         echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
     done
 
-# A mano, cuando cambie un fichero de bloqueo: el flatpak se construye SIN red
-# (ADR-0013) y el CI comprueba que estos ficheros estan al dia en vez de
-# regenerarlos, porque un fichero generado dentro del CI es un fichero que
-# nadie ha mirado.
-#
 # Regenera cargo-sources.json y node-sources.json.
 flatpak-sources:
     {{ justfile_directory() }}/scripts/flatpak-sources.sh
 
-# La comprobacion de ID-07, sin regenerar nada. Va dentro de `lint` (y por
-# tanto de `check`) en vez de ser un paso suelto del workflow, porque
-# docs/agents/code-host.md promete que el CI ejecuta `just check` y nada mas.
-#
 # Comprueba que las fuentes vendorizadas del flatpak estan al dia.
 check-flatpak-sources:
     {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
 
-# La comprobacion de ID-56, hermana de la de arriba y por los mismos motivos:
-# el bundle del sistema de diseno es normativo y despues del corte no hay
-# origen que consultar, asi que lo unico que puede protegerlo es un sello.
-#
 # Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
 check-ds-bundle:
     {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
 
-# La puerta del ID-170, tercera hermana de `check-repo` y por los mismos
-# motivos: una accion fijada por etiqueta es codigo de un tercero que puede
-# cambiar bajo los pies del runner, y la convencion de fijarlas por SHA se
-# rompe sola —quien anada un paso copiara el `uses: foo/bar@v1` del README de
-# esa accion—.
-#
 # Comprueba que las acciones de los workflows estan fijadas por SHA.
 check-actions:
     {{ justfile_directory() }}/.github/check-workflows.sh
@@ -752,35 +362,11 @@ check-actions:
 test-scripts:
     {{ justfile_directory() }}/scripts/tests/outline_test.sh
 
-# El mecanismo de publicacion (ID-172, ID-174), y la unica parte de la tuberia
-# de entrega que NO se puede ensayar con una etiqueta `-rc.N`: el ensayo se
-# detiene justo antes de tocar el anfitrion, asi que si esto no se prueba aqui
-# no se prueba en ningun sitio. La pata remota no se simula: levanta el mismo
-# `rrsync` del `authorized_keys` del VPS detras de un `ssh` de mentira, asi que
-# una opcion de rsync que la orden forzada no admita se ve aqui y no el dia de
-# la entrega. Sin `rrsync` instalado esa pata avisa y se salta.
-#
-# La otra mitad, la del arbol, hace lo mismo con los tres repositorios: importa
-# bundles de flatpak en un ostree vacio DOS VECES y comprueba que sale el mismo
-# commit, que es el ID-173 entero —reconstruir no obliga a nadie a
-# redescargar—. Necesita ostree, flatpak, dpkg-dev, apt-utils, createrepo-c y
-# rpm; si falta alguna, avisa y se salta esa pata, y el CI las instala para que
-# ahi no se salte nunca. Las firmas no se prueban: las claves de rFirma las
-# crea una persona (`packaging/setup-signing-key.sh`) y eso se ensaya con una
-# etiqueta `-rc.N`.
-#
 # Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
-# LA LANDING ES UN PROYECTO APARTE, con su `package.json`, su lockfile y sus
-# dependencias: `pnpm install` de la raiz no la instala y `build-ts` no la
-# construye. Aqui se instala en frio, se corren sus pruebas —las que exigen los
-# cinco diccionarios al 100 %— y se construye, que es lo que de verdad dice si
-# la pagina sigue saliendo en los cinco idiomas.
-#
-# La miniatura de Open Graph se versiona ya rasterizada porque el Dockerfile que
-# construye la landing no lleva navegador ni tipografias: generarla en cada
-# compilacion pediria las dos cosas para una imagen que cambia una vez al ano.
-# La rasteriza `packaging/repo/site/tools/og-image.sh`.
-#
+check-publish:
+    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
+    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
+
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
 check-landing:
     #!/usr/bin/env bash
@@ -790,52 +376,19 @@ check-landing:
     pnpm exec vitest run --reporter=dot
     pnpm exec astro build
 
-check-publish:
-    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
-    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
-
-# El candado del ID-150 y sus vecinos, hermano de las otras dos de `check-repo`
-# y por los mismos motivos: cuesta milisegundos, no necesita ni bootstrap ni
-# deps, y lo que detecta —una version que dice tres cosas distintas, un enlace
-# de descarga que envejece, un lanzador que pone `rfirma` donde va prosa— no lo
-# ve ninguna compilacion.
-#
-# La FUENTE de la version es rfirma-app/src-tauri/tauri.conf.json y solo ahi se
-# cambia; pom.xml queda FUERA del candado a proposito (ID-150). La regla de las
-# candidatas vive en packaging/native-packages-allowed.sh, y quien empaquete la
-# CONSULTA en vez de reimplementarla (ID-154).
-#
 # Comprueba el candado de la version y el nombre del producto.
 check-version:
     {{ justfile_directory() }}/packaging/check-version.py
 
-# El ID-164 y el TD-45. Python es tecnologia nueva aqui y solo vive en
-# `packaging/`: el candado de la version y la extension de Nautilus. Esa
-# extension corre DENTRO del proceso de Nautilus, asi que un error de sintaxis
-# no rompe rFirma, rompe el gestor de ficheros de quien la tenga instalada.
-#
-# `ruff check` es lo UNICO que la vigila (TD-45): no hay ninguna prueba que
-# instale el paquete y compruebe que Nautilus la carga, porque eso seria
-# comprobar una distribucion, no este repositorio.
-#
 # Lintea el Python del repositorio.
 lint-python:
     ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
-# A mano, cuando el bundle se reexporte desde el proyecto de sistema de diseno.
-# No lo ejecuta el CI: un sello regenerado dentro del CI sella lo que nadie ha
-# mirado, que es exactamente lo que se quiere impedir.
-#
 # Resella el bundle del sistema de diseno.
 seal-ds-bundle:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}"
-    # Rutas relativas a la raiz, que es desde donde comprueba el script, y
-    # orden estable (LC_ALL=C) para que dos resellados de lo mismo den el mismo
-    # fichero y el diff solo ensene lo que de verdad ha cambiado.
-    # `_ds_needs_recompile` queda fuera, igual que en .gitignore: es un marcador
-    # de estado de design-sync-cli y no parte del sistema de diseno.
     find rfirma-app/src/design-system/bundle -type f ! -name _ds_needs_recompile \
         | LC_ALL=C sort \
         | xargs sha256sum \
@@ -843,49 +396,18 @@ seal-ds-bundle:
     echo
     echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
-# Abre la ventana con recarga en caliente. Lo que le pases va a la
-# aplicacion, no a cargo: `just dev documento.pdf`, `just dev --help`. El
-# doble `--` es de `tauri dev`, que separa los argumentos del runner de los de
-# la aplicacion (`tauri dev -- [runnerArgs] -- [appArgs]`).
-#
 # Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
 dev *args: check-native po-import
     cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
 
-# Registra el binario de DESARROLLO como manejador de afirma:// en la sesion
-# del usuario, para no tener que construir e instalar el .deb en cada cambio.
-# Escribe ~/.local/share/applications/rfirma-dev.desktop y lo pone por
-# omision para el esquema. Se deshace con `just dev-handler-off`.
-#
-# COMO SE USA: en una terminal, `just dev`; en otra (una sola vez),
-# `just dev-handler`. Al pulsar el enlace de la sede, el escritorio arranca
-# target/debug/rfirma con la URL, y la instancia unica se la entrega a la
-# ventana que ya tienes abierta con recarga en caliente.
-#
-# SIN `just dev` DELANTE NO SIRVE: el binario de debug carga la interfaz de
-# http://localhost:1420 (build.devUrl), no de dist/, asi que arrancado solo
-# ensena una ventana en blanco.
-#
-# Firefox guarda su propia eleccion aparte de la del escritorio: si ya dijo
-# que abre afirma:// con AutoFirma, hay que quitarlo en sus Ajustes ->
-# Aplicaciones.
-#
-# Registra el binario de desarrollo como manejador de afirma://.
+# Registra el binario de desarrollo como manejador de afirma://; deshacer con `just dev-handler-off`.
 dev-handler:
     {{ justfile_directory() }}/scripts/dev-handler.sh on
 
-# Deshace lo anterior: borra el .desktop de desarrollo y dice quien queda
-# atendiendo el esquema.
-#
 # Quita el manejador de desarrollo de afirma://.
 dev-handler-off:
     {{ justfile_directory() }}/scripts/dev-handler.sh off
 
-# El .deb y el .rpm REUTILIZANDO la libreria nativa que ya esta construida.
-# Es `bundle` sin `native` delante: mismo resultado mientras no hayas tocado
-# el puente Java, y sin los tres minutos de native-image ni el ciclo de maven.
-# Si has tocado rfirma-native-bridge/, esta receta NO se entera: usa `bundle`.
-#
 # El .deb y el .rpm sin reconstruir la libreria nativa.
 bundle-quick: check-native build-ts
     #!/usr/bin/env bash
@@ -899,10 +421,6 @@ bundle-quick: check-native build-ts
         echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
     done
 
-# DESDE UN WORKTREE NO TOCA EL ARBOL DE RUST: es el de todos los worktrees
-# (ADR-0014), y vaciarlo le cuesta la recompilacion entera al agente de al
-# lado. Ahi solo borra sus informes de cobertura; para el disco, `clean-coverage`.
-#
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 clean:
     #!/usr/bin/env bash
@@ -917,14 +435,6 @@ clean:
     rm -f "{{ tauri }}"/*.profraw
     rm -rf "{{ app }}/dist"
 
-# ID-153: los fragmentos de changelog.d/ (uno por issue, README.md aparte) se
-# reunen aqui, no antes, porque escribir cada uno en su propio fichero es lo
-# que evita el conflicto de fusion de un `## [Unreleased]` compartido. A mano,
-# al publicar una version: sustituye la seccion "## [<version>] - sin
-# publicar" si existe (el caso de la v0.4.0), o inserta una seccion nueva
-# delante de la primera si la version ya tenia una fechada, y borra los
-# fragmentos incorporados.
-#
 # Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
 changelog-release version:
     {{ justfile_directory() }}/scripts/changelog-release.sh {{ version }}
