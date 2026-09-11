@@ -12,6 +12,7 @@ use crate::site::domain::relay_error::Situation as RelaySituation;
 const KEY: &str = "12345678";
 const RETRIEVE_SERVLET: &str = "https://relay.example/retrieve";
 const STORE_SERVLET: &str = "https://relay.example/store";
+const NO_WAIT: std::time::Duration = std::time::Duration::from_millis(0);
 
 fn a_key() -> CipherKey {
     CipherKey::from_url_parameter(KEY)
@@ -260,7 +261,7 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
 
     opened_and_delivered(&relay, &info);
     let (_operation, reply) = spy.take_reply();
-    reply.answer("la-respuesta-cifrada".to_owned());
+    let acknowledgement = reply.answer("la-respuesta-cifrada".to_owned());
 
     assert_eq!(
         servlets.body.retrieve(STORE_SERVLET, "tx-3"),
@@ -268,6 +269,10 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
     );
     assert_eq!(spy.exits(), 1);
     assert!(spy.failures().is_empty());
+    assert!(
+        acknowledgement.wait(NO_WAIT),
+        "la subida sincrona ya ha terminado: el acuse se cumple al momento"
+    );
 }
 
 #[test]
@@ -286,12 +291,16 @@ fn a_rejected_upload_notifies_without_closing_the_process() {
 
     opened_and_delivered(&relay, &info);
     let (_operation, reply) = spy.take_reply();
-    reply.answer("la-respuesta-cifrada".to_owned());
+    let acknowledgement = reply.answer("la-respuesta-cifrada".to_owned());
 
     assert_eq!(spy.exits(), 0);
     let failures = spy.failures();
     assert_eq!(failures.len(), 1);
     assert_eq!(failures[0].code(), SafCode::SendingResult);
+    assert!(
+        !acknowledgement.wait(NO_WAIT),
+        "una subida rechazada no entrega la respuesta: el acuse no se cumple"
+    );
 }
 
 #[test]

@@ -54,7 +54,10 @@ fn what_arrives_at_the_inbox_notifies_arrival_and_delivers_operations() {
     assert!(arrived.load(std::sync::atomic::Ordering::SeqCst));
 
     let url = AfirmaUrl::parse("afirma://websocket?ports=51001,51002,51003&v=4").expect("url");
-    inbox.deliver(url.clone(), ReplyHandle::of(|_| {}));
+    inbox.deliver(
+        url.clone(),
+        ReplyHandle::of(|_| Acknowledgement::immediate()),
+    );
     assert_eq!(delivered.lock().expect("el candado").as_ref(), Some(&url));
 }
 
@@ -80,11 +83,13 @@ fn what_is_answered_is_what_the_other_end_receives() {
     let keeping = std::sync::Arc::clone(&received);
     let handle = ReplyHandle::of(move |text| {
         *keeping.lock().expect("el candado") = Some(text);
+        Acknowledgement::immediate()
     });
 
-    handle.answer("OK".to_owned());
+    let acknowledgement = handle.answer("OK".to_owned());
 
     assert_eq!(received.lock().expect("el candado").as_deref(), Some("OK"));
+    assert!(acknowledgement.wait(std::time::Duration::from_millis(0)));
 }
 
 #[test]
