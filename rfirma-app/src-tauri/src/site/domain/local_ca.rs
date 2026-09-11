@@ -55,6 +55,14 @@ impl LocalCa {
         Ok(Self { certificate, key })
     }
 
+    /// Genera una CA local con los días de validez indicados, para pruebas de umbral.
+    #[cfg(test)]
+    pub fn valid_for_days_for_test(days: u32) -> Result<Self, TlsError> {
+        let key = generate_key()?;
+        let certificate = build_certificate(&key, days).map_err(not_generated)?;
+        Ok(Self { certificate, key })
+    }
+
     /// Reconstruye la CA local a partir de los PEM de certificado y clave privada.
     pub fn from_pem(certificate_pem: &[u8], key_pem: &[u8]) -> Result<Self, TlsError> {
         let certificate = X509::from_pem(certificate_pem).map_err(damaged)?;
