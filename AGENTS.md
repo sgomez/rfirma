@@ -55,14 +55,16 @@ peldaños:
 | --- | --- |
 | En cada rojo → verde | Solo la prueba que estás tocando: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
 | Antes de commitear | `just fmt` y **`just check-changed`**, una vez y no por arreglo: deduce de lo que cambia respecto a `origin/main` qué carriles hacen falta |
+| Si `check-changed` sale en rojo | Vuelve al primer peldaño con la prueba o el fichero que falló, arréglalo y repite `check-changed` una sola vez; nunca escales a `just check`. Si el rojo es `IO failure on output stream` o `No space left on device`, es el disco, no LLVM: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |
 | `just check` entero | Solo si tocas el `justfile` o `.github/` — y entonces `check-changed` ya dispara las tres cadenas sin que tengas que decidirlo |
 
 Tres avisos que ahorran una ronda:
 
-* **`just check-rust` no es un bucle de realimentación, es la puerta CRAP.**
+* **`just check-rust`, `just test`, `just coverage` y `just crap` no son un
+  bucle de realimentación: las cuatro arrastran el árbol instrumentado.**
   `cargo llvm-cov` compila un árbol instrumentado **aparte** del de `cargo
-  test` y de `clippy`, así que iterar con él paga dos compilaciones completas
+  test` y de `clippy`, así que iterar con ellas paga dos compilaciones completas
   para responder a lo que `cargo test <filtro>` responde en segundos.
 * **Un `cargo test` suelto necesita `rfirma-app/dist` y el token**, que es lo
   que le añaden las recetas: desde un árbol limpio el arranque sigue siendo
