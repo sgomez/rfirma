@@ -160,6 +160,11 @@ export const en: Dictionary = {
   "comparison.keys.label": "Where the private key is processed",
   "comparison.keys.autofirma": "In the Java process",
   "comparison.keys.rfirma": "In the system store or the PKCS#11 module; it never leaves it",
+  "comparison.pin.label": "PIN protection in memory",
+  "comparison.pin.autofirma":
+    "Partial <code>char[]</code> wipe with <code>Arrays.fill</code>, not pinned in RAM",
+  "comparison.pin.rfirma":
+    "Buffer pinned with <code>mlock</code>, excluded from dumps with <code>MADV_DONTDUMP</code> and wiped securely",
   "comparison.store.label": "Certificates in a file (<code>.p12</code>)",
   "comparison.store.autofirma":
     "The file's path is registered in a store dialogue with six options",

@@ -160,6 +160,11 @@ export const eu: Dictionary = {
   "comparison.keys.label": "Non prozesatzen den gakoa",
   "comparison.keys.autofirma": "Java prozesuan",
   "comparison.keys.rfirma": "Sistemaren biltegian edo PKCS#11 moduluan; ez da handik ateratzen",
+  "comparison.pin.label": "PINaren babesa memorian",
+  "comparison.pin.autofirma":
+    "<code>char[]</code>-aren garbiketa partziala <code>Arrays.fill</code>-ekin, RAMean finkatu gabe",
+  "comparison.pin.rfirma":
+    "<code>mlock</code>-ekin finkatutako búferra, <code>MADV_DONTDUMP</code>-ekin iraulketetatik kanpo eta modu seguruan ezabatua",
   "comparison.store.label": "Fitxategiko ziurtagiriak (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Fitxategiaren bidea sei aukerako biltegi-elkarrizketa batean gordetzen da",

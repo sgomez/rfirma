@@ -160,6 +160,11 @@ export const ca: Dictionary = {
   "comparison.keys.label": "On es processa la clau privada",
   "comparison.keys.autofirma": "Al procés Java",
   "comparison.keys.rfirma": "Al magatzem del sistema o al mòdul PKCS#11; no en surt",
+  "comparison.pin.label": "Protecció del PIN en memòria",
+  "comparison.pin.autofirma":
+    "Esborrat parcial del <code>char[]</code> amb <code>Arrays.fill</code>, sense fixar-lo a la RAM",
+  "comparison.pin.rfirma":
+    "Búfer fixat amb <code>mlock</code>, exclòs dels bolcats amb <code>MADV_DONTDUMP</code> i esborrat de manera segura",
   "comparison.store.label": "Certificats en fitxer (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Es registra la ruta del fitxer en un diàleg de magatzems amb sis opcions",

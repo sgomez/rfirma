@@ -158,6 +158,11 @@ export const es = {
   "comparison.keys.label": "Dónde se procesa la clave privada",
   "comparison.keys.autofirma": "En el proceso Java",
   "comparison.keys.rfirma": "En el almacén del sistema o el módulo PKCS#11; no sale de él",
+  "comparison.pin.label": "Protección del PIN en memoria",
+  "comparison.pin.autofirma":
+    "Borrado parcial del <code>char[]</code> con <code>Arrays.fill</code>, sin fijarlo en RAM",
+  "comparison.pin.rfirma":
+    "Búfer fijado con <code>mlock</code>, excluido de volcados con <code>MADV_DONTDUMP</code> y borrado seguro",
   "comparison.store.label": "Certificados en fichero (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Se registra la ruta del fichero en un diálogo de almacenes con seis opciones",

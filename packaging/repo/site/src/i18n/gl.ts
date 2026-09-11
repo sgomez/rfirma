@@ -160,6 +160,11 @@ export const gl: Dictionary = {
   "comparison.keys.label": "Onde se procesa a clave privada",
   "comparison.keys.autofirma": "No proceso Java",
   "comparison.keys.rfirma": "No almacén do sistema ou o módulo PKCS#11; non sae del",
+  "comparison.pin.label": "Protección do PIN na memoria",
+  "comparison.pin.autofirma":
+    "Borrado parcial do <code>char[]</code> con <code>Arrays.fill</code>, sen fixalo na RAM",
+  "comparison.pin.rfirma":
+    "Búfer fixado con <code>mlock</code>, excluído dos volcados con <code>MADV_DONTDUMP</code> e borrado de forma segura",
   "comparison.store.label": "Certificados en ficheiro (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Rexístrase a ruta do ficheiro nun diálogo de almacéns con seis opcións",
