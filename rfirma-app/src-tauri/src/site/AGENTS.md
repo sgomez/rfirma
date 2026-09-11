@@ -22,7 +22,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
-| `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011). |
+| `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011); también nombra, cierra con `flock` y barre la carpeta de paso propia del proceso. Pruebas en `adapters/scratch/tests.rs`. |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
 | `adapters/batch_services.rs` | El cliente de los dos servlets del lote remoto, sobre `reqwest::blocking`. Pruebas en `adapters/batch_services/tests.rs`. |
 | `adapters/servlets.rs` | El cliente del servidor intermedio de producción, sobre `reqwest::blocking`. Pruebas en `adapters/servlets/tests.rs`. |
