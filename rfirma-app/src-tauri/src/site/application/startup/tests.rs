@@ -74,6 +74,11 @@ impl SiteWindow for World {
     fn show(&self) {
         self.note("ventana:enseñada");
     }
+
+    fn errand_ended(&self, delivered: Acknowledgement) {
+        delivered.wait(Duration::from_secs(1));
+        self.note("ventana:trámite-terminado");
+    }
 }
 
 const TRUSTED: u32 = 0x38;
@@ -211,7 +216,7 @@ fn starting_with_nothing_shows_the_main_window() {
 }
 
 #[test]
-fn a_refused_launch_opens_no_site_window() {
+fn a_refused_launch_opens_the_hidden_window_and_arms_the_channel_refusal_wait() {
     let world = Arc::new(World::default());
     let store = a_store();
     let invocation = invoked_with(&[&a_launch(&format!("v=99&idsession={CREDENTIAL}"))]);
@@ -228,8 +233,105 @@ fn a_refused_launch_opens_no_site_window() {
     );
     assert_eq!(
         world.steps(),
-        ["canal"],
-        "un rechazo no abre ventana de sede ni toca la CA local"
+        ["canal", "ventana:rechazo:SAF_21"],
+        "un rechazo por el canal abre la ventana oculta sin enseñarla, y no toca la CA local"
+    );
+}
+
+#[test]
+fn serving_the_retained_refusal_ends_the_wait_and_closes_the_hidden_window() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch_with_threshold(
+        &a_launch(&format!("v=99&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(200),
+    );
+
+    assert_eq!(world.steps(), ["canal", "ventana:rechazo:SAF_21"]);
+
+    // El navegador llega y se le sirve el rechazo retenido.
+    live.browser_arrived();
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            "ventana:rechazo:SAF_21",
+            "ventana:trámite-terminado"
+        ],
+        "servir el rechazo cierra la ventana oculta sin esperar el plazo"
+    );
+}
+
+#[test]
+fn the_channel_refusal_wait_expires_and_closes_the_hidden_window_too() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch_with_threshold(
+        &a_launch(&format!("v=99&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(30),
+    );
+
+    for _ in 0..20 {
+        if live.is_revealed() {
+            break;
+        }
+        std::thread::yield_now();
+        std::thread::sleep(Duration::from_millis(10));
+    }
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            "ventana:rechazo:SAF_21",
+            "ventana:trámite-terminado"
+        ],
+        "al vencer el plazo sin servirse, la ventana oculta se cierra igualmente"
+    );
+}
+
+#[test]
+fn ending_the_errand_notifies_the_window_it_kept() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+
+    assert_eq!(
+        world.steps(),
+        ["canal".to_owned(), format!("ventana:creada:{}", PORTS[0])]
+    );
+
+    crate::site::application::errand::replies::declined(&live);
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            format!("ventana:creada:{}", PORTS[0]),
+            "ventana:trámite-terminado".to_owned(),
+        ],
+        "al terminar el trámite, la ventana que se guardó al empezar recibe el aviso"
     );
 }
 

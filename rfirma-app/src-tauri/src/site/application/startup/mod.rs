@@ -10,7 +10,7 @@ use crate::site::ports::{LocalCaSlots, TrustStores};
 
 use crate::site::domain::protocol::Refusal;
 
-use super::errand::{Errand, LiveErrand, Moment, NoChannel};
+use super::errand::{Acknowledgement, Errand, LiveErrand, Moment, NoChannel};
 use super::site::{self, Attendance, ChannelTransport, CodecTable};
 use super::trust;
 
@@ -28,6 +28,9 @@ pub trait SiteWindow: Send + Sync + 'static {
     fn open(&self, content: SiteWindowContent<'_>);
     /// Muestra y da foco a la ventana.
     fn show(&self);
+    /// Notifica que el trámite ha terminado, con el acuse de que la respuesta ya salió por el
+    /// canal; cierra la ventana solo si sigue oculta.
+    fn errand_ended(&self, delivered: Acknowledgement);
 }
 
 impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
@@ -36,6 +39,9 @@ impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
     }
     fn show(&self) {
         (**self).show();
+    }
+    fn errand_ended(&self, delivered: Acknowledgement) {
+        (**self).errand_ended(delivered);
     }
 }
 
@@ -178,24 +184,27 @@ pub fn attend_site_launch_with_threshold(
     let attendance = site::attend_launch(url, codecs, transport, live);
 
     match &attendance {
-        Attendance::Serving { errand, .. } => match local_ca {
-            LocalCaReach::Nowhere => {
-                open(
-                    live,
-                    &*window,
-                    SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
-                );
-                window.show();
-            }
-            LocalCaReach::NotAnObstacle => {
-                open(live, &*window, SiteWindowContent::TheErrand(errand));
-                if errand.opens_channel() {
-                    live.arm_backing_timeout(Arc::clone(&window), threshold);
-                } else {
+        Attendance::Serving { errand, .. } => {
+            live.keep_the_window(Arc::clone(&window));
+            match local_ca {
+                LocalCaReach::Nowhere => {
+                    open(
+                        live,
+                        &*window,
+                        SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
+                    );
                     window.show();
                 }
+                LocalCaReach::NotAnObstacle => {
+                    open(live, &*window, SiteWindowContent::TheErrand(errand));
+                    if errand.opens_channel() {
+                        live.arm_backing_timeout(Arc::clone(&window), threshold);
+                    } else {
+                        window.show();
+                    }
+                }
             }
-        },
+        }
         Attendance::ChannelNotOpened(error) => {
             if live.current().is_none() {
                 let dead_end = match error.refusal() {
@@ -216,7 +225,16 @@ pub fn attend_site_launch_with_threshold(
                 window.show();
             }
         }
-        Attendance::RefusingOverTheChannel { .. } => {}
+        Attendance::RefusingOverTheChannel { refusal, .. } => {
+            if live.current().is_none() {
+                open(
+                    live,
+                    &*window,
+                    SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
+                );
+                live.arm_channel_refusal_wait(Arc::clone(&window), threshold);
+            }
+        }
     }
 
     attendance

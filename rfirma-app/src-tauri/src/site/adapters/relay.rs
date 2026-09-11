@@ -17,27 +17,24 @@ use crate::site::ports::Servlets;
 use super::frontier::code_of_relay;
 
 /// El servidor intermedio: descarga y descifra la petición una vez, la entrega por el mismo
-/// buzón que el `wss`, y su asa de respuesta sube la contestación cifrada y termina el proceso.
+/// buzón que el `wss`, y su asa de respuesta sube la contestación cifrada.
 pub struct Relay {
     servlets: Arc<dyn Servlets + Send + Sync>,
     inbox: Inbox,
-    exit: Arc<dyn Fn() + Send + Sync>,
     on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
 }
 
 impl Relay {
-    /// Un transporte de servidor intermedio sobre los servlets, el buzón y los dos avisos dados:
-    /// el cierre del proceso tras subir, y el que se da cuando la subida se rechaza.
+    /// Un transporte de servidor intermedio sobre los servlets, el buzón y el aviso que se da
+    /// cuando la subida se rechaza.
     pub fn new(
         servlets: Arc<dyn Servlets + Send + Sync>,
         inbox: Inbox,
-        exit: Arc<dyn Fn() + Send + Sync>,
         on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
     ) -> Self {
         Self {
             servlets,
             inbox,
-            exit,
             on_upload_failure,
         }
     }
@@ -75,17 +72,13 @@ impl Transport for Relay {
         let resolved = resolve(info, self.servlets.as_ref()).map_err(ChannelError::refused)?;
 
         let servlets = Arc::clone(&self.servlets);
-        let exit = Arc::clone(&self.exit);
         let on_upload_failure = Arc::clone(&self.on_upload_failure);
         let store_servlet = resolved.store_servlet;
         let id = resolved.id;
         let reply =
             ReplyHandle::of(
                 move |text: String| match servlets.store(&store_servlet, &id, &text) {
-                    Ok(()) => {
-                        exit();
-                        Acknowledgement::immediate()
-                    }
+                    Ok(()) => Acknowledgement::immediate(),
                     Err(error) => {
                         on_upload_failure(refusal_of(error));
                         Acknowledgement::never()
@@ -103,9 +96,8 @@ impl Transport for Relay {
 
 impl Relay {
     fn upload(&self, store_servlet: &str, id: &str, text: String) {
-        match self.servlets.store(store_servlet, id, &text) {
-            Ok(()) => (self.exit)(),
-            Err(error) => (self.on_upload_failure)(refusal_of(error)),
+        if let Err(error) = self.servlets.store(store_servlet, id, &text) {
+            (self.on_upload_failure)(refusal_of(error));
         }
     }
 }

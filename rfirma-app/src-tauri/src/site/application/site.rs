@@ -81,6 +81,8 @@ pub enum Attendance {
         channel: OpenChannel,
         /// Respuesta de rechazo a enviar.
         answer: WireAnswer,
+        /// El rechazo sin traducir, para la ventana oculta que lo sostiene.
+        refusal: Refusal,
     },
     /// Rechazo notificado a través de la ventana por falta de canal.
     RefusingInTheWindow(Refusal),
@@ -143,6 +145,7 @@ fn refuse(url: &AfirmaUrl, refusal: Refusal, transport: ChannelTransport<'_>) ->
         Ok(channel) => Attendance::RefusingOverTheChannel {
             channel,
             answer: refusal.answer(),
+            refusal,
         },
         Err(_) => Attendance::RefusingInTheWindow(refusal),
     }

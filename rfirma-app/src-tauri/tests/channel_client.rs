@@ -333,6 +333,7 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
             self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }
         fn show(&self) {}
+        fn errand_ended(&self, _delivered: rfirma_lib::site::ports::Acknowledgement) {}
     }
 
     let attendance = attend_site_launch(

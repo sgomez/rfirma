@@ -285,7 +285,6 @@ fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
     let relay = Relay::new(
         Arc::new(InMemoryServlets::default()),
         inbox,
-        Arc::new(|| {}),
         Arc::new(|_refusal| {}),
     );
 
@@ -413,7 +412,10 @@ fn a_malformed_credential_in_the_third_protocol_is_refused_over_the_fixed_channe
         &LiveErrand::default(),
     );
 
-    let Attendance::RefusingOverTheChannel { channel, answer } = attendance else {
+    let Attendance::RefusingOverTheChannel {
+        channel, answer, ..
+    } = attendance
+    else {
         panic!("el protocolo 3 siempre tiene un canal fijo: {attendance:?}");
     };
     assert_eq!(

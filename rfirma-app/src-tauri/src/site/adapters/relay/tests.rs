@@ -68,10 +68,9 @@ impl Servlets for OrderedSpy {
     }
 }
 
-/// Lo que el buzón y los dos avisos del transporte recibieron.
+/// Lo que el buzón y el aviso de fallo del transporte recibieron.
 struct Spy {
     delivered: Arc<Mutex<Option<(AfirmaUrl, ReplyHandle)>>>,
-    exits: Arc<Mutex<u32>>,
     failures: Arc<Mutex<Vec<Refusal>>>,
 }
 
@@ -84,10 +83,6 @@ impl Spy {
             .expect("la operacion deberia haberse entregado")
     }
 
-    fn exits(&self) -> u32 {
-        *self.exits.lock().expect("el candado")
-    }
-
     fn failures(&self) -> Vec<Refusal> {
         self.failures.lock().expect("el candado").clone()
     }
@@ -95,17 +90,12 @@ impl Spy {
 
 fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
     let delivered = Arc::new(Mutex::new(None));
-    let exits = Arc::new(Mutex::new(0u32));
     let failures = Arc::new(Mutex::new(Vec::new()));
 
     let inbox_delivered = Arc::clone(&delivered);
     let inbox = Inbox::for_operations(move |url, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
     });
-
-    let exit_count = Arc::clone(&exits);
-    let exit: Arc<dyn Fn() + Send + Sync> =
-        Arc::new(move || *exit_count.lock().expect("el candado") += 1);
 
     let failure_log = Arc::clone(&failures);
     let on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync> =
@@ -114,14 +104,12 @@ fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
     let relay = Relay::new(
         servlets as Arc<dyn Servlets + Send + Sync>,
         inbox,
-        exit,
         on_upload_failure,
     );
     (
         relay,
         Spy {
             delivered,
-            exits,
             failures,
         },
     )
@@ -246,7 +234,7 @@ fn wait_is_called_before_get_when_the_site_asks_for_it() {
 }
 
 #[test]
-fn a_successful_upload_closes_the_process_and_reports_no_failure() {
+fn a_successful_upload_reports_no_failure_and_acknowledges_immediately() {
     let servlets = Arc::new(OrderedSpy::default());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
@@ -267,7 +255,6 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
         servlets.body.retrieve(STORE_SERVLET, "tx-3"),
         Ok("la-respuesta-cifrada".to_owned())
     );
-    assert_eq!(spy.exits(), 1);
     assert!(spy.failures().is_empty());
     assert!(
         acknowledgement.wait(NO_WAIT),
@@ -276,7 +263,7 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
 }
 
 #[test]
-fn a_rejected_upload_notifies_without_closing_the_process() {
+fn a_rejected_upload_notifies_without_acknowledging() {
     let servlets = Arc::new(OrderedSpy::that_rejects_the_upload());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
@@ -293,7 +280,6 @@ fn a_rejected_upload_notifies_without_closing_the_process() {
     let (_operation, reply) = spy.take_reply();
     let acknowledgement = reply.answer("la-respuesta-cifrada".to_owned());
 
-    assert_eq!(spy.exits(), 0);
     let failures = spy.failures();
     assert_eq!(failures.len(), 1);
     assert_eq!(failures[0].code(), SafCode::SendingResult);
@@ -353,7 +339,7 @@ fn a_refuse_duty_uploads_the_given_answer_without_waiting_resolving_or_deliverin
 
     assert_eq!(servlets.log(), vec!["put"]);
     assert!(spy.delivered.lock().expect("el candado").is_none());
-    assert_eq!(spy.exits(), 1);
+    assert!(spy.failures().is_empty());
 }
 
 #[test]
@@ -699,5 +685,5 @@ fn a_refuse_duty_without_a_store_target_does_not_open_the_channel() {
 
     assert_eq!(error.situation(), Situation::Relay);
     assert!(servlets.log().is_empty());
-    assert_eq!(spy.exits(), 0);
+    assert!(spy.failures().is_empty());
 }
