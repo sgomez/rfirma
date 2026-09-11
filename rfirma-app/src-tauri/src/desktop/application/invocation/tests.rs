@@ -102,19 +102,72 @@ fn not_even_a_notice_reaches_the_window_while_a_signing_session_is_live() {
 }
 
 #[test]
-fn a_site_launch_opens_its_own_window_and_replaces_nothing() {
+fn no_arguments_give_the_desktop_role() {
+    let invocation = Invocation {
+        command_line: vec!["rfirma".to_owned()],
+        folder: PathBuf::from("/"),
+    };
+
+    assert_eq!(role_of(invocation.clone()), Role::Desktop(invocation));
+}
+
+#[test]
+fn a_pdf_gives_the_desktop_role_with_that_document() {
+    let pdf = a_temporary_pdf("rol-escritorio.pdf");
+    let invocation = invoked_with(&pdf);
+
     assert_eq!(
-        second_invocation(&invoked_with_the_url(A_LAUNCH), false),
-        SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
+        role_of(invocation.clone()),
+        Role::Desktop(invocation.clone())
+    );
+    let opened = OpenedDocuments::new();
+    assert!(
+        told(&invocation, &opened)
+            .expect("algo trae")
+            .document
+            .is_some(),
+        "el documento sigue llegando a la ventana del escritorio"
     );
 }
 
 #[test]
-fn a_live_signing_session_does_not_stop_a_site_launch() {
-    assert_eq!(
-        second_invocation(&invoked_with_the_url(A_LAUNCH), true),
-        SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned())
+fn a_url_gives_the_site_role_with_the_whole_url() {
+    let invocation = invoked_with_the_url(A_LAUNCH);
+
+    assert_eq!(role_of(invocation), Role::Site(A_LAUNCH.to_owned()));
+}
+
+#[test]
+fn a_pdf_and_a_url_give_the_site_role_and_narrate_the_discarded_document() {
+    let pdf = a_temporary_pdf("descartado.pdf");
+    let invocation = Invocation {
+        command_line: vec![
+            "rfirma".to_owned(),
+            pdf.display().to_string(),
+            A_LAUNCH.to_owned(),
+        ],
+        folder: PathBuf::from("/"),
+    };
+
+    assert_eq!(role_of(invocation.clone()), Role::Site(A_LAUNCH.to_owned()));
+    assert!(
+        !Role::said(&invocation).is_empty(),
+        "el documento descartado se narra"
     );
+}
+
+#[test]
+fn a_url_alone_says_nothing() {
+    assert_eq!(
+        Role::said(&invoked_with_the_url(A_LAUNCH)),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn a_desktop_invocation_says_nothing() {
+    let pdf = a_temporary_pdf("sin-narrar.pdf");
+    assert_eq!(Role::said(&invoked_with(&pdf)), Vec::<String>::new());
 }
 
 #[test]
@@ -215,7 +268,7 @@ fn a_site_url_is_not_treated_as_a_file_path() {
 }
 
 #[test]
-fn the_whole_url_survives_the_single_instance_path() {
+fn an_afirma_url_by_the_bus_never_replaces_anything() {
     let invocation = Invocation {
         command_line: vec!["rfirma".to_owned(), A_LAUNCH.to_owned()],
         folder: PathBuf::from("/otra/carpeta"),
@@ -224,8 +277,8 @@ fn the_whole_url_survives_the_single_instance_path() {
     assert_eq!(invocation.site_launch(), Some(A_LAUNCH));
     assert_eq!(
         second_invocation(&invocation, false),
-        SecondInvocation::OpensItsOwnWindow(A_LAUNCH.to_owned()),
-        "una invocación de sede no sustituye ningún documento: abre lo suyo"
+        SecondInvocation::NothingHappens,
+        "un afirma:// por el bus lo manda un binario viejo; no sustituye ningún documento"
     );
 }
 

@@ -27,7 +27,7 @@ adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos
 
 | Módulo | Qué es |
 |---|---|
-| `lib.rs` | El armado de la aplicación: las cinco raíces, los complementos, el registro de órdenes, la instancia única (ADR-0010) y el arranque de `site/application/startup/`. Sin pruebas propias. |
+| `lib.rs` | El armado de la aplicación: decide el rol de proceso, escritorio o sede (ADR-0024), y monta una de las dos raíces; la instancia única (ADR-0010) solo se registra en la de escritorio. Sin pruebas propias. |
 | `main.rs` | El binario. No hay nada dentro. |
 | `crossing.rs` | El rasgo `WindowCrossing` y el macro `crossing!`, con los que se declara todo lo que cruza a la ventana. Pruebas en `crossing/tests.rs`. |
 | `crossing/failure.rs` | `Failure`, lo que cruza cuando algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`. Pruebas en `crossing/failure/tests.rs`. |
