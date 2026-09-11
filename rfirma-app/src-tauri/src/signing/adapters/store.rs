@@ -206,5 +206,14 @@ impl<T: Serialize> JsonFile<T> {
     }
 }
 
+impl<T: DeserializeOwned + Default + Serialize> JsonFile<T> {
+    /// Relee de disco, aplica `touch` a lo leído y guarda el resultado (ADR-0010).
+    pub fn update(&self, touch: impl FnOnce(&mut T)) -> Result<(), MemoryError> {
+        let mut value = self.load()?.into_value();
+        touch(&mut value);
+        self.save(&value)
+    }
+}
+
 #[cfg(test)]
 mod tests;
