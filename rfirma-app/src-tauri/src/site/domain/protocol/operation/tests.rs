@@ -471,12 +471,16 @@ fn the_format_is_looked_at_before_anything_else_of_the_signature() {
 
 #[test]
 fn format_auto_over_a_pdf_reads_as_pades_would_for_sign_and_cosign() {
+    let signed_pdf = b"%PDF-1.7\n/ByteRange [0 10 20 30]\n";
     for verb in [SIGN, COSIGN] {
         let auto = an_operation(&format!(
             "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
-            dat(b"%PDF-1.7\n")
+            dat(signed_pdf)
         ));
-        let explicit = a_signature(verb, "");
+        let explicit = an_operation(&format!(
+            "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format=PAdES&algorithm=SHA256withRSA&dat={}",
+            dat(signed_pdf)
+        ));
 
         assert_eq!(
             read_operation(&auto).expect("un PDF con 'auto' se atiende"),
@@ -484,6 +488,130 @@ fn format_auto_over_a_pdf_reads_as_pades_would_for_sign_and_cosign() {
             "'{verb}' con format=auto sobre un PDF"
         );
     }
+}
+
+#[test]
+fn cosign_with_format_auto_over_unsigned_binary_is_refused_with_saf_17() {
+    let url = an_operation(&format!(
+        "op={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(&[0x00, 0x01, 0x02, 0x03])
+    ));
+
+    let refusal = read_operation(&url).expect_err("binario no firmado en cosign");
+
+    assert_eq!(refusal.code(), SafCode::UnknownSigner);
+}
+
+#[test]
+fn countersign_with_format_auto_over_unsigned_data_is_refused_with_saf_17() {
+    for (document, label) in [
+        (&[0x00, 0x01, 0x02, 0x03][..], "binario"),
+        (b"%PDF-1.7\n".as_slice(), "PDF no firmado"),
+        (
+            b"<?xml version=\"1.0\"?><documento/>".as_slice(),
+            "XML no firmado",
+        ),
+    ] {
+        let url = an_operation(&format!(
+            "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+            dat(document)
+        ));
+
+        let refusal = read_operation(&url).expect_err(label);
+
+        assert_eq!(refusal.code(), SafCode::UnknownSigner, "{label}");
+    }
+}
+
+#[test]
+fn cosign_with_format_auto_over_unsigned_pdf_or_xml_is_refused_with_saf_17() {
+    for (document, label) in [
+        (b"%PDF-1.7\n".as_slice(), "PDF no firmado"),
+        (
+            b"<?xml version=\"1.0\"?><documento>sin firma</documento>".as_slice(),
+            "XML no firmado",
+        ),
+    ] {
+        let url = an_operation(&format!(
+            "op={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+            dat(document)
+        ));
+
+        let refusal = read_operation(&url).expect_err(label);
+
+        assert_eq!(refusal.code(), SafCode::UnknownSigner, "{label}");
+    }
+}
+
+#[test]
+fn multisig_with_format_auto_over_signed_documents_resolves_expected_formats() {
+    let signed_pdf = b"%PDF-1.7\n/ByteRange [0 10 20 30]\n";
+    let signed_xml = include_bytes!("../../../../../../../testdata/reference/xades-enveloping.xml");
+    let signed_cades = include_bytes!("../../../../../../../testdata/reference/cades-implicit.p7s");
+
+    let cosign_pdf = an_operation(&format!(
+        "op={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(signed_pdf)
+    ));
+    let SiteOperation::Sign(request) = read_operation(&cosign_pdf).expect("PDF firmado en cosign")
+    else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.format(), RequestedFormat::Pades);
+    assert_eq!(request.round(), SignatureRound::Again);
+
+    let cosign_xml = an_operation(&format!(
+        "op={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(signed_xml)
+    ));
+    let SiteOperation::Sign(request) = read_operation(&cosign_xml).expect("XML firmado en cosign")
+    else {
+        panic!("es una firma");
+    };
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
+    assert_eq!(request.round(), SignatureRound::Again);
+
+    let countersign_xml = an_operation(&format!(
+        "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(signed_xml)
+    ));
+    let SiteOperation::Sign(request) =
+        read_operation(&countersign_xml).expect("XML firmado en countersign")
+    else {
+        panic!("es una firma");
+    };
+    assert_eq!(
+        request.format(),
+        RequestedFormat::Xades(XadesEnvelope::Enveloping)
+    );
+    assert!(matches!(request.round(), SignatureRound::Counter { .. }));
+
+    let cosign_cades = an_operation(&format!(
+        "op={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(signed_cades)
+    ));
+    let SiteOperation::Sign(request) =
+        read_operation(&cosign_cades).expect("CAdES firmado en cosign")
+    else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.format(), RequestedFormat::Cades);
+    assert_eq!(request.round(), SignatureRound::Again);
+
+    let countersign_cades = an_operation(&format!(
+        "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(signed_cades)
+    ));
+    let SiteOperation::Sign(request) =
+        read_operation(&countersign_cades).expect("CAdES firmado en countersign")
+    else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.format(), RequestedFormat::Cades);
+    assert!(matches!(request.round(), SignatureRound::Counter { .. }));
 }
 
 #[test]
@@ -1281,10 +1409,15 @@ fn a_countersignature_without_a_target_counters_the_leafs_like_the_original() {
 }
 
 #[test]
-fn a_countersignature_under_format_auto_over_a_binary_is_a_cades_one() {
-    let url = a_countersignature(AUTO, "");
+fn a_countersignature_under_format_auto_over_a_cades_signature_is_a_cades_one() {
+    let cades = include_bytes!("../../../../../../../testdata/reference/cades-implicit.p7s");
+    let url = an_operation(&format!(
+        "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={AUTO}&algorithm=SHA256withRSA&dat={}",
+        dat(cades)
+    ));
 
-    let SiteOperation::Sign(request) = read_operation(&url).expect("un binario es CAdES") else {
+    let SiteOperation::Sign(request) = read_operation(&url).expect("una firma CAdES es CAdES")
+    else {
         panic!("es una firma");
     };
 
@@ -1374,14 +1507,16 @@ fn signing_and_saving_with_countersign_in_xades_is_attended() {
 }
 
 #[test]
-fn a_countersignature_under_format_auto_over_an_xml_is_a_xades_one() {
+fn a_countersignature_under_format_auto_over_a_signed_xml_is_a_xades_one() {
+    let xml = include_bytes!("../../../../../../../testdata/reference/xades-enveloping.xml");
     let url = an_operation(&format!(
         "op={COUNTERSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={AUTO}&\
          algorithm=SHA256withRSA&dat={}",
-        dat(b"<xml/>")
+        dat(xml)
     ));
 
-    let SiteOperation::Sign(request) = read_operation(&url).expect("un XML es XAdES") else {
+    let SiteOperation::Sign(request) = read_operation(&url).expect("un XML firmado es XAdES")
+    else {
         panic!("es una firma");
     };
 
