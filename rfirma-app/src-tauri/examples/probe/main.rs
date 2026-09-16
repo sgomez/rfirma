@@ -1,17 +1,28 @@
 //! Sondeo del saludo: el cliente publicado bajo Node invoca al binario declarado y el eco vuelve.
 
+mod dossier;
+
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
+use dossier::{CaseState, Dossier};
+
 const USAGE: &str = "\
-uso: cargo run --example probe -- --subject <binario> --trust-root <certificado> [--patience-ms <ms>]
+uso: cargo run --example probe -- --subject <binario> --trust-root <certificado> \
+--dossier <ruta> <orden>
 
   --subject      el binario que recibe la URL de arranque, como haría el escritorio al resolver
                  el esquema afirma://
   --trust-root   la raíz de confianza con la que ese binario sirve el canal, en PEM o en DER
+  --dossier      dónde vive el expediente de la tanda; se crea si no existe
   --patience-ms  cuánto espera el conductor antes de darse por vencido (por omisión, 60000)
+
+órdenes:
+  list                lista los casos del expediente con su estado y su fecha
+  run <caso>          ejecuta un caso por su nombre; si ya está resuelto, no repite salvo --relaunch
+  run-pending         ejecuta, por orden, los casos que sigan pendientes; se detiene si uno falla
 ";
 
 const DEFAULT_PATIENCE: Duration = Duration::from_millis(60_000);
@@ -22,10 +33,21 @@ const THE_SINGLE_SELECTION: &str = "selectcert";
 /// El modo que el cliente publicado habla de por sí: puertos sorteados y `v=4`.
 const THE_FOURTH_PROTOCOL: &str = "v4";
 
+/// Los nombres de los casos que el sondeo sabe ejecutar.
+const KNOWN_CASES: &[&str] = &["saludo"];
+
 struct Probe {
     subject: PathBuf,
     trust_root: PathBuf,
+    dossier: PathBuf,
     patience: Duration,
+    command: CaseCommand,
+}
+
+enum CaseCommand {
+    List,
+    Run { case: String, relaunch: bool },
+    RunPending,
 }
 
 fn main() {
@@ -42,31 +64,103 @@ impl Probe {
     fn from_the_command_line() -> Result<Self, String> {
         let mut subject = None;
         let mut trust_root = None;
+        let mut dossier = None;
         let mut patience = DEFAULT_PATIENCE;
         let mut arguments = std::env::args().skip(1);
-        while let Some(flag) = arguments.next() {
+        let command = loop {
+            let flag = arguments
+                .next()
+                .ok_or_else(|| "falta la orden: list, run <caso> o run-pending".to_owned())?;
             match flag.as_str() {
                 "--subject" => subject = Some(PathBuf::from(value_of(&flag, &mut arguments)?)),
                 "--trust-root" => {
                     trust_root = Some(PathBuf::from(value_of(&flag, &mut arguments)?));
                 }
+                "--dossier" => dossier = Some(PathBuf::from(value_of(&flag, &mut arguments)?)),
                 "--patience-ms" => {
                     let milliseconds = value_of(&flag, &mut arguments)?
                         .parse()
                         .map_err(|_| "--patience-ms quiere un número de milisegundos".to_owned())?;
                     patience = Duration::from_millis(milliseconds);
                 }
+                "list" => break CaseCommand::List,
+                "run-pending" => break CaseCommand::RunPending,
+                "run" => {
+                    let case = value_of(&flag, &mut arguments)?;
+                    let relaunch = arguments.next().as_deref() == Some("--relaunch");
+                    break CaseCommand::Run { case, relaunch };
+                }
                 other => return Err(format!("argumento desconocido: {other}")),
             }
-        }
+        };
         Ok(Self {
             subject: subject.ok_or_else(|| "falta --subject".to_owned())?,
             trust_root: trust_root.ok_or_else(|| "falta --trust-root".to_owned())?,
+            dossier: dossier.ok_or_else(|| "falta --dossier".to_owned())?,
             patience,
+            command,
         })
     }
 
     fn run(self) {
+        let mut dossier = Dossier::open(
+            &self.dossier,
+            &self.subject.display().to_string(),
+            KNOWN_CASES,
+        )
+        .unwrap_or_else(|complaint| {
+            eprintln!("{complaint}");
+            std::process::exit(1);
+        });
+        match &self.command {
+            CaseCommand::List => list(&dossier),
+            CaseCommand::Run { case, relaunch } => {
+                self.run_one(&mut dossier, case, *relaunch);
+            }
+            CaseCommand::RunPending => self.run_pending(&mut dossier),
+        }
+    }
+
+    fn run_one(&self, dossier: &mut Dossier, case: &str, relaunch: bool) {
+        if !KNOWN_CASES.contains(&case) {
+            eprintln!(
+                "no conozco el caso «{case}»; los que hay son: {}",
+                KNOWN_CASES.join(", ")
+            );
+            std::process::exit(2);
+        }
+        if !relaunch && dossier.state_of(case) == Some(CaseState::Resolved) {
+            println!("el caso «{case}» ya está resuelto; usa --relaunch para repetirlo");
+            return;
+        }
+        self.run_case(case);
+        dossier.resolve(case).unwrap_or_else(|complaint| {
+            eprintln!("{complaint}");
+            std::process::exit(1);
+        });
+    }
+
+    fn run_pending(&self, dossier: &mut Dossier) {
+        for case in KNOWN_CASES {
+            if dossier.state_of(case) == Some(CaseState::Resolved) {
+                continue;
+            }
+            self.run_case(case);
+            dossier.resolve(case).unwrap_or_else(|complaint| {
+                eprintln!("{complaint}");
+                std::process::exit(1);
+            });
+        }
+    }
+
+    fn run_case(&self, case: &str) {
+        match case {
+            "saludo" => self.run_greeting(),
+            other => unreachable!("caso sin arnés: {other}"),
+        }
+    }
+
+    fn run_greeting(&self) {
         let trust_root = the_trust_root_as_pem(&self.trust_root);
         let mut driver = the_published_client_running(trust_root.path(), self.patience);
         let events = driver.stdout.take().expect("el conductor escribe eventos");
@@ -84,6 +178,17 @@ impl Probe {
             let _ = subject.kill();
             let _ = subject.wait();
         }
+    }
+}
+
+fn list(dossier: &Dossier) {
+    for (case, record) in dossier.cases() {
+        let state = match record.state {
+            CaseState::Pending => "pendiente",
+            CaseState::Resolved => "resuelto",
+        };
+        let date = record.date.as_deref().unwrap_or("-");
+        println!("{case}\t{state}\t{date}");
     }
 }
 
