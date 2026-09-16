@@ -637,7 +637,11 @@ fn a_relay_launch_that_demands_a_protocol_version_not_spoken_here_is_refused() {
     )
     .expect_err("aqui no se habla la version 5 del protocolo");
 
-    assert_eq!(refusal.code(), SafCode::MinimumVersionNonSatisfied);
+    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+    assert_eq!(
+        refusal.answer().on_the_wire(),
+        "SAF_21: Este tramite no es compatible con la version instalada"
+    );
     assert_eq!(
         refusal.situation(),
         RefusalSituation::UnsupportedProtocolVersion

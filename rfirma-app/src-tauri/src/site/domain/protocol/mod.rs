@@ -79,7 +79,8 @@ pub use operation::{
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version,
-    check_minimum_protocol_version, check_servlet_url, checked_identifier,
+    check_minimum_protocol_version, check_protocol_version_bounds,
+    check_protocol_version_meets_minimum, check_servlet_url, checked_identifier,
     minimum_protocol_version, sticky_certificate, StickyCertificate,
 };
 pub use refusal::{Refusal, RefusalSituation};
