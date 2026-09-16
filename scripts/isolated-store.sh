@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # Monta el almacen de usar y tirar del sondeo para el sujeto que se le indique e
-# imprime tres lineas: la clase de sujeto reconocida, el envoltorio que lo lanza
-# contra ese almacen y la raiz de confianza con la que el sujeto va a servir el
-# canal, vacia cuando no depende del perfil.
+# imprime cuatro lineas: la clase de sujeto reconocida, el envoltorio que lo
+# lanza contra ese almacen, la raiz de confianza con la que el sujeto va a
+# servir el canal (vacia cuando no depende del perfil) y el modulo PKCS#11 del
+# almacen, para que quien llama pueda declararlo como coordenada de la tanda.
 #
 # Existe porque en un equipo de desarrollo los almacenes del titular contienen
 # su certificado personal, que este proyecto no usa en ningun punto, y los dos
@@ -110,4 +111,4 @@ else
     echo "almacen aislado en $profile, con $module y nada mas" >&2
 fi
 
-printf '%s\n%s\n%s\n' "$kind" "$wrapper" "$trust_root"
+printf '%s\n%s\n%s\n%s\n' "$kind" "$wrapper" "$trust_root" "$module"

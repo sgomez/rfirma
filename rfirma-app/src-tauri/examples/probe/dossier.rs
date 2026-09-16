@@ -81,8 +81,8 @@ impl Dossier {
             })?
         } else {
             let coordinates = coordinates.ok_or_else(|| {
-                "faltan las coordenadas de la tanda: --os, --os-version, --subject-version, \
-                 --transport y --store son obligatorias al abrir un expediente nuevo"
+                "faltan las coordenadas de la tanda: --os, --os-version, --subject-version y \
+                 --store son obligatorias al abrir un expediente nuevo"
                     .to_owned()
             })?;
             Contents {

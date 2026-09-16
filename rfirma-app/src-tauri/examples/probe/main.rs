@@ -4,7 +4,7 @@
 mod dossier;
 mod transcript;
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
@@ -25,8 +25,9 @@ uso: cargo run --example probe -- --subject <binario> --trust-root <certificado>
   Coordenadas de la tanda, obligatorias solo al abrir un expediente nuevo:
   --os               sistema operativo del sujeto
   --os-version       su versión
-  --subject-version  versión del sujeto sondeado
-  --transport        transporte del canal (sockets, servidor intermedio, ...)
+  --subject-version  versión del sujeto sondeado; si falta y la entrada es un terminal, se
+                      pregunta por teclado una sola vez
+  --transport        transporte del canal; por omisión, websocket (el único de esta fase)
   --store            almacén de certificados con el que se sondeó
 
 órdenes:
@@ -68,8 +69,13 @@ struct PartialCoordinates {
     store: Option<String>,
 }
 
+/// El único transporte que habla esta fase; el relé por servidor intermedio no está sondeado
+/// todavía.
+const DEFAULT_TRANSPORT: &str = "websocket";
+
 impl PartialCoordinates {
-    /// Las coordenadas completas, o el nombre de cada flag que falta.
+    /// Las coordenadas completas, o el nombre de cada flag que falta. `--transport` nunca falta:
+    /// sin dar, vale `DEFAULT_TRANSPORT`.
     fn complete(self) -> Result<HeaderCoordinates, Vec<&'static str>> {
         let mut missing = Vec::new();
         if self.os.is_none() {
@@ -81,9 +87,6 @@ impl PartialCoordinates {
         if self.subject_version.is_none() {
             missing.push("--subject-version");
         }
-        if self.transport.is_none() {
-            missing.push("--transport");
-        }
         if self.store.is_none() {
             missing.push("--store");
         }
@@ -94,10 +97,23 @@ impl PartialCoordinates {
             os: self.os.unwrap(),
             os_version: self.os_version.unwrap(),
             subject_version: self.subject_version.unwrap(),
-            transport: self.transport.unwrap(),
+            transport: self
+                .transport
+                .unwrap_or_else(|| DEFAULT_TRANSPORT.to_owned()),
             store: self.store.unwrap(),
         })
     }
+}
+
+/// Pregunta `label` por teclado y devuelve lo escrito, sin el salto de línea final.
+fn ask(label: &str) -> String {
+    print!("{label}: ");
+    let _ = std::io::stdout().flush();
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .expect("no pude leer de teclado");
+    line.trim().to_owned()
 }
 
 enum CaseCommand {
@@ -175,16 +191,16 @@ impl Probe {
             eprintln!("\nun fallo de condición no es un veredicto: no se ha llegado a medir nada.");
             std::process::exit(3);
         }
+        // Listar no emite veredicto, así que no exige coordenadas: si el expediente aún no
+        // existe, no hay nada que listar.
+        if matches!(self.command, CaseCommand::List) && !self.dossier.exists() {
+            println!("no hay expediente todavía en {}", self.dossier.display());
+            return;
+        }
         let header_coordinates = if self.dossier.exists() {
             None
         } else {
-            match std::mem::take(&mut self.coordinates).complete() {
-                Ok(coordinates) => Some(coordinates),
-                Err(missing) => {
-                    eprintln!("faltan las coordenadas de la tanda: {}", missing.join(", "));
-                    std::process::exit(3);
-                }
-            }
+            Some(self.coordinates_for_a_new_dossier())
         };
         let mut dossier = Dossier::open(
             &self.dossier,
@@ -203,6 +219,20 @@ impl Probe {
             }
             CaseCommand::RunPending => self.run_pending(&mut dossier),
         }
+    }
+
+    /// Las coordenadas para abrir un expediente nuevo: la versión del sujeto se pregunta por
+    /// teclado si falta y hay alguien delante; el resto, si falta, aborta nombrando el flag.
+    fn coordinates_for_a_new_dossier(&mut self) -> HeaderCoordinates {
+        if self.coordinates.subject_version.is_none() && std::io::stdin().is_terminal() {
+            self.coordinates.subject_version = Some(ask("versión del sujeto sondeado"));
+        }
+        std::mem::take(&mut self.coordinates)
+            .complete()
+            .unwrap_or_else(|missing| {
+                eprintln!("faltan las coordenadas de la tanda: {}", missing.join(", "));
+                std::process::exit(3);
+            })
     }
 
     fn run_one(&self, dossier: &mut Dossier, case: &str, relaunch: bool) {
