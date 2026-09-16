@@ -53,7 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, con los certificados en fichero de la v0.4 |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4 |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
-| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma y con qué certificado |
+| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado |
 | S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
 | S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
@@ -443,3 +443,37 @@ ejemplos —antes → después— en el [sistema de diseño](../design-system.md
 que **no** se recorta: la distinción entre «no tienes ninguno» y «la sede excluyó
 los tuyos», la instrucción accionable del pie de `SedeEspera`, y la regla dura de
 no enumerar jamás lo que la sede descartó.
+
+## Lo que cambió después de la v0.5 — la rama de identidad de `SedeConsentimiento`
+
+Decidido en el [#730](https://github.com/sgomez/rfirma/issues/730) y dibujado el
+16/09/2026. **Ningún artboard nuevo y ninguna página de trabajo**: es una tanda
+de redacción sobre `SedeConsentimiento`, en su misma página «Ventana de sede ·
+v0.5».
+
+**La rama de identidad dejaba de prometer una identificación que no ocurre.**
+`selectcert` devuelve el certificado público X.509 y nada más: no hay reto, ni
+firma, ni prueba de posesión de la clave privada. «Identificarse» y «Te
+identificarás con» nombraban un acto que no pasa, y lo hacían justo delante de
+quien está decidiendo si consentir. Se reescriben **cuatro cadenas y ninguna
+más**: el título con origen pasa a «*sede* pide tus datos de identidad», el de
+sin origen a «La petición pide tus datos de identidad y no indica de qué página
+viene», la etiqueta del certificado de «Te identificarás con» a «Enviarás los
+datos de», y el botón de «Identificarse» a «Enviar mis datos». La línea de qué se
+envía se queda **literal**, porque ya era exacta, y la rama de firma no cambia en
+ningún punto. **No se añade ninguna frase que desmienta la identificación**
+(«esto no es una firma» y parecidas): decir lo que se hace basta, y negar lo que
+no se hace es la verborrea que la v0.5 ya echó de aquí.
+
+**El texto de «sin origen» pasa a ser un dato** (`avisoSinOrigen`) en vez de
+estar escrito en la plantilla, porque la aplicación tiene dos claves —una por
+rama— y en el artboard sólo había una frase. La palanca `situacion` no lo hace
+visible: «entregar identidad · selectcert» y «PDF sin título · sin origen» son
+opciones excluyentes de la misma palanca, y abrir una quinta costaba más de lo
+que aclara.
+
+**Medido**: el botón crece sólo en horizontal. El pie mide 472 px útiles y
+«Cancelar» más «Enviar mis datos», con su hueco de 8 px, no pasan de 270. En
+vertical la rama de identidad es de las más holgadas del artboard, porque no
+pinta título, ni metadatos, ni cofirma: los 2,5 px de margen medidos en la v0.5
+son de la rama de firma.
