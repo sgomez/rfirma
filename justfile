@@ -49,6 +49,10 @@ ffi_allow := "src/signing/adapters/ffi.rs"
 autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
 autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
 
+# Donde deja el instalador .deb de AutoFirma 1.9.x su raiz de confianza, por
+# orden de preferencia; la primera es DER y el sondeo acepta las dos formas.
+autofirma_roots := "/usr/lib/Autofirma/Autofirma_ROOT.cer /etc/ssl/certs/Autofirma_ROOT.pem /usr/share/ca-certificates/Autofirma/Autofirma_ROOT.crt"
+
 # Librerias -dev del WebView que necesita Tauri; lista canonica que instala
 # tambien .github/workflows/ci.yml.
 system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
@@ -436,6 +440,67 @@ dev *args: check-native po-import
 [group('dev')]
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
+
+# Sondea el saludo del cliente publicado contra un binario instalado, aislado del almacen del titular y con la raiz que sirve cada sujeto: `just probe [binario] [raiz] [--patience-ms <ms>]`.
+[group('dev')]
+probe subject="" trust_root="" *args: autoscript build-ts
+    #!/usr/bin/env bash
+    set -euo pipefail
+    subject="{{ subject }}"
+    if [ -z "$subject" ]; then
+        subject="$(command -v autofirma || true)"
+        if [ -z "$subject" ]; then
+            echo "No hay sujeto que sondear: no encuentro 'autofirma' en el PATH." >&2
+            echo "Dalo a mano: just probe <ruta-del-binario>" >&2
+            exit 1
+        fi
+    fi
+    if [ ! -x "$subject" ]; then
+        echo "El sujeto $subject no existe o no es ejecutable." >&2
+        echo "Dalo a mano: just probe <ruta-del-binario>" >&2
+        exit 1
+    fi
+    trust_root="{{ trust_root }}"
+    if [ -n "$trust_root" ] && [ ! -f "$trust_root" ]; then
+        echo "La raiz de confianza $trust_root no existe." >&2
+        echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+        exit 1
+    fi
+    isolated="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
+    kind="$(printf '%s\n' "$isolated" | sed -n 1p)"
+    launcher="$(printf '%s\n' "$isolated" | sed -n 2p)"
+    served_root="$(printf '%s\n' "$isolated" | sed -n 3p)"
+    if [ -z "$trust_root" ]; then
+        case "$kind" in
+            rfirma)
+                trust_root="$served_root"
+                ;;
+            autofirma)
+                for candidate in {{ autofirma_roots }}; do
+                    if [ -f "$candidate" ]; then
+                        trust_root="$candidate"
+                        break
+                    fi
+                done
+                if [ -z "$trust_root" ]; then
+                    echo "No hay raiz de confianza con la que hablarle a $subject: no esta en ninguna de" >&2
+                    for candidate in {{ autofirma_roots }}; do
+                        echo "  $candidate" >&2
+                    done
+                    echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "No reconozco a $subject, asi que no se con que raiz sirve el canal." >&2
+                echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+                exit 1
+                ;;
+        esac
+    fi
+    echo "sondeo: sujeto $subject, raiz $trust_root"
+    cd "{{ tauri }}"
+    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" {{ args }}
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]
