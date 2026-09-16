@@ -76,3 +76,66 @@ fn what_starts_like_xml_but_does_not_parse_is_plain_xml_and_not_an_invoice() {
         DetectedShape::Xml
     );
 }
+
+#[test]
+fn a_pdf_with_byterange_or_type_sig_is_detected_as_pdf_signature() {
+    assert_eq!(
+        detect_signature(b"%PDF-1.7\n/ByteRange [0 10 20 30]\n"),
+        Some(DetectedSignature::Pdf)
+    );
+    assert_eq!(
+        detect_signature(b"%PDF-1.7\n<< /Type /Sig >>\n"),
+        Some(DetectedSignature::Pdf)
+    );
+    assert_eq!(
+        detect_signature(b"%PDF-1.7\n<< /Type/Sig >>\n"),
+        Some(DetectedSignature::Pdf)
+    );
+    assert_eq!(detect_signature(b"%PDF-1.7\nsin firma"), None);
+}
+
+#[test]
+fn a_signed_xml_is_detected_as_xml_signature() {
+    assert_eq!(
+        detect_signature(include_bytes!(
+            "../../../../../../../testdata/reference/xades-enveloping.xml"
+        )),
+        Some(DetectedSignature::Xml)
+    );
+    assert_eq!(
+        detect_signature(include_bytes!(
+            "../../../../../../../testdata/reference/document.xml"
+        )),
+        None
+    );
+}
+
+#[test]
+fn a_cms_signed_data_container_is_detected_as_cms_signature() {
+    assert_eq!(
+        detect_signature(include_bytes!(
+            "../../../../../../../testdata/reference/cades-implicit.p7s"
+        )),
+        Some(DetectedSignature::Cms)
+    );
+    assert_eq!(
+        detect_signature(include_bytes!(
+            "../../../../../../../testdata/reference/cades-explicit.p7s"
+        )),
+        Some(DetectedSignature::Cms)
+    );
+    assert_eq!(
+        detect_signature(include_bytes!(
+            "../../../../../../../testdata/reference/challenge.bin"
+        )),
+        None
+    );
+}
+
+#[test]
+fn an_invoice_is_detected_as_invoice_signature() {
+    assert_eq!(
+        detect_signature(AN_INVOICE),
+        Some(DetectedSignature::Invoice)
+    );
+}
