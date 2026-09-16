@@ -441,35 +441,61 @@ dev *args: check-native po-import
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
-# Sondea el saludo del cliente publicado contra un binario instalado, aislado del almacen del titular y con la raiz que sirve cada sujeto: `just probe [binario] [raiz] [--dossier <ruta>] [orden]`.
+# La version del sujeto es la unica coordenada que nadie puede deducir: si falta al abrir una
+# tanda nueva y hay alguien delante, se pregunta por teclado. --os y --store se toman solos
+# (`uname` y el almacen aislado); --transport vale «websocket», el unico de esta fase.
+# Sondea el cliente publicado contra un binario instalado, aislado del almacen del titular y con
+# la raiz que sirve cada sujeto: `just probe [orden] [--subject <ruta>] [--trust-root <ruta>]`.
+# `orden` es `list`, `run <caso>` o `run-pending` (por omision); ver `cargo run --example probe -- --help`.
 [group('dev')]
-probe subject="" trust_root="" *args: autoscript build-ts
+probe *args: autoscript build-ts
     #!/usr/bin/env bash
     set -euo pipefail
-    subject="{{ subject }}"
+    read -r -a given_args <<< "{{ args }}"
+    subject=""
+    trust_root=""
+    remaining_args=()
+    i=0
+    while [ "$i" -lt "${#given_args[@]}" ]; do
+        token="${given_args[$i]}"
+        case "$token" in
+            --subject)
+                i=$((i + 1))
+                subject="${given_args[$i]:-}"
+                ;;
+            --trust-root)
+                i=$((i + 1))
+                trust_root="${given_args[$i]:-}"
+                ;;
+            *)
+                remaining_args+=("$token")
+                ;;
+        esac
+        i=$((i + 1))
+    done
     if [ -z "$subject" ]; then
         subject="$(command -v autofirma || true)"
         if [ -z "$subject" ]; then
             echo "No hay sujeto que sondear: no encuentro 'autofirma' en el PATH." >&2
-            echo "Dalo a mano: just probe <ruta-del-binario>" >&2
+            echo "Dalo a mano: just probe --subject <ruta-del-binario>" >&2
             exit 1
         fi
     fi
     if [ ! -x "$subject" ]; then
         echo "El sujeto $subject no existe o no es ejecutable." >&2
-        echo "Dalo a mano: just probe <ruta-del-binario>" >&2
+        echo "Dalo a mano: just probe --subject <ruta-del-binario>" >&2
         exit 1
     fi
-    trust_root="{{ trust_root }}"
     if [ -n "$trust_root" ] && [ ! -f "$trust_root" ]; then
         echo "La raiz de confianza $trust_root no existe." >&2
-        echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+        echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
         exit 1
     fi
     isolated="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
     kind="$(printf '%s\n' "$isolated" | sed -n 1p)"
     launcher="$(printf '%s\n' "$isolated" | sed -n 2p)"
     served_root="$(printf '%s\n' "$isolated" | sed -n 3p)"
+    pkcs11_module="$(printf '%s\n' "$isolated" | sed -n 4p)"
     if [ -z "$trust_root" ]; then
         case "$kind" in
             rfirma)
@@ -487,38 +513,49 @@ probe subject="" trust_root="" *args: autoscript build-ts
                     for candidate in {{ autofirma_roots }}; do
                         echo "  $candidate" >&2
                     done
-                    echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+                    echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
                     exit 1
                 fi
                 ;;
             *)
                 echo "No reconozco a $subject, asi que no se con que raiz sirve el canal." >&2
-                echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+                echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
                 exit 1
                 ;;
         esac
     fi
     echo "sondeo: sujeto $subject, raiz $trust_root"
     cd "{{ tauri }}"
-    read -r -a extra_args <<< "{{ args }}"
     dossier_args=()
+    coordinate_args=()
     command_args=()
     has_dossier=false
     has_command=false
-    for token in "${extra_args[@]}"; do
+    has_os=false
+    has_store=false
+    for token in "${remaining_args[@]}"; do
         case "$token" in
             --dossier) has_dossier=true ;;
             list | run | run-pending) has_command=true ;;
+            --os) has_os=true ;;
+            --store) has_store=true ;;
         esac
     done
     if [ "$has_dossier" = false ]; then
         mkdir -p "{{ justfile_directory() }}/.scratch"
         dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/probe-dossier.json")
     fi
+    if [ "$has_os" = false ]; then
+        coordinate_args+=(--os "$(uname -s)" --os-version "$(uname -r)")
+    fi
+    if [ "$has_store" = false ]; then
+        coordinate_args+=(--store "softhsm2:$pkcs11_module")
+    fi
     if [ "$has_command" = false ]; then
         command_args=(run-pending)
     fi
-    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" "${dossier_args[@]}" {{ args }} "${command_args[@]}"
+    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" \
+        "${dossier_args[@]}" "${coordinate_args[@]}" "${remaining_args[@]}" "${command_args[@]}"
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]
