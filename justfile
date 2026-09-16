@@ -441,7 +441,7 @@ dev *args: check-native po-import
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
-# Sondea el saludo del cliente publicado contra un binario instalado: `just probe [binario] [raiz] [--patience-ms <ms>]`.
+# Sondea el saludo del cliente publicado contra un binario instalado, con un almacen NSS que solo ve los tokens de pruebas: `just probe [binario] [raiz] [--patience-ms <ms>]`.
 [group('dev')]
 probe subject="" trust_root="" *args: autoscript build-ts
     #!/usr/bin/env bash
@@ -483,8 +483,9 @@ probe subject="" trust_root="" *args: autoscript build-ts
         exit 1
     fi
     echo "sondeo: sujeto $subject, raiz $trust_root"
+    launcher="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
     cd "{{ tauri }}"
-    cargo run --example probe -- --subject "$subject" --trust-root "$trust_root" {{ args }}
+    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" {{ args }}
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]

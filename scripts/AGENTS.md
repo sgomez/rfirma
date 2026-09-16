@@ -10,6 +10,7 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `changelog-release.sh` | Reúne los fragmentos de `changelog.d/` en la sección de una versión de `CHANGELOG.md`. |
 | `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
 | `dev-handler.sh` | Registra o quita el binario de desarrollo como manejador de `afirma://`. |
+| `isolated-store.sh` | Monta el perfil NSS de usar y tirar que solo ve los tokens de SoftHSM, y el envoltorio que lanza contra el al sujeto del sondeo. |
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes vendorizadas del manifiesto flatpak. |
 | `check-native.sh` | Falla nombrando `just native` si la librería nativa no está construida. |
