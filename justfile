@@ -441,7 +441,7 @@ dev *args: check-native po-import
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
-# Sondea el saludo del cliente publicado contra un binario instalado, con un almacen NSS que solo ve los tokens de pruebas: `just probe [binario] [raiz] [--patience-ms <ms>]`.
+# Sondea el saludo del cliente publicado contra un binario instalado, aislado del almacen del titular y con la raiz que sirve cada sujeto: `just probe [binario] [raiz] [--patience-ms <ms>]`.
 [group('dev')]
 probe subject="" trust_root="" *args: autoscript build-ts
     #!/usr/bin/env bash
@@ -461,29 +461,44 @@ probe subject="" trust_root="" *args: autoscript build-ts
         exit 1
     fi
     trust_root="{{ trust_root }}"
-    if [ -z "$trust_root" ]; then
-        for candidate in {{ autofirma_roots }}; do
-            if [ -f "$candidate" ]; then
-                trust_root="$candidate"
-                break
-            fi
-        done
-        if [ -z "$trust_root" ]; then
-            echo "No hay raiz de confianza con la que hablarle a $subject: no esta en ninguna de" >&2
-            for candidate in {{ autofirma_roots }}; do
-                echo "  $candidate" >&2
-            done
-            echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
-            exit 1
-        fi
-    fi
-    if [ ! -f "$trust_root" ]; then
+    if [ -n "$trust_root" ] && [ ! -f "$trust_root" ]; then
         echo "La raiz de confianza $trust_root no existe." >&2
         echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
         exit 1
     fi
+    isolated="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
+    kind="$(printf '%s\n' "$isolated" | sed -n 1p)"
+    launcher="$(printf '%s\n' "$isolated" | sed -n 2p)"
+    served_root="$(printf '%s\n' "$isolated" | sed -n 3p)"
+    if [ -z "$trust_root" ]; then
+        case "$kind" in
+            rfirma)
+                trust_root="$served_root"
+                ;;
+            autofirma)
+                for candidate in {{ autofirma_roots }}; do
+                    if [ -f "$candidate" ]; then
+                        trust_root="$candidate"
+                        break
+                    fi
+                done
+                if [ -z "$trust_root" ]; then
+                    echo "No hay raiz de confianza con la que hablarle a $subject: no esta en ninguna de" >&2
+                    for candidate in {{ autofirma_roots }}; do
+                        echo "  $candidate" >&2
+                    done
+                    echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "No reconozco a $subject, asi que no se con que raiz sirve el canal." >&2
+                echo "Dala a mano (PEM o DER): just probe '$subject' <ruta-del-certificado>" >&2
+                exit 1
+                ;;
+        esac
+    fi
     echo "sondeo: sujeto $subject, raiz $trust_root"
-    launcher="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
     cd "{{ tauri }}"
     cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" {{ args }}
 
