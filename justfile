@@ -441,6 +441,9 @@ dev *args: check-native po-import
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
+# La primera vez que abre una tanda hacen falta ademas sus coordenadas: --os y --os-version se
+# toman solos con `uname`; --subject-version, --transport y --store los da quien sondea
+# (`just probe ... -- --subject-version <v> --transport <t> --store <a> run-pending`).
 # Sondea el saludo del cliente publicado contra un binario instalado, aislado del almacen del titular y con la raiz que sirve cada sujeto: `just probe [binario] [raiz] [--dossier <ruta>] [orden]`.
 [group('dev')]
 probe subject="" trust_root="" *args: autoscript build-ts
@@ -502,23 +505,30 @@ probe subject="" trust_root="" *args: autoscript build-ts
     cd "{{ tauri }}"
     read -r -a extra_args <<< "{{ args }}"
     dossier_args=()
+    coordinate_args=()
     command_args=()
     has_dossier=false
     has_command=false
+    has_os=false
     for token in "${extra_args[@]}"; do
         case "$token" in
             --dossier) has_dossier=true ;;
             list | run | run-pending) has_command=true ;;
+            --os) has_os=true ;;
         esac
     done
     if [ "$has_dossier" = false ]; then
         mkdir -p "{{ justfile_directory() }}/.scratch"
         dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/probe-dossier.json")
     fi
+    if [ "$has_os" = false ]; then
+        coordinate_args=(--os "$(uname -s)" --os-version "$(uname -r)")
+    fi
     if [ "$has_command" = false ]; then
         command_args=(run-pending)
     fi
-    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" "${dossier_args[@]}" {{ args }} "${command_args[@]}"
+    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" \
+        "${dossier_args[@]}" "${coordinate_args[@]}" {{ args }} "${command_args[@]}"
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]

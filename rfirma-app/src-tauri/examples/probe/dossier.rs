@@ -29,9 +29,30 @@ impl CaseRecord {
     }
 }
 
+/// Las coordenadas de una tanda, tomadas una sola vez al abrir un expediente nuevo.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Header {
+    pub os: String,
+    pub os_version: String,
+    pub subject_version: String,
+    pub transport: String,
+    pub store: String,
+    pub date: String,
+}
+
+/// Las coordenadas que da quien abre la tanda, sin la fecha: esa la pone el expediente.
+pub struct HeaderCoordinates {
+    pub os: String,
+    pub os_version: String,
+    pub subject_version: String,
+    pub transport: String,
+    pub store: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Contents {
     subject: String,
+    header: Header,
     cases: BTreeMap<String, CaseRecord>,
 }
 
@@ -44,8 +65,14 @@ pub struct Dossier {
 impl Dossier {
     /// Abre el expediente en `path` para `subject`, creándolo con `known_cases` si no existe.
     ///
-    /// Rechaza un expediente que otro sujeto generó, en vez de mezclar sus veredictos.
-    pub fn open(path: &Path, subject: &str, known_cases: &[&str]) -> Result<Self, String> {
+    /// Rechaza un expediente que otro sujeto generó, en vez de mezclar sus veredictos. Un
+    /// expediente nuevo exige `coordinates`: sin ellas no hay tanda que abrir.
+    pub fn open(
+        path: &Path,
+        subject: &str,
+        known_cases: &[&str],
+        coordinates: Option<HeaderCoordinates>,
+    ) -> Result<Self, String> {
         let mut contents = if path.exists() {
             let raw = fs::read_to_string(path)
                 .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
@@ -53,8 +80,21 @@ impl Dossier {
                 format!("{} no es un expediente válido: {error}", path.display())
             })?
         } else {
+            let coordinates = coordinates.ok_or_else(|| {
+                "faltan las coordenadas de la tanda: --os, --os-version, --subject-version, \
+                 --transport y --store son obligatorias al abrir un expediente nuevo"
+                    .to_owned()
+            })?;
             Contents {
                 subject: subject.to_owned(),
+                header: Header {
+                    os: coordinates.os,
+                    os_version: coordinates.os_version,
+                    subject_version: coordinates.subject_version,
+                    transport: coordinates.transport,
+                    store: coordinates.store,
+                    date: today(),
+                },
                 cases: BTreeMap::new(),
             }
         };
@@ -77,6 +117,10 @@ impl Dossier {
         };
         dossier.save()?;
         Ok(dossier)
+    }
+
+    pub fn header(&self) -> &Header {
+        &self.contents.header
     }
 
     pub fn cases(&self) -> impl Iterator<Item = (&str, &CaseRecord)> {
