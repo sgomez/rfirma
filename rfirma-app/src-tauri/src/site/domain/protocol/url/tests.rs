@@ -24,6 +24,28 @@ fn a_url_without_query_is_still_a_verb() {
 }
 
 #[test]
+fn trailing_slash_in_verb_is_normalized() {
+    let ws = AfirmaUrl::parse("afirma://websocket/?ports=49152&idsession=abc123")
+        .expect("websocket con barra final parsea");
+    assert_eq!(ws.verb(), "websocket");
+    assert_eq!(ws.parameter("ports"), Some("49152"));
+    assert_eq!(ws.parameter("idsession"), Some("abc123"));
+
+    let sign = AfirmaUrl::parse("afirma://sign/?op=sign&format=pades")
+        .expect("sign con barra final parsea");
+    assert_eq!(sign.verb(), "sign");
+    assert_eq!(sign.parameter("op"), Some("sign"));
+    assert_eq!(sign.parameter("format"), Some("pades"));
+
+    let batch = AfirmaUrl::parse("afirma://batch/?op=batch").expect("batch con barra final parsea");
+    assert_eq!(batch.verb(), "batch");
+    assert_eq!(batch.parameter("op"), Some("batch"));
+
+    let standalone = AfirmaUrl::parse("afirma://websocket/").expect("verbo suelto con barra final");
+    assert_eq!(standalone.verb(), "websocket");
+}
+
+#[test]
 fn the_scheme_is_compared_ignoring_case() {
     let url = AfirmaUrl::parse("AFIRMA://sign?op=sign").expect("el esquema no lleva mayusculas");
 
@@ -51,6 +73,8 @@ fn anything_that_is_not_the_scheme_is_refused_as_a_parameter_error() {
         "afirma:/websocket",
         "",
         "afirma://",
+        "afirma:///",
+        "afirma:///?op=sign",
     ] {
         let refusal = AfirmaUrl::parse(url).expect_err("no es una invocacion del protocolo");
         assert_eq!(refusal.code(), SafCode::Params, "con {url}");

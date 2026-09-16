@@ -37,6 +37,8 @@ impl AfirmaUrl {
             None => (rest, ""),
         };
 
+        let verb = verb.trim_end_matches('/');
+
         if verb.is_empty() {
             return Err(Refusal::params(format!(
                 "la invocacion no trae verbo: {url}"
