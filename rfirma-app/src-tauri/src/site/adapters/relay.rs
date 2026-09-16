@@ -157,7 +157,7 @@ fn upload_answer(
 
 struct HeartbeatInner {
     stop: Mutex<Option<oneshot::Sender<()>>>,
-    upload_lock: Mutex<()>,
+    upload_lock: Arc<Mutex<()>>,
 }
 
 #[derive(Clone)]
@@ -167,8 +167,12 @@ impl Heartbeat {
     fn new(stop: oneshot::Sender<()>) -> Self {
         Self(Arc::new(HeartbeatInner {
             stop: Mutex::new(Some(stop)),
-            upload_lock: Mutex::new(()),
+            upload_lock: Arc::new(Mutex::new(())),
         }))
+    }
+
+    fn upload_lock(&self) -> Arc<Mutex<()>> {
+        Arc::clone(&self.0.upload_lock)
     }
 
     fn stop(&self) {
@@ -206,7 +210,7 @@ fn spawn_heartbeat(
             servlets,
             store_servlet.to_owned(),
             id.to_owned(),
-            heartbeat.clone(),
+            heartbeat.upload_lock(),
             stop_rx,
         ));
     }
@@ -217,7 +221,7 @@ async fn pulse_active_wait(
     servlets: Arc<dyn Servlets + Send + Sync>,
     store_servlet: String,
     id: String,
-    heartbeat: Heartbeat,
+    upload_lock: Arc<Mutex<()>>,
     mut stopped: oneshot::Receiver<()>,
 ) {
     let mut interval = tokio::time::interval_at(
@@ -228,7 +232,7 @@ async fn pulse_active_wait(
         tokio::select! {
             _ = &mut stopped => break,
             _ = interval.tick() => {
-                let Ok(_guard) = heartbeat.0.upload_lock.lock() else {
+                let Ok(_guard) = upload_lock.lock() else {
                     break;
                 };
                 if !matches!(stopped.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)) {

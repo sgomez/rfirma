@@ -862,3 +862,36 @@ async fn parameters_variant_with_active_wait_pulses_periodically() {
     tokio::task::yield_now().await;
     assert_eq!(servlets.log(), vec!["get", "wait", "wait"]);
 }
+
+#[tokio::test(start_paused = true)]
+async fn when_handles_are_dropped_without_answering_the_heartbeat_stops() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
+
+    let channel = opened_and_delivered(&relay, &info);
+    let (_url, reply) = spy.take_reply();
+    tokio::task::yield_now().await;
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+
+    drop(channel);
+    drop(reply);
+    tokio::task::yield_now().await;
+
+    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(
+        servlets.log(),
+        vec!["wait", "get", "wait"],
+        "el latido debe detenerse si los asideros se descartan sin responder"
+    );
+}
