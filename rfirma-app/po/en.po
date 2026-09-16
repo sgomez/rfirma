@@ -1041,7 +1041,7 @@ msgid "sede.consent.asksSignature"
 msgstr "{{origin}} asks for your signature."
 
 msgid "sede.consent.asksIdentity"
-msgstr "{{origin}} asks you to identify yourself."
+msgstr "{{origin}} asks for your identity data."
 
 #. La misma frase que "asksSignature", con el formato del #530 nombrado.
 msgid "sede.consent.asksSignatureOf"
@@ -1074,7 +1074,7 @@ msgstr ""
 
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
-"The request asks you to identify yourself and doesn't say which page it "
+"The request asks for your identity data and doesn't say which page it "
 "comes from."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
@@ -1086,7 +1086,7 @@ msgid "sede.consent.signWith"
 msgstr "You'll sign with"
 
 msgid "sede.consent.identifyWith"
-msgstr "You'll identify yourself with"
+msgstr "You'll send the data from"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"
@@ -1145,7 +1145,7 @@ msgid "sede.consent.sign"
 msgstr "Sign"
 
 msgid "sede.consent.identify"
-msgstr "Identify"
+msgstr "Send my data"
 
 msgid "sede.confirm.title"
 msgstr "Something to confirm before signing"

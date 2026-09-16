@@ -45,8 +45,9 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
       stage.certificates[0] ??
       null,
   );
-  // `selectcert` es identificarse y todo lo demás es firmar: una sola pregunta,
-  // resuelta en el vocabulario del trámite y no repetida aquí.
+  // `selectcert` es una cesión de datos de identidad y todo lo demás es
+  // firmar: una sola pregunta, resuelta en el vocabulario del trámite y no
+  // repetida aquí.
   const identity = consentActionKey(operation) === "identify";
 
   return (

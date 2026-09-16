@@ -1054,7 +1054,7 @@ msgid "sede.consent.asksSignature"
 msgstr "{{origin}} demana la teva signatura."
 
 msgid "sede.consent.asksIdentity"
-msgstr "{{origin}} demana que t'identifiquis."
+msgstr "{{origin}} demana les teves dades d'identitat."
 
 #. La misma frase que "asksSignature", con el formato del #530 nombrado.
 msgid "sede.consent.asksSignatureOf"
@@ -1084,7 +1084,7 @@ msgid "sede.consent.unknownOriginSignatureOf"
 msgstr "La petició demana signar {{what}} i no indica de quina pàgina ve."
 
 msgid "sede.consent.unknownOriginIdentity"
-msgstr "La petició demana que t'identifiquis i no indica de quina pàgina ve."
+msgstr "La petició demana les teves dades d'identitat i no indica de quina pàgina ve."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.
@@ -1095,7 +1095,7 @@ msgid "sede.consent.signWith"
 msgstr "Signaràs amb"
 
 msgid "sede.consent.identifyWith"
-msgstr "T'identificaràs amb"
+msgstr "Enviaràs les dades de"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"
@@ -1156,7 +1156,7 @@ msgid "sede.consent.sign"
 msgstr "Signar"
 
 msgid "sede.consent.identify"
-msgstr "Identificar-se"
+msgstr "Enviar les meves dades"
 
 msgid "sede.confirm.title"
 msgstr "Cal confirmar abans de signar"
