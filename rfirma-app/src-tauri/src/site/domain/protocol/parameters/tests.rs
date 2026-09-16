@@ -162,10 +162,44 @@ fn a_protocol_version_newer_than_the_one_spoken_here_is_refused_with_its_own_cod
     let refusal = check_minimum_protocol_version(minimum_protocol_version(&a_url("&ver=5")))
         .expect_err("aqui no se habla la version 5 del protocolo");
 
-    assert_eq!(refusal.code(), SafCode::MinimumVersionNonSatisfied);
+    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+    assert_eq!(
+        refusal.answer().on_the_wire(),
+        "SAF_21: Este tramite no es compatible con la version instalada"
+    );
     assert_eq!(
         refusal.situation(),
         RefusalSituation::UnsupportedProtocolVersion,
         "la ventana tiene que poder nombrar lo que pasa"
+    );
+}
+
+#[test]
+fn a_protocol_version_below_the_minimum_threshold_is_refused_with_minimum_version_non_satisfied() {
+    let refusal = check_protocol_version_meets_minimum(1, 2)
+        .expect_err("la version 1 no satisface el minimo requerido 2");
+
+    assert_eq!(refusal.code(), SafCode::MinimumVersionNonSatisfied);
+    assert_eq!(
+        refusal.answer().on_the_wire(),
+        "SAF_41: El tramite exige una version mas reciente de la aplicacion"
+    );
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedProtocolVersion,
+        "la ventana tiene que poder nombrar lo que pasa"
+    );
+}
+
+#[test]
+fn protocol_version_bounds_accept_supported_versions_and_refuse_newer() {
+    for version in 0..=PROTOCOL_VERSION {
+        assert!(check_protocol_version_bounds(version).is_ok());
+    }
+    let refusal = check_protocol_version_bounds(5).expect_err("version 5 no soportada");
+    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+    assert_eq!(
+        refusal.answer().on_the_wire(),
+        "SAF_21: Este tramite no es compatible con la version instalada"
     );
 }

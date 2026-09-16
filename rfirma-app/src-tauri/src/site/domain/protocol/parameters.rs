@@ -164,18 +164,36 @@ pub fn minimum_protocol_version(url: &AfirmaUrl) -> i64 {
         })
 }
 
-/// Comprueba la versión mínima de protocolo que exige la operación.
-pub fn check_minimum_protocol_version(required: i64) -> Result<(), Refusal> {
+/// Comprueba los límites de la versión de protocolo que exige la operación.
+pub fn check_protocol_version_bounds(required: i64) -> Result<(), Refusal> {
     if required <= PROTOCOL_VERSION {
         return Ok(());
     }
 
     Err(Refusal::new(
-        SafCode::MinimumVersionNonSatisfied,
+        SafCode::UnsupportedProcedure,
         format!(
             "la operacion exige la version de protocolo {required} y aqui se habla como maximo \
              la {PROTOCOL_VERSION}"
         ),
+    )
+    .because(RefusalSituation::UnsupportedProtocolVersion))
+}
+
+/// Comprueba la versión mínima de protocolo que exige la operación.
+pub fn check_minimum_protocol_version(required: i64) -> Result<(), Refusal> {
+    check_protocol_version_bounds(required)
+}
+
+/// Comprueba que la versión de protocolo satisfaga un umbral mínimo exigido.
+pub fn check_protocol_version_meets_minimum(version: i64, minimum: i64) -> Result<(), Refusal> {
+    if version >= minimum {
+        return Ok(());
+    }
+
+    Err(Refusal::new(
+        SafCode::MinimumVersionNonSatisfied,
+        format!("la version de protocolo {version} no satisface el minimo requerido ({minimum})"),
     )
     .because(RefusalSituation::UnsupportedProtocolVersion))
 }

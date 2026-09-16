@@ -1994,7 +1994,12 @@ fn an_operation_that_demands_a_protocol_version_not_spoken_here_is_refused_befor
 
         assert_eq!(
             refusal.code(),
-            SafCode::MinimumVersionNonSatisfied,
+            SafCode::UnsupportedProcedure,
+            "con op={verb}"
+        );
+        assert_eq!(
+            refusal.answer().on_the_wire(),
+            "SAF_21: Este tramite no es compatible con la version instalada",
             "con op={verb}"
         );
     }

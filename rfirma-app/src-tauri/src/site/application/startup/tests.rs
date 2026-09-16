@@ -987,7 +987,7 @@ fn a_relay_refusal_with_a_known_destination_fires_its_delivery_and_ends_the_erra
         world.steps(),
         [
             "canal",
-            "ventana:rechazo:SAF_41",
+            "ventana:rechazo:SAF_21",
             "subida",
             "ventana:trámite-terminado"
         ],
@@ -1032,7 +1032,7 @@ fn a_relay_refusal_whose_upload_fails_shows_the_window_and_does_not_end_the_erra
         world.steps(),
         [
             "canal",
-            "ventana:rechazo:SAF_41",
+            "ventana:rechazo:SAF_21",
             "subida-fallida",
             "ventana:enseñada"
         ],
