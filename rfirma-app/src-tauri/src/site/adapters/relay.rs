@@ -1,6 +1,9 @@
 //! Transporte del servidor intermedio: sin canal que sostener, la operación llega ya resuelta desde la propia invocación (ADR-0005, ADR-0017).
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use tokio::sync::oneshot;
 
 use crate::site::application::errand::{Acknowledgement, Inbox, ReplyHandle, Transport};
 use crate::site::domain::channel::{
@@ -15,6 +18,8 @@ use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::ports::Servlets;
 
 use super::frontier::code_of_relay;
+
+const ACTIVE_WAIT_INTERVAL: Duration = Duration::from_secs(10);
 
 /// El servidor intermedio: descarga y descifra la petición una vez, la entrega por el mismo
 /// buzón que el `wss`, y su asa de respuesta sube la contestación cifrada.
@@ -92,26 +97,44 @@ impl Transport for Relay {
                 None => ChannelError::refused(failure.refusal),
             })?;
 
+        let heartbeat = spawn_heartbeat(
+            resolved.active_wait,
+            Arc::clone(&self.servlets),
+            &resolved.store_servlet,
+            &resolved.id,
+        );
+
+        let shutdown_heartbeat = heartbeat.clone();
+        let shutdown = Shutdown::of(move || {
+            if let Some(hb) = shutdown_heartbeat {
+                hb.stop();
+            }
+        });
+
         let servlets = Arc::clone(&self.servlets);
         let on_upload_failure = Arc::clone(&self.on_upload_failure);
         let store_servlet = resolved.store_servlet;
         let id = resolved.id;
-        let reply =
-            ReplyHandle::of(
-                move |text: String| match servlets.store(&store_servlet, &id, &text) {
-                    Ok(()) => Acknowledgement::immediate(),
-                    Err(error) => {
-                        on_upload_failure(refusal_of(error));
-                        Acknowledgement::never()
-                    }
-                },
-            );
+        let reply_heartbeat = heartbeat;
+        let reply = ReplyHandle::of(move |text: String| {
+            if let Some(hb) = &reply_heartbeat {
+                hb.stop();
+            }
+            let _guard = reply_heartbeat.as_ref().map(|hb| hb.0.upload_lock.lock());
+            match servlets.store(&store_servlet, &id, &text) {
+                Ok(()) => Acknowledgement::immediate(),
+                Err(error) => {
+                    on_upload_failure(refusal_of(error));
+                    Acknowledgement::never()
+                }
+            }
+        });
 
         let inbox = self.inbox.clone();
         let operation = resolved.operation;
         let delivery = Delivery::of(move || inbox.deliver(operation, reply));
 
-        Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery))
+        Ok(OpenChannel::with_delivery(0, shutdown, delivery))
     }
 }
 
@@ -132,11 +155,101 @@ fn upload_answer(
     }
 }
 
+struct HeartbeatInner {
+    stop: Mutex<Option<oneshot::Sender<()>>>,
+    upload_lock: Arc<Mutex<()>>,
+}
+
+#[derive(Clone)]
+struct Heartbeat(Arc<HeartbeatInner>);
+
+impl Heartbeat {
+    fn new(stop: oneshot::Sender<()>) -> Self {
+        Self(Arc::new(HeartbeatInner {
+            stop: Mutex::new(Some(stop)),
+            upload_lock: Arc::new(Mutex::new(())),
+        }))
+    }
+
+    fn upload_lock(&self) -> Arc<Mutex<()>> {
+        Arc::clone(&self.0.upload_lock)
+    }
+
+    fn stop(&self) {
+        if let Ok(mut lock) = self.0.stop.lock() {
+            if let Some(tx) = lock.take() {
+                let _ = tx.send(());
+            }
+        }
+    }
+}
+
+impl Drop for HeartbeatInner {
+    fn drop(&mut self) {
+        if let Ok(mut lock) = self.stop.lock() {
+            if let Some(tx) = lock.take() {
+                let _ = tx.send(());
+            }
+        }
+    }
+}
+
+fn spawn_heartbeat(
+    active_wait: bool,
+    servlets: Arc<dyn Servlets + Send + Sync>,
+    store_servlet: &str,
+    id: &str,
+) -> Option<Heartbeat> {
+    if !active_wait {
+        return None;
+    }
+    let (stop_tx, stop_rx) = oneshot::channel();
+    let heartbeat = Heartbeat::new(stop_tx);
+    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        handle.spawn(pulse_active_wait(
+            servlets,
+            store_servlet.to_owned(),
+            id.to_owned(),
+            heartbeat.upload_lock(),
+            stop_rx,
+        ));
+    }
+    Some(heartbeat)
+}
+
+async fn pulse_active_wait(
+    servlets: Arc<dyn Servlets + Send + Sync>,
+    store_servlet: String,
+    id: String,
+    upload_lock: Arc<Mutex<()>>,
+    mut stopped: oneshot::Receiver<()>,
+) {
+    let mut interval = tokio::time::interval_at(
+        tokio::time::Instant::now() + ACTIVE_WAIT_INTERVAL,
+        ACTIVE_WAIT_INTERVAL,
+    );
+    loop {
+        tokio::select! {
+            _ = &mut stopped => break,
+            _ = interval.tick() => {
+                let Ok(_guard) = upload_lock.lock() else {
+                    break;
+                };
+                if !matches!(stopped.try_recv(), Err(tokio::sync::oneshot::error::TryRecvError::Empty)) {
+                    break;
+                }
+                let _ = servlets.wait(&store_servlet, &id);
+            }
+        }
+    }
+}
+
 /// La operación que hay que atender y adónde va su respuesta, ya sin nada que recuperar.
 struct ResolvedRelay {
     operation: AfirmaUrl,
     store_servlet: String,
     id: String,
+    active_wait: bool,
 }
 
 /// Un fallo al resolver la operación, con el destino de subida cuando ya se conocía al fallar.
@@ -175,6 +288,7 @@ fn resolve(
                 operation: info.operation.clone(),
                 store_servlet: store_servlet.clone(),
                 id: id.clone(),
+                active_wait: info.active_wait,
             })
         }
         RelayRequest::DataByFileId {
@@ -193,6 +307,7 @@ fn resolve(
                 operation: info.operation.clone().with_parameter("dat", dat),
                 store_servlet: store_servlet.clone(),
                 id: id.clone(),
+                active_wait: info.active_wait,
             })
         }
         RelayRequest::ParametersByFileId {
@@ -210,17 +325,14 @@ fn resolve(
             let id = declared(&operation, "id").map_err(ResolutionFailure::without_destination)?;
             let id = checked_identifier(id, Parameter::Identifier)
                 .map_err(ResolutionFailure::without_destination)?;
-            wait_if_asked(
-                asks_for_active_wait(&operation),
-                servlets,
-                &store_servlet,
-                &id,
-            )
-            .map_err(|refusal| ResolutionFailure::at(refusal, &store_servlet, &id))?;
+            let active_wait = asks_for_active_wait(&operation);
+            wait_if_asked(active_wait, servlets, &store_servlet, &id)
+                .map_err(|refusal| ResolutionFailure::at(refusal, &store_servlet, &id))?;
             Ok(ResolvedRelay {
                 operation,
                 store_servlet,
                 id,
+                active_wait,
             })
         }
     }
