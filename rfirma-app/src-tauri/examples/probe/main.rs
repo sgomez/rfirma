@@ -1,6 +1,8 @@
-//! Sondeo del saludo: el cliente publicado bajo Node invoca al binario declarado y el eco vuelve.
+//! Sondeo: el cliente publicado bajo Node corre un guion del banco contra el binario declarado
+//! y transcribe lo que viajó, sin mirar el interior del sujeto.
 
 mod dossier;
+mod transcript;
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -8,6 +10,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
 use dossier::{CaseState, Dossier};
+use transcript::Transcript;
 
 const USAGE: &str = "\
 uso: cargo run --example probe -- --subject <binario> --trust-root <certificado> \
@@ -30,11 +33,14 @@ const DEFAULT_PATIENCE: Duration = Duration::from_millis(60_000);
 /// El guion de una sola selección, el más corto que hace saludar al cliente publicado.
 const THE_SINGLE_SELECTION: &str = "selectcert";
 
+/// El guion de `sign` con `format=CAdES` y `mode=explicit`: un trámite entero, de punta a punta.
+const THE_FULL_ERRAND: &str = "signcades";
+
 /// El modo que el cliente publicado habla de por sí: puertos sorteados y `v=4`.
 const THE_FOURTH_PROTOCOL: &str = "v4";
 
 /// Los nombres de los casos que el sondeo sabe ejecutar.
-const KNOWN_CASES: &[&str] = &["saludo"];
+const KNOWN_CASES: &[&str] = &["saludo", "tramite"];
 
 struct Probe {
     subject: PathBuf,
@@ -155,19 +161,30 @@ impl Probe {
 
     fn run_case(&self, case: &str) {
         match case {
-            "saludo" => self.run_greeting(),
+            "saludo" => self.run_errand(case, THE_SINGLE_SELECTION),
+            "tramite" => self.run_errand(case, THE_FULL_ERRAND),
             other => unreachable!("caso sin arnés: {other}"),
         }
     }
 
-    fn run_greeting(&self) {
+    /// Corre `script` de punta a punta contra el sujeto declarado, transcribiendo cada evento
+    /// del cliente publicado a medida que llega.
+    fn run_errand(&self, case: &str, script: &str) {
         let trust_root = the_trust_root_as_pem(&self.trust_root);
-        let mut driver = the_published_client_running(trust_root.path(), self.patience);
+        let mut driver = the_published_client_running(trust_root.path(), self.patience, script);
         let events = driver.stdout.take().expect("el conductor escribe eventos");
+        let mut transcript = Transcript::open(&self.dossier, case).unwrap_or_else(|complaint| {
+            eprintln!("{complaint}");
+            std::process::exit(1);
+        });
         let mut subject = None;
         for event in BufReader::new(events).lines().map_while(Result::ok) {
             println!("{event}");
             let _ = std::io::stdout().flush();
+            transcript.record(&event).unwrap_or_else(|complaint| {
+                eprintln!("{complaint}");
+                std::process::exit(1);
+            });
             if let Some(url) = the_launch_url_in(&event) {
                 eprintln!("sondeo: invoco {} con {url}", self.subject.display());
                 subject = Some(the_subject_invoked_with(&self.subject, &url));
@@ -208,7 +225,7 @@ fn the_driver() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/conformance/driver.mjs")
 }
 
-fn the_published_client_running(trust_root: &Path, patience: Duration) -> Child {
+fn the_published_client_running(trust_root: &Path, patience: Duration, script: &str) -> Child {
     let published_client = the_published_client();
     assert!(
         published_client.exists(),
@@ -221,7 +238,7 @@ fn the_published_client_running(trust_root: &Path, patience: Duration) -> Child 
         .env("NODE_EXTRA_CA_CERTS", trust_root)
         .env("RFIRMA_BENCH_TIMEOUT_MS", patience.as_millis().to_string())
         .env("RFIRMA_BENCH_MODE", THE_FOURTH_PROTOCOL)
-        .env("RFIRMA_BENCH_SCRIPT", THE_SINGLE_SELECTION)
+        .env("RFIRMA_BENCH_SCRIPT", script)
         .stdout(Stdio::piped())
         .spawn()
         .expect("Node debería arrancar el conductor")
