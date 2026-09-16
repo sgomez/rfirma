@@ -165,3 +165,4 @@ en `.scratch/archive/`.
 2026-09-11 spec=#671 sub=#676 model=sonnet effort=medium pr=#698 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
 2026-09-11 spec=#703 sub=#704 model=sonnet effort=medium pr=#706 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-11 spec=#703 sub=#705 model=sonnet effort=medium pr=#707 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-16 spec=#730 sub=#730 model=sonnet effort=medium pr=#736 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
