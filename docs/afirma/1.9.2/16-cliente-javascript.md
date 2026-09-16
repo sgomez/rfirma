@@ -110,6 +110,38 @@ El objeto `Platform` (`1087-1194`) clasifica la plataforma analizando
 
 ---
 
+### 2.3 El transporte se elige una vez y no degrada solo
+
+La cascada anterior es el **único** punto de todo `autoscript.js` donde se asigna
+`clienteFirma` (`902`, `915`, `923`, `931`). No existe ninguna vía por la que un
+transporte local que fracasa ceda el turno a otro: si la aplicación de escritorio no
+responde, el cliente agota sus reintentos y aborta, **sin conmutar al servidor
+intermedio**.
+
+* **En WebSocket (`2162-2186`):** `waitAppAndProcessRequest` reintenta hasta
+  `AUTOFIRMA_CONNECTION_RETRIES` (15) veces cada `AUTOFIRMA_LAUNCHING_TIME` (2000 ms).
+  Agotados los intentos, cierra el diálogo de espera, genera una terna de puertos nueva
+  y muestra un diálogo modal de error (`Dialog.showErrorDialog(ERROR_CONNECTING_AFIRMA, ...)`,
+  `2178`) cuyas dos únicas salidas son **reintentar con el mismo transporte**
+  (`execAppIntent(url, successCB, errorCB)`) o **abandonar** invocando el callback de
+  error con `es.gob.afirma.standalone.ApplicationNotFoundException` (`2180`).
+* **En Socket HTTP/TLS (`3042-3072`):** el comportamiento es idéntico, con un escalón
+  intermedio: si ya hubo conexión previa y se lleva sin responder más de la mitad de los
+  intentos (`timeoutResetCounter < AUTOFIRMA_CONNECTION_RETRIES/2`, `3047`), se supone que
+  el proceso murió y se relanza la aplicación desde cero (`port = ""`, `3048`). Solo cuando
+  `timeoutResetCounter == 0` aparece el mismo diálogo de dos salidas (`3062-3068`).
+
+Conmutar a servidor intermedio es, por tanto, una decisión que **solo puede tomar la
+página integradora**, y el camino no pasa por recargar la página: basta con invocar
+`AutoScript.setForceWSMode(true)` (`329-331`), que se limita a levantar la bandera
+global `forceWSMode` (`156`), y volver a llamar a `AutoScript.cargarAppAfirma(...)`, que
+reevalúa la cascada y sustituye la instancia de `clienteFirma` por una de
+`AppAfirmaJSWebService`. Como la bandera se consulta también en `setServlets` (`624`), la
+sede debe declarar antes las direcciones de los servlets para que el nuevo cliente los
+reciba (`903-905`).
+
+---
+
 ## 3. Identificadores de sesión y selección de puertos
 
 Para los transportes que requieren interacción local (WebSocket y Socket), `autoscript.js`
@@ -569,6 +601,41 @@ en firmas con sello de tiempo causados por un desfase en el reloj del cliente:
 
 ---
 
+### 9.3 La cofirma desde la API pública: el parámetro `dataB64` que nunca viaja
+
+La fachada global exporta **dos puntos de entrada distintos para la misma operación**
+`cosign` (`4929-4930`), que se diferencian en la aridad:
+
+| Función exportada | Firma | Definición |
+|---|---|---|
+| `coSign` | `(signB64, dataB64, algorithm, format, params, successCallback, errorCallback)` | `470-476` |
+| `cosign` | `(signB64, algorithm, format, params, successCallback, errorCallback)` | `478-481` |
+
+`coSign` conserva la firma histórica del antiguo `MiniApplet`, con un segundo argumento
+`dataB64` para aportar los datos originales. Ese argumento **se recibe y se descarta**: la
+llamada al transporte subyacente lo omite y traslada únicamente `signB64`
+(`clienteFirma.coSign(signB64, algorithm, format, params, ...)`, `474`). El propio código
+lo advierte en un comentario (`471-473`):
+
+> *El cliente de firma no soporta la cofirma en la que se proporcionan los datos. Esto
+> impide que se pueda cofirmar una firma CAdES explicita con un algoritmo de firma
+> distinto al de la firma original.*
+
+No se trata de un olvido del JavaScript, sino del reflejo fiel de una **limitación del
+protocolo**: la URI `afirma://` dispone de un único parámetro `dat`, que en `cosign`
+transporta la firma previa, y el lanzador invoca la sobrecarga de una sola ranura
+`signer.cosign(data, algorithm, ...)` (`ProtocolInvocationLauncherSign.java:710-717`). Los
+tres transportes son coherentes con ello y aceptan un solo binario en su `coSign` interno
+(`1834-1836` en WebSocket, `2735-2739` en socket, `3829-3831` en servidor intermedio). El
+mecanismo de recuperación de la huella y el error `SAF_44` que resulta cuando falla se
+detallan en el capítulo [06](06-operaciones-firma.md#61-despacho-de-la-operación-criptográfica).
+
+Para la sede integradora la consecuencia práctica es doble: `coSign` y `cosign` son
+equivalentes salvo por la posición de los argumentos, y pasar datos a `coSign` no produce
+error alguno —ni excepción, ni aviso— sino que simplemente no surte efecto.
+
+---
+
 ## 10. Resumen comparativo de transportes en `autoscript.js`
 
 | Característica | `AppAfirmaWebSocketClient` | `AppAfirmaJSSocket` | `AppAfirmaJSWebService` |
@@ -580,56 +647,6 @@ en firmas con sello de tiempo causados por un desfase en el reloj del cliente:
 | **Persistencia del proceso nativo** | Vivo mientras el socket esté abierto | Vivo hasta inactividad (90 s) | Muere tras cada operación |
 | **Operaciones de carga (`load`/`multiload`)** | Soportadas (`2377`) | Soportadas (`3436`) | No soportadas (`4148`) |
 | **Manejo de reintentos de conexión** | 15 intentos cada 2 s (`2165`) | 15 intentos cada 2 s (`3043`) | 10 a 15 ciclos de sondeo cada 3 a 4 s (`3718`) |
+| **Degradación a otro transporte si falla** | Ninguna: diálogo de reintento o `ApplicationNotFoundException` (`2178-2183`) | Ninguna: diálogo de reintento o `ApplicationNotFoundException` (`3062-3068`) | No procede (es el transporte de último recurso) |
 
 ---
-
-## Lo que el código no aclara
-
-**Omisión de la letra `v` en `VALID_CHARS_TO_ID`.** En la línea `1600`, el alfabeto
-definido para generar los identificadores de sesión es:
-`"1234567890abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"`.
-Entre la letra `u` y la letra `w` falta la letra `v`. No existe ninguna justificación
-técnica en los comentarios ni en el código para haber omitido deliberadamente la `v`
-minúscula del conjunto alfanumérico.
-
-**El delimitador sobrante en `processSignResponse` de WebSocket.** En la línea `2537`,
-al desempaquetar la respuesta tripartita de firma en el cliente WebSocket, el código
-ejecuta:
-```javascript
-extraInfo = Base64.decode(data.substring(sepPos2), true);
-```
-Dado que `sepPos2` es el índice de la segunda barra vertical (`|`), `data.substring(sepPos2)`
-empieza por el propio carácter tubería (`|`), provocando que `Base64.decode` reciba
-un carácter no Base64 en primera posición. En cambio, en `AppAfirmaJSWebService`
-(`4600`) se ejecuta correctamente `data.substring(sepPos2 + 1)`.
-
-**Divergencia en el nombre del parámetro de extensión para la operación `save`.**
-En `AppAfirmaWebSocketClient` (`2057`) y `AppAfirmaJSSocket` (`2992`), el parámetro de
-extensiones de fichero se empaqueta con la clave `"exts"`:
-`data.extension = createKeyValuePair("exts", extension)`.
-Sin embargo, en `AppAfirmaJSWebService` (`4122`), se empaqueta como `"extension"`:
-`params[params.length] = {key:"extension", value:extension}`.
-Aunque la clase Java receptora (`UrlParametersToSave.java:49`) tolera ambas claves, el
-código JS presenta esta disparidad entre sus propios submódulos.
-
-**Descarte del parámetro `dataB64` en `coSign`.** La función pública `coSign`
-(`470-476`) declara la firma `(signB64, dataB64, algorithm, format, params, ...)` pero
-omite por completo el argumento `dataB64` al delegar en `clienteFirma.coSign`:
-`clienteFirma.coSign(signB64, algorithm, format, params, ...)`.
-El comentario del código (`471-473`) señala que el cliente de firma no soporta la
-cofirma con datos explícitos, lo cual impide técnicamente cofirmar firmas CAdES
-explícitas con algoritmos distintos al original.
-
-**Falta de degradación automática en fallos de conexión local.** Cuando
-`AppAfirmaWebSocketClient` o `AppAfirmaJSSocket` agotan sus 15 reintentos sin lograr
-conectar con AutoFirma en la máquina local, el flujo no intenta degradar
-automáticamente al transporte por servidor intermedio `AppAfirmaJSWebService`, sino
-que aborta lanzando un diálogo modal y llamando a `errorCB`. El usuario queda
-bloqueado a menos que la sede haya previsto una recarga forzando `setForceWSMode(true)`.
-
-**Incoherencia en la comprobación de versión de protocolo.** `AppAfirmaWebSocketClient`
-declara `PROTOCOL_VERSION = 4` (`1747`) y `AppAfirmaJSWebService` declara
-`PROTOCOL_VERSION = 3` (`3715`), pero `AppAfirmaJSSocket` declara `PROTOCOL_VERSION = 1`
-(`2621`). El código no explica por qué el socket HTTP local se mantuvo congelado en
-la versión 1 del protocolo a pesar de que el servidor Java subyacente soporta
-versiones superiores en socket.

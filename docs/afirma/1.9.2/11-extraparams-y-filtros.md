@@ -112,9 +112,18 @@ public static Properties convertToProperties(final String entries) {
 
 A diferencia de `AOUtil.base642Properties`, este método procesa una cadena de texto ya
 descodificada y utiliza `entries.getBytes()` (el juego de caracteres por defecto de la
-plataforma del sistema operativo), por lo que en entornos donde la codificación local
-no sea UTF-8 puede corromper caracteres no ASCII. En el protocolo `afirma://` el punto
-de entrada habitual es `AOUtil.base642Properties`.
+plataforma del sistema operativo anfitrión), lo que en entornos donde la codificación local
+no sea UTF-8 provocaría la corrupción de caracteres no ASCII.
+
+Sin embargo, en el protocolo de escritorio `afirma://`, este método **jamás se invoca**:
+todas las invocaciones de protocolo (`UrlParametersToSign`, `UrlParametersToSignAndSave`,
+`UrlParametersToSelectCert`, `UrlParametersForBatch`) procesan exclusivamente el parámetro
+`properties` a través de `AOUtil.base642Properties`, el cual fija de forma inmutable
+`StandardCharsets.UTF_8`. El método `ExtraParamsProcessor.convertToProperties` constituye
+código legado utilizado exclusivamente por el applet web de navegador
+(`afirma-ui-miniapplet` · `MiniAfirmaApplet.java:149, 322, 478, 1401, 1475`), el cual
+recibía los parámetros como cadenas planas mediante LiveConnect. Por tanto, no existe riesgo
+de corrupción de juego de caracteres en las invocaciones por protocolo en ninguna plataforma.
 
 ### 2.4 Resiliencia ante errores de decodificación
 
@@ -246,6 +255,14 @@ private static void expandPolicyKeys(final Properties p, final byte[] signedData
    * Si no coincide con ninguno de estos dos valores literales, elimina `expPolicy` de `p`
      y lanza una excepción `IncompatiblePolicyException`:
      `"No se soporta la expansion de atributos para la politica: " + policyName`.
+   * **Incompatibilidad de `FirmaAGE19` ([BUG-20](A1-bugs-autofirma.md#bug-20-incompatibilidad-entre-policyproperties-y-extraparamsprocessor-impide-el-uso-del-identificador-oficial-firmaage19)):**
+     Aunque el recurso interno `afirma-core/src/main/resources/policy.properties:11-17`
+     define explícitamente los parámetros para `FirmaAGE19` indicando en comentarios que
+     se utilice mediante `"expPolicy=FirmaAGE19"`, la constante no existe en `AdESPolicyPropertiesManager`
+     ni se contempló en `isSupportedPolicy`. Por ello, enviar `expPolicy=FirmaAGE19` arroja
+     `IncompatiblePolicyException`, provocando que `ProtocolInvocationLauncherSign.java:492-496`
+     o `SignAndSave.java:484-488` capturen el error y emitan `SocketOperationException(ERROR_INVALID_POLICY)`
+     con código de error `SAF_23`.
 4. Normaliza el nombre del formato mediante `normalizeFormat(format)` (`ExtraParamsProcessor.java:185-208`):
    * `CAdES` o `CAdES-Tri` -> `"CAdES"`.
    * `XAdES`, `XAdES-Tri` o cadenas que comiencen por `"XAdES "` -> `"XAdES"`.
@@ -419,19 +436,27 @@ El modelo de filtrado combina conjunción y disyunción a dos niveles:
 
 ### 6.3 Filtro por defecto de caducidad (ETSI TS 119 102-1)
 
-En `CertFilterManager.java:133-135`:
+En `CertFilterManager.java:128-135`:
 ```java
+// Siguiendo los criterios de la ETSI TS 119 102-1, un usuario no deberia firmar nunca con
+// un certificado caducado, asi que, si no se definio ningun tipo de filtrado, se agregara
+// un filtro omitiendo estos certificados. Si se agregaron filtros, se considerara que es
+// el integrador estara definiendo sus preferencias concretas de filtrado
 if (this.filters.isEmpty()) {
     this.filters.add(new ExpiredCertificateFilter(false));
 }
 ```
-* Si el integrador **no define ningún filtro**, AutoFirma aplica de oficio la recomendación
-  de la norma ETSI TS 119 102-1 e inyecta un `ExpiredCertificateFilter(false)`, ocultando
-  todos los certificados cuya fecha de validez haya expirado (`cert.checkValidity()`).
-* **Regla crítica**: Si el integrador define **cualquier** filtro (por ejemplo `subject.contains:JUAN`),
-  la lista `this.filters` ya no está vacía y el filtro de caducidad por defecto **no se añade**.
-  En consecuencia, los certificados caducados que cumplan el filtro explícito se mostrarán
-  al usuario, a menos que se incluya explícitamente el subfiltro `nonexpired:`.
+* **Comportamiento por omisión**: Si el integrador **no define ningún filtro** (la lista `this.filters`
+  permanece vacía tras analizar `filter`, `filters` y `filters.N`), AutoFirma aplica de oficio la
+  recomendación de la norma ETSI TS 119 102-1 e inyecta automáticamente `ExpiredCertificateFilter(false)`,
+  ocultando del diálogo todos los certificados expirados (`cert.checkValidity()`).
+* **Desactivación implícita ante filtros específicos**: Si la aplicación web proporciona **cualquier**
+  criterio de filtrado (como por ejemplo un emisor `issuer.contains:FNMT`, un NIF `subject.rfc2254:...`
+  o un uso de clave), la condición `this.filters.isEmpty()` evalúa a `false` y el filtro de caducidad
+  **no se añade**. Por diseño, el código asume que el integrador toma el control completo de los criterios
+  de aceptación. En consecuencia, aquellos certificados caducados que cumplan las condiciones explícitas
+  especificadas por la sede **aparecerán en el diálogo de selección** y podrán ser elegidos por la persona
+  usuaria, a menos que el integrador concatene expresamente el subfiltro `;nonexpired:true`.
 
 ### 6.4 Bloqueo de almacenes externos
 
@@ -491,21 +516,32 @@ A continuación se detallan todos los filtros implementados en `CertFilterManage
 * **Particularidad**: en `CertFilterManager.java:194`, la condición es `filter.toLowerCase().startsWith("dnie:")`. Todo texto que siga a los dos puntos es ignorado.
 
 #### B. `authcert:` (`AuthCertificateFilter.java`)
-* **Ubicación**: `afirma-keystores-filters/.../AuthCertificateFilter.java:22-38`.
-* **Comportamiento real**: su método `matches(cert)` implementa literalmente:
-  `return !this.signatureDnieCertFilter.matches(cert);`
-  **No comprueba que el certificado posea capacidades de autenticación**. Simplemente
-  excluye el certificado de firma del DNIe y deja pasar cualquier otro certificado presente
-  en el almacén.
+* **Ubicación**: `afirma-keystores-filters/.../AuthCertificateFilter.java:21-38`.
+* **Comportamiento real y diseño intencionado**: el Javadoc de la clase documenta expresamente su propósito:
+  > *«Filtro que muestra todos los certificados salvo el de firma del DNIe. Esto no se realiza mediante KeyUsage, se muestran todos los certificados con clave privada disponibles en el almacén y se retiran los de firma del DNIe.»*
+* **Evaluación técnica**: su método `matches(cert)` implementa literalmente:
+  ```java
+  return !this.signatureDnieCertFilter.matches(cert);
+  ```
+  **No comprueba que el certificado posea capacidades de autenticación ni examina sus extensiones de uso de clave**.
+  Se limita a excluir el certificado de firma del DNIe (`SignatureDNIeFilter`), permitiendo el paso de cualquier
+  otro certificado presente en el almacén (persona física, persona jurídica, empleado público o certificados sin
+  uso específico). Si una aplicación web requiere autenticación estricta con verificación de usos de clave, debe
+  utilizar explícitamente `keyusage.digitalsignature:true`.
 
 #### C. `signingcert:` (`SigningCertificateFilter.java`)
-* **Ubicación**: `afirma-keystores-filters/.../SigningCertificateFilter.java:24-40`.
-* **Comportamiento real**: su método `matches(cert)` implementa literalmente:
-  `return !this.authenticationDnieCertFilter.matches(cert);`
-  **No comprueba que el certificado sea de firma ni examina su KeyUsage**. Excluye
-  únicamente el certificado de autenticación del DNIe (`(&(cn=AC DNIE *)...)` con
-  `digitalSignature = true`). Cualquier otro certificado del almacén (sea de persona
-  física, jurídica, o sin uso de firma) supera el filtro.
+* **Ubicación**: `afirma-keystores-filters/.../SigningCertificateFilter.java:23-40`.
+* **Comportamiento real y diseño intencionado**: el Javadoc de la clase describe su motivación de diseño:
+  > *«Filtro que muestra únicamente los certificados preparados para firma. Esto no se realiza mediante KeyUsage, sino que se muestran todos los certificados con clave privada disponibles en el almacén y retirar aquellos certificados que se conoce que no son específicos para firma, como el certificado de autenticación del DNIe, por ejemplo.»*
+* **Evaluación técnica**: su método `matches(cert)` implementa literalmente:
+  ```java
+  return !this.authenticationDnieCertFilter.matches(cert);
+  ```
+  **No comprueba que el certificado posea capacidades de firma ni examina su KeyUsage**. Excluye de forma
+  exclusiva el certificado de autenticación del DNIe (`AuthenticationDNIeFilter`), dejando pasar cualquier otro
+  certificado del almacén del usuario, con independencia de que carezca del bit de no repudio (`nonRepudiation`).
+  Para imponer un filtrado riguroso de certificados cualificados para firma electrónica según el estándar X.509,
+  el integrador debe declarar obligatoriamente `keyusage.nonrepudiation:true`.
 
 ---
 
@@ -541,13 +577,21 @@ A continuación se detallan todos los filtros implementados en `CertFilterManage
   3. Tenga la misma fecha de caducidad en formato `yyyy-MM-dd`.
 
 #### B. `qualified:<serialNumberHex>` (`QualifiedCertificatesFilter.java`)
-* **Ubicación**: `afirma-keystores-filters/.../QualifiedCertificatesFilter.java:38-200`.
-* **Discrepancia nominal**: el nombre `qualified:` es equívoco; **no comprueba si el
-  certificado es cualificado eIDAS**. Recibe un número de serie en hexadecimal y comprueba
-  si el certificado correspondiente ya es de firma (verificación de `nonRepudiation`
-  y regla ACCV-CA2 vía `KeyUsagesPattern`). Si no lo es, busca en el almacén un certificado
-  pareja de firma con el mismo emisor, mismo número de serie de titular (`2.5.4.5` o
-  `serialNumber` en el DN) y misma fecha de caducidad.
+* **Ubicación**: `afirma-keystores-filters/.../QualifiedCertificatesFilter.java:22-115`.
+* **Semántica y discrepancia nominal**: a pesar del prefijo `qualified:`, **no comprueba la cualificación jurídica eIDAS**
+  del certificado ni inspecciona declaraciones de cualificación (para verificar que un certificado reside en un
+  dispositivo cualificado seguro debe emplearse el filtro `sscd:`, ver §7.4). El filtro opera exclusivamente como
+  un localizador por número de serie con resolución automática de pareja de firma.
+* **Lógica de evaluación en `matches(aliases, ksm)`**:
+  1. Localiza el certificado cuyo número de serie hexadecimal coincide con el parámetro (tras normalizar espacios y ceros a la izquierda).
+  2. Si dicho certificado ya posee uso de firma (`isSignatureCert(cert)`, que comprueba `nonRepudiation` salvo la regla de compatibilidad ACCV-CA2), se añade su alias a la lista de admitidos.
+  3. Si no posee uso de firma, invoca `searchQualifiedSignatureCertificate` para buscar en el almacén un certificado pareja que cumpla conjuntamente:
+     - Mismo emisor (`cert.getIssuerDN()`).
+     - Mismo número de serie de titular (`FilterUtils.getSubjectSN(cert)`, atributo `2.5.4.5` / `serialNumber` del DN).
+     - Misma fecha de caducidad formateada como `yyyy-MM-dd`.
+     - `isSignatureCert(cert2) == true`.
+  4. Si localiza la pareja de firma, devuelve el alias de dicho segundo certificado.
+  5. Si no localiza ninguna pareja válida en el almacén: devuelve el alias del certificado original del número de serie, **salvo** si se trata del certificado de autenticación del DNIe (`!new AuthenticationDNIeFilter().matches(cert)`), en cuyo caso se descarta para impedir que el usuario firme inadvertidamente con la clave de autenticación.
 
 ---
 
@@ -584,9 +628,24 @@ A continuación se detallan todos los filtros implementados en `CertFilterManage
   * Atributos comunes: `cn`, `sn`, `c`, `l`, `st`, `o`, `ou`, `title`, `serialnumber`, `mail`.
 * **Ejemplo práctico**:
   `filter=subject.rfc2254:(&(cn=*Perez*)(c=ES)(!(ou=Pruebas)))`
-* **Comportamiento en caso de error**: si la expresión LDAP es inválida o no puede parsearse,
-  el método captura la excepción, emite una advertencia en el log y **devuelve `true`**
-  (política *fail-open*, ver §8).
+* **Comportamiento ante errores y política de apertura (*fail-open*)**:
+  En `RFC2254CertificateFilter.java:132-138` (conversión a `LdapName`) y líneas `170-176` (evaluación con `SearchFilter`),
+  cualquier excepción originada por sintaxis LDAP malformada (paréntesis desbalanceados, operadores ilegales o atributos no reconocidos)
+  o por imposibilidad de parsear el DN del certificado es interceptada:
+  ```java
+  catch (final Exception e) {
+      LOGGER.log(
+          Level.WARNING,
+          "No ha sido posible filtrar el certificado (filtro: '" + f + "', nombre: '" + name + "'), no se eliminara del listado: " + e,
+          e
+      );
+      return true;
+  }
+  ```
+  El diseño de AutoFirma opta conscientemente por no eliminar el certificado de la lista ante errores de parseo (`return true`).
+  Como consecuencia directa, si la sede electrónica comete un error de sintaxis en su expresión RFC 2254, el filtro
+  falla en modo abierto (*fail-open*): **no descarta ningún certificado** y todos los certificados disponibles con clave
+  privada en el almacén del usuario se muestran en el diálogo de selección.
 
 ---
 
@@ -622,13 +681,17 @@ A continuación se detallan todos los filtros implementados en `CertFilterManage
 
 ### 7.8 Filtro por identificador de política (`policyid:`)
 
-* **Ubicación**: `afirma-keystores-filters/.../PolicyIdFilter.java:30-90`.
+* **Ubicación**: `afirma-keystores-filters/.../PolicyIdFilter.java:24-90`; `CertFilterManager.java:245-250`.
 * **Sintaxis**:
   `policyid:<oid1>,<oid2>,...,<oidN>`
-* **Evaluación**:
-  1. Extrae la extensión X.509 `2.5.29.32` (`CertificatePolicies`) del certificado.
-  2. Decodifica la secuencia ASN.1 y obtiene todos los OIDs de las políticas declaradas.
-  3. **Condición estricta**:
+* **Mecanismo de parseo**: en `CertFilterManager.java:248`, el parámetro que sigue a `policyid:` se divide
+  por comas mediante `.split(",")` y se entrega como `List<String>` al constructor `PolicyIdFilter(allowedOids)`.
+* **Diseño e intención declarada en Javadoc**:
+  > *«Filtro de certificados por identificador de política de certificación. Si un certificado tiene varias políticas declaradas, todas deben estar dentro de la lista de políticas aceptadas.»*
+* **Evaluación técnica**:
+  1. Extrae la extensión X.509 `2.5.29.32` (`CertificatePolicies`) del certificado (`getCertificatePolicyIds`).
+  2. Parsea la secuencia ASN.1 con SpongyCastle (`CertificatePolicies`, `PolicyInformation`) y extrae todos los OIDs presentes en la lista `actualPolicies`.
+  3. Ejecuta la validación de inclusión estricta:
      ```java
      for (final String oid : actualPolicies) {
          if (!this.allowedOids.contains(oid)) {
@@ -637,9 +700,14 @@ A continuación se detallan todos los filtros implementados en `CertFilterManage
      }
      return true;
      ```
-     El certificado es aceptado **únicamente si todas sus políticas** están presentes
-     en la lista de OIDs permitidos. Si el certificado incluye una política no listada,
-     es rechazado.
+* **Consecuencia funcional**: la comprobación exige que el conjunto de políticas del certificado sea un
+  **subconjunto estricto** de las políticas permitidas (`actualPolicies ⊆ allowedOids`). No evalúa intersección
+  (es decir, no comprueba si el certificado contiene *al menos una* de las políticas requeridas). Si un certificado
+  incorpora múltiples OIDs de política en su extensión `2.5.29.32` (situación común en prestadores cualificados
+  como FNMT o Camerfirma, que declaran simultáneamente el OID general de la jerarquía y el OID específico de perfil
+  de empleado público o persona física), enviar un único OID provocará el descarte sistemático del certificado.
+  Para que un certificado multiconfiguración supere el filtro, la sede electrónica debe listar **todos** los OIDs
+  declarados en el certificado dentro del parámetro `policyid:`.
 
 ---
 
@@ -724,9 +792,9 @@ filter=nonexpired:true;keyusage.nonrepudiation:true
 ### Ejemplo 2: Filtrado por DNI específico y DNIe con selección desatendida
 ```properties
 headless=true
-filter=subject.rfc2254:(serialnumber=11830960J);dnie:
+filter=subject.rfc2254:(serialnumber=99999999R);dnie:
 ```
-* Exige que el certificado sea de firma del DNIe y pertenezca al titular con NIF `11830960J`.
+* Exige que el certificado sea de firma del DNIe y pertenezca al titular con NIF `99999999R`.
 * Al ser `headless=true`, si solo existe un DNIe conectado con ese NIF, la firma se
   realiza automáticamente sin mostrar diálogo Swing de selección.
 
@@ -739,72 +807,5 @@ filters.2=issuer.contains:FNMT;keyusage.nonrepudiation:true
 * Se evalúa `filters.2`: sobre los certificados restantes, se admiten aquellos emitidos
   por la FNMT que tengan uso de no repudio.
 
----
 
-## Lo que el código no aclara
 
-1. **Incompatibilidad entre `policy.properties` y `ExtraParamsProcessor`**:
-   En `policy.properties:11-17` se define la clave `FirmaAGE19` con los datos de la
-   política v1.9 de la AGE. Sin embargo, en `ExtraParamsProcessor.java:217-220`, el método
-   `isSupportedPolicy` únicamente comprueba:
-   ```java
-   return AdESPolicyPropertiesManager.POLICY_ID_AGE.equals(policyName) ||
-          AdESPolicyPropertiesManager.POLICY_ID_AGE_1_8.equals(policyName);
-   ```
-   Como `POLICY_ID_AGE` es el literal `"FirmaAGE"` y no `"FirmaAGE19"`, si una aplicación web
-   envía `expPolicy=FirmaAGE19`, AutoFirma lanza una excepción fatal `IncompatiblePolicyException`
-   en lugar de cargar la política configurada en el propio fichero de propiedades.
-2. **Eliminación silenciosa de la propiedad `profile` en el protocolo**:
-   En `ProtocolInvocationLauncherSign.java:153` y `ProtocolInvocationLauncherSignAndSave.java:150`,
-   figura el código:
-   ```java
-   //TODO: Deshacer cuando se permita la generacion de firmas baseline
-   options.getExtraParams().remove("profile");
-   ```
-   Cualquier configuración enviada por el integrador web respecto al perfil de firma
-   (por ejemplo `profile=baseline` para generar PAdES-Baseline o CAdES-Baseline) es
-   eliminada silenciosamente al inicio de la operación, forzando la generación de
-   firmas *advanced* tradicionales.
-3. **Semántica engañosa de los filtros `signingcert:` y `authcert:`**:
-   Los filtros `signingcert:` y `authcert:` sugieren una discriminación criptográfica
-   según los usos de clave del estándar X.509. Sin embargo, su código fuente demuestra
-   que no inspeccionan la extensión *KeyUsage*:
-   * `SigningCertificateFilter` únicamente excluye el certificado de autenticación del DNIe.
-   * `AuthCertificateFilter` únicamente excluye el certificado de firma del DNIe.
-   Cualquier certificado que no pertenezca a la CA del DNIe supera indistintamente ambos
-   filtros, aunque carezca por completo de usos de firma o de autenticación.
-4. **Comportamiento equívoco de `qualified:`**:
-   El prefijo `qualified:` no verifica el estado de cualificación eIDAS de un certificado.
-   Es un alias de conveniencia que recibe un número de serie en hexadecimal y ejecuta
-   un algoritmo de búsqueda de certificados de firma emparejados para resolver la clave
-   privada correcta cuando el navegador web proporciona el número de serie de autenticación.
-5. **Comportamiento *fail-open* en filtros LDAP RFC 2254**:
-   En `RFC2254CertificateFilter.java:117-124` y `148-155`, si la expresión RFC 2254
-   está malformada o lanza una excepción en tiempo de ejecución (por ejemplo un error
-   sintáctico de paréntesis en `SearchFilter`), el bloque `catch` registra una advertencia
-   en el log pero **devuelve `true`**, manteniendo el certificado en la lista de candidatos
-   en lugar de descartarlo.
-6. **Desactivación implícita del filtro de caducidad ETSI**:
-   De acuerdo con `CertFilterManager.java:133-135`, el filtro `ExpiredCertificateFilter(false)`
-   solo se añade si `this.filters.isEmpty()`. Si un integrador declara cualquier filtro
-   personalizado (por ejemplo un filtro por emisor o titular), la exclusión de certificados
-   caducados queda desactivada de inmediato. Los certificados caducados que cumplan el criterio
-   se mostrarán al usuario a menos que se concatene de forma explícita `;nonexpired:true`.
-7. **Lógica hiperrestrictiva de `PolicyIdFilter`**:
-   En `PolicyIdFilter.java:65-72`, el método `matches` exige que **todas** las políticas
-   declaradas en el certificado figuren en la lista de OIDs permitidos (`allowedOids`).
-   Si una CA emite un certificado que declara la política solicitada junto con un OID
-   adicional de ámbito corporativo o declarativo, el certificado es rechazado.
-8. **Inconsistencia de juego de caracteres en `ExtraParamsProcessor.convertToProperties`**:
-   Mientras que `AOUtil.base642Properties` fija rigurosamente `StandardCharsets.UTF_8`,
-   `ExtraParamsProcessor.convertToProperties` utiliza `entries.getBytes()`, asumiendo
-   el juego de caracteres por defecto del sistema operativo anfitrión. Si una cadena
-   con caracteres especiales o tildes se procesa a través de esta vía en plataformas
-   con codificación ANSI o ISO-8859-1, los valores quedan corruptos.
-9. **Riesgo de bloqueo con `headless=true` en presencia de certificados múltiples**:
-   En `AOKeyStoreDialog.java:726-733`, si se especifica `headless=true` pero el resultado
-   del filtrado arroja dos o más certificados disponibles, AutoFirma continúa con el flujo
-   gráfico normal e invoca `AOUIFactory.showCertificateSelectionDialog`. En entornos
-   desatendidos o sistemas sin servidor de ventanas gráfico (X11/Wayland), esto desencadena
-   una excepción `HeadlessException` irrecuperable en lugar de fallar con un código de error
-   específico de ambigüedad en modo desatendido.

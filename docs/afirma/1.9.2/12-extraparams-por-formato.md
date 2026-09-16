@@ -117,7 +117,7 @@ En `PdfVisibleAreasUtils.java:616-651` y `PdfUtil.java:699-730`:
   * Combinaciones complejas: `"1-3,-3--1"`.
   * Palabra clave `"all"`: estampa la firma en todas las páginas del documento.
   * Palabra clave `"append"`: inserta una **página nueva en blanco al final** del documento
-    (con las mismas dimensiones que la página 1) y estampa la firma en ella (`PdfSessionManager.java:395-400`).
+    (con las mismas dimensiones y rotación que la página 1) y estampa la firma en ella (`PdfSessionManager.java:395-400` y `PdfUtil.java:62, 712`).
 * Coordenadas del recuadro visible:
   * `signaturePositionOnPageLowerLeftX`
   * `signaturePositionOnPageLowerLeftY`
@@ -141,7 +141,11 @@ Lugar de firma: $$LOCATION$$ (solo si se especificó signatureProductionCity)
 ```
 
 En `PdfVisibleAreasUtils.java:244-355`, el texto de `layer2Text` admite las siguientes
-etiquetas dinámicas (macros):
+etiquetas dinámicas (macros). En el Javadoc de `PdfExtraParams.java:429` figuraba por duplicado
+la etiqueta `$$SUBJECTCN$$`, atribuyéndosele por error de documentación la descripción de la
+organización que en el código ejecutable corresponde de forma efectiva a `$$ORGANIZATION$$`
+(`PdfVisibleAreasUtils.java:64, 312`). Asimismo, las etiquetas `$$PSEUDONYM$$`, `$$OU$$`, `$$OUS$$`
+y `$$TITLE$$` son completamente operativas en tiempo de ejecución:
 
 | Macro | Origen del dato | Cita en código |
 |---|---|---|
@@ -168,7 +172,7 @@ Controlados en `PdfSessionManager.java:248-292` y `PdfVisibleAreasUtils.java:88-
 * `layer2FontSize`: tamaño numérico en puntos (por defecto `12`).
 * `layer2FontStyle`: máscara de bits entera: `0` = Normal, `1` = Negrita, `2` = Cursiva, `3` = Negrita/Cursiva, `4` = Subrayado, `8` = Tachado (admite combinaciones OR).
 * `layer2FontColor`: nombre textual de color (insensible a mayúsculas): `"black"` (defecto), `"white"`, `"gray"`, `"lightGray"`, `"darkGray"`, `"red"`, `"pink"`.
-* `signatureRotation`: rotación en grados en sentido horario del texto de firma: `0` (defecto), `90`, `180`, `270`.
+* `signatureRotation`: rotación en grados en sentido horario del texto de firma: `0` (defecto), `90`, `180`, `270` (`PdfSessionManager.java:103-104`, `PdfVisibleAreasUtils.java:499-520`). Aunque el Javadoc de `PdfExtraParams.java:25-28` afirma erróneamente que se trata de un valor booleano (`true`/`false`), el código en tiempo de ejecución realiza `Integer.parseInt(extraParams.getProperty(..., "0"))`; si se suministra `"true"` o `"false"`, lanza `NumberFormatException` provocando el aborto de la operación con error `SAF_09`.
 * `includeQuestionMark`: booleano (`false` por defecto). Si es `true`, activa el render de interrogación/aspa de validez de Acrobat (`sap.setRender(true)`).
 * `layer4Text`: texto de la capa 4 de apariencia (rara vez utilizado, solo si no hay rúbrica).
 
@@ -224,7 +228,7 @@ La carga y resolución de parámetros se realiza en `CAdESParameters.load` (`CAd
 | `signatureProductionCountry` | `SIGNATURE_PRODUCTION_COUNTRY` | Cadena | `null` | País en el que se realiza la firma. |
 | `policyIdentifier` | `POLICY_IDENTIFIER` | Cadena | `null` | Identificador de la política de firma (OID o URN de tipo OID). |
 | `policyIdentifierHash` | `POLICY_IDENTIFIER_HASH` | Cadena Base64 | `null` | Huella digital de la política en Base64. |
-| `policyIdentifierHashAlgorithm` | `POLICY_IDENTIFIER_HASH_ALGORITHM` *(errata)* | Cadena | `null` | Algoritmo de hash de la política. *Atención: en `CAdESExtraParams.java:121` la constante tiene el valor literal `"poliyIdentifierHashAlgorithm"` (sin 'c')*. |
+| `policyIdentifierHashAlgorithm` | `POLICY_IDENTIFIER_HASH_ALGORITHM` *(errata)* | Cadena | `null` | Algoritmo de hash de la política. En el protocolo `afirma://` la clave analizada es estrictamente `"policyIdentifierHashAlgorithm"` (`AdESPolicy.java:163`). No obstante, en `CAdESExtraParams.java:121` la constante pública Java contiene la errata `"poliyIdentifierHashAlgorithm"` (sin 'c'), lo que detona un `IllegalArgumentException` fatal si se usa programáticamente dicha constante o desde el configurador interno `ExtraParamsHelper` (ver [BUG-21](A1-bugs-autofirma.md#bug-21-errata-tipográfica-en-constante-cadesextraparamspolicy_identifier_hash_algorithm-provoca-illegalargumentexception-en-firmas-cades-con-política)). |
 | `policyQualifier` | `POLICY_QUALIFIER` | Cadena URL | `null` | URL hacia el documento descriptivo de la política. |
 | `commitmentTypeIndications` | `COMMITMENT_TYPE_INDICATIONS` | Entero | `null` | Número de declaraciones de compromiso a añadir. |
 | `commitmentTypeIndication`*n*`Identifier` | `COMMITMENT_TYPE_INDICATION_IDENTIFIER` | Cadena | Ninguno | Identificador de compromiso (`1`..`6`). |
@@ -248,8 +252,12 @@ se estructuran mediante el prefijo indexado `commitmentTypeIndication`*n*:
   * `"6"` -> `1.2.840.113549.1.9.16.6.6` (*Proof of creation*)
 * Calificadores adicionales: `commitmentTypeIndication`*n*`CommitmentTypeQualifiers`
   separa OIDs por el carácter `'|'`.
-* **Particularidad del bucle**: en `línea 98`, el bucle se evalúa como `for (int i = 0; i <= nCtis; i++)`,
-  por lo que con `commitmentTypeIndications=1` busca los índices `0` y `1`.
+* **Defecto de parada en el bucle (*off-by-one*)**: en `línea 98`, el bucle se evalúa como
+  `for (int i = 0; i <= nCtis; i++)`, iterando $N + 1$ veces desde el índice `0`. Por ello,
+  al declarar `commitmentTypeIndications=1` busca y añade tanto el índice `0` como el `1` si
+  están definidos (procesando dos compromisos en vez de uno), y al declarar
+  `commitmentTypeIndications=0` procesa e incorpora el índice `0` si existe
+  (ver [BUG-22](A1-bugs-autofirma.md#bug-22-bucle-con-error-por-exceso-off-by-one-en-el-procesamiento-de-declaraciones-de-compromiso-commitmenttypeindications)).
 
 ---
 
@@ -265,6 +273,11 @@ CAdES soporta la generación de firmas con sello de tiempo (CAdES-T) mediante
 * `tsaUsr` y `tsaPwd`: credenciales HTTP básicas para la TSA.
 * `tsaSslPkcs12File`: fichero PKCS#12 para autenticación mTLS contra la TSA.
 * `tsaSslPkcs12FilePassword`: contraseña del fichero PKCS#12 mTLS.
+* **Degradación silenciosa ante errores de configuración**: en `AOCAdESSigner.java:547-555`,
+  la instanciación de `TsaParams` se encuentra dentro de un bloque `try-catch` que silencia
+  cualquier `Exception`. Si los parámetros de TSA presentan errores sintácticos o de configuración,
+  el fallo se absorbe silenciosamente y se retorna la firma CAdES ordinaria (CAdES-BES) sin sello
+  de tiempo, sin elevar error alguno hacia el llamante (ver [BUG-23](A1-bugs-autofirma.md#bug-23-silenciamiento-de-excepciones-en-la-inicialización-de-tsa-provoca-degradación-silenciosa-a-firma-sin-sello-de-tiempo-en-xades-y-cades)).
 
 ---
 
@@ -302,16 +315,16 @@ y sus constantes se declaran en `XAdESExtraParams` (`afirma-crypto-xades/src/mai
 | `includeOnlySignningCertificate` | `INCLUDE_ONLY_SIGNNING_CERTIFICATE` | Booleano | `false` | Si es `true`, incluye solo el certificado firmante; si es `false`, incluye la cadena completa en `<ds:X509Data>`. |
 | `signerClaimedRoles` | `SIGNER_CLAIMED_ROLES` | Cadena | `null` | Lista de cargos del firmante separados por `'\|'`. |
 | `signatureProductionCity` | `SIGNATURE_PRODUCTION_CITY` | Cadena | `null` | Ciudad de firma en `SignatureProductionPlace`. |
-| `signatureProductionStreetAddress` | `SIGNATURE_PRODUCCTION_STREET_ADDRESS` | Cadena | `null` | Calle o dirección (solo se incorpora en perfiles baseline / V2). |
+| `signatureProductionStreetAddress` | `SIGNATURE_PRODUCCTION_STREET_ADDRESS` | Cadena | `null` | Calle o dirección (solo se incorpora en perfiles baseline / V2). *Nota: el identificador Java en `XAdESExtraParams.java:292` presenta una errata tipográfica con doble 'c' (`PRODUCCTION`), pero el valor literal de la cadena es el correcto `"signatureProductionStreetAddress"`*. |
 | `signatureProductionProvince` | `SIGNATURE_PRODUCTION_PROVINCE` | Cadena | `null` | Provincia de firma en `SignatureProductionPlace`. |
 | `signatureProductionPostalCode` | `SIGNATURE_PRODUCTION_POSTAL_CODE` | Cadena | `null` | Código postal en `SignatureProductionPlace`. |
 | `signatureProductionCountry` | `SIGNATURE_PRODUCTION_COUNTRY` | Cadena | `null` | País en `SignatureProductionPlace`. |
 | `policyIdentifier` | `POLICY_IDENTIFIER` | Cadena | `null` | Identificador de la política (URL o URN OID). |
 | `policyIdentifierHash` | `POLICY_IDENTIFIER_HASH` | Cadena Base64 | `null` | Huella digital de la política en Base64. |
 | `policyIdentifierHashAlgorithm` | `POLICY_IDENTIFIER_HASH_ALGORITHM` | Cadena | `null` | Algoritmo de resumen de la política (`SHA-1`, `SHA-256`, `SHA-512`). |
-| `policyDescription` | `POLICY_DESCRIPTION` | Cadena | `""` | Descripción textual de la política. Si es `null`, se fuerza a `""` para evitar un fallo interno de JXAdES (`XAdESCommonMetadataUtil.java:240-243`). |
+| `policyDescription` | `POLICY_DESCRIPTION` | Cadena | `""` | Descripción textual de la política. Si es `null`, se fuerza automáticamente a `""` para evitar un fallo interno de JXAdES (`NullPointerException` fatal en la biblioteca subyacente, `XAdESCommonMetadataUtil.java:240-243`). |
 | `policyQualifier` | `POLICY_QUALIFIER` | Cadena URL | `null` | URL con la descripción de la política. |
-| `commitmentTypeIndications` | `COMMITMENT_TYPE_INDICATIONS` | Entero | `null` | Número de declaraciones de compromiso a añadir. |
+| `commitmentTypeIndications` | `COMMITMENT_TYPE_INDICATIONS` | Entero | `null` | Número de declaraciones de compromiso a añadir. Al igual que en CAdES, el bucle en `XAdESUtil.java:326` adolece de un error *off-by-one* (`i <= nCtis`) que evalúa $N+1$ elementos (ver [BUG-22](A1-bugs-autofirma.md#bug-22-bucle-con-error-por-exceso-off-by-one-en-el-procesamiento-de-declaraciones-de-compromiso-commitmenttypeindications)). |
 | `commitmentTypeIndication`*n*`Identifier` | `COMMITMENT_TYPE_INDICATION_IDENTIFIER` | Cadena | Ninguno | Identificador de compromiso (`1`..`6`). |
 | `commitmentTypeIndication`*n*`Description` | `COMMITMENT_TYPE_INDICATION_DESCRIPTION` | Cadena | `null` | Descripción textual del compromiso. |
 | `commitmentTypeIndication`*n*`DocumentationReferences` | `COMMITMENT_TYPE_INDICATION_DOCUMENTATION_REFERENCE` | Cadena | `null` | URLs documentales separadas por `'\|'`. |
@@ -365,6 +378,30 @@ Cuando se firma un conjunto de documentos externos con `useManifest=true`,
 El ciclo se detiene en el primer índice `i` correlativo que no exista en el diccionario
 `properties`.
 
+* **Heterogeneidad de convenios de indexación**:
+  * `xmlTransforms` (`Utils.java:166`): indexación base cero estricta (`xmlTransform0` a `xmlTransform`{N-1}) acotada por el valor entero de `xmlTransforms`.
+  * `commitmentTypeIndications` (`XAdESUtil.java:326`): indexación base cero (`commitmentTypeIndication0`), si bien el bucle con error *off-by-one* (`i <= nCtis`) llega a evaluar hasta el índice $N$ (ver [BUG-22](A1-bugs-autofirma.md#bug-22-bucle-con-error-por-exceso-off-by-one-en-el-procesamiento-de-declaraciones-de-compromiso-commitmenttypeindications)).
+  * Referencias de `useManifest` (`XAdESSigner.java:1538`): indexación base uno forzosa (`int i = 1; while (extraParams.containsKey(URI_PREFIX + i))`). Si un llamante declara `uri0`, esta es ignorada por completo; si además no suministra `uri1`, `refsList.size() == 0` y la operación aborta arrojando `AOException("No se han proporcionado las referencias y huellas de los datos a firmar")`.
+
+---
+
+### 4.4 Sellado de tiempo en XAdES (`XAdESTspUtil`)
+
+XAdES permite la inclusión de sellos de tiempo para generar firmas XAdES-T mediante
+`XAdESTspUtil.timestampXAdES(xml, extraParams)` (`XAdESTspUtil.java:69-145`), invocado por
+`AOXAdESSigner.sign` (`AOXAdESSigner.java:395-400`).
+
+* **Propiedades aceptadas**: comparte los mismos parámetros que CAdES (`tsaURL`, `tsaPolicy`,
+  `tsaHashAlgorithm`, `tsaRequireCert`, `tsaUsr`, `tsaPwd`, `tsaSslPkcs12File`, etc.), gestionados
+  a través de `TsaParams`.
+* **Degradación silenciosa ante errores de configuración**: el método `timestampXAdES` se ejecuta
+  siempre al finalizar la firma. Al no disponer de una comprobación previa para discernir si se solicitó
+  TSA, intenta instanciar `new TsaParams(extraParams)` dentro de un bloque `try-catch` que silencia
+  cualquier `Exception` (`XAdESTspUtil.java:73-81`). Si los parámetros de TSA contienen errores de
+  sintaxis (p. ej. una URL con espacios en `tsaURL`), la excepción se descarta y el método devuelve la
+  firma XAdES ordinaria (XAdES-BES) sin sello de tiempo, sin reportar ningún error ni advertencia a la
+  sede electrónica (ver [BUG-23](A1-bugs-autofirma.md#bug-23-silenciamiento-de-excepciones-en-la-inicialización-de-tsa-provoca-degradación-silenciosa-a-firma-sin-sello-de-tiempo-en-xades-y-cades)).
+
 ---
 
 ## 5. Parámetros de FacturaE (`AOFacturaESigner`)
@@ -395,7 +432,9 @@ ALLOWED_PARAMS.add(XAdESExtraParams.BATCH_SIGNATURE_ID);
 ```
 
 Cualquier otra propiedad (como `nodeToSign`, `canonicalizationAlgorithm`, `referencesDigestMethod`,
-`includeOnlySignningCertificate`, etc.) **es eliminada** antes de pasar a `AOXAdESSigner`.
+`includeOnlySignningCertificate` o parámetros de sellado de tiempo como `tsaURL`) **es eliminada
+silenciosamente** antes de pasar a `AOXAdESSigner`, impidiendo por ejemplo la emisión de sellos de tiempo
+en facturas electrónicas sin registrar advertencias.
 
 ### 5.2 Restricciones de valores en FacturaE
 
@@ -449,93 +488,3 @@ En `afirma-crypto-xades/.../asic/AOXAdESASiCSSigner.java`:
   * `asicsFilename`: nombre del fichero dentro del ZIP (`XAdESASiCExtraParams.ASICS_FILENAME`).
 * El resto de propiedades de XAdES se entregan al motor `AOXAdESSigner`.
 
----
-
-## Lo que el código no aclara
-
-1. **Errata tipográfica en la constante de algoritmo de hash de política CAdES**:
-   En `CAdESExtraParams.java:121`, el literal de la constante contiene un error ortográfico histórico:
-   ```java
-   public static final String POLICY_IDENTIFIER_HASH_ALGORITHM = "poliyIdentifierHashAlgorithm";
-   ```
-   Falta la letra `'c'` en `"poliy"`. Por el contrario, en `AdESPolicy.buildAdESPolicy` (`AdESPolicy.java:163`),
-   el cargador de políticas lee la clave bien escrita: `extraParams.getProperty("policyIdentifierHashAlgorithm")`.
-   Si un invocador utiliza la constante de CAdES o escribe `"poliyIdentifierHashAlgorithm"`, `AdESPolicy`
-   no la encuentra, provocando que la firma se genere sin algoritmo de hash para la política o lance
-   una excepción de incongruencia.
-2. **Errata tipográfica en la constante de calle de XAdES**:
-   En `XAdESExtraParams.java:292`:
-   ```java
-   public static final String SIGNATURE_PRODUCCTION_STREET_ADDRESS = "signatureProductionStreetAddress";
-   ```
-   El identificador en código Java tiene una doble `'c'` (`PRODUCCTION`), mientras que el literal
-   de la clave de propiedad en la cadena es correcto (`"signatureProductionStreetAddress"`).
-3. **Contradicción entre documentación y código en `signatureRotation` (PAdES)**:
-   El Javadoc oficial en `PdfExtraParams.java:25-28` afirma textualmente:
-   > *«Si se indica `true` el texto de la firma se rota 90 grados en sentido positivo. Si se indica `false` o no se indica, no se rota nada.»*
-   
-   Sin embargo, la implementación real en `PdfSessionManager.java:103-104` ejecuta:
-   ```java
-   Integer.parseInt(extraParams.getProperty(PdfExtraParams.SIGNATURE_ROTATION, DEFAULT_SIGNATURE_ROTATION));
-   ```
-   Si una aplicación web envía `signatureRotation=true` confiando en la documentación oficial,
-   `Integer.parseInt` lanza una excepción no capturada `NumberFormatException`, abortando
-   la firma. La aplicación únicamente tolera grados numéricos enteros (`"0"`, `"90"`, `"180"`, `"270"`),
-   tal y como documenta el manual de línea de órdenes (`LineaComandos.html:605`).
-4. **Parámetro no documentado `signaturePage=append`**:
-   Ni `PdfExtraParams.java` ni `doc-files/extraparams.html` documentan la posibilidad de crear una
-   página nueva en blanco. No obstante, en `PdfUtil.java:62, 712` y `PdfSessionManager.java:395`, si
-   `signaturePage` contiene el valor `"append"`, AutoFirma inserta automáticamente una página en blanco
-   al final del documento PDF con las medidas de la primera página y estampa allí la firma visible.
-5. **Erratas en el Javadoc de macros de texto en PAdES**:
-   En `PdfExtraParams.java:429-431`, el Javadoc documenta erróneamente la macro de organización como:
-   ```java
-   <dt><i><b>$$SUBJECTCN$$</b></i></dt>
-   <dd>Organización (O, Organization) dentro del X.500 Principal...</dd>
-   ```
-   Duplicando `$$SUBJECTCN$$`. La implementación en `PdfVisibleAreasUtils.java:64, 313` demuestra que
-   la macro real implementada es `$$ORGANIZATION$$`.
-6. **Macros de Capa 2 no documentadas**:
-   El fichero oficial de documentación `extraparams.html` de PAdES no menciona las macros
-   `$$PSEUDONYM$$` (OID `2.5.4.65`), `$$OU$$` (primera unidad organizativa), `$$OUS$$` (todas las OUs
-   separadas por coma) ni `$$TITLE$$` (cargo profesional), a pesar de estar plenamente implementadas
-   en `PdfVisibleAreasUtils.java:55-58, 275-295`.
-7. **Error *off-by-one* en el bucle de `commitmentTypeIndications`**:
-   Tanto en `CommitmentTypeIndicationsHelper.java:98` (CAdES) como en `XAdESUtil.java:326` (XAdES),
-   el bucle que lee los compromisos está programado como:
-   ```java
-   for (int i = 0; i <= nCtis; i++)
-   ```
-   Utilizando `<=` en lugar de `<`. Si se declara `commitmentTypeIndications=1`, el código busca tanto
-   el índice `0` como el índice `1`, procesando hasta dos compromisos si ambos están definidos en las
-   propiedades.
-8. **Inconsistencia de origen en índices de colecciones**:
-   Mientras que `xmlTransforms` en XML y `commitmentTypeIndications` en CAdES/XAdES comienzan a numerar
-   sus elementos desde cero (`xmlTransform0...`, `commitmentTypeIndication0...`), la lectura de referencias
-   múltiples para el `Manifest` de XAdES en `XAdESSigner.java:1538` arranca forzosamente desde uno
-   (`int i = 1; while (extraParams.containsKey("uri" + i))`).
-9. **Eliminación silenciosa y opaca en FacturaE**:
-   `AOFacturaESigner.java:224-228` elimina cualquier parámetro que no esté en `ALLOWED_PARAMS` sin emitir
-   ningún mensaje de advertencia ni registro en el log. Si un integrador intenta aplicar opciones
-   legítimas de XAdES (como canonicalización personalizada o firma de nodo específico `nodeToSign`),
-   estas desaparecen sin dejar rastro en la traza de ejecución.
-10. **Tratamiento silencioso de errores de TSA en XAdES**:
-    En `XAdESTspUtil.java:76-81`, al generar un sello de tiempo para XAdES, si la instanciación de
-    `TsaParams` falla por parámetros incompletos o malformados, el bloque `catch` captura la excepción
-    y devuelve el XML original sin sellar, sin emitir ningún error ni advertencia al usuario ni al servidor.
-11. **Fallo estructural de JXAdES con `policyDescription` nula**:
-    En `XAdESCommonMetadataUtil.java:240-242`, figura el comentario:
-    ```java
-    // Error en JXAdES. Si la descripcion es nula toda la firma falla.
-    final String desc = description != null ? description : "";
-    spi.setDescription(desc);
-    ```
-    Si no se proporciona `policyDescription`, AutoFirma se ve obligada a inyectar una cadena vacía `""`
-    para evitar que la biblioteca subyacente JXAdES sufra una excepción de puntero nulo al componer
-    las propiedades firmadas.
-12. **Inutilización de validaciones baseline vía protocolo**:
-    Como se demostró en el capítulo 11 (§3), `ProtocolInvocationLauncherSign.java:153` y
-    `ProtocolInvocationLauncherSignAndSave.java:150` eliminan incondicionalmente la clave `profile`
-    al inicio de la invocación. Por ello, las comprobaciones de perfiles *baseline* codificadas dentro
-    de `AOPDFSigner.java:714`, `AOCAdESSigner.java:488` y `AOXAdESSigner.java` nunca llegan a ejecutarse
-    cuando la invocación proviene del protocolo `afirma://`.

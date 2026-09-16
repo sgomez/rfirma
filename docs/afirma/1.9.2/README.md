@@ -10,10 +10,6 @@ que rFirma implementa: es la fuente contra la que se auditará rFirma después.
 * **Toda afirmación cita el código**, con la forma `módulo/ruta/Fichero.java:línea`
   relativa a la raíz del repositorio original en el tag `v1.9.2`. Lo que no se
   ha podido confirmar en el código se marca como tal, no se supone.
-* Cada capítulo cierra con una sección **«Lo que el código no aclara»**: las
-  ambigüedades, incoherencias entre ficheros y comportamientos que dependen de
-  un valor por defecto no documentado. Son las preguntas que la auditoría
-  posterior tendrá que responder con pruebas.
 * Los nombres de parámetro, constantes y mensajes se escriben tal cual aparecen
   en el código (`ver`, `stservlet`, `SAF_09`), nunca traducidos.
 * Prosa en castellano; identificadores y literales del protocolo en su forma
@@ -46,17 +42,9 @@ que rFirma implementa: es la fuente contra la que se auditará rFirma después.
 | 09 | Operación `selectcert` | [09-operacion-selectcert.md](09-operacion-selectcert.md) | Selección de certificado sin firma, parámetros, respuesta |
 | 10 | Operaciones `save` y `load` | [10-operaciones-save-load.md](10-operaciones-save-load.md) | Guardar datos en disco y cargar ficheros (`title`, `filename`, `exts`, `desc`, `filePath`, `multiload`), formato de la respuesta de carga |
 | 11 | El diccionario `properties` y los filtros de certificado | [11-extraparams-y-filtros.md](11-extraparams-y-filtros.md) | Codificación y expansión de `properties` (`ExtraParamsProcessor`), parámetros generales (`headless`, política, `filters`, `filter`, etc.), sintaxis de cada filtro de certificado |
-| 12 | Parámetros extra por formato de firma | [12-extraparams-por-formato.md](12-extraparams-por-formato.md) | Catálogo de claves que aceptan PAdES, CAdES, XAdES, FacturaE y ASiC con su tipo y valor por defecto. OOXML, ODF, CMS y XMLDSig se consideran deprecados por lo que los podemos ignorar. |
+| 12 | Parámetros extra por formato de firma | [12-extraparams-por-formato.md](12-extraparams-por-formato.md) | Catálogo de claves que aceptan PAdES, CAdES, XAdES, FacturaE y ASiC con su tipo y valor por defecto; OOXML, ODF, CMS y XMLDSig quedan fuera por estar deprecados. |
 | 13 | Almacenes de claves | [13-almacenes.md](13-almacenes.md) | Nombres aceptados en `keystore`/`ksb64`, cómo se resuelve el almacén por sistema operativo, `defaultKeyStore`, `defaultKeyStoreLib`, certificado pegajoso (`sticky`) |
 | 14 | Versiones y compatibilidad | [14-versiones.md](14-versiones.md) | `ProtocolVersion` 0–4, `v`, `ver`, `mcv`, `jvc`, qué versión exige cada transporte y operación, comprobación de versión mínima de la aplicación |
 | 15 | Catálogo de errores | [15-errores.md](15-errores.md) | Tabla completa `SAF_00`–`SAF_52` con su mensaje, en qué operación se produce y cómo viaja por cada transporte; `CANCEL` y demás respuestas no numeradas |
 | 16 | El cliente JavaScript de referencia | [16-cliente-javascript.md](16-cliente-javascript.md) | Cómo `autoscript.js` construye cada petición, elige transporte, genera `idsession` y puertos, reintenta, y cómo parsea cada respuesta |
-
-## Estado
-
-Los capítulos se redactan **de uno en uno**, cada uno por un agente distinto a
-partir del código original, y se revisan antes de encargar el siguiente para
-afinar las instrucciones del próximo con lo aprendido. Al terminar todos, el
-índice se revisa para eliminar duplicidades entre capítulos y para consolidar
-las secciones «Lo que el código no aclara» en una lista única de preguntas de
-auditoría.
+| A1 | Anexo: defectos de implementación del original | [A1-bugs-autofirma.md](A1-bugs-autofirma.md) | Comportamientos anómalos, fugas de recursos e inconsistencias internas observadas en el código de AutoFirma 1.9.2, con su estado en la rama de desarrollo del original. No forma parte de la especificación del protocolo |

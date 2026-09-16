@@ -170,10 +170,15 @@ Parámetros esperados en la petición:
 * **En peticiones GET:** Los parámetros se extraen directamente con `request.getParameter()`
   (`StorageService.java:82-87`).
 * **En peticiones POST:** `StorageService` **no utiliza el análisis estándar del contenedor de servlets**.
-  Lee manualmente el cuerpo íntegro desde `request.getInputStream()`, lo transforma en `String`
+  Lee manualmente el cuerpo íntegro desde el flujo binario `request.getInputStream()`, lo transforma en `String`
   utilizando el juego de caracteres de la plataforma, lo fragmenta por el delimitador `&`,
   y separa cada par por el primer carácter `=` (`StorageService.java:90-115`).
   Cualquier fragmento sin `=` se descarta.
+  *Nota sobre el contrato en POST:* Si una petición POST enviase los parámetros en la *query string* de la URL
+  en lugar de en el cuerpo, `request.getInputStream()` estaría vacío y `StorageService` respondería
+  con `ERR-00:=No se ha indicado codigo de operacion` (`StorageService.java:118-123`). Por este motivo,
+  tanto el cliente JavaScript (`autoscript.js:4270-4318`) como el cliente interno de AutoFirma
+  (`UrlHttpManagerImpl.java:190-276`) ubican siempre los parámetros en el cuerpo HTTP de las peticiones POST.
 
 **Tratamiento y almacenamiento en disco (`storeSign`):**
 1. Si `id == null`, devuelve `ERR-05:=No se ha proporcionado un identificador para los datos`
@@ -234,9 +239,15 @@ tanto para GET como para POST (`RetrieveService.java:57, 74, 104`).
    * Se lee su contenido íntegro mediante un búfer de 4096 bytes (`RetrieveService.java:142-144, 193-211`).
    * Se escribe en la respuesta HTTP mediante `out.println(new String(bytes))`
      (`RetrieveService.java:143`).
-   * **Destrucción de un solo uso:** Si no está activo el modo `DEBUG`, el servlet
+   * **Destrucción de un solo uso (*read-once*):** Si no está activo el modo `DEBUG`, el servlet
      **borra el fichero inmediatamente tras servirlo** (`inFile.delete()`, `RetrieveService.java:152-154`).
-     Un segundo intento de lectura para el mismo `id` devolverá indefectiblemente `ERR-06`.
+     Este diseño implica que la lectura es destructiva y carece de confirmación de recepción (*acknowledgement*).
+     Si la conexión de red se interrumpe durante la transmisión HTTP o el navegador sufre una caída antes
+     de guardar la respuesta, el fichero ya habrá desaparecido del disco del servidor; un segundo intento
+     de descarga devolverá indefectiblemente `ERR-06:=El identificador para los datos es inválido`.
+     Dado que el cliente JavaScript interpreta `ERR-06` como indicación de que el proceso aún continúa
+     en curso (`autoscript.js:4442`), el cliente web continuará sondeando inútilmente hasta agotar
+     el número máximo de reintentos (`NUM_MAX_ITERATIONS`), concluyendo con error por tiempo de espera.
 
 ### 2.4 Catálogo de errores de los servlets intermediarios
 
@@ -275,6 +286,15 @@ Ambos servlets cargan su configuración estática en su primer acceso
      Admite interpolación de variables del sistema de la forma `${propiedad}` (`StorageConfig.java:216-243`).
    * `expTime`: Tiempo de caducidad en milisegundos. Por defecto: `60000` (60 segundos / 1 minuto)
      (`StorageConfig.java:49, 145-157`).
+     *Impacto en el arranque en frío y `fileid`:* Los ficheros de parámetros temporales subidos
+     por el navegador bajo un `fileid` están sujetos a esta misma cota de 60 segundos. Dado que el mecanismo
+     de espera activa (`ActiveWaitingThread`) únicamente emite señales `#WAIT` asociadas al identificador
+     de transacción final (`id`), y solo arranca *después* de haber descargado con éxito los parámetros
+     iniciales, el fichero `fileid` **carece por completo de señal de mantenimiento de vida (*keep-alive*)**.
+     Si el arranque en frío de la máquina virtual de Java o la autorización del sistema operativo
+     demora más de 60 segundos, la rutina `removeExpiredFiles()` o el propio `RetrieveService.retrieveSign`
+     eliminarán el fichero de parámetros, provocando que la aplicación nativa aborte con el error
+     `SAF_16` (`ERROR_RECOVERING_DATA`).
    * `maxFileSize`: Tamaño máximo de fichero en bytes (solo en `StorageConfig`).
      Por defecto: `0` (ilimitado) (`StorageConfig.java:52, 160-172`).
    * `debug`: Booleano (`true`/`false`). Si es `true`, **se desactiva el borrado de ficheros**
@@ -377,6 +397,18 @@ presencia de `fileid` (`ProtocolInvocationLauncher.java:307, 384, 459, 549, 660,
      con estructura `{"params": [{"k": "...", "v": "..."}, ...]}`. Si no, parsea con `parseXml`
      (`ProtocolInvocationLauncher.java:329-333`).
 
+3. **Consideraciones y defectos conocidos en el flujo con `fileid`:**
+   * **Ventana de caducidad estricta:** La descarga del XML mediante `fileid` debe completarse
+     antes de que transcurran 60 segundos desde su depósito en `StorageService` (§2.5). Al no existir
+     señal de espera activa para `fileid`, cualquier demora en el inicio del proceso en el cliente
+     provocará el borrado del fichero en el servidor y el fallo `SAF_16`.
+   * **Pérdida de versión y metadatos (`BUG-07`):** En operaciones de firma, si los parámetros se
+     recuperan por `fileid`, AutoFirma omite re-sincronizar la versión negociada tras descifrar el XML,
+     degradando la respuesta a versión 0 y perdiendo los metadatos `extraData`. Ver [BUG-07](A1-bugs-autofirma.md#bug-07-pérdida-de-la-versión-negociada-y-metadatos-extradata-en-servidor-intermedio-con-urls-largas).
+   * **Inoperancia en `load` (`BUG-04`):** Aunque `launch()` incluye la llamada para descargar
+     parámetros por `fileid` en `load`, la clase `UrlParametersToLoad` no analiza `stservlet` ni `id`,
+     haciendo inviable el retorno del resultado. Ver [BUG-04](A1-bugs-autofirma.md#bug-04-inoperancia-funcional-de-afirmaload-por-servidor-intermedio-y-nullpointerexception-en-gestión-de-errores).
+
 ---
 
 ## 4. El mecanismo de cifrado simétrico (`key`)
@@ -415,6 +447,14 @@ Dado que DES opera sobre bloques rígidos de 8 octetos (`PADDING_LENGTH = 8`),
 AutoFirma implementa un esquema de relleno manual propio (`DesCipher.padding`, `DesCipher.java:64-69`):
 * Si `data.length % 8 != 0`, se extiende el array de bytes hasta el siguiente múltiplo
   de 8 rellenando con octetos con valor `0x00` (`Arrays.copyOf`).
+
+**Ausencia total de negociación criptográfica:**
+En el protocolo `afirma://` de AutoFirma 1.9.2 no existe ningún mecanismo, parámetro ni cabecera
+para negociar algoritmos criptográficos más robustos (como AES-GCM o AES-CBC). El algoritmo DES
+en modo ECB está fijado en el código fuente de forma incondicional tanto en el backend Java
+(`DesCipher.java:31, 50`) como en el cliente JavaScript (`autoscript.js:4220-4245`). Toda clave
+recibida en el parámetro `key` debe tener exactamente 8 caracteres (`CIPHER_KEY_LENGTH = 8`),
+siendo rechazada cualquier otra longitud con excepción `ParameterException` (`SAF_03`).
 
 ### 4.3 Formato del dato cifrado: `PADDING.BASE64_URL_SAFE`
 
@@ -529,6 +569,16 @@ A pesar de que los parámetros se concatenan tras un signo `?` como si fuera una
 4. Por consiguiente, los parámetros se transmiten en el **cuerpo de la petición HTTP POST**
    como `application/x-www-form-urlencoded`.
 
+Este comportamiento desacopla la construcción sintáctica del código (`IntermediateServerUtil`)
+de la transmisión en red real. Resulta fundamental por dos razones:
+* **Límites de infraestructura:** Las firmas generadas y los lotes pueden alcanzar varios megabytes.
+  Si los parámetros viajaran en la query string de la URI, la inmensa mayoría de servidores web, proxies
+  inversos y balanceadores de carga rechazarían la conexión con un error HTTP 414 (*URI Too Long*).
+* **Contrato de `StorageService`:** Como se detalló en §2.2.2, `StorageService` en peticiones POST
+  lee exclusivamente desde `request.getInputStream()` y desestima la query string. Cualquier cliente
+  que enviase los parámetros en la URL de una petición POST provocaría que el servlet retornase
+  inmediatamente el error `ERR-00`.
+
 ### 6.2 Sincronización y finalización con `sendDataToServer`
 
 En `ProtocolInvocationLauncher.java:870-886`, la subida final del resultado o error
@@ -556,10 +606,10 @@ El destino del resultado según cada operación al usar servidor intermedio (`!b
 |---|---|---|---|
 | `sign` / `cosign` / `countersign` | `sendDataToServer` en `launch()` (`ProtocolInvocationLauncher.java:721`). | `sendDataToServer(URLEncoder.encode(msg), ...)` (`711-712`). | Sube `"CANCEL"` en texto plano (`701-702, 712`). |
 | `signandsave` | `sendDataToServer` en `launch()` (`ProtocolInvocationLauncher.java:612`). | `sendDataToServer(URLEncoder.encode(msg), ...)` (`602-603`). | Sube `"CANCEL"` en texto plano (`592-593, 603`). |
-| `selectcert` | `IntermediateServerUtil.sendData` **dentro** de `processSelectCert` (`ProtocolInvocationLauncherSelectCert.java:275`). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:427`). | **No sube nada** al servidor si lanza `AOCancelledOperationException` (`ProtocolInvocationLauncher.java:420-422`). |
-| `save` | `IntermediateServerUtil.sendData("OK", ...)` **dentro** de `processSave` (`ProtocolInvocationLauncherSave.java:120`). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:501`). | Sube `"CANCEL"` en texto plano (`ProtocolInvocationLauncher.java:498, 501`). |
-| `batch` | Devuelto por `processBatch` (gestiona internamente su subida o retorno trifásico). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:353`). | Sube `"CANCEL"` en texto plano (`ProtocolInvocationLauncher.java:350, 353`). |
-| `load` | **No sube nada** en caso de éxito; retorna la cadena en `processLoad` (`ProtocolInvocationLauncher.java:797-810`). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:808`). | Sube `"CANCEL"` en texto plano (`ProtocolInvocationLauncher.java:805, 808`). |
+| `selectcert` | `IntermediateServerUtil.sendData` **dentro** de `processSelectCert` (`ProtocolInvocationLauncherSelectCert.java:275`). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:427`). | Sube `"CANCEL"` en texto plano. `AOCancelledOperationException` se captura en `ProtocolInvocationLauncherSelectCert.java:201-205` y se relanza como `throw new SocketOperationException(getResultCancel())` cuando `!bySocket`; en `ProtocolInvocationLauncher.java:422-428`, `catch (SocketOperationException)` la intercepta y ejecuta `sendDataToServer("CANCEL", ...)`. El bloque `catch (AOCancelledOperationException)` en `launch()` (`420-422`) es código muerto. |
+| `save` | `IntermediateServerUtil.sendData("OK", ...)` **dentro** de `processSave` (`ProtocolInvocationLauncherSave.java:120`). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:501`). Ver [BUG-08](A1-bugs-autofirma.md#bug-08-invocación-incondicional-de-senddatatoserver-en-socketoperationexception-provoca-nullpointerexception-en-conexiones-por-socket). | Sube `"CANCEL"` en texto plano (`ProtocolInvocationLauncher.java:498, 501`). |
+| `batch` | Devuelto por `processBatch` (gestiona internamente su subida o retorno trifásico). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:353`). Ver [BUG-08](A1-bugs-autofirma.md#bug-08-invocación-incondicional-de-senddatatoserver-en-socketoperationexception-provoca-nullpointerexception-en-conexiones-por-socket). | Sube `"CANCEL"` en texto plano (`ProtocolInvocationLauncher.java:350, 353`). |
+| `load` | **No sube nada** en caso de éxito; retorna la cadena en `processLoad` (`ProtocolInvocationLauncher.java:797-810`). Ver [BUG-04](A1-bugs-autofirma.md#bug-04-inoperancia-funcional-de-afirmaload-por-servidor-intermedio-y-nullpointerexception-en-gestión-de-errores). | `sendDataToServer(URLEncoder.encode(msg), ...)` en `launch()` (`ProtocolInvocationLauncher.java:808`). Ver [BUG-04](A1-bugs-autofirma.md#bug-04-inoperancia-funcional-de-afirmaload-por-servidor-intermedio-y-nullpointerexception-en-gestión-de-errores) y [BUG-08](A1-bugs-autofirma.md#bug-08-invocación-incondicional-de-senddatatoserver-en-socketoperationexception-provoca-nullpointerexception-en-conexiones-por-socket). | Sube `"CANCEL"` en texto plano (`ProtocolInvocationLauncher.java:805, 808`). |
 
 ### 6.4 Estructura del resultado de firma devuelto
 
@@ -609,8 +659,13 @@ Al recibir HTTP status 200, `successResponseFunction(html, cipherKey, ...)`
 (`autoscript.js:4439-4638`) evalúa la respuesta en cascada:
 
 1. **Reintento (`ERR-06`):**
-   Si `html.substr(0, 6).toLowerCase() == "err-06"` (`4442`), significa que AutoFirma
-   aún no ha generado el resultado. La función devuelve `true` y el sondeo prosigue.
+   Si `html.substr(0, 6).toLowerCase() == "err-06"` (`4442`), el cliente asume que AutoFirma
+   aún no ha generado ni depositado el resultado en el servidor. La función devuelve `true`
+   y el bucle de sondeo continúa reintentando.
+   *Nota sobre la pérdida de datos:* Si una respuesta ya generada se perdió por corte de conexión
+   durante la descarga previa en `RetrieveService`, este ya habrá borrado el fichero del disco (§2.3.2);
+   las consultas sucesivas devolverán `ERR-06` y el cliente permanecerá en espera hasta agotar
+   las `NUM_MAX_ITERATIONS` antes de reportar el fallo.
 2. **Espera activa (`#WAIT`):**
    Si `html.substr(0, 5).toLowerCase() == "#wait"` (`4452`), devuelve `"reset"`.
    El bucle pone `iterations = 0`, marca `afirmaConnected = true` y continúa esperando (`4778-4780`).
@@ -655,79 +710,3 @@ obligatorias sobre `stservlet` y `rtservlet`
    **estrictamente por caracteres alfanuméricos** `[a-zA-Z0-9]` (`UrlParametersToSign.java:224-228`).
    Esta comprobación es crítica porque el servidor intermedio utiliza este valor directamente
    como nombre del fichero temporal en el disco (`new File(tmpDir, id)`).
-
----
-
-## Lo que el código no aclara
-
-**1. Transformación implícita de query string a body en `IntermediateServerUtil`.**
-`IntermediateServerUtil.sendData` concatena los parámetros `?op=put&v=1_0&id=...&dat=...`
-directamente sobre la URL de llamada y solicita `UrlHttpMethod.POST`. Funciona únicamente
-porque la implementación de bajo nivel `UrlHttpManagerImpl` contiene una heurística
-específica que detecta peticiones POST con `'?'`, parte la URL y traslada los parámetros
-al cuerpo del stream. Si se sustituyera `UrlHttpManager` por una biblioteca HTTP estándar
-que respete la URL tal cual, la petición se cursaría con una query string gigante,
-superando los límites del servidor web frontal.
-
-**2. Llamada incondicional a `sendDataToServer` en el `catch` de `SocketOperationException`.**
-En las ramas de `batch` (`ProtocolInvocationLauncher.java:353`), `selectcert` (`427`),
-`save` (`501`) y `load` (`808`), el bloque `catch (SocketOperationException e)`
-invoca `sendDataToServer(msg, params.getStorageServletUrl().toString(), params.getId())`
-**sin comprobar la bandera `!bySocket`**. Si la invocación proviniese de un socket local
-y fallara con dicha excepción, `params.getStorageServletUrl()` devolvería `null`,
-desencadenando un `NullPointerException` imprevisto al hacer `.toString()`. En cambio,
-en las ramas de `sign` (`710`) y `signandsave` (`600`) la llamada sí está debidamente
-protegida por `if (!bySocket)`.
-
-**3. Cancelación en `selectcert` no comunicada al servidor intermedio.**
-Si la persona usuaria cancela el diálogo de selección de certificado (`selectcert`),
-`processSelectCert` lanza `AOCancelledOperationException`. El despachador `launch`
-captura la excepción y retorna inmediatamente el código `CANCEL` (`ProtocolInvocationLauncher.java:420-422`),
-pero **no invoca a `sendDataToServer`**. Como consecuencia, ningún dato se sube
-a `StorageService`, y la página web queda bloqueada consultando a `RetrieveService`
-hasta agotar el timeout de sondeo o los reintentos.
-
-**4. `load` carece de soporte funcional en servidor intermedio.**
-Aunque el despachador de AutoFirma incluye lógica para descargar parámetros con `fileid`
-y arrancar la espera activa en `afirma://load?` (`ProtocolInvocationLauncher.java:767-792`),
-`ProtocolInvocationLauncherLoad.processLoad` **nunca sube los ficheros cargados al servidor intermedio**
-en caso de éxito; únicamente devuelve la cadena localmente (`ProtocolInvocationLauncherLoad.java:151`).
-En correspondencia, `autoscript.js` rechaza de partida las llamadas de carga por servidor intermedio
-con `UnsupportedOperationException` (`autoscript.js:4149-4156, 4163-4170`).
-
-**5. Debilidad criptográfica del cifrado DES en modo ECB.**
-El protocolo emplea cifrado DES simple con clave efectiva de 56 bits en modo `ECB`
-sin vector de inicialización (`DesCipher.java:31, 37`). El modo ECB no oculta patrones
-en datos repetitivos. Asimismo, la clave generada por el JavaScript se compone de
-8 dígitos decimales aleatorios (`autoscript.js:4225, 4228`), reduciendo el espacio de claves
-a $10^8$ posibilidades ($\approx 26.6$ bits de entropía), vulnerable a ataques
-de fuerza bruta inmediatos.
-
-**6. Derivación cruda de la clave simétrica.**
-`UrlParameters.verifyCipherKey` obtiene los octetos de la clave mediante `key.getBytes()`
-sin aplicar ninguna función de derivación de claves (KDF) ni validar bits de paridad DES.
-El comportamiento exacto de los bytes resultantes depende del `file.encoding`
-predeterminado de la máquina virtual si vinieran caracteres no ASCII (aunque el JavaScript
-solo genere dígitos).
-
-**7. Pérdida irrecuperable de la firma si falla la red en `RetrieveService`.**
-`RetrieveService.java:152-154` borra el fichero del disco inmediatamente después
-de haber volcado los bytes al `ServletOutputStream`. Si se produce una interrupción de red
-mientras el cliente web descarga la respuesta HTTP, el navegador registrará un error de conexión,
-pero al reintentar la petición recibirá un `ERR-06`, perdiendo la firma generada
-sin posibilidad de recuperación.
-
-**8. Condición de carrera en la limpieza periódica de ficheros.**
-El método `removeExpiredFiles()` de `StorageService` y `RetrieveService` itera sobre
-`tmpDir.listFiles()` y elimina archivos caducados en el hilo de cada petición HTTP.
-No existe ningún bloqueo o sincronización entre hilos del servidor; el propio código
-admite la condición de carrera capturando cualquier excepción genérica con el comentario:
-*«Suponemos que el fichero ha sido eliminado por otro hilo»* (`StorageService.java:218-223`).
-
-**9. Borrado prematuro de parámetros por expiración de 60 segundos.**
-El valor por defecto de `expTime` en servidor es de 60 000 ms (1 minuto)
-(`StorageConfig.java:49`, `RetrieveConfig.java:45`). Si un documento voluminoso
-se sube mediante `fileid` y el arranque de AutoFirma en la máquina del cliente tarda
-más de un minuto (por ejemplo debido a arranque en frío de la JVM, antivirus o lentitud del sistema),
-`RetrieveService` considerará el fichero caducado (`isExpired`) y lo borrará antes
-de que AutoFirma pueda descargarlo, fallando la invocación con `SAF_16`.

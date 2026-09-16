@@ -54,20 +54,30 @@ El protocolo presenta una dualidad histórica entre los identificadores `op` y
 `cop` (*crypto operation*):
 
 1. **En la URI directa (`afirma://<op>?`):**
-   El método `ProtocolInvocationUriParser.parserUri` extrae la parte de host/ruta
-   de la URI y la registra bajo la clave `op` (`ProtocolConstants.OPERATION_PARAM`)
-   en el diccionario de parámetros
-   (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ProtocolInvocationUriParser.java:299-304`).
-   Por ejemplo, para `afirma://cosign?...`, `params.get("op")` recibe el valor
-   `"cosign"`.
+   El método `ProtocolInvocationUriParser.parserUri` analiza inicialmente los parámetros
+   de la query string (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ProtocolInvocationUriParser.java:273-294`),
+   donde un llamante podría haber incluido `op=...`. Sin embargo, inmediatamente después
+   (`299-304`), extrae la parte de host/ruta de la URI y sobreescribe de forma incondicional
+   la clave `op` (`ProtocolConstants.OPERATION_PARAM`):
+   ```java
+   params.put(ProtocolConstants.OPERATION_PARAM, path.indexOf("/") == -1 ? path : path.substring(0, path.indexOf("/")));
+   ```
+   Por tanto, en una URI directa como `afirma://sign?op=cosign`, el path de la URI (`"sign"`)
+   tiene precedencia absoluta y sobreescribe cualquier valor que viaje en la query string.
 2. **En la configuración por XML (servidor intermedio):**
    Cuando los parámetros se descargan desde el servlet intermedio mediante `fileid`,
-   el analizador XML `ProtocolInvocationUriParserUtil.parseXml` inspecciona el nombre
-   del elemento raíz (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ProtocolInvocationUriParserUtil.java:99-105`):
-   si el nodo raíz es `<sign>`, `<cosign>` o `<countersign>`, dicho nombre se fija
-   como valor de `op`. Si el nodo raíz se llama `<op>`, se asume por defecto
-   `"SIGN"`. No obstante, si dentro del cuerpo XML existe un elemento hijo
-   `<e k="op" v="..."/>`, su valor sobreescribe al del elemento raíz (`111-129`).
+   el analizador XML `ProtocolInvocationUriParserUtil.parseXml`
+   (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ProtocolInvocationUriParserUtil.java:99-129`)
+   inspecciona en primer lugar el nombre del elemento raíz: si es `<sign>`, `<cosign>`
+   o `<countersign>`, dicho nombre se fija como valor inicial de `op` (o `"SIGN"` si el
+   nodo raíz se llama `<op>`). A continuación, el bucle que procesa las etiquetas hijas
+   `<e k="..." v="..."/>` (`111-129`) asigna cada par clave-valor al mapa, por lo que una
+   etiqueta explícita `<e k="op" v="..."/>` sobreescribe el nombre del elemento raíz.
+   Dado que el despachador general `ProtocolInvocationLauncher.java:642-651` canaliza
+   `sign`, `cosign` y `countersign` a través del mismo flujo de descarga y parseo de XML,
+   la operación final ejecutada por `processSign` vendrá determinada enteramente por el
+   valor de `op` resultante del XML, con independencia de si la URI de arranque fue
+   `afirma://sign?fileid=...` o `afirma://cosign?fileid=...`.
 3. **Conversión interna al enumerado `Operation`:**
    En `UrlParametersToSign.setSignParameters`
    (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/UrlParametersToSign.java:246-248`),
@@ -191,20 +201,50 @@ Si `format` equivale a `AOSignConstants.SIGN_FORMAT_AUTO` (`"auto"`, insensible 
 mayúsculas), el firmador se deja en `null` provisionalmente y se resuelve una vez
 disponibles los datos a firmar (`ProtocolInvocationLauncherSign.java:381-390`),
 llamando a `ProtocolInvocationLauncherUtil.identifyFormatFromData(data, cryptoOperation)`
-(`afirma-simple/src/main/java/es/gob/afirma/standalone/protocol/ProtocolInvocationLauncherUtil.java:150-180`):
+(`afirma-simple/src/main/java/es/gob/afirma/standalone/protocol/ProtocolInvocationLauncherUtil.java:150-180`).
+
+Existe una asimetría técnica fundamental en la resolución automática según la operación:
 
 * **Si la operación es `SIGN` (`153-166`):**
+  Los datos de entrada representan el documento original que se pretende firmar por
+  primera vez. Se aplican heurísticas de análisis de contenido binario (`DataAnalizerUtil`):
   1. Si `DataAnalizerUtil.isPDF(data)` → `PAdES`.
   2. Si no, si `DataAnalizerUtil.isFacturae(data)` → `FacturaE`.
   3. Si no, si `DataAnalizerUtil.isXML(data)` → `XAdES`.
-  4. En cualquier otro caso → `CAdES` (formato por defecto).
+  4. En cualquier otro caso → `CAdES` (formato comodín por defecto para cualquier fichero binario o textual arbitrario).
 * **Si la operación es `COSIGN` o `COUNTERSIGN` (`167-177`):**
-  Como se está multifirmando, los datos de entrada ya deben ser una firma. Se
-  invoca a `AOSignerFactory.getSigner(data)`, que recorre los firmadores registrados
-  con capacidad de identificación y ejecuta `signer.isSign(data)` hasta encontrar el
-  primero que reconozca la firma. Luego obtiene su formato con
-  `AOSignerFactory.getSignFormat(signer)`. Si ninguno lo reconoce, devuelve `null` y
-  se eleva el error `SAF_17` (`ERROR_UNKNOWN_SIGNER`).
+  Como se solicita una multifirma, los datos de entrada **deben constituir obligatoriamente
+  una firma electrónica preexistente**. No se analiza la extensión ni el tipo MIME del
+  documento, sino que se invoca `AOSignerFactory.getSigner(data)`
+  (`afirma-core/src/main/java/es/gob/afirma/core/signers/AOSignerFactory.java:92-118`),
+  el cual recorre secuencialmente la matriz de firmadores registrados con capacidad de
+  identificación (`SIGNERS_CLASSES`, evaluando `signer.isSign(data)`) en este orden estricto:
+  1. `CAdES` (`AOCAdESSigner`)
+  2. `CAdES-ASiC-S` (`AOCAdESASiCSSigner`)
+  3. `CMS/PKCS#7` (`AOCMSSigner`)
+  4. `FacturaE` (`AOFacturaESigner`)
+  5. `XAdES` (`AOXAdESSigner`)
+  6. `XAdES-ASiC-S` (`AOXAdESASiCSSigner`)
+  7. `XMLDSig` (`AOXMLDSigSigner`)
+  8. `PAdES` (`AOPDFSigner`)
+  9. `ODF` (`AOODFSigner`)
+  10. `OOXML` (`AOOOXMLSigner`)
+
+  Una vez hallado el primer firmador cuya llamada a `isSign(data)` devuelve `true`, se
+  recupera su nombre mediante `AOSignerFactory.getSignFormat(signer)`. Si ninguno lo
+  reconoce (por ejemplo, si se introducen datos binarios o XML planos que no son firmas),
+  `getSigner` devuelve `null` y la operación se aborta de inmediato con el error fatal
+  `SAF_17` (`ERROR_UNKNOWN_SIGNER`).
+
+  **Consecuencias de compatibilidad:**
+  - Un documento plano sin firma previa remitido con `format=auto` a `sign` se aceptará
+    y firmará (como XAdES si es XML o CAdES si es binario/texto), mientras que el mismo
+    fichero enviado a `cosign` o `countersign` fallará con `SAF_17`.
+  - Dado que `CAdES` precede a `CMS` en la matriz de búsqueda y las firmas CAdES derivan
+    de CMS/PKCS#7, una firma CMS estándar será identificada y clasificada como `CAdES`.
+  - Los contenedores ASiC (`.asics`), clasificados como `CAdES` en `sign` (al no ser PDF
+    ni XML), serán correctamente identificados como `CAdES-ASiC-S` o `XAdES-ASiC-S` en
+    multifirma por sus respectivos reconocedores específicos.
 
 ### 2.3 `algorithm`: Algoritmos de firma y composición dinámica
 
@@ -290,12 +330,20 @@ codificadas en Base64 (`UrlParametersToSign.java:298-314`). Estas propiedades se
 procesan en dos etapas:
 
 1. **Borrado incondicional de `profile`:**
-   Nada más arrancar `processSign`, el código ejecuta
-   `options.getExtraParams().remove("profile")` (`ProtocolInvocationLauncherSign.java:153`).
-   Un comentario explícito en el código señala:
-   `//TODO: Deshacer cuando se permita la generacion de firmas baseline`.
-   Cualquier perfil Baseline (p. ej. PAdES-Baseline-B) enviado en `properties` queda
-   ignorado silenciosamente.
+   Nada más arrancar `processSign`, el código ejecuta de forma imperativa:
+   ```java
+   //TODO: Deshacer cuando se permita la generacion de firmas baseline
+   options.getExtraParams().remove("profile");
+   ```
+   (`ProtocolInvocationLauncherSign.java:152-153`). Esta misma eliminación se repite
+   en `ProtocolInvocationLauncherSignAndSave.java:149-150` y en los procesadores del
+   servidor trifásico para lotes (`JSONSingleSignPreProcessor.java:99`, `SingleSignPreProcessor.java:87`).
+   En consecuencia, en AutoFirma 1.9.2 **es estrictamente imposible generar perfiles
+   *baseline*** (como `PAdES-Baseline-B`, `PAdES-Baseline-T`, `CAdES-Baseline-B`, etc.)
+   a través del protocolo `afirma://`. La propiedad se descarta de forma transparente y
+   silenciosa, sin elevar ningún error de parámetros (`SAF_03`) ni advertencia; los motores
+   criptográficos generan invariablemente firmas tradicionales en formato CMS/CAdES,
+   PAdES o XAdES avanzado/básico.
 2. **Expansión semántica (`ExtraParamsProcessor.expandProperties`):**
    Antes de invocar al firmador, las propiedades se someten a expansión
    (`ProtocolInvocationLauncherSign.java:488-496` y
@@ -313,14 +361,32 @@ adicional `target` dentro de `properties` define qué elementos del árbol de fi
 se van a contrafirmar (`ProtocolInvocationLauncherSign.java:723-724`):
 
 ```java
-"tree".equalsIgnoreCase(extraParams.getProperty(AfirmaExtraParams.TARGET)) ?
-        CounterSignTarget.TREE : CounterSignTarget.LEAFS
+signature = signer.countersign(
+        data,
+        algorithm,
+        "tree".equalsIgnoreCase(extraParams.getProperty(AfirmaExtraParams.TARGET)) ?
+                CounterSignTarget.TREE : CounterSignTarget.LEAFS,
+        null, // Targets
+        pke.getPrivateKey(),
+        pke.getCertificateChain(),
+        extraParams
+);
 ```
 
-* Si `target="tree"` (insensible a mayúsculas): contrafirma todo el árbol
-  de firmas (`CounterSignTarget.TREE`).
-* Si se omite o tiene cualquier otro valor (incluyendo `"leafs"`): contrafirma
-  únicamente los nodos hoja de la estructura (`CounterSignTarget.LEAFS`).
+Reglas del protocolo respecto al objetivo de contrafirma:
+* **Evaluación binaria estricta:** A diferencia de la API Java que dispone del validador
+  `CounterSignTarget.getTarget(name)` con control estricto de sintaxis, la capa de protocolo
+  bypassea dicho método mediante una comprobación ternaria directa.
+* **Activación de `TREE`:** Solo si `target="tree"` (insensible a mayúsculas) se activa
+  la contrafirma de todo el árbol (`CounterSignTarget.TREE`).
+* **Degradación silenciosa a `LEAFS`:** Cualquier otro valor —incluyendo la omisión del
+  parámetro, valores nulos o erratas tipográficas del cliente web (como `"all"`, `"lefs"`
+  o `"leaf"`)— se resuelve por defecto como `CounterSignTarget.LEAFS` sin emitir ninguna
+  advertencia ni arrojar error de parámetros (`SAF_03`).
+* **Inaccesibilidad de nodos específicos:** Debido a que el parámetro `targets` (lista de
+  firmantes o identificadores de nodo) se entrega fijado en `null`, las variantes `SIGNERS`
+  y `NODES` definidas en `CounterSignTarget.java` no son invocables a través del protocolo
+  `afirma://`.
 
 ---
 
@@ -399,17 +465,48 @@ extrae las condiciones especificadas en `properties` bajo las claves `filter` o
   ningún filtro explícito, AutoFirma inyecta automáticamente un filtro que excluye los
   certificados caducados (`ExpiredCertificateFilter(false)`, `CertFilterManager.java:133-135`).
 
-#### B) Autoselección si solo hay un candidato (`mandatoryCertificate`)
+#### B) Autoselección si solo hay un candidato (`mandatoryCertificate` vs `mandatoryCertSelection`)
 
-Existe una regla de inversión de lógica en `isMandatoryCertificate`
-(`CertFilterManager.java:145-154`):
-Si en `properties` se declara `mandatoryCertSelection=false` (o se opera en modo
-`headless=true`), el método `isMandatoryCertificate` devuelve `true`.
-En `AOKeyStoreDialog.show()` (`afirma-core-keystores/.../AOKeyStoreDialog.java:726-729`):
-Si `this.mandatoryCertificate == true` y tras aplicar los filtros **existe
-exactamente un certificado coincidente**, dicho certificado se selecciona de forma
-automática y transparente sin abrir la interfaz de usuario. En caso de haber más
-de uno o ninguno, el diálogo se abre normalmente (o falla si es *headless*).
+La propiedad `mandatoryCertSelection` en `properties` controla si la selección
+interactiva manual por parte del usuario en el diálogo de certificados es preceptiva:
+
+* **Por defecto o `mandatoryCertSelection=true`:**
+  La selección manual por el usuario es obligatoria; el diálogo `AOKeyStoreDialog` se
+  muestra **siempre**, incluso cuando en el almacén existe un único certificado que supera
+  los filtros configurados.
+* **Modo `mandatoryCertSelection=false`:**
+  La selección interactiva no es obligatoria. Si tras aplicar los filtros de certificado
+  queda **exactamente un único candidato válido**, AutoFirma omite por completo el diálogo
+  gráfico y autoselecciona dicho certificado de manera transparente.
+* **Modo desatendido (`headless=true`):**
+  AutoFirma asume internamente que no debe mostrar interfaz gráfica, activando la misma
+  vía de autoselección unitaria.
+
+**Razón de la aparente inversión lógica en el código:**
+En `CertFilterManager.java:145-154`, el método auxiliar se denomina `isMandatoryCertificate`:
+```java
+final boolean omitSelection = propertyFilters != null
+        && propertyFilters.containsKey(MANDATORY_CERT_SELECTION_PROPERTY)
+        && Boolean.FALSE.toString().equalsIgnoreCase(
+                propertyFilters.getProperty(MANDATORY_CERT_SELECTION_PROPERTY));
+
+return headless || omitSelection;
+```
+El nombre de este método proviene del parámetro booleano del constructor de
+`AOKeyStoreDialog` (`mandatoryCertificate`, `afirma-core-keystores/.../AOKeyStoreDialog.java:136, 726`),
+cuyo significado histórico en el diálogo era «¿debe forzarse la autoselección si el
+certificado es el único disponible?»:
+```java
+if (this.mandatoryCertificate && namedCertificates != null && namedCertificates.length == 1) {
+    this.selectedAlias = namedCertificates[0].getAlias();
+    return this.selectedAlias;
+}
+```
+Por tanto, cuando la sede web declara `mandatoryCertSelection=false` («no es obligatoria
+la selección manual»), `omitSelection` evalúa a `true`, `this.mandatoryCertificate` se fija
+en `true` y el diálogo gráfico se omite si hay un solo certificado candidato. Si tras el
+filtrado existen 0 o más de un certificado, el diálogo se abre normalmente (o falla con
+`HeadlessException` si opera en modo *headless*).
 
 #### C) Cancelación o ausencia de certificados
 
@@ -546,6 +643,14 @@ La diferencia entre ambos modos se evalúa en `checkShowRubricDialogIsCanceled` 
   no se inyectan coordenadas y el proceso continúa normalmente generando una firma
   PDF invisible estándar.
 
+> **Defecto de estado en sesiones continuas ([BUG-13](A1-bugs-autofirma.md#bug-13-fuga-de-estado-y-asignación-cruzada-en-showrubriciscanceled-entre-operaciones-de-firma)):**
+> El estado de cancelación del diálogo de rúbrica se registra en la variable estática mutable
+> `ProtocolInvocationLauncherSign.showRubricIsCanceled` (`108, 1014`), la cual **nunca se
+> restablece a `false`**. Además, el listener de la operación hermana `signandsave` modifica por
+> error este mismo campo estático de `Sign` (`ProtocolInvocationLauncherSignAndSave.java:1040`).
+> Como consecuencia, en sesiones abiertas de Socket local o WebSocket, cancelar una rúbrica deja
+> la bandera activada indefinidamente para futuras llamadas dentro del mismo proceso de la JVM.
+
 ---
 
 ## 6. Ejecución de la firma y casos especiales
@@ -575,6 +680,35 @@ switch (cryptoOperation) {
         throw new SocketOperationException(ERROR_UNSUPPORTED_OPERATION);
 }
 ```
+
+La rama `COSIGN` invoca la sobrecarga de **una sola ranura de datos**
+`cosign(sign, algorithm, key, certChain, extraParams)`
+(`ProtocolInvocationLauncherSign.java:710-717`), y no la sobrecarga de dos ranuras
+`cosign(data, sign, ...)` que sí declara la interfaz
+(`afirma-core/src/main/java/es/gob/afirma/core/signers/AOCoSigner.java:36`). El
+protocolo `afirma://` transporta un único parámetro `dat`, que en `cosign` contiene
+la firma previa, de modo que **no existe forma de aportar los datos originales a una
+cofirma**: la limitación es del protocolo, no del cliente que lo invoca.
+
+La consecuencia se observa en CAdES. Al no recibir los datos, `CAdESCoSigner` busca
+la huella digital que necesita en dos sitios por este orden
+(`afirma-crypto-cades-multi/src/main/java/es/gob/afirma/signers/multi/cades/CAdESCoSigner.java:191-265`):
+
+1. El contenido encapsulado de la firma previa, si esta es **implícita** (*attached*):
+   lo extrae y calcula su huella con el algoritmo solicitado (`194-205`).
+2. El atributo firmado `messageDigest` de alguno de los firmantes previos, **siempre
+   que su algoritmo de huella coincida con el pedido** (`249-264`).
+
+Si la firma previa es **explícita** (*detached*) y el algoritmo solicitado no coincide
+con el de ningún firmante anterior, ambas vías fallan y se lanza
+`ContainsNoDataException` (`268-270`), que el lanzador traduce a `SAF_44`
+(`ProtocolInvocationLauncherSign.java:779-783`). Es decir: una firma CAdES explícita
+solo se puede cofirmar reutilizando el algoritmo de huella de la firma original. El
+cliente JavaScript de referencia deja constancia expresa de esta limitación en un
+comentario de su propio código (`autoscript.js:471-473`), descrita en el
+capítulo [16](16-cliente-javascript.md#93-la-cofirma-desde-la-api-pública-el-parámetro-datab64-que-nunca-viaja).
+
+---
 
 ### 6.2 Parche heredado: Firmas XAdES explícitas
 
@@ -705,64 +839,3 @@ URL (`URLEncoder.encode`) y se envía al servlet `stservlet` antes de retornar
 | `SAF_51` | `ERROR_INCOMPATIBLE_KEY_TYPE` | El tipo de clave del certificado no es compatible con el algoritmo solicitado. | «El tipo de clave del certificado no está soportado.» |
 | `SAF_52` | `ERROR_LOCKED_KEYSTORE` | El almacén o tarjeta criptográfica está bloqueado por agotar intentos de PIN. | «El almacén de claves esta bloqueado. Siga las instrucciones del proveedor.» |
 
----
-
-## Lo que el código no aclara
-
-Esta sección reúne las lagunas, incoherencias y asimetrías identificadas en el
-código de AutoFirma 1.9.2 en relación con las operaciones de firma:
-
-1. **Fuga de estado en `showRubricIsCanceled`:**
-   En `ProtocolInvocationLauncherSign`, el campo
-   `static boolean showRubricIsCanceled = false;` (`línea 108`) se establece a
-   `true` en `SignPdfListener.propertiesCreated` (`1014`) si el usuario cancela
-   el diálogo de rúbrica. **En ninguna parte del código se vuelve a poner a
-   `false`**. En una sesión continua por socket local, si una primera firma visible
-   opcional es cancelada por el usuario, cualquier firma PDF visible posterior en
-   la misma sesión que incluya `visibleSignature=want` creerá falsamente que su
-   diálogo fue cancelado y abortará de forma inmediata con `SAF_43`, sin llegar a
-   mostrar el diálogo al usuario.
-2. **Supresión unilateral del parámetro `profile`:**
-   `options.getExtraParams().remove("profile")` (`ProtocolInvocationLauncherSign.java:153`)
-   elimina incondicionalmente cualquier perfil solicitado por la web (como
-   perfiles baseline PAdES/CAdES). No hay registro de log ni notificación al
-   llamante; la firma se degrada silenciosamente a la variante no baseline
-   antigua.
-3. **Asimetría de resolución en el formato `auto`:**
-   En `Operation.SIGN`, `identifyFormatFromData` comprueba estrictamente en este orden:
-   PDF, FacturaE, XML y por defecto CAdES (`ProtocolInvocationLauncherUtil.java:154-165`).
-   Un documento XML que sea a la vez una factura electrónica reconocida solo será
-   FacturaE si `isFacturae` lo detecta antes de que `isXML` lo derive a XAdES. En
-   cambio, para `COSIGN` y `COUNTERSIGN`, la detección depende enteramente del orden
-   fijo en que están declarados los elementos en la matriz estática
-   `AOSignerFactory.SIGNERS_CLASSES` (`AOSignerFactory.java:51-81`). Como CAdES y
-   CMS están antes que otros formatos, si una firma es ambigua o polifacética,
-   el resultado de `auto` dependerá del orden de registro de la lista en Java.
-4. **Validación laxa de `target` en contrafirma:**
-   La opción `target` no se valida sintácticamente al parsear los parámetros; en el
-   momento de firmar (`ProtocolInvocationLauncherSign.java:723`), únicamente se
-   evalúa si coincide con `"tree"`. Cualquier otro valor erróneo, mal escrito
-   (p. ej. `"lefs"`, `"all"`, `"nodes"`) o nulo se toma por defecto como `LEAFS`
-   sin ninguna advertencia.
-5. **Colisión de precedencia entre el path de la URI y el parámetro `op`:**
-   Si una invocación contiene `afirma://sign?op=cosign`, el método
-   `ProtocolInvocationUriParser.parserUri` extrae `"sign"` del path y ejecuta
-   `params.put("op", "sign")` tras haber procesado la query string
-   (`ProtocolInvocationUriParser.java:304`), machacando cualquier `op` previo.
-   Sin embargo, en la variante XML del servidor intermedio, un elemento hijo
-   `<e k="op" v="cosign"/>` machaca el nombre del elemento raíz `<sign>`
-   (`ProtocolInvocationUriParserUtil.java:127`). El comportamiento difiere según el
-   transporte utilizado.
-6. **Inversión semántica en `mandatoryCertSelection`:**
-   El parámetro `mandatoryCertSelection` significa textualmente «selección obligatoria
-   de certificado». No obstante, en `CertFilterManager.java:149-151`, se comprueba
-   si es `false` para asignar `mandatoryCertificate = true`, lo que en la API gráfica
-   de `AOKeyStoreDialog` significa «saltarse el diálogo y seleccionar automáticamente».
-   El nombre del parámetro web dice lo contrario de lo que hace internamente la
-   propiedad.
-7. **Ausencia de control de tipos de clave en algoritmos huérfanos:**
-   Si se pasa un algoritmo de hash simple (`SHA256`) y la clave es de tipo Ed25519 o
-   algoritmos post-cuánticos no reconocidos por `AOSignConstants.composeSignatureAlgorithmName`,
-   el método lanza `IllegalArgumentException("Tipo de clave de firma no soportado")`,
-   que termina en `SAF_51`. El código no contempla mecanismos de degradación ni
-   negociación alternativa.

@@ -74,6 +74,27 @@ no numérico, registra una advertencia en log y devuelve `false` (`51-56`).
 > La condición no impone cota inferior; solo rechaza valores estrictamente
 > superiores a 4 (`protocolVersion > 4`).
 
+La ausencia de cota inferior no es un descuido funcional, sino la consecuencia
+directa de la semántica de `ver`: el parámetro declara la **versión mínima de
+protocolo que la operación exige de la aplicación**, no el modo de protocolo bajo
+el que debe ejecutarse. La comprobación se limita, por tanto, a verificar que la
+aplicación llega a ese mínimo, y un mínimo negativo queda satisfecho de forma
+trivial. Una invocación con `ver=-10` es aceptada sin error, sin advertencia y sin
+registro en log: `parseProtocolVersion("-10")` devuelve `-10`
+(`ProtocolInvocationLauncher.java:907-915`), `MAX_PROTOCOL_VERSION_SUPPORTED.support(-10)`
+devuelve `true` y el valor llega intacto a la operación.
+
+El valor negativo tampoco altera el comportamiento posterior. Una vez superada la
+comprobación, el entero solo se consulta en un punto de todo el flujo de firma: el
+procesador de datos de respuesta lo guarda (`SignDataProcessor.java:11-18, 65-67`)
+y lo evalúa con la condición `getProtocolVersion() >= 3` para decidir si adjunta el
+tercer bloque de metadatos `extraData` a la respuesta
+(`NativeSignDataProcessor.java:77, 97`). En `save`, `load`, `selectcert` y `batch`
+no se consulta en absoluto. En consecuencia, `ver=-10`, `ver=-1`, `ver=0`, `ver=1`
+y `ver=2` producen exactamente el mismo resultado observable, y la única frontera
+de comportamiento real que introduce `ver` en una invocación directa es la del
+valor `3`.
+
 Si `support()` devuelve `false`, la operación rechaza la solicitud arrojando una
 `SocketOperationException` con código de error `SAF_21`
 (`ERROR_UNSUPPORTED_PROCEDURE`, *"Versión de protocolo no soportada"*):
@@ -340,6 +361,13 @@ ProtocolInvocationLauncherErrorManager.showError(errorCode, e); // SAF_21
 forceCloseApplication(0);
 ```
 
+El código `SAF_21` se emite aquí de forma incondicional, sin consultar el
+discriminante `isNewVersionNeeded()` que la propia excepción transporta
+(`ProtocolInvocationLauncher.java:242`), de modo que una petición con `v=1` —el
+caso propio de un `autoscript.js` antiguo— recibe el mensaje que pide actualizar
+AutoFirma cuando lo desactualizado es el trámite web (ver
+[BUG-25](A1-bugs-autofirma.md#bug-25-colapso-de-la-distinción-entre-protocolo-obsoleto-y-protocolo-no-soportado-en-el-arranque-de-canales-locales)).
+
 #### Diferencias entre versión 3 y versión 4 en WebSocket:
 * **Versión 3:** Instancia `AfirmaWebSocketServer` (`AfirmaWebSocketServerManager.java:75`).
   No valida identificador de sesión en la conexión WebSocket. Si no se especifica
@@ -372,6 +400,10 @@ el número coincida exactamente con uno de los elementos de `SUPPORTED_PROTOCOL_
 Si se solicita una versión que no sea 1, 2 o 3 (p. ej. `v=0` o `v=4`), lanza
 `UnsupportedProtocolException`. En `ProtocolInvocationLauncher.java:281-288`, se captura,
 se muestra el error `SAF_21` en pantalla y se devuelve la cadena de error `SAF_21`.
+El operador ternario que allí distingue entre protocolo obsoleto (`v=0`) y protocolo
+futuro (`v=4`) asigna el mismo código en sus dos ramas, por lo que ambos desajustes
+resultan indistinguibles para la sede y para el log (ver
+[BUG-25](A1-bugs-autofirma.md#bug-25-colapso-de-la-distinción-entre-protocolo-obsoleto-y-protocolo-no-soportado-en-el-arranque-de-canales-locales)).
 A diferencia de WebSocket, la versión 4 **no está soportada** en socket local HTTP.
 
 ### 3.3 Canal por Servidor Intermedio
@@ -382,6 +414,10 @@ sino que invoca directamente la operación (`afirma://sign?`, `afirma://batch?`,
 * Admite cualquier versión `protocolVersion <= 4` (`MAX_PROTOCOL_VERSION_SUPPORTED.support()`).
 * Si `ver` se omite en la URI, se asume `ProtocolVersion.VERSION_0` (entero `0`).
 * Si se proporciona una versión superior a 4 (p. ej. `ver=5`), arroja `SAF_21`.
+* La versión negociada no sobrevive al reenvío de peticiones con URL larga: cuando
+  la invocación se fragmenta a través del servidor intermedio, se pierden tanto la
+  versión como los metadatos `extraData` de la respuesta (ver
+  [BUG-07](A1-bugs-autofirma.md#bug-07-pérdida-de-la-versión-negociada-y-metadatos-extradata-en-servidor-intermedio-con-urls-largas)).
 
 ---
 
@@ -578,94 +614,3 @@ Descarga por HTTP un fichero remoto con el nuevo entero y evalúa:
 Integer.parseInt(newVersion) > Integer.parseInt(getCurrentVersion())
 ```
 (`Updater.java:163`).
-
----
-
-## Lo que el código no aclara
-
-**Fallo crítico de actualización de versión en servidor intermedio.**
-Cuando una petición hacia el servidor intermedio supera la longitud máxima de URL
-(`isURLTooLong()`, `autoscript.js:3803`), los parámetros completos se suben al
-servlet `StorageService` en un XML cifrado y en la URL de invocación solo se envían
-`fileid`, `rtservlet` y `key` (`autoscript.js:4413-4424`). La función `buildUrlWithoutData`
-**no incluye el parámetro `ver`** en la query string de la URI.
-En `ProtocolInvocationLauncher.java:653-655`:
-```java
-if (requestedProtocolVersion == -1) {
-    requestedProtocolVersion = parseProtocolVersion(params.getMinimumProtocolVersion());
-}
-```
-Dado que la URL no contiene `ver`, `params.getMinimumProtocolVersion()` devuelve `"0"`
-y `requestedProtocolVersion` se fija en `0`. Posteriormente (`660-679`), se descarga el
-XML desde el servlet y se reasigna `params` (`params = ProtocolInvocationUriParser.getParametersToSign(xmlData, true)`),
-el cual sí contiene `minimumProtocolVersion = "3"`. Sin embargo, `requestedProtocolVersion`
-**nunca se recalcula ni se actualiza** tras parsear el XML.
-Como consecuencia, la firma se procesa con `requestedProtocolVersion = 0`. Al llegar
-a `NativeSignDataProcessor.java:77, 97`, la comprobación `getProtocolVersion() >= 3`
-evalúa `0 >= 3` (**falso**), provocando que los metadatos `extraData` (nombre del
-fichero) **no se devuelvan nunca** cuando los datos viajan por servidor intermedio
-subidos previamente por exceso de tamaño.
-
-**Incoherencia de nombre entre `ver` y `v`.**
-En canales de socket y WebSocket, el parámetro de versión de la URI se llama `v`
-(`ProtocolInvocationLauncher.java:75`). En las operaciones directas por URI o en
-servidor intermedio, se llama `ver` (`UrlParametersToSign.java:38`). Si un cliente
-externo envía `afirma://sign?v=3...`, el parser de firma busca `ver`, no lo encuentra,
-adopta `"0"` por defecto e ignora `v=3` en silencio.
-
-**Parámetro `ver` en comandos de socket es código inoperante.**
-Cuando se utiliza el transporte por socket local o WebSocket, la versión de protocolo
-queda irrevocablemente congelada en la variable `this.protocolVersion` del hilo
-durante el apretón de manos inicial de `afirma://service?v=...` o `afirma://websocket?v=...`.
-Cualquier parámetro `ver` o `v` que el cliente web envíe dentro del comando
-`cmd=afirma://sign?...&ver=X` es completamente ignorado, pues `requestedProtocolVersion`
-ya no vale `-1` y la asignación condicional no se ejecuta (`ProtocolInvocationLauncher.java:653`).
-
-**`ParameterNeedsUpdatedVersionException` es código muerto.**
-La excepción `ParameterNeedsUpdatedVersionException`
-(`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ParameterNeedsUpdatedVersionException.java:14`)
-posee un constructor con visibilidad de paquete (`18`) y no es instanciada ni lanzada
-por ninguna clase de toda la base de código. Se trata de un vestigio de la versión 1.4
-(año 2014) que permanece en los bloques `catch` de `ProtocolInvocationLauncher.java`
-(`504, 616, 726, 811`) sin posibilidad alguna de ejecutarse. Las verificaciones
-de versión insuficiente lanzan en su lugar `SocketOperationException` con código `SAF_41`.
-
-**`Updater.isOldVersion()` es código muerto.**
-El método `Updater.isOldVersion(final String neededVersion)` (`Updater.java:177-187`),
-que comparaba cadenas contra el entero de compilación `currentVersion`, no es llamado
-desde ningún punto del proyecto.
-
-**La verificación de `jvc` es inalcanzable con parámetros ausentes.**
-Tanto `DEFAULT_JAVASCRIPT_VERSION_CODE` como `MIN_JAVASCRIPT_VERSION_CODE_NEEDED`
-valen exactamente `1` (`ProtocolInvocationLauncher.java:64, 66`). Cuando `jvc` falta o
-no es numérico, se captura la excepción y se asigna el valor por defecto `1` (`202`).
-Por ende, la condición `jvc < 1` únicamente puede dispararse si el invocador envía
-de forma expresa un número menor o igual que cero (`jvc=0` o `jvc=-1`).
-
-**`ProtocolVersion.support()` carece de cota inferior.**
-El método `support(final int protocolVersion)` (`ProtocolVersion.java:62-64`) evalúa
-`this.version >= protocolVersion`. Al llamarse sobre `MAX_PROTOCOL_VERSION_SUPPORTED` (`4`),
-cualquier entero negativo (p. ej. `-5` o `-99`) es evaluado como soportado (`4 >= -5` es `true`).
-La cota inferior solo se comprueba de forma explícita en `ServiceInvocationManager` (`{1, 2, 3}`)
-y en `AfirmaWebSocketServerManager` (`{3, 4}`). En operaciones directas por servidor
-intermedio, no existe validación de cota inferior.
-
-**Asimetría de versiones entre Socket HTTP y WebSocket.**
-`ServiceInvocationManager` soporta las versiones 1, 2 y 3 pero rechaza la 4 (`SAF_21`).
-En contrapartida, `AfirmaWebSocketServerManager` solo soporta las versiones 3 y 4,
-rechazando las versiones 1 y 2 (`SAF_21`). No existe un canal de transporte local
-que admita de manera unificada todas las versiones del protocolo.
-
-**Desalineación de versión de despliegue en `autoscript.js`.**
-En la distribución de AutoFirma 1.9.2 (tag `v1.9.2`), el archivo `autoscript.js` declara
-en su cabecera `var VERSION = "1.9.0";` (`autoscript.js:26`), a pesar de que el aplicativo
-empaquetado reporta `1.9.2` en `updater.properties`.
-
-**Errata de formato en mensajes de log de error.**
-En `ProtocolInvocationLauncherBatch.java:78`, `ProtocolInvocationLauncherSelectCert.java:77`,
-`ProtocolInvocationLauncherSave.java:50` y `ProtocolInvocationLauncherLoad.java:61`,
-el mensaje de error contiene un error tipográfico en el especificador de formato:
-`"Version de protocolo no soportada (%1s). Version actual: %s2. Hay que actualizar la aplicacion."`.
-El literal `%s2` no es un especificador posicional válido de `String.format` (debería ser
-`%2$s` o `%2s`), por lo que la versión máxima soportada no se imprime correctamente en
-las trazas de registro de esas cuatro operaciones.

@@ -55,7 +55,15 @@ cascada de decisiones (`autoscript.js:925-934`):
 ```javascript
 var PROTOCOL_VERSION = 1;
 ```
-(`autoscript.js:2621`).
+(`autoscript.js:2621`). El cliente JavaScript oficial inmoviliza la versión en `1`
+y nunca negocia versiones superiores por socket local, a pesar de que el servidor
+Java de AutoFirma admite hasta la versión `3` (`CURRENT_PROTOCOL_VERSION = 3` en
+`ServiceInvocationManager.java:42`). Como consecuencia de esta congelación, las
+operaciones de firma ejecutadas a través de este transporte nunca devuelven el
+bloque de metadatos extendidos `extraData` (como el nombre del archivo firmado),
+dado que su emisión exige explícitamente una versión de protocolo $\ge 3$
+(`NativeSignDataProcessor.java:77, 97`).
+
 
 ### 1.2 Topología y persistencia de sesión
 
@@ -210,7 +218,8 @@ de esta modalidad son:
 #### Extracción y validación de `ports`
 En `getChannelInfo` (`ProtocolInvocationLauncher.java:973-990`):
 * La cadena se divide por comas: `ps.split(",")`.
-* Cada elemento se convierte a entero con `Math.abs(Integer.parseInt(portsText[i]))`. Nótese que la función aplica valor absoluto: si se pasaran puertos negativos, se toman como positivos.
+* Cada elemento se convierte a entero con `Math.abs(Integer.parseInt(portsText[i]))` (`982`). El método aplica defensivamente el valor absoluto: si se proporcionan puertos con signo negativo (como `-63117`), se convierten automáticamente a positivos (`63117`).
+* No se realiza una verificación explícita del rango de puertos TCP (1 a 65535); si un número resultante se encuentra fuera de dicho rango o es cero, el fallo se delega en el constructor del socket en `tryPorts`, cuya excepción es capturada prosiguiendo con el siguiente candidato.
 * Si algún valor no es convertible a entero numérico, se lanza `IllegalArgumentException` (`985-988`).
 * Si `channelInfo.getPorts() == null`, `launch` registra un error `SEVERE`, muestra el diálogo con `ProtocolInvocationLauncherErrorManager.ERROR_PARAMS` (`SAF_03`) y devuelve su mensaje de error (`272-277`).
 
@@ -222,7 +231,7 @@ genera **3 puertos aleatorios únicos**:
 #### Extracción y saneamiento de `idsession`
 En `ProtocolInvocationLauncher.java:992-1008`:
 * Se lee el parámetro `idsession`.
-* Se recorre cada carácter exigiendo que sea alfanumérico:
+* Se recorre cada carácter exigiendo que sea alfanumérico según `Character.isLetterOrDigit(c)` (`996`):
   ```java
   boolean valid = true;
   for (final char c : idSession.toCharArray()) {
@@ -244,7 +253,25 @@ produce una cadena aleatoria de longitud fija `ID_LENGTH = 20` utilizando
 ```javascript
 VALID_CHARS_TO_ID = "1234567890abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 ```
-(Nótese que la letra minúscula `v` está omitida en el literal de `autoscript.js:1600`).
+Nótese que en este literal de `autoscript.js:1600` la letra minúscula `'v'` está
+omitida entre la `'u'` y la `'w'` (el conjunto contiene 61 caracteres en lugar de
+los 62 del alfabeto alfanumérico estándar). No obstante, el backend Java de AutoFirma
+evalúa `Character.isLetterOrDigit(c)`, por lo que acepta sin restricciones la letra
+`'v'` minúscula en cualquier identificador recibido.
+
+#### Negociación de versión (`v`) y asimetría con WebSocket
+El parámetro `v` establece la versión de protocolo para el canal:
+* En socket local HTTP, `ServiceInvocationManager.checkSupportProtocol` (`ServiceInvocationManager.java:212-220`)
+  admite exclusivamente las versiones `{ 1, 2, 3 }` (`CURRENT_PROTOCOL_VERSION = 3`).
+  Si se solicita una versión no admitida (por ejemplo `v=4`), se arroja
+  `UnsupportedProtocolException(protocolVersion, protocolVersion > 3)` y se
+  retorna el error `SAF_21` (`ERROR_UNSUPPORTED_PROCEDURE`).
+* Si el parámetro se omite en la URI, `getVersion` asigna por defecto `v=1`
+  (`ProtocolInvocationLauncher.java:912-914`), coincidiendo con el valor fijo
+  enviado por `AppAfirmaJSSocket` (`autoscript.js:2621`).
+* Esta regla contrasta con el transporte WebSocket (`afirma://websocket?`), el cual
+  admite exclusivamente las versiones `{ 3, 4 }` (`AfirmaWebSocketServerManager.java:36`)
+  y rechaza `{ 1, 2 }`.
 
 ### 2.3 Despacho en `ProtocolInvocationLauncher.launch`
 
@@ -261,11 +288,19 @@ Al procesar `afirma://service?` (`ProtocolInvocationLauncher.java:264-291`):
    ```java
    return RESULT_OK;
    ```
-   (Línea 290). Sin embargo, tal como se detalló en el capítulo 01,
-   `startService` entra en un bucle infinito `while (true)` bloqueante
-   (`ServiceInvocationManager.java:136`), por lo que esta línea nunca llega a
-   ejecutarse salvo que se produzca una excepción no capturada en la
-   inicialización.
+   (Línea 290). Este valor de retorno presenta una dualidad anómala en el código original:
+   * **En ejecución normal (éxito):** `startService` entra en un bucle infinito
+     `while (true)` bloqueante (`ServiceInvocationManager.java:136`), del que solo se sale
+     cuando expira el temporizador de inactividad ejecutando `Runtime.getRuntime().halt(0)`.
+     Por ello, en un escenario exitoso la línea 290 es **código muerto e inalcanzable**.
+   * **En caso de fallo de red o almacén SSL:** si `tryPorts` no logra enlazar ningún
+     puerto o si falla la carga del certificado `autofirma.pfx`, `startService` captura
+     silenciosamente la excepción (`ServiceInvocationManager.java:148-168`), escribe en el
+     log y retorna normalmente (`void`). En consecuencia, la ejecución alcanza la línea 290
+     y devuelve `RESULT_OK` ("OK") a `SimpleAfirma.main`, que concluye el proceso con éxito
+     (código 0) sin mostrar ningún diálogo ni advertir al navegador (ver
+     [BUG-10 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-10-silenciamiento-de-excepciones-en-serviceinvocationmanagerstartservice-y-retorno-erróneo-de-ok-tras-fallo-de-inicialización-del-socket)).
+
 
 ---
 
@@ -307,7 +342,8 @@ Reglas aplicadas sobre el socket servidor:
    ```
 4. Si ninguno de los puertos de la lista está libre, `tryPorts` lanza `IOException`,
    la cual es capturada en el `catch (IOException e)` de `startService` (`148-150`),
-   registrando un log `SEVERE` sin mostrar interfaz gráfica y saliendo del método.
+   registrando un log `SEVERE` sin mostrar interfaz gráfica y saliendo del método normalmente,
+   lo que provoca que `launch()` retorne `RESULT_OK` (ver [BUG-10](A1-bugs-autofirma.md#bug-10-silenciamiento-de-excepciones-en-serviceinvocationmanagerstartservice-y-retorno-erróneo-de-ok-tras-fallo-de-inicialización-del-socket)).
 
 ### 3.2 Restricción de suites de cifrado
 
@@ -478,6 +514,18 @@ quedar bloqueado en el `read` de la conexión:
     de lecturas consecutivas vacías o compuestas únicamente por espacios blancos.
     Si se agotan los 10 intentos, devuelve `null` para ignorar la petición y
     evitar consumo desmedido de memoria (`542-547`).
+* **Tratamiento de lecturas vacías y cierre silencioso:**
+  El límite de 10 reintentos está diseñado específicamente para gestionar conexiones
+  anómalas o sondas de red que emiten únicamente espacios en blanco o tramas vacías
+  (como sucede cuando un cliente falla en la negociación TLS o contacta al puerto sin
+  enviar una petición HTTP válida). Puesto que `socketIs.read(reqBuffer)` es una
+  operación bloqueante en el socket TCP, las demoras normales de red en transmisiones
+  legítimas no incrementan el contador: este solo avanza si una lectura efectiva devuelve
+  exclusivamente caracteres blancos (`insert.trim().isEmpty()`). Cuando se sobrepasa el
+  límite, `read()` retorna `null`, y `run()` (`CommandProcessorThread.java:124-126`)
+  emite un aviso (`LOGGER.warning("Se ha recibido una peticion vacia")`) y procede a
+  cerrar la conexión mediante `closeSocket(this.localSocket)` (`150`) de manera
+  completamente silenciosa, sin emitir ningún código ni cuerpo de error HTTP hacia el cliente.
 * **Detección del fin de mensaje:**
   Se busca `@EOF` tanto en `insert` (la lectura actual) como en `subFragment`
   (la concatenación de los últimos 36 bytes de la lectura previa con el inicio de
@@ -619,9 +667,18 @@ Se utiliza cuando la URL de la operación cabe en una única petición HTTP
        sendData(createHttpResponse(true, Integer.toString(parts)), socket, "Se mandaran " + parts + " partes");
        ```
        (`353`).
-* **Comportamiento fundamental:** nótese que el comando `cmd=` **no devuelve el
-  resultado de la firma**, sino el número de fragmentos disponibles (por ejemplo
-  `"1"`). El cliente debe solicitar a continuación cada parte mediante `send=`.
+* **Comportamiento fundamental y descarte de `ver`:**
+  * Nótese que el comando `cmd=` **no devuelve el resultado de la firma**, sino el
+    número de fragmentos disponibles (por ejemplo `"1"`). El cliente debe solicitar
+    a continuación cada parte mediante `send=`.
+  * **Inmutabilidad de la versión negociada:** al invocar
+    `ProtocolInvocationLauncher.launch(cmdUri, this.protocolVersion, true)`, la variable
+    `requestedProtocolVersion` recibe el valor fijado en el apretón de manos inicial
+    (`this.protocolVersion != -1`). Como consecuencia, las guardas
+    `if (requestedProtocolVersion == -1)` en `ProtocolInvocationLauncher.java:300, 650`
+    evalúan a `false`, provocando que cualquier parámetro `ver=...` incluido dentro de
+    `cmdUri` sea **completamente ignorado**. La versión negociada en el arranque rige
+    invariablemente para todas las operaciones de la sesión.
 
 ### 5.3 Comando `fragment=`: recepción fragmentada de peticiones grandes
 
@@ -780,9 +837,27 @@ private static byte[] createHttpResponse(final boolean ok, final String response
 }
 ```
 
-Detalles de la cabecera HTTP:
-* **Separadores de línea:** se utiliza exclusivamente el carácter de salto de línea
-  `\n` (código ASCII 10), en lugar de la secuencia estándar de HTTP `\r\n` (CRLF).
+Detalles de la cabecera HTTP y código de estado:
+* **Invariabilidad de `HTTP/1.1 200 OK`:** En todo el código de `CommandProcessorThread.java`,
+  el método `createHttpResponse` es invocado en 12 puntos distintos (líneas 269, 295,
+  298, 318, 336, 339, 353, 386, 389, 410, 471 y 483), y en **todas y cada una de las 12
+  llamadas el primer parámetro `ok` es incondicionalmente `true`**.
+  AutoFirma **nunca emite un código HTTP 500** por el canal de socket local: todas las
+  respuestas —tanto las de éxito como las cancelaciones del usuario (`CANCEL`), errores de
+  memoria (`MEMORY_ERROR`) y fallos funcionales o criptográficos (`SAF_nn`)— se envían
+  invariablemente con el encabezado de estado `HTTP/1.1 200 OK`.
+* **Código muerto y anomalía sintáctica en la rama `HTTP 500`:**
+  La rama `else` (líneas 824-826) que emite `HTTP/1.1 500 Internal Server Error` es
+  **código muerto al 100%**. Nótese adicionalmente que dicha rama contiene un defecto de
+  formato: omite el salto de línea al final del literal, por lo que si alguna vez llegara a
+  ejecutarse, concatenaría la línea de estado con la primera cabecera produciendo una
+  cabecera HTTP sintácticamente corrupta (`HTTP/1.1 500 Internal Server ErrorConnection: close\n`).
+* **Separadores de línea no estándar:** se utiliza exclusivamente el carácter de salto de línea
+  simple `\n` (código ASCII 10), en lugar de la secuencia estándar de HTTP `\r\n` (CRLF)
+  exigida por RFC 7230 / RFC 9112. Los navegadores web modernos (Chromium, Firefox, Safari, Edge)
+  incorporan analizadores HTTP permisivos en conexiones sobre `localhost`, por lo que
+  procesan las respuestas con normalidad a través de `XMLHttpRequest`, aunque parsers HTTP
+  estrictos de bajo nivel pueden denunciar el formato.
 * **Cabeceras fijas:**
   * `Connection: close`: cada transacción HTTP cierra la conexión tras responder.
   * `Pragma: no-cache`: previene cacheo intermedio.
@@ -970,7 +1045,8 @@ Estos campos:
   siguiente).
 * Si dos peticiones llegaran de forma concurrente sobre el mismo puerto, o si dos
   pestañas del navegador compartieran sesión, se producirían condiciones de carrera
-  al modificar `request` y `toSend`.
+  al modificar `request` y `toSend`, provocando excepciones de concurrencia o
+  corrupción cruzada de datos (ver [BUG-09 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-09-estado-estático-sin-sincronización-y-condiciones-de-carrera-en-commandprocessorthread)).
 
 ---
 
@@ -982,6 +1058,8 @@ implementa la máquina de estados del lado del navegador:
 
 ### 9.1 Inicialización y parámetros de temporización
 
+* `PROTOCOL_VERSION = 1` (`autoscript.js:2621`): versión fija de protocolo enviada en la URI de servicio (`&v=1`).
+* `VALID_CHARS_TO_ID = "1234567890abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"` (`autoscript.js:1600`): alfabeto de 61 caracteres empleado por `generateNewIdSession()` (`1612-1632`) para generar el identificador de sesión de longitud `ID_LENGTH = 20`, omitiendo la letra `'v'` minúscula.
 * `WAITING_TIME = 500` ms (`autoscript.js:2624`): tiempo de espera para reintentos
   de peticiones en caso de respuestas vacías.
 * `AUTOFIRMA_LAUNCHING_TIME = 2000` ms (`autoscript.js:149`): tiempo de retardo
@@ -1022,66 +1100,4 @@ implementa la máquina de estados del lado del navegador:
   `totalResponseRequest`. Si `part < totalParts`, se invoca recursivamente para
   `part + 1`; si `part == totalParts`, concluye y despacha el resultado (`3299-3318`).
 
----
 
-## Lo que el código no aclara
-
-Esta sección recopila las discrepancias, ambigüedades y comportamientos anómalos
-localizados al auditar el código fuente del tag `v1.9.2`:
-
-1. **Estado estático sin sincronización:** `request`, `toSend` y `parts` en
-   `CommandProcessorThread.java:67-69` son variables estáticas accesibles por todos
-   los hilos que crea `ServiceInvocationManager`. El código no sincroniza el
-   acceso a estas listas. Peticiones simultáneas o solapadas provocarían corrupción
-   de datos.
-2. **Riesgo de inyección en `closeMacService`:** el comentario de
-   `ProtocolInvocationLauncher.java:995-997` afirma que *«el ID de sesión solo
-   puede estar conformado por números para evitar inyección de código en
-   AppleScript»*. Sin embargo, el código real de validación en la línea 999 utiliza
-   `Character.isLetterOrDigit(c)`, permitiendo letras. Por su parte, `MacUtils.closeMacService`
-   (`MacUtils.java:86-88`) concatena este identificador directamente en un comando
-   de terminal `kill -9 $(ps -ef | grep " + sessionIdText + " | awk '{print $2}')`
-   a través de un script bash temporal, sin entrecomillado estricto.
-3. **HTTP 200 devuelto en condiciones de error:** en `CommandProcessorThread.java:471`,
-   el método `sendError` llama a `createHttpResponse(true, ...)` en lugar de
-   `false`. Esto provoca que todos los errores graves (`SAF_03`, `SAF_11`, `SAF_09`)
-   se envíen al navegador bajo el código de estado `HTTP/1.1 200 OK`, obligando al
-   cliente a inspeccionar el contenido textual en Base64 para saber si falló.
-4. **Mensaje de log hardcodeado en `sendError`:** la llamada a `sendData` dentro
-   de `sendError` (`CommandProcessorThread.java:471`) tiene fijado el literal
-   `"ID de sesion erroneo"` como tercer argumento para cualquier tipo de error,
-   generando mensajes de log engañosos en la consola de la aplicación cuando falla
-   la firma o los parámetros.
-5. **Separadores de línea no estándar en HTTP:** `createHttpResponse`
-   (`CommandProcessorThread.java:496-506`) concatena cabeceras HTTP usando
-   exclusivamente `\n` en lugar del par `\r\n` (CRLF) prescrito por la RFC 7230.
-   Asimismo, la línea de error `HTTP/1.1 500 Internal Server Error` (línea 499)
-   no incluye salto de línea al final antes de concatenar las cabeceras siguientes.
-6. **Inconsistencia de versiones soportadas en el socket:**
-   `ServiceInvocationManager.java:45` declara compatibilidad con las versiones
-   `1`, `2` y `3` (`SUPPORTED_PROTOCOL_VERSIONS`). No obstante, en la clase
-   `CommandProcessorThread` no existe ninguna bifurcación condicional basada en el
-   parámetro `protocolVersion` recibido: el protocolo de socket se procesa de
-   forma idéntica independientemente de que se invoque con `v=1`, `v=2` o `v=3`.
-7. **Puertos negativos aceptados en la URL:** `ProtocolInvocationLauncher.java:982`
-   aplica `Math.abs(Integer.parseInt(portsText[i]))` a la lista de puertos. Una URI
-   como `afirma://service?ports=-50000` se procesa como si fuera el puerto `50000`.
-   No hay ningún comentario que aclare el motivo de permitir puertos negativos en
-   la sintaxis.
-8. **Omisión de la letra 'v' en los IDs de sesión del JavaScript:** en
-   `autoscript.js:1600`, la constante `VALID_CHARS_TO_ID` contiene
-   `"1234567890abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"`. La letra
-   minúscula `v` fue omitida por una errata en el alfabeto del generador de
-   identificadores aleatorios.
-9. **Ausencia de respuesta ante lecturas vacías repetidas:** en
-   `CommandProcessorThread.java:545-546`, si se superan las 10 lecturas consecutivas
-   sin datos (`readingTries > MAX_READING_BUFFER_TRIES`), el método `read` retorna
-   `null`. Al recibir `null`, `run()` simplemente cierra el socket (`124-126, 150`)
-   sin emitir ninguna respuesta HTTP ni código de error al cliente, provocando que
-   la petición del navegador quede en espera hasta que venza su propio tiempo de
-   desconexión de red.
-10. **Resultado de `startService` que nunca retorna:** `ProtocolInvocationLauncher.java:290`
-    contiene la sentencia `return RESULT_OK;` tras invocar `ServiceInvocationManager.startService`.
-    Dado que `startService` ejecuta un bucle `while (true)` infinito
-    (`ServiceInvocationManager.java:136`), el control nunca regresa a `launch`, y la
-    cadena `"OK"` nunca llega a devolverse al invocador original de `SimpleAfirma.main`.

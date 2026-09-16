@@ -48,9 +48,11 @@ java -Djdk.tls.maxHandshakeMessageSize=65536 -jar /usr/lib/Autofirma/autofirma.j
 ```
 
 (`afirma-simple-installer/linux/instalador_deb/src/usr/bin/autofirma:2`). La
-asociación por `xdg-mime` en `postinst` está **comentada**
-(`afirma-simple-installer/linux/instalador_deb/src/DEBIAN/postinst:47`): el
-paquete deb confía solo en el `MimeType` del `.desktop`.
+asociación manual por `xdg-mime` en el script `postinst` está deliberadamente
+**comentada** (`afirma-simple-installer/linux/instalador_deb/src/DEBIAN/postinst:46-47`):
+su comentario razona que no es necesaria porque el tipo MIME queda registrado
+en el fichero `.desktop`, delegando la actualización a los disparadores estándar
+de `update-desktop-database` del empaquetado del sistema operativo.
 
 **Linux (rpm, Fedora y SUSE).** El spec genera el `.desktop` con
 `Exec=java -Djdk.tls.maxHandshakeMessageSize=65536 -jar %{_libdir}/%{name}/%{name}.jar %u`
@@ -95,10 +97,14 @@ con `args`:
 | `args[0].toLowerCase().startsWith("afirma://")` | `ProtocolInvocationLauncher.launch(args[0])` | `957-962` |
 | Sin argumentos | Modo escritorio, con comprobación de instancia única | `984-1067` |
 
-Solo se examina `args[0]`: si hay varios argumentos, **los demás se
-ignoran** en la rama de protocolo (`957`, `962`). No hay ningún tratamiento
-especial de la URI para macOS en `main`: la única lógica específica es el
-icono del Dock y un parche de PC/SC (`910-932`).
+Solo se examina `args[0]`: la aplicación asume que la URI viaja íntegra en el
+primer argumento. Si la llamada del sistema operativo fragmenta la orden en
+múltiples argumentos (por ejemplo, si la URI contiene espacios sin codificar en
+porcentaje y el ejecutable se invocó sin comillas), **los argumentos posteriores
+`args[1..]` se descartan silenciosamente** (`957`, `962`), lo que provoca que
+`args[0]` se procese truncada y falle en el análisis sintáctico de parámetros.
+No hay ningún tratamiento especial de la URI para macOS en `main`: la única
+lógica específica es el icono del Dock y un parche de PC/SC (`910-932`).
 
 Tras volver de `launch`, `main` cierra el proceso con `forceCloseApplication(0)`
 **salvo** que `args[0]` empiece por `afirma://websocket` (`978-980`); el
@@ -120,9 +126,12 @@ La de tres argumentos (`153`) hace lo siguiente antes de despachar:
 
 1. En macOS instala el manejador de «Acerca de…» (`154-164`).
 2. Si `urlString == null` → `SAF_01` (`166-171`); si no empieza por
-   `afirma://` **con minúsculas** → `SAF_02` (`172-178`). Nótese que `main`
-   comparó en minúsculas (`SimpleAfirma.java:957`) y aquí la comparación es
-   exacta.
+   `afirma://` **estrictamente con minúsculas** → `SAF_02` (`172-178`). Aunque
+   `SimpleAfirma.main` permite detectar la llamada ignorando mayúsculas
+   (`args[0].toLowerCase().startsWith("afirma://")`), el despachador `launch`
+   exige el prefijo en minúsculas exactas. Una invocación con esquema en
+   mayúsculas (como `AFIRMA://`) muestra el diálogo modal de error `SAF_02`
+   (`ERROR_UNSUPPORTED_PROTOCOL`) y el proceso finaliza con código 0.
 3. Configura JMulticard según preferencias (`180-184`).
 4. `requestedProtocolVersion = protocolVersion` (`189`).
 5. Extrae los parámetros con `extractParams` (`192`, `946-966`): toma todo lo
@@ -528,85 +537,3 @@ Independientemente del transporte, `mcv` (versión mínima de cliente) se
 comprueba en cada `process<Op>` contra `SimpleAfirma.getVersion()` y produce
 `SAF_41` (`ProtocolInvocationLauncherSave.java:62-72`).
 
----
-
-## Lo que el código no aclara
-
-**Mayúsculas en el esquema.** `main` acepta la URI si
-`args[0].toLowerCase().startsWith("afirma://")` (`SimpleAfirma.java:957`),
-pero `launch` la rechaza con `SAF_02` si no empieza exactamente por
-`afirma://` en minúsculas (`ProtocolInvocationLauncher.java:172-178`), y la
-excepción al cierre solo reconoce `afirma://websocket` en minúsculas
-(`SimpleAfirma.java:978`). Una URI `AFIRMA://sign?…` entra en la rama de
-protocolo, falla en `launch`, y el proceso se cierra con código 0.
-
-**Argumentos adicionales.** Solo se lee `args[0]` (`SimpleAfirma.java:957-962`).
-El código no dice qué debería ocurrir si el sistema operativo pasara la URI
-en otra posición o partida en varios argumentos (por ejemplo por un `%u` sin
-comillas en un `.desktop`).
-
-**`SAF_21` para las dos causas de versión no soportada.** En la rama `service`
-se calcula `e.isNewVersionNeeded() ? ERROR_UNSUPPORTED_PROCEDURE : ERROR_UNSUPPORTED_PROCEDURE`:
-ambas ramas del ternario son el mismo código (`ProtocolInvocationLauncher.java:283-285`).
-No se puede distinguir por el código si el cliente pide una versión más nueva
-que la aplicación o una que ya no existe.
-
-**`"OK"` de `service` que nunca se devuelve.** La rama `service` devuelve
-`RESULT_OK` tras `startService` (`290`), pero `startService` entra en
-`while (true)` (`ServiceInvocationManager.java:136`) y solo sale por una
-excepción, que registra sin relanzar (`148-165`). Cuando sale así, `launch`
-devuelve `"OK"` y `main` cierra con código 0 (`SimpleAfirma.java:978-980`)
-aunque no se haya abierto ningún puerto.
-
-**Cierre en la rama de servidor intermedio ante excepción no controlada.** Si
-`launch` lanzara una excepción no capturada en una URI directa, `main` la
-registra pero solo llama a `forceCloseApplication` para `websocket`
-(`SimpleAfirma.java:1073-1078`). Para el resto, `main` termina sin `halt`; el
-código no dice si la JVM sale o queda viva por hilos de AWT.
-
-**El aviso de `jvc` solo salta con valores ≤ 0.** `DEFAULT_JAVASCRIPT_VERSION_CODE`
-y `MIN_JAVASCRIPT_VERSION_CODE_NEEDED` valen 1 (`ProtocolInvocationLauncher.java:64-66`),
-así que un `jvc` ausente o no numérico nunca produce el aviso de `196-214`;
-solo lo hace un `jvc` explícito menor que 1. El propósito de ese diálogo con
-un JS actual (`VERSION_CODE = 3`, `autoscript.js:27`) no se puede deducir del
-código.
-
-**Versión por defecto para `service` cuando el JS declara `v=1`.** El cliente
-`AppAfirmaJSSocket` declara `PROTOCOL_VERSION = 1` (`autoscript.js:2621`), y
-`ServiceInvocationManager` la acepta (`42-45`). Las diferencias de
-comportamiento entre las versiones 1, 2 y 3 del canal socket no están en
-`launch`; hay que buscarlas en `CommandProcessorThread` (capítulo 04).
-
-**`load` no exige `stservlet` en el parseo pero lo usa.** `getParametersToLoad`
-no recibe `servicesRequired` (`ProtocolInvocationUriParserUtil.java:78`) y
-`UrlParametersToLoad` no menciona `STORAGE_SERVLET_PARAM`, pero `launch` llama
-a `params.getStorageServletUrl()` para la espera activa y para subir errores
-(`ProtocolInvocationLauncher.java:791`, `803-810`). Dónde se fija esa URL
-para `load` no se ha localizado en este capítulo (capítulo 10).
-
-**`ports` acepta números negativos.** `getChannelInfo` aplica `Math.abs` a
-cada puerto (`ProtocolInvocationLauncher.java:982`), de modo que `ports=-63117`
-equivale a `63117`. No hay comentario que lo justifique.
-
-**`idsession` alfanumérico pese al comentario.** El comentario dice que «el ID
-de sesión solo puede estar conformado por números» por el riesgo de inyección
-en AppleScript, pero la comprobación es `Character.isLetterOrDigit`
-(`ProtocolInvocationLauncher.java:995-1004`). Un `idsession` inválido no es
-error: se descarta en silencio (`1005-1007`).
-
-**Estado estático compartido entre operaciones de una misma sesión.**
-`requestedProtocolVersion`, `activeWaitingThread` y `stickyKeyEntry` son
-campos estáticos (`ProtocolInvocationLauncher.java:90-101`). En socket cada
-conexión es un hilo distinto (`ServiceInvocationManager.java:138`); el código
-no sincroniza esos campos, y no dice qué pasa con dos `cmd=` concurrentes.
-
-**El instalador deb no fija el manejador por defecto.** La línea `xdg-mime
-default … x-scheme-handler/afirma` está comentada
-(`afirma-simple-installer/linux/instalador_deb/src/DEBIAN/postinst:47`),
-mientras que los spec rpm sí escriben `mimeapps.list`. Si un sistema deb
-tiene otro manejador para `afirma`, el código no lo resuelve.
-
-**macOS: cinco segundos y un proceso por URI.** El lanzador nativo duerme 5 s
-y se termina tras arrancar la JVM (`AppDelegate.m:117-118`). El código no
-explica qué ocurre si llega una segunda URI antes de esos 5 s, ni si el
-`LSUIElement` impide que macOS reutilice el mismo proceso del lanzador.

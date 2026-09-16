@@ -109,11 +109,11 @@ de prefijo:
 |---|---|---|---|
 | Clase despachadora | `ProtocolInvocationLauncherSign` / `ProtocolInvocationLauncherSignAndSave` | `ProtocolInvocationLauncherSelectCert` | `ProtocolInvocationLauncher.java:415, 582, 690` |
 | Clase de parámetros | `UrlParametersToSign` / `UrlParametersToSignAndSave` | `UrlParametersToSelectCert` | `ProtocolInvocationUriParserUtil.java:171-177` |
-| Datos a firmar (`dat`) | Obligatorios (o solicitados mediante diálogo en disco) | Totalmente ignorados; reseteados a `null` | `UrlParametersToSelectCert.java:69` |
+| Datos a firmar (`dat`) | Obligatorios (o solicitados mediante diálogo en disco) | Inutilizados en la operación; si se envían erróneamente, `setCommonParameters` los descarga en memoria pero `processSelectCert` los ignora | `UrlParametersToSelectCert.java:69`, `UrlParameters.java:306-314` |
 | Formato y algoritmo (`format`, `algorithm`) | Obligatorios para la generación de firma | Inexistentes; no se leen ni se interpretan | `UrlParametersToSelectCert.java:121-221` |
-| Expansión de propiedades (`ExtraParamsProcessor`) | Se invoca `expandProperties()` para políticas y formatos | **No se invoca**: las propiedades se parsean como `Properties` crudo | `UrlParametersToSelectCert.java:191` |
+| Expansión de propiedades (`ExtraParamsProcessor`) | Se invoca `expandProperties()` para políticas y formatos | **No se invoca**: las propiedades se parsean como `Properties` crudo; no aplican políticas de firma al carecer de formato y datos | `UrlParametersToSelectCert.java:191` |
 | Diálogo de firma visible (PDF) | Se activa si el formato es PAdES y se solicita rúbrica | Inexistente: no aplica | `ProtocolInvocationLauncherSelectCert.java:134-227` |
-| Comprobación de clave privada | Requiere clave privada para firmar | **Requiere clave privada** (`checkPrivateKeys=true`), pese a que solo devolverá la clave pública | `ProtocolInvocationLauncherSelectCert.java:178, 193` |
+| Comprobación de clave privada | Requiere clave privada para firmar | **Requiere clave privada** (`checkPrivateKeys=true`), solicitando PIN en tarjetas criptográficas para validar la entrada y permitir su almacenamiento en `sticky` | `ProtocolInvocationLauncherSelectCert.java:178, 193` |
 | Formato de la respuesta | Compuesto: `certEncoded \| signature [ \| extraData ]` | Simple: únicamente el certificado (cifrado o codificado) | `ProtocolInvocationLauncherSelectCert.java:233, 248, 262` |
 
 ---
@@ -166,15 +166,38 @@ posteriormente los específicos en `UrlParametersToSelectCert.setSelectCertParam
    - Si no se encuentra `stservlet` a pesar de haberse proporcionado `id`, lanza `ParameterException("No se ha recibido la direccion del servlet para el guardado del resultado de la operacion")` (`UrlParametersToSelectCert.java:179-181`).
    - Cuando se invoca vía socket local o WebSocket (`bySocket == true`), `servicesRequired` es `false`, por lo que `stservlet` es totalmente opcional y puede omitirse.
 
-### 2.3 Parámetros ignorados o restablecidos
+### 2.3 Tratamiento de datos (`dat`), configuración remota (`fileid`) y parámetros ignorados
 
-En el constructor de `UrlParametersToSelectCert` (`UrlParametersToSelectCert.java:69-71`), se fuerza explícitamente:
+En el constructor de `UrlParametersToSelectCert` (`UrlParametersToSelectCert.java:68-72`), el código incluye las siguientes inicializaciones explícitas:
+
 ```java
-setData(null);
-setFileId(null);
-setRetrieveServletUrl(null);
+public UrlParametersToSelectCert(final boolean servicesRequired) {
+    this.servicesRequired = servicesRequired;
+    setData(null);
+    setFileId(null);
+    setRetrieveServletUrl(null);
+}
 ```
-Aunque `UrlParameters.setCommonParameters` lee `dat` y `gzip` si viniesen en la URL, la operación `selectcert` nunca hace uso de los datos. Parámetros propios de firma como `op` (en la query), `cop`, `format`, `algorithm`, `filename`, `signProperties` o `batchpresignerurl` son totalmente ignorados y carecen de efecto alguno.
+
+Sin embargo, el orden de ensamblado de parámetros en `ProtocolInvocationUriParserUtil.getParametersToSelectCert` (`ProtocolInvocationUriParserUtil.java:171-177`) determina un comportamiento crítico respecto a estas variables:
+
+```java
+final UrlParametersToSelectCert ret = new UrlParametersToSelectCert(servicesRequired);
+ret.setCommonParameters(params);
+ret.setSelectCertParameters(params);
+return ret;
+```
+
+1. **Configuración remota mediante `fileid` plenamente operativa**:
+   `setFileId(null)` en el constructor no anula el parámetro `fileid`. Inmediatamente después, `ret.setCommonParameters(params)` (`UrlParameters.java:269-272`) lee `fileid` y `rtservlet` (`retrieveServletUrl`), asignándolos a la instancia. Esto permite que el despachador general en `ProtocolInvocationLauncher.java:384-403` detecte `if (params.getFileId() != null)` y descargue el XML con la configuración completa de la operación desde el servidor intermedio.
+2. **Ingesta y consumo inútil de memoria ante el parámetro `dat`**:
+   Las líneas `setData(null)` del constructor se ejecutan **antes** de llamar a `setCommonParameters`. Por tanto:
+   - Si una invocación errónea incluye el parámetro `dat` (datos en Base64 o URL remota de descarga), `UrlParameters.java:306-314` ejecuta incondicionalmente `setData(DataDownloader.downloadData(dataPrm, Boolean.parseBoolean(params.get(GZIPPED_DATA_PARAM))))`.
+   - Ni `setSelectCertParameters` ni `ProtocolInvocationLauncherSelectCert` vuelven a limpiar `data`, por lo que los bytes descargados o decodificados permanecen retenidos en memoria en la instancia de `UrlParametersToSelectCert` durante toda la vida de la operación, sin que `processSelectCert` llegue a consultarlos jamás.
+   - Si la URL proporcionada en `dat` resulta inalcanzable, o si los datos locales apuntan a esquemas no permitidos (`file:/`), `DataDownloader` o `setCommonParameters` arrojan una `ParameterException`, abortando la operación prematuramente con el código de error `SAF_03` (`ERROR_PARAMS`), a pesar de que la selección de certificados no requería datos.
+   - Si se proporcionan simultáneamente `dat` y `fileid`, la condición `if (!params.containsKey(DATA_PARAM))` en `UrlParameters.java:267` omite la lectura de `fileid`, impidiendo que `ProtocolInvocationLauncher` descargue el XML de configuración y haciendo fracasar la llamada.
+3. **Parámetros de firma ignorados sin efecto**:
+   Parámetros propios de la generación de firmas electrónicas tales como `op` (en la query), `cop`, `format`, `algorithm`, `filename`, `signProperties` o `batchpresignerurl` no son leídos por `setSelectCertParameters` ni transferidos al contexto de ejecución, siendo ignorados de forma silente.
 
 ---
 
@@ -298,10 +321,12 @@ final List<CertificateFilter> filters = filterManager.getFilters();
 final boolean mandatoryCertificate = filterManager.isMandatoryCertificate();
 ```
 
-El gestor procesa los filtros disyuntivos y conjuntivos definidos bajo las claves `filter` o `filters` (por ejemplo, `filter=nonexpired:`, `filter=subject.rfc2254:...`, `filter=signingcert:`, `filter=sscd:`):
+#### Omisión deliberada de `ExtraParamsProcessor.expandProperties`
+En `UrlParametersToSelectCert.java:191`, las propiedades adicionales se cargan mediante `AOUtil.base642Properties(props)` en un objeto `Properties` directo, sin invocar `ExtraParamsProcessor.expandProperties(params, signedData, format)`. A diferencia de las operaciones de firma (`sign`, `signandsave`), donde `expandProperties` expande alias como `expPolicy=FirmaAGE` en los identificadores técnicos de política para CAdES, XAdES o PAdES, en `selectcert` **no existe formato de firma ni datos a firmar**. Si `selectcert` intentase ejecutar `ExtraParamsProcessor.expandProperties`, la ausencia de un formato válido causaría que `expandPolicyKeys` arrojase fatalmente `IncompatiblePolicyException("El formato de firma null no esta soportado por la politica")`. En `selectcert`, el diccionario `properties` transporta exclusivamente directivas de filtrado de certificados (`filter`, `filters`) y de interfaz (`headless`, `mandatoryCertSelection`, `disableopeningexternalstores`), las cuales son procesadas íntegramente por `CertFilterManager`.
 
+#### Reglas de filtrado y autoselección:
 * **Filtro automático de caducidad**: Si la lista de filtros resultante está vacía (`filters.isEmpty()`), `CertFilterManager` añade automáticamente un `ExpiredCertificateFilter(false)` conforme a los criterios de la directiva ETSI TS 119 102-1 (`CertFilterManager.java:133-135`), impidiendo que se muestren certificados caducados salvo que el integrador haya definido filtros específicos de forma explícita.
-* **Control de selección automática (`mandatoryCertificate`)**:
+* **Control de selección automática y comportamiento `headless` (`mandatoryCertificate`)**:
   `CertFilterManager.isMandatoryCertificate` (`CertFilterManager.java:145-154`) evalúa dos propiedades:
   ```java
   final boolean headless = propertyFilters != null
@@ -337,14 +362,16 @@ dialog.show();
 
 #### Comportamiento de `dialog.show()` (`AOKeyStoreDialog.java:720-745`):
 
-1. **Selección automática sin ventana**: Si `mandatoryCertificate == true` y la lista de certificados filtrados contiene **exactamente un único certificado** (`namedCertificates.length == 1`), `dialog.show()` selecciona inmediatamente ese alias y retorna sin mostrar ninguna ventana gráfica (`AOKeyStoreDialog.java:726-729`).
-2. **Presentación modal interactiva**: Si hay varios certificados válidos (o si `mandatoryCertificate == false`), se despliega la ventana `AOUIFactory.showCertificateSelectionDialog(...)` para que el usuario escoja el certificado deseado.
+1. **Selección automática si hay un único candidato**: Si `mandatoryCertificate == true` y la lista de certificados tras aplicar los filtros contiene **exactamente un único certificado** (`namedCertificates.length == 1`), `dialog.show()` selecciona inmediatamente dicho alias y retorna de inmediato sin desplegar ninguna interfaz gráfica (`AOKeyStoreDialog.java:726-729`).
+2. **Presencia de múltiples certificados candidatos ante `headless=true`**: Si existen 2 o más certificados válidos que superen los filtros, la directiva `mandatoryCertificate` (activada por `headless=true` o `mandatoryCertSelection=false`) no realiza ninguna autoselección arbitraria. AutoFirma considera que no puede resolver la ambigüedad sin intervención y procede a invocar el diálogo interactivo `AOUIFactory.showCertificateSelectionDialog(...)`:
+   - En sistemas con entorno de escritorio gráfico (X11, Wayland, Windows, macOS), se presenta la ventana visual de selección para que el usuario elija su certificado.
+   - En entornos estrictamente desatendidos sin servidor de ventanas (servidores headless, pipelines de CI/CD), la llamada de Swing lanza `java.awt.HeadlessException`. Dicha excepción es absorbida por el bloque general `catch (final Exception e)` de `ProtocolInvocationLauncherSelectCert.java:217-225`, que registra `"Error al mostrar el dialogo de seleccion de certificados"` y devuelve el código de error `SAF_08` (`ERROR_CANNOT_ACCESS_KEYSTORE`). Asimismo, `ProtocolInvocationLauncherErrorManager.showError` consulta la propiedad de sistema de la JVM `es.gob.afirma.protocolinvocation.HeadLess` para decidir si suprime la ventana emergente modal de error.
 3. **Ausencia de certificados**: Si ningún certificado supera los filtros (`namedCertificates.length == 0` o el diálogo lanza `IllegalStateException`), se lanza `AOCertificatesNotFoundException` (`AOKeyStoreDialog.java:736`), que en `ProtocolInvocationLauncherSelectCert.java:208-216` detona el error `SAF_19` (`ERROR_NO_CERTIFICATES_KEYSTORE`).
 4. **Cancelación del usuario**: Si el usuario pulsa el botón «Cancelar» o cierra la ventana, `selectedAlias` es `null`, lanzando `AOCancelledOperationException` (`AOKeyStoreDialog.java:741`). En `ProtocolInvocationLauncherSelectCert.java:201-207`, esto detona la salida especial `"CANCEL"`.
 
-#### Obtención de la clave privada (`PrivateKeyEntry`):
+#### Exigencia de clave privada (`PrivateKeyEntry`) y solicitud de PIN:
 
-Tras cerrarse el diálogo con éxito, se recupera el contexto del almacén (que puede ser un almacén secundario si el usuario navegó hacia un fichero externo) y se extrae la clave:
+Tras cerrarse el diálogo con éxito, se recupera el contexto del almacén y se extrae la clave:
 
 ```java
 final CertificateContext context = dialog.getSelectedCertificateContext();
@@ -352,7 +379,14 @@ final KeyStoreManager currentKsm = context.getKeyStoreManager();
 pke = currentKsm.getKeyEntry(context.getAlias());
 ```
 
-Dado que `checkPrivateKeys` fue fijado a `true`, la entrada devuelta es garantizadamente un `PrivateKeyEntry`.
+Dado que el diálogo fue instanciado con `checkPrivateKeys = true` (`ProtocolInvocationLauncherSelectCert.java:178`), `KeyStoreUtilities.getAliasesByFriendlyName` filtra activamente los alias mediante `ksm.isKeyEntry(al)` (`KeyStoreUtilities.java:248`), ocultando cualquier certificado público que carezca de clave privada en el almacén.
+
+La posterior recuperación de `pke` mediante `currentKsm.getKeyEntry(context.getAlias())` obedece a dos necesidades arquitectónicas del protocolo:
+1. Asegurar que la entrada elegida corresponde a una credencial de firma completa y no a un mero certificado público huérfano.
+2. Permitir que, cuando la llamada incluye `sticky=true`, la `PrivateKeyEntry` pueda fijarse en la variable estática `ProtocolInvocationLauncher.stickyKeyEntry` (`ProtocolInvocationLauncherSelectCert.java:196`), quedando disponible para que operaciones consecutivas de firma (`sign`, `cosign`, etc.) en la misma sesión la reutilicen directamente sin volver a interactuar con el usuario.
+
+**Impacto en tarjetas inteligentes y tokens criptográficos (DNIe, PKCS#11):**
+Al invocar `currentKsm.getKeyEntry(context.getAlias())`, si el almacén o dispositivo hardware subyacente requiere autenticación para acceder a la clave privada o al slot criptográfico, el controlador PKCS#11 o el `PasswordCallback` de AutoFirma **solicita el PIN de la tarjeta al usuario durante la ejecución de `selectcert`**, aun cuando la operación no realiza ninguna firma electrónica y concluye devolviendo exclusivamente el certificado público X.509 (`certEncoded = pke.getCertificateChain()[0].getEncoded()`). Si el usuario cancela la introducción del PIN en el diálogo del controlador criptográfico, se produce una excepción de cancelación (`AOCancelledOperationException` o `BadPasswordProviderException`), abortando la operación.
 
 ---
 
@@ -658,30 +692,5 @@ La cancelación de usuario utiliza el literal no numérico `"CANCEL"`.
 2. **Transporte por socket local o WebSocket (`bySocket == true`)**:
    No se lanza `SocketOperationException`. El método retorna directamente el código de error (`ProtocolInvocationLauncherErrorManager.getErrorMessage(errorCode)`) o `"CANCEL"`. El socket o websocket lo envía al navegador, donde `autoscript.js` evalúa si la respuesta comienza por `"SAF_"` o es igual a `"CANCEL"`, ejecutando el callback de error correspondiente.
 
----
 
-## Lo que el código no aclara
 
-1. **Comentario engañoso heredado de operaciones de firma**:
-   En `ProtocolInvocationLauncherSelectCert.java:229-230` figura el siguiente comentario:
-   ```java
-   // Concatenamos el certificado utilizado para firmar y la firma con un
-   // separador para que la pagina pueda recuperar ambos
-   ```
-   Dicho comentario es un residuo copiado literalmente de `ProtocolInvocationLauncherSign.java:540`. La operación `selectcert` no concatena nada, no genera ninguna firma y solo procesa el certificado.
-2. **Inversión semántica de la excepción `SocketOperationException`**:
-   A pesar de su nombre, `SocketOperationException` solo se lanza cuando **no** se está utilizando comunicación por socket (`if (!bySocket) throw new SocketOperationException(...)`). Se utiliza como mecanismo interno de control de flujo para saltar al bloque `catch` de `ProtocolInvocationLauncher.java` que gestiona el envío de errores al servidor intermedio. Cuando se usa un socket real (`bySocket == true`), la excepción nunca se lanza y el método retorna la cadena de error directamente.
-3. **Requisito estricto de clave privada para una operación de lectura pública**:
-   En `ProtocolInvocationLauncherSelectCert.java:178`, se instancia `AOKeyStoreDialog` con `checkPrivateKeys = true`, y en la línea 193 se recupera el alias mediante `currentKsm.getKeyEntry(context.getAlias())`. Esto tiene dos consecuencias no documentadas:
-   - Certificados digitales instalados en el sistema que no posean clave privada asociada (por ejemplo, certificados públicos importados o certificados de autenticación corporativos huérfanos) son excluidos del diálogo y no pueden ser seleccionados.
-   - En tarjetas inteligentes o tokens criptográficos que requieren verificación de PIN previa a la apertura de la clave privada, solicitar `selectcert` puede forzar la introducción del PIN del dispositivo en el diálogo nativo, a pesar de que la aplicación solo utilizará la clave pública del certificado y no realizará ninguna firma.
-4. **Ausencia de llamada a `ExtraParamsProcessor.expandProperties`**:
-   A diferencia de `sign` y `signandsave`, donde las propiedades se normalizan y expanden, en `selectcert` las propiedades se leen directamente con `AOUtil.base642Properties` y se entregan a `CertFilterManager`. Esto implica que no se resuelven políticas ni alias de propiedades complejas que dependen del procesador general de parámetros extra.
-5. **Descarga inútil de datos en memoria si la URL incluye `dat`**:
-   En `UrlParametersToSelectCert.java:69`, el constructor resetea `data` a `null`. Sin embargo, en `ProtocolInvocationUriParserUtil.java:174`, se llama a `ret.setCommonParameters(params)` antes de `ret.setSelectCertParameters(params)`. Si una llamada a `selectcert` incluye erróneamente el parámetro `dat` (o `fileid` de datos), `setCommonParameters` decodifica o descarga el fichero a memoria antes de que la operación de selección lo ignore por completo, provocando un consumo de memoria innecesario.
-6. **Contaminación cruzada de `stickyKeyEntry` en sesiones compartidas**:
-   La variable `stickyKeyEntry` en `ProtocolInvocationLauncher.java:90` es un campo estático global de la JVM. En los modos permanentes de socket local o WebSocket, el proceso permanece activo para sucesivas peticiones del navegador. Si una aplicación web utiliza `sticky=true`, la clave queda en memoria. Si a continuación otra página web distinta invoca una operación en el mismo equipo con `sticky=true` y sin `resetsticky=true`, reutilizará inadvertidamente la clave privada seleccionada por la sesión anterior sin mediar intervención del usuario, al no existir un aislamiento de claves pegajosas por identificador de sesión (`idsession`) o por origen/dominio en el código Java.
-7. **Comportamiento en entornos sin interfaz (`headless=true`)**:
-   En `AOKeyStoreDialog.java:726-729`, si se especifica `headless=true` en las propiedades, el diálogo solo se omite si el número de certificados resultantes del filtrado es estrictamente igual a 1 (`namedCertificates.length == 1`). Si hay dos o más certificados disponibles que superen el filtro, el código intenta ejecutar `AOUIFactory.showCertificateSelectionDialog(...)`. En un servidor o entorno desatendido sin servidor gráfico X11, esto provocará una `HeadlessException` de AWT que se capturará como error genérico `SAF_08` (`ERROR_CANNOT_ACCESS_KEYSTORE`), en lugar de abortar con un código de error específico de ambigüedad en modo desatendido.
-8. **Discrepancia en la cobertura de pruebas unitarias**:
-   En la suite de pruebas del repositorio original `clienteafirma`, no existe ninguna clase de test unitario (`*SelectCertTest.java`) para validar el análisis de parámetros ni el comportamiento de `UrlParametersToSelectCert` o `ProtocolInvocationLauncherSelectCert`, siendo una de las operaciones con menor verificación automatizada en la base de código.

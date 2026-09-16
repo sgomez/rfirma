@@ -188,14 +188,25 @@ heredera de `UrlParameters`
    En `UrlParametersToSave.java:247-255`, si se han definido `exts` y la
    descripción proporcionada no finaliza ya en `")"`, el parser concatena las
    extensiones entre paréntesis al final de la descripción.
-   *Nota de implementación:* La rutina itera las extensiones concatenando `*.`
-   y cada extensión sin intercalar separadores (p. ej., para `exts=pdf,txt` y
-   `desc=Documentos`, genera `"Documentos (*.pdf*.txt)"`).
+   *Mecanismo de formateo:* La rutina itera las extensiones concatenando `*.`
+   y cada extensión sin intercalar ningún delimitador (p. ej., para `exts=pdf,txt`
+   y `desc=Documentos`, ejecuta `sb.append("*.").append(ext)` en bucle, generando
+   la cadena `"Documentos (*.pdf*.txt)"` en lugar de utilizar comas o espacios).
+   Esta cadena resultante es la que se asigna como descripción al filtro nativo
+   y se muestra en el desplegable de tipos de archivo de la interfaz gráfica.
 5. **Validación de identificadores de sesión (`id` / `fileid`):**
    `UrlParametersToSave.java:154-165` restringe la longitud máxima a 20 caracteres
    (`MAX_ID_LENGTH = 20`) y verifica que todos los caracteres sean alfanuméricos
    ASCII estrictos (`[a-z0-9]` tras conversión a minúsculas en locale inglés).
-   En caso contrario, arroja `ParameterException`.
+   Si contiene caracteres no alfanuméricos, arroja una `ParameterException` con
+   el mensaje literal:
+   `"El identificador de la firma debe ser alfanumerico."`
+   A pesar de tratarse de una operación utilitaria de guardado de ficheros (`save`)
+   y no de firma digital, este mensaje hace referencia explícita a la «firma»
+   debido a que el bloque de validación fue reutilizado directamente del parser
+   de firma (`UrlParametersToSign.java:188-193`). El error es capturado por
+   `ProtocolInvocationLauncher.java:516`, que despliega el diálogo modal de error
+   al usuario con dicho texto y retorna el código `SAF_03`.
 6. **Validación de URL de servlets (`stservlet`, `rtservlet`):**
    `UrlParameters.validateURL` (`UrlParameters.java:351-379`) exige protocolo
    `http` o `https`, prohíbe conexiones a direcciones locales (`localhost` o
@@ -245,14 +256,17 @@ AOUIFactory.getSaveDataToFile(
 );
 ```
 
-#### Quirk crítico en la construcción del filtro de extensiones:
+#### Defecto en la construcción del filtro de extensiones múltiples (BUG-17):
 En `ProtocolInvocationLauncherSave.java:86`, el array de extensiones se construye
 como `new String[] { options.getExtensions() }` pasando la cadena cruda (por
-ejemplo `"pdf,txt"`), en lugar de dividirla mediante `.split(",")`. Como
-consecuencia, si se especifican múltiples extensiones separadas por coma en una
-operación `save`, el `FileNameExtensionFilter` subyacente de Java busca una
-extensión literal `.pdf,txt`, fallando en el emparejamiento con archivos normales
-y anexando `.pdf,txt` al nombre si el usuario no especifica extensión.
+ejemplo `"pdf,txt"`), en lugar de dividirla mediante `.split(",")` como realiza
+correctamente `ProtocolInvocationLauncherLoad.java:98`. Como consecuencia, si se
+especifican múltiples extensiones en una operación `save`, el `FileNameExtensionFilter`
+subyacente de Java busca una extensión literal `.pdf,txt`. Esto causa que los ficheros
+con extensiones válidas (`.pdf` o `.txt`) no se muestren en el diálogo nativo y que,
+al guardar, AutoFirma anexe `.pdf,txt` al nombre (p. ej. `informe.pdf.pdf,txt`),
+corrompiendo el nombre de archivo en disco — ver detalle y mecanismo en
+[BUG-17 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-17-corrupción-de-nombres-y-fallo-de-filtrado-en-save-por-omisión-de-división-de-extensiones-múltiples-exts).
 
 ### 3.3 Directorio inicial y preferencias
 
@@ -309,7 +323,7 @@ diferenciada según el canal de transporte utilizado:
 * Si el usuario cancela, devuelve `"CANCEL"`.
 * Si ocurre un error, devuelve el código `SAF_nn` correspondiente.
 
-#### Quirk de compatibilidad en el cliente JavaScript (`autoscript.js`):
+#### Defecto de respuesta en guardado por WebSocket (BUG-18):
 En `autoscript.js:3423`, la rutina de recepción del WebSocket evalúa:
 ```javascript
 // autoscript.js:3423-3428
@@ -320,12 +334,14 @@ if (data == "SAVE_OK") {
     return;
 }
 ```
-Dado que el servidor WebSocket de AutoFirma devuelve `"OK"` (y no `"SAVE_OK"`),
-la condición `data == "SAVE_OK"` resulta falsa. El flujo desciende hasta la línea
-3482, donde `autoscript.js` confunde la respuesta con el resultado de una firma,
-intenta decodificar `"OK"` como Base64 mediante `Base64.decode(data, true)` y
-llama a `successCallback(signature, certificate)` pasando los bytes residuales
-de la decodificación de `"OK"`.
+Dado que el servidor WebSocket de AutoFirma devuelve directamente la cadena `"OK"`
+devuelta por `ProtocolInvocationLauncher.launch` (a diferencia del socket HTTP local
+donde `CommandProcessorThread.java:293` la transforma en `"SAVE_OK"`), la condición
+`data == "SAVE_OK"` resulta falsa. El flujo desciende hasta la línea 3482, donde
+`autoscript.js` asume que la respuesta es una firma en Base64, intenta decodificar `"OK"`
+mediante `Base64.decode(data, true)` e invoca `successCallback(signature, certificate)`
+entregando los bytes residuales de `"OK"` como firma y `null` como certificado — ver
+detalle y mecanismo en [BUG-18 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-18-incoherencia-de-respuesta-en-save-por-websocket-ok-frente-a-save_ok-provoca-procesamiento-erróneo-como-firma-en-autoscriptjs).
 
 ### 4.2 Devolución en Socket local (`afirma://service`)
 
@@ -404,9 +420,15 @@ A diferencia de `save`, `load` nunca procesa ni requiere datos binarios de entra
 | `v` | Entero (`1`–`4`) | No | Versión de protocolo declarada en la URL (extraída por `ProtocolInvocationLauncher.getVersion`). | `ProtocolInvocationLauncher.java:923-939` |
 | `mcv` | Cadena versionada (p. ej. `1.9.2`) | No | Versión mínima de la aplicación AutoFirma requerida. Si la versión instalada es inferior, falla con `SAF_41`. | `UrlParametersToLoad.java:153`, `UrlParameters.java:260-262`, `ProtocolInvocationLauncherLoad.java:73-84` |
 
-*Nota sobre parámetros ausentes en `load`:* A diferencia de `UrlParametersToSave`,
-`UrlParametersToLoad` **no valida ni almacena** los parámetros de servidor
-intermedio `stservlet`, `id` o `key`.
+*Nota sobre parámetros ausentes y gestión de `key` en `load`:*
+1. A diferencia de `UrlParametersToSave`, `UrlParametersToLoad` no define ni
+   analiza los parámetros de servidor intermedio `stservlet` ni `id`.
+2. Por herencia de la clase base `UrlParameters`, `setCommonParameters` sí analiza
+   y valida el parámetro de clave de cifrado `key` (`verifyCipherKey`), exigiendo
+   que tenga exactamente 8 caracteres (arrojando `SAF_03` si la longitud difiere).
+   Sin embargo, el objeto descifrador `desKey` resultante **nunca es consultado ni
+   utilizado** por `ProtocolInvocationLauncherLoad`: los ficheros leídos se
+   transmiten siempre en Base64 plano sin cifrar (ver secciones 6.3 y 7.1).
 
 ---
 
@@ -471,6 +493,8 @@ Tras la selección, `selectedDataFiles` contiene los objetos `File[]` elegidos.
 2. Lee la totalidad de los bytes del fichero mediante `AOUtil.getDataFromInputStream(bis)`.
 3. Si la lectura produce `null`, lanza `IOException("La lectura de datos para cargar ha devuelto un nulo")`.
 4. Codifica el array binario en Base64 estándar usando `Base64.encode(data)`.
+   Los datos se codifican directamente en claro sin aplicar cifrado simétrico
+   (ni DES ni AES), con independencia de si se especificó el parámetro `key`.
 5. Si ocurre cualquier fallo de acceso al sistema de ficheros o error de memoria,
    captura la excepción y lanza el error `SAF_25` (`ERROR_CANNOT_LOAD_DATA`).
 
@@ -505,6 +529,17 @@ anexo1.pdf:JVBERi0xLjQK...|datos.xml:PD94bWwgdmVyc2lvbj0iMS4wIi...|factura.xsig:
 del fichero con su extensión; **nunca incluye la ruta absoluta ni el directorio
 del sistema de ficheros local**, protegiendo la privacidad del árbol de directorios
 del usuario.
+
+*Nota sobre transmisión en texto plano y ausencia de cifrado:* A diferencia de las
+operaciones de firma (`sign`, `cosign`, `countersign`) o de selección de
+credenciales (`selectcert`), donde los datos sensibles devueltos se cifran
+simétricamente con la clave `key` proporcionada por el llamante mediante DES-ECB,
+en `load` los contenidos de los ficheros leídos del disco del usuario se devuelven
+invariablemente en Base64 plano sin cifrar. No existe soporte en el código de
+`ProtocolInvocationLauncherLoad` ni en los métodos receptores de `autoscript.js`
+para descifrar ficheros cargados. Por tanto, la confidencialidad de la lectura
+descansa por completo en el aislamiento del canal de comunicación local (socket TCP
+o WebSocket vinculado a `127.0.0.1`).
 
 ### 7.2 Entrega por Socket local (`afirma://service`)
 
@@ -638,18 +673,23 @@ else {
   caracteres seguros para URL (`-` y `_`) generados por AutoFirma por los
   caracteres estándar de Base64 (`+` y `/`).
 
-### 8.3 Incoherencia de nombres de parámetros en `AppAfirmaJSWebSocket.saveDataToFile`
+### 8.3 Incoherencia de nombres de parámetros en `AppAfirmaJSWebService.saveDataToFile` (BUG-19)
 
-En la implementación `AppAfirmaJSWebSocket` (`autoscript.js:4122-4123`), los
-parámetros para extensión y descripción se configuran erróneamente como:
+En la implementación para servidor intermedio `AppAfirmaJSWebService`
+(`autoscript.js:4122-4123`), los parámetros de extensión y descripción se
+configuran erróneamente con nombres no reconocidos:
 ```javascript
 params[params.length] = {key:"extension", value:extension};
 params[params.length] = {key:"description", value:description};
 ```
-Sin embargo, `UrlParametersToSave.java:30,24` busca exclusivamente `exts` y `desc`.
-Por tanto, cuando se invoca `saveDataToFile` a través de WebSocket usando esta
-rama de código, los filtros de extensión y la descripción son totalmente
-ignorados por AutoFirma.
+A diferencia de las variantes de WebSocket (`AppAfirmaWebSocketClient`, línea 2057)
+y de socket HTTP local (`AppAfirmaJSSocket`, línea 3580) que empaquetan correctamente
+`"exts"` y `"desc"`, `AppAfirmaJSWebService` genera `"extension"` y `"description"`.
+Dado que `UrlParametersToSave.java:24,30` busca exclusivamente `FILENAME_EXTS_PARAM = "exts"`
+y `FILETYPE_DESCRIPTION_PARAM = "desc"`, estos parámetros son ignorados de forma
+silenciosa. Como consecuencia, al invocar `saveDataToFile` a través de servidor
+intermedio, el diálogo nativo de guardado se abre sin filtros de extensión ni
+descripción — ver detalle y mecanismo en [BUG-19 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-19-discrepancia-de-nombres-de-parámetros-extensiondescription-vs-extsdesc-en-appafirmajswebservicesavedatatofile-ignora-los-filtros-en-servidor-intermedio).
 
 ---
 
@@ -665,7 +705,7 @@ y `protocolmessages.properties`:
 |---|---|---|---|---|
 | `SAF_01` | `ERROR_NULL_URI` | `save` / `load` | La URI de invocación recibida en `args[0]` es `null`. | Protocolo no soportado / URI nula (`ProtocolLauncher.1`). |
 | `SAF_02` | `ERROR_UNSUPPORTED_PROTOCOL` | `save` / `load` | La URI no comienza por el esquema `afirma://`. | Formato de llamada incorrecto (`ProtocolLauncher.2`). |
-| `SAF_03` | `ERROR_PARAMS` | `save` / `load` | Parámetros obligatorios ausentes (p. ej. ni `dat` ni `fileid` en `save`), sintaxis de URL no válida, caracteres prohibidos en `filename` o `exts`, o `id` no alfanumérico. | Error en los parámetros de entrada (`ProtocolLauncher.3`). |
+| `SAF_03` | `ERROR_PARAMS` | `save` / `load` | Parámetros obligatorios ausentes (p. ej. ni `dat` ni `fileid` en `save`), sintaxis de URL no válida, caracteres prohibidos en `filename` o `exts`, `id` no alfanumérico (reportando el mensaje literal «El identificador de la firma debe ser alfanumerico.» en `UrlParametersToSave.java:162`), o clave `key` con longitud distinta de 8 caracteres. | Error en los parámetros de entrada (`ProtocolLauncher.3`). |
 | `SAF_05` | `ERROR_CANNOT_SAVE_DATA` | `save` | Excepción de E/S o fallo al escribir los bytes en disco en `ProtocolInvocationLauncherSave.java:102`. | No se ha podido guardar los datos (`ProtocolLauncher.5`). |
 | `SAF_11` | `ERROR_SENDING_RESULT` | `save` | Fallo de conexión de red al enviar el resultado `OK` al servlet de almacenamiento en `ProtocolInvocationLauncherSave.java:124`. | Error en el envío del resultado de la operación (`ProtocolLauncher.11`). |
 | `SAF_13` | `ERROR_LOCAL_ACCESS_BLOCKED` | `save` | Se especificó un servlet con dirección `localhost` o `127.0.0.1`, bloqueado por seguridad en `UrlParameters.java:370`. | Se ha pedido acceso a una dirección local, pero por seguridad se ha bloqueado el acceso (`ProtocolLauncher.13`). |
@@ -678,58 +718,3 @@ y `protocolmessages.properties`:
 | `CANCEL` | `RESULT_CANCEL` | `save` / `load` | El usuario pulsó el botón Cancelar o cerró la ventana del diálogo selector de ficheros. | `CANCEL` (sin código `SAF_`, interceptado por `autoscript.js` para emitir `AOCancelledOperationException`). |
 | `MEMORY_ERROR` | `MEMORY_ERROR` | `save` | La JVM se quedó sin memoria intentando procesar un fichero de tamaño excesivo. | El fichero que se pretende firmar o guardar excede de la memoria disponible para la aplicación. |
 
----
-
-## Lo que el código no aclara
-
-El análisis detallado del código original de AutoFirma 1.9.2 revela las
-siguientes anomalías, contradicciones y comportamientos no documentados:
-
-1. **Bug en el filtrado múltiple de extensiones en `save`:**
-   En `ProtocolInvocationLauncherSave.java:86`, el array de extensiones se crea
-   como `new String[] { options.getExtensions() }` en lugar de separar los
-   elementos con `.split(",")`. Si una invocación solicita
-   `afirma://save?exts=pdf,txt`, el filtro resultante no reconoce ficheros `.pdf`
-   ni `.txt`, sino que exige literalmente la extensión `.pdf,txt`. Si el usuario
-   guarda el archivo como `prueba.pdf`, `JSEUIManager.java:775` no encuentra la
-   extensión `.pdf,txt` y renombra automáticamente el fichero como
-   `prueba.pdf.pdf,txt`.
-2. **Incoherencia de nombres de parámetros en `AppAfirmaJSWebSocket`:**
-   En `autoscript.js:4122-4123`, el cliente construye la petición de guardado
-   con las claves `extension` y `description`, mientras que `UrlParametersToSave.java:30,24`
-   únicamente busca `exts` y `desc`. Esto provoca que en invocaciones WebSocket
-   los filtros y descripciones pasados desde JavaScript sean silenciosamente
-   ignorados.
-3. **Incoherencia en la respuesta de `save` por WebSocket:**
-   En `autoscript.js:3423`, la rutina de procesado WebSocket comprueba
-   estrictamente `if (data == "SAVE_OK")`. Sin embargo, `ProtocolInvocationLauncherSave.java:135`
-   devuelve la cadena `"OK"`. En el transporte socket local, `CommandProcessorThread.java:295`
-   subsana esto transformando explícitamente `"OK"` en `"SAVE_OK"`; pero en
-   WebSocket dicha transformación no existe, lo que causa que `autoscript.js`
-   interprete erróneamente `"OK"` como una firma electrónica codificada en Base64.
-4. **Incompatibilidad arquitectónica y fallo crítico de `load` en Servidor Intermedio:**
-   Aunque `ProtocolInvocationLauncher.java:753` admite invocar `load` en modo
-   servidor intermedio, `UrlParametersToLoad` no recupera `stservlet` ni `id`,
-   `ProtocolInvocationLauncherLoad` jamás envía los datos leídos por red, y ante
-   cualquier error o cancelación, la llamada a
-   `sendDataToServer(..., params.getStorageServletUrl().toString(), ...)` arroja un
-   `NullPointerException` no controlado en `ProtocolInvocationLauncher.java:808`.
-   Por ello, `autoscript.js:4149` desactiva de forma tajante la carga de ficheros
-   por servidor intermedio arrojando una excepción en el navegador.
-5. **Formateo defectuoso de la descripción generada en `save`:**
-   En `UrlParametersToSave.java:247-255`, cuando se añade la lista de extensiones
-   a la descripción, la concatenación produce una cadena sin espacios ni comas
-   entre las extensiones (p. ej. `Documento (*.pdf*.txt)` en lugar de
-   `Documento (*.pdf, *.txt)`).
-6. **Mensaje de error fuera de contexto en `save`:**
-   Al validar el identificador de sesión en `UrlParametersToSave.java:162`, si
-   contiene caracteres no alfanuméricos se arroja la excepción:
-   `"El identificador de la firma debe ser alfanumerico."`, evidenciando que el
-   código fue copiado literalmente del validador de operaciones de firma sin
-   adaptar el texto a una operación de guardado de ficheros.
-7. **Ausencia de canal cifrado para los datos leídos en `load`:**
-   A diferencia de `selectcert` y de las operaciones de firma en las que los datos
-   devueltos pueden cifrarse con la clave simétrica DES (`key`), la respuesta de
-   `load` viaja siempre en texto plano Base64. En redes locales sin TLS en el
-   socket local, los contenidos íntegros de los ficheros del usuario quedan
-   expuestos en tránsito.

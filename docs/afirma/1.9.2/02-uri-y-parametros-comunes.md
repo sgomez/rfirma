@@ -222,7 +222,7 @@ El procesamiento de parámetros utiliza tres excepciones especializadas:
 |---|---|---|---|
 | `ParameterException` | `Exception` | Parámetros obligatorios ausentes, formatos inválidos, longitudes excedidas o caracteres no permitidos (`afirma-core/.../ParameterException.java:13`). | `SAF_03` (`ProtocolInvocationLauncherErrorManager.ERROR_PARAMS`) |
 | `ParameterLocalAccessRequestedException` | `ParameterException` | Detección de host local (`localhost`, `127.0.0.1`) en las URL de servlets remotos (`afirma-core/.../ParameterLocalAccessRequestedException.java:14`). | `SAF_13` (`ProtocolInvocationLauncherErrorManager.ERROR_LOCAL_ACCESS_BLOCKED`) |
-| `ParameterNeedsUpdatedVersionException` | `ParameterException` | Declarada para indicar versión obsoleta (`afirma-core/.../ParameterNeedsUpdatedVersionException.java:14`). Su constructor es de paquete y **nunca es instanciada ni lanzada** en el código (código muerto). | N/A (capturada de forma preventiva para `SAF_41` en `ProtocolInvocationLauncher.java:504, 616, 726, 811`). |
+| `ParameterNeedsUpdatedVersionException` | `ParameterException` | Declarada para indicar versión obsoleta (`afirma-core/.../ParameterNeedsUpdatedVersionException.java:14`). Su constructor posee visibilidad de paquete (`ParameterNeedsUpdatedVersionException.java:18`) y **nunca es instanciada ni lanzada** en ninguna parte del repositorio (código muerto). Los bloques `catch` que la capturan son inalcanzables. | N/A (capturada preventivamente para `SAF_41` en `ProtocolInvocationLauncher.java:504, 616, 726, 811`, pero inalcanzable en ejecución). |
 
 ---
 
@@ -254,8 +254,9 @@ constante en código, tipo, restricciones sintácticas y comportamiento.
   `fileid` y utiliza su valor como identificador de sesión:
   `else if (params.containsKey(FILE_ID_PARAM)) { sessionId = params.get(FILE_ID_PARAM); }`
   (`UrlParametersToSign.java:214-216`).
-  En `UrlParametersToLoad.java`, el parámetro `id` **no se analiza**
-  (su mapa de parámetros no incluye `ID_PARAM`).
+  En `UrlParametersToLoad.java`, el parámetro `id` **no se analiza** en
+  `setLoadParameters` ni se adopta `fileid` como identificador de sesión, por lo
+  que `params.getId()` retorna siempre `null`.
 * **Propósito:** Correlaciona la petición con el resultado subido al servlet
   de almacenamiento temporal (`StorageService`).
 
@@ -282,6 +283,11 @@ canal de comunicación:
     versiones `1`, `2` y `3`.
   * Si la versión no está soportada, lanza `UnsupportedProtocolException`,
     mostrando el error `SAF_21` (`ERROR_UNSUPPORTED_PROCEDURE`).
+* **Consecuencia de la asimetría:** Como la omisión de `v` asigna el valor por
+  defecto `1`, una invocación `afirma://service?...` sin parámetro `v` arranca
+  correctamente (pues `1` pertenece a `{1, 2, 3}`), mientras que una invocación
+  `afirma://websocket?...` sin `v` falla de forma fulminante con error `SAF_21`
+  al no admitir la versión `1`.
 
 #### B) Parámetro `ver` (en operaciones de datos y servidor intermedio)
 * **Constante:** `VER_PARAM = "ver"` (`UrlParametersToSign.java:38`,
@@ -306,10 +312,30 @@ canal de comunicación:
 * **Función `parseProtocolVersion(version)`:**
   Parsea la cadena con `Integer.parseInt(version)`. Si es nula o inválida,
   devuelve `1` (`907-915`).
-* **Interacción clave:** Si la llamada proviene de un canal socket/websocket
-  activo, `requestedProtocolVersion` ya contiene la versión fijada en la
-  conexión inicial (`!= -1`), por lo que el parámetro `ver` de la operación
-  **es completamente ignorado**.
+* **Comportamiento ante confusión de `v` con `ver` en invocación directa:**
+  Si un llamante invoca una operación directa enviando `v=3` en lugar de `ver=3`,
+  el analizador sintáctico de la operación solo busca la clave `ver`. Al no
+  encontrarla, fija la versión mínima en `"0"` (`ProtocolVersion.VERSION_0.getVersion()`).
+  Seguidamente, `parseProtocolVersion("0")` evalúa a `0`, fijando
+  `requestedProtocolVersion = 0`. El parámetro `v` es **completamente ignorado**
+  y AutoFirma opera en modo de compatibilidad legado versión 0, omitiendo los
+  metadatos `extraData` en la respuesta.
+* **Comportamiento en órdenes dentro de socket (`cmd`):** Si la llamada proviene
+  de un canal socket/websocket activo, `requestedProtocolVersion` ya contiene la
+  versión fijada en el apretón de manos inicial (`!= -1`). Por ello, la condición
+  `if (requestedProtocolVersion == -1)` evalúa `false` y el parámetro `ver`
+  incluido dentro del comando `cmd` es **completamente ignorado**.
+* **Ausencia de cota inferior en `ProtocolVersion.support`:** El método
+  `ProtocolVersion.support(int)` (`ProtocolVersion.java:62-64`) evalúa únicamente
+  `this.version >= protocolVersion`. Al no comprobar una cota inferior, cualquier
+  número entero negativo (como `ver=-10`) es considerado soportado por
+  `VERSION_4` (`4 >= -10`), degradando la ejecución a la variante de procesador
+  de versión 0 en `selectProcessor`.
+* **Defecto en URLs largas por servidor intermedio:** Cuando una invocación por
+  servidor intermedio transporta los parámetros en un XML remoto, la URI inicial
+  carece de `ver` y fija `requestedProtocolVersion = 0`. `launch()` omite
+  actualizar `requestedProtocolVersion` tras descargar el XML, perdiendo la
+  versión solicitada (ver [BUG-07 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-07-pérdida-de-la-versión-negociada-y-metadatos-extradata-en-servidor-intermedio-con-urls-largas)).
 
 ### 6.3 `dat` y `gzip` — Datos inline y descompresión
 
@@ -386,6 +412,11 @@ canal de comunicación:
   `ParameterException("No se ha recibido la direccion del servlet para el guardado del resultado de la operacion")`
   (`UrlParametersToSign.java:273-275`, `UrlParametersToSignAndSave.java:266-268`,
   `UrlParametersToSelectCert.java:179-181`, `UrlParametersForBatch.java:280-282`).
+* **Ausencia en `load` y error fatal:** La clase `UrlParametersToLoad` **no analiza**
+  `stservlet`. En caso de producirse un error en invocaciones sin socket,
+  `ProtocolInvocationLauncher.java:808` intenta acceder a
+  `params.getStorageServletUrl().toString()`, arrojando un `NullPointerException`
+  que bloquea la notificación del error (ver [BUG-04 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-04-inoperancia-funcional-de-afirmaload-por-servidor-intermedio-y-nullpointerexception-en-gestión-de-errores)).
 
 ### 6.7 `key` — Clave de cifrado simétrico para el servidor intermedio
 
@@ -487,10 +518,11 @@ AutoFirma admite la configuración previa del almacén de claves a abrir:
 * **Tipo:** Cadena.
 * **Procesamiento:** Se extrae y almacena únicamente en `UrlParametersToSign.java:241-243`
   y `UrlParametersForBatch.java:221-223`.
-* **Uso real en el código:** Se guarda en la variable de instancia `this.appName`,
+* **Inercia funcional:** Se guarda en la variable de instancia `this.appName`,
   accesible mediante el getter `getAppName()`. Sin embargo, **ninguna clase de
-  la aplicación llama a `getAppName()`** en todo el repositorio. Se conserva
-  por motivos de compatibilidad sintáctica con invocaciones externas.
+  la aplicación llama a `getAppName()`** en todo el repositorio. No tiene ningún
+  impacto en la interfaz visual, en los diálogos, en los mensajes de log ni en
+  la lógica criptográfica. Se conserva exclusivamente por compatibilidad léxica.
 
 ### 6.13 `sticky` y `resetsticky` — Persistencia del certificado en sesión
 
@@ -504,22 +536,36 @@ no volver a solicitar confirmación en firmas consecutivas:
 * **Estado en memoria:** Reside en un campo estático de la JVM:
   `ProtocolInvocationLauncher.stickyKeyEntry`
   (`ProtocolInvocationLauncher.java:90, 110-120`).
-* **Comportamiento durante la selección de certificado:**
+* **Ciclo de vida y comportamiento:**
+  * Si `resetsticky=true`: se ignora cualquier clave prefijada y se fuerza al
+    usuario a seleccionar un certificado en el diálogo visual.
   * Si `sticky=true`, `resetsticky=false` y `stickyKeyEntry != null`:
     se reutiliza directamente la entrada de clave existente sin mostrar diálogo
-    al usuario (`ProtocolInvocationLauncherSign.java:518-521`).
+    al usuario (`ProtocolInvocationLauncherSign.java:518-521`,
+    `ProtocolInvocationLauncherSignAndSave.java:511-512`,
+    `ProtocolInvocationLauncherSelectCert.java:139-142`,
+    `ProtocolInvocationLauncherBatch.java:232-235`).
   * Si la operación culmina con éxito:
     `ProtocolInvocationLauncher.setStickyKeyEntry(stickySignatory ? pke : null)`
-    (`ProtocolInvocationLauncherSign.java:643`). Si `sticky=true`, se guarda la
-    clave privada; si `sticky=false`, **se borra cualquier clave previamente
+    (`ProtocolInvocationLauncherSign.java:643`,
+    `ProtocolInvocationLauncherSignAndSave.java:672`,
+    `ProtocolInvocationLauncherSelectCert.java:196-198`,
+    `ProtocolInvocationLauncherBatch.java:294-296`). Si `sticky=true`, se guarda la
+    clave privada; si `sticky=false`, **se purga cualquier clave previamente
     fijada**.
-  * Si `resetsticky=true`: se ignora cualquier clave prefijada y se obliga al
-    usuario a seleccionar un nuevo certificado.
-* **Alcance:** Dado que `stickyKeyEntry` es estático en el proceso de la JVM,
-  la persistencia **solo funciona en los transportes de larga duración**
-  (Socket local o WebSocket). En el transporte por servidor intermedio, donde
-  cada invocación por URI ejecuta un proceso de sistema operativo nuevo, el valor
-  no sobrevive entre ejecuciones.
+  * Si la operación falla con error (`SocketOperationException`), la clave
+    fijada se purga a `null` (`ProtocolInvocationLauncherSign.java:654`,
+    `ProtocolInvocationLauncherSignAndSave.java:682`,
+    `ProtocolInvocationLauncherBatch.java:334`).
+  * Si la operación de lote es cancelada por el usuario, también se purga a `null`
+    (`ProtocolInvocationLauncherBatch.java:355`).
+* **Fallo de aislamiento de sesión:** Dado que `stickyKeyEntry` es una variable
+  estática global de la JVM, no existe aislamiento por `idsession`, por pestaña
+  ni por origen web: el estado es del proceso, no de la sesión (ver [BUG-06 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-06-persistencia-de-certificado-sticky-en-campo-estático-de-jvm)).
+* **Inoperancia en servidor intermedio:** En el transporte por servidor intermedio,
+  cada invocación por URI ejecuta un proceso de sistema operativo nuevo que concluye
+  de inmediato con `forceCloseApplication(0)`, por lo que el estado en memoria no
+  sobrevive entre peticiones consecutivas.
 
 ### 6.14 `jvc` — Código de versión del JavaScript
 
@@ -533,8 +579,13 @@ no volver a solicitar confirmación en firmas consecutivas:
   Si `jvc < MIN_JAVASCRIPT_VERSION_CODE_NEEDED` (es decir, menor estricto que 1),
   se muestra un diálogo modal de aviso al usuario con el texto de `ProtocolLauncher.51`
   (*«Se está utilizando una versión antigua del cliente web...»*).
-  La versión actual de `autoscript.js` declara `VERSION_CODE = 3` (`autoscript.js:27`)
-  y envía siempre `jvc=3` (`autoscript.js:4362`).
+* **Inoperancia práctica del aviso:** Como tanto el código por defecto ante
+  omisión o error como el mínimo exigido valen `1`, la condición `jvc < 1` evalúa
+  `false` ante cualquier invocación legítima o desactualizada sin parámetro `jvc`.
+  El diálogo de advertencia **solo es alcanzable si un cliente envía deliberadamente
+  un número entero no positivo** (`jvc <= 0`). El cliente `autoscript.js` actual
+  declara `VERSION_CODE = 3` (`autoscript.js:27`) y envía siempre `jvc=3`
+  (`autoscript.js:4362`), por lo que nunca activa este aviso.
 
 ---
 
@@ -569,7 +620,7 @@ La siguiente tabla resume qué parámetros comunes reconoce cada clase de parám
 | `gzip` | Sí | Sí | Sí | **No** | **No** | Sí |
 | `fileid` | Sí | Sí | Sí | Sí (en launcher) | Sí | Sí |
 | `rtservlet` | Sí | Sí | Sí | Sí (en launcher) | Sí | Sí |
-| `stservlet` | Sí | Sí | Sí | Sí (en launcher) | Sí | Sí |
+| `stservlet` | Sí | Sí | Sí | **No** | Sí | Sí |
 | `key` | Sí | Sí | Sí | Sí (en launcher) | Sí | Sí |
 | `properties` | Sí | Sí | **No** | **No** | Sí | Sí |
 | `keystore`/`ksb64` | Sí | Sí | **No** | **No** | Sí | Sí |
@@ -579,58 +630,11 @@ La siguiente tabla resume qué parámetros comunes reconoce cada clase de parám
 | `sticky` | Sí | Sí | **No** | **No** | Sí | Sí |
 | `resetsticky` | Sí | Sí | **No** | **No** | Sí | Sí |
 
----
+*Nota sobre `UrlParametersToLoad`:* Aunque `ProtocolInvocationLauncher.java:767-810`
+intenta invocar `requestWait` y notificar errores usando
+`params.getStorageServletUrl()` y `params.getId()`, `UrlParametersToLoad` no
+procesa `id` ni `stservlet`. Como consecuencia, ambos valores son `null`,
+haciendo inviable el retorno de datos por servidor intermedio y provocando un
+`NullPointerException` al gestionar errores en dicho canal
+(ver [BUG-04 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-04-inoperancia-funcional-de-afirmaload-por-servidor-intermedio-y-nullpointerexception-en-gestión-de-errores)).
 
-## Lo que el código no aclara
-
-**Incoherencia entre `ver` y `v`.** El parámetro de versión de la URI se llama
-`v` en el arranque de sockets y websockets (`ProtocolInvocationLauncher.java:75`),
-pero se llama `ver` en los parsers de operaciones (`UrlParametersToSign.java:38`).
-Si un invocador envía `afirma://sign?v=3...`, el parser de firma busca `ver`,
-no lo encuentra y asume `ProtocolVersion.VERSION_0` (versión 0)
-(`UrlParametersToSign.java:238`), ignorando silenciosamente el parámetro `v`.
-
-**Algoritmos soportados dispares entre `sign` y `signandsave`.**
-El conjunto `SUPPORTED_SIGNATURE_ALGORITHMS` de `UrlParametersToSign`
-(`UrlParametersToSign.java:60-74`) incluye algoritmos ECDSA (`SHA1withECDSA`,
-`SHA256withECDSA`, `SHA384withECDSA`, `SHA512withECDSA`). En cambio, el conjunto
-de `UrlParametersToSignAndSave` (`UrlParametersToSignAndSave.java:67-77`) **no los
-contempla**: únicamente admite variantes RSA. Intentar ejecutar una operación
-`signandsave` con ECDSA produce un error `ParameterException("Algoritmo de firma no soportado")`
-(`285`). El código no justifica esta asimetría.
-
-**`ParameterNeedsUpdatedVersionException` es código muerto.** La excepción
-está declarada en `afirma-core` (`ParameterNeedsUpdatedVersionException.java:14`)
-y se captura de forma explícita en varios bloques `catch` de
-`ProtocolInvocationLauncher.java` (`504, 616, 726, 811`). Sin embargo, su
-constructor es de visibilidad de paquete y ninguna clase del proyecto la lanza.
-La verificación de `mcv` lanza en su lugar una `SocketOperationException` con
-código `SAF_41`.
-
-**El aviso de `jvc` es inalcanzable con parámetros ausentes.**
-`DEFAULT_JAVASCRIPT_VERSION_CODE` y `MIN_JAVASCRIPT_VERSION_CODE_NEEDED` valen
-ambos `1` (`ProtocolInvocationLauncher.java:64, 66`). Cuando `jvc` no se pasa en
-la URI o contiene un valor no numérico, la excepción se captura y se asigna el
-valor por defecto `1` (`202`). Por tanto, la condición `jvc < 1` solo puede
-dispararse si el llamador envía intencionadamente un número igual o menor que 0
-(como `jvc=0` o `jvc=-1`).
-
-**`load` carece de análisis de servlets pero el launcher los utiliza.**
-`UrlParametersToLoad.java` no analiza ni declara las constantes `id`, `fileid`,
-`stservlet` ni `rtservlet`. Sin embargo, `ProtocolInvocationLauncher.java`
-invoca `params.getFileId()` (`767`), `params.getStorageServletUrl()` (`791, 803`)
-y `params.getId()` (`791, 804`). Al no haberse parseado estos campos en la
-lectura de la URL, tales llamadas devuelven `null` a menos que los parámetros
-hayan sido inyectados por otra vía.
-
-**`appname` se analiza pero nunca se consulta.** Tanto `UrlParametersToSign`
-como `UrlParametersForBatch` definen el parámetro `appname` y lo almacenan en
-la propiedad `appName`, pero ningún componente de lógica de negocio o interfaz
-de usuario consume el método `getAppName()`.
-
-**`resetsticky` y `sticky` sin aislamiento multiusuario.**
-La referencia al certificado y clave fija se almacena en el campo estático
-`ProtocolInvocationLauncher.stickyKeyEntry` (`ProtocolInvocationLauncher.java:90`).
-Al ser estático para toda la JVM, en caso de múltiples hilos concurrentes en
-comunicación por socket o websocket no existe aislamiento de sesión: una
-operación con `sticky=true` puede afectar a peticiones posteriores concurrentes.

@@ -93,7 +93,7 @@ Al igual que el resto de operaciones, se aceptan tanto la sintaxis estándar sin
 | Nombre propuesto de archivo | Ignorado en URI | Parámetro `filename` en URI (con validación de caracteres ilegales) | `UrlParametersToSignAndSave.java:330-341` |
 | Exportación a disco | No existe | Obligatoria: diálogo interactivo `AOUIFactory.getSaveDataToFile` | `ProtocolInvocationLauncherSignAndSave.java:543` |
 | Parámetros adicionales de guardado | No reconocidos | `filenameSaveExts`, `filenameSaveDescription`, `filenameSaveCurrentDir` en `extraParams` | `ProtocolInvocationLauncherSignAndSave.java:537-546` |
-| Soporte de `anotherParams` | Sí (`getParametersToSign` llama a `ret.setAnotherParams`) | No (`getParametersToSignAndSave` omite la llamada; siempre vacío) | `ProtocolInvocationUriParserUtil.java:145, 156-162` |
+| Soporte de `anotherParams` | Sí (`getParametersToSign` llama a `ret.setAnotherParams`) | No (`getParametersToSignAndSave` omite la llamada; siempre vacío — ver [BUG-14](A1-bugs-autofirma.md#bug-14-omisión-de-setanotherparams-en-signandsave-descarta-parámetros-de-configuración-para-plugins)) | `ProtocolInvocationUriParserUtil.java:145, 156-162` |
 
 ---
 
@@ -126,9 +126,9 @@ public static UrlParametersToSignAndSave getParametersToSignAndSave(final Map<St
 
 | Parámetro | Tipo / Formato | Obligatorio | Descripción | Cita |
 |---|---|---|---|---|
-| `cop` | `String` (`"sign"`, `"cosign"`, `"countersign"`) | No formalmente en parser, sí en ejecución | Operación criptográfica real a ejecutar. Mapea internamente a `SignOperation.Operation`. Si se omite, su valor es `null` y genera `NullPointerException` en `executeSign`, derivando en error `SAF_09`. | `UrlParametersToSignAndSave.java:29, 237`, `ProtocolInvocationLauncherSignAndSave.java:155, 728` |
+| `cop` | `String` (`"sign"`, `"cosign"`, `"countersign"`) | No formalmente en parser, sí en ejecución | Operación criptográfica real a ejecutar. Mapea internamente a `SignOperation.Operation`. Si se omite o contiene un valor no reconocido, su valor es `null` y desencadena `NullPointerException` en `executeSign`, derivando en error `SAF_09` (o `SAF_03` si el firmador implementa `OptionalDataInterface`) tras solicitar certificado y PIN — ver [BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09). | `UrlParametersToSignAndSave.java:29, 237`, `ProtocolInvocationLauncherSignAndSave.java:155, 728` |
 | `format` | `String` | **Sí** | Formato de firma solicitado (`PAdES`, `CAdES`, `XAdES`, `FacturaE`, `AUTO`, etc.). Si falta, lanza `ParameterException("No se ha recibido el formato de firma")` (`SAF_03`). | `UrlParametersToSignAndSave.java:32, 272-277` |
-| `algorithm` | `String` | **Sí** | Algoritmo de hash o firma. Debe pertenecer obligatoriamente a la lista fija `SUPPORTED_SIGNATURE_ALGORITHMS`. Si no coincide, lanza `ParameterException` (`SAF_03`). | `UrlParametersToSignAndSave.java:35, 67-77, 280-288` |
+| `algorithm` | `String` | **Sí** | Algoritmo de hash o firma. Debe pertenecer obligatoriamente a la lista fija `SUPPORTED_SIGNATURE_ALGORITHMS`. Si no coincide, lanza `ParameterException` (`SAF_03`). Omite soporte directo de algoritmos ECDSA — ver [BUG-05](A1-bugs-autofirma.md#bug-05-rechazo-de-algoritmos-ecdsa-en-la-operación-signandsave). | `UrlParametersToSignAndSave.java:35, 67-77, 280-288` |
 | `filename` | `String` | No | Nombre de fichero propuesto para el diálogo de guardado. Se valida contra la lista de caracteres ilegales `\/:*?"<>|`. Si contiene alguno, lanza `ParameterException` (`SAF_03`). | `UrlParametersToSignAndSave.java:38, 330-341` |
 | `dat` | Base64 URL-safe / URL | Condicional | Datos o documento a firmar, en Base64 o URL remota (salvo prefijo `file:/`). Si no se indica ni viene `fileid`, AutoFirma pedirá al usuario que seleccione un fichero local mediante un diálogo modal. | `UrlParameters.java:299-319`, `ProtocolInvocationLauncherSignAndSave.java:293-350` |
 | `gzip` | `Boolean` (`"true"`/`"false"`) | No | Indica si los datos de `dat` están comprimidos con gzip. | `UrlParameters.java:311` |
@@ -164,7 +164,12 @@ minúsculas) con una de las siguientes cadenas (`68-77`):
 Cualquier otro valor (por ejemplo, algoritmos con curvas elípticas directas como
 `SHA256withECDSA`, o algoritmos no reconocidos) lanzará de inmediato:
 `ParameterException("Algoritmo de firma no soportado: " + algo)`, interrumpiendo
-el procesamiento con `SAF_03`. El algoritmo final compuesto con el tipo real de la
+el procesamiento con `SAF_03`. A diferencia de `UrlParametersToSign.java:70-73`
+(que sí incluye `SHA1withECDSA`, `SHA256withECDSA`, `SHA384withECDSA` y
+`SHA512withECDSA`), `UrlParametersToSignAndSave` omite estos identificadores,
+rechazando peticiones legítimas de firma elíptica con `SAF_03` — ver
+[BUG-05](A1-bugs-autofirma.md#bug-05-rechazo-de-algoritmos-ecdsa-en-la-operación-signandsave).
+El algoritmo final compuesto con el tipo real de la
 clave privada seleccionada (`RSA`, `EC`) se resuelve posteriormente durante la fase
 de firma mediante `AOSignConstants.composeSignatureAlgorithmName`
 (`ProtocolInvocationLauncherSignAndSave.java:664`).
@@ -279,6 +284,13 @@ seguridad y preparación que la operación `sign`:
    permiso `Permission.INLINE_PROCESS` cuyo `checkTrigger(operation)` devuelva
    `true`. En caso afirmativo, se utiliza el procesador del plugin; en caso
    contrario, se utiliza la instancia por defecto `NativeSignDataProcessor(protocolVersion)`.
+   Si el procesador del plugin devuelve múltiples operaciones en `preProcess`
+   (`isMassiveSign = operations.size() > 1`), el bucle iterativo (`167-188`) invoca
+   `sign()` individualmente para cada una de ellas, desplegando un diálogo de
+   guardado en disco (`AOUIFactory.getSaveDataToFile`) por cada documento firmado.
+   No obstante, en la fase final de devolución, `NativeSignDataProcessor.postProcess`
+   retiene exclusivamente el primer resultado (`results.get(0)`), descartando del
+   canal de respuesta web las firmas secundarias y sus metadatos.
 3. **Identificación de formato `AUTO`:**
    Si `format` es `"AUTO"`, se invoca `ProtocolInvocationLauncherUtil.identifyFormatFromData(data, cryptoOperation)`
    (`374`). Si no es posible identificar un firmador compatible, se aborta con
@@ -302,6 +314,24 @@ seguridad y preparación que la operación `sign`:
 7. **Posicionamiento de firma visible (PDF / PAdES):**
    Si `isRubricPositionRequired(format, extraParams)` es verdadero (`495`), se despliega
    la interfaz interactiva de rúbrica `SignPdfDialog.getVisibleSignatureDialog` (`970-978`).
+   * *Discrepancia entre Javadoc y código en la evaluación de coordenadas:* Aunque el
+     Javadoc de `isRubricPositionRequired` (`920-934`) estipula cuatro condiciones
+     acumulativas —siendo la cuarta que los parámetros adicionales NO definan
+     previamente las coordenadas de firma (`signaturePositionOnPageLowerLeftX`, etc.)—,
+     la implementación real (`936-965`) omite por completo la comprobación de coordenadas.
+     * Si la sede envía coordenadas fijas **sin** incluir el parámetro `visibleSignature`,
+       `isRubricPositionRequired` evalúa `false` y el diálogo gráfico no se abre,
+       aplicándose las coordenadas fijas de forma desatendida en el PDF.
+     * Si la sede envía coordenadas fijas e incluye simultáneamente `visibleSignature=want`
+       u `optional`, la comprobación incompleta ignora las coordenadas preestablecidas y
+       fuerza la apertura del diálogo modal de rúbrica, sobrescribiendo las coordenadas fijas
+       con las que dibuje la persona usuaria.
+   * *Gestión de cancelación y fuga de estado:* Si la persona usuaria cancela el diálogo de
+     rúbrica con `visibleSignature=want`, el listener `SignPdfListener` (`1040`) asigna
+     erróneamente `true` a la variable estática de otra clase
+     (`ProtocolInvocationLauncherSign.showRubricIsCanceled`), dejando en `false` su propio
+     campo; en consecuencia, `signandsave` no eleva `SAF_43` y genera silenciosamente un PDF
+     firmado sin rúbrica visual — ver [BUG-13](A1-bugs-autofirma.md#bug-13-fuga-de-estado-y-asignación-cruzada-en-showrubriciscanceled-entre-operaciones-de-firma).
 8. **Selección de almacén y certificado:**
    `selectCertAndSign` (`591-707`) gestiona el almacén de claves (`AOKeyStoreManager`),
    aplica el filtro de certificados (`CertFilterManager`), evalúa la presencia de
@@ -316,6 +346,10 @@ seguridad y preparación que la operación `sign`:
    * `COUNTERSIGN`: `signer.countersign(data, algorithm, target, null, pke.getPrivateKey(), pke.getCertificateChain(), extraParams)`,
      donde `target` es `CounterSignTarget.TREE` si el parámetro extra `target` es `"tree"`, o
      `CounterSignTarget.LEAFS` en cualquier otro caso.
+   Si `cop` fue omitido o contiene un valor no reconocido, `cryptoOperation` es `null`,
+   lo que provoca un `NullPointerException` en la sentencia `switch` (línea 728) que es
+   capturado genéricamente y retornado hacia la web como `SAF_09` en lugar de `SAF_03` — ver
+   [BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09).
 
 ---
 
@@ -394,6 +428,14 @@ private static String getFilename(final UrlParametersToSignAndSave options,
    **directamente sin ninguna modificación**. No se invoca a `signer.getSignedName()`,
    por lo que si la sede envió `filename=documento` sin extensión, esa cadena exacta
    aparecerá en el selector.
+   * *Guardado sin extensión si `filename` carece de ella:* Si la sede proporciona un
+     nombre sin extensión y en `properties` no se configuraron extensiones de guardado
+     (`filenameSaveExts`), el diálogo sólo registra el filtro global «Todos los archivos (*.*)».
+     Dado que el ajuste automático de extensión de `JSEUIManager.java:768-780` exige que el
+     filtro activo sea un `FileNameExtensionFilter` distinto del filtro global
+     (`fileChooser.getAcceptAllFileFilter() != ff`), el fichero se escribe físicamente en
+     disco sin ninguna extensión (`documento`), requiriendo intervención manual posterior
+     del usuario para abrirlo o asociarlo a una aplicación.
 2. **Precedencia 2: Nombre base del fichero cargado interactivamente (`filename`).**
    Si la URI no incluía `filename` y el documento se obtuvo interactivamente mediante el
    selector de entrada (`data == null`), se toma el nombre del fichero seleccionado,
@@ -495,7 +537,11 @@ El tercer campo únicamente se añade si se cumplen conjuntamente dos requisitos
    {"filename": "nombre_del_fichero_seleccionado.ext"}
    ```
 Si los datos vinieron en la propia invocación (`dat` o `fileid`), `extraData` es nulo y
-la respuesta consta estrictamente de dos campos (`cert|sign`).
+la respuesta consta estrictamente de dos campos (`cert|sign`). Asimismo, en caso de
+multifirma expandida por un plugin (`isMassiveSign == true`), `NativeSignDataProcessor.java:58-60`
+toma estrictamente `final SignResult result = results.get(0);`, devolviendo únicamente la
+primera firma a la aplicación web y descartando todas las firmas secundarias y sus metadatos
+del canal de respuesta.
 
 ### 6.2 Entrega del resultado según el transporte
 
@@ -529,6 +575,15 @@ a través del método común `processSignResponse(data)` (`autoscript.js:2512-25
 * Las funciones de callback de éxito reciben los parámetros deserializados:
   `successCallback(signature, certificate, extraInfo)`.
 
+#### Tratamiento de metadatos `extraInfo` y delimitador pleca en WebSocket:
+En el flujo por WebSocket (`autoscript.js:2537`), la extracción del tercer campo se ejecuta como
+`extraInfo = Base64.decode(data.substring(sepPos2), true);`. Al no sumar `1` al índice `sepPos2`,
+la subcadena extraída incluye el delimitador pleca inicial (`|`). No obstante, la función
+`Base64.decode` (`autoscript.js:5091`) sanea previamente la entrada aplicando la expresión regular
+`input.replace(/[^A-Za-z0-9\-\_\=]/g, "")`, purgando el carácter `|` antes de iniciar la decodificación
+y garantizando que el objeto JSON con el nombre del fichero (`{"filename":"..."}`) se procese
+correctamente sin provocar errores de sintaxis ni excepciones.
+
 ---
 
 ## 7. Catálogo de errores de `signandsave`
@@ -543,12 +598,12 @@ o en el literal `CANCEL` si la interrupción proviene de la voluntad expresa del
 | `CANCEL` | *(Literal `"CANCEL"`)* | El usuario canceló activamente alguna de las ventanas modales: diálogo de carga de fichero (`AOUIFactory.getLoadFiles`), confirmación de advertencia de firma previa, selección de certificado (`AOKeyStoreDialog`), rúbrica PDF o diálogo de guardado en disco (`AOUIFactory.getSaveDataToFile`). | `ProtocolInvocationLauncherSignAndSave.java:348, 437, 559, 646, 873` |
 | `SAF_00` | *Error en la lectura de los datos a firmar.* | Fallo de lectura del fichero seleccionado por el usuario al cargar datos interactivamente (`FileInputStream` / `AOUtil.getDataFromInputStream`). | `ProtocolInvocationLauncherSignAndSave.java:366` |
 | `SAF_01` | *No se ha pasado la URI a procesar.* | El objeto de parámetros recibido es nulo (`options == null`). | `ProtocolInvocationLauncherSignAndSave.java:125` |
-| `SAF_03` | *Parámetros incorrectos.* | Parámetros de invocación inválidos: falta `format` o `algorithm`, algoritmo no soportado en la lista blanca, nombre de fichero con caracteres ilegales (`\/:*?"<>|`), clave de cifrado con longitud distinta de 32, o identificador de sesión no alfanumérico o mayor de 40 caracteres. | `UrlParametersToSignAndSave.java:215, 221, 273, 281, 285, 335`, `ProtocolInvocationLauncher.java:630, 636` |
+| `SAF_03` | *Parámetros incorrectos.* | Parámetros de invocación inválidos: falta `format` o `algorithm`, algoritmo no soportado en la lista blanca (incluyendo el rechazo de algoritmos ECDSA — ver [BUG-05](A1-bugs-autofirma.md#bug-05-rechazo-de-algoritmos-ecdsa-en-la-operación-signandsave)), nombre de fichero con caracteres ilegales (`\/:*?"<>|`), clave de cifrado con longitud distinta de 32, identificador de sesión no alfanumérico o mayor de 40 caracteres, o ausencia de `cop` cuando el firmador implementa `OptionalDataInterface`. | `UrlParametersToSignAndSave.java:215, 221, 273, 281, 285, 335`, `ProtocolInvocationLauncher.java:630, 636, 748` |
 | `SAF_04` | *Operación no soportada.* | Operación no admitida: el valor de `cop` no corresponde a `SIGN`, `COSIGN` ni `COUNTERSIGN` (`SignOperation.Operation`), o el firmador no soporta la variante solicitada. | `ProtocolInvocationLauncherSignAndSave.java:761, 863` |
 | `SAF_05` | *Error al guardar los datos.* | Fallo de E/S al escribir la firma resultante en el fichero local elegido por el usuario (permisos denegados, ruta bloqueada o fallo de disco). | `ProtocolInvocationLauncherSignAndSave.java:563` |
 | `SAF_06` | *Formato de firma no soportado.* | El formato indicado en `format` no dispone de ningún proveedor registrado en `AOSignerFactory`. | `ProtocolInvocationLauncherSignAndSave.java:261` |
 | `SAF_08` | *Error al acceder al almacén de claves.* | Imposible instanciar el gestor del almacén (`AOKeyStoreManagerFactory`) o fallo fatal al inicializar el diálogo de certificados. | `ProtocolInvocationLauncherSignAndSave.java:614, 655` |
-| `SAF_09` | *Error durante la operación de firma.* | Excepción interna del motor criptográfico (`AOException` o genérica) al calcular la firma con la clave privada. También se genera si `cop` es omitido, provocando `NullPointerException` en el `switch` interno. | `ProtocolInvocationLauncherSignAndSave.java:877, 882` |
+| `SAF_09` | *Error durante la operación de firma.* | Excepción interna del motor criptográfico (`AOException` o genérica) al calcular la firma con la clave privada. También se genera si `cop` es omitido o no reconocido y los datos vienen provistos, provocando `NullPointerException` en el `switch` de `executeSign` tras haber solicitado certificado y PIN — ver [BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09). | `ProtocolInvocationLauncherSignAndSave.java:877, 882` |
 | `SAF_12` | *Error en el cifrado de datos.* | Error simétrico (`EncryptingException`) al cifrar la respuesta con la clave AES provista (`key`). | `ProtocolInvocationLauncherSignAndSave.java:198` |
 | `SAF_13` | *Se ha pedido un acceso a una dirección local.* | La URL de `stservlet` o `rtservlet` apunta a `localhost` o `127.0.0.1`, vulnerando la política de seguridad contra SSRF local. | `ProtocolInvocationLauncher.java:624`, `UrlParameters.java:386` |
 | `SAF_14` | *Se necesita una versión más moderna de Autofirma...* | La petición exige características no disponibles en la versión instalada (`ParameterNeedsUpdatedVersionException`). | `ProtocolInvocationLauncher.java:618` |
@@ -575,84 +630,3 @@ o en el literal `CANCEL` si la interrupción proviene de la voluntad expresa del
 | `SAF_51` | *Tipo de clave no compatible con el algoritmo.* | Incompatibilidad entre el tipo de clave privada del certificado (`RSA`, `EC`) y el algoritmo solicitado. | `ProtocolInvocationLauncherSignAndSave.java:667` |
 | `SAF_52` | *El almacén de claves está bloqueado.* | El token criptográfico o tarjeta inteligente se encuentra bloqueado por exceso de intentos erróneos de PIN (`LockedKeyStoreException`). | `ProtocolInvocationLauncherSignAndSave.java:684` |
 
----
-
-## Lo que el código no aclara
-
-Esta sección recopila las incoherencias internas, asimetrías de diseño y defectos
-de implementación observados en el código fuente de AutoFirma 1.9.2 en relación
-con la operación `signandsave`:
-
-1. **Bug de copia y pega en la cancelación de la rúbrica visible (`showRubricIsCanceled`):**
-   En `ProtocolInvocationLauncherSignAndSave.java:107`, la clase declara su propia variable estática:
-   ```java
-   static boolean showRubricIsCanceled = false;
-   ```
-   Y en `checkShowRubricDialogIsCalceled` (línea 986) evalúa:
-   ```java
-   if (showRubricIsCanceled) { ... }
-   ```
-   Sin embargo, en el listener que captura la cancelación del diálogo gráfico
-   (`SignPdfListener.propertiesCreated`, línea 1040), el código asigna:
-   ```java
-   ProtocolInvocationLauncherSign.showRubricIsCanceled = true;
-   ```
-   Se modifica la variable estática de la clase `ProtocolInvocationLauncherSign` (capítulo 06)
-   en lugar de la de `ProtocolInvocationLauncherSignAndSave`. Como consecuencia directa:
-   * En `signandsave`, la comprobación `if (showRubricIsCanceled)` evalúa siempre `false`,
-     impidiendo que se lance `VisibleSignatureMandatoryException` cuando `visibleSignature=want`
-     y el usuario cancela la rúbrica, prosiguiendo la firma sin estampar la rúbrica.
-   * La variable estática de `ProtocolInvocationLauncherSign` queda corrompida a `true`
-     en la JVM compartida, afectando negativamente a invocaciones posteriores de `sign`
-     en la misma sesión de socket.
-   * Adicionalmente, el nombre del método contiene una errata en el código fuente:
-     `checkShowRubricDialogIsCalceled` (con `l` en lugar de `n`).
-2. **Pérdida total de `anotherParams` por omisión en el deserializador:**
-   En `ProtocolInvocationUriParserUtil.java:145`, la operación `sign` ejecuta:
-   `ret.setAnotherParams(params);`, transfiriendo los parámetros no estándar a la
-   instancia. Sin embargo, en el método equivalente para `signandsave`
-   (`ProtocolInvocationUriParserUtil.java:156-162`), **se olvidó incluir esa llamada**.
-   Aunque `UrlParametersToSignAndSave` dispone del método `setAnotherParams`, nunca es
-   invocado por el parser. Por lo tanto, `options.getAnotherParams()` está siempre vacío
-   y ningún plugin puede recibir parámetros adicionales desde la URL en `signandsave`.
-3. **Ausencia de validación previa de obligatoriedad para `cop`:**
-   El método `UrlParametersToSignAndSave.setSignAndSaveParameters` (`líneas 237-238`)
-   recupera `params.get(CRYPTO_OPERATION_PARAM)` sin comprobar si es nulo. Si una sede
-   invoca `afirma://signandsave?format=PAdES&algorithm=SHA256withRSA` omitiendo `cop`,
-   el parser acepta la petición con éxito; pero más adelante, en `executeSign`
-   (`ProtocolInvocationLauncherSignAndSave.java:728`), la sentencia `switch (cryptoOperation)`
-   lanza un `NullPointerException` imprevisto que es interceptado como un fallo genérico
-   de firma `SAF_09` en lugar de denunciar la falta del parámetro (`SAF_03`).
-4. **Omisión de la comprobación de coordenadas predefinidas en `isRubricPositionRequired`:**
-   El Javadoc de `isRubricPositionRequired` (`ProtocolInvocationLauncherSignAndSave.java:923-927`)
-   afirma que no debe mostrarse el diálogo de rúbrica si los atributos de posición
-   (`signaturePositionOnPageLowerLeftX`, etc.) ya vienen fijados en la petición.
-   Sin embargo, en el cuerpo del método (`líneas 935-961`) dicha comprobación no existe:
-   siempre que figure `visibleSignature=want` u `optional` sobre un documento PDF,
-   el diálogo gráfico se abre de manera forzosa, ignorando las coordenadas fijadas por la web.
-5. **Comportamiento interactivo anómalo en ejecuciones multifirma o masivas:**
-   Si un plugin de procesado expande la operación en una lista de múltiples firmas
-   (`operations.size() > 1`, líneas 170-176), el bucle invoca `sign(...)` para cada
-   elemento. Como el diálogo `AOUIFactory.getSaveDataToFile` se encuentra dentro de `sign`
-   (`línea 543`), el usuario es forzado a interactuar con un diálogo de guardado
-   independiente por cada documento firmado. Posteriormente, `NativeSignDataProcessor.postProcess`
-   ignora todos los resultados excepto el primero (`results.get(0)`, línea 59),
-   descartando los metadatos de las firmas restantes hacia la web.
-6. **Riesgo de guardado sin extensión si `filename` no la incluye:**
-   Si la sede envía `filename=archivo_firmado` (sin extensión) y no se proporciona
-   la propiedad `filenameSaveExts`, la resolución `getFilename` devuelve `"archivo_firmado"`
-   literalmente. Si el usuario acepta la ventana sin teclear la extensión a mano,
-   el fichero se almacena en el disco local como un binario huérfano sin extensión,
-   ya que `JSEUIManager.saveDataToFile` solo añade extensiones automáticas cuando
-   existen filtros de fichero activos y se ha elegido uno distinto de «Todos los archivos».
-7. **Incoherencia en la devolución de `extraData` en JavaScript:**
-   En el cliente de referencia `autoscript.js`, cuando AutoFirma devuelve el tercer
-   campo con el JSON de metadatos (`extraInfo`):
-   * En `AppAfirmaWebSocketClient` (`línea 2537`): `data.substring(sepPos2)` no suma 1 al
-     índice de la pleca, pasando a `Base64.decode` una cadena que empieza con el carácter `|`,
-     lo que genera una cadena corrompida.
-   * En `AppAfirmaJSSocket` (`líneas 3482-3496`): el código solo busca la primera pleca
-     e ignora la existencia de un posible tercer campo, asignando a la variable `signature`
-     la concatenación de la firma y el bloque de metadatos.
-   * Únicamente `AppAfirmaJSWebService` (`línea 4600`) implementa la separación correcta
-     con `sepPos2 + 1` y decodificación aislada.

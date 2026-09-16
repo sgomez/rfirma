@@ -57,7 +57,14 @@ else if (params.get(KEYSTORE_PARAM) != null) {
 Consecuencias directas:
 1. **Precedencia de `keystore` sobre `ksb64`**: Si `params.get("keystore") != null`,
    se toma ese valor y **se ignora por completo** `ksb64`, incluso si `keystore` es
-   una cadena vacía.
+   una cadena vacía. Al comprobarse estrictamente `!= null` sin verificar `!isEmpty()`,
+   si una petición incluye `keystore=&ksb64=...`, el parámetro legado vacío anula
+   incondicionalmente al parámetro moderno `ksb64`. Posteriormente, el valor vacío `""`
+   no coincide con ningún almacén en `SimpleKeyStoreManager.getKeyStore("")`, provocando
+   la degradación al almacén por defecto del sistema operativo (Nivel 4). Por su parte,
+   el cliente JavaScript de referencia `autoscript.js` elude esta anomalía al incluir
+   `keystore` y `ksb64` únicamente cuando `defaultKeyStore != null && defaultKeyStore != "null"`
+   (`autoscript.js:2880`).
 2. **Fallback a Base64**: Solo si `keystore` está ausente (`null`), se evalúa `ksb64`.
    Si la decodificación falla, `ksValue` queda como `null`.
 3. **Uso por el cliente JavaScript**: En `autoscript.js`, el cliente WebSocket solo
@@ -89,6 +96,33 @@ $$\text{ksValue} = \langle\text{nombre\_almacen}\rangle [ : \langle\text{ruta\_b
   - Convierte a ruta canónica en disco: `new File(cleanedpath).getCanonicalPath()`.
   - Si el constructor o la resolución canónica fallan por sintaxis inválida en el SO,
     captura la excepción, registra un aviso y devuelve `null`.
+
+#### Tratamiento de rutas de archivo absolutas y comportamiento en Windows
+
+Dado que `separatorPos = ksValue.indexOf(':')` busca el **primer** carácter de dos puntos:
+* **Formato canónico con prefijo de almacén (`PKCS12:C:\cert.p12` o `PKCS11:C:\lib\p11.dll`)**:
+  El primer `:` se localiza tras el nombre del almacén (`separatorPos = 6`). El nombre extraído
+  es `"PKCS12"`, mientras que la ruta enviada a `cleanupPath` es `"C:\cert.p12"` íntegra con su
+  letra de unidad y dos puntos intactos (`ksValue.substring(separatorPos + 1)`), permitiendo a
+  `cleanupPath` resolver la ruta canónica del archivo en disco sin incidencias.
+* **Rutas absolutas de Windows sin prefijo (`C:\cert.p12`)**:
+  Si un invocador omite el prefijo del almacén y pasa directamente una ruta absoluta de Windows
+  en `keystore` o `ksb64`, el primer carácter `:` localizado es el separador de la letra de
+  unidad (`separatorPos = 1`). Por consiguiente:
+  1. `getKeyStoreName` extrae `"C"` como nombre de almacén (`ksValue.substring(0, 1)`).
+  2. `SimpleKeyStoreManager.getKeyStore("C")` intenta resolverlo; al no coincidir con ningún
+     `getName()` ni tarjeta registrada, evalúa `AOKeyStore.valueOf("C")`, arroja
+     `IllegalArgumentException`, registra en el log `WARNING: Almacen de claves no reconocido (C)`
+     y devuelve `null`.
+  3. `getDefaultKeyStoreLib` extrae `\cert.p12` (`ksValue.substring(2)`), pero dado que el tipo
+     de almacén resultó nulo, AutoFirma recurre a la jerarquía de resolución de Nivel 4 y asigna
+     el almacén por defecto del sistema operativo (`AOKeyStore.WINDOWS`, CAPI).
+  4. La aplicación abre el almacén de certificados de Windows e ignora por completo el fichero
+     indicado.
+  En sistemas Unix/Linux, al no existir dos puntos en una ruta como `/opt/cert.p12`, `separatorPos == -1`
+  y la ruta completa se evalúa como nombre de almacén, fallando igualmente y degradando al almacén
+  central (`SHARED_NSS`). Por tanto, la inclusión del prefijo `<nombre>:` es un requisito
+  sintáctico estricto e indispensable del protocolo.
 
 El resultado de estas funciones se guarda en los campos privados de `UrlParameters`:
 `defaultKeyStore` (`UrlParameters.java:90, 135-137`) y `defaultKeyStoreLib`
@@ -134,7 +168,7 @@ del almacén y para el acceso a certificados individuales.
 
 Cuando la URI o las preferencias proporcionan un nombre en formato cadena de texto,
 se resuelve contra `AOKeyStore` a través de `SimpleKeyStoreManager.getKeyStore(final String name)`
-(`afirma-simple/src/main/java/es/gob/afirma/standalone/SimpleKeyStoreManager.java:231-257`).
+(`afirma-simple/src/main/java/es/gob/afirma/standalone/SimpleKeyStoreManager.java:272-298`).
 
 El método aplica estrictamente tres etapas secuenciales:
 
@@ -152,20 +186,28 @@ flowchart TD
 ```
 
 1. **Búsqueda por nombre legible (`getName()`)**: Itera sobre `AOKeyStore.values()` y
-   compara `tempKs.getName().equalsIgnoreCase(name.trim())` (`SimpleKeyStoreManager.java:235-239`).
-   Permite usar nombres como `"Windows"`, `"PKCS#11"`, `"Llavero de Mac"` o `"NSS"`,
-   sin distinguir mayúsculas de minúsculas.
+   compara `tempKs.getName().equalsIgnoreCase(name.trim())` (`SimpleKeyStoreManager.java:276-280`).
+   Esta comprobación es **insensible a mayúsculas y minúsculas** sobre los nombres de visualización:
+   permite utilizar indistintamente `"windows"`, `"WINDOWS"`, `"pkcs#11"`, `"PKCS#11"`,
+   `"llavero de mac"`, `"nss"` o `"pkcs#12 / pfx"`.
 2. **Búsqueda en registros de tarjetas inteligentes**: Consulta los mapas de tarjetas
    registradas en preferencias de usuario (`KeyStorePreferencesManager.getUserSmartCardsRegistered()`)
    y de sistema (`KeyStorePreferencesManager.getSystemSmartCardsRegistered()`)
-   (`SimpleKeyStoreManager.java:241-248`). Si `name` coincide con una tarjeta configurada,
+   (`SimpleKeyStoreManager.java:281-289`). Esta búsqueda evalúa las claves registradas de forma
+   sensible a mayúsculas (`containsKey(name)`). Si `name` coincide con una tarjeta configurada,
    muta la constante global `AOKeyStore.PKCS11` reasignando su campo mutable
-   `result.setName(name)` y la devuelve.
+   `result.setName(name)` y la devuelve. Esta mutación altera de forma permanente el estado global
+   del singleton en la JVM, imposibilitando la resolución subsiguiente de `"PKCS#11"` por nombre
+   en procesos persistentes (ver [BUG-24](A1-bugs-autofirma.md#bug-24-mutación-de-estado-global-en-el-singleton-aokeystorepkcs11-invalida-la-resolución-de-almacén-en-ejecuciones-concurrentes-o-persistentes)).
 3. **Búsqueda por identificador del enum (`valueOf`)**: Si ninguna de las anteriores
-   encaja, invoca `AOKeyStore.valueOf(name)` (`SimpleKeyStoreManager.java:250-255`).
-   Esta llamada es **estrictamente sensible a mayúsculas y minúsculas**: acepta
-   `"PKCS12"`, `"SHARED_NSS"`, `"WINDOWS"`, `"APPLE"`, etc., pero falla si se introduce
-   `"pkcs12"` o `"shared_nss"`. Si lanza excepción, registra un aviso y retorna `null`.
+   encaja, invoca `AOKeyStore.valueOf(name)` (`SimpleKeyStoreManager.java:291-296`).
+   En Java, `Enum.valueOf` es **estrictamente sensible a mayúsculas y minúsculas**: exige la
+   coincidencia exacta con el nombre de la constante enum (`"PKCS12"`, `"SHARED_NSS"`, `"WINDOWS"`,
+   `"APPLE"`, `"DNIEJAVA"`, etc.). Si se proporciona en minúsculas (como `"pkcs12"` o
+   `"shared_nss"`), arroja `IllegalArgumentException`, captura el error, registra en el log
+   `WARNING: Almacen de claves no reconocido (<name>): java.lang.IllegalArgumentException` y
+   retorna `null`. En ese caso, la aplicación concluye sin almacén explícito y delega en el
+   almacén por defecto de la plataforma (Nivel 4).
 
 ---
 
@@ -397,6 +439,10 @@ public static void setStickyKeyEntry(final PrivateKeyEntry stickyKeyEntry) {
 }
 ```
 
+El uso de un único campo estático global a nivel de JVM carece de aislamiento por origen web
+(`Origin`) o por identificador de sesión (`idsession`): la entrada fijada pertenece al proceso
+y sobrevive a la operación que la fijó, hasta que otra la purgue (ver [BUG-06](A1-bugs-autofirma.md#bug-06-persistencia-de-certificado-sticky-en-campo-estático-de-jvm)).
+
 ### 7.3 Regla de evaluación y reutilización
 
 Al iniciarse `sign`, `signandsave`, `selectcert` o `batch`, se evalúa la siguiente
@@ -470,13 +516,17 @@ sequenceDiagram
 El soporte de `sticky` está supeditado a la persistencia en memoria del proceso de AutoFirma:
 
 * **Transporte B (Socket) y C (WebSocket)**: Como la instancia de la aplicación se mantiene viva
-  escuchando peticiones mientras dura la sesión (o hasta vencer el temporizador de 90 s),
+  escuchando peticiones mientras dura la sesión (o hasta vencer el temporizador de 90 s en socket),
   `stickyKeyEntry` se conserva intacto entre múltiples llamadas sucesivas.
 * **Transporte A (Servidor intermedio / Invocación directa)**: `SimpleAfirma.main` invoca
-  `forceCloseApplication(0)` (`Runtime.getRuntime().halt(0)`) inmediatamente después de
-  completar la operación (`SimpleAfirma.java:978-980`). Al destruirse el proceso de la JVM,
-  **el certificado pegajoso se pierde**. Por tanto, en el transporte clásico por servidor
-  intermedio, el parámetro `sticky` no tiene efecto práctico entre llamadas independientes.
+  incondicionalmente `forceCloseApplication(0)` (`Runtime.getRuntime().halt(0)`) inmediatamente después
+  de completar la operación y transmitir el resultado a `stservlet` (`SimpleAfirma.java:978-980`).
+  Al destruirse de inmediato el proceso del sistema operativo y su JVM asociada, **el certificado
+  pegajoso retenido en memoria se destruye de forma instantánea**.
+  Por consiguiente, en el transporte clásico por servidor intermedio el parámetro `sticky=true`
+  carece de cualquier efecto práctico persistente entre peticiones independientes: cada nueva invocación
+  inicia un proceso desacoplado con una máquina virtual limpia (`stickyKeyEntry == null`) que volverá a
+  exigir la selección de certificado.
 
 ---
 
@@ -484,7 +534,7 @@ El soporte de `sticky` está supeditado a la persistencia en memoria del proceso
 
 Cuando una operación abre la ventana modal de selección de certificados (`AOKeyStoreDialog`),
 el usuario tiene la opción de alternar entre los distintos almacenes disponibles en el equipo
-mediante un desplegable o un botón de almacén externo (`AOKeyStoreDialog.java:225-275`):
+mediante un desplegable o un botón de almacén externo (`AOKeyStoreDialog.java:227-275`):
 
 ```java
 public boolean changeKeyStoreManager(final int keyStoreId, final Object parent) {
@@ -516,63 +566,31 @@ operación recibida por socket o WebSocket, recordando la última elección del 
 ### 8.2 Restricción específica en Linux
 
 En entornos Linux existe una restricción documentada explícitamente en el código de AutoFirma
-(`AOKeyStoreDialog.java:285-300`):
+(`AOKeyStoreDialog.java:389-410`):
 
 > *«En linux no se puede cambiar entre el almacen central del sistema y el almacen de Mozilla
 > por un error en NSS que sigue cargando el almacen que ya tuviese aunque se le indique otro.
 > Por eso, solo damos la opcion de almacen central o almacen de Firefox, segun el almacen
 > que se cargue primero».*
 
-Si el almacén inicial cargado es `SHARED_NSS`, la lista de almacenes disponibles en el diálogo
-se limita a `KEYSTORE_ID_SYSTEM`, `KEYSTORE_ID_PKCS12` y `KEYSTORE_ID_DNIE`, excluyendo
-el de Mozilla Firefox para evitar colisiones internas en la biblioteca nativa `libnss3.so`.
+El método `getAvailablesKeyStores()` (`AOKeyStoreDialog.java:386-420`) comprueba el tipo del almacén
+activo en memoria. Si la aplicación arrancó con `SHARED_NSS` (`this.ksm.getType() == AOKeyStore.SHARED_NSS`
+o dentro del agregador), el vector devuelto para poblar el selector modal contiene exclusivamente:
+`KEYSTORE_ID_SYSTEM`, `KEYSTORE_ID_PKCS12` y `KEYSTORE_ID_DNIE`, suprimiendo deliberadamente
+`KEYSTORE_ID_MOZILLA`.
 
----
+Esta limitación se debe a la arquitectura interna de la biblioteca nativa NSS de Mozilla (`libnss3.so`):
+una vez que el proceso ha inicializado una base de datos NSS concreta (por ejemplo `$HOME/.pki/nssdb`),
+intentar abrir o alternar hacia la base de datos de un perfil de Firefox dentro del mismo proceso
+provoca conflictos de estado nativo en NSS o mantiene apuntando las consultas a la base de datos
+inicial.
 
-## Lo que el código no aclara
+En consecuencia, una persona usuaria en Linux no puede alternar interactivamente hacia el almacén de
+Mozilla Firefox si la invocación se inició con el almacén central del sistema. Para utilizar los
+certificados del perfil de Firefox en Linux se requiere imprescindiblemente:
+1. Que la petición web especifique explícitamente `keystore=MOZ_UNI` (o `Mozilla`), o
+2. Que se configure en las preferencias locales de AutoFirma el almacén `Mozilla / Firefox (unificado)`
+   como predeterminado (`useDefaultStoreInBrowserCalls=true`), garantizando que sea `MOZ_UNI` el primer
+   almacén cargado por el proceso.
 
-1. **Ambigüedad con rutas absolutas de Windows en `keystore` / `ksb64`**:
-   `UrlParameters.getKeyStoreName` localiza el separador mediante `ksValue.indexOf(':')`
-   (`UrlParameters.java:400`). Si una sede pasa directamente una ruta de fichero Windows sin
-   prefijo de almacén (por ejemplo `ksb64=Base64("C:\cert.p12")`), `indexOf(':')` detecta
-   los dos puntos de la unidad de disco en el índice 1. Como resultado, interpreta que el
-   nombre del almacén es `"C"` y la ruta de la biblioteca es `"\cert.p12"`. Al intentar
-   resolver `"C"` con `SimpleKeyStoreManager.getKeyStore("C")`, retorna `null` y degrada en
-   silencio al almacén por defecto de Windows CAPI en lugar de abrir el fichero PKCS#12.
-2. **Mutación de la constante global del enum `AOKeyStore.PKCS11`**:
-   Cuando `SimpleKeyStoreManager.getKeyStore(name)` detecta que el nombre corresponde a una
-   tarjeta registrada, ejecuta `AOKeyStore.PKCS11.setName(name)` (`SimpleKeyStoreManager.java:246`).
-   Al ser `AOKeyStore` un enum singleton, esta llamada altera permanentemente el valor
-   devuelto por `getName()` en toda la JVM hasta que otro flujo lo vuelva a cambiar.
-3. **Incoherencia entre búsqueda insensible (`getName`) y sensible (`valueOf`)**:
-   `SimpleKeyStoreManager.getKeyStore` busca primero con `equalsIgnoreCase` sobre `getName()`,
-   pero si se utiliza el nombre canónico del enum (como `PKCS12`, `SHARED_NSS`, `WINDOWS`),
-   depende de `AOKeyStore.valueOf(name)` (`SimpleKeyStoreManager.java:251`), que es sensible
-   a mayúsculas. Una invocación con `keystore=pkcs12` o `keystore=shared_nss` falla en
-   `valueOf` y devuelve `null` porque no coincide con `getName()` (`"PKCS#12 / PFX"` o `"NSS"`)
-   ni con el identificador exacto del enum.
-4. **Ignorancia total de `ksb64` si `keystore` está presente aunque sea vacío**:
-   En `UrlParameters.java:386, 419`, la condición es `if (params.get(KEYSTORE_OLD_PARAM) != null)`.
-   Si una sede envía en la URI `keystore=&ksb64=...`, la presencia de la clave `keystore`
-   (con cadena vacía) impide por completo que se lea `ksb64`.
-5. **Concurrencia en `stickyKeyEntry` en el servidor de sockets**:
-   `ProtocolInvocationLauncher.stickyKeyEntry` es un campo estático sin modificador `volatile`
-   ni sincronización explícita (`ProtocolInvocationLauncher.java:90, 110-120`). En el modo de
-   socket local, donde cada comando se atiende en un hilo independiente `CommandProcessorThread`,
-   operaciones concurrentes que manipulen `sticky` pueden generar condiciones de carrera sobre
-   la referencia del certificado en memoria.
-6. **Inutilidad silenciosa de `sticky` en el transporte por servidor intermedio**:
-   El código procesa `sticky=true` y `resetsticky=true` en todas las operaciones sin comprobar
-   si la invocación se realiza por socket o por servidor intermedio. Sin embargo, en el transporte
-   por servidor intermedio el proceso termina inmediatamente con `Runtime.halt(0)`, de modo que
-   el cliente web que solicite `sticky` no recibe ningún error ni advertencia, pero el estado
-   se pierde sin posibilidad de reutilización.
-7. **Ordinal duplicado en `AOKeyStore`**:
-   Las constantes `CERES_430` y `OTHER` se inicializan ambas con el valor de ordinal interno `18`
-   (`AOKeyStore.java:163, 175`). El código no explica si existe alguna dependencia interna que
-   asuma ordinales únicos en la ordenación de almacenes.
-8. **Incompatibilidad insalvable de NSS en Linux**:
-   La exclusión del almacén de Firefox en `AOKeyStoreDialog` cuando se utiliza `SHARED_NSS` en Linux
-   resuelve el cuelgue interno de NSS, pero impide que usuarios de Linux que tengan certificados
-   personales en Firefox puedan seleccionarlos si la llamada arrancó usando el almacén NSS
-   compartido del sistema.
+

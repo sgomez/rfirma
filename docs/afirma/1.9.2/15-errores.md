@@ -139,6 +139,61 @@ Consecuencias directas en el protocolo:
    (o no hubo causa con mensaje), se devuelve la cadena oficial
    `SAF_nn: <Texto_ProtocolLauncher>`.
 
+La distinción entre la segunda y la tercera rama la decide por completo el
+constructor empleado al elevar la excepción: `new SocketOperationException(code)`
+deja `super.getMessage()` a `null` y la sobreescritura de `getMessage()` devuelve
+el propio `code`, activando la rama estándar; cualquiera de los otros dos
+constructores propaga el mensaje de la causa (`SocketOperationException.java:21-34,
+44-47`). El propio despachador reconoce esta heurística como provisional:
+> *«TODO: Comprobar si realmente no tiene mensaje, en lugar de si el mensaje y el código son distintos»*
+> (`ProtocolInvocationLauncher.java:705`).
+
+Dos consecuencias delimitan lo que puede esperar un cliente del protocolo:
+
+* **El prefijo `SAF_nn` se conserva siempre.** La sustitución afecta únicamente
+  al texto descriptivo que sigue a los dos puntos, nunca al código: las tres
+  ramas emiten `CANCEL` o una cadena que empieza por el `errorCode`. La
+  comprobación `data.substr(0, 4) == "SAF_"` de `autoscript.js` (§6.1) no puede
+  romperse por esta vía.
+* **El texto que sigue al código no es parte del catálogo ni está traducido.**
+  Cuando la excepción interna aporta mensaje, el literal de
+  `protocolmessages.properties` no llega al llamante y en su lugar viaja el
+  mensaje de la excepción Java subyacente, redactado por la biblioteca que la
+  originó y sin paso alguno por el mecanismo de localización. Un cliente
+  compatible debe discriminar por el código `SAF_nn` y tratar el resto de la
+  cadena como diagnóstico opaco.
+
+#### La rama de `getRequestorText()` es código muerto
+
+Los tres procesadores que gestionan `RuntimeConfigNeededException` cierran su
+cadena de `if` con un `else` que eleva
+`new SocketOperationException(e.getRequestorText(), e.getMessage(), e)`
+(`ProtocolInvocationLauncherSign.java:468, 832`,
+`ProtocolInvocationLauncherSignAndSave.java:460, 855`). El valor de
+`getRequestorText()` es una clave de recurso (`pdfShadowAttackSuspect`,
+`signingLts`, `signingCertifiedPdf`, …), no un código `SAF_nn`, de modo que su
+emisión rompería el reconocimiento de errores en la sede.
+
+**Esa rama es inalcanzable en 1.9.2.** Se ejecuta solo si `getRequestType()`
+devuelve un valor distinto de `CONFIRM` y de `PASSWORD`, y el enumerado
+`RuntimeConfigNeededException.RequestType` declara exactamente esos dos valores
+(`RuntimeConfigNeededException.java:80-85`). El campo es `final` y se fija en el
+constructor (`:14, 29-51`), y las ocho subclases existentes pasan siempre una de
+las dos constantes: `CONFIRM` en `SuspectedPSAException.java:17`,
+`PdfIsCertifiedException.java:28`, `PdfHasUnregisteredSignaturesException.java:32`,
+`PdfFormModifiedException.java:28`, `SigningLTSException.java:32, 42-43, 54-55` y
+`AGEPolicyIncompatibilityException.java:51, 71`; `PASSWORD` en
+`RuntimePasswordNeededException.java:21, 32, 45`, de la que derivan
+`BadPdfPasswordException` y `PdfIsPasswordProtectedException`. Ninguna admite
+`null`.
+
+En consecuencia, una solicitud de configuración en tiempo de ejecución solo
+puede desembocar en tres resultados observables por el protocolo: reintento de
+la firma tras la confirmación o la contraseña, `CANCEL` si la persona usuaria
+rechaza el diálogo, o `SAF_50` (`ERROR_CONFIRMATION_NEEDED`) si `headless=true`
+impedía mostrarlo (`ProtocolInvocationLauncherSign.java:432-434, 793-795`,
+`ProtocolInvocationLauncherSignAndSave.java:424-426, 821-823`).
+
 ### 2.3 Errores con detalle técnico (`showErrorDetail`)
 
 Cuando se detecta un error de sintaxis o de parámetros (`ParameterException`),
@@ -196,17 +251,18 @@ En el transporte por servidor intermedio (invocación directa por URI del sistem
    `SimpleAfirma.main` invoca `forceCloseApplication(0)`, que llama a
    `Runtime.getRuntime().halt(0)` (`SimpleAfirma.java:978-980`, `454-456`).
 
-> [!WARNING]
-> **Bloqueo en el cliente web por errores tempranos de parámetros:**
-> Si la excepción ocurre al parsear los parámetros en `ProtocolInvocationLauncher`
-> (`ParameterException`, `ParameterNeedsUpdatedVersionException`,
-> `ParameterLocalAccessRequestedException`), el bloque `catch` correspondiente
-> (`ProtocolInvocationLauncher.java:506-528, 618-640, 728-750`) invoca a
-> `showError` pero **no llama a `sendDataToServer`**.
-> Como consecuencia, el resultado nunca se sube a `stservlet` y la página web
-> que ejecuta `autoscript.js` queda esperando activamente hasta agotar el número
-> máximo de iteraciones de sondeo (`NUM_MAX_ITERATIONS = 10`), finalizando por
-> *timeout*.
+El envío al servidor intermedio **solo se produce desde dos puntos** de cada
+bloque de operación: el `catch (SocketOperationException e)` que recoge los
+errores de la operación ya en curso y la entrega del resultado correcto
+(`ProtocolInvocationLauncher.java:353, 426, 501, 603, 612, 712, 721, 808`).
+Todo error detectado **antes** de llegar a esos puntos —URI nula, esquema
+desconocido, operación no reconocida, sintaxis de parámetros, acceso local
+bloqueado, versión mínima insatisfecha y fallo de recuperación o descifrado de
+la configuración remota— se muestra en un diálogo local y se devuelve como valor
+de retorno de `launch()`, valor que en este transporte nadie consume. Los
+códigos afectados son `SAF_01`, `SAF_02`, `SAF_03`, `SAF_04`, `SAF_13`, `SAF_14`,
+`SAF_15` y `SAF_16`, y en ningún caso alcanzan `stservlet`; es el defecto
+[BUG-26](A1-bugs-autofirma.md#bug-26-los-errores-anteriores-al-inicio-de-la-operación-no-se-suben-al-servidor-intermedio-y-la-sede-los-percibe-como-autofirma-no-instalada).
 
 ### 3.2 Transporte por socket local (`afirma://service`, `bySocket == true`)
 
@@ -235,6 +291,13 @@ En la comunicación mediante socket local TCP con TLS:
      `SAF_03: Error en los parámetros de entrada` (`110, 116, 135`).
    - Error de envío / I/O en socket: responde con `SAF_11` (`139`).
    - Excepción no controlada en el comando: responde con `SAF_09` (`147`).
+5. **Intento de subida al servidor intermedio pese a operar por socket**: En las
+   operaciones `batch`, `selectcert`, `save` y `load`, el `catch
+   (SocketOperationException e)` invoca `sendDataToServer` sin comprobar
+   `bySocket`, sobre unos parámetros que en este transporte no llevan
+   `stservlet`; el error real queda sustituido por un `NullPointerException`. Es
+   el defecto
+   [BUG-08](A1-bugs-autofirma.md#bug-08-invocación-incondicional-de-senddatatoserver-en-socketoperationexception-provoca-nullpointerexception-en-conexiones-por-socket).
 
 ### 3.3 Transporte por WebSocket (`afirma://websocket`, `bySocket == true`)
 
@@ -517,10 +580,15 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   como obligatoria y el usuario cancela la definición del área o falla su estampación
   (`VisibleSignatureMandatoryException`)
   (`ProtocolInvocationLauncherSign.java:181`, `ProtocolInvocationLauncherSignAndSave.java:179`).
-* **`SAF_44` (`ERROR_SIGN_WITHOUT_DATA`)**: La firma previa es explícita (*detached*) y no
-  incluye el contenido original necesario para operar sobre ella (`AOException`)
+* **`SAF_44` (`ERROR_SIGN_WITHOUT_DATA`)**: La firma previa es explícita (*detached*) y el
+  cofirmante no encuentra ni el contenido encapsulado ni un atributo `messageDigest` generado
+  con el mismo algoritmo de huella que el solicitado, por lo que no puede reconstruir aquello
+  que debe firmar (`ContainsNoDataException`,
+  `afirma-crypto-cades-multi/src/main/java/es/gob/afirma/signers/multi/cades/CAdESCoSigner.java:268-270`)
   (`ProtocolInvocationLauncherSign.java:781`, `ProtocolInvocationLauncherSignAndSave.java:809`,
-  `LocalBatchSigner.java:221`).
+  `LocalBatchSigner.java:221`). El mecanismo completo y el motivo por el que el protocolo no
+  admite aportar los datos en una cofirma se detallan en el
+  capítulo [06](06-operaciones-firma.md#61-despacho-de-la-operación-criptográfica).
 * **`SAF_50` (`ERROR_CONFIRMATION_NEEDED`)**: Ocurre cuando la validación previa detecta
   un posible PDF Shadow Attack o solapamiento de firmas que requiere confirmación expresa
   del usuario (`RuntimeConfigNeededException` con `RequestType.CONFIRM`), pero la
@@ -552,26 +620,69 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 ### 4.7 Códigos huérfanos sin uso en código activo
 
 Ocho de los 53 códigos definidos en `ProtocolInvocationLauncherErrorManager` no son
-lanzados jamás por ninguna ruta de ejecución activa en AutoFirma 1.9.2:
+lanzados jamás por ninguna ruta de ejecución activa en AutoFirma 1.9.2. Las ocho
+constantes se declaran (`ProtocolInvocationLauncherErrorManager.java:38, 41, 53,
+55, 67, 68, 79, 80`) y se registran en el diccionario `ERRORS` (`:95, 98, 110,
+112, 124, 125, 136, 137`), pero **ninguna instrucción ejecutable de ningún módulo
+las referencia**: la única aparición de dos de ellas fuera del gestor está dentro
+de un bloque comentado. Un cliente compatible no necesita contemplarlas.
 
-1. **`SAF_07` (`ERROR_CANNOT_FIND_KEYSTORE`)**: Registrado en el diccionario pero nunca
-   arrojado; los fallos de almacén arrojan `SAF_08`.
-2. **`SAF_10` (`ERROR_NO_CERTIFICATES_SYSTEM`)**: Registrado pero nunca arrojado; la
-   ausencia de certificados en el almacén arroja `SAF_19`.
-3. **`SAF_22` (`ERROR_UNSOPPORTED_WEB_PROCEDURE`)**: Definido para incompatibilidad
-   declarada por la sede web, sin uso en el despachador.
-4. **`SAF_24` (`ERROR_RECOVERING_LOG`)**: Diseñado para errores en la extracción del
-   log acumulado, funcionalidad no expuesta en el protocolo de la 1.9.2.
-5. **`SAF_36` (`ERROR_CANNOT_FIND_SSL_KEYSTORE`)**: Reservado para la ausencia del almacén
-   SSL de socket; el bloque que lo arrojaba en `launch()` se encuentra comentado
-   (`ProtocolInvocationLauncher.java:255`).
-6. **`SAF_37` (`ERROR_CANNOT_ACCESS_SSL_KEYSTORE`)**: Reservado para fallos de lectura del
-   almacén SSL de socket; se encuentra igualmente comentado (`ProtocolInvocationLauncher.java:256`).
-7. **`SAF_48` (`ERROR_PDF_SHADOW_ATTACK`)**: Definido para ataques PDF Shadow Attack,
-   pero el sistema gestiona estas detecciones mediante diálogos de confirmación
-   (`ProtocolLauncher.61`) o arroja `SAF_50` en modo desatendido.
-8. **`SAF_49` (`ERROR_SIGNING_LTS_SIGNATURE`)**: Definido para firmas longevas (LTS / archivo),
-   sin referencias activas en los despachadores de protocolo.
+1. **`SAF_07` (`ERROR_CANNOT_FIND_KEYSTORE`)** — *«No se ha podido determinar el
+   almacén de claves a utilizar»*. La imposibilidad de resolver o abrir un almacén
+   se notifica en su lugar con `SAF_08` (`ERROR_CANNOT_ACCESS_KEYSTORE`), emitido
+   por los cinco procesadores de operación
+   (`ProtocolInvocationLauncherSign.java:584, 626`,
+   `ProtocolInvocationLauncherSignAndSave.java:613, 655`,
+   `ProtocolInvocationLauncherSelectCert.java:158, 219`,
+   `ProtocolInvocationLauncherBatch.java:259, 311`).
+2. **`SAF_10` (`ERROR_NO_CERTIFICATES_SYSTEM`)** — *«No hay certificados de firma
+   instalados en el sistema»*. El caso real —almacén abierto pero sin certificados
+   admisibles— se notifica con `SAF_19` (`ERROR_NO_CERTIFICATES_KEYSTORE`)
+   (`ProtocolInvocationLauncherSign.java:621`,
+   `ProtocolInvocationLauncherSignAndSave.java:650`,
+   `ProtocolInvocationLauncherSelectCert.java:210`,
+   `ProtocolInvocationLauncherBatch.java:305`).
+3. **`SAF_22` (`ERROR_UNSOPPORTED_WEB_PROCEDURE`)** — *«El trámite web no es
+   compatible con la versión de Autofirma instalada»*. Es el código complementario
+   de `SAF_21` para el caso en que el desactualizado es el trámite y no la
+   aplicación. El único punto del programa donde su emisión estaba prevista es la
+   rama negativa del operador ternario de `ProtocolInvocationLauncher.java:283-285`,
+   que por error de copia repite `SAF_21`; véase
+   [BUG-25](A1-bugs-autofirma.md#bug-25-colapso-de-la-distinción-entre-protocolo-obsoleto-y-protocolo-no-soportado-en-el-arranque-de-canales-locales).
+4. **`SAF_24` (`ERROR_RECOVERING_LOG`)** — *«Error al obtener el registro de log
+   acumulado hasta la ejecución actual»* (`protocolmessages.properties:ProtocolLauncher.34`).
+   El protocolo `afirma://` de 1.9.2 no define ninguna operación de recuperación
+   del log, por lo que no existe ruta que pueda emitirlo.
+5. **`SAF_36` (`ERROR_CANNOT_FIND_SSL_KEYSTORE`)** — *«No se ha podido encontrar el
+   almacén de claves SSL para la comunicación segura»*. El bloque
+   `catch (GeneralSecurityException | IOException)` del arranque del canal WebSocket
+   que lo emitía está comentado íntegramente
+   (`ProtocolInvocationLauncher.java:252-259`).
+6. **`SAF_37` (`ERROR_CANNOT_ACCESS_SSL_KEYSTORE`)** — *«No se ha podido acceder al
+   almacén de claves SSL para la comunicación segura»*. Es la rama alternativa del
+   mismo bloque comentado (`ProtocolInvocationLauncher.java:255-256`). Al no
+   capturarse ya esas excepciones en el arranque del canal, los fallos del almacén
+   SSL quedan absorbidos aguas abajo; véase
+   [BUG-10](A1-bugs-autofirma.md#bug-10-silenciamiento-de-excepciones-en-serviceinvocationmanagerstartservice-y-retorno-erróneo-de-ok-tras-fallo-de-inicialización-del-socket).
+7. **`SAF_48` (`ERROR_PDF_SHADOW_ATTACK`)** — *«Posible PDF Shadow Attack»*
+   (`protocolmessages.properties:ProtocolLauncher.63`). La detección existe y está
+   activa —`configurePdfSignature` fuerza `pagesToCheckShadowAttack=10` cuando no
+   se autorizó explícitamente el ataque
+   (`ProtocolInvocationLauncherSign.java:866-871`)—, pero se materializa como
+   `SuspectedPSAException`, subclase de `RuntimeConfigNeededException` con
+   `RequestType.CONFIRM` (`SuspectedPSAException.java:9-18`). Su desenlace es por
+   tanto el descrito en §2.2: confirmación, `CANCEL` o `SAF_50` en modo desatendido.
+8. **`SAF_49` (`ERROR_SIGNING_LTS_SIGNATURE`)** — *«Multifirma de firma de archivo»*
+   (`protocolmessages.properties:ProtocolLauncher.64`). Igual que el anterior: la
+   cofirma o contrafirma de una firma con sellos de archivo eleva
+   `SigningLTSException`, también subclase de `RuntimeConfigNeededException` con
+   `RequestType.CONFIRM` (`SigningLTSException.java:17-56`), que se resuelve por la
+   vía de confirmación y nunca por un código propio.
+
+Los dos últimos comparten causa: la incorporación en versiones posteriores del
+mecanismo de configuración en tiempo de ejecución sustituyó el error terminal por
+un diálogo de confirmación, y los códigos previstos para la vía terminal quedaron
+en el diccionario sin emisor.
 
 ---
 
@@ -694,63 +805,3 @@ El callback de error de la sede web recibe dos argumentos:
 4. `es.gob.afirma.standalone.ApplicationNotFoundException`: Generado localmente en
    el navegador cuando expiran los reintentos de conexión por socket o WebSocket
    sin que AutoFirma haya respondido al `echo=` (`autoscript.js:2182, 3014`).
-
----
-
-## Lo que el código no aclara
-
-**Códigos SAF huérfanos.** Ocho códigos (`SAF_07`, `SAF_10`, `SAF_22`, `SAF_24`,
-`SAF_36`, `SAF_37`, `SAF_48`, `SAF_49`) están declarados en
-`ProtocolInvocationLauncherErrorManager.java` y cargados en la tabla `ERRORS`,
-pero ninguna instrucción ejecutable en todo el código fuente de AutoFirma los
-utiliza. En particular, `SAF_36` y `SAF_37` fueron comentados deliberadamente en
-`ProtocolInvocationLauncher.java:255-256`, mientras que `SAF_48` fue sustituido
-en la práctica por diálogos interactivos de advertencia o por `SAF_50`.
-
-**Incoherencia entre el mensaje oficial y `e.getMessage()` en la respuesta.** En
-`ProtocolInvocationLauncher.java:703-708`, la comprobación
-`!errorCode.equals(e.getMessage())` provoca que cualquier excepción que posea un
-mensaje interno en Java sobreescriba el texto oficial de `ERRORS.get(errorCode)`
-hacia la respuesta devuelta a la web. Por tanto, el texto que recibe la sede web
-puede ser una traza técnica interna en inglés o español en lugar de la redacción
-normalizada de `protocolmessages.properties`.
-
-**Bloqueo por error de parámetros en el transporte de servidor intermedio.** Si una
-URI directa contiene errores de sintaxis (`ParameterException`), pide acceso local
-indebido (`SAF_13`) o requiere una versión superior (`SAF_14`), la aplicación
-muestra el diálogo modal en la máquina del usuario pero **nunca sube la respuesta
-al `stservlet`**, ya que el objeto `params` no llegó a crearse o el bloque `catch`
-carece de llamada a `sendDataToServer` (`ProtocolInvocationLauncher.java:506-528, 618-640, 728-750`).
-La sede web permanece sondeando al servidor intermedio hasta agotar los reintentos por *timeout*.
-
-**Bloqueo en cancelación de `selectcert` por servidor intermedio.** Si el usuario
-cancela el diálogo de selección de certificado con servidor intermedio,
-`ProtocolInvocationLauncher.java:420-422` captura `AOCancelledOperationException`
-y ejecuta `return ProtocolInvocationLauncherSelectCert.getResultCancel()`, **omitiendo
-la llamada a `sendDataToServer`** (que sí se encuentra presente en el bloque `catch (SocketOperationException)`
-inmediatamente inferior). La cancelación de selección de certificado nunca llega al
-servidor intermedio.
-
-**Uso permanente de HTTP 200 para errores en socket local.**
-`CommandProcessorThread.createHttpResponse` siempre genera una cabecera
-`HTTP/1.1 200 OK` para cualquier respuesta de error (`CommandProcessorThread.java:493-512`),
-haciendo que los errores viajen siempre a nivel de capa de aplicación en el cuerpo
-de la respuesta Base64 y nunca en la capa de transporte HTTP.
-
-**Ruptura del prefijo `SAF_` por `e.getRequestorText()`.** En
-`ProtocolInvocationLauncherSign.java:832` y `ProtocolInvocationLauncherSignAndSave.java:860`,
-si la excepción `RuntimeConfigNeededException` no es de tipo `CONFIRM` ni `PASSWORD`,
-se lanza `new SocketOperationException(e.getRequestorText(), e.getMessage(), e)`.
-El código de error no es un `SAF_nn`, sino la clave de internacionalización devuelta
-por `getRequestorText()`, lo que impide que `autoscript.js` reconozca el error con su
-comprobación `data.substr(0, 4) == "SAF_"`.
-
-**Duplicación de la rama ternaria en `SAF_21`.** Al gestionar versiones no soportadas
-en la rama de sockets de `ProtocolInvocationLauncher.java:283-285`:
-```java
-final String errorCode = e.isNewVersionNeeded()
-    ? ProtocolInvocationLauncherErrorManager.ERROR_UNSUPPORTED_PROCEDURE
-    : ProtocolInvocationLauncherErrorManager.ERROR_UNSUPPORTED_PROCEDURE;
-```
-Ambas opciones del operador condicional son idénticas, impidiendo que el cliente
-o el log diferencien si la versión requerida es más moderna o más antigua que la soportada.

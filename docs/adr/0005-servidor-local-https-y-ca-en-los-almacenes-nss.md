@@ -406,3 +406,16 @@ loopback», que son remedios opuestos— es de la v0.5.
 - **El flatpak sí puede registrar `x-scheme-handler/afirma`** exportando su `.desktop`; el
   nuestro simplemente no lo declara todavía. Lo que sostiene el hito v0.4 no es que el
   flatpak no pueda ser la puerta, sino las otras fichas, que se sostienen solas.
+
+## Enmienda: el canal escucha en `127.0.0.1`, y `::1` queda fuera a propósito
+
+El certificado se emite con SAN `DNS:localhost` e `IP:127.0.0.1`, y el canal se
+ata a esa misma dirección, nunca a la comodín. `::1` no se sirve: quien conecte
+por el bucle local IPv6 no encuentra nada escuchando.
+
+No es un olvido. El cliente oficial tiene cableado `SERVER_HOST = "127.0.0.1"`,
+así que ninguna sede lo necesita, y admitirlo obliga a tocar dos sitios a la
+vez —un segundo `bind` y la SAN del certificado—, con el coste de reinstalación
+de CA que este ADR ya describe. La comprobación de procedencia sí pregunta por
+la propiedad de bucle local de la dirección, no compara cadenas, así que
+aceptaría `::1` sin cambios el día que se sirva.

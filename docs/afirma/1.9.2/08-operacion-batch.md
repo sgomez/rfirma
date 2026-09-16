@@ -41,7 +41,10 @@ En AutoFirma 1.9.2 existen dos modalidades radicalmente distintas de ejecución:
    (CAdES, XAdES, PAdES) y las guarda mediante un mecanismo de almacenamiento de
    servidor (`SignSaver` en XML o `DocumentManager` en JSON). AutoFirma **nunca**
    recibe ni devuelve los documentos firmados resultantes; únicamente recibe y
-   entrega al llamante un informe de resultados del lote.
+   entrega al llamante un informe de resultados del lote (`signs`). El protocolo
+   `afirma://` no contempla ninguna vía ni parámetro para retornar los binarios
+   firmados de un lote remoto al cliente web, requiriendo necesariamente que el
+   servidor disponga de componentes de custodia o persistencia para almacenarlos.
 
 2. **Lotes monofásicos locales (`localBatchProcess=true`, sólo JSON):**
    Diseñado para escenarios donde el servidor no dispone de los servicios de prefirma
@@ -164,8 +167,8 @@ public static UrlParametersForBatch getParametersToBatch(final Map<String, Strin
 | `fileid` | String alfanumérico | Condicional (si no hay `dat`) | `null` | Identificador de fichero remoto en el servidor intermedio para recuperar el sobre de parámetros. Longitud máx. 20 caracteres. | `UrlParameters.java:59`, `UrlParametersForBatch.java:196-210` |
 | `batchpresignerurl` | URL (HTTP/HTTPS) | Sí, si `!localBatchProcess` | `null` | URL del servlet de prefirma trifásica remota. Prohibido acceso a red local salvo configuración explícita. | `UrlParametersForBatch.java:243-259` |
 | `batchpostsignerurl` | URL (HTTP/HTTPS) | Sí, si `!localBatchProcess` | `null` | URL del servlet de postfirma trifásica remota. Prohibido acceso a red local salvo configuración explícita. | `UrlParametersForBatch.java:238-254` |
-| `jsonbatch` | Booleano (`true`/`false`) | No | `false` | Indica que la definición del lote proporcionada en `dat` está en formato JSON. En caso contrario, se asume XML. | `UrlParametersForBatch.java:44, 330-332` |
-| `localBatchProcess` | Booleano (`true`/`false`) | No | `false` | Indica si el proceso de lote se debe ejecutar de forma monofásica local sin contactar con servicios de pre/postfirma. Sólo opera en lotes JSON. | `UrlParametersForBatch.java:47, 232-234` |
+| `jsonbatch` | Booleano (`true`/`false`) | No | `false` | Indica que la definición del lote proporcionada en `dat` está en formato JSON. Estrictamente sensible a minúsculas (`jsonbatch`). En caso contrario, se asume XML. | `UrlParametersForBatch.java:44, 330-332` |
+| `localBatchProcess` | Booleano (`true`/`false`) | No | `false` | Indica si el proceso de lote se debe ejecutar de forma monofásica local sin contactar con servicios de pre/postfirma. Exclusivamente soportado en lotes JSON (`jsonbatch=true`). | `UrlParametersForBatch.java:47, 232-234` |
 | `needcert` | Booleano (`true`/`false`) | No | `false` | Si se establece a `true`, la respuesta incluirá el certificado utilizado para firmar separado por `\|`. | `UrlParametersForBatch.java:41, 322-327` |
 | `id` | String alfanumérico | Sí en servidor intermedio | `null` | Identificador de sesión para el intercambio con el servidor intermedio (`stservlet`). Longitud máx. 20 caracteres. | `UrlParametersForBatch.java:25, 196-211` |
 | `key` | String (8 caracteres) | Opcional | `null` | Clave simétrica de 8 caracteres (DES) utilizada para descifrar la entrada y cifrar la respuesta. | `UrlParameters.java:53-56`, `ProtocolInvocationLauncherUtil.java` |
@@ -199,6 +202,18 @@ public static UrlParametersForBatch getParametersToBatch(final Map<String, Strin
    `es.gob.afirma.allowLocalAccess` esté habilitada. El acceso local no permitido lanza
    `ParameterLocalAccessRequestedException`.
 
+### 2.3 Sensibilidad a mayúsculas en `jsonbatch` e incompatibilidad con `localBatchProcess`
+
+1. **Sensibilidad estricta a minúsculas en `jsonbatch`:**
+   El analizador de la URI `ProtocolInvocationUriParser.parserUri` (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ProtocolInvocationUriParser.java:273-286`) descompone los parámetros y los almacena en un `HashMap<String, String>` sin transformar ni normalizar el tamaño de las letras de las claves. La clase `UrlParametersForBatch.java:44, 330-332` comprueba estrictamente la presencia de `PARAM_JSON_BATCH = "jsonbatch"`.
+   El cliente web de referencia `autoscript.js` genera siempre `jsonbatch` íntegramente en minúsculas (`autoscript.js:2023, 2849, 4080`).
+   Si un llamante construye una petición utilizando grafías en camelCase (como `jsonBatch=true`, tal como aparecía en el test unitario deshabilitado `afirma-simple/src/test/java/es/gob/afirma/test/simple/TestProtocolInvocationJSON.java:40`), la condición `params.containsKey("jsonbatch")` evalúa falso. AutoFirma degrada entonces al valor por defecto `jsonbatch=false` y canaliza la petición hacia el motor XML (`BatchSigner.signXML`). Al intentar extraer el algoritmo invocando `getAlgorithmForXML` sobre los datos JSON en Base64, el parser SAX/DOM de XML falla arrojando `IOException`, lo que se traduce hacia el llamante en el error `SAF_27` (`ERROR_BATCH_SIGNATURE`).
+
+2. **Incompatibilidad de `localBatchProcess=true` con lotes XML:**
+   La modalidad de procesado monofásico local (`localBatchProcess=true`) está implementada de manera exclusiva para lotes en formato JSON gestionados por `JSONBatchManager` y `LocalBatchSigner`.
+   En `UrlParametersForBatch.java:236-260`, la presencia de `localBatchProcess=true` hace que el parser omita la obligatoriedad de `batchpresignerurl` y `batchpostsignerurl`. Sin embargo, el parser no comprueba que `jsonbatch` sea `true`.
+   Si se invoca un lote XML con `localBatchProcess=true` y URLs ausentes, AutoFirma no aborta en la fase de análisis de la URI; en su lugar, despliega la interfaz gráfica modal `AOKeyStoreDialog` y solicita la selección de certificado y PIN a la persona usuaria. Únicamente al llegar a `signBatch` (`ProtocolInvocationLauncherBatch.java:400-422`), el flujo bifurca hacia `BatchSigner.signXML` con URLs nulas, arrojando `IllegalArgumentException` y reportando tardíamente `SAF_03` ([BUG-16](A1-bugs-autofirma.md#bug-16-incompatibilidad-de-localbatchprocess-con-lotes-xml-provoca-fallo-tardío-con-saf_03-tras-seleccionar-certificado-y-pin)).
+
 ---
 
 ## 3. Recuperación de parámetros por servidor intermedio (`fileid`)
@@ -220,22 +235,11 @@ El flujo de recuperación en `ProtocolInvocationLauncher.java:307-333` opera com
    se elevan `InvalidEncryptedDataLengthException` o `DecryptionException`, resultando
    en los códigos de error `SAF_16` o `SAF_15` respectivamente.
 3. **Estructura del sobre descargado:**
-   El fichero recuperado del servidor intermedio **no es el lote directamente**, sino
-   un sobre estructurado con la lista de parámetros de la operación:
-   - Si `params.isJsonBatch()` es `true`: Se procesa mediante
-     `TriphaseDataParser.parseParamsListJson(batchDefinition)`
-     (`afirma-crypto-batch-client/.../TriphaseDataParser.java:156-177`). El JSON debe
-     contener la estructura `{"params": [{"k": "...", "v": "..."}, ...]}` donde cada
-     clave y valor se decodifican en UTF-8.
-   - Si es XML (`params.isJsonBatch()` es `false`): Se procesa mediante
-     `ProtocolInvocationUriParserUtil.parseXml(batchDefinition)`
-     (`afirma-core/.../ProtocolInvocationUriParserUtil.java:99-136`), que parsea nodos
-     `<params><param><key>...</key><value>...</value></param>...</params>`.
+   A pesar de que el comentario interno en el código (`ProtocolInvocationLauncher.java:304`) indica que se descargará «el JSON o XML de definicion de lote», el contenido recuperado del servidor intermedio **nunca es el documento de lote directamente**, sino un sobre estructurado con la colección completa de parámetros de la operación (`paramsMap`):
+   - **Determinación del formato del sobre:** La elección del parser depende de `params.isJsonBatch()` evaluado sobre los parámetros presentes en la URI inicial de arranque (`ProtocolInvocationLauncher.java:323-328`). Si la URI de invocación no incluyó `jsonbatch=true` (lo habitual cuando el navegador genera la URL abreviada con `buildUrlWithoutData` en `autoscript.js:4413-4424`, que solo transfiere `fileid`, `rtservlet` y `key`), `params.isJsonBatch()` evalúa `false`. En tal caso, el sobre recuperado debe ser obligatoriamente XML, procesándose mediante `ProtocolInvocationUriParserUtil.parseXml(batchDefinition)` (`afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/ProtocolInvocationUriParserUtil.java:99-136`), que parsea elementos `<batch><e k="..." v="..."/></batch>` (generados por `autoscript.js:4392-4401` vía `buildXML`).
+   - Si la URI inicial incluyó expresamente `jsonbatch=true`, se procesa mediante `TriphaseDataParser.parseParamsListJson(batchDefinition)` (`afirma-crypto-batch-client/src/main/java/es/gob/afirma/signers/batch/client/TriphaseDataParser.java:156-177`), esperando la estructura `{"params": [{"k": "...", "v": "..."}, ...]}`.
 4. **Instanciación final de parámetros:**
-   Los parámetros extraídos del sobre reemplazan o completan a los de la URI inicial
-   volviendo a llamar a `ProtocolInvocationUriParserUtil.getParametersToBatch(paramsMap, !bySocket)`.
-   La definición concreta del lote (el XML o JSON de las firmas individuales) reside
-   habitualmente dentro de la clave `dat` del sobre descargado.
+   Los parámetros recuperados del sobre reemplazan o completan a los de la URI inicial volviendo a llamar a `ProtocolInvocationUriParserUtil.getParametersToBatch(paramsMap, !bySocket)`. La definición concreta del lote (el documento XML o JSON de las firmas individuales) reside obligatoriamente dentro de la clave `dat` del sobre descargado (codificada en Base64), junto con las URLs `batchpresignerurl`, `batchpostsignerurl`, `stservlet` y demás opciones de la transacción.
 5. **Espera activa (*Active Waiting*):**
    Si `params.isActiveWaiting()` es `true` y la invocación no es por socket local
    (`!bySocket`), se inicia un hilo en segundo plano mediante `requestWait(storageServletUrl, id)`
@@ -386,9 +390,8 @@ en `afirma-server-triphase-signer/src/main/java/es/gob/afirma/signers/batch/doc-
    - `Id` (Opcional, alfanumérico): Identificador global del lote.
 
 2. **Elemento `<singlesign>` (Repetible):**
-   - Atributo `Id` (Obligatorio): Identificador único de la firma dentro del lote.
-     Nótese que `SignBatchXmlHandler.java:40, 123` comprueba el atributo con mayúscula
-     inicial `Id` (`attributes.getValue("Id")`).
+   - Atributo `Id` (Obligatorio): Identificador único de la firma individual dentro del lote.
+     **Sensibilidad estricta a mayúsculas:** El analizador SAX del servidor `SignBatchXmlHandler.java:40, 123-126` busca el atributo mediante `attributes.getValue(ATTR_ID)` donde `ATTR_ID = "Id"` con 'I' mayúscula. En XML los nombres de atributos distinguen entre mayúsculas y minúsculas, por lo que si una aplicación emisora genera `id="doc-001"` en minúsculas, la comprobación devuelve `null` y el servidor lanza fulminantemente `SAXException("No se ha indicar el atributo Id de una de las firmas")`. Esto detona un error HTTP 400 (`SAF_03`) o HTTP 500 (`SAF_27`) desde el servlet de prefirma. (Nótese el contraste con los lotes JSON, donde la clave es `id` en minúsculas, y con el propio log XML devuelto por el servidor, donde el atributo de salida se serializa en minúsculas: `<signresult id="..." .../>`).
    - `<datasource>`: Origen de los datos. Puede ser una URL accesible por el servidor
      (HTTP/HTTPS) o los datos directamente en Base64.
    - `<format>`: Formato de firma criptográfica (`XAdES`, `CAdES`, `PAdES`).
@@ -455,9 +458,16 @@ acorde al siguiente formato:
 ```
 
 Los posibles valores del atributo `result` corresponden a las constantes del enum
-`ProcessResult.Result` (`afirma-server-triphase-signer/.../ProcessResult.java:5-15`):
+`ProcessResult.Result` (`afirma-server-triphase-signer/src/main/java/es/gob/afirma/signers/batch/ProcessResult.java:5-15`):
 `DONE_AND_SAVED`, `DONE_BUT_NOT_SAVED_YET`, `DONE_BUT_SAVED_SKIPPED`,
 `DONE_BUT_ERROR_SAVING`, `ERROR_PRE`, `ERROR_POST`, `SKIPPED`, `SAVE_ROLLBACKED`.
+
+#### Esquema XML oficial frente a Javadoc desactualizado en `BatchSigner`
+
+Existe una discrepancia documental en el repositorio oficial de AutoFirma:
+* En el Javadoc del método cliente `BatchSigner.signXML` (`afirma-crypto-batch-client/src/main/java/es/gob/afirma/signers/batch/client/BatchSigner.java:181-207`), figura un esquema XML tentativo compuesto por nodos `<signs><sign id="..."><result>OK|KO|NP</result><reason>...</reason></sign></signs>`.
+* Sin embargo, la implementación ejecutable del servidor de postfirma (`afirma-server-triphase-signer/src/main/java/es/gob/afirma/signers/batch/xml/SignBatch.java:204-219`) y el esquema XSD oficial (`afirma-server-triphase-signer/src/main/java/es/gob/afirma/signers/batch/doc-files/resultlog-scheme.html`) generan e imponen invariablemente la estructura `<signs><signresult id="..." result="..." description="..."/></signs>`.
+* AutoFirma no analiza ni valida el contenido del XML retornado por el servidor de postfirma: `BatchSigner.java:291` se limita a transformar la respuesta HTTP en texto UTF-8 (`return new String(ret, DEFAULT_CHARSET)`). Por consiguiente, el formato de respuesta del protocolo en entornos reales es el generado por `SignBatch.java`. La especificación reflejada en el Javadoc de `BatchSigner` es un residuo documental que nunca fue implementado por el componente servidor de AutoFirma.
 
 ---
 
@@ -594,9 +604,14 @@ El JSON de entrada se deserializa en `JSONBatchManager.parseBatchConfig(byte[])`
    Cada elemento del array debe contener:
    - `id`: Identificador obligatorio del documento.
    - `datareference`: Cadena en Base64 que contiene **los datos binarios directos del
-     documento a firmar**. A diferencia de los lotes remotos, aquí `LocalBatchSigner`
-     llama directamente a `Base64.decode(jsonSingleSign.getString("datareference"))`
-     (`JSONBatchManager.java:126`). No se admiten URLs como origen de datos.
+     documento a firmar**. A diferencia de los lotes remotos (donde el servidor de prefirma descarga URLs o
+     recupera documentos mediante su `DocumentManager`), en el procesado local `JSONBatchManager.java:126` invoca
+     directamente `Base64.decode(jsonSingleSign.getString(ELEM_DATAREFERENCE))`. Por tanto, **no se admiten URLs
+     ni referencias remotas**: si un llamante suministra una URL HTTP/HTTPS en `datareference`, la decodificación
+     Base64 falla arrojando una excepción que `parseBatchConfig` (`JSONBatchManager.java:68`) captura y relanza como
+     `ParameterException`, traduciéndose en el error `SAF_20` (`ERROR_LOCAL_BATCH_SIGN`) en
+     `ProtocolInvocationLauncherBatch.java:386` (o, si la cadena contuviese caracteres decodificables como Base64,
+     fallaría posteriormente durante la firma del formato con `SAF_28`, `SAF_29` o `SAF_30`).
    - `format`, `suboperation`, `extraparams`: Opcionales. Si se omiten, heredan los
      valores globales del lote.
 
@@ -800,76 +815,3 @@ el mensaje que visualiza el usuario en la interfaz gráfica modal y la causa exa
 | `SAF_51` | `ERROR_INCOMPATIBLE_KEY_TYPE` | Tipo de clave no compatible | La clave privada del certificado seleccionado no admite el algoritmo indicado (ej. clave EC con algoritmo RSA). | `LocalBatchSigner.java:100` |
 | `SAF_52` | `ERROR_LOCKED_KEYSTORE` | El almacén de certificados está bloqueado | El almacén o token criptográfico se encuentra bloqueado por exceso de intentos de PIN. | `ProtocolInvocationLauncherBatch.java:357` |
 
----
-
-## Lo que el código no aclara
-
-El análisis detallado del código fuente de AutoFirma 1.9.2 revela diversas
-ambigüedades, inconsistencias de diseño y comportamientos no documentados:
-
-1. **Incompatibilidad absoluta de `localBatchProcess` con lotes XML:**
-   En `UrlParametersForBatch.java:236-260`, cuando `localBatchProcess` es `true`, el validador
-   omite deliberadamente la comprobación de `batchpresignerurl` y `batchpostsignerurl`.
-   Sin embargo, en `ProtocolInvocationLauncherBatch.java:400-422`, la bifurcación que
-   conduce a `LocalBatchSigner` evalúa de forma excluyente `if (options.isJsonBatch())`.
-   Si un llamante envía un lote en XML con `localBatchProcess=true`, la ejecución cae en el
-   bloque `else` invocando a `BatchSigner.signXML(...)`, el cual lanza de inmediato
-   `IllegalArgumentException("La URL de preproceso de lotes no puede se nula ni vacia")`
-   al detectar que las URLs son nulas. El código no valida esta incompatibilidad de forma
-   preventiva en el parser, provocando un error confuso de tipo `SAF_03`.
-
-2. **Discrepancia severa en el esquema XML de respuesta en lotes remotos:**
-   En la documentación Javadoc de `BatchSigner.java:181-207`, se afirma formalmente que el
-   servidor de postfirma devuelve un XML con la siguiente estructura:
-   `<signs><sign id="..."><result>OK|KO|NP</result><reason>...</reason></sign></signs>`.
-   Sin embargo, la implementación real del servidor en `SignBatch.java:215-219` y el esquema
-   oficial de documentación `resultlog-scheme.html` generan una estructura completamente
-   distinta: `<signs><signresult id="..." result="DONE_AND_SAVED" description="..."/></signs>`.
-   Cualquier cliente que hubiese implementado un parser guiado por el Javadoc de
-   `BatchSigner` fallaría al procesar las respuestas reales del servidor oficial de lotes.
-
-3. **Inconsistencia de capitalización en el parámetro `jsonbatch`:**
-   En `UrlParametersForBatch.java:44`, la constante del parámetro se define estrictamente
-   en minúsculas: `PARAM_JSON_BATCH = "jsonbatch"`. Dado que `extractParams` preserva las
-   mayúsculas y minúsculas exactas del mapa (`ProtocolInvocationLauncher.java:956-957`),
-   la búsqueda `params.containsKey("jsonbatch")` distingue entre mayúsculas y minúsculas.
-   Sorprendentemente, en el test unitario oficial de AutoFirma
-   `afirma-simple/src/test/java/es/gob/afirma/test/simple/TestProtocolInvocationJSON.java:40`,
-   la URI se construye con `jsonBatch=true` (con la 'B' mayúscula). Dicho test está marcado
-   con `@Ignore` y nunca se ejecutó en integración continua; si se ejecutase, el parámetro
-   sería ignorado y AutoFirma trataría la petición como un lote XML, fallando al parsearlo.
-
-4. **Naturaleza del sobre de datos recuperado mediante `fileid`:**
-   El comentario del código en `ProtocolInvocationLauncher.java:304-306` indica textualmente:
-   *«Si se indica un identificador de fichero, es que el JSON o XML de definicion de lote se tiene que descargar desde el servidor intermedio»*.
-   Sin embargo, las líneas inmediatamente posteriores (`327-332`) no tratan el binario
-   descargado como la definición del lote, sino como una lista serializada de parámetros
-   (`TriphaseDataParser.parseParamsListJson` o `ProtocolInvocationUriParserUtil.parseXml`).
-   Esto significa que el servicio de custodia intermedio debe almacenar un sobre con el
-   parámetro `dat` conteniendo el lote en Base64, y no el fichero XML/JSON del lote en bruto,
-   detalle que contradice los comentarios internos del código.
-
-5. **Asimetría semántica en el campo `datareference`:**
-   En los lotes remotos trifásicos (XML y JSON), `datareference` / `datasource` puede ser una
-   URL externa (que el servidor de pre/postfirma descarga por HTTP) o una cadena en Base64.
-   En cambio, en los lotes monofásicos locales, `JSONBatchManager.java:126` asume
-   invariablemente que el campo es Base64 y lo entrega directamente a `Base64.decode()`.
-   Si un integrador web proporciona una URL en un lote local, la operación falla
-   estrepitosamente con error de decodificación Base64 en lugar de descargar el recurso.
-
-6. **Sensibilidad a mayúsculas en el atributo `Id` del XML de lote:**
-   En `SignBatchXmlHandler.java:40, 123-126`, el procesador SAX del servidor busca
-   estrictamente el atributo `Id` (con 'I' mayúscula):
-   `attributes.getValue("Id")`. Si el XML de entrada utiliza el estándar habitual `id`
-   (en minúsculas), `attributes.getValue` devuelve `null` y el handler lanza
-   `SAXException("No se ha indicar el atributo Id de una de las firmas")`, a pesar de que
-   el Javadoc de `BatchSigner.java:118` documenta `<xs:attribute name="id"/>` en minúsculas.
-
-7. **Imposibilidad de recuperar las firmas en lotes remotos:**
-   En la arquitectura trifásica de AutoFirma, no existe ningún mecanismo ni parámetro para
-   que el llamante web obtenga las firmas electrónicas generadas a través del protocolo
-   `afirma://`. La aplicación asume ciegamente que el servidor donde residen los servlets
-   almacenará las firmas en disco o base de datos mediante clases `SignSaver`. Si una
-   aplicación web requiere disponer de los binarios firmados en el navegador o enviarlos
-   a su propio backend sin desplegar el ecosistema servidor de AutoFirma, la única vía
-   posible en 1.9.2 es recurrir forzosamente al lote local (`localBatchProcess=true`) en JSON.

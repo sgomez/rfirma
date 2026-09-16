@@ -130,7 +130,9 @@ tanto del servidor intermedio como del socket local HTTP:
 4. **Ausencia de temporizador de inactividad:** a diferencia del socket HTTP
    (`SOCKET_TIMEOUT = 90000` ms en `ServiceInvocationManager.java:39`), **el modo
    WebSocket no tiene temporizador de inactividad**. La aplicación permanece viva
-   mientras el canal WebSocket se mantenga abierto.
+   mientras el canal WebSocket se mantenga abierto. Si el navegador nunca llega a
+   conectar tras el arranque nativo, el proceso queda huérfano indefinidamente
+   (ver [BUG-01 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-01-proceso-huérfano-indefinido-en-websocket-sin-conexión-inicial)).
 5. **Detección de conexión perdida (*heartbeat*):** para detectar caídas de red o
    cierres anómalos del navegador, el servidor ajusta el temporizador de pérdida
    de conexión (`setConnectionLostTimeout`, provisto por `org.java_websocket.WebSocketServer`)
@@ -437,10 +439,10 @@ public AfirmaWebSocketServer(final int port, final String sessionId) {
 * **Enlace a todas las interfaces (`0.0.0.0`):** al instanciar `new InetSocketAddress(port)`
   sin especificar dirección IP, Java enlaza el socket servidor a la dirección comodín
   `INADDR_ANY` (`0.0.0.0`). Esto significa que el socket escucha en **todas** las
-  interfaces de red de la máquina (incluidas interfaces Ethernet o Wi-Fi accesibles
-  desde la red local), y no únicamente en `127.0.0.1`. La restricción de acceso local
-  se delega por completo a la verificación de la IP del cliente en la capa de
-  aplicación en la versión 4 (§4.2).
+  interfaces de red de la máquina, y no únicamente en `127.0.0.1`. La restricción de
+  acceso local no se aplica en el enlace del socket: se delega por completo a la
+  verificación de la IP del cliente en la capa de aplicación, que introduce la
+  versión 4 (§4.2).
 * **Reutilización de dirección:** `setReuseAddr(true)` permite reiniciar el servicio
   incluso si el puerto TCP se encuentra en estado `TIME_WAIT`.
 * **Hook de apagado del servidor:** añade un `ShutdownHook` a la JVM para asegurar
@@ -457,9 +459,14 @@ System.setProperty(SYSTEM_PROPERTY_OPTIMIZED_FOR_VDI, Boolean.toString(optimized
 Donde `SYSTEM_PROPERTY_OPTIMIZED_FOR_VDI = "websockets.optimizedForVdi"` (`línea 39`).
 Esta propiedad se lee de la configuración del usuario en la pestaña General de
 preferencias (`PreferencesPanelGeneral.java:73, 701, 740`: *«Funcionamiento optimizado
-para VDI. No recomendado en otros entornos»*). No obstante, en la base de código de
-AutoFirma 1.9.2 ninguna otra clase vuelve a consultar esta propiedad del sistema (ver
-sección final «Lo que el código no aclara»).
+para VDI. No recomendado en otros entornos»*).
+
+Aunque el commit de incorporación (`20b20d1b94c`) anunciaba la aplicación de un
+retardo en las comunicaciones WebSocket para evitar bloqueos del canal bajo VDI,
+dicha lógica nunca llegó a implementarse: en toda la base de código de AutoFirma 1.9.2
+ninguna clase, biblioteca ni método vuelve a consultar esta propiedad ni introduce
+retardos. La opción de configuración es un placebo funcional sin efecto alguno sobre el
+servidor ni el protocolo (ver [BUG-12 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-12-opción-de-configuración-modo-vdi-inoperativa-por-propiedad-de-sistema-huérfana-sin-consumidor-websocketsoptimizedforvdi)).
 
 ---
 
@@ -475,8 +482,8 @@ La clase base `AfirmaWebSocketServer`
 implementa la versión original del protocolo:
 
 1. **Sin validación de origen:** en `onMessage` (`99-115`), no se examina la dirección
-   IP del cliente remoto. Al estar enlazado a `0.0.0.0`, cualquier dispositivo de la
-   red local capaz de alcanzar el puerto TCP puede enviar peticiones.
+   IP del cliente remoto. La comprobación de procedencia local se introduce en la
+   versión 4 (§4.2).
 2. **Sin validación de sesión:** aunque el constructor recibe `sessionId` y lo guarda
    en `this.sessionId` (`55`), el método `onMessage` **nunca comprueba si el mensaje
    incluye `idsession`**, ni si este coincide con el de inicio.
@@ -530,9 +537,12 @@ private static boolean isLocalAddress(final InetAddress address) {
 }
 ```
 * **Comportamiento:** exige que la dirección IP remota sea textualmente `"127.0.0.1"`.
-* **Rechazo:** si la petición proviene de otra IP (o por IPv6 como `::1`), se envía el
-  código de error `SAF_47` (*«Peticion al socket desde IP externa o sin identificar»*,
-  `ProtocolInvocationLauncherErrorManager.java:78, 135`) y se aborta el procesamiento.
+* **Rechazo:** si la petición proviene de otra IP (o por la dirección de bucle local IPv6
+  como `::1` o `0:0:0:0:0:0:0:1`), se envía el código de error `SAF_47` (*«Peticion al socket
+  desde IP externa o sin identificar»*, `ProtocolInvocationLauncherErrorManager.java:78, 135`)
+  y se aborta el procesamiento (ver [BUG-11 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-11-rechazo-del-bucle-local-ipv6-1-en-el-websocket-versión-4)).
+  El cliente oficial `autoscript.js:1749` solventa esto fijando de manera estricta
+  `SERVER_HOST = "127.0.0.1"`, pero integraciones con IPv6 preferente son rechazadas.
 
 #### Filtro 2: Validación del identificador de sesión
 ```java
@@ -683,7 +693,12 @@ carácter tubería `|`:
 * Si hay un separador `|`: el primer campo es el certificado firmante codificado en
   Base64 y el segundo es la firma en Base64.
 * Si hay dos separadores `|`: el tercer campo contiene metadatos adicionales en Base64
-  (ej. información de firma trifásica).
+  (ej. información de firma trifásica). En `autoscript.js:2537`, la asignación
+  `extraInfo = Base64.decode(data.substring(sepPos2), true)` utiliza `sepPos2` sin sumar `1`,
+  arrastrando el delimitador `|` al inicio de la subcadena. Sin embargo, la rutina
+  `Base64.decode` (`autoscript.js:5091`) sanea previamente la entrada con la expresión regular
+  `input.replace(/[^A-Za-z0-9\-\_\=]/g, "")`, purgando el carácter `|` antes de iniciar la
+  decodificación y evitando así cualquier error sintáctico o corrupción de los metadatos.
 * **Normalización de Base64:** el cliente JavaScript convierte cualquier variante
   URL-safe (`-` y `_`) a Base64 estándar (`+` y `/`):
   `data.substring(...).replace(/\-/g, "+").replace(/\_/g, "/")` (`2530-2537`).
@@ -814,8 +829,9 @@ public void onOpen(final WebSocket ws, final ClientHandshake handshake) {
 
 A diferencia del socket local HTTP, donde `ServiceInvocationManager.java:132` recurre a
 un script temporal en macOS (`MacUtils.closeMacService`) para buscar y matar el proceso
-mediante `kill -9`, en modo WebSocket la desconexión se basa íntegramente en la señal
-`onClose` del protocolo WebSocket:
+mediante `kill -9` (ver [BUG-03 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-03-script-de-terminación-en-macos-closemacservice-invoca-kill-sobre-un-proceso-lanzador-extinto)),
+en modo WebSocket la desconexión se basa íntegramente en la señal `onClose` del protocolo
+WebSocket:
 * Cuando el usuario cierra la pestaña o navega fuera de la sede electrónica, el
   navegador emite automáticamente la trama *Close Frame* de WebSocket (código 1000/1001).
 * Al recibir el cierre, el servidor ejecuta `Runtime.getRuntime().halt(0)`
@@ -890,70 +906,4 @@ implementa la máquina de estados del navegador:
    ```
    Y transmite la URI de la operación real (`currentOperationUrl`).
 
----
 
-## Lo que el código no aclara
-
-Esta sección recopila las discrepancias, comportamientos anómalos y decisiones de
-diseño no documentadas detectadas al auditar el código fuente del tag `v1.9.2`:
-
-1. **Proceso huérfano indefinido si no hay conexión inicial:** a diferencia del socket
-   HTTP (`ServiceInvocationManager`), que arranca un temporizador de 90 segundos que
-   mata la JVM si nadie se conecta, `AfirmaWebSocketServerManager` y
-   `AfirmaWebSocketServer` **no tienen ningún temporizador de inactividad**. Si el
-   navegador lanza `afirma://websocket?` pero el usuario cancela el diálogo del
-   navegador para permitir abrir la aplicación externa, o si el navegador se cierra
-   antes de conectar, el proceso de AutoFirma queda ejecutándose en segundo plano
-   indefinidamente consumiendo memoria hasta que el sistema operativo se reinicie o se
-   fuerce su cierre manual.
-2. **`protocolVersion` en `AfirmaWebSocketServer` (v3) nunca se inicializa:** en
-   `AfirmaWebSocketServer.java:41`, el atributo `protocolVersion` se declara como
-   `private static int protocolVersion = -1;`. En ningún método de la clase se le
-   asigna valor (a diferencia de `AfirmaWebSocketServerV4`, que tiene la constante `4`).
-   Por tanto, en la versión 3 siempre se traslada `-1` a `ProtocolInvocationLauncher.launch`,
-   forzando a que la versión efectiva se infiera de los parámetros de la operación o
-   degrade a 1.
-3. **Escucha en `0.0.0.0` en lugar de la interfaz de bucle local:** en
-   `AfirmaWebSocketServer.java:52`, la llamada `super(new InetSocketAddress(port))`
-   enlaza el servidor a todas las interfaces de red de la máquina (`INADDR_ANY`). En la
-   versión 3 del servidor no existe ninguna comprobación de IP remota, permitiendo que
-   cualquier equipo de la misma red local envíe órdenes de firma al puerto si este es
-   alcanzable.
-4. **Rechazo estricto de IPv6 en la versión 4:** en `AfirmaWebSocketServerV4.java:100-102`,
-   `isLocalAddress` comprueba únicamente:
-   `LOCALHOST_ADDRESS.equals(address.getHostAddress())` donde `LOCALHOST_ADDRESS = "127.0.0.1"`.
-   A diferencia del socket HTTP (`CommandProcessorThread.java:159`), que admite
-   `0:0:0:0:0:0:0:1` y `localhost`, la implementación de WebSocket versión 4 rechaza con
-   `SAF_47` cualquier conexión originada a través de la dirección IPv6 de *loopback*
-   (`::1`).
-5. **Omisión de la versión por defecto incompatible:** si se invoca `afirma://websocket?`
-   sin el parámetro `v`, `getVersion` asigna por defecto el valor `1`
-   (`ProtocolInvocationLauncher.java:927`). Sin embargo, `AfirmaWebSocketServerManager.java:36`
-   solo admite las versiones `3` y `4`. Como resultado, una invocación que omita el
-   parámetro `v` no recurre a la versión más reciente ni a la más antigua soportada, sino
-   que falla inmediatamente mostrando `SAF_21` y matando la aplicación.
-6. **Propiedad `websockets.optimizedForVdi` huérfana:** en
-   `AfirmaWebSocketServerManager.java:61`, se establece la propiedad del sistema:
-   `System.setProperty("websockets.optimizedForVdi", Boolean.toString(optimizedForVdi))`.
-   No existe ninguna otra referencia a esta propiedad en todo el repositorio de
-   AutoFirma: ninguna clase lee su valor ni modifica su comportamiento en función de
-   ella.
-7. **Falta de comprobación del contenido de la respuesta de eco en JS:** en
-   `autoscript.js:2258-2268`, `onMessageEchoFunction` no comprueba que el mensaje
-   recibido sea la cadena `"OK"`. Cualquier mensaje devuelto por el socket (incluyendo
-   un mensaje de error como `SAF_46` o `SAF_47`) es interpretado como un eco exitoso,
-   lo que provoca que el cliente envíe de inmediato la operación real
-   (`ws.send(currentOperationUrl)`).
-8. **Ausencia de cierre explícito del WebSocket en el cliente:** en `autoscript.js`, el
-   objeto `AppAfirmaWebSocketClient` no expone ni ejecuta en ningún momento `ws.close()`.
-   El cierre del socket se confía enteramente a la destrucción del contexto de navegación
-   por parte del explorador web (al cerrar o recargar la pestaña).
-9. **Omisión de la letra 'v' en el alfabeto de generación de `idsession`:** en
-   `autoscript.js:1600`, el literal `VALID_CHARS_TO_ID` contiene
-   `"1234567890abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"`, donde falta la
-   letra minúscula `v` tras la `u`.
-10. **Inconsistencia entre el comentario de diseño y el código sobre `idsession`:** el
-    comentario en `ProtocolInvocationLauncher.java:995-996` afirma que *«el ID de sesión
-    solo puede estar conformado por números para evitar inyección de código en
-    AppleScript»*. Sin embargo, el código inmediatamente posterior (`línea 999`) valida
-    `Character.isLetterOrDigit(c)`, permitiendo letras mayúsculas y minúsculas.
