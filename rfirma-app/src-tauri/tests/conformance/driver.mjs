@@ -772,6 +772,10 @@ function aCondition(id, held, observation) {
   return { id, verdict: held ? "compliant" : "discrepant", observation };
 }
 
+function aConditionEvent(id, held, observation) {
+  return { event: "condition", ...aCondition(id, held, observation) };
+}
+
 /** La respuesta trae el certificado y la firma por separado, cada uno con su contenido. */
 function theCertificateAndTheSignatureApart(signature, certificate) {
   const apart = signature.length > 0 && certificate.length > 0 && signature !== certificate;
@@ -848,6 +852,19 @@ function theSaveScript() {
   );
 }
 
+/** Un `saveDataToFile()` cuyo `filename` trae un carácter que el protocolo no admite. */
+function theSaveWithAnIllegalFilenameScript() {
+  AutoScript.saveDataToFile(
+    theChallenge().toString("base64"),
+    "Guarda el reto del banco de referencia",
+    "cha:llenge.bin",
+    "bin",
+    "Datos binarios",
+    (data) => settle({ event: "success", data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un `getFileNameContentBase64()` para cargar un único fichero. */
 function theLoadScript() {
   AutoScript.getFileNameContentBase64(
@@ -855,8 +872,19 @@ function theLoadScript() {
     "bin",
     "Datos binarios",
     null,
-    (filename, data) =>
-      settle({ event: "success", filename: String(filename), data: String(data) }),
+    (filename, data) => {
+      const apart = String(filename).length > 0 && bytesOf(data).length > 0;
+      emit(
+        aConditionEvent(
+          "load_answers_the_name_of_the_chosen_file_next_to_its_content",
+          apart,
+          apart
+            ? "el nombre llegó separado del contenido"
+            : "la respuesta no trajo el nombre junto al contenido",
+        ),
+      );
+      settle({ event: "success", filename: String(filename), data: String(data) });
+    },
     (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
   );
 }
@@ -868,12 +896,28 @@ function theMultiLoadScript() {
     "bin",
     "Datos binarios",
     null,
-    (filenames, data) =>
+    (filenames, data) => {
+      const names = Array.isArray(filenames) ? filenames : [filenames];
+      const contents = Array.isArray(data) ? data : [data];
+      const apart =
+        names.length === contents.length &&
+        names.length > 1 &&
+        contents.every((content) => bytesOf(content).length > 0);
+      emit(
+        aConditionEvent(
+          "multiload_answers_every_chosen_file_apart",
+          apart,
+          apart
+            ? `volvieron ${names.length} ficheros, cada uno con su contenido`
+            : `la respuesta trajo ${names.length} nombre(s) y ${contents.length} contenido(s): no hubo selección múltiple con cada fichero aparte`,
+        ),
+      );
       settle({
         event: "success",
-        filenames: Array.isArray(filenames) ? filenames.join("|") : String(filenames),
-        data: Array.isArray(data) ? data.join("|") : String(data),
-      }),
+        filenames: names.join("|"),
+        data: contents.join("|"),
+      });
+    },
     (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
   );
 }
@@ -887,6 +931,36 @@ function theSignAndSaveScript() {
     "CAdES",
     "mode=explicit",
     "challenge-signed.csig",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `signAndSaveToFile()` sin datos: la petición viaja sin `dat` y el documento se pide en disco. */
+function theSignAndSaveWithoutDataScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    "",
+    "SHA256",
+    "CAdES",
+    "mode=explicit",
+    null,
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `signAndSaveToFile()` cuyo `filename` trae un carácter que el protocolo no admite. */
+function theSignAndSaveWithAnIllegalFilenameScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    theChallenge().toString("base64"),
+    "SHA256",
+    "CAdES",
+    "mode=explicit",
+    "challenge:signed.csig",
     (signature, certificate) =>
       settle({ event: "success", result: String(signature), certificate: String(certificate) }),
     (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
@@ -1357,10 +1431,30 @@ if (script.startsWith("protocol-")) {
     theSignAndSaveWithAnEcdsaAlgorithmScript();
   } else if (script === "signwithbrokentsa") {
     theSignWithABrokenTsaUrlScript();
+  } else if (script === "savewithanillegalfilename") {
+    theSaveWithAnIllegalFilenameScript();
+  } else if (script === "signandsavewithanillegalfilename") {
+    theSignAndSaveWithAnIllegalFilenameScript();
+  } else if (script === "signandsavewithoutdata") {
+    theSignAndSaveWithoutDataScript();
   } else {
     AutoScript.selectCertificate(
-      "",
-      (data) => settle({ event: "success", data: String(data) }),
+      script === "selectcertheadless" ? "headless=true" : "",
+      (data) => {
+        const certificate = bytesOf(data);
+        const alone =
+          !String(data).includes("|") && certificate.length > 0 && certificate[0] === 0x30;
+        emit(
+          aConditionEvent(
+            "selectcert_answers_the_chosen_certificate_alone",
+            alone,
+            alone
+              ? "volvió un único certificado codificado"
+              : "la respuesta no fue un certificado suelto",
+          ),
+        );
+        settle({ event: "success", data: String(data) });
+      },
       (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
     );
   }

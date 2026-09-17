@@ -18,20 +18,30 @@ use crate::dossier::{CheckState, Dossier, Verdict};
 use crate::errand::ErrandOutcome;
 use crate::verdicts::{
     chapter_tag, the_closing_of, the_verdict_for_a_bind_failure,
-    the_verdict_for_a_pinned_certificate, the_verdict_for_a_private_key_check,
-    the_verdict_for_a_save_confirmation, the_verdict_for_a_timestamp,
-    the_verdict_for_a_visible_signature_area, the_verdict_of, verdict_badge, CheckOutcome, GRAY,
-    PENDING_BADGE,
+    the_verdict_for_a_cancelled_dialogue, the_verdict_for_a_pinned_certificate,
+    the_verdict_for_a_private_key_check, the_verdict_for_a_proposed_save_name,
+    the_verdict_for_a_requested_input_document, the_verdict_for_a_save_confirmation,
+    the_verdict_for_a_saved_signature, the_verdict_for_a_timestamp,
+    the_verdict_for_a_visible_signature_area, the_verdict_for_an_automatic_selection,
+    the_verdict_for_an_interactive_load, the_verdict_for_an_overwrite_confirmation, the_verdict_of,
+    verdict_badge, CheckOutcome, GRAY, PENDING_BADGE,
 };
 use crate::Probe;
 
 /// Los arneses que la suite sabe correr; el catálogo los liga por nombre y la guarda de grada A
 /// exige que ninguno sobre ni falte.
 pub(crate) const THE_HARNESSES: &[&str] = &[
+    "automatic_certificate_selection",
+    "cancelled_dialogue",
+    "interactive_file_load",
     "occupied_service_ports",
+    "overwrite_confirmation",
     "pinned_certificate",
     "private_key_check",
+    "proposed_save_name",
+    "requested_input_document",
     "save_confirmation",
+    "signature_saved_to_disk",
     "supported_websocket_versions",
     "timestamp_in_the_signature",
     "visible_signature_area",
@@ -218,6 +228,27 @@ impl Probe {
             }
             Some("private_key_check") => {
                 the_verdict_for_a_private_key_check(outcome, answer.unwrap_or_default())
+            }
+            Some("signature_saved_to_disk") => {
+                the_verdict_for_a_saved_signature(outcome, answer.unwrap_or_default())
+            }
+            Some("proposed_save_name") => {
+                the_verdict_for_a_proposed_save_name(outcome, answer.unwrap_or_default())
+            }
+            Some("requested_input_document") => {
+                the_verdict_for_a_requested_input_document(outcome, answer.unwrap_or_default())
+            }
+            Some("overwrite_confirmation") => {
+                the_verdict_for_an_overwrite_confirmation(outcome, answer.unwrap_or_default())
+            }
+            Some("cancelled_dialogue") => {
+                the_verdict_for_a_cancelled_dialogue(outcome, answer.unwrap_or_default())
+            }
+            Some("interactive_file_load") => {
+                the_verdict_for_an_interactive_load(check, outcome, answer.unwrap_or_default())
+            }
+            Some("automatic_certificate_selection") => {
+                the_verdict_for_an_automatic_selection(outcome, answer.unwrap_or_default())
             }
             Some("pinned_certificate") => {
                 the_verdict_for_a_pinned_certificate(outcome, answer.unwrap_or_default())
