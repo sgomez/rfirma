@@ -22,19 +22,24 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
 function replacingOrFailing(source, literal, replacement) {
   if (!source.includes(literal)) {
-    throw new Error(`forcedToTheThirdProtocol: no encuentra el literal a sustituir: ${literal}`);
+    throw new Error(`forcedToProtocolVersion: no encuentra el literal a sustituir: ${literal}`);
   }
   return source.replace(literal, replacement);
 }
 
 /**
- * El `autoscript.js` publicado nunca manda `v=3` por websocket (siempre habla la 4). Para medir
- * el modo `v3` se fuerza el fuente antes de ejecutarlo: la versión que declara, la URL de
- * arranque sin `ports=` y los puertos con los que conecta, al puerto fijo. El oráculo sigue
- * siendo el cliente publicado; solo se le obliga a hablar como uno de la versión 3.
+ * El `autoscript.js` publicado nunca manda una versión distinta de 4 por websocket. Para medir
+ * cualquier otra —`v3`, o la obsoleta y la no soportada de BUG-25— se fuerza el fuente antes de
+ * ejecutarlo: la versión que declara, la URL de arranque sin `ports=` y los puertos con los que
+ * conecta, al puerto fijo. El oráculo sigue siendo el cliente publicado; solo se le obliga a
+ * hablar como uno de la versión pedida.
  */
-function forcedToTheThirdProtocol(source) {
-  source = replacingOrFailing(source, "var PROTOCOL_VERSION = 4;", "var PROTOCOL_VERSION = 3;");
+function forcedToProtocolVersion(source, version) {
+  source = replacingOrFailing(
+    source,
+    "var PROTOCOL_VERSION = 4;",
+    `var PROTOCOL_VERSION = ${version};`,
+  );
   source = replacingOrFailing(
     source,
     'var url = "afirma://websocket?ports=" + portsLine\n\t\t\t\t\t+ "&v=" + PROTOCOL_VERSION',
@@ -203,8 +208,11 @@ if (mode === "service") {
   delete globalThis.WebSocket;
 }
 
+const forcedProtocolVersion = mode !== "v4" ? /^v(\d+)$/.exec(mode) : null;
 const rawSource = readFileSync(autoscriptPath, "utf8");
-const forcedSource = mode === "v3" ? forcedToTheThirdProtocol(rawSource) : rawSource;
+const forcedSource = forcedProtocolVersion
+  ? forcedToProtocolVersion(rawSource, Number(forcedProtocolVersion[1]))
+  : rawSource;
 const source = script === "signgzip" ? withTheDataDeclaredGzipped(forcedSource) : forcedSource;
 runInThisContext(source, { filename: autoscriptPath });
 

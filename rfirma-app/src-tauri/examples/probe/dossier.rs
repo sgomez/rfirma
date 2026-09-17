@@ -7,11 +7,21 @@ use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
+/// El veredicto de un caso: tres valores, no dos. Un caso que no reproduce no falla la tanda,
+/// emite `Refuted` con sus coordenadas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
+pub enum Verdict {
+    Confirmed,
+    Refuted,
+    NotObservable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CaseState {
     Pending,
-    Resolved,
+    Resolved(Verdict),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,12 +144,12 @@ impl Dossier {
         self.contents.cases.get(case).map(|record| record.state)
     }
 
-    /// Marca `case` como resuelto hoy y lo deja escrito antes de devolver el control.
-    pub fn resolve(&mut self, case: &str) -> Result<(), String> {
+    /// Marca `case` con `verdict` hoy y lo deja escrito antes de devolver el control.
+    pub fn resolve(&mut self, case: &str, verdict: Verdict) -> Result<(), String> {
         self.contents.cases.insert(
             case.to_owned(),
             CaseRecord {
-                state: CaseState::Resolved,
+                state: CaseState::Resolved(verdict),
                 date: Some(today()),
             },
         );
@@ -154,7 +164,8 @@ impl Dossier {
     }
 }
 
-fn today() -> String {
+/// La fecha de hoy, `AAAA-MM-DD`: la misma que usa el expediente para fechar un veredicto.
+pub fn today() -> String {
     let seconds_since_epoch = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("el reloj del sistema va después de 1970")
@@ -181,4 +192,77 @@ fn civil_date_from_days(days: i64) -> (i64, u32, u32) {
         month_index - 9
     } as u32;
     (if month <= 2 { year + 1 } else { year }, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolves_a_case_with_a_three_valued_verdict() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let mut dossier =
+            Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
+
+        assert_eq!(dossier.state_of("saludo"), Some(CaseState::Pending));
+
+        dossier.resolve("saludo", Verdict::Refuted).unwrap();
+
+        assert_eq!(
+            dossier.state_of("saludo"),
+            Some(CaseState::Resolved(Verdict::Refuted))
+        );
+    }
+
+    #[test]
+    fn a_resolved_verdict_survives_a_reopen() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let mut dossier =
+            Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
+        dossier.resolve("saludo", Verdict::Confirmed).unwrap();
+
+        let reopened = Dossier::open(&path, "autofirma", &["saludo"], None).unwrap();
+
+        assert_eq!(
+            reopened.state_of("saludo"),
+            Some(CaseState::Resolved(Verdict::Confirmed))
+        );
+    }
+
+    #[test]
+    fn a_case_not_yet_run_stays_pending_instead_of_being_omitted() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let dossier = Dossier::open(
+            &path,
+            "autofirma",
+            &["saludo", "tramite"],
+            Some(coordinates),
+        )
+        .unwrap();
+
+        let names: Vec<&str> = dossier.cases().map(|(name, _)| name).collect();
+        assert!(names.contains(&"tramite"));
+        assert_eq!(dossier.state_of("tramite"), Some(CaseState::Pending));
+    }
 }
