@@ -1,9 +1,13 @@
 //! El trámite y el conductor del sondeo: arrancar el cliente publicado, leer sus eventos,
 //! invocar al sujeto y extraer lo que cada evento trae.
 
+use std::collections::VecDeque;
+use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
 
 use crate::dossier::ProtocolVerdict;
@@ -32,6 +36,8 @@ pub(crate) struct ErrandOutcome {
     pub(crate) signature: Option<String>,
     pub(crate) data: Option<String>,
     pub(crate) protocol_conditions: Vec<ProtocolConditionResult>,
+    #[allow(dead_code)]
+    pub(crate) recent_subject_lines: Vec<String>,
 }
 
 impl Probe {
@@ -52,22 +58,30 @@ impl Probe {
                 eprintln!("{complaint}");
                 std::process::exit(1);
             });
-        let mut subject = None;
+        let mut subject: Option<SubjectProcess> = None;
         let mut error_type = None;
         let mut error_code = None;
         let mut signature = None;
         let mut data = None;
         let mut protocol_conditions = Vec::new();
         for event in BufReader::new(events).lines().map_while(Result::ok) {
-            println!("{event}");
-            let _ = std::io::stdout().flush();
+            if self.verbose {
+                println!("{event}");
+                let _ = std::io::stdout().flush();
+            }
             transcript.record(&event).unwrap_or_else(|complaint| {
                 eprintln!("{complaint}");
                 std::process::exit(1);
             });
             if let Some(url) = the_launch_url_in(&event) {
-                eprintln!("sondeo: invoco {} con {url}", self.subject.display());
-                subject = Some(the_subject_invoked_with(&self.subject, &url));
+                if self.verbose {
+                    eprintln!("sondeo: invoco {} con {url}", self.subject.display());
+                }
+                subject = Some(the_subject_invoked_with(
+                    &self.subject,
+                    &url,
+                    &self.subject_log_path(),
+                ));
             }
             if let Some(kind) = the_error_type_in(&event) {
                 error_type = Some(kind);
@@ -90,10 +104,13 @@ impl Probe {
         }
         let launched = subject.is_some();
         let _ = driver.wait();
-        if let Some(mut subject) = subject {
-            let _ = subject.kill();
-            let _ = subject.wait();
-        }
+        let recent_subject_lines = if let Some(mut subject_proc) = subject {
+            let recents = subject_proc.recent_lines();
+            subject_proc.terminate();
+            recents
+        } else {
+            Vec::new()
+        };
         ErrandOutcome {
             launched,
             error_type,
@@ -101,6 +118,7 @@ impl Probe {
             signature,
             data,
             protocol_conditions,
+            recent_subject_lines,
         }
     }
 }
@@ -139,11 +157,93 @@ fn the_published_client_running(
         .expect("Node debería arrancar el conductor")
 }
 
-fn the_subject_invoked_with(subject: &Path, url: &str) -> Child {
-    Command::new(subject)
-        .arg(url)
-        .spawn()
-        .unwrap_or_else(|error| panic!("{} no arrancó: {error}", subject.display()))
+pub(crate) struct SubjectProcess {
+    child: Child,
+    recent_lines: Arc<Mutex<VecDeque<String>>>,
+    drain_handles: Vec<JoinHandle<()>>,
+}
+
+impl SubjectProcess {
+    pub(crate) fn spawn(subject: &Path, url: &str, log_path: &Path) -> Self {
+        if let Some(parent) = log_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let log_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_path)
+            .unwrap_or_else(|error| {
+                panic!(
+                    "no se pudo abrir el log del sujeto {}: {error}",
+                    log_path.display()
+                )
+            });
+        let log_file = Arc::new(Mutex::new(log_file));
+
+        let mut child = Command::new(subject)
+            .arg(url)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap_or_else(|error| panic!("{} no arrancó: {error}", subject.display()));
+
+        let recent_lines = Arc::new(Mutex::new(VecDeque::with_capacity(64)));
+        let mut drain_handles = Vec::new();
+
+        if let Some(stdout) = child.stdout.take() {
+            let file = Arc::clone(&log_file);
+            let recents = Arc::clone(&recent_lines);
+            drain_handles.push(spawn(move || drain_stream(stdout, file, recents)));
+        }
+
+        if let Some(stderr) = child.stderr.take() {
+            let file = Arc::clone(&log_file);
+            let recents = Arc::clone(&recent_lines);
+            drain_handles.push(spawn(move || drain_stream(stderr, file, recents)));
+        }
+
+        Self {
+            child,
+            recent_lines,
+            drain_handles,
+        }
+    }
+
+    pub(crate) fn recent_lines(&self) -> Vec<String> {
+        self.recent_lines.lock().unwrap().iter().cloned().collect()
+    }
+
+    pub(crate) fn terminate(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        for handle in self.drain_handles.drain(..) {
+            let _ = handle.join();
+        }
+    }
+}
+
+fn drain_stream(
+    stream: impl std::io::Read,
+    log_file: Arc<Mutex<std::fs::File>>,
+    recents: Arc<Mutex<VecDeque<String>>>,
+) {
+    let reader = BufReader::new(stream);
+    for line in reader.lines().map_while(Result::ok) {
+        if let Ok(mut file) = log_file.lock() {
+            let _ = writeln!(file, "{line}");
+            let _ = file.flush();
+        }
+        if let Ok(mut recents_lock) = recents.lock() {
+            if recents_lock.len() >= 50 {
+                recents_lock.pop_front();
+            }
+            recents_lock.push_back(line);
+        }
+    }
+}
+
+fn the_subject_invoked_with(subject: &Path, url: &str, log_path: &Path) -> SubjectProcess {
+    SubjectProcess::spawn(subject, url, log_path)
 }
 
 /// `NODE_EXTRA_CA_CERTS` solo lee PEM, y la raíz que instala AutoFirma en el escritorio es DER.
@@ -319,5 +419,33 @@ mod tests {
     fn ignores_an_event_without_protocol_condition() {
         let event = r#"{"event":"launch","url":"afirma://websocket"}"#;
         assert!(the_protocol_condition_in(event).is_none());
+    }
+    #[test]
+    fn drain_stream_pipes_lines_to_log_and_preserves_recents() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let log_file = Arc::new(Mutex::new(tmp.reopen().unwrap()));
+        let recents = Arc::new(Mutex::new(VecDeque::new()));
+        let input = std::io::Cursor::new(b"linea 1\nlinea 2\nlinea 3\n");
+
+        drain_stream(input, Arc::clone(&log_file), Arc::clone(&recents));
+
+        let stored: Vec<String> = recents.lock().unwrap().iter().cloned().collect();
+        assert_eq!(stored, vec!["linea 1", "linea 2", "linea 3"]);
+
+        let written = std::fs::read_to_string(tmp.path()).unwrap();
+        assert_eq!(written, "linea 1\nlinea 2\nlinea 3\n");
+    }
+    #[test]
+    fn outcome_carries_recent_subject_lines() {
+        let outcome = ErrandOutcome {
+            launched: true,
+            error_type: None,
+            error_code: None,
+            signature: None,
+            data: None,
+            protocol_conditions: Vec::new(),
+            recent_subject_lines: vec!["line 1".to_string()],
+        };
+        assert_eq!(outcome.recent_subject_lines.len(), 1);
     }
 }

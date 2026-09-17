@@ -46,6 +46,7 @@ fn verdict_label(verdict: Verdict) -> &'static str {
 }
 
 /// La etiqueta en castellano del resultado de una condición del protocolo.
+#[allow(dead_code)]
 pub(crate) fn protocol_verdict_label(verdict: ProtocolVerdict) -> &'static str {
     match verdict {
         ProtocolVerdict::Compliant => "conforme",
@@ -54,11 +55,11 @@ pub(crate) fn protocol_verdict_label(verdict: ProtocolVerdict) -> &'static str {
     }
 }
 
-const RESET: &str = "\x1b[0m";
-const GREEN: &str = "\x1b[32m";
-const RED: &str = "\x1b[31m";
-const YELLOW: &str = "\x1b[33m";
-const GRAY: &str = "\x1b[90m";
+pub(crate) const RESET: &str = "\x1b[0m";
+pub(crate) const GREEN: &str = "\x1b[32m";
+pub(crate) const RED: &str = "\x1b[31m";
+pub(crate) const YELLOW: &str = "\x1b[33m";
+pub(crate) const GRAY: &str = "\x1b[90m";
 
 const PREFIX_FECHA: &str = "  Fecha:        ";
 const PREFIX_OBSERVACION: &str = "  Observación:  ";
@@ -126,7 +127,7 @@ pub(crate) fn calculate_protocol_summary(dossier: &Dossier) -> ProtocolSummary {
     summary
 }
 
-fn format_badge(badge: &str, color: &str, use_color: bool) -> String {
+pub(crate) fn format_badge(badge: &str, color: &str, use_color: bool) -> String {
     let char_count = badge.chars().count();
     let pad = 15usize.saturating_sub(char_count);
     let spaces = " ".repeat(pad);
@@ -339,6 +340,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -356,6 +358,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -373,6 +376,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -390,6 +394,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved {
             verdict,
@@ -414,6 +419,7 @@ mod tests {
             signature: None,
             data: Some("MIID...".to_owned()),
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved {
             verdict,
@@ -438,6 +444,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_private_key_check(unlaunched)
         else {
@@ -452,6 +459,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_private_key_check(crashed)
         else {
