@@ -106,17 +106,12 @@ pub fn forget_recent(id: String, documents: State<'_, DocumentsRoot>) -> Result<
 pub fn choose_rubric(documents: State<'_, DocumentsRoot>) -> Option<RubricChoiceView> {
     let clues =
         crate::documents::ports::DialogClues::new().with_filter("Imagen", &["png", "jpg", "jpeg"]);
-    let chosen = match documents.portal.pick_file(&clues) {
-        Ok(Some(path)) => path,
-        Ok(None) => return None,
-        Err(error) => {
-            return Some(RubricChoiceView::refused(&RubricError::new(
-                Situation::SourceUnreadable,
-                error,
-            )))
-        }
-    };
-    let adopted = documents.rubric.adopt(&chosen);
+    let chosen = documents
+        .portal
+        .pick_file(&clues)
+        .map_err(|error| RubricError::new(Situation::SourceUnreadable, error))
+        .transpose()?;
+    let adopted = chosen.and_then(|path| documents.rubric.adopt(&path));
     Some(match adopted {
         Ok(normalized) => RubricChoiceView::adopted(&normalized),
         Err(error) => RubricChoiceView::refused(&error),
