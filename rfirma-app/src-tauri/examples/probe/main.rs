@@ -86,6 +86,13 @@ const APPLICATION_NOT_FOUND_EXCEPTION: &str =
 /// El `type` con el que el conductor avisa de que reventó él, no el sujeto.
 const THE_DRIVER_CRASH: &str = "uncaught";
 
+/// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
+const THE_EXHAUSTED_PATIENCE: &str = "timeout";
+
+/// Lo que el cliente publicado tarda en rendirse en el carril sin WebSocket: quince reintentos
+/// de eco contra tres puertos que no contestan, muy por encima de la paciencia de una tanda.
+const THE_SOCKET_BIND_FAILURE_PATIENCE: Duration = Duration::from_millis(180_000);
+
 /// Los puertos fijos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, y que el caso ocupa antes de
 /// invocar al sujeto para que no le quede ninguno libre.
 const THE_SOCKET_BIND_FAILURE_PORTS: [u16; 3] = [63131, 63132, 63133];
@@ -473,17 +480,18 @@ impl Probe {
                     .unwrap_or_else(|error| panic!("no pude ocupar el puerto {port}: {error}"))
             })
             .collect();
-        let outcome = self.run_errand(
+        let outcome = self.run_errand_with_patience(
             THE_SOCKET_BIND_FAILURE_CASE,
             THE_SINGLE_SELECTION,
             THE_SOCKET_BIND_FAILURE_MODE,
+            THE_SOCKET_BIND_FAILURE_PATIENCE,
         );
         if !outcome.launched {
             return CaseOutcome::resolved(Verdict::NotObservable);
         }
         let verdict = match outcome.error_type.as_deref() {
             Some(APPLICATION_NOT_FOUND_EXCEPTION) => Verdict::Confirmed,
-            Some(THE_DRIVER_CRASH) | None => Verdict::NotObservable,
+            Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) | None => Verdict::NotObservable,
             Some(_) => Verdict::Refuted,
         };
         CaseOutcome::Resolved {
@@ -506,9 +514,19 @@ impl Probe {
     /// Corre `script` en `mode` contra el sujeto declarado, transcribiendo cada evento del
     /// cliente publicado a medida que llega, y devuelve lo que se pudo medir del trámite.
     fn run_errand(&self, transcript_name: &str, script: &str, mode: &str) -> ErrandOutcome {
+        self.run_errand_with_patience(transcript_name, script, mode, self.patience)
+    }
+
+    /// Lo mismo, para el caso cuyo desenlace tarda más que la paciencia de la tanda.
+    fn run_errand_with_patience(
+        &self,
+        transcript_name: &str,
+        script: &str,
+        mode: &str,
+        patience: Duration,
+    ) -> ErrandOutcome {
         let trust_root = the_trust_root_as_pem(&self.trust_root);
-        let mut driver =
-            the_published_client_running(trust_root.path(), self.patience, script, mode);
+        let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
         let events = driver.stdout.take().expect("el conductor escribe eventos");
         let mut transcript =
             Transcript::open(&self.dossier, transcript_name).unwrap_or_else(|complaint| {
@@ -534,6 +552,9 @@ impl Probe {
             }
             if let Some(code) = the_saf_code_in(&event) {
                 error_code = Some(code);
+            }
+            if event.contains("\"event\":\"timeout\"") {
+                error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
             }
         }
         let launched = subject.is_some();
