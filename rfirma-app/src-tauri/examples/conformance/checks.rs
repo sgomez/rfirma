@@ -405,7 +405,8 @@ fn the_unmet_need_of(check: &Check, declared_store: &str, terminal: bool) -> Opt
     (!has_it).then(|| {
         format!(
             "la tanda declara el almacén «{declared_store}»; esta comprobación exige «{wanted}»: \
-             relánzala con `just conformance run {} --store {wanted}`",
+             relánzala en un expediente nuevo con `just conformance --dossier <expediente-nuevo> \
+             --store {wanted} run {}`",
             check.id
         )
     })
@@ -707,7 +708,9 @@ needs = [{needs}]
         let reason = the_unmet_need_of(&check, "rfirma-test", true).unwrap();
         assert!(reason.contains("rfirma-test-ecc"));
         assert!(reason.contains("rfirma-test"));
-        assert!(reason.contains("just conformance run a_check --store rfirma-test-ecc"));
+        assert!(reason.contains(
+            "just conformance --dossier <expediente-nuevo> --store rfirma-test-ecc run a_check"
+        ));
     }
 
     #[test]

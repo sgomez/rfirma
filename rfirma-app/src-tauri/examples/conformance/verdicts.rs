@@ -857,9 +857,10 @@ verdict = "conforme"
         let (closing, _) = the_closing_of(&dossier, &catalogue, None);
 
         assert!(closing.contains("needs_the_ecc_store"));
-        assert!(
-            closing.contains("just conformance run needs_the_ecc_store --store rfirma-test-ecc")
-        );
+        assert!(closing.contains(
+            "just conformance --dossier <expediente-nuevo> --store rfirma-test-ecc run \
+             needs_the_ecc_store"
+        ));
     }
 
     const FOUR_CHECKS: &str = r#"
