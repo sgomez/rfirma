@@ -1,5 +1,5 @@
-//! El trámite y el conductor del sondeo: arrancar el cliente publicado, leer sus eventos,
-//! invocar al sujeto y extraer lo que cada evento trae.
+//! El trámite y el conductor de la suite de conformidad: arrancar el cliente publicado, leer
+//! sus eventos, invocar al sujeto y extraer lo que cada evento trae.
 
 use std::collections::VecDeque;
 use std::fs::OpenOptions;

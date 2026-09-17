@@ -445,10 +445,10 @@ dev-handler mode="on":
 # tanda nueva y hay alguien delante, se pregunta por teclado. --os y --store se toman solos
 # (`uname` y el almacen aislado); --transport vale «websocket», el unico de esta fase.
 # Sondea el cliente publicado contra un binario instalado, aislado del almacen del titular y con
-# la raiz que sirve cada sujeto: `just probe [orden] [--subject <ruta>] [--trust-root <ruta>]`.
-# `orden` es `list`, `run <caso>` o `run-pending` (por omision); ver `cargo run --example probe -- --help`.
+# la raiz que sirve cada sujeto: `just conformance [orden] [--subject <ruta>] [--trust-root <ruta>]`.
+# `orden` es `list`, `run <caso>` o `run-pending` (por omision); ver `cargo run --example conformance -- --help`.
 [group('dev')]
-probe *args: autoscript build-ts
+conformance *args: autoscript build-ts
     #!/usr/bin/env bash
     set -euo pipefail
     read -r -a given_args <<< "{{ args }}"
@@ -477,18 +477,18 @@ probe *args: autoscript build-ts
         subject="$(command -v autofirma || true)"
         if [ -z "$subject" ]; then
             echo "No hay sujeto que sondear: no encuentro 'autofirma' en el PATH." >&2
-            echo "Dalo a mano: just probe --subject <ruta-del-binario>" >&2
+            echo "Dalo a mano: just conformance --subject <ruta-del-binario>" >&2
             exit 1
         fi
     fi
     if [ ! -x "$subject" ]; then
         echo "El sujeto $subject no existe o no es ejecutable." >&2
-        echo "Dalo a mano: just probe --subject <ruta-del-binario>" >&2
+        echo "Dalo a mano: just conformance --subject <ruta-del-binario>" >&2
         exit 1
     fi
     if [ -n "$trust_root" ] && [ ! -f "$trust_root" ]; then
         echo "La raiz de confianza $trust_root no existe." >&2
-        echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
+        echo "Dala a mano (PEM o DER): just conformance --subject '$subject' --trust-root <ruta-del-certificado>" >&2
         exit 1
     fi
     isolated="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
@@ -513,13 +513,13 @@ probe *args: autoscript build-ts
                     for candidate in {{ autofirma_roots }}; do
                         echo "  $candidate" >&2
                     done
-                    echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
+                    echo "Dala a mano (PEM o DER): just conformance --subject '$subject' --trust-root <ruta-del-certificado>" >&2
                     exit 1
                 fi
                 ;;
             *)
                 echo "No reconozco a $subject, asi que no se con que raiz sirve el canal." >&2
-                echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
+                echo "Dala a mano (PEM o DER): just conformance --subject '$subject' --trust-root <ruta-del-certificado>" >&2
                 exit 1
                 ;;
         esac
@@ -543,7 +543,7 @@ probe *args: autoscript build-ts
     done
     if [ "$has_dossier" = false ]; then
         mkdir -p "{{ justfile_directory() }}/.scratch"
-        dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/probe-dossier.json")
+        dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/conformance-dossier.json")
     fi
     if [ "$has_os" = false ]; then
         coordinate_args+=(--os "$(uname -s)" --os-version "$(uname -r)")
@@ -554,7 +554,7 @@ probe *args: autoscript build-ts
     if [ "$has_command" = false ]; then
         command_args=(run-pending)
     fi
-    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" \
+    cargo run --example conformance -- --subject "$launcher" --trust-root "$trust_root" \
         "${dossier_args[@]}" "${coordinate_args[@]}" "${remaining_args[@]}" "${command_args[@]}"
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.

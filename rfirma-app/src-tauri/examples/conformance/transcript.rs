@@ -1,6 +1,6 @@
-//! La transcripción de un caso del sondeo: los eventos del cliente publicado, legibles y en
-//! disco a medida que llegan, para que un trámite que no termina deje transcrito hasta dónde
-//! llegó.
+//! La transcripción de un caso de la suite de conformidad: los eventos del cliente publicado,
+//! legibles y en disco a medida que llegan, para que un trámite que no termina deje transcrito
+//! hasta dónde llegó.
 
 use std::fs::File;
 use std::io::{BufWriter, Write};

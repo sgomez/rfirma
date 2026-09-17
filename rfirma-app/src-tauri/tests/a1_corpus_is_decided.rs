@@ -1,4 +1,4 @@
-//! Guarda de grada A: cada ficha del anexo A1 tiene caso del sondeo o marca de no
+//! Guarda de grada A: cada ficha del anexo A1 tiene caso de la suite de conformidad o marca de no
 //! observable con motivo, y ningún caso cita una ficha inexistente.
 
 use std::collections::BTreeSet;
@@ -13,7 +13,7 @@ struct A1Card {
     unobservable: Option<String>,
 }
 
-/// Una cita a una ficha de A1 encontrada en el código del sondeo.
+/// Una cita a una ficha de A1 encontrada en el código de la suite de conformidad.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Citation {
     file: String,
@@ -157,7 +157,8 @@ fn find_dangling_citations(
 #[test]
 fn every_a1_card_in_annex_is_decided() {
     let annex_path = repository_root().join("docs/afirma/1.9.2/A1-bugs-autofirma.md");
-    let probe_cases_path = repository_root().join("rfirma-app/src-tauri/examples/probe/cases.rs");
+    let probe_cases_path =
+        repository_root().join("rfirma-app/src-tauri/examples/conformance/cases.rs");
 
     let annex_text = std::fs::read_to_string(&annex_path)
         .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", annex_path.display()));
@@ -192,7 +193,8 @@ fn every_a1_card_in_annex_is_decided() {
 #[test]
 fn no_probe_case_cites_a_nonexistent_a1_card() {
     let annex_path = repository_root().join("docs/afirma/1.9.2/A1-bugs-autofirma.md");
-    let probe_cases_path = repository_root().join("rfirma-app/src-tauri/examples/probe/cases.rs");
+    let probe_cases_path =
+        repository_root().join("rfirma-app/src-tauri/examples/conformance/cases.rs");
 
     let annex_text = std::fs::read_to_string(&annex_path)
         .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", annex_path.display()));
@@ -207,7 +209,7 @@ fn no_probe_case_cites_a_nonexistent_a1_card() {
 
     assert!(
         dangling.is_empty(),
-        "hay casos del sondeo que citan fichas inexistentes de A1:\n  {}",
+        "hay casos de la suite de conformidad que citan fichas inexistentes de A1:\n  {}",
         dangling.join("\n  ")
     );
 }
@@ -292,7 +294,8 @@ const THE_PRIVATE_KEY_CHECK_CASE: &str = "selectcert_checks_private_key";
 
 #[test]
 fn probe_cases_include_private_key_check_divergence_case() {
-    let probe_cases_path = repository_root().join("rfirma-app/src-tauri/examples/probe/cases.rs");
+    let probe_cases_path =
+        repository_root().join("rfirma-app/src-tauri/examples/conformance/cases.rs");
     let probe_text = std::fs::read_to_string(&probe_cases_path)
         .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", probe_cases_path.display()));
     assert!(

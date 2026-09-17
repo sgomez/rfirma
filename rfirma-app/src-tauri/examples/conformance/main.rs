@@ -1,5 +1,5 @@
-//! Sondeo: el cliente publicado bajo Node corre un guion del banco contra el binario declarado
-//! y transcribe lo que viajó, sin mirar el interior del sujeto.
+//! Suite de conformidad: el cliente publicado bajo Node corre un guion del banco contra el
+//! binario declarado y transcribe lo que viajó, sin mirar el interior del sujeto.
 
 mod cases;
 mod cli;

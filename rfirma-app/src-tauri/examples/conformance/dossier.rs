@@ -1,4 +1,5 @@
-//! El expediente de una tanda del sondeo: qué casos se han pasado, con qué sujeto y desde cuándo.
+//! El expediente de una tanda de la suite de conformidad: qué casos se han pasado, con qué
+//! sujeto y desde cuándo.
 
 use std::collections::BTreeMap;
 use std::fs;

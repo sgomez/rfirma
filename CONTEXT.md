@@ -238,26 +238,27 @@ El cliente propio, escrito en Rust, con el que se prueba el canal: saluda por
 conforme no puede provocar** —una credencial que no coincide, un canal abierto
 sólo para rechazar, alguien que intenta hablar en claro—. No es el cliente de
 nadie: existe para las pruebas.
-_Avoid_: cliente de pruebas, mock del navegador, simulador de sede
+_Avoid_: cliente de pruebas, mock del navegador, simulador de sede, banco de conformidad, suite
+de conformidad
 
 **Banco de conformidad**:
-El `autoscript.js` **publicado**, fijado al tag `v1.9.2` y corriendo bajo Node,
-con el que se comprueba que rfirma habla con el cliente real y no con una idea
-propia de él. Es el otro trabajo, no el mismo que el del **cliente de canal**:
-aquél cubre lo que el real no puede provocar, y éste cubre lo que el real hace.
-No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché
+La puerta del CI: el `autoscript.js` **publicado**, fijado al tag `v1.9.2` y corriendo bajo Node,
+con el que se comprueba que rfirma habla con el cliente real y no con una idea propia de él, en
+proceso y con veredicto verde o rojo de `cargo test`. Es el otro trabajo, no el mismo que el del
+**cliente de canal**: aquél cubre lo que el real no puede provocar, y éste cubre lo que el real
+hace. No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché
 (`just autoscript`), y vive en `tests/conformance_bench.rs`.
-_Avoid_: tests de integración, e2e, banco de pruebas
+_Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cliente de canal
 
-**Sondeo**:
-La comprobación de una ficha del anexo A1 o de una divergencia observable entre sujetos contra
-un binario real de AutoFirma o rFirma, con el **banco de conformidad** como instrumento: emite
-un veredicto de tres valores —confirmado, refutado, no observable— con las coordenadas de la tanda.
-Los veredictos de las divergencias sin ficha de A1 se registran en el **expediente** de la tanda
-(`dossier.json`) y en sus transcripciones, sin abrir fichas en el anexo A1. Vive en
-`cargo run --example probe` (`just probe`) y queda fuera de las gradas del ADR-0014: no es puerta
-de CI ni puerta manual de release, es investigación.
-_Avoid_: banco de pruebas, sondeo de conformidad, cliente de sondeo
+**Suite de conformidad**:
+El catálogo de exigencias del protocolo y el arnés que las mide contra el **sujeto** que se le
+declare —AutoFirma o rFirma, un binario instalado—, con el **banco de conformidad** como
+instrumento: emite un veredicto de tres valores —confirmado, refutado, no observable— con las
+coordenadas de la tanda. Produce un informe, no una puerta: queda fuera de las gradas del
+ADR-0014, no bloquea ningún PR ni ninguna etiqueta. Los veredictos de las divergencias sin ficha
+de A1 se registran en el **expediente** de la tanda (`dossier.json`) y en sus transcripciones,
+sin abrir fichas en el anexo A1. Vive en `cargo run --example conformance` (`just conformance`).
+_Avoid_: sondeo, banco de conformidad, cliente de canal
 
 **Códec del protocolo**:
 La traducción entre el texto que viaja por el canal y las estructuras con las

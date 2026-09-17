@@ -117,11 +117,12 @@ La lista lleva además su **condición de salida** —qué la haría innecesaria
 fichero, no aquí: el ADR fija que la puerta existe y con qué criterio se llena; qué la sustituiría
 es estado de la lista, y ahí lo lee quien la ejecuta.
 
-### El sondeo no es una grada ni una puerta
+### La suite de conformidad no es una grada ni una puerta
 
-El **sondeo** (`just probe`, glosario en `CONTEXT.md`) existe para medir las fichas del anexo A1
-contra un binario real de AutoFirma, y queda fuera de las cuatro gradas y de las dos puertas
-manuales de arriba: no bloquea ningún PR ni ninguna etiqueta, se lanza cuando alguien lo decide.
+La **suite de conformidad** (`just conformance`, glosario en `CONTEXT.md`) existe para medir las
+fichas del anexo A1 contra un binario real de AutoFirma, y queda fuera de las cuatro gradas y de
+las dos puertas manuales de arriba: no bloquea ningún PR ni ninguna etiqueta, se lanza cuando
+alguien lo decide.
 
 ## La prueba del ciclo completo tiene dueño
 

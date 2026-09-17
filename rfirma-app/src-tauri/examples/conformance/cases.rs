@@ -1,4 +1,5 @@
-//! El catálogo de casos del sondeo: sus nombres y cómo se corre cada uno contra el sujeto.
+//! El catálogo de casos de la suite de conformidad: sus nombres y cómo se corre cada uno contra
+//! el sujeto.
 
 use std::io::IsTerminal;
 use std::net::TcpListener;
