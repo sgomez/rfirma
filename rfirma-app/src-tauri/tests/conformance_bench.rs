@@ -13,6 +13,7 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
 use rfirma_lib::desktop::adapters::paths::Paths;
+use rfirma_lib::documents::ports::{DialogClues, PortalDialogs};
 use rfirma_lib::identity::domain::store::Store;
 use rfirma_lib::signing::adapters::isolate::Isolate;
 use rfirma_lib::signing::adapters::tauri::signed_with_the_secret;
@@ -101,6 +102,18 @@ const THE_SIGN_FACTURAE: &str = "signfacturae";
 
 /// El guion de `cosign` con `format=FacturaE` sobre la misma factura.
 const THE_COSIGN_FACTURAE: &str = "cosignfacturae";
+
+/// El guion de `saveDataToFile` sobre el reto de referencia.
+const THE_SAVE: &str = "save";
+
+/// El guion de `getFileNameContentBase64` para cargar un único fichero.
+const THE_LOAD: &str = "load";
+
+/// El guion de `getMultiFileNameContentBase64` para cargar varios ficheros.
+const THE_MULTI_LOAD: &str = "multiload";
+
+/// El guion de `signAndSaveToFile` sobre el reto binario con formato CAdES.
+const THE_SIGN_AND_SAVE: &str = "signandsave";
 
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
@@ -809,6 +822,66 @@ fn a_running_rfirma(home: &std::path::Path) -> Roots {
     roots.identity.stores = vec![Store::module(the_test_module())];
     roots.signing.prompter = Arc::new(MistypesTheTokenSecretOnce);
     roots
+}
+
+/// Doble de pruebas para PortalDialogs configurable programáticamente.
+#[derive(Clone, Default)]
+struct TestPortalDialogs {
+    single_file: Arc<Mutex<Option<PathBuf>>>,
+    multi_files: Arc<Mutex<Vec<PathBuf>>>,
+    save_destination: Arc<Mutex<Option<PathBuf>>>,
+}
+
+impl TestPortalDialogs {
+    fn picking_file(path: impl Into<PathBuf>) -> Self {
+        Self {
+            single_file: Arc::new(Mutex::new(Some(path.into()))),
+            ..Default::default()
+        }
+    }
+
+    fn cancelling_pick() -> Self {
+        Self {
+            single_file: Arc::new(Mutex::new(None)),
+            multi_files: Arc::new(Mutex::new(Vec::new())),
+            ..Default::default()
+        }
+    }
+
+    fn picking_files(paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
+        Self {
+            multi_files: Arc::new(Mutex::new(paths.into_iter().map(Into::into).collect())),
+            ..Default::default()
+        }
+    }
+
+    fn saving_to(path: impl Into<PathBuf>) -> Self {
+        Self {
+            save_destination: Arc::new(Mutex::new(Some(path.into()))),
+            ..Default::default()
+        }
+    }
+
+    fn cancelling_save() -> Self {
+        Self {
+            save_destination: Arc::new(Mutex::new(None)),
+            ..Default::default()
+        }
+    }
+}
+
+impl PortalDialogs for TestPortalDialogs {
+    fn pick_file(&self, _clues: &DialogClues) -> Result<Option<PathBuf>, String> {
+        Ok(self.single_file.lock().unwrap().clone())
+    }
+
+    fn pick_files(&self, _clues: &DialogClues) -> Result<Vec<PathBuf>, String> {
+        Ok(self.multi_files.lock().unwrap().clone())
+    }
+
+    fn save_file(&self, _clues: &DialogClues) -> Result<Option<PathBuf>, String> {
+        Ok(self.save_destination.lock().unwrap().clone())
+    }
 }
 
 /// El diálogo del PIN: la primera vez se equivoca y, al avisarle, teclea el del token de pruebas.
@@ -1653,6 +1726,177 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
     })
 }
 
+/// El trámite atendiendo `saveDataToFile`: abre el diálogo del portal y escribe en disco o cancela.
+fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::Saving(consent)) = errand::attend(&desk, url, answering, live) else {
+            return;
+        };
+
+        let clues = DialogClues {
+            title: consent.title.clone(),
+            filename: consent.filename.clone(),
+            extensions: consent.extensions.clone(),
+            description: consent.description.clone(),
+            starting_folder: consent.starting_folder.as_ref().map(PathBuf::from),
+        };
+        let chosen = roots
+            .site
+            .portal
+            .save_file(&clues)
+            .expect("el diálogo del portal para guardar no falla");
+        match chosen {
+            Some(path) => {
+                errand::saved(
+                    desk.scratch.as_ref(),
+                    &path,
+                    &consent.data,
+                    consent.signer_der.as_deref(),
+                    live,
+                );
+            }
+            None => {
+                errand::decline(live);
+            }
+        }
+    })
+}
+
+/// El trámite atendiendo `load` o `multiload`: abre el selector del portal y entrega o cancela.
+fn the_load_errand_of(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::Loading(consent)) = errand::attend(&desk, url, answering, live) else {
+            return;
+        };
+
+        let clues = DialogClues {
+            title: consent.title.clone(),
+            filename: consent.filename.clone(),
+            extensions: consent.extensions.clone(),
+            description: consent.description.clone(),
+            starting_folder: consent.starting_folder.as_ref().map(PathBuf::from),
+        };
+        let chosen = if consent.multiple {
+            roots
+                .site
+                .portal
+                .pick_files(&clues)
+                .expect("el diálogo del portal para cargar no falla")
+        } else {
+            roots
+                .site
+                .portal
+                .pick_file(&clues)
+                .expect("el diálogo del portal para cargar no falla")
+                .into_iter()
+                .collect()
+        };
+        if chosen.is_empty() {
+            errand::decline(live);
+        } else {
+            let named: Vec<(String, PathBuf)> = chosen
+                .into_iter()
+                .map(|path| {
+                    let name = path
+                        .file_name()
+                        .map(|name| name.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| path.to_string_lossy().into_owned());
+                    (name, path)
+                })
+                .collect();
+            errand::document_chosen(&desk, &named, live);
+        }
+    })
+}
+
+/// El trámite atendiendo `signandsave`: consiente, firma en el token, y guarda en el portal.
+fn the_sign_and_save_errand_of(
+    roots: &Arc<Roots>,
+    signer: &Arc<Mutex<Option<Vec<u8>>>>,
+) -> SiteOperations {
+    let roots = Arc::clone(roots);
+    let signer = Arc::clone(signer);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSign(consent)) = errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| panic!("el token de pruebas no ofreció {THE_TEST_CERTIFICATE}"));
+        let signing_certificate = roots
+            .identity
+            .chosen(&chosen.id)
+            .expect("el certificado consentido debería seguir en el token");
+        *signer
+            .lock()
+            .expect("nadie envenena el apunte del firmante") =
+            Some(signing_certificate.der().to_vec());
+
+        errand::consent(&desk, &chosen.id, live).expect("la prefirma debería consentirse");
+        let saving_step = tokio::task::block_in_place(|| {
+            sign_on_token(
+                &roots.identity.signer(),
+                &roots.signing.session,
+                THE_TOKEN_SECRET,
+            )
+            .expect("la firma en el token debería completarse");
+            errand::finish(&desk, live).expect("la postfirma debería completarse")
+        });
+
+        let Some(ErrandStep::Saving(saving_consent)) = saving_step else {
+            panic!("signandsave tenía que desembocar en ErrandStep::Saving");
+        };
+
+        let clues = DialogClues {
+            title: saving_consent.title.clone(),
+            filename: saving_consent.filename.clone(),
+            extensions: saving_consent.extensions.clone(),
+            description: saving_consent.description.clone(),
+            starting_folder: saving_consent.starting_folder.as_ref().map(PathBuf::from),
+        };
+        let chosen = roots
+            .site
+            .portal
+            .save_file(&clues)
+            .expect("el diálogo del portal para guardar no falla");
+        match chosen {
+            Some(path) => {
+                errand::saved(
+                    desk.scratch.as_ref(),
+                    &path,
+                    &saving_consent.data,
+                    saving_consent.signer_der.as_deref(),
+                    live,
+                );
+            }
+            None => {
+                errand::decline(live);
+            }
+        }
+    })
+}
+
 /// El trámite atendiendo una operación que el protocolo rechaza sin pedir consentimiento: la
 /// URL se decodifica y la respuesta sale por el canal en el mismo `attend`.
 fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
@@ -2351,4 +2595,291 @@ fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operati
         Some(WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
         "el servlet de guardado deberia recibir el SAF_NN del rechazo con el 'id' del xml"
     );
+}
+
+/// Guarda datos en disco con `saveDataToFile` y verifica la respuesta `SAVE_OK` y el fichero escrito.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_saves_data_to_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let target_dir = tempfile::tempdir().expect("directorio de guardado");
+    let save_path = target_dir.path().join("saved_challenge.bin");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::saving_to(&save_path));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SAVE);
+    let channel = the_errand_channel(&client, &material, &roots, the_save_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "saveDataToFile tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    assert_eq!(
+        verdict.field("data"),
+        "SAVE_OK",
+        "el successCallback recibe SAVE_OK"
+    );
+    assert_eq!(
+        std::fs::read(&save_path).expect("el fichero guardado debe existir"),
+        std::fs::read(the_challenge_path()).expect("el reto debe leerse"),
+        "el fichero guardado en disco coincide con los datos enviados"
+    );
+    channel.close();
+}
+
+/// Cancela el diálogo de guardado en `saveDataToFile` y verifica la excepción de cancelación.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cancels_saving_data_to_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::cancelling_save());
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SAVE);
+    let channel = the_errand_channel(&client, &material, &roots, the_save_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cancelación de saveDataToFile tenía que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("type"),
+        "es.gob.afirma.core.AOCancelledOperationException",
+        "el errorCallback recibe la excepción de cancelación"
+    );
+    channel.close();
+}
+
+/// Carga un único fichero con `getFileNameContentBase64` y verifica nombre y contenido en base64.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_loads_single_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let load_dir = tempfile::tempdir().expect("directorio de carga");
+    let file_path = load_dir.path().join("documento.bin");
+    let content = b"contenido de prueba para carga simple";
+    std::fs::write(&file_path, content).expect("debe escribirse el fichero");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::picking_file(&file_path));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "getFileNameContentBase64 tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    assert_eq!(verdict.field("filename"), "documento.bin");
+    assert_eq!(verdict.field("data"), STANDARD.encode(content));
+    channel.close();
+}
+
+/// Cancela el diálogo de carga en `getFileNameContentBase64` y verifica la excepción de cancelación.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cancels_loading_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::cancelling_pick());
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cancelación de getFileNameContentBase64 tenía que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("type"),
+        "es.gob.afirma.core.AOCancelledOperationException"
+    );
+    channel.close();
+}
+
+/// Carga múltiples ficheros con `getMultiFileNameContentBase64` y verifica nombres y contenidos.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_loads_multiple_files() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let load_dir = tempfile::tempdir().expect("directorio de carga");
+    let file1 = load_dir.path().join("doc1.bin");
+    let file2 = load_dir.path().join("doc2.bin");
+    let content1 = b"primer fichero";
+    let content2 = b"segundo fichero";
+    std::fs::write(&file1, content1).expect("debe escribirse doc1");
+    std::fs::write(&file2, content2).expect("debe escribirse doc2");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::picking_files([&file1, &file2]));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_MULTI_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "getMultiFileNameContentBase64 tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    assert_eq!(verdict.field("filenames"), "doc1.bin|doc2.bin");
+    assert_eq!(
+        verdict.field("data"),
+        format!(
+            "{}|{}",
+            STANDARD.encode(content1),
+            STANDARD.encode(content2)
+        )
+    );
+    channel.close();
+}
+
+/// Cancela el diálogo de carga múltiple en `getMultiFileNameContentBase64` y verifica la excepción de cancelación.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cancels_loading_multiple_files() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::cancelling_pick());
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_MULTI_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cancelación de getMultiFileNameContentBase64 tenía que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("type"),
+        "es.gob.afirma.core.AOCancelledOperationException"
+    );
+    channel.close();
+}
+
+/// Firma y guarda en disco con `signAndSaveToFile` verificando la firma guardada y los datos devueltos.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_and_saves_to_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let target_dir = tempfile::tempdir().expect("directorio de guardado");
+    let save_path = target_dir.path().join("challenge-signed.csig");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::saving_to(&save_path));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let signer = Arc::new(Mutex::new(None));
+    let client =
+        PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SIGN_AND_SAVE);
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_and_save_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "signAndSaveToFile tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let cms = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el CMS de signandsave llega en base64");
+    verified_by_openssl(&cms, &the_challenge_path());
+    validated_by_the_reference_tool(&cms);
+
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "el successCallback recibe tambien el DER del firmante"
+    );
+
+    let saved_bytes =
+        std::fs::read(&save_path).expect("el fichero firmado debe haberse guardado en disco");
+    assert_eq!(
+        saved_bytes, cms,
+        "el contenido guardado en disco coincide con la firma devuelta"
+    );
+
+    channel.close();
 }

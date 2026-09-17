@@ -623,6 +623,51 @@ function theSaveScript() {
   );
 }
 
+/** Un `getFileNameContentBase64()` para cargar un único fichero. */
+function theLoadScript() {
+  AutoScript.getFileNameContentBase64(
+    "Carga un documento",
+    "bin",
+    "Datos binarios",
+    null,
+    (filename, data) =>
+      settle({ event: "success", filename: String(filename), data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `getMultiFileNameContentBase64()` para cargar varios ficheros. */
+function theMultiLoadScript() {
+  AutoScript.getMultiFileNameContentBase64(
+    "Carga varios documentos",
+    "bin",
+    "Datos binarios",
+    null,
+    (filenames, data) =>
+      settle({
+        event: "success",
+        filenames: Array.isArray(filenames) ? filenames.join("|") : String(filenames),
+        data: Array.isArray(data) ? data.join("|") : String(data),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `signAndSaveToFile()` sobre el reto de referencia: firma en CAdES y guarda el resultado. */
+function theSignAndSaveScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    theChallenge().toString("base64"),
+    "SHA256",
+    "CAdES",
+    "mode=explicit",
+    "challenge-signed.csig",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -706,6 +751,12 @@ if (mode === "relay") {
   theCosignScript("FacturaE", "", theInvoice());
 } else if (script === "save") {
   theSaveScript();
+} else if (script === "load") {
+  theLoadScript();
+} else if (script === "multiload") {
+  theMultiLoadScript();
+} else if (script === "signandsave") {
+  theSignAndSaveScript();
 } else {
   AutoScript.selectCertificate(
     "",
