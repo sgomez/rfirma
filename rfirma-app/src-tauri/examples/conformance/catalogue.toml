@@ -1353,7 +1353,7 @@ drive = { mode = "v4", script = "selectcertheadless" }
 harness = "automatic_certificate_selection"
 needs = ["persona"]
 question = "¿se pidió elegir certificado? [s/n]"
-warning = "Con un único certificado utilizable en el almacén no debería pedirse ninguna elección; si aun así se pide, elige uno y contesta que sí."
+warning = "La exigencia presupone un único certificado utilizable en el almacén de la tanda: relánzala con `--store` apuntando a uno que sólo tenga ese. Si al ejecutarla aparece la lista con varios candidatos, la premisa no se cumple: cancela y deja la respuesta en blanco para que la comprobación quede pendiente en vez de condenar al sujeto."
 
 [check.expect.autofirma]
 verdict = "conforme"

@@ -401,7 +401,7 @@ pub(crate) fn the_verdict_for_a_save_confirmation(
     if answer.is_empty() {
         return CheckOutcome::StillPending;
     }
-    let asked_for_a_destination = answer.to_lowercase().starts_with('s');
+    let asked_for_a_destination = answered_yes(answer);
     if !asked_for_a_destination {
         return CheckOutcome::of(
             Verdict::Noncompliant,
@@ -685,7 +685,13 @@ fn the_answered_dialogue(outcome: &ErrandOutcome, answer: &str, unasked: &str) -
         return Answered::Settled(CheckOutcome::StillPending);
     }
     if !answered_yes(answer) {
-        return Answered::Settled(CheckOutcome::of(Verdict::Noncompliant, unasked.to_owned()));
+        if outcome.signature.is_some() || outcome.data.is_some() {
+            return Answered::Settled(CheckOutcome::of(Verdict::Noncompliant, unasked.to_owned()));
+        }
+        return Answered::Settled(CheckOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type.clone(),
+        });
     }
     Answered::Asked
 }
@@ -698,30 +704,9 @@ fn the_verdict_for_a_dialogue(
     seen: &str,
     unseen: &str,
 ) -> CheckOutcome {
-    if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
-    }
-    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
-        return CheckOutcome::Resolved {
-            verdict: Verdict::NotObservable,
-            observation: outcome.error_type.clone(),
-        };
-    }
-    if answer.is_empty() {
-        return CheckOutcome::StillPending;
-    }
-    if answer.to_lowercase().starts_with('s') {
-        return CheckOutcome::of(Verdict::Compliant, seen);
-    }
-    if outcome.signature.is_some() || outcome.data.is_some() {
-        return CheckOutcome::of(Verdict::Noncompliant, unseen);
-    }
-    CheckOutcome::Resolved {
-        verdict: Verdict::NotObservable,
-        observation: outcome.error_type.clone(),
+    match the_answered_dialogue(outcome, answer, unseen) {
+        Answered::Settled(outcome) => outcome,
+        Answered::Asked => CheckOutcome::of(Verdict::Compliant, seen),
     }
 }
 
@@ -978,6 +963,18 @@ mod tests {
     }
 
     #[test]
+    fn a_saved_signature_the_errand_never_reached_is_not_observable() {
+        let cancelled = ErrandOutcome {
+            error_type: Some(THE_CANCELLED_OPERATION_EXCEPTION.to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_saved_signature(&cancelled, "n")),
+            Verdict::NotObservable
+        );
+    }
+
+    #[test]
     fn a_saved_signature_nobody_answered_stays_pending() {
         assert!(matches!(
             the_verdict_for_a_saved_signature(&an_outcome(), ""),
@@ -1050,6 +1047,22 @@ mod tests {
                 "n"
             )),
             Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn an_interactive_load_the_errand_never_reached_is_not_observable() {
+        let cancelled = ErrandOutcome {
+            error_type: Some(THE_CANCELLED_OPERATION_EXCEPTION.to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_an_interactive_load(
+                &a_check_expecting(None),
+                &cancelled,
+                "n"
+            )),
+            Verdict::NotObservable
         );
     }
 

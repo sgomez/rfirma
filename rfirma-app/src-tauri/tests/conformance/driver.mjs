@@ -901,7 +901,7 @@ function theMultiLoadScript() {
       const contents = Array.isArray(data) ? data : [data];
       const apart =
         names.length === contents.length &&
-        names.length > 0 &&
+        names.length > 1 &&
         contents.every((content) => bytesOf(content).length > 0);
       emit(
         aConditionEvent(
@@ -909,7 +909,7 @@ function theMultiLoadScript() {
           apart,
           apart
             ? `volvieron ${names.length} ficheros, cada uno con su contenido`
-            : "la respuesta no trajo cada fichero con su contenido",
+            : `la respuesta trajo ${names.length} nombre(s) y ${contents.length} contenido(s): no hubo selección múltiple con cada fichero aparte`,
         ),
       );
       settle({
