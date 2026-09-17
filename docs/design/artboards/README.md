@@ -556,8 +556,9 @@ celda. **`afirma://` no se nombra.**
 **La fila de la aplicación de firma lleva desplegable, no un botón que alterna**,
 porque elegir programa es una elección declarada y no una reparación disfrazada;
 y el desplegable **sólo aparece si hay dónde elegir**. Sus cinco casos caben en
-la palanca «Aplicación de firma», que es **independiente** de «Momento del
-panel»: sin resumen global no hay nada que se pueda contradecir. La fila **no
+la palanca «Aplicación de firma» —que hoy se llama «Firma en sedes», y el
+porqué está en el apartado de la retirada—, que es **independiente** de «Momento
+del panel»: sin resumen global no hay nada que se pueda contradecir. La fila **no
 cambia de alto** en ninguno de los cinco.
 
 **Los cinco veredictos están todos a la vista en el artboard** y se distinguen
