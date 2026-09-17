@@ -71,7 +71,9 @@ eso está en `research/contrato-protocolo-afirma.md`.
 `visor-de-documento` · `panel-de-firma` · `preferencias` · `dialogo-pin` ·
 `dialogo-progreso-firma` · `dialogo-paginas-sin-sello` · `acerca-de` ·
 `ventana-de-sede` (la ventana que abre una sede por `afirma://`, entera: espera,
-consentimiento, firma, desenlace y sin certificado utilizable) · `design-system`
+consentimiento, firma, desenlace y sin certificado utilizable) ·
+`primer-arranque` (el asistente que configura el equipo la primera vez) ·
+`design-system`
 
 Al implementar una pantalla, **la ficha de esa pantalla es la fuente**, no el
 sistema de diseño entero (14 KB).

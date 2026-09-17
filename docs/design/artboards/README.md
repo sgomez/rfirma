@@ -8,7 +8,7 @@ terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, 
 importó a un repositorio público. Se ha usado también en la v0.4. **No preguntes si hay que
 borrarlo: no, hasta la v1.0.**
 
-Son los diecinueve artboards del canvas de Claude Design «Autofirma de escritorio
+Son los veinte artboards del canvas de Claude Design «Autofirma de escritorio
 en Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron el
 02/09/2026 con las decisiones de v0.2 del
@@ -21,6 +21,10 @@ no crean ninguno; ver «Lo que cambió en v0.4». La v0.5 —el
 [#317](https://github.com/sgomez/rfirma/issues/317)— es la primera que **crea
 artboards nuevos** desde la v0.3: cinco, en una página propia, más dos de la
 ventana principal tocados de rebote; ver «Lo que cambió en v0.5».
+Después de la v0.5, el asistente del primer arranque —el
+[#658](https://github.com/sgomez/rfirma/issues/658)— añade `PrimerArranque`, el
+vigésimo, en la página «Recorrido de firma»; ver «Lo que cambió después de la
+v0.5 — el asistente del primer arranque».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -57,6 +61,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
 | S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
+| — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde, y las dos acciones —instalar el certificado propio y poner a rFirma por defecto— |
 
 Los cinco de `Sede*` viven en la página **«Ventana de sede · v0.5»** y su ficha
 es [`ventana-de-sede.md`](../ventana-de-sede.md), **una sola para los cinco**:
@@ -64,6 +69,11 @@ es una ventana con una secuencia, no cinco pantallas
 ([#332](https://github.com/sgomez/rfirma/issues/332)). Miden 720 × 600 px, no
 1180 × 700: la ventana es de 520 × 420 y se dibuja centrada sobre un lienzo que
 representa el escritorio, para que se vea su tamaño real.
+
+`PrimerArranque` vive también en la página «Recorrido de firma», pero **no es
+un paso del recorrido**: es la pantalla del primer arranque, la misma ventana de
+1180 × 700 antes de que haya documento. Su ficha es
+[`primer-arranque.md`](../primer-arranque.md).
 
 No se ha importado `firmar-fichero-local.dc.html`: `canvas.json` lo aparta en
 la página «Otros» y lo marca como ajeno al recorrido.
@@ -477,3 +487,31 @@ que aclara.
 vertical la rama de identidad es de las más holgadas del artboard, porque no
 pinta título, ni metadatos, ni cofirma: los 2,5 px de margen medidos en la v0.5
 son de la rama de firma.
+
+## Lo que cambió después de la v0.5 — el asistente del primer arranque
+
+Decidido en el [#658](https://github.com/sgomez/rfirma/issues/658) —mapa
+[#652](https://github.com/sgomez/rfirma/issues/652), «La instalación se explica
+sola»— y validado el 17/09/2026. **Un artboard nuevo, `PrimerArranque`, y nada
+más tocado**: ni una pantalla existente cambia. Nació en una página de trabajo
+—`trabajo-primer-arranque`— que ha desaparecido al validar; el artboard se queda,
+ya sin prefijo, en «Recorrido de firma», y su anotación se ha mudado con él.
+
+**Sustituye al diálogo `trust/TrustNotice.tsx` y absorbe el disparo inicial de
+`desktop/UrlHandlerBanner.tsx`.** La diferencia de fondo es que este informa y
+**además hace**: instala el certificado propio y pone a rFirma por defecto ahí
+mismo, en dos pantallas —bienvenida con el deslinde, y las dos acciones juntas—.
+
+**El rechazo es por acción**, con un «Ahora no» al lado de cada botón: no hay
+salida al pie ni primario desactivado. **`afirma://` no se nombra en ninguna
+parte de la interfaz**: la pantalla habla de qué programa abren las sedes.
+
+**Medido**: la estructura de una sola página con los tres bloques apilados sumaba
+unos 770 px contra los 644 px del hueco, así que se desplazaba, y por eso se
+descartó junto con la de tres pantallas encadenadas.
+
+El selector `momento` **no es una palanca de alternativas**: es el recorrido —las
+dos pantallas— más el paso instalando, el paso hecho y el paso fallado, que son
+estados de esta pantalla. Lo que se decidió, medida a medida, está en la
+anotación de la página y en la ficha
+[`primer-arranque.md`](../primer-arranque.md), que es la referencia normativa.
