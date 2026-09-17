@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use crate::dossier::Verdict;
 use crate::livelog::{CheckLog, LiveLogSink, Provenance};
-use crate::transcript::{log_path_of, Transcript};
+use crate::transcript::{legible, log_path_of, Transcript};
 use crate::Probe;
 
 /// El `type` con el que el conductor avisa de que reventó él, no el sujeto.
@@ -50,7 +50,7 @@ impl Probe {
         mode: &str,
         patience: Duration,
     ) -> ErrandOutcome {
-        let start = Instant::now();
+        let start = self.monitor.item_started_at();
         let log_sink = self.monitor.log_sink();
         let case_log = CheckLog::open(&log_path_of(&self.dossier, transcript_name)).unwrap_or_else(
             |complaint| {
@@ -81,8 +81,10 @@ impl Probe {
                 eprintln!("{complaint}");
                 std::process::exit(1);
             });
-            case_log.record(start.elapsed(), Provenance::Driver, &event);
-            log_sink.push(Provenance::Driver, start.elapsed(), event.clone());
+            let elapsed = start.elapsed();
+            let readable_event = legible(&event);
+            case_log.record(elapsed, Provenance::Driver, &readable_event);
+            log_sink.push(Provenance::Driver, elapsed, readable_event);
             if let Some(url) = the_launch_url_in(&event) {
                 if self.verbose {
                     eprintln!("sondeo: invoco {} con {url}", self.subject.display());

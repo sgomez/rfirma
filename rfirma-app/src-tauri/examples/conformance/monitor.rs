@@ -116,6 +116,16 @@ impl ProgressMonitor {
         self.log_sink.clone()
     }
 
+    /// El arranque de la comprobación en curso, para que un trámite que corre varias veces
+    /// dentro de ella comparta el mismo reloj.
+    pub(crate) fn item_started_at(&self) -> Instant {
+        self.active_item
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map_or_else(Instant::now, |item| item.start)
+    }
+
     pub(crate) fn display_header(&self, subject: &str, header: &Header) {
         println!("{}", format_header(subject, header));
         let _ = std::io::stdout().flush();
@@ -155,6 +165,7 @@ impl ProgressMonitor {
         let active = Arc::clone(&self.active_item);
         let log_sink = self.log_sink.clone();
         let frame_lines = Arc::clone(&self.frame_lines);
+        let use_color = self.interactive_tty;
         let handle = spawn(move || {
             let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let mut i = 0;
@@ -175,6 +186,7 @@ impl ProgressMonitor {
                                     log_sink.height(),
                                     DEFAULT_LOG_WIDTH,
                                     log_sink.filter(),
+                                    use_color,
                                 );
                                 let rendered_frame = if log_region.is_empty() {
                                     spinner_line
@@ -371,5 +383,14 @@ mod tests {
     fn plain_monitor_reports_is_plain() {
         let monitor = ProgressMonitor::new(true, 8, LogFilter::All);
         assert!(monitor.is_plain());
+    }
+
+    #[test]
+    fn item_started_at_shares_the_clock_across_several_calls_of_the_same_item() {
+        let monitor = ProgressMonitor::new(true, 8, LogFilter::All);
+        monitor.start_progress("Comprobación", 1, 1, "un_id");
+        let first = monitor.item_started_at();
+        let second = monitor.item_started_at();
+        assert_eq!(first, second);
     }
 }

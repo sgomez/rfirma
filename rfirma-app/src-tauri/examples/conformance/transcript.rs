@@ -49,7 +49,7 @@ pub(crate) fn log_path_of(dossier: &Path, case: &str) -> PathBuf {
 }
 
 /// `raw_event` con cada campo en base64 vuelto a su texto, o anotado como binario si no lo es.
-fn legible(raw_event: &str) -> String {
+pub(crate) fn legible(raw_event: &str) -> String {
     let Ok(mut value) = serde_json::from_str::<Value>(raw_event) else {
         return raw_event.to_owned();
     };

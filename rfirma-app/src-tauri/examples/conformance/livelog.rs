@@ -7,6 +7,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use crate::verdicts::{GRAY, GREEN, RESET, YELLOW};
+
 /// El ancho de la región viva; no se consulta el terminal para no sumar una dependencia nueva.
 pub(crate) const DEFAULT_LOG_WIDTH: usize = 74;
 
@@ -21,6 +23,13 @@ pub(crate) fn provenance_tag(provenance: Provenance) -> &'static str {
     match provenance {
         Provenance::Driver => "conductor",
         Provenance::Subject => "sujeto",
+    }
+}
+
+fn provenance_color(provenance: Provenance) -> &'static str {
+    match provenance {
+        Provenance::Driver => GREEN,
+        Provenance::Subject => YELLOW,
     }
 }
 
@@ -107,6 +116,7 @@ pub(crate) fn compose_log_region(
     height: usize,
     width: usize,
     filter: LogFilter,
+    use_color: bool,
 ) -> String {
     if height == 0 || width < 12 {
         return String::new();
@@ -122,12 +132,26 @@ pub(crate) fn compose_log_region(
 
     let mut result = vec![header];
     for line in visible {
-        let content = format_log_line(line.elapsed, line.provenance, &line.text);
-        let truncated = truncated_to(&content, inner_width);
-        result.push(format!("│ {truncated:<inner_width$} │"));
+        let rendered = rendered_log_line(line, inner_width, use_color);
+        result.push(format!("│ {rendered} │"));
     }
     result.push(footer);
     result.join("\n")
+}
+
+/// La línea de la región, con la procedencia y el reloj en color cuando `use_color` lo permite —
+/// el fichero (`format_log_line`) no lo lleva nunca, para no meter ANSI en un `.log`.
+fn rendered_log_line(line: &LiveLogLine, inner_width: usize, use_color: bool) -> String {
+    let clock = format_elapsed_clock(line.elapsed);
+    let tag = format!("{:<9}", provenance_tag(line.provenance));
+    let prefix_width = clock.chars().count() + 1 + tag.chars().count() + 1;
+    let text_width = inner_width.saturating_sub(prefix_width);
+    let text = format!("{:<text_width$}", truncated_to(&line.text, text_width));
+    if !use_color {
+        return format!("{clock} {tag} {text}");
+    }
+    let color = provenance_color(line.provenance);
+    format!("{GRAY}{clock}{RESET} {color}{tag}{RESET} {text}")
 }
 
 /// El fichero de una comprobación, junto a su transcripción, con el mismo formato que la región
@@ -267,7 +291,7 @@ mod tests {
     fn compose_log_region_is_empty_when_height_is_zero() {
         let lines = vec![a_line(0, Provenance::Driver, "algo")];
         assert_eq!(
-            compose_log_region(&lines, 0, DEFAULT_LOG_WIDTH, LogFilter::All),
+            compose_log_region(&lines, 0, DEFAULT_LOG_WIDTH, LogFilter::All, false),
             ""
         );
     }
@@ -278,7 +302,7 @@ mod tests {
             a_line(310, Provenance::Driver, "launch afirma://websocket?v=1"),
             a_line(420, Provenance::Subject, "INFO ProtocolInvocationLauncher"),
         ];
-        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::All);
+        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::All, false);
         assert!(region.contains("registro"));
         assert!(region.contains("conductor · sujeto"));
         assert!(region.contains("00:00.31 conductor"));
@@ -292,7 +316,7 @@ mod tests {
         let lines: Vec<LiveLogLine> = (0..5)
             .map(|n| a_line(n * 100, Provenance::Driver, &format!("linea {n}")))
             .collect();
-        let region = compose_log_region(&lines, 2, DEFAULT_LOG_WIDTH, LogFilter::All);
+        let region = compose_log_region(&lines, 2, DEFAULT_LOG_WIDTH, LogFilter::All, false);
         assert!(!region.contains("linea 0"));
         assert!(!region.contains("linea 2"));
         assert!(region.contains("linea 3"));
@@ -303,7 +327,7 @@ mod tests {
     fn compose_log_region_truncates_a_line_longer_than_the_width() {
         let long_text = "x".repeat(200);
         let lines = vec![a_line(0, Provenance::Driver, &long_text)];
-        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::All);
+        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::All, false);
         assert!(region.contains('…'));
         for line in region.lines() {
             assert!(line.chars().count() <= DEFAULT_LOG_WIDTH);
@@ -313,8 +337,28 @@ mod tests {
     #[test]
     fn compose_log_region_names_the_active_filter() {
         let lines = vec![a_line(0, Provenance::Subject, "algo")];
-        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::Subject);
+        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::Subject, false);
         assert!(region.contains("[sujeto]"));
+    }
+
+    #[test]
+    fn compose_log_region_omits_ansi_when_color_is_disabled() {
+        let lines = vec![a_line(0, Provenance::Driver, "algo")];
+        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::All, false);
+        assert!(!region.contains('\x1b'));
+    }
+
+    #[test]
+    fn compose_log_region_colors_each_provenance_differently_when_enabled() {
+        let lines = vec![
+            a_line(0, Provenance::Driver, "del conductor"),
+            a_line(0, Provenance::Subject, "del sujeto"),
+        ];
+        let region = compose_log_region(&lines, 8, DEFAULT_LOG_WIDTH, LogFilter::All, true);
+        assert!(region.contains(GREEN));
+        assert!(region.contains(YELLOW));
+        assert!(region.contains(GRAY));
+        assert!(region.contains(RESET));
     }
 
     #[test]
