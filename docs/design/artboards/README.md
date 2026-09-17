@@ -8,7 +8,7 @@ terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, 
 importó a un repositorio público. Se ha usado también en la v0.4. **No preguntes si hay que
 borrarlo: no, hasta la v1.0.**
 
-Son los veintiún artboards del canvas de Claude Design «Autofirma de escritorio
+Son los veintidós artboards del canvas de Claude Design «Autofirma de escritorio
 en Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron el
 02/09/2026 con las decisiones de v0.2 del
@@ -29,6 +29,9 @@ v0.5 — el asistente del primer arranque». Y el panel de estado —el
 vigesimoprimero, en una página propia, «Estado de rFirma», y rehace el menú de
 `EstadoVacio`; ver «Lo que cambió después de la v0.5 — el panel de estado y el
 menú de la cabecera».
+`PreferenciasPantalla` se rehízo con el [#657](https://github.com/sgomez/rfirma/issues/657) y se podó con el
+[#661](https://github.com/sgomez/rfirma/issues/661); ver «Lo que cambió en
+Preferencias».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -58,7 +61,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | 9 | `EstadoExito` | Firmado — el resumen, sin la ficha 14 |
 | 10 | `EstadoErrorFirma` | Error de firma, en el pie del panel |
 | 5b | `EstadoPaginasSinSello` | Antes de firmar: las páginas donde el recuadro no cabe |
-| — | `PreferenciasPantalla` | Preferencias, a pantalla completa, con los certificados en fichero de la v0.4 |
+| — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4 |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
 | S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado |
@@ -620,3 +623,50 @@ poder ver que `rFirma` no aparece cuando su certificado no está en ningún alma
 Lo que se decidió, medida a medida, está en las anotaciones de la página y en las
 dos fichas normativas, [`panel-de-estado.md`](../panel-de-estado.md) y
 [`retirar-certificado.md`](../retirar-certificado.md).
+
+## Lo que cambió en Preferencias
+
+Decidido en el [#657](https://github.com/sgomez/rfirma/issues/657) y dibujado el
+10/09/2026, y podado en el
+[#661](https://github.com/sgomez/rfirma/issues/661) el 17/09/2026. **Un solo
+artboard tocado, `PreferenciasPantalla`, y ninguna página de trabajo**: la
+pantalla ya existía, así que las dos tandas se hicieron con una palanca dentro
+de ella. Los demás conservan el mismo `<helmet>`.
+
+**Preferencias deja de ser una columna con las secciones apiladas y pasa a ser
+un visor de pestañas en vertical.** El índice de la izquierda era el remedio al
+desplazamiento continuo y ahora es la pestaña: a la derecha se pinta **una sola
+sección**, la activa. El desplazamiento pasa a ser del panel —previsiblemente
+solo el de `Certificados en fichero` lo necesita—, y el índice y el pie con
+`Cerrar` no se mueven nunca. Se descartó la navegación de dos niveles al estilo
+`AdwNavigationView`: obliga a diseñar una vuelta atrás y a partir `Escape` en dos
+significados, y aquí `Escape` cierra Preferencias entera desde cualquier panel.
+
+**El índice pasa de cinco filas a cuatro: `General · Firma · Certificados ·
+Apariencia`.** «Sedes» y «Privacidad» desaparecen como filas: «Privacidad» se
+funde dentro de `General`, que es la entrada, como grupo con encabezado, y
+«Sedes» se va del todo. **De los siete ajustes numerados no se ha añadido ni
+quitado ninguno.** El rótulo de sección se queda como **título de la página**,
+que es lo que permite que «Certificados» recupere ahí su nombre completo,
+`Certificados en fichero`.
+
+**El grupo «Sedes» no llega a dibujarse: se borra entero**, decidido en el
+[#661](https://github.com/sgomez/rfirma/issues/661). El desplegable «Quién
+atiende los enlaces de las sedes» y su pista de Firefox se mudan a la fila
+`Firma en sedes` de `PanelEstado` —donde ya está el veredicto, y que pasa a ser
+el único sitio donde se elige el programa—, y el interruptor «Preguntarme al
+arrancar» desaparece con el banner que gobernaba. `General` se queda con un solo
+grupo, «Privacidad».
+
+**El encabezado de grupo se resuelve sin componente nuevo y sin estilo nuevo.**
+Título de página, encabezado de grupo y etiqueta de control se separan por
+tamaño, peso y color a la vez: `.rf-label` a 12 px en versalitas con divisoria,
+`.rf-title` a 14 px en caja baja y sin divisoria, y `.rf-label` a 12 px apagada.
+Solo `General` lleva grupos.
+
+**La palanca `Sección visible` es la pestaña activa**, con cuatro posiciones y
+`General` por omisión. Las demás son de contenido y solo se ven dentro de su
+sección, salvo el diálogo de apagar «Recordar mi actividad», que es un velo sobre
+la ventana entera. El caso del flatpak —el escritorio no deja elegir quién
+atiende `afirma://`— ya no se dibuja aquí en ninguna forma: viaja con el
+desplegable a `PanelEstado`.
