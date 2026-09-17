@@ -385,18 +385,19 @@ impl Probe {
         if !std::io::stdin().is_terminal() {
             return CaseOutcome::StillPending;
         }
-        if dossier.header().store != THE_ELLIPTIC_CURVE_TEST_STORE {
+        let store = &dossier.header().store;
+        let has_ecc = store == THE_ELLIPTIC_CURVE_TEST_STORE || store.contains("softhsm");
+        if !has_ecc {
             return CaseOutcome::Resolved {
                 verdict: Verdict::NotObservable,
                 observation: Some(format!(
-                    "la tanda declara el almacén «{}»; esta ficha exige «{THE_ELLIPTIC_CURVE_TEST_STORE}»",
-                    dossier.header().store
+                    "la tanda declara el almacén «{store}»; esta ficha exige un almacén con token de curva elíptica («{THE_ELLIPTIC_CURVE_TEST_STORE}» o softhsm2)"
                 )),
             };
         }
         println!(
-            "van a aparecer el diálogo de certificado y el de PIN: elige el del token de \
-             pruebas de curva elíptica"
+            "van a aparecer el diálogo de certificado y el de PIN: si el sujeto lo solicita, \
+             elige el certificado de curva elíptica (token 'rfirma-test-ecc', PIN 1234)"
         );
         let outcome = self.run_errand(
             THE_ECDSA_ALGORITHM_CASE,
