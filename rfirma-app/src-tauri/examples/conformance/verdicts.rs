@@ -431,41 +431,16 @@ pub(crate) fn the_verdict_for_a_private_key_check(
     outcome: &ErrandOutcome,
     answer: &str,
 ) -> CheckOutcome {
-    if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
-    }
-    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
-        return CheckOutcome::Resolved {
-            verdict: Verdict::NotObservable,
-            observation: outcome.error_type.clone(),
-        };
-    }
-    if answer.is_empty() {
-        return CheckOutcome::StillPending;
-    }
-    if answer.to_lowercase().starts_with('s') {
-        return CheckOutcome::of(
-            Verdict::Compliant,
-            if outcome.data.is_some() {
-                "se pidió el PIN del token y devolvió el certificado tras autenticación"
-            } else {
-                "se pidió el PIN del token y la operación se canceló"
-            },
-        );
-    }
-    if outcome.data.is_some() {
-        return CheckOutcome::of(
-            Verdict::Noncompliant,
-            "certificado devuelto sin pedir PIN ni comprobar clave privada",
-        );
-    }
-    CheckOutcome::Resolved {
-        verdict: Verdict::NotObservable,
-        observation: outcome.error_type.clone(),
-    }
+    the_verdict_for_a_dialogue(
+        outcome,
+        answer,
+        if outcome.data.is_some() {
+            "se pidió el PIN del token y devolvió el certificado tras autenticación"
+        } else {
+            "se pidió el PIN del token y la operación se canceló"
+        },
+        "certificado devuelto sin pedir PIN ni comprobar clave privada",
+    )
 }
 
 /// El veredicto del sello de tiempo: se juega sobre la firma que volvió, no sobre si la aplicación

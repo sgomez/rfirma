@@ -1122,8 +1122,8 @@ suite = "operaciones.firma"
 chapter = "12"
 citation = "AOFacturaESigner.java:57-87, 89-93, 224-228"
 statement = """
-FacturaE es un XAdES Enveloped fijo que acepta de su lista blanca los cargos del firmante, el lugar
-de producción y las claves de política.
+FacturaE es un XAdES Enveloped fijo que acepta de su lista blanca los cargos del firmante y el
+lugar de producción.
 """
 drive = { mode = "v4", script = "signfacturaewitharole" }
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."

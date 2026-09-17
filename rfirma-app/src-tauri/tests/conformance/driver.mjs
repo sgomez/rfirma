@@ -713,11 +713,7 @@ function theSignScript(format, extraParams, content, measuring) {
   theSignScriptWith("SHA256withRSA", format, extraParams, content, measuring);
 }
 
-/**
- * Un `sign()` con el algoritmo del guion. `measuring` traduce el resultado a las condiciones que
- * el conductor emite antes del veredicto, para lo que se afirma sobre la respuesta y no sobre que
- * el trámite se completara.
- */
+/** Un `sign()` con el algoritmo del guion. */
 function theSignScriptWith(algorithm, format, extraParams, content, measuring) {
   AutoScript.sign(
     content.toString("base64"),
@@ -1334,7 +1330,7 @@ if (script.startsWith("protocol-")) {
   } else if (script === "signwithanunknownformat") {
     theSignScript("NoSuchFormat", "", theChallenge());
   } else if (script === "signwithoutaformat") {
-    theSignScript("", "", theChallenge());
+    theSignScript(null, "", theChallenge());
   } else if (script === "cosigncades") {
     theCosignScript("CAdES", "", theReferenceSignature("cades-implicit.p7s"));
   } else if (script === "cosignauto") {
