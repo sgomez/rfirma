@@ -256,9 +256,66 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   </div>
 
 </div>
+<div class="rf-scrim" style="top:56px">
+  <div class="rf-dialog" role="dialog" aria-modal="true">
+
+    <div class="rf-stack rf-gap-xs">
+      <p class="rf-title" style="font-size:16px">{{titulo}}</p>
+
+      <sc-if value="{{esPregunta}}" hint-placeholder-val="{{true}}">
+        <p class="rf-prose">Se va a quitar de este equipo:</p>
+        <ul class="rf-stack" style="gap:4px;margin:0;padding-left:var(--rf-space-sm)">
+          <li class="rf-prose">El certificado de rFirma, de los navegadores donde esté</li>
+          <li class="rf-prose">Que las sedes abran rFirma</li>
+        </ul>
+        <p class="rf-hint">Se puede volver a instalar desde este panel.</p>
+      </sc-if>
+
+      <sc-if value="{{hayLista}}" hint-placeholder-val="{{false}}">
+        <ul class="rf-stack" style="gap:4px;margin:0 0 4px;padding:0;list-style:none">
+          <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="4">
+            <li class="rf-row rf-gap-xs">
+              <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{p.marca}}</span>
+              <span class="rf-body" style="width:190px;flex:none;{{p.pesoNombre}}">{{p.nombre}}</span>
+              <span class="rf-row rf-gap-xs" style="flex:1;min-width:0">
+                <sc-if value="{{p.hayArco}}" hint-placeholder-val="{{false}}">
+                  <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg></span>
+                </sc-if>
+                <span class="rf-body rf-text-muted" style="flex:1;min-width:0">{{p.nota}}</span>
+              </span>
+            </li>
+          </sc-for>
+        </ul>
+      </sc-if>
+
+      <sc-if value="{{hayAviso}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+          <span style="display:flex;flex:none;color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+          <p class="rf-hint" style="flex:1;min-width:0">Los navegadores abiertos siguen confiando hasta que los reinicies.</p>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="rf-row rf-gap-xs" style="justify-content:flex-end">
+      <sc-if value="{{hayCancelar}}" hint-placeholder-val="{{true}}">
+        <button class="rf-btn rf-btn--ghost">Cancelar</button>
+      </sc-if>
+      <sc-if value="{{hayCerrar}}" hint-placeholder-val="{{false}}">
+        <button class="rf-btn rf-btn--ghost" disabled="{{cerrarApagado}}">Cerrar</button>
+      </sc-if>
+      <sc-if value="{{hayRetirar}}" hint-placeholder-val="{{true}}">
+        <button class="rf-btn rf-btn--primary">Retirar</button>
+      </sc-if>
+      <sc-if value="{{hayReintentar}}" hint-placeholder-val="{{false}}">
+        <button class="rf-btn rf-btn--primary">Reintentar</button>
+      </sc-if>
+    </div>
+
+  </div>
+</div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"momento":{"editor":"enum","options":["algo que reparar","todo correcto","a medio medir","reparando","la reparación falla"],"default":"algo que reparar","section":"Momento del panel"},"aplicacion":{"editor":"enum","options":["AutoFirma es la aplicación","rFirma, con AutoFirma instalado","rFirma, sin AutoFirma","sin configurar","no se puede consultar"],"default":"AutoFirma es la aplicación","section":"Firma en sedes"},"desplegable":{"editor":"enum","options":["cerrado","abierto"],"default":"cerrado","section":"Desplegable de Firma en sedes"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"paso":{"editor":"enum","options":["pregunta","trabajando","resultado","resultado con fallo"],"default":"pregunta","section":"Paso de la retirada"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   senal(o) {
     const v = o.veredicto;
@@ -325,113 +382,109 @@ class Component extends DCLogic {
     ];
   }
 
+  pasoDeLaRetirada(nombre, marca, nota, arco, pendiente) {
+    return {
+      nombre: nombre,
+      marca: marca,
+      hayArco: arco === true,
+      nota: nota,
+      pesoNombre: pendiente === true ? "color:var(--rf-text-muted)" : ""
+    };
+  }
+
   renderVals() {
-    // EL PANEL DE ESTADO (#659; inventario del #655, mapa #652). Lo que la
-    // maquina informa; lo que yo decido esta en Preferencias. Lo unico que se
-    // acciona aqui es una REPARACION colgando de la señal que la pide.
+    // LA RETIRADA DEL CERTIFICADO (#660; panel del #659, mapa #652). Esto ES
+    // EL PANEL DE ESTADO —misma tabla, mismas columnas, mismo pie— con el velo
+    // de apagar «Recordar mi actividad» encima. Se dispara desde el panel y no
+    // desde Preferencias: deshace lo que el primer arranque escribio, y lo
+    // escrito es justo lo que la fila del certificado informa.
     //
-    // TABLA, Y SIN RESUMEN ARRIBA: cada fila ya trae su veredicto, asi que una
-    // franja que lo resuma es una linea mas que leer para saber lo mismo.
-    // Etiqueta y valor, telegrafico: esto no se lee, se mira.
+    // SE LLEVA LAS DOS UNICAS COSAS QUE rFIRMA ESCRIBE FUERA DE SU TERRITORIO:
+    // las dos CA locales de cada perfil de navegador, y el registro que hace
+    // que las sedes abran rFirma. Lo que vive en sus propias carpetas NO se
+    // toca, y por eso no se nombra: nombrarlo abriria la duda.
     //
-    // «afirma://» NO SE NOMBRA, ni «enlaces de las sedes»: quien firma solo
-    // sabe QUIEN TIENE QUE FIRMAR, y eso es lo que dice la fila.
+    // «afirma://» NO SE NOMBRA: se habla de QUE PROGRAMA ABREN LAS SEDES.
     const tema = this.props.tema || "light";
-    const m = this.props.momento || "algo que reparar";
-    const app = this.props.aplicacion || "AutoFirma es la aplicación";
-    const listaAbierta = (this.props.desplegable || "cerrado") === "abierto";
+    const p = this.props.paso || "pregunta";
 
-    const calma = m === "todo correcto";
-    const midiendo = m === "a medio medir";
-    const reparando = m === "reparando";
-    const falla = m === "la reparación falla";
+    const esPregunta = p === "pregunta";
+    const trabajando = p === "trabajando";
+    const fallo = p === "resultado con fallo";
+    const hecho = p === "resultado" || fallo;
 
-    const version = calma
-      ? { etiqueta: "Versión", valor: "0.4.1", veredicto: "Correcto" }
-      : midiendo
-        ? { etiqueta: "Versión", valor: "0.4.1", veredicto: "Comprobando" }
-        : { etiqueta: "Versión", valor: "0.4.1 → 0.5.0", veredicto: "Atención", accion: "Actualizar" };
+    const marcas = esPregunta || trabajando
+      ? ["✓", "✓", "✓"]
+      : (fallo ? ["✗", "✓", "✗"] : ["✗", "✗", "✗"]);
 
-    // LO QUE ACOPLA LAS DOS FILAS (#660): SIN CERTIFICADO INSTALADO, rFIRMA NO
-    // PUEDE FIRMAR EN SEDES. De ahí salen las dos consecuencias: rFirma no se
-    // ofrece en el desplegable, y cuando firman las sedes con otro programa el
-    // certificado no hace falta. Firmar un PDF en la ventana NO se cae: la CA
-    // sólo sostiene el canal con el navegador, y por eso la fila se llama
-    // «Firma en sedes».
-    const marcas = calma ? ["✓", "✓", "✓"] : (falla ? ["✗", "✗", "✗"] : ["✓", "✓", "✗"]);
-    const puestos = midiendo ? null : marcas.filter((x) => x === "✓").length;
-    const certInstalado = puestos === null || puestos > 0;
-
-    // El desplegable SOLO cuando hay donde elegir: un desplegable cuya única
-    // entrada es lo que ya pone no deja hacer nada. Y rFirma sólo es candidata
-    // si su certificado está puesto en algún almacén.
-    const noSePuedeConsultar = app === "no se puede consultar";
-    const esRFirma = app.indexOf("rFirma,") === 0;
-    const hayAutoFirma = app === "AutoFirma es la aplicación"
-      || app === "rFirma, con AutoFirma instalado" || app === "sin configurar";
-    const valorApp = app === "AutoFirma es la aplicación" ? "AutoFirma" : (esRFirma ? "rFirma" : "Sin configurar");
-    const candidatos = [];
-    if (hayAutoFirma) candidatos.push("AutoFirma");
-    if (certInstalado) candidatos.push("rFirma");
-    const hayDondeElegir = candidatos.filter((c) => c !== valorApp).length > 0;
-
-    // «No aplica» NO ES UNA MEDIA TINTA DE «Correcto»: dentro del contenedor
-    // los manejadores no se pueden consultar, asi que no hay nada que
-    // configurar ni nada que reparar. Casilla apagada, sin boton, sin
-    // desplegable y sin la pista de Firefox, que ahi no dice nada. La fila NO
-    // DESAPARECE: una fila que a veces esta obliga a reaprender la pantalla.
-    const aplicacion = noSePuedeConsultar
-      ? { etiqueta: "Firma en sedes", valor: "No se puede consultar",
-          veredicto: "No aplica", reservaPista: true }
-      : {
-          etiqueta: "Firma en sedes",
-          valor: valorApp,
-          desplegable: hayDondeElegir,
-          listaAbierta: hayDondeElegir && listaAbierta,
-          opciones: candidatos.map((c) => ({ nombre: c, marca: c === valorApp ? "✓" : "" })),
-          veredicto: esRFirma ? "Correcto" : "Atención",
-          accion: esRFirma ? "" : "Usar rFirma",
-          reservaPista: true,
-          pista: "Firefox lo pregunta la primera vez."
-        };
-
-    // EL BOTÓN DEL CERTIFICADO ES «Instalar» MIENTRAS FALTE UN ALMACÉN Y
-    // «Retirar…» CUANDO ESTÁ EN TODOS. Y si firma AutoFirma, el certificado
-    // pasa a «No aplica» conservando su valor: no hace falta. Ahí «No aplica»
-    // SÍ LLEVA ACCIÓN si queda algo puesto, porque no hacer falta y no haber
-    // nada que hacer son cosas distintas.
-    const firmaOtroPrograma = app === "AutoFirma es la aplicación";
-    let certificado;
-    if (midiendo) {
-      certificado = { etiqueta: "Certificado de rFirma", valor: "—", veredicto: "Comprobando" };
-    } else if (reparando) {
-      certificado = { etiqueta: "Certificado de rFirma", valor: "2 de 3 almacenes",
-        veredicto: "Atención", ocupada: true, textoOcupada: "Instalando…",
-        perfiles: this.almacenesDeLaCA(marcas) };
-    } else {
-      const propio = puestos === 3 ? "Correcto" : (puestos === 0 ? "Incorrecto" : "Atención");
-      certificado = {
-        etiqueta: "Certificado de rFirma",
-        valor: puestos + " de 3 almacenes",
-        veredicto: firmaOtroPrograma ? "No aplica" : propio,
-        accion: firmaOtroPrograma
-          ? (puestos === 0 ? "" : "Retirar…")
-          : (puestos === 3 ? "Retirar…" : "Instalar"),
-        perfiles: this.almacenesDeLaCA(marcas),
-        detalleAbierto: !calma
-      };
+    let pasos = [];
+    if (trabajando) {
+      pasos = [
+        this.pasoDeLaRetirada("Firefox", "✓", "", false, false),
+        this.pasoDeLaRetirada("Chrome y Chromium", "", "Retirando…", true, false),
+        this.pasoDeLaRetirada("Almacén del sistema", "", "En espera", false, true),
+        this.pasoDeLaRetirada("Firma en sedes", "", "En espera", false, true)
+      ];
+    } else if (fallo) {
+      pasos = [
+        this.pasoDeLaRetirada("Firefox", "✓", "", false, false),
+        this.pasoDeLaRetirada("Chrome y Chromium", "✗", "El perfil está en uso", false, false),
+        this.pasoDeLaRetirada("Almacén del sistema", "✓", "", false, false),
+        this.pasoDeLaRetirada("Firma en sedes", "✓", "Sin configurar", false, false)
+      ];
+    } else if (hecho) {
+      pasos = [
+        this.pasoDeLaRetirada("Firefox", "✓", "", false, false),
+        this.pasoDeLaRetirada("Chrome y Chromium", "✓", "", false, false),
+        this.pasoDeLaRetirada("Almacén del sistema", "✓", "", false, false),
+        this.pasoDeLaRetirada("Firma en sedes", "✓", "Sin configurar", false, false)
+      ];
     }
 
-    const sinCertificados = m === "algo que reparar";
-    const tusCertificados = sinCertificados
-      ? { etiqueta: "Tus certificados", valor: "Ninguno", veredicto: "Atención", accion: "Cómo instalar" }
-      : { etiqueta: "Tus certificados", valor: "3 almacenes", veredicto: "Correcto",
-          perfiles: this.tusAlmacenes(), detalleAbierto: calma };
+    // EL BOTON DEL DESENLACE ES «Cerrar», Y CIERRA EL DIALOGO: LA APLICACION
+    // SIGUE ABIERTA. Mientras se retira no hay salida, y eso lo dice el
+    // «Cerrar» apagado, no una frase.
+    const titulo = esPregunta
+      ? "Retirar el certificado de rFirma"
+      : (trabajando ? "Retirando…" : (fallo ? "Retirado a medias" : "Certificado retirado"));
+
+    // LA TABLA DE DETRAS ES LA DEL PANEL, con sus mismas reglas: antes de
+    // retirar, rFirma firma en sedes y el certificado esta en los tres; al
+    // terminar, «Sin configurar» y los almacenes que hayan quedado.
+    const puestos = marcas.filter((x) => x === "✓").length;
+    const firmaEnSedes = hecho
+      ? { etiqueta: "Firma en sedes", valor: "Sin configurar", veredicto: "Atención",
+          accion: "Usar rFirma", reservaPista: true, pista: "Firefox lo pregunta la primera vez." }
+      : { etiqueta: "Firma en sedes", valor: "rFirma", veredicto: "Correcto",
+          reservaPista: true, pista: "Firefox lo pregunta la primera vez." };
+    const certificado = trabajando
+      ? { etiqueta: "Certificado de rFirma", valor: "3 de 3 almacenes", veredicto: "Correcto",
+          ocupada: true, textoOcupada: "Retirando…", perfiles: this.almacenesDeLaCA(marcas) }
+      : { etiqueta: "Certificado de rFirma", valor: puestos + " de 3 almacenes",
+          veredicto: puestos === 3 ? "Correcto" : (puestos === 0 ? "Incorrecto" : "Atención"),
+          accion: puestos === 3 ? "Retirar…" : "Instalar",
+          perfiles: this.almacenesDeLaCA(marcas), detalleAbierto: fallo };
 
     return {
       tema: tema,
-      remedirApagado: reparando,
-      filas: [version, aplicacion, certificado, tusCertificados].map((s) => this.senal(s))
+      remedirApagado: trabajando,
+      filas: [
+        { etiqueta: "Versión", valor: "0.4.1", veredicto: "Correcto" },
+        firmaEnSedes,
+        certificado,
+        { etiqueta: "Tus certificados", valor: "3 almacenes", veredicto: "Correcto",
+          perfiles: this.tusAlmacenes() }
+      ].map((s) => this.senal(s)),
+      titulo: titulo,
+      esPregunta: esPregunta,
+      hayLista: trabajando || hecho,
+      pasos: pasos,
+      hayAviso: hecho,
+      hayCancelar: esPregunta,
+      hayRetirar: esPregunta,
+      hayCerrar: trabajando || hecho,
+      cerrarApagado: trabajando,
+      hayReintentar: fallo
     };
   }
 }
