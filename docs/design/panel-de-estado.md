@@ -149,7 +149,9 @@ y no haber nada que saber son dos cosas, y ninguna es estar bien.
 
 El triángulo de «Atención» es **el mismo `path`** que marca «Estado de rFirma»
 en el menú de la [cabecera](cabecera.md). Dos dibujos distintos para lo mismo
-serían dos vocabularios.
+serían dos vocabularios. Mismo dibujo, **regla distinta**: aquí lo pone el
+veredicto de la fila, y allí solo lo encienden las averías que rFirma puede y
+debe arreglar, que la [cabecera](cabecera.md) enumera.
 
 ### La fila de la firma en sedes
 
@@ -169,6 +171,19 @@ AutoFirma sin instalar no queda ninguno, así que el valor va en texto pelado: u
 desplegable cuya única entrada es lo que ya pone es un control que miente sobre
 lo que se puede hacer con él. `Sin configurar` lo lleva siempre, porque no es
 ninguno de los candidatos y cualquiera de ellos es una elección.
+
+**Ese desplegable es el único sitio donde se elige el programa**
+([#661](https://github.com/sgomez/rfirma/issues/661)).
+[Preferencias](preferencias.md) tenía una copia suya, con la misma pista de
+Firefox, y ya no: elegir y ver el veredicto son el mismo gesto, y partirlos en
+dos pantallas obligaba a ir a mirar a una para entender la otra. Dos controles
+para un mismo ajuste son además dos sitios donde mirar cuando no cuadra.
+
+**`AutoFirma es la aplicación` dice «Atención» aquí, pero no enciende el
+triángulo del menú de la [cabecera](cabecera.md).** Que las sedes abran
+AutoFirma es una elección legítima, no una avería: la fila lo cuenta a quien
+entra a mirar, y no sale a buscar a nadie. El veredicto de la fila y el disparo
+del triángulo no son la misma regla — la fila informa, el triángulo llama.
 
 **`No se puede consultar` es el sandbox del flatpak**, donde los manejadores
 registrados no se pueden leer. No hay nada que configurar ni nada que reparar,
@@ -252,10 +267,14 @@ aquí: ver [retirar el certificado](retirar-certificado.md).
 **La pantalla en calma es `todo correcto` × `rFirma, sin AutoFirma`**: cuatro
 veredictos apagados y un solo control, `Cerrar`.
 
-**El refresco es a mano**, con `Volver a comprobar`, más el automático que sigue
-a una reparación. Nada se remide solo: una tabla que cambia bajo el cursor
-mientras se lee obliga a comprobar dos veces lo que ya se había leído. Mientras
-una reparación corre, el botón de remedir se apaga.
+**Se mide al arrancar la aplicación** —es lo que decide si el triángulo del menú
+de la [cabecera](cabecera.md) se enciende antes de que nadie abra nada— y al
+abrir el panel. **El refresco es a mano**, con `Volver a comprobar`, más el
+automático que sigue a una reparación: toda reparación remide. Nada se remide
+solo: ni periódicamente ni al volver la ventana al frente. Una tabla que cambia
+bajo el cursor mientras se lee obliga a comprobar dos veces lo que ya se había
+leído, y medir cuando nadie mira es trabajar de más. Mientras una reparación
+corre, el botón de remedir se apaga.
 
 **La carga se pinta progresivamente**, señal a señal. La alternativa —esperar a
 tenerlo todo— deja la pantalla en blanco por culpa de la comprobación más lenta;

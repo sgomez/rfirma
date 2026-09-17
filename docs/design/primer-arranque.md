@@ -7,9 +7,11 @@ cuenta. Es la primera pantalla de la aplicación, antes de que haya documento
 alguno.
 
 Sustituye al diálogo `trust/TrustNotice.tsx`, que sólo contaba, y absorbe el
-disparo inicial de `desktop/UrlHandlerBanner.tsx`, que deja de aparecer en el
-primer arranque y queda como recuperación posterior. La diferencia de fondo con
-lo que hay hoy es que este **informa y además hace**.
+disparo inicial de `desktop/UrlHandlerBanner.tsx`, que **desaparece del todo**
+([#661](https://github.com/sgomez/rfirma/issues/661)): lo que quedaba de él
+—elegir quién atiende los enlaces de las sedes— vive en la fila `Firma en sedes`
+del [panel de estado](panel-de-estado.md). La diferencia de fondo con lo que hay
+hoy es que este **informa y además hace**.
 
 ## Casos de uso que la usan
 
