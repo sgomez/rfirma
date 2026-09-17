@@ -1,7 +1,6 @@
 //! El catálogo de condiciones del protocolo y el arnés que las verifica contra el sujeto.
 
 use crate::dossier::{Dossier, ProtocolConditionDefinition, ProtocolState, ProtocolVerdict};
-use crate::verdicts::protocol_verdict_label;
 use crate::Probe;
 
 pub(crate) const KNOWN_CONDITIONS: &[ProtocolConditionDefinition] = &[
@@ -157,16 +156,35 @@ const THE_SINGLE_SELECTION: &str = "selectcert";
 
 impl Probe {
     pub(crate) fn run_protocol_lane(&self, dossier: &mut Dossier) {
-        println!("iniciando el carril de conformidad de protocolo");
-        self.run_protocol_errand(dossier, "protocol-v4", "protocol-v4", THE_V4_PROTOCOL);
+        self.monitor
+            .display_header(dossier.subject(), dossier.header());
+        let total = KNOWN_CONDITIONS.len();
+        let mut index = 0;
+        self.run_protocol_errand(
+            dossier,
+            "protocol-v4",
+            "protocol-v4",
+            THE_V4_PROTOCOL,
+            &mut index,
+            total,
+        );
         self.run_protocol_errand(
             dossier,
             "protocol-v4-malformed-id",
             "protocol-v4-malformed-id",
             THE_V4_PROTOCOL,
+            &mut index,
+            total,
         );
-        self.run_protocol_errand(dossier, "protocol-v3", "protocol-v3", THE_V3_PROTOCOL);
-        self.run_channel_rejection_errands(dossier);
+        self.run_protocol_errand(
+            dossier,
+            "protocol-v3",
+            "protocol-v3",
+            THE_V3_PROTOCOL,
+            &mut index,
+            total,
+        );
+        self.run_channel_rejection_errands(dossier, &mut index, total);
     }
 
     fn run_protocol_errand(
@@ -175,23 +193,45 @@ impl Probe {
         transcript_name: &str,
         script: &str,
         mode: &str,
+        index: &mut usize,
+        total: usize,
     ) {
+        self.monitor
+            .start_progress("Condición", *index + 1, total, transcript_name);
+        let start = std::time::Instant::now();
         let outcome = self.run_errand(transcript_name, script, mode);
+        let duration = start.elapsed();
         if !outcome.launched {
             return;
         }
         for condition in outcome.protocol_conditions {
+            *index += 1;
             self.resolve_condition(
                 dossier,
                 &condition.id,
                 condition.verdict,
                 condition.observation,
+                duration,
             );
         }
     }
 
-    fn run_channel_rejection_errands(&self, dossier: &mut Dossier) {
+    fn run_channel_rejection_errands(
+        &self,
+        dossier: &mut Dossier,
+        index: &mut usize,
+        total: usize,
+    ) {
+        *index += 1;
+        self.monitor.start_progress(
+            "Condición",
+            *index,
+            total,
+            "websocket_channel_unsupported_versions_rejected",
+        );
+        let start = std::time::Instant::now();
         let outcome_v1 = self.run_errand("protocol-v1-rejection", THE_SINGLE_SELECTION, "v1");
+        let duration = start.elapsed();
         if outcome_v1.launched {
             let (verdict, obs) = match outcome_v1.error_code.as_deref() {
                 Some("SAF_21") => (ProtocolVerdict::Compliant, Some("SAF_21".to_owned())),
@@ -203,14 +243,20 @@ impl Probe {
                 "websocket_channel_unsupported_versions_rejected",
                 verdict,
                 obs,
+                duration,
             );
         }
 
+        *index += 1;
+        self.monitor
+            .start_progress("Condición", *index, total, "service_channel_version_range");
+        let start = std::time::Instant::now();
         let outcome_service_v4 = self.run_errand(
             "protocol-service-v4-rejection",
             THE_SINGLE_SELECTION,
             "service-v4",
         );
+        let duration = start.elapsed();
         if outcome_service_v4.launched {
             let (verdict, obs) = match outcome_service_v4.error_code.as_deref() {
                 Some("SAF_21") => (ProtocolVerdict::Compliant, Some("SAF_21".to_owned())),
@@ -220,21 +266,42 @@ impl Probe {
                     outcome_service_v4.error_type,
                 ),
             };
-            self.resolve_condition(dossier, "service_channel_version_range", verdict, obs);
+            self.resolve_condition(
+                dossier,
+                "service_channel_version_range",
+                verdict,
+                obs,
+                duration,
+            );
         }
 
+        *index += 1;
+        self.monitor.start_progress(
+            "Condición",
+            *index,
+            total,
+            "unsupported_protocol_uri_rejected",
+        );
+        let start = std::time::Instant::now();
         let outcome_bad_uri = self.run_errand(
             "protocol-bad-uri-rejection",
             THE_SINGLE_SELECTION,
             "bad-uri",
         );
+        let duration = start.elapsed();
         if outcome_bad_uri.launched {
             let (verdict, obs) = match outcome_bad_uri.error_code.as_deref() {
                 Some("SAF_02") => (ProtocolVerdict::Compliant, Some("SAF_02".to_owned())),
                 Some(other) => (ProtocolVerdict::Discrepant, Some(other.to_owned())),
                 None => (ProtocolVerdict::NotObservable, outcome_bad_uri.error_type),
             };
-            self.resolve_condition(dossier, "unsupported_protocol_uri_rejected", verdict, obs);
+            self.resolve_condition(
+                dossier,
+                "unsupported_protocol_uri_rejected",
+                verdict,
+                obs,
+                duration,
+            );
         }
 
         if dossier.protocol_state_of("v4_ports_negotiation")
@@ -242,11 +309,13 @@ impl Probe {
             && dossier.protocol_state_of("v3_ports_default_fixed")
                 == Some(ProtocolState::Resolved(ProtocolVerdict::Compliant))
         {
+            *index += 1;
             self.resolve_condition(
                 dossier,
                 "websocket_channel_supported_versions_accepted",
                 ProtocolVerdict::Compliant,
                 Some("v3 y v4 conectan con éxito".to_owned()),
+                std::time::Duration::from_millis(0),
             );
         }
     }
@@ -257,13 +326,34 @@ impl Probe {
         id: &str,
         verdict: ProtocolVerdict,
         observation: Option<String>,
+        duration: std::time::Duration,
     ) {
-        if let Some(record) = dossier.protocol_conditions().find(|(k, _)| *k == id) {
-            let chapter = record.1.chapter.clone();
-            let label = protocol_verdict_label(verdict);
-            let obs_text = observation.as_deref().unwrap_or("-");
-            println!("[{chapter}] {id}: {label} ({obs_text})");
-        }
+        let (badge, color) = match verdict {
+            ProtocolVerdict::Compliant => ("[CONFORME]", crate::verdicts::GREEN),
+            ProtocolVerdict::Discrepant => ("[DISCREPANCIA]", crate::verdicts::RED),
+            ProtocolVerdict::NotObservable => ("[NO OBSERVABLE]", crate::verdicts::YELLOW),
+        };
+        let chapter = dossier
+            .protocol_conditions()
+            .find(|(k, _)| *k == id)
+            .map(|(_, record)| {
+                if record.chapter.starts_with('[') {
+                    record.chapter.clone()
+                } else if record.chapter.starts_with("Cap.") {
+                    format!("[{}]", record.chapter)
+                } else {
+                    format!("[Cap. {}]", record.chapter)
+                }
+            })
+            .unwrap_or_else(|| "[--]".to_owned());
+        let display_name = format!("{chapter} {id}");
+        self.monitor.finish_item(
+            badge,
+            color,
+            &display_name,
+            duration,
+            observation.as_deref(),
+        );
         let _ = dossier.resolve_protocol(id, verdict, observation);
     }
 }

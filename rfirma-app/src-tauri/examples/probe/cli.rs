@@ -19,6 +19,8 @@ uso: cargo run --example probe -- --subject <binario> --trust-root <certificado>
   --trust-root       la raíz de confianza con la que ese binario sirve el canal, en PEM o en DER
   --dossier          dónde vive el expediente de la tanda; se crea si no existe
   --patience-ms      cuánto espera el conductor antes de darse por vencido (por omisión, 60000)
+  --plain            fuerza el modo lineal limpio sin secuencias ANSI ni sobreescritura
+  --verbose          emite las tramas JSON de WebSocket y trazas de depuración a la consola
 
   Coordenadas de la tanda, obligatorias solo al abrir un expediente nuevo:
   --os               sistema operativo del sujeto
@@ -85,7 +87,10 @@ impl PartialCoordinates {
 
 /// Pregunta `label` por teclado y devuelve lo escrito, sin el salto de línea final.
 pub(crate) fn ask(label: &str) -> String {
-    print!("{label}: ");
+    let is_tty = std::io::stdout().is_terminal() && std::io::stdin().is_terminal();
+    let box_str = crate::monitor::render_dialog_box(label, is_tty);
+    println!("\n{box_str}");
+    print!("> ");
     let _ = std::io::stdout().flush();
     let mut line = String::new();
     std::io::stdin()
@@ -101,6 +106,8 @@ impl Probe {
         let mut dossier = None;
         let mut patience = DEFAULT_PATIENCE;
         let mut coordinates = PartialCoordinates::default();
+        let mut plain = false;
+        let mut verbose = false;
         let mut arguments = std::env::args().skip(1);
         let command = loop {
             let flag = arguments
@@ -118,6 +125,8 @@ impl Probe {
                         .map_err(|_| "--patience-ms quiere un número de milisegundos".to_owned())?;
                     patience = Duration::from_millis(milliseconds);
                 }
+                "--plain" => plain = true,
+                "--verbose" => verbose = true,
                 "--os" => coordinates.os = Some(value_of(&flag, &mut arguments)?),
                 "--os-version" => coordinates.os_version = Some(value_of(&flag, &mut arguments)?),
                 "--subject-version" => {
@@ -125,20 +134,56 @@ impl Probe {
                 }
                 "--transport" => coordinates.transport = Some(value_of(&flag, &mut arguments)?),
                 "--store" => coordinates.store = Some(value_of(&flag, &mut arguments)?),
-                "list" => break CaseCommand::List,
-                "run-pending" => break CaseCommand::RunPending,
-                "protocol" | "run-protocol" => break CaseCommand::RunProtocol,
+                "list" => {
+                    while let Some(next_arg) = arguments.next() {
+                        match next_arg.as_str() {
+                            "--plain" => plain = true,
+                            "--verbose" => verbose = true,
+                            other => return Err(format!("argumento desconocido: {other}")),
+                        }
+                    }
+                    break CaseCommand::List;
+                }
+                "run-pending" => {
+                    while let Some(next_arg) = arguments.next() {
+                        match next_arg.as_str() {
+                            "--plain" => plain = true,
+                            "--verbose" => verbose = true,
+                            other => return Err(format!("argumento desconocido: {other}")),
+                        }
+                    }
+                    break CaseCommand::RunPending;
+                }
+                "protocol" | "run-protocol" => {
+                    while let Some(next_arg) = arguments.next() {
+                        match next_arg.as_str() {
+                            "--plain" => plain = true,
+                            "--verbose" => verbose = true,
+                            other => return Err(format!("argumento desconocido: {other}")),
+                        }
+                    }
+                    break CaseCommand::RunProtocol;
+                }
                 "run" => {
                     let case = value_of(&flag, &mut arguments)?;
                     if case == "protocol" {
                         break CaseCommand::RunProtocol;
                     }
-                    let relaunch = arguments.next().as_deref() == Some("--relaunch");
+                    let mut relaunch = false;
+                    while let Some(next_arg) = arguments.next() {
+                        match next_arg.as_str() {
+                            "--relaunch" => relaunch = true,
+                            "--plain" => plain = true,
+                            "--verbose" => verbose = true,
+                            other => return Err(format!("argumento desconocido: {other}")),
+                        }
+                    }
                     break CaseCommand::Run { case, relaunch };
                 }
                 other => return Err(format!("argumento desconocido: {other}")),
             }
         };
+        let monitor = crate::monitor::ProgressMonitor::new(plain);
         Ok(Self {
             subject: subject.ok_or_else(|| "falta --subject".to_owned())?,
             trust_root: trust_root.ok_or_else(|| "falta --trust-root".to_owned())?,
@@ -146,6 +191,8 @@ impl Probe {
             patience,
             command,
             coordinates,
+            verbose,
+            monitor,
         })
     }
 

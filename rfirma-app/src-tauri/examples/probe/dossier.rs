@@ -184,6 +184,10 @@ impl Dossier {
         Ok(dossier)
     }
 
+    pub fn subject(&self) -> &str {
+        &self.contents.subject
+    }
+
     pub fn header(&self) -> &Header {
         &self.contents.header
     }

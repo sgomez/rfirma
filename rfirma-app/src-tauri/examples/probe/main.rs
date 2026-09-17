@@ -5,6 +5,7 @@ mod cases;
 mod cli;
 mod dossier;
 mod errand;
+mod monitor;
 mod protocol;
 mod transcript;
 mod verdicts;
@@ -21,6 +22,8 @@ struct Probe {
     patience: Duration,
     command: CaseCommand,
     coordinates: cli::PartialCoordinates,
+    verbose: bool,
+    monitor: monitor::ProgressMonitor,
 }
 
 enum CaseCommand {
@@ -41,6 +44,15 @@ fn main() {
 }
 
 impl Probe {
+    pub(crate) fn subject_log_path(&self) -> PathBuf {
+        if let Some(parent) = self.dossier.parent() {
+            if !parent.as_os_str().is_empty() {
+                return parent.join("probe-subject.log");
+            }
+        }
+        PathBuf::from(".scratch/probe-subject.log")
+    }
+
     fn run(mut self) {
         if let Err(complaints) = cli::preflight(&self.subject, &self.trust_root) {
             for complaint in &complaints {

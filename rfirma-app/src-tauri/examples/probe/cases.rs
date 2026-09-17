@@ -10,7 +10,6 @@ use std::time::Duration;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use crate::cli::ask;
 use crate::dossier::{CaseState, Dossier, Verdict};
 use crate::errand::{THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
 use crate::verdicts::{the_verdict_for_private_key_check, the_verdict_for_saf_code, CaseOutcome};
@@ -157,24 +156,56 @@ impl Probe {
             println!("el caso «{case}» ya está resuelto; usa --relaunch para repetirlo");
             return;
         }
-        self.run_case_and_resolve(dossier, case);
+        self.monitor
+            .display_header(dossier.subject(), dossier.header());
+        self.run_case_and_resolve(dossier, case, 1, 1);
     }
 
     pub(crate) fn run_pending(&self, dossier: &mut Dossier) {
-        for case in KNOWN_CASES {
-            if matches!(dossier.state_of(case), Some(CaseState::Resolved(_))) {
-                continue;
-            }
-            self.run_case_and_resolve(dossier, case);
+        let pending: Vec<&str> = KNOWN_CASES
+            .iter()
+            .copied()
+            .filter(|case| !matches!(dossier.state_of(case), Some(CaseState::Resolved(_))))
+            .collect();
+
+        if pending.is_empty() {
+            let total = KNOWN_CASES.len();
+            println!("{}", no_pending_cases_message(total));
+            return;
+        }
+
+        self.monitor
+            .display_header(dossier.subject(), dossier.header());
+        let total = pending.len();
+        for (i, case) in pending.into_iter().enumerate() {
+            self.run_case_and_resolve(dossier, case, i + 1, total);
         }
     }
 
-    fn run_case_and_resolve(&self, dossier: &mut Dossier, case: &str) {
-        match self.run_case(dossier, case) {
+    fn run_case_and_resolve(
+        &self,
+        dossier: &mut Dossier,
+        case: &str,
+        current: usize,
+        total: usize,
+    ) {
+        self.monitor.start_progress("Caso", current, total, case);
+        let start = std::time::Instant::now();
+        let outcome = self.run_case(dossier, case);
+        let duration = start.elapsed();
+
+        match outcome {
             CaseOutcome::Resolved {
                 verdict,
                 observation,
             } => {
+                let (badge_text, color) = match verdict {
+                    Verdict::Confirmed => ("[CONFIRMADO]", crate::verdicts::GREEN),
+                    Verdict::Refuted => ("[REFUTADO]", crate::verdicts::RED),
+                    Verdict::NotObservable => ("[NO OBSERVABLE]", crate::verdicts::YELLOW),
+                };
+                self.monitor
+                    .finish_item(badge_text, color, case, duration, observation.as_deref());
                 dossier
                     .resolve(case, verdict, observation)
                     .unwrap_or_else(|complaint| {
@@ -183,7 +214,13 @@ impl Probe {
                     });
             }
             CaseOutcome::StillPending => {
-                println!("el caso «{case}» sigue pendiente: no hubo respuesta");
+                self.monitor.finish_item(
+                    "[PENDIENTE]",
+                    crate::verdicts::GRAY,
+                    case,
+                    duration,
+                    Some("no hubo respuesta"),
+                );
             }
         }
     }
@@ -258,7 +295,9 @@ impl Probe {
         if !outcome.launched {
             return CaseOutcome::resolved(Verdict::NotObservable);
         }
-        let answer = ask("¿se pidió elegir dónde guardar el fichero? [s/n]");
+        let answer = self
+            .monitor
+            .ask("¿se pidió elegir dónde guardar el fichero? [s/n]");
         if answer.is_empty() {
             return CaseOutcome::StillPending;
         }
@@ -469,6 +508,12 @@ impl OccupiedPorts {
     }
 }
 
+pub(crate) fn no_pending_cases_message(total: usize) -> String {
+    format!(
+        "No quedan casos pendientes en el expediente ({total}/{total} resueltos).\n\n        Opciones para continuar:\n          - Listar el expediente:   list\n          - Relanzar un caso:       run <caso> --relaunch\n          - Carril de protocolo:    protocol"
+    )
+}
+
 impl Drop for OccupiedPorts {
     fn drop(&mut self) {
         self.release.store(true, Ordering::Relaxed);
@@ -502,5 +547,13 @@ mod tests {
         assert!(!the_signature_carries_a_timestamp(
             "no es base64 ni de lejos: %%%"
         ));
+    }
+    #[test]
+    fn no_pending_cases_message_informs_complete_and_lists_options() {
+        let msg = no_pending_cases_message(11);
+        assert!(msg.contains("No quedan casos pendientes en el expediente (11/11 resueltos)"));
+        assert!(msg.contains("list"));
+        assert!(msg.contains("run <caso> --relaunch"));
+        assert!(msg.contains("protocol"));
     }
 }
