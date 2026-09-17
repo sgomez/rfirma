@@ -1,12 +1,12 @@
 //! Suite de conformidad: el cliente publicado bajo Node corre un guion del banco contra el
 //! binario declarado y transcribe lo que viajó, sin mirar el interior del sujeto.
 
-mod cases;
+mod catalogue;
+mod checks;
 mod cli;
 mod dossier;
 mod errand;
 mod monitor;
-mod protocol;
 mod transcript;
 mod verdicts;
 
@@ -20,17 +20,16 @@ struct Probe {
     trust_root: PathBuf,
     dossier: PathBuf,
     patience: Duration,
-    command: CaseCommand,
+    command: Command,
     coordinates: cli::PartialCoordinates,
     verbose: bool,
     monitor: monitor::ProgressMonitor,
 }
 
-enum CaseCommand {
-    List,
-    Run { case: String, relaunch: bool },
-    RunPending,
-    RunProtocol,
+enum Command {
+    List { suite: Option<String> },
+    Run { check: String, relaunch: bool },
+    RunPending { suite: Option<String> },
 }
 
 fn main() {
@@ -61,6 +60,14 @@ impl Probe {
             eprintln!("\nun fallo de condición no es un veredicto: no se ha llegado a medir nada.");
             std::process::exit(3);
         }
+        let catalogue = catalogue::read_the_catalogue().unwrap_or_else(|complaint| {
+            eprintln!("{complaint}");
+            std::process::exit(1);
+        });
+        if let Err(complaint) = cli::the_suite_asked_for(&self.command, &catalogue) {
+            eprintln!("{complaint}");
+            std::process::exit(2);
+        }
         let header_coordinates = if self.dossier.exists() {
             None
         } else {
@@ -69,8 +76,7 @@ impl Probe {
         let mut dossier = Dossier::open(
             &self.dossier,
             &self.subject.display().to_string(),
-            cases::KNOWN_CASES,
-            protocol::KNOWN_CONDITIONS,
+            &catalogue,
             header_coordinates,
         )
         .unwrap_or_else(|complaint| {
@@ -78,12 +84,13 @@ impl Probe {
             std::process::exit(1);
         });
         match &self.command {
-            CaseCommand::List => verdicts::list(&dossier),
-            CaseCommand::Run { case, relaunch } => {
-                self.run_one(&mut dossier, case, *relaunch);
+            Command::List { suite } => verdicts::list(&dossier, &catalogue, suite.as_deref()),
+            Command::Run { check, relaunch } => {
+                self.run_one(&mut dossier, &catalogue, check, *relaunch);
             }
-            CaseCommand::RunPending => self.run_pending(&mut dossier),
-            CaseCommand::RunProtocol => self.run_protocol_lane(&mut dossier),
+            Command::RunPending { suite } => {
+                self.run_pending(&mut dossier, &catalogue, suite.as_deref());
+            }
         }
     }
 }

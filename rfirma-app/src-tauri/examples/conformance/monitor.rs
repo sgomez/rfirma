@@ -270,14 +270,14 @@ mod tests {
     #[test]
     fn verdict_line_formats_cleanly_without_color() {
         let line = format_verdict_line(
-            "[CONFIRMADO]",
-            "\x1b[32m",
-            "test_case",
+            "[NO CONFORME]",
+            "\x1b[31m",
+            "an_identifier",
             Duration::from_millis(1200),
             Some("detalles"),
             false,
         );
-        assert_eq!(line, "[CONFIRMADO]    test_case (1.2s) - detalles");
+        assert_eq!(line, "[NO CONFORME]   an_identifier (1.2s) - detalles");
         assert!(!line.contains("\x1b["));
     }
 
@@ -286,12 +286,12 @@ mod tests {
         let line = format_verdict_line(
             "[CONFORME]",
             "\x1b[32m",
-            "condition_1",
+            "another_identifier",
             Duration::from_millis(300),
             Some("-"),
             false,
         );
-        assert_eq!(line, "[CONFORME]      condition_1 (0.3s)");
+        assert_eq!(line, "[CONFORME]      another_identifier (0.3s)");
     }
     #[test]
     fn plain_monitor_reports_is_plain() {

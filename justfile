@@ -446,7 +446,7 @@ dev-handler mode="on":
 # (`uname` y el almacen aislado); --transport vale «websocket», el unico de esta fase.
 # Mide el cliente publicado contra un binario instalado, aislado del almacen del titular y con
 # la raiz que sirve cada sujeto: `just conformance [orden] [--subject <ruta>] [--trust-root <ruta>]`.
-# `orden` es `list`, `run <caso>` o `run-pending` (por omision); ver `cargo run --example conformance -- --help`.
+# `orden` es `list`, `run <id>` o `run-pending` (por omision), y las dos ultimas admiten `--suite <conjunto>`.
 [group('dev')]
 conformance *args: autoscript build-ts
     #!/usr/bin/env bash

@@ -251,13 +251,15 @@ hace. No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y 
 _Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cliente de canal
 
 **Suite de conformidad**:
-El catálogo de exigencias del protocolo y el arnés que las mide contra el **sujeto** que se le
-declare —AutoFirma o rFirma, un binario instalado—, con el **cliente publicado** como
-instrumento: emite un veredicto de tres valores —confirmado, refutado, no observable— con las
-coordenadas de la tanda. Produce un informe, no una puerta: queda fuera de las gradas del
-ADR-0014, no bloquea ningún PR ni ninguna etiqueta. Los veredictos de las divergencias sin ficha
-de A1 se registran en el **expediente** de la tanda (`dossier.json`) y en sus transcripciones,
-sin abrir fichas en el anexo A1. Vive en `cargo run --example conformance` (`just conformance`).
+El catálogo de exigencias del protocolo —un `catalogue.toml` declarativo, una entrada por
+exigencia— y el arnés que las mide contra el **sujeto** que se le declare —AutoFirma o rFirma, un
+binario instalado—, con el **cliente publicado** como instrumento: emite un veredicto único
+—CONFORME, NO CONFORME, NO OBSERVABLE, y PENDIENTE mientras no se haya corrido— con las
+coordenadas de la tanda. El enunciado de cada entrada dice qué exige el protocolo, nunca qué hace
+mal un cliente. Produce un informe, no una puerta: queda fuera de las gradas del ADR-0014, no
+bloquea ningún PR ni ninguna etiqueta. Los veredictos se registran en el **expediente** de la
+tanda (`dossier.json`) y en sus transcripciones; el anexo A1 es su diccionario de causas, no su
+índice. Vive en `cargo run --example conformance` (`just conformance`).
 _Avoid_: sondeo, banco de conformidad, cliente de canal
 
 **Códec del protocolo**:
