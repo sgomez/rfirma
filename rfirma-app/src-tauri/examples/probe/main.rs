@@ -5,6 +5,7 @@ mod cases;
 mod cli;
 mod dossier;
 mod errand;
+mod protocol;
 mod transcript;
 mod verdicts;
 
@@ -26,6 +27,7 @@ enum CaseCommand {
     List,
     Run { case: String, relaunch: bool },
     RunPending,
+    RunProtocol,
 }
 
 fn main() {
@@ -56,6 +58,7 @@ impl Probe {
             &self.dossier,
             &self.subject.display().to_string(),
             cases::KNOWN_CASES,
+            protocol::KNOWN_CONDITIONS,
             header_coordinates,
         )
         .unwrap_or_else(|complaint| {
@@ -68,6 +71,7 @@ impl Probe {
                 self.run_one(&mut dossier, case, *relaunch);
             }
             CaseCommand::RunPending => self.run_pending(&mut dossier),
+            CaseCommand::RunProtocol => self.run_protocol_lane(&mut dossier),
         }
     }
 }

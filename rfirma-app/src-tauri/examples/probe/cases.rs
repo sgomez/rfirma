@@ -133,6 +133,13 @@ pub(crate) const KNOWN_CASES: &[&str] = &[
 
 impl Probe {
     pub(crate) fn run_one(&self, dossier: &mut Dossier, case: &str, relaunch: bool) {
+        if crate::protocol::KNOWN_CONDITIONS
+            .iter()
+            .any(|c| c.id == case)
+        {
+            println!("«{case}» es una condición del carril de protocolo; usa la orden «protocol» para ejecutar el carril");
+            return;
+        }
         if !KNOWN_CASES.contains(&case) {
             eprintln!(
                 "no conozco el caso «{case}»; los que hay son: {}",

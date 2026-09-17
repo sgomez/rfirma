@@ -1,6 +1,6 @@
 //! La traducción de lo observado en cada caso a un veredicto, y el listado que las muestra.
 
-use crate::dossier::{CaseState, Dossier, Verdict};
+use crate::dossier::{CaseState, Dossier, ProtocolState, ProtocolVerdict, Verdict};
 use crate::errand::ErrandOutcome;
 
 /// Lo que deja un caso al correr: un veredicto, con su observación si la hubo, o nada si se
@@ -38,6 +38,15 @@ fn verdict_label(verdict: Verdict) -> &'static str {
     }
 }
 
+/// La etiqueta en castellano del resultado de una condición del protocolo.
+pub(crate) fn protocol_verdict_label(verdict: ProtocolVerdict) -> &'static str {
+    match verdict {
+        ProtocolVerdict::Compliant => "conforme",
+        ProtocolVerdict::Discrepant => "discrepancia",
+        ProtocolVerdict::NotObservable => "no observable",
+    }
+}
+
 pub(crate) fn list(dossier: &Dossier) {
     let header = dossier.header();
     println!(
@@ -57,6 +66,18 @@ pub(crate) fn list(dossier: &Dossier) {
         let date = record.date.as_deref().unwrap_or("-");
         let observation = record.observation.as_deref().unwrap_or("-");
         println!("{case}\t{state}\t{date}\t{observation}");
+    }
+    for (id, record) in dossier.protocol_conditions() {
+        let state = match record.state {
+            ProtocolState::Pending => "pendiente",
+            ProtocolState::Resolved(verdict) => protocol_verdict_label(verdict),
+        };
+        let date = record.date.as_deref().unwrap_or("-");
+        let observation = record.observation.as_deref().unwrap_or("-");
+        println!(
+            "[{}] {}\t{}\t{}\t{}\t{}\t{}",
+            record.chapter, id, state, date, record.citation, record.statement, observation
+        );
     }
 }
 
@@ -94,6 +115,7 @@ mod tests {
             error_type: Some(THE_DRIVER_CRASH.to_owned()),
             error_code: None,
             signature: None,
+            protocol_conditions: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -109,6 +131,7 @@ mod tests {
             error_type: Some("java.lang.Exception".to_owned()),
             error_code: Some("SAF_47".to_owned()),
             signature: None,
+            protocol_conditions: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -124,11 +147,28 @@ mod tests {
             error_type: Some("java.lang.Exception".to_owned()),
             error_code: Some("SAF_03".to_owned()),
             signature: None,
+            protocol_conditions: Vec::new(),
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
             panic!("el caso debería resolverse");
         };
         assert_eq!(verdict, Verdict::Refuted);
+    }
+
+    #[test]
+    fn protocol_verdict_labels_match_spanish_vocabulary() {
+        assert_eq!(
+            protocol_verdict_label(ProtocolVerdict::Compliant),
+            "conforme"
+        );
+        assert_eq!(
+            protocol_verdict_label(ProtocolVerdict::Discrepant),
+            "discrepancia"
+        );
+        assert_eq!(
+            protocol_verdict_label(ProtocolVerdict::NotObservable),
+            "no observable"
+        );
     }
 }

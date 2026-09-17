@@ -32,6 +32,7 @@ uso: cargo run --example probe -- --subject <binario> --trust-root <certificado>
   list                lista los casos del expediente con su estado y su fecha
   run <caso>          ejecuta un caso por su nombre; si ya está resuelto, no repite salvo --relaunch
   run-pending         ejecuta, por orden, los casos que sigan pendientes; se detiene si uno falla
+  protocol            ejecuta el carril de conformidad de protocolo entero, de una tirada
 ";
 
 const DEFAULT_PATIENCE: Duration = Duration::from_millis(60_000);
@@ -126,8 +127,12 @@ impl Probe {
                 "--store" => coordinates.store = Some(value_of(&flag, &mut arguments)?),
                 "list" => break CaseCommand::List,
                 "run-pending" => break CaseCommand::RunPending,
+                "protocol" | "run-protocol" => break CaseCommand::RunProtocol,
                 "run" => {
                     let case = value_of(&flag, &mut arguments)?;
+                    if case == "protocol" {
+                        break CaseCommand::RunProtocol;
+                    }
                     let relaunch = arguments.next().as_deref() == Some("--relaunch");
                     break CaseCommand::Run { case, relaunch };
                 }
