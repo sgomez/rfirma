@@ -10,6 +10,7 @@ use crate::dossier::Header;
 use crate::verdicts::format_badge;
 
 pub(crate) struct ProgressMonitor {
+    #[allow(dead_code)]
     plain: bool,
     interactive_tty: bool,
     active_item: Arc<Mutex<Option<ActiveItem>>>,
@@ -76,6 +77,7 @@ pub(crate) fn format_verdict_line(
 }
 
 impl ProgressMonitor {
+    #[allow(dead_code)]
     pub(crate) fn is_plain(&self) -> bool {
         self.plain
     }

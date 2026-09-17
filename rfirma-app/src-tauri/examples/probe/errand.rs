@@ -36,6 +36,7 @@ pub(crate) struct ErrandOutcome {
     pub(crate) signature: Option<String>,
     pub(crate) data: Option<String>,
     pub(crate) protocol_conditions: Vec<ProtocolConditionResult>,
+    #[allow(dead_code)]
     pub(crate) recent_subject_lines: Vec<String>,
 }
 

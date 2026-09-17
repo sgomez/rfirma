@@ -135,7 +135,7 @@ impl Probe {
                 "--transport" => coordinates.transport = Some(value_of(&flag, &mut arguments)?),
                 "--store" => coordinates.store = Some(value_of(&flag, &mut arguments)?),
                 "list" => {
-                    while let Some(next_arg) = arguments.next() {
+                    for next_arg in arguments.by_ref() {
                         match next_arg.as_str() {
                             "--plain" => plain = true,
                             "--verbose" => verbose = true,
@@ -145,7 +145,7 @@ impl Probe {
                     break CaseCommand::List;
                 }
                 "run-pending" => {
-                    while let Some(next_arg) = arguments.next() {
+                    for next_arg in arguments.by_ref() {
                         match next_arg.as_str() {
                             "--plain" => plain = true,
                             "--verbose" => verbose = true,
@@ -155,7 +155,7 @@ impl Probe {
                     break CaseCommand::RunPending;
                 }
                 "protocol" | "run-protocol" => {
-                    while let Some(next_arg) = arguments.next() {
+                    for next_arg in arguments.by_ref() {
                         match next_arg.as_str() {
                             "--plain" => plain = true,
                             "--verbose" => verbose = true,
@@ -170,7 +170,7 @@ impl Probe {
                         break CaseCommand::RunProtocol;
                     }
                     let mut relaunch = false;
-                    while let Some(next_arg) = arguments.next() {
+                    for next_arg in arguments.by_ref() {
                         match next_arg.as_str() {
                             "--relaunch" => relaunch = true,
                             "--plain" => plain = true,

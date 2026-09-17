@@ -46,6 +46,7 @@ fn verdict_label(verdict: Verdict) -> &'static str {
 }
 
 /// La etiqueta en castellano del resultado de una condición del protocolo.
+#[allow(dead_code)]
 pub(crate) fn protocol_verdict_label(verdict: ProtocolVerdict) -> &'static str {
     match verdict {
         ProtocolVerdict::Compliant => "conforme",
