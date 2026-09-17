@@ -40,6 +40,7 @@ pub struct Roots {
     pub desktop: DesktopRoot,
     pub signing: SigningRoot,
     pub site: SiteRoot,
+    pub dialogs: Arc<documents::adapters::dialogs::RealPortalDialogs>,
 }
 
 /// Compone las cinco raíces de producción sobre las rutas de esta máquina, con la invocación
@@ -52,6 +53,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
 fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Invocation>) -> Roots {
     let memory = Arc::new(signing::adapters::memory::Memory::at(&paths));
     let ca_store = site::adapters::tls::LocalCaStore::of(&paths);
+    let dialogs = Arc::new(documents::adapters::dialogs::RealPortalDialogs::default());
     let identity = IdentityRoot {
         token: Box::new(identity::adapters::pkcs11::RealToken),
         stores: identity::adapters::pkcs11::stores::from_environment(),
@@ -66,6 +68,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         opened: documents::application::documents::OpenedDocuments::new(),
         memory: memory.clone(),
         files: Arc::new(documents::adapters::files::RealFiles),
+        portal: dialogs.clone(),
     };
     let desktop = DesktopRoot {
         pending_invocation: match invocation {
@@ -105,6 +108,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         scratch_dir: std::env::temp_dir(),
         scratch: Arc::new(site::adapters::scratch::RealScratch),
         batch: Arc::new(site::adapters::batch_services::RelayBatchServices::default()),
+        portal: dialogs.clone(),
     };
     Roots {
         identity,
@@ -112,6 +116,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         desktop,
         signing,
         site,
+        dialogs,
     }
 }
 
@@ -152,6 +157,7 @@ fn with_the_five_roots(
         desktop,
         signing,
         site,
+        dialogs: _,
     } = roots;
 
     builder
@@ -282,9 +288,11 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
         },
     ));
 
+    let dialogs = roots.dialogs.clone();
     with_the_five_roots(builder, roots)
         .manage(scratch)
         .setup(move |app| {
+            dialogs.attach(app.handle().clone());
             open_the_main_window(app.handle());
             Ok(())
         })
@@ -301,10 +309,12 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
     let scratch = own_scratch("site");
     let mut roots = composed_roots(paths, None);
     roots.site.scratch_dir = scratch.path().to_path_buf();
+    let dialogs = roots.dialogs.clone();
 
     with_the_five_roots(tauri::Builder::default(), roots)
         .manage(scratch)
         .setup(move |app| {
+            dialogs.attach(app.handle().clone());
             say(said_by_the_role);
 
             let handle = app.handle().clone();

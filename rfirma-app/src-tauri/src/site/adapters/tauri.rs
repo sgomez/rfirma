@@ -96,36 +96,17 @@ pub fn site_look_again(app_handle: tauri::AppHandle) {
     site_window::publish_what_moved(&app_handle, looked);
 }
 
-/// Añade el filtro de extensiones al diálogo del portal, si la sede declaró alguna.
-fn with_extensions<R: tauri::Runtime>(
-    mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
-    extensions: &[String],
-    description: Option<&str>,
-) -> tauri_plugin_dialog::FileDialogBuilder<R> {
-    if extensions.is_empty() {
-        return dialog;
-    }
-    let list: Vec<&str> = extensions.iter().map(String::as_str).collect();
-    dialog = dialog.add_filter(description.unwrap_or(""), &list);
-    dialog
-}
-
 /// El nombre base y la ruta de cada fichero que la persona eligió.
-fn named_paths(
-    chosen: Vec<tauri_plugin_dialog::FilePath>,
-) -> Result<Vec<(String, std::path::PathBuf)>, Failure> {
+fn named_paths(chosen: Vec<std::path::PathBuf>) -> Vec<(String, std::path::PathBuf)> {
     chosen
         .into_iter()
-        .map(|file_path| {
-            let path = file_path
-                .into_path()
-                .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
+        .map(|path| {
             let name = path
                 .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or_default()
                 .to_owned();
-            Ok((name, path))
+            (name, path)
         })
         .collect()
 }
@@ -138,21 +119,20 @@ fn nothing_pending(what: &str) -> Failure {
     )
 }
 
-/// El diálogo de guardado del portal con las pistas que declaró la sede.
-fn save_dialog<R: tauri::Runtime>(
-    mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
+/// Las pistas para el diálogo de guardado del portal que declaró la sede.
+fn dialog_clues_for_saving(
     consent: &crate::site::application::errand::SavingConsent,
-) -> tauri_plugin_dialog::FileDialogBuilder<R> {
-    if let Some(name) = consent.filename.as_deref() {
-        dialog = dialog.set_file_name(name);
+) -> crate::documents::ports::DialogClues {
+    crate::documents::ports::DialogClues {
+        title: consent.title.clone(),
+        filename: consent.filename.clone(),
+        extensions: consent.extensions.clone(),
+        description: consent.description.clone(),
+        starting_folder: consent
+            .starting_folder
+            .as_ref()
+            .map(std::path::PathBuf::from),
     }
-    if let Some(title) = consent.title.as_deref() {
-        dialog = dialog.set_title(title);
-    }
-    if let Some(folder) = consent.starting_folder.as_deref() {
-        dialog = dialog.set_directory(folder);
-    }
-    with_extensions(dialog, &consent.extensions, consent.description.as_deref())
 }
 
 /// El diálogo de guardado se cerró sin elegir ningún destino.
@@ -189,16 +169,15 @@ fn told_of_saving(
 
 /// Escribe donde la persona eligió, o cancela si cerró el diálogo sin elegir.
 fn write_where_chosen(
-    chosen: Option<tauri_plugin_dialog::FilePath>,
+    chosen: Option<std::path::PathBuf>,
     consent: &crate::site::application::errand::SavingConsent,
     scratch: &dyn crate::site::ports::Scratch,
     live: &crate::site::application::errand::LiveErrand,
 ) -> Result<bool, Failure> {
-    let Some(chosen) = chosen else {
+    let Some(path) = chosen else {
         crate::site::application::errand::decline(live);
         return Err(save_cancelled());
     };
-    let path = named_paths(vec![chosen])?.remove(0).1;
     let outcome = crate::site::application::errand::saved(
         scratch,
         &path,
@@ -216,47 +195,32 @@ pub fn site_save_file(
     app_handle: tauri::AppHandle,
     site: State<'_, SiteRoot>,
 ) -> Result<bool, Failure> {
-    use tauri_plugin_dialog::DialogExt;
-
+    let _ = app_handle;
     let Some(consent) = site.errand.the_saving_pending() else {
         return Err(nothing_pending("ningun guardado"));
     };
 
-    let dialog = save_dialog(app_handle.dialog().file(), &consent);
-    write_where_chosen(
-        dialog.blocking_save_file(),
-        &consent,
-        site.scratch.as_ref(),
-        &site.errand,
-    )
+    let clues = dialog_clues_for_saving(&consent);
+    let chosen = site
+        .portal
+        .save_file(&clues)
+        .map_err(|error| Failure::new("documentUnreadable", error))?;
+    write_where_chosen(chosen, &consent, site.scratch.as_ref(), &site.errand)
 }
 
-/// El selector de carga del portal con las pistas que declaró la sede.
-fn load_dialog<R: tauri::Runtime>(
-    mut dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
+/// Las pistas para el selector de carga del portal que declaró la sede.
+fn dialog_clues_for_loading(
     consent: &crate::site::application::errand::LoadingConsent,
-) -> tauri_plugin_dialog::FileDialogBuilder<R> {
-    if let Some(name) = consent.filename.as_deref() {
-        dialog = dialog.set_file_name(name);
-    }
-    if let Some(title) = consent.title.as_deref() {
-        dialog = dialog.set_title(title);
-    }
-    if let Some(folder) = consent.starting_folder.as_deref() {
-        dialog = dialog.set_directory(folder);
-    }
-    with_extensions(dialog, &consent.extensions, consent.description.as_deref())
-}
-
-/// Elige uno o varios ficheros del selector, según lo que pida la sede.
-fn pick<R: tauri::Runtime>(
-    dialog: tauri_plugin_dialog::FileDialogBuilder<R>,
-    multiple: bool,
-) -> Vec<tauri_plugin_dialog::FilePath> {
-    if multiple {
-        dialog.blocking_pick_files().unwrap_or_default()
-    } else {
-        dialog.blocking_pick_file().into_iter().collect()
+) -> crate::documents::ports::DialogClues {
+    crate::documents::ports::DialogClues {
+        title: consent.title.clone(),
+        filename: consent.filename.clone(),
+        extensions: consent.extensions.clone(),
+        description: consent.description.clone(),
+        starting_folder: consent
+            .starting_folder
+            .as_ref()
+            .map(std::path::PathBuf::from),
     }
 }
 
@@ -297,7 +261,7 @@ fn load_chosen<
     P: crate::site::ports::PolicyEngine,
     N: crate::site::application::errand::Neighbours,
 >(
-    chosen: Vec<tauri_plugin_dialog::FilePath>,
+    chosen: Vec<std::path::PathBuf>,
     desk: &crate::site::application::errand::ErrandDesk<'_, E, P, N>,
     live: &crate::site::application::errand::LiveErrand,
 ) -> Result<
@@ -311,7 +275,7 @@ fn load_chosen<
         crate::site::application::errand::decline(live);
         return Err(load_cancelled());
     }
-    let named = named_paths(chosen)?;
+    let named = named_paths(chosen);
     told_of_loading(crate::site::application::errand::document_chosen(
         desk, &named, live,
     ))
@@ -321,16 +285,25 @@ fn load_chosen<
 /// (ADR-0011). El valor devuelto es cuántos ficheros entregó a la sede, o `None` si el trámite
 /// sigue con un paso más.
 #[tauri::command(async)]
-pub fn site_load_files(app_handle: tauri::AppHandle) -> Result<Option<u32>, Failure> {
-    use tauri_plugin_dialog::DialogExt;
-
+pub fn site_load_files(
+    app_handle: tauri::AppHandle,
+    site: State<'_, SiteRoot>,
+) -> Result<Option<u32>, Failure> {
     let (moved, delivered) = site_window::with_the_desk(&app_handle, |desk, live| {
         let Some(consent) = live.the_loading_pending() else {
             return Err(nothing_pending("ninguna carga"));
         };
 
-        let dialog = load_dialog(app_handle.dialog().file(), &consent);
-        let chosen = pick(dialog, consent.multiple);
+        let clues = dialog_clues_for_loading(&consent);
+        let chosen = if consent.multiple {
+            site.portal.pick_files(&clues)
+        } else {
+            site.portal
+                .pick_file(&clues)
+                .map(|opt| opt.into_iter().collect())
+        }
+        .map_err(|error| Failure::new("documentUnreadable", error))?;
+
         load_chosen(chosen, desk, live)
     })?;
     site_window::publish_what_moved(&app_handle, moved);

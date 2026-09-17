@@ -1,5 +1,5 @@
 use super::*;
-use tauri_plugin_dialog::FilePath;
+use std::path::PathBuf;
 
 use crate::site::adapters::scratch::RealScratch;
 use crate::site::application::errand::{
@@ -21,29 +21,15 @@ fn a_consent() -> crate::site::application::errand::SavingConsent {
 #[test]
 fn each_chosen_path_keeps_its_base_name_and_its_full_path() {
     let chosen = vec![
-        FilePath::Path("/home/persona/uno.pdf".into()),
-        FilePath::Path("/home/persona/carpeta/dos.pdf".into()),
+        PathBuf::from("/home/persona/uno.pdf"),
+        PathBuf::from("/home/persona/carpeta/dos.pdf"),
     ];
 
-    let named = named_paths(chosen).expect("son rutas de disco");
+    let named = named_paths(chosen);
 
     assert_eq!(named[0].0, "uno.pdf");
-    assert_eq!(
-        named[0].1,
-        std::path::PathBuf::from("/home/persona/uno.pdf")
-    );
+    assert_eq!(named[0].1, PathBuf::from("/home/persona/uno.pdf"));
     assert_eq!(named[1].0, "dos.pdf");
-}
-
-#[test]
-fn a_url_that_is_not_a_file_path_is_the_only_way_named_paths_fails() {
-    let chosen = vec![FilePath::Url(
-        "https://example.org/x".parse().expect("es una url"),
-    )];
-
-    let failed = named_paths(chosen);
-
-    assert!(failed.is_err());
 }
 
 /// `end()` no limpia `moment`: guarda por qué `site_save_file` no republica el que había tras
@@ -57,7 +43,7 @@ fn a_finished_save_leaves_the_stale_moment_untouched_for_the_caller_to_not_repub
     });
 
     let shown = write_where_chosen(
-        Some(FilePath::Path(home.path().join("destino.pdf"))),
+        Some(home.path().join("destino.pdf")),
         &a_consent(),
         &RealScratch,
         &live,

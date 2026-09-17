@@ -15,25 +15,23 @@ use crate::signing::domain::VisibleBox;
 /// Abre el diálogo del sistema y apunta lo que el portal conceda.
 #[tauri::command(async)]
 pub fn open_document(
-    app_handle: tauri::AppHandle,
     documents: State<'_, DocumentsRoot>,
 ) -> Result<Option<OpenedDocumentView>, Failure> {
-    use tauri_plugin_dialog::DialogExt;
-
-    let mut dialog = app_handle.dialog().file().add_filter("PDF", &["pdf"]);
+    let mut clues = crate::documents::ports::DialogClues::new().with_filter("PDF", &["pdf"]);
     if let Some(folder) = crate::documents::application::documents::starting_folder(
         documents.memory.as_ref(),
         documents.files.as_ref(),
         &documents.chosen_folder(),
     ) {
-        dialog = dialog.set_directory(folder);
+        clues = clues.with_starting_folder(folder);
     }
-    let Some(chosen) = dialog.blocking_pick_file() else {
+    let chosen = documents
+        .portal
+        .pick_file(&clues)
+        .map_err(|error| Failure::new("documentUnreadable", error))?;
+    let Some(handle) = chosen else {
         return Ok(None);
     };
-    let handle = chosen
-        .into_path()
-        .map_err(|error| Failure::new("documentUnreadable", error.to_string()))?;
     Ok(Some(
         crate::documents::application::documents::note_opened(
             documents.memory.as_ref(),
@@ -105,21 +103,20 @@ pub fn forget_recent(id: String, documents: State<'_, DocumentsRoot>) -> Result<
 
 /// Abre el diálogo del portal y adopta la imagen elegida como rúbrica (ADR-0012).
 #[tauri::command(async)]
-pub fn choose_rubric(
-    app_handle: tauri::AppHandle,
-    documents: State<'_, DocumentsRoot>,
-) -> Option<RubricChoiceView> {
-    use tauri_plugin_dialog::DialogExt;
-
-    let dialog = app_handle
-        .dialog()
-        .file()
-        .add_filter("Imagen", &["png", "jpg", "jpeg"]);
-    let chosen = dialog.blocking_pick_file()?;
-    let adopted = chosen
-        .into_path()
-        .map_err(|error| RubricError::new(Situation::SourceUnreadable, error.to_string()))
-        .and_then(|source| documents.rubric.adopt(&source));
+pub fn choose_rubric(documents: State<'_, DocumentsRoot>) -> Option<RubricChoiceView> {
+    let clues =
+        crate::documents::ports::DialogClues::new().with_filter("Imagen", &["png", "jpg", "jpeg"]);
+    let chosen = match documents.portal.pick_file(&clues) {
+        Ok(Some(path)) => path,
+        Ok(None) => return None,
+        Err(error) => {
+            return Some(RubricChoiceView::refused(&RubricError::new(
+                Situation::SourceUnreadable,
+                error,
+            )))
+        }
+    };
+    let adopted = documents.rubric.adopt(&chosen);
     Some(match adopted {
         Ok(normalized) => RubricChoiceView::adopted(&normalized),
         Err(error) => RubricChoiceView::refused(&error),
