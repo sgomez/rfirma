@@ -1,5 +1,6 @@
 //! Adaptadores de `documents`: todo lo que toca el mundo, incluidas las órdenes y las vistas de Tauri.
 
+pub mod dialogs;
 pub mod failures;
 pub mod files;
 pub mod rubric;

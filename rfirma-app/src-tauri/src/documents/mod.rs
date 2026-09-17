@@ -28,6 +28,8 @@ pub struct DocumentsRoot {
     pub memory: Arc<dyn DocumentsMemory + Send + Sync>,
     /// El disco donde viven los documentos.
     pub files: Arc<dyn DocumentFiles + Send + Sync>,
+    /// Diálogos del sistema operativo a través del portal.
+    pub portal: Arc<dyn ports::PortalDialogs + Send + Sync>,
 }
 
 impl DocumentsRoot {

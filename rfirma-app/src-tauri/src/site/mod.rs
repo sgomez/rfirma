@@ -36,6 +36,8 @@ pub struct SiteRoot {
     pub scratch: Arc<dyn ports::Scratch + Send + Sync>,
     /// Los dos servlets del lote remoto.
     pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
+    /// Diálogos del sistema operativo a través del portal.
+    pub portal: Arc<dyn crate::documents::ports::PortalDialogs + Send + Sync>,
 }
 
 /// La mesa del trámite sobre las raíces de producción.
