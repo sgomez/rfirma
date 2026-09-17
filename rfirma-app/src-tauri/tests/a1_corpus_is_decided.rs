@@ -289,3 +289,14 @@ const THE_PRIVATE_KEY_CHECK_CASE: &str = "selectcert_checks_private_key";
     let dangling = find_dangling_citations(&citations, &existing);
     assert!(dangling.is_empty());
 }
+
+#[test]
+fn probe_cases_include_private_key_check_divergence_case() {
+    let probe_cases_path = repository_root().join("rfirma-app/src-tauri/examples/probe/cases.rs");
+    let probe_text = std::fs::read_to_string(&probe_cases_path)
+        .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", probe_cases_path.display()));
+    assert!(
+        probe_text.contains("selectcert_checks_private_key"),
+        "cases.rs debe incluir el caso de divergencia selectcert_checks_private_key"
+    );
+}

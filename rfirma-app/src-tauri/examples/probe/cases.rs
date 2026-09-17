@@ -13,8 +13,13 @@ use base64::Engine as _;
 use crate::cli::ask;
 use crate::dossier::{CaseState, Dossier, Verdict};
 use crate::errand::{THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
-use crate::verdicts::{the_verdict_for_saf_code, CaseOutcome};
+use crate::verdicts::{the_verdict_for_private_key_check, the_verdict_for_saf_code, CaseOutcome};
 use crate::Probe;
+
+/// Mide la divergencia en `selectcert` exigiendo clave privada: AutoFirma exige clave
+/// privada (al pedir el PIN de un token PKCS#11 sin respuesta resulta en cancelación),
+/// mientras que rFirma lista sin sesión y devuelve el certificado.
+pub(crate) const THE_PRIVATE_KEY_CHECK_CASE: &str = "selectcert_checks_private_key";
 
 /// El guion de una sola selección, el más corto que hace saludar al cliente publicado.
 const THE_SINGLE_SELECTION: &str = "selectcert";
@@ -129,6 +134,7 @@ pub(crate) const KNOWN_CASES: &[&str] = &[
     THE_VERB_VALIDATION_CASE,
     THE_ECDSA_ALGORITHM_CASE,
     THE_TIMESTAMP_DEGRADATION_CASE,
+    THE_PRIVATE_KEY_CHECK_CASE,
 ];
 
 impl Probe {
@@ -200,6 +206,7 @@ impl Probe {
             THE_VERB_VALIDATION_CASE => self.run_verb_validation_case(),
             THE_ECDSA_ALGORITHM_CASE => self.run_ecdsa_algorithm_case(dossier),
             THE_TIMESTAMP_DEGRADATION_CASE => self.run_timestamp_degradation_case(),
+            THE_PRIVATE_KEY_CHECK_CASE => self.run_private_key_check_case(),
             other => unreachable!("caso sin arnés: {other}"),
         }
     }
@@ -402,6 +409,18 @@ impl Probe {
                 }
             }
         }
+    }
+
+    /// El caso de divergencia que mide si `selectcert` exige clave privada contra los tokens
+    /// de prueba del proyecto: AutoFirma cancela al requerir PIN sin respuesta (confirmado);
+    /// rFirma devuelve el certificado sin sesión ni comprobar clave privada (refutado).
+    fn run_private_key_check_case(&self) -> CaseOutcome {
+        let outcome = self.run_errand(
+            THE_PRIVATE_KEY_CHECK_CASE,
+            THE_SINGLE_SELECTION,
+            THE_FOURTH_PROTOCOL,
+        );
+        the_verdict_for_private_key_check(outcome)
     }
 }
 
