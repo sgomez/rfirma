@@ -299,30 +299,45 @@ pub(crate) fn the_verdict_for_saf_code(outcome: ErrandOutcome, expected: &str) -
 }
 
 /// El veredicto del caso de divergencia que mide si `selectcert` exige clave privada: AutoFirma
-/// cancela al requerir PIN sin respuesta (confirmado); rFirma devuelve el certificado sin sesión
+/// pide PIN o cancela al requerirlo (confirmado); rFirma devuelve el certificado sin pedir PIN
 /// ni comprobar clave privada (refutado).
-pub(crate) fn the_verdict_for_private_key_check(outcome: ErrandOutcome) -> CaseOutcome {
+pub(crate) fn the_verdict_for_private_key_check(
+    outcome: ErrandOutcome,
+    asked_pin: bool,
+) -> CaseOutcome {
     if !outcome.launched {
         return CaseOutcome::resolved(Verdict::NotObservable);
     }
-    if outcome.data.is_some() || outcome.signature.is_some() {
-        return CaseOutcome::Resolved {
-            verdict: Verdict::Refuted,
-            observation: Some("certificado devuelto sin comprobar clave privada".to_owned()),
-        };
-    }
     match outcome.error_type.as_deref() {
-        Some(THE_CANCELLED_OPERATION_EXCEPTION) => CaseOutcome::Resolved {
-            verdict: Verdict::Confirmed,
-            observation: Some("operación cancelada al exigir clave privada".to_owned()),
-        },
-        Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) | None => {
-            CaseOutcome::resolved(Verdict::NotObservable)
+        Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) => {
+            return CaseOutcome::resolved(Verdict::NotObservable);
         }
-        Some(_) => CaseOutcome::Resolved {
+        _ => {}
+    }
+    if asked_pin {
+        CaseOutcome::Resolved {
+            verdict: Verdict::Confirmed,
+            observation: Some(
+                if outcome.data.is_some() {
+                    "se pidió el PIN del token y devolvió el certificado tras autenticación"
+                } else {
+                    "se pidió el PIN del token y la operación se canceló"
+                }
+                .to_owned(),
+            ),
+        }
+    } else if outcome.data.is_some() {
+        CaseOutcome::Resolved {
+            verdict: Verdict::Refuted,
+            observation: Some(
+                "certificado devuelto sin pedir PIN ni comprobar clave privada".to_owned(),
+            ),
+        }
+    } else {
+        CaseOutcome::Resolved {
             verdict: Verdict::NotObservable,
             observation: outcome.error_type,
-        },
+        }
     }
 }
 
@@ -386,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn private_key_check_confirmed_on_cancelled_operation() {
+    fn private_key_check_confirmed_on_pin_demanded_and_cancelled() {
         let outcome = ErrandOutcome {
             launched: true,
             error_type: Some(THE_CANCELLED_OPERATION_EXCEPTION.to_owned()),
@@ -399,19 +414,19 @@ mod tests {
         let CaseOutcome::Resolved {
             verdict,
             observation,
-        } = the_verdict_for_private_key_check(outcome)
+        } = the_verdict_for_private_key_check(outcome, true)
         else {
             panic!("el caso debería resolverse");
         };
         assert_eq!(verdict, Verdict::Confirmed);
         assert_eq!(
             observation.as_deref(),
-            Some("operación cancelada al exigir clave privada")
+            Some("se pidió el PIN del token y la operación se canceló")
         );
     }
 
     #[test]
-    fn private_key_check_refuted_when_certificate_data_returned() {
+    fn private_key_check_confirmed_on_pin_demanded_and_data_returned() {
         let outcome = ErrandOutcome {
             launched: true,
             error_type: None,
@@ -424,14 +439,39 @@ mod tests {
         let CaseOutcome::Resolved {
             verdict,
             observation,
-        } = the_verdict_for_private_key_check(outcome)
+        } = the_verdict_for_private_key_check(outcome, true)
+        else {
+            panic!("el caso debería resolverse");
+        };
+        assert_eq!(verdict, Verdict::Confirmed);
+        assert_eq!(
+            observation.as_deref(),
+            Some("se pidió el PIN del token y devolvió el certificado tras autenticación")
+        );
+    }
+
+    #[test]
+    fn private_key_check_refuted_when_certificate_data_returned_without_pin() {
+        let outcome = ErrandOutcome {
+            launched: true,
+            error_type: None,
+            error_code: None,
+            signature: None,
+            data: Some("MIID...".to_owned()),
+            protocol_conditions: Vec::new(),
+            recent_subject_lines: Vec::new(),
+        };
+        let CaseOutcome::Resolved {
+            verdict,
+            observation,
+        } = the_verdict_for_private_key_check(outcome, false)
         else {
             panic!("el caso debería resolverse");
         };
         assert_eq!(verdict, Verdict::Refuted);
         assert_eq!(
             observation.as_deref(),
-            Some("certificado devuelto sin comprobar clave privada")
+            Some("certificado devuelto sin pedir PIN ni comprobar clave privada")
         );
     }
 
@@ -446,7 +486,8 @@ mod tests {
             protocol_conditions: Vec::new(),
             recent_subject_lines: Vec::new(),
         };
-        let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_private_key_check(unlaunched)
+        let CaseOutcome::Resolved { verdict, .. } =
+            the_verdict_for_private_key_check(unlaunched, false)
         else {
             panic!("el caso debería resolverse");
         };
@@ -461,7 +502,8 @@ mod tests {
             protocol_conditions: Vec::new(),
             recent_subject_lines: Vec::new(),
         };
-        let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_private_key_check(crashed)
+        let CaseOutcome::Resolved { verdict, .. } =
+            the_verdict_for_private_key_check(crashed, false)
         else {
             panic!("el caso debería resolverse");
         };

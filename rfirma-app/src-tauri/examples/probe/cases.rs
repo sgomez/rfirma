@@ -451,15 +451,29 @@ impl Probe {
     }
 
     /// El caso de divergencia que mide si `selectcert` exige clave privada contra los tokens
-    /// de prueba del proyecto: AutoFirma cancela al requerir PIN sin respuesta (confirmado);
-    /// rFirma devuelve el certificado sin sesión ni comprobar clave privada (refutado).
+    /// de prueba del proyecto: AutoFirma pide PIN o cancela al requerirlo (confirmado); rFirma
+    /// devuelve el certificado sin pedir PIN ni comprobar clave privada (refutado).
     fn run_private_key_check_case(&self) -> CaseOutcome {
+        if !std::io::stdin().is_terminal() {
+            return CaseOutcome::StillPending;
+        }
+        println!("van a aparecer el diálogo de selección de certificado y el de PIN (si el sujeto exige clave privada)");
         let outcome = self.run_errand(
             THE_PRIVATE_KEY_CHECK_CASE,
             THE_SINGLE_SELECTION,
             THE_FOURTH_PROTOCOL,
         );
-        the_verdict_for_private_key_check(outcome)
+        if !outcome.launched {
+            return CaseOutcome::resolved(Verdict::NotObservable);
+        }
+        let answer = self
+            .monitor
+            .ask("¿se pidió el PIN del token/certificado? [s/n]");
+        if answer.is_empty() {
+            return CaseOutcome::StillPending;
+        }
+        let asked_pin = answer.to_lowercase().starts_with('s');
+        the_verdict_for_private_key_check(outcome, asked_pin)
     }
 }
 
