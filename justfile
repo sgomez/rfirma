@@ -50,7 +50,7 @@ autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1
 autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
 
 # Donde deja el instalador .deb de AutoFirma 1.9.x su raiz de confianza, por
-# orden de preferencia; la primera es DER y el sondeo acepta las dos formas.
+# orden de preferencia; la primera es DER y la suite de conformidad acepta las dos formas.
 autofirma_roots := "/usr/lib/Autofirma/Autofirma_ROOT.cer /etc/ssl/certs/Autofirma_ROOT.pem /usr/share/ca-certificates/Autofirma/Autofirma_ROOT.crt"
 
 # Librerias -dev del WebView que necesita Tauri; lista canonica que instala
@@ -444,7 +444,7 @@ dev-handler mode="on":
 # La version del sujeto es la unica coordenada que nadie puede deducir: si falta al abrir una
 # tanda nueva y hay alguien delante, se pregunta por teclado. --os y --store se toman solos
 # (`uname` y el almacen aislado); --transport vale «websocket», el unico de esta fase.
-# Sondea el cliente publicado contra un binario instalado, aislado del almacen del titular y con
+# Mide el cliente publicado contra un binario instalado, aislado del almacen del titular y con
 # la raiz que sirve cada sujeto: `just conformance [orden] [--subject <ruta>] [--trust-root <ruta>]`.
 # `orden` es `list`, `run <caso>` o `run-pending` (por omision); ver `cargo run --example conformance -- --help`.
 [group('dev')]

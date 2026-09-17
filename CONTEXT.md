@@ -252,7 +252,7 @@ _Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cli
 
 **Suite de conformidad**:
 El catálogo de exigencias del protocolo y el arnés que las mide contra el **sujeto** que se le
-declare —AutoFirma o rFirma, un binario instalado—, con el **banco de conformidad** como
+declare —AutoFirma o rFirma, un binario instalado—, con el **cliente publicado** como
 instrumento: emite un veredicto de tres valores —confirmado, refutado, no observable— con las
 coordenadas de la tanda. Produce un informe, no una puerta: queda fuera de las gradas del
 ADR-0014, no bloquea ningún PR ni ninguna etiqueta. Los veredictos de las divergencias sin ficha
