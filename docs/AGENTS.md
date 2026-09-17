@@ -73,6 +73,7 @@ eso está en `research/contrato-protocolo-afirma.md`.
 `ventana-de-sede` (la ventana que abre una sede por `afirma://`, entera: espera,
 consentimiento, firma, desenlace y sin certificado utilizable) ·
 `primer-arranque` (el asistente que configura el equipo la primera vez) ·
+`panel-de-estado` (la tabla de señales de la instalación, con sus reparaciones) ·
 `design-system`
 
 Al implementar una pantalla, **la ficha de esa pantalla es la fuente**, no el

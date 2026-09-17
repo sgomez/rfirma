@@ -121,9 +121,24 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   <div style="position:absolute;top:52px;right:var(--rf-space-sm);min-width:230px;
     padding:6px;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);
     border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated);
-    display:flex;flex-direction:column;gap:2px">
-    <span class="rf-prose" style="padding:9px 10px;border-radius:var(--rf-radius-sm)">Preferencias…</span>
-    <span class="rf-prose" style="padding:9px 10px;border-radius:var(--rf-radius-sm)">Acerca de rFirma</span>
+    display:flex;flex-direction:column;gap:2px" role="menu">
+    <sc-for list="{{ entradas }}" as="entrada" hint-placeholder-count="4">
+      <sc-if value="{{entrada.hayDivisor}}" hint-placeholder-val="{{false}}">
+        <hr class="rf-divider" style="margin:4px 0">
+      </sc-if>
+      <span class="rf-prose rf-row rf-gap-xs" role="menuitem"
+        style="padding:9px 10px;border-radius:var(--rf-radius-sm);{{entrada.estiloFoco}}">
+        <span style="flex:1;min-width:0">{{entrada.texto}}</span>
+        <span style="width:14px;height:14px;flex:none;display:flex;align-items:center;justify-content:center">
+          <sc-if value="{{entrada.esEnlace}}" hint-placeholder-val="{{false}}">
+            <span style="display:flex;color:var(--rf-text-muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></span>
+          </sc-if>
+          <sc-if value="{{entrada.hayAviso}}" hint-placeholder-val="{{false}}">
+            <span style="display:flex;color:var(--rf-text)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+          </sc-if>
+        </span>
+      </span>
+    </sc-for>
   </div>
 </header>
 <div class="rf-row" style="flex:1;min-height:0;align-items:stretch">
@@ -159,10 +174,47 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"aviso":{"editor":"enum","options":["todo en orden","hay algo que revisar"],"default":"hay algo que revisar","section":"Aviso en el menú"},"foco":{"editor":"enum","options":["sin foco","teclado · primera entrada","teclado · la salida al navegador"],"default":"teclado · la salida al navegador","section":"Foco por teclado"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   renderVals() {
-    return { tema: this.props.tema ?? "light" };
+    // EL MENU DE LA CABECERA (#656, dibujado en el #659). Cuatro entradas en
+    // dos grupos separados por un divisor: arriba lo que habla de ESTA
+    // INSTALACION, abajo el grupo canonico de la HIG (Preferences · Help ·
+    // About) en su orden.
+    // «Estado de rFirma» y no «Estado»: en esta misma franja vive la insignia
+    // del documento.
+    // Los dos iconos no salen de ninguna biblioteca: son <svg> en linea, como
+    // las tres rayas del boton, y caen en la MISMA COLUMNA de 14 px, que se
+    // reserva siempre para que la entrada no cambie de alto ni de ancho.
+    // El triangulo es LA MISMA SILUETA que marca «Atención» en el panel de
+    // estado: dos dibujos distintos para lo mismo serian dos vocabularios.
+    const tema = this.props.tema || "light";
+    const hayAviso = (this.props.aviso || "hay algo que revisar") === "hay algo que revisar";
+    const foco = this.props.foco || "teclado · la salida al navegador";
+
+    const textos = [
+      { texto: "Estado de rFirma", hayAviso: hayAviso },
+      { texto: "Preferencias…", hayDivisor: true },
+      { texto: "Comentarios y ayuda", esEnlace: true },
+      { texto: "Acerca de rFirma" }
+    ];
+
+    let enfocada = -1;
+    if (foco === "teclado · primera entrada") enfocada = 0;
+    if (foco === "teclado · la salida al navegador") enfocada = 2;
+
+    return {
+      tema: tema,
+      entradas: textos.map((e, i) => ({
+        texto: e.texto,
+        esEnlace: e.esEnlace === true,
+        hayAviso: e.hayAviso === true,
+        hayDivisor: e.hayDivisor === true,
+        estiloFoco: i === enfocada
+          ? "background:var(--rf-surface);outline:2px solid var(--rf-focus-ring);outline-offset:2px"
+          : ""
+      }))
+    };
   }
 }
 </script>

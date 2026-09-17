@@ -200,6 +200,17 @@ reimplementar ni relajar:
   los contornos de control cumplen el 3:1 de WCAG 1.4.11, en ambos temas.
 - **Movimiento reducido.** Ver sección 6.
 
+**El vocabulario de veredictos.** Donde haya que decir si algo está bien —hoy el
+[panel de estado](panel-de-estado.md) y el aviso del menú de la
+[cabecera](cabecera.md)— se dice con **silueta de icono, palabra y peso**, y son
+cinco: *Correcto*, *Atención*, *Incorrecto*, *No aplica* y *Comprobando*. Los
+iconos son `<svg>` en línea de 14 o 16 px sobre lienzo `0 0 24 24`, en
+`currentColor`. Lo que reclama atención va en `--rf-text` a peso 700; lo demás,
+en `--rf-text-muted` y peso normal, de modo que «No aplica» y «Comprobando» se
+distinguen entre sí por la silueta y no por una media tinta. Un mismo estado se
+dibuja **con el mismo `path` en todas las pantallas**: el triángulo de
+«Atención» del panel es el que marca la entrada del menú.
+
 ---
 
 ## 9. Vocabulario de clases
