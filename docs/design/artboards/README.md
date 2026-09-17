@@ -66,7 +66,8 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
 | S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde, y las dos acciones —instalar el certificado propio y poner a rFirma por defecto— |
-| E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos y sus reparaciones |
+| E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos, sus reparaciones y el botón del certificado que alterna entre instalar y retirar |
+| E2 | `RetirarCertificado` | El panel de estado con el velo de la retirada encima: pregunta, avance almacén a almacén y desenlace, con y sin fallo |
 
 Los cinco de `Sede*` viven en la página **«Ventana de sede · v0.5»** y su ficha
 es [`ventana-de-sede.md`](../ventana-de-sede.md), **una sola para los cinco**:
@@ -555,8 +556,9 @@ celda. **`afirma://` no se nombra.**
 **La fila de la aplicación de firma lleva desplegable, no un botón que alterna**,
 porque elegir programa es una elección declarada y no una reparación disfrazada;
 y el desplegable **sólo aparece si hay dónde elegir**. Sus cinco casos caben en
-la palanca «Aplicación de firma», que es **independiente** de «Momento del
-panel»: sin resumen global no hay nada que se pueda contradecir. La fila **no
+la palanca «Aplicación de firma» —que hoy se llama «Firma en sedes», y el
+porqué está en el apartado de la retirada—, que es **independiente** de «Momento
+del panel»: sin resumen global no hay nada que se pueda contradecir. La fila **no
 cambia de alto** en ninguno de los cinco.
 
 **Los cinco veredictos están todos a la vista en el artboard** y se distinguen
@@ -573,3 +575,48 @@ biblioteca de iconos.
 Lo que se decidió, medida a medida, está en la anotación de la página y en las
 dos fichas normativas, [`panel-de-estado.md`](../panel-de-estado.md) y
 [`cabecera.md`](../cabecera.md).
+
+## Lo que cambió después de la v0.5 — la retirada del certificado desde el panel
+
+Decidido en el [#660](https://github.com/sgomez/rfirma/issues/660) —mapa
+[#652](https://github.com/sgomez/rfirma/issues/652), «La instalación se explica
+sola»— y validado el 17/09/2026. **Un artboard nuevo, `RetirarCertificado`, en la
+misma página «Estado de rFirma», y `PanelEstado` tocado.** No hubo página de
+trabajo ni artboard de usar y tirar: los dos son definitivos.
+
+**`RetirarCertificado` es `PanelEstado` con el velo encima**, y así está escrito:
+su fichero es una copia del otro más el velo, con la tabla pintada por la misma
+función. Detrás del velo no hay una reconstrucción parecida del panel, sino el
+panel.
+
+**El velo empieza a los 56 px y no tapa la cabecera.** El porqué es un modelo, no
+un parecido: la cabecera es permanente y el cuerpo es lo que cambia, así que
+«Estado de rFirma» y «Preferencias» son **vistas del cuerpo** y un modal nacido
+dentro del cuerpo no puede tapar lo que no es suyo. La consecuencia es que la
+cabecera sigue alcanzable durante la retirada, incluso mientras trabaja: el
+diálogo es una comodidad y la verdad está en la tabla.
+
+**Cuatro tiempos en una palanca** —pregunta, trabajando, resultado y resultado con
+fallo—, porque son momentos de la misma pantalla-estado. El panel de detrás cambia
+con ellos, con las reglas del propio panel: `Retirando…` en la celda de acción,
+mismo sitio y mismo patrón que `Instalando…`, y `Volver a comprobar` apagado
+mientras dura.
+
+**El velo no estrena nada**: `.rf-scrim` y `.rf-dialog` son los de apagar
+«Recordar mi actividad» en Preferencias, el ✓ y el ✗ son los de `ver almacenes`,
+el arco es el de «Comprobando» y el triángulo el de «Atención».
+
+En `PanelEstado`, la señal `Aplicación de firma` pasa a llamarse **`Firma en
+sedes`**: con las dos filas acopladas, el nombre viejo se leía como «sin
+certificado esto no firma», y arrastrar un PDF a la ventana no toca la CA.
+El botón del certificado **alterna** `Instalar` y `Retirar…` según el veredicto,
+nunca los dos a la vez; si firma AutoFirma el certificado pasa a **`No aplica`
+conservando su valor y con `Retirar…` si queda algo puesto**, rompiendo a
+propósito la regla de que «No aplica» no lleva acción. La regla del desplegable se
+afina a **«hay dónde elegir cuando queda algún candidato distinto del valor
+actual»**, y estrena la palanca «Desplegable de Firma en sedes», que está para
+poder ver que `rFirma` no aparece cuando su certificado no está en ningún almacén.
+
+Lo que se decidió, medida a medida, está en las anotaciones de la página y en las
+dos fichas normativas, [`panel-de-estado.md`](../panel-de-estado.md) y
+[`retirar-certificado.md`](../retirar-certificado.md).

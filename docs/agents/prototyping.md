@@ -181,6 +181,18 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **la retirada desde dentro**
+([#660](https://github.com/sgomez/rfirma/issues/660), mapa
+[#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
+y salió de esta tabla. Deja **un artboard nuevo**, `RetirarCertificado`, en la
+página «Estado de rFirma», que es `PanelEstado` con el velo de la retirada
+encima; no hubo página de trabajo ni artboard de usar y tirar que fundir. De
+rebote toca `PanelEstado`, donde la señal pasa a llamarse «Firma en sedes» y el
+botón del certificado alterna entre instalar y retirar. Sus fichas son
+[`retirar-certificado.md`](../design/retirar-certificado.md) —nueva— y
+[`panel-de-estado.md`](../design/panel-de-estado.md), y las dos enlazan el canvas
+desde su sección «Decisiones».
+
 El caso de uso **el panel de estado y el menú de la cabecera**
 ([#659](https://github.com/sgomez/rfirma/issues/659), mapa
 [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**

@@ -74,6 +74,8 @@ eso está en `research/contrato-protocolo-afirma.md`.
 consentimiento, firma, desenlace y sin certificado utilizable) ·
 `primer-arranque` (el asistente que configura el equipo la primera vez) ·
 `panel-de-estado` (la tabla de señales de la instalación, con sus reparaciones) ·
+`retirar-certificado` (el velo que confirma y ejecuta la retirada del
+certificado de rFirma de los almacenes) ·
 `design-system`
 
 Al implementar una pantalla, **la ficha de esa pantalla es la fuente**, no el
