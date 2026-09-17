@@ -3,12 +3,12 @@
 
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 
+use crate::catalogue::{Check, THE_SUITES};
 use crate::dossier::HeaderCoordinates;
 use crate::errand::the_published_client;
-use crate::{CaseCommand, Probe};
+use crate::{Command, Probe};
 
 pub(crate) const USAGE: &str = "\
 uso: cargo run --example conformance -- --subject <binario> --trust-root <certificado> \
@@ -31,10 +31,12 @@ uso: cargo run --example conformance -- --subject <binario> --trust-root <certif
   --store            almacén de certificados con el que se sondeó
 
 órdenes:
-  list                lista los casos del expediente con su estado y su fecha
-  run <caso>          ejecuta un caso por su nombre; si ya está resuelto, no repite salvo --relaunch
-  run-pending         ejecuta, por orden, los casos que sigan pendientes; se detiene si uno falla
-  protocol            ejecuta el carril de conformidad de protocolo entero, de una tirada
+  list                lista las comprobaciones del expediente con su estado y su fecha
+  run <id>            ejecuta una comprobación por su identificador; si ya está resuelta, no
+                      repite salvo --relaunch
+  run-pending         ejecuta, por orden del catálogo, las que sigan pendientes
+
+  --suite <conjunto>  acota `list` y `run-pending` a un conjunto del catálogo
 ";
 
 const DEFAULT_PATIENCE: Duration = Duration::from_millis(60_000);
@@ -85,6 +87,49 @@ impl PartialCoordinates {
     }
 }
 
+/// Los flags que pueden venir detrás de la orden, que son los mismos que pueden venir delante.
+fn read_the_trailing_flags(
+    arguments: &mut impl Iterator<Item = String>,
+    plain: &mut bool,
+    verbose: &mut bool,
+    suite: &mut Option<String>,
+    relaunch: &mut bool,
+) -> Result<(), String> {
+    while let Some(argument) = arguments.next() {
+        match argument.as_str() {
+            "--plain" => *plain = true,
+            "--verbose" => *verbose = true,
+            "--relaunch" => *relaunch = true,
+            "--suite" => *suite = Some(value_of("--suite", arguments)?),
+            other => return Err(format!("argumento desconocido: {other}")),
+        }
+    }
+    Ok(())
+}
+
+/// El conjunto que la orden acota, si está en el vocabulario y si alguna entrada lo declara.
+pub(crate) fn the_suite_asked_for(command: &Command, catalogue: &[Check]) -> Result<(), String> {
+    let asked = match command {
+        Command::List { suite } | Command::RunPending { suite } => suite.as_deref(),
+        Command::Run { .. } => None,
+    };
+    let Some(wanted) = asked else {
+        return Ok(());
+    };
+    if !THE_SUITES.contains(&wanted) {
+        return Err(format!(
+            "no conozco el conjunto «{wanted}»; los que hay son: {}",
+            THE_SUITES.join(", ")
+        ));
+    }
+    if !catalogue.iter().any(|check| check.suite == wanted) {
+        return Err(format!(
+            "el conjunto «{wanted}» no tiene ninguna comprobación en el catálogo"
+        ));
+    }
+    Ok(())
+}
+
 /// Pregunta `label` por teclado y devuelve lo escrito, sin el salto de línea final.
 pub(crate) fn ask(label: &str) -> String {
     let is_tty = std::io::stdout().is_terminal() && std::io::stdin().is_terminal();
@@ -108,12 +153,15 @@ impl Probe {
         let mut coordinates = PartialCoordinates::default();
         let mut plain = false;
         let mut verbose = false;
+        let mut suite = None;
+        let mut relaunch = false;
         let mut arguments = std::env::args().skip(1);
         let command = loop {
             let flag = arguments
                 .next()
-                .ok_or_else(|| "falta la orden: list, run <caso> o run-pending".to_owned())?;
+                .ok_or_else(|| "falta la orden: list, run <id> o run-pending".to_owned())?;
             match flag.as_str() {
+                "--suite" => suite = Some(value_of(&flag, &mut arguments)?),
                 "--subject" => subject = Some(PathBuf::from(value_of(&flag, &mut arguments)?)),
                 "--trust-root" => {
                     trust_root = Some(PathBuf::from(value_of(&flag, &mut arguments)?));
@@ -135,50 +183,39 @@ impl Probe {
                 "--transport" => coordinates.transport = Some(value_of(&flag, &mut arguments)?),
                 "--store" => coordinates.store = Some(value_of(&flag, &mut arguments)?),
                 "list" => {
-                    for next_arg in arguments.by_ref() {
-                        match next_arg.as_str() {
-                            "--plain" => plain = true,
-                            "--verbose" => verbose = true,
-                            other => return Err(format!("argumento desconocido: {other}")),
-                        }
-                    }
-                    break CaseCommand::List;
+                    read_the_trailing_flags(
+                        &mut arguments,
+                        &mut plain,
+                        &mut verbose,
+                        &mut suite,
+                        &mut relaunch,
+                    )?;
+                    break Command::List {
+                        suite: suite.take(),
+                    };
                 }
                 "run-pending" => {
-                    for next_arg in arguments.by_ref() {
-                        match next_arg.as_str() {
-                            "--plain" => plain = true,
-                            "--verbose" => verbose = true,
-                            other => return Err(format!("argumento desconocido: {other}")),
-                        }
-                    }
-                    break CaseCommand::RunPending;
-                }
-                "protocol" | "run-protocol" => {
-                    for next_arg in arguments.by_ref() {
-                        match next_arg.as_str() {
-                            "--plain" => plain = true,
-                            "--verbose" => verbose = true,
-                            other => return Err(format!("argumento desconocido: {other}")),
-                        }
-                    }
-                    break CaseCommand::RunProtocol;
+                    read_the_trailing_flags(
+                        &mut arguments,
+                        &mut plain,
+                        &mut verbose,
+                        &mut suite,
+                        &mut relaunch,
+                    )?;
+                    break Command::RunPending {
+                        suite: suite.take(),
+                    };
                 }
                 "run" => {
-                    let case = value_of(&flag, &mut arguments)?;
-                    if case == "protocol" {
-                        break CaseCommand::RunProtocol;
-                    }
-                    let mut relaunch = false;
-                    for next_arg in arguments.by_ref() {
-                        match next_arg.as_str() {
-                            "--relaunch" => relaunch = true,
-                            "--plain" => plain = true,
-                            "--verbose" => verbose = true,
-                            other => return Err(format!("argumento desconocido: {other}")),
-                        }
-                    }
-                    break CaseCommand::Run { case, relaunch };
+                    let check = value_of(&flag, &mut arguments)?;
+                    read_the_trailing_flags(
+                        &mut arguments,
+                        &mut plain,
+                        &mut verbose,
+                        &mut suite,
+                        &mut relaunch,
+                    )?;
+                    break Command::Run { check, relaunch };
                 }
                 other => return Err(format!("argumento desconocido: {other}")),
             }
@@ -215,7 +252,11 @@ impl Probe {
 /// es que no se ha llegado a medir.
 pub(crate) fn preflight(subject: &Path, trust_root: &Path) -> Result<(), Vec<String>> {
     let mut complaints = Vec::new();
-    if Command::new("node").arg("--version").output().is_err() {
+    if std::process::Command::new("node")
+        .arg("--version")
+        .output()
+        .is_err()
+    {
         complaints.push("falta Node en el PATH".to_owned());
     }
     let published_client = the_published_client();

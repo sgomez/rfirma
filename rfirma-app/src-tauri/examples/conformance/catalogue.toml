@@ -1,0 +1,403 @@
+# El catálogo de la suite de conformidad: una entrada por exigencia del protocolo `afirma://`.
+#
+# El enunciado dice qué exige el protocolo, nunca qué hace mal un cliente: un enunciado que
+# empiece por «en AutoFirma…» está mal escrito. El cuerpo ejecutable vive en Rust y se liga por
+# `id`; aquí sólo están los metadatos. La guarda `conformance_catalogue_is_sound.rs` los vigila.
+
+[[check]]
+id = "the_published_client_completes_a_certificate_selection"
+suite = "saludo"
+chapter = "09"
+citation = "ProtocolInvocationLauncherSelectCert.java:134-227; AOKeyStoreDialog.java:720-745"
+statement = """
+Una selección de certificado se completa de punta a punta: el canal se abre, el eco vuelve y la
+respuesta trae el certificado elegido.
+"""
+drive = { mode = "v4", script = "selectcert" }
+warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
+
+[[check]]
+id = "the_published_client_completes_a_cades_signature"
+suite = "saludo"
+chapter = "06"
+citation = "ProtocolInvocationLauncherSign.java:409-483; AOSignerFactory.java:92-118"
+statement = """
+Una firma CAdES en modo explícito se completa de punta a punta y la respuesta trae el certificado
+y la firma.
+"""
+drive = { mode = "v4", script = "signcades" }
+warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
+
+[[check]]
+id = "the_service_channel_completes_a_certificate_selection"
+suite = "saludo"
+chapter = "04"
+citation = "ServiceInvocationManager.java:103-169; CommandProcessorThread.java:520-620"
+statement = """
+El carril del socket local completa una selección de certificado igual que el canal WebSocket: sin
+esta comprobación ninguna de las suyas es de fiar.
+"""
+drive = { mode = "service", script = "selectcert" }
+warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
+
+[[check]]
+id = "v4_ports_negotiation"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "ProtocolInvocationLauncher.java:233-236, 976-990; AfirmaWebSocketServerManager.java:64-90"
+statement = """
+El cliente JavaScript selecciona 3 puertos aleatorios únicos (ports=p1,p2,p3) y el servidor enlaza
+el primer puerto libre de la lista.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "v4_echo_greeting"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServerV4.java:81-83"
+statement = """
+La petición de eco echo=-idsession=<idSession>@EOF recibe la respuesta de texto OK.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "v4_channel_credential_present"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServerV4.java:72-78"
+statement = """
+El mensaje que incluye el identificador de sesión coincidente con el negociado en el arranque es
+aceptado para su procesamiento.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "v4_channel_credential_absent"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServerV4.java:72-78; ProtocolInvocationLauncherErrorManager.java:77, 134"
+statement = """
+Si el mensaje no incluye el identificador de sesión o este difiere del negociado en el arranque, el
+servidor responde con SAF_46.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "v4_channel_credential_malformed"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "ProtocolInvocationLauncher.java:992-1008; AfirmaWebSocketServerV4.java:72-78"
+statement = """
+Si idsession en la URL de arranque contiene caracteres no alfanuméricos, se anula y el servidor no
+rechaza los mensajes con SAF_46.
+"""
+drive = { mode = "v4", script = "protocol-v4-malformed-id" }
+
+[[check]]
+id = "v4_single_client"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServer.java:70, 73-79, 82-91"
+statement = """
+La primera conexión se fija en wsClient; el cierre de conexiones secundarias no finaliza la
+aplicación, que sólo termina cuando se cierra el cliente principal.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "v3_ports_default_fixed"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "ProtocolInvocationLauncher.java:87, 233-236; AfirmaWebSocketServer.java:51-56"
+statement = """
+En versión 3, la ausencia de ports en la URL de arranque asigna por defecto el puerto fijo 63117
+(DEFAULT_WEBSOCKET_PORT).
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+
+[[check]]
+id = "v3_echo_greeting"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServer.java:33, 103-105"
+statement = """
+En versión 3, cualquier mensaje que empiece por echo= responde inmediatamente OK sin exigir @EOF ni
+identificador de sesión.
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+
+[[check]]
+id = "v3_channel_credential_ignored"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServer.java:99-115"
+statement = """
+En versión 3, el servidor no valida el identificador de sesión en los mensajes entrantes y no emite
+SAF_46.
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+
+[[check]]
+id = "v3_single_client"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServer.java:82-91"
+statement = """
+En versión 3, el cierre de una conexión secundaria no termina la aplicación; el canal principal
+sigue activo.
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+
+[[check]]
+id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
+suite = "transporte.websocket"
+chapter = "05"
+citation = "AfirmaWebSocketServerV4.java:57-68, 100-102"
+statement = """
+El canal de la versión 4 exige que la dirección de origen sea textualmente 127.0.0.1 y responde
+SAF_47 a cualquier otra, el bucle local IPv6 incluido.
+"""
+drive = { mode = "v4-ipv6", script = "selectcert" }
+expects_saf = "SAF_47"
+cause = "BUG-11"
+
+[[check]]
+id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
+suite = "transporte.service"
+chapter = "04"
+citation = "ServiceInvocationManager.java:136-143, 148-168; ProtocolInvocationLauncher.java:281-288"
+statement = """
+Si el canal no puede ligar ninguno de los puertos ofrecidos, la sede recibe un error que lo dice, y
+no un silencio indistinguible de que la aplicación no esté instalada.
+"""
+drive = { mode = "service-bind-failure", script = "selectcert" }
+harness = "occupied_service_ports"
+needs = ["puertos:63131,63132,63133"]
+cause = "BUG-10"
+
+[[check]]
+id = "operation_supported_protocol_version"
+suite = "versiones"
+chapter = "14"
+citation = "ProtocolVersion.java:60-62; ProtocolInvocationLauncher.java:62, 907-915"
+statement = """
+Las operaciones aceptan versiones de protocolo menores o iguales a 4
+(MAX_PROTOCOL_VERSION_SUPPORTED).
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "operation_unsupported_protocol_version_rejected"
+suite = "versiones"
+chapter = "14"
+citation = "ProtocolVersion.java:60-62; ProtocolInvocationLauncherSign.java:133-140"
+statement = """
+Una versión de protocolo solicitada superior a 4 (p. ej. ver=5) es rechazada con el código SAF_21.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "operation_minimum_client_version_satisfied"
+suite = "versiones"
+chapter = "14"
+citation = "Version.java:120-169; ProtocolInvocationLauncherSign.java:143-150"
+statement = """
+Si mcv solicita una versión igual o inferior a la versión del aplicativo (p. ej. mcv=1.0.0), la
+operación continúa sin error de versión.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "operation_minimum_client_version_unsatisfied_rejected"
+suite = "versiones"
+chapter = "14"
+citation = "Version.java:120-169; ProtocolInvocationLauncherSign.java:143-150; ProtocolInvocationLauncherErrorManager.java:72"
+statement = """
+Si mcv solicita una versión superior a la de la aplicación (p. ej. mcv=99.0.0), la operación es
+rechazada con SAF_41.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "websocket_handshake_session_query_parameter"
+suite = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerV4.java:49-74"
+statement = """
+En versión 4 se exige idsession en la query string del handshake HTTP de WebSocket
+(ws.getResourceDescriptor()) y la conexión que no lo traiga se rechaza con el código de cierre 1008.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "websocket_channel_supported_versions_accepted"
+suite = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107"
+statement = """
+El canal WebSocket admite las versiones de protocolo 3 y 4 (SUPPORTED_PROTOCOL_VERSIONS): las dos
+llegan a abrir canal.
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+harness = "supported_websocket_versions"
+
+[[check]]
+id = "service_channel_version_range"
+suite = "versiones"
+chapter = "14"
+citation = "ServiceInvocationManager.java:42-45, 212-220; ProtocolInvocationLauncher.java:281-288"
+statement = """
+El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3; la versión 4 se rechaza
+con SAF_21.
+"""
+drive = { mode = "service-v4", script = "selectcert" }
+expects_saf = "SAF_21"
+
+[[check]]
+id = "websocket_rejects_a_protocol_version_it_does_not_support"
+suite = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
+statement = """
+El canal WebSocket sólo admite las versiones de protocolo 3 y 4. Una URL de arranque que pida otra
+—v=1, obsoleta; v=99, no soportada— se rechaza con SAF_21, y el código llega al cliente.
+"""
+drive = { mode = "v1", script = "selectcert" }
+expects_saf = "SAF_21"
+needs = ["espera:60"]
+warning = "El cliente publicado agota sus reintentos antes de rendirse: la comprobación tarda alrededor de un minuto."
+cause = "BUG-25"
+
+[[check]]
+id = "save_answers_a_confirmation_the_published_client_recognises"
+suite = "operaciones"
+chapter = "10"
+citation = "CommandProcessorThread.java:290-305; AfirmaWebSocketServer.java:113; JSEUIManager.java:695-838"
+statement = """
+save pide destino y responde una confirmación de guardado que el cliente publicado reconoce como
+tal, no como una firma.
+"""
+drive = { mode = "v4", script = "save" }
+harness = "save_confirmation"
+needs = ["persona"]
+question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
+warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
+cause = "BUG-18"
+
+[[check]]
+id = "signandsave_accepts_an_elliptic_curve_algorithm"
+suite = "operaciones"
+chapter = "07"
+citation = "UrlParametersToSignAndSave.java:35, 67-77, 280-288; UrlParametersToSign.java:74-77"
+statement = """
+El catálogo de algoritmos incluye los de curva elíptica, y signandsave los acepta igual que sign.
+"""
+drive = { mode = "v4", script = "signandsavewithecdsa" }
+needs = ["almacén:rfirma-test-ecc"]
+warning = "Van a aparecer el diálogo de certificado y el del PIN: elige el certificado de curva elíptica (token rfirma-test-ecc, PIN 1234)."
+cause = "BUG-05"
+
+[[check]]
+id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
+suite = "operaciones"
+chapter = "12"
+citation = "AOCAdESSigner.java:543-550, 576-579; XAdESTspUtil.java:82-84"
+statement = """
+Si la petición pide sello de tiempo, la firma que vuelve lo lleva; si no se pudo sellar, la
+operación lo reporta en vez de devolver una firma sin sello.
+"""
+drive = { mode = "v4", script = "signwithbrokentsa" }
+harness = "timestamp_in_the_signature"
+warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
+cause = "BUG-23"
+
+[[check]]
+id = "selectcert_only_offers_certificates_with_a_private_key"
+suite = "operaciones"
+chapter = "09"
+citation = "ProtocolInvocationLauncherSelectCert.java:178, 193; KeyStoreUtilities.java:248"
+statement = """
+selectcert filtra los certificados sin clave privada en el almacén (checkPrivateKeys=true) y, en un
+token que exija autenticación, puede pedir el PIN antes de devolver el certificado.
+"""
+drive = { mode = "v4", script = "selectcert" }
+harness = "private_key_check"
+needs = ["persona"]
+question = "¿se pidió el PIN del token/certificado? [s/n]"
+warning = "Van a aparecer el diálogo de selección de certificado y, si el sujeto exige clave privada, el del PIN."
+
+[[check]]
+id = "unsupported_protocol_uri_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:172-178"
+statement = """
+Una URI que no empieza estrictamente por afirma:// se rechaza con SAF_02.
+"""
+drive = { mode = "bad-uri", script = "selectcert" }
+expects_saf = "SAF_02"
+
+[[check]]
+id = "unsupported_operation_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:837-843"
+statement = """
+Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "sign_missing_or_invalid_operation_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:733"
+statement = """
+En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "sign_unsupported_format_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:269"
+statement = """
+Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "local_access_blocked"
+suite = "errores"
+chapter = "15"
+citation = "UrlParameters.java:279-281; ProtocolInvocationLauncher.java:735"
+statement = """
+Si stservlet o rtservlet apuntan a direcciones locales prohibidas, se rechaza con SAF_13.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "invalid_parameters_syntax_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:741"
+statement = """
+Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[[check]]
+id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
+suite = "errores"
+chapter = "07"
+citation = "UrlParametersToSignAndSave.java:29, 237; ProtocolInvocationLauncherSignAndSave.java:155, 728"
+statement = """
+Una invocación de signandsave sin cop se rechaza con SAF_04, el mismo código con el que sign
+rechaza un verbo ausente o no reconocido.
+"""
+drive = { mode = "v4", script = "signandsavewithoutaverb" }
+expects_saf = "SAF_04"
+warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
+cause = "BUG-15"

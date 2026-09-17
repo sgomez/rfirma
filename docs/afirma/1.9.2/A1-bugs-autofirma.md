@@ -102,7 +102,7 @@ dirigido al defecto.
 
 ### BUG-05: Rechazo de algoritmos ECDSA en la operación `signandsave`
 
-* **Caso del sondeo:** `signandsave_rejects_ecdsa_signatures_from_the_elliptic_curve_token`.
+* **Comprobación del catálogo:** `signandsave_accepts_an_elliptic_curve_algorithm`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToSignAndSave.java:68-77` sigue sin las variantes ECDSA que `UrlParametersToSign.java:74-77` sí declara. Ambos aceptan ya el nombre de solo huella (`SHA256`), que es la vía que queda abierta a una clave elíptica.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:67-77, 284-287` frente a `UrlParametersToSign.java:60-74`.
 * **Origen de auditoría:** Anteriormente AUD-32 ([02-uri-y-parametros-comunes.md](02-uri-y-parametros-comunes.md), [07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -167,7 +167,7 @@ dirigido al defecto.
 
 ### BUG-10: Silenciamiento de excepciones en `ServiceInvocationManager.startService` y retorno erróneo de `OK` tras fallo de inicialización del socket
 
-* **Caso del sondeo:** `an_occupied_socket_makes_the_client_report_the_app_as_missing`.
+* **Comprobación del catálogo:** `the_service_channel_reports_a_bind_failure_instead_of_claiming_success`.
 * **Estado en `master`:** **Corregido.** `ServiceInvocationManager.startService` declara ya `throws SllKeyStoreException, IOException` y `ProtocolInvocationLauncher.java:323-332` las captura por separado: el `OK_RESPONSE` solo se alcanza si no hubo excepción.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ServiceInvocationManager.java:148-168`, `ProtocolInvocationLauncher.java:279-291`.
 * **Origen de auditoría:** Anteriormente AUD-26 ([01-vision-general.md](01-vision-general.md), [04-transporte-socket.md](04-transporte-socket.md)).
@@ -192,7 +192,7 @@ dirigido al defecto.
 
 ### BUG-11: Rechazo del bucle local IPv6 (`::1`) en el WebSocket versión 4
 
-* **Caso del sondeo:** `ipv6_loopback_is_rejected_on_the_v4_channel`.
+* **Comprobación del catálogo:** `the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1`.
 * **Estado en `master`:** **Sigue presente.** Solo cambia el código de error emitido.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerV4.java:38, 57-68`.
 * **Origen de auditoría:** Anteriormente AUD-28 ([05-transporte-websocket.md](05-transporte-websocket.md)).
@@ -264,7 +264,7 @@ dirigido al defecto.
 
 ### BUG-15: Ausencia de validación de `cop` en `signandsave` provoca `NullPointerException` y reporte engañoso con `SAF_09`
 
-* **Caso del sondeo:** `signandsave_without_a_verb_reports_its_real_error_code`.
+* **Comprobación del catálogo:** `signandsave_rejects_a_request_without_a_verb_with_saf_04`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToSignAndSave.java:238-239` sigue asignando `cop` sin comprobar presencia ni pertenencia al conjunto de operaciones.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:237-238`; `afirma-simple-plugins` · `es.gob.afirma.standalone.plugins.SignOperation.java:67-78`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSignAndSave.java:155, 297, 728, 882-887`.
 * **Origen de auditoría:** Anteriormente AUD-37 ([07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -329,7 +329,7 @@ dirigido al defecto.
 
 ### BUG-18: Incoherencia de respuesta en `save` por WebSocket (`"OK"` frente a `"SAVE_OK"`) provoca procesamiento erróneo como firma en `autoscript.js`
 
-* **Veredicto del sondeo (2026-09-17):** confirmado, con `save_over_websocket_asks_for_a_destination`.
+* **Veredicto de la suite (2026-09-17):** no conforme, con `save_answers_a_confirmation_the_published_client_recognises`.
 * **Estado en `master`:** **Corregido.** El cliente acepta ya ambas respuestas: `autoscript.js:2803`, `if (data == "OK" || data == "SAVE_OK")`. El backend sigue emitiendo `"OK"` por WebSocket, pero ya no se interpreta como firma.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSave.java:135`, `CommandProcessorThread.java:291-295`, `AfirmaWebSocketServer.java:113`, `AfirmaWebSocketServerV4.java:91`; `afirma-ui-miniapplet-deploy` · `autoscript.js:3423-3428, 3480-3500`.
 * **Origen de auditoría:** Anteriormente AUD-52 ([10-operaciones-save-load.md](10-operaciones-save-load.md)).
@@ -442,7 +442,7 @@ dirigido al defecto.
 
 ### BUG-23: Silenciamiento de excepciones en la inicialización de TSA provoca degradación silenciosa a firma sin sello de tiempo en XAdES y CAdES
 
-* **Caso del sondeo:** `a_broken_tsa_url_returns_an_unstamped_signature_without_a_warning`.
+* **Comprobación del catálogo:** `a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure`.
 * **Estado en `master`:** **Sigue presente.** `XAdESTspUtil.java:82-84` y `AOCAdESSigner.java:576-579` conservan el `catch (Exception)` que devuelve la firma sin sello sin registrar nada.
 * **Código fuente:** `afirma-crypto-xades` · `src/main/java/es/gob/afirma/signers/xades/XAdESTspUtil.java:73-81`, `AOXAdESSigner.java:395-400`; `afirma-crypto-cades` · `src/main/java/es/gob/afirma/signers/cades/AOCAdESSigner.java:547-555`; `afirma-crypto-core-pkcs7-tsp` · `src/main/java/es/gob/afirma/signers/tsp/pkcs7/TsaParams.java:111-135`.
 * **Origen de auditoría:** Anteriormente AUD-71 ([12-extraparams-por-formato.md](12-extraparams-por-formato.md)).
@@ -497,7 +497,7 @@ dirigido al defecto.
 
 ### BUG-25: Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales
 
-* **Veredicto del sondeo (2026-09-17):** confirmado, con `obsolete_and_unsupported_protocol_share_error_code`.
+* **Veredicto de la suite (2026-09-17):** no conforme, con `websocket_rejects_a_protocol_version_it_does_not_support`.
 * **Estado en `master`:** **Sigue presente.** La distinción se ha perdido por construcción: `UnsupportedProtocolException.java:31` fija un código único en el constructor y `isNewVersionNeeded()` sigue sin consumidor.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:283-285` (socket) y `:240-244` (WebSocket); `UnsupportedProtocolException.java:33-47`; `ServiceInvocationManager.java:42-45, 212-220`; `AfirmaWebSocketServerManager.java:27-36, 100-107`; `ProtocolInvocationLauncherErrorManager.java:45, 53, 102, 110`.
 * **Origen de auditoría:** Anteriormente AUD-84 ([01-vision-general.md](01-vision-general.md), [14-versiones.md](14-versiones.md), [15-errores.md](15-errores.md)).

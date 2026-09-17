@@ -1,5 +1,5 @@
-//! El expediente de una tanda de la suite de conformidad: qué casos se han pasado, con qué
-//! sujeto y desde cuándo.
+//! El expediente de una tanda de la suite de conformidad: qué comprobaciones se han corrido, con
+//! qué sujeto y desde cuándo.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -8,74 +8,49 @@ use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
-/// El veredicto de un caso: tres valores, no dos. Un caso que no reproduce no falla la tanda,
-/// emite `Refuted` con sus coordenadas.
+use crate::catalogue::Check;
+
+/// El veredicto de una comprobación: uno solo de cada color, y ninguno que pinte de verde un
+/// sujeto que se apartó de lo que el protocolo exige.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Verdict {
-    Confirmed,
-    Refuted,
+    Compliant,
+    Noncompliant,
     NotObservable,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum CaseState {
+pub enum CheckState {
     Pending,
     Resolved(Verdict),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CaseRecord {
-    pub state: CaseState,
+pub struct CheckRecord {
+    pub suite: String,
+    pub chapter: String,
+    pub citation: String,
+    pub statement: String,
+    pub state: CheckState,
     pub date: Option<String>,
-    /// Lo que la persona dijo haber visto, en un caso interactivo. Ausente en un caso automático.
     #[serde(default)]
     pub observation: Option<String>,
 }
 
-impl CaseRecord {
-    fn pending() -> Self {
+impl CheckRecord {
+    fn pending(check: &Check) -> Self {
         Self {
-            state: CaseState::Pending,
+            suite: check.suite.clone(),
+            chapter: check.chapter.clone(),
+            citation: check.citation.clone(),
+            statement: check.statement.clone(),
+            state: CheckState::Pending,
             date: None,
             observation: None,
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ProtocolVerdict {
-    Compliant,
-    Discrepant,
-    NotObservable,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ProtocolState {
-    Pending,
-    Resolved(ProtocolVerdict),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProtocolRecord {
-    pub chapter: String,
-    pub citation: String,
-    pub statement: String,
-    pub state: ProtocolState,
-    pub date: Option<String>,
-    #[serde(default)]
-    pub observation: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ProtocolConditionDefinition {
-    pub id: &'static str,
-    pub chapter: &'static str,
-    pub citation: &'static str,
-    pub statement: &'static str,
 }
 
 /// Las coordenadas de una tanda, tomadas una sola vez al abrir un expediente nuevo.
@@ -102,32 +77,33 @@ pub struct HeaderCoordinates {
 struct Contents {
     subject: String,
     header: Header,
-    cases: BTreeMap<String, CaseRecord>,
-    #[serde(default)]
-    protocol: BTreeMap<String, ProtocolRecord>,
+    checks: BTreeMap<String, CheckRecord>,
 }
 
 /// El expediente de una tanda: un JSON en la ruta que se le indique, ligado a un único sujeto.
+#[derive(Debug)]
 pub struct Dossier {
     path: PathBuf,
     contents: Contents,
 }
 
 impl Dossier {
-    /// Abre el expediente en `path` para `subject`, creándolo con `known_cases` y `known_conditions` si no existe.
+    /// Abre el expediente en `path` para `subject`, creándolo con `catalogue` si no existe.
     ///
-    /// Rechaza un expediente que otro sujeto generó, en vez de mezclar sus veredictos. Un
-    /// expediente nuevo exige `coordinates`: sin ellas no hay tanda que abrir.
+    /// Rechaza un expediente que otro sujeto generó, y uno de la forma anterior, en vez de mezclar
+    /// veredictos o reinterpretarlos en silencio. Un expediente nuevo exige `coordinates`.
     pub fn open(
         path: &Path,
         subject: &str,
-        known_cases: &[&str],
-        known_conditions: &[ProtocolConditionDefinition],
+        catalogue: &[Check],
         coordinates: Option<HeaderCoordinates>,
     ) -> Result<Self, String> {
         let mut contents = if path.exists() {
             let raw = fs::read_to_string(path)
                 .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
+            if let Some(complaint) = the_complaint_of_an_older_form(path, &raw) {
+                return Err(complaint);
+            }
             serde_json::from_str(&raw).map_err(|error| {
                 format!("{} no es un expediente válido: {error}", path.display())
             })?
@@ -147,8 +123,7 @@ impl Dossier {
                     store: coordinates.store,
                     date: today(),
                 },
-                cases: BTreeMap::new(),
-                protocol: BTreeMap::new(),
+                checks: BTreeMap::new(),
             }
         };
         if contents.subject != subject {
@@ -158,24 +133,11 @@ impl Dossier {
                 contents.subject
             ));
         }
-        for case in known_cases {
+        for check in catalogue {
             contents
-                .cases
-                .entry((*case).to_owned())
-                .or_insert_with(CaseRecord::pending);
-        }
-        for condition in known_conditions {
-            contents
-                .protocol
-                .entry(condition.id.to_owned())
-                .or_insert_with(|| ProtocolRecord {
-                    chapter: condition.chapter.to_owned(),
-                    citation: condition.citation.to_owned(),
-                    statement: condition.statement.to_owned(),
-                    state: ProtocolState::Pending,
-                    date: None,
-                    observation: None,
-                });
+                .checks
+                .entry(check.id.clone())
+                .or_insert_with(|| CheckRecord::pending(check));
         }
         let dossier = Self {
             path: path.to_owned(),
@@ -193,57 +155,27 @@ impl Dossier {
         &self.contents.header
     }
 
-    pub fn cases(&self) -> impl Iterator<Item = (&str, &CaseRecord)> {
+    pub fn checks(&self) -> impl Iterator<Item = (&str, &CheckRecord)> {
         self.contents
-            .cases
-            .iter()
-            .map(|(name, record)| (name.as_str(), record))
-    }
-
-    pub fn state_of(&self, case: &str) -> Option<CaseState> {
-        self.contents.cases.get(case).map(|record| record.state)
-    }
-
-    pub fn protocol_conditions(&self) -> impl Iterator<Item = (&str, &ProtocolRecord)> {
-        self.contents
-            .protocol
+            .checks
             .iter()
             .map(|(id, record)| (id.as_str(), record))
     }
 
-    pub fn protocol_state_of(&self, id: &str) -> Option<ProtocolState> {
-        self.contents.protocol.get(id).map(|record| record.state)
+    pub fn state_of(&self, id: &str) -> Option<CheckState> {
+        self.contents.checks.get(id).map(|record| record.state)
     }
 
-    /// Marca `case` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes
-    /// de devolver el control.
+    /// Marca `id` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes de
+    /// devolver el control.
     pub fn resolve(
         &mut self,
-        case: &str,
+        id: &str,
         verdict: Verdict,
         observation: Option<String>,
     ) -> Result<(), String> {
-        self.contents.cases.insert(
-            case.to_owned(),
-            CaseRecord {
-                state: CaseState::Resolved(verdict),
-                date: Some(today()),
-                observation,
-            },
-        );
-        self.save()
-    }
-
-    /// Marca `id` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes
-    /// de devolver el control.
-    pub fn resolve_protocol(
-        &mut self,
-        id: &str,
-        verdict: ProtocolVerdict,
-        observation: Option<String>,
-    ) -> Result<(), String> {
-        if let Some(record) = self.contents.protocol.get_mut(id) {
-            record.state = ProtocolState::Resolved(verdict);
+        if let Some(record) = self.contents.checks.get_mut(id) {
+            record.state = CheckState::Resolved(verdict);
             record.date = Some(today());
             record.observation = observation;
         }
@@ -256,6 +188,21 @@ impl Dossier {
         fs::write(&self.path, json)
             .map_err(|error| format!("{} no se pudo escribir: {error}", self.path.display()))
     }
+}
+
+/// Un expediente con casos y condiciones es de la forma anterior, la de las dos escalas: no se
+/// reinterpreta, se nombra y se pide uno nuevo.
+fn the_complaint_of_an_older_form(path: &Path, raw: &str) -> Option<String> {
+    let contents: serde_json::Value = serde_json::from_str(raw).ok()?;
+    let object = contents.as_object()?;
+    (object.contains_key("cases") || object.contains_key("protocol")).then(|| {
+        format!(
+            "{} es un expediente de la forma anterior, con casos de divergencia y condiciones de \
+             protocolo. Sus veredictos no se reinterpretan: abre uno nuevo con --dossier <otra \
+             ruta>, o aparta ese fichero.",
+            path.display()
+        )
+    })
 }
 
 /// La fecha de hoy, `AAAA-MM-DD`: la misma que usa el expediente para fechar un veredicto.
@@ -291,209 +238,124 @@ fn civil_date_from_days(days: i64) -> (i64, u32, u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::catalogue::the_catalogue_in;
 
-    #[test]
-    fn resolves_a_case_with_a_three_valued_verdict() {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
+    fn a_catalogue_of(ids: &[&str]) -> Vec<Check> {
+        let entries: String = ids
+            .iter()
+            .map(|id| {
+                format!(
+                    "[[check]]\nid = \"{id}\"\nsuite = \"errores\"\nchapter = \"15\"\n\
+                     citation = \"ProtocolInvocationLauncher.java:741\"\n\
+                     statement = \"Algo se rechaza con SAF_03.\"\n\
+                     drive = {{ mode = \"v4\", script = \"selectcert\" }}\n\n"
+                )
+            })
+            .collect();
+        the_catalogue_in(&entries).unwrap()
+    }
+
+    fn some_coordinates() -> HeaderCoordinates {
+        HeaderCoordinates {
             os: "linux".to_owned(),
             os_version: "6.0".to_owned(),
             subject_version: "1.9.2".to_owned(),
             transport: "websocket".to_owned(),
             store: "softhsm2".to_owned(),
-        };
+        }
+    }
+
+    #[test]
+    fn resolves_a_check_with_the_single_verdict() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
         let mut dossier =
-            Dossier::open(&path, "autofirma", &["saludo"], &[], Some(coordinates)).unwrap();
-
-        assert_eq!(dossier.state_of("saludo"), Some(CaseState::Pending));
-
-        dossier.resolve("saludo", Verdict::Refuted, None).unwrap();
+            Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
 
         assert_eq!(
-            dossier.state_of("saludo"),
-            Some(CaseState::Resolved(Verdict::Refuted))
+            dossier.state_of("v4_echo_greeting"),
+            Some(CheckState::Pending)
+        );
+
+        dossier
+            .resolve("v4_echo_greeting", Verdict::Noncompliant, None)
+            .unwrap();
+
+        assert_eq!(
+            dossier.state_of("v4_echo_greeting"),
+            Some(CheckState::Resolved(Verdict::Noncompliant))
         );
     }
 
     #[test]
-    fn a_resolved_verdict_survives_a_reopen() {
+    fn a_resolved_verdict_and_its_observation_survive_a_reopen() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
-            os: "linux".to_owned(),
-            os_version: "6.0".to_owned(),
-            subject_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
-        };
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
         let mut dossier =
-            Dossier::open(&path, "autofirma", &["saludo"], &[], Some(coordinates)).unwrap();
-        dossier.resolve("saludo", Verdict::Confirmed, None).unwrap();
-
-        let reopened = Dossier::open(&path, "autofirma", &["saludo"], &[], None).unwrap();
-
-        assert_eq!(
-            reopened.state_of("saludo"),
-            Some(CaseState::Resolved(Verdict::Confirmed))
-        );
-    }
-
-    #[test]
-    fn a_case_not_yet_run_stays_pending_instead_of_being_omitted() {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
-            os: "linux".to_owned(),
-            os_version: "6.0".to_owned(),
-            subject_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
-        };
-        let dossier = Dossier::open(
-            &path,
-            "autofirma",
-            &["saludo", "tramite"],
-            &[],
-            Some(coordinates),
-        )
-        .unwrap();
-
-        let names: Vec<&str> = dossier.cases().map(|(name, _)| name).collect();
-        assert!(names.contains(&"tramite"));
-        assert_eq!(dossier.state_of("tramite"), Some(CaseState::Pending));
-    }
-
-    #[test]
-    fn an_observation_survives_a_reopen_alongside_the_verdict() {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
-            os: "linux".to_owned(),
-            os_version: "6.0".to_owned(),
-            subject_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
-        };
-        let mut dossier =
-            Dossier::open(&path, "autofirma", &["saludo"], &[], Some(coordinates)).unwrap();
+            Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
         dossier
             .resolve(
-                "saludo",
-                Verdict::Confirmed,
-                Some("se pidió elegir certificado".to_owned()),
-            )
-            .unwrap();
-
-        let reopened = Dossier::open(&path, "autofirma", &["saludo"], &[], None).unwrap();
-
-        let (_, record) = reopened
-            .cases()
-            .find(|(name, _)| *name == "saludo")
-            .unwrap();
-        assert_eq!(
-            record.observation.as_deref(),
-            Some("se pidió elegir certificado")
-        );
-    }
-
-    #[test]
-    fn resolves_a_protocol_condition_with_a_three_valued_verdict() {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
-            os: "linux".to_owned(),
-            os_version: "6.0".to_owned(),
-            subject_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
-        };
-        let condition = ProtocolConditionDefinition {
-            id: "v4_echo_greeting",
-            chapter: "05",
-            citation: "AfirmaWebSocketServerV4.java:81-83",
-            statement: "La petición de eco recibe OK",
-        };
-        let mut dossier =
-            Dossier::open(&path, "autofirma", &[], &[condition], Some(coordinates)).unwrap();
-
-        assert_eq!(
-            dossier.protocol_state_of("v4_echo_greeting"),
-            Some(ProtocolState::Pending)
-        );
-
-        dossier
-            .resolve_protocol(
                 "v4_echo_greeting",
-                ProtocolVerdict::Compliant,
+                Verdict::Compliant,
                 Some("OK".to_owned()),
             )
             .unwrap();
 
-        assert_eq!(
-            dossier.protocol_state_of("v4_echo_greeting"),
-            Some(ProtocolState::Resolved(ProtocolVerdict::Compliant))
-        );
-    }
-
-    #[test]
-    fn a_resolved_protocol_verdict_survives_a_reopen() {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
-            os: "linux".to_owned(),
-            os_version: "6.0".to_owned(),
-            subject_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
-        };
-        let condition = ProtocolConditionDefinition {
-            id: "v4_echo_greeting",
-            chapter: "05",
-            citation: "AfirmaWebSocketServerV4.java:81-83",
-            statement: "La petición de eco recibe OK",
-        };
-        let mut dossier =
-            Dossier::open(&path, "autofirma", &[], &[condition], Some(coordinates)).unwrap();
-        dossier
-            .resolve_protocol(
-                "v4_echo_greeting",
-                ProtocolVerdict::Discrepant,
-                Some("error".to_owned()),
-            )
-            .unwrap();
-
-        let reopened = Dossier::open(&path, "autofirma", &[], &[condition], None).unwrap();
+        let reopened = Dossier::open(&path, "autofirma", &catalogue, None).unwrap();
 
         assert_eq!(
-            reopened.protocol_state_of("v4_echo_greeting"),
-            Some(ProtocolState::Resolved(ProtocolVerdict::Discrepant))
+            reopened.state_of("v4_echo_greeting"),
+            Some(CheckState::Resolved(Verdict::Compliant))
         );
         let (_, record) = reopened
-            .protocol_conditions()
+            .checks()
             .find(|(id, _)| *id == "v4_echo_greeting")
             .unwrap();
-        assert_eq!(record.observation.as_deref(), Some("error"));
-        assert_eq!(record.chapter, "05");
-        assert_eq!(record.citation, "AfirmaWebSocketServerV4.java:81-83");
+        assert_eq!(record.observation.as_deref(), Some("OK"));
+        assert_eq!(record.chapter, "15");
+        assert_eq!(record.suite, "errores");
     }
 
     #[test]
-    fn a_protocol_condition_not_yet_run_stays_pending() {
+    fn a_check_not_yet_run_stays_pending_instead_of_being_omitted() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let coordinates = HeaderCoordinates {
-            os: "linux".to_owned(),
-            os_version: "6.0".to_owned(),
-            subject_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
-        };
-        let condition = ProtocolConditionDefinition {
-            id: "v4_echo_greeting",
-            chapter: "05",
-            citation: "AfirmaWebSocketServerV4.java:81-83",
-            statement: "La petición de eco recibe OK",
-        };
+        let catalogue = a_catalogue_of(&["v4_echo_greeting", "v3_echo_greeting"]);
         let dossier =
-            Dossier::open(&path, "autofirma", &[], &[condition], Some(coordinates)).unwrap();
+            Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
 
+        let ids: Vec<&str> = dossier.checks().map(|(id, _)| id).collect();
+        assert!(ids.contains(&"v3_echo_greeting"));
         assert_eq!(
-            dossier.protocol_state_of("v4_echo_greeting"),
-            Some(ProtocolState::Pending)
+            dossier.state_of("v3_echo_greeting"),
+            Some(CheckState::Pending)
         );
+    }
+
+    #[test]
+    fn a_dossier_of_the_older_form_is_refused_by_name_instead_of_reinterpreted() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(
+            file.path(),
+            r#"{"subject":"autofirma","header":{},"cases":{},"protocol":{}}"#,
+        )
+        .unwrap();
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
+
+        let complaint = Dossier::open(file.path(), "autofirma", &catalogue, None).unwrap_err();
+
+        assert!(complaint.contains(&file.path().display().to_string()));
+        assert!(complaint.contains("forma anterior"));
+        assert!(complaint.contains("abre uno nuevo"));
+    }
+
+    #[test]
+    fn a_dossier_of_another_subject_is_refused() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
+        Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
+
+        let complaint = Dossier::open(&path, "rfirma", &catalogue, None).unwrap_err();
+
+        assert!(complaint.contains("es de autofirma, no de rfirma"));
     }
 }

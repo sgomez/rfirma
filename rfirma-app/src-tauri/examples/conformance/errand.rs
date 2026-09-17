@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
 
-use crate::dossier::ProtocolVerdict;
+use crate::dossier::Verdict;
 use crate::transcript::Transcript;
 use crate::Probe;
 
@@ -23,7 +23,7 @@ pub(crate) const THE_EXHAUSTED_PATIENCE: &str = "timeout";
 #[derive(Debug, Clone)]
 pub(crate) struct ProtocolConditionResult {
     pub(crate) id: String,
-    pub(crate) verdict: ProtocolVerdict,
+    pub(crate) verdict: Verdict,
     pub(crate) observation: Option<String>,
 }
 
@@ -48,10 +48,10 @@ impl Probe {
         transcript_name: &str,
         script: &str,
         mode: &str,
+        patience: Duration,
     ) -> ErrandOutcome {
         let trust_root = the_trust_root_as_pem(&self.trust_root);
-        let mut driver =
-            the_published_client_running(trust_root.path(), self.patience, script, mode);
+        let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
         let events = driver.stdout.take().expect("el conductor escribe eventos");
         let mut transcript =
             Transcript::open(&self.dossier, transcript_name).unwrap_or_else(|complaint| {
@@ -331,9 +331,9 @@ fn the_protocol_condition_in(event: &str) -> Option<ProtocolConditionResult> {
     let id = value.get("id")?.as_str()?.to_owned();
     let verdict_str = value.get("verdict")?.as_str()?;
     let verdict = match verdict_str {
-        "compliant" => ProtocolVerdict::Compliant,
-        "discrepant" => ProtocolVerdict::Discrepant,
-        _ => ProtocolVerdict::NotObservable,
+        "compliant" => Verdict::Compliant,
+        "discrepant" => Verdict::Noncompliant,
+        _ => Verdict::NotObservable,
     };
     let observation = value
         .get("observation")
@@ -411,7 +411,7 @@ mod tests {
         let event = r#"{"event":"condition","id":"v4_echo_greeting","verdict":"compliant","observation":"OK"}"#;
         let condition = the_protocol_condition_in(event).expect("debería leer la condición");
         assert_eq!(condition.id, "v4_echo_greeting");
-        assert_eq!(condition.verdict, ProtocolVerdict::Compliant);
+        assert_eq!(condition.verdict, Verdict::Compliant);
         assert_eq!(condition.observation.as_deref(), Some("OK"));
     }
 

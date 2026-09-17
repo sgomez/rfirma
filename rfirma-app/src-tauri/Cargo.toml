@@ -173,6 +173,8 @@ tempfile = "3"
 # ensamblado PAdES entero (docs/research/pkcs11-mecanismo-firma.md, punto 5).
 # Solo de pruebas: rfirma no hace criptografia RSA en Rust, la delega en el token.
 rsa = "0.9"
+# El catálogo de la suite de conformidad es un TOML del árbol, y el ejemplo lo lee al arrancar.
+toml = "1"
 # La bandera `oid` es la que hace que la verificacion use el envoltorio
 # DigestInfo de PKCS#1 v1.5. Sin ella `rsa` no acepta Sha256 como digest con
 # prefijo, que es justo lo que el ID-16 exige contrastar.
