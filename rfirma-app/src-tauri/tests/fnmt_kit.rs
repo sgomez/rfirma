@@ -17,7 +17,7 @@ const EXPIRIES: [(&str, u64, &str); 2] = [
 ];
 
 /// Huellas SHA-256 de los ficheros `.p12` versionados.
-const FINGERPRINTS: [(&str, &str); 4] = [
+const FINGERPRINTS: [(&str, &str); 5] = [
     (
         "active-rsa.p12",
         "6e0cad97b78be2918ed54a64a0dd4f3f6e4c16e01b405ef0836fb91b77a3ffb4",
@@ -33,6 +33,10 @@ const FINGERPRINTS: [(&str, &str); 4] = [
     (
         "active-ecc.p12",
         "d4d2638c332b314675ce4f541ff1ca6e0ce0802463430db69033e955645e9f71",
+    ),
+    (
+        "pseudonym-rsa.p12",
+        "ed38e08e8df77160eb4c0b03fa5e78243fefdd35116af23aa6bcb56cbc2d56b1",
     ),
 ];
 

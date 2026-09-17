@@ -183,28 +183,60 @@ class FilterBridgeTest {
                 FilterBridge.select(parsed, List.of(TestFixtures.activeCertificate())));
     }
 
+    @Test
+    void pseudonym_criterion_matches_only_pseudonym_certificates() throws Exception {
+        final List<X509Certificate> listing =
+                List.of(TestFixtures.activeCertificate(), TestFixtures.pseudonymCertificate());
+
+        assertArrayEquals(new int[] { 1 },
+                FilterBridge.select(filters("filters=pseudonym:true"), listing));
+    }
+
+    @Test
+    void qualified_criterion_matches_certificate_by_hex_serial_number() throws Exception {
+        final X509Certificate active = TestFixtures.activeCertificate();
+        final X509Certificate expired = TestFixtures.expiredCertificate();
+        final List<X509Certificate> listing = List.of(active, expired);
+
+        final String activeSn = active.getSerialNumber().toString(16);
+        final String expiredSn = expired.getSerialNumber().toString(16);
+
+        assertArrayEquals(new int[] { 0 },
+                FilterBridge.select(filters("filters=qualified:" + activeSn), listing));
+        assertArrayEquals(new int[] { 1 },
+                FilterBridge.select(filters("filters=qualified:" + expiredSn), listing));
+        assertArrayEquals(new int[] {},
+                FilterBridge.select(filters("filters=qualified:ffffffffffffffff"), listing));
+    }
+
+    @Test
+    void ssl_criterion_matches_certificate_by_hex_serial_number() throws Exception {
+        final X509Certificate active = TestFixtures.activeCertificate();
+        final X509Certificate expired = TestFixtures.expiredCertificate();
+        final List<X509Certificate> listing = List.of(active, expired);
+
+        final String activeSn = active.getSerialNumber().toString(16);
+        final String expiredSn = expired.getSerialNumber().toString(16);
+
+        assertArrayEquals(new int[] { 0 },
+                FilterBridge.select(filters("filters=ssl:" + activeSn), listing));
+        assertArrayEquals(new int[] { 1 },
+                FilterBridge.select(filters("filters=ssl:" + expiredSn), listing));
+        assertArrayEquals(new int[] {},
+                FilterBridge.select(filters("filters=ssl:ffffffffffffffff"), listing));
+    }
+
     /**
-     * ID-260: los cuatro criterios que nadie ha podido medir —hace falta un
-     * DNIe, un certificado SSL, uno cualificado y uno de seudonimo emitidos de
-     * verdad— <b>se aceptan</b>. Lo que se fija aqui es que el motor los
-     * entiende y contesta sin reventar; que su veredicto sea el correcto es la
-     * cobertura que falta, y esta anotada como tal.
+     * dnie: se acepta en el motor aunque no dispone de cobertura de veredicto
+     * en el kit FNMT al pertenecer a la jerarquia de la Direccion General de la
+     * Policia (ver docs/research/filtros-sede-unmeasured.md).
      */
     @Test
-    void the_four_unmeasured_criteria_are_accepted_even_without_coverage_of_their_verdict()
-            throws Exception {
+    void dnie_criterion_is_accepted_without_verdict_coverage() throws Exception {
         final List<X509Certificate> listing =
                 List.of(TestFixtures.activeCertificate(), TestFixtures.expiredCertificate());
-
-        for (final String criterion : new String[] {
-                "qualified:2.16.724.1.3.5.3.2", "pseudonym:true", "ssl:true", "dnie:true" }) {
-            final int[] selected = FilterBridge.select(filters("filters=" + criterion), listing);
-
-            // Con dos certificados el listado ya puede decir algo: lo que se fija
-            // es que el motor *criba* —contesta con un subconjunto propio— y no
-            // que cribe bien, que es la cobertura que falta.
-            assertTrue(selected.length < listing.size(),
-                    "el motor entiende " + criterion + " y contesta cribando");
-        }
+        final int[] selected = FilterBridge.select(filters("filters=dnie:true"), listing);
+        assertTrue(selected.length < listing.size(),
+                "el motor entiende dnie: y contesta cribando");
     }
 }
