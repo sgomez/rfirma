@@ -180,6 +180,13 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 | ----------- | ------ | ------ | ------ |
 | _(ninguno en vuelo)_ | | | |
 
+El caso de uso **el asistente del primer arranque** ([#658](https://github.com/sgomez/rfirma/issues/658),
+mapa [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
+y salió de esta tabla: es **una pantalla nueva con un artboard nuevo**,
+`PrimerArranque`, que vive en la página «Recorrido de firma» como cualquier otra
+y tiene ficha propia, [`primer-arranque.md`](../design/primer-arranque.md), con
+el enlace al canvas en su sección «Decisiones». No tocó ninguna otra ficha.
+
 El caso de uso **v0.5 · la ventana de sede** ([#317](https://github.com/sgomez/rfirma/issues/317))
 se validó el **05/09/2026** y salió de esta tabla. Es la excepción declarada a la
 regla de «una ficha por pantalla»: sus cinco artboards —`SedeEspera`,
