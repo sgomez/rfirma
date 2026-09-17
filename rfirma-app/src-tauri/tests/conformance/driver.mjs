@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { createServer as createTcpServer } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -224,6 +225,49 @@ if (mode === "relay") {
 }
 
 /**
+ * El transporte sin WebSocket habla con el canal local por `XMLHttpRequest`, y Node no trae
+ * ninguno: sin él `getHttpRequest()` devuelve `null` y el cliente publicado revienta en el primer
+ * eco, antes de que el sujeto llegue a decir nada.
+ */
+function theLocalServiceAsXmlHttpRequest() {
+  return class {
+    open(method, url) {
+      this.method = method;
+      this.url = url;
+      this.requestHeaders = {};
+      this.readyState = 1;
+      this.status = 0;
+      this.responseText = "";
+    }
+    setRequestHeader(name, value) {
+      this.requestHeaders[name] = value;
+    }
+    send(body) {
+      const attempt = httpsRequest(
+        this.url,
+        { method: this.method, headers: this.requestHeaders },
+        (response) => {
+          let text = "";
+          response.setEncoding("utf8");
+          response.on("data", (chunk) => {
+            text += chunk;
+          });
+          response.on("end", () => this.arrive(response.statusCode, text));
+        },
+      );
+      attempt.on("error", () => this.arrive(0, ""));
+      attempt.end(body ?? "");
+    }
+    arrive(status, text) {
+      this.status = status;
+      this.responseText = text;
+      this.readyState = 4;
+      this.onreadystatechange?.();
+    }
+  };
+}
+
+/**
  * Sin `WebSocket` en el entorno (`isWebSocketsSupported()`, autoscript.js:197-199), el cliente
  * publicado cae al transporte sin WebSocket (`AppAfirmaJSSocket`) y lanza `afirma://service?…`
  * en vez de `afirma://websocket?…`. Node trae `WebSocket` como global desde la 22, así que hay
@@ -231,6 +275,7 @@ if (mode === "relay") {
  */
 if (mode === "service" || mode === "service-bind-failure") {
   delete globalThis.WebSocket;
+  globalThis.XMLHttpRequest = theLocalServiceAsXmlHttpRequest();
 }
 
 /**
