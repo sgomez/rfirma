@@ -26,6 +26,7 @@ dirigido al defecto.
 
 ### BUG-01: Proceso huérfano indefinido en WebSocket sin conexión inicial
 
+* **No observable:** el proceso huérfano de la JVM queda en segundo plano tras cancelar o cerrar la pestaña; requiere inspeccionar el árbol de procesos del sistema operativo, no llega al cable.
 * **Estado en `master`:** **Corregido.** `AfirmaWebSocketServer.java:101` arranca un `InnactivityWatcherThread` con `INITIAL_INACTIVITY_TIMEOUT` que `markAsWorking()` interrumpe en cuanto llega la primera petición.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerManager.java:52-94`, `AfirmaWebSocketServer.java:70-91` frente a `ServiceInvocationManager.java:127-134`.
 * **Origen de auditoría:** Anteriormente AUD-03 ([01-vision-general.md](01-vision-general.md), [05-transporte-websocket.md](05-transporte-websocket.md)).
@@ -37,6 +38,7 @@ dirigido al defecto.
 
 ### BUG-02: Cierre omitido del proceso ante excepciones no capturadas en invocaciones sin WebSocket
 
+* **No observable:** el hilo AWT-EventQueue mantiene viva la JVM sin respuesta; requiere inspeccionar el interior del proceso, no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `SimpleAfirma.java:1074-1079` conserva el bloque idéntico, con `forceCloseApplication(-1)` condicionado al prefijo `afirma://websocket`.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.SimpleAfirma.java:1073-1078`.
 * **Origen de auditoría:** Anteriormente AUD-04 ([01-vision-general.md](01-vision-general.md)).
@@ -57,6 +59,7 @@ dirigido al defecto.
 
 ### BUG-03: Script de terminación en macOS (`closeMacService`) invoca `kill` sobre un proceso lanzador extinto
 
+* **No observable:** es de otro sistema operativo (el lanzador nativo de macOS y su script `closeMacService`).
 * **Estado en `master`:** **Sigue presente.** `MacUtils.java:86-88` mantiene literalmente `kill -9 $(ps -ef | grep <sessionId> | awk '{print $2}')`, y el lanzador de macOS sigue auto-terminándose.
 * **Código fuente:** `afirma-simple-installer` · `macos/Lanzador/Autofirma para macOS/AppDelegate.m:117-121`; `afirma-simple` · `es.gob.afirma.standalone.so.macos.MacUtils.java:74-95`; `ServiceInvocationManager.java:127-134`.
 * **Origen de auditoría:** Anteriormente AUD-05 ([01-vision-general.md](01-vision-general.md), [04-transporte-socket.md](04-transporte-socket.md)).
@@ -84,6 +87,7 @@ dirigido al defecto.
 
 ### BUG-04: Inoperancia funcional de `afirma://load` por servidor intermedio y `NullPointerException` en gestión de errores
 
+* **No observable:** es del transporte por servidor intermedio (`afirma://load` con `rtservlet`), que queda para más adelante.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToLoad` sigue sin declarar `id` ni `stservlet`. El envío al servidor intermedio se corrigió en el camino de éxito (`ProtocolInvocationLauncher.java:882`), de modo que el `NullPointerException` se ha desplazado del `catch` a la invocación normal.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:767-810`, `ProtocolInvocationLauncherLoad.java:151`; `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToLoad.java:15-202`; `afirma-ui-miniapplet-deploy` · `autoscript.js:4149-4170`.
 * **Origen de auditoría:** Anteriormente AUD-18 ([01-vision-general.md](01-vision-general.md), [02-uri-y-parametros-comunes.md](02-uri-y-parametros-comunes.md), [03-transporte-servidor-intermedio.md](03-transporte-servidor-intermedio.md), [10-operaciones-save-load.md](10-operaciones-save-load.md)).
@@ -98,6 +102,7 @@ dirigido al defecto.
 
 ### BUG-05: Rechazo de algoritmos ECDSA en la operación `signandsave`
 
+* **Caso del sondeo:** `signandsave_rejects_ecdsa_signatures_from_the_elliptic_curve_token`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToSignAndSave.java:68-77` sigue sin las variantes ECDSA que `UrlParametersToSign.java:74-77` sí declara. Ambos aceptan ya el nombre de solo huella (`SHA256`), que es la vía que queda abierta a una clave elíptica.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:67-77, 284-287` frente a `UrlParametersToSign.java:60-74`.
 * **Origen de auditoría:** Anteriormente AUD-32 ([02-uri-y-parametros-comunes.md](02-uri-y-parametros-comunes.md), [07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -109,6 +114,7 @@ dirigido al defecto.
 
 ### BUG-06: Persistencia de certificado (`sticky`) en campo estático de JVM
 
+* **No observable:** estado de sesión modelado en campo estático de la JVM; requiere inspección de memoria interna del proceso, no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `ProtocolInvocationLauncher.java:100` mantiene `private static PrivateKeyEntry stickyKeyEntry`, con los mismos accesores.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:90, 109-121`, `ProtocolInvocationLauncherSign.java:518-521, 643`, `ProtocolInvocationLauncherSelectCert.java:139-142, 196`.
 * **Origen de auditoría:** Anteriormente AUD-77 ([01-vision-general.md](01-vision-general.md), [02-uri-y-parametros-comunes.md](02-uri-y-parametros-comunes.md), [09-operacion-selectcert.md](09-operacion-selectcert.md), [13-almacenes.md](13-almacenes.md)).
@@ -119,6 +125,7 @@ dirigido al defecto.
 
 ### BUG-07: Pérdida de la versión negociada y metadatos `extraData` en servidor intermedio con URLs largas
 
+* **No observable:** es del transporte por servidor intermedio (descarga y sincronización del XML de parámetros remotos), que queda para más adelante.
 * **Estado en `master`:** **Corregido.** La versión se fija ahora **después** de descargar y parsear el XML remoto, con el mismo patrón en las seis operaciones que admiten `fileid` (`ProtocolInvocationLauncher.java:753-756` y homólogos).
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:653-679`, `NativeSignDataProcessor.java:77, 97`; `afirma-ui-miniapplet-deploy` · `autoscript.js:3803, 4413-4424`.
 * **Origen de auditoría:** Anteriormente AUD-09 ([14-versiones.md](14-versiones.md)).
@@ -130,6 +137,7 @@ dirigido al defecto.
 
 ### BUG-08: Invocación incondicional de `sendDataToServer` en `SocketOperationException` provoca `NullPointerException` en conexiones por socket
 
+* **No observable:** excepción interna no capturada al intentar enviar a un servlet nulo en canal socket; no es observable en el cable sin un servidor intermedio configurado.
 * **Estado en `master`:** **Corregido.** El `catch (SocketOperationException)` solo compone el mensaje; el envío es un paso común posterior y único por operación, siempre bajo `if (!bySocket)` (`ProtocolInvocationLauncher.java:410-413` y homólogos).
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:353, 427, 501, 808` frente a `ProtocolInvocationLauncher.java:600-605, 709-714`.
 * **Origen de auditoría:** Anteriormente AUD-16 ([03-transporte-servidor-intermedio.md](03-transporte-servidor-intermedio.md), [09-operacion-selectcert.md](09-operacion-selectcert.md), [10-operaciones-save-load.md](10-operaciones-save-load.md), [15-errores.md](15-errores.md)).
@@ -141,6 +149,7 @@ dirigido al defecto.
 
 ### BUG-09: Estado estático sin sincronización y condiciones de carrera en `CommandProcessorThread`
 
+* **No observable:** condición de carrera concurrente sobre campos estáticos no sincronizados en la JVM; requiere inspección de memoria interna o concurrencia no determinista, no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `CommandProcessorThread.java:72-74` conserva los tres campos estáticos mutables sin sincronización.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.CommandProcessorThread.java:67-69`, `ServiceInvocationManager.java:136-143`.
 * **Origen de auditoría:** Anteriormente AUD-22 ([01-vision-general.md](01-vision-general.md), [04-transporte-socket.md](04-transporte-socket.md), [13-almacenes.md](13-almacenes.md)).
@@ -158,6 +167,7 @@ dirigido al defecto.
 
 ### BUG-10: Silenciamiento de excepciones en `ServiceInvocationManager.startService` y retorno erróneo de `OK` tras fallo de inicialización del socket
 
+* **Caso del sondeo:** `an_occupied_socket_makes_the_client_report_the_app_as_missing`.
 * **Estado en `master`:** **Corregido.** `ServiceInvocationManager.startService` declara ya `throws SllKeyStoreException, IOException` y `ProtocolInvocationLauncher.java:323-332` las captura por separado: el `OK_RESPONSE` solo se alcanza si no hubo excepción.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ServiceInvocationManager.java:148-168`, `ProtocolInvocationLauncher.java:279-291`.
 * **Origen de auditoría:** Anteriormente AUD-26 ([01-vision-general.md](01-vision-general.md), [04-transporte-socket.md](04-transporte-socket.md)).
@@ -182,6 +192,7 @@ dirigido al defecto.
 
 ### BUG-11: Rechazo del bucle local IPv6 (`::1`) en el WebSocket versión 4
 
+* **Caso del sondeo:** `ipv6_loopback_is_rejected_on_the_v4_channel`.
 * **Estado en `master`:** **Sigue presente.** Solo cambia el código de error emitido.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerV4.java:38, 57-68`.
 * **Origen de auditoría:** Anteriormente AUD-28 ([05-transporte-websocket.md](05-transporte-websocket.md)).
@@ -192,6 +203,7 @@ dirigido al defecto.
 
 ### BUG-12: Opción de configuración «Modo VDI» inoperativa por propiedad de sistema huérfana sin consumidor (`websockets.optimizedForVdi`)
 
+* **No observable:** la propiedad de sistema `websockets.optimizedForVdi` se asigna en la JVM sin efecto en la red; no llega al cable.
 * **Estado en `master`:** **Sigue presente.** La propiedad `websockets.optimizedForVdi` se sigue asignando en `AfirmaWebSocketServerManager.java:69` y ninguna clase la consulta.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerManager.java:39, 59-61`, `es.gob.afirma.standalone.ui.preferences.PreferencesPanelGeneral.java:701, 740`; `afirma-ui-simple-configurator-common` · `es.gob.afirma.standalone.configurator.common.PreferencesManager.java:182`.
 * **Origen de auditoría:** Anteriormente AUD-29 ([05-transporte-websocket.md](05-transporte-websocket.md)).
@@ -209,6 +221,7 @@ dirigido al defecto.
 
 ### BUG-13: Fuga de estado y asignación cruzada en `showRubricIsCanceled` entre operaciones de firma
 
+* **No observable:** fuga de estado en campo estático mutable entre operaciones; requiere inspección de memoria interna de la JVM, no llega al cable.
 * **Estado en `master`:** **Sigue presente.** Ambas clases conservan su `static boolean showRubricIsCanceled` sin reposición, y `ProtocolInvocationLauncherSignAndSave.java:1050` sigue asignando el de la clase `Sign`. La `VisibleSignatureMandatoryException` nueva cubre otro caso, no este.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSign.java:108, 960-980, 1014`, `ProtocolInvocationLauncherSignAndSave.java:107, 985-1006, 1040`.
 * **Origen de auditoría:** Anteriormente AUD-30 ([06-operaciones-firma.md](06-operaciones-firma.md), [07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -232,6 +245,7 @@ dirigido al defecto.
 
 ### BUG-14: Omisión de `setAnotherParams` en `signandsave` descarta parámetros de configuración para plugins
 
+* **No observable:** omisión de paso de directivas a plugins de AutoFirma; requiere un plugin Java auxiliar cargado en el proceso, no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `ProtocolInvocationUriParserUtil.java:160-166` sigue sin `ret.setAnotherParams(params)`, que sí conserva la fábrica de `sign` en la línea 149.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.ProtocolInvocationUriParserUtil.java:156-162` frente a `145`; `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:101, 365, 372-378`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSignAndSave.java:159`.
 * **Origen de auditoría:** Anteriormente AUD-36 ([07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -250,6 +264,7 @@ dirigido al defecto.
 
 ### BUG-15: Ausencia de validación de `cop` en `signandsave` provoca `NullPointerException` y reporte engañoso con `SAF_09`
 
+* **Caso del sondeo:** `signandsave_without_a_verb_reports_its_real_error_code`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToSignAndSave.java:238-239` sigue asignando `cop` sin comprobar presencia ni pertenencia al conjunto de operaciones.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:237-238`; `afirma-simple-plugins` · `es.gob.afirma.standalone.plugins.SignOperation.java:67-78`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSignAndSave.java:155, 297, 728, 882-887`.
 * **Origen de auditoría:** Anteriormente AUD-37 ([07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -271,6 +286,7 @@ dirigido al defecto.
 
 ### BUG-16: Incompatibilidad de `localBatchProcess` con lotes XML provoca fallo tardío con `SAF_03` tras seleccionar certificado y PIN
 
+* **No observable:** lote XML local con `localBatchProcess=true` sin servidor de pre/postfirma; requiere interacción modal de usuario y no llega al cable del protocolo.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersForBatch.java:251` sigue saltándose la validación de las URLs cuando `localBatchProcess=true`, sin exigir en ningún punto `jsonbatch=true`.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersForBatch.java:236-260`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherBatch.java:341-346, 400-422`; `afirma-crypto-batch-client` · `es.gob.afirma.signers.batch.client.BatchSigner.java:223-228`.
 * **Origen de auditoría:** Anteriormente AUD-41 ([08-operacion-batch.md](08-operacion-batch.md)).
@@ -289,6 +305,7 @@ dirigido al defecto.
 
 ### BUG-17: Corrupción de nombres y fallo de filtrado en `save` por omisión de división de extensiones múltiples (`exts`)
 
+* **No observable:** fallo de extensiones en el diálogo nativo Swing de guardado (`JFileChooser`); interacción de interfaz gráfica que no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `ProtocolInvocationLauncherSave.java:73-74` sigue envolviendo la cadena cruda en `new String[] { options.getExtensions() }` sin dividir por comas.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSave.java:86` frente a `ProtocolInvocationLauncherLoad.java:98`; `afirma-ui-core-jse` · `es.gob.afirma.ui.core.jse.JSEUIManager.java:738-744, 771-778`.
 * **Origen de auditoría:** Anteriormente AUD-51 ([10-operaciones-save-load.md](10-operaciones-save-load.md)).
@@ -331,6 +348,7 @@ dirigido al defecto.
 
 ### BUG-19: Discrepancia de nombres de parámetros (`extension`/`description` vs `exts`/`desc`) en `AppAfirmaJSWebService.saveDataToFile` ignora los filtros en servidor intermedio
 
+* **No observable:** es del transporte por servidor intermedio (`AppAfirmaJSWebService.saveDataToFile`), que queda para más adelante.
 * **Estado en `master`:** **Sigue presente.** `autoscript.js:4575` sigue enviando la clave `extension`, y `UrlParametersToSave.java:26, 32` sigue leyendo solo `desc` y `exts`.
 * **Código fuente:** `afirma-ui-miniapplet-deploy` · `autoscript.js:4122-4123` frente a `2057-2058, 3580-3581`; `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSave.java:23-30, 223-224, 244-245`.
 * **Origen de auditoría:** Anteriormente AUD-87 ([10-operaciones-save-load.md](10-operaciones-save-load.md), [16-cliente-javascript.md](16-cliente-javascript.md)).
@@ -347,6 +365,7 @@ dirigido al defecto.
 
 ### BUG-20: Incompatibilidad entre `policy.properties` y `ExtraParamsProcessor` impide el uso del identificador oficial `FirmaAGE19`
 
+* **No observable:** conflicto entre catálogo interno `policy.properties` y procesador de parámetros; error interno en el classpath de Java que no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `ExtraParamsProcessor.java:218-221` sigue admitiendo únicamente `FirmaAGE` y `FirmaAGE18`.
 * **Código fuente:** `afirma-core` · `src/main/resources/policy.properties:11-17`; `afirma-core` · `es.gob.afirma.core.signers.AdESPolicyPropertiesManager.java:35-38`; `afirma-core` · `es.gob.afirma.core.signers.ExtraParamsProcessor.java:140-143, 217-220`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSign.java:492-496`, `ProtocolInvocationLauncherSignAndSave.java:484-488`.
 * **Origen de auditoría:** Anteriormente AUD-56 ([11-extraparams-y-filtros.md](11-extraparams-y-filtros.md)).
@@ -377,6 +396,7 @@ dirigido al defecto.
 
 ### BUG-21: Errata tipográfica en constante `CAdESExtraParams.POLICY_IDENTIFIER_HASH_ALGORITHM` provoca `IllegalArgumentException` en firmas CAdES con política
 
+* **No observable:** errata en constante Java que arroja excepción al construir la política CAdES; fallo interno de la biblioteca criptográfica sin manifestación diferenciable en el canal.
 * **Estado en `master`:** **Corregido.** `CAdESExtraParams.java:121` declara ya `"policyIdentifierHashAlgorithm"`.
 * **Código fuente:** `afirma-crypto-cades` · `src/main/java/es/gob/afirma/signers/cades/CAdESExtraParams.java:121`; `afirma-core` · `src/main/java/es/gob/afirma/core/signers/AdESPolicy.java:84, 163`; `afirma-simple` · `src/main/java/es/gob/afirma/standalone/ui/ExtraParamsHelper.java:222`.
 * **Origen de auditoría:** Anteriormente AUD-65 ([12-extraparams-por-formato.md](12-extraparams-por-formato.md)).
@@ -403,6 +423,7 @@ dirigido al defecto.
 
 ### BUG-22: Bucle con error por exceso (*off-by-one*) en el procesamiento de declaraciones de compromiso (`commitmentTypeIndications`)
 
+* **No observable:** error en bucle de indización ASN.1 en estructura de firma; procesado criptográfico interno sin visibilidad en el cable del cliente.
 * **Estado en `master`:** **Corregido a medias.** Los dos bucles siguen con la cota inclusiva (`CommitmentTypeIndicationsHelper.java:98`, `XAdESUtil.java:327`), pero ahora se rechaza `nCtis < 1`, de modo que el caso de declarar cero elementos ya no incorpora ninguno. El elemento de más sigue apareciendo para cualquier $N \geq 1$.
 * **Código fuente:** `afirma-crypto-cades` · `src/main/java/es/gob/afirma/signers/cades/CommitmentTypeIndicationsHelper.java:98`; `afirma-crypto-xades` · `src/main/java/es/gob/afirma/signers/xades/XAdESUtil.java:326`.
 * **Origen de auditoría:** Anteriormente AUD-69 ([12-extraparams-por-formato.md](12-extraparams-por-formato.md)).
@@ -421,6 +442,7 @@ dirigido al defecto.
 
 ### BUG-23: Silenciamiento de excepciones en la inicialización de TSA provoca degradación silenciosa a firma sin sello de tiempo en XAdES y CAdES
 
+* **Caso del sondeo:** `a_broken_tsa_url_returns_an_unstamped_signature_without_a_warning`.
 * **Estado en `master`:** **Sigue presente.** `XAdESTspUtil.java:82-84` y `AOCAdESSigner.java:576-579` conservan el `catch (Exception)` que devuelve la firma sin sello sin registrar nada.
 * **Código fuente:** `afirma-crypto-xades` · `src/main/java/es/gob/afirma/signers/xades/XAdESTspUtil.java:73-81`, `AOXAdESSigner.java:395-400`; `afirma-crypto-cades` · `src/main/java/es/gob/afirma/signers/cades/AOCAdESSigner.java:547-555`; `afirma-crypto-core-pkcs7-tsp` · `src/main/java/es/gob/afirma/signers/tsp/pkcs7/TsaParams.java:111-135`.
 * **Origen de auditoría:** Anteriormente AUD-71 ([12-extraparams-por-formato.md](12-extraparams-por-formato.md)).
@@ -447,6 +469,7 @@ dirigido al defecto.
 
 ### BUG-24: Mutación de estado global en el singleton `AOKeyStore.PKCS11` invalida la resolución de almacén en ejecuciones concurrentes o persistentes
 
+* **No observable:** mutación de estado global en el singleton `AOKeyStore.PKCS11`; requiere inspección del estado interno de la JVM, no llega al cable.
 * **Estado en `master`:** **Sigue presente.** `AOKeyStore.java:235` mantiene el mutador público y `SimpleKeyStoreManager.java:311` sigue ejecutando `result.setName(name)` sobre la constante del enum.
 * **Código fuente:** `afirma-core-keystores` · `es.gob.afirma.keystores.AOKeyStore.java:226-228`, `AOKeyStoreDialog.java:596`; `afirma-simple` · `es.gob.afirma.standalone.SimpleKeyStoreManager.java:286-288`, `es.gob.afirma.standalone.ui.preferences.PreferencesPanelKeystores.java:225, 233, 573, 585, 600, 692`.
 * **Origen de auditoría:** Anteriormente AUD-74 ([13-almacenes.md](13-almacenes.md)).
@@ -502,6 +525,7 @@ dirigido al defecto.
 
 ### BUG-26: Los errores anteriores al inicio de la operación no se suben al servidor intermedio y la sede los percibe como «AutoFirma no instalada»
 
+* **No observable:** es del transporte por servidor intermedio (reporte de errores previos al arranque hacia el servlet), que queda para más adelante.
 * **Estado en `master`:** **Corregido a medias.** Los fallos de recuperación y descifrado de la configuración remota se suben ya mediante `IntermediateServerErrorSendedException` y `processIntermediateServiceError` (`ProtocolInvocationLauncher.java:922`). Los seis anteriores al inicio de la operación —`SAF_01`, `SAF_02`, `SAF_03`, `SAF_04`, `SAF_13` y `SAF_14`— siguen mostrando diálogo y devolviendo la cadena sin subir nada.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:165-177` (URI nula y esquema no reconocido), `:356-367, 429-440, 504-527, 616-639, 726-749, 811-832` (bloques `catch` de parámetros de cada operación), `:663-677` (recuperación de la configuración remota, replicado en los seis bloques), `:837-842` (operación no reconocida), frente a los únicos puntos de subida en `:353, 426, 501, 603, 612, 712, 721, 808`; `afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js:3722, 4729-4768`.
 * **Origen de auditoría:** Anteriormente AUD-83 ([15-errores.md](15-errores.md)).
