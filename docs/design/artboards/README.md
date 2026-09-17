@@ -8,7 +8,7 @@ terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, 
 importó a un repositorio público. Se ha usado también en la v0.4. **No preguntes si hay que
 borrarlo: no, hasta la v1.0.**
 
-Son los veinte artboards del canvas de Claude Design «Autofirma de escritorio
+Son los veintiún artboards del canvas de Claude Design «Autofirma de escritorio
 en Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron el
 02/09/2026 con las decisiones de v0.2 del
@@ -24,7 +24,11 @@ ventana principal tocados de rebote; ver «Lo que cambió en v0.5».
 Después de la v0.5, el asistente del primer arranque —el
 [#658](https://github.com/sgomez/rfirma/issues/658)— añade `PrimerArranque`, el
 vigésimo, en la página «Recorrido de firma»; ver «Lo que cambió después de la
-v0.5 — el asistente del primer arranque».
+v0.5 — el asistente del primer arranque». Y el panel de estado —el
+[#659](https://github.com/sgomez/rfirma/issues/659)— añade `PanelEstado`, el
+vigesimoprimero, en una página propia, «Estado de rFirma», y rehace el menú de
+`EstadoVacio`; ver «Lo que cambió después de la v0.5 — el panel de estado y el
+menú de la cabecera».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -36,13 +40,13 @@ Cuando llegue la v1.0 habrá que decidir de nuevo si sigue haciendo falta.
 
 ## Qué es cada fichero
 
-`canvas.json` numera los estados y los reparte en **tres** páginas. El orden de
+`canvas.json` numera los estados y los reparte en **cuatro** páginas. El orden de
 la página «Recorrido de firma» es el de la ficha `ventana-principal.md`; la
 página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto** |
+| 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto**: sus cuatro entradas, el divisor, el aviso y el foco por teclado |
 | 2 | `EstadoDocumentoCargado` | Documento cargado, sin certificado |
 | 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
 | 3 | `EstadoCargandoCertificados` | Buscando certificados, y el diálogo de secreto del almacén cuando la sesión se abre **antes** de listar |
@@ -62,6 +66,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
 | S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde, y las dos acciones —instalar el certificado propio y poner a rFirma por defecto— |
+| E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos y sus reparaciones |
 
 Los cinco de `Sede*` viven en la página **«Ventana de sede · v0.5»** y su ficha
 es [`ventana-de-sede.md`](../ventana-de-sede.md), **una sola para los cinco**:
@@ -515,3 +520,56 @@ dos pantallas— más el paso instalando, el paso hecho y el paso fallado, que s
 estados de esta pantalla. Lo que se decidió, medida a medida, está en la
 anotación de la página y en la ficha
 [`primer-arranque.md`](../primer-arranque.md), que es la referencia normativa.
+
+## Lo que cambió después de la v0.5 — el panel de estado y el menú de la cabecera
+
+Decidido en el [#659](https://github.com/sgomez/rfirma/issues/659) —mapa
+[#652](https://github.com/sgomez/rfirma/issues/652), «La instalación se explica
+sola»; inventario de señales en el
+[#655](https://github.com/sgomez/rfirma/issues/655) y menú en el
+[#656](https://github.com/sgomez/rfirma/issues/656)— y validado el 17/09/2026.
+**Un artboard nuevo, `PanelEstado`, en una página propia —«Estado de rFirma»—, y
+`EstadoVacio` tocado de rebote.** Los tres artboards de trabajo que hubo
+—`PanelEstadoCorrecto`, `PanelEstadoComprobando` y `PanelEstadoReparando`— se
+fundieron en `PanelEstado` como opciones de su palanca «Momento del panel» y han
+desaparecido del proyecto y del repositorio.
+
+**El panel no es un diálogo**: es la ventana de 1180 × 700 con la cabecera del
+ADR-0007 intacta y el pie **hermano** de la zona que se desplaza, de modo que
+cumple el 2.4.11 por construcción y no por z-index.
+
+**Forma: tabla** —`Señal · Valor · Veredicto · Acción`, 190 / flexible / 130 /
+160 px—, y **sin franja de resumen arriba**: cada fila ya trae su veredicto,
+incluso mientras se actualiza. La lista y las tarjetas se descartaron.
+
+**Cuatro señales y no cinco.** «Canal de distribución» se cayó: una casilla que
+siempre dice «Correcto» y no puede ponerse en rojo no es una señal. El canal
+sobrevive como lo que `[Actualizar]` hace por dentro, y por eso **no hay variante
+de `.deb` ni de `.rpm`**: sería idéntica píxel a píxel.
+
+**Redacción telegráfica**, etiqueta y valor: `0.4.1 → 0.5.0`, `2 de 3
+almacenes`, `Ninguno`, `Sin configurar`. La única prosa de la pantalla es la
+pista `Firefox lo pregunta la primera vez.`, debajo de su fila y fuera de la
+celda. **`afirma://` no se nombra.**
+
+**La fila de la aplicación de firma lleva desplegable, no un botón que alterna**,
+porque elegir programa es una elección declarada y no una reparación disfrazada;
+y el desplegable **sólo aparece si hay dónde elegir**. Sus cinco casos caben en
+la palanca «Aplicación de firma», que es **independiente** de «Momento del
+panel»: sin resumen global no hay nada que se pueda contradecir. La fila **no
+cambia de alto** en ninguno de los cinco.
+
+**Los cinco veredictos están todos a la vista en el artboard** y se distinguen
+por silueta, palabra y peso, **nunca por color**. «No aplica» y «Comprobando»
+están igual de apagados y los separa la silueta.
+
+En `EstadoVacio`, el menú pasa de dos entradas a **cuatro en dos grupos con un
+divisor**, con la columna de 14 px reservada en las cuatro para el icono de
+enlace externo o el triángulo del aviso —**el mismo `path`** que «Atención» en
+el panel—, y con dos palancas nuevas: el aviso y el foco por teclado. El `<svg>`
+del enlace externo sale del canvas, como salieron las tres rayas: no hay
+biblioteca de iconos.
+
+Lo que se decidió, medida a medida, está en la anotación de la página y en las
+dos fichas normativas, [`panel-de-estado.md`](../panel-de-estado.md) y
+[`cabecera.md`](../cabecera.md).

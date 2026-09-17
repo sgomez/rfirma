@@ -178,7 +178,22 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
-| El panel de estado y el menú de la cabecera ([#659](https://github.com/sgomez/rfirma/issues/659), mapa [#652](https://github.com/sgomez/rfirma/issues/652)) | [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página «Estado de rFirma» (`PanelEstado`) y `EstadoVacio` | en revisión (tanda 1 aplicada) | pendientes: `panel-de-estado.md` y `cabecera.md` |
+
+No hay ningún prototipo en vuelo.
+
+El caso de uso **el panel de estado y el menú de la cabecera**
+([#659](https://github.com/sgomez/rfirma/issues/659), mapa
+[#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
+y salió de esta tabla. Deja **un artboard nuevo**, `PanelEstado`, en una página
+propia —«Estado de rFirma»—, con dos palancas independientes: el momento del
+panel y la aplicación de firma. Los tres artboards de trabajo que hubo se
+fundieron en él al validar y se borraron del proyecto y del repositorio. De
+rebote toca `EstadoVacio`, cuyo menú pasa a cuatro entradas con divisor, aviso y
+foco por teclado. Sus fichas son
+[`panel-de-estado.md`](../design/panel-de-estado.md) —nueva— y
+[`cabecera.md`](../design/cabecera.md), y las dos enlazan el canvas desde su
+sección «Decisiones»; `design-system.md` estrena de paso el vocabulario de
+veredictos, que es transversal.
 
 El caso de uso **el asistente del primer arranque** ([#658](https://github.com/sgomez/rfirma/issues/658),
 mapa [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
