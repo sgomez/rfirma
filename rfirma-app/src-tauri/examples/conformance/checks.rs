@@ -116,6 +116,7 @@ impl Probe {
     fn run_group(&self, dossier: &mut Dossier, group: &[&Check], done: &mut usize, total: usize) {
         let head = group[0];
         *done += 1;
+        self.monitor.announce_check(head);
         self.monitor
             .start_progress("Comprobación", *done, total, &head.id);
 
@@ -128,17 +129,8 @@ impl Probe {
             );
             return;
         }
-        if let Some(complaint) = self.the_unmet_precondition_of(head, dossier) {
-            self.resolve(
-                dossier,
-                head,
-                CheckOutcome::of(Verdict::NotObservable, complaint),
-                Duration::ZERO,
-            );
-            return;
-        }
-        if head.needs_a_person() && !std::io::stdin().is_terminal() {
-            self.leave_pending(head, "no hay nadie delante para contestar");
+        if let Some(why) = self.the_unmet_precondition_of(head, dossier) {
+            self.leave_pending(head, &why);
             return;
         }
         for warning in the_warnings_of(group) {
@@ -161,6 +153,7 @@ impl Probe {
         );
         for member in &group[1..] {
             *done += 1;
+            self.monitor.announce_check(member);
             self.monitor
                 .start_progress("Comprobación", *done, total, &member.id);
             self.resolve(dossier, member, the_verdict_of(member, &outcome), duration);
@@ -169,14 +162,12 @@ impl Probe {
 
     /// Lo que la comprobación necesita y la tanda no trae; `None` si no le falta nada.
     fn the_unmet_precondition_of(&self, check: &Check, dossier: &Dossier) -> Option<String> {
-        let wanted = check.required_store()?;
-        let declared = &dossier.header().store;
-        let has_it = declared == wanted || declared.contains("softhsm");
-        (!has_it).then(|| {
-            format!(
-                "la tanda declara el almacén «{declared}»; esta comprobación exige «{wanted}» o softhsm2"
-            )
-        })
+        the_unmet_need_of(
+            check,
+            &dossier.header().store,
+            std::io::stdin().is_terminal(),
+        )
+        .or_else(|| the_occupied_port_complaint(check))
     }
 
     /// Conduce el trámite de la comprobación, con el arnés que declare si necesita más que
@@ -380,9 +371,76 @@ fn the_warnings_of(group: &[&Check]) -> Vec<String> {
     let mut said = BTreeSet::new();
     group
         .iter()
-        .filter_map(|check| check.warning.clone())
+        .flat_map(|check| {
+            check
+                .warning
+                .clone()
+                .into_iter()
+                .chain(the_wait_announcement_of(check))
+        })
         .filter(|warning| said.insert(warning.clone()))
         .collect()
+}
+
+/// Cuánto va a tardar una comprobación que espera a que el cliente publicado agote sus reintentos,
+/// y por qué; `None` si no declara `espera:<segundos>`.
+fn the_wait_announcement_of(check: &Check) -> Option<String> {
+    check.declared_patience().map(|patience| {
+        format!(
+            "Esta comprobación tarda por diseño: hasta {}s, mientras el cliente publicado agota sus \
+             reintentos.",
+            patience.as_secs()
+        )
+    })
+}
+
+/// Lo que le falta a la comprobación de lo que declara `needs`, con el mensaje que dice qué falta y
+/// cómo relanzarla; `None` si la persona y el almacén que pide están.
+fn the_unmet_need_of(check: &Check, declared_store: &str, terminal: bool) -> Option<String> {
+    if check.needs_a_person() && !terminal {
+        return Some("no hay nadie delante para contestar".to_owned());
+    }
+    let wanted = check.required_store()?;
+    let has_it = declared_store == wanted || declared_store.contains("softhsm");
+    (!has_it).then(|| {
+        format!(
+            "la tanda declara el almacén «{declared_store}»; esta comprobación exige «{wanted}»: \
+             relánzala en un expediente nuevo con `just conformance --dossier <expediente-nuevo> \
+             --store {wanted} run {}`",
+            check.id
+        )
+    })
+}
+
+/// Si alguno de los puertos que la comprobación necesita libres está ocupado por otra cosa; `None`
+/// si no declara `puertos:<lista>` o todos están libres.
+fn the_occupied_port_complaint(check: &Check) -> Option<String> {
+    check
+        .required_ports()
+        .into_iter()
+        .find(|port| port_is_occupied(*port))
+        .map(|port| format!("el puerto {port} está ocupado por otra cosa"))
+}
+
+fn port_is_occupied(port: u16) -> bool {
+    TcpListener::bind(("0.0.0.0", port)).is_err()
+}
+
+/// El motivo por el que una comprobación sigue pendiente al cierre de la tanda: la misma
+/// precondición incumplida si sigue sin cumplirse, o que no hubo respuesta la última vez.
+pub(crate) fn the_reason_it_is_still_pending(
+    check: &Check,
+    declared_store: &str,
+    terminal: bool,
+) -> String {
+    the_unmet_need_of(check, declared_store, terminal)
+        .or_else(|| the_occupied_port_complaint(check))
+        .unwrap_or_else(|| {
+            format!(
+                "no hubo respuesta la última vez: relánzala con `just conformance run {} --relaunch`",
+                check.id
+            )
+        })
 }
 
 pub(crate) fn no_pending_checks_message(total: usize, suite: Option<&str>) -> String {
@@ -610,5 +668,103 @@ warning = "el mismo aviso"
         let group: Vec<&Check> = catalogue.iter().collect();
 
         assert_eq!(the_warnings_of(&group), ["el mismo aviso"]);
+    }
+
+    fn a_check_that_needs(needs: &str) -> Check {
+        the_catalogue_in(&format!(
+            r#"
+[[check]]
+id = "a_check"
+suite = "errores"
+chapter = "15"
+citation = "A.java:1"
+statement = "Algo."
+drive = {{ mode = "v4", script = "protocol-v4" }}
+needs = [{needs}]
+"#,
+        ))
+        .unwrap()
+        .remove(0)
+    }
+
+    #[test]
+    fn a_check_that_needs_a_person_without_a_terminal_is_left_pending() {
+        let check = a_check_that_needs(r#""persona""#);
+        assert_eq!(
+            the_unmet_need_of(&check, "cualquier-almacen", false).as_deref(),
+            Some("no hay nadie delante para contestar")
+        );
+    }
+
+    #[test]
+    fn a_check_that_needs_a_person_with_a_terminal_needs_nothing_more() {
+        let check = a_check_that_needs(r#""persona""#);
+        assert_eq!(the_unmet_need_of(&check, "cualquier-almacen", true), None);
+    }
+
+    #[test]
+    fn a_store_mismatch_names_the_missing_store_and_the_relaunch_order() {
+        let check = a_check_that_needs(r#""almacén:rfirma-test-ecc""#);
+        let reason = the_unmet_need_of(&check, "rfirma-test", true).unwrap();
+        assert!(reason.contains("rfirma-test-ecc"));
+        assert!(reason.contains("rfirma-test"));
+        assert!(reason.contains(
+            "just conformance --dossier <expediente-nuevo> --store rfirma-test-ecc run a_check"
+        ));
+    }
+
+    #[test]
+    fn softhsm_satisfies_any_declared_store() {
+        let check = a_check_that_needs(r#""almacén:rfirma-test-ecc""#);
+        assert_eq!(
+            the_unmet_need_of(&check, "softhsm2-token-generico", true),
+            None
+        );
+    }
+
+    #[test]
+    fn a_check_without_a_declared_store_needs_nothing_from_it() {
+        let check = a_check_that_needs(r#""espera:5""#);
+        assert_eq!(the_unmet_need_of(&check, "cualquier-almacen", true), None);
+    }
+
+    #[test]
+    fn an_occupied_port_is_named_and_a_free_one_is_not() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let occupied_port = listener.local_addr().unwrap().port();
+        let check = a_check_that_needs(&format!(r#""puertos:{occupied_port}""#));
+
+        let complaint = the_occupied_port_complaint(&check).unwrap();
+        assert!(complaint.contains(&occupied_port.to_string()));
+
+        drop(listener);
+        assert_eq!(the_occupied_port_complaint(&check), None);
+    }
+
+    #[test]
+    fn a_check_with_declared_patience_announces_how_long_it_takes() {
+        let check = a_check_that_needs(r#""espera:60""#);
+        let announcement = the_wait_announcement_of(&check).unwrap();
+        assert!(announcement.contains("60s"));
+    }
+
+    #[test]
+    fn a_check_without_declared_patience_announces_nothing() {
+        let check = a_check_that_needs(r#""persona""#);
+        assert_eq!(the_wait_announcement_of(&check), None);
+    }
+
+    #[test]
+    fn the_reason_still_pending_falls_back_to_relaunch_when_nothing_is_unmet() {
+        let check = a_check_that_needs(r#""persona""#);
+        let reason = the_reason_it_is_still_pending(&check, "cualquier-almacen", true);
+        assert!(reason.contains("just conformance run a_check --relaunch"));
+    }
+
+    #[test]
+    fn the_reason_still_pending_prefers_the_unmet_need() {
+        let check = a_check_that_needs(r#""persona""#);
+        let reason = the_reason_it_is_still_pending(&check, "cualquier-almacen", false);
+        assert_eq!(reason, "no hay nadie delante para contestar");
     }
 }

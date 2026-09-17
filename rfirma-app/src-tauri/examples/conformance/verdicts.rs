@@ -1,11 +1,14 @@
 //! La traducción de lo observado en cada comprobación a su veredicto, y el listado que las
 //! muestra.
 
+use std::io::IsTerminal;
+
 use crate::baseline::{
     contrast_of, the_exit_code_of, the_expectation_of, the_surprises_of, verdict_name,
     BaselineTally, Contrast, Expectation,
 };
 use crate::catalogue::Check;
+use crate::checks::the_reason_it_is_still_pending;
 use crate::dossier::{CheckRecord, CheckState, Dossier, Verdict};
 use crate::errand::{ErrandOutcome, THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
 
@@ -287,11 +290,34 @@ pub(crate) fn the_closing_of(
             out.push_str(&format!("  {surprise}\n"));
         }
     }
+    out.push_str(&the_pending_section_of(dossier, catalogue, suite));
     (out, the_exit_code_of(&tally))
 }
 
+/// Lo que quedó pendiente al cierre, con el motivo por el que se saltó cada una.
+fn the_pending_section_of(dossier: &Dossier, catalogue: &[Check], suite: Option<&str>) -> String {
+    let declared_store = &dossier.header().store;
+    let terminal = std::io::stdin().is_terminal();
+    let pending: Vec<String> = catalogue
+        .iter()
+        .filter(|check| suite.is_none_or(|wanted| check.suite == wanted))
+        .filter(|check| matches!(dossier.state_of(&check.id), Some(CheckState::Pending)))
+        .map(|check| {
+            format!(
+                "  {}: {}",
+                check.id,
+                the_reason_it_is_still_pending(check, declared_store, terminal)
+            )
+        })
+        .collect();
+    if pending.is_empty() {
+        String::new()
+    } else {
+        format!("\nPendientes:\n{}\n", pending.join("\n"))
+    }
+}
+
 pub(crate) fn list(dossier: &Dossier, catalogue: &[Check], suite: Option<&str>) {
-    use std::io::IsTerminal;
     let use_color = std::io::stdout().is_terminal();
     print!("{}", format_list(dossier, catalogue, suite, use_color));
 }
@@ -788,7 +814,53 @@ mod tests {
             "Frente a la línea base:  1 coinciden · 1 SORPRESA · 1 sin medida · 1 pendientes"
         ));
         assert!(closing.contains("a_two: se esperaba CONFORME y salió NO CONFORME"));
+        assert!(closing.contains("Pendientes:"));
+        assert!(closing.contains("a_four: no hubo respuesta la última vez"));
         assert_eq!(code, 1);
+    }
+
+    #[test]
+    fn the_closing_names_the_store_a_pending_check_is_missing() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let catalogue = the_catalogue_in(
+            r#"
+[[check]]
+id = "needs_the_ecc_store"
+suite = "operaciones"
+chapter = "07"
+citation = "A.java:1"
+statement = "Algo."
+drive = { mode = "v4", script = "selectcert" }
+needs = ["almacén:rfirma-test-ecc"]
+
+[check.expect.autofirma]
+verdict = "conforme"
+"#,
+        )
+        .unwrap();
+        let coordinates = HeaderCoordinates {
+            os: "Linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "rfirma-test".to_owned(),
+        };
+        let dossier = Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(coordinates),
+        )
+        .unwrap();
+
+        let (closing, _) = the_closing_of(&dossier, &catalogue, None);
+
+        assert!(closing.contains("needs_the_ecc_store"));
+        assert!(closing.contains(
+            "just conformance --dossier <expediente-nuevo> --store rfirma-test-ecc run \
+             needs_the_ecc_store"
+        ));
     }
 
     const FOUR_CHECKS: &str = r#"
