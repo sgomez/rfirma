@@ -499,6 +499,69 @@ pub(crate) fn the_verdict_for_a_timestamp(outcome: &ErrandOutcome, stamped: bool
     }
 }
 
+/// El veredicto del certificado fijado: quien está delante dice si se le pidió el certificado en
+/// las selecciones en que el protocolo lo exige, y sólo en ellas.
+pub(crate) fn the_verdict_for_a_pinned_certificate(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    the_verdict_for_a_dialogue(
+        outcome,
+        answer,
+        "el certificado se pidió en la primera selección y tras soltarlo, y no mientras estuvo fijado",
+        "el certificado fijado no se respetó o no se volvió a pedir al soltarlo",
+    )
+}
+
+/// El veredicto del área de firma visible: quien está delante dice si se le pidió marcarla, que es
+/// lo que `visibleSignature=want` exige antes de firmar.
+pub(crate) fn the_verdict_for_a_visible_signature_area(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    the_verdict_for_a_dialogue(
+        outcome,
+        answer,
+        "se pidió marcar el área de la firma visible",
+        "la firma salió sin pedir el área que el protocolo exige marcar",
+    )
+}
+
+/// El veredicto de una exigencia que se juega a un diálogo: sin respuesta de quien está delante no
+/// hay nada que afirmar, y sin trámite completado tampoco hay incumplimiento que declarar.
+fn the_verdict_for_a_dialogue(
+    outcome: &ErrandOutcome,
+    answer: &str,
+    seen: &str,
+    unseen: &str,
+) -> CheckOutcome {
+    if !outcome.launched {
+        return CheckOutcome::of(
+            Verdict::NotObservable,
+            "el sujeto no llegó a arrancar en esta tanda",
+        );
+    }
+    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
+        return CheckOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type.clone(),
+        };
+    }
+    if answer.is_empty() {
+        return CheckOutcome::StillPending;
+    }
+    if answer.to_lowercase().starts_with('s') {
+        return CheckOutcome::of(Verdict::Compliant, seen);
+    }
+    if outcome.signature.is_some() || outcome.data.is_some() {
+        return CheckOutcome::of(Verdict::Noncompliant, unseen);
+    }
+    CheckOutcome::Resolved {
+        verdict: Verdict::NotObservable,
+        observation: outcome.error_type.clone(),
+    }
+}
+
 /// El veredicto del fallo al ligar el socket: el error que la sede recibe distingue el arranque
 /// fallido de la aplicación ausente, o no lo distingue.
 pub(crate) fn the_verdict_for_a_bind_failure(outcome: &ErrandOutcome) -> CheckOutcome {
@@ -1050,5 +1113,89 @@ verdict = "conforme"
         assert!(output.contains("Conjunto transporte.websocket: 11 comprobaciones"));
         assert!(output.contains("v4_echo_greeting"));
         assert!(!output.contains("invalid_parameters_syntax_rejected"));
+    }
+
+    #[test]
+    fn a_certificate_asked_for_where_the_protocol_says_is_compliant() {
+        let signed = ErrandOutcome {
+            signature: Some("MIIF...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_pinned_certificate(&signed, "s")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn a_pinned_certificate_that_was_asked_for_again_is_noncompliant() {
+        let signed = ErrandOutcome {
+            signature: Some("MIIF...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_pinned_certificate(&signed, "n")),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn a_pinned_certificate_nobody_answered_stays_pending() {
+        assert!(matches!(
+            the_verdict_for_a_pinned_certificate(&an_outcome(), ""),
+            CheckOutcome::StillPending
+        ));
+    }
+
+    #[test]
+    fn a_dialogue_whose_errand_never_came_back_is_not_observable() {
+        assert_eq!(
+            the_verdict(the_verdict_for_a_pinned_certificate(&an_outcome(), "n")),
+            Verdict::NotObservable
+        );
+    }
+
+    #[test]
+    fn a_visible_area_that_was_asked_for_is_compliant() {
+        let signed = ErrandOutcome {
+            signature: Some("JVBERi0...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_visible_signature_area(&signed, "s")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn a_signature_that_skipped_the_visible_area_is_noncompliant() {
+        let signed = ErrandOutcome {
+            signature: Some("JVBERi0...".to_owned()),
+            ..an_outcome()
+        };
+        let CheckOutcome::Resolved {
+            verdict,
+            observation,
+        } = the_verdict_for_a_visible_signature_area(&signed, "n")
+        else {
+            panic!("la comprobación debería resolverse");
+        };
+        assert_eq!(verdict, Verdict::Noncompliant);
+        assert_eq!(
+            observation.as_deref(),
+            Some("la firma salió sin pedir el área que el protocolo exige marcar")
+        );
+    }
+
+    #[test]
+    fn a_crashed_visible_area_check_is_not_observable() {
+        let crashed = ErrandOutcome {
+            error_type: Some(THE_DRIVER_CRASH.to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_visible_signature_area(&crashed, "s")),
+            Verdict::NotObservable
+        );
     }
 }

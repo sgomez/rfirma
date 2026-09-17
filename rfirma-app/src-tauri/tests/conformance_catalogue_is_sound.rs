@@ -41,12 +41,13 @@ const THE_PROFILES: [&str; 2] = ["autofirma", "rfirma"];
 
 const THE_VERDICTS: [&str; 3] = ["conforme", "no-conforme", "no-observable"];
 
-const THE_SUITES: [&str; 6] = [
+const THE_SUITES: [&str; 7] = [
     "saludo",
     "transporte.websocket",
     "transporte.service",
     "versiones",
     "operaciones",
+    "operaciones.firma",
     "errores",
 ];
 
@@ -365,7 +366,8 @@ fn entries_whose_baseline_is_incomplete(entries: &[Entry]) -> Vec<String> {
     wrong
 }
 
-/// Una expectativa distinta de `conforme` sin causa: no se declara un incumplimiento porque sí.
+/// Una expectativa distinta de `conforme` sin causa: no se declara un incumplimiento porque sí. La
+/// exigencia no medible ya trae su motivo, y no necesita ninguna otra para esperar lo no observable.
 fn expectations_that_deviate_without_a_cause(entries: &[Entry]) -> Vec<String> {
     entries
         .iter()
@@ -374,7 +376,9 @@ fn expectations_that_deviate_without_a_cause(entries: &[Entry]) -> Vec<String> {
                 .expectations
                 .iter()
                 .filter(|expectation| {
-                    expectation.verdict != "conforme" && expectation.cause.is_none()
+                    expectation.verdict != "conforme"
+                        && expectation.cause.is_none()
+                        && !(entry.unmeasurable.is_some() && expectation.verdict == "no-observable")
                 })
                 .map(move |expectation| format!("{}: {}", entry.id, expectation.profile))
         })
@@ -568,6 +572,15 @@ fn an_expectation_that_deviates_without_a_cause_is_caught_and_named() {
         expectations_that_deviate_without_a_cause(&entries),
         vec!["a_one: autofirma"]
     );
+}
+
+#[test]
+fn an_unmeasurable_entry_expects_the_unobservable_without_any_other_cause() {
+    let entries = entries_in(
+        "[[check]]\nid = \"a_one\"\nunmeasurable = \"el cliente publicado no la ejercita\"\n\n[check.expect.autofirma]\nverdict = \"no-observable\"\n\n[check.expect.rfirma]\nverdict = \"no-observable\"\n",
+    );
+
+    assert!(expectations_that_deviate_without_a_cause(&entries).is_empty());
 }
 
 #[test]
