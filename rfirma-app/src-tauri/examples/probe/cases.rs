@@ -7,6 +7,9 @@ use std::sync::Arc;
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
 
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine as _;
+
 use crate::cli::ask;
 use crate::dossier::{CaseState, Dossier, Verdict};
 use crate::errand::{THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
@@ -84,6 +87,36 @@ const THE_VERB_VALIDATION_CASE: &str = "signandsave_without_a_verb_reports_its_r
 /// El código engañoso con el que BUG-15 documenta que se reporta la falta de verbo.
 const SAF_09_MISLEADING_ERROR: &str = "SAF_09";
 
+/// El almacén de pruebas que exige la ficha de curva elíptica: sin él, un `SAF_03` no distingue
+/// el rechazo del parámetro del rechazo de una clave que ni siquiera es elíptica.
+const THE_ELLIPTIC_CURVE_TEST_STORE: &str = "rfirma-test-ecc";
+
+/// El guion de `signandsave` con un algoritmo `SHA256withECDSA`.
+const THE_SIGN_AND_SAVE_WITH_ECDSA_SCRIPT: &str = "signandsavewithecdsa";
+
+/// El caso que mide BUG-05: si `signandsave` sigue rechazando un algoritmo de curva elíptica con
+/// un certificado ECC de verdad detrás.
+const THE_ECDSA_ALGORITHM_CASE: &str =
+    "signandsave_rejects_ecdsa_signatures_from_the_elliptic_curve_token";
+
+/// El código con el que `signandsave` rechaza un algoritmo de firma que no reconoce.
+const SAF_03_INVALID_PARAMS: &str = "SAF_03";
+
+/// El guion de `sign` en CAdES con un `tsaURL` de sintaxis inválida —lleva un espacio—, para que
+/// `TsaParams` reviente al construirse.
+const THE_BROKEN_TSA_SCRIPT: &str = "signwithbrokentsa";
+
+/// El caso que mide BUG-23: si un `tsaURL` mal formado deja la firma sin sello de tiempo y sin
+/// avisar, en vez de reportar el error de configuración.
+const THE_TIMESTAMP_DEGRADATION_CASE: &str =
+    "a_broken_tsa_url_returns_an_unstamped_signature_without_a_warning";
+
+/// El OID PKCS#9 `id-aa-signatureTimeStampToken` (1.2.840.113549.1.9.16.2.14), con su etiqueta y
+/// su longitud DER: si aparece en la firma, el sello de tiempo se estampó de verdad.
+const THE_TIMESTAMP_TOKEN_OID: [u8; 13] = [
+    0x06, 0x0B, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x10, 0x02, 0x0E,
+];
+
 /// Los nombres de los casos que el sondeo sabe ejecutar.
 pub(crate) const KNOWN_CASES: &[&str] = &[
     "saludo",
@@ -94,6 +127,8 @@ pub(crate) const KNOWN_CASES: &[&str] = &[
     THE_SERVICE_CHANNEL_REACHES_THE_SUBJECT_CASE,
     THE_SOCKET_BIND_FAILURE_CASE,
     THE_VERB_VALIDATION_CASE,
+    THE_ECDSA_ALGORITHM_CASE,
+    THE_TIMESTAMP_DEGRADATION_CASE,
 ];
 
 impl Probe {
@@ -122,7 +157,7 @@ impl Probe {
     }
 
     fn run_case_and_resolve(&self, dossier: &mut Dossier, case: &str) {
-        match self.run_case(case) {
+        match self.run_case(dossier, case) {
             CaseOutcome::Resolved {
                 verdict,
                 observation,
@@ -140,7 +175,7 @@ impl Probe {
         }
     }
 
-    fn run_case(&self, case: &str) -> CaseOutcome {
+    fn run_case(&self, dossier: &Dossier, case: &str) -> CaseOutcome {
         match case {
             "saludo" => {
                 self.run_errand(case, THE_SINGLE_SELECTION, THE_FOURTH_PROTOCOL);
@@ -156,6 +191,8 @@ impl Probe {
             THE_SERVICE_CHANNEL_REACHES_THE_SUBJECT_CASE => self.run_service_channel_case(),
             THE_SOCKET_BIND_FAILURE_CASE => self.run_socket_bind_failure_case(),
             THE_VERB_VALIDATION_CASE => self.run_verb_validation_case(),
+            THE_ECDSA_ALGORITHM_CASE => self.run_ecdsa_algorithm_case(dossier),
+            THE_TIMESTAMP_DEGRADATION_CASE => self.run_timestamp_degradation_case(),
             other => unreachable!("caso sin arnés: {other}"),
         }
     }
@@ -288,6 +325,88 @@ impl Probe {
         );
         the_verdict_for_saf_code(outcome, SAF_09_MISLEADING_ERROR)
     }
+
+    /// El caso que mide BUG-05: exige el almacén de curva elíptica para que el rechazo se juegue
+    /// sobre un certificado ECC de verdad, y no sobre un parámetro sin nada detrás.
+    fn run_ecdsa_algorithm_case(&self, dossier: &Dossier) -> CaseOutcome {
+        if !std::io::stdin().is_terminal() {
+            return CaseOutcome::StillPending;
+        }
+        if dossier.header().store != THE_ELLIPTIC_CURVE_TEST_STORE {
+            return CaseOutcome::Resolved {
+                verdict: Verdict::NotObservable,
+                observation: Some(format!(
+                    "la tanda declara el almacén «{}»; esta ficha exige «{THE_ELLIPTIC_CURVE_TEST_STORE}»",
+                    dossier.header().store
+                )),
+            };
+        }
+        println!(
+            "van a aparecer el diálogo de certificado y el de PIN: elige el del token de \
+             pruebas de curva elíptica"
+        );
+        let outcome = self.run_errand(
+            THE_ECDSA_ALGORITHM_CASE,
+            THE_SIGN_AND_SAVE_WITH_ECDSA_SCRIPT,
+            THE_FOURTH_PROTOCOL,
+        );
+        the_verdict_for_saf_code(outcome, SAF_03_INVALID_PARAMS)
+    }
+
+    /// El caso que mide BUG-23: el veredicto se juega sobre si la firma resultante lleva el
+    /// sello de tiempo, no sobre si la aplicación avisó de algo.
+    fn run_timestamp_degradation_case(&self) -> CaseOutcome {
+        if !std::io::stdin().is_terminal() {
+            return CaseOutcome::StillPending;
+        }
+        println!("va a aparecer el diálogo de certificado y el de PIN");
+        let outcome = self.run_errand(
+            THE_TIMESTAMP_DEGRADATION_CASE,
+            THE_BROKEN_TSA_SCRIPT,
+            THE_FOURTH_PROTOCOL,
+        );
+        if !outcome.launched {
+            return CaseOutcome::resolved(Verdict::NotObservable);
+        }
+        if let Some(code) = outcome.error_code {
+            return CaseOutcome::Resolved {
+                verdict: Verdict::Refuted,
+                observation: Some(code),
+            };
+        }
+        match outcome.signature {
+            None => CaseOutcome::resolved(Verdict::NotObservable),
+            Some(signature) => {
+                let stamped = the_signature_carries_a_timestamp(&signature);
+                CaseOutcome::Resolved {
+                    verdict: if stamped {
+                        Verdict::Refuted
+                    } else {
+                        Verdict::Confirmed
+                    },
+                    observation: Some(
+                        if stamped {
+                            "la firma lleva el sello de tiempo"
+                        } else {
+                            "la firma salió sin sello de tiempo y sin error"
+                        }
+                        .to_owned(),
+                    ),
+                }
+            }
+        }
+    }
+}
+
+/// Si la firma en Base64 lleva el sello de tiempo estampado de verdad: busca el OID del
+/// atributo no firmado, no basta con que la petición llevara un `tsaURL`.
+fn the_signature_carries_a_timestamp(signature: &str) -> bool {
+    let Ok(bytes) = STANDARD.decode(signature) else {
+        return false;
+    };
+    bytes
+        .windows(THE_TIMESTAMP_TOKEN_OID.len())
+        .any(|window| window == THE_TIMESTAMP_TOKEN_OID)
 }
 
 /// Los puertos que el caso del socket ocupa para que el sujeto no pueda ligarlos, cerrando cada
@@ -330,5 +449,32 @@ impl Drop for OccupiedPorts {
         for occupier in self.occupiers.drain(..) {
             let _ = occupier.join();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_signature_without_the_timestamp_oid_is_not_stamped() {
+        let signature = STANDARD.encode(b"CMS SignedData sin nada de interes");
+        assert!(!the_signature_carries_a_timestamp(&signature));
+    }
+
+    #[test]
+    fn a_signature_with_the_timestamp_oid_is_stamped() {
+        let mut der = b"prefacio arbitrario".to_vec();
+        der.extend_from_slice(&THE_TIMESTAMP_TOKEN_OID);
+        der.extend_from_slice(b"resto arbitrario");
+        let signature = STANDARD.encode(der);
+        assert!(the_signature_carries_a_timestamp(&signature));
+    }
+
+    #[test]
+    fn a_signature_that_is_not_base64_is_not_stamped() {
+        assert!(!the_signature_carries_a_timestamp(
+            "no es base64 ni de lejos: %%%"
+        ));
     }
 }

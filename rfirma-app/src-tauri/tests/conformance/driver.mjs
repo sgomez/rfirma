@@ -767,6 +767,28 @@ function theSignAndSaveScript() {
   );
 }
 
+/** Un `signAndSaveToFile()` con un algoritmo de curva elíptica: BUG-05 lo rechaza igual que a un
+ * certificado RSA, aunque el certificado sea de curva elíptica. */
+function theSignAndSaveWithAnEcdsaAlgorithmScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    theChallenge().toString("base64"),
+    "SHA256withECDSA",
+    "CAdES",
+    "mode=explicit",
+    "challenge-signed.csig",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `sign()` en CAdES con un `tsaURL` de sintaxis inválida: BUG-23 debería silenciar el fallo
+ * de `TsaParams` y devolver la firma sin sello, sin avisar. */
+function theSignWithABrokenTsaUrlScript() {
+  theSignScript("CAdES", "mode=explicit\ntsaURL=http://tsa invalida", theChallenge());
+}
+
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -858,6 +880,10 @@ if (mode === "relay") {
   theSignAndSaveScript();
 } else if (script === "signandsavewithoutaverb") {
   theSignAndSaveWithoutAVerbScript();
+} else if (script === "signandsavewithecdsa") {
+  theSignAndSaveWithAnEcdsaAlgorithmScript();
+} else if (script === "signwithbrokentsa") {
+  theSignWithABrokenTsaUrlScript();
 } else {
   AutoScript.selectCertificate(
     "",
