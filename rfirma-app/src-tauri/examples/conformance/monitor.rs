@@ -1,4 +1,4 @@
-//! Monitor de terminal en tiempo real para el sondeo de compatibilidad.
+//! Monitor de terminal en tiempo real para la suite de conformidad.
 
 use std::io::{IsTerminal, Write};
 use std::sync::atomic::{AtomicBool, Ordering};

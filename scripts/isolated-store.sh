@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# Monta el almacen de usar y tirar del sondeo para el sujeto que se le indique e
-# imprime cuatro lineas: la clase de sujeto reconocida, el envoltorio que lo
-# lanza contra ese almacen, la raiz de confianza con la que el sujeto va a
-# servir el canal (vacia cuando no depende del perfil) y el modulo PKCS#11 del
-# almacen, para que quien llama pueda declararlo como coordenada de la tanda.
+# Monta el almacen de usar y tirar de la suite de conformidad para el sujeto que
+# se le indique e imprime cuatro lineas: la clase de sujeto reconocida, el
+# envoltorio que lo lanza contra ese almacen, la raiz de confianza con la que el
+# sujeto va a servir el canal (vacia cuando no depende del perfil) y el modulo
+# PKCS#11 del almacen, para que quien llama pueda declararlo como coordenada de
+# la tanda.
 #
 # Existe porque en un equipo de desarrollo los almacenes del titular contienen
 # su certificado personal, que este proyecto no usa en ningun punto, y los dos
@@ -19,9 +20,10 @@
 #   -Duser.home. Su raiz de confianza vive fuera del perfil, en la instalacion
 #   del sistema, asi que no la imprime.
 # * rFirma resuelve sus rutas por XDG y es su propia CA: con el perfil vacio se
-#   comporta como instalacion nueva y genera una CA dentro. El sondeo lo arranca
-#   una vez en seco para que nazca y declara esa CA como raiz; servir con la del
-#   titular exigiria su clave privada, y el perfil no toca nada suyo.
+#   comporta como instalacion nueva y genera una CA dentro. La suite de
+#   conformidad lo arranca una vez en seco para que nazca y declara esa CA como
+#   raiz; servir con la del titular exigiria su clave privada, y el perfil no
+#   toca nada suyo.
 #
 # El perfil se rehace entero en cada llamada.
 

@@ -1,5 +1,5 @@
-//! La línea de órdenes del sondeo: su uso, las coordenadas de la tanda, las preguntas por
-//! teclado y el arranque que denuncia lo que falta antes de medir nada.
+//! La línea de órdenes de la suite de conformidad: su uso, las coordenadas de la tanda, las
+//! preguntas por teclado y el arranque que denuncia lo que falta antes de medir nada.
 
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
@@ -11,7 +11,7 @@ use crate::errand::the_published_client;
 use crate::{CaseCommand, Probe};
 
 pub(crate) const USAGE: &str = "\
-uso: cargo run --example probe -- --subject <binario> --trust-root <certificado> \
+uso: cargo run --example conformance -- --subject <binario> --trust-root <certificado> \
 --dossier <ruta> <orden>
 
   --subject          el binario que recibe la URL de arranque, como haría el escritorio al
