@@ -11,11 +11,11 @@ vivo, caducado de verdad— porque exigen una CA real.
 proyecto.** No se importa, no se exporta y no aparece en ningún fixture.
 
 El kit completo (155 ficheros) sigue viviendo fuera del repositorio, en
-`~/.local/share/rfirma-test-certs`. Aquí solo están los cuatro que las pruebas
+`~/.local/share/rfirma-test-certs`. Aquí solo están los cinco que las pruebas
 necesitan. Detalle del entorno en
 [`docs/research/token-pkcs11-pruebas.md`](../../docs/research/token-pkcs11-pruebas.md).
 
-## Los cuatro ficheros
+## Los cinco ficheros
 
 | Fichero | Contraseña | Papel | `notAfter` |
 | --- | --- | --- | --- |
@@ -23,10 +23,12 @@ necesitan. Detalle del entorno en
 | `active-ecc.p12` | `1234` | Camino feliz de curva elíptica. P-256, de la rama `Claves ECC` del kit. Es el único que está en el token SoftHSM `rfirma-test-ecc`. | **2029-09-04 07:58:54 GMT** |
 | `revoked-rsa.p12` | `1234` | Revocado de verdad, no caducado: la firma se construye pero la validación debe rechazarla. OCSP `revoked`, motivo `superseded`, desde 2024-10-30. | 2028-10-30 09:58:12 GMT |
 | `expired-rsa.p12` | `G5cp,fYC9gje` | Caducado: el rechazo debe ocurrir **antes** de pedir el PIN. | 2020-11-08 12:48:35 GMT |
+| `pseudonym-rsa.p12` | `1234` | Empleado público con seudónimo (`TEST-0000`). RSA 2048, para medir el veredicto de `pseudonym:`. | 2027-02-05 18:21:53 GMT |
 
-Los tres de RSA son `C=ES, CN=EIDAS CERTIFICADO PRUEBAS - 99999999R`, emitidos
-por `C=ES, O=FNMT-RCM, OU=Ceres, CN=AC FNMT Usuarios`. El de curva elíptica es
-un espécimen distinto, `99949991H`, emitido por `C=ES, O=FNMT-RCM,
+Los tres de persona física de RSA son `C=ES, CN=EIDAS CERTIFICADO PRUEBAS - 99999999R`,
+emitidos por `C=ES, O=FNMT-RCM, OU=Ceres, CN=AC FNMT Usuarios`. El de empleado público
+con seudónimo es `TEST-0000`, emitido por `C=ES, O=FNMT-RCM, OU=Ceres, CN=AC Sector Público`.
+El de curva elíptica es un espécimen distinto, `99949991H`, emitido por `C=ES, O=FNMT-RCM,
 CN=AC USUARIOS G2`.
 
 > `Caducados/password.txt` del kit original nombra un `PF_ACTIVO_EIDAS.p12` que
@@ -42,15 +44,17 @@ SHA-256 del fichero `.p12` tal cual está aquí:
 a8ff78c1a7b13bcdc12347f683dd5395b6e0ac1d9c3cad23e3668823ae2b1425  revoked-rsa.p12
 901df49ac10cceb0524c8cb50833d1407d0974f42f9d45a5b4b71c0eefa4e91f  expired-rsa.p12
 d4d2638c332b314675ce4f541ff1ca6e0ce0802463430db69033e955645e9f71  active-ecc.p12
+ed38e08e8df77160eb4c0b03fa5e78243fefdd35116af23aa6bcb56cbc2d56b1  pseudonym-rsa.p12
 ```
 
 SHA-256 del certificado de titular (DER), para contrastar contra `openssl`:
 
 ```
-activo-rsa    27:82:59:D1:09:89:98:C4:45:E1:5F:C0:11:A5:21:1C:3F:41:10:96:FB:57:FE:41:B9:48:95:7C:F9:16:A8:ED
-revocado-rsa  26:FA:9C:9C:C4:2B:06:E5:A5:A6:AB:B1:F6:69:6A:E4:16:1C:51:E6:16:DC:94:33:76:CF:EE:FD:10:4A:34:69
-caducado-rsa  71:BD:C8:89:E9:F4:68:90:99:9B:47:66:52:59:E1:0B:97:CF:65:4E:03:A9:47:4B:6A:24:AB:03:F4:55:14:2E
-activo-ecc    83:F7:96:19:F5:2A:B8:F3:67:55:DE:28:68:06:85:CF:A4:CE:FA:5C:44:DA:D2:23:97:B0:4E:70:D5:06:EC:10
+activo-rsa     27:82:59:D1:09:89:98:C4:45:E1:5F:C0:11:A5:21:1C:3F:41:10:96:FB:57:FE:41:B9:48:95:7C:F9:16:A8:ED
+revocado-rsa   26:FA:9C:9C:C4:2B:06:E5:A5:A6:AB:B1:F6:69:6A:E4:16:1C:51:E6:16:DC:94:33:76:CF:EE:FD:10:4A:34:69
+caducado-rsa   71:BD:C8:89:E9:F4:68:90:99:9B:47:66:52:59:E1:0B:97:CF:65:4E:03:A9:47:4B:6A:24:AB:03:F4:55:14:2E
+activo-ecc     83:F7:96:19:F5:2A:B8:F3:67:55:DE:28:68:06:85:CF:A4:CE:FA:5C:44:DA:D2:23:97:B0:4E:70:D5:06:EC:10
+pseudonimo-rsa A8:6C:F3:8B:A1:E9:31:60:12:80:AB:A3:91:E5:37:0D:DE:DF:44:FF:1A:8B:74:DC:98:29:06:31:B4:4D:A6:A9
 ```
 
 Los `.p12` de la FNMT usan cifrado antiguo, así que OpenSSL 3 exige `-legacy`:
@@ -84,3 +88,7 @@ está justamente para que no se pueda hacer una cosa sin la otra.
 `.github/secret_scanning.yml` excluye este directorio. Son claves privadas de
 verdad, pero de una CA de pruebas y con la contraseña publicada por su emisor:
 alertar sobre ellas es ruido que enseña a ignorar las alertas de verdad.
+
+## Criterio `dnie:` y ausencia de material en el kit FNMT
+
+El kit FNMT no contiene certificados para medir el criterio `dnie:` debido a que el DNI electrónico pertenece a la jerarquía de certificación de la **Dirección General de la Policía (DGP)** (`AC RAIZ DNIE` y sub-CAs `AC DNIE 00X`), totalmente independiente de la FNMT. Para respetar la política de materiales del kit oficial de pruebas, no se generan certificados sintéticos en el árbol del repositorio. La justificación técnica completa y las fuentes oficiales del Set de Certificados de Prueba de la DGP están documentadas en [`docs/research/filtros-sede-unmeasured.md`](../../docs/research/filtros-sede-unmeasured.md).
