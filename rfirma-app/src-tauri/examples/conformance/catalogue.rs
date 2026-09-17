@@ -17,6 +17,7 @@ pub(crate) const THE_SUITES: &[&str] = &[
     "versiones",
     "operaciones",
     "operaciones.firma",
+    "operaciones.disco",
     "errores",
 ];
 
@@ -212,6 +213,6 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn the_catalogue_of_the_repository_reads() {
         let checks = read_the_catalogue().unwrap();
-        assert_eq!(checks.len(), 65);
+        assert_eq!(checks.len(), 81);
     }
 }

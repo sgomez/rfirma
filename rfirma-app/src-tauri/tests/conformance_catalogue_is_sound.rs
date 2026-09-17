@@ -17,6 +17,7 @@ struct Entry {
     harness: Option<String>,
     needs: Vec<String>,
     question: Option<String>,
+    warning: Option<String>,
     unmeasurable: Option<String>,
     cited_cards: BTreeSet<String>,
     expectations: Vec<Expectation>,
@@ -41,13 +42,14 @@ const THE_PROFILES: [&str; 2] = ["autofirma", "rfirma"];
 
 const THE_VERDICTS: [&str; 3] = ["conforme", "no-conforme", "no-observable"];
 
-const THE_SUITES: [&str; 7] = [
+const THE_SUITES: [&str; 8] = [
     "saludo",
     "transporte.websocket",
     "transporte.service",
     "versiones",
     "operaciones",
     "operaciones.firma",
+    "operaciones.disco",
     "errores",
 ];
 
@@ -122,6 +124,7 @@ fn entry_of(value: &toml::Value) -> Entry {
             })
             .unwrap_or_default(),
         question: optional("question"),
+        warning: optional("warning"),
         unmeasurable: optional("unmeasurable"),
         cited_cards: cards_cited_in(&value.to_string()),
         expectations: expectations_of(value),
@@ -292,19 +295,21 @@ fn unmeasurable_entries_that_are_wrong(entries: &[Entry]) -> Vec<String> {
         .collect()
 }
 
-fn person_entries_without_a_question(entries: &[Entry]) -> Vec<String> {
+fn person_entries_without_a_question_or_a_warning(entries: &[Entry]) -> Vec<String> {
     entries
         .iter()
-        .filter(|entry| {
-            entry.needs.iter().any(|need| need == "persona")
-                && entry
-                    .question
-                    .as_deref()
-                    .map(str::trim)
-                    .unwrap_or_default()
-                    .is_empty()
+        .filter(|entry| entry.needs.iter().any(|need| need == "persona"))
+        .flat_map(|entry| {
+            [("pregunta", &entry.question), ("aviso", &entry.warning)]
+                .into_iter()
+                .filter(|(_, said)| {
+                    said.as_deref()
+                        .map(str::trim)
+                        .unwrap_or_default()
+                        .is_empty()
+                })
+                .map(|(what, _)| format!("{}: sin {what}", entry.id))
         })
-        .map(|entry| entry.id.clone())
         .collect()
 }
 
@@ -483,9 +488,9 @@ fn every_check_says_what_the_protocol_demands_and_where_it_is_written() {
         unmeasurable_entries_that_are_wrong(&entries).join("\n  ")
     );
     assert!(
-        person_entries_without_a_question(&entries).is_empty(),
-        "hay entradas que necesitan a una persona y no traen su pregunta:\n  {}",
-        person_entries_without_a_question(&entries).join("\n  ")
+        person_entries_without_a_question_or_a_warning(&entries).is_empty(),
+        "hay entradas que necesitan a una persona y no traen su pregunta o su aviso:\n  {}",
+        person_entries_without_a_question_or_a_warning(&entries).join("\n  ")
     );
 }
 
@@ -686,11 +691,19 @@ fn an_unmeasurable_check_that_is_driven_or_unmotivated_is_caught_and_named() {
 }
 
 #[test]
-fn a_check_that_needs_a_person_without_a_question_is_caught_and_named() {
+fn a_check_that_needs_a_person_without_a_question_or_a_warning_is_caught_and_named() {
     let entries = entries_in(
         "[[check]]\nid = \"a_one\"\nneeds = [\"persona\"]\ndrive = { mode = \"v4\", script = \"save\" }\n",
     );
-    assert_eq!(person_entries_without_a_question(&entries), vec!["a_one"]);
+    assert_eq!(
+        person_entries_without_a_question_or_a_warning(&entries),
+        vec!["a_one: sin pregunta", "a_one: sin aviso"]
+    );
+
+    let answered = entries_in(
+        "[[check]]\nid = \"a_two\"\nneeds = [\"persona\"]\nquestion = \"¿se pidió destino? [s/n]\"\nwarning = \"Va a aparecer la ventana de destino.\"\ndrive = { mode = \"v4\", script = \"save\" }\n",
+    );
+    assert!(person_entries_without_a_question_or_a_warning(&answered).is_empty());
 }
 
 #[test]

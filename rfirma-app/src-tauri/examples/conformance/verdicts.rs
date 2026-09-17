@@ -13,7 +13,6 @@ use crate::dossier::{CheckRecord, CheckState, Dossier, Verdict};
 use crate::errand::{ErrandOutcome, THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
 
 /// La excepción con la que el cliente publicado reporta la cancelación de la operación.
-#[cfg(test)]
 pub(crate) const THE_CANCELLED_OPERATION_EXCEPTION: &str =
     "es.gob.afirma.core.AOCancelledOperationException";
 
@@ -502,6 +501,195 @@ pub(crate) fn the_verdict_for_a_visible_signature_area(
     )
 }
 
+/// El veredicto del guardado de una firma: quien está delante dice si se pidió destino, y el cable
+/// dice si la firma volvió a la sede después de guardarla.
+pub(crate) fn the_verdict_for_a_saved_signature(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    match the_answered_dialogue(outcome, answer, "no se pidió dónde guardar la firma") {
+        Answered::Settled(outcome) => outcome,
+        Answered::Asked => {
+            if outcome.signature.is_some() {
+                CheckOutcome::of(
+                    Verdict::Compliant,
+                    "se pidió destino y la firma volvió a la sede",
+                )
+            } else {
+                CheckOutcome::of(
+                    Verdict::Noncompliant,
+                    "se pidió destino, pero la firma no volvió a la sede",
+                )
+            }
+        }
+    }
+}
+
+/// El veredicto del nombre de guardado: quien está delante dice si se le ofreció el que la petición
+/// propuso.
+pub(crate) fn the_verdict_for_a_proposed_save_name(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    the_verdict_for_a_dialogue(
+        outcome,
+        answer,
+        "se ofreció para guardar el nombre que la petición propuso",
+        "la firma se guardó con un nombre que la petición no propuso",
+    )
+}
+
+/// El veredicto de la carga interactiva del documento: la petición llegó sin datos y quien está
+/// delante dice si se le pidió el documento a firmar.
+pub(crate) fn the_verdict_for_a_requested_input_document(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    the_verdict_for_a_dialogue(
+        outcome,
+        answer,
+        "se pidió el documento a firmar antes de firmarlo",
+        "la petición sin datos se resolvió sin pedir el documento a firmar",
+    )
+}
+
+/// El veredicto de la confirmación de sobrescritura: quien está delante dice si se le preguntó
+/// antes de escribir sobre un fichero que ya estaba.
+pub(crate) fn the_verdict_for_an_overwrite_confirmation(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    the_verdict_for_a_dialogue(
+        outcome,
+        answer,
+        "se pidió confirmación antes de escribir sobre el fichero que ya estaba",
+        "se escribió sobre el fichero que ya estaba sin pedir confirmación",
+    )
+}
+
+/// El veredicto de una cancelación: quien está delante dice si canceló, y el cable dice si la sede
+/// recibió la cancelación como tal.
+pub(crate) fn the_verdict_for_a_cancelled_dialogue(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    if !outcome.launched {
+        return CheckOutcome::of(
+            Verdict::NotObservable,
+            "el sujeto no llegó a arrancar en esta tanda",
+        );
+    }
+    if answer.is_empty() {
+        return CheckOutcome::StillPending;
+    }
+    if !answered_yes(answer) {
+        return CheckOutcome::of(Verdict::NotObservable, "no se llegó a cancelar el diálogo");
+    }
+    match outcome.error_type.as_deref() {
+        Some(THE_CANCELLED_OPERATION_EXCEPTION) => CheckOutcome::of(
+            Verdict::Compliant,
+            "la sede recibió la cancelación como cancelación",
+        ),
+        Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) => CheckOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type.clone(),
+        },
+        Some(other) => CheckOutcome::of(
+            Verdict::Noncompliant,
+            format!("se canceló y la sede recibió {other}"),
+        ),
+        None => CheckOutcome::of(
+            Verdict::Noncompliant,
+            "se canceló y la sede no recibió ninguna cancelación",
+        ),
+    }
+}
+
+/// El veredicto de una carga interactiva: quien está delante dice si se le pidieron los ficheros, y
+/// el cable dice si la respuesta trajo cada nombre junto a su contenido.
+pub(crate) fn the_verdict_for_an_interactive_load(
+    check: &Check,
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    match the_answered_dialogue(outcome, answer, "no se pidió elegir qué fichero cargar") {
+        Answered::Settled(outcome) => outcome,
+        Answered::Asked => the_verdict_of(check, outcome),
+    }
+}
+
+/// El veredicto de la autoselección: con un único candidato, quien está delante dice que no se le
+/// pidió elegir y el cable trae el certificado igualmente.
+pub(crate) fn the_verdict_for_an_automatic_selection(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    if !outcome.launched {
+        return CheckOutcome::of(
+            Verdict::NotObservable,
+            "el sujeto no llegó a arrancar en esta tanda",
+        );
+    }
+    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
+        return CheckOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type.clone(),
+        };
+    }
+    if answer.is_empty() {
+        return CheckOutcome::StillPending;
+    }
+    if answered_yes(answer) {
+        return CheckOutcome::of(
+            Verdict::Noncompliant,
+            "se pidió elegir certificado habiendo un único candidato",
+        );
+    }
+    if outcome.data.is_some() {
+        return CheckOutcome::of(
+            Verdict::Compliant,
+            "el único candidato se resolvió sin pedir que se eligiera",
+        );
+    }
+    CheckOutcome::Resolved {
+        verdict: Verdict::NotObservable,
+        observation: outcome.error_type.clone(),
+    }
+}
+
+/// Lo que queda de un diálogo antes de mirar el cable: o ya está resuelto, o quien está delante
+/// contestó que sí y el cable tiene la última palabra.
+enum Answered {
+    Settled(CheckOutcome),
+    Asked,
+}
+
+fn answered_yes(answer: &str) -> bool {
+    answer.to_lowercase().starts_with('s')
+}
+
+fn the_answered_dialogue(outcome: &ErrandOutcome, answer: &str, unasked: &str) -> Answered {
+    if !outcome.launched {
+        return Answered::Settled(CheckOutcome::of(
+            Verdict::NotObservable,
+            "el sujeto no llegó a arrancar en esta tanda",
+        ));
+    }
+    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
+        return Answered::Settled(CheckOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type.clone(),
+        });
+    }
+    if answer.is_empty() {
+        return Answered::Settled(CheckOutcome::StillPending);
+    }
+    if !answered_yes(answer) {
+        return Answered::Settled(CheckOutcome::of(Verdict::Noncompliant, unasked.to_owned()));
+    }
+    Answered::Asked
+}
+
 /// El veredicto de una exigencia que se juega a un diálogo: sin respuesta de quien está delante no
 /// hay nada que afirmar, y sin trámite completado tampoco hay incumplimiento que declarar.
 fn the_verdict_for_a_dialogue(
@@ -766,6 +954,166 @@ mod tests {
         assert_eq!(
             the_verdict(the_verdict_for_a_private_key_check(&returned, "n")),
             Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn a_signature_saved_after_asking_for_a_destination_is_compliant() {
+        let signed = ErrandOutcome {
+            signature: Some("MIIB...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_saved_signature(&signed, "s")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn a_signature_saved_that_never_came_back_to_the_site_is_noncompliant() {
+        assert_eq!(
+            the_verdict(the_verdict_for_a_saved_signature(&an_outcome(), "s")),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn a_saved_signature_nobody_answered_stays_pending() {
+        assert!(matches!(
+            the_verdict_for_a_saved_signature(&an_outcome(), ""),
+            CheckOutcome::StillPending
+        ));
+    }
+
+    #[test]
+    fn a_cancellation_the_site_received_as_such_is_compliant() {
+        let cancelled = ErrandOutcome {
+            error_type: Some(THE_CANCELLED_OPERATION_EXCEPTION.to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_cancelled_dialogue(&cancelled, "s")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn a_cancellation_the_site_never_received_is_noncompliant() {
+        assert_eq!(
+            the_verdict(the_verdict_for_a_cancelled_dialogue(&an_outcome(), "s")),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn a_dialogue_nobody_cancelled_is_not_observable() {
+        assert_eq!(
+            the_verdict(the_verdict_for_a_cancelled_dialogue(&an_outcome(), "n")),
+            Verdict::NotObservable
+        );
+    }
+
+    #[test]
+    fn the_only_candidate_resolved_without_asking_is_compliant() {
+        let returned = ErrandOutcome {
+            data: Some("MIID...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_an_automatic_selection(&returned, "n")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn asking_to_choose_with_a_single_candidate_is_noncompliant() {
+        let returned = ErrandOutcome {
+            data: Some("MIID...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_an_automatic_selection(&returned, "s")),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn an_interactive_load_that_was_never_asked_for_is_noncompliant() {
+        let loaded = ErrandOutcome {
+            data: Some("Y29udHJhdG8=".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_an_interactive_load(
+                &a_check_expecting(None),
+                &loaded,
+                "n"
+            )),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn an_interactive_load_takes_the_condition_the_driver_measured() {
+        let loaded = ErrandOutcome {
+            protocol_conditions: vec![crate::errand::ProtocolConditionResult {
+                id: "an_id".to_owned(),
+                verdict: Verdict::Noncompliant,
+                observation: Some("la respuesta no trajo el nombre junto al contenido".to_owned()),
+            }],
+            data: Some("Y29udHJhdG8=".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_an_interactive_load(
+                &a_check_expecting(None),
+                &loaded,
+                "s"
+            )),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn an_interactive_load_nobody_answered_stays_pending() {
+        assert!(matches!(
+            the_verdict_for_an_interactive_load(&a_check_expecting(None), &an_outcome(), ""),
+            CheckOutcome::StillPending
+        ));
+    }
+
+    #[test]
+    fn a_save_name_that_was_the_proposed_one_is_compliant() {
+        let signed = ErrandOutcome {
+            signature: Some("MIIB...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_proposed_save_name(&signed, "s")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn a_document_never_asked_for_before_signing_is_noncompliant() {
+        let signed = ErrandOutcome {
+            signature: Some("MIIB...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_requested_input_document(&signed, "n")),
+            Verdict::Noncompliant
+        );
+    }
+
+    #[test]
+    fn an_overwrite_that_was_confirmed_first_is_compliant() {
+        assert_eq!(
+            the_verdict(the_verdict_for_an_overwrite_confirmation(
+                &an_outcome(),
+                "s"
+            )),
+            Verdict::Compliant
         );
     }
 
