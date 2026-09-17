@@ -6,6 +6,7 @@ use crate::dossier::{
 use crate::errand::{ErrandOutcome, THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
 
 /// La excepción con la que el cliente publicado reporta la cancelación de la operación.
+#[cfg(test)]
 pub(crate) const THE_CANCELLED_OPERATION_EXCEPTION: &str =
     "es.gob.afirma.core.AOCancelledOperationException";
 
@@ -308,11 +309,8 @@ pub(crate) fn the_verdict_for_private_key_check(
     if !outcome.launched {
         return CaseOutcome::resolved(Verdict::NotObservable);
     }
-    match outcome.error_type.as_deref() {
-        Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) => {
-            return CaseOutcome::resolved(Verdict::NotObservable);
-        }
-        _ => {}
+    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
+        return CaseOutcome::resolved(Verdict::NotObservable);
     }
     if asked_pin {
         CaseOutcome::Resolved {
