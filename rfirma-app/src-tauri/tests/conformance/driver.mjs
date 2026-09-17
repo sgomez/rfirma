@@ -69,7 +69,8 @@ function forcedToIpv6Loopback(source) {
 
 /**
  * El transporte sin WebSocket sortea sus 3 puertos candidatos al azar; para medir BUG-10 hace
- * falta que el sondeo pueda ocuparlos de antemano, así que se fuerzan a una lista fija.
+ * falta que la suite de conformidad pueda ocuparlos de antemano, así que se fuerzan a una lista
+ * fija.
  */
 function forcedToFixedServicePorts(source, ports) {
   return replacingOrFailing(
