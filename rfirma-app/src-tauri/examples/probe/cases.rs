@@ -43,6 +43,15 @@ const THE_IPV6_LOOPBACK_CASE: &str = "ipv6_loopback_is_rejected_on_the_v4_channe
 /// `127.0.0.1`.
 const SAF_47_EXTERNAL_REQUEST: &str = "SAF_47";
 
+/// El modo del conductor que abre el carril `service`: sin `WebSocket`, hablando por el socket
+/// TCP local al que ya ningún navegador llega, pero que el original sigue sirviendo.
+const THE_SERVICE_MODE: &str = "service";
+
+/// El caso feliz del carril `service`: sin él, ninguna de sus fichas es de fiar, porque el
+/// cliente publicado se apoya en `XMLHttpRequest`/`WebSocket`, que Node no trae de por sí.
+const THE_SERVICE_CHANNEL_REACHES_THE_SUBJECT_CASE: &str =
+    "the_service_channel_reaches_the_subject";
+
 /// El modo del conductor que fuerza el transporte `service` a hablar por una lista fija de
 /// puertos, la misma que el caso ocupa de antemano.
 const THE_SOCKET_BIND_FAILURE_MODE: &str = "service-bind-failure";
@@ -82,6 +91,7 @@ pub(crate) const KNOWN_CASES: &[&str] = &[
     THE_PROTOCOL_FRESHNESS_CASE,
     THE_SAVE_DESTINATION_CASE,
     THE_IPV6_LOOPBACK_CASE,
+    THE_SERVICE_CHANNEL_REACHES_THE_SUBJECT_CASE,
     THE_SOCKET_BIND_FAILURE_CASE,
     THE_VERB_VALIDATION_CASE,
 ];
@@ -143,6 +153,7 @@ impl Probe {
             THE_PROTOCOL_FRESHNESS_CASE => self.run_protocol_freshness_case(),
             THE_SAVE_DESTINATION_CASE => self.run_save_destination_case(),
             THE_IPV6_LOOPBACK_CASE => self.run_ipv6_loopback_case(),
+            THE_SERVICE_CHANNEL_REACHES_THE_SUBJECT_CASE => self.run_service_channel_case(),
             THE_SOCKET_BIND_FAILURE_CASE => self.run_socket_bind_failure_case(),
             THE_VERB_VALIDATION_CASE => self.run_verb_validation_case(),
             other => unreachable!("caso sin arnés: {other}"),
@@ -222,6 +233,25 @@ impl Probe {
             THE_IPV6_LOOPBACK_MODE,
         );
         the_verdict_for_saf_code(outcome, SAF_47_EXTERNAL_REQUEST)
+    }
+
+    /// El caso feliz que abre el carril `service`: si el sujeto no llega a arrancar, el carril
+    /// no existe todavía y ninguna de sus fichas es de fiar, así que el caso sale no observable
+    /// en vez de confirmarse a ciegas.
+    fn run_service_channel_case(&self) -> CaseOutcome {
+        let outcome = self.run_errand(
+            THE_SERVICE_CHANNEL_REACHES_THE_SUBJECT_CASE,
+            THE_SINGLE_SELECTION,
+            THE_SERVICE_MODE,
+        );
+        if outcome.launched {
+            CaseOutcome::confirmed()
+        } else {
+            CaseOutcome::Resolved {
+                verdict: Verdict::NotObservable,
+                observation: outcome.error_code.or(outcome.error_type),
+            }
+        }
     }
 
     /// Ocupa de antemano los puertos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, para que
