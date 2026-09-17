@@ -6,6 +6,7 @@ mod dossier;
 mod transcript;
 
 use std::io::{BufRead, BufReader, IsTerminal, Write};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
@@ -66,12 +67,64 @@ const THE_SAVE_DESTINATION_CASE: &str = "save_over_websocket_asks_for_a_destinat
 /// La ficha del anexo A1 que `THE_SAVE_DESTINATION_CASE` resuelve.
 const BUG_18_HEADING: &str = "### BUG-18: Incoherencia de respuesta en `save` por WebSocket (`\"OK\"` frente a `\"SAVE_OK\"`) provoca procesamiento erróneo como firma en `autoscript.js`";
 
+/// El modo del conductor que hace hablar al cliente publicado con el bucle local IPv6.
+const THE_IPV6_LOOPBACK_MODE: &str = "v4-ipv6";
+
+/// El caso que mide BUG-11: si el canal de la versión 4 sigue rechazando el bucle local IPv6.
+const THE_IPV6_LOOPBACK_CASE: &str = "ipv6_loopback_is_rejected_on_the_v4_channel";
+
+/// La ficha del anexo A1 que `THE_IPV6_LOOPBACK_CASE` resuelve.
+const BUG_11_HEADING: &str =
+    "### BUG-11: Rechazo del bucle local IPv6 (`::1`) en el WebSocket versión 4";
+
+/// El código con el que el canal de la versión 4 rechaza una procedencia que no es exactamente
+/// `127.0.0.1`.
+const SAF_47_EXTERNAL_REQUEST: &str = "SAF_47";
+
+/// El modo del conductor que fuerza el transporte `service` a hablar por una lista fija de
+/// puertos, la misma que el caso ocupa de antemano.
+const THE_SOCKET_BIND_FAILURE_MODE: &str = "service-bind-failure";
+
+/// El caso que mide BUG-10: si un fallo al ligar el socket sigue siendo indistinguible, para el
+/// cliente publicado, de que la aplicación no está instalada.
+const THE_SOCKET_BIND_FAILURE_CASE: &str =
+    "an_occupied_socket_makes_the_client_report_the_app_as_missing";
+
+/// La ficha del anexo A1 que `THE_SOCKET_BIND_FAILURE_CASE` resuelve.
+const BUG_10_HEADING: &str = "### BUG-10: Silenciamiento de excepciones en `ServiceInvocationManager.startService` y retorno erróneo de `OK` tras fallo de inicialización del socket";
+
+/// El error con el que el cliente publicado se rinde tras agotar los reintentos de conexión: el
+/// mismo que arroja cuando la aplicación no está instalada.
+const APPLICATION_NOT_FOUND_EXCEPTION: &str =
+    "es.gob.afirma.standalone.ApplicationNotFoundException";
+
+/// Los puertos fijos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, y que el caso ocupa antes de
+/// invocar al sujeto para que no le quede ninguno libre.
+const THE_SOCKET_BIND_FAILURE_PORTS: [u16; 3] = [63131, 63132, 63133];
+
+/// El código con el que `signandsave` debería rechazar la falta del verbo (`cop`), si validara
+/// su presencia como hace `sign`.
+const THE_SIGN_AND_SAVE_SCRIPT: &str = "signandsavewithoutaverb";
+
+/// El caso que mide BUG-15: qué código de error llega de verdad al cliente publicado cuando
+/// `signandsave` no recibe verbo.
+const THE_VERB_VALIDATION_CASE: &str = "signandsave_without_a_verb_reports_its_real_error_code";
+
+/// La ficha del anexo A1 que `THE_VERB_VALIDATION_CASE` resuelve.
+const BUG_15_HEADING: &str = "### BUG-15: Ausencia de validación de `cop` en `signandsave` provoca `NullPointerException` y reporte engañoso con `SAF_09`";
+
+/// El código engañoso con el que BUG-15 documenta que se reporta la falta de verbo.
+const SAF_09_MISLEADING_ERROR: &str = "SAF_09";
+
 /// Los nombres de los casos que el sondeo sabe ejecutar.
 const KNOWN_CASES: &[&str] = &[
     "saludo",
     "tramite",
     THE_PROTOCOL_FRESHNESS_CASE,
     THE_SAVE_DESTINATION_CASE,
+    THE_IPV6_LOOPBACK_CASE,
+    THE_SOCKET_BIND_FAILURE_CASE,
+    THE_VERB_VALIDATION_CASE,
 ];
 
 struct Probe {
@@ -341,6 +394,9 @@ impl Probe {
             }
             THE_PROTOCOL_FRESHNESS_CASE => self.run_protocol_freshness_case(),
             THE_SAVE_DESTINATION_CASE => self.run_save_destination_case(),
+            THE_IPV6_LOOPBACK_CASE => self.run_ipv6_loopback_case(),
+            THE_SOCKET_BIND_FAILURE_CASE => self.run_socket_bind_failure_case(),
+            THE_VERB_VALIDATION_CASE => self.run_verb_validation_case(),
             other => unreachable!("caso sin arnés: {other}"),
         }
     }
@@ -401,10 +457,88 @@ impl Probe {
         }
     }
 
+    /// El código SAF con el que el canal de la versión 4 responde a una conexión por el bucle
+    /// local IPv6: si es `SAF_47`, BUG-11 sigue vigente; si el trámite tira para adelante, está
+    /// corregido.
+    fn run_ipv6_loopback_case(&self) -> CaseOutcome {
+        let outcome = self.run_errand(
+            THE_IPV6_LOOPBACK_CASE,
+            THE_SINGLE_SELECTION,
+            THE_IPV6_LOOPBACK_MODE,
+        );
+        if !outcome.launched {
+            return CaseOutcome::resolved(Verdict::NotObservable);
+        }
+        let verdict = if outcome.error_type.as_deref() == Some(SAF_47_EXTERNAL_REQUEST) {
+            Verdict::Confirmed
+        } else {
+            Verdict::Refuted
+        };
+        CaseOutcome::Resolved {
+            verdict,
+            observation: outcome.error_type,
+        }
+    }
+
+    /// Ocupa de antemano los puertos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, para que
+    /// `tryPorts` no encuentre ninguno libre, y mide si el cliente publicado acaba reportando la
+    /// aplicación como no instalada en vez de un fallo de arranque.
+    fn run_socket_bind_failure_case(&self) -> CaseOutcome {
+        let _occupied_ports: Vec<TcpListener> = THE_SOCKET_BIND_FAILURE_PORTS
+            .iter()
+            .map(|port| {
+                TcpListener::bind(("0.0.0.0", *port))
+                    .unwrap_or_else(|error| panic!("no pude ocupar el puerto {port}: {error}"))
+            })
+            .collect();
+        let outcome = self.run_errand(
+            THE_SOCKET_BIND_FAILURE_CASE,
+            THE_SINGLE_SELECTION,
+            THE_SOCKET_BIND_FAILURE_MODE,
+        );
+        if !outcome.launched {
+            return CaseOutcome::resolved(Verdict::NotObservable);
+        }
+        let verdict = if outcome.error_type.as_deref() == Some(APPLICATION_NOT_FOUND_EXCEPTION) {
+            Verdict::Confirmed
+        } else {
+            Verdict::Refuted
+        };
+        CaseOutcome::Resolved {
+            verdict,
+            observation: outcome.error_type,
+        }
+    }
+
+    /// El código con el que `signandsave` responde de verdad cuando no recibe verbo: si es el
+    /// `SAF_09` engañoso que documenta BUG-15, sigue vigente.
+    fn run_verb_validation_case(&self) -> CaseOutcome {
+        let outcome = self.run_errand(
+            THE_VERB_VALIDATION_CASE,
+            THE_SIGN_AND_SAVE_SCRIPT,
+            THE_FOURTH_PROTOCOL,
+        );
+        if !outcome.launched {
+            return CaseOutcome::resolved(Verdict::NotObservable);
+        }
+        let verdict = if outcome.error_type.as_deref() == Some(SAF_09_MISLEADING_ERROR) {
+            Verdict::Confirmed
+        } else {
+            Verdict::Refuted
+        };
+        CaseOutcome::Resolved {
+            verdict,
+            observation: outcome.error_type,
+        }
+    }
+
     fn record_verdict_in_annex_if_any(&self, case: &str, verdict: Verdict) {
         let heading = match case {
             THE_PROTOCOL_FRESHNESS_CASE => BUG_25_HEADING,
             THE_SAVE_DESTINATION_CASE => BUG_18_HEADING,
+            THE_IPV6_LOOPBACK_CASE => BUG_11_HEADING,
+            THE_SOCKET_BIND_FAILURE_CASE => BUG_10_HEADING,
+            THE_VERB_VALIDATION_CASE => BUG_15_HEADING,
             _ => return,
         };
         let line = format!(

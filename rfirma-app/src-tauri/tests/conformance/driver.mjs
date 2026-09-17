@@ -17,6 +17,11 @@ const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
 const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
 const script = process.env.RFIRMA_BENCH_SCRIPT ?? "selectcert";
 const THE_PORT_OF_THE_THIRD_PROTOCOL = Number(process.env.RFIRMA_BENCH_PORT ?? "63117");
+const THE_SERVICE_BIND_FAILURE_PORTS = (
+  process.env.RFIRMA_BENCH_SERVICE_PORTS ?? "63131,63132,63133"
+)
+  .split(",")
+  .map(Number);
 const here = dirname(fileURLToPath(import.meta.url));
 
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
@@ -51,6 +56,26 @@ function forcedToProtocolVersion(source, version) {
     `var ports = [${THE_PORT_OF_THE_THIRD_PROTOCOL}];`,
   );
   return source;
+}
+
+/**
+ * El `autoscript.js` publicado siempre habla con `127.0.0.1`: para medir BUG-11 hay que forzarlo
+ * a hablar con el bucle local IPv6 en su lugar, sobre el mismo canal `v=4`.
+ */
+function forcedToIpv6Loopback(source) {
+  return replacingOrFailing(source, 'var SERVER_HOST = "127.0.0.1";', 'var SERVER_HOST = "[::1]";');
+}
+
+/**
+ * El transporte sin WebSocket sortea sus 3 puertos candidatos al azar; para medir BUG-10 hace
+ * falta que el sondeo pueda ocuparlos de antemano, así que se fuerzan a una lista fija.
+ */
+function forcedToFixedServicePorts(source, ports) {
+  return replacingOrFailing(
+    source,
+    "// Calculamos los puertos\n\t\t\t\t\tvar ports = AfirmaUtils.getRandomPorts(minPort, maxPort);",
+    `// Calculamos los puertos\n\t\t\t\t\tvar ports = [${ports.join(", ")}];`,
+  );
 }
 
 /**
@@ -204,15 +229,30 @@ if (mode === "relay") {
  * en vez de `afirma://websocket?…`. Node trae `WebSocket` como global desde la 22, así que hay
  * que quitarlo a propósito para medir este modo.
  */
-if (mode === "service") {
+if (mode === "service" || mode === "service-bind-failure") {
   delete globalThis.WebSocket;
+}
+
+/**
+ * El certificado que sirve el canal solo trae `IP:127.0.0.1` como nombre alternativo: al
+ * bucle local IPv6 no le valida el nombre nunca, y eso taparía la comprobación de BUG-11 con
+ * un fallo de TLS en vez de con la respuesta —o el silencio— del sujeto.
+ */
+if (mode === "v4-ipv6") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 
 const forcedProtocolVersion = mode !== "v4" ? /^v(\d+)$/.exec(mode) : null;
 const rawSource = readFileSync(autoscriptPath, "utf8");
-const forcedSource = forcedProtocolVersion
+let forcedSource = forcedProtocolVersion
   ? forcedToProtocolVersion(rawSource, Number(forcedProtocolVersion[1]))
   : rawSource;
+if (mode === "v4-ipv6") {
+  forcedSource = forcedToIpv6Loopback(forcedSource);
+}
+if (mode === "service-bind-failure") {
+  forcedSource = forcedToFixedServicePorts(forcedSource, THE_SERVICE_BIND_FAILURE_PORTS);
+}
 const source = script === "signgzip" ? withTheDataDeclaredGzipped(forcedSource) : forcedSource;
 runInThisContext(source, { filename: autoscriptPath });
 
@@ -610,6 +650,20 @@ function theCosignScript(format, extraParams, content) {
   );
 }
 
+/** Un `signAndSaveToFile()` sin identificador de operación: el verbo (`cop`) no viaja. */
+function theSignAndSaveWithoutAVerbScript() {
+  AutoScript.signAndSaveToFile(
+    null,
+    theChallenge().toString("base64"),
+    "SHA256withRSA",
+    "CAdES",
+    "",
+    "challenge.csig",
+    (data) => settle({ event: "success", data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un `saveDataToFile()` sobre el reto de referencia: dispara la ventana nativa de destino. */
 function theSaveScript() {
   AutoScript.saveDataToFile(
@@ -757,6 +811,8 @@ if (mode === "relay") {
   theMultiLoadScript();
 } else if (script === "signandsave") {
   theSignAndSaveScript();
+} else if (script === "signandsavewithoutaverb") {
+  theSignAndSaveWithoutAVerbScript();
 } else {
   AutoScript.selectCertificate(
     "",
