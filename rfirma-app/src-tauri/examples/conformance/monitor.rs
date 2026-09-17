@@ -6,8 +6,9 @@ use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::{Duration, Instant};
 
+use crate::catalogue::Check;
 use crate::dossier::Header;
-use crate::verdicts::format_badge;
+use crate::verdicts::{chapter_tag, format_badge};
 
 pub(crate) struct ProgressMonitor {
     #[allow(dead_code)]
@@ -32,6 +33,17 @@ pub(crate) fn format_header(subject: &str, header: &Header) -> String {
         "Sondeo de compatibilidad\n  Sujeto:   {subject} (v{})\n  Sistema:  {} {}\n  Almacén:  {} ({})\n",
         header.subject_version, header.os, header.os_version, header.store, header.transport
     )
+}
+
+/// Lo que se lee antes de invocar al sujeto: qué comprobación es, de qué conjunto y de qué
+/// capítulo, y su enunciado resumido — para saber qué se mide sin abrir el catálogo.
+pub(crate) fn format_check_announcement(
+    chapter: &str,
+    suite: &str,
+    id: &str,
+    statement: &str,
+) -> String {
+    format!("\n{} {suite} · {id}\n  {statement}", chapter_tag(chapter))
 }
 
 pub(crate) fn render_dialog_box(prompt: &str, use_color: bool) -> String {
@@ -95,6 +107,14 @@ impl ProgressMonitor {
 
     pub(crate) fn display_header(&self, subject: &str, header: &Header) {
         println!("{}", format_header(subject, header));
+        let _ = std::io::stdout().flush();
+    }
+
+    pub(crate) fn announce_check(&self, check: &Check) {
+        println!(
+            "{}",
+            format_check_announcement(&check.chapter, &check.suite, &check.id, &check.statement)
+        );
         let _ = std::io::stdout().flush();
     }
 
@@ -246,6 +266,16 @@ mod tests {
         assert!(rendered.contains("\x1b[1;36m"));
         assert!(rendered.contains("\x1b[0m"));
         assert!(rendered.contains(prompt));
+    }
+
+    #[test]
+    fn format_check_announcement_names_id_suite_chapter_and_statement() {
+        let announcement =
+            format_check_announcement("15", "errores", "an_identifier", "Un enunciado resumido.");
+        assert!(announcement.contains("[Cap. 15]"));
+        assert!(announcement.contains("errores"));
+        assert!(announcement.contains("an_identifier"));
+        assert!(announcement.contains("Un enunciado resumido."));
     }
 
     #[test]
