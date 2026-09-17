@@ -28,6 +28,9 @@ pub enum CaseState {
 pub struct CaseRecord {
     pub state: CaseState,
     pub date: Option<String>,
+    /// Lo que la persona dijo haber visto, en un caso interactivo. Ausente en un caso automático.
+    #[serde(default)]
+    pub observation: Option<String>,
 }
 
 impl CaseRecord {
@@ -35,6 +38,7 @@ impl CaseRecord {
         Self {
             state: CaseState::Pending,
             date: None,
+            observation: None,
         }
     }
 }
@@ -144,13 +148,20 @@ impl Dossier {
         self.contents.cases.get(case).map(|record| record.state)
     }
 
-    /// Marca `case` con `verdict` hoy y lo deja escrito antes de devolver el control.
-    pub fn resolve(&mut self, case: &str, verdict: Verdict) -> Result<(), String> {
+    /// Marca `case` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes
+    /// de devolver el control.
+    pub fn resolve(
+        &mut self,
+        case: &str,
+        verdict: Verdict,
+        observation: Option<String>,
+    ) -> Result<(), String> {
         self.contents.cases.insert(
             case.to_owned(),
             CaseRecord {
                 state: CaseState::Resolved(verdict),
                 date: Some(today()),
+                observation,
             },
         );
         self.save()
@@ -213,7 +224,7 @@ mod tests {
 
         assert_eq!(dossier.state_of("saludo"), Some(CaseState::Pending));
 
-        dossier.resolve("saludo", Verdict::Refuted).unwrap();
+        dossier.resolve("saludo", Verdict::Refuted, None).unwrap();
 
         assert_eq!(
             dossier.state_of("saludo"),
@@ -233,7 +244,7 @@ mod tests {
         };
         let mut dossier =
             Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
-        dossier.resolve("saludo", Verdict::Confirmed).unwrap();
+        dossier.resolve("saludo", Verdict::Confirmed, None).unwrap();
 
         let reopened = Dossier::open(&path, "autofirma", &["saludo"], None).unwrap();
 
@@ -264,5 +275,37 @@ mod tests {
         let names: Vec<&str> = dossier.cases().map(|(name, _)| name).collect();
         assert!(names.contains(&"tramite"));
         assert_eq!(dossier.state_of("tramite"), Some(CaseState::Pending));
+    }
+
+    #[test]
+    fn an_observation_survives_a_reopen_alongside_the_verdict() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let mut dossier =
+            Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
+        dossier
+            .resolve(
+                "saludo",
+                Verdict::Confirmed,
+                Some("se pidió elegir certificado".to_owned()),
+            )
+            .unwrap();
+
+        let reopened = Dossier::open(&path, "autofirma", &["saludo"], None).unwrap();
+
+        let (_, record) = reopened
+            .cases()
+            .find(|(name, _)| *name == "saludo")
+            .unwrap();
+        assert_eq!(
+            record.observation.as_deref(),
+            Some("se pidió elegir certificado")
+        );
     }
 }

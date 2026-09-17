@@ -610,6 +610,19 @@ function theCosignScript(format, extraParams, content) {
   );
 }
 
+/** Un `saveDataToFile()` sobre el reto de referencia: dispara la ventana nativa de destino. */
+function theSaveScript() {
+  AutoScript.saveDataToFile(
+    theChallenge().toString("base64"),
+    "Guarda el reto del banco de referencia",
+    "challenge.bin",
+    "bin",
+    "Datos binarios",
+    (data) => settle({ event: "success", data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -691,6 +704,8 @@ if (mode === "relay") {
   theSignScript("FacturaE", "", theInvoice());
 } else if (script === "cosignfacturae") {
   theCosignScript("FacturaE", "", theInvoice());
+} else if (script === "save") {
+  theSaveScript();
 } else {
   AutoScript.selectCertificate(
     "",
