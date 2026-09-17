@@ -8,6 +8,7 @@ mod cli;
 mod comparison;
 mod dossier;
 mod errand;
+mod livelog;
 mod monitor;
 mod transcript;
 mod verdicts;
@@ -57,15 +58,6 @@ fn main() {
 }
 
 impl Probe {
-    pub(crate) fn subject_log_path(&self) -> PathBuf {
-        if let Some(parent) = self.dossier.parent() {
-            if !parent.as_os_str().is_empty() {
-                return parent.join("probe-subject.log");
-            }
-        }
-        PathBuf::from(".scratch/probe-subject.log")
-    }
-
     fn run(mut self) {
         if let Err(complaints) = cli::preflight(&self.subject, &self.trust_root) {
             for complaint in &complaints {

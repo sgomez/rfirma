@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 use crate::catalogue::Check;
 use crate::dossier::Header;
+use crate::livelog::{compose_log_region, LiveLogSink, LogFilter, DEFAULT_LOG_WIDTH};
 use crate::verdicts::{chapter_tag, format_badge};
 
 pub(crate) struct ProgressMonitor {
@@ -17,6 +18,8 @@ pub(crate) struct ProgressMonitor {
     active_item: Arc<Mutex<Option<ActiveItem>>>,
     running: Arc<AtomicBool>,
     ticker: Mutex<Option<JoinHandle<()>>>,
+    log_sink: LiveLogSink,
+    frame_lines: Arc<Mutex<usize>>,
 }
 
 struct ActiveItem {
@@ -94,7 +97,7 @@ impl ProgressMonitor {
         self.plain
     }
 
-    pub(crate) fn new(plain: bool) -> Self {
+    pub(crate) fn new(plain: bool, log_lines: usize, log_filter: LogFilter) -> Self {
         let is_tty = !plain && std::io::stdout().is_terminal();
         Self {
             plain,
@@ -102,7 +105,15 @@ impl ProgressMonitor {
             active_item: Arc::new(Mutex::new(None)),
             running: Arc::new(AtomicBool::new(true)),
             ticker: Mutex::new(None),
+            log_sink: LiveLogSink::new(log_filter, log_lines),
+            frame_lines: Arc::new(Mutex::new(0)),
         }
+    }
+
+    /// El extremo por el que el conductor y el sujeto entregan sus líneas, desde sus propios
+    /// hilos.
+    pub(crate) fn log_sink(&self) -> LiveLogSink {
+        self.log_sink.clone()
     }
 
     pub(crate) fn display_header(&self, subject: &str, header: &Header) {
@@ -128,6 +139,7 @@ impl ProgressMonitor {
             start: Instant::now(),
             suspended: false,
         });
+        self.log_sink.clear();
 
         if self.interactive_tty {
             self.ensure_ticker();
@@ -141,6 +153,8 @@ impl ProgressMonitor {
         }
         let running = Arc::clone(&self.running);
         let active = Arc::clone(&self.active_item);
+        let log_sink = self.log_sink.clone();
+        let frame_lines = Arc::clone(&self.frame_lines);
         let handle = spawn(move || {
             let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let mut i = 0;
@@ -149,14 +163,25 @@ impl ProgressMonitor {
                     if let Ok(item_lock) = active.lock() {
                         if let Some(ref item) = *item_lock {
                             if !item.suspended {
-                                let frame = frames[i % frames.len()];
+                                let glyph = frames[i % frames.len()];
                                 i = i.wrapping_add(1);
                                 let elapsed = item.start.elapsed().as_secs_f32();
-                                print!(
-                                    "\r\x1b[2K{} [{} {}/{}] {}... ({:.1}s)",
-                                    frame, item.kind, item.current, item.total, item.name, elapsed
+                                let spinner_line = format!(
+                                    "{} [{} {}/{}] {}... ({:.1}s)",
+                                    glyph, item.kind, item.current, item.total, item.name, elapsed
                                 );
-                                let _ = std::io::stdout().flush();
+                                let log_region = compose_log_region(
+                                    &log_sink.snapshot(),
+                                    log_sink.height(),
+                                    DEFAULT_LOG_WIDTH,
+                                    log_sink.filter(),
+                                );
+                                let rendered_frame = if log_region.is_empty() {
+                                    spinner_line
+                                } else {
+                                    format!("{spinner_line}\n{log_region}")
+                                };
+                                repaint_frame(&frame_lines, &rendered_frame);
                             }
                         }
                     }
@@ -180,8 +205,7 @@ impl ProgressMonitor {
             *lock = None;
         }
         if self.interactive_tty {
-            print!("\r\x1b[2K");
-            let _ = std::io::stdout().flush();
+            clear_frame(&self.frame_lines);
         }
         let line = format_verdict_line(
             badge,
@@ -201,8 +225,7 @@ impl ProgressMonitor {
             item.suspended = true;
         }
         if self.interactive_tty {
-            print!("\r\x1b[2K");
-            let _ = std::io::stdout().flush();
+            clear_frame(&self.frame_lines);
         }
     }
 
@@ -237,10 +260,31 @@ impl Drop for ProgressMonitor {
             let _ = handle.join();
         }
         if self.interactive_tty {
-            print!("\r\x1b[2K");
-            let _ = std::io::stdout().flush();
+            clear_frame(&self.frame_lines);
         }
     }
+}
+
+/// Redibuja `frame` donde estaba el anterior, sin desplazar lo que ya se dio por resuelto.
+fn repaint_frame(frame_lines: &Arc<Mutex<usize>>, frame: &str) {
+    let mut previous = frame_lines.lock().unwrap();
+    let mut out = std::io::stdout();
+    if *previous > 0 {
+        let _ = write!(out, "\x1b[{previous}F\x1b[0J");
+    }
+    let _ = writeln!(out, "{frame}");
+    let _ = out.flush();
+    *previous = frame.lines().count();
+}
+
+/// Borra la última región dibujada por [`repaint_frame`], sin dejar nada en su lugar.
+fn clear_frame(frame_lines: &Arc<Mutex<usize>>) {
+    let mut previous = frame_lines.lock().unwrap();
+    if *previous > 0 {
+        print!("\x1b[{previous}F\x1b[0J");
+        let _ = std::io::stdout().flush();
+    }
+    *previous = 0;
 }
 
 #[cfg(test)]
@@ -325,7 +369,7 @@ mod tests {
     }
     #[test]
     fn plain_monitor_reports_is_plain() {
-        let monitor = ProgressMonitor::new(true);
+        let monitor = ProgressMonitor::new(true, 8, LogFilter::All);
         assert!(monitor.is_plain());
     }
 }

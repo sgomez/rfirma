@@ -2,16 +2,16 @@
 //! sus eventos, invocar al sujeto y extraer lo que cada evento trae.
 
 use std::collections::VecDeque;
-use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::dossier::Verdict;
-use crate::transcript::Transcript;
+use crate::livelog::{CheckLog, LiveLogSink, Provenance};
+use crate::transcript::{log_path_of, Transcript};
 use crate::Probe;
 
 /// El `type` con el que el conductor avisa de que reventó él, no el sujeto.
@@ -50,6 +50,14 @@ impl Probe {
         mode: &str,
         patience: Duration,
     ) -> ErrandOutcome {
+        let start = Instant::now();
+        let log_sink = self.monitor.log_sink();
+        let case_log = CheckLog::open(&log_path_of(&self.dossier, transcript_name)).unwrap_or_else(
+            |complaint| {
+                eprintln!("{complaint}");
+                std::process::exit(1);
+            },
+        );
         let trust_root = the_trust_root_as_pem(&self.trust_root);
         let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
         let events = driver.stdout.take().expect("el conductor escribe eventos");
@@ -73,6 +81,8 @@ impl Probe {
                 eprintln!("{complaint}");
                 std::process::exit(1);
             });
+            case_log.record(start.elapsed(), Provenance::Driver, &event);
+            log_sink.push(Provenance::Driver, start.elapsed(), event.clone());
             if let Some(url) = the_launch_url_in(&event) {
                 if self.verbose {
                     eprintln!("sondeo: invoco {} con {url}", self.subject.display());
@@ -80,7 +90,9 @@ impl Probe {
                 subject = Some(the_subject_invoked_with(
                     &self.subject,
                     &url,
-                    &self.subject_log_path(),
+                    case_log.clone(),
+                    log_sink.clone(),
+                    start,
                 ));
             }
             if let Some(kind) = the_error_type_in(&event) {
@@ -164,22 +176,13 @@ pub(crate) struct SubjectProcess {
 }
 
 impl SubjectProcess {
-    pub(crate) fn spawn(subject: &Path, url: &str, log_path: &Path) -> Self {
-        if let Some(parent) = log_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let log_file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_path)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "no se pudo abrir el log del sujeto {}: {error}",
-                    log_path.display()
-                )
-            });
-        let log_file = Arc::new(Mutex::new(log_file));
-
+    pub(crate) fn spawn(
+        subject: &Path,
+        url: &str,
+        case_log: CheckLog,
+        log_sink: LiveLogSink,
+        start: Instant,
+    ) -> Self {
         let mut child = Command::new(subject)
             .arg(url)
             .stdout(Stdio::piped())
@@ -191,15 +194,21 @@ impl SubjectProcess {
         let mut drain_handles = Vec::new();
 
         if let Some(stdout) = child.stdout.take() {
-            let file = Arc::clone(&log_file);
+            let log = case_log.clone();
+            let sink = log_sink.clone();
             let recents = Arc::clone(&recent_lines);
-            drain_handles.push(spawn(move || drain_stream(stdout, file, recents)));
+            drain_handles.push(spawn(move || {
+                drain_stream(stdout, log, sink, start, recents)
+            }));
         }
 
         if let Some(stderr) = child.stderr.take() {
-            let file = Arc::clone(&log_file);
+            let log = case_log.clone();
+            let sink = log_sink.clone();
             let recents = Arc::clone(&recent_lines);
-            drain_handles.push(spawn(move || drain_stream(stderr, file, recents)));
+            drain_handles.push(spawn(move || {
+                drain_stream(stderr, log, sink, start, recents)
+            }));
         }
 
         Self {
@@ -224,15 +233,16 @@ impl SubjectProcess {
 
 fn drain_stream(
     stream: impl std::io::Read,
-    log_file: Arc<Mutex<std::fs::File>>,
+    case_log: CheckLog,
+    log_sink: LiveLogSink,
+    start: Instant,
     recents: Arc<Mutex<VecDeque<String>>>,
 ) {
     let reader = BufReader::new(stream);
     for line in reader.lines().map_while(Result::ok) {
-        if let Ok(mut file) = log_file.lock() {
-            let _ = writeln!(file, "{line}");
-            let _ = file.flush();
-        }
+        let elapsed = start.elapsed();
+        case_log.record(elapsed, Provenance::Subject, &line);
+        log_sink.push(Provenance::Subject, elapsed, line.clone());
         if let Ok(mut recents_lock) = recents.lock() {
             if recents_lock.len() >= 50 {
                 recents_lock.pop_front();
@@ -242,8 +252,14 @@ fn drain_stream(
     }
 }
 
-fn the_subject_invoked_with(subject: &Path, url: &str, log_path: &Path) -> SubjectProcess {
-    SubjectProcess::spawn(subject, url, log_path)
+fn the_subject_invoked_with(
+    subject: &Path,
+    url: &str,
+    case_log: CheckLog,
+    log_sink: LiveLogSink,
+    start: Instant,
+) -> SubjectProcess {
+    SubjectProcess::spawn(subject, url, case_log, log_sink, start)
 }
 
 /// `NODE_EXTRA_CA_CERTS` solo lee PEM, y la raíz que instala AutoFirma en el escritorio es DER.
@@ -422,18 +438,26 @@ mod tests {
     }
     #[test]
     fn drain_stream_pipes_lines_to_log_and_preserves_recents() {
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        let log_file = Arc::new(Mutex::new(tmp.reopen().unwrap()));
+        let dir = tempfile::tempdir().unwrap();
+        let case_log = CheckLog::open(&dir.path().join("a_check.log")).unwrap();
+        let log_sink = LiveLogSink::new(crate::livelog::LogFilter::All, 8);
         let recents = Arc::new(Mutex::new(VecDeque::new()));
         let input = std::io::Cursor::new(b"linea 1\nlinea 2\nlinea 3\n");
 
-        drain_stream(input, Arc::clone(&log_file), Arc::clone(&recents));
+        drain_stream(
+            input,
+            case_log,
+            log_sink.clone(),
+            Instant::now(),
+            Arc::clone(&recents),
+        );
 
         let stored: Vec<String> = recents.lock().unwrap().iter().cloned().collect();
         assert_eq!(stored, vec!["linea 1", "linea 2", "linea 3"]);
 
-        let written = std::fs::read_to_string(tmp.path()).unwrap();
-        assert_eq!(written, "linea 1\nlinea 2\nlinea 3\n");
+        let snapshot = log_sink.snapshot();
+        assert_eq!(snapshot.len(), 3);
+        assert_eq!(snapshot[0].text, "linea 1");
     }
     #[test]
     fn outcome_carries_recent_subject_lines() {

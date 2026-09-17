@@ -42,6 +42,12 @@ fn transcripts_directory_of(dossier: &Path) -> PathBuf {
     PathBuf::from(directory)
 }
 
+/// El registro de `case`, junto a su transcripción: un fichero por comprobación, nombrado por su
+/// identificador.
+pub(crate) fn log_path_of(dossier: &Path, case: &str) -> PathBuf {
+    transcripts_directory_of(dossier).join(format!("{case}.log"))
+}
+
 /// `raw_event` con cada campo en base64 vuelto a su texto, o anotado como binario si no lo es.
 fn legible(raw_event: &str) -> String {
     let Ok(mut value) = serde_json::from_str::<Value>(raw_event) else {

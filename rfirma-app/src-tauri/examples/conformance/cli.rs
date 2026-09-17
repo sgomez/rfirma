@@ -9,6 +9,7 @@ use crate::baseline::{Profile, THE_PROFILES};
 use crate::catalogue::{Check, THE_SUITES};
 use crate::dossier::HeaderCoordinates;
 use crate::errand::the_published_client;
+use crate::livelog::LogFilter;
 use crate::{Command, Probe};
 
 pub(crate) const USAGE: &str = "\
@@ -23,6 +24,10 @@ uso: cargo run --example conformance -- --subject <binario> --trust-root <certif
   --patience-ms      cuánto espera el conductor antes de darse por vencido (por omisión, 60000)
   --plain            fuerza el modo lineal limpio sin secuencias ANSI ni sobreescritura
   --verbose          emite las tramas JSON de WebSocket y trazas de depuración a la consola
+  --log-lines <n>    alto de la región viva del registro, al pie, mientras corre la
+                      comprobación (por omisión 8; 0 la desactiva y deja la salida de siempre)
+  --log <quién>      filtra la región viva y el fichero por procedencia: conductor, sujeto o
+                      todo (por omisión, todo)
 
   Coordenadas de la tanda, obligatorias solo al abrir un expediente nuevo:
   --os               sistema operativo del sujeto
@@ -44,6 +49,9 @@ uso: cargo run --example conformance -- --subject <binario> --trust-root <certif
 ";
 
 const DEFAULT_PATIENCE: Duration = Duration::from_millis(60_000);
+
+/// El alto por omisión de la región viva del registro, en líneas.
+const DEFAULT_LOG_LINES: usize = 8;
 
 /// Las coordenadas de la tanda, según llegaron de la línea de órdenes: puede que falte alguna.
 #[derive(Default)]
@@ -98,6 +106,8 @@ fn read_the_trailing_flags(
     verbose: &mut bool,
     suite: &mut Option<String>,
     relaunch: &mut bool,
+    log_lines: &mut usize,
+    log_filter: &mut LogFilter,
 ) -> Result<(), String> {
     while let Some(argument) = arguments.next() {
         match argument.as_str() {
@@ -105,10 +115,18 @@ fn read_the_trailing_flags(
             "--verbose" => *verbose = true,
             "--relaunch" => *relaunch = true,
             "--suite" => *suite = Some(value_of("--suite", arguments)?),
+            "--log-lines" => *log_lines = the_declared_log_lines(arguments)?,
+            "--log" => *log_filter = LogFilter::parse(&value_of("--log", arguments)?)?,
             other => return Err(format!("argumento desconocido: {other}")),
         }
     }
     Ok(())
+}
+
+fn the_declared_log_lines(arguments: &mut impl Iterator<Item = String>) -> Result<usize, String> {
+    value_of("--log-lines", arguments)?
+        .parse()
+        .map_err(|_| "--log-lines quiere un número de líneas".to_owned())
 }
 
 /// El flag que la orden no usa, denunciado en vez de tragado en silencio.
@@ -170,6 +188,8 @@ impl Probe {
         let mut verbose = false;
         let mut suite = None;
         let mut relaunch = false;
+        let mut log_lines = DEFAULT_LOG_LINES;
+        let mut log_filter = LogFilter::default();
         let mut arguments = std::env::args().skip(1);
         let command = loop {
             let flag = arguments
@@ -199,6 +219,8 @@ impl Probe {
                 }
                 "--plain" => plain = true,
                 "--verbose" => verbose = true,
+                "--log-lines" => log_lines = the_declared_log_lines(&mut arguments)?,
+                "--log" => log_filter = LogFilter::parse(&value_of(&flag, &mut arguments)?)?,
                 "--os" => coordinates.os = Some(value_of(&flag, &mut arguments)?),
                 "--os-version" => coordinates.os_version = Some(value_of(&flag, &mut arguments)?),
                 "--subject-version" => {
@@ -213,6 +235,8 @@ impl Probe {
                         &mut verbose,
                         &mut suite,
                         &mut relaunch,
+                        &mut log_lines,
+                        &mut log_filter,
                     )?;
                     no_flag_the_command_ignores("list", &[("--relaunch", relaunch)])?;
                     break Command::List {
@@ -226,6 +250,8 @@ impl Probe {
                         &mut verbose,
                         &mut suite,
                         &mut relaunch,
+                        &mut log_lines,
+                        &mut log_filter,
                     )?;
                     no_flag_the_command_ignores("run-pending", &[("--relaunch", relaunch)])?;
                     break Command::RunPending {
@@ -240,6 +266,8 @@ impl Probe {
                         &mut verbose,
                         &mut suite,
                         &mut relaunch,
+                        &mut log_lines,
+                        &mut log_filter,
                     )?;
                     no_flag_the_command_ignores("run", &[("--suite", suite.is_some())])?;
                     break Command::Run { check, relaunch };
@@ -247,7 +275,7 @@ impl Probe {
                 other => return Err(format!("argumento desconocido: {other}")),
             }
         };
-        let monitor = crate::monitor::ProgressMonitor::new(plain);
+        let monitor = crate::monitor::ProgressMonitor::new(plain, log_lines, log_filter);
         Ok(Self {
             subject: subject.ok_or_else(|| "falta --subject".to_owned())?,
             trust_root: trust_root.ok_or_else(|| "falta --trust-root".to_owned())?,
