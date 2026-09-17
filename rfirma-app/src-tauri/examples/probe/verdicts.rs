@@ -93,6 +93,7 @@ mod tests {
             launched: true,
             error_type: Some(THE_DRIVER_CRASH.to_owned()),
             error_code: None,
+            signature: None,
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -107,6 +108,7 @@ mod tests {
             launched: true,
             error_type: Some("java.lang.Exception".to_owned()),
             error_code: Some("SAF_47".to_owned()),
+            signature: None,
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {
@@ -121,6 +123,7 @@ mod tests {
             launched: true,
             error_type: Some("java.lang.Exception".to_owned()),
             error_code: Some("SAF_03".to_owned()),
+            signature: None,
         };
         let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
         else {

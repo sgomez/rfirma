@@ -15,12 +15,13 @@ pub(crate) const THE_DRIVER_CRASH: &str = "uncaught";
 /// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
 pub(crate) const THE_EXHAUSTED_PATIENCE: &str = "timeout";
 
-/// Lo que se pudo medir de un trámite: si el sujeto llegó a arrancar, el código SAF que emitió
-/// y la clase con la que el cliente publicado lo envolvió.
+/// Lo que se pudo medir de un trámite: si el sujeto llegó a arrancar, el código SAF que emitió,
+/// la clase con la que el cliente publicado lo envolvió, y la firma que devolvió si hubo éxito.
 pub(crate) struct ErrandOutcome {
     pub(crate) launched: bool,
     pub(crate) error_type: Option<String>,
     pub(crate) error_code: Option<String>,
+    pub(crate) signature: Option<String>,
 }
 
 impl Probe {
@@ -44,6 +45,7 @@ impl Probe {
         let mut subject = None;
         let mut error_type = None;
         let mut error_code = None;
+        let mut signature = None;
         for event in BufReader::new(events).lines().map_while(Result::ok) {
             println!("{event}");
             let _ = std::io::stdout().flush();
@@ -61,6 +63,9 @@ impl Probe {
             if let Some(code) = the_saf_code_in(&event) {
                 error_code = Some(code);
             }
+            if let Some(result) = the_signature_in(&event) {
+                signature = Some(result);
+            }
             if event.contains("\"event\":\"timeout\"") {
                 error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
             }
@@ -75,6 +80,7 @@ impl Probe {
             launched,
             error_type,
             error_code,
+            signature,
         }
     }
 }
@@ -164,6 +170,16 @@ fn the_error_message_in(event: &str) -> Option<String> {
     Some(event[from..].split('"').next()?.to_owned())
 }
 
+/// La firma en Base64 de un evento de éxito, que viaja en el campo `result`.
+fn the_signature_in(event: &str) -> Option<String> {
+    if !event.contains("\"event\":\"success\"") {
+        return None;
+    }
+    let needle = "\"result\":\"";
+    let from = event.find(needle)? + needle.len();
+    Some(event[from..].split('"').next()?.to_owned())
+}
+
 /// El código SAF del error, que viaja en el `message`: el `type` solo trae la clase que lo
 /// envolvió.
 fn the_saf_code_in(event: &str) -> Option<String> {
@@ -206,6 +222,25 @@ mod tests {
     fn ignores_an_event_that_is_not_an_error() {
         assert_eq!(
             the_saf_code_in(r#"{"event":"launch","url":"afirma://websocket?v=4"}"#),
+            None
+        );
+    }
+
+    #[test]
+    fn reads_the_signature_from_a_success_event() {
+        assert_eq!(
+            the_signature_in(r#"{"event":"success","result":"TUlJQg==","certificate":"x"}"#)
+                .as_deref(),
+            Some("TUlJQg==")
+        );
+    }
+
+    #[test]
+    fn ignores_an_event_that_is_not_a_success() {
+        assert_eq!(
+            the_signature_in(
+                r#"{"event":"error","message":"SAF_03: parametro invalido","type":"java.lang.Exception"}"#
+            ),
             None
         );
     }
