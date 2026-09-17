@@ -8,6 +8,9 @@ use std::io::{BufRead, BufReader, IsTerminal, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
 
 use dossier::{CaseState, Dossier, HeaderCoordinates, Verdict};
@@ -89,9 +92,8 @@ const THE_DRIVER_CRASH: &str = "uncaught";
 /// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
 const THE_EXHAUSTED_PATIENCE: &str = "timeout";
 
-/// Lo que el cliente publicado tarda en rendirse en el carril sin WebSocket: quince reintentos
-/// de eco contra tres puertos que no contestan, muy por encima de la paciencia de una tanda.
-const THE_SOCKET_BIND_FAILURE_PATIENCE: Duration = Duration::from_millis(180_000);
+/// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
+const THE_OCCUPIER_HEARTBEAT: Duration = Duration::from_millis(50);
 
 /// Los puertos fijos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, y que el caso ocupa antes de
 /// invocar al sujeto para que no le quede ninguno libre.
@@ -473,18 +475,11 @@ impl Probe {
     /// `tryPorts` no encuentre ninguno libre, y mide si el cliente publicado acaba reportando la
     /// aplicación como no instalada en vez de un fallo de arranque.
     fn run_socket_bind_failure_case(&self) -> CaseOutcome {
-        let _occupied_ports: Vec<TcpListener> = THE_SOCKET_BIND_FAILURE_PORTS
-            .iter()
-            .map(|port| {
-                TcpListener::bind(("0.0.0.0", *port))
-                    .unwrap_or_else(|error| panic!("no pude ocupar el puerto {port}: {error}"))
-            })
-            .collect();
-        let outcome = self.run_errand_with_patience(
+        let _occupied_ports = OccupiedPorts::at(&THE_SOCKET_BIND_FAILURE_PORTS);
+        let outcome = self.run_errand(
             THE_SOCKET_BIND_FAILURE_CASE,
             THE_SINGLE_SELECTION,
             THE_SOCKET_BIND_FAILURE_MODE,
-            THE_SOCKET_BIND_FAILURE_PATIENCE,
         );
         if !outcome.launched {
             return CaseOutcome::resolved(Verdict::NotObservable);
@@ -514,19 +509,9 @@ impl Probe {
     /// Corre `script` en `mode` contra el sujeto declarado, transcribiendo cada evento del
     /// cliente publicado a medida que llega, y devuelve lo que se pudo medir del trámite.
     fn run_errand(&self, transcript_name: &str, script: &str, mode: &str) -> ErrandOutcome {
-        self.run_errand_with_patience(transcript_name, script, mode, self.patience)
-    }
-
-    /// Lo mismo, para el caso cuyo desenlace tarda más que la paciencia de la tanda.
-    fn run_errand_with_patience(
-        &self,
-        transcript_name: &str,
-        script: &str,
-        mode: &str,
-        patience: Duration,
-    ) -> ErrandOutcome {
         let trust_root = the_trust_root_as_pem(&self.trust_root);
-        let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
+        let mut driver =
+            the_published_client_running(trust_root.path(), self.patience, script, mode);
         let events = driver.stdout.take().expect("el conductor escribe eventos");
         let mut transcript =
             Transcript::open(&self.dossier, transcript_name).unwrap_or_else(|complaint| {
@@ -713,6 +698,49 @@ fn the_launch_url_in(event: &str) -> Option<String> {
     let needle = "\"url\":\"";
     let from = event.find(needle)? + needle.len();
     Some(event[from..].split('"').next()?.to_owned())
+}
+
+/// Los puertos que el caso del socket ocupa para que el sujeto no pueda ligarlos, cerrando cada
+/// conexión que les llegue: un ocupante mudo colgaría al cliente publicado en el primer eco, y
+/// entonces no se rinde nunca y no hay nada que medir.
+struct OccupiedPorts {
+    release: Arc<AtomicBool>,
+    occupiers: Vec<JoinHandle<()>>,
+}
+
+impl OccupiedPorts {
+    fn at(ports: &[u16]) -> Self {
+        let release = Arc::new(AtomicBool::new(false));
+        let occupiers = ports
+            .iter()
+            .map(|port| {
+                let listener = TcpListener::bind(("0.0.0.0", *port))
+                    .unwrap_or_else(|error| panic!("no pude ocupar el puerto {port}: {error}"));
+                listener
+                    .set_nonblocking(true)
+                    .expect("el ocupante debería poder no bloquearse");
+                let release = Arc::clone(&release);
+                spawn(move || {
+                    while !release.load(Ordering::Relaxed) {
+                        match listener.accept() {
+                            Ok(_) => continue,
+                            Err(_) => sleep(THE_OCCUPIER_HEARTBEAT),
+                        }
+                    }
+                })
+            })
+            .collect();
+        Self { release, occupiers }
+    }
+}
+
+impl Drop for OccupiedPorts {
+    fn drop(&mut self) {
+        self.release.store(true, Ordering::Relaxed);
+        for occupier in self.occupiers.drain(..) {
+            let _ = occupier.join();
+        }
+    }
 }
 
 /// El veredicto de una ficha que se juega a un código SAF concreto: sin código en el cable no
