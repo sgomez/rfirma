@@ -9,10 +9,11 @@ Los ajustes de la aplicación. Se abre desde el menú de la
 
 ## Estructura
 
-**Un visor de pestañas en vertical**, dentro de un diálogo a pantalla completa:
-ocupa todo lo que hay bajo la [cabecera](cabecera.md), que se queda **intacta
-con su estado de documento** detrás, y mientras está delante el foco no se
-escapa a los controles de la ventana.
+**Un visor de pestañas en vertical**, y **no un diálogo**: es una **vista del
+cuerpo** de la ventana, que sustituye lo que hubiera bajo la
+[cabecera](cabecera.md) y ocupa todo ese hueco. La cabecera se queda **intacta,
+con su estado de documento**, porque nada se pinta encima de ella; y mientras la
+vista está delante el foco no se escapa a los controles de la ventana.
 
 Tres regiones, de izquierda a derecha y de arriba abajo:
 
@@ -116,35 +117,7 @@ Son **siete**, repartidos en cuatro paneles.
 
 ### General
 
-Es la entrada, y lleva los dos grupos que antes eran sección propia: primero
-**Sedes**, después **Privacidad**.
-
-#### Sedes
-
-**Un solo control, y solo donde se puede cumplir** (ID-238, ID-240).
-
-- **Quién atiende los enlaces de las sedes** (desplegable), con lo que el
-  escritorio diga que hay registrado para `afirma://`: **ningún nombre de
-  aplicación está escrito en el código**, ni «AutoFirma» ni «rFirma». Elegir
-  escribe un `default` explícito en el `mimeapps.list` del `$HOME`, y **solo
-  ahí**. Mientras no haya ninguno escrito, el valor es *Lo que decida el
-  escritorio*, que desaparece de la lista en cuanto se elige a alguien: enseñar
-  el primero de la lista como si estuviera elegido sería mentir.
-- Debajo, la ayuda que **no se puede deducir mirando** (§11 del
-  [sistema de diseño](design-system.md)): «Firefox usa la elección que guarda en
-  sus propias preferencias». Es cierta, no la ve nadie y cambia lo que la
-  persona hará si el enlace le sigue abriendo otra aplicación (ID-241).
-- **Preguntarme al arrancar** (interruptor, activo por omisión): es lo que
-  deshace el «No volver a preguntar» del banner de la
-  [ventana principal](ventana-principal.md). Vive aquí porque es donde alguien
-  va a buscar la pregunta que apagó.
-
-**En el flatpak no hay ni desplegable ni interruptor**, sino una frase fija:
-«Esta versión no puede cambiarlo: se elige en los ajustes del escritorio».
-Medido: dentro del sandbox GIO contesta `None` a todos los esquemas, no existe
-ningún portal de manejadores predeterminados y `set_as_default_for_type()`
-**devuelve `True` mintiendo** (ID-240). Un desplegable ahí sería un control que
-finge elegir, que es justo lo que esta ficha ya descartó para el destino.
+Es la entrada, y lleva un solo grupo: **Privacidad**.
 
 #### Privacidad
 
@@ -293,7 +266,7 @@ debajo enumerando lo que el propio control ya muestra al abrirse.
 - **Normal**: los ajustes tienen siempre valor, y se guardan al elegirlos. La
   sección activa es la del índice, y al abrir es *General*.
 - **Confirmando el borrado**: apagar «Recordar mi actividad» abre un
-  `.rf-dialog` pequeño **encima** de la pantalla completa —índice incluido, que
+  `.rf-dialog` pequeño **encima** de la vista —índice incluido, que
   es lo único que se ve desde cualquier sección—, con lo que se va a perder
   —los documentos recientes y el certificado—, `Cancelar` como `--ghost` y
   `Borrar y apagar` como primario. El interruptor **no se mueve** hasta que se
@@ -353,19 +326,40 @@ salieron de tener que caber en una columna con desplazamiento continuo: el
 restricción desaparece y el fallo nuevo es el contrario, la página medio vacía.
 *Sedes* era el único huérfano claro —un desplegable y un interruptor, y bajo
 flatpak ningún control, solo una frase fija: una página entera para una
-disculpa—. *Privacidad* se le une dentro de *General* para que sus dos
-interruptores queden a la vista al abrir Preferencias, sin un clic, y va al
-final a propósito, porque se leen como un par —qué recuerda de mí y con quién
-habla— y el desplegable de sedes en medio los desemparejaría. Se conserva la
-palabra «Privacidad» como encabezado de grupo, que era lo único que se perdía al
-fundirla. **Ningún ajuste se ha añadido ni quitado**: los siete son los mismos,
-con el mismo comportamiento y la misma ayuda; lo que cambia es dónde viven.
+disculpa—. *Privacidad* pasa a ser el único grupo de *General*, para que sus dos
+interruptores queden a la vista al abrir Preferencias, sin un clic. Se conserva
+la palabra «Privacidad» como encabezado de grupo, que era lo único que se perdía
+al dejar de ser sección.
+
+**Por qué *Sedes* no se funde en *General*, sino que desaparece**
+([#661](https://github.com/sgomez/rfirma/issues/661)). El
+[#657](https://github.com/sgomez/rfirma/issues/657) la mandaba dentro de
+*General*; se descartó al cerrar los avisos. Sus tres piezas se han quedado sin
+sitio aquí, una por una:
+
+- **El desplegable «Quién atiende los enlaces de las sedes» se muda entero** a la
+  fila *Firma en sedes* del [panel de estado](panel-de-estado.md), que es donde
+  se dice el veredicto. Elegir y saber qué pasa son el mismo gesto, y partirlos
+  en dos pantallas obliga a ir a mirar a una para entender la otra. Ese
+  desplegable pasa a ser **el único sitio donde se elige el programa**: aquí no
+  queda ninguna copia, porque dos controles para un mismo ajuste son dos sitios
+  donde mirar.
+- **La pista de Firefox se va con él**, pegada al control que explica.
+- **«Preguntarme al arrancar» se borra.** No gobernaba más que el banner que
+  preguntaba quién atiende `afirma://` al abrir la aplicación, y ese banner ya no
+  existe: preguntar es configurar, y configurar se hace en el panel de estado.
+  Un interruptor que enciende algo que no se puede encender no es un ajuste.
+
+Con eso el grupo *Sedes* deja de existir en Preferencias. **De los siete
+ajustes numerados no se ha movido ninguno**: lo que sale de aquí es el
+desplegable, que nunca estuvo en esa cuenta, y un interruptor que ya no tiene
+nada que gobernar.
 
 **Por qué deja de ser un modal de 480 px.** Con cinco ajustes ya iba justo, y lo
 que traiga cada hito no cabe: la v0.4 sola le añadió una sección entera con una
 lista. Se descartó una ruta de un router: con guardado automático y `Cerrar`
 como única salida no hay ningún estado al que navegar ni nada que confirmar, así
-que lo que queda es un diálogo, solo que grande. Así `Escape` sigue valiendo y
+que lo que queda es la vista entera del cuerpo. Así `Escape` sigue valiendo y
 `Cmd+,` en macOS sigue prometiendo lo que abre.
 
 **La cabecera no cambia** mientras Preferencias está delante, estado del

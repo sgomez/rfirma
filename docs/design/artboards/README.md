@@ -464,13 +464,20 @@ solo el de `Certificados en fichero` lo necesita—, y el índice y el pie con
 significados, y aquí `Escape` cierra Preferencias entera desde cualquier panel.
 
 **El índice pasa de cinco filas a cuatro: `General · Firma · Certificados ·
-Apariencia`.** «Sedes» y «Privacidad» desaparecen como filas y su contenido se
-funde dentro de `General`, que es la entrada, en dos grupos con encabezado —
-«Sedes» primero, «Privacidad» al final, para que sus dos interruptores se lean
-como un par—. **Ningún ajuste se ha añadido ni quitado**: los siete son los
-mismos. El rótulo de sección se queda como **título de la página**, que es lo que
-permite que «Certificados» recupere ahí su nombre completo, `Certificados en
-fichero`.
+Apariencia`.** «Sedes» y «Privacidad» desaparecen como filas: «Privacidad» se
+funde dentro de `General`, que es la entrada, como grupo con encabezado, y
+«Sedes» se va del todo. **De los siete ajustes numerados no se ha añadido ni
+quitado ninguno.** El rótulo de sección se queda como **título de la página**,
+que es lo que permite que «Certificados» recupere ahí su nombre completo,
+`Certificados en fichero`.
+
+**El grupo «Sedes» no llega a dibujarse: se borra entero**, decidido en el
+[#661](https://github.com/sgomez/rfirma/issues/661). El desplegable «Quién
+atiende los enlaces de las sedes» y su pista de Firefox se mudan a la fila
+`Firma en sedes` de `PanelEstado` —donde ya está el veredicto, y que pasa a ser
+el único sitio donde se elige el programa—, y el interruptor «Preguntarme al
+arrancar» desaparece con el banner que gobernaba. `General` se queda con un solo
+grupo, «Privacidad».
 
 **El encabezado de grupo se resuelve sin componente nuevo y sin estilo nuevo.**
 Título de página, encabezado de grupo y etiqueta de control se separan por
@@ -481,6 +488,6 @@ Solo `General` lleva grupos.
 **La palanca `Sección visible` es la pestaña activa**, con cuatro posiciones y
 `General` por omisión. Las demás son de contenido y solo se ven dentro de su
 sección, salvo el diálogo de apagar «Recordar mi actividad», que es un velo sobre
-la ventana entera. El caso del flatpak en «Sedes» —ni desplegable ni interruptor,
-sino una frase fija— **no se dibuja**: sería otra palanca, y esta tanda pregunta
-por el reparto, no por el entorno.
+la ventana entera. El caso del flatpak —el escritorio no deja elegir quién
+atiende `afirma://`— ya no se dibuja aquí en ninguna forma: viaja con el
+desplegable a `PanelEstado`.
