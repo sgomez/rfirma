@@ -33,6 +33,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
 | 0023 | El catálogo de algoritmos es el del original, SHA-1 incluido |
 | 0024 | Un proceso por trámite de sede, y el escritorio aparte |
+| 0025 | `selectcert` no abre sesión en el token: sin PIN en una operación que no firma |
 
 ## `research/` — mediciones (por qué algo es como es)
 

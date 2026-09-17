@@ -19,6 +19,15 @@ struct Entry {
     question: Option<String>,
     unmeasurable: Option<String>,
     cited_cards: BTreeSet<String>,
+    expectations: Vec<Expectation>,
+}
+
+/// Lo que la línea base declara de un perfil, leído igual de crudo que el resto de la entrada.
+#[derive(Debug, Clone)]
+struct Expectation {
+    profile: String,
+    verdict: String,
+    cause: Option<String>,
 }
 
 /// Una ficha del anexo A1 y lo que el anexo decide sobre ella.
@@ -27,6 +36,10 @@ struct A1Card {
     id: String,
     unobservable: Option<String>,
 }
+
+const THE_PROFILES: [&str; 2] = ["autofirma", "rfirma"];
+
+const THE_VERDICTS: [&str; 3] = ["conforme", "no-conforme", "no-observable"];
 
 const THE_SUITES: [&str; 6] = [
     "saludo",
@@ -110,7 +123,29 @@ fn entry_of(value: &toml::Value) -> Entry {
         question: optional("question"),
         unmeasurable: optional("unmeasurable"),
         cited_cards: cards_cited_in(&value.to_string()),
+        expectations: expectations_of(value),
     }
+}
+
+fn expectations_of(value: &toml::Value) -> Vec<Expectation> {
+    let Some(declared) = value.get("expect").and_then(toml::Value::as_table) else {
+        return Vec::new();
+    };
+    declared
+        .iter()
+        .map(|(profile, expectation)| Expectation {
+            profile: profile.clone(),
+            verdict: expectation
+                .get("verdict")
+                .and_then(toml::Value::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+            cause: expectation
+                .get("cause")
+                .and_then(toml::Value::as_str)
+                .map(str::to_owned),
+        })
+        .collect()
 }
 
 /// Las fichas `BUG-NN` citadas en un texto, por donde quiera que la entrada las cite.
@@ -305,6 +340,77 @@ fn unmotivated_cards(cards: &[A1Card]) -> Vec<String> {
         .collect()
 }
 
+/// Las entradas que no declaran expectativa para algún perfil conocido, o la declaran con un
+/// veredicto que no existe.
+fn entries_whose_baseline_is_incomplete(entries: &[Entry]) -> Vec<String> {
+    let mut wrong = Vec::new();
+    for entry in entries {
+        for profile in THE_PROFILES {
+            match entry
+                .expectations
+                .iter()
+                .find(|expectation| expectation.profile == profile)
+            {
+                None => wrong.push(format!("{}: sin expectativa para {profile}", entry.id)),
+                Some(expectation) if !THE_VERDICTS.contains(&expectation.verdict.as_str()) => {
+                    wrong.push(format!(
+                        "{}: {profile} espera «{}», que no es un veredicto",
+                        entry.id, expectation.verdict
+                    ));
+                }
+                Some(_) => {}
+            }
+        }
+    }
+    wrong
+}
+
+/// Una expectativa distinta de `conforme` sin causa: no se declara un incumplimiento porque sí.
+fn expectations_that_deviate_without_a_cause(entries: &[Entry]) -> Vec<String> {
+    entries
+        .iter()
+        .flat_map(|entry| {
+            entry
+                .expectations
+                .iter()
+                .filter(|expectation| {
+                    expectation.verdict != "conforme" && expectation.cause.is_none()
+                })
+                .map(move |expectation| format!("{}: {}", entry.id, expectation.profile))
+        })
+        .collect()
+}
+
+/// Las causas que no resuelven ni a ficha del anexo A1 ni a fichero de ADR.
+fn causes_that_do_not_resolve(
+    entries: &[Entry],
+    cards: &BTreeSet<String>,
+    adrs: &BTreeSet<String>,
+) -> Vec<String> {
+    entries
+        .iter()
+        .flat_map(|entry| {
+            entry.expectations.iter().filter_map(move |expectation| {
+                let cause = expectation.cause.as_deref()?;
+                let resolves = cards.contains(cause) || adrs.contains(cause);
+                (!resolves).then(|| format!("{}: {cause}", entry.id))
+            })
+        })
+        .collect()
+}
+
+/// Los ADR con fichero en `docs/adr/`, por su identificador `ADR-NNNN`.
+fn adrs_in(folder: &Path) -> BTreeSet<String> {
+    std::fs::read_dir(folder)
+        .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", folder.display()))
+        .filter_map(|entry| entry.ok()?.file_name().to_str().map(str::to_owned))
+        .filter(|name| name.ends_with(".md"))
+        .filter_map(|name| name.split('-').next().map(str::to_owned))
+        .filter(|number| number.len() == 4 && number.chars().all(|c| c.is_ascii_digit()))
+        .map(|number| format!("ADR-{number}"))
+        .collect()
+}
+
 fn the_catalogue() -> Vec<Entry> {
     entries_in(&read(&catalogue_path()))
 }
@@ -409,6 +515,80 @@ fn every_a1_card_is_decided_and_no_check_cites_one_that_does_not_exist() {
         "hay fichas de A1 marcadas como no observables sin motivo:\n  {}",
         unmotivated_cards(&cards).join("\n  ")
     );
+}
+
+#[test]
+fn every_check_declares_what_the_baseline_expects_of_every_profile() {
+    let entries = the_catalogue();
+    let cards: BTreeSet<String> = a1_cards_in(&read(&annex_path()))
+        .into_iter()
+        .map(|card| card.id)
+        .collect();
+    let adrs = adrs_in(&repository_root().join("docs/adr"));
+
+    assert!(
+        entries_whose_baseline_is_incomplete(&entries).is_empty(),
+        "hay entradas cuya linea base no cubre todos los perfiles:\n  {}",
+        entries_whose_baseline_is_incomplete(&entries).join("\n  ")
+    );
+    assert!(
+        expectations_that_deviate_without_a_cause(&entries).is_empty(),
+        "hay expectativas distintas de conforme sin causa que las explique:\n  {}",
+        expectations_that_deviate_without_a_cause(&entries).join("\n  ")
+    );
+    assert!(
+        causes_that_do_not_resolve(&entries, &cards, &adrs).is_empty(),
+        "hay causas que no son ni ficha de A1 ni fichero de ADR:\n  {}",
+        causes_that_do_not_resolve(&entries, &cards, &adrs).join("\n  ")
+    );
+}
+
+#[test]
+fn a_baseline_without_a_profile_or_with_an_invented_verdict_is_caught_and_named() {
+    let entries = entries_in(
+        "[[check]]\nid = \"a_one\"\ndrive = { mode = \"v4\", script = \"selectcert\" }\n\n[check.expect.autofirma]\nverdict = \"regular\"\n",
+    );
+
+    assert_eq!(
+        entries_whose_baseline_is_incomplete(&entries),
+        vec![
+            "a_one: autofirma espera «regular», que no es un veredicto",
+            "a_one: sin expectativa para rfirma",
+        ]
+    );
+}
+
+#[test]
+fn an_expectation_that_deviates_without_a_cause_is_caught_and_named() {
+    let entries = entries_in(
+        "[[check]]\nid = \"a_one\"\ndrive = { mode = \"v4\", script = \"selectcert\" }\n\n[check.expect.autofirma]\nverdict = \"no-conforme\"\n\n[check.expect.rfirma]\nverdict = \"conforme\"\n",
+    );
+
+    assert_eq!(
+        expectations_that_deviate_without_a_cause(&entries),
+        vec!["a_one: autofirma"]
+    );
+}
+
+#[test]
+fn a_cause_that_is_neither_a_card_nor_an_adr_is_caught_and_named() {
+    let entries = entries_in(
+        "[[check]]\nid = \"a_one\"\ndrive = { mode = \"v4\", script = \"selectcert\" }\n\n[check.expect.autofirma]\nverdict = \"no-conforme\"\ncause = \"BUG-99\"\n\n[check.expect.rfirma]\nverdict = \"no-conforme\"\ncause = \"ADR-0001\"\n",
+    );
+    let cards: BTreeSet<String> = ["BUG-01"].map(str::to_owned).into();
+    let adrs: BTreeSet<String> = ["ADR-0001"].map(str::to_owned).into();
+
+    assert_eq!(
+        causes_that_do_not_resolve(&entries, &cards, &adrs),
+        vec!["a_one: BUG-99"]
+    );
+}
+
+#[test]
+fn the_reader_of_adrs_takes_the_number_of_each_file() {
+    let adrs = adrs_in(&repository_root().join("docs/adr"));
+    assert!(adrs.contains("ADR-0001"));
+    assert!(!adrs.contains(&format!("ADR-{}", 9999)));
 }
 
 #[test]

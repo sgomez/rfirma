@@ -1,9 +1,11 @@
 //! Suite de conformidad: el cliente publicado bajo Node corre un guion del banco contra el
 //! binario declarado y transcribe lo que viajó, sin mirar el interior del sujeto.
 
+mod baseline;
 mod catalogue;
 mod checks;
 mod cli;
+mod comparison;
 mod dossier;
 mod errand;
 mod monitor;
@@ -13,11 +15,13 @@ mod verdicts;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use baseline::Profile;
 use dossier::Dossier;
 
 struct Probe {
     subject: PathBuf,
     trust_root: PathBuf,
+    profile: Profile,
     dossier: PathBuf,
     patience: Duration,
     command: Command,
@@ -33,6 +37,16 @@ enum Command {
 }
 
 fn main() {
+    if let Some(comparison) = cli::the_comparison_asked_for() {
+        match comparison {
+            Ok(report) => print!("{report}"),
+            Err(complaint) => {
+                eprintln!("{complaint}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     match Probe::from_the_command_line() {
         Ok(probe) => probe.run(),
         Err(complaint) => {
@@ -76,6 +90,7 @@ impl Probe {
         let mut dossier = Dossier::open(
             &self.dossier,
             &self.subject.display().to_string(),
+            self.profile,
             &catalogue,
             header_coordinates,
         )

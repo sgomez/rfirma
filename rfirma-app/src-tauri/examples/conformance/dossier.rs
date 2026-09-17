@@ -8,6 +8,7 @@ use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
+use crate::baseline::Profile;
 use crate::catalogue::Check;
 
 /// El veredicto de una comprobación: uno solo de cada color, y ninguno que pinte de verde un
@@ -76,6 +77,7 @@ pub struct HeaderCoordinates {
 #[derive(Debug, Serialize, Deserialize)]
 struct Contents {
     subject: String,
+    profile: Profile,
     header: Header,
     checks: BTreeMap<String, CheckRecord>,
 }
@@ -95,6 +97,7 @@ impl Dossier {
     pub fn open(
         path: &Path,
         subject: &str,
+        profile: Profile,
         catalogue: &[Check],
         coordinates: Option<HeaderCoordinates>,
     ) -> Result<Self, String> {
@@ -115,6 +118,7 @@ impl Dossier {
             })?;
             Contents {
                 subject: subject.to_owned(),
+                profile,
                 header: Header {
                     os: coordinates.os,
                     os_version: coordinates.os_version,
@@ -133,6 +137,14 @@ impl Dossier {
                 contents.subject
             ));
         }
+        if contents.profile != profile {
+            return Err(format!(
+                "el expediente {} se abrió con el perfil {}, y esta tanda trae {}",
+                path.display(),
+                contents.profile.name(),
+                profile.name()
+            ));
+        }
         for check in catalogue {
             contents
                 .checks
@@ -149,6 +161,23 @@ impl Dossier {
 
     pub fn subject(&self) -> &str {
         &self.contents.subject
+    }
+
+    pub fn profile(&self) -> Profile {
+        self.contents.profile
+    }
+
+    /// Lee un expediente ya escrito, sin catálogo ni sujeto con el que cuadrarlo: lo que necesita
+    /// quien compara dos tandas.
+    pub fn read(path: &Path) -> Result<Self, String> {
+        let raw = fs::read_to_string(path)
+            .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
+        let contents = serde_json::from_str(&raw)
+            .map_err(|error| format!("{} no es un expediente válido: {error}", path.display()))?;
+        Ok(Self {
+            path: path.to_owned(),
+            contents,
+        })
     }
 
     pub fn header(&self) -> &Header {
@@ -269,8 +298,14 @@ mod tests {
     fn resolves_a_check_with_the_single_verdict() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        let mut dossier =
-            Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
+        let mut dossier = Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(some_coordinates()),
+        )
+        .unwrap();
 
         assert_eq!(
             dossier.state_of("v4_echo_greeting"),
@@ -291,8 +326,14 @@ mod tests {
     fn a_resolved_verdict_and_its_observation_survive_a_reopen() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        let mut dossier =
-            Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
+        let mut dossier = Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(some_coordinates()),
+        )
+        .unwrap();
         dossier
             .resolve(
                 "v4_echo_greeting",
@@ -301,7 +342,8 @@ mod tests {
             )
             .unwrap();
 
-        let reopened = Dossier::open(&path, "autofirma", &catalogue, None).unwrap();
+        let reopened =
+            Dossier::open(&path, "autofirma", Profile::Autofirma, &catalogue, None).unwrap();
 
         assert_eq!(
             reopened.state_of("v4_echo_greeting"),
@@ -320,8 +362,14 @@ mod tests {
     fn a_check_not_yet_run_stays_pending_instead_of_being_omitted() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting", "v3_echo_greeting"]);
-        let dossier =
-            Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
+        let dossier = Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(some_coordinates()),
+        )
+        .unwrap();
 
         let ids: Vec<&str> = dossier.checks().map(|(id, _)| id).collect();
         assert!(ids.contains(&"v3_echo_greeting"));
@@ -341,7 +389,14 @@ mod tests {
         .unwrap();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
 
-        let complaint = Dossier::open(file.path(), "autofirma", &catalogue, None).unwrap_err();
+        let complaint = Dossier::open(
+            file.path(),
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            None,
+        )
+        .unwrap_err();
 
         assert!(complaint.contains(&file.path().display().to_string()));
         assert!(complaint.contains("forma anterior"));
@@ -352,10 +407,54 @@ mod tests {
     fn a_dossier_of_another_subject_is_refused() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        Dossier::open(&path, "autofirma", &catalogue, Some(some_coordinates())).unwrap();
+        Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(some_coordinates()),
+        )
+        .unwrap();
 
-        let complaint = Dossier::open(&path, "rfirma", &catalogue, None).unwrap_err();
+        let complaint =
+            Dossier::open(&path, "rfirma", Profile::Rfirma, &catalogue, None).unwrap_err();
 
         assert!(complaint.contains("es de autofirma, no de rfirma"));
+    }
+
+    #[test]
+    fn a_dossier_opened_with_another_profile_is_refused_naming_both() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
+        Dossier::open(
+            &path,
+            "un-binario",
+            Profile::Autofirma,
+            &catalogue,
+            Some(some_coordinates()),
+        )
+        .unwrap();
+
+        let complaint =
+            Dossier::open(&path, "un-binario", Profile::Rfirma, &catalogue, None).unwrap_err();
+
+        assert!(complaint.contains("perfil autofirma"));
+        assert!(complaint.contains("trae rfirma"));
+    }
+
+    #[test]
+    fn the_profile_of_a_dossier_survives_a_reopen() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
+        Dossier::open(
+            &path,
+            "un-binario",
+            Profile::Rfirma,
+            &catalogue,
+            Some(some_coordinates()),
+        )
+        .unwrap();
+
+        assert_eq!(Dossier::read(&path).unwrap().profile(), Profile::Rfirma);
     }
 }

@@ -12,13 +12,14 @@ use std::time::{Duration, Instant};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
+use crate::baseline::{contrast_of, verdict_name, Contrast, Profile};
 use crate::catalogue::{Check, Drive};
 use crate::dossier::{CheckState, Dossier, Verdict};
 use crate::errand::ErrandOutcome;
 use crate::verdicts::{
-    chapter_tag, the_verdict_for_a_bind_failure, the_verdict_for_a_private_key_check,
-    the_verdict_for_a_save_confirmation, the_verdict_for_a_timestamp, the_verdict_of,
-    verdict_badge, CheckOutcome, GRAY, PENDING_BADGE,
+    chapter_tag, the_closing_of, the_verdict_for_a_bind_failure,
+    the_verdict_for_a_private_key_check, the_verdict_for_a_save_confirmation,
+    the_verdict_for_a_timestamp, the_verdict_of, verdict_badge, CheckOutcome, GRAY, PENDING_BADGE,
 };
 use crate::Probe;
 
@@ -78,6 +79,7 @@ impl Probe {
             .collect();
         if pending.is_empty() {
             println!("{}", no_pending_checks_message(catalogue.len(), suite));
+            self.close_the_run(dossier, catalogue, suite);
             return;
         }
 
@@ -95,6 +97,17 @@ impl Probe {
                 already_run.insert(member.id.as_str());
             }
             self.run_group(dossier, &group, &mut done, total);
+        }
+        self.close_the_run(dossier, catalogue, suite);
+    }
+
+    /// El cierre de la tanda: las dos filas del resumen, las sorpresas nombradas y el código de
+    /// salida que las traduce.
+    fn close_the_run(&self, dossier: &Dossier, catalogue: &[Check], suite: Option<&str>) {
+        let (closing, code) = the_closing_of(dossier, catalogue, suite);
+        print!("{closing}");
+        if code != 0 {
+            std::process::exit(code);
         }
     }
 
@@ -275,12 +288,13 @@ impl Probe {
                 observation,
             } => {
                 let (badge, color) = verdict_badge(verdict);
+                let note = the_note_of(check, verdict, observation.as_deref(), self.profile);
                 self.monitor.finish_item(
                     badge,
                     color,
                     &format!("{} {}", chapter_tag(&check.chapter), check.id),
                     duration,
-                    observation.as_deref(),
+                    note.as_deref(),
                 );
                 dossier
                     .resolve(&check.id, verdict, observation)
@@ -292,6 +306,32 @@ impl Probe {
             CheckOutcome::StillPending => self.leave_pending(check, "no hubo respuesta"),
         }
     }
+}
+
+/// Lo que se dice al pie de la comprobación recién resuelta: su observación y, si lo observado no
+/// es lo que la línea base declara, la sorpresa dicha en el momento.
+fn the_note_of(
+    check: &Check,
+    verdict: Verdict,
+    observation: Option<&str>,
+    profile: Profile,
+) -> Option<String> {
+    let Some(expectation) = check.expect.get(profile.name()) else {
+        return observation.map(str::to_owned);
+    };
+    let contrast = contrast_of(verdict, expectation.verdict);
+    if contrast == Contrast::Matches {
+        return observation.map(str::to_owned);
+    }
+    let contrast_said = format!(
+        "{}: se esperaba {}",
+        contrast.label(),
+        verdict_name(expectation.verdict)
+    );
+    Some(match observation {
+        Some(observation) => format!("{observation} — {contrast_said}"),
+        None => contrast_said,
+    })
 }
 
 /// Si el canal llegó a abrirse: el conductor lo dice midiendo alguna condición, y no decir nada no
